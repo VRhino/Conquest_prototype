@@ -18,7 +18,7 @@ public enum SquadFSMState
     Idle,
     FollowingHero,
     HoldingPosition,
-    Attacking,
+    InCombat,
     Retreating,
     KO
 }

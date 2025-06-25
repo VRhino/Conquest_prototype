@@ -27,13 +27,8 @@ public partial class SquadOrderSystem : SystemBase
                 state.ValueRW.currentFormation = input.ValueRO.desiredFormation;
             }
 
-            // Attempt to update FSM state if the entity has such component
-            if (SystemAPI.HasComponent<SquadFSMStateComponent>(entity))
-            {
-                var fsm = SystemAPI.GetComponentRW<SquadFSMStateComponent>(entity);
-                if (fsm.ValueRO.currentState != OrderToState(input.ValueRO.orderType))
-                    fsm.ValueRW.currentState = OrderToState(input.ValueRO.orderType);
-            }
+            // Request a state transition if using the FSM system
+            state.ValueRW.transitionTo = OrderToState(input.ValueRO.orderType);
 
             input.ValueRW.hasNewOrder = false;
         }
@@ -45,7 +40,7 @@ public partial class SquadOrderSystem : SystemBase
         {
             SquadOrderType.FollowHero => SquadFSMState.FollowingHero,
             SquadOrderType.HoldPosition => SquadFSMState.HoldingPosition,
-            SquadOrderType.Attack => SquadFSMState.Attacking,
+            SquadOrderType.Attack => SquadFSMState.InCombat,
             _ => SquadFSMState.Idle,
         };
     }
