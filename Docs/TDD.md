@@ -727,6 +727,13 @@ csharp
 CopiarEditar
 enum DamageType { Blunt, Slashing, Piercing }
 
+enum DamageCategory { Normal, Critical, Ability }
+
+`DamageCategory` define la representación visual del daño. El valor
+`Critical` aplica un multiplicador de **1.5x** y se muestra con un popup
+mayor y color distinto. `Ability` corresponde a efectos como sangrado y
+usa su propio color.
+
 DamageProfile (ScriptableObject)
 - baseDamage: float
 - damageType: DamageType
@@ -779,6 +786,7 @@ float CalculateEffectiveDamage(float baseDamage, float defense, float penetratio
 DamageCalculationSystem
 - Lee DamageProfile, DefenseComponent y PenetrationComponent
 - Aplica daño resultante a HealthComponent
+ - Aplica multiplicador 1.5f si el `DamageCategory` es `Critical`
 
 HealthComponent (IComponentData)
 - maxHealth: float
