@@ -63,7 +63,7 @@ public partial class UnitAttackSystem : SystemBase
             {
                 if (!SystemAPI.HasComponent<PendingDamageEvent>(entity))
                 {
-                    bool crit = UnityEngine.Random.value <= 0.1f;
+                    bool crit = UnityEngine.Random.value <= weapon.ValueRO.criticalChance;
                     SystemAPI.AddComponent(entity, new PendingDamageEvent
                     {
                         target = target,
