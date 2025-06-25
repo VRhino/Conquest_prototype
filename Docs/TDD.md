@@ -353,6 +353,7 @@ El comportamiento es **grupal**, pero con **unidad mínima de decisión** en cad
 - `UnitAttackSystem`:
     - Verifica cooldowns
     - Ejecuta animaciones de ataque si tiene target
+    - Usa `criticalChance` del arma para aplicar golpes críticos de 1.5x
 
 ---
 
@@ -655,6 +656,7 @@ HeroAttackSystem
 - Valida cooldown y stamina
 - Reproduce animación correcta
 - Activa collider de arma mediante Animation Events
+- Genera golpes críticos con multiplicador 1.5x según `criticalChance` del arma
 ```
 
 ```csharp
@@ -691,6 +693,7 @@ SquadCombatComponent (IComponentData)
 ```csharp
 UnitWeaponComponent (IComponentData)
 - damageProfile: Entity (referencia a ScriptableObject con daño, tipo, penetración)
+- criticalChance: float (probabilidad de crítico para héroe y unidades)
 ```
 
 ```csharp
