@@ -10,6 +10,9 @@ public partial class DamageCalculationSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        var defenseLookup = GetComponentLookup<DefenseComponent>(true);
+        var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
+
         foreach (var (pending, entity) in SystemAPI
                      .Query<RefRO<PendingDamageEvent>>()
                      .WithEntityAccess())
@@ -21,13 +24,68 @@ public partial class DamageCalculationSystem : SystemBase
                 continue;
             }
 
+            // Skip if target already dead
+            if (SystemAPI.HasComponent<IsDeadComponent>(pending.ValueRO.target))
+            {
+                SystemAPI.RemoveComponent<PendingDamageEvent>(entity);
+                continue;
+            }
+
+            // Friendly fire check
+            if (pending.ValueRO.sourceTeam != Team.None &&
+                SystemAPI.HasComponent<TeamComponent>(pending.ValueRO.target))
+            {
+                var targetTeam = SystemAPI.GetComponent<TeamComponent>(pending.ValueRO.target).value;
+                if (targetTeam == pending.ValueRO.sourceTeam)
+                {
+                    SystemAPI.RemoveComponent<PendingDamageEvent>(entity);
+                    continue;
+                }
+            }
+
             var profile = SystemAPI.GetComponent<DamageProfileComponent>(pending.ValueRO.damageProfile);
-            float finalDamage = profile.baseDamage * pending.ValueRO.multiplier;
+
+            float defense = 0f;
+            if (defenseLookup.HasComponent(pending.ValueRO.target))
+            {
+                var def = defenseLookup[pending.ValueRO.target];
+                defense = profile.damageType switch
+                {
+                    DamageType.Blunt => def.bluntDefense,
+                    DamageType.Slashing => def.slashDefense,
+                    DamageType.Piercing => def.pierceDefense,
+                    _ => 0f
+                };
+            }
+
+            float penetration = profile.penetration;
+            if (SystemAPI.Exists(pending.ValueRO.damageSource) &&
+                penetrationLookup.HasComponent(pending.ValueRO.damageSource))
+            {
+                var pen = penetrationLookup[pending.ValueRO.damageSource];
+                penetration += profile.damageType switch
+                {
+                    DamageType.Blunt => pen.bluntPenetration,
+                    DamageType.Slashing => pen.slashPenetration,
+                    DamageType.Piercing => pen.piercePenetration,
+                    _ => 0f
+                };
+            }
+
+            float baseDamage = profile.baseDamage * pending.ValueRO.multiplier;
+            float mitigatedDefense = math.max(0f, defense - penetration);
+            float effectiveDamage = math.max(0f, baseDamage - mitigatedDefense);
 
             if (SystemAPI.HasComponent<HealthComponent>(pending.ValueRO.target))
             {
                 var health = SystemAPI.GetComponentRW<HealthComponent>(pending.ValueRO.target);
-                health.ValueRW.currentHealth = math.max(0f, health.ValueRO.currentHealth - finalDamage);
+                health.ValueRW.currentHealth = math.max(0f, health.ValueRO.currentHealth - effectiveDamage);
+
+                if (health.ValueRW.currentHealth <= 0f &&
+                    !SystemAPI.HasComponent<IsDeadComponent>(pending.ValueRO.target))
+                {
+                    SystemAPI.AddComponent<IsDeadComponent>(pending.ValueRO.target);
+                }
             }
 
             SystemAPI.RemoveComponent<PendingDamageEvent>(entity);

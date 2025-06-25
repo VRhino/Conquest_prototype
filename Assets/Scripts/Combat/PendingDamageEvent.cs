@@ -9,8 +9,14 @@ public struct PendingDamageEvent : IComponentData
     /// <summary>Entity that will receive the damage.</summary>
     public Entity target;
 
+    /// <summary>Entity that originated the damage.</summary>
+    public Entity damageSource;
+
     /// <summary>Damage profile to apply.</summary>
     public Entity damageProfile;
+
+    /// <summary>Team of the source entity to check friendly fire.</summary>
+    public Team sourceTeam;
 
     /// <summary>Visual category for popup effects.</summary>
     public DamageCategory category;

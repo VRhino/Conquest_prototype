@@ -79,10 +79,16 @@ public partial class HeroAttackSystem : SystemBase
                 if (!SystemAPI.HasComponent<PendingDamageEvent>(weapon.ValueRO.owner))
                 {
                     bool crit = UnityEngine.Random.value <= weaponData.ValueRO.criticalChance;
+                    Team team = Team.None;
+                    if (SystemAPI.HasComponent<TeamComponent>(weapon.ValueRO.owner))
+                        team = SystemAPI.GetComponent<TeamComponent>(weapon.ValueRO.owner).value;
+
                     SystemAPI.AddComponent(weapon.ValueRO.owner, new PendingDamageEvent
                     {
                         target = hitEntity,
+                        damageSource = weapon.ValueRO.owner,
                         damageProfile = weaponData.ValueRO.damageProfile,
+                        sourceTeam = team,
                         category = crit ? DamageCategory.Critical : DamageCategory.Normal,
                         multiplier = crit ? 1.5f : 1f
                     });
