@@ -80,10 +80,16 @@ public partial class SquadAttackSystem : SystemBase
                         !SystemAPI.HasComponent<PendingDamageEvent>(unit))
                     {
                         bool crit = Random.value <= weapon.criticalChance;
+                        Team team = Team.None;
+                        if (SystemAPI.HasComponent<TeamComponent>(unit))
+                            team = SystemAPI.GetComponent<TeamComponent>(unit).value;
+
                         SystemAPI.AddComponent(unit, new PendingDamageEvent
                         {
                             target = chosen,
+                            damageSource = unit,
                             damageProfile = weapon.damageProfile,
+                            sourceTeam = team,
                             category = crit ? DamageCategory.Critical : DamageCategory.Normal,
                             multiplier = crit ? 1.5f : 1f
                         });

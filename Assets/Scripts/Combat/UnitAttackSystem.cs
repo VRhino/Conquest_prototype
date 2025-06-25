@@ -64,10 +64,16 @@ public partial class UnitAttackSystem : SystemBase
                 if (!SystemAPI.HasComponent<PendingDamageEvent>(entity))
                 {
                     bool crit = UnityEngine.Random.value <= weapon.ValueRO.criticalChance;
+                    Team team = Team.None;
+                    if (SystemAPI.HasComponent<TeamComponent>(entity))
+                        team = SystemAPI.GetComponent<TeamComponent>(entity).value;
+
                     SystemAPI.AddComponent(entity, new PendingDamageEvent
                     {
                         target = target,
+                        damageSource = entity,
                         damageProfile = weapon.ValueRO.damageProfile,
+                        sourceTeam = team,
                         category = crit ? DamageCategory.Critical : DamageCategory.Normal,
                         multiplier = crit ? 1.5f : 1f
                     });
