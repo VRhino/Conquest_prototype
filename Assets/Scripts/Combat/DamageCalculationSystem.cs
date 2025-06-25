@@ -21,7 +21,7 @@ public partial class DamageCalculationSystem : SystemBase
                 continue;
             }
 
-            var profile = SystemAPI.GetComponent<DamageProfileData>(pending.ValueRO.damageProfile);
+            var profile = SystemAPI.GetComponent<DamageProfileComponent>(pending.ValueRO.damageProfile);
             float finalDamage = profile.baseDamage * pending.ValueRO.multiplier;
 
             if (SystemAPI.HasComponent<HealthComponent>(pending.ValueRO.target))

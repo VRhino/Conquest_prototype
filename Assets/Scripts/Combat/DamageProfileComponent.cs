@@ -4,7 +4,7 @@ using Unity.Entities;
 /// Component holding runtime data for a weapon damage profile.
 /// Typically baked from a <see cref="DamageProfile"/> ScriptableObject.
 /// </summary>
-public struct DamageProfileData : IComponentData
+public struct DamageProfileComponent : IComponentData
 {
     /// <summary>Base damage dealt by the attack.</summary>
     public float baseDamage;
