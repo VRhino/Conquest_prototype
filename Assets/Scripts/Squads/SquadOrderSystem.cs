@@ -10,8 +10,10 @@ public partial class SquadOrderSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        foreach (var (input, state, entity) in SystemAPI
-                     .Query<RefRW<SquadInputComponent>, RefRW<SquadStateComponent>>()
+        foreach (var (input, state, formation, entity) in SystemAPI
+                     .Query<RefRW<SquadInputComponent>,
+                            RefRW<SquadStateComponent>,
+                            RefRW<FormationComponent>>()
                      .WithEntityAccess())
         {
             if (!input.ValueRO.hasNewOrder)
@@ -25,6 +27,7 @@ public partial class SquadOrderSystem : SystemBase
             if (input.ValueRO.desiredFormation != state.ValueRO.currentFormation)
             {
                 state.ValueRW.currentFormation = input.ValueRO.desiredFormation;
+                formation.ValueRW.currentFormation = input.ValueRO.desiredFormation;
             }
 
             // Request a state transition if using the FSM system
