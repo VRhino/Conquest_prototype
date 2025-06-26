@@ -21,6 +21,9 @@ public struct DataContainerComponent : IComponentData
     /// <summary>Total leadership used by the selected loadout.</summary>
     public int totalLeadershipUsed;
 
+    /// <summary>Identifier of the spawn point chosen during preparation.</summary>
+    public int selectedSpawnID;
+
     /// <summary>Team identifier for this player.</summary>
     public int playerTeam;
 
