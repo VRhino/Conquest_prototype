@@ -1335,10 +1335,10 @@ public struct HeroAttributesComponent : IComponentData {
 
 ```csharp
 public struct HeroAbilityComponent : IComponentData {
-    public Entity habilidad1; // Q
-    public Entity habilidad2; // E
-    public Entity habilidad3; // R
-    public Entity ultimate;   // F
+    public Entity abilityQ; // Q
+    public Entity abilityE; // E
+    public Entity abilityR; // R
+    public Entity ultimate; // F
 }
 
 ```

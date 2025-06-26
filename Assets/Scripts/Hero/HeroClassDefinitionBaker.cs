@@ -28,9 +28,9 @@ public class HeroClassDefinitionBaker : Baker<HeroClassDefinition>
             maxArmadura = authoring.maxArmadura,
             minVitalidad = authoring.minVitalidad,
             maxVitalidad = authoring.maxVitalidad,
-            habilidad1 = authoring.abilities.Count > 0 ? GetEntity(authoring.abilities[0], TransformUsageFlags.None) : Entity.Null,
-            habilidad2 = authoring.abilities.Count > 1 ? GetEntity(authoring.abilities[1], TransformUsageFlags.None) : Entity.Null,
-            habilidad3 = authoring.abilities.Count > 2 ? GetEntity(authoring.abilities[2], TransformUsageFlags.None) : Entity.Null,
+            abilityQ = authoring.abilities.Count > 0 ? GetEntity(authoring.abilities[0], TransformUsageFlags.None) : Entity.Null,
+            abilityE = authoring.abilities.Count > 1 ? GetEntity(authoring.abilities[1], TransformUsageFlags.None) : Entity.Null,
+            abilityR = authoring.abilities.Count > 2 ? GetEntity(authoring.abilities[2], TransformUsageFlags.None) : Entity.Null,
             ultimate = authoring.abilities.Count > 3 ? GetEntity(authoring.abilities[3], TransformUsageFlags.None) : Entity.Null
         });
 
