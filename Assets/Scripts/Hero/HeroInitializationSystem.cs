@@ -40,9 +40,9 @@ public partial class HeroInitializationSystem : SystemBase
 
             ecb.AddComponent(entity, new HeroAbilityComponent
             {
-                habilidad1 = def.habilidad1,
-                habilidad2 = def.habilidad2,
-                habilidad3 = def.habilidad3,
+                abilityQ = def.abilityQ,
+                abilityE = def.abilityE,
+                abilityR = def.abilityR,
                 ultimate = def.ultimate
             });
 

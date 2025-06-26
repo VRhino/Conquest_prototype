@@ -24,9 +24,16 @@ public struct HeroClassDefinitionComponent : IComponentData
     public int minVitalidad;
     public int maxVitalidad;
 
-    public Entity habilidad1;
-    public Entity habilidad2;
-    public Entity habilidad3;
+    /// <summary>Reference to the Q ability for this class.</summary>
+    public Entity abilityQ;
+
+    /// <summary>Reference to the E ability for this class.</summary>
+    public Entity abilityE;
+
+    /// <summary>Reference to the R ability for this class.</summary>
+    public Entity abilityR;
+
+    /// <summary>Reference to the ultimate ability (F key).</summary>
     public Entity ultimate;
 }
 
