@@ -1,16 +1,20 @@
 using Unity.Entities;
 
 /// <summary>
-/// References data required to execute a hero ability.
+/// Stores the ability references available to the hero. The
+/// system expects three active abilities and one ultimate.
 /// </summary>
 public struct HeroAbilityComponent : IComponentData
 {
-    /// <summary>Entity holding additional ability data or effects.</summary>
-    public Entity abilityData;
+    /// <summary>Ability triggered with the Q key.</summary>
+    public Entity habilidad1;
 
-    /// <summary>Stamina cost required to trigger this ability.</summary>
-    public float staminaCost;
+    /// <summary>Ability triggered with the E key.</summary>
+    public Entity habilidad2;
 
-    /// <summary>Entity with the <see cref="CooldownComponent"/> that tracks readiness.</summary>
-    public Entity cooldownEntity;
+    /// <summary>Ability triggered with the R key.</summary>
+    public Entity habilidad3;
+
+    /// <summary>Ultimate ability triggered with the F key.</summary>
+    public Entity ultimate;
 }
