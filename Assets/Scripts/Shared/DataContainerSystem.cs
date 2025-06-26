@@ -18,13 +18,14 @@ public partial class DataContainerSystem : SystemBase
             Entity entity = em.CreateEntity(typeof(DataContainerComponent));
             em.SetComponentData(entity, new DataContainerComponent
             {
+                playerID = 0,
                 playerName = default,
+                teamID = 0,
                 selectedLoadoutID = -1,
                 selectedSquads = default,
                 selectedPerks = default,
                 totalLeadershipUsed = 0,
                 selectedSpawnID = -1,
-                playerTeam = 0,
                 isReady = false
             });
         }
