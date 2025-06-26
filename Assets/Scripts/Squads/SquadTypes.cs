@@ -20,3 +20,25 @@ public enum FormationType
     Testudo,
     Wedge
 }
+
+/// <summary>
+/// Classification of squad unit types available to the player.
+/// </summary>
+public enum SquadType
+{
+    Escuderos,
+    Arqueros,
+    Piqueros,
+    Lanceros
+}
+
+/// <summary>
+/// Tactical behavior profile used by AI systems.
+/// </summary>
+public enum BehaviorProfile
+{
+    Defensivo,
+    Hostigador,
+    Anticarga,
+    Versatil
+}
