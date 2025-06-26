@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
 /// Ensures a singleton <see cref="DataContainerComponent"/> exists and persists
@@ -17,9 +18,7 @@ public partial class DataContainerSystem : SystemBase
             var em = World.DefaultGameObjectInjectionWorld.EntityManager;
             Entity entity = em.CreateEntity(typeof(DataContainerComponent), typeof(HeroProgressComponent));
 
-            var save = LocalSaveSystem.LoadGame();
-            if (save.heroProgress == null)
-                save.heroProgress = new LocalSaveSystem.HeroProgressData();
+            var save = LocalSaveSystem.LoadProgress();
 
             em.SetComponentData(entity, new DataContainerComponent
             {
@@ -36,10 +35,10 @@ public partial class DataContainerSystem : SystemBase
 
             em.SetComponentData(entity, new HeroProgressComponent
             {
-                level = save.heroProgress.level,
-                currentXP = save.heroProgress.currentXP,
-                xpToNextLevel = save.heroProgress.xpToNextLevel,
-                perkPoints = save.heroProgress.perkPoints
+                level = save.level,
+                currentXP = save.currentXP,
+                xpToNextLevel = CalculateNext(save.level),
+                perkPoints = save.perkPoints
             });
         }
     }
@@ -47,5 +46,10 @@ public partial class DataContainerSystem : SystemBase
     protected override void OnUpdate()
     {
         // This system only holds persistent data; no per-frame logic required.
+    }
+
+    static int CalculateNext(int level)
+    {
+        return (int)Unity.Mathematics.math.floor(100 * Unity.Mathematics.math.pow(1.2f, level - 1));
     }
 }
