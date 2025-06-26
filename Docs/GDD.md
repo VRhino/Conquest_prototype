@@ -1,133 +1,10 @@
 # GDD
 
-GDD mvp
-
-Concepts clave
-
-1. Heroes: avatar del jugador, creado por el no viene pre creados Como las squads
-2. Skins de heroe: skins visuals a las piezas de armadura o arma, solo visuals no afectan en nada a Sus atributos
-3. Armas: piezas con las q ataca el heroes solo hay Una pieza, esta determinanla clase del heroes, hay 4 tipos, espalda y escudos, lanza, Arco y espalda a 2 manos
-4. Piezas de armadura: son las piezas de armadura q se equipa el heroes, son 4 piezas casco, guantes, Pero y pantalones, hay de 3 tipos, ligera, media y pesada
-5. Squads: conjunto de unidades qué posee UN jugador, el cual tiene formaciones(linea, dispersal, testudo, etc…) y ordenes(seguro, atacar, manner posicion), Durante la batalla no puede Haber mas de Un squad activo por heroes Al mismo tiempo, pueden Haber n cantidad de unidades dentro de UN squad
-6. Skins de unidad: skin visual para la unidad
-7. Unidad: individuo que conforman UN Squad solo puede Haber UN Tipo de unidad dentro de UN squad
-8. Perks:  Los talentos (perks) son **modificadores pasivos y activos** que el jugador desbloquea para personalizar su estilo de juego, su rol en combate y la sinergia con su escuadra. El sistema está basado en un **árbol de progresión tipo Path of Exile**, con rutas ramificadas y desbloqueo secuencia
-9. Formacion: son las distintas formaciones qué puede adopter UN squad por indication directa del heroe, dependiendo de la squad tiene Unas formaciones u otras
-    - Linea
-    - Testudo
-    - Dispersa
-    - Cuña
-    - Schiltron
-    - Muro de escudos
-10. Orden: ordenes qué Les puede dar el heroes a las squads.
-    - Seguir: la squad siguen Al heroes defendiendole
-    - Mantener posicion: la squad SE mantiene el la ubicacion donde lo coloque el heroe, manteniendo la formacion qué Tenga activa de momento
-    - Atacar: el squad ataca a Los enemigos q Tengan dentro de rango
-11. Equipamiento: piezas de armadura de unidad, qué SE pierden cuando mueren unidades Durante partida, Una unidad si tiene menos de 50% de equipamiento entra con debufffs y si tienes 0% no puede ser no puede Entrar a partida
-12. Loadout: Los jugadores pueden tener Unas squads preseleccionadas fuera de partida qué SE pueden elegir antes de Entrar a partida Como conjunto
-    - Viene limitada por la cantidad de liderazgo q tiene el heroes, es decir si el heroe tiene 3 de liderazgo y hay 4 squads, arqueros 1 de liderazgo, piqueros 2 de liderazgo, lanceros 1 de liderazgo y escuderos 2 de liderazgo, en el loadout no puede guardar arqueros(1), piqueros(2) y lanceros(1) por qué la Suma seria 4 y el maximo para el son 3, SE puede menos o igual pero nunca mas
-13. Liderazgo: es lo que limita la cantidad de squads q puede llevar UN heroe a batalla  y la cantidad de squads q entran en UN loadout, el heroe tiene UN Valor y Los squads tienen UN coste de liderazgo
-14. estamina: es lo que los heroes utilizan para realizar ataques sprintar y lanzar habilidades
-15. ////batalla 
-16. Batalla: Punto central del juego aqui es donde Los jugadores luchan en 2 bandos(atacantes y defensores) capturando banderas para ganar(atacantes) o defendiendolas hasta que acabe el tiempo(defensores) para ganar
-17. Supply point: Este es UN elemento presente en la batalla donde si Tu bando ya lo capturo puede curar pasivamente si esta el heroes o su squad esta dentro de rango de action, o puede cambiar su tropas.activa de entre las que trajo a batalla interactuando con el avatar del suppli point. Si Un heroe entra en el rango de action de UN suppli point que no pretence a SU bando y no hay ninguna heroe del bando owner de ese supply point empieza en tiempo de capturas, si Durante la captura entra UN heroe del bando owner SE cancela la captura y SE reinicia el contador. Pueden existir supply point de 3 tipos segun la perspective de jugador
-    - Aliadas: pertenece Al bando del jugador. aparecen de color Azul en el minimapa, el borde de su rango de action SE muestra de Este colour y el avatar del suppli tambien tiene Los detalles de Este colour, en Este el jugador puede interactuar con el supply point y el y su squad SE curan pasivamente con estar dentro del radio de accion
-    - Enemigo: pertenece Al bando contrario Al jugador. Aparece el con Todos sus detalles en rojo, el usuario puede capturarlo mas no interactuar con el, ni SE curan ni el ni au squad
-    - Neutral: no pertenece a nadie aun. SE muestra de color gris, cualquier bando puede capturarlo, nadie puede interactuar con el ni curarce
-18. Punto de captura: son las banderas qué qué tienen q captura Los atacantes para ganar o defenderlas hasta q SE arcane el tiempo Los defensores para ganar la partida. Existen de dos tipos las normales y las del base. Cada Bandera tiene un rango de action, es mas grande en las banderas del base
-    - Normales: SE identifican con Una letra, A, B, C, etc… y Al conquistarlas aumentan UN Poco el tiempo de partida para darle mas tiempo a Los atacantes, es decir si quedaban 10 min en el timer Justo cuando SE completa la conquista de Una Bandera normal, SE le agregarian 5 min(por ejemplo) y el timer quedaria 15min
-    - De base: Al conquistar esta Bandera SE termina la partida y gana el bando de Los atacantes, para desbloquea esta Bandera y sea capturable es necesario conquistar las banderas normales
-19. Captura de banderas: la captura de banderas funciona de la siguiente Manera
-    - Tiene qué Entrar Al menos uN heroe del bando contrario para q Inicie la Barra de captura
-    - No puede Haber ninguna heroe del bando owner dentro del rango de action de la Bandera
-    - Si UN heroe del bando owner entra dentro del rango de action de la Bandera mientras SE esta conquistando, SE interrumpe la Barra de captura hasta q no haya ninguna heroe del bando owner dentro de dicho rango
-    - El avance en la Barra de captura no SE pierde Al set interrumpida, continua desde el mismo Punto donde quedo
-    - cuando un heroe esta dentro del rango de la bandera que se esta capturando va ganado puntos de captura que se muestan al final de la partida en el post batalla
-20. Maquinaria de asedio: elemetos Como Torres de asedio y arietes qué SE usan para asediar en Una batalla, solo el bando atacante tiene acceso a ellas y Debe interactuar con ellos para qué su unidad Los empuje de su Punto de partida a SU Punto de contacto
-    - Torres de asedio: para tener acceso a lo alto de las murallas
-    - Ariete: para romper puertas
-21. Bandos: conjunto de jugadores qué juegan juntos para ganar Una partida o batalla existen 2 bandos atacantes y defensores
-22. Spawn points: puntos de aparcion para los heroes con sus squads al empezar la partida
-23. //// Combate
-24. Daños y defensa: existe 3 tipos de daño, contundente(blunt), perforante(piercing), y cortante(slashing) cada squad y heroes poseen estos 3 tipos de daños en diferentes proporciones, y existe Una contraparte defensive de cada Uno(defensa contundente, perforante y cortante) q SE toman en cuenta a la hora De la asignacion de daño
-25. Penetracion de armadura: la penetracion de armadura es otro Valor q SE Toma en cuenta a hora De asignacion de daño, existen Una por cada Tipo de daño(contundente, perforante y cortante) y el Valor de cada Una SE Salta la defensa de ese Tipo y ese daño directo a la Vida, por ejemplo si voy a hacer 1000 puntos de daño cortante y el enemigos tienen 450 de defensa cortante entran 550, Pero si el qué hace daño tiene 100 de penetracion de armadura cortante entran 1000dñC - (450dfC -100paC) qué es igual a 650dñC siendo dñC(daño Cortante), dfC(defensa Cortante) y paC( penetracion de armadura cortante)
-26. //// Barracon
-27. barracon: este es el espacio donde el jugador puede consultar, desbloquear, formar o desvandar Squads fuera de partida
-    - al inicio del juego el usuario no tiene acceso a todas las squads, las va desbloqueando en este apartado
-    - Formar: crear un squad del tipo de squad desbloqueado, las squads formadas son las que van ganando exp en partidas y pueden desbloquear cosas en consecuencia
-    - Desvandar: destruye una Squad formada con aterioridad perdiendo progreso nivel y demas cosas asociadas a ella
-
-## Flujo o journey de un jugador
-
-vamos a aondar un poco mas en la mecanicas de los mapas de feudo para el MVP,
-
-las batallas de feudo (vamos a llamarlas solo "Batallas" de ahora en adelante  porq son las unicas que hay en este MVP) son el core del juego.
-vamos a defenir un flujo de actividad del usuario dentro del juego desde que abre el juego:
-
-1. al iniciar se le muestra una interfaz para llenar los datos de "usuario" y "password"
-2. una vez introducidos estos datos y son correctos, pasa a la seleccion de personajes
-3. aqui en la interfaz de seleccion de personajes, el usuario puede:
-3.1) crear personajes
-3.2) elegir entre los personajes que tenga creados
-3.3) al elegir un personaje se visualiza el personaje en 3d con las armaduras que tenga activas y las skins
-3.4) y una vez elige un personaje se le ativa un boton en la interfaz que dicen "entrar" y lo presiona
-4. una vez presionado el boton entrar y con el personaje valido escogido, aparece la pantalla de carga, mientras se carga el unico feudo o ciudad que tendremos donde aparecera e interactuaran todos los jugadores (el feudo)
-5. al terminar de cargar el mapa el usuario aparece en el  feudo
-6. dentro de la interfaz general del usuario cuando esta en el feudo aparece un boton en parte superior derecha, con la forma de una miniatura de un castillo, que al presionarlo lo mete en la cola de espera para entrar en "Batalla"
-7. el juego por detras recibe todas las solicitudes de batalla y los junta de forma aleatoria hasta llenar un Lobby automatico de batalla(ya sea 3vs3, 5vs5 o 15vs15), tomaremos en este ejemplo que es 3vs3
-8. una vez lleno el lobby, el juego saca a los jugadores 6 jugadores que conforman el lobby y los coloca de forma aleatoria en los bandos(3 atacantes y 3 defensores y les muestra a pantalla completa la interfaz de la fase de preparacion de la batalla
-9. en esta interfaz de la fase de preparacion de batalla, el jugador puede:
-9.1) elegir las Squads de entre las que tiene disponibles sin superar su limite de liderazgo
-9.2) elegir el punto de respawn donde quiere parecer de entre los que tiene disponible su bando
-9.2.1) en la interfaz se muestra un mini mapa del mapa de batalla y los puntos de spawn se muestran en este mini mapa con una miniatura interactuable que al usuario clickar en ellas se selecciona y cambia de color
-9.3) elegir entre los loadouts de tropas que tiene
-9.4) y presionar continuar y se le bloquea la seleccion hasta que el resto de jugadores presionen continuar o se acababe el tiempo
-9.5) si se acaba el tiempo y el jugador no ha dado continuar pasa automaticamente con lo que tenga elegido
-9.6) pasan a la pantalla de carga mientras se carga el mapa de batalla y se cargan todos los heroes y las tropas en el mismo
-9.7) una vez cargado todo se muestra el personaje y se desarrolla la batalla
-10. una vez terminada la batalla y se haya determinado ganador, se pasa a una interfaz de pantalla completa con el resumen de la batalla(cuantas unidades mato el jugador con cada unidad, cuales Squads utilizo y cuanto mato con cada una, ademas la exp que gano el heroe y cada unidad, y en esta interfaz un boton continuar
-10.1) al presionar continuar, lo saca de la vista de resumen de batalla y lo lleva al mapa del feudo
-
-## Scenes(por no encontrar una mejor manera de llamarlas)
-
-espacios donde estara el jugador o pantallas diferenciadas o stages donde el jugador interactuara con la interfaz
-
-- login
-- seleccion de personaje:
-    - selecciona de entre los avatares que tenga creados, se identifican por nombre
-- creacion de personaje:
-    - solo se podra elegir entre 3 avatares pre creados, pero podra crear un nombre para identificarlo
-- pantallas de carga
-- feudo: espacio central donde coexistiran los jugadores mientras no esten en partida
-    - en este espacio o Scene el jugador podra ver su avatar y moverse con el por el feudo pero no podra combatir, lanzar habiliades, usar perks, o desplegar Squads
-- preparacion de batalla:
-    - aqui es donde el usuario elige los squads que puede llevar a la partida siempre limitado por su atributo de liderazgo, ademas puede elegir uno de sus 3 loadout que aparecen como botones en la parte inferior de este panel y se llenara automaticamente los slots de la parte superior mostrando las unidades que conforman ese loadout
-    - se ven en el panel lateral izquierdo todos los jugadores que forman parte del equipo del jugador
-    - en la panel inferior central  esta UI de seleccion de squads
-    - en la parte superior el timer para empezar partida(3 miin)
-    - en la parte central y derecha un mapa del feudo de la batalla, en ella se muestran los Spawn points para que los seleccione el heroe y la ubicacion de los puntos de captura y supply points
-    - en la parte inferior derecha esta el panel donde el usuario puede ver y cambiar los slots de armaduras y arma que llevara a batalla
-- batalla
-    - aqui es donde se desarrolla todo el combate
-    - los jugadores ven sus avatar y su squad activo, pueden dar ordenes a sus squads, cambiar formaciones, luchar contra unidades enemigas, conquistar supply points y puntos de captura y demas
-    - en la parte inferior izquierda de la hud esta la ui de tropa que muestra, imagen de unidad, posibles ordenes, posibles formaciones, cantidad de unidades vivas/total
-    - en la parte central inferior, icono de clase de heroe, barra de vida y panel de habilidades que puede utilizar
-    - cuando se elimina a una unidad enemiga aparace por unos segundos el contador de unidades enemigas eliminadas, pegado al derecho de la pantalla centrado verticalmente
-    - cuando una unidad asiga daño sale un popup damage que muestra el valor del daño que hizo y desaparece en menos de un segundo
-    - si la bandera de base esta disponible para conquistar se muestra el icono(rombo con el color ya sea aliada o enemiga con el icono del tipo de badera en el centro) con la barra de conquista circular a su alrededor con su progreso
-    - el timer de batalla pegado a la parte superior, centrada horizontalmente
-    - en la parte inferior derecha, pegado al borde se muesta el minimapa de la batalla donde se muestran los puntos de captura y supply points y su estado actual, mas la ubicacion de todos los heroes aliados
-- post batalla
-    - es una pantalla donde se muestra el resumen de batalla, que Squads utilizo el heroe, que unidades mato con cada squad, exp que gano con cada una, y si se gano o se perdio la partida, se divide en 3 pestañas
-        - pestaña de overall, muestra daño total, daño total recibido, contador de unidades matadas general, experiecia de heroe y de Squad ganado, y distintos elementos ganados en la partida
-        - pestaña de Squads: muestra las Squads utilizadas, cuantas unidades mato cada una cuanta exp gano cada una
-        - pestaña de equipo: muestra 2 tablas, una a la izquierda con todos los jugadores aliados, cuanto mato cada heroe, su puntaje, si fue MVP, puntos de captura y en la parte derecha muestra
-
 ## 📌 Nombre tentativo: Conquest Tactics
 
 ---
 
-## 1. 🌟 Resumen Ejecutivo (versión ajustada)
+# 1. 🌟 Resumen Ejecutivo (versión ajustada)
 
 **Nombre tentativo:** *Feudos: Guerra de Escuadras*
 
@@ -191,7 +68,7 @@ El jugador actúa como un **líder de tropas**, dando órdenes, controlando form
 
 ---
 
-## 2. 🔁 Core Gameplay Loop (Versión Reescrita)
+# 2. 🔁 Core Gameplay Loop (Versión Reescrita)
 
 ### 🎯 Objetivo del Loop
 
@@ -235,7 +112,7 @@ Crear un flujo centrado en la **preparación táctica, liderazgo en combate y co
 - Colaboración con otros jugadores para superar desafíos grupales.
 - Profundidad y rejugabilidad al optimizar combinaciones de escuadras, perks y formaciones.
 
-## 3. 🧍 Mecánicas del Jugador (Versión Reescrita)
+# 3. 🧍 Mecánicas del Jugador (Versión Reescrita)
 
 ### 🎮 Control del Héroe
 
@@ -315,7 +192,7 @@ El jugador es un **comandante táctico con presencia física en el campo**, que:
 
 ---
 
-## 4. 🪖 Unidades y Escuadras (Squads)
+# 4. 🪖 Unidades y Escuadras (Squads)
 
 - **Composición:** solo un tipo de unidad por escuadra
 - **Tipos:** arqueros, lanceros, escuderos, piqueros
@@ -684,7 +561,7 @@ Unidad versátil con lanza y escudo, adaptables tanto en ataque como defensa. Bu
 - Muro de Escudos
 - Cuña
 
-## 5. 🧝 Héroes y Personalización
+# 5. 🧝 Héroes y Personalización
 
 El héroe es el eje de la experiencia táctica del jugador, pero no está diseñado para ser una fuerza dominante individual. En este sistema, el jugador lidera, coordina y potencia a sus escuadras, y su efectividad depende en gran medida del uso estratégico del entorno, habilidades y formaciones, no del combate uno contra uno.
 
@@ -1130,7 +1007,7 @@ Puntos sin asignar: 5
 
 ## 
 
-## 6. 📈 Progresión y Sistema de Perks
+# 6. 📈 Progresión y Sistema de Perks
 
 ---
 
@@ -1264,7 +1141,7 @@ El **barracón** es el centro de gestión de escuadras del jugador dentro del fe
 - Reforzamiento del concepto de escuadra como "unidad básica".
 - Build del héroe ≠ build de combate directo, sino de comando.
 
-## 7. ⚔️ Combate y Sistema de Daño
+# 7. ⚔️ Combate y Sistema de Daño
 
 ---
 
@@ -1394,7 +1271,7 @@ Cuando un héroe es eliminado durante una batalla:
 
 ---
 
-## 8. 🌍 Mapas y Modo de Juego
+# 8. 🌍 Mapas y Modo de Juego
 
 ---
 
@@ -1477,7 +1354,7 @@ Los **puntos de captura** son objetivos estratégicos que deben ser conquistados
 
 ---
 
-## 9. 📏 Flujo del Usuario (Scenes)
+# 9. 📏 Flujo del Usuario (Scenes)
 
 ### 🧭 Objetivo
 
@@ -1604,7 +1481,7 @@ En el MVP, el emparejamiento funciona de forma simple:
 
 ---
 
-## 10. 💰 Economía y Recompensas
+# 10. 💰 Economía y Recompensas
 
 ### 🎯 Filosofía
 
@@ -1686,7 +1563,7 @@ El equipo del héroe (armadura y armas) se consigue a través de:
 
 ---
 
-## 11. 🏐 Alcance del MVP (Versión Jugable Inicial)
+# 11. 🏐 Alcance del MVP (Versión Jugable Inicial)
 
 ### 🎯 Objetivo del MVP
 
@@ -1742,7 +1619,7 @@ Demostrar el **núcleo táctico** del juego:
 
 ---
 
-## 12. 🧭 UI y HUD
+# 12. 🧭 UI y HUD
 
 ### 🎯 Principios de diseño
 
@@ -1818,7 +1695,7 @@ Demostrar el **núcleo táctico** del juego:
 - El sistema de cambio de escuadra solo debe mostrarse cuando el jugador está en un **supply point no disputado**.
 - El minimapa debe evitar mostrar información no relevante (no hay fog of war, pero sí restricción por línea de visión y aliados cercanos).
 
-## 13. 📘 Glosario de Conceptos Clave
+# 13. 📘 Glosario de Conceptos Clave
 
 ---
 
@@ -2137,3 +2014,127 @@ Sistema por el cual héroes y escuadras **ganan experiencia y mejoran**:
 - El progreso es **persistente entre partidas**.
 
 Cada sistema tiene su propia curva de progresión, diseñada para fomentar la especialización y el dominio táctico.
+
+# 15 difinicion inicial
+definicion inicial y no curadad del GDD
+
+ ## Concepts clave
+
+* Heroes: avatar del jugador, creado por el no viene pre creados Como las squads
+* Skins de heroe: skins visuals a las piezas de armadura o arma, solo visuals no afectan en nada a Sus atributos
+* Armas: piezas con las q ataca el heroes solo hay Una pieza, esta determinanla clase del heroes, hay 4 tipos, espalda y escudos, lanza, Arco y espalda a 2 manos
+* Piezas de armadura: son las piezas de armadura q se equipa el heroes, son 4 piezas casco, guantes, Pero y pantalones, hay de 3 tipos, ligera, media y pesada
+* Squads: conjunto de unidades qué posee UN jugador, el cual tiene formaciones(linea, dispersal, testudo, etc…) y ordenes(seguro, atacar, manner posicion), Durante la batalla no puede Haber mas de Un squad activo por heroes Al mismo tiempo, pueden Haber n cantidad de unidades dentro de UN squad
+* Skins de unidad: skin visual para la unidad
+* Unidad: individuo que conforman UN Squad solo puede Haber UN Tipo de unidad dentro de UN squad
+* Perks:  Los talentos (perks) son **modificadores pasivos y activos** que el jugador desbloquea para personalizar su estilo de juego, su rol en combate y la sinergia con su escuadra. El sistema está basado en un **árbol de progresión tipo Path of Exile**, con rutas ramificadas y desbloqueo secuencia
+* Formacion: son las distintas formaciones qué puede adopter UN squad por indication directa del heroe, dependiendo de la squad tiene Unas formaciones u otras
+    - Linea
+    - Testudo
+    - Dispersa
+    - Cuña
+    - Schiltron
+    - Muro de escudos
+* Orden: ordenes qué Les puede dar el heroes a las squads.
+    - Seguir: la squad siguen Al heroes defendiendole
+    - Mantener posicion: la squad SE mantiene el la ubicacion donde lo coloque el heroe, manteniendo la formacion qué Tenga activa de momento
+    - Atacar: el squad ataca a Los enemigos q Tengan dentro de rango
+* Equipamiento: piezas de armadura de unidad, qué SE pierden cuando mueren unidades Durante partida, Una unidad si tiene menos de 50% de equipamiento entra con debufffs y si tienes 0% no puede ser no puede Entrar a partida
+* Loadout: Los jugadores pueden tener Unas squads preseleccionadas fuera de partida qué SE pueden elegir antes de Entrar a partida Como conjunto
+    - Viene limitada por la cantidad de liderazgo q tiene el heroes, es decir si el heroe tiene 3 de liderazgo y hay 4 squads, arqueros 1 de liderazgo, piqueros 2 de liderazgo, lanceros 1 de liderazgo y escuderos 2 de liderazgo, en el loadout no puede guardar arqueros(1), piqueros(2) y lanceros(1) por qué la Suma seria 4 y el maximo para el son 3, SE puede menos o igual pero nunca mas
+* Liderazgo: es lo que limita la cantidad de squads q puede llevar UN heroe a batalla  y la cantidad de squads q entran en UN loadout, el heroe tiene UN Valor y Los squads tienen UN coste de liderazgo
+* estamina: es lo que los heroes utilizan para realizar ataques sprintar y lanzar habilidades
+////batalla 
+* Batalla: Punto central del juego aqui es donde Los jugadores luchan en 2 bandos(atacantes y defensores) capturando banderas para ganar(atacantes) o defendiendolas hasta que acabe el tiempo(defensores) para ganar
+* Supply point: Este es UN elemento presente en la batalla donde si Tu bando ya lo capturo puede curar pasivamente si esta el heroes o su squad esta dentro de rango de action, o puede cambiar su tropas.activa de entre las que trajo a batalla interactuando con el avatar del suppli point. Si Un heroe entra en el rango de action de UN suppli point que no pretence a SU bando y no hay ninguna heroe del bando owner de ese supply point empieza en tiempo de capturas, si Durante la captura entra UN heroe del bando owner SE cancela la captura y SE reinicia el contador. Pueden existir supply point de 3 tipos segun la perspective de jugador
+    - Aliadas: pertenece Al bando del jugador. aparecen de color Azul en el minimapa, el borde de su rango de action SE muestra de Este colour y el avatar del suppli tambien tiene Los detalles de Este colour, en Este el jugador puede interactuar con el supply point y el y su squad SE curan pasivamente con estar dentro del radio de accion
+    - Enemigo: pertenece Al bando contrario Al jugador. Aparece el con Todos sus detalles en rojo, el usuario puede capturarlo mas no interactuar con el, ni SE curan ni el ni au squad
+    - Neutral: no pertenece a nadie aun. SE muestra de color gris, cualquier bando puede capturarlo, nadie puede interactuar con el ni curarce
+* Punto de captura: son las banderas qué qué tienen q captura Los atacantes para ganar o defenderlas hasta q SE arcane el tiempo Los defensores para ganar la partida. Existen de dos tipos las normales y las del base. Cada Bandera tiene un rango de action, es mas grande en las banderas del base
+    - Normales: SE identifican con Una letra, A, B, C, etc… y Al conquistarlas aumentan UN Poco el tiempo de partida para darle mas tiempo a Los atacantes, es decir si quedaban 10 min en el timer Justo cuando SE completa la conquista de Una Bandera normal, SE le agregarian 5 min(por ejemplo) y el timer quedaria 15min
+    - De base: Al conquistar esta Bandera SE termina la partida y gana el bando de Los atacantes, para desbloquea esta Bandera y sea capturable es necesario conquistar las banderas normales
+* Captura de banderas: la captura de banderas funciona de la siguiente Manera
+    - Tiene qué Entrar Al menos uN heroe del bando contrario para q Inicie la Barra de captura
+    - No puede Haber ninguna heroe del bando owner dentro del rango de action de la Bandera
+    - Si UN heroe del bando owner entra dentro del rango de action de la Bandera mientras SE esta conquistando, SE interrumpe la Barra de captura hasta q no haya ninguna heroe del bando owner dentro de dicho rango
+    - El avance en la Barra de captura no SE pierde Al set interrumpida, continua desde el mismo Punto donde quedo
+    - cuando un heroe esta dentro del rango de la bandera que se esta capturando va ganado puntos de captura que se muestan al final de la partida en el post batalla
+* Maquinaria de asedio: elemetos Como Torres de asedio y arietes qué SE usan para asediar en Una batalla, solo el bando atacante tiene acceso a ellas y Debe interactuar con ellos para qué su unidad Los empuje de su Punto de partida a SU Punto de contacto
+    - Torres de asedio: para tener acceso a lo alto de las murallas
+    - Ariete: para romper puertas
+* Bandos: conjunto de jugadores qué juegan juntos para ganar Una partida o batalla existen 2 bandos atacantes y defensores
+* Spawn points: puntos de aparcion para los heroes con sus squads al empezar la partida
+//// Combate
+* Daños y defensa: existe 3 tipos de daño, contundente(blunt), perforante(piercing), y cortante(slashing) cada squad y heroes poseen estos 3 tipos de daños en diferentes proporciones, y existe Una contraparte defensive de cada Uno(defensa contundente, perforante y cortante) q SE toman en cuenta a la hora De la asignacion de daño
+* Penetracion de armadura: la penetracion de armadura es otro Valor q SE Toma en cuenta a hora De asignacion de daño, existen Una por cada Tipo de daño(contundente, perforante y cortante) y el Valor de cada Una SE Salta la defensa de ese Tipo y ese daño directo a la Vida, por ejemplo si voy a hacer 1000 puntos de daño cortante y el enemigos tienen 450 de defensa cortante entran 550, Pero si el qué hace daño tiene 100 de penetracion de armadura cortante entran 1000dñC - (450dfC -100paC) qué es igual a 650dñC siendo dñC(daño Cortante), dfC(defensa Cortante) y paC( penetracion de armadura cortante)
+//// Barracon
+* barracon: este es el espacio donde el jugador puede consultar, desbloquear, formar o desvandar Squads fuera de partida
+    - al inicio del juego el usuario no tiene acceso a todas las squads, las va desbloqueando en este apartado
+    - Formar: crear un squad del tipo de squad desbloqueado, las squads formadas son las que van ganando exp en partidas y pueden desbloquear cosas en consecuencia
+    - Desvandar: destruye una Squad formada con aterioridad perdiendo progreso nivel y demas cosas asociadas a ella
+
+## Flujo o journey de un jugador
+
+vamos a aondar un poco mas en la mecanicas de los mapas de feudo para el MVP,
+
+las batallas de feudo (vamos a llamarlas solo "Batallas" de ahora en adelante  porq son las unicas que hay en este MVP) son el core del juego.
+vamos a defenir un flujo de actividad del usuario dentro del juego desde que abre el juego:
+
+1. al iniciar se le muestra una interfaz para llenar los datos de "usuario" y "password"
+2. una vez introducidos estos datos y son correctos, pasa a la seleccion de personajes
+3. aqui en la interfaz de seleccion de personajes, el usuario puede:
+3.1) crear personajes
+3.2) elegir entre los personajes que tenga creados
+3.3) al elegir un personaje se visualiza el personaje en 3d con las armaduras que tenga activas y las skins
+3.4) y una vez elige un personaje se le ativa un boton en la interfaz que dicen "entrar" y lo presiona
+4. una vez presionado el boton entrar y con el personaje valido escogido, aparece la pantalla de carga, mientras se carga el unico feudo o ciudad que tendremos donde aparecera e interactuaran todos los jugadores (el feudo)
+5. al terminar de cargar el mapa el usuario aparece en el  feudo
+6. dentro de la interfaz general del usuario cuando esta en el feudo aparece un boton en parte superior derecha, con la forma de una miniatura de un castillo, que al presionarlo lo mete en la cola de espera para entrar en "Batalla"
+7. el juego por detras recibe todas las solicitudes de batalla y los junta de forma aleatoria hasta llenar un Lobby automatico de batalla(ya sea 3vs3, 5vs5 o 15vs15), tomaremos en este ejemplo que es 3vs3
+8. una vez lleno el lobby, el juego saca a los jugadores 6 jugadores que conforman el lobby y los coloca de forma aleatoria en los bandos(3 atacantes y 3 defensores y les muestra a pantalla completa la interfaz de la fase de preparacion de la batalla
+9. en esta interfaz de la fase de preparacion de batalla, el jugador puede:
+9.1) elegir las Squads de entre las que tiene disponibles sin superar su limite de liderazgo
+9.2) elegir el punto de respawn donde quiere parecer de entre los que tiene disponible su bando
+9.2.1) en la interfaz se muestra un mini mapa del mapa de batalla y los puntos de spawn se muestran en este mini mapa con una miniatura interactuable que al usuario clickar en ellas se selecciona y cambia de color
+9.3) elegir entre los loadouts de tropas que tiene
+9.4) y presionar continuar y se le bloquea la seleccion hasta que el resto de jugadores presionen continuar o se acababe el tiempo
+9.5) si se acaba el tiempo y el jugador no ha dado continuar pasa automaticamente con lo que tenga elegido
+9.6) pasan a la pantalla de carga mientras se carga el mapa de batalla y se cargan todos los heroes y las tropas en el mismo
+9.7) una vez cargado todo se muestra el personaje y se desarrolla la batalla
+10. una vez terminada la batalla y se haya determinado ganador, se pasa a una interfaz de pantalla completa con el resumen de la batalla(cuantas unidades mato el jugador con cada unidad, cuales Squads utilizo y cuanto mato con cada una, ademas la exp que gano el heroe y cada unidad, y en esta interfaz un boton continuar
+10.1) al presionar continuar, lo saca de la vista de resumen de batalla y lo lleva al mapa del feudo
+
+## Scenes(por no encontrar una mejor manera de llamarlas)
+
+espacios donde estara el jugador o pantallas diferenciadas o stages donde el jugador interactuara con la interfaz
+
+- login
+- seleccion de personaje:
+    - selecciona de entre los avatares que tenga creados, se identifican por nombre
+- creacion de personaje:
+    - solo se podra elegir entre 3 avatares pre creados, pero podra crear un nombre para identificarlo
+- pantallas de carga
+- feudo: espacio central donde coexistiran los jugadores mientras no esten en partida
+    - en este espacio o Scene el jugador podra ver su avatar y moverse con el por el feudo pero no podra combatir, lanzar habiliades, usar perks, o desplegar Squads
+- preparacion de batalla:
+    - aqui es donde el usuario elige los squads que puede llevar a la partida siempre limitado por su atributo de liderazgo, ademas puede elegir uno de sus 3 loadout que aparecen como botones en la parte inferior de este panel y se llenara automaticamente los slots de la parte superior mostrando las unidades que conforman ese loadout
+    - se ven en el panel lateral izquierdo todos los jugadores que forman parte del equipo del jugador
+    - en la panel inferior central  esta UI de seleccion de squads
+    - en la parte superior el timer para empezar partida(3 miin)
+    - en la parte central y derecha un mapa del feudo de la batalla, en ella se muestran los Spawn points para que los seleccione el heroe y la ubicacion de los puntos de captura y supply points
+    - en la parte inferior derecha esta el panel donde el usuario puede ver y cambiar los slots de armaduras y arma que llevara a batalla
+- batalla
+    - aqui es donde se desarrolla todo el combate
+    - los jugadores ven sus avatar y su squad activo, pueden dar ordenes a sus squads, cambiar formaciones, luchar contra unidades enemigas, conquistar supply points y puntos de captura y demas
+    - en la parte inferior izquierda de la hud esta la ui de tropa que muestra, imagen de unidad, posibles ordenes, posibles formaciones, cantidad de unidades vivas/total
+    - en la parte central inferior, icono de clase de heroe, barra de vida y panel de habilidades que puede utilizar
+    - cuando se elimina a una unidad enemiga aparace por unos segundos el contador de unidades enemigas eliminadas, pegado al derecho de la pantalla centrado verticalmente
+    - cuando una unidad asiga daño sale un popup damage que muestra el valor del daño que hizo y desaparece en menos de un segundo
+    - si la bandera de base esta disponible para conquistar se muestra el icono(rombo con el color ya sea aliada o enemiga con el icono del tipo de badera en el centro) con la barra de conquista circular a su alrededor con su progreso
+    - el timer de batalla pegado a la parte superior, centrada horizontalmente
+    - en la parte inferior derecha, pegado al borde se muesta el minimapa de la batalla donde se muestran los puntos de captura y supply points y su estado actual, mas la ubicacion de todos los heroes aliados
+- post batalla
+    - es una pantalla donde se muestra el resumen de batalla, que Squads utilizo el heroe, que unidades mato con cada squad, exp que gano con cada una, y si se gano o se perdio la partida, se divide en 3 pestañas
+        - pestaña de overall, muestra daño total, daño total recibido, contador de unidades matadas general, experiecia de heroe y de Squad ganado, y distintos elementos ganados en la partida
+        - pestaña de Squads: muestra las Squads utilizadas, cuantas unidades mato cada una cuanta exp gano cada una
+        - pestaña de equipo: muestra 2 tablas, una a la izquierda con todos los jugadores aliados, cuanto mato cada heroe, su puntaje, si fue MVP, puntos de captura y en la parte derecha muestra
