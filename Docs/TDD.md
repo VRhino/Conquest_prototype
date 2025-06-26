@@ -57,6 +57,7 @@
 - 7.2 Guardado local en MVP
 - 7.3 Estructura de ScriptableObjects para perks y escuadras
 - 7.4 Sistema de perks: carga, activación y visualización
+- 7.5 Sistema de clases de heroe
 
 ### 8. Multijugador (MVP)
 
@@ -741,8 +742,7 @@ Cada unidad tiene defensas diferenciadas por tipo y los ataques tienen **penetra
 🧩 **Componentes:**
 
 ```csharp
-csharp
-CopiarEditar
+
 enum DamageType { Blunt, Slashing, Piercing }
 
 enum DamageCategory { Normal, Critical, Ability }
@@ -760,8 +760,7 @@ DamageProfile (ScriptableObject)
 ```
 
 ```csharp
-csharp
-CopiarEditar
+
 DefenseComponent (IComponentData)
 - bluntDefense: float
 - slashDefense: float
@@ -770,8 +769,7 @@ DefenseComponent (IComponentData)
 ```
 
 ```csharp
-csharp
-CopiarEditar
+
 PenetrationComponent (IComponentData)
 - bluntPenetration: float
 - slashPenetration: float
@@ -1270,6 +1268,396 @@ PerkManager (UI)
 - `HUD` representa el estado de cada perk con íconos, cooldown, y tooltips
 
 ---
+### 🔀 7.5 Sistema de Clases de Héroe
+
+#### 📌 Descripción
+
+Cada clase de héroe (Espada y Escudo, Espada a Dos Manos, Lanza, Arco) define su rol táctico, atributos base, límites de progresión, habilidades exclusivas y sinergias con escuadras. La implementación debe garantizar que las clases:
+
+- Sean fácilmente instanciables desde datos externos.
+- Impongan límites a la asignación de atributos.
+- Asignen automáticamente habilidades compatibles.
+- Permitan perks únicos según clase.
+
+---
+
+#### 🧩 Componentes Técnicos
+
+#### `HeroClassDefinition` (ScriptableObject)
+
+Define los parámetros estáticos de cada clase.
+
+```csharp
+public enum HeroClass {
+    EspadaYEscudo,
+    EspadaDosManos,
+    Lanza,
+    Arco
+}
+
+[CreateAssetMenu(menuName = "Hero/Class Definition")]
+public class HeroClassDefinition : ScriptableObject {
+    public HeroClass heroClass;
+    public Sprite icon;
+    public string description;
+
+    public int baseFuerza;
+    public int baseDestreza;
+    public int baseArmadura;
+    public int baseVitalidad;
+
+    public int minFuerza, maxFuerza;
+    public int minDestreza, maxDestreza;
+    public int minArmadura, maxArmadura;
+    public int minVitalidad, maxVitalidad;
+
+    public GameObject weaponPrefab;
+    public List<HeroAbilityData> abilities;
+    public List<PerkData> validClassPerks;
+}
+
+```
+
+#### `HeroAttributesComponent` (ECS)
+
+```csharp
+public struct HeroAttributesComponent : IComponentData {
+    public int fuerza;
+    public int destreza;
+    public int armadura;
+    public int vitalidad;
+    public Entity classDefinition; // referencia a HeroClassDefinition
+}
+
+```
+
+#### `HeroAbilityComponent` (ECS)
+
+```csharp
+public struct HeroAbilityComponent : IComponentData {
+    public Entity habilidad1; // Q
+    public Entity habilidad2; // E
+    public Entity habilidad3; // R
+    public Entity ultimate;   // F
+}
+
+```
+
+---
+
+#### ⚙️ Sistemas Involucrados
+
+#### `HeroInitializationSystem`
+
+- Carga atributos base y habilidades desde `HeroClassDefinition`.
+- Se ejecuta al crear un nuevo héroe o cargar una partida.
+
+#### `HeroAttributeSystem`
+
+- Valida en tiempo real que los puntos asignados no excedan los límites definidos por clase.
+
+```csharp
+if (nuevoValor > clase.maxFuerza || nuevoValor < clase.minFuerza)
+    bloquearAsignación();
+
+```
+
+#### `PerkSystem` / `PerkTreeUI`
+
+- Filtra perks según clase del héroe.
+
+```csharp
+if (perk.tags.Contains("Arco") && heroClass != HeroClass.Arco)
+    ocultarPerk();
+
+```
+
+#### `LoadoutSystem`
+
+- Verifica que el arma equipada coincida con el `HeroClassDefinition`.
+- Impide uso de escuadras o perks no compatibles.
+
+---
+
+#### 🖥️ UI
+
+- Panel de creación y carga de héroe debe mostrar:
+    - Descripción de clase.
+    - Rango permitido de atributos.
+    - Habilidades disponibles (preview).
+    - Arma obligatoria para esa clase.
+    - Perks exclusivos habilitados.
+
+---
+
+#### ✅ Validaciones Críticas
+
+| Validación | Nivel | Acción |
+| --- | --- | --- |
+| Arma incompatible con clase | Loadout / Combate | Bloquear |
+| Atributo fuera de rango | UI de atributos | Evitar asignación |
+| Perk exclusivo de otra clase | UI de perks | Ocultar o desactivar |
+| Habilidad no definida por clase | Combate | Invalidar ejecución |
+
+---
+
+### 🧬 7.6 Progresión Avanzada de Escuadras y Sinergias
+
+📌 **Objetivo:**
+
+Expandir la progresión de escuadras más allá del nivel numérico, incorporando habilidades, formaciones, equipamiento y sinergias con el héroe, basadas en el diseño del GDD.
+
+---
+
+#### 🗂️ 7.6.1 ScriptableObjects por Tipo de Escuadra
+
+Cada escuadra estará representada por un `SquadData` específico, que contendrá:
+
+```csharp
+
+[CreateAssetMenu(menuName = "Squads/SquadDataExtended")]
+public class SquadData : ScriptableObject {
+    [Header("Identificación")]
+    public string squadName;
+    public SquadType tipo; // Ej. Escuderos, Arqueros
+    public Sprite icon;
+    public GameObject prefab;
+
+    [Header("Formaciones y Liderazgo")]
+    public List<FormationType> availableFormations;
+    public int liderazgoCost;
+    public BehaviorProfile behaviorProfile;
+
+    [Header("Habilidades por Nivel")]
+    public List<AbilityData> abilitiesByLevel;
+
+    [Header("Atributos Base (Unidad)")]
+    public float vidaBase;
+    public float velocidadBase;
+    public float masa;
+    public float peso; // ligero, medio, pesado
+    public float bloqueo; // solo si tiene escudo
+
+    [Header("Defensas por Tipo")]
+    public float defensaCortante;
+    public float defensaPerforante;
+    public float defensaContundente;
+
+    [Header("Daño y Penetración")]
+    public float dañoCortante;
+    public float dañoPerforante;
+    public float dañoContundente;
+
+    public float penetracionCortante;
+    public float penetracionPerforante;
+    public float penetracionContundente;
+
+    [Header("Solo para Unidades a Distancia")]
+    public bool esUnidadADistancia;
+    public float alcance;
+    public float precision;
+    public float cadenciaFuego;
+    public float velocidadRecarga;
+    public int municionTotal;
+
+    [Header("Progresión por Nivel")]
+    public AnimationCurve vidaCurve;
+    public AnimationCurve dañoCurve;
+    public AnimationCurve defensaCurve;
+    public AnimationCurve velocidadCurve;
+}
+
+```
+
+- **abilitiesByLevel:** lista ordenada de habilidades (activas/pasivas) desbloqueables por nivel.
+- **baseStats:** contiene los atributos iniciales (vida, daño, defensas, etc.).
+- **availableFormations:** accesibles desde el inicio o con desbloqueo progresivo.
+- **behaviorProfile:** define estilo táctico (ver abajo).
+
+---
+
+#### 🧠 7.6.2 Sistema `SquadProgressionSystem`
+
+Controla la experiencia y progresión de cada escuadra activa:
+
+```csharp
+
+SquadProgressComponent
+- level: int
+- currentXP: float
+- xpToNextLevel: float
+- unlockedAbilities: List<AbilityData>
+- unlockedFormations: List<FormationType>
+
+```
+
+- La experiencia se gana por escuadra según su participación en combate.
+- Cada `10 niveles`, se desbloquea una habilidad nueva.
+- Nuevas formaciones se habilitan en niveles específicos (ej. Testudo en nivel 10 para Escuderos).
+
+---
+
+#### 🛡️ 7.6.3 Sistema de `EquipamientoComponent`
+
+Cada unidad tendrá un estado de equipamiento persistente:
+
+```csharp
+
+UnitEquipmentComponent
+- armorPercent: float
+- isDeployable: bool
+- hasDebuff: bool
+
+```
+
+- Si `armorPercent < 50%` ➜ `hasDebuff = true`
+- Si `armorPercent == 0%` ➜ `isDeployable = false`
+- Este estado se actualiza al morir unidades y se guarda entre partidas.
+- El HUD de preparación de batalla mostrará advertencias si una escuadra no es viable.
+
+---
+
+#### 🧠 7.6.4 BehaviorProfiles de Escuadras
+
+Cada tipo de escuadra tendrá un perfil de comportamiento táctico predefinido, usado por la IA y animaciones contextuales.
+
+```csharp
+
+public enum BehaviorProfile {
+    Defensivo,
+    Hostigador,
+    Anticarga,
+    Versátil
+}
+
+```
+
+| Escuadra | Perfil |
+| --- | --- |
+| Escuderos | Defensivo |
+| Arqueros | Hostigador |
+| Piqueros | Anticarga |
+| Lanceros | Versátil |
+
+> Estos perfiles afectan la toma de decisiones AI en SquadAISystem y priorización de objetivos.
+> 
+
+#### 📊 7.6.5 Sistema de Atributos de Unidad (por Escuadra)
+
+📌 **Objetivo:**
+
+Implementar un sistema estructurado de atributos para unidades individuales dentro de cada escuadra, alineado con el apartado **4.12 del GDD**, para soportar progresión, balance y sinergias.
+
+---
+
+#### 🧩 Estructura `UnitStatsComponent`
+
+Cada unidad dentro de una escuadra portará un componente con atributos base, que escalan con nivel y pueden ser modificados por perks o habilidades.
+
+```csharp
+
+public struct UnitStatsComponent : IComponentData {
+    public float vida;
+    public float velocidad;
+    public float masa;
+    public float peso; // 1=ligero, 2=medio, 3=peso
+    public float bloqueo; // si tiene escudo
+
+    public float defensaCortante;
+    public float defensaPerforante;
+    public float defensaContundente;
+
+    public float dañoCortante;
+    public float dañoPerforante;
+    public float dañoContundente;
+
+    public float penetracionCortante;
+    public float penetracionPerforante;
+    public float penetracionContundente;
+
+    public int liderazgoCosto;
+}
+
+```
+
+> Los atributos se poblarán desde SquadData y escalarán según nivel en SquadProgressComponent.
+> 
+
+---
+
+#### 🏹 Atributos Exclusivos para Unidades a Distancia
+
+Se añade un componente adicional opcional para escuadras como **Arqueros**:
+
+```csharp
+
+public struct UnitRangedStatsComponent : IComponentData {
+    public float alcance;
+    public float precision;
+    public float cadenciaFuego;
+    public float velocidadRecarga;
+    public int municionTotal;
+}
+
+```
+
+> Se asocia solo si el SquadType lo requiere. Usado por RangedAttackSystem y HUD.
+> 
+
+---
+
+#### 🔁 Integración con otros sistemas
+
+- `SquadAttackSystem`: consulta tipo de daño y penetración para calcular daño efectivo.
+- `SquadAIComponent`: usa `velocidad`, `alcance`, y `masa` para determinar tácticas óptimas.
+- `FormationSystem`: puede modificar temporalmente atributos (ej. bonus de defensa en *Testudo*).
+- `PerkSystem`: perks del héroe pueden modificar ciertos stats como `precisión` o `velocidad`.
+
+---
+
+#### 📈 Escalado por Nivel
+
+Cada escuadra usa una función de progresión aplicada sobre `UnitStatsComponent`:
+
+```csharp
+
+public struct SquadProgressionStats {
+    public AnimationCurve vidaCurve;
+    public AnimationCurve dañoCurve;
+    public AnimationCurve defensaCurve;
+    public AnimationCurve velocidadCurve;
+}
+
+```
+
+> Estas curvas definen el escalado base hasta nivel 30, sin intervención del jugador.
+> 
+
+---
+
+#### 🧪 Ejemplo Visual (Escuderos, Nivel 1)
+
+| Atributo | Valor |
+| --- | --- |
+| Vida | 120 |
+| Defensa Contundente | 25 |
+| Daño Cortante | 14 |
+| Penetración Cortante | 3 |
+| Velocidad | 2.5 |
+| Bloqueo | 40 |
+| Liderazgo | 2 |
+
+---
+
+#### 🔒 Notas de Validación
+
+- Las unidades **no pueden tener atributos modificados directamente por el jugador** (según GDD).
+- Los modificadores válidos provienen de:
+    - Nivel de escuadra
+    - Formación activa
+    - Habilidades de escuadra
+    - Perks del héroe
+- Estos datos deben sincronizarse entre cliente y servidor (Netcode Snapshot).
 
 ## 🌐 8. Multijugador (MVP)
 
