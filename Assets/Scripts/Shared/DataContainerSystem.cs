@@ -15,7 +15,12 @@ public partial class DataContainerSystem : SystemBase
         if (!SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out _))
         {
             var em = World.DefaultGameObjectInjectionWorld.EntityManager;
-            Entity entity = em.CreateEntity(typeof(DataContainerComponent));
+            Entity entity = em.CreateEntity(typeof(DataContainerComponent), typeof(HeroProgressComponent));
+
+            var save = LocalSaveSystem.LoadGame();
+            if (save.heroProgress == null)
+                save.heroProgress = new LocalSaveSystem.HeroProgressData();
+
             em.SetComponentData(entity, new DataContainerComponent
             {
                 playerID = 0,
@@ -27,6 +32,14 @@ public partial class DataContainerSystem : SystemBase
                 totalLeadershipUsed = 0,
                 selectedSpawnID = -1,
                 isReady = false
+            });
+
+            em.SetComponentData(entity, new HeroProgressComponent
+            {
+                level = save.heroProgress.level,
+                currentXP = save.heroProgress.currentXP,
+                xpToNextLevel = save.heroProgress.xpToNextLevel,
+                perkPoints = save.heroProgress.perkPoints
             });
         }
     }

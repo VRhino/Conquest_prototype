@@ -14,6 +14,17 @@ public static class LocalSaveSystem
     public class PlayerProgressData
     {
         public List<LoadoutData> loadouts = new();
+        public HeroProgressData heroProgress = new();
+    }
+
+    /// <summary>Serializable representation of the hero progression.</summary>
+    [Serializable]
+    public class HeroProgressData
+    {
+        public int level = 1;
+        public int currentXP = 0;
+        public int xpToNextLevel = 100;
+        public int perkPoints = 0;
     }
 
     /// <summary>Serializable representation of a loadout.</summary>
