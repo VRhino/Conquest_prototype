@@ -14,9 +14,12 @@ public partial class SquadAISystem : SystemBase
     {
         const float cohesionRadiusSq = 25f; // Distance squared to consider units scattered
 
-        foreach (var (ai, state, units, entity) in SystemAPI
+        var dataLookup = GetComponentLookup<SquadDataComponent>(true);
+
+        foreach (var (ai, state, dataRef, units, entity) in SystemAPI
                      .Query<RefRW<SquadAIComponent>,
-                            RefRO<SquadStateComponent>,
+                            RefRW<SquadStateComponent>,
+                            RefRO<SquadDataReference>,
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
@@ -50,27 +53,42 @@ public partial class SquadAISystem : SystemBase
                 }
             }
 
+            BehaviorProfile profile = BehaviorProfile.Versatile;
+            if (dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
+                profile = data.behaviorProfile;
+
             SquadAIState desiredState;
-            if (dispersed)
+            switch (profile)
             {
-                desiredState = SquadAIState.Regrouping;
-            }
-            else if (state.ValueRO.currentOrder == SquadOrderType.FollowHero ||
-                     state.ValueRO.currentOrder == SquadOrderType.Attack)
-            {
-                desiredState = enemiesDetected ? SquadAIState.Attacking : SquadAIState.Idle;
-            }
-            else if (state.ValueRO.currentOrder == SquadOrderType.HoldPosition)
-            {
-                desiredState = enemiesDetected ? SquadAIState.Attacking : SquadAIState.Defending;
-            }
-            else
-            {
-                desiredState = SquadAIState.Idle;
+                case BehaviorProfile.Defensive:
+                    desiredState = dispersed ? SquadAIState.Regrouping
+                                             : enemiesDetected ? SquadAIState.Defending
+                                                               : SquadAIState.Idle;
+                    break;
+                case BehaviorProfile.Harassing:
+                    desiredState = dispersed ? SquadAIState.Regrouping
+                                             : enemiesDetected ? SquadAIState.Attacking
+                                                               : SquadAIState.Idle;
+                    break;
+                case BehaviorProfile.AntiCharge:
+                    desiredState = dispersed ? SquadAIState.Regrouping
+                                             : SquadAIState.Defending;
+                    break;
+                default: // Versatile
+                    if (dispersed)
+                        desiredState = SquadAIState.Regrouping;
+                    else if (enemiesDetected)
+                        desiredState = SquadAIState.Attacking;
+                    else if (state.ValueRO.currentOrder == SquadOrderType.HoldPosition)
+                        desiredState = SquadAIState.Defending;
+                    else
+                        desiredState = SquadAIState.Idle;
+                    break;
             }
 
             ai.ValueRW.state = desiredState;
             ai.ValueRW.isInCombat = enemiesDetected;
+            state.ValueRW.isInCombat = enemiesDetected;
         }
     }
 }

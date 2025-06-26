@@ -6,13 +6,13 @@ using Unity.Entities;
 public enum HeroAttributeType
 {
     /// <summary>Strength attribute.</summary>
-    Fuerza,
+    Strength,
     /// <summary>Dexterity attribute.</summary>
-    Destreza,
+    Dexterity,
     /// <summary>Armor attribute.</summary>
-    Armadura,
+    Armor,
     /// <summary>Vitality attribute.</summary>
-    Vitalidad
+    Vitality
 }
 
 /// <summary>

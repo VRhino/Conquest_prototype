@@ -26,10 +26,10 @@ public enum FormationType
 /// </summary>
 public enum SquadType
 {
-    Escuderos,
-    Arqueros,
-    Piqueros,
-    Lanceros
+    Squires,
+    Archers,
+    Pikemen,
+    Lancers
 }
 
 /// <summary>
@@ -37,8 +37,8 @@ public enum SquadType
 /// </summary>
 public enum BehaviorProfile
 {
-    Defensivo,
-    Hostigador,
-    Anticarga,
-    Versatil
+    Defensive,
+    Harassing,
+    AntiCharge,
+    Versatile
 }

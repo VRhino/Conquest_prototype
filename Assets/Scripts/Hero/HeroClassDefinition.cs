@@ -6,10 +6,10 @@ using UnityEngine;
 /// </summary>
 public enum HeroClass
 {
-    EspadaYEscudo,
-    EspadaDosManos,
-    Lanza,
-    Arco
+    SwordAndShield,
+    TwoHandedSword,
+    Spear,
+    Bow
 }
 
 /// <summary>
