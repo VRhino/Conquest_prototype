@@ -9,6 +9,8 @@ public struct SquadDataComponent : IComponentData
     public float velocidadBase;
     public float masa;
     public float peso;
+    /// <summary>Classification of squad units.</summary>
+    public SquadType squadType;
     public float bloqueo;
 
     public float defensaCortante;
