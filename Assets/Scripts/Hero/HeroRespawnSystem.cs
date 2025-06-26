@@ -12,21 +12,19 @@ public partial class HeroRespawnSystem : SystemBase
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
 
-        foreach (var (life, health, spawn, transform) in
+        foreach (var (life, health, spawn) in
                  SystemAPI.Query<RefRW<HeroLifeComponent>,
                                  RefRW<HealthComponent>,
-                                 RefRO<HeroSpawnComponent>,
-                                 RefRW<LocalTransform>>()
-                        .WithAll<IsLocalPlayer>())
+                                 RefRW<HeroSpawnComponent>>()
+                                 .WithAll<IsLocalPlayer>())
         {
             if (life.ValueRO.isAlive)
             {
                 if (health.ValueRO.currentHealth <= 0f)
                 {
                     life.ValueRW.isAlive = false;
-                    life.ValueRW.deathTimer = life.ValueRO.respawnDelay;
+                    life.ValueRW.deathTimer = life.ValueRO.respawnCooldown;
                 }
-
                 continue;
             }
 
@@ -34,11 +32,10 @@ public partial class HeroRespawnSystem : SystemBase
             if (life.ValueRO.deathTimer <= 0f)
             {
                 life.ValueRW.isAlive = true;
-                life.ValueRW.deathTimer = life.ValueRO.respawnDelay;
+                life.ValueRW.deathTimer = life.ValueRO.respawnCooldown;
                 health.ValueRW.currentHealth = health.ValueRO.maxHealth;
 
-                transform.ValueRW.Position = spawn.ValueRO.spawnPosition;
-                transform.ValueRW.Rotation = spawn.ValueRO.spawnRotation;
+                spawn.ValueRW.hasSpawned = false;
             }
         }
     }

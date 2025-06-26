@@ -13,5 +13,5 @@ public struct HeroLifeComponent : IComponentData
     public float deathTimer;
 
     /// <summary>Total time before the hero respawns.</summary>
-    public float respawnDelay;
+    public float respawnCooldown;
 }
