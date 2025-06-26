@@ -2135,7 +2135,7 @@ Para asegurar buen rendimiento durante el MVP, se aplican prácticas básicas de
 
 🧩 **Componentes recomendados:**
 
-- `PerformanceTrackerSystem` (opcional): muestra FPS, draw calls y GC.
+- `PerformanceTrackerSystem`: muestra FPS, draw calls y memoria GC en tiempo real.
 - `ObjectPoolSystem`: para proyectiles, habilidades y unidades temporales.
 - `AsyncSceneLoader`: para evitar stutter al cambiar de escena.
 
