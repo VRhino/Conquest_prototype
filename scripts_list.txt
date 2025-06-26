@@ -92,3 +92,11 @@ C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Squads.meta
 C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\UI\UIManager.cs
 C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\UI\UIManagerSystem.cs
 C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\UI.meta
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Hero\HeroAttributesComponent.cs
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Hero\HeroClassDefinitionComponent.cs
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Hero\HeroClassDefinitionBaker.cs
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Hero\HeroClassReferenceAuthoring.cs
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Hero\HeroInitializationSystem.cs
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Perks\PerkDataComponent.cs
+C:\Users\VRINO\Conquest tactics\prototipo_curado\Assets\Scripts\Perks\PerkDataBaker.cs
+
