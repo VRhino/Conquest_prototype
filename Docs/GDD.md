@@ -1420,9 +1420,15 @@ El mapa tiene un diseño **asimétrico semi-lineal**, con tres zonas clave:
 
 ### 🅰️ Puntos de Captura
 
-- **A (Central):** objetivo primario en disputa desde el minuto 0.
-- **Base (Final):** zona final de captura si A cae.
-- Cada punto de captura requiere **presencia de escuadra(s) aliada(s)** sin enemigos cerca para progresar.
+Los **puntos de captura** son objetivos estratégicos que deben ser conquistados por el bando atacante para avanzar y ganar la partida. Su funcionamiento es diferente al de los supply points:
+
+- **Propiedad inicial:** Todos los puntos de captura pertenecen al bando defensor al inicio de la partida.
+- **Captura irreversible:** Una vez que un punto de captura es conquistado por el bando atacante, **no puede ser recuperado por el bando defensor** durante esa partida.
+- **Desbloqueo secuencial:** Algunos puntos de captura están **bloqueados** al inicio y solo se pueden capturar si se ha conquistado previamente el punto anterior (precondición). Un punto bloqueado **no puede ser capturado** hasta que se desbloquee.
+- **Punto de base:** Si el atacante conquista el punto de base, la partida termina inmediatamente con la victoria del bando atacante.
+- **Progresión:** Al capturar un punto previo, se desbloquea el siguiente punto de captura en la secuencia, permitiendo el avance del equipo atacante.
+- **Diferencia con supply points:** A diferencia de los supply points, los puntos de captura **no pueden cambiar de dueño varias veces**; su captura es definitiva para el resto de la partida.
+
 
 ### 🔄 Supply Points (2 por bando)
 

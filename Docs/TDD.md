@@ -549,7 +549,14 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     
     ### 📌 Descripción:
     
-    Zonas claves para el objetivo de la partida. Se activan cuando un héroe entra, y se contestan si hay presencia enemiga.
+    Los puntos de captura son zonas estratégicas que deben ser conquistadas por el bando atacante para avanzar y ganar la partida. Su funcionamiento es diferente al de los supply points:
+    
+    - **Propiedad inicial:** Todos los puntos de captura pertenecen al bando defensor al inicio de la partida.
+    - **Captura irreversible:** Una vez que un punto de captura es conquistado por el bando atacante, no puede ser recuperado por el bando defensor durante esa partida.
+    - **Desbloqueo secuencial:** Algunos puntos de captura están bloqueados al inicio y solo se pueden capturar si se ha conquistado previamente el punto anterior (precondición). Un punto bloqueado no puede ser capturado hasta que se desbloquee.
+    - **Punto de base:** Si el atacante conquista el punto de base, la partida termina inmediatamente con la victoria del bando atacante.
+    - **Progresión:** Al capturar un punto previo, se desbloquea el siguiente punto de captura en la secuencia, permitiendo el avance del equipo atacante.
+    - **Diferencia con supply points:** A diferencia de los supply points, los puntos de captura no pueden cambiar de dueño varias veces; su captura es definitiva para el resto de la partida.
     
     ### 🧩 Componentes:
     
@@ -558,9 +565,13 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
         - `isContested`: bool
         - `teamOwner`: int (0: neutral, 1/2: equipos)
         - `isBase`: bool
+        - `isLocked`: bool (indica si el punto está bloqueado y no puede capturarse)
+        - `unlockCondition`: referencia al punto previo que debe ser capturado
     - `CaptureZoneTriggerSystem`:
         - Detecta héroes dentro del radio
-        - Actualiza captura si cumple condiciones (nadie del bando propietario presente)
+        - Actualiza captura si cumple condiciones (nadie del bando propietario presente y el punto está desbloqueado)
+        - Al completarse la captura, si el punto desbloquea otro, lo activa
+        - Si es un punto de base y es capturado, termina la partida
     - `CaptureProgressUISystem`:
         - Sincroniza HUD de progreso
         - Envía eventos de captura completada
@@ -569,6 +580,8 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     
     - El HUD recibe cambios de color, íconos o tiempo.
     - El resultado de la captura puede desbloquear zonas (ej.: Base se desbloquea tras capturar A/B).
+    - Los puntos de captura no pueden ser recuperados por el bando defensor una vez perdidos.
+    - Los supply points pueden cambiar de dueño varias veces durante la partida, pero los puntos de captura no.
     
     ---
     
