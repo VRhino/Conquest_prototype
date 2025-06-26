@@ -42,8 +42,23 @@ public partial class HeroInputSystem : SystemBase
                 input.isAttacking = mouse.leftButton.isPressed;
             }
 
+            bool interact = keyboard != null && keyboard.fKey.wasPressedThisFrame;
+
             // Write the captured values back to the entity component.
             SystemAPI.SetComponent(entity, input);
+
+            if (SystemAPI.HasComponent<PlayerInteractionComponent>(entity))
+            {
+                var inter = SystemAPI.GetComponentRW<PlayerInteractionComponent>(entity);
+                inter.ValueRW.interactPressed = interact;
+            }
+            else
+            {
+                SystemAPI.AddComponent(entity, new PlayerInteractionComponent
+                {
+                    interactPressed = interact
+                });
+            }
         }
     }
 }
