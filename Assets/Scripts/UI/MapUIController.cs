@@ -27,7 +27,7 @@ public class MapUIController : MonoBehaviour
 
         foreach (var sp in points)
         {
-            if (sp.teamID != data.playerTeam || !sp.isActive)
+            if (sp.teamID != data.teamID || !sp.isActive)
                 continue;
 
             if (_spawnIconPrefab != null && _spawnContainer != null)
