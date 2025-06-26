@@ -34,6 +34,7 @@ public class SquadDataBaker : Baker<SquadData>
             velocidadBase = authoring.velocidadBase,
             masa = authoring.masa,
             peso = authoring.peso,
+            squadType = authoring.tipo,
             bloqueo = authoring.bloqueo,
             defensaCortante = authoring.defensaCortante,
             defensaPerforante = authoring.defensaPerforante,
