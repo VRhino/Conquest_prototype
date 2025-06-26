@@ -49,6 +49,7 @@
 - 6.3 Estado y retirada de escuadra al morir el héroe
 - 6.4 Reglas del sistema de captura y uso de supply points
 - 6.5 Asignación de spawn inicial
+- 6.6 Panatlla de Preparación de Batalla
 
 ### 7. Progresión y Guardado de Datos
 
@@ -1022,6 +1023,94 @@ HeroSpawnSystem
 
 - `MapUIController` para seleccionar spawn
 - `GameManager` o `MatchController` asigna posición real al iniciar partida
+
+### 🧭 6.6 Pantalla de Preparación de Batalla
+
+📌 *Descripción General*
+
+La **pantalla de preparación de batalla** es una escena transicional crítica entre el lobby de matchmaking y el inicio de la partida. Su propósito es permitir al jugador configurar su estrategia antes del despliegue: seleccionar escuadras, perks, punto de spawn y revisar el mapa táctico.
+
+Esta escena se gestiona como parte del flujo general definido por `SceneFlowManager`, y actúa como punto de validación de datos de entrada para la escena de batalla.
+
+---
+
+⚙️ *Sistemas Involucrados*
+
+- `SceneFlowManager`: gestiona la transición entre escenas y define el estado actual del juego (`enum GamePhase { Feudo, Preparacion, Combate, PostPartida }`).
+- `DataContainer`: almacena los datos persistentes del jugador entre escenas (héroe, escuadras, perks, spawn).
+- `SpawnSelectionSystem`: permite seleccionar un punto de aparición válido sobre el mapa táctico.
+- `LoadoutSystem`: valida que el total de liderazgo del jugador no sea superado y aplica configuraciones de escuadras.
+- `HeroPreviewSystem`: opcionalmente muestra al héroe con su equipamiento actual.
+- `TimerSystem_PreparationPhase`: gestiona la cuenta regresiva y el paso automático si el jugador no confirma.
+
+---
+
+🖥️ *Interfaz de Usuario (UI)*
+
+🎯 Panel Central
+- `MapUIController`: minimapa interactivo que muestra:
+  - Puntos de spawn válidos
+  - Supply points
+  - Objetivos de captura
+  - Indicadores visuales de selección
+
+🧰 Panel Inferior
+- `LoadoutBuilderUI`: slots de escuadra
+  - Arrastrar y soltar escuadras desde las disponibles
+  - Visualización de liderazgo usado / máximo
+- Botones de selección rápida de loadouts predefinidos
+
+🔧 Panel Inferior Derecho
+- `HeroPreviewWidget`: muestra modelo 3D del héroe con su equipamiento y arma activa
+
+🌲 Panel Izquierdo
+- Lista de jugadores del equipo con su estado de confirmación
+
+🧠 Panel Superior
+- Temporizador de preparación
+- Estado global de confirmaciones
+
+✅ Botón Confirmar
+- Se habilita si:
+  - Al menos una escuadra seleccionada
+  - No se excede el liderazgo
+  - Hay un spawn seleccionado
+- Al presionarlo:
+  - Se bloquea la UI
+  - Se marca al jugador como listo
+  - Espera al resto o al final del tiempo
+
+---
+
+🔄 *Lógica de Flujo*
+
+1. Carga inicial desde `DataContainer`.
+2. Visualización de estado actual (loadout, spawn, perks, equipamiento).
+3. Selección de escuadras (drag & drop), perks y punto de spawn.
+4. Confirmación manual o automática al terminar el tiempo.
+5. Validación final y carga de la escena de combate (`AsyncSceneLoader`).
+
+---
+
+📦 *Componentes Clave*
+
+- `SpawnPointComponent`: posición, team, isSelected
+- `SquadData` (ScriptableObject): habilidades, formaciones, liderazgo
+- `PerkData`: perks activos y pasivos
+- `HeroData`: clase, equipamiento, atributos
+- `LoadoutSaveData`: presets de escuadras y perks
+
+---
+
+✅ *Validaciones Técnicas*
+
+- ❌ Escuadra vacía → botón deshabilitado
+- ❌ Liderazgo excedido → UI bloquea selección
+- ❌ Sin spawn seleccionado → advertencia
+- ✅ Si el tiempo expira → se guarda estado actual como definitivo
+
+---
+
 
 ## 🧬 7. Progresión y Guardado de Datos
 
