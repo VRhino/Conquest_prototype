@@ -18,6 +18,13 @@ public partial class SpawnSelectionSystem : SystemBase
                      .WithAll<IsLocalPlayer>()
                      .WithEntityAccess())
         {
+            if (SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var containerEntity))
+            {
+                var data = EntityManager.GetComponentData<DataContainerComponent>(containerEntity);
+                data.selectedSpawnID = request.ValueRO.spawnId;
+                EntityManager.SetComponentData(containerEntity, data);
+            }
+
             spawn.ValueRW.spawnId = request.ValueRO.spawnId;
             spawn.ValueRW.hasSpawned = false;
             ecb.RemoveComponent<SpawnSelectionRequest>(entity);
