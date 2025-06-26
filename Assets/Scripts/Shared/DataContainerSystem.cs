@@ -19,8 +19,10 @@ public partial class DataContainerSystem : SystemBase
             em.SetComponentData(entity, new DataContainerComponent
             {
                 playerName = default,
-                selectedSquad = -1,
+                selectedLoadoutID = -1,
+                selectedSquads = default,
                 selectedPerks = default,
+                totalLeadershipUsed = 0,
                 playerTeam = 0,
                 isReady = false
             });
