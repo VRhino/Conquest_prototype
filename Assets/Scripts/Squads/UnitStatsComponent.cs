@@ -9,7 +9,10 @@ public struct UnitStatsComponent : IComponentData
     public float vida;
     public float velocidad;
     public float masa;
-    public float peso;
+    /// <summary>
+    /// Weight category of the unit: 1=light, 2=medium, 3=heavy.
+    /// </summary>
+    public int peso;
     public float bloqueo;
 
     public float defensaCortante;
