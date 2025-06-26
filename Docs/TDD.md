@@ -604,6 +604,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     - `SquadSwapSystem`:
         - Verifica si se puede hacer el cambio
         - Elimina la escuadra actual, instancia la nueva si está disponible
+        - Lanza `SquadChangeEvent` para sincronizar el nuevo estado
     
     ### 🧩 Curación:
     
@@ -1311,15 +1312,16 @@ El héroe puede cambiar su escuadra **únicamente en supply points seguros**. Es
 SupplyPointComponent
 - ownerTeam: enum
 - isContested: bool
-- healingEnabled: boolSquadChangeRequest (Command)
-- newSquadID: int
+- healingEnabled: bool
+SquadSwapRequest (Command)
+- newSquadId: int
 ```
 
 ```csharp
-SquadChangeSystem (Server-side)
-- Valida condiciones
-- Ejecuta el cambio
-- Dispara eventos de sincronización
+- SquadSwapSystem (Server-side)
+   - Valida condiciones
+   - Ejecuta el cambio
+   - Dispara eventos de sincronización
 ```
 
 🔁 **Interacción:**
