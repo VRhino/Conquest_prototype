@@ -23,6 +23,7 @@ public partial class DataContainerSystem : SystemBase
                 selectedSquads = default,
                 selectedPerks = default,
                 totalLeadershipUsed = 0,
+                selectedSpawnID = -1,
                 playerTeam = 0,
                 isReady = false
             });

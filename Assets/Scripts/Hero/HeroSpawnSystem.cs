@@ -23,6 +23,9 @@ public partial class HeroSpawnSystem : SystemBase
         {
             if (!spawnData.ValueRO.hasSpawned && life.ValueRO.isAlive)
             {
+                if (SystemAPI.TryGetSingleton<DataContainerComponent>(out var data))
+                    spawnData.ValueRW.spawnId = data.selectedSpawnID;
+
                 bool found = false;
                 SpawnPointComponent selected = default;
 
