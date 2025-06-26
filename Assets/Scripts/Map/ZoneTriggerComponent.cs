@@ -17,4 +17,13 @@ public struct ZoneTriggerComponent : IComponentData
 
     /// <summary>Whether the zone is currently active.</summary>
     public bool isActive;
+
+    /// <summary>Radius of the trigger used to detect entities.</summary>
+    public float radius;
+
+    /// <summary>True if the zone cannot be captured yet.</summary>
+    public bool isLocked;
+
+    /// <summary>Marks this zone as the final capture point.</summary>
+    public bool isFinal;
 }
