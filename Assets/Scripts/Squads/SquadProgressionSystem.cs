@@ -24,6 +24,7 @@ public partial class SquadProgressionSystem : SystemBase
         var abilityLookup = GetBufferLookup<AbilityByLevelElement>(true);
         var formationLookup = GetBufferLookup<AvailableFormationElement>(true);
         var unitBufferLookup = GetBufferLookup<SquadUnitElement>(true);
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (progress, dataRef, entity) in SystemAPI
                      .Query<RefRW<SquadProgressComponent>, RefRO<SquadDataReference>>()
@@ -47,8 +48,14 @@ public partial class SquadProgressionSystem : SystemBase
                 ApplyStats(entity, data, progress.ValueRO.level, unitBufferLookup);
                 UnlockAbility(entity, dataRef.ValueRO.dataEntity, progress.ValueRO.level, abilityLookup);
                 UnlockFormation(entity, dataRef.ValueRO.dataEntity, progress.ValueRO.level, formationLookup);
+
+                Entity evt = ecb.CreateEntity();
+                ecb.AddComponent(evt, new SquadLevelUpEvent { squad = entity });
             }
         }
+
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
     }
 
     static float CalculateNext(int level)
@@ -88,7 +95,7 @@ public partial class SquadProgressionSystem : SystemBase
                 vida = data.vidaBase * vidaMul,
                 velocidad = data.velocidadBase * velMul,
                 masa = data.masa,
-                peso = data.peso,
+                peso = (int)math.round(data.peso),
                 bloqueo = data.bloqueo,
                 defensaCortante = data.defensaCortante * defMul,
                 defensaPerforante = data.defensaPerforante * defMul,
