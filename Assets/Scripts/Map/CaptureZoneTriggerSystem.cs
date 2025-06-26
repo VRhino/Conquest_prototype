@@ -97,7 +97,7 @@ public partial class CaptureZoneTriggerSystem : SystemBase
                     SystemAPI.TryGetSingletonEntity<GameStateComponent>(out var stateEntity))
                 {
                     var state = SystemAPI.GetComponentRW<GameStateComponent>(stateEntity);
-                    state.ValueRW.currentPhase = GamePhase.PostGame;
+                    state.ValueRW.currentPhase = GamePhase.PostPartida;
                 }
             }
         }
