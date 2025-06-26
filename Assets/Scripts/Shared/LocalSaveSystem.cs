@@ -4,43 +4,34 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// Simple utility that stores and loads player progress in JSON format
-/// under the application's persistent data path.
+/// Utility used to persist the player's progression locally in JSON format.
 /// </summary>
 public static class LocalSaveSystem
 {
-    /// <summary>Container for all player progress data.</summary>
+    /// <summary>Structure containing the player's progress.</summary>
     [Serializable]
     public class PlayerProgressData
     {
-        public List<LoadoutData> loadouts = new();
-        public HeroProgressData heroProgress = new();
-    }
-
-    /// <summary>Serializable representation of the hero progression.</summary>
-    [Serializable]
-    public class HeroProgressData
-    {
         public int level = 1;
         public int currentXP = 0;
-        public int xpToNextLevel = 100;
         public int perkPoints = 0;
+        public List<LoadoutData> loadouts = new();
     }
 
     /// <summary>Serializable representation of a loadout.</summary>
     [Serializable]
     public class LoadoutData
     {
-        public int loadoutID;
+        public string name = string.Empty;
         public List<int> squadIDs = new();
         public List<int> perkIDs = new();
-        public int leadershipUsed;
+        public int totalLeadership = 0;
     }
 
-    static string FilePath => Path.Combine(Application.persistentDataPath, "save.json");
+    static string FilePath => Path.Combine(Application.persistentDataPath, "player_progress.json");
 
-    /// <summary>Loads the player progress file if it exists.</summary>
-    public static PlayerProgressData LoadGame()
+    /// <summary>Loads the player progress file or returns a new instance.</summary>
+    public static PlayerProgressData LoadProgress()
     {
         if (!File.Exists(FilePath))
             return new PlayerProgressData();
@@ -56,8 +47,8 @@ public static class LocalSaveSystem
         }
     }
 
-    /// <summary>Saves the given progress data to disk.</summary>
-    public static void SaveGame(PlayerProgressData data)
+    /// <summary>Serializes the given data to disk.</summary>
+    public static void SaveProgress(PlayerProgressData data)
     {
         string json = JsonUtility.ToJson(data, true);
         File.WriteAllText(FilePath, json);

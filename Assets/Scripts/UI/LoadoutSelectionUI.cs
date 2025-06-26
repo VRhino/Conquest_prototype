@@ -18,16 +18,16 @@ public class LoadoutSelectionUI : MonoBehaviour
         public Text leadership;
         public Button selectButton;
 
-        public void SetData(LocalSaveSystem.LoadoutData data)
+        public void SetData(LocalSaveSystem.LoadoutData data, int index)
         {
             if (title != null)
-                title.text = $"Loadout {data.loadoutID + 1}";
+                title.text = string.IsNullOrEmpty(data.name) ? $"Loadout {index + 1}" : data.name;
             if (squads != null)
                 squads.text = string.Join(", ", data.squadIDs);
             if (perks != null)
                 perks.text = string.Join(", ", data.perkIDs);
             if (leadership != null)
-                leadership.text = data.leadershipUsed.ToString();
+                leadership.text = data.totalLeadership.ToString();
         }
     }
 
@@ -39,14 +39,14 @@ public class LoadoutSelectionUI : MonoBehaviour
 
     void Start()
     {
-        _progress = LocalSaveSystem.LoadGame();
+        _progress = LocalSaveSystem.LoadProgress();
 
         for (int i = 0; i < _loadouts.Count; i++)
         {
             if (i < _progress.loadouts.Count)
             {
                 var ld = _progress.loadouts[i];
-                _loadouts[i].SetData(ld);
+                _loadouts[i].SetData(ld, i);
                 int idx = i;
                 if (_loadouts[i].selectButton != null)
                     _loadouts[i].selectButton.onClick.AddListener(() => SelectLoadout(idx));
@@ -82,7 +82,7 @@ public class LoadoutSelectionUI : MonoBehaviour
         var container = em.GetComponentData<DataContainerComponent>(entity);
         var data = _progress.loadouts[_selectedIndex];
 
-        container.selectedLoadoutID = data.loadoutID;
+        container.selectedLoadoutID = _selectedIndex;
         container.selectedSquads.Clear();
         foreach (int id in data.squadIDs)
             container.selectedSquads.Add(id);
@@ -91,7 +91,7 @@ public class LoadoutSelectionUI : MonoBehaviour
         foreach (int id in data.perkIDs)
             container.selectedPerks.Add(id);
 
-        container.totalLeadershipUsed = data.leadershipUsed;
+        container.totalLeadershipUsed = data.totalLeadership;
         container.isReady = true;
 
         em.SetComponentData(entity, container);

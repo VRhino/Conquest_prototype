@@ -15,9 +15,7 @@ public partial class HeroLevelSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        _saveData = LocalSaveSystem.LoadGame();
-        if (_saveData.heroProgress == null)
-            _saveData.heroProgress = new LocalSaveSystem.HeroProgressData();
+        _saveData = LocalSaveSystem.LoadProgress();
     }
 
     protected override void OnUpdate()
@@ -66,11 +64,10 @@ public partial class HeroLevelSystem : SystemBase
 
         if (save || IsPostMatch())
         {
-            _saveData.heroProgress.level = progress.ValueRO.level;
-            _saveData.heroProgress.currentXP = progress.ValueRO.currentXP;
-            _saveData.heroProgress.xpToNextLevel = progress.ValueRO.xpToNextLevel;
-            _saveData.heroProgress.perkPoints = progress.ValueRO.perkPoints;
-            LocalSaveSystem.SaveGame(_saveData);
+            _saveData.level = progress.ValueRO.level;
+            _saveData.currentXP = progress.ValueRO.currentXP;
+            _saveData.perkPoints = progress.ValueRO.perkPoints;
+            LocalSaveSystem.SaveProgress(_saveData);
         }
     }
 
@@ -80,10 +77,10 @@ public partial class HeroLevelSystem : SystemBase
             return;
 
         var progress = SystemAPI.GetComponentRW<HeroProgressComponent>(entity);
-        progress.ValueRW.level = _saveData.heroProgress.level;
-        progress.ValueRW.currentXP = _saveData.heroProgress.currentXP;
-        progress.ValueRW.xpToNextLevel = _saveData.heroProgress.xpToNextLevel;
-        progress.ValueRW.perkPoints = _saveData.heroProgress.perkPoints;
+        progress.ValueRW.level = _saveData.level;
+        progress.ValueRW.currentXP = _saveData.currentXP;
+        progress.ValueRW.xpToNextLevel = CalculateNext(_saveData.level);
+        progress.ValueRW.perkPoints = _saveData.perkPoints;
     }
 
     static int CalculateNext(int level)
