@@ -24,7 +24,7 @@ public partial class UnitTargetingSystem : SystemBase
                           (state.ValueRO.currentOrder == SquadOrderType.HoldPosition));
 
             // Temporary map to track how many units are attacking each enemy
-            using var enemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
+            var enemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
 
             // First pass: choose closest target for each unit
             for (int i = 0; i < units.Length; i++)
@@ -128,6 +128,8 @@ public partial class UnitTargetingSystem : SystemBase
                     }
                 }
             }
+
+            enemyCounts.Dispose();
         }
     }
 }

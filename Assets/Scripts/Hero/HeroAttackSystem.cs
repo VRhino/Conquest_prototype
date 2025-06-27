@@ -67,7 +67,7 @@ public partial class HeroAttackSystem : SystemBase
                 continue;
 
             var aabb = collider.ValueRO.CalculateAabb(new RigidTransform(transform.ValueRO.Rotation, transform.ValueRO.Position));
-            using var hits = new NativeList<int>(Allocator.Temp);
+            var hits = new NativeList<int>(Allocator.Temp);
             physicsWorld.OverlapAabb(aabb, ref hits, CollisionFilter.Default);
 
             for (int i = 0; i < hits.Length; i++)
@@ -95,6 +95,7 @@ public partial class HeroAttackSystem : SystemBase
                 }
             }
 
+            hits.Dispose();
             weapon.ValueRW.isActive = false;
         }
     }
