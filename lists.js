@@ -14,7 +14,9 @@ function listFiles(dirPath, fileList = []) {
         if (fs.statSync(fullPath).isDirectory()) {
             listFiles(fullPath, fileList);
         } else {
-            fileList.push(fullPath);
+            if (!file.endsWith('.meta')) { // Ignorar archivos .meta
+                fileList.push(fullPath);
+            }
         }
     });
     return fileList;

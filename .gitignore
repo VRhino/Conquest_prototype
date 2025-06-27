@@ -31,3 +31,5 @@ Thumbs.db
 
 # Excluir carpetas 'examples'
 **/examples/
+
+scripts_list.txt
