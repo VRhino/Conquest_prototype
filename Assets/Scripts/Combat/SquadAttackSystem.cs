@@ -79,7 +79,7 @@ public partial class SquadAttackSystem : SystemBase
                     if (chosen != Entity.Null &&
                         !SystemAPI.HasComponent<PendingDamageEvent>(unit))
                     {
-                        bool crit = Random.value <= weapon.criticalChance;
+                        bool crit = UnityEngine.Random.value <= weapon.criticalChance;
                         Team team = Team.None;
                         if (SystemAPI.HasComponent<TeamComponent>(unit))
                             team = SystemAPI.GetComponent<TeamComponent>(unit).value;

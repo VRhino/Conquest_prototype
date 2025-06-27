@@ -27,7 +27,7 @@ public class FormationVisualizer : MonoBehaviour
         _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
     }
 
-    void Update()
+   void Update()
     {
         if (_cameraEntity == Entity.Null || !_entityManager.Exists(_cameraEntity))
             FindCameraEntity();
@@ -73,14 +73,17 @@ public class FormationVisualizer : MonoBehaviour
             return;
         }
 
-        var formations = formationData.formationLibrary.Value.formations;
-        BlobArray<float3> offsets = default;
+        // ✅ Corrección: acceder a blob por referencia
+        ref var formations = ref formationData.formationLibrary.Value.formations;
+        ref BlobArray<float3> offsets = ref formations[0].localOffsets; 
         bool found = false;
+
         for (int i = 0; i < formations.Length; i++)
         {
             if (formations[i].formationType == state.currentFormation)
             {
-                offsets = formations[i].localOffsets;
+                ref var formation = ref formations[i];
+                offsets = ref formation.localOffsets; // ✅ acceso por ref
                 found = true;
                 break;
             }
@@ -98,7 +101,7 @@ public class FormationVisualizer : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            _positions[i] = leaderTransform.Position + offsets[i];
+            _positions[i] = (Vector3)(leaderTransform.Position + offsets[i]);
         }
     }
 

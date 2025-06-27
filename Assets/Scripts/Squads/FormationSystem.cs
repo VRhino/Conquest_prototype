@@ -13,7 +13,7 @@ public partial class FormationSystem : SystemBase
         float deltaTime = SystemAPI.Time.DeltaTime;
 
         foreach (var (input, state, formationData, units) in SystemAPI
-                     .Query<RefRO<SquadInputComponent>,
+                    .Query<RefRO<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
                             RefRO<SquadFormationDataComponent>,
                             DynamicBuffer<SquadUnitElement>>())
@@ -34,18 +34,21 @@ public partial class FormationSystem : SystemBase
                 continue;
             }
 
-            var formations = formationData.ValueRO.formationLibrary.Value.formations;
-            BlobArray<float3> offsets = default;
+            ref var formations = ref formationData.ValueRO.formationLibrary.Value.formations;
+            ref BlobArray<float3> offsets = ref formations[0].localOffsets; // fallback inicial
+
             bool found = false;
             for (int i = 0; i < formations.Length; i++)
             {
                 if (formations[i].formationType == input.ValueRO.desiredFormation)
                 {
-                    offsets = formations[i].localOffsets;
+                    ref var formation = ref formations[i];
+                    offsets = ref formation.localOffsets;
                     found = true;
                     break;
                 }
             }
+
             if (!found)
             {
                 state.ValueRW = s;
@@ -85,4 +88,5 @@ public partial class FormationSystem : SystemBase
             state.ValueRW = s;
         }
     }
+
 }

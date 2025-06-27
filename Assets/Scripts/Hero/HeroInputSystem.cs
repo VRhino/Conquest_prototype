@@ -103,10 +103,11 @@ public partial class HeroInputSystem : SystemBase
             ecb = ecb.AsParallelWriter()
         };
 
-        var handle = job.ScheduleParallel();
-        handle.Complete();
+        var handle = job.ScheduleParallel(Dependency);
+        Dependency = handle;
 
+        handle.Complete(); // Solo si necesitas efectos inmediatos, como el ecb.Playback
         ecb.Playback(EntityManager);
-        ecb.Dispose();
+        ecb.Dispose();      
     }
 }

@@ -17,7 +17,7 @@ public partial class HeroAttackSystem : SystemBase
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
-        var physicsWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld;
+        var physicsWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().PhysicsWorld;
 
         // Process attack input and start animations
         foreach (var (input, combat, stamina, life, anim, entity) in
@@ -39,7 +39,7 @@ public partial class HeroAttackSystem : SystemBase
                 !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= 15f)
             {
                 c.isAttacking = true;
-                c.attackCooldown = 0.7f; // default cooldown
+                c.attackCooldown = 0.7f;
                 anim.ValueRW.triggerAttack = true;
                 stamina.ValueRW.currentStamina -= 15f;
 
@@ -72,12 +72,19 @@ public partial class HeroAttackSystem : SystemBase
 
             var rigidTransform = new RigidTransform(transform.ValueRO.Rotation, transform.ValueRO.Position);
             var aabb = collider.ValueRO.Value.Value.CalculateAabb(rigidTransform);
+
+            var input = new OverlapAabbInput
+            {
+                Aabb = aabb,
+                Filter = CollisionFilter.Default
+            };
+
             var hits = new NativeList<int>(Allocator.Temp);
-            physicsWorld.OverlapAabb(aabb, ref hits, CollisionFilter.Default);
+            physicsWorld.CollisionWorld.OverlapAabb(input, ref hits);
 
             for (int i = 0; i < hits.Length; i++)
             {
-                Entity hitEntity = SystemAPI.GetSingleton<PhysicsWorldSingleton>().PhysicsWorld.Bodies[hits[i]].Entity;
+                Entity hitEntity = physicsWorld.Bodies[hits[i]].Entity;
                 if (hitEntity == weapon.ValueRO.owner)
                     continue;
 

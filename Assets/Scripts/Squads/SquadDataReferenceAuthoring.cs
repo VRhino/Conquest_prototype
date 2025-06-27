@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public class SquadDataReferenceAuthoring : MonoBehaviour
 {
-    public SquadData squadData;
+    public SquadDataAuthoring squadData;
 
     class SquadDataReferenceBaker : Baker<SquadDataReferenceAuthoring>
     {

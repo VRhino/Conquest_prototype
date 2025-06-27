@@ -19,7 +19,7 @@ public class HeroCameraController : MonoBehaviour
         _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
     }
 
-    void Update()
+   void Update()
     {
         if (_cameraEntity == Entity.Null || !_entityManager.Exists(_cameraEntity))
             FindCameraEntity();
@@ -64,10 +64,11 @@ public class HeroCameraController : MonoBehaviour
             offset += new float3(0f, 3f, -3f);
 
         quaternion rot = quaternion.Euler(0f, math.radians(_yaw), 0f);
-        float3 desired = heroTransform.Position + math.mul(rot, new float3(0f, offset.y, -camTarget.zoomLevel) + new float3(offset.x, 0f, offset.z));
+        float3 desiredFloat = heroTransform.Position + math.mul(rot, new float3(0f, offset.y, -camTarget.zoomLevel) + new float3(offset.x, 0f, offset.z));
+        Vector3 desired = (Vector3)desiredFloat;
 
         // Raycast to avoid clipping
-        Vector3 from = heroTransform.Position + new float3(0f, offset.y, 0f);
+        Vector3 from = (Vector3)(heroTransform.Position + new float3(0f, offset.y, 0f));
         Vector3 to = desired;
         Vector3 dir = to - from;
         if (Physics.Raycast(from, dir.normalized, out RaycastHit hit, dir.magnitude))
@@ -76,8 +77,9 @@ public class HeroCameraController : MonoBehaviour
         }
 
         transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * 5f);
-        transform.rotation = Quaternion.LookRotation(heroTransform.Position - transform.position);
+        transform.rotation = Quaternion.LookRotation((Vector3)heroTransform.Position - transform.position);
     }
+
 
     void FindCameraEntity()
     {

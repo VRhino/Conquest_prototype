@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public class HeroClassReferenceAuthoring : MonoBehaviour
 {
-    public HeroClassDefinition classDefinition;
+    public HeroClassDefinitionAuthoring classDefinition; // Cambiado
 
     class HeroClassReferenceBaker : Baker<HeroClassReferenceAuthoring>
     {
