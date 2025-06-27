@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine.InputSystem;
@@ -10,55 +11,102 @@ using UnityEngine.InputSystem;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class HeroInputSystem : SystemBase
 {
+    [WithAll(typeof(IsLocalPlayer))]
+    partial struct HeroInputJob : IJobEntity
+    {
+        public float2 moveInput;
+        public bool isSprinting;
+        public bool isJumping;
+        public bool useSkill1;
+        public bool useSkill2;
+        public bool useUltimate;
+        public bool isAttacking;
+        public bool interactPressed;
+
+        [NativeDisableParallelForRestriction]
+        public ComponentLookup<PlayerInteractionComponent> interactionLookup;
+
+        public EntityCommandBuffer.ParallelWriter ecb;
+
+        public void Execute(Entity entity, [EntityInQueryIndex] int sortKey, ref HeroInputComponent input)
+        {
+            input.moveInput = moveInput;
+            input.isSprinting = isSprinting;
+            input.isJumping = isJumping;
+            input.useSkill1 = useSkill1;
+            input.useSkill2 = useSkill2;
+            input.useUltimate = useUltimate;
+            input.isAttacking = isAttacking;
+
+            if (interactionLookup.HasComponent(entity))
+            {
+                var inter = interactionLookup[entity];
+                inter.interactPressed = interactPressed;
+                interactionLookup[entity] = inter;
+            }
+            else
+            {
+                ecb.AddComponent(sortKey, entity, new PlayerInteractionComponent
+                {
+                    interactPressed = interactPressed
+                });
+            }
+        }
+    }
+
     protected override void OnUpdate()
     {
         var keyboard = Keyboard.current;
         var mouse = Mouse.current;
 
-        foreach (var entity in SystemAPI.Query<Entity>().WithAll<HeroInputComponent, IsLocalPlayer>())
+        float2 move = float2.zero;
+        bool sprint = false;
+        bool jump = false;
+        bool skill1 = false;
+        bool skill2 = false;
+        bool ultimate = false;
+        bool attack = false;
+        bool interact = false;
+
+        if (keyboard != null)
         {
-            var input = new HeroInputComponent();
-
-            // Gather directional input (XZ plane).
-            if (keyboard != null)
-            {
-                float x = 0f;
-                float z = 0f;
-                if (keyboard.aKey.isPressed) x -= 1f;
-                if (keyboard.dKey.isPressed) x += 1f;
-                if (keyboard.sKey.isPressed) z -= 1f;
-                if (keyboard.wKey.isPressed) z += 1f;
-                input.moveInput = new float2(x, z);
-
-                input.isSprinting = keyboard.leftShiftKey.isPressed;
-                input.isJumping = keyboard.spaceKey.isPressed;
-                input.useSkill1 = keyboard.qKey.isPressed;
-                input.useSkill2 = keyboard.eKey.isPressed;
-                input.useUltimate = keyboard.rKey.isPressed;
-            }
-
-            if (mouse != null)
-            {
-                input.isAttacking = mouse.leftButton.isPressed;
-            }
-
-            bool interact = keyboard != null && keyboard.fKey.wasPressedThisFrame;
-
-            // Write the captured values back to the entity component.
-            SystemAPI.SetComponent(entity, input);
-
-            if (SystemAPI.HasComponent<PlayerInteractionComponent>(entity))
-            {
-                var inter = SystemAPI.GetComponentRW<PlayerInteractionComponent>(entity);
-                inter.ValueRW.interactPressed = interact;
-            }
-            else
-            {
-                SystemAPI.AddComponent(entity, new PlayerInteractionComponent
-                {
-                    interactPressed = interact
-                });
-            }
+            if (keyboard.aKey.isPressed) move.x -= 1f;
+            if (keyboard.dKey.isPressed) move.x += 1f;
+            if (keyboard.sKey.isPressed) move.y -= 1f;
+            if (keyboard.wKey.isPressed) move.y += 1f;
+            sprint = keyboard.leftShiftKey.isPressed;
+            jump = keyboard.spaceKey.isPressed;
+            skill1 = keyboard.qKey.isPressed;
+            skill2 = keyboard.eKey.isPressed;
+            ultimate = keyboard.rKey.isPressed;
+            interact = keyboard.fKey.wasPressedThisFrame;
         }
+
+        if (mouse != null)
+        {
+            attack = mouse.leftButton.isPressed;
+        }
+
+        var ecb = new EntityCommandBuffer(Allocator.TempJob);
+
+        var job = new HeroInputJob
+        {
+            moveInput = move,
+            isSprinting = sprint,
+            isJumping = jump,
+            useSkill1 = skill1,
+            useSkill2 = skill2,
+            useUltimate = ultimate,
+            isAttacking = attack,
+            interactPressed = interact,
+            interactionLookup = GetComponentLookup<PlayerInteractionComponent>(),
+            ecb = ecb.AsParallelWriter()
+        };
+
+        var handle = job.ScheduleParallel();
+        handle.Complete();
+
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
     }
 }
