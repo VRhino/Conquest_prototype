@@ -9,7 +9,7 @@ using UnityEngine.AI;
 [RequireComponent(typeof(NavMeshAgent))]
 public class NavMeshAgentAuthoring : MonoBehaviour
 {
-    class Baker : Unity.Entities.Baker<NavMeshAgentAuthoring>
+    class NavMeshAgentBaker : Unity.Entities.Baker<NavMeshAgentAuthoring>
     {
         public override void Bake(NavMeshAgentAuthoring authoring)
         {

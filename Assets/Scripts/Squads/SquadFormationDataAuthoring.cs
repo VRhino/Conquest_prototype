@@ -9,7 +9,7 @@ public class SquadFormationDataAuthoring : MonoBehaviour
 {
     public FormationScriptableObject[] formations;
 
-    class Baker : Unity.Entities.Baker<SquadFormationDataAuthoring>
+    class SquadFormationDataBaker : Unity.Entities.Baker<SquadFormationDataAuthoring>
     {
         public override void Bake(SquadFormationDataAuthoring authoring)
         {

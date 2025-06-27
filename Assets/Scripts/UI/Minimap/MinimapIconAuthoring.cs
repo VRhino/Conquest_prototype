@@ -10,7 +10,7 @@ public class MinimapIconAuthoring : MonoBehaviour
     public MinimapIconType iconType = MinimapIconType.Hero;
     public Team teamAffiliation = Team.None;
 
-    class Baker : Unity.Entities.Baker<MinimapIconAuthoring>
+    class MinimapIconBaker : Unity.Entities.Baker<MinimapIconAuthoring>
     {
         public override void Bake(MinimapIconAuthoring authoring)
         {
