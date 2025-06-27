@@ -76,7 +76,7 @@ public partial class FormationSystem : SystemBase
                 }
                 else
                 {
-                    SystemAPI.AddComponent(unit, new UnitTargetPositionComponent { position = target });
+                    EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
                 }
             }
 

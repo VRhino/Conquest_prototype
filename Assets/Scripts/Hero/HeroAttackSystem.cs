@@ -83,7 +83,7 @@ public partial class HeroAttackSystem : SystemBase
                     if (SystemAPI.HasComponent<TeamComponent>(weapon.ValueRO.owner))
                         team = SystemAPI.GetComponent<TeamComponent>(weapon.ValueRO.owner).value;
 
-                    SystemAPI.AddComponent(weapon.ValueRO.owner, new PendingDamageEvent
+                    EntityManager.AddComponentData(weapon.ValueRO.owner, new PendingDamageEvent
                     {
                         target = hitEntity,
                         damageSource = weapon.ValueRO.owner,
