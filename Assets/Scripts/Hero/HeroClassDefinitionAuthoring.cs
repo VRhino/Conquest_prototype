@@ -3,9 +3,8 @@ using Unity.Entities;
 using UnityEngine;
 
 /// <summary>
-/// MonoBehaviour used to bake <see cref="HeroClassDefinition"/> assets into entities
-/// with <see cref="HeroClassDefinitionComponent"/> and a buffer of
-/// <see cref="ValidPerkElement"/> references.
+/// MonoBehaviour used to bake <see cref="HeroClassDefinition"/> assets into
+/// ECS components and buffers that can be consumed at runtime.
 /// </summary>
 public class HeroClassDefinitionAuthoring : MonoBehaviour
 {
@@ -20,34 +19,27 @@ public class HeroClassDefinitionAuthoring : MonoBehaviour
 
             var entity = GetEntity(TransformUsageFlags.None);
 
-            AddComponent(entity, new HeroClassDefinitionComponent
+            AddComponent(entity, new HeroClassComponent
             {
-                heroClass = authoring.definition.heroClass,
-                baseFuerza = authoring.definition.baseFuerza,
-                baseDestreza = authoring.definition.baseDestreza,
-                baseArmadura = authoring.definition.baseArmadura,
-                baseVitalidad = authoring.definition.baseVitalidad,
-                minFuerza = authoring.definition.minFuerza,
-                maxFuerza = authoring.definition.maxFuerza,
-                minDestreza = authoring.definition.minDestreza,
-                maxDestreza = authoring.definition.maxDestreza,
-                minArmadura = authoring.definition.minArmadura,
-                maxArmadura = authoring.definition.maxArmadura,
-                minVitalidad = authoring.definition.minVitalidad,
-                maxVitalidad = authoring.definition.maxVitalidad,
-                abilityQ = authoring.definition.abilities.Count > 0 ? GetEntity(authoring.definition.abilities[0], TransformUsageFlags.None) : Entity.Null,
-                abilityE = authoring.definition.abilities.Count > 1 ? GetEntity(authoring.definition.abilities[1], TransformUsageFlags.None) : Entity.Null,
-                abilityR = authoring.definition.abilities.Count > 2 ? GetEntity(authoring.definition.abilities[2], TransformUsageFlags.None) : Entity.Null,
-                ultimate = authoring.definition.abilities.Count > 3 ? GetEntity(authoring.definition.abilities[3], TransformUsageFlags.None) : Entity.Null
+                heroClass = authoring.definition.heroClass
             });
 
-            var buffer = AddBuffer<ValidPerkElement>(entity);
-            if (authoring.definition.validClassPerks != null)
+            var abilities = AddBuffer<HeroAbilityBufferElement>(entity);
+            if (authoring.definition.abilities != null)
             {
-                foreach (var perk in authoring.definition.validClassPerks)
+                foreach (var ability in authoring.definition.abilities)
                 {
-                    if (perk != null)
-                        buffer.Add(new ValidPerkElement { Value = GetEntity(perk, TransformUsageFlags.None) });
+                    if (ability == null)
+                        continue;
+
+                    abilities.Add(new HeroAbilityBufferElement
+                    {
+                        name = ability.abilityName,
+                        cooldown = ability.cooldown,
+                        staminaCost = ability.staminaCost,
+                        damageMultiplier = ability.damageMultiplier,
+                        category = (AbilityCategory)ability.category
+                    });
                 }
             }
         }
