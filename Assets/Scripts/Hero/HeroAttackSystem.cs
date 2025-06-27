@@ -56,7 +56,11 @@ public partial class HeroAttackSystem : SystemBase
         }
 
         // Check for collisions while weapon colliders are active
-        foreach (var (weapon, collider, transform, weaponData) in
+        foreach ((RefRW<WeaponColliderComponent> weapon,
+                  RefRO<PhysicsCollider> collider,
+                  RefRO<LocalTransform> transform,
+                  RefRO<UnitWeaponComponent> weaponData,
+                  Entity entity) in
                  SystemAPI.Query<RefRW<WeaponColliderComponent>,
                                  RefRO<PhysicsCollider>,
                                  RefRO<LocalTransform>,
@@ -66,7 +70,8 @@ public partial class HeroAttackSystem : SystemBase
             if (!weapon.ValueRO.isActive)
                 continue;
 
-            var aabb = collider.ValueRO.CalculateAabb(new RigidTransform(transform.ValueRO.Rotation, transform.ValueRO.Position));
+            var rigidTransform = new RigidTransform(transform.ValueRO.Rotation, transform.ValueRO.Position);
+            var aabb = collider.ValueRO.Value.Value.CalculateAabb(rigidTransform);
             var hits = new NativeList<int>(Allocator.Temp);
             physicsWorld.OverlapAabb(aabb, ref hits, CollisionFilter.Default);
 
