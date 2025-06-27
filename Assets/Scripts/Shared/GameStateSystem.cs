@@ -11,9 +11,10 @@ public partial class GameStateSystem : SystemBase
     {
         base.OnCreate();
 
-        if (!SystemAPI.TryGetSingletonEntity<GameStateComponent>(out _))
+        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
         {
-            var em = World.DefaultGameObjectInjectionWorld.EntityManager;
             Entity entity = em.CreateEntity(typeof(GameStateComponent));
             em.SetComponentData(entity, new GameStateComponent
             {

@@ -182,16 +182,20 @@ public partial class UnitDeploymentValidationSystem : SystemBase
 
     bool IsPreparationPhase()
     {
-        if (SystemAPI.TryGetSingleton<GameStateComponent>(out var state))
-            return state.currentPhase == GamePhase.Barracon ||
-                   state.currentPhase == GamePhase.Preparacion;
-        return false;
+        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
+            return false;
+        var state = q.GetSingleton<GameStateComponent>();
+        return state.currentPhase == GamePhase.Barracon ||
+               state.currentPhase == GamePhase.Preparacion;
     }
 
     bool IsPostMatch()
     {
-        if (SystemAPI.TryGetSingleton<GameStateComponent>(out var state))
-            return state.currentPhase == GamePhase.PostPartida;
-        return false;
+        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
+            return false;
+        var state = q.GetSingleton<GameStateComponent>();
+        return state.currentPhase == GamePhase.PostPartida;
     }
 }

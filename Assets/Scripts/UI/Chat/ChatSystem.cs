@@ -17,9 +17,10 @@ public partial class ChatSystem : SystemBase
         base.OnCreate();
 
         // Ensure a singleton entity with a dynamic buffer exists
-        if (!SystemAPI.TryGetSingletonEntity<ChatHistoryState>(out _))
+        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<ChatHistoryState>());
+        if (q.IsEmptyIgnoreFilter)
         {
-            var em = World.DefaultGameObjectInjectionWorld.EntityManager;
             Entity entity = em.CreateEntity(typeof(ChatHistoryState));
             em.AddBuffer<ChatHistoryElement>(entity);
             em.SetComponentData(entity, new ChatHistoryState

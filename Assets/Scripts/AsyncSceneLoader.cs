@@ -58,9 +58,15 @@ public class AsyncSceneLoader : MonoBehaviour
             _loadingScreen.SetActive(false);
 
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
-        if (!SystemAPI.TryGetSingletonEntity<GameStateComponent>(out Entity stateEntity))
+        Entity stateEntity;
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
         {
             stateEntity = em.CreateEntity(typeof(GameStateComponent));
+        }
+        else
+        {
+            stateEntity = q.GetSingletonEntity();
         }
         em.SetComponentData(stateEntity, new GameStateComponent { currentPhase = targetPhase });
 

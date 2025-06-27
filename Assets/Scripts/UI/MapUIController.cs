@@ -18,8 +18,10 @@ public class MapUIController : MonoBehaviour
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-        if (!SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var dataEntity))
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (q.IsEmptyIgnoreFilter)
             return;
+        var dataEntity = q.GetSingletonEntity();
 
         var data = em.GetComponentData<DataContainerComponent>(dataEntity);
         var query = em.CreateEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
@@ -45,8 +47,10 @@ public class MapUIController : MonoBehaviour
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
-        if (SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var dataEntity))
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (!q.IsEmptyIgnoreFilter)
         {
+            var dataEntity = q.GetSingletonEntity();
             var data = em.GetComponentData<DataContainerComponent>(dataEntity);
             data.selectedSpawnID = spawnId;
             em.SetComponentData(dataEntity, data);
