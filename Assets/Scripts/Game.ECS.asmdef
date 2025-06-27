@@ -6,8 +6,12 @@
 		"Unity.Mathematics",
 		"Unity.Transforms",
 		"Unity.RenderPipelines.Universal",
-                "Unity.Rendering.Hybrid",
-                "Unity.Burst",
-                "Unity.Physics"
+		"Unity.Rendering.Hybrid",
+		"Unity.Burst",
+		"Unity.Physics",
+		"Unity.TextMeshPro",
+		"Unity.InputSystem",
+		"Unity.Collections",
+		"Unity.Entities.Hybrid"
         ]
 }

@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game.ECS", "Game.ECS.csproj", "{F509B414-509B-03B0-E6C0-7F5126152B7D}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp", "Assembly-CSharp.csproj", "{3674B835-4634-6B8E-D6F6-A056F1E6EE0D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Assembly-CSharp-Editor", "Assembly-CSharp-Editor.csproj", "{ACA665A2-1036-1974-F221-650790931AD8}"
@@ -11,6 +13,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F509B414-509B-03B0-E6C0-7F5126152B7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F509B414-509B-03B0-E6C0-7F5126152B7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F509B414-509B-03B0-E6C0-7F5126152B7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F509B414-509B-03B0-E6C0-7F5126152B7D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3674B835-4634-6B8E-D6F6-A056F1E6EE0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3674B835-4634-6B8E-D6F6-A056F1E6EE0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3674B835-4634-6B8E-D6F6-A056F1E6EE0D}.Release|Any CPU.ActiveCfg = Release|Any CPU

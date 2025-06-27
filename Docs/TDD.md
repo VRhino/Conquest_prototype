@@ -97,7 +97,7 @@
 ### 1.1 Motor y Versión
 
 - **Motor:** Unity
-- **Versión:** Unity 2022.3.6f1 (LTS)
+- **Versión:** Unity 2022.3.62f1 (LTS)
 
 ### 1.2 Render Pipeline
 

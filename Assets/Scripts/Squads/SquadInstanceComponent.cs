@@ -17,7 +17,7 @@ public class SquadInstanceAuthoring : UnityEngine.MonoBehaviour
 {
     public int id = 0;
 
-    class Baker : Baker<SquadInstanceAuthoring>
+    class Baker : Unity.Entities.Baker<SquadInstanceAuthoring>
     {
         public override void Bake(SquadInstanceAuthoring authoring)
         {

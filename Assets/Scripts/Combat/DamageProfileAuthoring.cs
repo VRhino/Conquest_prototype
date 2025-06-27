@@ -8,7 +8,7 @@ public class DamageProfileAuthoring : MonoBehaviour
 {
     public DamageProfile profile;
 
-    class Baker : Unity.Entities.Baker<DamageProfileAuthoring>
+    class DamageProfileBaker : Baker<DamageProfileAuthoring>
     {
         public override void Bake(DamageProfileAuthoring authoring)
         {

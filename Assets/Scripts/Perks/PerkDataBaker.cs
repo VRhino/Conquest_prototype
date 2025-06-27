@@ -4,7 +4,7 @@ using Unity.Entities;
 /// Baker that converts <see cref="PerkData"/> assets into entities with
 /// <see cref="PerkDataComponent"/> so they can be referenced at runtime.
 /// </summary>
-public class PerkDataBaker : Baker<PerkData>
+public class PerkDataBaker : Unity.Entities.Baker<PerkData>
 {
     public override void Bake(PerkData authoring)
     {

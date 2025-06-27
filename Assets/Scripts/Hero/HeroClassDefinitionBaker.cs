@@ -7,7 +7,7 @@ using UnityEngine;
 /// with <see cref="HeroClassDefinitionComponent"/> and a buffer of
 /// <see cref="ValidPerkElement"/> references.
 /// </summary>
-public class HeroClassDefinitionBaker : Baker<HeroClassDefinition>
+public class HeroClassDefinitionBaker : Unity.Entities.Baker<HeroClassDefinition>
 {
     public override void Bake(HeroClassDefinition authoring)
     {

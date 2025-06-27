@@ -5,7 +5,7 @@ using Unity.Entities;
 /// Baker that converts <see cref="SquadData"/> assets into entities containing
 /// a <see cref="SquadDataComponent"/> and buffers for abilities and formations.
 /// </summary>
-public class SquadDataBaker : Baker<SquadData>
+public class SquadDataBaker : Unity.Entities.Baker<SquadData>
 {
     public override void Bake(SquadData authoring)
     {
