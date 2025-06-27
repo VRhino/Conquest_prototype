@@ -11,7 +11,8 @@ public partial class HeroSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        var spawnPoints = SystemAPI.Query<RefRO<SpawnPointComponent>>().ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
+        var spawnPointQuery = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
+        var spawnPoints = spawnPointQuery.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
         float dt = SystemAPI.Time.DeltaTime;
 
         foreach (var (life, spawnData, team, transform) in

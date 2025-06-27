@@ -14,10 +14,6 @@ public partial class SupplyInteractionSystem : SystemBase
     {
         float dt = SystemAPI.Time.DeltaTime;
 
-        var heroQuery = SystemAPI.Query<RefRO<LocalTransform>,
-                                        RefRO<HeroLifeComponent>,
-                                        RefRO<TeamComponent>>()
-                                .WithEntityAccess();
 
         var healthLookup = GetComponentLookup<HealthComponent>();
         var staminaLookup = GetComponentLookup<StaminaComponent>();
@@ -39,7 +35,11 @@ public partial class SupplyInteractionSystem : SystemBase
             float radiusSq = zone.ValueRO.radius * zone.ValueRO.radius;
             Team owner = (Team)supply.ValueRO.currentTeam;
 
-            foreach (var (hTransform, life, team, heroEntity) in heroQuery)
+            foreach (var (hTransform, life, team, heroEntity) in
+                     SystemAPI.Query<RefRO<LocalTransform>,
+                                     RefRO<HeroLifeComponent>,
+                                     RefRO<TeamComponent>>()
+                             .WithEntityAccess())
             {
                 if (!life.ValueRO.isAlive)
                     continue;
