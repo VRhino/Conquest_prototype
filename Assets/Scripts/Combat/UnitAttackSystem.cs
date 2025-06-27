@@ -68,7 +68,7 @@ public partial class UnitAttackSystem : SystemBase
                     if (SystemAPI.HasComponent<TeamComponent>(entity))
                         team = SystemAPI.GetComponent<TeamComponent>(entity).value;
 
-                    SystemAPI.AddComponent(entity, new PendingDamageEvent
+                    EntityManager.AddComponentData(entity, new PendingDamageEvent
                     {
                         target = target,
                         damageSource = entity,

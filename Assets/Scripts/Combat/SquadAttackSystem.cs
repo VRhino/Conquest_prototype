@@ -84,7 +84,7 @@ public partial class SquadAttackSystem : SystemBase
                         if (SystemAPI.HasComponent<TeamComponent>(unit))
                             team = SystemAPI.GetComponent<TeamComponent>(unit).value;
 
-                        SystemAPI.AddComponent(unit, new PendingDamageEvent
+                        EntityManager.AddComponentData(unit, new PendingDamageEvent
                         {
                             target = chosen,
                             damageSource = unit,

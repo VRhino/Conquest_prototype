@@ -64,7 +64,7 @@ public class MapUIController : MonoBehaviour
             if (em.HasComponent<SpawnSelectionRequest>(hero))
                 em.SetComponentData(hero, new SpawnSelectionRequest { spawnId = spawnId });
             else
-                em.AddComponent(hero, new SpawnSelectionRequest { spawnId = spawnId });
+                em.AddComponentData(hero, new SpawnSelectionRequest { spawnId = spawnId });
         }
     }
 }

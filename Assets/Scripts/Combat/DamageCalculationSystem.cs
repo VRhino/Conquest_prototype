@@ -20,14 +20,14 @@ public partial class DamageCalculationSystem : SystemBase
             if (!SystemAPI.Exists(pending.ValueRO.target) ||
                 !SystemAPI.Exists(pending.ValueRO.damageProfile))
             {
-                SystemAPI.RemoveComponent<PendingDamageEvent>(entity);
+                EntityManager.RemoveComponent<PendingDamageEvent>(entity);
                 continue;
             }
 
             // Skip if target already dead
             if (SystemAPI.HasComponent<IsDeadComponent>(pending.ValueRO.target))
             {
-                SystemAPI.RemoveComponent<PendingDamageEvent>(entity);
+                EntityManager.RemoveComponent<PendingDamageEvent>(entity);
                 continue;
             }
 
@@ -38,7 +38,7 @@ public partial class DamageCalculationSystem : SystemBase
                 var targetTeam = SystemAPI.GetComponent<TeamComponent>(pending.ValueRO.target).value;
                 if (targetTeam == pending.ValueRO.sourceTeam)
                 {
-                    SystemAPI.RemoveComponent<PendingDamageEvent>(entity);
+                    EntityManager.RemoveComponent<PendingDamageEvent>(entity);
                     continue;
                 }
             }
@@ -84,11 +84,11 @@ public partial class DamageCalculationSystem : SystemBase
                 if (health.ValueRW.currentHealth <= 0f &&
                     !SystemAPI.HasComponent<IsDeadComponent>(pending.ValueRO.target))
                 {
-                    SystemAPI.AddComponent<IsDeadComponent>(pending.ValueRO.target);
+                    EntityManager.AddComponent<IsDeadComponent>(pending.ValueRO.target);
                 }
             }
 
-            SystemAPI.RemoveComponent<PendingDamageEvent>(entity);
+            EntityManager.RemoveComponent<PendingDamageEvent>(entity);
         }
     }
 }
