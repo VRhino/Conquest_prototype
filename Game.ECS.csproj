@@ -74,6 +74,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Squads\SquadDataAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadStatsComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitStatsBufferElement.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAttributeType.cs" />
     <Compile Include="Assets\Scripts\Squads\NonDeployableSquadTag.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttackSystem.cs" />
@@ -104,6 +106,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadStatusComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\PerformanceTrackerSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbilityComponent.cs" />
+    <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchControllerSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconComponent.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkDataAuthoring.cs" />
@@ -159,6 +162,8 @@
     <Compile Include="Assets\Scripts\UI\Chat\ChatSystem.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinitionAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroClassComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroAbilityBufferElement.cs" />
     <Compile Include="Assets\Scripts\Map\CaptureZoneTriggerSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTriggerComponent.cs" />
