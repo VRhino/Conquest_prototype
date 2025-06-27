@@ -14,9 +14,6 @@ public partial class CaptureZoneTriggerSystem : SystemBase
     {
         float dt = SystemAPI.Time.DeltaTime;
 
-        var heroQuery = SystemAPI.Query<RefRO<LocalTransform>,
-                                        RefRO<HeroLifeComponent>,
-                                        RefRO<TeamComponent>>();
 
         var linkLookup = GetComponentLookup<ZoneLinkComponent>(true);
         var zoneLookup = GetComponentLookup<ZoneTriggerComponent>();
@@ -38,7 +35,10 @@ public partial class CaptureZoneTriggerSystem : SystemBase
             float radiusSq = zone.ValueRO.radius * zone.ValueRO.radius;
             Team owner = (Team)zone.ValueRO.teamOwner;
 
-            foreach (var (hTransform, life, team) in heroQuery)
+            foreach (var (hTransform, life, team) in
+                     SystemAPI.Query<RefRO<LocalTransform>,
+                                     RefRO<HeroLifeComponent>,
+                                     RefRO<TeamComponent>>())
             {
                 if (!life.ValueRO.isAlive)
                     continue;
