@@ -28,7 +28,7 @@ public partial class HeroInputSystem : SystemBase
 
         public EntityCommandBuffer.ParallelWriter ecb;
 
-        public void Execute(Entity entity, [EntityInQueryIndex] int sortKey, ref HeroInputComponent input)
+        public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref HeroInputComponent input)
         {
             input.moveInput = moveInput;
             input.isSprinting = isSprinting;

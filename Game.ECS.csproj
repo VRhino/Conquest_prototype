@@ -116,7 +116,6 @@
     <Compile Include="Assets\Scripts\Squads\UnitDeploymentValidationSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinition.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitWeaponComponent.cs" />
-    <Compile Include="Assets\Scripts\Perks\PerkDataBaker.cs" />
     <Compile Include="Assets\Scripts\Combat\PendingDamageEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroMovementSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataComponent.cs" />
@@ -144,13 +143,11 @@
     <Compile Include="Assets\Scripts\Hero\HeroInputSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneReferenceBuffer.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
-    <Compile Include="Assets\Scripts\Hero\HeroClassDefinitionBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInputComponent.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapRenderer.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLevelSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationLibraryBlob.cs" />
     <Compile Include="Assets\Scripts\Shared\CooldownComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadDataBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitLocalTargetComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadUnitElement.cs" />
     <Compile Include="Assets\Scripts\Hero\SpawnSelectionSystem.cs" />
