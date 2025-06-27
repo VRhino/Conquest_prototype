@@ -8,7 +8,7 @@ public class SquadDataReferenceAuthoring : MonoBehaviour
 {
     public SquadData squadData;
 
-    class Baker : Unity.Entities.Baker<SquadDataReferenceAuthoring>
+    class SquadDataReferenceBaker : Baker<SquadDataReferenceAuthoring>
     {
         public override void Bake(SquadDataReferenceAuthoring authoring)
         {

@@ -11,7 +11,7 @@ public class DataContainerAuthoring : MonoBehaviour
     public int playerID = 0;
     public int teamID = 0;
 
-    class Baker : Unity.Entities.Baker<DataContainerAuthoring>
+    class DataContainerBaker : Unity.Entities.Baker<DataContainerAuthoring>
     {
         public override void Bake(DataContainerAuthoring authoring)
         {

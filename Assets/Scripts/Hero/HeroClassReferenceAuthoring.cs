@@ -9,7 +9,7 @@ public class HeroClassReferenceAuthoring : MonoBehaviour
 {
     public HeroClassDefinition classDefinition;
 
-    class Baker : Unity.Entities.Baker<HeroClassReferenceAuthoring>
+    class HeroClassReferenceBaker : Baker<HeroClassReferenceAuthoring>
     {
         public override void Bake(HeroClassReferenceAuthoring authoring)
         {
