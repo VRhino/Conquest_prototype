@@ -73,14 +73,17 @@ public partial class HeroLevelSystem : SystemBase
 
     void InitializeProgressComponent()
     {
-        if (!SystemAPI.TryGetSingletonEntity<HeroProgressComponent>(out var entity))
+        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<HeroProgressComponent>());
+        if (q.IsEmptyIgnoreFilter)
             return;
 
-        var progress = SystemAPI.GetComponentRW<HeroProgressComponent>(entity);
-        progress.ValueRW.level = _saveData.level;
-        progress.ValueRW.currentXP = _saveData.currentXP;
-        progress.ValueRW.xpToNextLevel = CalculateNext(_saveData.level);
-        progress.ValueRW.perkPoints = _saveData.perkPoints;
+        Entity entity = q.GetSingletonEntity();
+        var progress = EntityManager.GetComponentData<HeroProgressComponent>(entity);
+        progress.level = _saveData.level;
+        progress.currentXP = _saveData.currentXP;
+        progress.xpToNextLevel = CalculateNext(_saveData.level);
+        progress.perkPoints = _saveData.perkPoints;
+        EntityManager.SetComponentData(entity, progress);
     }
 
     static int CalculateNext(int level)
@@ -90,8 +93,10 @@ public partial class HeroLevelSystem : SystemBase
 
     bool IsPostMatch()
     {
-        if (SystemAPI.TryGetSingleton<GameStateComponent>(out var state))
-            return state.currentPhase == GamePhase.PostPartida;
-        return false;
+        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
+            return false;
+        var state = q.GetSingleton<GameStateComponent>();
+        return state.currentPhase == GamePhase.PostPartida;
     }
 }

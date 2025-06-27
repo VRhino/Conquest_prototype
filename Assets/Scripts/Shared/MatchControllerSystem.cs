@@ -13,9 +13,10 @@ public partial class MatchControllerSystem : SystemBase
     {
         base.OnCreate();
 
-        if (!SystemAPI.TryGetSingletonEntity<MatchStateComponent>(out _))
+        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<MatchStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
         {
-            var em = World.DefaultGameObjectInjectionWorld.EntityManager;
             Entity entity = em.CreateEntity(typeof(MatchStateComponent));
             em.SetComponentData(entity, new MatchStateComponent
             {

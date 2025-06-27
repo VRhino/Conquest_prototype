@@ -13,9 +13,10 @@ public partial class DataContainerSystem : SystemBase
     {
         base.OnCreate();
 
-        if (!SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out _))
+        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (q.IsEmptyIgnoreFilter)
         {
-            var em = World.DefaultGameObjectInjectionWorld.EntityManager;
             Entity entity = em.CreateEntity(typeof(DataContainerComponent), typeof(HeroProgressComponent));
 
             var save = LocalSaveSystem.LoadProgress();

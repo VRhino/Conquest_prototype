@@ -39,8 +39,11 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
-        if (!SystemAPI.TryGetSingleton<GameStateComponent>(out var state))
+        var q = World.DefaultGameObjectInjectionWorld.EntityManager
+            .CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
             return;
+        var state = q.GetSingleton<GameStateComponent>();
 
         if (state.currentPhase != _currentPhase)
             ShowScreen(state.currentPhase);
@@ -102,7 +105,12 @@ public class UIManager : MonoBehaviour
 
     void UpdateFromGameState()
     {
-        if (SystemAPI.TryGetSingleton<GameStateComponent>(out var state))
+        var q = World.DefaultGameObjectInjectionWorld.EntityManager
+            .CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (!q.IsEmptyIgnoreFilter)
+        {
+            var state = q.GetSingleton<GameStateComponent>();
             ShowScreen(state.currentPhase);
+        }
     }
 }

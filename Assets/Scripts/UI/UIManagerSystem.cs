@@ -12,8 +12,13 @@ public partial class UIManagerSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
-        if (SystemAPI.TryGetSingleton<GameStateComponent>(out var state))
+        var q = World.DefaultGameObjectInjectionWorld.EntityManager
+            .CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (!q.IsEmptyIgnoreFilter)
+        {
+            var state = q.GetSingleton<GameStateComponent>();
             _lastPhase = state.currentPhase;
+        }
     }
 
     protected override void OnUpdate()

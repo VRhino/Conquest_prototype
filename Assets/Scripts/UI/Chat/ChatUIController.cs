@@ -138,15 +138,21 @@ public class ChatUIController : MonoBehaviour
 
     FixedString64Bytes GetPlayerName()
     {
-        if (SystemAPI.TryGetSingleton<DataContainerComponent>(out var data))
+        var q = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (!q.IsEmptyIgnoreFilter)
+        {
+            var data = q.GetSingleton<DataContainerComponent>();
             return data.playerName;
+        }
         return new FixedString64Bytes("Player");
     }
 
     Color GetTeamColor()
     {
-        if (SystemAPI.TryGetSingleton<DataContainerComponent>(out var data))
+        var q = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (!q.IsEmptyIgnoreFilter)
         {
+            var data = q.GetSingleton<DataContainerComponent>();
             return ((Team)data.teamID) switch
             {
                 Team.TeamA => Color.blue,
@@ -162,8 +168,12 @@ public class ChatUIController : MonoBehaviour
         if (_historyEntity != Entity.Null && _em.Exists(_historyEntity))
             return true;
 
-        if (SystemAPI.TryGetSingletonEntity<ChatHistoryState>(out _historyEntity))
+        var q = _em.CreateEntityQuery(ComponentType.ReadOnly<ChatHistoryState>());
+        if (!q.IsEmptyIgnoreFilter)
+        {
+            _historyEntity = q.GetSingletonEntity();
             return true;
+        }
 
         return false;
     }

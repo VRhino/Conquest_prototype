@@ -50,9 +50,11 @@ public partial class UnitStatScalingSystem : SystemBase
 
     bool IsBattleLoading()
     {
-        if (SystemAPI.TryGetSingleton<MatchStateComponent>(out var state))
-            return state.currentState == MatchState.LoadingMap;
-        return false;
+        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<MatchStateComponent>());
+        if (q.IsEmptyIgnoreFilter)
+            return false;
+        var state = q.GetSingleton<MatchStateComponent>();
+        return state.currentState == MatchState.LoadingMap;
     }
 
     void ApplyStats(Entity squadEntity,

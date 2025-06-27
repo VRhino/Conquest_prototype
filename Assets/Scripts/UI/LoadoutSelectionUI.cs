@@ -76,8 +76,10 @@ public class LoadoutSelectionUI : MonoBehaviour
             return;
 
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
-        if (!SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var entity))
+        var q = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (q.IsEmptyIgnoreFilter)
             return;
+        Entity entity = q.GetSingletonEntity();
 
         var container = em.GetComponentData<DataContainerComponent>(entity);
         var data = _progress.loadouts[_selectedIndex];
