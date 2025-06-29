@@ -37,6 +37,9 @@ public struct SquadDataComponent : IComponentData
 
     /// <summary>Progression curves sampled per level.</summary>
     public BlobAssetReference<SquadProgressionCurveBlob> curves;
+
+    /// <summary>Prefab entity used to instantiate squad units.</summary>
+    public Entity unitPrefab;
 }
 
 /// <summary>
