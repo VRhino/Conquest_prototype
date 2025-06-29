@@ -219,6 +219,11 @@
     <Compile Include="Assets\Scripts\Squads\UnitTargetPositionComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\XPSource.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneLinkComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroSquadSelectionComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroSquadReference.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadOwnerComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitOwnerComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadSpawningSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\NavMeshAgentAuthoring.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconAuthoring.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolBootstrapper.cs" />
