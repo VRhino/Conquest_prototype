@@ -19,6 +19,39 @@ public class SquadDataAuthoring : MonoBehaviour
 
             var entity = GetEntity(TransformUsageFlags.None);
 
+            Entity prefabEntity = authoring.data.prefab != null
+                ? GetEntity(authoring.data.prefab, TransformUsageFlags.Dynamic)
+                : Entity.Null;
+
+            AddComponent(entity, new SquadDataComponent
+            {
+                vidaBase = authoring.data.vidaBase,
+                velocidadBase = authoring.data.velocidadBase,
+                masa = authoring.data.masa,
+                peso = authoring.data.peso,
+                squadType = authoring.data.tipo,
+                bloqueo = authoring.data.bloqueo,
+                defensaCortante = authoring.data.defensaCortante,
+                defensaPerforante = authoring.data.defensaPerforante,
+                defensaContundente = authoring.data.defensaContundente,
+                danoCortante = authoring.data.danoCortante,
+                danoPerforante = authoring.data.danoPerforante,
+                danoContundente = authoring.data.danoContundente,
+                penetracionCortante = authoring.data.penetracionCortante,
+                penetracionPerforante = authoring.data.penetracionPerforante,
+                penetracionContundente = authoring.data.penetracionContundente,
+                esUnidadADistancia = authoring.data.esUnidadADistancia,
+                alcance = authoring.data.alcance,
+                precision = authoring.data.precision,
+                cadenciaFuego = authoring.data.cadenciaFuego,
+                velocidadRecarga = authoring.data.velocidadRecarga,
+                municionTotal = authoring.data.municionTotal,
+                liderazgoCost = authoring.data.liderazgoCost,
+                behaviorProfile = authoring.data.behaviorProfile,
+                curves = default,
+                unitPrefab = prefabEntity
+            });
+
             AddComponent(entity, new SquadStatsComponent
             {
                 squadType = authoring.data.tipo,
