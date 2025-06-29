@@ -25,8 +25,6 @@ public partial class HeroSpawnSystem : SystemBase
             var spawnPointsForInstantiate = spawnPointQueryForInstantiate.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
             SpawnPointComponent selected = default;
             bool found = false;
-            UnityEngine.Debug.Log($"[HeroSpawnSystem] Instanciando héroe local con spawnID={dataForInstantiate.selectedSpawnID}, teamID={dataForInstantiate.teamID}");
-            UnityEngine.Debug.Log($"[HeroSpawnSystem] Total spawn points for instantiation: {spawnPointsForInstantiate.Length}");
             for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
             {
                 var sp = spawnPointsForInstantiate[i];
@@ -39,7 +37,6 @@ public partial class HeroSpawnSystem : SystemBase
             }
             if (!found)
             {
-                UnityEngine.Debug.LogWarning("[HeroSpawnSystem] No se encontró un SpawnPoint válido para el héroe local. No se instancia el héroe.");
                 for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
                 {
                     var sp = spawnPointsForInstantiate[i];
@@ -53,7 +50,6 @@ public partial class HeroSpawnSystem : SystemBase
             }
             if (found)
             {
-                UnityEngine.Debug.Log($"Instanciando héroe local en posición {selected.position} (spawnID={selected.spawnID}, teamID={selected.teamID})");
                 var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
                 var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
                 entityManager.SetComponentData(heroEntity, new LocalTransform { Position = selected.position, Rotation = Unity.Mathematics.quaternion.identity, Scale = 1f });

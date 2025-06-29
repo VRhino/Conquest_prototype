@@ -77,6 +77,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroAttributeType.cs" />
     <Compile Include="Assets\Scripts\Squads\NonDeployableSquadTag.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttackSystem.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadSpawningSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\GamePhase.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatMessageComponent.cs" />
@@ -101,6 +102,7 @@
     <Compile Include="Assets\Scripts\Combat\DamageProfile.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefabBaker.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitOwnerComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitStatScalingSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAnimationComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroHealthComponent.cs" />
@@ -133,6 +135,7 @@
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconType.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDeploymentWarningEvent.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadOwnerComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerAuthoring.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCategory.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkTag.cs" />
@@ -140,6 +143,7 @@
     <Compile Include="Assets\Scripts\Hero\PlayerInteractionComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassReferenceAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFollowFormationSystem.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroSquadSelectionComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombatComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnBaker.cs" />
@@ -228,12 +232,14 @@
     <Compile Include="Assets\Scripts\Shared\MatchStateComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
+    <Compile Include="Assets\Scripts\SoloParaPruebas\HeroSquadSelectionTestAuthoring.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFSMSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFSMStateComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlotComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\EnvironmentAwarenessComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\DetectedEnemy.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroRespawnSystem.cs" />
@@ -243,13 +249,9 @@
     <Compile Include="Assets\Scripts\Squads\UnitTargetPositionComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\XPSource.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneLinkComponent.cs" />
-    <Compile Include="Assets\Scripts\Hero\HeroSquadSelectionComponent.cs" />
-    <Compile Include="Assets\Scripts\Hero\HeroSquadReference.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadOwnerComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitOwnerComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadSpawningSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\NavMeshAgentAuthoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Demo\EquipmentManager.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroSquadReference.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconAuthoring.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolBootstrapper.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraSettingsComponent.cs" />

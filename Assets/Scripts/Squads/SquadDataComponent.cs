@@ -40,6 +40,8 @@ public struct SquadDataComponent : IComponentData
 
     /// <summary>Prefab entity used to instantiate squad units.</summary>
     public Entity unitPrefab;
+
+    public int unitCount;
 }
 
 /// <summary>

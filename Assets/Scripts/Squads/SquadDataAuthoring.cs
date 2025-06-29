@@ -49,7 +49,8 @@ public class SquadDataAuthoring : MonoBehaviour
                 liderazgoCost = authoring.data.liderazgoCost,
                 behaviorProfile = authoring.data.behaviorProfile,
                 curves = default,
-                unitPrefab = prefabEntity
+                unitPrefab = prefabEntity,
+                unitCount = authoring.data.unitCount
             });
 
             AddComponent(entity, new SquadStatsComponent

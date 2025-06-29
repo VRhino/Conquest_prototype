@@ -9,6 +9,6 @@ public class FormationScriptableObject : ScriptableObject
     /// <summary>Formation this pattern represents.</summary>
     public FormationType formationType;
 
-    /// <summary>Offsets relative to the leader for each unit.</summary>
-    public Vector3[] localOffsets;
+    /// <summary>Offsets relative to the leader for each unit (x, z).</summary>
+    public Vector2[] localOffsets;
 }

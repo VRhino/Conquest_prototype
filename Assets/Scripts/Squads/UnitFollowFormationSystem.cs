@@ -12,6 +12,7 @@ public partial class UnitFollowFormationSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        Dependency.Complete();
         const float moveSpeed = 5f;
         const float stoppingDistanceSq = 0.04f; // ~0.2m
 
@@ -20,13 +21,17 @@ public partial class UnitFollowFormationSystem : SystemBase
         var slotLookup = GetComponentLookup<UnitFormationSlotComponent>(true);
         var targetLookup = GetComponentLookup<UnitLocalTargetComponent>();
         var transformLookup = GetComponentLookup<LocalTransform>();
+        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
 
-        foreach (var units in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>())
+        foreach (var (units, entity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
             if (units.Length == 0)
                 continue;
 
-            Entity leader = units[0].Value;
+            if (!ownerLookup.HasComponent(entity))
+                continue;
+
+            Entity leader = ownerLookup[entity].hero;
             if (!transformLookup.HasComponent(leader))
                 continue;
 
@@ -43,6 +48,9 @@ public partial class UnitFollowFormationSystem : SystemBase
                 float3 current = transformLookup[unit].Position;
                 float3 diff = desired - current;
                 float distSq = math.lengthsq(diff);
+
+                // UnityEngine.Debug.Log($"[UnitFollowFormationSystem] unit: {unit}, leader: {leader}, offset: {slotLookup[unit].relativeOffset}, desired: {desired}, current: {current}, distSq: {distSq}");
+
                 if (distSq > stoppingDistanceSq)
                 {
                     float3 step = math.normalizesafe(diff) * moveSpeed * dt;

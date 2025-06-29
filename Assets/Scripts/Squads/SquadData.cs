@@ -86,4 +86,8 @@ public class SquadData : ScriptableObject
     public AnimationCurve defensaCurve;
     /// <summary>Speed scaling per level.</summary>
     public AnimationCurve velocidadCurve;
+
+    // Squad size
+    /// <summary>Total number of units in this squad.</summary>
+    public int unitCount;
 }

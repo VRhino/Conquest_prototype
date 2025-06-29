@@ -22,7 +22,7 @@ public class SquadFormationDataAuthoring : MonoBehaviour
                 formationArray[i].formationType = form.formationType;
                 var offsets = builder.Allocate(ref formationArray[i].localOffsets, form.localOffsets.Length);
                 for (int j = 0; j < form.localOffsets.Length; j++)
-                    offsets[j] = form.localOffsets[j];
+                    offsets[j] = new Unity.Mathematics.float3(form.localOffsets[j].x, 0, form.localOffsets[j].y);
             }
 
             var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
