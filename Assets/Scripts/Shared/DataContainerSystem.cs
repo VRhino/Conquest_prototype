@@ -23,14 +23,14 @@ public partial class DataContainerSystem : SystemBase
 
             em.SetComponentData(entity, new DataContainerComponent
             {
-                playerID = 0,
+                playerID = 1,
                 playerName = default,
-                teamID = 0,
+                teamID = 1,
                 selectedLoadoutID = -1,
                 selectedSquads = default,
                 selectedPerks = default,
                 totalLeadershipUsed = 0,
-                selectedSpawnID = -1,
+                selectedSpawnID = 1,
                 isReady = false
             });
 

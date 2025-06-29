@@ -3,12 +3,28 @@
   "WorkspaceRootPath": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\heroattacksystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\heroattacksystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\herospawnsystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\herospawnsystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\combat\\damageprofileauthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\game.ecs.asmdef||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\game.ecs.asmdef||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\map\\spawnpointcomponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\map\\spawnpointcomponent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\heroclassreferenceauthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\heroclassreferenceauthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\combat\\damageprofileauthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\combat\\damageprofileauthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\heroattacksystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\heroattacksystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Library\\PackageCache\\com.unity.transport@1.5.0\\Runtime\\IPCManager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -27,6 +43,56 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "HeroSpawnSystem.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroSpawnSystem.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroSpawnSystem.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroSpawnSystem.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Hero\\HeroSpawnSystem.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAACvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-28T18:02:31.389Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Game.ECS.asmdef",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Game.ECS.asmdef",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Game.ECS.asmdef",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Game.ECS.asmdef",
+              "RelativeToolTip": "Assets\\Scripts\\Game.ECS.asmdef",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001874|",
+              "WhenOpened": "2025-06-28T17:58:59.027Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "SpawnPointComponent.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Map\\SpawnPointComponent.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Map\\SpawnPointComponent.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Map\\SpawnPointComponent.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Map\\SpawnPointComponent.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-28T14:03:47.283Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "HeroClassReferenceAuthoring.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroClassReferenceAuthoring.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroClassReferenceAuthoring.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroClassReferenceAuthoring.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Hero\\HeroClassReferenceAuthoring.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-28T13:35:28.99Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
               "Title": "HeroAttackSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroAttackSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroAttackSystem.cs",
@@ -34,25 +100,23 @@
               "RelativeToolTip": "Assets\\Scripts\\Hero\\HeroAttackSystem.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-27T06:29:49.819Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-27T06:29:49.819Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "DamageProfileAuthoring.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs",
               "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs",
               "RelativeToolTip": "Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAA+AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-27T06:27:25.104Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-06-27T06:27:25.104Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 6,
               "Title": "IPCManager.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Library\\PackageCache\\com.unity.transport@1.5.0\\Runtime\\IPCManager.cs",
               "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.transport@1.5.0\\Runtime\\IPCManager.cs",

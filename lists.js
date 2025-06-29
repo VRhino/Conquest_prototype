@@ -1,9 +1,11 @@
-// Este script lista todos los archivos dentro de Assets/Scripts y guarda el resultado en scripts_list.txt
+// Este script lista todos los archivos dentro de Assets/Scripts o una subcarpeta específica y guarda el resultado en scripts_list.txt
 
 const fs = require('fs');
 const path = require('path');
 
-const dir = path.join(__dirname, 'Assets', 'Scripts');
+// Toma el argumento opcional de la línea de comandos
+const subfolder = process.argv[2] || '';
+const dir = path.join(__dirname, 'Assets', 'Scripts', subfolder);
 const output = path.join(__dirname, 'scripts_list.txt');
 
 function listFiles(dirPath, fileList = []) {

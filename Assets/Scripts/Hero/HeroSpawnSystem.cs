@@ -11,6 +11,57 @@ public partial class HeroSpawnSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        // Instanciar el héroe local si no existe
+        bool heroExists = false;
+        foreach (var _ in SystemAPI.Query<RefRO<IsLocalPlayer>>())
+        {
+            heroExists = true;
+            break;
+        }
+        
+        if (!heroExists && SystemAPI.TryGetSingleton<HeroPrefabComponent>(out var heroPrefab) && SystemAPI.TryGetSingleton<DataContainerComponent>(out var dataForInstantiate))
+        {
+            var spawnPointQueryForInstantiate = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
+            var spawnPointsForInstantiate = spawnPointQueryForInstantiate.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
+            SpawnPointComponent selected = default;
+            bool found = false;
+            UnityEngine.Debug.Log($"[HeroSpawnSystem] Instanciando héroe local con spawnID={dataForInstantiate.selectedSpawnID}, teamID={dataForInstantiate.teamID}");
+            UnityEngine.Debug.Log($"[HeroSpawnSystem] Total spawn points for instantiation: {spawnPointsForInstantiate.Length}");
+            for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
+            {
+                var sp = spawnPointsForInstantiate[i];
+                if (sp.spawnID == dataForInstantiate.selectedSpawnID && sp.teamID == dataForInstantiate.teamID && sp.isActive)
+                {
+                    selected = sp;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+            {
+                UnityEngine.Debug.LogWarning("[HeroSpawnSystem] No se encontró un SpawnPoint válido para el héroe local. No se instancia el héroe.");
+                for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
+                {
+                    var sp = spawnPointsForInstantiate[i];
+                    if (sp.teamID == dataForInstantiate.teamID && sp.isActive)
+                    {
+                        selected = sp;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (found)
+            {
+                UnityEngine.Debug.Log($"Instanciando héroe local en posición {selected.position} (spawnID={selected.spawnID}, teamID={selected.teamID})");
+                var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+                var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
+                entityManager.SetComponentData(heroEntity, new LocalTransform { Position = selected.position, Rotation = Unity.Mathematics.quaternion.identity, Scale = 1f });
+                // Puedes setear aquí otros componentes iniciales si lo necesitas
+            }
+            spawnPointsForInstantiate.Dispose();
+        }
+
         var spawnPointQuery = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
         var spawnPoints = spawnPointQuery.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
         float dt = SystemAPI.Time.DeltaTime;
