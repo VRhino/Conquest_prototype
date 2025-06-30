@@ -68,6 +68,9 @@ public partial class HeroInputSystem : SystemBase
         bool attack = false;
         bool interact = false;
 
+        // Solo loguea si hay input relevante
+        bool hasInput = false;
+
         if (keyboard != null)
         {
             if (keyboard.aKey.isPressed) move.x -= 1f;
@@ -86,6 +89,8 @@ public partial class HeroInputSystem : SystemBase
         {
             attack = mouse.leftButton.isPressed;
         }
+
+        hasInput = (move.x != 0 || move.y != 0 || sprint || jump || skill1 || skill2 || ultimate || attack || interact);
 
         var ecb = new EntityCommandBuffer(Allocator.TempJob);
 

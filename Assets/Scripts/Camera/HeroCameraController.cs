@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// MonoBehaviour that controls the third person camera and follows the
@@ -13,13 +14,28 @@ public class HeroCameraController : MonoBehaviour
     Entity _cameraEntity;
     Entity _heroEntity;
     float _yaw;
+    float _mouseX;
+    float _scroll;
+    bool _tacticalMode;
+
+    private void OnEnable()
+    {
+        // Suscribe input events
+        var playerInput = GetComponent<PlayerInput>();
+        if (playerInput != null)
+        {
+            playerInput.actions["Look"].performed += ctx => _mouseX = ctx.ReadValue<Vector2>().x;
+            playerInput.actions["Zoom"].performed += ctx => _scroll = ctx.ReadValue<float>();
+            playerInput.actions["Tactical"].performed += ctx => _tacticalMode = ctx.ReadValue<float>() > 0.5f;
+        }
+    }
 
     void Awake()
     {
         _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
     }
 
-   void Update()
+    void Update()
     {
         if (_cameraEntity == Entity.Null || !_entityManager.Exists(_cameraEntity))
             FindCameraEntity();
@@ -45,13 +61,13 @@ public class HeroCameraController : MonoBehaviour
             return;
         }
 
-        // Input handling
-        _yaw += Input.GetAxis("Mouse X") * settings.rotationSensitivity;
+        // Input handling (nuevo Input System)
+        _yaw += _mouseX * settings.rotationSensitivity * Time.deltaTime;
         camTarget.zoomLevel = math.clamp(
-            camTarget.zoomLevel - Input.GetAxis("Mouse ScrollWheel") * settings.zoomSpeed,
+            camTarget.zoomLevel - _scroll * settings.zoomSpeed * Time.deltaTime,
             settings.minZoom,
             settings.maxZoom);
-        camTarget.tacticalMode = Input.GetKey(KeyCode.LeftAlt);
+        camTarget.tacticalMode = _tacticalMode;
         state.state = camTarget.tacticalMode ? CameraState.Tactical : CameraState.Normal;
 
         _entityManager.SetComponentData(_cameraEntity, camTarget);
@@ -78,14 +94,18 @@ public class HeroCameraController : MonoBehaviour
 
         transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * 5f);
         transform.rotation = Quaternion.LookRotation((Vector3)heroTransform.Position - transform.position);
-    }
 
+        // Reset input deltas
+        _mouseX = 0f;
+        _scroll = 0f;
+    }
 
     void FindCameraEntity()
     {
         var query = _entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<CameraTargetComponent>(),
-            ComponentType.ReadOnly<IsLocalPlayer>());
+            ComponentType.ReadOnly<CameraSettingsComponent>(),
+            ComponentType.ReadOnly<CameraStateComponent>());
         using var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
         if (entities.Length > 0)
             _cameraEntity = entities[0];

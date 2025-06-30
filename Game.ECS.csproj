@@ -85,6 +85,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroPrefabAuthoring.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitDetectedEnemy.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitSpacingSystem.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroStatsBaker.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStatsComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfileComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\NavAgentComponent.cs" />
@@ -131,6 +132,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroInputComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadCombatComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEquipmentComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroInputAuthoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularCharacterEditor.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconType.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDeploymentWarningEvent.cs" />
@@ -204,9 +206,11 @@
     <Compile Include="Assets\Scripts\Squads\SquadChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Map\MapSceneManager.cs" />
+    <Compile Include="Assets\Scripts\Camera\CameraBootstrapSystem.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayerBaker.cs" />
     <Compile Include="Assets\Scripts\Shared\CooldownSystem.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroInputBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadControlSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitStatsComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStaminaSystem.cs" />
@@ -244,6 +248,7 @@
     <Compile Include="Assets\Scripts\Map\ZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroRespawnSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroStatsAuthoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularArmorType.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLifeBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitTargetPositionComponent.cs" />
