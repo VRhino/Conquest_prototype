@@ -38,18 +38,13 @@ public struct SquadDataComponent : IComponentData
     /// <summary>Progression curves sampled per level.</summary>
     public BlobAssetReference<SquadProgressionCurveBlob> curves;
 
+    /// <summary>Formation patterns available to this squad type.</summary>
+    public BlobAssetReference<FormationLibraryBlob> formationLibrary;
+
     /// <summary>Prefab entity used to instantiate squad units.</summary>
     public Entity unitPrefab;
 
     public int unitCount;
-}
-
-/// <summary>
-/// Buffer element storing all formations defined for this squad type.
-/// </summary>
-public struct AvailableFormationElement : IBufferElementData
-{
-    public FormationType Value;
 }
 
 /// <summary>

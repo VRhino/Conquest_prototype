@@ -1681,28 +1681,33 @@ public enum HeroState { Idle, Moving }
 ### UnitFormationStateComponent
 
 ```csharp
-public enum UnitFormationState { Formed, Moving }
-
+public enum UnitFormationState { Formed, Waiting, Moving }
 ```
 
 ### 📐 Lógica de transición
 
-| Estado actual unidad | Estado héroe | Condición | Nuevo estado unidad |
+| Estado actual unidad | Condición | Nuevo estado unidad | Descripción |
 | --- | --- | --- | --- |
-| Formed | Idle o Moving | Dentro del radio (≤5m) | Formed (sin cambio) |
-| Formed | Moving | Sale del radio (>5m) | Moving (con delay) |
-| Moving | Cualquier | Aún no llegó a su slot | Moving |
-| Moving | Cualquier | Llega a slot asignado de formación | Formed |
+| Formed | Héroe sale del radio (>5m) | Waiting | Inicia delay aleatorio (0.5-1.5s) |
+| Waiting | Delay expira | Moving | Comienza movimiento hacia slot |
+| Waiting | Héroe regresa al radio Y unidad en slot | Formed | Cancela delay, permanece en posición |
+| Moving | Llega a slot Y héroe dentro del radio | Formed | Completa movimiento exitosamente |
+| Moving | Llega a slot Y héroe fuera del radio | Waiting | Nuevo delay antes de moverse nuevamente |
+
+**Notas importantes:**
+- Solo las unidades en estado `Moving` se mueven físicamente
+- El estado `Waiting` introduce un delay aleatorio para crear movimientos más naturales
+- Las unidades en estado `Formed` o `Waiting` permanecen estáticas
 
 ---
 
 ### 🧩 Componentes involucrados
 
 - `HeroStateComponent`: actualizado por `HeroStateSystem` en base al input del jugador.
-- `UnitFormationStateComponent`: actualizado por `UnitFormationStateSystem` evaluando distancia y estado.
-- `LocalTransform`: posición actual.
+- `UnitFormationStateComponent`: actualizado por `UnitFormationStateSystem` evaluando distancia del héroe al centro del escuadrón y posición de la unidad en su slot.
+- `LocalTransform`: posición actual de héroe y unidades.
 - `SquadUnitElement`: buffer de unidades del escuadrón.
-- `SquadFormationDataComponent`: contiene la formación activa y las posiciones de referencia.
+- `SquadDataComponent`: contiene las formaciones disponibles y datos del grid.
 
 ---
 
@@ -1714,17 +1719,17 @@ Actualiza el estado del héroe (`Idle` o `Moving`) usando información de input 
 
 ### 2. UnitFormationStateSystem
 
-Gestiona las transiciones de estado de cada unidad en base a:
+Gestiona las transiciones de estado de cada unidad implementando la tabla de transiciones:
 
-- Distancia con respecto al héroe.
-- Estado previo.
-- Posición asignada según la formación.
+- **Formed → Waiting**: Cuando el héroe sale del radio de formación (>5m del centro del escuadrón)
+- **Waiting → Moving**: Cuando expira el delay aleatorio (0.5-1.5 segundos)
+- **Waiting → Formed**: Cuando el héroe regresa al radio y la unidad ya está en su slot
+- **Moving → Formed**: Cuando la unidad llega a su slot y el héroe está dentro del radio
+- **Moving → Waiting**: Cuando la unidad llega a su slot pero el héroe sigue fuera del radio
 
-Incluye lógica para evitar que la unidad cancele un movimiento activo si el héroe regresa al radio.
+### 3. UnitFollowFormationSystem
 
-### 3. UnitMovementSystem
-
-Mueve las unidades hacia su posición asignada **solo si están en estado `Moving`**. No activa lógica de movimiento si están en `Formed`.
+Mueve las unidades hacia su posición asignada **solo si están en estado `Moving`**. Las unidades en estado `Formed` o `Waiting` permanecen estáticas, creando un comportamiento más natural y evitando movimientos innecesarios.
 
 ## 🌐 8. Multijugador (MVP)
 

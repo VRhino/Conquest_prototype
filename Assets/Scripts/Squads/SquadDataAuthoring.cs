@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>
@@ -22,6 +23,9 @@ public class SquadDataAuthoring : MonoBehaviour
             Entity prefabEntity = authoring.data.prefab != null
                 ? GetEntity(authoring.data.prefab, TransformUsageFlags.Dynamic)
                 : Entity.Null;
+
+            // Bake formation library
+            var formationLibrary = BakeFormationLibrary(authoring.data.gridFormations);
 
             AddComponent(entity, new SquadDataComponent
             {
@@ -49,6 +53,7 @@ public class SquadDataAuthoring : MonoBehaviour
                 liderazgoCost = authoring.data.liderazgoCost,
                 behaviorProfile = authoring.data.behaviorProfile,
                 curves = default,
+                formationLibrary = formationLibrary,
                 unitPrefab = prefabEntity,
                 unitCount = authoring.data.unitCount
             });
@@ -75,6 +80,46 @@ public class SquadDataAuthoring : MonoBehaviour
                 bluntDefense = authoring.data.defensaContundente,
                 leadershipCost = authoring.data.liderazgoCost
             });
+        }
+
+        private BlobAssetReference<FormationLibraryBlob> BakeFormationLibrary(GridFormationScriptableObject[] gridFormations)
+        {
+            var builder = new BlobBuilder(Allocator.Temp);
+            ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
+            
+            if (gridFormations == null || gridFormations.Length == 0)
+            {
+                Debug.LogWarning("No grid formations assigned to squad data. Creating empty formation library.");
+                builder.Allocate(ref root.formations, 0);
+            }
+            else
+            {
+                var formationArray = builder.Allocate(ref root.formations, gridFormations.Length);
+                
+                for (int i = 0; i < gridFormations.Length; i++)
+                {
+                    var gridForm = gridFormations[i];
+                    if (gridForm == null)
+                    {
+                        Debug.LogWarning($"Grid formation at index {i} is null in squad data. Skipping.");
+                        continue;
+                    }
+
+                    formationArray[i].formationType = gridForm.formationType;
+                    
+                    // Store centered grid positions (hero-relative)
+                    Vector2Int[] centeredPositions = gridForm.GetCenteredGridPositions();
+                    var gridPositions = builder.Allocate(ref formationArray[i].gridPositions, centeredPositions.Length);
+                    for (int j = 0; j < centeredPositions.Length; j++)
+                    {
+                        gridPositions[j] = new int2(centeredPositions[j].x, centeredPositions[j].y);
+                    }
+                }
+            }
+
+            var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+            builder.Dispose();
+            return blob;
         }
     }
 }

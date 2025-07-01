@@ -22,7 +22,6 @@ public partial class SquadProgressionSystem : SystemBase
 
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
         var abilityLookup = GetBufferLookup<AbilityByLevelElement>(true);
-        var formationLookup = GetBufferLookup<AvailableFormationElement>(true);
         var unitBufferLookup = GetBufferLookup<SquadUnitElement>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -47,7 +46,7 @@ public partial class SquadProgressionSystem : SystemBase
 
                 ApplyStats(entity, data, progress.ValueRO.level, unitBufferLookup);
                 UnlockAbility(entity, dataRef.ValueRO.dataEntity, progress.ValueRO.level, abilityLookup);
-                UnlockFormation(entity, dataRef.ValueRO.dataEntity, progress.ValueRO.level, formationLookup);
+                // Note: Formations are now always available from SquadDataComponent.formationLibrary
 
                 Entity evt = ecb.CreateEntity();
                 ecb.AddComponent(evt, new SquadLevelUpEvent { squad = entity });
@@ -155,24 +154,6 @@ public partial class SquadProgressionSystem : SystemBase
         unlocked.Add(new UnlockedAbilityElement { Value = ability });
     }
 
-    void UnlockFormation(Entity squadEntity, Entity dataEntity, int level,
-                         BufferLookup<AvailableFormationElement> formationLookup)
-    {
-        if (!formationLookup.HasBuffer(dataEntity))
-            return;
-        var forms = formationLookup[dataEntity];
-        int index = level / 10; // first formation assumed available at level 1
-        if (index < 0 || index >= forms.Length)
-            return;
-
-        if (!EntityManager.HasBuffer<UnlockedFormationElement>(squadEntity))
-            EntityManager.AddBuffer<UnlockedFormationElement>(squadEntity);
-        var unlocked = EntityManager.GetBuffer<UnlockedFormationElement>(squadEntity);
-        var form = forms[index].Value;
-        foreach (var f in unlocked)
-            if (f.Value == form)
-                return;
-        unlocked.Add(new UnlockedFormationElement { Value = form });
-    }
+    // Note: Formation unlocking removed - all formations are now available from SquadDataComponent.formationLibrary
 }
 

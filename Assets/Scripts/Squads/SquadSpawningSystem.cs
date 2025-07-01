@@ -14,7 +14,6 @@ public partial class SquadSpawningSystem : SystemBase
     {
         Dependency.Complete();
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
-        var formationLookup = GetComponentLookup<SquadFormationDataComponent>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (spawn, selection, transform, hero, entity) in SystemAPI
@@ -34,23 +33,17 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 continue;
             }
-            if (!formationLookup.TryGetComponent(selection.ValueRO.squadDataEntity, out var formationData))
-            {
-                continue;
-            }
 
             // Create squad entity
             Entity squad = ecb.CreateEntity();
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
+            ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
             ecb.AddComponent(squad, new SquadStatsComponent
             {
                 squadType = data.squadType,
                 behaviorProfile = data.behaviorProfile
             });
-            ecb.AddComponent(squad, new SquadFormationDataComponent
-            {
-                formationLibrary = formationData.formationLibrary
-            });
+            // Note: Formation library is now included directly in SquadDataComponent
             ecb.AddComponent(squad, new SquadProgressComponent
             {
                 level = 1,
@@ -60,8 +53,8 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddComponent(squad, new SquadInstanceComponent { id = selection.ValueRO.instanceId });
             
             // Obtener la primera formación disponible en el arreglo como formación por defecto (índice 0)
-            var firstFormationType = formationData.formationLibrary.Value.formations.Length > 0 
-                ? formationData.formationLibrary.Value.formations[0].formationType 
+            var firstFormationType = data.formationLibrary.Value.formations.Length > 0 
+                ? data.formationLibrary.Value.formations[0].formationType 
                 : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
             
             // Agregar componentes necesarios para el sistema de control y formación
@@ -96,9 +89,10 @@ public partial class SquadSpawningSystem : SystemBase
 
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);
 
-            ref var formations = ref formationData.formationLibrary.Value.formations;
-            ref var offsets = ref formations[0].localOffsets; // Siempre usar índice 0 para spawn inicial
-            int unitCount = offsets.Length;
+            ref var formations = ref data.formationLibrary.Value.formations;
+            ref var firstFormation = ref formations[0]; // Always use index 0 for initial spawn
+            
+            int unitCount = firstFormation.gridPositions.Length;
 
             for (int i = 0; i < unitCount; i++)
             {
@@ -108,28 +102,42 @@ public partial class SquadSpawningSystem : SystemBase
                 }
 
                 Entity unit = ecb.Instantiate(data.unitPrefab);
-                float3 offset = offsets[i];
-                float3 heroForward = math.forward(transform.ValueRO.Rotation);
-                float3 squadOrigin = transform.ValueRO.Position + heroForward * 5f;
-                float3 baseXZ = squadOrigin + new float3(offset.x, 0, offset.z);
+                float3 squadOrigin = transform.ValueRO.Position; // Spawn directly at hero position
+                
+                // Use grid positions from formation blob (positions are already centered)
+                ref var gridPositions = ref firstFormation.gridPositions;
+                int2 gridPos = gridPositions[i];
+                float3 gridOffset = FormationGridSystem.GridToRelativeWorld(gridPos);
+                
+                float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
 
-                // Obtener altura del terreno clásico de Unity
+                // Get classic Unity terrain height
                 float y = 0f;
                 if (UnityEngine.Terrain.activeTerrain != null)
                 {
                     y = UnityEngine.Terrain.activeTerrain.SampleHeight(new UnityEngine.Vector3(baseXZ.x, 0, baseXZ.z));
-                    y += UnityEngine.Terrain.activeTerrain.GetPosition().y; // Ajuste por la posición del terreno
+                    y += UnityEngine.Terrain.activeTerrain.GetPosition().y; // Adjust for terrain position
                 }
                 float3 worldPos = new float3(baseXZ.x, y, baseXZ.z);
 
                 ecb.SetComponent(unit, LocalTransform.FromPosition(worldPos));
+                
+                // Use the grid system
+                ecb.AddComponent(unit, new UnitGridSlotComponent
+                {
+                    gridPosition = gridPos,
+                    slotIndex = i,
+                    worldOffset = gridOffset
+                });
+                
+                // Maintain compatibility with existing system
                 ecb.AddComponent(unit, new UnitFormationSlotComponent
                 {
-                    relativeOffset = offsets[i],
+                    relativeOffset = gridOffset,
                     slotIndex = i
                 });
                 
-                // Agregar UnitTargetPositionComponent desde el inicio
+                // Add UnitTargetPositionComponent from the start
                 ecb.AddComponent(unit, new UnitTargetPositionComponent
                 {
                     position = worldPos
@@ -184,9 +192,8 @@ public partial class SquadSpawningSystem : SystemBase
                 // Añadir UnitFormationStateComponent a cada unidad
                 ecb.AddComponent(unit, new UnitFormationStateComponent {
                     State = UnitFormationState.Formed,
-                    Delay = 0f,
-                    Timer = 0f,
-                    Waiting = false
+                    DelayTimer = 0f,
+                    DelayDuration = 0f
                 });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }

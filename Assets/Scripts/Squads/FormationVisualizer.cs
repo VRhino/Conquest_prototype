@@ -66,16 +66,16 @@ public class FormationVisualizer : MonoBehaviour
 
         var leaderTransform = _entityManager.GetComponentData<LocalTransform>(leader);
         var state = _entityManager.GetComponentData<SquadStateComponent>(_squadEntity);
-        var formationData = _entityManager.GetComponentData<SquadFormationDataComponent>(_squadEntity);
-        if (!formationData.formationLibrary.IsCreated)
+        var squadData = _entityManager.GetComponentData<SquadDataComponent>(_squadEntity);
+        if (!squadData.formationLibrary.IsCreated)
         {
             _positions = System.Array.Empty<Vector3>();
             return;
         }
 
         // ✅ Corrección: acceder a blob por referencia
-        ref var formations = ref formationData.formationLibrary.Value.formations;
-        ref BlobArray<float3> offsets = ref formations[0].localOffsets; 
+        ref var formations = ref squadData.formationLibrary.Value.formations;
+        ref BlobArray<int2> gridPositions = ref formations[0].gridPositions; 
         bool found = false;
 
         for (int i = 0; i < formations.Length; i++)
@@ -83,7 +83,7 @@ public class FormationVisualizer : MonoBehaviour
             if (formations[i].formationType == state.currentFormation)
             {
                 ref var formation = ref formations[i];
-                offsets = ref formation.localOffsets; // ✅ acceso por ref
+                gridPositions = ref formation.gridPositions; // ✅ acceso por ref
                 found = true;
                 break;
             }
@@ -95,13 +95,17 @@ public class FormationVisualizer : MonoBehaviour
             return;
         }
 
-        int count = math.min(units.Length, offsets.Length);
-        if (_positions.Length != count)
-            _positions = new Vector3[count];
+        // Only visualize positions for squad units (exclude leader/hero)
+        int squadUnitCount = units.Length - 1; // Exclude leader
+        int positionsToShow = math.min(squadUnitCount, gridPositions.Length);
+        if (_positions.Length != positionsToShow)
+            _positions = new Vector3[positionsToShow];
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < positionsToShow; i++)
         {
-            _positions[i] = (Vector3)(leaderTransform.Position + offsets[i]);
+            // Convert grid position to world offset
+            float3 worldOffset = FormationGridSystem.GridToRelativeWorld(gridPositions[i]);
+            _positions[i] = (Vector3)(leaderTransform.Position + worldOffset);
         }
     }
 
@@ -128,7 +132,7 @@ public class FormationVisualizer : MonoBehaviour
     {
         var query = _entityManager.CreateEntityQuery(
             ComponentType.ReadOnly<SquadStateComponent>(),
-            ComponentType.ReadOnly<SquadFormationDataComponent>(),
+            ComponentType.ReadOnly<SquadDataComponent>(),
             ComponentType.ReadOnly<SquadUnitElement>(),
             ComponentType.ReadOnly<IsLocalPlayer>());
         using var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);

@@ -18,8 +18,8 @@ public class SquadData : ScriptableObject
     public GameObject prefab;
 
     // Formations and leadership
-    /// <summary>Formations the squad can adopt.</summary>
-    public List<FormationType> availableFormations;
+    /// <summary>Grid-based formations the squad can adopt.</summary>
+    public GridFormationScriptableObject[] gridFormations;
     /// <summary>Leadership cost to deploy the squad.</summary>
     public int liderazgoCost;
     /// <summary>Default tactical behavior profile.</summary>

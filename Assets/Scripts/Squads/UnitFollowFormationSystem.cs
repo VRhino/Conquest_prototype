@@ -81,8 +81,11 @@ public partial class UnitFollowFormationSystem : SystemBase
                 // Usar offset de formación (puede haber sido actualizado por FormationSystem)
                 float3 offset = slotLookup[unit].relativeOffset;
                 
+                // Asegurar que el offset esté ajustado a la cuadrícula
+                float3 gridOffset = FormationGridSystem.SnapToGrid(offset);
+                
                 // Calcular posición deseada usando la base de formación (consistente con UnitFormationStateSystem)
-                float3 desired = formationBase + offset;
+                float3 desired = formationBase + gridOffset;
                 
                 // Solo usar UnitTargetPositionComponent como override temporal si existe y es diferente
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
@@ -111,16 +114,19 @@ public partial class UnitFollowFormationSystem : SystemBase
                 // --- NUEVA LÓGICA BASADA EN ESTADO PERSISTENTE ---
                 if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
                     continue;
+                    
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
-                // Calcular posición de slot usando la misma lógica
-                float3 slotPos = formationBase + offset;
-                // Usar diff y distSq ya definidos arriba
-                // Solo mover si el estado es Moving
+                
+                // Calculate slot position using same logic (snapped to grid)
+                float3 slotPos = formationBase + gridOffset;
+                
+                // Only move if the unit state is Moving
                 if (stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq)
                 {
                     float speedMultiplier = 1f;
                     if (SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit))
                         speedMultiplier = SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier;
+                        
                     float pesoMultiplier = 1f;
                     if (SystemAPI.HasComponent<UnitStatsComponent>(unit))
                     {
@@ -129,15 +135,18 @@ public partial class UnitFollowFormationSystem : SystemBase
                         else if (peso == 3) pesoMultiplier = 0.6f;
                     }
                     speedMultiplier *= pesoMultiplier;
+
                     float3 step = math.normalizesafe(diff) * moveSpeed * speedMultiplier * dt;
                     if (math.lengthsq(step) > distSq)
                         step = diff;
+
                     current += step;
                     var t = transformLookup[unit];
                     t.Position = current;
                     transformLookup[unit] = t;
                 }
-                // Actualizar target visual si aplica
+                
+                // Update visual target regardless of state for UI purposes
                 if (targetLookup.HasComponent(unit))
                 {
                     var target = targetLookup[unit];

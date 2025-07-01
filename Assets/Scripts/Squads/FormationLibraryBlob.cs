@@ -12,12 +12,13 @@ public struct FormationLibraryBlob
 
 /// <summary>
 /// Blob representation of a single formation.
+/// All formations are now grid-based.
 /// </summary>
 public struct FormationDataBlob
 {
     /// <summary>Formation type.</summary>
     public FormationType formationType;
-
-    /// <summary>Offsets relative to the leader.</summary>
-    public BlobArray<float3> localOffsets;
+    
+    /// <summary>Grid positions for each unit.</summary>
+    public BlobArray<int2> gridPositions;
 }

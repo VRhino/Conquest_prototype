@@ -10,7 +10,7 @@ public partial struct UnitFormationStateSystem : ISystem
     {
         float dt = SystemAPI.Time.DeltaTime;
         const float formationRadiusSq = 25f; // 5m squared
-        const float slotThresholdSq = 0.25f; // ~0.5m
+        const float slotThresholdSq = 0.25f; // ~0.5m threshold for being "in slot"
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -24,7 +24,7 @@ public partial struct UnitFormationStateSystem : ISystem
             float3 heroPos = SystemAPI.GetComponent<LocalTransform>(hero).Position;
             var heroState = SystemAPI.GetComponent<HeroStateComponent>(hero).State;
 
-            // Calculate squad center
+            // Calculate squad center (average position of all units)
             float3 squadCenter = float3.zero;
             int count = 0;
             foreach (var unitElem in units)
@@ -38,7 +38,7 @@ public partial struct UnitFormationStateSystem : ISystem
             if (count > 0) squadCenter /= count;
 
             float heroDistSq = math.lengthsq(heroPos - squadCenter);
-            bool heroOutsideRadius = heroDistSq > formationRadiusSq;
+            bool heroWithinRadius = heroDistSq <= formationRadiusSq;
 
             foreach (var unitElem in units)
             {
@@ -51,50 +51,60 @@ public partial struct UnitFormationStateSystem : ISystem
                 var slot = SystemAPI.GetComponent<UnitFormationSlotComponent>(unit);
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                // Calcular posición deseada de la misma manera que UnitFollowFormationSystem
+                // Calculate desired position using same logic as UnitFollowFormationSystem
                 float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(hero).Rotation);
-                float3 formationBase = heroPos - heroForward * 5f; // Formación 5 metros detrás del héroe
-                float3 desired = formationBase + slot.relativeOffset;
-                float3 current = SystemAPI.GetComponent<LocalTransform>(unit).Position;
-                float distSq = math.lengthsq(desired - current);
+                float3 formationBase = heroPos - heroForward * 5f; // Formation 5 meters behind hero
+                
+                // Snap offset to grid for consistency
+                float3 gridOffset = FormationGridSystem.SnapToGrid(slot.relativeOffset);
+                float3 desiredSlotPos = formationBase + gridOffset;
+                float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+                float distToSlotSq = math.lengthsq(desiredSlotPos - currentPos);
+                
+                bool inSlot = distToSlotSq <= slotThresholdSq;
 
+                // State transition logic
                 switch (stateComp.State)
                 {
                     case UnitFormationState.Formed:
-                        if (heroOutsideRadius)
+                        // Formed -> Waiting: Hero leaves grid radius
+                        if (!heroWithinRadius)
                         {
-                            if (!stateComp.Waiting)
-                            {
-                                stateComp.Delay = UnityEngine.Random.Range(0.5f, 1.5f);
-                                stateComp.Timer = 0f;
-                                stateComp.Waiting = true;
-                            }
-                            else
-                            {
-                                stateComp.Timer += dt;
-                                if (stateComp.Timer >= stateComp.Delay)
-                                {
-                                    stateComp.State = UnitFormationState.Moving;
-                                    stateComp.Waiting = false;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            stateComp.Waiting = false;
-                            stateComp.Timer = 0f;
+                            stateComp.State = UnitFormationState.Waiting;
+                            stateComp.DelayTimer = 0f;
+                            stateComp.DelayDuration = UnityEngine.Random.Range(0.5f, 1.5f);
                         }
                         break;
-                    case UnitFormationState.Moving:
-                        // Solo puede volver a Formed si está en slot Y el héroe está dentro del radio
-                        if (distSq <= slotThresholdSq && !heroOutsideRadius)
+
+                    case UnitFormationState.Waiting:
+                        // Waiting -> Moving: Random delay expires
+                        stateComp.DelayTimer += dt;
+                        if (stateComp.DelayTimer >= stateComp.DelayDuration)
+                        {
+                            stateComp.State = UnitFormationState.Moving;
+                            stateComp.DelayTimer = 0f;
+                        }
+                        // Waiting -> Formed: Hero returns to radius while still waiting
+                        else if (heroWithinRadius && inSlot)
                         {
                             stateComp.State = UnitFormationState.Formed;
-                            stateComp.Waiting = false;
-                            stateComp.Timer = 0f;
+                            stateComp.DelayTimer = 0f;
                         }
                         break;
+
+                    case UnitFormationState.Moving:
+                        // Moving -> Formed: Unit reaches slot AND hero is within radius
+                        if (inSlot && heroWithinRadius)
+                        {
+                            stateComp.State = UnitFormationState.Formed;
+                            stateComp.DelayTimer = 0f;
+                        }
+                        // Note: If hero leaves radius while moving, unit continues moving
+                        // and will transition to Waiting only after reaching slot (if hero still out)
+                        // or directly to Formed if hero returns to radius when unit reaches slot
+                        break;
                 }
+
                 SystemAPI.SetComponent(unit, stateComp);
             }
         }

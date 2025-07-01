@@ -12,10 +12,10 @@ public partial class FormationSystem : SystemBase
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
 
-        foreach (var (input, state, formationData, units) in SystemAPI
+        foreach (var (input, state, squadData, units) in SystemAPI
                     .Query<RefRO<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
-                            RefRO<SquadFormationDataComponent>,
+                            RefRO<SquadDataComponent>,
                             DynamicBuffer<SquadUnitElement>>())
         {
             var s = state.ValueRW;
@@ -28,33 +28,32 @@ public partial class FormationSystem : SystemBase
                 continue;
             }
 
-            if (!formationData.ValueRO.formationLibrary.IsCreated || units.Length == 0)
+            if (!squadData.ValueRO.formationLibrary.IsCreated || units.Length == 0)
             {
                 state.ValueRW = s;
                 continue;
             }
 
-            ref var formations = ref formationData.ValueRO.formationLibrary.Value.formations;
-            ref BlobArray<float3> offsets = ref formations[0].localOffsets; // fallback inicial
-
-            bool found = false;
+            ref var formations = ref squadData.ValueRO.formationLibrary.Value.formations;
+            
+            // Find the desired formation
+            int formationIndex = -1;
             for (int i = 0; i < formations.Length; i++)
             {
                 if (formations[i].formationType == input.ValueRO.desiredFormation)
                 {
-                    ref var formation = ref formations[i];
-                    offsets = ref formation.localOffsets;
-                    found = true;
+                    formationIndex = i;
                     break;
                 }
             }
 
-            if (!found)
+            if (formationIndex == -1)
             {
                 state.ValueRW = s;
                 continue;
             }
 
+            ref var formation = ref formations[formationIndex];
             Entity leader = units[0].Value;
             if (!SystemAPI.Exists(leader))
             {
@@ -63,52 +62,78 @@ public partial class FormationSystem : SystemBase
             }
 
             float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
-            
-            // Calcular punto base de la formación relativo al héroe
-            float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(leader).Rotation);
-            float3 formationBase = leaderPos - heroForward * 5f;
+            float3 formationBase = leaderPos;
 
-            int count = math.min(units.Length, offsets.Length);
-            for (int i = 0; i < count; i++)
+            // Use grid-based positioning - Skip leader (index 0), position only squad units
+            int squadUnitCount = units.Length - 1; // Exclude leader/hero
+            ref var gridPositions = ref formation.gridPositions;
+            int positionsToUse = math.min(squadUnitCount, gridPositions.Length);
+            
+            for (int i = 0; i < positionsToUse; i++)
             {
-                Entity unit = units[i].Value;
+                Entity unit = units[i + 1].Value; // +1 to skip leader
                 if (!SystemAPI.Exists(unit))
                     continue;
 
-                float3 target = formationBase + offsets[i];
+                // Get grid position from blob and convert to world position
+                int2 gridPos = gridPositions[i];
+                float3 relativeWorldPos = FormationGridSystem.GridToRelativeWorld(gridPos);
+                float3 target = formationBase + relativeWorldPos;
                 
-                // Actualizar UnitTargetPositionComponent
-                if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                UpdateUnitPosition(unit, target, relativeWorldPos, i);
+                
+                // Update grid slot component
+                if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
                 {
-                    var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
-                    targetPos.ValueRW.position = target;
+                    var gridSlot = SystemAPI.GetComponentRW<UnitGridSlotComponent>(unit);
+                    gridSlot.ValueRW.gridPosition = gridPos;
+                    gridSlot.ValueRW.worldOffset = relativeWorldPos;
                 }
                 else
                 {
-                    EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
-                }
-                
-                // También actualizar UnitFormationSlotComponent para consistencia
-                if (SystemAPI.HasComponent<UnitFormationSlotComponent>(unit))
-                {
-                    var slotComp = SystemAPI.GetComponentRW<UnitFormationSlotComponent>(unit);
-                    slotComp.ValueRW.relativeOffset = offsets[i];
-                    slotComp.ValueRW.slotIndex = i;
-                }
-                
-                // Marcar la unidad como Moving para que se reposicione inmediatamente
-                if (SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
-                {
-                    var formationState = SystemAPI.GetComponentRW<UnitFormationStateComponent>(unit);
-                    formationState.ValueRW.State = UnitFormationState.Moving;
-                    formationState.ValueRW.Timer = 0f;
-                    formationState.ValueRW.Waiting = false;
+                    EntityManager.AddComponentData(unit, new UnitGridSlotComponent 
+                    { 
+                        gridPosition = gridPos,
+                        slotIndex = i,
+                        worldOffset = relativeWorldPos
+                    });
                 }
             }
 
             s.currentFormation = input.ValueRO.desiredFormation;
             s.formationChangeCooldown = 1f;
             state.ValueRW = s;
+        }
+    }
+
+    private void UpdateUnitPosition(Entity unit, float3 target, float3 relativeOffset, int slotIndex)
+    {
+        // Update UnitTargetPositionComponent
+        if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+        {
+            var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
+            targetPos.ValueRW.position = target;
+        }
+        else
+        {
+            EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
+        }
+        
+        // Update UnitFormationSlotComponent for consistency
+        if (SystemAPI.HasComponent<UnitFormationSlotComponent>(unit))
+        {
+            var slotComp = SystemAPI.GetComponentRW<UnitFormationSlotComponent>(unit);
+            slotComp.ValueRW.relativeOffset = relativeOffset;
+            slotComp.ValueRW.slotIndex = slotIndex;
+        }
+        
+        // Mark unit as Moving so it repositions immediately
+        if (SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
+        {
+            var formationState = SystemAPI.GetComponentRW<UnitFormationStateComponent>(unit);
+            formationState.ValueRW.State = UnitFormationState.Moving;
+            formationState.ValueRW.DelayTimer = 0f;
+            formationState.ValueRW.DelayDuration = 0f;
         }
     }
 

@@ -130,8 +130,10 @@
     <Compile Include="Assets\Scripts\Combat\PendingDamageEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroMovementSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\GridFormationCreator.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageType.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\GridFormationTester.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadCombatComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEquipmentComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputAuthoring.cs" />
@@ -159,6 +161,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroInputSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneReferenceBuffer.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayerAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\FormationCenterTest.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInputComponent.cs" />
@@ -194,6 +197,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroInitializationSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitTargetingSystem.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularExtensionMethods.cs" />
+    <Compile Include="Assets\Scripts\Squads\GridFormationScriptableObject.cs" />
     <Compile Include="Assets\Scripts\UI\UIManagerSystem.cs" />
     <Compile Include="Assets\Scripts\UI\SpawnIcon.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointAuthoring.cs" />
@@ -225,6 +229,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadFormationDataAuthoring.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\GridFormationUpdateSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\StaminaComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitRangedStatsComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfileAuthoring.cs" />
@@ -233,6 +238,7 @@
     <Compile Include="Assets\Scripts\Combat\WeaponColliderComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadLevelUpEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStateSystem.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitGridSlotComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbilityBufferElement.cs" />
     <Compile Include="Assets\Scripts\Squads\RetreatLogicSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamAuthoring.cs" />
@@ -240,6 +246,7 @@
     <Compile Include="Assets\Scripts\Combat\PenetrationComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolableObject.cs" />
     <Compile Include="Assets\Scripts\Camera\HeroCameraController.cs" />
+    <Compile Include="Assets\Scripts\Shared\DataContainerBaker.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchStateComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
@@ -257,8 +264,10 @@
     <Compile Include="Assets\Scripts\Shared\DataContainerComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStatsAuthoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularArmorType.cs" />
+    <Compile Include="Assets\Scripts\Squads\FormationCenterCalculationTest.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationStateComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLifeBaker.cs" />
+    <Compile Include="Assets\Scripts\Squads\FormationGridSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitTargetPositionComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\XPSource.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneLinkComponent.cs" />
@@ -274,6 +283,7 @@
     <Compile Include="Assets\Scripts\UI\UIManager.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAttackSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\DefenseComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\FormationSystemIntegrationTest.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStateComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\HealthComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStateComponent.cs" />
@@ -281,7 +291,6 @@
     <Compile Include="Assets\Scripts\Squads\UnitSpacingComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLifeAuthoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadFormationDataComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationAdaptationSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\SquadSkillComponent.cs" />
     <Compile Include="Assets\Scripts\Map\CapturePointProgressComponent.cs" />
@@ -295,7 +304,6 @@
     <Compile Include="Assets\Scripts\Map\SpawnPointBaker.cs" />
     <Compile Include="Assets\Scripts\Hero\LevelUpEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\XPEventComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationScriptableObject.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\ModularCharacterEditorReadme.txt" />

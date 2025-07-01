@@ -1,35 +1,24 @@
+// This file is now obsolete - formations are handled directly in SquadData.cs
+// and baked in SquadDataAuthoring.cs for a unified, simpler system.
+//
+// Migration: Move your GridFormationScriptableObject[] from this component
+// to the SquadData.gridFormations field instead.
+
+/*
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 /// <summary>
-/// MonoBehaviour used to bake formation data from scriptable objects into a blob asset.
+/// OBSOLETE: This component has been replaced by direct integration in SquadData.
+/// Use SquadData.gridFormations instead.
 /// </summary>
+[System.Obsolete("Use SquadData.gridFormations instead of this separate component")]
 public class SquadFormationDataAuthoring : MonoBehaviour
 {
-    public FormationScriptableObject[] formations;
-
-    class SquadFormationDataBaker : Unity.Entities.Baker<SquadFormationDataAuthoring>
-    {
-        public override void Bake(SquadFormationDataAuthoring authoring)
-        {
-            var builder = new BlobBuilder(Allocator.Temp);
-            ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
-            var formationArray = builder.Allocate(ref root.formations, authoring.formations.Length);
-            for (int i = 0; i < authoring.formations.Length; i++)
-            {
-                var form = authoring.formations[i];
-                formationArray[i].formationType = form.formationType;
-                var offsets = builder.Allocate(ref formationArray[i].localOffsets, form.localOffsets.Length);
-                for (int j = 0; j < form.localOffsets.Length; j++)
-                    offsets[j] = new Unity.Mathematics.float3(form.localOffsets[j].x, 0, form.localOffsets[j].y);
-            }
-
-            var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
-            builder.Dispose();
-
-            var entity = GetEntity(TransformUsageFlags.None);
-            AddComponent(entity, new SquadFormationDataComponent { formationLibrary = blob });
-        }
-    }
+    [Header("Grid-Based Formations")]
+    [Tooltip("This is now obsolete. Use SquadData.gridFormations instead.")]
+    public GridFormationScriptableObject[] gridFormations;
 }
+*/

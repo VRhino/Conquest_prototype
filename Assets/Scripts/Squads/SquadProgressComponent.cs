@@ -25,7 +25,9 @@ public struct UnlockedAbilityElement : IBufferElementData
 
 /// <summary>
 /// Buffer element storing formations available to the squad.
+/// OBSOLETE: All formations are now always available from SquadDataComponent.formationLibrary
 /// </summary>
+[System.Obsolete("All formations are now available from SquadDataComponent.formationLibrary")]
 public struct UnlockedFormationElement : IBufferElementData
 {
     public FormationType Value;

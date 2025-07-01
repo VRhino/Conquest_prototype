@@ -18,7 +18,9 @@ public enum FormationType
     Line,
     Dispersed,
     Testudo,
-    Wedge
+    Wedge,
+    Column,
+    Square
 }
 
 /// <summary>
