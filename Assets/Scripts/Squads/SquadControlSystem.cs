@@ -16,8 +16,8 @@ public partial class SquadControlSystem : SystemBase
 
         bool orderIssued = false;
         bool formationChanged = false;
+        int formationIndex = -1; // Índice de formación en lugar de tipo específico
         SquadOrderType newOrder = default;
-        FormationType newFormation = default;
 
         if (keyboard.cKey.wasPressedThisFrame)
         {
@@ -37,37 +37,79 @@ public partial class SquadControlSystem : SystemBase
 
         if (keyboard.f1Key.wasPressedThisFrame)
         {
-            newFormation = FormationType.Line;
+            formationIndex = 0;
             formationChanged = true;
         }
         else if (keyboard.f2Key.wasPressedThisFrame)
         {
-            newFormation = FormationType.Dispersed;
+            formationIndex = 1;
             formationChanged = true;
         }
         else if (keyboard.f3Key.wasPressedThisFrame)
         {
-            newFormation = FormationType.Testudo;
+            formationIndex = 2;
             formationChanged = true;
         }
         else if (keyboard.f4Key.wasPressedThisFrame)
         {
-            newFormation = FormationType.Wedge;
+            formationIndex = 3;
             formationChanged = true;
         }
 
         if (!orderIssued && !formationChanged)
             return;
 
-        foreach (var input in SystemAPI.Query<RefRW<SquadInputComponent>>().WithAll<IsLocalPlayer>())
+        // Encontrar el héroe local y su squad
+        foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
         {
-            if (orderIssued)
-                input.ValueRW.orderType = newOrder;
+            Entity squadEntity = heroSquadRef.ValueRO.squad;
+            
+            if (SystemAPI.HasComponent<SquadInputComponent>(squadEntity))
+            {
+                var input = SystemAPI.GetComponentRW<SquadInputComponent>(squadEntity);
+                
+                if (orderIssued)
+                {
+                    input.ValueRW.orderType = newOrder;
+                }
 
-            if (formationChanged)
-                input.ValueRW.desiredFormation = newFormation;
+                if (formationChanged)
+                {
+                    // Obtener la biblioteca de formaciones del squad
+                    if (SystemAPI.HasComponent<SquadFormationDataComponent>(squadEntity))
+                    {
+                        var formationData = SystemAPI.GetComponent<SquadFormationDataComponent>(squadEntity);
+                        if (formationData.formationLibrary.IsCreated)
+                        {
+                            ref var formations = ref formationData.formationLibrary.Value.formations;
+                            
+                            // Verificar que el índice solicitado existe
+                            if (formationIndex >= 0 && formationIndex < formations.Length)
+                            {
+                                FormationType newFormation = formations[formationIndex].formationType;
+                                input.ValueRW.desiredFormation = newFormation;
+                            }
+                            else
+                            {
+                                continue; // No procesar este cambio
+                            }
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
 
-            input.ValueRW.hasNewOrder = true;
+                input.ValueRW.hasNewOrder = true;
+            }
+            else
+            {
+            }
         }
     }
 }

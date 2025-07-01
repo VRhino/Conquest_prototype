@@ -58,11 +58,46 @@ public partial class SquadSpawningSystem : SystemBase
                 xpToNextLevel = 100f
             });
             ecb.AddComponent(squad, new SquadInstanceComponent { id = selection.ValueRO.instanceId });
+            
+            // Obtener la primera formación disponible en el arreglo como formación por defecto (índice 0)
+            var firstFormationType = formationData.formationLibrary.Value.formations.Length > 0 
+                ? formationData.formationLibrary.Value.formations[0].formationType 
+                : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
+            
+            // Agregar componentes necesarios para el sistema de control y formación
+            ecb.AddComponent(squad, new SquadInputComponent
+            {
+                orderType = SquadOrderType.FollowHero,
+                hasNewOrder = false,
+                desiredFormation = firstFormationType // Formación inicial: primera del arreglo
+            });
+            
+            ecb.AddComponent(squad, new SquadStateComponent
+            {
+                currentFormation = firstFormationType, // Formación inicial: primera del arreglo
+                currentOrder = SquadOrderType.FollowHero,
+                isExecutingOrder = false,
+                isInCombat = false,
+                formationChangeCooldown = 0f,
+                currentState = SquadFSMState.Idle,
+                transitionTo = SquadFSMState.Idle,
+                stateTimer = 0f,
+                lastOwnerAlive = true,
+                retreatTriggered = false
+            });
+            
+            ecb.AddComponent(squad, new FormationComponent
+            {
+                currentFormation = firstFormationType // Formación inicial: primera del arreglo
+            });
+            
+            // Agregar buffer para el patrón de formación
+            ecb.AddBuffer<FormationPatternElement>(squad);
 
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);
 
             ref var formations = ref formationData.formationLibrary.Value.formations;
-            ref var offsets = ref formations[0].localOffsets;
+            ref var offsets = ref formations[0].localOffsets; // Siempre usar índice 0 para spawn inicial
             int unitCount = offsets.Length;
 
             for (int i = 0; i < unitCount; i++)
@@ -92,6 +127,12 @@ public partial class SquadSpawningSystem : SystemBase
                 {
                     relativeOffset = offsets[i],
                     slotIndex = i
+                });
+                
+                // Agregar UnitTargetPositionComponent desde el inicio
+                ecb.AddComponent(unit, new UnitTargetPositionComponent
+                {
+                    position = worldPos
                 });
                 ecb.AddComponent(unit, new UnitOwnerComponent { squad = squad, hero = entity });
                 ecb.AddComponent(unit, new UnitStatsComponent
@@ -150,6 +191,20 @@ public partial class SquadSpawningSystem : SystemBase
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
             ecb.AddComponent(entity, new HeroSquadReference { squad = squad });
+            
+            // Copiar el team del héroe al squad y sus unidades
+            if (SystemAPI.HasComponent<TeamComponent>(entity))
+            {
+                var heroTeam = SystemAPI.GetComponent<TeamComponent>(entity);
+                ecb.AddComponent(squad, heroTeam);
+                
+                // Aplicar el team a todas las unidades del squad
+                for (int i = 0; i < unitBuffer.Length; i++)
+                {
+                    Entity unit = unitBuffer[i].Value;
+                    ecb.AddComponent(unit, heroTeam);
+                }
+            }
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
             ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });
             // Añadir UnitPrevLeaderPosComponent al héroe si no lo tiene

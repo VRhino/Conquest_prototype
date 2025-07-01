@@ -63,6 +63,10 @@ public partial class FormationSystem : SystemBase
             }
 
             float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
+            
+            // Calcular punto base de la formación relativo al héroe
+            float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(leader).Rotation);
+            float3 formationBase = leaderPos - heroForward * 5f;
 
             int count = math.min(units.Length, offsets.Length);
             for (int i = 0; i < count; i++)
@@ -71,7 +75,9 @@ public partial class FormationSystem : SystemBase
                 if (!SystemAPI.Exists(unit))
                     continue;
 
-                float3 target = leaderPos + offsets[i];
+                float3 target = formationBase + offsets[i];
+                
+                // Actualizar UnitTargetPositionComponent
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
                 {
                     var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
@@ -80,6 +86,23 @@ public partial class FormationSystem : SystemBase
                 else
                 {
                     EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
+                }
+                
+                // También actualizar UnitFormationSlotComponent para consistencia
+                if (SystemAPI.HasComponent<UnitFormationSlotComponent>(unit))
+                {
+                    var slotComp = SystemAPI.GetComponentRW<UnitFormationSlotComponent>(unit);
+                    slotComp.ValueRW.relativeOffset = offsets[i];
+                    slotComp.ValueRW.slotIndex = i;
+                }
+                
+                // Marcar la unidad como Moving para que se reposicione inmediatamente
+                if (SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
+                {
+                    var formationState = SystemAPI.GetComponentRW<UnitFormationStateComponent>(unit);
+                    formationState.ValueRW.State = UnitFormationState.Moving;
+                    formationState.ValueRW.Timer = 0f;
+                    formationState.ValueRW.Waiting = false;
                 }
             }
 

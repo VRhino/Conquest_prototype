@@ -47,11 +47,6 @@ public partial class UnitFollowFormationSystem : SystemBase
             float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(leader).Rotation);
             float3 formationBase = leaderPos - heroForward * 5f;
 
-            // Obtener offset de la unidad de referencia (primera del buffer)
-            float3 refOffset = float3.zero;
-            if (units.Length > 0 && slotLookup.HasComponent(units[0].Value))
-                refOffset = slotLookup[units[0].Value].relativeOffset;
-
             // Calcular centro de la squad (promedio de posiciones de las unidades)
             float3 squadCenter = float3.zero;
             int squadCount = 0;
@@ -83,8 +78,32 @@ public partial class UnitFollowFormationSystem : SystemBase
                     prevLeaderPos = prevLeaderPosLookup[unit].value;
                 prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = leaderPos };
 
+                // Usar offset de formación (puede haber sido actualizado por FormationSystem)
                 float3 offset = slotLookup[unit].relativeOffset;
-                float3 desired = leaderPos + (offset - refOffset); // Ahora siempre hacia el héroe
+                
+                // Calcular posición deseada usando la base de formación (consistente con UnitFormationStateSystem)
+                float3 desired = formationBase + offset;
+                
+                // Solo usar UnitTargetPositionComponent como override temporal si existe y es diferente
+                if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                {
+                    float3 staticTarget = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+                    float3 dynamicTarget = desired;
+                    
+                    // Si la posición estática está muy lejos de la dinámica, usar la dinámica (héroe se movió)
+                    float distanceBetweenTargets = math.distance(staticTarget, dynamicTarget);
+                    if (distanceBetweenTargets > 1f) // Si el héroe se movió más de 1 metro
+                    {
+                        desired = dynamicTarget; // Seguir al héroe
+                        // Actualizar el target component para la próxima vez
+                        var targetComp = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
+                        targetComp.ValueRW.position = dynamicTarget;
+                    }
+                    else
+                    {
+                        desired = staticTarget; // Mantener formación específica
+                    }
+                }
                 float3 current = transformLookup[unit].Position;
                 float3 diff = desired - current;
                 float distSq = math.lengthsq(diff);
@@ -93,8 +112,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                 if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
                     continue;
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
-                // Calcular posición de slot
-                float3 slotPos = leaderPos + (offset - refOffset);
+                // Calcular posición de slot usando la misma lógica
+                float3 slotPos = formationBase + offset;
                 // Usar diff y distSq ya definidos arriba
                 // Solo mover si el estado es Moving
                 if (stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq)

@@ -51,7 +51,10 @@ public partial struct UnitFormationStateSystem : ISystem
                 var slot = SystemAPI.GetComponent<UnitFormationSlotComponent>(unit);
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                float3 desired = heroPos + slot.relativeOffset;
+                // Calcular posición deseada de la misma manera que UnitFollowFormationSystem
+                float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(hero).Rotation);
+                float3 formationBase = heroPos - heroForward * 5f; // Formación 5 metros detrás del héroe
+                float3 desired = formationBase + slot.relativeOffset;
                 float3 current = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                 float distSq = math.lengthsq(desired - current);
 

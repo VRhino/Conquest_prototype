@@ -58,6 +58,8 @@
 - 7.3 Estructura de ScriptableObjects para perks y escuadras
 - 7.4 Sistema de perks: carga, activación y visualización
 - 7.5 Sistema de clases de heroe
+- 7.6 Progresión Avanzada de Escuadras y Sinergias
+- 7.7 Control de Estados entr Héroe y Unidades del Escuadrón
 
 ### 8. Multijugador (MVP)
 
@@ -1658,6 +1660,71 @@ public struct SquadProgressionStats {
     - Habilidades de escuadra
     - Perks del héroe
 - Estos datos deben sincronizarse entre cliente y servidor (Netcode Snapshot).
+
+# Sin título
+
+### 7.7 Control de Estado entre Héroe y Unidades del Escuadrón
+
+### 🎯 Descripción funcional
+
+Este módulo define el comportamiento coordinado entre un héroe y las unidades de su escuadrón, evaluando distancia y movimiento para controlar transiciones entre los estados `Formed` y `Moving` de cada unidad. Se asegura que las unidades no reaccionen en cada frame, sino que su lógica se base en un modelo persistente de estados evaluado y transicionado de forma controlada.
+
+### ⚙️ Estados definidos
+
+### HeroStateComponent
+
+```csharp
+public enum HeroState { Idle, Moving }
+
+```
+
+### UnitFormationStateComponent
+
+```csharp
+public enum UnitFormationState { Formed, Moving }
+
+```
+
+### 📐 Lógica de transición
+
+| Estado actual unidad | Estado héroe | Condición | Nuevo estado unidad |
+| --- | --- | --- | --- |
+| Formed | Idle o Moving | Dentro del radio (≤5m) | Formed (sin cambio) |
+| Formed | Moving | Sale del radio (>5m) | Moving (con delay) |
+| Moving | Cualquier | Aún no llegó a su slot | Moving |
+| Moving | Cualquier | Llega a slot asignado de formación | Formed |
+
+---
+
+### 🧩 Componentes involucrados
+
+- `HeroStateComponent`: actualizado por `HeroStateSystem` en base al input del jugador.
+- `UnitFormationStateComponent`: actualizado por `UnitFormationStateSystem` evaluando distancia y estado.
+- `LocalTransform`: posición actual.
+- `SquadUnitElement`: buffer de unidades del escuadrón.
+- `SquadFormationDataComponent`: contiene la formación activa y las posiciones de referencia.
+
+---
+
+### 🧠 Sistemas requeridos
+
+### 1. HeroStateSystem
+
+Actualiza el estado del héroe (`Idle` o `Moving`) usando información de input o delta de posición.
+
+### 2. UnitFormationStateSystem
+
+Gestiona las transiciones de estado de cada unidad en base a:
+
+- Distancia con respecto al héroe.
+- Estado previo.
+- Posición asignada según la formación.
+
+Incluye lógica para evitar que la unidad cancele un movimiento activo si el héroe regresa al radio.
+
+### 3. UnitMovementSystem
+
+Mueve las unidades hacia su posición asignada **solo si están en estado `Moving`**. No activa lógica de movimiento si están en `Formed`.
 
 ## 🌐 8. Multijugador (MVP)
 
