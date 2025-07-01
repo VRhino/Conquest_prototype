@@ -22,6 +22,12 @@ public partial class UnitFollowFormationSystem : SystemBase
         var targetLookup = GetComponentLookup<UnitLocalTargetComponent>();
         var transformLookup = GetComponentLookup<LocalTransform>();
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
+        var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
+        bool heroIsMoving = false;
+        float3 prevHeroPos = float3.zero;
+        // Detectar si el héroe se mueve (solo ejemplo, idealmente cachear en otro sistema)
+        // Aquí asumimos que si el líder se mueve más de 0.05m, está en movimiento
+        // (esto puede mejorarse con un sistema dedicado)
 
         foreach (var (units, entity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -37,6 +43,33 @@ public partial class UnitFollowFormationSystem : SystemBase
 
             float3 leaderPos = transformLookup[leader].Position;
 
+            // Calcular punto base de la formación: 5 metros detrás del héroe
+            float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(leader).Rotation);
+            float3 formationBase = leaderPos - heroForward * 5f;
+
+            // Obtener offset de la unidad de referencia (primera del buffer)
+            float3 refOffset = float3.zero;
+            if (units.Length > 0 && slotLookup.HasComponent(units[0].Value))
+                refOffset = slotLookup[units[0].Value].relativeOffset;
+
+            // Calcular centro de la squad (promedio de posiciones de las unidades)
+            float3 squadCenter = float3.zero;
+            int squadCount = 0;
+            for (int j = 0; j < units.Length; j++)
+            {
+                Entity u = units[j].Value;
+                if (transformLookup.HasComponent(u))
+                {
+                    squadCenter += transformLookup[u].Position;
+                    squadCount++;
+                }
+            }
+            if (squadCount > 0)
+                squadCenter /= squadCount;
+
+            float heroDistSq = math.lengthsq(leaderPos - squadCenter);
+            bool heroOutsideRadius = heroDistSq > 25f; // 5 metros al cuadrado
+
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;
@@ -44,16 +77,40 @@ public partial class UnitFollowFormationSystem : SystemBase
                     !transformLookup.HasComponent(unit))
                     continue;
 
-                float3 desired = leaderPos + slotLookup[unit].relativeOffset;
+                // Obtener y actualizar posición previa del líder para esta unidad
+                float3 prevLeaderPos = leaderPos;
+                if (prevLeaderPosLookup.HasComponent(unit))
+                    prevLeaderPos = prevLeaderPosLookup[unit].value;
+                prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = leaderPos };
+
+                float3 offset = slotLookup[unit].relativeOffset;
+                float3 desired = leaderPos + (offset - refOffset); // Ahora siempre hacia el héroe
                 float3 current = transformLookup[unit].Position;
                 float3 diff = desired - current;
                 float distSq = math.lengthsq(diff);
 
-                // UnityEngine.Debug.Log($"[UnitFollowFormationSystem] unit: {unit}, leader: {leader}, offset: {slotLookup[unit].relativeOffset}, desired: {desired}, current: {current}, distSq: {distSq}");
-
-                if (distSq > stoppingDistanceSq)
+                // --- NUEVA LÓGICA BASADA EN ESTADO PERSISTENTE ---
+                if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
+                    continue;
+                var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
+                // Calcular posición de slot
+                float3 slotPos = leaderPos + (offset - refOffset);
+                // Usar diff y distSq ya definidos arriba
+                // Solo mover si el estado es Moving
+                if (stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq)
                 {
-                    float3 step = math.normalizesafe(diff) * moveSpeed * dt;
+                    float speedMultiplier = 1f;
+                    if (SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit))
+                        speedMultiplier = SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier;
+                    float pesoMultiplier = 1f;
+                    if (SystemAPI.HasComponent<UnitStatsComponent>(unit))
+                    {
+                        int peso = SystemAPI.GetComponent<UnitStatsComponent>(unit).peso;
+                        if (peso == 2) pesoMultiplier = 0.8f;
+                        else if (peso == 3) pesoMultiplier = 0.6f;
+                    }
+                    speedMultiplier *= pesoMultiplier;
+                    float3 step = math.normalizesafe(diff) * moveSpeed * speedMultiplier * dt;
                     if (math.lengthsq(step) > distSq)
                         step = diff;
                     current += step;
@@ -61,11 +118,11 @@ public partial class UnitFollowFormationSystem : SystemBase
                     t.Position = current;
                     transformLookup[unit] = t;
                 }
-
+                // Actualizar target visual si aplica
                 if (targetLookup.HasComponent(unit))
                 {
                     var target = targetLookup[unit];
-                    target.targetPosition = desired;
+                    target.targetPosition = slotPos;
                     targetLookup[unit] = target;
                 }
             }

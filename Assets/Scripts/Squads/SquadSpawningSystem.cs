@@ -74,7 +74,9 @@ public partial class SquadSpawningSystem : SystemBase
 
                 Entity unit = ecb.Instantiate(data.unitPrefab);
                 float3 offset = offsets[i];
-                float3 baseXZ = transform.ValueRO.Position + new float3(offset.x, 0, offset.z);
+                float3 heroForward = math.forward(transform.ValueRO.Rotation);
+                float3 squadOrigin = transform.ValueRO.Position + heroForward * 5f;
+                float3 baseXZ = squadOrigin + new float3(offset.x, 0, offset.z);
 
                 // Obtener altura del terreno clásico de Unity
                 float y = 0f;
@@ -121,9 +123,37 @@ public partial class SquadSpawningSystem : SystemBase
                         municionTotal = data.municionTotal
                     });
                 }
+                // Añadir delay de seguimiento aleatorio a cada unidad (nuevo comportamiento)
+                float randomDelay = UnityEngine.Random.Range(0.5f, 1.5f);
+                ecb.AddComponent(unit, new UnitFollowDelayComponent {
+                    delay = randomDelay,
+                    timer = 0f,
+                    waiting = false,
+                    triggered = false
+                });
+                // Añadir posición previa del líder para evitar error de acceso
+                ecb.AddComponent(unit, new UnitPrevLeaderPosComponent {
+                    value = worldPos
+                });
+                // Variación de velocidad individual
+                float speedMultiplier = UnityEngine.Random.Range(0.9f, 1.1f);
+                ecb.AddComponent(unit, new UnitMoveSpeedVariation {
+                    speedMultiplier = speedMultiplier
+                });
+                // Añadir UnitFormationStateComponent a cada unidad
+                ecb.AddComponent(unit, new UnitFormationStateComponent {
+                    State = UnitFormationState.Formed,
+                    Delay = 0f,
+                    Timer = 0f,
+                    Waiting = false
+                });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
             ecb.AddComponent(entity, new HeroSquadReference { squad = squad });
+            // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
+            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });
+            // Añadir UnitPrevLeaderPosComponent al héroe si no lo tiene
+            ecb.AddComponent(entity, new UnitPrevLeaderPosComponent { value = transform.ValueRO.Position });
         }
 
         ecb.Playback(EntityManager);
