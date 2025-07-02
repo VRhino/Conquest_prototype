@@ -103,40 +103,16 @@ public class GridFormationScriptableObject : ScriptableObject
     }
 
     /// <summary>
-    /// Obtiene las posiciones de las unidades relativas al centro de la formación.
-    /// El héroe siempre estará en el centro (0,0) relativo.
-    /// </summary>
-    /// <returns>Posiciones ajustadas donde el centro de la formación es (0,0)</returns>
-    public Vector2Int[] GetCenteredGridPositions()
-    {
-        if (gridPositions.Length == 0) return new Vector2Int[0];
-
-        Vector2Int center = GetFormationCenter();
-        Vector2Int[] centeredPositions = new Vector2Int[gridPositions.Length];
-
-        for (int i = 0; i < gridPositions.Length; i++)
-        {
-            centeredPositions[i] = new Vector2Int(
-                gridPositions[i].x - center.x,
-                gridPositions[i].y - center.y
-            );
-        }
-
-        return centeredPositions;
-    }
-
-    /// <summary>
-    /// Convierte las posiciones centradas de cuadrícula a offsets del mundo.
-    /// Usa las posiciones relativas al centro de la formación.
+    /// Convierte las posiciones de cuadrícula a offsets del mundo.
+    /// Usa las posiciones originales del ScriptableObject.
     /// </summary>
     public Vector3[] GetCenteredWorldOffsets()
     {
-        Vector2Int[] centeredPositions = GetCenteredGridPositions();
-        Vector3[] offsets = new Vector3[centeredPositions.Length];
+        Vector3[] offsets = new Vector3[gridPositions.Length];
         
-        for (int i = 0; i < centeredPositions.Length; i++)
+        for (int i = 0; i < gridPositions.Length; i++)
         {
-            float3 worldPos = FormationGridSystem.GridToRelativeWorld(new int2(centeredPositions[i].x, centeredPositions[i].y));
+            float3 worldPos = FormationGridSystem.GridToRelativeWorld(new int2(gridPositions[i].x, gridPositions[i].y));
             offsets[i] = new Vector3(worldPos.x, 0f, worldPos.z);
         }
         

@@ -41,7 +41,7 @@ public class FormationSystemIntegrationTest : MonoBehaviour
         
         // Test ScriptableObject calculations
         var calculatedCenter = formation.GetFormationCenter();
-        var centeredPositions = formation.GetCenteredGridPositions();
+        var originalPositions = formation.gridPositions; // Usar posiciones originales
         var worldOffsets = formation.GetCenteredWorldOffsets();
         
         Debug.Log($"Expected center: ({expectedCenter.x}, {expectedCenter.y})");
@@ -50,18 +50,18 @@ public class FormationSystemIntegrationTest : MonoBehaviour
         bool centerCorrect = calculatedCenter.x == expectedCenter.x && calculatedCenter.y == expectedCenter.y;
         Debug.Log($"Center calculation: {(centerCorrect ? "✓ PASS" : "✗ FAIL")}");
         
-        // Test centered positions
+        // Test original positions
         Debug.Log($"Original positions count: {formation.gridPositions.Length}");
-        Debug.Log($"Centered positions count: {centeredPositions.Length}");
+        Debug.Log($"Grid positions count: {originalPositions.Length}");
         Debug.Log($"World offsets count: {worldOffsets.Length}");
         
-        // Show first few centered positions
-        Debug.Log("Sample centered positions (relative to hero):");
-        for (int i = 0; i < math.min(5, centeredPositions.Length); i++)
+        // Show first few original positions
+        Debug.Log("Sample grid positions (original from ScriptableObject):");
+        for (int i = 0; i < math.min(5, originalPositions.Length); i++)
         {
-            var pos = centeredPositions[i];
+            var pos = originalPositions[i];
             var offset = worldOffsets[i];
-            Debug.Log($"  Unit {i}: Grid({pos.x}, {pos.y}) = World({offset.x:F1}, {offset.z:F1})m from hero");
+            Debug.Log($"  Unit {i}: Grid({pos.x}, {pos.y}) = World({offset.x:F1}, {offset.z:F1})m");
         }
         
         // Simulate ECS blob conversion
@@ -72,22 +72,22 @@ public class FormationSystemIntegrationTest : MonoBehaviour
     {
         Debug.Log($"Testing ECS blob conversion for {name}:");
         
-        // Simulate what SquadDataAuthoring does
-        var centeredPositions = formation.GetCenteredGridPositions();
-        var blobPositions = new int2[centeredPositions.Length];
+        // Simulate what SquadDataAuthoring does - usar posiciones originales
+        var originalPositions = formation.gridPositions;
+        var blobPositions = new int2[originalPositions.Length];
         
-        for (int i = 0; i < centeredPositions.Length; i++)
+        for (int i = 0; i < originalPositions.Length; i++)
         {
-            blobPositions[i] = new int2(centeredPositions[i].x, centeredPositions[i].y);
+            blobPositions[i] = new int2(originalPositions[i].x, originalPositions[i].y);
         }
         
         Debug.Log($"Blob conversion successful: {blobPositions.Length} positions converted");
         
-        // Test that blob positions match original centered positions
+        // Test that blob positions match original positions
         bool conversionCorrect = true;
-        for (int i = 0; i < centeredPositions.Length; i++)
+        for (int i = 0; i < originalPositions.Length; i++)
         {
-            if (blobPositions[i].x != centeredPositions[i].x || blobPositions[i].y != centeredPositions[i].y)
+            if (blobPositions[i].x != originalPositions[i].x || blobPositions[i].y != originalPositions[i].y)
             {
                 conversionCorrect = false;
                 break;

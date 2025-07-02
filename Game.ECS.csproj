@@ -133,7 +133,6 @@
     <Compile Include="Assets\Scripts\Squads\GridFormationCreator.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageType.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\GridFormationTester.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadCombatComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEquipmentComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputAuthoring.cs" />
@@ -158,10 +157,10 @@
     <Compile Include="Assets\Scripts\Hero\HeroAttributeSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.cs" />
     <Compile Include="Assets\Scripts\Combat\IsDeadComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitOrientationComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneReferenceBuffer.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayerAuthoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationCenterTest.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInputComponent.cs" />
@@ -179,11 +178,13 @@
     <Compile Include="Assets\Scripts\UI\Chat\ChatUIController.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchState.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataReferenceAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitOrientationInitializationSystem.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPoolSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatSystem.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinitionAuthoring.cs" />
     <Compile Include="Assets\Scripts\Map\CaptureZoneTriggerSystem.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitOrientationAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitMoveSpeedVariation.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTriggerComponent.cs" />

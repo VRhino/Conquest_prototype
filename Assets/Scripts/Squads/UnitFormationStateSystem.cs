@@ -43,20 +43,18 @@ public partial struct UnitFormationStateSystem : ISystem
             foreach (var unitElem in units)
             {
                 Entity unit = unitElem.Value;
-                if (!SystemAPI.HasComponent<UnitFormationSlotComponent>(unit) ||
+                if (!SystemAPI.HasComponent<UnitGridSlotComponent>(unit) ||
                     !SystemAPI.HasComponent<LocalTransform>(unit) ||
                     !SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
                     continue;
 
-                var slot = SystemAPI.GetComponent<UnitFormationSlotComponent>(unit);
+                var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
                 // Calculate desired position using same logic as UnitFollowFormationSystem
                 float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(hero).Rotation);
                 float3 formationBase = heroPos - heroForward * 5f; // Formation 5 meters behind hero
-                
-                // Snap offset to grid for consistency
-                float3 gridOffset = FormationGridSystem.SnapToGrid(slot.relativeOffset);
+                float3 gridOffset = slot.worldOffset;
                 float3 desiredSlotPos = formationBase + gridOffset;
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                 float distToSlotSq = math.lengthsq(desiredSlotPos - currentPos);

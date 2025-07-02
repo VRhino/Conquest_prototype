@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
 /// Parameters that control how much space a unit maintains from its
@@ -11,4 +12,6 @@ public struct UnitSpacingComponent : IComponentData
 
     /// <summary>Strength of the repelling force applied when overlapping.</summary>
     public float repelForce;
+    /// <summary>Slot asignado en la grid (x, y)</summary>
+    public int2 Slot;
 }

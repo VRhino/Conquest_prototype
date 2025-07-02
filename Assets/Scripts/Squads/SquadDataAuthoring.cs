@@ -107,12 +107,12 @@ public class SquadDataAuthoring : MonoBehaviour
 
                     formationArray[i].formationType = gridForm.formationType;
                     
-                    // Store centered grid positions (hero-relative)
-                    Vector2Int[] centeredPositions = gridForm.GetCenteredGridPositions();
-                    var gridPositions = builder.Allocate(ref formationArray[i].gridPositions, centeredPositions.Length);
-                    for (int j = 0; j < centeredPositions.Length; j++)
+                    // Store original grid positions from ScriptableObject
+                    Vector2Int[] originalPositions = gridForm.gridPositions;
+                    var gridPositions = builder.Allocate(ref formationArray[i].gridPositions, originalPositions.Length);
+                    for (int j = 0; j < originalPositions.Length; j++)
                     {
-                        gridPositions[j] = new int2(centeredPositions[j].x, centeredPositions[j].y);
+                        gridPositions[j] = new int2(originalPositions[j].x, originalPositions[j].y);
                     }
                 }
             }

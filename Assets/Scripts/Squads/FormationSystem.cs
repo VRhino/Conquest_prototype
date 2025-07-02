@@ -64,14 +64,14 @@ public partial class FormationSystem : SystemBase
             float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
             float3 formationBase = leaderPos;
 
-            // Use grid-based positioning - Skip leader (index 0), position only squad units
-            int squadUnitCount = units.Length - 1; // Exclude leader/hero
+            // Use grid-based positioning - All units in buffer are squad units (hero is separate)
+            int squadUnitCount = units.Length; // All units in buffer are squad units
             ref var gridPositions = ref formation.gridPositions;
             int positionsToUse = math.min(squadUnitCount, gridPositions.Length);
             
             for (int i = 0; i < positionsToUse; i++)
             {
-                Entity unit = units[i + 1].Value; // +1 to skip leader
+                Entity unit = units[i].Value; // Process all units starting from index 0
                 if (!SystemAPI.Exists(unit))
                     continue;
 
@@ -118,15 +118,13 @@ public partial class FormationSystem : SystemBase
         {
             EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
         }
-        
-        // Update UnitFormationSlotComponent for consistency
-        if (SystemAPI.HasComponent<UnitFormationSlotComponent>(unit))
+        // Actualizar el campo Slot de UnitSpacingComponent si existe
+        if (SystemAPI.HasComponent<UnitSpacingComponent>(unit))
         {
-            var slotComp = SystemAPI.GetComponentRW<UnitFormationSlotComponent>(unit);
-            slotComp.ValueRW.relativeOffset = relativeOffset;
-            slotComp.ValueRW.slotIndex = slotIndex;
+            var spacingComp = SystemAPI.GetComponentRW<UnitSpacingComponent>(unit);
+            int2 slot = (int2)math.round(FormationGridSystem.RelativeWorldToGrid(relativeOffset));
+            spacingComp.ValueRW.Slot = slot;
         }
-        
         // Mark unit as Moving so it repositions immediately
         if (SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
         {

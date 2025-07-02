@@ -12,22 +12,6 @@ public partial class GridFormationUpdateSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        // Mantener consistencia entre UnitGridSlotComponent y UnitFormationSlotComponent
-        foreach (var (gridSlot, formationSlot, entity) in SystemAPI
-                    .Query<RefRO<UnitGridSlotComponent>,
-                           RefRW<UnitFormationSlotComponent>>()
-                    .WithEntityAccess())
-        {
-            // Convertir posición de grid a offset para compatibilidad con sistemas existentes
-            float3 worldOffset = FormationGridSystem.GridToRelativeWorld(gridSlot.ValueRO.gridPosition);
-            
-            // Solo actualizar si el offset cambió
-            if (!worldOffset.Equals(formationSlot.ValueRO.relativeOffset))
-            {
-                formationSlot.ValueRW.relativeOffset = worldOffset;
-            }
-        }
-        
         // Actualizar posiciones target cuando las unidades cambien de grid slot
         foreach (var (units, squadEntity) in SystemAPI
                     .Query<DynamicBuffer<SquadUnitElement>>()

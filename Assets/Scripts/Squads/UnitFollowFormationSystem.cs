@@ -18,7 +18,7 @@ public partial class UnitFollowFormationSystem : SystemBase
 
         float dt = SystemAPI.Time.DeltaTime;
 
-        var slotLookup = GetComponentLookup<UnitFormationSlotComponent>(true);
+        var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
         var targetLookup = GetComponentLookup<UnitLocalTargetComponent>();
         var transformLookup = GetComponentLookup<LocalTransform>();
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
@@ -79,10 +79,9 @@ public partial class UnitFollowFormationSystem : SystemBase
                 prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = leaderPos };
 
                 // Usar offset de formación (puede haber sido actualizado por FormationSystem)
-                float3 offset = slotLookup[unit].relativeOffset;
-                
+                float3 offset = slotLookup[unit].worldOffset;
                 // Asegurar que el offset esté ajustado a la cuadrícula
-                float3 gridOffset = FormationGridSystem.SnapToGrid(offset);
+                float3 gridOffset = offset;
                 
                 // Calcular posición deseada usando la base de formación (consistente con UnitFormationStateSystem)
                 float3 desired = formationBase + gridOffset;
@@ -143,6 +142,10 @@ public partial class UnitFollowFormationSystem : SystemBase
                     current += step;
                     var t = transformLookup[unit];
                     t.Position = current;
+                    
+                    // Actualizar orientación basada en configuración
+                    UpdateUnitOrientation(unit, ref t, leaderPos, heroForward, diff, dt);
+                    
                     transformLookup[unit] = t;
                 }
                 
@@ -154,6 +157,52 @@ public partial class UnitFollowFormationSystem : SystemBase
                     targetLookup[unit] = target;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Actualiza la orientación de una unidad basada en su configuración de orientación.
+    /// </summary>
+    private void UpdateUnitOrientation(Entity unit, ref LocalTransform transform, float3 heroPos, float3 heroForward, float3 movementDirection, float deltaTime)
+    {
+        // Obtener configuración de orientación (valores por defecto si no existe)
+        UnitOrientationType orientationType = UnitOrientationType.FaceHero;
+        float rotationSpeed = 5f;
+        
+        if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
+        {
+            var orientationComp = SystemAPI.GetComponent<UnitOrientationComponent>(unit);
+            orientationType = orientationComp.orientationType;
+            rotationSpeed = orientationComp.rotationSpeed;
+        }
+
+        float3 targetDirection = float3.zero;
+        bool shouldRotate = true;
+
+        switch (orientationType)
+        {
+            case UnitOrientationType.None:
+                shouldRotate = false;
+                break;
+
+            case UnitOrientationType.FaceHero:
+                targetDirection = math.normalizesafe(heroPos - transform.Position);
+                break;
+
+            case UnitOrientationType.MatchHeroDirection:
+                // Usar la dirección del héroe que ya tenemos
+                targetDirection = heroForward;
+                break;
+
+            case UnitOrientationType.FaceMovementDirection:
+                targetDirection = math.normalizesafe(movementDirection);
+                break;
+        }
+
+        if (shouldRotate && math.lengthsq(targetDirection) > 0.01f)
+        {
+            quaternion targetRotation = quaternion.LookRotationSafe(targetDirection, math.up());
+            transform.Rotation = math.slerp(transform.Rotation, targetRotation, deltaTime * rotationSpeed);
         }
     }
 }

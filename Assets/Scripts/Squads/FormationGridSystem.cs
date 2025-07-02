@@ -6,8 +6,8 @@ using Unity.Mathematics;
 /// </summary>
 public static class FormationGridSystem
 {
-    public const float CELL_WIDTH = 1.0f;   // Ancho de celda en X
-    public const float CELL_DEPTH = 1.0f;   // Profundidad de celda en Z
+    public const float CELL_WIDTH = 1.5f;   // Ancho de celda en X
+    public const float CELL_DEPTH = 1.5f;   // Profundidad de celda en Z
     public const float MARGIN = 5.0f;       // Margen alrededor de la formación
 
     /// <summary>Public properties for external access</summary>

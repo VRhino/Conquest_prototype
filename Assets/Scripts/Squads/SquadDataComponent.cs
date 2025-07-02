@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
 /// Runtime representation of <see cref="SquadData"/> used by squad systems.
@@ -45,6 +46,8 @@ public struct SquadDataComponent : IComponentData
     public Entity unitPrefab;
 
     public int unitCount;
+    /// <summary>Tamaño de la grid de formación (celdas en X, celdas en Y)</summary>
+    public int2 GridSize;
 }
 
 /// <summary>

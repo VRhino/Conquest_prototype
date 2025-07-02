@@ -129,12 +129,11 @@ public partial class SquadSpawningSystem : SystemBase
                     slotIndex = i,
                     worldOffset = gridOffset
                 });
-                
-                // Maintain compatibility with existing system
-                ecb.AddComponent(unit, new UnitFormationSlotComponent
-                {
-                    relativeOffset = gridOffset,
-                    slotIndex = i
+                // Inicializar el campo Slot de UnitSpacingComponent
+                ecb.SetComponent(unit, new UnitSpacingComponent {
+                    minDistance = /* valor adecuado, por ejemplo 1.5f o el que corresponda */ 1.5f,
+                    repelForce = /* valor adecuado, por ejemplo 1f o el que corresponda */ 1f,
+                    Slot = gridPos
                 });
                 
                 // Add UnitTargetPositionComponent from the start

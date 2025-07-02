@@ -11,16 +11,19 @@ public struct UnitGridSlotComponent : IComponentData
     /// Posición en la cuadrícula local (enteros)
     /// (0,0) representa el centro de la formación (primera unidad)
     /// </summary>
+    [UnityEngine.SerializeField]
     public int2 gridPosition;
     
     /// <summary>
     /// Índice de la unidad en el buffer del squad
     /// </summary>
+    [UnityEngine.SerializeField]
     public int slotIndex;
     
     /// <summary>
     /// Posición en el mundo calculada desde la cuadrícula
     /// (para caché, se actualiza cuando cambia la formación)
     /// </summary>
+    [UnityEngine.SerializeField]
     public float3 worldOffset;
 }
