@@ -11,12 +11,15 @@ public partial class FormationSystem : SystemBase
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
+        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
+        var transformLookup = GetComponentLookup<LocalTransform>(true);
 
-        foreach (var (input, state, squadData, units) in SystemAPI
+        foreach (var (input, state, squadData, units, squadEntity) in SystemAPI
                     .Query<RefRO<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
                             RefRO<SquadDataComponent>,
-                            DynamicBuffer<SquadUnitElement>>())
+                            DynamicBuffer<SquadUnitElement>>()
+                    .WithEntityAccess())
         {
             var s = state.ValueRW;
             s.formationChangeCooldown = math.max(0f, s.formationChangeCooldown - deltaTime);
@@ -29,6 +32,18 @@ public partial class FormationSystem : SystemBase
             }
 
             if (!squadData.ValueRO.formationLibrary.IsCreated || units.Length == 0)
+            {
+                state.ValueRW = s;
+                continue;
+            }
+
+            // Obtener la posición del héroe como base de formación
+            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner))
+            {
+                state.ValueRW = s;
+                continue;
+            }
+            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform))
             {
                 state.ValueRW = s;
                 continue;
@@ -54,15 +69,8 @@ public partial class FormationSystem : SystemBase
             }
 
             ref var formation = ref formations[formationIndex];
-            Entity leader = units[0].Value;
-            if (!SystemAPI.Exists(leader))
-            {
-                state.ValueRW = s;
-                continue;
-            }
-
-            float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
-            float3 formationBase = leaderPos;
+            float3 heroPos = heroTransform.Position;
+            float3 formationBase = heroPos;
 
             // Use grid-based positioning - All units in buffer are squad units (hero is separate)
             int squadUnitCount = units.Length; // All units in buffer are squad units
@@ -75,27 +83,29 @@ public partial class FormationSystem : SystemBase
                 if (!SystemAPI.Exists(unit))
                     continue;
 
-                // Get grid position from blob and convert to world position
-                int2 gridPos = gridPositions[i];
-                float3 relativeWorldPos = FormationGridSystem.GridToRelativeWorld(gridPos);
+                // Get original grid position from blob and use it directly (no centering)
+                int2 originalGridPos = gridPositions[i];
+                
+                // Convert grid position directly to world position
+                float3 relativeWorldPos = FormationGridSystem.GridToRelativeWorld(originalGridPos);
                 float3 target = formationBase + relativeWorldPos;
                 
                 UpdateUnitPosition(unit, target, relativeWorldPos, i);
                 
-                // Update grid slot component
+                // Update grid slot component - mantener posición original en gridPosition
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
                 {
                     var gridSlot = SystemAPI.GetComponentRW<UnitGridSlotComponent>(unit);
-                    gridSlot.ValueRW.gridPosition = gridPos;
-                    gridSlot.ValueRW.worldOffset = relativeWorldPos;
+                    gridSlot.ValueRW.gridPosition = originalGridPos; // Mantener posición original
+                    gridSlot.ValueRW.worldOffset = relativeWorldPos; // Usar offset directo sin centrado
                 }
                 else
                 {
                     EntityManager.AddComponentData(unit, new UnitGridSlotComponent 
                     { 
-                        gridPosition = gridPos,
+                        gridPosition = originalGridPos, // Mantener posición original
                         slotIndex = i,
-                        worldOffset = relativeWorldPos
+                        worldOffset = relativeWorldPos // Usar offset directo sin centrado
                     });
                 }
             }

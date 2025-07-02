@@ -12,6 +12,9 @@ public partial class GridFormationUpdateSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
+        var transformLookup = GetComponentLookup<LocalTransform>(true);
+        
         // Actualizar posiciones target cuando las unidades cambien de grid slot
         foreach (var (units, squadEntity) in SystemAPI
                     .Query<DynamicBuffer<SquadUnitElement>>()
@@ -19,11 +22,11 @@ public partial class GridFormationUpdateSystem : SystemBase
         {
             if (units.Length == 0) continue;
             
-            // La primera unidad es el centro de referencia del squad
-            Entity leader = units[0].Value;
-            if (!SystemAPI.HasComponent<LocalTransform>(leader)) continue;
+            // Obtener la posición del héroe como centro de referencia
+            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner)) continue;
+            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform)) continue;
             
-            float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
+            float3 heroPos = heroTransform.Position;
             
             // Actualizar target positions basadas en grid slots
             for (int i = 0; i < units.Length; i++)
@@ -32,7 +35,7 @@ public partial class GridFormationUpdateSystem : SystemBase
                 if (!SystemAPI.HasComponent<UnitGridSlotComponent>(unit)) continue;
                 
                 var gridSlot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
-                float3 targetPos = leaderPos + gridSlot.worldOffset;
+                float3 targetPos = heroPos + gridSlot.worldOffset;
                 
                 // Ajustar altura del terreno
                 if (UnityEngine.Terrain.activeTerrain != null)

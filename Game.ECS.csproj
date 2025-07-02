@@ -265,7 +265,6 @@
     <Compile Include="Assets\Scripts\Shared\DataContainerComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStatsAuthoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularArmorType.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationCenterCalculationTest.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationStateComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLifeBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationGridSystem.cs" />

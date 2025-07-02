@@ -13,23 +13,29 @@ public partial class FormationAdaptationSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        foreach (var (env, input, state, formation, units) in SystemAPI
+        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
+        var transformLookup = GetComponentLookup<LocalTransform>(true);
+        
+        foreach (var (env, input, state, formation, units, squadEntity) in SystemAPI
                      .Query<RefRW<EnvironmentAwarenessComponent>,
                             RefRW<SquadInputComponent>,
                             RefRO<SquadStateComponent>,
                             RefRO<FormationComponent>,
-                            DynamicBuffer<SquadUnitElement>>())
+                            DynamicBuffer<SquadUnitElement>>()
+                     .WithEntityAccess())
         {
             if (state.ValueRO.isInCombat || units.Length == 0)
                 continue;
 
-            Entity leader = units[0].Value;
-            if (!SystemAPI.Exists(leader))
+            // Usar la posición del héroe para detectar obstáculos
+            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner))
+                continue;
+            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform))
                 continue;
 
-            float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
+            float3 heroPos = heroTransform.Position;
             var envData = env.ValueRW;
-            envData.obstacleDetected = Physics.CheckSphere(leaderPos, envData.detectionRadius);
+            envData.obstacleDetected = Physics.CheckSphere(heroPos, envData.detectionRadius);
             env.ValueRW = envData;
 
             bool narrow = envData.terrainType != TerrainType.Abierto || envData.obstacleDetected;

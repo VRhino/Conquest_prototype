@@ -45,7 +45,7 @@ public partial class UnitFollowFormationSystem : SystemBase
 
             // Calcular punto base de la formación: 5 metros detrás del héroe
             float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(leader).Rotation);
-            float3 formationBase = leaderPos - heroForward * 5f;
+            float3 formationBase = leaderPos - heroForward;
 
             // Calcular centro de la squad (promedio de posiciones de las unidades)
             float3 squadCenter = float3.zero;
@@ -117,7 +117,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
                 
                 // Calculate slot position using same logic (snapped to grid)
-                float3 slotPos = formationBase + gridOffset;
+                float3 slotPos = gridOffset;
                 
                 // Only move if the unit state is Moving
                 if (stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq)

@@ -53,7 +53,7 @@ public partial struct UnitFormationStateSystem : ISystem
 
                 // Calculate desired position using same logic as UnitFollowFormationSystem
                 float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(hero).Rotation);
-                float3 formationBase = heroPos - heroForward * 5f; // Formation 5 meters behind hero
+                float3 formationBase = heroPos - heroForward; // Formation 5 meters behind hero
                 float3 gridOffset = slot.worldOffset;
                 float3 desiredSlotPos = formationBase + gridOffset;
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;

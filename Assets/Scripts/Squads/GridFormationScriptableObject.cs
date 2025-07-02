@@ -33,6 +33,23 @@ public class GridFormationScriptableObject : ScriptableObject
     }
 
     /// <summary>
+    /// Convierte las posiciones de cuadrícula a offsets del mundo usando las posiciones absolutas.
+    /// Mantiene compatibilidad con código existente que usa posiciones absolutas.
+    /// </summary>
+    public Vector3[] GetAbsoluteWorldOffsets()
+    {
+        Vector3[] offsets = new Vector3[gridPositions.Length];
+        
+        for (int i = 0; i < gridPositions.Length; i++)
+        {
+            float3 worldPos = FormationGridSystem.GridToRelativeWorld(new int2(gridPositions[i].x, gridPositions[i].y));
+            offsets[i] = new Vector3(worldPos.x, 0f, worldPos.z);
+        }
+        
+        return offsets;
+    }
+
+    /// <summary>
     /// Calcula el área total que ocupa esta formación incluyendo márgenes.
     /// </summary>
     public Vector2 GetFormationArea()
@@ -71,47 +88,18 @@ public class GridFormationScriptableObject : ScriptableObject
     }
 
     /// <summary>
-    /// Calcula el centro real de la formación basándose en las posiciones de las unidades.
-    /// Para grillas con dimensiones pares, redondea hacia el centro de masa.
-    /// </summary>
-    /// <returns>Posición del centro de la formación en coordenadas de grid</returns>
-    public Vector2Int GetFormationCenter()
-    {
-        if (gridPositions.Length == 0) return Vector2Int.zero;
-
-        int minX = int.MaxValue, maxX = int.MinValue;
-        int minY = int.MaxValue, maxY = int.MinValue;
-
-        foreach (var pos in gridPositions)
-        {
-            minX = math.min(minX, pos.x);
-            maxX = math.max(maxX, pos.x);
-            minY = math.min(minY, pos.y);
-            maxY = math.max(maxY, pos.y);
-        }
-
-        // Para dimensiones pares, usar el centro geométrico real
-        // Para dimensiones impares, usar la celda central
-        float centerX = (minX + maxX) / 2.0f;
-        float centerY = (minY + maxY) / 2.0f;
-        
-        // Redondear al entero más cercano
-        int finalCenterX = Mathf.RoundToInt(centerX);
-        int finalCenterY = Mathf.RoundToInt(centerY);
-
-        return new Vector2Int(finalCenterX, finalCenterY);
-    }
-
-    /// <summary>
-    /// Convierte las posiciones de cuadrícula a offsets del mundo.
-    /// Usa las posiciones originales del ScriptableObject.
+    /// Convierte las posiciones de cuadrícula a offsets del mundo usando posiciones absolutas.
+    /// Sin centrado - usa las coordenadas de grid tal como fueron diseñadas.
     /// </summary>
     public Vector3[] GetCenteredWorldOffsets()
     {
+        if (gridPositions.Length == 0) return new Vector3[0];
+        
         Vector3[] offsets = new Vector3[gridPositions.Length];
         
         for (int i = 0; i < gridPositions.Length; i++)
         {
+            // Usar posición de grid directamente sin centrado
             float3 worldPos = FormationGridSystem.GridToRelativeWorld(new int2(gridPositions[i].x, gridPositions[i].y));
             offsets[i] = new Vector3(worldPos.x, 0f, worldPos.z);
         }

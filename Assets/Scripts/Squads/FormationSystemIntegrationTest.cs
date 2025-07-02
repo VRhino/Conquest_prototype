@@ -11,14 +11,14 @@ public class FormationSystemIntegrationTest : MonoBehaviour
     public GridFormationScriptableObject testudoFormation;
     public GridFormationScriptableObject lineFormation;
 
-    [ContextMenu("Test Formation Center Calculations")]
+    [ContextMenu("Test Formation Calculations")]
     public void TestFormationCenters()
     {
         Debug.Log("=== Formation System Integration Test ===");
         
         if (testudoFormation != null)
         {
-            TestFormation(testudoFormation, new int2(4, 5), "Testudo");
+            TestFormation(testudoFormation, "Testudo");
         }
         else
         {
@@ -27,7 +27,7 @@ public class FormationSystemIntegrationTest : MonoBehaviour
         
         if (lineFormation != null)
         {
-            TestFormation(lineFormation, new int2(5, 4), "Line");
+            TestFormation(lineFormation, "Line");
         }
         else
         {
@@ -35,20 +35,15 @@ public class FormationSystemIntegrationTest : MonoBehaviour
         }
     }
 
-    private void TestFormation(GridFormationScriptableObject formation, int2 expectedCenter, string name)
+    private void TestFormation(GridFormationScriptableObject formation, string name)
     {
         Debug.Log($"\n--- Testing {name} Formation ---");
         
-        // Test ScriptableObject calculations
-        var calculatedCenter = formation.GetFormationCenter();
+        // Test ScriptableObject calculations (no centering anymore)
         var originalPositions = formation.gridPositions; // Usar posiciones originales
-        var worldOffsets = formation.GetCenteredWorldOffsets();
+        var worldOffsets = formation.GetCenteredWorldOffsets(); // Still named "Centered" but no centering
         
-        Debug.Log($"Expected center: ({expectedCenter.x}, {expectedCenter.y})");
-        Debug.Log($"Calculated center: ({calculatedCenter.x}, {calculatedCenter.y})");
-        
-        bool centerCorrect = calculatedCenter.x == expectedCenter.x && calculatedCenter.y == expectedCenter.y;
-        Debug.Log($"Center calculation: {(centerCorrect ? "✓ PASS" : "✗ FAIL")}");
+        Debug.Log($"Formation uses absolute grid positions (no centering)");
         
         // Test original positions
         Debug.Log($"Original positions count: {formation.gridPositions.Length}");
@@ -56,7 +51,7 @@ public class FormationSystemIntegrationTest : MonoBehaviour
         Debug.Log($"World offsets count: {worldOffsets.Length}");
         
         // Show first few original positions
-        Debug.Log("Sample grid positions (original from ScriptableObject):");
+        Debug.Log("Sample grid positions (absolute coordinates):");
         for (int i = 0; i < math.min(5, originalPositions.Length); i++)
         {
             var pos = originalPositions[i];

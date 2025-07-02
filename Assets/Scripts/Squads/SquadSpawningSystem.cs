@@ -104,10 +104,38 @@ public partial class SquadSpawningSystem : SystemBase
                 Entity unit = ecb.Instantiate(data.unitPrefab);
                 float3 squadOrigin = transform.ValueRO.Position; // Spawn directly at hero position
                 
-                // Use grid positions from formation blob (positions are already centered)
+                // Use grid positions from formation blob
                 ref var gridPositions = ref firstFormation.gridPositions;
-                int2 gridPos = gridPositions[i];
-                float3 gridOffset = FormationGridSystem.GridToRelativeWorld(gridPos);
+                int2 originalGridPos = gridPositions[i];
+                
+                // Calculate centered position for world placement (closer to hero)
+                // We need to get the formation center and calculate relative position
+                int2 minGrid = new int2(int.MaxValue, int.MaxValue);
+                int2 maxGrid = new int2(int.MinValue, int.MinValue);
+                
+                // Find bounds of the formation
+                for (int j = 0; j < gridPositions.Length; j++)
+                {
+                    minGrid.x = math.min(minGrid.x, gridPositions[j].x);
+                    minGrid.y = math.min(minGrid.y, gridPositions[j].y);
+                    maxGrid.x = math.max(maxGrid.x, gridPositions[j].x);
+                    maxGrid.y = math.max(maxGrid.y, gridPositions[j].y);
+                }
+                
+                // Calculate formation center
+                int2 formationCenter = new int2(
+                    (int)math.round((minGrid.x + maxGrid.x) / 2.0f),
+                    (int)math.round((minGrid.y + maxGrid.y) / 2.0f)
+                );
+                
+                // Calculate centered position relative to formation center
+                int2 centeredGridPos = new int2(
+                    originalGridPos.x - formationCenter.x,
+                    originalGridPos.y - formationCenter.y
+                );
+                
+                // Convert centered position to world offset
+                float3 gridOffset = FormationGridSystem.GridToRelativeWorld(centeredGridPos);
                 
                 float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
 
@@ -122,18 +150,18 @@ public partial class SquadSpawningSystem : SystemBase
 
                 ecb.SetComponent(unit, LocalTransform.FromPosition(worldPos));
                 
-                // Use the grid system
+                // Use the grid system - mantener la posición original para gridPosition
                 ecb.AddComponent(unit, new UnitGridSlotComponent
                 {
-                    gridPosition = gridPos,
+                    gridPosition = originalGridPos, // Mantener posición original del ScriptableObject
                     slotIndex = i,
-                    worldOffset = gridOffset
+                    worldOffset = gridOffset // Usar offset centrado para posicionamiento
                 });
                 // Inicializar el campo Slot de UnitSpacingComponent
                 ecb.SetComponent(unit, new UnitSpacingComponent {
                     minDistance = /* valor adecuado, por ejemplo 1.5f o el que corresponda */ 1.5f,
                     repelForce = /* valor adecuado, por ejemplo 1f o el que corresponda */ 1f,
-                    Slot = gridPos
+                    Slot = originalGridPos // Usar posición original para Slot
                 });
                 
                 // Add UnitTargetPositionComponent from the start
