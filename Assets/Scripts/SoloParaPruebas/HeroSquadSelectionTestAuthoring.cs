@@ -19,6 +19,7 @@ public class HeroSquadSelectionTestAuthoring : MonoBehaviour
             var squadDataEntity = authoring.squadDataPrefab != null
                 ? GetEntity(authoring.squadDataPrefab, TransformUsageFlags.None)
                 : Entity.Null;
+            
             AddComponent(entity, new HeroSquadSelectionComponent
             {
                 squadDataEntity = squadDataEntity,
