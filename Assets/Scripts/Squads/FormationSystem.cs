@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 /// <summary>
 /// Assigns target positions to squad units based on the selected formation.
@@ -67,46 +68,37 @@ public partial class FormationSystem : SystemBase
                 state.ValueRW = s;
                 continue;
             }
-
+            //se tiene la formacion deseada
             ref var formation = ref formations[formationIndex];
 
-            // Use grid-based positioning - All units in buffer are squad units (hero is separate)
-            int squadUnitCount = units.Length; // All units in buffer are squad units
+            int squadUnitCount = units.Length; 
             ref var gridPositions = ref formation.gridPositions;
             int positionsToUse = math.min(squadUnitCount, gridPositions.Length);
             
             for (int i = 0; i < positionsToUse; i++)
             {
-                Entity unit = units[i].Value; // Process all units starting from index 0
+                // entidad
+                Entity unit = units[i].Value;
                 if (!SystemAPI.Exists(unit))
                     continue;
-
-                // Get original grid position from blob and use it directly (no centering)
-                int2 originalGridPos = gridPositions[i];
+                FormationPositionCalculator.CalculateDesiredPosition(
+                    unit, 
+                    ref gridPositions,
+                    heroTransform.Position,
+                    i,
+                    out int2 originalGridPos,
+                    out float3 gridOffset,
+                    out float3 worldPos,
+                    true);
                 
-                // Convert grid position directly to world position
-                float3 relativeWorldPos = FormationGridSystem.GridToRelativeWorld(originalGridPos);
-                
-                // Create temporary grid slot for calculation
-                UnitGridSlotComponent tempSlot = new UnitGridSlotComponent
-                {
-                    gridPosition = originalGridPos,
-                    worldOffset = relativeWorldPos,
-                    slotIndex = i
-                };
-                
-                // Use unified position calculator
-                float3 target = FormationPositionCalculator.CalculateDesiredPosition(
-                    heroTransform, tempSlot, useHeroForward: false, adjustForTerrain: false);
-                
-                UpdateUnitPosition(unit, target, relativeWorldPos, i);
+                UpdateUnitPosition(unit, worldPos, new float3(originalGridPos.x, 0, originalGridPos.y), i);
                 
                 // Update grid slot component - mantener posición original en gridPosition
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
                 {
                     var gridSlot = SystemAPI.GetComponentRW<UnitGridSlotComponent>(unit);
                     gridSlot.ValueRW.gridPosition = originalGridPos; // Mantener posición original
-                    gridSlot.ValueRW.worldOffset = relativeWorldPos; // Usar offset directo sin centrado
+                    gridSlot.ValueRW.worldOffset = gridOffset; // Usar offset directo sin centrado
                 }
                 else
                 {
@@ -114,7 +106,7 @@ public partial class FormationSystem : SystemBase
                     { 
                         gridPosition = originalGridPos, // Mantener posición original
                         slotIndex = i,
-                        worldOffset = relativeWorldPos // Usar offset directo sin centrado
+                        worldOffset = gridOffset // Usar offset directo sin centrado
                     });
                 }
             }
@@ -125,25 +117,24 @@ public partial class FormationSystem : SystemBase
         }
     }
 
-    private void UpdateUnitPosition(Entity unit, float3 target, float3 relativeOffset, int slotIndex)
+    private void UpdateUnitPosition(Entity unit, float3 worldPos, float3 originalGridPos, int slotIndex)
     {
         // Update UnitTargetPositionComponent
         if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
         {
             var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
-            targetPos.ValueRW.position = target;
+            targetPos.ValueRW.position = worldPos;
         }
         else
         {
-            EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
+            EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = worldPos });
         }
         
         // Actualizar el campo Slot de UnitSpacingComponent si existe
         if (SystemAPI.HasComponent<UnitSpacingComponent>(unit))
         {
             var spacingComp = SystemAPI.GetComponentRW<UnitSpacingComponent>(unit);
-            int2 slot = (int2)math.round(FormationGridSystem.RelativeWorldToGrid(relativeOffset));
-            spacingComp.ValueRW.Slot = slot;
+            spacingComp.ValueRW.Slot = new int2((int)originalGridPos.x, (int)originalGridPos.z);
         }
         
         // Mark unit as Moving so it repositions immediately

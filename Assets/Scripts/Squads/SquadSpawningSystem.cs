@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 /// <summary>
 /// Spawns squad entities and their units when a hero enters the scene.
@@ -16,7 +17,7 @@ public partial class SquadSpawningSystem : SystemBase
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        foreach (var (spawn, selection, transform, hero, entity) in SystemAPI
+        foreach (var (spawn, selection, heroTransform, hero, entity) in SystemAPI
                      .Query<RefRO<HeroSpawnComponent>,
                             RefRO<HeroSquadSelectionComponent>,
                             RefRO<LocalTransform>,
@@ -102,51 +103,7 @@ public partial class SquadSpawningSystem : SystemBase
                 }
 
                 Entity unit = ecb.Instantiate(data.unitPrefab);
-                float3 squadOrigin = transform.ValueRO.Position; // Spawn directly at hero position
-                
-                // Use grid positions from formation blob
-                ref var gridPositions = ref firstFormation.gridPositions;
-                int2 originalGridPos = gridPositions[i];
-                
-                // Calculate centered position for world placement (closer to hero)
-                // We need to get the formation center and calculate relative position
-                int2 minGrid = new int2(int.MaxValue, int.MaxValue);
-                int2 maxGrid = new int2(int.MinValue, int.MinValue);
-                
-                // Find bounds of the formation
-                for (int j = 0; j < gridPositions.Length; j++)
-                {
-                    minGrid.x = math.min(minGrid.x, gridPositions[j].x);
-                    minGrid.y = math.min(minGrid.y, gridPositions[j].y);
-                    maxGrid.x = math.max(maxGrid.x, gridPositions[j].x);
-                    maxGrid.y = math.max(maxGrid.y, gridPositions[j].y);
-                }
-                
-                // Calculate formation center
-                int2 formationCenter = new int2(
-                    (int)math.round((minGrid.x + maxGrid.x) / 2.0f),
-                    (int)math.round((minGrid.y + maxGrid.y) / 2.0f)
-                );
-                
-                // Calculate centered position relative to formation center
-                int2 centeredGridPos = new int2(
-                    originalGridPos.x - formationCenter.x,
-                    originalGridPos.y - formationCenter.y
-                );
-                
-                // Convert centered position to world offset
-                float3 gridOffset = FormationGridSystem.GridToRelativeWorld(centeredGridPos);
-                
-                float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
-
-                // Get classic Unity terrain height
-                float y = 0f;
-                if (UnityEngine.Terrain.activeTerrain != null)
-                {
-                    y = UnityEngine.Terrain.activeTerrain.SampleHeight(new UnityEngine.Vector3(baseXZ.x, 0, baseXZ.z));
-                    y += UnityEngine.Terrain.activeTerrain.GetPosition().y; // Adjust for terrain position
-                }
-                float3 worldPos = new float3(baseXZ.x, y, baseXZ.z);
+                FormationPositionCalculator.CalculateDesiredPosition(unit, ref firstFormation.gridPositions, heroTransform.ValueRO.Position, i, out int2 originalGridPos, out float3 gridOffset, out float3 worldPos, true);
 
                 ecb.SetComponent(unit, LocalTransform.FromPosition(worldPos));
                 
@@ -240,9 +197,7 @@ public partial class SquadSpawningSystem : SystemBase
                 }
             }
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
-            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });
-            // Añadir UnitPrevLeaderPosComponent al héroe si no lo tiene
-            ecb.AddComponent(entity, new UnitPrevLeaderPosComponent { value = transform.ValueRO.Position });
+            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });;
         }
 
         ecb.Playback(EntityManager);

@@ -150,6 +150,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitFollowFormationSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSquadSelectionComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombatComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\FormationPositionCalculator.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnBaker.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyPointComponent.cs" />
@@ -283,7 +284,6 @@
     <Compile Include="Assets\Scripts\UI\UIManager.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAttackSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\DefenseComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationSystemIntegrationTest.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStateComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\HealthComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStateComponent.cs" />

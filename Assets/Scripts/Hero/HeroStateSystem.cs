@@ -1,12 +1,15 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using Unity.Collections;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial struct HeroStateSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
     {
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
+        
         foreach (var (transform, entity) in SystemAPI.Query<RefRO<LocalTransform>>().WithEntityAccess())
         {
             if (!SystemAPI.HasComponent<HeroStateComponent>(entity))
@@ -24,7 +27,19 @@ public partial struct HeroStateSystem : ISystem
             heroState.State = distSq > 0.0025f ? HeroState.Moving : HeroState.Idle;
 
             SystemAPI.SetComponent(entity, heroState);
-            SystemAPI.SetComponent(entity, new UnitPrevLeaderPosComponent { value = currPos });
+            
+            // Add or update the previous position component
+            if (!SystemAPI.HasComponent<UnitPrevLeaderPosComponent>(entity))
+            {
+                ecb.AddComponent(entity, new UnitPrevLeaderPosComponent { value = currPos });
+            }
+            else
+            {
+                SystemAPI.SetComponent(entity, new UnitPrevLeaderPosComponent { value = currPos });
+            }
         }
+        
+        ecb.Playback(state.EntityManager);
+        ecb.Dispose();
     }
 }

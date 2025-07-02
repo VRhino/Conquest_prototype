@@ -17,6 +17,32 @@ public partial struct UnitFormationStateSystem : ISystem
             if (!SystemAPI.HasComponent<SquadOwnerComponent>(squadEntity))
                 continue;
 
+            // Get squad data and state to access formation library
+            if (!SystemAPI.HasComponent<SquadDataComponent>(squadEntity) || 
+                !SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
+                continue;
+
+            var squadData = SystemAPI.GetComponent<SquadDataComponent>(squadEntity);
+            var squadState = SystemAPI.GetComponent<SquadStateComponent>(squadEntity);
+
+            // Get current formation gridPositions from squad data
+            ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
+            if (squadData.formationLibrary.IsCreated)
+            {
+                ref var formations = ref squadData.formationLibrary.Value.formations;
+                FormationType currentFormation = squadState.currentFormation;
+                
+                // Find the current formation in the library
+                for (int f = 0; f < formations.Length; f++)
+                {
+                    if (formations[f].formationType == currentFormation)
+                    {
+                        gridPositions = ref formations[f].gridPositions;
+                        break;
+                    }
+                }
+            }
+
             Entity hero = SystemAPI.GetComponent<SquadOwnerComponent>(squadEntity).hero;
             if (!SystemAPI.HasComponent<LocalTransform>(hero) || !SystemAPI.HasComponent<HeroStateComponent>(hero))
                 continue;
@@ -26,23 +52,11 @@ public partial struct UnitFormationStateSystem : ISystem
 
             // Calculate squad center (average position of all units)
             float3 squadCenter = float3.zero;
-            int count = 0;
-            foreach (var unitElem in units)
+            bool heroWithinRadius = FormationPositionCalculator.isHeroInRange(units, SystemAPI.GetComponentLookup<LocalTransform>(true), heroPos, formationRadiusSq);
+            
+            for (int i = 0; i < units.Length; i++)
             {
-                if (SystemAPI.HasComponent<LocalTransform>(unitElem.Value))
-                {
-                    squadCenter += SystemAPI.GetComponent<LocalTransform>(unitElem.Value).Position;
-                    count++;
-                }
-            }
-            if (count > 0) squadCenter /= count;
-
-            float heroDistSq = math.lengthsq(heroPos - squadCenter);
-            bool heroWithinRadius = heroDistSq <= formationRadiusSq;
-
-            foreach (var unitElem in units)
-            {
-                Entity unit = unitElem.Value;
+                Entity unit = units[i].Value;
                 if (!SystemAPI.HasComponent<UnitGridSlotComponent>(unit) ||
                     !SystemAPI.HasComponent<LocalTransform>(unit) ||
                     !SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
@@ -51,9 +65,26 @@ public partial struct UnitFormationStateSystem : ISystem
                 var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                // Use unified position calculator
-                float3 desiredSlotPos = FormationPositionCalculator.CalculateDesiredPosition(
-                    SystemAPI.GetComponent<LocalTransform>(hero), slot, useHeroForward: true, adjustForTerrain: false);
+                // Use unified position calculator with current formation
+                float3 desiredSlotPos = float3.zero;
+                if (gridPositions.Length > 0 && i < gridPositions.Length)
+                {
+                    FormationPositionCalculator.CalculateDesiredPosition(
+                        unit,
+                        ref gridPositions,
+                        heroPos,
+                        i,
+                        out int2 originalGridPos,
+                        out float3 gridOffset,
+                        out float3 worldPos,
+                        true);
+                    desiredSlotPos = worldPos;
+                }
+                else
+                {
+                    // Fallback to grid slot offset if no formation data available
+                    desiredSlotPos = heroPos + slot.worldOffset;
+                }
                 
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                 

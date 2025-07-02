@@ -8,108 +8,117 @@ using Unity.Transforms;
 /// </summary>
 public static class FormationPositionCalculator
 {
-    /// <summary>
-    /// Calcula la posición deseada para una unidad en formación basada en su grid slot.
-    /// </summary>
-    /// <param name="heroTransform">Transform del héroe (líder del squad)</param>
-    /// <param name="gridSlot">Componente de grid slot de la unidad</param>
-    /// <param name="useHeroForward">Si true, usa la orientación del héroe para la base de formación</param>
-    /// <param name="adjustForTerrain">Si true, ajusta la altura Y al terreno</param>
-    /// <returns>Posición deseada en coordenadas del mundo</returns>
-    public static float3 CalculateDesiredPosition(
-        LocalTransform heroTransform, 
-        UnitGridSlotComponent gridSlot, 
-        bool useHeroForward = true,
-        bool adjustForTerrain = true)
-    {
-        float3 heroPos = heroTransform.Position;
-        float3 formationBase;
-        
-        if (useHeroForward)
-        {
-            // Usar orientación del héroe para calcular la base de formación
-            float3 heroForward = math.forward(heroTransform.Rotation);
-            formationBase = heroPos - heroForward;
-        }
-        else
-        {
-            // Usar directamente la posición del héroe como base
-            formationBase = heroPos;
-        }
-        
-        // Aplicar el offset de grid
-        float3 targetPos = formationBase + gridSlot.worldOffset;
-        
-        // Ajustar altura del terreno si se solicita
-        if (adjustForTerrain && UnityEngine.Terrain.activeTerrain != null)
-        {
-            float terrainHeight = UnityEngine.Terrain.activeTerrain.SampleHeight(
-                new UnityEngine.Vector3(targetPos.x, 0, targetPos.z));
-            terrainHeight += UnityEngine.Terrain.activeTerrain.GetPosition().y;
-            targetPos.y = terrainHeight;
-        }
-        
-        return targetPos;
-    }
     
-    /// <summary>
-    /// Calcula la posición deseada con base de formación personalizada.
-    /// </summary>
-    /// <param name="formationBase">Posición base de la formación</param>
-    /// <param name="gridSlot">Componente de grid slot de la unidad</param>
-    /// <param name="adjustForTerrain">Si true, ajusta la altura Y al terreno</param>
-    /// <returns>Posición deseada en coordenadas del mundo</returns>
-    public static float3 CalculateDesiredPositionWithBase(
-        float3 formationBase,
-        UnitGridSlotComponent gridSlot,
-        bool adjustForTerrain = true)
-    {
-        // Aplicar el offset de grid
-        float3 targetPos = formationBase + gridSlot.worldOffset;
-        
-        // Ajustar altura del terreno si se solicita
-        if (adjustForTerrain && UnityEngine.Terrain.activeTerrain != null)
-        {
-            float terrainHeight = UnityEngine.Terrain.activeTerrain.SampleHeight(
-                new UnityEngine.Vector3(targetPos.x, 0, targetPos.z));
-            terrainHeight += UnityEngine.Terrain.activeTerrain.GetPosition().y;
-            targetPos.y = terrainHeight;
-        }
-        
-        return targetPos;
-    }
-    
-    /// <summary>
-    /// Calcula la base de formación usando la posición y orientación del héroe.
-    /// </summary>
-    /// <param name="heroTransform">Transform del héroe</param>
-    /// <param name="useHeroForward">Si true, retrocede un paso desde el héroe</param>
-    /// <returns>Posición base para la formación</returns>
-    public static float3 CalculateFormationBase(LocalTransform heroTransform, bool useHeroForward = true)
-    {
-        float3 heroPos = heroTransform.Position;
-        
-        if (useHeroForward)
-        {
-            float3 heroForward = math.forward(heroTransform.Rotation);
-            return heroPos - heroForward;
-        }
-        else
-        {
-            return heroPos;
-        }
-    }
-    
-    /// <summary>
-    /// Verifica si una unidad está en su posición de slot dentro de un threshold.
-    /// </summary>
-    /// <param name="unitPosition">Posición actual de la unidad</param>
-    /// <param name="desiredPosition">Posición deseada</param>
-    /// <param name="thresholdSq">Threshold al cuadrado para optimización</param>
-    /// <returns>True si la unidad está en posición</returns>
-    public static bool IsUnitInSlot(float3 unitPosition, float3 desiredPosition, float thresholdSq = 0.25f)
+    public static bool IsUnitInSlot(float3 unitPosition, float3 desiredPosition, float thresholdSq)
     {
         float distSq = math.lengthsq(desiredPosition - unitPosition);
         return distSq <= thresholdSq;
+    }
+
+    public static float calculateTerraindHeight(float3 position)
+    {
+        if (UnityEngine.Terrain.activeTerrain != null)
+        {
+            float terrainHeight = UnityEngine.Terrain.activeTerrain.SampleHeight(
+                new UnityEngine.Vector3(position.x, 0, position.z));
+            terrainHeight += UnityEngine.Terrain.activeTerrain.GetPosition().y; // Adjust for terrain position
+            return terrainHeight;
+        }
+        return position.y; // Return original Y if no terrain
+    }
+
+    public static float3 CalculateDesiredPosition(
+        Entity unit,
+        ref BlobArray<int2> gridPositions,
+        float3 heroPosition,
+        int unitIndex,
+        out int2 originalGridPos,
+        out float3 gridOffset,
+        out float3 worldPos,
+        bool adjustForTerrain
+        )
+    {
+        var squadOrigin = heroPosition;
+        originalGridPos = gridPositions[unitIndex];
+                            
+        //calculo la poscicion central ubicando al heroe en el centro de la formacion
+        int2 minGrid = new int2(int.MaxValue, int.MaxValue);
+        int2 maxGrid = new int2(int.MinValue, int.MinValue);
+
+        //busco los limites del grid
+        for (int j = 0; j < gridPositions.Length; j++)
+        {
+            minGrid.x = math.min(minGrid.x, gridPositions[j].x);
+            minGrid.y = math.min(minGrid.y, gridPositions[j].y);
+            maxGrid.x = math.max(maxGrid.x, gridPositions[j].x);
+            maxGrid.y = math.max(maxGrid.y, gridPositions[j].y);
+        }
+        //calculo el centro del grid
+        int2 formationCenter = new int2(
+            (int)math.round((minGrid.x + maxGrid.x) / 2.0f),
+            (int)math.round((minGrid.y + maxGrid.y) / 2.0f)
+        );
+
+        // Calculo la posicion central relativa al centro de la formacion
+        int2 centeredGridPos = new int2(
+            originalGridPos.x - formationCenter.x,
+            originalGridPos.y - formationCenter.y
+        );
+
+        //convierto la posicion central a world offset
+        gridOffset = FormationGridSystem.GridToRelativeWorld(centeredGridPos);
+
+        float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
+
+        // obtengo Unity terrain height
+        float y = baseXZ.y;
+        if (adjustForTerrain && UnityEngine.Terrain.activeTerrain != null)
+        {
+           y = calculateTerraindHeight(baseXZ);
+        }
+        worldPos = new float3(baseXZ.x, y, baseXZ.z);
+        
+        return worldPos;
+    }
+
+    public static bool isHeroInRange(DynamicBuffer<Entity> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, float range)
+    {
+        float3 squadCenter = float3.zero;
+        int squadCount = 0;
+        foreach (var unit in units)
+        {
+            if (transformLookup.HasComponent(unit))
+            {
+                squadCenter += transformLookup[unit].Position;
+                squadCount++;
+            }
+        }
+
+        if (squadCount > 0)
+            squadCenter /= squadCount;
+
+        float heroDistSq = math.lengthsq(heroPosition - squadCenter);
+        return heroDistSq <= range; // range al cuadrado
+    }
+
+    public static bool isHeroInRange(DynamicBuffer<SquadUnitElement> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, float range)
+    {
+        float3 squadCenter = float3.zero;
+        int squadCount = 0;
+        foreach (var unitElement in units)
+        {
+            Entity unit = unitElement.Value;
+            if (transformLookup.HasComponent(unit))
+            {
+                squadCenter += transformLookup[unit].Position;
+                squadCount++;
+            }
+        }
+
+        if (squadCount > 0)
+            squadCenter /= squadCount;
+
+        float heroDistSq = math.lengthsq(heroPosition - squadCenter);
+        return heroDistSq <= range; // range al cuadrado
     }
 }

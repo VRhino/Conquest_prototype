@@ -1,6 +1,8 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
+using Unity.Collections;
 
 /// <summary>
 /// Moves each unit of a squad towards its assigned formation slot relative to
@@ -23,6 +25,10 @@ public partial class UnitFollowFormationSystem : SystemBase
         var transformLookup = GetComponentLookup<LocalTransform>();
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
+        var stateLookup = GetComponentLookup<SquadStateComponent>(true);
+        var squadDataLookup = GetComponentLookup<SquadDataComponent>(true);
+        
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
         bool heroIsMoving = false;
         float3 prevHeroPos = float3.zero;
         // Detectar si el héroe se mueve (solo ejemplo, idealmente cachear en otro sistema)
@@ -36,37 +42,44 @@ public partial class UnitFollowFormationSystem : SystemBase
 
             if (!ownerLookup.HasComponent(entity))
                 continue;
+            
+                
+            if (!stateLookup.TryGetComponent(entity, out var squadState))
+                continue;
+
+            if (!squadDataLookup.TryGetComponent(entity, out var squadData))
+                continue;
 
             Entity leader = ownerLookup[entity].hero;
             if (!transformLookup.HasComponent(leader))
                 continue;
 
-            float3 leaderPos = transformLookup[leader].Position;
+            float3 heroPosition = transformLookup[leader].Position;
             LocalTransform leaderTransform = SystemAPI.GetComponent<LocalTransform>(leader);
-
-            // Calculate formation base using unified calculator
-            float3 formationBase = FormationPositionCalculator.CalculateFormationBase(leaderTransform, useHeroForward: true);
             
             // Keep heroForward for orientation updates
             float3 heroForward = math.forward(leaderTransform.Rotation);
 
-            // Calcular centro de la squad (promedio de posiciones de las unidades)
-            float3 squadCenter = float3.zero;
-            int squadCount = 0;
-            for (int j = 0; j < units.Length; j++)
+            // Get current formation gridPositions from squad data
+            ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
+            if (squadData.formationLibrary.IsCreated)
             {
-                Entity u = units[j].Value;
-                if (transformLookup.HasComponent(u))
+                ref var formations = ref squadData.formationLibrary.Value.formations;
+                FormationType currentFormation = squadState.currentFormation;
+                
+                // Find the current formation in the library
+                for (int f = 0; f < formations.Length; f++)
                 {
-                    squadCenter += transformLookup[u].Position;
-                    squadCount++;
+                    if (formations[f].formationType == currentFormation)
+                    {
+                        gridPositions = ref formations[f].gridPositions;
+                        break;
+                    }
                 }
             }
-            if (squadCount > 0)
-                squadCenter /= squadCount;
 
-            float heroDistSq = math.lengthsq(leaderPos - squadCenter);
-            bool heroOutsideRadius = heroDistSq > 25f; // 5 metros al cuadrado
+            // Calcular si el héroe está fuera del rango del escuadrón
+            bool heroOutsideRadius = !FormationPositionCalculator.isHeroInRange(units, transformLookup, heroPosition, 25.0f); // 5m squared radius
 
             for (int i = 0; i < units.Length; i++)
             {
@@ -75,18 +88,54 @@ public partial class UnitFollowFormationSystem : SystemBase
                     !transformLookup.HasComponent(unit))
                     continue;
 
+                // Solo procesar movimiento si el héroe está fuera del radio O si la unidad ya está en movimiento
+                if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
+                    continue;
+                    
+                var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
+                
+                // Si el héroe está dentro del radio y la unidad ya está formada, no hacer nada
+                if (!heroOutsideRadius && stateComp.State == UnitFormationState.Formed)
+                    continue;
+
                 // Obtener y actualizar posición previa del líder para esta unidad
-                float3 prevLeaderPos = leaderPos;
+                float3 prevLeaderPos = heroPosition;
                 if (prevLeaderPosLookup.HasComponent(unit))
+                {
                     prevLeaderPos = prevLeaderPosLookup[unit].value;
-                prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = leaderPos };
+                    prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = heroPosition };
+                }
+                else
+                {
+                    // Add the component using ECB if it doesn't exist
+                    ecb.AddComponent(unit, new UnitPrevLeaderPosComponent { value = heroPosition });
+                }
 
                 // Get unit's grid slot
                 var gridSlot = slotLookup[unit];
                 
                 // Use unified position calculator for consistency
-                float3 desired = FormationPositionCalculator.CalculateDesiredPositionWithBase(
-                    formationBase, gridSlot, adjustForTerrain: false);
+                float3 desired = float3.zero;
+                if (gridPositions.Length > 0 && i < gridPositions.Length)
+                {
+                    // Use the actual grid positions from current formation
+                    FormationPositionCalculator.CalculateDesiredPosition(
+                        unit,
+                        ref gridPositions,
+                        heroPosition,
+                        i,
+                        out int2 originalGridPos,
+                        out float3 gridOffset,
+                        out float3 worldPos,
+                        true);
+                    desired = worldPos; // Use calculated world position
+                }
+                else
+                {
+                    Debug.LogWarning($"Unit {unit} has no grid position assigned in formation. Using default offset.");
+                    // Fallback to grid slot offset if no formation data available
+                    desired = heroPosition + gridSlot.worldOffset;
+                }
                 
                 // Solo usar UnitTargetPositionComponent como override temporal si existe y es diferente
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
@@ -112,12 +161,6 @@ public partial class UnitFollowFormationSystem : SystemBase
                 float3 diff = desired - current;
                 float distSq = math.lengthsq(diff);
 
-                // --- NUEVA LÓGICA BASADA EN ESTADO PERSISTENTE ---
-                if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
-                    continue;
-                    
-                var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
-                
                 // Calculate slot position using unified calculator
                 float3 slotPos = gridSlot.worldOffset;
                 
@@ -146,7 +189,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                     t.Position = current;
                     
                     // Actualizar orientación basada en configuración
-                    UpdateUnitOrientation(unit, ref t, leaderPos, heroForward, diff, dt);
+                    UpdateUnitOrientation(unit, ref t, heroPosition, heroForward, diff, dt);
                     
                     transformLookup[unit] = t;
                 }
@@ -160,6 +203,9 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
             }
         }
+        
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
     }
 
     /// <summary>
@@ -203,8 +249,16 @@ public partial class UnitFollowFormationSystem : SystemBase
 
         if (shouldRotate && math.lengthsq(targetDirection) > 0.01f)
         {
-            quaternion targetRotation = quaternion.LookRotationSafe(targetDirection, math.up());
-            transform.Rotation = math.slerp(transform.Rotation, targetRotation, deltaTime * rotationSpeed);
+            // Limitar la rotación solo al plano horizontal (eliminar componente Y)
+            float3 horizontalDirection = new float3(targetDirection.x, 0, targetDirection.z);
+            horizontalDirection = math.normalizesafe(horizontalDirection);
+            
+            // Solo rotar si hay suficiente componente horizontal
+            if (math.lengthsq(horizontalDirection) > 0.01f)
+            {
+                quaternion targetRotation = quaternion.LookRotationSafe(horizontalDirection, math.up());
+                transform.Rotation = math.slerp(transform.Rotation, targetRotation, deltaTime * rotationSpeed);
+            }
         }
     }
 }
