@@ -69,8 +69,6 @@ public partial class FormationSystem : SystemBase
             }
 
             ref var formation = ref formations[formationIndex];
-            float3 heroPos = heroTransform.Position;
-            float3 formationBase = heroPos;
 
             // Use grid-based positioning - All units in buffer are squad units (hero is separate)
             int squadUnitCount = units.Length; // All units in buffer are squad units
@@ -88,7 +86,18 @@ public partial class FormationSystem : SystemBase
                 
                 // Convert grid position directly to world position
                 float3 relativeWorldPos = FormationGridSystem.GridToRelativeWorld(originalGridPos);
-                float3 target = formationBase + relativeWorldPos;
+                
+                // Create temporary grid slot for calculation
+                UnitGridSlotComponent tempSlot = new UnitGridSlotComponent
+                {
+                    gridPosition = originalGridPos,
+                    worldOffset = relativeWorldPos,
+                    slotIndex = i
+                };
+                
+                // Use unified position calculator
+                float3 target = FormationPositionCalculator.CalculateDesiredPosition(
+                    heroTransform, tempSlot, useHeroForward: false, adjustForTerrain: false);
                 
                 UpdateUnitPosition(unit, target, relativeWorldPos, i);
                 
@@ -128,6 +137,7 @@ public partial class FormationSystem : SystemBase
         {
             EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = target });
         }
+        
         // Actualizar el campo Slot de UnitSpacingComponent si existe
         if (SystemAPI.HasComponent<UnitSpacingComponent>(unit))
         {
@@ -135,6 +145,7 @@ public partial class FormationSystem : SystemBase
             int2 slot = (int2)math.round(FormationGridSystem.RelativeWorldToGrid(relativeOffset));
             spacingComp.ValueRW.Slot = slot;
         }
+        
         // Mark unit as Moving so it repositions immediately
         if (SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
         {

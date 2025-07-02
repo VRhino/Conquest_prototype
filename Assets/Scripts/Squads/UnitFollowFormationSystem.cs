@@ -42,10 +42,13 @@ public partial class UnitFollowFormationSystem : SystemBase
                 continue;
 
             float3 leaderPos = transformLookup[leader].Position;
+            LocalTransform leaderTransform = SystemAPI.GetComponent<LocalTransform>(leader);
 
-            // Calcular punto base de la formación: 5 metros detrás del héroe
-            float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(leader).Rotation);
-            float3 formationBase = leaderPos - heroForward;
+            // Calculate formation base using unified calculator
+            float3 formationBase = FormationPositionCalculator.CalculateFormationBase(leaderTransform, useHeroForward: true);
+            
+            // Keep heroForward for orientation updates
+            float3 heroForward = math.forward(leaderTransform.Rotation);
 
             // Calcular centro de la squad (promedio de posiciones de las unidades)
             float3 squadCenter = float3.zero;
@@ -78,13 +81,12 @@ public partial class UnitFollowFormationSystem : SystemBase
                     prevLeaderPos = prevLeaderPosLookup[unit].value;
                 prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = leaderPos };
 
-                // Usar offset de formación (puede haber sido actualizado por FormationSystem)
-                float3 offset = slotLookup[unit].worldOffset;
-                // Asegurar que el offset esté ajustado a la cuadrícula
-                float3 gridOffset = offset;
+                // Get unit's grid slot
+                var gridSlot = slotLookup[unit];
                 
-                // Calcular posición deseada usando la base de formación (consistente con UnitFormationStateSystem)
-                float3 desired = formationBase + gridOffset;
+                // Use unified position calculator for consistency
+                float3 desired = FormationPositionCalculator.CalculateDesiredPositionWithBase(
+                    formationBase, gridSlot, adjustForTerrain: false);
                 
                 // Solo usar UnitTargetPositionComponent como override temporal si existe y es diferente
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
@@ -116,8 +118,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                     
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
                 
-                // Calculate slot position using same logic (snapped to grid)
-                float3 slotPos = gridOffset;
+                // Calculate slot position using unified calculator
+                float3 slotPos = gridSlot.worldOffset;
                 
                 // Only move if the unit state is Moving
                 if (stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq)

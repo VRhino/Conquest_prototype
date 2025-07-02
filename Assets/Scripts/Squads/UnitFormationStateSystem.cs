@@ -51,15 +51,14 @@ public partial struct UnitFormationStateSystem : ISystem
                 var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                // Calculate desired position using same logic as UnitFollowFormationSystem
-                float3 heroForward = math.forward(SystemAPI.GetComponent<LocalTransform>(hero).Rotation);
-                float3 formationBase = heroPos - heroForward; // Formation 5 meters behind hero
-                float3 gridOffset = slot.worldOffset;
-                float3 desiredSlotPos = formationBase + gridOffset;
-                float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
-                float distToSlotSq = math.lengthsq(desiredSlotPos - currentPos);
+                // Use unified position calculator
+                float3 desiredSlotPos = FormationPositionCalculator.CalculateDesiredPosition(
+                    SystemAPI.GetComponent<LocalTransform>(hero), slot, useHeroForward: true, adjustForTerrain: false);
                 
-                bool inSlot = distToSlotSq <= slotThresholdSq;
+                float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+                
+                // Use unified position checker
+                bool inSlot = FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, slotThresholdSq);
 
                 // State transition logic
                 switch (stateComp.State)

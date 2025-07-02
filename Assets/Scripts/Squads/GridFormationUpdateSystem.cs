@@ -35,15 +35,10 @@ public partial class GridFormationUpdateSystem : SystemBase
                 if (!SystemAPI.HasComponent<UnitGridSlotComponent>(unit)) continue;
                 
                 var gridSlot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
-                float3 targetPos = heroPos + gridSlot.worldOffset;
                 
-                // Ajustar altura del terreno
-                if (UnityEngine.Terrain.activeTerrain != null)
-                {
-                    float terrainHeight = UnityEngine.Terrain.activeTerrain.SampleHeight(new UnityEngine.Vector3(targetPos.x, 0, targetPos.z));
-                    terrainHeight += UnityEngine.Terrain.activeTerrain.GetPosition().y;
-                    targetPos.y = terrainHeight;
-                }
+                // Use unified position calculator
+                float3 targetPos = FormationPositionCalculator.CalculateDesiredPosition(
+                    heroTransform, gridSlot, useHeroForward: false, adjustForTerrain: true);
                 
                 // Actualizar target position si existe el componente
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
