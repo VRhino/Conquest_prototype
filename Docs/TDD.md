@@ -76,6 +76,7 @@
 - 9.3 Minimapa dinámico (feudo y combate)
 - 9.4 Interfaz de preparación y loadouts
 - 9.5 Menús de interacción con supply y puntos de captura
+- 9.6 Sistema de Marcadores de Destino (Hold Position)
 
 ### 10. Seguridad y Backend (Para expansión futura)
 
@@ -2011,6 +2012,84 @@ Pantalla accesible **antes de entrar a batalla**, permite seleccionar:
 
 - Ambas interfaces están sincronizadas con datos del servidor.
 - La visibilidad de estas UIs depende de `ZoneDetectionSystem` que activa/desactiva componentes de UI según el rango.
+
+---
+
+### 🎯 9.6 Sistema de Marcadores de Destino (Hold Position)
+
+📌 **Descripción:**
+
+Sistema visual que muestra marcadores en el mundo 3D para indicar las posiciones exactas donde se moverán las unidades cuando se da una orden de "Hold Position". Los marcadores aparecen únicamente durante órdenes de Hold Position y proporcionan feedback visual inmediato de dónde se formará el escuadrón.
+
+🧩 **Componentes principales:**
+
+**`UnitDestinationMarkerComponent`** (IComponentData):
+- Se añade dinámicamente a unidades que requieren marcadores
+- Almacena: `markerEntity` (referencia al prefab instanciado), `targetPosition` (posición objetivo), `isActive` (estado), `ownerUnit` (unidad propietaria)
+
+**`DestinationMarkerPrefabComponent`** (IComponentData - Singleton):
+- Componente global que almacena la referencia al prefab del marcador
+- Configurado mediante `DestinationMarkerAuthoring` desde el Inspector
+
+**`DestinationMarkerSystem`** (SystemBase):
+- Sistema principal que gestiona el ciclo de vida completo de los marcadores
+- Se ejecuta después de `UnitFollowFormationSystem` para usar posiciones actualizadas
+- Funciona exclusivamente en estado `SquadFSMState.HoldingPosition`
+
+🔁 **Flujo de interacción:**
+
+1. **Detección de orden Hold Position:**
+   - `SquadControlSystem` captura posición del mouse en terreno
+   - `SquadOrderSystem` crea/actualiza `SquadHoldPositionComponent` con posición del mouse
+   - `SquadFSMSystem` transiciona escuadrón a `HoldingPosition`
+
+2. **Creación de marcadores:**
+   - `DestinationMarkerSystem` detecta unidades en estado `Moving` dentro de escuadrón en `HoldingPosition`
+   - Usa `FormationPositionCalculator.CalculateDesiredPosition()` para obtener posición exacta de cada unidad
+   - Instancia prefabs de marcadores en posiciones calculadas
+
+3. **Actualización y limpieza:**
+   - Marcadores se actualizan cuando cambia la formación en Hold Position
+   - Se destruyen automáticamente cuando unidades alcanzan estado `Formed`
+   - Se limpian completamente al cambiar a `FollowingHero`
+
+🧩 **Integración con otros sistemas:**
+
+**Con sistemas de formación:**
+- Usa `FormationPositionCalculator` para consistencia en cálculos de posición
+- Lee `gridPositions` de la formación actual desde `SquadDataComponent`
+- Respeta thresholds de distancia: `slotThresholdSq = 0.04f` (0.2m precision)
+
+**Con sistemas de estado:**
+- Monitorea `UnitFormationStateComponent.State` para detectar transiciones `Moving` ↔ `Formed`
+- Responde a `SquadStateComponent.currentState` para limitar funcionamiento a Hold Position
+
+**Con entrada del usuario:**
+- Recibe posiciones de mouse desde `SquadInputComponent.holdPosition`
+- Usa posición del mouse como `squadCenter` en lugar de posición del héroe
+
+🧩 **Características técnicas:**
+
+**Precisión de posicionamiento:**
+- Marcadores aparecen en posiciones exactas calculadas por el sistema de formación
+- Mismos algoritmos que `UnitFollowFormationSystem` para garantizar coherencia
+- Thresholds reducidos para mayor precisión visual
+
+**Gestión de memoria:**
+- Usa `EntityCommandBuffer` para operaciones thread-safe
+- Limpieza automática de componentes al cambiar de estado
+- Previene memory leaks mediante destrucción explícita de entidades de marcadores
+
+**Restricciones de uso:**
+- **SOLO** activo durante `SquadFSMState.HoldingPosition`
+- **NO** se muestran en `FollowingHero` ni otros estados
+- **NO** aparecen durante cambios de formación en modo seguimiento
+
+🔁 **Configuración:**
+
+- Requiere un GameObject en escena con `DestinationMarkerAuthoring`
+- Prefab del marcador debe tener `LocalTransform` para posicionamiento
+- Sistema completamente automático, sin configuración adicional requerida
 
 ---
 

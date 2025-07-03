@@ -10,7 +10,7 @@ public partial struct UnitFormationStateSystem : ISystem
     {
         float dt = SystemAPI.Time.DeltaTime;
         const float formationRadiusSq = 25f; // 5m squared
-        const float slotThresholdSq = 0.25f; // ~0.5m threshold for being "in slot"
+        const float slotThresholdSq = 0.04f; // ~0.2m threshold for being "in slot" (reducido de 0.25f)
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -124,7 +124,7 @@ public partial struct UnitFormationStateSystem : ISystem
                     // En Hold Position: transiciones de estado simplificadas
                     // Las unidades solo se mueven si están muy lejos de su posición asignada
                     // Usar un threshold más grande solo para detectar si necesita reorganizarse
-                    const float holdPositionThresholdSq = 4.0f; // 2 metros cuadrados para cambios de formación
+                    const float holdPositionThresholdSq = 1.0f; // 1 metro cuadrado para cambios de formación (reducido de 4.0f)
                     
                     switch (stateComp.State)
                     {

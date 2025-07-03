@@ -100,7 +100,9 @@
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\ColorPropertyLinker.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroCombatComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\RetreatComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\DestinationMarkerPrefabComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroMovementAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\DestinationMarkerAuthoring.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefabComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfile.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
@@ -191,6 +193,7 @@
     <Compile Include="Assets\Scripts\Squads\FormationSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTriggerComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\DestinationMarkerSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\CapturePointUIController.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularBodyPart.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadAISystem.cs" />
@@ -228,6 +231,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitStatsComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStaminaSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroProgressComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitDestinationMarkerComponent.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFormationDataAuthoring.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
