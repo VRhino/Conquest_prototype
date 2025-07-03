@@ -259,6 +259,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadLevelUpEvent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitGridSlotComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbilityBufferElement.cs" />
+    <Compile Include="Assets\Scripts\Hero\VisualPrefabConfiguration.cs" />
     <Compile Include="Assets\Scripts\Squads\RetreatLogicSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamAuthoring.cs" />
     <Compile Include="Assets\Scripts\Combat\Team.cs" />

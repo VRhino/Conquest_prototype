@@ -18,6 +18,10 @@
 - **[CompleteSystemsList.md](./CompleteSystemsList.md)** - 📊 **Lista completa** de los 33 sistemas Squad/Hero analizados
 - **[FormationAdaptationSystem_Fix.md](./FormationAdaptationSystem_Fix.md)** - 🔧 **Corrección específica** del FormationAdaptationSystem
 - **[GridFormationSystemGuide.md](./GridFormationSystemGuide.md)** - 📐 **Guía técnica** del sistema de formaciones en grilla
+- **[VisualPrefabRegistry_Refactor.md](./VisualPrefabRegistry_Refactor.md)** - 🎨 **Refactorización data-driven** del sistema de prefabs visuales
+
+#### Guías de Desarrollo
+- **[AgregarNuevaUnidad_Guia.md](./AgregarNuevaUnidad_Guia.md)** - 🛠️ **Guía paso a paso** para agregar nuevas unidades visuales y ECS
 
 ## 🎯 Documentos Clave para Desarrolladores
 
@@ -27,7 +31,8 @@
 
 ### Para desarrollo futuro:
 1. **[CompleteSystemsList.md](./CompleteSystemsList.md)** - Referencia rápida de todos los sistemas
-2. **[GDD.md](./GDD.md)** y **[TDD.md](./TDD.md)** - Documentación del diseño del juego
+2. **[AgregarNuevaUnidad_Guia.md](./AgregarNuevaUnidad_Guia.md)** - Guía para agregar nuevas unidades
+3. **[GDD.md](./GDD.md)** y **[TDD.md](./TDD.md)** - Documentación del diseño del juego
 
 ## 📈 Logros de la Refactorización
 
@@ -37,6 +42,7 @@
 - ✅ **Arquitectura híbrida ECS-GameObject** implementada
 - ✅ **Separación clara de responsabilidades** documentada
 - ✅ **Eliminación de lógica duplicada crítica**
+- ✅ **VisualPrefabRegistry refactorizado** a arquitectura data-driven escalable
 
 ## 🚀 Estado del Proyecto
 

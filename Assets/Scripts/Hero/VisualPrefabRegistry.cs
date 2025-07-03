@@ -4,26 +4,19 @@ using UnityEngine;
 /// <summary>
 /// Singleton que mantiene un registro de prefabs visuales disponibles
 /// para la instanciación híbrida. Permite acceso fácil desde los sistemas ECS.
-/// Los squads no tienen prefabs visuales propios, solo las unidades individuales.
+/// Ahora usa VisualPrefabConfiguration para soporte escalable de N unidades.
 /// </summary>
 [System.Serializable]
 public class VisualPrefabRegistry : MonoBehaviour
 {
-    [Header("Hero Visual Prefabs")]
-    public GameObject heroSyntyPrefab;
-    public GameObject heroAlternatePrefab;
+    [Header("Visual Prefab Configuration")]
+    [SerializeField] private VisualPrefabConfiguration config;
     
-    [Header("Unit Visual Prefabs (Solo unidades tienen visuales)")]
-    public GameObject unitEscuderoPrefab;    // Squires
-    public GameObject unitArqueroPrefab;     // Archers  
-    public GameObject unitPikemenPrefab;     // Pikemen
-    public GameObject unitCaballoPrefab;     // Lancers
-    
-    [Header("Other Visual Prefabs")]
-    public GameObject[] additionalPrefabs;
+    [Header("Runtime Configuration")]
+    [SerializeField] private bool autoValidateOnStart = true;
     
     private static VisualPrefabRegistry _instance;
-    private Dictionary<string, GameObject> _prefabDictionary;
+    private Dictionary<string, GameObject> _runtimePrefabCache;
     
     public static VisualPrefabRegistry Instance
     {
@@ -49,7 +42,12 @@ public class VisualPrefabRegistry : MonoBehaviour
         {
             _instance = this;
             DontDestroyOnLoad(gameObject);
-            InitializePrefabDictionary();
+            InitializePrefabCache();
+            
+            if (autoValidateOnStart && config != null)
+            {
+                config.ValidateConfiguration();
+            }
         }
         else if (_instance != this)
         {
@@ -58,84 +56,92 @@ public class VisualPrefabRegistry : MonoBehaviour
     }
     
     /// <summary>
-    /// Inicializa el diccionario de prefabs para búsqueda rápida.
+    /// Inicializa el cache de prefabs para búsqueda rápida en runtime.
     /// </summary>
-    private void InitializePrefabDictionary()
+    private void InitializePrefabCache()
     {
-        _prefabDictionary = new Dictionary<string, GameObject>();
-        int uniquePrefabCount = 0;
+        _runtimePrefabCache = new Dictionary<string, GameObject>();
         
-        if (heroSyntyPrefab != null)
+        if (config == null)
         {
-            _prefabDictionary["HeroSynty"] = heroSyntyPrefab;
-            // Solo registrar con un nombre para evitar confusión
-            uniquePrefabCount++;
-            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'HeroSynty': {heroSyntyPrefab.name}");
+            Debug.LogError("[VisualPrefabRegistry] No se ha asignado VisualPrefabConfiguration");
+            return;
         }
         
-        if (heroAlternatePrefab != null)
-        {
-            _prefabDictionary["HeroAlternate"] = heroAlternatePrefab;
-            uniquePrefabCount++;
-            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'HeroAlternate': {heroAlternatePrefab.name}");
-        }
+        int totalPrefabs = 0;
         
-        // Los squads no tienen prefabs visuales propios
-        // Solo registrar prefabs visuales de unidad
-        if (unitEscuderoPrefab != null)
+        // Cache hero prefabs
+        foreach (var heroPrefab in config.HeroPrefabs)
         {
-            _prefabDictionary["UnitVisual_Escudero"] = unitEscuderoPrefab;
-            _prefabDictionary["UnitEscudero"] = unitEscuderoPrefab;
-            uniquePrefabCount++;
-            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitEscudero': {unitEscuderoPrefab.name}");
-        }
-        
-        if (unitArqueroPrefab != null)
-        {
-            _prefabDictionary["UnitVisual_Arquero"] = unitArqueroPrefab;
-            _prefabDictionary["UnitArquero"] = unitArqueroPrefab;
-            uniquePrefabCount++;
-            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitArquero': {unitArqueroPrefab.name}");
-        }
-        
-        if (unitPikemenPrefab != null)
-        {
-            _prefabDictionary["UnitVisual_Pikemen"] = unitPikemenPrefab;
-            _prefabDictionary["UnitPikemen"] = unitPikemenPrefab;
-            uniquePrefabCount++;
-            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitPikemen': {unitPikemenPrefab.name}");
-        }
-        
-        if (unitCaballoPrefab != null)
-        {
-            _prefabDictionary["UnitVisual_Caballo"] = unitCaballoPrefab;
-            _prefabDictionary["UnitCaballo"] = unitCaballoPrefab;
-            uniquePrefabCount++;
-            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitCaballo': {unitCaballoPrefab.name}");
-        }
-        
-        // Registrar prefabs adicionales
-        foreach (var prefab in additionalPrefabs)
-        {
-            if (prefab != null)
+            if (heroPrefab.visualPrefab != null)
             {
-                _prefabDictionary[prefab.name] = prefab;
-                uniquePrefabCount++;
-                Debug.Log($"[VisualPrefabRegistry] Registrado prefab adicional: {prefab.name}");
+                string key = $"Hero_{heroPrefab.heroId}";
+                _runtimePrefabCache[key] = heroPrefab.visualPrefab;
+                
+                // También agregar con clave legacy para compatibilidad
+                if (heroPrefab.heroId == "Synty")
+                    _runtimePrefabCache["HeroSynty"] = heroPrefab.visualPrefab;
+                
+                totalPrefabs++;
+                Debug.Log($"[VisualPrefabRegistry] Cached hero prefab: {key}");
             }
         }
         
-        // Registry initialized successfully
+        // Cache unit prefabs
+        foreach (var unitPrefab in config.UnitPrefabs)
+        {
+            if (unitPrefab.visualPrefab != null)
+            {
+                string key = $"Unit_{unitPrefab.squadType}_{unitPrefab.unitId}";
+                _runtimePrefabCache[key] = unitPrefab.visualPrefab;
+                
+                // También agregar claves legacy para compatibilidad
+                string legacyKey = GetLegacyUnitKey(unitPrefab.squadType);
+                if (!string.IsNullOrEmpty(legacyKey))
+                    _runtimePrefabCache[legacyKey] = unitPrefab.visualPrefab;
+                
+                totalPrefabs++;
+                Debug.Log($"[VisualPrefabRegistry] Cached unit prefab: {key}");
+            }
+        }
+        
+        // Cache additional prefabs
+        foreach (var additionalPrefab in config.AdditionalPrefabs)
+        {
+            if (additionalPrefab.prefab != null)
+            {
+                _runtimePrefabCache[additionalPrefab.prefabKey] = additionalPrefab.prefab;
+                totalPrefabs++;
+                Debug.Log($"[VisualPrefabRegistry] Cached additional prefab: {additionalPrefab.prefabKey}");
+            }
+        }
+        
+        Debug.Log($"[VisualPrefabRegistry] Initialized with {totalPrefabs} prefabs total");
     }
     
     /// <summary>
-    /// Obtiene un prefab visual por su nombre/clave.
+    /// Obtiene clave legacy para compatibilidad con código existente.
     /// </summary>
-    /// <param name="prefabKey">Clave o nombre del prefab</param>
+    private string GetLegacyUnitKey(SquadType squadType)
+    {
+        return squadType switch
+        {
+            SquadType.Squires => "UnitEscudero",
+            SquadType.Archers => "UnitArquero", 
+            SquadType.Pikemen => "UnitPikemen",
+            SquadType.Lancers => "UnitCaballo",
+            _ => null
+        };
+    }
+    
+    /// <summary>
+    /// Obtiene un prefab visual por su clave.
+    /// </summary>
+    /// <param name="prefabKey">Clave del prefab</param>
     /// <returns>GameObject del prefab o null si no se encuentra</returns>
     public GameObject GetPrefab(string prefabKey)
     {
-        if (_prefabDictionary.TryGetValue(prefabKey, out GameObject prefab))
+        if (_runtimePrefabCache != null && _runtimePrefabCache.TryGetValue(prefabKey, out GameObject prefab))
         {
             return prefab;
         }
@@ -145,45 +151,127 @@ public class VisualPrefabRegistry : MonoBehaviour
     }
     
     /// <summary>
+    /// Obtiene el prefab visual por defecto del héroe.
+    /// </summary>
+    /// <returns>GameObject del prefab del héroe o null</returns>
+    public GameObject GetDefaultHeroPrefab()
+    {
+        if (config == null) return null;
+        return config.GetDefaultHeroPrefab();
+    }
+    
+    /// <summary>
+    /// Obtiene un prefab de héroe específico por ID.
+    /// </summary>
+    /// <param name="heroId">ID del héroe</param>
+    /// <returns>GameObject del prefab del héroe o null</returns>
+    public GameObject GetHeroPrefab(string heroId)
+    {
+        if (config == null) return null;
+        return config.GetHeroPrefab(heroId);
+    }
+    
+    /// <summary>
+    /// Obtiene el prefab visual por defecto de unidad según el tipo.
+    /// </summary>
+    /// <param name="squadType">Tipo de squad</param>
+    /// <returns>GameObject de la unidad por defecto</returns>
+    public GameObject GetDefaultUnitPrefab(SquadType squadType = SquadType.Squires)
+    {
+        if (config == null) return null;
+        return config.GetUnitPrefab(squadType);
+    }
+    
+    /// <summary>
+    /// Obtiene un prefab de unidad específico.
+    /// </summary>
+    /// <param name="squadType">Tipo de squad</param>
+    /// <param name="unitId">ID específico de la unidad (opcional)</param>
+    /// <returns>GameObject del prefab de la unidad</returns>
+    public GameObject GetUnitPrefab(SquadType squadType, string unitId = null)
+    {
+        if (config == null) return null;
+        return config.GetUnitPrefab(squadType, unitId);
+    }
+    
+    /// <summary>
+    /// Obtiene todas las variantes disponibles de una unidad.
+    /// </summary>
+    /// <param name="squadType">Tipo de squad</param>
+    /// <param name="unitId">ID de la unidad</param>
+    /// <returns>Array de GameObjects con las variantes</returns>
+    public GameObject[] GetUnitVariants(SquadType squadType, string unitId)
+    {
+        if (config == null) return new GameObject[0];
+        return config.GetUnitVariants(squadType, unitId);
+    }
+    
+    /// <summary>
     /// Registra un nuevo prefab en tiempo de ejecución.
     /// </summary>
     /// <param name="key">Clave para el prefab</param>
     /// <param name="prefab">GameObject del prefab</param>
     public void RegisterPrefab(string key, GameObject prefab)
     {
-        if (_prefabDictionary == null)
+        if (_runtimePrefabCache == null)
         {
-            InitializePrefabDictionary();
+            InitializePrefabCache();
         }
         
-        _prefabDictionary[key] = prefab;
-        // Prefab registered
+        _runtimePrefabCache[key] = prefab;
+        Debug.Log($"[VisualPrefabRegistry] Registered runtime prefab: {key}");
     }
     
     /// <summary>
-    /// Obtiene el prefab visual por defecto del héroe.
+    /// Obtiene todos los tipos de escuadrón que tienen prefabs configurados.
     /// </summary>
-    /// <returns>GameObject del prefab del héroe o null</returns>
-    public GameObject GetDefaultHeroPrefab()
+    /// <returns>Array de SquadTypes disponibles</returns>
+    public SquadType[] GetAvailableSquadTypes()
     {
-        return GetPrefab("HeroSynty") ?? GetPrefab("HeroVisual_Synty");
-    }
-    
-    /// <summary>
-    /// Obtiene el prefab visual por defecto de unidad según el tipo.
-    /// Los squads no tienen prefabs visuales propios, solo las unidades.
-    /// </summary>
-    /// <param name="squadType">Tipo de squad para determinar la unidad</param>
-    /// <returns>GameObject de la unidad por defecto</returns>
-    public GameObject GetDefaultUnitPrefab(SquadType squadType = SquadType.Squires)
-    {
-        return squadType switch
+        if (config == null) return new SquadType[0];
+        
+        var availableTypes = new System.Collections.Generic.HashSet<SquadType>();
+        foreach (var unit in config.UnitPrefabs)
         {
-            SquadType.Squires => GetPrefab("UnitEscudero"),
-            SquadType.Archers => GetPrefab("UnitArquero"),
-            SquadType.Pikemen => GetPrefab("UnitPikemen"),
-            SquadType.Lancers => GetPrefab("UnitCaballo"),
-            _ => GetPrefab("UnitEscudero")
-        };
+            if (unit.visualPrefab != null)
+                availableTypes.Add(unit.squadType);
+        }
+        
+        var result = new SquadType[availableTypes.Count];
+        availableTypes.CopyTo(result);
+        return result;
+    }
+    
+    /// <summary>
+    /// Obtiene todos los IDs de unidad disponibles para un tipo de escuadrón.
+    /// </summary>
+    /// <param name="squadType">Tipo de escuadrón</param>
+    /// <returns>Array de IDs de unidad</returns>
+    public string[] GetAvailableUnitIds(SquadType squadType)
+    {
+        if (config == null) return new string[0];
+        
+        var unitIds = new System.Collections.Generic.List<string>();
+        foreach (var unit in config.UnitPrefabs)
+        {
+            if (unit.squadType == squadType && unit.visualPrefab != null)
+                unitIds.Add(unit.unitId);
+        }
+        
+        return unitIds.ToArray();
+    }
+    
+    /// <summary>
+    /// Valida la configuración actual y reporta errores.
+    /// </summary>
+    public void ValidateConfiguration()
+    {
+        if (config == null)
+        {
+            Debug.LogError("[VisualPrefabRegistry] No se ha asignado VisualPrefabConfiguration");
+            return;
+        }
+        
+        config.ValidateConfiguration();
     }
 }

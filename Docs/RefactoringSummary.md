@@ -43,7 +43,17 @@
 - **Después:** Solo detecta obstáculos/terreno y escribe a EnvironmentAwarenessComponent
 - **Beneficio:** Respeta decisiones del jugador, datos disponibles para navegación
 
-### 5. Limpieza de Código
+### 5. Refactorización de VisualPrefabRegistry
+- **Antes:** Campos hardcodeados para tipos específicos de unidad (_unitEscudero, _unitArquero, etc.)
+- **Después:** Sistema data-driven usando VisualPrefabConfiguration ScriptableObject
+- **Beneficios:**
+  - Soporta N unidades/héroes de forma dinámica
+  - Configuración externa sin tocar código
+  - Validación automática de configuración
+  - Compatibilidad con claves legacy para transición suave
+  - Cache de runtime para búsquedas rápidas
+
+### 6. Limpieza de Código
 - Eliminados logs de debug innecesarios
 - Corregidos errores de compilación (enums, imports, etc.)
 - Eliminados componentes y referencias obsoletas
