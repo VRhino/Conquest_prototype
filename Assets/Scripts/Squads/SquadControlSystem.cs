@@ -13,6 +13,10 @@ public partial class SquadControlSystem : SystemBase
 {
     private Camera _mainCamera;
     
+    // Variables para el doble clic de X
+    private float _lastXPressTime = 0f;
+    private const float DOUBLE_CLICK_THRESHOLD = 0.5f; // Tiempo máximo entre clics para detectar doble clic
+    
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -35,6 +39,7 @@ public partial class SquadControlSystem : SystemBase
         int formationIndex = -1; // Índice de formación en lugar de tipo específico
         SquadOrderType newOrder = default;
         float3 mouseWorldPosition = float3.zero;
+        bool isDoubleClickX = false;
 
         if (keyboard.cKey.wasPressedThisFrame)
         {
@@ -43,11 +48,26 @@ public partial class SquadControlSystem : SystemBase
         }
         else if (keyboard.xKey.wasPressedThisFrame)
         {
-            newOrder = SquadOrderType.HoldPosition;
-            orderIssued = true;
+            float currentTime = (float)SystemAPI.Time.ElapsedTime;
             
-            // Capturar la posición del mouse en el terreno
-            mouseWorldPosition = GetMouseWorldPosition();
+            // Verificar si es un doble clic
+            if (currentTime - _lastXPressTime <= DOUBLE_CLICK_THRESHOLD)
+            {
+                // Es un doble clic - cambiar formación
+                isDoubleClickX = true;
+                formationChanged = true;
+            }
+            else
+            {
+                // Es un clic simple - orden HoldPosition
+                newOrder = SquadOrderType.HoldPosition;
+                orderIssued = true;
+                
+                // Capturar la posición del mouse en el terreno
+                mouseWorldPosition = GetMouseWorldPosition();
+            }
+            
+            _lastXPressTime = currentTime;
         }
         else if (keyboard.vKey.wasPressedThisFrame)
         {
@@ -109,17 +129,45 @@ public partial class SquadControlSystem : SystemBase
                         {
                             ref var formations = ref squadData.formationLibrary.Value.formations;
                             
-                            // Verificar que el índice solicitado existe
-                            if (formationIndex >= 0 && formationIndex < formations.Length)
+                            if (isDoubleClickX)
                             {
-                                FormationType newFormation = formations[formationIndex].formationType;
+                                // Lógica para doble clic X - cambiar a la siguiente formación disponible
                                 FormationType currentFormation = input.ValueRO.desiredFormation;
-                                input.ValueRW.desiredFormation = newFormation;
+                                
+                                // Encontrar el índice actual de la formación
+                                int currentIndex = -1;
+                                for (int i = 0; i < formations.Length; i++)
+                                {
+                                    if (formations[i].formationType == currentFormation)
+                                    {
+                                        currentIndex = i;
+                                        break;
+                                    }
+                                }
+                                
+                                // Calcular el siguiente índice (circular)
+                                int nextIndex = (currentIndex + 1) % formations.Length;
+                                FormationType nextFormation = formations[nextIndex].formationType;
+                                
+                                input.ValueRW.desiredFormation = nextFormation;
+                                
+                                Debug.Log($"Doble clic X: Cambiando formación de {currentFormation} (índice {currentIndex}) a {nextFormation} (índice {nextIndex})");
                             }
                             else
                             {
-                                Debug.LogWarning($"Índice de formación no válido: {formationIndex}. Debe estar entre 0 y {formations.Length - 1}.");
-                                continue; // No procesar este cambio
+                                // Lógica original para F1-F4
+                                // Verificar que el índice solicitado existe
+                                if (formationIndex >= 0 && formationIndex < formations.Length)
+                                {
+                                    FormationType newFormation = formations[formationIndex].formationType;
+                                    FormationType currentFormation = input.ValueRO.desiredFormation;
+                                    input.ValueRW.desiredFormation = newFormation;
+                                }
+                                else
+                                {
+                                    Debug.LogWarning($"Índice de formación no válido: {formationIndex}. Debe estar entre 0 y {formations.Length - 1}.");
+                                    continue; // No procesar este cambio
+                                }
                             }
                         }
                         else

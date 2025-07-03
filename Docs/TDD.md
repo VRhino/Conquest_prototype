@@ -246,6 +246,32 @@ El jugador controla **una escuadra activa** a la vez. Puede darle órdenes y cam
 
 Cada formación está representada en ECS como una `NativeArray<LocalPosition>` relativa al líder de escuadra.
 
+### 🔄 **Nueva Funcionalidad: Cambio Cíclico de Formaciones**
+
+**Doble clic en `X`**: Cambia automáticamente a la siguiente formación disponible en el array de formaciones del escuadrón.
+
+🧩 **Lógica implementada:**
+
+- **Primer clic en `X`**: Ejecuta orden `HoldPosition` (comportamiento original)
+- **Doble clic rápido en `X`** (< 0.5 segundos): Cancela `HoldPosition` y cambia formación
+- **Rotación cíclica**: Al llegar al último índice, regresa al primer índice del array
+
+🔧 **Ejemplo de funcionamiento:**
+
+```
+Formaciones disponibles: [0: Line, 1: Testudo, 2: Wedge]
+Estado inicial: Line (índice 0)
+Doble clic X → Testudo (índice 1)
+Doble clic X → Wedge (índice 2)  
+Doble clic X → Line (índice 0) // Vuelve al inicio
+```
+
+⚙️ **Implementación técnica:**
+- `SquadControlSystem` detecta doble clic mediante `Time.time` y threshold de 0.5s
+- Busca índice actual en el array de formaciones del `SquadDataComponent`
+- Calcula siguiente índice usando operador módulo: `(currentIndex + 1) % formations.Length`
+- Actualiza `SquadInputComponent.desiredFormation` con nueva formación
+
 ### 🧩 UI de Escuadra Activa:
 
 - Sistema basado en Unity UI (Canvas) que muestra:
