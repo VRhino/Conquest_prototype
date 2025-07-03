@@ -1,6 +1,8 @@
 using Unity.Entities;
 using UnityEngine.InputSystem;
 using UnityEngine;
+using Unity.Mathematics;
+using Unity.Transforms;
 
 /// <summary>
 /// Reads player hotkeys and writes the corresponding commands to the
@@ -9,16 +11,30 @@ using UnityEngine;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class SquadControlSystem : SystemBase
 {
+    private Camera _mainCamera;
+    
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        _mainCamera = Camera.main;
+    }
+
     protected override void OnUpdate()
     {
+        if (_mainCamera == null)
+            _mainCamera = Camera.main;
+            
         var keyboard = Keyboard.current;
-        if (keyboard == null)
+        var mouse = Mouse.current;
+        
+        if (keyboard == null || mouse == null)
             return;
 
         bool orderIssued = false;
         bool formationChanged = false;
         int formationIndex = -1; // Índice de formación en lugar de tipo específico
         SquadOrderType newOrder = default;
+        float3 mouseWorldPosition = float3.zero;
 
         if (keyboard.cKey.wasPressedThisFrame)
         {
@@ -29,6 +45,9 @@ public partial class SquadControlSystem : SystemBase
         {
             newOrder = SquadOrderType.HoldPosition;
             orderIssued = true;
+            
+            // Capturar la posición del mouse en el terreno
+            mouseWorldPosition = GetMouseWorldPosition();
         }
         else if (keyboard.vKey.wasPressedThisFrame)
         {
@@ -74,6 +93,10 @@ public partial class SquadControlSystem : SystemBase
                 if (orderIssued)
                 {
                     input.ValueRW.orderType = newOrder;
+                    if (newOrder == SquadOrderType.HoldPosition)
+                    {
+                        input.ValueRW.holdPosition = mouseWorldPosition;
+                    }
                 }
 
                 if (formationChanged)
@@ -118,5 +141,59 @@ public partial class SquadControlSystem : SystemBase
             {
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the world position of the mouse cursor projected onto the terrain.
+    /// Returns the hero's position if the raycast fails.
+    /// </summary>
+    private float3 GetMouseWorldPosition()
+    {
+        if (_mainCamera == null)
+            return float3.zero;
+
+        var mouse = Mouse.current;
+        if (mouse == null)
+            return float3.zero;
+
+        Vector2 mouseScreenPosition = mouse.position.ReadValue();
+        Ray ray = _mainCamera.ScreenPointToRay(mouseScreenPosition);
+
+        // Intentar hacer raycast con el terreno
+        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+        {
+            // Verificar si el hit es con el terreno (puedes ajustar esto según tus layers)
+            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Default") || 
+                hit.collider.CompareTag("Terrain"))
+            {
+                return new float3(hit.point.x, hit.point.y, hit.point.z);
+            }
+        }
+
+        // Si no se encontró el terreno, usar un plano Y=0 como fallback
+        float distance = 0f;
+        Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+        if (groundPlane.Raycast(ray, out distance))
+        {
+            Vector3 hitPoint = ray.GetPoint(distance);
+            return new float3(hitPoint.x, 0f, hitPoint.z);
+        }
+
+        // Último recurso: devolver posición del héroe si está disponible
+        foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
+        {
+            Entity squadEntity = heroSquadRef.ValueRO.squad;
+            if (SystemAPI.HasComponent<SquadOwnerComponent>(squadEntity))
+            {
+                var squadOwner = SystemAPI.GetComponent<SquadOwnerComponent>(squadEntity);
+                if (SystemAPI.HasComponent<LocalTransform>(squadOwner.hero))
+                {
+                    var heroTransform = SystemAPI.GetComponent<LocalTransform>(squadOwner.hero);
+                    return heroTransform.Position;
+                }
+            }
+        }
+
+        return float3.zero;
     }
 }

@@ -69,7 +69,7 @@ public partial class GridFormationUpdateSystem : SystemBase
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,
                         ref gridPositions,
-                        heroPos,
+                        heroPos, // GridFormationUpdateSystem siempre usa la posición actual del héroe
                         i,
                         out int2 originalGridPos,
                         out float3 gridOffset,

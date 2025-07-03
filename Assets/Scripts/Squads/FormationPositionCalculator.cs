@@ -30,7 +30,7 @@ public static class FormationPositionCalculator
     public static float3 CalculateDesiredPosition(
         Entity unit,
         ref BlobArray<int2> gridPositions,
-        float3 heroPosition,
+        float3 squadCenter,
         int unitIndex,
         out int2 originalGridPos,
         out float3 gridOffset,
@@ -38,7 +38,7 @@ public static class FormationPositionCalculator
         bool adjustForTerrain
         )
     {
-        var squadOrigin = heroPosition;
+        var squadOrigin = squadCenter;
         originalGridPos = gridPositions[unitIndex];
                             
         //calculo la poscicion central ubicando al heroe en el centro de la formacion

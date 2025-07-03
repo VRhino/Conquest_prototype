@@ -63,7 +63,8 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 orderType = SquadOrderType.FollowHero,
                 hasNewOrder = false,
-                desiredFormation = firstFormationType // Formación inicial: primera del arreglo
+                desiredFormation = firstFormationType, // Formación inicial: primera del arreglo
+                holdPosition = float3.zero // Inicializar con posición vacía
             });
             
             ecb.AddComponent(squad, new SquadStateComponent

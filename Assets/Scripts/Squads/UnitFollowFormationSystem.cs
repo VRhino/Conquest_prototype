@@ -78,6 +78,10 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
             }
 
+            // Determinar el comportamiento según el estado del escuadrón
+            bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
+            bool isFollowingHero = squadState.currentState == SquadFSMState.FollowingHero;
+            
             // Calcular si el héroe está fuera del rango del escuadrón
             bool heroOutsideRadius = !FormationPositionCalculator.isHeroInRange(units, transformLookup, heroPosition, 25.0f); // 5m squared radius
 
@@ -94,9 +98,26 @@ public partial class UnitFollowFormationSystem : SystemBase
                     
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
                 
-                // Si el héroe está dentro del radio y la unidad ya está formada, no hacer nada
-                if (!heroOutsideRadius && stateComp.State == UnitFormationState.Formed)
-                    continue;
+                // Comportamiento diferente según el estado del escuadrón
+                if (isHoldingPosition)
+                {
+                    // En Hold Position: las unidades NO siguen al héroe, mantienen posición
+                    // Solo se mueven si están muy lejos de su slot asignado (por ejemplo, fueron empujadas)
+                    // Continuar procesamiento para mantener formación en posición fija
+                }
+                else if (isFollowingHero)
+                {
+                    // En Follow Hero: comportamiento normal de seguimiento
+                    // Si el héroe está dentro del radio y la unidad ya está formada, no hacer nada
+                    if (!heroOutsideRadius && stateComp.State == UnitFormationState.Formed)
+                        continue;
+                }
+                else
+                {
+                    // Otros estados: seguir comportamiento por defecto
+                    if (!heroOutsideRadius && stateComp.State == UnitFormationState.Formed)
+                        continue;
+                }
 
                 // Obtener y actualizar posición previa del líder para esta unidad
                 float3 prevLeaderPos = heroPosition;
@@ -116,45 +137,77 @@ public partial class UnitFollowFormationSystem : SystemBase
                 
                 // Use unified position calculator for consistency
                 float3 desired = float3.zero;
-                if (gridPositions.Length > 0 && i < gridPositions.Length)
-                {
-                    // Use the actual grid positions from current formation
-                    FormationPositionCalculator.CalculateDesiredPosition(
-                        unit,
-                        ref gridPositions,
-                        heroPosition,
-                        i,
-                        out int2 originalGridPos,
-                        out float3 gridOffset,
-                        out float3 worldPos,
-                        true);
-                    desired = worldPos; // Use calculated world position
-                }
-                else
-                {
-                    Debug.LogWarning($"Unit {unit} has no grid position assigned in formation. Using default offset.");
-                    // Fallback to grid slot offset if no formation data available
-                    desired = heroPosition + gridSlot.worldOffset;
-                }
                 
-                // Solo usar UnitTargetPositionComponent como override temporal si existe y es diferente
-                if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                if (isHoldingPosition)
                 {
-                    float3 staticTarget = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
-                    float3 dynamicTarget = desired;
+                    // En Hold Position: usar el centro fijo del escuadrón
+                    float3 holdCenter = heroPosition; // Default fallback
                     
-                    // Si la posición estática está muy lejos de la dinámica, usar la dinámica (héroe se movió)
-                    float distanceBetweenTargets = math.distance(staticTarget, dynamicTarget);
-                    if (distanceBetweenTargets > 1f) // Si el héroe se movió más de 1 metro
+                    // Obtener o crear el centro fijo para Hold Position
+                    if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                     {
-                        desired = dynamicTarget; // Seguir al héroe
-                        // Actualizar el target component para la próxima vez
-                        var targetComp = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
-                        targetComp.ValueRW.position = dynamicTarget;
+                        var holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(entity);
+                        holdCenter = holdComponent.holdCenter;
                     }
                     else
                     {
-                        desired = staticTarget; // Mantener formación específica
+                        // Primera vez que se da Hold Position, guardar el centro actual
+                        holdCenter = heroPosition;
+                        ecb.AddComponent(entity, new SquadHoldPositionComponent 
+                        { 
+                            holdCenter = holdCenter,
+                            originalFormation = squadState.currentFormation
+                        });
+                    }
+                    
+                    // Calcular posición de formación usando el centro fijo
+                    if (gridPositions.Length > 0 && i < gridPositions.Length)
+                    {
+                        FormationPositionCalculator.CalculateDesiredPosition(
+                            unit,
+                            ref gridPositions,
+                            holdCenter, // Usar centro fijo en lugar de posición del héroe
+                            i,
+                            out int2 originalGridPos,
+                            out float3 gridOffset,
+                            out float3 worldPos,
+                            true);
+                        desired = worldPos;
+                    }
+                    else
+                    {
+                        desired = holdCenter + gridSlot.worldOffset;
+                    }
+                }
+                else
+                {
+                    // Comportamiento normal: seguir al héroe
+                    // Limpiar SquadHoldPositionComponent si cambiamos de Hold Position a Follow
+                    if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
+                    {
+                        ecb.RemoveComponent<SquadHoldPositionComponent>(entity);
+                    }
+                    
+                    // Usar la posición actual del héroe como centro dinámico
+                    if (gridPositions.Length > 0 && i < gridPositions.Length)
+                    {
+                        // Use the actual grid positions from current formation
+                        FormationPositionCalculator.CalculateDesiredPosition(
+                            unit,
+                            ref gridPositions,
+                            heroPosition, // Usar posición actual del héroe como centro dinámico
+                            i,
+                            out int2 originalGridPos,
+                            out float3 gridOffset,
+                            out float3 worldPos,
+                            true);
+                        desired = worldPos; // Use calculated world position
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Unit {unit} has no grid position assigned in formation. Using default offset.");
+                        // Fallback to grid slot offset if no formation data available
+                        desired = heroPosition + gridSlot.worldOffset;
                     }
                 }
                 float3 current = transformLookup[unit].Position;
@@ -165,7 +218,21 @@ public partial class UnitFollowFormationSystem : SystemBase
                 float3 slotPos = gridSlot.worldOffset;
                 
                 // Only move if the unit state is Moving
-                if (stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq)
+                bool shouldMove = false;
+                
+                if (isHoldingPosition)
+                {
+                    // En Hold Position: una vez que está Moving, usar threshold normal para llegar precisamente
+                    // El threshold grande solo se usa en UnitFormationStateSystem para detectar cambios de formación
+                    shouldMove = stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq;
+                }
+                else
+                {
+                    // Comportamiento normal de seguimiento
+                    shouldMove = stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq;
+                }
+                
+                if (shouldMove)
                 {
                     float speedMultiplier = 1f;
                     if (SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit))

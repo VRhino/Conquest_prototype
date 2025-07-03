@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
 /// Holds the current command issued to a squad.
@@ -14,4 +15,10 @@ public struct SquadInputComponent : IComponentData
 
     /// <summary>Requested formation.</summary>
     public FormationType desiredFormation;
+
+    /// <summary>
+    /// Position for Hold Position orders. This is set when orderType is HoldPosition
+    /// and represents the terrain position where the squad should hold formation.
+    /// </summary>
+    public float3 holdPosition;
 }

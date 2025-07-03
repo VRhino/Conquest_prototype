@@ -149,6 +149,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroClassReferenceAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFollowFormationSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSquadSelectionComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadHoldPositionComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombatComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationPositionCalculator.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnSystem.cs" />

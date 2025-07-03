@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
 /// System that interprets the <see cref="SquadInputComponent"/> and updates
@@ -8,8 +9,19 @@ using Unity.Entities;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class SquadOrderSystem : SystemBase
 {
+    private EntityCommandBuffer.ParallelWriter _ecb;
+    private BeginSimulationEntityCommandBufferSystem _ecbSystem;
+
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        _ecbSystem = World.GetOrCreateSystemManaged<BeginSimulationEntityCommandBufferSystem>();
+    }
+
     protected override void OnUpdate()
     {
+        var ecb = _ecbSystem.CreateCommandBuffer().AsParallelWriter();
+        
         foreach (var (input, state, formation, entity) in SystemAPI
                      .Query<RefRW<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
@@ -22,6 +34,34 @@ public partial class SquadOrderSystem : SystemBase
             // Copy the requested order to the state component
             state.ValueRW.currentOrder = input.ValueRO.orderType;
             state.ValueRW.isExecutingOrder = true;
+
+            // Handle Hold Position order specifically
+            if (input.ValueRO.orderType == SquadOrderType.HoldPosition)
+            {
+                // Create or update SquadHoldPositionComponent with mouse position
+                if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
+                {
+                    var holdComponent = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(entity);
+                    holdComponent.ValueRW.holdCenter = input.ValueRO.holdPosition;
+                    holdComponent.ValueRW.originalFormation = input.ValueRO.desiredFormation;
+                }
+                else
+                {
+                    ecb.AddComponent(entity.Index, entity, new SquadHoldPositionComponent
+                    {
+                        holdCenter = input.ValueRO.holdPosition,
+                        originalFormation = input.ValueRO.desiredFormation
+                    });
+                }
+            }
+            else
+            {
+                // Remove SquadHoldPositionComponent when not in Hold Position
+                if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
+                {
+                    ecb.RemoveComponent<SquadHoldPositionComponent>(entity.Index, entity);
+                }
+            }
 
             // Request formation change if needed
             if (input.ValueRO.desiredFormation != state.ValueRO.currentFormation)
@@ -39,6 +79,8 @@ public partial class SquadOrderSystem : SystemBase
 
             input.ValueRW.hasNewOrder = false;
         }
+
+        _ecbSystem.AddJobHandleForProducer(Dependency);
     }
 
     static SquadFSMState OrderToState(SquadOrderType order)

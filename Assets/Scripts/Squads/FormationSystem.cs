@@ -84,7 +84,7 @@ public partial class FormationSystem : SystemBase
                 FormationPositionCalculator.CalculateDesiredPosition(
                     unit, 
                     ref gridPositions,
-                    heroTransform.Position,
+                    heroTransform.Position, // El FormationSystem siempre usa la posición del héroe como centro
                     i,
                     out int2 originalGridPos,
                     out float3 gridOffset,
@@ -113,6 +113,15 @@ public partial class FormationSystem : SystemBase
 
             s.currentFormation = input.ValueRO.desiredFormation;
             s.formationChangeCooldown = 1f;
+            
+            // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
+            if (s.currentState == SquadFSMState.HoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+            {
+                var holdComponent = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity);
+                holdComponent.ValueRW.originalFormation = input.ValueRO.desiredFormation;
+                // Mantener el mismo holdCenter para que la formación se reorganice en el mismo lugar
+            }
+            
             state.ValueRW = s;
         }
     }
