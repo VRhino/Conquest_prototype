@@ -35,7 +35,7 @@
 ### 🧙‍♂️ **Sistema del Héroe**
 - 🔄 Animaciones básicas (Idle, Run, Attack)
 - 🔄 Sistema de stamina y cooldowns
-- 🔄 Sistema de salto (a eliminar según nota)
+- ✅ Sistema de salto eliminado
 - 🔄 Implementación real de habilidades (Q, E, R)
 
 ### 🛡️ **Sistema de Escuadras**
@@ -165,7 +165,7 @@
 
 ## ⚠️ Notas Importantes
 
-- **Eliminar sistema de salto:** Remover todas las referencias al salto del héroe del código y diseño
+- ✅ **Sistema de salto eliminado:** Se removieron todas las referencias al salto del héroe del código y diseño
 - **Prioridad en Core:** Enfocar en funcionalidades básicas antes de características avanzadas
 - **Testing requerido:** Muchas funcionalidades necesitan pruebas en motor Unity
 

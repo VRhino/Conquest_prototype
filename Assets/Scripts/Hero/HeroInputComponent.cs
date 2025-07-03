@@ -13,9 +13,6 @@ public struct HeroInputComponent : IComponentData
     /// <summary>True while left shift is held.</summary>
     public bool isSprinting;
 
-    /// <summary>True while space bar is held.</summary>
-    public bool isJumping;
-
     /// <summary>True while left mouse button is held.</summary>
     public bool isAttacking;
 

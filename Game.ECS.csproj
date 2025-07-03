@@ -146,7 +146,6 @@
     <Compile Include="Assets\Scripts\Shared\DataContainerAuthoring.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCategory.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkTag.cs" />
-    <Compile Include="Assets\Scripts\Hero\HeroGroundState.cs" />
     <Compile Include="Assets\Scripts\Hero\PlayerInteractionComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassReferenceAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFollowFormationSystem.cs" />

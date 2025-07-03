@@ -11,8 +11,7 @@ public class HeroStatsBaker : Baker<HeroStatsAuthoring>
         AddComponent(entity, new HeroStatsComponent
         {
             baseSpeed = authoring.baseSpeed,
-            sprintMultiplier = authoring.sprintMultiplier,
-            jumpForce = authoring.jumpForce
+            sprintMultiplier = authoring.sprintMultiplier
         });
     }
 }

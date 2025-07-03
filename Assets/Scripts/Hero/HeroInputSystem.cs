@@ -16,7 +16,6 @@ public partial class HeroInputSystem : SystemBase
     {
         public float2 moveInput;
         public bool isSprinting;
-        public bool isJumping;
         public bool useSkill1;
         public bool useSkill2;
         public bool useUltimate;
@@ -32,7 +31,6 @@ public partial class HeroInputSystem : SystemBase
         {
             input.moveInput = moveInput;
             input.isSprinting = isSprinting;
-            input.isJumping = isJumping;
             input.useSkill1 = useSkill1;
             input.useSkill2 = useSkill2;
             input.useUltimate = useUltimate;
@@ -61,7 +59,6 @@ public partial class HeroInputSystem : SystemBase
 
         float2 move = float2.zero;
         bool sprint = false;
-        bool jump = false;
         bool skill1 = false;
         bool skill2 = false;
         bool ultimate = false;
@@ -78,7 +75,6 @@ public partial class HeroInputSystem : SystemBase
             if (keyboard.sKey.isPressed) move.y -= 1f;
             if (keyboard.wKey.isPressed) move.y += 1f;
             sprint = keyboard.leftShiftKey.isPressed;
-            jump = keyboard.spaceKey.isPressed;
             skill1 = keyboard.qKey.isPressed;
             skill2 = keyboard.eKey.isPressed;
             ultimate = keyboard.rKey.isPressed;
@@ -90,7 +86,7 @@ public partial class HeroInputSystem : SystemBase
             attack = mouse.leftButton.isPressed;
         }
 
-        hasInput = (move.x != 0 || move.y != 0 || sprint || jump || skill1 || skill2 || ultimate || attack || interact);
+        hasInput = (move.x != 0 || move.y != 0 || sprint || skill1 || skill2 || ultimate || attack || interact);
 
         var ecb = new EntityCommandBuffer(Allocator.TempJob);
 
@@ -98,7 +94,6 @@ public partial class HeroInputSystem : SystemBase
         {
             moveInput = move,
             isSprinting = sprint,
-            isJumping = jump,
             useSkill1 = skill1,
             useSkill2 = skill2,
             useUltimate = ultimate,

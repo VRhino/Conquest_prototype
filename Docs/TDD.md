@@ -159,7 +159,7 @@ El jugador controla directamente al **héroe** en tercera persona durante la bat
 
 - `HeroControllerSystem` (SystemBase):
     - Sistema de movimiento basado en **EntityCommandBuffer** y **Input System**.
-    - Controla desplazamiento (`WASD`), salto (`Space`), sprint (`LeftShift`), y bloqueo de movimiento si está aturdido o muerto.
+    - Controla desplazamiento (`WASD`), sprint (`LeftShift`), y bloqueo de movimiento si está aturdido o muerto.
     - Referencia el componente `HeroStats` para consultar la estamina, velocidad, etc.
 - `HeroInputComponent` (IComponentData):
     - Contiene inputs actuales del frame: movimiento, ataque, habilidades, órdenes, etc.

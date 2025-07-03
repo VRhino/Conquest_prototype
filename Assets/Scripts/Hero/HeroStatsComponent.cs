@@ -10,7 +10,4 @@ public struct HeroStatsComponent : IComponentData
 
     /// <summary>Multiplier applied when sprinting.</summary>
     public float sprintMultiplier;
-
-    /// <summary>Force applied when jumping.</summary>
-    public float jumpForce;
 }
