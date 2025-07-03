@@ -42,18 +42,30 @@ public partial class UnitFollowFormationSystem : SystemBase
                 continue;
 
             if (!ownerLookup.HasComponent(entity))
+            {
+                Debug.LogWarning($"[UnitFollowFormationSystem] Squad {entity.Index} no tiene SquadOwnerComponent");
                 continue;
+            }
             
                 
             if (!stateLookup.TryGetComponent(entity, out var squadState))
+            {
+                Debug.LogWarning($"[UnitFollowFormationSystem] Squad {entity.Index} no tiene SquadStateComponent");
                 continue;
+            }
 
             if (!squadDataLookup.TryGetComponent(entity, out var squadData))
+            {
+                Debug.LogWarning($"[UnitFollowFormationSystem] Squad {entity.Index} no tiene SquadDataComponent");
                 continue;
+            }
 
             Entity leader = ownerLookup[entity].hero;
             if (!transformLookup.HasComponent(leader))
+            {
+                Debug.LogWarning($"[UnitFollowFormationSystem] Hero {leader.Index} del squad {entity.Index} no tiene LocalTransform o no existe");
                 continue;
+            }
 
             float3 heroPosition = transformLookup[leader].Position;
             LocalTransform leaderTransform = SystemAPI.GetComponent<LocalTransform>(leader);
@@ -95,29 +107,43 @@ public partial class UnitFollowFormationSystem : SystemBase
 
                 // Solo procesar movimiento si el héroe está fuera del radio O si la unidad ya está en movimiento
                 if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
+                {
+                    Debug.LogWarning($"[UnitFollowFormationSystem] Unit {unit.Index} missing UnitFormationStateComponent");
                     continue;
+                }
                     
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
+                
+                Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} state: {stateComp.State}, heroOutsideRadius: {heroOutsideRadius}, current pos: {transformLookup[unit].Position}");
                 
                 // Comportamiento diferente según el estado del escuadrón
                 if (isHoldingPosition)
                 {
+                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} in HoldingPosition mode");
                     // En Hold Position: las unidades NO siguen al héroe, mantienen posición
                     // Solo se mueven si están muy lejos de su slot asignado (por ejemplo, fueron empujadas)
                     // Continuar procesamiento para mantener formación en posición fija
                 }
                 else if (isFollowingHero)
                 {
+                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} in FollowingHero mode");
                     // En Follow Hero: comportamiento normal de seguimiento
                     // Si el héroe está dentro del radio y la unidad ya está formada, no hacer nada
                     if (!heroOutsideRadius && stateComp.State == UnitFormationState.Formed)
+                    {
+                        Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} already formed and hero in range, skipping");
                         continue;
+                    }
                 }
                 else
                 {
+                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} in other state: {squadState.currentState}");
                     // Otros estados: seguir comportamiento por defecto
                     if (!heroOutsideRadius && stateComp.State == UnitFormationState.Formed)
+                    {
+                        Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} already formed and hero in range, skipping");
                         continue;
+                    }
                 }
 
                 // Obtener y actualizar posición previa del líder para esta unidad
@@ -215,8 +241,23 @@ public partial class UnitFollowFormationSystem : SystemBase
                 float3 diff = desired - current;
                 float distSq = math.lengthsq(diff);
 
+                Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} current: {current}, desired: {desired}, distance: {math.sqrt(distSq)}");
+
                 // Calculate slot position using unified calculator
                 float3 slotPos = gridSlot.worldOffset;
+                
+                // Automatically set units to Moving state if they're far from their target
+                const float formationThreshold = 4.0f; // Units should start moving if more than 2m away
+                if (distSq > formationThreshold && stateComp.State != UnitFormationState.Moving)
+                {
+                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} is far from target ({math.sqrt(distSq)}m), setting to Moving state");
+                    var newStateComp = stateComp;
+                    newStateComp.State = UnitFormationState.Moving;
+                    newStateComp.DelayTimer = 0f;
+                    newStateComp.DelayDuration = 0f;
+                    ecb.SetComponent(unit, newStateComp);
+                    stateComp = newStateComp; // Update local copy for this frame
+                }
                 
                 // Only move if the unit state is Moving
                 bool shouldMove = false;
@@ -235,6 +276,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                 
                 if (shouldMove)
                 {
+                    Debug.Log($"[UnitFollowFormationSystem] Moving unit {unit.Index} from {current} to {desired}, distance: {math.sqrt(distSq)}");
+                    
                     // Obtener la velocidad base de la unidad (ya incluye escalado por nivel y multiplicador de peso)
                     // El cálculo se realiza centralizadamente en UnitSpeedCalculator.CalculateFinalSpeed()
                     float baseSpeed = defaultMoveSpeed; // Fallback
@@ -261,6 +304,19 @@ public partial class UnitFollowFormationSystem : SystemBase
                     UpdateUnitOrientation(unit, ref t, heroPosition, heroForward, diff, dt);
                     
                     transformLookup[unit] = t;
+                    
+                    // Check if unit has reached its target position
+                    if (distSq <= stoppingDistanceSq)
+                    {
+                        Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} reached target, setting to Formed state");
+                        var newStateComp = stateComp;
+                        newStateComp.State = UnitFormationState.Formed;
+                        ecb.SetComponent(unit, newStateComp);
+                    }
+                }
+                else
+                {
+                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} NOT moving - State: {stateComp.State}, isHoldingPosition: {isHoldingPosition}, distSq: {distSq}, stoppingDistanceSq: {stoppingDistanceSq}");
                 }
                 
                 // Update visual target regardless of state for UI purposes

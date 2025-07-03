@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Collections;
 
 /// <summary>
 /// Applies pending damage events to their targets using the damage profile data.
@@ -12,6 +13,7 @@ public partial class DamageCalculationSystem : SystemBase
     {
         var defenseLookup = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (pending, entity) in SystemAPI
                      .Query<RefRO<PendingDamageEvent>>()
@@ -20,14 +22,14 @@ public partial class DamageCalculationSystem : SystemBase
             if (!SystemAPI.Exists(pending.ValueRO.target) ||
                 !SystemAPI.Exists(pending.ValueRO.damageProfile))
             {
-                EntityManager.RemoveComponent<PendingDamageEvent>(entity);
+                ecb.RemoveComponent<PendingDamageEvent>(entity);
                 continue;
             }
 
             // Skip if target already dead
             if (SystemAPI.HasComponent<IsDeadComponent>(pending.ValueRO.target))
             {
-                EntityManager.RemoveComponent<PendingDamageEvent>(entity);
+                ecb.RemoveComponent<PendingDamageEvent>(entity);
                 continue;
             }
 
@@ -84,11 +86,15 @@ public partial class DamageCalculationSystem : SystemBase
                 if (health.ValueRW.currentHealth <= 0f &&
                     !SystemAPI.HasComponent<IsDeadComponent>(pending.ValueRO.target))
                 {
-                    EntityManager.AddComponent<IsDeadComponent>(pending.ValueRO.target);
+                    ecb.AddComponent<IsDeadComponent>(pending.ValueRO.target);
                 }
             }
 
-            EntityManager.RemoveComponent<PendingDamageEvent>(entity);
+            ecb.RemoveComponent<PendingDamageEvent>(entity);
         }
+        
+        // Execute all deferred changes
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
     }
 }

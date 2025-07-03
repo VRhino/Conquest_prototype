@@ -4,12 +4,20 @@ using UnityEngine;
 /// <summary>
 /// Singleton que mantiene un registro de prefabs visuales disponibles
 /// para la instanciación híbrida. Permite acceso fácil desde los sistemas ECS.
+/// Los squads no tienen prefabs visuales propios, solo las unidades individuales.
 /// </summary>
+[System.Serializable]
 public class VisualPrefabRegistry : MonoBehaviour
 {
     [Header("Hero Visual Prefabs")]
     public GameObject heroSyntyPrefab;
     public GameObject heroAlternatePrefab;
+    
+    [Header("Unit Visual Prefabs (Solo unidades tienen visuales)")]
+    public GameObject unitEscuderoPrefab;    // Squires
+    public GameObject unitArqueroPrefab;     // Archers  
+    public GameObject unitPikemenPrefab;     // Pikemen
+    public GameObject unitCaballoPrefab;     // Lancers
     
     [Header("Other Visual Prefabs")]
     public GameObject[] additionalPrefabs;
@@ -72,6 +80,40 @@ public class VisualPrefabRegistry : MonoBehaviour
             Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'HeroAlternate': {heroAlternatePrefab.name}");
         }
         
+        // Los squads no tienen prefabs visuales propios
+        // Solo registrar prefabs visuales de unidad
+        if (unitEscuderoPrefab != null)
+        {
+            _prefabDictionary["UnitVisual_Escudero"] = unitEscuderoPrefab;
+            _prefabDictionary["UnitEscudero"] = unitEscuderoPrefab;
+            uniquePrefabCount++;
+            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitEscudero': {unitEscuderoPrefab.name}");
+        }
+        
+        if (unitArqueroPrefab != null)
+        {
+            _prefabDictionary["UnitVisual_Arquero"] = unitArqueroPrefab;
+            _prefabDictionary["UnitArquero"] = unitArqueroPrefab;
+            uniquePrefabCount++;
+            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitArquero': {unitArqueroPrefab.name}");
+        }
+        
+        if (unitPikemenPrefab != null)
+        {
+            _prefabDictionary["UnitVisual_Pikemen"] = unitPikemenPrefab;
+            _prefabDictionary["UnitPikemen"] = unitPikemenPrefab;
+            uniquePrefabCount++;
+            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitPikemen': {unitPikemenPrefab.name}");
+        }
+        
+        if (unitCaballoPrefab != null)
+        {
+            _prefabDictionary["UnitVisual_Caballo"] = unitCaballoPrefab;
+            _prefabDictionary["UnitCaballo"] = unitCaballoPrefab;
+            uniquePrefabCount++;
+            Debug.Log($"[VisualPrefabRegistry] Registrado prefab 'UnitCaballo': {unitCaballoPrefab.name}");
+        }
+        
         // Registrar prefabs adicionales
         foreach (var prefab in additionalPrefabs)
         {
@@ -125,5 +167,23 @@ public class VisualPrefabRegistry : MonoBehaviour
     public GameObject GetDefaultHeroPrefab()
     {
         return GetPrefab("HeroSynty") ?? GetPrefab("HeroVisual_Synty");
+    }
+    
+    /// <summary>
+    /// Obtiene el prefab visual por defecto de unidad según el tipo.
+    /// Los squads no tienen prefabs visuales propios, solo las unidades.
+    /// </summary>
+    /// <param name="squadType">Tipo de squad para determinar la unidad</param>
+    /// <returns>GameObject de la unidad por defecto</returns>
+    public GameObject GetDefaultUnitPrefab(SquadType squadType = SquadType.Squires)
+    {
+        return squadType switch
+        {
+            SquadType.Squires => GetPrefab("UnitEscudero"),
+            SquadType.Archers => GetPrefab("UnitArquero"),
+            SquadType.Pikemen => GetPrefab("UnitPikemen"),
+            SquadType.Lancers => GetPrefab("UnitCaballo"),
+            _ => GetPrefab("UnitEscudero")
+        };
     }
 }

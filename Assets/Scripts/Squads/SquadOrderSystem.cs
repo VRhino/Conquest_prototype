@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
+using UnityEngine;
 
 /// <summary>
 /// System that interprets the <see cref="SquadInputComponent"/> and updates
@@ -31,6 +32,8 @@ public partial class SquadOrderSystem : SystemBase
             if (!input.ValueRO.hasNewOrder)
                 continue;
 
+            Debug.Log($"[SquadOrderSystem] Processing order {input.ValueRO.orderType} for squad {entity.Index}");
+
             // Copy the requested order to the state component
             state.ValueRW.currentOrder = input.ValueRO.orderType;
             state.ValueRW.isExecutingOrder = true;
@@ -38,6 +41,7 @@ public partial class SquadOrderSystem : SystemBase
             // Handle Hold Position order specifically
             if (input.ValueRO.orderType == SquadOrderType.HoldPosition)
             {
+                Debug.Log($"[SquadOrderSystem] Setting HoldPosition at {input.ValueRO.holdPosition} for squad {entity.Index}");
                 // Create or update SquadHoldPositionComponent with mouse position
                 if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                 {
@@ -75,7 +79,9 @@ public partial class SquadOrderSystem : SystemBase
             }
 
             // Request a state transition if using the FSM system
-            state.ValueRW.transitionTo = OrderToState(input.ValueRO.orderType);
+            var newState = OrderToState(input.ValueRO.orderType);
+            state.ValueRW.transitionTo = newState;
+            Debug.Log($"[SquadOrderSystem] Requesting state transition to {newState} for squad {entity.Index}");
 
             input.ValueRW.hasNewOrder = false;
         }

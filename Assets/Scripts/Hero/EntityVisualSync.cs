@@ -18,6 +18,10 @@ public class EntityVisualSync : MonoBehaviour
     [SerializeField] private Vector3 lastEntityPosition;
     [SerializeField] private bool entityExists = false;
     
+    [Header("Scale Configuration")]
+    [SerializeField] private Vector3 originalPrefabScale;
+    [SerializeField] private bool scaleInitialized = false;
+    
     private void Update()
     {
         SyncWithEntity();
@@ -57,7 +61,14 @@ public class EntityVisualSync : MonoBehaviour
             var transform = entityManager.GetComponentData<LocalTransform>(entity);
             this.transform.position = transform.Position;
             this.transform.rotation = transform.Rotation;
-            this.transform.localScale = Vector3.one * transform.Scale;
+            
+            // Conservar el tamaño original del prefab y aplicar el scale de la entidad como multiplicador
+            if (!scaleInitialized)
+            {
+                originalPrefabScale = this.transform.localScale;
+                scaleInitialized = true;
+            }
+            this.transform.localScale = originalPrefabScale * transform.Scale;
             
             if (showDebugInfo)
             {
@@ -99,7 +110,14 @@ public class EntityVisualSync : MonoBehaviour
         entity = targetEntity;
         entityManager = manager;
         
-        Debug.Log($"[EntityVisualSync] Configurado para sincronizar entidad {targetEntity.Index}");
+        // Capturar el tamaño original del prefab al configurar la sincronización
+        if (!scaleInitialized)
+        {
+            originalPrefabScale = transform.localScale;
+            scaleInitialized = true;
+        }
+        
+        Debug.Log($"[EntityVisualSync] Configurado para sincronizar entidad {targetEntity.Index} con escala original {originalPrefabScale}");
     }
     
     /// <summary>

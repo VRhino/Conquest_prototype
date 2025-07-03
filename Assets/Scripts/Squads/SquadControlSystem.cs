@@ -3,12 +3,16 @@ using UnityEngine.InputSystem;
 using UnityEngine;
 using Unity.Mathematics;
 using Unity.Transforms;
+using Unity.Collections;
+using System.Collections.Generic;
 
 /// <summary>
 /// Reads player hotkeys and writes the corresponding commands to the
 /// <see cref="SquadInputComponent"/> of the active squad.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateBefore(typeof(SquadOrderSystem))]
+[UpdateBefore(typeof(FormationSystem))]
 public partial class SquadControlSystem : SystemBase
 {
     private Camera _mainCamera;
@@ -25,6 +29,9 @@ public partial class SquadControlSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        // Create temporary command buffer for deferred entity changes
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
+            
         if (_mainCamera == null)
             _mainCamera = Camera.main;
             
@@ -99,6 +106,11 @@ public partial class SquadControlSystem : SystemBase
         if (!orderIssued && !formationChanged)
             return;
 
+        Debug.Log($"[SquadControlSystem] Processing input - Order: {orderIssued}, Formation: {formationChanged}");
+
+        // Collect all changes first, then apply them outside the iteration
+        var squadChanges = new List<(Entity squadEntity, SquadInputComponent input)>();
+
         // Encontrar el héroe local y su squad
         int heroCount = 0;
         foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
@@ -108,14 +120,14 @@ public partial class SquadControlSystem : SystemBase
             
             if (SystemAPI.HasComponent<SquadInputComponent>(squadEntity))
             {
-                var input = SystemAPI.GetComponentRW<SquadInputComponent>(squadEntity);
+                var input = SystemAPI.GetComponent<SquadInputComponent>(squadEntity);
                 
                 if (orderIssued)
                 {
-                    input.ValueRW.orderType = newOrder;
+                    input.orderType = newOrder;
                     if (newOrder == SquadOrderType.HoldPosition)
                     {
-                        input.ValueRW.holdPosition = mouseWorldPosition;
+                        input.holdPosition = mouseWorldPosition;
                     }
                 }
 
@@ -132,7 +144,7 @@ public partial class SquadControlSystem : SystemBase
                             if (isDoubleClickX)
                             {
                                 // Lógica para doble clic X - cambiar a la siguiente formación disponible
-                                FormationType currentFormation = input.ValueRO.desiredFormation;
+                                FormationType currentFormation = input.desiredFormation;
                                 
                                 // Encontrar el índice actual de la formación
                                 int currentIndex = -1;
@@ -149,7 +161,7 @@ public partial class SquadControlSystem : SystemBase
                                 int nextIndex = (currentIndex + 1) % formations.Length;
                                 FormationType nextFormation = formations[nextIndex].formationType;
                                 
-                                input.ValueRW.desiredFormation = nextFormation;
+                                input.desiredFormation = nextFormation;
                                 
                                 // Cambio cíclico de formación con doble clic X
                             }
@@ -160,8 +172,8 @@ public partial class SquadControlSystem : SystemBase
                                 if (formationIndex >= 0 && formationIndex < formations.Length)
                                 {
                                     FormationType newFormation = formations[formationIndex].formationType;
-                                    FormationType currentFormation = input.ValueRO.desiredFormation;
-                                    input.ValueRW.desiredFormation = newFormation;
+                                    FormationType currentFormation = input.desiredFormation;
+                                    input.desiredFormation = newFormation;
                                 }
                                 else
                                 {
@@ -183,11 +195,36 @@ public partial class SquadControlSystem : SystemBase
                     }
                 }
 
-                input.ValueRW.hasNewOrder = true;
+                input.hasNewOrder = true;
+                
+                // Collect the change for later application
+                squadChanges.Add((squadEntity, input));
+                
+                Debug.Log($"[SquadControlSystem] Collected order {newOrder} for squad {squadEntity.Index}");
             }
             else
             {
+                Debug.Log($"[SquadControlSystem] Squad entity {squadEntity.Index} does not have SquadInputComponent");
             }
+        }
+        
+        // Apply all collected changes using EntityCommandBuffer
+        if (squadChanges.Count > 0)
+        {
+            foreach (var (squadEntity, input) in squadChanges)
+            {
+                ecb.SetComponent(squadEntity, input);
+            }
+            
+            // Execute all deferred changes
+            ecb.Playback(EntityManager);
+            ecb.Dispose();
+            
+            Debug.Log($"[SquadControlSystem] Applied {squadChanges.Count} changes via EntityCommandBuffer");
+        }
+        else
+        {
+            ecb.Dispose();
         }
     }
 

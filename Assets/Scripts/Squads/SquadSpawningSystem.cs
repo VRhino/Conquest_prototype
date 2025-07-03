@@ -35,9 +35,15 @@ public partial class SquadSpawningSystem : SystemBase
                 continue;
             }
 
-            // Create squad entity
+            // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
+            
+            // Configurar posición inicial del squad
+            ecb.AddComponent(squad, LocalTransform.FromPosition(heroTransform.ValueRO.Position));
+            
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
+            Debug.Log($"[SquadSpawningSystem] Squad {squad.Index} creado con hero {entity.Index}");
+            
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
             ecb.AddComponent(squad, new SquadStatsComponent
             {
@@ -52,6 +58,9 @@ public partial class SquadSpawningSystem : SystemBase
                 xpToNextLevel = 100f
             });
             ecb.AddComponent(squad, new SquadInstanceComponent { id = selection.ValueRO.instanceId });
+            
+            // Los squads son entidades lógicas sin visual propio
+            // Solo las unidades individuales tienen visuales
             
             // Obtener la primera formación disponible en el arreglo como formación por defecto (índice 0)
             var firstFormationType = data.formationLibrary.Value.formations.Length > 0 
@@ -74,8 +83,8 @@ public partial class SquadSpawningSystem : SystemBase
                 isExecutingOrder = false,
                 isInCombat = false,
                 formationChangeCooldown = 0f,
-                currentState = SquadFSMState.Idle,
-                transitionTo = SquadFSMState.Idle,
+                currentState = SquadFSMState.FollowingHero, // Initial state should match the initial order
+                transitionTo = SquadFSMState.FollowingHero, // Initial state should match the initial order
                 stateTimer = 0f,
                 lastOwnerAlive = true,
                 retreatTriggered = false
@@ -98,90 +107,55 @@ public partial class SquadSpawningSystem : SystemBase
 
             for (int i = 0; i < unitCount; i++)
             {
-                if (data.unitPrefab == Entity.Null)
-                {
-                    break;
-                }
-
-                Entity unit = ecb.Instantiate(data.unitPrefab);
+                // Crear unidad ECS (solo lógica, sin visuales)
+                Entity unit = ecb.CreateEntity();
                 FormationPositionCalculator.CalculateDesiredPosition(unit, ref firstFormation.gridPositions, heroTransform.ValueRO.Position, i, out int2 originalGridPos, out float3 gridOffset, out float3 worldPos, true);
 
-                ecb.SetComponent(unit, LocalTransform.FromPosition(worldPos));
+                ecb.AddComponent(unit, LocalTransform.FromPosition(worldPos));
                 
-                // Use the grid system - mantener la posición original para gridPosition
-                ecb.AddComponent(unit, new UnitGridSlotComponent
+                // Agregar referencia visual para la unidad
+                ecb.AddComponent(unit, new UnitVisualReference
                 {
-                    gridPosition = originalGridPos, // Mantener posición original del ScriptableObject
-                    slotIndex = i,
-                    worldOffset = gridOffset // Usar offset centrado para posicionamiento
+                    visualPrefabName = GetUnitVisualPrefabName(data.squadType)
                 });
-                // Inicializar el campo Slot de UnitSpacingComponent
-                ecb.SetComponent(unit, new UnitSpacingComponent {
-                    minDistance = /* valor adecuado, por ejemplo 1.5f o el que corresponda */ 1.5f,
-                    repelForce = /* valor adecuado, por ejemplo 1f o el que corresponda */ 1f,
+                
+                // Añadir componentes ECS de la unidad (todos excepto visuales)
+                ecb.AddComponent(unit, new UnitEquipmentComponent
+                {
+                    armorPercent = 100f,
+                    hasDebuff = false,
+                    isDeployable = true
+                });
+                
+                ecb.AddComponent<UnitCombatComponent>(unit);
+                ecb.AddComponent(unit, new UnitSpacingComponent
+                {
+                    minDistance = 1.5f,
+                    repelForce = 1f,
                     Slot = originalGridPos // Usar posición original para Slot
                 });
+                ecb.AddComponent<UnitTargetPositionComponent>(unit);
+                ecb.AddComponent<UnitFormationStateComponent>(unit); // Critical component for movement
+                ecb.AddComponent(unit, new UnitGridSlotComponent
+                {
+                    gridPosition = originalGridPos,
+                    slotIndex = i,
+                    worldOffset = gridOffset
+                });
+                ecb.AddComponent(unit, new UnitOrientationComponent
+                {
+                    orientationType = UnitOrientationType.FaceHero,
+                    rotationSpeed = 5f
+                });
                 
-                // Add UnitTargetPositionComponent from the start
-                ecb.AddComponent(unit, new UnitTargetPositionComponent
-                {
-                    position = worldPos
-                });
-                ecb.AddComponent(unit, new UnitOwnerComponent { squad = squad, hero = entity });
-                ecb.AddComponent(unit, new UnitStatsComponent
-                {
-                    vida = data.vidaBase,
-                    velocidad = data.velocidadBase,
-                    masa = data.masa,
-                    peso = (int)data.peso,
-                    bloqueo = data.bloqueo,
-                    defensaCortante = data.defensaCortante,
-                    defensaPerforante = data.defensaPerforante,
-                    defensaContundente = data.defensaContundente,
-                    danoCortante = data.danoCortante,
-                    danoPerforante = data.danoPerforante,
-                    danoContundente = data.danoContundente,
-                    penetracionCortante = data.penetracionCortante,
-                    penetracionPerforante = data.penetracionPerforante,
-                    penetracionContundente = data.penetracionContundente,
-                    liderazgoCosto = data.liderazgoCost
-                });
-                if (data.esUnidadADistancia)
-                {
-                    ecb.AddComponent(unit, new UnitRangedStatsComponent
-                    {
-                        alcance = data.alcance,
-                        precision = data.precision,
-                        cadenciaFuego = data.cadenciaFuego,
-                        velocidadRecarga = data.velocidadRecarga,
-                        municionTotal = data.municionTotal
-                    });
-                }
-                // Añadir delay de seguimiento aleatorio a cada unidad (nuevo comportamiento)
-                float randomDelay = UnityEngine.Random.Range(0.5f, 1.5f);
-                ecb.AddComponent(unit, new UnitFollowDelayComponent {
-                    delay = randomDelay,
-                    timer = 0f,
-                    waiting = false,
-                    triggered = false
-                });
-                // Añadir posición previa del líder para evitar error de acceso
-                ecb.AddComponent(unit, new UnitPrevLeaderPosComponent {
-                    value = worldPos
-                });
-                // Variación de velocidad individual
-                float speedMultiplier = UnityEngine.Random.Range(0.9f, 1.1f);
-                ecb.AddComponent(unit, new UnitMoveSpeedVariation {
-                    speedMultiplier = speedMultiplier
-                });
-                // Añadir UnitFormationStateComponent a cada unidad
-                ecb.AddComponent(unit, new UnitFormationStateComponent {
-                    State = UnitFormationState.Formed,
-                    DelayTimer = 0f,
-                    DelayDuration = 0f
-                });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
+            
+            // El SquadVisualManagementSystem se encargará de crear los GameObjects visuales
+            Debug.Log($"[SquadSpawningSystem] Squad ECS creado para héroe {entity.Index} con {unitCount} unidades. " +
+                      $"Los visuales serán creados por SquadVisualManagementSystem.");
+            
+            // Crear referencia del squad al héroe
             ecb.AddComponent(entity, new HeroSquadReference { squad = squad });
             
             // Copiar el team del héroe al squad y sus unidades
@@ -199,9 +173,31 @@ public partial class SquadSpawningSystem : SystemBase
             }
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
             ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });;
+            
+            // El SquadVisualManagementSystem se encargará de crear los GameObjects visuales
+            Debug.Log($"[SquadSpawningSystem] Squad ECS creado para héroe {entity.Index} con {unitCount} unidades. " +
+                      $"Los visuales serán creados por SquadVisualManagementSystem.");
         }
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+    
+    /// <summary>
+    /// Obtiene el nombre del prefab visual para un tipo de unidad.
+    /// Los squads no tienen prefabs visuales, solo las unidades individuales.
+    /// </summary>
+    /// <param name="squadType">Tipo de squad para determinar el tipo de unidad</param>
+    /// <returns>Nombre del prefab visual</returns>
+    private FixedString64Bytes GetUnitVisualPrefabName(SquadType squadType)
+    {
+        return squadType switch
+        {
+            SquadType.Squires => "UnitVisual_Escudero",
+            SquadType.Archers => "UnitVisual_Arquero",
+            SquadType.Pikemen => "UnitVisual_Pikemen",
+            SquadType.Lancers => "UnitVisual_Caballo", 
+            _ => "UnitVisual_Default"
+        };
     }
 }

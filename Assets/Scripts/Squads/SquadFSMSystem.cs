@@ -1,4 +1,5 @@
 using Unity.Entities;
+using UnityEngine;
 
 /// <summary>
 /// Finite state machine system that decides the tactical state for each squad.
@@ -6,6 +7,7 @@ using Unity.Entities;
 /// retreat...).
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(SquadOrderSystem))]
 public partial class SquadFSMSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -21,9 +23,7 @@ public partial class SquadFSMSystem : SystemBase
             // Apply pending transition
             if (s.currentState != s.transitionTo)
             {
-#if UNITY_EDITOR
-                // Squad state transition
-#endif
+                Debug.Log($"[SquadFSMSystem] Squad {entity.Index} transitioning from {s.currentState} to {s.transitionTo}");
                 s.currentState = s.transitionTo;
                 s.stateTimer = 0f;
             }

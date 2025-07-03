@@ -9,6 +9,7 @@ using UnityEngine;
 /// in <see cref="FormationComponent"/> and restored when space allows.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(SquadControlSystem))]
 public partial class FormationAdaptationSystem : SystemBase
 {
     protected override void OnUpdate()

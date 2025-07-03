@@ -105,6 +105,7 @@
     <Compile Include="Assets\Scripts\Squads\DestinationMarkerPrefabComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\DestinationMarkerAuthoring.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefabComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitEntityAuthoring.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfile.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefabBaker.cs" />
@@ -125,6 +126,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroEntityAuthoring.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconComponent.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkDataAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadVisualComponents.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationVisualizer.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyInteractionSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadTargetEntity.cs" />
@@ -221,6 +223,7 @@
     <Compile Include="Assets\Scripts\UI\MapUIController.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayer.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadVisualManagementSystem.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\Item.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraStateComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadChangeEvent.cs" />
@@ -228,6 +231,7 @@
     <Compile Include="Assets\Scripts\Map\MapSceneManager.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraBootstrapSystem.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadEntityAuthoring.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayerBaker.cs" />
     <Compile Include="Assets\Scripts\Shared\CooldownSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputBaker.cs" />

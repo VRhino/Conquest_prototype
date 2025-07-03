@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using Unity.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -14,6 +15,7 @@ public partial class FormationSystem : SystemBase
         float deltaTime = SystemAPI.Time.DeltaTime;
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var transformLookup = GetComponentLookup<LocalTransform>(true);
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (input, state, squadData, units, squadEntity) in SystemAPI
                     .Query<RefRO<SquadInputComponent>,
@@ -91,7 +93,7 @@ public partial class FormationSystem : SystemBase
                     out float3 worldPos,
                     true);
                 
-                UpdateUnitPosition(unit, worldPos, new float3(originalGridPos.x, 0, originalGridPos.y), i);
+                UpdateUnitPosition(unit, worldPos, new float3(originalGridPos.x, 0, originalGridPos.y), i, ecb);
                 
                 // Update grid slot component - mantener posición original en gridPosition
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
@@ -102,7 +104,7 @@ public partial class FormationSystem : SystemBase
                 }
                 else
                 {
-                    EntityManager.AddComponentData(unit, new UnitGridSlotComponent 
+                    ecb.AddComponent(unit, new UnitGridSlotComponent 
                     { 
                         gridPosition = originalGridPos, // Mantener posición original
                         slotIndex = i,
@@ -124,9 +126,13 @@ public partial class FormationSystem : SystemBase
             
             state.ValueRW = s;
         }
+        
+        // Execute all deferred changes
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
     }
 
-    private void UpdateUnitPosition(Entity unit, float3 worldPos, float3 originalGridPos, int slotIndex)
+    private void UpdateUnitPosition(Entity unit, float3 worldPos, float3 originalGridPos, int slotIndex, EntityCommandBuffer ecb)
     {
         // Update UnitTargetPositionComponent
         if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
@@ -136,7 +142,7 @@ public partial class FormationSystem : SystemBase
         }
         else
         {
-            EntityManager.AddComponentData(unit, new UnitTargetPositionComponent { position = worldPos });
+            ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
         }
         
         // Actualizar el campo Slot de UnitSpacingComponent si existe

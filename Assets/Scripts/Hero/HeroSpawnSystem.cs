@@ -51,17 +51,21 @@ public partial class HeroSpawnSystem : SystemBase
             }
             if (found)
             {
+                // Calcular la altura correcta del terreno
+                var spawnPosition = selected.position;
+                spawnPosition.y = FormationPositionCalculator.calculateTerraindHeight(spawnPosition);
+                
                 // Instanciación híbrida: crear solo la entidad ECS (sin visual)
                 var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
                 var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
                 entityManager.SetComponentData(heroEntity, new LocalTransform { 
-                    Position = selected.position, 
+                    Position = spawnPosition, 
                     Rotation = Unity.Mathematics.quaternion.identity, 
                     Scale = 1f 
                 });
                 
                 // El HeroVisualManagementSystem se encargará de crear el GameObject visual
-                Debug.Log($"[HeroSpawnSystem] Entidad del héroe instanciada en {selected.position}. " +
+                Debug.Log($"[HeroSpawnSystem] Entidad del héroe instanciada en {spawnPosition} (altura ajustada al terreno). " +
                           $"El visual será creado por HeroVisualManagementSystem.");
             }
             spawnPointsForInstantiate.Dispose();
@@ -115,9 +119,15 @@ public partial class HeroSpawnSystem : SystemBase
 
                 if (found)
                 {
-                    spawnData.ValueRW.spawnPosition = selected.position;
-                    transform.ValueRW.Position = selected.position;
+                    // Calcular la altura correcta del terreno
+                    var correctedPosition = selected.position;
+                    correctedPosition.y = FormationPositionCalculator.calculateTerraindHeight(correctedPosition);
+                    
+                    spawnData.ValueRW.spawnPosition = correctedPosition;
+                    transform.ValueRW.Position = correctedPosition;
                     spawnData.ValueRW.hasSpawned = true;
+                    
+                    Debug.Log($"[HeroSpawnSystem] Posición del héroe actualizada a {correctedPosition} (altura ajustada al terreno)");
                 }
             }
         }
