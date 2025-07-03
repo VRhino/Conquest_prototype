@@ -12,6 +12,17 @@
 
 ---
 
+## ✅ Mejoras Completadas
+
+### 🎯 **Sistema de Formaciones**
+- ✅ **Optimización de Detección de Rango:** Cambiado algoritmo para usar unidad más cercana al héroe
+  - **Fecha:** 3 de Julio, 2025
+  - **Impacto:** Mejorada consistencia en transiciones "Formed↔Moving"
+  - **Archivos modificados:** `FormationPositionCalculator.cs`
+  - **Beneficios:** Comportamiento más predecible en formaciones grandes
+
+---
+
 ## 1. 🐛 Bugs Conocidos
 
 ### 🎯 **Control de Héroe**

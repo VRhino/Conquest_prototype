@@ -173,27 +173,53 @@
 
 ## 🔄 Mejoras Técnicas Específicas
 
-### 🎯 **1. Optimización de Detección de Rango (Formed↔Moving)**
+### 🎯 **1. Optimización de Detección de Rango (Formed↔Moving)** ✅
 
-**📋 Problema actual:**
-- La lógica evalúa la posición individual de cada unidad vs el héroe
-- Puede causar comportamiento inconsistente en formaciones grandes
+**📋 Problema original:**
+- La lógica evaluaba la posición individual de cada unidad vs el héroe
+- Podía causar comportamiento inconsistente en formaciones grandes
 
-**🔧 Solución propuesta:**
-- Cambiar algoritmo para usar la **unidad más cercana al héroe** como referencia
-- Aplicar la misma lógica de transición a todo el escuadrón basado en esa distancia
-- Mejorar consistencia del comportamiento grupal
+**🔧 Solución implementada:**
+- ✅ **Cambiado algoritmo para usar la unidad más cercana al héroe** como referencia
+- ✅ **Aplicada la misma lógica de transición** a todo el escuadrón basado en esa distancia
+- ✅ **Mejorada consistencia del comportamiento grupal**
 
 **⚙️ Implementación técnica:**
 ```csharp
-// En lugar de evaluar cada unidad individualmente:
+// ANTES - Evaluar cada unidad individualmente:
 // foreach(unit) if(distance(unit, hero) > threshold) → Moving
 
-// Usar unidad más cercana como referencia:
-var closestUnit = FindClosestUnitToHero(squad);
-if(distance(closestUnit, hero) > threshold) 
-    → Todo el squad cambia a Moving
+// AHORA - Usar unidad más cercana como referencia:
+public static bool isHeroInRange(DynamicBuffer<SquadUnitElement> units, 
+    ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, float range)
+{
+    float closestDistSq = float.MaxValue;
+    bool hasValidUnit = false;
+    
+    foreach (var unitElement in units)
+    {
+        Entity unit = unitElement.Value;
+        if (transformLookup.HasComponent(unit))
+        {
+            float3 unitPosition = transformLookup[unit].Position;
+            float distSq = math.lengthsq(heroPosition - unitPosition);
+            
+            if (distSq < closestDistSq)
+            {
+                closestDistSq = distSq;
+                hasValidUnit = true;
+            }
+        }
+    }
+
+    return hasValidUnit && closestDistSq <= range;
+}
 ```
+
+**🧩 Sistemas modificados:**
+- `FormationPositionCalculator.isHeroInRange()` - Refactorizado para usar unidad más cercana
+- `UnitFormationStateSystem` - Ahora usa lógica consistente para todo el escuadrón
+- `UnitFollowFormationSystem` - Beneficiado por la nueva lógica unificada
 
 ### 🖱️ **2. Posicionamiento Manual con X Mantenida**
 
