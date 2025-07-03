@@ -15,7 +15,7 @@ public partial class UnitFollowFormationSystem : SystemBase
     protected override void OnUpdate()
     {
         Dependency.Complete();
-        const float moveSpeed = 5f;
+        const float defaultMoveSpeed = 5f; // Fallback en caso de que no haya UnitStatsComponent
         const float stoppingDistanceSq = 0.04f; // ~0.2m
 
         float dt = SystemAPI.Time.DeltaTime;
@@ -27,6 +27,7 @@ public partial class UnitFollowFormationSystem : SystemBase
         var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
         var squadDataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var unitStatsLookup = GetComponentLookup<UnitStatsComponent>(true);
         
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         bool heroIsMoving = false;
@@ -234,20 +235,21 @@ public partial class UnitFollowFormationSystem : SystemBase
                 
                 if (shouldMove)
                 {
+                    // Obtener la velocidad base de la unidad (ya incluye escalado por nivel y multiplicador de peso)
+                    // El cálculo se realiza centralizadamente en UnitSpeedCalculator.CalculateFinalSpeed()
+                    float baseSpeed = defaultMoveSpeed; // Fallback
+                    if (unitStatsLookup.HasComponent(unit))
+                    {
+                        baseSpeed = unitStatsLookup[unit].velocidad;
+                    }
+                    
+                    // Aplicar solo multiplicadores adicionales específicos de la unidad
                     float speedMultiplier = 1f;
                     if (SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit))
                         speedMultiplier = SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier;
-                        
-                    float pesoMultiplier = 1f;
-                    if (SystemAPI.HasComponent<UnitStatsComponent>(unit))
-                    {
-                        int peso = SystemAPI.GetComponent<UnitStatsComponent>(unit).peso;
-                        if (peso == 2) pesoMultiplier = 0.8f;
-                        else if (peso == 3) pesoMultiplier = 0.6f;
-                    }
-                    speedMultiplier *= pesoMultiplier;
-
-                    float3 step = math.normalizesafe(diff) * moveSpeed * speedMultiplier * dt;
+                    
+                    float finalSpeed = baseSpeed * speedMultiplier;
+                    float3 step = math.normalizesafe(diff) * finalSpeed * dt;
                     if (math.lengthsq(step) > distSq)
                         step = diff;
 

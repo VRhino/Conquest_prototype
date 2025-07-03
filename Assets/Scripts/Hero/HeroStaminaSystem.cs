@@ -59,6 +59,7 @@ public partial class HeroStaminaSystem : SystemBase
                 }
             }
 
+            // Regeneración de stamina solo si no se realizaron acciones
             if (!performedAction)
             {
                 data.currentStamina += data.regenRate * deltaTime;
@@ -66,11 +67,12 @@ public partial class HeroStaminaSystem : SystemBase
 
             data.currentStamina = math.clamp(data.currentStamina, 0f, data.maxStamina);
 
+            // Sistema de exhaustion más granular
             if (data.currentStamina <= 0f)
             {
                 data.isExhausted = true;
             }
-            else if (data.currentStamina > data.maxStamina * 0.2f)
+            else if (data.currentStamina > data.maxStamina * 0.2f) // Recupera cuando tiene más del 20%
             {
                 data.isExhausted = false;
             }

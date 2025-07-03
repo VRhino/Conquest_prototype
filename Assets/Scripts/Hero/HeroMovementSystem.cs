@@ -5,7 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// Handles deterministic movement and rotation of the local hero based on
-/// <see cref="HeroInputComponent"/> data.
+/// <see cref="HeroInputComponent"/> and <see cref="HeroStatsComponent"/> data.
+/// Applies sprint multiplier when sprinting and stamina is available.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class HeroMovementSystem : SystemBase
@@ -14,9 +15,10 @@ public partial class HeroMovementSystem : SystemBase
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
 
-        foreach (var (input, movement, life, transform) in
+        foreach (var (input, stats, stamina, life, transform) in
                  SystemAPI.Query<RefRO<HeroInputComponent>,
-                                 RefRO<HeroMovementComponent>,
+                                 RefRO<HeroStatsComponent>,
+                                 RefRO<StaminaComponent>,
                                  RefRO<HeroLifeComponent>,
                                  RefRW<LocalTransform>>()
                         .WithAll<IsLocalPlayer>())
@@ -45,7 +47,17 @@ public partial class HeroMovementSystem : SystemBase
             if (magnitude > 0f)
             {
                 float3 direction = desired / magnitude;
-                transform.ValueRW.Position += direction * movement.ValueRO.movementSpeed * deltaTime;
+                
+                // Calcular velocidad actual considerando sprint
+                float currentSpeed = stats.ValueRO.baseSpeed;
+                
+                // Si está haciendo sprint y tiene stamina suficiente, aplicar multiplicador
+                if (input.ValueRO.isSprinting && !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina > 0f)
+                {
+                    currentSpeed *= stats.ValueRO.sprintMultiplier;
+                }
+                
+                transform.ValueRW.Position += direction * currentSpeed * deltaTime;
 
                 // Rota el héroe siempre hacia el forward de la cámara
                 quaternion targetRot = quaternion.LookRotationSafe((float3)camForward, math.up());

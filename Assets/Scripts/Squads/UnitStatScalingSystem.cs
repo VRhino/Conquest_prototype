@@ -77,12 +77,16 @@ public partial class UnitStatScalingSystem : SystemBase
             if (!EntityManager.Exists(ue.Value))
                 continue;
 
+            // Usar función centralizada para calcular velocidad con multiplicador de peso
+            int peso = (int)math.round(data.peso);
+            float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.velocidadBase, velMul, peso);
+
             var stats = new UnitStatsComponent
             {
                 vida = data.vidaBase * vidaMul,
-                velocidad = data.velocidadBase * velMul,
+                velocidad = finalSpeed, // Usar velocidad calculada centralizadamente
                 masa = data.masa,
-                peso = (int)math.round(data.peso),
+                peso = peso,
                 bloqueo = data.bloqueo,
                 defensaCortante = data.defensaCortante * defMul,
                 defensaPerforante = data.defensaPerforante * defMul,

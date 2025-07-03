@@ -5,7 +5,7 @@ using UnityEngine;
 /// </summary>
 public class HeroStatsAuthoring : MonoBehaviour
 {
-    public float baseSpeed = 5f;
-    public float sprintMultiplier = 1.5f;
+    public float baseSpeed = 2f;
+    public float sprintMultiplier = 2f;
     public float jumpForce = 10f;
 }

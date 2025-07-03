@@ -7,6 +7,10 @@ using Unity.Entities;
 public struct UnitStatsComponent : IComponentData
 {
     public float vida;
+    /// <summary>
+    /// Final movement speed including base speed, level scaling, and weight multiplier.
+    /// Calculated using UnitSpeedCalculator.CalculateFinalSpeed().
+    /// </summary>
     public float velocidad;
     public float masa;
     /// <summary>
