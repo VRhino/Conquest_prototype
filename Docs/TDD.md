@@ -2,7 +2,7 @@
 
 ## Índice Técnico (TDD)
 
-### 1. Arquitectura General del Proyecto
+### 1. 🧱 Arquitectura General del Proyecto
 
 - 1.1 Versión y configuración de Unity
 - 1.2 Render Pipeline: elección y justificación
@@ -11,7 +11,7 @@
 - 1.5 Arquitectura ECS con Unity DOTS
 - 1.6 Integración con Netcode for GameObjects
 
-### 2. Control del Jugador y Cámara
+### 2. 🎮 Control del Jugador y Cámara
 
 - 2.1 Movimiento y control del héroe (TPS)
 - 2.2 Control de cámara según estado del héroe
@@ -19,7 +19,7 @@
 - 2.4 Feedback visual y navegación(x)
 - 2.5 Modo espectador tras muerte(x)
 
-### 3. IA de Escuadras y Unidades
+### 3. 🧠 IA de Escuadras y Unidades
 
 - 3.1 Sistema de navegación (NavMesh)
 - 3.2 Comportamiento en formación reactivo
@@ -27,14 +27,14 @@
 - 3.4 Coordinación de habilidades de escuadra
 - 3.5 FSM para estados de escuadras y transición a retirada
 
-### 4. Construcción de Mapas y Escenarios
+### 4. 🏗️ Construcción de Mapas y Escenarios
 
 - 4.1 Herramientas para creación de mapas (Unity Terrain / externos)
 - 4.2 Implementación de elementos destructibles (puertas, obstáculos)
 - 4.3 Sistema de zonas y triggers físicos (Supply, captura, visibilidad)
 - 4.4 Configuración del mapa MVP y puntos claves
 
-### 5. Sistema de Combate y Daño
+### 5. ⚔️ Sistema de Combate y Daño
 
 - 5.1 Combate del héroe (colliders y animaciones)
 - 5.2 Combate de escuadras (detección y ataques sincronizados)
@@ -42,7 +42,7 @@
 - 5.4 Cálculo de daño y penetración en C#
 - 5.5 Gestión de cooldowns y tiempos de habilidad
 
-### 6. Flujo de Partida
+### 6. 🔄 Flujo de Partida
 
 - 6.1 Transiciones entre escenas (Feudo → Preparación → Combate → Post)
 - 6.2 Ciclo de vida del héroe (muerte, respawn, cooldown)
@@ -51,7 +51,7 @@
 - 6.5 Asignación de spawn inicial
 - 6.6 Panatlla de Preparación de Batalla
 
-### 7. Progresión y Guardado de Datos
+### 7. 🧬 Progresión y Guardado de Datos
 
 - 7.1 Progresión del héroe (nivel, atributos, perks)
 - 7.2 Guardado local en MVP
@@ -61,7 +61,7 @@
 - 7.6 Progresión Avanzada de Escuadras y Sinergias
 - 7.7 Control de Estados entr Héroe y Unidades del Escuadrón
 
-### 8. Multijugador (MVP)
+## 8. 🌐 Multijugador (MVP)
 
 - 8.1 Arquitectura de red: servidor dedicado
 - 8.2 Sincronización de escuadras y héroes (Snapshots o comandos, decisión final)
@@ -69,7 +69,7 @@
 - 8.4 Comunicación entre jugadores (chat básico)
 - 8.5 Cambios de escuadra desde supply points (restricciones de sincronización)
 
-### 9. UI y HUD
+## 9. 🖥️ UI y HUD
 
 - 9.1 Sistema de UI (Canvas con Unity UI)
 - 9.2 HUD de batalla: salud, habilidades, escuadra, órdenes
@@ -78,31 +78,31 @@
 - 9.5 Menús de interacción con supply y puntos de captura
 - 9.6 Sistema de Marcadores de Destino (Hold Position)
 
-### 10. Seguridad y Backend (Para expansión futura)
+## 10. 🔐 Seguridad y Backend (Para expansión futura)
 
 - 10.1 Estado actual (solo local)
 - 10.2 Recomendaciones para transición a backend (login, matchmaking, almacenamiento)
 - 10.3 Gestión segura de progresión futura
 
-### 11. Extras Técnicos
+## 11. ⚙️ Extras Técnicos
 
 - 11.1 Sistema de liderazgo (restricciones en loadouts)
 - 11.2 Sistema de estamina y gasto por acción
 - 11.3 Visualización de formaciones y selección de unidades
 - 11.4 Optimización de escena y assets (nivel MVP)
 
-### 12. Glosario tecnico
+## 12. 📘 Glosario tecnico
 
 ---
 
 ## 1. 🧱 Arquitectura General del Proyecto
 
-### 1.1 Motor y Versión
+### 1.1 🏗️ Motor y Versión
 
 - **Motor:** Unity
 - **Versión:** Unity 2022.3.62f1 (LTS)
 
-### 1.2 Render Pipeline
+### 1.2 🎨 Render Pipeline
 
 - **Pipeline:** URP (Universal Render Pipeline)
 - **Justificación:**
@@ -110,7 +110,7 @@
     - Ideal para entornos con escuadras numerosas.
     - Compatible con dispositivos de gama media.
 
-### 1.3 Arquitectura Técnica
+### 1.3 🏗️ Arquitectura Técnica
 
 - **Paradigma Base:** ECS (Entity Component System)
 - **Implementación:** Unity Entities 1.0 (DOTS)
@@ -119,7 +119,7 @@
     - Separación clara entre lógica y datos.
     - Rendimiento optimizado para combate en masa.
 
-### 1.4 Organización Modular por Escenas
+### 1.4 🏛️ Organización Modular por Escenas
 
 - El proyecto se divide en **múltiples escenas funcionales**:
     - **Login / Selección de personaje**
@@ -132,7 +132,7 @@
 > Cada escena tiene su propio sistema de UI, lógica de flujo y referencia a sistemas compartidos.
 > 
 
-### 1.5 Networking
+### 1.5 🌐 Networking
 
 - **Solución de red:** Unity Netcode for GameObjects (con ECS wrapper donde sea necesario).
 - **Topología:** Cliente-servidor con servidor dedicado.
@@ -145,11 +145,11 @@
 
 ---
 
-## 🎮 Sección 2: Control del Jugador y Cámara
+## 2. 🎮 Control del Jugador y Cámara
 
 ---
 
-### 🎮 2.1 Control del Héroe
+### 2.1 🎯 Control del Héroe
 
 ### 🎯 Descripción General:
 
@@ -181,7 +181,7 @@ El jugador controla directamente al **héroe** en tercera persona durante la bat
 
 ---
 
-### 🎥 2.2 Cámara
+### 2.2 🎥 Cámara
 
 ### 📌 Normal:
 
@@ -213,7 +213,7 @@ El jugador controla directamente al **héroe** en tercera persona durante la bat
 
 ---
 
-### 🛡️ 2.3 Control de Escuadras
+### 2.3 🛡️ Control de Escuadras
 
 ### 📌 Descripción:
 
@@ -266,11 +266,11 @@ Cada formación está representada en ECS como una `NativeArray<LocalPosition>` 
 
 ---
 
-🤖 3. IA de Escuadras y Unidades
+## 3. 🧠 IA de Escuadras y Unidades
 
 ---
 
-🧭 3.1 Sistema de Navegación (NavMesh)
+### 3.1 🧭 Sistema de Navegación (NavMesh)
 
 📌 Descripción:
 
@@ -308,7 +308,7 @@ Detecta obstáculos en el camino y ajusta temporalmente la forma.
 
 ---
 
-### 🧱 3.2 Comportamiento Reactivo en Formación
+### 3.2 🧱 Comportamiento Reactivo en Formación
 
 ### 📌 Descripción:
 
@@ -329,7 +329,7 @@ Las escuadras **reaccionan dinámicamente** al entorno manteniendo su formación
 
 ---
 
-### 👥 3.3 IA de Escuadra Grupal vs Individual
+### 3.3 👥 IA de Escuadra Grupal vs Individual
 
 ### 📌 Descripción:
 
@@ -362,7 +362,7 @@ El comportamiento es **grupal**, pero con **unidad mínima de decisión** en cad
 
 ---
 
-### 🧠 3.4 Coordinación de Habilidades de Escuadra
+### 3.4 🧠 Coordinación de Habilidades de Escuadra
 
 ### 📌 Descripción:
 
@@ -384,7 +384,7 @@ Habilidades de escuadra se ejecutan de forma **coordinada y sincronizada**, basa
 
 ---
 
-### 🔁 3.5 FSM para Estados de Escuadras y Transición a Retirada
+### 3.5 🔁 FSM para Estados de Escuadras y Transición a Retirada
 
 ### 📌 Descripción:
 
@@ -418,7 +418,7 @@ Cada escuadra tiene un sistema FSM (Finite State Machine) que rige su **estado a
 
 ---
 
-### 🛠️ 4.1 Herramientas para Creación de Mapas
+### 4.1 🛠️ Herramientas para Creación de Mapas
 
 ### 📌 Descripción:
 
@@ -442,7 +442,7 @@ El mapa MVP será creado **a mano en Unity** utilizando herramientas internas de
 
 ---
 
-### 🚪 4.2 Implementación de Elementos Destructibles
+### 4.2 🚪 Implementación de Elementos Destructibles
 
 ### 📌 Descripción:
 
@@ -470,7 +470,7 @@ Puertas y obstáculos específicos pueden **ser destruidos** por escuadras o maq
 
 ---
 
-### 📦 4.3 Sistema de Zonas y Triggers Físicos
+### 4.3 📦 Sistema de Zonas y Triggers Físicos
 
 ### 📌 Descripción:
 
@@ -508,7 +508,7 @@ El mapa está lleno de **zonas funcionales**, cada una identificada por **collid
 
 ---
 
-### 🗺️ 4.4 Configuración del Mapa MVP y Puntos Claves
+### 4.4 🗺️ Configuración del Mapa MVP y Puntos Claves
 
 ### 📌 Descripción:
 
@@ -550,7 +550,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     
     ---
     
-    ### 🏳️ 4.4.1 Puntos de Captura
+    ### 4.4.1 🏳️ Puntos de Captura
     
     ### 📌 Descripción:
     
@@ -590,7 +590,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     
     ---
     
-    ### 🩺 4.4.2 Supply Points
+    ### 4.4.2 🩺 Supply Points
     
     ### 📌 Descripción:
     
@@ -620,7 +620,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     
     ---
     
-    ### 🧭 4.4.3 Spawn Points
+    ### 4.4.3 🧭 Spawn Points
     
     ### 📌 Descripción:
     
@@ -642,7 +642,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
 
 ---
 
-### 🧍 5.1 Combate del Héroe (Colliders y Animaciones)
+### 5.1 🧍 Combate del Héroe (Colliders y Animaciones)
 
 📌 **Descripción:**
 
@@ -693,7 +693,7 @@ WeaponColliderAuthoring (MonoBehaviour → Baker)
 
 ---
 
-### 🪖 5.2 Combate de Escuadras (Detección y Ataques Sincronizados)
+### 5.2 🪖 Combate de Escuadras (Detección y Ataques Sincronizados)
 
 📌 **Descripción:**
 
@@ -730,7 +730,7 @@ SquadAttackSystem
 
 ---
 
-### ⚔️ 5.3 Tipos de Daño y Resistencias
+### 5.3 ⚔️ Tipos de Daño y Resistencias
 
 📌 **Descripción:**
 
@@ -787,7 +787,7 @@ PenetrationComponent (IComponentData)
 
 ---
 
-### 🧮 5.4 Cálculo de Daño y Penetración (Lógica en C#)
+### 5.4 🧮 Cálculo de Daño y Penetración (Lógica en C#)
 
 📌 **Fórmula básica de cálculo:**
 
@@ -817,7 +817,7 @@ HealthComponent (IComponentData)
 
 ---
 
-### ⏱️ 5.5 Gestión de Cooldowns y Tiempos de Habilidad
+### 5.5 ⏱️ Gestión de Cooldowns y Tiempos de Habilidad
 
 📌 **Descripción:**
 
@@ -860,7 +860,7 @@ CooldownSystem
 
 ---
 
-### 🧭 6.1 Transiciones entre Escenas
+### 6.1 🧭 Transiciones entre Escenas
 
 *(Feudo → Preparación → Combate → Post Batalla)*
 
@@ -892,7 +892,7 @@ DataContainer (ScriptableObject o Singleton en DontDestroyOnLoad)
 
 ---
 
-### ☠️ 6.2 Ciclo de Vida del Héroe (Muerte, Respawn, Cooldown)
+### 6.2 ☠️ Ciclo de Vida del Héroe (Muerte, Respawn, Cooldown)
 
 📌 **Descripción:**
 
@@ -926,7 +926,7 @@ HeroSpectatorCameraSystem
 
 ---
 
-### 🪖 6.3 Estado y Retiro de Escuadra al Morir el Héroe
+### 6.3 🪖 Estado y Retiro de Escuadra al Morir el Héroe
 
 📌 **Descripción:**
 
@@ -959,7 +959,7 @@ SquadVisibilitySystem
 
 ---
 
-### 🏳️ 6.4 Reglas del Sistema de Captura y Uso de Supply Points
+### 6.4 🏳️ Reglas del Sistema de Captura y Uso de Supply Points
 
 📌 **Descripción:**
 
@@ -995,7 +995,7 @@ SupplyInteractionSystem
 
 ---
 
-### 📍 6.5 Asignación de Spawn Inicial
+### 6.5 📍 Asignación de Spawn Inicial
 
 📌 **Descripción:**
 
@@ -1025,7 +1025,7 @@ HeroSpawnSystem
 - `MapUIController` para seleccionar spawn
 - `GameManager` o `MatchController` asigna posición real al iniciar partida
 
-### 🧭 6.6 Pantalla de Preparación de Batalla
+### 6.6 🧭 Pantalla de Preparación de Batalla
 
 📌 *Descripción General*
 
@@ -1117,7 +1117,7 @@ Esta escena se gestiona como parte del flujo general definido por `SceneFlowMana
 
 ---
 
-### 🧠 7.1 Progresión del Héroe (Nivel, Atributos, Perks)
+### 7.1 🧠 Progresión del Héroe (Nivel, Atributos, Perks)
 
 📌 **Descripción:**
 
@@ -1156,7 +1156,7 @@ HeroLevelSystem
 
 ---
 
-### 💾 7.2 Guardado Local en MVP
+### 7.2 💾 Guardado Local en MVP
 
 📌 **Descripción:**
 
@@ -1189,7 +1189,7 @@ LocalSaveSystem
 
 ---
 
-### 📁 7.3 Estructura de ScriptableObjects para Perks y Escuadras
+### 7.3 📁 Estructura de ScriptableObjects para Perks y Escuadras
 
 📌 **Descripción:**
 
@@ -1229,7 +1229,7 @@ public class SquadData : ScriptableObject {
 
 ---
 
-### 🧠 7.4 Sistema de Perks: Carga, Activación y Visualización
+### 7.4 🧠 Sistema de Perks: Carga, Activación y Visualización
 
 📌 **Descripción:**
 
@@ -1271,7 +1271,7 @@ PerkManager (UI)
 - `HUD` representa el estado de cada perk con íconos, cooldown, y tooltips
 
 ---
-### 🔀 7.5 Sistema de Clases de Héroe
+### 7.5 🔀 Sistema de Clases de Héroe
 
 #### 📌 Descripción
 
@@ -1404,7 +1404,7 @@ if (perk.tags.Contains("Arco") && heroClass != HeroClass.Arco)
 
 ---
 
-### 🧬 7.6 Progresión Avanzada de Escuadras y Sinergias
+### 7.6 🧬 Progresión Avanzada de Escuadras y Sinergias
 
 📌 **Objetivo:**
 
@@ -1412,7 +1412,7 @@ Expandir la progresión de escuadras más allá del nivel numérico, incorporand
 
 ---
 
-#### 🗂️ 7.6.1 ScriptableObjects por Tipo de Escuadra
+#### 7.6.1 🗂️ ScriptableObjects por Tipo de Escuadra
 
 Cada escuadra estará representada por un `SquadData` específico, que contendrá:
 
@@ -1479,7 +1479,7 @@ public class SquadData : ScriptableObject {
 
 ---
 
-#### 🧠 7.6.2 Sistema `SquadProgressionSystem`
+#### 7.6.2 🧠 Sistema `SquadProgressionSystem`
 
 Controla la experiencia y progresión de cada escuadra activa:
 
@@ -1500,7 +1500,7 @@ SquadProgressComponent
 
 ---
 
-#### 🛡️ 7.6.3 Sistema de `EquipamientoComponent`
+#### 7.6.3 🛡️ Sistema de `EquipamientoComponent`
 
 Cada unidad tendrá un estado de equipamiento persistente:
 
@@ -1520,7 +1520,7 @@ UnitEquipmentComponent
 
 ---
 
-#### 🧠 7.6.4 BehaviorProfiles de Escuadras
+#### 7.6.4 🧠 BehaviorProfiles de Escuadras
 
 Cada tipo de escuadra tendrá un perfil de comportamiento táctico predefinido, usado por la IA y animaciones contextuales.
 
@@ -1545,7 +1545,7 @@ public enum BehaviorProfile {
 > Estos perfiles afectan la toma de decisiones AI en SquadAISystem y priorización de objetivos.
 > 
 
-#### 📊 7.6.5 Sistema de Atributos de Unidad (por Escuadra)
+#### 7.6.5 📊 Sistema de Atributos de Unidad (por Escuadra)
 
 📌 **Objetivo:**
 
@@ -1664,7 +1664,7 @@ public struct SquadProgressionStats {
 
 # Sin título
 
-### 7.7 Control de Estado entre Héroe y Unidades del Escuadrón
+### 7.7 🔄 Control de Estado entre Héroe y Unidades del Escuadrón
 
 ### 🎯 Descripción funcional
 
