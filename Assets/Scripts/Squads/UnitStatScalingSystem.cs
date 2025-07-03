@@ -44,7 +44,7 @@ public partial class UnitStatScalingSystem : SystemBase
             if (!dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 continue;
 
-            ApplyStats(squad, data, progress.ValueRO.level, unitBufferLookup);
+            UnitStatsUtility.ApplyStatsToSquad(squad, data, progress.ValueRO.level, EntityManager, unitBufferLookup);
         }
     }
 
@@ -55,75 +55,5 @@ public partial class UnitStatScalingSystem : SystemBase
             return false;
         var state = q.GetSingleton<MatchStateComponent>();
         return state.currentState == MatchState.LoadingMap;
-    }
-
-    void ApplyStats(Entity squadEntity,
-                    SquadDataComponent data,
-                    int level,
-                    BufferLookup<SquadUnitElement> unitBufferLookup)
-    {
-        if (!unitBufferLookup.HasBuffer(squadEntity))
-            return;
-
-        int index = math.clamp(level - 1, 0, data.curves.Value.vida.Length - 1);
-        float vidaMul = data.curves.Value.vida[index];
-        float danoMul = data.curves.Value.dano[index];
-        float defMul = data.curves.Value.defensa[index];
-        float velMul = data.curves.Value.velocidad[index];
-
-        DynamicBuffer<SquadUnitElement> units = unitBufferLookup[squadEntity];
-        foreach (var ue in units)
-        {
-            if (!EntityManager.Exists(ue.Value))
-                continue;
-
-            // Usar función centralizada para calcular velocidad con multiplicador de peso
-            int peso = (int)math.round(data.peso);
-            float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.velocidadBase, velMul, peso);
-
-            var stats = new UnitStatsComponent
-            {
-                vida = data.vidaBase * vidaMul,
-                velocidad = finalSpeed, // Usar velocidad calculada centralizadamente
-                masa = data.masa,
-                peso = peso,
-                bloqueo = data.bloqueo,
-                defensaCortante = data.defensaCortante * defMul,
-                defensaPerforante = data.defensaPerforante * defMul,
-                defensaContundente = data.defensaContundente * defMul,
-                danoCortante = data.danoCortante * danoMul,
-                danoPerforante = data.danoPerforante * danoMul,
-                danoContundente = data.danoContundente * danoMul,
-                penetracionCortante = data.penetracionCortante,
-                penetracionPerforante = data.penetracionPerforante,
-                penetracionContundente = data.penetracionContundente,
-                liderazgoCosto = data.liderazgoCost
-            };
-
-            if (EntityManager.HasComponent<UnitStatsComponent>(ue.Value))
-                EntityManager.SetComponentData(ue.Value, stats);
-            else
-                EntityManager.AddComponentData(ue.Value, stats);
-
-            if (data.esUnidadADistancia)
-            {
-                var ranged = new UnitRangedStatsComponent
-                {
-                    alcance = data.alcance,
-                    precision = data.precision,
-                    cadenciaFuego = data.cadenciaFuego,
-                    velocidadRecarga = data.velocidadRecarga,
-                    municionTotal = data.municionTotal
-                };
-                if (EntityManager.HasComponent<UnitRangedStatsComponent>(ue.Value))
-                    EntityManager.SetComponentData(ue.Value, ranged);
-                else
-                    EntityManager.AddComponentData(ue.Value, ranged);
-            }
-            else if (EntityManager.HasComponent<UnitRangedStatsComponent>(ue.Value))
-            {
-                EntityManager.RemoveComponent<UnitRangedStatsComponent>(ue.Value);
-            }
-        }
     }
 }

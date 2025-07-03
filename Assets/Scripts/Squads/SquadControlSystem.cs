@@ -268,14 +268,12 @@ public partial class SquadControlSystem : SystemBase
         foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
         {
             Entity squadEntity = heroSquadRef.ValueRO.squad;
-            if (SystemAPI.HasComponent<SquadOwnerComponent>(squadEntity))
+            var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
+            var transformLookup = GetComponentLookup<LocalTransform>(true);
+            
+            if (HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPosition))
             {
-                var squadOwner = SystemAPI.GetComponent<SquadOwnerComponent>(squadEntity);
-                if (SystemAPI.HasComponent<LocalTransform>(squadOwner.hero))
-                {
-                    var heroTransform = SystemAPI.GetComponent<LocalTransform>(squadOwner.hero);
-                    return heroTransform.Position;
-                }
+                return heroPosition;
             }
         }
 

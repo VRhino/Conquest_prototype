@@ -177,6 +177,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroLevelSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationLibraryBlob.cs" />
     <Compile Include="Assets\Scripts\Shared\CooldownComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitStatsUtility.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitPrevLeaderPosComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitLocalTargetComponent.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\SimpleIconCreator\Editor\IconCreatorWindow.cs" />
@@ -187,6 +188,7 @@
     <Compile Include="Assets\Scripts\Shared\MatchState.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataReferenceAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOrientationInitializationSystem.cs" />
+    <Compile Include="Assets\Scripts\Squads\HeroPositionUtility.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPoolSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatSystem.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />

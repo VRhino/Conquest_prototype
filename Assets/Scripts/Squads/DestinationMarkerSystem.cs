@@ -60,10 +60,8 @@ public partial class DestinationMarkerSystem : SystemBase
             if (!squadDataLookup.TryGetComponent(squadEntity, out var squadData))
                 continue;
                 
-            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform))
+            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPosition))
                 continue;
-                
-            float3 heroPosition = heroTransform.Position;
             
             // Get current formation gridPositions from squad data
             ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;

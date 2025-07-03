@@ -49,10 +49,8 @@ public partial class GridFormationUpdateSystem : SystemBase
             }
             
             // Obtener la posición del héroe como centro de referencia
-            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner)) continue;
-            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform)) continue;
-            
-            float3 heroPos = heroTransform.Position;
+            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPos))
+                continue;
             
             // Actualizar target positions basadas en grid slots
             for (int i = 0; i < units.Length; i++)

@@ -4,9 +4,9 @@ using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
-/// Automatically adjusts squad formations when traversing narrow spaces
-/// or when obstacles are detected. The player's chosen formation is stored
-/// in <see cref="FormationComponent"/> and restored when space allows.
+/// Detects environmental obstacles and terrain conditions for individual unit navigation.
+/// Units can use this information to adapt their pathfinding and movement behavior.
+/// Does NOT modify squad formations - that's the player's choice.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadControlSystem))]
@@ -17,11 +17,9 @@ public partial class FormationAdaptationSystem : SystemBase
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var transformLookup = GetComponentLookup<LocalTransform>(true);
         
-        foreach (var (env, input, state, formation, units, squadEntity) in SystemAPI
+        foreach (var (env, state, units, squadEntity) in SystemAPI
                      .Query<RefRW<EnvironmentAwarenessComponent>,
-                            RefRW<SquadInputComponent>,
                             RefRO<SquadStateComponent>,
-                            RefRO<FormationComponent>,
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
@@ -29,23 +27,22 @@ public partial class FormationAdaptationSystem : SystemBase
                 continue;
 
             // Usar la posición del héroe para detectar obstáculos
-            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner))
+            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPos))
                 continue;
-            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform))
-                continue;
-
-            float3 heroPos = heroTransform.Position;
             var envData = env.ValueRW;
+            
+            // Detectar obstáculos para que las unidades puedan usar esta información
             envData.obstacleDetected = Physics.CheckSphere(heroPos, envData.detectionRadius);
+            
+            // Detectar el tipo de terreno en la zona del escuadrón
+            // Este información será utilizada por las unidades individuales para su navegación
+            bool narrowSpace = envData.terrainType != TerrainType.Abierto || envData.obstacleDetected;
+            envData.requiresAdaptation = narrowSpace;
+            
             env.ValueRW = envData;
-
-            bool narrow = envData.terrainType != TerrainType.Abierto || envData.obstacleDetected;
-            FormationType desired = narrow ? FormationType.Line : formation.ValueRO.currentFormation;
-
-            if (input.ValueRO.desiredFormation != desired)
-            {
-                input.ValueRW.desiredFormation = desired;
-            }
+            
+            // Las unidades individuales pueden leer EnvironmentAwarenessComponent 
+            // para ajustar su comportamiento de movimiento y navegación
         }
     }
 }

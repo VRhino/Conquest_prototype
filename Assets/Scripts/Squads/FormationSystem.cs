@@ -41,12 +41,7 @@ public partial class FormationSystem : SystemBase
             }
 
             // Obtener la posición del héroe como base de formación
-            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner))
-            {
-                state.ValueRW = s;
-                continue;
-            }
-            if (!transformLookup.TryGetComponent(squadOwner.hero, out var heroTransform))
+            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPosition))
             {
                 state.ValueRW = s;
                 continue;
@@ -86,7 +81,7 @@ public partial class FormationSystem : SystemBase
                 FormationPositionCalculator.CalculateDesiredPosition(
                     unit, 
                     ref gridPositions,
-                    heroTransform.Position, // El FormationSystem siempre usa la posición del héroe como centro
+                    heroPosition, // El FormationSystem siempre usa la posición del héroe como centro
                     i,
                     out int2 originalGridPos,
                     out float3 gridOffset,

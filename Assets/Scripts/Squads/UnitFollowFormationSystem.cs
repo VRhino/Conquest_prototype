@@ -29,6 +29,10 @@ public partial class UnitFollowFormationSystem : SystemBase
         var squadDataLookup = GetComponentLookup<SquadDataComponent>(true);
         var unitStatsLookup = GetComponentLookup<UnitStatsComponent>(true);
         
+        // TODO: Las unidades pueden usar EnvironmentAwarenessComponent del escuadrón 
+        // para adaptar su navegación individual (evitar obstáculos, ajustar velocidad, etc.)
+        // var environmentLookup = GetComponentLookup<EnvironmentAwarenessComponent>(true);
+
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         bool heroIsMoving = false;
         float3 prevHeroPos = float3.zero;

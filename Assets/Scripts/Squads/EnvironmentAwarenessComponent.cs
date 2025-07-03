@@ -14,6 +14,9 @@ public struct EnvironmentAwarenessComponent : IComponentData
 
     /// <summary>True if obstacles were detected near the squad.</summary>
     public bool obstacleDetected;
+    
+    /// <summary>True if environmental conditions require individual unit navigation adaptation.</summary>
+    public bool requiresAdaptation;
 }
 
 /// <summary>
