@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
+using UnityEngine;
 
 /// <summary>
 /// Places the local hero at the selected spawn point at the start of the match
@@ -50,10 +51,18 @@ public partial class HeroSpawnSystem : SystemBase
             }
             if (found)
             {
+                // Instanciación híbrida: crear solo la entidad ECS (sin visual)
                 var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
                 var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
-                entityManager.SetComponentData(heroEntity, new LocalTransform { Position = selected.position, Rotation = Unity.Mathematics.quaternion.identity, Scale = 1f });
-                // Puedes setear aquí otros componentes iniciales si lo necesitas
+                entityManager.SetComponentData(heroEntity, new LocalTransform { 
+                    Position = selected.position, 
+                    Rotation = Unity.Mathematics.quaternion.identity, 
+                    Scale = 1f 
+                });
+                
+                // El HeroVisualManagementSystem se encargará de crear el GameObject visual
+                Debug.Log($"[HeroSpawnSystem] Entidad del héroe instanciada en {selected.position}. " +
+                          $"El visual será creado por HeroVisualManagementSystem.");
             }
             spawnPointsForInstantiate.Dispose();
         }

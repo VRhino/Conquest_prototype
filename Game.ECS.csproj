@@ -97,6 +97,7 @@
     <Compile Include="Assets\Scripts\UI\Zone\SquadButtonUI.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadNavigationSystem.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\ModularArmor.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroVisualComponents.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\Universal\CustomPreviewEditor.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\ColorPropertyLinker.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroCombatComponent.cs" />
@@ -120,6 +121,8 @@
     <Compile Include="Assets\Scripts\Shared\HeroAbilityComponent.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Components\ModularCharacterManager.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchControllerSystem.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroVisualManagementSystem.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroEntityAuthoring.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconComponent.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkDataAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationVisualizer.cs" />
@@ -192,6 +195,7 @@
     <Compile Include="Assets\Scripts\Squads\FormationSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTriggerComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\EntityVisualSync.cs" />
     <Compile Include="Assets\Scripts\Squads\DestinationMarkerSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\CapturePointUIController.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularBodyPart.cs" />
@@ -207,6 +211,7 @@
     <Compile Include="Assets\Scripts\UI\SpawnIcon.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationComponent.cs" />
+    <Compile Include="Assets\Scripts\Hero\VisualPrefabAuthoring.cs" />
     <Compile Include="Assets\Scripts\AsyncSceneLoader.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneManagerSingleton.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkDataComponent.cs" />
@@ -234,6 +239,7 @@
     <Compile Include="Assets\Scripts\Perks\PerkData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFormationDataAuthoring.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
+    <Compile Include="Assets\Scripts\Hero\VisualPrefabRegistry.cs" />
     <Compile Include="Assets\Scripts\Squads\GridFormationUpdateSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\StaminaComponent.cs" />
