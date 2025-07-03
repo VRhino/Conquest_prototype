@@ -166,7 +166,7 @@ public partial class DestinationMarkerSystem : SystemBase
                             marker.ValueRW.markerEntity = newMarker;
                             
                             // Debug temporal
-                            UnityEngine.Debug.Log($"Recreated marker for unit at position: {desiredPosition}");
+                            // Marker recreated for unit
                         }
                     }
                     else
@@ -183,7 +183,7 @@ public partial class DestinationMarkerSystem : SystemBase
                         ecb.RemoveComponent<UnitDestinationMarkerComponent>(0, unit);
                         
                         // Debug temporal
-                        UnityEngine.Debug.Log($"Removed marker component from unit (shouldShowMarker = false)");
+                        // Marker component removed from unit
                     }
                 }
                 else if (shouldShowMarker)
@@ -206,7 +206,7 @@ public partial class DestinationMarkerSystem : SystemBase
                     });
                     
                     // Debug temporal
-                    UnityEngine.Debug.Log($"Created new marker for unit at position: {desiredPosition}");
+                    // New marker created for unit
                 }
             }
             

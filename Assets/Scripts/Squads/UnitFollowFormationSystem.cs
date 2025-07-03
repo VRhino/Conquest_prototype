@@ -205,7 +205,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                     }
                     else
                     {
-                        Debug.LogWarning($"Unit {unit} has no grid position assigned in formation. Using default offset.");
+                        // Unit has no grid position assigned, using default offset
                         // Fallback to grid slot offset if no formation data available
                         desired = heroPosition + gridSlot.worldOffset;
                     }

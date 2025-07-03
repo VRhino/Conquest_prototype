@@ -22,7 +22,7 @@ public partial class SquadFSMSystem : SystemBase
             if (s.currentState != s.transitionTo)
             {
 #if UNITY_EDITOR
-                UnityEngine.Debug.Log($"Squad {entity} -> {s.transitionTo}");
+                // Squad state transition
 #endif
                 s.currentState = s.transitionTo;
                 s.stateTimer = 0f;

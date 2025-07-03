@@ -89,7 +89,7 @@ public class SquadDataAuthoring : MonoBehaviour
             
             if (gridFormations == null || gridFormations.Length == 0)
             {
-                Debug.LogWarning("No grid formations assigned to squad data. Creating empty formation library.");
+                // No grid formations assigned to squad data
                 builder.Allocate(ref root.formations, 0);
             }
             else
@@ -101,7 +101,7 @@ public class SquadDataAuthoring : MonoBehaviour
                     var gridForm = gridFormations[i];
                     if (gridForm == null)
                     {
-                        Debug.LogWarning($"Grid formation at index {i} is null in squad data. Skipping.");
+                        // Grid formation is null, skipping
                         continue;
                     }
 

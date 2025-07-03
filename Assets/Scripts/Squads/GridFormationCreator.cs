@@ -137,7 +137,7 @@ public static class GridFormationCreator
         Selection.activeObject = formation;
         EditorUtility.FocusProjectWindow();
         
-        Debug.Log($"Created grid formation asset: {path}");
+        // Grid formation asset created
     }
 }
 

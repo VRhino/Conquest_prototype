@@ -7,7 +7,7 @@
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\squads\\formationpositioncalculator.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\squads\\unitfollowformationsystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\squads\\unitfollowformationsystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\squads\\unitfollowformationsystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -72,7 +72,7 @@
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\FormationPositionCalculator.cs",
               "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\FormationPositionCalculator.cs",
               "RelativeToolTip": "Assets\\Scripts\\Squads\\FormationPositionCalculator.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABwAAAA8AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAABjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-07-02T16:45:12.972Z",
               "EditorCaption": ""
@@ -87,8 +87,7 @@
               "RelativeToolTip": "Assets\\Scripts\\Squads\\UnitFollowFormationSystem.cs",
               "ViewState": "AgIAADUAAAAAAAAAAAAqwEkAAAArAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-02T16:26:27.601Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-02T16:26:27.601Z"
             },
             {
               "$type": "Document",

@@ -165,7 +165,6 @@
     <Compile Include="Assets\Scripts\Hero\HeroInputSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneReferenceBuffer.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayerAuthoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationCenterTest.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInputComponent.cs" />
@@ -290,7 +289,6 @@
     <Compile Include="Assets\Scripts\UI\UIManager.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAttackSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\DefenseComponent.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationSystemIntegrationTest.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStateComponent.cs" />
     <Compile Include="Assets\Scripts\Combat\HealthComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStateComponent.cs" />

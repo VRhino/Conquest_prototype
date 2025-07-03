@@ -151,7 +151,7 @@ public partial class SquadControlSystem : SystemBase
                                 
                                 input.ValueRW.desiredFormation = nextFormation;
                                 
-                                Debug.Log($"Doble clic X: Cambiando formación de {currentFormation} (índice {currentIndex}) a {nextFormation} (índice {nextIndex})");
+                                // Cambio cíclico de formación con doble clic X
                             }
                             else
                             {
@@ -165,20 +165,20 @@ public partial class SquadControlSystem : SystemBase
                                 }
                                 else
                                 {
-                                    Debug.LogWarning($"Índice de formación no válido: {formationIndex}. Debe estar entre 0 y {formations.Length - 1}.");
+                                    // Índice de formación no válido
                                     continue; // No procesar este cambio
                                 }
                             }
                         }
                         else
                         {
-                            Debug.LogWarning("La biblioteca de formaciones no está creada.");
+                            // La biblioteca de formaciones no está creada
                             continue;
                         }
                     }
                     else
                     {
-                        Debug.LogWarning("El componente SquadData no está presente en la entidad del squad.");
+                        // El componente SquadData no está presente
                         continue;
                     }
                 }
