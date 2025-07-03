@@ -152,14 +152,8 @@ public partial class FormationSystem : SystemBase
             spacingComp.ValueRW.Slot = new int2((int)originalGridPos.x, (int)originalGridPos.z);
         }
         
-        // Mark unit as Moving so it repositions immediately
-        if (SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
-        {
-            var formationState = SystemAPI.GetComponentRW<UnitFormationStateComponent>(unit);
-            formationState.ValueRW.State = UnitFormationState.Moving;
-            formationState.ValueRW.DelayTimer = 0f;
-            formationState.ValueRW.DelayDuration = 0f;
-        }
+        // State management is handled by UnitFormationStateSystem
+        // This system only handles position calculation
     }
 
 }

@@ -125,7 +125,7 @@ public class VisualPrefabRegistry : MonoBehaviour
             }
         }
         
-        Debug.Log($"[VisualPrefabRegistry] Registrados {uniquePrefabCount} prefabs únicos con {_prefabDictionary.Count} entradas de diccionario");
+        // Registry initialized successfully
     }
     
     /// <summary>
@@ -157,7 +157,7 @@ public class VisualPrefabRegistry : MonoBehaviour
         }
         
         _prefabDictionary[key] = prefab;
-        Debug.Log($"[VisualPrefabRegistry] Registrado prefab '{key}'");
+        // Prefab registered
     }
     
     /// <summary>

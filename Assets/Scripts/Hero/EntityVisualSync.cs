@@ -117,7 +117,7 @@ public class EntityVisualSync : MonoBehaviour
             scaleInitialized = true;
         }
         
-        Debug.Log($"[EntityVisualSync] Configurado para sincronizar entidad {targetEntity.Index} con escala original {originalPrefabScale}");
+        // Visual sync configured
     }
     
     /// <summary>
@@ -125,7 +125,7 @@ public class EntityVisualSync : MonoBehaviour
     /// </summary>
     private void DestroyVisual()
     {
-        Debug.Log($"[EntityVisualSync] Entidad {entity.Index} destruida, destruyendo visual");
+        // Entity destroyed, destroying visual
         
         if (Application.isPlaying)
         {

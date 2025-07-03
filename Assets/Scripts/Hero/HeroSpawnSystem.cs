@@ -65,8 +65,7 @@ public partial class HeroSpawnSystem : SystemBase
                 });
                 
                 // El HeroVisualManagementSystem se encargará de crear el GameObject visual
-                Debug.Log($"[HeroSpawnSystem] Entidad del héroe instanciada en {spawnPosition} (altura ajustada al terreno). " +
-                          $"El visual será creado por HeroVisualManagementSystem.");
+                // Hero entity spawned successfully
             }
             spawnPointsForInstantiate.Dispose();
         }
@@ -127,7 +126,7 @@ public partial class HeroSpawnSystem : SystemBase
                     transform.ValueRW.Position = correctedPosition;
                     spawnData.ValueRW.hasSpawned = true;
                     
-                    Debug.Log($"[HeroSpawnSystem] Posición del héroe actualizada a {correctedPosition} (altura ajustada al terreno)");
+                    // Hero position updated to terrain height
                 }
             }
         }

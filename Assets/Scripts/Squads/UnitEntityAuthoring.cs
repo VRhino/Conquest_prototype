@@ -63,6 +63,6 @@ public class UnitEntityBaker : Baker<UnitEntityAuthoring>
             visualPrefabName = authoring.visualPrefabName
         });
         
-        Debug.Log($"[UnitEntityBaker] Baked ECS-only unit entity with visual reference: {authoring.visualPrefabName}");
+        // ECS-only unit entity baked
     }
 }

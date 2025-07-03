@@ -95,8 +95,7 @@ public partial class SquadVisualManagementSystem : SystemBase
             parentSquad = parentSquad
         });
         
-        Debug.Log($"[SquadVisualManagementSystem] Visual de unidad creado para entidad {unitEntity.Index} " +
-                  $"tipo {squadType} en posición {transform.Position}");
+        // Visual de unidad creado
     }
     
     /// <summary>

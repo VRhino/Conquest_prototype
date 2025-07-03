@@ -42,7 +42,7 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddComponent(squad, LocalTransform.FromPosition(heroTransform.ValueRO.Position));
             
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
-            Debug.Log($"[SquadSpawningSystem] Squad {squad.Index} creado con hero {entity.Index}");
+            // Squad created successfully
             
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
             ecb.AddComponent(squad, new SquadStatsComponent
@@ -151,9 +151,7 @@ public partial class SquadSpawningSystem : SystemBase
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
             
-            // El SquadVisualManagementSystem se encargará de crear los GameObjects visuales
-            Debug.Log($"[SquadSpawningSystem] Squad ECS creado para héroe {entity.Index} con {unitCount} unidades. " +
-                      $"Los visuales serán creados por SquadVisualManagementSystem.");
+            // Squad ECS created successfully
             
             // Crear referencia del squad al héroe
             ecb.AddComponent(entity, new HeroSquadReference { squad = squad });
@@ -174,9 +172,7 @@ public partial class SquadSpawningSystem : SystemBase
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
             ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });;
             
-            // El SquadVisualManagementSystem se encargará de crear los GameObjects visuales
-            Debug.Log($"[SquadSpawningSystem] Squad ECS creado para héroe {entity.Index} con {unitCount} unidades. " +
-                      $"Los visuales serán creados por SquadVisualManagementSystem.");
+            // Squad ECS created successfully
         }
 
         ecb.Playback(EntityManager);

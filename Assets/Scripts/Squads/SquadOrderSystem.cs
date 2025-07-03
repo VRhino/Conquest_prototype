@@ -32,7 +32,7 @@ public partial class SquadOrderSystem : SystemBase
             if (!input.ValueRO.hasNewOrder)
                 continue;
 
-            Debug.Log($"[SquadOrderSystem] Processing order {input.ValueRO.orderType} for squad {entity.Index}");
+            // Process the order without debug logging
 
             // Copy the requested order to the state component
             state.ValueRW.currentOrder = input.ValueRO.orderType;
@@ -41,7 +41,6 @@ public partial class SquadOrderSystem : SystemBase
             // Handle Hold Position order specifically
             if (input.ValueRO.orderType == SquadOrderType.HoldPosition)
             {
-                Debug.Log($"[SquadOrderSystem] Setting HoldPosition at {input.ValueRO.holdPosition} for squad {entity.Index}");
                 // Create or update SquadHoldPositionComponent with mouse position
                 if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                 {
@@ -81,7 +80,6 @@ public partial class SquadOrderSystem : SystemBase
             // Request a state transition if using the FSM system
             var newState = OrderToState(input.ValueRO.orderType);
             state.ValueRW.transitionTo = newState;
-            Debug.Log($"[SquadOrderSystem] Requesting state transition to {newState} for squad {entity.Index}");
 
             input.ValueRW.hasNewOrder = false;
         }

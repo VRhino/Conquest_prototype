@@ -106,7 +106,7 @@ public partial class SquadControlSystem : SystemBase
         if (!orderIssued && !formationChanged)
             return;
 
-        Debug.Log($"[SquadControlSystem] Processing input - Order: {orderIssued}, Formation: {formationChanged}");
+        // Process input without debug logging
 
         // Collect all changes first, then apply them outside the iteration
         var squadChanges = new List<(Entity squadEntity, SquadInputComponent input)>();
@@ -200,11 +200,11 @@ public partial class SquadControlSystem : SystemBase
                 // Collect the change for later application
                 squadChanges.Add((squadEntity, input));
                 
-                Debug.Log($"[SquadControlSystem] Collected order {newOrder} for squad {squadEntity.Index}");
+                // Collect order for squad
             }
             else
             {
-                Debug.Log($"[SquadControlSystem] Squad entity {squadEntity.Index} does not have SquadInputComponent");
+                // Squad entity doesn't have SquadInputComponent
             }
         }
         
@@ -220,7 +220,7 @@ public partial class SquadControlSystem : SystemBase
             ecb.Playback(EntityManager);
             ecb.Dispose();
             
-            Debug.Log($"[SquadControlSystem] Applied {squadChanges.Count} changes via EntityCommandBuffer");
+        // Apply changes via EntityCommandBuffer
         }
         else
         {

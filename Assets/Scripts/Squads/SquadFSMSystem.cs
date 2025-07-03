@@ -23,7 +23,7 @@ public partial class SquadFSMSystem : SystemBase
             // Apply pending transition
             if (s.currentState != s.transitionTo)
             {
-                Debug.Log($"[SquadFSMSystem] Squad {entity.Index} transitioning from {s.currentState} to {s.transitionTo}");
+                // Transition to the new state
                 s.currentState = s.transitionTo;
                 s.stateTimer = 0f;
             }

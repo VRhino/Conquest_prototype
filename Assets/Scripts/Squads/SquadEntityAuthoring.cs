@@ -46,6 +46,6 @@ public class SquadEntityBaker : Baker<SquadEntityAuthoring>
             });
         }
         
-        Debug.Log($"[SquadEntityBaker] Baked ECS-only squad entity (squads no tienen visuales propios)");
+        // ECS-only squad entity baked
     }
 }

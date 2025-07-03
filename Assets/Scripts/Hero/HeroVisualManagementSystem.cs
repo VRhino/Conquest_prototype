@@ -83,8 +83,7 @@ public partial class HeroVisualManagementSystem : SystemBase
             visualInstanceId = visualInstance.GetInstanceID()
         });
         
-        Debug.Log($"[HeroVisualManagementSystem] Visual creado para entidad {entity.Index} " +
-                  $"en posición {transform.Position}");
+        // Visual created successfully
     }
     
     /// <summary>
