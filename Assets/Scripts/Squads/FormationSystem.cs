@@ -81,8 +81,10 @@ public partial class FormationSystem : SystemBase
                 FormationPositionCalculator.CalculateDesiredPosition(
                     unit, 
                     ref gridPositions,
-                    heroPosition, // El FormationSystem siempre usa la posición del héroe como centro
-                    i,
+                    i, // unitIndex
+                    state.ValueRW, // SquadStateComponent
+                    null, // SquadHoldPositionComponent?
+                    heroPosition, // heroPos
                     out int2 originalGridPos,
                     out float3 gridOffset,
                     out float3 worldPos,
@@ -134,10 +136,12 @@ public partial class FormationSystem : SystemBase
         {
             var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
             targetPos.ValueRW.position = worldPos;
+            Debug.Log($"[FormationSystem] Set UnitTargetPositionComponent for Entity {unit} to {worldPos}");
         }
         else
         {
             ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
+            Debug.Log($"[FormationSystem] Added UnitTargetPositionComponent for Entity {unit} with {worldPos}");
         }
         
         // Actualizar el campo Slot de UnitSpacingComponent si existe

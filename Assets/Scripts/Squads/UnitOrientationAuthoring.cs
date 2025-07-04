@@ -8,7 +8,7 @@ public class UnitOrientationAuthoring : MonoBehaviour
 {
     [Header("Orientación")]
     [Tooltip("Tipo de orientación que debe usar esta unidad")]
-    public UnitOrientationType orientationType = UnitOrientationType.FaceHero;
+    public UnitOrientationType orientationType = UnitOrientationType.MatchHeroDirection;
     
     [Tooltip("Velocidad de rotación (mayor = rotación más rápida)")]
     [Range(0.1f, 20f)]

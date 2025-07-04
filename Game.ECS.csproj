@@ -226,7 +226,6 @@
     <Compile Include="Assets\Scripts\Squads\UnitFollowDelayComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadNavigationComponent.cs" />
     <Compile Include="Assets\Scripts\UI\MapUIController.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitAnimationMovementAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayer.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadVisualManagementSystem.cs" />
@@ -296,6 +295,7 @@
     <Compile Include="Assets\Scripts\Map\ZoneLinkComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\NavMeshAgentAuthoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Demo\EquipmentManager.cs" />
+    <Compile Include="Assets\Scripts\Animation\UnitAnimationDebugger.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSquadReference.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconAuthoring.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolBootstrapper.cs" />

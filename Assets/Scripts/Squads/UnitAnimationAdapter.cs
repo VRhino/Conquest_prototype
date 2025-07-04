@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Transforms;
 using UnityEngine;
 
 namespace ConquestTactics.Animation
@@ -38,6 +39,12 @@ namespace ConquestTactics.Animation
         
         [Tooltip("Umbral de velocidad por debajo del cual se considera que la unidad está detenida")]
         [SerializeField] private float _stoppedThreshold = 0.05f;
+        
+        [Tooltip("Modo de depuración que fuerza el estado de movimiento para probar animaciones")]
+        [SerializeField] private bool _forceMovementDebugMode = false;
+        
+        [Tooltip("Velocidad forzada para modo de depuración (0-1)")]
+        [SerializeField] [Range(0, 1)] private float _forcedDebugSpeed = 0.5f;
         
         [Header("Debug")]
         [Tooltip("Mostrar información de debug en consola")]
@@ -144,11 +151,18 @@ namespace ConquestTactics.Animation
         
         private bool IsValidSetup()
         {
-            return _world != null && 
-                   _entityManager != null && 
-                   _unitEntity != Entity.Null && 
-                   _entityManager.Exists(_unitEntity) && 
-                   _entityManager.HasComponent<UnitAnimationMovementComponent>(_unitEntity);
+            bool worldOk = _world != null;
+            bool entityManagerOk = _entityManager != null;
+            bool entityOk = _unitEntity != Entity.Null;
+            bool existsOk = entityOk && _entityManager.Exists(_unitEntity);
+            bool hasComponentOk = existsOk && _entityManager.HasComponent<UnitAnimationMovementComponent>(_unitEntity);
+
+            if (_enableDebugLogs)
+            {
+                Debug.Log($"[UnitAnimationAdapter][IsValidSetup] worldOk: {worldOk}, entityManagerOk: {entityManagerOk}, entityOk: {entityOk}, existsOk: {existsOk}, hasComponentOk: {hasComponentOk}");
+            }
+
+            return worldOk && entityManagerOk && entityOk && existsOk && hasComponentOk;
         }
         
         #endregion
@@ -162,6 +176,24 @@ namespace ConquestTactics.Animation
         {
             try
             {
+                // En modo debug, usar valores forzados para pruebas
+                if (_forceMovementDebugMode)
+                {
+                    NormalizedSpeed = _forcedDebugSpeed;
+                    MovementVector = new Vector2(0, 1); // Dirección adelante
+                    IsStopped = NormalizedSpeed < _stoppedThreshold;
+                    IsRunning = NormalizedSpeed >= _runningThreshold;
+                    
+                    // Log especial para modo debug
+                    if (_enableDebugLogs && Time.frameCount % 60 == 0)
+                    {
+                        Debug.LogWarning($"[UnitAnimationAdapter] {gameObject.name} - MODO DEBUG FORZADO: Speed: {NormalizedSpeed:F2}, Stopped: {IsStopped}, Running: {IsRunning}");
+                    }
+                    
+                    return; // No procesamos datos de ECS en este modo
+                }
+                
+                // Modo normal usando datos de ECS
                 if (!_entityManager.HasComponent<UnitAnimationMovementComponent>(_unitEntity))
                 {
                     if (_enableDebugLogs)
@@ -180,13 +212,52 @@ namespace ConquestTactics.Animation
                 
                 MovementVector = new Vector2(animData.MovementDirection.x, animData.MovementDirection.z);
                 
-                // Determinar estados
-                IsStopped = NormalizedSpeed < _stoppedThreshold;
+                // Si el vector de movimiento es muy pequeño pero la velocidad no lo es,
+                // asegurarnos de tener una dirección válida
+                if (MovementVector.sqrMagnitude < 0.01f && NormalizedSpeed > _stoppedThreshold)
+                {
+                    MovementVector = new Vector2(0, 1); // Dirección adelante por defecto
+                }
+                
+                // Comprobar si realmente hay movimiento físico (basado en Vector3.Distance)
+                // Esto podría detectar cambios de posición incluso si el sistema ECS no reporta velocidad
+                bool physicalMovement = false;
+                if (_entityManager.HasComponent<LocalTransform>(_unitEntity))
+                {
+                    var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_unitEntity);
+                    float distance = Vector3.Distance(transform.position, new Vector3(ecsTransform.Position.x, ecsTransform.Position.y, ecsTransform.Position.z));
+                    physicalMovement = distance > _stoppedThreshold * Time.deltaTime;
+                }
+                
+                // Determinar estados, priorizando el movimiento físico observado
+                IsStopped = !physicalMovement && NormalizedSpeed < _stoppedThreshold;
                 IsRunning = NormalizedSpeed >= _runningThreshold;
+                
+                // Si la unidad no se ha movido desde el spawn, forzar valores a cero y detenido
+                if (animData.CurrentSpeed < _stoppedThreshold && MovementVector.sqrMagnitude < 0.0001f)
+                {
+                    NormalizedSpeed = 0f;
+                    MovementVector = Vector2.zero;
+                    IsStopped = true;
+                    IsRunning = false;
+                    if (_enableDebugLogs)
+                    {
+                        Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} - Sin movimiento desde spawn: Speed=0, Vec=Vector2.zero, IsStopped=true");
+                    }
+                }
+                
+                // Modo de depuración para forzar movimiento
+                if (_forceMovementDebugMode)
+                {
+                    NormalizedSpeed = _forcedDebugSpeed;
+                    MovementVector = new Vector2(1, 0); // Forzar dirección
+                    IsStopped = NormalizedSpeed < _stoppedThreshold;
+                    IsRunning = NormalizedSpeed >= _runningThreshold;
+                }
                 
                 if (_enableDebugLogs && Time.frameCount % 120 == 0) // Log cada ~2 segundos
                 {
-                    Debug.Log($"[UnitAnimationAdapter] {gameObject.name} - Speed: {NormalizedSpeed:F2}, Stopped: {IsStopped}, Running: {IsRunning}");
+                    Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} - Speed: {NormalizedSpeed:F2}, Stopped: {IsStopped}, Running: {IsRunning}");
                 }
             }
             catch (System.Exception e)
@@ -221,22 +292,51 @@ namespace ConquestTactics.Animation
         #endregion
         
         #region Debug
-        
+
         /// <summary>
-        /// Muestra el estado actual del adaptador (para debugging)
+        /// Muestra el estado actual del adaptador y la comunicación con EntityVisualSync y ECS (para debugging)
         /// </summary>
-        [ContextMenu("Debug Animation State")]
-        public void DebugAnimationState()
+        [ContextMenu("Debug Adapter State (ECS ↔ Visual)")]
+        public void DebugAdapterState()
         {
-            Debug.Log($"=== Unit Animation Adapter State [{gameObject.name}] ===");
-            Debug.Log($"Entity: {_unitEntity}");
-            Debug.Log($"Normalized Speed: {NormalizedSpeed}");
-            Debug.Log($"Movement Vector: {MovementVector}");
-            Debug.Log($"Is Stopped: {IsStopped}");
-            Debug.Log($"Is Running: {IsRunning}");
-            Debug.Log($"Valid Setup: {IsValidSetup()}");
+            var visualSync = GetComponent<ConquestTactics.Visual.EntityVisualSync>();
+            Debug.Log($"=== [UnitAnimationAdapter] Debug State for {gameObject.name} ===");
+            Debug.Log($"EntityVisualSync: {(visualSync != null ? "ENCONTRADO" : "NO ENCONTRADO")}");
+            if (visualSync != null)
+            {
+                Debug.Log($"  - HeroEntity: {visualSync.GetHeroEntity()}");
+            }
+            Debug.Log($"UnitEntity (encontrada): {_unitEntity}");
+            Debug.Log($"World: {_world?.Name ?? "null"}");
+            Debug.Log($"EntityManager: {(_entityManager != null ? "OK" : "null")}");
+            Debug.Log($"IsValidSetup: {IsValidSetup()}");
+            if (_entityManager != null && _unitEntity != Entity.Null && _entityManager.HasComponent<UnitAnimationMovementComponent>(_unitEntity))
+            {
+                var animData = _entityManager.GetComponentData<UnitAnimationMovementComponent>(_unitEntity);
+                Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | [ECS] CurrentSpeed: {animData.CurrentSpeed:F3}, MaxSpeed: {animData.MaxSpeed:F3}, IsMoving: {animData.IsMoving}, IsRunning: {animData.IsRunning}");
+                Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | [ECS] MovementDirection: {animData.MovementDirection}");
+            }
+            else
+            {
+                Debug.LogWarning($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | No se pudo leer UnitAnimationMovementComponent de la entidad asociada");
+            }
+            Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | [ADAPTER] NormalizedSpeed: {NormalizedSpeed:F2}, IsStopped: {IsStopped}, IsRunning: {IsRunning}, MovementVector: {MovementVector}");
         }
-        
+
+        private void LateUpdate()
+        {
+            if (_enableDebugLogs && Time.frameCount % 60 == 0)
+            {
+                var visualSync = GetComponent<ConquestTactics.Visual.EntityVisualSync>();
+                Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | Valid: {IsValidSetup()} | VisualSync: {(visualSync != null ? "OK" : "NO")}");
+                Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | NormalizedSpeed: {NormalizedSpeed:F2} | IsStopped: {IsStopped} | IsRunning: {IsRunning}");
+                if (_entityManager != null && _unitEntity != Entity.Null && _entityManager.HasComponent<UnitAnimationMovementComponent>(_unitEntity))
+                {
+                    var animData = _entityManager.GetComponentData<UnitAnimationMovementComponent>(_unitEntity);
+                    Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} | [ECS] Speed: {animData.CurrentSpeed:F2} | Max: {animData.MaxSpeed:F2} | IsMoving: {animData.IsMoving} | IsRunning: {animData.IsRunning}");
+                }
+            }
+        }
         #endregion
     }
 }

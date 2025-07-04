@@ -53,7 +53,7 @@ public class UnitEntityBaker : Baker<UnitEntityAuthoring>
         // Orientación básica (puede ser modificada por el squad data)
         AddComponent(entity, new UnitOrientationComponent
         {
-            orientationType = UnitOrientationType.FaceHero,
+            orientationType = UnitOrientationType.MatchHeroDirection,
             rotationSpeed = 5f
         });
         

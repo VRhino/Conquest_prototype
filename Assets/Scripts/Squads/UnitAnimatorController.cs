@@ -123,9 +123,6 @@ namespace ConquestTactics.Visual
             _animator.SetBool(_isWalkingHash, false);
             _animator.SetTrigger(_forceIdleHash);
             
-            // Luego iniciar la secuencia completa de inicialización
-            StartCoroutine(ForceAnimatorInitialization());
-            
             // Log del nombre exacto del AnimatorController para verificación
             if (_enableDebugLogs)
             {
@@ -134,70 +131,28 @@ namespace ConquestTactics.Visual
                 Debug.Log($"[UnitAnimatorController] Tiene parámetro MoveSpeed: {AnimatorHasParameter(_moveSpeedHash)}");
                 Debug.Log($"[UnitAnimatorController] Tiene parámetro IsStopped: {AnimatorHasParameter(_isStoppedHash)}");
                 Debug.Log($"[UnitAnimatorController] Tiene parámetro CurrentGait: {AnimatorHasParameter(_currentGaitHash)}");
-            }
-        }
-        
-        private System.Collections.IEnumerator ForceAnimatorInitialization()
-        {
-            yield return new WaitForEndOfFrame();
-            
-            // Hacer un reset completo del Animator para asegurar un estado limpio
-            _animator.Rebind();
-            _animator.Update(0);
-            
-            // Configurar parámetros base
-            _animator.SetBool(_isGroundedHash, true);
-            _animator.SetFloat(_moveSpeedHash, 0f);
-            _animator.SetInteger(_currentGaitHash, 0);
-            _animator.SetBool(_isStoppedHash, true);
-            _animator.SetBool(_isWalkingHash, false);
-            _animator.SetBool(_movementInputPressedHash, false);
-            
-            // Forzar transición al estado grounded
-            _animator.SetTrigger(_forceGroundedTransitionHash);
-            _animator.SetTrigger(_forceIdleHash);
-            
-            yield return new WaitForSeconds(0.2f);
-            
-            // Simular una secuencia completa de movimiento para "despertar" al animator
-            Debug.Log($"[UnitAnimatorController] Iniciando secuencia de despertar para {gameObject.name}");
-            
-            // Activar movimiento
-            _animator.SetBool(_movementInputPressedHash, true);
-            _animator.SetFloat(_moveSpeedHash, 0.5f);
-            _animator.SetInteger(_currentGaitHash, 1);  // Walk
-            _animator.SetBool(_isStoppedHash, false);
-            _animator.SetBool(_isWalkingHash, true);
-            _animator.SetTrigger(_forceLocomotionHash);
-            
-            yield return new WaitForSeconds(0.3f);
-            
-            // Cambiar a correr
-            _animator.SetFloat(_moveSpeedHash, 0.8f);
-            _animator.SetInteger(_currentGaitHash, 2);  // Run
-            _animator.SetBool(_isWalkingHash, false);
-            
-            yield return new WaitForSeconds(0.3f);
-            
-            // Volver a caminar
-            _animator.SetFloat(_moveSpeedHash, 0.3f);
-            _animator.SetInteger(_currentGaitHash, 1);  // Walk
-            _animator.SetBool(_isWalkingHash, true);
-            
-            yield return new WaitForSeconds(0.3f);
-            
-            // Volver al estado idle
-            _animator.SetBool(_movementInputPressedHash, false);
-            _animator.SetFloat(_moveSpeedHash, 0f);
-            _animator.SetInteger(_currentGaitHash, 0);  // Idle
-            _animator.SetBool(_isStoppedHash, true);
-            _animator.SetBool(_isWalkingHash, false);
-            _animator.SetTrigger(_forceIdleHash);
-            
-            if (_enableDebugLogs)
-            {
-                Debug.Log($"[UnitAnimatorController] Inicialización forzada completada para {gameObject.name}");
-                Debug.Log($"[UnitAnimatorController] Estado actual: {GetCurrentAnimatorStateName()}");
+                // Log de todos los parámetros actuales del Animator
+                string paramStates = $"[UnitAnimatorController] Estado inicial de parámetros para {gameObject.name} (InstanceID: {gameObject.GetInstanceID()}):";
+                foreach (var param in _animator.parameters)
+                {
+                    switch (param.type)
+                    {
+                        case AnimatorControllerParameterType.Bool:
+                            paramStates += $"\n  {param.name} (Bool): {_animator.GetBool(param.name)}";
+                            break;
+                        case AnimatorControllerParameterType.Float:
+                            paramStates += $"\n  {param.name} (Float): {_animator.GetFloat(param.name):F2}";
+                            break;
+                        case AnimatorControllerParameterType.Int:
+                            paramStates += $"\n  {param.name} (Int): {_animator.GetInteger(param.name)}";
+                            break;
+                        case AnimatorControllerParameterType.Trigger:
+                            paramStates += $"\n  {param.name} (Trigger)";
+                            break;
+                    }
+                }
+                Debug.Log(paramStates);
+                Debug.Log($"[UnitAnimatorController] Estado inicial del Animator: {GetCurrentAnimatorStateName()}");
             }
         }
         
@@ -224,54 +179,109 @@ namespace ConquestTactics.Visual
             _currentSpeed = _animationAdapter.NormalizedSpeed;
             _isStopped = _animationAdapter.IsStopped;
             _isRunning = _animationAdapter.IsRunning;
-            
+
+            // Log de valores recibidos del adapter para comparar
+            if (_enableDebugLogs && Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"[UnitAnimatorController][Adapter] {gameObject.name} - Adapter: Speed={_animationAdapter.NormalizedSpeed:F2}, Stopped={_animationAdapter.IsStopped}, Running={_animationAdapter.IsRunning}, Vec={_animationAdapter.MovementVector}");
+            }
+
             // Detectar cambios de estado para forzar transiciones
             bool isMovingThisFrame = !_isStopped;
             bool stateChanged = isMovingThisFrame != _wasMovingLastFrame;
             
+            // IMPORTANTE: Verificar el estado actual del Animator
+            AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
+            bool isInIdleState = currentState.IsName("Base Layer.Idle Standing.Idle_Standing") || 
+                                currentState.IsName("Idle_Standing");
+            bool isInLocoState = currentState.IsName("Base Layer.Locomotion Standing.Locomotion") || 
+                                currentState.IsName("Locomotion");
+            
             // Forzar una transición al estado grounded si está en fall state
             _animator.SetBool(_isGroundedHash, true);
-            _animator.SetTrigger(_forceGroundedTransitionHash);
             
-            // Actualizar velocidad de movimiento (principal para locomoción)
-            // No aplicamos smoothing para que responda inmediatamente
+            if (currentState.IsName("Base Layer.Fall.Falling") || currentState.IsName("Falling"))
+            {
+                _animator.SetTrigger(_forceGroundedTransitionHash);
+            }
+            
+            // MODIFICADO: Forzar valores para las animaciones
+            // Primero actualizamos parámetros principales en el orden correcto
+            
+            // 0. Forzar parámetros adicionales requeridos por el Animator Controller
+            _animator.SetBool("isStarting", false);
+            _animator.SetBool("isJumping", false);
+            _animator.SetBool("MovementInputTapper", false);
+            _animator.SetBool("MovementInputHeld", isMovingThisFrame);
+            
+            // 1. Activar/desactivar movementInput (crítico para transiciones)
+            _animator.SetBool(_movementInputPressedHash, isMovingThisFrame);
+            
+            // 2. Establecer velocidad (crítico para determinar qué animación se muestra)
             _animator.SetFloat(_moveSpeedHash, _currentSpeed);
             
-            // Actualizar estado de detenido - IMPORTANTE para transiciones
-            _animator.SetBool(_isStoppedHash, _isStopped);
-            
-            // Actualizar gait (idle, walk, run) - aplicamos inmediatamente
-            int gait = 0; // Idle
-            if (_currentSpeed > 0.01f)
+            // 3. Forzar el estado IsStopped a false cuando hay movimiento (prioridad máxima)
+            if (isMovingThisFrame)
             {
-                gait = _isRunning ? 2 : 1; // 2 = Run, 1 = Walk
-                
-                // Activar el parámetro MovementInputPressed para forzar transición
-                _animator.SetBool(_movementInputPressedHash, true);
-                
-                // Si acaba de empezar a moverse, forzar transición a locomoción
-                if (stateChanged && isMovingThisFrame)
-                {
-                    _animator.SetTrigger(_forceLocomotionHash);
-                    
-                    if (_enableDebugLogs)
-                    {
-                        Debug.Log($"[UnitAnimatorController] Forzando transición a LOCOMOCIÓN para {gameObject.name}");
-                    }
-                }
+                _animator.SetBool(_isStoppedHash, false);
             }
             else
             {
-                _animator.SetBool(_movementInputPressedHash, false);
-                
-                // Si acaba de detenerse, forzar transición a idle
-                if (stateChanged && !isMovingThisFrame)
+                _animator.SetBool(_isStoppedHash, true);
+            }
+            
+            // 4. Establecer gait explícitamente
+            int gait;
+            if (isMovingThisFrame)
+            {
+                gait = _isRunning ? 2 : 1; // 2 = Run, 1 = Walk
+            }
+            else
+            {
+                gait = 0; // Idle
+            }
+            _animator.SetInteger(_currentGaitHash, gait);
+            
+            // 5. Establecer IsWalking para mayor claridad
+            _animator.SetBool(_isWalkingHash, isMovingThisFrame && !_isRunning);
+            
+            // 6. Forzar transiciones con triggers si el estado no coincide con el esperado
+            // Esto soluciona problemas donde el animator no responde a los parámetros regulares
+            
+            if (isMovingThisFrame && isInIdleState) 
+            {
+                _animator.SetTrigger(_forceLocomotionHash);
+                if (_enableDebugLogs)
                 {
-                    _animator.SetTrigger(_forceIdleHash);
-                    
+                    Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de IDLE para {gameObject.name} - Speed: {_currentSpeed:F2}");
+                }
+            }
+            else if (!isMovingThisFrame && isInLocoState && currentState.normalizedTime > 0.25f)
+            {
+                _animator.SetTrigger(_forceIdleHash);
+                if (_enableDebugLogs)
+                {
+                    Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de LOCOMOTION para {gameObject.name}");
+                }
+            }
+            
+            // Si cambió de estado, aplicar triggers correspondientes
+            if (stateChanged)
+            {
+                if (isMovingThisFrame)
+                {
+                    _animator.SetTrigger(_forceLocomotionHash);
                     if (_enableDebugLogs)
                     {
-                        Debug.Log($"[UnitAnimatorController] Forzando transición a IDLE para {gameObject.name}");
+                        Debug.Log($"[UnitAnimatorController] Cambio: IDLE → LOCOMOCIÓN para {gameObject.name}");
+                    }
+                }
+                else
+                {
+                    _animator.SetTrigger(_forceIdleHash);
+                    if (_enableDebugLogs)
+                    {
+                        Debug.Log($"[UnitAnimatorController] Cambio: LOCOMOCIÓN → IDLE para {gameObject.name}");
                     }
                 }
             }
@@ -373,6 +383,46 @@ namespace ConquestTactics.Visual
             }
             
             return false;
+        }
+        
+        #endregion
+        
+        #region Helper Methods
+        
+        /// <summary>
+        /// Fuerza la animación de movimiento - llamar cuando una unidad se atasca en idle
+        /// </summary>
+        public void ForceMovementAnimation()
+        {
+            _animator.SetBool(_isGroundedHash, true);
+            _animator.SetBool(_isStoppedHash, false);
+            _animator.SetFloat(_moveSpeedHash, 0.5f); // Velocidad media
+            _animator.SetInteger(_currentGaitHash, 1); // Walk
+            _animator.SetBool(_movementInputPressedHash, true);
+            _animator.SetBool(_isWalkingHash, true);
+            _animator.SetTrigger(_forceLocomotionHash);
+            if (_enableDebugLogs)
+            {
+                Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de movimiento para {gameObject.name}");
+            }
+        }
+        
+        /// <summary>
+        /// Fuerza la animación de idle - llamar cuando una unidad se atasca en movimiento
+        /// </summary>
+        public void ForceIdleAnimation()
+        {
+            _animator.SetBool(_isGroundedHash, true);
+            _animator.SetBool(_isStoppedHash, true);
+            _animator.SetFloat(_moveSpeedHash, 0f);
+            _animator.SetInteger(_currentGaitHash, 0); // Idle
+            _animator.SetBool(_movementInputPressedHash, false);
+            _animator.SetBool(_isWalkingHash, false);
+            _animator.SetTrigger(_forceIdleHash);
+            if (_enableDebugLogs)
+            {
+                Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de idle para {gameObject.name}");
+            }
         }
         
         #endregion

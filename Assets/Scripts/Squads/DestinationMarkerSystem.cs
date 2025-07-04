@@ -109,8 +109,10 @@ public partial class DestinationMarkerSystem : SystemBase
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,
                         ref gridPositions,
-                        squadCenter,
-                        i,
+                        i, // unitIndex
+                        squadState,
+                        SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity) ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : (SquadHoldPositionComponent?)null,
+                        heroPosition,
                         out int2 originalGridPos,
                         out float3 gridOffset,
                         out float3 worldPos,

@@ -109,9 +109,20 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 // Crear unidad ECS (solo lógica, sin visuales)
                 Entity unit = ecb.CreateEntity();
-                FormationPositionCalculator.CalculateDesiredPosition(unit, ref firstFormation.gridPositions, heroTransform.ValueRO.Position, i, out int2 originalGridPos, out float3 gridOffset, out float3 worldPos, true);
+                FormationPositionCalculator.CalculateDesiredPosition(
+                    unit,
+                    ref firstFormation.gridPositions,
+                    i, // unitIndex
+                    new SquadStateComponent { currentFormation = firstFormationType },
+                    null,
+                    heroTransform.ValueRO.Position,
+                    out int2 originalGridPos,
+                    out float3 gridOffset,
+                    out float3 worldPos,
+                    true);
 
                 ecb.AddComponent(unit, LocalTransform.FromPosition(worldPos));
+                Debug.Log($"[SquadSpawningSystem.cs][{unit}] Set LocalTransform.Position = {worldPos}");
                 
                 // Agregar referencia visual para la unidad
                 ecb.AddComponent(unit, new UnitVisualReference
@@ -144,10 +155,21 @@ public partial class SquadSpawningSystem : SystemBase
                 });
                 ecb.AddComponent(unit, new UnitOrientationComponent
                 {
-                    orientationType = UnitOrientationType.FaceHero,
+                    orientationType = UnitOrientationType.MatchHeroDirection,
                     rotationSpeed = 5f
                 });
-                
+                // Asignar UnitAnimationMovementComponent por defecto
+                ecb.AddComponent(unit, new ConquestTactics.Animation.UnitAnimationMovementComponent
+                {
+                    CurrentSpeed = 0f,
+                    MaxSpeed = 5f,
+                    MovementDirection = new Unity.Mathematics.float3(0, 0, 1),
+                    IsMoving = false,
+                    IsRunning = false,
+                    MovementTime = 0f,
+                    StoppedTime = 0f,
+                    PreviousPosition = worldPos // Inicializar con la posición de spawn
+                });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
             

@@ -30,5 +30,8 @@ namespace ConquestTactics.Animation
         
         // Tiempo que lleva la unidad detenida (para transiciones)
         public float StoppedTime;
+        
+        // Posición previa de la unidad (para cálculo de movimiento frame a frame)
+        public float3 PreviousPosition;
     }
 }

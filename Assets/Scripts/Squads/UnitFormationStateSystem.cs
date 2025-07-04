@@ -55,7 +55,10 @@ public partial struct UnitFormationStateSystem : ISystem
 
             // Calculate squad center (average position of all units)
             float3 squadCenter = float3.zero;
-            bool heroWithinRadius = FormationPositionCalculator.isHeroInRange(units, SystemAPI.GetComponentLookup<LocalTransform>(true), heroPos, formationRadiusSq);
+            var localTransformLookup = SystemAPI.GetComponentLookup<LocalTransform>(true);
+            Entity closestUnit;
+            float closestDistSq = FormationPositionCalculator.GetClosestUnitDistanceSq(units, localTransformLookup, heroPos, out closestUnit);
+            bool heroWithinRadius = closestDistSq <= formationRadiusSq;
             
             for (int i = 0; i < units.Length; i++)
             {
@@ -71,47 +74,18 @@ public partial struct UnitFormationStateSystem : ISystem
                 // Use unified position calculator with current formation
                 float3 desiredSlotPos = float3.zero;
                 
-                if (isHoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
-                {
-                    // En Hold Position, usar el centro fijo del escuadrón
-                    var holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
-                    
-                    if (gridPositions.Length > 0 && i < gridPositions.Length)
-                    {
-                        FormationPositionCalculator.CalculateDesiredPosition(
-                            unit,
-                            ref gridPositions,
-                            holdComponent.holdCenter, // Usar centro fijo en lugar de posición del héroe
-                            i,
-                            out int2 originalGridPos,
-                            out float3 gridOffset,
-                            out float3 worldPos,
-                            true);
-                        desiredSlotPos = worldPos;
-                    }
-                    else
-                    {
-                        desiredSlotPos = holdComponent.holdCenter + slot.worldOffset;
-                    }
-                }
-                else if (gridPositions.Length > 0 && i < gridPositions.Length)
-                {
-                    FormationPositionCalculator.CalculateDesiredPosition(
-                        unit,
-                        ref gridPositions,
-                        heroPos, // Usar posición actual del héroe como centro dinámico
-                        i,
-                        out int2 originalGridPos,
-                        out float3 gridOffset,
-                        out float3 worldPos,
-                        true);
-                    desiredSlotPos = worldPos;
-                }
-                else
-                {
-                    // Fallback to grid slot offset if no formation data available
-                    desiredSlotPos = heroPos + slot.worldOffset;
-                }
+                FormationPositionCalculator.CalculateDesiredPosition(
+                    unit,
+                    ref gridPositions,
+                    i, // unitIndex
+                    squadState,
+                    SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity) ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : (SquadHoldPositionComponent?)null,
+                    heroPos,
+                    out int2 originalGridPos,
+                    out float3 gridOffset,
+                    out float3 worldPos,
+                    true);
+                desiredSlotPos = worldPos;
                 
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                 
@@ -125,28 +99,34 @@ public partial struct UnitFormationStateSystem : ISystem
                     // Las unidades solo se mueven si están muy lejos de su posición asignada
                     // Usar un threshold más grande solo para detectar si necesita reorganizarse
                     const float holdPositionThresholdSq = 1.0f; // 1 metro cuadrado para cambios de formación (reducido de 4.0f)
-                    
                     switch (stateComp.State)
                     {
                         case UnitFormationState.Formed:
-                            // Cambiar a Moving si está fuera de la posición asignada
-                            // Usar threshold más grande para permitir cambios de formación
+                            // Cambiar a Waiting si está fuera de la posición asignada
                             if (!FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, holdPositionThresholdSq))
+                            {
+                                stateComp.State = UnitFormationState.Waiting;
+                                stateComp.DelayTimer = 0f;
+                                stateComp.DelayDuration = UnityEngine.Random.Range(0.5f, 1.5f);
+                            }
+                            break;
+                        case UnitFormationState.Waiting:
+                            // Esperar el delay antes de pasar a Moving
+                            stateComp.DelayTimer += dt;
+                            if (stateComp.DelayTimer >= stateComp.DelayDuration)
                             {
                                 stateComp.State = UnitFormationState.Moving;
                                 stateComp.DelayTimer = 0f;
                             }
+                            // Si vuelve a estar en slot durante el delay, regresar a Formed
+                            else if (FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, holdPositionThresholdSq))
+                            {
+                                stateComp.State = UnitFormationState.Formed;
+                                stateComp.DelayTimer = 0f;
+                            }
                             break;
-
-                        case UnitFormationState.Waiting:
-                            // En Hold Position, pasar directamente a Moving sin delay
-                            stateComp.State = UnitFormationState.Moving;
-                            stateComp.DelayTimer = 0f;
-                            break;
-
                         case UnitFormationState.Moving:
                             // Moving -> Formed: Unit reaches assigned position
-                            // Usar el threshold normal (más estricto) para considerar que llegó
                             if (inSlot)
                             {
                                 stateComp.State = UnitFormationState.Formed;

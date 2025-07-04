@@ -94,6 +94,7 @@ public partial class HeroSpawnSystem : SystemBase
                 Rotation = Unity.Mathematics.quaternion.identity, 
                 Scale = 1f 
             });
+            Debug.Log($"[HeroSpawnSystem.cs][{heroEntity}] Set LocalTransform.Position = {spawnPosition}");
             
             // Marcar como spawneado para evitar re-spawning
             if (entityManager.HasComponent<HeroSpawnComponent>(heroEntity))
@@ -119,12 +120,11 @@ public partial class HeroSpawnSystem : SystemBase
         var spawnPointQuery = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
         var spawnPoints = spawnPointQuery.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
 
-        foreach (var (life, spawnData, team, transform) in
-                 SystemAPI.Query<RefRO<HeroLifeComponent>,
-                                RefRW<HeroSpawnComponent>,
-                                RefRO<TeamComponent>,
-                                RefRW<LocalTransform>>()
-                          .WithAll<IsLocalPlayer>())
+        foreach (var (life, spawnData, team, transform) in SystemAPI.Query<RefRO<HeroLifeComponent>,
+                                   RefRW<HeroSpawnComponent>,
+                                   RefRO<TeamComponent>,
+                                   RefRW<LocalTransform>>()
+                        .WithAll<IsLocalPlayer>())
         {
             if (!spawnData.ValueRO.hasSpawned && life.ValueRO.isAlive)
             {
@@ -163,14 +163,14 @@ public partial class HeroSpawnSystem : SystemBase
 
                 if (found)
                 {
-                    // Calcular la altura correcta del terreno
                     var correctedPosition = selected.position;
                     correctedPosition.y = FormationPositionCalculator.calculateTerraindHeight(correctedPosition);
-                    
+
                     spawnData.ValueRW.spawnPosition = correctedPosition;
                     transform.ValueRW.Position = correctedPosition;
+                    Debug.Log($"[HeroSpawnSystem.cs] Set LocalTransform.Position = {correctedPosition}");
                     spawnData.ValueRW.hasSpawned = true;
-                    
+
                     if (_enableDebugLogs)
                     {
                         Debug.Log($"[HeroSpawnSystem] Hero position updated to terrain height: {correctedPosition}");

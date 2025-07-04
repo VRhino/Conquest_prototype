@@ -140,79 +140,19 @@ public partial class UnitFollowFormationSystem : SystemBase
                 
                 // Use unified position calculator for consistency
                 float3 desired = float3.zero;
-                
-                if (isHoldingPosition)
-                {
-                    // En Hold Position: usar el centro fijo del escuadrón
-                    float3 holdCenter = heroPosition; // Default fallback
-                    
-                    // Obtener o crear el centro fijo para Hold Position
-                    if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
-                    {
-                        var holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(entity);
-                        holdCenter = holdComponent.holdCenter;
-                    }
-                    else
-                    {
-                        // Primera vez que se da Hold Position, guardar el centro actual
-                        holdCenter = heroPosition;
-                        ecb.AddComponent(entity, new SquadHoldPositionComponent 
-                        { 
-                            holdCenter = holdCenter,
-                            originalFormation = squadState.currentFormation
-                        });
-                    }
-                    
-                    // Calcular posición de formación usando el centro fijo
-                    if (gridPositions.Length > 0 && i < gridPositions.Length)
-                    {
-                        FormationPositionCalculator.CalculateDesiredPosition(
-                            unit,
-                            ref gridPositions,
-                            holdCenter, // Usar centro fijo en lugar de posición del héroe
-                            i,
-                            out int2 originalGridPos,
-                            out float3 gridOffset,
-                            out float3 worldPos,
-                            true);
-                        desired = worldPos;
-                    }
-                    else
-                    {
-                        desired = holdCenter + gridSlot.worldOffset;
-                    }
-                }
-                else
-                {
-                    // Comportamiento normal: seguir al héroe
-                    // Limpiar SquadHoldPositionComponent si cambiamos de Hold Position a Follow
-                    if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
-                    {
-                        ecb.RemoveComponent<SquadHoldPositionComponent>(entity);
-                    }
-                    
-                    // Usar la posición actual del héroe como centro dinámico
-                    if (gridPositions.Length > 0 && i < gridPositions.Length)
-                    {
-                        // Use the actual grid positions from current formation
-                        FormationPositionCalculator.CalculateDesiredPosition(
-                            unit,
-                            ref gridPositions,
-                            heroPosition, // Usar posición actual del héroe como centro dinámico
-                            i,
-                            out int2 originalGridPos,
-                            out float3 gridOffset,
-                            out float3 worldPos,
-                            true);
-                        desired = worldPos; // Use calculated world position
-                    }
-                    else
-                    {
-                        // Unit has no grid position assigned, using default offset
-                        // Fallback to grid slot offset if no formation data available
-                        desired = heroPosition + gridSlot.worldOffset;
-                    }
-                }
+                FormationPositionCalculator.CalculateDesiredPosition(
+                    unit,
+                    ref gridPositions,
+                    i, // unitIndex
+                    squadState,
+                    SystemAPI.HasComponent<SquadHoldPositionComponent>(entity) ? SystemAPI.GetComponent<SquadHoldPositionComponent>(entity) : (SquadHoldPositionComponent?)null,
+                    heroPosition,
+                    out int2 originalGridPos,
+                    out float3 gridOffset,
+                    out float3 worldPos,
+                    true);
+                desired = worldPos;
+
                 float3 current = transformLookup[unit].Position;
                 float3 diff = desired - current;
                 float distSq = math.lengthsq(diff);
@@ -292,7 +232,7 @@ public partial class UnitFollowFormationSystem : SystemBase
     private void UpdateUnitOrientation(Entity unit, ref LocalTransform transform, float3 heroPos, float3 heroForward, float3 movementDirection, float deltaTime)
     {
         // Obtener configuración de orientación (valores por defecto si no existe)
-        UnitOrientationType orientationType = UnitOrientationType.FaceHero;
+        UnitOrientationType orientationType = UnitOrientationType.MatchHeroDirection;
         float rotationSpeed = 5f;
         
         if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))

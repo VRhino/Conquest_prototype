@@ -15,25 +15,34 @@ public partial class HeroMovementSystem : SystemBase
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
 
-        foreach (var (input, stats, stamina, life, transform) in
-                 SystemAPI.Query<RefRO<HeroInputComponent>,
-                                 RefRO<HeroStatsComponent>,
-                                 RefRO<StaminaComponent>,
-                                 RefRO<HeroLifeComponent>,
-                                 RefRW<LocalTransform>>()
+        int i = 0;
+        foreach (var (input, stats, stamina, life, transform) in SystemAPI.Query<RefRO<HeroInputComponent>,
+                                   RefRO<HeroStatsComponent>,
+                                   RefRO<StaminaComponent>,
+                                   RefRO<HeroLifeComponent>,
+                                   RefRW<LocalTransform>>()
                         .WithAll<IsLocalPlayer>())
         {
+            // If you need the entity, you can get it from the query's Entity array:
+            // var entity = query.GetEntityArray(Allocator.Temp)[i];
+            // But for most single-player hero systems, there is only one entity.
+            // If you need to log the entity, you can skip it or log index.
+
             if (!life.ValueRO.isAlive)
+            {
+                i++;
                 continue;
+            }
 
             float2 moveInput = input.ValueRO.MoveInput;
 
-            // Obtén la referencia a la cámara principal
             var cam = Camera.main;
             if (cam == null)
+            {
+                i++;
                 return;
+            }
 
-            // Calcula forward y right de la cámara, ignorando el eje Y para movimiento plano
             Vector3 camForward = cam.transform.forward;
             camForward.y = 0f;
             camForward.Normalize();
@@ -47,22 +56,21 @@ public partial class HeroMovementSystem : SystemBase
             if (magnitude > 0f)
             {
                 float3 direction = desired / magnitude;
-                
-                // Calcular velocidad actual considerando sprint
+
                 float currentSpeed = stats.ValueRO.baseSpeed;
-                
-                // Si está haciendo sprint y tiene stamina suficiente, aplicar multiplicador
+
                 if (input.ValueRO.IsSprintPressed && !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina > 0f)
                 {
                     currentSpeed *= stats.ValueRO.sprintMultiplier;
                 }
-                
-                transform.ValueRW.Position += direction * currentSpeed * deltaTime;
 
-                // Rota el héroe siempre hacia el forward de la cámara
+                transform.ValueRW.Position += direction * currentSpeed * deltaTime;
+                Debug.Log($"[HeroMovementSystem.cs] Set LocalTransform.Position += {direction * currentSpeed * deltaTime} (new: {transform.ValueRW.Position})");
+
                 quaternion targetRot = quaternion.LookRotationSafe((float3)camForward, math.up());
                 transform.ValueRW.Rotation = math.slerp(transform.ValueRW.Rotation, targetRot, deltaTime * 10f);
             }
+            i++;
         }
     }
 }

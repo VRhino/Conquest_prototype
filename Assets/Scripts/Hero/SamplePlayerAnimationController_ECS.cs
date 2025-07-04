@@ -991,6 +991,22 @@ namespace Synty.AnimationBaseLocomotion.Samples
             {
                 _animator.SetBool(_isGroundedHash, true);
             }
+            
+            // Comprobar si está atascado en idle mientras debería estar en movimiento
+            bool isInIdleState = stateInfo.IsName("Base Layer.Idle Standing.Idle_Standing");
+            Vector3 velocity = _velocity;
+            bool hasMovementInput = _inputAdapter._moveComposite.sqrMagnitude > 0.01f;
+            bool shouldBeMoving = velocity.sqrMagnitude > 0.1f || hasMovementInput;
+            
+            if (isInIdleState && shouldBeMoving)
+            {
+                // Forzar los parámetros de movimiento
+                _animator.SetBool(_movementInputPressedHash, true);
+                _animator.SetBool(_isStoppedHash, false);
+                _animator.SetFloat(_moveSpeedHash, _speed2D > 0.1f ? _speed2D : 0.3f);
+                _animator.SetInteger(_currentGaitHash, 1); // Forzar a estado Walk
+                _animator.SetTrigger(_forceGroundedTransitionHash);
+            }
         }
 
         private void ExitLocomotionState()

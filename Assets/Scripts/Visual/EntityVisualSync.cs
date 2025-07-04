@@ -73,7 +73,10 @@ namespace ConquestTactics.Visual
         
         private void Start()
         {
-            Debug.Log($"[EntityVisualSync] Start ejecutándose en {gameObject.name}");
+            if (_enableDebugLogs)
+            {
+                Debug.Log($"[EntityVisualSync] Start ejecutándose en {gameObject.name}");
+            }
             InitializeEcsReferences();
             
             // Disable any components that might conflict with our position control
@@ -82,12 +85,18 @@ namespace ConquestTactics.Visual
             // Solo auto-buscar si no se ha configurado una entidad manualmente
             if (_autoFindHeroEntity && !_isManuallyConfigured && _heroEntity == Entity.Null)
             {
-                Debug.Log($"[EntityVisualSync] Auto-buscando entidad héroe (no hay entidad configurada manualmente)");
+                if (_enableDebugLogs)
+                {
+                    Debug.Log($"[EntityVisualSync] Auto-buscando entidad héroe (no hay entidad configurada manualmente)");
+                }
                 FindHeroEntity();
             }
             else if (_heroEntity != Entity.Null)
             {
-                Debug.Log($"[EntityVisualSync] Entidad ya configurada manualmente: {_heroEntity}, saltando auto-búsqueda");
+                if (_enableDebugLogs)
+                {
+                    Debug.Log($"[EntityVisualSync] Entidad ya configurada manualmente: {_heroEntity}, saltando auto-búsqueda");
+                }
             }
             
             // Inicializar valores target
@@ -273,12 +282,9 @@ namespace ConquestTactics.Visual
                 
                 // Logs más frecuentes para debug inicial
                 bool isInitialSync = _isManuallyConfigured && Time.time < 5f; // Primeros 5 segundos
-               
-                
                 if (_syncPosition)
                 {
                     _targetPosition = targetPos;
-                    
                     if (_smoothMovement)
                     {
                         Vector3 newPos = Vector3.Lerp(transform.position, _targetPosition, _smoothSpeed * Time.deltaTime);
@@ -286,7 +292,7 @@ namespace ConquestTactics.Visual
                     }
                     else
                     {
-                        if (isInitialSync)
+                        if (isInitialSync && _enableDebugLogs)
                         {
                             Debug.Log($"[EntityVisualSync] Direct assignment - Setting position to: {_targetPosition}");
                         }
@@ -313,7 +319,10 @@ namespace ConquestTactics.Visual
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[EntityVisualSync] Error durante sincronización: {e.Message}");
+                if (_enableDebugLogs)
+                {
+                    Debug.LogError($"[EntityVisualSync] Error durante sincronización: {e.Message}");
+                }
                 _hasValidTarget = false;
             }
         }
@@ -336,7 +345,10 @@ namespace ConquestTactics.Visual
                 // Si aún no podemos inicializar, diferir la configuración
                 if (_entityManager == null)
                 {
-                    Debug.LogWarning("[EntityVisualSync] No se puede configurar héroe - EntityManager no disponible aún");
+                    if (_enableDebugLogs)
+                    {
+                        Debug.LogWarning("[EntityVisualSync] No se puede configurar héroe - EntityManager no disponible aún");
+                    }
                     return;
                 }
             }
@@ -356,12 +368,15 @@ namespace ConquestTactics.Visual
             // Forzar sincronización inmediata para evitar desfase inicial
             if (_hasValidTarget)
             {
-                Debug.Log($"[EntityVisualSync] Forzando sincronización inicial para entity {heroEntity}");
-                Debug.Log($"[EntityVisualSync] Posición ANTES de sincronizar: {transform.position}");
-                SyncTransformFromEcs();
-                Debug.Log($"[EntityVisualSync] Posición DESPUÉS de sincronizar: {transform.position}");
                 if (_enableDebugLogs)
                 {
+                    Debug.Log($"[EntityVisualSync] Forzando sincronización inicial para entity {heroEntity}");
+                    Debug.Log($"[EntityVisualSync] Posición ANTES de sincronizar: {transform.position}");
+                }
+                SyncTransformFromEcs();
+                if (_enableDebugLogs)
+                {
+                    Debug.Log($"[EntityVisualSync] Posición DESPUÉS de sincronizar: {transform.position}");
                     try 
                     {
                         var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
@@ -375,7 +390,10 @@ namespace ConquestTactics.Visual
             }
             else
             {
-                Debug.LogWarning($"[EntityVisualSync] No se pudo validar la entidad {heroEntity}");
+                if (_enableDebugLogs)
+                {
+                    Debug.LogWarning($"[EntityVisualSync] No se pudo validar la entidad {heroEntity}");
+                }
             }
         }
         
@@ -464,32 +482,29 @@ namespace ConquestTactics.Visual
             if (_lastSetPosition != transform.position)
             {
                 Vector3 diff = transform.position - _lastSetPosition;
-                
-                // Check if difference is significant (not just floating point imprecision)
                 if (diff.sqrMagnitude > 0.001f)
                 {
-                    Debug.LogWarning($"[EntityVisualSync] POSITION INTERFERENCE DETECTED on {gameObject.name}!");
-                    Debug.LogWarning($"[EntityVisualSync] Expected: {_lastSetPosition}, Actual: {transform.position}, Difference: {diff}");
-                    
-                    // Log all components that could be responsible
-                    Debug.LogWarning("[EntityVisualSync] Components that might be responsible:");
-                    
-                    // Check for common position-modifying components
-                    if (TryGetComponent<CharacterController>(out var cc))
-                        Debug.LogWarning($"[EntityVisualSync] - CharacterController (enabled: {cc.enabled})");
-                        
-                    if (TryGetComponent<Rigidbody>(out var rb))
-                        Debug.LogWarning($"[EntityVisualSync] - Rigidbody (isKinematic: {rb.isKinematic})");
-                        
-                    if (TryGetComponent<Animator>(out var anim))
-                        Debug.LogWarning($"[EntityVisualSync] - Animator (applyRootMotion: {anim.applyRootMotion})");
-                    
-                    // List all MonoBehaviours except self
-                    var behaviors = GetComponents<MonoBehaviour>();
-                    foreach (var behavior in behaviors)
+                    if (_enableDebugLogs)
                     {
-                        if (behavior != this && behavior.enabled)
-                            Debug.LogWarning($"[EntityVisualSync] - {behavior.GetType().Name} (enabled)");
+                        Debug.LogWarning($"[EntityVisualSync] POSITION INTERFERENCE DETECTED on {gameObject.name}!");
+                        Debug.LogWarning($"[EntityVisualSync] Expected: {_lastSetPosition}, Actual: {transform.position}, Difference: {diff}");
+                        Debug.LogWarning("[EntityVisualSync] Components that might be responsible:");
+                    }
+                    // Check for common position-modifying components
+                    if (_enableDebugLogs)
+                    {
+                        if (TryGetComponent<CharacterController>(out var cc))
+                            Debug.LogWarning($"[EntityVisualSync] - CharacterController (enabled: {cc.enabled})");
+                        if (TryGetComponent<Rigidbody>(out var rb))
+                            Debug.LogWarning($"[EntityVisualSync] - Rigidbody (isKinematic: {rb.isKinematic})");
+                        if (TryGetComponent<Animator>(out var anim))
+                            Debug.LogWarning($"[EntityVisualSync] - Animator (applyRootMotion: {anim.applyRootMotion})");
+                        var behaviors = GetComponents<MonoBehaviour>();
+                        foreach (var behavior in behaviors)
+                        {
+                            if (behavior != this && behavior.enabled)
+                                Debug.LogWarning($"[EntityVisualSync] - {behavior.GetType().Name} (enabled)");
+                        }
                     }
                 }
             }
@@ -500,27 +515,31 @@ namespace ConquestTactics.Visual
         /// </summary>
         private void DisableConflictingComponents()
         {
-            // Disable CharacterController if present, as it conflicts with our position control
             CharacterController characterController = GetComponent<CharacterController>();
             if (characterController != null && characterController.enabled)
             {
-                Debug.LogWarning($"[EntityVisualSync] Disabling CharacterController on {gameObject.name} to prevent position conflicts");
+                if (_enableDebugLogs)
+                {
+                    Debug.LogWarning($"[EntityVisualSync] Disabling CharacterController on {gameObject.name} to prevent position conflicts");
+                }
                 characterController.enabled = false;
             }
-            
-            // Disable Rigidbody if not kinematic
             Rigidbody rb = GetComponent<Rigidbody>();
             if (rb != null && !rb.isKinematic)
             {
-                Debug.LogWarning($"[EntityVisualSync] Setting Rigidbody to kinematic on {gameObject.name} to prevent position conflicts");
+                if (_enableDebugLogs)
+                {
+                    Debug.LogWarning($"[EntityVisualSync] Setting Rigidbody to kinematic on {gameObject.name} to prevent position conflicts");
+                }
                 rb.isKinematic = true;
             }
-            
-            // Check for Animator with root motion
             Animator animator = GetComponent<Animator>();
             if (animator != null && animator.applyRootMotion)
             {
-                Debug.LogWarning($"[EntityVisualSync] Disabling root motion on Animator in {gameObject.name} to prevent position conflicts");
+                if (_enableDebugLogs)
+                {
+                    Debug.LogWarning($"[EntityVisualSync] Disabling root motion on Animator in {gameObject.name} to prevent position conflicts");
+                }
                 animator.applyRootMotion = false;
             }
         }

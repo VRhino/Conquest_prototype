@@ -141,6 +141,40 @@ Si la unidad se mueve pero no rota hacia la dirección del movimiento:
 2. Aumenta el valor de `Rotation Speed` para rotaciones más rápidas.
 3. Asegúrate de que `Sync Rotation` esté desactivado en EntityVisualSync.
 
+## Solución de Problemas Específicos
+
+### Unidades Atascadas en Idle a Pesar de Moverse
+
+Si las unidades permanecen en estado `idle_standing` mientras se mueven físicamente:
+
+1. **Uso de UnitAnimationDebugger**:
+   - Agrega el script `UnitAnimationDebugger` a cualquier GameObject en la escena.
+   - Presiona F7 para forzar animación de movimiento en todas las unidades.
+   - Presiona F8 para forzar animación de idle en todas las unidades.
+   - Presiona F9 para reiniciar todos los animadores.
+
+2. **Verifica la sincronización de posición**:
+   - Asegúrate de que el componente `EntityVisualSync` esté correctamente configurado y enlazado con la entidad ECS.
+   - Verifica que `Sync Position` esté habilitado y que el ID de entidad sea correcto.
+
+3. **Modo de depuración forzada**:
+   - Habilita `Force Movement Debug Mode` en el `UnitAnimationAdapter`.
+   - Establece un valor de `Forced Debug Speed` mayor que el umbral de detección de movimiento (0.05 por defecto).
+   - Esto forzará los parámetros de movimiento independientemente del movimiento real.
+
+4. **Verifica el sistema ECS**:
+   - Revisa los datos del componente `UnitAnimationMovementComponent` usando el EntityDebugger.
+   - Confirma que `CurrentSpeed` y `IsMoving` se actualicen correctamente.
+
+5. **Ajusta los umbrales de detección**:
+   - Reduce el `Stopped Threshold` en `UnitAnimationAdapter` (intenta con 0.01).
+   - Esto hará que las unidades sean más sensibles a pequeños movimientos.
+
+6. **Solución extrema para casos atascados**:
+   - Modifica el prefab de la unidad para añadir un componente `Animator` nuevo y configúralo correctamente.
+   - Elimina y vuelve a añadir los componentes `UnitAnimationAdapter` y `UnitAnimatorController`.
+   - Esto restablecerá el estado del Animator y forzará una reinicialización limpia.
+
 ## Notas Importantes
 
 - Las unidades no tienen input del jugador ni cámara que los siga

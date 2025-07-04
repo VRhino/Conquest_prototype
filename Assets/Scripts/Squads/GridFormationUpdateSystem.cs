@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 /// <summary>
 /// Sistema que mantiene sincronizados los componentes de grid con las posiciones de formación.
@@ -52,6 +53,11 @@ public partial class GridFormationUpdateSystem : SystemBase
             if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPos))
                 continue;
             
+            // Obtener el componente de hold position si existe
+            SquadHoldPositionComponent? holdComponent = null;
+            if (SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+                holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
+            
             // Actualizar target positions basadas en grid slots
             for (int i = 0; i < units.Length; i++)
             {
@@ -67,8 +73,10 @@ public partial class GridFormationUpdateSystem : SystemBase
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,
                         ref gridPositions,
-                        heroPos, // GridFormationUpdateSystem siempre usa la posición actual del héroe
-                        i,
+                        i, // unitIndex
+                        squadState,
+                        holdComponent,
+                        heroPos,
                         out int2 originalGridPos,
                         out float3 gridOffset,
                         out float3 worldPos,
@@ -86,6 +94,7 @@ public partial class GridFormationUpdateSystem : SystemBase
                 {
                     var targetComp = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
                     targetComp.ValueRW.position = targetPos;
+                    Debug.Log($"[GridFormationUpdateSystem] Set UnitTargetPositionComponent for Entity {unit} to {targetPos}");
                 }
             }
         }

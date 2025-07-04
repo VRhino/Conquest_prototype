@@ -13,6 +13,8 @@ using ConquestTactics.Animation;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitFollowFormationSystem))]
+[UpdateAfter(typeof(HeroMovementSystem))]
+[UpdateAfter(typeof(SquadSpawningSystem))]
 public partial class UnitAnimationSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -37,22 +39,16 @@ public partial class UnitAnimationSystem : SystemBase
             // Posición actual
             float3 currentPos = transformLookup[entity].Position;
             
-            // Determinar posición anterior
-            float3 prevPos;
-            if (prevPosLookup.HasComponent(entity))
-            {
-                // Usar la posición previa guardada
-                prevPos = prevPosLookup[entity].value;
-            }
-            else
-            {
-                // Si no hay posición previa, asumimos que está quieta
-                prevPos = currentPos;
-            }
+            // Determinar posición anterior usando el campo per-unit
+            float3 prevPos = animComponent.ValueRO.PreviousPosition;
             
             // Calcular vector de movimiento y velocidad
             float3 movementVector = currentPos - prevPos;
             float speedMagnitude = math.length(movementVector) / dt;
+            
+            // Verificación adicional de movimiento basada en la posición directamente
+            // Esto ayuda a detectar movimiento incluso con valores muy pequeños
+            float positionDifference = math.distance(currentPos, prevPos);
             
             // Obtener velocidad máxima de las stats de la unidad o usar un valor por defecto
             float maxSpeed = 5f; // Velocidad base por defecto
@@ -61,8 +57,19 @@ public partial class UnitAnimationSystem : SystemBase
                 maxSpeed = statsLookup[entity].velocidad;
             }
             
-            // Verificar si la unidad está en movimiento (umbral pequeño para evitar micromovimientos)
-            bool isMoving = speedMagnitude > 0.05f;
+            // Umbral más pequeño para detectar movimiento
+            float movementThreshold = 0.001f;
+            
+            // Verificar si la unidad está en movimiento
+            // Consideramos ambos criterios: velocidad y cambio de posición
+            bool isMoving = speedMagnitude > movementThreshold || positionDifference > movementThreshold;
+            
+            // Ajustar velocidad si es muy pequeña pero hay movimiento detectado
+            if (isMoving && speedMagnitude < movementThreshold)
+            {
+                // Asignar una velocidad mínima para asegurar que se activen las animaciones
+                speedMagnitude = movementThreshold * 10f;
+            }
             
             // Actualizar los contadores de tiempo para transiciones suaves
             if (isMoving)
@@ -88,6 +95,15 @@ public partial class UnitAnimationSystem : SystemBase
             animComponent.ValueRW.MovementDirection = movementDirection;
             animComponent.ValueRW.IsMoving = isMoving;
             animComponent.ValueRW.IsRunning = isRunning;
+            
+            // LOG: Diagnóstico tras el spawn y en los primeros frames
+            if (SystemAPI.Time.ElapsedTime < 2.0f || entity.Index % 100 == 0) // Solo los primeros 2s o cada 100 entidades
+            {
+                Debug.Log($"[UnitAnimationSystem] Entity: {entity} | CurrentPos: {currentPos} | PrevPos: {prevPos} | MovementVec: {movementVector} | Speed: {speedMagnitude:F4} | IsMoving: {isMoving}");
+            }
+
+            // Actualizar PreviousPosition para el siguiente frame
+            animComponent.ValueRW.PreviousPosition = currentPos;
         }
     }
 }
