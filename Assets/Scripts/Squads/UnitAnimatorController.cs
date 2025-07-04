@@ -32,6 +32,7 @@ namespace ConquestTactics.Visual
         [SerializeField, ReadOnly] private float _currentSpeed;
         [SerializeField, ReadOnly] private bool _isStopped;
         [SerializeField, ReadOnly] private bool _isRunning;
+        [SerializeField, ReadOnly] private bool _isSprinting;
         
         #endregion
         
@@ -179,6 +180,7 @@ namespace ConquestTactics.Visual
             _currentSpeed = _animationAdapter.NormalizedSpeed;
             _isStopped = _animationAdapter.IsStopped;
             _isRunning = _animationAdapter.IsRunning;
+            _isSprinting = _animationAdapter.IsSprinting;
 
             // Log de valores recibidos del adapter para comparar
             if (_enableDebugLogs && Time.frameCount % 60 == 0)
@@ -234,7 +236,12 @@ namespace ConquestTactics.Visual
             int gait;
             if (isMovingThisFrame)
             {
-                gait = _isRunning ? 2 : 1; // 2 = Run, 1 = Walk
+                if (_isSprinting)
+                    gait = 3; // Sprint
+                else if (_isRunning)
+                    gait = 2; // Run
+                else
+                    gait = 1; // Walk
             }
             else
             {
@@ -313,7 +320,7 @@ namespace ConquestTactics.Visual
             if (_enableDebugLogs && Time.frameCount % 60 == 0)
             {
                 Debug.Log($"[UnitAnimatorController] {gameObject.name} - Speed: {_currentSpeed:F2}, Stopped: {_isStopped}, " +
-                          $"Running: {_isRunning}, Gait: {gait}, AnimState: {GetCurrentAnimatorStateName()}");
+                          $"Running: {_isRunning}, Sprinting: {_isSprinting}, Gait: {gait}, AnimState: {GetCurrentAnimatorStateName()}");
             }
         }
         

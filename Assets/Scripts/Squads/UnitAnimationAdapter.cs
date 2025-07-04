@@ -24,6 +24,8 @@ namespace ConquestTactics.Animation
         
         // Si la unidad está corriendo
         public bool IsRunning { get; private set; } = false;
+        // Si la unidad está sprintando (normalized speed >= 1)
+        public bool IsSprinting { get; private set; } = false;
         
         #endregion
         
@@ -183,11 +185,12 @@ namespace ConquestTactics.Animation
                     MovementVector = new Vector2(0, 1); // Dirección adelante
                     IsStopped = NormalizedSpeed < _stoppedThreshold;
                     IsRunning = NormalizedSpeed >= _runningThreshold;
+                    IsSprinting = NormalizedSpeed >= 1f;
                     
                     // Log especial para modo debug
                     if (_enableDebugLogs && Time.frameCount % 60 == 0)
                     {
-                        Debug.LogWarning($"[UnitAnimationAdapter] {gameObject.name} - MODO DEBUG FORZADO: Speed: {NormalizedSpeed:F2}, Stopped: {IsStopped}, Running: {IsRunning}");
+                        Debug.LogWarning($"[UnitAnimationAdapter] {gameObject.name} - MODO DEBUG FORZADO: Speed: {NormalizedSpeed:F2}, Stopped: {IsStopped}, Running: {IsRunning}, Sprinting: {IsSprinting}");
                     }
                     
                     return; // No procesamos datos de ECS en este modo
@@ -231,7 +234,8 @@ namespace ConquestTactics.Animation
                 
                 // Determinar estados, priorizando el movimiento físico observado
                 IsStopped = !physicalMovement && NormalizedSpeed < _stoppedThreshold;
-                IsRunning = NormalizedSpeed >= _runningThreshold;
+                IsRunning = NormalizedSpeed >= _runningThreshold && NormalizedSpeed < 0.8f;
+                IsSprinting = NormalizedSpeed >= 0.8f;
                 
                 // Si la unidad no se ha movido desde el spawn, forzar valores a cero y detenido
                 if (animData.CurrentSpeed < _stoppedThreshold && MovementVector.sqrMagnitude < 0.0001f)
@@ -240,6 +244,7 @@ namespace ConquestTactics.Animation
                     MovementVector = Vector2.zero;
                     IsStopped = true;
                     IsRunning = false;
+                    IsSprinting = false;
                     if (_enableDebugLogs)
                     {
                         Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} - Sin movimiento desde spawn: Speed=0, Vec=Vector2.zero, IsStopped=true");
@@ -269,6 +274,7 @@ namespace ConquestTactics.Animation
                 MovementVector = Vector2.zero;
                 IsStopped = true;
                 IsRunning = false;
+                IsSprinting = false;
             }
         }
         

@@ -93,8 +93,7 @@ public partial class GridFormationUpdateSystem : SystemBase
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
                 {
                     var targetComp = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
-                    targetComp.ValueRW.position = targetPos;
-                    Debug.Log($"[GridFormationUpdateSystem] Set UnitTargetPositionComponent for Entity {unit} to {targetPos}");
+                    targetComp.ValueRW.position = targetPos;;
                 }
             }
         }
