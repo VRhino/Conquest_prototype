@@ -90,6 +90,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroStatsComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitSpeedCalculator.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfileComponent.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitAnimatorController.cs" />
     <Compile Include="Assets\Scripts\Squads\NavAgentComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Shared\LocalSaveSystem.cs" />
@@ -128,6 +129,7 @@
     <Compile Include="Assets\Scripts\Perks\PerkDataAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadVisualComponents.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationVisualizer.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitAnimationAdapter.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyInteractionSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadTargetEntity.cs" />
     <Compile Include="Assets\Scripts\Testing\PrefabConfigurationValidator.cs" />
@@ -224,6 +226,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitFollowDelayComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadNavigationComponent.cs" />
     <Compile Include="Assets\Scripts\UI\MapUIController.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitAnimationMovementAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayer.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadVisualManagementSystem.cs" />
@@ -257,6 +260,7 @@
     <Compile Include="Assets\Scripts\Combat\WeaponColliderComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStateSystem.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadLevelUpEvent.cs" />
+    <Compile Include="Assets\Scripts\Testing\EcsAnimationTester.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitGridSlotComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbilityBufferElement.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefabConfiguration.cs" />
@@ -269,6 +273,7 @@
     <Compile Include="Assets\Scripts\Shared\DataContainerBaker.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchStateComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerSystem.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitAnimationMovementComponent.cs" />
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
     <Compile Include="Assets\Scripts\SoloParaPruebas\HeroSquadSelectionTestAuthoring.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassComponent.cs" />
@@ -298,6 +303,7 @@
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\Gender.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAttributesComponent.cs" />
     <Compile Include="Assets\Scripts\UI\UIManager.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitAnimationSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAttackSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\DefenseComponent.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStateComponent.cs" />

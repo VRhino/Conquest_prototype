@@ -313,12 +313,9 @@ namespace Synty.AnimationBaseLocomotion.Samples
                 }
                 else
                 {
-                    Debug.Log("[SamplePlayerAnimationController_ECS] Auto-found HeroCameraController in scene");
+                    // Auto-found HeroCameraController
                 }
             }
-
-            // ADDED: Debug log to notify that IsGrounded will always be true
-            Debug.Log("[SamplePlayerAnimationController_ECS] IsGrounded parameter will always be set to true");
 
             // REMOVED: Unnecessary event subscriptions
             // Only keep necessary events:
@@ -328,8 +325,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
             _isStrafing = _alwaysStrafe;
             SwitchState(AnimationState.Locomotion);
-            
-            Debug.Log("[SamplePlayerAnimationController_ECS] Initialized with ECS input system");
         }
 
         private void OnDestroy()
@@ -444,7 +439,17 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _animator.SetFloat(_bodyLookYHash, _bodyLookY);
 
             _animator.SetFloat(_isStrafingHash, _isStrafing ? 1.0f : 0.0f);
-            _animator.SetFloat(_moveSpeedHash, _speed2D);
+            
+            // MODIFICADO: Si no hay input, asegurarse de que MoveSpeed es 0 inmediatamente
+            if (_inputAdapter._moveComposite.sqrMagnitude < 0.01f)
+            {
+                _animator.SetFloat(_moveSpeedHash, 0);
+            }
+            else
+            {
+                _animator.SetFloat(_moveSpeedHash, _speed2D);
+            }
+            
             _animator.SetInteger(_currentGaitHash, (int) _currentGait);
 
             _animator.SetFloat(_strafeDirectionXHash, _strafeDirectionX);
@@ -538,17 +543,19 @@ namespace Synty.AnimationBaseLocomotion.Samples
             // Let EntityVisualSync handle positioning instead
             //_controller.Move(_velocity * Time.deltaTime);
             
-            // Still calculate velocity for animation purposes
-            _speed2D = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
-            _speed2D = Mathf.Round(_speed2D * 1000f) / 1000f;
-            
-            // Debug log to confirm this method is skipping actual movement
-            if (Time.frameCount % 300 == 0) // Log every ~5 seconds
+            // MODIFICADO: Si no hay input, forzar velocidad a 0
+            if (_inputAdapter._moveComposite.sqrMagnitude < 0.01f)
             {
-                Debug.Log("[SamplePlayerAnimationController_ECS] Move called but skipping controller.Move - using EntityVisualSync instead");
+                _speed2D = 0f;
+            }
+            else
+            {
+                // Still calculate velocity for animation purposes
+                _speed2D = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
+                _speed2D = Mathf.Round(_speed2D * 1000f) / 1000f;
             }
             
-            // REMOVED: Lock-on logic
+            // Skip actual movement - handled by EntityVisualSync
         }
 
         // REMOVED: ApplyGravity() - not needed without jump/fall
@@ -576,8 +583,22 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _targetVelocity.x = _moveDirection.x * _currentMaxSpeed;
             _targetVelocity.z = _moveDirection.z * _currentMaxSpeed;
 
-            _velocity.z = Mathf.Lerp(_velocity.z, _targetVelocity.z, _speedChangeDamping * Time.deltaTime);
-            _velocity.x = Mathf.Lerp(_velocity.x, _targetVelocity.x, _speedChangeDamping * Time.deltaTime);
+            // MODIFICADO: Detener inmediatamente el movimiento cuando no hay input
+            float inputMagnitude = _inputAdapter._moveComposite.sqrMagnitude;
+            if (inputMagnitude < 0.01f)
+            {
+                // Si no hay input, detener inmediatamente
+                _velocity.z = 0;
+                _velocity.x = 0;
+                
+                // No movement input - velocity set to zero immediately
+            }
+            else
+            {
+                // Si hay input, aplicar suavizado normal
+                _velocity.z = Mathf.Lerp(_velocity.z, _targetVelocity.z, _speedChangeDamping * Time.deltaTime);
+                _velocity.x = Mathf.Lerp(_velocity.x, _targetVelocity.x, _speedChangeDamping * Time.deltaTime);
+            }
 
             // Speed calculation for animation moved to Move() method
             // because we need to calculate it even when we don't move the character
@@ -710,7 +731,17 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private void CheckIfStopped()
         {
-            _isStopped = _moveDirection.magnitude == 0 && _speed2D < .5;
+            // MODIFICADO: Usar threshold más bajo y considerar el input directamente
+            bool noInput = _inputAdapter._moveComposite.sqrMagnitude < 0.01f;
+            bool noVelocity = _speed2D < 0.1f; // Threshold reducido
+            
+            _isStopped = noInput || (noVelocity && _moveDirection.magnitude == 0);
+            
+            if (noInput && !noVelocity)
+            {
+                // Si no hay input pero todavía hay velocidad, forzar la detención
+                _speed2D = 0;
+            }
         }
 
         private void CheckIfStarting()
@@ -930,57 +961,36 @@ namespace Synty.AnimationBaseLocomotion.Samples
             Move();
             UpdateAnimatorController();
             
-            // ADDED: Periódicamente revisar el estado actual del animador
+            // Periódicamente revisar y corregir problemas comunes del Animator
             if (Time.frameCount % 120 == 0) // Aproximadamente cada 2 segundos a 60fps
             {
-                LogAnimatorState();
+                CheckAndFixAnimatorState();
             }
         }
         
-        // ADDED: Método para diagnosticar el estado actual del Animator
-        private void LogAnimatorState()
+        // Método para revisar y corregir problemas comunes del Animator
+        private void CheckAndFixAnimatorState()
         {
             if (_animator == null)
                 return;
                 
             AnimatorStateInfo stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
-            bool isGrounded = _animator.GetBool(_isGroundedHash);
-            string stateName = "Unknown";
             
-            // Intenta determinar el nombre del estado actual
-            if (stateInfo.IsName("Base Layer.Fall.Falling"))
-                stateName = "Falling";
-            else if (stateInfo.IsName("Base Layer.Locomotion Standing.Locomotion"))
-                stateName = "Locomotion";
-            else if (stateInfo.IsName("Base Layer.Idle Standing.Idle_Standing"))
-                stateName = "Idle_Standing";
-            
-            Debug.Log($"[SamplePlayerAnimationController_ECS] Animator State - " +
-                      $"State: {stateName}, " +
-                      $"IsGrounded: {isGrounded}, " +
-                      $"Y Position: {transform.position.y}, " +
-                      $"Normalized Time: {stateInfo.normalizedTime:F2}");
-            
-            // Detectar y corregir si está atascado en Fall
-            if (stateName == "Falling" && transform.position.y < 0.01f)
+            // Verificar si está atascado en el estado Fall
+            if (stateInfo.IsName("Base Layer.Fall.Falling") && transform.position.y < 0.01f)
             {
-                ForceExitFallState();
+                // Asegurarse de que IsGrounded es true
+                _animator.SetBool(_isGroundedHash, true);
+                
+                // Forzar un trigger de transición
+                _animator.SetTrigger(_forceGroundedTransitionHash);
             }
-        }
-        
-        // ADDED: Método para forzar la salida del estado Fall
-        private void ForceExitFallState()
-        {
-            Debug.LogWarning("[SamplePlayerAnimationController_ECS] Animator stuck in Fall state with Y near 0. Forcing state transition...");
             
-            // Asegurarse de que IsGrounded es true
-            _animator.SetBool(_isGroundedHash, true);
-            
-            // Forzar un trigger de transición
-            _animator.SetTrigger(_forceGroundedTransitionHash);
-            
-            // También podríamos resetear el controlador como última opción
-            //_animator.Rebind();
+            // Asegurar que siempre está en estado grounded
+            if (!_animator.GetBool(_isGroundedHash))
+            {
+                _animator.SetBool(_isGroundedHash, true);
+            }
         }
 
         private void ExitLocomotionState()

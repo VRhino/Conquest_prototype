@@ -105,12 +105,7 @@ namespace ConquestTactics.Visual
             // Optimización: no sincronizar cada frame si no es necesario
             if (Time.time - _lastSyncTime < SYNC_INTERVAL)
                 return;
-                
-            if (_enableDebugLogs && Time.frameCount % 300 == 0) // Cada 5 segundos aprox
-            {
-                Debug.Log($"[EntityVisualSync] Update ejecutándose - HasValidTarget: {_hasValidTarget}, Entity: {_heroEntity}");
-            }
-                
+                 
             SyncTransformFromEcs();
             _lastSyncTime = Time.time;
         }
@@ -278,10 +273,7 @@ namespace ConquestTactics.Visual
                 
                 // Logs más frecuentes para debug inicial
                 bool isInitialSync = _isManuallyConfigured && Time.time < 5f; // Primeros 5 segundos
-                if (_enableDebugLogs && (Time.frameCount % 120 == 0 || isInitialSync)) // Debug cada 2 segundos aprox o durante inicialización
-                {
-                    Debug.Log($"[EntityVisualSync] Sync - ECS: {ecsTransform.Position}, Target: {targetPos}, Current: {transform.position}, SyncPos: {_syncPosition}, Smooth: {_smoothMovement}");
-                }
+               
                 
                 if (_syncPosition)
                 {
@@ -290,10 +282,6 @@ namespace ConquestTactics.Visual
                     if (_smoothMovement)
                     {
                         Vector3 newPos = Vector3.Lerp(transform.position, _targetPosition, _smoothSpeed * Time.deltaTime);
-                        if (isInitialSync)
-                        {
-                            Debug.Log($"[EntityVisualSync] Lerp - From: {transform.position} To: {_targetPosition} Speed: {_smoothSpeed} DeltaTime: {Time.deltaTime} Result: {newPos}");
-                        }
                         transform.position = newPos;
                     }
                     else
