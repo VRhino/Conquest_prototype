@@ -28,31 +28,31 @@ public partial class HeroStaminaSystem : SystemBase
 
             if (!data.isExhausted)
             {
-                if (input.ValueRO.isSprinting)
+                if (input.ValueRO.IsSprintPressed)
                 {
                     data.currentStamina -= 10f * deltaTime;
                     performedAction = true;
                 }
 
-                if (input.ValueRO.isAttacking)
+                if (input.ValueRO.IsAttackPressed)
                 {
                     data.currentStamina -= 15f;
                     performedAction = true;
                 }
 
-                if (input.ValueRO.useSkill1)
+                if (input.ValueRO.UseSkill1)
                 {
                     data.currentStamina -= 20f;
                     performedAction = true;
                 }
 
-                if (input.ValueRO.useSkill2)
+                if (input.ValueRO.UseSkill2)
                 {
                     data.currentStamina -= 25f;
                     performedAction = true;
                 }
 
-                if (input.ValueRO.useUltimate)
+                if (input.ValueRO.UseUltimate)
                 {
                     data.currentStamina -= 40f;
                     performedAction = true;

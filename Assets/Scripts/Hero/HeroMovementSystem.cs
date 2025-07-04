@@ -26,7 +26,7 @@ public partial class HeroMovementSystem : SystemBase
             if (!life.ValueRO.isAlive)
                 continue;
 
-            float2 moveInput = input.ValueRO.moveInput;
+            float2 moveInput = input.ValueRO.MoveInput;
 
             // Obtén la referencia a la cámara principal
             var cam = Camera.main;
@@ -52,7 +52,7 @@ public partial class HeroMovementSystem : SystemBase
                 float currentSpeed = stats.ValueRO.baseSpeed;
                 
                 // Si está haciendo sprint y tiene stamina suficiente, aplicar multiplicador
-                if (input.ValueRO.isSprinting && !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina > 0f)
+                if (input.ValueRO.IsSprintPressed && !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina > 0f)
                 {
                     currentSpeed *= stats.ValueRO.sprintMultiplier;
                 }

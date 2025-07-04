@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
+using ConquestTactics.Visual;
 
 /// <summary>
 /// Sistema que gestiona la instanciación y sincronización de los GameObjects visuales
@@ -86,7 +87,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         {
             syncScript = visualInstance.AddComponent<EntityVisualSync>();
         }
-        syncScript.SetupSync(unitEntity, EntityManager);
+        syncScript.SetHeroEntity(unitEntity);
         
         // Marcar la unidad como teniendo visual
         ecb.AddComponent(unitEntity, new UnitVisualInstance

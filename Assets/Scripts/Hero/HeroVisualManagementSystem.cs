@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
+using ConquestTactics.Visual;
 
 /// <summary>
 /// Sistema que gestiona la instanciación y sincronización de los GameObjects visuales
@@ -25,9 +26,14 @@ public partial class HeroVisualManagementSystem : SystemBase
                         .WithNone<HeroVisualInstance>()
                         .WithEntityAccess())
         {
+            // Asegurar que la entidad esté completamente spawneada
             if (!spawn.ValueRO.hasSpawned)
+            {
+                Debug.Log($"[HeroVisualManagementSystem] Entity {entity} not yet spawned, skipping visual creation");
                 continue;
+            }
                 
+            Debug.Log($"[HeroVisualManagementSystem] Creating visual for entity {entity} at position {transform.ValueRO.Position}");
             CreateVisualForEntity(entity, visualRef.ValueRO, transform.ValueRO, ecb);
         }
         
@@ -68,6 +74,8 @@ public partial class HeroVisualManagementSystem : SystemBase
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
         
+        Debug.Log($"[HeroVisualManagementSystem] Visual spawned at position: {transform.Position} for entity {entity}");
+        
         // Configurar el script de sincronización
         EntityVisualSync syncScript = visualInstance.GetComponent<EntityVisualSync>();
         if (syncScript == null)
@@ -75,7 +83,9 @@ public partial class HeroVisualManagementSystem : SystemBase
             syncScript = visualInstance.AddComponent<EntityVisualSync>();
         }
         
-        syncScript.SetupSync(entity, EntityManager);
+        syncScript.SetHeroEntity(entity);
+        
+        Debug.Log($"[HeroVisualManagementSystem] EntityVisualSync configured for entity {entity}");
         
         // Marcar la entidad como teniendo un visual instanciado
         ecb.AddComponent(entity, new HeroVisualInstance

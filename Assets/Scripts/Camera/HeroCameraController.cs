@@ -110,4 +110,40 @@ public class HeroCameraController : MonoBehaviour
         if (entities.Length > 0)
             _cameraEntity = entities[0];
     }
+
+    #region Public API for Animation Controller
+
+    /// <summary>
+    /// Gets the normalised forward vector of the camera with the Y value zeroed.
+    /// Required for SamplePlayerAnimationController_ECS compatibility.
+    /// </summary>
+    /// <returns>The normalised forward vector of the camera with the Y value zeroed.</returns>
+    public Vector3 GetCameraForwardZeroedYNormalised()
+    {
+        var forward = transform.forward;
+        return new Vector3(forward.x, 0, forward.z).normalized;
+    }
+
+    /// <summary>
+    /// Gets the normalised right vector of the camera with the Y value zeroed.
+    /// Required for SamplePlayerAnimationController_ECS compatibility.
+    /// </summary>
+    /// <returns>The normalised right vector of the camera with the Y value zeroed.</returns>
+    public Vector3 GetCameraRightZeroedYNormalised()
+    {
+        var right = transform.right;
+        return new Vector3(right.x, 0, right.z).normalized;
+    }
+
+    /// <summary>
+    /// Gets the X value of the camera tilt.
+    /// Required for SamplePlayerAnimationController_ECS compatibility.
+    /// </summary>
+    /// <returns>The X value of the camera tilt.</returns>
+    public float GetCameraTiltX()
+    {
+        return transform.eulerAngles.x;
+    }
+
+    #endregion
 }

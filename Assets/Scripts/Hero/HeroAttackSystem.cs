@@ -35,7 +35,7 @@ public partial class HeroAttackSystem : SystemBase
             var c = combat.ValueRW;
             c.attackCooldown = math.max(0f, c.attackCooldown - deltaTime);
 
-            if (input.ValueRO.isAttacking && !c.isAttacking && c.attackCooldown <= 0f &&
+            if (input.ValueRO.IsAttackPressed && !c.isAttacking && c.attackCooldown <= 0f &&
                 !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= 15f)
             {
                 c.isAttacking = true;

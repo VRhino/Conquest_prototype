@@ -8,20 +8,23 @@ using Unity.Mathematics;
 public struct HeroInputComponent : IComponentData
 {
     /// <summary>Direction on the XZ plane from WASD keys.</summary>
-    public float2 moveInput;
+    public float2 MoveInput;
 
     /// <summary>True while left shift is held.</summary>
-    public bool isSprinting;
+    public bool IsSprintPressed;
 
     /// <summary>True while left mouse button is held.</summary>
-    public bool isAttacking;
+    public bool IsAttackPressed;
 
     /// <summary>True while Q key is held.</summary>
-    public bool useSkill1;
+    public bool UseSkill1;
 
     /// <summary>True while E key is held.</summary>
-    public bool useSkill2;
+    public bool UseSkill2;
 
     /// <summary>True while R key is held.</summary>
-    public bool useUltimate;
+    public bool UseUltimate;
+
+    /// <summary>True when walk toggle key is pressed (for animation system).</summary>
+    public bool IsWalkTogglePressed;
 }

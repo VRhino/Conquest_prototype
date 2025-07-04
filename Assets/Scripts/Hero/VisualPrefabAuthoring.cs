@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
+using ConquestTactics.Visual;
 
 /// <summary>
 /// Authoring component para marcar GameObjects como prefabs visuales.
