@@ -39,5 +39,3 @@ scripts_list.txt
 
 # Ignorar todos los archivos .meta generados por Unity
 *.meta
-
-/Assets/synty

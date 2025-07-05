@@ -77,6 +77,14 @@ public partial class UnitFollowFormationSystem : SystemBase
             // Keep heroForward for orientation updates
             float3 heroForward = math.forward(leaderTransform.Rotation);
 
+            // Obtener el estado de movimiento del héroe
+            bool heroMovingForSquad = false;
+            if (SystemAPI.HasComponent<HeroStateComponent>(leader))
+            {
+                var heroState = SystemAPI.GetComponent<HeroStateComponent>(leader);
+                heroMovingForSquad = heroState.State == HeroState.Moving;
+            }
+
             // Get current formation gridPositions from squad data
             ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
             if (squadData.formationLibrary.IsCreated)
@@ -120,15 +128,6 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
                     
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
-                
-                // Only process movement based on unit's current state
-                // State management is handled by UnitFormationStateSystem
-                if (isHoldingPosition)
-                {
-                    // En Hold Position: las unidades NO siguen al héroe, mantienen posición
-                    // Solo se mueven si están muy lejos de su slot asignado (por ejemplo, fueron empujadas)
-                    // Continuar procesamiento para mantener formación en posición fija
-                }
 
                 // Obtener y actualizar posición previa del líder para esta unidad
                 float3 prevLeaderPos = heroPosition;
@@ -171,10 +170,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                 // Only move if the unit state is Moving (state management is UnitFormationStateSystem's responsibility)
                 bool shouldMove = false;
 
-                // Detectar si el héroe se está moviendo para esta unidad
-                float heroMoveSq = math.lengthsq(heroPosition - prevLeaderPos);
-                bool heroMovingForUnit = heroMoveSq > 0.0001f; // Umbral pequeño
-
+                // Usar el estado de movimiento del héroe en vez de comparar posiciones
                 if (isHoldingPosition)
                 {
                     // En Hold Position: una vez que está Moving, usar threshold normal para llegar precisamente
@@ -182,8 +178,12 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
                 else
                 {
-                    // Si el héroe se está moviendo, la unidad debe seguir moviéndose aunque esté cerca del slot
-                    shouldMove = stateComp.State == UnitFormationState.Moving && (distSq > stoppingDistanceSq || heroMovingForUnit);
+                    // Si el héroe se está moviendo, la unidad siempre se mueve (sin importar distancia al slot)
+                    // Si el héroe está quieto, solo se mueve si está lejos del slot
+                    if (heroMovingForSquad)
+                        shouldMove = stateComp.State == UnitFormationState.Moving;
+                    else
+                        shouldMove = stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq;
                 }
                 
                 if (shouldMove)
@@ -206,7 +206,6 @@ public partial class UnitFollowFormationSystem : SystemBase
 
                     float finalSpeed = baseSpeed * speedMultiplier;
                     
-                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} speed: {baseSpeed}, multiplier: {speedMultiplier}, finalSpeed: {finalSpeed} hurryToComander: {hurryToComander}");
                     float3 step = math.normalizesafe(diff) * finalSpeed * dt;
                     if (math.lengthsq(step) > distSq)
                         step = diff;
@@ -214,9 +213,9 @@ public partial class UnitFollowFormationSystem : SystemBase
                     current += step;
                     var t = transformLookup[unit];
                     t.Position = current;
-                    
+
                     // Actualizar orientación basada en configuración
-                    UpdateUnitOrientation(unit, ref t, heroPosition, heroForward, diff, dt);
+                    UpdateUnitOrientation(unit, ref t, heroPosition, heroForward, diff, dt, UnitOrientationType.FaceMovementDirection);
                     
                     transformLookup[unit] = t;
                     
@@ -225,7 +224,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
                 else
                 {
-                    // Unit not moving - state management handled automatically
+                    
                 }
                 
                 // Update visual target regardless of state for UI purposes
@@ -245,16 +244,14 @@ public partial class UnitFollowFormationSystem : SystemBase
     /// <summary>
     /// Actualiza la orientación de una unidad basada en su configuración de orientación.
     /// </summary>
-    private void UpdateUnitOrientation(Entity unit, ref LocalTransform transform, float3 heroPos, float3 heroForward, float3 movementDirection, float deltaTime)
+    private void UpdateUnitOrientation(Entity unit, ref LocalTransform transform, float3 heroPos, float3 heroForward, float3 movementDirection, float deltaTime, UnitOrientationType orientationType)
     {
-        // Obtener configuración de orientación (valores por defecto si no existe)
-        UnitOrientationType orientationType = UnitOrientationType.MatchHeroDirection;
+         Debug.Log($"[UnitFollowFormationSystem] Updating orientation for unit {unit.Index} with type {orientationType}");
         float rotationSpeed = 5f;
         
         if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
         {
             var orientationComp = SystemAPI.GetComponent<UnitOrientationComponent>(unit);
-            orientationType = orientationComp.orientationType;
             rotationSpeed = orientationComp.rotationSpeed;
         }
 

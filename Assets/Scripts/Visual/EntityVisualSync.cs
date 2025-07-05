@@ -28,7 +28,7 @@ namespace ConquestTactics.Visual
         [SerializeField] private bool _syncRotation = true;
         
         [Tooltip("Suavizar el movimiento visual")]
-        [SerializeField] private bool _smoothMovement = false;
+        [SerializeField, HideInInspector] private bool _smoothMovement = false; // Forzar a false por código
         
         [Tooltip("Velocidad de suavizado del movimiento")]
         [SerializeField] private float _smoothSpeed = 10f;
@@ -285,36 +285,16 @@ namespace ConquestTactics.Visual
                 if (_syncPosition)
                 {
                     _targetPosition = targetPos;
-                    if (_smoothMovement)
-                    {
-                        Vector3 newPos = Vector3.Lerp(transform.position, _targetPosition, _smoothSpeed * Time.deltaTime);
-                        transform.position = newPos;
-                    }
-                    else
-                    {
-                        if (isInitialSync && _enableDebugLogs)
-                        {
-                            Debug.Log($"[EntityVisualSync] Direct assignment - Setting position to: {_targetPosition}");
-                        }
-                        transform.position = _targetPosition;
-                    }
-                    
-                    // Cache position for interference detection
+                    // Forzar siempre movimiento instantáneo
+                    transform.position = _targetPosition;
                     _lastSetPosition = transform.position;
                 }
                 
                 if (_syncRotation)
                 {
                     _targetRotation = targetRot;
-                    
-                    if (_smoothMovement)
-                    {
-                        transform.rotation = Quaternion.Lerp(transform.rotation, _targetRotation, _smoothSpeed * Time.deltaTime);
-                    }
-                    else
-                    {
-                        transform.rotation = _targetRotation;
-                    }
+                    // Forzar siempre rotación instantánea
+                    transform.rotation = _targetRotation;
                 }
             }
             catch (System.Exception e)

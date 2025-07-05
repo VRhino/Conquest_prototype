@@ -107,7 +107,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(0.5f, 1.5f);
+                                stateComp.DelayDuration = UnityEngine.Random.Range(0.5f, 1f);
                             }
                             break;
                         case UnitFormationState.Waiting:
@@ -168,9 +168,22 @@ public partial struct UnitFormationStateSystem : ISystem
                             break;
 
                         case UnitFormationState.Moving:
+                            // Obtener el estado de movimiento del héroe
+                            bool heroMovingForSquad = heroState == HeroState.Moving;
                             // Moving -> Formed: Unit reaches slot AND hero is within radius
                             if (inSlot && heroWithinRadius)
                             {
+                                if (!heroMovingForSquad)
+                                {
+                                    // Si el héroe no se está moviendo, la unidad se forma
+                                    stateComp.State = UnitFormationState.Formed;
+                                    stateComp.DelayTimer = 0f;
+                                }
+                                else
+                                {
+                                    // Si el héroe se está moviendo, la unidad sigue al héroe
+                                    stateComp.State = UnitFormationState.Moving;
+                                }
                                 stateComp.State = UnitFormationState.Formed;
                                 stateComp.DelayTimer = 0f;
                             }

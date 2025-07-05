@@ -125,4 +125,28 @@ public static class FormationPositionCalculator
 
         return closestDistSq;
     }
+
+    // Devuelve la distancia al cuadrado entre el héroe y la unidad más lejana del escuadrón
+    public static float GetFarestUnitDistanceSq(DynamicBuffer<SquadUnitElement> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, out Entity farestUnit)
+    {
+        float farestDistSq = float.MinValue;
+        farestUnit = Entity.Null;
+        
+        foreach (var unitElement in units)
+        {
+            Entity unit = unitElement.Value;
+            if (transformLookup.HasComponent(unit))
+            {
+                float3 unitPosition = transformLookup[unit].Position;
+                float distSq = math.lengthsq(heroPosition - unitPosition);
+                
+                if (distSq > farestDistSq)
+                {
+                    farestDistSq = distSq;
+                    farestUnit = unit;
+                }
+            }
+        }
+        return farestDistSq;
+    }
 }
