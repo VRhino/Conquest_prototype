@@ -65,7 +65,6 @@ public partial class HeroMovementSystem : SystemBase
                 }
 
                 transform.ValueRW.Position += direction * currentSpeed * deltaTime;
-                Debug.Log($"[HeroMovementSystem.cs] Set LocalTransform.Position += {direction * currentSpeed * deltaTime} (new: {transform.ValueRW.Position})");
 
                 quaternion targetRot = quaternion.LookRotationSafe((float3)camForward, math.up());
                 transform.ValueRW.Rotation = math.slerp(transform.ValueRW.Rotation, targetRot, deltaTime * 10f);

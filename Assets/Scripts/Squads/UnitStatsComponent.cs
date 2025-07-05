@@ -16,7 +16,7 @@ public struct UnitStatsComponent : IComponentData
     /// <summary>
     /// Weight category of the unit: 1=light, 2=medium, 3=heavy.
     /// </summary>
-    public int peso;
+    public float peso;
     public float bloqueo;
 
     public float defensaCortante;

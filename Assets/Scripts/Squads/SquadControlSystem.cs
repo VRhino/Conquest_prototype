@@ -20,6 +20,7 @@ public partial class SquadControlSystem : SystemBase
     // Variables para el doble clic de X
     private float _lastXPressTime = 0f;
     private const float DOUBLE_CLICK_THRESHOLD = 0.5f; // Tiempo máximo entre clics para detectar doble clic
+    private float _lastCPressTime = 0f; // Para doble clic de C
     
     protected override void OnCreate()
     {
@@ -47,6 +48,18 @@ public partial class SquadControlSystem : SystemBase
         SquadOrderType newOrder = default;
         float3 mouseWorldPosition = float3.zero;
         bool isDoubleClickX = false;
+        // Doble clic de C para toggle
+        bool isDoubleClickC = false;
+        if (keyboard.cKey.wasPressedThisFrame)
+        {
+            float currentTimeC = (float)SystemAPI.Time.ElapsedTime;
+            if (currentTimeC - _lastCPressTime <= DOUBLE_CLICK_THRESHOLD)
+            {
+                isDoubleClickC = true;
+            }
+            _lastCPressTime = currentTimeC;
+        }
+        
 
         if (keyboard.cKey.wasPressedThisFrame)
         {
@@ -122,6 +135,12 @@ public partial class SquadControlSystem : SystemBase
             {
                 var input = SystemAPI.GetComponent<SquadInputComponent>(squadEntity);
                 
+                // Toggle hurryToComander solo si hubo doble clic en C
+                if (isDoubleClickC)
+                {
+                    input.hurryToComander = !input.hurryToComander;
+                }
+
                 if (orderIssued)
                 {
                     input.orderType = newOrder;
@@ -196,11 +215,7 @@ public partial class SquadControlSystem : SystemBase
                 }
 
                 input.hasNewOrder = true;
-                
-                // Collect the change for later application
                 squadChanges.Add((squadEntity, input));
-                
-                // Collect order for squad
             }
             else
             {

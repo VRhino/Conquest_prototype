@@ -28,7 +28,7 @@ namespace ConquestTactics.Visual
         [SerializeField] private bool _syncRotation = true;
         
         [Tooltip("Suavizar el movimiento visual")]
-        [SerializeField] private bool _smoothMovement = true;
+        [SerializeField] private bool _smoothMovement = false;
         
         [Tooltip("Velocidad de suavizado del movimiento")]
         [SerializeField] private float _smoothSpeed = 10f;

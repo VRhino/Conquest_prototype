@@ -122,7 +122,6 @@ public partial class SquadSpawningSystem : SystemBase
                     true);
 
                 ecb.AddComponent(unit, LocalTransform.FromPosition(worldPos));
-                Debug.Log($"[SquadSpawningSystem.cs][{unit}] Set LocalTransform.Position = {worldPos}");
                 
                 // Agregar referencia visual para la unidad
                 ecb.AddComponent(unit, new UnitVisualReference
@@ -158,17 +157,37 @@ public partial class SquadSpawningSystem : SystemBase
                     orientationType = UnitOrientationType.MatchHeroDirection,
                     rotationSpeed = 5f
                 });
-                // Asignar UnitAnimationMovementComponent por defecto
+                // Obtener velocidad máxima desde el SquadDataComponent (todas las unidades del squad comparten la misma velocidad base)
+                float maxSpeed = data.velocidadBase; // Usar el campo correcto del ScriptableObject
+                // Asignar UnitAnimationMovementComponent por defecto con velocidad correcta
                 ecb.AddComponent(unit, new ConquestTactics.Animation.UnitAnimationMovementComponent
                 {
                     CurrentSpeed = 0f,
-                    MaxSpeed = 5f,
+                    MaxSpeed = maxSpeed,
                     MovementDirection = new Unity.Mathematics.float3(0, 0, 1),
                     IsMoving = false,
                     IsRunning = false,
                     MovementTime = 0f,
                     StoppedTime = 0f,
                     PreviousPosition = worldPos // Inicializar con la posición de spawn
+                });
+                // Agregar UnitStatsComponent usando los valores del SquadData
+                ecb.AddComponent(unit, new UnitStatsComponent
+                {
+                    vida = data.vidaBase,
+                    velocidad = data.velocidadBase,
+                    masa = data.masa,
+                    peso = data.peso,
+                    bloqueo = data.bloqueo,
+                    defensaCortante = data.defensaCortante,
+                    defensaPerforante = data.defensaPerforante,
+                    defensaContundente = data.defensaContundente,
+                    danoCortante = data.danoCortante,
+                    danoPerforante = data.danoPerforante,
+                    danoContundente = data.danoContundente,
+                    penetracionCortante = data.penetracionCortante,
+                    penetracionPerforante = data.penetracionPerforante,
+                    penetracionContundente = data.penetracionContundente
                 });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }

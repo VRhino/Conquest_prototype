@@ -96,11 +96,6 @@ public partial class UnitAnimationSystem : SystemBase
             animComponent.ValueRW.IsMoving = isMoving;
             animComponent.ValueRW.IsRunning = isRunning;
             
-            // LOG: Diagnóstico tras el spawn y en los primeros frames
-            if (SystemAPI.Time.ElapsedTime < 2.0f || entity.Index % 100 == 0) // Solo los primeros 2s o cada 100 entidades
-            {
-                Debug.Log($"[UnitAnimationSystem] Entity: {entity} | CurrentPos: {currentPos} | PrevPos: {prevPos} | MovementVec: {movementVector} | Speed: {speedMagnitude:F4} | IsMoving: {isMoving}");
-            }
 
             // Actualizar PreviousPosition para el siguiente frame
             animComponent.ValueRW.PreviousPosition = currentPos;

@@ -21,7 +21,6 @@ public partial class HeroInputSystem : SystemBase
         public bool useUltimate;
         public bool isAttacking;
         public bool interactPressed;
-        public bool isWalkTogglePressed;
 
         [NativeDisableParallelForRestriction]
         public ComponentLookup<PlayerInteractionComponent> interactionLookup;
@@ -36,7 +35,6 @@ public partial class HeroInputSystem : SystemBase
             input.UseSkill2 = useSkill2;
             input.UseUltimate = useUltimate;
             input.IsAttackPressed = isAttacking;
-            input.IsWalkTogglePressed = isWalkTogglePressed;
 
             if (interactionLookup.HasComponent(entity))
             {
@@ -66,7 +64,6 @@ public partial class HeroInputSystem : SystemBase
         bool ultimate = false;
         bool attack = false;
         bool interact = false;
-        bool walkToggle = false;
 
         // Solo loguea si hay input relevante
         bool hasInput = false;
@@ -82,7 +79,6 @@ public partial class HeroInputSystem : SystemBase
             skill2 = keyboard.eKey.isPressed;
             ultimate = keyboard.rKey.isPressed;
             interact = keyboard.fKey.wasPressedThisFrame;
-            walkToggle = keyboard.leftAltKey.wasPressedThisFrame; // Alt para toggle walk
         }
 
         if (mouse != null)
@@ -90,7 +86,7 @@ public partial class HeroInputSystem : SystemBase
             attack = mouse.leftButton.isPressed;
         }
 
-        hasInput = (move.x != 0 || move.y != 0 || sprint || skill1 || skill2 || ultimate || attack || interact || walkToggle);
+        hasInput = (move.x != 0 || move.y != 0 || sprint || skill1 || skill2 || ultimate || attack || interact);
 
         var ecb = new EntityCommandBuffer(Allocator.TempJob);
 
@@ -103,7 +99,6 @@ public partial class HeroInputSystem : SystemBase
             useUltimate = ultimate,
             isAttacking = attack,
             interactPressed = interact,
-            isWalkTogglePressed = walkToggle,
             interactionLookup = GetComponentLookup<PlayerInteractionComponent>(),
             ecb = ecb.AsParallelWriter()
         };

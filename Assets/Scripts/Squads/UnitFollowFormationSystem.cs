@@ -98,6 +98,14 @@ public partial class UnitFollowFormationSystem : SystemBase
             // Determinar el comportamiento según el estado del escuadrón
             bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
 
+            // Detectar si el squad tiene la bandera hurryToComander activa
+            bool hurryToComander = false;
+            if (SystemAPI.HasComponent<SquadInputComponent>(entity))
+            {
+                var squadInput = SystemAPI.GetComponent<SquadInputComponent>(entity);
+                hurryToComander = squadInput.hurryToComander;
+            }
+
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;
@@ -162,17 +170,20 @@ public partial class UnitFollowFormationSystem : SystemBase
                 
                 // Only move if the unit state is Moving (state management is UnitFormationStateSystem's responsibility)
                 bool shouldMove = false;
-                
+
+                // Detectar si el héroe se está moviendo para esta unidad
+                float heroMoveSq = math.lengthsq(heroPosition - prevLeaderPos);
+                bool heroMovingForUnit = heroMoveSq > 0.0001f; // Umbral pequeño
+
                 if (isHoldingPosition)
                 {
                     // En Hold Position: una vez que está Moving, usar threshold normal para llegar precisamente
-                    // El threshold grande solo se usa en UnitFormationStateSystem para detectar cambios de formación
                     shouldMove = stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq;
                 }
                 else
                 {
-                    // Comportamiento normal de seguimiento
-                    shouldMove = stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq;
+                    // Si el héroe se está moviendo, la unidad debe seguir moviéndose aunque esté cerca del slot
+                    shouldMove = stateComp.State == UnitFormationState.Moving && (distSq > stoppingDistanceSq || heroMovingForUnit);
                 }
                 
                 if (shouldMove)
@@ -189,8 +200,13 @@ public partial class UnitFollowFormationSystem : SystemBase
                     float speedMultiplier = 1f;
                     if (SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit))
                         speedMultiplier = SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier;
-                    
+                    // Si hurryToComander está activo, duplicar el multiplicador de velocidad
+                    if (hurryToComander)
+                        speedMultiplier *= 2f;
+
                     float finalSpeed = baseSpeed * speedMultiplier;
+                    
+                    Debug.Log($"[UnitFollowFormationSystem] Unit {unit.Index} speed: {baseSpeed}, multiplier: {speedMultiplier}, finalSpeed: {finalSpeed} hurryToComander: {hurryToComander}");
                     float3 step = math.normalizesafe(diff) * finalSpeed * dt;
                     if (math.lengthsq(step) > distSq)
                         step = diff;

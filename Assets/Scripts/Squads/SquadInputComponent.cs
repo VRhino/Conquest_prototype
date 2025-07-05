@@ -21,4 +21,9 @@ public struct SquadInputComponent : IComponentData
     /// and represents the terrain position where the squad should hold formation.
     /// </summary>
     public float3 holdPosition;
+
+    /// <summary>
+    /// Si es true, el squad debe moverse rápidamente hacia el comandante (tecla C sostenida)
+    /// </summary>
+    public bool hurryToComander;
 }
