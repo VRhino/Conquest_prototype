@@ -27,6 +27,9 @@ namespace ConquestTactics.Animation
         // Si la unidad está sprintando (normalized speed >= 1)
         public bool IsSprinting { get; private set; } = false;
         
+        // Velocidad 2D real (sin normalizar, en unidades por segundo)
+        public float Speed2D { get; private set; }
+        
         #endregion
         
         #region Inspector Settings
@@ -207,11 +210,12 @@ namespace ConquestTactics.Animation
                 }
                 
                 var animData = _entityManager.GetComponentData<UnitAnimationMovementComponent>(_unitEntity);
-                
+
                 // Actualizar propiedades
                 NormalizedSpeed = animData.MaxSpeed > 0 
                     ? Mathf.Clamp01(animData.CurrentSpeed / animData.MaxSpeed) 
                     : 0f;
+                Speed2D = animData.CurrentSpeed;
                 
                 MovementVector = new Vector2(animData.MovementDirection.x, animData.MovementDirection.z);
                 
@@ -271,6 +275,7 @@ namespace ConquestTactics.Animation
                 
                 // Valores por defecto en caso de error
                 NormalizedSpeed = 0f;
+                Speed2D = 0f;
                 MovementVector = Vector2.zero;
                 IsStopped = true;
                 IsRunning = false;

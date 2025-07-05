@@ -176,8 +176,9 @@ namespace ConquestTactics.Visual
         /// </summary>
         private void UpdateAnimationParameters()
         {
-            // Almacenar valores actuales para debugging
-            _currentSpeed = _animationAdapter.NormalizedSpeed;
+            // Usar la velocidad real 2D expuesta por el adapter
+            float speed2D = _animationAdapter.Speed2D;
+            _currentSpeed = speed2D;
             _isStopped = _animationAdapter.IsStopped;
             _isRunning = _animationAdapter.IsRunning;
             _isSprinting = _animationAdapter.IsSprinting;
@@ -214,13 +215,14 @@ namespace ConquestTactics.Visual
             _animator.SetBool("isStarting", false);
             _animator.SetBool("isJumping", false);
             _animator.SetBool("MovementInputTapper", false);
+            _animator.SetBool("MovementInputPressed", false);
             _animator.SetBool("MovementInputHeld", isMovingThisFrame);
             
             // 1. Activar/desactivar movementInput (crítico para transiciones)
-            _animator.SetBool(_movementInputPressedHash, isMovingThisFrame);
+            _animator.SetBool(_movementInputPressedHash, !isMovingThisFrame);
             
             // 2. Establecer velocidad (crítico para determinar qué animación se muestra)
-            _animator.SetFloat(_moveSpeedHash, _currentSpeed);
+            _animator.SetFloat(_moveSpeedHash, speed2D);
             
             // 3. Forzar el estado IsStopped a false cuando hay movimiento (prioridad máxima)
             if (isMovingThisFrame)
@@ -250,7 +252,7 @@ namespace ConquestTactics.Visual
             _animator.SetInteger(_currentGaitHash, gait);
             
             // 5. Establecer IsWalking para mayor claridad
-            _animator.SetBool(_isWalkingHash, isMovingThisFrame && !_isRunning);
+            _animator.SetBool(_isWalkingHash, false);
             
             // 6. Forzar transiciones con triggers si el estado no coincide con el esperado
             // Esto soluciona problemas donde el animator no responde a los parámetros regulares
@@ -296,7 +298,7 @@ namespace ConquestTactics.Visual
             _animator.SetInteger(_currentGaitHash, gait);
             
             // Configurar caminando o corriendo - más explícito
-            bool isWalking = !_isRunning && !_isStopped;
+            bool isWalking = false;
             _animator.SetBool(_isWalkingHash, isWalking);
             
             // Parámetros de dirección para compatibilidad con AC_Polygon

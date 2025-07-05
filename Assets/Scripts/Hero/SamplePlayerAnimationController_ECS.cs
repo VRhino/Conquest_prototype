@@ -349,7 +349,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private void EnableWalk(bool enable)
         {
-            _isWalking = enable && !_isSprinting; // SIMPLIFIED: No grounded check needed
+            _isWalking = false; // SIMPLIFIED: No grounded check needed
         }
 
         #endregion
