@@ -1,6 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
-
+using Unity.Collections;
 /// <summary>
 /// Stores the spawn location used when the hero respawns.
 /// Also tracks the selected spawn point.
@@ -18,4 +18,8 @@ public struct HeroSpawnComponent : IComponentData
 
     /// <summary>True when the hero has been placed at the spawn.</summary>
     public bool hasSpawned;
+
+    /// <summary>
+    /// Unique identifier for the visual prefab used for this hero.
+    public FixedString64Bytes visualPrefabId;
 }

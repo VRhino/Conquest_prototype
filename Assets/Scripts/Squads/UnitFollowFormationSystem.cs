@@ -246,7 +246,6 @@ public partial class UnitFollowFormationSystem : SystemBase
     /// </summary>
     private void UpdateUnitOrientation(Entity unit, ref LocalTransform transform, float3 heroPos, float3 heroForward, float3 movementDirection, float deltaTime, UnitOrientationType orientationType)
     {
-         Debug.Log($"[UnitFollowFormationSystem] Updating orientation for unit {unit.Index} with type {orientationType}");
         float rotationSpeed = 5f;
         
         if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))

@@ -132,7 +132,6 @@
     <Compile Include="Assets\Scripts\Squads\UnitAnimationAdapter.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyInteractionSystem.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadTargetEntity.cs" />
-    <Compile Include="Assets\Scripts\Testing\PrefabConfigurationValidator.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularSetupWizard.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitDeploymentValidationSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinition.cs" />
@@ -171,6 +170,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitOrientationComponent.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInputSystem.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneReferenceBuffer.cs" />
+    <Compile Include="Assets\Scripts\Hero\HeroMoveIntent.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayerAuthoring.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawnAuthoring.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />

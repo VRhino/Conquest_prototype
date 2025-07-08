@@ -66,11 +66,30 @@ namespace ConquestTactics.Visual
         // Performance optimization
         private float _lastSyncTime;
         private const float SYNC_INTERVAL = 0.016f; // ~60 FPS
+
+        private CharacterController _characterController;
+
+        // Gravity/vertical velocity handling
+        private float _verticalVelocity = 0f;
+        private const float GRAVITY = -9.81f;
+        private const float TERMINAL_VELOCITY = -50f;
+        private const float GROUND_CHECK_BUFFER = -0.5f; // Small negative to keep grounded
         
         #endregion
         
         #region Unity Lifecycle
         
+        private void Awake()
+        {
+            _characterController = GetComponent<CharacterController>();
+            if (_characterController != null && !_characterController.enabled)
+            {
+                _characterController.enabled = true;
+                if (_enableDebugLogs)
+                    Debug.Log("[EntityVisualSync] CharacterController habilitado para movimiento visual");
+            }
+        }
+
         private void Start()
         {
             if (_enableDebugLogs)
@@ -115,7 +134,46 @@ namespace ConquestTactics.Visual
             if (Time.time - _lastSyncTime < SYNC_INTERVAL)
                 return;
                  
-            SyncTransformFromEcs();
+            // 1. Leer intención de movimiento ECS y mover el CharacterController
+            if (IsValidSetup() && _characterController != null && _characterController.enabled)
+            {
+                Vector3 move = Vector3.zero;
+                if (_entityManager.HasComponent<HeroMoveIntent>(_heroEntity))
+                {
+                    var moveIntent = _entityManager.GetComponentData<HeroMoveIntent>(_heroEntity);
+                    move = new Vector3(moveIntent.Direction.x, 0, moveIntent.Direction.z) * moveIntent.Speed;
+                }
+                // Gravity/vertical velocity logic
+                if (_characterController.isGrounded)
+                {
+                    if (_verticalVelocity < 0)
+                        _verticalVelocity = GROUND_CHECK_BUFFER; // Small negative to keep grounded
+                }
+                else
+                {
+                    _verticalVelocity += GRAVITY * Time.deltaTime;
+                    if (_verticalVelocity < TERMINAL_VELOCITY)
+                        _verticalVelocity = TERMINAL_VELOCITY;
+                }
+                move.y = _verticalVelocity;
+                _characterController.Move(move * Time.deltaTime);
+            }
+            // 2. Actualizar ECS LocalTransform con la posición visual después del movimiento
+            if (IsValidSetup())
+            {
+                var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
+                float3 newPos = transform.position - _positionOffset;
+                ecsTransform.Position = newPos;
+                _entityManager.SetComponentData(_heroEntity, ecsTransform);
+            }
+            // 3. Sincronizar rotación si corresponde
+            if (_syncRotation && IsValidSetup())
+            {
+                var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
+                ecsTransform.Rotation = transform.rotation;
+                _entityManager.SetComponentData(_heroEntity, ecsTransform);
+            }
+            
             _lastSyncTime = Time.time;
         }
         
@@ -502,26 +560,26 @@ namespace ConquestTactics.Visual
                 {
                     Debug.LogWarning($"[EntityVisualSync] Disabling CharacterController on {gameObject.name} to prevent position conflicts");
                 }
-                characterController.enabled = false;
+                characterController.enabled = true;
             }
-            Rigidbody rb = GetComponent<Rigidbody>();
-            if (rb != null && !rb.isKinematic)
-            {
-                if (_enableDebugLogs)
-                {
-                    Debug.LogWarning($"[EntityVisualSync] Setting Rigidbody to kinematic on {gameObject.name} to prevent position conflicts");
-                }
-                rb.isKinematic = true;
-            }
-            Animator animator = GetComponent<Animator>();
-            if (animator != null && animator.applyRootMotion)
-            {
-                if (_enableDebugLogs)
-                {
-                    Debug.LogWarning($"[EntityVisualSync] Disabling root motion on Animator in {gameObject.name} to prevent position conflicts");
-                }
-                animator.applyRootMotion = false;
-            }
+            // Rigidbody rb = GetComponent<Rigidbody>();
+            // if (rb != null && !rb.isKinematic)
+            // {
+            //     if (_enableDebugLogs)
+            //     {
+            //         Debug.LogWarning($"[EntityVisualSync] Setting Rigidbody to kinematic on {gameObject.name} to prevent position conflicts");
+            //     }
+            //     rb.isKinematic = true;
+            // }
+            // Animator animator = GetComponent<Animator>();
+            // if (animator != null && animator.applyRootMotion)
+            // {
+            //     if (_enableDebugLogs)
+            //     {
+            //         Debug.LogWarning($"[EntityVisualSync] Disabling root motion on Animator in {gameObject.name} to prevent position conflicts");
+            //     }
+            //     animator.applyRootMotion = false;
+            // }
         }
 
         #endregion

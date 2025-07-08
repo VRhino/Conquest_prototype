@@ -18,9 +18,8 @@ public partial class HeroVisualManagementSystem : SystemBase
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         
         // Crear visuales para entidades recién spawneadas
-        foreach (var (spawn, visualRef, transform, entity) in
-                 SystemAPI.Query<RefRO<HeroSpawnComponent>, 
-                                 RefRO<HeroVisualReference>, 
+        foreach (var (spawn, transform, entity) in
+                 SystemAPI.Query<RefRO<HeroSpawnComponent>,
                                  RefRO<LocalTransform>>()
                         .WithAll<IsLocalPlayer>()
                         .WithNone<HeroVisualInstance>()
@@ -32,11 +31,10 @@ public partial class HeroVisualManagementSystem : SystemBase
                 Debug.Log($"[HeroVisualManagementSystem] Entity {entity} not yet spawned, skipping visual creation");
                 continue;
             }
-                
-            Debug.Log($"[HeroVisualManagementSystem] Creating visual for entity {entity} at position {transform.ValueRO.Position}");
-            CreateVisualForEntity(entity, visualRef.ValueRO, transform.ValueRO, ecb);
+            
+                // Usar el id del prefab visual desde HeroSpawnComponent
+                CreateVisualForEntity(entity, spawn.ValueRO.visualPrefabId.ToString(), transform.ValueRO, ecb);
         }
-        
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }
@@ -45,26 +43,18 @@ public partial class HeroVisualManagementSystem : SystemBase
     /// Crea un GameObject visual para la entidad especificada.
     /// </summary>
     /// <param name="entity">Entidad para la que crear el visual</param>
-    /// <param name="visualRef">Referencia al prefab visual</param>
+    /// <param name="visualPrefabId">ID del prefab visual</param>
     /// <param name="transform">Transform inicial de la entidad</param>
     /// <param name="ecb">EntityCommandBuffer para agregar componentes</param>
-    private void CreateVisualForEntity(Entity entity, HeroVisualReference visualRef, 
+    private void CreateVisualForEntity(Entity entity, string visualPrefabId, 
         LocalTransform transform, EntityCommandBuffer ecb)
     {
-        // Intentar obtener el prefab visual desde el EntityManager
-        if (!EntityManager.Exists(visualRef.visualPrefab))
-        {
-            Debug.LogWarning($"[HeroVisualManagementSystem] Prefab visual no encontrado para entidad {entity.Index}");
-            return;
-        }
-        
-        // Para esta implementación híbrida, necesitamos una referencia al prefab GameObject
-        // Como workaround, buscaremos el prefab por nombre o usaremos un sistema de registro
-        GameObject visualPrefab = FindVisualPrefabGameObject("HeroSynty");
+        // Buscar el prefab visual usando el id
+        GameObject visualPrefab = FindVisualPrefabGameObject(visualPrefabId);
         
         if (visualPrefab == null)
         {
-            Debug.LogWarning($"[HeroVisualManagementSystem] GameObject del prefab visual no encontrado");
+            Debug.LogWarning($"[HeroVisualManagementSystem] GameObject del prefab visual no encontrado para id: {visualPrefabId}");
             return;
         }
         
@@ -99,13 +89,14 @@ public partial class HeroVisualManagementSystem : SystemBase
     /// <summary>
     /// Busca el prefab GameObject visual usando el VisualPrefabRegistry.
     /// </summary>
-    /// <param name="prefabName">Nombre del prefab a buscar</param>
+    /// <param name="prefabId">ID del prefab a buscar</param>
     /// <returns>GameObject del prefab visual o null si no se encuentra</returns>
-    private GameObject FindVisualPrefabGameObject(string prefabName)
+    private GameObject FindVisualPrefabGameObject(string prefabId)
     {
+        Debug.Log($"[HeroVisualManagementSystem] Looking for visual prefab with ID: {prefabId}");
         // Usar el registro de prefabs visuales
         VisualPrefabRegistry registry = VisualPrefabRegistry.Instance;
-        GameObject prefab = registry.GetPrefab(prefabName);
+        GameObject prefab = registry.GetPrefab(prefabId);
         
         if (prefab == null)
         {

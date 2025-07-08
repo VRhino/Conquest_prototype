@@ -14,62 +14,43 @@ public partial class HeroMovementSystem : SystemBase
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
-
-        int i = 0;
-        foreach (var (input, stats, stamina, life, transform) in SystemAPI.Query<RefRO<HeroInputComponent>,
-                                   RefRO<HeroStatsComponent>,
-                                   RefRO<StaminaComponent>,
-                                   RefRO<HeroLifeComponent>,
-                                   RefRW<LocalTransform>>()
-                        .WithAll<IsLocalPlayer>())
-        {
-            // If you need the entity, you can get it from the query's Entity array:
-            // var entity = query.GetEntityArray(Allocator.Temp)[i];
-            // But for most single-player hero systems, there is only one entity.
-            // If you need to log the entity, you can skip it or log index.
-
-            if (!life.ValueRO.isAlive)
+        Entities
+            .WithAll<IsLocalPlayer>()
+            .WithStructuralChanges()
+            .ForEach((Entity entity, ref HeroInputComponent input, in HeroStatsComponent stats, in StaminaComponent stamina, in HeroLifeComponent life) =>
             {
-                i++;
-                continue;
-            }
+                if (!life.isAlive)
+                    return;
 
-            float2 moveInput = input.ValueRO.MoveInput;
+                float2 moveInput = input.MoveInput;
+                var cam = Camera.main;
+                if (cam == null)
+                    return;
 
-            var cam = Camera.main;
-            if (cam == null)
-            {
-                i++;
-                return;
-            }
+                Vector3 camForward = cam.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
+                Vector3 camRight = cam.transform.right;
+                camRight.y = 0f;
+                camRight.Normalize();
 
-            Vector3 camForward = cam.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
-            Vector3 camRight = cam.transform.right;
-            camRight.y = 0f;
-            camRight.Normalize();
-
-            float3 desired = (float3)(camForward * moveInput.y + camRight * moveInput.x);
-            float magnitude = math.length(desired);
-
-            if (magnitude > 0f)
-            {
-                float3 direction = desired / magnitude;
-
-                float currentSpeed = stats.ValueRO.baseSpeed;
-
-                if (input.ValueRO.IsSprintPressed && !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina > 0f)
+                float3 desired = (float3)(camForward * moveInput.y + camRight * moveInput.x);
+                float magnitude = math.length(desired);
+                float3 direction = magnitude > 0f ? desired / magnitude : float3.zero;
+                float currentSpeed = stats.baseSpeed;
+                if (input.IsSprintPressed && !stamina.isExhausted && stamina.currentStamina > 0f)
                 {
-                    currentSpeed *= stats.ValueRO.sprintMultiplier;
+                    currentSpeed *= stats.sprintMultiplier;
                 }
 
-                transform.ValueRW.Position += direction * currentSpeed * deltaTime;
-
-                quaternion targetRot = quaternion.LookRotationSafe((float3)camForward, math.up());
-                transform.ValueRW.Rotation = math.slerp(transform.ValueRW.Rotation, targetRot, deltaTime * 10f);
-            }
-            i++;
-        }
+                if (EntityManager.HasComponent<HeroMoveIntent>(entity))
+                {
+                    EntityManager.SetComponentData(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });
+                }
+                else
+                {
+                    EntityManager.AddComponentData(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });
+                }
+            }).Run();
     }
 }

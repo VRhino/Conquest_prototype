@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
+using Unity.Collections;
 
 /// <summary>
 /// Authoring component para crear el prefab ECS puro del héroe (solo lógica, sin visuales).
@@ -24,8 +25,8 @@ public class HeroEntityAuthoring : MonoBehaviour
     public GameObject squadDataPrefab;
     public int instanceId = 0;
     
-    [Header("Visual Prefab Reference")]
-    public GameObject visualPrefab; // Referencia al prefab visual de Synty
+    [Header("Visual Prefab Reference Identifier")]
+    public string visualPrefabId;
 }
 
 /// <summary>
@@ -50,7 +51,8 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
             spawnId = authoring.spawnId,
             spawnPosition = Vector3.zero,
             spawnRotation = quaternion.identity,
-            hasSpawned = false
+            hasSpawned = false,
+            visualPrefabId = new FixedString64Bytes(authoring.visualPrefabId)
         });
         
         AddComponent(entity, new TeamComponent
@@ -86,14 +88,5 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
         // Componentes de marcado
         AddComponent<IsLocalPlayer>(entity);
         AddComponent<HeroInputComponent>(entity);
-        
-        // Referencia al prefab visual
-        if (authoring.visualPrefab != null)
-        {
-            AddComponent(entity, new HeroVisualReference
-            {
-                visualPrefab = GetEntity(authoring.visualPrefab, TransformUsageFlags.Dynamic)
-            });
-        }
     }
 }
