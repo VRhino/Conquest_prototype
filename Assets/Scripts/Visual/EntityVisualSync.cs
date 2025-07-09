@@ -379,7 +379,6 @@ namespace ConquestTactics.Visual
             if (_entityManager == null || _world == null || !_world.IsCreated)
             {
                 InitializeEcsReferences();
-                
                 // Si aún no podemos inicializar, diferir la configuración
                 if (_entityManager == null)
                 {
@@ -390,41 +389,19 @@ namespace ConquestTactics.Visual
                     return;
                 }
             }
-            
             _heroEntity = heroEntity;
             _hasValidTarget = _entityManager.Exists(heroEntity);
             _isManuallyConfigured = true; // Marcar como configurado manualmente
-            
             // Make sure no components interfere with our position control
             DisableConflictingComponents();
-            
             if (_enableDebugLogs)
             {
                 Debug.Log($"[EntityVisualSync] Entidad héroe configurada manualmente: {heroEntity}, válida: {_hasValidTarget}");
             }
-            
             // Forzar sincronización inmediata para evitar desfase inicial
             if (_hasValidTarget)
             {
-                if (_enableDebugLogs)
-                {
-                    Debug.Log($"[EntityVisualSync] Forzando sincronización inicial para entity {heroEntity}");
-                    Debug.Log($"[EntityVisualSync] Posición ANTES de sincronizar: {transform.position}");
-                }
-                SyncTransformFromEcs();
-                if (_enableDebugLogs)
-                {
-                    Debug.Log($"[EntityVisualSync] Posición DESPUÉS de sincronizar: {transform.position}");
-                    try 
-                    {
-                        var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
-                        Debug.Log($"[EntityVisualSync] Sincronización inicial - ECS pos: {ecsTransform.Position}, Visual pos: {transform.position}");
-                    }
-                    catch (System.Exception e)
-                    {
-                        Debug.LogError($"[EntityVisualSync] Error obteniendo transform ECS: {e.Message}");
-                    }
-                }
+                ForceSyncToEcsPosition();
             }
             else
             {
@@ -432,6 +409,37 @@ namespace ConquestTactics.Visual
                 {
                     Debug.LogWarning($"[EntityVisualSync] No se pudo validar la entidad {heroEntity}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Fuerza la posición y rotación del visual a la del ECS, desactivando momentáneamente el CharacterController si es necesario
+        /// </summary>
+        private void ForceSyncToEcsPosition()
+        {
+            if (!IsValidSetup()) return;
+            var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
+            bool wasEnabled = false;
+            if (_characterController != null)
+            {
+                wasEnabled = _characterController.enabled;
+                _characterController.enabled = false;
+            }
+            if (_syncPosition)
+            {
+                transform.position = (Vector3)ecsTransform.Position + _positionOffset;
+            }
+            if (_syncRotation)
+            {
+                transform.rotation = math.mul(ecsTransform.Rotation, quaternion.Euler(math.radians(_rotationOffset)));
+            }
+            if (_characterController != null && wasEnabled)
+            {
+                _characterController.enabled = true;
+            }
+            if (_enableDebugLogs)
+            {
+                Debug.Log($"[EntityVisualSync] ForceSyncToEcsPosition ejecutado. Visual pos: {transform.position}, ECS pos: {ecsTransform.Position}");
             }
         }
         
