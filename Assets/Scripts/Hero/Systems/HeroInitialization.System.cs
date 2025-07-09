@@ -1,6 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
-
+using UnityEngine;
 /// <summary>
 /// Initializes hero attributes, abilities and perk lists when a hero is
 /// created or loaded from saved progression.
@@ -18,6 +18,9 @@ public partial class HeroInitializationSystem : SystemBase
     {
         var defLookup = GetComponentLookup<HeroClassDefinitionComponent>(true);
         var perkLookup = GetBufferLookup<ValidPerkElement>(true);
+        var staminaLookup = SystemAPI.GetComponentLookup<StaminaComponent>(false);
+        var healthLookup = SystemAPI.GetComponentLookup<HeroHealthComponent>(false);
+        var attrLookup = SystemAPI.GetComponentLookup<HeroAttributesComponent>(true);
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -26,9 +29,11 @@ public partial class HeroInitializationSystem : SystemBase
                      .WithNone<HeroAttributesComponent>()
                      .WithEntityAccess())
         {
+            Debug.Log($"[HeroInitializationSystem] Initializing hero {entity.Index} with class {classRef.ValueRO.classEntity.Index}");
             if (!defLookup.TryGetComponent(classRef.ValueRO.classEntity, out var def))
                 continue;
 
+            Debug.Log($"[HeroInitializationSystem] Found class definition for {classRef.ValueRO.classEntity.Index}");
             ecb.AddComponent(entity, new HeroAttributesComponent
             {
                 fuerza = def.baseFuerza,
@@ -53,6 +58,29 @@ public partial class HeroInitializationSystem : SystemBase
                 foreach (var perk in source)
                     dest.Add(perk);
             }
+        }
+
+        foreach (var (attr, entity) in SystemAPI.Query<RefRO<HeroAttributesComponent>>().WithEntityAccess())
+        {
+            // Solo calcular si ambos componentes existen
+            if (!healthLookup.HasComponent(entity) || !staminaLookup.HasComponent(entity))
+                continue;
+
+            var attributes = attr.ValueRO;
+            // Fórmulas: vidaMax = 100 + (5 * vitalidad), estaminaMax = 100 + (3 * destreza / 2)
+            float vidaMax = 100f + (5f * attributes.vitalidad);
+            float estaminaMax = 100f + (3f * attributes.destreza / 2f);
+            
+            Debug.Log($"[HeroInitializationSystem] Initializing hero {entity.Index} with max health: {vidaMax}, max stamina: {estaminaMax}");
+            var health = healthLookup[entity];
+            health.maxHealth = vidaMax;
+            health.currentHealth = vidaMax;
+            healthLookup[entity] = health;
+
+            var stamina = staminaLookup[entity];
+            stamina.maxStamina = estaminaMax;
+            stamina.currentStamina = estaminaMax;
+            staminaLookup[entity] = stamina;
         }
 
         ecb.Playback(EntityManager);

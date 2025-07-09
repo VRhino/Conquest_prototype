@@ -74,6 +74,13 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
             isExhausted = authoring.startExhausted
         });
         
+        // HeroHealthComponent por defecto (se recalcula luego en sistemas)
+        AddComponent(entity, new HeroHealthComponent
+        {
+            currentHealth = 100f,
+            maxHealth = 100f
+        });
+        
         // Squad selection
         if (authoring.squadDataPrefab != null)
         {
