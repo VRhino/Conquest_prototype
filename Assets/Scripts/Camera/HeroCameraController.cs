@@ -14,7 +14,9 @@ public class HeroCameraController : MonoBehaviour
     Entity _cameraEntity;
     Entity _heroEntity;
     float _yaw;
+    float _pitch; // Nuevo: ángulo vertical
     float _mouseX;
+    float _mouseY; // Nuevo: input vertical
     float _scroll;
     bool _tacticalMode;
 
@@ -24,7 +26,11 @@ public class HeroCameraController : MonoBehaviour
         var playerInput = GetComponent<PlayerInput>();
         if (playerInput != null)
         {
-            playerInput.actions["Look"].performed += ctx => _mouseX = ctx.ReadValue<Vector2>().x;
+            playerInput.actions["Look"].performed += ctx => {
+                var look = ctx.ReadValue<Vector2>();
+                _mouseX = look.x;
+                _mouseY = look.y; // Nuevo: capturar Y
+            };
             playerInput.actions["Zoom"].performed += ctx => _scroll = ctx.ReadValue<float>();
             playerInput.actions["Tactical"].performed += ctx => _tacticalMode = ctx.ReadValue<float>() > 0.5f;
         }
@@ -63,6 +69,8 @@ public class HeroCameraController : MonoBehaviour
 
         // Input handling (nuevo Input System)
         _yaw += _mouseX * settings.rotationSensitivity * Time.deltaTime;
+        _pitch -= _mouseY * settings.rotationSensitivity * Time.deltaTime; // Nuevo: sumar pitch
+        _pitch = Mathf.Clamp(_pitch, -60f, 80f); // Limitar el ángulo vertical
         camTarget.zoomLevel = math.clamp(
             camTarget.zoomLevel - _scroll * settings.zoomSpeed * Time.deltaTime,
             settings.minZoom,
@@ -79,7 +87,8 @@ public class HeroCameraController : MonoBehaviour
         if (camTarget.tacticalMode)
             offset += new float3(0f, 3f, -3f);
 
-        quaternion rot = quaternion.Euler(0f, math.radians(_yaw), 0f);
+        // Nuevo: aplicar pitch y yaw
+        quaternion rot = quaternion.Euler(math.radians(_pitch), math.radians(_yaw), 0f);
         float3 desiredFloat = heroTransform.Position + math.mul(rot, new float3(0f, offset.y, -camTarget.zoomLevel) + new float3(offset.x, 0f, offset.z));
         Vector3 desired = (Vector3)desiredFloat;
 
@@ -97,6 +106,7 @@ public class HeroCameraController : MonoBehaviour
 
         // Reset input deltas
         _mouseX = 0f;
+        _mouseY = 0f; // Nuevo: resetear input vertical
         _scroll = 0f;
     }
 
