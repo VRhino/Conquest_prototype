@@ -34,14 +34,3 @@ public class HeroAbilityData : ScriptableObject
     /// <summary>Optional multiplier applied to base damage.</summary>
     public float damageMultiplier;
 }
-
-/// <summary>
-/// Categories mapping abilities to input keys.
-/// </summary>
-public enum HeroAbilityCategory
-{
-    Q,
-    E,
-    R,
-    Ultimate
-}

@@ -67,19 +67,21 @@ public class HUDController : MonoBehaviour
     {
         if (_heroSection != null && !_heroSection.activeSelf)
             return;
-
+    
+        Debug.Log("[HUDController] Updating hero section");
         var query = em.CreateEntityQuery(
             ComponentType.ReadOnly<HeroHealthComponent>(),
             ComponentType.ReadOnly<StaminaComponent>(),
             ComponentType.ReadOnly<IsLocalPlayer>());
-
+        Debug.Log("[HUDController] Hero section query created");
         if (query.IsEmptyIgnoreFilter)
             return;
-
+        Debug.Log("[HUDController] Hero section query is not empty");
         Entity hero = query.GetSingletonEntity();
+        Debug.Log($"Updating HUD for hero: {hero.Index}");
         var health = em.GetComponentData<HeroHealthComponent>(hero);
         var stamina = em.GetComponentData<StaminaComponent>(hero);
-
+       
         if (_healthFill != null)
             _healthFill.fillAmount = health.maxHealth > 0f ? health.currentHealth / health.maxHealth : 0f;
         if (_staminaFill != null)

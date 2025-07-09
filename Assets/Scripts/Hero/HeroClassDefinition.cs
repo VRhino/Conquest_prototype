@@ -1,16 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Enumeration of the available hero classes in Feudos: Guerra de Escuadras.
-/// </summary>
-public enum HeroClass
-{
-    SwordAndShield,
-    TwoHandedSword,
-    Spear,
-    Bow
-}
 
 /// <summary>
 /// Defines the parameters for a hero class. Used by initialization and attribute systems.
