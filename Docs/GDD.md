@@ -1267,8 +1267,60 @@ Cuando un héroe es eliminado durante una batalla:
 - El terreno (muros, obstáculos, elevaciones) puede bloquear la visión y ocultar unidades detrás de cobertura.
 
 > Este diseño favorece el juego táctico con posicionamiento, uso de terreno y scouting manual por parte del jugador.
-> 
 
+---
+### 7.4 🛡️ Bloqueo Activo y Defensivo (Héroes y Unidades)
+
+El sistema de bloqueo permite reducir o anular el daño recibido antes de que se aplique, si se cumplen condiciones de colisión física, energía disponible (stamina o resistencia) y dirección adecuada. Este sistema se divide en dos ramas: **bloqueo activo del héroe** y **bloqueo pasivo de unidades con escudo**.
+
+---
+
+#### 🧍‍♂️ Héroe – Bloqueo Activo
+
+- **Activación:** el jugador mantiene presionado el botón derecho del mouse (`RMB`) para entrar en modo de bloqueo.
+- **Movimiento:** mientras bloquea, el héroe puede caminar a velocidad reducida, pero no puede correr.
+- **Validación:** el bloqueo se considera exitoso si el ataque enemigo impacta primero el *collider físico del arma o escudo* antes que el cuerpo del personaje.
+- **Colisión vs Ángulo:** no se usan grados de ángulo para determinar éxito. Si el proyectil/golpe impacta el collider del objeto de bloqueo (no el cuerpo), se activa el bloqueo.
+- **Cada arma tiene su propio collider de bloqueo**, cuyo tamaño afecta la facilidad de defensa (un escudo cubre más que una lanza).
+
+##### Mitigación de daño y consumo de stamina:
+| Tipo de Daño    | Multiplicador de Stamina Consumida |
+|------------------|------------------------------------|
+| Cortante         | x1.0                               |
+| Contundente      | x2.0                               |
+| Perforante       | x0.7                               |
+
+- **Ruptura de Guardia:**
+  - Si el daño bloqueado reduce la stamina a 0 → el héroe entra en estado `Stagger` (1 segundo sin control de input).
+  - Si no hay stamina suficiente para bloquear completamente → el bloqueo falla, se recibe daño completo.
+- **Animaciones:** el estado de bloqueo y la ruptura deben tener sus propias animaciones y efectos visuales.
+
+---
+
+#### 🛡️ Unidades – Bloqueo Pasivo con Escudo
+
+- **Requisitos:** solo escuadras con escudos pueden bloquear (ej. Escuderos, Lanceros).
+- **Colisión Física:** el escudo tiene un `collider físico` activo en todo momento. Si el ataque impacta el escudo antes que la unidad → se considera un bloqueo exitoso.
+- **Estadística de bloqueo (`bloqueo`):** cada unidad con escudo tiene un valor numérico que representa su resistencia defensiva. Este valor se reduce proporcionalmente al daño bloqueado.
+
+##### Ruptura de Escudo:
+- Si `bloqueo` ≤ 0 → la unidad entra en estado `StaggerUnit` por `2 segundos base`, modificado por:
+  - **`recuperacionBloqueo`:** valor oculto que reduce la duración del stagger (afectado por perks).
+- Durante el `Stagger`, la unidad no puede moverse ni atacar.
+
+##### Regeneración:
+- El valor de `bloqueo` se recupera pasivamente con el tiempo, incluso en combate.
+
+##### Bonificaciones:
+- **Formaciones defensivas** (como Muro de Escudos o Testudo) aumentan el valor de bloqueo y la estabilidad defensiva.
+- **Perks o habilidades del héroe** pueden otorgar bonificaciones adicionales a unidades aliadas.
+
+##### IA y Orientación:
+- Las unidades con escudo intentan girar automáticamente hacia amenazas frontales si están libres o sin objetivo directo, para maximizar su eficacia defensiva.
+
+---
+
+Este sistema refuerza el diseño de líneas defensivas, control de estamina, lectura táctica de amenazas y el uso de formaciones como mecánica clave para escuadras especializadas.
 ---
 
 # 8. 🌍 Mapas y Modo de Juego
@@ -1643,6 +1695,50 @@ Demostrar el **núcleo táctico** del juego:
 | **Mapa táctico / minimapa** | Superior derecha | Muestra terreno, supply points, aliados, enemigos detectados. |
 | **Notificación de objetivo** | Superior centro | Objetivo actual: capturar, defender, replegar. |
 | **Mensajes del equipo / chat** | Inferior izquierda (colapsable) | Chat de equipo. Solo visible fuera de combate por defecto. |
+
+---
+### 🧾 12.1.1 Vista de Estado de Batalla (Tecla `Tab`)
+
+📌 **Descripción:**
+Este panel se activa al mantener presionada la tecla `Tab` durante una partida activa. Permite al jugador evaluar de manera rápida y táctica el estado completo de la batalla, sin interferir en el combate.
+
+🔍 **Propósito:**
+- Obtener una visión general del desempeño de ambos equipos.
+- Consultar el estado de los puntos de captura y supply.
+- Ubicar aliados en el mapa táctico expandido.
+
+🧩 **Elementos mostrados:**
+
+#### 🧍 Listado de Jugadores por Bando:
+- Nombre del jugador.
+- Kills de héroes (⚔️).
+- Kills de unidades (🪖).
+- Muertes totales (💀).
+
+#### 🧭 Mapa Central Expandido:
+- Posición de aliados (🧍‍♂️).
+- Puntos de captura con:
+  - Porcentaje de captura (📊).
+  - Estado de control (🔵, 🔴, ⚪).
+- Supply points con su estado actual:
+  - 🟦 Aliado
+  - 🟥 Enemigo
+  - ⚪ Neutral
+
+📐 **Comportamiento:**
+- Se activa solo mientras se mantenga `Tab`.
+- Oculta el HUD principal temporalmente.
+- Animación rápida de entrada/salida.
+
+🛠 **Sistemas involucrados:**
+- `BattleStatusPanel`
+- `MinimapRendererExpanded`
+- `ScoreSyncSystem`
+- `CaptureZoneTracker`
+- `SupplyPointStatusTracker`
+
+🎯 **Inspiración:**
+Similar a paneles de estado vistos en juegos como *Battlefield* (modo comandante) y *Conqueror’s Blade*.
 
 ---
 

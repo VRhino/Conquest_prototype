@@ -41,6 +41,7 @@
 - 5.3 Tipos de daño y resistencias (blunt, slashing, piercing)
 - 5.4 Cálculo de daño y penetración en C#
 - 5.5 Gestión de cooldowns y tiempos de habilidad
+- 5.6 Sistema de Bloqueo y Mitigación por Colisión
 
 ### 6. 🔄 Flujo de Partida
 
@@ -60,6 +61,7 @@
 - 7.5 Sistema de clases de heroe
 - 7.6 Progresión Avanzada de Escuadras y Sinergias
 - 7.7 Control de Estados entr Héroe y Unidades del Escuadrón
+- 7.8 Estructura de Persistencia del Jugador (MVP y Post MVP)
 
 ## 8. 🌐 Multijugador (MVP)
 
@@ -77,6 +79,7 @@
 - 9.4 Interfaz de preparación y loadouts
 - 9.5 Menús de interacción con supply y puntos de captura
 - 9.6 Sistema de Marcadores de Destino (Hold Position)
+- 9.7 Scoreboard de Batalla (Panel de Estado Activado con `Tab`)
 
 ## 10. 🔐 Seguridad y Backend (Para expansión futura)
 
@@ -879,6 +882,73 @@ CooldownSystem
     - Icono gris → en cooldown
     - Números → segundos restantes
     - Animación de “cooldown completado”
+
+---
+### 5.6 🛡️ Sistema de Bloqueo y Mitigación por Colisión
+
+📌 **Descripción:**
+
+El sistema de bloqueo permite anular o reducir el daño entrante, tanto en el héroe (bloqueo activo) como en unidades defensivas (bloqueo pasivo). Se activa por colisión directa del golpe con el **hitbox del escudo o arma**, evaluando si el impacto fue **frontal** y si el **bloqueo está activo o disponible**.
+
+---
+
+🧍‍♂️ **Bloqueo del Héroe (Activo)**
+
+- **Input:** se mantiene el botón derecho del mouse (`RMB`) para activar el bloqueo.
+- **Movimiento:** al bloquear, el héroe solo puede caminar a velocidad reducida.
+- **Hitbox:** cada arma tiene su propio `GameObject` con collider físico habilitado en `blockingMode`.
+- **Validación:** si un ataque colisiona con el collider de bloqueo antes que con el `HeroCollider`, se considera un **bloqueo exitoso**.
+- **Mitigación:** se consume estamina proporcional al daño:
+  - `Cortante`: 1:1
+  - `Contundente`: x2
+  - `Perforante`: x0.7
+- **Ruptura:** si la estamina cae a 0 al bloquear → estado `Stagger` por 1s (bloquea input, animación de retroceso).
+- **Fallos:** si no hay estamina suficiente → bloqueo no se aplica, recibe daño completo.
+- **Ángulo de bloqueo:** determinado por el collider físico del arma/escudo, no por un ángulo numérico.
+
+---
+
+🛡️ **Bloqueo de Unidades (Pasivo)**
+
+- **Elegibilidad:** solo escuadras con escudo tienen acceso a este sistema.
+- **Stats:** se usa el campo `bloqueo` en `UnitStatsComponent` como resistencia acumulada.
+- **Validación:** si el ataque colisiona con el `EscudoCollider`, se considera un **bloqueo válido**.
+- **Reducción de `bloqueo`:** se resta el daño recibido al valor actual de `bloqueo`. Si llega a 0:
+  - Se activa estado `StaggerUnit` por `2s - recuperaciónBloqueo`
+- **Recuperación de bloqueo:** atributo oculto que reduce la duración del stagger (escala con perks o mejoras).
+- **Regeneración:** el valor de `bloqueo` se recupera pasivamente con el tiempo.
+- **Formaciones:** bonus de bloqueo se aplican según la formación activa (`Testudo`, `Muro de Escudos`, etc).
+
+---
+
+🧩 **Componentes nuevos**
+
+```csharp
+public struct BlockingComponent : IComponentData {
+    public bool isBlocking;
+    public Entity weaponCollider; // referencia al escudo o arma que bloquea
+    public float staminaDrainMultiplier;
+}
+
+public struct StaggerComponent : IComponentData {
+    public float duration;
+    public float timer;
+    public bool isStaggered;
+}
+
+public struct BlockValueComponent : IComponentData {
+    public float currentBlock;
+    public float maxBlock;
+    public float regenRate;
+    public float staggerDuration; // base 2s, modificado por perks
+}
+```
+🧠  **Sistemas involucrados**
+
+- HeroBlockSystem: activa bloqueo si input detectado y suficiente stamina.
+- UnitBlockSystem: aplica lógica de reducción pasiva y rotación defensiva.
+- StaggerSystem: bloquea input o AI si una entidad entra en estado de ruptura.
+- DamageCalculationSystem: consulta bloqueo antes de aplicar daño, ajusta el valor si fue mitigado.
 
 ---
 
@@ -1758,6 +1828,245 @@ Gestiona las transiciones de estado de cada unidad implementando la tabla de tra
 
 Mueve las unidades hacia su posición asignada **solo si están en estado `Moving`**. Las unidades en estado `Formed` o `Waiting` permanecen estáticas, creando un comportamiento más natural y evitando movimientos innecesarios.
 
+---
+### 7.8 📦 Estructura de Persistencia del Jugador (MVP y Post-MVP)
+
+📌 **Descripción general:**
+
+Este módulo define la estructura de datos central que representa el estado persistente del jugador. Permite guardar y cargar el progreso tanto a nivel local (en disco) como en el futuro a través de un backend. Incluye el héroe, escuadras, inventario, equipamiento y perks.
+
+---
+
+### 🧱 Estructuras de Datos Serializables
+
+#### `PlayerData.cs`
+
+```csharp
+[Serializable]
+public class PlayerData {
+    public string id;
+    public string name;
+    public string password; // Temporal para persistencia local
+    public List<HeroData> heroList;
+}
+```
+
+#### `HeroData.cs`
+
+```csharp
+
+[Serializable]
+public class HeroData {
+    public string name;
+    public HeroClass heroClass; // Referencia al tipo base (ScriptableObject)
+    public CalculatedAttributes cachedAttributes;
+    public List<Item> inventory;
+    public List<string> unlockedSquads;
+    public List<SquadInstanceData> squadList;
+    public AvatarParts parts;
+    public int level;
+    public int expPoints;
+    public Equipment equipment;
+}
+
+```
+
+---
+
+#### `SquadInstanceData.cs`
+
+```csharp
+
+[Serializable]
+public class SquadInstanceData {
+    public string id;
+    public SquadData baseSquad; // Referencia a ScriptableObject
+    public int level;
+    public int experience;
+    public List<string> unlockedAbilities;
+    public List<int> unlockedFormationsIndices;
+    public int selectedFormationIndex;
+    public string customName;
+}
+
+```
+
+---
+
+#### `AvatarParts.cs` (solo cosmético)
+
+```csharp
+
+[Serializable]
+public class AvatarParts {
+    public string headPartID;
+    public string torsoPartID;
+    public string glovesPartID;
+    public string pantsPartID;
+    public string bootsPartID;
+    public string hairPartID;
+}
+
+```
+
+---
+
+#### `Equipment.cs`
+
+```csharp
+
+[Serializable]
+public class Equipment {
+    public Item head;
+    public Item torso;
+    public Item gloves;
+    public Item pants;
+    public Item weapon;
+}
+
+```
+
+---
+
+#### `Item.cs` y tipos
+
+```csharp
+
+[Serializable]
+public class Item {
+    public string itemID;
+    public ItemType type;
+    public Dictionary<string, float> stats;
+    public List<VisualAttachment> visuals;
+}
+
+public enum ItemType {
+    Headgear, Torso, Gloves, Pants, Weapon
+}
+
+[Serializable]
+public class VisualAttachment {
+    public string prefabID;
+    public string boneTarget;
+}
+
+```
+
+---
+
+#### `CalculatedAttributes.cs` (atributos derivados cacheados)
+
+```csharp
+
+[Serializable]
+public class CalculatedAttributes {
+    public float maxHealth, stamina;
+    public float strength, dexterity, vitality, armor;
+    public float bluntDamage, slashingDamage, piercingDamage;
+    public float bluntDefense, slashDefense, pierceDefense;
+    public float bluntPenetration, slashPenetration, piercePenetration;
+    public float blockPower, movementSpeed;
+}
+
+```
+
+---
+
+#### 💾 `SaveSystem` y `LoadSystem`
+
+#### 📁 Archivos:
+
+- `SaveSystem.cs`
+- `LoadSystem.cs`
+- Guardado en `Application.persistentDataPath` en formato JSON.
+
+#### 📌 Métodos esperados:
+
+```csharp
+
+public static class SaveSystem {
+    public static void SavePlayer(PlayerData data);
+    public static PlayerData LoadPlayer();
+}
+
+```
+
+- Guardado automático tras partida o cambios en el barracón.
+- Carga automática al iniciar el juego.
+
+---
+
+#### ⚙️ Extensibilidad para backend
+
+Se define la interfaz:
+
+```csharp
+
+public interface ISaveProvider {
+    void Save(PlayerData data);
+    PlayerData Load();
+}
+
+```
+
+Implementaciones:
+
+- `LocalSaveProvider` (JSON en disco)
+- `CloudSaveProvider` (Futuro backend con API)
+
+Esto facilita la transición al backend sin modificar lógica de negocio.
+
+---
+
+#### 🚀 Integración con ECS
+
+- Los datos cargados se transforman en entidades en `GameBootstrapSystem`.
+- Cada `HeroData` genera una entidad `Hero`, con sus componentes iniciales (`HeroStats`, `HeroAttributes`, `PerkComponent`, etc.).
+- Cada `SquadInstanceData` genera entidades asociadas al `SquadData` referenciado, con su progreso dinámico (nivel, habilidades, formaciones desbloqueadas).
+
+---
+
+#### 🔄 Flujo General de Persistencia
+
+```
+
+Inicio del juego
+  ↓
+Cargar PlayerData desde JSON
+  ↓
+Seleccionar HeroData activo
+  ↓
+Generar entidades iniciales en ECS
+  ↓
+Actualizar progreso durante la sesión
+  ↓
+Guardar PlayerData modificado en disco al cerrar o tras batalla
+
+```
+
+---
+
+#### 🧠 Buenas prácticas implementadas
+
+- Separación clara entre datos estáticos (ScriptableObject) y dinámicos (progreso serializado).
+- Cache de atributos derivados para evitar cálculos innecesarios (`CalculatedAttributes`).
+- Referencias indirectas a `ScriptableObject` mediante nombres o IDs.
+- Preparado para expansión multijugador (con `ISaveProvider`).
+
+---
+
+#### ✅ Checklist de criterios técnicos del backlog
+
+| Requisito | Estado |
+| --- | --- |
+| Estructura de `PlayerData`, `HeroData`, `SquadInstanceData` | ✅ |
+| Serialización y guardado local funcional | ✅ |
+| Separación entre datos base y dinámicos | ✅ |
+| Soporte para atributos cacheados del héroe | ✅ |
+| Referencias limpias a `SquadData`, `HeroClass`, etc. | ✅ |
+| Diseño listo para futura integración backend | ✅ |
+---
+
 ## 🌐 8. Multijugador (MVP)
 
 ---
@@ -2118,6 +2427,67 @@ Sistema visual que muestra marcadores en el mundo 3D para indicar las posiciones
 - Sistema completamente automático, sin configuración adicional requerida
 
 ---
+### 📊 9.6 Scoreboard de Batalla (Panel de Estado Activado con `Tab`)
+
+#### 🧾 Descripción General
+
+Durante el combate, el jugador puede activar temporalmente un panel de estado presionando la tecla `Tab`. Este panel proporciona una visión táctica en tiempo real del desarrollo de la batalla, incluyendo:
+
+- ✅ Rendimiento individual de jugadores de ambos bandos.
+- 🧭 Control territorial actual (supply points y puntos de captura).
+- 🧍 Posicionamiento en vivo de aliados en el mapa.
+
+Este sistema actúa como un HUD expandido y cumple funciones de *scoreboard*, mapa táctico y herramienta de análisis en medio del combate.
+
+#### 🎯 Objetivos Funcionales
+
+- Brindar información condensada sin romper la inmersión.
+- Permitir rápida evaluación del estado de aliados y control del terreno.
+- Visualización pasiva y no interactiva (sin inputs durante visualización).
+
+#### 🧩 Componentes UI
+
+- **`BattleStatusPanel`**: Contenedor principal visible solo durante `Input.Tab held`.
+  - 🎛️ Oculta el HUD principal mientras está activo.
+  - ✨ Animación de entrada y salida con transición fade-in/fade-out rápida.
+
+- **`PlayerScoreColumn` (x2)**: Muestra jugadores por equipo (aliados y enemigos).
+  - 🧍 Nombre del jugador.
+  - ⚔️ Kills de héroes.
+  - 🪖 Kills de unidades.
+  - 💀 Muertes totales.
+
+- **`BattleStatusMinimap`**: Minimap central con representación expandida.
+  - 🧍‍♂️ Posición en tiempo real de héroes aliados (íconos tipo ping).
+  - ⛽ Supply points: iconos con estado (🟡 neutral, 🔵 aliado, 🔴 enemigo).
+  - 🎯 Puntos de captura: icono + porcentaje + color de dominancia (barra radial o slider).
+
+#### ⚙️ Comportamiento del Sistema
+
+- ⌨️ Se activa mientras se mantiene presionada la tecla `Tab`.
+- 👁️ Oculta el HUD principal para evitar superposición.
+- 🧼 Al soltar `Tab`, el panel desaparece y el HUD normal se reactiva.
+
+#### 🧠 Lógica Técnica
+
+- 🔄 Sistema central: `BattleStatusUIController`
+- Se suscribe a eventos de:
+  - `MultiplayerScoreSystem` → 🔢 kills/muertes por jugador
+  - `CaptureZoneStatusSystem` → 🎯 porcentaje de captura por zona
+  - `SupplyPointStatusSystem` → ⛽ estado de control de supply
+  - `AllyPositionBroadcastSystem` → 🧍‍♂️ ubicación en tiempo real de aliados
+
+#### 🔗 Dependencias
+
+- `InputSystem` (⌨️ tecla `Tab`)
+- `CanvasLayeredHUDSystem` (🎛️ switching de HUD)
+- `BattleHUDDataStream` (📡 ECS -> UI)
+
+#### 🎨 Requisitos Visuales
+
+- 🧭 Minimapa con mayor zoom que el minimapa de HUD estándar.
+- 🖼️ Íconos diferenciados por función: 🧍 jugadores, ⛽ supply, 🎯 captura.
+- 🔍 Legibilidad asegurada en resoluciones desde 1280x720.
 
 ## 🔐 10. Seguridad y Backend (Para expansión futura)
 
