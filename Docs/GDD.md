@@ -162,6 +162,7 @@ Crear un flujo centrado en la **preparación táctica, liderazgo en combate y co
 - Activar habilidades de escuadra desde la interfaz de HUD.
 - Cambiar formación con teclas rápidas (`F1` a `F3`).
 - Posicionar escuadra aprovechando terreno, cobertura y línea de visión.
+- Solo puede cambiarse de escuadra en puntos de suministro aliados que no estén en disputa. Fuera de eso, no se puede intercambiar escuadra durante el combate.
 
 ---
 
@@ -178,6 +179,7 @@ Crear un flujo centrado en la **preparación táctica, liderazgo en combate y co
 - Algunos perks afectan al **héroe directamente** (movilidad, defensa, habilidades).
 - Otros mejoran el **rendimiento de escuadras** (moral, velocidad, bonus situacionales).
 - El sistema fomenta **sinergias específicas** entre clase de héroe y tipo de escuadra.
+- Estas habilidades ofensivas están pensadas para apoyar maniobras tácticas, no para que el héroe actúe sin escuadra.
 
 ---
 
@@ -209,7 +211,9 @@ El jugador es un **comandante táctico con presencia física en el campo**, que:
 
 - Una **Escuadra (Squad)** es un grupo homogéneo de unidades **controladas tácticamente por el jugador a través del héroe**.
 - Solo **una escuadra puede estar activa al mismo tiempo** por héroe.
+- Las escuadras no activas están en reserva y no están presentes físicamente en el campo de batalla.
 - Las escuadras representan el **verdadero poder de combate** del jugador: sin ellas, el héroe está en seria desventaja.
+- Una vez recibida una orden (como ‘Atacar’), la escuadra ejecuta su comportamiento automáticamente según su IA, sin necesidad de microgestión adicional.
 
 ### 🛠️ 4.2 Composición
 
@@ -247,7 +251,6 @@ El héroe puede dar las siguientes órdenes tácticas:
 | **Retirada táctica** (futura) | Retroceden a una posición segura. |
 
 > Las órdenes se dan en tiempo real con hotkeys configurables.
-> 
 
 **Hotkeys sugeridas (MVP):**
 
@@ -261,25 +264,100 @@ El héroe puede dar las siguientes órdenes tácticas:
 
 Las escuadras pueden entrar en formaciones específicas según su tipo. Las formaciones son **herramientas tácticas críticas**, no solo visuales.
 
-| Formación | Función táctica |
+#### Tabla de compatibilidad de formaciones por escuadra
+
+| Escuadra    | Línea | Testudo | Dispersa | Cuña | Schiltron | Muro de Escudos |
+|-------------|:-----:|:-------:|:--------:|:----:|:---------:|:---------------:|
+| Escuderos   |   ✔   |   ✔     |          |      |           |       ✔         |
+| Arqueros    |   ✔   |         |    ✔     |      |           |                 |
+| Piqueros    |   ✔   |         |          |  ✔   |     ✔     |                 |
+| Lanceros    |   ✔   |         |          |  ✔   |           |       ✔         |
+
+#### Formaciones globales y relación con escuadras
+
+- **Línea**: disponible para todas las escuadras.
+- **Testudo**: solo escuderos.
+- **Dispersa**: solo arqueros.
+- **Cuña**: piqueros y lanceros.
+- **Schiltron**: solo piqueros.
+- **Muro de Escudos**: escuderos y lanceros.
+
+- Las escuadras solo pueden usar las formaciones que aparecen marcadas en esta tabla. La ausencia de una formación implica incompatibilidad.
+
+- Las formaciones avanzadas se desbloquean en niveles clave. Ejemplo (Escuderos):
+
+    Testudo: disponible desde nivel 1
+
+    Muro de Escudos: nivel 10
+
+    Línea: siempre disponible
+
+#### 🧱 Impacto de las Formaciones en Masa, Carga y Comportamiento
+
+#### 📐 Masa y Formaciones
+
+Cada escuadra posee un valor base de **masa** definido en su `SquadData`. Esta masa representa su resistencia y capacidad de empuje durante maniobras de carga. Las **formaciones modifican este valor base** mediante un multiplicador, lo cual afecta la capacidad del escuadrón para resistir o ejecutar cargas efectivas:
+
+| Formación | Multiplicador de Masa |
 | --- | --- |
-| **Línea** | Defensa básica, contacto directo. |
-| **Testudo** | Protección contra proyectiles. |
-| **Dispersa** | Minimiza daño de área. |
-| **Cuña** | Penetra líneas enemigas. |
-| **Schiltron** | Anticarga en defensa circular. |
-| **Muro de Escudos** | Sólida contención frontal. |
+| Línea | x1.0 |
+| Testudo | x2.0 |
+| Dispersa | x0.5 |
+| Cuña | x1.3 |
+| Schiltron | x1.5 |
+| Muro de Escudos | x1.5 |
+- Formaciones **más cerradas** otorgan mayor masa (e.g. Testudo), permitiendo resistir mejor embestidas.
+- Formaciones **abiertas o móviles** como Dispersa reducen masa, facilitando movilidad pero con mayor vulnerabilidad.
 
-> Cambiar de formación toma tiempo y puede dejar a la escuadra vulnerable.
-> 
+El cálculo final de masa es:
 
-Cada escuadra tiene acceso a **formaciones** diferentes según su tipo. Las formaciones afectan:
+```
+MasaTotal = SquadData.masaBase * FormationProfile.multiplicador
+```
 
-- Dirección del enfrentamiento
-- Comportamiento defensivo/ofensivo
-- Tamaño de colisión
-- Buffs situacionales
+> ⚠️ Nota: actualmente, esta masa solo afecta el sistema de cargas, no la navegación ni el combate convencional.
+---
 
+#### 🐎 Cargas y Resolución de Impactos
+
+El sistema de carga considera dos factores para determinar si una escuadra puede **romper una formación enemiga**:
+
+1. **Masa total** (formación + tipo de unidad)
+2. **Velocidad de impacto**
+
+Adicionalmente, el tipo de unidad enemiga modifica el resultado. Por ejemplo:
+
+- Cargar contra lanceros o picas suele ser inefectivo, incluso con más masa.
+- Cargar contra arqueros o escuderos es más efectivo, siempre que se mantenga suficiente velocidad y masa.
+
+En caso de empate de masa, se prioriza la **velocidad de quien ataca** como factor de ruptura.
+
+---
+
+#### 🚶‍♂️ Navegación y Colisiones
+
+- Las **unidades aliadas no colisionan entre sí**, permitiendo formaciones compactas y movimiento fluido entre tropas del mismo bando.
+- **Formaciones enemigas no interactúan por masa** durante movimiento o pathfinding. La masa no bloquea trayectorias: solo se aplica en el instante de una carga.
+- No hay penalización actual por quedar “atascado”. Las unidades siguen atacando si el enemigo está cerca.
+
+---
+
+#### 🤖 Limitaciones actuales
+
+- No existe aún un sistema de “estado de formación” (ej. estable, rota, dispersa).
+- Las formaciones **no afectan la precisión, defensa, daño o bloqueo** en combate cuerpo a cuerpo.
+- Tampoco se penaliza el uso de formaciones inapropiadas para ciertas situaciones (ej. Dispersa en combate cerrado).
+- El sistema de targeting o IA **no usa la masa para tomar decisiones** tácticas en el MVP.
+- No existe un sistema visual para representar masa, empuje o perfiles de colisión en el editor.
+
+---
+
+#### 🧩 Ampliaciones futuras sugeridas
+
+- Implementar un **perfil de colisión/formación** para IA y decisiones tácticas.
+- Introducir un sistema de “formación rota” o “estabilidad táctica” que afecte stats temporales si la formación es superada.
+- Usar la masa y formación en navegación avanzada (evitar chocar contra formaciones más pesadas).
+- Añadir soporte de visualización para diseñadores sobre colisión, empuje y centros de masa.
 ---
 
 ### 🧩 4.6 Habilidades de Escuadra
@@ -316,7 +394,8 @@ Cada escuadra tiene acceso a **formaciones** diferentes según su tipo. Las form
     - **>50% equipamiento**: sin penalización
     - **<50%**: entran a batalla con debuffs
     - **0%**: no pueden desplegarse
-
+- Los efectos de tener menos de 50% o 0% de equipamiento se aplican en la próxima batalla, no durante la actual.
+- Durante el MVP, el reabastecimiento de equipamiento es automático al final de la partida. Las restricciones por pérdida total son narrativas y servirán como base para una penalización real en versiones futuras.
 ---
 
 ### 📦 4.9 Barracón y Administración
@@ -335,6 +414,7 @@ Desde el **Barracón**, los jugadores pueden:
 - Cada escuadra tiene un **costo de liderazgo**.
 - El héroe tiene un límite total de liderazgo según su progreso.
 - Los jugadores pueden preparar **loadouts personalizados** para cada batalla, **sin exceder el liderazgo máximo del héroe**.
+- El sistema de liderazgo limita cuántas escuadras puedes traer a la batalla en el loadout, no cuántas puedes usar a la vez (siempre es una sola activa).
 
 ---
 
@@ -751,12 +831,14 @@ Una **interfaz de personaje** donde el jugador distribuye los puntos de atributo
 
 | Elemento en pantalla | Descripción |
 | --- | --- |
-| **Atributos visibles** | Fuerza, Destreza, Armadura, Vitalidad (con su valor actual y máximo) |
+| **Atributos visibles** | Fuerza, Destreza, Armadura, Vitalidad (formato: valor actual / valor máximo permitido por clase) |
 | **Puntos disponibles** | Contador en parte superior (“Puntos sin asignar: X”) |
 | **Botones de asignación** | [+] y [-] junto a cada atributo para sumar o quitar puntos (hasta el límite) |
 | **Vista previa derivada** | Muestra cómo cambiarán los atributos derivados (vida, daño, etc.) |
 | **Botón Confirmar** | Aplica los cambios realizados |
 | **Botón Resetear** | Devuelve los puntos sin penalización, habilitado solo fuera de batalla |
+
+Ejemplo visual sugerido: `Fuerza: 6 / 12`
 
 ---
 
@@ -1896,7 +1978,7 @@ No todas las formaciones están disponibles para todas las escuadras.
 
 Instrucciones que el jugador puede dar a su escuadra durante el combate:
 
-- **Seguir**: la escuadra acompaña y protege al héroe.
+- **Seguir**: la escuadra sigue al héroe, protegiéndolo.
 - **Mantener posición**: la escuadra se queda donde fue colocada, conservando su formación.
 - **Atacar**: la escuadra prioriza atacar enemigos dentro de su rango de acción.
 
@@ -1907,7 +1989,7 @@ Estas órdenes pueden cambiar en tiempo real y adaptarse al contexto táctico.
 Son las **piezas que representan la armadura y armas** que usan las unidades dentro de una escuadra.
 
 - Se degradan o **se pierden si más del 90% de la escuadra muere** durante la batalla.
-- Si una unidad tiene **menos del 50% de su equipamiento**, entra con penalizaciones.
+- Si una unidad tiene **menos de 50% de su equipamiento**, entra con penalizaciones.
 - Si está en 0%, la escuadra **no puede ser desplegada** hasta que se recupere.
 
 ---
@@ -1961,17 +2043,44 @@ El jugador participa con su héroe y **una sola escuadra activa** a la vez, aunq
 
 ### 16. 🩹 **Supply Point (Punto de Suministro)**
 
-Estructura fija en el mapa con **efectos tácticos importantes**. Sus funciones incluyen:
+Estructura fija del mapa con **funciones tácticas clave**. Los supply points permiten a los jugadores **reorganizar su estrategia a mitad de combate**, bajo condiciones específicas.
 
-- **Cambiar escuadra activa** del jugador (si no está en disputa).
-- **Curar al héroe y su escuadra** pasivamente dentro de su radio.
-- **Capturables** si no pertenecen al bando del jugador.
+#### 🎯 Funciones principales:
 
-Tipos:
+- **Cambiar la escuadra activa** del jugador (únicamente el héroe, si se cumplen condiciones).
+- **Curar pasivamente al héroe y su escuadra** dentro del radio de acción.
+- **Pueden ser capturados** si no pertenecen al bando del jugador.
 
-- **Aliado**: interactuable, cura.
-- **Enemigo**: capturable, no interactuable.
-- **Neutral**: puede capturarse por cualquier bando.
+#### 🛡️ Reglas de uso:
+
+Un supply point solo puede ser **utilizado** si se cumplen **ambas condiciones**:
+
+1. El punto debe ser de tipo **aliado** (pertenecer al bando del jugador).
+2. El punto **no debe estar en disputa** (ningún héroe enemigo dentro del radio de acción).
+
+#### 🧍 Interacción del Héroe:
+
+- Solo el **héroe** puede interactuar activamente con un supply point para:
+    - **Cambiar de escuadra** (entre las que trajo a la batalla, según su loadout).
+    - **Activar efectos de curación** para sí mismo y su escuadra.
+- Esta interacción se realiza automáticamente al entrar en el radio si las condiciones se cumplen, o mediante interfaz específica de acción.
+
+#### 🪖 Curación de unidades:
+
+- Las **unidades de la escuadra activa** reciben **curación pasiva automática** mientras estén dentro del área del supply point.
+- Esta curación solo ocurre si el supply es **aliado y no está en disputa**.
+- Las unidades no pueden activar ni interferir directamente con el supply point: solo el estado del héroe lo habilita.
+
+#### 🏁 Tipos de supply point (según perspectiva del jugador):
+
+| Tipo | Interacción | Curación | Captura posible |
+| --- | --- | --- | --- |
+| **Aliado** | Sí | Sí | No |
+| **Enemigo** | No | No | Sí |
+| **Neutral** | No | No | Sí |
+- Los supply points **enemigos o neutrales no permiten interacción ni curación**.
+- Si un supply enemigo o neutral **no tiene héroes defensores presentes**, un héroe atacante puede iniciar una **captura**.
+- La captura se **interrumpe** si un héroe del bando defensor entra en el área. El progreso no se reinicia: se reanuda desde donde quedó si se reintenta más tarde.
 
 ---
 
@@ -2064,8 +2173,8 @@ Configuraciones tácticas que adoptan las unidades dentro de una escuadra según
 Cada tipo de escuadra tiene disponibles **distintas formaciones**, como:
 
 - Línea
-- Dispersa
 - Testudo
+- Dispersa
 - Cuña
 - Schiltron
 - Muro de escudos
@@ -2079,8 +2188,8 @@ Afectan su comportamiento, defensas y sinergia con el terreno y enemigo.
 Instrucciones directas que el héroe puede dar a su escuadra activa durante la batalla. Las principales son:
 
 - **Seguir**: la escuadra sigue al héroe, protegiéndolo.
-- **Mantener posición**: se mantiene en la ubicación actual con la formación activa.
-- **Atacar**: se lanzan contra enemigos dentro de rango de detección.
+- **Mantener posición**: la escuadra se queda donde fue colocada, conservando su formación.
+- **Atacar**: la escuadra prioriza atacar enemigos dentro de su rango de detección.
 
 Las órdenes pueden combinarse con formaciones para maximizar la efectividad táctica.
 
@@ -2141,7 +2250,7 @@ definicion inicial y no curadad del GDD
 * Liderazgo: es lo que limita la cantidad de squads q puede llevar UN heroe a batalla  y la cantidad de squads q entran en UN loadout, el heroe tiene UN Valor y Los squads tienen UN coste de liderazgo
 * estamina: es lo que los heroes utilizan para realizar ataques sprintar y lanzar habilidades
 ////batalla 
-* Batalla: Punto central del juego aqui es donde Los jugadores luchan en 2 bandos(atacantes y defensores) capturando banderas para ganar(atacantes) o defendiendolas hasta que acabe el tiempo(defensores) para ganar
+* Batalla: Punto central del juego aqui es donde Los jugadores luchan en 2 bandos(atacantes y defensores) capturando banderas para ganar(atacantes) o defendiendolas hasta que se acabe el tiempo(defensores) para ganar
 * Supply point: Este es UN elemento presente en la batalla donde si Tu bando ya lo capturo puede curar pasivamente si esta el heroes o su squad esta dentro de rango de action, o puede cambiar su tropas.activa de entre las que trajo a batalla interactuando con el avatar del suppli point. Si Un heroe entra en el rango de action de UN suppli point que no pretence a SU bando y no hay ninguna heroe del bando owner de ese supply point empieza en tiempo de capturas, si Durante la captura entra UN heroe del bando owner SE cancela la captura y SE reinicia el contador. Pueden existir supply point de 3 tipos segun la perspective de jugador
     - Aliadas: pertenece Al bando del jugador. aparecen de color Azul en el minimapa, el borde de su rango de action SE muestra de Este colour y el avatar del suppli tambien tiene Los detalles de Este colour, en Este el jugador puede interactuar con el supply point y el y su squad SE curan pasivamente con estar dentro del radio de accion
     - Enemigo: pertenece Al bando contrario Al jugador. Aparece el con Todos sus detalles en rojo, el usuario puede capturarlo mas no interactuar con el, ni SE curan ni el ni au squad

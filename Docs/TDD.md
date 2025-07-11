@@ -62,6 +62,7 @@
 - 7.6 Progresión Avanzada de Escuadras y Sinergias
 - 7.7 Control de Estados entr Héroe y Unidades del Escuadrón
 - 7.8 Estructura de Persistencia del Jugador (MVP y Post MVP)
+- 7.9 DataCacheService: Cálculo y Cache de Atributos
 
 ## 8. 🌐 Multijugador (MVP)
 
@@ -2065,6 +2066,90 @@ Guardar PlayerData modificado en disco al cerrar o tras batalla
 | Soporte para atributos cacheados del héroe | ✅ |
 | Referencias limpias a `SquadData`, `HeroClass`, etc. | ✅ |
 | Diseño listo para futura integración backend | ✅ |
+---
+### 🧠 7.9 `DataCacheService`: Cálculo y Cache de Atributos
+
+📌 **Descripción general:**
+
+`DataCacheService` es un servicio central encargado de calcular, almacenar y servir datos derivados del héroe como atributos, liderazgo total, y perks activos. Está diseñado para:
+
+- Minimizar cálculos redundantes en tiempo de ejecución.
+- Proveer acceso rápido a datos transformados desde `HeroData`, `Equipment`, perks y clase base.
+- Ser accesible desde sistemas ECS y UI, sin modificar directamente los datos de entrada.
+
+---
+
+#### 🧩 Componentes clave:
+
+#### `DataCacheService.cs`
+
+```csharp
+public static class DataCacheService {
+    void CacheAttributes(HeroData heroData);
+    CalculatedAttributes GetCachedAttributes(string heroId);
+    List<string> GetActivePerks(string heroId);
+    void Clear(); // Opcional, para limpieza de caché en escena
+}
+
+```
+
+#### Internamente:
+
+- Usa `Dictionary<string, CalculatedAttributes>` para cachear por ID de héroe.
+- Calcula los valores combinando:
+    - Atributos base por clase (`HeroClassDefinition`)
+    - Nivel y puntos de atributo
+    - Equipo (`Equipment`)
+    - Perks activos (si están implementados)
+- Utiliza las fórmulas descritas en el GDD para daño, defensa, vida, liderazgo y penetraciónGDD.
+
+---
+
+#### 🔁 Interacción:
+
+- Llamado desde `GameBootstrapSystem` al cargar datos persistidos.
+- Llamado desde `HeroAttributeSystem`, `PerkSystem`, `LoadoutSystem` y HUD.
+- Opcionalmente se puede recalcular tras cambios en el inventario, nivel, perks o clase del héroe.
+
+---
+
+#### ⚙️ Ejemplo de flujo:
+
+```
+plaintext
+CopiarEditar
+Al cargar HeroData
+    ↓
+DataCacheService.CacheAttributes(HeroData)
+    ↓
+Genera CalculatedAttributes
+    ↓
+Almacena en memoria
+    ↓
+HeroStatsSystem accede vía GetCachedAttributes(heroId)
+
+```
+
+---
+
+#### 📌 Consideraciones técnicas:
+
+- La clase debe ser pasiva: solo lee datos y expone getters.
+- No debe guardar referencias a ScriptableObjects ni a entidades ECS.
+- Compatible con serialización indirecta (`HeroClassDefinition.name`, `Item.itemID`, etc.).
+- Pensada para operar **antes** de la conversión a entidades (durante carga de datos).
+
+---
+
+#### ✅ Checklist
+
+| Requisito | Estado |
+| --- | --- |
+| Cache de `CalculatedAttributes` | ✅ |
+| Soporte para perks y equipo | ✅ |
+| Acceso rápido por ID de héroe | ✅ |
+| Preparado para integración con ECS | ✅ |
+| Compatible con lógica actual de persistencia | ✅ |
 ---
 
 ## 🌐 8. Multijugador (MVP)
