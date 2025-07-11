@@ -53,10 +53,10 @@ public class HeroData
     public List<int> ownedSquads = new();
 
     /// <summary>Loadout configurations available to this hero.</summary>
-    public List<LocalSaveSystem.LoadoutData> loadouts = new();
+    public List<LoadoutSaveData> loadouts = new();
 
     /// <summary>Progress for each squad instance.</summary>
-    public List<LocalSaveSystem.SquadInstanceData> squadProgress = new();
+    public List<SquadInstanceData> squadProgress = new();
 
     // Inventory and equipment
 
