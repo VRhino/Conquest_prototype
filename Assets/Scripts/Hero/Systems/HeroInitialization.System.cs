@@ -29,11 +29,9 @@ public partial class HeroInitializationSystem : SystemBase
                      .WithNone<HeroAttributesComponent>()
                      .WithEntityAccess())
         {
-            Debug.Log($"[HeroInitializationSystem] Initializing hero {entity.Index} with class {classRef.ValueRO.classEntity.Index}");
             if (!defLookup.TryGetComponent(classRef.ValueRO.classEntity, out var def))
                 continue;
 
-            Debug.Log($"[HeroInitializationSystem] Found class definition for {classRef.ValueRO.classEntity.Index}");
             ecb.AddComponent(entity, new HeroAttributesComponent
             {
                 fuerza = def.baseFuerza,
@@ -71,7 +69,6 @@ public partial class HeroInitializationSystem : SystemBase
             float vidaMax = 100f + (5f * attributes.vitalidad);
             float estaminaMax = 100f + (3f * attributes.destreza / 2f);
             
-            Debug.Log($"[HeroInitializationSystem] Initializing hero {entity.Index} with max health: {vidaMax}, max stamina: {estaminaMax}");
             var health = healthLookup[entity];
             health.maxHealth = vidaMax;
             health.currentHealth = vidaMax;

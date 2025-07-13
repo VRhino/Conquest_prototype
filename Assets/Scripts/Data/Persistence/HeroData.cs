@@ -61,7 +61,7 @@ public class HeroData
     // Inventory and equipment
 
     /// <summary>All items owned by this hero.</summary>
-    public List<Item> inventory = new();
+    public List<InventoryItem> inventory = new();
 
     // Current visual and equipment state
 
@@ -119,7 +119,7 @@ public class VisualAttachment
 /// Uses an identifier to resolve the actual ScriptableObject definition.
 /// </summary>
 [Serializable]
-public class Item
+public class InventoryItem
 {
     /// <summary>Identifier of the item definition.</summary>
     public string itemId = string.Empty;

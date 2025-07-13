@@ -1,17 +1,6 @@
 using Unity.Entities;
 
 /// <summary>
-/// Possible tactical AI states for a squad.
-/// </summary>
-public enum TacticalIntent 
-{
-    Idle,
-    Attacking,
-    Regrouping,
-    Defending
-}
-
-/// <summary>
 /// Component that tracks the current AI state of a squad.
 /// </summary>
 public struct SquadAIComponent : IComponentData

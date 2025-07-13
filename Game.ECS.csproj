@@ -1,26 +1,21 @@
-﻿<Project ToolsVersion="Current">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- Generated file, do not modify, your changes will be overwritten (use AssetPostprocessor.OnGeneratedCSProject) -->
   <PropertyGroup>
-    <BaseIntermediateOutputPath>Temp\obj\$(Configuration)\$(MSBuildProjectName)</BaseIntermediateOutputPath>
-    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
-  </PropertyGroup>
-  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
-  <ItemGroup>
-    <ProjectCapability Include="Unity" />
-  </ItemGroup>
-  <PropertyGroup>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <EnableDefaultItems>false</EnableDefaultItems>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <LangVersion>9.0</LangVersion>
-    <Configurations>Debug;Release</Configurations>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.20506</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
+    <ProjectGuid>{F509B414-509B-03B0-E6C0-7F5126152B7D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <AssemblyName>Game.ECS</AssemblyName>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
     <BaseDirectory>.</BaseDirectory>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -44,22 +39,23 @@
     <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <NoStandardLibraries>true</NoStandardLibraries>
-    <NoStdLib>true</NoStdLib>
     <NoConfig>true</NoConfig>
-    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
-    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+    <NoStdLib>true</NoStdLib>
+    <AddAdditionalExplicitAssemblyReferences>false</AddAdditionalExplicitAssemblyReferences>
+    <ImplicitlyExpandNETStandardFacades>false</ImplicitlyExpandNETStandardFacades>
+    <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <PropertyGroup>
+    <ProjectTypeGuids>{E097FAD1-6243-4DAD-9C02-E9B9EFC3FFC1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <UnityProjectGenerator>Package</UnityProjectGenerator>
     <UnityProjectGeneratorVersion>2.0.22</UnityProjectGeneratorVersion>
-    <UnityProjectGeneratorStyle>SDK</UnityProjectGeneratorStyle>
+    <UnityProjectGeneratorStyle>Legacy</UnityProjectGeneratorStyle>
     <UnityProjectType>Game:1</UnityProjectType>
     <UnityBuildTarget>StandaloneWindows64:19</UnityBuildTarget>
     <UnityVersion>2022.3.62f1</UnityVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Analyzer Include="C:\Users\VRINO\.vscode\extensions\visualstudiotoolsforunity.vstuc-1.1.2\Analyzers\Microsoft.Unity.Analyzers.dll" />
+    <Analyzer Include="C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\Microsoft\Visual Studio Tools for Unity\Analyzers\Microsoft.Unity.Analyzers.dll" />
     <Analyzer Include="C:\Users\VRINO\Conquest tactics\prototipo_curado\Library\PackageCache\com.unity.transport@2.2.1\Analyzers\Unity.Transport.Analyzers.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.SourceGenerators.dll" />
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\2022.3.62f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.Properties.SourceGenerator.dll" />
@@ -81,7 +77,6 @@
     <Compile Include="Assets\Scripts\Squads\SquadAI.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitSpacing.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\GamePhase.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadSpawning.System.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitWeapon.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPool.System.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombat.Component.cs" />
@@ -92,19 +87,19 @@
     <Compile Include="Assets\Scripts\Combat\UnitDetectedEnemy.cs" />
     <Compile Include="Assets\Scripts\Visual\EntityVisualSync.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitStats.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadProgression.System.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainer.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitSpeedCalculator.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitRangedStats.Component.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPoint.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadOrder.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimatorController.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPoint.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationGrid.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadSwap.System.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SquadButtonUI.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgress.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadNavigation.System.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\ModularArmor.cs" />
+    <Compile Include="Assets\Scripts\Data\Persistence\HeroData.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\Universal\CustomPreviewEditor.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\Stamina.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\ColorPropertyLinker.cs" />
@@ -117,13 +112,14 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroStats.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfile.cs" />
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
+    <Compile Include="Assets\Scripts\Data\Combat\CalculaterdAttributes.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOwner.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadVisualManagement.System.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraBootstrap.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitGridSlot.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapCamera.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitPrevLeaderPos.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\RetreatLogic.System.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraTarget.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Components\ModularCharacterManager.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinition.Authoring.cs" />
@@ -134,11 +130,11 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroVisual.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimationAdapter.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroClass.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitFormationState.System.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadTargetEntity.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularSetupWizard.cs" />
     <Compile Include="Assets\Scripts\Shared\LocalSave.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroLevel.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitFollowFormation.System.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinition.cs" />
     <Compile Include="Assets\Scripts\Combat\PendingDamageEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInput.System.cs" />
@@ -148,37 +144,43 @@
     <Compile Include="Assets\Scripts\Squads\UnitAnimationMovement.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageType.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroCombat.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitDeploymentValidation.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroInput.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOrientation.Authoring.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroSquadReference.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\Formation.System.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainer.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Core\LoadSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatMessage.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefab.Authoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularCharacterEditor.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitSpacing.System.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconType.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\XPSource.Type.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroAbilityCategory.Type.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDeploymentWarningEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayer.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\Health.Component.cs" />
+    <Compile Include="Assets\Scripts\Data\Persistence\SquadInstanceData.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCategory.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkTag.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadNavigation.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\GridFormationUpdate.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\FormationGrid.System.cs" />
     <Compile Include="Assets\Scripts\Shared\Cooldown.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadCombat.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationPositionCalculator.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitFollowFormation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStatus.Component.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTrigger.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\SpawnSelectionRequest.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\Formation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.cs" />
     <Compile Include="Assets\Scripts\Animation\EcsAnimationInputAdapter.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroState.Component.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneReferenceBuffer.cs" />
     <Compile Include="Assets\Scripts\Shared\PerformanceTracker.System.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneLink.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\RetreatLogic.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadFSM.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Enums\UnitOrientation.Type.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroAttack.System.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapRenderer.cs" />
@@ -197,69 +199,75 @@
     <Compile Include="Assets\Scripts\Squads\SquadUnitElement.cs" />
     <Compile Include="Assets\Scripts\SoloParaPruebas\HeroSquadSelectionTest.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\WeaponCollider.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\Chat\ChatUIController.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\SpawnSelection.System.cs" />
+    <Compile Include="Assets\Scripts\UI\Chat\ChatUIController.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchState.cs" />
     <Compile Include="Assets\Scripts\Shared\GameState.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\IsLocalPlayer.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\HeroPositionUtility.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlot.Component.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadNavigation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitMoveSpeedVariation.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadVisualManagement.System.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\CapturePointUIController.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\FormationAdaptation.System.cs" />
     <Compile Include="Assets\Scripts\Combat\Penetration.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularBodyPart.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\LevelUpEvent.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\BodyPartLinker.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitAttack.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitDeploymentValidation.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadOrder.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitStatsBufferElement.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadSwapRequest.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitLocalTarget.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\SamplePlayerAnimationController_ECS.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitStatScaling.System.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularExtensionMethods.cs" />
     <Compile Include="Assets\Scripts\Squads\GridFormationScriptableObject.cs" />
     <Compile Include="Assets\Scripts\UI\SpawnIcon.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\XPEvent.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\NavAgent.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\Team.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitAnimation.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroClassDefinition.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInput.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefab.Authoring.cs" />
     <Compile Include="Assets\Scripts\AsyncSceneLoader.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneManagerSingleton.cs" />
-    <Compile Include="Assets\Scripts\Squads\DestinationMarker.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\DestinationMarker.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFSMState.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Enums\TacticalIntent.Type.cs" />
     <Compile Include="Assets\Scripts\UI\MapUIController.cs" />
     <Compile Include="Assets\Scripts\Squads\Formation.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroEntity.Authoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\Item.cs" />
+    <Compile Include="Assets\Scripts\Squads\Enums\UnitFormationState.Type.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroAttributes.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Map\MapSceneManager.cs" />
-    <Compile Include="Assets\Scripts\Hero\Components\HeroSpawn.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInitialization.System.cs" />
+    <Compile Include="Assets\Scripts\Hero\Components\HeroSpawn.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Enums\Terrain.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroMovement.System.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttack.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadControl.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitStatScaling.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadOwner.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\NavMeshAgent.Authoring.cs" />
-    <Compile Include="Assets\Scripts\Perks\PerkData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInstance.Component.cs" />
+    <Compile Include="Assets\Scripts\Perks\PerkData.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInput.Authoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadHoldPosition.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitOrientationInitialization.System.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyInteraction.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitOrientationInitialization.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\SquadHoldPosition.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadAI.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroSquadSelection.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadState.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIcon.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefabRegistry.cs" />
+    <Compile Include="Assets\Scripts\Squads\Enums\SquadState.Type.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCalculation.System.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkData.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroAttribute.System.cs" />
@@ -268,28 +276,30 @@
     <Compile Include="Assets\Scripts\Combat\Team.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroHealth.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataReference.Authoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadTypes.cs" />
     <Compile Include="Assets\Scripts\Shared\SquadSkill.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfile.Component.cs" />
     <Compile Include="Assets\Scripts\Map\CaptureZoneTrigger.System.cs" />
+    <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSaveData.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadLevelUpEvent.cs" />
     <Compile Include="Assets\Scripts\Testing\EcsAnimationTester.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbilityBufferElement.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefabConfiguration.cs" />
     <Compile Include="Assets\Scripts\Combat\Team.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainer.Component.cs" />
+    <Compile Include="Assets\Scripts\Core\SaveSystem.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStats.Authoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitFormationState.System.cs" />
-    <Compile Include="Assets\Scripts\Shared\MatchController.System.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLife.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Shared\MatchController.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadControl.System.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\GridFormationUpdate.System.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolableObject.cs" />
+    <Compile Include="Assets\Scripts\Inventory\Enums\Item.Type.cs" />
     <Compile Include="Assets\Scripts\Camera\HeroCameraController.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerBaker.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadAI.System.cs" />
+    <Compile Include="Assets\Scripts\Data\Persistence\PlayerData.cs" />
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\AtributeLimitEvent.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroAttribute.Type.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitSpacing.System.cs" />
     <Compile Include="Assets\Scripts\Squads\DetectedEnemy.cs" />
     <Compile Include="Assets\Scripts\Squads\DestinationMarkerPrefab.Component.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneCapturedEvent.cs" />
@@ -301,11 +311,10 @@
     <Compile Include="Assets\Scripts\Combat\IsDead.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroRespawn.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\PlayerInteraction.Component.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadProgression.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroSpawn.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitAnimation.System.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Demo\EquipmentManager.cs" />
     <Compile Include="Assets\Scripts\Animation\UnitAnimationDebugger.cs" />
-    <Compile Include="Assets\Scripts\Squads\FormationAdaptation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOrientation.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassReference.Authoring.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolBootstrapper.cs" />
@@ -315,18 +324,18 @@
     <Compile Include="Assets\Scripts\Combat\Defense.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadEntity.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStats.Component.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadSwap.System.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraState.Component.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyPoint.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitDestinationMarker.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitTargetPosition.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroClass.Type.cs" />
+    <Compile Include="Assets\Scripts\Squads\Enums\SquadEnums.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularCharacterStatics.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\SquadSpawning.System.cs" />
     <Compile Include="Assets\Scripts\Shared\Cooldown.System.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbilityData.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneType.cs" />
-    <Compile Include="Assets\Scripts\Squads\SquadFSM.System.cs" />
     <Compile Include="Assets\Scripts\UI\LoadoutSelectionUI.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointBaker.cs" />
@@ -1272,16 +1281,13 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
-  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
-  <ItemGroup>
-    <ProjectCapability Remove="LaunchProfiles" />
-    <ProjectCapability Remove="SharedProjectReferences" />
-    <ProjectCapability Remove="ReferenceManagerSharedProjects" />
-    <ProjectCapability Remove="ProjectReferences" />
-    <ProjectCapability Remove="ReferenceManagerProjects" />
-    <ProjectCapability Remove="COMReferences" />
-    <ProjectCapability Remove="ReferenceManagerCOM" />
-    <ProjectCapability Remove="AssemblyReferences" />
-    <ProjectCapability Remove="ReferenceManagerAssemblies" />
-  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="GenerateTargetFrameworkMonikerAttribute" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
 </Project>

@@ -18,14 +18,3 @@ public struct EnvironmentAwarenessComponent : IComponentData
     /// <summary>True if environmental conditions require individual unit navigation adaptation.</summary>
     public bool requiresAdaptation;
 }
-
-/// <summary>
-/// Simple classification of terrain around a squad.
-/// </summary>
-public enum TerrainType
-{
-    Abierto,
-    Estrecho,
-    Escalera,
-    Puerta
-}
