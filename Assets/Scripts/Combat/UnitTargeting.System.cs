@@ -18,7 +18,7 @@ public partial class UnitTargetingSystem : SystemBase
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
-            bool allow = ai.ValueRO.state == SquadAIState.Attacking &&
+            bool allow = ai.ValueRO.tacticalIntent == TacticalIntent .Attacking &&
                          (state.ValueRO.currentOrder == SquadOrderType.Attack ||
                           state.ValueRO.currentOrder == SquadOrderType.FollowHero ||
                           (state.ValueRO.currentOrder == SquadOrderType.HoldPosition));

@@ -27,7 +27,7 @@ public partial class SquadAttackSystem : SystemBase
                             DynamicBuffer<SquadTargetEntity>>()
                      .WithEntityAccess())
         {
-            if (ai.ValueRO.state != SquadAIState.Attacking)
+            if (ai.ValueRO.tacticalIntent != TacticalIntent .Attacking)
                 continue;
 
             var c = combat.ValueRW;

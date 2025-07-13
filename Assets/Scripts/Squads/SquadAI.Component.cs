@@ -3,7 +3,7 @@ using Unity.Entities;
 /// <summary>
 /// Possible tactical AI states for a squad.
 /// </summary>
-public enum SquadAIState
+public enum TacticalIntent 
 {
     Idle,
     Attacking,
@@ -17,7 +17,7 @@ public enum SquadAIState
 public struct SquadAIComponent : IComponentData
 {
     /// <summary>Current AI state.</summary>
-    public SquadAIState state;
+    public TacticalIntent  tacticalIntent;
 
     /// <summary>Current target entity if any.</summary>
     public Entity targetEntity;

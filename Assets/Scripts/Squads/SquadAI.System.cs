@@ -57,36 +57,36 @@ public partial class SquadAISystem : SystemBase
             if (dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 profile = data.behaviorProfile;
 
-            SquadAIState desiredState;
+            TacticalIntent  desiredState;
             switch (profile)
             {
                 case BehaviorProfile.Defensive:
-                    desiredState = dispersed ? SquadAIState.Regrouping
-                                             : enemiesDetected ? SquadAIState.Defending
-                                                               : SquadAIState.Idle;
+                    desiredState = dispersed ? TacticalIntent .Regrouping
+                                             : enemiesDetected ? TacticalIntent .Defending
+                                                               : TacticalIntent .Idle;
                     break;
                 case BehaviorProfile.Harassing:
-                    desiredState = dispersed ? SquadAIState.Regrouping
-                                             : enemiesDetected ? SquadAIState.Attacking
-                                                               : SquadAIState.Idle;
+                    desiredState = dispersed ? TacticalIntent .Regrouping
+                                             : enemiesDetected ? TacticalIntent .Attacking
+                                                               : TacticalIntent .Idle;
                     break;
                 case BehaviorProfile.AntiCharge:
-                    desiredState = dispersed ? SquadAIState.Regrouping
-                                             : SquadAIState.Defending;
+                    desiredState = dispersed ? TacticalIntent .Regrouping
+                                             : TacticalIntent .Defending;
                     break;
                 default: // Versatile
                     if (dispersed)
-                        desiredState = SquadAIState.Regrouping;
+                        desiredState = TacticalIntent .Regrouping;
                     else if (enemiesDetected)
-                        desiredState = SquadAIState.Attacking;
+                        desiredState = TacticalIntent .Attacking;
                     else if (state.ValueRO.currentOrder == SquadOrderType.HoldPosition)
-                        desiredState = SquadAIState.Defending;
+                        desiredState = TacticalIntent .Defending;
                     else
-                        desiredState = SquadAIState.Idle;
+                        desiredState = TacticalIntent .Idle;
                     break;
             }
 
-            ai.ValueRW.state = desiredState;
+            ai.ValueRW.tacticalIntent = desiredState;
             ai.ValueRW.isInCombat = enemiesDetected;
             state.ValueRW.isInCombat = enemiesDetected;
         }
