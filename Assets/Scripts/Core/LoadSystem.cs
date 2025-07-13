@@ -1,25 +1,34 @@
-
 using System;
-using System.IO;
 using UnityEngine;
 
+using Core.Persistence;
 
 /// <summary>
 /// Handles loading of <see cref="PlayerData"/> from persistent storage.
 /// </summary>
 public static class LoadSystem
 {
-    /// <summary>Loads player data if a save file exists.</summary>
-    /// <returns>Deserialized <see cref="PlayerData"/> or null.</returns>
+    private static ISaveProvider _provider = new LocalSaveProvider();
+
+    /// <summary>
+    /// Permite cambiar el proveedor de carga (ej: para CloudSaveProvider en el futuro).
+    /// </summary>
+    public static void SetProvider(ISaveProvider provider)
+    {
+        _provider = provider ?? new LocalSaveProvider();
+    }
+
+    /// <summary>Carga los datos del jugador usando el proveedor actual y recalcula atributos cacheados.</summary>
     public static PlayerData LoadPlayer()
     {
-        if (!File.Exists(SaveFileConfig.FilePath))
-            return null;
-
         try
         {
-            string json = File.ReadAllText(SaveFileConfig.FilePath);
-            return JsonUtility.FromJson<PlayerData>(json);
+            var data = _provider.Load();
+            if (data != null)
+            {
+                DataCacheService.RecalculateAttributes(data);
+            }
+            return data;
         }
         catch (Exception e)
         {

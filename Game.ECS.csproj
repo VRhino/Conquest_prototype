@@ -172,6 +172,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadStatus.Component.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTrigger.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\SpawnSelectionRequest.cs" />
+    <Compile Include="Assets\Scripts\Services\DataCacheService.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\Formation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.cs" />
     <Compile Include="Assets\Scripts\Animation\EcsAnimationInputAdapter.cs" />
@@ -237,6 +238,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadFSMState.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\TacticalIntent.Type.cs" />
     <Compile Include="Assets\Scripts\UI\MapUIController.cs" />
+    <Compile Include="Assets\Scripts\SoloParaPruebas\SaveLoadTest.cs" />
     <Compile Include="Assets\Scripts\Squads\Formation.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroEntity.Authoring.cs" />

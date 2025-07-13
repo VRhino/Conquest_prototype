@@ -112,6 +112,18 @@ public static class DataCacheService
         return list;
     }
 
+    // Recalcula los atributos cacheados para todos los héroes del jugador.
+    public static void RecalculateAttributes(PlayerData data)
+    {
+        Clear();
+        if (data == null || data.heroes == null)
+            return;
+        foreach (var hero in data.heroes)
+        {
+            CacheAttributes(hero);
+        }
+    }
+
     // Helper --------------------------------------------------------------
 
     // Generates a unique key for the hero based on available data.

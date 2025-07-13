@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static DataCacheService;
 
 /// <summary>
 /// Root persistent profile for the local player.
@@ -23,4 +24,12 @@ public class PlayerData
 
     /// <summary>All heroes created by the player.</summary>
     public List<HeroData> heroes = new();
+
+    /// <summary>
+    /// Limpia los datos cacheados relacionados con el jugador y sus héroes.
+    /// </summary>
+    public void ClearCachedAttributes()
+    {
+        DataCacheService.Clear();
+    }
 }
