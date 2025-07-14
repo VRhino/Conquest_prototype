@@ -1,3 +1,5 @@
+using System;
+
 /// <summary>
 /// Serializable representation of an item stored in a hero's inventory.
 /// Uses an identifier to resolve the actual ScriptableObject definition.

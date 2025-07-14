@@ -1,3 +1,5 @@
+using System;
+
 /// <summary>
 /// Attachment applied to the avatar for purely visual customization.
 /// </summary>

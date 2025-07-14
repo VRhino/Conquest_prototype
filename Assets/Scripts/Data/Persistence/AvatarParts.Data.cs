@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 /// <summary>
 /// Visual customization references for the hero's modular avatar.
 /// </summary>

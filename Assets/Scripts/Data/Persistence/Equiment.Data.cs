@@ -1,3 +1,5 @@
+using System;
+
 /// <summary>
 /// Current functional equipment worn by the hero.
 /// Each field stores the ID of an item owned in the inventory.
