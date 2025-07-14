@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 2560
     height: 1349
   m_ShowMode: 4
-  m_Title: Console
+  m_Title: Inspector
   m_RootView: {fileID: 4}
   m_MinSize: {x: 875, y: 300}
   m_MaxSize: {x: 10000, y: 10000}
@@ -172,7 +172,7 @@ MonoBehaviour:
   m_MinSize: {x: 400, y: 100}
   m_MaxSize: {x: 32384, y: 16192}
   vertical: 0
-  controlID: 50
+  controlID: 276
   draggingID: 0
 --- !u!114 &8
 MonoBehaviour:
@@ -198,7 +198,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 100}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 1
-  controlID: 51
+  controlID: 277
   draggingID: 0
 --- !u!114 &9
 MonoBehaviour:
@@ -224,7 +224,7 @@ MonoBehaviour:
   m_MinSize: {x: 200, y: 50}
   m_MaxSize: {x: 16192, y: 8096}
   vertical: 0
-  controlID: 42
+  controlID: 178
   draggingID: 0
 --- !u!114 &10
 MonoBehaviour:
@@ -304,7 +304,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 50}
   m_MaxSize: {x: 24288, y: 8096}
   vertical: 0
-  controlID: 52
+  controlID: 278
   draggingID: 0
 --- !u!114 &13
 MonoBehaviour:
@@ -466,9 +466,9 @@ MonoBehaviour:
   m_SceneHierarchy:
     m_TreeViewState:
       scrollPos: {x: 0, y: 0}
-      m_SelectedIDs: 66080000
-      m_LastClickedID: 0
-      m_ExpandedIDs: 3ae5fbff9e230d00
+      m_SelectedIDs: 72e6ffff
+      m_LastClickedID: -6542
+      m_ExpandedIDs: e4eaffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
@@ -955,7 +955,7 @@ MonoBehaviour:
   m_Position:
     m_Target: {x: 803.8402, y: 438.43765, z: 2.8330927}
     speed: 2
-    m_Value: {x: 809.6157, y: 452.5959, z: 2.5152755}
+    m_Value: {x: 803.8402, y: 438.43765, z: 2.8330927}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -1007,7 +1007,7 @@ MonoBehaviour:
   m_Size:
     m_Target: 674.47894
     speed: 2
-    m_Value: 706.2607
+    m_Value: 674.47894
   m_Ortho:
     m_Target: 1
     speed: 2
@@ -1319,7 +1319,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Assets/Scripts/SyntyEditorTools-master/ModularCharacterEditor/Scripts/Demo
+    - Assets/Scripts/SoloParaPruebas
     m_Globs: []
     m_OriginalText: 
     m_ImportLogFlags: 0
@@ -1327,16 +1327,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Assets/Scripts/SyntyEditorTools-master/ModularCharacterEditor/Scripts/Demo
+  - Assets/Scripts/SoloParaPruebas
   m_LastFoldersGridSize: 16
   m_LastProjectPath: C:\Users\VRINO\Conquest tactics\prototipo_curado
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
-    scrollPos: {x: 0, y: 500}
-    m_SelectedIDs: c4490000
-    m_LastClickedID: 18884
-    m_ExpandedIDs: 000000002c470000504700005c470000984700000c480000a8480000b0480000dc480000e44800000c490000884900009849000074240d00
+    scrollPos: {x: 0, y: 319}
+    m_SelectedIDs: c29d0000
+    m_LastClickedID: 40386
+    m_ExpandedIDs: 00000000769d0000889d0000a69d0000a89d0000aa9d0000b49d0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1364,7 +1364,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 000000002c470000504700005c47000098470000a8480000b0480000dc4800000c4900008849000074240d00
+    m_ExpandedIDs: 00000000769d0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
