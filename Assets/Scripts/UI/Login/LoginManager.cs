@@ -14,9 +14,13 @@ public static class LoginManager
     var data = LoadSystem.LoadPlayer();
     if (data != null && data.playerName == username)
     {
-      // Usuario existe, cargar datos
-      SessionData.SetUsername(username);
+      if (data == null)
+      {
+        errorLabel.text = "No se pudo cargar el perfil del usuario.";
+        return;
+      }
       Debug.Log($"Login successful for {username} (existing user)");
+      PlayerSessionService.SetPlayer(data);
       SceneManager.LoadSceneAsync("AvatarCreator");
       return;
     }
@@ -26,16 +30,6 @@ public static class LoginManager
       Debug.LogWarning($"Login failed for {username} (user not found)");
       // Aquí podrías redirigir a una pantalla de registro si es necesario
       return;
-
     }
-  }
-}
-
-public static class SessionData
-{
-  public static string Username { get; private set; }
-  public static void SetUsername(string username)
-  {
-    Username = username;
   }
 }

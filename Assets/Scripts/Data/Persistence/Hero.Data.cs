@@ -16,6 +16,8 @@ public class HeroData
     /// <summary>Name chosen by the player for this hero.</summary>
     public string heroName = string.Empty;
 
+    public string gender = string.Empty;
+
     // Progression
 
     /// <summary>Current hero level.</summary>

@@ -13,6 +13,8 @@ public class AvatarParts
     public string hairId = string.Empty;
     /// <summary>Identifier for facial hair or beard.</summary>
     public string beardId = string.Empty;
+    /// <summary>Identifier for the eyebrow style.</summary>
+    public string eyebrowId = string.Empty;
     /// <summary>Optional extra attachments.</summary>
     public List<VisualAttachment> attachments = new();
 }
