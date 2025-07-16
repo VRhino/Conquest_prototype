@@ -288,6 +288,7 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroHealth.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataReference.Authoring.cs" />
     <Compile Include="Assets\Scripts\UI\Login\LoginUIController.UI.cs" />
+    <Compile Include="Assets\Scripts\UI\avatarCreator\HeroClassSelector.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\SquadSkill.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfile.Component.cs" />
     <Compile Include="Assets\Scripts\Map\CaptureZoneTrigger.System.cs" />

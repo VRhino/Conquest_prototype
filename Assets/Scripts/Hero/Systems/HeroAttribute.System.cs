@@ -30,13 +30,13 @@ public partial class HeroAttributeSystem : SystemBase
             var data = attr.ValueRW;
             bool changed = false;
 
-            changed |= Validate(ref data.fuerza, def.minFuerza, def.maxFuerza,
+            changed |= Validate(ref data.fuerza, def.minStrength, def.maxStrength,
                                 HeroAttributeType.Strength, entity, ref ecb);
-            changed |= Validate(ref data.destreza, def.minDestreza, def.maxDestreza,
+            changed |= Validate(ref data.destreza, def.minDexterity, def.maxDexterity,
                                 HeroAttributeType.Dexterity, entity, ref ecb);
-            changed |= Validate(ref data.armadura, def.minArmadura, def.maxArmadura,
+            changed |= Validate(ref data.armadura, def.minArmor, def.maxArmor,
                                 HeroAttributeType.Armor, entity, ref ecb);
-            changed |= Validate(ref data.vitalidad, def.minVitalidad, def.maxVitalidad,
+            changed |= Validate(ref data.vitalidad, def.minVitality, def.maxVitality,
                                 HeroAttributeType.Vitality, entity, ref ecb);
 
             if (changed)

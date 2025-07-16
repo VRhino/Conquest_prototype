@@ -22,6 +22,7 @@ public class AvatarCreatorUIController : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button continueButton;
     [SerializeField] private Button cancelButton;
+
     void Start()
     {
         maleButton.onClick.AddListener(() => avatarPartSelector.SetGender(AvatarPartSelector.Gender.Male));

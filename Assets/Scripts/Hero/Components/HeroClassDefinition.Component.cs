@@ -10,19 +10,19 @@ public struct HeroClassDefinitionComponent : IComponentData
 {
     public HeroClass heroClass;
 
-    public int baseFuerza;
-    public int baseDestreza;
-    public int baseArmadura;
-    public int baseVitalidad;
+    public int baseStrength;
+    public int baseDexterity;
+    public int baseArmor;
+    public int baseVitality;
 
-    public int minFuerza;
-    public int maxFuerza;
-    public int minDestreza;
-    public int maxDestreza;
-    public int minArmadura;
-    public int maxArmadura;
-    public int minVitalidad;
-    public int maxVitalidad;
+    public int minStrength;
+    public int maxStrength;
+    public int minDexterity;
+    public int maxDexterity;
+    public int minArmor;
+    public int maxArmor;
+    public int minVitality;
+    public int maxVitality;
 
     /// <summary>Reference to the Q ability for this class.</summary>
     public Entity abilityQ;

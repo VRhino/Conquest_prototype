@@ -108,7 +108,7 @@
               "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\avatarCreator\\avatarCreatorController.UI.cs",
               "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\avatarCreator\\avatarCreatorController.UI.cs",
               "RelativeToolTip": "Assets\\Scripts\\UI\\avatarCreator\\avatarCreatorController.UI.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAA+AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-07-15T13:21:43.2Z",
               "EditorCaption": ""
@@ -123,8 +123,7 @@
               "RelativeToolTip": "Library\\PackageCache\\com.unity.render-pipelines.universal@14.0.12\\Shaders\\Lit.shader",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002777|",
-              "WhenOpened": "2025-07-15T08:54:47.87Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-15T08:54:47.87Z"
             },
             {
               "$type": "Document",

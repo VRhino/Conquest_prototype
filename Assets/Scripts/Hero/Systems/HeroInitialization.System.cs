@@ -34,10 +34,10 @@ public partial class HeroInitializationSystem : SystemBase
 
             ecb.AddComponent(entity, new HeroAttributesComponent
             {
-                fuerza = def.baseFuerza,
-                destreza = def.baseDestreza,
-                armadura = def.baseArmadura,
-                vitalidad = def.baseVitalidad,
+                fuerza = def.baseStrength,
+                destreza = def.baseDexterity,
+                armadura = def.baseArmor,
+                vitalidad = def.baseVitality,
                 classDefinition = classRef.ValueRO.classEntity
             });
 
