@@ -12,7 +12,6 @@ public class AvatarPartSelector : MonoBehaviour
     private const string SLOT_EYEBROW = "Eyebrow";
     private const string SLOT_FACIALHAIR = "FacialHair";
     private AvatarPartDatabase avatarPartDatabase;
-    public enum Gender { Male, Female }
     public Gender currentGender;
 
     [Header("References to part roots")]

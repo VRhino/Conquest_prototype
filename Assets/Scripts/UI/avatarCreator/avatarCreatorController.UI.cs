@@ -25,8 +25,8 @@ public class AvatarCreatorUIController : MonoBehaviour
 
     void Start()
     {
-        maleButton.onClick.AddListener(() => avatarPartSelector.SetGender(AvatarPartSelector.Gender.Male));
-        femaleButton.onClick.AddListener(() => avatarPartSelector.SetGender(AvatarPartSelector.Gender.Female));
+        maleButton.onClick.AddListener(() => avatarPartSelector.SetGender(Gender.Male));
+        femaleButton.onClick.AddListener(() => avatarPartSelector.SetGender(Gender.Female));
         continueButton.onClick.AddListener(OnContinuePressed);
         cancelButton.onClick.AddListener(OnCancelPressed);
 
@@ -37,7 +37,7 @@ public class AvatarCreatorUIController : MonoBehaviour
         avatarPartSelector.facialHairSlider = facialHairSlider;
 
         // Set default gender (optional)
-        avatarPartSelector.SetGender(AvatarPartSelector.Gender.Male);
+        avatarPartSelector.SetGender(Gender.Male);
     }
 
     private void OnContinuePressed()

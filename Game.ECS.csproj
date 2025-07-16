@@ -175,6 +175,7 @@
     <Compile Include="Assets\Scripts\Squads\Systems\UnitFollowFormation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStatus.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\inventoryItem.Data.cs" />
+    <Compile Include="Assets\Scripts\UI\avatarCreator\gender.Type.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTrigger.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\SpawnSelectionRequest.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\Formation.System.cs" />
