@@ -95,6 +95,7 @@
     <Compile Include="Assets\Scripts\Map\SpawnPoint.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadOrder.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimatorController.cs" />
+    <Compile Include="Assets\Scripts\Data\Avatar\AvatarParts.Data.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\SquadInstance.Data.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPoint.Component.cs" />
@@ -144,7 +145,6 @@
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInput.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroStamina.System.cs" />
     <Compile Include="Assets\Scripts\Squads\DestinationMarker.Authoring.cs" />
-    <Compile Include="Assets\Scripts\Squads\GridFormationCreator.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimationMovement.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageType.cs" />
     <Compile Include="Assets\Scripts\Core\DataCacheService.cs" />
@@ -221,6 +221,7 @@
     <Compile Include="Assets\Scripts\Squads\Systems\FormationAdaptation.System.cs" />
     <Compile Include="Assets\Scripts\Combat\Penetration.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularBodyPart.cs" />
+    <Compile Include="Assets\Scripts\Data\Avatar\AvatarSlot.Type.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\LevelUpEvent.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\BodyPartLinker.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitAttack.System.cs" />
@@ -259,6 +260,7 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroSpawn.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\Terrain.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
+    <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDatabase.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroMovement.System.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttack.System.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitStatScaling.System.cs" />
@@ -295,6 +297,7 @@
     <Compile Include="Assets\Scripts\Combat\Team.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainer.Component.cs" />
     <Compile Include="Assets\Scripts\Core\SaveSystem.cs" />
+    <Compile Include="Assets\Scripts\Editor\AvatarPartDatabaseAutoFiller.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroStats.Authoring.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroLife.Authoring.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchController.System.cs" />
@@ -313,6 +316,7 @@
     <Compile Include="Assets\Scripts\SoloParaPruebas\Testing\EcsAnimationTester.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationState.Component.cs" />
+    <Compile Include="Assets\Scripts\Data\Items\Item.Data.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularArmorType.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEquipment.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroPrefab.Component.cs" />
@@ -326,7 +330,6 @@
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Demo\EquipmentManager.cs" />
     <Compile Include="Assets\Scripts\Animation\UnitAnimationDebugger.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOrientation.Component.cs" />
-    <Compile Include="Assets\Scripts\Data\Persistence\AvatarParts.Data.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassReference.Authoring.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\PoolBootstrapper.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\Gender.cs" />
@@ -342,6 +345,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitTargetPosition.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroClass.Type.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\SquadEnums.Type.cs" />
+    <Compile Include="Assets\Scripts\Utils\TreeLeafPathExporter.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularCharacterStatics.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadSpawning.System.cs" />
@@ -351,6 +355,7 @@
     <Compile Include="Assets\Scripts\UI\LoadoutSelectionUI.cs" />
     <Compile Include="Assets\Scripts\Perks\PerkData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointBaker.cs" />
+    <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDefinition.Data.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\ModularCharacterEditorReadme.txt" />

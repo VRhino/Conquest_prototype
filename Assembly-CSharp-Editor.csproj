@@ -76,7 +76,6 @@
     <Compile Include="Assets\Synty\Tools\SyntyPropBoneTool\Editor\PropBoneBinderEditor.cs" />
     <Compile Include="Assets\Synty\Tools\SyntyPropBoneTool\Editor\PropBoneConfigEditor.cs" />
     <Compile Include="Assets\Synty\Tools\SyntyPropBoneTool\Editor\Utils\PropBoneToolEditorUtil.cs" />
-    <Compile Include="Assets\Editor\ReadOnlyDrawer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
