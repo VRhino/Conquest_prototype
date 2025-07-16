@@ -1676,7 +1676,7 @@ Esta escena se gestiona como parte del flujo general definido por `SceneFlowMana
 
 - `SpawnPointComponent`: posición, team, isSelected
 - `SquadData` (ScriptableObject): habilidades, formaciones, liderazgo
-- `PerkData`: perks activos y pasivos
+- `HeroPerk`: perks activos y pasivos
 - `HeroData`: clase, equipamiento, atributos
 - `LoadoutSaveData`: presets de escuadras y perks
 
@@ -1777,8 +1777,8 @@ Los perks y escuadras estarán definidos como **ScriptableObjects**, facilitando
 🧩 **Ejemplos:**
 
 ```csharp
-[CreateAssetMenu(menuName = "Perks/PerkData")]
-public class PerkData : ScriptableObject {
+[CreateAssetMenu(menuName = "Perks/HeroPerk")]
+public class HeroPerk : ScriptableObject {
     public string perkName;
     public Sprite icon;
     public string description;
@@ -1818,8 +1818,8 @@ El sistema de perks es un **árbol modular**. El jugador puede activar hasta `5 
 
 ```csharp
 PerkComponent
-- List<PerkData> activePerks
-- List<PerkData> passivePerks
+- List<HeroPerk> activePerks
+- List<HeroPerk> passivePerks
 ```
 
 ```csharp
@@ -1894,8 +1894,8 @@ public class HeroClassDefinition : ScriptableObject {
     public int minVitalidad, maxVitalidad;
 
     public GameObject weaponPrefab;
-    public List<HeroAbilityData> abilities;
-    public List<PerkData> validClassPerks;
+    public List<HeroAbility> abilities;
+    public List<HeroPerk> validClassPerks;
 }
 
 ```

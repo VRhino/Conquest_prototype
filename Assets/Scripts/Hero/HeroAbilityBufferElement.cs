@@ -2,7 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 
 /// <summary>
-/// Buffer element storing hero ability parameters baked from <see cref="HeroAbilityData"/>.
+/// Buffer element storing hero ability parameters baked from <see cref="HeroAbility"/>.
 /// </summary>
 public struct HeroAbilityBufferElement : IBufferElementData
 {

@@ -34,8 +34,8 @@ public class HeroClassDefinition : ScriptableObject
     public int maxVitality;
 
     /// <summary>List of active abilities available to this class.</summary>
-    public List<HeroAbilityData> abilities;
+    public List<HeroAbility> abilities;
 
     /// <summary>Perks that can be chosen by heroes of this class.</summary>
-    public List<PerkData> validClassPerks;
+    public List<HeroPerk> validClassPerks;
 }

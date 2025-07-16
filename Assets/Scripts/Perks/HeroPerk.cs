@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// Data describing a gameplay perk available to the player.
 /// </summary>
-[CreateAssetMenu(fileName = "PerkData", menuName = "Game/Perk Data")]
-public class PerkData : ScriptableObject
+[CreateAssetMenu(fileName = "HeroPerk", menuName = "Hero/Perk Data")]
+public class HeroPerk : ScriptableObject
 {
     /// <summary>Unique identifier for the perk.</summary>
     public int perkID;

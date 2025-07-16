@@ -5,7 +5,7 @@ using UnityEngine;
 /// Loaded by <see cref="HeroClassDefinition"/> and referenced by the HUD.
 /// </summary>
 [CreateAssetMenu(menuName = "Hero/Ability Data")]
-public class HeroAbilityData : ScriptableObject
+public class HeroAbility : ScriptableObject
 {
     /// <summary>Name shown to players.</summary>
     public string abilityName;

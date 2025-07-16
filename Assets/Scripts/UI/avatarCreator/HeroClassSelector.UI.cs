@@ -5,15 +5,25 @@ using TMPro;
 
 using Data.Avatar;
 
+
 public class HeroClassSelector : MonoBehaviour
 {
-
     [SerializeField] private List<string> basePartIds = new();
     [Header("Modelo 3D")]
     [SerializeField] private Transform modularDummy; // Asignar desde el editor
     [Header("Setup")]
     [SerializeField] private Transform classContainer;
-    [SerializeField] private GameObject classButtonPrefab;
+    [SerializeField] private GameObject classButtonPrefab;    
+
+    [Header("Perks UI")]
+    [SerializeField] private Transform perksContainer; // Asignar desde el editor
+    [SerializeField] private GameObject perkItemPrefab; // Prefab con hijos "Icon" (Image) y "Label" (TMP_Text)
+    [Header("Abilities UI")]
+    [SerializeField] private Transform abilitiesContainer; // Asignar desde el editor
+    [SerializeField] private string qAbilityName = "QAbility";
+    [SerializeField] private string eAbilityName = "EAbility";
+    [SerializeField] private string rAbilityName = "RAbility";
+    [SerializeField] private string ultimateAbilityName = "Ultimate";
 
     [Header("UI de detalles")]
     [SerializeField] private TMP_Text classNameText;
@@ -27,13 +37,11 @@ public class HeroClassSelector : MonoBehaviour
     [Header("Data")]
     public List<HeroClassDefinition> availableClasses = new();
 
-    
     [Header("Character Selector")]
     [SerializeField] private AvatarPartSelector avatarPartSelector;
 
     [Header("Avatar DB")]
     private AvatarPartDatabase avatarPartDatabase; // Asignar desde el editor o cargar en runtime
-
 
     private HeroClassDefinition selectedClass;
 
@@ -102,7 +110,97 @@ public class HeroClassSelector : MonoBehaviour
         // Activar visualmente las piezas de armadura por defecto según la clase
         ActivateDefaultArmorVisuals(heroClass);
 
+        // Instanciar perks de la clase
+        UpdatePerksUI(heroClass);
+        // Rellenar habilidades de la clase
+        UpdateAbilitiesUI(heroClass);
+
         // La asignación de clase y stats al HeroData debe hacerse al crear el héroe en el controlador principal.
+    }
+
+    // Instancia los perks de la clase seleccionada en el perksContainer
+    private void UpdatePerksUI(HeroClassDefinition heroClass)
+    {
+        if (perksContainer == null || perkItemPrefab == null)
+            return;
+
+        // Limpiar perks previos
+        foreach (Transform child in perksContainer)
+            Destroy(child.gameObject);
+
+        if (heroClass.validClassPerks == null) return;
+        foreach (var perk in heroClass.validClassPerks)
+        {
+            if (perk == null) continue;
+            var perkGO = Instantiate(perkItemPrefab, perksContainer);
+            var iconTransform = perkGO.transform.Find("Icon");
+            var labelTransform = perkGO.transform.Find("Label");
+            var descTransform = perkGO.transform.Find("Description");
+            var icon = iconTransform ? iconTransform.GetComponent<Image>() : null;
+            var label = labelTransform ? labelTransform.GetComponent<TMP_Text>() : null;
+            var desc = descTransform ? descTransform.GetComponent<TMP_Text>() : null;
+            if (icon) icon.sprite = perk.icon;
+            if (label) label.text = perk.perkName;
+            if (desc) desc.text = perk.description;
+        }
+    }
+    // Rellena los datos de las habilidades en los contenedores Q, E, R y Ultimate
+    private void UpdateAbilitiesUI(HeroClassDefinition heroClass)
+    {
+        if (abilitiesContainer == null || heroClass.abilities == null) return;
+
+        // Buscar los 4 contenedores hijos por nombre
+        var qGO = abilitiesContainer.Find(qAbilityName);
+        var eGO = abilitiesContainer.Find(eAbilityName);
+        var rGO = abilitiesContainer.Find(rAbilityName);
+        var uGO = abilitiesContainer.Find(ultimateAbilityName);
+
+        // Limpiar todos los campos primero
+        void ClearAbility(Transform abilityGO)
+        {
+            if (abilityGO == null) return;
+            var icon = abilityGO.Find("Icon")?.GetComponent<Image>();
+            var label = abilityGO.Find("Label")?.GetComponent<TMPro.TMP_Text>();
+            var desc = abilityGO.Find("Description")?.GetComponent<TMPro.TMP_Text>();
+            if (icon) icon.sprite = null;
+            if (label) label.text = "";
+            if (desc) desc.text = "";
+        }
+        ClearAbility(qGO);
+        ClearAbility(eGO);
+        ClearAbility(rGO);
+        ClearAbility(uGO);
+
+        // Map category string to container
+        System.Action<HeroAbility, Transform> FillAbility = (ability, abilityGO) => {
+            if (ability == null || abilityGO == null) return;
+            var icon = abilityGO.Find("Icon")?.GetComponent<Image>();
+            var label = abilityGO.Find("Label")?.GetComponent<TMPro.TMP_Text>();
+            var desc = abilityGO.Find("Description")?.GetComponent<TMPro.TMP_Text>();
+            if (icon) icon.sprite = ability.icon;
+            if (label) label.text = ability.abilityName;
+            if (desc) desc.text = ability.description;
+        };
+
+        foreach (var ability in heroClass.abilities)
+        {
+            if (ability == null) continue;
+            switch (ability.category)
+            {
+                case HeroAbilityCategory.Q:
+                    FillAbility(ability, qGO);
+                    break;
+                case HeroAbilityCategory.E:
+                    FillAbility(ability, eGO);
+                    break;
+                case HeroAbilityCategory.R:
+                    FillAbility(ability, rGO);
+                    break;
+                case HeroAbilityCategory.Ultimate:
+                    FillAbility(ability, uGO);
+                    break;
+            }
+        }
     }
     // Desactiva todas las piezas de armadura y deja solo las piezas base activas según la lista basePartIds
     private void ResetModularDummyToBase()
@@ -310,9 +408,9 @@ public class HeroClassSelector : MonoBehaviour
         if (classIconImage) classIconImage.sprite = heroClass.icon;
 
         // Asegurar que los valores de stats se actualizan correctamente
-        if (vitalityText) vitalityText.text = $"Vitalidad: {heroClass.baseVitality}";
-        if (dexterityText) dexterityText.text = $"Destreza: {heroClass.baseDexterity}";
-        if (strengthText) strengthText.text = $"Fuerza: {heroClass.baseStrength}";
-        if (armorText) armorText.text = $"Armadura: {heroClass.baseArmor}";
+        if (vitalityText) vitalityText.text = $"Vitality: {heroClass.baseVitality}";
+        if (dexterityText) dexterityText.text = $"Dexterity: {heroClass.baseDexterity}";
+        if (strengthText) strengthText.text = $"Strength: {heroClass.baseStrength}";
+        if (armorText) armorText.text = $"Armor: {heroClass.baseArmor}";
     }
 }
