@@ -10,6 +10,7 @@ namespace Data.Avatar
         Hair,
         Eyebrows,
         Beard,
-        Face
+        Face,
+        Weapon
     }
 }

@@ -94,6 +94,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitSpeedCalculator.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitRangedStats.Component.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPoint.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Data\Avatar\AvatarVisualUtils.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadOrder.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimatorController.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarParts.Data.cs" />

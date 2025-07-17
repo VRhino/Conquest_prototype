@@ -18,5 +18,7 @@ namespace Data.Avatar
         public List<AvatarPartDefinition> pantsParts;
         public List<AvatarPartDefinition> headParts;
         public List<AvatarPartDefinition> bootsParts;
+        // weapon modular parts
+        public List<AvatarPartDefinition> weaponParts;
     }
 }
