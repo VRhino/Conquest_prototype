@@ -8,6 +8,9 @@ namespace Data.Avatar
         // Desactiva todas las piezas de armadura y deja solo las piezas base activas según la lista basePartIds
         public static void ResetModularDummyToBase(Transform modularDummy, AvatarPartDatabase avatarPartDatabase, List<string> basePartIds, global::Gender currentGender)
         {
+            modularDummy.GetComponent<AvatarPartSelector>().maleParts.SetActive(currentGender == Gender.Male);
+            modularDummy.GetComponent<AvatarPartSelector>().femaleParts.SetActive(currentGender == Gender.Female);
+
             if (modularDummy == null || avatarPartDatabase == null) return;
 
             // 1. Reunir todos los boneTargets únicos de las piezas base
@@ -92,7 +95,7 @@ namespace Data.Avatar
         }
 
         // Activa la pieza de armadura por id usando avatarPartDatabase, boneTarget y prefabPath
-        public static void ActivateArmorPieceById(Transform modularDummy, AvatarPartDatabase avatarPartDatabase, string partId, global::Gender currentGender)
+        public static void ToggleArmorVisibilityByAvatarPartId(Transform modularDummy, AvatarPartDatabase avatarPartDatabase, string partId, global::Gender currentGender)
         {
             if (modularDummy == null)
             {

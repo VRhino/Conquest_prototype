@@ -21,7 +21,7 @@ public static class LoginManager
       }
       Debug.Log($"Login successful for {username} (existing user)");
       PlayerSessionService.SetPlayer(data);
-      SceneManager.LoadSceneAsync("AvatarCreator");
+      SceneManager.LoadSceneAsync("CharacterSelecctionScene");
       return;
     }
     else

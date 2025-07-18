@@ -4,12 +4,17 @@ using UnityEngine.UI;
 using TMPro;
 
 
+
 using Data.Avatar;
+using Data.Items;
 
 
 public class HeroClassSelector : MonoBehaviour
 {
-    [SerializeField] private List<string> basePartIds = new();
+    // Lista interna de itemIds base equipados, se rellena dinámicamente según la clase
+    [SerializeField]private List<string> basePartIds = new();
+    private List<string> baseItemIds = new();
+    // Rellena baseItemIds según la clase seleccionada
     [Header("Modelo 3D")]
     [SerializeField] private Transform modularDummy; // Asignar desde el editor
     [Header("Setup")]
@@ -41,10 +46,10 @@ public class HeroClassSelector : MonoBehaviour
     [Header("Character Selector")]
     [SerializeField] private AvatarPartSelector avatarPartSelector;
 
-    [Header("Avatar DB")]
-    private AvatarPartDatabase avatarPartDatabase; // Asignar desde el editor o cargar en runtime
-
-    private HeroClassDefinition selectedClass;
+    
+    private AvatarPartDatabase avatarPartDatabase;
+    private ItemDatabase itemDB; 
+    public HeroClassDefinition selectedClass;
 
 
     void Start()
@@ -58,6 +63,14 @@ public class HeroClassSelector : MonoBehaviour
                 Debug.LogError("No se pudo cargar AvatarPartDatabase desde Resources/Data/Avatar/AvatarPartDatabase");
             }
         }
+        if (itemDB == null)
+        {
+            itemDB = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
+            if (itemDB == null)
+            {
+                Debug.LogError("No se pudo cargar ItemDatabase desde Resources/Data/Items/ItemDatabase");
+            }
+        }
         GenerateButtons();
         // Mostrar detalles de la clase en el índice 1 al iniciar (si existe)
         if (availableClasses != null && availableClasses.Count > 1)
@@ -66,7 +79,53 @@ public class HeroClassSelector : MonoBehaviour
             SelectClass(selectedClass);
         }
     }
+    public Equipment GetCurrentEquipment()
+    {
+        // Devuelve el equipo actual usando los itemId seleccionados
+        Equipment equipment = new Equipment();
+        // Asume que baseItemIds tiene el orden: weapon, helmet, torso, gloves, pants
+        if (baseItemIds.Count > 0) equipment.weaponId = baseItemIds[0];
+        if (baseItemIds.Count > 1) equipment.helmetId = baseItemIds[1];
+        if (baseItemIds.Count > 2) equipment.torsoId = baseItemIds[2];
+        if (baseItemIds.Count > 3) equipment.glovesId = baseItemIds[3];
+        if (baseItemIds.Count > 4) equipment.pantsId = baseItemIds[4];
+        return equipment;
+    }
 
+     private void FillBaseItemIdsForClass(HeroClassDefinition heroClass)
+    {
+        baseItemIds.Clear();
+        // Determina el sufijo de armadura y el itemId de arma según la clase
+        string armorSuffix, weaponId;
+        switch (heroClass.heroClass.ToString())
+        {
+            case "Bow":
+                armorSuffix = "L";
+                weaponId = "WeaBBasic";
+                break;
+            case "Spear":
+                armorSuffix = "M";
+                weaponId = "WeaSBasic";
+                break;
+            case "TwoHandedSword":
+                armorSuffix = "M";
+                weaponId = "WeaS2HBasic";
+                break;
+            case "SwordAndShield":
+                armorSuffix = "H";
+                weaponId = "WeaS&SBasic";
+                break;
+            default:
+                armorSuffix = "L";
+                weaponId = "WeaBBasic";
+                break;
+        }
+        baseItemIds.Add(weaponId);
+        baseItemIds.Add($"Boot{armorSuffix}ADef");
+        baseItemIds.Add($"Tor{armorSuffix}ADef");
+        baseItemIds.Add($"Glo{armorSuffix}ADef");
+        baseItemIds.Add($"Pan{armorSuffix}ADef");
+    }
     private void GenerateButtons()
     {
         foreach (Transform child in classContainer)
@@ -93,7 +152,7 @@ public class HeroClassSelector : MonoBehaviour
 
             if (!button)
                 Debug.LogWarning($"El prefab del botón de clase no tiene componente Button. ({buttonGO.name})");
-            else 
+            else
                 button.onClick.AddListener(() => SelectClass(heroClass));
         }
     }
@@ -105,23 +164,23 @@ public class HeroClassSelector : MonoBehaviour
         // Actualizar la UI y guardar la selección localmente.
         UpdateDetails(heroClass);
 
-        // Limpiar dummy y dejar solo piezas base
-       Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(
+        // Limpiar dummy y dejar solo piezas base visuales
+        Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(
             modularDummy,
             avatarPartDatabase,
             basePartIds,
             avatarPartSelector.currentGender
         );
 
+           // Rellenar baseItemIds según la clase seleccionada
+        FillBaseItemIdsForClass(heroClass);
+
         // Activar visualmente las piezas de armadura por defecto según la clase
         ActivateDefaultArmorVisuals(heroClass);
-
         // Instanciar perks de la clase
         UpdatePerksUI(heroClass);
         // Rellenar habilidades de la clase
         UpdateAbilitiesUI(heroClass);
-
-        // La asignación de clase y stats al HeroData debe hacerse al crear el héroe en el controlador principal.
     }
 
     // Instancia los perks de la clase seleccionada en el perksContainer
@@ -209,45 +268,22 @@ public class HeroClassSelector : MonoBehaviour
         }
     }
 
-    // Mapea la clase a un set de armadura y activa visualmente las piezas
+    // Activa visualmente las piezas de armadura por itemId usando AvatarVisualUtils
     private void ActivateDefaultArmorVisuals(HeroClassDefinition heroClass)
     {
-        string armorSet = "";
-        string weaponSet = "";
-        switch (heroClass.heroClass.ToString())
+        foreach (var itemId in baseItemIds)
         {
-            case "Bow":
-                armorSet = "LigthArmorDefault";
-                weaponSet = "BowBasic";
-                break;
-            case "Spear":
-                armorSet = "MediumArmorDefault";
-                weaponSet = "SpearBasic";
-                break;
-            case "TwoHandedSword":
-                armorSet = "MediumArmorDefault";
-                weaponSet = "TwoHandedSwordBasic";
-                break;
-            case "SwordAndShield":
-                armorSet = "HeavyArmorDefault";
-                weaponSet = "SwordAndShieldBasic";
-                break;
-            default:
-                armorSet = "LigthArmorDefault";
-                break;
+            var itemData = itemDB.GetItemDataById(itemId);
+            if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
+            {
+                Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(
+                    modularDummy,
+                    avatarPartDatabase,
+                    itemData.visualPartId,
+                    avatarPartSelector.currentGender
+                );
+            }
         }
-
-        string torsoId = $"Torso{armorSet}";
-        string pantsId = $"Pants{armorSet}";
-        string bootsId = $"Boots{armorSet}";
-        string glovesId = $"Gloves{armorSet}";
-        string weaponId = $"{weaponSet}";
-
-        Data.Avatar.AvatarVisualUtils.ActivateArmorPieceById(modularDummy, avatarPartDatabase, torsoId, avatarPartSelector.currentGender);
-        Data.Avatar.AvatarVisualUtils.ActivateArmorPieceById(modularDummy, avatarPartDatabase, pantsId, avatarPartSelector.currentGender);
-        Data.Avatar.AvatarVisualUtils.ActivateArmorPieceById(modularDummy, avatarPartDatabase, bootsId, avatarPartSelector.currentGender);
-        Data.Avatar.AvatarVisualUtils.ActivateArmorPieceById(modularDummy, avatarPartDatabase, glovesId, avatarPartSelector.currentGender);
-        Data.Avatar.AvatarVisualUtils.ActivateArmorPieceById(modularDummy, avatarPartDatabase, weaponId, avatarPartSelector.currentGender);
     }
     private void UpdateDetails(HeroClassDefinition heroClass)
     {

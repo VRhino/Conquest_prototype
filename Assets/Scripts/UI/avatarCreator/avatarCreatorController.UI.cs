@@ -17,6 +17,9 @@ public class AvatarCreatorUIController : MonoBehaviour
     [Header("Character Selector")]
     public AvatarPartSelector avatarPartSelector;
 
+    [Header("Class Selector")]
+    [SerializeField]private HeroClassSelector classSelector;
+
     [Header("Hero Input")]
     public TMPro.TMP_InputField heroNameInput;
     [Header("Buttons")]
@@ -48,18 +51,20 @@ public class AvatarCreatorUIController : MonoBehaviour
             Debug.LogWarning("Nombre del héroe vacío.");
             return;
         }
-
+        Equipment equipment = classSelector.GetCurrentEquipment();
         AvatarParts avatar = avatarPartSelector.GetCurrentSelection();
         HeroData hero = new HeroData
         {
             heroName = heroName,
             avatar = avatar,
+            classId = classSelector.selectedClass.name,
             gender = avatarPartSelector.currentGender.ToString(),
             level = 1,
             currentXP = 0,
             attributePoints = 0,
             perkPoints = 0,
-            bronze = 0,            
+            bronze = 0,
+            equipment = equipment,        
             // Aquí puedes configurar claseId, stats iniciales, etc.
         };
 
@@ -75,7 +80,7 @@ public class AvatarCreatorUIController : MonoBehaviour
         PlayerSessionService.SetSelectedHero(hero);
         SaveSystem.SavePlayer(player);
 
-        SceneManager.LoadScene("FeudoScene");
+        SceneManager.LoadScene("CharacterSelecctionScene");
     }
     private void OnCancelPressed()
     {
