@@ -87,8 +87,8 @@
     <Compile Include="Assets\Scripts\Hero\StaminaBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\Unit.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitDetectedEnemy.cs" />
-    <Compile Include="Assets\Scripts\Visual\EntityVisualSync.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\AvatarVisualUtils.cs" />
+    <Compile Include="Assets\Scripts\Visual\EntityVisualSync.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\Hero.Data.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitStats.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainer.System.cs" />

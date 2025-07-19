@@ -85,6 +85,6 @@ public class AvatarCreatorUIController : MonoBehaviour
     private void OnCancelPressed()
     {
         PlayerSessionService.Clear();
-        SceneManager.LoadScene("LoginScene");
+        SceneManager.LoadScene("CharacterSelecctionScene");
     }
 }

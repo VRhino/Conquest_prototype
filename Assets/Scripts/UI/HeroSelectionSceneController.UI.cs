@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using Data.Items;
+using UnityEditor.SearchService;
 
 public class HeroSelectionSceneController : MonoBehaviour
 {
@@ -18,6 +19,8 @@ public class HeroSelectionSceneController : MonoBehaviour
 
     [Header("Buttons")]
     [SerializeField] private Button createHeroButton;
+    [SerializeField] private Button deleteHeroButton;
+    [SerializeField] private Button exitButton;
 
     [SerializeField] private List<string> basePartIds = new();
 
@@ -26,6 +29,9 @@ public class HeroSelectionSceneController : MonoBehaviour
         LoadHeroButtons();
         confirmButton.onClick.AddListener(OnConfirm);
         createHeroButton.onClick.AddListener(OnCreateHero);
+        deleteHeroButton.onClick.AddListener(OnDeleteHero);
+        exitButton.onClick.AddListener(OnExitPressed);
+
     }
     void OnCreateHero()
     {
@@ -74,6 +80,8 @@ public class HeroSelectionSceneController : MonoBehaviour
 
         if (heroes.Count > 0)
             OnSelectHero(heroes[0]);
+        else
+            dummyRoot.gameObject.SetActive(false);
     }
 
     void OnSelectHero(HeroData hero)
@@ -156,5 +164,50 @@ public class HeroSelectionSceneController : MonoBehaviour
     {
         PlayerSessionService.SetSelectedHero(selectedHero);
         UnityEngine.SceneManagement.SceneManager.LoadScene("FeudoScene");
+    }
+    void OnDeleteHero()
+    {
+        if (selectedHero == null)
+        {
+            Debug.LogWarning("No hay héroe seleccionado para eliminar.");
+            return;
+        }
+
+        // Confirmación simple usando un diálogo nativo de Unity
+        // Si usas un sistema de UI propio, reemplaza esto por tu popup
+        bool confirm = UnityEditor.EditorUtility.DisplayDialog(
+            "Delete Hero",
+            $"Are you sure you want to delete hero '{selectedHero.heroName}'? This action cannot be undone.",
+            "Delete",
+            "Cancel"
+        );
+        if (!confirm)
+        {
+            Debug.Log("Eliminación cancelada por el usuario.");
+            return;
+        }
+
+        var player = PlayerSessionService.CurrentPlayer;
+        if (player == null)
+        {
+            Debug.LogError("No hay sesión de jugador activa.");
+            return;
+        }
+
+        if (player.heroes.Remove(selectedHero))
+        {
+            SaveSystem.SavePlayer(player);
+            LoadHeroButtons();
+            Debug.Log($"Héroe '{selectedHero.heroName}' eliminado correctamente.");
+        }
+        else
+        {
+            Debug.LogWarning($"No se pudo eliminar el héroe '{selectedHero.heroName}'.");
+        }
+    }
+    void OnExitPressed()
+    {
+        PlayerSessionService.Clear();
+        UnityEngine.SceneManagement.SceneManager.LoadScene("LoginScene");
     }
 }

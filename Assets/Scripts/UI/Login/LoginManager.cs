@@ -21,6 +21,12 @@ public static class LoginManager
       }
       Debug.Log($"Login successful for {username} (existing user)");
       PlayerSessionService.SetPlayer(data);
+      if (data.heroes.Count == 0)
+      {
+        // Si no hay héroes, redirigir a la pantalla de creación de héroe
+        SceneManager.LoadSceneAsync("AvatarCreator");
+        return;
+      }
       SceneManager.LoadSceneAsync("CharacterSelecctionScene");
       return;
     }
