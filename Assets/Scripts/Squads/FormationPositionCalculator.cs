@@ -1,6 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 /// <summary>
 /// Calculadora centralizada para posiciones de formación.
@@ -8,7 +9,16 @@ using Unity.Transforms;
 /// </summary>
 public static class FormationPositionCalculator
 {
-    
+    public static float3 GetSquadCenter(
+        in SquadStateComponent squadState,
+        SquadHoldPositionComponent? holdComponent,
+        float3 heroPos)
+    {
+        return (squadState.currentState == SquadFSMState.HoldingPosition && holdComponent.HasValue)
+            ? holdComponent.Value.holdCenter
+            : heroPos;
+    }
+
     public static bool IsUnitInSlot(float3 unitPosition, float3 desiredPosition, float thresholdSq)
     {
         float distSq = math.lengthsq(desiredPosition - unitPosition);
@@ -30,14 +40,17 @@ public static class FormationPositionCalculator
     public static float3 CalculateDesiredPosition(
         Entity unit,
         ref BlobArray<int2> gridPositions,
-        float3 squadCenter,
         int unitIndex,
+        in SquadStateComponent squadState,
+        SquadHoldPositionComponent? holdComponent,
+        float3 heroPos,
         out int2 originalGridPos,
         out float3 gridOffset,
         out float3 worldPos,
         bool adjustForTerrain
         )
     {
+        float3 squadCenter = GetSquadCenter(squadState, holdComponent, heroPos);
         var squadOrigin = squadCenter;
         originalGridPos = gridPositions[unitIndex];
                             
@@ -81,53 +94,6 @@ public static class FormationPositionCalculator
         return worldPos;
     }
 
-    public static bool isHeroInRange(DynamicBuffer<Entity> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, float range)
-    {
-        float closestDistSq = float.MaxValue;
-        bool hasValidUnit = false;
-        
-        foreach (var unit in units)
-        {
-            if (transformLookup.HasComponent(unit))
-            {
-                float3 unitPosition = transformLookup[unit].Position;
-                float distSq = math.lengthsq(heroPosition - unitPosition);
-                
-                if (distSq < closestDistSq)
-                {
-                    closestDistSq = distSq;
-                    hasValidUnit = true;
-                }
-            }
-        }
-
-        return hasValidUnit && closestDistSq <= range; // range al cuadrado
-    }
-
-    public static bool isHeroInRange(DynamicBuffer<SquadUnitElement> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, float range)
-    {
-        float closestDistSq = float.MaxValue;
-        bool hasValidUnit = false;
-        
-        foreach (var unitElement in units)
-        {
-            Entity unit = unitElement.Value;
-            if (transformLookup.HasComponent(unit))
-            {
-                float3 unitPosition = transformLookup[unit].Position;
-                float distSq = math.lengthsq(heroPosition - unitPosition);
-                
-                if (distSq < closestDistSq)
-                {
-                    closestDistSq = distSq;
-                    hasValidUnit = true;
-                }
-            }
-        }
-
-        return hasValidUnit && closestDistSq <= range; // range al cuadrado
-    }
-
     /// <summary>
     /// Obtiene la distancia al cuadrado entre el héroe y la unidad más cercana del escuadrón.
     /// </summary>
@@ -158,5 +124,29 @@ public static class FormationPositionCalculator
         }
 
         return closestDistSq;
+    }
+
+    // Devuelve la distancia al cuadrado entre el héroe y la unidad más lejana del escuadrón
+    public static float GetFarestUnitDistanceSq(DynamicBuffer<SquadUnitElement> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, out Entity farestUnit)
+    {
+        float farestDistSq = float.MinValue;
+        farestUnit = Entity.Null;
+        
+        foreach (var unitElement in units)
+        {
+            Entity unit = unitElement.Value;
+            if (transformLookup.HasComponent(unit))
+            {
+                float3 unitPosition = transformLookup[unit].Position;
+                float distSq = math.lengthsq(heroPosition - unitPosition);
+                
+                if (distSq > farestDistSq)
+                {
+                    farestDistSq = distSq;
+                    farestUnit = unit;
+                }
+            }
+        }
+        return farestDistSq;
     }
 }

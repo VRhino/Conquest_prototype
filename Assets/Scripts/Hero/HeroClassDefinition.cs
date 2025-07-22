@@ -1,16 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Enumeration of the available hero classes in Feudos: Guerra de Escuadras.
-/// </summary>
-public enum HeroClass
-{
-    SwordAndShield,
-    TwoHandedSword,
-    Spear,
-    Bow
-}
 
 /// <summary>
 /// Defines the parameters for a hero class. Used by initialization and attribute systems.
@@ -28,27 +18,24 @@ public class HeroClassDefinition : ScriptableObject
     public string description;
 
     [Header("Atributos Base")]
-    public int baseFuerza;
-    public int baseDestreza;
-    public int baseArmadura;
-    public int baseVitalidad;
+    public int baseStrength;
+    public int baseDexterity;
+    public int baseArmor;
+    public int baseVitality;
 
     [Header("Límites de Atributos")]
-    public int minFuerza;
-    public int maxFuerza;
-    public int minDestreza;
-    public int maxDestreza;
-    public int minArmadura;
-    public int maxArmadura;
-    public int minVitalidad;
-    public int maxVitalidad;
-
-    /// <summary>Prefab of the weapon required for this class.</summary>
-    public GameObject weaponPrefab;
+    public int minStrength;
+    public int maxStrength;
+    public int minDexterity;
+    public int maxDexterity;
+    public int minArmor;
+    public int maxArmor;
+    public int minVitality;
+    public int maxVitality;
 
     /// <summary>List of active abilities available to this class.</summary>
-    public List<HeroAbilityData> abilities;
+    public List<HeroAbility> abilities;
 
     /// <summary>Perks that can be chosen by heroes of this class.</summary>
-    public List<PerkData> validClassPerks;
+    public List<HeroPerk> validClassPerks;
 }

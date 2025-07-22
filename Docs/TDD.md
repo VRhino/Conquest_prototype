@@ -41,6 +41,7 @@
 - 5.3 Tipos de daño y resistencias (blunt, slashing, piercing)
 - 5.4 Cálculo de daño y penetración en C#
 - 5.5 Gestión de cooldowns y tiempos de habilidad
+- 5.6 Sistema de Bloqueo y Mitigación por Colisión
 
 ### 6. 🔄 Flujo de Partida
 
@@ -60,6 +61,8 @@
 - 7.5 Sistema de clases de heroe
 - 7.6 Progresión Avanzada de Escuadras y Sinergias
 - 7.7 Control de Estados entr Héroe y Unidades del Escuadrón
+- 7.8 Estructura de Persistencia del Jugador (MVP y Post MVP)
+- 7.9 DataCacheService: Cálculo y Cache de Atributos
 
 ## 8. 🌐 Multijugador (MVP)
 
@@ -77,6 +80,7 @@
 - 9.4 Interfaz de preparación y loadouts
 - 9.5 Menús de interacción con supply y puntos de captura
 - 9.6 Sistema de Marcadores de Destino (Hold Position)
+- 9.7 Scoreboard de Batalla (Panel de Estado Activado con `Tab`)
 
 ## 10. 🔐 Seguridad y Backend (Para expansión futura)
 
@@ -364,13 +368,80 @@ El comportamiento es **grupal**, pero con **unidad mínima de decisión** en cad
 ### 🧩 Componentes:
 
 - `SquadAIComponent`:
-    - `state`: enum general (Idle, Atacando, Reagrupando, Defendiendo, Retirada)
-    - `targetEntity`: enemigo actual
+    - `tacticalIntent`: enum (Idle, Atacando, Reagrupando, Defendiendo, Retirada)
+    - `groupTarget`: entidad enemiga prioritaria sugerida para todas las unidades
     - `isInCombat`: bool
 - `UnitCombatComponent`:
     - Posición relativa
     - `attackCooldown`
     - Estado local (cubierto, flanqueado, suprimido)
+
+
+
+* tacticalIntent representa la intención táctica asignada por el jugador o IA. No refleja el estado actual de ejecución, que es gestionado por SquadStateComponent.
+* groupTarget es sugerido por el SquadAISystem con base en la táctica (tacticalIntent), pero las unidades individuales pueden sobreescribirlo localmente si tienen mejor opción en rango o línea de visión, evaluado por UnitTargetingSystem.
+
+📌 ¿Qué es `tacticalIntent`?
+
+`SquadAIComponent.tacticalIntent` es un campo enum que representa la **intención táctica activa** del escuadrón. Esta intención es establecida por el jugador (o IA) mediante una orden directa (por ejemplo, presionar `C`, `V`, o `X`), y puede tomar los siguientes valores:
+
+```csharp
+enum TacticalIntent {
+  Idle,
+  Atacando,
+  Reagrupando,
+  Defendiendo,
+  Retirada
+}
+
+```
+
+Este valor **no refleja el estado actual físico o lógico de la escuadra**, sino su meta deseada. La ejecución de esta intención depende del entorno, estados internos y lógica FSM.
+
+---
+
+⚙️ Flujo y sincronización entre sistemas
+
+| Sistema | Acción |
+| --- | --- |
+| `SquadOrderSystem` | Cambia el valor de `tacticalIntent` en base a la orden del jugador. |
+| `SquadAISystem` | Lee `tacticalIntent` y determina qué acciones tomar: movimiento, targeting, cambio de formación, etc. |
+| `SquadFSMSystem` | Intenta alinear el `SquadStateComponent.currentState` con el `tacticalIntent`, si las condiciones del entorno lo permiten. |
+| `SquadNavigationSystem` | Calcula caminos y rutas en función del `tacticalIntent`, por ejemplo mover hacia un enemigo si la intención es `Atacando`. |
+| `SquadCombatSystem` | Se activa en consecuencia si `tacticalIntent == Atacando` y hay enemigos en rango. |
+
+---
+
+🔄 Transición Táctica → Estado FSM
+
+| `tacticalIntent` | Estado FSM esperado en `SquadStateComponent.currentState` |
+| --- | --- |
+| `Idle` | `Idle` |
+| `Atacando` | `Moving → InCombat` |
+| `Reagrupando` | `Moving → HoldingPosition` |
+| `Defendiendo` | `HoldingPosition` |
+| `Retirada` | `Retreating → KO` (si se completa) |
+
+> El SquadFSMSystem es responsable de esta transición. Si la escuadra no puede alcanzar la intención (ej: sin camino libre), permanece en el estado actual hasta que se reevalúe.
+> 
+
+---
+
+🧠 Ejemplo de flujo completo
+
+1. El jugador presiona `V` (Atacar).
+2. `SquadOrderSystem` asigna `tacticalIntent = Atacando`.
+3. `SquadAISystem` identifica un objetivo cercano y asigna un path.
+4. `SquadFSMSystem` cambia `currentState` de `Idle` a `Moving`, y luego a `InCombat` al alcanzar al enemigo.
+5. Si el enemigo muere y no hay nuevos targets, `SquadFSMSystem` revierte a `Idle`.
+
+---
+
+✅ Ventajas de esta separación
+
+- Permite modularidad: distintos sistemas pueden leer la intención sin interferencia directa.
+- Evita desincronización: el FSM refleja **estado observable**, no deseo interno.
+- A futuro: facilita implementación de intenciones complejas, como flanqueo, distracción o formación dinámica.
 
 ### 🧩 Sistemas:
 
@@ -381,11 +452,14 @@ El comportamiento es **grupal**, pero con **unidad mínima de decisión** en cad
 - `UnitTargetingSystem`:
     - Asigna enemigo cercano a cada unidad
     - Maneja “sobretargeting” (más de 3 soldados contra 1 objetivo = redistribución)
+Notas:
+* Este sistema se encarga de asignar blancos individuales a cada unidad, partiendo de groupTarget cuando sea válido, o buscando uno propio si está fuera de rango/visión. Si varias unidades se sobrecargan contra un mismo blanco, se redistribuye el targeting automáticamente (“sobretargeting”).
 - `UnitAttackSystem`:
     - Verifica cooldowns
     - Ejecuta animaciones de ataque si tiene target
     - Usa `criticalChance` del arma para aplicar golpes críticos de 1.5x
-
+---
+⚠️ Nota: attackCooldown aplica solo a ataques básicos individuales. No interfiere ni comparte lógica con cooldowns[] en SquadSkillComponent, que gestiona habilidades activas del escuadrón.
 ---
 
 ### 3.4 🧠 Coordinación de Habilidades de Escuadra
@@ -408,6 +482,7 @@ Habilidades de escuadra se ejecutan de forma **coordinada y sincronizada**, basa
     - Algunas habilidades solo se ejecutan en formaciones concretas (ej. Muro de Escudos).
     - Si no está en la formación correcta, no puede activarse.
 
+ Los cooldowns en este componente aplican solo a habilidades especiales del escuadrón. No afectan ni dependen del cooldown de ataque básico (attackCooldown) de las unidades individuales.
 ---
 
 ### 3.5 🔁 FSM para Estados de Escuadras y Transición a Retirada
@@ -732,7 +807,7 @@ SquadCombatComponent (IComponentData)
 - attackRange: float
 - attackInterval: float
 - attackTimer: float
-- targetEntities: DynamicBuffer<Entity>
+- targetEntities: DynamicBuffer<Entity> // lista de enemigos dentro de rango, usada para análisis de amenaza y ataque sincronizado.
 ```
 
 ```csharp
@@ -812,35 +887,206 @@ PenetrationComponent (IComponentData)
 - El tipo de daño determina qué defensa y qué penetración se aplican.
 
 ---
-
 ### 5.4 🧮 Cálculo de Daño y Penetración (Lógica en C#)
 
-📌 **Fórmula básica de cálculo:**
+El sistema de daño combina múltiples factores para determinar el daño final aplicado a una unidad. Estos factores incluyen el tipo de daño, la armadura del objetivo, la penetración del atacante, y condiciones contextuales como flanqueo o desorganización.
+
+---
+
+**📌 Fuentes de penetración**
+
+- **DamageProfile.penetration**: Valor base definido por el tipo de ataque o habilidad. Es estático y siempre presente.
+- **PenetrationComponent**: Define valores específicos por tipo (bluntPenetration, slashPenetration, piercePenetration). Es dinámico y refleja buffs, perks o efectos temporales.
+
+⚠️ El sistema combina ambas fuentes si están disponibles para obtener la penetración efectiva.
+
+---
+
+**🛡️ Tabla de efectividad: Tipo de Daño vs Tipo de Armadura**
+
+| DamageType | LightArmor | MediumArmor | HeavyArmor | Shielded |
+| --- | --- | --- | --- | --- |
+| Slash | ✔️ Alta | ⚠️ Media | ❌ Baja | ❌ Baja |
+| Pierce | ⚠️ Media | ✔️ Alta | ⚠️ Media | ❌ Baja |
+| Blunt | ❌ Baja | ⚠️ Media | ✔️ Alta | ⚠️ Media |
+
+El daño base se multiplica según la combinación del tipo de daño y el tipo de armadura del objetivo.
+
+---
+
+**🎯 Críticos contextuales**
+
+Un ataque se considera crítico si:
+
+1. El atacante impacta desde un **flanco o retaguardia**.
+2. El objetivo está **fuera de formación** (`UnitFormationState = Dispersed`).
+
+No se usa RNG ni categoría marcada. Se evalúa la situación tácticamente:
 
 ```csharp
-float CalculateEffectiveDamage(float baseDamage, float defense, float penetration)
+bool IsCriticalHit(Entity attacker, Entity target)
 {
-    float mitigatedDefense = Mathf.Max(0, defense - penetration);
-    return Mathf.Max(0, baseDamage - mitigatedDefense);
+    bool flanking = IsOutsideFrontCone(attacker, target);
+    bool disrupted = target.HasComponent<UnitFormationStateComponent>() &&
+                     target.GetComponent<UnitFormationStateComponent>().state == Dispersed;
+
+    return flanking || disrupted;
 }
+
 ```
 
-🧩 **Sistemas involucrados:**
+---
+
+**🧮 Lógica de cálculo completa**
+
+---
+
+### `CalculateFinalDamage` – Solo cálculo numérico
 
 ```csharp
-DamageCalculationSystem
-- Lee DamageProfile, DefenseComponent y PenetrationComponent
-- Aplica daño resultante a HealthComponent
- - Aplica multiplicador 1.5f si el `DamageCategory` es `Critical`
+float GetEffectivePenetration(DamageType type, DamageProfile profile, Entity attacker)
+{
+    float basePen = profile.GetPenetrationFor(type);
+    float bonusPen = 0f;
 
-HealthComponent (IComponentData)
-- maxHealth: float
-- currentHealth: float
+    if (HasComponent<PenetrationComponent>(attacker))
+        bonusPen = GetComponent<PenetrationComponent>(attacker).GetBonusFor(type);
+
+    return basePen + bonusPen;
+}
+
+float CalculateFinalDamage(DamageProfile profile, Entity attacker, Entity target)
+{
+    DamageType type = profile.damageType;
+    ArmorType armor = target.GetComponent<ArmorComponent>().armorType;
+
+    float baseDamage = profile.baseDamage;
+    float armorMultiplier = DamageArmorMultiplier(type, armor);
+    float adjustedDamage = baseDamage * armorMultiplier;
+
+    float penetration = GetEffectivePenetration(type, profile, attacker);
+    float defense = target.GetComponent<DefenseComponent>().value;
+
+    float mitigatedDefense = Mathf.Max(0, defense - penetration);
+    float finalDamage = Mathf.Max(0, adjustedDamage - mitigatedDefense);
+
+    if (IsCriticalHit(attacker, target))
+        finalDamage *= 1.5f;
+
+    return finalDamage;
+}
+
 ```
 
-- Si `currentHealth <= 0`, se notifica a `DeathSystem`
-- Puede desencadenar animación de muerte, retirada de unidad, etc.
+---
 
+### `ApplyDamageAndEffects` – Daño real + efectos secundarios
+
+```csharp
+void ApplyDamageAndEffects(DamageProfile profile, Entity attacker, Entity target)
+{
+    float finalDamage = CalculateFinalDamage(profile, attacker, target);
+
+    // Aplicar daño a la salud
+    var health = target.GetComponent<HealthComponent>();
+    health.currentHealth = Mathf.Max(0, health.currentHealth - finalDamage);
+    SetComponent(target, health);
+
+    // Aplicar efectos secundarios definidos en el perfil
+    foreach (var effect in profile.statusEffects)
+    {
+        PendingStatusEffect pending = new PendingStatusEffect
+        {
+            type = effect.type,                 // Bleed, Burn, etc.
+            duration = effect.duration,
+            magnitude = effect.magnitude,
+            source = attacker,
+            refreshPolicy = effect.refreshPolicy
+        };
+
+        AddBuffer<PendingStatusEffectsBuffer>(target).Add(pending);
+    }
+
+    // Aplicar efecto de stagger si el daño supera 50% de la salud máxima
+    float staggerThreshold = health.maxHealth * 0.5f;
+    if (finalDamage >= staggerThreshold)
+    {
+        AddComponent(target, new StaggerComponent { duration = 1.5f });
+    }
+}
+
+```
+
+### 🔥 Efectos secundarios (Bleed, Burn, Stagger)
+
+Ciertos ataques pueden aplicar efectos secundarios definidos en el `DamageProfile`:
+
+- **Bleed**: aplica daño por segundo durante varios ticks.
+- **Stagger**: reduce movilidad o interrumpe animaciones si el daño recibido supera cierto umbral.
+- **Burn**: inflige daño prolongado que se intensifica si el objetivo permanece en área ardiente.
+
+Estos efectos se definen como `StatusEffect[]` en el perfil del daño y se procesan tras aplicar el daño principal.
+
+---
+
+### ⚙️ Modularización por pasos
+
+1. **Recolección de datos**: DamageProfile, stats, buffs, armor, estado.
+2. **Resolución de penetración**: base + modificadores.
+3. **Resolución de defensa**: `mitigatedDefense = defense - penetration`.
+4. **Aplicación de modificadores**: tipo vs tipo, crítico, flanco.
+5. **Cálculo del daño neto**: `adjustedDamage - mitigatedDefense`.
+6. **Aplicación**: se reduce `HealthComponent.currentHealth`.
+7. **Evaluación de efectos secundarios**: se aplican como `StatusEffect`.
+8. **Reacción del objetivo**: muerte, stagger, ruptura de formación.
+
+---
+
+### 🧮 Ejemplo paso a paso
+
+**Datos:**
+
+- Daño base: `40`
+- Tipo de daño: `Piercing`
+- Armadura: `MediumArmor`
+- Defensa: `25`
+- Penetración base: `10`
+- Penetración adicional: `5`
+- Crítico: **Sí** (flanqueo)
+
+**Cálculo:**
+
+- Modificador tipo vs tipo: `1.0`
+- `adjustedDamage = 40 * 1.0 = 40`
+- `penetration = 10 + 5 = 15`
+- `mitigatedDefense = max(0, 25 - 15) = 10`
+- `finalDamage = max(0, 40 - 10) = 30`
+- `finalDamage *= 1.5 (crítico) = 45`
+
+**Resultado:**
+
+- Daño aplicado: `45`
+- Efecto adicional: `Bleed (5 DPS durante 4s)`
+
+**🧩 Sistemas involucrados**
+
+- **DamageCalculationSystem**
+    - Lee: `DamageProfile`, `DefenseComponent`, `ArmorComponent`, `PenetrationComponent`, `UnitFormationStateComponent`
+    - Calcula: tipo vs tipo, penetración efectiva, daño mitigado, y críticos contextuales
+    - Aplica el daño a `HealthComponent`
+- **HealthComponent** (IComponentData)
+    - `maxHealth: float`
+    - `currentHealth: float`
+
+Si `currentHealth <= 0`, se notifica al `DeathSystem`, que puede:
+
+- Activar animaciones de muerte
+- Retirar la unidad del mapa
+- Liberar su slot de formación
+
+---
+
+Este diseño separa claramente los aspectos estáticos (perfil del arma) de los dinámicos (contexto del combate), permite decisiones tácticas significativas, y mantiene un flujo lógico unificado de cálculo de daño.
 ---
 
 ### 5.5 ⏱️ Gestión de Cooldowns y Tiempos de Habilidad
@@ -881,7 +1127,314 @@ CooldownSystem
     - Animación de “cooldown completado”
 
 ---
+### 5.6 🛡️ Sistema de Bloqueo y Mitigación por Colisión
 
+📌 **Descripción:**
+
+El sistema de bloqueo permite anular o reducir el daño entrante, tanto en el héroe (bloqueo activo) como en unidades defensivas (bloqueo pasivo). Se activa por colisión directa del golpe con el **hitbox del escudo o arma**, evaluando si el impacto fue **frontal** y si el **bloqueo está activo o disponible**.
+
+---
+
+🧍‍♂️ **Bloqueo del Héroe (Activo)**
+
+- **Input:** se mantiene el botón derecho del mouse (`RMB`) para activar el bloqueo.
+- **Movimiento:** al bloquear, el héroe solo puede caminar a velocidad reducida.
+- **Hitbox:** cada arma tiene su propio `GameObject` con collider físico habilitado en `blockingMode`.
+- **Validación:** si un ataque colisiona con el collider de bloqueo antes que con el `HeroCollider`, se considera un **bloqueo exitoso**.
+- **Mitigación:** se consume estamina proporcional al daño:
+  - `Cortante`: 1:1
+  - `Contundente`: x2
+  - `Perforante`: x0.7
+- **Ruptura:** si la estamina cae a 0 al bloquear → estado `Stagger` por 1s (bloquea input, animación de retroceso).
+- **Fallos:** si no hay estamina suficiente → bloqueo no se aplica, recibe daño completo.
+- **Ángulo de bloqueo:** determinado por el collider físico del arma/escudo, no por un ángulo numérico.
+
+---
+
+🛡️ **Bloqueo de Unidades (Pasivo)**
+
+- **Elegibilidad:** solo escuadras con escudo tienen acceso a este sistema.
+- **Stats:** se usa el campo `bloqueo` en `UnitStatsComponent` como resistencia acumulada.
+- **Validación:** si el ataque colisiona con el `EscudoCollider`, se considera un **bloqueo válido**.
+- **Reducción de `bloqueo`:** se resta el daño recibido al valor actual de `bloqueo`. Si llega a 0:
+  - Se activa estado `StaggerUnit` por `2s - recuperaciónBloqueo`
+- **Recuperación de bloqueo:** atributo oculto que reduce la duración del stagger (escala con perks o mejoras).
+- **Regeneración:** el valor de `bloqueo` se recupera pasivamente con el tiempo.
+- **Formaciones:** bonus de bloqueo se aplican según la formación activa (`Testudo`, `Muro de Escudos`, etc).
+
+---
+
+🧩 **Componentes nuevos**
+
+```csharp
+public struct BlockingComponent : IComponentData {
+    public bool isBlocking;
+    public Entity weaponCollider; // referencia al escudo o arma que bloquea
+    public float staminaDrainMultiplier;
+}
+
+public struct StaggerComponent : IComponentData {
+    public float duration;
+    public float timer;
+    public bool isStaggered;
+}
+
+public struct BlockValueComponent : IComponentData {
+    public float currentBlock;
+    public float maxBlock;
+    public float regenRate;
+    public float staggerDuration; // base 2s, modificado por perks
+}
+```
+🧠  **Sistemas involucrados**
+
+- HeroBlockSystem: activa bloqueo si input detectado y suficiente stamina.
+- UnitBlockSystem: aplica lógica de reducción pasiva y rotación defensiva.
+- StaggerSystem: bloquea input o AI si una entidad entra en estado de ruptura.
+- DamageCalculationSystem: consulta bloqueo antes de aplicar daño, ajusta el valor si fue mitigado.
+
+---
+### 5.7 🎯 Jerarquía de Targeting (Unidad vs Escuadra)
+
+El sistema de targeting está dividido en dos niveles de decisión: **nivel grupal** y **nivel individual**, para permitir tácticas coordinadas sin limitar la autonomía de cada unidad.
+
+**Componentes involucrados**
+
+- `SquadAIComponent.groupTarget`: entidad enemiga prioritaria sugerida por el sistema de IA grupal (`SquadAISystem`).
+- `SquadCombatComponent.targetEntities`: lista dinámica de enemigos cercanos, para análisis de amenaza.
+- `UnitCombatComponent.target`: blanco actual de cada unidad, determinado por lógica local.
+  
+**Flujo de decisión**
+
+1. `SquadAISystem` asigna un `groupTarget` basado en el `tacticalIntent` del escuadrón.
+2. `UnitTargetingSystem` evalúa para cada unidad si el `groupTarget` es visible y está dentro de su alcance efectivo.
+3. Si el `groupTarget` no es válido, la unidad selecciona un blanco propio desde `targetEntities`, priorizando distancia y tipo.
+4. Si varias unidades coinciden en el mismo blanco, se aplica una redistribución (sobretargeting mitigation) para diversificar los objetivos.
+5. Si la unidad está en cooldown, desorganizada o sin línea de visión, no toma acción ofensiva hasta reevaluación del targeting.
+
+**Reglas adicionales**
+
+- Las unidades no pueden atacar blancos fuera de su visión ni ignorar `tacticalIntent`.
+- La reasignación de targets es reactiva ante cambios de visibilidad, muerte del blanco o entrada de nuevas amenazas.
+
+> ⚠️ Nota: Este sistema permite una coordinación efectiva sin requerir micromanagement completo del jugador, manteniendo el foco en decisiones tácticas de alto nivel.
+
+---
+
+### 5.8 🧩 Lógica de Formaciones y Jerarquía de Sistemas
+
+El sistema de formaciones se estructura en torno a dos representaciones principales:
+
+- `formationPattern: Vector3[]` (en `FormationComponent`): patrón ideal de slots relativos. Es la **fuente de verdad estructural** y no cambia dinámicamente.
+- `formationOffset[]` (en `SquadNavigationComponent`): offsets aplicados para cada unidad, adaptados según terreno u obstáculos.
+
+📌 **Jerarquía de responsabilidad**
+
+| Sistema | Función | Modifica `formationPattern` | Modifica `formationOffset[]` |
+|--------|---------|-----------------------------|-------------------------------|
+| `FormationSystem` | Asigna formaciones y genera offsets base. | ✔ Sí | ✔ Sí |
+| `FormationAdaptationSystem` | Ajusta offsets ante colisiones u obstáculos. | ✖ No | ✔ Sí |
+| `UnitFollowFormationSystem` | Mueve unidades hacia sus offsets asignados. | ✖ No | ✖ No |
+| `FormationConstraintSystem` | Verifica si la formación está incompleta o rota. | ✖ No | ✖ No |
+
+> ⚠️ Regla: `formationPattern` solo puede ser modificado por `FormationSystem`. Los demás sistemas operan únicamente sobre los offsets instanciados.
+
+🔄 **Flujo de datos**
+
+1. El jugador u orden externa cambia la formación (`FormationSystem`).
+2. Se establece un nuevo `formationPattern` y se recalculan los `formationOffset[]`.
+3. Si el terreno o entorno interfiere, `FormationAdaptationSystem` ajusta los offsets temporalmente.
+4. `UnitFollowFormationSystem` dirige a las unidades hacia sus offsets activos.
+5. Si la formación no puede mantenerse, `FormationConstraintSystem` puede notificar ruptura.
+
+🧠 **Concepto clave**
+
+```plaintext
+formationPattern = Lo ideal
+formationOffset[] = Lo posible
+formación ejecutada = Lo real
+```
+📘 **Notas adicionales**
+
+- El patrón base permanece constante hasta un nuevo cambio de formación.
+- La adaptación no sobreescribe el patrón original.
+- El sistema puede volver a recalcular los offsets en cualquier momento a partir del patrón si se elimina una adaptación temporal.
+
+---
+### 5.9 🐎 Masa, Formación y Dinámica de Carga
+
+El sistema de cargas se basa en la **interacción de masas entre escuadras**, afectadas por la **formación activa**, la **velocidad de impacto**, y el **tipo de unidad**. Esta sección define la lógica unificada para calcular la masa efectiva y resolver interacciones entre formaciones en situaciones de carga.
+
+---
+
+📌 **1. Masa efectiva de escuadra**
+
+La **masa efectiva** se calcula en runtime con base en las unidades activas y su formación actual:
+
+```csharp
+float CalcularMasaEfectivaEscuadra(Entity squad)
+{
+    float masaBase = 0f;
+    var unidades = GetBuffer<SquadUnitElement>(squad);
+
+    foreach (var unidad in unidades)
+    {
+        masaBase += GetComponent<UnitStatsComponent>(unidad.entity).masa;
+    }
+
+    float formacionMultiplicador = GetFormacionMultiplicador(squad); // e.g., x2.0 para Testudo
+    return masaBase * formacionMultiplicador;
+}
+
+```
+
+- **`UnitStatsComponent.masa`**: valor base por unidad.
+- **Multiplicador de formación**:
+    - `Dispersa`: x0.5
+    - `Línea`: x1.0
+    - `Cuña`: x1.3
+    - `Muro de escudos`: x1.5
+    - `Schiltron`: x1.5
+    - `Testudo`: x2.0
+
+---
+
+### ⚔️ 2. Lógica de resolución de carga
+
+Cuando una escuadra realiza una carga contra otra, el resultado depende de:
+
+1. **Masa efectiva del atacante y defensor**.
+2. **Velocidad de impacto del atacante** (`SquadMovementComponent.velocity`).
+3. **Tipo de unidad defensora** (ej. picas o escudos resisten mejor).
+
+**Flujo simplificado de resolución:**
+
+```csharp
+csharp
+CopiarEditar
+float fuerzaImpacto = masaAtacante * velocidadImpacto;
+
+if (fuerzaImpacto > masaDefensora * resistenciaTipoUnidad)
+    Resultado = FormaciónDefensoraRota;
+else
+    Resultado = AtacanteInterrumpido;
+
+```
+
+- `resistenciaTipoUnidad`: multiplicador definido por tipo (ej. lanceros: x1.5, arqueros: x0.75).
+- `FormaciónDefensoraRota`: aplica `Dispersed` a las unidades afectadas.
+- `AtacanteInterrumpido`: reduce momentum o cambia estado a `Stagger`.
+
+---
+
+🧱 **3. Efectos posibles tras la colisión**
+
+- Si el atacante supera la resistencia:
+    - La formación defensora se rompe (estado `Dispersed`).
+    - Las unidades pueden recibir daño adicional (colisión física o por desorganización).
+- Si el defensor resiste:
+    - El atacante es frenado.
+    - Se puede aplicar `Stagger` si el impacto fue parcial.
+    - La IA puede cambiar a "Retirada táctica" o "Mantener posición".
+
+---
+
+**🧠 4. Diseño emergente**
+
+- Escuadras ligeras en `Dispersa` tienen baja masa → excelente evasión, pero no aguantan carga.
+- Escuadras defensivas en `Muro de Escudos` pueden resistir incluso cargas frontales.
+- Una carga en `Cuña` con alta velocidad puede penetrar formaciones si se enfoca en un punto débil.
+
+---
+
+**🛠️ Recomendación de implementación**
+
+- Centralizar la lógica de masa en un `SquadMassUtilitySystem`.
+- El sistema de combate o navegación debería consultar la masa efectiva para:
+    - Cálculo de fuerza de colisión.
+    - Decisión de ruta (evitar formaciones más pesadas).
+- Las animaciones de impacto o ruptura deberían estar vinculadas al resultado de esta lógica.
+
+---
+
+### 5.10 🐎 Daño por Carga
+
+El **daño por carga** es un tipo especial de daño físico aplicado en el momento de colisión entre escuadras, cuando una de ellas está en movimiento ofensivo a velocidad elevada. Se calcula de forma separada al combate cuerpo a cuerpo.
+
+---
+
+📌 **¿Cuándo se considera una carga?**
+
+Una escuadra se considera que está realizando una carga si:
+
+- Su `SquadStateComponent.currentState == Moving`
+- Tiene una **velocidad superior a cierto umbral** (`velocity > 3.0f`)
+- Su `tacticalIntent == Atacando`
+- Y su formación es compatible (ver tabla abajo)
+
+---
+
+🛠️ **Cálculo del daño por carga**
+
+```csharp
+float CalcularDañoCarga(Entity atacante, Entity defensor)
+{
+    float masa = CalcularMasaEfectivaEscuadra(atacante);
+    float velocidad = GetComponent<SquadMovementComponent>(atacante).velocity;
+    float defensa = GetComponent<DefenseComponent>(defensor).value;
+
+    float fuerzaImpacto = masa * velocidad;
+    float baseImpacto = fuerzaImpacto * 0.12f; // coeficiente ajustable
+    float mitigado = Mathf.Max(0, baseImpacto - defensa * 0.5f);
+
+    return mitigado;
+}
+
+```
+
+- `masa`: incluye el modificador de formación.
+- `velocidad`: tomada del componente de navegación.
+- `defensa`: puede ser mitigada parcialmente si hay escudos o perks.
+
+---
+
+📊 **Compatibilidad de formaciones con carga**
+
+| Formación | ¿Permite carga? | Modificador de masa | Comentario |
+| --- | --- | --- | --- |
+| **Línea** | ✅ Sí | x1.0 | Estándar ofensivo |
+| **Cuña** | ✅ Sí | x1.3 | Ideal para romper líneas |
+| **Dispersa** | ✅ Sí | x0.5 | Carga ligera y rápida (caballería) |
+| **Schiltron** | ❌ No | x1.5 | Formado para resistir, no atacar |
+| **Muro de escudos** | ❌ No | x1.5 | Defensiva, inmóvil |
+| **Testudo** | ❌ No | x2.0 | Defensa total, no permite velocidad ni impulso |
+
+---
+
+🧩 **Aplicación del daño**
+
+1. En el momento de colisión detectado por `SquadCollisionSystem`:
+    - Se evalúa si el atacante cumple condiciones de carga.
+    - Se calcula el daño con `CalcularDañoCarga()`.
+    - Se reparte entre las unidades afectadas del defensor.
+    - Si el daño supera cierto umbral relativo al `maxHealth`, se aplica `Stagger`.
+2. También puede provocar ruptura de formación (estado `Dispersed`) si se supera la **masa efectiva** del defensor.
+
+---
+
+🔥 **Ejemplo**
+
+- Masa efectiva atacante: `320`
+- Velocidad: `4.5`
+- Defensa del defensor: `20`
+
+```
+yaml
+Fuerza de impacto: 320 * 4.5 = 1440
+Base daño: 1440 * 0.12 = 172.8
+Mitigado: 172.8 - (20 * 0.5) = 162.8 de daño por carga
+
+```
 ## 🔄 6. Flujo de Partida
 
 ---
@@ -1123,7 +1676,7 @@ Esta escena se gestiona como parte del flujo general definido por `SceneFlowMana
 
 - `SpawnPointComponent`: posición, team, isSelected
 - `SquadData` (ScriptableObject): habilidades, formaciones, liderazgo
-- `PerkData`: perks activos y pasivos
+- `HeroPerk`: perks activos y pasivos
 - `HeroData`: clase, equipamiento, atributos
 - `LoadoutSaveData`: presets de escuadras y perks
 
@@ -1224,8 +1777,8 @@ Los perks y escuadras estarán definidos como **ScriptableObjects**, facilitando
 🧩 **Ejemplos:**
 
 ```csharp
-[CreateAssetMenu(menuName = "Perks/PerkData")]
-public class PerkData : ScriptableObject {
+[CreateAssetMenu(menuName = "Perks/HeroPerk")]
+public class HeroPerk : ScriptableObject {
     public string perkName;
     public Sprite icon;
     public string description;
@@ -1265,8 +1818,8 @@ El sistema de perks es un **árbol modular**. El jugador puede activar hasta `5 
 
 ```csharp
 PerkComponent
-- List<PerkData> activePerks
-- List<PerkData> passivePerks
+- List<HeroPerk> activePerks
+- List<HeroPerk> passivePerks
 ```
 
 ```csharp
@@ -1341,8 +1894,8 @@ public class HeroClassDefinition : ScriptableObject {
     public int minVitalidad, maxVitalidad;
 
     public GameObject weaponPrefab;
-    public List<HeroAbilityData> abilities;
-    public List<PerkData> validClassPerks;
+    public List<HeroAbility> abilities;
+    public List<HeroPerk> validClassPerks;
 }
 
 ```
@@ -1524,6 +2077,10 @@ SquadProgressComponent
 - Cada `10 niveles`, se desbloquea una habilidad nueva.
 - Nuevas formaciones se habilitan en niveles específicos (ej. Testudo en nivel 10 para Escuderos).
 
+---
+Las formaciones posibles para una escuadra están definidas en su SquadData.availableFormations.
+El campo unlockedFormations en SquadProgressComponent refleja el subconjunto activo disponible según el nivel actual de la escuadra.
+Esto evita conflictos: availableFormations actúa como límite superior, mientras que unlockedFormations representa el estado de progresión.
 ---
 
 #### 7.6.3 🛡️ Sistema de `EquipamientoComponent`
@@ -1757,6 +2314,329 @@ Gestiona las transiciones de estado de cada unidad implementando la tabla de tra
 ### 3. UnitFollowFormationSystem
 
 Mueve las unidades hacia su posición asignada **solo si están en estado `Moving`**. Las unidades en estado `Formed` o `Waiting` permanecen estáticas, creando un comportamiento más natural y evitando movimientos innecesarios.
+
+---
+### 7.8 📦 Estructura de Persistencia del Jugador (MVP y Post-MVP)
+
+📌 **Descripción general:**
+
+Este módulo define la estructura de datos central que representa el estado persistente del jugador. Permite guardar y cargar el progreso tanto a nivel local (en disco) como en el futuro a través de un backend. Incluye el héroe, escuadras, inventario, equipamiento y perks.
+
+---
+
+### 🧱 Estructuras de Datos Serializables
+
+#### `PlayerData.cs`
+
+```csharp
+[Serializable]
+public class PlayerData {
+    public string id;
+    public string name;
+    public string password; // Temporal para persistencia local
+    public List<HeroData> heroList;
+}
+```
+
+#### `HeroData.cs`
+
+```csharp
+
+[Serializable]
+public class HeroData {
+    public string name;
+    public HeroClass heroClass; // Referencia al tipo base (ScriptableObject)
+    public CalculatedAttributes cachedAttributes;
+    public List<Item> inventory;
+    public List<string> unlockedSquads;
+    public List<SquadInstanceData> squadList;
+    public AvatarParts parts;
+    public int level;
+    public int expPoints;
+    public Equipment equipment;
+}
+
+```
+
+---
+
+#### `SquadInstanceData.cs`
+
+```csharp
+
+[Serializable]
+public class SquadInstanceData {
+    public string id;
+    public SquadData baseSquad; // Referencia a ScriptableObject
+    public int level;
+    public int experience;
+    public List<string> unlockedAbilities;
+    public List<int> unlockedFormationsIndices;
+    public int selectedFormationIndex;
+    public string customName;
+}
+
+```
+
+---
+
+#### `AvatarParts.cs` (solo cosmético)
+
+```csharp
+
+[Serializable]
+public class AvatarParts {
+    public string headPartID;
+    public string torsoPartID;
+    public string glovesPartID;
+    public string pantsPartID;
+    public string bootsPartID;
+    public string hairPartID;
+}
+
+```
+
+---
+
+#### `Equipment.cs`
+
+```csharp
+
+[Serializable]
+public class Equipment {
+    public Item head;
+    public Item torso;
+    public Item gloves;
+    public Item pants;
+    public Item weapon;
+}
+
+```
+
+---
+
+#### `Item.cs` y tipos
+
+```csharp
+
+[Serializable]
+public class Item {
+    public string itemID;
+    public ItemType type;
+    public Dictionary<string, float> stats;
+    public List<VisualAttachment> visuals;
+}
+
+public enum ItemType {
+    Headgear, Torso, Gloves, Pants, Weapon
+}
+
+[Serializable]
+public class VisualAttachment {
+    public string prefabID;
+    public string boneTarget;
+}
+
+```
+
+---
+
+#### `CalculatedAttributes.cs` (atributos derivados cacheados)
+
+```csharp
+
+[Serializable]
+public class CalculatedAttributes {
+    public float maxHealth, stamina;
+    public float strength, dexterity, vitality, armor;
+    public float bluntDamage, slashingDamage, piercingDamage;
+    public float bluntDefense, slashDefense, pierceDefense;
+    public float bluntPenetration, slashPenetration, piercePenetration;
+    public float blockPower, movementSpeed;
+}
+
+```
+
+---
+
+#### 💾 `SaveSystem` y `LoadSystem`
+
+#### 📁 Archivos:
+
+- `SaveSystem.cs`
+- `LoadSystem.cs`
+- Guardado en `Application.persistentDataPath` en formato JSON.
+
+#### 📌 Métodos esperados:
+
+```csharp
+
+public static class SaveSystem {
+    public static void SavePlayer(PlayerData data);
+    public static PlayerData LoadPlayer();
+}
+
+```
+
+- Guardado automático tras partida o cambios en el barracón.
+- Carga automática al iniciar el juego.
+
+---
+
+#### ⚙️ Extensibilidad para backend
+
+Se define la interfaz:
+
+```csharp
+
+public interface ISaveProvider {
+    void Save(PlayerData data);
+    PlayerData Load();
+}
+
+```
+
+Implementaciones:
+
+- `LocalSaveProvider` (JSON en disco)
+- `CloudSaveProvider` (Futuro backend con API)
+
+Esto facilita la transición al backend sin modificar lógica de negocio.
+
+---
+
+#### 🚀 Integración con ECS
+
+- Los datos cargados se transforman en entidades en `GameBootstrapSystem`.
+- Cada `HeroData` genera una entidad `Hero`, con sus componentes iniciales (`HeroStats`, `HeroAttributes`, `PerkComponent`, etc.).
+- Cada `SquadInstanceData` genera entidades asociadas al `SquadData` referenciado, con su progreso dinámico (nivel, habilidades, formaciones desbloqueadas).
+
+---
+
+#### 🔄 Flujo General de Persistencia
+
+```
+
+Inicio del juego
+  ↓
+Cargar PlayerData desde JSON
+  ↓
+Seleccionar HeroData activo
+  ↓
+Generar entidades iniciales en ECS
+  ↓
+Actualizar progreso durante la sesión
+  ↓
+Guardar PlayerData modificado en disco al cerrar o tras batalla
+
+```
+
+---
+
+#### 🧠 Buenas prácticas implementadas
+
+- Separación clara entre datos estáticos (ScriptableObject) y dinámicos (progreso serializado).
+- Cache de atributos derivados para evitar cálculos innecesarios (`CalculatedAttributes`).
+- Referencias indirectas a `ScriptableObject` mediante nombres o IDs.
+- Preparado para expansión multijugador (con `ISaveProvider`).
+
+---
+
+#### ✅ Checklist de criterios técnicos del backlog
+
+| Requisito | Estado |
+| --- | --- |
+| Estructura de `PlayerData`, `HeroData`, `SquadInstanceData` | ✅ |
+| Serialización y guardado local funcional | ✅ |
+| Separación entre datos base y dinámicos | ✅ |
+| Soporte para atributos cacheados del héroe | ✅ |
+| Referencias limpias a `SquadData`, `HeroClass`, etc. | ✅ |
+| Diseño listo para futura integración backend | ✅ |
+---
+### 🧠 7.9 `DataCacheService`: Cálculo y Cache de Atributos
+
+📌 **Descripción general:**
+
+`DataCacheService` es un servicio central encargado de calcular, almacenar y servir datos derivados del héroe como atributos, liderazgo total, y perks activos. Está diseñado para:
+
+- Minimizar cálculos redundantes en tiempo de ejecución.
+- Proveer acceso rápido a datos transformados desde `HeroData`, `Equipment`, perks y clase base.
+- Ser accesible desde sistemas ECS y UI, sin modificar directamente los datos de entrada.
+
+---
+
+#### 🧩 Componentes clave:
+
+#### `DataCacheService.cs`
+
+```csharp
+public static class DataCacheService {
+    void CacheAttributes(HeroData heroData);
+    CalculatedAttributes GetCachedAttributes(string heroId);
+    List<string> GetActivePerks(string heroId);
+    void Clear(); // Opcional, para limpieza de caché en escena
+}
+
+```
+
+#### Internamente:
+
+- Usa `Dictionary<string, CalculatedAttributes>` para cachear por ID de héroe.
+- Calcula los valores combinando:
+    - Atributos base por clase (`HeroClassDefinition`)
+    - Nivel y puntos de atributo
+    - Equipo (`Equipment`)
+    - Perks activos (si están implementados)
+- Utiliza las fórmulas descritas en el GDD para daño, defensa, vida, liderazgo y penetraciónGDD.
+
+---
+
+#### 🔁 Interacción:
+
+- Llamado desde `GameBootstrapSystem` al cargar datos persistidos.
+- Llamado desde `HeroAttributeSystem`, `PerkSystem`, `LoadoutSystem` y HUD.
+- Opcionalmente se puede recalcular tras cambios en el inventario, nivel, perks o clase del héroe.
+
+---
+
+#### ⚙️ Ejemplo de flujo:
+
+```
+plaintext
+CopiarEditar
+Al cargar HeroData
+    ↓
+DataCacheService.CacheAttributes(HeroData)
+    ↓
+Genera CalculatedAttributes
+    ↓
+Almacena en memoria
+    ↓
+HeroStatsSystem accede vía GetCachedAttributes(heroId)
+
+```
+
+---
+
+#### 📌 Consideraciones técnicas:
+
+- La clase debe ser pasiva: solo lee datos y expone getters.
+- No debe guardar referencias a ScriptableObjects ni a entidades ECS.
+- Compatible con serialización indirecta (`HeroClassDefinition.name`, `Item.itemID`, etc.).
+- Pensada para operar **antes** de la conversión a entidades (durante carga de datos).
+
+---
+
+#### ✅ Checklist
+
+| Requisito | Estado |
+| --- | --- |
+| Cache de `CalculatedAttributes` | ✅ |
+| Soporte para perks y equipo | ✅ |
+| Acceso rápido por ID de héroe | ✅ |
+| Preparado para integración con ECS | ✅ |
+| Compatible con lógica actual de persistencia | ✅ |
+---
 
 ## 🌐 8. Multijugador (MVP)
 
@@ -2118,6 +2998,67 @@ Sistema visual que muestra marcadores en el mundo 3D para indicar las posiciones
 - Sistema completamente automático, sin configuración adicional requerida
 
 ---
+### 📊 9.6 Scoreboard de Batalla (Panel de Estado Activado con `Tab`)
+
+#### 🧾 Descripción General
+
+Durante el combate, el jugador puede activar temporalmente un panel de estado presionando la tecla `Tab`. Este panel proporciona una visión táctica en tiempo real del desarrollo de la batalla, incluyendo:
+
+- ✅ Rendimiento individual de jugadores de ambos bandos.
+- 🧭 Control territorial actual (supply points y puntos de captura).
+- 🧍 Posicionamiento en vivo de aliados en el mapa.
+
+Este sistema actúa como un HUD expandido y cumple funciones de *scoreboard*, mapa táctico y herramienta de análisis en medio del combate.
+
+#### 🎯 Objetivos Funcionales
+
+- Brindar información condensada sin romper la inmersión.
+- Permitir rápida evaluación del estado de aliados y control del terreno.
+- Visualización pasiva y no interactiva (sin inputs durante visualización).
+
+#### 🧩 Componentes UI
+
+- **`BattleStatusPanel`**: Contenedor principal visible solo durante `Input.Tab held`.
+  - 🎛️ Oculta el HUD principal mientras está activo.
+  - ✨ Animación de entrada y salida con transición fade-in/fade-out rápida.
+
+- **`PlayerScoreColumn` (x2)**: Muestra jugadores por equipo (aliados y enemigos).
+  - 🧍 Nombre del jugador.
+  - ⚔️ Kills de héroes.
+  - 🪖 Kills de unidades.
+  - 💀 Muertes totales.
+
+- **`BattleStatusMinimap`**: Minimap central con representación expandida.
+  - 🧍‍♂️ Posición en tiempo real de héroes aliados (íconos tipo ping).
+  - ⛽ Supply points: iconos con estado (🟡 neutral, 🔵 aliado, 🔴 enemigo).
+  - 🎯 Puntos de captura: icono + porcentaje + color de dominancia (barra radial o slider).
+
+#### ⚙️ Comportamiento del Sistema
+
+- ⌨️ Se activa mientras se mantiene presionada la tecla `Tab`.
+- 👁️ Oculta el HUD principal para evitar superposición.
+- 🧼 Al soltar `Tab`, el panel desaparece y el HUD normal se reactiva.
+
+#### 🧠 Lógica Técnica
+
+- 🔄 Sistema central: `BattleStatusUIController`
+- Se suscribe a eventos de:
+  - `MultiplayerScoreSystem` → 🔢 kills/muertes por jugador
+  - `CaptureZoneStatusSystem` → 🎯 porcentaje de captura por zona
+  - `SupplyPointStatusSystem` → ⛽ estado de control de supply
+  - `AllyPositionBroadcastSystem` → 🧍‍♂️ ubicación en tiempo real de aliados
+
+#### 🔗 Dependencias
+
+- `InputSystem` (⌨️ tecla `Tab`)
+- `CanvasLayeredHUDSystem` (🎛️ switching de HUD)
+- `BattleHUDDataStream` (📡 ECS -> UI)
+
+#### 🎨 Requisitos Visuales
+
+- 🧭 Minimapa con mayor zoom que el minimapa de HUD estándar.
+- 🖼️ Íconos diferenciados por función: 🧍 jugadores, ⛽ supply, 🎯 captura.
+- 🔍 Legibilidad asegurada en resoluciones desde 1280x720.
 
 ## 🔐 10. Seguridad y Backend (Para expansión futura)
 
@@ -2351,6 +3292,7 @@ Para asegurar buen rendimiento durante el MVP, se aplican prácticas básicas de
 | **FormationSystem** | Sistema que reordena posiciones de unidades dentro de una escuadra según una formación seleccionada. Usa `NavMesh` + `LocalToWorld`. |
 | **StaminaSystem** | Controla el gasto y recuperación de estamina en el héroe. Interactúa con input, habilidades y UI. |
 | **AbilityComponent** | Define datos de una habilidad (daño, tipo, coste de stamina, cooldown) y su ejecución. |
+| **tacticalIntent** | Enum dentro de `SquadAIComponent`. Representa la intención táctica del escuadrón: atacar, reagruparse, defender, etc. No debe confundirse con `currentState`, que refleja el estado real actual del escuadrón. |
 
 ---
 

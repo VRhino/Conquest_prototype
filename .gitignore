@@ -37,8 +37,3 @@ Thumbs.db
 
 scripts_list.txt
 
-# Ignorar todos los archivos .meta generados por Unity
-*.meta
-
-# Ignorar archivos de configuración de Unity
-Assets/synty/
