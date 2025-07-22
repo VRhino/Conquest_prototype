@@ -122,8 +122,8 @@
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraBootstrap.System.cs" />
-    <Compile Include="Assets\Scripts\Squads\UnitGridSlot.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapCamera.cs" />
+    <Compile Include="Assets\Scripts\Squads\UnitGridSlot.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitPrevLeaderPos.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\RetreatLogic.System.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraTarget.Component.cs" />
