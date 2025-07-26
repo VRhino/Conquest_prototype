@@ -6,17 +6,25 @@ namespace Data.Avatar
     public static class AvatarVisualUtils
     {
         // Desactiva todas las piezas de armadura y deja solo las piezas base activas según la lista basePartIds
-        public static void ResetModularDummyToBase(Transform modularDummy, AvatarPartDatabase avatarPartDatabase, List<string> basePartIds, global::Gender currentGender)
+        public static void ResetModularDummyToBase(
+            Transform modularDummy,
+            AvatarPartDatabase avatarPartDatabase,
+            List<string> extraBasePartIds,
+            global::Gender currentGender)
         {
             modularDummy.GetComponent<AvatarPartSelector>().maleParts.SetActive(currentGender == Gender.Male);
             modularDummy.GetComponent<AvatarPartSelector>().femaleParts.SetActive(currentGender == Gender.Female);
+            var basePartsDef = Resources.Load<AvatarBasePartsDefinition>("Data/Avatar/DefaultAvatarBasePartsDefinition");
 
-            if (modularDummy == null || avatarPartDatabase == null) return;
+            if (modularDummy == null || avatarPartDatabase == null || basePartsDef == null) return;
+            var allBasePartIds = new List<string>(basePartsDef.basePartIds);
+            if (extraBasePartIds != null)
+                allBasePartIds.AddRange(extraBasePartIds);
 
             // 1. Reunir todos los boneTargets únicos de las piezas base
             var boneTargets = new HashSet<string>();
             var baseAttachments = new List<(string boneTarget, string prefabName)>();
-            foreach (var id in basePartIds)
+            foreach (var id in allBasePartIds)
             {
                 var part = FindAvatarPartById(avatarPartDatabase, id);
                 if (part == null || part.attachments == null) continue;

@@ -11,8 +11,6 @@ using Data.Items;
 
 public class HeroClassSelector : MonoBehaviour
 {
-    // Lista interna de itemIds base equipados, se rellena dinámicamente según la clase
-    [SerializeField]private List<string> basePartIds = new();
     private List<string> baseItemIds = new();
     // Rellena baseItemIds según la clase seleccionada
     [Header("Modelo 3D")]
@@ -168,7 +166,7 @@ public class HeroClassSelector : MonoBehaviour
         Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(
             modularDummy,
             avatarPartDatabase,
-            basePartIds,
+            new List<string>(),
             avatarPartSelector.currentGender
         );
 

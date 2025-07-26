@@ -3,6 +3,8 @@ using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 using ConquestTactics.Visual;
+using System.Collections.Generic;
+using Data.Items;
 
 /// <summary>
 /// Sistema que gestiona la instanciación y sincronización de los GameObjects visuales
@@ -63,27 +65,98 @@ public partial class HeroVisualManagementSystem : SystemBase
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
-        
+
+        try
+        {
+            // Aplicar la personalización visual del héroe seleccionado
+            ApplyHeroVisualCustomization(visualInstance);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[HeroVisualManagementSystem] Error applying visual customization: {ex.Message}\n{ex.StackTrace}");
+        }
+
         Debug.Log($"[HeroVisualManagementSystem] Visual spawned at position: {transform.Position} for entity {entity}");
-        
+
         // Configurar el script de sincronización
         EntityVisualSync syncScript = visualInstance.GetComponent<EntityVisualSync>();
         if (syncScript == null)
         {
             syncScript = visualInstance.AddComponent<EntityVisualSync>();
         }
-        
+
         syncScript.SetHeroEntity(entity);
-        
+
         Debug.Log($"[HeroVisualManagementSystem] EntityVisualSync configured for entity {entity}");
-        
-        // Marcar la entidad como teniendo un visual instanciado
+
+        Debug.Log($"[HeroVisualManagementSystem] Adding HeroVisualInstance to entity {entity} with instanceId {visualInstance.GetInstanceID()}");
+        // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)
         ecb.AddComponent(entity, new HeroVisualInstance
         {
             visualInstanceId = visualInstance.GetInstanceID()
         });
-        
+        Debug.Log($"[HeroVisualManagementSystem] HeroVisualInstance added to entity {entity}");
         // Visual created successfully
+    }
+
+    /// <summary>
+    /// Aplica la personalización visual del HeroData seleccionado al dummy visual instanciado.
+    /// </summary>
+    /// <param name="visualInstance">GameObject visual del héroe</param>
+    private void ApplyHeroVisualCustomization(GameObject visualInstance)
+    {
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData == null)
+        {
+            Debug.LogWarning("[HeroVisualManagementSystem] No hay HeroData seleccionado en PlayerSessionService.");
+            return;
+        }
+        var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
+        var itemDB = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
+        if (avatarPartDatabase == null || itemDB == null)
+        {
+            Debug.LogWarning("[HeroVisualManagementSystem] No se pudo cargar AvatarPartDatabase o ItemDatabase.");
+            return;
+        }
+
+        // 1) Aplicar partes base visuales
+        var baseVisualPartIds = new List<string>();
+        if (!string.IsNullOrEmpty(heroData.avatar.headId)) baseVisualPartIds.Add(heroData.avatar.headId);
+        if (!string.IsNullOrEmpty(heroData.avatar.hairId)) baseVisualPartIds.Add(heroData.avatar.hairId);
+        if (!string.IsNullOrEmpty(heroData.avatar.beardId)) baseVisualPartIds.Add(heroData.avatar.beardId);
+        if (!string.IsNullOrEmpty(heroData.avatar.eyebrowId)) baseVisualPartIds.Add(heroData.avatar.eyebrowId);
+
+        Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(
+            visualInstance.transform,
+            avatarPartDatabase,
+            baseVisualPartIds,
+            heroData.gender == "Male" ? Gender.Male : Gender.Female
+        );
+
+        // 2) Aplicar equipo funcional
+        var equipmentIds = new List<string> {
+            heroData.equipment.weaponId,
+            heroData.equipment.helmetId,
+            heroData.equipment.torsoId,
+            heroData.equipment.glovesId,
+            heroData.equipment.pantsId
+        };
+        foreach (var itemId in equipmentIds)
+        {
+            if (!string.IsNullOrEmpty(itemId))
+            {
+                var itemData = itemDB.GetItemDataById(itemId);
+                if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
+                {
+                    Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(
+                        visualInstance.transform,
+                        avatarPartDatabase,
+                        itemData.visualPartId,
+                        heroData.gender == "Male" ? Gender.Male : Gender.Female
+                    );
+                }
+            }
+        }
     }
     
     /// <summary>
@@ -98,11 +171,11 @@ public partial class HeroVisualManagementSystem : SystemBase
         VisualPrefabRegistry registry = VisualPrefabRegistry.Instance;
         GameObject prefab = registry.GetPrefab(prefabId);
         
-        if (prefab == null)
-        {
-            // Fallback: usar el prefab por defecto del héroe
-            prefab = registry.GetDefaultHeroPrefab();
-        }
+        // if (prefab == null)
+        // {
+        //     // Fallback: usar el prefab por defecto del héroe
+        //     prefab = registry.GetDefaultHeroPrefab();
+        // }
         
         return prefab;
     }

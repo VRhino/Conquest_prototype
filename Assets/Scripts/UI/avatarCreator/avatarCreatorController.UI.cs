@@ -8,14 +8,8 @@ public class AvatarCreatorUIController : MonoBehaviour
     public Button maleButton;
     public Button femaleButton;
 
-    [Header("Sliders")]
-    public Slider hairSlider;
-    public Slider headSlider;
-    public Slider eyebrowSlider;
-    public Slider facialHairSlider;
-
-    [Header("Character Selector")]
-    public AvatarPartSelector avatarPartSelector;
+    [Header("Sliders Controller")]
+    public AvatarPartSliderController sliderController;
 
     [Header("Class Selector")]
     [SerializeField]private HeroClassSelector classSelector;
@@ -28,19 +22,14 @@ public class AvatarCreatorUIController : MonoBehaviour
 
     void Start()
     {
-        maleButton.onClick.AddListener(() => avatarPartSelector.SetGender(Gender.Male));
-        femaleButton.onClick.AddListener(() => avatarPartSelector.SetGender(Gender.Female));
+        maleButton.onClick.AddListener(() => { sliderController.avatarPartSelector.SetGender(Gender.Male); sliderController.SetupSliders(); });
+        femaleButton.onClick.AddListener(() => { sliderController.avatarPartSelector.SetGender(Gender.Female); sliderController.SetupSliders(); });
         continueButton.onClick.AddListener(OnContinuePressed);
         cancelButton.onClick.AddListener(OnCancelPressed);
 
-        // Asignar sliders a AvatarPartSelector
-        avatarPartSelector.hairSlider = hairSlider;
-        avatarPartSelector.headSlider = headSlider;
-        avatarPartSelector.eyebrowSlider = eyebrowSlider;
-        avatarPartSelector.facialHairSlider = facialHairSlider;
-
         // Set default gender (optional)
-        avatarPartSelector.SetGender(Gender.Male);
+        sliderController.avatarPartSelector.SetGender(Gender.Male);
+        sliderController.SetupSliders();
     }
 
     private void OnContinuePressed()
@@ -52,13 +41,13 @@ public class AvatarCreatorUIController : MonoBehaviour
             return;
         }
         Equipment equipment = classSelector.GetCurrentEquipment();
-        AvatarParts avatar = avatarPartSelector.GetCurrentSelection();
+        AvatarParts avatar = sliderController.avatarPartSelector.GetCurrentSelection();
         HeroData hero = new HeroData
         {
             heroName = heroName,
             avatar = avatar,
             classId = classSelector.selectedClass.name,
-            gender = avatarPartSelector.currentGender.ToString(),
+            gender = sliderController.avatarPartSelector.currentGender.ToString(),
             level = 1,
             currentXP = 0,
             attributePoints = 0,

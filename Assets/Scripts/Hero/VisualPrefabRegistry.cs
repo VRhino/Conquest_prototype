@@ -75,7 +75,7 @@ public class VisualPrefabRegistry : MonoBehaviour
         {
             if (heroPrefab.visualPrefab != null)
             {
-                string key = $"Hero_{heroPrefab.heroId}";
+                string key = heroPrefab.heroId;
                 _runtimePrefabCache[key] = heroPrefab.visualPrefab;
                 
                 // También agregar con clave legacy para compatibilidad

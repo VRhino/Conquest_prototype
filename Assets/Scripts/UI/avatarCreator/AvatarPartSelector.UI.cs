@@ -19,13 +19,6 @@ public class AvatarPartSelector : MonoBehaviour
     public GameObject maleParts;
     public GameObject femaleParts;
 
-    [Header("Sliders (assigned from UI)")]
-    public Slider hairSlider;
-    public Slider headSlider;
-    public Slider eyebrowSlider;
-    public Slider facialHairSlider; // Only active for male
-
-
     private readonly Dictionary<string, Transform> currentPartGroups = new();
 
     private void Awake()
@@ -67,43 +60,19 @@ public class AvatarPartSelector : MonoBehaviour
             currentPartGroups[SLOT_HEAD] = femaleParts.transform.Find("Female_00_Head/Female_Head_All_Elements");
             currentPartGroups[SLOT_EYEBROW] = femaleParts.transform.Find("Female_01_Eyebrows");
         }
-
-        SetupSliders();
     }
 
-    private void SetupSliders()
+
+    // Permite al controlador de sliders obtener el grupo de partes por tipo
+    public Transform GetPartGroup(string partType)
     {
-        SetSlider(hairSlider, SLOT_HAIR);
-        SetSlider(headSlider, SLOT_HEAD);
-        SetSlider(eyebrowSlider, SLOT_EYEBROW);
-
-        if (facialHairSlider != null)
-        {
-            facialHairSlider.gameObject.SetActive(currentGender == Gender.Male);
-            if (currentGender == Gender.Male)
-                SetSlider(facialHairSlider, SLOT_FACIALHAIR);
-        }
+        if (currentPartGroups.TryGetValue(partType, out var group))
+            return group;
+        return null;
     }
 
-    private void SetSlider(Slider slider, string partType)
-    {
-        if (!currentPartGroups.ContainsKey(partType) || slider == null) return;
-
-        Transform group = currentPartGroups[partType];
-        int count = group.childCount;
-
-        slider.maxValue = count - 1;
-        slider.minValue = 0;
-        slider.wholeNumbers = true;
-        slider.onValueChanged.RemoveAllListeners();
-        slider.onValueChanged.AddListener(index => ShowOnly(group, (int)index));
-
-        // Mostrar la primera parte al cambiar género
-        slider.value = 0;
-        ShowOnly(group, 0);
-    }
-
-    private void ShowOnly(Transform group, int indexToShow)
+    // Permite al controlador de sliders mostrar solo una parte
+    public void ShowOnly(Transform group, int indexToShow)
     {
         if (group == null)
             return;
@@ -117,6 +86,7 @@ public class AvatarPartSelector : MonoBehaviour
             child.gameObject.SetActive(isActive);
         }
     }
+
     public AvatarParts GetCurrentSelection()
     {
         string MapPrefabToId(string slot, string prefabName)

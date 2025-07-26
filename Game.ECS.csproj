@@ -255,6 +255,7 @@
     <Compile Include="Assets\Scripts\Squads\Formation.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroEntity.Authoring.cs" />
+    <Compile Include="Assets\Scripts\UI\avatarCreator\AvatarPartSliderController.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\Item.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\AvatarPartSelector.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\UnitFormationState.Type.cs" />
@@ -355,6 +356,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadSpawning.System.cs" />
     <Compile Include="Assets\Scripts\Shared\Cooldown.System.cs" />
+    <Compile Include="Assets\Scripts\Visual\AvatarBasePartsDefinition.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneType.cs" />
     <Compile Include="Assets\Scripts\UI\LoadoutSelectionUI.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbility.cs" />

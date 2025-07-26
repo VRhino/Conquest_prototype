@@ -21,6 +21,8 @@ public class HeroEntityAuthoring : MonoBehaviour
     public float regenRate = 10f;
     public bool startExhausted = false;
     
+
+    //Solo para editor y pruebas
     [Header("Squad Configuration")]
     public GameObject squadDataPrefab;
     public int instanceId = 0;
