@@ -13,7 +13,6 @@ using ConquestTactics.Animation;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitFollowFormationSystem))]
-[UpdateAfter(typeof(HeroMovementSystem))]
 [UpdateAfter(typeof(SquadSpawningSystem))]
 public partial class UnitAnimationSystem : SystemBase
 {

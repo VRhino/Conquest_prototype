@@ -35,8 +35,7 @@ public partial class HeroMovementSystem : SystemBase
                 camRight.Normalize();
 
                 float3 desired = (float3)(camForward * moveInput.y + camRight * moveInput.x);
-                float magnitude = math.length(desired);
-                float3 direction = magnitude > 0f ? desired / magnitude : float3.zero;
+                float3 direction = math.lengthsq(desired) > 0f ? math.normalize(desired) : float3.zero;
                 float currentSpeed = stats.baseSpeed;
                 if (input.IsSprintPressed && !stamina.isExhausted && stamina.currentStamina > 0f)
                 {

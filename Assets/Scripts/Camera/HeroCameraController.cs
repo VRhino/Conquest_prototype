@@ -10,6 +10,16 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class HeroCameraController : MonoBehaviour
 {
+    [Header("Camera Control")]
+    [Tooltip("Si está en true, la cámara queda estática y el héroe se mueve libremente. Si está en false, la cámara sigue al héroe.")]
+    [SerializeField] public bool staticCamera = false;
+
+    [Header("Camera Settings (Override)")]
+    [Tooltip("Sensibilidad de rotación de la cámara (si se usa override)")]
+    [SerializeField] private float rotationSensitivityOverride = 0f;
+    [Tooltip("Distancia mínima de la cámara (si se usa override)")]
+    [SerializeField] private float minZoomOverride = 0f;
+
     EntityManager _entityManager;
     Entity _cameraEntity;
     Entity _heroEntity;
@@ -68,12 +78,14 @@ public class HeroCameraController : MonoBehaviour
         }
 
         // Input handling (nuevo Input System)
-        _yaw += _mouseX * settings.rotationSensitivity * Time.deltaTime;
-        _pitch -= _mouseY * settings.rotationSensitivity * Time.deltaTime; // Nuevo: sumar pitch
-        _pitch = Mathf.Clamp(_pitch, -60f, 80f); // Limitar el ángulo vertical
+        float rotSens = rotationSensitivityOverride > 0f ? rotationSensitivityOverride : settings.rotationSensitivity;
+        float minZoom = minZoomOverride > 0f ? minZoomOverride : settings.minZoom;
+        _yaw += _mouseX * rotSens * Time.deltaTime;
+        _pitch -= _mouseY * rotSens * Time.deltaTime;
+        _pitch = Mathf.Clamp(_pitch, -60f, 80f);
         camTarget.zoomLevel = math.clamp(
             camTarget.zoomLevel - _scroll * settings.zoomSpeed * Time.deltaTime,
-            settings.minZoom,
+            minZoom,
             settings.maxZoom);
         camTarget.tacticalMode = _tacticalMode;
         state.state = camTarget.tacticalMode ? CameraState.Tactical : CameraState.Normal;
@@ -81,28 +93,42 @@ public class HeroCameraController : MonoBehaviour
         _entityManager.SetComponentData(_cameraEntity, camTarget);
         _entityManager.SetComponentData(_cameraEntity, state);
 
-        var heroTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
+
+        // Intentar seguir al GameObject visual si existe
+        Vector3? visualPosition = null;
+        if (_entityManager.HasComponent<HeroVisualInstance>(_heroEntity))
+        {
+            var visualInstance = _entityManager.GetComponentData<HeroVisualInstance>(_heroEntity);
+            var visualObj = FindVisualByInstanceId(visualInstance.visualInstanceId);
+            if (visualObj != null)
+                visualPosition = visualObj.transform.position;
+        }
 
         float3 offset = camTarget.offset;
         if (camTarget.tacticalMode)
             offset += new float3(0f, 3f, -3f);
 
-        // Nuevo: aplicar pitch y yaw
-        quaternion rot = quaternion.Euler(math.radians(_pitch), math.radians(_yaw), 0f);
-        float3 desiredFloat = heroTransform.Position + math.mul(rot, new float3(0f, offset.y, -camTarget.zoomLevel) + new float3(offset.x, 0f, offset.z));
-        Vector3 desired = (Vector3)desiredFloat;
+        Vector3 followPos = visualPosition ?? (Vector3)_entityManager.GetComponentData<LocalTransform>(_heroEntity).Position;
 
-        // Raycast to avoid clipping
-        Vector3 from = (Vector3)(heroTransform.Position + new float3(0f, offset.y, 0f));
-        Vector3 to = desired;
-        Vector3 dir = to - from;
-        if (Physics.Raycast(from, dir.normalized, out RaycastHit hit, dir.magnitude))
+        if (!staticCamera)
         {
-            desired = hit.point;
-        }
+            // Nuevo: aplicar pitch y yaw
+            quaternion rot = quaternion.Euler(math.radians(_pitch), math.radians(_yaw), 0f);
+            Vector3 desired = followPos + (Vector3)math.mul(rot, new float3(0f, offset.y, -camTarget.zoomLevel) + new float3(offset.x, 0f, offset.z));
 
-        transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * 5f);
-        transform.rotation = Quaternion.LookRotation((Vector3)heroTransform.Position - transform.position);
+            // Raycast to avoid clipping
+            Vector3 from = followPos + new Vector3(0f, offset.y, 0f);
+            Vector3 to = desired;
+            Vector3 dir = to - from;
+            if (Physics.Raycast(from, dir.normalized, out RaycastHit hit, dir.magnitude))
+            {
+                desired = hit.point;
+            }
+
+            transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * 5f);
+            transform.rotation = Quaternion.LookRotation(followPos - transform.position);
+        }
+        // Si staticCamera == true, la cámara se queda en su posición y rotación actuales
 
         // Reset input deltas
         _mouseX = 0f;
@@ -122,6 +148,21 @@ public class HeroCameraController : MonoBehaviour
     }
 
     #region Public API for Animation Controller
+
+    /// <summary>
+    /// Busca el GameObject visual por su InstanceID.
+    /// </summary>
+    private GameObject FindVisualByInstanceId(int instanceId)
+    {
+        if (instanceId == 0) return null;
+        var allVisuals = GameObject.FindObjectsOfType<ConquestTactics.Visual.EntityVisualSync>();
+        foreach (var visual in allVisuals)
+        {
+            if (visual.gameObject.GetInstanceID() == instanceId)
+                return visual.gameObject;
+        }
+        return null;
+    }
 
     /// <summary>
     /// Gets the normalised forward vector of the camera with the Y value zeroed.
