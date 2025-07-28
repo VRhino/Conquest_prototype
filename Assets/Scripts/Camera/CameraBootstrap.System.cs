@@ -30,7 +30,7 @@ public partial class CameraBootstrapSystem : SystemBase
             });
             EntityManager.AddComponentData(cameraEntity, new CameraSettingsComponent
             {
-                minZoom = 5f,
+                minZoom = 1f,
                 maxZoom = 20f,
                 zoomSpeed = 10f,
                 rotationSensitivity = 100f
