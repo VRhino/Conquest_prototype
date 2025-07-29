@@ -19,12 +19,20 @@ public class HeroCameraController : MonoBehaviour
     [SerializeField] private float rotationSensitivityOverride = 0f;
     [Tooltip("Distancia mínima de la cámara (si se usa override)")]
     [SerializeField] private float minZoomOverride = 0f;
+    [SerializeField] public bool disableCameraFollow = false;
 
     EntityManager _entityManager;
     Entity _cameraEntity;
     Entity _heroEntity;
-    float _yaw;
-    float _pitch; // Nuevo: ángulo vertical
+    // Ángulos de referencia (de la cámara de ejemplo)
+    private const float REFERENCE_YAW = 2f;
+    private const float REFERENCE_PITCH = 8f;
+    // Offset global de referencia (posición cámara - posición héroe)
+    private static readonly Vector3 REFERENCE_OFFSET_GLOBAL = new Vector3(0f, 1.8f, -3.478333f);
+
+    float _yaw = REFERENCE_YAW;
+    float _pitch = REFERENCE_PITCH;
+    Vector3 _offsetLocal;
     float _mouseX;
     float _mouseY; // Nuevo: input vertical
     float _scroll;
@@ -42,13 +50,16 @@ public class HeroCameraController : MonoBehaviour
                 _mouseY = look.y; // Nuevo: capturar Y
             };
             playerInput.actions["Zoom"].performed += ctx => _scroll = ctx.ReadValue<float>();
-            playerInput.actions["Tactical"].performed += ctx => _tacticalMode = ctx.ReadValue<float>() > 0.5f;
+            // playerInput.actions["Tactical"].performed += ctx => _tacticalMode = ctx.ReadValue<float>() > 0.5f;
         }
     }
 
     void Awake()
     {
         _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+        // Calcular el offset local respecto a la rotación de referencia
+        Quaternion referenceRot = Quaternion.Euler(REFERENCE_PITCH, REFERENCE_YAW, 0f);
+        _offsetLocal = Quaternion.Inverse(referenceRot) * REFERENCE_OFFSET_GLOBAL;
     }
 
     void Update()
@@ -87,46 +98,55 @@ public class HeroCameraController : MonoBehaviour
             camTarget.zoomLevel - _scroll * settings.zoomSpeed * Time.deltaTime,
             minZoom,
             settings.maxZoom);
-        camTarget.tacticalMode = _tacticalMode;
-        state.state = camTarget.tacticalMode ? CameraState.Tactical : CameraState.Normal;
+        // camTarget.tacticalMode = _tacticalMode;
+        // state.state = camTarget.tacticalMode ? CameraState.Tactical : CameraState.Normal;
 
         _entityManager.SetComponentData(_cameraEntity, camTarget);
         _entityManager.SetComponentData(_cameraEntity, state);
 
 
-        // Intentar seguir al GameObject visual si existe
-        Vector3? visualPosition = null;
+        // Intentar seguir un punto específico del visual (CameraFollowPoint) si existe
+        Vector3? followPos = null;
         if (_entityManager.HasComponent<HeroVisualInstance>(_heroEntity))
         {
             var visualInstance = _entityManager.GetComponentData<HeroVisualInstance>(_heroEntity);
             var visualObj = FindVisualByInstanceId(visualInstance.visualInstanceId);
             if (visualObj != null)
-                visualPosition = visualObj.transform.position;
+            {
+                var followPoint = visualObj.transform.Find("CameraFollowPoint");
+                if (followPoint != null)
+                    followPos = followPoint.position;
+                else
+                    followPos = visualObj.transform.position;
+            }
         }
-
-        float3 offset = camTarget.offset;
-        if (camTarget.tacticalMode)
-            offset += new float3(0f, 3f, -3f);
-
-        Vector3 followPos = visualPosition ?? (Vector3)_entityManager.GetComponentData<LocalTransform>(_heroEntity).Position;
+        if (!followPos.HasValue)
+            followPos = (Vector3)_entityManager.GetComponentData<LocalTransform>(_heroEntity).Position;
 
         if (!staticCamera)
         {
-            // Nuevo: aplicar pitch y yaw
+            // Calcula la rotación a partir de _pitch y _yaw (ambos controlados por el mouse)
             quaternion rot = quaternion.Euler(math.radians(_pitch), math.radians(_yaw), 0f);
-            Vector3 desired = followPos + (Vector3)math.mul(rot, new float3(0f, offset.y, -camTarget.zoomLevel) + new float3(offset.x, 0f, offset.z));
+            Vector3 offset = (Vector3)math.mul(rot, _offsetLocal * camTarget.zoomLevel);
+            Vector3 desired = followPos.Value + offset;
 
-            // Raycast to avoid clipping
-            Vector3 from = followPos + new Vector3(0f, offset.y, 0f);
+            // Raycast para evitar clipping
+            Vector3 from = followPos.Value + new Vector3(0f, offset.y, 0f);
             Vector3 to = desired;
             Vector3 dir = to - from;
             if (Physics.Raycast(from, dir.normalized, out RaycastHit hit, dir.magnitude))
             {
                 desired = hit.point;
             }
-
-            transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * 5f);
-            transform.rotation = Quaternion.LookRotation(followPos - transform.position);
+            if (disableCameraFollow)
+            {
+                desired = transform.position;
+            }
+            else
+            {
+                transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * 5f);
+                transform.rotation = Quaternion.LookRotation(followPos.Value - transform.position);
+            }
         }
         // Si staticCamera == true, la cámara se queda en su posición y rotación actuales
 
