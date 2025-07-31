@@ -27,6 +27,12 @@ namespace ConquestTactics.Visual
         [SerializeField] private bool _showDebugLines = false;
         
         private World _world;
+
+        /// <summary>
+        /// Indica si este visual representa al héroe local (con isLocalComponent en ECS).
+        /// </summary>
+        [HideInInspector]
+        public bool IsLocalHero = false;
         private EntityManager _entityManager;
         private EntityQuery _heroQuery;
         private Entity _heroEntity = Entity.Null;
@@ -58,7 +64,6 @@ namespace ConquestTactics.Visual
             if (_enableDebugLogs)
                 Debug.Log($"[EntityVisualSync] Start ejecutándose en {gameObject.name}");
             InitializeEcsReferences();
-            DisableConflictingComponents();
             if (_autoFindHeroEntity && !_isManuallyConfigured && _heroEntity == Entity.Null)
             {
                 if (_enableDebugLogs)
@@ -70,6 +75,26 @@ namespace ConquestTactics.Visual
                 if (_enableDebugLogs)
                     Debug.Log($"[EntityVisualSync] Entidad ya configurada manualmente: {_heroEntity}, saltando auto-búsqueda");
             }
+
+
+            // Si hay entidad válida, mover el visual a la posición del ECS antes de activar el CharacterController
+            if (_heroEntity != Entity.Null && _entityManager != null && _entityManager.Exists(_heroEntity))
+            {
+                // Setear IsLocalHero si la entidad tiene el tag IsLocalPlayer
+                IsLocalHero = _entityManager.HasComponent<IsLocalPlayer>(_heroEntity);
+                if (_entityManager.HasComponent<LocalTransform>(_heroEntity))
+                {
+                    var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
+                    transform.position = ecsTransform.Position;
+                    transform.rotation = ecsTransform.Rotation;
+                    if (_enableDebugLogs)
+                        Debug.Log($"[EntityVisualSync] Posición visual inicializada desde ECS: {ecsTransform.Position}");
+                }
+                if (_enableDebugLogs)
+                    Debug.Log($"[EntityVisualSync] IsLocalHero seteado a {IsLocalHero} para entidad {_heroEntity}");
+            }
+
+            DisableConflictingComponents();
             _targetPosition = transform.position;
             _targetRotation = transform.rotation;
             if (_enableDebugLogs)

@@ -76,8 +76,6 @@ public partial class HeroVisualManagementSystem : SystemBase
             Debug.LogError($"[HeroVisualManagementSystem] Error applying visual customization: {ex.Message}\n{ex.StackTrace}");
         }
 
-        Debug.Log($"[HeroVisualManagementSystem] Visual spawned at position: {transform.Position} for entity {entity}");
-
         // Configurar el script de sincronización
         EntityVisualSync syncScript = visualInstance.GetComponent<EntityVisualSync>();
         if (syncScript == null)
@@ -86,17 +84,11 @@ public partial class HeroVisualManagementSystem : SystemBase
         }
 
         syncScript.SetHeroEntity(entity);
-
-        Debug.Log($"[HeroVisualManagementSystem] EntityVisualSync configured for entity {entity}");
-
-        Debug.Log($"[HeroVisualManagementSystem] Adding HeroVisualInstance to entity {entity} with instanceId {visualInstance.GetInstanceID()}");
         // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)
         ecb.AddComponent(entity, new HeroVisualInstance
         {
             visualInstanceId = visualInstance.GetInstanceID()
         });
-        Debug.Log($"[HeroVisualManagementSystem] HeroVisualInstance added to entity {entity}");
-        // Visual created successfully
     }
 
     /// <summary>
@@ -108,14 +100,12 @@ public partial class HeroVisualManagementSystem : SystemBase
         var heroData = PlayerSessionService.SelectedHero;
         if (heroData == null)
         {
-            Debug.LogWarning("[HeroVisualManagementSystem] No hay HeroData seleccionado en PlayerSessionService.");
             return;
         }
         var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
         var itemDB = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
         if (avatarPartDatabase == null || itemDB == null)
         {
-            Debug.LogWarning("[HeroVisualManagementSystem] No se pudo cargar AvatarPartDatabase o ItemDatabase.");
             return;
         }
 
@@ -166,17 +156,9 @@ public partial class HeroVisualManagementSystem : SystemBase
     /// <returns>GameObject del prefab visual o null si no se encuentra</returns>
     private GameObject FindVisualPrefabGameObject(string prefabId)
     {
-        Debug.Log($"[HeroVisualManagementSystem] Looking for visual prefab with ID: {prefabId}");
         // Usar el registro de prefabs visuales
         VisualPrefabRegistry registry = VisualPrefabRegistry.Instance;
         GameObject prefab = registry.GetPrefab(prefabId);
-        
-        // if (prefab == null)
-        // {
-        //     // Fallback: usar el prefab por defecto del héroe
-        //     prefab = registry.GetDefaultHeroPrefab();
-        // }
-        
         return prefab;
     }
 }
