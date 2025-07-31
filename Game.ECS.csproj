@@ -76,6 +76,7 @@
     <Compile Include="Assets\Scripts\Squads\NonDeployableSquadTag.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadAI.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitSpacing.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\NpcDialogueUIController.cs" />
     <Compile Include="Assets\Scripts\Shared\GamePhase.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitWeapon.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPool.System.cs" />
@@ -183,6 +184,7 @@
     <Compile Include="Assets\Scripts\UI\avatarCreator\gender.Type.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTrigger.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\SpawnSelectionRequest.cs" />
+    <Compile Include="Assets\Scripts\Dialogue\DialogOption.Type.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\Formation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.cs" />
     <Compile Include="Assets\Scripts\Animation\EcsAnimationInputAdapter.cs" />
@@ -195,6 +197,7 @@
     <Compile Include="Assets\Scripts\Hero\Systems\HeroAttack.System.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapRenderer.cs" />
+    <Compile Include="Assets\Scripts\UI\DialogueUIState.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationLibraryBlob.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFollowDelay.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapIcon.Authoring.cs" />
@@ -231,6 +234,7 @@
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularBodyPart.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarSlot.Type.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\LevelUpEvent.Component.cs" />
+    <Compile Include="Assets\Scripts\Dialogue\NpcDialogReference.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\BodyPartLinker.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitAttack.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitStatsBufferElement.cs" />
@@ -354,6 +358,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitDestinationMarker.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitTargetPosition.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroClass.Type.cs" />
+    <Compile Include="Assets\Scripts\Dialogue\NpcDialogueData.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\SquadEnums.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularCharacterStatics.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />

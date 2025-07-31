@@ -1,5 +1,5 @@
-using UnityEngine;
 using ConquestTactics.UI;
+using UnityEngine;
 
 namespace ConquestTactics.Triggers
 {
@@ -77,15 +77,45 @@ namespace ConquestTactics.Triggers
         public void Interact()
         {
             Debug.Log($"[NpcTriggerZone] Interact called for building: {buildingID}");
-            // var hero = PlayerSessionService.SelectedHero;
-            // if (hero == null) return;
-            // if (buildingID == "barracks")
-            //     BarrackMenuUI.Open(hero);
-            // else if (buildingID == "armory")
-            //     ArmoryMenuUI.Open(hero);
-            // // Aquí puedes agregar más edificios si es necesario
-            // // Registrar flag de activación en memoria (puede ser un servicio estático)
-            // NpcTriggerActivationFlags.RegisterActivation(buildingID);
+            // Buscar el NpcDialogueReference en el NPC (este GameObject o padres)
+            var dialogueRef = GetComponentInParent<NpcDialogueReference>() ?? GetComponent<NpcDialogueReference>();
+            if (dialogueRef == null || dialogueRef.dialogueData == null)
+            {
+                Debug.LogWarning($"[NpcTriggerZone] No se encontró NpcDialogueReference o dialogueData en {gameObject.name}");
+                return;
+            }
+            // Marcar diálogo abierto y pausar cámara
+            DialogueUIState.IsDialogueOpen = true;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(false);
+
+            // Abrir el menú de diálogo
+            NpcDialogueUIController.Instance.Open(dialogueRef.dialogueData, OnDialogueOptionSelected);
+
+            // Callback para manejar la opción seleccionada en el diálogo
+            void OnDialogueOptionSelected(Dialogue.DialogueOption option)
+            {
+                Debug.Log($"[NpcTriggerZone] Opción seleccionada: {option.optionText} ({option.optionType})");
+                // Al cerrar el diálogo, reanudar cámara y limpiar flag
+                DialogueUIState.IsDialogueOpen = false;
+                if (HeroCameraController.Instance != null)
+                    HeroCameraController.Instance.SetCameraFollowEnabled(true);
+
+                switch (option.optionType)
+                {
+                    case Dialogue.DialogueOptionType.OpenMenu:
+                        // Aquí puedes abrir el menú correspondiente según nextMenuId
+                        // if (option.nextMenuId == "barracks") BarrackMenuUI.Open(...);
+                        // else if (option.nextMenuId == "armory") ArmoryMenuUI.Open(...);
+                        break;
+                    case Dialogue.DialogueOptionType.CloseDialogue:
+                        // No hacer nada, el diálogo ya se cierra automáticamente
+                        break;
+                    case Dialogue.DialogueOptionType.CustomEvent:
+                        // Aquí puedes disparar lógica personalizada usando option.customEvent
+                        break;
+                }
+            }
         }
 
         private bool IsHeroPlayer(Collider other)

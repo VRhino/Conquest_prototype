@@ -1,8 +1,9 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using static DialogueUIState;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// MonoBehaviour that controls the third person camera and follows the
@@ -20,6 +21,15 @@ public class HeroCameraController : MonoBehaviour
     [Tooltip("Distancia mínima de la cámara (si se usa override)")]
     [SerializeField] private float minZoomOverride = 0f;
     [SerializeField] public bool disableCameraFollow = false;
+
+    // Permite acceso global para pausar la cámara desde UI/dialogue
+    private static HeroCameraController _instance;
+    public static HeroCameraController Instance => _instance;
+
+    private void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
+    }
 
     EntityManager _entityManager;
     Entity _cameraEntity;
@@ -40,16 +50,22 @@ public class HeroCameraController : MonoBehaviour
 
     private void OnEnable()
     {
+        _instance = this;
         // Suscribe input events
         var playerInput = GetComponent<PlayerInput>();
         if (playerInput != null)
         {
             playerInput.actions["Look"].performed += ctx => {
+                // Si el diálogo está abierto, ignorar input de cámara
+                if (DialogueUIState.IsDialogueOpen) return;
                 var look = ctx.ReadValue<Vector2>();
                 _mouseX = look.x;
-                _mouseY = look.y; // Nuevo: capturar Y
+                _mouseY = look.y;
             };
-            playerInput.actions["Zoom"].performed += ctx => _scroll = ctx.ReadValue<float>();
+            playerInput.actions["Zoom"].performed += ctx => {
+                if (DialogueUIState.IsDialogueOpen) return;
+                _scroll = ctx.ReadValue<float>();
+            };
             // playerInput.actions["Tactical"].performed += ctx => _tacticalMode = ctx.ReadValue<float>() > 0.5f;
         }
     }
@@ -138,7 +154,7 @@ public class HeroCameraController : MonoBehaviour
             {
                 desired = hit.point;
             }
-            if (disableCameraFollow)
+            if (disableCameraFollow || DialogueUIState.IsDialogueOpen)
             {
                 desired = transform.position;
             }
@@ -154,6 +170,14 @@ public class HeroCameraController : MonoBehaviour
         _mouseX = 0f;
         _mouseY = 0f; // Nuevo: resetear input vertical
         _scroll = 0f;
+    }
+
+    /// <summary>
+    /// Permite pausar/reanudar el seguimiento de cámara desde UI/dialogue
+    /// </summary>
+    public void SetCameraFollowEnabled(bool enabled)
+    {
+        disableCameraFollow = !enabled;
     }
 
     void FindCameraEntity()
