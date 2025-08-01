@@ -16,6 +16,8 @@ namespace ConquestTactics.Triggers
         private GameObject _playerObject;
         private string _promptText = "Presiona 'F' para interactuar";
 
+
+
         private void Reset()
         {
             // Asegura que el collider es trigger
@@ -95,21 +97,21 @@ namespace ConquestTactics.Triggers
             // Callback para manejar la opción seleccionada en el diálogo
             void OnDialogueOptionSelected(Dialogue.DialogueOption option)
             {
-                Debug.Log($"[NpcTriggerZone] Opción seleccionada: {option.optionText} ({option.optionType})");
                 // Al cerrar el diálogo, reanudar cámara y limpiar flag
-                DialogueUIState.IsDialogueOpen = false;
-                if (HeroCameraController.Instance != null)
-                    HeroCameraController.Instance.SetCameraFollowEnabled(true);
 
                 switch (option.optionType)
                 {
                     case Dialogue.DialogueOptionType.OpenMenu:
-                        // Aquí puedes abrir el menú correspondiente según nextMenuId
-                        // if (option.nextMenuId == "barracks") BarrackMenuUI.Open(...);
-                        // else if (option.nextMenuId == "armory") ArmoryMenuUI.Open(...);
+                        if (option.nextMenuId == "barracks")
+                        {
+                            var heroData = PlayerSessionService.SelectedHero;
+                            NpcTriggerUIController.Instance?.OpenBarracksMenu(heroData);
+                        }
                         break;
                     case Dialogue.DialogueOptionType.CloseDialogue:
-                        // No hacer nada, el diálogo ya se cierra automáticamente
+                        DialogueUIState.IsDialogueOpen = false;
+                        if (HeroCameraController.Instance != null)
+                            HeroCameraController.Instance.SetCameraFollowEnabled(true);
                         break;
                     case Dialogue.DialogueOptionType.CustomEvent:
                         // Aquí puedes disparar lógica personalizada usando option.customEvent

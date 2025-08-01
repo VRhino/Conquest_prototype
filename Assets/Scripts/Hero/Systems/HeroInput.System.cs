@@ -68,7 +68,7 @@ public partial class HeroInputSystem : SystemBase
         // Solo loguea si hay input relevante
         bool hasInput = false;
 
-        if (keyboard != null)
+        if (keyboard != null && DialogueUIState.IsDialogueOpen == false)
         {
             if (keyboard.aKey.isPressed) move.x -= 1f;
             if (keyboard.dKey.isPressed) move.x += 1f;

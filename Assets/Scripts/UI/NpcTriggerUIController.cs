@@ -13,6 +13,20 @@ namespace ConquestTactics.UI
         public GameObject promptPanel;
         public TMPro.TextMeshProUGUI promptText;
 
+        [Header("Referencias UI de Menús")]
+        [Tooltip("Referencia al controlador de UI de barracas (asignar desde el editor)")]
+        public BarracksMenuUIController barracksMenuUIController;
+        /// <summary>
+        /// Abre el menú de barracas con el HeroData dado.
+        /// </summary>
+        public void OpenBarracksMenu(HeroData heroData)
+        {
+            if (barracksMenuUIController != null)
+                barracksMenuUIController.Open(heroData);
+            else
+                Debug.LogWarning("[NpcTriggerUIController] No se asignó barracksMenuUIController en el inspector");
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)

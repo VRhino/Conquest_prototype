@@ -256,6 +256,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadFSMState.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\TacticalIntent.Type.cs" />
     <Compile Include="Assets\Scripts\UI\MapUIController.cs" />
+    <Compile Include="Assets\Scripts\UI\BarracksMenuUIController.cs" />
     <Compile Include="Assets\Scripts\Core\PlayerSessionService.cs" />
     <Compile Include="Assets\Scripts\Squads\Formation.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
