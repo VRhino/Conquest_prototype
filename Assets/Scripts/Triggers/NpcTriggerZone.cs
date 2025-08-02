@@ -87,9 +87,7 @@ namespace ConquestTactics.Triggers
                 return;
             }
             // Marcar diálogo abierto y pausar cámara
-            DialogueUIState.IsDialogueOpen = true;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(false);
+            OpenDialogue();
 
             // Abrir el menú de diálogo
             NpcDialogueUIController.Instance.Open(dialogueRef.dialogueData, OnDialogueOptionSelected);
@@ -109,9 +107,7 @@ namespace ConquestTactics.Triggers
                         }
                         break;
                     case Dialogue.DialogueOptionType.CloseDialogue:
-                        DialogueUIState.IsDialogueOpen = false;
-                        if (HeroCameraController.Instance != null)
-                            HeroCameraController.Instance.SetCameraFollowEnabled(true);
+                        CloseDialogue();
                         break;
                     case Dialogue.DialogueOptionType.CustomEvent:
                         // Aquí puedes disparar lógica personalizada usando option.customEvent
@@ -132,6 +128,26 @@ namespace ConquestTactics.Triggers
             // // Consulta el sistema de flags de tutorial
             // return TutorialFlags.Allows(buildingID);
             return true; // Por defecto, permite interacción
+        }
+
+        private void OpenDialogue()
+        {
+            DialogueUIState.IsDialogueOpen = true;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(false);
+            
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        private void CloseDialogue()
+        {
+            DialogueUIState.IsDialogueOpen = false;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(true);
+            
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
         }
     }
 }

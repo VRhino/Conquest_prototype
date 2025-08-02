@@ -51,8 +51,8 @@ public class HeroData
     /// <summary>Perk identifiers unlocked by this hero.</summary>
     public List<int> unlockedPerks = new();
 
-    /// <summary>Identifiers of squads owned by the hero.</summary>
-    public List<int> ownedSquads = new();
+    /// <summary>Identifiers of the Type of squads available by the hero to recruit.</summary>
+    public List<string> availableSquads = new();
 
     /// <summary>Loadout configurations available to this hero.</summary>
     public List<LoadoutSaveData> loadouts = new();

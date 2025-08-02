@@ -44,3 +44,10 @@ public enum BehaviorProfile
     AntiCharge,
     Versatile
 }
+
+public enum UnitType
+{
+    Infantry,
+    Cavalry,
+    Distance
+}

@@ -8,12 +8,20 @@ using UnityEngine;
 public class SquadData : ScriptableObject
 {
     // Identification
+    /// <summary>Unique identifier for this squad type.</summary>
+    public string id = string.Empty;
     /// <summary>Name of the squad shown in UI.</summary>
     public string squadName;
     /// <summary>Type of squad this data represents.</summary>
     public SquadType tipo;
+    /// <summary>Unit type for this squad.</summary>
+    public UnitType unitType;
     /// <summary>Icon used in menus.</summary>
     public Sprite icon;
+    /// <summary>Background image for squad selection UI.</summary>
+    public Sprite background;
+    /// <summary>Image used in squad selection UI.</summary>
+    public Sprite unitImage;
     /// <summary>Prefab spawned for this squad.</summary>
     public GameObject prefab;
 

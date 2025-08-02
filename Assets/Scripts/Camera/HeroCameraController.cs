@@ -76,6 +76,8 @@ public class HeroCameraController : MonoBehaviour
         // Calcular el offset local respecto a la rotación de referencia
         Quaternion referenceRot = Quaternion.Euler(REFERENCE_PITCH, REFERENCE_YAW, 0f);
         _offsetLocal = Quaternion.Inverse(referenceRot) * REFERENCE_OFFSET_GLOBAL;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()

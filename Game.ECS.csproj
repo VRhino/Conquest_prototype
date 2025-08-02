@@ -113,6 +113,7 @@
     <Compile Include="Assets\Scripts\UI\UIManager.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroAnimation.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroProgress.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\SquadSelectionPanel.UI.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroVisualManagement.System.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroSpawn.Authoring.cs" />
     <Compile Include="Assets\Scripts\Hero\Stamina.Authoring.cs" />
@@ -325,7 +326,9 @@
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\AtributeLimitEvent.Component.cs" />
     <Compile Include="Assets\Scripts\UI\NpcTriggerUIController.cs" />
+    <Compile Include="Assets\Scripts\UI\SquadOption.UI.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroAttribute.Type.cs" />
+    <Compile Include="Assets\Scripts\Data\SquadDatabase.cs" />
     <Compile Include="Assets\Scripts\Squads\DetectedEnemy.cs" />
     <Compile Include="Assets\Scripts\Squads\DestinationMarkerPrefab.Component.cs" />
     <Compile Include="Assets\Scripts\SoloParaPruebas\Testing\EcsAnimationTester.cs" />
