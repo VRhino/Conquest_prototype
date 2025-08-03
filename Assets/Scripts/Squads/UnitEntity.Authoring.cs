@@ -10,16 +10,14 @@ public class UnitEntityAuthoring : MonoBehaviour
     [Header("Unit ECS Configuration")]
     [Tooltip("Velocidad base de movimiento")]
     public float baseSpeed = 3.5f;
-    
+
     [Tooltip("Radio mínimo para evitar colisiones")]
     public float minDistance = 1.5f;
-    
+
     [Tooltip("Fuerza de repulsión contra otras unidades")]
     public float repelForce = 1f;
-    
-    [Header("Visual Configuration")]
-    [Tooltip("Nombre del prefab visual para este tipo de unidad")]
-    public string visualPrefabName = "UnitVisual_Default";
+    [Tooltip("data del escuadrón al que pertenece esta unidad")]
+    public SquadData squadData;
 }
 
 /// <summary>
@@ -60,7 +58,7 @@ public class UnitEntityBaker : Baker<UnitEntityAuthoring>
         // Referencia al visual prefab
         AddComponent(entity, new UnitVisualReference
         {
-            visualPrefabName = authoring.visualPrefabName
+            visualPrefabName = authoring.squadData.visualPrefabName
         });
         
         // ECS-only unit entity baked

@@ -122,6 +122,7 @@
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
     <Compile Include="Assets\Scripts\Data\Combat\CalculaterdAttributes.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOwner.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraBootstrap.System.cs" />
@@ -133,6 +134,7 @@
     <Compile Include="Assets\Scripts\Perks\HeroPerk.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Components\ModularCharacterManager.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinition.Authoring.cs" />
+    <Compile Include="Assets\Scripts\UI\FormationOption.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchState.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadVisualComponents.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationVisualizer.cs" />

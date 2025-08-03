@@ -29,28 +29,28 @@ public class SquadDataAuthoring : MonoBehaviour
 
             AddComponent(entity, new SquadDataComponent
             {
-                vidaBase = authoring.data.vidaBase,
-                velocidadBase = authoring.data.velocidadBase,
-                masa = authoring.data.masa,
-                peso = authoring.data.peso,
-                squadType = authoring.data.tipo,
-                bloqueo = authoring.data.bloqueo,
-                defensaCortante = authoring.data.defensaCortante,
-                defensaPerforante = authoring.data.defensaPerforante,
-                defensaContundente = authoring.data.defensaContundente,
-                danoCortante = authoring.data.danoCortante,
-                danoPerforante = authoring.data.danoPerforante,
-                danoContundente = authoring.data.danoContundente,
-                penetracionCortante = authoring.data.penetracionCortante,
-                penetracionPerforante = authoring.data.penetracionPerforante,
-                penetracionContundente = authoring.data.penetracionContundente,
-                esUnidadADistancia = authoring.data.esUnidadADistancia,
-                alcance = authoring.data.alcance,
-                precision = authoring.data.precision,
-                cadenciaFuego = authoring.data.cadenciaFuego,
-                velocidadRecarga = authoring.data.velocidadRecarga,
-                municionTotal = authoring.data.municionTotal,
-                liderazgoCost = authoring.data.liderazgoCost,
+                vidaBase = authoring.data.baseHealth,
+                velocidadBase = authoring.data.baseSpeed,
+                masa = authoring.data.massValue,
+                peso = authoring.data.totalWeight,
+                squadType = authoring.data.type,
+                bloqueo = authoring.data.block,
+                defensaCortante = authoring.data.slashingDefense,
+                defensaPerforante = authoring.data.piercingDefense,
+                defensaContundente = authoring.data.bluntDefense,
+                danoCortante = authoring.data.slashingDamage,
+                danoPerforante = authoring.data.piercingDamage,
+                danoContundente = authoring.data.bluntDamage,
+                penetracionCortante = authoring.data.slashingPenetration,
+                penetracionPerforante = authoring.data.piercingPenetration,
+                penetracionContundente = authoring.data.bluntPenetration,
+                esUnidadADistancia = authoring.data.isDistanceUnit,
+                alcance = authoring.data.range,
+                precision = authoring.data.accuracy,
+                cadenciaFuego = authoring.data.fireRate,
+                velocidadRecarga = authoring.data.reloadSpeed,
+                municionTotal = authoring.data.ammo,
+                liderazgoCost = authoring.data.leadershipCost,
                 behaviorProfile = authoring.data.behaviorProfile,
                 curves = default,
                 formationLibrary = formationLibrary,
@@ -60,25 +60,25 @@ public class SquadDataAuthoring : MonoBehaviour
 
             AddComponent(entity, new SquadStatsComponent
             {
-                squadType = authoring.data.tipo,
+                squadType = authoring.data.type,
                 behaviorProfile = authoring.data.behaviorProfile
             });
 
             var statsBuffer = AddBuffer<UnitStatsBufferElement>(entity);
             statsBuffer.Add(new UnitStatsBufferElement
             {
-                health = (int)authoring.data.vidaBase,
-                speed = (int)authoring.data.velocidadBase,
-                mass = (int)authoring.data.masa,
-                weightClass = (int)authoring.data.peso,
-                blockValue = authoring.data.bloqueo,
-                slashingDamage = authoring.data.danoCortante,
-                piercingDamage = authoring.data.danoPerforante,
-                bluntDamage = authoring.data.danoContundente,
-                slashingDefense = authoring.data.defensaCortante,
-                piercingDefense = authoring.data.defensaPerforante,
-                bluntDefense = authoring.data.defensaContundente,
-                leadershipCost = authoring.data.liderazgoCost
+                health = (int)authoring.data.baseHealth,
+                speed = (int)authoring.data.baseSpeed,
+                mass = (int)authoring.data.massValue,
+                weightClass = (int)authoring.data.totalWeight,
+                blockValue = authoring.data.block,
+                slashingDamage = authoring.data.slashingDamage,
+                piercingDamage = authoring.data.piercingDamage,
+                bluntDamage = authoring.data.bluntDamage,
+                slashingDefense = authoring.data.slashingDefense,
+                piercingDefense = authoring.data.piercingDefense,
+                bluntDefense = authoring.data.bluntDefense,
+                leadershipCost = authoring.data.leadershipCost
             });
         }
 

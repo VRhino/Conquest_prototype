@@ -92,7 +92,7 @@ public class VisualPrefabRegistry : MonoBehaviour
         {
             if (unitPrefab.visualPrefab != null)
             {
-                string key = $"Unit_{unitPrefab.squadType}_{unitPrefab.unitId}";
+                string key = $"{unitPrefab.unitId}";
                 _runtimePrefabCache[key] = unitPrefab.visualPrefab;
                 
                 // También agregar claves legacy para compatibilidad
@@ -129,7 +129,7 @@ public class VisualPrefabRegistry : MonoBehaviour
             SquadType.Squires => "UnitEscudero",
             SquadType.Archers => "UnitArquero", 
             SquadType.Pikemen => "UnitPikemen",
-            SquadType.Lancers => "UnitCaballo",
+            SquadType.Spearmen => "UnitSpearmen",
             _ => null
         };
     }

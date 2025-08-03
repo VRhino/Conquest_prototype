@@ -74,7 +74,7 @@ public enum SquadType
     Squires,
     Archers,
     Pikemen,
-    Lancers,
+    Spearmen,
     Knights    // ← Nuevo tipo
 }
 ```
@@ -126,8 +126,8 @@ private Entity CreateSquadEntity(SquadType squadType)
             return CreateArcherSquad();
         case SquadType.Pikemen:
             return CreatePikemenSquad();
-        case SquadType.Lancers:
-            return CreateLancerSquad();
+        case SquadType.Spearmen:
+            return CreateSpearmenSquad();
         case SquadType.Knights:  // ← Agregar nuevo caso
             return CreateKnightSquad();
         default:
@@ -197,7 +197,7 @@ public enum SquadType
     Squires,
     Archers,
     Pikemen,
-    Lancers,
+    Spearmen,
     Mages    // ← Nuevo
 }
 

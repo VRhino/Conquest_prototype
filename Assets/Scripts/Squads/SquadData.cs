@@ -13,7 +13,7 @@ public class SquadData : ScriptableObject
     /// <summary>Name of the squad shown in UI.</summary>
     public string squadName;
     /// <summary>Type of squad this data represents.</summary>
-    public SquadType tipo;
+    public SquadType type;
     /// <summary>Unit type for this squad.</summary>
     public UnitType unitType;
     /// <summary>Icon used in menus.</summary>
@@ -29,7 +29,7 @@ public class SquadData : ScriptableObject
     /// <summary>Grid-based formations the squad can adopt.</summary>
     public GridFormationScriptableObject[] gridFormations;
     /// <summary>Leadership cost to deploy the squad.</summary>
-    public int liderazgoCost;
+    public int leadershipCost;
     /// <summary>Default tactical behavior profile.</summary>
     public BehaviorProfile behaviorProfile;
 
@@ -39,63 +39,68 @@ public class SquadData : ScriptableObject
 
     // Base unit attributes
     /// <summary>Base health for each unit.</summary>
-    public float vidaBase;
+    public int baseHealth;
     /// <summary>Base movement speed.</summary>
-    public float velocidadBase;
+    public float baseSpeed;
     /// <summary>Mass used for physics and pushback.</summary>
-    public float masa;
+    public float massValue;
     /// <summary>General weight category value.</summary>
-    public float peso;
+    public float totalWeight;
     /// <summary>Block value if the unit carries a shield.</summary>
-    public float bloqueo;
+    public int block;
+    /// <summary>Block regeneration rate.</summary>
+    public int blockRegenRate;
 
     // Defenses
     /// <summary>Defense against slashing damage.</summary>
-    public float defensaCortante;
+    public float slashingDefense;
     /// <summary>Defense against piercing damage.</summary>
-    public float defensaPerforante;
+    public float piercingDefense;
     /// <summary>Defense against blunt damage.</summary>
-    public float defensaContundente;
+    public float bluntDefense;
 
     // Damage and penetration
     /// <summary>Slashing damage dealt.</summary>
-    public float danoCortante;
+    public float slashingDamage;
     /// <summary>Piercing damage dealt.</summary>
-    public float danoPerforante;
+    public float piercingDamage;
     /// <summary>Blunt damage dealt.</summary>
-    public float danoContundente;
+    public float bluntDamage;
     /// <summary>Slashing penetration value.</summary>
-    public float penetracionCortante;
+    public float slashingPenetration;
     /// <summary>Piercing penetration value.</summary>
-    public float penetracionPerforante;
+    public float piercingPenetration;
     /// <summary>Blunt penetration value.</summary>
-    public float penetracionContundente;
+    public float bluntPenetration;
 
     // Ranged-only attributes
     /// <summary>True if the squad attacks from range.</summary>
-    public bool esUnidadADistancia;
+    public bool isDistanceUnit;
     /// <summary>Maximum effective range.</summary>
-    public float alcance;
+    public float range;
     /// <summary>Base accuracy percentage.</summary>
-    public float precision;
+    public float accuracy;
     /// <summary>Time between shots.</summary>
-    public float cadenciaFuego;
+    public float fireRate;
     /// <summary>Time required to reload.</summary>
-    public float velocidadRecarga;
+    public float reloadSpeed;
     /// <summary>Total ammunition carried.</summary>
-    public int municionTotal;
+    public int ammo;
 
     // Progression curves
     /// <summary>Health scaling per level.</summary>
-    public AnimationCurve vidaCurve;
+    public AnimationCurve healthCurve;
     /// <summary>Damage scaling per level.</summary>
-    public AnimationCurve danoCurve;
+    public AnimationCurve damageCurve;
     /// <summary>Defense scaling per level.</summary>
-    public AnimationCurve defensaCurve;
+    public AnimationCurve defenseCurve;
     /// <summary>Speed scaling per level.</summary>
-    public AnimationCurve velocidadCurve;
+    public AnimationCurve speedCurve;
 
     // Squad size
     /// <summary>Total number of units in this squad.</summary>
     public int unitCount;
+    
+    /// <summary> Prefab name for the visual representation of this unit type.</summary>
+    public string visualPrefabName;
 }

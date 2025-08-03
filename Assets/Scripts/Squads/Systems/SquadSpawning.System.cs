@@ -233,7 +233,7 @@ public partial class SquadSpawningSystem : SystemBase
             SquadType.Squires => "UnitVisual_Escudero",
             SquadType.Archers => "UnitVisual_Arquero",
             SquadType.Pikemen => "UnitVisual_Pikemen",
-            SquadType.Lancers => "UnitVisual_Caballo", 
+            SquadType.Spearmen => "UnitVisual_Spearmen", 
             _ => "UnitVisual_Default"
         };
     }

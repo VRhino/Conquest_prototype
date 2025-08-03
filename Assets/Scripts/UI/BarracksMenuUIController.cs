@@ -17,6 +17,9 @@ public class BarracksMenuUIController : MonoBehaviour
     [Header("Panel principal del menú de barracas")]
     public GameObject mainPanel;
 
+    [Header("Panel de detalle de escuadrón")]
+    public SquadDetailPanel squadDetailPanel;
+
     [Header("Botones de acción")]
     public Button exitButton;
     public Button addInfantryButton;
@@ -93,6 +96,7 @@ public class BarracksMenuUIController : MonoBehaviour
                 var optionUI = itemGO.GetComponent<SquadOptionUI>();
                 optionUI?.SetSquadData(squadData);
                 optionUI.setProgress(squadInstance.level.ToString());
+                optionUI.onClick = () => showSquadDetails(squadInstance);
             }
         }
 
@@ -108,7 +112,36 @@ public class BarracksMenuUIController : MonoBehaviour
 
         Debug.Log($"[BarracksMenuUIController] Abriendo menú de barracas para: {heroData?.heroName ?? "(null)"}");
     }
-
+    public void showSquadDetails(SquadInstanceData squadDataAndProgress)
+    {
+        if (squadDataAndProgress == null)
+        {
+            Debug.LogWarning("[BarracksMenuUIController] SquadData nulo al intentar mostrar detalles");
+            return;
+        }
+        Debug.Log($"[BarracksMenuUIController] Mostrando detalles del escuadrón: {squadDataAndProgress.customName}");
+        // Buscar el SquadData correspondiente
+        var squadDatabase = Resources.Load<SquadDatabase>("Data/Squads/SquadDatabase");
+        if (squadDatabase == null)
+        {
+            Debug.LogWarning("[BarracksMenuUIController] No se pudo cargar SquadDatabase para detalles");
+            return;
+        }
+        var squadData = squadDatabase.allSquads.Find(sq => sq != null && sq.id == squadDataAndProgress.baseSquadID);
+        if (squadData == null)
+        {
+            Debug.LogWarning($"[BarracksMenuUIController] No se encontró SquadData para baseSquadID: {squadDataAndProgress.baseSquadID}");
+            return;
+        }
+        if (squadDetailPanel != null)
+        {
+            squadDetailPanel.Show(squadDataAndProgress, squadData);
+        }
+        else
+        {
+            Debug.LogWarning("[BarracksMenuUIController] No se asignó SquadDetailPanel en el inspector");
+        }
+    }
     public void Close()
     {
         if (mainPanel != null)
@@ -154,9 +187,11 @@ public class BarracksMenuUIController : MonoBehaviour
             level = 1,
             experience = 0,
             unlockedAbilities = new System.Collections.Generic.List<string>(),
-            unlockedFormationsIndices = new System.Collections.Generic.List<int>(),
+            //add the index of all grid formations on squadData
+            permittedFormationIndexes = squadData.gridFormations.Select((f, i) => i).ToList(),
             selectedFormationIndex = 0,
-            customName = squadData.squadName
+            customName = squadData.squadName,
+            unitsInSquad = squadData.unitCount,
         };
 
         _currentHeroData.squadProgress.Add(newSquad);

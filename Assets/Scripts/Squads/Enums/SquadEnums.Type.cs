@@ -31,7 +31,7 @@ public enum SquadType
     Squires,
     Archers,
     Pikemen,
-    Lancers
+    Spearmen
 }
 
 /// <summary>

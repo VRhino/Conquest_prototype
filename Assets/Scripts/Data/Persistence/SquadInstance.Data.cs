@@ -31,11 +31,22 @@ public class SquadInstanceData
     public List<string> unlockedAbilities = new();
 
     /// <summary>Indices of unlocked formations inside the base data array.</summary>
-    public List<int> unlockedFormationsIndices = new();
+    public List<int> permittedFormationIndexes = new();
 
     /// <summary>Index of the currently selected formation.</summary>
     public int selectedFormationIndex = 0;
 
     /// <summary>Custom name given by the player to this squad.</summary>
     public string customName = string.Empty;
+
+    /// <summary>Number of units injured in this squad.</summary>
+    public int unitsInjured = 0;
+
+    /// <summary>Number of units killed in this squad.</summary>
+    public int unitsKilled = 0;
+
+    /// <summary>Number of pieces of equipment lost by this squad.</summary>
+    public int equipmentLost = 0;
+    /// <summary>Number of units currently in this squad.</summary>
+    public int unitsInSquad = 0;
 }

@@ -11,6 +11,8 @@ public class GridFormationScriptableObject : ScriptableObject
     /// <summary>Tipo de formación que representa este patrón.</summary>
     public FormationType formationType;
 
+    public Sprite formationIcon;
+
     /// <summary>
     /// Posiciones en la cuadrícula para las unidades del squad (sin incluir el héroe).
     /// Cada posición incluye el borde de 2 celdas alrededor de la formación.
