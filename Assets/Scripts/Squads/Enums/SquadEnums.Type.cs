@@ -51,3 +51,20 @@ public enum UnitType
     Cavalry,
     Distance
 }
+
+/// <summary>
+/// Enum que define los diferentes niveles de rareza para unidades/escuadrones.
+/// </summary>
+public enum SquadRarity
+{
+    peasant_tier,
+    levy_tier,
+    conscript_tier,
+    trained_tier,
+    seasoned_tier,
+    veteran_tier,
+    hardened_tier,
+    elite_tier,
+    master_tier,
+    legendary_tier
+}

@@ -283,6 +283,7 @@
     <Compile Include="Assets\Scripts\Squads\Systems\UnitStatScaling.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadOwner.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\NavMeshAgent.Authoring.cs" />
+    <Compile Include="Assets\Scripts\UI\SquadRarityUI.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInstance.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInput.Authoring.cs" />

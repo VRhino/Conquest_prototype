@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-
 /// <summary>
 /// Detailed configuration data for a squad type used by the game systems.
 /// </summary>
@@ -24,6 +23,8 @@ public class SquadData : ScriptableObject
     public Sprite unitImage;
     /// <summary>Prefab spawned for this squad.</summary>
     public GameObject prefab;
+    /// <summary>Rarity level of this squad.</summary>
+    public SquadRarity rarity = SquadRarity.levy_tier;
 
     // Formations and leadership
     /// <summary>Grid-based formations the squad can adopt.</summary>
