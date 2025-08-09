@@ -46,7 +46,6 @@ public class HeroClassSelector : MonoBehaviour
 
     
     private AvatarPartDatabase avatarPartDatabase;
-    private ItemDatabase itemDB; 
     public HeroClassDefinition selectedClass;
 
 
@@ -61,14 +60,13 @@ public class HeroClassSelector : MonoBehaviour
                 Debug.LogError("No se pudo cargar AvatarPartDatabase desde Resources/Data/Avatar/AvatarPartDatabase");
             }
         }
-        if (itemDB == null)
+        
+        // ItemDatabase ahora usa singleton - verificar que esté disponible
+        if (ItemDatabase.Instance == null)
         {
-            itemDB = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
-            if (itemDB == null)
-            {
-                Debug.LogError("No se pudo cargar ItemDatabase desde Resources/Data/Items/ItemDatabase");
-            }
+            Debug.LogError("ItemDatabase.Instance is null! Make sure ItemDatabase exists in Resources folder.");
         }
+        
         GenerateButtons();
         // Mostrar detalles de la clase en el índice 1 al iniciar (si existe)
         if (availableClasses != null && availableClasses.Count > 1)
@@ -271,7 +269,7 @@ public class HeroClassSelector : MonoBehaviour
     {
         foreach (var itemId in baseItemIds)
         {
-            var itemData = itemDB.GetItemDataById(itemId);
+            var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
             if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
             {
                 Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(

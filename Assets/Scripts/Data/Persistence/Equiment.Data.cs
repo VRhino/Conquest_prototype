@@ -12,4 +12,5 @@ public class Equipment
     public string torsoId = string.Empty;
     public string glovesId = string.Empty;
     public string pantsId = string.Empty;
+    public string bootsId = string.Empty;
 }

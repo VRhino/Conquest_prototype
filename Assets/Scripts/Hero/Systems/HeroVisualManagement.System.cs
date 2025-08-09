@@ -103,8 +103,8 @@ public partial class HeroVisualManagementSystem : SystemBase
             return;
         }
         var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
-        var itemDB = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
-        if (avatarPartDatabase == null || itemDB == null)
+        
+        if (avatarPartDatabase == null || ItemDatabase.Instance == null)
         {
             return;
         }
@@ -135,7 +135,7 @@ public partial class HeroVisualManagementSystem : SystemBase
         {
             if (!string.IsNullOrEmpty(itemId))
             {
-                var itemData = itemDB.GetItemDataById(itemId);
+                var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
                 if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
                 {
                     Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(

@@ -32,8 +32,16 @@ public class HeroData
     /// <summary>Unspent perk points.</summary>
     public int perkPoints = 0;
 
-     /// <summary>Bronze currency earned by this hero.</summary>
+    // Currency
+
+    /// <summary>Bronze currency earned by this hero.</summary>
     public int bronze = 0;
+
+    /// <summary>Silver currency earned by this hero.</summary>
+    public int silver = 0;
+
+    /// <summary>Gold currency earned by this hero.</summary>
+    public int gold = 0;
 
     // Attributes
 

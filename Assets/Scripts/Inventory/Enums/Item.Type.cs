@@ -9,6 +9,16 @@ public enum ItemType
     Torso,
     Gloves,
     Pants,
+    Boots,
     Consumable,
     Visual
+}
+
+public enum ItemRarity
+{
+    Common,
+    Uncommon,
+    Rare,
+    Epic,
+    Legendary
 }

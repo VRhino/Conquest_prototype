@@ -73,7 +73,6 @@ public class AvatarCreatorUIController : MonoBehaviour
     }
     private void OnCancelPressed()
     {
-        PlayerSessionService.Clear();
         SceneManager.LoadScene("CharacterSelecctionScene");
     }
 }

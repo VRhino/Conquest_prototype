@@ -128,13 +128,13 @@ public class SquadDetailPanel : MonoBehaviour
         { SquadRarity.peasant_tier,   (new Color(0.5f, 0.5f, 0.5f), 0.5f) }, // gray
         { SquadRarity.levy_tier,      (new Color(0.5f, 0.5f, 0.5f), 1f) },
         { SquadRarity.conscript_tier, (new Color(0.5f, 0.5f, 0.5f), 1.5f) },
-        { SquadRarity.trained_tier,   (Color.green, 2f) },
-        { SquadRarity.seasoned_tier,  (Color.green, 2.5f) },
-        { SquadRarity.veteran_tier,   (new Color(0.3f, 0.5f, 1f), 3f) }, // blue
-        { SquadRarity.hardened_tier,  (new Color(0.3f, 0.5f, 1f), 3.5f) },
-        { SquadRarity.elite_tier,     (new Color(0.6f, 0.2f, 0.7f), 4f) }, // purple
-        { SquadRarity.master_tier,    (new Color(0.6f, 0.2f, 0.7f), 4.5f) },
-        { SquadRarity.legendary_tier, (new Color(1f, 0.85f, 0.2f), 5f) } // golden
+        { SquadRarity.trained_tier,   (new Color32(72, 180, 122, 255), 2f) }, // green #48B47A
+        { SquadRarity.seasoned_tier,  (new Color32(72, 180, 122, 255), 2.5f) }, // green #48B47A
+        { SquadRarity.veteran_tier,   (new Color32(89, 131, 203, 255), 3f) }, // blue #5983CB
+        { SquadRarity.hardened_tier,  (new Color32(89, 131, 203, 255), 3.5f) }, // blue #5983CB
+        { SquadRarity.elite_tier,     (new Color32(167, 108, 203, 255), 4f) }, // purple #A76CCB
+        { SquadRarity.master_tier,    (new Color32(167, 108, 203, 255), 4.5f) }, // purple #A76CCB
+        { SquadRarity.legendary_tier, (new Color32(217, 159, 87, 255), 5f) } // golden #D99F57
     };
 
     public static (Color color, float stars) GetRarityInfo(SquadRarity rarity)

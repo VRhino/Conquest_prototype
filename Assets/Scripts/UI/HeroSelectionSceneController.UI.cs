@@ -137,12 +137,12 @@ public class HeroSelectionSceneController : MonoBehaviour
             equipment.glovesId,
             equipment.pantsId
         };
-        ItemDatabase itemDB = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
+        
         foreach (var itemId in equipmentIds)
         {
             if (!string.IsNullOrEmpty(itemId))
             {
-                ItemData itemData = itemDB.GetItemDataById(itemId);
+                ItemData itemData = ItemDatabase.Instance.GetItemDataById(itemId);
                 if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
                 {
                     Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(

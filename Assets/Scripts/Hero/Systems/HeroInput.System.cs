@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -88,6 +89,9 @@ public partial class HeroInputSystem : SystemBase
 
         hasInput = (move.x != 0 || move.y != 0 || sprint || skill1 || skill2 || ultimate || attack || interact);
 
+        // --- Abrir/cerrar inventario solo en la escena del feudo ---
+
+        manageInventoryDisplay();
         var ecb = new EntityCommandBuffer(Allocator.TempJob);
 
         var job = new HeroInputJob
@@ -108,6 +112,31 @@ public partial class HeroInputSystem : SystemBase
 
         handle.Complete(); // Solo si necesitas efectos inmediatos, como el ecb.Playback
         ecb.Playback(EntityManager);
-        ecb.Dispose();      
+        ecb.Dispose();
+    }
+
+    private void manageInventoryDisplay()
+    {
+        var keyboardInput = UnityEngine.InputSystem.Keyboard.current;
+        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        bool isFeudoScene = currentScene == "FeudoScene";
+        if (isFeudoScene && keyboardInput != null && keyboardInput.iKey.wasPressedThisFrame)
+        {
+            var inventoryPanel = UnityEngine.Object.FindObjectOfType<InventoryPanelController>(true);
+            if (inventoryPanel != null)
+            {
+                if (inventoryPanel.mainPanel != null && inventoryPanel.mainPanel.activeSelf)
+                {
+                    inventoryPanel.ClosePanel();
+                }
+                else
+                {
+                    // Obtener el HeroData actual (ajusta si tu sistema es diferente)
+                    var hero = PlayerSessionService.SelectedHero;
+                    if (hero != null)
+                        inventoryPanel.OpenPanel(hero);
+                }
+            }
+        }
     }
 }

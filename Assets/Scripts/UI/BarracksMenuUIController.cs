@@ -119,7 +119,6 @@ public class BarracksMenuUIController : MonoBehaviour
             Debug.LogWarning("[BarracksMenuUIController] SquadData nulo al intentar mostrar detalles");
             return;
         }
-        Debug.Log($"[BarracksMenuUIController] Mostrando detalles del escuadrón: {squadDataAndProgress.customName}");
         // Buscar el SquadData correspondiente
         var squadDatabase = Resources.Load<SquadDatabase>("Data/Squads/SquadDatabase");
         if (squadDatabase == null)
@@ -195,7 +194,6 @@ public class BarracksMenuUIController : MonoBehaviour
         };
 
         _currentHeroData.squadProgress.Add(newSquad);
-        Debug.Log($"[BarracksMenuUIController] Escuadrón '{squadData.squadName}' enlistado correctamente. Total ahora: {_currentHeroData.squadProgress.Count}");
 
         // Actualizar la sesión (SelectedHero) y guardar el PlayerData completo
         if (PlayerSessionService.CurrentPlayer != null)
