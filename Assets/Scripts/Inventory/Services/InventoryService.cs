@@ -74,9 +74,16 @@ public static class InventoryService
             Debug.LogWarning($"[InventoryService] Item '{itemId}' does not exist in database");
             return false;
         }
+        InventoryItem existingItem = null;
+        try
+        {
+            existingItem = _currentHero.inventory.FirstOrDefault(i => i.itemId == itemId);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[InventoryService] Error finding item '{itemId}': {ex.Message}");
+        }
 
-        var existingItem = _currentHero.inventory.FirstOrDefault(i => i.itemId == itemId);
-        
         // Si el ítem ya existe y es stackeable, aumentar cantidad
         if (existingItem != null && InventoryUtils.IsStackable(itemId))
         {
@@ -108,6 +115,9 @@ public static class InventoryService
         // Emitir eventos
         InventoryEvents.OnItemAdded?.Invoke(itemId, quantity);
         InventoryEvents.OnInventoryChanged?.Invoke();
+        
+        // Guardar persistencia automáticamente
+        SavePlayerData();
         
         return true;
     }
@@ -159,6 +169,9 @@ public static class InventoryService
         InventoryEvents.OnItemRemoved?.Invoke(itemId, quantity);
         InventoryEvents.OnInventoryChanged?.Invoke();
         
+        // Guardar persistencia automáticamente
+        SavePlayerData();
+        
         return true;
     }
 
@@ -208,6 +221,9 @@ public static class InventoryService
         InventoryEvents.OnItemEquipped?.Invoke(itemId);
         InventoryEvents.OnInventoryChanged?.Invoke();
         
+        // Guardar persistencia automáticamente
+        SavePlayerData();
+        
         return true;
     }
 
@@ -226,6 +242,9 @@ public static class InventoryService
         // Emitir eventos
         InventoryEvents.OnItemUnequipped?.Invoke(currentItemId);
         InventoryEvents.OnInventoryChanged?.Invoke();
+        
+        // Guardar persistencia automáticamente
+        SavePlayerData();
         
         return true;
     }
@@ -476,6 +495,30 @@ public static class InventoryService
         if (_currentHero?.equipment == null) return;
 
         InventoryUtils.SetEquippedItemId(_currentHero.equipment, slot, itemId);
+    }
+
+    /// <summary>
+    /// Guarda automáticamente los datos del jugador cuando hay cambios en el inventario.
+    /// </summary>
+    private static void SavePlayerData()
+    {
+        try
+        {
+            var playerData = PlayerSessionService.CurrentPlayer;
+            if (playerData != null)
+            {
+                SaveSystem.SavePlayer(playerData);
+                Debug.Log("[InventoryService] Player data saved automatically after inventory change");
+            }
+            else
+            {
+                Debug.LogWarning("[InventoryService] Cannot save player data: PlayerSessionService.CurrentPlayer is null");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[InventoryService] Failed to save player data: {e.Message}");
+        }
     }
 
     #endregion

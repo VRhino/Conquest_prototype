@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -127,6 +128,7 @@ public class InventoryPanelController : MonoBehaviour
             if (cellController != null)
             {
                 _cellControllers.Add(cellController);
+                cellController.SetCellIndex(i); // Asignar índice de celda
                 cellController.Clear(); // Inicialmente vacía
             }
             else
@@ -135,7 +137,6 @@ public class InventoryPanelController : MonoBehaviour
             }
         }
 
-        Debug.Log($"[InventoryPanelController] Creada grilla de inventario: {totalCells} celdas ({gridWidth}x{gridHeight})");
     }
 
     /// <summary>
@@ -158,13 +159,14 @@ public class InventoryPanelController : MonoBehaviour
         // Mostrar el panel
         if (mainPanel != null)
             mainPanel.SetActive(true);
+        
+        ToggleUIInteraction();
 
         // Actualizar displays
         UpdateMoneyDisplay();
         UpdateInventoryDisplay();
         UpdateFilterButtons();
 
-        Debug.Log($"[InventoryPanelController] Panel abierto para héroe: {heroData.heroName}");
     }
 
     /// <summary>
@@ -174,9 +176,10 @@ public class InventoryPanelController : MonoBehaviour
     {
         if (mainPanel != null)
             mainPanel.SetActive(false);
+        
+        ToggleUIInteraction();
 
         _currentHero = null;
-        Debug.Log("[InventoryPanelController] Panel cerrado");
     }
 
     /// <summary>
@@ -223,30 +226,34 @@ public class InventoryPanelController : MonoBehaviour
     /// </summary>
     private void UpdateInventoryDisplay()
     {
-        if (_currentHero == null || _cellControllers.Count == 0) return;
+        if (_currentHero == null || _cellControllers.Count == 0)
+            return;
 
-        // Obtener ítems filtrados
-        List<InventoryItem> filteredItems = GetFilteredItems();
-
-        // Limpiar todas las celdas
-        foreach (var cellController in _cellControllers)
+        // Asegurarse que el inventario tenga el tamaño de la grilla (permitir huecos)
+        var inventory = _currentHero.inventory;
+        int totalCells = gridWidth * gridHeight;
+        if (inventory.Count < totalCells)
         {
-            cellController.Clear();
+            // Rellenar con nulls si faltan posiciones
+            while (inventory.Count < totalCells)
+                inventory.Add(null);
         }
 
-        // Llenar celdas con ítems filtrados
-        for (int i = 0; i < filteredItems.Count && i < _cellControllers.Count; i++)
+        for (int i = 0; i < _cellControllers.Count; i++)
         {
-            var item = filteredItems[i];
-            var itemData = InventoryUtils.GetItemData(item.itemId);
-            
-            if (itemData != null)
+            InventoryItemCellController cell = _cellControllers[i];
+            cell.SetCellIndex(i);
+            if (inventory != null && inventory[i] != null)
             {
-                _cellControllers[i].SetItem(item, itemData);
+                var item = inventory[i];
+                var itemData = InventoryUtils.GetItemData(item.itemId);
+                cell.SetItem(item, itemData);
+            }
+            else
+            {
+                cell.Clear();
             }
         }
-
-        Debug.Log($"[InventoryPanelController] Inventario actualizado: {filteredItems.Count} ítems mostrados con filtro {_currentFilter}");
     }
 
     /// <summary>
@@ -298,6 +305,73 @@ public class InventoryPanelController : MonoBehaviour
     {
         UpdateInventoryDisplay();
         UpdateMoneyDisplay();
+    }
+
+    /// <summary>
+    /// Intercambia ítems entre dos celdas de la grilla.
+    /// Llamado por el sistema de drag and drop.
+    /// </summary>
+    /// <param name="sourceCellIndex">Índice de la celda origen</param>
+    /// <param name="targetCellIndex">Índice de la celda destino</param>
+    public void SwapItems(int sourceCellIndex, int targetCellIndex)
+    {
+        if (_currentHero?.inventory == null)
+        {
+            Debug.LogError("[InventoryPanelController] No hay héroe o inventario válido para intercambiar ítems");
+            return;
+        }
+
+        // Validar índices
+        if (sourceCellIndex < 0 || sourceCellIndex >= _cellControllers.Count ||
+            targetCellIndex < 0 || targetCellIndex >= _cellControllers.Count)
+        {
+            Debug.LogError($"[InventoryPanelController] Índices de celda inválidos: origen={sourceCellIndex}, destino={targetCellIndex}");
+            return;
+        }
+
+        var inventory = _currentHero.inventory;
+        int totalCells = gridWidth * gridHeight;
+        if (inventory.Count < totalCells)
+        {
+            while (inventory.Count < totalCells)
+                inventory.Add(null);
+        }
+
+        // Si ambas celdas están vacías, no hacer nada
+        if (inventory[sourceCellIndex] == null && inventory[targetCellIndex] == null)
+            return;
+
+        // Intercambiar o mover ítem
+        if (inventory[sourceCellIndex] != null)
+        {
+            var temp = inventory[sourceCellIndex];
+            inventory[sourceCellIndex] = inventory[targetCellIndex];
+            inventory[targetCellIndex] = temp;
+        }
+        // Actualizar visualización
+        UpdateInventoryDisplay();
+    }
+
+    private void ToggleUIInteraction()
+    {
+        if (DialogueUIState.IsDialogueOpen)
+        {
+            DialogueUIState.IsDialogueOpen = false;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(true);
+
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        else
+        {
+            DialogueUIState.IsDialogueOpen = true;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(false);
+            
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 
     #region Debug & Validation

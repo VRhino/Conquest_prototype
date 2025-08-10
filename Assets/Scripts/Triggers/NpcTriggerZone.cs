@@ -110,7 +110,16 @@ namespace ConquestTactics.Triggers
                         CloseDialogue();
                         break;
                     case Dialogue.DialogueOptionType.CustomEvent:
-                        // Aquí puedes disparar lógica personalizada usando option.customEvent
+                        if (option.customEvent == "Add_Item")
+                        {
+                            var hero = PlayerSessionService.SelectedHero;
+                            if (hero != null)
+                            {
+                                InventoryService.Initialize(hero);
+                                InventoryService.AddItem("TorMADef", 1);
+                            }
+                        }
+                        CloseDialogue();
                         break;
                 }
             }

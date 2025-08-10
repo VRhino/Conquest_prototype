@@ -3,11 +3,19 @@
   "WorkspaceRootPath": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\data\\items\\itemdatabase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\data\\items\\itemdatabase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\systems\\heroinput.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\systems\\heroinput.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\squads\\systems\\unitanimation.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\squads\\systems\\unitanimation.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\squads\\systems\\unitanimation.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -127,19 +135,44 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "NpcTriggerZone.cs",
-              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
-              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
-              "RelativeToolTip": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
-              "ViewState": "AgIAAEwAAAAAAAAAAAAqwGAAAABmAAAAAAAAAA==",
+              "Title": "ItemDatabase.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Data\\Items\\ItemDatabase.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Data\\Items\\ItemDatabase.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Data\\Items\\ItemDatabase.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Data\\Items\\ItemDatabase.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-31T13:53:44.958Z",
+              "WhenOpened": "2025-08-10T07:48:11.991Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "HeroInput.System.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-09T10:37:01.844Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "NpcTriggerZone.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
+              "ViewState": "AgIAAEwAAAAAAAAAAAAqwGAAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-07-31T13:53:44.958Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "UnitAnimation.System.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\Systems\\UnitAnimation.System.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\Systems\\UnitAnimation.System.cs",
@@ -147,12 +180,11 @@
               "RelativeToolTip": "Assets\\Scripts\\Squads\\Systems\\UnitAnimation.System.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAIBJwA4AAAAwAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-27T09:51:00.625Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-27T09:51:00.625Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "HeroClassSelector.UI.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\avatarCreator\\HeroClassSelector.UI.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\avatarCreator\\HeroClassSelector.UI.cs",
@@ -164,7 +196,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "avatarCreatorController.UI.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\avatarCreator\\avatarCreatorController.UI.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\avatarCreator\\avatarCreatorController.UI.cs",
@@ -176,7 +208,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 10,
               "Title": "Lit.shader",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Library\\PackageCache\\com.unity.render-pipelines.universal@14.0.12\\Shaders\\Lit.shader",
               "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.render-pipelines.universal@14.0.12\\Shaders\\Lit.shader",
@@ -188,7 +220,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 11,
               "Title": "HeroInitialization.System.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\Systems\\HeroInitialization.System.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\Systems\\HeroInitialization.System.cs",
@@ -200,7 +232,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 12,
               "Title": "HeroEntityAuthoring.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroEntityAuthoring.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroEntityAuthoring.cs",
@@ -211,7 +243,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 18,
               "Title": "SquadVisualManagementSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\SquadVisualManagementSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\SquadVisualManagementSystem.cs",
@@ -223,7 +255,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 19,
               "Title": "HeroVisualManagementSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroVisualManagementSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroVisualManagementSystem.cs",
@@ -235,7 +267,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "EcsAnimationInputAdapter.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Animation\\EcsAnimationInputAdapter.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Animation\\EcsAnimationInputAdapter.cs",
@@ -247,7 +279,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 9,
               "Title": "GraphicEditor.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Library\\PackageCache\\com.unity.ugui@1.0.0\\Editor\\UI\\GraphicEditor.cs",
               "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.ugui@1.0.0\\Editor\\UI\\GraphicEditor.cs",
@@ -259,7 +291,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 7,
               "Title": "Debug.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Library\\PackageCache\\com.unity.entities@1.3.14\\Unity.Entities\\Stubs\\Unity\\Debug.cs",
               "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.entities@1.3.14\\Unity.Entities\\Stubs\\Unity\\Debug.cs",
@@ -271,7 +303,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 6,
               "Title": "HeroVisualManagement.System.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\Systems\\HeroVisualManagement.System.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\Systems\\HeroVisualManagement.System.cs",
@@ -283,7 +315,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 20,
               "Title": "VisualPrefabAuthoring.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\VisualPrefabAuthoring.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\VisualPrefabAuthoring.cs",
@@ -295,7 +327,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 21,
               "Title": "HeroSquadSelectionTestAuthoring.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\SoloParaPruebas\\HeroSquadSelectionTestAuthoring.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\SoloParaPruebas\\HeroSquadSelectionTestAuthoring.cs",
@@ -307,7 +339,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 13,
               "Title": "FormationPositionCalculator.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\FormationPositionCalculator.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\FormationPositionCalculator.cs",
@@ -319,7 +351,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 22,
               "Title": "UnitFollowFormationSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\UnitFollowFormationSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\UnitFollowFormationSystem.cs",
@@ -331,7 +363,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 23,
               "Title": "FormationSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\FormationSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\FormationSystem.cs",
@@ -343,7 +375,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 14,
               "Title": "GridFormationScriptableObject.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\GridFormationScriptableObject.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\GridFormationScriptableObject.cs",
@@ -355,7 +387,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 15,
               "Title": "SquadData.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Squads\\SquadData.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Squads\\SquadData.cs",
@@ -367,7 +399,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 24,
               "Title": "HeroPrefabBaker.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroPrefabBaker.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroPrefabBaker.cs",
@@ -379,7 +411,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 25,
               "Title": "HeroSpawnSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroSpawnSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroSpawnSystem.cs",
@@ -391,7 +423,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 16,
               "Title": "Game.ECS.asmdef",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Game.ECS.asmdef",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Game.ECS.asmdef",
@@ -403,7 +435,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 26,
               "Title": "SpawnPointComponent.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Map\\SpawnPointComponent.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Map\\SpawnPointComponent.cs",
@@ -415,7 +447,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 27,
               "Title": "HeroClassReferenceAuthoring.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroClassReferenceAuthoring.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroClassReferenceAuthoring.cs",
@@ -427,7 +459,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 28,
               "Title": "HeroAttackSystem.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\HeroAttackSystem.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\HeroAttackSystem.cs",
@@ -439,7 +471,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 29,
               "Title": "DamageProfileAuthoring.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs",
@@ -451,7 +483,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 17,
               "Title": "IPCManager.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Library\\PackageCache\\com.unity.transport@1.5.0\\Runtime\\IPCManager.cs",
               "RelativeDocumentMoniker": "Library\\PackageCache\\com.unity.transport@1.5.0\\Runtime\\IPCManager.cs",

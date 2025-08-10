@@ -289,8 +289,8 @@
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryItemCellController.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttack.System.cs" />
     <Compile Include="Assets\Scripts\Inventory\InventoryStats.cs" />
-    <Compile Include="Assets\Scripts\Squads\Systems\UnitStatScaling.System.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryPanelController.cs" />
+    <Compile Include="Assets\Scripts\Squads\Systems\UnitStatScaling.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadOwner.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\NavMeshAgent.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInstance.Component.cs" />
@@ -308,6 +308,7 @@
     <Compile Include="Assets\Scripts\Squads\Enums\SquadState.Type.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCalculation.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroAttribute.System.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\InventoryDragHandler.cs" />
     <Compile Include="Assets\Scripts\Squads\Retreat.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitTargeting.System.cs" />
     <Compile Include="Assets\Scripts\Combat\Team.Component.cs" />
