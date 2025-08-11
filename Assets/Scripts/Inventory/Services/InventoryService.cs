@@ -31,28 +31,11 @@ public static class InventoryService
         
         if (_currentHero?.inventory == null)
         {
-            Debug.LogWarning("[InventoryService] Hero inventory is null, initializing empty list");
             if (_currentHero != null)
                 _currentHero.inventory = new List<InventoryItem>();
         }
     }
-
-    /// <summary>
-    /// Inicializa el servicio con el héroe activo y una base de datos específica.
-    /// </summary>
-    public static void Initialize(HeroData hero, ItemDatabase itemDatabase)
-    {
-        _currentHero = hero;
-        _itemDatabase = itemDatabase;
-        
-        if (_currentHero?.inventory == null)
-        {
-            Debug.LogWarning("[InventoryService] Hero inventory is null, initializing empty list");
-            if (_currentHero != null)
-                _currentHero.inventory = new List<InventoryItem>();
-        }
-    }
-
+    
     /// <summary>
     /// Agrega un ítem al inventario. Si es stackeable y ya existe, aumenta la cantidad.
     /// </summary>
@@ -61,65 +44,31 @@ public static class InventoryService
     /// <returns>True si se agregó exitosamente, false si no hay espacio</returns>
     public static bool AddItem(string itemId, int quantity = 1)
     {
-        if (!ValidateService()) return false;
-        
-        // Validaciones de entrada
-        if (!InventoryUtils.ValidateItemParameters(itemId, quantity))
-        {
+        if (!ValidateOperation(itemId, quantity))
+        {   
+            Debug.LogWarning($"Invalid operation for itemId '{itemId}' with quantity {quantity}");
             return false;
-        }
-        
-        if (!InventoryUtils.ItemExists(itemId))
-        {
-            Debug.LogWarning($"[InventoryService] Item '{itemId}' does not exist in database");
-            return false;
-        }
-        InventoryItem existingItem = null;
-        try
-        {
-            existingItem = _currentHero.inventory.FirstOrDefault(i => i.itemId == itemId);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[InventoryService] Error finding item '{itemId}': {ex.Message}");
         }
 
-        // Si el ítem ya existe y es stackeable, aumentar cantidad
-        if (existingItem != null && InventoryUtils.IsStackable(itemId))
+        var existingItem = FindStackableItem(itemId);
+
+        if (existingItem != null)
         {
-            existingItem.quantity += quantity;
-            Debug.Log($"[InventoryService] Stacked {quantity} of '{itemId}'. New total: {existingItem.quantity}");
+            return StackExistingItem(existingItem, quantity, itemId);
         }
         else
         {
-            // Verificar límite de slots solo para ítems no stackeables o nuevos
-            if (_currentHero.inventory.Count >= InventoryLimit)
-            {
-                Debug.LogWarning($"[InventoryService] Inventory full! Cannot add '{itemId}'. Limit: {InventoryLimit}");
-                InventoryEvents.OnInventoryFull?.Invoke();
-                return false;
-            }
-
-            // Crear nuevo ítem
-            var itemData = InventoryUtils.GetItemData(itemId);
-            var newItem = new InventoryItem
-            {
-                itemId = itemId,
-                itemType = itemData?.itemType ?? ItemType.None,
-                quantity = quantity
-            };
-            _currentHero.inventory.Add(newItem);
-            Debug.Log($"[InventoryService] Added new item '{itemId}' x{quantity} to inventory");
+            return AddNewItem(itemId, quantity);
         }
+    }
 
-        // Emitir eventos
-        InventoryEvents.OnItemAdded?.Invoke(itemId, quantity);
-        InventoryEvents.OnInventoryChanged?.Invoke();
-        
-        // Guardar persistencia automáticamente
-        SavePlayerData();
-        
-        return true;
+    /// <summary>
+    /// Busca un item stackeable del mismo tipo
+    /// </summary>
+    private static InventoryItem FindStackableItem(string itemId)
+    {
+        return _currentHero.inventory.FirstOrDefault(item => 
+            item.itemId == itemId && item.IsStackable);
     }
 
     /// <summary>
@@ -130,49 +79,16 @@ public static class InventoryService
     /// <returns>True si se removió exitosamente, false si no existía o cantidad insuficiente</returns>
     public static bool RemoveItem(string itemId, int quantity = 1)
     {
-        if (!ValidateService()) return false;
-        
-        // Validaciones de entrada
-        if (!InventoryUtils.ValidateItemParameters(itemId, quantity))
-        {
-            return false;
-        }
+        if (!ValidateOperation(itemId, quantity)) return false;
 
-        var item = _currentHero.inventory.FirstOrDefault(i => i.itemId == itemId);
+        var item = FindItemInInventory(itemId);
         if (item == null)
-        {
-            Debug.LogWarning($"[InventoryService] Cannot remove item '{itemId}': not found in inventory");
             return false;
-        }
 
-        // Verificar que hay suficiente cantidad
         if (item.quantity < quantity)
-        {
-            Debug.LogWarning($"[InventoryService] Cannot remove {quantity} of '{itemId}': only {item.quantity} available");
             return false;
-        }
 
-        item.quantity -= quantity;
-        
-        // Si la cantidad llega a 0 o menos, remover completamente
-        if (item.quantity <= 0)
-        {
-            _currentHero.inventory.Remove(item);
-            Debug.Log($"[InventoryService] Completely removed '{itemId}' from inventory");
-        }
-        else
-        {
-            Debug.Log($"[InventoryService] Removed {quantity} of '{itemId}'. Remaining: {item.quantity}");
-        }
-
-        // Emitir eventos
-        InventoryEvents.OnItemRemoved?.Invoke(itemId, quantity);
-        InventoryEvents.OnInventoryChanged?.Invoke();
-        
-        // Guardar persistencia automáticamente
-        SavePlayerData();
-        
-        return true;
+        return ProcessItemRemoval(item, quantity, itemId);
     }
 
     /// <summary>
@@ -184,47 +100,17 @@ public static class InventoryService
     {
         if (!ValidateService()) return false;
         
-        var item = _currentHero.inventory.FirstOrDefault(i => i.itemId == itemId);
+        var item = FindItemInInventory(itemId);
         if (item == null)
-        {
-            Debug.LogWarning($"[InventoryService] Cannot equip item '{itemId}': not found in inventory");
             return false;
-        }
 
-        var itemType = item.itemType;
-        
-        // Verificar que sea un ítem equipable
-        if (!InventoryUtils.IsEquippableType(itemType))
-        {
-            Debug.LogWarning($"[InventoryService] Cannot equip item '{itemId}': type '{itemType}' is not equippable");
+        if (!InventoryUtils.IsEquippableType(item.itemType))
             return false;
-        }
 
-        // Validaciones adicionales de equipamiento
         if (!CanEquipItemAdvanced(itemId))
-        {
-            Debug.LogWarning($"[InventoryService] Cannot equip item '{itemId}': advanced validation failed");
             return false;
-        }
 
-        // Desequipar ítem anterior si existe
-        string previousItemId = GetEquippedItemInSlot(itemType);
-        if (!string.IsNullOrEmpty(previousItemId))
-        {
-            UnequipItem(itemType);
-        }
-
-        // Equipar nuevo ítem
-        SetEquippedItem(itemType, itemId);
-
-        // Emitir eventos
-        InventoryEvents.OnItemEquipped?.Invoke(itemId);
-        InventoryEvents.OnInventoryChanged?.Invoke();
-        
-        // Guardar persistencia automáticamente
-        SavePlayerData();
-        
-        return true;
+        return ProcessEquipment(itemId, item.itemType);
     }
 
     /// <summary>
@@ -238,13 +124,7 @@ public static class InventoryService
         if (string.IsNullOrEmpty(currentItemId)) return false;
 
         SetEquippedItem(slot, string.Empty);
-
-        // Emitir eventos
-        InventoryEvents.OnItemUnequipped?.Invoke(currentItemId);
-        InventoryEvents.OnInventoryChanged?.Invoke();
-        
-        // Guardar persistencia automáticamente
-        SavePlayerData();
+        EmitEquipmentEvents(currentItemId, isEquipping: false);
         
         return true;
     }
@@ -335,52 +215,28 @@ public static class InventoryService
     {
         if (!ValidateService()) return false;
 
-        bool repairsNeeded = false;
         var itemsToRemove = new List<InventoryItem>();
+        bool repairsNeeded = false;
 
         foreach (var item in _currentHero.inventory)
         {
-            // Verificar que el ítem existe en la base de datos
-            if (!_itemDatabase.ItemExists(item.itemId))
+            if (ShouldRemoveItem(item))
             {
-                Debug.LogWarning($"[InventoryService] Removing invalid item '{item.itemId}' from inventory");
                 itemsToRemove.Add(item);
                 repairsNeeded = true;
-                continue;
             }
-
-            // Verificar que la cantidad sea válida
-            if (item.quantity <= 0)
+            else if (FixItemType(item))
             {
-                Debug.LogWarning($"[InventoryService] Removing item '{item.itemId}' with invalid quantity {item.quantity}");
-                itemsToRemove.Add(item);
-                repairsNeeded = true;
-                continue;
-            }
-
-            // Sincronizar el tipo del ítem con la base de datos
-            var correctType = _itemDatabase.GetItemType(item.itemId);
-            if (item.itemType != correctType)
-            {
-                Debug.LogWarning($"[InventoryService] Correcting item type for '{item.itemId}': {item.itemType} -> {correctType}");
-                item.itemType = correctType;
                 repairsNeeded = true;
             }
         }
 
-        // Remover ítems inválidos
-        foreach (var item in itemsToRemove)
-        {
-            _currentHero.inventory.Remove(item);
-        }
+        RemoveInvalidItems(itemsToRemove);
 
         if (repairsNeeded)
-        {
             InventoryEvents.OnInventoryChanged?.Invoke();
-            Debug.Log($"[InventoryService] Inventory validation complete. {itemsToRemove.Count} invalid items removed.");
-        }
 
-        return !repairsNeeded; // Return true si no se necesitaron reparaciones
+        return !repairsNeeded;
     }
 
     /// <summary>
@@ -389,7 +245,6 @@ public static class InventoryService
     public static void SetInventoryLimit(int newLimit)
     {
         InventoryLimit = newLimit;
-        Debug.Log($"[InventoryService] Inventory limit set to {InventoryLimit}");
     }
 
     /// <summary>
@@ -422,56 +277,169 @@ public static class InventoryService
         return stats;
     }
 
-    /// <summary>
-    /// Imprime un resumen detallado del inventario para debugging.
-    /// </summary>
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public static void DebugPrintInventory()
-    {
-        if (!ValidateService())
-        {
-            Debug.Log("[InventoryService] Service not initialized for debug print");
-            return;
-        }
-
-        var stats = GetInventoryStats();
-        Debug.Log($"=== INVENTORY DEBUG ({_currentHero.heroName}) ===");
-        Debug.Log($"Slots used: {stats.TotalItems}/{stats.InventoryLimit} ({stats.UsagePercentage:F1}%)");
-        Debug.Log($"Total quantity: {stats.TotalQuantity}");
-        Debug.Log($"Items by type: W:{stats.WeaponCount} H:{stats.HelmetCount} T:{stats.TorsoCount} G:{stats.GlovesCount} P:{stats.PantsCount} C:{stats.ConsumableCount} V:{stats.VisualCount}");
-        
-        Debug.Log("=== ITEMS ===");
-        foreach (var item in _currentHero.inventory)
-        {
-            var itemName = _itemDatabase.GetItemName(item.itemId);
-            Debug.Log($"- {itemName} ({item.itemId}) | Type: {item.itemType} | Qty: {item.quantity}");
-        }
-        Debug.Log("=== END INVENTORY ===");
-    }
-
     #region Private Methods
 
+    #region Validation Methods
+    
     private static bool ValidateService()
     {
-        if (_currentHero == null)
-        {
-            Debug.LogError("[InventoryService] Service not initialized: hero is null");
+        if (_currentHero == null || _itemDatabase == null)
             return false;
-        }
-        if (_itemDatabase == null)
-        {
-            Debug.LogError("[InventoryService] Service not initialized: item database is null");
-            return false;
-        }
+       
         return true;
     }
+
+    private static bool ValidateOperation(string itemId, int quantity)
+    {
+        if (!ValidateService()) return false;
+        
+        if (!InventoryUtils.ValidateItemParameters(itemId, quantity))
+            return false;
+        
+        if (!InventoryUtils.ItemExists(itemId))
+            return false;
+        
+        return true;
+    }
+
+    #endregion
+
+    #region Inventory Operations
+
+    private static InventoryItem FindItemInInventory(string itemId)
+    {
+        try
+        {
+            return _currentHero.inventory.FirstOrDefault(i => i.itemId == itemId);
+        }
+        catch (Exception ex)
+        {
+            LogError($"Error finding item '{itemId}': {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool StackExistingItem(InventoryItem existingItem, int quantity, string itemId)
+    {
+        existingItem.quantity += quantity;
+        
+        EmitItemEvents(itemId, quantity, isAdding: true);
+        return true;
+    }
+
+    private static bool AddNewItem(string itemId, int quantity)
+    {
+        if (_currentHero.inventory.Count >= InventoryLimit)
+        {
+            InventoryEvents.OnInventoryFull?.Invoke();
+            return false;
+        }
+
+        // Crear nueva instancia del item
+        var newItem = CreateItemInstance(itemId, quantity);
+        if (newItem == null)
+        {
+            LogError($"Failed to create item instance: {itemId}");
+            return false;
+        }
+
+        // Asignar slot automáticamente
+        newItem.slotIndex = FindNextAvailableSlotIndex();
+        
+        _currentHero.inventory.Add(newItem);
+        
+        // Emitir evento adicional para equipment instances
+        if (newItem.IsEquipment)
+        {
+            InventoryEvents.OnEquipmentInstanceGenerated?.Invoke(newItem.instanceId, itemId);
+        }
+        
+        EmitItemEvents(itemId, quantity, isAdding: true);
+        return true;
+    }
+
+    /// <summary>
+    /// Crea una nueva instancia de item
+    /// </summary>
+    private static InventoryItem CreateItemInstance(string itemId, int quantity)
+    {
+        var itemData = InventoryUtils.GetItemData(itemId);
+        if (itemData == null) return null;
+
+        var item = new InventoryItem
+        {
+            itemId = itemId,
+            itemType = itemData.itemType,
+            quantity = quantity
+        };
+
+        // Si es equipment, generar stats únicos e instanceId
+        if (itemData.IsEquipment)
+        {
+            item.instanceId = System.Guid.NewGuid().ToString();
+            
+            if (itemData.statGenerator != null)
+            {
+                item.GeneratedStats = itemData.statGenerator.GenerateStats();
+            }
+        }
+
+        return item;
+    }
+
+    private static bool ProcessItemRemoval(InventoryItem item, int quantity, string itemId)
+    {
+        item.quantity -= quantity;
+        
+        if (item.quantity <= 0)
+        {
+            _currentHero.inventory.Remove(item);
+        }
+        EmitItemEvents(itemId, quantity, isAdding: false);
+        return true;
+    }
+
+    /// <summary>
+    /// Encuentra el próximo slot disponible en la grilla para colocar un nuevo ítem.
+    /// </summary>
+    private static int FindNextAvailableSlotIndex()
+    {
+        const int GRID_SIZE = 72; // 9x8 grilla
+        
+        // Crear un array para marcar slots ocupados
+        bool[] occupiedSlots = new bool[GRID_SIZE];
+        
+        // Marcar slots ocupados por ítems existentes
+        foreach (var item in _currentHero.inventory)
+        {
+            if (item.slotIndex >= 0 && item.slotIndex < GRID_SIZE)
+            {
+                occupiedSlots[item.slotIndex] = true;
+            }
+        }
+        
+        // Encontrar el primer slot libre
+        for (int i = 0; i < GRID_SIZE; i++)
+        {
+            if (!occupiedSlots[i])
+            {
+                return i;
+            }
+        }
+        
+        // Si no hay slots libres, retornar -1 (esto no debería pasar si validamos inventoryLimit correctamente)
+        return -1;
+    }
+
+    #endregion
+
+    #region Equipment Operations
 
     private static bool CanEquipItemAdvanced(string itemId)
     {
         var itemData = _itemDatabase.GetItemDataById(itemId);
         if (itemData == null) return false;
 
-        // Verificar que sea un tipo equipable
         if (!InventoryUtils.IsEquippableType(itemData.itemType)) return false;
 
         // Aquí se pueden agregar validaciones futuras:
@@ -486,15 +454,63 @@ public static class InventoryService
     private static string GetEquippedItemInSlot(ItemType slot)
     {
         if (_currentHero?.equipment == null) return string.Empty;
-
         return InventoryUtils.GetEquippedItemId(_currentHero.equipment, slot);
     }
 
     private static void SetEquippedItem(ItemType slot, string itemId)
     {
         if (_currentHero?.equipment == null) return;
-
         InventoryUtils.SetEquippedItemId(_currentHero.equipment, slot, itemId);
+    }
+
+    private static bool ProcessEquipment(string itemId, ItemType itemType)
+    {
+        // Desequipar ítem anterior si existe
+        string previousItemId = GetEquippedItemInSlot(itemType);
+        if (!string.IsNullOrEmpty(previousItemId))
+        {
+            UnequipItem(itemType);
+        }
+
+        // Equipar nuevo ítem
+        SetEquippedItem(itemType, itemId);
+        EmitEquipmentEvents(itemId, isEquipping: true);
+        
+        return true;
+    }
+
+    #endregion
+
+    #region Event and Persistence Management
+
+    private static void EmitItemEvents(string itemId, int quantity, bool isAdding)
+    {
+        if (isAdding)
+        {
+            InventoryEvents.OnItemAdded?.Invoke(itemId, quantity);
+        }
+        else
+        {
+            InventoryEvents.OnItemRemoved?.Invoke(itemId, quantity);
+        }
+        
+        InventoryEvents.OnInventoryChanged?.Invoke();
+        SavePlayerData();
+    }
+
+    private static void EmitEquipmentEvents(string itemId, bool isEquipping)
+    {
+        if (isEquipping)
+        {
+            InventoryEvents.OnItemEquipped?.Invoke(itemId);
+        }
+        else
+        {
+            InventoryEvents.OnItemUnequipped?.Invoke(itemId);
+        }
+        
+        InventoryEvents.OnInventoryChanged?.Invoke();
+        SavePlayerData();
     }
 
     /// <summary>
@@ -508,18 +524,145 @@ public static class InventoryService
             if (playerData != null)
             {
                 SaveSystem.SavePlayer(playerData);
-                Debug.Log("[InventoryService] Player data saved automatically after inventory change");
+                LogInfo("Player data saved automatically after inventory change");
             }
             else
             {
-                Debug.LogWarning("[InventoryService] Cannot save player data: PlayerSessionService.CurrentPlayer is null");
+                LogWarning("Cannot save player data: PlayerSessionService.CurrentPlayer is null");
             }
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[InventoryService] Failed to save player data: {e.Message}");
+            LogError($"Failed to save player data: {e.Message}");
         }
     }
+
+    #endregion
+
+    #region Logging Utilities
+
+    private static void LogInfo(string message)
+    {
+        Debug.Log($"[InventoryService] {message}");
+    }
+
+    private static void LogWarning(string message)
+    {
+        Debug.LogWarning($"[InventoryService] {message}");
+    }
+
+    private static void LogError(string message)
+    {
+        Debug.LogError($"[InventoryService] {message}");
+    }
+
+    #endregion
+
+    #region Validation and Repair Methods
+
+    private static bool ShouldRemoveItem(InventoryItem item)
+    {
+        if (!_itemDatabase.ItemExists(item.itemId))
+        {
+            LogWarning($"Removing invalid item '{item.itemId}' from inventory");
+            return true;
+        }
+
+        if (item.quantity <= 0)
+        {
+            LogWarning($"Removing item '{item.itemId}' with invalid quantity {item.quantity}");
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool FixItemType(InventoryItem item)
+    {
+        var correctType = _itemDatabase.GetItemType(item.itemId);
+        if (item.itemType != correctType)
+        {
+            item.itemType = correctType;
+            return true;
+        }
+        return false;
+    }
+
+    private static void RemoveInvalidItems(List<InventoryItem> itemsToRemove)
+    {
+        foreach (var item in itemsToRemove)
+        {
+            _currentHero.inventory.Remove(item);
+        }
+    }
+
+    #endregion
+
+    #region Consumable Usage
+
+    /// <summary>
+    /// Usa un item consumible del inventario
+    /// </summary>
+    /// <param name="itemId">ID del item a usar</param>
+    /// <param name="quantity">Cantidad a usar (por defecto 1)</param>
+    /// <returns>True si se usó exitosamente</returns>
+    public static bool UseConsumableItem(string itemId, int quantity = 1)
+    {
+        if (_currentHero?.inventory == null) return false;
+
+        var item = _currentHero.inventory.FirstOrDefault(i => 
+            i.itemId == itemId && IsConsumableItem(i.itemId) && i.quantity >= quantity);
+
+        if (item == null)
+        {
+            LogError($"Consumable item not found or insufficient quantity: {itemId}");
+            return false;
+        }
+
+        var itemData = InventoryUtils.GetItemData(itemId);
+        if (itemData?.effects == null || itemData.effects.Length == 0)
+        {
+            LogError($"Item {itemId} has no effects to execute");
+            return false;
+        }
+
+        // Ejecutar efectos del item
+        bool anyEffectExecuted = false;
+        foreach (var effect in itemData.effects)
+        {
+            if (effect != null && effect.CanExecute(_currentHero))
+            {
+                effect.Execute(_currentHero);
+                anyEffectExecuted = true;
+                
+                // Emitir evento para cada efecto ejecutado
+                InventoryEvents.OnItemEffectExecuted?.Invoke(effect.GetType().Name, _currentHero);
+            }
+        }
+
+        if (anyEffectExecuted)
+        {
+            // Reducir cantidad o remover item
+            if (RemoveItem(itemId, quantity))
+            {
+                InventoryEvents.OnItemUsed?.Invoke(itemId, _currentHero);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Verifica si un item es consumible
+    /// </summary>
+    private static bool IsConsumableItem(string itemId)
+    {
+        var itemData = InventoryUtils.GetItemData(itemId);
+        return itemData != null && itemData.IsConsumable;
+    }
+
+    #endregion
 
     #endregion
 }

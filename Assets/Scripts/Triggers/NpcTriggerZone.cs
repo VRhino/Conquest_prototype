@@ -1,4 +1,5 @@
 using ConquestTactics.UI;
+using ConquestTactics.Dialogue;
 using UnityEngine;
 
 namespace ConquestTactics.Triggers
@@ -106,18 +107,39 @@ namespace ConquestTactics.Triggers
                             NpcTriggerUIController.Instance?.OpenBarracksMenu(heroData);
                         }
                         break;
+                        
                     case Dialogue.DialogueOptionType.CloseDialogue:
                         CloseDialogue();
                         break;
-                    case Dialogue.DialogueOptionType.CustomEvent:
-                        if (option.customEvent == "Add_Item")
+                        
+                    case Dialogue.DialogueOptionType.ExecuteEffects:
+                        var hero = PlayerSessionService.SelectedHero;
+                        if (hero != null && option.dialogueEffectIds != null && option.dialogueEffectIds.Length > 0)
                         {
-                            var hero = PlayerSessionService.SelectedHero;
-                            if (hero != null)
+                            InventoryService.Initialize(hero);
+                            
+                            Debug.Log($"[NpcTriggerZone] Executing {option.dialogueEffectIds.Length} dialogue effects...");
+                            
+                            // Ejecutar los efectos usando DialogueEffectSystem
+                            bool allSucceeded = ConquestTactics.Dialogue.DialogueEffectSystem.ExecuteDialogueEffects(
+                                option.dialogueEffectIds, 
+                                hero, 
+                                buildingID, 
+                                option.effectParameters
+                            );
+                            
+                            if (allSucceeded)
                             {
-                                InventoryService.Initialize(hero);
-                                InventoryService.AddItem("TorMADef", 1);
+                                Debug.Log($"[NpcTriggerZone] All effects executed successfully");
                             }
+                            else
+                            {
+                                Debug.LogWarning($"[NpcTriggerZone] Some effects failed to execute");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[NpcTriggerZone] ExecuteEffects called but no hero or effect IDs available");
                         }
                         CloseDialogue();
                         break;

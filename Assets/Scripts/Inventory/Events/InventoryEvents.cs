@@ -41,6 +41,21 @@ public static class InventoryEvents
     public static Action OnInventorySorted;
 
     /// <summary>
+    /// Se dispara cuando se ejecuta un efecto de ítem. Parámetros: effectId, hero afectado.
+    /// </summary>
+    public static Action<string, HeroData> OnItemEffectExecuted;
+
+    /// <summary>
+    /// Se dispara cuando se usa un ítem consumible. Parámetros: itemId, hero que lo usa.
+    /// </summary>
+    public static Action<string, HeroData> OnItemUsed;
+
+    /// <summary>
+    /// Se dispara cuando se genera una nueva instancia de equipment. Parámetros: instanceId, itemId.
+    /// </summary>
+    public static Action<string, string> OnEquipmentInstanceGenerated;
+
+    /// <summary>
     /// Limpia todos los listeners de eventos. Útil para evitar referencias colgantes.
     /// </summary>
     public static void ClearAllListeners()
@@ -52,5 +67,8 @@ public static class InventoryEvents
         OnItemRemoved = null;
         OnInventoryFull = null;
         OnInventorySorted = null;
+        OnItemEffectExecuted = null;
+        OnItemUsed = null;
+        OnEquipmentInstanceGenerated = null;
     }
 }

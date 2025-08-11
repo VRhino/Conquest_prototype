@@ -3,6 +3,18 @@ using System.Collections.Generic;
 
 namespace ConquestTactics.Dialogue
 {
+    /// <summary>
+    /// Parámetros opcionales para efectos de diálogo.
+    /// </summary>
+    [System.Serializable]
+    public class DialogueParameters
+    {
+        public string stringParameter;
+        public int intParameter;
+        public float floatParameter;
+        public bool boolParameter;
+    }
+
     [CreateAssetMenu(fileName = "NpcDialogueData", menuName = "NPC/NPC Dialogue Data", order = 1)]
     public class NpcDialogueData : ScriptableObject
     {
@@ -19,9 +31,21 @@ namespace ConquestTactics.Dialogue
     [System.Serializable]
     public class DialogueOption
     {
+        [Header("Basic Settings")]
         public string optionText;
         public DialogueOptionType optionType;
-        public string nextMenuId; // Por ejemplo: "barracks", "armory", etc.
-        public string customEvent; // Para lógica personalizada si se requiere
+        
+        [Header("Menu Options")]
+        public string nextMenuId; // Para DialogueOptionType.OpenMenu
+        
+        [Header("Dialogue Effects")]
+        [Tooltip("IDs de los efectos de diálogo a ejecutar (nombres de los ScriptableObjects)")]
+        public string[] dialogueEffectIds; // Id guardados en la dialogueEffectsDatabase
+        [Tooltip("Parámetros opcionales para los efectos de diálogo, estos sobre escriben algunos de los definidos en el scriptable object")]
+        public DialogueParameters effectParameters; // Parámetros opcionales para los efectos
+        
+        [Header("Advanced Settings")]
+        [Tooltip("Si está marcado, la opción solo aparece si todos los efectos se pueden ejecutar")]
+        public bool requireEffectsCanExecute = false;
     }
 }

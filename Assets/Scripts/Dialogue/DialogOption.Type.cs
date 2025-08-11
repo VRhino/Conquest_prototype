@@ -4,6 +4,6 @@ namespace ConquestTactics.Dialogue
     {
         OpenMenu,
         CloseDialogue,
-        CustomEvent
+        ExecuteEffects
     }
 }

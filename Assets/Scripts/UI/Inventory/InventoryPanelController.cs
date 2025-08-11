@@ -41,6 +41,7 @@ public class InventoryPanelController : MonoBehaviour
     private ItemFilter _currentFilter = ItemFilter.All;
     private List<InventoryItemCellController> _cellControllers = new List<InventoryItemCellController>();
     private HeroData _currentHero;
+    private InventoryItem[] slotItems;
 
     /// <summary>
     /// Tipos de filtro disponibles para el inventario.
@@ -65,6 +66,10 @@ public class InventoryPanelController : MonoBehaviour
         InventoryEvents.OnItemAdded += OnItemChanged;
         InventoryEvents.OnItemRemoved += OnItemChanged;
         InventoryEvents.OnInventorySorted += UpdateInventoryDisplay;
+        
+        // Inicializar array visual si aún no está creado
+        if (slotItems == null)
+            slotItems = new InventoryItem[gridWidth * gridHeight];
     }
 
     void OnDisable()
@@ -153,6 +158,10 @@ public class InventoryPanelController : MonoBehaviour
 
         _currentHero = heroData;
 
+        // Inicializar array visual si aún no está creado
+        if (slotItems == null)
+            slotItems = new InventoryItem[gridWidth * gridHeight];
+
         // Inicializar el servicio de inventario
         InventoryService.Initialize(heroData);
 
@@ -227,31 +236,37 @@ public class InventoryPanelController : MonoBehaviour
     private void UpdateInventoryDisplay()
     {
         if (_currentHero == null || _cellControllers.Count == 0)
-            return;
+            return; // Early exit if no hero or cell controllers
 
-        // Asegurarse que el inventario tenga el tamaño de la grilla (permitir huecos)
-        var inventory = _currentHero.inventory;
         int totalCells = gridWidth * gridHeight;
-        if (inventory.Count < totalCells)
+        
+        // Limpiar array visual
+        Array.Clear(slotItems, 0, slotItems.Length);
+
+        // Colocar cada item del inventario persistente en su posición visual correspondiente
+        foreach (var item in _currentHero.inventory)
         {
-            // Rellenar con nulls si faltan posiciones
-            while (inventory.Count < totalCells)
-                inventory.Add(null);
+            if (item != null && item.slotIndex >= 0 && item.slotIndex < totalCells)
+            {
+                slotItems[item.slotIndex] = item;
+            }
         }
 
-        for (int i = 0; i < _cellControllers.Count; i++)
+        // Actualizar cada celda visual basándose en slotItems
+        for (int i = 0; i < totalCells && i < _cellControllers.Count; i++)
         {
-            InventoryItemCellController cell = _cellControllers[i];
-            cell.SetCellIndex(i);
-            if (inventory != null && inventory[i] != null)
+            var cellController = _cellControllers[i];
+            cellController.SetCellIndex(i);
+            
+            var item = slotItems[i];
+            if (item != null)
             {
-                var item = inventory[i];
                 var itemData = InventoryUtils.GetItemData(item.itemId);
-                cell.SetItem(item, itemData);
+                cellController.SetItem(item, itemData);
             }
             else
             {
-                cell.Clear();
+                cellController.Clear();
             }
         }
     }
@@ -322,34 +337,43 @@ public class InventoryPanelController : MonoBehaviour
         }
 
         // Validar índices
-        if (sourceCellIndex < 0 || sourceCellIndex >= _cellControllers.Count ||
-            targetCellIndex < 0 || targetCellIndex >= _cellControllers.Count)
+        int totalCells = gridWidth * gridHeight;
+        if (sourceCellIndex < 0 || sourceCellIndex >= totalCells ||
+            targetCellIndex < 0 || targetCellIndex >= totalCells)
         {
             Debug.LogError($"[InventoryPanelController] Índices de celda inválidos: origen={sourceCellIndex}, destino={targetCellIndex}");
             return;
         }
 
-        var inventory = _currentHero.inventory;
-        int totalCells = gridWidth * gridHeight;
-        if (inventory.Count < totalCells)
-        {
-            while (inventory.Count < totalCells)
-                inventory.Add(null);
-        }
+        Debug.Log($"[InventoryPanelController] Intercambiando ítems: origen={sourceCellIndex}, destino={targetCellIndex}");
+
+        // Obtener ítems de las posiciones visuales
+        var sourceItem = slotItems[sourceCellIndex];
+        var targetItem = slotItems[targetCellIndex];
 
         // Si ambas celdas están vacías, no hacer nada
-        if (inventory[sourceCellIndex] == null && inventory[targetCellIndex] == null)
+        if (sourceItem == null && targetItem == null)
             return;
 
-        // Intercambiar o mover ítem
-        if (inventory[sourceCellIndex] != null)
-        {
-            var temp = inventory[sourceCellIndex];
-            inventory[sourceCellIndex] = inventory[targetCellIndex];
-            inventory[targetCellIndex] = temp;
-        }
+        // Actualizar slotIndex de los ítems si existen
+        if (sourceItem != null)
+            sourceItem.slotIndex = targetCellIndex;
+        
+        if (targetItem != null)
+            targetItem.slotIndex = sourceCellIndex;
+
+        // Intercambiar en el array visual
+        slotItems[sourceCellIndex] = targetItem;
+        slotItems[targetCellIndex] = sourceItem;
+
         // Actualizar visualización
         UpdateInventoryDisplay();
+        
+        // Guardar cambios (el inventario persistente se actualiza automáticamente por las referencias)
+        if (PlayerSessionService.CurrentPlayer != null)
+        {
+            SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
+        }
     }
 
     private void ToggleUIInteraction()
