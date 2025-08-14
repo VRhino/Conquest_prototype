@@ -37,6 +37,9 @@ public class InventoryPanelController : MonoBehaviour
     [Header("Exit Button")]
     public Button exitButton;
 
+    [Header("Tooltip System")]
+    public InventoryTooltipManager tooltipManager;
+
     // Control de filtros
     private ItemFilter _currentFilter = ItemFilter.All;
     private List<InventoryItemCellController> _cellControllers = new List<InventoryItemCellController>();
@@ -57,6 +60,7 @@ public class InventoryPanelController : MonoBehaviour
     {
         InitializeButtons();
         CreateInventoryGrid();
+        InitializeTooltipSystem();
     }
 
     void OnEnable()
@@ -142,6 +146,35 @@ public class InventoryPanelController : MonoBehaviour
             }
         }
 
+    }
+
+    /// <summary>
+    /// Inicializa el sistema de tooltips conectándolo con las celdas del inventario.
+    /// </summary>
+    private void InitializeTooltipSystem()
+    {
+        // Buscar o crear el tooltip manager si no está asignado
+        if (tooltipManager == null)
+        {
+            tooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        }
+
+        if (tooltipManager == null)
+        {
+            Debug.LogWarning("[InventoryPanelController] No se encontró InventoryTooltipManager. El sistema de tooltips no estará disponible.");
+            return;
+        }
+
+        // Conectar todas las celdas creadas al sistema de tooltips
+        foreach (var cellController in _cellControllers)
+        {
+            if (cellController != null)
+            {
+                tooltipManager.ConnectCellToTooltip(cellController);
+            }
+        }
+
+        Debug.Log($"[InventoryPanelController] Sistema de tooltips inicializado con {_cellControllers.Count} celdas");
     }
 
     /// <summary>

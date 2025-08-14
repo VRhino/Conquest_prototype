@@ -21,6 +21,8 @@ public static class InventoryService
         set => _inventoryLimit = Mathf.Max(1, value); // Mínimo 1 slot
     }
 
+    public static HeroData GetCurrentHero() => _currentHero;
+
     /// <summary>
     /// Inicializa el servicio con el héroe activo. Usa ItemDatabase.Instance automáticamente.
     /// </summary>
@@ -28,7 +30,7 @@ public static class InventoryService
     {
         _currentHero = hero;
         _itemDatabase = InventoryUtils.GetItemDatabase();
-        
+
         if (_currentHero?.inventory == null)
         {
             if (_currentHero != null)

@@ -19,18 +19,22 @@ public class InventoryItemCellController : MonoBehaviour
     [SerializeField] private Sprite backgroundSpriteRare;
     [SerializeField] private Sprite backgroundSpriteEpic;
     [SerializeField] private Sprite backgroundSpriteLegendary;
-    
+    [SerializeField] private InventoryItemCellInteraction _interaction;
     // Componente de drag and drop (se agrega dinámicamente)
     private Component _dragHandler;
     
     // Índice de la celda en la grilla
-    [SerializeField ]private int _cellIndex = -1;
+    [SerializeField] private int _cellIndex = -1;
 
     void Awake()
     {
         // Inicialización del componente de interacción
-        // TODO: Agregar InventoryItemCellInteraction component cuando se necesite
-        
+        _interaction = gameObject.AddComponent<InventoryItemCellInteraction>();
+        if (_interaction == null)
+        {
+            Debug.Log($"[InventoryItemCellController] Interacción no configurada para la celda {_cellIndex}");
+        }
+
         // Inicializar componente de drag and drop dinámicamente
         InitializeDragHandler();
     }
@@ -80,8 +84,8 @@ public class InventoryItemCellController : MonoBehaviour
         filler.color = InventoryUtils.GetRarityColor(item);
 
         // Actualizar componente de interacción si existe
-        // if (_interaction != null)
-        //     _interaction.SetItem(item, itemData);
+        if (_interaction != null)
+            _interaction.SetItem(item, itemData);
         
         // Actualizar drag handler
         CallDragHandlerMethod("SetItemData", item, itemData, _cellIndex);
@@ -106,8 +110,8 @@ public class InventoryItemCellController : MonoBehaviour
         itemPanel.SetActive(false);
         
         // Limpiar interacción si existe
-        // if (_interaction != null)
-        //     _interaction.ClearItem();
+        if (_interaction != null)
+            _interaction.ClearItem();
         
         // Limpiar drag handler
         CallDragHandlerMethod("ClearItemData");

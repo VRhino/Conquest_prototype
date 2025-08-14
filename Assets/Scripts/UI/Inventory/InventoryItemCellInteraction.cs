@@ -6,7 +6,7 @@ using Data.Items;
 /// Maneja las interacciones del usuario con las celdas del inventario.
 /// Permite equipar ítems, mostrar tooltips, etc.
 /// </summary>
-public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
+public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
 {
     private InventoryItem _currentItem;
     private ItemData _currentItemData;
@@ -24,12 +24,17 @@ public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler,
     /// <summary>
     /// Callback cuando el mouse entra en la celda.
     /// </summary>
-    public System.Action<InventoryItem, ItemData> OnItemHoverEnter;
+    public System.Action<InventoryItem, ItemData, Vector3> OnItemHoverEnter;
+    
+    /// <summary>
+    /// Callback cuando el mouse se mueve sobre la celda.
+    /// </summary>
+    public System.Action<InventoryItem, ItemData, Vector3> OnItemHoverMove;
     
     /// <summary>
     /// Callback cuando el mouse sale de la celda.
     /// </summary>
-    public System.Action<InventoryItem, ItemData> OnItemHoverExit;
+    public System.Action<InventoryItem, ItemData, Vector3> OnItemHoverExit;
 
     /// <summary>
     /// Asigna el ítem actual a esta celda para manejar las interacciones.
@@ -75,14 +80,22 @@ public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler,
     {
         if (_currentItem == null || _currentItemData == null) return;
         
-        OnItemHoverEnter?.Invoke(_currentItem, _currentItemData);
+        // Para UI Canvas, eventData.position ya está en coordenadas de pantalla correctas
+        OnItemHoverEnter?.Invoke(_currentItem, _currentItemData, eventData.position);
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         if (_currentItem == null || _currentItemData == null) return;
         
-        OnItemHoverExit?.Invoke(_currentItem, _currentItemData);
+        OnItemHoverExit?.Invoke(_currentItem, _currentItemData, eventData.position);
+    }
+
+    public void OnPointerMove(PointerEventData eventData)
+    {
+        if (_currentItem == null || _currentItemData == null) return;
+        
+        OnItemHoverMove?.Invoke(_currentItem, _currentItemData, eventData.position);
     }
 
     /// <summary>
