@@ -116,7 +116,7 @@ namespace ConquestTactics.Triggers
                         var hero = PlayerSessionService.SelectedHero;
                         if (hero != null && option.dialogueEffectIds != null && option.dialogueEffectIds.Length > 0)
                         {
-                            InventoryService.Initialize(hero);
+                            InventoryManager.Initialize(hero);
                             
                             Debug.Log($"[NpcTriggerZone] Executing {option.dialogueEffectIds.Length} dialogue effects...");
                             

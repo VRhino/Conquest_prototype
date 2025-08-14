@@ -77,15 +77,64 @@ public class HeroClassSelector : MonoBehaviour
     }
     public Equipment GetCurrentEquipment()
     {
-        // Devuelve el equipo actual usando los itemId seleccionados
         Equipment equipment = new Equipment();
-        // Asume que baseItemIds tiene el orden: weapon, helmet, torso, gloves, pants
-        if (baseItemIds.Count > 0) equipment.weaponId = baseItemIds[0];
-        if (baseItemIds.Count > 1) equipment.helmetId = baseItemIds[1];
-        if (baseItemIds.Count > 2) equipment.torsoId = baseItemIds[2];
-        if (baseItemIds.Count > 3) equipment.glovesId = baseItemIds[3];
-        if (baseItemIds.Count > 4) equipment.pantsId = baseItemIds[4];
+        
+        // Verificar que ItemDatabase esté disponible antes de crear items
+        if (ItemDatabase.Instance == null)
+        {
+            Debug.LogError("[HeroClassSelector] ItemDatabase not available, cannot create equipment instances");
+            return equipment;
+        }
+        
+        // Crear InventoryItems usando ItemInstanceService para generar stats e instanceId únicos
+        if (baseItemIds.Count > 0 && !string.IsNullOrEmpty(baseItemIds[0]))
+            equipment.weapon = CreateEquipmentItem(baseItemIds[0]);
+        if (baseItemIds.Count > 1 && !string.IsNullOrEmpty(baseItemIds[1]))
+            equipment.helmet = CreateEquipmentItem(baseItemIds[1]);
+        if (baseItemIds.Count > 2 && !string.IsNullOrEmpty(baseItemIds[2]))
+            equipment.torso = CreateEquipmentItem(baseItemIds[2]);
+        if (baseItemIds.Count > 3 && !string.IsNullOrEmpty(baseItemIds[3]))
+            equipment.gloves = CreateEquipmentItem(baseItemIds[3]);
+        if (baseItemIds.Count > 4 && !string.IsNullOrEmpty(baseItemIds[4]))
+            equipment.pants = CreateEquipmentItem(baseItemIds[4]);
+        if (baseItemIds.Count > 5 && !string.IsNullOrEmpty(baseItemIds[5]))
+            equipment.boots = CreateEquipmentItem(baseItemIds[5]);
+            
         return equipment;
+    }
+
+    /// <summary>
+    /// Crea una instancia de InventoryItem usando ItemInstanceService para generar stats únicos.
+    /// Incluye validación y manejo de errores para casos donde el item no existe.
+    /// </summary>
+    /// <param name="itemId">ID del ítem a crear</param>
+    /// <returns>InventoryItem con stats generados o null si hay error</returns>
+    private InventoryItem CreateEquipmentItem(string itemId)
+    {
+        if (string.IsNullOrEmpty(itemId))
+        {
+            Debug.LogWarning("[HeroClassSelector] Cannot create equipment item: itemId is null or empty");
+            return null;
+        }
+        
+        // Verificar que el item existe en la base de datos antes de crear la instancia
+        var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+        if (itemData == null)
+        {
+            Debug.LogError($"[HeroClassSelector] ItemData not found for ID: {itemId}. Item will not be equipped.");
+            return null;
+        }
+        
+        // Crear instancia usando ItemInstanceService para generar stats e instanceId
+        var item = ItemInstanceService.CreateItem(itemId);
+        if (item == null)
+        {
+            Debug.LogError($"[HeroClassSelector] Failed to create item instance for ID: {itemId}");
+            return null;
+        }
+        
+        Debug.Log($"[HeroClassSelector] Created equipment item: {itemId} with instanceId: {item.instanceId}");
+        return item;
     }
 
      private void FillBaseItemIdsForClass(HeroClassDefinition heroClass)
@@ -117,10 +166,11 @@ public class HeroClassSelector : MonoBehaviour
                 break;
         }
         baseItemIds.Add(weaponId);
-        baseItemIds.Add($"Boot{armorSuffix}ADef");
+        baseItemIds.Add("");
         baseItemIds.Add($"Tor{armorSuffix}ADef");
         baseItemIds.Add($"Glo{armorSuffix}ADef");
         baseItemIds.Add($"Pan{armorSuffix}ADef");
+        baseItemIds.Add($"Boot{armorSuffix}ADef");
     }
     private void GenerateButtons()
     {

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Data.Items; // Para acceder a ItemType
 
 namespace Data.Avatar
 {
@@ -155,6 +156,126 @@ namespace Data.Avatar
                     Debug.LogWarning($"No se encontró el prefab '{prefabName}' dentro de '{boneTarget}' para {partId}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Desequipa visualmente un slot específico, dejándolo en estado base o vacío.
+        /// </summary>
+        /// <param name="modularDummy">Transform del modelo modular</param>
+        /// <param name="avatarPartDatabase">Base de datos de partes del avatar</param>
+        /// <param name="slotType">Tipo de slot a desequipar</param>
+        /// <param name="currentGender">Género actual</param>
+        /// <param name="heroData">Datos del héroe para obtener partes base</param>
+        public static void UnequipSlotVisual(Transform modularDummy, 
+            AvatarPartDatabase avatarPartDatabase, ItemType slotType, 
+            global::Gender currentGender, HeroData heroData)
+        {
+            if (modularDummy == null || avatarPartDatabase == null || heroData == null)
+            {
+                Debug.LogWarning("UnequipSlotVisual: Parámetros nulos detectados");
+                return;
+            }
+                
+            // Obtener el ítem base para este slot según el héroe
+            string basePartId = GetBasePartIdForSlot(slotType, heroData);
+            
+            if (!string.IsNullOrEmpty(basePartId))
+            {
+                // Activar la parte base del avatar
+                Debug.Log($"Activating base part for slot {slotType}: {basePartId}");
+                ToggleArmorVisibilityByAvatarPartId(modularDummy, avatarPartDatabase, basePartId, currentGender);
+            }
+            else
+            {
+                // No hay parte base específica, desactivar todas las partes del slot
+                Debug.Log($"No base part found for slot {slotType}, disabling all parts in slot");
+                DisableAllPartsInSlot(modularDummy, slotType, avatarPartDatabase, currentGender);
+            }
+        }
+        
+        /// <summary>
+        /// Obtiene el ID de la parte base para un slot específico desde los datos del héroe.
+        /// </summary>
+        /// <param name="slotType">Tipo de slot</param>
+        /// <param name="heroData">Datos del héroe</param>
+        /// <returns>ID de la parte base o string vacío</returns>
+        private static string GetBasePartIdForSlot(ItemType slotType, HeroData heroData)
+        {
+            // Mapear slots de equipamiento a las partes base del avatar del héroe
+            return slotType switch
+            {
+                ItemType.Helmet => heroData.avatar.headId, // Puede ser la cabeza base
+                ItemType.Torso => "", // Torso base suele estar integrado en el modelo
+                ItemType.Gloves => "", // Manos base suelen estar integradas
+                ItemType.Pants => "", // Piernas base suelen estar integradas  
+                ItemType.Boots => "", // Pies base suelen estar integrados
+                ItemType.Weapon => "", // Las armas no tienen "base", simplemente se desactivan
+                _ => ""
+            };
+        }
+        
+        /// <summary>
+        /// Desactiva todas las partes visuales de un slot específico.
+        /// </summary>
+        /// <param name="modularDummy">Transform del modelo modular</param>
+        /// <param name="slotType">Tipo de slot</param>
+        /// <param name="database">Base de datos de partes</param>
+        /// <param name="gender">Género actual</param>
+        private static void DisableAllPartsInSlot(Transform modularDummy, ItemType slotType, 
+            AvatarPartDatabase database, global::Gender gender)
+        {
+            // Obtener todas las partes del slot y desactivarlas
+            var partsForSlot = GetPartsListForSlot(database, slotType);
+            if (partsForSlot == null) 
+            {
+                Debug.LogWarning($"No parts list found for slot type: {slotType}");
+                return;
+            }
+            
+            foreach (var part in partsForSlot)
+            {
+                if (part?.attachments == null) continue;
+                
+                foreach (var attachment in part.attachments)
+                {
+                    string boneTarget = gender == global::Gender.Male ? attachment.boneTargetMale : attachment.boneTargetFemale;
+                    string prefabName = gender == global::Gender.Male ? attachment.prefabPathMale : attachment.prefabPathFemale;
+                    
+                    if (string.IsNullOrEmpty(boneTarget) || string.IsNullOrEmpty(prefabName)) continue;
+                    
+                    var boneTransform = modularDummy.Find(boneTarget) ?? FindDeepChild(modularDummy, boneTarget);
+                    if (boneTransform == null) continue;
+                    
+                    foreach (Transform child in boneTransform)
+                    {
+                        if (child.name == prefabName)
+                        {
+                            child.gameObject.SetActive(false);
+                            Debug.Log($"Disabled part: {prefabName} in bone: {boneTarget}");
+                        }
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Obtiene la lista de partes correspondiente a un tipo de slot.
+        /// </summary>
+        /// <param name="database">Base de datos de partes</param>
+        /// <param name="slotType">Tipo de slot</param>
+        /// <returns>Lista de partes o null</returns>
+        private static List<AvatarPartDefinition> GetPartsListForSlot(AvatarPartDatabase database, ItemType slotType)
+        {
+            return slotType switch
+            {
+                ItemType.Helmet => database.headParts,
+                ItemType.Torso => database.torsoParts,
+                ItemType.Gloves => database.glovesParts,
+                ItemType.Pants => database.pantsParts,
+                ItemType.Boots => database.bootsParts,
+                ItemType.Weapon => database.weaponParts,
+                _ => null
+            };
         }
     }
 }

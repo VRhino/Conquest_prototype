@@ -67,12 +67,7 @@ public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler,
         else if (eventData.button == PointerEventData.InputButton.Right)
         {
             OnItemRightClicked?.Invoke(_currentItem, _currentItemData);
-            
-            // Auto-equipar si es equipamiento
-            if (IsEquippableItem(_currentItemData.itemType))
-            {
-                TryEquipItem();
-            }
+            HandleRightClickAction(); // Nueva lógica centralizada
         }
     }
 
@@ -105,7 +100,7 @@ public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler,
     {
         if (_currentItem == null || _currentItemData == null) return;
 
-        bool success = InventoryService.EquipItem(_currentItem.itemId);
+        bool success = InventoryManager.EquipItem(_currentItem);
         
         if (success)
         {
@@ -118,12 +113,59 @@ public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler,
     }
 
     /// <summary>
-    /// Verifica si un tipo de ítem es equipable.
+    /// Intenta usar el ítem consumible actual.
     /// </summary>
-    /// <param name="itemType">Tipo de ítem</param>
-    /// <returns>True si es equipable</returns>
-    private bool IsEquippableItem(ItemType itemType)
+    private void TryUseConsumableItem()
     {
-        return InventoryUtils.IsEquippableType(itemType);
+        if (_currentItem == null || _currentItemData == null) return;
+
+        bool success = InventoryManager.UseConsumable(_currentItem);
+        
+        if (success)
+        {            
+            // Notificar al sistema de tooltips para validación
+            NotifyTooltipSystemAfterItemAction();
+        }
+        else
+        {
+            Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo usar: {_currentItemData.name}");
+        }
+    }
+
+    /// <summary>
+    /// Maneja la acción de click derecho según el tipo de ítem.
+    /// </summary>
+    private void HandleRightClickAction()
+    {
+        if (_currentItem == null || _currentItemData == null) return;
+
+        if (InventoryUtils.IsEquippableType(_currentItemData.itemType))
+        {
+            TryEquipItem();
+        }
+        else if (InventoryUtils.IsConsumableType(_currentItemData.itemType))
+        {
+            TryUseConsumableItem();
+        }
+        else
+        {
+            Debug.LogWarning($"[InventoryItemCellInteraction] Tipo de ítem no soportado para click derecho: {_currentItemData.itemType}");
+        }
+    }
+
+    /// <summary>
+    /// Notifica al sistema de tooltips después de una acción que puede cambiar el inventario.
+    /// Esto asegura que los tooltips se mantengan sincronizados.
+    /// </summary>
+    private void NotifyTooltipSystemAfterItemAction()
+    {
+        // Buscar el manager de tooltips
+        InventoryTooltipManager tooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        if (tooltipManager != null)
+        {
+            // Forzar validación del tooltip actual
+            tooltipManager.ForceValidateTooltip();
+            Debug.Log("[InventoryItemCellInteraction] Tooltip system notified after item action");
+        }
     }
 }

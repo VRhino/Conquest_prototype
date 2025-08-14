@@ -32,8 +32,8 @@ namespace ConquestTactics.Dialogue
                 return false;
             }
 
-        // Agregar el ítem usando InventoryService
-        bool success = InventoryService.AddItem(targetItemId, targetQuantity);
+            // Agregar el ítem usando InventoryManager
+        bool success = InventoryManager.AddItem(targetItemId, targetQuantity);
 
         if (success)
         {
@@ -69,7 +69,7 @@ namespace ConquestTactics.Dialogue
             return false;
         }
 
-        return InventoryService.HasSpace();
+        return InventoryManager.HasSpace();
     }
 
     protected override void OnValidate()

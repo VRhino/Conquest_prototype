@@ -53,6 +53,11 @@ public class InventoryTooltipController : MonoBehaviour
 
     // Control de estado
     private bool _isShowing = false;
+    
+    /// <summary>
+    /// Indica si el tooltip está actualmente visible.
+    /// </summary>
+    public bool IsShowing => _isShowing;
     private float _showTimer = 0f;
     private InventoryItem _currentItem;
     private ItemData _currentItemData;
@@ -229,6 +234,99 @@ public class InventoryTooltipController : MonoBehaviour
         _showTimer = 0f;
         _currentItem = null;
         _currentItemData = null;
+    }
+
+    /// <summary>
+    /// Verifica si actualmente se está mostrando un ítem específico.
+    /// </summary>
+    /// <param name="itemId">ID del ítem a verificar</param>
+    /// <returns>True si el tooltip está mostrando este ítem</returns>
+    public bool IsShowingItem(string itemId)
+    {
+        return _isShowing && _currentItem != null && _currentItem.itemId == itemId;
+    }
+
+    /// <summary>
+    /// Verifica si actualmente se está mostrando un ítem específico por instanceId (para equipment).
+    /// </summary>
+    /// <param name="instanceId">Instance ID del ítem a verificar</param>
+    /// <returns>True si el tooltip está mostrando este ítem</returns>
+    public bool IsShowingItemInstance(string instanceId)
+    {
+        return _isShowing && _currentItem != null && _currentItem.instanceId == instanceId;
+    }
+
+    /// <summary>
+    /// Valida si el tooltip actual sigue siendo válido y lo actualiza o oculta según corresponda.
+    /// </summary>
+    public void ValidateAndRefreshTooltip()
+    {
+        if (!_isShowing || _currentItem == null) return;
+        
+        var currentHero = PlayerSessionService.SelectedHero;
+        if (currentHero?.inventory == null) 
+        {
+            HideTooltip();
+            return;
+        }
+        
+        // Verificar si el item sigue siendo válido
+        if (!InventoryUtils.IsTooltipItemValid(_currentItem, currentHero.inventory))
+        {
+            HideTooltip();
+            return;
+        }
+        
+        // Buscar item actualizado
+        var updatedItem = InventoryUtils.GetUpdatedTooltipItem(_currentItem, currentHero.inventory);
+        if (updatedItem != null && InventoryUtils.HasTooltipRelevantChanges(_currentItem, updatedItem))
+        {
+            // Refrescar tooltip con datos actualizados
+            var itemData = InventoryUtils.GetItemData(updatedItem.itemId);
+            if (itemData != null)
+            {
+                _currentItem = updatedItem;
+                _currentItemData = itemData;
+                PopulateTooltipContent(); // Método existente
+                Debug.Log($"[InventoryTooltipController] Tooltip refreshed for updated item: {itemData.name}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Valida y oculta el tooltip si el ítem especificado ya no es válido.
+    /// </summary>
+    /// <param name="removedItemId">ID del ítem que fue removido</param>
+    public void ValidateTooltipForRemovedItem(string removedItemId)
+    {
+        if (!_isShowing || _currentItem == null) return;
+        
+        // Si el tooltip está mostrando el ítem removido, ocultarlo
+        if (_currentItem.itemId == removedItemId)
+        {
+            // Para equipment, verificar también por instanceId para mayor precisión
+            if (!string.IsNullOrEmpty(_currentItem.instanceId))
+            {
+                var currentHero = PlayerSessionService.SelectedHero;
+                if (currentHero?.inventory != null)
+                {
+                    // Si el item con este instanceId ya no existe, ocultar tooltip
+                    bool stillExists = currentHero.inventory.Any(item => 
+                        item.instanceId == _currentItem.instanceId);
+                    
+                    if (!stillExists)
+                    {
+                        HideTooltip();
+                        Debug.Log($"[InventoryTooltipController] Tooltip hidden - equipment instance removed: {removedItemId}");
+                    }
+                }
+            }
+            else
+            {
+                // Para stackables, hacer validación completa
+                ValidateAndRefreshTooltip();
+            }
+        }
     }
 
     /// <summary>

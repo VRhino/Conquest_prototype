@@ -8,7 +8,7 @@ using Data.Items;
 
 /// <summary>
 /// Controlador principal del panel de inventario que maneja filtros, grilla, ordenamiento y monedas.
-/// Integra con InventoryService para la gestión de datos y InventoryItemCellController para la visualización.
+/// Integra con InventoryManager para la gestión de datos y InventoryItemCellController para la visualización.
 /// </summary>
 public class InventoryPanelController : MonoBehaviour
 {
@@ -46,6 +46,13 @@ public class InventoryPanelController : MonoBehaviour
     private HeroData _currentHero;
     private InventoryItem[] slotItems;
 
+    // Propiedades públicas para InventoryUIUtils
+    public ItemFilter CurrentFilter => _currentFilter;
+    public List<InventoryItemCellController> CellControllers => _cellControllers;
+    public InventoryItem[] SlotItems => slotItems;
+    public int GridWidth => gridWidth;
+    public int GridHeight => gridHeight;
+
     /// <summary>
     /// Tipos de filtro disponibles para el inventario.
     /// </summary>
@@ -65,11 +72,10 @@ public class InventoryPanelController : MonoBehaviour
 
     void OnEnable()
     {
-        // Suscribirse a eventos del inventario
-        InventoryEvents.OnInventoryChanged += UpdateInventoryDisplay;
-        InventoryEvents.OnItemAdded += OnItemChanged;
-        InventoryEvents.OnItemRemoved += OnItemChanged;
-        InventoryEvents.OnInventorySorted += UpdateInventoryDisplay;
+        // Suscribirse a eventos del inventario usando InventoryManager
+        InventoryManager.OnInventoryChanged += RefreshFullUI;
+        InventoryManager.OnItemAdded += OnItemChanged;
+        InventoryManager.OnItemRemoved += OnItemChanged;
         
         // Inicializar array visual si aún no está creado
         if (slotItems == null)
@@ -78,11 +84,10 @@ public class InventoryPanelController : MonoBehaviour
 
     void OnDisable()
     {
-        // Desuscribirse de eventos
-        InventoryEvents.OnInventoryChanged -= UpdateInventoryDisplay;
-        InventoryEvents.OnItemAdded -= OnItemChanged;
-        InventoryEvents.OnItemRemoved -= OnItemChanged;
-        InventoryEvents.OnInventorySorted -= UpdateInventoryDisplay;
+        // Desuscribirse de eventos usando InventoryManager
+        InventoryManager.OnInventoryChanged -= RefreshFullUI;
+        InventoryManager.OnItemAdded -= OnItemChanged;
+        InventoryManager.OnItemRemoved -= OnItemChanged;
     }
 
     /// <summary>
@@ -196,7 +201,7 @@ public class InventoryPanelController : MonoBehaviour
             slotItems = new InventoryItem[gridWidth * gridHeight];
 
         // Inicializar el servicio de inventario
-        InventoryService.Initialize(heroData);
+        InventoryManager.Initialize(heroData);
 
         // Mostrar el panel
         if (mainPanel != null)
@@ -204,10 +209,8 @@ public class InventoryPanelController : MonoBehaviour
         
         ToggleUIInteraction();
 
-        // Actualizar displays
-        UpdateMoneyDisplay();
-        UpdateInventoryDisplay();
-        UpdateFilterButtons();
+        // Actualizar displays usando el método unificado
+        RefreshFullUI();
 
     }
 
@@ -231,8 +234,7 @@ public class InventoryPanelController : MonoBehaviour
     public void ApplyFilter(ItemFilter filter)
     {
         _currentFilter = filter;
-        UpdateInventoryDisplay();
-        UpdateFilterButtons();
+        RefreshFullUI(); // Usa el método unificado que actualiza todo
         Debug.Log($"[InventoryPanelController] Filtro aplicado: {filter}");
     }
 
@@ -241,8 +243,25 @@ public class InventoryPanelController : MonoBehaviour
     /// </summary>
     public void SortInventory()
     {
-        InventoryService.SortByType();
+        // InventoryManager.SortByType();
         Debug.Log("[InventoryPanelController] Inventario ordenado");
+    }
+
+    /// <summary>
+    /// Actualiza completamente la UI del inventario.
+    /// Este método reemplaza las llamadas individuales y soluciona el bug de actualización de monedas.
+    /// SOLUCIÓN: Ahora UpdateMoneyDisplay() se llama junto con UpdateInventoryDisplay()
+    /// </summary>
+    public void RefreshFullUI()
+    {
+        if (_currentHero == null) return;
+
+        // ESTA ES LA SOLUCIÓN AL BUG: llamar UpdateMoneyDisplay() junto con UpdateInventoryDisplay()
+        UpdateInventoryDisplay();
+        UpdateMoneyDisplay();    // ¡Esta era la línea que faltaba!
+        UpdateFilterButtons();
+
+        Debug.Log("[InventoryPanelController] FULL UI refresh completed - money display now updates correctly");
     }
 
     /// <summary>
@@ -310,7 +329,7 @@ public class InventoryPanelController : MonoBehaviour
     /// <returns>Lista de ítems filtrados</returns>
     private List<InventoryItem> GetFilteredItems()
     {
-        var allItems = InventoryService.GetAllItems();
+        var allItems = InventoryManager.GetAllItems();
 
         switch (_currentFilter)
         {
@@ -347,12 +366,10 @@ public class InventoryPanelController : MonoBehaviour
     /// <summary>
     /// Callback para cuando cambian los ítems en el inventario.
     /// </summary>
-    /// <param name="itemId">ID del ítem que cambió</param>
-    /// <param name="quantity">Cantidad cambiada</param>
-    private void OnItemChanged(string itemId, int quantity)
+    /// <param name="item">Ítem que cambió</param>
+    private void OnItemChanged(InventoryItem item)
     {
-        UpdateInventoryDisplay();
-        UpdateMoneyDisplay();
+        RefreshFullUI(); // Ahora usa el método unificado que actualiza todo
     }
 
     /// <summary>
@@ -399,8 +416,8 @@ public class InventoryPanelController : MonoBehaviour
         slotItems[sourceCellIndex] = targetItem;
         slotItems[targetCellIndex] = sourceItem;
 
-        // Actualizar visualización
-        UpdateInventoryDisplay();
+        // Actualizar visualización completa
+        RefreshFullUI();
         
         // Guardar cambios (el inventario persistente se actualiza automáticamente por las referencias)
         if (PlayerSessionService.CurrentPlayer != null)

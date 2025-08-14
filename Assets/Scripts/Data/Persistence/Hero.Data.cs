@@ -85,12 +85,12 @@ public class HeroData
     {
         return new List<string>
         {
-            equipment.weaponId,
-            equipment.helmetId,
-            equipment.torsoId,
-            equipment.glovesId,
-            equipment.pantsId,
-            equipment.bootsId
+            equipment.weapon?.itemId ?? string.Empty,
+            equipment.helmet?.itemId ?? string.Empty,
+            equipment.torso?.itemId ?? string.Empty,
+            equipment.gloves?.itemId ?? string.Empty,
+            equipment.pants?.itemId ?? string.Empty,
+            equipment.boots?.itemId ?? string.Empty
         };
     }
 }

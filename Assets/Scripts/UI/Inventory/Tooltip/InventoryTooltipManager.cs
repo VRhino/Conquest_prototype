@@ -17,7 +17,91 @@ public class InventoryTooltipManager : MonoBehaviour
     void Start()
     {
         InitializeManager();
+        StartTooltipValidation();
     }
+
+    void OnDestroy()
+    {
+        StopTooltipValidation();
+        
+        // Limpiar conexiones al destruir el manager
+        if (_tooltipController != null)
+        {
+            _tooltipController.HideTooltip();
+        }
+    }
+
+    #region Tooltip Validation System
+
+    private bool _validationEnabled = true;
+    private float _validationInterval = 0.2f; // Validar cada 200ms
+    private float _lastValidationTime = 0f;
+
+    /// <summary>
+    /// Inicia el sistema de validación periódica de tooltips.
+    /// </summary>
+    private void StartTooltipValidation()
+    {
+        _validationEnabled = true;
+        _lastValidationTime = Time.time;
+        
+        Debug.Log("[InventoryTooltipManager] Sistema de validación de tooltips iniciado");
+    }
+
+    /// <summary>
+    /// Detiene el sistema de validación periódica de tooltips.
+    /// </summary>
+    private void StopTooltipValidation()
+    {
+        _validationEnabled = false;
+        
+        Debug.Log("[InventoryTooltipManager] Sistema de validación de tooltips detenido");
+    }
+
+    void Update()
+    {
+        // Validación periódica de tooltips
+        if (_validationEnabled && Time.time - _lastValidationTime >= _validationInterval)
+        {
+            ValidateCurrentTooltip();
+            _lastValidationTime = Time.time;
+        }
+    }
+
+    /// <summary>
+    /// Valida el tooltip actual y lo actualiza/oculta según corresponda.
+    /// </summary>
+    private void ValidateCurrentTooltip()
+    {
+        if (_tooltipController != null && _tooltipController.IsShowing)
+        {
+            _tooltipController.ValidateAndRefreshTooltip();
+        }
+    }
+
+    /// <summary>
+    /// Fuerza una validación inmediata del tooltip.
+    /// Útil para llamar después de operaciones que modifiquen el inventario.
+    /// </summary>
+    public void ForceValidateTooltip()
+    {
+        if (_tooltipController != null)
+        {
+            _tooltipController.ValidateAndRefreshTooltip();
+        }
+    }
+
+    /// <summary>
+    /// Configura el intervalo de validación periódica.
+    /// </summary>
+    /// <param name="interval">Intervalo en segundos (mínimo 0.1)</param>
+    public void SetValidationInterval(float interval)
+    {
+        _validationInterval = Mathf.Max(0.1f, interval);
+        Debug.Log($"[InventoryTooltipManager] Intervalo de validación establecido a {_validationInterval}s");
+    }
+
+    #endregion
 
     /// <summary>
     /// Inicializa el manager y conecta con los sistemas necesarios.
@@ -183,6 +267,7 @@ public class InventoryTooltipManager : MonoBehaviour
     /// </summary>
     public void RefreshCellConnections()
     {
+        // Por ahora usar método local, luego migrar a InventoryUIUtils
         ConnectToInventoryCells();
     }
 
@@ -210,15 +295,6 @@ public class InventoryTooltipManager : MonoBehaviour
         }
     }
 
-    void OnDestroy()
-    {
-        // Limpiar conexiones al destruir el manager
-        if (_tooltipController != null)
-        {
-            _tooltipController.HideTooltip();
-        }
-    }
-
     #region Inspector Debugging
 
     [ContextMenu("Test Show Tooltip")]
@@ -227,9 +303,9 @@ public class InventoryTooltipManager : MonoBehaviour
         if (!Application.isPlaying) return;
 
         // Buscar un ítem para testing
-        if (InventoryService.GetCurrentHero()?.inventory != null && InventoryService.GetCurrentHero().inventory.Count > 0)
+        if (InventoryManager.GetCurrentHero()?.inventory != null && InventoryManager.GetCurrentHero().inventory.Count > 0)
         {
-            var firstItem = InventoryService.GetCurrentHero().inventory[0];
+            var firstItem = InventoryManager.GetCurrentHero().inventory[0];
             var itemData = ItemDatabase.Instance?.GetItemDataById(firstItem.itemId);
             
             if (itemData != null)

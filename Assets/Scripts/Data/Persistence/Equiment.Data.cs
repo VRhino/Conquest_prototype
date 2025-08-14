@@ -2,15 +2,15 @@ using System;
 
 /// <summary>
 /// Current functional equipment worn by the hero.
-/// Each field stores the ID of an item owned in the inventory.
+/// Each field stores a complete InventoryItem instance to preserve stats and unique data.
 /// </summary>
 [Serializable]
 public class Equipment
 {
-    public string weaponId = string.Empty;
-    public string helmetId = string.Empty;
-    public string torsoId = string.Empty;
-    public string glovesId = string.Empty;
-    public string pantsId = string.Empty;
-    public string bootsId = string.Empty;
+    public InventoryItem weapon = null;
+    public InventoryItem helmet = null;
+    public InventoryItem torso = null;
+    public InventoryItem gloves = null;
+    public InventoryItem pants = null;
+    public InventoryItem boots = null;
 }

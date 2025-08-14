@@ -88,25 +88,10 @@ public static class ItemEffectSystem
             }
         }
 
-        // Consumir el ítem si se ejecutaron todos los efectos exitosamente
-        if (allSucceeded && protoItem.consumeOnUse)
-        {
-            bool removed = InventoryService.RemoveItem(item.itemId, 1);
-            if (!removed)
-            {
-                LogWarning($"Could not remove consumed item: {item.itemId}");
-            }
-        }
-
-        // Emitir eventos de efectos ejecutados
+        // Los efectos se han ejecutado exitosamente
         if (allSucceeded)
         {
-            foreach (var effect in sortedEffects)
-            {
-                InventoryEvents.OnItemEffectExecuted?.Invoke(effect.EffectId, hero);
-            }
-            
-            InventoryEvents.OnItemUsed?.Invoke(item.itemId, hero);
+            LogInfo($"All effects executed successfully for item: {item.itemId}");
         }
 
         return allSucceeded;
