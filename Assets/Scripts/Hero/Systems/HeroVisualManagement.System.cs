@@ -124,13 +124,7 @@ public partial class HeroVisualManagementSystem : SystemBase
         );
 
         // 2) Aplicar equipo funcional
-        var equipmentIds = new List<string> {
-            heroData.equipment.weaponId,
-            heroData.equipment.helmetId,
-            heroData.equipment.torsoId,
-            heroData.equipment.glovesId,
-            heroData.equipment.pantsId
-        };
+        var equipmentIds = heroData.GetEquipment();
         foreach (var itemId in equipmentIds)
         {
             if (!string.IsNullOrEmpty(itemId))

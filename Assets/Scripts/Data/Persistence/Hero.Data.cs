@@ -80,4 +80,17 @@ public class HeroData
 
     /// <summary>Visual customization of the avatar.</summary>
     public AvatarParts avatar = new();
+
+    public List<string> GetEquipment()
+    {
+        return new List<string>
+        {
+            equipment.weaponId,
+            equipment.helmetId,
+            equipment.torsoId,
+            equipment.glovesId,
+            equipment.pantsId,
+            equipment.bootsId
+        };
+    }
 }

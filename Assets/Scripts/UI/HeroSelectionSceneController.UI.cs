@@ -129,16 +129,9 @@ public class HeroSelectionSceneController : MonoBehaviour
         );
 
         // 2) Activar piezas de equipo funcionales
-        var equipment = hero.equipment;
-        var equipmentIds = new List<string> {
-            equipment.weaponId,
-            equipment.helmetId,
-            equipment.torsoId,
-            equipment.glovesId,
-            equipment.pantsId
-        };
-        
-        foreach (var itemId in equipmentIds)
+        var equipment = hero.GetEquipment();
+
+        foreach (var itemId in equipment)
         {
             if (!string.IsNullOrEmpty(itemId))
             {

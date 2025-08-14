@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\data\\avatar\\avatarpartdatabase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\data\\avatar\\avatarpartdatabase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\inventory\\inventoryarchitecturesetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\inventory\\inventoryarchitecturesetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\triggers\\npctriggerzone.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\inventory\\services\\inventoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -129,6 +129,10 @@
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Combat\\DamageProfileAuthoring.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\InventoryArchitectureSetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Assets\\Scripts\\Inventory\\InventoryArchitectureSetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -138,11 +142,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "AvatarPartDatabase.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Data\\Avatar\\AvatarPartDatabase.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Data\\Avatar\\AvatarPartDatabase.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Data\\Avatar\\AvatarPartDatabase.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Data\\Avatar\\AvatarPartDatabase.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-14T09:16:01.276Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 32,
               "Title": "InventoryArchitectureSetup.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\InventoryArchitectureSetup.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Inventory\\InventoryArchitectureSetup.cs",
@@ -150,8 +167,7 @@
               "RelativeToolTip": "Assets\\Scripts\\Inventory\\InventoryArchitectureSetup.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAA9AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-11T10:20:00.142Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-08-11T10:20:00.142Z"
             },
             {
               "$type": "Document",
@@ -191,13 +207,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "NpcTriggerZone.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
               "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
               "RelativeToolTip": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
-              "ViewState": "AgIAAGgAAAAAAAAAAAAqwHwAAABIAAAAAAAAAA==",
+              "ViewState": "AgIAAGgAAAAAAAAAAAAqwHwAAAA6AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-07-31T13:53:44.958Z",
               "EditorCaption": ""
