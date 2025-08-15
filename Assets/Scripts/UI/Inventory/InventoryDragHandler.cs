@@ -84,6 +84,14 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
         if (_currentItem == null || _currentItemData == null)
             return;
 
+        // NUEVO: Verificar si el drag & drop está habilitado según el filtro actual
+        var inventoryPanel = FindObjectOfType<InventoryPanelController>();
+        if (inventoryPanel != null && !inventoryPanel.CanPerformDragDrop())
+        {
+            Debug.LogWarning("[InventoryDragHandler] Drag & Drop is disabled when filters are active");
+            return;
+        }
+
         CreateDragVisual();
         
         // Hacer la celda original semi-transparente durante el drag

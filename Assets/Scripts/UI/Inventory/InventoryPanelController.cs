@@ -240,11 +240,53 @@ public class InventoryPanelController : MonoBehaviour
 
     /// <summary>
     /// Ordena el inventario y actualiza la visualización.
+    /// Solo funciona cuando el filtro actual es "All".
     /// </summary>
     public void SortInventory()
     {
-        // InventoryManager.SortByType();
-        Debug.Log("[InventoryPanelController] Inventario ordenado");
+        // Validación: solo permitir sort cuando el filtro es "All"
+        if (!CanPerformSort())
+        {
+            Debug.LogWarning("[InventoryPanelController] Sort is only available when filter is set to 'All'");
+            return;
+        }
+
+        if (_currentHero == null)
+        {
+            Debug.LogError("[InventoryPanelController] Cannot sort - no hero data available");
+            return;
+        }
+
+        // Ejecutar el sort a través del InventoryManager
+        bool success = InventoryManager.SortByType();
+        
+        if (success)
+        {
+            Debug.Log("[InventoryPanelController] Inventory sorted successfully");
+        }
+        else
+        {
+            Debug.LogError("[InventoryPanelController] Failed to sort inventory");
+        }
+    }
+
+    /// <summary>
+    /// Verifica si se puede realizar un sort del inventario.
+    /// </summary>
+    /// <returns>True si se puede hacer sort</returns>
+    public bool CanPerformSort()
+    {
+        return _currentFilter == ItemFilter.All && _currentHero != null;
+    }
+
+    /// <summary>
+    /// Verifica si el drag & drop está habilitado.
+    /// Solo se permite con filtro "All".
+    /// </summary>
+    /// <returns>True si se puede hacer drag & drop</returns>
+    public bool CanPerformDragDrop()
+    {
+        return _currentFilter == ItemFilter.All;
     }
 
     /// <summary>
@@ -284,6 +326,7 @@ public class InventoryPanelController : MonoBehaviour
 
     /// <summary>
     /// Actualiza la visualización de los ítems en la grilla según el filtro actual.
+    /// NUEVO: Ahora usa GetFilteredItems() para aplicar filtros y compactar items desde slot 0.
     /// </summary>
     private void UpdateInventoryDisplay()
     {
@@ -292,15 +335,29 @@ public class InventoryPanelController : MonoBehaviour
 
         int totalCells = gridWidth * gridHeight;
         
-        // Limpiar array visual
+        // Limpiar array visual completo
         Array.Clear(slotItems, 0, slotItems.Length);
 
-        // Colocar cada item del inventario persistente en su posición visual correspondiente
-        foreach (var item in _currentHero.inventory)
+        // NUEVO: Obtener items según filtro actual (reutiliza GetFilteredItems() existente)
+        var itemsToShow = GetFilteredItems();
+
+        if (_currentFilter == ItemFilter.All)
         {
-            if (item != null && item.slotIndex >= 0 && item.slotIndex < totalCells)
+            // Con filtro "All": mantener posiciones originales (comportamiento anterior)
+            foreach (var item in itemsToShow)
             {
-                slotItems[item.slotIndex] = item;
+                if (item != null && item.slotIndex >= 0 && item.slotIndex < totalCells)
+                {
+                    slotItems[item.slotIndex] = item;
+                }
+            }
+        }
+        else
+        {
+            // Con filtros activos: compactar items desde slot 0
+            for (int i = 0; i < itemsToShow.Count && i < totalCells; i++)
+            {
+                slotItems[i] = itemsToShow[i];
             }
         }
 
@@ -321,6 +378,8 @@ public class InventoryPanelController : MonoBehaviour
                 cellController.Clear();
             }
         }
+
+        Debug.Log($"[InventoryPanelController] Display updated with filter '{_currentFilter}': showing {itemsToShow.Count} items");
     }
 
     /// <summary>
@@ -348,11 +407,11 @@ public class InventoryPanelController : MonoBehaviour
     }
 
     /// <summary>
-    /// Actualiza el estado visual de los botones de filtro.
+    /// Actualiza el estado visual de los botones de filtro y sort.
     /// </summary>
     private void UpdateFilterButtons()
     {
-        // Resetear interactividad de todos los botones
+        // Resetear interactividad de los botones de filtro
         if (allItemsButton != null)
             allItemsButton.interactable = _currentFilter != ItemFilter.All;
         
@@ -361,6 +420,10 @@ public class InventoryPanelController : MonoBehaviour
         
         if (stackableButton != null)
             stackableButton.interactable = _currentFilter != ItemFilter.Stackable;
+
+        // El botón de sort solo está disponible cuando el filtro es "All"
+        if (sortButton != null)
+            sortButton.interactable = _currentFilter == ItemFilter.All;
     }
 
     /// <summary>
@@ -375,11 +438,19 @@ public class InventoryPanelController : MonoBehaviour
     /// <summary>
     /// Intercambia ítems entre dos celdas de la grilla.
     /// Llamado por el sistema de drag and drop.
+    /// NUEVO: Solo permite intercambio cuando filtro es "All".
     /// </summary>
     /// <param name="sourceCellIndex">Índice de la celda origen</param>
     /// <param name="targetCellIndex">Índice de la celda destino</param>
     public void SwapItems(int sourceCellIndex, int targetCellIndex)
     {
+        // NUEVO: Validar que el filtro sea "All" para permitir drag & drop
+        if (_currentFilter != ItemFilter.All)
+        {
+            Debug.LogWarning("[InventoryPanelController] Drag & Drop is disabled when filters are active. Switch to 'All' filter to enable item movement.");
+            return;
+        }
+
         if (_currentHero?.inventory == null)
         {
             Debug.LogError("[InventoryPanelController] No hay héroe o inventario válido para intercambiar ítems");

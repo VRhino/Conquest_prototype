@@ -549,6 +549,177 @@ public static class InventoryManager
 
     #endregion
 
+    #region Inventory Organization
+
+    /// <summary>
+    /// Ordena el inventario por tipo y rareza, combinando stackables y compactando espacios.
+    /// Orden: Armaduras → Armas → Consumibles/Visuales, por rareza dentro de cada tipo.
+    /// </summary>
+    public static bool SortByType()
+    {
+        if (!ValidateInitialization()) return false;
+
+        LogInfo("Starting inventory sort by type and rarity");
+
+        try
+        {
+            // Paso 1: Combinar stackables duplicados
+            CombineStackableItems();
+
+            // Paso 2: Obtener todos los items válidos
+            var allItems = new List<InventoryItem>(_currentHero.inventory);
+            
+            if (allItems.Count == 0)
+            {
+                LogInfo("Inventory is empty - no sorting needed");
+                return true;
+            }
+
+            // Paso 3: Ordenar según criterios especificados
+            allItems.Sort((item1, item2) =>
+            {
+                // Obtener datos de los items
+                var data1 = InventoryUtils.GetItemData(item1.itemId);
+                var data2 = InventoryUtils.GetItemData(item2.itemId);
+
+                if (data1 == null && data2 == null) return 0;
+                if (data1 == null) return 1;
+                if (data2 == null) return -1;
+
+                // Comparar por prioridad de tipo (armaduras > armas > consumibles)
+                int typePriority1 = GetItemTypePriority(data1.itemType);
+                int typePriority2 = GetItemTypePriority(data2.itemType);
+
+                if (typePriority1 != typePriority2)
+                    return typePriority1.CompareTo(typePriority2);
+
+                // Dentro del mismo tipo, ordenar por rareza (legendary > epic > rare > uncommon > common)
+                int rarityPriority1 = GetRarityPriority(data1.rarity);
+                int rarityPriority2 = GetRarityPriority(data2.rarity);
+
+                if (rarityPriority1 != rarityPriority2)
+                    return rarityPriority1.CompareTo(rarityPriority2);
+
+                // Como criterio final, ordenar por nombre para consistencia
+                return string.Compare(data1.name, data2.name, StringComparison.OrdinalIgnoreCase);
+            });
+
+            // Paso 4: Reasignar slotIndex secuencialmente desde 0
+            for (int i = 0; i < allItems.Count; i++)
+            {
+                allItems[i].slotIndex = i;
+            }
+
+            // Paso 5: Actualizar la lista del inventario
+            _currentHero.inventory.Clear();
+            _currentHero.inventory.AddRange(allItems);
+
+            // Paso 6: Notificar cambios y guardar
+            InventoryEventService.TriggerInventoryChanged();
+
+            LogInfo($"Inventory sorted successfully - {allItems.Count} items organized");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogError($"Error during inventory sort: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Combina items stackables duplicados para optimizar espacio.
+    /// </summary>
+    private static void CombineStackableItems()
+    {
+        var itemsToRemove = new List<InventoryItem>();
+        var processedItems = new HashSet<string>();
+
+        for (int i = 0; i < _currentHero.inventory.Count; i++)
+        {
+            var currentItem = _currentHero.inventory[i];
+            
+            // Solo procesar stackables y que no hayamos procesado ya
+            if (!currentItem.IsStackable || processedItems.Contains(currentItem.itemId))
+                continue;
+
+            processedItems.Add(currentItem.itemId);
+
+            // Buscar otros items del mismo tipo para combinar
+            for (int j = i + 1; j < _currentHero.inventory.Count; j++)
+            {
+                var otherItem = _currentHero.inventory[j];
+                
+                if (ItemInstanceService.CanStack(currentItem, otherItem))
+                {
+                    // Combinar las cantidades
+                    ItemInstanceService.StackItems(currentItem, otherItem);
+                    itemsToRemove.Add(otherItem);
+                    
+                    LogInfo($"Combined stackable items: {currentItem.itemId} (total: {currentItem.quantity})");
+                }
+            }
+        }
+
+        // Remover items que fueron combinados
+        foreach (var itemToRemove in itemsToRemove)
+        {
+            _currentHero.inventory.Remove(itemToRemove);
+        }
+
+        if (itemsToRemove.Count > 0)
+        {
+            LogInfo($"Removed {itemsToRemove.Count} duplicate stackable items after combining");
+        }
+    }
+
+    /// <summary>
+    /// Obtiene la prioridad numérica para ordenamiento por tipo.
+    /// Menor número = mayor prioridad (aparece primero).
+    /// </summary>
+    private static int GetItemTypePriority(ItemType itemType)
+    {
+        return itemType switch
+        {
+            // Armaduras primero (prioridad alta)
+            ItemType.Helmet => 1,
+            ItemType.Torso => 2,
+            ItemType.Gloves => 3,
+            ItemType.Pants => 4,
+            ItemType.Boots => 5,
+            
+            // Armas segundo
+            ItemType.Weapon => 6,
+            
+            // Consumibles y visuales al final
+            ItemType.Consumable => 7,
+            ItemType.Visual => 8,
+            
+            // Items sin tipo al final
+            ItemType.None => 9,
+            _ => 10
+        };
+    }
+
+    /// <summary>
+    /// Obtiene la prioridad numérica para ordenamiento por rareza.
+    /// Menor número = mayor prioridad (aparece primero).
+    /// </summary>
+    private static int GetRarityPriority(ItemRarity rarity)
+    {
+        return rarity switch
+        {
+            ItemRarity.Legendary => 1,
+            ItemRarity.Epic => 2,
+            ItemRarity.Rare => 3,
+            ItemRarity.Uncommon => 4,
+            ItemRarity.Common => 5,
+            _ => 6
+        };
+    }
+
+    #endregion
+
     #region Logging
 
     private static void LogInfo(string message)
