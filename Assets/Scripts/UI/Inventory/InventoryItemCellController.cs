@@ -69,6 +69,19 @@ public class InventoryItemCellController : MonoBehaviour
 
         // Asignar sprites
         Sprite itemSprite = itemData.iconPath != null ? Resources.Load<Sprite>(itemData.iconPath) : null;
+        
+        if (itemSprite == null)
+        {
+            Debug.LogWarning($"[InventoryItemCellController] No se pudo cargar sprite de ítem: {itemData.iconPath}");
+            itemMiniature.gameObject.SetActive(false);
+        }
+        else
+        {
+            Debug.Log($"[InventoryItemCellController] Cargando sprite de ítem: {itemData.iconPath}");
+            itemMiniature.gameObject.SetActive(true);
+            itemMiniature.sprite = itemSprite;
+        }
+
         itemBackground.sprite = itemData.rarity switch
         {
             ItemRarity.Common => backgroundSpriteCommon,
@@ -78,7 +91,6 @@ public class InventoryItemCellController : MonoBehaviour
             ItemRarity.Legendary => backgroundSpriteLegendary,
             _ => backgroundSpriteCommon // Default case
         };
-        itemMiniature.sprite = itemSprite;
 
         // Asignar color de rareza
         filler.color = InventoryUtils.GetRarityColor(item);

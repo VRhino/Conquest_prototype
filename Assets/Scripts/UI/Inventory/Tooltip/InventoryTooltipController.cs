@@ -125,7 +125,6 @@ public class InventoryTooltipController : MonoBehaviour
             {
                 // Pivot en esquina superior izquierda (0, 1)
                 rectTransform.pivot = new Vector2(0f, 1f);
-                Debug.Log("[InventoryTooltipController] Pivot configurado en esquina superior izquierda");
             }
         }
 
@@ -164,8 +163,6 @@ public class InventoryTooltipController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[InventoryTooltipController] ShowTooltip en posición: {mousePosition}");
-        
         _currentItem = item;
         _currentItemData = itemData;
         _lastMousePosition = mousePosition;
@@ -205,13 +202,11 @@ public class InventoryTooltipController : MonoBehaviour
         // Ahora posicionar el tooltip
         if (_lastMousePosition != Vector3.zero)
         {
-            Debug.Log($"[InventoryTooltipController] Posicionando tooltip en: {_lastMousePosition}");
             UpdateTooltipPosition(_lastMousePosition);
         }
         else
         {
             Vector3 defaultPos = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-            Debug.Log($"[InventoryTooltipController] Usando posición por defecto: {defaultPos}");
             UpdateTooltipPosition(defaultPos);
         }
 
@@ -288,7 +283,6 @@ public class InventoryTooltipController : MonoBehaviour
                 _currentItem = updatedItem;
                 _currentItemData = itemData;
                 PopulateTooltipContent(); // Método existente
-                Debug.Log($"[InventoryTooltipController] Tooltip refreshed for updated item: {itemData.name}");
             }
         }
     }
@@ -317,7 +311,6 @@ public class InventoryTooltipController : MonoBehaviour
                     if (!stillExists)
                     {
                         HideTooltip();
-                        Debug.Log($"[InventoryTooltipController] Tooltip hidden - equipment instance removed: {removedItemId}");
                     }
                 }
             }
@@ -484,13 +477,13 @@ public class InventoryTooltipController : MonoBehaviour
         // Categoría
         if (categoryText != null)
         {
-            categoryText.text = $"Tipo: {GetItemTypeDisplayName(_currentItemData.itemType)}";
+            categoryText.text = $"{GetItemTypeDisplayName(_currentItemData.itemType)}";
         }
 
         // Durabilidad (placeholder - se puede implementar en el futuro)
         if (durabilityText != null)
         {
-            durabilityText.text = "Durabilidad: 100/100";
+            durabilityText.text = $"100/100";
         }
     }
 
@@ -622,14 +615,12 @@ public class InventoryTooltipController : MonoBehaviour
             
             rectTransform.localPosition = localPosition;
             
-            Debug.Log($"[InventoryTooltipController] Tooltip posicionado en: {localPosition} (cursor: {screenPosition})");
         }
         else
         {
             // Fallback: posición directa con offset
             Vector3 adjustedPosition = screenPosition + new Vector3(tooltipOffset.x, -tooltipOffset.y, 0f);
             rectTransform.position = adjustedPosition;
-            Debug.Log($"[InventoryTooltipController] Tooltip fallback en: {adjustedPosition}");
         }
     }
 
@@ -640,20 +631,26 @@ public class InventoryTooltipController : MonoBehaviour
     {
         if (miniatureImage == null) return;
 
+        Debug.Log($"[InventoryTooltipController] Cargando icono de ítem: {_currentItemData.iconPath}");
         // Intentar cargar el sprite del ítem
         if (!string.IsNullOrEmpty(_currentItemData.iconPath))
         {
+           
             Sprite itemSprite = Resources.Load<Sprite>(_currentItemData.iconPath);
             if (itemSprite != null)
             {
                 miniatureImage.sprite = itemSprite;
                 miniatureImage.gameObject.SetActive(true);
-                return;
             }
+           
+        }
+        else
+        {
+            // Si no se encontró sprite, ocultar miniatura
+            miniatureImage.gameObject.SetActive(false);
+            Debug.LogWarning($"[InventoryTooltipController] No se pudo cargar sprite de ítem: {_currentItemData.iconPath}");
         }
 
-        // Si no se encontró sprite, ocultar miniatura
-        miniatureImage.gameObject.SetActive(false);
     }
 
     #region Helper Methods

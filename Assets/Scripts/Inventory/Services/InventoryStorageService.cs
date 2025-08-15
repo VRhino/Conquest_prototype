@@ -208,6 +208,16 @@ public static class InventoryStorageService
     }
 
     /// <summary>
+    /// Busca el primer item con el ID especificado.
+    /// </summary>
+    public static InventoryItem FindItemById(string itemId)
+    {
+        if (string.IsNullOrEmpty(itemId)) return null;
+        
+        return _currentHero.inventory.FirstOrDefault(item => item.itemId == itemId);
+    }
+
+    /// <summary>
     /// Obtiene todos los items de un tipo específico.
     /// </summary>
     public static List<InventoryItem> GetItemsOfType(ItemType itemType)

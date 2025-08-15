@@ -179,6 +179,7 @@
     <Compile Include="Assets\Scripts\Hero\Enums\HeroAbilityCategory.Type.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDeploymentWarningEvent.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Systems\DialogueEffectSystem.cs" />
+    <Compile Include="Assets\Scripts\Inventory\ItemsEffects\EquipmentGrantEffect.cs" />
     <Compile Include="Assets\Scripts\Data\Items\ItemDatabase.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayer.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\Health.Component.cs" />

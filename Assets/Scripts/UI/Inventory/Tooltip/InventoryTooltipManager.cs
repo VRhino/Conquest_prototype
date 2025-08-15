@@ -45,7 +45,6 @@ public class InventoryTooltipManager : MonoBehaviour
         _validationEnabled = true;
         _lastValidationTime = Time.time;
         
-        Debug.Log("[InventoryTooltipManager] Sistema de validación de tooltips iniciado");
     }
 
     /// <summary>
@@ -55,7 +54,6 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         _validationEnabled = false;
         
-        Debug.Log("[InventoryTooltipManager] Sistema de validación de tooltips detenido");
     }
 
     void Update()
@@ -98,7 +96,6 @@ public class InventoryTooltipManager : MonoBehaviour
     public void SetValidationInterval(float interval)
     {
         _validationInterval = Mathf.Max(0.1f, interval);
-        Debug.Log($"[InventoryTooltipManager] Intervalo de validación establecido a {_validationInterval}s");
     }
 
     #endregion
@@ -152,7 +149,6 @@ public class InventoryTooltipManager : MonoBehaviour
             ConnectCellToTooltip(cell);
         }
 
-        Debug.Log($"[InventoryTooltipManager] Conectadas {cells.Length} celdas al sistema de tooltips");
     }
 
     /// <summary>
@@ -229,7 +225,6 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         if (!enableTooltips || _tooltipController == null) return;
 
-        Debug.Log($"[InventoryTooltipManager] Mouse move: {mousePosition}");
         _tooltipController.UpdateTooltipPosition(mousePosition);
     }
 
