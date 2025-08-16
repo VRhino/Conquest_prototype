@@ -10,7 +10,7 @@ using UnityEngine;
 public static class InventoryStorageService
 {
     private static HeroData _currentHero;
-    private static int _inventoryLimit = 20;
+    private static int _inventoryLimit = 72;
 
     /// <summary>Límite máximo de slots del inventario.</summary>
     public static int InventoryLimit 

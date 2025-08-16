@@ -272,6 +272,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadInput.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefab.Authoring.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneManagerSingleton.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\ComparisonTooltipUtils.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\DestinationMarker.System.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFSMState.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\TacticalIntent.Type.cs" />
@@ -296,6 +297,7 @@
     <Compile Include="Assets\Scripts\Squads\Enums\Terrain.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDatabase.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\StatComparisonUtils.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroMovement.System.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryItemCellController.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttack.System.cs" />

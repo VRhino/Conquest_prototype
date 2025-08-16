@@ -46,10 +46,28 @@ public class InventoryTooltipController : MonoBehaviour
     [SerializeField] private Sprite epicBackgroundSprite;
     [SerializeField] private Sprite legendaryBackgroundSprite;
 
+    [Header("Tooltip Configuration")]
+    [SerializeField] private TooltipType tooltipType = TooltipType.Primary;
+    [SerializeField] private Vector2 comparisonPositionOffset = new Vector2(300f, 0f);
+
     [Header("Settings")]
     [SerializeField] private Vector2 tooltipOffset = new Vector2(15f, 15f); // Aumentado para mayor separación
     [SerializeField] private float showDelay = 0.2f;
     [SerializeField] private bool followMouse = true;
+
+    /// <summary>
+    /// Tipos de tooltip disponibles para configuración.
+    /// </summary>
+    public enum TooltipType
+    {
+        Primary,     // Tooltip principal - muestra item del inventario con comparación
+        Secondary    // Tooltip secundario - muestra item equipado como referencia
+    }
+
+    /// <summary>
+    /// Tipo actual del tooltip configurado en este controlador.
+    /// </summary>
+    public TooltipType CurrentTooltipType => tooltipType;
 
     // Control de estado
     private bool _isShowing = false;
@@ -64,25 +82,8 @@ public class InventoryTooltipController : MonoBehaviour
     private Vector3 _lastMousePosition = Vector3.zero;
     private List<GameObject> _statEntries = new List<GameObject>();
 
-    // Singleton para acceso global
-    private static InventoryTooltipController _instance;
-    public static InventoryTooltipController Instance
-    {
-        get
-        {
-            if (_instance == null)
-                _instance = FindObjectOfType<InventoryTooltipController>();
-            return _instance;
-        }
-    }
-
     void Awake()
     {
-        if (_instance == null)
-            _instance = this;
-        else if (_instance != this)
-            Destroy(gameObject);
-
         InitializeTooltip();
     }
 
@@ -185,7 +186,13 @@ public class InventoryTooltipController : MonoBehaviour
     private System.Collections.IEnumerator ShowTooltipCoroutine()
     {
         if (tooltipPanel != null)
+        {
             tooltipPanel.SetActive(true);
+            
+            // SOLUCIÓN CRITICA: Deshabilitar raycasting en el tooltip para evitar bucle infinito
+            // El tooltip no debe interferir con el raycasting de las celdas
+            DisableRaycastTargetsInTooltip();
+        }
 
         // Poblar contenido
         PopulateTooltipContent();
@@ -502,11 +509,32 @@ public class InventoryTooltipController : MonoBehaviour
 
         if (isEquipment)
         {
-            foreach (var stat in _currentItem.GeneratedStats)
+            // Primary tooltip muestra comparación SI hay equipado del mismo tipo
+            if (tooltipType == TooltipType.Primary && HasEquippedItemForComparison())
             {
-                CreateStatEntry(stat.Key, stat.Value);
+                SetupComparisonStats();
+            }
+            // Secondary tooltip (o Primary sin equipado) muestra stats normales
+            else
+            {
+                foreach (var stat in _currentItem.GeneratedStats)
+                {
+                    CreateStatEntry(stat.Key, stat.Value);
+                }
             }
         }
+    }
+
+    /// <summary>
+    /// Verifica si hay un ítem equipado del mismo tipo para mostrar comparación.
+    /// </summary>
+    /// <returns>True si se puede mostrar comparación</returns>
+    private bool HasEquippedItemForComparison()
+    {
+        if (_currentItemData == null || !_currentItemData.IsEquipment) return false;
+        
+        return ComparisonTooltipUtils.ShouldShowComparison(_currentItemData) &&
+               ComparisonTooltipUtils.GetEquippedItemForComparison(_currentItemData.itemType) != null;
     }
 
     /// <summary>
@@ -514,6 +542,14 @@ public class InventoryTooltipController : MonoBehaviour
     /// </summary>
     private void SetupInteractionPanel()
     {
+        // Solo mostrar panel de interacción en tooltips primarios
+        if (tooltipType == TooltipType.Secondary)
+        {
+            if (interactionPanel != null)
+                interactionPanel.SetActive(false);
+            return;
+        }
+
         if (interactionPanel != null)
             interactionPanel.SetActive(true);
 
@@ -547,6 +583,60 @@ public class InventoryTooltipController : MonoBehaviour
         else if (texts.Length == 1)
         {
             texts[0].text = $"{GetStatDisplayName(statName)}: {FormatStatValue(statValue)}";
+        }
+    }
+
+    /// <summary>
+    /// Configura las estadísticas para el tooltip de comparación.
+    /// </summary>
+    private void SetupComparisonStats()
+    {
+        if (_currentItemData?.IsEquipment != true) return;
+
+        // Obtener el ítem equipado correspondiente
+        var equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(_currentItemData.itemType);
+        if (equippedItem?.GeneratedStats == null) return;
+
+        // Comparar las estadísticas usando los InventoryItems
+        var comparisons = StatComparisonUtils.CompareItemStats(_currentItem, equippedItem);
+
+        // Crear entradas para cada comparación significativa
+        foreach (var comparison in comparisons)
+        {
+            if (StatComparisonUtils.IsSignificantStat(comparison))
+            {
+                CreateComparisonStatEntry(comparison);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Crea una entrada de estadística con comparación.
+    /// </summary>
+    /// <param name="comparison">Comparación de la estadística</param>
+    private void CreateComparisonStatEntry(StatComparison comparison)
+    {
+        if (statEntryPrefab == null || statsContainer == null) return;
+
+        GameObject entry = Instantiate(statEntryPrefab, statsContainer);
+        _statEntries.Add(entry);
+
+        // Buscar componentes de texto en el prefab
+        TMP_Text[] texts = entry.GetComponentsInChildren<TMP_Text>();
+        
+        if (texts.Length >= 2)
+        {
+            // Nombre de la estadística
+            texts[0].text = GetStatDisplayName(comparison.statName);
+            
+            // Valor con comparación
+            texts[1].text = StatComparisonUtils.FormatComparisonValue(comparison);
+            texts[1].color = StatComparisonUtils.GetComparisonColor(comparison);
+        }
+        else if (texts.Length == 1)
+        {
+            texts[0].text = $"{GetStatDisplayName(comparison.statName)}: {StatComparisonUtils.FormatComparisonValue(comparison)}";
+            texts[0].color = StatComparisonUtils.GetComparisonColor(comparison);
         }
     }
 
@@ -588,7 +678,15 @@ public class InventoryTooltipController : MonoBehaviour
         {
             // Con pivot en (0,1), la posición será la esquina superior izquierda del tooltip
             // Aplicar offset para separar del cursor
-            localPosition += new Vector2(tooltipOffset.x, -tooltipOffset.y);
+            Vector2 offset = tooltipOffset;
+            
+            // Si es tooltip secundario, aplicar el offset adicional
+            if (tooltipType == TooltipType.Secondary)
+            {
+                offset += comparisonPositionOffset;
+            }
+            
+            localPosition += new Vector2(offset.x, -offset.y);
             
             // Obtener dimensiones para validación de límites
             Vector2 tooltipSize = rectTransform.sizeDelta;
@@ -600,13 +698,13 @@ public class InventoryTooltipController : MonoBehaviour
             // Si se sale por la derecha, mover a la izquierda del cursor
             if (localPosition.x + tooltipSize.x > canvasHalfWidth)
             {
-                localPosition.x = localPosition.x - tooltipSize.x - tooltipOffset.x * 2;
+                localPosition.x = localPosition.x - tooltipSize.x - offset.x * 2;
             }
             
             // Si se sale por abajo, mover arriba del cursor  
             if (localPosition.y - tooltipSize.y < -canvasHalfHeight)
             {
-                localPosition.y = localPosition.y + tooltipSize.y + tooltipOffset.y * 2;
+                localPosition.y = localPosition.y + tooltipSize.y + offset.y * 2;
             }
             
             // Asegurar límites mínimos
@@ -631,7 +729,6 @@ public class InventoryTooltipController : MonoBehaviour
     {
         if (miniatureImage == null) return;
 
-        Debug.Log($"[InventoryTooltipController] Cargando icono de ítem: {_currentItemData.iconPath}");
         // Intentar cargar el sprite del ítem
         if (!string.IsNullOrEmpty(_currentItemData.iconPath))
         {
@@ -651,6 +748,59 @@ public class InventoryTooltipController : MonoBehaviour
             Debug.LogWarning($"[InventoryTooltipController] No se pudo cargar sprite de ítem: {_currentItemData.iconPath}");
         }
 
+    }
+
+    /// <summary>
+    /// Deshabilita el raycasting en todos los elementos UI del tooltip para evitar interferencia.
+    /// CRÍTICO: Esto previene el bucle infinito donde el tooltip bloquea el hover de las celdas.
+    /// </summary>
+    private void DisableRaycastTargetsInTooltip()
+    {
+        if (tooltipPanel == null) return;
+
+        // Deshabilitar raycasting en todos los Graphic (Image, Text, etc.) del tooltip
+        UnityEngine.UI.Graphic[] graphics = tooltipPanel.GetComponentsInChildren<UnityEngine.UI.Graphic>(includeInactive: true);
+        
+        foreach (var graphic in graphics)
+        {
+            graphic.raycastTarget = false;
+        }
+
+    }
+
+    /// <summary>
+    /// Método para testing: Verifica el estado de raycast targets en el tooltip.
+    /// </summary>
+    [ContextMenu("Debug Raycast Targets")]
+    private void DebugRaycastTargets()
+    {
+        if (tooltipPanel == null)
+        {
+            Debug.Log("[InventoryTooltipController] Tooltip panel is null");
+            return;
+        }
+
+        UnityEngine.UI.Graphic[] graphics = tooltipPanel.GetComponentsInChildren<UnityEngine.UI.Graphic>(includeInactive: true);
+        int enabledTargets = 0;
+        int disabledTargets = 0;
+
+        foreach (var graphic in graphics)
+        {
+            if (graphic.raycastTarget)
+            {
+                enabledTargets++;
+            }
+            else
+            {
+                disabledTargets++;
+            }
+        }
+
+        
+        if (enabledTargets > 0)
+        {
+            Debug.LogWarning($"[InventoryTooltipController] WARNING: {enabledTargets} elements still have raycast enabled - this may cause hover interference!");
+        }
     }
 
     #region Helper Methods
@@ -828,6 +978,15 @@ public class InventoryTooltipController : MonoBehaviour
     public void SetFollowMouse(bool follow)
     {
         followMouse = follow;
+    }
+
+    /// <summary>
+    /// Configura el tipo de tooltip.
+    /// </summary>
+    /// <param name="type">Tipo de tooltip</param>
+    public void SetTooltipType(TooltipType type)
+    {
+        tooltipType = type;
     }
 
     #endregion
