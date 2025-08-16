@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using Data.Items;
 
 /// <summary>
@@ -220,7 +221,7 @@ public class InventoryTooltipManager : MonoBehaviour
         if (enableComparisonTooltips && itemData != null && itemData.IsEquipment && 
             ComparisonTooltipUtils.ShouldShowComparison(itemData))
         {
-            ShowDualTooltips(item, itemData);
+            ShowDualTooltips(item, itemData, mousePosition);
         }
         else if (primaryTooltipController != null)
         {
@@ -251,15 +252,16 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         if (!enableTooltips) return;
 
-        // Actualizar posición de ambos tooltips si están activos
+        // Actualizar posición del tooltip primario (normal)
         if (primaryTooltipController != null && primaryTooltipController.IsShowing)
         {
-            primaryTooltipController.UpdateTooltipPosition(mousePosition);
+            primaryTooltipController.PositioningSystem.UpdatePositionWithComparison(mousePosition, false);
         }
 
+        // Actualizar posición del tooltip secundario (con offset)
         if (secondaryTooltipController != null && secondaryTooltipController.IsShowing)
         {
-            secondaryTooltipController.UpdateTooltipPosition(mousePosition);
+            secondaryTooltipController.PositioningSystem.UpdatePositionWithComparison(mousePosition, true);
         }
     }
 
@@ -315,6 +317,50 @@ public class InventoryTooltipManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Muestra tooltips duales (primario + secundario) para equipamiento con posición específica.
+    /// </summary>
+    /// <param name="item">Ítem del inventario</param>
+    /// <param name="itemData">Datos del ítem</param>
+    /// <param name="mousePosition">Posición específica del mouse</param>
+    public void ShowDualTooltips(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    {
+        if (!enableTooltips) return;
+
+        // Mostrar tooltip primario (inventario) - posición normal
+        if (primaryTooltipController != null)
+        {
+            primaryTooltipController.ShowTooltipInstant(item, itemData, mousePosition);
+        }
+
+        // Mostrar tooltip secundario (equipado) - con offset de comparación
+        if (enableComparisonTooltips && secondaryTooltipController != null && 
+            ComparisonTooltipUtils.ShouldShowComparison(itemData))
+        {
+            var equippedItemData = GetEquippedItemData(itemData.itemType);
+            if (equippedItemData.equippedItem != null && equippedItemData.itemData != null)
+            {
+                // Posición con offset para el tooltip secundario
+                Vector3 secondaryPosition = mousePosition + new Vector3(
+                    primaryTooltipController.ComparisonPositionOffset.x,
+                    primaryTooltipController.ComparisonPositionOffset.y,
+                    0f
+                );
+                
+                secondaryTooltipController.ShowTooltipInstant(
+                    equippedItemData.equippedItem, 
+                    equippedItemData.itemData, 
+                    secondaryPosition
+                );
+            }
+            else
+            {
+                // Fallback: si no hay ítem equipado, ocultar tooltip de comparación
+                Debug.LogWarning($"[InventoryTooltipManager] No se pudo obtener el ítem equipado para comparación del tipo {itemData.itemType}");
+            }
+        }
+    }
+
+    /// <summary>
     /// Muestra tooltips duales (primario + secundario) para equipamiento.
     /// El primario muestra el ítem del inventario con comparación, el secundario muestra el ítem equipado como referencia.
     /// </summary>
@@ -324,27 +370,20 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         if (!enableTooltips) return;
 
-        // Mostrar tooltip primario con el ítem del inventario (incluye comparación automáticamente)
-        if (primaryTooltipController != null)
+        // Obtener posición actual del mouse usando Input System
+        Vector3 mousePosition = Vector3.zero;
+        if (Mouse.current != null)
         {
-            primaryTooltipController.ShowTooltipInstant(item, itemData);
+            mousePosition = Mouse.current.position.ReadValue();
+        }
+        else
+        {
+            // Fallback si no hay mouse disponible
+            mousePosition = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
         }
 
-        // Mostrar tooltip secundario con el ítem equipado (solo información, sin comparación)
-        if (enableComparisonTooltips && secondaryTooltipController != null && 
-            ComparisonTooltipUtils.ShouldShowComparison(itemData))
-        {
-            var equippedItemData = GetEquippedItemData(itemData.itemType);
-            if (equippedItemData.equippedItem != null && equippedItemData.itemData != null)
-            {
-                secondaryTooltipController.ShowTooltipInstant(equippedItemData.equippedItem, equippedItemData.itemData);
-            }
-            else
-            {
-                // Fallback: si no hay ítem equipado, ocultar tooltip de comparación
-                Debug.LogWarning($"[InventoryTooltipManager] No se pudo obtener el ítem equipado para comparación del tipo {itemData.itemType}");
-            }
-        }
+        // Llamar al método con posición específica
+        ShowDualTooltips(item, itemData, mousePosition);
     }
 
     /// <summary>
