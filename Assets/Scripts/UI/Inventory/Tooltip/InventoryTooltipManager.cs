@@ -130,13 +130,13 @@ public class InventoryTooltipManager : MonoBehaviour
         }
 
         // Configurar el tooltip normal
-        primaryTooltipController.SetTooltipType(InventoryTooltipController.TooltipType.Primary);
+        primaryTooltipController.SetTooltipType(TooltipType.Primary);
         primaryTooltipController.SetShowDelay(hoverDelay);
 
         // Configurar el tooltip de comparación si está habilitado
         if (enableComparisonTooltips && secondaryTooltipController != null)
         {
-            secondaryTooltipController.SetTooltipType(InventoryTooltipController.TooltipType.Secondary);
+            secondaryTooltipController.SetTooltipType(TooltipType.Secondary);
             secondaryTooltipController.SetShowDelay(hoverDelay);
         }
 
@@ -336,7 +336,7 @@ public class InventoryTooltipManager : MonoBehaviour
         if (enableComparisonTooltips && secondaryTooltipController != null && 
             ComparisonTooltipUtils.ShouldShowComparison(itemData))
         {
-            var equippedItemData = GetEquippedItemData(itemData.itemType);
+            var equippedItemData = GetEquippedItemData(itemData.itemType, itemData.itemCategory);
             if (equippedItemData.equippedItem != null && equippedItemData.itemData != null)
             {
                 // Posición con offset para el tooltip secundario
@@ -391,12 +391,12 @@ public class InventoryTooltipManager : MonoBehaviour
     /// </summary>
     /// <param name="equipmentType">Tipo de equipamiento</param>
     /// <returns>Tupla con el ítem equipado y sus datos, o null si no hay nada equipado</returns>
-    private (InventoryItem equippedItem, ItemData itemData) GetEquippedItemData(ItemType equipmentType)
+    private (InventoryItem equippedItem, ItemData itemData) GetEquippedItemData(ItemType equipmentType, ItemCategory itemCategory)
     {
         try
         {
             // Obtener el ítem equipado usando la utilidad existente
-            var equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(equipmentType);
+            var equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(equipmentType, itemCategory);
             if (equippedItem == null)
             {
                 return (null, null);

@@ -65,6 +65,7 @@ Ubicación: `Assets/Scripts/Resources/Data/Items/ItemDatabase`
 - `🧾 description`: Descripción del ítem.
 - `🎖️ rarity`: Rareza (`Common`, `Uncommon`, `Rare`, `Epic`, `Legendary`).
 - `🛡️ itemType`: Debe ser `Armor`
+- `itemCategory`: Categoria (itemCategory Enum)
 - `📦 stackable`: `false` para equipos.
 - `🧩 visualPartId`: ID del VisualPart creado en el paso 3.
 - `📈 statsGenerators`: Lista de generadores de stats defensivos.

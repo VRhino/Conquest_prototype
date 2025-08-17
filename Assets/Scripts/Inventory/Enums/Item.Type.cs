@@ -5,11 +5,7 @@ public enum ItemType
 {
     None,
     Weapon,
-    Helmet,
-    Torso,
-    Gloves,
-    Pants,
-    Boots,
+    Armor,
     Consumable,
     Visual
 }
@@ -21,4 +17,26 @@ public enum ItemRarity
     Rare,
     Epic,
     Legendary
+}
+
+public enum ItemCategory
+{
+    Helmet,
+    Torso,
+    Gloves,
+    Pants,
+    Boots,
+    Spear,
+    Bow,
+    TwoHandedSword,
+    SwordAndShield,
+    None
+}
+
+public enum ArmorType
+{
+    Light,
+    Medium,
+    Heavy,
+    None
 }

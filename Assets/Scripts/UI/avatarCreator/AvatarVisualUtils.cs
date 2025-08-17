@@ -59,6 +59,10 @@ namespace Data.Avatar
                 }
             }
         }
+        public static void resetAvatarPartToBase()
+        {
+            
+        }
          // Busca una pieza en la base de datos por id (en todas las listas)
         public static AvatarPartDefinition FindAvatarPartById(AvatarPartDatabase avatarPartDatabase, string id)
         {
@@ -166,9 +170,14 @@ namespace Data.Avatar
         /// <param name="slotType">Tipo de slot a desequipar</param>
         /// <param name="currentGender">Género actual</param>
         /// <param name="heroData">Datos del héroe para obtener partes base</param>
-        public static void UnequipSlotVisual(Transform modularDummy, 
-            AvatarPartDatabase avatarPartDatabase, ItemType slotType, 
-            global::Gender currentGender, HeroData heroData)
+        public static void UnequipSlotVisual(
+            Transform modularDummy, 
+            AvatarPartDatabase avatarPartDatabase,
+            ItemType slotType,
+            ItemCategory itemCategory,
+            global::Gender currentGender,
+            HeroData heroData
+            )
         {
             if (modularDummy == null || avatarPartDatabase == null || heroData == null)
             {
@@ -177,7 +186,7 @@ namespace Data.Avatar
             }
                 
             // Obtener el ítem base para este slot según el héroe
-            string basePartId = GetBasePartIdForSlot(slotType, heroData);
+            string basePartId = GetBasePartIdForSlot(slotType, heroData, itemCategory);
             
             if (!string.IsNullOrEmpty(basePartId))
             {
@@ -188,8 +197,8 @@ namespace Data.Avatar
             else
             {
                 // No hay parte base específica, desactivar todas las partes del slot
-                Debug.Log($"No base part found for slot {slotType}, disabling all parts in slot");
-                DisableAllPartsInSlot(modularDummy, slotType, avatarPartDatabase, currentGender);
+                Debug.Log($"No base part found for slot {itemCategory}, disabling all parts in slot");
+                DisableAllPartsInSlot(modularDummy, slotType, itemCategory, avatarPartDatabase, currentGender);
             }
         }
         
@@ -198,18 +207,47 @@ namespace Data.Avatar
         /// </summary>
         /// <param name="slotType">Tipo de slot</param>
         /// <param name="heroData">Datos del héroe</param>
+        /// <param name="itemCategory">Categoría del ítem</param>
         /// <returns>ID de la parte base o string vacío</returns>
-        private static string GetBasePartIdForSlot(ItemType slotType, HeroData heroData)
+        private static string GetBasePartIdForSlot(ItemType slotType, HeroData heroData, ItemCategory itemCategory)
         {
+            if (heroData?.avatar == null) return "";
+            Debug.Log($"[AvatarVisualUtils]GetBasePartIdForSlot called for slotType: {slotType}, itemCategory: {itemCategory}, heroData: {heroData.heroName}");
             // Mapear slots de equipamiento a las partes base del avatar del héroe
             return slotType switch
             {
-                ItemType.Helmet => heroData.avatar.headId, // Puede ser la cabeza base
-                ItemType.Torso => "", // Torso base suele estar integrado en el modelo
-                ItemType.Gloves => "", // Manos base suelen estar integradas
-                ItemType.Pants => "", // Piernas base suelen estar integradas  
-                ItemType.Boots => "", // Pies base suelen estar integrados
                 ItemType.Weapon => "", // Las armas no tienen "base", simplemente se desactivan
+                ItemType.Armor => itemCategory switch
+                {
+                    ItemCategory.Helmet => heroData.avatar.headId ?? "", // Mostrar cabeza base del héroe
+                    ItemCategory.Torso => GetDefaultBodyPartId("torso", heroData), // Parte base del torso
+                    ItemCategory.Gloves => GetDefaultBodyPartId("gloves", heroData), // Parte base de guantes
+                    ItemCategory.Pants => GetDefaultBodyPartId("pants", heroData), // Parte base de pantalones
+                    ItemCategory.Boots => GetDefaultBodyPartId("boots", heroData), // Parte base de botas
+                    _ => ""
+                },
+                _ => ""
+            };
+        }
+
+        /// <summary>
+        /// Obtiene el ID de la parte base del cuerpo para un slot específico.
+        /// Esto podría expandirse para usar configuraciones más específicas del héroe.
+        /// </summary>
+        /// <param name="slotName">Nombre del slot (torso, gloves, pants, boots)</param>
+        /// <param name="heroData">Datos del héroe</param>
+        /// <returns>ID de la parte base o string vacío</returns>
+        private static string GetDefaultBodyPartId(string slotName, HeroData heroData)
+        {
+            if (heroData?.avatar == null) return "";
+
+            return slotName switch
+            {
+                "torso" => "TorsoDefault",
+                "gloves" => "GlovesDefault",
+                "pants" => "PantsDefault",
+                "boots" => "BootsDefault",
+                "weapon" => "WeaponDefault",
                 _ => ""
             };
         }
@@ -221,11 +259,16 @@ namespace Data.Avatar
         /// <param name="slotType">Tipo de slot</param>
         /// <param name="database">Base de datos de partes</param>
         /// <param name="gender">Género actual</param>
-        private static void DisableAllPartsInSlot(Transform modularDummy, ItemType slotType, 
-            AvatarPartDatabase database, global::Gender gender)
+        private static void DisableAllPartsInSlot(
+            Transform modularDummy,
+            ItemType slotType,
+            ItemCategory itemCategory,
+            AvatarPartDatabase database,
+            global::Gender gender
+            )
         {
             // Obtener todas las partes del slot y desactivarlas
-            var partsForSlot = GetPartsListForSlot(database, slotType);
+            var partsForSlot = GetPartsListForSlot(database, slotType, itemCategory);
             if (partsForSlot == null) 
             {
                 Debug.LogWarning($"No parts list found for slot type: {slotType}");
@@ -264,16 +307,20 @@ namespace Data.Avatar
         /// <param name="database">Base de datos de partes</param>
         /// <param name="slotType">Tipo de slot</param>
         /// <returns>Lista de partes o null</returns>
-        private static List<AvatarPartDefinition> GetPartsListForSlot(AvatarPartDatabase database, ItemType slotType)
+        private static List<AvatarPartDefinition> GetPartsListForSlot(AvatarPartDatabase database, ItemType slotType, ItemCategory itemCategory)
         {
             return slotType switch
             {
-                ItemType.Helmet => database.headParts,
-                ItemType.Torso => database.torsoParts,
-                ItemType.Gloves => database.glovesParts,
-                ItemType.Pants => database.pantsParts,
-                ItemType.Boots => database.bootsParts,
                 ItemType.Weapon => database.weaponParts,
+                ItemType.Armor => itemCategory switch
+                {
+                    ItemCategory.Helmet => database.headParts,
+                    ItemCategory.Torso => database.torsoParts,
+                    ItemCategory.Gloves => database.glovesParts,
+                    ItemCategory.Pants => database.pantsParts,
+                    ItemCategory.Boots => database.bootsParts,
+                    _ => null
+                },                    
                 _ => null
             };
         }

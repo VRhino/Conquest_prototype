@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Data.Items;
+using Unity.Entities.UniversalDelegates;
 
 /// <summary>
 /// Utilidades centralizadas para formateo de tooltips.
@@ -170,21 +171,45 @@ public static class TooltipFormattingUtils
     /// Obtiene el nombre de display para un tipo de ítem.
     /// </summary>
     /// <param name="itemType">Tipo de ítem</param>
+    /// <param name="itemCategory">Categoría de ítem</param>
     /// <returns>Nombre formateado para mostrar</returns>
-    public static string GetItemTypeDisplayName(ItemType itemType)
+    public static string GetItemTypeDisplayName(ItemType itemType, ItemCategory itemCategory)
     {
-        return itemType switch
+        if (itemType == ItemType.Weapon)
         {
-            ItemType.Weapon => "Arma",
-            ItemType.Helmet => "Casco",
-            ItemType.Torso => "Armadura", 
-            ItemType.Gloves => "Guantes",
-            ItemType.Pants => "Pantalones",
-            ItemType.Boots => "Botas",
-            ItemType.Consumable => "Consumible",
-            ItemType.Visual => "Cosmético",
-            _ => itemType.ToString()
-        };
+            return itemCategory switch
+            {
+                ItemCategory.Bow => "Arco",
+                ItemCategory.Spear => "Lanza",
+                ItemCategory.TwoHandedSword => "Espada a Dos Manos",
+                ItemCategory.SwordAndShield => "Espada y Escudo",
+                _ => "Arma"
+            };
+        }
+        else if (itemType == ItemType.Armor)
+        {
+            return itemCategory switch
+            {
+                ItemCategory.Helmet => "Casco",
+                ItemCategory.Torso => "Torso",
+                ItemCategory.Gloves => "Guantes",
+                ItemCategory.Pants => "Pantalones",
+                ItemCategory.Boots => "Botas",
+                _ => "Armadura"
+            };
+        }
+        else if (itemType == ItemType.Consumable)
+        {
+            return "Consumible";
+        }
+        else if (itemType == ItemType.Visual)
+        {
+            return "Cosmético";
+        }
+        else
+        {
+            return "Sin Tipo";
+        }
     }
 
     /// <summary>
@@ -192,15 +217,13 @@ public static class TooltipFormattingUtils
     /// </summary>
     /// <param name="itemType">Tipo de ítem</param>
     /// <returns>Información de armadura específica</returns>
-    public static string GetArmorTypeInfo(ItemType itemType)
+    public static string GetArmorTypeInfo(ArmorType armorType)
     {
-        return itemType switch
+        return armorType switch
         {
-            ItemType.Helmet => "Casco",
-            ItemType.Torso => "Pechera",
-            ItemType.Gloves => "Guantes",
-            ItemType.Pants => "Pantalones",
-            ItemType.Boots => "Botas",
+           ArmorType.Light => "Armadura Ligera",
+           ArmorType.Medium => "Armadura Media",
+           ArmorType.Heavy => "Armadura Pesada",
             _ => "Desconocido"
         };
     }
@@ -254,17 +277,20 @@ public static class TooltipFormattingUtils
     /// Obtiene el texto de acción apropiado para un ítem.
     /// </summary>
     /// <param name="itemData">Datos del ítem</param>
-    /// <param name="inventoryItem">Instancia del ítem</param>
     /// <returns>Texto de acción formateado</returns>
-    public static string GetActionText(ItemData itemData, InventoryItem inventoryItem)
+    public static string GetActionText(ItemData itemData, TooltipType currentTooltipType)
     {
         if (itemData == null) return "";
-        
-        if (itemData.IsEquipment)
+        if (currentTooltipType == TooltipType.Secondary)
         {
-            // Usar el texto en español para compatibilidad con el controller actual
-            return "Clic derecho: Equipar ";
+            return "Equipado";
         }
+            
+        if (itemData.IsEquipment)
+            {
+                // Usar el texto en español para compatibilidad con el controller actual
+                return "Clic derecho: Equipar ";
+            }
         
         if (itemData.IsConsumable)
         {

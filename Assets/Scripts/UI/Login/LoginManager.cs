@@ -1,4 +1,5 @@
 
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -19,7 +20,6 @@ public static class LoginManager
         errorLabel.text = "No se pudo cargar el perfil del usuario.";
         return;
       }
-      Debug.Log($"Login successful for {username} (existing user)");
       PlayerSessionService.SetPlayer(data);
       if (data.heroes.Count == 0)
       {

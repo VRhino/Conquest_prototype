@@ -14,7 +14,10 @@ namespace Data.Items
         public string description;
         public ItemRarity rarity = ItemRarity.Common;
         public ItemType itemType = ItemType.None;
+        public ItemCategory itemCategory = ItemCategory.None;
+        public ArmorType armorType = ArmorType.None;
         public bool stackable = true;
+        
 
         [Header("Visual")]
         public string visualPartId; // Referencia a AvatarPartDefinition por ID

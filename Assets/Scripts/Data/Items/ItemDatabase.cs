@@ -36,58 +36,6 @@ namespace Data.Items
         }
 
         /// <summary>
-        /// Verifica si un ítem puede apilarse en el inventario.
-        /// </summary>
-        public bool IsStackable(string itemId)
-        {
-            var item = GetItemDataById(itemId);
-            return item != null && item.stackable;
-        }
-
-        /// <summary>
-        /// Obtiene el tipo de un ítem por su ID.
-        /// </summary>
-        public ItemType GetItemType(string itemId)
-        {
-            var item = GetItemDataById(itemId);
-            return item?.itemType ?? ItemType.None;
-        }
-
-        /// <summary>
-        /// Verifica si un ítem existe en la base de datos.
-        /// </summary>
-        public bool ItemExists(string itemId)
-        {
-            return GetItemDataById(itemId) != null;
-        }
-
-        /// <summary>
-        /// Obtiene todos los ítems de un tipo específico.
-        /// </summary>
-        public List<ItemData> GetItemsByType(ItemType itemType)
-        {
-            return items?.FindAll(item => item.itemType == itemType) ?? new List<ItemData>();
-        }
-
-        /// <summary>
-        /// Obtiene el nombre display de un ítem.
-        /// </summary>
-        public string GetItemName(string itemId)
-        {
-            var item = GetItemDataById(itemId);
-            return item?.name ?? "Unknown Item";
-        }
-
-        /// <summary>
-        /// Obtiene la descripción de un ítem.
-        /// </summary>
-        public string GetItemDescription(string itemId)
-        {
-            var item = GetItemDataById(itemId);
-            return item?.description ?? "";
-        }
-
-        /// <summary>
         /// Valida que todos los ítems en la base de datos tengan configuración correcta.
         /// </summary>
         [ContextMenu("Validate Database")]
@@ -116,6 +64,10 @@ namespace Data.Items
                 {
                     Debug.LogWarning($"[ItemDatabase] Item '{item.id}' has ItemType.None");
                     errors++;
+                }
+                if (item.itemCategory == ItemCategory.None)
+                {
+                    Debug.LogWarning($"[ItemDatabase] Item '{item.id}' has ItemCategory.None");
                 }
             }
 

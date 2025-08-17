@@ -62,6 +62,7 @@ Ubicación: `Assets/Scripts/Resources/Data/Items/ItemDatabase`
 - `🧾 description`: Descripción breve del arma.
 - `🎖️ rarity`: Rareza (`Common`, `Uncommon`, `Rare`, `Epic`, `Legendary`).
 - `⚔️ itemType`: `Weapon`.
+- `itemCateogry`: Categoria (itemCategory Enum)
 - `📦 stackable`: `false` (los ítems de tipo `Equipment` no son apilables).
 - `🧩 visualPartId`: ID del VisualPart creado en el paso 3.
 - `📈 statsGenerators`: Lista de generadores de estadísticas para este arma.

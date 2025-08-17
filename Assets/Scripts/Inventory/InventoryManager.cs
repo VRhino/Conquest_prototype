@@ -213,56 +213,6 @@ public static class InventoryManager
         return EquipmentManagerService.EquipItem(item);
     }
 
-    /// <summary>
-    /// Desequipa un item de un tipo específico y lo devuelve al inventario.
-    /// </summary>
-    public static bool UnequipItem(ItemType itemType)
-    {
-        if (!ValidateInitialization()) return false;
-
-        return EquipmentManagerService.UnequipItem(itemType);
-    }
-
-    /// <summary>
-    /// Obtiene el item equipado en un slot específico.
-    /// </summary>
-    public static InventoryItem GetEquippedItem(ItemType itemType)
-    {
-        if (!ValidateInitialization()) return null;
-
-        return EquipmentManagerService.GetEquippedItem(itemType);
-    }
-
-    /// <summary>
-    /// Verifica si un item puede ser equipado.
-    /// </summary>
-    public static bool CanEquipItem(InventoryItem item)
-    {
-        if (!ValidateInitialization()) return false;
-
-        return EquipmentManagerService.CanEquipItem(item);
-    }
-
-    /// <summary>
-    /// Verifica si un item específico está equipado.
-    /// </summary>
-    public static bool IsItemEquipped(InventoryItem item)
-    {
-        if (!ValidateInitialization()) return false;
-
-        return EquipmentManagerService.IsItemEquipped(item);
-    }
-
-    /// <summary>
-    /// Obtiene todos los items equipados.
-    /// </summary>
-    public static InventoryItem[] GetAllEquippedItems()
-    {
-        if (!ValidateInitialization()) return new InventoryItem[0];
-
-        return EquipmentManagerService.GetAllEquippedItems();
-    }
-
     #endregion
 
     #region Consumable Operations
@@ -587,8 +537,8 @@ public static class InventoryManager
                 if (data2 == null) return -1;
 
                 // Comparar por prioridad de tipo (armaduras > armas > consumibles)
-                int typePriority1 = GetItemTypePriority(data1.itemType);
-                int typePriority2 = GetItemTypePriority(data2.itemType);
+                int typePriority1 = GetItemTypePriority(data1.itemCategory, data1.itemType);
+                int typePriority2 = GetItemTypePriority(data2.itemCategory, data2.itemType);
 
                 if (typePriority1 != typePriority2)
                     return typePriority1.CompareTo(typePriority2);
@@ -677,28 +627,37 @@ public static class InventoryManager
     /// Obtiene la prioridad numérica para ordenamiento por tipo.
     /// Menor número = mayor prioridad (aparece primero).
     /// </summary>
-    private static int GetItemTypePriority(ItemType itemType)
+    private static int GetItemTypePriority(ItemCategory itemCategory, ItemType itemType)
     {
-        return itemType switch
+        if (itemType == ItemType.Armor)
         {
-            // Armaduras primero (prioridad alta)
-            ItemType.Helmet => 1,
-            ItemType.Torso => 2,
-            ItemType.Gloves => 3,
-            ItemType.Pants => 4,
-            ItemType.Boots => 5,
-            
-            // Armas segundo
-            ItemType.Weapon => 6,
-            
-            // Consumibles y visuales al final
-            ItemType.Consumable => 7,
-            ItemType.Visual => 8,
-            
-            // Items sin tipo al final
-            ItemType.None => 9,
-            _ => 10
-        };
+            return itemCategory switch
+            {
+                ItemCategory.Helmet => 1,
+                ItemCategory.Torso => 2,
+                ItemCategory.Gloves => 3,
+                ItemCategory.Pants => 4,
+                ItemCategory.Boots => 5,
+                _ => 6 // Otros tipos de armadura
+            };
+        }
+        if (itemType == ItemType.Weapon)
+        {
+            return itemCategory switch
+            {
+                ItemCategory.Bow => 7,
+                ItemCategory.Spear => 8,
+                ItemCategory.TwoHandedSword => 9,
+                ItemCategory.SwordAndShield => 10,
+                _ => 11 // Otros tipos de armas
+            };
+        }
+        if (itemType == ItemType.Consumable || itemType == ItemType.Visual)
+        {
+            return 12; // Consumibles y visuales al final
+        }
+
+        return 13; // Otros tipos no especificados
     }
 
     /// <summary>

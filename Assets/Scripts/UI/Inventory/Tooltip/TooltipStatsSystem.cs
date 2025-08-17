@@ -68,9 +68,9 @@ public class TooltipStatsSystem : ITooltipComponent
         _statsPanel?.SetActive(true);
 
         // Verificar si hay comparación disponible
-        bool hasComparison = ShouldShowComparison(itemData);
+        bool hasComparison = ComparisonTooltipUtils.ShouldShowComparison(itemData);
 
-        if (hasComparison && _controller.CurrentTooltipType == InventoryTooltipController.TooltipType.Primary)
+        if (hasComparison && _controller.CurrentTooltipType == TooltipType.Primary)
         {
             SetupComparisonStats(item, itemData);
         }
@@ -118,7 +118,7 @@ public class TooltipStatsSystem : ITooltipComponent
     private void SetupComparisonStats(InventoryItem item, ItemData itemData)
     {
         // Obtener ítem equipado para comparación
-        InventoryItem equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(itemData.itemType);
+        InventoryItem equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(itemData.itemType, itemData.itemCategory);
 
         if (equippedItem == null || equippedItem.GeneratedStats == null)
         {
@@ -204,29 +204,6 @@ public class TooltipStatsSystem : ITooltipComponent
         }
 
         entry.SetActive(true);
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    /// <summary>
-    /// Verifica si se debe mostrar comparación para este ítem.
-    /// </summary>
-    private bool ShouldShowComparison(ItemData itemData)
-    {
-        return ComparisonTooltipUtils.ShouldShowComparison(itemData);
-    }
-
-    /// <summary>
-    /// Verifica si hay un ítem equipado para comparar.
-    /// </summary>
-    private bool HasEquippedItemForComparison(ItemData itemData)
-    {
-        if (!itemData.IsEquipment) return false;
-
-        InventoryItem equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(itemData.itemType);
-        return equippedItem != null && equippedItem.GeneratedStats != null && equippedItem.GeneratedStats.Count > 0;
     }
 
     #endregion

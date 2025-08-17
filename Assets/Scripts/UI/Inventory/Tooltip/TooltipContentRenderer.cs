@@ -148,12 +148,12 @@ public class TooltipContentRenderer : ITooltipComponent
 
         // Configurar categoría
         if (_categoryText != null)
-            _categoryText.text = TooltipFormattingUtils.GetItemTypeDisplayName(itemData.itemType);
+            _categoryText.text = TooltipFormattingUtils.GetItemTypeDisplayName(itemData.itemType, itemData.itemCategory);
 
         // Configurar información de armadura si aplica
-        if (_armorText != null && IsArmorItem(itemData.itemType))
+        if (_armorText != null && itemData.itemType == ItemType.Armor)
         {
-            _armorText.text = TooltipFormattingUtils.GetArmorTypeInfo(itemData.itemType);
+            _armorText.text = TooltipFormattingUtils.GetArmorTypeInfo(itemData.armorType);
             _armorText.gameObject.SetActive(true);
         }
         else if (_armorText != null)
@@ -164,8 +164,8 @@ public class TooltipContentRenderer : ITooltipComponent
         // Configurar durabilidad (placeholder - implementar cuando esté el sistema)
         if (_durabilityText != null)
         {
-            // Por ahora ocultar durabilidad
-            _durabilityText.gameObject.SetActive(false);
+            _durabilityText.text = "100/100";
+            _durabilityText.gameObject.SetActive(true);
         }
     }
 
@@ -176,11 +176,12 @@ public class TooltipContentRenderer : ITooltipComponent
     {
         if (_actionText == null) return;
 
-        string actionString = TooltipFormattingUtils.GetActionText(itemData, item);
+        string actionString = TooltipFormattingUtils.GetActionText(itemData, _controller.CurrentTooltipType);
 
         if (!string.IsNullOrEmpty(actionString))
         {
             _actionText.text = actionString;
+            _actionText.color = _controller.CurrentTooltipType == TooltipType.Secondary ? Color.green : Color.white;
             _interactionPanel?.SetActive(true);
         }
         else
@@ -259,22 +260,6 @@ public class TooltipContentRenderer : ITooltipComponent
             ItemRarity.Legendary => _controller.LegendaryBackgroundSprite,
             _ => _controller.CommonBackgroundSprite
         };
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    /// <summary>
-    /// Verifica si un tipo de ítem es armadura.
-    /// </summary>
-    private bool IsArmorItem(ItemType itemType)
-    {
-        return itemType == ItemType.Helmet ||
-               itemType == ItemType.Torso ||
-               itemType == ItemType.Gloves ||
-               itemType == ItemType.Pants ||
-               itemType == ItemType.Boots;
     }
 
     #endregion

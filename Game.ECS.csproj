@@ -189,8 +189,8 @@
     <Compile Include="Assets\Scripts\Inventory\Services\ConsumableManagerService.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadNavigation.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\FormationGrid.System.cs" />
-    <Compile Include="Assets\Scripts\Shared\Cooldown.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipFormattingUtils.cs" />
+    <Compile Include="Assets\Scripts\Shared\Cooldown.Component.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\ItemInstanceService.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadCombat.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationPositionCalculator.cs" />
@@ -198,6 +198,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadStatus.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\inventoryItem.Data.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\gender.Type.cs" />
+    <Compile Include="Assets\Scripts\Editor\ItemDatabaseEditor.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneTrigger.Component.cs" />
     <Compile Include="Assets\Scripts\Inventory\Utils\InventoryUIUtils.cs" />
     <Compile Include="Assets\Scripts\Hero\SpawnSelectionRequest.cs" />
@@ -272,6 +273,7 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroClassDefinition.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInput.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefab.Authoring.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\tooltip.Type.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneManagerSingleton.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\ComparisonTooltipUtils.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\DestinationMarker.System.cs" />
@@ -402,6 +404,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitTargetPosition.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroClass.Type.cs" />
     <Compile Include="Assets\Scripts\Dialogue\NpcDialogueData.cs" />
+    <Compile Include="Assets\Scripts\Inventory\Data\EquipmentCompatibilityInfo.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\SquadEnums.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularCharacterStatics.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />

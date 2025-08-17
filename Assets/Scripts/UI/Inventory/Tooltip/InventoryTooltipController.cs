@@ -65,15 +65,6 @@ public class InventoryTooltipController : MonoBehaviour
     private TooltipDataValidator _dataValidator;
 
     /// <summary>
-    /// Tipos de tooltip disponibles para configuración.
-    /// </summary>
-    public enum TooltipType
-    {
-        Primary,     // Tooltip principal - muestra item del inventario con comparación
-        Secondary    // Tooltip secundario - muestra item equipado como referencia
-    }
-
-    /// <summary>
     /// Tipo actual del tooltip configurado en este controlador.
     /// </summary>
     public TooltipType CurrentTooltipType => tooltipType;

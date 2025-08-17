@@ -26,7 +26,8 @@ public static class PlayerSessionService
         }
 
         SelectedHero = hero;
-        Debug.Log($"Hero seleccionado: {hero.heroName}");
+        Debug.Log($"[PlayerSessionService]Hero seleccionado: {hero.heroName}");
+        Debug.Log($"[PlayerSessionService]Pantalones del héroe seleccionado: {hero.equipment.pants}");
     }
 
     public static bool IsSessionActive => CurrentPlayer != null;

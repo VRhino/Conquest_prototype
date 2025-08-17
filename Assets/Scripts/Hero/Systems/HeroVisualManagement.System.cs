@@ -318,6 +318,7 @@ public partial class HeroVisualManagementSystem : SystemBase
                 visualInstance.transform,
                 avatarPartDatabase,
                 itemData.itemType,
+                itemData.itemCategory,
                 gender,
                 heroData
             );

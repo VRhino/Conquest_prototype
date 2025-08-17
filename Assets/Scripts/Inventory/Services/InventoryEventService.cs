@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// Servicio especializado en manejo de eventos y persistencia del inventario.
@@ -17,6 +18,9 @@ public static class InventoryEventService
     public static event Action<InventoryItem, InventoryItem> OnItemEquipped; // (equipped, unequipped)
     public static event Action<InventoryItem> OnItemUnequipped;
     public static event Action<InventoryItem> OnItemUsed;
+    
+    // Eventos para confirmación de equipamiento
+    public static event Action<InventoryItem, string, UnityAction, UnityAction> OnEquipmentConfirmationRequired;
 
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
@@ -101,6 +105,17 @@ public static class InventoryEventService
         OnItemUsed?.Invoke(item);
         TriggerInventoryChanged();
         LogInventoryOperation($"Item used: {item.itemId}");
+    }
+
+    /// <summary>
+    /// Solicita confirmación para equipar un item que puede causar conflictos.
+    /// </summary>
+    public static void TriggerEquipmentConfirmationRequired(InventoryItem item, string warningMessage, UnityAction onConfirm, UnityAction onCancel)
+    {
+        if (item == null) return;
+        
+        OnEquipmentConfirmationRequired?.Invoke(item, warningMessage, onConfirm, onCancel);
+        LogInfo($"Equipment confirmation requested for item: {item.itemId}");
     }
 
     #endregion
