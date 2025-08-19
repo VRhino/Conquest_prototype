@@ -104,7 +104,7 @@ public class InventoryItemCellInteraction : MonoBehaviour, IPointerClickHandler,
         
         if (success)
         {
-            Debug.Log($"[InventoryItemCellInteraction] Ítem equipado: {_currentItemData.name}");
+            if (_currentItem.itemId != "") Debug.Log($"[InventoryItemCellInteraction] Ítem equipado: {_currentItemData.name}");
         }
         else
         {

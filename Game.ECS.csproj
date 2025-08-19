@@ -109,6 +109,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadProgress.Component.cs" />
     <Compile Include="Assets\Scripts\Triggers\NpcTriggerZone.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\ModularArmor.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailEquipmentSlot.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\Universal\CustomPreviewEditor.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\Stamina.Component.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Linkers\ColorPropertyLinker.cs" />
@@ -131,6 +132,7 @@
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipStatEntry.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapCamera.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitGridSlot.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailUIController.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitPrevLeaderPos.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\RetreatLogic.System.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraTarget.Component.cs" />
@@ -159,6 +161,7 @@
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInput.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroStamina.System.cs" />
     <Compile Include="Assets\Scripts\Squads\DestinationMarker.Authoring.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetail3DPreview.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimationMovement.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageType.cs" />
     <Compile Include="Assets\Scripts\Core\DataCacheService.cs" />
@@ -213,6 +216,7 @@
     <Compile Include="Assets\Scripts\Map\ZoneLink.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadFSM.System.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\UnitOrientation.Type.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailAttributePanel.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroAttack.System.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapRenderer.cs" />
@@ -246,6 +250,7 @@
     <Compile Include="Assets\Scripts\UI\HeroSelectionSceneController.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlot.Component.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailStatsPanel.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadNavigation.System.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitMoveSpeedVariation.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadVisualManagement.System.cs" />

@@ -89,9 +89,9 @@ public partial class HeroInputSystem : SystemBase
 
         hasInput = (move.x != 0 || move.y != 0 || sprint || skill1 || skill2 || ultimate || attack || interact);
 
-        // --- Abrir/cerrar inventario solo en la escena del feudo ---
+        // --- Abrir/cerrar inventario y hero detail solo en la escena del feudo ---
 
-        manageInventoryDisplay();
+        manageUIDisplays();
         var ecb = new EntityCommandBuffer(Allocator.TempJob);
 
         var job = new HeroInputJob
@@ -115,12 +115,16 @@ public partial class HeroInputSystem : SystemBase
         ecb.Dispose();
     }
 
-    private void manageInventoryDisplay()
+    private void manageUIDisplays()
     {
         var keyboardInput = UnityEngine.InputSystem.Keyboard.current;
         string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         bool isFeudoScene = currentScene == "FeudoScene";
-        if (isFeudoScene && keyboardInput != null && keyboardInput.iKey.wasPressedThisFrame)
+        
+        if (!isFeudoScene || keyboardInput == null) return;
+        
+        // Manejo del inventario con tecla 'I'
+        if (keyboardInput.iKey.wasPressedThisFrame)
         {
             var inventoryPanel = UnityEngine.Object.FindObjectOfType<InventoryPanelController>(true);
             if (inventoryPanel != null)
@@ -136,6 +140,20 @@ public partial class HeroInputSystem : SystemBase
                     if (hero != null)
                         inventoryPanel.OpenPanel(hero);
                 }
+            }
+        }
+        
+        // Manejo del Hero Detail con tecla 'P'
+        if (keyboardInput.pKey.wasPressedThisFrame)
+        {
+            var heroDetailPanel = UnityEngine.Object.FindObjectOfType<HeroDetailUIController>(true);
+            if (heroDetailPanel != null)
+            {
+                heroDetailPanel.TogglePanel();
+            }
+            else
+            {
+                // Debug.LogWarning("[HeroInputSystem] HeroDetailUIController no encontrado en la escena");
             }
         }
     }

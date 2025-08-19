@@ -3,11 +3,15 @@
   "WorkspaceRootPath": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\systems\\heroinput.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\systems\\heroinput.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\inventory\\services\\equipmentmanagerservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\inventory\\services\\equipmentmanagerservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|c:\\users\\vrino\\conquest tactics\\prototipo_curado\\assets\\scripts\\ui\\inventory\\tooltip\\tooltipstatssystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\ui\\inventory\\tooltip\\tooltipstatssystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\ui\\inventory\\tooltip\\tooltipstatssystem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -33,10 +37,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\data\\items\\itemdatabase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\data\\items\\itemdatabase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\hero\\systems\\heroinput.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|solutionrelative:assets\\scripts\\hero\\systems\\heroinput.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{F509B414-509B-03B0-E6C0-7F5126152B7D}|Game.ECS.csproj|C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\assets\\scripts\\squads\\systems\\unitanimation.system.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -162,37 +162,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 7,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "EquipmentManagerService.cs",
-              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
-              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
-              "RelativeToolTip": "Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
-              "ViewState": "AgIAAHUCAAAAAAAAAAAqwIkCAAA4AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-17T14:19:25.617Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "TooltipStatsSystem.cs",
-              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
-              "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
-              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
-              "RelativeToolTip": "Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
-              "ViewState": "AgIAABYAAAAAAAAAAABRwDEAAAAEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-17T10:06:52.148Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "ExampleEquipmentGrantSetup.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\ItemsEffects\\Examples\\ExampleEquipmentGrantSetup.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Inventory\\ItemsEffects\\Examples\\ExampleEquipmentGrantSetup.cs",
@@ -203,7 +177,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "InventoryItemCellInteraction.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\Inventory\\InventoryItemCellInteraction.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\Inventory\\InventoryItemCellInteraction.cs",
@@ -215,7 +189,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "EntityVisualSync.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Visual\\EntityVisualSync.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Visual\\EntityVisualSync.cs",
@@ -227,7 +201,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "AvatarPartDatabase.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Data\\Avatar\\AvatarPartDatabase.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Data\\Avatar\\AvatarPartDatabase.cs",
@@ -263,7 +237,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": "ItemDatabase.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Data\\Items\\ItemDatabase.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Data\\Items\\ItemDatabase.cs",
@@ -275,19 +249,45 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 0,
               "Title": "HeroInput.System.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
               "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
               "RelativeToolTip": "Assets\\Scripts\\Hero\\Systems\\HeroInput.System.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAsAAAAAAAAAA==",
+              "ViewState": "AgIAAIcAAAAAAAAAAAAqwJsAAAATAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-08-09T10:37:01.844Z"
+              "WhenOpened": "2025-08-09T10:37:01.844Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 2,
+              "Title": "TooltipStatsSystem.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
+              "RelativeToolTip": "Assets\\Scripts\\UI\\Inventory\\Tooltip\\TooltipStatsSystem.cs",
+              "ViewState": "AgIAABYAAAAAAAAAAABRwDEAAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-17T10:06:52.148Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "EquipmentManagerService.cs",
+              "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
+              "ToolTip": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Inventory\\Services\\EquipmentManagerService.cs",
+              "ViewState": "AgIAAJ8BAAAAAAAAAABRwGUCAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-08-17T14:19:25.617Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
               "Title": "NpcTriggerZone.cs",
               "DocumentMoniker": "C:\\Users\\VRINO\\Conquest tactics\\prototipo_curado\\Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Triggers\\NpcTriggerZone.cs",
