@@ -176,6 +176,9 @@ public static class DataCacheService
         result.blockPower = fuerza * Constants.BLOCK_POWER_MULTIPLIER;
         result.movementSpeed = Constants.MOVEMENT_SPEED_BASE + destreza * Constants.MOVEMENT_SPEED_DEX_MULTIPLIER;
 
+        // Calcular liderazgo usando el calculador especializado
+        result.leadership = HeroLeadershipCalculator.CalculateLeadership(hero);
+
         return result;
     }
 }

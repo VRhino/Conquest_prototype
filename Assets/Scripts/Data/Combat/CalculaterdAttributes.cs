@@ -58,4 +58,7 @@ public class CalculatedAttributes
 
     /// <summary>Movement speed in units per second after modifiers.</summary>
     public float movementSpeed;
+
+    /// <summary>Leadership capacity for squad management (base 700 + equipment stats).</summary>
+    public float leadership;
 }

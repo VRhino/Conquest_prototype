@@ -36,6 +36,10 @@ public class HeroDetailUIController : MonoBehaviour
     [Header("Left Panel - Basic Stats")]
     public GameObject basicStatsPanel;
     
+    // Available Points Display
+    public GameObject availablePointsPanel;
+    public TMP_Text availablePointsText;
+    
     // Leadership
     public TMP_Text leadershipValueText;
     public Button leadershipMoreButton;
@@ -64,6 +68,8 @@ public class HeroDetailUIController : MonoBehaviour
     [Header("Left Panel - Buttons")]
     public Button moreDetailsButton;
     public Button resetButton;
+    public Button saveButton;
+    public Button cancelButton;
     
     [Header("Right Panel - Equipment")]
     
@@ -101,13 +107,6 @@ public class HeroDetailUIController : MonoBehaviour
 
     private HeroData _currentHeroData;
     private bool _isDetailedPanelVisible = false;
-    private Dictionary<string, int> _tempAttributeChanges = new Dictionary<string, int>();
-    
-    // Referencias a sub-componentes (se crearán en las siguientes fases)
-    // private HeroDetail3DPreview _preview3D;
-    // private HeroDetailStatsPanel _statsPanel;
-    // private HeroDetailAttributePanel _attributePanel;
-    // private List<HeroDetailEquipmentSlot> _equipmentSlots;
 
     #endregion
 
@@ -145,9 +144,6 @@ public class HeroDetailUIController : MonoBehaviour
         {
             Instance = null;
         }
-        
-        // Desuscribirse de eventos cuando se implemente
-        // CleanupEventListeners();
     }
 
     #endregion
@@ -181,7 +177,6 @@ public class HeroDetailUIController : MonoBehaviour
         }
 
         _currentHeroData = heroData;
-        _tempAttributeChanges.Clear();
         
         if (mainPanel != null)
         {
@@ -204,7 +199,6 @@ public class HeroDetailUIController : MonoBehaviour
         
         // Limpiar datos temporales
         _currentHeroData = null;
-        _tempAttributeChanges.Clear();
         _isDetailedPanelVisible = false;
         
         // Ocultar panel detallado si estaba visible
@@ -260,75 +254,139 @@ public class HeroDetailUIController : MonoBehaviour
             heroNameText.text = _currentHeroData.heroName;
         }
         
+        // Obtener información de experiencia usando el nuevo calculador
+        var expInfo = HeroExperienceCalculator.GetExperienceInfo(_currentHeroData);
+        
         // Nivel
         if (levelText != null)
         {
-            levelText.text = _currentHeroData.level.ToString();
+            levelText.text = expInfo.currentLevel.ToString();
         }
         
-        // Experiencia - Se implementará completamente en fase posterior
+        // Experiencia
         if (expText != null)
         {
-            expText.text = $"EXP: {_currentHeroData.currentXP}";
+            expText.text = expInfo.GetProgressText();
         }
         
-        // TODO: Calcular experiencia para próximo nivel y actualizar barra
-        // TODO: Actualizar sprite del nivel basado en rarity
+        // Barra de progreso de experiencia
+        if (expBarForeground != null)
+        {
+            expBarForeground.fillAmount = expInfo.progressToNextLevel;
+        }
+        
+        // Nivel actual y siguiente
+        if (actualLevelText != null)
+        {
+            actualLevelText.text = expInfo.currentLevel.ToString();
+        }
+        
+        if (nextLevelText != null)
+        {
+            if (expInfo.isMaxLevel)
+            {
+                nextLevelText.text = "MAX";
+            }
+            else
+            {
+                nextLevelText.text = (expInfo.currentLevel + 1).ToString();
+            }
+        }
     }
 
     private void PopulateBasicStats()
     {
         if (_currentHeroData == null) return;
         
-        // Usar cache de atributos si está disponible
-        string heroKey = string.IsNullOrEmpty(_currentHeroData.heroName) ? 
-                        _currentHeroData.classId : _currentHeroData.heroName;
+        // Obtener ID del héroe para cache y servicios temporales
+        string heroId = GetHeroId(_currentHeroData);
         
-        var cachedAttributes = DataCacheService.GetCachedAttributes(heroKey);
+        // Actualizar puntos disponibles
+        UpdateAvailablePointsDisplay();
         
-        // Leadership - Se calculará basado en stats + equipo
-        UpdateStatDisplay("leadership", 0, leadershipValueText, leadershipMoreButton, leadershipMinusButton); // TODO: Calcular leadership real
+        // Usar atributos con cambios temporales si están disponibles
+        var attributes = HeroTempAttributeService.HasTempChanges(heroId) 
+            ? HeroTempAttributeService.GetAttributesWithTempChanges(heroId)
+            : DataCacheService.GetCachedAttributes(heroId);
+        
+        if (attributes == null)
+        {
+            Debug.LogWarning($"[HeroDetailUIController] No se pudieron obtener atributos para hero: {heroId}");
+            return;
+        }
+        
+        // Leadership - Calculado automáticamente, no modificable directamente
+        UpdateStatDisplay("leadership", attributes.leadership, leadershipValueText, leadershipMoreButton, leadershipMinusButton, false);
         
         // Strength (Fuerza)
-        UpdateStatDisplay("fuerza", _currentHeroData.fuerza, strengthValueText, strengthMoreButton, strengthMinusButton);
+        UpdateStatDisplay("fuerza", attributes.strength, strengthValueText, strengthMoreButton, strengthMinusButton);
         
         // Agility (Destreza) 
-        UpdateStatDisplay("destreza", _currentHeroData.destreza, agilityValueText, agilityMoreButton, agilityMinusButton);
+        UpdateStatDisplay("destreza", attributes.dexterity, agilityValueText, agilityMoreButton, agilityMinusButton);
         
         // Armor
-        UpdateStatDisplay("armadura", _currentHeroData.armadura, armorValueText, armorMoreButton, armorMinusButton);
+        UpdateStatDisplay("armadura", attributes.armor, armorValueText, armorMoreButton, armorMinusButton);
         
         // Toughness (Vitalidad)
-        UpdateStatDisplay("vitalidad", _currentHeroData.vitalidad, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
+        UpdateStatDisplay("vitalidad", attributes.vitality, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
     }
 
-    private void UpdateStatDisplay(string statName, int baseValue, TMP_Text valueText, Button moreButton, Button minusButton)
+    /// <summary>
+    /// Actualiza el panel de puntos disponibles con la información actual.
+    /// </summary>
+    private void UpdateAvailablePointsDisplay()
+    {
+        if (_currentHeroData == null || availablePointsText == null) return;
+        
+        string heroId = GetHeroId(_currentHeroData);
+        // Usar el mismo método que el validador para consistencia
+        int availablePoints = HeroTempAttributeService.GetAvailablePoints(heroId, _currentHeroData);
+        
+        // Actualizar texto solo con número de puntos disponibles
+        availablePointsText.text = $"{availablePoints}";
+        
+        // Color blanco fijo (sin lógica de colores)
+        availablePointsText.color = Color.white;
+        
+        // Mostrar/ocultar panel solo si hay puntos disponibles o cambios temporales
+        bool showPanel = availablePoints > 0 || HeroTempAttributeService.HasTempChanges(heroId);
+        if (availablePointsPanel != null)
+        {
+            availablePointsPanel.SetActive(showPanel);
+        }
+    }
+
+    private void UpdateStatDisplay(string statName, float displayValue, TMP_Text valueText, Button moreButton, Button minusButton, bool canModify = true)
     {
         if (valueText == null) return;
         
-        // Obtener cambio temporal si existe
-        _tempAttributeChanges.TryGetValue(statName, out int tempChange);
-        int displayValue = baseValue + tempChange;
+        string heroId = GetHeroId(_currentHeroData);
+        
+        // Obtener valor base y temporal
+        float baseValue = HeroAttributeValidator.GetCurrentAttributeValue(_currentHeroData, statName);
+        float tempValue = HeroTempAttributeService.GetTempAttributeValue(heroId, statName, baseValue);
+        
+        bool hasChanges = Mathf.Abs(tempValue - baseValue) > 0.01f;
         
         // Actualizar texto con color
-        if (tempChange != 0)
+        if (hasChanges)
         {
             valueText.color = Color.green;
-            valueText.text = $"{displayValue}";
+            valueText.text = $"{tempValue:F0}";
         }
         else
         {
             valueText.color = Color.white;
-            valueText.text = displayValue.ToString();
+            valueText.text = $"{displayValue:F0}";
         }
         
-        // Mostrar/ocultar botones basado en puntos disponibles
-        bool hasAttributePoints = _currentHeroData.attributePoints > 0;
-        bool canDecrease = tempChange > 0;
+        // Mostrar/ocultar botones basado en validaciones y disponibilidad
+        bool canIncrease = canModify && HeroAttributeValidator.CanIncrementAttribute(_currentHeroData, statName);
+        bool canDecrease = canModify && HeroAttributeValidator.CanDecrementAttribute(_currentHeroData, statName) && hasChanges;
         
         if (moreButton != null)
         {
-            moreButton.gameObject.SetActive(hasAttributePoints);
+            moreButton.gameObject.SetActive(canIncrease);
         }
         
         if (minusButton != null)
@@ -345,7 +403,6 @@ public class HeroDetailUIController : MonoBehaviour
         {
             Debug.Log($"[HeroDetailUIController] Equipment loaded - Weapon: {_currentHeroData.equipment.weapon?.itemId ?? "None"}");
             Debug.Log($"[HeroDetailUIController] Equipment loaded - Helmet: {_currentHeroData.equipment.helmet?.itemId ?? "None"}");
-            // ... otros slots
         }
     }
 
@@ -353,30 +410,35 @@ public class HeroDetailUIController : MonoBehaviour
     {
         if (!_isDetailedPanelVisible || attributesDetailPanel == null) return;
         
-        string heroKey = string.IsNullOrEmpty(_currentHeroData.heroName) ? 
-                        _currentHeroData.classId : _currentHeroData.heroName;
+        string heroId = GetHeroId(_currentHeroData);
         
-        var cachedAttributes = DataCacheService.GetCachedAttributes(heroKey);
-        if (cachedAttributes == null) return;
+        // Obtener valores base (sin cambios temporales)
+        var baseAttributes = DataCacheService.GetCachedAttributes(heroId);
         
-        // Actualizar todos los valores detallados
-        if (healthText != null) healthText.text = $"Health: {cachedAttributes.maxHealth:F1}";
-        if (staminaText != null) staminaText.text = $"Stamina: {cachedAttributes.stamina:F1}";
+        // Obtener valores con cambios temporales si existen
+        var currentAttributes = HeroTempAttributeService.HasTempChanges(heroId) 
+            ? HeroTempAttributeService.GetAttributesWithTempChanges(heroId)
+            : baseAttributes;
+            
+        if (baseAttributes == null || currentAttributes == null) return;
         
-        if (piercingDamageText != null) piercingDamageText.text = $"Piercing Damage: {cachedAttributes.piercingDamage:F1}";
-        if (slashingDamageText != null) slashingDamageText.text = $"Slashing Damage: {cachedAttributes.slashingDamage:F1}";
-        if (bluntDamageText != null) bluntDamageText.text = $"Blunt Damage: {cachedAttributes.bluntDamage:F1}";
+        // Actualizar valores usando el formato "base+cambio"
+        FormatAttributeValueWithChange(baseAttributes.maxHealth, currentAttributes.maxHealth, healthText, 0);
+        FormatAttributeValueWithChange(baseAttributes.stamina, currentAttributes.stamina, staminaText, 0);
         
-        if (piercingDefenseText != null) piercingDefenseText.text = $"Piercing Defense: {cachedAttributes.pierceDefense:F1}";
-        if (slashingDefenseText != null) slashingDefenseText.text = $"Slashing Defense: {cachedAttributes.slashDefense:F1}";
-        if (bluntDefenseText != null) bluntDefenseText.text = $"Blunt Defense: {cachedAttributes.bluntDefense:F1}";
+        FormatAttributeValueWithChange(baseAttributes.piercingDamage, currentAttributes.piercingDamage, piercingDamageText, 1);
+        FormatAttributeValueWithChange(baseAttributes.slashingDamage, currentAttributes.slashingDamage, slashingDamageText, 1);
+        FormatAttributeValueWithChange(baseAttributes.bluntDamage, currentAttributes.bluntDamage, bluntDamageText, 1);
         
-        if (piercingPenetrationText != null) piercingPenetrationText.text = $"Piercing Penetration: {cachedAttributes.piercePenetration:F1}";
-        if (slashingPenetrationText != null) slashingPenetrationText.text = $"Slashing Penetration: {cachedAttributes.slashPenetration:F1}";
-        if (bluntPenetrationText != null) bluntPenetrationText.text = $"Blunt Penetration: {cachedAttributes.bluntPenetration:F1}";
+        FormatAttributeValueWithChange(baseAttributes.pierceDefense, currentAttributes.pierceDefense, piercingDefenseText, 1);
+        FormatAttributeValueWithChange(baseAttributes.slashDefense, currentAttributes.slashDefense, slashingDefenseText, 1);
+        FormatAttributeValueWithChange(baseAttributes.bluntDefense, currentAttributes.bluntDefense, bluntDefenseText, 1);
         
-        if (blockText != null) blockText.text = $"Block Power: {cachedAttributes.blockPower:F1}";
-        // if (blockRegenText != null) blockRegenText.text = $"Block Regen: {0:F1}"; // TODO: Implementar en CalculatedAttributes
+        FormatAttributeValueWithChange(baseAttributes.piercePenetration, currentAttributes.piercePenetration, piercingPenetrationText, 1);
+        FormatAttributeValueWithChange(baseAttributes.slashPenetration, currentAttributes.slashPenetration, slashingPenetrationText, 1);
+        FormatAttributeValueWithChange(baseAttributes.bluntPenetration, currentAttributes.bluntPenetration, bluntPenetrationText, 1);
+        
+        FormatAttributeValueWithChange(baseAttributes.blockPower, currentAttributes.blockPower, blockText, 1);
     }
 
     #endregion
@@ -391,6 +453,10 @@ public class HeroDetailUIController : MonoBehaviour
             attributesDetailPanel.SetActive(false);
             _isDetailedPanelVisible = false;
         }
+        
+        // Ocultar botones Save/Cancel inicialmente
+        if (saveButton != null) saveButton.gameObject.SetActive(false);
+        if (cancelButton != null) cancelButton.gameObject.SetActive(false);
     }
 
     private void SetupButtonListeners()
@@ -409,7 +475,21 @@ public class HeroDetailUIController : MonoBehaviour
             resetButton.onClick.AddListener(ResetTempChanges);
         }
         
-        // Botones de stats - se implementarán en fase posterior
+        // Botón Save
+        if (saveButton != null)
+        {
+            saveButton.onClick.RemoveAllListeners();
+            saveButton.onClick.AddListener(SaveChanges);
+        }
+        
+        // Botón Cancel
+        if (cancelButton != null)
+        {
+            cancelButton.onClick.RemoveAllListeners();
+            cancelButton.onClick.AddListener(CancelChanges);
+        }
+        
+        // Botones de stats
         SetupStatButtons();
         
         // Botones de reparación - placeholder para fase posterior
@@ -478,29 +558,22 @@ public class HeroDetailUIController : MonoBehaviour
     {
         if (_currentHeroData == null) return;
         
-        // Verificar puntos disponibles para aumentar
-        if (change > 0 && _currentHeroData.attributePoints <= 0)
-        {
-            Debug.Log("[HeroDetailUIController] No hay puntos de atributo disponibles");
-            return;
-        }
+        string heroId = GetHeroId(_currentHeroData);
         
-        // Verificar que no se puede reducir por debajo de 0
-        _tempAttributeChanges.TryGetValue(statName, out int currentTempChange);
-        if (change < 0 && currentTempChange <= 0)
+        // Obtener valor actual considerando cambios temporales
+        float currentValue = HeroAttributeValidator.GetCurrentAttributeValue(_currentHeroData, statName);
+        float currentTempValue = HeroTempAttributeService.GetTempAttributeValue(heroId, statName, currentValue);
+        float newValue = currentTempValue + change;
+        
+        // Validar la modificación usando el validador
+        if (!HeroAttributeValidator.CanModifyAttribute(_currentHeroData, statName, newValue, change))
         {
-            Debug.Log($"[HeroDetailUIController] No se puede reducir {statName} más");
+            Debug.LogWarning($"[HeroDetailUIController] No se puede modificar {statName} a {newValue}");
             return;
         }
         
         // Aplicar cambio temporal
-        _tempAttributeChanges[statName] = currentTempChange + change;
-        
-        // Si vuelve a 0, remover del diccionario
-        if (_tempAttributeChanges[statName] == 0)
-        {
-            _tempAttributeChanges.Remove(statName);
-        }
+        HeroTempAttributeService.ApplyTempChange(heroId, statName, newValue);
         
         // Actualizar UI
         PopulateBasicStats();
@@ -515,15 +588,212 @@ public class HeroDetailUIController : MonoBehaviour
             UpdateDetailedAttributesPanel();
         }
         
-        Debug.Log($"[HeroDetailUIController] {statName} modificado en {change}. Cambio total: {_tempAttributeChanges.GetValueOrDefault(statName, 0)}");
+        // Mostrar indicador visual de cambios pendientes
+        ShowUnsavedChangesIndicator();
+        
+        Debug.Log($"[HeroDetailUIController] {statName} modificado a {newValue}. Valor base: {currentValue}");
     }
 
     private void ResetTempChanges()
     {
-        _tempAttributeChanges.Clear();
+        if (_currentHeroData == null) return;
+        
+        string heroId = GetHeroId(_currentHeroData);
+        HeroTempAttributeService.ClearTempChanges(heroId);
+        
         PopulateBasicStats();
         UpdateDetailedAttributesPanel();
+        HideUnsavedChangesIndicator();
+        
         Debug.Log("[HeroDetailUIController] Cambios temporales reseteados");
+    }
+
+    #endregion
+
+    #region Save/Cancel Operations
+
+    /// <summary>
+    /// Guarda todos los cambios temporales aplicándolos permanentemente al HeroData.
+    /// </summary>
+    public void SaveChanges()
+    {
+        if (_currentHeroData == null) return;
+        
+        string heroId = GetHeroId(_currentHeroData);
+        
+        if (!HeroTempAttributeService.HasTempChanges(heroId))
+        {
+            Debug.Log("[HeroDetailUIController] No hay cambios temporales para guardar");
+            return;
+        }
+        
+        // Aplicar cambios temporales al HeroData actual
+        ApplyTempChangesToHeroData();
+        
+        // Guardar usando el sistema existente
+        SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
+        
+        // Limpiar cambios temporales
+        HeroTempAttributeService.ClearTempChanges(heroId);
+        
+        // Actualizar cache
+        DataCacheService.RecalculateAttributes(PlayerSessionService.CurrentPlayer);
+        
+        // Refrescar UI
+        PopulateBasicStats();
+        HideUnsavedChangesIndicator();
+        
+        // Cerrar panel de detalles automáticamente después de guardar
+        if (_isDetailedPanelVisible)
+        {
+            ToggleDetailedPanel();
+        }
+        
+        Debug.Log("[HeroDetailUIController] Cambios guardados exitosamente");
+    }
+
+    /// <summary>
+    /// Cancela todos los cambios temporales sin persistir.
+    /// </summary>
+    public void CancelChanges()
+    {
+        if (_currentHeroData == null) return;
+        
+        string heroId = GetHeroId(_currentHeroData);
+        HeroTempAttributeService.ClearTempChanges(heroId);
+        
+        PopulateBasicStats();
+        UpdateDetailedAttributesPanel();
+        HideUnsavedChangesIndicator();
+        
+        Debug.Log("[HeroDetailUIController] Cambios cancelados");
+    }
+
+    /// <summary>
+    /// Aplica los cambios temporales directamente al HeroData.
+    /// </summary>
+    private void ApplyTempChangesToHeroData()
+    {
+        if (_currentHeroData == null) return;
+        
+        string heroId = GetHeroId(_currentHeroData);
+        var tempChanges = HeroTempAttributeService.GetTempChanges(heroId);
+        
+        if (tempChanges == null) return;
+        
+        // Calcular puntos gastados antes de aplicar cambios
+        int pointsUsed = HeroTempAttributeService.CalculateUsedTempPoints(heroId, _currentHeroData);
+        
+        foreach (var change in tempChanges)
+        {
+            ApplyAttributeChangeToHeroData(change.Key, change.Value);
+        }
+        
+        // Reducir puntos de atributo disponibles
+        _currentHeroData.attributePoints = Mathf.Max(0, _currentHeroData.attributePoints - pointsUsed);
+        
+        Debug.Log($"[HeroDetailUIController] Puntos gastados aplicados: {pointsUsed}. Puntos restantes: {_currentHeroData.attributePoints}");
+    }
+
+    /// <summary>
+    /// Aplica un cambio específico de atributo al HeroData.
+    /// </summary>
+    private void ApplyAttributeChangeToHeroData(string attributeName, float newValue)
+    {
+        switch (attributeName.ToLower())
+        {
+            case "fuerza":
+            case "strength":
+                _currentHeroData.fuerza = (int)newValue;
+                break;
+            case "destreza":
+            case "dexterity":
+                _currentHeroData.destreza = (int)newValue;
+                break;
+            case "armadura":
+            case "armor":
+                _currentHeroData.armadura = (int)newValue;
+                break;
+            case "vitalidad":
+            case "vitality":
+                _currentHeroData.vitalidad = (int)newValue;
+                break;
+            default:
+                Debug.LogWarning($"[HeroDetailUIController] Atributo no reconocido para persistir: {attributeName}");
+                break;
+        }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Obtiene el ID único del héroe para operaciones de cache y servicios.
+    /// Utiliza el método centralizado de HeroAttributeValidator para consistencia.
+    /// </summary>
+    private string GetHeroId(HeroData heroData)
+    {
+        return HeroAttributeValidator.GetHeroId(heroData);
+    }
+
+    /// <summary>
+    /// Muestra indicador visual de que hay cambios pendientes por guardar.
+    /// </summary>
+    private void ShowUnsavedChangesIndicator()
+    {
+        // Mostrar botones Save/Cancel
+        if (saveButton != null) saveButton.gameObject.SetActive(true);
+        if (cancelButton != null) cancelButton.gameObject.SetActive(true);
+        
+        Debug.Log("[HeroDetailUIController] Cambios pendientes - mostrar botones Save/Cancel");
+    }
+
+    /// <summary>
+    /// Oculta el indicador visual de cambios pendientes.
+    /// </summary>
+    private void HideUnsavedChangesIndicator()
+    {
+        // Ocultar botones Save/Cancel
+        if (saveButton != null) saveButton.gameObject.SetActive(false);
+        if (cancelButton != null) cancelButton.gameObject.SetActive(false);
+        
+        Debug.Log("[HeroDetailUIController] Sin cambios pendientes - ocultar botones Save/Cancel");
+    }
+
+    /// <summary>
+    /// Formatea un valor de atributo mostrando el cambio si existe.
+    /// </summary>
+    /// <param name="baseValue">Valor base original</param>
+    /// <param name="finalValue">Valor final con cambios aplicados</param>
+    /// <param name="textComponent">Componente de texto a actualizar</param>
+    /// <param name="decimals">Número de decimales a mostrar</param>
+    private void FormatAttributeValueWithChange(float baseValue, float finalValue, TMP_Text textComponent, int decimals = 0)
+    {
+        if (textComponent == null) return;
+        
+        float difference = finalValue - baseValue;
+        bool hasChanges = Mathf.Abs(difference) > 0.01f;
+        
+        if (hasChanges)
+        {
+            textComponent.color = Color.green;
+            string format = decimals == 0 ? "F0" : $"F{decimals}";
+            if (difference > 0)
+            {
+                textComponent.text = $"{baseValue.ToString(format)}+{difference.ToString(format)}";
+            }
+            else
+            {
+                textComponent.text = $"{baseValue.ToString(format)}{difference.ToString(format)}"; // Ya incluye el signo negativo
+            }
+        }
+        else
+        {
+            textComponent.color = Color.white;
+            string format = decimals == 0 ? "F0" : $"F{decimals}";
+            textComponent.text = finalValue.ToString(format);
+        }
     }
 
     #endregion
