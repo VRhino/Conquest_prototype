@@ -248,6 +248,8 @@ public static class InventoryStorageService
     /// </summary>
     public static bool HasSpace()
     {
+        Debug.Assert(_currentHero != null, "Current hero is not initialized");
+        Debug.Assert(_currentHero.inventory != null, "Current hero inventory is not initialized");
         return _currentHero.inventory.Count < _inventoryLimit;
     }
 

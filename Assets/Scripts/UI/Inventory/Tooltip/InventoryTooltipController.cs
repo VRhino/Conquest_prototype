@@ -213,6 +213,7 @@ public class InventoryTooltipController : MonoBehaviour
     /// </summary>
     public void HideTooltip()
     {
+        Debug.Log("[InventoryTooltipController] Hiding tooltip");
         _lifecycleManager?.HideTooltip();
     }
 

@@ -43,6 +43,8 @@ public class InventoryTooltipManager : MonoBehaviour
 
     #region Tooltip Validation System
 
+    // Sistema de validación que se deshabilita automáticamente para equipment tooltips
+    // y se reactiva para tooltips del inventario para evitar que se oculten incorrectamente
     private bool _validationEnabled = true;
     private float _validationInterval = 0.2f; // Validar cada 200ms
     private float _lastValidationTime = 0f;
@@ -217,6 +219,9 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         if (!enableTooltips) return;
 
+        // Reactivar validación periódica para tooltips del inventario
+        StartTooltipValidation();
+
         // Determinar si mostrar dual tooltips o solo el normal
         if (enableComparisonTooltips && itemData != null && itemData.IsEquipment && 
             ComparisonTooltipUtils.ShouldShowComparison(itemData))
@@ -310,6 +315,9 @@ public class InventoryTooltipManager : MonoBehaviour
     /// <param name="itemData">Datos del ítem</param>
     public void ShowTooltipManual(InventoryItem item, ItemData itemData)
     {
+        // Reactivar validación periódica para tooltips manuales del inventario
+        StartTooltipValidation();
+        
         if (primaryTooltipController != null)
         {
             primaryTooltipController.ShowTooltipInstant(item, itemData);
@@ -511,6 +519,57 @@ public class InventoryTooltipManager : MonoBehaviour
         {
             Debug.Log($"[InventoryTooltipManager] Secondary Tooltip Type: {secondaryTooltipController.CurrentTooltipType}");
         }
+    }
+
+    #endregion
+
+    #region Equipment Tooltip Integration
+
+    /// <summary>
+    /// Método público para mostrar tooltip de equipamiento desde Hero Detail UI.
+    /// Utilizado por HeroEquipmentPanel para mostrar tooltips de items equipados.
+    /// </summary>
+    /// <param name="equippedItem">Item equipado</param>
+    /// <param name="equippedItemData">Datos del item equipado</param>
+    /// <param name="screenPosition">Posición en pantalla</param>
+    public void ShowEquipmentTooltip(InventoryItem equippedItem, ItemData equippedItemData, Vector3 screenPosition)
+    {
+        if (!enableTooltips || primaryTooltipController == null) return;
+
+        // Deshabilitar validación periódica para equipment tooltips
+        StopTooltipValidation();
+
+        // Mostrar tooltip simple sin comparación para equipment ya equipado
+        primaryTooltipController.ShowTooltip(equippedItem, equippedItemData, screenPosition);
+    }
+
+    /// <summary>
+    /// Actualiza la posición del tooltip de equipamiento.
+    /// </summary>
+    /// <param name="screenPosition">Nueva posición en pantalla</param>
+    public void UpdateEquipmentTooltipPosition(Vector3 screenPosition)
+    {
+        if (!enableTooltips || primaryTooltipController == null) return;
+
+        if (primaryTooltipController.IsShowing)
+        {
+            primaryTooltipController.PositioningSystem.UpdatePosition(screenPosition);
+        }
+    }
+
+    /// <summary>
+    /// Oculta el tooltip de equipamiento.
+    /// </summary>
+    public void HideEquipmentTooltip()
+    {
+        Debug.Log("[InventoryTooltipManager] Hiding equipment tooltip");
+        if (primaryTooltipController != null)
+        {
+            primaryTooltipController.HideTooltip();
+        }
+        
+        // Reactivar validación periódica para tooltips normales del inventario
+        StartTooltipValidation();
     }
 
     #endregion

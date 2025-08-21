@@ -109,6 +109,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// </summary>
     public void HideTooltip()
     {
+        Debug.Log("[TooltipLifecycleManager] Hiding tooltip");
         // Detener cualquier corrutina activa
         _controller.StopAllCoroutines();
 

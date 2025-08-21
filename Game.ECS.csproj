@@ -299,6 +299,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Map\SupplyZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Map\MapSceneManager.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroEquipmentSlotInteraction.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\Equiment.Data.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInitialization.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroSpawn.Component.cs" />
@@ -343,6 +344,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadDataReference.Authoring.cs" />
     <Compile Include="Assets\Scripts\Inventory\statsGenerators\BasicWeaponStatGenerator.cs" />
     <Compile Include="Assets\Scripts\Core\HeroLeadershipCalculator.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroEquipmentPanel.cs" />
     <Compile Include="Assets\Scripts\UI\Login\LoginUIController.UI.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\HeroClassSelector.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\SquadSkill.Component.cs" />

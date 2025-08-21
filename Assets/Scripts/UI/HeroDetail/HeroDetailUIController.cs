@@ -73,7 +73,10 @@ public class HeroDetailUIController : MonoBehaviour
     
     [Header("Right Panel - Equipment")]
     
-    // Equipment Slots
+    // Equipment Panel Controller (Fase 3) - se inicializa dinámicamente 
+    private MonoBehaviour equipmentPanel;
+    
+    // Equipment Slots (Individual GameObjects - para compatibilidad con prefab)
     public GameObject helmetSlot;
     public GameObject torsoSlot;
     public GameObject glovesSlot;
@@ -178,6 +181,13 @@ public class HeroDetailUIController : MonoBehaviour
 
         _currentHeroData = heroData;
         
+        // Inicializar el InventoryManager para que los equipment slots puedan funcionar
+        // Sin esto, las operaciones como CanUnequipCurrentItem() fallan porque InventoryStorageService no está inicializado
+        if (!InventoryManager.IsInitialized)
+        {
+            InventoryManager.Initialize(heroData);
+        }
+        
         if (mainPanel != null)
         {
             mainPanel.SetActive(true);
@@ -223,6 +233,29 @@ public class HeroDetailUIController : MonoBehaviour
         {
             OpenPanel();
         }
+        ToggleUIInteraction();
+    }
+
+     private void ToggleUIInteraction()
+    {
+        if (DialogueUIState.IsDialogueOpen)
+        {
+            DialogueUIState.IsDialogueOpen = false;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(true);
+
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        else
+        {
+            DialogueUIState.IsDialogueOpen = true;
+            if (HeroCameraController.Instance != null)
+                HeroCameraController.Instance.SetCameraFollowEnabled(false);
+            
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
     }
 
     /// <summary>
@@ -258,39 +291,23 @@ public class HeroDetailUIController : MonoBehaviour
         var expInfo = HeroExperienceCalculator.GetExperienceInfo(_currentHeroData);
         
         // Nivel
-        if (levelText != null)
-        {
-            levelText.text = expInfo.currentLevel.ToString();
-        }
+        if (levelText != null) levelText.text = expInfo.currentLevel.ToString();
         
         // Experiencia
-        if (expText != null)
-        {
-            expText.text = expInfo.GetProgressText();
-        }
-        
+        if (expText != null) expText.text = expInfo.GetProgressText();
+
         // Barra de progreso de experiencia
-        if (expBarForeground != null)
-        {
-            expBarForeground.fillAmount = expInfo.progressToNextLevel;
-        }
+        if (expBarForeground != null) expBarForeground.fillAmount = expInfo.progressToNextLevel;
         
         // Nivel actual y siguiente
-        if (actualLevelText != null)
-        {
-            actualLevelText.text = expInfo.currentLevel.ToString();
-        }
+        if (actualLevelText != null) actualLevelText.text = expInfo.currentLevel.ToString();
         
         if (nextLevelText != null)
         {
             if (expInfo.isMaxLevel)
-            {
                 nextLevelText.text = "MAX";
-            }
             else
-            {
                 nextLevelText.text = (expInfo.currentLevel + 1).ToString();
-            }
         }
     }
 
@@ -315,19 +332,10 @@ public class HeroDetailUIController : MonoBehaviour
             return;
         }
         
-        // Leadership - Calculado automáticamente, no modificable directamente
         UpdateStatDisplay("leadership", attributes.leadership, leadershipValueText, leadershipMoreButton, leadershipMinusButton, false);
-        
-        // Strength (Fuerza)
         UpdateStatDisplay("fuerza", attributes.strength, strengthValueText, strengthMoreButton, strengthMinusButton);
-        
-        // Agility (Destreza) 
         UpdateStatDisplay("destreza", attributes.dexterity, agilityValueText, agilityMoreButton, agilityMinusButton);
-        
-        // Armor
         UpdateStatDisplay("armadura", attributes.armor, armorValueText, armorMoreButton, armorMinusButton);
-        
-        // Toughness (Vitalidad)
         UpdateStatDisplay("vitalidad", attributes.vitality, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
     }
 
@@ -342,18 +350,13 @@ public class HeroDetailUIController : MonoBehaviour
         // Usar el mismo método que el validador para consistencia
         int availablePoints = HeroTempAttributeService.GetAvailablePoints(heroId, _currentHeroData);
         
-        // Actualizar texto solo con número de puntos disponibles
         availablePointsText.text = $"{availablePoints}";
         
-        // Color blanco fijo (sin lógica de colores)
         availablePointsText.color = Color.white;
         
         // Mostrar/ocultar panel solo si hay puntos disponibles o cambios temporales
         bool showPanel = availablePoints > 0 || HeroTempAttributeService.HasTempChanges(heroId);
-        if (availablePointsPanel != null)
-        {
-            availablePointsPanel.SetActive(showPanel);
-        }
+        if (availablePointsPanel != null) availablePointsPanel.SetActive(showPanel);
     }
 
     private void UpdateStatDisplay(string statName, float displayValue, TMP_Text valueText, Button moreButton, Button minusButton, bool canModify = true)
@@ -384,26 +387,29 @@ public class HeroDetailUIController : MonoBehaviour
         bool canIncrease = canModify && HeroAttributeValidator.CanIncrementAttribute(_currentHeroData, statName);
         bool canDecrease = canModify && HeroAttributeValidator.CanDecrementAttribute(_currentHeroData, statName) && hasChanges;
         
-        if (moreButton != null)
-        {
-            moreButton.gameObject.SetActive(canIncrease);
-        }
-        
-        if (minusButton != null)
-        {
-            minusButton.gameObject.SetActive(canDecrease);
-        }
+        if (moreButton != null) moreButton.gameObject.SetActive(canIncrease);
+
+        if (minusButton != null) minusButton.gameObject.SetActive(canDecrease);
     }
 
     private void PopulateEquipmentSlots()
     {
-        // Se implementará en Fase 3 cuando se creen los componentes de slots
-        // Por ahora, logging básico
-        if (_currentHeroData?.equipment != null)
+        if (equipmentPanel == null) InitializeEquipmentPanel();
+
+        if (equipmentPanel != null)
         {
-            Debug.Log($"[HeroDetailUIController] Equipment loaded - Weapon: {_currentHeroData.equipment.weapon?.itemId ?? "None"}");
-            Debug.Log($"[HeroDetailUIController] Equipment loaded - Helmet: {_currentHeroData.equipment.helmet?.itemId ?? "None"}");
+            // Usar reflexión para evitar errores de compilación temporales
+            var populateMethod = equipmentPanel.GetType().GetMethod("PopulateFromSelectedHero");
+            if (populateMethod != null)
+            {
+                populateMethod.Invoke(equipmentPanel, null);
+                Debug.Log("[HeroDetailUIController] Equipment slots populated via HeroEquipmentPanel");
+            }
+            else
+                Debug.LogWarning("[HeroDetailUIController] PopulateFromSelectedHero method not found on equipment panel");
         }
+        else
+            if (_currentHeroData?.equipment != null) Debug.Log($"[HeroDetailUIController] Equipment loaded - Helmet: {_currentHeroData.equipment.helmet?.itemId ?? "None"}");
     }
 
     private void UpdateDetailedAttributesPanel()
@@ -508,19 +514,10 @@ public class HeroDetailUIController : MonoBehaviour
 
     private void SetupStatButtons()
     {
-        // Leadership buttons
         SetupStatButtonPair("leadership", leadershipMoreButton, leadershipMinusButton);
-        
-        // Strength buttons  
         SetupStatButtonPair("fuerza", strengthMoreButton, strengthMinusButton);
-        
-        // Agility buttons
         SetupStatButtonPair("destreza", agilityMoreButton, agilityMinusButton);
-        
-        // Armor buttons
         SetupStatButtonPair("armadura", armorMoreButton, armorMinusButton);
-        
-        // Toughness buttons
         SetupStatButtonPair("vitalidad", toughnessMoreButton, toughnessMinusButton);
     }
 
@@ -546,10 +543,7 @@ public class HeroDetailUIController : MonoBehaviour
         _isDetailedPanelVisible = !_isDetailedPanelVisible;
         attributesDetailPanel.SetActive(_isDetailedPanelVisible);
         
-        if (_isDetailedPanelVisible)
-        {
-            UpdateDetailedAttributesPanel();
-        }
+        if (_isDetailedPanelVisible) UpdateDetailedAttributesPanel();
         
         Debug.Log($"[HeroDetailUIController] Panel detallado: {(_isDetailedPanelVisible ? "Mostrado" : "Oculto")}");
     }
@@ -567,10 +561,7 @@ public class HeroDetailUIController : MonoBehaviour
         
         // Validar la modificación usando el validador
         if (!HeroAttributeValidator.CanModifyAttribute(_currentHeroData, statName, newValue, change))
-        {
-            Debug.LogWarning($"[HeroDetailUIController] No se puede modificar {statName} a {newValue}");
             return;
-        }
         
         // Aplicar cambio temporal
         HeroTempAttributeService.ApplyTempChange(heroId, statName, newValue);
@@ -580,18 +571,11 @@ public class HeroDetailUIController : MonoBehaviour
         
         // Mostrar panel detallado automáticamente si se modifica un stat
         if (!_isDetailedPanelVisible)
-        {
             ToggleDetailedPanel();
-        }
         else
-        {
             UpdateDetailedAttributesPanel();
-        }
         
-        // Mostrar indicador visual de cambios pendientes
         ShowUnsavedChangesIndicator();
-        
-        Debug.Log($"[HeroDetailUIController] {statName} modificado a {newValue}. Valor base: {currentValue}");
     }
 
     private void ResetTempChanges()
@@ -604,8 +588,6 @@ public class HeroDetailUIController : MonoBehaviour
         PopulateBasicStats();
         UpdateDetailedAttributesPanel();
         HideUnsavedChangesIndicator();
-        
-        Debug.Log("[HeroDetailUIController] Cambios temporales reseteados");
     }
 
     #endregion
@@ -622,21 +604,11 @@ public class HeroDetailUIController : MonoBehaviour
         string heroId = GetHeroId(_currentHeroData);
         
         if (!HeroTempAttributeService.HasTempChanges(heroId))
-        {
-            Debug.Log("[HeroDetailUIController] No hay cambios temporales para guardar");
             return;
-        }
         
-        // Aplicar cambios temporales al HeroData actual
-        ApplyTempChangesToHeroData();
-        
-        // Guardar usando el sistema existente
-        SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
-        
-        // Limpiar cambios temporales
+        ApplyTempChangesToHeroData();        
+        SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);        
         HeroTempAttributeService.ClearTempChanges(heroId);
-        
-        // Actualizar cache
         DataCacheService.RecalculateAttributes(PlayerSessionService.CurrentPlayer);
         
         // Refrescar UI
@@ -644,12 +616,7 @@ public class HeroDetailUIController : MonoBehaviour
         HideUnsavedChangesIndicator();
         
         // Cerrar panel de detalles automáticamente después de guardar
-        if (_isDetailedPanelVisible)
-        {
-            ToggleDetailedPanel();
-        }
-        
-        Debug.Log("[HeroDetailUIController] Cambios guardados exitosamente");
+        if (_isDetailedPanelVisible) ToggleDetailedPanel();
     }
 
     /// <summary>
@@ -665,8 +632,6 @@ public class HeroDetailUIController : MonoBehaviour
         PopulateBasicStats();
         UpdateDetailedAttributesPanel();
         HideUnsavedChangesIndicator();
-        
-        Debug.Log("[HeroDetailUIController] Cambios cancelados");
     }
 
     /// <summary>
@@ -690,9 +655,7 @@ public class HeroDetailUIController : MonoBehaviour
         }
         
         // Reducir puntos de atributo disponibles
-        _currentHeroData.attributePoints = Mathf.Max(0, _currentHeroData.attributePoints - pointsUsed);
-        
-        Debug.Log($"[HeroDetailUIController] Puntos gastados aplicados: {pointsUsed}. Puntos restantes: {_currentHeroData.attributePoints}");
+        _currentHeroData.attributePoints = Mathf.Max(0, _currentHeroData.attributePoints - pointsUsed);        
     }
 
     /// <summary>
@@ -729,6 +692,55 @@ public class HeroDetailUIController : MonoBehaviour
     #region Helper Methods
 
     /// <summary>
+    /// Inicializa el panel de equipamiento si no está ya inicializado.
+    /// </summary>
+    private void InitializeEquipmentPanel()
+    {
+        var panelType = System.Type.GetType("HeroEquipmentPanel");
+        if (panelType != null)
+        {
+            equipmentPanel = GetComponentInChildren(panelType) as MonoBehaviour;
+            
+            if (equipmentPanel == null)
+            {
+                // Si no existe, buscar en los slots para crear uno dinámicamente
+                var equipmentParent = FindEquipmentParent();
+                if (equipmentParent != null)
+                {
+                    equipmentPanel = equipmentParent.AddComponent(panelType) as MonoBehaviour;
+                }
+            }
+            
+            if (equipmentPanel != null)
+            {
+                // Inicializar el panel usando reflexión
+                var initMethod = equipmentPanel.GetType().GetMethod("InitializePanel");
+                if (initMethod != null)
+                {
+                    initMethod.Invoke(equipmentPanel, null);
+                }
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[HeroDetailUIController] HeroEquipmentPanel class not found - may need Unity compilation");
+        }
+    }
+
+    /// <summary>
+    /// Encuentra el GameObject padre que contiene los slots de equipamiento.
+    /// </summary>
+    private GameObject FindEquipmentParent()
+    {
+        // Intentar encontrar un padre común de los slots de equipamiento
+        if (helmetSlot != null) return helmetSlot.transform.parent?.gameObject;
+        if (torsoSlot != null) return torsoSlot.transform.parent?.gameObject;
+        if (weaponSlot != null) return weaponSlot.transform.parent?.gameObject;
+        
+        return gameObject; // Fallback al objeto principal
+    }
+
+    /// <summary>
     /// Obtiene el ID único del héroe para operaciones de cache y servicios.
     /// Utiliza el método centralizado de HeroAttributeValidator para consistencia.
     /// </summary>
@@ -757,8 +769,6 @@ public class HeroDetailUIController : MonoBehaviour
         // Ocultar botones Save/Cancel
         if (saveButton != null) saveButton.gameObject.SetActive(false);
         if (cancelButton != null) cancelButton.gameObject.SetActive(false);
-        
-        Debug.Log("[HeroDetailUIController] Sin cambios pendientes - ocultar botones Save/Cancel");
     }
 
     /// <summary>
