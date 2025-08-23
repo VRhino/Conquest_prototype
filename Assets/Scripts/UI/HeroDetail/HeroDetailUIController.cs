@@ -9,7 +9,7 @@ using Data.Items;
 /// Maneja la apertura/cierre del panel y coordina todos los sub-componentes.
 /// Refactorizado para delegar responsabilidades específicas a paneles especializados.
 /// </summary>
-public class HeroDetailUIController : MonoBehaviour
+public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
 {
     #region Singleton Pattern
     
@@ -175,7 +175,7 @@ public class HeroDetailUIController : MonoBehaviour
         else
             OpenPanel();
 
-        ToggleUIInteraction();
+        // No llamar ToggleUIInteraction aquí - el FullscreenPanelManager se encarga
     }
 
     /// <summary>

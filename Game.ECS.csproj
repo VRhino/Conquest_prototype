@@ -343,6 +343,7 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroHealth.Component.cs" />
     <Compile Include="Assets\Scripts\UI\NpcPromptBillboard.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDataReference.Authoring.cs" />
+    <Compile Include="Assets\Scripts\UI\Interface\IFullscreenPanel.cs" />
     <Compile Include="Assets\Scripts\Inventory\statsGenerators\BasicWeaponStatGenerator.cs" />
     <Compile Include="Assets\Scripts\Core\HeroLeadershipCalculator.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroEquipmentPanel.cs" />
@@ -404,6 +405,7 @@
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\Gender.cs" />
     <Compile Include="Assets\Scripts\Shared\GameState.System.cs" />
     <Compile Include="Assets\Scripts\UI\UIManager.cs" />
+    <Compile Include="Assets\Scripts\UI\Management\FullscreenPanelManager.cs" />
     <Compile Include="Assets\Scripts\Combat\Defense.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadEntity.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadStats.Component.cs" />

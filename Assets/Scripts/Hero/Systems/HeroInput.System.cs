@@ -12,6 +12,8 @@ using UnityEngine.InputSystem;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class HeroInputSystem : SystemBase
 {
+    
+    private bool uiInteractionState;
     [WithAll(typeof(IsLocalPlayer))]
     partial struct HeroInputJob : IJobEntity
     {
@@ -120,41 +122,31 @@ public partial class HeroInputSystem : SystemBase
         var keyboardInput = UnityEngine.InputSystem.Keyboard.current;
         string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         bool isFeudoScene = currentScene == "FeudoScene";
-        
+
         if (!isFeudoScene || keyboardInput == null) return;
-        
-        // Manejo del inventario con tecla 'I'
-        if (keyboardInput.iKey.wasPressedThisFrame)
+
+        // Verificar si el FullscreenPanelManager está disponible
+        if (FullscreenPanelManager.Instance == null)
         {
-            var inventoryPanel = UnityEngine.Object.FindObjectOfType<InventoryPanelController>(true);
-            if (inventoryPanel != null)
-            {
-                if (inventoryPanel.mainPanel != null && inventoryPanel.mainPanel.activeSelf)
-                {
-                    inventoryPanel.ClosePanel();
-                }
-                else
-                {
-                    // Obtener el HeroData actual (ajusta si tu sistema es diferente)
-                    var hero = PlayerSessionService.SelectedHero;
-                    if (hero != null)
-                        inventoryPanel.OpenPanel(hero);
-                }
-            }
+            UnityEngine.Debug.LogWarning("[HeroInputSystem] FullscreenPanelManager no está disponible");
+            return;
         }
-        
+
+        // Manejo del inventario con tecla 'I'
+        if (keyboardInput.iKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleInventoryKeyPress();
+
         // Manejo del Hero Detail con tecla 'P'
-        if (keyboardInput.pKey.wasPressedThisFrame)
+        if (keyboardInput.pKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleHeroDetailKeyPress();
+
+        // Manejo de las Barracas con tecla 'B'
+        if (keyboardInput.bKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleBarracksKeyPress();
+
+        if (keyboardInput.escapeKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleEscapeKeyPress();
+
+        if (keyboardInput.altKey.isPressed)
         {
-            var heroDetailPanel = UnityEngine.Object.FindObjectOfType<HeroDetailUIController>(true);
-            if (heroDetailPanel != null)
-            {
-                heroDetailPanel.TogglePanel();
-            }
-            else
-            {
-                // Debug.LogWarning("[HeroInputSystem] HeroDetailUIController no encontrado en la escena");
-            }
+            uiInteractionState = !uiInteractionState;
+            FullscreenPanelManager.Instance.SetUIInteractionState(uiInteractionState);
         }
     }
 }

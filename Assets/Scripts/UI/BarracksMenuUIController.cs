@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 using System;
 using System.Linq;
-public class BarracksMenuUIController : MonoBehaviour
+public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
 {
     [Header("Listas de unidades por tipo")]
     public Transform infantryListContainer;
@@ -33,6 +33,9 @@ public class BarracksMenuUIController : MonoBehaviour
 
     private HeroData _currentHeroData;
 
+    // IFullscreenPanel interface implementation
+    public bool IsPanelOpen => mainPanel != null && mainPanel.activeSelf;
+
     // Lógica para abrir el menú con la info del héroe
     public void Open(HeroData heroData)
     {
@@ -44,7 +47,7 @@ public class BarracksMenuUIController : MonoBehaviour
         if (exitButton != null)
         {
             exitButton.onClick.RemoveAllListeners();
-            exitButton.onClick.AddListener(Close);
+            exitButton.onClick.AddListener(() => FullscreenPanelManager.Instance.ClosePanel<BarracksMenuUIController>());
         }
         if (addInfantryButton != null)
         {
@@ -145,13 +148,50 @@ public class BarracksMenuUIController : MonoBehaviour
     {
         if (mainPanel != null)
             mainPanel.SetActive(false);
-            DialogueUIState.IsDialogueOpen = false;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(true);
-            
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
     }
+
+    #region IFullscreenPanel Implementation
+
+    /// <summary>
+    /// Abre el panel sin pasar datos específicos. Usa el héroe actual del PlayerSessionService.
+    /// </summary>
+    public void OpenPanel()
+    {
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData != null)
+        {
+            Open(heroData);
+        }
+        else
+        {
+            Debug.LogError("[BarracksMenuUIController] No hay héroe activo en PlayerSessionService para abrir las barracas");
+        }
+    }
+
+    /// <summary>
+    /// Cierra el panel.
+    /// </summary>
+    public void ClosePanel()
+    {
+        Close();
+    }
+
+    /// <summary>
+    /// Alterna el estado del panel (abierto/cerrado).
+    /// </summary>
+    public void TogglePanel()
+    {
+        if (IsPanelOpen)
+        {
+            ClosePanel();
+        }
+        else
+        {
+            OpenPanel();
+        }
+    }
+
+    #endregion
 
     // Lógica para abrir el panel de selección de escuadrón
     public void OnAddUnitClicked(UnitType unitType)

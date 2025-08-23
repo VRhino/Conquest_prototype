@@ -10,7 +10,7 @@ using Data.Items;
 /// Controlador principal del panel de inventario que maneja filtros, grilla, ordenamiento y monedas.
 /// Integra con InventoryManager para la gestión de datos y InventoryItemCellController para la visualización.
 /// </summary>
-public class InventoryPanelController : MonoBehaviour
+public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
 {
     [Header("Panel Principal")]
     public GameObject mainPanel;
@@ -52,6 +52,9 @@ public class InventoryPanelController : MonoBehaviour
     public InventoryItem[] SlotItems => slotItems;
     public int GridWidth => gridWidth;
     public int GridHeight => gridHeight;
+
+    // IFullscreenPanel interface implementation
+    public bool IsPanelOpen => mainPanel != null && mainPanel.activeSelf;
 
     /// <summary>
     /// Tipos de filtro disponibles para el inventario.
@@ -111,7 +114,7 @@ public class InventoryPanelController : MonoBehaviour
 
         // Salir
         if (exitButton != null)
-            exitButton.onClick.AddListener(ClosePanel);
+            exitButton.onClick.AddListener(() => FullscreenPanelManager.Instance.ClosePanel<InventoryPanelController>());
     }
 
     /// <summary>
@@ -207,7 +210,7 @@ public class InventoryPanelController : MonoBehaviour
         if (mainPanel != null)
             mainPanel.SetActive(true);
         
-        ToggleUIInteraction();
+        // No llamar ToggleUIInteraction aquí - el FullscreenPanelManager se encarga
 
         // Actualizar displays usando el método unificado
         RefreshFullUI();
@@ -222,10 +225,45 @@ public class InventoryPanelController : MonoBehaviour
         if (mainPanel != null)
             mainPanel.SetActive(false);
         
-        ToggleUIInteraction();
+        // No llamar ToggleUIInteraction aquí - el FullscreenPanelManager se encarga
 
         _currentHero = null;
     }
+
+    #region IFullscreenPanel Implementation
+
+    /// <summary>
+    /// Abre el panel sin pasar datos específicos. Usa el héroe actual del PlayerSessionService.
+    /// </summary>
+    public void OpenPanel()
+    {
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData != null)
+        {
+            OpenPanel(heroData);
+        }
+        else
+        {
+            Debug.LogError("[InventoryPanelController] No hay héroe activo en PlayerSessionService para abrir el inventario");
+        }
+    }
+
+    /// <summary>
+    /// Alterna el estado del panel (abierto/cerrado).
+    /// </summary>
+    public void TogglePanel()
+    {
+        if (IsPanelOpen)
+        {
+            ClosePanel();
+        }
+        else
+        {
+            OpenPanel();
+        }
+    }
+
+    #endregion
 
     /// <summary>
     /// Aplica un filtro específico a los ítems mostrados.

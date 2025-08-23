@@ -17,6 +17,7 @@ public class SquadDetailPanel : MonoBehaviour
     public Image squadIconBackground;
     public TMP_Text squadNameText;
     public TMP_Text squadTypeText;
+    public Image rarityDivider;
     public Transform starsContainer;
     public GameObject starsPrefab;
 
@@ -139,8 +140,8 @@ public class SquadDetailPanel : MonoBehaviour
 
     public static (Color color, float stars) GetRarityInfo(SquadRarity rarity)
     {
-        if (RarityInfo.TryGetValue(rarity, out var info))
-            return info;
+        if (RarityInfo.TryGetValue(rarity, out var info)) return info;
+        
         return (Color.white, 0f);
     }
 
@@ -159,7 +160,12 @@ public class SquadDetailPanel : MonoBehaviour
         {
             Debug.LogWarning("[SquadDetailPanel] 2 starsContainer o starsPrefab no asignados");
             return;
+
         }
+
+        Color squadRarityColor = GetRarityInfo(rarity).color;
+        if (rarityDivider != null) rarityDivider.color = squadRarityColor;
+
         // Limpiar estrellas previas
         foreach (Transform child in starsContainer)
         {
