@@ -41,6 +41,7 @@ public class HeroDetailUIController : MonoBehaviour
     [SerializeField] private HeroDetailStatsPanel _statsPanel;
     [SerializeField] private HeroDetailAttributePanel _attributesPanel;
     [SerializeField] private HeroEquipmentPanel _equipmentPanel;
+    [SerializeField] private HeroDetail3DPreview _previewSystem;
 
     #endregion
 
@@ -157,6 +158,8 @@ public class HeroDetailUIController : MonoBehaviour
     /// </summary>
     public void ClosePanel()
     {
+        DisablePreviewSystem();
+        
         if (mainPanel != null) mainPanel.SetActive(false);
         
         _currentHeroData = null;
@@ -190,6 +193,7 @@ public class HeroDetailUIController : MonoBehaviour
         
         PopulateHeroStatus();
         PopulateSubPanels();
+        EnablePreviewSystem();
     }
 
     private void PopulateHeroStatus()
@@ -358,6 +362,42 @@ public class HeroDetailUIController : MonoBehaviour
     #endregion
 
     #region Helper Methods
+
+    /// <summary>
+    /// Habilita el sistema de preview 3D.
+    /// </summary>
+    private void EnablePreviewSystem()
+    {
+        if (_previewSystem != null)
+        {
+            _previewSystem.EnablePreview();
+            Debug.Log("[HeroDetailUIController] 3D Preview system enabled");
+        }
+        else
+        {
+            Debug.LogWarning("[HeroDetailUIController] Preview system not assigned");
+            
+            // Intentar encontrar el componente automáticamente
+            _previewSystem = GetComponentInChildren<HeroDetail3DPreview>();
+            if (_previewSystem != null)
+            {
+                _previewSystem.EnablePreview();
+                Debug.Log("[HeroDetailUIController] Found and enabled preview system automatically");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Deshabilita el sistema de preview 3D.
+    /// </summary>
+    private void DisablePreviewSystem()
+    {
+        if (_previewSystem != null)
+        {
+            _previewSystem.DisablePreview();
+            Debug.Log("[HeroDetailUIController] 3D Preview system disabled");
+        }
+    }
 
     /// <summary>
     /// Inicializa el panel de equipamiento si no está ya inicializado.

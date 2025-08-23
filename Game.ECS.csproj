@@ -269,6 +269,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitLocalTarget.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\SamplePlayerAnimationController_ECS.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularExtensionMethods.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailPreviewCamera.cs" />
     <Compile Include="Assets\Scripts\Squads\GridFormationScriptableObject.cs" />
     <Compile Include="Assets\Scripts\UI\SpawnIcon.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\XPEvent.Component.cs" />
@@ -416,6 +417,7 @@
     <Compile Include="Assets\Scripts\Dialogue\NpcDialogueData.cs" />
     <Compile Include="Assets\Scripts\Inventory\Data\EquipmentCompatibilityInfo.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\SquadEnums.Type.cs" />
+    <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetail3DPreviewSetup.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularCharacterStatics.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadSpawning.System.cs" />
