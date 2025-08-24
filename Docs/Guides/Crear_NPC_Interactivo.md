@@ -82,7 +82,7 @@ Ubicación: `Assets/Prefabs/NPC/`
         - `📦 Collider (Sphere o Box, isTrigger = true)`
         - `📜 NPCTriggerZone (Script)` → Configurar `BuildingId`
         - `🔗 NPCDialogReference (Script)` → Asignar el `NPCDialogData` creado
-    - 🧾 `Canvas`
+    - 🧾 `Canvas` -> Npc Billboard component
         - `📋 Interaction_Panel`
             - `🪟 Background`
             - `💬 Display_Text` (texto mostrado al entrar en zona de interacción)

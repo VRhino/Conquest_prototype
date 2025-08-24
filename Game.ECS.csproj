@@ -132,7 +132,6 @@
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipStatEntry.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailUIController.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitGridSlot.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\Minimap\MinimapCamera.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitPrevLeaderPos.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\RetreatLogic.System.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraTarget.Component.cs" />
@@ -177,7 +176,6 @@
     <Compile Include="Assets\Scripts\Hero\HeroPrefab.Authoring.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularCharacterEditor.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitSpacing.System.cs" />
-    <Compile Include="Assets\Scripts\UI\Minimap\MinimapIconType.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\XPSource.Type.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroAbilityCategory.Type.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadDeploymentWarningEvent.cs" />
@@ -215,16 +213,15 @@
     <Compile Include="Assets\Scripts\Shared\PerformanceTracker.System.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneLink.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadFSM.System.cs" />
+    <Compile Include="Assets\Scripts\UI\Minimap\MinimapController.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\UnitOrientation.Type.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailAttributePanel.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroAttack.System.cs" />
     <Compile Include="Assets\Scripts\Squads\AbilityData.cs" />
-    <Compile Include="Assets\Scripts\UI\Minimap\MinimapRenderer.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadRarity.cs" />
     <Compile Include="Assets\Scripts\UI\DialogueUIState.cs" />
     <Compile Include="Assets\Scripts\Squads\FormationLibraryBlob.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFollowDelay.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\Minimap\MinimapIcon.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadFormationData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEntity.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageProfile.Authoring.cs" />
@@ -293,6 +290,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadProgressionCurveBlob.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroEntity.Authoring.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\AvatarPartSliderController.cs" />
+    <Compile Include="Assets\Scripts\UI\Minimap\PlayerMinimapIcon.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\Item.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\AvatarPartSelector.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\UnitFormationState.Type.cs" />
@@ -330,7 +328,6 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroSquadSelection.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadState.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryItemCellInteraction.cs" />
-    <Compile Include="Assets\Scripts\UI\Minimap\MinimapIcon.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefabRegistry.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\SquadState.Type.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCalculation.System.cs" />
