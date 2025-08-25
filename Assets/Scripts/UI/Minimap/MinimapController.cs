@@ -7,55 +7,55 @@ using UnityEngine.UI;
 /// </summary>
 public class MinimapController : MonoBehaviour
 {
-        [Header("Camera Setup")]
-        [SerializeField] private Camera minimapCamera;
-        [SerializeField] private RenderTexture renderTexture;
-        [SerializeField] private RawImage minimapDisplay;
+    [Header("Camera Setup")]
+    [SerializeField] private Camera minimapCamera;
+    [SerializeField] private RenderTexture renderTexture;
+    [SerializeField] private RawImage minimapDisplay;
 
-        [Header("Camera Settings")]
-        [SerializeField] private float cameraHeight = 20f;
-        [SerializeField] private float orthographicSize = 15f;
-        [SerializeField] private LayerMask minimapLayers = -1;
+    [Header("Camera Settings")]
+    [SerializeField] private float cameraHeight = 20f;
+    [SerializeField] private float orthographicSize = 15f;
+    [SerializeField] private LayerMask minimapLayers = -1;
 
-        [Header("Zoom Controls")]
-        [SerializeField] private Button zoomInButton;
-        [SerializeField] private Button zoomOutButton;
-        [SerializeField] private float minZoom = 5f;
-        [SerializeField] private float maxZoom = 30f;
-        [SerializeField] private float zoomStep = 2f;
+    [Header("Zoom Controls")]
+    [SerializeField] private Button zoomInButton;
+    [SerializeField] private Button zoomOutButton;
+    [SerializeField] private float minZoom = 5f;
+    [SerializeField] private float maxZoom = 30f;
+    [SerializeField] private float zoomStep = 2f;
 
-        [Header("Player Tracking")]
-        [SerializeField] private string playerTag = "Player";
-        [SerializeField] private float followSmoothness = 5f;
+    [Header("Player Tracking")]
+    [SerializeField] private string playerTag = "Player";
+    [SerializeField] private float followSmoothness = 5f;
 
-        // Referencias del sistema
-        private Transform playerTransform;
-        private Vector3 cameraOffset;
-    
+    // Referencias del sistema
+    private Transform playerTransform;
+    private Vector3 cameraOffset;
+
     #region Unity Lifecycle
-    
+
     private void Awake()
     {
         InitializeCamera();
         InitializeRenderTexture();
     }
-    
+
     private void Start()
     {
-    FindPlayerTransform();
-    EnableMinimap();
-    InitializeZoomButtons();
+        FindPlayerTransform();
+        EnableMinimap();
+        InitializeZoomButtons();
     }
-    
+
     private void LateUpdate()
     {
-    UpdateCameraPosition();
+        UpdateCameraPosition();
     }
-    
+
     #endregion
-    
+
     #region Initialization
-    
+
     private void InitializeCamera()
     {
         if (minimapCamera == null)
@@ -67,19 +67,19 @@ public class MinimapController : MonoBehaviour
                 return;
             }
         }
-        
+
         // Configurar cámara para minimapa
         minimapCamera.orthographic = true;
         minimapCamera.orthographicSize = orthographicSize;
         minimapCamera.cullingMask = minimapLayers;
         minimapCamera.clearFlags = CameraClearFlags.SolidColor;
         minimapCamera.backgroundColor = new Color(0.1f, 0.1f, 0.1f, 1f); // Fondo oscuro
-        
+
         // Orientación desde arriba
         transform.rotation = Quaternion.Euler(90f, 0f, 0f);
         cameraOffset = new Vector3(0f, cameraHeight, 0f);
     }
-    
+
     private void InitializeRenderTexture()
     {
         if (renderTexture == null)
@@ -88,22 +88,22 @@ public class MinimapController : MonoBehaviour
             renderTexture = new RenderTexture(256, 256, 16, RenderTextureFormat.ARGB32);
             renderTexture.name = "MinimapRenderTexture";
         }
-        
+
         if (minimapCamera != null)
         {
             minimapCamera.targetTexture = renderTexture;
         }
-        
+
         if (minimapDisplay != null)
         {
             minimapDisplay.texture = renderTexture;
         }
     }
-    
+
     #endregion
-    
+
     #region Player Tracking
-    
+
     private void FindPlayerTransform()
     {
         GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
@@ -117,7 +117,7 @@ public class MinimapController : MonoBehaviour
             Debug.LogWarning($"[MinimapController] No GameObject found with tag: {playerTag}");
         }
     }
-    
+
     private void UpdateCameraPosition()
     {
         if (playerTransform == null)
@@ -126,14 +126,14 @@ public class MinimapController : MonoBehaviour
             FindPlayerTransform();
             return;
         }
-        
+
         // Posición objetivo: player + offset hacia arriba
         Vector3 targetPosition = playerTransform.position + cameraOffset;
-        
+
         // Smooth following (opcional, se puede quitar para seguimiento instantáneo)
         if (followSmoothness > 0f)
         {
-            transform.position = Vector3.Lerp(transform.position, targetPosition, 
+            transform.position = Vector3.Lerp(transform.position, targetPosition,
                 followSmoothness * Time.deltaTime);
         }
         else
@@ -141,9 +141,9 @@ public class MinimapController : MonoBehaviour
             transform.position = targetPosition;
         }
     }
-    
+
     #endregion
-    
+
     #region Public API
     /// <summary>
     /// Inicializa los botones de zoom y asigna los listeners.
@@ -173,7 +173,7 @@ public class MinimapController : MonoBehaviour
         float newSize = Mathf.Min(maxZoom, orthographicSize + zoomStep);
         SetOrthographicSize(newSize);
     }
-    
+
     /// <summary>
     /// Activa el minimapa.
     /// </summary>
@@ -183,13 +183,13 @@ public class MinimapController : MonoBehaviour
         {
             minimapCamera.enabled = true;
         }
-        
+
         if (minimapDisplay != null)
         {
             minimapDisplay.gameObject.SetActive(true);
         }
     }
-    
+
     /// <summary>
     /// Desactiva el minimapa.
     /// </summary>
@@ -199,13 +199,13 @@ public class MinimapController : MonoBehaviour
         {
             minimapCamera.enabled = false;
         }
-        
+
         if (minimapDisplay != null)
         {
             minimapDisplay.gameObject.SetActive(false);
         }
     }
-    
+
     /// <summary>
     /// Configura el tamaño ortográfico de la cámara (zoom).
     /// </summary>
@@ -218,7 +218,7 @@ public class MinimapController : MonoBehaviour
             minimapCamera.orthographicSize = orthographicSize;
         }
     }
-    
+
     /// <summary>
     /// Configura la altura de la cámara sobre el player.
     /// </summary>
@@ -228,11 +228,11 @@ public class MinimapController : MonoBehaviour
         cameraHeight = height;
         cameraOffset = new Vector3(0f, cameraHeight, 0f);
     }
-    
+
     #endregion
-    
+
     #region Cleanup
-    
+
     private void OnDestroy()
     {
         if (renderTexture != null)
@@ -240,6 +240,6 @@ public class MinimapController : MonoBehaviour
             renderTexture.Release();
         }
     }
-    
+
     #endregion
 }

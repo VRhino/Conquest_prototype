@@ -304,6 +304,7 @@
     <Compile Include="Assets\Scripts\Hero\Components\HeroSpawn.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\Terrain.Type.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
+    <Compile Include="Assets\Scripts\Inventory\ItemsEffects\ChooseWeaponRewardEffect.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDatabase.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\StatComparisonUtils.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroMovement.System.cs" />
@@ -317,6 +318,7 @@
     <Compile Include="Assets\Scripts\Squads\NavMeshAgent.Authoring.cs" />
     <Compile Include="Assets\Scripts\Inventory\InventoryManager.cs" />
     <Compile Include="Assets\Scripts\Inventory\ItemsEffects\CurrencyEffect.cs" />
+    <Compile Include="Assets\Scripts\UI\Dialogs\RewardDialogDataSO.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInstance.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\InventoryTooltipManager.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
@@ -385,6 +387,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitFormationState.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Items\Item.Data.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularArmorType.cs" />
+    <Compile Include="Assets\Scripts\UI\Dialogs\SimpleRewardDialogDataSO.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEquipment.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroPrefab.Component.cs" />
     <Compile Include="Assets\Scripts\Map\CapturePointProgress.Component.cs" />
@@ -395,6 +398,7 @@
     <Compile Include="Assets\Scripts\Squads\Systems\SquadProgression.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroSpawn.System.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Demo\EquipmentManager.cs" />
+    <Compile Include="Assets\Scripts\UI\Dialogs\RewardDialogUIController.cs" />
     <Compile Include="Assets\Scripts\Core\HeroExperienceCalculator.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOrientation.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassReference.Authoring.cs" />

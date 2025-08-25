@@ -12,6 +12,7 @@ public class InventoryItemCellController : MonoBehaviour
     public Image itemMiniature;
     public Image filler;
     public TMP_Text stackText;
+    public Image selectedOverlay;
 
     [Header("Background Sprites")]
     [SerializeField] private Sprite backgroundSpriteCommon;
@@ -67,6 +68,36 @@ public class InventoryItemCellController : MonoBehaviour
             return;
         }
 
+        SetItemVisuals(itemData);
+
+        // Actualizar componente de interacción si existe
+        if (_interaction != null)
+            _interaction.SetItem(item, itemData);
+        
+        // Actualizar drag handler
+        CallDragHandlerMethod("SetItemData", item, itemData, _cellIndex);
+
+        // Stack
+        if (itemData.stackable && item.quantity > 1)
+        {
+            stackText.gameObject.SetActive(true);
+            stackText.text = item.quantity.ToString();
+        }
+        else
+        {
+            stackText.gameObject.SetActive(false);
+        }
+    }
+
+    public void SetPreviewItem(ItemData itemPreviewData)
+    {
+        itemPanel.SetActive(true);
+        stackText.gameObject.SetActive(false);
+        SetItemVisuals(itemPreviewData);
+    }
+
+    private void SetItemVisuals(ItemData itemData)
+    {
         // Asignar sprites
         Sprite itemSprite = itemData.iconPath != null ? Resources.Load<Sprite>(itemData.iconPath) : null;
         
@@ -93,25 +124,7 @@ public class InventoryItemCellController : MonoBehaviour
         };
 
         // Asignar color de rareza
-        filler.color = InventoryUtils.GetRarityColor(item);
-
-        // Actualizar componente de interacción si existe
-        if (_interaction != null)
-            _interaction.SetItem(item, itemData);
-        
-        // Actualizar drag handler
-        CallDragHandlerMethod("SetItemData", item, itemData, _cellIndex);
-
-        // Stack
-        if (itemData.stackable && item.quantity > 1)
-        {
-            stackText.gameObject.SetActive(true);
-            stackText.text = item.quantity.ToString();
-        }
-        else
-        {
-            stackText.gameObject.SetActive(false);
-        }
+        filler.color = InventoryUtils.GetRarityColor(itemData.rarity);
     }
 
     /// <summary>
@@ -120,11 +133,11 @@ public class InventoryItemCellController : MonoBehaviour
     public void Clear()
     {
         itemPanel.SetActive(false);
-        
+
         // Limpiar interacción si existe
         if (_interaction != null)
             _interaction.ClearItem();
-        
+
         // Limpiar drag handler
         CallDragHandlerMethod("ClearItemData");
     }

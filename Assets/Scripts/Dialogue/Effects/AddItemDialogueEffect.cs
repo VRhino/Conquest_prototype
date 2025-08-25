@@ -33,7 +33,7 @@ namespace ConquestTactics.Dialogue
             }
 
             // Agregar el ítem usando InventoryManager
-        bool success = InventoryManager.AddItem(targetItemId, targetQuantity);
+        bool success = InventoryManager.CreateAndAddItem(targetItemId, targetQuantity);
 
         if (success)
         {

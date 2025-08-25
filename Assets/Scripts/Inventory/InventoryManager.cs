@@ -70,7 +70,7 @@ public static class InventoryManager
     /// <summary>
     /// Crea una nueva instancia de item y la agrega al inventario.
     /// </summary>
-    public static bool AddItem(string itemId, int quantity = 1)
+    public static bool CreateAndAddItem(string itemId, int quantity = 1)
     {
         if (!ValidateInitialization()) return false;
 

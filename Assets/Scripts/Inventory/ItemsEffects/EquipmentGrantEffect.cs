@@ -59,7 +59,7 @@ public class EquipmentGrantEffect : ItemEffect
 
             // Intentar agregar al inventario
             bool added = false;
-            added = InventoryManager.AddItem(targetItemId, 1);
+            added = InventoryManager.CreateAndAddItem(targetItemId, 1);
 
             if (added)
             {
@@ -165,71 +165,6 @@ public class EquipmentGrantEffect : ItemEffect
     {
         return 80; // Alta prioridad para que se ejecute antes que otros efectos
     }
-
-    #region Public Configuration Methods
-
-    /// <summary>
-    /// Configura el item ID del equipment a otorgar
-    /// </summary>
-    /// <param name="itemId">ID del item en la base de datos</param>
-    public void SetTargetItem(string itemId)
-    {
-        targetItemId = itemId;
-    }
-
-    /// <summary>
-    /// Configura si se permiten duplicados del mismo equipment
-    /// </summary>
-    /// <param name="allowed">True si se permiten duplicados</param>
-    public void SetAllowDuplicates(bool allowed)
-    {
-        allowDuplicates = allowed;
-    }
-
-    /// <summary>
-    /// Obtiene el item ID configurado
-    /// </summary>
-    /// <returns>ID del item objetivo</returns>
-    public string GetTargetItemId()
-    {
-        return targetItemId;
-    }
-
-    #endregion
-
-    #region Validation Methods
-
-    /// <summary>
-    /// Valida la configuración del efecto en el editor
-    /// </summary>
-    public bool ValidateConfiguration()
-    {
-        if (string.IsNullOrEmpty(targetItemId))
-        {
-            Debug.LogError($"[{name}] Target item ID is not configured", this);
-            return false;
-        }
-
-        if (validateItemExists)
-        {
-            var itemData = InventoryUtils.GetItemData(targetItemId);
-            if (itemData == null)
-            {
-                Debug.LogError($"[{name}] Target item '{targetItemId}' not found in database", this);
-                return false;
-            }
-
-            if (!itemData.IsEquipment)
-            {
-                Debug.LogError($"[{name}] Target item '{targetItemId}' is not equipment", this);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    #endregion
 
     #region Logging
 
