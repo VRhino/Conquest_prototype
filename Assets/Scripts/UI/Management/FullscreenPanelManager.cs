@@ -9,6 +9,24 @@ using UnityEngine.UI;
 /// </summary>
 public class FullscreenPanelManager : MonoBehaviour
 {
+    // Exclusivity flag for reward dialog
+    [SerializeField] public bool IsRewardDialogOpen { get; private set; } = false;
+
+    /// <summary>
+    /// Call this when the reward dialog is opened to block other panels.
+    /// </summary>
+    public void NotifyRewardDialogOpened()
+    {
+        IsRewardDialogOpen = true;
+    }
+
+    /// <summary>
+    /// Call this when the reward dialog is closed to unblock other panels.
+    /// </summary>
+    public void NotifyRewardDialogClosed()
+    {
+        IsRewardDialogOpen = false;
+    }
     #region Singleton Pattern
 
     public static FullscreenPanelManager Instance { get; private set; }
@@ -170,6 +188,7 @@ public class FullscreenPanelManager : MonoBehaviour
     /// </summary>
     public void OpenPanel<T>() where T : MonoBehaviour
     {
+        if (IsRewardDialogOpen) return;
         var panelType = typeof(T);
         if (!_registeredPanels.TryGetValue(panelType, out var targetPanel))
         {
@@ -197,6 +216,7 @@ public class FullscreenPanelManager : MonoBehaviour
     /// </summary>
     public void ClosePanel<T>() where T : MonoBehaviour
     {
+        if (IsRewardDialogOpen) return;
         var panelType = typeof(T);
         if (!_registeredPanels.TryGetValue(panelType, out var targetPanel))
         {
@@ -218,6 +238,8 @@ public class FullscreenPanelManager : MonoBehaviour
     /// </summary>
     public void TogglePanel<T>() where T : MonoBehaviour
     {
+       if (IsRewardDialogOpen) return;
+
         var panelType = typeof(T);
         if (!_registeredPanels.TryGetValue(panelType, out var targetPanel))
         {

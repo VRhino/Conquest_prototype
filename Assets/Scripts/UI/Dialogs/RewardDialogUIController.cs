@@ -31,6 +31,7 @@ public class RewardDialogUIController : MonoBehaviour
         mainPanel.SetActive(true);
         SetupUI();
         acceptButton.onClick.AddListener(OnAcceptButtonPressed);
+        FullscreenPanelManager.Instance.NotifyRewardDialogOpened();
     }
 
     private void SetupUI()
@@ -106,5 +107,6 @@ public class RewardDialogUIController : MonoBehaviour
         dialogData = null;
         _currentHero = null;
         selectedItemIds.Clear();
+        FullscreenPanelManager.Instance.NotifyRewardDialogClosed();
     }
 }
