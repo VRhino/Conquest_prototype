@@ -119,7 +119,6 @@ public static class EquipmentManagerService
             return false;
         }
 
-        // NUEVO: Validar compatibilidad de armadura
        executeCompatibilityValidations(item, itemData);
 
         int originalSlot = item.slotIndex;
@@ -157,7 +156,6 @@ public static class EquipmentManagerService
                 }
                 LogWarning($"Could not place {currentlyEquipped.itemId} in original slot {originalSlot}, placed in available slot instead");
             }
-            
             LogInfo($"Swapped {item.itemId} (equipped) with {currentlyEquipped.itemId} (to slot {originalSlot})");
             InventoryEventService.TriggerItemEquipped(item, currentlyEquipped);
         }

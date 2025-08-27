@@ -13,6 +13,7 @@ using System.Linq;
 /// </summary>
 public class InventoryTooltipController : MonoBehaviour
 {
+
     [Header("Main Tooltip")]
     public GameObject tooltipPanel;
     public Canvas tooltipCanvas;
@@ -116,7 +117,7 @@ public class InventoryTooltipController : MonoBehaviour
 
     void Start()
     {
-        _lifecycleManager?.HideTooltip();
+        //_lifecycleManager?.HideTooltip();
     }
 
     void Update()
@@ -171,41 +172,44 @@ public class InventoryTooltipController : MonoBehaviour
 
     #region Public API
 
+    public string GetCellId() { return _lifecycleManager?.CellId; }
+
     /// <summary>
     /// Muestra el tooltip para un ítem específico con delay.
     /// </summary>
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
-    public void ShowTooltip(InventoryItem item, ItemData itemData)
+    public void ShowTooltip(InventoryItem item, ItemData itemData, string cellId)
     {
-        _lifecycleManager?.ShowTooltip(item, itemData);
+        _lifecycleManager?.ShowTooltip(item, itemData, cellId);
     }
 
     /// <summary>
     /// Muestra el tooltip para un ítem específico con delay y posición del mouse.
     /// </summary>
+    /// <param name="cellId">ID de la celda</param>
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    public void ShowTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void ShowTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
-        _lifecycleManager?.ShowTooltip(item, itemData, mousePosition);
+        _lifecycleManager?.ShowTooltip(item, itemData, mousePosition, cellId);
     }
 
     /// <summary>
     /// Muestra el tooltip inmediatamente sin delay.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData)
+    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, string cellId)
     {
-        _lifecycleManager?.ShowTooltipInstant(item, itemData);
+        _lifecycleManager?.ShowTooltipInstant(item, itemData, cellId);
     }
 
     /// <summary>
     /// Muestra el tooltip inmediatamente con posición específica.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
-        _lifecycleManager?.ShowTooltipInstant(item, itemData, mousePosition);
+        _lifecycleManager?.ShowTooltipInstant(item, itemData, mousePosition, cellId);
     }
 
     /// <summary>
@@ -213,7 +217,6 @@ public class InventoryTooltipController : MonoBehaviour
     /// </summary>
     public void HideTooltip()
     {
-        Debug.Log("[InventoryTooltipController] Hiding tooltip");
         _lifecycleManager?.HideTooltip();
     }
 

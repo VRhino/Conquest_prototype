@@ -150,6 +150,11 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
             PopulateUI();
         }
         
+        var globalTooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        if (globalTooltipManager != null)
+        {
+            _equipmentPanel.SetTooltipManager(globalTooltipManager);
+        }
         Debug.Log($"[HeroDetailUIController] Panel abierto para héroe: {heroData.heroName}");
     }
 
@@ -159,7 +164,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
     public void ClosePanel()
     {
         DisablePreviewSystem();
-        
+        if (_equipmentPanel != null) _equipmentPanel.SetTooltipManager(null);
         if (mainPanel != null) mainPanel.SetActive(false);
         
         _currentHeroData = null;

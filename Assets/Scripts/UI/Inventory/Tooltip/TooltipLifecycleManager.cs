@@ -8,6 +8,7 @@ using System.Collections;
 /// </summary>
 public class TooltipLifecycleManager : ITooltipComponent
 {
+    private string _cellId;
     private InventoryTooltipController _controller;
     private bool _isShowing = false;
     private float _showTimer = 0f;
@@ -24,6 +25,7 @@ public class TooltipLifecycleManager : ITooltipComponent
         _showTimer = 0f;
         _currentItem = null;
         _currentItemData = null;
+        _cellId = "";
         _lastMousePosition = Vector3.zero;
     }
 
@@ -36,17 +38,23 @@ public class TooltipLifecycleManager : ITooltipComponent
         _controller = null;
         _currentItem = null;
         _currentItemData = null;
+        _cellId = "";
     }
 
     #endregion
 
     #region Public API
 
+    public string CellId => _cellId;
+
     /// <summary>
     /// Muestra el tooltip para un ítem específico.
     /// </summary>
-    public void ShowTooltip(InventoryItem item, ItemData itemData)
+    public void ShowTooltip(InventoryItem item, ItemData itemData, string cellId)
     {
+        _cellId = cellId;
+        Debug.Log($"[TooltipLifecycleManager][ShowTooltip] Showing tooltip instantly for item: {itemData?.name} in cell: {cellId}");
+
         if (item == null || itemData == null)
         {
             HideTooltip();
@@ -78,30 +86,31 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// <summary>
     /// Muestra el tooltip con posición específica.
     /// </summary>
-    public void ShowTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void ShowTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
         _lastMousePosition = mousePosition;
-        ShowTooltip(item, itemData);
+        ShowTooltip(item, itemData, cellId);
     }
 
     /// <summary>
     /// Muestra el tooltip inmediatamente sin delay.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData)
+    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, string cellId)
     {
         _currentItem = item;
         _currentItemData = itemData;
         _showTimer = 0f;
+        _cellId = cellId;
         ShowTooltipImmediate();
     }
 
     /// <summary>
     /// Muestra el tooltip inmediatamente con posición específica.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
         _lastMousePosition = mousePosition;
-        ShowTooltipInstant(item, itemData);
+        ShowTooltipInstant(item, itemData, cellId);
     }
 
     /// <summary>
@@ -109,7 +118,6 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// </summary>
     public void HideTooltip()
     {
-        Debug.Log("[TooltipLifecycleManager] Hiding tooltip");
         // Detener cualquier corrutina activa
         _controller.StopAllCoroutines();
 
@@ -120,6 +128,7 @@ public class TooltipLifecycleManager : ITooltipComponent
         _showTimer = 0f;
         _currentItem = null;
         _currentItemData = null;
+        _cellId = "";
     }
 
     #endregion
@@ -213,7 +222,10 @@ public class TooltipLifecycleManager : ITooltipComponent
         // Posicionar el tooltip
         if (_lastMousePosition != Vector3.zero)
         {
-            _controller.PositioningSystem?.UpdatePosition(_lastMousePosition);
+            if (_controller.CurrentTooltipType == TooltipType.Primary)
+                _controller.PositioningSystem?.UpdatePosition(_lastMousePosition);
+            else
+                _controller.PositioningSystem?.UpdatePositionWithComparison(_lastMousePosition, true);
         }
         else
         {

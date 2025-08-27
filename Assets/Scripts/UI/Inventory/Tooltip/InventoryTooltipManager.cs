@@ -1,6 +1,6 @@
+using Data.Items;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using Data.Items;
 
 /// <summary>
 /// Manager que integra el sistema de tooltips con el inventario.
@@ -12,14 +12,14 @@ public class InventoryTooltipManager : MonoBehaviour
     [Header("Tooltip Settings")]
     [SerializeField] private float hoverDelay = 0.5f;
     [SerializeField] private bool enableTooltips = true;
-    [SerializeField] private bool enableComparisonTooltips = true;
-    
+    [SerializeField] private bool enableComparisonTooltips = false;
+
     [Header("Tooltip Controllers")]
     [SerializeField] private InventoryTooltipController primaryTooltipController;   // Muestra item del inventario con comparación
     [SerializeField] private InventoryTooltipController secondaryTooltipController; // Muestra item equipado como referencia
-    
+
     private InventoryPanelController _inventoryPanel;
-    
+
     // Legacy reference para compatibilidad
     private InventoryTooltipController _tooltipController => primaryTooltipController;
 
@@ -33,12 +33,17 @@ public class InventoryTooltipManager : MonoBehaviour
     void OnDestroy()
     {
         StopTooltipValidation();
-        
+
         // Limpiar conexiones al destruir el manager
         if (_tooltipController != null)
         {
             _tooltipController.HideTooltip();
         }
+    }
+
+    public void SetEnableComparisonTooltips(bool enable)
+    {
+        enableComparisonTooltips = enable;
     }
 
     #region Tooltip Validation System
@@ -56,7 +61,7 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         _validationEnabled = true;
         _lastValidationTime = Time.time;
-        
+
     }
 
     /// <summary>
@@ -65,7 +70,6 @@ public class InventoryTooltipManager : MonoBehaviour
     private void StopTooltipValidation()
     {
         _validationEnabled = false;
-        
     }
 
     void Update()
@@ -97,6 +101,7 @@ public class InventoryTooltipManager : MonoBehaviour
     {
         if (_tooltipController != null)
         {
+            Debug.Log("[InventoryTooltipManager] Forcing tooltip validation");
             _tooltipController.ValidateAndRefreshTooltip();
         }
     }
@@ -151,6 +156,14 @@ public class InventoryTooltipManager : MonoBehaviour
         }
 
         // Conectar con las celdas existentes
+        _inventoryPanel = FindObjectOfType<InventoryPanelController>();
+        if (_inventoryPanel == null)
+        {
+            Debug.LogWarning("[InventoryTooltipManager] No se encontró InventoryPanelController en la escena");
+            return;
+        }
+
+        // Conectar con las celdas existentes
         ConnectToInventoryCells();
     }
 
@@ -163,7 +176,7 @@ public class InventoryTooltipManager : MonoBehaviour
 
         // Buscar todas las celdas de inventario
         InventoryItemCellController[] cells = FindObjectsOfType<InventoryItemCellController>();
-        
+
         foreach (var cell in cells)
         {
             ConnectCellToTooltip(cell);
@@ -190,6 +203,8 @@ public class InventoryTooltipManager : MonoBehaviour
         interaction.OnItemHoverEnter += OnItemHoverEnter;
         interaction.OnItemHoverExit += OnItemHoverExit;
         interaction.OnItemHoverMove += OnItemHoverMove;
+        interaction.OnSetItem += OnSetItem;
+        interaction.OnClearItem += OnClearItem;
     }
 
     /// <summary>
@@ -206,6 +221,8 @@ public class InventoryTooltipManager : MonoBehaviour
             interaction.OnItemHoverEnter -= OnItemHoverEnter;
             interaction.OnItemHoverExit -= OnItemHoverExit;
             interaction.OnItemHoverMove -= OnItemHoverMove;
+            interaction.OnSetItem -= OnSetItem;
+            interaction.OnClearItem -= OnClearItem;
         }
     }
 
@@ -215,7 +232,7 @@ public class InventoryTooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    private void OnItemHoverEnter(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void OnItemHoverEnter(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
         if (!enableTooltips) return;
 
@@ -223,14 +240,14 @@ public class InventoryTooltipManager : MonoBehaviour
         StartTooltipValidation();
 
         // Determinar si mostrar dual tooltips o solo el normal
-        if (enableComparisonTooltips && itemData != null && itemData.IsEquipment && 
+        if (enableComparisonTooltips && itemData != null && itemData.IsEquipment &&
             ComparisonTooltipUtils.ShouldShowComparison(itemData))
         {
-            ShowDualTooltips(item, itemData, mousePosition);
+            ShowDualTooltips(item, itemData, mousePosition, cellId);
         }
         else if (primaryTooltipController != null)
         {
-            primaryTooltipController.ShowTooltip(item, itemData, mousePosition);
+            primaryTooltipController.ShowTooltip(item, itemData, mousePosition, cellId);
         }
     }
 
@@ -240,7 +257,7 @@ public class InventoryTooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    private void OnItemHoverExit(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void OnItemHoverExit(InventoryItem item, ItemData itemData, Vector3 mousePosition)
     {
         if (!enableTooltips) return;
 
@@ -253,7 +270,7 @@ public class InventoryTooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    private void OnItemHoverMove(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void OnItemHoverMove(InventoryItem item, ItemData itemData, Vector3 mousePosition)
     {
         if (!enableTooltips) return;
 
@@ -269,59 +286,25 @@ public class InventoryTooltipManager : MonoBehaviour
             secondaryTooltipController.PositioningSystem.UpdatePositionWithComparison(mousePosition, true);
         }
     }
-
-    /// <summary>
-    /// Habilita o deshabilita el sistema de tooltips.
-    /// </summary>
-    /// <param name="enable">True para habilitar, false para deshabilitar</param>
-    public void SetTooltipsEnabled(bool enable)
+    public void OnSetItem(InventoryItem item, ItemData itemData, string cellIdSetted)
     {
-        enableTooltips = enable;
-        
-        if (!enable && _tooltipController != null)
+        if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdSetted)) return;
+
+        if (enableComparisonTooltips)
         {
-            _tooltipController.HideTooltip();
+            Debug.Log("[InventoryTooltipManager] Updating to dual tooltips on item set");
+            ShowDualTooltips(item, itemData, cellIdSetted);
         }
+        else
+            primaryTooltipController.ShowTooltipInstant(item, itemData, cellIdSetted);
+
+
     }
 
-    /// <summary>
-    /// Configura el delay de aparición de los tooltips.
-    /// </summary>
-    /// <param name="delay">Tiempo de delay en segundos</param>
-    public void SetHoverDelay(float delay)
+    public void OnClearItem(InventoryItem item, ItemData itemData, string cellIdCleared)
     {
-        hoverDelay = Mathf.Max(0f, delay);
-        
-        if (_tooltipController != null)
-        {
-            _tooltipController.SetShowDelay(hoverDelay);
-        }
-    }
-
-    /// <summary>
-    /// Fuerza la actualización de conexiones con las celdas.
-    /// Útil cuando se crean nuevas celdas dinámicamente.
-    /// </summary>
-    public void RefreshCellConnections()
-    {
-        // Por ahora usar método local, luego migrar a InventoryUIUtils
-        ConnectToInventoryCells();
-    }
-
-    /// <summary>
-    /// Muestra un tooltip específico manualmente (para testing).
-    /// </summary>
-    /// <param name="item">Ítem a mostrar</param>
-    /// <param name="itemData">Datos del ítem</param>
-    public void ShowTooltipManual(InventoryItem item, ItemData itemData)
-    {
-        // Reactivar validación periódica para tooltips manuales del inventario
-        StartTooltipValidation();
-        
-        if (primaryTooltipController != null)
-        {
-            primaryTooltipController.ShowTooltipInstant(item, itemData);
-        }
+        if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdCleared)) return;
+        HideAllTooltips();
     }
 
     /// <summary>
@@ -330,34 +313,29 @@ public class InventoryTooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición específica del mouse</param>
-    public void ShowDualTooltips(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    public void ShowDualTooltips(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
         if (!enableTooltips) return;
 
         // Mostrar tooltip primario (inventario) - posición normal
         if (primaryTooltipController != null)
         {
-            primaryTooltipController.ShowTooltipInstant(item, itemData, mousePosition);
+            Debug.Log($"[InventoryTooltipManager] Showing primary tooltip at position {mousePosition}");
+            primaryTooltipController.ShowTooltipInstant(item, itemData, mousePosition, cellId);
         }
 
         // Mostrar tooltip secundario (equipado) - con offset de comparación
-        if (enableComparisonTooltips && secondaryTooltipController != null && 
+        if (enableComparisonTooltips && secondaryTooltipController != null &&
             ComparisonTooltipUtils.ShouldShowComparison(itemData))
         {
             var equippedItemData = GetEquippedItemData(itemData.itemType, itemData.itemCategory);
             if (equippedItemData.equippedItem != null && equippedItemData.itemData != null)
             {
-                // Posición con offset para el tooltip secundario
-                Vector3 secondaryPosition = mousePosition + new Vector3(
-                    primaryTooltipController.ComparisonPositionOffset.x,
-                    primaryTooltipController.ComparisonPositionOffset.y,
-                    0f
-                );
-                
                 secondaryTooltipController.ShowTooltipInstant(
-                    equippedItemData.equippedItem, 
-                    equippedItemData.itemData, 
-                    secondaryPosition
+                    equippedItemData.equippedItem,
+                    equippedItemData.itemData,
+                    mousePosition,
+                    cellId
                 );
             }
             else
@@ -374,12 +352,12 @@ public class InventoryTooltipManager : MonoBehaviour
     /// </summary>
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
-    public void ShowDualTooltips(InventoryItem item, ItemData itemData)
+    public void ShowDualTooltips(InventoryItem item, ItemData itemData, string cellId)
     {
         if (!enableTooltips) return;
 
         // Obtener posición actual del mouse usando Input System
-        Vector3 mousePosition = Vector3.zero;
+        Vector3 mousePosition;
         if (Mouse.current != null)
         {
             mousePosition = Mouse.current.position.ReadValue();
@@ -391,7 +369,7 @@ public class InventoryTooltipManager : MonoBehaviour
         }
 
         // Llamar al método con posición específica
-        ShowDualTooltips(item, itemData, mousePosition);
+        ShowDualTooltips(item, itemData, mousePosition, cellId);
     }
 
     /// <summary>
@@ -450,44 +428,14 @@ public class InventoryTooltipManager : MonoBehaviour
             secondaryTooltipController.HideTooltip();
         }
     }
+    #region Helper Functions
 
+    public bool ArePrimaryTooltipsActive() => primaryTooltipController != null && primaryTooltipController.IsShowing;
+
+    public bool IsThisCellShowingTooltip(string cellId) => primaryTooltipController != null && primaryTooltipController.GetCellId() == cellId;
+
+    #endregion
     #region Inspector Debugging
-
-    [ContextMenu("Test Show Tooltip")]
-    private void TestShowTooltip()
-    {
-        if (!Application.isPlaying) return;
-
-        // Buscar un ítem para testing
-        if (InventoryManager.GetCurrentHero()?.inventory != null && InventoryManager.GetCurrentHero().inventory.Count > 0)
-        {
-            var firstItem = InventoryManager.GetCurrentHero().inventory[0];
-            var itemData = ItemDatabase.Instance?.GetItemDataById(firstItem.itemId);
-            
-            if (itemData != null)
-            {
-                ShowTooltipManual(firstItem, itemData);
-            }
-        }
-        else
-        {
-            Debug.Log("[InventoryTooltipManager] No hay ítems en el inventario para testing");
-        }
-    }
-
-    [ContextMenu("Test Hide Tooltip")]
-    private void TestHideTooltip()
-    {
-        if (!Application.isPlaying) return;
-        HideTooltipManual();
-    }
-
-    [ContextMenu("Refresh Connections")]
-    private void TestRefreshConnections()
-    {
-        if (!Application.isPlaying) return;
-        RefreshCellConnections();
-    }
 
     /// <summary>
     /// Valida las referencias y muestra información de debug.
@@ -500,76 +448,6 @@ public class InventoryTooltipManager : MonoBehaviour
                   $"\n- Secondary Tooltip: {(secondaryTooltipController != null ? "✓ Asignado" : "✗ Faltante")}" +
                   $"\n- Enable Tooltips: {enableTooltips}" +
                   $"\n- Enable Comparison: {enableComparisonTooltips}");
-    }
-
-    /// <summary>
-    /// Botón de debug para probar las conexiones.
-    /// </summary>
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void DebugTooltipConnections()
-    {
-        ValidateReferences();
-        
-        if (primaryTooltipController != null)
-        {
-            Debug.Log($"[InventoryTooltipManager] Primary Tooltip Type: {primaryTooltipController.CurrentTooltipType}");
-        }
-        
-        if (secondaryTooltipController != null)
-        {
-            Debug.Log($"[InventoryTooltipManager] Secondary Tooltip Type: {secondaryTooltipController.CurrentTooltipType}");
-        }
-    }
-
-    #endregion
-
-    #region Equipment Tooltip Integration
-
-    /// <summary>
-    /// Método público para mostrar tooltip de equipamiento desde Hero Detail UI.
-    /// Utilizado por HeroEquipmentPanel para mostrar tooltips de items equipados.
-    /// </summary>
-    /// <param name="equippedItem">Item equipado</param>
-    /// <param name="equippedItemData">Datos del item equipado</param>
-    /// <param name="screenPosition">Posición en pantalla</param>
-    public void ShowEquipmentTooltip(InventoryItem equippedItem, ItemData equippedItemData, Vector3 screenPosition)
-    {
-        if (!enableTooltips || primaryTooltipController == null) return;
-
-        // Deshabilitar validación periódica para equipment tooltips
-        StopTooltipValidation();
-
-        // Mostrar tooltip simple sin comparación para equipment ya equipado
-        primaryTooltipController.ShowTooltip(equippedItem, equippedItemData, screenPosition);
-    }
-
-    /// <summary>
-    /// Actualiza la posición del tooltip de equipamiento.
-    /// </summary>
-    /// <param name="screenPosition">Nueva posición en pantalla</param>
-    public void UpdateEquipmentTooltipPosition(Vector3 screenPosition)
-    {
-        if (!enableTooltips || primaryTooltipController == null) return;
-
-        if (primaryTooltipController.IsShowing)
-        {
-            primaryTooltipController.PositioningSystem.UpdatePosition(screenPosition);
-        }
-    }
-
-    /// <summary>
-    /// Oculta el tooltip de equipamiento.
-    /// </summary>
-    public void HideEquipmentTooltip()
-    {
-        Debug.Log("[InventoryTooltipManager] Hiding equipment tooltip");
-        if (primaryTooltipController != null)
-        {
-            primaryTooltipController.HideTooltip();
-        }
-        
-        // Reactivar validación periódica para tooltips normales del inventario
-        StartTooltipValidation();
     }
 
     #endregion

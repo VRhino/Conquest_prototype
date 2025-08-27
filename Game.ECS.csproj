@@ -80,6 +80,7 @@
     <Compile Include="Assets\Scripts\Shared\GamePhase.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitWeapon.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPool.System.cs" />
+    <Compile Include="Assets\Scripts\UI\BaseItemCellController.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombat.Component.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraSettings.Component.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\avatarCreatorController.UI.cs" />
@@ -145,6 +146,7 @@
     <Compile Include="Assets\Scripts\Squads\FormationVisualizer.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\Chat.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroVisual.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\BaseItemCellInteraction.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimationAdapter.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Effects\UnlockSquadDialogueEffect.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\InventoryStorageService.cs" />

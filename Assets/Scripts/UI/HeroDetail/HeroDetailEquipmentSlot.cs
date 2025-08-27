@@ -8,7 +8,7 @@ using Data.Items;
 /// Hereda de InventoryItemCellController para reutilizar toda la lógica de visualización,
 /// y añade funcionalidad específica para equipment slots (placeholders, validaciones, etc.).
 /// </summary>
-public class HeroEquipmentSlotController : InventoryItemCellController
+public class HeroEquipmentSlotController : BaseItemCellController
 {
     #region Equipment Slot Properties
     
@@ -23,9 +23,6 @@ public class HeroEquipmentSlotController : InventoryItemCellController
     [SerializeField] private GameObject placeholder;
     [SerializeField] private Image placeholderIconImage;
     [SerializeField] private TMP_Text placeholderLabel;
-    
-    // Componente de interacción - se inicializa dinámicamente
-    private MonoBehaviour _interaction;
 
     #endregion
 
@@ -48,37 +45,38 @@ public class HeroEquipmentSlotController : InventoryItemCellController
 
     #endregion
 
+    protected override System.Type InteractionType => typeof(HeroEquipmentSlotInteraction);
+
     #region Unity Lifecycle
 
-    private void Awake()
+    protected override void Awake()
     {
-        // Don't call base.Awake() to prevent automatic InventoryItemCellInteraction addition
-        // Instead, manually initialize only what we need from the base class
-        
+        base.Awake();
+
         // Initialize slot-specific properties if needed
         if (slotType == ItemType.Weapon && slotCategory == ItemCategory.None)
-        {
             Debug.LogWarning($"HeroEquipmentSlotController '{name}': SlotCategory not set for Weapon slot");
-        }
         else if (slotType == ItemType.Armor && slotCategory == ItemCategory.None)
-        {
             Debug.LogWarning($"HeroEquipmentSlotController '{name}': SlotCategory not set for Armor slot");
-        }
         
-        // Note: We will add HeroEquipmentSlotInteraction in Start() instead of here
-        // And we don't need to call InitializeDragHandler since it's private in base class
-    }
-
-    void Start()
-    {
-        // Llamar después de Awake para asegurar inicialización completa
         InitializeEquipmentSlot();
     }
 
     #endregion
 
     #region Equipment Slot Initialization
-
+    /// <summary>
+    /// Configuración inicial del slot de equipamiento
+    /// </summary>
+    private void InitializeEquipmentSlot()
+    {
+        // Configurar placeholder si no está ya configurado
+        if (placeholder == null)
+            Debug.LogWarning($"[HeroEquipmentSlot] Placeholder no configurado para slot {slotType}.{slotCategory}");
+        
+        SetupPlaceholderVisuals();
+    }
+    
     /// <summary>
     /// Inicializa el slot de equipamiento con su tipo específico.
     /// </summary>
@@ -89,7 +87,7 @@ public class HeroEquipmentSlotController : InventoryItemCellController
         slotType = equipmentSlotType;
         slotCategory = equipmentSlotCategory;
         SetupPlaceholderVisuals();
-        
+
         // Comenzar con slot vacío
         ShowPlaceholder();
         _interaction = GetComponent<HeroEquipmentSlotInteraction>();
@@ -98,20 +96,6 @@ public class HeroEquipmentSlotController : InventoryItemCellController
             Debug.LogWarning($"[HeroEquipmentSlot] No interaction component found for {slotType}.{slotCategory} slot");
         }
         Debug.Log($"[HeroEquipmentSlot] Initialized {slotType}.{slotCategory} slot");
-    }
-
-    /// <summary>
-    /// Configuración inicial del slot de equipamiento
-    /// </summary>
-    private void InitializeEquipmentSlot()
-    {
-        // Configurar placeholder si no está ya configurado
-        if (placeholder == null)
-        {
-            Debug.LogWarning($"[HeroEquipmentSlot] Placeholder no configurado para slot {slotType}.{slotCategory}");
-        }
-        
-        SetupPlaceholderVisuals();
     }
 
     #endregion
@@ -123,15 +107,9 @@ public class HeroEquipmentSlotController : InventoryItemCellController
     /// </summary>
     private void SetupPlaceholderVisuals()
     {
-        if (placeholderIconImage != null && placeholderIcon != null)
-        {
-            placeholderIconImage.sprite = placeholderIcon;
-        }
-        
-        if (placeholderLabel != null)
-        {
-            placeholderLabel.text = GetSlotDisplayName();
-        }
+        if (placeholderIconImage != null && placeholderIcon != null) placeholderIconImage.sprite = placeholderIcon;
+
+        if (placeholderLabel != null) placeholderLabel.text = GetSlotDisplayName();
     }
 
     /// <summary>
@@ -233,25 +211,16 @@ public class HeroEquipmentSlotController : InventoryItemCellController
         // Configurar estado específico de equipment slot
         HidePlaceholder();
         
-        // Sincronizar con componente de interacción si existe
-        SyncWithInteractionComponent(equippedItem, itemData);
-        
         Debug.Log($"[HeroEquipmentSlot] Set equipped item {equippedItem.itemId} in {slotType}.{slotCategory} slot");
     }
 
     /// <summary>
     /// Limpia el slot y muestra el placeholder
     /// </summary>
-    public void ClearEquippedItem()
+    public override void Clear()
     {
-        // Usar funcionalidad base
-        Clear();
-        
-        // Mostrar placeholder
+        base.Clear();
         ShowPlaceholder();
-        
-        // Sincronizar con componente de interacción
-        SyncWithInteractionComponent(null, null);
         
         Debug.Log($"[HeroEquipmentSlot] Cleared {slotType}.{slotCategory} slot");
     }
@@ -324,36 +293,6 @@ public class HeroEquipmentSlotController : InventoryItemCellController
     public void RefreshSlot()
     {
         PopulateFromEquippedItem();
-    }
-
-    /// <summary>
-    /// Sincroniza el estado del slot con el componente de interacción
-    /// </summary>
-    /// <param name="equippedItem">Item equipado (null para limpiar)</param>
-    /// <param name="itemData">Datos del item (null para limpiar)</param>
-    private void SyncWithInteractionComponent(InventoryItem equippedItem, ItemData itemData)
-    {
-        if (_interaction != null)
-        {
-            // Usar reflexión para evitar errores de compilación temporales
-            var setEquippedItemMethod = _interaction.GetType().GetMethod("SetEquippedItem");
-            if (setEquippedItemMethod != null)
-            {
-                setEquippedItemMethod.Invoke(_interaction, new object[] { equippedItem, itemData });
-            }
-        }
-    }
-
-    #endregion
-
-    #region Debug Info
-
-    /// <summary>
-    /// Información de debug del slot
-    /// </summary>
-    public string GetDebugInfo()
-    {
-        return $"Equipment Slot [{slotType}.{slotCategory}] - HasItem: {HasEquippedItem} - CanUnequip: {CanUnequipCurrentItem()}";
     }
 
     #endregion

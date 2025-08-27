@@ -294,7 +294,6 @@ namespace Data.Avatar
                         if (child.name == prefabName)
                         {
                             child.gameObject.SetActive(false);
-                            Debug.Log($"Disabled part: {prefabName} in bone: {boneTarget}");
                         }
                     }
                 }

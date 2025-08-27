@@ -31,8 +31,14 @@ public class TooltipDataValidator : ITooltipComponent
     /// </summary>
     public void ValidateAndRefreshTooltip()
     {
-        if (!_controller.LifecycleManager.IsShowing || _controller.LifecycleManager.CurrentItem == null) 
+        if (!_controller.LifecycleManager.IsShowing)
             return;
+
+        if (_controller.LifecycleManager.IsShowing && _controller.LifecycleManager.CurrentItem == null)
+        {
+            _controller.LifecycleManager.HideTooltip();
+            return;
+        }
 
         var currentHero = PlayerSessionService.SelectedHero;
         if (currentHero?.inventory == null)
@@ -43,13 +49,6 @@ public class TooltipDataValidator : ITooltipComponent
 
         var currentItem = _controller.LifecycleManager.CurrentItem;
         var currentItemData = _controller.LifecycleManager.CurrentItemData;
-
-        // Verificar si el item sigue siendo válido
-        if (!InventoryUtils.IsTooltipItemValid(currentItem, currentHero.inventory))
-        {
-            _controller.LifecycleManager.HideTooltip();
-            return;
-        }
 
         // Buscar item actualizado
         var updatedItem = InventoryUtils.GetUpdatedTooltipItem(currentItem, currentHero.inventory);

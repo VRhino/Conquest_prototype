@@ -49,6 +49,19 @@ public class HeroEquipmentPanel : MonoBehaviour
     // Referencia al héroe actual
     private HeroData _currentHero;
 
+    public void SetTooltipManager(InventoryTooltipManager manager)
+    {
+        if (manager != null)
+        {
+            tooltipManager = manager;
+            manager.SetEnableComparisonTooltips(false);
+        }
+        else
+        {
+            tooltipManager = null;
+        }
+    }
+
     #endregion
 
     #region Unity Lifecycle
@@ -207,9 +220,6 @@ public class HeroEquipmentPanel : MonoBehaviour
         // Limpiar integración actual
         CleanupTooltipIntegration();
         
-        // Buscar nuevo tooltip manager
-        tooltipManager = FindTooltipManager();
-        
         // Reinicializar integración
         InitializeTooltipIntegration();
         
@@ -221,12 +231,12 @@ public class HeroEquipmentPanel : MonoBehaviour
     /// </summary>
     public void ClearAllSlots()
     {
-        helmetSlot?.ClearEquippedItem();
-        torsoSlot?.ClearEquippedItem();
-        glovesSlot?.ClearEquippedItem();
-        pantsSlot?.ClearEquippedItem();
-        bootsSlot?.ClearEquippedItem();
-        weaponSlot?.ClearEquippedItem();
+        helmetSlot?.Clear();
+        torsoSlot?.Clear();
+        glovesSlot?.Clear();
+        pantsSlot?.Clear();
+        bootsSlot?.Clear();
+        weaponSlot?.Clear();
         
         Debug.Log("[HeroEquipmentPanel] All slots cleared");
     }
@@ -484,9 +494,9 @@ public class HeroEquipmentPanel : MonoBehaviour
 
         if (interaction == null) return;
         // Conectar eventos de hover con métodos adapter
-        interaction.OnSlotHoverEnter += OnSlotHoverEnter;
-        interaction.OnSlotHoverMove += OnSlotHoverMove; 
-        interaction.OnSlotHoverExit += OnSlotHoverExit;
+        interaction.OnItemHoverEnter += tooltipManager.OnItemHoverEnter;
+        interaction.OnItemHoverMove += tooltipManager.OnItemHoverMove; 
+        interaction.OnItemHoverExit += tooltipManager.OnItemHoverExit;
     }
 
     /// <summary>
@@ -500,44 +510,9 @@ public class HeroEquipmentPanel : MonoBehaviour
         var interaction = slot.GetComponent<HeroEquipmentSlotInteraction>();
         if (interaction == null) return;
 
-        interaction.OnSlotHoverEnter -= OnSlotHoverEnter;
-        interaction.OnSlotHoverMove -= OnSlotHoverMove;
-        interaction.OnSlotHoverExit -= OnSlotHoverExit;
-    }
-
-    /// <summary>
-    /// Adapter method: Convierte evento de equipment slot hover enter en evento de inventory tooltip.
-    /// </summary>
-    /// <param name="equippedItem">Item equipado en el slot</param>
-    /// <param name="equippedItemData">Datos del item equipado</param>
-    /// <param name="screenPosition">Posición en pantalla del hover</param>
-    /// <param name="itemType">Tipo del item (Armor/Weapon)</param>
-    /// <param name="itemCategory">Categoría del item (Helmet/Torso/etc)</param>
-    private void OnSlotHoverEnter(InventoryItem equippedItem, ItemData equippedItemData, Vector3 screenPosition, ItemType itemType, ItemCategory itemCategory)
-    {
-        if (tooltipManager == null || equippedItem == null || equippedItemData == null) return;
-        // Llamar al método público del tooltip manager con los parámetros adaptados
-        tooltipManager.ShowEquipmentTooltip(equippedItem, equippedItemData, screenPosition);
-    }
-
-    /// <summary>
-    /// Adapter method: Convierte evento de equipment slot hover move en evento de inventory tooltip.
-    /// </summary>
-    private void OnSlotHoverMove(InventoryItem equippedItem, ItemData equippedItemData, Vector3 screenPosition, ItemType itemType, ItemCategory itemCategory)
-    {
-        if (tooltipManager == null || equippedItem == null || equippedItemData == null) return;
-
-        tooltipManager.UpdateEquipmentTooltipPosition(screenPosition);
-    }
-
-    /// <summary>
-    /// Adapter method: Convierte evento de equipment slot hover exit en evento de inventory tooltip.
-    /// </summary>
-    private void OnSlotHoverExit(InventoryItem equippedItem, ItemData equippedItemData, Vector3 screenPosition, ItemType itemType, ItemCategory itemCategory)
-    {
-        if (tooltipManager == null) return;
-        Debug.Log($"[HeroEquipmentPanel] Hiding tooltip for {itemType}.{itemCategory}");
-        tooltipManager.HideEquipmentTooltip();
+        interaction.OnItemHoverEnter -= tooltipManager.OnItemHoverEnter;
+        interaction.OnItemHoverMove -= tooltipManager.OnItemHoverMove;
+        interaction.OnItemHoverExit -= tooltipManager.OnItemHoverExit;
     }
 
     /// <summary>
@@ -546,36 +521,12 @@ public class HeroEquipmentPanel : MonoBehaviour
     /// <returns>El InventoryTooltipManager encontrado o null si no existe</returns>
     private InventoryTooltipManager FindTooltipManager()
     {
-        // Primero buscar en el objeto padre (HeroDetailUIController)
-        var parentTooltipManager = GetComponentInParent<InventoryTooltipManager>();
-        if (parentTooltipManager != null)
-        {
-            Debug.Log("[HeroEquipmentPanel] Found tooltip manager in parent hierarchy");
-            return parentTooltipManager;
-        }
-
-        // Buscar en los hijos del objeto actual
-        var childTooltipManager = GetComponentInChildren<InventoryTooltipManager>();
-        if (childTooltipManager != null)
-        {
-            Debug.Log("[HeroEquipmentPanel] Found tooltip manager in children");
-            return childTooltipManager;
-        }
-
         // Buscar globalmente en la escena
         var globalTooltipManager = FindObjectOfType<InventoryTooltipManager>();
         if (globalTooltipManager != null)
         {
             Debug.Log("[HeroEquipmentPanel] Found tooltip manager globally in scene");
             return globalTooltipManager;
-        }
-
-        // Si no se encuentra, intentar buscar en el Canvas del UI
-        var canvasTooltipManager = FindInCanvas();
-        if (canvasTooltipManager != null)
-        {
-            Debug.Log("[HeroEquipmentPanel] Found tooltip manager in Canvas");
-            return canvasTooltipManager;
         }
 
         Debug.LogWarning("[HeroEquipmentPanel] No InventoryTooltipManager found in scene");
