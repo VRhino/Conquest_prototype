@@ -311,7 +311,7 @@ public class FullscreenPanelManager : MonoBehaviour
             // Activar modo UI: cursor visible y cámara deshabilitada
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
-
+            DialogueUIState.IsDialogueOpen = true;
             // Deshabilitar la cámara del héroe
             if (HeroCameraController.Instance != null)
             {
@@ -323,7 +323,7 @@ public class FullscreenPanelManager : MonoBehaviour
             // Desactivar modo UI: cursor bloqueado y cámara habilitada
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
-
+            DialogueUIState.IsDialogueOpen = false;
             // Habilitar la cámara del héroe
             if (HeroCameraController.Instance != null)
             {
