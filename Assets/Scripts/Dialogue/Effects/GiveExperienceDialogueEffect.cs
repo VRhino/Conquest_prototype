@@ -6,7 +6,7 @@ namespace ConquestTactics.Dialogue
     /// <summary>
     /// Efecto de diálogo que otorga experiencia al héroe.
     /// </summary>
-    [CreateAssetMenu(fileName = "GiveExperienceDialogueEffect", menuName = "Dialogue/Effects/Give Experience", order = 2)]
+    [CreateAssetMenu(fileName = "GiveExperienceDialogueEffect", menuName = "NPC/Dialogue/Effects/Give Experience", order = 2)]
     public class GiveExperienceDialogueEffect : DialogueEffect
 {
     [Header("Experience Settings")]

@@ -15,7 +15,7 @@ namespace ConquestTactics.Dialogue
     /// Efecto de diálogo que agrega un ítem al inventario del héroe.
     /// Reemplaza el customEvent "Add_Item" con un sistema más flexible.
     /// </summary>
-    [CreateAssetMenu(fileName = "OpenFullScreenMenuDialogueEffect", menuName = "Dialogue/Effects/Open Full Screen Menu", order = 1)]
+    [CreateAssetMenu(fileName = "OpenFullScreenMenuDialogueEffect", menuName = "NPC/Dialogue/Effects/Open Full Screen Menu", order = 1)]
     public class OpenFullScreenMenuDialogueEffect : DialogueEffect
     {
         [Header("Menu Settings")]

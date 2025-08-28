@@ -19,18 +19,30 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
     private List<StoreItemController> _activeItems = new();
     private System.Action _onExit;
 
-    public void Initialize(List<StoreProductData> products, System.Action onExit = null)
+    public void Initialize(List<string> productsIds, System.Action onExit = null)
     {
         _onExit = onExit;
         ClearItems();
-        foreach (var product in products)
+        foreach (var productId in productsIds)
         {
             var go = Instantiate(storeItemPrefab, goodsContainer);
             var controller = go.GetComponent<StoreItemController>();
+            var product = ItemDatabase.Instance.GetItemDataById(productId);
+            if (product == null)
+            {
+                Debug.LogWarning($"[UIStoreController] Product with ID '{productId}' not found in ItemDatabase.");
+                continue;
+            }
             controller.Setup(product, OnProductPurchased);
             _activeItems.Add(controller);
         }
-        exitButton.onClick.AddListener(ClosePanel);
+        if (exitButton != null)
+            exitButton.onClick.AddListener(() => FullscreenPanelManager.Instance.ClosePanel<UIStoreController>());
+    }
+    public void SetStoreData(StoreData storeData)
+    {
+        titleText.text = storeData.storeTitle;
+        Initialize(storeData.productIds);
     }
 
     private void ClearItems()
@@ -40,11 +52,11 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
         _activeItems.Clear();
     }
 
-    private void OnProductPurchased(StoreProductData product)
+    private void OnProductPurchased(InventoryItem product, ItemData protoProduct)
     {
         // Integrar con InventoryManager y lógica de compra;
         // Opcional: feedback visual, actualizar UI, etc.
-        Debug.Log($"Purchased product: {product.productName}");
+        Debug.Log($"Purchased product: {protoProduct.name}");
     }
 
     public void ShowPanel()
@@ -76,17 +88,4 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
         else
             ShowPanel();
     }
-}
-
-/// <summary>
-/// Datos de producto para la tienda (puede expandirse según necesidades)
-/// </summary>
-[System.Serializable]
-public class StoreProductData
-{
-    public string itemId;
-    public int cost;
-    public string currencyIconPath;
-    public string productName;
-    // Otros campos según necesidades
 }

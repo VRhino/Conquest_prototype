@@ -522,7 +522,7 @@ namespace ConquestTactics.Dialogue
 
 ```csharp
 [CreateAssetMenu(fileName = "AddItemDialogueEffect", 
-                 menuName = "Dialogue/Effects/Add Item")]
+                 menuName = "NPC/Dialogue/Effects/Add Item")]
 public class AddItemDialogueEffect : DialogueEffect
 {
     [Header("Item Settings")]
@@ -568,7 +568,7 @@ public class AddItemDialogueEffect : DialogueEffect
 
 ```csharp
 [CreateAssetMenu(fileName = "GiveExperienceDialogueEffect", 
-                 menuName = "Dialogue/Effects/Give Experience")]
+                 menuName = "NPC/Dialogue/Effects/Give Experience")]
 public class GiveExperienceDialogueEffect : DialogueEffect
 {
     [Header("Experience Settings")]
@@ -607,7 +607,7 @@ public class GiveExperienceDialogueEffect : DialogueEffect
 
 ```csharp
 [CreateAssetMenu(fileName = "UnlockSquadDialogueEffect", 
-                 menuName = "Dialogue/Effects/Unlock Squad")]
+                 menuName = "NPC/Dialogue/Effects/Unlock Squad")]
 public class UnlockSquadDialogueEffect : DialogueEffect
 {
     [Header("Squad Settings")]
@@ -1145,7 +1145,7 @@ public class MagicWeaponStatGenerator : ItemStatGenerator
 #### Paso 1: Crear la Clase
 ```csharp
 [CreateAssetMenu(fileName = "TeleportDialogueEffect", 
-                 menuName = "Dialogue/Effects/Teleport")]
+                 menuName = "NPC/Dialogue/Effects/Teleport")]
 public class TeleportDialogueEffect : DialogueEffect
 {
     [Header("Teleport Settings")]
@@ -1278,7 +1278,7 @@ public class LegendaryWeaponGenerator : ItemStatGenerator
 
 ```csharp
 [CreateAssetMenu(fileName = "DynamicShopDialogueEffect", 
-                 menuName = "Dialogue/Effects/Dynamic Shop")]
+                 menuName = "NPC/Dialogue/Effects/Dynamic Shop")]
 public class DynamicShopDialogueEffect : DialogueEffect
 {
     [Header("Shop Settings")]

@@ -108,6 +108,7 @@
     <Compile Include="Assets\Scripts\Squads\Systems\SquadSwap.System.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SquadButtonUI.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadProgress.Component.cs" />
+    <Compile Include="Assets\Scripts\Data\StoreDatabase.cs" />
     <Compile Include="Assets\Scripts\Triggers\NpcTriggerZone.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Item\ModularArmor.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailEquipmentSlot.cs" />
@@ -249,6 +250,7 @@
     <Compile Include="Assets\Scripts\Squads\HeroPositionUtility.cs" />
     <Compile Include="Assets\Scripts\UI\HeroSelectionSceneController.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlot.Component.cs" />
+    <Compile Include="Assets\Scripts\Dialogue\Effects\OpenStoreDialogueEffect.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailStatsPanel.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadNavigation.System.cs" />
@@ -373,6 +375,7 @@
     <Compile Include="Assets\Scripts\Inventory\Enums\Item.Type.cs" />
     <Compile Include="Assets\Scripts\Camera\HeroCameraController.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipStatsSystem.cs" />
+    <Compile Include="Assets\Scripts\Data\Persistence\Store.Data.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainerBaker.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\Player.Data.cs" />
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />

@@ -301,6 +301,12 @@ public class FullscreenPanelManager : MonoBehaviour
         RequestPanelToggle<UIStoreController>();
     }
 
+    public void HandleStoreOpen(StoreData storeData)
+    {
+        storePanel.SetStoreData(storeData);
+        RequestPanelToggle<UIStoreController>();
+    }
+
     public void HandleDialogueOpen(NpcDialogueData dialogueData, Action<DialogueOption> onOptionSelected)
     {
         dialoguePanel.setData(dialogueData, onOptionSelected);
@@ -320,6 +326,7 @@ public class FullscreenPanelManager : MonoBehaviour
 
     private void RequestPanelToggle<T>() where T : MonoBehaviour
     {
+        Debug.Log($"[FullscreenPanelManager] Requesting panel toggle: {typeof(T).Name}");
         TogglePanel<T>();
     }
 

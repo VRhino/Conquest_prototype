@@ -7,7 +7,7 @@ namespace ConquestTactics.Dialogue
     /// Efecto de diálogo que agrega un ítem al inventario del héroe.
     /// Reemplaza el customEvent "Add_Item" con un sistema más flexible.
     /// </summary>
-    [CreateAssetMenu(fileName = "AddItemDialogueEffect", menuName = "Dialogue/Effects/Add Item", order = 1)]
+    [CreateAssetMenu(fileName = "AddItemDialogueEffect", menuName = "NPC/Dialogue/Effects/Add Item", order = 1)]
     public class AddItemDialogueEffect : DialogueEffect
 {
     [Header("Item Settings")]

@@ -6,7 +6,7 @@ namespace ConquestTactics.Dialogue
     /// <summary>
     /// Efecto de diálogo que desbloquea un nuevo tipo de escuadrón.
     /// </summary>
-    [CreateAssetMenu(fileName = "UnlockSquadDialogueEffect", menuName = "Dialogue/Effects/Unlock Squad", order = 3)]
+    [CreateAssetMenu(fileName = "UnlockSquadDialogueEffect", menuName = "NPC/Dialogue/Effects/Unlock Squad", order = 3)]
     public class UnlockSquadDialogueEffect : DialogueEffect
 {
     [Header("Squad Settings")]

@@ -16,17 +16,19 @@ public class StoreItemController : MonoBehaviour
     [SerializeField] private TMP_Text costText;
     [SerializeField] private Button buyButton;
 
-    private StoreProductData _productData;
-    private System.Action<StoreProductData> _onBuy;
+    private InventoryItem _productData;
+    private ItemData _protoProduct;
+    private System.Action<InventoryItem, ItemData> _onBuy;
 
-    public void Setup(StoreProductData productData, System.Action<StoreProductData> onBuy)
+    public void Setup(ItemData itemData, System.Action<InventoryItem, ItemData> onBuy)
     {
-        _productData = productData;
+        _protoProduct = itemData;
         _onBuy = onBuy;
-        var itemData = ItemDatabase.Instance.GetItemDataById(productData.itemId);
-        itemCellController.SetPreviewItem(itemData);
-        productNameText.text = productData.productName;
-        costText.text = productData.cost.ToString();
+        InventoryItem inventoryItem = ItemInstanceService.CreateItem(itemData.id);
+        _productData = inventoryItem;
+        itemCellController.SetItem(inventoryItem, itemData);
+        productNameText.text = itemData.name;
+        costText.text = "300";
         // Cargar icono de moneda si es necesario
         buyButton.onClick.RemoveAllListeners();
         buyButton.onClick.AddListener(OnBuyClicked);
@@ -34,6 +36,6 @@ public class StoreItemController : MonoBehaviour
 
     private void OnBuyClicked()
     {
-        _onBuy?.Invoke(_productData);
+        _onBuy?.Invoke(_productData, _protoProduct);
     }
 }
