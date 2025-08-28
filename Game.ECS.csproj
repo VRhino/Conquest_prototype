@@ -245,6 +245,7 @@
     <Compile Include="Assets\Scripts\Perks\HeroPerk.Authoring.cs" />
     <Compile Include="Assets\Scripts\Shared\GameState.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\IsLocalPlayer.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\Store\StoreItemController.cs" />
     <Compile Include="Assets\Scripts\Squads\HeroPositionUtility.cs" />
     <Compile Include="Assets\Scripts\UI\HeroSelectionSceneController.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlot.Component.cs" />
@@ -330,6 +331,7 @@
     <Compile Include="Assets\Scripts\Squads\SquadHoldPosition.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadAI.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroSquadSelection.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\Store\UIStoreController.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadState.Component.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryItemCellInteraction.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefabRegistry.cs" />
@@ -347,6 +349,7 @@
     <Compile Include="Assets\Scripts\UI\Interface\IFullscreenPanel.cs" />
     <Compile Include="Assets\Scripts\Inventory\statsGenerators\BasicWeaponStatGenerator.cs" />
     <Compile Include="Assets\Scripts\Core\HeroLeadershipCalculator.cs" />
+    <Compile Include="Assets\Scripts\Dialogue\Effects\OpenFullScreenMenuDialogueEffect.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroEquipmentPanel.cs" />
     <Compile Include="Assets\Scripts\UI\Login\LoginUIController.UI.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\HeroClassSelector.UI.cs" />

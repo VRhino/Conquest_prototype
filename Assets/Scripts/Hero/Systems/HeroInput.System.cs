@@ -70,7 +70,6 @@ public partial class HeroInputSystem : SystemBase
 
         // Solo loguea si hay input relevante
         bool hasInput = false;
-        UnityEngine.Debug.Log($"[HeroInputSystem] IsDialogueOpen: {DialogueUIState.IsDialogueOpen}");
         if (keyboard != null && DialogueUIState.IsDialogueOpen == false)
         {
             if (keyboard.aKey.isPressed) move.x -= 1f;

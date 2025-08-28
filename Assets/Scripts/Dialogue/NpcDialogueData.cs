@@ -35,9 +35,6 @@ namespace ConquestTactics.Dialogue
         public string optionText;
         public DialogueOptionType optionType;
         
-        [Header("Menu Options")]
-        public string nextMenuId; // Para DialogueOptionType.OpenMenu
-        
         [Header("Dialogue Effects")]
         [Tooltip("IDs de los efectos de diálogo a ejecutar (nombres de los ScriptableObjects)")]
         public string[] dialogueEffectIds; // Id guardados en la dialogueEffectsDatabase

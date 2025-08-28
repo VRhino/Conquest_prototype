@@ -46,12 +46,13 @@ namespace ConquestTactics.Dialogue
                 // Aquí podrías disparar un evento de notificación UI
                 Debug.Log($"[Dialogue] {message}");
             }
-
+            FullscreenPanelManager.Instance.ClosePanel<NpcDialogueUIController>();
             OnEffectExecuted(hero, npcId);
             return true;
         }
         else
-        {
+        {            
+            FullscreenPanelManager.Instance.ClosePanel<NpcDialogueUIController>();
             Debug.LogWarning($"[AddItemDialogueEffect] Failed to add item: {targetItemId}");
             return false;
         }

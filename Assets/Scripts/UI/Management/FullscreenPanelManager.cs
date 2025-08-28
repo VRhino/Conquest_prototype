@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using ConquestTactics.Dialogue;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -35,10 +37,14 @@ public class FullscreenPanelManager : MonoBehaviour
 
     #region Serialized Fields - Panel Controllers
 
+    [SerializeField] private bool isUIModeEnabled = false;
+
     [Header("Panel Controllers")]
     [SerializeField] private InventoryPanelController inventoryPanel;
     [SerializeField] private HeroDetailUIController heroDetailPanel;
     [SerializeField] private BarracksMenuUIController barracksPanel;
+    [SerializeField] private UIStoreController storePanel;
+    [SerializeField] private NpcDialogueUIController dialoguePanel;
 
     #endregion
 
@@ -116,6 +122,16 @@ public class FullscreenPanelManager : MonoBehaviour
         if (barracksPanel != null && barracksPanel is IFullscreenPanel)
         {
             RegisterPanel<BarracksMenuUIController>(barracksPanel as IFullscreenPanel);
+        }
+
+        if (storePanel != null && storePanel is IFullscreenPanel)
+        {
+            RegisterPanel<UIStoreController>(storePanel as IFullscreenPanel);
+        }
+
+        if (dialoguePanel != null && dialoguePanel is IFullscreenPanel)
+        {
+            RegisterPanel<NpcDialogueUIController>(dialoguePanel as IFullscreenPanel);
         }
     }
 
@@ -280,6 +296,17 @@ public class FullscreenPanelManager : MonoBehaviour
         RequestPanelToggle<BarracksMenuUIController>();
     }
 
+    public void HandleStoreOpen()
+    {
+        RequestPanelToggle<UIStoreController>();
+    }
+
+    public void HandleDialogueOpen(NpcDialogueData dialogueData, Action<DialogueOption> onOptionSelected)
+    {
+        dialoguePanel.setData(dialogueData, onOptionSelected);
+        RequestPanelToggle<NpcDialogueUIController>();
+    }
+
     public void HandleEscapeKeyPress()
     {
         if (_currentActivePanel != null)
@@ -306,6 +333,7 @@ public class FullscreenPanelManager : MonoBehaviour
     /// </summary>
     public void SetUIInteractionState(bool enableUIMode)
     {
+        isUIModeEnabled = enableUIMode;
         if (enableUIMode)
         {
             // Activar modo UI: cursor visible y cámara deshabilitada

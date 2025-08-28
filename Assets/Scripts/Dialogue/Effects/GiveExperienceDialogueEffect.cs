@@ -40,7 +40,7 @@ namespace ConquestTactics.Dialogue
             
             Debug.Log($"[Dialogue] {message}");
         }
-
+        FullscreenPanelManager.Instance.ClosePanel<NpcDialogueUIController>();
         OnEffectExecuted(hero, npcId);
         return true;
     }

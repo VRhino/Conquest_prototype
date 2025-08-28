@@ -225,8 +225,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         if (mainPanel != null)
             mainPanel.SetActive(false);
         
-        // No llamar ToggleUIInteraction aquí - el FullscreenPanelManager se encarga
-
         _currentHero = null;
     }
 

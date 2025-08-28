@@ -87,11 +87,8 @@ namespace ConquestTactics.Triggers
                 Debug.LogWarning($"[NpcTriggerZone] No se encontró NpcDialogueReference o dialogueData en {gameObject.name}");
                 return;
             }
-            // Marcar diálogo abierto y pausar cámara
-            OpenDialogue();
-
-            // Abrir el menú de diálogo
-            NpcDialogueUIController.Instance.Open(dialogueRef.dialogueData, OnDialogueOptionSelected);
+            
+            FullscreenPanelManager.Instance.HandleDialogueOpen(dialogueRef.dialogueData, OnDialogueOptionSelected);
 
             // Callback para manejar la opción seleccionada en el diálogo
             void OnDialogueOptionSelected(Dialogue.DialogueOption option)
@@ -99,19 +96,7 @@ namespace ConquestTactics.Triggers
                 // Al cerrar el diálogo, reanudar cámara y limpiar flag
 
                 switch (option.optionType)
-                {
-                    case Dialogue.DialogueOptionType.OpenMenu:
-                        if (option.nextMenuId == "barracks")
-                        {
-                            var heroData = PlayerSessionService.SelectedHero;
-                            NpcTriggerUIController.Instance?.OpenBarracksMenu(heroData);
-                        }
-                        break;
-                        
-                    case Dialogue.DialogueOptionType.CloseDialogue:
-                        CloseDialogue();
-                        break;
-                        
+                {                        
                     case Dialogue.DialogueOptionType.ExecuteEffects:
                         var hero = PlayerSessionService.SelectedHero;
                         if (hero != null && option.dialogueEffectIds != null && option.dialogueEffectIds.Length > 0)
@@ -141,7 +126,6 @@ namespace ConquestTactics.Triggers
                         {
                             Debug.LogWarning($"[NpcTriggerZone] ExecuteEffects called but no hero or effect IDs available");
                         }
-                        CloseDialogue();
                         break;
                 }
             }
@@ -159,26 +143,6 @@ namespace ConquestTactics.Triggers
             // // Consulta el sistema de flags de tutorial
             // return TutorialFlags.Allows(buildingID);
             return true; // Por defecto, permite interacción
-        }
-
-        private void OpenDialogue()
-        {
-            DialogueUIState.IsDialogueOpen = true;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(false);
-            
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-
-        private void CloseDialogue()
-        {
-            DialogueUIState.IsDialogueOpen = false;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(true);
-            
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
         }
     }
 }
