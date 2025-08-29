@@ -238,10 +238,8 @@ public class InventoryTooltipManager : MonoBehaviour
 
         // Reactivar validación periódica para tooltips del inventario
         StartTooltipValidation();
-
-        // Determinar si mostrar dual tooltips o solo el normal
-        if (enableComparisonTooltips && itemData != null && itemData.IsEquipment &&
-            ComparisonTooltipUtils.ShouldShowComparison(itemData))
+       // Determinar si mostrar dual tooltips o solo el normal
+        if (enableComparisonTooltips && ComparisonTooltipUtils.ShouldShowComparison(itemData))
         {
             ShowDualTooltips(item, itemData, mousePosition, cellId);
         }
@@ -320,7 +318,6 @@ public class InventoryTooltipManager : MonoBehaviour
         // Mostrar tooltip primario (inventario) - posición normal
         if (primaryTooltipController != null)
         {
-            Debug.Log($"[InventoryTooltipManager] Showing primary tooltip at position {mousePosition}");
             primaryTooltipController.ShowTooltipInstant(item, itemData, mousePosition, cellId);
         }
 

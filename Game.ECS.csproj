@@ -80,7 +80,6 @@
     <Compile Include="Assets\Scripts\Shared\GamePhase.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitWeapon.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPool.System.cs" />
-    <Compile Include="Assets\Scripts\UI\BaseItemCellController.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombat.Component.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraSettings.Component.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\avatarCreatorController.UI.cs" />
@@ -130,6 +129,7 @@
     <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellController.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraBootstrap.System.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipStatEntry.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailUIController.cs" />
@@ -147,7 +147,6 @@
     <Compile Include="Assets\Scripts\Squads\FormationVisualizer.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\Chat.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroVisual.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\BaseItemCellInteraction.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitAnimationAdapter.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Effects\UnlockSquadDialogueEffect.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\InventoryStorageService.cs" />
@@ -279,6 +278,7 @@
     <Compile Include="Assets\Scripts\Combat\Team.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitAnimation.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroClassDefinition.Component.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\ItemCellInteraction.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInput.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\VisualPrefab.Authoring.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\tooltip.Type.cs" />
@@ -344,6 +344,7 @@
     <Compile Include="Assets\Scripts\Hero\Utils\HeroEquipmentMappingUtils.cs" />
     <Compile Include="Assets\Scripts\Squads\Retreat.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitTargeting.System.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellInteraction.cs" />
     <Compile Include="Assets\Scripts\Combat\Team.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroHealth.Component.cs" />
     <Compile Include="Assets\Scripts\UI\NpcPromptBillboard.cs" />
@@ -438,6 +439,7 @@
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\InventoryTooltipController.cs" />
     <Compile Include="Assets\Scripts\Core\HeroAttributeValidator.cs" />
     <Compile Include="Assets\Scripts\UI\LoadoutSelectionUI.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\ItemCellController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroAbility.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointBaker.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDefinition.Data.cs" />

@@ -172,6 +172,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
             Debug.LogWarning("[InventoryPanelController] No se encontró InventoryTooltipManager. El sistema de tooltips no estará disponible.");
             return;
         }
+        tooltipManager.SetEnableComparisonTooltips(true);
 
         // Conectar todas las celdas creadas al sistema de tooltips
         foreach (var cellController in _cellControllers)
@@ -214,7 +215,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
 
         // Actualizar displays usando el método unificado
         RefreshFullUI();
-
+        if (tooltipManager != null)  tooltipManager.SetEnableComparisonTooltips(true);
     }
 
     /// <summary>
@@ -224,7 +225,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     {
         if (mainPanel != null)
             mainPanel.SetActive(false);
-        
+        tooltipManager?.HideAllTooltips();
         _currentHero = null;
     }
 

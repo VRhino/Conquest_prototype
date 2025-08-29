@@ -19,6 +19,9 @@ public abstract class BaseItemCellController : MonoBehaviour
     public Image selectedOverlay;
     public Image filler; // Referencia directa, no reflexión
 
+    protected InventoryItem _currentItem;
+    protected ItemData _currentItemData;
+
     // Sprites de fondo por rareza (pueden ser null en subclases)
     [Header("Background Sprites")]
     [SerializeField] protected Sprite backgroundSpriteCommon;
@@ -31,16 +34,23 @@ public abstract class BaseItemCellController : MonoBehaviour
     protected BaseItemCellInteraction _interaction;
 
     // Tipo de interacción que debe usar esta celda/slot
-    protected abstract System.Type InteractionType { get; }
+    protected virtual System.Type InteractionType  => typeof(BaseItemCellInteraction);
 
     protected virtual void Awake()
     {
         // Inicializar componente de interacción
         _interaction = (BaseItemCellInteraction)GetComponent(InteractionType);
         if (_interaction == null)
+        {
             _interaction = (BaseItemCellInteraction)gameObject.AddComponent(InteractionType);
+        }
 
         _interaction.Initialize(cellId);
+    }
+
+    protected virtual void Start()
+    {
+        _interaction.SetItem(_currentItem, _currentItemData, cellId);
     }
 
     /// <summary>
@@ -48,6 +58,9 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// </summary>
     public virtual void SetItem(InventoryItem item, ItemData itemData)
     {
+        _currentItem = item;
+        _currentItemData = itemData;
+        
         bool hasItem = item != null && itemData != null;
         itemPanel.SetActive(hasItem);
 

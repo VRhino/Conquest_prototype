@@ -58,6 +58,7 @@ public class HeroEquipmentPanel : MonoBehaviour
         }
         else
         {
+            tooltipManager?.HideAllTooltips();
             tooltipManager = null;
         }
     }

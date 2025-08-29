@@ -16,6 +16,8 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
     [SerializeField] private GameObject storeItemPrefab;
     [SerializeField] private Button exitButton;
 
+    private InventoryTooltipManager tooltipManager;
+
     private List<StoreItemController> _activeItems = new();
     private System.Action _onExit;
 
@@ -33,12 +35,23 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
                 Debug.LogWarning($"[UIStoreController] Product with ID '{productId}' not found in ItemDatabase.");
                 continue;
             }
-            controller.Setup(product, OnProductPurchased);
+            tooltipManager = FindTooltipManager();
+            tooltipManager.SetEnableComparisonTooltips(true);
+            controller.Setup(product, OnProductPurchased, tooltipManager);
             _activeItems.Add(controller);
         }
         if (exitButton != null)
             exitButton.onClick.AddListener(() => FullscreenPanelManager.Instance.ClosePanel<UIStoreController>());
     }
+
+    public InventoryTooltipManager FindTooltipManager()
+    {
+        InventoryTooltipManager _tooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        if (_tooltipManager == null)
+            Debug.LogWarning("[UIStoreController] No InventoryTooltipManager found in the scene.");
+        return _tooltipManager;
+    }
+
     public void SetStoreData(StoreData storeData)
     {
         titleText.text = storeData.storeTitle;
@@ -59,33 +72,26 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
         Debug.Log($"Purchased product: {protoProduct.name}");
     }
 
-    public void ShowPanel()
-    {
-        gameObject.SetActive(true);
-    }
-    public void HidePanel()
-    {
-        gameObject.SetActive(false);
-    }
     public bool IsOpen => gameObject.activeSelf;
 
     public bool IsPanelOpen => IsOpen;
 
     public void ClosePanel()
     {
-        HidePanel();
+        gameObject.SetActive(false);
+        tooltipManager?.HideAllTooltips();
     }
 
     public void OpenPanel()
     {
-        ShowPanel();
+        gameObject.SetActive(true);
     }
 
     public void TogglePanel()
     {
         if (IsOpen)
-            HidePanel();
+            ClosePanel();
         else
-            ShowPanel();
+            OpenPanel();
     }
 }

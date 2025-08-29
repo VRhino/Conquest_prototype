@@ -14,3 +14,26 @@ tooltip (gameObject)
 │           └── statValue (text) -> valor de la estadística
 └── interaction_panel (gameObject)
     └── action (text) -> acciones disponibles (Equipar, Usar, etc.)
+
+
+Reward_Dialog
+├── TitlePanel
+│   └──  titulo (text)
+├── Text_Panel 
+│   └──  text (text)
+├── Reward_Section -> item container / horizontal layout
+│   └──  Inventory_Item_cell (puede ser 1 o N y se agregand dinamicamente) -> prefab existente
+└── Button_section
+    └── Button (button)
+
+UIStore (IFullscreenPanel)
+├── Title(text)
+├── Goods (container) -> item container /vertical layout
+|   └── Store_Item (prefab) -> puede ser 1 o N se agrega dinamicamente
+|       ├── Item_Sell (prefab) (BaseItemCellController)
+|       ├── Product_Name (text)
+|       ├── Currency_Icon (img)
+|       ├── Cost (text)
+|       └── Button -> accion (comprar)
+└── Buttons
+    └── Exit_Button 
