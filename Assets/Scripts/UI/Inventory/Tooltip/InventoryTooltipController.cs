@@ -99,7 +99,10 @@ public class InventoryTooltipController : MonoBehaviour
     public Vector2 TooltipOffset => tooltipOffset;
     public float ShowDelay => showDelay;
     public bool FollowMouse => followMouse;
-    public Vector2 ComparisonPositionOffset => comparisonPositionOffset;
+    public float Separation = 10f;
+
+    public RectTransform _primaryTooltipRect { private set; get; } = null;
+    public RectTransform _secondaryTooltipRect { private set; get; } = null;
 
     // Sprites por rareza
     public Sprite CommonBackgroundSprite => commonBackgroundSprite;
@@ -107,6 +110,8 @@ public class InventoryTooltipController : MonoBehaviour
     public Sprite RareBackgroundSprite => rareBackgroundSprite;
     public Sprite EpicBackgroundSprite => epicBackgroundSprite;
     public Sprite LegendaryBackgroundSprite => legendaryBackgroundSprite;
+
+    private bool _isUsingDualSystem = false;
 
     #region Unity Lifecycle
 
@@ -171,18 +176,13 @@ public class InventoryTooltipController : MonoBehaviour
     #endregion
 
     #region Public API
-
-    public string GetCellId() { return _lifecycleManager?.CellId; }
-
-    /// <summary>
-    /// Muestra el tooltip para un ítem específico con delay.
-    /// </summary>
-    /// <param name="item">Ítem del inventario</param>
-    /// <param name="itemData">Datos del ítem</param>
-    public void ShowTooltip(InventoryItem item, ItemData itemData, string cellId)
-    {
-        _lifecycleManager?.ShowTooltip(item, itemData, cellId);
+    public void setDualSystem(bool isDual, RectTransform primaryTooltipRect, RectTransform secondaryTooltipRect) {       
+        _isUsingDualSystem = isDual;
+        _primaryTooltipRect = primaryTooltipRect;
+        _secondaryTooltipRect = secondaryTooltipRect;
     }
+    public bool isDual { get { return _isUsingDualSystem; } }
+    public string GetCellId() { return _lifecycleManager?.CellId; }
 
     /// <summary>
     /// Muestra el tooltip para un ítem específico con delay y posición del mouse.
@@ -260,15 +260,6 @@ public class InventoryTooltipController : MonoBehaviour
     public void ValidateTooltipForRemovedItem(string removedItemId)
     {
         _dataValidator?.ValidateTooltipForRemovedItem(removedItemId);
-    }
-
-    /// <summary>
-    /// Actualiza la posición del tooltip basada en la posición de pantalla.
-    /// </summary>
-    /// <param name="screenPosition">Posición en coordenadas de pantalla</param>
-    public void UpdateTooltipPosition(Vector3 screenPosition)
-    {
-        _positioningSystem?.UpdatePosition(screenPosition);
     }
 
     /// <summary>

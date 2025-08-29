@@ -12,6 +12,94 @@ public class TooltipPositioningSystem : ITooltipComponent
     private Canvas _tooltipCanvas;
     private bool _followMouse = true;
 
+    /// <summary>
+    /// Posiciona dos tooltips (primario y secundario) juntos, eligiendo dirección según espacio disponible.
+    /// </summary>
+    public void UpdateDualTooltipPosition(Vector3 screenPosition)
+    {
+
+        // Obtener referencias y parámetros
+        bool isPrimary = _controller.CurrentTooltipType == TooltipType.Primary;
+        RectTransform primaryTooltipRect = _controller._primaryTooltipRect;
+        RectTransform secondaryTooltipRect = _controller._secondaryTooltipRect;
+        float separation = _controller.Separation;
+
+        RectTransform tooltipRect = _tooltipPanel.GetComponent<RectTransform>();
+        if (primaryTooltipRect == null || secondaryTooltipRect == null || _tooltipCanvas == null) return;
+        
+        // Obtener tamaño de ambos tooltips
+        Vector2 primarySize = primaryTooltipRect.sizeDelta;
+        Vector2 secondarySize = secondaryTooltipRect.sizeDelta;
+        
+        // Convertir posición de pantalla a posición de canvas
+        Vector2 canvasPosition = ConvertScreenToCanvasPosition(screenPosition);
+
+
+        // Obtener límites del canvas
+        RectTransform canvasRect = _tooltipCanvas.GetComponent<RectTransform>();
+        Vector2 canvasSize = new Vector2(Screen.width, Screen.height);
+        if (_tooltipCanvas.renderMode != RenderMode.ScreenSpaceOverlay && canvasRect != null)
+        {
+            canvasSize = canvasRect.sizeDelta;
+        }
+        float leftLimit = -canvasSize.x / 2f;
+        float rightLimit = canvasSize.x / 2f;
+        float bottomLimit = -canvasSize.y / 2f;
+        float topLimit = canvasSize.y / 2f;
+
+        // Calcular ancho total requerido
+        float totalWidth = primarySize.x + secondarySize.x + separation;
+
+        // Espacio disponible a la derecha del cursor
+        float spaceRight = rightLimit - canvasPosition.x;
+        // Espacio disponible a la izquierda del cursor
+        float spaceLeft = canvasPosition.x - leftLimit;
+
+        bool placeRight = spaceRight >= totalWidth;
+
+        // Calcular posición Y (alineada para ambos tooltips)
+        float offsetY = Mathf.Abs(_controller.TooltipOffset.y);
+        float posY = canvasPosition.y - offsetY;
+        // Validar que no se salga por abajo/arriba
+        float minY = bottomLimit + Mathf.Max(primarySize.y, secondarySize.y);
+        float maxY = topLimit;
+        posY = Mathf.Clamp(posY, minY, maxY);
+
+        // Calcular posiciones X
+        Vector2 primaryPos, secondaryPos;
+        if (placeRight)
+        {
+            SetTooltipPivot(tooltipRect, new Vector2(0, 1));
+            // Primario a la derecha del cursor
+            primaryPos = new Vector2(canvasPosition.x + Mathf.Abs(_controller.TooltipOffset.x), posY);
+            // Secundario a la derecha del primario
+            secondaryPos = new Vector2(primaryPos.x + primarySize.x + separation, posY);
+        }
+        else
+        {
+            SetTooltipPivot(tooltipRect, new Vector2(1, 1));
+            // Secundario a la izquierda del cursor
+            secondaryPos = new Vector2(canvasPosition.x - Mathf.Abs(_controller.TooltipOffset.x), posY);
+            // Primario a la izquierda del secundario
+            primaryPos = new Vector2(secondaryPos.x - secondarySize.x - separation, posY);
+        }
+
+        // Actualizar solo el tooltip correspondiente
+        if (isPrimary)
+            primaryTooltipRect.anchoredPosition = AdjustPositionForScreenEdges(primaryPos, primaryTooltipRect);
+        else
+            secondaryTooltipRect.anchoredPosition = AdjustPositionForScreenEdges(secondaryPos, secondaryTooltipRect);
+    }
+
+    /// <summary>
+    /// Cambia el pivot de un tooltip.
+    /// </summary>
+    private void SetTooltipPivot(RectTransform tooltipRect, Vector2 pivot)
+    {
+        if (tooltipRect != null)
+            tooltipRect.pivot = pivot;
+    }
+
     #region ITooltipComponent Implementation
 
     public void Initialize(InventoryTooltipController controller)
@@ -40,6 +128,20 @@ public class TooltipPositioningSystem : ITooltipComponent
     {
         if (_tooltipPanel == null || !_tooltipPanel.activeInHierarchy) return;
 
+        if (_controller.isDual)
+        {
+            UpdateDualTooltipPosition(screenPosition);
+            return;
+        }
+        else
+        {
+            UpdatePositionSimple(screenPosition);
+            return;
+        }
+    }
+
+    public void UpdatePositionSimple(Vector3 screenPosition)
+    {
         RectTransform tooltipRect = _tooltipPanel.GetComponent<RectTransform>();
         if (tooltipRect == null) return;
 
@@ -100,23 +202,6 @@ public class TooltipPositioningSystem : ITooltipComponent
         _followMouse = follow;
     }
 
-    /// <summary>
-    /// Actualiza la posición aplicando offset de comparación para tooltips secundarios.
-    /// </summary>
-    public void UpdatePositionWithComparison(Vector3 screenPosition, bool isSecondary = false)
-    {
-        Vector3 adjustedPosition = screenPosition;
-        
-        if (isSecondary)
-        {
-            // Aplicar offset de comparación desde el controller
-            adjustedPosition.x += _controller.ComparisonPositionOffset.x;
-            adjustedPosition.y += _controller.ComparisonPositionOffset.y;
-        }
-        
-        UpdatePosition(adjustedPosition);
-    }
-
     #endregion
 
     #region Private Methods
@@ -157,101 +242,38 @@ public class TooltipPositioningSystem : ITooltipComponent
     private Vector2 AdjustPositionForScreenEdges(Vector2 canvasPosition, RectTransform tooltipRect)
     {
         if (_tooltipCanvas == null) return canvasPosition;
-
-        // Obtener dimensiones del canvas
         RectTransform canvasRect = _tooltipCanvas.GetComponent<RectTransform>();
-        
-        // Usar dimensiones de pantalla para Screen Space Overlay
         Vector2 canvasSize = new Vector2(Screen.width, Screen.height);
         if (_tooltipCanvas.renderMode != RenderMode.ScreenSpaceOverlay && canvasRect != null)
-        {
             canvasSize = canvasRect.sizeDelta;
-        }
-        
         Vector2 tooltipSize = tooltipRect.sizeDelta;
-        
-        // Usar offset configurable del controller
-        float offsetX = Mathf.Abs(_controller.TooltipOffset.x);
-        float offsetY = Mathf.Abs(_controller.TooltipOffset.y);
-
-        Vector2 adjustedPosition = canvasPosition;
-
-        // Convertir límites de canvas a coordenadas centradas
         float leftLimit = -canvasSize.x / 2f;
         float rightLimit = canvasSize.x / 2f;
         float bottomLimit = -canvasSize.y / 2f;
         float topLimit = canvasSize.y / 2f;
 
-        // POSICIONAMIENTO HORIZONTAL (sin cambios - ya funciona correctamente)
-        // Posición preferida: a la derecha del cursor
-        float preferredX = canvasPosition.x + offsetX;
-        
-        // Verificar si el tooltip cabe a la derecha
-        if (preferredX + tooltipSize.x <= rightLimit)
-        {
-            adjustedPosition.x = preferredX;
-        }
-        else
-        {
-            // No cabe a la derecha, intentar a la izquierda
-            float leftX = canvasPosition.x - offsetX - tooltipSize.x;
-            if (leftX >= leftLimit)
-            {
-                adjustedPosition.x = leftX;
-            }
-            else
-            {
-                // No cabe en ningún lado, forzar dentro de límites
-                adjustedPosition.x = Mathf.Clamp(preferredX, leftLimit, rightLimit - tooltipSize.x);
-            }
+        Vector2 adjustedPosition = canvasPosition;
+
+        // Ajuste horizontal según pivot
+        if (tooltipRect.pivot.x == 0f) {
+            // Tooltip cuelga hacia la derecha
+            if (adjustedPosition.x + tooltipSize.x > rightLimit)
+                adjustedPosition.x = rightLimit - tooltipSize.x;
+            if (adjustedPosition.x < leftLimit)
+                adjustedPosition.x = leftLimit;
+        } else {
+            // Tooltip cuelga hacia la izquierda
+            if (adjustedPosition.x - tooltipSize.x < leftLimit)
+                adjustedPosition.x = leftLimit + tooltipSize.x;
+            if (adjustedPosition.x > rightLimit)
+                adjustedPosition.x = rightLimit;
         }
 
-        // POSICIONAMIENTO VERTICAL CORREGIDO PARA PIVOT (0,1)
-        // Con pivot (0,1): el tooltip se extiende desde positionY hasta positionY - tooltipSize.y
-        
-        // Posición preferida: abajo del cursor (tooltip cuelga hacia abajo)
-        float preferredY = canvasPosition.y - offsetY;
-        
-        // Verificar si el tooltip cabe abajo (considerando que crece hacia abajo desde su posición)
-        if (preferredY - tooltipSize.y >= bottomLimit)
-        {
-            // Cabe abajo del cursor - comportamiento normal
-            adjustedPosition.y = preferredY;
-        }
-        else
-        {
-            // NO cabe abajo, reposicionar ARRIBA del cursor
-            float topY = canvasPosition.y + offsetY;
-            
-            // Verificar si cabe arriba (el tooltip seguirá colgando hacia abajo, pero desde arriba)
-            if (topY <= topLimit)
-            {
-                adjustedPosition.y = topY;
-            }
-            else
-            {
-                // No cabe completamente arriba, ajustar para que quepa
-                // Posicionar de tal manera que el tooltip no sobrepase el límite superior
-                adjustedPosition.y = topLimit;
-            }
-        }
-
-        // VALIDACIÓN FINAL: Asegurar que el tooltip esté completamente dentro de límites
-        // Considerar pivot (0,1): el tooltip se extiende hacia abajo desde su posición
-        
-        // Limitar X (sin cambios)
-        adjustedPosition.x = Mathf.Clamp(
-            adjustedPosition.x,
-            leftLimit,
-            rightLimit - tooltipSize.x
-        );
-
-        // Limitar Y para pivot (0,1): la posición Y es la esquina superior, el tooltip cuelga hacia abajo
-        adjustedPosition.y = Mathf.Clamp(
-            adjustedPosition.y,
-            bottomLimit + tooltipSize.y, // Límite inferior + altura (para que no se salga por abajo)
-            topLimit                     // Límite superior (esquina superior del tooltip)
-        );
+        // Ajuste vertical (si se sale por arriba o abajo)
+        if (adjustedPosition.y - tooltipSize.y < bottomLimit)
+            adjustedPosition.y = bottomLimit + tooltipSize.y;
+        if (adjustedPosition.y > topLimit)
+            adjustedPosition.y = topLimit;
 
         return adjustedPosition;
     }

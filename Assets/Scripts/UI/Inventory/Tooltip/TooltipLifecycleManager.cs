@@ -16,6 +16,13 @@ public class TooltipLifecycleManager : ITooltipComponent
     private ItemData _currentItemData;
     private Vector3 _lastMousePosition = Vector3.zero;
 
+    #region In case of dual system
+
+    private RectTransform primaryTooltipRect;
+    private RectTransform secondaryTooltipRect;
+
+    #endregion
+
     #region ITooltipComponent Implementation
 
     public void Initialize(InventoryTooltipController controller)
@@ -222,15 +229,7 @@ public class TooltipLifecycleManager : ITooltipComponent
         // Posicionar el tooltip
         if (_lastMousePosition != Vector3.zero)
         {
-            if (_controller.CurrentTooltipType == TooltipType.Primary)
-                _controller.PositioningSystem?.UpdatePosition(_lastMousePosition);
-            else
-                _controller.PositioningSystem?.UpdatePositionWithComparison(_lastMousePosition, true);
-        }
-        else
-        {
-            Vector3 defaultPos = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
-            _controller.PositioningSystem?.UpdatePosition(defaultPos);
+            _controller.PositioningSystem?.UpdatePosition(_lastMousePosition);
         }
 
         _isShowing = true;

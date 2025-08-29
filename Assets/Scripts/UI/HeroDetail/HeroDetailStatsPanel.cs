@@ -149,12 +149,13 @@ public class HeroDetailStatsPanel : MonoBehaviour
     public void ResetTempChanges()
     {
         if (_currentHeroData == null) return;
-        
+
         string heroId = GetHeroId(_currentHeroData);
         HeroTempAttributeService.ClearTempChanges(heroId);
-        
+
         PopulateStats();
         UpdateSaveCancelButtonsVisibility();
+        OnRequestAttributesPanelHide?.Invoke();
     }
 
     /// <summary>

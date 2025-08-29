@@ -234,9 +234,8 @@ public class InventoryTooltipManager : MonoBehaviour
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
     public void OnItemHoverEnter(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
-        if (!enableTooltips) return;
+        if (!enableTooltips || item == null || itemData == null) return;
 
-        // Reactivar validación periódica para tooltips del inventario
         StartTooltipValidation();
        // Determinar si mostrar dual tooltips o solo el normal
         if (enableComparisonTooltips && ComparisonTooltipUtils.ShouldShowComparison(itemData))
@@ -245,7 +244,7 @@ public class InventoryTooltipManager : MonoBehaviour
         }
         else if (primaryTooltipController != null)
         {
-            primaryTooltipController.ShowTooltip(item, itemData, mousePosition, cellId);
+            ShowSimpleTooltip(item, itemData, mousePosition, cellId);
         }
     }
 
@@ -275,15 +274,21 @@ public class InventoryTooltipManager : MonoBehaviour
         // Actualizar posición del tooltip primario (normal)
         if (primaryTooltipController != null && primaryTooltipController.IsShowing)
         {
-            primaryTooltipController.PositioningSystem.UpdatePositionWithComparison(mousePosition, false);
+            primaryTooltipController.PositioningSystem.UpdatePosition(mousePosition);
         }
 
         // Actualizar posición del tooltip secundario (con offset)
         if (secondaryTooltipController != null && secondaryTooltipController.IsShowing)
         {
-            secondaryTooltipController.PositioningSystem.UpdatePositionWithComparison(mousePosition, true);
+            secondaryTooltipController.PositioningSystem.UpdatePosition(mousePosition);
         }
     }
+    /// <summary>
+    /// Callback cuando se establece un ítem en una celda ya sea por cambio o por unequip.
+    /// </summary>
+    /// <param name="item">Ítem del inventario</param>
+    /// <param name="itemData">Datos del ítem</param>
+    /// <param name="cellIdSetted">ID de la celda donde se establece el ítem</param>
     public void OnSetItem(InventoryItem item, ItemData itemData, string cellIdSetted)
     {
         if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdSetted)) return;
@@ -291,18 +296,34 @@ public class InventoryTooltipManager : MonoBehaviour
         if (enableComparisonTooltips)
         {
             Debug.Log("[InventoryTooltipManager] Updating to dual tooltips on item set");
-            ShowDualTooltips(item, itemData, cellIdSetted);
+            ShowDualTooltips(item, itemData, GetMousePosition(), cellIdSetted);
         }
         else
-            primaryTooltipController.ShowTooltipInstant(item, itemData, cellIdSetted);
-
-
+        {
+            Debug.Log("[InventoryTooltipManager] Updating to simple tooltip on item set");
+            ShowSimpleTooltip(item, itemData, GetMousePosition(), cellIdSetted);
+        }
     }
 
     public void OnClearItem(InventoryItem item, ItemData itemData, string cellIdCleared)
     {
         if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdCleared)) return;
         HideAllTooltips();
+    }
+
+    /// <summary>
+    /// Muestra un tooltip simple (primario) para un ítem.
+    /// </summary>
+    /// <param name="item">Ítem del inventario</param>
+    /// <param name="itemData">Datos del ítem</param>
+    /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
+    /// <param name="cellId">ID de la celda donde se encuentra el ítem</param>
+    public void ShowSimpleTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    {
+        if (!enableTooltips || primaryTooltipController == null) return;
+
+        primaryTooltipController.setDualSystem(false, null, null);
+        primaryTooltipController.ShowTooltipInstant(item, itemData, mousePosition, cellId);
     }
 
     /// <summary>
@@ -314,10 +335,13 @@ public class InventoryTooltipManager : MonoBehaviour
     public void ShowDualTooltips(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
     {
         if (!enableTooltips) return;
+        RectTransform primaryTooltipRect = primaryTooltipController.tooltipPanel.GetComponent<RectTransform>();
+        RectTransform secondaryTooltipRect = secondaryTooltipController.tooltipPanel.GetComponent<RectTransform>();
 
         // Mostrar tooltip primario (inventario) - posición normal
         if (primaryTooltipController != null)
         {
+            primaryTooltipController.setDualSystem(true, primaryTooltipRect, secondaryTooltipRect);
             primaryTooltipController.ShowTooltipInstant(item, itemData, mousePosition, cellId);
         }
 
@@ -328,6 +352,7 @@ public class InventoryTooltipManager : MonoBehaviour
             var equippedItemData = GetEquippedItemData(itemData.itemType, itemData.itemCategory);
             if (equippedItemData.equippedItem != null && equippedItemData.itemData != null)
             {
+                secondaryTooltipController.setDualSystem(true, primaryTooltipRect, secondaryTooltipRect);
                 secondaryTooltipController.ShowTooltipInstant(
                     equippedItemData.equippedItem,
                     equippedItemData.itemData,
@@ -343,30 +368,18 @@ public class InventoryTooltipManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Muestra tooltips duales (primario + secundario) para equipamiento.
-    /// El primario muestra el ítem del inventario con comparación, el secundario muestra el ítem equipado como referencia.
-    /// </summary>
-    /// <param name="item">Ítem del inventario</param>
-    /// <param name="itemData">Datos del ítem</param>
-    public void ShowDualTooltips(InventoryItem item, ItemData itemData, string cellId)
+    private Vector3 GetMousePosition()
     {
-        if (!enableTooltips) return;
-
         // Obtener posición actual del mouse usando Input System
-        Vector3 mousePosition;
         if (Mouse.current != null)
         {
-            mousePosition = Mouse.current.position.ReadValue();
+            return Mouse.current.position.ReadValue();
         }
         else
         {
             // Fallback si no hay mouse disponible
-            mousePosition = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+            return new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
         }
-
-        // Llamar al método con posición específica
-        ShowDualTooltips(item, itemData, mousePosition, cellId);
     }
 
     /// <summary>
