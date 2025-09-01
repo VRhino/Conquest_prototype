@@ -21,6 +21,17 @@ public class StoreItemController : MonoBehaviour
     private ItemData _protoProduct;
     private System.Action<InventoryItem, ItemData> _onBuy;
 
+    /// <summary>
+    /// Obtiene los datos del producto para validaciones externas.
+    /// </summary>
+    public ItemData ProtoProduct => _protoProduct;
+
+    /// <summary>
+    /// Obtiene la instancia específica del ítem que se muestra en la tienda.
+    /// Esta es la misma instancia que ve el usuario en los tooltips.
+    /// </summary>
+    public InventoryItem GetProductInstance() => _productData;
+
     public void Setup(ItemData itemData, System.Action<InventoryItem, ItemData> onBuy, InventoryTooltipManager tooltipManager)
     {
         _protoProduct = itemData;
@@ -30,12 +41,55 @@ public class StoreItemController : MonoBehaviour
         _tooltipManager = tooltipManager;
         itemCellController.SetItem(inventoryItem, itemData);
         productNameText.text = itemData.name;
-        costText.text = "300";
+        costText.text = inventoryItem.price.ToString();
+        
         // Conectar eventos de tooltip
         ConnectWithTooltipsEvents();
-        // Cargar icono de moneda si es necesario
+        
+        // Configurar botón de compra
+        UpdateBuyButtonState();
+        
         buyButton.onClick.RemoveAllListeners();
         buyButton.onClick.AddListener(OnBuyClicked);
+    }
+
+    /// <summary>
+    /// Actualiza el estado del botón de compra basado en si el jugador puede permitirse el item.
+    /// </summary>
+    private void UpdateBuyButtonState()
+    {
+        if (buyButton == null || _protoProduct == null) return;
+
+        // Para evitar dependency issues, delegamos la verificación al controller padre
+        // Por ahora, solo mantenemos el botón activo
+        buyButton.interactable = true;
+        
+        // TODO: El UIStoreController puede llamar a UpdateBuyButtonAvailability después de transacciones
+    }
+
+    /// <summary>
+    /// Método público para que el UIStoreController actualice la disponibilidad del botón.
+    /// </summary>
+    /// <param name="canAfford">True si el jugador puede permitirse este item</param>
+    public void UpdateBuyButtonAvailability(bool canAfford)
+    {
+        if (buyButton == null) return;
+
+        buyButton.interactable = canAfford;
+        
+        // Cambiar el color del botón
+        var buttonImage = buyButton.GetComponent<Image>();
+        if (buttonImage != null)
+        {
+            buttonImage.color = canAfford ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f);
+        }
+        
+        // Cambiar texto del botón
+        var buttonText = buyButton.GetComponentInChildren<TMP_Text>();
+        if (buttonText != null)
+        {
+            buttonText.text = canAfford ? "Buy" : "Can't Afford";
+        }
     }
 
     public void ConnectWithTooltipsEvents()

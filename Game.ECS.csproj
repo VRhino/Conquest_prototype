@@ -103,6 +103,7 @@
     <Compile Include="Assets\Scripts\Data\Persistence\SquadInstance.Data.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\ItemEffectSystem.cs" />
+    <Compile Include="Assets\Scripts\Data\Pricing\PricingConfigurationSO.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPoint.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadSwap.System.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SquadButtonUI.cs" />
@@ -127,6 +128,7 @@
     <Compile Include="Assets\Scripts\Data\Combat\CalculaterdAttributes.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOwner.Component.cs" />
     <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
+    <Compile Include="Assets\Scripts\Services\CurrencyService.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellController.cs" />
@@ -176,6 +178,7 @@
     <Compile Include="Assets\Scripts\Core\LoadSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatMessage.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefab.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Data\Pricing\SimplePricingConfig.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularCharacterEditor.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitSpacing.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\XPSource.Type.cs" />
@@ -249,6 +252,7 @@
     <Compile Include="Assets\Scripts\Squads\HeroPositionUtility.cs" />
     <Compile Include="Assets\Scripts\UI\HeroSelectionSceneController.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlot.Component.cs" />
+    <Compile Include="Assets\Scripts\Inventory\Services\StoreTransactionService.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Effects\OpenStoreDialogueEffect.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailStatsPanel.cs" />
@@ -315,6 +319,7 @@
     <Compile Include="Assets\Scripts\Hero\Systems\HeroMovement.System.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryItemCellController.cs" />
     <Compile Include="Assets\Scripts\Combat\SquadAttack.System.cs" />
+    <Compile Include="Assets\Scripts\Inventory\Data\TransactionResult.cs" />
     <Compile Include="Assets\Scripts\Inventory\InventoryStats.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\InventoryPanelController.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitStatScaling.System.cs" />
@@ -405,6 +410,7 @@
     <Compile Include="Assets\Scripts\Hero\Components\PlayerInteraction.Component.cs" />
     <Compile Include="Assets\Scripts\Camera\OrbitalCameraController.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadProgression.System.cs" />
+    <Compile Include="Assets\Scripts\Services\ItemPricingService.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroSpawn.System.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Demo\EquipmentManager.cs" />
     <Compile Include="Assets\Scripts\UI\Dialogs\RewardDialogUIController.cs" />

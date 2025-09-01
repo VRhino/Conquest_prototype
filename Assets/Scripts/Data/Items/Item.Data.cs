@@ -33,6 +33,9 @@ namespace Data.Items
         public bool requiresConfirmation = false;
         public string useButtonText = "Use";
 
+        [Header("Pricing")]
+        public UnityEngine.ScriptableObject pricingConfig; // PricingConfigurationSO - Opcional, si es null usa precio por defecto
+
         /// <summary>
         /// Verifica si este ítem es equipment (tiene generador de stats).
         /// </summary>

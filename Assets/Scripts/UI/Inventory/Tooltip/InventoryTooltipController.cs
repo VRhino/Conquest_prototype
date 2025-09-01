@@ -31,6 +31,7 @@ public class InventoryTooltipController : MonoBehaviour
     public TMP_Text armorText;
     public TMP_Text categoryText;
     public TMP_Text durabilityText;
+    public TMP_Text priceText;
 
     [Header("Stats Panel")]
     public GameObject statsPanel;
@@ -91,6 +92,7 @@ public class InventoryTooltipController : MonoBehaviour
     public TMP_Text ArmorText => armorText;
     public TMP_Text CategoryText => categoryText;
     public TMP_Text DurabilityText => durabilityText;
+    public TMP_Text PriceText => priceText;
     public GameObject StatsPanel => statsPanel;
     public Transform StatsContainer => statsContainer;
     public GameObject StatEntryPrefab => statEntryPrefab;

@@ -15,6 +15,7 @@ public class InventoryItemCellController : BaseItemCellController
         InitializeDragHandler();
     }
 
+
     private void InitializeDragHandler()
     {
         var dragHandlerType = System.Type.GetType("InventoryDragHandler");
@@ -31,17 +32,6 @@ public class InventoryItemCellController : BaseItemCellController
         base.SetItem(item, itemData);
         // Actualizar drag handler
         CallDragHandlerMethod(item != null && itemData != null ? "SetItemData" : "ClearItemData", item, itemData, _cellIndex);
-    }
-
-    public override void SetPreviewItem(ItemData itemPreviewData)
-    {
-        base.SetPreviewItem(itemPreviewData);
-    }
-
-    protected override void SetItemVisuals(ItemData itemData)
-    {
-        base.SetItemVisuals(itemData);
-        // Si necesitas visuales extra, agrégalos aquí
     }
 
     public override void Clear()
@@ -71,12 +61,20 @@ public class InventoryItemCellController : BaseItemCellController
         try
         {
             var method = _dragHandler.GetType().GetMethod(methodName);
-            if (method != null)
-                method.Invoke(_dragHandler, parameters);
+            method?.Invoke(_dragHandler, parameters);
         }
         catch (System.Exception ex)
         {
             Debug.LogWarning($"[InventoryItemCellController] Error calling drag handler method {methodName}: {ex.Message}");
         }
+    }
+
+    public void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    {
+        _interaction?.SetEvents(onItemClicked, onItemRightClicked);
+    }
+    public void RemoveEvents()
+    {
+       _interaction?.RemoveEvents();
     }
 }

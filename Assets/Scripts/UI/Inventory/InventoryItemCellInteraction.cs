@@ -8,12 +8,16 @@ using Data.Items;
 /// </summary>
 public class InventoryItemCellInteraction : BaseItemCellInteraction
 {
-    public override void OnPointerClick(PointerEventData eventData)
+    protected override void Start()
     {
-        base.OnPointerClick(eventData);
-        if (eventData.button == PointerEventData.InputButton.Right)
-            HandleRightClickAction();
+        base.Start();
+        if (_OnRightClick == null)
+        {
+            _OnRightClick = HandleRightClickAction; 
+            OnItemRightClicked += _OnRightClick;
+        }
     }
+
     /// <summary>
     /// Intenta equipar el ítem actual.
     /// </summary>
@@ -47,16 +51,16 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
     /// <summary>
     /// Maneja la acción de click derecho según el tipo de ítem.
     /// </summary>
-    private void HandleRightClickAction()
+    private void HandleRightClickAction(InventoryItem item, ItemData itemData)
     {
-        if (_currentItem == null || _currentItemData == null) return;
+        if (item == null || itemData == null) return;
 
-        if (InventoryUtils.IsEquippableType(_currentItemData.itemType))
+        if (InventoryUtils.IsEquippableType(itemData.itemType))
             TryEquipItem();
-        else if (InventoryUtils.IsConsumableType(_currentItemData.itemType))
+        else if (InventoryUtils.IsConsumableType(itemData.itemType))
             TryUseConsumableItem();
         else
-            Debug.LogWarning($"[InventoryItemCellInteraction] Tipo de ítem no soportado para click derecho: {_currentItemData.itemType}");
+            Debug.LogWarning($"[InventoryItemCellInteraction] Tipo de ítem no soportado para click derecho: {itemData.itemType}");
     }
 
     /// <summary>

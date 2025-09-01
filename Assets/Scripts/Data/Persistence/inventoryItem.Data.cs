@@ -36,6 +36,12 @@ public class InventoryItem
     public int quantity = 1;
 
     /// <summary>
+    /// Precio calculado de este ítem. Para stackables es precio por unidad.
+    /// Se calcula al crear la instancia usando ItemPricingService.
+    /// </summary>
+    public int price = 0;
+
+    /// <summary>
     /// Index of the slot in the inventory grid. Use -1 for items not assigned to a slot.
     /// </summary>
     public int slotIndex = -1;

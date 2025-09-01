@@ -27,6 +27,12 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
             Debug.LogError("[HeroEquipmentSlotInteraction] No se encontró HeroEquipmentSlotController en el mismo GameObject");
     }
 
+    void Start()
+    {
+        OnItemRightClicked += HandleRightClick;
+        OnItemClicked += HandleLeftClick;
+    }
+
     #endregion
 
     #region Public API
@@ -39,27 +45,15 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
     
     #endregion
 
-    #region Event System Implementation
-
-    public override void OnPointerClick(PointerEventData eventData)
-    {
-        base.OnPointerClick(eventData);
-
-        if (eventData.button == PointerEventData.InputButton.Left) HandleLeftClick();
-        else if (eventData.button == PointerEventData.InputButton.Right && HasEquippedItem) HandleRightClick();
-    }
-
-    #endregion
-
     #region Interaction Logic
 
     /// <summary>
     /// Maneja el click izquierdo en el slot.
     /// Para futuro: drag & drop, seleccionar desde inventario, etc.
     /// </summary>
-    private void HandleLeftClick()
+    private void HandleLeftClick(InventoryItem item, ItemData itemData)
     {
-        
+
         if (!HasEquippedItem)
         {
             Debug.Log($"[HeroEquipmentSlotInteraction] Left clicked on empty slot: {_slotType}.{_slotCategory}");
@@ -70,22 +64,13 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
     /// <summary>
     /// Maneja el click derecho en el slot (desequipar item).
     /// </summary>
-    private void HandleRightClick()
+    private void HandleRightClick(InventoryItem item, ItemData itemData)
     {
-        if (!HasEquippedItem)
-        {
-            Debug.Log($"[HeroEquipmentSlotInteraction] Right clicked on empty slot: {_slotType}.{_slotCategory}");
-            return;
-        }
+        if (!HasEquippedItem) return;
 
         // Verificar si se puede desequipar
-        if (!_slotController.CanUnequipCurrentItem())
-        {
-            Debug.LogWarning($"[HeroEquipmentSlotInteraction] Cannot unequip {_currentItemData.name} - no inventory space");
-            return;
-        }
-        
-        ItemData itemData = _currentItemData; // Guardar referencia antes de limpiar
+        if (!_slotController.CanUnequipCurrentItem()) return;
+
         // Intentar desequipar
         bool success = TryUnequipCurrentItem();
 

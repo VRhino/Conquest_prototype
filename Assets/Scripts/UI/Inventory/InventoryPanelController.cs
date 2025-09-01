@@ -210,8 +210,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         // Mostrar el panel
         if (mainPanel != null)
             mainPanel.SetActive(true);
-        
-        // No llamar ToggleUIInteraction aquí - el FullscreenPanelManager se encarga
 
         // Actualizar displays usando el método unificado
         RefreshFullUI();
@@ -237,14 +235,27 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     public void OpenPanel()
     {
         var heroData = PlayerSessionService.SelectedHero;
-        if (heroData != null)
+        if (heroData != null) OpenPanel(heroData);
+    }
+
+    public void OpenAsAuxiliaryPanel(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    {
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData == null) return;
+        
+        OpenPanel(heroData);
+        exitButton.gameObject.SetActive(false);
+        foreach (var cell in _cellControllers)
         {
-            OpenPanel(heroData);
+            cell.RemoveEvents();
+            cell.SetEvents(onItemClicked, onItemRightClicked);
         }
-        else
-        {
-            Debug.LogError("[InventoryPanelController] No hay héroe activo en PlayerSessionService para abrir el inventario");
-        }
+    }
+
+    public void CloseAsAuxiliaryPanel()
+    {
+        ClosePanel();
+        exitButton.gameObject.SetActive(true); // Restaurar botón de salir
     }
 
     /// <summary>
@@ -252,14 +263,8 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     /// </summary>
     public void TogglePanel()
     {
-        if (IsPanelOpen)
-        {
-            ClosePanel();
-        }
-        else
-        {
-            OpenPanel();
-        }
+        if (IsPanelOpen) ClosePanel();
+        else OpenPanel();
     }
 
     #endregion
@@ -296,15 +301,9 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
 
         // Ejecutar el sort a través del InventoryManager
         bool success = InventoryManager.SortByType();
-        
-        if (success)
-        {
-            Debug.Log("[InventoryPanelController] Inventory sorted successfully");
-        }
-        else
-        {
-            Debug.LogError("[InventoryPanelController] Failed to sort inventory");
-        }
+
+        if (success) Debug.Log("[InventoryPanelController] Inventory sorted successfully");
+        else Debug.LogError("[InventoryPanelController] Failed to sort inventory");
     }
 
     /// <summary>
@@ -321,23 +320,18 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     /// Solo se permite con filtro "All".
     /// </summary>
     /// <returns>True si se puede hacer drag & drop</returns>
-    public bool CanPerformDragDrop()
-    {
-        return _currentFilter == ItemFilter.All;
-    }
+    public bool CanPerformDragDrop() => _currentFilter == ItemFilter.All;
 
     /// <summary>
     /// Actualiza completamente la UI del inventario.
     /// Este método reemplaza las llamadas individuales y soluciona el bug de actualización de monedas.
-    /// SOLUCIÓN: Ahora UpdateMoneyDisplay() se llama junto con UpdateInventoryDisplay()
     /// </summary>
     public void RefreshFullUI()
     {
         if (_currentHero == null) return;
 
-        // ESTA ES LA SOLUCIÓN AL BUG: llamar UpdateMoneyDisplay() junto con UpdateInventoryDisplay()
         UpdateInventoryDisplay();
-        UpdateMoneyDisplay();    // ¡Esta era la línea que faltaba!
+        UpdateMoneyDisplay();
         UpdateFilterButtons();
 
         Debug.Log("[InventoryPanelController] FULL UI refresh completed - money display now updates correctly");
@@ -531,28 +525,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         if (PlayerSessionService.CurrentPlayer != null)
         {
             SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
-        }
-    }
-
-    private void ToggleUIInteraction()
-    {
-        if (DialogueUIState.IsDialogueOpen)
-        {
-            DialogueUIState.IsDialogueOpen = false;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(true);
-
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else
-        {
-            DialogueUIState.IsDialogueOpen = true;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(false);
-            
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
         }
     }
 

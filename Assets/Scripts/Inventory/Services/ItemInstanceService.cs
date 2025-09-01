@@ -52,6 +52,9 @@ public static class ItemInstanceService
             LogInfo($"Created stackable item: {protoItemId} with quantity: {quantity}");
         }
 
+        // NUEVO: Calcular precio para la nueva instancia usando ItemPricingService
+        item.price = ItemPricingService.CalculateItemPrice(protoItem, item);
+
         return item;
     }
 

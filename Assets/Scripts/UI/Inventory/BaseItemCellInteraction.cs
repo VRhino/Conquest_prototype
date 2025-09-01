@@ -11,6 +11,9 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
     // Referencias al ítem actual y sus datos
     protected InventoryItem _currentItem;
     protected ItemData _currentItemData;
+
+    protected System.Action<InventoryItem, ItemData> _OnClick;
+    protected System.Action<InventoryItem, ItemData> _OnRightClick;
     protected string _cellId;
 
     // Callbacks de interacción (pueden ser asignados por el controlador)
@@ -27,6 +30,13 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
         _cellId = cellId;
     }
 
+    protected virtual void Start()
+    {
+        Debug.Log($"[BaseItemCellInteraction] Start. CellId: {_cellId}");
+        OnItemClicked += _OnClick;
+        OnItemRightClicked += _OnRightClick;
+    }
+
     /// <summary>
     /// Asigna el ítem actual para manejar las interacciones.
     /// </summary>
@@ -35,6 +45,24 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
         _currentItem = item;
         _currentItemData = itemData;
         OnSetItem?.Invoke(item, itemData, cellId);
+    }
+
+    public virtual void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    {
+        Debug.Log($"[BaseItemCellInteraction] Setting events. Click: {onItemClicked != null}, RightClick: {onItemRightClicked != null} cellId: {_cellId}");
+        _OnClick = onItemClicked;
+        _OnRightClick = onItemRightClicked;
+        OnItemClicked += onItemClicked;
+        OnItemRightClicked += onItemRightClicked;
+    }
+
+    public virtual void RemoveEvents()
+    {
+        Debug.Log($"[BaseItemCellInteraction] Removing events. CellId: {_cellId}");
+        OnItemClicked -= _OnClick;
+        OnItemRightClicked -= _OnRightClick;
+        _OnClick = null;
+        _OnRightClick = null;
     }
 
     /// <summary>

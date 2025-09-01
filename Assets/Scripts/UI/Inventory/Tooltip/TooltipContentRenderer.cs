@@ -23,6 +23,7 @@ public class TooltipContentRenderer : ITooltipComponent
     private TMP_Text _armorText;
     private TMP_Text _categoryText;
     private TMP_Text _durabilityText;
+    private TMP_Text _priceText;
     private TMP_Text _actionText;
 
     #region ITooltipComponent Implementation
@@ -43,6 +44,7 @@ public class TooltipContentRenderer : ITooltipComponent
         _armorText = controller.ArmorText;
         _categoryText = controller.CategoryText;
         _durabilityText = controller.DurabilityText;
+        _priceText = controller.PriceText;
         _actionText = controller.ActionText;
     }
 
@@ -62,6 +64,7 @@ public class TooltipContentRenderer : ITooltipComponent
         _armorText = null;
         _categoryText = null;
         _durabilityText = null;
+        _priceText = null;
         _actionText = null;
     }
 
@@ -102,6 +105,9 @@ public class TooltipContentRenderer : ITooltipComponent
 
         if (_durabilityText != null)
             _durabilityText.text = "";
+
+        if (_priceText != null)
+            _priceText.text = "";
 
         if (_actionText != null)
             _actionText.text = "";
@@ -166,6 +172,28 @@ public class TooltipContentRenderer : ITooltipComponent
         {
             _durabilityText.text = "100/100";
             _durabilityText.gameObject.SetActive(true);
+        }
+
+        // Configurar precio
+        if (_priceText != null && item != null)
+        {
+            int displayPrice;
+            if (item.price > 0)
+            {
+                displayPrice = item.price;
+            }
+            else
+            {
+                // Usar ItemPricingService para calcular precio si no está cacheado
+                displayPrice = ItemPricingService.CalculateItemPrice(itemData, item);
+            }
+            
+            _priceText.text = displayPrice.ToString();
+            _priceText.gameObject.SetActive(true);
+        }
+        else if (_priceText != null)
+        {
+            _priceText.gameObject.SetActive(false);
         }
     }
 

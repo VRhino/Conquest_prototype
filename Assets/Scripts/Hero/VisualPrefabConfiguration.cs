@@ -4,7 +4,7 @@ using UnityEngine;
 /// ScriptableObject que define la configuración de prefabs visuales para diferentes tipos de unidades.
 /// Permite agregar nuevos tipos de unidades sin modificar código.
 /// </summary>
-[CreateAssetMenu(fileName = "VisualPrefabConfig", menuName = "Conquest Tactics/Visual Prefab Configuration")]
+[CreateAssetMenu(fileName = "VisualPrefabConfig", menuName = "Avatar/Visual Prefab Configuration")]
 public class VisualPrefabConfiguration : ScriptableObject
 {
     [Header("Hero Visual Prefabs")]
