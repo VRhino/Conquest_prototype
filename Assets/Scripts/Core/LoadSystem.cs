@@ -24,10 +24,6 @@ public static class LoadSystem
         try
         {
             var data = _provider.Load();
-            if (data != null)
-            {
-                DataCacheService.RecalculateAttributes(data);
-            }
             return data;
         }
         catch (Exception e)

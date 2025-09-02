@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -32,7 +33,7 @@ public static class HeroTempAttributeService
         {
             _tempChanges[heroId] = new Dictionary<string, float>();
         }
-
+        
         _tempChanges[heroId][attributeName] = newValue;
     }
 
@@ -87,9 +88,8 @@ public static class HeroTempAttributeService
         {
             ApplyTempChangeToCalculatedAttributes(modifiedAttributes, change.Key, change.Value);
         }
-        
         // Recalcular atributos derivados basados en los nuevos valores base
-        RecalculateDerivedAttributes(modifiedAttributes);
+        RecalculateDerivedAttributes(modifiedAttributes, heroId);
 
         return modifiedAttributes;
     }
@@ -161,23 +161,18 @@ public static class HeroTempAttributeService
     {
         switch (attributeName.ToLower())
         {
-            case "fuerza":
             case "strength":
                 attributes.strength = newValue;
                 break;
-            case "destreza":
             case "dexterity":
                 attributes.dexterity = newValue;
                 break;
-            case "armadura":
             case "armor":
                 attributes.armor = newValue;
                 break;
-            case "vitalidad":
             case "vitality":
                 attributes.vitality = newValue;
                 break;
-            case "liderazgo":
             case "leadership":
                 attributes.leadership = newValue;
                 break;
@@ -189,36 +184,46 @@ public static class HeroTempAttributeService
 
     /// <summary>
     /// Recalcula los atributos derivados basados en los atributos base modificados temporalmente.
-    /// Usa las mismas fórmulas que DataCacheService pero con los valores temporales.
+    /// Utiliza la función centralizada de DataCacheService para mantener consistencia total.
     /// </summary>
-    private static void RecalculateDerivedAttributes(CalculatedAttributes attributes)
+    private static void RecalculateDerivedAttributes(CalculatedAttributes attributes, string heroId)
     {
-        // Constantes del sistema (copiadas de DataCacheService)
-        const float BASE_HEALTH = 100f;
-        const float BASE_STAMINA = 100f;
-        const float BASE_DAMAGE = 5f;
-        const float BLUNT_DAMAGE_MULTIPLIER = 2f;
-        const float PIERCING_DAMAGE_MULTIPLIER = 2f;
-        const float BLOCK_POWER_MULTIPLIER = 0.5f;
-        const float MOVEMENT_SPEED_BASE = 5f;
-        const float MOVEMENT_SPEED_DEX_MULTIPLIER = 0.1f;
+        // Obtener la definición de clase del héroe
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData == null)
+        {
+            Debug.LogWarning($"[HeroTempAttributeService] No se pudo obtener datos del héroe para {heroId}");
+            return;
+        }
 
-        // Recalcular stats derivados usando las mismas fórmulas que DataCacheService
-        attributes.maxHealth = BASE_HEALTH + attributes.vitality;
-        attributes.stamina = BASE_STAMINA + attributes.dexterity;
+        var classData = HeroClassManager.GetClassDefinition(heroData.classId);
+        if (classData == null)
+        {
+            Debug.LogWarning($"[HeroTempAttributeService] No se pudo obtener definición de clase para {heroData.classId}");
+            return;
+        }
 
-        attributes.bluntDamage = BASE_DAMAGE + (BLUNT_DAMAGE_MULTIPLIER * attributes.strength);
-        attributes.slashingDamage = BASE_DAMAGE + attributes.strength + attributes.dexterity;
-        attributes.piercingDamage = BASE_DAMAGE + (PIERCING_DAMAGE_MULTIPLIER * attributes.dexterity);
+        // Usar la función centralizada de DataCacheService para calcular atributos derivados
+        var calculatedResults = DataCacheService.CalculateDerivedAttributes(classData, 
+            attributes.strength, attributes.dexterity, attributes.armor, attributes.vitality, attributes.leadership);
 
-        attributes.bluntDefense = attributes.armor;
-        attributes.slashDefense = attributes.armor;
-        attributes.pierceDefense = attributes.armor;
-
-        attributes.blockPower = attributes.strength * BLOCK_POWER_MULTIPLIER;
-        attributes.movementSpeed = MOVEMENT_SPEED_BASE + attributes.dexterity * MOVEMENT_SPEED_DEX_MULTIPLIER;
-
-        // Nota: El liderazgo se mantiene igual porque se calcula desde el equipamiento, no los stats base
+        // Aplicar los resultados calculados a nuestro objeto attributes
+        attributes.maxHealth = calculatedResults.maxHealth;
+        attributes.stamina = calculatedResults.stamina;
+        // Atributos de daño
+        attributes.bluntDamage = calculatedResults.bluntDamage;
+        attributes.slashingDamage = calculatedResults.slashingDamage;
+        attributes.piercingDamage = calculatedResults.piercingDamage;
+        // Atributos de penetración
+        attributes.bluntPenetration = calculatedResults.bluntPenetration;
+        attributes.slashPenetration = calculatedResults.slashPenetration;
+        attributes.piercePenetration = calculatedResults.piercePenetration;
+        // Atributos de defensa
+        attributes.bluntDefense = calculatedResults.bluntDefense;
+        attributes.slashDefense = calculatedResults.slashDefense;
+        attributes.pierceDefense = calculatedResults.pierceDefense;
+        attributes.blockPower = calculatedResults.blockPower;
+        attributes.movementSpeed = calculatedResults.movementSpeed;
     }
 
     /// <summary>

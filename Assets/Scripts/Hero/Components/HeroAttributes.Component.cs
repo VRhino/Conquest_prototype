@@ -7,16 +7,16 @@ using Unity.Entities;
 public struct HeroAttributesComponent : IComponentData
 {
     /// <summary>Strength value of the hero.</summary>
-    public int fuerza;
+    public int strength;
 
     /// <summary>Dexterity value of the hero.</summary>
-    public int destreza;
+    public int dexterity;
 
     /// <summary>Armor value of the hero.</summary>
-    public int armadura;
+    public int armor;
 
     /// <summary>Vitality (health pool modifier) of the hero.</summary>
-    public int vitalidad;
+    public int vitality;
 
     /// <summary>Entity representing the baked hero class definition.</summary>
     public Entity classDefinition;

@@ -55,6 +55,12 @@ public class HeroDetailAttributePanel : MonoBehaviour
     {
         InitializePanel();
         SetupButtonListeners();
+        SubscribeToEvents();
+    }
+
+    void OnDestroy()
+    {
+        UnsubscribeFromEvents();
     }
 
     #endregion
@@ -100,11 +106,11 @@ public class HeroDetailAttributePanel : MonoBehaviour
         var baseAttributes = DataCacheService.GetCachedAttributes(heroId);
         
         // Obtener valores con cambios temporales si existen
-        var currentAttributes = HeroTempAttributeService.HasTempChanges(heroId) 
+        var currentAttributes = HeroTempAttributeService.HasTempChanges(heroId)
             ? HeroTempAttributeService.GetAttributesWithTempChanges(heroId)
             : baseAttributes;
-            
-        if (baseAttributes == null || currentAttributes == null) 
+
+        if (baseAttributes == null || currentAttributes == null)
         {
             Debug.LogWarning($"[HeroDetailAttributePanel] No se pudieron obtener atributos para hero: {heroId}");
             return;
@@ -117,7 +123,7 @@ public class HeroDetailAttributePanel : MonoBehaviour
         FormatAttributeValueWithChange(baseAttributes.piercingDamage, currentAttributes.piercingDamage, piercingDamageText, 1);
         FormatAttributeValueWithChange(baseAttributes.slashingDamage, currentAttributes.slashingDamage, slashingDamageText, 1);
         FormatAttributeValueWithChange(baseAttributes.bluntDamage, currentAttributes.bluntDamage, bluntDamageText, 1);
-        
+
         FormatAttributeValueWithChange(baseAttributes.pierceDefense, currentAttributes.pierceDefense, piercingDefenseText, 1);
         FormatAttributeValueWithChange(baseAttributes.slashDefense, currentAttributes.slashDefense, slashingDefenseText, 1);
         FormatAttributeValueWithChange(baseAttributes.bluntDefense, currentAttributes.bluntDefense, bluntDefenseText, 1);
@@ -139,10 +145,7 @@ public class HeroDetailAttributePanel : MonoBehaviour
         _isDetailedPanelVisible = !_isDetailedPanelVisible;
         attributesDetailPanel.SetActive(_isDetailedPanelVisible);
         
-        if (_isDetailedPanelVisible) 
-        {
-            UpdatePanel();
-        }
+        if (_isDetailedPanelVisible) UpdatePanel();
         
         Debug.Log($"[HeroDetailAttributePanel] Panel detallado: {(_isDetailedPanelVisible ? "Mostrado" : "Oculto")}");
     }
@@ -180,7 +183,6 @@ public class HeroDetailAttributePanel : MonoBehaviour
 
     private void InitializePanel()
     {
-        // Asegurar que el panel detallado esté oculto inicialmente
         if (attributesDetailPanel != null)
         {
             attributesDetailPanel.SetActive(false);
@@ -239,6 +241,44 @@ public class HeroDetailAttributePanel : MonoBehaviour
     private string GetHeroId(HeroData heroData)
     {
         return HeroAttributeValidator.GetHeroId(heroData);
+    }
+
+    #endregion
+
+    #region Event Management
+
+    /// <summary>
+    /// Suscribe a eventos del sistema.
+    /// </summary>
+    private void SubscribeToEvents()
+    {
+        Debug.Log("[HeroDetailAttributePanel] Suscribiéndose a eventos de DataCacheService");
+        DataCacheService.OnHeroCacheUpdated += OnHeroCacheUpdated;
+    }
+
+    /// <summary>
+    /// Desuscribe de eventos del sistema.
+    /// </summary>
+    private void UnsubscribeFromEvents()
+    {
+        DataCacheService.OnHeroCacheUpdated -= OnHeroCacheUpdated;
+    }
+
+    /// <summary>
+    /// Maneja la actualización del cache de un héroe.
+    /// </summary>
+    private void OnHeroCacheUpdated(string updatedHeroId)
+    {
+        if (_currentHeroData == null) return;
+        
+        string currentHeroId = GetHeroId(_currentHeroData);
+        
+        // Solo actualizar si es el héroe actual y el panel está visible
+        if (currentHeroId == updatedHeroId && _isDetailedPanelVisible)
+        {
+            Debug.Log($"[HeroDetailAttributePanel] Cache updated for current hero: {_currentHeroData.heroName}. Refreshing detailed panel.");
+            UpdatePanel();
+        }
     }
 
     #endregion

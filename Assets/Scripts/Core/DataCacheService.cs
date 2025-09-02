@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,23 +9,6 @@ using UnityEngine;
 /// </summary>
 public static class DataCacheService
 {
-    // Constants used for attribute calculations. These values should be tuned
-    // according to the GDD formulas and game balance requirements.
-    static class Constants
-    {
-        public const float BASE_HEALTH = 100f;
-        public const float BASE_STAMINA = 100f;
-        public const float BASE_DAMAGE = 5f;
-        public const float BASE_ARMOR = 0f;
-
-        public const float BLUNT_DAMAGE_MULTIPLIER = 2f;
-        public const float PIERCING_DAMAGE_MULTIPLIER = 2f;
-
-        public const float PENETRATION_BASE = 0f;
-        public const float BLOCK_POWER_MULTIPLIER = 0.5f;
-        public const float MOVEMENT_SPEED_BASE = 5f;
-        public const float MOVEMENT_SPEED_DEX_MULTIPLIER = 0.1f;
-    }
     // Cache of calculated attributes by hero identifier.
     static readonly Dictionary<string, CalculatedAttributes> _attributeCache = new();
 
@@ -33,6 +17,21 @@ public static class DataCacheService
 
     // Cache of active perk identifiers by hero.
     static readonly Dictionary<string, List<string>> _perkCache = new();
+
+    // Equipment event listeners management
+    private static bool _eventListenersInitialized = false;
+    private static Coroutine _debounceCoroutine = null;
+    private static bool _updatePending = false;
+
+    #region Events
+
+    /// <summary>
+    /// Evento disparado cuando el cache de un héroe es actualizado.
+    /// Útil para que la UI se refresque automáticamente.
+    /// </summary>
+    public static System.Action<string> OnHeroCacheUpdated;
+
+    #endregion
 
     /// <summary>
     /// Clears all cached information. Useful when reloading player data.
@@ -50,12 +49,14 @@ public static class DataCacheService
     /// <param name="heroData">Hero progression data.</param>
     public static void CacheAttributes(HeroData heroData)
     {
-        if (heroData == null)
-            return;
+        if (heroData == null) return;
 
         var calculated = CalculateAttributes(heroData);
         string key = GetHeroKey(heroData);
         _attributeCache[key] = calculated;
+
+        // Disparar evento de actualización
+        OnHeroCacheUpdated?.Invoke(key);
     }
 
     /// <summary>
@@ -113,15 +114,12 @@ public static class DataCacheService
     }
 
     // Recalcula los atributos cacheados para todos los héroes del jugador.
-    public static void RecalculateAttributes(PlayerData data)
+    public static void RecalculateAttributes(HeroData hero)
     {
         Clear();
-        if (data == null || data.heroes == null)
-            return;
-        foreach (var hero in data.heroes)
-        {
-            CacheAttributes(hero);
-        }
+        if (hero == null) return;
+        CacheAttributes(hero);
+        
     }
 
     // Helper --------------------------------------------------------------
@@ -133,52 +131,254 @@ public static class DataCacheService
         return string.IsNullOrEmpty(heroData.heroName) ? heroData.classId : heroData.heroName;
     }
 
-    // Performs the actual attribute calculations using simple formulas
-    // described in the GDD. Real implementation should include equipment
-    // and perk modifiers.
-    static CalculatedAttributes CalculateAttributes(HeroData hero)
+    /// <summary>
+    /// Performs the actual attribute calculations using formulas from the GDD.
+    /// Public method that can be used by other services for consistent calculations.
+    /// </summary>
+    public static CalculatedAttributes CalculateAttributes(HeroData hero)
+    {
+        // Get class definition for constants
+        var classData = HeroClassManager.GetClassDefinition(hero.classId);
+        if (classData == null) Debug.LogWarning($"[DataCacheService] No class definition found for {hero.classId}, using defaults");
+
+        // Get equipment stats bonuses
+        var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats();
+        // Primary attributes with equipment bonuses
+        float strength = hero.strength + (equipmentStats.ContainsKey("Strength") ? equipmentStats["Strength"] : 0);
+        float dexterity = hero.dexterity + (equipmentStats.ContainsKey("Dexterity") ? equipmentStats["Dexterity"] : 0);
+        float armor = hero.armor + (equipmentStats.ContainsKey("Armor") ? equipmentStats["Armor"] : 0);
+        float vitality = hero.vitality + (equipmentStats.ContainsKey("Vitality") ? equipmentStats["Vitality"] : 0);
+
+        return CalculateDerivedAttributes(classData, strength, dexterity, armor, vitality, HeroLeadershipCalculator.CalculateLeadership(hero));
+    }
+
+    /// <summary>
+    /// Sobrecarga para calcular atributos derivados usando valores específicos de atributos base.
+    /// Útil para HeroTempAttributeService cuando se calculan modificaciones temporales.
+    /// </summary>
+    /// <param name="classData">Definición de clase del héroe</param>
+    /// <param name="strength">Valor de fuerza (con modificaciones temporales aplicadas)</param>
+    /// <param name="dexterity">Valor de destreza (con modificaciones temporales aplicadas)</param>
+    /// <param name="armor">Valor de armadura (con modificaciones temporales aplicadas)</param>
+    /// <param name="vitality">Valor de vitalidad (con modificaciones temporales aplicadas)</param>
+    /// <param name="leadership">Valor de liderazgo (con modificaciones temporales aplicadas)</param>
+    /// <returns>CalculatedAttributes con valores derivados calculados</returns>
+    public static CalculatedAttributes CalculateDerivedAttributes(HeroClassDefinition classData,
+        float strength, float dexterity, float armor, float vitality, float leadership)
     {
         var result = new CalculatedAttributes();
 
-        // Base values (could come from the hero class definition)
-        const float baseHealth = Constants.BASE_HEALTH;
-        const float baseStamina = Constants.BASE_STAMINA;
-        const float baseDamage = Constants.BASE_DAMAGE;
-        const float baseArmor = Constants.BASE_ARMOR;
+        if (classData == null)
+        {
+            Debug.LogWarning("[DataCacheService] No class definition provided for derived calculations");
+            return result;
+        }
 
-        // Primary attributes
-        float fuerza = hero.fuerza;
-        float destreza = hero.destreza;
-        float armadura = hero.armadura;
-        float vitalidad = hero.vitalidad;
+        // Base values from class definition
+        float baseHealth = classData.baseHealth;
+        float baseStamina = classData.baseStamina;
+        float baseDamage = classData.baseDamage;
+        float baseArmor = classData.baseArmorValue;
 
-        // Derived stats following GDD section 5.2
-        result.maxHealth = baseHealth + vitalidad;
-        result.stamina = baseStamina + destreza;
+        // Set primary attributes
+        result.strength = strength;
+        result.dexterity = dexterity;
+        result.vitality = vitality;
+        result.armor = armor;
+        result.leadership = leadership;
 
-        result.strength = fuerza;
-        result.dexterity = destreza;
-        result.vitality = vitalidad;
-        result.armor = baseArmor + armadura;
+        // Calculate derived stats using the same formulas
+        result.maxHealth = baseHealth + (classData.healthPerVitality * vitality);
+        result.stamina = baseStamina + (classData.staminaPerDexterity * dexterity);
 
-        result.bluntDamage = baseDamage + (Constants.BLUNT_DAMAGE_MULTIPLIER * fuerza);
-        result.slashingDamage = baseDamage + fuerza + destreza;
-        result.piercingDamage = baseDamage + (Constants.PIERCING_DAMAGE_MULTIPLIER * destreza);
+        result.bluntDamage = baseDamage + (classData.bluntDamageMultiplierByStr * strength);
+        result.slashingDamage = baseDamage + (classData.slashingDamageMultiplierByStr * strength + classData.slashingDamageMultiplierByDex * dexterity);
+        result.piercingDamage = baseDamage + (classData.piercingDamageMultiplierByDex * dexterity);
 
-        result.bluntDefense = baseArmor + armadura;
-        result.slashDefense = baseArmor + armadura;
-        result.pierceDefense = baseArmor + armadura;
+        result.bluntDefense = baseArmor + (armor * classData.bluntDefenseMultiplierByArmor);
+        result.slashDefense = baseArmor + (armor * classData.slashingDefenseMultiplierByArmor);
+        result.pierceDefense = baseArmor + (armor * classData.piercingDefenseMultiplierByArmor);
 
-        result.bluntPenetration = Constants.PENETRATION_BASE;
-        result.slashPenetration = Constants.PENETRATION_BASE;
-        result.piercePenetration = Constants.PENETRATION_BASE;
+        result.bluntPenetration = strength * classData.bluntPenetrationMultiplierByStr;
+        result.slashPenetration = (strength * classData.slashingPenetrationMultiplierByStr) + (dexterity * classData.slashingPenetrationMultiplierByDex);
+        result.piercePenetration = dexterity * classData.piercingPenetrationMultiplierByDex;
 
-        result.blockPower = fuerza * Constants.BLOCK_POWER_MULTIPLIER;
-        result.movementSpeed = Constants.MOVEMENT_SPEED_BASE + destreza * Constants.MOVEMENT_SPEED_DEX_MULTIPLIER;
-
-        // Calcular liderazgo usando el calculador especializado
-        result.leadership = HeroLeadershipCalculator.CalculateLeadership(hero);
+        result.blockPower = strength * classData.blockPowerMultiplierByStr;
+        result.movementSpeed = classData.movementSpeedBase + dexterity * classData.movementSpeedDexMultiplier;
 
         return result;
     }
+
+    #region Equipment Event Listeners
+
+    /// <summary>
+    /// Inicializa los listeners para eventos de equipamiento.
+    /// Debe llamarse cuando se selecciona un héroe activo.
+    /// </summary>
+    public static void InitializeEventListeners()
+    {
+        if (_eventListenersInitialized) return;
+
+        try
+        {
+            InventoryEventService.OnItemEquipped += OnItemEquipped;
+            InventoryEventService.OnItemUnequipped += OnItemUnequipped;
+            _eventListenersInitialized = true;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[DataCacheService] Failed to initialize event listeners: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Limpia los listeners de eventos de equipamiento.
+    /// Debe llamarse al cambiar de héroe o cerrar sesión.
+    /// </summary>
+    public static void CleanupEventListeners()
+    {
+        if (!_eventListenersInitialized) return;
+
+        try
+        {
+            InventoryEventService.OnItemEquipped -= OnItemEquipped;
+            InventoryEventService.OnItemUnequipped -= OnItemUnequipped;
+            _eventListenersInitialized = false;
+            
+            // Cancelar debounce pendiente
+            if (_debounceCoroutine != null)
+            {
+                MonoBehaviourHelper.StopCoroutineIfRunning(_debounceCoroutine);
+                _debounceCoroutine = null;
+                _updatePending = false;
+            }            
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[DataCacheService] Failed to cleanup event listeners: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Maneja el evento de item equipado.
+    /// </summary>
+    private static void OnItemEquipped(InventoryItem equippedItem, InventoryItem unequippedItem)
+    {
+        if (equippedItem?.IsEquipment == true) ScheduleCacheUpdate();
+    }
+
+    /// <summary>
+    /// Maneja el evento de item desequipado.
+    /// </summary>
+    private static void OnItemUnequipped(InventoryItem item)
+    {
+        if (item?.IsEquipment == true) ScheduleCacheUpdate();
+    }
+
+    /// <summary>
+    /// Programa una actualización del cache con debounce.
+    /// Evita múltiples recalculaciones cuando se hacen varios cambios rápidos.
+    /// </summary>
+    private static void ScheduleCacheUpdate()
+    {
+        if (_updatePending) return;
+        
+        _updatePending = true;
+        
+        // Cancelar corrutina anterior si existe
+        if (_debounceCoroutine != null)
+        {
+            MonoBehaviourHelper.StopCoroutineIfRunning(_debounceCoroutine);
+        }
+        
+        // Iniciar nueva corrutina con debounce
+        _debounceCoroutine = MonoBehaviourHelper.StartCoroutine(DebouncedCacheUpdate());
+    }
+
+    /// <summary>
+    /// Corrutina que actualiza el cache después de un pequeño delay.
+    /// </summary>
+    private static IEnumerator DebouncedCacheUpdate()
+    {
+        yield return new WaitForSeconds(0.1f); // 100ms debounce
+        
+        try
+        {
+            UpdateCurrentHeroCache();
+        }
+        finally
+        {
+            _updatePending = false;
+            _debounceCoroutine = null;
+        }
+    }
+
+    /// <summary>
+    /// Actualiza el cache del héroe actualmente seleccionado.
+    /// Optimización: solo actualiza el héroe específico, no todos.
+    /// </summary>
+    private static void UpdateCurrentHeroCache()
+    {
+        var currentHero = PlayerSessionService.SelectedHero;
+        if (currentHero == null)
+        {
+            Debug.LogWarning("[DataCacheService] No selected hero to update cache for");
+            return;
+        }
+        
+        CacheAttributes(currentHero);
+    }
+
+    #endregion
+
+    #region MonoBehaviour Helper
+
+    /// <summary>
+    /// Helper estático para manejar corrutinas desde una clase estática.
+    /// </summary>
+    private static class MonoBehaviourHelper
+    {
+        private static MonoBehaviour _instance;
+        
+        private static MonoBehaviour Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    var go = new GameObject("[DataCacheService Helper]");
+                    _instance = go.AddComponent<DataCacheServiceHelper>();
+                    Object.DontDestroyOnLoad(go);
+                }
+                return _instance;
+            }
+        }
+        
+        public static Coroutine StartCoroutine(IEnumerator routine)
+        {
+            return Instance.StartCoroutine(routine);
+        }
+        
+        public static void StopCoroutineIfRunning(Coroutine coroutine)
+        {
+            if (coroutine != null && Instance != null)
+            {
+                Instance.StopCoroutine(coroutine);
+            }
+        }
+    }
+
+    /// <summary>
+    /// MonoBehaviour helper para ejecutar corrutinas.
+    /// </summary>
+    private class DataCacheServiceHelper : MonoBehaviour
+    {
+        private void OnDestroy()
+        {
+            // Limpiar referencias cuando se destruye
+            CleanupEventListeners();
+        }
+    }
+
+    #endregion
 }

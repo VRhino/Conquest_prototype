@@ -1,4 +1,5 @@
 using UnityEngine;
+using static DataCacheService;
 
 /// <summary>
 /// Servicio de validación para modificaciones de atributos del héroe.
@@ -64,13 +65,9 @@ public static class HeroAttributeValidator
 
         switch (attributeName.ToLower())
         {
-            case "fuerza":
             case "strength":
-            case "destreza":
             case "dexterity":
-            case "armadura":
             case "armor":
-            case "vitalidad":
             case "vitality":
                 return GetBasicAttributeLimits(heroData, attributeName);
             
@@ -182,21 +179,25 @@ public static class HeroAttributeValidator
         if (heroData == null || string.IsNullOrEmpty(attributeName))
             return 0f;
 
+        string heroId = GetHeroId(heroData);
+        CalculatedAttributes cached = GetCachedAttributes(heroId);
+
+        if (cached == null)
+        {
+            Debug.LogWarning($"[HeroAttributeValidator] No cached attributes found for hero: {heroId}");
+            return 0f;
+        }
+
         switch (attributeName.ToLower())
         {
-            case "fuerza":
             case "strength":
-                return heroData.fuerza;
-            case "destreza":
+                return cached.strength;
             case "dexterity":
-                return heroData.destreza;
-            case "armadura":
+                return cached.dexterity;
             case "armor":
-                return heroData.armadura;
-            case "vitalidad":
+                return cached.armor;
             case "vitality":
-                return heroData.vitalidad;
-            case "liderazgo":
+                return cached.vitality;
             case "leadership":
                 // El liderazgo se calcula, no se modifica directamente
                 return HeroLeadershipCalculator.CalculateLeadership(heroData);

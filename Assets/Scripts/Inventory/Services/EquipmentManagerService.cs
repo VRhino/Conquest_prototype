@@ -385,11 +385,13 @@ public static class EquipmentManagerService
     /// <summary>
     /// Calcula el total de stats proporcionados por todo el equipment equipado.
     /// </summary>
-    public static System.Collections.Generic.Dictionary<string, float> CalculateTotalEquipmentStats()
+    public static Dictionary<string, float> CalculateTotalEquipmentStats()
     {
-        var totalStats = new System.Collections.Generic.Dictionary<string, float>();
+        var totalStats = new Dictionary<string, float>();
         var equippedItems = GetAllEquippedItems();
 
+        if (equippedItems.Length == 0) Debug.LogWarning("[EquipmentManager] No equipped items found for stat calculation");
+        
         foreach (var item in equippedItems)
         {
             if (item?.IsEquipment != true) continue;

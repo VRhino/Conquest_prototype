@@ -80,6 +80,12 @@ public class HeroDetailStatsPanel : MonoBehaviour
     void Start()
     {
         SetupButtonListeners();
+        SubscribeToEvents();
+    }
+
+    void OnDestroy()
+    {
+        UnsubscribeFromEvents();
     }
 
     #endregion
@@ -134,10 +140,10 @@ public class HeroDetailStatsPanel : MonoBehaviour
         }
         
         UpdateStatDisplay("leadership", attributes.leadership, leadershipValueText, leadershipMoreButton, leadershipMinusButton, false);
-        UpdateStatDisplay("fuerza", attributes.strength, strengthValueText, strengthMoreButton, strengthMinusButton);
-        UpdateStatDisplay("destreza", attributes.dexterity, agilityValueText, agilityMoreButton, agilityMinusButton);
-        UpdateStatDisplay("armadura", attributes.armor, armorValueText, armorMoreButton, armorMinusButton);
-        UpdateStatDisplay("vitalidad", attributes.vitality, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
+        UpdateStatDisplay("strength", attributes.strength, strengthValueText, strengthMoreButton, strengthMinusButton);
+        UpdateStatDisplay("dexterity", attributes.dexterity, agilityValueText, agilityMoreButton, agilityMinusButton);
+        UpdateStatDisplay("armor", attributes.armor, armorValueText, armorMoreButton, armorMinusButton);
+        UpdateStatDisplay("vitality", attributes.vitality, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
         
         // Actualizar visibilidad de botones Save/Cancel basado en si hay cambios temporales
         UpdateSaveCancelButtonsVisibility();
@@ -173,7 +179,7 @@ public class HeroDetailStatsPanel : MonoBehaviour
         ApplyTempChangesToHeroData();
         SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
         HeroTempAttributeService.ClearTempChanges(heroId);
-        DataCacheService.RecalculateAttributes(PlayerSessionService.CurrentPlayer);
+        DataCacheService.RecalculateAttributes(PlayerSessionService.SelectedHero);
         
         PopulateStats();
         UpdateSaveCancelButtonsVisibility();
@@ -324,10 +330,10 @@ public class HeroDetailStatsPanel : MonoBehaviour
     private void SetupStatButtons()
     {
         SetupStatButtonPair("leadership", leadershipMoreButton, leadershipMinusButton);
-        SetupStatButtonPair("fuerza", strengthMoreButton, strengthMinusButton);
-        SetupStatButtonPair("destreza", agilityMoreButton, agilityMinusButton);
-        SetupStatButtonPair("armadura", armorMoreButton, armorMinusButton);
-        SetupStatButtonPair("vitalidad", toughnessMoreButton, toughnessMinusButton);
+        SetupStatButtonPair("strength", strengthMoreButton, strengthMinusButton);
+        SetupStatButtonPair("dexterity", agilityMoreButton, agilityMinusButton);
+        SetupStatButtonPair("armor", armorMoreButton, armorMinusButton);
+        SetupStatButtonPair("vitality", toughnessMoreButton, toughnessMinusButton);
     }
 
     private void SetupStatButtonPair(string statName, Button moreButton, Button minusButton)
@@ -405,21 +411,17 @@ public class HeroDetailStatsPanel : MonoBehaviour
     {
         switch (attributeName.ToLower())
         {
-            case "fuerza":
             case "strength":
-                _currentHeroData.fuerza = (int)newValue;
+                _currentHeroData.strength = (int)newValue;
                 break;
-            case "destreza":
             case "dexterity":
-                _currentHeroData.destreza = (int)newValue;
+                _currentHeroData.dexterity = (int)newValue;
                 break;
-            case "armadura":
             case "armor":
-                _currentHeroData.armadura = (int)newValue;
+                _currentHeroData.armor = (int)newValue;
                 break;
-            case "vitalidad":
             case "vitality":
-                _currentHeroData.vitalidad = (int)newValue;
+                _currentHeroData.vitality = (int)newValue;
                 break;
             default:
                 Debug.LogWarning($"[HeroDetailStatsPanel] Atributo no reconocido para persistir: {attributeName}");
@@ -432,6 +434,44 @@ public class HeroDetailStatsPanel : MonoBehaviour
     private string GetHeroId(HeroData heroData)
     {
         return HeroAttributeValidator.GetHeroId(heroData);
+    }
+
+    #endregion
+
+    #region Event Management
+
+    /// <summary>
+    /// Suscribe a eventos del sistema.
+    /// </summary>
+    private void SubscribeToEvents()
+    {
+        DataCacheService.OnHeroCacheUpdated += OnHeroCacheUpdated;
+    }
+
+    /// <summary>
+    /// Desuscribe de eventos del sistema.
+    /// </summary>
+    private void UnsubscribeFromEvents()
+    {
+        DataCacheService.OnHeroCacheUpdated -= OnHeroCacheUpdated;
+    }
+
+    /// <summary>
+    /// Maneja la actualización del cache de un héroe.
+    /// </summary>
+    private void OnHeroCacheUpdated(string updatedHeroId)
+    {
+        Debug.Log($"[HeroDetailStatsPanel] OnHeroCacheUpdated recibido para heroId: {updatedHeroId}");
+        if (_currentHeroData == null) return;
+        
+        string currentHeroId = GetHeroId(_currentHeroData);
+        
+        // Solo actualizar si es el héroe actual
+        if (currentHeroId == updatedHeroId)
+        {
+            Debug.Log($"[HeroDetailStatsPanel] Cache updated for current hero: {_currentHeroData.heroName}. Refreshing UI.");
+            PopulateStats();
+        }
     }
 
     #endregion

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -53,8 +54,8 @@ public class AvatarCreatorUIController : MonoBehaviour
             attributePoints = 0,
             perkPoints = 0,
             bronze = 0,
-            equipment = equipment,        
-            // Aquí puedes configurar claseId, stats iniciales, etc.
+            equipment = equipment,
+            availableSquads = new List<string> { "sqd01", "arc01", "spm01" }
         };
 
         PlayerData player = PlayerSessionService.CurrentPlayer;

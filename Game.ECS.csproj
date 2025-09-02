@@ -127,8 +127,8 @@
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
     <Compile Include="Assets\Scripts\Data\Combat\CalculaterdAttributes.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOwner.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
     <Compile Include="Assets\Scripts\Services\CurrencyService.cs" />
+    <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellController.cs" />
@@ -254,6 +254,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitFormationSlot.Component.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\StoreTransactionService.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Effects\OpenStoreDialogueEffect.cs" />
+    <Compile Include="Assets\Scripts\Core\HeroClassManager.cs" />
     <Compile Include="Assets\Scripts\UI\HUDController.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailStatsPanel.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadNavigation.System.cs" />
@@ -358,6 +359,7 @@
     <Compile Include="Assets\Scripts\Inventory\statsGenerators\BasicWeaponStatGenerator.cs" />
     <Compile Include="Assets\Scripts\Core\HeroLeadershipCalculator.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Effects\OpenFullScreenMenuDialogueEffect.cs" />
+    <Compile Include="Assets\Scripts\Debug\HeroCacheDebugger.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroEquipmentPanel.cs" />
     <Compile Include="Assets\Scripts\UI\Login\LoginUIController.UI.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\HeroClassSelector.UI.cs" />

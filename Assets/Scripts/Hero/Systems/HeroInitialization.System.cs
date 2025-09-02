@@ -34,10 +34,10 @@ public partial class HeroInitializationSystem : SystemBase
 
             ecb.AddComponent(entity, new HeroAttributesComponent
             {
-                fuerza = def.baseStrength,
-                destreza = def.baseDexterity,
-                armadura = def.baseArmor,
-                vitalidad = def.baseVitality,
+                strength = def.baseStrength,
+                dexterity = def.baseDexterity,
+                armor = def.baseArmor,
+                vitality = def.baseVitality,
                 classDefinition = classRef.ValueRO.classEntity
             });
 
@@ -65,18 +65,35 @@ public partial class HeroInitializationSystem : SystemBase
                 continue;
 
             var attributes = attr.ValueRO;
-            // Fórmulas: vidaMax = 100 + (5 * vitalidad), estaminaMax = 100 + (3 * destreza / 2)
-            float vidaMax = 100f + (5f * attributes.vitalidad);
-            float estaminaMax = 100f + (3f * attributes.destreza / 2f);
             
+            // Obtener la definición de clase desde el componente
+            HeroClassDefinition classData = null;
+            if (defLookup.HasComponent(entity))
+            {
+                var classDef = defLookup[entity];
+                // Convertir enum a string para buscar la definición
+                string classId = classDef.heroClass.ToString();
+                classData = HeroClassManager.GetClassDefinition(classId);
+                if(classData == null) Debug.LogError($"[HeroInitializationSystem] No se encontró HeroClassDefinition para classId: {classId}");
+            }
+
+            CalculatedAttributes calculatedAttributes =
+                DataCacheService.CalculateDerivedAttributes(
+                    classData,
+                    attributes.strength,
+                    attributes.dexterity,
+                    attributes.armor,
+                    attributes.vitality,
+                    0);
+
             var health = healthLookup[entity];
-            health.maxHealth = vidaMax;
-            health.currentHealth = vidaMax;
+            health.maxHealth = calculatedAttributes.maxHealth;
+            health.currentHealth = calculatedAttributes.maxHealth;
             healthLookup[entity] = health;
 
             var stamina = staminaLookup[entity];
-            stamina.maxStamina = estaminaMax;
-            stamina.currentStamina = estaminaMax;
+            stamina.maxStamina = calculatedAttributes.stamina;
+            stamina.currentStamina = calculatedAttributes.stamina;
             staminaLookup[entity] = stamina;
         }
 

@@ -46,13 +46,13 @@ public class HeroData
     // Attributes
 
     /// <summary>Base strength value.</summary>
-    public int fuerza = 0;
+    public int strength = 0;
     /// <summary>Base dexterity value.</summary>
-    public int destreza = 0;
+    public int dexterity = 0;
     /// <summary>Base armor value.</summary>
-    public int armadura = 0;
+    public int armor = 0;
     /// <summary>Base vitality value.</summary>
-    public int vitalidad = 0;
+    public int vitality = 0;
 
     // Unlocks and selections
 

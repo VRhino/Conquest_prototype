@@ -144,6 +144,9 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
             InventoryManager.Initialize(heroData);
         }
         
+        // Recalcular atributos para asegurar que incluyan los stats del equipamiento actual
+        DataCacheService.RecalculateAttributes(PlayerSessionService.SelectedHero);
+
         if (mainPanel != null)
         {
             mainPanel.SetActive(true);
