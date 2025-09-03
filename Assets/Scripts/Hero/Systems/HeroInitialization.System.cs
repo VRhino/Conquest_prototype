@@ -77,14 +77,19 @@ public partial class HeroInitializationSystem : SystemBase
                 if(classData == null) Debug.LogError($"[HeroInitializationSystem] No se encontró HeroClassDefinition para classId: {classId}");
             }
 
-            CalculatedAttributes calculatedAttributes =
-                DataCacheService.CalculateDerivedAttributes(
-                    classData,
-                    attributes.strength,
-                    attributes.dexterity,
-                    attributes.armor,
-                    attributes.vitality,
-                    0);
+            // Usar nueva arquitectura para cálculo de atributos
+            var baseStats = new HeroBaseStats
+            {
+                baseStrength = attributes.strength,
+                baseDexterity = attributes.dexterity,
+                baseArmor = attributes.armor,
+                baseVitality = attributes.vitality
+            };
+            
+            var equipmentBonuses = EquipmentBonuses.Empty; // ECS no maneja equipamiento inicialmente
+            var tempMods = EquipmentBonuses.Empty;
+            
+            var calculatedAttributes = HeroCalculatedAttributes.Calculate(baseStats, equipmentBonuses, tempMods, classData);
 
             var health = healthLookup[entity];
             health.maxHealth = calculatedAttributes.maxHealth;

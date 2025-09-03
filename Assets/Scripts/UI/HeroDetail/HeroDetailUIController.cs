@@ -145,7 +145,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         }
         
         // Recalcular atributos para asegurar que incluyan los stats del equipamiento actual
-        DataCacheService.RecalculateAttributes(PlayerSessionService.SelectedHero);
+        DataCacheService.CacheAttributes(PlayerSessionService.SelectedHero); // Usar método específico de cache
 
         if (mainPanel != null)
         {

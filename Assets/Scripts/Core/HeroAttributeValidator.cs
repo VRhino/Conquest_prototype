@@ -90,12 +90,10 @@ public static class HeroAttributeValidator
     /// <returns>True si tiene suficientes puntos, False si no</returns>
     public static bool HasEnoughPoints(HeroData heroData, int requiredPoints)
     {
-        if (heroData == null)
-            return false;
+        if (heroData == null) return false;
 
         // Solo validamos puntos positivos (incrementos)
-        if (requiredPoints <= 0)
-            return true;
+        if (requiredPoints <= 0) return true;
 
         // Obtener puntos disponibles considerando cambios temporales
         string heroId = GetHeroId(heroData);
@@ -126,6 +124,7 @@ public static class HeroAttributeValidator
 
     /// <summary>
     /// Valida si se puede incrementar un atributo en 1 punto.
+    /// CORREGIDO: Elimina el doble conteo de bonificaciones de equipamiento.
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
@@ -135,10 +134,9 @@ public static class HeroAttributeValidator
         if (heroData == null || string.IsNullOrEmpty(attributeName))
             return false;
 
-        // Obtener valor actual considerando cambios temporales
+        // CORREGIDO: Usar método claro para obtener valor final
         string heroId = GetHeroId(heroData);
-        float baseValue = GetCurrentAttributeValue(heroData, attributeName);
-        float currentValue = HeroTempAttributeService.GetTempAttributeValue(heroId, attributeName, baseValue);
+        float currentValue = HeroTempAttributeService.GetFinalAttributeValue(heroId, attributeName);
         float newValue = currentValue + 1f;
 
         bool canIncrement = CanModifyAttribute(heroData, attributeName, newValue, 1);
@@ -148,6 +146,7 @@ public static class HeroAttributeValidator
 
     /// <summary>
     /// Valida si se puede decrementar un atributo en 1 punto.
+    /// CORREGIDO: Elimina el doble conteo de bonificaciones de equipamiento.
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
@@ -157,54 +156,14 @@ public static class HeroAttributeValidator
         if (heroData == null || string.IsNullOrEmpty(attributeName))
             return false;
 
-        // Obtener valor actual considerando cambios temporales
+        // CORREGIDO: Usar método claro para obtener valor final
         string heroId = GetHeroId(heroData);
-        float baseValue = GetCurrentAttributeValue(heroData, attributeName);
-        float currentValue = HeroTempAttributeService.GetTempAttributeValue(heroId, attributeName, baseValue);
+        float currentValue = HeroTempAttributeService.GetFinalAttributeValue(heroId, attributeName);
         float newValue = currentValue - 1f;
 
         // Para decrementar, no necesitamos puntos adicionales, pero sí validar límites
         var limits = GetAttributeLimits(heroData, attributeName);
         return newValue >= limits.min;
-    }
-
-    /// <summary>
-    /// Obtiene el valor actual de un atributo específico del héroe.
-    /// </summary>
-    /// <param name="heroData">Datos del héroe</param>
-    /// <param name="attributeName">Nombre del atributo</param>
-    /// <returns>Valor actual del atributo</returns>
-    public static float GetCurrentAttributeValue(HeroData heroData, string attributeName)
-    {
-        if (heroData == null || string.IsNullOrEmpty(attributeName))
-            return 0f;
-
-        string heroId = GetHeroId(heroData);
-        CalculatedAttributes cached = GetCachedAttributes(heroId);
-
-        if (cached == null)
-        {
-            Debug.LogWarning($"[HeroAttributeValidator] No cached attributes found for hero: {heroId}");
-            return 0f;
-        }
-
-        switch (attributeName.ToLower())
-        {
-            case "strength":
-                return cached.strength;
-            case "dexterity":
-                return cached.dexterity;
-            case "armor":
-                return cached.armor;
-            case "vitality":
-                return cached.vitality;
-            case "leadership":
-                // El liderazgo se calcula, no se modifica directamente
-                return HeroLeadershipCalculator.CalculateLeadership(heroData);
-            default:
-                Debug.LogWarning($"[HeroAttributeValidator] Atributo no reconocido: {attributeName}");
-                return 0f;
-        }
     }
 
     /// <summary>
@@ -234,7 +193,6 @@ public static class HeroAttributeValidator
     {
         switch (attributeName.ToLower())
         {
-            case "liderazgo":
             case "leadership":
                 // El liderazgo no se puede modificar directamente
                 Debug.LogWarning("[HeroAttributeValidator] El liderazgo no se puede modificar directamente. Se calcula basado en equipamiento.");

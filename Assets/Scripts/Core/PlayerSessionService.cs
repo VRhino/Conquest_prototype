@@ -25,7 +25,7 @@ public static class PlayerSessionService
             return;
         }
         EquipmentManagerService.Initialize(hero);
-        DataCacheService.RecalculateAttributes(hero);
+        DataCacheService.CacheAttributes(hero); // Usar método específico de cache
 
         // Limpiar listeners del héroe anterior
         if (SelectedHero != null)

@@ -128,22 +128,16 @@ public class HeroDetailStatsPanel : MonoBehaviour
         // Actualizar puntos disponibles
         UpdateAvailablePointsDisplay();
         
-        // Usar atributos con cambios temporales si están disponibles
+        // Usar nueva arquitectura: obtener atributos calculados con modificaciones temporales
         var attributes = HeroTempAttributeService.HasTempChanges(heroId) 
-            ? HeroTempAttributeService.GetAttributesWithTempChanges(heroId)
-            : DataCacheService.GetCachedAttributes(heroId);
-        
-        if (attributes == null)
-        {
-            Debug.LogWarning($"[HeroDetailStatsPanel] No se pudieron obtener atributos para hero: {heroId}");
-            return;
-        }
+            ? DataCacheService.CalculateAttributes(_currentHeroData, HeroTempAttributeService.GetTempChangesAsEquipmentBonuses(heroId))
+            : DataCacheService.CalculateAttributes(_currentHeroData);
         
         UpdateStatDisplay("leadership", attributes.leadership, leadershipValueText, leadershipMoreButton, leadershipMinusButton, false);
-        UpdateStatDisplay("strength", attributes.strength, strengthValueText, strengthMoreButton, strengthMinusButton);
-        UpdateStatDisplay("dexterity", attributes.dexterity, agilityValueText, agilityMoreButton, agilityMinusButton);
-        UpdateStatDisplay("armor", attributes.armor, armorValueText, armorMoreButton, armorMinusButton);
-        UpdateStatDisplay("vitality", attributes.vitality, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
+        UpdateStatDisplay("strength", attributes.finalStrength, strengthValueText, strengthMoreButton, strengthMinusButton);
+        UpdateStatDisplay("dexterity", attributes.finalDexterity, agilityValueText, agilityMoreButton, agilityMinusButton);
+        UpdateStatDisplay("armor", attributes.finalArmor, armorValueText, armorMoreButton, armorMinusButton);
+        UpdateStatDisplay("vitality", attributes.finalVitality, toughnessValueText, toughnessMoreButton, toughnessMinusButton);
         
         // Actualizar visibilidad de botones Save/Cancel basado en si hay cambios temporales
         UpdateSaveCancelButtonsVisibility();
@@ -179,7 +173,7 @@ public class HeroDetailStatsPanel : MonoBehaviour
         ApplyTempChangesToHeroData();
         SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
         HeroTempAttributeService.ClearTempChanges(heroId);
-        DataCacheService.RecalculateAttributes(PlayerSessionService.SelectedHero);
+        DataCacheService.CacheAttributes(PlayerSessionService.SelectedHero); // Usar método específico para recalcular cache
         
         PopulateStats();
         UpdateSaveCancelButtonsVisibility();
@@ -274,17 +268,17 @@ public class HeroDetailStatsPanel : MonoBehaviour
         
         string heroId = GetHeroId(_currentHeroData);
         
-        // Obtener valor base y temporal
-        float baseValue = HeroAttributeValidator.GetCurrentAttributeValue(_currentHeroData, statName);
-        float tempValue = HeroTempAttributeService.GetTempAttributeValue(heroId, statName, baseValue);
+        // CORREGIDO: Usar nomenclatura clara
+        float baseWithEquipment = DataCacheService.GetBaseWithEquipment(_currentHeroData, statName);
+        float finalValue = HeroTempAttributeService.GetFinalAttributeValue(heroId, statName);
         
-        bool hasChanges = Mathf.Abs(tempValue - baseValue) > 0.01f;
+        bool hasChanges = Mathf.Abs(finalValue - baseWithEquipment) > 0.01f;
         
         // Actualizar texto con color
         if (hasChanges)
         {
             valueText.color = Color.green;
-            valueText.text = $"{tempValue:F0}";
+            valueText.text = $"{finalValue:F0}";
         }
         else
         {
@@ -357,10 +351,9 @@ public class HeroDetailStatsPanel : MonoBehaviour
         
         string heroId = GetHeroId(_currentHeroData);
         
-        // Obtener valor actual considerando cambios temporales
-        float currentValue = HeroAttributeValidator.GetCurrentAttributeValue(_currentHeroData, statName);
-        float currentTempValue = HeroTempAttributeService.GetTempAttributeValue(heroId, statName, currentValue);
-        float newValue = currentTempValue + change;
+        // CORREGIDO: Usar nomenclatura clara y eliminar doble conteo
+        float currentValue = HeroTempAttributeService.GetFinalAttributeValue(heroId, statName);
+        float newValue = currentValue + change;
         
         // Validar la modificación usando el validador
         if (!HeroAttributeValidator.CanModifyAttribute(_currentHeroData, statName, newValue, change))
@@ -406,27 +399,66 @@ public class HeroDetailStatsPanel : MonoBehaviour
 
     /// <summary>
     /// Aplica un cambio específico de atributo al HeroData.
+    /// FIXED: Solo modifica los stats base, no incluye bonificaciones de equipamiento.
     /// </summary>
     private void ApplyAttributeChangeToHeroData(string attributeName, float newValue)
     {
+        // CRITICAL FIX: newValue viene de modificaciones temporales que incluyen equipamiento
+        // Necesitamos calcular solo la diferencia sobre el valor base original
+        
+        float currentBaseValue = GetCurrentBaseValue(attributeName);
+        float equipmentBonus = GetEquipmentBonusForAttribute(attributeName);
+        
+        // El valor temporal incluye base + equipamiento + modificaciones
+        // Necesitamos extraer solo las modificaciones: newValue - (base + equipamiento)
+        float modificationOnly = newValue - (currentBaseValue + equipmentBonus);
+        float newBaseValue = currentBaseValue + modificationOnly;
+        
         switch (attributeName.ToLower())
         {
             case "strength":
-                _currentHeroData.strength = (int)newValue;
+                _currentHeroData.strength = Mathf.RoundToInt(newBaseValue);
                 break;
             case "dexterity":
-                _currentHeroData.dexterity = (int)newValue;
+                _currentHeroData.dexterity = Mathf.RoundToInt(newBaseValue);
                 break;
             case "armor":
-                _currentHeroData.armor = (int)newValue;
+                _currentHeroData.armor = Mathf.RoundToInt(newBaseValue);
                 break;
             case "vitality":
-                _currentHeroData.vitality = (int)newValue;
+                _currentHeroData.vitality = Mathf.RoundToInt(newBaseValue);
                 break;
             default:
                 Debug.LogWarning($"[HeroDetailStatsPanel] Atributo no reconocido para persistir: {attributeName}");
                 break;
         }
+        
+        Debug.Log($"[HeroDetailStatsPanel] FIXED - {attributeName}: base {currentBaseValue} + equipment {equipmentBonus} + mod {modificationOnly} = new base {newBaseValue}");
+    }
+
+    /// <summary>
+    /// Obtiene el valor base actual de un atributo sin bonificaciones.
+    /// </summary>
+    private float GetCurrentBaseValue(string attributeName)
+    {
+        switch (attributeName.ToLower())
+        {
+            case "strength": return _currentHeroData.strength;
+            case "dexterity": return _currentHeroData.dexterity;
+            case "armor": return _currentHeroData.armor;
+            case "vitality": return _currentHeroData.vitality;
+            default: return 0f;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene la bonificación de equipamiento para un atributo específico.
+    /// </summary>
+    private float GetEquipmentBonusForAttribute(string attributeName)
+    {
+        var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats();
+        string capitalizedName = char.ToUpper(attributeName[0]) + attributeName.Substring(1).ToLower();
+        return equipmentStats.ContainsKey(capitalizedName) ? equipmentStats[capitalizedName] : 0f;
     }
     /// <summary>
     /// Obtiene el ID único del héroe para operaciones de cache y servicios.

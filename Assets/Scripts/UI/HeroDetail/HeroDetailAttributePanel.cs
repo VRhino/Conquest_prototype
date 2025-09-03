@@ -102,19 +102,11 @@ public class HeroDetailAttributePanel : MonoBehaviour
         
         string heroId = GetHeroId(_currentHeroData);
         
-        // Obtener valores base (sin cambios temporales)
-        var baseAttributes = DataCacheService.GetCachedAttributes(heroId);
-        
-        // Obtener valores con cambios temporales si existen
+        // Usar nueva arquitectura: obtener atributos base y con modificaciones temporales
+        var baseAttributes = DataCacheService.CalculateAttributes(_currentHeroData);
         var currentAttributes = HeroTempAttributeService.HasTempChanges(heroId)
-            ? HeroTempAttributeService.GetAttributesWithTempChanges(heroId)
+            ? DataCacheService.CalculateAttributes(_currentHeroData, HeroTempAttributeService.GetTempChangesAsEquipmentBonuses(heroId))
             : baseAttributes;
-
-        if (baseAttributes == null || currentAttributes == null)
-        {
-            Debug.LogWarning($"[HeroDetailAttributePanel] No se pudieron obtener atributos para hero: {heroId}");
-            return;
-        }
         
         // Actualizar valores usando el formato "base+cambio"
         FormatAttributeValueWithChange(baseAttributes.maxHealth, currentAttributes.maxHealth, healthText, 0);

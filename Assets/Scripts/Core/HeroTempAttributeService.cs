@@ -6,6 +6,7 @@ using UnityEngine;
 /// Servicio para manejar modificaciones temporales de atributos del héroe.
 /// Mantiene un cache temporal superpuesto sobre el cache principal de DataCacheService.
 /// Permite modificar atributos sin alterar los datos persistidos hasta que se confirmen los cambios.
+/// REFACTORED: Usa nueva arquitectura de separación base/calculado/temporal.
 /// </summary>
 public static class HeroTempAttributeService
 {
@@ -19,7 +20,7 @@ public static class HeroTempAttributeService
     /// Aplica una modificación temporal a un atributo específico del héroe.
     /// </summary>
     /// <param name="heroId">ID del héroe</param>
-    /// <param name="attributeName">Nombre del atributo (ej: "fuerza", "destreza")</param>
+    /// <param name="attributeName">Nombre del atributo (ej: "strength", "dexterity")</param>
     /// <param name="newValue">Nuevo valor temporal</param>
     public static void ApplyTempChange(string heroId, string attributeName, float newValue)
     {
@@ -29,69 +30,80 @@ public static class HeroTempAttributeService
             return;
         }
 
-        if (!_tempChanges.ContainsKey(heroId))
-        {
-            _tempChanges[heroId] = new Dictionary<string, float>();
-        }
+        if (!_tempChanges.ContainsKey(heroId)) _tempChanges[heroId] = new Dictionary<string, float>();
         
         _tempChanges[heroId][attributeName] = newValue;
     }
 
     /// <summary>
     /// Obtiene los atributos calculados con las modificaciones temporales aplicadas.
-    /// Si no hay modificaciones temporales, retorna los atributos del cache normal.
+    /// Usa la nueva arquitectura de separación base/calculado/temporal.
     /// </summary>
     /// <param name="heroId">ID del héroe</param>
-    /// <returns>CalculatedAttributes con modificaciones temporales aplicadas</returns>
-    public static CalculatedAttributes GetAttributesWithTempChanges(string heroId)
+    /// <returns>HeroCalculatedAttributes con modificaciones temporales aplicadas</returns>
+    public static HeroCalculatedAttributes GetAttributesWithTempChanges(string heroId)
     {
-        var baseAttributes = DataCacheService.GetCachedAttributes(heroId);
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData == null || heroData.heroName != heroId)
+        {
+            Debug.LogWarning($"[HeroTempAttributeService] No se encontró hero data para: {heroId}");
+            return HeroCalculatedAttributes.Empty;
+        }
+
+        // Si no hay cambios temporales, usar cálculo normal
+        if (!HasTempChanges(heroId)) return DataCacheService.GetHeroCalculatedAttributes(heroId);
+
+        // Convertir cambios temporales a EquipmentBonuses para la nueva arquitectura
+        var tempMods = GetTempChangesAsEquipmentBonuses(heroId);
         
-        if (baseAttributes == null)
+        return DataCacheService.CalculateAttributes(heroData, tempMods);
+    }
+
+    /// <summary>
+    /// Convierte las modificaciones temporales a formato EquipmentBonuses.
+    /// CORREGIDO: Ahora calcula correctamente la diferencia entre temporal y (base + equipamiento).
+    /// </summary>
+    /// <param name="heroId">ID del héroe</param>
+    /// <returns>Modificaciones temporales en formato de bonificaciones</returns>
+    public static EquipmentBonuses GetTempChangesAsEquipmentBonuses(string heroId)
+    {
+        if (!_tempChanges.ContainsKey(heroId))
         {
-            Debug.LogWarning($"[HeroTempAttributeService] No se encontraron atributos base para hero: {heroId}");
-            return null;
+            return EquipmentBonuses.Empty;
         }
 
-        // Si no hay cambios temporales, devolver atributos base
-        if (!_tempChanges.ContainsKey(heroId) || _tempChanges[heroId].Count == 0)
+        var changes = _tempChanges[heroId];
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData == null) return EquipmentBonuses.Empty;
+
+        // CORREGIDO: Calcular diferencias entre valores temporales y valores con equipamiento
+        var result = new EquipmentBonuses();
+        
+        if (changes.ContainsKey("strength"))
         {
-            return baseAttributes;
+            var baseWithEquipment = DataCacheService.GetBaseWithEquipment(heroData, "strength");
+            result.strengthBonus = (int)(changes["strength"] - baseWithEquipment);
+        }
+            
+        if (changes.ContainsKey("dexterity"))
+        {
+            var baseWithEquipment = DataCacheService.GetBaseWithEquipment(heroData, "dexterity");
+            result.dexterityBonus = (int)(changes["dexterity"] - baseWithEquipment);
+        }
+            
+        if (changes.ContainsKey("armor"))
+        {
+            var baseWithEquipment = DataCacheService.GetBaseWithEquipment(heroData, "armor");
+            result.armorBonus = (int)(changes["armor"] - baseWithEquipment);
+        }
+            
+        if (changes.ContainsKey("vitality"))
+        {
+            var baseWithEquipment = DataCacheService.GetBaseWithEquipment(heroData, "vitality");
+            result.vitalityBonus = (int)(changes["vitality"] - baseWithEquipment);
         }
 
-        // Crear una copia de los atributos base y aplicar cambios temporales
-        var modifiedAttributes = new CalculatedAttributes
-        {
-            maxHealth = baseAttributes.maxHealth,
-            stamina = baseAttributes.stamina,
-            strength = baseAttributes.strength,
-            dexterity = baseAttributes.dexterity,
-            vitality = baseAttributes.vitality,
-            armor = baseAttributes.armor,
-            bluntDamage = baseAttributes.bluntDamage,
-            slashingDamage = baseAttributes.slashingDamage,
-            piercingDamage = baseAttributes.piercingDamage,
-            bluntDefense = baseAttributes.bluntDefense,
-            slashDefense = baseAttributes.slashDefense,
-            pierceDefense = baseAttributes.pierceDefense,
-            bluntPenetration = baseAttributes.bluntPenetration,
-            slashPenetration = baseAttributes.slashPenetration,
-            piercePenetration = baseAttributes.piercePenetration,
-            blockPower = baseAttributes.blockPower,
-            movementSpeed = baseAttributes.movementSpeed,
-            leadership = baseAttributes.leadership
-        };
-
-        // Aplicar modificaciones temporales a atributos base
-        var heroChanges = _tempChanges[heroId];
-        foreach (var change in heroChanges)
-        {
-            ApplyTempChangeToCalculatedAttributes(modifiedAttributes, change.Key, change.Value);
-        }
-        // Recalcular atributos derivados basados en los nuevos valores base
-        RecalculateDerivedAttributes(modifiedAttributes, heroId);
-
-        return modifiedAttributes;
+        return result;
     }
 
     /// <summary>
@@ -115,7 +127,6 @@ public static class HeroTempAttributeService
     {
         if (string.IsNullOrEmpty(heroId) || !_tempChanges.ContainsKey(heroId))
             return null;
-
         return new Dictionary<string, float>(_tempChanges[heroId]);
     }
 
@@ -125,151 +136,97 @@ public static class HeroTempAttributeService
     /// <param name="heroId">ID del héroe</param>
     public static void ClearTempChanges(string heroId)
     {
-        if (string.IsNullOrEmpty(heroId))
-            return;
-
-        if (_tempChanges.ContainsKey(heroId))
+        if (!string.IsNullOrEmpty(heroId) && _tempChanges.ContainsKey(heroId))
         {
             _tempChanges[heroId].Clear();
         }
     }
 
     /// <summary>
-    /// Obtiene el valor temporal de un atributo específico, o el valor original si no hay cambio temporal.
+    /// Obtiene el valor final de un atributo considerando modificaciones temporales.
+    /// CORREGIDO: Usa la nueva nomenclatura clara para evitar confusión.
     /// </summary>
     /// <param name="heroId">ID del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
-    /// <param name="originalValue">Valor original del atributo</param>
-    /// <returns>Valor temporal si existe, valor original si no</returns>
-    public static float GetTempAttributeValue(string heroId, string attributeName, float originalValue)
+    /// <returns>Valor con temporales aplicadas, o valor base+equipamiento si no hay temporales</returns>
+    public static float GetFinalAttributeValue(string heroId, string attributeName)
     {
-        if (string.IsNullOrEmpty(heroId) || string.IsNullOrEmpty(attributeName))
-            return originalValue;
+        var heroData = PlayerSessionService.SelectedHero;
+        if (heroData == null) return 0f;
 
-        if (_tempChanges.ContainsKey(heroId) && _tempChanges[heroId].ContainsKey(attributeName))
-        {
-            return _tempChanges[heroId][attributeName];
-        }
-
-        return originalValue;
+        if (!HasTempChanges(heroId))
+            return DataCacheService.GetBaseWithEquipment(heroData, attributeName);
+            
+        var changes = _tempChanges[heroId];
+        if (changes.ContainsKey(attributeName))
+            return changes[attributeName];
+            
+        return DataCacheService.GetBaseWithEquipment(heroData, attributeName);
     }
 
     /// <summary>
-    /// Aplica un cambio temporal específico a un objeto CalculatedAttributes.
+    /// OBSOLETO: Usar GetFinalAttributeValue en su lugar.
+    /// Mantiene compatibilidad temporal con código legacy.
     /// </summary>
-    private static void ApplyTempChangeToCalculatedAttributes(CalculatedAttributes attributes, string attributeName, float newValue)
+    [System.Obsolete("Usar GetFinalAttributeValue para mayor claridad", false)]
+    public static float GetTempAttributeValue(string heroId, string attributeName, float originalValue)
+    {
+        return GetFinalAttributeValue(heroId, attributeName);
+    }
+
+    /// <summary>
+    /// Calcula la cantidad de puntos de atributo usados en modificaciones temporales.
+    /// </summary>
+    /// <param name="heroId">ID del héroe</param>
+    /// <param name="heroData">Datos base del héroe</param>
+    /// <returns>Puntos usados en modificaciones temporales</returns>
+    public static int CalculateUsedTempPoints(string heroId, HeroData heroData)
+    {
+        if (!HasTempChanges(heroId) || heroData == null) return 0;
+
+        var changes = _tempChanges[heroId];
+        int usedPoints = 0;
+
+        foreach (var change in changes)
+        {
+            float BaseAndEquipment = DataCacheService.GetBaseWithEquipment(heroData, change.Key);
+            float tempValue = change.Value;
+            int difference = Mathf.RoundToInt(tempValue - BaseAndEquipment);
+            if (difference > 0) usedPoints += difference;
+        }
+
+        return usedPoints;
+    }
+
+    /// <summary>
+    /// Obtiene el valor original de un atributo desde HeroData.
+    /// </summary>
+    /// <param name="heroData">Datos del héroe</param>
+    /// <param name="attributeName">Nombre del atributo</param>
+    /// <returns>Valor original del atributo</returns>
+    private static float GetOriginalValue(HeroData heroData, string attributeName)
     {
         switch (attributeName.ToLower())
         {
-            case "strength":
-                attributes.strength = newValue;
-                break;
-            case "dexterity":
-                attributes.dexterity = newValue;
-                break;
-            case "armor":
-                attributes.armor = newValue;
-                break;
-            case "vitality":
-                attributes.vitality = newValue;
-                break;
-            case "leadership":
-                attributes.leadership = newValue;
-                break;
-            default:
-                Debug.LogWarning($"[HeroTempAttributeService] Atributo no reconocido para modificación temporal: {attributeName}");
-                break;
+            case "strength": return heroData.strength;
+            case "dexterity": return heroData.dexterity;
+            case "armor": return heroData.armor;
+            case "vitality": return heroData.vitality;
+            default: return 0f;
         }
     }
 
     /// <summary>
-    /// Recalcula los atributos derivados basados en los atributos base modificados temporalmente.
-    /// Utiliza la función centralizada de DataCacheService para mantener consistencia total.
-    /// </summary>
-    private static void RecalculateDerivedAttributes(CalculatedAttributes attributes, string heroId)
-    {
-        // Obtener la definición de clase del héroe
-        var heroData = PlayerSessionService.SelectedHero;
-        if (heroData == null)
-        {
-            Debug.LogWarning($"[HeroTempAttributeService] No se pudo obtener datos del héroe para {heroId}");
-            return;
-        }
-
-        var classData = HeroClassManager.GetClassDefinition(heroData.classId);
-        if (classData == null)
-        {
-            Debug.LogWarning($"[HeroTempAttributeService] No se pudo obtener definición de clase para {heroData.classId}");
-            return;
-        }
-
-        // Usar la función centralizada de DataCacheService para calcular atributos derivados
-        var calculatedResults = DataCacheService.CalculateDerivedAttributes(classData, 
-            attributes.strength, attributes.dexterity, attributes.armor, attributes.vitality, attributes.leadership);
-
-        // Aplicar los resultados calculados a nuestro objeto attributes
-        attributes.maxHealth = calculatedResults.maxHealth;
-        attributes.stamina = calculatedResults.stamina;
-        // Atributos de daño
-        attributes.bluntDamage = calculatedResults.bluntDamage;
-        attributes.slashingDamage = calculatedResults.slashingDamage;
-        attributes.piercingDamage = calculatedResults.piercingDamage;
-        // Atributos de penetración
-        attributes.bluntPenetration = calculatedResults.bluntPenetration;
-        attributes.slashPenetration = calculatedResults.slashPenetration;
-        attributes.piercePenetration = calculatedResults.piercePenetration;
-        // Atributos de defensa
-        attributes.bluntDefense = calculatedResults.bluntDefense;
-        attributes.slashDefense = calculatedResults.slashDefense;
-        attributes.pierceDefense = calculatedResults.pierceDefense;
-        attributes.blockPower = calculatedResults.blockPower;
-        attributes.movementSpeed = calculatedResults.movementSpeed;
-    }
-
-    /// <summary>
-    /// Calcula cuántos puntos de atributo se han usado en los cambios temporales.
-    /// </summary>
-    /// <param name="heroId">ID del héroe</param>
-    /// <param name="heroData">Datos del héroe para obtener valores base</param>
-    /// <returns>Número total de puntos usados temporalmente</returns>
-    public static int CalculateUsedTempPoints(string heroId, HeroData heroData)
-    {
-        if (string.IsNullOrEmpty(heroId) || heroData == null || !_tempChanges.ContainsKey(heroId))
-        {
-            return 0;
-        }
-
-        int totalUsedPoints = 0;
-        var heroChanges = _tempChanges[heroId];
-
-        foreach (var change in heroChanges)
-        {
-            float baseValue = HeroAttributeValidator.GetCurrentAttributeValue(heroData, change.Key);
-            float tempValue = change.Value;
-            int pointsUsed = Mathf.RoundToInt(tempValue - baseValue);
-            
-            // Solo contamos puntos positivos (incrementos)
-            if (pointsUsed > 0)
-                totalUsedPoints += pointsUsed;
-        }
-
-        return totalUsedPoints;
-    }
-
-    /// <summary>
-    /// Calcula cuántos puntos de atributo están disponibles considerando cambios temporales.
+    /// Calcula los puntos de atributo disponibles para un héroe considerando modificaciones temporales.
     /// </summary>
     /// <param name="heroId">ID del héroe</param>
     /// <param name="heroData">Datos del héroe</param>
-    /// <returns>Puntos disponibles después de considerar cambios temporales</returns>
+    /// <returns>Puntos disponibles después de modificaciones temporales</returns>
     public static int GetAvailablePoints(string heroId, HeroData heroData)
     {
-        if (heroData == null)
-            return 0;
-
-        int usedTempPoints = CalculateUsedTempPoints(heroId, heroData);
-        int available = Mathf.Max(0, heroData.attributePoints - usedTempPoints);
+        if (heroData == null) return 0;
         
-        return available;
+        int usedTempPoints = CalculateUsedTempPoints(heroId, heroData);
+        return heroData.attributePoints - usedTempPoints;
     }
 }

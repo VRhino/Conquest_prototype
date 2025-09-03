@@ -10,7 +10,7 @@ using UnityEngine;
 public static class DataCacheService
 {
     // Cache of calculated attributes by hero identifier.
-    static readonly Dictionary<string, CalculatedAttributes> _attributeCache = new();
+    static readonly Dictionary<string, HeroCalculatedAttributes> _attributeCache = new();
 
     // Cache of unlocked formation IDs per squad instance.
     static readonly Dictionary<string, List<string>> _formationCache = new();
@@ -44,31 +44,41 @@ public static class DataCacheService
     }
 
     /// <summary>
-    /// Calculates and stores the derived attributes for the given hero.
+    /// Calculates and stores the derived attributes for the given hero using new architecture.
     /// </summary>
     /// <param name="heroData">Hero progression data.</param>
     public static void CacheAttributes(HeroData heroData)
     {
         if (heroData == null) return;
 
-        var calculated = CalculateAttributes(heroData);
+        // Use new architecture for calculation - NO MORE LEGACY CONVERSION
+        var newAttributes = CalculateAttributes(heroData);
+        
         string key = GetHeroKey(heroData);
-        _attributeCache[key] = calculated;
+        _attributeCache[key] = newAttributes;
 
         // Disparar evento de actualización
         OnHeroCacheUpdated?.Invoke(key);
     }
 
+    // Helper method for generating hero keys
+    private static string GetHeroKey(HeroData heroData)
+    {
+        return string.IsNullOrEmpty(heroData.heroName) ? heroData.classId : heroData.heroName;
+    }
+
     /// <summary>
-    /// Retrieves previously cached attributes for a hero.
+    /// Retrieves previously cached hero calculated attributes.
     /// </summary>
     /// <param name="heroId">Unique identifier or name of the hero.</param>
-    public static CalculatedAttributes GetCachedAttributes(string heroId)
+    /// <returns>HeroCalculatedAttributes or Empty if not found</returns>
+    public static HeroCalculatedAttributes GetHeroCalculatedAttributes(string heroId)
     {
         if (string.IsNullOrEmpty(heroId))
-            return null;
+            return HeroCalculatedAttributes.Empty;
+            
         _attributeCache.TryGetValue(heroId, out var attributes);
-        return attributes;
+        return attributes; // Returns Empty if not found due to struct behavior
     }
 
     /// <summary>
@@ -113,101 +123,143 @@ public static class DataCacheService
         return list;
     }
 
-    // Recalcula los atributos cacheados para todos los héroes del jugador.
-    public static void RecalculateAttributes(HeroData hero)
-    {
-        Clear();
-        if (hero == null) return;
-        CacheAttributes(hero);
-        
-    }
+    #region Attribute Calculation System
 
-    // Helper --------------------------------------------------------------
-
-    // Generates a unique key for the hero based on available data.
-    static string GetHeroKey(HeroData heroData)
+    /// <summary>
+    /// Extrae los stats base de un HeroData sin modificaciones.
+    /// </summary>
+    /// <param name="heroData">Datos del héroe</param>
+    /// <returns>Estructura con los stats base puros</returns>
+    public static HeroBaseStats GetBaseStats(HeroData heroData)
     {
-        // If the project later introduces an explicit ID use it here.
-        return string.IsNullOrEmpty(heroData.heroName) ? heroData.classId : heroData.heroName;
+        return HeroBaseStats.FromHeroData(heroData);
     }
 
     /// <summary>
-    /// Performs the actual attribute calculations using formulas from the GDD.
-    /// Public method that can be used by other services for consistent calculations.
+    /// Calcula las bonificaciones de equipamiento actuales.
     /// </summary>
-    public static CalculatedAttributes CalculateAttributes(HeroData hero)
+    /// <returns>Estructura con bonificaciones de equipamiento</returns>
+    public static EquipmentBonuses GetEquipmentBonuses()
     {
-        // Get class definition for constants
-        var classData = HeroClassManager.GetClassDefinition(hero.classId);
-        if (classData == null) Debug.LogWarning($"[DataCacheService] No class definition found for {hero.classId}, using defaults");
-
-        // Get equipment stats bonuses
         var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats();
-        // Primary attributes with equipment bonuses
-        float strength = hero.strength + (equipmentStats.ContainsKey("Strength") ? equipmentStats["Strength"] : 0);
-        float dexterity = hero.dexterity + (equipmentStats.ContainsKey("Dexterity") ? equipmentStats["Dexterity"] : 0);
-        float armor = hero.armor + (equipmentStats.ContainsKey("Armor") ? equipmentStats["Armor"] : 0);
-        float vitality = hero.vitality + (equipmentStats.ContainsKey("Vitality") ? equipmentStats["Vitality"] : 0);
-
-        return CalculateDerivedAttributes(classData, strength, dexterity, armor, vitality, HeroLeadershipCalculator.CalculateLeadership(hero));
+        
+        return new EquipmentBonuses
+        {
+            strengthBonus = equipmentStats.ContainsKey("Strength") ? (int)equipmentStats["Strength"] : 0,
+            dexterityBonus = equipmentStats.ContainsKey("Dexterity") ? (int)equipmentStats["Dexterity"] : 0,
+            armorBonus = equipmentStats.ContainsKey("Armor") ? (int)equipmentStats["Armor"] : 0,
+            vitalityBonus = equipmentStats.ContainsKey("Vitality") ? (int)equipmentStats["Vitality"] : 0
+        };
     }
 
     /// <summary>
-    /// Sobrecarga para calcular atributos derivados usando valores específicos de atributos base.
-    /// Útil para HeroTempAttributeService cuando se calculan modificaciones temporales.
+    /// Calcula los atributos finales usando la nueva arquitectura separada.
     /// </summary>
-    /// <param name="classData">Definición de clase del héroe</param>
-    /// <param name="strength">Valor de fuerza (con modificaciones temporales aplicadas)</param>
-    /// <param name="dexterity">Valor de destreza (con modificaciones temporales aplicadas)</param>
-    /// <param name="armor">Valor de armadura (con modificaciones temporales aplicadas)</param>
-    /// <param name="vitality">Valor de vitalidad (con modificaciones temporales aplicadas)</param>
-    /// <param name="leadership">Valor de liderazgo (con modificaciones temporales aplicadas)</param>
-    /// <returns>CalculatedAttributes con valores derivados calculados</returns>
-    public static CalculatedAttributes CalculateDerivedAttributes(HeroClassDefinition classData,
-        float strength, float dexterity, float armor, float vitality, float leadership)
+    /// <param name="heroData">Datos base del héroe</param>
+    /// <param name="temporaryMods">Modificaciones temporales (opcional)</param>
+    /// <returns>Atributos completamente calculados</returns>
+    public static HeroCalculatedAttributes CalculateAttributes(HeroData heroData, EquipmentBonuses temporaryMods = default)
     {
-        var result = new CalculatedAttributes();
+        if (heroData == null) return HeroCalculatedAttributes.Empty;
 
-        if (classData == null)
+        var baseStats = GetBaseStats(heroData);
+        var equipmentBonuses = GetEquipmentBonuses();
+        var classDefinition = HeroClassManager.GetClassDefinition(heroData.classId);
+
+        return HeroCalculatedAttributes.Calculate(baseStats, equipmentBonuses, temporaryMods, classDefinition);
+    }
+
+    #region Clear Naming Methods for Attribute Values
+
+    /// <summary>
+    /// Obtiene el valor base puro (solo HeroData) de un atributo específico.
+    /// </summary>
+    /// <param name="heroData">Datos del héroe</param>
+    /// <param name="attributeName">Nombre del atributo</param>
+    /// <returns>Valor base puro sin modificaciones</returns>
+    public static float GetPureBaseValue(HeroData heroData, string attributeName)
+    {
+        if (heroData == null || string.IsNullOrEmpty(attributeName))
+            return 0f;
+
+        switch (attributeName.ToLower())
         {
-            Debug.LogWarning("[DataCacheService] No class definition provided for derived calculations");
-            return result;
+            case "strength": return heroData.strength;
+            case "dexterity": return heroData.dexterity;
+            case "armor": return heroData.armor;
+            case "vitality": return heroData.vitality;
+            default:
+                Debug.LogWarning($"[DataCacheService] Atributo no reconocido: {attributeName}");
+                return 0f;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene la bonificación de equipamiento para un atributo específico.
+    /// </summary>
+    /// <param name="heroData">Datos del héroe</param>
+    /// <param name="attributeName">Nombre del atributo</param>
+    /// <returns>Bonificación del equipamiento</returns>
+    public static float GetEquipmentBonusValue(HeroData heroData, string attributeName)
+    {
+        if (heroData == null || string.IsNullOrEmpty(attributeName))
+            return 0f;
+
+        var equipmentBonuses = GetEquipmentBonuses();
+        
+        switch (attributeName.ToLower())
+        {
+            case "strength": return equipmentBonuses.strengthBonus;
+            case "dexterity": return equipmentBonuses.dexterityBonus;
+            case "armor": return equipmentBonuses.armorBonus;
+            case "vitality": return equipmentBonuses.vitalityBonus;
+            default:
+                Debug.LogWarning($"[DataCacheService] Atributo no reconocido: {attributeName}");
+                return 0f;
+        }
+    }
+
+    /// <summary>
+    /// Obtiene el valor que se muestra normalmente en UI (Base + Equipamiento).
+    /// Este es el valor que el usuario ve antes de hacer modificaciones temporales.
+    /// </summary>
+    /// <param name="heroData">Datos del héroe</param>
+    /// <param name="attributeName">Nombre del atributo</param>
+    /// <returns>Base + Equipamiento</returns>
+    public static float GetBaseWithEquipment(HeroData heroData, string attributeName)
+    {
+        return GetPureBaseValue(heroData, attributeName) + GetEquipmentBonusValue(heroData, attributeName);
+    }
+
+    /// <summary>
+    /// Obtiene el valor final calculado incluyendo todas las modificaciones temporales.
+    /// Este es el valor que se muestra cuando hay cambios temporales activos.
+    /// </summary>
+    /// <param name="heroData">Datos del héroe</param>
+    /// <param name="attributeName">Nombre del atributo</param>
+    /// <param name="temporaryMods">Modificaciones temporales</param>
+    /// <returns>Base + Equipamiento + Temporales</returns>
+    public static float GetFinalCalculatedValue(HeroData heroData, string attributeName, EquipmentBonuses temporaryMods = default)
+    {
+        var baseWithEquipment = GetBaseWithEquipment(heroData, attributeName);
+        
+        if (!temporaryMods.HasBonuses)
+            return baseWithEquipment;
+
+        float temporaryBonus = 0f;
+        switch (attributeName.ToLower())
+        {
+            case "strength": temporaryBonus = temporaryMods.strengthBonus; break;
+            case "dexterity": temporaryBonus = temporaryMods.dexterityBonus; break;
+            case "armor": temporaryBonus = temporaryMods.armorBonus; break;
+            case "vitality": temporaryBonus = temporaryMods.vitalityBonus; break;
         }
 
-        // Base values from class definition
-        float baseHealth = classData.baseHealth;
-        float baseStamina = classData.baseStamina;
-        float baseDamage = classData.baseDamage;
-        float baseArmor = classData.baseArmorValue;
-
-        // Set primary attributes
-        result.strength = strength;
-        result.dexterity = dexterity;
-        result.vitality = vitality;
-        result.armor = armor;
-        result.leadership = leadership;
-
-        // Calculate derived stats using the same formulas
-        result.maxHealth = baseHealth + (classData.healthPerVitality * vitality);
-        result.stamina = baseStamina + (classData.staminaPerDexterity * dexterity);
-
-        result.bluntDamage = baseDamage + (classData.bluntDamageMultiplierByStr * strength);
-        result.slashingDamage = baseDamage + (classData.slashingDamageMultiplierByStr * strength + classData.slashingDamageMultiplierByDex * dexterity);
-        result.piercingDamage = baseDamage + (classData.piercingDamageMultiplierByDex * dexterity);
-
-        result.bluntDefense = baseArmor + (armor * classData.bluntDefenseMultiplierByArmor);
-        result.slashDefense = baseArmor + (armor * classData.slashingDefenseMultiplierByArmor);
-        result.pierceDefense = baseArmor + (armor * classData.piercingDefenseMultiplierByArmor);
-
-        result.bluntPenetration = strength * classData.bluntPenetrationMultiplierByStr;
-        result.slashPenetration = (strength * classData.slashingPenetrationMultiplierByStr) + (dexterity * classData.slashingPenetrationMultiplierByDex);
-        result.piercePenetration = dexterity * classData.piercingPenetrationMultiplierByDex;
-
-        result.blockPower = strength * classData.blockPowerMultiplierByStr;
-        result.movementSpeed = classData.movementSpeedBase + dexterity * classData.movementSpeedDexMultiplier;
-
-        return result;
+        return baseWithEquipment + temporaryBonus;
     }
+
+    #endregion
+    #endregion
 
     #region Equipment Event Listeners
 
