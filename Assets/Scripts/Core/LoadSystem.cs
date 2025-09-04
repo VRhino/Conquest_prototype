@@ -32,4 +32,21 @@ public static class LoadSystem
             return null;
         }
     }
+
+    public static HeroData LoadHeroForTesting()
+    {
+        var playerData = LoadPlayer();
+        if (playerData == null)
+        {
+            Debug.LogError("No player data available to load hero.");
+            return null;
+        }
+        var hero = playerData.heroes[0]; // Cargar el primer héroe para pruebas
+        if (hero == null)
+        {
+            Debug.LogError("No hero data found in player data.");
+            return null;
+        }
+        return hero;
+    }
 }

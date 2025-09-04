@@ -380,6 +380,11 @@ public static class DataCacheService
         
         CacheAttributes(currentHero);
     }
+    public static float getHeroLeadership(string heroName)
+    {
+       HeroCalculatedAttributes attributes = GetHeroCalculatedAttributes(heroName);
+       return attributes.leadership;
+    }
 
     #endregion
 
@@ -391,7 +396,7 @@ public static class DataCacheService
     private static class MonoBehaviourHelper
     {
         private static MonoBehaviour _instance;
-        
+
         private static MonoBehaviour Instance
         {
             get
@@ -405,12 +410,12 @@ public static class DataCacheService
                 return _instance;
             }
         }
-        
+
         public static Coroutine StartCoroutine(IEnumerator routine)
         {
             return Instance.StartCoroutine(routine);
         }
-        
+
         public static void StopCoroutineIfRunning(Coroutine coroutine)
         {
             if (coroutine != null && Instance != null)

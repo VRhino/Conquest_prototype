@@ -35,22 +35,17 @@ public class SquadSelectionPanel : MonoBehaviour
         foreach (Transform child in squadOptionsContainer)
             Destroy(child.gameObject);
 
-        // Cargar la base de datos desde Resources/Data/Squads/SquadDatabase
-        var squadDatabase = Resources.Load<SquadDatabase>("Data/Squads/SquadDatabase");
-        if (squadDatabase == null || heroData == null)
+        if (heroData == null)
         {
-            Debug.LogWarning("[SquadSelectionPanel] Falta SquadDatabase o HeroData");
+            Debug.LogWarning("[SquadSelectionPanel] HeroData es null");
             return;
         }
-        // Mostrar solo los escuadrones disponibles para el héroe Y del tipo solicitado
-        foreach (string squadId in heroData.availableSquads)
+        
+        // Obtener squads disponibles para el héroe filtrados por tipo
+        var availableSquads = SquadDataService.GetSquadsForHero(heroData.availableSquads, filterType);
+        
+        foreach (var squadData in availableSquads)
         {
-            var squadData = squadDatabase.allSquads.Find(sq => sq != null && sq.id == squadId && sq.unitType == filterType);
-            if (squadData == null)
-            {
-                // No warning, simplemente no mostrar si no es del tipo
-                continue;
-            }
             var optionGO = Instantiate(squadOptionPrefab, squadOptionsContainer);
             var optionUI = optionGO.GetComponent<SquadOptionUI>();
             if (optionUI != null)

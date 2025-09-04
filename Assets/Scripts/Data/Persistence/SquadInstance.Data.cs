@@ -49,4 +49,6 @@ public class SquadInstanceData
     public int equipmentLost = 0;
     /// <summary>Number of units currently in this squad.</summary>
     public int unitsInSquad = 0;
+
+    public int unitsAlive => unitsInSquad - unitsInjured - unitsKilled;
 }

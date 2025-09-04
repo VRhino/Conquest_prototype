@@ -73,18 +73,10 @@ public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
         if (distanceListContainer != null)
             foreach (Transform c in distanceListContainer) Destroy(c.gameObject);
 
-        // Cargar la base de datos de escuadrones
-        var squadDatabase = Resources.Load<SquadDatabase>("Data/Squads/SquadDatabase");
-        if (squadDatabase == null)
-        {
-            Debug.LogWarning("[BarracksMenuUIController] No se pudo cargar SquadDatabase");
-            return;
-        }
-
         // Mostrar los escuadrones del héroe en cada lista según unitType
         foreach (var squadInstance in heroData.squadProgress)
         {
-            var squadData = squadDatabase.allSquads.Find(sq => sq != null && sq.id == squadInstance.baseSquadID);
+            var squadData = SquadDataService.GetSquadById(squadInstance.baseSquadID);
             if (squadData == null) continue;
             Transform targetList = null;
             switch (squadData.unitType)
@@ -98,7 +90,7 @@ public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
                 var itemGO = Instantiate(squadListItemPrefab, targetList);
                 var optionUI = itemGO.GetComponent<SquadOptionUI>();
                 optionUI?.SetSquadData(squadData);
-                optionUI.setProgress(squadInstance.level.ToString());
+                optionUI.SetInstanceData(squadInstance.level.ToString(), squadInstance.unitsAlive);
                 optionUI.onClick = () => showSquadDetails(squadInstance);
             }
         }
@@ -122,14 +114,8 @@ public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
             Debug.LogWarning("[BarracksMenuUIController] SquadData nulo al intentar mostrar detalles");
             return;
         }
-        // Buscar el SquadData correspondiente
-        var squadDatabase = Resources.Load<SquadDatabase>("Data/Squads/SquadDatabase");
-        if (squadDatabase == null)
-        {
-            Debug.LogWarning("[BarracksMenuUIController] No se pudo cargar SquadDatabase para detalles");
-            return;
-        }
-        var squadData = squadDatabase.allSquads.Find(sq => sq != null && sq.id == squadDataAndProgress.baseSquadID);
+        
+        var squadData = SquadDataService.GetSquadById(squadDataAndProgress.baseSquadID);
         if (squadData == null)
         {
             Debug.LogWarning($"[BarracksMenuUIController] No se encontró SquadData para baseSquadID: {squadDataAndProgress.baseSquadID}");

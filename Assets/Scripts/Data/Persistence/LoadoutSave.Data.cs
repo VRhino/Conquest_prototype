@@ -11,11 +11,14 @@ public class LoadoutSaveData
     public string name = string.Empty;
 
     /// <summary>Identifiers of squads included in the loadout.</summary>
-    public List<int> squadIDs = new();
+    public List<string> squadIDs = new();
 
     /// <summary>Perk identifiers selected for the loadout.</summary>
-    public List<int> perkIDs = new();
+    public List<string> perkIDs = new();
 
     /// <summary>Total leadership required by this setup.</summary>
     public int totalLeadership = 0;
+
+    /// <summary>Indicates if this loadout is currently active.</summary>
+    public bool isActive = false;
 }

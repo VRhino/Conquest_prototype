@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using ConquestTactics.Dialogue;
+using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -54,6 +55,7 @@ public class FullscreenPanelManager : MonoBehaviour
     [SerializeField] private Button inventoryHUDButton;
     [SerializeField] private Button heroDetailHUDButton;
     [SerializeField] private Button barracksHUDButton;
+    [SerializeField] private Button battleHUDButton;
 
     #endregion
 
@@ -137,20 +139,16 @@ public class FullscreenPanelManager : MonoBehaviour
 
     private void SetupHUDButtons()
     {
-        if (inventoryHUDButton != null)
-        {
-            inventoryHUDButton.onClick.AddListener(() => RequestPanelToggle<InventoryPanelController>());
-        }
+        if (inventoryHUDButton != null) inventoryHUDButton.onClick.AddListener(() => RequestPanelToggle<InventoryPanelController>());
 
-        if (heroDetailHUDButton != null)
-        {
-            heroDetailHUDButton.onClick.AddListener(() => RequestPanelToggle<HeroDetailUIController>());
-        }
+        if (heroDetailHUDButton != null) heroDetailHUDButton.onClick.AddListener(() => RequestPanelToggle<HeroDetailUIController>());
 
-        if (barracksHUDButton != null)
+        if (barracksHUDButton != null) barracksHUDButton.onClick.AddListener(() => RequestPanelToggle<BarracksMenuUIController>());
+
+        if (battleHUDButton != null) battleHUDButton.onClick.AddListener(() =>
         {
-            barracksHUDButton.onClick.AddListener(() => RequestPanelToggle<BarracksMenuUIController>());
-        }
+            UnityEngine.SceneManagement.SceneManager.LoadScene("BattlePrepScene");
+        });
     }
 
     #endregion

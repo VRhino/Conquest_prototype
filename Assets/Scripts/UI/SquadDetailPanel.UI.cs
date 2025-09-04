@@ -124,26 +124,6 @@ public class SquadDetailPanel : MonoBehaviour
                 SetLayerRecursively(child.gameObject, layer);
         }
     }
-    public static readonly Dictionary<SquadRarity, (Color color, float stars)> RarityInfo = new()
-    {
-        { SquadRarity.peasant_tier,   (new Color(0.5f, 0.5f, 0.5f), 0.5f) }, // gray
-        { SquadRarity.levy_tier,      (new Color(0.5f, 0.5f, 0.5f), 1f) },
-        { SquadRarity.conscript_tier, (new Color(0.5f, 0.5f, 0.5f), 1.5f) },
-        { SquadRarity.trained_tier,   (new Color32(72, 180, 122, 255), 2f) }, // green #48B47A
-        { SquadRarity.seasoned_tier,  (new Color32(72, 180, 122, 255), 2.5f) }, // green #48B47A
-        { SquadRarity.veteran_tier,   (new Color32(89, 131, 203, 255), 3f) }, // blue #5983CB
-        { SquadRarity.hardened_tier,  (new Color32(89, 131, 203, 255), 3.5f) }, // blue #5983CB
-        { SquadRarity.elite_tier,     (new Color32(167, 108, 203, 255), 4f) }, // purple #A76CCB
-        { SquadRarity.master_tier,    (new Color32(167, 108, 203, 255), 4.5f) }, // purple #A76CCB
-        { SquadRarity.legendary_tier, (new Color32(217, 159, 87, 255), 5f) } // golden #D99F57
-    };
-
-    public static (Color color, float stars) GetRarityInfo(SquadRarity rarity)
-    {
-        if (RarityInfo.TryGetValue(rarity, out var info)) return info;
-        
-        return (Color.white, 0f);
-    }
 
     private void fillTitle(SquadData data)
     {
@@ -163,7 +143,7 @@ public class SquadDetailPanel : MonoBehaviour
 
         }
 
-        Color squadRarityColor = GetRarityInfo(rarity).color;
+        Color squadRarityColor = SquadUtils.GetRarityColor(rarity);
         if (rarityDivider != null) rarityDivider.color = squadRarityColor;
 
         // Limpiar estrellas previas
@@ -172,7 +152,7 @@ public class SquadDetailPanel : MonoBehaviour
             Destroy(child.gameObject);
         }
         // Obtener información de rareza
-        if (RarityInfo.TryGetValue(rarity, out var info))
+        if (SquadUtils.RarityInfo.TryGetValue(rarity, out var info))
         {
             // Crear estrellas según la información de rareza, incluyendo medias estrellas
             int fullStars = Mathf.FloorToInt(info.stars);
@@ -221,7 +201,7 @@ public class SquadDetailPanel : MonoBehaviour
     private void fillStatusPanel(SquadInstanceData instance, SquadData data)
     {
         if (leadershipText != null) leadershipText.text = data.leadershipCost.ToString();
-        if (unitCountText != null) unitCountText.text = $"{instance.unitsInSquad - (instance.unitsKilled + instance.unitsInjured)}/{instance.unitsInSquad}";
+        if (unitCountText != null) unitCountText.text = $"{instance.unitsAlive}/{instance.unitsInSquad}";
         if (equipmentText != null) equipmentText.text = $"{instance.unitsInSquad - instance.equipmentLost}/{instance.unitsInSquad}";
         if (injuredText != null) injuredText.text = instance.unitsInjured.ToString();
 
