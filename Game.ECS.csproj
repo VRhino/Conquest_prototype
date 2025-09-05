@@ -82,13 +82,13 @@
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPool.System.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitCombat.Component.cs" />
     <Compile Include="Assets\Scripts\Camera\CameraSettings.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\avatarCreator\avatarCreatorController.UI.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePreparation\HeroSliceController.cs" />
+    <Compile Include="Assets\Scripts\UI\avatarCreator\avatarCreatorController.UI.cs" />
     <Compile Include="Assets\Scripts\Perks\HeroPerk.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroLife.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\StaminaBaker.cs" />
-    <Compile Include="Assets\Scripts\Squads\Unit.Authoring.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePreparation\SquadIconController.cs" />
+    <Compile Include="Assets\Scripts\Squads\Unit.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitDetectedEnemy.cs" />
     <Compile Include="Assets\Scripts\UI\avatarCreator\AvatarVisualUtils.cs" />
     <Compile Include="Assets\Scripts\Visual\EntityVisualSync.cs" />
@@ -131,6 +131,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitOwner.Component.cs" />
     <Compile Include="Assets\Scripts\Services\CurrencyService.cs" />
     <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
+    <Compile Include="Assets\Scripts\UI\BattlePreparation\FooterController.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellController.cs" />
@@ -445,6 +446,7 @@
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetail3DPreviewSetup.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Utilities\ModularCharacterStatics.cs" />
     <Compile Include="Assets\Scripts\Data\Attributes\HeroCalculatedAttributes.cs" />
+    <Compile Include="Assets\Scripts\UI\BattlePreparation\TroopsSelectorController.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadData.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadSpawning.System.cs" />
     <Compile Include="Assets\Scripts\Shared\Cooldown.System.cs" />

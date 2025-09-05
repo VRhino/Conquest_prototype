@@ -41,9 +41,7 @@ public abstract class BaseItemCellController : MonoBehaviour
         // Inicializar componente de interacción
         _interaction = (BaseItemCellInteraction)GetComponent(InteractionType);
         if (_interaction == null)
-        {
             _interaction = (BaseItemCellInteraction)gameObject.AddComponent(InteractionType);
-        }
 
         _interaction.Initialize(cellId);
     }

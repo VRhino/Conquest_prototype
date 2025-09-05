@@ -18,6 +18,14 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
         }
     }
 
+    public void ResetDefaultEvents()
+    {
+        if (_OnRightClick != null) OnItemRightClicked -= _OnRightClick;
+
+        _OnRightClick = HandleRightClickAction; 
+        OnItemRightClicked += _OnRightClick;
+    }
+
     /// <summary>
     /// Intenta equipar el ítem actual.
     /// </summary>

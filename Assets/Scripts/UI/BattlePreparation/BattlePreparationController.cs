@@ -31,14 +31,15 @@ public class BattlePreparationController : MonoBehaviour
         _heroSliceMap = new Dictionary<string, HeroSliceController>();
         //solo para tensting
         initTestHero();
-        
+
         initializeLocalHero();
         ValidateComponents();
     }
 
     private void initTestHero()
     {
-        HeroData localHero = LoadSystem.LoadHeroForTesting();
+        LoadSystem.LoadDataForTesting(out HeroData localHero, out PlayerData player);
+        PlayerSessionService.SetPlayer(player);
         PlayerSessionService.SetSelectedHero(localHero);
     }
 
@@ -176,24 +177,6 @@ public class BattlePreparationController : MonoBehaviour
         Debug.Log("[BattlePreparationController] Todos los héroes limpiados");
     }
 
-    /// <summary>
-    /// Actualiza los squads de un héroe específico.
-    /// Dispara el evento para que el HeroSliceController se actualice automáticamente.
-    /// </summary>
-    /// <param name="heroName">Nombre del héroe</param>
-    /// <param name="selectedSquads">Nueva lista de squads seleccionados</param>
-    public void UpdateHeroSquads(string heroName, List<SquadIconData> selectedSquads)
-    {
-        if (string.IsNullOrEmpty(heroName))
-        {
-            Debug.LogWarning("[BattlePreparationController] Nombre de héroe inválido para actualizar squads");
-            return;
-        }
-
-        // Disparar evento para que el HeroSliceController se actualice
-        BattlePreparationEvents.TriggerSquadsUpdated(heroName, selectedSquads ?? new List<SquadIconData>());
-    }
-
     #endregion
 
     #region Private Methods
@@ -207,7 +190,7 @@ public class BattlePreparationController : MonoBehaviour
             return;
         }
 
-        List<SquadIconData> squads = SquadDataService.ConvertLoadoutToSquadIconData(localHero.loadouts[0]);
+        List<SquadIconData> squads = SquadDataService.ConvertLoadoutToSquadIconData(localHero.loadouts[0], localHero);
         HeroClassDefinition heroClass = HeroClassManager.GetClassDefinition(localHero.classId);
 
         HeroSliceData localHeroData = new HeroSliceData(

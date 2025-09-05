@@ -182,8 +182,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
                 tooltipManager.ConnectCellToTooltip(cellController);
             }
         }
-
-        Debug.Log($"[InventoryPanelController] Sistema de tooltips inicializado con {_cellControllers.Count} celdas");
     }
 
     /// <summary>
@@ -254,6 +252,11 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
 
     public void CloseAsAuxiliaryPanel()
     {
+        foreach (var cell in _cellControllers)
+        {
+            cell.RemoveEvents();
+            cell.ResetDefaultEvents();
+        }
         ClosePanel();
         exitButton.gameObject.SetActive(true); // Restaurar botón de salir
     }
@@ -277,7 +280,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     {
         _currentFilter = filter;
         RefreshFullUI(); // Usa el método unificado que actualiza todo
-        Debug.Log($"[InventoryPanelController] Filtro aplicado: {filter}");
     }
 
     /// <summary>
@@ -334,7 +336,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         UpdateMoneyDisplay();
         UpdateFilterButtons();
 
-        Debug.Log("[InventoryPanelController] FULL UI refresh completed - money display now updates correctly");
     }
 
     /// <summary>
@@ -409,8 +410,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
                 cellController.Clear();
             }
         }
-
-        Debug.Log($"[InventoryPanelController] Display updated with filter '{_currentFilter}': showing {itemsToShow.Count} items");
     }
 
     /// <summary>
@@ -497,8 +496,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
             return;
         }
 
-        Debug.Log($"[InventoryPanelController] Intercambiando ítems: origen={sourceCellIndex}, destino={targetCellIndex}");
-
         // Obtener ítems de las posiciones visuales
         var sourceItem = slotItems[sourceCellIndex];
         var targetItem = slotItems[targetCellIndex];
@@ -550,14 +547,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         if (goldText == null) { Debug.LogWarning("[InventoryPanelController] goldText no asignado"); }
         if (exitButton == null) { Debug.LogWarning("[InventoryPanelController] exitButton no asignado"); }
 
-        if (errors == 0)
-        {
-            Debug.Log("[InventoryPanelController] Validación completada: configuración correcta");
-        }
-        else
-        {
-            Debug.LogError($"[InventoryPanelController] Validación falló: {errors} errores críticos encontrados");
-        }
+        if (errors != 0) Debug.LogError($"[InventoryPanelController] Validación falló: {errors} errores críticos encontrados");
     }
 
     /// <summary>

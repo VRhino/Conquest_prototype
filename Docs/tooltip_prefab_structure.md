@@ -37,3 +37,39 @@ UIStore (IFullscreenPanel)
 |       └── Button -> accion (comprar)
 └── Buttons
     └── Exit_Button 
+
+HeroSlice
+├── player icon -> img(hidden for the moment)
+├── Hero_class icon -> image
+├── Hero_name -> text
+├── Hero_Level -> text
+├── house_image -> img(hidden for the moment)
+└── Squad_Icon_Container
+    └── Squad_Icon (prefab)
+
+Squad_Icon
+├── Backgroud -> image
+├── underline -> image(color)
+└── Icon -> image
+
+
+Troops_viewver
+├── Rigth_chevron -> button
+├── Left_chevron -> button
+├── Troops_container_placeholder -> gameObject siempre activo
+└── Troops_container -> contiene N cantidad de Squad_Option
+       └── Squad_Option -> prefab
+
+Footer_Controller
+├── leadership_Text
+├── Troops_viewver  -> itemsPerPage = 5
+└── buttons
+    ├── Show_loadouts -> button
+    └── Save_Loadout -> button
+
+Troops_selector
+├── Troops_viewver -> itemsPerPage = 8
+└── Troops_filter
+    ├── infantry 
+    ├── Distance
+    └── Cavalry

@@ -32,7 +32,6 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
 
     protected virtual void Start()
     {
-        Debug.Log($"[BaseItemCellInteraction] Start. CellId: {_cellId}");
         OnItemClicked += _OnClick;
         OnItemRightClicked += _OnRightClick;
     }
@@ -49,7 +48,6 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
 
     public virtual void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
     {
-        Debug.Log($"[BaseItemCellInteraction] Setting events. Click: {onItemClicked != null}, RightClick: {onItemRightClicked != null} cellId: {_cellId}");
         _OnClick = onItemClicked;
         _OnRightClick = onItemRightClicked;
         OnItemClicked += onItemClicked;
@@ -58,7 +56,6 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
 
     public virtual void RemoveEvents()
     {
-        Debug.Log($"[BaseItemCellInteraction] Removing events. CellId: {_cellId}");
         OnItemClicked -= _OnClick;
         OnItemRightClicked -= _OnRightClick;
         _OnClick = null;

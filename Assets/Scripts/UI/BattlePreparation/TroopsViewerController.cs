@@ -1,131 +1,98 @@
 using System;
 using System.Collections.Generic;
-using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Controlador para el componente Troops_viewer en battle preparation.
-/// Maneja la paginación de tropas seleccionadas y la gestión de loadouts.
-/// Forma parte integral del BattlePreparationController.
+/// Widget reutilizable de paginación para listas de elementos.
+/// Maneja la navegación entre páginas y la instanciación de elementos.
+/// Completamente agnóstico del dominio - puede usarse para cualquier tipo de lista.
 /// </summary>
 public class TroopsViewerController : MonoBehaviour
 {
     #region UI References
+
+    private string identifier = "";
     
     [Header("Navigation")]
     [SerializeField] private Button rightChevron;
     [SerializeField] private Button leftChevron;
     
     [Header("Containers")]
-    [SerializeField] private GameObject troopsContainerPlaceholder;
-    [SerializeField] private Transform troopsContainer;
-    [SerializeField] private GameObject squadOptionPrefab; 
+    [SerializeField] private Transform itemContainerPlaceholder;
+    [SerializeField] private Transform itemContainer;
+    [SerializeField] private GameObject itemPrefab;
+    [SerializeField] private GameObject itemPrefabPlaceHolder;
+
+    #endregion
+
+    #region Configuration
     
-    [Header("Actions")]
-    [SerializeField] private Button showLoadoutsButton;
-    [SerializeField] private Button saveLoadoutButton;
-
-    [Header("Display")]
-    [SerializeField] private TextMeshProUGUI totalLeadershipText;
-
+    [Header("Configuration")]
+    [SerializeField] private int itemsPerPage = 5;
+    
     #endregion
 
     #region Private Fields
 
-    private const int TROOPS_PER_PAGE = 5;
-    
-    private List<string> _selectedSquadIds;
-    private List<SquadOptionUI> _currentPageOptions;
+    private List<string> _itemIds = new List<string>();
+    private List<GameObject> _currentPageItems = new List<GameObject>();
     private int _currentPageIndex = 0;
     private int _totalPages = 0;
-    private HeroData _currentHero;
-    private LoadoutSaveData _activeLoadout;
-    private int _totalLeadershipCost = 0;
-    
+    private bool _isInitialized = false;
+
     #endregion
 
     #region Events
 
     /// <summary>
-    /// Se dispara cuando la selección de tropas cambia.
+    /// Se dispara cuando se hace click en un item.
     /// </summary>
-    public System.Action<List<string>> OnSelectionChanged;
+    public System.Action<string> OnItemClicked;
     
+    /// <summary>
+    /// Se dispara cuando el widget necesita crear un item específico.
+    /// Parámetros: itemId, container, prefab
+    /// Retorna: GameObject creado
+    /// </summary>
+    public System.Func<string, Transform, GameObject, GameObject> OnItemsRequested;
+    
+    /// <summary>
+    /// Se dispara cuando se hace click en un placeholder.
+    /// </summary>
+    public System.Action OnPlaceholderClicked;
+
     #endregion
-    
+
     #region Unity Lifecycle
-    
+
     void Awake()
     {
-        _selectedSquadIds = new List<string>();
-        _currentPageOptions = new List<SquadOptionUI>();
+        identifier = Guid.NewGuid().ToString();
     }
-    void Start()
-    {
-        InitializeFromActiveLoadout();
-        SetupButtonListeners();
-        ValidateComponents();
-    }
+
+    
     void OnDestroy()
     {
         ClearButtonListeners();
     }
-    
+
     #endregion
-    
+
     #region Initialization
-    
-    /// <summary>
-    /// Inicializa el viewer cargando el loadout activo del héroe en PlayerSessionService.
-    /// </summary>
-    private void InitializeFromActiveLoadout()
-    {
-        _currentHero = PlayerSessionService.SelectedHero;
-        if (_currentHero == null)
-        {
-            Debug.LogError("[TroopsViewerController] No hay héroe seleccionado en PlayerSessionService");
-            return;
-        }
-        
-        _activeLoadout = _currentHero.loadouts.Find(l => l.isActive);
-        if (_activeLoadout == null)
-        {
-            Debug.LogWarning("[TroopsViewerController] No hay loadout activo para el héroe");
-            _selectedSquadIds.Clear();
-        }
-        else
-        {
-            _selectedSquadIds = new List<string>(_activeLoadout.squadIDs);
-        }
-        
-        UpdateTotalLeadershipDisplay();
 
-        RecalculatePagination();
-        RenderCurrentPage();
-    }
-    
-    private void UpdateTotalLeadershipDisplay()
+    public void initialize(int itemPerPage = 5)
     {
-        if (_currentHero == null) return;
-        
-         _totalLeadershipCost = 0;
-
-        foreach (var squadId in _selectedSquadIds)
-        {
-            var squadData = SquadDataService.GetSquadById(squadId);
-            if (squadData != null)
-            {
-                _totalLeadershipCost += squadData.leadershipCost;
-            }
-        }
-        
-        float availableLeadership = DataCacheService.getHeroLeadership(_currentHero.heroName);
-        totalLeadershipText.text = $"{_totalLeadershipCost}/{(int)availableLeadership}";
+        itemsPerPage = itemPerPage;
+        SetupButtonListeners();
+        ValidateComponents();
+        RenderPlaceholder();
+        _isInitialized = true;
     }
     
     /// <summary>
-    /// Configura los listeners de los botones.
+    /// Configura los listeners de los botones de navegación.
     /// </summary>
     private void SetupButtonListeners()
     {
@@ -140,18 +107,6 @@ public class TroopsViewerController : MonoBehaviour
             leftChevron.onClick.RemoveAllListeners();
             leftChevron.onClick.AddListener(OnLeftChevronClicked);
         }
-
-        if (showLoadoutsButton != null)
-        {
-            showLoadoutsButton.onClick.RemoveAllListeners();
-            showLoadoutsButton.onClick.AddListener(OnShowLoadoutsClicked);
-        }
-
-        if (saveLoadoutButton != null)
-        {
-            saveLoadoutButton.onClick.RemoveAllListeners();
-            saveLoadoutButton.onClick.AddListener(OnSaveLoadoutClicked);
-        }
     }
     
     /// <summary>
@@ -161,8 +116,6 @@ public class TroopsViewerController : MonoBehaviour
     {
         if (rightChevron != null) rightChevron.onClick.RemoveAllListeners();
         if (leftChevron != null) leftChevron.onClick.RemoveAllListeners();
-        if (showLoadoutsButton != null) showLoadoutsButton.onClick.RemoveAllListeners();
-        if (saveLoadoutButton != null) saveLoadoutButton.onClick.RemoveAllListeners();
     }
     
     #endregion
@@ -170,11 +123,11 @@ public class TroopsViewerController : MonoBehaviour
     #region Pagination
     
     /// <summary>
-    /// Recalcula la paginación basado en la cantidad de tropas seleccionadas.
+    /// Recalcula la paginación basado en la cantidad de items.
     /// </summary>
     private void RecalculatePagination()
     {
-        _totalPages = Mathf.CeilToInt((float)_selectedSquadIds.Count / TROOPS_PER_PAGE);
+        _totalPages = Mathf.CeilToInt((float)_itemIds.Count / itemsPerPage);
         if (_totalPages == 0) _totalPages = 1; // Mínimo una página
         
         // Asegurar que el índice actual sea válido
@@ -213,120 +166,82 @@ public class TroopsViewerController : MonoBehaviour
     #region Rendering
 
     /// <summary>
-    /// Renderiza la página actual destruyendo las opciones existentes y creando nuevas.
+    /// Renderiza la página actual destruyendo los items existentes y creando nuevos.
     /// </summary>
     private void RenderCurrentPage()
     {
-        ClearTroopsContainer();
+        ClearContainer();
+        RenderPlaceholder();
+        // Calcular rango de items para la página actual
+        int startIndex = _currentPageIndex * itemsPerPage;
+        int endIndex = Mathf.Min(startIndex + itemsPerPage, _itemIds.Count);
 
-        if (_selectedSquadIds.Count == 0)
-        {
-            // No hay tropas seleccionadas, el placeholder permanece visible
-            return;
-        }
-
-        // Calcular rango de squads para la página actual
-        int startIndex = _currentPageIndex * TROOPS_PER_PAGE;
-        int endIndex = Mathf.Min(startIndex + TROOPS_PER_PAGE, _selectedSquadIds.Count);
-        // Instanciar Squad_Option para cada squad en la página
+        // Crear items para la página
         for (int i = startIndex; i < endIndex; i++)
         {
-            string squadId = _selectedSquadIds[i];
-            CreateSquadOption(squadId);
+            string itemId = _itemIds[i];
+            CreateItem(itemId);
         }
     }
-    
     /// <summary>
-    /// Crea una Squad_Option para un squad específico.
+    /// Renderiza el placeholder
     /// </summary>
-    /// <param name="squadId">ID del squad</param>
-    private void CreateSquadOption(string squadId)
+    private void RenderPlaceholder()
     {
-        if (squadOptionPrefab == null || troopsContainer == null)
+
+        if (itemContainerPlaceholder != null)
+            itemContainerPlaceholder.gameObject.SetActive(true);
+
+        if (itemPrefabPlaceHolder != null && itemContainerPlaceholder != null)
+        {
+            int existingPlaceholders = itemContainerPlaceholder.childCount;
+            if (existingPlaceholders == itemsPerPage) return;
+            //llenar el placeholder container
+            int itemsToCreate = itemsPerPage;
+            for (int i = 0; i < itemsToCreate; i++)
+            {
+                GameObject placeholder = Instantiate(itemPrefabPlaceHolder, itemContainerPlaceholder);
+                
+                // Configurar click listener en cada placeholder
+                Button placeholderButton = placeholder.GetComponent<Button>();
+                if (placeholderButton != null)
+                {
+                    placeholderButton.onClick.AddListener(() => OnPlaceholderClicked?.Invoke());
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Crea un item específico solicitando al controlador superior.
+    /// </summary>
+    /// <param name="itemId">ID del item</param>
+    private void CreateItem(string itemId)
+    {
+        if (itemPrefab == null || itemContainer == null)
         {
             Debug.LogError("[TroopsViewerController] Prefab o container no asignados");
             return;
         }
-        
-        // Obtener datos del squad
-        var squadData = SquadDataService.GetSquadById(squadId);
-        if (squadData == null)
-        {
-            Debug.LogWarning($"[TroopsViewerController] No se encontró SquadData para ID: {squadId}");
-            return;
-        }
-        _totalLeadershipCost += squadData.leadershipCost;
-        // Buscar instancia del squad en el progreso del héroe
-        var squadInstance = _currentHero?.squadProgress?.Find(s => s.baseSquadID == squadId);
-        
-        // Instanciar prefab
-        GameObject optionGO = Instantiate(squadOptionPrefab, troopsContainer);
-        SquadOptionUI optionUI = optionGO.GetComponent<SquadOptionUI>();
-        
-        if (optionUI != null)
-        {
-            // Configurar datos básicos
-            optionUI.SetSquadData(squadData);
-            optionUI.ToggleBattlePreMode();
-            
-            // Configurar datos de instancia si existen
-            if (squadInstance != null)
-            {
-                optionUI.SetInstanceData(squadInstance.level.ToString(), squadInstance.unitsAlive);
-            }
-            
-            // Configurar estado seleccionado
-            optionUI.SetSelected(true); // Siempre seleccionado en este contexto
-            
-            // Configurar callback de click
-            optionUI.onClick = () => OnSquadOptionClicked(squadId);
-            
-            _currentPageOptions.Add(optionUI);
-        }
+
+        // Solicitar al controlador superior que cree el item
+        GameObject createdItem = OnItemsRequested?.Invoke(itemId, itemContainer, itemPrefab);
+
+        if (createdItem != null) _currentPageItems.Add(createdItem);
     }
     
     /// <summary>
-    /// Limpia todas las Squad_Option del container.
+    /// Limpia todos los items del container.
     /// </summary>
-    private void ClearTroopsContainer()
+    private void ClearContainer()
     {
-        foreach (Transform child in troopsContainer)
+        for (int i = 0; i < itemContainer.childCount; i++)
         {
-            Destroy(child.gameObject);
+            Transform child = itemContainer.GetChild(i);
+            if (child != null)
+                Destroy(child.gameObject);
         }
-        _currentPageOptions.Clear();
-    }
-    
-    #endregion
-    
-    #region Squad Selection
-    
-    /// <summary>
-    /// Maneja el click en una Squad_Option.
-    /// </summary>
-    /// <param name="squadId">ID del squad clickeado</param>
-    private void OnSquadOptionClicked(string squadId)
-    {
-        // Toggle selección del squad
-        if (_selectedSquadIds.Contains(squadId))
-        {
-            _selectedSquadIds.Remove(squadId);
-            Debug.Log($"[TroopsViewerController] Squad removido de selección: {squadId}");
-        }
-        else
-        {
-            _selectedSquadIds.Add(squadId);
-            Debug.Log($"[TroopsViewerController] Squad agregado a selección: {squadId}");
-        }
-        
-        // Recalcular paginación si cambió el número de elementos
-        RecalculatePagination();
-        
-        // Re-renderizar página actual
-        RenderCurrentPage();
-        
-        // Notificar cambio
-        OnSelectionChanged?.Invoke(new List<string>(_selectedSquadIds));
+        _currentPageItems.Clear();
     }
     
     #endregion
@@ -349,124 +264,51 @@ public class TroopsViewerController : MonoBehaviour
         NavigateToPage(_currentPageIndex - 1);
     }
     
-    /// <summary>
-    /// Maneja el click en el botón Show Loadouts.
-    /// </summary>
-    private void OnShowLoadoutsClicked()
-    {
-        Debug.Log("[TroopsViewerController] Show loadouts clicked");
-        // TODO: Implementar panel de loadouts
-    }
-    
-    /// <summary>
-    /// Maneja el click en el botón Save Loadout.
-    /// </summary>
-    private void OnSaveLoadoutClicked()
-    {
-        SaveCurrentLoadout();
-    }
-    
-    #endregion
-    
-    #region Loadout Management
-    
-    /// <summary>
-    /// Guarda la selección actual en el loadout activo.
-    /// </summary>
-    private void SaveCurrentLoadout()
-    {
-        if (_currentHero == null || _activeLoadout == null)
-        {
-            Debug.LogWarning("[TroopsViewerController] No hay héroe o loadout activo para guardar");
-            return;
-        }
-        
-        // Actualizar squadIDs del loadout activo
-        _activeLoadout.squadIDs = new List<string>(_selectedSquadIds);
-        
-        // TODO: Calcular totalLeadership basado en los squads seleccionados
-        // _activeLoadout.totalLeadership = CalculateTotalLeadership();
-        
-        // Guardar datos del jugador
-        if (PlayerSessionService.CurrentPlayer != null)
-        {
-            SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
-            Debug.Log($"[TroopsViewerController] Loadout '{_activeLoadout.name}' guardado con {_selectedSquadIds.Count} squads");
-        }
-        else
-        {
-            Debug.LogWarning("[TroopsViewerController] No hay CurrentPlayer para guardar");
-        }
-    }
-    
     #endregion
     
     #region Public API
     
     /// <summary>
-    /// Actualiza el viewer desde un loadout específico.
+    /// Establece la lista de items a mostrar.
     /// </summary>
-    /// <param name="loadout">Loadout con los squads a mostrar</param>
-    public void UpdateFromLoadout(LoadoutSaveData loadout)
+    /// <param name="itemIds">Lista de IDs de items</param>
+    public bool SetItems(List<string> itemIds, string whoCalled)
     {
-        if (loadout == null)
-        {
-            _selectedSquadIds.Clear();
-        }
-        else
-        {
-            _selectedSquadIds = new List<string>(loadout.squadIDs);
-            _activeLoadout = loadout;
-        }
-        
+        if (!_isInitialized) return false;
+
+        _currentPageItems = new List<GameObject>();
+        _itemIds = itemIds;
+        _currentPageIndex = 0;
         RecalculatePagination();
         RenderCurrentPage();
+        return true;
+    }
+
+    /// <summary>
+    /// Obtiene el índice de la página actual.
+    /// </summary>
+    /// <returns>Índice de página actual (0-based)</returns>
+    public int GetCurrentPageIndex()
+    {
+        return _currentPageIndex;
     }
     
     /// <summary>
-    /// Agrega un squad a la selección.
+    /// Obtiene el total de páginas.
     /// </summary>
-    /// <param name="squadId">ID del squad a agregar</param>
-    public void AddSquadToSelection(string squadId)
+    /// <returns>Total de páginas</returns>
+    public int GetTotalPages()
     {
-        if (!_selectedSquadIds.Contains(squadId))
-        {
-            _selectedSquadIds.Add(squadId);
-            RecalculatePagination();
-            RenderCurrentPage();
-            OnSelectionChanged?.Invoke(new List<string>(_selectedSquadIds));
-        }
+        return _totalPages;
     }
     
     /// <summary>
-    /// Remueve un squad de la selección.
+    /// Dispara el evento de click en un item (para ser usado por items creados).
     /// </summary>
-    /// <param name="squadId">ID del squad a remover</param>
-    public void RemoveSquadFromSelection(string squadId)
+    /// <param name="itemId">ID del item clickeado</param>
+    public void TriggerItemClick(string itemId)
     {
-        if (_selectedSquadIds.Remove(squadId))
-        {
-            RecalculatePagination();
-            RenderCurrentPage();
-            OnSelectionChanged?.Invoke(new List<string>(_selectedSquadIds));
-        }
-    }
-    
-    /// <summary>
-    /// Obtiene la selección actual de squads.
-    /// </summary>
-    /// <returns>Lista de IDs de squads seleccionados</returns>
-    public List<string> GetCurrentSelection()
-    {
-        return new List<string>(_selectedSquadIds);
-    }
-    
-    /// <summary>
-    /// Recarga desde el loadout activo del héroe actual.
-    /// </summary>
-    public void RefreshFromActiveLoadout()
-    {
-        InitializeFromActiveLoadout();
+        OnItemClicked?.Invoke(itemId);
     }
     
     #endregion
@@ -480,12 +322,10 @@ public class TroopsViewerController : MonoBehaviour
     {
         List<string> missingComponents = new List<string>();
         
-        if (troopsContainer == null) missingComponents.Add("troopsContainer");
-        if (squadOptionPrefab == null) missingComponents.Add("squadOptionPrefab");
+        if (itemContainer == null) missingComponents.Add("itemContainer");
+        if (itemPrefab == null) missingComponents.Add("itemPrefab");
         if (rightChevron == null) missingComponents.Add("rightChevron");
         if (leftChevron == null) missingComponents.Add("leftChevron");
-        if (showLoadoutsButton == null) missingComponents.Add("showLoadoutsButton");
-        if (saveLoadoutButton == null) missingComponents.Add("saveLoadoutButton");
         
         if (missingComponents.Count > 0)
         {

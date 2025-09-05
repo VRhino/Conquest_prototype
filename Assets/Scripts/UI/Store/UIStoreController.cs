@@ -147,6 +147,7 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
     public void ClosePanel()
     {
         gameObject.SetActive(false);
+        
         tooltipManager?.HideAllTooltips();
         auxiliaryInventoryPanel?.CloseAsAuxiliaryPanel();
     }

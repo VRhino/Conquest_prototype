@@ -124,48 +124,11 @@ public static class SquadDataService
         
         return result;
     }
-    
-    /// <summary>
-    /// Obtiene squads por rareza.
-    /// </summary>
-    /// <param name="rarity">Rareza a filtrar</param>
-    /// <returns>Lista de squads de la rareza especificada</returns>
-    public static List<SquadData> GetSquadsByRarity(SquadRarity rarity)
-    {
-        EnsureInitialized();
-        return _squadCache.Values.Where(squad => squad.rarity == rarity).ToList();
-    }
-    
+
     #endregion
-    
-    #region Validation API
-    
-    /// <summary>
-    /// Valida si un squad existe.
-    /// </summary>
-    /// <param name="squadId">ID del squad a validar</param>
-    /// <returns>True si el squad existe</returns>
-    public static bool ValidateSquadExists(string squadId)
-    {
-        return GetSquadById(squadId) != null;
-    }
-    
-    /// <summary>
-    /// Valida una lista de squad IDs.
-    /// </summary>
-    /// <param name="squadIds">Lista de IDs a validar</param>
-    /// <returns>True si todos los squads existen</returns>
-    public static bool ValidateSquadList(List<string> squadIds)
-    {
-        if (squadIds == null) return true; // Lista nula es válida
-        
-        return squadIds.All(ValidateSquadExists);
-    }
-    
-    #endregion
-    
+
     #region Conversion API for BattlePreparation
-    
+
     /// <summary>
     /// Convierte un squad ID a SquadIconData para uso en UI.
     /// </summary>
@@ -175,7 +138,7 @@ public static class SquadDataService
     {
         var squadData = GetSquadById(squadId);
         if (squadData == null) return null;
-        
+
         return new SquadIconData(
             squadId: squadData.id,
             backgroundSprite: squadData.background,
@@ -210,18 +173,39 @@ public static class SquadDataService
     /// </summary>
     /// <param name="LoadOutSaveData">Datos del loadout</param>
     /// <returns>Lista de SquadIconData del loadout activo</returns>
-    public static List<SquadIconData> ConvertLoadoutToSquadIconData(LoadoutSaveData loadoutData)
+    public static List<SquadIconData> ConvertLoadoutToSquadIconData(LoadoutSaveData loadoutData, HeroData heroData)
     {
-        if (loadoutData?.squadIDs == null || loadoutData.squadIDs.Count == 0)
+        if (loadoutData?.squadInstanceIDs == null || loadoutData.squadInstanceIDs.Count == 0)
             return new List<SquadIconData>();
 
-        return ConvertToSquadIconDataList(loadoutData.squadIDs);
+        List<string> heroSquadIDs = convertInstanceIDsToBaseSquadIDs(loadoutData.squadInstanceIDs, heroData?.squadProgress);
+        if (heroSquadIDs.Count == 0)
+            return new List<SquadIconData>();
+
+        return ConvertToSquadIconDataList(heroSquadIDs);
+    }
+    /// <summary>
+    /// Convierte una lista de squadInstanceIDs a sus correspondientes baseSquadIDs usando los datos del héroe.
+    /// </summary>
+    /// <param name="squadInstanceIDs">Lista de squadInstanceIDs</param>
+    /// <param name="heroData">Datos del héroe para referencia</param>
+    /// <returns>Lista de baseSquadIDs correspondientes</returns>
+    public static List<string> convertInstanceIDsToBaseSquadIDs(List<string> squadInstanceIDs, List<SquadInstanceData> Instances)
+    {
+        if (squadInstanceIDs == null || squadInstanceIDs.Count == 0 || Instances == null)
+            return new List<string>();
+
+        var instanceIDSet = new HashSet<string>(squadInstanceIDs);
+        return Instances
+            .Where(squad => instanceIDSet.Contains(squad.id))
+            .Select(squad => squad.baseSquadID)
+            .ToList();
     }
     
     #endregion
-    
+
     #region Advanced API
-    
+
     /// <summary>
     /// Obtiene squads por rango de costo de liderazgo.
     /// </summary>
@@ -271,19 +255,6 @@ public static class SquadDataService
         
         return totalCost;
     }
-    
-    /// <summary>
-    /// Valida un loadout completo.
-    /// </summary>
-    /// <param name="loadout">Loadout a validar</param>
-    /// <returns>True si el loadout es válido</returns>
-    public static bool ValidateLoadout(LoadoutSaveData loadout)
-    {
-        if (loadout?.squadIDs == null) return true;
-        
-        return ValidateSquadList(loadout.squadIDs);
-    }
-    
     #endregion
     
     #region Private Methods

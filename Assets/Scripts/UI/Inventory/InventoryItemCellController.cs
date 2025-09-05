@@ -75,6 +75,14 @@ public class InventoryItemCellController : BaseItemCellController
     }
     public void RemoveEvents()
     {
-       _interaction?.RemoveEvents();
+        _interaction?.RemoveEvents();
+    }
+    
+    public void ResetDefaultEvents()
+    {
+        if (_interaction is InventoryItemCellInteraction interaction)
+        {
+            interaction.ResetDefaultEvents();
+        }
     }
 }

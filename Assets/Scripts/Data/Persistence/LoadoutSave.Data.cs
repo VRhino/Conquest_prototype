@@ -11,7 +11,7 @@ public class LoadoutSaveData
     public string name = string.Empty;
 
     /// <summary>Identifiers of squads included in the loadout.</summary>
-    public List<string> squadIDs = new();
+    public List<string> squadInstanceIDs = new();
 
     /// <summary>Perk identifiers selected for the loadout.</summary>
     public List<string> perkIDs = new();
