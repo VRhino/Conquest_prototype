@@ -35,7 +35,7 @@ public class HeroEquipmentPanel : MonoBehaviour
     #region Tooltip Integration
 
     [Header("Tooltip Integration")]
-    [SerializeField]private TooltipManager tooltipManager;
+    [SerializeField] private TooltipManager tooltipManager;
 
     #endregion
 
@@ -63,6 +63,8 @@ public class HeroEquipmentPanel : MonoBehaviour
             tooltipManager = null;
         }
     }
+
+
 
     public void SetEvents(
         Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked,

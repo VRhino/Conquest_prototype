@@ -43,8 +43,11 @@ public class BattlePreparationController : MonoBehaviour
         _equipmentPanel.InitializePanel();
         _equipmentPanel.PopulateFromSelectedHero();
         _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
+        TooltipManager tooltipManager = FindAnyObjectByType<TooltipManager>();
+        if (tooltipManager != null) _equipmentPanel.SetTooltipManager(tooltipManager);
         if (!_itemPopUpSelector.IsInitialized)
         {
+            if (tooltipManager != null) _itemPopUpSelector.SetTooltipManager(tooltipManager);
             _itemPopUpSelector.Initialize();
             _itemPopUpSelector.SetEvents(OnItemClicked);
         }
@@ -275,7 +278,7 @@ public class BattlePreparationController : MonoBehaviour
     private void OnEquipmentSlotClicked(InventoryItem item, ItemData itemData, HeroEquipmentSlotController slotController)
     {
         if (slotController == null) return;
-
+        
         List<InventoryItem> items = InventoryStorageService.GetItemsByTypeAndCategory(slotController.SlotType, slotController.SlotCategory);
         if (items == null || items.Count == 0)
         {
