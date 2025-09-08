@@ -8,13 +8,15 @@ public class InventoryItemCellController : BaseItemCellController
     // Drag & drop y cellIndex son específicos de inventario
     private Component _dragHandler;
     [SerializeField] private int _cellIndex = -1;
+    
+    // Implementación de la propiedad abstracta de la base
+    protected override System.Type InteractionType => typeof(InventoryItemCellInteraction);
 
-    protected override void Awake()
+    public override void Initialize()
     {
-        base.Awake();
+        base.Initialize();
         InitializeDragHandler();
     }
-
 
     private void InitializeDragHandler()
     {
@@ -40,9 +42,6 @@ public class InventoryItemCellController : BaseItemCellController
         CallDragHandlerMethod("ClearItemData");
     }
 
-    // Implementación de la propiedad abstracta de la base
-    protected override System.Type InteractionType => typeof(InventoryItemCellInteraction);
-
     /// <summary>
     /// Establece el índice de esta celda en la grilla (solo inventario).
     /// </summary>
@@ -67,15 +66,6 @@ public class InventoryItemCellController : BaseItemCellController
         {
             Debug.LogWarning($"[InventoryItemCellController] Error calling drag handler method {methodName}: {ex.Message}");
         }
-    }
-
-    public void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
-    {
-        _interaction?.SetEvents(onItemClicked, onItemRightClicked);
-    }
-    public void RemoveEvents()
-    {
-        _interaction?.RemoveEvents();
     }
     
     public void ResetDefaultEvents()

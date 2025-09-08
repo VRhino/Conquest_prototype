@@ -42,11 +42,12 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
     [SerializeField] private HeroDetailAttributePanel _attributesPanel;
     [SerializeField] private HeroEquipmentPanel _equipmentPanel;
     [SerializeField] private HeroDetail3DPreview _previewSystem;
+    [SerializeField] private ItemSelectorController _itemSelector;
 
     #endregion
 
     #region Equipment Slots (Legacy - para compatibilidad)
-    
+
     [Header("Equipment Slots (Legacy)")]
     public GameObject helmetSlot;
     public GameObject torsoSlot;
@@ -82,10 +83,18 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
             Destroy(gameObject);
             return;
         }
-        
+
         // Inicializar panel oculto
         if (mainPanel != null)
             mainPanel.SetActive(false);
+            
+        if (!_itemSelector.IsInitialized)
+        {
+            var globalTooltipManager = FindObjectOfType<TooltipManager>();
+            if (globalTooltipManager != null) _itemSelector.SetTooltipManager(globalTooltipManager);
+            _itemSelector.Initialize();
+            _itemSelector.SetEvents(OnItemSelected);
+        }
     }
 
     void Start()
@@ -153,11 +162,9 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
             PopulateUI();
         }
         
-        var globalTooltipManager = FindObjectOfType<InventoryTooltipManager>();
-        if (globalTooltipManager != null)
-        {
-            _equipmentPanel.SetTooltipManager(globalTooltipManager);
-        }
+        var globalTooltipManager = FindObjectOfType<TooltipManager>();
+        if (globalTooltipManager != null) _equipmentPanel.SetTooltipManager(globalTooltipManager);
+
         Debug.Log($"[HeroDetailUIController] Panel abierto para héroe: {heroData.heroName}");
     }
 
@@ -223,10 +230,8 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         
         if (nextLevelText != null)
         {
-            if (expInfo.isMaxLevel)
-                nextLevelText.text = "MAX";
-            else
-                nextLevelText.text = (expInfo.currentLevel + 1).ToString();
+            if (expInfo.isMaxLevel) nextLevelText.text = "MAX";
+            else nextLevelText.text = (expInfo.currentLevel + 1).ToString();
         }
     }
 
@@ -319,28 +324,6 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         }
     }
 
-    private void ToggleUIInteraction()
-    {
-        if (DialogueUIState.IsDialogueOpen)
-        {
-            DialogueUIState.IsDialogueOpen = false;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(true);
-
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else
-        {
-            DialogueUIState.IsDialogueOpen = true;
-            if (HeroCameraController.Instance != null)
-                HeroCameraController.Instance.SetCameraFollowEnabled(false);
-            
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-    }
-
     /// <summary>
     /// Manejador para cuando se modifican los stats en el panel de estadísticas.
     /// </summary>
@@ -367,6 +350,61 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         if (_attributesPanel != null)  _attributesPanel.HidePanelIfShown();
     }
 
+    public void OnEquipmentSlotClicked(InventoryItem item, ItemData itemData, HeroEquipmentSlotController slotController)
+    {
+        if ( _equipmentPanel == null) return;
+        
+        List<InventoryItem> items = InventoryStorageService.GetItemsByTypeAndCategory(slotController.SlotType, slotController.SlotCategory);
+        if (items == null || items.Count == 0)
+        {
+            Debug.LogWarning($"[HeroDetailUIController] No hay items disponibles para el tipo y categoría del item: {itemData.name}");
+            return;
+        }
+        RectTransform slotRect = _equipmentPanel.GetSlotTransform(slotController.SlotType, slotController.SlotCategory);
+        _itemSelector.SetItems(items);
+        _itemSelector.ShowNearElement(slotRect);
+    }
+
+    public void OnEquipmentSlotRightClicked(InventoryItem item, ItemData itemData)
+    {
+        if (item == null || itemData == null || _equipmentPanel == null) return;
+        ItemCategory category = item.itemType == ItemType.Weapon ? ItemCategory.None : itemData.itemCategory;
+        HeroEquipmentSlotController slotController = _equipmentPanel.GetSlot(item.itemType, category);
+
+        if (slotController == null) return;
+
+        if (!slotController.CanUnequipCurrentItem()) return;
+        bool success = EquipmentManagerService.UnequipItem(item.itemType, itemData.itemCategory);
+        if (success)
+        {
+            slotController.Clear();
+            Debug.Log($"[HeroDetailUIController] Successfully unequipped: {itemData.name}");
+            PopulateEquipmentSlots();
+        }
+        else
+        {
+            Debug.LogError($"[HeroDetailUIController] Failed to unequipped: {itemData.name}");
+        }
+    }
+
+    public void OnItemSelected(InventoryItem item, ItemData itemData)
+    {
+        if (item == null || itemData == null || _equipmentPanel == null) return;
+
+        bool success = InventoryManager.EquipItem(item);
+
+        if (success)
+        {
+            Debug.Log($"[HeroDetailUIController] Item equipado: {itemData.name}");
+            PopulateEquipmentSlots();
+        }
+        else
+        {
+            Debug.LogWarning($"[HeroDetailUIController] No se pudo equipar el item: {itemData.name}");
+        }
+        _itemSelector.Hide();
+    }
+
     #endregion
 
     #region Helper Methods
@@ -384,7 +422,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         else
         {
             Debug.LogWarning("[HeroDetailUIController] Preview system not assigned");
-            
+
             // Intentar encontrar el componente automáticamente
             _previewSystem = GetComponentInChildren<HeroDetail3DPreview>();
             if (_previewSystem != null)
@@ -426,7 +464,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
                     _equipmentPanel = equipmentParent.AddComponent(panelType) as HeroEquipmentPanel;
                 }
             }
-            
+
             if (_equipmentPanel != null)
             {
                 // Inicializar el panel usando reflexión
@@ -434,6 +472,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
                 if (initMethod != null)
                 {
                     initMethod.Invoke(_equipmentPanel, null);
+                    _equipmentPanel.SetEvents(OnEquipmentSlotClicked, OnEquipmentSlotRightClicked);
                 }
             }
         }

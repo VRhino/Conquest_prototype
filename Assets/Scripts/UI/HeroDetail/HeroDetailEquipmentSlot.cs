@@ -49,31 +49,19 @@ public class HeroEquipmentSlotController : BaseItemCellController
 
     #region Unity Lifecycle
 
-    protected override void Awake()
-    {
-        base.Awake();
-
-        // Initialize slot-specific properties if needed
-        if (slotType == ItemType.Weapon && slotCategory == ItemCategory.None)
-            Debug.LogWarning($"HeroEquipmentSlotController '{name}': SlotCategory not set for Weapon slot");
-        else if (slotType == ItemType.Armor && slotCategory == ItemCategory.None)
-            Debug.LogWarning($"HeroEquipmentSlotController '{name}': SlotCategory not set for Armor slot");
-        
-        InitializeEquipmentSlot();
-    }
-
     #endregion
 
     #region Equipment Slot Initialization
-    /// <summary>
-    /// Configuración inicial del slot de equipamiento
-    /// </summary>
-    private void InitializeEquipmentSlot()
+    
+    public override void Initialize()
     {
-        // Configurar placeholder si no está ya configurado
+        base.Initialize();
+        if (slotType == ItemType.Armor && slotCategory == ItemCategory.None)
+            Debug.LogWarning($"HeroEquipmentSlotController '{name}': SlotCategory not set for Armor slot");
+
         if (placeholder == null)
             Debug.LogWarning($"[HeroEquipmentSlot] Placeholder no configurado para slot {slotType}.{slotCategory}");
-        
+
         SetupPlaceholderVisuals();
     }
     
@@ -213,6 +201,16 @@ public class HeroEquipmentSlotController : BaseItemCellController
         
         Debug.Log($"[HeroEquipmentSlot] Set equipped item {equippedItem.itemId} in {slotType}.{slotCategory} slot");
     }
+    
+    public void SetupEquipmentSlotEvents(
+        System.Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked,
+        System.Action<InventoryItem, ItemData> onItemRightClicked)
+    {
+        if (_interaction is HeroEquipmentSlotInteraction equipmentInteraction)
+        {
+            equipmentInteraction.SetupEquipmentSlotEvents(onItemRightClicked, onEquipmentSlotClicked);
+        }
+    }
 
     /// <summary>
     /// Limpia el slot y muestra el placeholder
@@ -221,7 +219,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
     {
         base.Clear();
         ShowPlaceholder();
-        
+
         Debug.Log($"[HeroEquipmentSlot] Cleared {slotType}.{slotCategory} slot");
     }
 

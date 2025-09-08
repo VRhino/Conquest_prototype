@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using BattleDrakeStudios.ModularCharacters;
+using Data.Items;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// Controlador padre que maneja una lista de HeroSliceController.
@@ -13,6 +16,10 @@ public class BattlePreparationController : MonoBehaviour
     [Header("Hero Slice Management")]
     [SerializeField] public Transform heroSliceContainer;
     [SerializeField] public GameObject heroSlicePrefab;
+
+    [Header("Equipment Management")]
+    [SerializeField] private HeroEquipmentPanel _equipmentPanel;
+    [SerializeField] private ItemSelectorController _itemPopUpSelector;
 
     #endregion
 
@@ -33,7 +40,14 @@ public class BattlePreparationController : MonoBehaviour
         initTestHero();
 
         initializeLocalHero();
-        ValidateComponents();
+        _equipmentPanel.InitializePanel();
+        _equipmentPanel.PopulateFromSelectedHero();
+        _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
+        if (!_itemPopUpSelector.IsInitialized)
+        {
+            _itemPopUpSelector.Initialize();
+            _itemPopUpSelector.SetEvents(OnItemClicked);
+        }
     }
 
     private void initTestHero()
@@ -201,6 +215,8 @@ public class BattlePreparationController : MonoBehaviour
             houseIcon: null,
             selectedSquads: squads ?? new List<SquadIconData>()
         );
+        InventoryStorageService.Initialize(localHero);
+        InventoryManager.Initialize(localHero);
         AddHero(localHeroData);
     }
 
@@ -251,37 +267,38 @@ public class BattlePreparationController : MonoBehaviour
         _heroSliceMap.Clear();
     }
 
-    /// <summary>
-    /// Valida que los componentes críticos estén asignados.
-    /// </summary>
-    private void ValidateComponents()
-    {
-        List<string> missingComponents = new List<string>();
-
-        if (heroSliceContainer == null) missingComponents.Add("heroSliceContainer");
-        if (heroSlicePrefab == null) missingComponents.Add("heroSlicePrefab");
-
-        if (missingComponents.Count > 0)
-        {
-            Debug.LogWarning($"[BattlePreparationController] Componentes faltantes: {string.Join(", ", missingComponents)}");
-        }
-    }
 
     #endregion
 
-    #region Debug Methods
+    #region Event Handlers
 
-    /// <summary>
-    /// Información de debug sobre el estado actual.
-    /// </summary>
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    public void LogDebugInfo()
+    private void OnEquipmentSlotClicked(InventoryItem item, ItemData itemData, HeroEquipmentSlotController slotController)
     {
-        Debug.Log($"[BattlePreparationController] Héroes activos: {_heroSliceControllers.Count}");
-        foreach (var heroName in _heroSliceMap.Keys)
+        if (slotController == null) return;
+
+        List<InventoryItem> items = InventoryStorageService.GetItemsByTypeAndCategory(slotController.SlotType, slotController.SlotCategory);
+        if (items == null || items.Count == 0)
         {
-            Debug.Log($"  - {heroName}");
+            Debug.LogWarning($"[BattlePreparationController] No hay items disponibles para el tipo y categoría del item: {itemData.name}");
+            return;
         }
+        RectTransform slotRect = _equipmentPanel.GetSlotTransform(slotController.SlotType, slotController.SlotCategory);
+        _itemPopUpSelector.SetItems(items);
+        _itemPopUpSelector.ShowNearElement(slotRect);
+    }
+
+    private void OnItemClicked(InventoryItem item, ItemData itemData)
+    {
+        if(item == null || itemData == null) Debug.LogWarning("[BattlePreparationController] Item o ItemData nulo en OnItemClicked");
+        //equipar el item clicado
+        bool success = InventoryManager.EquipItem(item);
+
+        if (success) {
+            _equipmentPanel.PopulateFromSelectedHero();
+            _itemPopUpSelector.Hide();
+        }
+        else
+            Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {itemData.name}");
     }
 
     #endregion

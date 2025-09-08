@@ -130,8 +130,8 @@
     <Compile Include="Assets\Scripts\Combat\TeamBaker.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitOwner.Component.cs" />
     <Compile Include="Assets\Scripts\Services\CurrencyService.cs" />
-    <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePreparation\FooterController.cs" />
+    <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellController.cs" />
@@ -317,6 +317,7 @@
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInitialization.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroSpawn.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\Terrain.Type.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\ItemSelectorController.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularArmorCreator.cs" />
     <Compile Include="Assets\Scripts\Inventory\ItemsEffects\ChooseWeaponRewardEffect.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDatabase.cs" />

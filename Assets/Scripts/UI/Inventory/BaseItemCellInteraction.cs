@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using Data.Items;
+using System;
 
 /// <summary>
 /// Clase base abstracta para la interacción de celdas y slots de inventario/equipamiento.
@@ -12,28 +13,22 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
     protected InventoryItem _currentItem;
     protected ItemData _currentItemData;
 
-    protected System.Action<InventoryItem, ItemData> _OnClick;
-    protected System.Action<InventoryItem, ItemData> _OnRightClick;
+    protected Action<InventoryItem, ItemData> _OnClick;
+    protected Action<InventoryItem, ItemData> _OnRightClick;
     protected string _cellId;
 
     // Callbacks de interacción (pueden ser asignados por el controlador)
-    public System.Action<InventoryItem, ItemData> OnItemClicked;
-    public System.Action<InventoryItem, ItemData> OnItemRightClicked;
-    public System.Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter;
-    public System.Action<InventoryItem, ItemData, Vector3> OnItemHoverMove;
-    public System.Action<InventoryItem, ItemData, Vector3> OnItemHoverExit;
-    public System.Action<InventoryItem, ItemData, string> OnSetItem;
-    public System.Action<InventoryItem, ItemData, string> OnClearItem;
+    public Action<InventoryItem, ItemData> OnItemClicked;
+    public Action<InventoryItem, ItemData> OnItemRightClicked;
+    public Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter;
+    public Action<InventoryItem, ItemData, Vector3> OnItemHoverMove;
+    public Action<InventoryItem, ItemData, Vector3> OnItemHoverExit;
+    public Action<InventoryItem, ItemData, string> OnSetItem;
+    public Action<InventoryItem, ItemData, string> OnClearItem;
 
-    public void Initialize(string cellId)
+    public virtual void Initialize(string cellId)
     {
         _cellId = cellId;
-    }
-
-    protected virtual void Start()
-    {
-        OnItemClicked += _OnClick;
-        OnItemRightClicked += _OnRightClick;
     }
 
     /// <summary>
@@ -46,7 +41,7 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
         OnSetItem?.Invoke(item, itemData, cellId);
     }
 
-    public virtual void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    public virtual void SetEvents(Action<InventoryItem, ItemData> onItemClicked, Action<InventoryItem, ItemData> onItemRightClicked)
     {
         _OnClick = onItemClicked;
         _OnRightClick = onItemRightClicked;
@@ -79,6 +74,34 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
             OnItemClicked?.Invoke(_currentItem, _currentItemData);
         else if (eventData.button == PointerEventData.InputButton.Right)
             OnItemRightClicked?.Invoke(_currentItem, _currentItemData);
+    }
+    public virtual void ConnectWithTooltips(
+        Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemData, Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemData, Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemData, string> OnSetItem,
+        Action<InventoryItem, ItemData, string> OnClearItem
+    )
+    {
+        this.OnItemHoverEnter += OnItemHoverEnter;
+        this.OnItemHoverExit += OnItemHoverExit;
+        this.OnItemHoverMove += OnItemHoverMove;
+        this.OnSetItem += OnSetItem;
+        this.OnClearItem += OnClearItem;
+    }
+    public virtual void DisconnectFromTooltips(
+        Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemData, Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemData, Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemData, string> OnSetItem,
+        Action<InventoryItem, ItemData, string> OnClearItem
+    )
+    {
+        this.OnItemHoverEnter -= OnItemHoverEnter;
+        this.OnItemHoverExit -= OnItemHoverExit;
+        this.OnItemHoverMove -= OnItemHoverMove;
+        this.OnSetItem -= OnSetItem;
+        this.OnClearItem -= OnClearItem;
     }
 
     public virtual void OnPointerEnter(PointerEventData eventData)

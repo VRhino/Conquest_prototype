@@ -22,10 +22,18 @@ public static class ComparisonTooltipUtils
         // Verificar que el tipo de equipo sea válido
         var equipmentType = itemData.itemType;
         if (!IsValidEquipmentTypeForComparison(equipmentType))
+        {
+            Debug.LogWarning($"[ComparisonTooltipUtils] Tipo de equipamiento no válido para comparación: {equipmentType}");
             return false;
+        }
 
         // Verificar si hay un ítem equipado en esa ranura
         var equippedItem = GetEquippedItemForComparison(equipmentType, itemData.itemCategory);
+        if (equippedItem == null)
+        {
+            Debug.Log($"[ComparisonTooltipUtils] No hay ítem equipado para comparar en {equipmentType} - {itemData.itemCategory}");
+            return false;
+        }
         return equippedItem != null;
     }
 

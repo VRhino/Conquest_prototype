@@ -17,7 +17,7 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
     [SerializeField] private Button exitButton;
     [SerializeField] private InventoryPanelController auxiliaryInventoryPanel;
 
-    private InventoryTooltipManager tooltipManager;
+    private TooltipManager tooltipManager;
 
     private List<StoreItemController> _activeItems = new();
     private System.Action _onExit;
@@ -54,9 +54,9 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
             exitButton.onClick.AddListener(() => FullscreenPanelManager.Instance.ClosePanel<UIStoreController>());
     }
 
-    public InventoryTooltipManager FindTooltipManager()
+    public TooltipManager FindTooltipManager()
     {
-        InventoryTooltipManager _tooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        TooltipManager _tooltipManager = FindObjectOfType<TooltipManager>();
         if (_tooltipManager == null)
             Debug.LogWarning("[UIStoreController] No InventoryTooltipManager found in the scene.");
         return _tooltipManager;

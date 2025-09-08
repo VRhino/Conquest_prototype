@@ -73,3 +73,9 @@ Troops_selector
     ├── infantry 
     ├── Distance
     └── Cavalry
+
+ItemSelector
+├── Rigth_chevron -> button
+├── Left_chevron -> button
+└── Troops_container -> contiene 10 cantidad de item_options
+       └── itemOption -> prefab

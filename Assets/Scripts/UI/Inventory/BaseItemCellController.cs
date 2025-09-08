@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Data.Items;
 using System;
+using System.Numerics;
 
 /// <summary>
 /// Clase base abstracta para celdas y slots de inventario/equipamiento.
@@ -35,20 +36,22 @@ public abstract class BaseItemCellController : MonoBehaviour
 
     // Tipo de interacción que debe usar esta celda/slot
     protected virtual System.Type InteractionType  => typeof(BaseItemCellInteraction);
+    private bool _isInitialized = false;
 
-    protected virtual void Awake()
+    public string CellId => cellId;
+
+
+    public virtual void Initialize()
     {
-        // Inicializar componente de interacción
         _interaction = (BaseItemCellInteraction)GetComponent(InteractionType);
         if (_interaction == null)
-            _interaction = (BaseItemCellInteraction)gameObject.AddComponent(InteractionType);
-
-        _interaction.Initialize(cellId);
-    }
-
-    protected virtual void Start()
-    {
-        _interaction.SetItem(_currentItem, _currentItemData, cellId);
+            _interaction = (BaseItemCellInteraction)gameObject.AddComponent(InteractionType); 
+        if (_interaction != null)
+        {
+            _interaction.Initialize(cellId);
+            _interaction.SetItem(_currentItem, _currentItemData, cellId);
+        }
+        _isInitialized = true;
     }
 
     /// <summary>
@@ -56,9 +59,11 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// </summary>
     public virtual void SetItem(InventoryItem item, ItemData itemData)
     {
+        if(_isInitialized == false) Initialize();
+
         _currentItem = item;
         _currentItemData = itemData;
-        
+
         bool hasItem = item != null && itemData != null;
         itemPanel.SetActive(hasItem);
 
@@ -77,6 +82,53 @@ public abstract class BaseItemCellController : MonoBehaviour
             stackText.text = item.quantity.ToString();
         }
         else stackText.gameObject.SetActive(false);
+    }
+
+    public virtual void ConnectWithTooltips(
+        Action<InventoryItem, ItemData, UnityEngine.Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemData, string> OnSetItem,
+        Action<InventoryItem, ItemData, string> OnClearItem
+    )
+    {
+        if (_isInitialized == false) Initialize();
+        _interaction?.ConnectWithTooltips(OnItemHoverEnter, OnItemHoverExit, OnItemHoverMove, OnSetItem, OnClearItem);
+    }
+    
+    public virtual void DisconnectFromTooltips(
+        Action<InventoryItem, ItemData, UnityEngine.Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemData, string> OnSetItem,
+        Action<InventoryItem, ItemData, string> OnClearItem
+    )
+    {
+        _interaction?.DisconnectFromTooltips(OnItemHoverEnter, OnItemHoverExit, OnItemHoverMove, OnSetItem, OnClearItem);
+    }
+    public virtual void SetSelected(bool isSelected)
+    {
+        if (selectedOverlay != null)
+            selectedOverlay.gameObject.SetActive(isSelected);
+    }
+
+    /// <summary>
+    /// Asigna los eventos de interacción al componente de interacción.
+    /// </summary>
+    public void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    {
+        if (_isInitialized == false) Initialize();
+
+        if (_interaction != null) _interaction.SetEvents(onItemClicked, onItemRightClicked);
+        else Debug.LogWarning($"[BaseItemCellController] No interaction component found on cell {cellId} to set events.");
+    }
+
+    /// <summary>
+    /// Remueve los eventos asignados al componente de interacción.
+    /// </summary>
+    public void RemoveEvents()
+    {
+        if (_interaction != null) _interaction.RemoveEvents();
     }
 
     /// <summary>

@@ -38,7 +38,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     public Button exitButton;
 
     [Header("Tooltip System")]
-    public InventoryTooltipManager tooltipManager;
+    public TooltipManager tooltipManager;
 
     // Control de filtros
     private ItemFilter _currentFilter = ItemFilter.All;
@@ -164,7 +164,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         // Buscar o crear el tooltip manager si no está asignado
         if (tooltipManager == null)
         {
-            tooltipManager = FindObjectOfType<InventoryTooltipManager>();
+            tooltipManager = FindObjectOfType<TooltipManager>();
         }
 
         if (tooltipManager == null)

@@ -8,22 +8,18 @@ using Data.Items;
 /// </summary>
 public class InventoryItemCellInteraction : BaseItemCellInteraction
 {
-    protected override void Start()
-    {
-        base.Start();
-        if (_OnRightClick == null)
-        {
-            _OnRightClick = HandleRightClickAction; 
-            OnItemRightClicked += _OnRightClick;
-        }
-    }
-
     public void ResetDefaultEvents()
     {
         if (_OnRightClick != null) OnItemRightClicked -= _OnRightClick;
 
         _OnRightClick = HandleRightClickAction; 
         OnItemRightClicked += _OnRightClick;
+    }
+
+    public override void Initialize(string cellId)
+    {
+        base.Initialize(cellId);
+        ResetDefaultEvents();
     }
 
     /// <summary>
@@ -36,9 +32,9 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
         bool success = InventoryManager.EquipItem(_currentItem);
 
         if (success)
-            if (_currentItem != null && _currentItem.itemId != "") Debug.Log($"[InventoryItemCellInteraction] Ítem equipado: {itemData.name}");
-            else
-                Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {itemData.name}");
+            Debug.Log($"[InventoryItemCellInteraction] Ítem equipado: {itemData.name}");
+        else
+            Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {_currentItemData.name}");
     }
 
     /// <summary>
@@ -78,7 +74,7 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
     private void NotifyTooltipSystemAfterItemAction()
     {
         // Buscar el manager de tooltips
-        InventoryTooltipManager tooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        TooltipManager tooltipManager = FindObjectOfType<TooltipManager>();
         if (tooltipManager != null)
         {
             // Forzar validación del tooltip actual

@@ -13,6 +13,30 @@ public static class EquipmentManagerService
 {
     private static HeroData _currentHero;
 
+    #region Equipment Access Dictionaries
+
+    private static readonly Dictionary<(ItemType, ItemCategory), System.Func<InventoryItem>> _equipmentGetters = new()
+    {
+        { (ItemType.Weapon, ItemCategory.None), () => _currentHero.equipment.weapon },
+        { (ItemType.Armor, ItemCategory.Helmet), () => _currentHero.equipment.helmet },
+        { (ItemType.Armor, ItemCategory.Torso), () => _currentHero.equipment.torso },
+        { (ItemType.Armor, ItemCategory.Gloves), () => _currentHero.equipment.gloves },
+        { (ItemType.Armor, ItemCategory.Pants), () => _currentHero.equipment.pants },
+        { (ItemType.Armor, ItemCategory.Boots), () => _currentHero.equipment.boots }
+    };
+
+    private static readonly Dictionary<(ItemType, ItemCategory), System.Action<InventoryItem>> _equipmentSetters = new()
+    {
+        { (ItemType.Weapon, ItemCategory.None), item => _currentHero.equipment.weapon = item },
+        { (ItemType.Armor, ItemCategory.Helmet), item => _currentHero.equipment.helmet = item },
+        { (ItemType.Armor, ItemCategory.Torso), item => _currentHero.equipment.torso = item },
+        { (ItemType.Armor, ItemCategory.Gloves), item => _currentHero.equipment.gloves = item },
+        { (ItemType.Armor, ItemCategory.Pants), item => _currentHero.equipment.pants = item },
+        { (ItemType.Armor, ItemCategory.Boots), item => _currentHero.equipment.boots = item },
+    };
+
+    #endregion
+
     #region Armor Compatibility System
 
     /// <summary>
@@ -92,10 +116,10 @@ public static class EquipmentManagerService
         if (_currentHero.equipment == null)
         {
             _currentHero.equipment = new Equipment();
-            LogInfo("Initialized empty equipment for hero");
+            Log("Initialized empty equipment for hero", LogType.Info);
         }
         
-        LogInfo($"Equipment manager initialized for hero: {_currentHero.heroName}");
+        Log($"Equipment manager initialized for hero: {_currentHero.heroName}", LogType.Info);
     }
 
     #region Equipment Operations
@@ -108,14 +132,14 @@ public static class EquipmentManagerService
     {
         if (!ValidateEquipOperation(item))
         {
-            LogError($"[EquipmentManager]Invalid equip operation for item: {item.itemId}");
+            Log($"Invalid equip operation for item: {item.itemId}", LogType.Error);
             return false;
         }
 
         var itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null)
         {
-            LogError($"[EquipmentManager]Item data not found for: {item.itemId}");
+            Log($"Item data not found for: {item.itemId}", LogType.Error);
             return false;
         }
 
@@ -124,7 +148,7 @@ public static class EquipmentManagerService
         int originalSlot = item.slotIndex;
         if (!InventoryStorageService.RemoveSpecificItem(item))
         {
-            LogError($"[EquipmentManager]Failed to remove {item.itemId} from inventory slot {originalSlot}");
+            Log($"Failed to remove {item.itemId} from inventory slot {originalSlot}", LogType.Error);
             return false;
         }
 
@@ -136,7 +160,7 @@ public static class EquipmentManagerService
         {
             // Si falla, devolver el item al inventario para mantener consistencia
             InventoryStorageService.AddExistingItemAtSlot(item, originalSlot);
-            LogError($"[EquipmentManager]Failed to equip item in slot: {itemData.itemType}. Item returned to inventory.");
+            Log($"Failed to equip item in slot: {itemData.itemType}. Item returned to inventory.", LogType.Error);
             return false;
         }
 
@@ -151,17 +175,17 @@ public static class EquipmentManagerService
                     // Si falla completamente, revertir el equipamiento
                     SetEquippedItem(itemData.itemType, itemData.itemCategory, currentlyEquipped);
                     InventoryStorageService.AddExistingItemAtSlot(item, originalSlot);
-                    LogError($"Failed to place {currentlyEquipped.itemId} in inventory. Equipment reverted.");
+                    Log($"Failed to place {currentlyEquipped.itemId} in inventory. Equipment reverted.", LogType.Error);
                     return false;
                 }
-                LogWarning($"Could not place {currentlyEquipped.itemId} in original slot {originalSlot}, placed in available slot instead");
+                Log($"Could not place {currentlyEquipped.itemId} in original slot {originalSlot}, placed in available slot instead", LogType.Warning);
             }
-            LogInfo($"Swapped {item.itemId} (equipped) with {currentlyEquipped.itemId} (to slot {originalSlot})");
+            Log($"Swapped {item.itemId} (equipped) with {currentlyEquipped.itemId} (to slot {originalSlot})", LogType.Info);
             InventoryEventService.TriggerItemEquipped(item, currentlyEquipped);
         }
         else
         {
-            LogInfo($"Equipped {item.itemId} from slot {originalSlot} in empty {itemData.itemType} slot");
+            Log($"Equipped {item.itemId} from slot {originalSlot} in empty {itemData.itemType} slot", LogType.Info);
             InventoryEventService.TriggerItemEquipped(item);
         }
         
@@ -175,18 +199,18 @@ public static class EquipmentManagerService
         {
             if (!compatibilityInfo.HasInventorySpace)
             {
-                LogWarning($"Cannot equip {item.itemId}: {compatibilityInfo.WarningMessage}");
+                Log($"Cannot equip {item.itemId}: {compatibilityInfo.WarningMessage}", LogType.Warning);
                 return false;
             }
 
             // TODO: Integrar con sistema UI para mostrar confirmación
             // Por ahora, proceder automáticamente (para testing)
-            LogInfo($"Equipment compatibility warning: {compatibilityInfo.WarningMessage}");
+            Log($"Equipment compatibility warning: {compatibilityInfo.WarningMessage}", LogType.Info);
 
             // Desequipar piezas incompatibles ANTES de continuar
             if (!UnequipIncompatiblePieces(compatibilityInfo.IncompatiblePieces))
             {
-                LogError($"Failed to unequip incompatible pieces for {item.itemId}");
+                Log($"Failed to unequip incompatible pieces for {item.itemId}", LogType.Error);
                 return false;
             }
         }
@@ -201,36 +225,16 @@ public static class EquipmentManagerService
         var equippedItem = GetEquippedItem(itemType, itemCategory);
         if (equippedItem == null)
         {
-            LogWarning($"No item equipped in slot: {itemType}");
+            Log($"No item equipped in slot: {itemType}", LogType.Warning);
             return false;
         }
 
-        // Verificar que hay espacio en el inventario
-        if (!InventoryStorageService.HasSpace())
+        if (!PerformUnequip(equippedItem, itemType, itemCategory))
         {
-            LogWarning("Cannot unequip - no space in inventory");
             return false;
         }
 
-        // Remover del equipment
-        if (!SetEquippedItem(itemType, itemCategory, null))
-        {
-            LogError($"Failed to unequip item from slot: {itemType}");
-            return false;
-        }
-        
-        // Devolver al inventario
-        if (!InventoryStorageService.AddExistingItem(equippedItem))
-        {
-            // Revertir si no se puede agregar al inventario
-            SetEquippedItem(itemType, itemCategory, equippedItem);
-            LogError($"Failed to add {equippedItem.itemId} back to inventory. Unequip reverted.");
-            return false;
-        }
-
-        LogInfo($"Unequipped {equippedItem.itemId} from {itemType} slot");
         InventoryEventService.TriggerItemUnequipped(equippedItem);
-
         return true;
     }
 
@@ -244,20 +248,20 @@ public static class EquipmentManagerService
 
         if (item1 == null && item2 == null)
         {
-            LogWarning("Cannot swap - both slots are empty");
+            Log("Cannot swap - both slots are empty", LogType.Warning);
             return false;
         }
 
         // Verificar que los items pueden equiparse en los slots destino
         if (item1 != null && !CanEquipInSlot(item1, slotType2))
         {
-            LogWarning($"{item1.itemId} cannot be equipped in {slotType2} slot");
+            Log($"{item1.itemId} cannot be equipped in {slotType2} slot", LogType.Warning);
             return false;
         }
 
         if (item2 != null && !CanEquipInSlot(item2, slotType1))
         {
-            LogWarning($"{item2.itemId} cannot be equipped in {slotType1} slot");
+            Log($"{item2.itemId} cannot be equipped in {slotType1} slot", LogType.Warning);
             return false;
         }
 
@@ -266,7 +270,7 @@ public static class EquipmentManagerService
         SetEquippedItem(slotType2, itemCategory2, item1);
 
         string swapInfo = $"Swapped equipment: {slotType1} <-> {slotType2}";
-        LogInfo(swapInfo);
+        Log(swapInfo, LogType.Info);
         InventoryEventService.LogInventoryOperation(swapInfo);
 
         return true;
@@ -282,27 +286,9 @@ public static class EquipmentManagerService
     public static InventoryItem GetEquippedItem(ItemType itemType, ItemCategory itemCategory)
     {
         if (_currentHero?.equipment == null) return null;
-        if (itemType == ItemType.Armor)
-        {
-            return itemCategory switch
-            {
-                ItemCategory.Helmet => _currentHero.equipment.helmet,
-                ItemCategory.Torso => _currentHero.equipment.torso,
-                ItemCategory.Gloves => _currentHero.equipment.gloves,
-                ItemCategory.Pants => _currentHero.equipment.pants,
-                ItemCategory.Boots => _currentHero.equipment.boots,
-                _ => null
-            };
-        }
-        else if (itemType == ItemType.Weapon)
-        {
-            return _currentHero.equipment.weapon;
-        }
-        else
-        {
-            LogWarning($"[EquipmentManager]Invalid item type for equipment query: {itemType}");
-            return null;
-        }
+        itemCategory = itemType == ItemType.Weapon ? ItemCategory.None : itemCategory;
+        var key = (itemType, itemCategory);
+        return _equipmentGetters.TryGetValue(key, out var getter) ? getter() : null;
     }
 
     /// <summary>
@@ -336,37 +322,30 @@ public static class EquipmentManagerService
 
     #region Validation Methods
 
+    private static bool IsItemEquippable(InventoryItem item, out ItemData itemData)
+    {
+        itemData = null;
+        if (item == null || !item.IsEquipment)
+        {
+            Log("Cannot equip null or non-equipment item", LogType.Warning);
+            return false;
+        }
+        itemData = InventoryUtils.GetItemData(item.itemId);
+        if (itemData == null || !InventoryUtils.IsEquippableType(itemData.itemType))
+        {
+            Log("Item data not found or not equippable", LogType.Warning);
+            return false;
+        }
+        return true;
+    }
+
     /// <summary>
     /// Verifica si un item puede ser equipado.
     /// </summary>
     public static bool CanEquipItem(InventoryItem item)
     {
-        if (item == null)
-        {
-            LogWarning("Cannot equip null item");
-            return false;
-        }
-
-        if (!item.IsEquipment)
-        {
-            LogWarning($"Item {item.itemId} is not equipment");
-            return false;
-        }
-
-        var itemData = InventoryUtils.GetItemData(item.itemId);
-        if (itemData == null)
-        {
-            LogWarning($"Item data not found for: {item.itemId}");
-            return false;
-        }
-
-        if (!InventoryUtils.IsEquippableType(itemData.itemType))
-        {
-            LogWarning($"Item type {itemData.itemType} is not equippable");
-            return false;
-        }
-
-        return true;
+        ItemData itemData;
+        return IsItemEquippable(item, out itemData);
     }
 
     /// <summary>
@@ -423,15 +402,49 @@ public static class EquipmentManagerService
     {
         if (itemData.itemType == ItemType.Weapon)
         {
-            return CheckWeaponCompatibility(item, itemData);
+            return CheckCompatibility(item, itemData, true);
         }
         else if (itemData.itemType == ItemType.Armor)
         {
-            return CheckArmorCompatibility(item, itemData);
+            return CheckCompatibility(item, itemData, false);
         }
 
         // No hay conflictos para otros tipos de items
         return new EquipmentCompatibilityInfo(false);
+    }
+
+    private static EquipmentCompatibilityInfo CheckCompatibility(InventoryItem item, ItemData itemData, bool isWeapon)
+    {
+        List<InventoryItem> incompatibleItems = isWeapon 
+            ? GetIncompatibleArmorPieces(itemData.itemCategory) 
+            : new List<InventoryItem> { GetIncompatibleWeapon(itemData.armorType) }.Where(x => x != null).ToList();
+        
+        if (incompatibleItems.Count == 0) return new EquipmentCompatibilityInfo(false);
+        
+        bool hasSpace = ValidateInventorySpaceForUnequip(incompatibleItems);
+        string warningMessage = BuildCompatibilityWarningMessage(itemData, incompatibleItems, isWeapon, hasSpace);
+        
+        return new EquipmentCompatibilityInfo(true, incompatibleItems, hasSpace, warningMessage, 
+            isWeapon ? CompatibilityConflictType.WeaponIncompatibleWithArmor : CompatibilityConflictType.ArmorIncompatibleWithWeapon);
+    }
+
+    private static string BuildCompatibilityWarningMessage(ItemData itemData, List<InventoryItem> incompatibleItems, bool isWeapon, bool hasSpace)
+    {
+        string itemTypeName = isWeapon ? GetWeaponTypeName(itemData.itemCategory) : GetArmorTypeName(itemData.armorType);
+        string compatibleTypes = isWeapon 
+            ? string.Join(", ", WeaponArmorCompatibility[itemData.itemCategory].Select(a => GetArmorTypeName(a)))
+            : "compatible weapons";
+        
+        string message = hasSpace 
+            ? $"Equipar {itemData.name} desequipará {incompatibleItems.Count} piezas incompatibles."
+            : $"No hay espacio suficiente en el inventario para desequipar las piezas incompatibles.";
+        
+        if (isWeapon && incompatibleItems.Count > 0)
+        {
+            message += $"\n\nLa {itemTypeName} '{itemData.name}' solo es compatible con armadura: {compatibleTypes}.";
+        }
+        
+        return message;
     }
 
     /// <summary>
@@ -439,27 +452,7 @@ public static class EquipmentManagerService
     /// </summary>
     private static EquipmentCompatibilityInfo CheckWeaponCompatibility(InventoryItem item, ItemData itemData)
     {
-        var incompatiblePieces = GetIncompatibleArmorPieces(itemData.itemCategory);
-        
-        if (incompatiblePieces.Count == 0)
-        {
-            return new EquipmentCompatibilityInfo(false);
-        }
-
-        // Verificar espacio en inventario para las piezas incompatibles
-        bool hasSpace = ValidateInventorySpaceForUnequip(incompatiblePieces);
-        
-        string warningMessage = hasSpace 
-            ? $"Equipar {itemData.name} desequipará {incompatiblePieces.Count} piezas de armadura incompatibles."
-            : $"No hay espacio suficiente en el inventario para desequipar las piezas incompatibles.";
-
-        return new EquipmentCompatibilityInfo(
-            requiresConfirmation: true,
-            incompatiblePieces: incompatiblePieces,
-            hasInventorySpace: hasSpace,
-            warningMessage: warningMessage,
-            conflictType: CompatibilityConflictType.WeaponIncompatibleWithArmor
-        );
+        return CheckCompatibility(item, itemData, true);
     }
 
     /// <summary>
@@ -467,28 +460,7 @@ public static class EquipmentManagerService
     /// </summary>
     private static EquipmentCompatibilityInfo CheckArmorCompatibility(InventoryItem item, ItemData itemData)
     {
-        var incompatibleWeapon = GetIncompatibleWeapon(itemData.armorType);
-        
-        if (incompatibleWeapon == null)
-        {
-            return new EquipmentCompatibilityInfo(false);
-        }
-
-        // Verificar espacio en inventario para el arma incompatible
-        var incompatibleList = new List<InventoryItem> { incompatibleWeapon };
-        bool hasSpace = ValidateInventorySpaceForUnequip(incompatibleList);
-
-        string warningMessage = hasSpace 
-            ? $"Equipar {itemData.name} desequipará el arma incompatible."
-            : $"No hay espacio suficiente en el inventario para desequipar el arma incompatible.";
-
-        return new EquipmentCompatibilityInfo(
-            requiresConfirmation: true,
-            incompatiblePieces: incompatibleList,
-            hasInventorySpace: hasSpace,
-            warningMessage: warningMessage,
-            conflictType: CompatibilityConflictType.ArmorIncompatibleWithWeapon
-        );
+        return CheckCompatibility(item, itemData, false);
     }
 
     /// <summary>
@@ -555,30 +527,20 @@ public static class EquipmentManagerService
             return true;
         }
 
-        LogInfo($"[EquipmentManager] Unequipping {incompatiblePieces.Count} incompatible pieces...");
+        Log($"[EquipmentManager] Unequipping {incompatiblePieces.Count} incompatible pieces...", LogType.Info);
 
         foreach (var piece in incompatiblePieces)
         {
             var pieceData = InventoryUtils.GetItemData(piece.itemId);
             if (pieceData == null) continue;
 
-            // Desequipar la pieza
-            if (!SetEquippedItem(pieceData.itemType, pieceData.itemCategory, null))
+            if (!PerformUnequip(piece, pieceData.itemType, pieceData.itemCategory))
             {
-                LogError($"[EquipmentManager] Failed to unequip incompatible piece: {piece.itemId}");
+                Log($"[EquipmentManager] Failed to unequip incompatible piece: {piece.itemId}", LogType.Error);
                 return false;
             }
 
-            // Agregar al inventario
-            if (!InventoryStorageService.AddExistingItem(piece))
-            {
-                LogError($"[EquipmentManager] Failed to add unequipped piece {piece.itemId} to inventory");
-                // Intentar revertir el desequipamiento
-                SetEquippedItem(pieceData.itemType, pieceData.itemCategory, piece);
-                return false;
-            }
-
-            LogInfo($"[EquipmentManager] Successfully unequipped incompatible piece: {pieceData.name}");
+            Log($"[EquipmentManager] Successfully unequipped incompatible piece: {pieceData.name}", LogType.Info);
             InventoryEventService.TriggerItemUnequipped(piece);
         }
 
@@ -601,7 +563,7 @@ public static class EquipmentManagerService
         {
             if (!InventoryStorageService.HasSpace())
             {
-                LogWarning($"Not enough inventory space for unequipping {itemsToUnequip.Count} pieces");
+                Log($"Not enough inventory space for unequipping {itemsToUnequip.Count} pieces", LogType.Warning);
                 return false;
             }
         }
@@ -613,18 +575,41 @@ public static class EquipmentManagerService
 
     #region Private Helper Methods
 
+    private static bool PerformUnequip(InventoryItem item, ItemType itemType, ItemCategory itemCategory)
+    {
+        if (!InventoryStorageService.HasSpace())
+        {
+            Log("No space in inventory for unequip", LogType.Warning);
+            return false;
+        }
+        
+        if (!SetEquippedItem(itemType, itemCategory, null))
+        {
+            Log("Failed to unequip item", LogType.Error);
+            return false;
+        }
+        
+        if (!InventoryStorageService.AddExistingItem(item))
+        {
+            // Revertir
+            SetEquippedItem(itemType, itemCategory, item);
+            Log("Failed to add to inventory, unequip reverted", LogType.Error);
+            return false;
+        }
+        
+        Log($"Unequipped {item.itemId}", LogType.Info);
+        return true;
+    }
+
     private static bool ValidateEquipOperation(InventoryItem item)
     {
         if (_currentHero?.equipment == null)
         {
-            LogError("Equipment not initialized");
+            Log("Equipment not initialized", LogType.Error);
             return false;
         }
 
-        if (!CanEquipItem(item))
-        {
-            return false;
-        }
+        if (!CanEquipItem(item)) return false;
 
         // Verificar que el item está en el inventario
         var inventoryItems = InventoryStorageService.GetAllItems();
@@ -633,7 +618,7 @@ public static class EquipmentManagerService
 
         if (!itemInInventory)
         {
-            LogWarning($"Item {item.itemId} not found in inventory");
+            Log($"Item {item.itemId} not found in inventory", LogType.Warning);
             return false;
         }
 
@@ -644,208 +629,20 @@ public static class EquipmentManagerService
     {
         if (_currentHero?.equipment == null) return false;
         if(item != null) item.slotIndex = -1; //Lo sacamos del inventario
-        switch (itemType)
+        itemCategory = itemType == ItemType.Weapon ? ItemCategory.None : itemCategory;
+        var key = (itemType, itemCategory);
+        if (_equipmentSetters.TryGetValue(key, out var setter))
         {
-            case ItemType.Weapon:
-                _currentHero.equipment.weapon = item;
-                return true;
-            case ItemType.Armor:
-                switch (itemCategory)
-                {
-                    case ItemCategory.Helmet:
-                        _currentHero.equipment.helmet = item;
-                        return true;
-                    case ItemCategory.Torso:
-                        _currentHero.equipment.torso = item;
-                        return true;
-                    case ItemCategory.Gloves:
-                        _currentHero.equipment.gloves = item;
-                        return true;
-                    case ItemCategory.Pants:
-                        _currentHero.equipment.pants = item;
-                        return true;
-                    case ItemCategory.Boots:
-                        _currentHero.equipment.boots = item;
-                        return true;
-                    default:
-                        LogError($"Invalid armor category: {itemCategory}");
-                        return false;
-                }
-            default:
-                LogError($"Invalid equipment type: {itemType}");
-                return false;
+            setter(item);
+            return true;
         }
-    }
-
-    #endregion
-
-    #region Debugging and Reporting
-
-    /// <summary>
-    /// Genera un reporte detallado del equipment actual.
-    /// </summary>
-    public static string GenerateEquipmentReport()
-    {
-        if (_currentHero?.equipment == null)
-        {
-            return "Equipment not initialized";
-        }
-
-        var report = new System.Text.StringBuilder();
-        report.AppendLine($"=== EQUIPMENT REPORT - {_currentHero.heroName} ===");
-        report.AppendLine($"Equipped Items: {GetEquippedItemCount()}/6");
-        report.AppendLine();
-
-        AppendEquipmentSlotInfo(report, "Weapon", _currentHero.equipment.weapon);
-        AppendEquipmentSlotInfo(report, "Helmet", _currentHero.equipment.helmet);
-        AppendEquipmentSlotInfo(report, "Torso", _currentHero.equipment.torso);
-        AppendEquipmentSlotInfo(report, "Gloves", _currentHero.equipment.gloves);
-        AppendEquipmentSlotInfo(report, "Pants", _currentHero.equipment.pants);
-        AppendEquipmentSlotInfo(report, "Boots", _currentHero.equipment.boots);
-
-        // Stats totales
-        var totalStats = CalculateTotalEquipmentStats();
-        if (totalStats.Count > 0)
-        {
-            report.AppendLine("=== TOTAL EQUIPMENT STATS ===");
-            foreach (var stat in totalStats)
-            {
-                report.AppendLine($"{stat.Key}: {stat.Value:F2}");
-            }
-        }
-
-        return report.ToString();
-    }
-
-    private static void AppendEquipmentSlotInfo(System.Text.StringBuilder report, string slotName, InventoryItem item)
-    {
-        report.AppendLine($"[{slotName}]");
-        if (item != null)
-        {
-            report.AppendLine($"  Item: {item.itemId}");
-            report.AppendLine($"  Instance ID: {item.instanceId}");
-            if (item.GeneratedStats.Count > 0)
-            {
-                report.AppendLine("  Stats:");
-                foreach (var stat in item.GeneratedStats)
-                {
-                    report.AppendLine($"    {stat.Key}: {stat.Value:F2}");
-                }
-            }
-        }
-        else
-        {
-            report.AppendLine("  Empty");
-        }
-        report.AppendLine();
+        Log($"Invalid equipment slot {itemType}, {itemCategory}", LogType.Error);
+        return false;
     }
 
     #endregion
 
     #region Armor Compatibility Implementation
-
-
-    /// <summary>
-    /// Verifica incompatibilidades cuando se equipa un arma.
-    /// </summary>
-    private static List<InventoryItem> CheckWeaponCompatibility(ItemData weaponData, out string warningMessage)
-    {
-        List<InventoryItem> incompatibleItems = new List<InventoryItem>();
-        warningMessage = "";
-
-        if (!WeaponArmorCompatibility.TryGetValue(weaponData.itemCategory, out ArmorType[] compatibleArmorTypes))
-        {
-            return incompatibleItems;
-        }
-
-        List<string> incompatiblePieceNames = new List<string>();
-
-        // Verificar cada slot de armadura equipado
-        var armorSlots = new[]
-        {
-            ItemCategory.Helmet,
-            ItemCategory.Torso,
-            ItemCategory.Gloves,
-            ItemCategory.Pants,
-            ItemCategory.Boots
-        };
-
-        foreach (var armorSlot in armorSlots)
-        {
-            var equippedArmor = GetEquippedItem(ItemType.Armor, armorSlot);
-            if (equippedArmor != null)
-            {
-                var armorData = InventoryUtils.GetItemData(equippedArmor.itemId);
-                if (armorData != null && !compatibleArmorTypes.Contains(armorData.armorType))
-                {
-                    incompatibleItems.Add(equippedArmor);
-                    incompatiblePieceNames.Add(armorData.name);
-                }
-            }
-        }
-
-        if (incompatibleItems.Count > 0)
-        {
-            string weaponTypeName = GetWeaponTypeName(weaponData.itemCategory);
-            string armorTypesText = string.Join(", ", compatibleArmorTypes.Select(a => GetArmorTypeName(a)));
-            
-            warningMessage = $"La {weaponTypeName} '{weaponData.name}' solo es compatible con armadura: {armorTypesText}.\n\n";
-            warningMessage += $"Las siguientes piezas serán desequipadas:\n• {string.Join("\n• ", incompatiblePieceNames)}";
-        }
-
-        return incompatibleItems;
-    }
-
-    /// <summary>
-    /// Verifica incompatibilidades cuando se equipa armadura.
-    /// </summary>
-    private static List<InventoryItem> CheckArmorCompatibility(ItemData armorData, out string warningMessage)
-    {
-        List<InventoryItem> incompatibleItems = new List<InventoryItem>();
-        warningMessage = "";
-
-        // Verificar si hay armas equipadas que sean incompatibles con este tipo de armadura
-        var weaponSlots = new[]
-        {
-            (ItemType.Weapon, ItemCategory.SwordAndShield),
-            (ItemType.Weapon, ItemCategory.TwoHandedSword),
-            (ItemType.Weapon, ItemCategory.Bow),
-            (ItemType.Weapon, ItemCategory.Spear)
-        };
-
-        List<string> incompatibleWeaponNames = new List<string>();
-
-        foreach (var (weaponType, weaponCategory) in weaponSlots)
-        {
-            var equippedWeapon = GetEquippedItem(weaponType, weaponCategory);
-            if (equippedWeapon != null)
-            {
-                // Verificar si esta arma es compatible con el tipo de armadura
-                if (WeaponArmorCompatibility.TryGetValue(weaponCategory, out ArmorType[] compatibleArmorTypes))
-                {
-                    if (!compatibleArmorTypes.Contains(armorData.armorType))
-                    {
-                        incompatibleItems.Add(equippedWeapon);
-                        var weaponData = InventoryUtils.GetItemData(equippedWeapon.itemId);
-                        if (weaponData != null)
-                        {
-                            incompatibleWeaponNames.Add(weaponData.name);
-                        }
-                    }
-                }
-            }
-        }
-
-        if (incompatibleItems.Count > 0)
-        {
-            string armorTypeName = GetArmorTypeName(armorData.armorType);
-            warningMessage = $"La armadura {armorTypeName} '{armorData.name}' no es compatible con las siguientes armas equipadas:\n\n";
-            warningMessage += $"• {string.Join("\n• ", incompatibleWeaponNames)}\n\n";
-            warningMessage += "Estas armas serán desequipadas.";
-        }
-
-        return incompatibleItems;
-    }
 
     /// <summary>
     /// Obtiene el nombre legible del tipo de arma.
@@ -880,19 +677,17 @@ public static class EquipmentManagerService
 
     #region Logging
 
-    private static void LogInfo(string message)
-    {
-        Debug.Log($"[EquipmentManagerService] {message}");
-    }
+    private enum LogType { Info, Warning, Error }
 
-    private static void LogWarning(string message)
+    private static void Log(string message, LogType logType = LogType.Info)
     {
-        Debug.LogWarning($"[EquipmentManagerService] {message}");
-    }
-
-    private static void LogError(string message)
-    {
-        Debug.LogError($"[EquipmentManagerService] {message}");
+        string prefix = "[EquipmentManagerService]";
+        switch (logType)
+        {
+            case LogType.Info: Debug.Log($"{prefix} {message}"); break;
+            case LogType.Warning: Debug.LogWarning($"{prefix} {message}"); break;
+            case LogType.Error: Debug.LogError($"{prefix} {message}"); break;
+        }
     }
 
     #endregion

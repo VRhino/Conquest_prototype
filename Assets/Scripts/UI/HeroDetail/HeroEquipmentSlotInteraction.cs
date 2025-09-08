@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using Data.Items;
 using UnityEditor.Graphs;
+using System;
+using BattleDrakeStudios.ModularCharacters;
 
 /// <summary>
 /// Maneja las interacciones del usuario con los slots de equipamiento del Hero Detail UI.
@@ -10,10 +12,16 @@ using UnityEditor.Graphs;
 /// </summary>
 public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
 {
+     #region Events
+    
+    /// <summary>
+    /// Evento transformado que incluye información del slot controller
+    /// </summary>
+    public System.Action<InventoryItem, ItemData, HeroEquipmentSlotController> OnEquipmentSlotClicked;
+
+    #endregion
     #region Private Fields
     private HeroEquipmentSlotController _slotController;
-    private ItemType _slotType => _slotController != null ? _slotController.SlotType : ItemType.None;
-    private ItemCategory _slotCategory => _slotController != null ? _slotController.SlotCategory : ItemCategory.None;
 
     #endregion
 
@@ -27,10 +35,44 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
             Debug.LogError("[HeroEquipmentSlotInteraction] No se encontró HeroEquipmentSlotController en el mismo GameObject");
     }
 
-    void Start()
+    #region Event Forwarding
+
+    /// <summary>
+    /// Configura el sistema de event forwarding
+    /// </summary>
+    private void SetupEventForwarding()
     {
-        OnItemRightClicked += HandleRightClick;
-        OnItemClicked += HandleLeftClick;
+        // Suscribirse al evento base para hacer forwarding
+        this.OnItemClicked += HandleItemClickedForwarding;
+    }
+
+    /// <summary>
+    /// Método que intercepta el evento base y lo transforma en el nuevo evento
+    /// </summary>
+    private void HandleItemClickedForwarding(InventoryItem item, ItemData itemData)
+    {
+        // Validar que tenemos todos los datos necesarios
+        if ( _slotController == null)
+        {
+            Debug.LogWarning("[HeroEquipmentSlotInteraction] Datos inválidos para forwarding de evento");
+            return;
+        }
+        
+        // Log opcional para debugging
+        Debug.Log($"[HeroEquipmentSlotInteraction] Forwarding click event for slot: {_slotController.SlotType}-{_slotController.SlotCategory}");
+        
+        // Lanzar el evento transformado con información adicional
+        OnEquipmentSlotClicked?.Invoke(item, itemData, _slotController);
+    }
+
+    #endregion
+
+    public void SetupEquipmentSlotEvents(
+        Action<InventoryItem, ItemData> onItemRightClicked,
+        Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked = null)
+    {
+        base.SetEvents(HandleItemClickedForwarding, onItemRightClicked);
+        OnEquipmentSlotClicked += onEquipmentSlotClicked;
     }
 
     #endregion
@@ -42,88 +84,6 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
     /// </summary>
     /// <returns>True si hay un item equipado</returns>
     public bool HasEquippedItem => _currentItem != null && _currentItemData != null;
-    
-    #endregion
-
-    #region Interaction Logic
-
-    /// <summary>
-    /// Maneja el click izquierdo en el slot.
-    /// Para futuro: drag & drop, seleccionar desde inventario, etc.
-    /// </summary>
-    private void HandleLeftClick(InventoryItem item, ItemData itemData)
-    {
-
-        if (!HasEquippedItem)
-        {
-            Debug.Log($"[HeroEquipmentSlotInteraction] Left clicked on empty slot: {_slotType}.{_slotCategory}");
-            // Futuro: abrir inventario filtrado, mostrar items compatibles, etc.
-        }
-    }
-
-    /// <summary>
-    /// Maneja el click derecho en el slot (desequipar item).
-    /// </summary>
-    private void HandleRightClick(InventoryItem item, ItemData itemData)
-    {
-        if (!HasEquippedItem) return;
-
-        // Verificar si se puede desequipar
-        if (!_slotController.CanUnequipCurrentItem()) return;
-
-        // Intentar desequipar
-        bool success = TryUnequipCurrentItem();
-
-
-        if (success) Debug.Log($"[HeroEquipmentSlotInteraction] Successfully unequipped: {itemData.name}");
-        else Debug.LogError($"[HeroEquipmentSlotInteraction] Failed to unequip: {itemData.name}");
-    }
-
-    /// <summary>
-    /// Intenta desequipar el item actual del slot.
-    /// </summary>
-    /// <returns>True si se desequipó exitosamente</returns>
-    private bool TryUnequipCurrentItem()
-    {
-        if (!HasEquippedItem) return false;
-
-        try
-        {
-            // Usar EquipmentManagerService para desequipar
-            bool success = EquipmentManagerService.UnequipItem(_slotType, _slotCategory);
-
-            if (success)
-            {
-                _slotController.Clear();
-                NotifyTooltipSystemAfterAction();                
-                return true;
-            }
-            
-            return false;
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[HeroEquipmentSlotInteraction] Exception while unequipping item: {e.Message}");
-            return false;
-        }
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    /// <summary>
-    /// Notifica al sistema de tooltips después de una acción que puede cambiar el equipamiento.
-    /// </summary>
-    private void NotifyTooltipSystemAfterAction()
-    {
-        var tooltipManager = FindObjectOfType<InventoryTooltipManager>();
-        if (tooltipManager != null)
-        {            
-            Debug.Log("[HeroEquipmentSlotInteraction] Tooltip system notified after unequip action");
-            tooltipManager.ForceValidateTooltip();
-        }
-    }
 
     #endregion
 }

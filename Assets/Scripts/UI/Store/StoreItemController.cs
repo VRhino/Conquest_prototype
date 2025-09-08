@@ -15,7 +15,7 @@ public class StoreItemController : MonoBehaviour
     [SerializeField] private Image currencyIcon;
     [SerializeField] private TMP_Text costText;
     [SerializeField] private Button buyButton;
-    private InventoryTooltipManager _tooltipManager;
+    private TooltipManager _tooltipManager;
 
     private InventoryItem _productData;
     private ItemData _protoProduct;
@@ -32,7 +32,7 @@ public class StoreItemController : MonoBehaviour
     /// </summary>
     public InventoryItem GetProductInstance() => _productData;
 
-    public void Setup(ItemData itemData, System.Action<InventoryItem, ItemData> onBuy, InventoryTooltipManager tooltipManager)
+    public void Setup(ItemData itemData, System.Action<InventoryItem, ItemData> onBuy, TooltipManager tooltipManager)
     {
         _protoProduct = itemData;
         _onBuy = onBuy;
@@ -95,25 +95,13 @@ public class StoreItemController : MonoBehaviour
     public void ConnectWithTooltipsEvents()
     {
         if (_tooltipManager == null) return;
-        ItemCellInteraction interaction = itemCellController.GetComponent<ItemCellInteraction>();
-        if (interaction == null) return;
-        // Conectar eventos de tooltip
-        interaction.OnItemHoverEnter += _tooltipManager.OnItemHoverEnter;
-        interaction.OnItemHoverExit += _tooltipManager.OnItemHoverExit;
-        interaction.OnItemHoverMove += _tooltipManager.OnItemHoverMove;
+        _tooltipManager.ConnectCellToTooltip(itemCellController);
     }
 
     public void DisconnectFromTooltipEvents()
     {
         if (_tooltipManager == null) return;
-
-        ItemCellInteraction interaction = itemCellController.GetComponent<ItemCellInteraction>();
-        if (interaction == null) return;
-
-        // Desconectar eventos de tooltip
-        interaction.OnItemHoverEnter -= _tooltipManager.OnItemHoverEnter;
-        interaction.OnItemHoverExit -= _tooltipManager.OnItemHoverExit;
-        interaction.OnItemHoverMove -= _tooltipManager.OnItemHoverMove;
+        _tooltipManager.DisconnectCellFromTooltip(itemCellController);
     }
 
     private void OnDestroy()

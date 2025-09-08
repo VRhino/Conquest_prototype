@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using Data.Items;
+using System;
 
 /// <summary>
 /// Controlador del panel de equipamiento del Hero Detail UI.
@@ -34,7 +35,7 @@ public class HeroEquipmentPanel : MonoBehaviour
     #region Tooltip Integration
 
     [Header("Tooltip Integration")]
-    [SerializeField]private InventoryTooltipManager tooltipManager;
+    [SerializeField]private TooltipManager tooltipManager;
 
     #endregion
 
@@ -49,7 +50,7 @@ public class HeroEquipmentPanel : MonoBehaviour
     // Referencia al héroe actual
     private HeroData _currentHero;
 
-    public void SetTooltipManager(InventoryTooltipManager manager)
+    public void SetTooltipManager(TooltipManager manager)
     {
         if (manager != null)
         {
@@ -63,24 +64,30 @@ public class HeroEquipmentPanel : MonoBehaviour
         }
     }
 
+    public void SetEvents(
+        Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked,
+        Action<InventoryItem, ItemData> onItemRightClicked
+        )
+    {
+        foreach (var slot in GetAllSlots())
+        {
+            slot?.RemoveEvents();
+            slot?.SetupEquipmentSlotEvents(onEquipmentSlotClicked, onItemRightClicked);
+        }
+    }
+
     #endregion
 
     #region Unity Lifecycle
 
     void Start()
     {
-        if (autoInitializeOnStart)
-        {
-            InitializePanel();
-        }
+        if (autoInitializeOnStart) InitializePanel();
     }
 
     void OnEnable()
     {
-        if (_isInitialized && autoPopulateOnEnable)
-        {
-            RefreshAllSlots();
-        }
+        if (_isInitialized && autoPopulateOnEnable) RefreshAllSlots();
     }
 
     #endregion
@@ -388,7 +395,7 @@ public class HeroEquipmentPanel : MonoBehaviour
     void OnDestroy()
     {
         UnsubscribeFromEquipmentEvents();
-        CleanupTooltipIntegration();
+        if(tooltipManager != null) CleanupTooltipIntegration();
     }
 
     #if UNITY_EDITOR
@@ -401,10 +408,7 @@ public class HeroEquipmentPanel : MonoBehaviour
         AutoAssignSlotsByConfiguration();
         
         // Validar configuración en el editor
-        if (Application.isPlaying && _isInitialized)
-        {
-            ValidateSlotReferences();
-        }
+        if (Application.isPlaying && _isInitialized) ValidateSlotReferences();
     }
     
     /// <summary>
@@ -460,24 +464,17 @@ public class HeroEquipmentPanel : MonoBehaviour
         Debug.Log("[HeroEquipmentPanel] Initializing tooltip integration...");
         
         // Buscar el tooltipManager dinámicamente
-        if (tooltipManager == null)
-        {
-            tooltipManager = FindTooltipManager();
-        }
+        if (tooltipManager == null) tooltipManager = FindTooltipManager();
         
         if (tooltipManager == null)
         {
             Debug.LogWarning("[HeroEquipmentPanel] TooltipManager could not be found. Tooltip functionality will not work.");
             return;
         }
-
-        // Conectar eventos para cada slot
-        ConnectSlotTooltipEvents(helmetSlot);
-        ConnectSlotTooltipEvents(torsoSlot);
-        ConnectSlotTooltipEvents(glovesSlot);
-        ConnectSlotTooltipEvents(pantsSlot);
-        ConnectSlotTooltipEvents(bootsSlot);
-        ConnectSlotTooltipEvents(weaponSlot);
+        foreach (var slot in GetAllSlots())
+        {
+            ConnectSlotTooltipEvents(slot);
+        }
 
         Debug.Log("[HeroEquipmentPanel] Tooltip integration initialized successfully");
     }
@@ -489,15 +486,7 @@ public class HeroEquipmentPanel : MonoBehaviour
     private void ConnectSlotTooltipEvents(HeroEquipmentSlotController slot)
     {
         if (slot == null) return;
-        
-        // Obtener el componente de interacción del slot
-        var interaction = slot.GetComponent<HeroEquipmentSlotInteraction>();
-
-        if (interaction == null) return;
-        // Conectar eventos de hover con métodos adapter
-        interaction.OnItemHoverEnter += tooltipManager.OnItemHoverEnter;
-        interaction.OnItemHoverMove += tooltipManager.OnItemHoverMove; 
-        interaction.OnItemHoverExit += tooltipManager.OnItemHoverExit;
+        tooltipManager?.ConnectCellToTooltip(slot);
     }
 
     /// <summary>
@@ -507,23 +496,27 @@ public class HeroEquipmentPanel : MonoBehaviour
     private void DisconnectSlotTooltipEvents(HeroEquipmentSlotController slot)
     {
         if (slot == null) return;
+        tooltipManager?.DisconnectCellFromTooltip(slot);
+    }
 
-        var interaction = slot.GetComponent<HeroEquipmentSlotInteraction>();
-        if (interaction == null) return;
-
-        interaction.OnItemHoverEnter -= tooltipManager.OnItemHoverEnter;
-        interaction.OnItemHoverMove -= tooltipManager.OnItemHoverMove;
-        interaction.OnItemHoverExit -= tooltipManager.OnItemHoverExit;
+    public RectTransform GetSlotTransform(ItemType itemType, ItemCategory itemCategory)
+    {
+        var slot = GetSlot(itemType, itemCategory);
+        if (slot != null)
+        {
+            return slot.GetComponent<RectTransform>();
+        }
+        return null;
     }
 
     /// <summary>
     /// Busca el InventoryTooltipManager dinámicamente en la escena.
     /// </summary>
     /// <returns>El InventoryTooltipManager encontrado o null si no existe</returns>
-    private InventoryTooltipManager FindTooltipManager()
+    private TooltipManager FindTooltipManager()
     {
         // Buscar globalmente en la escena
-        var globalTooltipManager = FindObjectOfType<InventoryTooltipManager>();
+        var globalTooltipManager = FindObjectOfType<TooltipManager>();
         if (globalTooltipManager != null)
         {
             Debug.Log("[HeroEquipmentPanel] Found tooltip manager globally in scene");
@@ -535,31 +528,14 @@ public class HeroEquipmentPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// Busca el InventoryTooltipManager en el Canvas que contiene este panel.
-    /// </summary>
-    /// <returns>El InventoryTooltipManager del Canvas o null</returns>
-    private InventoryTooltipManager FindInCanvas()
-    {
-        var parentCanvas = GetComponentInParent<Canvas>();
-        if (parentCanvas != null)
-        {
-            var canvasTooltipManager = parentCanvas.GetComponentInChildren<InventoryTooltipManager>();
-            return canvasTooltipManager;
-        }
-        return null;
-    }
-
-    /// <summary>
     /// Limpia la integración de tooltips desconectando eventos.
     /// </summary>
     private void CleanupTooltipIntegration()
     {
-        DisconnectSlotTooltipEvents(helmetSlot);
-        DisconnectSlotTooltipEvents(torsoSlot);
-        DisconnectSlotTooltipEvents(glovesSlot);
-        DisconnectSlotTooltipEvents(pantsSlot);
-        DisconnectSlotTooltipEvents(bootsSlot);
-        DisconnectSlotTooltipEvents(weaponSlot);
+        foreach (var slot in GetAllSlots())
+        {
+            DisconnectSlotTooltipEvents(slot);
+        }
 
         Debug.Log("[HeroEquipmentPanel] Tooltip integration cleaned up");
     }

@@ -120,42 +120,6 @@ public static class InventoryUIUtils
     #endregion
     
     #region Cell Management
-    
-    /// <summary>
-    /// Configura una celda con un item específico.
-    /// Utiliza la lógica existente de InventoryItemCellController.SetItem().
-    /// </summary>
-    /// <param name="cell">Controlador de la celda</param>
-    /// <param name="item">Item del inventario (puede ser null)</param>
-    /// <param name="itemData">Datos del item (puede ser null)</param>
-    /// <param name="cellIndex">Índice de la celda</param>
-    public static void SetupCell(InventoryItemCellController cell, InventoryItem item, ItemData itemData, int cellIndex)
-    {
-        if (cell == null) return;
-
-        cell.SetCellIndex(cellIndex);
-        
-        if (item != null && itemData != null)
-        {
-            cell.SetItem(item, itemData);
-        }
-        else
-        {
-            cell.Clear();
-        }
-    }
-    
-    /// <summary>
-    /// Limpia una celda y resetea su estado.
-    /// Wrapper around InventoryItemCellController.Clear().
-    /// </summary>
-    /// <param name="cell">Controlador de la celda</param>
-    public static void ClearCell(InventoryItemCellController cell)
-    {
-        if (cell == null) return;
-        cell.Clear();
-    }
-    
     /// <summary>
     /// Actualiza múltiples celdas en batch para mejor performance.
     /// Optimización para evitar llamadas individuales.
@@ -200,7 +164,7 @@ public static class InventoryUIUtils
     /// </summary>
     /// <param name="tooltipManager">Manager de tooltips</param>
     /// <param name="inventoryPanel">Panel de inventario</param>
-    public static void ConnectTooltipsToInventory(InventoryTooltipManager tooltipManager, InventoryPanelController inventoryPanel)
+    public static void ConnectTooltipsToInventory(TooltipManager tooltipManager, InventoryPanelController inventoryPanel)
     {
         if (tooltipManager == null || inventoryPanel == null) return;
 
@@ -214,29 +178,13 @@ public static class InventoryUIUtils
 
         Debug.Log($"[InventoryUIUtils] Connected {cells.Length} cells to tooltip system");
     }
-    
-    /// <summary>
-    /// Reconecta tooltips después de cambios en la UI.
-    /// Movido desde InventoryTooltipManager.RefreshCellConnections().
-    /// </summary>
-    /// <param name="tooltipManager">Manager de tooltips</param>
-    public static void RefreshTooltipConnections(InventoryTooltipManager tooltipManager)
-    {
-        if (tooltipManager == null) return;
-
-        var inventoryPanel = Object.FindObjectOfType<InventoryPanelController>();
-        ConnectTooltipsToInventory(tooltipManager, inventoryPanel);
-
-        Debug.Log("[InventoryUIUtils] Tooltip connections refreshed");
-    }
-
     /// <summary>
     /// Conecta una celda específica al sistema de tooltips.
     /// Helper method movido desde InventoryTooltipManager.
     /// </summary>
     /// <param name="tooltipManager">Manager de tooltips</param>
     /// <param name="cell">Celda a conectar</param>
-    private static void ConnectCellToTooltip(InventoryTooltipManager tooltipManager, InventoryItemCellController cell)
+    private static void ConnectCellToTooltip(TooltipManager tooltipManager, InventoryItemCellController cell)
     {
         if (tooltipManager == null || cell == null) return;
 
@@ -245,86 +193,5 @@ public static class InventoryUIUtils
         tooltipManager.ConnectCellToTooltip(cell);
     }
     
-    #endregion
-    
-    #region Event Handler Utilities
-    
-    /// <summary>
-    /// Handler unificado para cambios en el inventario.
-    /// Reemplaza múltiples handlers específicos con una solución centralizada.
-    /// </summary>
-    /// <param name="controller">Controlador del panel de inventario</param>
-    public static void OnInventoryChanged_Handler(InventoryPanelController controller)
-    {
-        if (controller == null) return;
-
-        // Usar el método principal de refresh completo
-        RefreshFullUI(controller);
-
-        Debug.Log("[InventoryUIUtils] Inventory changed event handled");
-    }
-    
-    /// <summary>
-    /// Handler unificado para cuando se usan items.
-    /// Asegura actualización completa después del uso de consumibles.
-    /// </summary>
-    /// <param name="controller">Controlador del panel de inventario</param>
-    /// <param name="item">Item que fue usado</param>
-    public static void OnItemUsed_Handler(InventoryPanelController controller, InventoryItem item)
-    {
-        if (controller == null) return;
-
-        // Refresh completo para asegurar que se actualice todo
-        RefreshFullUI(controller);
-
-        Debug.Log($"[InventoryUIUtils] Item used event handled: {item?.itemId}");
-    }
-    
-    #endregion
-
-    #region Validation and Debugging
-
-    /// <summary>
-    /// Valida que todos los componentes UI estén correctamente configurados.
-    /// </summary>
-    /// <param name="controller">Controlador a validar</param>
-    /// <returns>True si la configuración es válida</returns>
-    public static bool ValidateUIComponents(InventoryPanelController controller)
-    {
-        if (controller == null)
-        {
-            Debug.LogError("[InventoryUIUtils] ValidateUIComponents: controller is null");
-            return false;
-        }
-
-        bool isValid = true;
-
-        if (controller.bronzeText == null)
-        {
-            Debug.LogWarning("[InventoryUIUtils] bronzeText is null");
-            isValid = false;
-        }
-
-        if (controller.silverText == null)
-        {
-            Debug.LogWarning("[InventoryUIUtils] silverText is null");
-            isValid = false;
-        }
-
-        if (controller.goldText == null)
-        {
-            Debug.LogWarning("[InventoryUIUtils] goldText is null");
-            isValid = false;
-        }
-
-        if (controller.CellControllers.Count == 0)
-        {
-            Debug.LogWarning("[InventoryUIUtils] No cell controllers found");
-            isValid = false;
-        }
-
-        return isValid;
-    }
-
     #endregion
 }

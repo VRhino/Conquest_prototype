@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BattleDrakeStudios.ModularCharacters;
+using Data.Items;
 using UnityEngine;
 
 /// <summary>
@@ -225,6 +227,38 @@ public static class InventoryStorageService
         return _currentHero.inventory.Where(item => item.itemType == itemType).ToList();
     }
 
+    public static List<InventoryItem> GetItemsByTypeAndCategory(InventoryItem item)
+    {
+        ItemData protoItem = InventoryUtils.GetItemData(item.itemId);
+        if (protoItem == null)
+        {
+            Debug.LogWarning($"ItemData not found for item: {item.itemId}");
+            return new List<InventoryItem>();
+        }
+        return GetItemsByTypeAndCategory(protoItem.itemType, protoItem.itemCategory);
+    }
+
+    public static List<InventoryItem> GetItemsByTypeAndCategory(ItemType itemType, ItemCategory itemCategory)
+    {
+
+        if (itemType == ItemType.Weapon)
+        {
+            return _currentHero.inventory
+                .Where(i => i.itemType == ItemType.Weapon)
+                .ToList();
+        }
+
+        if (itemType == ItemType.Armor)
+        {
+            return _currentHero.inventory
+                .Where(i => i.itemType == ItemType.Armor &&
+                            InventoryUtils.GetItemData(i.itemId)?.itemCategory == itemCategory)
+                .ToList();
+        }
+
+        return new List<InventoryItem>();
+    }
+
     /// <summary>
     /// Obtiene todos los items del inventario.
     /// </summary>
@@ -279,10 +313,7 @@ public static class InventoryStorageService
     private static bool IsValidSlotIndex(int slotIndex)
     {
         bool isValid = slotIndex >= 0 && slotIndex < _inventoryLimit;
-        if (!isValid)
-        {
-            LogWarning($"Invalid slot index: {slotIndex}. Valid range: 0-{_inventoryLimit - 1}");
-        }
+        if (!isValid) LogWarning($"Invalid slot index: {slotIndex}. Valid range: 0-{_inventoryLimit - 1}");
         return isValid;
     }
 
@@ -398,20 +429,9 @@ public static class InventoryStorageService
 
     #region Logging
 
-    private static void LogInfo(string message)
-    {
-        Debug.Log($"[InventoryStorageService] {message}");
-    }
-
-    private static void LogWarning(string message)
-    {
-        Debug.LogWarning($"[InventoryStorageService] {message}");
-    }
-
-    private static void LogError(string message)
-    {
-        Debug.LogError($"[InventoryStorageService] {message}");
-    }
+    private static void LogInfo(string message) { Debug.Log($"[InventoryStorageService] {message}"); }
+    private static void LogWarning(string message) { Debug.LogWarning($"[InventoryStorageService] {message}"); }
+    private static void LogError(string message) { Debug.LogError($"[InventoryStorageService] {message}"); }
 
     #endregion
 }

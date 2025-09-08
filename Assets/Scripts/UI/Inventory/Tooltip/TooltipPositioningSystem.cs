@@ -12,12 +12,90 @@ public class TooltipPositioningSystem : ITooltipComponent
     private Canvas _tooltipCanvas;
     private bool _followMouse = true;
 
+    #region Core Positioning Logic
+
+    /// <summary>
+    /// Contiene toda la lógica de posicionamiento inteligente.
+    /// </summary>
+    private class SmartPositioningContext
+    {
+        public Vector2 CanvasPosition { get; set; }
+        public Vector2 CanvasSize { get; set; }
+        public Vector2 TooltipSize { get; set; }
+        public bool HasEnoughSpaceRight { get; set; }
+        public bool HasEnoughSpaceLeft { get; set; }
+        public bool ShouldPlaceRight { get; set; }
+        public Vector2 Pivot { get; set; }
+        public Vector2 FinalPosition { get; set; }
+    }
+
+    /// <summary>
+    /// Calcula el contexto de posicionamiento inteligente.
+    /// </summary>
+    private SmartPositioningContext CalculateSmartPositioningContext(Vector3 screenPosition, Vector2 tooltipSize)
+    {
+        var context = new SmartPositioningContext();
+
+        // Conversión común de coordenadas
+        context.CanvasPosition = ConvertScreenToCanvasPosition(screenPosition);
+        context.CanvasSize = GetCanvasSize();
+        context.TooltipSize = tooltipSize;
+
+        // Cálculo de espacio disponible
+        float rightLimit = context.CanvasSize.x / 2f;
+        float leftLimit = -context.CanvasSize.x / 2f;
+
+        context.HasEnoughSpaceRight = (rightLimit - context.CanvasPosition.x) >= tooltipSize.x;
+        context.HasEnoughSpaceLeft = (context.CanvasPosition.x - leftLimit) >= tooltipSize.x;
+
+        // Lógica de decisión de dirección
+        context.ShouldPlaceRight = DeterminePlacementDirection(context);
+
+        return context;
+    }
+
+    /// <summary>
+    /// Determina la dirección óptima de colocación.
+    /// </summary>
+    private bool DeterminePlacementDirection(SmartPositioningContext context)
+    {
+        if (context.HasEnoughSpaceRight) return true;
+        if (context.HasEnoughSpaceLeft) return false;
+        return true; // Default: forzar derecha si no cabe en ninguno
+    }
+
+    /// <summary>
+    /// Aplica el posicionamiento inteligente a un tooltip.
+    /// </summary>
+    private void ApplySmartPositioning(SmartPositioningContext context, RectTransform tooltipRect, float offsetY = 0)
+    {
+        // Aplicar pivot
+        context.Pivot = context.ShouldPlaceRight ? new Vector2(0, 1) : new Vector2(1, 1);
+        SetTooltipPivot(tooltipRect, context.Pivot);
+
+        // Calcular posición Y
+        float posY = context.CanvasPosition.y - Mathf.Abs(offsetY);
+
+        // Calcular posición X según pivot
+        float posX = context.ShouldPlaceRight
+            ? context.CanvasPosition.x + Mathf.Abs(_controller.TooltipOffset.x)
+            : context.CanvasPosition.x - Mathf.Abs(_controller.TooltipOffset.x);
+
+        context.FinalPosition = new Vector2(posX, posY);
+
+        // Aplicar ajuste final
+        context.FinalPosition = AdjustPositionForScreenEdges(context.FinalPosition, tooltipRect);
+
+        tooltipRect.anchoredPosition = context.FinalPosition;
+    }
+
+    #endregion
+
     /// <summary>
     /// Posiciona dos tooltips (primario y secundario) juntos, eligiendo dirección según espacio disponible.
     /// </summary>
     public void UpdateDualTooltipPosition(Vector3 screenPosition)
     {
-
         // Obtener referencias y parámetros
         bool isPrimary = _controller.CurrentTooltipType == TooltipType.Primary;
         RectTransform primaryTooltipRect = _controller._primaryTooltipRect;
@@ -26,69 +104,62 @@ public class TooltipPositioningSystem : ITooltipComponent
 
         RectTransform tooltipRect = _tooltipPanel.GetComponent<RectTransform>();
         if (primaryTooltipRect == null || secondaryTooltipRect == null || _tooltipCanvas == null) return;
-        
+
         // Obtener tamaño de ambos tooltips
         Vector2 primarySize = primaryTooltipRect.sizeDelta;
         Vector2 secondarySize = secondaryTooltipRect.sizeDelta;
-        
-        // Convertir posición de pantalla a posición de canvas
-        Vector2 canvasPosition = ConvertScreenToCanvasPosition(screenPosition);
 
+        // Calcular contexto para ambos tooltips juntos
+        Vector2 combinedSize = new Vector2(
+            primarySize.x + secondarySize.x + separation,
+            Mathf.Max(primarySize.y, secondarySize.y)
+        );
 
-        // Obtener límites del canvas
-        RectTransform canvasRect = _tooltipCanvas.GetComponent<RectTransform>();
-        Vector2 canvasSize = new Vector2(Screen.width, Screen.height);
-        if (_tooltipCanvas.renderMode != RenderMode.ScreenSpaceOverlay && canvasRect != null)
-        {
-            canvasSize = canvasRect.sizeDelta;
-        }
-        float leftLimit = -canvasSize.x / 2f;
-        float rightLimit = canvasSize.x / 2f;
-        float bottomLimit = -canvasSize.y / 2f;
-        float topLimit = canvasSize.y / 2f;
+        var context = CalculateSmartPositioningContext(screenPosition, combinedSize);
 
-        // Calcular ancho total requerido
-        float totalWidth = primarySize.x + secondarySize.x + separation;
+        // Aplicar posicionamiento dual
+        ApplyDualPositioning(context, primaryTooltipRect, secondaryTooltipRect, isPrimary, separation);
+    }
 
-        // Espacio disponible a la derecha del cursor
-        float spaceRight = rightLimit - canvasPosition.x;
-        // Espacio disponible a la izquierda del cursor
-        float spaceLeft = canvasPosition.x - leftLimit;
-
-        bool placeRight = spaceRight >= totalWidth;
-
+    /// <summary>
+    /// Aplica el posicionamiento específico para tooltips duales.
+    /// </summary>
+    private void ApplyDualPositioning(SmartPositioningContext context, RectTransform primaryRect,
+                                     RectTransform secondaryRect, bool isPrimary, float separation)
+    {
         // Calcular posición Y (alineada para ambos tooltips)
         float offsetY = Mathf.Abs(_controller.TooltipOffset.y);
-        float posY = canvasPosition.y - offsetY;
-        // Validar que no se salga por abajo/arriba
-        float minY = bottomLimit + Mathf.Max(primarySize.y, secondarySize.y);
-        float maxY = topLimit;
+        float posY = context.CanvasPosition.y - offsetY;
+
+        // Validar límites Y
+        var limits = GetCanvasLimits();
+        float minY = limits.bottom + Mathf.Max(primaryRect.sizeDelta.y, secondaryRect.sizeDelta.y);
+        float maxY = limits.top;
         posY = Mathf.Clamp(posY, minY, maxY);
 
-        // Calcular posiciones X
         Vector2 primaryPos, secondaryPos;
-        if (placeRight)
+        if (context.ShouldPlaceRight)
         {
-            SetTooltipPivot(tooltipRect, new Vector2(0, 1));
+            SetTooltipPivot(_tooltipPanel.GetComponent<RectTransform>(), new Vector2(0, 1));
             // Primario a la derecha del cursor
-            primaryPos = new Vector2(canvasPosition.x + Mathf.Abs(_controller.TooltipOffset.x), posY);
+            primaryPos = new Vector2(context.CanvasPosition.x + Mathf.Abs(_controller.TooltipOffset.x), posY);
             // Secundario a la derecha del primario
-            secondaryPos = new Vector2(primaryPos.x + primarySize.x + separation, posY);
+            secondaryPos = new Vector2(primaryPos.x + primaryRect.sizeDelta.x + separation, posY);
         }
         else
         {
-            SetTooltipPivot(tooltipRect, new Vector2(1, 1));
+            SetTooltipPivot(_tooltipPanel.GetComponent<RectTransform>(), new Vector2(1, 1));
             // Secundario a la izquierda del cursor
-            secondaryPos = new Vector2(canvasPosition.x - Mathf.Abs(_controller.TooltipOffset.x), posY);
+            secondaryPos = new Vector2(context.CanvasPosition.x - Mathf.Abs(_controller.TooltipOffset.x), posY);
             // Primario a la izquierda del secundario
-            primaryPos = new Vector2(secondaryPos.x - secondarySize.x - separation, posY);
+            primaryPos = new Vector2(secondaryPos.x - primaryRect.sizeDelta.x - separation, posY);
         }
 
-        // Actualizar solo el tooltip correspondiente
+        // Aplicar posiciones con ajuste de bordes
         if (isPrimary)
-            primaryTooltipRect.anchoredPosition = AdjustPositionForScreenEdges(primaryPos, primaryTooltipRect);
+            primaryRect.anchoredPosition = AdjustPositionForScreenEdges(primaryPos, primaryRect);
         else
-            secondaryTooltipRect.anchoredPosition = AdjustPositionForScreenEdges(secondaryPos, secondaryTooltipRect);
+            secondaryRect.anchoredPosition = AdjustPositionForScreenEdges(secondaryPos, secondaryRect);
     }
 
     /// <summary>
@@ -131,28 +202,29 @@ public class TooltipPositioningSystem : ITooltipComponent
         if (_controller.isDual)
         {
             UpdateDualTooltipPosition(screenPosition);
-            return;
         }
         else
         {
-            UpdatePositionSimple(screenPosition);
-            return;
+            UpdateSingleTooltipSmartPosition(screenPosition);
         }
     }
 
-    public void UpdatePositionSimple(Vector3 screenPosition)
+    /// <summary>
+    /// Posicionamiento inteligente para tooltip único.
+    /// </summary>
+    public void UpdateSingleTooltipSmartPosition(Vector3 screenPosition)
     {
         RectTransform tooltipRect = _tooltipPanel.GetComponent<RectTransform>();
         if (tooltipRect == null) return;
 
-        // Convertir posición de pantalla a posición de canvas
-        Vector2 canvasPosition = ConvertScreenToCanvasPosition(screenPosition);
+        var context = CalculateSmartPositioningContext(screenPosition, tooltipRect.sizeDelta);
+        ApplySmartPositioning(context, tooltipRect, _controller.TooltipOffset.y);
+    }
 
-        // Aplicar detección de bordes
-        Vector2 adjustedPosition = AdjustPositionForScreenEdges(canvasPosition, tooltipRect);
-
-        // Aplicar la posición final
-        tooltipRect.anchoredPosition = adjustedPosition;
+    public void UpdatePositionSimple(Vector3 screenPosition)
+    {
+        // Mantener compatibilidad hacia atrás - redirigir a la nueva lógica inteligente
+        UpdateSingleTooltipSmartPosition(screenPosition);
     }
 
     /// <summary>
@@ -205,6 +277,33 @@ public class TooltipPositioningSystem : ITooltipComponent
     #endregion
 
     #region Private Methods
+
+    /// <summary>
+    /// Obtiene el tamaño del canvas de forma centralizada.
+    /// </summary>
+    private Vector2 GetCanvasSize()
+    {
+        RectTransform canvasRect = _tooltipCanvas.GetComponent<RectTransform>();
+        if (_tooltipCanvas.renderMode == RenderMode.ScreenSpaceOverlay || canvasRect == null)
+        {
+            return new Vector2(Screen.width, Screen.height);
+        }
+        return canvasRect.sizeDelta;
+    }
+
+    /// <summary>
+    /// Obtiene los límites del canvas.
+    /// </summary>
+    private (float left, float right, float bottom, float top) GetCanvasLimits()
+    {
+        Vector2 canvasSize = GetCanvasSize();
+        return (
+            -canvasSize.x / 2f,
+            canvasSize.x / 2f,
+            -canvasSize.y / 2f,
+            canvasSize.y / 2f
+        );
+    }
 
     /// <summary>
     /// Convierte posición de pantalla a posición de canvas.

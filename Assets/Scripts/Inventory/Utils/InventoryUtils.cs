@@ -24,19 +24,6 @@ public static class InventoryUtils
     }
 
     /// <summary>
-    /// Obtiene todos los tipos de ítems equipables.
-    /// </summary>
-    /// <returns>Array con todos los tipos equipables</returns>
-    public static ItemType[] GetAllEquippableTypes()
-    {
-        return new ItemType[]
-        {
-            ItemType.Weapon,
-            ItemType.Armor
-        };
-    }
-
-    /// <summary>
     /// Verifica si un tipo de ítem es consumible.
     /// Centraliza la lógica de todos los tipos consumibles.
     /// </summary>
@@ -124,16 +111,6 @@ public static class InventoryUtils
     }
 
     /// <summary>
-    /// Verifica si un ítem existe en la base de datos.
-    /// </summary>
-    /// <param name="itemId">ID del ítem</param>
-    /// <returns>True si el ítem existe</returns>
-    public static bool ItemExists(string itemId)
-    {
-        return GetItemData(itemId) != null;
-    }
-
-    /// <summary>
     /// Verifica si un ítem es stackeable.
     /// </summary>
     /// <param name="itemId">ID del ítem</param>
@@ -142,37 +119,6 @@ public static class InventoryUtils
     {
         var itemData = GetItemData(itemId);
         return itemData != null && itemData.stackable;
-    }
-
-    #endregion
-
-    #region Equipment Slot Management
-
-    /// <summary>
-    /// Obtiene el InventoryItem equipado en un slot específico.
-    /// Centraliza el acceso a los diferentes slots de equipamiento.
-    /// </summary>
-    /// <param name="equipment">Equipamiento del héroe</param>
-    /// <param name="itemType">Tipo de slot</param>
-    /// <returns>InventoryItem equipado o null si no hay nada</returns>
-    public static InventoryItem GetEquippedItem(Equipment equipment, ItemType itemType, ItemCategory itemCategory)
-    {
-        if (equipment == null) return null;
-
-        return itemType switch
-        {
-            ItemType.Weapon => equipment.weapon,
-            ItemType.Armor => itemCategory switch
-            {
-                ItemCategory.Helmet => equipment.helmet,
-                ItemCategory.Torso => equipment.torso,
-                ItemCategory.Gloves => equipment.gloves,
-                ItemCategory.Pants => equipment.pants,
-                ItemCategory.Boots => equipment.boots,
-                _ => null
-            },
-            _ => null
-        };
     }
 
     #endregion
