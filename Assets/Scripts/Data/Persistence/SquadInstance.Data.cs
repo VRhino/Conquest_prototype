@@ -36,9 +36,6 @@ public class SquadInstanceData
     /// <summary>Index of the currently selected formation.</summary>
     public int selectedFormationIndex = 0;
 
-    /// <summary>Custom name given by the player to this squad.</summary>
-    public string customName = string.Empty;
-
     /// <summary>Number of units injured in this squad.</summary>
     public int unitsInjured = 0;
 

@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using BattleDrakeStudios.ModularCharacters;
 using Data.Items;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,6 +22,12 @@ public class BattlePreparationController : MonoBehaviour
     [Header("Equipment Management")]
     [SerializeField] private HeroEquipmentPanel _equipmentPanel;
     [SerializeField] private ItemSelectorController _itemPopUpSelector;
+    [Header("Header Display")]
+    [SerializeField] private TextMeshProUGUI timerDisplay;
+    [SerializeField] private TextMeshProUGUI mapName;
+    [Header("Timer Management")]
+    [SerializeField] private TimerController _timerController;
+    private BattleData _currentBattleData;
 
     #endregion
 
@@ -37,9 +45,10 @@ public class BattlePreparationController : MonoBehaviour
         _heroSliceControllers = new List<HeroSliceController>();
         _heroSliceMap = new Dictionary<string, HeroSliceController>();
         //solo para tensting
-        initTestHero();
+        initializeTestEnvironment();
 
-        initializeLocalHero();
+        InitializeTimerController();
+        initializeBattlePreparation();
         _equipmentPanel.InitializePanel();
         _equipmentPanel.PopulateFromSelectedHero();
         _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
@@ -53,15 +62,21 @@ public class BattlePreparationController : MonoBehaviour
         }
     }
 
-    private void initTestHero()
+    private void initializeTestEnvironment()
     {
         LoadSystem.LoadDataForTesting(out HeroData localHero, out PlayerData player);
         PlayerSessionService.SetPlayer(player);
         PlayerSessionService.SetSelectedHero(localHero);
+        _currentBattleData = BattleDebugCreator.CreateBattleWithLocalHero(localHero);
     }
 
     void OnDestroy()
     {
+        if (_timerController != null)
+        {
+            _timerController.OnTimerFinished -= OnPreparationTimerFinished;
+        }
+        
         ClearAllHeroSlices();
     }
 
@@ -103,7 +118,6 @@ public class BattlePreparationController : MonoBehaviour
 
         return false;
     }
-
     /// <summary>
     /// Actualiza la información de un héroe existente.
     /// Si el héroe no existe, lo crea.
@@ -118,18 +132,13 @@ public class BattlePreparationController : MonoBehaviour
             return false;
         }
 
-        // Si existe, actualizar
         if (_heroSliceMap.TryGetValue(heroData.heroName, out HeroSliceController existingController))
         {
             existingController.Initialize(heroData);
             Debug.Log($"[BattlePreparationController] Héroe actualizado: {heroData.heroName}");
             return true;
         }
-        else
-        {
-            // Si no existe, crear
-            return AddHero(heroData);
-        }
+        else return AddHero(heroData);
     }
 
     /// <summary>
@@ -163,64 +172,97 @@ public class BattlePreparationController : MonoBehaviour
     }
 
     /// <summary>
-    /// Obtiene el controlador de un héroe específico.
-    /// </summary>
-    /// <param name="heroName">Nombre del héroe</param>
-    /// <returns>HeroSliceController o null si no existe</returns>
-    public HeroSliceController GetHeroController(string heroName)
-    {
-        if (_heroSliceMap.TryGetValue(heroName, out HeroSliceController controller))
-        {
-            return controller;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Obtiene todos los héroes actualmente mostrados.
-    /// </summary>
-    /// <returns>Lista de nombres de héroes</returns>
-    public List<string> GetAllHeroes()
-    {
-        return new List<string>(_heroSliceMap.Keys);
-    }
-
-    /// <summary>
     /// Limpia todos los héroes del battle preparation.
     /// </summary>
-    public void ClearAllHeroes()
-    {
-        ClearAllHeroSlices();
-        Debug.Log("[BattlePreparationController] Todos los héroes limpiados");
-    }
+    public void ClearAllHeroes() { ClearAllHeroSlices(); }
 
+    /// <summary>
+    /// Obtiene acceso al TimerController para operaciones avanzadas.
+    /// </summary>
+    public TimerController TimerController => _timerController;
     #endregion
 
     #region Private Methods
 
-    private void initializeLocalHero()
+    private void InitializeTimerController()
     {
-        HeroData localHero = PlayerSessionService.SelectedHero;
-        if (localHero == null || localHero?.loadouts == null || localHero.loadouts.Count == 0)
+        if (_timerController == null)
         {
-            Debug.LogError("[BattlePreparationController] No hay héroe seleccionado en PlayerSessionService o no tiene loadouts");
+            // Buscar en escena o crear instancia
+            _timerController = FindAnyObjectByType<TimerController>();
+            if (_timerController == null)
+            {
+                GameObject timerGO = new GameObject("TimerController");
+                timerGO.transform.SetParent(transform);
+                _timerController = timerGO.AddComponent<TimerController>();
+            }
+        }
+
+        _timerController.Initialize(_currentBattleData, timerDisplay);
+        _timerController.OnTimerFinished += OnPreparationTimerFinished;
+    }
+
+    private void OnPreparationTimerFinished()
+    {
+        Debug.Log("[BattlePreparationController] El tiempo de preparación ha terminado.");
+        // Aquí podrías disparar un evento o llamar a un método para iniciar la batalla.
+    }
+
+    private void initializeBattlePreparation()
+    {
+        if (_currentBattleData == null)
+        {
+            Debug.LogError("[BattlePreparationController] No hay datos de batalla actuales para inicializar");
             return;
         }
 
-        List<SquadIconData> squads = SquadDataService.ConvertLoadoutToSquadIconData(localHero.loadouts[0], localHero);
-        HeroClassDefinition heroClass = HeroClassManager.GetClassDefinition(localHero.classId);
+        mapName.text = _currentBattleData.mapName;
 
-        HeroSliceData localHeroData = new HeroSliceData(
-            heroIcon: null,
-            classIcon: heroClass?.icon,
-            heroName: localHero?.heroName,
-            heroLevel: localHero?.level ?? 1,
-            houseIcon: null,
-            selectedSquads: squads ?? new List<SquadIconData>()
-        );
+        ClearAllHeroes();
+
+        //identificar local hero en listas
+        HeroData localHero = PlayerSessionService.SelectedHero;
+        List<BattleHeroData> players = new List<BattleHeroData>();
+
+        BattleHeroData localBattleHeroData = _currentBattleData.attackers.Find(bh => bh.heroName == localHero.heroName);
+        if (localBattleHeroData != null) players = new List<BattleHeroData>(_currentBattleData.attackers);
+
+        localBattleHeroData = _currentBattleData.defenders.Find(bh => bh.heroName == localHero.heroName);
+        if (localBattleHeroData != null) players = new List<BattleHeroData>(_currentBattleData.defenders);
+
+        if (players.Count == 0)
+        {
+            Debug.LogError("[BattlePreparationController] No se encontró el héroe local en los datos de batalla");
+            return;
+        }
+
+        initializeLocalHero(localHero);
+
+        foreach (var battleHero in players)
+        {
+            List<string> squadIDs = SquadDataService.getBaseSquadIDsFromInstances(battleHero.squadInstances);
+            List<SquadIconData> squads = SquadDataService.ConvertToSquadIconDataList(squadIDs);
+            HeroClassDefinition heroClass = HeroClassManager.GetClassDefinition(battleHero.classID);
+
+            HeroSliceData heroData = new HeroSliceData(
+                heroIcon: null,
+                classIcon: heroClass?.icon,
+                heroName: battleHero.heroName,
+                heroLevel: battleHero.level,
+                houseIcon: null,
+                selectedSquads: squads ?? new List<SquadIconData>()
+            );
+
+            AddHero(heroData);
+        }
+        Debug.Log($"[BattlePreparationController] Héroes inicializados: {_heroSliceControllers.Count}");
+        _timerController.SetPreparationTimer(_currentBattleData.PreparationTimer);
+    }
+
+    private void initializeLocalHero(HeroData localHero)
+    {
         InventoryStorageService.Initialize(localHero);
         InventoryManager.Initialize(localHero);
-        AddHero(localHeroData);
     }
 
 
@@ -278,7 +320,7 @@ public class BattlePreparationController : MonoBehaviour
     private void OnEquipmentSlotClicked(InventoryItem item, ItemData itemData, HeroEquipmentSlotController slotController)
     {
         if (slotController == null) return;
-        
+
         List<InventoryItem> items = InventoryStorageService.GetItemsByTypeAndCategory(slotController.SlotType, slotController.SlotCategory);
         if (items == null || items.Count == 0)
         {
@@ -292,11 +334,12 @@ public class BattlePreparationController : MonoBehaviour
 
     private void OnItemClicked(InventoryItem item, ItemData itemData)
     {
-        if(item == null || itemData == null) Debug.LogWarning("[BattlePreparationController] Item o ItemData nulo en OnItemClicked");
+        if (item == null || itemData == null) Debug.LogWarning("[BattlePreparationController] Item o ItemData nulo en OnItemClicked");
         //equipar el item clicado
         bool success = InventoryManager.EquipItem(item);
 
-        if (success) {
+        if (success)
+        {
             _equipmentPanel.PopulateFromSelectedHero();
             _itemPopUpSelector.Hide();
         }

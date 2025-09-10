@@ -215,7 +215,6 @@ public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
             //add the index of all grid formations on squadData
             permittedFormationIndexes = squadData.gridFormations.Select((f, i) => i).ToList(),
             selectedFormationIndex = 0,
-            customName = squadData.squadName,
             unitsInSquad = squadData.unitCount,
         };
 

@@ -201,6 +201,13 @@ public static class SquadDataService
             .Select(squad => squad.baseSquadID)
             .ToList();
     }
+    public static List<string> getBaseSquadIDsFromInstances(List<SquadInstanceData> Instances)
+    {
+        if (Instances == null || Instances.Count == 0)
+            return new List<string>();
+
+        return Instances.Select(squad => squad.baseSquadID).ToList();
+    }
     
     #endregion
 
