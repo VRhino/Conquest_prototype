@@ -77,7 +77,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
         SetupPlaceholderVisuals();
 
         // Comenzar con slot vacío
-        ShowPlaceholder();
+        Clear();
         _interaction = GetComponent<HeroEquipmentSlotInteraction>();
         if (_interaction == null)
         {
@@ -105,12 +105,8 @@ public class HeroEquipmentSlotController : BaseItemCellController
     /// </summary>
     private void ShowPlaceholder()
     {
-        if (placeholder != null)
-            placeholder.SetActive(true);
-            
-        if (itemPanel != null)
-            itemPanel.SetActive(false);
-            
+        if (placeholder != null) placeholder.SetActive(true);
+        if (itemPanel != null) itemPanel.SetActive(false);
         HasEquippedItem = false;
     }
 
@@ -119,12 +115,8 @@ public class HeroEquipmentSlotController : BaseItemCellController
     /// </summary>
     private void HidePlaceholder()
     {
-        if (placeholder != null)
-            placeholder.SetActive(false);
-            
-        if (itemPanel != null)
-            itemPanel.SetActive(true);
-            
+        if (placeholder != null) placeholder.SetActive(false);
+        if (itemPanel != null) itemPanel.SetActive(true);
         HasEquippedItem = true;
     }
 
@@ -140,7 +132,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
         if (!PlayerSessionService.HasHero)
         {
             Debug.LogWarning("[HeroEquipmentSlot] No hero selected");
-            ShowPlaceholder();
+            Clear();
             return;
         }
 
@@ -161,13 +153,12 @@ public class HeroEquipmentSlotController : BaseItemCellController
             else
             {
                 Debug.LogWarning($"[HeroEquipmentSlot] ItemData not found for {equippedItem.itemId}");
-                ShowPlaceholder();
+                Clear();
             }
         }
         else
         {
-            // No hay item equipado
-            ShowPlaceholder();
+            Clear();
             Debug.Log($"[HeroEquipmentSlot] {slotType}.{slotCategory} slot is empty");
         }
     }
@@ -181,7 +172,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
     {
         if (equippedItem == null || itemData == null)
         {
-            ShowPlaceholder();
+            Clear();
             return;
         }
 
@@ -189,7 +180,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
         if (!IsValidItemForSlot(itemData))
         {
             Debug.LogError($"[HeroEquipmentSlot] Item {itemData.id} is not valid for {slotType}.{slotCategory} slot");
-            ShowPlaceholder();
+            Clear();
             return;
         }
 
@@ -219,7 +210,6 @@ public class HeroEquipmentSlotController : BaseItemCellController
     {
         base.Clear();
         ShowPlaceholder();
-
         Debug.Log($"[HeroEquipmentSlot] Cleared {slotType}.{slotCategory} slot");
     }
 

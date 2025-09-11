@@ -23,6 +23,9 @@ public static class DataCacheService
     private static Coroutine _debounceCoroutine = null;
     private static bool _updatePending = false;
 
+    // Base leadership value for all heroes
+    private const float BASE_LEADERSHIP_VALUE = 700f;
+
     #region Events
 
     /// <summary>
@@ -188,6 +191,7 @@ public static class DataCacheService
             case "dexterity": return heroData.dexterity;
             case "armor": return heroData.armor;
             case "vitality": return heroData.vitality;
+            case "leadership": return BASE_LEADERSHIP_VALUE;
             default:
                 Debug.LogWarning($"[DataCacheService] Atributo no reconocido: {attributeName}");
                 return 0f;

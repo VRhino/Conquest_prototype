@@ -79,15 +79,7 @@ public class PlayerMinimapIcon : MonoBehaviour
     private void FindPlayerTransform()
     {
         GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
-        if (playerObject != null)
-        {
-            playerTransform = playerObject.transform;
-            Debug.Log($"[PlayerMinimapIcon] Player found: {playerObject.name}");
-        }
-        else
-        {
-            Debug.LogWarning($"[PlayerMinimapIcon] No GameObject found with tag: {playerTag}");
-        }
+        if (playerObject != null) playerTransform = playerObject.transform;
     }
     
     private void UpdateIconTransform()

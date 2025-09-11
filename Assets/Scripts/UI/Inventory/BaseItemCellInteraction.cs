@@ -64,6 +64,7 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
     {
         _currentItem = null;
         _currentItemData = null;
+        Debug.Log($"[BaseItemCellInteraction] ClearItem called for cellId={_cellId}");
         OnClearItem?.Invoke(_currentItem, _currentItemData, _cellId);
     }
 

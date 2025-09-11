@@ -15,7 +15,7 @@ public static class InventoryEventService
     public static event Action OnInventoryChanged;
     public static event Action<InventoryItem> OnItemAdded;
     public static event Action<InventoryItem> OnItemRemoved;
-    public static event Action<InventoryItem, InventoryItem> OnItemEquipped; // (equipped, unequipped)
+    public static event Action<InventoryItem, InventoryItem> OnItemEquipped;
     public static event Action<InventoryItem> OnItemUnequipped;
     public static event Action<InventoryItem> OnItemUsed;
     

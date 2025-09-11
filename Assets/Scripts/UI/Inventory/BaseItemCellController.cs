@@ -181,7 +181,9 @@ public abstract class BaseItemCellController : MonoBehaviour
     public virtual void Clear()
     {
         itemPanel.SetActive(false);
-        if (_interaction != null)
-            _interaction.ClearItem();
+        _currentItem = null;
+        _currentItemData = null;
+        if (_interaction != null) _interaction.ClearItem();
+        else Debug.LogWarning($"[BaseItemCellController] No interaction component found on cell {cellId} to clear item.");
     }
 }

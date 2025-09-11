@@ -15,8 +15,8 @@ public class TooltipManager : MonoBehaviour
     [SerializeField] private bool enableComparisonTooltips = false;
 
     [Header("Tooltip Controllers")]
-    [SerializeField] private InventoryTooltipController primaryTooltipController;   // Muestra item del inventario con comparación
-    [SerializeField] private InventoryTooltipController secondaryTooltipController; // Muestra item equipado como referencia
+    [SerializeField] private InventoryTooltipController primaryTooltipController;
+    [SerializeField] private InventoryTooltipController secondaryTooltipController;
 
     // Legacy reference para compatibilidad
     private InventoryTooltipController _tooltipController => primaryTooltipController;
@@ -25,7 +25,6 @@ public class TooltipManager : MonoBehaviour
     {
         InitializeManager();
         StartTooltipValidation();
-        ValidateReferences();
     }
 
     void OnDestroy()
@@ -49,7 +48,7 @@ public class TooltipManager : MonoBehaviour
     // Sistema de validación que se deshabilita automáticamente para equipment tooltips
     // y se reactiva para tooltips del inventario para evitar que se oculten incorrectamente
     private bool _validationEnabled = true;
-    private float _validationInterval = 0.2f; // Validar cada 200ms
+    private float _validationInterval = 0.2f;
     private float _lastValidationTime = 0f;
 
     /// <summary>
@@ -97,11 +96,7 @@ public class TooltipManager : MonoBehaviour
     /// </summary>
     public void ForceValidateTooltip()
     {
-        if (_tooltipController != null)
-        {
-            Debug.Log("[InventoryTooltipManager] Forcing tooltip validation");
-            _tooltipController.ValidateAndRefreshTooltip();
-        }
+        if (_tooltipController != null) _tooltipController.ValidateAndRefreshTooltip();
     }
 
     /// <summary>
@@ -253,6 +248,7 @@ public class TooltipManager : MonoBehaviour
 
     public void OnClearItem(InventoryItem item, ItemData itemData, string cellIdCleared)
     {
+        Debug.Log($"[BaseItemCellInteraction] ClearItem called for cellId={cellIdCleared}");
         if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdCleared)) return;
         HideAllTooltips();
     }
@@ -372,22 +368,6 @@ public class TooltipManager : MonoBehaviour
     public bool ArePrimaryTooltipsActive() => primaryTooltipController != null && primaryTooltipController.IsShowing;
 
     public bool IsThisCellShowingTooltip(string cellId) => primaryTooltipController != null && primaryTooltipController.GetCellId() == cellId;
-
-    #endregion
-    #region Inspector Debugging
-
-    /// <summary>
-    /// Valida las referencias y muestra información de debug.
-    /// </summary>
-    [System.Diagnostics.Conditional("UNITY_EDITOR")]
-    private void ValidateReferences()
-    {
-        Debug.Log($"[InventoryTooltipManager] Referencias:" +
-                  $"\n- Primary Tooltip: {(primaryTooltipController != null ? "✓ Asignado" : "✗ Faltante")}" +
-                  $"\n- Secondary Tooltip: {(secondaryTooltipController != null ? "✓ Asignado" : "✗ Faltante")}" +
-                  $"\n- Enable Tooltips: {enableTooltips}" +
-                  $"\n- Enable Comparison: {enableComparisonTooltips}");
-    }
 
     #endregion
 }

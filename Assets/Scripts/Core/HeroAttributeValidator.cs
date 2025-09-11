@@ -27,26 +27,14 @@ public static class HeroAttributeValidator
     /// <returns>True si la modificación es válida, False si no</returns>
     public static bool CanModifyAttribute(HeroData heroData, string attributeName, float newValue, int pointsRequired = 1)
     {
-        if (heroData == null || string.IsNullOrEmpty(attributeName))
-        {
-            Debug.LogWarning("[HeroAttributeValidator] HeroData o attributeName es inválido.");
-            return false;
-        }
+        if (heroData == null || string.IsNullOrEmpty(attributeName)) return false;
 
         // Validar puntos disponibles
-        if (!HasEnoughPoints(heroData, pointsRequired))
-        {
-            Debug.LogWarning($"[HeroAttributeValidator] Hero {heroData.heroName} no tiene suficientes puntos de atributo. Disponibles: {heroData.attributePoints}, Requeridos: {pointsRequired}");
-            return false;
-        }
+        if (!HasEnoughPoints(heroData, pointsRequired)) return false;
 
         // Validar límites del atributo
         var limits = GetAttributeLimits(heroData, attributeName);
-        if (newValue < limits.min || newValue > limits.max)
-        {
-            Debug.LogWarning($"[HeroAttributeValidator] Valor {newValue} para {attributeName} está fuera de límites [{limits.min}, {limits.max}]");
-            return false;
-        }
+        if (newValue < limits.min || newValue > limits.max) return false;
 
         // Validaciones específicas por atributo
         return ValidateSpecificAttribute(heroData, attributeName, newValue);
@@ -71,12 +59,10 @@ public static class HeroAttributeValidator
             case "vitality":
                 return GetBasicAttributeLimits(heroData, attributeName);
             
-            case "liderazgo":
             case "leadership":
                 return GetLeadershipLimits(heroData);
             
             default:
-                Debug.LogWarning($"[HeroAttributeValidator] Atributo no reconocido: {attributeName}");
                 return (DefaultLimits.MIN_ATTRIBUTE_VALUE, DefaultLimits.MAX_ATTRIBUTE_VALUE);
         }
     }
@@ -100,9 +86,6 @@ public static class HeroAttributeValidator
         int availablePoints = HeroTempAttributeService.GetAvailablePoints(heroId, heroData);
         
         bool hasEnough = availablePoints >= requiredPoints;
-        
-        // DEBUG: Log para diagnosticar
-        Debug.Log($"[HasEnoughPoints] heroId={heroId}, available={availablePoints}, required={requiredPoints}, hasEnough={hasEnough}");
         
         return hasEnough;
     }

@@ -337,9 +337,9 @@
     <Compile Include="Assets\Scripts\Squads\NavMeshAgent.Authoring.cs" />
     <Compile Include="Assets\Scripts\Inventory\InventoryManager.cs" />
     <Compile Include="Assets\Scripts\Inventory\ItemsEffects\CurrencyEffect.cs" />
+    <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipManager.cs" />
     <Compile Include="Assets\Scripts\UI\Dialogs\RewardDialogDataSO.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadInstance.Component.cs" />
-    <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\InventoryTooltipManager.cs" />
     <Compile Include="Assets\Scripts\UI\Zone\SupplyPointUIController.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroInput.Authoring.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitOrientationInitialization.System.cs" />

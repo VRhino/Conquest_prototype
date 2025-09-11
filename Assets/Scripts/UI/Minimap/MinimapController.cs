@@ -107,15 +107,7 @@ public class MinimapController : MonoBehaviour
     private void FindPlayerTransform()
     {
         GameObject playerObject = GameObject.FindGameObjectWithTag(playerTag);
-        if (playerObject != null)
-        {
-            playerTransform = playerObject.transform;
-            Debug.Log($"[MinimapController] Player found: {playerObject.name}");
-        }
-        else
-        {
-            Debug.LogWarning($"[MinimapController] No GameObject found with tag: {playerTag}");
-        }
+        if (playerObject != null) playerTransform = playerObject.transform;
     }
 
     private void UpdateCameraPosition()

@@ -167,13 +167,9 @@ public class FullscreenPanelManager : MonoBehaviour
         }
 
         var panelType = typeof(T);
-        if (_registeredPanels.ContainsKey(panelType))
-        {
-            Debug.LogWarning($"[FullscreenPanelManager] Panel of type {panelType.Name} already registered. Replacing...");
-        }
+        if (_registeredPanels.ContainsKey(panelType))  Debug.LogWarning($"[FullscreenPanelManager] Panel of type {panelType.Name} already registered. Replacing...");
 
         _registeredPanels[panelType] = panel;
-        Debug.Log($"[FullscreenPanelManager] Panel {panelType.Name} registered successfully");
     }
 
     /// <summary>
@@ -184,12 +180,9 @@ public class FullscreenPanelManager : MonoBehaviour
         var panelType = typeof(T);
         if (_registeredPanels.ContainsKey(panelType))
         {
-            if (_currentActivePanel == _registeredPanels[panelType])
-            {
-                _currentActivePanel = null;
-            }
+            if (_currentActivePanel == _registeredPanels[panelType]) _currentActivePanel = null;
+
             _registeredPanels.Remove(panelType);
-            Debug.Log($"[FullscreenPanelManager] Panel {panelType.Name} unregistered");
         }
     }
 
@@ -210,19 +203,15 @@ public class FullscreenPanelManager : MonoBehaviour
             return;
         }
 
-        // Cerrar panel actual si hay uno diferente abierto
         if (_currentActivePanel != null && _currentActivePanel != targetPanel)
         {
             _currentActivePanel.ClosePanel();
-            SetUIInteractionState(false); // Desactivar antes de cambiar
+            SetUIInteractionState(false);
         }
 
-        // Abrir el panel solicitado
         targetPanel.OpenPanel();
         _currentActivePanel = targetPanel;
-        SetUIInteractionState(true); // Activar para el nuevo panel
-
-        Debug.Log($"[FullscreenPanelManager] Opened panel: {panelType.Name}");
+        SetUIInteractionState(true);
     }
 
     /// <summary>
@@ -242,8 +231,7 @@ public class FullscreenPanelManager : MonoBehaviour
         {
             targetPanel.ClosePanel();
             _currentActivePanel = null;
-            SetUIInteractionState(false); // Desactivar UI interaction
-            Debug.Log($"[FullscreenPanelManager] Closed panel: {panelType.Name}");
+            SetUIInteractionState(false);
         }
     }
 
