@@ -34,8 +34,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
             return;
         }
 
-        if (!IsPreparationPhase())
-            return;
+        if (!IsPreparationPhase()) return;
 
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -186,8 +185,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
         if (q.IsEmptyIgnoreFilter)
             return false;
         var state = q.GetSingleton<GameStateComponent>();
-        return state.currentPhase == GamePhase.Barracon ||
-               state.currentPhase == GamePhase.Preparacion;
+        return state.currentPhase == GamePhase.Preparacion;
     }
 
     bool IsPostMatch()

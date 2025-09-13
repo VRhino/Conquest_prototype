@@ -119,10 +119,13 @@ public partial class HeroInputSystem : SystemBase
     private void manageUIDisplays()
     {
         var keyboardInput = UnityEngine.InputSystem.Keyboard.current;
-        string currentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        bool isFeudoScene = currentScene == "FeudoScene";
+        
+        var gameStateQuery = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        if (gameStateQuery.IsEmpty) return;
+        var gameState = EntityManager.GetComponentData<GameStateComponent>(gameStateQuery.GetSingletonEntity());
+        bool isFeudoPhase = gameState.currentPhase == GamePhase.Feudo;
 
-        if (!isFeudoScene || keyboardInput == null) return;
+        if (!isFeudoPhase || keyboardInput == null) return;
 
         // Verificar si el FullscreenPanelManager está disponible
         if (FullscreenPanelManager.Instance == null)

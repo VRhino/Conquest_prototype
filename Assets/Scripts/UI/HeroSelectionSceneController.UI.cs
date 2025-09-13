@@ -33,10 +33,12 @@ public class HeroSelectionSceneController : MonoBehaviour
         exitButton.onClick.AddListener(OnExitPressed);
 
     }
+
     void OnCreateHero()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("AvatarCreator");
+        SceneTransitionService.LoadScene("AvatarCreator");
     }
+
     void LoadHeroButtons()
     {
         var heroes = PlayerSessionService.CurrentPlayer.heroes;
@@ -156,8 +158,9 @@ public class HeroSelectionSceneController : MonoBehaviour
     void OnConfirm()
     {
         PlayerSessionService.SetSelectedHero(selectedHero);
-        UnityEngine.SceneManagement.SceneManager.LoadScene("FeudoScene");
+        SceneTransitionService.LoadScene("FeudoScene");
     }
+    
     void OnDeleteHero()
     {
         if (selectedHero == null)

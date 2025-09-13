@@ -24,10 +24,10 @@ public static class LoginManager
       if (data.heroes.Count == 0)
       {
         // Si no hay héroes, redirigir a la pantalla de creación de héroe
-        SceneManager.LoadSceneAsync("AvatarCreator");
+        SceneTransitionService.LoadSceneAsync("AvatarCreator");
         return;
       }
-      SceneManager.LoadSceneAsync("CharacterSelecctionScene");
+      SceneTransitionService.LoadSceneAsync("CharacterSelecctionScene");
       return;
     }
     else

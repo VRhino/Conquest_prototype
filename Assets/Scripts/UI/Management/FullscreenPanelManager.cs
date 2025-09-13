@@ -146,7 +146,7 @@ public class FullscreenPanelManager : MonoBehaviour
         if (barracksHUDButton != null) barracksHUDButton.onClick.AddListener(() => RequestPanelToggle<BarracksMenuUIController>());
 
         if (battleHUDButton != null) battleHUDButton.onClick.AddListener(() =>
-        {
+        {   
             UnityEngine.SceneManagement.SceneManager.LoadScene("BattlePrepScene");
         });
     }

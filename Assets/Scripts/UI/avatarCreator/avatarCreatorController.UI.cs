@@ -70,10 +70,10 @@ public class AvatarCreatorUIController : MonoBehaviour
         PlayerSessionService.SetSelectedHero(hero);
         SaveSystem.SavePlayer(player);
 
-        SceneManager.LoadScene("CharacterSelecctionScene");
+        SceneTransitionService.LoadScene("CharacterSelecctionScene");
     }
     private void OnCancelPressed()
     {
-        SceneManager.LoadScene("CharacterSelecctionScene");
+        SceneTransitionService.LoadScene("CharacterSelecctionScene");
     }
 }
