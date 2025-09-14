@@ -15,7 +15,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     
     private InventoryItemCellController _cellController;
     private InventoryItem _currentItem;
-    private ItemData _currentItemData;
+    private ItemDataSO _currentItemData;
     [SerializeField] private int _cellIndex;
 
     // Drag visual
@@ -56,7 +56,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="cellIndex">Índice de la celda en la grilla</param>
-    public void SetItemData(InventoryItem item, ItemData itemData, int cellIndex)
+    public void SetItemData(InventoryItem item, ItemDataSO itemData, int cellIndex)
     {
         _cellIndex = cellIndex;
         
@@ -163,15 +163,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
         
         // Agregar Image y configurar sprite
         _dragImage = _dragVisual.AddComponent<Image>();
-        
-        // Usar la miniatura del ítem
-        if (!string.IsNullOrEmpty(_currentItemData.iconPath))
-        {
-            Sprite itemSprite = Resources.Load<Sprite>(_currentItemData.iconPath);
-            if (itemSprite != null)
-                _dragImage.sprite = itemSprite;
-        }
-        
+        _dragImage.sprite = _currentItemData.icon;
         // Aplicar color de rareza
         _dragImage.color = InventoryUtils.GetRarityColor(_currentItem);
         

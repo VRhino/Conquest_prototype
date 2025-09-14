@@ -13,7 +13,7 @@ public static class ComparisonTooltipUtils
     /// </summary>
     /// <param name="itemData">Datos del ítem del inventario</param>
     /// <returns>True si se debe mostrar el tooltip de comparación</returns>
-    public static bool ShouldShowComparison(ItemData itemData)
+    public static bool ShouldShowComparison(ItemDataSO itemData)
     {
         // Solo mostrar comparación para equipamiento
         if (itemData == null || !itemData.IsEquipment)
@@ -47,7 +47,7 @@ public static class ComparisonTooltipUtils
         try
         {
             // Obtener el ítem equipado usando el EquipmentManagerService
-            var equippedItem = EquipmentManagerService.GetEquippedItem(equipmentType, itemCategory);
+            InventoryItem equippedItem = EquipmentManagerService.GetEquippedItem(equipmentType, itemCategory);
             return equippedItem;
         }
         catch (Exception ex)

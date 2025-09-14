@@ -52,7 +52,7 @@ public class TooltipStatsSystem : ITooltipComponent
     /// <summary>
     /// Configura las estadísticas del tooltip para un ítem.
     /// </summary>
-    public void SetupStats(InventoryItem item, ItemData itemData)
+    public void SetupStats(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null) return;
 
@@ -104,7 +104,7 @@ public class TooltipStatsSystem : ITooltipComponent
     /// <summary>
     /// Configura estadísticas regulares sin comparación.
     /// </summary>
-    private void SetupRegularStats(InventoryItem item, ItemData itemData)
+    private void SetupRegularStats(InventoryItem item, ItemDataSO itemData)
     {
         foreach (var stat in item.GeneratedStats)
         {
@@ -115,7 +115,7 @@ public class TooltipStatsSystem : ITooltipComponent
     /// <summary>
     /// Configura estadísticas con comparación a ítem equipado.
     /// </summary>
-    private void SetupComparisonStats(InventoryItem item, ItemData itemData)
+    private void SetupComparisonStats(InventoryItem item, ItemDataSO itemData)
     {
         // Obtener ítem equipado para comparación
         InventoryItem equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(itemData.itemType, itemData.itemCategory);

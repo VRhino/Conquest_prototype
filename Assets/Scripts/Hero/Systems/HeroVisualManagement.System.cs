@@ -119,10 +119,13 @@ public partial class HeroVisualManagementSystem : SystemBase
         }
         var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
         
-        if (avatarPartDatabase == null || ItemDatabase.Instance == null)
+        if (avatarPartDatabase == null)
         {
             return;
         }
+
+        // Asegurar que ItemService esté inicializado
+        ItemService.Initialize();
 
         // 1) Aplicar partes base visuales
         var baseVisualPartIds = new List<string>();
@@ -144,7 +147,7 @@ public partial class HeroVisualManagementSystem : SystemBase
         {
             if (!string.IsNullOrEmpty(itemId))
             {
-                var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+                var itemData = ItemService.GetItemById(itemId);
                 if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
                 {
                     Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(
@@ -283,7 +286,7 @@ public partial class HeroVisualManagementSystem : SystemBase
             return;
         }
         
-        var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+        var itemData = ItemService.GetItemById(itemId);
         if (itemData == null || string.IsNullOrEmpty(itemData.visualPartId)) 
         {
             Debug.LogWarning($"[HeroVisualManagementSystem] Item data or visualPartId not found for item: {itemId}");

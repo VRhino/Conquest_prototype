@@ -193,7 +193,7 @@ public class InventoryTooltipController : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    public void ShowTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    public void ShowTooltip(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         _lifecycleManager?.ShowTooltip(item, itemData, mousePosition, cellId);
     }
@@ -201,7 +201,7 @@ public class InventoryTooltipController : MonoBehaviour
     /// <summary>
     /// Muestra el tooltip inmediatamente sin delay.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, string cellId)
+    public void ShowTooltipInstant(InventoryItem item, ItemDataSO itemData, string cellId)
     {
         _lifecycleManager?.ShowTooltipInstant(item, itemData, cellId);
     }
@@ -209,7 +209,7 @@ public class InventoryTooltipController : MonoBehaviour
     /// <summary>
     /// Muestra el tooltip inmediatamente con posición específica.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    public void ShowTooltipInstant(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         _lifecycleManager?.ShowTooltipInstant(item, itemData, mousePosition, cellId);
     }

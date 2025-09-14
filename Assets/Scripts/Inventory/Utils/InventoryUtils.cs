@@ -83,31 +83,16 @@ public static class InventoryUtils
     #region Database Access
 
     /// <summary>
-    /// Obtiene la instancia segura de ItemDatabase con validación.
-    /// Centraliza el acceso a la base de datos para evitar errores.
-    /// </summary>
-    /// <returns>Instancia de ItemDatabase o null si no existe</returns>
-    public static ItemDatabase GetItemDatabase()
-    {
-        var database = ItemDatabase.Instance;
-        if (database == null)
-        {
-            Debug.LogError("[InventoryUtils] ItemDatabase.Instance is null! Make sure ItemDatabase exists in Resources folder.");
-        }
-        return database;
-    }
-
-    /// <summary>
     /// Obtiene los datos de un ítem por su ID de forma segura.
     /// </summary>
     /// <param name="itemId">ID del ítem</param>
     /// <returns>Datos del ítem o null si no existe</returns>
-    public static ItemData GetItemData(string itemId)
+    public static ItemDataSO GetItemData(string itemId)
     {
         if (string.IsNullOrEmpty(itemId)) return null;
         
-        var database = GetItemDatabase();
-        return database?.GetItemDataById(itemId);
+        ItemService.Initialize();
+        return ItemService.GetItemById(itemId);
     }
 
     /// <summary>

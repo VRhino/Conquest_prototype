@@ -11,20 +11,20 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
 {
     // Referencias al ítem actual y sus datos
     protected InventoryItem _currentItem;
-    protected ItemData _currentItemData;
+    protected ItemDataSO _currentItemData;
 
-    protected Action<InventoryItem, ItemData> _OnClick;
-    protected Action<InventoryItem, ItemData> _OnRightClick;
+    protected Action<InventoryItem, ItemDataSO> _OnClick;
+    protected Action<InventoryItem, ItemDataSO> _OnRightClick;
     protected string _cellId;
 
     // Callbacks de interacción (pueden ser asignados por el controlador)
-    public Action<InventoryItem, ItemData> OnItemClicked;
-    public Action<InventoryItem, ItemData> OnItemRightClicked;
-    public Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter;
-    public Action<InventoryItem, ItemData, Vector3> OnItemHoverMove;
-    public Action<InventoryItem, ItemData, Vector3> OnItemHoverExit;
-    public Action<InventoryItem, ItemData, string> OnSetItem;
-    public Action<InventoryItem, ItemData, string> OnClearItem;
+    public Action<InventoryItem, ItemDataSO> OnItemClicked;
+    public Action<InventoryItem, ItemDataSO> OnItemRightClicked;
+    public Action<InventoryItem, ItemDataSO, Vector3, string> OnItemHoverEnter;
+    public Action<InventoryItem, ItemDataSO, Vector3> OnItemHoverMove;
+    public Action<InventoryItem, ItemDataSO, Vector3> OnItemHoverExit;
+    public Action<InventoryItem, ItemDataSO, string> OnSetItem;
+    public Action<InventoryItem, ItemDataSO, string> OnClearItem;
 
     public virtual void Initialize(string cellId)
     {
@@ -34,14 +34,14 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
     /// <summary>
     /// Asigna el ítem actual para manejar las interacciones.
     /// </summary>
-    public virtual void SetItem(InventoryItem item, ItemData itemData, string cellId)
+    public virtual void SetItem(InventoryItem item, ItemDataSO itemData, string cellId)
     {
         _currentItem = item;
         _currentItemData = itemData;
         OnSetItem?.Invoke(item, itemData, cellId);
     }
 
-    public virtual void SetEvents(Action<InventoryItem, ItemData> onItemClicked, Action<InventoryItem, ItemData> onItemRightClicked)
+    public virtual void SetEvents(Action<InventoryItem, ItemDataSO> onItemClicked, Action<InventoryItem, ItemDataSO> onItemRightClicked)
     {
         _OnClick = onItemClicked;
         _OnRightClick = onItemRightClicked;
@@ -77,11 +77,11 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
             OnItemRightClicked?.Invoke(_currentItem, _currentItemData);
     }
     public virtual void ConnectWithTooltips(
-        Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter,
-        Action<InventoryItem, ItemData, Vector3> OnItemHoverExit,
-        Action<InventoryItem, ItemData, Vector3> OnItemHoverMove,
-        Action<InventoryItem, ItemData, string> OnSetItem,
-        Action<InventoryItem, ItemData, string> OnClearItem
+        Action<InventoryItem, ItemDataSO, Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemDataSO, Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemDataSO, Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemDataSO, string> OnSetItem,
+        Action<InventoryItem, ItemDataSO, string> OnClearItem
     )
     {
         this.OnItemHoverEnter += OnItemHoverEnter;
@@ -91,11 +91,11 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
         this.OnClearItem += OnClearItem;
     }
     public virtual void DisconnectFromTooltips(
-        Action<InventoryItem, ItemData, Vector3, string> OnItemHoverEnter,
-        Action<InventoryItem, ItemData, Vector3> OnItemHoverExit,
-        Action<InventoryItem, ItemData, Vector3> OnItemHoverMove,
-        Action<InventoryItem, ItemData, string> OnSetItem,
-        Action<InventoryItem, ItemData, string> OnClearItem
+        Action<InventoryItem, ItemDataSO, Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemDataSO, Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemDataSO, Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemDataSO, string> OnSetItem,
+        Action<InventoryItem, ItemDataSO, string> OnClearItem
     )
     {
         this.OnItemHoverEnter -= OnItemHoverEnter;

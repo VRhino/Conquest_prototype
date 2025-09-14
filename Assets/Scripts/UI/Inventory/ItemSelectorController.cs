@@ -34,7 +34,7 @@ public class ItemSelectorController : MonoBehaviour
     private const int ITEMS_PER_PAGE = 10;
 
     // Callbacks asignados externamente
-    private Action<InventoryItem, ItemData> _onItemClicked;
+    private Action<InventoryItem, ItemDataSO> _onItemClicked;
 
     #endregion
 
@@ -157,7 +157,7 @@ public class ItemSelectorController : MonoBehaviour
     /// Configura los callbacks para eventos de las celdas.
     /// Debe ser llamado después de Initialize().
     /// </summary>
-    public void SetEvents(Action<InventoryItem, ItemData> onItemClicked)
+    public void SetEvents(Action<InventoryItem, ItemDataSO> onItemClicked)
     {
         _onItemClicked = onItemClicked;
         foreach (ItemCellController cell in _itemCells)
@@ -254,7 +254,7 @@ public class ItemSelectorController : MonoBehaviour
             if (itemIndex < _allItems.Count)
             {
                 InventoryItem item = _allItems[itemIndex];
-                ItemData itemData = InventoryUtils.GetItemData(item.itemId);
+                ItemDataSO itemData = ItemService.GetItemById(item.itemId);
                 _itemCells[i].SetItem(item, itemData);
             }
             else

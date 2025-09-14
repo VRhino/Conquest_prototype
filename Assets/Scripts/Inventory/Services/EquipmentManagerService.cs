@@ -136,7 +136,7 @@ public static class EquipmentManagerService
             return false;
         }
 
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null)
         {
             Log($"Item data not found for: {item.itemId}", LogType.Error);
@@ -192,7 +192,7 @@ public static class EquipmentManagerService
         return true;
     }
 
-    private static bool executeCompatibilityValidations(InventoryItem item, ItemData itemData)
+    private static bool executeCompatibilityValidations(InventoryItem item, ItemDataSO itemData)
     {
         var compatibilityInfo = CheckEquipmentCompatibility(item, itemData);
         if (compatibilityInfo.RequiresConfirmation)
@@ -322,7 +322,7 @@ public static class EquipmentManagerService
 
     #region Validation Methods
 
-    private static bool IsItemEquippable(InventoryItem item, out ItemData itemData)
+    private static bool IsItemEquippable(InventoryItem item, out ItemDataSO itemData)
     {
         itemData = null;
         if (item == null || !item.IsEquipment)
@@ -344,7 +344,7 @@ public static class EquipmentManagerService
     /// </summary>
     public static bool CanEquipItem(InventoryItem item)
     {
-        ItemData itemData;
+        ItemDataSO itemData;
         return IsItemEquippable(item, out itemData);
     }
 
@@ -355,7 +355,7 @@ public static class EquipmentManagerService
     {
         if (!CanEquipItem(item)) return false;
 
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null) return false;
 
         return itemData.itemType == slotType;
@@ -398,7 +398,7 @@ public static class EquipmentManagerService
     /// <summary>
     /// Verifica la compatibilidad del equipamiento y determina si se requiere confirmación.
     /// </summary>
-    private static EquipmentCompatibilityInfo CheckEquipmentCompatibility(InventoryItem item, ItemData itemData)
+    private static EquipmentCompatibilityInfo CheckEquipmentCompatibility(InventoryItem item, ItemDataSO itemData)
     {
         if (itemData.itemType == ItemType.Weapon)
         {
@@ -413,7 +413,7 @@ public static class EquipmentManagerService
         return new EquipmentCompatibilityInfo(false);
     }
 
-    private static EquipmentCompatibilityInfo CheckCompatibility(InventoryItem item, ItemData itemData, bool isWeapon)
+    private static EquipmentCompatibilityInfo CheckCompatibility(InventoryItem item, ItemDataSO itemData, bool isWeapon)
     {
         List<InventoryItem> incompatibleItems = isWeapon 
             ? GetIncompatibleArmorPieces(itemData.itemCategory) 
@@ -428,7 +428,7 @@ public static class EquipmentManagerService
             isWeapon ? CompatibilityConflictType.WeaponIncompatibleWithArmor : CompatibilityConflictType.ArmorIncompatibleWithWeapon);
     }
 
-    private static string BuildCompatibilityWarningMessage(ItemData itemData, List<InventoryItem> incompatibleItems, bool isWeapon, bool hasSpace)
+    private static string BuildCompatibilityWarningMessage(ItemDataSO itemData, List<InventoryItem> incompatibleItems, bool isWeapon, bool hasSpace)
     {
         string itemTypeName = isWeapon ? GetWeaponTypeName(itemData.itemCategory) : GetArmorTypeName(itemData.armorType);
         string compatibleTypes = isWeapon 
@@ -450,7 +450,7 @@ public static class EquipmentManagerService
     /// <summary>
     /// Verifica la compatibilidad de un arma con la armadura equipada.
     /// </summary>
-    private static EquipmentCompatibilityInfo CheckWeaponCompatibility(InventoryItem item, ItemData itemData)
+    private static EquipmentCompatibilityInfo CheckWeaponCompatibility(InventoryItem item, ItemDataSO itemData)
     {
         return CheckCompatibility(item, itemData, true);
     }
@@ -458,7 +458,7 @@ public static class EquipmentManagerService
     /// <summary>
     /// Verifica la compatibilidad de una armadura con el arma equipada.
     /// </summary>
-    private static EquipmentCompatibilityInfo CheckArmorCompatibility(InventoryItem item, ItemData itemData)
+    private static EquipmentCompatibilityInfo CheckArmorCompatibility(InventoryItem item, ItemDataSO itemData)
     {
         return CheckCompatibility(item, itemData, false);
     }

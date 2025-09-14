@@ -30,7 +30,7 @@ public static class ConsumableManagerService
     {
         if (!ValidateConsumableOperation(item)) return false;
 
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null)
         {
             LogError($"Item data not found for: {item.itemId}");
@@ -78,7 +78,7 @@ public static class ConsumableManagerService
             return false;
         }
 
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null)
         {
             LogError($"Item data not found for: {item.itemId}");
@@ -217,7 +217,7 @@ public static class ConsumableManagerService
             return false;
         }
 
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null)
         {
             LogWarning($"Item data not found for: {item.itemId}");
@@ -309,19 +309,13 @@ public static class ConsumableManagerService
         return true;
     }
 
-    private static bool ApplyConsumableEffects(ItemData itemData, InventoryItem item)
+    private static bool ApplyConsumableEffects(ItemDataSO itemData, InventoryItem item)
     {
         // Usar el sistema de efectos existente (ItemEffectSystem)
         bool effectsApplied = ItemEffectSystem.UseConsumableItem(item, _currentHero);
         
-        if (effectsApplied)
-        {
-            LogInfo($"Successfully applied effects for consumable: {item.itemId}");
-        }
-        else
-        {
-            LogWarning($"Failed to apply effects for consumable: {item.itemId}");
-        }
+        if (effectsApplied) LogInfo($"Successfully applied effects for consumable: {item.itemId}");
+        else LogWarning($"Failed to apply effects for consumable: {item.itemId}");
         
         return effectsApplied;
     }

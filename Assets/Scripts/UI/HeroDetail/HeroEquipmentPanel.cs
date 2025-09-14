@@ -65,8 +65,8 @@ public class HeroEquipmentPanel : MonoBehaviour
     }
 
     public void SetEvents(
-        Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked,
-        Action<InventoryItem, ItemData> onItemRightClicked
+        Action<InventoryItem, ItemDataSO, HeroEquipmentSlotController> onEquipmentSlotClicked,
+        Action<InventoryItem, ItemDataSO> onItemRightClicked
         )
     {
         foreach (var slot in GetAllSlots())

@@ -13,7 +13,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     private bool _isShowing = false;
     private float _showTimer = 0f;
     private InventoryItem _currentItem;
-    private ItemData _currentItemData;
+    private ItemDataSO _currentItemData;
     private Vector3 _lastMousePosition = Vector3.zero;
 
     #region In case of dual system
@@ -57,7 +57,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// <summary>
     /// Muestra el tooltip para un ítem específico.
     /// </summary>
-    public void ShowTooltip(InventoryItem item, ItemData itemData, string cellId)
+    public void ShowTooltip(InventoryItem item, ItemDataSO itemData, string cellId)
     {
         _cellId = cellId;
         Debug.Log($"[TooltipLifecycleManager][ShowTooltip] Showing tooltip instantly for item: {itemData?.name} in cell: {cellId}");
@@ -93,7 +93,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// <summary>
     /// Muestra el tooltip con posición específica.
     /// </summary>
-    public void ShowTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    public void ShowTooltip(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         _lastMousePosition = mousePosition;
         ShowTooltip(item, itemData, cellId);
@@ -102,7 +102,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// <summary>
     /// Muestra el tooltip inmediatamente sin delay.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, string cellId)
+    public void ShowTooltipInstant(InventoryItem item, ItemDataSO itemData, string cellId)
     {
         _currentItem = item;
         _currentItemData = itemData;
@@ -114,7 +114,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// <summary>
     /// Muestra el tooltip inmediatamente con posición específica.
     /// </summary>
-    public void ShowTooltipInstant(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    public void ShowTooltipInstant(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         _lastMousePosition = mousePosition;
         ShowTooltipInstant(item, itemData, cellId);
@@ -187,7 +187,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// <summary>
     /// Obtiene los datos del ítem actualmente mostrado.
     /// </summary>
-    public ItemData CurrentItemData => _currentItemData;
+    public ItemDataSO CurrentItemData => _currentItemData;
 
     #endregion
 

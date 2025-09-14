@@ -144,7 +144,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
         
         if (equippedItem != null)
         {
-            var itemData = ItemDatabase.Instance?.GetItemDataById(equippedItem.itemId);
+            ItemDataSO itemData = ItemService.GetItemById(equippedItem.itemId);
             if (itemData != null)
             {
                 SetEquippedItem(equippedItem, itemData);
@@ -168,7 +168,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
     /// </summary>
     /// <param name="equippedItem">Item equipado</param>
     /// <param name="itemData">Datos del item</param>
-    public void SetEquippedItem(InventoryItem equippedItem, ItemData itemData)
+    public void SetEquippedItem(InventoryItem equippedItem, ItemDataSO itemData)
     {
         if (equippedItem == null || itemData == null)
         {
@@ -194,8 +194,8 @@ public class HeroEquipmentSlotController : BaseItemCellController
     }
     
     public void SetupEquipmentSlotEvents(
-        System.Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked,
-        System.Action<InventoryItem, ItemData> onItemRightClicked)
+        System.Action<InventoryItem, ItemDataSO, HeroEquipmentSlotController> onEquipmentSlotClicked,
+        System.Action<InventoryItem, ItemDataSO> onItemRightClicked)
     {
         if (_interaction is HeroEquipmentSlotInteraction equipmentInteraction)
         {
@@ -222,7 +222,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
     /// </summary>
     /// <param name="itemData">Datos del item a validar</param>
     /// <returns>True si el item es válido para este slot</returns>
-    private bool IsValidItemForSlot(ItemData itemData)
+    private bool IsValidItemForSlot(ItemDataSO itemData)
     {
         if (itemData == null || !itemData.IsEquipment)
             return false;

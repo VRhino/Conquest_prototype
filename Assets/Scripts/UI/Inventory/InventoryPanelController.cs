@@ -236,7 +236,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         if (heroData != null) OpenPanel(heroData);
     }
 
-    public void OpenAsAuxiliaryPanel(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    public void OpenAsAuxiliaryPanel(System.Action<InventoryItem, ItemDataSO> onItemClicked, System.Action<InventoryItem, ItemDataSO> onItemRightClicked)
     {
         var heroData = PlayerSessionService.SelectedHero;
         if (heroData == null) return;
@@ -402,7 +402,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
             var item = slotItems[i];
             if (item != null)
             {
-                var itemData = InventoryUtils.GetItemData(item.itemId);
+                ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
                 cellController.SetItem(item, itemData);
             }
             else

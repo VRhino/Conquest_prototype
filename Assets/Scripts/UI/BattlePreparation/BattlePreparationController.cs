@@ -319,7 +319,7 @@ public class BattlePreparationController : MonoBehaviour
 
     #region Event Handlers
 
-    private void OnEquipmentSlotClicked(InventoryItem item, ItemData itemData, HeroEquipmentSlotController slotController)
+    private void OnEquipmentSlotClicked(InventoryItem item, ItemDataSO itemData, HeroEquipmentSlotController slotController)
     {
         if (slotController == null) return;
 
@@ -334,7 +334,7 @@ public class BattlePreparationController : MonoBehaviour
         _itemPopUpSelector.ShowNearElement(slotRect);
     }
 
-    private void OnItemClicked(InventoryItem item, ItemData itemData)
+    private void OnItemClicked(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null) Debug.LogWarning("[BattlePreparationController] Item o ItemData nulo en OnItemClicked");
         //equipar el item clicado

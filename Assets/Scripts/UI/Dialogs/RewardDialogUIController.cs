@@ -51,7 +51,7 @@ public class RewardDialogUIController : MonoBehaviour
         selectedItemIds.Clear();
         foreach (var itemId in dialogData.rewardItemIds)
         {
-            var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+            ItemDataSO itemData = ItemService.GetItemById(itemId);
             var cellGO = Instantiate(inventoryItemCellPrefab, rewardItemsContainer);
             cellGO.transform.localScale = Vector3.one * 1.375f;
             var cellController = cellGO.GetComponent<InventoryItemCellController>();

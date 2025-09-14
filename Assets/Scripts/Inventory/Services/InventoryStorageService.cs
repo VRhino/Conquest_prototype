@@ -229,7 +229,7 @@ public static class InventoryStorageService
 
     public static List<InventoryItem> GetItemsByTypeAndCategory(InventoryItem item)
     {
-        ItemData protoItem = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO protoItem = InventoryUtils.GetItemData(item.itemId);
         if (protoItem == null)
         {
             Debug.LogWarning($"ItemData not found for item: {item.itemId}");

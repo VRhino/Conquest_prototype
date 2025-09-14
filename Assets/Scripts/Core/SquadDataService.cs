@@ -280,11 +280,11 @@ public static class SquadDataService
     /// </summary>
     private static void LoadSquadDatabase()
     {
-        _squadDatabase = Resources.Load<SquadDatabase>("Data/Squads/SquadDatabase");
+        _squadDatabase = Resources.Load<SquadDatabase>("Squads/SquadDatabase");
         
         if (_squadDatabase == null)
         {
-            Debug.LogError("[SquadDataService] No se pudo cargar SquadDatabase desde Resources/Data/Squads/SquadDatabase");
+            Debug.LogError("[SquadDataService] No se pudo cargar SquadDatabase desde Resources/Squads/SquadDatabase");
             return;
         }
         

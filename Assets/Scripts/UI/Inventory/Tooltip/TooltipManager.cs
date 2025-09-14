@@ -177,7 +177,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    private void OnItemHoverEnter(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    private void OnItemHoverEnter(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         if (!enableTooltips || item == null || itemData == null) return;
         StartTooltipValidation();
@@ -198,7 +198,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    private void OnItemHoverExit(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    private void OnItemHoverExit(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition)
     {
         if (!enableTooltips) return;
 
@@ -211,7 +211,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
-    private void OnItemHoverMove(InventoryItem item, ItemData itemData, Vector3 mousePosition)
+    private void OnItemHoverMove(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition)
     {
         if (!enableTooltips) return;
 
@@ -233,7 +233,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="cellIdSetted">ID de la celda donde se establece el ítem</param>
-    private void OnSetItem(InventoryItem item, ItemData itemData, string cellIdSetted)
+    private void OnSetItem(InventoryItem item, ItemDataSO itemData, string cellIdSetted)
     {
         if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdSetted)) return;
 
@@ -241,7 +241,7 @@ public class TooltipManager : MonoBehaviour
         else ShowSimpleTooltip(item, itemData, GetMousePosition(), cellIdSetted);
     }
 
-    public void OnClearItem(InventoryItem item, ItemData itemData, string cellIdCleared)
+    public void OnClearItem(InventoryItem item, ItemDataSO itemData, string cellIdCleared)
     {
         Debug.Log($"[BaseItemCellInteraction] ClearItem called for cellId={cellIdCleared}");
         if (!enableTooltips || !ArePrimaryTooltipsActive() || !IsThisCellShowingTooltip(cellIdCleared)) return;
@@ -255,7 +255,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición del mouse en coordenadas de pantalla</param>
     /// <param name="cellId">ID de la celda donde se encuentra el ítem</param>
-    public void ShowSimpleTooltip(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    public void ShowSimpleTooltip(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         if (!enableTooltips || primaryTooltipController == null) return;
 
@@ -269,7 +269,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="item">Ítem del inventario</param>
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="mousePosition">Posición específica del mouse</param>
-    public void ShowDualTooltips(InventoryItem item, ItemData itemData, Vector3 mousePosition, string cellId)
+    public void ShowDualTooltips(InventoryItem item, ItemDataSO itemData, Vector3 mousePosition, string cellId)
     {
         if (!enableTooltips) return;
         RectTransform primaryTooltipRect = primaryTooltipController.tooltipPanel.GetComponent<RectTransform>();
@@ -286,13 +286,13 @@ public class TooltipManager : MonoBehaviour
         if (enableComparisonTooltips && secondaryTooltipController != null &&
             ComparisonTooltipUtils.ShouldShowComparison(itemData))
         {
-            var equippedItemData = GetEquippedItemData(itemData.itemType, itemData.itemCategory);
-            if (equippedItemData.equippedItem != null && equippedItemData.itemData != null)
+            (InventoryItem equippedItem, ItemDataSO equipmentDataSO) = GetEquippedItemData(itemData.itemType, itemData.itemCategory);
+            if (equippedItem != null && equipmentDataSO != null)
             {
                 secondaryTooltipController.setDualSystem(true, primaryTooltipRect, secondaryTooltipRect);
                 secondaryTooltipController.ShowTooltipInstant(
-                    equippedItemData.equippedItem,
-                    equippedItemData.itemData,
+                    equippedItem,
+                    equipmentDataSO,
                     mousePosition,
                     cellId
                 );
@@ -316,16 +316,16 @@ public class TooltipManager : MonoBehaviour
     /// </summary>
     /// <param name="equipmentType">Tipo de equipamiento</param>
     /// <returns>Tupla con el ítem equipado y sus datos, o null si no hay nada equipado</returns>
-    private (InventoryItem equippedItem, ItemData itemData) GetEquippedItemData(ItemType equipmentType, ItemCategory itemCategory)
+    private (InventoryItem equippedItem, ItemDataSO itemData) GetEquippedItemData(ItemType equipmentType, ItemCategory itemCategory)
     {
         try
         {
             // Obtener el ítem equipado usando la utilidad existente
-            var equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(equipmentType, itemCategory);
+            InventoryItem equippedItem = ComparisonTooltipUtils.GetEquippedItemForComparison(equipmentType, itemCategory);
             if (equippedItem == null) return (null, null);
 
             // Obtener los datos del ítem de la base de datos
-            var itemData = ItemDatabase.Instance?.GetItemDataById(equippedItem.itemId);
+            ItemDataSO itemData = ItemService.GetItemById(equippedItem.itemId);
             if (itemData == null)
             {
                 Debug.LogWarning($"[InventoryTooltipManager] No se encontraron datos para el ítem equipado ID: {equippedItem.itemId}");

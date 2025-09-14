@@ -135,6 +135,7 @@
     <Compile Include="Assets\Scripts\Services\CurrencyService.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePreparation\FooterController.cs" />
     <Compile Include="Assets\Scripts\UI\SquadDetailPanel.UI.cs" />
+    <Compile Include="Assets\Scripts\Core\ItemService.cs" />
     <Compile Include="Assets\Scripts\Shared\HeroAbility.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\LoadoutSave.Data.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\BaseItemCellController.cs" />
@@ -185,6 +186,7 @@
     <Compile Include="Assets\Scripts\Core\LoadSystem.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatMessage.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroPrefab.Authoring.cs" />
+    <Compile Include="Assets\Scripts\Editor\Items\ItemCreatorWizard.cs" />
     <Compile Include="Assets\Scripts\Data\Pricing\SimplePricingConfig.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Editor\ModularCharacterEditor.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\UnitSpacing.System.cs" />
@@ -193,7 +195,6 @@
     <Compile Include="Assets\Scripts\Squads\SquadDeploymentWarningEvent.cs" />
     <Compile Include="Assets\Scripts\Dialogue\Systems\DialogueEffectSystem.cs" />
     <Compile Include="Assets\Scripts\Inventory\ItemsEffects\EquipmentGrantEffect.cs" />
-    <Compile Include="Assets\Scripts\Data\Items\ItemDatabase.cs" />
     <Compile Include="Assets\Scripts\Hero\IsLocalPlayer.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\Health.Component.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCategory.cs" />
@@ -403,6 +404,7 @@
     <Compile Include="Assets\Scripts\Shared\AbilityCategory.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\AtributeLimitEvent.Component.cs" />
     <Compile Include="Assets\Scripts\Hero\Components\HeroVisualEquipmentInitializer.cs" />
+    <Compile Include="Assets\Scripts\Data\Items\ItemDataSO.cs" />
     <Compile Include="Assets\Scripts\UI\NpcTriggerUIController.cs" />
     <Compile Include="Assets\Scripts\UI\SquadOption.UI.cs" />
     <Compile Include="Assets\Scripts\Hero\Enums\HeroAttribute.Type.cs" />
@@ -416,7 +418,6 @@
     <Compile Include="Assets\Scripts\UI\BattlePreparation\TroopsViewerController.cs" />
     <Compile Include="Assets\Scripts\Map\ZoneCapturedEvent.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitFormationState.Component.cs" />
-    <Compile Include="Assets\Scripts\Data\Items\Item.Data.cs" />
     <Compile Include="Assets\Scripts\SyntyEditorTools-master\ModularCharacterEditor\Scripts\Enums\ModularArmorType.cs" />
     <Compile Include="Assets\Scripts\UI\Dialogs\SimpleRewardDialogDataSO.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitEquipment.Component.cs" />
@@ -471,6 +472,7 @@
     <Compile Include="Assets\Scripts\Hero\HeroAbility.cs" />
     <Compile Include="Assets\Scripts\UI\MatchmakingUI.cs" />
     <Compile Include="Assets\Scripts\Map\SpawnPointBaker.cs" />
+    <Compile Include="Assets\Scripts\Data\Items\EnhancedItemDatabase.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarPartDefinition.Data.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipContentRenderer.cs" />
   </ItemGroup>

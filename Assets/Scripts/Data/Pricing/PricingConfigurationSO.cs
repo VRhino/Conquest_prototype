@@ -34,7 +34,7 @@ public abstract class PricingConfigurationSO : ScriptableObject
         /// <param name="itemData">Datos del prototipo del ítem</param>
         /// <param name="inventoryItem">Instancia específica del ítem (opcional)</param>
         /// <returns>Precio calculado en monedas</returns>
-        public abstract int CalculatePrice(ItemData itemData, InventoryItem inventoryItem = null);
+        public abstract int CalculatePrice(ItemDataSO itemData, InventoryItem inventoryItem = null);
 
         /// <summary>
         /// Obtiene una vista previa de cómo funciona esta configuración de precios.

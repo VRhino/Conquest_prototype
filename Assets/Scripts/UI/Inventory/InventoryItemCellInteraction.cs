@@ -28,7 +28,7 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
     private void TryEquipItem()
     {
         if (_currentItem == null || _currentItemData == null) return;
-        ItemData itemData = _currentItemData;
+        ItemDataSO itemData = _currentItemData;
         bool success = InventoryManager.EquipItem(_currentItem);
 
         if (success)
@@ -55,7 +55,7 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
     /// <summary>
     /// Maneja la acción de click derecho según el tipo de ítem.
     /// </summary>
-    private void HandleRightClickAction(InventoryItem item, ItemData itemData)
+    private void HandleRightClickAction(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null) return;
 

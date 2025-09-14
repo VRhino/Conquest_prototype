@@ -18,13 +18,13 @@ public class StoreItemController : MonoBehaviour
     private TooltipManager _tooltipManager;
 
     private InventoryItem _productData;
-    private ItemData _protoProduct;
-    private System.Action<InventoryItem, ItemData> _onBuy;
+    private ItemDataSO _protoProduct;
+    private System.Action<InventoryItem, ItemDataSO> _onBuy;
 
     /// <summary>
     /// Obtiene los datos del producto para validaciones externas.
     /// </summary>
-    public ItemData ProtoProduct => _protoProduct;
+    public ItemDataSO ProtoProduct => _protoProduct;
 
     /// <summary>
     /// Obtiene la instancia específica del ítem que se muestra en la tienda.
@@ -32,7 +32,7 @@ public class StoreItemController : MonoBehaviour
     /// </summary>
     public InventoryItem GetProductInstance() => _productData;
 
-    public void Setup(ItemData itemData, System.Action<InventoryItem, ItemData> onBuy, TooltipManager tooltipManager)
+    public void Setup(ItemDataSO itemData, System.Action<InventoryItem, ItemDataSO> onBuy, TooltipManager tooltipManager)
     {
         _protoProduct = itemData;
         _onBuy = onBuy;

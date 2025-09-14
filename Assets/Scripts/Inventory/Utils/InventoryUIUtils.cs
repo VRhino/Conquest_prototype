@@ -142,7 +142,7 @@ public static class InventoryUIUtils
             var item = slotItems[i];
             if (item != null)
             {
-                var itemData = InventoryUtils.GetItemData(item.itemId);
+                ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
                 cellController.SetItem(item, itemData);
             }
             else

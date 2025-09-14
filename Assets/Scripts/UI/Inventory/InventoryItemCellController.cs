@@ -29,7 +29,7 @@ public class InventoryItemCellController : BaseItemCellController
         }
     }
 
-    public override void SetItem(InventoryItem item, ItemData itemData)
+    public override void SetItem(InventoryItem item, ItemDataSO itemData)
     {
         base.SetItem(item, itemData);
         // Actualizar drag handler

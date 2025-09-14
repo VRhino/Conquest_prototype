@@ -38,7 +38,7 @@ public class SimplePricingConfig : PricingConfigurationSO
         /// <param name="itemData">Datos del ítem</param>
         /// <param name="inventoryItem">Instancia del ítem (no usado en precios simples)</param>
         /// <returns>Precio configurado o precio por defecto si no se encuentra</returns>
-        public override int CalculatePrice(ItemData itemData, InventoryItem inventoryItem = null)
+        public override int CalculatePrice(ItemDataSO itemData, InventoryItem inventoryItem = null)
         {
             if (itemData == null)
             {

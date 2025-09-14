@@ -17,7 +17,7 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
     /// <summary>
     /// Evento transformado que incluye información del slot controller
     /// </summary>
-    public System.Action<InventoryItem, ItemData, HeroEquipmentSlotController> OnEquipmentSlotClicked;
+    public System.Action<InventoryItem, ItemDataSO, HeroEquipmentSlotController> OnEquipmentSlotClicked;
 
     #endregion
     #region Private Fields
@@ -49,7 +49,7 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
     /// <summary>
     /// Método que intercepta el evento base y lo transforma en el nuevo evento
     /// </summary>
-    private void HandleItemClickedForwarding(InventoryItem item, ItemData itemData)
+    private void HandleItemClickedForwarding(InventoryItem item, ItemDataSO itemData)
     {
         // Validar que tenemos todos los datos necesarios
         if ( _slotController == null)
@@ -68,8 +68,8 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
     #endregion
 
     public void SetupEquipmentSlotEvents(
-        Action<InventoryItem, ItemData> onItemRightClicked,
-        Action<InventoryItem, ItemData, HeroEquipmentSlotController> onEquipmentSlotClicked = null)
+        Action<InventoryItem, ItemDataSO> onItemRightClicked,
+        Action<InventoryItem, ItemDataSO, HeroEquipmentSlotController> onEquipmentSlotClicked = null)
     {
         base.SetEvents(HandleItemClickedForwarding, onItemRightClicked);
         OnEquipmentSlotClicked += onEquipmentSlotClicked;

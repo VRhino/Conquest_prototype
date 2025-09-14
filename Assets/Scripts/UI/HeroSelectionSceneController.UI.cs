@@ -137,7 +137,7 @@ public class HeroSelectionSceneController : MonoBehaviour
         {
             if (!string.IsNullOrEmpty(itemId))
             {
-                ItemData itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+                ItemDataSO itemData = ItemService.GetItemById(itemId);
                 if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
                 {
                     Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(

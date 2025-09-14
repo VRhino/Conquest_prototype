@@ -278,7 +278,7 @@ public static class TooltipFormattingUtils
     /// </summary>
     /// <param name="itemData">Datos del ítem</param>
     /// <returns>Texto de acción formateado</returns>
-    public static string GetActionText(ItemData itemData, TooltipType currentTooltipType)
+    public static string GetActionText(ItemDataSO itemData, TooltipType currentTooltipType)
     {
         if (itemData == null) return "";
         if (currentTooltipType == TooltipType.Secondary)
@@ -299,39 +299,6 @@ public static class TooltipFormattingUtils
         }
         
         return "Arrastrar: Mover";
-    }
-
-    #endregion
-
-    #region Validation
-
-    /// <summary>
-    /// Valida que los datos necesarios para el formateo estén presentes.
-    /// </summary>
-    /// <param name="itemData">Datos del ítem</param>
-    /// <param name="inventoryItem">Instancia del ítem</param>
-    /// <returns>True si los datos son válidos</returns>
-    public static bool ValidateFormattingData(ItemData itemData, InventoryItem inventoryItem)
-    {
-        if (itemData == null)
-        {
-            Debug.LogWarning("[TooltipFormattingUtils] ItemData is null");
-            return false;
-        }
-        
-        if (inventoryItem == null)
-        {
-            Debug.LogWarning("[TooltipFormattingUtils] InventoryItem is null");
-            return false;
-        }
-        
-        if (string.IsNullOrEmpty(itemData.id))
-        {
-            Debug.LogWarning("[TooltipFormattingUtils] ItemData ID is null or empty");
-            return false;
-        }
-        
-        return true;
     }
 
     #endregion

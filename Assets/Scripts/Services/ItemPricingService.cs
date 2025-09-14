@@ -23,7 +23,7 @@ public static class ItemPricingService
     /// <param name="itemData">Datos del prototipo del ítem</param>
     /// <param name="inventoryItem">Instancia específica del ítem (opcional)</param>
     /// <returns>Precio de compra calculado</returns>
-    public static int CalculateItemPrice(ItemData itemData, InventoryItem inventoryItem = null)
+    public static int CalculateItemPrice(ItemDataSO itemData, InventoryItem inventoryItem = null)
     {
         if (itemData == null)
         {
@@ -77,7 +77,7 @@ public static class ItemPricingService
     /// <param name="inventoryItem">Instancia del ítem</param>
     /// <param name="sellRatio">Ratio de venta (por defecto 0.5 = 50%)</param>
     /// <returns>Precio de venta calculado</returns>
-    public static int CalculateItemSellPrice(ItemData itemData, InventoryItem inventoryItem = null, float sellRatio = DEFAULT_SELL_RATIO)
+    public static int CalculateItemSellPrice(ItemDataSO itemData, InventoryItem inventoryItem = null, float sellRatio = DEFAULT_SELL_RATIO)
     {
         if (sellRatio < 0f || sellRatio > 1f)
         {
@@ -101,7 +101,7 @@ public static class ItemPricingService
     /// </summary>
     /// <param name="itemData">Datos del ítem</param>
     /// <returns>Precio por defecto basado en rareza</returns>
-    public static int GetDefaultPriceForItem(ItemData itemData)
+    public static int GetDefaultPriceForItem(ItemDataSO itemData)
     {
         if (itemData == null)
             return DEFAULT_FALLBACK_PRICE;
@@ -135,7 +135,7 @@ public static class ItemPricingService
     /// </summary>
     /// <param name="itemData">Datos del ítem</param>
     /// <returns>True si tiene configuración personalizada</returns>
-    public static bool HasCustomPricing(ItemData itemData)
+    public static bool HasCustomPricing(ItemDataSO itemData)
     {
         return itemData?.pricingConfig != null && itemData.pricingConfig is PricingConfigurationSO;
     }
@@ -146,7 +146,7 @@ public static class ItemPricingService
     /// <param name="itemData">Datos del ítem</param>
     /// <param name="inventoryItem">Instancia del ítem (opcional)</param>
     /// <returns>String con información detallada de pricing</returns>
-    public static string GetPricingDebugInfo(ItemData itemData, InventoryItem inventoryItem = null)
+    public static string GetPricingDebugInfo(ItemDataSO itemData, InventoryItem inventoryItem = null)
     {
         if (itemData == null)
             return "ItemData is null";

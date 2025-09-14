@@ -75,7 +75,7 @@ public class TooltipContentRenderer : ITooltipComponent
     /// <summary>
     /// Puebla el contenido completo del tooltip con información del ítem.
     /// </summary>
-    public void PopulateContent(InventoryItem item, ItemData itemData)
+    public void PopulateContent(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null) return;
 
@@ -130,7 +130,7 @@ public class TooltipContentRenderer : ITooltipComponent
     /// <summary>
     /// Configura el panel de título con nombre, icono y rareza.
     /// </summary>
-    private void SetupTitlePanel(InventoryItem item, ItemData itemData)
+    private void SetupTitlePanel(InventoryItem item, ItemDataSO itemData)
     {
         // Configurar título
         if (_title != null)
@@ -146,7 +146,7 @@ public class TooltipContentRenderer : ITooltipComponent
     /// <summary>
     /// Configura el panel de contenido con descripción, categoría y durabilidad.
     /// </summary>
-    private void SetupContentPanel(InventoryItem item, ItemData itemData)
+    private void SetupContentPanel(InventoryItem item, ItemDataSO itemData)
     {
         // Configurar descripción
         if (_descriptionText != null && !string.IsNullOrEmpty(itemData.description))
@@ -200,7 +200,7 @@ public class TooltipContentRenderer : ITooltipComponent
     /// <summary>
     /// Configura el panel de interacción con texto de acciones disponibles.
     /// </summary>
-    private void SetupInteractionPanel(InventoryItem item, ItemData itemData)
+    private void SetupInteractionPanel(InventoryItem item, ItemDataSO itemData)
     {
         if (_actionText == null) return;
 
@@ -225,23 +225,14 @@ public class TooltipContentRenderer : ITooltipComponent
     /// <summary>
     /// Configura el icono del ítem.
     /// </summary>
-    private void SetItemIcon(ItemData itemData)
+    private void SetItemIcon(ItemDataSO itemData)
     {
         if (_miniatureImage == null) return;
 
-        if (!string.IsNullOrEmpty(itemData.iconPath))
+        if (itemData.icon != null)
         {
-            Sprite itemSprite = Resources.Load<Sprite>(itemData.iconPath);
-            if (itemSprite != null)
-            {
-                _miniatureImage.sprite = itemSprite;
+                _miniatureImage.sprite = itemData.icon;
                 _miniatureImage.gameObject.SetActive(true);
-            }
-            else
-            {
-                Debug.LogWarning($"[TooltipContentRenderer] No se encontró sprite en: {itemData.iconPath}");
-                _miniatureImage.gameObject.SetActive(false);
-            }
         }
         else
         {

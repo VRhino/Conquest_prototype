@@ -35,10 +35,10 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
         {
             var go = Instantiate(storeItemPrefab, goodsContainer);
             var controller = go.GetComponent<StoreItemController>();
-            var product = ItemDatabase.Instance.GetItemDataById(productId);
+            var product = ItemService.GetItemById(productId);
             if (product == null)
             {
-                Debug.LogWarning($"[UIStoreController] Product with ID '{productId}' not found in ItemDatabase.");
+                Debug.LogWarning($"[UIStoreController] Product with ID '{productId}' not found in ItemService.");
                 continue;
             }
             tooltipManager = FindTooltipManager();
@@ -75,7 +75,7 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
         _activeItems.Clear();
     }
 
-    private void OnProductPurchased(InventoryItem product, ItemData protoProduct)
+    private void OnProductPurchased(InventoryItem product, ItemDataSO protoProduct)
     {
         // Verificar que tenemos un héroe seleccionado
         var currentHero = PlayerSessionService.SelectedHero;
@@ -158,7 +158,7 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
         gameObject.SetActive(true);
     }
 
-    public void SellItem(InventoryItem item, ItemData itemData)
+    public void SellItem(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null)
         {
@@ -216,7 +216,7 @@ public class UIStoreController : MonoBehaviour, IFullscreenPanel
     /// </summary>
     /// <param name="soldItem">Item que fue vendido</param>
     /// <param name="protoProduct">Datos del prototipo del item</param>
-    private void RemoveStoreItem(InventoryItem soldItem, ItemData protoProduct)
+    private void RemoveStoreItem(InventoryItem soldItem, ItemDataSO protoProduct)
     {
         // Buscar el controlador que maneja este item
         StoreItemController itemToRemove = null;

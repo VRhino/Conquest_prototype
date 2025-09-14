@@ -167,7 +167,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         DisablePreviewSystem();
         if (_equipmentPanel != null) _equipmentPanel.SetTooltipManager(null);
         if (mainPanel != null) mainPanel.SetActive(false);
-        
+        if (_itemSelector != null) _itemSelector.Hide();
         _currentHeroData = null;
     }
 
@@ -323,7 +323,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         if (_attributesPanel != null)  _attributesPanel.HidePanelIfShown();
     }
 
-    public void OnEquipmentSlotClicked(InventoryItem item, ItemData itemData, HeroEquipmentSlotController slotController)
+    public void OnEquipmentSlotClicked(InventoryItem item, ItemDataSO itemData, HeroEquipmentSlotController slotController)
     {
         if ( _equipmentPanel == null) return;
         
@@ -338,7 +338,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         _itemSelector.ShowNearElement(slotRect);
     }
 
-    public void OnEquipmentSlotRightClicked(InventoryItem item, ItemData itemData)
+    public void OnEquipmentSlotRightClicked(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null || _equipmentPanel == null) return;
         ItemCategory category = item.itemType == ItemType.Weapon ? ItemCategory.None : itemData.itemCategory;
@@ -360,7 +360,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         }
     }
 
-    public void OnItemSelected(InventoryItem item, ItemData itemData)
+    public void OnItemSelected(InventoryItem item, ItemDataSO itemData)
     {
         if (item == null || itemData == null || _equipmentPanel == null) return;
 

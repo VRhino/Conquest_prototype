@@ -22,7 +22,7 @@ public class SimpleRewardDialogDataSO : RewardDialogDataSO
         
         foreach (var itemId in rewardItemIds)
             {
-                var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+                ItemDataSO itemData = ItemService.GetItemById(itemId);
                 if (itemData != null)
                 {
                     InventoryManager.CreateAndAddItem(itemId, 1);

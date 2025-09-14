@@ -61,12 +61,6 @@ public class HeroClassSelector : MonoBehaviour
             }
         }
         
-        // ItemDatabase ahora usa singleton - verificar que esté disponible
-        if (ItemDatabase.Instance == null)
-        {
-            Debug.LogError("ItemDatabase.Instance is null! Make sure ItemDatabase exists in Resources folder.");
-        }
-        
         GenerateButtons();
         // Mostrar detalles de la clase en el índice 1 al iniciar (si existe)
         if (availableClasses != null && availableClasses.Count > 1)
@@ -78,13 +72,6 @@ public class HeroClassSelector : MonoBehaviour
     public Equipment GetCurrentEquipment()
     {
         Equipment equipment = new Equipment();
-        
-        // Verificar que ItemDatabase esté disponible antes de crear items
-        if (ItemDatabase.Instance == null)
-        {
-            Debug.LogError("[HeroClassSelector] ItemDatabase not available, cannot create equipment instances");
-            return equipment;
-        }
         
         // Crear InventoryItems usando ItemInstanceService para generar stats e instanceId únicos
         if (baseItemIds.Count > 0 && !string.IsNullOrEmpty(baseItemIds[0]))
@@ -118,7 +105,7 @@ public class HeroClassSelector : MonoBehaviour
         }
         
         // Verificar que el item existe en la base de datos antes de crear la instancia
-        var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+        ItemDataSO itemData = ItemService.GetItemById(itemId);
         if (itemData == null)
         {
             Debug.LogError($"[HeroClassSelector] ItemData not found for ID: {itemId}. Item will not be equipped.");
@@ -319,7 +306,7 @@ public class HeroClassSelector : MonoBehaviour
     {
         foreach (var itemId in baseItemIds)
         {
-            var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+            ItemDataSO itemData = ItemService.GetItemById(itemId);
             if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
             {
                 Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(

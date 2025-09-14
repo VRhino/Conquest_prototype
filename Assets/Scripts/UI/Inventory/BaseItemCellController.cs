@@ -21,7 +21,7 @@ public abstract class BaseItemCellController : MonoBehaviour
     public Image filler; // Referencia directa, no reflexión
 
     protected InventoryItem _currentItem;
-    protected ItemData _currentItemData;
+    protected ItemDataSO _currentItemData;
 
     // Sprites de fondo por rareza (pueden ser null en subclases)
     [Header("Background Sprites")]
@@ -57,7 +57,7 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// <summary>
     /// Asigna un item a la celda. Si item es null, muestra solo el placeholder.
     /// </summary>
-    public virtual void SetItem(InventoryItem item, ItemData itemData)
+    public virtual void SetItem(InventoryItem item, ItemDataSO itemData)
     {
         if(_isInitialized == false) Initialize();
 
@@ -85,11 +85,11 @@ public abstract class BaseItemCellController : MonoBehaviour
     }
 
     public virtual void ConnectWithTooltips(
-        Action<InventoryItem, ItemData, UnityEngine.Vector3, string> OnItemHoverEnter,
-        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverExit,
-        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverMove,
-        Action<InventoryItem, ItemData, string> OnSetItem,
-        Action<InventoryItem, ItemData, string> OnClearItem
+        Action<InventoryItem, ItemDataSO, UnityEngine.Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemDataSO, UnityEngine.Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemDataSO, UnityEngine.Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemDataSO, string> OnSetItem,
+        Action<InventoryItem, ItemDataSO, string> OnClearItem
     )
     {
         if (_isInitialized == false) Initialize();
@@ -97,11 +97,11 @@ public abstract class BaseItemCellController : MonoBehaviour
     }
     
     public virtual void DisconnectFromTooltips(
-        Action<InventoryItem, ItemData, UnityEngine.Vector3, string> OnItemHoverEnter,
-        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverExit,
-        Action<InventoryItem, ItemData, UnityEngine.Vector3> OnItemHoverMove,
-        Action<InventoryItem, ItemData, string> OnSetItem,
-        Action<InventoryItem, ItemData, string> OnClearItem
+        Action<InventoryItem, ItemDataSO, UnityEngine.Vector3, string> OnItemHoverEnter,
+        Action<InventoryItem, ItemDataSO, UnityEngine.Vector3> OnItemHoverExit,
+        Action<InventoryItem, ItemDataSO, UnityEngine.Vector3> OnItemHoverMove,
+        Action<InventoryItem, ItemDataSO, string> OnSetItem,
+        Action<InventoryItem, ItemDataSO, string> OnClearItem
     )
     {
         _interaction?.DisconnectFromTooltips(OnItemHoverEnter, OnItemHoverExit, OnItemHoverMove, OnSetItem, OnClearItem);
@@ -115,7 +115,7 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// <summary>
     /// Asigna los eventos de interacción al componente de interacción.
     /// </summary>
-    public void SetEvents(System.Action<InventoryItem, ItemData> onItemClicked, System.Action<InventoryItem, ItemData> onItemRightClicked)
+    public void SetEvents(System.Action<InventoryItem, ItemDataSO> onItemClicked, System.Action<InventoryItem, ItemDataSO> onItemRightClicked)
     {
         if (_isInitialized == false) Initialize();
 
@@ -134,7 +134,7 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// <summary>
     /// Asigna un item de preview (sin cantidad ni interacción)
     /// </summary>
-    public virtual void SetPreviewItem(ItemData itemPreviewData)
+    public virtual void SetPreviewItem(ItemDataSO itemPreviewData)
     {
         itemPanel.SetActive(true);
         stackText.gameObject.SetActive(false);
@@ -144,9 +144,9 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// <summary>
     /// Actualiza los elementos visuales según el item
     /// </summary>
-    protected virtual void SetItemVisuals(ItemData itemData)
+    protected virtual void SetItemVisuals(ItemDataSO itemData)
     {
-        Sprite itemSprite = itemData.iconPath != null ? Resources.Load<Sprite>(itemData.iconPath) : null;
+        Sprite itemSprite = itemData.icon;
         if (itemSprite == null)
         {
             itemMiniature.gameObject.SetActive(false);

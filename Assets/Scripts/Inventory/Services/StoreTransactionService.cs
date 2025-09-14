@@ -1,5 +1,6 @@
 using UnityEngine;
 using Data.Items;
+using BattleDrakeStudios.ModularCharacters;
 
 /// <summary>
 /// Servicio especializado en transacciones de tienda (compra y venta de ítems).
@@ -55,7 +56,7 @@ public static class StoreTransactionService
         }
 
         // Obtener datos del ítem
-        var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+        ItemDataSO itemData = ItemService.GetItemById(itemId);
         int totalCost = ItemPricingService.CalculateItemPrice(itemData) * quantity;
 
         LogInfo($"Executing purchase: {itemData.name} x{quantity} for {totalCost} Bronze");
@@ -122,7 +123,7 @@ public static class StoreTransactionService
         }
 
         // Verificar que el ítem existe
-        var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+        ItemDataSO itemData = ItemService.GetItemById(itemId);
         if (itemData == null)
         {
             return TransactionResult.CreateFailure(TransactionErrorType.InvalidItem,
@@ -193,7 +194,7 @@ public static class StoreTransactionService
         int sellQuantity = quantity == -1 ? item.quantity : quantity;
         
         // Obtener datos del ítem y calcular precio de venta
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         int sellPrice = ItemPricingService.CalculateItemSellPrice(itemData, item) * sellQuantity;
 
         LogInfo($"Executing sale: {itemData.name} x{sellQuantity} for {sellPrice} Bronze");
@@ -264,7 +265,7 @@ public static class StoreTransactionService
         }
 
         // Obtener datos del ítem
-        var itemData = InventoryUtils.GetItemData(item.itemId);
+        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
         if (itemData == null)
         {
             return TransactionResult.CreateFailure(TransactionErrorType.InvalidItem,
