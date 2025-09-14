@@ -46,15 +46,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
 
     #endregion
 
-    #region Equipment Slots (Legacy - para compatibilidad)
-
-    [Header("Equipment Slots (Legacy)")]
-    public GameObject helmetSlot;
-    public GameObject torsoSlot;
-    public GameObject glovesSlot;
-    public GameObject pantsSlot;
-    public GameObject bootsSlot;
-    public GameObject weaponSlot;
+    #region UI References - Buttons
     
     [Header("Repair Buttons")]
     public Button repairButton;
@@ -84,9 +76,8 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
             return;
         }
 
-        // Inicializar panel oculto
-        if (mainPanel != null)
-            mainPanel.SetActive(false);
+        if (mainPanel != null) mainPanel.SetActive(false);
+        InitializeEquipmentPanel();
             
         if (!_itemSelector.IsInitialized)
         {
@@ -185,12 +176,8 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
     /// </summary>
     public void TogglePanel()
     {
-        if (mainPanel != null && mainPanel.activeSelf)
-            ClosePanel();
-        else
-            OpenPanel();
-
-        // No llamar ToggleUIInteraction aquí - el FullscreenPanelManager se encarga
+        if (mainPanel != null && mainPanel.activeSelf) ClosePanel();
+        else OpenPanel();
     }
 
     /// <summary>
@@ -248,23 +235,9 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
 
     private void PopulateEquipmentSlots()
     {
-        if (_equipmentPanel == null) InitializeEquipmentPanel();
-
-        if (_equipmentPanel != null)
-        {
-            // Usar reflexión para evitar errores de compilación temporales
-            var populateMethod = _equipmentPanel.GetType().GetMethod("PopulateFromSelectedHero");
-            if (populateMethod != null)
-            {
-                populateMethod.Invoke(_equipmentPanel, null);
-            }
-            else Debug.LogWarning("[HeroDetailUIController] PopulateFromSelectedHero method not found on equipment panel");
-        }
-        else
-        {
-            if (_currentHeroData?.equipment != null) 
-                Debug.Log($"[HeroDetailUIController] Equipment loaded - Helmet: {_currentHeroData.equipment.helmet?.itemId ?? "None"}");
-        }
+        if (_equipmentPanel != null) _equipmentPanel.PopulateFromSelectedHero();
+        else if (_currentHeroData?.equipment != null)
+            Debug.Log($"[HeroDetailUIController] Equipment loaded - Helmet: {_currentHeroData.equipment.helmet?.itemId ?? "None"}");
     }
 
     #endregion
@@ -450,50 +423,13 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
     /// </summary>
     private void InitializeEquipmentPanel()
     {
-        var panelType = System.Type.GetType("HeroEquipmentPanel");
-        if (panelType != null)
+        if (_equipmentPanel != null)
         {
-            _equipmentPanel = GetComponentInChildren(panelType) as HeroEquipmentPanel;
-            
-            if (_equipmentPanel == null)
-            {
-                // Si no existe, buscar en los slots para crear uno dinámicamente
-                var equipmentParent = FindEquipmentParent();
-                if (equipmentParent != null)
-                {
-                    _equipmentPanel = equipmentParent.AddComponent(panelType) as HeroEquipmentPanel;
-                }
-            }
-
-            if (_equipmentPanel != null)
-            {
-                // Inicializar el panel usando reflexión
-                var initMethod = _equipmentPanel.GetType().GetMethod("InitializePanel");
-                if (initMethod != null)
-                {
-                    initMethod.Invoke(_equipmentPanel, null);
-                    _equipmentPanel.SetEvents(OnEquipmentSlotClicked, OnEquipmentSlotRightClicked);
-                }
-            }
-        }
-        else
-        {
-            Debug.LogWarning("[HeroDetailUIController] HeroEquipmentPanel class not found - may need Unity compilation");
+            _equipmentPanel.InitializePanel();
+            _equipmentPanel.SetEvents(OnEquipmentSlotClicked, OnEquipmentSlotRightClicked);
         }
     }
 
-    /// <summary>
-    /// Encuentra el GameObject padre que contiene los slots de equipamiento.
-    /// </summary>
-    private GameObject FindEquipmentParent()
-    {
-        // Intentar encontrar un padre común de los slots de equipamiento
-        if (helmetSlot != null) return helmetSlot.transform.parent?.gameObject;
-        if (torsoSlot != null) return torsoSlot.transform.parent?.gameObject;
-        if (weaponSlot != null) return weaponSlot.transform.parent?.gameObject;
-        
-        return gameObject; // Fallback al objeto principal
-    }
 
     #endregion
 }

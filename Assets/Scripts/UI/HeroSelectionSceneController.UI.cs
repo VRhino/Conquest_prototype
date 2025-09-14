@@ -204,6 +204,6 @@ public class HeroSelectionSceneController : MonoBehaviour
     void OnExitPressed()
     {
         PlayerSessionService.Clear();
-        UnityEngine.SceneManagement.SceneManager.LoadScene("LoginScene");
+        SceneTransitionService.LoadScene("LoginScene");
     }
 }

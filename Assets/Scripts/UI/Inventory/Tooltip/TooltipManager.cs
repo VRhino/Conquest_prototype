@@ -18,8 +18,6 @@ public class TooltipManager : MonoBehaviour
     [SerializeField] private InventoryTooltipController primaryTooltipController;
     [SerializeField] private InventoryTooltipController secondaryTooltipController;
 
-    // Legacy reference para compatibilidad
-    private InventoryTooltipController _tooltipController => primaryTooltipController;
 
     void Start()
     {
@@ -32,10 +30,7 @@ public class TooltipManager : MonoBehaviour
         StopTooltipValidation();
 
         // Limpiar conexiones al destruir el manager
-        if (_tooltipController != null)
-        {
-            _tooltipController.HideTooltip();
-        }
+        if (primaryTooltipController != null) primaryTooltipController.HideTooltip();
     }
 
     public void SetEnableComparisonTooltips(bool enable)
@@ -84,9 +79,9 @@ public class TooltipManager : MonoBehaviour
     /// </summary>
     private void ValidateCurrentTooltip()
     {
-        if (_tooltipController != null && _tooltipController.IsShowing)
+        if (primaryTooltipController != null && primaryTooltipController.IsShowing)
         {
-            _tooltipController.ValidateAndRefreshTooltip();
+            primaryTooltipController.ValidateAndRefreshTooltip();
         }
     }
 
@@ -96,7 +91,7 @@ public class TooltipManager : MonoBehaviour
     /// </summary>
     public void ForceValidateTooltip()
     {
-        if (_tooltipController != null) _tooltipController.ValidateAndRefreshTooltip();
+        if (primaryTooltipController != null) primaryTooltipController.ValidateAndRefreshTooltip();
     }
 
     /// <summary>
@@ -148,7 +143,7 @@ public class TooltipManager : MonoBehaviour
     /// <param name="cell">Celda a conectar</param>
     public void ConnectCellToTooltip(BaseItemCellController cell)
     {
-        if (!enableTooltips || _tooltipController == null || cell == null) return;
+        if (!enableTooltips || primaryTooltipController == null || cell == null) return;
 
         cell.ConnectWithTooltips(
             OnItemHoverEnter,

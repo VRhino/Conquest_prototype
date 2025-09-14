@@ -8,10 +8,10 @@ public static class SceneTransitionService
     private static readonly Dictionary<string, GamePhase> SceneToPhaseMap = new()
     {
         { "LoginScene", GamePhase.Login },
-        { "CharacterSelecctionScene", GamePhase.Login }, // Asumiendo que es parte de login
-        { "AvatarCreator", GamePhase.Login },
+        { "HeroSelectionScene", GamePhase.CharacterSelection },
+        { "AvatarCreator", GamePhase.AvatarCreation },
         { "FeudoScene", GamePhase.Feudo },
-        { "BattlePrepScene", GamePhase.Preparacion },
+        { "BattlePrepScene", GamePhase.BattlePreparation },
         { "BattleScene", GamePhase.Combate },
         { "PostBattleScene", GamePhase.PostPartida }
     };
@@ -51,7 +51,7 @@ public static class SceneTransitionService
         }
     }
 
-    private static void UpdateGamePhase(GamePhase newPhase)
+    public static void UpdateGamePhase(GamePhase newPhase)
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
         var query = em.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());

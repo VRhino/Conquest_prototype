@@ -165,16 +165,6 @@ public static class HeroTempAttributeService
     }
 
     /// <summary>
-    /// OBSOLETO: Usar GetFinalAttributeValue en su lugar.
-    /// Mantiene compatibilidad temporal con código legacy.
-    /// </summary>
-    [System.Obsolete("Usar GetFinalAttributeValue para mayor claridad", false)]
-    public static float GetTempAttributeValue(string heroId, string attributeName, float originalValue)
-    {
-        return GetFinalAttributeValue(heroId, attributeName);
-    }
-
-    /// <summary>
     /// Calcula la cantidad de puntos de atributo usados en modificaciones temporales.
     /// </summary>
     /// <param name="heroId">ID del héroe</param>

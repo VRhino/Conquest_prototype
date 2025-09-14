@@ -22,13 +22,10 @@ public static class BattleDebugCreator
             return null;
         }
 
-        // Create new battle data
         BattleData battleData = CreateTestBattle();
 
-        // Convert HeroData to BattleHeroData
         BattleHeroData battleHero = ConvertHeroToBattleHero(localHero);
 
-        // Add as first attacker
         battleData.attackers.Insert(0, battleHero);
 
         Debug.Log($"BattleDebugCreator: Created battle with hero '{battleHero.heroName}' as first attacker");

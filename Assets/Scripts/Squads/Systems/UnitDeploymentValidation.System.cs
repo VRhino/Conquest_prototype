@@ -185,7 +185,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
         if (q.IsEmptyIgnoreFilter)
             return false;
         var state = q.GetSingleton<GameStateComponent>();
-        return state.currentPhase == GamePhase.Preparacion;
+        return state.currentPhase == GamePhase.BattlePreparation;
     }
 
     bool IsPostMatch()

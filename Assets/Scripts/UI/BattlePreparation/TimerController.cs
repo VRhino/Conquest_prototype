@@ -24,8 +24,7 @@ public class TimerController : MonoBehaviour
     #endregion
 
     #region Dependencies
-
-    private BattleData _battleData;
+    private int secondsRemaining = 0;
     private TextMeshProUGUI _timerDisplay;
 
     #endregion
@@ -44,14 +43,16 @@ public class TimerController : MonoBehaviour
     /// </summary>
     /// <param name="battleData">Datos de batalla que contienen el timer</param>
     /// <param name="timerDisplay">Componente UI para mostrar el timer</param>
-    public void Initialize(BattleData battleData, TextMeshProUGUI timerDisplay)
+    public void Initialize(int seconds, TextMeshProUGUI timerDisplay)
     {
-        _battleData = battleData;
+        if (seconds >= 0) secondsRemaining = seconds;
+        else secondsRemaining = 1;
+
         _timerDisplay = timerDisplay;
 
-        if (_battleData == null)
+        if (_timerDisplay == null )
         {
-            Debug.LogError("[TimerController] BattleData no puede ser null");
+            Debug.LogError("[TimerController] TimerDisplay no puede ser null");
             return;
         }
 
@@ -62,22 +63,22 @@ public class TimerController : MonoBehaviour
     /// Establece el tiempo de preparación en segundos.
     /// </summary>
     /// <param name="seconds">Tiempo en segundos</param>
-    public void SetPreparationTimer(int seconds)
+    public void SetCountDownSecs(int seconds)
     {
-        if (_battleData == null)
+        if (_timerDisplay == null)
         {
             Debug.LogError("[TimerController] No inicializado correctamente");
             return;
         }
         if (seconds < 0) seconds = 0;
-        _battleData.PreparationTimer = seconds;
+        secondsRemaining = seconds;
         UpdateTimerDisplay();
 
         // Reiniciar countdown si está corriendo
         if (_isRunning) StopCountdown();
 
         // Iniciar countdown si hay tiempo
-        if (_battleData.PreparationTimer > 0) StartCountdown();
+        if (secondsRemaining > 0) StartCountdown();
         else OnTimerFinished?.Invoke();
     }
 
@@ -85,73 +86,23 @@ public class TimerController : MonoBehaviour
     /// Reduce el tiempo del timer.
     /// </summary>
     /// <param name="seconds">Segundos a reducir</param>
-    public void DecreasePreparationTimer(int seconds)
+    public void ReduceTimerSeconds(int seconds)
     {
-        if (_battleData == null || seconds < 0) return;
+        if (_timerDisplay == null || seconds < 0) return;
 
-        _battleData.PreparationTimer -= seconds;
-        if (_battleData.PreparationTimer < 0) _battleData.PreparationTimer = 0;
+        secondsRemaining -= seconds;
+        if (secondsRemaining < 0) secondsRemaining = 0;
 
         UpdateTimerDisplay();
-        OnTimerUpdated?.Invoke(_battleData.PreparationTimer);
+        OnTimerUpdated?.Invoke(secondsRemaining);
 
-        if (_battleData.PreparationTimer == 0)
+        if (secondsRemaining == 0)
         {
             StopCountdown();
             OnTimerFinished?.Invoke();
         }
     }
-
-    /// <summary>
-    /// Pausa el countdown del timer.
-    /// </summary>
-    public void PauseTimer()
-    {
-        if (_isRunning)
-        {
-            StopCountdown();
-        }
-    }
-
-    /// <summary>
-    /// Reanuda el countdown del timer.
-    /// </summary>
-    public void ResumeTimer()
-    {
-        if (!_isRunning && _battleData != null && _battleData.PreparationTimer > 0)
-        {
-            StartCountdown();
-        }
-    }
-
-    /// <summary>
-    /// Detiene completamente el timer.
-    /// </summary>
-    public void StopTimer()
-    {
-        StopCountdown();
-        if (_battleData != null)
-        {
-            _battleData.PreparationTimer = 0;
-            UpdateTimerDisplay();
-        }
-    }
-
-    /// <summary>
-    /// Obtiene el tiempo restante en segundos.
-    /// </summary>
-    /// <returns>Tiempo restante</returns>
-    public int GetRemainingTime()
-    {
-        return _battleData?.PreparationTimer ?? 0;
-    }
-
-    /// <summary>
-    /// Verifica si el timer está corriendo.
-    /// </summary>
-    /// <returns>True si está corriendo</returns>
-    public bool IsRunning() { return _isRunning; }
-
+    
     #endregion
 
     #region Private Methods
@@ -185,10 +136,10 @@ public class TimerController : MonoBehaviour
     /// </summary>
     private IEnumerator CountdownCoroutine()
     {
-        while (_battleData.PreparationTimer > 0 && _isRunning)
+        while (secondsRemaining > 0 && _isRunning)
         {
             yield return new WaitForSeconds(1);
-            if (_isRunning) DecreasePreparationTimer(1);
+            if (_isRunning) ReduceTimerSeconds(1);
         }
     }
 
@@ -197,9 +148,9 @@ public class TimerController : MonoBehaviour
     /// </summary>
     private void UpdateTimerDisplay()
     {
-        if (_timerDisplay != null && _battleData != null)
+        if (_timerDisplay != null)
         {
-            TimeSpan timeSpan = TimeSpan.FromSeconds(_battleData.PreparationTimer);
+            TimeSpan timeSpan = TimeSpan.FromSeconds(secondsRemaining);
             _timerDisplay.text = timeSpan.ToString(@"mm\:ss");
         }
     }

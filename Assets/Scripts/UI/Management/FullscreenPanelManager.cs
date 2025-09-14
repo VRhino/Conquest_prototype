@@ -97,6 +97,14 @@ public class FullscreenPanelManager : MonoBehaviour
 
     private void InitializeManager()
     {
+        // [TESTING ONLY] Setup test environment if available
+        TestEnvironmentInitializer testEnv = FindAnyObjectByType<TestEnvironmentInitializer>();
+        if (testEnv != null)
+        {
+            testEnv.SetupTestEnvironment();
+            testEnv.SetGamePhase(GamePhase.Feudo);
+        }
+
         _registeredPanels = new Dictionary<System.Type, IFullscreenPanel>();
         _currentActivePanel = null;
 
@@ -146,8 +154,9 @@ public class FullscreenPanelManager : MonoBehaviour
         if (barracksHUDButton != null) barracksHUDButton.onClick.AddListener(() => RequestPanelToggle<BarracksMenuUIController>());
 
         if (battleHUDButton != null) battleHUDButton.onClick.AddListener(() =>
-        {   
-            UnityEngine.SceneManagement.SceneManager.LoadScene("BattlePrepScene");
+        {
+            Debug.Log("[FullscreenPanelManager] Battle HUD button pressed");
+            MatchmakingService.Instance?.toggleMatchmaking(PlayerSessionService.SelectedHero);
         });
     }
 

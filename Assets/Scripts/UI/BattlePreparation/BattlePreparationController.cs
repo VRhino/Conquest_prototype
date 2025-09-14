@@ -44,8 +44,21 @@ public class BattlePreparationController : MonoBehaviour
     {
         _heroSliceControllers = new List<HeroSliceController>();
         _heroSliceMap = new Dictionary<string, HeroSliceController>();
-        //solo para tensting
-        initializeTestEnvironment();
+
+        // Usar datos de transición si existen
+        _currentBattleData = BattleTransitionData.Instance.GetAndClearBattleData();
+        if (_currentBattleData != null) Debug.Log($"[BattlePreparationController] Using transition data: {_currentBattleData.battleID}");
+        else
+        {
+            // [TESTING ONLY] Setup test environment if available
+            TestEnvironmentInitializer testEnv = FindAnyObjectByType<TestEnvironmentInitializer>();
+            if (testEnv != null)
+            {
+                testEnv.SetupTestEnvironment();
+                _currentBattleData = testEnv.GenerateBattleData(PlayerSessionService.SelectedHero);
+                testEnv.SetGamePhase(GamePhase.BattlePreparation);
+            }
+        }
 
         InitializeTimerController();
         initializeBattlePreparation();
@@ -62,21 +75,10 @@ public class BattlePreparationController : MonoBehaviour
         }
     }
 
-    private void initializeTestEnvironment()
-    {
-        LoadSystem.LoadDataForTesting(out HeroData localHero, out PlayerData player);
-        PlayerSessionService.SetPlayer(player);
-        PlayerSessionService.SetSelectedHero(localHero);
-        _currentBattleData = BattleDebugCreator.CreateBattleWithLocalHero(localHero);
-    }
-
     void OnDestroy()
     {
-        if (_timerController != null)
-        {
-            _timerController.OnTimerFinished -= OnPreparationTimerFinished;
-        }
-        
+        if (_timerController != null) _timerController.OnTimerFinished -= OnPreparationTimerFinished;
+
         ClearAllHeroSlices();
     }
 
@@ -198,7 +200,7 @@ public class BattlePreparationController : MonoBehaviour
             }
         }
 
-        _timerController.Initialize(_currentBattleData, timerDisplay);
+        _timerController.Initialize(_currentBattleData.PreparationTimer, timerDisplay);
         _timerController.OnTimerFinished += OnPreparationTimerFinished;
     }
 
@@ -256,7 +258,7 @@ public class BattlePreparationController : MonoBehaviour
             AddHero(heroData);
         }
         Debug.Log($"[BattlePreparationController] Héroes inicializados: {_heroSliceControllers.Count}");
-        _timerController.SetPreparationTimer(_currentBattleData.PreparationTimer);
+        _timerController.SetCountDownSecs(_currentBattleData.PreparationTimer);
     }
 
     private void initializeLocalHero(HeroData localHero)

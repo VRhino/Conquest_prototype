@@ -1,8 +1,11 @@
 public enum GamePhase
 {
     Login,
+    CharacterSelection,
+    AvatarCreation,
     Feudo,
-    Preparacion,
+    Matchmaking,
+    BattlePreparation,
     Combate,
     PostPartida
 }
