@@ -7,37 +7,52 @@
 
 ---
 
-## 📦 1. Crear el ítem en la ItemDatabase
+## 📦 1. Crear el Scriptable Object del Item
 
-Ubicación: `Assets/Scripts/Resources/Data/Items/ItemDatabase`
+Ubicación: `Assets/Resources/items/`
 
-### 1.1 Campos del nuevo ítem:
+📌 En EL menu superior → `Tools -> Items -> Item Creator Wizard`
+
+NOTA: al usar el itemCreatorWizard se crea una carpeta para dicho item en la ruta antes mencionada con el id elegido por nombre de la carpeta, dejar dentro de dicha carpeta todos assets que use dicho item:
+* Scripable Object (itemData)
+* png (miniatures, etc...)
+
+## 2. completar el itemDataSO
+
+Ubicación: `Assets/Resources/items/{ID}/{ID}.asset`
+
+### 2.1 Campos del nuevo ítem:
 
 - `🆔 id`: Identificador único del ítem.
 - `🏷️ name`: Nombre mostrado en el tooltip del inventario.
-- `🖼️ iconPath`: Ruta al ícono que se mostrará en la UI del inventario.
+- `🖼️ icon`: ícono que se mostrará en la UI del inventario.
 - `🧾 description`: Descripción del ítem.
 - `🎖️ rarity`: Rareza del ítem (`Common`, `Uncommon`, `Rare`, `Epic`, `Legendary`).
 - `🎯 itemType`: Tipo de ítem (`Consumable`).
-- `📦 stackable`: Booleano; si se puede apilar en el inventario.
+- `📦 stackable`: Booleano; si se puede apilar en el inventario. 
 - `🚫 visualPartId`: (No aplica para consumibles)
 - `🚫 statsGenerators`: (No aplica para consumibles)
 - `💥 effects`: Lista de `ItemEffects` que se ejecutan al usar el ítem.
 
 ---
 
-## 🧬 2. Crear el efecto del Consumible (ItemEffect)
+## 3. Asegurarse que este en ItemSODatabase
+
+Ubicacion: `Assets/Resources/items/ItemSODatabase.asset`
+
+---
+
+## 🧬 4. Crear el efecto del Consumible (ItemEffect)
 
 Ubicación: `Assets/ScriptableObjects/Items/`
 
 📌 Clic derecho en la carpeta → `Create → Item → Effects → Currency`
 
-### 2.1 Tipo disponible: `CurrencyEffect`
+### 4.1 Tipo disponible: `CurrencyEffect`
 
 > Añade monedas al inventario del jugador.
-> 
 
-### 2.2 Campos del `CurrencyEffect`:
+### 4.2 Campos del `CurrencyEffect`:
 
 - `🆔 id`: Identificador del efecto.
 - `📝 displayName`: Nombre visible en el editor de Unity.

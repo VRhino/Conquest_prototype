@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using Data.Items;
+using BattleDrakeStudios.ModularCharacters;
 
 namespace ItemSystem.Editor
 {
@@ -82,6 +83,10 @@ namespace ItemSystem.Editor
             {
                 EditorGUILayout.HelpBox("Item ID is required and should be unique.", MessageType.Warning);
             }
+            else if (_itemId.Contains(" "))
+            {
+                EditorGUILayout.HelpBox("Item ID should not contain spaces. Use underscores or camelCase.", MessageType.Warning);
+            }
 
             _itemName = EditorGUILayout.TextField("Item Name", _itemName);
             if (string.IsNullOrEmpty(_itemName))
@@ -99,6 +104,45 @@ namespace ItemSystem.Editor
             if (_itemType == ItemType.Armor)
             {
                 _armorType = (ArmorType)EditorGUILayout.EnumPopup("Armor Type", _armorType);
+                if (_armorType == ArmorType.None)
+                {
+                    EditorGUILayout.HelpBox("Please select an Armor Type for armor items.", MessageType.Warning);
+                }
+            }
+            else
+            {
+                _armorType = ArmorType.None; // Reset for non-armor items
+            }
+
+            // Show helpful information based on item type
+            ShowItemTypeInfo();
+        }
+
+        private void ShowItemTypeInfo()
+        {
+            string info = "";
+            MessageType messageType = MessageType.Info;
+
+            switch (_itemType)
+            {
+                case ItemType.Weapon:
+                    info = "Weapons require a StatGenerator for generating stats and a VisualPartId for appearance.";
+                    break;
+                case ItemType.Armor:
+                    info = "Armor requires a StatGenerator for generating stats, VisualPartId for appearance, and ArmorType selection.";
+                    break;
+                case ItemType.Consumable:
+                    info = "Consumables require ItemEffect arrays to define their functionality when used.";
+                    break;
+                case ItemType.None:
+                    info = "Please select an Item Type to continue.";
+                    messageType = MessageType.Warning;
+                    break;
+            }
+
+            if (!string.IsNullOrEmpty(info))
+            {
+                EditorGUILayout.HelpBox(info, messageType);
             }
         }
 
@@ -209,13 +253,19 @@ namespace ItemSystem.Editor
                 // Create ItemDataSO
                 var itemDataSO = CreateInstance<ItemDataSO>();
                 
-                // Set basic properties through reflection or direct assignment
+                // Set basic properties through SerializedObject
                 SetItemProperties(itemDataSO);
 
                 // Create asset
                 AssetDatabase.CreateAsset(itemDataSO, targetPath);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
+
+                // Verificar que el ítem se configuró correctamente
+                if (!VerifyItemCreation(itemDataSO))
+                {
+                    Debug.LogWarning($"[ItemCreatorWizard] Item created but some properties may not have been set correctly: {_itemId}");
+                }
 
                 // Auto-register if enabled
                 if (_autoRegister && _targetDatabase != null)
@@ -251,28 +301,142 @@ namespace ItemSystem.Editor
 
         private void SetItemProperties(ItemDataSO itemDataSO)
         {
-            // Create a temporary ItemData to use the conversion method
-            var tempItemData = new ItemDataSO
+            // Usar SerializedObject para establecer los campos privados
+            var serializedObject = new SerializedObject(itemDataSO);
+            
+            try
             {
-                // id = _itemId,
-                // name = _itemName,
-                // description = _description,
-                // itemType = _itemType,
-                // itemCategory = _itemCategory,
-                // rarity = _rarity,
-                // armorType = _armorType,
-                // stackable = _itemType == ItemType.Consumable, // Default stackable for consumables
-                // consumeOnUse = _itemType == ItemType.Consumable,
-                // iconPath = "", // User will need to set this manually
-                // visualPartId = "", // User will need to set this manually
-                // statGenerator = null, // User will need to set this manually
-                // effects = null, // User will need to set this manually
-                // requiresConfirmation = false,
-                // useButtonText = "Use",
-                // pricingConfig = null
-            };
+                // Establecer propiedades básicas
+                SetSerializedProperty(serializedObject, "_id", _itemId);
+                SetSerializedProperty(serializedObject, "_name", _itemName);
+                SetSerializedProperty(serializedObject, "_description", _description);
+                SetSerializedProperty(serializedObject, "_rarity", (int)_rarity);
+                SetSerializedProperty(serializedObject, "_itemType", (int)_itemType);
+                SetSerializedProperty(serializedObject, "_itemCategory", (int)_itemCategory);
+                SetSerializedProperty(serializedObject, "_armorType", (int)_armorType);
+                
+                // Configurar propiedades por defecto según el tipo
+                bool isConsumable = _itemType == ItemType.Consumable;
+                SetSerializedProperty(serializedObject, "_stackable", isConsumable);
+                SetSerializedProperty(serializedObject, "_consumeOnUse", isConsumable);
+                SetSerializedProperty(serializedObject, "_requiresConfirmation", false);
+                SetSerializedProperty(serializedObject, "_useButtonText", "Use");
+                
+                // Limpiar campos opcionales (usuario los configurará manualmente)
+                SetSerializedPropertyObject(serializedObject, "_Icon", null);
+                SetSerializedProperty(serializedObject, "_visualPartId", "");
+                SetSerializedPropertyObject(serializedObject, "_statGenerator", null);
+                SetSerializedPropertyObject(serializedObject, "_pricingConfig", null);
+                
+                // Configurar array de efectos
+                var effectsProperty = serializedObject.FindProperty("_effects");
+                if (effectsProperty != null)
+                {
+                    effectsProperty.ClearArray();
+                    // Para consumibles, el array queda vacío pero disponible para agregar efectos
+                }
+                
+                // Aplicar cambios
+                serializedObject.ApplyModifiedProperties();
+                
+                Debug.Log($"[ItemCreatorWizard] Properties set successfully for item: {_itemId} (Type: {_itemType})");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[ItemCreatorWizard] Failed to set properties for item {_itemId}: {ex.Message}");
+                throw;
+            }
+        }
 
-            EditorUtility.CopySerialized(tempItemData, itemDataSO);
+        /// <summary>
+        /// Helper method para establecer propiedades serializadas de forma segura
+        /// </summary>
+        private void SetSerializedProperty(SerializedObject serializedObject, string propertyName, object value)
+        {
+            var property = serializedObject.FindProperty(propertyName);
+            if (property == null)
+            {
+                Debug.LogWarning($"[ItemCreatorWizard] Property '{propertyName}' not found in ItemDataSO");
+                return;
+            }
+
+            switch (value)
+            {
+                case string stringValue:
+                    property.stringValue = stringValue;
+                    break;
+                case int intValue:
+                    property.enumValueIndex = intValue;
+                    break;
+                case bool boolValue:
+                    property.boolValue = boolValue;
+                    break;
+                default:
+                    Debug.LogWarning($"[ItemCreatorWizard] Unsupported property type for '{propertyName}': {value?.GetType()}");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Helper method para establecer referencias de objeto serializadas
+        /// </summary>
+        private void SetSerializedPropertyObject(SerializedObject serializedObject, string propertyName, UnityEngine.Object value)
+        {
+            var property = serializedObject.FindProperty(propertyName);
+            if (property == null)
+            {
+                Debug.LogWarning($"[ItemCreatorWizard] Object property '{propertyName}' not found in ItemDataSO");
+                return;
+            }
+            
+            property.objectReferenceValue = value;
+        }
+
+        /// <summary>
+        /// Verifica que el ItemDataSO se haya configurado correctamente
+        /// </summary>
+        private bool VerifyItemCreation(ItemDataSO itemDataSO)
+        {
+            bool isValid = true;
+
+            // Verificar propiedades básicas
+            if (itemDataSO.id != _itemId)
+            {
+                Debug.LogError($"[ItemCreatorWizard] ID verification failed. Expected: {_itemId}, Got: {itemDataSO.id}");
+                isValid = false;
+            }
+
+            if (itemDataSO.name != _itemName)
+            {
+                Debug.LogError($"[ItemCreatorWizard] Name verification failed. Expected: {_itemName}, Got: {itemDataSO.name}");
+                isValid = false;
+            }
+
+            if (itemDataSO.itemType != _itemType)
+            {
+                Debug.LogError($"[ItemCreatorWizard] ItemType verification failed. Expected: {_itemType}, Got: {itemDataSO.itemType}");
+                isValid = false;
+            }
+
+            if (itemDataSO.rarity != _rarity)
+            {
+                Debug.LogError($"[ItemCreatorWizard] Rarity verification failed. Expected: {_rarity}, Got: {itemDataSO.rarity}");
+                isValid = false;
+            }
+
+            // Verificar configuración específica por tipo
+            bool expectedStackable = _itemType == ItemType.Consumable;
+            if (itemDataSO.stackable != expectedStackable)
+            {
+                Debug.LogWarning($"[ItemCreatorWizard] Stackable property may not be set correctly. Expected: {expectedStackable}, Got: {itemDataSO.stackable}");
+            }
+
+            if (isValid)
+            {
+                Debug.Log($"[ItemCreatorWizard] Item verification passed for: {_itemId}");
+            }
+
+            return isValid;
         }
 
         private string GetTargetPath()
@@ -307,34 +471,33 @@ namespace ItemSystem.Editor
         {
             var issues = new System.Collections.Generic.List<string>();
 
-            if (string.IsNullOrEmpty(_itemId))
-            {
+            // Validar ID
+            if (string.IsNullOrEmpty(_itemId)) 
                 issues.Add("Item ID is required");
-            }
-            else if (_itemId.Contains(" "))
-            {
+            else if (_itemId.Contains(" ")) 
                 issues.Add("Item ID should not contain spaces");
-            }
+            else if (!System.Text.RegularExpressions.Regex.IsMatch(_itemId, @"^[a-zA-Z][a-zA-Z0-9_]*$"))
+                issues.Add("Item ID should start with a letter and contain only letters, numbers, and underscores");
 
-            if (_itemType == ItemType.None)
-            {
+            // Validar tipo
+            if (_itemType == ItemType.None) 
                 issues.Add("Please select an Item Type");
-            }
 
-            if (_itemCategory == ItemCategory.None)
-            {
+            // Validar categoría (no requerida para consumibles)
+            if (_itemCategory == ItemCategory.None && _itemType != ItemType.Consumable) 
                 issues.Add("Please select an Item Category");
-            }
 
-            if (_itemType == ItemType.Armor && _armorType == ArmorType.None)
-            {
+            // Validar tipo de armadura para armaduras
+            if (_itemType == ItemType.Armor && _armorType == ArmorType.None) 
                 issues.Add("Please select an Armor Type for armor items");
-            }
 
-            if (_autoRegister && _targetDatabase == null)
-            {
+            // Validar database para auto-registro
+            if (_autoRegister && _targetDatabase == null) 
                 issues.Add("Please select a target database for auto-registration");
-            }
+
+            // Validar nombre
+            if (string.IsNullOrEmpty(_itemName))
+                issues.Add("Item Name cannot be empty");
 
             return issues;
         }

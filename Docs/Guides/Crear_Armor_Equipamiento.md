@@ -27,7 +27,6 @@ Modular_Character
 ```
 
 > Un torso de nivel alto puede incluir múltiples piezas visuales.
-> 
 
 el Prefab del heroe es ModularHeroVisual (Assets/Prefabs/esqueletos)
 
@@ -53,11 +52,23 @@ Ubicación: `Assets/Resources/Data/Avatar/AvatarPartsDatabase`
 
 ---
 
-## 📦 4. Crear el ítem en la ItemDatabase
+## 📦 4. Crear el Scriptable Object del Item
 
-Ubicación: `Assets/Scripts/Resources/Data/Items/ItemDatabase`
+Ubicación: `Assets/Resources/items/`
 
-### 4.1 Campos del nuevo ítem (tipo Armor)
+📌 En EL menu superior → `Tools -> Items -> Item Creator Wizard`
+
+NOTA: al usar el itemCreatorWizard se crea una carpeta para dicho item en la ruta antes mencionada con el id elegido por nombre de la carpeta, dejar dentro de dicha carpeta todos assets que use dicho item:
+* Scripable Object (itemData)
+* png (miniatures, etc...)
+
+---
+
+## 5. completar el itemDataSO
+
+Ubicación: `Assets/Resources/items/armors/{ID}/{ID}.asset`
+
+### 5.1 Campos del nuevo ítem:
 
 - `🆔 id`: Identificador único del ítem.
 - `🏷️ name`: Nombre visible en el tooltip.
@@ -72,13 +83,19 @@ Ubicación: `Assets/Scripts/Resources/Data/Items/ItemDatabase`
 
 ---
 
-## 🧪 5. Crear StatsGenerators
+## 6. Asegurarse que este en ItemSODatabase
+
+Ubicacion: `Assets/Resources/items/ItemSODatabase.asset`
+
+---
+
+## 🧪 7. Crear StatsGenerators
 
 Ubicación: `Assets/ScriptableObjects/Items/`
 
 📌 Clic derecho → `Create → Item → StatsGenerators → [tipo de stat]`
 
-### 5.1 Campos del `StatsGenerator`
+### 7.1 Campos del `StatsGenerator`
 
 - `🆔 id`: Identificador del stat generator.
 - `📝 displayName`: Nombre mostrado en el editor.
@@ -127,4 +144,3 @@ Ubicación: `Assets/ScriptableObjects/Items/`
 ---
 
 > 🧠 Usa esta guía como base para crear conjuntos completos de armaduras. Asegúrate de registrar cada pieza correctamente para una visualización coherente en personajes.
->

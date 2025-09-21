@@ -94,32 +94,17 @@ namespace Data.Items
                 isValid = false;
             }
 
-            if (string.IsNullOrEmpty(_name))
-            {
-                Debug.LogWarning($"[ItemDataSO] {_id}: Name is empty", this);
-            }
+            if (string.IsNullOrEmpty(_name)) Debug.LogWarning($"[ItemDataSO] {_id}: Name is empty", this);
 
-            if (_itemType == ItemType.None)
-            {
-                Debug.LogWarning($"[ItemDataSO] {_id}: ItemType is None", this);
-            }
+            if (_itemType == ItemType.None) Debug.LogWarning($"[ItemDataSO] {_id}: ItemType is None", this);
 
-            if (_itemCategory == ItemCategory.None)
-            {
-                Debug.LogWarning($"[ItemDataSO] {_id}: ItemCategory is None", this);
-            }
+            if (_itemCategory == ItemCategory.None) Debug.LogWarning($"[ItemDataSO] {_id}: ItemCategory is None", this);
 
             // Validar que equipment tenga statGenerator
-            if (_itemType != ItemType.Consumable && _statGenerator == null)
-            {
-                Debug.LogWarning($"[ItemDataSO] {_id}: Equipment item missing statGenerator", this);
-            }
+            if (_itemType != ItemType.Consumable && _statGenerator == null) Debug.LogWarning($"[ItemDataSO] {_id}: Equipment item missing statGenerator", this);
 
             // Validar que consumible tenga efectos
-            if (_itemType == ItemType.Consumable && (_effects == null || _effects.Length == 0))
-            {
-                Debug.LogWarning($"[ItemDataSO] {_id}: Consumable item missing effects", this);
-            }
+            if (_itemType == ItemType.Consumable && (_effects == null || _effects.Length == 0)) Debug.LogWarning($"[ItemDataSO] {_id}: Consumable item missing effects", this);
 
             return isValid;
         }
@@ -131,16 +116,10 @@ namespace Data.Items
         private void OnValidate()
         {
             // Auto-set name from file name if empty
-            if (string.IsNullOrEmpty(_name))
-            {
-                _name = this.name;
-            }
+            if (string.IsNullOrEmpty(_name)) _name = this.name;
 
             // Auto-set ID from file name if empty
-            if (string.IsNullOrEmpty(_id))
-            {
-                _id = this.name;
-            }
+            if (string.IsNullOrEmpty(_id)) _id = this.name;
         }
 
         #endregion
