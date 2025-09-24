@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Data.Maps;
 using UnityEngine;
 
 /// <summary>
@@ -84,7 +85,9 @@ public static class BattleDebugCreator
             battleData.defenders.Add(defender);
         }
 
-        Debug.Log("BattleDebugCreator: Created test battle with mock data");
+        //Create mock map
+        battleData.mapData = MapService.GetMapById("default");
+        Debug.Log($"BattleDebugCreator: Created test battle with map '{battleData.mapData.name}'");
         return battleData;
     }
     public static void GenerateRandomSquadInstances(List<string> validSquadIDs, out List<SquadInstanceData> randomSquads)

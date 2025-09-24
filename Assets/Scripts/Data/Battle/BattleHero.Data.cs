@@ -19,4 +19,6 @@ public class BattleHeroData
 
     /// <summary>Current level of the hero.</summary>
     public int level = 1;
+    /// <summary>Spawn point ID where the hero will enter the battle.</summary>
+    public string spawnPointId = string.Empty;
 }

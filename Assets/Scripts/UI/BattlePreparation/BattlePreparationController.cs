@@ -27,6 +27,9 @@ public class BattlePreparationController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI mapName;
     [Header("Timer Management")]
     [SerializeField] private TimerController _timerController;
+    [Header("Map Management")]
+    [SerializeField] private GameObject _preparationMapContainer;
+    private PreparationMapControllerUI _preparationMapControllerUI;
     private BattleData _currentBattleData;
 
     #endregion
@@ -61,7 +64,8 @@ public class BattlePreparationController : MonoBehaviour
         }
 
         InitializeTimerController();
-        initializeBattlePreparation();
+        InitializeBattlePreparation();
+        InitializeMap();
         _equipmentPanel.InitializePanel();
         _equipmentPanel.PopulateFromSelectedHero();
         _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
@@ -186,6 +190,39 @@ public class BattlePreparationController : MonoBehaviour
 
     #region Private Methods
 
+    private void InitializeMap()
+    {
+        if (_currentBattleData == null || _currentBattleData.mapData == null)
+        {
+            Debug.LogWarning("[BattlePreparationController] No hay datos de mapa para inicializar");
+            return;
+        }
+
+        // Limpiar mapa previo
+        foreach (Transform child in _preparationMapContainer.transform)
+        {
+            Destroy(child.gameObject);
+        }
+
+        // Instanciar nuevo mapa
+        GameObject mapPrefab = _currentBattleData.mapData.preparationMap;
+        if (mapPrefab != null)
+        {
+            GameObject mapInstance = Instantiate(mapPrefab, _preparationMapContainer.transform);
+            mapInstance.name = mapPrefab.name;
+            _preparationMapControllerUI = mapInstance.GetComponent<PreparationMapControllerUI>();
+            if (_preparationMapControllerUI != null)
+            {
+                _preparationMapControllerUI.Initialize(_currentBattleData.playerSide(PlayerSessionService.SelectedHero.heroName));
+                _preparationMapControllerUI.OnSpawnPointSelected += OnSpawnPointSelected;
+            }
+            else Debug.LogWarning($"[BattlePreparationController] El prefab del mapa no tiene PreparationMapControllerUI: {mapPrefab.name}");
+            Debug.Log($"[BattlePreparationController] Mapa de preparación instanciado: {mapPrefab.name}");
+        }
+
+        else Debug.LogWarning($"[BattlePreparationController] El mapa de preparación no está asignado en MapDataSO: {_currentBattleData.mapData.name}");
+    }
+
     private void InitializeTimerController()
     {
         if (_timerController == null)
@@ -210,7 +247,7 @@ public class BattlePreparationController : MonoBehaviour
         // Aquí podrías disparar un evento o llamar a un método para iniciar la batalla.
     }
 
-    private void initializeBattlePreparation()
+    private void InitializeBattlePreparation()
     {
         if (_currentBattleData == null)
         {
@@ -218,7 +255,7 @@ public class BattlePreparationController : MonoBehaviour
             return;
         }
 
-        mapName.text = _currentBattleData.mapName;
+        mapName.text = _currentBattleData.mapData.name;
 
         ClearAllHeroes();
 
@@ -347,6 +384,25 @@ public class BattlePreparationController : MonoBehaviour
         }
         else
             Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {itemData.name}");
+    }
+    
+    private void OnSpawnPointSelected(SpawnPointControllerUI spawnPoint)
+    {
+        if (_preparationMapControllerUI == null)
+        {
+            Debug.LogWarning("[BattlePreparationController] No hay PreparationMapControllerUI para manejar selección de spawn points");
+            return;
+        }
+
+        if (spawnPoint == null)
+        {
+            Debug.LogWarning("[BattlePreparationController] Spawn point nulo en OnSpawnPointSelected");
+            return;
+        }
+
+        _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName).spawnPointId = spawnPoint.spawnPointId;
+        //[TODO] enviar el evento de battle data updated
+        Debug.Log($"[BattlePreparationController] Spawn point seleccionado: {spawnPoint.name}");
     }
 
     #endregion

@@ -77,10 +77,12 @@
     <Analyzer Include="C:\Users\VRINO\Conquest tactics\prototipo_curado\Library\PackageCache\com.unity.entities@1.3.14\Unity.Entities\SourceGenerators\SystemGenerator.Common.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\UI\BattlePreparation\CapturePointIconController.UI.cs" />
     <Compile Include="Assets\Scripts\Squads\NonDeployableSquadTag.cs" />
     <Compile Include="Assets\Scripts\Squads\SquadAI.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\UnitSpacing.Component.cs" />
     <Compile Include="Assets\Scripts\UI\NpcDialogueUIController.cs" />
+    <Compile Include="Assets\Scripts\UI\SpawnPoints\SpawnPointController.UI.cs" />
     <Compile Include="Assets\Scripts\Shared\GamePhase.cs" />
     <Compile Include="Assets\Scripts\Combat\UnitWeapon.Component.cs" />
     <Compile Include="Assets\Scripts\Shared\Pooling\ObjectPool.System.cs" />
@@ -107,6 +109,7 @@
     <Compile Include="Assets\Scripts\Squads\UnitAnimatorController.cs" />
     <Compile Include="Assets\Scripts\Data\Avatar\AvatarParts.Data.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\SquadInstance.Data.cs" />
+    <Compile Include="Assets\Scripts\Data\Maps\MapDatabase.cs" />
     <Compile Include="Assets\Scripts\Shared\GameStateChangeEvent.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\ItemEffectSystem.cs" />
     <Compile Include="Assets\Scripts\Data\Pricing\PricingConfigurationSO.cs" />
@@ -167,6 +170,7 @@
     <Compile Include="Assets\Scripts\Shared\LocalSave.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroLevel.System.cs" />
     <Compile Include="Assets\Scripts\Hero\HeroClassDefinition.cs" />
+    <Compile Include="Assets\Scripts\UI\BattlePreparation\SupplyPointController.UI.cs" />
     <Compile Include="Assets\Scripts\Combat\PendingDamageEvent.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroInput.System.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\HeroStamina.System.cs" />
@@ -226,6 +230,7 @@
     <Compile Include="Assets\Scripts\Map\ZoneLink.Component.cs" />
     <Compile Include="Assets\Scripts\Squads\Systems\SquadFSM.System.cs" />
     <Compile Include="Assets\Scripts\UI\Minimap\MinimapController.cs" />
+    <Compile Include="Assets\Scripts\Core\MapService.cs" />
     <Compile Include="Assets\Scripts\Shared\ScenePhaseUpdater.cs" />
     <Compile Include="Assets\Scripts\Squads\Enums\UnitOrientation.Type.cs" />
     <Compile Include="Assets\Scripts\UI\HeroDetail\HeroDetailAttributePanel.cs" />
@@ -250,6 +255,7 @@
     <Compile Include="Assets\Scripts\SoloParaPruebas\HeroSquadSelectionTest.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\WeaponCollider.Component.cs" />
     <Compile Include="Assets\Scripts\Data\Persistence\visualAttachment.Data.cs" />
+    <Compile Include="Assets\Scripts\UI\BattlePreparation\PreparationMapController.UI.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\SpawnSelection.System.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatUIController.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchState.cs" />
@@ -386,6 +392,7 @@
     <Compile Include="Assets\Scripts\Hero\VisualPrefabConfiguration.cs" />
     <Compile Include="Assets\Scripts\Inventory\Services\InventoryEventService.cs" />
     <Compile Include="Assets\Scripts\Combat\Team.cs" />
+    <Compile Include="Assets\Scripts\Data\Maps\MapDataSO.cs" />
     <Compile Include="Assets\Scripts\UI\Inventory\Tooltip\TooltipLifecycleManager.cs" />
     <Compile Include="Assets\Scripts\Shared\DataContainer.Component.cs" />
     <Compile Include="Assets\Scripts\Core\SaveSystem.cs" />
