@@ -254,8 +254,8 @@
     <Compile Include="Assets\Scripts\Squads\SquadUnitElement.cs" />
     <Compile Include="Assets\Scripts\SoloParaPruebas\HeroSquadSelectionTest.Authoring.cs" />
     <Compile Include="Assets\Scripts\Combat\WeaponCollider.Component.cs" />
-    <Compile Include="Assets\Scripts\Data\Persistence\visualAttachment.Data.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePreparation\PreparationMapController.UI.cs" />
+    <Compile Include="Assets\Scripts\Data\Persistence\visualAttachment.Data.cs" />
     <Compile Include="Assets\Scripts\Hero\Systems\SpawnSelection.System.cs" />
     <Compile Include="Assets\Scripts\UI\Chat\ChatUIController.cs" />
     <Compile Include="Assets\Scripts\Shared\MatchState.cs" />

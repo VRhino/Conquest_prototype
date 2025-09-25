@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 public enum Side
@@ -25,7 +26,7 @@ public class PreparationMapControllerUI : MonoBehaviour
     private SpawnPointControllerUI _currentSelectedSpawnPoint;
     public Side side;
     // Evento público para selección
-    public event System.Action<SpawnPointControllerUI> OnSpawnPointSelected;
+    private event System.Action<SpawnPointControllerUI> OnSpawnPointSelected;
     
     #region Public API
     
@@ -64,8 +65,14 @@ public class PreparationMapControllerUI : MonoBehaviour
         Debug.Log($"[PreparationMapControllerUI] Spawn point selected: {(spawnPoint != null ? spawnPoint.name : "none")}");
     }
     
-    #endregion
+    public string GetDefaultSpawnPointId()
+    {
+        if (spawnPoints == null || spawnPoints.Count == 0) return null;
+        return spawnPoints[0].spawnPointId;
+    }
     
+    #endregion
+
     #region Unity Events
 
     public void Initialize(Side side)
@@ -78,13 +85,13 @@ public class PreparationMapControllerUI : MonoBehaviour
             if (side == spawnPoint.spawnPointType) SubscribeToSpawnPoint(spawnPoint);
             else spawnPoint.gameObject.SetActive(false);
         }
-        
+
         // Initialize supply points
         foreach (var supplyPoint in supplyPoints)
         {
             supplyPoint.Initialize(side);
         }
-        
+
         // Initialize capture points
         foreach (var capturePoint in capturePoints)
         {
@@ -125,7 +132,7 @@ public class PreparationMapControllerUI : MonoBehaviour
     /// <param name="spawnPoint">Spawn point al que suscribirse</param>
     private void SubscribeToSpawnPoint(SpawnPointControllerUI spawnPoint)
     {
-        if (spawnPoint != null) spawnPoint.OnSpawnPointClicked += OnSpawnPointClicked;
+        if (spawnPoint != null) spawnPoint.ConnectOnClickEvent(OnSpawnPointClicked);
     }
     
     /// <summary>
@@ -134,19 +141,33 @@ public class PreparationMapControllerUI : MonoBehaviour
     /// <param name="spawnPoint">Spawn point del que desuscribirse</param>
     private void UnsubscribeFromSpawnPoint(SpawnPointControllerUI spawnPoint)
     {
-        if (spawnPoint != null) spawnPoint.OnSpawnPointClicked -= OnSpawnPointClicked;
+        if (spawnPoint != null) spawnPoint.DisconnectAllEvents();
     }
     
     #endregion
     
-    #region Validation
-    
-    /// <summary>
-    /// Valida la configuración del componente en el editor.
-    /// </summary>
-    private void OnValidate()
+    #region Event Handling
+    public void DisconnectAllEvents()
     {
+        foreach (var spawnPoint in spawnPoints)
+            UnsubscribeFromSpawnPoint(spawnPoint);
+        
+        OnSpawnPointSelected = null;
+    }
+
+    public void SubscribeToSpawnPointSelected(Action<SpawnPointControllerUI> onSpawnPointSelected)
+    {
+        OnSpawnPointSelected += onSpawnPointSelected;
+    }
+    public void ReconnectAllEvents(
+        Action<SpawnPointControllerUI> onSpawnPointSelected
+    )
+    {
+        SubscribeToSpawnPointSelected(onSpawnPointSelected);
+        foreach (SpawnPointControllerUI spawnPoint in spawnPoints)
+            if (spawnPoint != null && spawnPoint.spawnPointType == side) SubscribeToSpawnPoint(spawnPoint);
     }
     
     #endregion
+    
 }

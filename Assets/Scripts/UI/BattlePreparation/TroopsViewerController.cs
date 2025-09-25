@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -49,19 +48,37 @@ public class TroopsViewerController : MonoBehaviour
     /// <summary>
     /// Se dispara cuando se hace click en un item.
     /// </summary>
-    public System.Action<string> OnItemClicked;
+    private Action<string> OnItemClicked;
     
     /// <summary>
     /// Se dispara cuando el widget necesita crear un item específico.
     /// Parámetros: itemId, container, prefab
     /// Retorna: GameObject creado
     /// </summary>
-    public System.Func<string, Transform, GameObject, GameObject> OnItemsRequested;
+    private Func<string, Transform, GameObject, GameObject> OnItemsRequested;
     
     /// <summary>
     /// Se dispara cuando se hace click en un placeholder.
     /// </summary>
-    public System.Action OnPlaceholderClicked;
+    private Action OnPlaceholderClicked;
+
+    public void ConnectExternalEvents(
+        Action<string> onItemClicked,
+        Func<string, Transform, GameObject, GameObject> onItemsRequested,
+        Action onPlaceholderClicked
+    )
+    {
+        OnItemClicked = onItemClicked;
+        OnItemsRequested = onItemsRequested;
+        if (onPlaceholderClicked != null) OnPlaceholderClicked = onPlaceholderClicked;
+    }
+
+    public void DisconnectAllEvents()
+    {
+        OnItemClicked = null;
+        OnItemsRequested = null;
+        OnPlaceholderClicked = null;
+    }
 
     #endregion
 

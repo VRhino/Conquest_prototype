@@ -27,6 +27,9 @@ public class FooterController : MonoBehaviour
     [SerializeField] private TroopsSelectorController troopsSelectorController;
     [SerializeField] private GameObject SquadSelectionPanel;
 
+    [Header("Start section")]
+    [SerializeField] private Button startBattleButton;
+
     #endregion
 
     #region Private Fields
@@ -40,15 +43,40 @@ public class FooterController : MonoBehaviour
 
     #region Events
 
-    /// <summary>
-    /// Se dispara cuando la selección de tropas cambia.
-    /// </summary>
-    public System.Action<List<string>> OnSelectionChanged;
+    public Action OnStartPressed;
+
     
+    public void ConnectTroopsViewerEvents()
+    {
+        if (troopsViewerWidget == null) return;
+
+        troopsViewerWidget.ConnectExternalEvents(
+            OnSquadOptionClicked,
+            OnItemsRequested,
+            OnPlaceholderClicked
+        );
+    }
+
+    public void ConnectTroopsSelectorEvents()
+    {
+        if (troopsSelectorController == null) return;
+
+        troopsSelectorController.SubscribeToEvents(
+            OnSquadSelectedFromSelector,
+            OnSelectorClosed
+        );
+    }
+
+    public void DisconnectAllEvents()
+    {
+        if (troopsViewerWidget != null) troopsViewerWidget.DisconnectAllEvents();
+        if (troopsSelectorController != null) troopsSelectorController.DisconnectAllEvents();
+    }
+
     #endregion
-    
+
     #region Unity Lifecycle
-    
+
     void Awake()
     {
         _heroSquadInstanceIDs = new List<string>();
@@ -79,17 +107,11 @@ public class FooterController : MonoBehaviour
     {
         if (troopsViewerWidget != null)
         {
-            troopsViewerWidget.OnItemClicked += OnSquadOptionClicked;
-            troopsViewerWidget.OnItemsRequested += OnItemsRequested;
-            troopsViewerWidget.OnPlaceholderClicked += OnPlaceholderClicked;
+            ConnectTroopsViewerEvents();
             troopsViewerWidget.initialize(5);
         }
         
-        if (troopsSelectorController != null)
-        {
-            troopsSelectorController.OnSquadSelected += OnSquadSelectedFromSelector;
-            troopsSelectorController.OnSelectorClosed += OnSelectorClosed;
-        }
+        if (troopsSelectorController != null) ConnectTroopsSelectorEvents();
     }
     
     /// <summary>
@@ -157,7 +179,7 @@ public class FooterController : MonoBehaviour
             totalLeadershipText.text = $"{_totalLeadershipCost}/{(int)availableLeadership}";
         }
     }
-    
+
     /// <summary>
     /// Configura los listeners de los botones específicos del footer.
     /// </summary>
@@ -173,6 +195,12 @@ public class FooterController : MonoBehaviour
         {
             saveLoadoutButton.onClick.RemoveAllListeners();
             saveLoadoutButton.onClick.AddListener(OnSaveLoadoutClicked);
+        }
+        
+        if (startBattleButton != null)
+        {
+            startBattleButton.onClick.RemoveAllListeners();
+            startBattleButton.onClick.AddListener(OnStartClicked);
         }
     }
     
@@ -190,18 +218,8 @@ public class FooterController : MonoBehaviour
     /// </summary>
     private void ClearWidgetListeners()
     {
-        if (troopsViewerWidget != null)
-        {
-            troopsViewerWidget.OnItemClicked -= OnSquadOptionClicked;
-            troopsViewerWidget.OnItemsRequested -= OnItemsRequested;
-            troopsViewerWidget.OnPlaceholderClicked -= OnPlaceholderClicked;
-        }
-        
-        if (troopsSelectorController != null)
-        {
-            troopsSelectorController.OnSquadSelected -= OnSquadSelectedFromSelector;
-            troopsSelectorController.OnSelectorClosed -= OnSelectorClosed;
-        }
+        if (troopsViewerWidget != null) troopsViewerWidget.DisconnectAllEvents();        
+        if (troopsSelectorController != null) troopsSelectorController.DisconnectAllEvents();
     }
     
     #endregion
@@ -311,10 +329,15 @@ public class FooterController : MonoBehaviour
             Debug.LogError("[FooterController] TroopsSelectorController no asignado");
         }
     }
-    
+
     #endregion
-    
+
     #region Button Handlers
+    
+    public void SetStartButtonInteractable(bool interactable)
+    {
+        if (startBattleButton != null) startBattleButton.interactable = interactable;
+    }
     
     /// <summary>
     /// Maneja el click en el botón Show Loadouts.
@@ -332,11 +355,16 @@ public class FooterController : MonoBehaviour
     {
         SaveCurrentLoadout();
     }
-    
+
+    private void OnStartClicked()
+    {
+        Debug.Log("[FooterController] Start battle clicked");
+        OnStartPressed?.Invoke();
+    }
     #endregion
-    
+
     #region Loadout Management
-    
+
     /// <summary>
     /// Guarda la selección actual en el loadout activo.
     /// </summary>
@@ -347,13 +375,13 @@ public class FooterController : MonoBehaviour
             Debug.LogWarning("[FooterController] No hay héroe o loadout activo para guardar");
             return;
         }
-        
+
         // Actualizar squadIDs del loadout activo
         _activeLoadout.squadInstanceIDs = new List<string>(_heroSquadInstanceIDs);
-        
+
         // TODO: Calcular totalLeadership basado en los squads seleccionados
         // _activeLoadout.totalLeadership = CalculateTotalLeadership();
-        
+
         // Guardar datos del jugador
         if (PlayerSessionService.CurrentPlayer != null)
         {
@@ -395,6 +423,12 @@ public class FooterController : MonoBehaviour
     {
         SquadSelectionPanel.SetActive(false);
     }
+
+    public void ReconnectAllEvents()
+    {
+        if (troopsViewerWidget != null) ConnectTroopsViewerEvents();
+        if (troopsSelectorController != null) ConnectTroopsSelectorEvents();
+    }
     
     #endregion
 
@@ -406,12 +440,12 @@ public class FooterController : MonoBehaviour
     private void ValidateComponents()
     {
         List<string> missingComponents = new List<string>();
-        
+
         if (troopsViewerWidget == null) missingComponents.Add("troopsViewerWidget");
         if (showLoadoutsButton == null) missingComponents.Add("showLoadoutsButton");
         if (saveLoadoutButton == null) missingComponents.Add("saveLoadoutButton");
         if (totalLeadershipText == null) missingComponents.Add("totalLeadershipText");
-        
+
         if (missingComponents.Count > 0)
         {
             Debug.LogWarning($"[FooterController] Componentes faltantes: {string.Join(", ", missingComponents)}");

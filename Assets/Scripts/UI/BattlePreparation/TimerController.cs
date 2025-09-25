@@ -50,13 +50,26 @@ public class TimerController : MonoBehaviour
 
         _timerDisplay = timerDisplay;
 
-        if (_timerDisplay == null )
+        if (_timerDisplay == null)
         {
             Debug.LogError("[TimerController] TimerDisplay no puede ser null");
             return;
         }
 
         UpdateTimerDisplay();
+    }
+
+    public void SetFinalCountdown(
+        Action OnFinalCountdownFinished,
+        int seconds = 10
+    )
+    {
+        Debug.Log("[TimerController] Setting final countdown");
+        DisconnectAllEvents();
+        Initialize(seconds, _timerDisplay);
+        _timerDisplay.color = Color.red;
+        OnTimerFinished += OnFinalCountdownFinished;
+        SetCountDownSecs(seconds);
     }
 
     /// <summary>
@@ -102,7 +115,7 @@ public class TimerController : MonoBehaviour
             OnTimerFinished?.Invoke();
         }
     }
-    
+
     #endregion
 
     #region Private Methods
@@ -164,5 +177,12 @@ public class TimerController : MonoBehaviour
         StopCountdown();
     }
 
+    #endregion
+
+    #region Event Handling
+    public void DisconnectAllEvents()
+    {
+        OnTimerFinished = null;
+    }
     #endregion
 }

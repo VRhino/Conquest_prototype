@@ -47,12 +47,12 @@ public class TroopsSelectorController : MonoBehaviour
     /// Se dispara cuando se selecciona una squad instance.
     /// Parámetro: squadInstanceID seleccionado
     /// </summary>
-    public System.Action<string> OnSquadSelected;
+    private Action<string> OnSquadSelected;
     
     /// <summary>
     /// Se dispara cuando se cierra el selector.
     /// </summary>
-    public System.Action OnSelectorClosed;
+    private Action OnSelectorClosed;
     
     #endregion
     
@@ -75,8 +75,11 @@ public class TroopsSelectorController : MonoBehaviour
     {
         if (troopsViewerWidget != null)
         {
-            troopsViewerWidget.OnItemsRequested += OnItemsRequested;
-            troopsViewerWidget.OnItemClicked += OnSquadInstanceClicked;
+            troopsViewerWidget.ConnectExternalEvents(
+                OnSquadInstanceClicked,
+                OnItemsRequested,
+                () => { }
+            );
             troopsViewerWidget.initialize(8);
         }
     }
@@ -128,11 +131,7 @@ public class TroopsSelectorController : MonoBehaviour
     /// </summary>
     private void ClearWidgetListeners()
     {
-        if (troopsViewerWidget != null)
-        {
-            troopsViewerWidget.OnItemsRequested -= OnItemsRequested;
-            troopsViewerWidget.OnItemClicked -= OnSquadInstanceClicked;
-        }
+        if (troopsViewerWidget != null) troopsViewerWidget.DisconnectAllEvents();
     }
 
     private void SetAllAvailableSquadInstanceIDs(List<string> list)
@@ -324,6 +323,35 @@ public class TroopsSelectorController : MonoBehaviour
     {
         return CreateSquadOption(squadInstanceID, container, prefab);
     }
+
+    public void ConnectDefaultEvents()
+    {
+        
+    }
+    
+    public void SubscribeToEvents(
+       Action<string> OnSelectedSquadHandler,
+       Action OnSelectorClosedHandler
+    )
+    {
+        OnSquadSelected += OnSelectedSquadHandler;
+        OnSelectorClosed += OnSelectorClosedHandler;
+    }
+
+    public void DisconnectAllEvents()
+    {
+        OnSquadSelected = null;
+        OnSelectorClosed = null;
+    }
+
+    public void UnsubscribeFromEvents(
+         Action<string> OnSelectedSquadHandler,
+         Action OnSelectorClosedHandler
+    )
+    {
+        OnSquadSelected -= OnSelectedSquadHandler;
+        OnSelectorClosed -= OnSelectorClosedHandler;
+    }
     
     /// <summary>
     /// Crea una Squad_Option para una squad instance específica.
@@ -339,21 +367,21 @@ public class TroopsSelectorController : MonoBehaviour
             Debug.LogError("CreateSquadOption: Prefab or container is null");
             return null;
         }
-        
+
         var squadInstance = GetSquadInstanceById(squadInstanceID);
         if (squadInstance == null)
         {
             Debug.LogError($"CreateSquadOption: SquadInstance not found for ID: {squadInstanceID}");
             return null;
         }
-        
+
         var squadData = SquadDataService.GetSquadById(squadInstance.baseSquadID);
         if (squadData == null)
         {
             Debug.LogError($"CreateSquadOption: SquadData not found for baseSquadID: {squadInstance.baseSquadID}");
             return null;
         }
-        
+
         GameObject optionGO = Instantiate(prefab, container);
         SquadOptionUI optionUI = optionGO.GetComponent<SquadOptionUI>();
         if (optionUI != null)
@@ -361,24 +389,25 @@ public class TroopsSelectorController : MonoBehaviour
             // Configurar datos básicos del squad
             optionUI.SetSquadData(squadData);
             optionUI.ToggleBattlePreMode();
-            
+
             // Configurar datos de instancia
             optionUI.SetInstanceData(squadInstance.level.ToString(), squadInstance.unitsAlive);
-            
+
             // Configurar estado no seleccionado inicialmente
             optionUI.SetSelected(false);
-            
+
             // Configurar estado habilitado/deshabilitado según liderazgo
             bool canSelect = CanSelectSquadInstance(squadInstanceID);
-            
+
             // Configurar callback de click
-            optionUI.onClick = () => {
+            optionUI.onClick = () =>
+            {
                 if (canSelect)
                 {
                     troopsViewerWidget?.TriggerItemClick(squadInstance.id);
                 }
             };
-            
+
             // Si no puede seleccionarse, deshabilitar el botón
             if (!canSelect)
             {
@@ -389,7 +418,7 @@ public class TroopsSelectorController : MonoBehaviour
                 }
             }
         }
-        
+
         return optionGO;
     }
     
@@ -412,9 +441,9 @@ public class TroopsSelectorController : MonoBehaviour
     }
     
     #endregion
-    
+
     #region UI State Management
-    
+
     /// <summary>
     /// Actualiza el estado visual de los botones de filtro.
     /// </summary>
@@ -425,7 +454,7 @@ public class TroopsSelectorController : MonoBehaviour
         UpdateFilterButton(infantryFilterButton, _currentFilter == UnitType.Infantry);
         UpdateFilterButton(distanceFilterButton, _currentFilter == UnitType.Distance);
         UpdateFilterButton(cavalryFilterButton, _currentFilter == UnitType.Cavalry);
-        
+
         // Deshabilitar botones de filtro si no hay squad instances de ese tipo
         UpdateFilterButtonAvailability();
     }

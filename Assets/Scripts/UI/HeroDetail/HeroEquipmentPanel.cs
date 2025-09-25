@@ -239,6 +239,13 @@ public class HeroEquipmentPanel : MonoBehaviour
 
     #region Event System
 
+    public void DisconnectAllEvents()
+    {
+        UnsubscribeFromEquipmentEvents();
+        foreach (var slot in GetAllSlots())
+            slot?.RemoveEvents();
+    }
+    
     /// <summary>
     /// Se suscribe a eventos de cambios en equipamiento.
     /// </summary>

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using BattleDrakeStudios.ModularCharacters;
 using Data.Items;
 using TMPro;
 using UnityEngine;
@@ -25,12 +24,15 @@ public class BattlePreparationController : MonoBehaviour
     [Header("Header Display")]
     [SerializeField] private TextMeshProUGUI timerDisplay;
     [SerializeField] private TextMeshProUGUI mapName;
+    [Header("Squad Management")]
+    [SerializeField] private FooterController _footerController;
     [Header("Timer Management")]
     [SerializeField] private TimerController _timerController;
     [Header("Map Management")]
     [SerializeField] private GameObject _preparationMapContainer;
     private PreparationMapControllerUI _preparationMapControllerUI;
     private BattleData _currentBattleData;
+    private bool _isActiveUI = true;
 
     #endregion
 
@@ -59,24 +61,18 @@ public class BattlePreparationController : MonoBehaviour
             {
                 testEnv.SetupTestEnvironment();
                 _currentBattleData = testEnv.GenerateBattleData(PlayerSessionService.SelectedHero);
+                _currentBattleData.PreparationTimer = 10;
                 testEnv.SetGamePhase(GamePhase.BattlePreparation);
             }
         }
+        TooltipManager tooltipManager = FindAnyObjectByType<TooltipManager>();
 
         InitializeTimerController();
         InitializeBattlePreparation();
         InitializeMap();
-        _equipmentPanel.InitializePanel();
-        _equipmentPanel.PopulateFromSelectedHero();
-        _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
-        TooltipManager tooltipManager = FindAnyObjectByType<TooltipManager>();
-        if (tooltipManager != null) _equipmentPanel.SetTooltipManager(tooltipManager);
-        if (!_itemPopUpSelector.IsInitialized)
-        {
-            if (tooltipManager != null) _itemPopUpSelector.SetTooltipManager(tooltipManager);
-            _itemPopUpSelector.Initialize();
-            _itemPopUpSelector.SetEvents(OnItemClicked);
-        }
+        InitializeEquipmentPanel(tooltipManager);
+        InitializePopupSelector(tooltipManager);
+        _footerController.OnStartPressed += OnStartClicked;
     }
 
     void OnDestroy()
@@ -214,13 +210,43 @@ public class BattlePreparationController : MonoBehaviour
             if (_preparationMapControllerUI != null)
             {
                 _preparationMapControllerUI.Initialize(_currentBattleData.playerSide(PlayerSessionService.SelectedHero.heroName));
-                _preparationMapControllerUI.OnSpawnPointSelected += OnSpawnPointSelected;
+                _preparationMapControllerUI.SubscribeToSpawnPointSelected(OnSpawnPointSelected);
             }
             else Debug.LogWarning($"[BattlePreparationController] El prefab del mapa no tiene PreparationMapControllerUI: {mapPrefab.name}");
             Debug.Log($"[BattlePreparationController] Mapa de preparación instanciado: {mapPrefab.name}");
         }
 
         else Debug.LogWarning($"[BattlePreparationController] El mapa de preparación no está asignado en MapDataSO: {_currentBattleData.mapData.name}");
+    }
+
+    private void InitializeEquipmentPanel(TooltipManager tooltipManager)
+    {
+        if (_equipmentPanel == null)
+        {
+            Debug.LogError("[BattlePreparationController] No hay HeroEquipmentPanel asignado");
+            return;
+        }
+
+        _equipmentPanel.InitializePanel();
+        _equipmentPanel.PopulateFromSelectedHero();
+        _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
+        if (tooltipManager != null) _equipmentPanel.SetTooltipManager(tooltipManager);
+    }
+
+    private void InitializePopupSelector(TooltipManager tooltipManager)
+    {
+        if (_itemPopUpSelector == null)
+        {
+            Debug.LogError("[BattlePreparationController] No hay ItemSelectorController asignado");
+            return;
+        }
+
+        if (!_itemPopUpSelector.IsInitialized)
+        {
+            if (tooltipManager != null) _itemPopUpSelector.SetTooltipManager(tooltipManager);
+            _itemPopUpSelector.Initialize();
+            _itemPopUpSelector.SetEvents(OnItemClicked);
+        }
     }
 
     private void InitializeTimerController()
@@ -239,12 +265,6 @@ public class BattlePreparationController : MonoBehaviour
 
         _timerController.Initialize(_currentBattleData.PreparationTimer, timerDisplay);
         _timerController.OnTimerFinished += OnPreparationTimerFinished;
-    }
-
-    private void OnPreparationTimerFinished()
-    {
-        Debug.Log("[BattlePreparationController] El tiempo de preparación ha terminado.");
-        // Aquí podrías disparar un evento o llamar a un método para iniciar la batalla.
     }
 
     private void InitializeBattlePreparation()
@@ -385,7 +405,7 @@ public class BattlePreparationController : MonoBehaviour
         else
             Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {itemData.name}");
     }
-    
+
     private void OnSpawnPointSelected(SpawnPointControllerUI spawnPoint)
     {
         if (_preparationMapControllerUI == null)
@@ -405,5 +425,42 @@ public class BattlePreparationController : MonoBehaviour
         Debug.Log($"[BattlePreparationController] Spawn point seleccionado: {spawnPoint.name}");
     }
 
-    #endregion
+    private void OnPreparationTimerFinished()
+    {
+        if (_isActiveUI) DisconnectAllEvents();
+        BattleHeroData localHeroData = _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName);
+        if (localHeroData.spawnPointId == null)
+        {
+            localHeroData.spawnPointId = _preparationMapControllerUI.GetDefaultSpawnPointId();
+        }
+        _footerController.SetStartButtonInteractable(false);
+        _timerController.SetFinalCountdown(OnFinalCountdownFinished, 10);
+    }
+
+    private void OnFinalCountdownFinished()
+    {
+        Debug.Log("[BattlePreparationController] El tiempo de preparación ha terminado.");
+    }
+
+    private void OnStartClicked()
+    {
+        if (_isActiveUI) DisconnectAllEvents();
+        else reconnectAllEvents();
+
+        _isActiveUI = !_isActiveUI;
+    }
+
+    private void reconnectAllEvents()
+    {
+        _preparationMapControllerUI.ReconnectAllEvents(OnSpawnPointSelected);
+        _equipmentPanel.SetEvents(OnEquipmentSlotClicked, null);
+        _footerController.ReconnectAllEvents();
+    }
+    private void DisconnectAllEvents()
+    {
+        _preparationMapControllerUI.DisconnectAllEvents();
+        _equipmentPanel.DisconnectAllEvents();
+        _footerController.DisconnectAllEvents();
+    }
 }
+    #endregion
