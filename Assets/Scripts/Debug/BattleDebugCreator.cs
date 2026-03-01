@@ -98,20 +98,12 @@ public static class BattleDebugCreator
         for (int i = 0; i < squadCount; i++)
         {
             string randomSquadID = validSquadIDs[UnityEngine.Random.Range(0, validSquadIDs.Count)];
-            int randomLevel = UnityEngine.Random.Range(1, 5);
-            int randomUnits = UnityEngine.Random.Range(5, 21);
+            var squadInstance = SquadDataService.CreateSquadInstance(randomSquadID);
+            if (squadInstance == null) continue;
 
-            SquadInstanceData squadInstance = new SquadInstanceData
-            {
-                id = System.Guid.NewGuid().ToString(),
-                baseSquadID = randomSquadID,
-                level = randomLevel,
-                unitsInSquad = randomUnits,
-                experience = 0,
-                unlockedAbilities = new List<string>(),
-                permittedFormationIndexes = new List<int> { 0 },
-                selectedFormationIndex = 0
-            };
+            // Sobrescribir valores con datos aleatorios para debug
+            squadInstance.level = UnityEngine.Random.Range(1, 5);
+            squadInstance.unitsInSquad = UnityEngine.Random.Range(5, 21);
 
             randomSquads.Add(squadInstance);
         }

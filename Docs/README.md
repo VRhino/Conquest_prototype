@@ -9,42 +9,46 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ## Índice de Documentos
 
-
-- [Data Persistence System](./DataPersistenceSystem.md):
-  Sistema de guardado y carga de datos del jugador, preparado para extensibilidad y ejemplos de uso.
-- [AgregarNuevaUnidad_Guia.md](./AgregarNuevaUnidad_Guia.md):
-  Cómo crear y agregar una nueva unidad al juego paso a paso.
-- [CompleteSystemsList.md](./CompleteSystemsList.md):
-  Listado y descripción breve de todos los sistemas implementados en el proyecto.
 - [ConfiguracionPrefabs_ECS_Visual.md](./ConfiguracionPrefabs_ECS_Visual.md):
   Guía para configurar prefabs visuales y su integración con ECS.
 - [Detalles_a_Mejorar.md](./Detalles_a_Mejorar.md):
   Detalles técnicos y lista de mejoras pendientes en el desarrollo.
-- [FormationAdaptationSystem_Fix.md](./FormationAdaptationSystem_Fix.md):
-  Soluciones y notas sobre el sistema de adaptación de formaciones tácticas.
+- [Existing_Databases.md](./Existing_Databases.md):
+  Documentación sobre las bases de datos existentes en el proyecto.
 - [Funcionalidades.md](./Funcionalidades.md):
   Resumen de las funcionalidades principales implementadas en el juego.
 - [GDD.md](./GDD.md):
   Documento de diseño general del juego (Game Design Document).
-- [GridFormationSystemGuide.md](./GridFormationSystemGuide.md):
-  Guía para el sistema de formaciones en cuadrícula y su lógica.
+- [Hero_detail_prefab_structure.md](./Hero_detail_prefab_structure.md):
+  Estructura interna de cómo están configurados los prefabs de detalle del héroe.
 - [ModeloHybrido.md](./ModeloHybrido.md):
   Explicación del modelo híbrido visual/ECS utilizado en el proyecto.
 - [README.md](./README.md):
   Este archivo, resumen y enlaces a toda la documentación.
-- [RefactoringSummary.md](./RefactoringSummary.md):
-  Resumen de los principales cambios y refactorizaciones realizadas.
-- [SystemResponsibilities.md](./SystemResponsibilities.md):
-  Descripción de las responsabilidades y roles de cada sistema.
+- [ScriptableObjects_Architecture.md](./ScriptableObjects_Architecture.md):
+  Arquitectura y manejo de los datos del juego utilizando Scriptable Objects.
 - [TDD.md](./TDD.md):
   Guía para el desarrollo orientado a pruebas (Test Driven Development).
-- [VisualPrefabRegistry_Refactor.md](./VisualPrefabRegistry_Refactor.md):
-  Detalles sobre el registro visual de prefabs y su proceso de refactorización.
+- [tooltip_prefab_structure.md](./tooltip_prefab_structure.md):
+  Guía técnica enfocada en la estructura base de los prefabs de tooltip de la interfaz.
+
+### Guías de Creación
+
+- [AgregarNuevaUnidad_Guia.md](./Guides/AgregarNuevaUnidad_Guia.md):
+  Cómo crear y agregar una nueva unidad al juego paso a paso.
+- [Crear Consumible.md](./Guides/Crear%20Consumible.md):
+  Pasos para crear e integrar un nuevo ítem de tipo consumible.
+- [Crear_Armor_Equipamiento.md](./Guides/Crear_Armor_Equipamiento.md):
+  Guía con los pasos para crear piezas de armadura equipables en los personajes.
+- [Crear_NPC_Interactivo.md](./Guides/Crear_NPC_Interactivo.md):
+  Documentación detallada para diseñar e incluir NPCs interactivos en los mapas.
+- [Crear_Weapon_Equipamiento.md](./Guides/Crear_Weapon_Equipamiento.md):
+  Tutorial técnico para integrar nuevas armas en el sistema de juego.
 
 ## Uso
 
-Consulta cada documento según el área que desees revisar o mejorar. Para dudas sobre persistencia de datos, revisa el archivo [DataPersistenceSystem.md](./DataPersistenceSystem.md).
+Consulta cada documento según el área específica que desees repasar, investigar o mejorar dentro del proyecto.
 
 ---
 
-> Documentación actualizada al 2025.
+> Documentación de Conquest Tactics, actualizada al 2026.

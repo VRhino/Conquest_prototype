@@ -262,6 +262,49 @@ public static class SquadDataService
         
         return totalCost;
     }
+
+    /// <summary>
+    /// Crea una nueva instancia de escuadrón a partir del ID base del ScriptableObject.
+    /// Centraliza la lógica de creación para evitar duplicación en UI, barracas y debug.
+    /// </summary>
+    /// <param name="baseSquadID">Identificador del SquadData ScriptableObject base.</param>
+    /// <param name="level">Nivel inicial del escuadrón (por defecto 1).</param>
+    /// <returns>Nueva instancia configurada, o null si el baseSquadID no es válido.</returns>
+    public static SquadInstanceData CreateSquadInstance(string baseSquadID, int level = 1)
+    {
+        EnsureInitialized();
+
+        SquadData squadData = GetSquadById(baseSquadID);
+        if (squadData == null)
+        {
+            Debug.LogError($"[SquadDataService] No se encontró SquadData para ID: {baseSquadID}. No se puede crear instancia.");
+            return null;
+        }
+
+        // Generar índices de formaciones permitidas a partir de las formaciones del ScriptableObject
+        var permittedFormations = new List<int>();
+        if (squadData.gridFormations != null)
+        {
+            for (int i = 0; i < squadData.gridFormations.Length; i++)
+                permittedFormations.Add(i);
+        }
+
+        return new SquadInstanceData
+        {
+            id = System.Guid.NewGuid().ToString(),
+            baseSquadID = baseSquadID,
+            level = level,
+            experience = 0,
+            unlockedAbilities = new List<string>(),
+            permittedFormationIndexes = permittedFormations,
+            selectedFormationIndex = 0,
+            unitsInSquad = squadData.unitCount,
+            unitsInjured = 0,
+            unitsKilled = 0,
+            equipmentLost = 0
+        };
+    }
+
     #endregion
     
     #region Private Methods

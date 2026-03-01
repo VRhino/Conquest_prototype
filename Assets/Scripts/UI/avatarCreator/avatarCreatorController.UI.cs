@@ -43,20 +43,13 @@ public class AvatarCreatorUIController : MonoBehaviour
         }
         Equipment equipment = classSelector.GetCurrentEquipment();
         AvatarParts avatar = sliderController.avatarPartSelector.GetCurrentSelection();
-        HeroData hero = new HeroData
-        {
-            heroName = heroName,
-            avatar = avatar,
-            classId = classSelector.selectedClass.name,
-            gender = sliderController.avatarPartSelector.currentGender.ToString(),
-            level = 1,
-            currentXP = 0,
-            attributePoints = 0,
-            perkPoints = 0,
-            bronze = 0,
-            equipment = equipment,
-            availableSquads = new List<string> { "sqd01", "arc01", "spm01" }
-        };
+        HeroData hero = HeroDataService.CreateNewHero(
+            heroName, 
+            avatar, 
+            classSelector.selectedClass.name, 
+            sliderController.avatarPartSelector.currentGender.ToString(), 
+            equipment
+        );
 
         PlayerData player = PlayerSessionService.CurrentPlayer;
 

@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using System;
-using System.Linq;
 public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
 {
     [Header("Listas de unidades por tipo")]
@@ -204,19 +203,13 @@ public class BarracksMenuUIController : MonoBehaviour, IFullscreenPanel
             return;
         }
 
-        // Crear nueva instancia de escuadrón
-        var newSquad = new SquadInstanceData
+        // Crear nueva instancia de escuadrón usando el servicio centralizado
+        var newSquad = SquadDataService.CreateSquadInstance(squadData.id);
+        if (newSquad == null)
         {
-            id = System.Guid.NewGuid().ToString(), // ID único para la instancia
-            baseSquadID = squadData.id,
-            level = 1,
-            experience = 0,
-            unlockedAbilities = new System.Collections.Generic.List<string>(),
-            //add the index of all grid formations on squadData
-            permittedFormationIndexes = squadData.gridFormations.Select((f, i) => i).ToList(),
-            selectedFormationIndex = 0,
-            unitsInSquad = squadData.unitCount,
-        };
+            Debug.LogWarning($"[BarracksMenuUIController] No se pudo crear instancia para squad: {squadData.id}");
+            return;
+        }
 
         _currentHeroData.squadProgress.Add(newSquad);
 
