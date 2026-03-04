@@ -440,14 +440,57 @@ public class BattlePreparationController : MonoBehaviour
     private void OnFinalCountdownFinished()
     {
         Debug.Log("[BattlePreparationController] El tiempo de preparación ha terminado.");
+        TransitionToBattle();
     }
 
     private void OnStartClicked()
     {
-        if (_isActiveUI) DisconnectAllEvents();
-        else reconnectAllEvents();
+        if (_isActiveUI)
+        {
+            DisconnectAllEvents();
+            _isActiveUI = false;
+            TransitionToBattle();
+        }
+    }
 
-        _isActiveUI = !_isActiveUI;
+    /// <summary>
+    /// Sincroniza los datos actualizados y transiciona a BattleScene.
+    /// </summary>
+    private void TransitionToBattle()
+    {
+        if (_currentBattleData == null)
+        {
+            Debug.LogError("[BattlePreparationController] No hay BattleData para transicionar");
+            return;
+        }
+
+        // 1. Sincronizar squads seleccionados del footer en BattleData
+        BattleHeroData localHeroData = _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName);
+        if (localHeroData != null)
+        {
+            List<string> selectedSquadIDs = _footerController.GetSelectedSquadInstanceIDs();
+            localHeroData.squadInstances = new List<SquadInstanceData>();
+            foreach (var instanceID in selectedSquadIDs)
+            {
+                SquadInstanceData instance = PlayerSessionService.SelectedHero.squadProgress?.Find(s => s.id == instanceID);
+                if (instance != null) localHeroData.squadInstances.Add(instance);
+            }
+
+            // 2. Asignar spawn point por defecto si no se seleccionó
+            if (string.IsNullOrEmpty(localHeroData.spawnPointId) && _preparationMapControllerUI != null)
+            {
+                localHeroData.spawnPointId = _preparationMapControllerUI.GetDefaultSpawnPointId();
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[BattlePreparationController] No se encontró el héroe local en BattleData al transicionar");
+        }
+
+        // 3. Transferir datos y cargar escena
+        Debug.Log($"[BattlePreparationController] Transitioning to BattleScene with battleID: {_currentBattleData.battleID}");
+        BattleTransitionData.Instance.SetBattleData(_currentBattleData);
+        SceneTransitionService.LoadScene("BattleScene");
     }
 
     private void reconnectAllEvents()

@@ -89,15 +89,9 @@ public class MinimapController : MonoBehaviour
             renderTexture.name = "MinimapRenderTexture";
         }
 
-        if (minimapCamera != null)
-        {
-            minimapCamera.targetTexture = renderTexture;
-        }
+        if (minimapCamera != null) minimapCamera.targetTexture = renderTexture;
 
-        if (minimapDisplay != null)
-        {
-            minimapDisplay.texture = renderTexture;
-        }
+        if (minimapDisplay != null) minimapDisplay.texture = renderTexture;
     }
 
     #endregion

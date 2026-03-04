@@ -45,6 +45,14 @@ public class FooterController : MonoBehaviour
 
     public Action OnStartPressed;
 
+    /// <summary>
+    /// Devuelve una copia de los squad instance IDs seleccionados actualmente.
+    /// </summary>
+    public List<string> GetSelectedSquadInstanceIDs()
+    {
+        return new List<string>(_heroSquadInstanceIDs);
+    }
+
     
     public void ConnectTroopsViewerEvents()
     {

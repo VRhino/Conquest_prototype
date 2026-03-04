@@ -45,7 +45,8 @@ public static class BattleDebugCreator
             heroName = heroData.heroName,
             classID = heroData.classId,
             level = heroData.level,
-            squadInstances = new List<SquadInstanceData>()
+            squadInstances = new List<SquadInstanceData>(),
+            spawnPointId = "1" // Default spawn point
         };
 
         // Convert active Loadout to SquadInstances
@@ -124,7 +125,8 @@ public static class BattleDebugCreator
             heroName = randomHeroName,
             classID = randomClassID,
             level = randomLevel,
-            squadInstances = new List<SquadInstanceData>(randomSquads)
+            squadInstances = new List<SquadInstanceData>(randomSquads),
+            spawnPointId = UnityEngine.Random.Range(1, 4).ToString() // Default random spawn point (1-3)
         };
 
         return battleHero;
