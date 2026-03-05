@@ -58,6 +58,8 @@ public class SquadDataAuthoring : MonoBehaviour
                 unitCount = authoring.data.unitCount
             });
 
+            AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(authoring.data.id) });
+
             AddComponent(entity, new SquadStatsComponent
             {
                 squadType = authoring.data.type,

@@ -106,12 +106,42 @@ public partial class HeroSpawnSystem : SystemBase
                 entityManager.SetComponentData(heroEntity, spawnComponent);
             }
             
+            // Asignar squad al hero si BattleData proveyó un squad ID
+            if (!dataForInstantiate.selectedSquadBaseID.IsEmpty)
+            {
+                Entity squadDataEntity = Entity.Null;
+                foreach (var (idComp, e) in SystemAPI
+                    .Query<RefRO<SquadDataIDComponent>>()
+                    .WithEntityAccess())
+                {
+                    if (idComp.ValueRO.id == dataForInstantiate.selectedSquadBaseID)
+                    {
+                        squadDataEntity = e;
+                        break;
+                    }
+                }
+
+                if (squadDataEntity != Entity.Null)
+                {
+                    entityManager.AddComponentData(heroEntity, new HeroSquadSelectionComponent
+                    {
+                        squadDataEntity = squadDataEntity,
+                        instanceId = 0
+                    });
+                    Debug.Log($"[HeroSpawnSystem] Squad '{dataForInstantiate.selectedSquadBaseID}' asignado al hero entity {heroEntity}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[HeroSpawnSystem] No se encontró SquadDataIDComponent con id='{dataForInstantiate.selectedSquadBaseID}'");
+                }
+            }
+            
             if (_enableDebugLogs)
             {
                 Debug.Log($"[HeroSpawnSystem] Hero spawned successfully at position: {spawnPosition}");
             }
         }
-        
+
         spawnPointsForInstantiate.Dispose();
     }
     

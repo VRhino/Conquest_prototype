@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Entities;
-using UnityEngine;
 using UnityEngine;
 
 /// <summary>
@@ -114,6 +114,9 @@ public class BattleSceneController : MonoBehaviour
             data.teamID = teamID;
             // Asegurar isReady=true para iniciar
             data.isReady = true;
+
+            if (localHero.squadInstances != null && localHero.squadInstances.Count > 0)
+                data.selectedSquadBaseID = new FixedString64Bytes(localHero.squadInstances[0].baseSquadID);
 
             em.SetComponentData(entity, data);
             Debug.Log($"[BattleSceneController] ECS DataContainerComponent sync: spawnID={spawnID}, teamID={teamID}");

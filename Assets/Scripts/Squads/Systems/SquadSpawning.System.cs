@@ -34,7 +34,8 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 continue;
             }
-
+            Debug.Log($"[SquadSpawningSystem] Hero spawned successfully at position: {heroTransform.ValueRO.Position}");
+            Debug.Log($"[SquadSpawningSystem] Squad data: {data}");
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
             
@@ -115,7 +116,7 @@ public partial class SquadSpawningSystem : SystemBase
                     i, // unitIndex
                     new SquadStateComponent { currentFormation = firstFormationType },
                     null,
-                    heroTransform.ValueRO.Position,
+                    spawn.ValueRO.spawnPosition,
                     out int2 originalGridPos,
                     out float3 gridOffset,
                     out float3 worldPos,
@@ -145,7 +146,7 @@ public partial class SquadSpawningSystem : SystemBase
                     Slot = originalGridPos // Usar posición original para Slot
                 });
                 ecb.AddComponent<UnitTargetPositionComponent>(unit);
-                ecb.AddComponent<UnitFormationStateComponent>(unit); // Critical component for movement
+                ecb.AddComponent(unit, new UnitFormationStateComponent { State = UnitFormationState.Moving }); // Start Moving so units seek their formation slot
                 ecb.AddComponent(unit, new UnitGridSlotComponent
                 {
                     gridPosition = originalGridPos,

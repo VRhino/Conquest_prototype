@@ -32,4 +32,7 @@ public struct DataContainerComponent : IComponentData
 
     /// <summary>True when the player finished setting up and is ready.</summary>
     public bool isReady;
+
+    /// <summary>Base ID of the first squad selected for this match.</summary>
+    public FixedString64Bytes selectedSquadBaseID;
 }

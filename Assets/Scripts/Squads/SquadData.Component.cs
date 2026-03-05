@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 
@@ -64,6 +65,14 @@ public struct AbilityByLevelElement : IBufferElementData
 public struct SquadDataReference : IComponentData
 {
     public Entity dataEntity;
+}
+
+/// <summary>
+/// Stores the string ID of a squad data entity so it can be looked up at runtime by ID.
+/// </summary>
+public struct SquadDataIDComponent : IComponentData
+{
+    public FixedString64Bytes id;
 }
 
 

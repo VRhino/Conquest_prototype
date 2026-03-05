@@ -145,12 +145,24 @@ namespace ConquestTactics.Visual
             if (_syncPosition || _syncRotation)
             {
                 var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
-                // Escritura de posición desactivada para depuración
-                if (_syncRotation)
+                bool isHero = _entityManager.HasComponent<HeroMoveIntent>(_heroEntity);
+                if (isHero)
                 {
-                    ecsTransform.Rotation = transform.rotation;
+                    // Hero: GO is authoritative for rotation — write GO rotation back to ECS
+                    if (_syncRotation)
+                    {
+                        ecsTransform.Rotation = transform.rotation;
+                    }
+                    _entityManager.SetComponentData(_heroEntity, ecsTransform);
                 }
-                _entityManager.SetComponentData(_heroEntity, ecsTransform);
+                else
+                {
+                    // Units: ECS is authoritative — sync position and rotation from ECS to GO
+                    if (_syncPosition)
+                        transform.position = ecsTransform.Position;
+                    if (_syncRotation)
+                        transform.rotation = ecsTransform.Rotation;
+                }
             }
             _lastSyncTime = Time.time;
         }
@@ -238,9 +250,12 @@ namespace ConquestTactics.Visual
                     return;
                 }
             }
+            _heroEntity = heroEntity;
+            _isManuallyConfigured = true;
+            _hasValidTarget = true;
             DisableConflictingComponents();
             if (_enableDebugLogs)
-                Debug.Log($"[EntityVisualSync] Entidad héroe configurada manualmente: {heroEntity}, válida: {_hasValidTarget}");
+                Debug.Log($"[EntityVisualSync] Entidad configurada manualmente: {heroEntity}");
         }
 
         public void RefreshHeroEntity()
