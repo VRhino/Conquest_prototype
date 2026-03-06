@@ -61,7 +61,6 @@ public class BattleSceneController : MonoBehaviour
         SyncBattleDataToECS();
 
         // [TODO] Aquí se inicializarán los sistemas de batalla:
-        // - Spawning de unidades
         // - Carga del mapa de batalla
         // - HUD de combate
         // - Timer de batalla
@@ -116,7 +115,9 @@ public class BattleSceneController : MonoBehaviour
             data.isReady = true;
 
             if (localHero.squadInstances != null && localHero.squadInstances.Count > 0)
+            {
                 data.selectedSquadBaseID = new FixedString64Bytes(localHero.squadInstances[0].baseSquadID);
+            }
 
             em.SetComponentData(entity, data);
             Debug.Log($"[BattleSceneController] ECS DataContainerComponent sync: spawnID={spawnID}, teamID={teamID}");

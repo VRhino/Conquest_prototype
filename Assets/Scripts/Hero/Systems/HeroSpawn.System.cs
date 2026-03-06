@@ -11,7 +11,7 @@ using UnityEngine;
 public partial class HeroSpawnSystem : SystemBase
 {
     private bool _enableDebugLogs = false;
-    
+
     protected override void OnUpdate()
     {
         // Solo verificar spawning cada pocos frames para evitar condiciones de carrera
@@ -21,40 +21,40 @@ public partial class HeroSpawnSystem : SystemBase
             HandleExistingHeroPositioning();
             return;
         }
-        
+
         // Instanciar el héroe local si no existe
         bool heroExists = false;
-        
+
         // Verificar si ya existe una entidad héroe con IsLocalPlayer
         var heroQuery = GetEntityQuery(ComponentType.ReadOnly<IsLocalPlayer>());
         heroExists = !heroQuery.IsEmpty;
-        
+
         if (_enableDebugLogs)
         {
             Debug.Log($"[HeroSpawnSystem] Hero exists check: {heroExists}, Hero count: {heroQuery.CalculateEntityCount()}");
         }
-        
+
         if (!heroExists && SystemAPI.TryGetSingleton<HeroPrefabComponent>(out var heroPrefab) && SystemAPI.TryGetSingleton<DataContainerComponent>(out var dataForInstantiate))
         {
             SpawnNewHero(heroPrefab, dataForInstantiate);
         }
-        
+
         // Manejar posicionamiento de héroes existentes
         HandleExistingHeroPositioning();
     }
-    
+
     private void SpawnNewHero(HeroPrefabComponent heroPrefab, DataContainerComponent dataForInstantiate)
     {
         if (_enableDebugLogs)
         {
             Debug.Log("[HeroSpawnSystem] Attempting to spawn hero - no existing hero found");
         }
-        
+
         var spawnPointQueryForInstantiate = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
         var spawnPointsForInstantiate = spawnPointQueryForInstantiate.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
         SpawnPointComponent selected = default;
         bool found = false;
-        
+
         for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
         {
             var sp = spawnPointsForInstantiate[i];
@@ -65,7 +65,7 @@ public partial class HeroSpawnSystem : SystemBase
                 break;
             }
         }
-        
+
         if (!found)
         {
             for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
@@ -79,23 +79,24 @@ public partial class HeroSpawnSystem : SystemBase
                 }
             }
         }
-        
+
         if (found)
         {
             // Calcular la altura correcta del terreno
             var spawnPosition = selected.position;
             spawnPosition.y = FormationPositionCalculator.calculateTerraindHeight(spawnPosition);
-            
+
             // Instanciación híbrida: crear solo la entidad ECS (sin visual)
             var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
-            entityManager.SetComponentData(heroEntity, new LocalTransform { 
-                Position = spawnPosition, 
-                Rotation = Unity.Mathematics.quaternion.identity, 
-                Scale = 1f 
+            entityManager.SetComponentData(heroEntity, new LocalTransform
+            {
+                Position = spawnPosition,
+                Rotation = Unity.Mathematics.quaternion.identity,
+                Scale = 1f
             });
             Debug.Log($"[HeroSpawnSystem.cs][{heroEntity}] Set LocalTransform.Position = {spawnPosition}");
-            
+
             // Marcar como spawneado para evitar re-spawning
             if (entityManager.HasComponent<HeroSpawnComponent>(heroEntity))
             {
@@ -105,7 +106,7 @@ public partial class HeroSpawnSystem : SystemBase
                 spawnComponent.spawnId = dataForInstantiate.selectedSpawnID;
                 entityManager.SetComponentData(heroEntity, spawnComponent);
             }
-            
+
             // Asignar squad al hero si BattleData proveyó un squad ID
             if (!dataForInstantiate.selectedSquadBaseID.IsEmpty)
             {
@@ -135,7 +136,7 @@ public partial class HeroSpawnSystem : SystemBase
                     Debug.LogWarning($"[HeroSpawnSystem] No se encontró SquadDataIDComponent con id='{dataForInstantiate.selectedSquadBaseID}'");
                 }
             }
-            
+
             if (_enableDebugLogs)
             {
                 Debug.Log($"[HeroSpawnSystem] Hero spawned successfully at position: {spawnPosition}");
@@ -144,7 +145,7 @@ public partial class HeroSpawnSystem : SystemBase
 
         spawnPointsForInstantiate.Dispose();
     }
-    
+
     private void HandleExistingHeroPositioning()
     {
         var spawnPointQuery = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());

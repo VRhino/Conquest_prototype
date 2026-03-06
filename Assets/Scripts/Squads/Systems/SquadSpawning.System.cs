@@ -34,8 +34,6 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 continue;
             }
-            Debug.Log($"[SquadSpawningSystem] Hero spawned successfully at position: {heroTransform.ValueRO.Position}");
-            Debug.Log($"[SquadSpawningSystem] Squad data: {data}");
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
             

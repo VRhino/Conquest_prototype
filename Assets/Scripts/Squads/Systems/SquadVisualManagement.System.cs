@@ -55,15 +55,10 @@ public partial class SquadVisualManagementSystem : SystemBase
         Entity parentSquad = FindParentSquad(unitEntity);
         SquadType squadType = SquadType.Squires; // Default
         
-        if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDataReference>(parentSquad))
+        if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDataComponent>(parentSquad))
         {
-            var squadDataRef = EntityManager.GetComponentData<SquadDataReference>(parentSquad);
-            if (EntityManager.Exists(squadDataRef.dataEntity) && 
-                EntityManager.HasComponent<SquadDataComponent>(squadDataRef.dataEntity))
-            {
-                var squadData = EntityManager.GetComponentData<SquadDataComponent>(squadDataRef.dataEntity);
-                squadType = squadData.squadType;
-            }
+            var squadData = EntityManager.GetComponentData<SquadDataComponent>(parentSquad);
+            squadType = squadData.squadType;
         }
         
         // Buscar el prefab visual
@@ -80,7 +75,8 @@ public partial class SquadVisualManagementSystem : SystemBase
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.name = $"Unit_{unitEntity.Index}_Visual";
-        
+        SetLayerRecursively(visualInstance, 0); // 0 = Default, el prefab puede tener layer de preview
+
         // Configurar sincronización con la entidad de la unidad
         var syncScript = visualInstance.GetComponent<EntityVisualSync>();
         if (syncScript == null)
@@ -130,7 +126,6 @@ public partial class SquadVisualManagementSystem : SystemBase
     private GameObject FindUnitVisualPrefab(string prefabName, SquadType squadType)
     {
         var registry = VisualPrefabRegistry.Instance;
-        
         // Intentar por nombre específico primero
         if (!string.IsNullOrEmpty(prefabName))
         {
@@ -140,5 +135,12 @@ public partial class SquadVisualManagementSystem : SystemBase
         
         // Fallback al tipo de squad
         return registry.GetDefaultUnitPrefab(squadType);
+    }
+
+    private static void SetLayerRecursively(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+        foreach (Transform child in obj.transform)
+            SetLayerRecursively(child.gameObject, layer);
     }
 }
