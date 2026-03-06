@@ -2,7 +2,7 @@
 
 ## Resumen de Arquitectura
 
-En Unity 2022.3.x con Entities 1.3.14, tenemos dos prefabs separados que trabajan juntos:
+En Unity 2022.3.x con Entities 1.3.14, la arquitectura utiliza dos prefabs separados que trabajan juntos. La instanciación y vinculación es **automática**: `HeroSpawnSystem` crea la entidad ECS y `HeroVisualManagementSystem` instancia el visual; para squads, `SquadSpawningSystem` crea las entidades y `SquadVisualManagementSystem` instancia los visuals. `VisualPrefabRegistry` gestiona el lookup de prefabs.
 
 1. **`HeroEntity_pure.prefab`** - Entidad ECS pura (lógica)
 2. **`ModularCharacter.prefab`** - Representación visual (GameObject híbrido)
@@ -209,12 +209,9 @@ public class EntityVisualSync : MonoBehaviour
 - ✅ BodyLookY (float)
 - ✅ LocomotionStartDirection (float)
 
-##### Parámetros a ELIMINAR del Animator Controller:
-- ❌ IsJumping (bool)
-- ❌ FallingDuration (float)
-- ❌ IsCrouching (bool)
-- ❌ IsGrounded (bool)
-- ❌ Cualquier parámetro relacionado con aiming/lock-on
+##### Parámetros eliminados del Animator Controller:
+Los siguientes parámetros fueron eliminados por no ser necesarios en el modelo híbrido:
+IsJumping, FallingDuration, IsCrouching, IsGrounded, y cualquier parámetro relacionado con aiming/lock-on.
 
 ## 🔗 Sincronización Entre Prefabs
 
@@ -268,38 +265,38 @@ return new HeroInputComponent
 
 ## 🎮 Setup en Escena
 
-### Usando el Sistema Existente (Recomendado)
-El proyecto **ya tiene un sistema híbrido completo** que funciona automáticamente:
+### Flujo Automatizado (Producción)
 
+El setup de prefabs en escena es **completamente automatizado**. No se requiere colocar manualmente prefabs en la escena ni configurar spawners.
+
+**Héroe:**
 ```
-HeroSpawnSystem (ECS) 
-    ↓ Crea entidad ECS pura automáticamente
+HeroSpawnSystem (ECS)
+    ↓ Crea la entidad ECS pura
 HeroVisualManagementSystem (ECS)
-    ↓ Crea GameObject visual automáticamente  
+    ↓ Detecta entidades sin visual (WithNone<HeroVisualInstance>)
+    ↓ Obtiene el prefab visual via VisualPrefabRegistry
+    ↓ Instancia el GameObject visual automáticamente
+    ↓ Configura EntityVisualSync para sincronización
 ```
 
-**No se requiere configuración manual adicional** - el sistema funciona automáticamente cuando:
-1. Tienes los prefabs `HeroEntity_pure.prefab` y `ModularCharacter.prefab` configurados
-2. Los spawn points están configurados en la escena
-3. El sistema detecta que no hay héroe local y lo spawnea automáticamente
-
-### Setup Manual (Solo para Testing)
-Si necesitas testing manual, puedes crear un spawner simple:
-
-```csharp
-// Solo para testing - usar el sistema automático en producción
-public class ManualHeroSpawner : MonoBehaviour
-{
-    [SerializeField] private GameObject heroPurePrefab;    // HeroEntity_pure.prefab
-    [SerializeField] private GameObject heroVisualPrefab; // ModularCharacter.prefab
-    
-    void Start()
-    {
-        // El HeroSpawnSystem y HeroVisualManagementSystem ya manejan esto automáticamente
-        // Este código es solo para debugging manual
-    }
-}
+**Squads / Unidades:**
 ```
+SquadSpawningSystem (ECS)
+    ↓ Crea las entidades ECS de squad y unidades
+SquadVisualManagementSystem (ECS)
+    ↓ Detecta entidades de unidad sin visual (WithNone<UnitVisualInstance>)
+    ↓ Obtiene el prefab visual via VisualPrefabRegistry
+    ↓ Instancia los GameObjects de unidad automáticamente
+    ↓ Configura EntityVisualSync por cada unidad
+```
+
+Ambos sistemas de visual management consultan `VisualPrefabRegistry` (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`), que a su vez lee la configuración de `VisualPrefabConfiguration` (`Assets/Scripts/Hero/VisualPrefabConfiguration.cs`).
+
+**Requisitos para que funcione:**
+1. `VisualPrefabRegistry` debe estar presente como singleton en la escena
+2. `VisualPrefabConfiguration` debe tener los prefabs registrados con sus claves
+3. Los spawn points deben estar configurados en la escena
 
 ## ✅ Checklist de Configuración
 
@@ -373,6 +370,22 @@ public class ManualHeroSpawner : MonoBehaviour
 2. Activar "Show On Screen Info" para overlay visual
 3. Los componentes se detectan automáticamente
 4. Usar "Log Current Status" para reportes detallados en consola
+
+## 🔧 VisualPrefabRegistry y Configuración
+
+La gestión centralizada de prefabs visuales se realiza a través de:
+
+- **`VisualPrefabRegistry`** (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`): Singleton MonoBehaviour que gestiona el registro, caching y lookup de prefabs visuales en runtime. Es utilizado por `HeroVisualManagementSystem` y `SquadVisualManagementSystem` para obtener los prefabs correctos al instanciar visuals.
+- **`VisualPrefabConfiguration`** (`Assets/Scripts/Hero/VisualPrefabConfiguration.cs`): ScriptableObject que define la lista de prefabs disponibles con sus claves de búsqueda (por ejemplo `"HeroSynty"`, `"SquirePrefab"`).
+
+### Convención de nombres para prefabs de unidades
+
+Los prefabs visuales de unidades (esqueletos/skeletons para visualización) siguen la convención `*_GO_Squeleton.prefab`. Ejemplos:
+- `Assets/Resources/Squads/Squires/Squires_GO_Squeleton.prefab`
+- `Assets/Resources/Squads/Spearmen/Spearmen_GO_Squeleton.prefab`
+- `Assets/Resources/Squads/Levy_Archers/Levy_Archer_GO_Squeleton.prefab`
+
+Estos prefabs se ubican bajo `Assets/Resources/Squads/<TipoSquad>/` y son los que `SquadVisualManagementSystem` instancia automáticamente para cada unidad.
 
 ## 🚀 Resultado Final
 

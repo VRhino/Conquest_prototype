@@ -17,4 +17,7 @@ public struct SupplyPointComponent : IComponentData
 
     /// <summary>True when heroes from both teams are present.</summary>
     public bool isContested;
+
+    /// <summary>True when an enemy team is actively capturing this point.</summary>
+    public bool isCapturing;
 }

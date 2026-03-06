@@ -148,7 +148,8 @@ namespace ConquestTactics.Visual
                 bool isHero = _entityManager.HasComponent<HeroMoveIntent>(_heroEntity);
                 if (isHero)
                 {
-                    // Hero: GO is authoritative for rotation — write GO rotation back to ECS
+                    // Hero: GO is authoritative — write GO position and rotation back to ECS
+                    ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);
                     if (_syncRotation)
                     {
                         ecsTransform.Rotation = transform.rotation;

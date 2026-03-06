@@ -13,6 +13,7 @@ public partial class UnitOrientationInitializationSystem : SystemBase
         
         // Buscar unidades que no tengan orientación
         var entities = SystemAPI.QueryBuilder()
+            .WithAll<UnitVisualReference>()
             .WithNone<UnitOrientationComponent>()
             .Build()
             .ToEntityArray(Unity.Collections.Allocator.Temp);

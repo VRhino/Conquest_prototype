@@ -11,8 +11,6 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 - [ConfiguracionPrefabs_ECS_Visual.md](./ConfiguracionPrefabs_ECS_Visual.md):
   Guía para configurar prefabs visuales y su integración con ECS.
-- [Detalles_a_Mejorar.md](./Detalles_a_Mejorar.md):
-  Detalles técnicos y lista de mejoras pendientes en el desarrollo.
 - [Existing_Databases.md](./Existing_Databases.md):
   Documentación sobre las bases de datos existentes en el proyecto.
 - [Funcionalidades.md](./Funcionalidades.md):
@@ -27,6 +25,8 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
   Este archivo, resumen y enlaces a toda la documentación.
 - [ScriptableObjects_Architecture.md](./ScriptableObjects_Architecture.md):
   Arquitectura y manejo de los datos del juego utilizando Scriptable Objects.
+- [squad_prefab_relationships.md](./squad_prefab_relationships.md):
+  Documentación de las relaciones entre prefabs de escuadrones y su configuración.
 - [TDD.md](./TDD.md):
   Guía para el desarrollo orientado a pruebas (Test Driven Development).
 - [tooltip_prefab_structure.md](./tooltip_prefab_structure.md):
@@ -44,6 +44,8 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
   Documentación detallada para diseñar e incluir NPCs interactivos en los mapas.
 - [Crear_Weapon_Equipamiento.md](./Guides/Crear_Weapon_Equipamiento.md):
   Tutorial técnico para integrar nuevas armas en el sistema de juego.
+- [Spawn_Heroe_Guia.md](./Guides/Spawn_Heroe_Guia.md):
+  Guía para la creación y spawn de héroes en el sistema de batalla.
 
 ## Uso
 

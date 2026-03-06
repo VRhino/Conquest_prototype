@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Conquest Tactics** is a squad-based tactical multiplayer game built in **Unity 2022.3.x** with **DOTS/ECS (Entities 1.3.14)**. Players control a hero commander who leads squads of soldiers in 3v3 PvP battles (~5-10 minutes).
+**Conquest Tactics** is a squad-based tactical multiplayer game built in **Unity 2022.3.x** with **DOTS/ECS (Entities 1.3.14)**. Players control a hero commander who leads squads of soldiers in 3v3 PvP battles (hasta 30 minutos máximo, timer base corto con extensión por captura de puntos).
 
 ## Build & Development
 
@@ -14,7 +14,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Docs**: `Docs/` contains architecture guides and creation guides (mostly in Spanish). Key files:
   - `Docs/ModeloHybrido.md` — canonical reference for the ECS-GameObject hybrid architecture
   - `Docs/GDD.md` — Game Design Document
+  - `Docs/TDD.md` — Technical Design Document
   - `Docs/ScriptableObjects_Architecture.md` — data architecture patterns
+  - `Docs/squad_prefab_relationships.md` — squad prefab architecture (SquadData → ECS → Visual)
   - `Assets/Scripts/Squads/SystemResponsibilities.md` — system responsibilities and data flow
 
 ## Architecture: Hybrid ECS-GameObject Model
@@ -41,7 +43,7 @@ Input → SquadControlSystem → SquadOrderSystem → SquadFSMSystem
          SquadVisualManagementSystem → EntityVisualSync (per-unit)
 ```
 
-Hero flow: `HeroInputSystem → HeroMovementSystem → HeroStateSystem → HeroVisualManagementSystem → EntityVisualSync`
+Hero flow: `HeroInputSystem → HeroMoveIntent → HeroMovementSystem → HeroStateSystem → HeroVisualManagementSystem → EntityVisualSync`
 
 ### System Responsibility Rules
 
@@ -53,6 +55,15 @@ Each ECS system has one responsibility — do not add concerns outside its scope
 - **UnitFollowFormationSystem**: moves units physically; never changes their state
 - **FormationSystem**: calculates formation slot positions only
 - **DestinationMarkerSystem**: reads state, never writes it
+
+### Visual Instantiation (Automated)
+
+Visual GameObjects are instantiated automatically by ECS systems — no manual prefab setup needed:
+- **Hero**: `HeroSpawnSystem` → `HeroVisualManagementSystem` → `VisualPrefabRegistry` → instantiate + `EntityVisualSync`
+- **Units**: `SquadSpawningSystem` → `SquadVisualManagementSystem` → `VisualPrefabRegistry` → instantiate + `EntityVisualSync`
+- **Supply Points**: `SupplyPointSetup` (MonoBehaviour) creates ECS entity + propagates to `SupplyPointZoneIndicator`
+
+`VisualPrefabRegistry` (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`) is the singleton that manages prefab lookup and caching via `VisualPrefabConfiguration`.
 
 ### Core Services (Assets/Scripts/Core/)
 
@@ -87,8 +98,8 @@ Scenes (defined in `ProjectSettings/EditorBuildSettings.asset`):
 ```
 Assets/Scripts/
 ├── Core/           - Services and persistence (HeroDataService, SquadDataService, etc.)
-├── Hero/           - 24 ECS components + 12 ECS systems for the hero entity
-├── Squads/         - Squad and unit ECS components + 21+ ECS systems
+├── Hero/           - ECS components + 12 ECS systems for the hero entity
+├── Squads/         - Squad and unit ECS components + 22 ECS systems (34 total with hero)
 ├── Inventory/      - Item system with ScriptableObject-based architecture
 ├── UI/             - UI controllers per scene (BattlePreparation/, Battle/, HeroDetail/, etc.)
 ├── Data/           - Data structures (Items, Battle, Maps, Attributes)
@@ -103,6 +114,18 @@ Items, effects, and game content use a ScriptableObject-based architecture (see 
 ## UI Patterns
 
 UI controllers follow a Singleton pattern with `OpenPanel()` / `ClosePanel()` / `TogglePanel()` and `PopulateUI()` methods. Scene-level UI controllers live under `Assets/Scripts/UI/<SceneName>/`.
+
+## Game Design Essentials
+
+- **Match**: 3v3 PvP, asymmetric attackers vs defenders. Timer base corto + extensión por captura. Máximo 30 min.
+- **Hero classes (4)**: Sword & Shield, Two-Handed Sword, Spear, Bow. Each has 3 abilities (Q/E/R) + 1 ultimate (F). Separate perk system: 2 active + 5 passive.
+- **Squad types (4)**: Squires, Archers, Pikemen, Spearmen. One active squad per hero. Leadership cost limits loadout.
+- **Squad controls**: C=Follow, X=Hold Position, double-X=Cycle formation, V=Attack, F1-F4=Specific formations, ALT=Radial menu, 1/2/3=Squad abilities.
+- **Formations**: Line, Testudo, Dispersed, Wedge, Schiltron, Shield Wall. Each has mass multiplier affecting charges.
+- **Supply points**: In main scene (not subscene). `SupplyPointSetup` creates ECS entity at runtime. Colors: blue (allied), red (enemy), gray (neutral).
+- **Capture points**: Irreversible capture. Adds time to match timer. Base capture = instant win.
+- **Stagger**: Only from guard break (hero 1s, unit 2s). No stagger from damage threshold.
+- **Damage types**: Blunt, Slashing, Piercing — each with defense and penetration values.
 
 ## Key Packages
 

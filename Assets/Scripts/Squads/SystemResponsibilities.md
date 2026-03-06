@@ -193,12 +193,12 @@ UnitFollowFormationSystem (solo lee estados)
 ## Próximos Pasos
 ✅ **COMPLETADO**: Unificar lógica de stats duplicada entre SquadProgressionSystem y UnitStatScalingSystem
 ✅ **COMPLETADO**: Implementar uso de HeroPositionUtility en todos los sistemas relevantes
-✅ **COMPLETADO**: Análisis completo de TODOS los 33 sistemas (incluyendo los 2 faltantes)
+✅ **COMPLETADO**: Análisis completo de TODOS los 34 sistemas (incluyendo los 2 faltantes)
 - Pruebas de integración completas
 - Validación de rendimiento
 - Documentación de API final
 
-## Sistemas 19-33: Análisis Completado
+## Sistemas 19-34: Análisis Completado
 
 ### 19. UnitOrientationInitializationSystem
 **Responsabilidad:** Inicializa componente de orientación automáticamente para unidades sin configurar.
@@ -256,10 +256,22 @@ UnitFollowFormationSystem (solo lee estados)
 **Responsabilidad:** Procesa solicitudes de selección de spawn point para héroes.
 **Estado:** ✅ Limpio, sin duplicación. Sistema simple de procesamiento de requests.
 
-## Análisis Final Completo: Todos los 33 Sistemas
+### 33. UnitAnimationSystem
+**Responsabilidad:** Actualiza datos de movimiento en UnitAnimationMovementComponent para cada unidad, calculando velocidad basada en movimiento físico tras UnitFollowFormationSystem.
+**Estado:** ✅ Limpio, sin duplicación.
+
+### 34. FormationAdaptationSystem
+**Responsabilidad:** Detecta obstáculos y condiciones del terreno para navegación individual de unidades, adaptando su pathfinding sin modificar la formación del escuadrón.
+**Estado:** ✅ Limpio, sin duplicación. Usa HeroPositionUtility.
+
+### 35. GridFormationUpdateSystem
+**Responsabilidad:** Mantiene sincronizados los componentes de grid con las posiciones de formación, actualizando posiciones target cuando las unidades cambian de grid slot.
+**Estado:** ✅ Limpio, sin duplicación. Usa HeroPositionUtility.
+
+## Análisis Final Completo: Todos los 34 Sistemas
 
 **Observaciones Finales:**
-- **32/33 sistemas con arquitectura limpia** sin duplicación significativa
+- **33/34 sistemas con arquitectura limpia** sin duplicación significativa
 - **1 área de duplicación crítica identificada y corregida** (stats scaling)
 - **Separación correcta** entre sistemas similares por contexto (hero vs squad)
 - **Arquitectura híbrida ECS-GameObject** correctamente implementada

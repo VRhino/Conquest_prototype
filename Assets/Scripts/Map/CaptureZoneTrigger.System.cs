@@ -57,7 +57,14 @@ public partial class CaptureZoneTriggerSystem : SystemBase
 
             if (defenders)
             {
-                progress.ValueRW.isContested = true;
+                progress.ValueRW.isContested = attackers; // contested solo si ambos presentes
+
+                if (!attackers && progress.ValueRO.captureProgress > 0f)
+                {
+                    // Solo defensores: el progreso decrementa
+                    progress.ValueRW.captureProgress = math.max(0f,
+                        progress.ValueRO.captureProgress - progress.ValueRO.captureSpeed * dt);
+                }
                 continue;
             }
 
@@ -65,6 +72,7 @@ public partial class CaptureZoneTriggerSystem : SystemBase
 
             if (attackers)
             {
+                // Solo atacantes: la captura avanza desde donde quedó
                 progress.ValueRW.captureProgress = math.min(100f,
                     progress.ValueRO.captureProgress + progress.ValueRO.captureSpeed * dt);
             }

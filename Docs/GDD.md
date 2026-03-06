@@ -12,7 +12,7 @@
 
 **Plataforma objetivo:** PC
 
-**Duración estimada por partida:** 5 a 10 minutos
+**Duración estimada por partida:** Hasta 30 minutos (máximo). Timer base corto con extensión por captura de puntos.
 
 **Estilo visual:** Realismo medieval táctico (inspiración en la Europa feudal)
 
@@ -125,8 +125,10 @@ Crear un flujo centrado en la **preparación táctica, liderazgo en combate y co
 ### ⚔️ Combate del Héroe
 
 - **Ataques básicos** (según clase/arma equipada).
-- **3 habilidades activas** + **1 ultimate**.
+- **3 habilidades de clase** (Q, E, R) + **1 ultimate** (F), **FIJAS por clase** (no intercambiables).
 - El daño del héroe es **complementario**, útil para asistir o rematar, **no para borrar unidades completas**.
+
+> **IMPORTANTE:** Las habilidades de clase (Q, E, R, F) son un sistema SEPARADO de los Perks. Las habilidades son fijas por clase y no se pueden cambiar. Los Perks son un sistema de talentos independiente con 2 activos + 5 pasivos configurables (ver sección 6.2).
 
 ### 🔋 Recurso clave: Estamina
 
@@ -160,7 +162,7 @@ Crear un flujo centrado en la **preparación táctica, liderazgo en combate y co
 
 - Cambiar escuadra activa (en supply points).
 - Activar habilidades de escuadra desde la interfaz de HUD.
-- Cambiar formación con teclas rápidas (`F1` a `F3`).
+- Cambiar formación con teclas rápidas (`F1` a `F4` para formaciones específicas, doble-tap `X` para ciclar, o menú radial `ALT`).
 - Posicionar escuadra aprovechando terreno, cobertura y línea de visión.
 - Solo puede cambiarse de escuadra en puntos de suministro aliados que no estén en disputa. Fuera de eso, no se puede intercambiar escuadra durante el combate.
 
@@ -197,7 +199,7 @@ El jugador es un **comandante táctico con presencia física en el campo**, que:
 # 4. 🪖 Unidades y Escuadras (Squads)
 
 - **Composición:** solo un tipo de unidad por escuadra
-- **Tipos:** arqueros, lanceros, escuderos, piqueros
+- **Tipos:** arqueros, Spearmen, escuderos, piqueros
 - **IA:** comportamiento automático, con orden siempre activa
 - **Habilidades:** activadas manualmente por el jugador
 - **Progresión:** hasta nivel 30, desbloquean habilidades y formaciones
@@ -271,16 +273,16 @@ Las escuadras pueden entrar en formaciones específicas según su tipo. Las form
 | Escuderos   |   ✔   |   ✔     |          |      |           |       ✔         |
 | Arqueros    |   ✔   |         |    ✔     |      |           |                 |
 | Piqueros    |   ✔   |         |          |  ✔   |     ✔     |                 |
-| Lanceros    |   ✔   |         |          |  ✔   |           |       ✔         |
+| Spearmen    |   ✔   |         |          |  ✔   |           |       ✔         |
 
 #### Formaciones globales y relación con escuadras
 
 - **Línea**: disponible para todas las escuadras.
 - **Testudo**: solo escuderos.
 - **Dispersa**: solo arqueros.
-- **Cuña**: piqueros y lanceros.
+- **Cuña**: piqueros y Spearmen.
 - **Schiltron**: solo piqueros.
-- **Muro de Escudos**: escuderos y lanceros.
+- **Muro de Escudos**: escuderos y Spearmen.
 
 - Las escuadras solo pueden usar las formaciones que aparecen marcadas en esta tabla. La ausencia de una formación implica incompatibilidad.
 
@@ -327,7 +329,7 @@ El sistema de carga considera dos factores para determinar si una escuadra puede
 
 Adicionalmente, el tipo de unidad enemiga modifica el resultado. Por ejemplo:
 
-- Cargar contra lanceros o picas suele ser inefectivo, incluso con más masa.
+- Cargar contra Spearmen o picas suele ser inefectivo, incluso con más masa.
 - Cargar contra arqueros o escuderos es más efectivo, siempre que se mantenga suficiente velocidad y masa.
 
 En caso de empate de masa, se prioriza la **velocidad de quien ataca** como factor de ruptura.
@@ -600,7 +602,7 @@ Unidad de control de área y defensa contra cargas. Su largo alcance les permite
 
 ---
 
-### 🛡️ Lanceros
+### 🛡️ Spearmen
 
 **Descripción**
 Unidad versátil con lanza y escudo, adaptables tanto en ataque como defensa. Buenos en avance táctico y resistencia en combate prolongado.
@@ -658,7 +660,7 @@ Un héroe sin apoyo de sus tropas debe tener dificultades reales para sobrevivir
 - Lanza
 - Arco
 
-> Cada arma define la clase del héroe y otorga un set único de habilidades activas + 1 habilidad ultimate.
+> Cada arma define la clase del héroe y otorga un set único de 3 habilidades de clase (Q, E, R) + 1 habilidad ultimate (F), FIJAS por clase. Los Perks son un sistema SEPARADO (ver sección 6.2).
 > 
 
 ### 🛡️ Armadura equipada
@@ -1381,7 +1383,7 @@ El sistema de bloqueo permite reducir o anular el daño recibido antes de que se
 
 #### 🛡️ Unidades – Bloqueo Pasivo con Escudo
 
-- **Requisitos:** solo escuadras con escudos pueden bloquear (ej. Escuderos, Lanceros).
+- **Requisitos:** solo escuadras con escudos pueden bloquear (ej. Escuderos, Spearmen).
 - **Colisión Física:** el escudo tiene un `collider físico` activo en todo momento. Si el ataque impacta el escudo antes que la unidad → se considera un bloqueo exitoso.
 - **Estadística de bloqueo (`bloqueo`):** cada unidad con escudo tiene un valor numérico que representa su resistencia defensiva. Este valor se reduce proporcionalmente al daño bloqueado.
 
@@ -1420,7 +1422,7 @@ El mapa y el modo de juego están diseñados para **fomentar la toma de decision
 | Parámetro | Valor |
 | --- | --- |
 | **Jugadores** | 3 vs 3 |
-| **Duración estimada** | 15–20 minutos |
+| **Duración estimada** | Hasta 30 minutos (máximo). Timer base corto con extensión por captura de puntos. |
 | **Condiciones de victoria** | <ul><li>**Atacantes**: Capturar los puntos de control antes de que termine el tiempo.</li><li>**Defensores**: Evitar la captura durante todo el tiempo límite.</li></ul> |
 
 ---
@@ -1441,7 +1443,7 @@ Los **puntos de captura** son objetivos estratégicos que deben ser conquistados
 - **Diferencia con supply points:** A diferencia de los supply points, los puntos de captura **no pueden cambiar de dueño varias veces**; su captura es definitiva para el resto de la partida.
 
 
-### 🔄 Supply Points (2 por bando)
+### 🔄 Supply Points (definidos por el mapa)
 
 - Son **zonas seguras** donde los héroes pueden:
     - **Cambiar de escuadra activa**
@@ -1713,8 +1715,8 @@ Demostrar el **núcleo táctico** del juego:
 | --- | --- | --- |
 | **Modo de juego principal** | ✅ | *Batalla 3v3*: captura de puntos vs defensa. |
 | **Mapa** | ✅ | 1 solo mapa jugable con elementos estratégicos (terreno, supply points, puntos de captura). |
-| **Clases de héroe** | ✅ | 2 clases iniciales: `Espada y Escudo` y `Espada a Dos Manos`. |
-| **Escuadras disponibles** | ✅ | 4 tipos: `Escuderos`, `Arqueros`, `Lanceros`, `Piqueros`. |
+| **Clases de héroe** | ✅ | 4 clases: `Espada y Escudo`, `Espada a Dos Manos`, `Lanza` y `Arco`. |
+| **Escuadras disponibles** | ✅ | 4 tipos: `Escuderos`, `Arqueros`, `Spearmen`, `Piqueros`. |
 | **Sistema de perks** | ✅ | Árbol funcional con perks activos y pasivos por rama. |
 | **Atributos de héroe** | ✅ | Sistema de distribución de puntos con interfaz de asignación. |
 | **Cambio de formación** | ✅ | Escuadras pueden cambiar formación en tiempo real. |
@@ -1842,11 +1844,11 @@ Similar a paneles de estado vistos en juegos como *Battlefield* (modo comandante
 
 | Acción | Tecla propuesta | Comentario |
 | --- | --- | --- |
-| Ordenar mover escuadra | RMB (clic derecho) | Apunta y mueve hacia zona indicada. |
-| Ordenar mantener posición | `H` o botón contextual | Detiene movimiento de escuadra. |
-| Cambiar formación | `F` o rueda contextual | Cambia a la siguiente formación disponible. |
-| Usar habilidad de héroe | `Q / E / R` + `Ult: F` | Íconos con cooldown visibles. |
-| Usar habilidad de escuadra | `1 / 2 / 3` | Muestra en HUD con cooldown. |
+| Ordenar mover escuadra | RMB (clic derecho) | Orden de movimiento por terrain-click via raycast hacia la zona indicada. |
+| Ordenar mantener posición | `X` (single tap) | Detiene movimiento de escuadra. |
+| Cambiar formación | `F1-F4` para formaciones específicas, doble-tap `X` para ciclar, o menú radial (`ALT`) | Cambia a la formación indicada. |
+| Usar habilidad de héroe (fijas por clase) | `Q / E / R` + `Ult: F` | Íconos con cooldown visibles. Habilidades FIJAS por clase, no intercambiables. |
+| Usar habilidad de escuadra | `1 / 2 / 3` (hotkeys directos) y también accesibles desde el menú radial (`ALT`) | Muestra en HUD con cooldown. |
 | Cambiar escuadra (en supply point) | `TAB` (en punto seguro) | Interfaz emergente para swap. |
 
 ---
@@ -1857,7 +1859,6 @@ Similar a paneles de estado vistos en juegos como *Battlefield* (modo comandante
     - Azul: aliados
     - Rojo: enemigos
     - Gris: neutral / sin controlar
-    - Verde: supply point disponible
 - **Indicadores contextuales**:
     - Flechas direccionales en minimapa para refuerzos enemigos.
     - Iconos flotantes sobre escuadras (escudo, arco, lanza) para reconocimiento rápido.
@@ -1938,7 +1939,7 @@ Skins visuales aplicables a unidades de escuadra. Al igual que las skins del hé
 
 ### 7. 🧍‍♂️ **Unidad**
 
-Individuo que conforma una escuadra. Cada escuadra solo puede estar compuesta por **un único tipo de unidad** (por ejemplo, arqueros o lanceros).
+Individuo que conforma una escuadra. Cada escuadra solo puede estar compuesta por **un único tipo de unidad** (por ejemplo, arqueros o Spearmen).
 
 ---
 
@@ -2080,7 +2081,9 @@ Un supply point solo puede ser **utilizado** si se cumplen **ambas condiciones**
 | **Neutral** | No | No | Sí |
 - Los supply points **enemigos o neutrales no permiten interacción ni curación**.
 - Si un supply enemigo o neutral **no tiene héroes defensores presentes**, un héroe atacante puede iniciar una **captura**.
-- La captura se **interrumpe** si un héroe del bando defensor entra en el área. El progreso no se reinicia: se reanuda desde donde quedó si se reintenta más tarde.
+- Si un héroe del bando que controla el punto entra en el área, el progreso de captura **se resetea a 0** completamente.
+- La captura **no avanza** mientras haya algún héroe del bando propietario dentro del área.
+- Una vez que todos los héroes defensores abandonan el área, el atacante puede reiniciar la captura desde 0.
 
 ---
 
@@ -2093,8 +2096,8 @@ Objetivo estratégico del mapa. Sirve para:
 
 Tipos:
 
-- **Normal**: otorga tiempo adicional si es capturada.
-- **Base**: su captura finaliza la partida a favor de los atacantes.
+- **Normal**: capturar un punto normal añade tiempo al reloj de partida. El máximo es 30 minutos.
+- **Base**: capturar la base = victoria inmediata del bando atacante.
 
 ---
 
@@ -2102,10 +2105,12 @@ Tipos:
 
 Mecánica que regula la toma de puntos de captura:
 
-- Solo se inicia si un **héroe del bando atacante entra en el rango**.
-- Se interrumpe si un héroe defensor entra.
-- El progreso **no se reinicia** si es interrumpido: se pausa.
-- Aporta **puntos personales** en el post-batalla según tiempo dentro del punto.
+- Solo se inicia si al menos un **héroe del bando atacante entra en el rango** y no hay defensores presentes.
+- Si un héroe defensor entra, la captura se **pausa** (el progreso se mantiene).
+- Si solo quedan defensores en el área (sin atacantes), el progreso **empieza a decrementar** gradualmente.
+- Si los defensores salen y vuelven a entrar atacantes, la captura **continúa desde donde quedó**.
+- La captura es **irreversible** una vez completada: el punto no puede volver a cambiar de dueño.
+- Los puntos de captura son propiedad inicial del **bando defensor** y su número y disposición los define el mapa.
 
 ---
 
@@ -2246,7 +2251,7 @@ definicion inicial y no curadad del GDD
     - Atacar: el squad ataca a Los enemigos q Tengan dentro de rango
 * Equipamiento: piezas de armadura de unidad, qué SE pierden cuando mueren unidades Durante partida, Una unidad si tiene menos de 50% de equipamiento entra con debufffs y si tienes 0% no puede ser no puede Entrar a partida
 * Loadout: Los jugadores pueden tener Unas squads preseleccionadas fuera de partida qué SE pueden elegir antes de Entrar a partida Como conjunto
-    - Viene limitada por la cantidad de liderazgo q tiene el heroes, es decir si el heroe tiene 3 de liderazgo y hay 4 squads, arqueros 1 de liderazgo, piqueros 2 de liderazgo, lanceros 1 de liderazgo y escuderos 2 de liderazgo, en el loadout no puede guardar arqueros(1), piqueros(2) y lanceros(1) por qué la Suma seria 4 y el maximo para el son 3, SE puede menos o igual pero nunca mas
+    - Viene limitada por la cantidad de liderazgo q tiene el heroes, es decir si el heroe tiene 3 de liderazgo y hay 4 squads, arqueros 1 de liderazgo, piqueros 2 de liderazgo, Spearmen 1 de liderazgo y escuderos 2 de liderazgo, en el loadout no puede guardar arqueros(1), piqueros(2) y Spearmen(1) por qué la Suma seria 4 y el maximo para el son 3, SE puede menos o igual pero nunca mas
 * Liderazgo: es lo que limita la cantidad de squads q puede llevar UN heroe a batalla  y la cantidad de squads q entran en UN loadout, el heroe tiene UN Valor y Los squads tienen UN coste de liderazgo
 * estamina: es lo que los heroes utilizan para realizar ataques sprintar y lanzar habilidades
 ////batalla 

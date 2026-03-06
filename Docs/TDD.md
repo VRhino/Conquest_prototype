@@ -117,7 +117,7 @@
 ### 1.3 🏗️ Arquitectura Técnica
 
 - **Paradigma Base:** ECS (Entity Component System)
-- **Implementación:** Unity Entities 1.0 (DOTS)
+- **Implementación:** Unity Entities 1.3.14 (DOTS)
 - **Justificación:**
     - Escalabilidad con múltiples unidades en pantalla.
     - Separación clara entre lógica y datos.
@@ -468,6 +468,8 @@ Notas:
 
 Habilidades de escuadra se ejecutan de forma **coordinada y sincronizada**, basadas en señales del jugador (hotkey) y condiciones tácticas (posición, formación, enemigos).
 
+**Activación:** Las habilidades de escuadra se activan mediante hotkeys directos `1`, `2`, `3` para activación rápida, y también son accesibles desde el **menú radial** (`ALT`).
+
 ### 🧩 Componentes:
 
 - `SquadSkillComponent`:
@@ -616,7 +618,7 @@ El mapa está lleno de **zonas funcionales**, cada una identificada por **collid
 El MVP incluye **un único mapa simétrico asimétrico**, con elementos específicos:
 
 - 2 puntos de spawn (por bando)
-- 2 supply points por lado
+- N supply points por lado (cantidad definida por el mapa, puede ser asimétrica)
 - 1 bandera principal de base
 - 1 bandera de captura intermedia
 - Obstáculos estratégicos, puntos de visión, zonas estrechas
@@ -661,6 +663,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     - **Captura irreversible:** Una vez que un punto de captura es conquistado por el bando atacante, no puede ser recuperado por el bando defensor durante esa partida.
     - **Desbloqueo secuencial:** Algunos puntos de captura están bloqueados al inicio y solo se pueden capturar si se ha conquistado previamente el punto anterior (precondición). Un punto bloqueado no puede ser capturado hasta que se desbloquee.
     - **Punto de base:** Si el atacante conquista el punto de base, la partida termina inmediatamente con la victoria del bando atacante.
+    - **Extensión de tiempo:** Capturar un punto de captura normal (no base) añade tiempo al timer de la partida. El máximo absoluto es 30 minutos (`battleDurationSeconds = 1800`). Esta mecánica previene estancamientos donde el bando defensor domina sin presión temporal.
     - **Progresión:** Al capturar un punto previo, se desbloquea el siguiente punto de captura en la secuencia, permitiendo el avance del equipo atacante.
     - **Diferencia con supply points:** A diferencia de los supply points, los puntos de captura no pueden cambiar de dueño varias veces; su captura es definitiva para el resto de la partida.
     
@@ -675,9 +678,12 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
         - `unlockCondition`: referencia al punto previo que debe ser capturado
     - `CaptureZoneTriggerSystem`:
         - Detecta héroes dentro del radio
-        - Actualiza captura si cumple condiciones (nadie del bando propietario presente y el punto está desbloqueado)
-        - Al completarse la captura, si el punto desbloquea otro, lo activa
-        - Si es un punto de base y es capturado, termina la partida
+        - Si hay atacantes y **ningún defensor**: avanza `captureProgress`
+        - Si hay defensores (con o sin atacantes): **pausa** la captura (`isContested = true`), el progreso se mantiene
+        - Si solo hay defensores (sin atacantes): el progreso **decrementa** gradualmente
+        - Si solo hay atacantes de nuevo: la captura **continúa desde donde quedó**
+        - Al completarse la captura (progress >= 100): cambia `teamOwner`, desbloquea siguiente punto si aplica
+        - Si es punto de base y es capturado: termina la partida inmediatamente
     - `CaptureProgressUISystem`:
         - Sincroniza HUD de progreso
         - Envía eventos de captura completada
@@ -695,7 +701,7 @@ AZUL SPAWN     --[SUPPLY]--        [CAPTURE POINT A]        --[SUPPLY]--    ROJO
     
     ### 📌 Descripción:
     
-    Zonas pasivas que permiten curar al héroe/squad y cambiar de escuadra si no están en disputa.
+    Zonas del mapa que permiten curar al héroe/squad y cambiar de escuadra si no están en disputa. Su cantidad y posición la define cada mapa (puede ser asimétrica entre bandos). A diferencia de los puntos de captura, pueden cambiar de dueño múltiples veces durante la partida.
     
     ### 🧩 Componentes:
     
@@ -1007,25 +1013,20 @@ void ApplyDamageAndEffects(DamageProfile profile, Entity attacker, Entity target
         AddBuffer<PendingStatusEffectsBuffer>(target).Add(pending);
     }
 
-    // Aplicar efecto de stagger si el daño supera 50% de la salud máxima
-    float staggerThreshold = health.maxHealth * 0.5f;
-    if (finalDamage >= staggerThreshold)
-    {
-        AddComponent(target, new StaggerComponent { duration = 1.5f });
-    }
 }
 
 ```
 
-### 🔥 Efectos secundarios (Bleed, Burn, Stagger)
+### 🔥 Efectos secundarios (Bleed, Burn)
 
 Ciertos ataques pueden aplicar efectos secundarios definidos en el `DamageProfile`:
 
 - **Bleed**: aplica daño por segundo durante varios ticks.
-- **Stagger**: reduce movilidad o interrumpe animaciones si el daño recibido supera cierto umbral.
 - **Burn**: inflige daño prolongado que se intensifica si el objetivo permanece en área ardiente.
 
 Estos efectos se definen como `StatusEffect[]` en el perfil del daño y se procesan tras aplicar el daño principal.
+
+> **Nota sobre Stagger:** El stagger NO se activa por umbral de daño. Solo existe como consecuencia de un guard break (ruptura de bloqueo): 1s para el héroe, 2s para unidades. Ver sección 5.6 para detalles.
 
 ---
 
@@ -1038,7 +1039,7 @@ Estos efectos se definen como `StatusEffect[]` en el perfil del daño y se proce
 5. **Cálculo del daño neto**: `adjustedDamage - mitigatedDefense`.
 6. **Aplicación**: se reduce `HealthComponent.currentHealth`.
 7. **Evaluación de efectos secundarios**: se aplican como `StatusEffect`.
-8. **Reacción del objetivo**: muerte, stagger, ruptura de formación.
+8. **Reacción del objetivo**: muerte, ruptura de formación.
 
 ---
 
@@ -1321,7 +1322,7 @@ else
 
 ```
 
-- `resistenciaTipoUnidad`: multiplicador definido por tipo (ej. lanceros: x1.5, arqueros: x0.75).
+- `resistenciaTipoUnidad`: multiplicador definido por tipo (ej. Spearmen: x1.5, arqueros: x0.75).
 - `FormaciónDefensoraRota`: aplica `Dispersed` a las unidades afectadas.
 - `AtacanteInterrumpido`: reduce momentum o cambia estado a `Stagger`.
 
@@ -1417,7 +1418,7 @@ float CalcularDañoCarga(Entity atacante, Entity defensor)
     - Se evalúa si el atacante cumple condiciones de carga.
     - Se calcula el daño con `CalcularDañoCarga()`.
     - Se reparte entre las unidades afectadas del defensor.
-    - Si el daño supera cierto umbral relativo al `maxHealth`, se aplica `Stagger`.
+    - Si la fuerza de impacto supera la masa defensora, puede provocar ruptura de formación.
 2. También puede provocar ruptura de formación (estado `Dispersed`) si se supera la **masa efectiva** del defensor.
 
 ---
@@ -1436,6 +1437,8 @@ Mitigado: 172.8 - (20 * 0.5) = 162.8 de daño por carga
 
 ```
 ## 🔄 6. Flujo de Partida
+
+📌 **Duración de partida:** Timer base corto con extensión por captura de puntos. Máximo 30 minutos (`battleDurationSeconds = 1800`).
 
 ---
 
@@ -1555,11 +1558,11 @@ SupplyPointComponent
 ```
 
 ```csharp
-SupplyCaptureSystem
-- Detecta héroes enemigos en zona sin defensores
-- Inicia barra de captura
-- Interrumpe captura si entra defensor
-- Al capturar, cambia `ownerTeam`
+SupplyCaptureSystem (lógica incluida en SupplyInteractionSystem)
+- Detecta héroes enemigos en zona sin defensores → inicia barra de captura
+- Si entra un héroe del bando propietario → **resetea captureProgress a 0** completamente
+- La captura no avanza mientras haya algún héroe propietario en el área
+- Al completar captura (progress >= 100) → cambia `ownerTeam`, lanza `SupplyZoneCapturedEvent`
 
 SupplyInteractionSystem
 - Si supply está en estado aliado y sin disputa:
@@ -1835,8 +1838,10 @@ PerkManager (UI)
 
 📌 **Activación en Combate:**
 
-- Perks activos están ligados a teclas (`Q`, `E`)
-- Consumen stamina y entran en cooldown
+- Perks activos se activan por condiciones o triggers definidos en su configuración.
+- Consumen stamina y entran en cooldown.
+
+> **Nota importante:** Las habilidades del héroe (Q, E, R + ultimate F) son un sistema SEPARADO de los perks. Cada clase tiene 3 habilidades de clase + 1 ultimate fijas (ver `HeroAbilityComponent` en sección 7.5). Los perks son bonificaciones de talento con 2 slots activos + 5 slots pasivos, NO son las habilidades principales del héroe.
 
 📌 **Sinergia:**
 
@@ -1854,7 +1859,7 @@ PerkManager (UI)
 
 #### 📌 Descripción
 
-Cada clase de héroe (Espada y Escudo, Espada a Dos Manos, Lanza, Arco) define su rol táctico, atributos base, límites de progresión, habilidades exclusivas y sinergias con escuadras. La implementación debe garantizar que las clases:
+Cada clase de héroe (Espada y Escudo, Espada a Dos Manos, Lanza, Arco) define su rol táctico, atributos base, límites de progresión, habilidades exclusivas y sinergias con escuadras. **El MVP incluye las 4 clases de héroe: Sword & Shield, Two-Handed Sword, Spear y Bow.** La implementación debe garantizar que las clases:
 
 - Sean fácilmente instanciables desde datos externos.
 - Impongan límites a la asignación de atributos.
@@ -2123,7 +2128,7 @@ public enum BehaviorProfile {
 | Escuderos | Defensivo |
 | Arqueros | Hostigador |
 | Piqueros | Anticarga |
-| Lanceros | Versátil |
+| Spearmen | Versátil |
 
 > Estos perfiles afectan la toma de decisiones AI en SquadAISystem y priorización de objetivos.
 > 
@@ -3030,7 +3035,7 @@ Este sistema actúa como un HUD expandido y cumple funciones de *scoreboard*, ma
 
 - **`BattleStatusMinimap`**: Minimap central con representación expandida.
   - 🧍‍♂️ Posición en tiempo real de héroes aliados (íconos tipo ping).
-  - ⛽ Supply points: iconos con estado (🟡 neutral, 🔵 aliado, 🔴 enemigo).
+  - ⛽ Supply points: iconos con estado (gris = neutral, 🔵 azul = aliado, 🔴 rojo = enemigo).
   - 🎯 Puntos de captura: icono + porcentaje + color de dominancia (barra radial o slider).
 
 #### ⚙️ Comportamiento del Sistema

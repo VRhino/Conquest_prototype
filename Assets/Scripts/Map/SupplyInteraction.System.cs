@@ -15,7 +15,7 @@ public partial class SupplyInteractionSystem : SystemBase
         float dt = SystemAPI.Time.DeltaTime;
 
 
-        var healthLookup = GetComponentLookup<HealthComponent>();
+        var healthLookup = GetComponentLookup<HeroHealthComponent>();
         var staminaLookup = GetComponentLookup<StaminaComponent>();
         var interactionLookup = GetComponentLookup<PlayerInteractionComponent>(true);
 
@@ -27,6 +27,7 @@ public partial class SupplyInteractionSystem : SystemBase
         {
             if (zone.ValueRO.zoneType != ZoneType.Supply || !zone.ValueRO.isActive)
                 continue;
+
 
             bool teamA = false;
             bool teamB = false;
@@ -44,8 +45,11 @@ public partial class SupplyInteractionSystem : SystemBase
                 if (!life.ValueRO.isAlive)
                     continue;
 
-                if (math.distancesq(hTransform.ValueRO.Position, transform.ValueRO.Position) > radiusSq)
+                float distSq = math.distancesq(hTransform.ValueRO.Position, transform.ValueRO.Position);
+
+                if (distSq > radiusSq)
                     continue;
+
 
                 if (team.ValueRO.value == Team.TeamA)
                     teamA = true;
@@ -59,8 +63,14 @@ public partial class SupplyInteractionSystem : SystemBase
             bool contested = teamA && teamB;
             supply.ValueRW.isContested = contested;
 
+            // Si el equipo propietario está presente, resetear captura a 0
+            bool ownerPresent = (owner == Team.TeamA && teamA) || (owner == Team.TeamB && teamB);
+            if (ownerPresent && supply.ValueRO.captureProgress > 0f)
+                supply.ValueRW.captureProgress = 0f;
+
             if (contested || (!teamA && !teamB))
             {
+                supply.ValueRW.isCapturing = false;
                 alliedHeroes.Dispose();
                 continue;
             }
@@ -70,6 +80,7 @@ public partial class SupplyInteractionSystem : SystemBase
 
             if (owner == presentTeam)
             {
+                supply.ValueRW.isCapturing = false;
                 // Zone owned by present team - apply benefits
                 foreach (var hero in alliedHeroes)
                 {
@@ -97,10 +108,12 @@ public partial class SupplyInteractionSystem : SystemBase
             else
             {
                 // Capture attempt
+                supply.ValueRW.isCapturing = true;
                 supply.ValueRW.captureProgress = math.min(100f, supply.ValueRO.captureProgress + supply.ValueRO.captureSpeed * dt);
                 if (supply.ValueRO.captureProgress >= 100f)
                 {
                     supply.ValueRW.captureProgress = 0f;
+                    supply.ValueRW.isCapturing = false;
                     supply.ValueRW.currentTeam = teamInt;
                     zone.ValueRW.teamOwner = teamInt;
 

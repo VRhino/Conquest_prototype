@@ -243,9 +243,9 @@ public static bool isHeroInRange(DynamicBuffer<SquadUnitElement> units,
 
 **🧩 Sistemas involucrados:**
 - `SquadControlSystem` - Detección de input extendido
-- `ManualPositioningSystem` - Nuevo sistema para esta funcionalidad
-- `FormationMarkerSystem` - Extensión del sistema actual de markers
-- `TerrainRaycastSystem` - Validación de posiciones en terreno
+- `ManualPositioningSystem` - ⚠️ **No implementado / Planificado** - Nuevo sistema para esta funcionalidad
+- `FormationMarkerSystem` - ⚠️ **No implementado / Planificado** - Extensión del sistema actual de markers
+- `TerrainRaycastSystem` - ⚠️ **No implementado / Planificado** - Validación de posiciones en terreno
 
 ---
 

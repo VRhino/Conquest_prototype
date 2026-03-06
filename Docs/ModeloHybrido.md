@@ -231,8 +231,8 @@ public class EntityVisualSync : MonoBehaviour
 
 | **Sistema** | **Responsabilidad** | **Input** | **Output** |
 |-------------|-------------------|-----------|------------|
-| `HeroInputSystem` | Captura input del jugador | Mouse, Keyboard | HeroInputComponent |
-| `HeroMovementSystem` | Mueve héroe según input | HeroInputComponent | LocalTransform |
+| `HeroInputSystem` | Captura input del jugador | Mouse, Keyboard | HeroInputComponent, HeroMoveIntent |
+| `HeroMovementSystem` | Mueve héroe según intent | HeroMoveIntent | LocalTransform |
 | `HeroStateSystem` | Detecta estado héroe | Transform changes | HeroStateComponent |
 | `SquadControlSystem` | Captura órdenes de squad | Input | SquadInputComponent |
 | `SquadOrderSystem` | Procesa órdenes | SquadInputComponent | SquadStateComponent |
@@ -304,7 +304,7 @@ public class EntityVisualSync : MonoBehaviour
 │   │    │  Input │ Logic Processing │ Data Update │ Visual Sync            │   │   │
 │   │    │   │    │        │         │      │      │     │                  │   │   │
 │   │    │   ▼    │        ▼         │      ▼      │     ▼                  │   │   │
-│   │    │ WASD───┼─►HeroInputSys────┼─►HeroMoveSys┼─►LocalTransform        │   │   │
+│   │    │ WASD───┼─►HeroInputSys────┼─►MoveIntent─┼─►HeroMoveSys─►LocalTr   │   │   │
 │   │    │ Mouse  │                  │             │        │                │   │   │
 │   │    │        │                  │             │        ▼                │   │   │
 │   │    │        │                  │             │  EntityVisualSync      │   │   │
@@ -567,30 +567,38 @@ public partial class HeroSpawnSystem : SystemBase
     }
 }
 
-// 2. HERO VISUAL CREATION  
+// 2. HERO VISUAL CREATION
+// HeroVisualManagementSystem queries for hero entities that don't yet have a visual
+// and automatically instantiates the visual GameObject via VisualPrefabRegistry.
 public partial class HeroVisualManagementSystem : SystemBase
 {
     protected override void OnUpdate()
     {
         foreach (var (spawn, visualRef, transform, entity) in
-                 SystemAPI.Query<RefRO<HeroSpawnComponent>, 
-                                 RefRO<HeroVisualReference>, 
+                 SystemAPI.Query<RefRO<HeroSpawnComponent>,
+                                 RefRO<HeroVisualReference>,
                                  RefRO<LocalTransform>>()
                         .WithNone<HeroVisualInstance>()
                         .WithEntityAccess())
         {
+            // Obtain visual prefab via VisualPrefabRegistry singleton
+            // (Assets/Scripts/Hero/VisualPrefabRegistry.cs)
+            // which caches prefab lookups from VisualPrefabConfiguration
+            var registry = VisualPrefabRegistry.Instance;
+            GameObject prefab = registry.GetPrefab("HeroSynty");
+
             // Instanciar GameObject visual
-            GameObject visual = Object.Instantiate(GetSyntyPrefab("HeroSynty"));
+            GameObject visual = Object.Instantiate(prefab);
             visual.transform.position = transform.ValueRO.Position;
-            
+
             // Setup sincronización
             EntityVisualSync sync = visual.GetComponent<EntityVisualSync>();
             sync.SetupSync(entity, EntityManager);
-            
+
             // Marcar como instanciado
-            EntityManager.AddComponentData(entity, new HeroVisualInstance 
-            { 
-                visualInstanceId = visual.GetInstanceID() 
+            EntityManager.AddComponentData(entity, new HeroVisualInstance
+            {
+                visualInstanceId = visual.GetInstanceID()
             });
         }
     }
@@ -664,20 +672,28 @@ public partial class SquadSpawningSystem : SystemBase
 
 ### Sistema de Movimiento y Formaciones
 
+El flujo de movimiento del héroe utiliza `HeroMoveIntent` (`Assets/Scripts/Hero/Components/HeroMoveIntent.Component.cs`) como componente intermedio que convierte el input crudo en intención de movimiento. Esto separa la captura de input del procesamiento de movimiento:
+
+```
+HeroInputSystem → HeroInputComponent → HeroMoveIntent → HeroMovementSystem → LocalTransform
+```
+
 ```csharp
 // 4. MOVEMENT PROCESSING
+// HeroMovementSystem reads from HeroMoveIntent (not raw input) to move the hero.
+// HeroMoveIntent bridges input capture to movement processing.
 public partial class HeroMovementSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        foreach (var (input, stats, transform, entity) in
-                 SystemAPI.Query<RefRO<HeroInputComponent>,
-                                RefRO<HeroStatsComponent>, 
+        foreach (var (moveIntent, stats, transform, entity) in
+                 SystemAPI.Query<RefRO<HeroMoveIntent>,
+                                RefRO<HeroStatsComponent>,
                                 RefRW<LocalTransform>>()
                         .WithAll<IsLocalPlayer>()
                         .WithEntityAccess())
         {
-            float3 movement = input.ValueRO.movement;
+            float3 movement = moveIntent.ValueRO.Direction;
             float speed = stats.ValueRO.baseSpeed;
             
             // Aplicar movimiento
@@ -903,6 +919,10 @@ public class EntityVisualSync : MonoBehaviour
 ```
 
 ### 🎨 Flexibilidad con Assets
+
+La gestión de prefabs visuales está centralizada en dos archivos:
+- **`VisualPrefabRegistry`** (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`): Singleton MonoBehaviour que gestiona el lookup y caching de prefabs visuales en runtime. Tanto `HeroVisualManagementSystem` como `SquadVisualManagementSystem` lo usan para obtener los prefabs a instanciar.
+- **`VisualPrefabConfiguration`** (`Assets/Scripts/Hero/VisualPrefabConfiguration.cs`): ScriptableObject que define los prefabs disponibles y sus claves de búsqueda.
 
 ```csharp
 // SISTEMA DATA-DRIVEN
