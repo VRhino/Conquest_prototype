@@ -13,6 +13,7 @@ public partial class CaptureZoneTriggerSystem : SystemBase
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;
+        var ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(World.Unmanaged);
 
 
         var linkLookup = GetComponentLookup<ZoneLinkComponent>(true);
@@ -55,6 +56,8 @@ public partial class CaptureZoneTriggerSystem : SystemBase
                 }
             }
 
+            progress.ValueRW.isBeingCaptured = attackers;
+
             if (defenders)
             {
                 progress.ValueRW.isContested = attackers; // contested solo si ambos presentes
@@ -81,9 +84,10 @@ public partial class CaptureZoneTriggerSystem : SystemBase
             {
                 zone.ValueRW.teamOwner = progress.ValueRO.capturingTeam;
                 zone.ValueRW.isActive = false;
+                progress.ValueRW.isBeingCaptured = false;
 
-                Entity evt = EntityManager.CreateEntity();
-                EntityManager.AddComponentData(evt, new ZoneCapturedEvent
+                Entity evt = ecb.CreateEntity();
+                ecb.AddComponent(evt, new ZoneCapturedEvent
                 {
                     zoneId = zone.ValueRO.zoneId,
                     capturingTeam = (Team)progress.ValueRO.capturingTeam

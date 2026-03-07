@@ -12,11 +12,15 @@ public class SupplyPointSetup : MonoBehaviour
     [Header("Zone Configuration")]
     [SerializeField] float _radius = 10f;
     [SerializeField] float _captureSpeed = 1f;
+    [SerializeField] Team _initialTeam = Team.None;
 
     [Header("Runtime Info (Play Mode)")]
     [SerializeField] int _zoneId;
 
     static int _nextZoneId = 1;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => _nextZoneId = 1;
 
     public int ZoneId { get; private set; }
     public Entity ZoneEntity { get; private set; }
@@ -29,11 +33,13 @@ public class SupplyPointSetup : MonoBehaviour
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
         ZoneEntity = em.CreateEntity();
 
+        int teamInt = (int)_initialTeam;
+
         em.AddComponentData(ZoneEntity, new ZoneTriggerComponent
         {
             zoneId = ZoneId,
             zoneType = ZoneType.Supply,
-            teamOwner = 0,
+            teamOwner = teamInt,
             isActive = true,
             radius = _radius,
             isLocked = false,
@@ -44,7 +50,7 @@ public class SupplyPointSetup : MonoBehaviour
         {
             captureProgress = 0f,
             captureSpeed = _captureSpeed,
-            currentTeam = 0,
+            currentTeam = teamInt,
             isContested = false
         });
 

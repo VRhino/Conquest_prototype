@@ -5,11 +5,11 @@ using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
-/// Visual indicator showing the radius of influence of a supply point.
-/// Changes color based on team ownership relative to the local player.
-/// Receives its zone entity from the parent SupplyPointSetup.
+/// Visual indicator showing the radius of influence of a capture point.
+/// Changes color based on team ownership and capture progress relative to the local player.
+/// Receives its zone entity from the parent CapturePointSetup.
 /// </summary>
-public class SupplyPointZoneIndicator : MonoBehaviour
+public class CapturePointZoneIndicator : MonoBehaviour
 {
     [Header("Colors")]
     [SerializeField] Color _neutralColor = new Color(0.5f, 0.5f, 0.5f, 0.4f);
@@ -23,14 +23,15 @@ public class SupplyPointZoneIndicator : MonoBehaviour
     MaterialPropertyBlock _mpb;
     EntityManager _em;
     Entity _zoneEntity;
-    Team _playerTeam;
+    EntityQuery _dcQuery;
     int _cachedColorHash;
     bool _initialized;
 
-    public void Initialize(int zoneId, Entity zoneEntity)
+    public void Initialize(int zoneId, Entity zoneEntity, bool isLocked)
     {
         _zoneEntity = zoneEntity;
         _initialized = true;
+        gameObject.SetActive(!isLocked);
     }
 
     void Start()
@@ -38,12 +39,18 @@ public class SupplyPointZoneIndicator : MonoBehaviour
         _renderer = GetComponent<Renderer>();
         _mpb = new MaterialPropertyBlock();
         _em = World.DefaultGameObjectInjectionWorld.EntityManager;
-        CachePlayerTeam();
+        _dcQuery = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
 
         if (!_initialized)
             FindZoneEntityByProximity();
 
         SetScaleFromRadius();
+    }
+
+    void OnDestroy()
+    {
+        if (World.DefaultGameObjectInjectionWorld != null && World.DefaultGameObjectInjectionWorld.IsCreated)
+            _dcQuery.Dispose();
     }
 
     void FindZoneEntityByProximity()
@@ -59,7 +66,7 @@ public class SupplyPointZoneIndicator : MonoBehaviour
         foreach (var ent in ents)
         {
             var zone = _em.GetComponentData<ZoneTriggerComponent>(ent);
-            if (zone.zoneType != ZoneType.Supply) continue;
+            if (zone.zoneType != ZoneType.Capture) continue;
 
             var pos = _em.GetComponentData<LocalTransform>(ent).Position;
             float dist = math.distancesq(myPos, pos);
@@ -69,13 +76,6 @@ public class SupplyPointZoneIndicator : MonoBehaviour
                 _zoneEntity = ent;
             }
         }
-    }
-
-    void CachePlayerTeam()
-    {
-        var q = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
-        if (!q.IsEmptyIgnoreFilter)
-            _playerTeam = (Team)q.GetSingleton<DataContainerComponent>().teamID;
     }
 
     void SetScaleFromRadius()
@@ -94,9 +94,17 @@ public class SupplyPointZoneIndicator : MonoBehaviour
     {
         if (_zoneEntity == Entity.Null || !_em.Exists(_zoneEntity)) return;
 
+        Team playerTeam = Team.None;
+        if (!_dcQuery.IsEmptyIgnoreFilter)
+        {
+            int teamID = _dcQuery.GetSingleton<DataContainerComponent>().teamID;
+            if (teamID != 0) playerTeam = (Team)teamID;
+        }
+
         var zone = _em.GetComponentData<ZoneTriggerComponent>(_zoneEntity);
-        var supply = _em.GetComponentData<SupplyPointComponent>(_zoneEntity);
-        Color color = ResolveColor(zone.teamOwner, supply.isCapturing);
+
+        var progress = _em.GetComponentData<CapturePointProgressComponent>(_zoneEntity);
+        Color color = ResolveColor(zone.teamOwner, progress.isBeingCaptured, playerTeam);
 
         int hash = color.GetHashCode();
         if (hash != _cachedColorHash)
@@ -108,11 +116,11 @@ public class SupplyPointZoneIndicator : MonoBehaviour
         }
     }
 
-    Color ResolveColor(int teamOwner, bool isCapturing)
+    Color ResolveColor(int teamOwner, bool isBeingCaptured, Team playerTeam)
     {
-        if (isCapturing) return _neutralColor;
+        if (isBeingCaptured) return _neutralColor;
         if (teamOwner == 0) return _neutralColor;
-        if ((Team)teamOwner == _playerTeam) return _alliedColor;
+        if ((Team)teamOwner == playerTeam) return _alliedColor;
         return _enemyColor;
     }
 }

@@ -16,4 +16,7 @@ public struct CapturePointProgressComponent : IComponentData
 
     /// <summary>True if defenders are present, pausing capture.</summary>
     public bool isContested;
+
+    /// <summary>True while at least one attacker is actively in the zone this frame.</summary>
+    public bool isBeingCaptured;
 }
