@@ -55,12 +55,18 @@ public class HUDController : MonoBehaviour
     [SerializeField] TMP_Text _unitCountText;
     [SerializeField] Image _formationIcon;
 
+    [Header("Capture Bar")]
+    [SerializeField] GameObject _captureBarSection;
+    [SerializeField] Image _captureProgressFill;
+    [SerializeField] TMP_Text _captureProgressText;
+
     void Update()
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
         UpdateHeroSection(em);
         UpdateSquadSection(em);
+        UpdateCaptureBar(em);
     }
 
     void UpdateHeroSection(EntityManager em)
@@ -117,5 +123,29 @@ public class HUDController : MonoBehaviour
             else
                 _formationIcon.fillAmount = 1f;
         }
+    }
+
+    void UpdateCaptureBar(EntityManager em)
+    {
+        var query = em.CreateEntityQuery(typeof(LocalHeroCaptureStateComponent));
+        if (query.IsEmptyIgnoreFilter)
+        {
+            _captureBarSection?.SetActive(false);
+            return;
+        }
+
+        var state = em.GetComponentData<LocalHeroCaptureStateComponent>(query.GetSingletonEntity());
+
+        if (_captureBarSection != null)
+            _captureBarSection.SetActive(state.isInZone);
+
+        if (!state.isInZone)
+            return;
+
+        if (_captureProgressFill != null)
+            _captureProgressFill.fillAmount = state.captureProgress / 100f;
+
+        if (_captureProgressText != null)
+            _captureProgressText.text = $"{Mathf.RoundToInt(state.captureProgress)}%";
     }
 }
