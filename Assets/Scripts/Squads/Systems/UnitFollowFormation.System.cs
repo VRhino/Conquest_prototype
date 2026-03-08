@@ -9,7 +9,7 @@ using Unity.Collections;
 /// the squad leader.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(FormationSystem))]
+[UpdateAfter(typeof(GridFormationUpdateSystem))]
 public partial class UnitFollowFormationSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -26,7 +26,6 @@ public partial class UnitFollowFormationSystem : SystemBase
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
-        var squadDataLookup = GetComponentLookup<SquadDataComponent>(true);
         var unitStatsLookup = GetComponentLookup<UnitStatsComponent>(true);
         
         // TODO: Las unidades pueden usar EnvironmentAwarenessComponent del escuadrón 
@@ -58,12 +57,6 @@ public partial class UnitFollowFormationSystem : SystemBase
                 continue;
             }
 
-            if (!squadDataLookup.TryGetComponent(entity, out var squadData))
-            {
-                Debug.LogWarning($"[UnitFollowFormationSystem] Squad {entity.Index} no tiene SquadDataComponent");
-                continue;
-            }
-
             Entity leader = ownerLookup[entity].hero;
             if (!transformLookup.HasComponent(leader))
             {
@@ -83,24 +76,6 @@ public partial class UnitFollowFormationSystem : SystemBase
             {
                 var heroState = SystemAPI.GetComponent<HeroStateComponent>(leader);
                 heroMovingForSquad = heroState.State == HeroState.Moving;
-            }
-
-            // Get current formation gridPositions from squad data
-            ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
-            if (squadData.formationLibrary.IsCreated)
-            {
-                ref var formations = ref squadData.formationLibrary.Value.formations;
-                FormationType currentFormation = squadState.currentFormation;
-                
-                // Find the current formation in the library
-                for (int f = 0; f < formations.Length; f++)
-                {
-                    if (formations[f].formationType == currentFormation)
-                    {
-                        gridPositions = ref formations[f].gridPositions;
-                        break;
-                    }
-                }
             }
 
             // Determinar el comportamiento según el estado del escuadrón
@@ -144,21 +119,11 @@ public partial class UnitFollowFormationSystem : SystemBase
 
                 // Get unit's grid slot
                 var gridSlot = slotLookup[unit];
-                
-                // Use unified position calculator for consistency
-                float3 desired = float3.zero;
-                FormationPositionCalculator.CalculateDesiredPosition(
-                    unit,
-                    ref gridPositions,
-                    i, // unitIndex
-                    squadState,
-                    SystemAPI.HasComponent<SquadHoldPositionComponent>(entity) ? SystemAPI.GetComponent<SquadHoldPositionComponent>(entity) : (SquadHoldPositionComponent?)null,
-                    heroPosition,
-                    out int2 originalGridPos,
-                    out float3 gridOffset,
-                    out float3 worldPos,
-                    true);
-                desired = worldPos;
+
+                // Read target position already calculated by GridFormationUpdateSystem
+                if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                    continue;
+                float3 desired = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
 
                 float3 current = transformLookup[unit].Position;
                 float3 diff = desired - current;

@@ -4,6 +4,7 @@ using Unity.Transforms;
 using UnityEngine;
 
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(GridFormationUpdateSystem))]
 public partial struct UnitFormationStateSystem : ISystem
 {
     public void OnUpdate(ref SystemState state)
@@ -17,31 +18,10 @@ public partial struct UnitFormationStateSystem : ISystem
             if (!SystemAPI.HasComponent<SquadOwnerComponent>(squadEntity))
                 continue;
 
-            // Get squad data and state to access formation library
-            if (!SystemAPI.HasComponent<SquadDataComponent>(squadEntity) || 
-                !SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
+            if (!SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
                 continue;
 
-            var squadData = SystemAPI.GetComponent<SquadDataComponent>(squadEntity);
             var squadState = SystemAPI.GetComponent<SquadStateComponent>(squadEntity);
-
-            // Get current formation gridPositions from squad data
-            ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
-            if (squadData.formationLibrary.IsCreated)
-            {
-                ref var formations = ref squadData.formationLibrary.Value.formations;
-                FormationType currentFormation = squadState.currentFormation;
-                
-                // Find the current formation in the library
-                for (int f = 0; f < formations.Length; f++)
-                {
-                    if (formations[f].formationType == currentFormation)
-                    {
-                        gridPositions = ref formations[f].gridPositions;
-                        break;
-                    }
-                }
-            }
 
             Entity hero = SystemAPI.GetComponent<SquadOwnerComponent>(squadEntity).hero;
             if (!SystemAPI.HasComponent<LocalTransform>(hero) || !SystemAPI.HasComponent<HeroStateComponent>(hero))
@@ -53,12 +33,9 @@ public partial struct UnitFormationStateSystem : ISystem
             // Determinar si el escuadrón está en modo Hold Position
             bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
 
-            // Calculate squad center (average position of all units)
-            float3 squadCenter = float3.zero;
             var localTransformLookup = SystemAPI.GetComponentLookup<LocalTransform>(true);
-            Entity closestUnit;
-            float closestDistSq = FormationPositionCalculator.GetClosestUnitDistanceSq(units, localTransformLookup, heroPos, out closestUnit);
-            bool heroWithinRadius = closestDistSq <= formationRadiusSq;
+            float farestDistSq = FormationPositionCalculator.GetFarestUnitDistanceSq(units, localTransformLookup, heroPos, out Entity farestUnit);
+            bool heroWithinRadius = farestDistSq <= formationRadiusSq;
             
             for (int i = 0; i < units.Length; i++)
             {
@@ -68,24 +45,11 @@ public partial struct UnitFormationStateSystem : ISystem
                     !SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
                     continue;
 
-                var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                // Use unified position calculator with current formation
-                float3 desiredSlotPos = float3.zero;
-                
-                FormationPositionCalculator.CalculateDesiredPosition(
-                    unit,
-                    ref gridPositions,
-                    i, // unitIndex
-                    squadState,
-                    SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity) ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : (SquadHoldPositionComponent?)null,
-                    heroPos,
-                    out int2 originalGridPos,
-                    out float3 gridOffset,
-                    out float3 worldPos,
-                    true);
-                desiredSlotPos = worldPos;
+                if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                    continue;
+                float3 desiredSlotPos = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
                 
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                 
@@ -184,8 +148,6 @@ public partial struct UnitFormationStateSystem : ISystem
                                     // Si el héroe se está moviendo, la unidad sigue al héroe
                                     stateComp.State = UnitFormationState.Moving;
                                 }
-                                stateComp.State = UnitFormationState.Formed;
-                                stateComp.DelayTimer = 0f;
                             }
                             // Note: If hero leaves radius while moving, unit continues moving
                             // and will transition to Waiting only after reaching slot (if hero still out)

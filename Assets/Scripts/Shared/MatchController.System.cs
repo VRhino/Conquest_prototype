@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Server-side system that controls the flow of a match.
@@ -60,6 +61,11 @@ public partial class MatchControllerSystem : SystemBase
             case MatchState.InBattle:
                 if (state.ValueRO.victoryConditionMet)
                     Transition(ref state, MatchState.EndMatch, ref ecb);
+                break;
+
+            case MatchState.EndMatch:
+                Enabled = false;
+                SceneManager.LoadScene("PostBattleScene");
                 break;
         }
 
