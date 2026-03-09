@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace UI.HeroDetail
 {
@@ -152,35 +153,38 @@ namespace UI.HeroDetail
         /// </summary>
         private void HandleMouseInput()
         {
-            if (_heroTransform == null)
+            if (_heroTransform == null || Mouse.current == null)
                 return;
-            
+
+            var mouse = Mouse.current;
+
             // Detección de clic/drag sobre la cámara (esto se manejará desde el UI)
-            if (_enableMouseRotation && Input.GetMouseButtonDown(0))
+            if (_enableMouseRotation && mouse.leftButton.wasPressedThisFrame)
             {
                 _isDragging = true;
-                _lastMousePosition = Input.mousePosition;
+                _lastMousePosition = (Vector3)mouse.position.ReadValue();
             }
-            
-            if (_isDragging && Input.GetMouseButton(0))
+
+            if (_isDragging && mouse.leftButton.isPressed)
             {
                 // Calcular delta del mouse
-                Vector3 mouseDelta = Input.mousePosition - _lastMousePosition;
+                Vector3 currentMousePosition = (Vector3)mouse.position.ReadValue();
+                Vector3 mouseDelta = currentMousePosition - _lastMousePosition;
                 float mouseX = mouseDelta.x * _rotationSpeed * Time.deltaTime;
-                
+
                 // Rotar el offset alrededor del héroe
                 _currentOffset = Quaternion.AngleAxis(mouseX, Vector3.up) * _currentOffset;
-                
-                _lastMousePosition = Input.mousePosition;
+
+                _lastMousePosition = currentMousePosition;
             }
-            
-            if (Input.GetMouseButtonUp(0))
+
+            if (mouse.leftButton.wasReleasedThisFrame)
             {
                 _isDragging = false;
             }
-            
+
             // Zoom con scroll del mouse
-            float scrollWheel = Input.GetAxis("Mouse ScrollWheel");
+            float scrollWheel = mouse.scroll.ReadValue().y / 120f;
             if (Mathf.Abs(scrollWheel) > 0.01f)
             {
                 float currentDistance = _currentOffset.magnitude;

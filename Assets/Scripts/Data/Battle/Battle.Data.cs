@@ -17,6 +17,7 @@ public class BattleData
     public List<BattleHeroData> defenders = new();
     public string battleID = "";
     public int PreparationTimer = 60; //seconds
+    public int BattleTimer = 900; // seconds (15 min default base timer)
 
 
     public Side playerSide(string heroName)

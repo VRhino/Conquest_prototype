@@ -115,6 +115,7 @@ public partial class CaptureZoneTriggerSystem : SystemBase
                     {
                         var match = SystemAPI.GetComponentRW<MatchStateComponent>(matchEntity);
                         match.ValueRW.victoryConditionMet = true;
+                        match.ValueRW.winnerTeam = progress.ValueRO.capturingTeam;
                     }
                 }
             }

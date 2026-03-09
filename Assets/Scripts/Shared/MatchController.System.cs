@@ -21,7 +21,7 @@ public partial class MatchControllerSystem : SystemBase
             Entity entity = em.CreateEntity(typeof(MatchStateComponent));
             em.SetComponentData(entity, new MatchStateComponent
             {
-                currentState = MatchState.WaitingForPlayers,
+                currentState = MatchState.InBattle,
                 stateTimer = 0f,
                 playersReady = 0,
                 maxPlayers = 2,
@@ -65,6 +65,7 @@ public partial class MatchControllerSystem : SystemBase
 
             case MatchState.EndMatch:
                 Enabled = false;
+                BattleTransitionData.Instance.WinnerTeam = state.ValueRO.winnerTeam;
                 SceneManager.LoadScene("PostBattleScene");
                 break;
         }

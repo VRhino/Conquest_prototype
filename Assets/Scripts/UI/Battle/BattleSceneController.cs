@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using Unity.Collections;
 using Unity.Entities;
 using UnityEngine;
@@ -12,6 +13,12 @@ public class BattleSceneController : MonoBehaviour
     #region Private Fields
 
     private BattleData _currentBattleData;
+
+    [SerializeField] private TextMeshProUGUI _battleTimerDisplay;
+
+    private TimerController _timerController;
+
+    private const int MaxBattleDurationSeconds = 1800; // 30 min cap
 
     #endregion
 
@@ -60,10 +67,27 @@ public class BattleSceneController : MonoBehaviour
         // Sincronizar info de batalla hacia ECS antes de que HeroSpawnSystem actúe
         SyncBattleDataToECS();
 
-        // [TODO] Aquí se inicializarán los sistemas de batalla:
-        // - Carga del mapa de batalla
-        // - HUD de combate
-        // - Timer de batalla
+        // Inicializar timer de batalla
+        InitializeBattleTimer();
+    }
+
+    /// <summary>
+    /// Configura e inicia el timer de batalla.
+    /// </summary>
+    private void InitializeBattleTimer()
+    {
+        int battleSeconds = _currentBattleData.BattleTimer;
+        if (battleSeconds <= 0 && _currentBattleData.mapData != null)
+            battleSeconds = _currentBattleData.mapData.battleDuration;
+        if (battleSeconds <= 0)
+            battleSeconds = 900; // fallback 15 min
+
+        _timerController = gameObject.AddComponent<TimerController>();
+        _timerController.Initialize(battleSeconds, _battleTimerDisplay);
+        _timerController.OnTimerFinished += OnBattleTimerExpired;
+        _timerController.SetCountDownSecs(battleSeconds);
+
+        Debug.Log($"[BattleSceneController] Battle timer iniciado: {battleSeconds}s");
     }
 
     /// <summary>
@@ -171,6 +195,54 @@ public class BattleSceneController : MonoBehaviour
     /// Acceso a los datos de batalla actuales.
     /// </summary>
     public BattleData CurrentBattleData => _currentBattleData;
+
+    /// <summary>
+    /// Extiende el timer de batalla por la cantidad de segundos indicada, sin superar el máximo de 30 minutos.
+    /// </summary>
+    public void ExtendTimer(int seconds)
+    {
+        if (_timerController == null || seconds <= 0) return;
+
+        // Calcular cuánto tiempo queda y cuánto podemos agregar sin superar el cap
+        int currentRemaining = _timerController.SecondsRemaining;
+        int maxExtension = MaxBattleDurationSeconds - currentRemaining;
+        int actualExtension = Mathf.Min(seconds, maxExtension);
+
+        if (actualExtension <= 0)
+        {
+            Debug.Log("[BattleSceneController] Timer ya está en el máximo (30 min), no se extiende.");
+            return;
+        }
+
+        _timerController.AddSeconds(actualExtension);
+        Debug.Log($"[BattleSceneController] Timer extendido +{actualExtension}s (restante: {currentRemaining + actualExtension}s)");
+    }
+
+    #endregion
+
+    #region Timer Events
+
+    /// <summary>
+    /// Se invoca cuando el timer de batalla llega a cero. Victoria para los defensores.
+    /// </summary>
+    private void OnBattleTimerExpired()
+    {
+        Debug.Log("[BattleSceneController] Timer de batalla expirado — victoria de defensores.");
+
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world == null) return;
+
+        var em = world.EntityManager;
+        var query = em.CreateEntityQuery(typeof(MatchStateComponent));
+        if (!query.IsEmpty)
+        {
+            var entity = query.GetSingletonEntity();
+            var match = em.GetComponentData<MatchStateComponent>(entity);
+            match.victoryConditionMet = true;
+            match.winnerTeam = 2; // Defenders win on timer expiry
+            em.SetComponentData(entity, match);
+        }
+    }
 
     #endregion
 }

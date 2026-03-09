@@ -88,6 +88,7 @@ public static class BattleDebugCreator
 
         //Create mock map
         battleData.mapData = MapService.GetMapById("default");
+        battleData.BattleTimer = battleData.mapData != null ? battleData.mapData.battleDuration : 900;
         Debug.Log($"BattleDebugCreator: Created test battle with map '{battleData.mapData.name}'");
         return battleData;
     }

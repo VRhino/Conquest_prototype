@@ -2,6 +2,7 @@
 using System.Text;
 using Unity.Entities;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Profiling;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -54,7 +55,7 @@ public class PerformanceTrackerSystem : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F10))
+        if (Keyboard.current != null && Keyboard.current.f10Key.wasPressedThisFrame)
             Toggle();
 
         _timer += Time.unscaledDeltaTime;

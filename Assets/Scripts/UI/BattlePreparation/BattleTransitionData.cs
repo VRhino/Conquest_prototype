@@ -28,6 +28,12 @@ public class BattleTransitionData : ScriptableObject
 
     private BattleData _battleData;
 
+    /// <summary>
+    /// Team that won the match. 0 = undecided, 1 = attackers, 2 = defenders.
+    /// Set by MatchControllerSystem before loading PostBattleScene.
+    /// </summary>
+    public int WinnerTeam { get; set; }
+
     #endregion
 
     #region Public API

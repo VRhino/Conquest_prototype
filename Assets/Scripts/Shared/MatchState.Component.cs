@@ -20,4 +20,7 @@ public struct MatchStateComponent : IComponentData
 
     /// <summary>Flag set when victory conditions are achieved.</summary>
     public bool victoryConditionMet;
+
+    /// <summary>Team that won the match. 0 = undecided, 1 = attackers, 2 = defenders.</summary>
+    public int winnerTeam;
 }

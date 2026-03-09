@@ -55,6 +55,9 @@ public class HUDController : MonoBehaviour
     [SerializeField] TMP_Text _unitCountText;
     [SerializeField] Image _formationIcon;
 
+    [Header("Battle Timer")]
+    [SerializeField] TMP_Text _battleTimerText;
+
     [Header("Capture Bar")]
     [SerializeField] GameObject _captureBarSection;
     [SerializeField] Image _captureProgressFill;

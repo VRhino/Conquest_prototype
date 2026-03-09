@@ -96,6 +96,23 @@ public class TimerController : MonoBehaviour
     }
 
     /// <summary>
+    /// Tiempo restante en segundos.
+    /// </summary>
+    public int SecondsRemaining => secondsRemaining;
+
+    /// <summary>
+    /// Agrega segundos al timer (para extensiones de batalla).
+    /// </summary>
+    public void AddSeconds(int seconds)
+    {
+        if (_timerDisplay == null || seconds <= 0) return;
+
+        secondsRemaining += seconds;
+        UpdateTimerDisplay();
+        OnTimerUpdated?.Invoke(secondsRemaining);
+    }
+
+    /// <summary>
     /// Reduce el tiempo del timer.
     /// </summary>
     /// <param name="seconds">Segundos a reducir</param>
