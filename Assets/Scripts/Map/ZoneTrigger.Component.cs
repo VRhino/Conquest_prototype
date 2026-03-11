@@ -26,4 +26,7 @@ public struct ZoneTriggerComponent : IComponentData
 
     /// <summary>Marks this zone as the final capture point.</summary>
     public bool isFinal;
+
+    /// <summary>Label character for UI display (ASCII, e.g. (byte)'A').</summary>
+    public byte pointLabel;
 }

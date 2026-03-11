@@ -15,8 +15,10 @@ public class BattleSceneController : MonoBehaviour
     private BattleData _currentBattleData;
 
     [SerializeField] private TextMeshProUGUI _battleTimerDisplay;
+    [SerializeField] private GameObject _loadingScreen;
 
     private TimerController _timerController;
+    private bool _loadingScreenDismissed;
 
     private const int MaxBattleDurationSeconds = 1800; // 30 min cap
 
@@ -51,6 +53,24 @@ public class BattleSceneController : MonoBehaviour
                 Debug.LogError("[BattleSceneController] No hay BattleData disponible y no hay TestEnvironmentInitializer");
             }
         }
+    }
+
+    void Update()
+    {
+        if (_loadingScreenDismissed || _loadingScreen == null) return;
+
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world == null || !world.IsCreated) return;
+
+        var em = world.EntityManager;
+        var query = em.CreateEntityQuery(typeof(IsLocalPlayer), typeof(HeroVisualInstance));
+        if (!query.IsEmpty)
+        {
+            _loadingScreen.SetActive(false);
+            _loadingScreenDismissed = true;
+            Debug.Log("[BattleSceneController] Hero visual ready — loading screen dismissed.");
+        }
+        query.Dispose();
     }
 
     #endregion

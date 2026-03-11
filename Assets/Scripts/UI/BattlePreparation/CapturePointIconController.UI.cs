@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Controlador visual para puntos de captura que muestra información de control territorial.
@@ -14,6 +15,10 @@ public class CapturePointIconControllerUI : MonoBehaviour
     [SerializeField] private Image backgroundImage;
     [SerializeField] private Image border1Image;
     [SerializeField] private Image border2Image;
+
+    [Header("Label & Final Icon")]
+    [SerializeField] private TMP_Text _labelText;
+    [SerializeField] private Image _finalIcon;
     
     // Colores predefinidos para Background
     private static readonly Color AlliedBackgroundColor = new Color(0.565f, 0.631f, 0.745f, 0.718f); // #90A1BE con alpha 183
@@ -59,6 +64,21 @@ public class CapturePointIconControllerUI : MonoBehaviour
         Debug.Log($"[CapturePointIconControllerUI] {gameObject.name} initialized as {status} (Player: {playerSide}, Point: {side})");
     }
     
+    /// <summary>
+    /// Sets the label text and toggles the final icon.
+    /// For final capture points the label is hidden and the special icon is shown.
+    /// </summary>
+    public void SetLabel(string label, bool isFinal)
+    {
+        if (_labelText != null)
+        {
+            _labelText.text = isFinal ? "" : label;
+            _labelText.gameObject.SetActive(!isFinal);
+        }
+        if (_finalIcon != null)
+            _finalIcon.gameObject.SetActive(isFinal);
+    }
+
     /// <summary>
     /// Cambia manualmente los colores del capture point.
     /// </summary>

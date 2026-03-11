@@ -17,6 +17,7 @@ public class CapturePointSetup : MonoBehaviour
     [Header("Capture Point Options")]
     [SerializeField] bool _isLocked;
     [SerializeField] bool _isFinal;
+    [SerializeField] string _pointLabel = "A";
     [SerializeField] CapturePointSetup _requiredCapturePoint;
 
     [Header("Runtime Info (Play Mode)")]
@@ -55,7 +56,8 @@ public class CapturePointSetup : MonoBehaviour
             isActive = true,
             radius = _radius,
             isLocked = _isLocked,
-            isFinal = _isFinal
+            isFinal = _isFinal,
+            pointLabel = string.IsNullOrEmpty(_pointLabel) ? (byte)0 : (byte)_pointLabel[0]
         });
 
         em.AddComponentData(ZoneEntity, new CapturePointProgressComponent

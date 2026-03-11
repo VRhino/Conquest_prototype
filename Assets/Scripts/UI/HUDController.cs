@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.UI;
@@ -63,6 +64,12 @@ public class HUDController : MonoBehaviour
     [SerializeField] Image _captureProgressFill;
     [SerializeField] TMP_Text _captureProgressText;
 
+    [Header("Capture Point Icons")]
+    [SerializeField] Transform _capturePointIconsContainer;
+    [SerializeField] GameObject _capturePointIconPrefab;
+
+    private Dictionary<int, GameObject> _capturePointIcons = new();
+
     void Update()
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
@@ -70,6 +77,7 @@ public class HUDController : MonoBehaviour
         UpdateHeroSection(em);
         UpdateSquadSection(em);
         UpdateCaptureBar(em);
+        UpdateCapturePointIcons(em);
     }
 
     void UpdateHeroSection(EntityManager em)
@@ -150,5 +158,57 @@ public class HUDController : MonoBehaviour
 
         if (_captureProgressText != null)
             _captureProgressText.text = $"{Mathf.RoundToInt(state.captureProgress)}%";
+    }
+
+    void UpdateCapturePointIcons(EntityManager em)
+    {
+        if (_capturePointIconsContainer == null || _capturePointIconPrefab == null)
+            return;
+
+        var query = em.CreateEntityQuery(
+            ComponentType.ReadOnly<CapturePointTag>(),
+            ComponentType.ReadOnly<ZoneTriggerComponent>());
+
+        // Build set of zoneIds that should be visible along with label data
+        var visibleZones = new Dictionary<int, (byte label, bool isFinal)>();
+        var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        for (int i = 0; i < entities.Length; i++)
+        {
+            var zone = em.GetComponentData<ZoneTriggerComponent>(entities[i]);
+            if (zone.isActive && !zone.isLocked)
+                visibleZones[zone.zoneId] = (zone.pointLabel, zone.isFinal);
+        }
+        entities.Dispose();
+
+        // Remove icons that should no longer be visible
+        var toRemove = new List<int>();
+        foreach (var kvp in _capturePointIcons)
+        {
+            if (!visibleZones.ContainsKey(kvp.Key))
+            {
+                Destroy(kvp.Value);
+                toRemove.Add(kvp.Key);
+            }
+        }
+        foreach (var id in toRemove)
+            _capturePointIcons.Remove(id);
+
+        // Add icons for newly visible zones
+        foreach (var kvp in visibleZones)
+        {
+            if (!_capturePointIcons.ContainsKey(kvp.Key))
+            {
+                var icon = Instantiate(_capturePointIconPrefab, _capturePointIconsContainer);
+                var controller = icon.GetComponent<CapturePointIconControllerUI>();
+                if (controller != null)
+                {
+                    controller.SetColors(false); // enemy-owned by default
+                    var (label, isFinal) = kvp.Value;
+                    string labelStr = label > 0 ? ((char)label).ToString() : "";
+                    controller.SetLabel(labelStr, isFinal);
+                }
+                _capturePointIcons[kvp.Key] = icon;
+            }
+        }
     }
 }
