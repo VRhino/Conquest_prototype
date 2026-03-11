@@ -188,6 +188,11 @@ public partial class SquadSpawningSystem : SystemBase
                     penetracionPerforante = data.penetracionPerforante,
                     penetracionContundente = data.penetracionContundente
                 });
+                ecb.AddComponent(unit, new HealthComponent
+                {
+                    maxHealth = data.vidaBase,
+                    currentHealth = data.vidaBase
+                });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
             

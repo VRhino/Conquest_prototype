@@ -52,9 +52,8 @@ public class HUDController : MonoBehaviour
     [Header("Ability Slots")]
     [SerializeField] AbilitySlot[] _abilitySlots = new AbilitySlot[4];
 
-    [Header("Squad Elements")]
-    [SerializeField] TMP_Text _unitCountText;
-    [SerializeField] Image _formationIcon;
+    [Header("Squad Section")]
+    [SerializeField] SquadSectionController _squadSectionController;
 
     [Header("Battle Timer")]
     [SerializeField] TMP_Text _battleTimerText;
@@ -69,13 +68,15 @@ public class HUDController : MonoBehaviour
     [SerializeField] GameObject _capturePointIconPrefab;
 
     private Dictionary<int, GameObject> _capturePointIcons = new();
+    private bool _squadInitialized;
 
     void Update()
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
         UpdateHeroSection(em);
-        UpdateSquadSection(em);
+        InitializeSquadIfNeeded(em);
+        _squadSectionController?.UpdateFromECS(em);
         UpdateCaptureBar(em);
         UpdateCapturePointIcons(em);
     }
@@ -108,32 +109,22 @@ public class HUDController : MonoBehaviour
             slot?.UpdateSlot(em);
     }
 
-    void UpdateSquadSection(EntityManager em)
+    void InitializeSquadIfNeeded(EntityManager em)
     {
-        if (_squadSection != null && !_squadSection.activeSelf)
-            return;
+        if (_squadInitialized || _squadSectionController == null) return;
 
-        var query = em.CreateEntityQuery(
-            ComponentType.ReadOnly<SquadStatusComponent>(),
-            ComponentType.ReadOnly<IsLocalPlayer>());
+        var query = em.CreateEntityQuery(typeof(DataContainerComponent));
+        if (query.IsEmptyIgnoreFilter) return;
 
-        if (query.IsEmptyIgnoreFilter)
-            return;
+        var data = em.GetComponentData<DataContainerComponent>(query.GetSingletonEntity());
+        string squadId = data.selectedSquadBaseID.ToString();
+        if (string.IsNullOrEmpty(squadId)) return;
 
-        Entity squad = query.GetSingletonEntity();
-        var status = em.GetComponentData<SquadStatusComponent>(squad);
+        var squadData = SquadDataService.GetSquadById(squadId);
+        if (squadData == null) return;
 
-        if (_unitCountText != null)
-            _unitCountText.text = $"{status.aliveUnits}/{status.totalUnits}";
-
-        if (_formationIcon != null)
-        {
-            // Placeholder: reduce fill while formation is on cooldown
-            if (status.formationCooldown > 0f)
-                _formationIcon.fillAmount = 1f - status.formationCooldown;
-            else
-                _formationIcon.fillAmount = 1f;
-        }
+        _squadSectionController.Initialize(squadData);
+        _squadInitialized = true;
     }
 
     void UpdateCaptureBar(EntityManager em)
