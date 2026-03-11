@@ -1,5 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
@@ -22,11 +23,13 @@ public partial class SquadOrderSystem : SystemBase
     protected override void OnUpdate()
     {
         var ecb = _ecbSystem.CreateCommandBuffer().AsParallelWriter();
-        
-        foreach (var (input, state, formation, entity) in SystemAPI
+        var transformLookup = GetComponentLookup<LocalTransform>(true);
+
+        foreach (var (input, state, formation, owner, entity) in SystemAPI
                      .Query<RefRW<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
-                            RefRW<FormationComponent>>()
+                            RefRW<FormationComponent>,
+                            RefRO<SquadOwnerComponent>>()
                      .WithEntityAccess())
         {
             if (!input.ValueRO.hasNewOrder)
@@ -41,11 +44,20 @@ public partial class SquadOrderSystem : SystemBase
             // Handle Hold Position order specifically
             if (input.ValueRO.orderType == SquadOrderType.HoldPosition)
             {
-                // Create or update SquadHoldPositionComponent with mouse position
+                // Capture hero's current facing rotation for the formation
+                quaternion heroRotation = quaternion.identity;
+                Entity heroEntity = owner.ValueRO.hero;
+                if (transformLookup.HasComponent(heroEntity))
+                {
+                    heroRotation = transformLookup[heroEntity].Rotation;
+                }
+
+                // Create or update SquadHoldPositionComponent with mouse position and hero rotation
                 if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                 {
                     var holdComponent = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(entity);
                     holdComponent.ValueRW.holdCenter = input.ValueRO.holdPosition;
+                    holdComponent.ValueRW.holdRotation = heroRotation;
                     holdComponent.ValueRW.originalFormation = input.ValueRO.desiredFormation;
                 }
                 else
@@ -53,6 +65,7 @@ public partial class SquadOrderSystem : SystemBase
                     ecb.AddComponent(entity.Index, entity, new SquadHoldPositionComponent
                     {
                         holdCenter = input.ValueRO.holdPosition,
+                        holdRotation = heroRotation,
                         originalFormation = input.ValueRO.desiredFormation
                     });
                 }

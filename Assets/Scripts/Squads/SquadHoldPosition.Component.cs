@@ -13,7 +13,13 @@ public struct SquadHoldPositionComponent : IComponentData
     /// This is set when the Hold Position order is given.
     /// </summary>
     public float3 holdCenter;
-    
+
+    /// <summary>
+    /// The hero's facing rotation when Hold Position was ordered.
+    /// Used to rotate the formation so units face the same direction.
+    /// </summary>
+    public quaternion holdRotation;
+
     /// <summary>
     /// The formation type that was active when Hold Position was ordered.
     /// This prevents formation changes from affecting the held position.

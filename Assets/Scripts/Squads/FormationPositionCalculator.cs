@@ -47,7 +47,8 @@ public static class FormationPositionCalculator
         out int2 originalGridPos,
         out float3 gridOffset,
         out float3 worldPos,
-        bool adjustForTerrain
+        bool adjustForTerrain,
+        quaternion formationRotation = default
         )
     {
         float3 squadCenter = GetSquadCenter(squadState, holdComponent, heroPos);
@@ -80,6 +81,13 @@ public static class FormationPositionCalculator
 
         //convierto la posicion central a world offset
         gridOffset = FormationGridSystem.GridToRelativeWorld(centeredGridPos);
+
+        // Rotate grid offset if a valid non-identity rotation is provided
+        // default(quaternion) = (0,0,0,0) which is invalid, so check w != 0
+        if (formationRotation.value.w != 0f && !formationRotation.Equals(quaternion.identity))
+        {
+            gridOffset = math.mul(formationRotation, gridOffset);
+        }
 
         float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
 

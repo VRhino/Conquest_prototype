@@ -37,8 +37,12 @@ public partial class SquadSpawningSystem : SystemBase
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
             
-            // Configurar posición inicial del squad
-            ecb.AddComponent(squad, LocalTransform.FromPosition(heroTransform.ValueRO.Position));
+            // Configurar posición inicial del squad offset delante del héroe
+            quaternion heroRotation = heroTransform.ValueRO.Rotation;
+            float3 heroForward = math.forward(heroRotation);
+            const float SQUAD_SPAWN_OFFSET = 5f;
+            float3 formationAnchor = heroTransform.ValueRO.Position + heroForward * SQUAD_SPAWN_OFFSET;
+            ecb.AddComponent(squad, LocalTransform.FromPosition(formationAnchor));
             
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
             // Squad created successfully
@@ -114,13 +118,19 @@ public partial class SquadSpawningSystem : SystemBase
                     i, // unitIndex
                     new SquadStateComponent { currentFormation = firstFormationType },
                     null,
-                    spawn.ValueRO.spawnPosition,
+                    formationAnchor,
                     out int2 originalGridPos,
                     out float3 gridOffset,
                     out float3 worldPos,
-                    true);
+                    true,
+                    heroRotation);
 
-                ecb.AddComponent(unit, LocalTransform.FromPosition(worldPos));
+                ecb.AddComponent(unit, new LocalTransform
+                {
+                    Position = worldPos,
+                    Rotation = heroRotation,
+                    Scale = 1f
+                });
                 
                 // Agregar referencia visual para la unidad
                 ecb.AddComponent(unit, new UnitVisualReference

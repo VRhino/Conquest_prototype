@@ -106,6 +106,13 @@ public partial class DestinationMarkerSystem : SystemBase
                 
                 if (gridPositions.Length > 0 && i < gridPositions.Length)
                 {
+                    // Use hold rotation when in HoldingPosition, otherwise no rotation (follow)
+                    quaternion formationRotation = default;
+                    if (isHoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+                    {
+                        formationRotation = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity).holdRotation;
+                    }
+
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,
                         ref gridPositions,
@@ -116,7 +123,8 @@ public partial class DestinationMarkerSystem : SystemBase
                         out int2 originalGridPos,
                         out float3 gridOffset,
                         out float3 worldPos,
-                        true);
+                        true,
+                        formationRotation);
                     desiredPosition = worldPos;
                 }
                 else
@@ -129,7 +137,8 @@ public partial class DestinationMarkerSystem : SystemBase
                 if (isHoldingPosition && SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
                 {
                     var unitState = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
-                    shouldShowMarker = unitState.State == UnitFormationState.Moving;
+                    shouldShowMarker = unitState.State == UnitFormationState.Moving
+                                    || unitState.State == UnitFormationState.Waiting;
                 }
                 
                 // Manage marker for this unit

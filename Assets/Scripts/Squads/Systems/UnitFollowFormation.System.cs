@@ -189,7 +189,27 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
                 else
                 {
-                    
+                    // Unidad no se mueve — si está en HoldPosition y Formed, orientarse según holdRotation
+                    if (isHoldingPosition && stateComp.State == UnitFormationState.Formed
+                        && SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
+                    {
+                        var holdComp = SystemAPI.GetComponent<SquadHoldPositionComponent>(entity);
+                        var t = transformLookup[unit];
+
+                        float3 holdForward = math.mul(holdComp.holdRotation, math.forward());
+                        float3 horizontalDir = math.normalizesafe(new float3(holdForward.x, 0, holdForward.z));
+
+                        if (math.lengthsq(horizontalDir) > 0.01f)
+                        {
+                            quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
+                            float rotSpeed = 5f;
+                            if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
+                                rotSpeed = SystemAPI.GetComponent<UnitOrientationComponent>(unit).rotationSpeed;
+                            t.Rotation = math.slerp(t.Rotation, targetRot, dt * rotSpeed);
+                        }
+
+                        transformLookup[unit] = t;
+                    }
                 }
                 
                 // Update visual target regardless of state for UI purposes

@@ -70,6 +70,13 @@ public partial class GridFormationUpdateSystem : SystemBase
                 float3 targetPos = float3.zero;
                 if (gridPositions.Length > 0 && i < gridPositions.Length)
                 {
+                    // Use hold rotation when in HoldingPosition, otherwise no rotation (follow)
+                    quaternion formationRotation = default;
+                    if (squadState.currentState == SquadFSMState.HoldingPosition && holdComponent.HasValue)
+                    {
+                        formationRotation = holdComponent.Value.holdRotation;
+                    }
+
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,
                         ref gridPositions,
@@ -80,7 +87,8 @@ public partial class GridFormationUpdateSystem : SystemBase
                         out int2 originalGridPos,
                         out float3 gridOffset,
                         out float3 worldPos,
-                        true);
+                        true,
+                        formationRotation);
                     targetPos = worldPos;
                 }
                 else

@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -89,10 +90,11 @@ public partial class HeroSpawnSystem : SystemBase
             // Instanciación híbrida: crear solo la entidad ECS (sin visual)
             var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
+            var spawnRotation = CalculateSpawnRotation(spawnPosition, (int)dataForInstantiate.teamID);
             entityManager.SetComponentData(heroEntity, new LocalTransform
             {
                 Position = spawnPosition,
-                Rotation = Unity.Mathematics.quaternion.identity,
+                Rotation = spawnRotation,
                 Scale = 1f
             });
             Debug.Log($"[HeroSpawnSystem.cs][{heroEntity}] Set LocalTransform.Position = {spawnPosition}");
@@ -103,6 +105,7 @@ public partial class HeroSpawnSystem : SystemBase
                 var spawnComponent = entityManager.GetComponentData<HeroSpawnComponent>(heroEntity);
                 spawnComponent.hasSpawned = true;
                 spawnComponent.spawnPosition = spawnPosition;
+                spawnComponent.spawnRotation = spawnRotation;
                 spawnComponent.spawnId = dataForInstantiate.selectedSpawnID;
                 entityManager.SetComponentData(heroEntity, spawnComponent);
             }
@@ -197,8 +200,11 @@ public partial class HeroSpawnSystem : SystemBase
                     var correctedPosition = selected.position;
                     correctedPosition.y = FormationPositionCalculator.calculateTerraindHeight(correctedPosition);
 
+                    var rotation = CalculateSpawnRotation(correctedPosition, (int)team.ValueRO.value);
                     spawnData.ValueRW.spawnPosition = correctedPosition;
+                    spawnData.ValueRW.spawnRotation = rotation;
                     transform.ValueRW.Position = correctedPosition;
+                    transform.ValueRW.Rotation = rotation;
                     Debug.Log($"[HeroSpawnSystem.cs] Set LocalTransform.Position = {correctedPosition}");
                     spawnData.ValueRW.hasSpawned = true;
 
@@ -211,5 +217,36 @@ public partial class HeroSpawnSystem : SystemBase
         }
 
         spawnPoints.Dispose();
+    }
+
+    /// <summary>
+    /// Calculates a rotation facing the enemy's final capture zone so the hero
+    /// spawns looking toward the objective.
+    /// </summary>
+    private quaternion CalculateSpawnRotation(float3 spawnPos, int heroTeamId)
+    {
+        var zoneQuery = GetEntityQuery(ComponentType.ReadOnly<ZoneTriggerComponent>(), ComponentType.ReadOnly<LocalTransform>());
+        var zoneEntities = zoneQuery.ToEntityArray(Allocator.Temp);
+
+        quaternion result = quaternion.identity;
+
+        for (int i = 0; i < zoneEntities.Length; i++)
+        {
+            var zone = EntityManager.GetComponentData<ZoneTriggerComponent>(zoneEntities[i]);
+            if (zone.isFinal && zone.teamOwner != heroTeamId)
+            {
+                var zoneTransform = EntityManager.GetComponentData<LocalTransform>(zoneEntities[i]);
+                float3 direction = zoneTransform.Position - spawnPos;
+                direction.y = 0f; // XZ plane only
+                if (math.lengthsq(direction) > 0.001f)
+                {
+                    result = quaternion.LookRotationSafe(math.normalize(direction), math.up());
+                }
+                break;
+            }
+        }
+
+        zoneEntities.Dispose();
+        return result;
     }
 }
