@@ -164,6 +164,7 @@ SquadFSMState:
 - Asigna posiciones de formación cuando cambia la formación seleccionada
 - Lee `SquadDataComponent.formationLibrary` (blob asset)
 - Cooldown entre cambios de formación: **1 segundo** (`formationChangeCooldown = 1f`)
+- Lee `SquadHoldPositionComponent` si existe y lo pasa a `CalculateDesiredPosition()` para que en modo Hold Position las posiciones se calculen respecto al holdCenter
 - Llama a `FormationPositionCalculator.CalculateDesiredPosition()` para cada unidad
 - Escribe `UnitTargetPositionComponent`, `UnitGridSlotComponent`, `UnitSpacingComponent`
 
@@ -198,7 +199,7 @@ FormationLibraryBlob
 | `GetSquadCenter()` | Retorna `holdCenter` en Hold Position, sino `heroPos` |
 | `CalculateDesiredPosition()` | Convierte posición de grilla a posición world. Centra la grilla, aplica `GridToRelativeWorld()`, ajusta altura de terreno |
 | `IsUnitInSlot()` | Check de distancia entre unidad y slot deseado |
-| `GetFarestUnitDistanceSq()` | Distancia de la unidad más lejana (para verificar radio de 5m) |
+| `GetFarestUnitDistanceSq()` | Distancia de la unidad más lejana (para verificar radio de 10m) |
 | `GetClosestUnitDistanceSq()` | Distancia de la unidad más cercana |
 
 ---
@@ -230,14 +231,15 @@ public struct UnitFormationStateComponent : IComponentData
 
 | Nombre | Valor | Uso |
 |--------|-------|-----|
-| `formationRadiusSq` | `25f` (5m²) | Radio para considerar que el héroe está "cerca" |
+| `formationRadiusSq` | `100f` (10m²) | Radio para considerar que el héroe está "cerca" (soporta formaciones de hasta 20 unidades) |
 | `slotThresholdSq` | `0.04f` (~0.2m²) | Distancia para considerar unidad "en slot" |
 | `holdPositionThresholdSq` | `1.0f` (1m²) | Distancia para detectar drift en Hold Position |
 
 ### Transiciones — Modo Follow Hero
 
 ```
-Formed → Waiting:  El héroe sale del radio de 5m (usa GetFarestUnitDistanceSq)
+Formed → Waiting:  El héroe sale del radio de 10m (usa GetFarestUnitDistanceSq)
+                   O la unidad ya no está cerca de su slot asignado (detecta cambios de formación)
                    Delay aleatorio: 0.5–1.5s
 
 Waiting → Moving:  El delay expira (DelayTimer >= DelayDuration)

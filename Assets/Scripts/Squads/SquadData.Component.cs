@@ -7,34 +7,34 @@ using Unity.Mathematics;
 /// </summary>
 public struct SquadDataComponent : IComponentData
 {
-    public float vidaBase;
-    public float velocidadBase;
-    public float masa;
-    public float peso;
+    public float baseHealth;
+    public float baseSpeed;
+    public float mass;
+    public float weight;
     /// <summary>Classification of squad units.</summary>
     public SquadType squadType;
-    public float bloqueo;
+    public float block;
 
-    public float defensaCortante;
-    public float defensaPerforante;
-    public float defensaContundente;
+    public float slashingDefense;
+    public float piercingDefense;
+    public float bluntDefense;
 
-    public float danoCortante;
-    public float danoPerforante;
-    public float danoContundente;
+    public float slashingDamage;
+    public float piercingDamage;
+    public float bluntDamage;
 
-    public float penetracionCortante;
-    public float penetracionPerforante;
-    public float penetracionContundente;
+    public float slashingPenetration;
+    public float piercingPenetration;
+    public float bluntPenetration;
 
-    public bool esUnidadADistancia;
-    public float alcance;
-    public float precision;
-    public float cadenciaFuego;
-    public float velocidadRecarga;
-    public int municionTotal;
+    public bool isRangedUnit;
+    public float range;
+    public float accuracy;
+    public float fireRate;
+    public float reloadSpeed;
+    public int ammoCapacity;
 
-    public int liderazgoCost;
+    public int leadershipCost;
     public BehaviorProfile behaviorProfile;
 
     /// <summary>Progression curves sampled per level.</summary>
@@ -47,7 +47,7 @@ public struct SquadDataComponent : IComponentData
     public Entity unitPrefab;
 
     public int unitCount;
-    /// <summary>Tamaño de la grid de formación (celdas en X, celdas en Y)</summary>
+    /// <summary>Formation grid size (cells in X, cells in Y)</summary>
     public int2 GridSize;
 }
 
@@ -74,5 +74,4 @@ public struct SquadDataIDComponent : IComponentData
 {
     public FixedString64Bytes id;
 }
-
 

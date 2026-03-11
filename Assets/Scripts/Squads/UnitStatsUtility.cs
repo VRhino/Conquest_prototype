@@ -3,19 +3,14 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 /// <summary>
-/// Utilidad centralizada para aplicar escalado de stats a unidades de escuadrón.
-/// Evita la duplicación de lógica entre SquadProgressionSystem y UnitStatScalingSystem.
+/// Centralized utility for applying scaled stats to squad units.
+/// Avoids logic duplication between SquadProgressionSystem and UnitStatScalingSystem.
 /// </summary>
 public static class UnitStatsUtility
 {
     /// <summary>
-    /// Aplica stats escalados por nivel a todas las unidades de un escuadrón.
+    /// Applies level-scaled stats to all units in a squad.
     /// </summary>
-    /// <param name="squadEntity">Entidad del escuadrón</param>
-    /// <param name="data">Datos base del escuadrón</param>
-    /// <param name="level">Nivel actual del escuadrón</param>
-    /// <param name="entityManager">EntityManager para acceso a componentes</param>
-    /// <param name="unitBufferLookup">Lookup para buffers de unidades</param>
     public static void ApplyStatsToSquad(
         Entity squadEntity,
         SquadDataComponent data,
@@ -26,83 +21,76 @@ public static class UnitStatsUtility
         if (!unitBufferLookup.HasBuffer(squadEntity))
             return;
 
-        // Calcular multiplicadores basados en nivel
-        int index = math.clamp(level - 1, 0, data.curves.Value.vida.Length - 1);
-        float vidaMul = data.curves.Value.vida[index];
-        float danoMul = data.curves.Value.dano[index];
-        float defMul = data.curves.Value.defensa[index];
-        float velMul = data.curves.Value.velocidad[index];
+        // Calculate multipliers based on level
+        int index = math.clamp(level - 1, 0, data.curves.Value.health.Length - 1);
+        float healthMul = data.curves.Value.health[index];
+        float damageMul = data.curves.Value.damage[index];
+        float defenseMul = data.curves.Value.defense[index];
+        float speedMul = data.curves.Value.speed[index];
 
-        // Aplicar stats a cada unidad
+        // Apply stats to each unit
         DynamicBuffer<SquadUnitElement> units = unitBufferLookup[squadEntity];
         foreach (var unitElement in units)
         {
             if (!entityManager.Exists(unitElement.Value))
                 continue;
 
-            ApplyStatsToUnit(unitElement.Value, data, vidaMul, danoMul, defMul, velMul, entityManager);
+            ApplyStatsToUnit(unitElement.Value, data, healthMul, damageMul, defenseMul, speedMul, entityManager);
         }
     }
 
     /// <summary>
-    /// Aplica stats escalados a una unidad individual.
+    /// Applies scaled stats to an individual unit.
     /// </summary>
-    /// <param name="unitEntity">Entidad de la unidad</param>
-    /// <param name="data">Datos base del escuadrón</param>
-    /// <param name="vidaMul">Multiplicador de vida</param>
-    /// <param name="danoMul">Multiplicador de daño</param>
-    /// <param name="defMul">Multiplicador de defensa</param>
-    /// <param name="velMul">Multiplicador de velocidad</param>
-    /// <param name="entityManager">EntityManager para acceso a componentes</param>
     public static void ApplyStatsToUnit(
         Entity unitEntity,
         SquadDataComponent data,
-        float vidaMul,
-        float danoMul,
-        float defMul,
-        float velMul,
+        float healthMul,
+        float damageMul,
+        float defenseMul,
+        float speedMul,
         EntityManager entityManager)
     {
-        // Calcular velocidad final usando la utilidad centralizada
-        int peso = (int)math.round(data.peso);
-        float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.velocidadBase, velMul, peso);
+        // Calculate final speed using centralized utility
+        int weightCategory = (int)math.round(data.weight);
+        float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.baseSpeed, speedMul, weightCategory);
 
-        // Crear componente de stats principal
+        // Create main stats component
         var stats = new UnitStatsComponent
         {
-            vida = data.vidaBase * vidaMul,
-            velocidad = finalSpeed,
-            masa = data.masa,
-            peso = peso,
-            bloqueo = data.bloqueo,
-            defensaCortante = data.defensaCortante * defMul,
-            defensaPerforante = data.defensaPerforante * defMul,
-            defensaContundente = data.defensaContundente * defMul,
-            danoCortante = data.danoCortante * danoMul,
-            danoPerforante = data.danoPerforante * danoMul,
-            danoContundente = data.danoContundente * danoMul,
-            penetracionCortante = data.penetracionCortante,
-            penetracionPerforante = data.penetracionPerforante,
-            penetracionContundente = data.penetracionContundente,
-            liderazgoCosto = data.liderazgoCost
+            health = data.baseHealth * healthMul,
+            speed = finalSpeed,
+            mass = data.mass,
+            weight = weightCategory,
+            block = data.block,
+            slashingDefense = data.slashingDefense * defenseMul,
+            piercingDefense = data.piercingDefense * defenseMul,
+            bluntDefense = data.bluntDefense * defenseMul,
+            slashingDamage = data.slashingDamage * damageMul,
+            piercingDamage = data.piercingDamage * damageMul,
+            bluntDamage = data.bluntDamage * damageMul,
+            slashingPenetration = data.slashingPenetration,
+            piercingPenetration = data.piercingPenetration,
+            bluntPenetration = data.bluntPenetration,
+            leadershipCost = data.leadershipCost
         };
 
-        // Aplicar stats principales
+        // Apply main stats
         if (entityManager.HasComponent<UnitStatsComponent>(unitEntity))
             entityManager.SetComponentData(unitEntity, stats);
         else
             entityManager.AddComponentData(unitEntity, stats);
 
-        // Aplicar stats de unidad a distancia si corresponde
-        if (data.esUnidadADistancia)
+        // Apply ranged stats if applicable
+        if (data.isRangedUnit)
         {
             var rangedStats = new UnitRangedStatsComponent
             {
-                alcance = data.alcance,
-                precision = data.precision,
-                cadenciaFuego = data.cadenciaFuego,
-                velocidadRecarga = data.velocidadRecarga,
-                municionTotal = data.municionTotal
+                range = data.range,
+                accuracy = data.accuracy,
+                fireRate = data.fireRate,
+                reloadSpeed = data.reloadSpeed,
+                totalAmmo = data.ammoCapacity
             };
 
             if (entityManager.HasComponent<UnitRangedStatsComponent>(unitEntity))
@@ -112,7 +100,6 @@ public static class UnitStatsUtility
         }
         else if (entityManager.HasComponent<UnitRangedStatsComponent>(unitEntity))
         {
-            // Remover stats de distancia si la unidad ya no es a distancia
             entityManager.RemoveComponent<UnitRangedStatsComponent>(unitEntity);
         }
     }

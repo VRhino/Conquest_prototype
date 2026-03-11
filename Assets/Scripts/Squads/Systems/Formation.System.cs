@@ -68,10 +68,15 @@ public partial class FormationSystem : SystemBase
             //se tiene la formacion deseada
             ref var formation = ref formations[formationIndex];
 
-            int squadUnitCount = units.Length; 
+            // Read hold component if squad is in HoldPosition mode
+            SquadHoldPositionComponent? holdComponent = null;
+            if (SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+                holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
+
+            int squadUnitCount = units.Length;
             ref var gridPositions = ref formation.gridPositions;
             int positionsToUse = math.min(squadUnitCount, gridPositions.Length);
-            
+
             for (int i = 0; i < positionsToUse; i++)
             {
                 // entidad
@@ -79,11 +84,11 @@ public partial class FormationSystem : SystemBase
                 if (!SystemAPI.Exists(unit))
                     continue;
                 FormationPositionCalculator.CalculateDesiredPosition(
-                    unit, 
+                    unit,
                     ref gridPositions,
                     i, // unitIndex
                     state.ValueRW, // SquadStateComponent
-                    null, // SquadHoldPositionComponent?
+                    holdComponent, // SquadHoldPositionComponent? — use actual value instead of null
                     heroPosition, // heroPos
                     out int2 originalGridPos,
                     out float3 gridOffset,
@@ -116,8 +121,8 @@ public partial class FormationSystem : SystemBase
             // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
             if (s.currentState == SquadFSMState.HoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
             {
-                var holdComponent = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity);
-                holdComponent.ValueRW.originalFormation = input.ValueRO.desiredFormation;
+                var holdCompRW = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity);
+                holdCompRW.ValueRW.originalFormation = input.ValueRO.desiredFormation;
                 // Mantener el mismo holdCenter para que la formación se reorganice en el mismo lugar
             }
             

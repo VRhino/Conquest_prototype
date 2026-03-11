@@ -53,7 +53,7 @@ public partial class UnitAnimationSystem : SystemBase
             float maxSpeed = 5f; // Velocidad base por defecto
             if (statsLookup.HasComponent(entity))
             {
-                maxSpeed = statsLookup[entity].velocidad;
+                maxSpeed = statsLookup[entity].speed;
             }
             
             // Umbral más pequeño para detectar movimiento

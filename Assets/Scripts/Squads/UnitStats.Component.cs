@@ -6,31 +6,30 @@ using Unity.Entities;
 /// </summary>
 public struct UnitStatsComponent : IComponentData
 {
-    public float vida;
+    public float health;
     /// <summary>
     /// Final movement speed including base speed, level scaling, and weight multiplier.
     /// Calculated using UnitSpeedCalculator.CalculateFinalSpeed().
     /// </summary>
-    public float velocidad;
-    public float masa;
+    public float speed;
+    public float mass;
     /// <summary>
     /// Weight category of the unit: 1=light, 2=medium, 3=heavy.
     /// </summary>
-    public float peso;
-    public float bloqueo;
+    public float weight;
+    public float block;
 
-    public float defensaCortante;
-    public float defensaPerforante;
-    public float defensaContundente;
+    public float slashingDefense;
+    public float piercingDefense;
+    public float bluntDefense;
 
-    public float danoCortante;
-    public float danoPerforante;
-    public float danoContundente;
+    public float slashingDamage;
+    public float piercingDamage;
+    public float bluntDamage;
 
-    public float penetracionCortante;
-    public float penetracionPerforante;
-    public float penetracionContundente;
+    public float slashingPenetration;
+    public float piercingPenetration;
+    public float bluntPenetration;
 
-    public int liderazgoCosto;
+    public int leadershipCost;
 }
-

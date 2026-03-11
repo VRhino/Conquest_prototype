@@ -7,9 +7,8 @@ using Unity.Entities;
 /// </summary>
 public struct SquadProgressionCurveBlob
 {
-    public BlobArray<float> vida;
-    public BlobArray<float> dano;
-    public BlobArray<float> defensa;
-    public BlobArray<float> velocidad;
+    public BlobArray<float> health;
+    public BlobArray<float> damage;
+    public BlobArray<float> defense;
+    public BlobArray<float> speed;
 }
-

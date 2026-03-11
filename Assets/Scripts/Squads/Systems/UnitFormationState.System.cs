@@ -10,7 +10,7 @@ public partial struct UnitFormationStateSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         float dt = SystemAPI.Time.DeltaTime;
-        const float formationRadiusSq = 25f; // 5m squared
+        const float formationRadiusSq = 100f; // 10m squared — supports up to 20-unit formations
         const float slotThresholdSq = 0.04f; // ~0.2m threshold for being "in slot" (reducido de 0.25f)
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
@@ -106,8 +106,10 @@ public partial struct UnitFormationStateSystem : ISystem
                     switch (stateComp.State)
                     {
                         case UnitFormationState.Formed:
-                            // Formed -> Waiting: Hero leaves grid radius
-                            if (!heroWithinRadius)
+                            // Formed -> Waiting: Hero leaves grid radius OR unit is far from assigned slot (formation changed)
+                            bool nearAssignedSlot = FormationPositionCalculator.IsUnitInSlot(
+                                currentPos, desiredSlotPos, formationRadiusSq);
+                            if (!heroWithinRadius || !nearAssignedSlot)
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;

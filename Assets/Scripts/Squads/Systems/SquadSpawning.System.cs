@@ -157,7 +157,7 @@ public partial class SquadSpawningSystem : SystemBase
                     rotationSpeed = 5f
                 });
                 // Obtener velocidad máxima desde el SquadDataComponent (todas las unidades del squad comparten la misma velocidad base)
-                float maxSpeed = data.velocidadBase; // Usar el campo correcto del ScriptableObject
+                float maxSpeed = data.baseSpeed;
                 // Asignar UnitAnimationMovementComponent por defecto con velocidad correcta
                 ecb.AddComponent(unit, new ConquestTactics.Animation.UnitAnimationMovementComponent
                 {
@@ -173,25 +173,25 @@ public partial class SquadSpawningSystem : SystemBase
                 // Agregar UnitStatsComponent usando los valores del SquadData
                 ecb.AddComponent(unit, new UnitStatsComponent
                 {
-                    vida = data.vidaBase,
-                    velocidad = data.velocidadBase,
-                    masa = data.masa,
-                    peso = data.peso,
-                    bloqueo = data.bloqueo,
-                    defensaCortante = data.defensaCortante,
-                    defensaPerforante = data.defensaPerforante,
-                    defensaContundente = data.defensaContundente,
-                    danoCortante = data.danoCortante,
-                    danoPerforante = data.danoPerforante,
-                    danoContundente = data.danoContundente,
-                    penetracionCortante = data.penetracionCortante,
-                    penetracionPerforante = data.penetracionPerforante,
-                    penetracionContundente = data.penetracionContundente
+                    health = data.baseHealth,
+                    speed = data.baseSpeed,
+                    mass = data.mass,
+                    weight = data.weight,
+                    block = data.block,
+                    slashingDefense = data.slashingDefense,
+                    piercingDefense = data.piercingDefense,
+                    bluntDefense = data.bluntDefense,
+                    slashingDamage = data.slashingDamage,
+                    piercingDamage = data.piercingDamage,
+                    bluntDamage = data.bluntDamage,
+                    slashingPenetration = data.slashingPenetration,
+                    piercingPenetration = data.piercingPenetration,
+                    bluntPenetration = data.bluntPenetration
                 });
                 ecb.AddComponent(unit, new HealthComponent
                 {
-                    maxHealth = data.vidaBase,
-                    currentHealth = data.vidaBase
+                    maxHealth = data.baseHealth,
+                    currentHealth = data.baseHealth
                 });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }

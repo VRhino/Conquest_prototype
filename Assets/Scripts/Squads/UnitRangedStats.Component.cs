@@ -6,10 +6,9 @@ using Unity.Entities;
 /// </summary>
 public struct UnitRangedStatsComponent : IComponentData
 {
-    public float alcance;
-    public float precision;
-    public float cadenciaFuego;
-    public float velocidadRecarga;
-    public int municionTotal;
+    public float range;
+    public float accuracy;
+    public float fireRate;
+    public float reloadSpeed;
+    public int totalAmmo;
 }
-

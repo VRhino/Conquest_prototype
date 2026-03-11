@@ -158,7 +158,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                     float baseSpeed = defaultMoveSpeed; // Fallback
                     if (unitStatsLookup.HasComponent(unit))
                     {
-                        baseSpeed = unitStatsLookup[unit].velocidad;
+                        baseSpeed = unitStatsLookup[unit].speed;
                     }
                     
                     // Aplicar solo multiplicadores adicionales específicos de la unidad
