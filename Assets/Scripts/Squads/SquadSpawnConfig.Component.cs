@@ -1,0 +1,10 @@
+using Unity.Entities;
+
+public struct SquadSpawnConfigComponent : IComponentData
+{
+    public float squadSpawnOffset;    // Distancia delante del héroe al spawnear el squad
+    public float unitMinDistance;     // Distancia mínima entre unidades (spacing)
+    public float unitRepelForce;      // Fuerza de repulsión entre unidades
+    public float unitRotationSpeed;   // Velocidad de rotación inicial de las unidades
+    public float heroSlotSpacing;     // Espacio lateral entre slots de héroe (metros)
+}

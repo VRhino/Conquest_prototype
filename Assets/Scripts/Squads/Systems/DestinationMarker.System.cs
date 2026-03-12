@@ -44,6 +44,7 @@ public partial class DestinationMarkerSystem : SystemBase
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
         var squadDataLookup = GetComponentLookup<SquadDataComponent>(true);
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
+        var isLocalPlayerLookup = GetComponentLookup<IsLocalPlayer>(true);
         
         // Process each squad to update destination markers for their units
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
@@ -53,7 +54,11 @@ public partial class DestinationMarkerSystem : SystemBase
                 
             if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner))
                 continue;
-                
+
+            // Solo generar markers para squads del jugador local
+            if (!isLocalPlayerLookup.HasComponent(squadOwner.hero))
+                continue;
+
             if (!stateLookup.TryGetComponent(squadEntity, out var squadState))
                 continue;
                 

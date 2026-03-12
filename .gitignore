@@ -37,3 +37,7 @@ Thumbs.db
 
 scripts_list.txt
 
+# Battle data dumps (debug only)
+Assets/Debug/BattleDataDumps/
+Assets/Debug/BattleDataDumps.meta
+

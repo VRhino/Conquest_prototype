@@ -53,6 +53,23 @@
 - ✅ Crea escuadrones y unidades ECS-only
 - ✅ Configura componentes iniciales
 - ✅ Establece estado inicial (FollowingHero)
+- ✅ Lee `SquadSpawnConfigComponent` (singleton) para todos los parámetros de spawn
+
+**⚠️ Requisito de escena:** Este sistema requiere un singleton `SquadSpawnConfigComponent` en el ECS World. Sin él, `GetSingleton<SquadSpawnConfigComponent>()` lanzará `InvalidOperationException` al entrar en Play Mode.
+
+**Cómo proveer el singleton:**
+1. En `DOTSWorld.unity` (subscena ECS), crear un GameObject vacío llamado `SquadSpawnConfig`
+2. Añadirle el componente `SquadSpawnConfigAuthoring`
+3. El Baker convierte los valores del Inspector en `SquadSpawnConfigComponent` durante el baking
+
+**Valores configurables desde el Inspector:**
+
+| Campo | Default | Descripción |
+|-------|---------|-------------|
+| `squadSpawnOffset` | 5 | Metros delante del héroe al spawnear el squad |
+| `unitMinDistance` | 1.5 | Distancia mínima entre unidades (spacing) |
+| `unitRepelForce` | 1 | Fuerza de repulsión entre unidades |
+| `unitRotationSpeed` | 5 | Velocidad de rotación inicial de las unidades |
 
 ### SquadVisualManagementSystem
 **Responsabilidad Principal:** Gestión de visuales de unidades

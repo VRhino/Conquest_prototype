@@ -11,9 +11,15 @@ using UnityEngine;
 [UpdateAfter(typeof(HeroSpawnSystem))]
 public partial class SquadSpawningSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        RequireForUpdate<SquadSpawnConfigComponent>();
+    }
+
     protected override void OnUpdate()
     {
         Dependency.Complete();
+        var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -36,17 +42,16 @@ public partial class SquadSpawningSystem : SystemBase
             }
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
-            
+
             // Configurar posición inicial del squad offset delante del héroe
             quaternion heroRotation = heroTransform.ValueRO.Rotation;
             float3 heroForward = math.forward(heroRotation);
-            const float SQUAD_SPAWN_OFFSET = 5f;
-            float3 formationAnchor = heroTransform.ValueRO.Position + heroForward * SQUAD_SPAWN_OFFSET;
+            float3 formationAnchor = heroTransform.ValueRO.Position + heroForward * spawnConfig.squadSpawnOffset;
             ecb.AddComponent(squad, LocalTransform.FromPosition(formationAnchor));
-            
+
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
             // Squad created successfully
-            
+
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
             ecb.AddComponent(squad, new SquadStatsComponent
             {
@@ -61,43 +66,48 @@ public partial class SquadSpawningSystem : SystemBase
                 xpToNextLevel = 100f
             });
             ecb.AddComponent(squad, new SquadInstanceComponent { id = selection.ValueRO.instanceId });
-            
+
             // Los squads son entidades lógicas sin visual propio
             // Solo las unidades individuales tienen visuales
-            
+
             // Obtener la primera formación disponible en el arreglo como formación por defecto (índice 0)
-            var firstFormationType = data.formationLibrary.Value.formations.Length > 0 
-                ? data.formationLibrary.Value.formations[0].formationType 
+            var firstFormationType = data.formationLibrary.Value.formations.Length > 0
+                ? data.formationLibrary.Value.formations[0].formationType
                 : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
-            
+
+            // Héroes remotos comienzan en HoldPosition para evitar movimiento errático sin IA
+            bool isLocalHero = SystemAPI.HasComponent<IsLocalPlayer>(entity);
+            var initialOrder = isLocalHero ? SquadOrderType.FollowHero : SquadOrderType.HoldPosition;
+            var initialState = isLocalHero ? SquadFSMState.FollowingHero : SquadFSMState.HoldingPosition;
+
             // Agregar componentes necesarios para el sistema de control y formación
             ecb.AddComponent(squad, new SquadInputComponent
             {
-                orderType = SquadOrderType.FollowHero,
+                orderType = initialOrder,
                 hasNewOrder = false,
                 desiredFormation = firstFormationType, // Formación inicial: primera del arreglo
-                holdPosition = float3.zero // Inicializar con posición vacía
+                holdPosition = formationAnchor // Posición de hold = spawn del squad
             });
-            
+
             ecb.AddComponent(squad, new SquadStateComponent
             {
                 currentFormation = firstFormationType, // Formación inicial: primera del arreglo
-                currentOrder = SquadOrderType.FollowHero,
+                currentOrder = initialOrder,
                 isExecutingOrder = false,
                 isInCombat = false,
                 formationChangeCooldown = 0f,
-                currentState = SquadFSMState.FollowingHero, // Initial state should match the initial order
-                transitionTo = SquadFSMState.FollowingHero, // Initial state should match the initial order
+                currentState = initialState,
+                transitionTo = initialState,
                 stateTimer = 0f,
                 lastOwnerAlive = true,
                 retreatTriggered = false
             });
-            
+
             ecb.AddComponent(squad, new FormationComponent
             {
                 currentFormation = firstFormationType // Formación inicial: primera del arreglo
             });
-            
+
             // Agregar buffer para el patrón de formación
             ecb.AddBuffer<FormationPatternElement>(squad);
 
@@ -105,7 +115,7 @@ public partial class SquadSpawningSystem : SystemBase
 
             ref var formations = ref data.formationLibrary.Value.formations;
             ref var firstFormation = ref formations[0]; // Always use index 0 for initial spawn
-            
+
             int unitCount = firstFormation.gridPositions.Length;
 
             for (int i = 0; i < unitCount; i++)
@@ -131,13 +141,13 @@ public partial class SquadSpawningSystem : SystemBase
                     Rotation = heroRotation,
                     Scale = 1f
                 });
-                
+
                 // Agregar referencia visual para la unidad
                 ecb.AddComponent(unit, new UnitVisualReference
                 {
                     visualPrefabName = GetUnitVisualPrefabName(data.squadType)
                 });
-                
+
                 // Añadir componentes ECS de la unidad (todos excepto visuales)
                 ecb.AddComponent(unit, new UnitEquipmentComponent
                 {
@@ -145,16 +155,16 @@ public partial class SquadSpawningSystem : SystemBase
                     hasDebuff = false,
                     isDeployable = true
                 });
-                
+
                 ecb.AddComponent<UnitCombatComponent>(unit);
                 ecb.AddComponent(unit, new UnitSpacingComponent
                 {
-                    minDistance = 1.5f,
-                    repelForce = 1f,
+                    minDistance = spawnConfig.unitMinDistance,
+                    repelForce = spawnConfig.unitRepelForce,
                     Slot = originalGridPos // Usar posición original para Slot
                 });
                 ecb.AddComponent<UnitTargetPositionComponent>(unit);
-                ecb.AddComponent(unit, new UnitFormationStateComponent { State = UnitFormationState.Moving }); // Start Moving so units seek their formation slot
+                ecb.AddComponent(unit, new UnitFormationStateComponent { State = UnitFormationState.Formed }); // Units spawn already at their formation slot, no need to seek it
                 ecb.AddComponent(unit, new UnitGridSlotComponent
                 {
                     gridPosition = originalGridPos,
@@ -164,7 +174,7 @@ public partial class SquadSpawningSystem : SystemBase
                 ecb.AddComponent(unit, new UnitOrientationComponent
                 {
                     orientationType = UnitOrientationType.MatchHeroDirection,
-                    rotationSpeed = 5f
+                    rotationSpeed = spawnConfig.unitRotationSpeed
                 });
                 // Obtener velocidad máxima desde el SquadDataComponent (todas las unidades del squad comparten la misma velocidad base)
                 float maxSpeed = data.baseSpeed;
@@ -205,18 +215,18 @@ public partial class SquadSpawningSystem : SystemBase
                 });
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
-            
+
             // Squad ECS created successfully
-            
+
             // Crear referencia del squad al héroe
             ecb.AddComponent(entity, new HeroSquadReference { squad = squad });
-            
+
             // Copiar el team del héroe al squad y sus unidades
             if (SystemAPI.HasComponent<TeamComponent>(entity))
             {
                 var heroTeam = SystemAPI.GetComponent<TeamComponent>(entity);
                 ecb.AddComponent(squad, heroTeam);
-                
+
                 // Aplicar el team a todas las unidades del squad
                 for (int i = 0; i < unitBuffer.Length; i++)
                 {
@@ -225,15 +235,15 @@ public partial class SquadSpawningSystem : SystemBase
                 }
             }
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
-            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });;
-            
+            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle }); ;
+
             // Squad ECS created successfully
         }
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }
-    
+
     /// <summary>
     /// Obtiene el nombre del prefab visual para un tipo de unidad.
     /// Los squads no tienen prefabs visuales, solo las unidades individuales.
@@ -247,7 +257,7 @@ public partial class SquadSpawningSystem : SystemBase
             SquadType.Squires => "UnitVisual_Escudero",
             SquadType.Archers => "UnitVisual_Arquero",
             SquadType.Pikemen => "UnitVisual_Pikemen",
-            SquadType.Spearmen => "UnitVisual_Spearmen", 
+            SquadType.Spearmen => "UnitVisual_Spearmen",
             _ => "UnitVisual_Default"
         };
     }

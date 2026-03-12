@@ -34,23 +34,21 @@ public partial class HeroVisualManagementSystem : SystemBase
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         
-        // Crear visuales para entidades recién spawneadas
+        // Crear visuales para entidades recién spawneadas (héroe local y remotos)
         foreach (var (spawn, transform, entity) in
                  SystemAPI.Query<RefRO<HeroSpawnComponent>,
                                  RefRO<LocalTransform>>()
-                        .WithAll<IsLocalPlayer>()
                         .WithNone<HeroVisualInstance>()
                         .WithEntityAccess())
         {
             // Asegurar que la entidad esté completamente spawneada
             if (!spawn.ValueRO.hasSpawned)
             {
-                Debug.Log($"[HeroVisualManagementSystem] Entity {entity} not yet spawned, skipping visual creation");
                 continue;
             }
-            
-                // Usar el id del prefab visual desde HeroSpawnComponent
-                CreateVisualForEntity(entity, spawn.ValueRO.visualPrefabId.ToString(), transform.ValueRO, ecb);
+
+            bool isLocal = SystemAPI.HasComponent<IsLocalPlayer>(entity);
+            CreateVisualForEntity(entity, spawn.ValueRO.visualPrefabId.ToString(), transform.ValueRO, ecb, isLocal);
         }
         ecb.Playback(EntityManager);
         ecb.Dispose();
@@ -63,32 +61,36 @@ public partial class HeroVisualManagementSystem : SystemBase
     /// <param name="visualPrefabId">ID del prefab visual</param>
     /// <param name="transform">Transform inicial de la entidad</param>
     /// <param name="ecb">EntityCommandBuffer para agregar componentes</param>
-    private void CreateVisualForEntity(Entity entity, string visualPrefabId, 
-        LocalTransform transform, EntityCommandBuffer ecb)
+    /// <param name="isLocalPlayer">True si la entidad es el jugador local (aplica personalización de avatar)</param>
+    private void CreateVisualForEntity(Entity entity, string visualPrefabId,
+        LocalTransform transform, EntityCommandBuffer ecb, bool isLocalPlayer = true)
     {
         // Buscar el prefab visual usando el id
         GameObject visualPrefab = FindVisualPrefabGameObject(visualPrefabId);
-        
+
         if (visualPrefab == null)
         {
             Debug.LogWarning($"[HeroVisualManagementSystem] GameObject del prefab visual no encontrado para id: {visualPrefabId}");
             return;
         }
-        
+
         // Instanciar el GameObject visual
         GameObject visualInstance = Object.Instantiate(visualPrefab);
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
 
-        try
+        // Solo aplicar personalización de avatar al héroe local
+        if (isLocalPlayer)
         {
-            // Aplicar la personalización visual del héroe seleccionado
-            ApplyHeroVisualCustomization(visualInstance);
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogError($"[HeroVisualManagementSystem] Error applying visual customization: {ex.Message}\n{ex.StackTrace}");
+            try
+            {
+                ApplyHeroVisualCustomization(visualInstance);
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[HeroVisualManagementSystem] Error applying visual customization: {ex.Message}\n{ex.StackTrace}");
+            }
         }
 
         // Configurar el script de sincronización

@@ -15,6 +15,10 @@ public class HeroCameraController : MonoBehaviour
     [Tooltip("Si está en true, la cámara queda estática y el héroe se mueve libremente. Si está en false, la cámara sigue al héroe.")]
     [SerializeField] public bool staticCamera = false;
 
+    [Header("Camera Collision")]
+    [SerializeField] private float cameraEyeHeight = 1.5f;
+    [SerializeField] private float cameraCollisionMargin = 0.25f;
+
     [Header("Camera Settings (Override)")]
     [Tooltip("Sensibilidad de rotación de la cámara (si se usa override)")]
     [SerializeField] private float rotationSensitivityOverride = 0f;
@@ -149,12 +153,11 @@ public class HeroCameraController : MonoBehaviour
             Vector3 desired = followPos.Value + offset;
 
             // Raycast para evitar clipping
-            Vector3 from = followPos.Value + new Vector3(0f, offset.y, 0f);
-            Vector3 to = desired;
-            Vector3 dir = to - from;
+            Vector3 from = followPos.Value + Vector3.up * cameraEyeHeight;
+            Vector3 dir = desired - from;
             if (Physics.Raycast(from, dir.normalized, out RaycastHit hit, dir.magnitude))
             {
-                desired = hit.point;
+                desired = hit.point + hit.normal * cameraCollisionMargin;
             }
             if (disableCameraFollow || DialogueUIState.IsDialogueOpen)
             {
