@@ -22,6 +22,11 @@ public class BattleSceneController : MonoBehaviour
 
     private TimerController _timerController;
     private bool _loadingScreenDismissed;
+    private int _spawnedRemoteCount;
+    private float _allVisualsReadyTime = -1f;
+    private const float LoadingScreenDelay = 3f;
+    private const float MaxLoadingScreenTime = 30f;
+    private float _loadingStartTime;
 
     private const int MaxBattleDurationSeconds = 1800; // 30 min cap
 
@@ -56,24 +61,53 @@ public class BattleSceneController : MonoBehaviour
                 Debug.LogError("[BattleSceneController] No hay BattleData disponible y no hay TestEnvironmentInitializer");
             }
         }
+
+        _loadingStartTime = Time.time;
     }
 
     void Update()
     {
         if (_loadingScreenDismissed || _loadingScreen == null) return;
 
-        var world = World.DefaultGameObjectInjectionWorld;
-        if (world == null || !world.IsCreated) return;
-
-        var em = world.EntityManager;
-        var query = em.CreateEntityQuery(typeof(IsLocalPlayer), typeof(HeroVisualInstance));
-        if (!query.IsEmpty)
+        // Timeout de seguridad
+        if (Time.time - _loadingStartTime >= MaxLoadingScreenTime)
         {
             _loadingScreen.SetActive(false);
             _loadingScreenDismissed = true;
-            Debug.Log("[BattleSceneController] Hero visual ready — loading screen dismissed.");
+            Debug.LogWarning("[BattleSceneController] Loading screen dismissed by timeout.");
+            return;
         }
-        query.Dispose();
+
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world == null || !world.IsCreated) return;
+        var em = world.EntityManager;
+
+        // Esperar a que el héroe local tenga visual
+        var localQuery = em.CreateEntityQuery(typeof(IsLocalPlayer), typeof(HeroVisualInstance));
+        bool localReady = !localQuery.IsEmpty;
+        localQuery.Dispose();
+        if (!localReady) return;
+
+        // Contar héroes con visual
+        var allVisualsQuery = em.CreateEntityQuery(typeof(HeroVisualInstance));
+        int totalWithVisual = allVisualsQuery.CalculateEntityCount();
+        allVisualsQuery.Dispose();
+
+        int expectedTotal = 1 + _spawnedRemoteCount;
+        bool allReady = totalWithVisual >= expectedTotal;
+
+        if (allReady && _allVisualsReadyTime < 0f)
+        {
+            _allVisualsReadyTime = Time.time;
+            Debug.Log($"[BattleSceneController] All {totalWithVisual} hero visuals ready — waiting {LoadingScreenDelay}s");
+        }
+
+        if (_allVisualsReadyTime >= 0f && Time.time - _allVisualsReadyTime >= LoadingScreenDelay)
+        {
+            _loadingScreen.SetActive(false);
+            _loadingScreenDismissed = true;
+            Debug.Log("[BattleSceneController] Loading screen dismissed after delay.");
+        }
     }
 
     #endregion
@@ -282,14 +316,15 @@ public class BattleSceneController : MonoBehaviour
                 slotIndex = 0;
             slotCounter[key] = slotIndex + 1;
 
-            SpawnRemoteHero(em, heroPrefabComp, spawnPoints, heroData, teamID, slotIndex);
+            bool spawned = SpawnRemoteHero(em, heroPrefabComp, spawnPoints, heroData, teamID, slotIndex);
+            if (spawned) _spawnedRemoteCount++;
         }
 
         spawnPoints.Dispose();
-        Debug.Log($"[BattleSceneController] Héroes remotos spawneados: {remoteHeroes.Count}");
+        Debug.Log($"[BattleSceneController] Héroes remotos spawneados: {_spawnedRemoteCount}/{remoteHeroes.Count}");
     }
 
-    private void SpawnRemoteHero(EntityManager em, HeroPrefabComponent heroPrefabComp,
+    private bool SpawnRemoteHero(EntityManager em, HeroPrefabComponent heroPrefabComp,
         NativeArray<SpawnPointComponent> spawnPoints, BattleHeroData heroData, int teamID, int slotIndex = 0)
     {
         // Parsear spawnPointId a int (ej: "at1" → 1, "df2" → 2)
@@ -331,7 +366,7 @@ public class BattleSceneController : MonoBehaviour
         if (!found)
         {
             Debug.LogWarning($"[BattleSceneController] No se encontró spawn point para héroe remoto '{heroData.heroName}' (team={teamID}, spawnID={spawnID})");
-            return;
+            return false;
         }
 
         // Calcular posición y rotación
@@ -413,6 +448,7 @@ public class BattleSceneController : MonoBehaviour
         }
 
         Debug.Log($"[BattleSceneController] Héroe remoto '{heroData.heroName}' spawneado en {spawnPosition} (team={teamID})");
+        return true;
     }
 
     /// <summary>
