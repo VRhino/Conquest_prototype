@@ -167,6 +167,27 @@ public class BattleSceneController : MonoBehaviour
             if (localHero.squadInstances != null && localHero.squadInstances.Count > 0)
             {
                 data.selectedSquadBaseID = new FixedString64Bytes(localHero.squadInstances[0].baseSquadID);
+
+                // Asignar IDs enteros secuenciales (0, 1, 2, ...) a cada instancia de escuadra.
+                // ID 0 = escuadra activa → coincide con HeroSpawnSystem que hardcodea instanceId = 0.
+                data.selectedSquads.Clear();
+                for (int i = 0; i < localHero.squadInstances.Count; i++)
+                    data.selectedSquads.Add(i);
+
+                // Poblar el buffer de mapping usando las instancias directamente
+                if (em.HasBuffer<SquadIdMapElement>(entity))
+                {
+                    var mapBuffer = em.GetBuffer<SquadIdMapElement>(entity);
+                    mapBuffer.Clear();
+                    for (int i = 0; i < localHero.squadInstances.Count; i++)
+                    {
+                        mapBuffer.Add(new SquadIdMapElement
+                        {
+                            squadId = i,
+                            baseSquadID = new FixedString64Bytes(localHero.squadInstances[i].baseSquadID)
+                        });
+                    }
+                }
             }
 
             em.SetComponentData(entity, data);

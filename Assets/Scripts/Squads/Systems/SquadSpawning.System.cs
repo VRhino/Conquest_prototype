@@ -80,6 +80,18 @@ public partial class SquadSpawningSystem : SystemBase
             var initialOrder = isLocalHero ? SquadOrderType.FollowHero : SquadOrderType.HoldPosition;
             var initialState = isLocalHero ? SquadFSMState.FollowingHero : SquadFSMState.HoldingPosition;
 
+            // Fix: squads remotos necesitan SquadHoldPositionComponent para que
+            // GridFormationUpdateSystem use holdCenter fijo en lugar de seguir al héroe
+            if (!isLocalHero)
+            {
+                ecb.AddComponent(squad, new SquadHoldPositionComponent
+                {
+                    holdCenter = formationAnchor,
+                    holdRotation = heroRotation,
+                    originalFormation = firstFormationType
+                });
+            }
+
             // Agregar componentes necesarios para el sistema de control y formación
             ecb.AddComponent(squad, new SquadInputComponent
             {
@@ -118,7 +130,23 @@ public partial class SquadSpawningSystem : SystemBase
 
             int unitCount = firstFormation.gridPositions.Length;
 
-            for (int i = 0; i < unitCount; i++)
+            // Check if this is a re-invocation with reduced units (squad swap)
+            int spawnCount = unitCount;
+            if (SystemAPI.HasBuffer<InactiveSquadElement>(entity))
+            {
+                var inactiveBuffer = SystemAPI.GetBuffer<InactiveSquadElement>(entity);
+                for (int b = 0; b < inactiveBuffer.Length; b++)
+                {
+                    if (inactiveBuffer[b].squadId == selection.ValueRO.instanceId)
+                    {
+                        spawnCount = inactiveBuffer[b].aliveUnits;
+                        inactiveBuffer.RemoveAt(b);
+                        break;
+                    }
+                }
+            }
+
+            for (int i = 0; i < spawnCount; i++)
             {
                 // Crear unidad ECS (solo lógica, sin visuales)
                 Entity unit = ecb.CreateEntity();
@@ -163,7 +191,7 @@ public partial class SquadSpawningSystem : SystemBase
                     repelForce = spawnConfig.unitRepelForce,
                     Slot = originalGridPos // Usar posición original para Slot
                 });
-                ecb.AddComponent<UnitTargetPositionComponent>(unit);
+                ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
                 ecb.AddComponent(unit, new UnitFormationStateComponent { State = UnitFormationState.Formed }); // Units spawn already at their formation slot, no need to seek it
                 ecb.AddComponent(unit, new UnitGridSlotComponent
                 {
@@ -235,9 +263,53 @@ public partial class SquadSpawningSystem : SystemBase
                 }
             }
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
-            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle }); ;
+            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });
 
-            // Squad ECS created successfully
+            // Initialize InactiveSquadElement buffer for squad swap (only on first spawn, when buffer doesn't exist yet)
+            if (!SystemAPI.HasBuffer<InactiveSquadElement>(entity))
+            {
+                var inactiveBuffer = ecb.AddBuffer<InactiveSquadElement>(entity);
+                // Read the SquadIdMapElement buffer from DataContainer to get int→string mapping
+                var dcQuery = GetEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+                if (!dcQuery.IsEmptyIgnoreFilter)
+                {
+                    Entity dcEntity = dcQuery.GetSingletonEntity();
+                    if (SystemAPI.HasBuffer<SquadIdMapElement>(dcEntity))
+                    {
+                        var mapBuffer = SystemAPI.GetBuffer<SquadIdMapElement>(dcEntity);
+                        var idLookup = GetComponentLookup<SquadDataIDComponent>(true);
+
+                        for (int m = 0; m < mapBuffer.Length; m++)
+                        {
+                            var map = mapBuffer[m];
+                            // Skip the currently active squad
+                            if (map.squadId == selection.ValueRO.instanceId)
+                                continue;
+
+                            // Find the SquadDataIDComponent entity to get unit count
+                            int totalUnitsForSquad = unitCount; // fallback
+                            foreach (var (idComp, dataComp) in SystemAPI
+                                         .Query<RefRO<SquadDataIDComponent>, RefRO<SquadDataComponent>>())
+                            {
+                                if (idComp.ValueRO.id == map.baseSquadID)
+                                {
+                                    totalUnitsForSquad = dataComp.ValueRO.formationLibrary.Value.formations[0].gridPositions.Length;
+                                    break;
+                                }
+                            }
+
+                            inactiveBuffer.Add(new InactiveSquadElement
+                            {
+                                squadId = map.squadId,
+                                baseSquadID = map.baseSquadID,
+                                aliveUnits = totalUnitsForSquad,
+                                totalUnits = totalUnitsForSquad,
+                                isEliminated = false
+                            });
+                        }
+                    }
+                }
+            }
         }
 
         ecb.Playback(EntityManager);

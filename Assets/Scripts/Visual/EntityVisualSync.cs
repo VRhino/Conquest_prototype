@@ -103,6 +103,16 @@ namespace ConquestTactics.Visual
 
         private void Update()
         {
+            // If the linked ECS entity was destroyed, destroy this visual GameObject
+            if (_hasValidTarget && _heroEntity != Entity.Null && _entityManager != null
+                && (!_entityManager.Exists(_heroEntity)))
+            {
+                if (_enableDebugLogs)
+                    Debug.Log($"[EntityVisualSync] Entity {_heroEntity} destroyed — destroying visual {gameObject.name}");
+                Destroy(gameObject);
+                return;
+            }
+
             // Eliminar throttle: correr Update cada frame
             if (!IsValidSetup())
             {

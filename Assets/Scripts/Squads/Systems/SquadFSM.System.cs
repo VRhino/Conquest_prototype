@@ -53,6 +53,13 @@ public partial class SquadFSMSystem : SystemBase
                 continue;
             }
 
+            // Lock Retreating state once triggered (swap or owner death)
+            if (s.currentState == SquadFSMState.Retreating && s.retreatTriggered)
+            {
+                state.ValueRW = s;
+                continue;
+            }
+
             // Determine next state based on conditions
             SquadFSMState desired = s.currentState;
 

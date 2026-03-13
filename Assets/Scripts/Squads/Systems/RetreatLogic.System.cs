@@ -6,6 +6,8 @@ using Unity.Transforms;
 /// <summary>
 /// Moves squads in the <see cref="SquadFSMState.Retreating"/> state towards a
 /// safe location and removes them once the retreat completes.
+/// For swap-originated retreats, persists alive-unit count into the hero's
+/// <see cref="InactiveSquadElement"/> buffer before destruction.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadFSMSystem))]
@@ -49,6 +51,51 @@ public partial class RetreatLogicSystem : SystemBase
 
             if (reached || retreat.ValueRO.retreatTimer >= retreat.ValueRO.retreatDuration)
             {
+                // If this squad retreated due to a swap, persist alive-unit count
+                if (SystemAPI.HasComponent<SquadRetreatingFromSwapTag>(entity))
+                {
+                    var swapTag = SystemAPI.GetComponent<SquadRetreatingFromSwapTag>(entity);
+                    Entity heroEntity = swapTag.heroEntity;
+
+                    if (SystemAPI.Exists(heroEntity) && SystemAPI.HasBuffer<InactiveSquadElement>(heroEntity))
+                    {
+                        // Count alive units
+                        int aliveCount = 0;
+                        for (int u = 0; u < units.Length; u++)
+                        {
+                            Entity unitEntity = units[u].Value;
+                            if (SystemAPI.Exists(unitEntity) && !SystemAPI.HasComponent<IsDeadComponent>(unitEntity))
+                            {
+                                aliveCount++;
+                            }
+                        }
+
+                        // Update the corresponding InactiveSquadElement
+                        var inactiveBuffer = SystemAPI.GetBuffer<InactiveSquadElement>(heroEntity);
+                        for (int b = 0; b < inactiveBuffer.Length; b++)
+                        {
+                            if (inactiveBuffer[b].squadId == swapTag.squadId)
+                            {
+                                var elem = inactiveBuffer[b];
+                                elem.aliveUnits = aliveCount;
+                                elem.isEliminated = aliveCount == 0;
+                                inactiveBuffer[b] = elem;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Destroy all unit entities before destroying the squad
+                for (int u = 0; u < units.Length; u++)
+                {
+                    Entity unitEntity = units[u].Value;
+                    if (SystemAPI.Exists(unitEntity))
+                    {
+                        ecb.DestroyEntity(unitEntity);
+                    }
+                }
+
                 ecb.DestroyEntity(entity);
             }
         }

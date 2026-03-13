@@ -49,9 +49,19 @@ public partial class GridFormationUpdateSystem : SystemBase
                 }
             }
             
-            // Obtener la posición del héroe como centro de referencia
-            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPos))
-                continue;
+            // Para escuadras en retreat, usar el retreat target como centro de formación
+            // en vez del héroe (que ahora controla otra escuadra tras un swap)
+            float3 heroPos;
+            if (squadState.currentState == SquadFSMState.Retreating
+                && SystemAPI.HasComponent<RetreatComponent>(squadEntity))
+            {
+                heroPos = SystemAPI.GetComponent<RetreatComponent>(squadEntity).retreatTarget;
+            }
+            else
+            {
+                if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out heroPos))
+                    continue;
+            }
             
             // Obtener el componente de hold position si existe
             SquadHoldPositionComponent? holdComponent = null;

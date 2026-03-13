@@ -18,6 +18,7 @@ public partial class DataContainerSystem : SystemBase
         if (q.IsEmptyIgnoreFilter)
         {
             Entity entity = em.CreateEntity(typeof(DataContainerComponent), typeof(HeroProgressComponent));
+            em.AddBuffer<SquadIdMapElement>(entity);
 
             var save = LocalSaveSystem.LoadProgress();
 

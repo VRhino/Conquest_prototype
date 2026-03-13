@@ -69,12 +69,14 @@ public class HUDController : MonoBehaviour
 
     private Dictionary<int, GameObject> _capturePointIcons = new();
     private bool _squadInitialized;
+    private bool _externalOverride;
 
     void Update()
     {
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
 
         UpdateHeroSection(em);
+        CheckSquadChangeEvent(em);
         InitializeSquadIfNeeded(em);
         _squadSectionController?.UpdateFromECS(em);
         UpdateCaptureBar(em);
@@ -109,6 +111,42 @@ public class HUDController : MonoBehaviour
             slot?.UpdateSlot(em);
     }
 
+    void CheckSquadChangeEvent(EntityManager em)
+    {
+        var evtQuery = em.CreateEntityQuery(ComponentType.ReadOnly<SquadChangeEvent>());
+        if (evtQuery.IsEmptyIgnoreFilter) return;
+
+        var evtEntity = evtQuery.GetSingletonEntity();
+        var evt = em.GetComponentData<SquadChangeEvent>(evtEntity);
+
+        // Consume the event entity so it doesn't fire again
+        em.DestroyEntity(evtEntity);
+
+        // Look up baseSquadID for the new squad from SquadIdMapElement buffer
+        var dcQuery = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        if (!dcQuery.IsEmptyIgnoreFilter)
+        {
+            var dcEntity = dcQuery.GetSingletonEntity();
+            if (em.HasBuffer<SquadIdMapElement>(dcEntity))
+            {
+                var mapBuffer = em.GetBuffer<SquadIdMapElement>(dcEntity);
+                for (int i = 0; i < mapBuffer.Length; i++)
+                {
+                    if (mapBuffer[i].squadId == evt.newSquadId)
+                    {
+                        string baseId = mapBuffer[i].baseSquadID.ToString();
+                        var squadData = SquadDataService.GetSquadById(baseId);
+                        if (squadData != null && _squadSectionController != null)
+                        {
+                            _squadSectionController.Initialize(squadData);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     void InitializeSquadIfNeeded(EntityManager em)
     {
         if (_squadInitialized || _squadSectionController == null) return;
@@ -127,8 +165,26 @@ public class HUDController : MonoBehaviour
         _squadInitialized = true;
     }
 
+    /// <summary>Shows the capture bar with custom text and fill (for channeling).</summary>
+    public void ShowProgressBar(string text, float fillAmount)
+    {
+        _externalOverride = true;
+        if (_captureBarSection != null) _captureBarSection.SetActive(true);
+        if (_captureProgressFill != null) _captureProgressFill.fillAmount = fillAmount;
+        if (_captureProgressText != null) _captureProgressText.text = text;
+    }
+
+    /// <summary>Hides the bar and restores normal capture behavior.</summary>
+    public void HideProgressBar()
+    {
+        _externalOverride = false;
+        if (_captureBarSection != null) _captureBarSection.SetActive(false);
+    }
+
     void UpdateCaptureBar(EntityManager em)
     {
+        if (_externalOverride) return;
+
         var query = em.CreateEntityQuery(typeof(LocalHeroCaptureStateComponent));
         if (query.IsEmptyIgnoreFilter)
         {

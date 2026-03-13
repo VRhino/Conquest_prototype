@@ -1,7 +1,7 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using Unity.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -48,7 +48,7 @@ public partial class FormationSystem : SystemBase
             }
 
             ref var formations = ref squadData.ValueRO.formationLibrary.Value.formations;
-            
+
             // Find the desired formation
             int formationIndex = -1;
             for (int i = 0; i < formations.Length; i++)
@@ -94,9 +94,9 @@ public partial class FormationSystem : SystemBase
                     out float3 gridOffset,
                     out float3 worldPos,
                     true);
-                
+
                 UpdateUnitPosition(unit, worldPos, new float3(originalGridPos.x, 0, originalGridPos.y), i, ecb);
-                
+
                 // Update grid slot component - mantener posición original en gridPosition
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
                 {
@@ -106,8 +106,8 @@ public partial class FormationSystem : SystemBase
                 }
                 else
                 {
-                    ecb.AddComponent(unit, new UnitGridSlotComponent 
-                    { 
+                    ecb.AddComponent(unit, new UnitGridSlotComponent
+                    {
                         gridPosition = originalGridPos, // Mantener posición original
                         slotIndex = i,
                         worldOffset = gridOffset // Usar offset directo sin centrado
@@ -117,7 +117,7 @@ public partial class FormationSystem : SystemBase
 
             s.currentFormation = input.ValueRO.desiredFormation;
             s.formationChangeCooldown = 1f;
-            
+
             // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
             if (s.currentState == SquadFSMState.HoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
             {
@@ -125,10 +125,10 @@ public partial class FormationSystem : SystemBase
                 holdCompRW.ValueRW.originalFormation = input.ValueRO.desiredFormation;
                 // Mantener el mismo holdCenter para que la formación se reorganice en el mismo lugar
             }
-            
+
             state.ValueRW = s;
         }
-        
+
         // Execute all deferred changes
         ecb.Playback(EntityManager);
         ecb.Dispose();
@@ -141,21 +141,19 @@ public partial class FormationSystem : SystemBase
         {
             var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
             targetPos.ValueRW.position = worldPos;
-            Debug.Log($"[FormationSystem] Set UnitTargetPositionComponent for Entity {unit} to {worldPos}");
         }
         else
         {
             ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
-            Debug.Log($"[FormationSystem] Added UnitTargetPositionComponent for Entity {unit} with {worldPos}");
         }
-        
+
         // Actualizar el campo Slot de UnitSpacingComponent si existe
         if (SystemAPI.HasComponent<UnitSpacingComponent>(unit))
         {
             var spacingComp = SystemAPI.GetComponentRW<UnitSpacingComponent>(unit);
             spacingComp.ValueRW.Slot = new int2((int)originalGridPos.x, (int)originalGridPos.z);
         }
-        
+
         // State management is handled by UnitFormationStateSystem
         // This system only handles position calculation
     }

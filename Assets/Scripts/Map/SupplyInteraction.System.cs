@@ -13,11 +13,11 @@ public partial class SupplyInteractionSystem : SystemBase
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;
-
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         var healthLookup = GetComponentLookup<HeroHealthComponent>();
         var staminaLookup = GetComponentLookup<StaminaComponent>();
-        var interactionLookup = GetComponentLookup<PlayerInteractionComponent>(true);
+
 
         foreach (var (zone, supply, transform, entity) in
                  SystemAPI.Query<RefRW<ZoneTriggerComponent>,
@@ -98,11 +98,6 @@ public partial class SupplyInteractionSystem : SystemBase
                         staminaLookup[hero] = st;
                     }
 
-                    if (interactionLookup.HasComponent(hero) && interactionLookup[hero].interactPressed &&
-                        !EntityManager.HasComponent<SquadSwapRequest>(hero))
-                    {
-                        EntityManager.AddComponentData(hero, new SquadSwapRequest { zoneId = zone.ValueRO.zoneId });
-                    }
                 }
             }
             else
@@ -117,8 +112,8 @@ public partial class SupplyInteractionSystem : SystemBase
                     supply.ValueRW.currentTeam = teamInt;
                     zone.ValueRW.teamOwner = teamInt;
 
-                    Entity evt = EntityManager.CreateEntity();
-                    EntityManager.AddComponentData(evt, new SupplyZoneCapturedEvent
+                    Entity evt = ecb.CreateEntity();
+                    ecb.AddComponent(evt, new SupplyZoneCapturedEvent
                     {
                         zoneId = zone.ValueRO.zoneId,
                         capturingTeam = presentTeam
@@ -128,5 +123,8 @@ public partial class SupplyInteractionSystem : SystemBase
 
             alliedHeroes.Dispose();
         }
+
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
     }
 }
