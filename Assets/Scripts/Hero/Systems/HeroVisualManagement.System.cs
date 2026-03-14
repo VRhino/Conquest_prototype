@@ -80,6 +80,11 @@ public partial class HeroVisualManagementSystem : SystemBase
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
 
+        // Asignar layer "Heroes" para culling de distancia nativo
+        int heroesLayer = LayerMask.NameToLayer("Heroes");
+        if (heroesLayer >= 0)
+            SetLayerRecursively(visualInstance, heroesLayer);
+
         // Solo aplicar personalización de avatar al héroe local
         if (isLocalPlayer)
         {
@@ -92,6 +97,11 @@ public partial class HeroVisualManagementSystem : SystemBase
                 Debug.LogError($"[HeroVisualManagementSystem] Error applying visual customization: {ex.Message}\n{ex.StackTrace}");
             }
         }
+
+        // Desactivar animación cuando el personaje está fuera de cámara (sin costo de runtime)
+        var animator = visualInstance.GetComponent<Animator>();
+        if (animator != null)
+            animator.cullingMode = AnimatorCullingMode.CullCompletely;
 
         // Configurar el script de sincronización
         EntityVisualSync syncScript = visualInstance.GetComponent<EntityVisualSync>();
@@ -163,6 +173,13 @@ public partial class HeroVisualManagementSystem : SystemBase
         }
     }
     
+    private static void SetLayerRecursively(GameObject obj, int layer)
+    {
+        obj.layer = layer;
+        foreach (Transform child in obj.transform)
+            SetLayerRecursively(child.gameObject, layer);
+    }
+
     /// <summary>
     /// Busca el prefab GameObject visual usando el VisualPrefabRegistry.
     /// </summary>

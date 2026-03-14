@@ -74,13 +74,13 @@ public static class BattleDebugCreator
         battleData.battleID = Guid.NewGuid().ToString();
 
         // Create mock attackers
-        for (int i = 0; i < 14; i++)
+        for (int i = 0; i < 4; i++)
         {
             BattleHeroData attacker = CreateRandomMockBattleHero();
             battleData.attackers.Add(attacker);
         }
         // Create mock defenders
-        for (int i = 0; i < 15; i++)
+        for (int i = 0; i < 5; i++)
         {
             BattleHeroData defender = CreateRandomMockBattleHero();
             battleData.defenders.Add(defender);

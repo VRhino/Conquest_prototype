@@ -6,6 +6,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Controlador principal de la escena de batalla.
@@ -19,10 +20,16 @@ public class BattleSceneController : MonoBehaviour
 
     [SerializeField] private TextMeshProUGUI _battleTimerDisplay;
     [SerializeField] private GameObject _loadingScreen;
+    [SerializeField] private GameObject _victoryDefeatPanel;
+    [SerializeField] private GameObject _victoryObject;
+    [SerializeField] private GameObject _defeatObject;
 
     private TimerController _timerController;
     private bool _loadingScreenDismissed;
     private int _spawnedRemoteCount;
+    private bool _matchEndHandled;
+    private float _matchEndTime = -1f;
+    private const float PostMatchDelay = 10f;
     private float _allVisualsReadyTime = -1f;
     private const float LoadingScreenDelay = 3f;
     private const float MaxLoadingScreenTime = 30f;
@@ -63,10 +70,47 @@ public class BattleSceneController : MonoBehaviour
         }
 
         _loadingStartTime = Time.time;
+
+        ConfigureCameraLayerCulling();
+    }
+
+    /// <summary>
+    /// Configura culling de distancia por layer en la cámara principal.
+    /// Las unidades más allá de 120 m dejan de renderizarse nativamente.
+    /// </summary>
+    private void ConfigureCameraLayerCulling()
+    {
+        var cam = Camera.main;
+        if (cam == null) return;
+
+        int unitsLayer = LayerMask.NameToLayer("Units");
+        if (unitsLayer < 0)
+        {
+            Debug.LogWarning("[BattleSceneController] Layer 'Units' no encontrado — omitiendo layerCullDistances.");
+            return;
+        }
+
+        // Asegurar que el layer "Units" esté incluido en la culling mask
+        cam.cullingMask |= (1 << unitsLayer);
+
+        float[] distances = new float[32];
+        distances[unitsLayer] = 120f;
+
+        int heroesLayer = LayerMask.NameToLayer("Heroes");
+        if (heroesLayer >= 0)
+        {
+            cam.cullingMask |= (1 << heroesLayer);
+            distances[heroesLayer] = 150f;
+        }
+
+        cam.layerCullDistances = distances;
+        cam.layerCullSpherical = true;
     }
 
     void Update()
     {
+        HandleMatchEnd();
+
         if (_loadingScreenDismissed || _loadingScreen == null) return;
 
         // Timeout de seguridad
@@ -108,6 +152,74 @@ public class BattleSceneController : MonoBehaviour
             _loadingScreenDismissed = true;
             Debug.Log("[BattleSceneController] Loading screen dismissed after delay.");
         }
+    }
+
+    private void HandleMatchEnd()
+    {
+        // Transición a PostBattleScene tras el delay
+        if (_matchEndHandled && _matchEndTime >= 0f && Time.time - _matchEndTime >= PostMatchDelay)
+        {
+            SceneManager.LoadScene("PostBattleScene");
+            return;
+        }
+
+        if (_matchEndHandled) return;
+
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world == null || !world.IsCreated) return;
+
+        var em = world.EntityManager;
+        var matchQuery = em.CreateEntityQuery(typeof(MatchStateComponent));
+        if (matchQuery.IsEmpty) { matchQuery.Dispose(); return; }
+
+        // Puede haber más de una entidad con MatchStateComponent (subscena + sistema); buscar la primera en EndMatch
+        var matchStates = matchQuery.ToComponentDataArray<MatchStateComponent>(Allocator.Temp);
+        matchQuery.Dispose();
+
+        MatchStateComponent matchState = default;
+        bool found = false;
+        for (int i = 0; i < matchStates.Length; i++)
+        {
+            if (matchStates[i].currentState == MatchState.EndMatch)
+            {
+                matchState = matchStates[i];
+                found = true;
+                break;
+            }
+        }
+        matchStates.Dispose();
+
+        if (!found) return;
+
+        _matchEndHandled = true;
+        _matchEndTime = Time.time;
+
+        // Determinar equipo del jugador local
+        int localTeam = 0;
+        var localQuery = em.CreateEntityQuery(typeof(IsLocalPlayer), typeof(TeamComponent));
+        if (!localQuery.IsEmpty)
+        {
+            var teams = localQuery.ToComponentDataArray<TeamComponent>(Allocator.Temp);
+            if (teams.Length > 0)
+                localTeam = teams[0].value == Team.TeamA ? 1 : 2;
+            teams.Dispose();
+        }
+        localQuery.Dispose();
+
+        bool localWon = localTeam != 0 && localTeam == matchState.winnerTeam;
+
+        // Mostrar panel Victory/Defeat
+        if (_victoryDefeatPanel != null)
+            _victoryDefeatPanel.SetActive(true);
+        if (_victoryObject != null)
+            _victoryObject.SetActive(localWon);
+        if (_defeatObject != null)
+            _defeatObject.SetActive(!localWon);
+
+        // Guardar ganador para PostBattleScene
+        BattleTransitionData.Instance.WinnerTeam = matchState.winnerTeam;
+
+        Debug.Log($"[BattleSceneController] Match ended — winner team: {matchState.winnerTeam}, local team: {localTeam}, localWon: {localWon}. Loading PostBattleScene in {PostMatchDelay}s.");
     }
 
     #endregion

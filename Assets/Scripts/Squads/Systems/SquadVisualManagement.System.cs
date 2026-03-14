@@ -75,7 +75,16 @@ public partial class SquadVisualManagementSystem : SystemBase
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.name = $"Unit_{unitEntity.Index}_Visual";
-        SetLayerRecursively(visualInstance, 0); // 0 = Default, el prefab puede tener layer de preview
+
+        // Asignar layer "Units" para culling de distancia nativo por cámara
+        int unitsLayer = LayerMask.NameToLayer("Units");
+        int targetLayer = unitsLayer >= 0 ? unitsLayer : 0;
+        SetLayerRecursively(visualInstance, targetLayer);
+
+        // Desactivar animación cuando la unidad está fuera de cámara (sin costo de runtime)
+        var animator = visualInstance.GetComponent<Animator>();
+        if (animator != null)
+            animator.cullingMode = AnimatorCullingMode.CullCompletely;
 
         // Configurar sincronización con la entidad de la unidad
         var syncScript = visualInstance.GetComponent<EntityVisualSync>();

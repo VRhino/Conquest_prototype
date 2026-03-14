@@ -65,8 +65,6 @@ public partial class MatchControllerSystem : SystemBase
 
             case MatchState.EndMatch:
                 Enabled = false;
-                BattleTransitionData.Instance.WinnerTeam = state.ValueRO.winnerTeam;
-                SceneManager.LoadScene("PostBattleScene");
                 break;
         }
 
