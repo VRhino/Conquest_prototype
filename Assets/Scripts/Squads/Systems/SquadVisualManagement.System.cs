@@ -2,7 +2,9 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.AI;
 using ConquestTactics.Visual;
+using System.Collections.Generic;
 
 /// <summary>
 /// Sistema que gestiona la instanciación y sincronización de los GameObjects visuales
@@ -16,28 +18,37 @@ public partial class SquadVisualManagementSystem : SystemBase
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
-        
+        var pendingNavAgents = new List<(Entity entity, NavMeshAgent agent)>();
+
         // Solo crear visuales para unidades individuales
         // Los squads son entidades lógicas sin visual propio
-        CreateUnitVisuals(ecb);
-        
+        CreateUnitVisuals(ecb, pendingNavAgents);
+
         ecb.Playback(EntityManager);
         ecb.Dispose();
+
+        // Adjuntar NavMeshAgent como componente manejado después del playback para evitar
+        // cambios estructurales durante la iteración de queries
+        foreach (var (entity, agent) in pendingNavAgents)
+        {
+            EntityManager.AddComponentObject(entity, agent);
+            EntityManager.AddComponent<NavAgentComponent>(entity);
+        }
     }
-    
+
     /// <summary>
     /// Crea visuales para unidades que no tienen visual todavía.
     /// Los squads no tienen visuales propios, solo las unidades individuales.
     /// </summary>
-    private void CreateUnitVisuals(EntityCommandBuffer ecb)
+    private void CreateUnitVisuals(EntityCommandBuffer ecb, List<(Entity, NavMeshAgent)> pendingNavAgents)
     {
         foreach (var (unitVisualRef, transform, entity) in
-                 SystemAPI.Query<RefRO<UnitVisualReference>, 
+                 SystemAPI.Query<RefRO<UnitVisualReference>,
                                  RefRO<LocalTransform>>()
                         .WithNone<UnitVisualInstance>()
                         .WithEntityAccess())
         {
-            CreateVisualForUnit(entity, unitVisualRef.ValueRO, transform.ValueRO, ecb);
+            CreateVisualForUnit(entity, unitVisualRef.ValueRO, transform.ValueRO, ecb, pendingNavAgents);
         }
     }
     
@@ -48,8 +59,8 @@ public partial class SquadVisualManagementSystem : SystemBase
     /// <param name="visualRef">Referencia al prefab visual</param>
     /// <param name="transform">Transform inicial de la unidad</param>
     /// <param name="ecb">EntityCommandBuffer para agregar componentes</param>
-    private void CreateVisualForUnit(Entity unitEntity, UnitVisualReference visualRef, 
-        LocalTransform transform, EntityCommandBuffer ecb)
+    private void CreateVisualForUnit(Entity unitEntity, UnitVisualReference visualRef,
+        LocalTransform transform, EntityCommandBuffer ecb, List<(Entity, NavMeshAgent)> pendingNavAgents)
     {
         // Buscar el squad padre para determinar el tipo
         Entity parentSquad = FindParentSquad(unitEntity);
@@ -83,7 +94,11 @@ public partial class SquadVisualManagementSystem : SystemBase
 
         var syncScript = VisualSyncUtility.SetupVisualSync(visualInstance);
         syncScript.SetHeroEntity(unitEntity);
-        
+
+        var agent = visualInstance.GetComponent<NavMeshAgent>();
+        if (agent != null)
+            pendingNavAgents.Add((unitEntity, agent));
+
         // Marcar la unidad como teniendo visual
         ecb.AddComponent(unitEntity, new UnitVisualInstance
         {

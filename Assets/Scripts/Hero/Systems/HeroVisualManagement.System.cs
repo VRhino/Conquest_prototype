@@ -2,6 +2,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.AI;
 using ConquestTactics.Visual;
 using System.Collections.Generic;
 using Data.Items;
@@ -33,7 +34,8 @@ public partial class HeroVisualManagementSystem : SystemBase
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
-        
+        var pendingNavAgents = new List<(Entity entity, NavMeshAgent agent)>();
+
         // Crear visuales para entidades recién spawneadas (héroe local y remotos)
         foreach (var (spawn, transform, entity) in
                  SystemAPI.Query<RefRO<HeroSpawnComponent>,
@@ -48,10 +50,17 @@ public partial class HeroVisualManagementSystem : SystemBase
             }
 
             bool isLocal = SystemAPI.HasComponent<IsLocalPlayer>(entity);
-            CreateVisualForEntity(entity, spawn.ValueRO.visualPrefabId.ToString(), transform.ValueRO, ecb, isLocal);
+            CreateVisualForEntity(entity, spawn.ValueRO.visualPrefabId.ToString(), transform.ValueRO, ecb, isLocal, pendingNavAgents);
         }
         ecb.Playback(EntityManager);
         ecb.Dispose();
+
+        // Adjuntar NavMeshAgent como componente manejado después del playback
+        foreach (var (entity, agent) in pendingNavAgents)
+        {
+            EntityManager.AddComponentObject(entity, agent);
+            EntityManager.AddComponent<NavAgentComponent>(entity);
+        }
     }
     
     /// <summary>
@@ -63,7 +72,8 @@ public partial class HeroVisualManagementSystem : SystemBase
     /// <param name="ecb">EntityCommandBuffer para agregar componentes</param>
     /// <param name="isLocalPlayer">True si la entidad es el jugador local (aplica personalización de avatar)</param>
     private void CreateVisualForEntity(Entity entity, string visualPrefabId,
-        LocalTransform transform, EntityCommandBuffer ecb, bool isLocalPlayer = true)
+        LocalTransform transform, EntityCommandBuffer ecb, bool isLocalPlayer = true,
+        List<(Entity, NavMeshAgent)> pendingNavAgents = null)
     {
         // Buscar el prefab visual usando el id
         GameObject visualPrefab = FindVisualPrefabGameObject(visualPrefabId);
@@ -104,6 +114,15 @@ public partial class HeroVisualManagementSystem : SystemBase
 
         var syncScript = VisualSyncUtility.SetupVisualSync(visualInstance);
         syncScript.SetHeroEntity(entity);
+
+        // Heroes remotos usan NavMeshAgent para navegar sin teleport
+        if (!isLocalPlayer && pendingNavAgents != null)
+        {
+            var agent = visualInstance.GetComponent<NavMeshAgent>();
+            if (agent != null)
+                pendingNavAgents.Add((entity, agent));
+        }
+
         // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)
         ecb.AddComponent(entity, new HeroVisualInstance
         {

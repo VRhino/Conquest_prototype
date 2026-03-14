@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.Transforms;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace ConquestTactics.Visual
 {
@@ -43,6 +44,7 @@ namespace ConquestTactics.Visual
         private float _lastSyncTime;
         private const float SYNC_INTERVAL = 0.016f;
         private CharacterController _characterController;
+        private NavMeshAgent _navAgent;
         private float _verticalVelocity = 0f;
         private const float GRAVITY = -9.81f;
         private const float TERMINAL_VELOCITY = -50f;
@@ -57,6 +59,7 @@ namespace ConquestTactics.Visual
                 if (_enableDebugLogs)
                     Debug.Log("[EntityVisualSync] CharacterController habilitado para movimiento visual");
             }
+            _navAgent = GetComponent<NavMeshAgent>();
         }
 
         private void Start()
@@ -168,11 +171,24 @@ namespace ConquestTactics.Visual
                 }
                 else
                 {
-                    // Units: ECS is authoritative — sync position and rotation from ECS to GO
-                    if (_syncPosition)
-                        transform.position = ecsTransform.Position;
-                    if (_syncRotation)
-                        transform.rotation = ecsTransform.Rotation;
+                    bool usesNavMesh = _navAgent != null && _navAgent.enabled;
+                    if (usesNavMesh)
+                    {
+                        // NavMesh-driven: GO is authoritative — write GO position/rotation back to ECS
+                        if (_syncPosition)
+                            ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);
+                        if (_syncRotation)
+                            ecsTransform.Rotation = transform.rotation;
+                        _entityManager.SetComponentData(_heroEntity, ecsTransform);
+                    }
+                    else
+                    {
+                        // Units without NavMesh: ECS is authoritative — sync ECS → GO
+                        if (_syncPosition)
+                            transform.position = ecsTransform.Position;
+                        if (_syncRotation)
+                            transform.rotation = ecsTransform.Rotation;
+                    }
                 }
             }
             _lastSyncTime = Time.time;

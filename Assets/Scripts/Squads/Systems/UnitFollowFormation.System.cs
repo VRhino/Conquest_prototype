@@ -96,6 +96,10 @@ public partial class UnitFollowFormationSystem : SystemBase
                     !transformLookup.HasComponent(unit))
                     continue;
 
+                // Unidades con NavMeshAgent son manejadas por UnitNavMeshSystem
+                if (SystemAPI.HasComponent<NavAgentComponent>(unit))
+                    continue;
+
                 // Solo procesar movimiento si el héroe está fuera del radio O si la unidad ya está en movimiento
                 if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
                 {
