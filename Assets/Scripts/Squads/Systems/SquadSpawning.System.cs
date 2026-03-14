@@ -156,7 +156,7 @@ public partial class SquadSpawningSystem : SystemBase
                     i, // unitIndex
                     new SquadStateComponent { currentFormation = firstFormationType },
                     null,
-                    formationAnchor,
+                    heroTransform.ValueRO.Position, // misma base que GridFormationUpdateSystem (sin squadSpawnOffset)
                     out int2 originalGridPos,
                     out float3 gridOffset,
                     out float3 worldPos,

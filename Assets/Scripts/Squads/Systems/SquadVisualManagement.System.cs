@@ -97,7 +97,10 @@ public partial class SquadVisualManagementSystem : SystemBase
 
         var agent = visualInstance.GetComponent<NavMeshAgent>();
         if (agent != null)
+        {
+            agent.Warp(visualInstance.transform.position); // fuerza posición al spawn, evita warp al NavMesh más cercano
             pendingNavAgents.Add((unitEntity, agent));
+        }
 
         // Marcar la unidad como teniendo visual
         ecb.AddComponent(unitEntity, new UnitVisualInstance

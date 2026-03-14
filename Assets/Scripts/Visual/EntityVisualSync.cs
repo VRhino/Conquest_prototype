@@ -171,7 +171,7 @@ namespace ConquestTactics.Visual
                 }
                 else
                 {
-                    bool usesNavMesh = _navAgent != null && _navAgent.enabled;
+                    bool usesNavMesh = _navAgent != null && _navAgent.enabled && _navAgent.isOnNavMesh;
                     if (usesNavMesh)
                     {
                         // NavMesh-driven: GO is authoritative — write GO position/rotation back to ECS

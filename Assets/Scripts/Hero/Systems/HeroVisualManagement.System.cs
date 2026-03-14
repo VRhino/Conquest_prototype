@@ -120,7 +120,10 @@ public partial class HeroVisualManagementSystem : SystemBase
         {
             var agent = visualInstance.GetComponent<NavMeshAgent>();
             if (agent != null)
+            {
+                agent.Warp(visualInstance.transform.position); // fuerza posición al spawn, evita warp al NavMesh más cercano
                 pendingNavAgents.Add((entity, agent));
+            }
         }
 
         // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)
