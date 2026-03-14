@@ -264,7 +264,7 @@ public partial class SquadControlSystem : SystemBase
         {
             // Verificar si el hit es con el terreno (puedes ajustar esto según tus layers)
             if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Default") || 
-                hit.collider.CompareTag("Terrain"))
+                hit.collider.CompareTag(GameTags.Terrain))
             {
                 return new float3(hit.point.x, hit.point.y, hit.point.z);
             }

@@ -140,6 +140,10 @@ public partial class HeroSpawnSystem : SystemBase
                 }
             }
 
+            // Añadir HeroStateComponent para que CameraBootstrapSystem pueda encontrar al héroe
+            // (SquadSpawningSystem también lo añade, pero no corre en FeudoScene sin squads)
+            entityManager.AddComponentData(heroEntity, new HeroStateComponent { State = HeroState.Idle });
+
             if (_enableDebugLogs)
             {
                 Debug.Log($"[HeroSpawnSystem] Hero spawned successfully at position: {spawnPosition}");

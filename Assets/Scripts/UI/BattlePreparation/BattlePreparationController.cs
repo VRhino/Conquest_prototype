@@ -490,7 +490,7 @@ public class BattlePreparationController : MonoBehaviour
         // 3. Transferir datos y cargar escena
         Debug.Log($"[BattlePreparationController] Transitioning to BattleScene with battleID: {_currentBattleData.battleID}");
         BattleTransitionData.Instance.SetBattleData(_currentBattleData);
-        SceneTransitionService.LoadScene("BattleScene");
+        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Battle);
     }
 
     private void reconnectAllEvents()

@@ -85,6 +85,10 @@ public partial class HeroVisualManagementSystem : SystemBase
         if (heroesLayer >= 0)
             SetLayerRecursively(visualInstance, heroesLayer);
 
+        // Asignar tag "Player" al héroe local para que HeroDetail3DPreview lo pueda encontrar
+        if (isLocalPlayer)
+            visualInstance.tag = GameTags.Player;
+
         // Solo aplicar personalización de avatar al héroe local
         if (isLocalPlayer)
         {
@@ -98,18 +102,7 @@ public partial class HeroVisualManagementSystem : SystemBase
             }
         }
 
-        // Desactivar animación cuando el personaje está fuera de cámara (sin costo de runtime)
-        var animator = visualInstance.GetComponent<Animator>();
-        if (animator != null)
-            animator.cullingMode = AnimatorCullingMode.CullCompletely;
-
-        // Configurar el script de sincronización
-        EntityVisualSync syncScript = visualInstance.GetComponent<EntityVisualSync>();
-        if (syncScript == null)
-        {
-            syncScript = visualInstance.AddComponent<EntityVisualSync>();
-        }
-
+        var syncScript = VisualSyncUtility.SetupVisualSync(visualInstance);
         syncScript.SetHeroEntity(entity);
         // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)
         ecb.AddComponent(entity, new HeroVisualInstance

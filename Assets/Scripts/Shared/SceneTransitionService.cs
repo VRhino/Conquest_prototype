@@ -5,15 +5,28 @@ using UnityEngine.SceneManagement;
 
 public static class SceneTransitionService
 {
+    public static class SceneNames
+    {
+        public const string Login = "LoginScene";
+        public const string HeroSelection = "HeroSelectionScene";
+        public const string AvatarCreator = "AvatarCreator";
+        public const string CharacterSelection = "CharacterSelecctionScene";
+        public const string Feudo = "FeudoScene";
+        public const string BattlePrep = "BattlePrepScene";
+        public const string Battle = "BattleScene";
+        public const string PostBattle = "PostBattleScene";
+    }
+
     private static readonly Dictionary<string, GamePhase> SceneToPhaseMap = new()
     {
-        { "LoginScene", GamePhase.Login },
-        { "HeroSelectionScene", GamePhase.CharacterSelection },
-        { "AvatarCreator", GamePhase.AvatarCreation },
-        { "FeudoScene", GamePhase.Feudo },
-        { "BattlePrepScene", GamePhase.BattlePreparation },
-        { "BattleScene", GamePhase.Combate },
-        { "PostBattleScene", GamePhase.PostPartida }
+        { SceneNames.Login, GamePhase.Login },
+        { SceneNames.HeroSelection, GamePhase.CharacterSelection },
+        { SceneNames.CharacterSelection, GamePhase.CharacterSelection },
+        { SceneNames.AvatarCreator, GamePhase.AvatarCreation },
+        { SceneNames.Feudo, GamePhase.Feudo },
+        { SceneNames.BattlePrep, GamePhase.BattlePreparation },
+        { SceneNames.Battle, GamePhase.Combate },
+        { SceneNames.PostBattle, GamePhase.PostPartida }
     };
 
     public static void LoadScene(string sceneName)

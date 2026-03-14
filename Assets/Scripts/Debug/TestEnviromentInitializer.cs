@@ -6,7 +6,7 @@ public class TestEnvironmentInitializer : MonoBehaviour
     public void SetupTestEnvironment()
     {
         // Solo inicializar con datos de test si no hay datos de transición
-        if (!BattleTransitionData.Instance.HasBattleData())
+        if (!BattleTransitionData.Instance.HasBattleData() && !PlayerSessionService.IsSessionActive)
         {
             LoadSystem.LoadDataForTesting(out HeroData localHero, out PlayerData player);
             PlayerSessionService.SetPlayer(player);

@@ -123,11 +123,11 @@ public class HeroDetail3DPreview : MonoBehaviour, IPointerDownHandler, IPointerU
         {
             previewCamera.targetTexture = renderTexture;
             
-            // Intentar usar layer hero_preview, si no existe usar Default
-            int heroLayer = LayerMask.NameToLayer("hero_preview");
+            // Usar el layer "Heroes" que es el que asigna HeroVisualManagementSystem
+            int heroLayer = LayerMask.NameToLayer("Heroes");
             if (heroLayer == -1)
             {
-                Debug.LogWarning("[HeroDetail3DPreview] Layer 'hero_preview' not found, using Default layer");
+                Debug.LogWarning("[HeroDetail3DPreview] Layer 'Heroes' not found, using Default layer");
                 heroLayer = 0; // Default layer
             }
             
@@ -161,7 +161,7 @@ public class HeroDetail3DPreview : MonoBehaviour, IPointerDownHandler, IPointerU
     private void FindHeroInScene()
     {
         // Buscar el héroe activo en la escena
-        GameObject heroObject = GameObject.FindWithTag("Player");
+        GameObject heroObject = GameObject.FindWithTag(GameTags.Player);
         
         if (heroObject != null)
         {

@@ -1,10 +1,35 @@
 {
-  "enabledPlugins": {
-    "context-mode@context-mode": true
-  },
   "permissions": {
     "allow": [
-      "mcp__plugin_context-mode_context-mode__ctx_batch_execute"
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_search"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[HOOK] REUSE-CHECK: Antes de crear este archivo, debes haber ejecutado /reuse-check. Si no lo hiciste, detente y hazlo ahora.'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[HOOK] NO-MAGIC-PARAMS: Revisa si el codigo que acabas de escribir contiene literales numericos o strings de configuracion. Si los hay, ejecuta /no-magic-params.'"
+          }
+        ]
+      }
+    ]
+  },
+  "enabledPlugins": {
+    "context-mode@context-mode": true
   }
 }

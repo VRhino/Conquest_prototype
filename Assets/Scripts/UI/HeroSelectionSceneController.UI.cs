@@ -36,7 +36,7 @@ public class HeroSelectionSceneController : MonoBehaviour
 
     void OnCreateHero()
     {
-        SceneTransitionService.LoadScene("AvatarCreator");
+        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.AvatarCreator);
     }
 
     void LoadHeroButtons()
@@ -158,7 +158,7 @@ public class HeroSelectionSceneController : MonoBehaviour
     void OnConfirm()
     {
         PlayerSessionService.SetSelectedHero(selectedHero);
-        SceneTransitionService.LoadScene("FeudoScene");
+        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Feudo);
     }
     
     void OnDeleteHero()
@@ -204,6 +204,6 @@ public class HeroSelectionSceneController : MonoBehaviour
     void OnExitPressed()
     {
         PlayerSessionService.Clear();
-        SceneTransitionService.LoadScene("LoginScene");
+        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Login);
     }
 }

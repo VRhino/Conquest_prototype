@@ -81,17 +81,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         int targetLayer = unitsLayer >= 0 ? unitsLayer : 0;
         SetLayerRecursively(visualInstance, targetLayer);
 
-        // Desactivar animación cuando la unidad está fuera de cámara (sin costo de runtime)
-        var animator = visualInstance.GetComponent<Animator>();
-        if (animator != null)
-            animator.cullingMode = AnimatorCullingMode.CullCompletely;
-
-        // Configurar sincronización con la entidad de la unidad
-        var syncScript = visualInstance.GetComponent<EntityVisualSync>();
-        if (syncScript == null)
-        {
-            syncScript = visualInstance.AddComponent<EntityVisualSync>();
-        }
+        var syncScript = VisualSyncUtility.SetupVisualSync(visualInstance);
         syncScript.SetHeroEntity(unitEntity);
         
         // Marcar la unidad como teniendo visual

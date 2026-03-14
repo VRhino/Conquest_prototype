@@ -159,7 +159,7 @@ public class BattleSceneController : MonoBehaviour
         // Transición a PostBattleScene tras el delay
         if (_matchEndHandled && _matchEndTime >= 0f && Time.time - _matchEndTime >= PostMatchDelay)
         {
-            SceneManager.LoadScene("PostBattleScene");
+            SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.PostBattle);
             return;
         }
 
