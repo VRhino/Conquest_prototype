@@ -23,9 +23,9 @@ public partial class SquadStatusUpdateSystem : SystemBase
 
             bool hasStatus = SystemAPI.HasComponent<SquadStatusComponent>(squadEntity);
 
-            // Ensure squad entity has IsLocalPlayer tag so the UI query finds it
-            if (!SystemAPI.HasComponent<IsLocalPlayer>(squadEntity))
-                ecb.AddComponent<IsLocalPlayer>(squadEntity);
+            // Ensure squad entity has IsLocalSquadActive tag so the UI query finds it
+            if (!SystemAPI.HasComponent<IsLocalSquadActive>(squadEntity))
+                ecb.AddComponent<IsLocalSquadActive>(squadEntity);
 
             // Count alive/total units
             if (!SystemAPI.HasBuffer<SquadUnitElement>(squadEntity))

@@ -19,7 +19,7 @@ public partial class CameraBootstrapSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        EntityQuery heroQuery = SystemAPI.QueryBuilder().WithAll<IsLocalPlayer, HeroStateComponent>().Build();
+        EntityQuery heroQuery = SystemAPI.QueryBuilder().WithAll<IsLocalPlayer>().Build();
         if (heroQuery.IsEmpty)
             return;
 

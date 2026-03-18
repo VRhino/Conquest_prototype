@@ -69,7 +69,7 @@ public class SquadSectionController : MonoBehaviour
         // --- Squad status (alive/total) ---
         var squadQuery = em.CreateEntityQuery(
             ComponentType.ReadOnly<SquadStatusComponent>(),
-            ComponentType.ReadOnly<IsLocalPlayer>());
+            ComponentType.ReadOnly<IsLocalSquadActive>());
         if (squadQuery.IsEmptyIgnoreFilter) return;
 
         Entity squadEntity = squadQuery.GetSingletonEntity();

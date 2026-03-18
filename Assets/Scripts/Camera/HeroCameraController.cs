@@ -169,7 +169,6 @@ public class HeroCameraController : MonoBehaviour
                 transform.rotation = Quaternion.LookRotation(followPos.Value - transform.position);
             }
         }
-        // Si staticCamera == true, la cámara se queda en su posición y rotación actuales
 
         // Reset input deltas
         _mouseX = 0f;

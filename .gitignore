@@ -40,4 +40,6 @@ scripts_list.txt
 # Battle data dumps (debug only)
 Assets/Debug/BattleDataDumps/
 Assets/Debug/BattleDataDumps.meta
+Assets/Debug/EntityDumps/
+Assets/Debug/EntityDumps.meta
 

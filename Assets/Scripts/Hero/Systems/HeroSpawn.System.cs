@@ -99,6 +99,18 @@ public partial class HeroSpawnSystem : SystemBase
             });
             Debug.Log($"[HeroSpawnSystem.cs][{heroEntity}] Set LocalTransform.Position = {spawnPosition}");
 
+            // Garantizar isAlive = true (bool defaultea false en prefab bakeado)
+            if (entityManager.HasComponent<HeroLifeComponent>(heroEntity))
+            {
+                var life = entityManager.GetComponentData<HeroLifeComponent>(heroEntity);
+                life.isAlive = true;
+                entityManager.SetComponentData(heroEntity, life);
+            }
+            else
+            {
+                entityManager.AddComponentData(heroEntity, new HeroLifeComponent { isAlive = true });
+            }
+
             // Marcar como spawneado para evitar re-spawning
             if (entityManager.HasComponent<HeroSpawnComponent>(heroEntity))
             {

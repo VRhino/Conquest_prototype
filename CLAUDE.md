@@ -2,6 +2,53 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## WORKFLOW ORCHESTRATION
+
+### 1. Plan Mode Default
+
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+
+### 2. Subagent Strategy
+
+- Use subagents liberally to keep the main context window clean
+- OfFload research, exploration and parallel analisis to subagents
+- For complex problems, throw more compute at it by via subagents
+- One Task per subagent for focused execution
+- Use Haiku for simple tasks like research, exploration and parallel analisis
+
+### 3. Self-Improvement loop
+
+- After ANY correction from the user: update tasks/lessons.md with the pattern
+- Write rules for yourself that prevent you from making the same mistake
+- Ruthlessly iterate on thesse lessons until mistake rate drops
+- Review lessons at session start for relevant project
+
+### 4 Demand Elegance
+
+- For non-trivial changes: pause and ask "is there a more elegant way to do this?"
+- if a fix feels hacky: "knowing everything i know now, implement the elegant solution"
+- Skip this for simple, obvious fixes -- don't over-engineer it
+- Challenge your own work before presenting it
+
+## Task Management
+
+1. Plan First: Write plan to tasks/todo.md with checable items
+2. Verify Plan: Chect it before starting implementation
+3. Track Progress: Mark items complete as you go
+4. Explain Changes: High-level summary at each step
+5. Docment Results: Add review section to tasks/todo.md
+6. Capture Lessons: Update tasks/lessons.md after corrections
+
+## Core Principles
+
+- Simplicity first: Make every change as simple as posible. Impact minimal code.
+- No lazzyness: Find root causes. No temporary fixes. Senior developer standards.
+- Minimal Impact: Only touch what is necessary. No side effects with new bugs.
+
+
 ## Project Overview
 
 **Conquest Tactics** is a squad-based tactical multiplayer game built in **Unity 2022.3.x** with **DOTS/ECS (Entities 1.3.14)**. Players control a hero commander who leads squads of soldiers in 3v3 PvP battles (hasta 30 minutos máximo, timer base corto con extensión por captura de puntos).
