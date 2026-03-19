@@ -86,9 +86,17 @@ public partial class HeroVisualManagementSystem : SystemBase
 
         // Instanciar el GameObject visual
         GameObject visualInstance = Object.Instantiate(visualPrefab);
+
+        // Safe teleport: disable CharacterController before setting position to prevent internal state desync
+        var cc = visualInstance.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
+
+        // Re-enable CharacterController after position is set
+        if (cc != null) cc.enabled = true;
 
         // Asignar layer "Heroes" para culling de distancia nativo
         int heroesLayer = LayerMask.NameToLayer("Heroes");

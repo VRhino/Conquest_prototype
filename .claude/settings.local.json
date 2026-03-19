@@ -10,7 +10,8 @@
       "mcp__plugin_context-mode_context-mode__ctx_execute",
       "Bash(xargs grep:*)",
       "Bash(grep -r \"class.*Detection\\\\|class.*Targeting\" /c/Users/VRINO/desarrollo/Conquest_prototype/Assets/Scripts --include=*.cs -n)",
-      "WebSearch"
+      "WebSearch",
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index"
     ]
   },
   "hooks": {

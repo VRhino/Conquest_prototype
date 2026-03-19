@@ -237,9 +237,8 @@ public class BattleSceneController : MonoBehaviour
     /// </summary>
     private void InitializeBattle()
     {
-        Debug.Log($"[BattleTestDebug] BattleData received — attackers: {_currentBattleData.attackers.Count}, defenders: {_currentBattleData.defenders.Count}");
         // hacer debug de los datos del spawn de lo local hero
-        Debug.Log($"[BattleTestDebug] Local hero spawn data: {_currentBattleData.attackers[0].spawnPointId}");
+
         // Sincronizar info de batalla hacia ECS antes de que HeroSpawnSystem actúe
         SyncBattleDataToECS();
 
@@ -284,7 +283,7 @@ public class BattleSceneController : MonoBehaviour
             Debug.LogError($"[BattleTestDebug] SyncBattleDataToECS: findHeroDataByName('{localHeroName}') returned null. Attackers: [{string.Join(", ", _currentBattleData.attackers.ConvertAll(h => h.heroName))}] Defenders: [{string.Join(", ", _currentBattleData.defenders.ConvertAll(h => h.heroName))}]");
             return;
         }
-        Debug.Log($"[BattleTestDebug] SyncBattleDataToECS: Found local hero '{localHeroName}' — squadInstances: {localHero.squadInstances?.Count ?? 0}");
+
 
         // Parsear el string ID a int (IDs deben ser numéricos puros: "1", "2", "3")
         int spawnID = 1;
@@ -320,9 +319,6 @@ public class BattleSceneController : MonoBehaviour
             if (localHero.squadInstances != null && localHero.squadInstances.Count > 0)
             {
                 data.selectedSquadBaseID = new FixedString64Bytes(localHero.squadInstances[0].baseSquadID);
-                Debug.Log($"[BattleTestDebug] SyncBattleDataToECS: selectedSquadBaseID='{localHero.squadInstances[0].baseSquadID}', total squadInstances={localHero.squadInstances.Count}");
-                for (int i = 0; i < localHero.squadInstances.Count; i++)
-                    Debug.Log($"[BattleTestDebug]   · slot {i}: instanceId={localHero.squadInstances[i].id}  baseSquadID={localHero.squadInstances[i].baseSquadID}");
 
                 // Asignar IDs enteros secuenciales (0, 1, 2, ...) a cada instancia de escuadra.
                 // ID 0 = escuadra activa → coincide con HeroSpawnSystem que hardcodea instanceId = 0.

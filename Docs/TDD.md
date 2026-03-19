@@ -82,6 +82,37 @@
 - 9.6 Sistema de Marcadores de Destino (Hold Position)
 - 9.7 Scoreboard de Batalla (Panel de Estado Activado con `Tab`)
 
+## 9.8 Post-Battle UI & Victory/Defeat System
+
+`BattleSceneController` (MonoBehaviour en BattleScene) gestiona el ciclo completo de fin de partida:
+
+**Responsabilidades de BattleSceneController:**
+- **Inicialización** (`Awake`): Lee `BattleTransitionData`, resetea `DialogueUIState.IsDialogueOpen = false` para limpiar estado que puede haber filtrado de la escena anterior, y activa fallback a `TestEnvironmentInitializer` si no hay `BattleData`
+- **Layer culling** (`ConfigureCameraLayerCulling`): Configura `camera.layerCullDistances` — Units a 120 m, Heroes a 150 m; activa `layerCullSpherical = true` para culling esférico en lugar de planar
+- **Loading screen**: Se descarta cuando todos los `HeroVisualInstance` esperados están listos + 3 s de delay (`LoadingScreenDelay`). Timeout de seguridad a los 30 s (`MaxLoadingScreenTime`) para evitar loading screen infinita
+- **Victory/Defeat** (`HandleMatchEnd`): Monitorea `MatchStateComponent.currentState == MatchState.EndMatch` cada frame. Al detectar fin de partida, activa `_victoryDefeatPanel` y muestra `_victoryObject` o `_defeatObject` según el equipo local. Guarda `WinnerTeam` en `BattleTransitionData` para la post-battle scene
+- **Transición** a `PostBattleScene` tras `PostMatchDelay = 10s`
+- **Timer**: Cuando el timer llega a 0, los defensores ganan (`winnerTeam = 2`)
+
+**Flujo Victory/Defeat:**
+```
+MatchStateComponent.EndMatch detectado
+  → _victoryDefeatPanel.SetActive(true)
+  → Comparar IsLocalPlayer.TeamComponent vs matchState.winnerTeam
+  → _victoryObject.SetActive(localWon) / _defeatObject.SetActive(!localWon)
+  → BattleTransitionData.WinnerTeam = matchState.winnerTeam
+  → Esperar PostMatchDelay (10s) → SceneTransitionService.LoadScene(PostBattle)
+```
+
+## 5.7 Hitbox Weapon System (Commit e59b3d62)
+
+El sistema de combate del héroe usa hitboxes por arma (no raycast). Las armas tienen colliders habilitados solo durante el swing activo:
+
+- **Shields**: colliders propios que bloquean proyectiles y ataques frontales
+- **Detección de enemigos**: los hitboxes del arma detectan entidades enemigas con `TeamComponent` diferente al atacante
+- **Capas**: las armas y escudos usan layers dedicados para evitar auto-colisión entre el héroe y sus propias armas
+- El sistema se activa via animación (Animation Events) — no via ECS Systems — porque la detección de hitbox es una responsabilidad visual/física del lado GameObject
+
 ## 10. 🔐 Seguridad y Backend (Para expansión futura)
 
 - 10.1 Estado actual (solo local)

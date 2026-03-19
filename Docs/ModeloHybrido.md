@@ -605,6 +605,21 @@ public partial class HeroVisualManagementSystem : SystemBase
 }
 ```
 
+### Hero-Squad Entity Linking
+
+`HeroSpawnSystem` vincula el héroe local a su escuadra activa mediante `HeroSquadSelectionComponent`. El linking ocurre en el momento del spawn y usa `instanceId = 0` para identificar la escuadra activa (slot 0):
+
+```csharp
+// HeroSpawnSystem — linking héroe → escuadra activa
+em.AddComponentData(heroEntity, new HeroSquadSelectionComponent
+{
+    squadDataEntity = squadEntities[i],  // referencia a la entidad ECS de SquadData
+    instanceId = 0                        // 0 = escuadra activa; coincide con BattleSceneController.SyncBattleDataToECS
+});
+```
+
+El sistema valida que `selectedSquadBaseID` sea no-vacío antes de buscar la escuadra; si no se encuentra, loguea un warning y no agrega el componente. `BattleSceneController.SyncBattleDataToECS` asigna IDs enteros secuenciales (0, 1, 2…) a las instancias de escuadra, siendo ID 0 la activa — esto debe mantenerse sincronizado con el hardcode `instanceId = 0` en `HeroSpawnSystem`.
+
 ### Gestión de Squad y Unidades
 
 ```csharp
@@ -754,6 +769,43 @@ public partial class FormationSystem : SystemBase
     }
 }
 ```
+
+### NavMesh Integration & Safe Teleport Pattern
+
+El modelo híbrido distingue dos tipos de movimiento de héroe según si es local o remoto:
+
+| **Tipo** | **Movimiento** | **Componente** |
+|----------|---------------|----------------|
+| **Héroe local** | `CharacterController` — el jugador controla el movimiento | `EntityVisualSync` lee ECS, mueve el CharacterController |
+| **Héroe remoto** | `NavMeshAgent` — IA/red controla el movimiento | `NavMeshAgent.Warp()` en spawn, luego agente libre |
+
+**Orden de inicialización (spawn):**
+1. `HeroSpawnSystem` crea la entidad ECS con `LocalTransform` en la posición de spawn
+2. `HeroVisualManagementSystem` instancia el prefab visual y obtiene el `NavMeshAgent`
+3. Para héroes remotos: `agent.Warp(visualInstance.transform.position)` — fuerza la posición sin buscar el punto NavMesh más cercano
+4. Validar `agent.isOnNavMesh` antes de activar el sync frame-a-frame
+
+**Safe Teleport Pattern (CharacterController):**
+
+`EntityVisualSync` deshabilita el `CharacterController` antes de aplicar cualquier cambio de posición proveniente de ECS, y lo rehabilita después. Esto evita que el CharacterController corrija o invalide la posición ECS durante el sync:
+
+```csharp
+// EntityVisualSync — patrón seguro para teleporte/posicionamiento
+if (_characterController != null && _characterController.enabled)
+{
+    _characterController.enabled = false;
+    transform.position = ecsPosition;
+    _characterController.enabled = true;
+}
+else
+{
+    transform.position = ecsPosition;
+}
+```
+
+**Constantes clave en EntityVisualSync:**
+- `GROUND_CHECK_BUFFER = -0.5f` — offset vertical para detección de suelo en simulación de gravedad
+- `TERMINAL_VELOCITY = -50f` — velocidad vertical máxima de caída (cap de gravedad simulada)
 
 ### Sincronización Visual Automática
 

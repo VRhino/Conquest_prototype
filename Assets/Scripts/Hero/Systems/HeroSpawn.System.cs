@@ -69,6 +69,7 @@ public partial class HeroSpawnSystem : SystemBase
 
         if (!found)
         {
+            Debug.LogWarning($"[HeroSpawnSystem] No exact match for spawnID={dataForInstantiate.selectedSpawnID}+teamID={dataForInstantiate.teamID}. Trying fallback...");
             for (int i = 0; i < spawnPointsForInstantiate.Length; i++)
             {
                 var sp = spawnPointsForInstantiate[i];
@@ -79,6 +80,11 @@ public partial class HeroSpawnSystem : SystemBase
                     break;
                 }
             }
+        }
+
+        if (!found)
+        {
+            Debug.LogError($"[HeroSpawnSystem] NO spawn point found for teamID={dataForInstantiate.teamID}. Hero will NOT spawn.");
         }
 
         if (found)
@@ -141,7 +147,8 @@ public partial class HeroSpawnSystem : SystemBase
             }
 
             // Asignar squad al hero si BattleData proveyó un squad ID
-            Debug.Log($"[BattleTestDebug] HeroSpawnSystem: selectedSquadBaseID='{dataForInstantiate.selectedSquadBaseID}' (isEmpty={dataForInstantiate.selectedSquadBaseID.IsEmpty})");
+            if (_enableDebugLogs)
+                Debug.Log($"[HeroSpawnSystem] selectedSquadBaseID='{dataForInstantiate.selectedSquadBaseID}'");
             if (!dataForInstantiate.selectedSquadBaseID.IsEmpty)
             {
                 Entity squadDataEntity = Entity.Null;
@@ -167,18 +174,12 @@ public partial class HeroSpawnSystem : SystemBase
                 }
                 else
                 {
-                    int totalSquadEntities = 0;
-                    foreach (var (idComp, _) in SystemAPI.Query<RefRO<SquadDataIDComponent>>().WithEntityAccess())
-                    {
-                        Debug.Log($"[BattleTestDebug]   · available SquadDataIDComponent.id = '{idComp.ValueRO.id}'");
-                        totalSquadEntities++;
-                    }
-                    Debug.LogWarning($"[BattleTestDebug] HeroSpawnSystem: Squad '{dataForInstantiate.selectedSquadBaseID}' NOT found. Total SquadDataIDComponent entities in ECS: {totalSquadEntities}");
+                    Debug.LogWarning($"[HeroSpawnSystem] Squad '{dataForInstantiate.selectedSquadBaseID}' NOT found in ECS.");
                 }
             }
             else
             {
-                Debug.LogError("[BattleTestDebug] HeroSpawnSystem: selectedSquadBaseID is EMPTY — HeroSquadSelectionComponent will NOT be added, squads will not spawn.");
+                Debug.LogError("[HeroSpawnSystem] selectedSquadBaseID is EMPTY — HeroSquadSelectionComponent will NOT be added, squads will not spawn.");
             }
 
             // Añadir HeroStateComponent para que CameraBootstrapSystem pueda encontrar al héroe

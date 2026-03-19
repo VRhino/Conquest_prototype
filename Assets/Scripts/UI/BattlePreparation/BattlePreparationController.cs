@@ -476,10 +476,6 @@ public class BattlePreparationController : MonoBehaviour
                 if (instance != null) localHeroData.squadInstances.Add(instance);
             }
 
-            Debug.Log($"[BattleTestDebug] BattlePrep→BattleScene: Hero '{localHeroData.heroName}' transitioning with {localHeroData.squadInstances.Count} squadInstances (footer returned {selectedSquadIDs.Count} IDs):");
-            foreach (var s in localHeroData.squadInstances)
-                Debug.Log($"[BattleTestDebug]   · instanceId={s.id}  baseSquadID={s.baseSquadID}");
-
             // 2. Asignar spawn point por defecto si no se seleccionó
             if (string.IsNullOrEmpty(localHeroData.spawnPointId) && _preparationMapControllerUI != null)
             {

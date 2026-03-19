@@ -45,6 +45,7 @@ namespace ConquestTactics.Visual
         private const float SYNC_INTERVAL = 0.016f;
         private CharacterController _characterController;
         private NavMeshAgent _navAgent;
+        private bool _positionInitialized = false;
         private float _verticalVelocity = 0f;
         private const float GRAVITY = -9.81f;
         private const float TERMINAL_VELOCITY = -50f;
@@ -88,8 +89,14 @@ namespace ConquestTactics.Visual
                 if (_entityManager.HasComponent<LocalTransform>(_heroEntity))
                 {
                     var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
+
+                    // Safe teleport: disable CC before setting position to avoid internal state desync
+                    if (_characterController != null) _characterController.enabled = false;
                     transform.position = ecsTransform.Position;
                     transform.rotation = ecsTransform.Rotation;
+                    if (_characterController != null) _characterController.enabled = true;
+
+                    _positionInitialized = true;
                     if (_enableDebugLogs)
                         Debug.Log($"[EntityVisualSync] Posición visual inicializada desde ECS: {ecsTransform.Position}");
                 }
@@ -159,7 +166,7 @@ namespace ConquestTactics.Visual
             {
                 var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
                 bool isHero = _entityManager.HasComponent<HeroMoveIntent>(_heroEntity);
-                if (isHero)
+                if (isHero && _positionInitialized)
                 {
                     // Hero: GO is authoritative — write GO position and rotation back to ECS
                     ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);

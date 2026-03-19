@@ -129,7 +129,9 @@ Inventory services live in `Assets/Scripts/Inventory/Services/`.
 Reuse these utilities across systems to avoid duplication:
 - `HeroPositionUtility` — hero position retrieval (used by 6+ systems)
 - `UnitStatsUtility` — stat application for progression systems
-- `FormationPositionCalculator` — formation math
+- `FormationPositionCalculator` — formation math and terrain height (`calculateTerraindHeight`)
+- `GameTags` (`Assets/Scripts/Shared/GameTags.cs`) — tag constants shared across systems (`Player`, `Terrain`); avoid magic strings
+- `VisualSyncUtility` (`Assets/Scripts/Shared/VisualSyncUtility.cs`) — configures `AnimatorCullingMode` and gets/adds `EntityVisualSync` on visual GameObjects; used by both `HeroVisualManagementSystem` and `SquadVisualManagementSystem`
 
 ## Scene Flow
 
