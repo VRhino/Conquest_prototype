@@ -429,7 +429,7 @@ public class BattlePreparationController : MonoBehaviour
     {
         if (_isActiveUI) DisconnectAllEvents();
         BattleHeroData localHeroData = _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName);
-        if (localHeroData.spawnPointId == null)
+        if (string.IsNullOrEmpty(localHeroData.spawnPointId))
         {
             localHeroData.spawnPointId = _preparationMapControllerUI.GetDefaultSpawnPointId();
         }
@@ -475,6 +475,10 @@ public class BattlePreparationController : MonoBehaviour
                 SquadInstanceData instance = PlayerSessionService.SelectedHero.squadProgress?.Find(s => s.id == instanceID);
                 if (instance != null) localHeroData.squadInstances.Add(instance);
             }
+
+            Debug.Log($"[BattleTestDebug] BattlePrep→BattleScene: Hero '{localHeroData.heroName}' transitioning with {localHeroData.squadInstances.Count} squadInstances (footer returned {selectedSquadIDs.Count} IDs):");
+            foreach (var s in localHeroData.squadInstances)
+                Debug.Log($"[BattleTestDebug]   · instanceId={s.id}  baseSquadID={s.baseSquadID}");
 
             // 2. Asignar spawn point por defecto si no se seleccionó
             if (string.IsNullOrEmpty(localHeroData.spawnPointId) && _preparationMapControllerUI != null)

@@ -1,6 +1,13 @@
 ---
 name: validate-component
-description: Validate an ECS component, buffer element, or tag follows project conventions including naming, struct purity, minimal fields, and no duplication with existing components.
+description: >
+  Validate an ECS component, buffer element, or tag follows project conventions including
+  naming, struct purity, minimal fields, and no duplication with existing components.
+  AUTO-INVOKE when: (1) a new or modified component file was just written,
+  (2) after /new-ecs-component as a mandatory post-creation check,
+  (3) the user asks "is this component correct?", "does this component follow conventions?",
+  (4) reviewing a PR/diff that includes component changes.
+  Also invoke when you're about to add fields to an existing component — check duplication first.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob
 ---

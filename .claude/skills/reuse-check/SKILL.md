@@ -1,6 +1,13 @@
 ---
 name: reuse-check
-description: Before creating any new class, component, system, utility, or service, exhaustively search the codebase for existing elements that can be reused or extended. Auto-invoked when Claude is about to create new code.
+description: >
+  Before creating any new class, component, system, utility, or service, exhaustively search
+  the codebase for existing elements that can be reused or extended.
+  AUTO-INVOKE this skill BEFORE writing any new file — always run before /new-ecs-system,
+  /new-ecs-component, or creating any MonoBehaviour/service/utility.
+  Also invoke when the user says "I need a new X", "create a X", "add a new Y",
+  or when Claude is about to call Write to create a new .cs file.
+  Finding a partial match and extending is always preferred over creating from scratch.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob
 ---
@@ -32,6 +39,8 @@ Check if these utilities already solve part of the problem:
 - `HeroPositionUtility` — hero position retrieval
 - `UnitStatsUtility` — stat application
 - `FormationPositionCalculator` — formation math
+- `VisualSyncUtility` — visual sync helpers (extracted recently)
+- `GameTags` — shared tag constants (extracted recently)
 
 ### 3. Inventory Services (`Assets/Scripts/Inventory/Services/`)
 Search for item/inventory-related services.

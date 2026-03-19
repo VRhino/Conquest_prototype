@@ -16,7 +16,10 @@ namespace Data.Maps
         [Header("Strategic Points")]
         [SerializeField] private List<string> _supplyPointIds = new List<string>();
         [SerializeField] private List<string> _capturePointIds = new List<string>();
-        [SerializeField] private List<string> _spawnPointIds = new List<string>();
+
+        [Header("Spawn Points")]
+        [SerializeField] private List<string> _attackerSpawnPointIds = new List<string>();
+        [SerializeField] private List<string> _defenderSpawnPointIds = new List<string>();
 
         [Header("Battle Configuration")]
         [SerializeField] private int _battleDurationSeconds = 1800; // En segundos (30 minutos por defecto)
@@ -30,7 +33,8 @@ namespace Data.Maps
         public new string name => _mapName;
         public List<string> supplyPointIds => _supplyPointIds;
         public List<string> capturePointIds => _capturePointIds;
-        public List<string> spawnPointIds => _spawnPointIds;
+        public List<string> attackerSpawnPointIds => _attackerSpawnPointIds;
+        public List<string> defenderSpawnPointIds => _defenderSpawnPointIds;
         public int battleDuration => _battleDurationSeconds;
         public GameObject preparationMap => _preparationMap;
 
@@ -63,10 +67,11 @@ namespace Data.Maps
                 isValid = false;
             }
 
-            if (_spawnPointIds.Count < 2)
-            {
-                Debug.LogWarning($"[MapDataSO] {_mapId}: Should have at least 2 spawn points for multiplayer", this);
-            }
+            if (_attackerSpawnPointIds.Count < 1)
+                Debug.LogWarning($"[MapDataSO] {_mapId}: No attacker spawn points configured", this);
+
+            if (_defenderSpawnPointIds.Count < 1)
+                Debug.LogWarning($"[MapDataSO] {_mapId}: No defender spawn points configured", this);
 
             return isValid;
         }

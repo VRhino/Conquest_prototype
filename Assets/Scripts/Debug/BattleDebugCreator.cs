@@ -16,6 +16,9 @@ public static class BattleDebugCreator
     /// <param name="localHero">The hero data to convert and add as the first attacker</param>
     /// <returns>A new BattleData instance with the hero configured as attacker</returns>
     public static BattleData CreateBattleWithLocalHero(HeroData localHero)
+        => CreateBattleWithLocalHero(localHero, Team.TeamA, 4, 5);
+
+    public static BattleData CreateBattleWithLocalHero(HeroData localHero, Team playerTeam, int attackerCount, int defenderCount)
     {
         if (localHero == null)
         {
@@ -23,13 +26,22 @@ public static class BattleDebugCreator
             return null;
         }
 
-        BattleData battleData = CreateTestBattle();
-
+        BattleData battleData = CreateTestBattle(attackerCount, defenderCount);
         BattleHeroData battleHero = ConvertHeroToBattleHero(localHero);
 
-        battleData.attackers.Insert(0, battleHero);
+        if (playerTeam == Team.TeamB)
+        {
+            battleHero.spawnPointId = "4"; // First defender spawn
+            battleData.defenders.Insert(0, battleHero);
+        }
+        else
+        {
+            battleHero.spawnPointId = "1"; // First attacker spawn
+            battleData.attackers.Insert(0, battleHero);
+        }
 
-        Debug.Log($"BattleDebugCreator: Created battle with hero '{battleHero.heroName}' as first attacker");
+        string teamName = playerTeam == Team.TeamB ? "defender" : "attacker";
+        Debug.Log($"BattleDebugCreator: Created battle with hero '{battleHero.heroName}' as first {teamName}");
         return battleData;
     }
 
@@ -46,7 +58,7 @@ public static class BattleDebugCreator
             classID = heroData.classId,
             level = heroData.level,
             squadInstances = new List<SquadInstanceData>(),
-            spawnPointId = "1" // Default spawn point
+            spawnPointId = string.Empty // Assigned by caller based on team
         };
 
         // Convert active Loadout to SquadInstances
@@ -68,25 +80,19 @@ public static class BattleDebugCreator
     /// Creates a test battle with mock data for debugging purposes.
     /// </summary>
     /// <returns>A BattleData instance with test data</returns>
-    public static BattleData CreateTestBattle()
+    public static BattleData CreateTestBattle() => CreateTestBattle(4, 5);
+
+    public static BattleData CreateTestBattle(int attackerCount, int defenderCount)
     {
         BattleData battleData = new BattleData();
         battleData.battleID = Guid.NewGuid().ToString();
 
-        // Create mock attackers
-        for (int i = 0; i < 4; i++)
-        {
-            BattleHeroData attacker = CreateRandomMockBattleHero();
-            battleData.attackers.Add(attacker);
-        }
-        // Create mock defenders
-        for (int i = 0; i < 5; i++)
-        {
-            BattleHeroData defender = CreateRandomMockBattleHero();
-            battleData.defenders.Add(defender);
-        }
+        for (int i = 0; i < attackerCount; i++)
+            battleData.attackers.Add(CreateRandomMockBattleHero(1, 3)); // Attacker spawns 1-3
 
-        //Create mock map
+        for (int i = 0; i < defenderCount; i++)
+            battleData.defenders.Add(CreateRandomMockBattleHero(4, 6)); // Defender spawns 4-6
+
         battleData.mapData = MapService.GetMapById("default");
         battleData.BattleTimer = battleData.mapData != null ? battleData.mapData.battleDuration : 900;
         Debug.Log($"BattleDebugCreator: Created test battle with map '{battleData.mapData.name}'");
@@ -111,7 +117,7 @@ public static class BattleDebugCreator
         }
     }
 
-    public static BattleHeroData CreateRandomMockBattleHero()
+    public static BattleHeroData CreateRandomMockBattleHero(int minSpawnId = 1, int maxSpawnId = 3)
     {
         List<string> validSquadIDs = new List<string> { "sqd01", "arc01", "spm01" };
         List<string> validClassIDs = new List<string> { "SwordAndShield", "TwoHandedSword", "Bow", "Spear" };
@@ -127,7 +133,7 @@ public static class BattleDebugCreator
             classID = randomClassID,
             level = randomLevel,
             squadInstances = new List<SquadInstanceData>(randomSquads),
-            spawnPointId = UnityEngine.Random.Range(1, 4).ToString() // Default random spawn point (1-3)
+            spawnPointId = UnityEngine.Random.Range(minSpawnId, maxSpawnId + 1).ToString()
         };
 
         return battleHero;

@@ -55,7 +55,20 @@ public class SquadDataAuthoring : MonoBehaviour
                 curves = default,
                 formationLibrary = formationLibrary,
                 unitPrefab = prefabEntity,
-                unitCount = authoring.data.unitCount
+                unitCount = authoring.data.unitCount,
+                attackRange = authoring.data.attackRange,
+                attackInterval = authoring.data.attackInterval,
+                criticalChance = authoring.data.criticalChance,
+                criticalMultiplier = authoring.data.criticalMultiplier,
+                detectionRange = authoring.data.detectionRange,
+                damageZoneStart = authoring.data.damageZoneStart,
+                damageZoneHalfWidth = authoring.data.damageZoneHalfWidth,
+                damageZoneYOffset = authoring.data.damageZoneYOffset,
+                damageZoneHalfHeight = authoring.data.damageZoneHalfHeight,
+                strikeWindowStart = authoring.data.strikeWindowStart,
+                strikeWindowDuration = authoring.data.strikeWindowDuration,
+                attackAnimationDuration = authoring.data.attackAnimationDuration,
+                kineticMultiplier = authoring.data.kineticMultiplier
             });
 
             AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(authoring.data.id) });

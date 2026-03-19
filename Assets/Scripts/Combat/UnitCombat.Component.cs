@@ -16,4 +16,14 @@ public struct UnitCombatComponent : IComponentData
 
     /// <summary>Set when the unit is being suppressed.</summary>
     public bool isSuppressed;
+
+    // ── Attack animation state ────────────────────────────────────────────────
+    /// <summary>True while the attack animation is playing.</summary>
+    public bool isAttacking;
+
+    /// <summary>Time elapsed since the current attack animation started.</summary>
+    public float attackAnimationTimer;
+
+    /// <summary>True once the hitbox has produced a damage event this swing.</summary>
+    public bool hitboxFired;
 }

@@ -96,9 +96,25 @@ public partial class UnitFollowFormationSystem : SystemBase
                     !transformLookup.HasComponent(unit))
                     continue;
 
-                // Unidades con NavMeshAgent son manejadas por UnitNavMeshSystem
+                // Unidades con NavMeshAgent son manejadas por UnitNavMeshSystem,
+                // pero solo si el agente está activo y en el NavMesh.
+                bool navMeshHandlesMovement = false;
+                UnityEngine.AI.NavMeshAgent navAgent = null;
                 if (SystemAPI.HasComponent<NavAgentComponent>(unit))
-                    continue;
+                {
+                    navAgent = SystemAPI.ManagedAPI.GetComponent<UnityEngine.AI.NavMeshAgent>(unit);
+                    if (navAgent != null && navAgent.isOnNavMesh)
+                    {
+                        navMeshHandlesMovement = true;
+                        // No continue — seguimos para aplicar orientación cuando Formed
+                    }
+                    else
+                    {
+                        // NavMesh no disponible — NO caer a movimiento directo
+                        Debug.LogWarning($"[UnitFollowFormation] Unit {unit.Index} has NavAgentComponent but is NOT on NavMesh. Bake the NavMesh surface. Unit will not move.");
+                        continue;
+                    }
+                }
 
                 // Solo procesar movimiento si el héroe está fuera del radio O si la unidad ya está en movimiento
                 if (!SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
@@ -155,7 +171,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                         shouldMove = stateComp.State == UnitFormationState.Moving && distSq > stoppingDistanceSq;
                 }
                 
-                if (shouldMove)
+                if (shouldMove && !navMeshHandlesMovement)
                 {
                     // Obtener la velocidad base de la unidad (ya incluye escalado por nivel y multiplicador de peso)
                     // El cálculo se realiza centralizadamente en UnitSpeedCalculator.CalculateFinalSpeed()
@@ -193,26 +209,52 @@ public partial class UnitFollowFormationSystem : SystemBase
                 }
                 else
                 {
-                    // Unidad no se mueve — si está en HoldPosition y Formed, orientarse según holdRotation
-                    if (isHoldingPosition && stateComp.State == UnitFormationState.Formed
-                        && SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
+                    // Orientación para unidades Formed (tanto NavMesh como directas)
+                    if (stateComp.State == UnitFormationState.Formed)
                     {
-                        var holdComp = SystemAPI.GetComponent<SquadHoldPositionComponent>(entity);
-                        var t = transformLookup[unit];
+                        float3 targetForward = float3.zero;
+                        bool hasTargetOrientation = false;
 
-                        float3 holdForward = math.mul(holdComp.holdRotation, math.forward());
-                        float3 horizontalDir = math.normalizesafe(new float3(holdForward.x, 0, holdForward.z));
-
-                        if (math.lengthsq(horizontalDir) > 0.01f)
+                        if (isHoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                         {
-                            quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
-                            float rotSpeed = 5f;
-                            if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
-                                rotSpeed = SystemAPI.GetComponent<UnitOrientationComponent>(unit).rotationSpeed;
-                            t.Rotation = math.slerp(t.Rotation, targetRot, dt * rotSpeed);
+                            // Hold position: usar holdRotation
+                            var holdComp = SystemAPI.GetComponent<SquadHoldPositionComponent>(entity);
+                            targetForward = math.mul(holdComp.holdRotation, math.forward());
+                            hasTargetOrientation = true;
+                        }
+                        else if (navMeshHandlesMovement)
+                        {
+                            // NavMesh normal follow: orientar según dirección del héroe
+                            targetForward = heroForward;
+                            hasTargetOrientation = true;
                         }
 
-                        transformLookup[unit] = t;
+                        if (hasTargetOrientation)
+                        {
+                            float3 horizontalDir = math.normalizesafe(new float3(targetForward.x, 0, targetForward.z));
+                            if (math.lengthsq(horizontalDir) > 0.01f)
+                            {
+                                quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
+                                float rotSpeed = 5f;
+                                if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
+                                    rotSpeed = SystemAPI.GetComponent<UnitOrientationComponent>(unit).rotationSpeed;
+
+                                if (navMeshHandlesMovement && navAgent != null)
+                                {
+                                    // NavMesh: GO es autoritativo — escribir directo al transform del GO
+                                    navAgent.updateRotation = false;
+                                    Quaternion currentRot = navAgent.transform.rotation;
+                                    navAgent.transform.rotation = Quaternion.Slerp(currentRot, targetRot, dt * rotSpeed);
+                                }
+                                else
+                                {
+                                    // Sin NavMesh: escribir al ECS LocalTransform
+                                    var t = transformLookup[unit];
+                                    t.Rotation = math.slerp(t.Rotation, targetRot, dt * rotSpeed);
+                                    transformLookup[unit] = t;
+                                }
+                            }
+                        }
                     }
                 }
                 

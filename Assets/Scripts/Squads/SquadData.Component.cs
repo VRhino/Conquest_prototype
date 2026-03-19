@@ -49,6 +49,26 @@ public struct SquadDataComponent : IComponentData
     public int unitCount;
     /// <summary>Formation grid size (cells in X, cells in Y)</summary>
     public int2 GridSize;
+
+    public float attackRange;
+    public float attackInterval;
+    public float criticalChance;
+    public float criticalMultiplier;
+    public float detectionRange;
+
+    // Hitbox shape
+    public float damageZoneStart;
+    public float damageZoneHalfWidth;
+    public float damageZoneYOffset;
+    public float damageZoneHalfHeight;
+
+    // Strike window timing
+    public float strikeWindowStart;
+    public float strikeWindowDuration;
+    public float attackAnimationDuration;
+
+    // Kinetic
+    public float kineticMultiplier;
 }
 
 /// <summary>

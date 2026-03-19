@@ -19,7 +19,10 @@ public partial class UnitNavMeshSystem : SystemBase
         {
             var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(entity);
             if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                agent.updateRotation = true;
                 agent.SetDestination(targetPos.ValueRO.position);
+            }
         }
     }
 }

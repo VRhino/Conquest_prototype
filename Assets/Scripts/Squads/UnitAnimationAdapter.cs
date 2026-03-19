@@ -26,7 +26,10 @@ namespace ConquestTactics.Animation
         public bool IsRunning { get; private set; } = false;
         // Si la unidad está sprintando (normalized speed >= 1)
         public bool IsSprinting { get; private set; } = false;
-        
+
+        // Si la unidad está ejecutando un ataque (strike window activa)
+        public bool IsAttacking { get; private set; } = false;
+
         // Velocidad 2D real (sin normalizar, en unidades por segundo)
         public float Speed2D { get; private set; }
         
@@ -210,6 +213,17 @@ namespace ConquestTactics.Animation
                 }
                 
                 var animData = _entityManager.GetComponentData<UnitAnimationMovementComponent>(_unitEntity);
+
+                // Leer estado de ataque desde UnitCombatComponent
+                if (_entityManager.HasComponent<UnitCombatComponent>(_unitEntity))
+                {
+                    var combatData = _entityManager.GetComponentData<UnitCombatComponent>(_unitEntity);
+                    IsAttacking = combatData.isAttacking;
+                }
+                else
+                {
+                    IsAttacking = false;
+                }
 
                 // Actualizar propiedades
                 NormalizedSpeed = animData.MaxSpeed > 0 

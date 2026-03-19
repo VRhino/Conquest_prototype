@@ -1,6 +1,13 @@
 ---
 name: spawn-entity
-description: Guide for correctly adding a new entity type (hero, unit, supply point, or custom) to the project. Covers the full pipeline from component design to visual instantiation. Use when adding a completely new kind of entity rather than adding components to an existing type.
+description: >
+  Guide for correctly adding a new entity type (hero, unit, supply point, or custom) to the project.
+  Covers the full pipeline from component design to visual instantiation.
+  AUTO-INVOKE when: (1) user wants to add a completely NEW kind of entity (not just new components),
+  (2) user says "add a new unit type", "create a new hero class", "I need a new entity",
+  "how do I spawn a new X", or describes a new game object that needs ECS + visual representation,
+  (3) user is creating a new faction, enemy type, or interactive object.
+  Do NOT invoke for adding components to an existing entity type — use /new-ecs-component instead.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob, Write, Edit
 ---

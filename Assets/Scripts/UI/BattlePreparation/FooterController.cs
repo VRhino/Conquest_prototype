@@ -387,8 +387,7 @@ public class FooterController : MonoBehaviour
         // Actualizar squadIDs del loadout activo
         _activeLoadout.squadInstanceIDs = new List<string>(_heroSquadInstanceIDs);
 
-        // TODO: Calcular totalLeadership basado en los squads seleccionados
-        // _activeLoadout.totalLeadership = CalculateTotalLeadership();
+        _activeLoadout.totalLeadership = _totalLeadershipCost;
 
         // Guardar datos del jugador
         if (PlayerSessionService.CurrentPlayer != null)

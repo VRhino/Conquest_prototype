@@ -1,6 +1,14 @@
 ---
 name: no-magic-params
-description: Detecta y previene magic numbers/strings hardcodeados en codigo. Auto-invocado cuando Claude escribe codigo con valores literales que deberian ser parametrizables. Aplica a sistemas ECS, MonoBehaviours, UI controllers y servicios.
+description: >
+  Detecta y previene magic numbers/strings hardcodeados en codigo.
+  AUTO-INVOCAR cuando: (1) Claude acaba de escribir o modificar codigo con literales
+  numericos como 3f, 0.5f, 100, 2f en logica de sistemas, (2) el usuario pregunta
+  "donde configuro este valor", "como hago este valor editable", "necesito tunear esto",
+  (3) un sistema ECS nuevo fue creado (siempre verificar despues de /new-ecs-system),
+  (4) se escribe cualquier duracion, threshold, multiplicador o radio sin una config component.
+  Aplica a sistemas ECS, MonoBehaviours, UI controllers y servicios.
+  NO invocar para valores 0, 1, -1, math.PI ni constantes matematicas.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob
 ---

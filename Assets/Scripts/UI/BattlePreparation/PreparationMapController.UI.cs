@@ -68,7 +68,11 @@ public class PreparationMapControllerUI : MonoBehaviour
     public string GetDefaultSpawnPointId()
     {
         if (spawnPoints == null || spawnPoints.Count == 0) return null;
-        return spawnPoints[0].spawnPointId;
+        foreach (var sp in spawnPoints)
+        {
+            if (sp.spawnPointType == side) return sp.spawnPointId;
+        }
+        return spawnPoints[0].spawnPointId; // fallback
     }
     
     #endregion

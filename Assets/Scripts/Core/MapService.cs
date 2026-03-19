@@ -121,14 +121,25 @@ public static class MapService
     }
     
     /// <summary>
-    /// Obtiene el número de spawn points de un mapa.
+    /// Obtiene el número de spawn points de atacantes de un mapa.
     /// </summary>
     /// <param name="mapId">ID del mapa</param>
-    /// <returns>Número de spawn points, -1 si el mapa no existe</returns>
-    public static int GetSpawnPointCount(string mapId)
+    /// <returns>Número de spawn points de atacantes, -1 si el mapa no existe</returns>
+    public static int GetAttackerSpawnPointCount(string mapId)
     {
         var map = GetMapById(mapId);
-        return map != null ? map.spawnPointIds.Count : -1;
+        return map != null ? map.attackerSpawnPointIds.Count : -1;
+    }
+
+    /// <summary>
+    /// Obtiene el número de spawn points de defensores de un mapa.
+    /// </summary>
+    /// <param name="mapId">ID del mapa</param>
+    /// <returns>Número de spawn points de defensores, -1 si el mapa no existe</returns>
+    public static int GetDefenderSpawnPointCount(string mapId)
+    {
+        var map = GetMapById(mapId);
+        return map != null ? map.defenderSpawnPointIds.Count : -1;
     }
     
     #endregion

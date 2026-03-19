@@ -43,6 +43,14 @@ public static class HeroDataService
             }
         }
 
+        // Crear loadout default vacío para que el sistema de save/load funcione
+        hero.loadouts.Add(new LoadoutSaveData
+        {
+            name = "Default",
+            squadInstanceIDs = new List<string>(),
+            isActive = true
+        });
+
         return hero;
     }
 }

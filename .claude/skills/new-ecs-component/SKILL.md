@@ -1,6 +1,13 @@
 ---
 name: new-ecs-component
-description: Scaffold a new ECS Component, Tag, or Buffer Element following Conquest project conventions. Auto-invoked when creating new ECS data types. Ensures struct purity, correct naming, and no duplication.
+description: >
+  Scaffold a new ECS Component, Tag, or Buffer Element following Conquest project conventions.
+  AUTO-INVOKE when: (1) user asks to "add a component", "create a component", "I need to store X on an entity",
+  (2) a system needs data that doesn't exist yet as an ECS component,
+  (3) a new state, flag, or buffer is needed for heroes, units, or supply points.
+  Ensures struct purity, correct naming, and no duplication.
+  Always run /reuse-check FIRST — if data already exists in another component, extend it instead.
+  After creation, ask if an Authoring/Baker is needed (/new-authoring) and run /validate-component.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob, Write, Edit
 ---

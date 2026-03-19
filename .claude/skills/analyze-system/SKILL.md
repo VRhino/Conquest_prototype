@@ -1,6 +1,12 @@
 ---
 name: analyze-system
-description: Analyze an ECS system to verify it follows single-responsibility rules, correct data flow, hybrid model layer separation, and project naming conventions.
+description: >
+  Analyze an ECS system to verify it follows single-responsibility rules, correct data flow,
+  hybrid model layer separation, and project naming conventions.
+  AUTO-INVOKE this skill whenever: (1) a new or modified *.System.cs file was just written,
+  (2) the user asks "does this system look right / follow conventions?", (3) before committing
+  any ECS-related change, or (4) a system is producing unexpected behavior. Also invoke when
+  the user says "review my system", "check this system", or "analyze the system".
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob
 ---
@@ -72,6 +78,16 @@ Check if the system duplicates logic available in:
 - `HeroPositionUtility`
 - `UnitStatsUtility`
 - `FormationPositionCalculator`
+- `VisualPrefabRegistry` — for visual instantiation (never use `Instantiate()` directly)
+
+### 7. NavMesh / Physics Integration (if applicable)
+If the system moves entities, verify:
+- NavMeshAgent usage goes through `NavMeshAgent.SetDestination()` on the GO side via `EntityVisualSync`
+- ECS systems never directly access `NavMeshAgent` (that's a managed type — use a sync component)
+- Physics forces/velocity changes use `Unity.Physics` components, not `Rigidbody`
+
+### 8. Final step
+After analysis, if issues were found, recommend running `/review-ecs` before committing.
 
 ## Output format
 

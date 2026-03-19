@@ -1,6 +1,12 @@
 ---
 name: debug-ecs-flow
-description: Trace and diagnose data flow issues between ECS systems. Use when a system isn't receiving expected data, components aren't updating, or the execution order is producing wrong results.
+description: >
+  Trace and diagnose data flow issues between ECS systems. AUTO-INVOKE when:
+  a system isn't receiving expected data, components aren't updating, execution order
+  produces wrong results, entities don't appear/disappear as expected, animations
+  don't play, units don't move, the NavMesh agent isn't following ECS position,
+  a singleton isn't found, or the user says things like "it's not working", "nothing
+  happens", "the system doesn't run", "units are stuck", "visual isn't updating".
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob, Bash(git log*), Bash(git diff*)
 ---
@@ -70,6 +76,12 @@ For each system in the suspected pipeline segment, read the full file and check:
 - Visual updates (animations, position sync) must go through `EntityVisualSync`.
 - ECS systems write to ECS components → `EntityVisualSync.Update()` reads them each frame.
 - If visual doesn't update: check `EntityVisualSync` is active and the matching component field is being written.
+
+### F. NavMesh / Agent sync issues
+- `NavMeshAgent` is a managed MonoBehaviour — ECS systems cannot access it directly.
+- Movement intent lives in ECS (e.g., `MoveTarget`, `NavAgentConfig`); `EntityVisualSync` applies it via `NavMeshAgent.SetDestination()`.
+- If units/heroes don't move: check (1) ECS component has updated destination, (2) `EntityVisualSync` is reading it, (3) `NavMeshAgent.isOnNavMesh` is true, (4) agent wasn't warped to an off-mesh position.
+- If position desyncs: check that `EntityVisualSync` writes back the GO position to `LocalTransform` after the agent moves.
 
 ## Step 3: Search for the data being written
 

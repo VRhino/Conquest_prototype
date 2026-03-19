@@ -108,7 +108,7 @@ public partial struct UnitFormationStateSystem : ISystem
                         case UnitFormationState.Formed:
                             // Formed -> Waiting: Hero leaves grid radius OR unit is far from assigned slot (formation changed)
                             bool nearAssignedSlot = FormationPositionCalculator.IsUnitInSlot(
-                                currentPos, desiredSlotPos, formationRadiusSq);
+                                currentPos, desiredSlotPos, slotThresholdSq);
                             if (!heroWithinRadius || !nearAssignedSlot)
                             {
                                 stateComp.State = UnitFormationState.Waiting;

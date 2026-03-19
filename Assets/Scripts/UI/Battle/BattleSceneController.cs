@@ -237,7 +237,9 @@ public class BattleSceneController : MonoBehaviour
     /// </summary>
     private void InitializeBattle()
     {
-
+        Debug.Log($"[BattleTestDebug] BattleData received — attackers: {_currentBattleData.attackers.Count}, defenders: {_currentBattleData.defenders.Count}");
+        // hacer debug de los datos del spawn de lo local hero
+        Debug.Log($"[BattleTestDebug] Local hero spawn data: {_currentBattleData.attackers[0].spawnPointId}");
         // Sincronizar info de batalla hacia ECS antes de que HeroSpawnSystem actúe
         SyncBattleDataToECS();
 
@@ -279,22 +281,22 @@ public class BattleSceneController : MonoBehaviour
         BattleHeroData localHero = _currentBattleData.findHeroDataByName(localHeroName);
         if (localHero == null)
         {
-            Debug.LogWarning($"[BattleSceneController] No se encontró al héroe local '{localHeroName}' para sincronizar con ECS.");
+            Debug.LogError($"[BattleTestDebug] SyncBattleDataToECS: findHeroDataByName('{localHeroName}') returned null. Attackers: [{string.Join(", ", _currentBattleData.attackers.ConvertAll(h => h.heroName))}] Defenders: [{string.Join(", ", _currentBattleData.defenders.ConvertAll(h => h.heroName))}]");
             return;
         }
+        Debug.Log($"[BattleTestDebug] SyncBattleDataToECS: Found local hero '{localHeroName}' — squadInstances: {localHero.squadInstances?.Count ?? 0}");
 
-        // Parsear el string ID a int extrayendo la parte numérica (ej: "at1" → 1, "df2" → 2)
+        // Parsear el string ID a int (IDs deben ser numéricos puros: "1", "2", "3")
         int spawnID = 1;
         if (!string.IsNullOrEmpty(localHero.spawnPointId))
         {
-            var match = System.Text.RegularExpressions.Regex.Match(localHero.spawnPointId, @"\d+");
-            if (match.Success && int.TryParse(match.Value, out int parsedSpawnId))
+            if (int.TryParse(localHero.spawnPointId, out int parsedSpawnId))
             {
                 spawnID = parsedSpawnId;
             }
             else
             {
-                Debug.LogWarning($"[BattleSceneController] spawnPointId '{localHero.spawnPointId}' no contiene número válido. Usando default (1).");
+                Debug.LogWarning($"[BattleSceneController] spawnPointId '{localHero.spawnPointId}' no es un entero válido. Usando default (1).");
             }
         }
 
@@ -318,6 +320,9 @@ public class BattleSceneController : MonoBehaviour
             if (localHero.squadInstances != null && localHero.squadInstances.Count > 0)
             {
                 data.selectedSquadBaseID = new FixedString64Bytes(localHero.squadInstances[0].baseSquadID);
+                Debug.Log($"[BattleTestDebug] SyncBattleDataToECS: selectedSquadBaseID='{localHero.squadInstances[0].baseSquadID}', total squadInstances={localHero.squadInstances.Count}");
+                for (int i = 0; i < localHero.squadInstances.Count; i++)
+                    Debug.Log($"[BattleTestDebug]   · slot {i}: instanceId={localHero.squadInstances[i].id}  baseSquadID={localHero.squadInstances[i].baseSquadID}");
 
                 // Asignar IDs enteros secuenciales (0, 1, 2, ...) a cada instancia de escuadra.
                 // ID 0 = escuadra activa → coincide con HeroSpawnSystem que hardcodea instanceId = 0.
@@ -339,6 +344,11 @@ public class BattleSceneController : MonoBehaviour
                         });
                     }
                 }
+            }
+
+            else
+            {
+                Debug.LogError($"[BattleTestDebug] SyncBattleDataToECS: Hero '{localHeroName}' has 0 squadInstances — selectedSquadBaseID will NOT be set, squads will not spawn.");
             }
 
             em.SetComponentData(entity, data);
@@ -397,8 +407,7 @@ public class BattleSceneController : MonoBehaviour
             int localSpawnID = 1;
             if (!string.IsNullOrEmpty(localHero.spawnPointId))
             {
-                var m = System.Text.RegularExpressions.Regex.Match(localHero.spawnPointId, @"\d+");
-                if (m.Success && int.TryParse(m.Value, out int parsed))
+                if (int.TryParse(localHero.spawnPointId, out int parsed))
                     localSpawnID = parsed;
             }
             int localTeamID = _currentBattleData.playerSide(localHeroName) == Side.Defenders ? 2 : 1;
@@ -424,8 +433,7 @@ public class BattleSceneController : MonoBehaviour
             int spawnID = 1;
             if (!string.IsNullOrEmpty(heroData.spawnPointId))
             {
-                var m = System.Text.RegularExpressions.Regex.Match(heroData.spawnPointId, @"\d+");
-                if (m.Success && int.TryParse(m.Value, out int parsed))
+                if (int.TryParse(heroData.spawnPointId, out int parsed))
                     spawnID = parsed;
             }
             int key = spawnID * 100 + teamID;
@@ -444,12 +452,11 @@ public class BattleSceneController : MonoBehaviour
     private bool SpawnRemoteHero(EntityManager em, HeroPrefabComponent heroPrefabComp,
         NativeArray<SpawnPointComponent> spawnPoints, BattleHeroData heroData, int teamID, int slotIndex = 0)
     {
-        // Parsear spawnPointId a int (ej: "at1" → 1, "df2" → 2)
+        // Parsear spawnPointId a int (IDs deben ser numéricos puros: "1", "2", "3")
         int spawnID = 1;
         if (!string.IsNullOrEmpty(heroData.spawnPointId))
         {
-            var match = System.Text.RegularExpressions.Regex.Match(heroData.spawnPointId, @"\d+");
-            if (match.Success && int.TryParse(match.Value, out int parsed))
+            if (int.TryParse(heroData.spawnPointId, out int parsed))
                 spawnID = parsed;
         }
 

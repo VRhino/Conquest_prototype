@@ -1,6 +1,12 @@
 ---
 name: new-ecs-system
-description: Scaffold a new ECS System following Conquest project conventions. Auto-invoked when the user asks to create a new ECS system. Generates the system skeleton with correct naming, [BurstCompile], [UpdateInGroup], and ISystem pattern.
+description: >
+  Scaffold a new ECS System following Conquest project conventions.
+  AUTO-INVOKE when: (1) user asks to "create a system", "add a system", "I need a system that...",
+  (2) new game logic needs to be wired into the ECS pipeline (movement, combat, spawning, state transitions),
+  (3) after /new-ecs-component when the component needs processing logic.
+  Generates the system skeleton with correct naming, [BurstCompile], [UpdateInGroup], and ISystem pattern.
+  Always run /reuse-check FIRST. After creation, run /analyze-system and /no-magic-params.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob, Write, Edit
 ---
@@ -154,3 +160,12 @@ Run `/no-magic-params <NewSystemFile>` to verify no hardcoded values.
 4. **Use `[BurstCompile]`** on both the system struct and the job struct whenever possible.
 5. **Log prefix**: All debug logs must use `[{SystemName}]` prefix.
 6. **No magic numbers**: all tunable values must come from a config singleton (see `/no-magic-params`).
+7. **NavMesh is managed** — systems never hold a `NavMeshAgent` reference. If navigation intent needs to be communicated, write to an ECS component (e.g., `NavAgentTarget`) and let `EntityVisualSync` drive the agent.
+8. **Cleanup**: If the system creates resources (allocated arrays, job handles), add `OnDestroy(ref SystemState state)` to clean up.
+
+## Post-creation checklist
+
+After writing the system file:
+1. Run `/analyze-system {SystemName}` — verify single responsibility and data flow position
+2. Run `/no-magic-params {SystemFile}` — verify no hardcoded balance values
+3. If the system requires a new singleton config, run `/new-ecs-component` + `/new-authoring`

@@ -1,6 +1,7 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Physics;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -123,6 +124,20 @@ public partial class SquadSpawningSystem : SystemBase
             // Agregar buffer para el patrón de formación
             ecb.AddBuffer<FormationPatternElement>(squad);
 
+            // Buffers de combate y detección de enemigos
+            ecb.AddComponent<SquadAIComponent>(squad);
+            ecb.AddBuffer<DetectedEnemy>(squad);
+            ecb.AddBuffer<SquadTargetEntity>(squad);
+
+            // Create one damage profile entity per squad — all units reference it.
+            Entity squadDamageProfile = ecb.CreateEntity();
+            ecb.AddComponent(squadDamageProfile, new DamageProfileComponent
+            {
+                baseDamage  = GetPrimaryDamage(data),
+                damageType  = GetPrimaryDamageType(data.squadType),
+                penetration = GetPrimaryPenetration(data)
+            });
+
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);
 
             ref var formations = ref data.formationLibrary.Value.formations;
@@ -241,6 +256,83 @@ public partial class SquadSpawningSystem : SystemBase
                     maxHealth = data.baseHealth,
                     currentHealth = data.baseHealth
                 });
+                ecb.AddComponent(unit, new DefenseComponent
+                {
+                    bluntDefense  = data.bluntDefense,
+                    slashDefense  = data.slashingDefense,
+                    pierceDefense = data.piercingDefense
+                });
+                ecb.AddComponent(unit, new PenetrationComponent
+                {
+                    bluntPenetration  = data.bluntPenetration,
+                    slashPenetration  = data.slashingPenetration,
+                    piercePenetration = data.piercingPenetration
+                });
+                ecb.AddComponent(unit, new UnitWeaponComponent
+                {
+                    damageProfile           = squadDamageProfile,
+                    attackRange             = data.attackRange,
+                    attackInterval          = data.attackInterval,
+                    criticalChance          = data.criticalChance,
+                    criticalMultiplier      = data.criticalMultiplier,
+                    damageZoneStart         = data.damageZoneStart,
+                    damageZoneHalfWidth     = data.damageZoneHalfWidth,
+                    damageZoneYOffset       = data.damageZoneYOffset,
+                    damageZoneHalfHeight    = data.damageZoneHalfHeight,
+                    strikeWindowStart       = data.strikeWindowStart,
+                    strikeWindowDuration    = data.strikeWindowDuration,
+                    attackAnimationDuration = data.attackAnimationDuration,
+                    kineticMultiplier       = data.kineticMultiplier
+                });
+
+                // ── Hurtbox: permanent capsule collider on unit (receives damage) ──────
+                // Layer 6 = Hurtbox. Configure in Unity Physics Category Names.
+                var hurtboxCollider = Unity.Physics.CapsuleCollider.Create(
+                    new CapsuleGeometry
+                    {
+                        Vertex0 = new float3(0f, 0.4f, 0f),
+                        Vertex1 = new float3(0f, 1.6f, 0f),
+                        Radius  = 0.35f
+                    },
+                    new CollisionFilter
+                    {
+                        BelongsTo    = PhysicsLayers.HurtboxMask,
+                        CollidesWith = PhysicsLayers.HitboxMask,
+                        GroupIndex   = 0
+                    });
+                ecb.AddComponent(unit, new PhysicsCollider { Value = hurtboxCollider });
+
+                // ── Weapon hitbox entity: separate ECS entity, disabled by default ─────
+                // Activated only during the strike window by UnitAttackSystem.
+                float hitboxHalfD = math.max(0.01f,
+                    (data.attackRange - data.damageZoneStart) * 0.5f);
+                float sizeX = math.max(0.02f, data.damageZoneHalfWidth  * 2f);
+                float sizeY = math.max(0.02f, data.damageZoneHalfHeight * 2f);
+                float sizeZ = math.max(0.02f, hitboxHalfD               * 2f);
+                float bevelRadius = math.min(0.01f, math.min(sizeX, math.min(sizeY, sizeZ)) * 0.49f);
+                var weaponHitboxCollider = Unity.Physics.BoxCollider.Create(
+                    new BoxGeometry
+                    {
+                        Center      = float3.zero,
+                        Orientation = quaternion.identity,
+                        Size        = new float3(sizeX, sizeY, sizeZ),
+                        BevelRadius = bevelRadius
+                    },
+                    new CollisionFilter
+                    {
+                        BelongsTo    = PhysicsLayers.HitboxMask,
+                        CollidesWith = PhysicsLayers.HurtboxMask,
+                        GroupIndex   = 0
+                    });
+                Entity hitboxEntity = ecb.CreateEntity();
+                ecb.AddComponent(hitboxEntity, LocalTransform.FromPosition(worldPos));
+                ecb.AddComponent(hitboxEntity, new PhysicsCollider { Value = weaponHitboxCollider });
+                ecb.AddComponent(hitboxEntity, new WeaponHitboxOwner { ownerUnit = unit });
+                ecb.AddComponent(hitboxEntity, new WeaponHitboxActiveTag());
+                ecb.SetComponentEnabled<WeaponHitboxActiveTag>(hitboxEntity, false);
+                ecb.AddComponent(unit, new WeaponHitboxRef { hitboxEntity = hitboxEntity });
+
+                ecb.AddBuffer<UnitDetectedEnemy>(unit);
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
 
@@ -314,6 +406,39 @@ public partial class SquadSpawningSystem : SystemBase
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+
+    private static float GetPrimaryDamage(SquadDataComponent data)
+    {
+        return data.squadType switch
+        {
+            SquadType.Archers  => data.piercingDamage,
+            SquadType.Pikemen  => data.piercingDamage,
+            SquadType.Spearmen => data.piercingDamage,
+            _                  => data.slashingDamage   // Squires and default
+        };
+    }
+
+    private static DamageType GetPrimaryDamageType(SquadType squadType)
+    {
+        return squadType switch
+        {
+            SquadType.Archers  => DamageType.Piercing,
+            SquadType.Pikemen  => DamageType.Piercing,
+            SquadType.Spearmen => DamageType.Piercing,
+            _                  => DamageType.Slashing  // Squires and default
+        };
+    }
+
+    private static float GetPrimaryPenetration(SquadDataComponent data)
+    {
+        return data.squadType switch
+        {
+            SquadType.Archers  => data.piercingPenetration,
+            SquadType.Pikemen  => data.piercingPenetration,
+            SquadType.Spearmen => data.piercingPenetration,
+            _                  => data.slashingPenetration
+        };
     }
 
     /// <summary>

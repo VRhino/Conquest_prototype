@@ -267,7 +267,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private Vector3 _currentRotation = new Vector3(0f, 0f, 0f);
         private Vector3 _moveDirection;
         private Vector3 _previousRotation;
-        private Vector3 _velocity;
 
         // REMOVED: All jump, fall, crouch, lock-on, aiming variables
 
@@ -277,12 +276,16 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private const float _ANIMATION_DAMP_TIME = 5f;
         private const float _STRAFE_DIRECTION_DAMP_TIME = 20f;
+        private const float _INPUT_DEADZONE = 0.01f;
+        private const float _VELOCITY_STOP_THRESHOLD = 0.1f;
+        private const float _TURN_IN_PLACE_ANGLE = 10f;
+        private const float _LOCOMOTION_START_DELAY = 0.2f;
+        private const float _MAX_LEAN_ROTATION_RATE = 275.0f;
         private float _targetMaxSpeed;
         private float _rotationRate;
         private float _initialLeanValue;
         private float _initialTurnValue;
         private Vector3 _cameraForward;
-        private Vector3 _targetVelocity;
 
         // REMOVED: Falling, gravity variables
 
@@ -325,6 +328,9 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
             _isStrafing = _alwaysStrafe;
             SwitchState(AnimationState.Locomotion);
+
+            if (_animator != null)
+                _animator.SetBool(_isGroundedHash, true);
         }
 
         private void OnDestroy()
@@ -349,7 +355,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private void EnableWalk(bool enable)
         {
-            _isWalking = false; // SIMPLIFIED: No grounded check needed
+            _isWalking = enable;
         }
 
         #endregion
@@ -441,7 +447,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _animator.SetFloat(_isStrafingHash, _isStrafing ? 1.0f : 0.0f);
             
             // MODIFICADO: Si no hay input, asegurarse de que MoveSpeed es 0 inmediatamente
-            if (_inputAdapter._moveComposite.sqrMagnitude < 0.01f)
+            if (_inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE)
             {
                 _animator.SetFloat(_moveSpeedHash, 0);
             }
@@ -539,23 +545,13 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private void Move()
         {
-            // DISABLED: CharacterController movement was overriding ECS entity position
-            // Let EntityVisualSync handle positioning instead
-            //_controller.Move(_velocity * Time.deltaTime);
-            
-            // MODIFICADO: Si no hay input, forzar velocidad a 0
-            if (_inputAdapter._moveComposite.sqrMagnitude < 0.01f)
+            if (_inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE)
             {
                 _speed2D = 0f;
+                return;
             }
-            else
-            {
-                // Still calculate velocity for animation purposes
-                _speed2D = new Vector3(_velocity.x, 0f, _velocity.z).magnitude;
-                _speed2D = Mathf.Round(_speed2D * 1000f) / 1000f;
-            }
-            
-            // Skip actual movement - handled by EntityVisualSync
+
+            _speed2D = Mathf.Round(_currentMaxSpeed * 1000f) / 1000f;
         }
 
         // REMOVED: ApplyGravity() - not needed without jump/fall
@@ -579,29 +575,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
             }
 
             _currentMaxSpeed = Mathf.Lerp(_currentMaxSpeed, _targetMaxSpeed, _ANIMATION_DAMP_TIME * Time.deltaTime);
-
-            _targetVelocity.x = _moveDirection.x * _currentMaxSpeed;
-            _targetVelocity.z = _moveDirection.z * _currentMaxSpeed;
-
-            // MODIFICADO: Detener inmediatamente el movimiento cuando no hay input
-            float inputMagnitude = _inputAdapter._moveComposite.sqrMagnitude;
-            if (inputMagnitude < 0.01f)
-            {
-                // Si no hay input, detener inmediatamente
-                _velocity.z = 0;
-                _velocity.x = 0;
-                
-                // No movement input - velocity set to zero immediately
-            }
-            else
-            {
-                // Si hay input, aplicar suavizado normal
-                _velocity.z = Mathf.Lerp(_velocity.z, _targetVelocity.z, _speedChangeDamping * Time.deltaTime);
-                _velocity.x = Mathf.Lerp(_velocity.x, _targetVelocity.x, _speedChangeDamping * Time.deltaTime);
-            }
-
-            // Speed calculation for animation moved to Move() method
-            // because we need to calculate it even when we don't move the character
 
             Vector3 playerForwardVector = transform.forward;
             _newDirectionDifferenceAngle = playerForwardVector != _moveDirection
@@ -700,7 +673,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
                     _cameraRotationOffset = Mathf.Lerp(_cameraRotationOffset, newOffset, t);
 
-                    if (Mathf.Abs(_cameraRotationOffset) > 10)
+                    if (Mathf.Abs(_cameraRotationOffset) > _TURN_IN_PLACE_ANGLE)
                     {
                         _isTurningInPlace = true;
                     }
@@ -714,7 +687,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
                 _shuffleDirectionZ = 1;
                 _shuffleDirectionX = 0;
 
-                Vector3 faceDirection = new Vector3(_velocity.x, 0f, _velocity.z);
+                Vector3 faceDirection = new Vector3(_moveDirection.x, 0f, _moveDirection.z);
 
                 if (faceDirection == Vector3.zero)
                 {
@@ -732,8 +705,8 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private void CheckIfStopped()
         {
             // MODIFICADO: Usar threshold más bajo y considerar el input directamente
-            bool noInput = _inputAdapter._moveComposite.sqrMagnitude < 0.01f;
-            bool noVelocity = _speed2D < 0.1f; // Threshold reducido
+            bool noInput = _inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE;
+            bool noVelocity = _speed2D < _VELOCITY_STOP_THRESHOLD;
             
             _isStopped = noInput || (noVelocity && _moveDirection.magnitude == 0);
             
@@ -765,12 +738,10 @@ namespace Synty.AnimationBaseLocomotion.Samples
                         _animator.SetFloat(_locomotionStartDirectionHash, _locomotionStartDirection);
                     }
 
-                    float delayTime = 0.2f;
-                    _leanDelay = delayTime;
-                    _headLookDelay = delayTime;
-                    _bodyLookDelay = delayTime;
-
-                    _locomotionStartTimer = delayTime;
+                    _leanDelay = _LOCOMOTION_START_DELAY;
+                    _headLookDelay = _LOCOMOTION_START_DELAY;
+                    _bodyLookDelay = _LOCOMOTION_START_DELAY;
+                    _locomotionStartTimer = _LOCOMOTION_START_DELAY;
                 }
             }
             else
@@ -826,13 +797,12 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _initialLeanValue = leansActivated ? _rotationRate : 0f;
 
             float leanSmoothness = 5;
-            float maxLeanRotationRate = 275.0f;
 
             float referenceValue = _speed2D / _sprintSpeed;
             _leanValue = CalculateSmoothedValue(
                 _leanValue,
                 _initialLeanValue,
-                maxLeanRotationRate,
+                _MAX_LEAN_ROTATION_RATE,
                 leanSmoothness,
                 _leanCurve,
                 referenceValue,
@@ -852,7 +822,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
                 _headLookX = CalculateSmoothedValue(
                     _headLookX,
                     _initialTurnValue,
-                    maxLeanRotationRate,
+                    _MAX_LEAN_ROTATION_RATE,
                     headTurnSmoothness,
                     _headLookXCurve,
                     _headLookX,
@@ -867,7 +837,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _bodyLookX = CalculateSmoothedValue(
                 _bodyLookX,
                 _initialTurnValue,
-                maxLeanRotationRate,
+                _MAX_LEAN_ROTATION_RATE,
                 bodyTurnSmoothness,
                 _bodyLookXCurve,
                 _bodyLookX,
@@ -960,53 +930,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
             FaceMoveDirection();
             Move();
             UpdateAnimatorController();
-            
-            // Periódicamente revisar y corregir problemas comunes del Animator
-            if (Time.frameCount % 120 == 0) // Aproximadamente cada 2 segundos a 60fps
-            {
-                CheckAndFixAnimatorState();
-            }
-        }
-        
-        // Método para revisar y corregir problemas comunes del Animator
-        private void CheckAndFixAnimatorState()
-        {
-            if (_animator == null)
-                return;
-                
-            AnimatorStateInfo stateInfo = _animator.GetCurrentAnimatorStateInfo(0);
-            
-            // Verificar si está atascado en el estado Fall
-            if (stateInfo.IsName("Base Layer.Fall.Falling") && transform.position.y < 0.01f)
-            {
-                // Asegurarse de que IsGrounded es true
-                _animator.SetBool(_isGroundedHash, true);
-                
-                // Forzar un trigger de transición
-                _animator.SetTrigger(_forceGroundedTransitionHash);
-            }
-            
-            // Asegurar que siempre está en estado grounded
-            if (!_animator.GetBool(_isGroundedHash))
-            {
-                _animator.SetBool(_isGroundedHash, true);
-            }
-            
-            // Comprobar si está atascado en idle mientras debería estar en movimiento
-            bool isInIdleState = stateInfo.IsName("Base Layer.Idle Standing.Idle_Standing");
-            Vector3 velocity = _velocity;
-            bool hasMovementInput = _inputAdapter._moveComposite.sqrMagnitude > 0.01f;
-            bool shouldBeMoving = velocity.sqrMagnitude > 0.1f || hasMovementInput;
-            
-            if (isInIdleState && shouldBeMoving)
-            {
-                // Forzar los parámetros de movimiento
-                _animator.SetBool(_movementInputPressedHash, true);
-                _animator.SetBool(_isStoppedHash, false);
-                _animator.SetFloat(_moveSpeedHash, _speed2D > 0.1f ? _speed2D : 0.3f);
-                _animator.SetInteger(_currentGaitHash, 1); // Forzar a estado Walk
-                _animator.SetTrigger(_forceGroundedTransitionHash);
-            }
         }
 
         private void ExitLocomotionState()

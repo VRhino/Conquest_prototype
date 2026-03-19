@@ -98,6 +98,41 @@ public class SquadData : ScriptableObject
     /// <summary>Speed scaling per level.</summary>
     public AnimationCurve speedCurve;
 
+    // Combat parameters
+    /// <summary>Melee attack range in world units.</summary>
+    public float attackRange = 2f;
+    /// <summary>Time in seconds between attacks.</summary>
+    public float attackInterval = 1.5f;
+    /// <summary>Probability of a critical hit (0–1).</summary>
+    public float criticalChance = 0.05f;
+    /// <summary>Damage multiplier applied on a critical hit.</summary>
+    public float criticalMultiplier = 1.5f;
+
+    /// <summary>Radius in world units within which enemies are detected.</summary>
+    public float detectionRange = 8f;
+
+    // Hitbox shape — defines the weapon damage box in world space
+    /// <summary>Distance from unit origin to near edge of damage box.</summary>
+    public float damageZoneStart = 0f;
+    /// <summary>Half-width of damage box in XZ (meters).</summary>
+    public float damageZoneHalfWidth = 0.75f;
+    /// <summary>Vertical offset of the damage box center (weapon angle).</summary>
+    public float damageZoneYOffset = 1.0f;
+    /// <summary>Half-height of the damage box.</summary>
+    public float damageZoneHalfHeight = 1.0f;
+
+    // Strike window timing
+    /// <summary>Seconds from animation start when hitbox activates.</summary>
+    public float strikeWindowStart = 0.35f;
+    /// <summary>Duration the hitbox stays active.</summary>
+    public float strikeWindowDuration = 0.15f;
+    /// <summary>Total duration of the attack animation.</summary>
+    public float attackAnimationDuration = 1.0f;
+
+    // Kinetic
+    /// <summary>Scales penetration bonus from attacker speed.</summary>
+    public float kineticMultiplier = 0.3f;
+
     // Squad size
     /// <summary>Total number of units in this squad.</summary>
     public int unitCount;

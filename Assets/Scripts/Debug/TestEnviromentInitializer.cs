@@ -3,6 +3,10 @@ using UnityEngine;
 
 public class TestEnvironmentInitializer : MonoBehaviour
 {
+    [SerializeField] private int attackers = 3;
+    [SerializeField] private int defenders = 3;
+    [SerializeField] private Team playerTeam = Team.TeamA;
+
     public void SetupTestEnvironment()
     {
         // Solo inicializar con datos de test si no hay datos de transición
@@ -21,7 +25,7 @@ public class TestEnvironmentInitializer : MonoBehaviour
 
     public BattleData GenerateBattleData(HeroData localHero)
     {
-        return BattleDebugCreator.CreateBattleWithLocalHero(localHero);
+        return BattleDebugCreator.CreateBattleWithLocalHero(localHero, playerTeam, attackers, defenders);
     }
 
 }

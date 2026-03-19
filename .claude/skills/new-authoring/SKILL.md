@@ -1,6 +1,13 @@
 ---
 name: new-authoring
-description: Scaffold the Baker and Authoring MonoBehaviour for an existing ECS component. Auto-invoked when the user needs to make an ECS component editable in the Unity Inspector. Generates the Authoring + Baker pair following project patterns.
+description: >
+  Scaffold the Baker and Authoring MonoBehaviour for an existing ECS component.
+  AUTO-INVOKE when: (1) a new ECS component needs to be configured in the Unity Inspector,
+  (2) the user says "make this editable in the editor / inspector", "add authoring",
+  "I need to set values in the subscene", or "how do I bake this component",
+  (3) after /new-ecs-component when the component needs editor configuration,
+  (4) a config singleton needs to be placed in DOTSWorld.unity.
+  Always run AFTER the component file exists.
 disable-model-invocation: false
 allowed-tools: Read, Grep, Glob, Write, Edit
 ---

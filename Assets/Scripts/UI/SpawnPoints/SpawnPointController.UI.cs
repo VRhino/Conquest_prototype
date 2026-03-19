@@ -126,6 +126,10 @@ public class SpawnPointControllerUI : MonoBehaviour
             clickButton = GetComponent<Button>();
             if (clickButton == null) Debug.LogWarning($"[SpawnPointControllerUI] No Button component found on {gameObject.name}");
         }
+
+        // spawnPointId debe ser numérico puro para compatibilidad con BattleSceneController
+        if (!string.IsNullOrEmpty(spawnPointId) && !int.TryParse(spawnPointId, out _))
+            Debug.LogWarning($"[SpawnPointControllerUI] spawnPointId '{spawnPointId}' en {gameObject.name} no es numérico puro. Usar solo números (\"1\", \"2\", \"3\").");
     }
     
     #endregion

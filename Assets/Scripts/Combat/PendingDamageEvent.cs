@@ -23,4 +23,14 @@ public struct PendingDamageEvent : IComponentData
 
     /// <summary>Damage multiplier (1 for normal, >1 for critical).</summary>
     public float multiplier;
+
+    // ── Context for damage formula ────────────────────────────────────────────
+    /// <summary>Direction the attack came from (used for shield orientation check).</summary>
+    public Unity.Mathematics.float3 attackDirection;
+
+    /// <summary>Attacker speed at the moment of impact (used for kinetic bonus).</summary>
+    public float attackerSpeed;
+
+    /// <summary>World position of the attacker (used for height bonus).</summary>
+    public Unity.Mathematics.float3 attackerPosition;
 }
