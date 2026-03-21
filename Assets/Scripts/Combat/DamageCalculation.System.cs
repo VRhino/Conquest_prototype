@@ -34,18 +34,31 @@ public partial class DamageCalculationSystem : SystemBase
         {
             var p = pending.ValueRO;
 
+            UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc: processing event attacker={entity}, target={p.target}, profile={p.damageProfile}");
+
             if (!SystemAPI.Exists(p.target) || !SystemAPI.Exists(p.damageProfile))
-            { ecb.RemoveComponent<PendingDamageEvent>(entity); continue; }
+            {
+                bool tMissing = !SystemAPI.Exists(p.target);
+                bool pMissing = !SystemAPI.Exists(p.damageProfile);
+                UnityEngine.Debug.LogWarning($"[BattleTestDebug] DamageCalc DISCARD: targetMissing={tMissing}, profileMissing={pMissing}, attacker={entity}");
+                ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
+            }
 
             if (SystemAPI.HasComponent<IsDeadComponent>(p.target))
-            { ecb.RemoveComponent<PendingDamageEvent>(entity); continue; }
+            {
+                UnityEngine.Debug.LogWarning($"[BattleTestDebug] DamageCalc DISCARD: target={p.target} already dead");
+                ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
+            }
 
             // Friendly fire check
             if (p.sourceTeam != Team.None &&
                 SystemAPI.HasComponent<TeamComponent>(p.target))
             {
                 if (SystemAPI.GetComponent<TeamComponent>(p.target).value == p.sourceTeam)
-                { ecb.RemoveComponent<PendingDamageEvent>(entity); continue; }
+                {
+                    UnityEngine.Debug.LogWarning($"[BattleTestDebug] DamageCalc DISCARD: friendly fire attacker={entity} target={p.target} team={p.sourceTeam}");
+                    ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
+                }
             }
 
             // Shield block check — intercepts frontal attacks before hurtbox
@@ -66,6 +79,7 @@ public partial class DamageCalculationSystem : SystemBase
                 }
                 if (blocked)
                 {
+                    UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc SHIELD BLOCK: target={p.target}, blockRemaining={math.max(0f, shield.currentBlock - 50f):F0}");
                     shield.currentBlock     = math.max(0f, shield.currentBlock - 50f);
                     shieldLookup[p.target]  = shield;
                     ecb.RemoveComponent<PendingDamageEvent>(entity);
@@ -103,9 +117,9 @@ public partial class DamageCalculationSystem : SystemBase
                 };
             }
 
-            // Ratio-based mitigation with 5% damage floor
-            float ratio        = defense / math.max(penetration, 0.001f);
-            float mitigation   = math.min(ratio, 0.95f);
+            // Normalized mitigation: defense / (defense + penetration) → always in [0, 1)
+            // Naturally dynamic — only approaches 0.95 when defense >> penetration
+            float mitigation   = math.min(defense / (defense + math.max(penetration, 0.001f)), 0.95f);
             float effectiveDmg = profile.baseDamage * p.multiplier * (1f - mitigation);
 
             // Kinetic bonus — attacker speed increases penetration effectiveness
@@ -131,11 +145,15 @@ public partial class DamageCalculationSystem : SystemBase
 
             effectiveDmg = math.max(0f, effectiveDmg);
 
+            UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc: baseDmg={profile.baseDamage:F1}, defense={defense:F1}, penetration={penetration:F1}, mitigation={mitigation:F2}, effective={effectiveDmg:F1}");
+
             // Apply to unit or hero
             if (SystemAPI.HasComponent<HealthComponent>(p.target))
             {
                 var hp = SystemAPI.GetComponentRW<HealthComponent>(p.target);
+                float prevHp = hp.ValueRO.currentHealth;
                 hp.ValueRW.currentHealth = math.max(0f, hp.ValueRO.currentHealth - effectiveDmg);
+                UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc DAMAGE APPLIED: target={p.target}, HP {prevHp:F1} → {hp.ValueRO.currentHealth:F1}");
                 if (hp.ValueRO.currentHealth <= 0f &&
                     !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);

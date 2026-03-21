@@ -47,7 +47,12 @@ public partial class UnitAttackSystem : SystemBase
 
                 // Gate WeaponHitboxBehaviour — tag lives on the unit entity itself
                 if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
+                {
+                    bool wasInWindow = SystemAPI.IsComponentEnabled<WeaponHitboxActiveTag>(entity);
                     SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, inWindow);
+                    if (inWindow && !wasInWindow)
+                        UnityEngine.Debug.Log($"[BattleTestDebug] WeaponHitboxActiveTag ENABLED on {entity}, timer={c.attackAnimationTimer:F3}");
+                }
 
                 // Phase 3 — animation done
                 if (c.attackAnimationTimer >= weapon.ValueRO.attackAnimationDuration)
@@ -93,6 +98,7 @@ public partial class UnitAttackSystem : SystemBase
                 c.isAttacking          = true;
                 c.attackAnimationTimer = 0f;
                 c.hitboxFired          = false;
+                UnityEngine.Debug.Log($"[BattleTestDebug] UnitAttack: ATTACK START entity={entity}, dist2D={dist2D:F2}, range={weapon.ValueRO.attackRange}");
             }
         }
     }

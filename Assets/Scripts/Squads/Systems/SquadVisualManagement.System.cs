@@ -106,8 +106,11 @@ public partial class SquadVisualManagementSystem : SystemBase
         if (hitboxBehaviour != null)
         {
             hitboxBehaviour.ownerUnit = unitEntity;
-            var hitboxCollider = hitboxBehaviour.GetComponent<UnityEngine.Collider>();
-            if (hitboxCollider != null) hitboxCollider.enabled = false;
+            Debug.Log($"[BattleTestDebug] WeaponHitbox wired: unit={unitEntity}, GO={hitboxBehaviour.gameObject.name}");
+        }
+        else
+        {
+            Debug.LogWarning($"[BattleTestDebug] WeaponHitbox child NOT FOUND on visual GO for unit={unitEntity} (prefab={visualPrefab.name})");
         }
 
         var agent = visualInstance.GetComponent<NavMeshAgent>();

@@ -22,31 +22,53 @@ public class WeaponHitboxBehaviour : MonoBehaviour
         _world = World.DefaultGameObjectInjectionWorld;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (_world == null || !_world.IsCreated || ownerUnit == Entity.Null) return;
 
         var em = _world.EntityManager;
 
+        Debug.Log($"[BattleTestDebug] OnTriggerEnter: owner={ownerUnit}, other={other.name}");
+
         // Gate: only active during strike window (WeaponHitboxActiveTag enabled by UnitAttackSystem)
-        if (!em.IsComponentEnabled<WeaponHitboxActiveTag>(ownerUnit)) return;
+        if (!em.IsComponentEnabled<WeaponHitboxActiveTag>(ownerUnit))
+        {
+            Debug.Log($"[BattleTestDebug] Blocked: WeaponHitboxActiveTag DISABLED on {ownerUnit}");
+            return;
+        }
 
         // One hit per swing
         var combat = em.GetComponentData<UnitCombatComponent>(ownerUnit);
-        if (combat.hitboxFired) return;
+        if (combat.hitboxFired)
+        {
+            Debug.Log($"[BattleTestDebug] Blocked: hitboxFired already true on {ownerUnit}");
+            return;
+        }
 
         // Resolve target entity from the collider's visual GO
         var sync = other.GetComponentInParent<EntityVisualSync>();
-        if (sync == null) return;
+        if (sync == null)
+        {
+            Debug.LogWarning($"[BattleTestDebug] EntityVisualSync NOT FOUND in parent of {other.name}");
+            return;
+        }
         Entity target = sync.GetHeroEntity();
-        if (target == Entity.Null || !em.Exists(target)) return;
+        if (target == Entity.Null || !em.Exists(target))
+        {
+            Debug.LogWarning($"[BattleTestDebug] Target entity NULL from sync on {other.name}");
+            return;
+        }
 
         // Friendly fire check
         bool hasTeam = em.HasComponent<TeamComponent>(ownerUnit);
         if (hasTeam && em.HasComponent<TeamComponent>(target))
         {
             if (em.GetComponentData<TeamComponent>(ownerUnit).value ==
-                em.GetComponentData<TeamComponent>(target).value) return;
+                em.GetComponentData<TeamComponent>(target).value)
+            {
+                Debug.Log($"[BattleTestDebug] Friendly fire SKIP: owner={ownerUnit} team == target={target} team");
+                return;
+            }
         }
 
         // Dead check
@@ -71,6 +93,8 @@ public class WeaponHitboxBehaviour : MonoBehaviour
             attackerSpeed    = attackerSpeed,
             attackerPosition = transform.position
         });
+
+        Debug.Log($"[BattleTestDebug] PendingDamageEvent CREATED: attacker={ownerUnit} → target={target}, crit={crit}");
 
         combat.hitboxFired = true;
         em.SetComponentData(ownerUnit, combat);
