@@ -15,6 +15,9 @@ using System.Collections.Generic;
 [UpdateAfter(typeof(SquadSpawningSystem))]
 public partial class SquadVisualManagementSystem : SystemBase
 {
+    private const string DetectorChildName = "Detector";
+    private static readonly int ShaderBaseColor = Shader.PropertyToID("_BaseColor");
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
@@ -95,6 +98,8 @@ public partial class SquadVisualManagementSystem : SystemBase
         var syncScript = VisualSyncUtility.SetupVisualSync(visualInstance);
         syncScript.SetHeroEntity(unitEntity);
 
+        ApplyDetectorColor(visualInstance, unitEntity, parentSquad);
+
         var agent = visualInstance.GetComponent<NavMeshAgent>();
         if (agent != null)
         {
@@ -152,6 +157,39 @@ public partial class SquadVisualManagementSystem : SystemBase
         
         // Fallback al tipo de squad
         return registry.GetDefaultUnitPrefab(squadType);
+    }
+
+    private void ApplyDetectorColor(GameObject visualInstance, Entity unitEntity, Entity parentSquad)
+    {
+        Transform detectorTransform = visualInstance.transform.Find(DetectorChildName);
+        if (detectorTransform == null) return;
+
+        Renderer cubeRenderer = detectorTransform.GetComponentInChildren<Renderer>();
+        if (cubeRenderer == null) return;
+
+        bool isLocalSquad = parentSquad != Entity.Null &&
+                            EntityManager.HasComponent<IsLocalSquadActive>(parentSquad);
+
+        Color color;
+        if (isLocalSquad)
+        {
+            color = Color.yellow;
+        }
+        else if (SystemAPI.TryGetSingleton<DataContainerComponent>(out var dc) &&
+                 EntityManager.HasComponent<TeamComponent>(unitEntity))
+        {
+            var unitTeam = EntityManager.GetComponentData<TeamComponent>(unitEntity).value;
+            color = (unitTeam == (Team)dc.teamID) ? Color.blue : Color.red;
+        }
+        else
+        {
+            color = Color.white;
+        }
+
+        var mpb = new MaterialPropertyBlock();
+        cubeRenderer.GetPropertyBlock(mpb);
+        mpb.SetColor(ShaderBaseColor, color);
+        cubeRenderer.SetPropertyBlock(mpb);
     }
 
     private static void SetLayerRecursively(GameObject obj, int layer)

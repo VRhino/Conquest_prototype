@@ -110,18 +110,9 @@ public partial class EnemyDetectionSystem : SystemBase
                     unitBuf.Add(new UnitDetectedEnemy { Value = squadTargets[j].Value });
             }
 
-            // [CombatTestDebug] — squad-level detection summary
-            UnityEngine.Debug.Log($"[CombatTestDebug][Detection] Squad {entityA.Index}: " +
-                $"aliveUnits={aliveCount} detectionRange={dataA.ValueRO.detectionRange:F1} " +
-                $"detectedSquads={detectedEnemies.Length} enemyUnitsInRange={squadTargets.Length}");
 
-            // [CombatTestDebug] — first unit propagation check
-            if (unitsA.Length > 0)
-            {
-                Entity u0 = unitsA[0].Value;
-                int bufLen = _unitDetectedLookup.HasBuffer(u0) ? _unitDetectedLookup[u0].Length : -1;
-                UnityEngine.Debug.Log($"[CombatTestDebug][Detection] Unit {u0.Index}: UnitDetectedEnemy.Length={bufLen}");
-            }
+
+
         }
     }
 }

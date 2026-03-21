@@ -22,6 +22,8 @@ public partial class UnitBodyblockSystem : SystemBase
     private const float RepulsionStrength = 8f;     // fuerza Moving vs Moving
     private const float WallStrength      = 60f;    // fuerza cuando una formación-muro bloquea
     private const float MaxPushPerFrame   = 0.3f;   // clamp de desplazamiento por frame
+    private const float EngagingRadius    = 0.35f;  // solo previene overlap físico entre engaging
+    private const float EngagingStrength  = 3f;     // suave — no empuja fuera de rango de ataque
     private const float CellSize          = BodyblockRadius;
 
     // ── Formaciones que actúan como muro sólido ───────────────────────────────
@@ -40,7 +42,8 @@ public partial class UnitBodyblockSystem : SystemBase
         public float3             position;
         public UnitFormationState state;   // héroes = siempre Moving
         public Team               team;
-        public bool               isWall;  // Formed + formación muro
+        public bool               isWall;      // Formed + formación muro
+        public bool               isEngaging;  // en combate cuerpo a cuerpo
     }
 
     private readonly List<AgentData>                    _agents         = new();
@@ -76,16 +79,22 @@ public partial class UnitBodyblockSystem : SystemBase
             if (agent == null || !agent.enabled || !agent.isOnNavMesh) continue;
 
             var pos = agent.transform.position;
-            bool formed  = stateComp.ValueRO.State != UnitFormationState.Moving;
+            var formState = stateComp.ValueRO.State;  // estado real, sin override
+
+            bool engaging = SystemAPI.HasComponent<IsEngagingTag>(entity)
+                         && SystemAPI.IsComponentEnabled<IsEngagingTag>(entity);
+
+            bool formed  = formState != UnitFormationState.Moving;
             bool isWall  = formed && _unitIsWall.TryGetValue(entity, out var w) && w;
 
             _agents.Add(new AgentData
             {
-                agent    = agent,
-                position = new float3(pos.x, pos.y, pos.z),
-                state    = stateComp.ValueRO.State,
-                team     = teamComp.ValueRO.value,
-                isWall   = isWall,
+                agent      = agent,
+                position   = new float3(pos.x, pos.y, pos.z),
+                state      = formState,
+                team       = teamComp.ValueRO.value,
+                isWall     = isWall,
+                isEngaging = engaging,
             });
         }
 
@@ -163,6 +172,25 @@ public partial class UnitBodyblockSystem : SystemBase
 
                     bool iMoving = _agents[i].state == UnitFormationState.Moving;
                     bool jMoving = _agents[j].state == UnitFormationState.Moving;
+                    bool iEng    = _agents[i].isEngaging;
+                    bool jEng    = _agents[j].isEngaging;
+
+                    // Engaging vs Engaging → repulsión suave solo para prevenir overlap
+                    if (iEng && jEng)
+                    {
+                        float engRadSq = EngagingRadius * EngagingRadius;
+                        if (distSq >= engRadSq) continue;
+                        float eOverlap = EngagingRadius - dist;
+                        float eMag     = eOverlap * EngagingStrength * dt;
+                        var   ePush    = new Vector3(dir.x * eMag * 0.5f, 0f, dir.z * eMag * 0.5f);
+                        _offsets[i] += ePush;
+                        _offsets[j] -= ePush;
+                        continue;
+                    }
+
+                    // Engaging vs non-engaging → engaging actúa como muro estático
+                    if (iEng) iMoving = false;
+                    if (jEng) jMoving = false;
 
                     // Formed vs Formed → sin push (dos paredes estáticas, evita vibración)
                     if (!iMoving && !jMoving) continue;

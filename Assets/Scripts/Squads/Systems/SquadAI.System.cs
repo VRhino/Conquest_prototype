@@ -85,10 +85,7 @@ public partial class SquadAISystem : SystemBase
             ai.ValueRW.isInCombat = enemiesDetected;
             state.ValueRW.isInCombat = enemiesDetected;
 
-            // [CombatTestDebug] — intent decision
-            UnityEngine.Debug.Log($"[CombatTestDebug][SquadAI] Squad {entity.Index}: " +
-                $"profile={profile} enemiesDetected={enemiesDetected} dispersed={dispersed} " +
-                $"→ intent={desiredState} isInCombat={ai.ValueRO.isInCombat}");
+
         }
     }
 }

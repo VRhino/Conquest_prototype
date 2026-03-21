@@ -28,10 +28,7 @@ public partial class UnitTargetingSystem : SystemBase
                           state.ValueRO.currentOrder == SquadOrderType.FollowHero ||
                           (state.ValueRO.currentOrder == SquadOrderType.HoldPosition));
 
-            // [CombatTestDebug] — gate check
-            UnityEngine.Debug.Log($"[CombatTestDebug][Targeting] Squad {squadEntity.Index}: " +
-                $"intent={ai.ValueRO.tacticalIntent} order={state.ValueRO.currentOrder} " +
-                $"allow={allow}");
+
 
             // Temporary map to track how many units are attacking each enemy
             var enemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
@@ -114,6 +111,18 @@ public partial class UnitTargetingSystem : SystemBase
                 if (combat.ValueRO.target == Entity.Null)
                     continue;
 
+                // Skip units already in attack range of their current target
+                if (SystemAPI.HasComponent<UnitWeaponComponent>(unit)
+                    && SystemAPI.HasComponent<LocalTransform>(unit)
+                    && SystemAPI.HasComponent<LocalTransform>(combat.ValueRO.target))
+                {
+                    float3 uPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+                    float3 tPos = SystemAPI.GetComponent<LocalTransform>(combat.ValueRO.target).Position;
+                    float atkRange = SystemAPI.GetComponent<UnitWeaponComponent>(unit).attackRange;
+                    if (math.distancesq(uPos, tPos) <= atkRange * atkRange)
+                        continue;
+                }
+
                 if (!enemyCounts.TryGetValue(combat.ValueRO.target, out int count) || count <= maxPerTarget)
                     continue;
 
@@ -140,21 +149,7 @@ public partial class UnitTargetingSystem : SystemBase
                 }
             }
 
-            // [CombatTestDebug] — per-unit target/engage state (first unit only)
-            if (units.Length > 0)
-            {
-                Entity u0 = units[0].Value;
-                if (SystemAPI.HasComponent<UnitCombatComponent>(u0))
-                {
-                    var c = SystemAPI.GetComponent<UnitCombatComponent>(u0);
-                    bool engaging = SystemAPI.HasComponent<IsEngagingTag>(u0)
-                                 && SystemAPI.IsComponentEnabled<IsEngagingTag>(u0);
-                    int detCount = SystemAPI.HasBuffer<UnitDetectedEnemy>(u0)
-                        ? SystemAPI.GetBuffer<UnitDetectedEnemy>(u0).Length : -1;
-                    UnityEngine.Debug.Log($"[CombatTestDebug][Targeting] Unit {u0.Index}: " +
-                        $"detectedEnemies={detCount} target={c.target} IsEngaging={engaging}");
-                }
-            }
+
 
             enemyCounts.Dispose();
 

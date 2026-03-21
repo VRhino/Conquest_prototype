@@ -22,6 +22,7 @@ public partial class SquadSpawningSystem : SystemBase
         Dependency.Complete();
         var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var isLocalPlayerLookup = GetComponentLookup<IsLocalPlayer>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (spawn, selection, heroTransform, hero, entity) in SystemAPI
@@ -54,6 +55,8 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddComponent(squad, LocalTransform.FromPosition(formationAnchor));
 
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
+            if (isLocalPlayerLookup.HasComponent(entity))
+                ecb.AddComponent<IsLocalSquadActive>(squad);
             // Squad created successfully
 
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent

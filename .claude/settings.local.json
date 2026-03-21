@@ -16,7 +16,9 @@
       "Read(//c/Users/VRINO/.claude//**)",
       "Read(//c/Users/VRINO/.claude/plugins//**)",
       "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/.claude-plugin)",
-      "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/skills/unity-log)"
+      "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/skills/unity-log)",
+      "mcp__claude_ai_Excalidraw__read_me",
+      "mcp__claude_ai_Excalidraw__create_view"
     ]
   },
   "hooks": {

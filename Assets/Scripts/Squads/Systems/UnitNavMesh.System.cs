@@ -87,8 +87,10 @@ public partial class UnitNavMeshSystem : SystemBase
             : 6f;
 
         // ── Phase 1: movement + rotation decision per NavMesh unit ───────────
-        foreach (var (targetPos, transform, entity) in
-            SystemAPI.Query<RefRO<UnitTargetPositionComponent>, RefRW<LocalTransform>>()
+        foreach (var (targetPos, formState, transform, entity) in
+            SystemAPI.Query<RefRO<UnitTargetPositionComponent>,
+                            RefRO<UnitFormationStateComponent>,
+                            RefRW<LocalTransform>>()
                      .WithAll<NavAgentComponent>()
                      .WithEntityAccess())
         {
@@ -131,7 +133,12 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
             }
 
-            if (combatTarget != Entity.Null
+            // HoldPosition: unidades van a su slot y se quedan; no persiguen targets.
+            _unitToOrder.TryGetValue(entity, out SquadOrderType squadOrder);
+            bool isHoldingPosition = squadOrder == SquadOrderType.HoldPosition;
+
+            if (!isHoldingPosition
+                && combatTarget != Entity.Null
                 && SystemAPI.HasComponent<LocalTransform>(combatTarget))
             {
                 float3 targetWorldPos = SystemAPI.GetComponent<LocalTransform>(combatTarget).Position;
@@ -140,13 +147,27 @@ public partial class UnitNavMeshSystem : SystemBase
                 float  dist     = math.distance(unitXZ, targetXZ);
                 float  stopDist = attackRange * StopDistanceFactor;
 
-                // ── Destination: pursue combat target regardless of HoldPosition ──
-                // HoldPosition only blocks free movement; active combat always pursues.
                 if (dist > stopDist)
                 {
-                    float2 dir    = math.normalizesafe(unitXZ - targetXZ);
-                    float2 stopXZ = targetXZ + dir * stopDist;
+                    float2 baseDir = math.normalizesafe(unitXZ - targetXZ);
+
+                    // Offset angular estable por unidad (golden ratio → distribución uniforme)
+                    float angleOffset = (math.frac(entity.Index * 0.618034f) - 0.5f) * math.PI * 0.5f; // ±45°
+
+                    float cosA = math.cos(angleOffset);
+                    float sinA = math.sin(angleOffset);
+                    float2 rotatedDir = new float2(
+                        baseDir.x * cosA - baseDir.y * sinA,
+                        baseDir.x * sinA + baseDir.y * cosA
+                    );
+
+                    float2 stopXZ = targetXZ + rotatedDir * stopDist;
                     destination   = new float3(stopXZ.x, unitPos.y, stopXZ.y);
+                }
+                else
+                {
+                    // Already in attack range — stay at current position
+                    destination = unitPos;
                 }
 
                 // ── Rotation: face target when in close range ────────────────
@@ -163,33 +184,27 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
                 else
                 {
-                    // Moving toward target — let NavMesh handle rotation.
                     agent.updateRotation = true;
                 }
             }
             else
             {
-                // No combat target — NavMesh owns rotation.
+                // Sin combat target activo, o en HoldPosition — NavMesh maneja rotación.
                 agent.updateRotation = true;
             }
 
-            // [CombatTestDebug] — NavMesh decision (only when combat is active)
-            if (hasCombat)
-            {
-                float3 slotPos    = targetPos.ValueRO.position;
-                Entity rawTarget  = SystemAPI.GetComponent<UnitCombatComponent>(entity).target;
-                float  distToSlot = combatTarget != Entity.Null
-                    && SystemAPI.HasComponent<LocalTransform>(combatTarget)
-                    ? math.sqrt(math.distancesq(
-                        SystemAPI.GetComponent<LocalTransform>(combatTarget).Position, slotPos))
-                    : -1f;
-                UnityEngine.Debug.Log($"[CombatTestDebug][NavMesh] Unit {entity.Index}: " +
-                    $"rawTarget={rawTarget} combatTargetAfterLeash={combatTarget} " +
-                    $"distEnemyToSlot={distToSlot:F1} leash={leashDistance:F1} " +
-                    $"destination={destination}");
-            }
 
-            agent.SetDestination(destination);
+
+            // Gate: respect the randomized reaction delay.
+            // Combat targets always bypass the delay — units must fight back immediately.
+            if (formState.ValueRO.State == UnitFormationState.Waiting && combatTarget == Entity.Null)
+            {
+                agent.ResetPath(); // hold until delay expires
+            }
+            else
+            {
+                agent.SetDestination(destination);
+            }
         }
     }
 }
