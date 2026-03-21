@@ -56,12 +56,6 @@ public struct SquadDataComponent : IComponentData
     public float criticalMultiplier;
     public float detectionRange;
 
-    // Hitbox shape
-    public float damageZoneStart;
-    public float damageZoneHalfWidth;
-    public float damageZoneYOffset;
-    public float damageZoneHalfHeight;
-
     // Strike window timing
     public float strikeWindowStart;
     public float strikeWindowDuration;

@@ -171,15 +171,16 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
 
                 // ── Rotation: face target when in close range ────────────────
+                // Escribir al GO directamente — EntityVisualSync sincroniza GO→ECS,
+                // por lo que escribir a ECS transform sería sobreescrito en el mismo frame.
                 if (dist <= EngagementRange)
                 {
                     agent.updateRotation = false;
                     float2 dir2D = math.normalizesafe(targetXZ - unitXZ);
                     if (math.lengthsq(dir2D) > 0f)
                     {
-                        transform.ValueRW.Rotation = quaternion.LookRotationSafe(
-                            new float3(dir2D.x, 0f, dir2D.y),
-                            math.up());
+                        agent.transform.rotation = UnityEngine.Quaternion.LookRotation(
+                            new UnityEngine.Vector3(dir2D.x, 0f, dir2D.y));
                     }
                 }
                 else

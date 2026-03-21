@@ -23,19 +23,6 @@ public struct UnitWeaponComponent : IComponentData
     /// <summary>Damage multiplier applied on a critical hit.</summary>
     public float criticalMultiplier;
 
-    // ── Hitbox shape ──────────────────────────────────────────────────────────
-    /// <summary>Distance from unit to the near edge of the damage box.</summary>
-    public float damageZoneStart;
-
-    /// <summary>Half-width of the damage box in XZ.</summary>
-    public float damageZoneHalfWidth;
-
-    /// <summary>Vertical offset of the damage box center (weapon angle).</summary>
-    public float damageZoneYOffset;
-
-    /// <summary>Half-height of the damage box.</summary>
-    public float damageZoneHalfHeight;
-
     // ── Strike window timing ──────────────────────────────────────────────────
     /// <summary>Seconds from animation start when hitbox activates.</summary>
     public float strikeWindowStart;

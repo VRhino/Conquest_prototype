@@ -38,10 +38,6 @@ public partial class BraceWeaponSystem : SystemBase
                     var w    = weaponLookup[unit];
 
                     w.attackRange             = prof.attackRange;
-                    w.damageZoneStart         = prof.damageZoneStart;
-                    w.damageZoneHalfWidth     = prof.damageZoneHalfWidth;
-                    w.damageZoneYOffset       = prof.damageZoneYOffset;
-                    w.damageZoneHalfHeight    = prof.damageZoneHalfHeight;
                     w.strikeWindowStart       = prof.strikeWindowStart;
                     w.strikeWindowDuration    = prof.strikeWindowDuration;
                     w.attackAnimationDuration = prof.attackAnimationDuration;

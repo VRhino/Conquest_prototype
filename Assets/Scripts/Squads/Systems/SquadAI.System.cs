@@ -28,8 +28,12 @@ public partial class SquadAISystem : SystemBase
                 enemiesDetected = detected.Length > 0;
             }
 
-            // Dispersed check: compare each unit to the formation anchor, not to units[0]
+            // Dispersed check + retaliation signal sweep (single unit loop for both)
             bool dispersed = false;
+            bool wasHit    = false;
+            bool isBracing = SystemAPI.HasComponent<SquadCombatModeComponent>(entity)
+                          && SystemAPI.GetComponent<SquadCombatModeComponent>(entity).mode == SquadCombatMode.Brace;
+
             if (SystemAPI.HasComponent<SquadFormationAnchorComponent>(entity))
             {
                 float3 anchorPos = SystemAPI.GetComponent<SquadFormationAnchorComponent>(entity).position;
@@ -38,12 +42,22 @@ public partial class SquadAISystem : SystemBase
                 for (int i = 0; i < units.Length; i++)
                 {
                     Entity u = units[i].Value;
-                    if (!SystemAPI.Exists(u) || !SystemAPI.HasComponent<LocalTransform>(u)) continue;
-                    float3 pos = SystemAPI.GetComponent<LocalTransform>(u).Position;
-                    if (math.distancesq(pos, anchorPos) > cohesionRadiusSq)
+                    if (!SystemAPI.Exists(u)) continue;
+
+                    if (SystemAPI.HasComponent<LocalTransform>(u))
                     {
-                        dispersed = true;
-                        break;
+                        float3 pos = SystemAPI.GetComponent<LocalTransform>(u).Position;
+                        if (math.distancesq(pos, anchorPos) > cohesionRadiusSq)
+                            dispersed = true;
+                    }
+
+                    // Consume retaliation pulse set by DamageCalculationSystem
+                    if (!wasHit
+                        && SystemAPI.HasComponent<IsUnderAttackTag>(u)
+                        && SystemAPI.IsComponentEnabled<IsUnderAttackTag>(u))
+                    {
+                        wasHit = true;
+                        SystemAPI.SetComponentEnabled<IsUnderAttackTag>(u, false);
                     }
                 }
             }
@@ -81,9 +95,13 @@ public partial class SquadAISystem : SystemBase
                     break;
             }
 
+            // Retaliation override: a unit was hit this frame and we are not bracing
+            if (wasHit && !isBracing && desiredState != TacticalIntent.Attacking)
+                desiredState = TacticalIntent.Attacking;
+
             ai.ValueRW.tacticalIntent = desiredState;
-            ai.ValueRW.isInCombat = enemiesDetected;
-            state.ValueRW.isInCombat = enemiesDetected;
+            ai.ValueRW.isInCombat     = enemiesDetected || wasHit;
+            state.ValueRW.isInCombat  = enemiesDetected || wasHit;
 
 
         }

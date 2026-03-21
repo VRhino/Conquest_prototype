@@ -111,16 +111,6 @@ public class SquadData : ScriptableObject
     /// <summary>Radius in world units within which enemies are detected.</summary>
     public float detectionRange = 8f;
 
-    // Hitbox shape — defines the weapon damage box in world space
-    /// <summary>Distance from unit origin to near edge of damage box.</summary>
-    public float damageZoneStart = 0f;
-    /// <summary>Half-width of damage box in XZ (meters).</summary>
-    public float damageZoneHalfWidth = 0.75f;
-    /// <summary>Vertical offset of the damage box center (weapon angle).</summary>
-    public float damageZoneYOffset = 1.0f;
-    /// <summary>Half-height of the damage box.</summary>
-    public float damageZoneHalfHeight = 1.0f;
-
     // Strike window timing
     /// <summary>Seconds from animation start when hitbox activates.</summary>
     public float strikeWindowStart = 0.35f;

@@ -60,6 +60,9 @@ namespace ConquestTactics.Visual
         // Triggers para forzar transiciones específicas
         private readonly int _forceLocomotionHash = Animator.StringToHash("ForceLocomotion");
         private readonly int _forceIdleHash = Animator.StringToHash("ForceIdle");
+
+        // Combat layer
+        private readonly int _isAttackingHash = Animator.StringToHash("IsAttacking");
         
         // Variable para detectar cambios de estado
         private bool _wasMovingLastFrame = false;
@@ -315,6 +318,10 @@ namespace ConquestTactics.Visual
                 _animator.SetFloat(_strafeDirectionZHash, 1f); // Forward direction cuando está detenido
             }
             
+            // Combat layer — pasar estado de ataque al Animator
+            if (AnimatorHasParameter(_isAttackingHash))
+                _animator.SetBool(_isAttackingHash, _animationAdapter.IsAttacking);
+
             // Guardar estado para detectar cambios en el próximo frame
             _wasMovingLastFrame = isMovingThisFrame;
             

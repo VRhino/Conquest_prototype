@@ -1,7 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Physics;
 using Unity.Transforms;
 using UnityEngine;
 
@@ -171,6 +170,12 @@ public partial class SquadSpawningSystem : SystemBase
                 }
             }
 
+            // Compute level-1 speed using curve + weight (same formula as UnitStatsUtility)
+            // UnitStatScalingSystem will override this on level changes.
+            float spawnSpeedMul = data.curves.IsCreated ? data.curves.Value.speed[0] : 1f; // index 0 = level 1
+            int spawnWeightCategory = (int)math.round(data.weight);
+            float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.baseSpeed, spawnSpeedMul, spawnWeightCategory);
+
             for (int i = 0; i < spawnCount; i++)
             {
                 // Crear unidad ECS (solo lógica, sin visuales)
@@ -232,6 +237,10 @@ public partial class SquadSpawningSystem : SystemBase
                 ecb.AddComponent<IsEngagingTag>(unit);
                 ecb.SetComponentEnabled<IsEngagingTag>(unit, false);
 
+                // Retaliation signal — enabled by DamageCalculationSystem when unit is hit
+                ecb.AddComponent<IsUnderAttackTag>(unit);
+                ecb.SetComponentEnabled<IsUnderAttackTag>(unit, false);
+
                 // Tactical stance (starts Normal; FormationStanceSystem updates on arrival)
                 ecb.AddComponent(unit, new UnitFormationStanceComponent { stance = UnitStance.Normal });
 
@@ -246,8 +255,7 @@ public partial class SquadSpawningSystem : SystemBase
                     orientationType = UnitOrientationType.MatchHeroDirection,
                     rotationSpeed = spawnConfig.unitRotationSpeed
                 });
-                // Obtener velocidad máxima desde el SquadDataComponent (todas las unidades del squad comparten la misma velocidad base)
-                float maxSpeed = data.baseSpeed;
+                float maxSpeed = finalSpeed;
                 // Asignar UnitAnimationMovementComponent por defecto con velocidad correcta
                 ecb.AddComponent(unit, new ConquestTactics.Animation.UnitAnimationMovementComponent
                 {
@@ -266,7 +274,7 @@ public partial class SquadSpawningSystem : SystemBase
                 ecb.AddComponent(unit, new UnitStatsComponent
                 {
                     health = data.baseHealth,
-                    speed = data.baseSpeed,
+                    speed = finalSpeed,
                     mass = data.mass,
                     weight = data.weight,
                     block = data.block,
@@ -304,62 +312,17 @@ public partial class SquadSpawningSystem : SystemBase
                     attackInterval          = data.attackInterval,
                     criticalChance          = data.criticalChance,
                     criticalMultiplier      = data.criticalMultiplier,
-                    damageZoneStart         = data.damageZoneStart,
-                    damageZoneHalfWidth     = data.damageZoneHalfWidth,
-                    damageZoneYOffset       = data.damageZoneYOffset,
-                    damageZoneHalfHeight    = data.damageZoneHalfHeight,
                     strikeWindowStart       = data.strikeWindowStart,
                     strikeWindowDuration    = data.strikeWindowDuration,
                     attackAnimationDuration = data.attackAnimationDuration,
                     kineticMultiplier       = data.kineticMultiplier
                 });
 
-                // ── Hurtbox: permanent capsule collider on unit (receives damage) ──────
-                // Layer 6 = Hurtbox. Configure in Unity Physics Category Names.
-                var hurtboxCollider = Unity.Physics.CapsuleCollider.Create(
-                    new CapsuleGeometry
-                    {
-                        Vertex0 = new float3(0f, 0.4f, 0f),
-                        Vertex1 = new float3(0f, 1.6f, 0f),
-                        Radius  = 0.35f
-                    },
-                    new CollisionFilter
-                    {
-                        BelongsTo    = PhysicsLayers.HurtboxMask,
-                        CollidesWith = PhysicsLayers.HitboxMask,
-                        GroupIndex   = 0
-                    });
-                ecb.AddComponent(unit, new PhysicsCollider { Value = hurtboxCollider });
-
-                // ── Weapon hitbox entity: separate ECS entity, disabled by default ─────
-                // Activated only during the strike window by UnitAttackSystem.
-                float hitboxHalfD = math.max(0.01f,
-                    (data.attackRange - data.damageZoneStart) * 0.5f);
-                float sizeX = math.max(0.02f, data.damageZoneHalfWidth  * 2f);
-                float sizeY = math.max(0.02f, data.damageZoneHalfHeight * 2f);
-                float sizeZ = math.max(0.02f, hitboxHalfD               * 2f);
-                float bevelRadius = math.min(0.01f, math.min(sizeX, math.min(sizeY, sizeZ)) * 0.49f);
-                var weaponHitboxCollider = Unity.Physics.BoxCollider.Create(
-                    new BoxGeometry
-                    {
-                        Center      = float3.zero,
-                        Orientation = quaternion.identity,
-                        Size        = new float3(sizeX, sizeY, sizeZ),
-                        BevelRadius = bevelRadius
-                    },
-                    new CollisionFilter
-                    {
-                        BelongsTo    = PhysicsLayers.HitboxMask,
-                        CollidesWith = PhysicsLayers.HurtboxMask,
-                        GroupIndex   = 0
-                    });
-                Entity hitboxEntity = ecb.CreateEntity();
-                ecb.AddComponent(hitboxEntity, LocalTransform.FromPosition(worldPos));
-                ecb.AddComponent(hitboxEntity, new PhysicsCollider { Value = weaponHitboxCollider });
-                ecb.AddComponent(hitboxEntity, new WeaponHitboxOwner { ownerUnit = unit });
-                ecb.AddComponent(hitboxEntity, new WeaponHitboxActiveTag());
-                ecb.SetComponentEnabled<WeaponHitboxActiveTag>(hitboxEntity, false);
-                ecb.AddComponent(unit, new WeaponHitboxRef { hitboxEntity = hitboxEntity });
+                // ── Weapon hitbox gate tag — activated by UnitAttackSystem during strike window ──
+                // Actual collision detection is done by WeaponHitboxBehaviour (GO BoxCollider trigger)
+                // placed by the designer on the "WeaponHitbox" child GO of the unit prefab.
+                ecb.AddComponent<WeaponHitboxActiveTag>(unit);
+                ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);
 
                 ecb.AddBuffer<UnitDetectedEnemy>(unit);
                 unitBuffer.Add(new SquadUnitElement { Value = unit });

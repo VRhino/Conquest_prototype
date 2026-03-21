@@ -6,12 +6,12 @@ using Unity.Transforms;
 /// CB-style unit attack state machine — three phases per swing:
 ///
 ///   Phase 1 — Decision:
-///     target valid + in detectionRange AABB + !isAttacking + cooldown=0
+///     target valid + in OBB range + !isAttacking + cooldown=0
 ///     → isAttacking=true, reset timer and hitboxFired
 ///
 ///   Phase 2 — Strike window:
 ///     timer in [strikeWindowStart, strikeWindowStart+strikeWindowDuration]
-///     → SetComponentEnabled WeaponHitboxActiveTag = true (HitboxCollisionSystem detects overlap)
+///     → WeaponHitboxActiveTag enabled on the unit (WeaponHitboxBehaviour reads this gate)
 ///     → outside window → disable tag
 ///
 ///   Phase 3 — End of animation:
@@ -24,7 +24,6 @@ public partial class UnitAttackSystem : SystemBase
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;
-        var hitboxTagLookup = GetComponentLookup<WeaponHitboxActiveTag>();
 
         foreach (var (combat, weapon, transform, entity) in
                  SystemAPI.Query<RefRW<UnitCombatComponent>,
@@ -46,13 +45,9 @@ public partial class UnitAttackSystem : SystemBase
                              && c.attackAnimationTimer <  weapon.ValueRO.strikeWindowStart
                                                         + weapon.ValueRO.strikeWindowDuration;
 
-                // Toggle hitbox tag for HitboxCollisionSystem
-                if (SystemAPI.HasComponent<WeaponHitboxRef>(entity))
-                {
-                    Entity hbe = SystemAPI.GetComponent<WeaponHitboxRef>(entity).hitboxEntity;
-                    if (hbe != Entity.Null && hitboxTagLookup.HasComponent(hbe))
-                        hitboxTagLookup.SetComponentEnabled(hbe, inWindow);
-                }
+                // Gate WeaponHitboxBehaviour — tag lives on the unit entity itself
+                if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
+                    SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, inWindow);
 
                 // Phase 3 — animation done
                 if (c.attackAnimationTimer >= weapon.ValueRO.attackAnimationDuration)
@@ -62,13 +57,8 @@ public partial class UnitAttackSystem : SystemBase
                     c.hitboxFired          = false;
                     c.attackCooldown       = weapon.ValueRO.attackInterval;
 
-                    // Ensure hitbox is disabled when animation ends
-                    if (SystemAPI.HasComponent<WeaponHitboxRef>(entity))
-                    {
-                        Entity hbe = SystemAPI.GetComponent<WeaponHitboxRef>(entity).hitboxEntity;
-                        if (hbe != Entity.Null && hitboxTagLookup.HasComponent(hbe))
-                            hitboxTagLookup.SetComponentEnabled(hbe, false);
-                    }
+                    if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
+                        SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
                 }
                 continue;
             }
@@ -89,21 +79,14 @@ public partial class UnitAttackSystem : SystemBase
                 alive = SystemAPI.GetComponent<HeroLifeComponent>(target).isAlive;
             if (!alive) { c.target = Entity.Null; continue; }
 
-            // Range check: directional AABB matching the weapon damage box
+            // Range check: simple 2D distance (XZ plane) — actual hit detection is
+            // handled by the designer-placed WeaponHitbox BoxCollider on the unit prefab.
             if (!SystemAPI.HasComponent<LocalTransform>(target)) continue;
             float3 targetPos = SystemAPI.GetComponent<LocalTransform>(target).Position;
 
-            float3 forward = math.forward(transform.ValueRO.Rotation);
-            float  halfD   = math.max(0.01f,
-                (weapon.ValueRO.attackRange - weapon.ValueRO.damageZoneStart) * 0.5f);
-            float3 center  = transform.ValueRO.Position
-                           + forward * (weapon.ValueRO.damageZoneStart + halfD)
-                           + new float3(0f, weapon.ValueRO.damageZoneYOffset, 0f);
-            float3 halfExt = new float3(
-                weapon.ValueRO.damageZoneHalfWidth,
-                weapon.ValueRO.damageZoneHalfHeight,
-                halfD);
-            bool inRange = math.all(targetPos >= center - halfExt & targetPos <= center + halfExt);
+            float3 toTarget = targetPos - transform.ValueRO.Position;
+            float  dist2D   = math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
+            bool   inRange  = dist2D <= weapon.ValueRO.attackRange;
 
             if (inRange && c.attackCooldown <= 0f)
             {

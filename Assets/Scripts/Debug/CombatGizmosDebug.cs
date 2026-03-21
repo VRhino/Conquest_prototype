@@ -84,36 +84,16 @@ public class CombatGizmosDebug : MonoBehaviour
         Gizmos.DrawLine(bottom - Vector3.forward * CapsuleRadius, top - Vector3.forward * CapsuleRadius);
     }
 
-    // ── Weapon hitbox AABB ────────────────────────────────────────────────────
+    // ── Weapon hitbox arc (attack range forward indicator) ───────────────────
 
     void DrawWeaponHitbox(Vector3 pos, Vector3 fwd, UnitWeaponComponent weapon, Entity entity, EntityManager em)
     {
-        float depth = weapon.attackRange - weapon.damageZoneStart;
-        if (depth <= 0f) return;
+        bool active = em.HasComponent<WeaponHitboxActiveTag>(entity)
+                   && em.IsComponentEnabled<WeaponHitboxActiveTag>(entity);
 
-        bool active = false;
-        if (em.HasComponent<WeaponHitboxRef>(entity))
-        {
-            var hitboxRef = em.GetComponentData<WeaponHitboxRef>(entity);
-            if (em.Exists(hitboxRef.hitboxEntity))
-                active = em.IsComponentEnabled<WeaponHitboxActiveTag>(hitboxRef.hitboxEntity);
-        }
-
-        float halfDepth = depth * 0.5f;
-        Vector3 center  = pos
-            + fwd        * (weapon.damageZoneStart + halfDepth)
-            + Vector3.up * weapon.damageZoneYOffset;
-
-        Vector3 size = new Vector3(
-            weapon.damageZoneHalfWidth  * 2f,
-            weapon.damageZoneHalfHeight * 2f,
-            depth);
-
-        Matrix4x4 prev = Gizmos.matrix;
-        Gizmos.color  = active ? HitboxActiveColor : HitboxInactiveColor;
-        Gizmos.matrix = Matrix4x4.TRS(center, Quaternion.LookRotation(fwd), Vector3.one);
-        Gizmos.DrawWireCube(Vector3.zero, size);
-        Gizmos.matrix = prev;
+        // Draw a small forward line + arc to indicate the attack range direction
+        Gizmos.color = active ? HitboxActiveColor : HitboxInactiveColor;
+        Gizmos.DrawLine(pos + Vector3.up * 1f, pos + Vector3.up * 1f + fwd * weapon.attackRange);
     }
 
     // ── Health bar (world-space lines above the unit) ─────────────────────────

@@ -16,9 +16,12 @@ public static class BattleDebugCreator
     /// <param name="localHero">The hero data to convert and add as the first attacker</param>
     /// <returns>A new BattleData instance with the hero configured as attacker</returns>
     public static BattleData CreateBattleWithLocalHero(HeroData localHero)
-        => CreateBattleWithLocalHero(localHero, Team.TeamA, 4, 5);
+        => CreateBattleWithLocalHero(localHero, Team.TeamA, 4, 5, EnemySquadMode.Random, null);
 
     public static BattleData CreateBattleWithLocalHero(HeroData localHero, Team playerTeam, int attackerCount, int defenderCount)
+        => CreateBattleWithLocalHero(localHero, playerTeam, attackerCount, defenderCount, EnemySquadMode.Random, null);
+
+    public static BattleData CreateBattleWithLocalHero(HeroData localHero, Team playerTeam, int attackerCount, int defenderCount, EnemySquadMode squadMode, SquadData squadOverride)
     {
         if (localHero == null)
         {
@@ -26,7 +29,13 @@ public static class BattleDebugCreator
             return null;
         }
 
-        BattleData battleData = CreateTestBattle(attackerCount, defenderCount);
+        List<string> validSquadIDs;
+        if (squadMode == EnemySquadMode.Fixed && squadOverride != null)
+            validSquadIDs = new List<string> { squadOverride.id };
+        else
+            validSquadIDs = SquadDataService.GetAllSquads().ConvertAll(s => s.id);
+
+        BattleData battleData = CreateTestBattle(attackerCount, defenderCount, validSquadIDs);
         BattleHeroData battleHero = ConvertHeroToBattleHero(localHero);
 
         if (playerTeam == Team.TeamB)
@@ -83,15 +92,18 @@ public static class BattleDebugCreator
     public static BattleData CreateTestBattle() => CreateTestBattle(4, 5);
 
     public static BattleData CreateTestBattle(int attackerCount, int defenderCount)
+        => CreateTestBattle(attackerCount, defenderCount, SquadDataService.GetAllSquads().ConvertAll(s => s.id));
+
+    private static BattleData CreateTestBattle(int attackerCount, int defenderCount, List<string> validSquadIDs)
     {
         BattleData battleData = new BattleData();
         battleData.battleID = Guid.NewGuid().ToString();
 
         for (int i = 0; i < attackerCount; i++)
-            battleData.attackers.Add(CreateRandomMockBattleHero(1, 3)); // Attacker spawns 1-3
+            battleData.attackers.Add(CreateRandomMockBattleHero(1, 3, validSquadIDs)); // Attacker spawns 1-3
 
         for (int i = 0; i < defenderCount; i++)
-            battleData.defenders.Add(CreateRandomMockBattleHero(4, 6)); // Defender spawns 4-6
+            battleData.defenders.Add(CreateRandomMockBattleHero(4, 6, validSquadIDs)); // Defender spawns 4-6
 
         battleData.mapData = MapService.GetMapById("default");
         battleData.BattleTimer = battleData.mapData != null ? battleData.mapData.battleDuration : 900;
@@ -118,8 +130,10 @@ public static class BattleDebugCreator
     }
 
     public static BattleHeroData CreateRandomMockBattleHero(int minSpawnId = 1, int maxSpawnId = 3)
+        => CreateRandomMockBattleHero(minSpawnId, maxSpawnId, SquadDataService.GetAllSquads().ConvertAll(s => s.id));
+
+    public static BattleHeroData CreateRandomMockBattleHero(int minSpawnId, int maxSpawnId, List<string> validSquadIDs)
     {
-        List<string> validSquadIDs = new List<string> { "sqd01", "arc01", "spm01" };
         List<string> validClassIDs = new List<string> { "SwordAndShield", "TwoHandedSword", "Bow", "Spear" };
         string randomHeroName = $"Hero_{UnityEngine.Random.Range(1000, 9999)}";
         string randomClassID = validClassIDs[UnityEngine.Random.Range(0, validClassIDs.Count)];

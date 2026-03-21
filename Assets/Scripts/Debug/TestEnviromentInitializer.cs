@@ -1,11 +1,15 @@
 // This class is responsible for initializing the test environment
 using UnityEngine;
 
+public enum EnemySquadMode { Random, Fixed }
+
 public class TestEnvironmentInitializer : MonoBehaviour
 {
     [SerializeField] private int attackers = 3;
     [SerializeField] private int defenders = 3;
     [SerializeField] private Team playerTeam = Team.TeamA;
+    [SerializeField] private EnemySquadMode enemySquadMode = EnemySquadMode.Random;
+    [SerializeField] private SquadData enemySquadOverride;
 
     public void SetupTestEnvironment()
     {
@@ -25,7 +29,7 @@ public class TestEnvironmentInitializer : MonoBehaviour
 
     public BattleData GenerateBattleData(HeroData localHero)
     {
-        return BattleDebugCreator.CreateBattleWithLocalHero(localHero, playerTeam, attackers, defenders);
+        return BattleDebugCreator.CreateBattleWithLocalHero(localHero, playerTeam, attackers, defenders, enemySquadMode, enemySquadOverride);
     }
 
 }

@@ -15,7 +15,8 @@ using System.Collections.Generic;
 [UpdateAfter(typeof(SquadSpawningSystem))]
 public partial class SquadVisualManagementSystem : SystemBase
 {
-    private const string DetectorChildName = "Detector";
+    private const string DetectorChildName    = "Detector";
+    private const string WeaponHitboxChildName = "WeaponHitbox";
     private static readonly int ShaderBaseColor = Shader.PropertyToID("_BaseColor");
 
     protected override void OnUpdate()
@@ -99,6 +100,15 @@ public partial class SquadVisualManagementSystem : SystemBase
         syncScript.SetHeroEntity(unitEntity);
 
         ApplyDetectorColor(visualInstance, unitEntity, parentSquad);
+
+        // Wire WeaponHitboxBehaviour to its owner ECS entity (placed by designer in prefab)
+        var hitboxBehaviour = visualInstance.GetComponentInChildren<WeaponHitboxBehaviour>(true);
+        if (hitboxBehaviour != null)
+        {
+            hitboxBehaviour.ownerUnit = unitEntity;
+            var hitboxCollider = hitboxBehaviour.GetComponent<UnityEngine.Collider>();
+            if (hitboxCollider != null) hitboxCollider.enabled = false;
+        }
 
         var agent = visualInstance.GetComponent<NavMeshAgent>();
         if (agent != null)

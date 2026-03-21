@@ -17,6 +17,7 @@ using Unity.Transforms;
 /// Shield check runs before damage: blocks frontal hits when currentBlock > 0.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateBefore(typeof(SquadAISystem))]
 public partial class DamageCalculationSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -138,6 +139,10 @@ public partial class DamageCalculationSystem : SystemBase
                 if (hp.ValueRO.currentHealth <= 0f &&
                     !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
+
+                // Signal the squad to retaliate (consumed by SquadAISystem this frame)
+                if (SystemAPI.HasComponent<IsUnderAttackTag>(p.target))
+                    ecb.SetComponentEnabled<IsUnderAttackTag>(p.target, true);
             }
             else if (SystemAPI.HasComponent<HeroHealthComponent>(p.target))
             {

@@ -99,7 +99,12 @@ public partial class UnitFollowFormationSystem : SystemBase
                         float speedMultiplier = SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit)
                             ? SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier
                             : 1f;
-                        if (hurryToComander) speedMultiplier *= 2f;
+
+                        bool hasCombatTarget = SystemAPI.HasComponent<UnitCombatComponent>(unit)
+                            && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
+                            && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
+
+                        if (hurryToComander || hasCombatTarget) speedMultiplier *= 2f;
                         navAgent.speed = baseSpeed * speedMultiplier;
                     }
                     else
