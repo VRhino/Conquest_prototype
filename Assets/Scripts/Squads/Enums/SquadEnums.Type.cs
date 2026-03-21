@@ -20,7 +20,8 @@ public enum FormationType
     Testudo,
     Wedge,
     Column,
-    Square
+    Square,
+    ShieldWall,
 }
 
 /// <summary>

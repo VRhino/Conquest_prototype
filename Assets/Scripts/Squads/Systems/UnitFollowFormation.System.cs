@@ -210,7 +210,11 @@ public partial class UnitFollowFormationSystem : SystemBase
                 else
                 {
                     // Orientación para unidades Formed (tanto NavMesh como directas)
-                    if (stateComp.State == UnitFormationState.Formed)
+                    // Skip if the unit is actively engaging an enemy — UnitNavMeshSystem
+                    // already rotates it to face the target.
+                    bool isEngaging = SystemAPI.HasComponent<IsEngagingTag>(unit)
+                                   && SystemAPI.IsComponentEnabled<IsEngagingTag>(unit);
+                    if (stateComp.State == UnitFormationState.Formed && !isEngaging)
                     {
                         float3 targetForward = float3.zero;
                         bool hasTargetOrientation = false;

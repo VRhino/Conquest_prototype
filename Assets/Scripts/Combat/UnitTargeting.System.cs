@@ -8,10 +8,15 @@ using Unity.Transforms;
 /// current squad state and player order.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(SquadAISystem))]
 public partial class UnitTargetingSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        int maxPerTarget = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
+            ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().maxUnitsPerTarget
+            : 2;
+
         foreach (var (ai, state, units, squadEntity) in SystemAPI
                      .Query<RefRO<SquadAIComponent>,
                             RefRO<SquadStateComponent>,
@@ -22,6 +27,11 @@ public partial class UnitTargetingSystem : SystemBase
                          (state.ValueRO.currentOrder == SquadOrderType.Attack ||
                           state.ValueRO.currentOrder == SquadOrderType.FollowHero ||
                           (state.ValueRO.currentOrder == SquadOrderType.HoldPosition));
+
+            // [CombatTestDebug] — gate check
+            UnityEngine.Debug.Log($"[CombatTestDebug][Targeting] Squad {squadEntity.Index}: " +
+                $"intent={ai.ValueRO.tacticalIntent} order={state.ValueRO.currentOrder} " +
+                $"allow={allow}");
 
             // Temporary map to track how many units are attacking each enemy
             var enemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
@@ -48,6 +58,7 @@ public partial class UnitTargetingSystem : SystemBase
                 }
 
                 var detected = SystemAPI.GetBuffer<UnitDetectedEnemy>(unit);
+
                 if (detected.Length == 0)
                 {
                     combat.ValueRW.target = Entity.Null;
@@ -103,7 +114,7 @@ public partial class UnitTargetingSystem : SystemBase
                 if (combat.ValueRO.target == Entity.Null)
                     continue;
 
-                if (!enemyCounts.TryGetValue(combat.ValueRO.target, out int count) || count <= 3)
+                if (!enemyCounts.TryGetValue(combat.ValueRO.target, out int count) || count <= maxPerTarget)
                     continue;
 
                 if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
@@ -118,7 +129,7 @@ public partial class UnitTargetingSystem : SystemBase
 
                     int current = 0;
                     enemyCounts.TryGetValue(candidate, out current);
-                    if (current < 3)
+                    if (current < maxPerTarget)
                     {
                         enemyCounts[combat.ValueRO.target] = count - 1;
                         combat.ValueRW.target = candidate;
@@ -129,7 +140,37 @@ public partial class UnitTargetingSystem : SystemBase
                 }
             }
 
+            // [CombatTestDebug] — per-unit target/engage state (first unit only)
+            if (units.Length > 0)
+            {
+                Entity u0 = units[0].Value;
+                if (SystemAPI.HasComponent<UnitCombatComponent>(u0))
+                {
+                    var c = SystemAPI.GetComponent<UnitCombatComponent>(u0);
+                    bool engaging = SystemAPI.HasComponent<IsEngagingTag>(u0)
+                                 && SystemAPI.IsComponentEnabled<IsEngagingTag>(u0);
+                    int detCount = SystemAPI.HasBuffer<UnitDetectedEnemy>(u0)
+                        ? SystemAPI.GetBuffer<UnitDetectedEnemy>(u0).Length : -1;
+                    UnityEngine.Debug.Log($"[CombatTestDebug][Targeting] Unit {u0.Index}: " +
+                        $"detectedEnemies={detCount} target={c.target} IsEngaging={engaging}");
+                }
+            }
+
             enemyCounts.Dispose();
+
+            // Third pass: sync IsEngagingTag so other systems can query engagement state
+            for (int i = 0; i < units.Length; i++)
+            {
+                Entity unit = units[i].Value;
+                if (!SystemAPI.Exists(unit)
+                    || !SystemAPI.HasComponent<IsEngagingTag>(unit)
+                    || !SystemAPI.HasComponent<UnitCombatComponent>(unit))
+                    continue;
+
+                bool hasTarget = SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null;
+                SystemAPI.SetComponentEnabled<IsEngagingTag>(unit, hasTarget);
+            }
         }
+
     }
 }

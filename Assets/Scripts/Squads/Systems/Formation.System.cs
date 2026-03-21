@@ -13,8 +13,6 @@ public partial class FormationSystem : SystemBase
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
-        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
-        var transformLookup = GetComponentLookup<LocalTransform>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (input, state, squadData, units, squadEntity) in SystemAPI
@@ -40,12 +38,13 @@ public partial class FormationSystem : SystemBase
                 continue;
             }
 
-            // Obtener la posición del héroe como base de formación
-            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPosition))
+            // Use the anchor computed by SquadAnchorSystem (handles hold/retreat/follow cases)
+            if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
             {
                 state.ValueRW = s;
                 continue;
             }
+            float3 heroPosition = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity).position;
 
             ref var formations = ref squadData.ValueRO.formationLibrary.Value.formations;
 

@@ -65,9 +65,12 @@ public partial class DestinationMarkerSystem : SystemBase
             if (!squadDataLookup.TryGetComponent(squadEntity, out var squadData))
                 continue;
                 
-            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPosition))
+            // Use the anchor computed by SquadAnchorSystem (handles hold/retreat/follow cases)
+            if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
                 continue;
-            
+            var anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
+            float3 heroPosition = anchor.position;
+
             // Get current formation gridPositions from squad data
             ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
             if (squadData.formationLibrary.IsCreated)
@@ -86,15 +89,9 @@ public partial class DestinationMarkerSystem : SystemBase
                 }
             }
             
-            // Determine squad center based on current state
+            // Anchor already holds the correct center (hold/retreat/follow) from SquadAnchorSystem
             float3 squadCenter = heroPosition;
             bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
-            
-            if (isHoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
-            {
-                var holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
-                squadCenter = holdComponent.holdCenter;
-            }
             
             // Process each unit in the squad
             for (int i = 0; i < units.Length; i++)
@@ -111,12 +108,8 @@ public partial class DestinationMarkerSystem : SystemBase
                 
                 if (gridPositions.Length > 0 && i < gridPositions.Length)
                 {
-                    // Use hold rotation when in HoldingPosition, otherwise no rotation (follow)
-                    quaternion formationRotation = default;
-                    if (isHoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
-                    {
-                        formationRotation = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity).holdRotation;
-                    }
+                    // Rotation already computed by SquadAnchorSystem (holdRotation or default)
+                    quaternion formationRotation = anchor.rotation;
 
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,

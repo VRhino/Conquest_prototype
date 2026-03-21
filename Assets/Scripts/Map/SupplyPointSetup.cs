@@ -32,6 +32,9 @@ public class SupplyPointSetup : MonoBehaviour
 
         var em = World.DefaultGameObjectInjectionWorld.EntityManager;
         ZoneEntity = em.CreateEntity();
+#if UNITY_EDITOR
+        em.SetName(ZoneEntity, $"SupplyPoint_{ZoneId}_{gameObject.name}");
+#endif
 
         int teamInt = (int)_initialTeam;
 

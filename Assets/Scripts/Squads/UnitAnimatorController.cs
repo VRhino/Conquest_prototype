@@ -92,7 +92,7 @@ namespace ConquestTactics.Visual
             _animator.SetFloat(_strafeDirectionZHash, 1f); // Forward direction
             
             // Forzar una transición al estado grounded
-            _animator.SetTrigger(_forceGroundedTransitionHash);
+            //_animator.SetTrigger(_forceGroundedTransitionHash);
             
             if (_enableDebugLogs)
             {
@@ -122,7 +122,7 @@ namespace ConquestTactics.Visual
             _animator.SetFloat(_moveSpeedHash, 0f);
             _animator.SetInteger(_currentGaitHash, 0);
             _animator.SetBool(_isWalkingHash, false);
-            _animator.SetTrigger(_forceIdleHash);
+            //_animator.SetTrigger(_forceIdleHash);
             
             // Log del nombre exacto del AnimatorController para verificación
             if (_enableDebugLogs)
@@ -212,9 +212,9 @@ namespace ConquestTactics.Visual
             // Primero actualizamos parámetros principales en el orden correcto
             
             // 0. Forzar parámetros adicionales requeridos por el Animator Controller
-            _animator.SetBool("isStarting", false);
-            _animator.SetBool("isJumping", false);
-            _animator.SetBool("MovementInputTapper", false);
+            // _animator.SetBool("isStarting", false);
+            // _animator.SetBool("isJumping", false);
+            // _animator.SetBool("MovementInputTapper", false);
             _animator.SetBool("MovementInputPressed", false);
             _animator.SetBool("MovementInputHeld", isMovingThisFrame);
             
@@ -259,18 +259,18 @@ namespace ConquestTactics.Visual
             
             if (isMovingThisFrame && isInIdleState) 
             {
-                _animator.SetTrigger(_forceLocomotionHash);
+                //_animator.SetTrigger(_forceLocomotionHash);
                 if (_enableDebugLogs)
                 {
-                    Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de IDLE para {gameObject.name} - Speed: {_currentSpeed:F2}");
+                    // Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de IDLE para {gameObject.name} - Speed: {_currentSpeed:F2}");
                 }
             }
             else if (!isMovingThisFrame && isInLocoState && currentState.normalizedTime > 0.25f)
             {
-                _animator.SetTrigger(_forceIdleHash);
+                //_animator.SetTrigger(_forceIdleHash);
                 if (_enableDebugLogs)
                 {
-                    Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de LOCOMOTION para {gameObject.name}");
+                    // Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de LOCOMOTION para {gameObject.name}");
                 }
             }
             
@@ -279,7 +279,7 @@ namespace ConquestTactics.Visual
             {
                 if (isMovingThisFrame)
                 {
-                    _animator.SetTrigger(_forceLocomotionHash);
+                    // _animator.SetTrigger(_forceLocomotionHash);
                     if (_enableDebugLogs)
                     {
                         Debug.Log($"[UnitAnimatorController] Cambio: IDLE → LOCOMOCIÓN para {gameObject.name}");
@@ -287,7 +287,7 @@ namespace ConquestTactics.Visual
                 }
                 else
                 {
-                    _animator.SetTrigger(_forceIdleHash);
+                    // _animator.SetTrigger(_forceIdleHash);
                     if (_enableDebugLogs)
                     {
                         Debug.Log($"[UnitAnimatorController] Cambio: LOCOMOCIÓN → IDLE para {gameObject.name}");
@@ -412,7 +412,7 @@ namespace ConquestTactics.Visual
             _animator.SetTrigger(_forceLocomotionHash);
             if (_enableDebugLogs)
             {
-                Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de movimiento para {gameObject.name}");
+                // Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de movimiento para {gameObject.name}");
             }
         }
         
@@ -427,10 +427,10 @@ namespace ConquestTactics.Visual
             _animator.SetInteger(_currentGaitHash, 0); // Idle
             _animator.SetBool(_movementInputPressedHash, false);
             _animator.SetBool(_isWalkingHash, false);
-            _animator.SetTrigger(_forceIdleHash);
+            // _animator.SetTrigger(_forceIdleHash);
             if (_enableDebugLogs)
             {
-                Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de idle para {gameObject.name}");
+                // Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de idle para {gameObject.name}");
             }
         }
         

@@ -43,6 +43,9 @@ public partial class SquadSpawningSystem : SystemBase
             }
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
+#if UNITY_EDITOR
+            ecb.SetName(squad, $"Squad_{selection.ValueRO.instanceId}_{data.squadType}");
+#endif
 
             // Configurar posición inicial del squad offset delante del héroe
             quaternion heroRotation = heroTransform.ValueRO.Rotation;
@@ -54,6 +57,7 @@ public partial class SquadSpawningSystem : SystemBase
             // Squad created successfully
 
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
+            ecb.AddComponent(squad, new SquadDataReference { dataEntity = squad }); // Self-ref so SquadAISystem can find this squad
             ecb.AddComponent(squad, new SquadStatsComponent
             {
                 squadType = data.squadType,
@@ -76,22 +80,18 @@ public partial class SquadSpawningSystem : SystemBase
                 ? data.formationLibrary.Value.formations[0].formationType
                 : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
 
-            // Héroes remotos comienzan en HoldPosition para evitar movimiento errático sin IA
-            bool isLocalHero = SystemAPI.HasComponent<IsLocalPlayer>(entity);
-            var initialOrder = isLocalHero ? SquadOrderType.FollowHero : SquadOrderType.HoldPosition;
-            var initialState = isLocalHero ? SquadFSMState.FollowingHero : SquadFSMState.HoldingPosition;
+            // Todos los squads comienzan en HoldPosition para que el jugador se oriente antes de mover
+            var initialOrder = SquadOrderType.HoldPosition;
+            var initialState = SquadFSMState.HoldingPosition;
 
-            // Fix: squads remotos necesitan SquadHoldPositionComponent para que
-            // GridFormationUpdateSystem use holdCenter fijo en lugar de seguir al héroe
-            if (!isLocalHero)
+            // Siempre agregar SquadHoldPositionComponent para que GridFormationUpdateSystem
+            // use holdCenter fijo en lugar de seguir al héroe desde el spawn
+            ecb.AddComponent(squad, new SquadHoldPositionComponent
             {
-                ecb.AddComponent(squad, new SquadHoldPositionComponent
-                {
-                    holdCenter = formationAnchor,
-                    holdRotation = heroRotation,
-                    originalFormation = firstFormationType
-                });
-            }
+                holdCenter = formationAnchor,
+                holdRotation = heroRotation,
+                originalFormation = firstFormationType
+            });
 
             // Agregar componentes necesarios para el sistema de control y formación
             ecb.AddComponent(squad, new SquadInputComponent
@@ -129,6 +129,13 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddBuffer<DetectedEnemy>(squad);
             ecb.AddBuffer<SquadTargetEntity>(squad);
 
+            // Formation anchor — updated each frame by SquadAnchorSystem
+            ecb.AddComponent(squad, new SquadFormationAnchorComponent
+            {
+                position = formationAnchor,
+                rotation = quaternion.identity
+            });
+
             // Create one damage profile entity per squad — all units reference it.
             Entity squadDamageProfile = ecb.CreateEntity();
             ecb.AddComponent(squadDamageProfile, new DamageProfileComponent
@@ -165,13 +172,16 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 // Crear unidad ECS (solo lógica, sin visuales)
                 Entity unit = ecb.CreateEntity();
+#if UNITY_EDITOR
+                ecb.SetName(unit, $"Unit_{i}_{data.squadType}_Sq{selection.ValueRO.instanceId}");
+#endif
                 FormationPositionCalculator.CalculateDesiredPosition(
                     unit,
                     ref firstFormation.gridPositions,
                     i, // unitIndex
                     new SquadStateComponent { currentFormation = firstFormationType },
                     null,
-                    heroTransform.ValueRO.Position, // misma base que GridFormationUpdateSystem (sin squadSpawnOffset)
+                    formationAnchor, // usar el ancla del squad que ya incluye squadSpawnOffset
                     out int2 originalGridPos,
                     out float3 gridOffset,
                     out float3 worldPos,
@@ -208,6 +218,20 @@ public partial class SquadSpawningSystem : SystemBase
                 });
                 ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
                 ecb.AddComponent(unit, new UnitFormationStateComponent { State = UnitFormationState.Formed }); // Units spawn already at their formation slot, no need to seek it
+
+                // Formation lifecycle milestone tags (pulse signals, start disabled)
+                ecb.AddComponent<UnitStartedMovingTag>(unit);
+                ecb.SetComponentEnabled<UnitStartedMovingTag>(unit, false);
+                ecb.AddComponent<UnitArrivedAtSlotTag>(unit);
+                ecb.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, false);
+
+                // Combat engagement tag — enabled by UnitTargetingSystem when unit has a target
+                ecb.AddComponent<IsEngagingTag>(unit);
+                ecb.SetComponentEnabled<IsEngagingTag>(unit, false);
+
+                // Tactical stance (starts Normal; FormationStanceSystem updates on arrival)
+                ecb.AddComponent(unit, new UnitFormationStanceComponent { stance = UnitStance.Normal });
+
                 ecb.AddComponent(unit, new UnitGridSlotComponent
                 {
                     gridPosition = originalGridPos,
@@ -231,7 +255,9 @@ public partial class SquadSpawningSystem : SystemBase
                     IsRunning = false,
                     MovementTime = 0f,
                     StoppedTime = 0f,
-                    PreviousPosition = worldPos // Inicializar con la posición de spawn
+                    PreviousPosition = worldPos, // Inicializar con la posición de spawn
+                    CurrentStance = UnitStance.Normal,
+                    SlotRow = originalGridPos.y,
                 });
                 // Agregar UnitStatsComponent usando los valores del SquadData
                 ecb.AddComponent(unit, new UnitStatsComponent
@@ -345,6 +371,7 @@ public partial class SquadSpawningSystem : SystemBase
             if (SystemAPI.HasComponent<TeamComponent>(entity))
             {
                 var heroTeam = SystemAPI.GetComponent<TeamComponent>(entity);
+                Debug.Log($"[BattleTestDebug] Squad spawn: hero {entity} → team={heroTeam.value}");
                 ecb.AddComponent(squad, heroTeam);
 
                 // Aplicar el team a todas las unidades del squad
@@ -353,6 +380,10 @@ public partial class SquadSpawningSystem : SystemBase
                     Entity unit = unitBuffer[i].Value;
                     ecb.AddComponent(unit, heroTeam);
                 }
+            }
+            else
+            {
+                Debug.LogWarning($"Squad spawn: hero {entity} NO tiene TeamComponent al spawnear");
             }
             // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
             ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });

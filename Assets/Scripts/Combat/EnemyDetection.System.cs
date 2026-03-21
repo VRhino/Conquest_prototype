@@ -84,7 +84,8 @@ public partial class EnemyDetectionSystem : SystemBase
                         continue;
 
                     float3 posB = _transformLookup[uB].Position;
-                    if (math.distancesq(centroidA, posB) > detectionRangeSq)
+                    float distSq = math.distancesq(centroidA, posB);
+                    if (distSq > detectionRangeSq)
                         continue;
 
                     if (!squadRegistered)
@@ -107,6 +108,19 @@ public partial class EnemyDetectionSystem : SystemBase
                 unitBuf.Clear();
                 for (int j = 0; j < squadTargets.Length; j++)
                     unitBuf.Add(new UnitDetectedEnemy { Value = squadTargets[j].Value });
+            }
+
+            // [CombatTestDebug] — squad-level detection summary
+            UnityEngine.Debug.Log($"[CombatTestDebug][Detection] Squad {entityA.Index}: " +
+                $"aliveUnits={aliveCount} detectionRange={dataA.ValueRO.detectionRange:F1} " +
+                $"detectedSquads={detectedEnemies.Length} enemyUnitsInRange={squadTargets.Length}");
+
+            // [CombatTestDebug] — first unit propagation check
+            if (unitsA.Length > 0)
+            {
+                Entity u0 = unitsA[0].Value;
+                int bufLen = _unitDetectedLookup.HasBuffer(u0) ? _unitDetectedLookup[u0].Length : -1;
+                UnityEngine.Debug.Log($"[CombatTestDebug][Detection] Unit {u0.Index}: UnitDetectedEnemy.Length={bufLen}");
             }
         }
     }

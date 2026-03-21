@@ -96,6 +96,9 @@ public partial class HeroSpawnSystem : SystemBase
             // Instanciación híbrida: crear solo la entidad ECS (sin visual)
             var entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             var heroEntity = entityManager.Instantiate(heroPrefab.prefab);
+#if UNITY_EDITOR
+            entityManager.SetName(heroEntity, $"Hero_Team{(int)dataForInstantiate.teamID}");
+#endif
             var spawnRotation = CalculateSpawnRotation(spawnPosition, (int)dataForInstantiate.teamID);
             entityManager.SetComponentData(heroEntity, new LocalTransform
             {

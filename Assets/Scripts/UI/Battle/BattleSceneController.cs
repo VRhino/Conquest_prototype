@@ -280,7 +280,7 @@ public class BattleSceneController : MonoBehaviour
         BattleHeroData localHero = _currentBattleData.findHeroDataByName(localHeroName);
         if (localHero == null)
         {
-            Debug.LogError($"[BattleTestDebug] SyncBattleDataToECS: findHeroDataByName('{localHeroName}') returned null. Attackers: [{string.Join(", ", _currentBattleData.attackers.ConvertAll(h => h.heroName))}] Defenders: [{string.Join(", ", _currentBattleData.defenders.ConvertAll(h => h.heroName))}]");
+            Debug.LogError($"SyncBattleDataToECS: findHeroDataByName('{localHeroName}') returned null. Attackers: [{string.Join(", ", _currentBattleData.attackers.ConvertAll(h => h.heroName))}] Defenders: [{string.Join(", ", _currentBattleData.defenders.ConvertAll(h => h.heroName))}]");
             return;
         }
 
@@ -344,7 +344,7 @@ public class BattleSceneController : MonoBehaviour
 
             else
             {
-                Debug.LogError($"[BattleTestDebug] SyncBattleDataToECS: Hero '{localHeroName}' has 0 squadInstances — selectedSquadBaseID will NOT be set, squads will not spawn.");
+                Debug.LogError($"SyncBattleDataToECS: Hero '{localHeroName}' has 0 squadInstances — selectedSquadBaseID will NOT be set, squads will not spawn.");
             }
 
             em.SetComponentData(entity, data);

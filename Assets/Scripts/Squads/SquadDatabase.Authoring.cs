@@ -60,7 +60,20 @@ public class SquadDatabaseAuthoring : MonoBehaviour
                     curves = default,
                     formationLibrary = formationLibrary,
                     unitPrefab = prefabEntity,
-                    unitCount = squadData.unitCount
+                    unitCount = squadData.unitCount,
+                    attackRange = squadData.attackRange,
+                    attackInterval = squadData.attackInterval,
+                    criticalChance = squadData.criticalChance,
+                    criticalMultiplier = squadData.criticalMultiplier,
+                    detectionRange = squadData.detectionRange,
+                    damageZoneStart = squadData.damageZoneStart,
+                    damageZoneHalfWidth = squadData.damageZoneHalfWidth,
+                    damageZoneYOffset = squadData.damageZoneYOffset,
+                    damageZoneHalfHeight = squadData.damageZoneHalfHeight,
+                    strikeWindowStart = squadData.strikeWindowStart,
+                    strikeWindowDuration = squadData.strikeWindowDuration,
+                    attackAnimationDuration = squadData.attackAnimationDuration,
+                    kineticMultiplier = squadData.kineticMultiplier
                 });
 
                 AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(squadData.id) });

@@ -32,7 +32,13 @@ namespace ConquestTactics.Animation
 
         // Velocidad 2D real (sin normalizar, en unidades por segundo)
         public float Speed2D { get; private set; }
-        
+
+        // Si la unidad está en postura de escudos trabados (Shield Wall)
+        public bool IsBraced { get; private set; } = false;
+
+        // Fila en la formación (0 = fila delantera). Usado por blend tree de animación.
+        public int SlotRow { get; private set; } = 0;
+
         #endregion
         
         #region Inspector Settings
@@ -226,10 +232,14 @@ namespace ConquestTactics.Animation
                 }
 
                 // Actualizar propiedades
-                NormalizedSpeed = animData.MaxSpeed > 0 
-                    ? Mathf.Clamp01(animData.CurrentSpeed / animData.MaxSpeed) 
+                NormalizedSpeed = animData.MaxSpeed > 0
+                    ? Mathf.Clamp01(animData.CurrentSpeed / animData.MaxSpeed)
                     : 0f;
                 Speed2D = animData.CurrentSpeed;
+
+                // Postura táctica y fila de formación (para blend tree de Shield Wall)
+                IsBraced = animData.CurrentStance == UnitStance.BracedShields;
+                SlotRow   = animData.SlotRow;
                 
                 MovementVector = new Vector2(animData.MovementDirection.x, animData.MovementDirection.z);
                 

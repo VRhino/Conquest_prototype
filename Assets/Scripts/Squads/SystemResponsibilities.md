@@ -56,14 +56,39 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: Gestiona todos los cambios de estado de unidades (Moving/Formed/Waiting)
 - **Regla**: Único owner de transiciones de estado de unidades
 
+### UnitNavMeshSystem
+- **Responsabilidad**: Única autoridad para decisiones NavMesh por unidad: destino + rotación
+- **Orden**: `[UpdateAfter(UnitFormationStateSystem)]` `[UpdateBefore(UnitFollowFormationSystem)]`
+- **Owner exclusivo**: `agent.SetDestination()` y `agent.updateRotation`
+- **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition)
+- **Rotación combate**: Si dist ≤ 3.5u → `updateRotation=false` + rota `LocalTransform` para mirar al target
+- **Rotación normal**: `updateRotation=true` — NavMesh controla la orientación durante movimiento
+- **`UnitTargetPositionComponent`**: solo lectura — nunca escribe (ownership exclusivo de sistemas de formación)
+
 ### UnitFollowFormationSystem
-- **Responsabilidad**: Mueve las unidades físicamente hacia su `UnitTargetPositionComponent`
-- **Output**: `LocalTransform`
-- **Regla**: Nunca cambia el estado de unidades — solo las mueve
+- **Responsabilidad**: Mueve unidades sin NavMesh + aplica rotación Formed para unidades NavMesh
+- **Output**: `LocalTransform` (non-NavMesh), `navAgent.transform.rotation` (NavMesh Formed state)
+- **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
+- **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 
 ### SquadVisualManagementSystem
 - **Responsabilidad**: Instancia prefabs visuales de unidades y configura `EntityVisualSync`
 - **Usa**: `VisualPrefabRegistry`, `VisualSyncUtility.SetupVisualSync()`
+
+### UnitBodyblockSystem
+- **Responsabilidad**: Repulsión física per-frame entre entidades de equipos distintos via `agent.Move()`
+- **Cubre**: unidades vs unidades + héroes remotos vs unidades (héroe local bloqueado por CapsuleCollider físico)
+- **Fuerza**: `WallStrength = 60f` para Line/Testudo/Wedge/Square en estado Formed; `RepulsionStrength = 8f` para Dispersed/Column
+- **Regla**: Solo cross-team — aliados nunca se repelen; `Formed vs Formed` sin push (evita vibración)
+- **Algoritmo**: Spatial grid (cell = `BodyblockRadius`) → 9 celdas vecinas → O(n×k)
+- **Orden**: `[UpdateAfter(UnitNavMeshSystem)]`
+- **Ref**: `Docs/Mechanics/BodyblockSystem.md`
+
+### FormationStanceSystem
+- **Responsabilidad**: Lee milestone tags de pulso 1 frame (`UnitStartedMovingTag`, `UnitArrivedAtSlotTag`) → actualiza `UnitFormationStanceComponent` + propaga `CurrentStance` y `SlotRow` a `UnitAnimationMovementComponent`
+- **Orden**: `[UpdateAfter(UnitFormationStateSystem)]`
+- **NO hace**: no cambia estado de formación (`UnitFormationStateComponent`), no mueve unidades, no escribe `SquadStateComponent`
+- **Ref**: `Docs/Mechanics/FormationMilestoneSystem.md`
 
 ### DestinationMarkerSystem
 - **Responsabilidad**: Lee estado de squad para mostrar el marcador de destino (Hold Position)

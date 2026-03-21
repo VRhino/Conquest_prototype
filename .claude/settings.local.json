@@ -11,7 +11,12 @@
       "Bash(xargs grep:*)",
       "Bash(grep -r \"class.*Detection\\\\|class.*Targeting\" /c/Users/VRINO/desarrollo/Conquest_prototype/Assets/Scripts --include=*.cs -n)",
       "WebSearch",
-      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index"
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+      "Skill(analyze-system)",
+      "Read(//c/Users/VRINO/.claude//**)",
+      "Read(//c/Users/VRINO/.claude/plugins//**)",
+      "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/.claude-plugin)",
+      "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/skills/unity-log)"
     ]
   },
   "hooks": {

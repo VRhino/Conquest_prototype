@@ -50,11 +50,19 @@ public partial struct UnitFormationStateSystem : ISystem
                 if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
                     continue;
                 float3 desiredSlotPos = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
-                
+
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
-                
+
                 // Use unified position checker
                 bool inSlot = FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, slotThresholdSq);
+
+                // ── Milestone tags: reset to off each frame, then re-enable on transition ──
+                bool hasMilestoneTags = SystemAPI.HasComponent<UnitStartedMovingTag>(unit);
+                if (hasMilestoneTags)
+                {
+                    SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, false);
+                    SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, false);
+                }
 
                 // State transition logic
                 if (isHoldingPosition)
@@ -81,6 +89,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Moving;
                                 stateComp.DelayTimer = 0f;
+                                if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
                             }
                             // Si vuelve a estar en slot durante el delay, regresar a Formed
                             else if (FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, holdPositionThresholdSq))
@@ -95,6 +104,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Formed;
                                 stateComp.DelayTimer = 0f;
+                                if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, true);
                             }
                             break;
                     }
@@ -124,6 +134,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Moving;
                                 stateComp.DelayTimer = 0f;
+                                if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
                             }
                             // Waiting -> Formed: Hero returns to radius while still waiting
                             else if (heroWithinRadius && inSlot)
@@ -144,6 +155,7 @@ public partial struct UnitFormationStateSystem : ISystem
                                     // Si el héroe no se está moviendo, la unidad se forma
                                     stateComp.State = UnitFormationState.Formed;
                                     stateComp.DelayTimer = 0f;
+                                    if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, true);
                                 }
                                 else
                                 {

@@ -13,9 +13,6 @@ public partial class GridFormationUpdateSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
-        var transformLookup = GetComponentLookup<LocalTransform>(true);
-        
         // Actualizar posiciones target cuando las unidades cambien de grid slot
         foreach (var (units, squadEntity) in SystemAPI
                     .Query<DynamicBuffer<SquadUnitElement>>()
@@ -49,21 +46,12 @@ public partial class GridFormationUpdateSystem : SystemBase
                 }
             }
             
-            // Para escuadras en retreat, usar el retreat target como centro de formación
-            // en vez del héroe (que ahora controla otra escuadra tras un swap)
-            float3 heroPos;
-            if (squadState.currentState == SquadFSMState.Retreating
-                && SystemAPI.HasComponent<RetreatComponent>(squadEntity))
-            {
-                heroPos = SystemAPI.GetComponent<RetreatComponent>(squadEntity).retreatTarget;
-            }
-            else
-            {
-                if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out heroPos))
-                    continue;
-            }
-            
-            // Obtener el componente de hold position si existe
+            if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
+                continue;
+            var anchorComp = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
+            float3 heroPos = anchorComp.position;
+
+            // Obtener el componente de hold position si existe (needed by FormationPositionCalculator)
             SquadHoldPositionComponent? holdComponent = null;
             if (SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
                 holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
@@ -80,12 +68,8 @@ public partial class GridFormationUpdateSystem : SystemBase
                 float3 targetPos = float3.zero;
                 if (gridPositions.Length > 0 && i < gridPositions.Length)
                 {
-                    // Use hold rotation when in HoldingPosition, otherwise no rotation (follow)
-                    quaternion formationRotation = default;
-                    if (squadState.currentState == SquadFSMState.HoldingPosition && holdComponent.HasValue)
-                    {
-                        formationRotation = holdComponent.Value.holdRotation;
-                    }
+                    // Rotation already computed by SquadAnchorSystem (holdRotation or default)
+                    quaternion formationRotation = anchorComp.rotation;
 
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,

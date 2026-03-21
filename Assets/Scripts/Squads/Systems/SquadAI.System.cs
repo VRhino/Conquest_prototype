@@ -12,8 +12,6 @@ public partial class SquadAISystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        const float cohesionRadiusSq = 25f; // Distance squared to consider units scattered
-
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
 
         foreach (var (ai, state, dataRef, units, entity) in SystemAPI
@@ -30,25 +28,22 @@ public partial class SquadAISystem : SystemBase
                 enemiesDetected = detected.Length > 0;
             }
 
+            // Dispersed check: compare each unit to the formation anchor, not to units[0]
             bool dispersed = false;
-            if (units.Length > 0)
+            if (SystemAPI.HasComponent<SquadFormationAnchorComponent>(entity))
             {
-                Entity leader = units[0].Value;
-                if (SystemAPI.Exists(leader))
+                float3 anchorPos = SystemAPI.GetComponent<SquadFormationAnchorComponent>(entity).position;
+                // Scale radius with squad size: ~2× half-width of max line formation
+                float cohesionRadiusSq = math.max(100f, units.Length * units.Length * 2f);
+                for (int i = 0; i < units.Length; i++)
                 {
-                    float3 leaderPos = SystemAPI.GetComponent<LocalTransform>(leader).Position;
-                    for (int i = 0; i < units.Length; i++)
+                    Entity u = units[i].Value;
+                    if (!SystemAPI.Exists(u) || !SystemAPI.HasComponent<LocalTransform>(u)) continue;
+                    float3 pos = SystemAPI.GetComponent<LocalTransform>(u).Position;
+                    if (math.distancesq(pos, anchorPos) > cohesionRadiusSq)
                     {
-                        Entity unit = units[i].Value;
-                        if (!SystemAPI.Exists(unit))
-                            continue;
-
-                        float3 pos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
-                        if (math.distancesq(pos, leaderPos) > cohesionRadiusSq)
-                        {
-                            dispersed = true;
-                            break;
-                        }
+                        dispersed = true;
+                        break;
                     }
                 }
             }
@@ -89,6 +84,11 @@ public partial class SquadAISystem : SystemBase
             ai.ValueRW.tacticalIntent = desiredState;
             ai.ValueRW.isInCombat = enemiesDetected;
             state.ValueRW.isInCombat = enemiesDetected;
+
+            // [CombatTestDebug] — intent decision
+            UnityEngine.Debug.Log($"[CombatTestDebug][SquadAI] Squad {entity.Index}: " +
+                $"profile={profile} enemiesDetected={enemiesDetected} dispersed={dispersed} " +
+                $"→ intent={desiredState} isInCombat={ai.ValueRO.isInCombat}");
         }
     }
 }

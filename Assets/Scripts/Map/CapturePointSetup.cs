@@ -45,6 +45,9 @@ public class CapturePointSetup : MonoBehaviour
         _em = World.DefaultGameObjectInjectionWorld.EntityManager;
         var em = _em;
         ZoneEntity = em.CreateEntity();
+#if UNITY_EDITOR
+        em.SetName(ZoneEntity, $"CapturePoint_{ZoneId}_{gameObject.name}");
+#endif
 
         int teamInt = (int)_initialTeam;
 
