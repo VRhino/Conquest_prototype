@@ -137,8 +137,7 @@ public partial class UnitNavMeshSystem : SystemBase
             _unitToOrder.TryGetValue(entity, out SquadOrderType squadOrder);
             bool isHoldingPosition = squadOrder == SquadOrderType.HoldPosition;
 
-            if (!isHoldingPosition
-                && combatTarget != Entity.Null
+            if (combatTarget != Entity.Null
                 && SystemAPI.HasComponent<LocalTransform>(combatTarget))
             {
                 float3 targetWorldPos = SystemAPI.GetComponent<LocalTransform>(combatTarget).Position;

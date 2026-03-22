@@ -32,7 +32,6 @@ public partial class SquadStatusUpdateSystem : SystemBase
                 continue;
 
             var units = SystemAPI.GetBuffer<SquadUnitElement>(squadEntity);
-            int total = units.Length;
             int alive = 0;
 
             for (int i = 0; i < units.Length; i++)
@@ -42,16 +41,25 @@ public partial class SquadStatusUpdateSystem : SystemBase
                     alive++;
             }
 
-            var status = new SquadStatusComponent
-            {
-                aliveUnits = alive,
-                totalUnits = total
-            };
-
             if (hasStatus)
-                ecb.SetComponent(squadEntity, status);
+            {
+                // Preserve totalUnits — it must not decrease as units die and are removed from the buffer
+                var existing = SystemAPI.GetComponent<SquadStatusComponent>(squadEntity);
+                ecb.SetComponent(squadEntity, new SquadStatusComponent
+                {
+                    aliveUnits = alive,
+                    totalUnits = existing.totalUnits
+                });
+            }
             else
-                ecb.AddComponent(squadEntity, status);
+            {
+                // First initialization: buffer is still full (no deaths yet)
+                ecb.AddComponent(squadEntity, new SquadStatusComponent
+                {
+                    aliveUnits = alive,
+                    totalUnits = units.Length
+                });
+            }
         }
 
         ecb.Playback(EntityManager);

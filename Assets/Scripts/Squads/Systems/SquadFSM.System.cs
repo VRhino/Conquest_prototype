@@ -94,6 +94,8 @@ public partial class SquadFSMSystem : SystemBase
             if (desired == SquadFSMState.Retreating)
                 s.retreatTriggered = true;
 
+
+
             s.transitionTo = desired;
             state.ValueRW = s;
         }

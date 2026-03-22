@@ -161,7 +161,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                     if (hasTargetOrientation)
                     {
                         float3 horizontalDir = math.normalizesafe(new float3(targetForward.x, 0, targetForward.z));
-                        if (math.lengthsq(horizontalDir) > 0.01f)
+                        if (math.lengthsq(horizontalDir) > 0.01f && navAgent != null)
                         {
                             quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
                             float rotSpeed = 5f;

@@ -28,12 +28,12 @@ public class WeaponHitboxBehaviour : MonoBehaviour
 
         var em = _world.EntityManager;
 
-        Debug.Log($"[BattleTestDebug] OnTriggerEnter: owner={ownerUnit}, other={other.name}");
+
 
         // Gate: only active during strike window (WeaponHitboxActiveTag enabled by UnitAttackSystem)
         if (!em.IsComponentEnabled<WeaponHitboxActiveTag>(ownerUnit))
         {
-            Debug.Log($"[BattleTestDebug] Blocked: WeaponHitboxActiveTag DISABLED on {ownerUnit}");
+
             return;
         }
 
@@ -41,7 +41,7 @@ public class WeaponHitboxBehaviour : MonoBehaviour
         var combat = em.GetComponentData<UnitCombatComponent>(ownerUnit);
         if (combat.hitboxFired)
         {
-            Debug.Log($"[BattleTestDebug] Blocked: hitboxFired already true on {ownerUnit}");
+
             return;
         }
 
@@ -66,7 +66,7 @@ public class WeaponHitboxBehaviour : MonoBehaviour
             if (em.GetComponentData<TeamComponent>(ownerUnit).value ==
                 em.GetComponentData<TeamComponent>(target).value)
             {
-                Debug.Log($"[BattleTestDebug] Friendly fire SKIP: owner={ownerUnit} team == target={target} team");
+
                 return;
             }
         }
@@ -94,7 +94,7 @@ public class WeaponHitboxBehaviour : MonoBehaviour
             attackerPosition = transform.position
         });
 
-        Debug.Log($"[BattleTestDebug] PendingDamageEvent CREATED: attacker={ownerUnit} → target={target}, crit={crit}");
+
 
         combat.hitboxFired = true;
         em.SetComponentData(ownerUnit, combat);

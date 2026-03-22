@@ -337,7 +337,7 @@ public partial class SquadSpawningSystem : SystemBase
             if (SystemAPI.HasComponent<TeamComponent>(entity))
             {
                 var heroTeam = SystemAPI.GetComponent<TeamComponent>(entity);
-                Debug.Log($"[BattleTestDebug] Squad spawn: hero {entity} → team={heroTeam.value}");
+
                 ecb.AddComponent(squad, heroTeam);
 
                 // Aplicar el team a todas las unidades del squad

@@ -23,10 +23,12 @@ public partial class UnitTargetingSystem : SystemBase
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
-            bool allow = ai.ValueRO.tacticalIntent == TacticalIntent .Attacking &&
+            bool allow = ai.ValueRO.tacticalIntent == TacticalIntent.Attacking &&
                          (state.ValueRO.currentOrder == SquadOrderType.Attack ||
                           state.ValueRO.currentOrder == SquadOrderType.FollowHero ||
-                          (state.ValueRO.currentOrder == SquadOrderType.HoldPosition));
+                          state.ValueRO.currentOrder == SquadOrderType.HoldPosition);
+
+
 
 
 
@@ -50,6 +52,7 @@ public partial class UnitTargetingSystem : SystemBase
 
                 if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
                 {
+
                     combat.ValueRW.target = Entity.Null;
                     continue;
                 }
@@ -58,6 +61,7 @@ public partial class UnitTargetingSystem : SystemBase
 
                 if (detected.Length == 0)
                 {
+
                     combat.ValueRW.target = Entity.Null;
                     continue;
                 }

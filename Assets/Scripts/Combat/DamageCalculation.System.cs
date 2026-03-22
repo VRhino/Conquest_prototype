@@ -34,7 +34,7 @@ public partial class DamageCalculationSystem : SystemBase
         {
             var p = pending.ValueRO;
 
-            UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc: processing event attacker={entity}, target={p.target}, profile={p.damageProfile}");
+
 
             if (!SystemAPI.Exists(p.target) || !SystemAPI.Exists(p.damageProfile))
             {
@@ -79,7 +79,7 @@ public partial class DamageCalculationSystem : SystemBase
                 }
                 if (blocked)
                 {
-                    UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc SHIELD BLOCK: target={p.target}, blockRemaining={math.max(0f, shield.currentBlock - 50f):F0}");
+
                     shield.currentBlock     = math.max(0f, shield.currentBlock - 50f);
                     shieldLookup[p.target]  = shield;
                     ecb.RemoveComponent<PendingDamageEvent>(entity);
@@ -153,7 +153,7 @@ public partial class DamageCalculationSystem : SystemBase
 
             effectiveDmg = math.max(0f, effectiveDmg);
 
-            UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc: baseDmg={profile.baseDamage:F1}, defense={defense:F1}, penetration={penetration:F1}, mitigation={mitigation:F2}, effective={effectiveDmg:F1}");
+
 
             if (FloatingCombatTextManager.Instance == null)
                 UnityEngine.Debug.LogWarning("[BattleTestDebug] DamageCalc: FloatingCombatTextManager.Instance es NULL — ¿está el FCTManager en la escena?");
@@ -168,7 +168,7 @@ public partial class DamageCalculationSystem : SystemBase
                 float prevHp = hp.ValueRO.currentHealth;
                 hp.ValueRW.currentHealth = math.max(0f, prevHp - effectiveDmg);
                 willKill = hp.ValueRO.currentHealth <= 0f;
-                UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc DAMAGE APPLIED: target={p.target}, HP {prevHp:F1} → {hp.ValueRO.currentHealth:F1}");
+
                 if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
 

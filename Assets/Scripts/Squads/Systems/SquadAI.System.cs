@@ -8,6 +8,7 @@ using Unity.Transforms;
 /// other systems.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateBefore(typeof(SquadFSMSystem))]
 public partial class SquadAISystem : SystemBase
 {
     protected override void OnUpdate()
@@ -71,7 +72,7 @@ public partial class SquadAISystem : SystemBase
             {
                 case BehaviorProfile.Defensive:
                     desiredState = dispersed ? TacticalIntent .Regrouping
-                                             : enemiesDetected ? TacticalIntent .Defending
+                                             : enemiesDetected ? TacticalIntent .Attacking
                                                                : TacticalIntent .Idle;
                     break;
                 case BehaviorProfile.Harassing:
@@ -95,9 +96,12 @@ public partial class SquadAISystem : SystemBase
                     break;
             }
 
-            // Retaliation override: a unit was hit this frame and we are not bracing
-            if (wasHit && !isBracing && desiredState != TacticalIntent.Attacking)
+            // Retaliation override: a unit was hit this frame — always retaliate regardless of brace mode
+            if (wasHit && desiredState != TacticalIntent.Attacking)
                 desiredState = TacticalIntent.Attacking;
+
+            bool hasAnchor = SystemAPI.HasComponent<SquadFormationAnchorComponent>(entity);
+
 
             ai.ValueRW.tacticalIntent = desiredState;
             ai.ValueRW.isInCombat     = enemiesDetected || wasHit;

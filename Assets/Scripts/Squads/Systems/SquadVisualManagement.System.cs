@@ -106,7 +106,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         if (hitboxBehaviour != null)
         {
             hitboxBehaviour.ownerUnit = unitEntity;
-            Debug.Log($"[BattleTestDebug] WeaponHitbox wired: unit={unitEntity}, GO={hitboxBehaviour.gameObject.name}");
+
         }
         else
         {

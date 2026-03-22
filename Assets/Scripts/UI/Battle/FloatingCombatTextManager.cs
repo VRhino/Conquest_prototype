@@ -37,7 +37,7 @@ public class FloatingCombatTextManager : MonoBehaviour
             _pool.Enqueue(entry);
         }
 
-        Debug.Log($"[BattleTestDebug] FCTManager.Awake: singleton OK, pool={_pool.Count} entradas.");
+
     }
 
     private void OnDestroy()
@@ -47,7 +47,7 @@ public class FloatingCombatTextManager : MonoBehaviour
 
     public void Spawn(Vector3 worldPos, DamageCategory type, float dmgValue)
     {
-        Debug.Log($"[BattleTestDebug] FCTManager.Spawn: type={type}, dmg={dmgValue:F1}, pos={worldPos}, poolLeft={_pool.Count}");
+
         Sprite iconSprite = (int)type < icons.Length ? icons[(int)type] : null;
         FCTEntry entry = _pool.Count > 0 ? _pool.Dequeue() : CreateOverflow();
         entry.Activate(worldPos, type, dmgValue, iconSprite);

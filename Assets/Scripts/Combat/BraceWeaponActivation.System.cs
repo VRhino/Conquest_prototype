@@ -16,7 +16,7 @@ public partial class BraceWeaponActivationSystem : SystemBase
         foreach (var (state, entity) in
                  SystemAPI.Query<RefRO<SquadStateComponent>>().WithEntityAccess())
         {
-            bool shouldBrace = state.ValueRO.currentState == SquadFSMState.HoldingPosition;
+            bool shouldBrace = false; // Brace mode no se activa automáticamente
             bool hasModeComp = SystemAPI.HasComponent<SquadCombatModeComponent>(entity);
             var currentMode  = hasModeComp
                 ? SystemAPI.GetComponent<SquadCombatModeComponent>(entity).mode
