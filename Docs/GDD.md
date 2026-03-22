@@ -2339,7 +2339,11 @@ espacios donde estara el jugador o pantallas diferenciadas o stages donde el jug
     - en la parte inferior izquierda de la hud esta la ui de tropa que muestra, imagen de unidad, posibles ordenes, posibles formaciones, cantidad de unidades vivas/total
     - en la parte central inferior, icono de clase de heroe, barra de vida y panel de habilidades que puede utilizar
     - cuando se elimina a una unidad enemiga aparace por unos segundos el contador de unidades enemigas eliminadas, pegado al derecho de la pantalla centrado verticalmente
-    - cuando una unidad asiga daño sale un popup damage que muestra el valor del daño que hizo y desaparece en menos de un segundo
+    - cuando una unidad recibe daño aparece un **Floating Combat Text (FCT)** sobre ella que muestra el resultado del golpe y desaparece animado hacia arriba con fade:
+        - **Daño normal**: número blanco
+        - **Golpe crítico**: número dorado, texto "CRITICO", tamaño mayor
+        - **Daño bloqueado por escudo**: texto gris "BLOQ" + icono de escudo amarillo
+        - **Golpe de muerte**: número rojo, tamaño mayor + icono de calavera
     - si la bandera de base esta disponible para conquistar se muestra el icono(rombo con el color ya sea aliada o enemiga con el icono del tipo de badera en el centro) con la barra de conquista circular a su alrededor con su progreso
     - el timer de batalla pegado a la parte superior, centrada horizontalmente
     - en la parte inferior derecha, pegado al borde se muesta el minimapa de la batalla donde se muestran los puntos de captura y supply points y su estado actual, mas la ubicacion de todos los heroes aliados

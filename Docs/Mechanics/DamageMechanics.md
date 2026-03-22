@@ -268,7 +268,7 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | Archivo | Rol |
 |---------|-----|
 | `Assets/Scripts/Combat/DamageType.cs` | Enum: Blunt, Slashing, Piercing |
-| `Assets/Scripts/Combat/DamageCategory.cs` | Enum: Normal, Critical, Ability (para UI de popups) |
+| `Assets/Scripts/Combat/DamageCategory.cs` | Enum: Normal, Critical, Ability, Blocked, Death — indexa el tipo de FCT a mostrar |
 | `Assets/Scripts/Combat/DamageProfile.cs` | ScriptableObject: baseDamage, damageType, penetration |
 | `Assets/Scripts/Combat/Team.cs` | Enum: None, TeamA, TeamB |
 
@@ -317,7 +317,41 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 
 ---
 
-## 12. Referencia Técnica Rápida
+## 12. Retroalimentación Visual — Floating Combat Text (FCT)
+
+Cada golpe procesado por `DamageCalculationSystem` genera un popup visual flotante sobre la unidad receptora.
+El tipo de popup se determina al final del cálculo de daño, una vez conocido el resultado real.
+
+### Categorías y su visual
+
+| Categoría | Color | Texto | Icono | Tamaño |
+|-----------|-------|-------|-------|--------|
+| `Normal` | Blanco | Valor numérico | — | 1× |
+| `Critical` | Dorado #FFD700 | "CRITICO {n}" | — | 1.4× |
+| `Blocked` | Gris #AAAAAA | "BLOQ" | Escudo amarillo | 1× |
+| `Death` | Rojo #FF3333 | Valor numérico | Calavera | 1.2× |
+
+### Lógica de categoría
+
+```
+if HP_post_damage <= 0  → Death
+else if multiplier > 1  → Critical
+else                    → PendingDamageEvent.category  (Normal / Ability)
+```
+
+`Blocked` se emite en la rama de escudo de `DamageCalculationSystem`, antes de aplicar daño al HP.
+
+### Infraestructura FCT
+
+| Archivo | Rol |
+|---------|-----|
+| `Assets/Scripts/UI/Battle/FloatingCombatTextManager.cs` | Singleton + pool (20 entradas). `Spawn(pos, category, dmg)` |
+| `Assets/Scripts/UI/Battle/FCTEntry.cs` | Canvas world-space por entrada. Billboard, animación float+fade, pool callback |
+| `Assets/Scripts/Combat/DamageCategory.cs` | Enum indexado por el manager para resolver sprite de icono |
+
+---
+
+## 13. Referencia Técnica Rápida
 
 ### Flujo de datos resumido
 

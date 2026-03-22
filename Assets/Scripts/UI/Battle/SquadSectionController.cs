@@ -29,6 +29,7 @@ public class SquadSectionController : MonoBehaviour
     private SquadData _squadData;
     private List<UnitHealthBarController> _healthBars = new();
     private List<HUDFormationIconController> _formationIcons = new();
+    private readonly List<UnitHealthBarController> _sortBuffer = new();
     private bool _initialized;
 
     /// <summary>
@@ -111,7 +112,21 @@ public class SquadSectionController : MonoBehaviour
             // Hide excess bars
             for (int i = units.Length; i < _healthBars.Count; i++)
                 _healthBars[i].gameObject.SetActive(false);
+
+            SortHealthBarsByHealth();
         }
+    }
+
+    private void SortHealthBarsByHealth()
+    {
+        _sortBuffer.Clear();
+        foreach (var bar in _healthBars)
+            if (bar.gameObject.activeSelf) _sortBuffer.Add(bar);
+
+        _sortBuffer.Sort((a, b) => b.CurrentPercent.CompareTo(a.CurrentPercent));
+
+        for (int i = 0; i < _sortBuffer.Count; i++)
+            _sortBuffer[i].transform.SetSiblingIndex(i);
     }
 
     private void EnsureHealthBars(int count)

@@ -13,10 +13,13 @@ public class UnitHealthBarController : MonoBehaviour
     [SerializeField] private Color _lowHealthColor = new Color(0.8f, 0.2f, 0.2f, 1f);
     [SerializeField][Range(0f, 1f)] private float _lowHealthThreshold = 0.3f;
 
+    public float CurrentPercent { get; private set; }
+
     public void SetHealthPercent(float percent)
     {
         if (_foreground == null) return;
-        _foreground.fillAmount = Mathf.Clamp01(percent);
-        _foreground.color = percent <= _lowHealthThreshold ? _lowHealthColor : _normalColor;
+        CurrentPercent = Mathf.Clamp01(percent);
+        _foreground.fillAmount = CurrentPercent;
+        _foreground.color = CurrentPercent <= _lowHealthThreshold ? _lowHealthColor : _normalColor;
     }
 }

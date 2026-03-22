@@ -104,6 +104,47 @@ MatchStateComponent.EndMatch detectado
   → Esperar PostMatchDelay (10s) → SceneTransitionService.LoadScene(PostBattle)
 ```
 
+## 9.9 Floating Combat Text (FCT)
+
+📌 **Descripción:**
+
+Sistema de feedback visual que muestra el resultado de cada golpe sobre la unidad receptora. Los textos flotan hacia arriba y se desvanecen. Implementado como pool de GameObjects con Canvas world-space.
+
+🧩 **Tipos de FCT:**
+
+| Categoría | Visual | Descripción |
+|-----------|--------|-------------|
+| `Normal` | Número blanco | Daño estándar aplicado |
+| `Critical` | Número dorado, texto "CRITICO", fuente mayor | Golpe con multiplicador > 1 |
+| `Blocked` | Texto gris "BLOQ" + icono escudo amarillo | Golpe interceptado por escudo activo |
+| `Death` | Número rojo, fuente mayor + icono calavera | Golpe que reduce HP a 0 |
+
+🧩 **Componentes:**
+
+- `FloatingCombatTextManager`: singleton MonoBehaviour en BattleScene. Pool de 20 `FCTEntry`. Resuelve sprite de icono por `DamageCategory`.
+- `FCTEntry`: Canvas world-space por entrada. `TextMeshProUGUI` + `Image`. Billboard via `LateUpdate`. Animación: float +1.5u / 1.2s + fade.
+- `DamageCategory`: enum (`Normal`, `Critical`, `Ability`, `Blocked`, `Death`) usado como índice de icono e identificador de visual.
+
+🔁 **Flujo:**
+
+1. `DamageCalculationSystem` aplica daño al `HealthComponent`.
+2. Determina categoría: `Death` si HP ≤ 0, `Critical` si `multiplier > 1`, si no usa `PendingDamageEvent.category`.
+3. Llama `FloatingCombatTextManager.Instance?.Spawn(worldPos + offset, category, effectiveDmg)`.
+4. El manager resuelve el sprite del icono e invoca `FCTEntry.Activate`.
+5. El entry anima y se devuelve al pool al terminar.
+
+⚙️ **Parámetros configurables (Inspector del prefab):**
+
+| Campo | Default | Descripción |
+|-------|---------|-------------|
+| `baseFontSize` | 40 | Tamaño base del texto en unidades canvas |
+| `worldScale` | 0.005 | Escala world-space del Canvas |
+| `fontScaleCritical` | 1.4 | Multiplicador de fuente para críticos |
+| `fontScaleDeath` | 1.2 | Multiplicador de fuente para muerte |
+| `colorNormal/Critical/Blocked/Death` | — | Colores por categoría |
+
+---
+
 ## 5.7 Hitbox Weapon System (Commit e59b3d62)
 
 El sistema de combate del héroe usa hitboxes por arma (no raycast). Las armas tienen colliders habilitados solo durante el swing activo:

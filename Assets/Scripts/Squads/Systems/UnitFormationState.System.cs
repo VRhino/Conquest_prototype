@@ -10,6 +10,7 @@ public partial struct UnitFormationStateSystem : ISystem
     public void OnUpdate(ref SystemState state)
     {
         float dt = SystemAPI.Time.DeltaTime;
+        var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
         const float formationRadiusSq = 100f; // 10m squared — supports up to 20-unit formations
         const float slotThresholdSq = 0.04f; // ~0.2m threshold for being "in slot" (reducido de 0.25f)
 
@@ -79,7 +80,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(0.5f, 1f);
+                                stateComp.DelayDuration = UnityEngine.Random.Range(spawnConfig.unitMoveDelayMin, spawnConfig.unitMoveDelayMax);
                             }
                             break;
                         case UnitFormationState.Waiting:
@@ -123,7 +124,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(0.5f, 1.5f);
+                                stateComp.DelayDuration = UnityEngine.Random.Range(spawnConfig.unitFollowDelayMin, spawnConfig.unitFollowDelayMax);
                             }
                             break;
 

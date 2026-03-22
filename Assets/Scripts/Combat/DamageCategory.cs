@@ -5,5 +5,7 @@ public enum DamageCategory
 {
     Normal,
     Critical,
-    Ability
+    Ability,
+    Blocked,
+    Death
 }

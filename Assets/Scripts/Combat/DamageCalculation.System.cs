@@ -83,6 +83,14 @@ public partial class DamageCalculationSystem : SystemBase
                     shield.currentBlock     = math.max(0f, shield.currentBlock - 50f);
                     shieldLookup[p.target]  = shield;
                     ecb.RemoveComponent<PendingDamageEvent>(entity);
+
+                    if (transformLookup.HasComponent(p.target))
+                    {
+                        float3 bp = transformLookup[p.target].Position;
+                        FloatingCombatTextManager.Instance?.Spawn(
+                            new UnityEngine.Vector3(bp.x, bp.y + 1.8f, bp.z),
+                            DamageCategory.Blocked, 0f);
+                    }
                     continue;
                 }
             }
@@ -147,15 +155,21 @@ public partial class DamageCalculationSystem : SystemBase
 
             UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc: baseDmg={profile.baseDamage:F1}, defense={defense:F1}, penetration={penetration:F1}, mitigation={mitigation:F2}, effective={effectiveDmg:F1}");
 
-            // Apply to unit or hero
+            if (FloatingCombatTextManager.Instance == null)
+                UnityEngine.Debug.LogWarning("[BattleTestDebug] DamageCalc: FloatingCombatTextManager.Instance es NULL — ¿está el FCTManager en la escena?");
+
+            const float FctYOffset = 1.8f;
+
+            // Apply to unit or hero — determinar willKill del resultado (una sola lectura de HP)
+            bool willKill = false;
             if (SystemAPI.HasComponent<HealthComponent>(p.target))
             {
                 var hp = SystemAPI.GetComponentRW<HealthComponent>(p.target);
                 float prevHp = hp.ValueRO.currentHealth;
-                hp.ValueRW.currentHealth = math.max(0f, hp.ValueRO.currentHealth - effectiveDmg);
+                hp.ValueRW.currentHealth = math.max(0f, prevHp - effectiveDmg);
+                willKill = hp.ValueRO.currentHealth <= 0f;
                 UnityEngine.Debug.Log($"[BattleTestDebug] DamageCalc DAMAGE APPLIED: target={p.target}, HP {prevHp:F1} → {hp.ValueRO.currentHealth:F1}");
-                if (hp.ValueRO.currentHealth <= 0f &&
-                    !SystemAPI.HasComponent<IsDeadComponent>(p.target))
+                if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
 
                 // Signal the squad to retaliate (consumed by SquadAISystem this frame)
@@ -165,10 +179,23 @@ public partial class DamageCalculationSystem : SystemBase
             else if (SystemAPI.HasComponent<HeroHealthComponent>(p.target))
             {
                 var hp = SystemAPI.GetComponentRW<HeroHealthComponent>(p.target);
-                hp.ValueRW.currentHealth = math.max(0f, hp.ValueRO.currentHealth - effectiveDmg);
-                if (hp.ValueRO.currentHealth <= 0f &&
-                    !SystemAPI.HasComponent<IsDeadComponent>(p.target))
+                float prevHp = hp.ValueRO.currentHealth;
+                hp.ValueRW.currentHealth = math.max(0f, prevHp - effectiveDmg);
+                willKill = hp.ValueRO.currentHealth <= 0f;
+                if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
+            }
+
+            // Emitir FCT con categoría correcta
+            if (transformLookup.HasComponent(p.target))
+            {
+                float3 tp = transformLookup[p.target].Position;
+                DamageCategory cat = willKill          ? DamageCategory.Death
+                                   : p.multiplier > 1f ? DamageCategory.Critical
+                                   :                     p.category;
+                FloatingCombatTextManager.Instance?.Spawn(
+                    new UnityEngine.Vector3(tp.x, tp.y + FctYOffset, tp.z),
+                    cat, effectiveDmg);
             }
 
             ecb.RemoveComponent<PendingDamageEvent>(entity);
