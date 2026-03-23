@@ -4,11 +4,11 @@ using Unity.Mathematics;
 using Unity.Transforms;
 
 /// <summary>
-/// Applies pending damage events using ratio-based mitigation:
+/// Applies pending damage events using flat-reduction mitigation:
 ///
-///   ratio      = defense / max(penetration, 0.001)
-///   mitigation = min(ratio, 0.95)                  ← floor 5% damage always lands
-///   D_eff      = baseDamage * multiplier * (1 - mitigation)
+///   rawDmg           = baseDamage * multiplier
+///   effectiveDefense = max(defense - penetration, 0)
+///   D_eff            = max(rawDmg - effectiveDefense, rawDmg * 0.05)   ← floor 5%
 ///
 /// Bonuses applied after mitigation:
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
@@ -125,10 +125,11 @@ public partial class DamageCalculationSystem : SystemBase
                 };
             }
 
-            // Normalized mitigation: defense / (defense + penetration) → always in [0, 1)
-            // Naturally dynamic — only approaches 0.95 when defense >> penetration
-            float mitigation   = math.min(defense / (defense + math.max(penetration, 0.001f)), 0.95f);
-            float effectiveDmg = profile.baseDamage * p.multiplier * (1f - mitigation);
+            // Flat reduction: defense absorbs N points of damage, penetration bypasses N points of defense
+            // Floor: mitigation never exceeds 95% — at least 5% of raw damage always lands
+            float rawDmg           = profile.baseDamage * p.multiplier;
+            float effectiveDefense = math.max(defense - penetration, 0f);
+            float effectiveDmg     = math.max(rawDmg - effectiveDefense, rawDmg * 0.05f);
 
             // Kinetic bonus — attacker speed increases penetration effectiveness
             if (p.attackerSpeed > 0f)

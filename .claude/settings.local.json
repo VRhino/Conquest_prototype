@@ -18,7 +18,9 @@
       "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/.claude-plugin)",
       "Bash(mkdir -p /c/Users/VRINO/.claude/plugins/local/unity-tools/skills/unity-log)",
       "mcp__claude_ai_Excalidraw__read_me",
-      "mcp__claude_ai_Excalidraw__create_view"
+      "mcp__claude_ai_Excalidraw__create_view",
+      "mcp__plugin_Notion_notion__notion-search",
+      "mcp__plugin_Notion_notion__notion-fetch"
     ]
   },
   "hooks": {
