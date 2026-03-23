@@ -4,11 +4,13 @@ using Unity.Mathematics;
 using Unity.Transforms;
 
 /// <summary>
-/// Applies pending damage events using flat-reduction mitigation:
+/// Applies pending damage events using flat-reduction mitigation per damage type:
 ///
-///   rawDmg           = baseDamage * multiplier
-///   effectiveDefense = max(defense - penetration, 0)
-///   D_eff            = max(rawDmg - effectiveDefense, rawDmg * 0.05)   ← floor 5%
+///   For each type T in {Blunt, Slashing, Piercing} where profile.T_damage > 0:
+///     rawDmg    = profile.T_damage * multiplier
+///     netDefense = max(T_defense - (profile.T_pen + unit.T_pen), 0)
+///     contrib   = max(rawDmg - netDefense, rawDmg * 0.05)   ← floor 5% per type
+///   D_eff = sum of all type contributions
 ///
 /// Bonuses applied after mitigation:
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
@@ -95,41 +97,37 @@ public partial class DamageCalculationSystem : SystemBase
                 }
             }
 
-            // Resolve defense and penetration by damage type
+            // Resolve defense and penetration per type — sum contributions of all non-zero damage types
             var profile = SystemAPI.GetComponent<DamageProfileComponent>(p.damageProfile);
 
-            float defense = 0f;
-            if (defenseLookup.HasComponent(p.target))
-            {
-                var def = defenseLookup[p.target];
-                defense = profile.damageType switch
-                {
-                    DamageType.Blunt    => def.bluntDefense,
-                    DamageType.Slashing => def.slashDefense,
-                    DamageType.Piercing => def.pierceDefense,
-                    _                   => 0f
-                };
-            }
+            var def = defenseLookup.HasComponent(p.target)
+                ? defenseLookup[p.target]
+                : default;
 
-            float penetration = profile.penetration;
-            if (SystemAPI.Exists(p.damageSource) &&
-                penetrationLookup.HasComponent(p.damageSource))
-            {
-                var pen = penetrationLookup[p.damageSource];
-                penetration += profile.damageType switch
-                {
-                    DamageType.Blunt    => pen.bluntPenetration,
-                    DamageType.Slashing => pen.slashPenetration,
-                    DamageType.Piercing => pen.piercePenetration,
-                    _                   => 0f
-                };
-            }
+            var pen = SystemAPI.Exists(p.damageSource) && penetrationLookup.HasComponent(p.damageSource)
+                ? penetrationLookup[p.damageSource]
+                : default;
 
-            // Flat reduction: defense absorbs N points of damage, penetration bypasses N points of defense
-            // Floor: mitigation never exceeds 95% — at least 5% of raw damage always lands
-            float rawDmg           = profile.baseDamage * p.multiplier;
-            float effectiveDefense = math.max(defense - penetration, 0f);
-            float effectiveDmg     = math.max(rawDmg - effectiveDefense, rawDmg * 0.05f);
+            float effectiveDmg = 0f;
+
+            if (profile.bluntDamage > 0f)
+            {
+                float raw    = profile.bluntDamage * p.multiplier;
+                float netDef = math.max(def.bluntDefense - (profile.bluntPenetration + pen.bluntPenetration), 0f);
+                effectiveDmg += math.max(raw - netDef, raw * 0.05f);
+            }
+            if (profile.slashingDamage > 0f)
+            {
+                float raw    = profile.slashingDamage * p.multiplier;
+                float netDef = math.max(def.slashDefense - (profile.slashingPenetration + pen.slashPenetration), 0f);
+                effectiveDmg += math.max(raw - netDef, raw * 0.05f);
+            }
+            if (profile.piercingDamage > 0f)
+            {
+                float raw    = profile.piercingDamage * p.multiplier;
+                float netDef = math.max(def.pierceDefense - (profile.piercingPenetration + pen.piercePenetration), 0f);
+                effectiveDmg += math.max(raw - netDef, raw * 0.05f);
+            }
 
             // Kinetic bonus — attacker speed increases penetration effectiveness
             if (p.attackerSpeed > 0f)

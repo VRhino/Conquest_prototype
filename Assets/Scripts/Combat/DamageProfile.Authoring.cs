@@ -16,11 +16,17 @@ public class DamageProfileAuthoring : MonoBehaviour
             if (authoring.profile == null)
                 return;
 
+            var t = authoring.profile.damageType;
+            float d = authoring.profile.baseDamage;
+            float p = authoring.profile.penetration;
             AddComponent(entity, new DamageProfileComponent
             {
-                baseDamage = authoring.profile.baseDamage,
-                damageType = authoring.profile.damageType,
-                penetration = authoring.profile.penetration
+                bluntDamage         = t == DamageType.Blunt    ? d : 0f,
+                slashingDamage      = t == DamageType.Slashing ? d : 0f,
+                piercingDamage      = t == DamageType.Piercing ? d : 0f,
+                bluntPenetration    = t == DamageType.Blunt    ? p : 0f,
+                slashingPenetration = t == DamageType.Slashing ? p : 0f,
+                piercingPenetration = t == DamageType.Piercing ? p : 0f,
             });
         }
     }

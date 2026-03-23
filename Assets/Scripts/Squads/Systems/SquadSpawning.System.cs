@@ -139,12 +139,16 @@ public partial class SquadSpawningSystem : SystemBase
             });
 
             // Create one damage profile entity per squad — all units reference it.
+            // Values are taken directly from SquadData; types with value 0 are ignored in calculation.
             Entity squadDamageProfile = ecb.CreateEntity();
             ecb.AddComponent(squadDamageProfile, new DamageProfileComponent
             {
-                baseDamage  = GetPrimaryDamage(data),
-                damageType  = GetPrimaryDamageType(data.squadType),
-                penetration = GetPrimaryPenetration(data)
+                bluntDamage         = data.bluntDamage,
+                slashingDamage      = data.slashingDamage,
+                piercingDamage      = data.piercingDamage,
+                bluntPenetration    = data.bluntPenetration,
+                slashingPenetration = data.slashingPenetration,
+                piercingPenetration = data.piercingPenetration,
             });
 
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);
@@ -403,39 +407,6 @@ public partial class SquadSpawningSystem : SystemBase
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
-    }
-
-    private static float GetPrimaryDamage(SquadDataComponent data)
-    {
-        return data.squadType switch
-        {
-            SquadType.Archers  => data.piercingDamage,
-            SquadType.Pikemen  => data.piercingDamage,
-            SquadType.Spearmen => data.piercingDamage,
-            _                  => data.slashingDamage   // Squires and default
-        };
-    }
-
-    private static DamageType GetPrimaryDamageType(SquadType squadType)
-    {
-        return squadType switch
-        {
-            SquadType.Archers  => DamageType.Piercing,
-            SquadType.Pikemen  => DamageType.Piercing,
-            SquadType.Spearmen => DamageType.Piercing,
-            _                  => DamageType.Slashing  // Squires and default
-        };
-    }
-
-    private static float GetPrimaryPenetration(SquadDataComponent data)
-    {
-        return data.squadType switch
-        {
-            SquadType.Archers  => data.piercingPenetration,
-            SquadType.Pikemen  => data.piercingPenetration,
-            SquadType.Spearmen => data.piercingPenetration,
-            _                  => data.slashingPenetration
-        };
     }
 
     /// <summary>
