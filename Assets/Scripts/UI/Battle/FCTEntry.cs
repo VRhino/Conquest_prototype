@@ -6,7 +6,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Una entrada de Floating Combat Text. Vive en un prefab con un Canvas world-space.
-/// Anima flotando hacia arriba + fade, luego se devuelve al pool.
+/// Anima en parábola hacia la derecha + fade, luego se devuelve al pool.
 /// </summary>
 public class FCTEntry : MonoBehaviour
 {
@@ -34,7 +34,8 @@ public class FCTEntry : MonoBehaviour
     private const string LabelCritical = "CRITICO";
     private const string LabelBlocked  = "BLOQ";
 
-    private const float FloatHeight   = 1.5f;
+    private const float ArcWidth     = 1.2f;  // desplazamiento horizontal total (derecha)
+    private const float ArcHeight    = 1.0f;  // altura del punto de control de la cima
     private const float Duration      = 1.2f;
     private const float FadeStartFrac = 0.6f;
 
@@ -110,8 +111,9 @@ public class FCTEntry : MonoBehaviour
 
     private IEnumerator AnimateRoutine()
     {
-        Vector3 startPos = transform.position;
-        Vector3 endPos   = startPos + Vector3.up * FloatHeight;
+        Vector3 p0 = transform.position;
+        Vector3 p1 = p0 + Vector3.right * (ArcWidth * 0.5f) + Vector3.up * ArcHeight;
+        Vector3 p2 = p0 + Vector3.right * ArcWidth;
 
         Color labelColor = label.color;
         Color iconColor  = icon.enabled ? icon.color : Color.white;
@@ -122,7 +124,9 @@ public class FCTEntry : MonoBehaviour
             elapsed += Time.deltaTime;
             float t = elapsed / Duration;
 
-            transform.position = Vector3.Lerp(startPos, endPos, t);
+            // Bezier cuadrática: (1-t)²·p0 + 2(1-t)t·p1 + t²·p2
+            float u = 1f - t;
+            transform.position = u * u * p0 + 2f * u * t * p1 + t * t * p2;
 
             float alpha = t < FadeStartFrac
                 ? 1f

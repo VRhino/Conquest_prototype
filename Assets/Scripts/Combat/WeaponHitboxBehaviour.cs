@@ -94,7 +94,9 @@ public class WeaponHitboxBehaviour : MonoBehaviour
             attackerPosition = transform.position
         });
 
-
+        // Spawn hit impact VFX at contact point
+        Vector3 contactPoint = other.ClosestPoint(transform.position);
+        HitImpactEffectManager.Instance?.Spawn(contactPoint);
 
         combat.hitboxFired = true;
         em.SetComponentData(ownerUnit, combat);
