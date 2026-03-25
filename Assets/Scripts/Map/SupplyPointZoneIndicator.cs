@@ -19,8 +19,12 @@ public class SupplyPointZoneIndicator : MonoBehaviour
     [Header("Fallback")]
     [SerializeField] float _fallbackRadius = 10f;
 
+    [Header("Glow")]
+    [SerializeField] Renderer _glowRenderer;
+
     Renderer _renderer;
     MaterialPropertyBlock _mpb;
+    MaterialPropertyBlock _glowMpb;
     EntityManager _em;
     Entity _zoneEntity;
     Team _playerTeam;
@@ -44,6 +48,15 @@ public class SupplyPointZoneIndicator : MonoBehaviour
             FindZoneEntityByProximity();
 
         SetScaleFromRadius();
+        InitGlowRenderer();
+    }
+
+    void InitGlowRenderer()
+    {
+        if (_glowRenderer == null) return;
+        _glowMpb = new MaterialPropertyBlock();
+        _glowMpb.SetColor("_BaseColor", _neutralColor);
+        _glowRenderer.SetPropertyBlock(_glowMpb);
     }
 
     void FindZoneEntityByProximity()
@@ -98,13 +111,22 @@ public class SupplyPointZoneIndicator : MonoBehaviour
         var supply = _em.GetComponentData<SupplyPointComponent>(_zoneEntity);
         Color color = ResolveColor(zone.teamOwner, supply.isCapturing);
 
-        int hash = color.GetHashCode();
+        float captureProgress = supply.isCapturing ? supply.captureProgress / 100f : 0f;
+        int hash = color.GetHashCode() * 31 + captureProgress.GetHashCode();
         if (hash != _cachedColorHash)
         {
             _cachedColorHash = hash;
             _renderer.GetPropertyBlock(_mpb);
             _mpb.SetColor("_BaseColor", color);
+            _mpb.SetFloat("_CaptureProgress", captureProgress);
             _renderer.SetPropertyBlock(_mpb);
+
+            if (_glowRenderer != null)
+            {
+                _glowRenderer.GetPropertyBlock(_glowMpb);
+                _glowMpb.SetColor("_BaseColor", color);
+                _glowRenderer.SetPropertyBlock(_glowMpb);
+            }
         }
     }
 
