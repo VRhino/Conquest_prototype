@@ -67,7 +67,10 @@ public static class BattleDebugCreator
             classID = heroData.classId,
             level = heroData.level,
             squadInstances = new List<SquadInstanceData>(),
-            spawnPointId = string.Empty // Assigned by caller based on team
+            spawnPointId = string.Empty, // Assigned by caller based on team
+            avatar = heroData.avatar,
+            equipment = heroData.equipment,
+            gender = heroData.gender
         };
 
         // Convert active Loadout to SquadInstances
@@ -134,20 +137,24 @@ public static class BattleDebugCreator
 
     public static BattleHeroData CreateRandomMockBattleHero(int minSpawnId, int maxSpawnId, List<string> validSquadIDs)
     {
-        List<string> validClassIDs = new List<string> { "SwordAndShield", "TwoHandedSword", "Bow", "Spear" };
-        string randomHeroName = $"Hero_{UnityEngine.Random.Range(1000, 9999)}";
-        string randomClassID = validClassIDs[UnityEngine.Random.Range(0, validClassIDs.Count)];
-        int randomLevel = UnityEngine.Random.Range(1, 10);
+        HeroData poolHero = TestHeroPool.GetRandom();
+
+        string heroName = poolHero != null ? poolHero.heroName : $"Hero_{UnityEngine.Random.Range(1000, 9999)}";
+        string classID  = poolHero != null ? poolHero.classId  : "SwordAndShield";
+        int    level    = UnityEngine.Random.Range(1, 10);
 
         GenerateRandomSquadInstances(validSquadIDs, out List<SquadInstanceData> randomSquads);
 
         BattleHeroData battleHero = new BattleHeroData
         {
-            heroName = randomHeroName,
-            classID = randomClassID,
-            level = randomLevel,
+            heroName      = heroName,
+            classID       = classID,
+            level         = level,
             squadInstances = new List<SquadInstanceData>(randomSquads),
-            spawnPointId = UnityEngine.Random.Range(minSpawnId, maxSpawnId + 1).ToString()
+            spawnPointId  = UnityEngine.Random.Range(minSpawnId, maxSpawnId + 1).ToString(),
+            avatar        = poolHero?.avatar    ?? new AvatarParts(),
+            equipment     = poolHero?.equipment ?? new Equipment(),
+            gender        = poolHero?.gender    ?? "Male"
         };
 
         return battleHero;

@@ -1,0 +1,1943 @@
+{
+    "heroes": [
+        {
+            "classId": "Bow",
+            "heroName": "Hero_1",
+            "gender": "Male",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "5c6c78f9-287c-4797-9f84-a96a27de384b",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "ca9357f6-ab8a-4a3a-b69f-4c301c49b693",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "6390686a-d0bf-4a55-8ab8-64e35d56f60b",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaBBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "4e1e734f-d5fb-4391-88a3-861df960d92c",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 9
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 15
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 5
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 16
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 13
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "5bb3795e-d9f7-4cfc-b3e5-eb910693ec7f",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 15
+                        },
+                        {
+                            "name": "Health",
+                            "value": 95
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 5
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 4
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "e4db2fb5-d217-4d09-a753-1bb6592101cd",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 15
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "Health",
+                            "value": 82
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 7
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "26a83c07-77e0-4865-a742-53bb6fcbdba9",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 12
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "Health",
+                            "value": 82
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 7
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 6
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "26b189d7-bf44-40f7-a448-a8ac97cd6467",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 15
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "Health",
+                            "value": 59
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 4
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_00",
+                "hairId": "hair_01",
+                "beardId": "facialhair_01",
+                "eyebrowId": "eyebrow_01"
+            }
+        },
+        {
+            "classId": "TwoHandedSword",
+            "heroName": "Hero_2",
+            "gender": "Female",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "a704d742-0654-4f15-9919-fc556d2b68e8",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "d8135192-3fb6-4b16-a7ce-fae3d287f8b4",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "8c79bf7f-6031-4ab1-9d15-6f1f09ca1c35",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaS2HBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "fbe08e57-ff2c-43d1-bebb-06bc550f0d19",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 10
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 15
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 17
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 6
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 4
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 20
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 14
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "62a3e1c8-65d9-4426-81ba-42031d2ccd25",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 8
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "Health",
+                            "value": 99
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 6
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 7
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "0932086f-8bf5-4538-aea9-1fc19525f117",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 18
+                        },
+                        {
+                            "name": "Health",
+                            "value": 87
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "5f8dc71c-40e4-4b61-bf7f-d0898777e576",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 9
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "Health",
+                            "value": 62
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 5
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 4
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "300ef6aa-1eb4-409d-a211-0d805edf7384",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 12
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 20
+                        },
+                        {
+                            "name": "Health",
+                            "value": 99
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 5
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_00",
+                "hairId": "hair_01",
+                "beardId": "",
+                "eyebrowId": "eyebrow_01"
+            }
+        },
+        {
+            "classId": "SwordAndShield",
+            "heroName": "Hero_3",
+            "gender": "Male",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "05d7a14d-58ce-4498-9904-4b3427278ad0",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "09d36314-1fdf-4f7a-a6cd-ee825b4e7fe4",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "cfda9b07-7955-466c-b30a-c5513f2910d8",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaS&SBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "7bd5137f-9cbc-4205-b34c-f9e35988ca11",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 11
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 18
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 12
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 6
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 6
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 14
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 18
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "b60e15ef-fe3e-4536-b3f7-dfc44a65cf48",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 8
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 19
+                        },
+                        {
+                            "name": "Health",
+                            "value": 83
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "d9922594-60a2-415b-9cf3-db795d2300c3",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "Health",
+                            "value": 74
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 8
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "f2ff5fc3-2a24-47c8-94f2-4f171ef3c459",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 9
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 10
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 19
+                        },
+                        {
+                            "name": "Health",
+                            "value": 56
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 6
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "aee585e1-c5a8-48a6-8f59-88cb37317fae",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 20
+                        },
+                        {
+                            "name": "Health",
+                            "value": 58
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 4
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_04",
+                "hairId": "hair_09",
+                "beardId": "facialhair_15",
+                "eyebrowId": "eyebrow_01"
+            }
+        },
+        {
+            "classId": "TwoHandedSword",
+            "heroName": "Hero_5",
+            "gender": "Male",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "b3103672-1e98-49b7-ba70-30f3121598b5",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "152577c5-0c91-4fa7-8a0a-569e6414120a",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "1736501c-01b6-4382-9dd5-b807329f464b",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaS2HBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "9d862b98-0a30-4615-bd05-7aa687ddf34c",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 10
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 13
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 2
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 8
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 11
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 10
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "c4c36da2-3753-426f-a4d2-ab05413feb36",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 15
+                        },
+                        {
+                            "name": "Health",
+                            "value": 83
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 9
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 8
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "f560be82-fd9c-4143-9db5-0cb1929933fd",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 19
+                        },
+                        {
+                            "name": "Health",
+                            "value": 81
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 5
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 3
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "750f0cf8-5950-4d52-82b7-f0c43c00a44b",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 10
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "Health",
+                            "value": 69
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 9
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 8
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "6930346b-19cb-4d5a-8396-f7cf848b2084",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 12
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 12
+                        },
+                        {
+                            "name": "Health",
+                            "value": 79
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 5
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 6
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_00",
+                "hairId": "hair_02",
+                "beardId": "facialhair_16",
+                "eyebrowId": "eyebrow_01"
+            }
+        },
+        {
+            "classId": "Spear",
+            "heroName": "Hero_4",
+            "gender": "Female",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "b3bcfe4b-7156-4bc8-82d4-fbae974cfe56",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "2ce87313-8656-4236-8c26-3b1c9b32eaf9",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "96fe8d82-3df5-49e1-b6f6-77bc51661790",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaSBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "0a371068-22e9-4d47-babc-806d19efadcb",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 15
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 11
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 16
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 2
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 2
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 19
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 10
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "31f4c5c5-2b6f-4761-96b0-3645310280b3",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 18
+                        },
+                        {
+                            "name": "Health",
+                            "value": 89
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 9
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 3
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "e71732e5-f1fb-4f2a-a83c-f0efe27e438c",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "Health",
+                            "value": 65
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "cc7c477e-a3aa-44db-ad63-138d4f3730df",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 10
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 19
+                        },
+                        {
+                            "name": "Health",
+                            "value": 81
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 7
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootMADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "2822ad24-466d-4daa-83d6-881a7dad15af",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 10
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "Health",
+                            "value": 87
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 8
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 8
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_00",
+                "hairId": "hair_19",
+                "beardId": "",
+                "eyebrowId": "eyebrow_03"
+            }
+        },
+        {
+            "classId": "Bow",
+            "heroName": "Hero_6",
+            "gender": "Male",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "3b99e2e4-1dc7-4e89-97d6-4647eecebc94",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "f48f085d-d03e-41ea-8d7d-ea7d09f1722d",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "49409575-e540-4bd9-87c0-51b37c14f581",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaBBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "c720c807-0e50-43a3-ae52-72d563574765",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 15
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 12
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 7
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 2
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 5
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 10
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 17
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "200a93d4-a811-4c0e-a29f-234f02da15e9",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 10
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "Health",
+                            "value": 53
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 5
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 5
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "a57579be-adea-4f8a-b59a-5ba192c2731e",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 18
+                        },
+                        {
+                            "name": "Health",
+                            "value": 62
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 7
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 9
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "9b2101d0-ff16-43d7-81de-c8763abfba0c",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 12
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 19
+                        },
+                        {
+                            "name": "Health",
+                            "value": 50
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 6
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 4
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootLADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "ba8743ce-fa13-4e08-98e8-2a79a43424f8",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 8
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 13
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "Health",
+                            "value": 73
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 9
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 7
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_00",
+                "hairId": "hair_21",
+                "beardId": "facialhair_04",
+                "eyebrowId": "eyebrow_01"
+            }
+        },
+        {
+            "classId": "SwordAndShield",
+            "heroName": "Hero_7",
+            "gender": "Female",
+            "level": 1,
+            "currentXP": 0,
+            "attributePoints": 0,
+            "perkPoints": 0,
+            "bronze": 500,
+            "silver": 0,
+            "gold": 0,
+            "strength": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "vitality": 0,
+            "unlockedPerks": [],
+            "availableSquads": [
+                "sqd01",
+                "arc01",
+                "spm01"
+            ],
+            "loadouts": [
+                {
+                    "name": "Default",
+                    "squadInstanceIDs": [],
+                    "perkIDs": [],
+                    "totalLeadership": 0,
+                    "isActive": true
+                }
+            ],
+            "squadProgress": [
+                {
+                    "id": "17b58bd5-8984-469a-88e0-7c3394f696a5",
+                    "baseSquadID": "sqd01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "1b884714-7ca1-40c7-b887-119f3d869e4d",
+                    "baseSquadID": "arc01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 12
+                },
+                {
+                    "id": "69f3463d-469a-45cb-b64b-689a0ec72c91",
+                    "baseSquadID": "spm01",
+                    "level": 1,
+                    "experience": 0,
+                    "unlockedAbilities": [],
+                    "permittedFormationIndexes": [
+                        0,
+                        1,
+                        2
+                    ],
+                    "selectedFormationIndex": 0,
+                    "unitsInjured": 0,
+                    "unitsKilled": 0,
+                    "equipmentLost": 0,
+                    "unitsInSquad": 20
+                }
+            ],
+            "inventory": [],
+            "equipment": {
+                "weapon": {
+                    "itemId": "WeaS&SBasic",
+                    "itemType": 1,
+                    "quantity": 1,
+                    "price": 30,
+                    "slotIndex": -1,
+                    "instanceId": "890e51d4-db50-43eb-8a05-b23a78b9fb43",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDamage",
+                            "value": 8
+                        },
+                        {
+                            "name": "SlashingDamage",
+                            "value": 17
+                        },
+                        {
+                            "name": "BluntDamage",
+                            "value": 15
+                        },
+                        {
+                            "name": "PiercingPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "SlashingPenetration",
+                            "value": 4
+                        },
+                        {
+                            "name": "BluntPenetration",
+                            "value": 3
+                        },
+                        {
+                            "name": "Strength",
+                            "value": 14
+                        },
+                        {
+                            "name": "Dexterity",
+                            "value": 11
+                        }
+                    ]
+                },
+                "helmet": {
+                    "itemId": "",
+                    "itemType": 0,
+                    "quantity": 1,
+                    "price": 0,
+                    "slotIndex": -1,
+                    "instanceId": "",
+                    "serializedStats": []
+                },
+                "torso": {
+                    "itemId": "TorHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "522739e7-04cf-4baf-84c5-5790e17f0689",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 11
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 12
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "Health",
+                            "value": 87
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 6
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 3
+                        }
+                    ]
+                },
+                "gloves": {
+                    "itemId": "GloHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "35802385-040a-45ce-8e07-a8eda77572e7",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "Health",
+                            "value": 66
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 9
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 7
+                        }
+                    ]
+                },
+                "pants": {
+                    "itemId": "PanHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "98b039cc-bff5-4f72-adb3-2b476eb0ad4c",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 14
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 17
+                        },
+                        {
+                            "name": "Health",
+                            "value": 67
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 7
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 5
+                        }
+                    ]
+                },
+                "boots": {
+                    "itemId": "BootHADef",
+                    "itemType": 2,
+                    "quantity": 1,
+                    "price": 24,
+                    "slotIndex": -1,
+                    "instanceId": "9ad93db8-821f-4ef4-acd6-c8bed0b87ee4",
+                    "serializedStats": [
+                        {
+                            "name": "PiercingDefense",
+                            "value": 10
+                        },
+                        {
+                            "name": "SlashingDefense",
+                            "value": 16
+                        },
+                        {
+                            "name": "BluntDefense",
+                            "value": 15
+                        },
+                        {
+                            "name": "Health",
+                            "value": 73
+                        },
+                        {
+                            "name": "Armor",
+                            "value": 6
+                        },
+                        {
+                            "name": "Vitality",
+                            "value": 6
+                        }
+                    ]
+                }
+            },
+            "avatar": {
+                "headId": "head_00",
+                "hairId": "hair_04",
+                "beardId": "",
+                "eyebrowId": "eyebrow_01"
+            }
+        }
+    ]
+}

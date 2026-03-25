@@ -215,7 +215,8 @@ namespace ConquestTactics.Visual
             {
                 _heroQuery = _entityManager.CreateEntityQuery(
                     typeof(HeroInputComponent),
-                    typeof(LocalTransform)
+                    typeof(LocalTransform),
+                    typeof(IsLocalPlayer)
                 );
                 if (_enableDebugLogs)
                     Debug.Log("[EntityVisualSync] Referencias ECS inicializadas correctamente");

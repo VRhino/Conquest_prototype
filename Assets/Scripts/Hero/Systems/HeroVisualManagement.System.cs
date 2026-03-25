@@ -107,7 +107,7 @@ public partial class HeroVisualManagementSystem : SystemBase
         if (isLocalPlayer)
             visualInstance.tag = GameTags.Player;
 
-        // Solo aplicar personalización de avatar al héroe local
+        // Aplicar personalización de avatar
         if (isLocalPlayer)
         {
             try
@@ -117,6 +117,26 @@ public partial class HeroVisualManagementSystem : SystemBase
             catch (System.Exception ex)
             {
                 Debug.LogError($"[HeroVisualManagementSystem] Error applying visual customization: {ex.Message}\n{ex.StackTrace}");
+            }
+        }
+        else
+        {
+            // Héroes remotos no deben leer input local — deshabilitar el adaptador de animación
+            var animAdapter = visualInstance.GetComponentInChildren<ConquestTactics.Animation.EcsAnimationInputAdapter>(true);
+            if (animAdapter != null) animAdapter.enabled = false;
+
+            // Aplicar partes visuales del héroe remoto si hay datos de apariencia disponibles
+            if (EntityManager.HasComponent<HeroAppearanceComponent>(entity))
+            {
+                var appearance = EntityManager.GetComponentObject<HeroAppearanceComponent>(entity);
+                try
+                {
+                    ApplyHeroVisualCustomization(visualInstance, appearance);
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[HeroVisualManagementSystem] Error applying remote hero visual: {ex.Message}\n{ex.StackTrace}");
+                }
             }
         }
 
@@ -142,55 +162,73 @@ public partial class HeroVisualManagementSystem : SystemBase
     }
 
     /// <summary>
-    /// Aplica la personalización visual del HeroData seleccionado al dummy visual instanciado.
+    /// Aplica la personalización visual al dummy visual instanciado.
+    /// Si <paramref name="remoteAppearance"/> es null, usa el héroe local (PlayerSessionService.SelectedHero).
     /// </summary>
-    /// <param name="visualInstance">GameObject visual del héroe</param>
-    private void ApplyHeroVisualCustomization(GameObject visualInstance)
+    private void ApplyHeroVisualCustomization(GameObject visualInstance, HeroAppearanceComponent remoteAppearance = null)
     {
-        var heroData = PlayerSessionService.SelectedHero;
-        if (heroData == null)
+        AvatarParts avatar;
+        Equipment   equipment;
+        string      gender;
+
+        if (remoteAppearance != null)
         {
-            return;
+            avatar    = remoteAppearance.avatar;
+            equipment = remoteAppearance.equipment;
+            gender    = remoteAppearance.gender;
         }
+        else
+        {
+            var heroData = PlayerSessionService.SelectedHero;
+            if (heroData == null) return;
+            avatar    = heroData.avatar;
+            equipment = heroData.equipment;
+            gender    = heroData.gender;
+        }
+
+        if (avatar == null) return;
+
         var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
-        
-        if (avatarPartDatabase == null)
-        {
-            return;
-        }
+        if (avatarPartDatabase == null) return;
 
         // Asegurar que ItemService esté inicializado
         ItemService.Initialize();
 
         // 1) Aplicar partes base visuales
         var baseVisualPartIds = new List<string>();
-        if (!string.IsNullOrEmpty(heroData.avatar.headId)) baseVisualPartIds.Add(heroData.avatar.headId);
-        if (!string.IsNullOrEmpty(heroData.avatar.hairId)) baseVisualPartIds.Add(heroData.avatar.hairId);
-        if (!string.IsNullOrEmpty(heroData.avatar.beardId)) baseVisualPartIds.Add(heroData.avatar.beardId);
-        if (!string.IsNullOrEmpty(heroData.avatar.eyebrowId)) baseVisualPartIds.Add(heroData.avatar.eyebrowId);
+        if (!string.IsNullOrEmpty(avatar.headId))    baseVisualPartIds.Add(avatar.headId);
+        if (!string.IsNullOrEmpty(avatar.hairId))    baseVisualPartIds.Add(avatar.hairId);
+        if (!string.IsNullOrEmpty(avatar.beardId))   baseVisualPartIds.Add(avatar.beardId);
+        if (!string.IsNullOrEmpty(avatar.eyebrowId)) baseVisualPartIds.Add(avatar.eyebrowId);
+
+        var genderEnum = gender == "Male" ? Gender.Male : Gender.Female;
 
         Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(
             visualInstance.transform,
             avatarPartDatabase,
             baseVisualPartIds,
-            heroData.gender == "Male" ? Gender.Male : Gender.Female
+            genderEnum
         );
 
         // 2) Aplicar equipo funcional
-        var equipmentIds = heroData.GetEquipment();
-        foreach (var itemId in equipmentIds)
+        if (equipment != null)
         {
-            if (!string.IsNullOrEmpty(itemId))
+            var tempHero = new HeroData { gender = gender, equipment = equipment };
+            var equipmentIds = tempHero.GetEquipment();
+            foreach (var itemId in equipmentIds)
             {
-                var itemData = ItemService.GetItemById(itemId);
-                if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
+                if (!string.IsNullOrEmpty(itemId))
                 {
-                    Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(
-                        visualInstance.transform,
-                        avatarPartDatabase,
-                        itemData.visualPartId,
-                        heroData.gender == "Male" ? Gender.Male : Gender.Female
-                    );
+                    var itemData = ItemService.GetItemById(itemId);
+                    if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
+                    {
+                        Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(
+                            visualInstance.transform,
+                            avatarPartDatabase,
+                            itemData.visualPartId,
+                            genderEnum
+                        );
+                    }
                 }
             }
         }

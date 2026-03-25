@@ -21,4 +21,13 @@ public class BattleHeroData
     public int level = 1;
     /// <summary>Spawn point ID where the hero will enter the battle.</summary>
     public string spawnPointId = string.Empty;
+
+    /// <summary>Avatar part IDs for visual customization.</summary>
+    public AvatarParts avatar = new();
+
+    /// <summary>Equipped items for visual customization.</summary>
+    public Equipment equipment = new();
+
+    /// <summary>Gender used to select correct avatar assets.</summary>
+    public string gender = "Male";
 }

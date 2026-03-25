@@ -567,6 +567,14 @@ public class BattleSceneController : MonoBehaviour
             squadQuery.Dispose();
         }
 
+        // Adjuntar datos visuales para que HeroVisualManagementSystem aplique partes al héroe remoto
+        em.AddComponentObject(heroEntity, new HeroAppearanceComponent
+        {
+            avatar    = heroData.avatar    ?? new AvatarParts(),
+            equipment = heroData.equipment ?? new Equipment(),
+            gender    = string.IsNullOrEmpty(heroData.gender) ? "Male" : heroData.gender
+        });
+
         Debug.Log($"[BattleSceneController] Héroe remoto '{heroData.heroName}' spawneado en {spawnPosition} (team={teamID})");
         return true;
     }

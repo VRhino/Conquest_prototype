@@ -2,7 +2,7 @@ Shader "Custom/ZoneGlow"
 {
     // Columna de luz vertical para zonas de captura.
     // Aplicar a un cilindro hijo del ZoneIndicator GO.
-    // ZTest Off: visible a través de irregularidades del terreno.
+    // ZTest LEqual: respeta el depth buffer; no atraviesa paredes ni geometría sólida.
     // Blend One One (additive): se suma al color de la escena como luz.
     //
     // Usa object-space Y para el falloff: NO depende de MaterialPropertyBlock
@@ -26,7 +26,7 @@ Shader "Custom/ZoneGlow"
 
         Blend One One       // Additive: el glow se suma al color de la escena
         ZWrite Off
-        ZTest Off           // Siempre visible, incluso a través del terreno
+        ZTest LEqual        // Respeta el depth buffer; no atraviesa paredes
         Cull Front          // Solo cara interior del cilindro
 
         Pass

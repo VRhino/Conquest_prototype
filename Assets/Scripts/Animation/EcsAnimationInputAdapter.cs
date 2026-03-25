@@ -133,7 +133,10 @@ namespace ConquestTactics.Animation
             _entityManager = _world.EntityManager;
             
             // Crear query para encontrar entidades héroe
-            _heroQuery = _entityManager.CreateEntityQuery(typeof(HeroInputComponent));
+            _heroQuery = _entityManager.CreateEntityQuery(
+                typeof(HeroInputComponent),
+                typeof(IsLocalPlayer)
+            );
         }
         
         private void FindHeroEntity()
