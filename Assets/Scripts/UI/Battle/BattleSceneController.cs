@@ -527,9 +527,31 @@ public class BattleSceneController : MonoBehaviour
         if (em.HasComponent<HeroInputComponent>(heroEntity))
             em.RemoveComponent<HeroInputComponent>(heroEntity);
 
-        // Asignar team correcto
+        // Agregar componentes AI para comportamiento autónomo
+        em.AddComponent<HeroAITag>(heroEntity);
+        // Behaviors disponibles — solo 1 activo a la vez (IEnableableComponent)
+        em.AddComponent<RusherBehaviorActive>(heroEntity);
+        em.AddComponent<BalancedBehaviorActive>(heroEntity);
+
+        // Asignar behavior aleatoriamente (50% Rusher, 50% Balanced)
+        bool useRusher = UnityEngine.Random.value < 0.5f;
+        em.SetComponentEnabled<RusherBehaviorActive>(heroEntity, useRusher);
+        em.SetComponentEnabled<BalancedBehaviorActive>(heroEntity, !useRusher);
+
+        em.AddComponentObject(heroEntity, new HeroAIBlackboard());
+        em.AddComponentData(heroEntity, new HeroAIDecision());
+
+        // Asegurar que HeroMoveIntent existe para el pipeline de movimiento/animación
+        if (!em.HasComponent<HeroMoveIntent>(heroEntity))
+            em.AddComponentData(heroEntity, new HeroMoveIntent());
+
+        // Asignar team y rol atacante/defensor
         var team = teamID == 1 ? Team.TeamA : Team.TeamB;
         em.SetComponentData(heroEntity, new TeamComponent { value = team });
+
+        // TeamA = atacantes (Balanced usa esta info para decidir push vs defend)
+        if (teamID == 1)
+            em.AddComponent<IsAttackerRole>(heroEntity);
 
         // Marcar como spawneado
         if (em.HasComponent<HeroSpawnComponent>(heroEntity))

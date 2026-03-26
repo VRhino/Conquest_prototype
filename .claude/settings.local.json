@@ -23,7 +23,8 @@
       "mcp__plugin_Notion_notion__notion-fetch",
       "Bash(python3:*)",
       "Bash(node:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(find /c/Users/VRINO/Desarrollo/Conquest_prototype -name *SquadFSMState* -o -name *UnitFormationState*)"
     ]
   },
   "hooks": {

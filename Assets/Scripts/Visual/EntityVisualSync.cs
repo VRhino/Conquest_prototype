@@ -3,6 +3,7 @@ using Unity.Transforms;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
+using ConquestTactics.Animation;
 
 namespace ConquestTactics.Visual
 {
@@ -45,6 +46,7 @@ namespace ConquestTactics.Visual
         private const float SYNC_INTERVAL = 0.016f;
         private CharacterController _characterController;
         private NavMeshAgent _navAgent;
+        private EcsAnimationInputAdapter _animAdapter;
         private bool _positionInitialized = false;
         private float _verticalVelocity = 0f;
         private const float GRAVITY = -9.81f;
@@ -60,7 +62,8 @@ namespace ConquestTactics.Visual
                 if (_enableDebugLogs)
                     Debug.Log("[EntityVisualSync] CharacterController habilitado para movimiento visual");
             }
-            _navAgent = GetComponent<NavMeshAgent>();
+            _navAgent     = GetComponent<NavMeshAgent>();
+            _animAdapter  = GetComponentInChildren<EcsAnimationInputAdapter>(true);
         }
 
         private void Start()
@@ -187,6 +190,11 @@ namespace ConquestTactics.Visual
                         if (_syncRotation)
                             ecsTransform.Rotation = transform.rotation;
                         _entityManager.SetComponentData(_heroEntity, ecsTransform);
+
+                        // Drive animations from NavMeshAgent velocity (replaces RemoteHeroAnimationDriver)
+                        if (_animAdapter != null)
+                            _animAdapter.DriveFromVelocity(_navAgent.velocity,
+                                _navAgent.speed > 0f ? _navAgent.speed : 1f);
                     }
                     else
                     {

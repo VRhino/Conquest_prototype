@@ -305,6 +305,35 @@ namespace ConquestTactics.Animation
         {
             FindHeroEntity();
         }
+
+        /// <summary>
+        /// Drives animation input from a NavMeshAgent velocity (used by remote AI heroes).
+        /// Called each frame by <see cref="ConquestTactics.Visual.EntityVisualSync"/> when the
+        /// NavMeshAgent is active, so SamplePlayerAnimationController receives valid values
+        /// without touching local player input.
+        /// </summary>
+        /// <param name="worldVelocity">NavMeshAgent.velocity in world space</param>
+        /// <param name="maxSpeed">NavMeshAgent.speed (used to normalize 0-1)</param>
+        public void DriveFromVelocity(Vector3 worldVelocity, float maxSpeed)
+        {
+            float speed  = worldVelocity.magnitude;
+            bool  moving = speed > _inputThreshold;
+            float normalized = maxSpeed > 0.001f ? Mathf.Clamp01(speed / maxSpeed) : 0f;
+
+            _moveComposite         = moving ? new Vector2(0f, normalized) : Vector2.zero;
+            _movementInputDetected = moving;
+
+            if (moving)
+            {
+                if (_movementInputDuration == 0f) _inputStartTime = Time.time;
+                _movementInputDuration = Time.time - _inputStartTime;
+            }
+            else
+            {
+                _movementInputDuration = 0f;
+                _inputStartTime        = 0f;
+            }
+        }
         
         /// <summary>
         /// Simula el evento de walk toggle (para testing o uso manual)

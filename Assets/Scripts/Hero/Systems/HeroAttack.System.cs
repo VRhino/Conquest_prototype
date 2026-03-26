@@ -12,6 +12,7 @@ using UnityEngine;
 /// <see cref="PendingDamageEvent"/> is created on the hero.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(HeroAIExecutionSystem))]
 public partial class HeroAttackSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -36,6 +37,42 @@ public partial class HeroAttackSystem : SystemBase
             c.attackCooldown = math.max(0f, c.attackCooldown - deltaTime);
 
             if (input.ValueRO.IsAttackPressed && !c.isAttacking && c.attackCooldown <= 0f &&
+                !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= 15f)
+            {
+                c.isAttacking = true;
+                c.attackCooldown = 0.7f;
+                anim.ValueRW.triggerAttack = true;
+                stamina.ValueRW.currentStamina -= 15f;
+
+                if (SystemAPI.Exists(c.activeWeapon) &&
+                    SystemAPI.HasComponent<WeaponColliderComponent>(c.activeWeapon))
+                {
+                    var weapon = SystemAPI.GetComponentRW<WeaponColliderComponent>(c.activeWeapon);
+                    weapon.ValueRW.owner = entity;
+                    weapon.ValueRW.isActive = true;
+                }
+            }
+
+            combat.ValueRW = c;
+        }
+
+        // AI hero attack processing — reads HeroAIDecision.shouldAttack instead of player input
+        foreach (var (decision, combat, stamina, life, anim, entity) in
+                 SystemAPI.Query<RefRO<HeroAIDecision>,
+                                 RefRW<HeroCombatComponent>,
+                                 RefRW<StaminaComponent>,
+                                 RefRO<HeroLifeComponent>,
+                                 RefRW<HeroAnimationComponent>>()
+                          .WithAll<HeroAITag>()
+                          .WithEntityAccess())
+        {
+            if (!life.ValueRO.isAlive)
+                continue;
+
+            var c = combat.ValueRW;
+            c.attackCooldown = math.max(0f, c.attackCooldown - deltaTime);
+
+            if (decision.ValueRO.shouldAttack && !c.isAttacking && c.attackCooldown <= 0f &&
                 !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= 15f)
             {
                 c.isAttacking = true;

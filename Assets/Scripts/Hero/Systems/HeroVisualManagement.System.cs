@@ -95,8 +95,9 @@ public partial class HeroVisualManagementSystem : SystemBase
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
 
-        // Re-enable CharacterController after position is set
-        if (cc != null) cc.enabled = true;
+        // Re-enable CharacterController only for local hero.
+        // Remote heroes use NavMeshAgent — keeping CC active would conflict with the agent.
+        if (cc != null && isLocalPlayer) cc.enabled = true;
 
         // Asignar layer "Heroes" para culling de distancia nativo
         int heroesLayer = LayerMask.NameToLayer("Heroes");
@@ -122,6 +123,7 @@ public partial class HeroVisualManagementSystem : SystemBase
         else
         {
             // Héroes remotos no deben leer input local — deshabilitar el adaptador de animación
+            // (EntityVisualSync lo pilota desde la velocidad del NavMeshAgent)
             var animAdapter = visualInstance.GetComponentInChildren<ConquestTactics.Animation.EcsAnimationInputAdapter>(true);
             if (animAdapter != null) animAdapter.enabled = false;
 
@@ -147,11 +149,18 @@ public partial class HeroVisualManagementSystem : SystemBase
         if (!isLocalPlayer && pendingNavAgents != null)
         {
             var agent = visualInstance.GetComponent<NavMeshAgent>();
-            if (agent != null)
+            if (agent == null)
             {
-                agent.Warp(visualInstance.transform.position); // fuerza posición al spawn, evita warp al NavMesh más cercano
-                pendingNavAgents.Add((entity, agent));
+                Debug.LogWarning("[HeroVisualManagementSystem] NavMeshAgent missing from hero visual prefab — adding programmatically. Add NavMeshAgent to the prefab to suppress this warning.");
+                agent = visualInstance.AddComponent<NavMeshAgent>();
+                agent.stoppingDistance = 0.5f;
+                agent.autoBraking     = true;
+                agent.angularSpeed    = 360f;
+                agent.acceleration    = 12f;
+                // speed is overridden each frame by HeroAIExecutionSystem using stats.baseSpeed
             }
+            agent.Warp(visualInstance.transform.position); // fuerza posición al spawn, evita warp al NavMesh más cercano
+            pendingNavAgents.Add((entity, agent));
         }
 
         // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)
