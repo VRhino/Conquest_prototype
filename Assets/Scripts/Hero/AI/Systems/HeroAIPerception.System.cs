@@ -2,6 +2,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 
+
 /// <summary>
 /// Per-hero perception layer. Reads the centralized <see cref="TeamWorldState"/>
 /// and computes per-hero derived values (distances, "am I inside a zone?", nearest enemy, etc.)
@@ -18,6 +19,8 @@ using Unity.Transforms;
 [UpdateBefore(typeof(HeroAIRusherSystem))]
 public partial class HeroAIPerceptionSystem : SystemBase
 {
+    private const float UnderAttackRangeSq = 20f * 20f;
+
     protected override void OnUpdate()
     {
         // Tick-gate: only update every 5 frames for performance
@@ -97,6 +100,11 @@ public partial class HeroAIPerceptionSystem : SystemBase
                     bb.nearestEnemyPosition   = enemy.position;
                 }
             }
+
+            // ── Under attack ──────────────────────────────────────────
+            bb.isUnderAttack = (bb.nearestEnemyHero != Entity.Null
+                                && bb.nearestEnemyDistanceSq <= UnderAttackRangeSq)
+                               || bb.squadIsInCombat;
 
             // ── Zone-derived data ──────────────────────────────────────
             bb.isInsideAnyZone  = false;

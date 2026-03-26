@@ -10,7 +10,7 @@ using Unity.Transforms;
 ///
 /// ATTACKER priorities:
 ///   1. Dead → Idle
-///   2. HP &lt; 30% → Retreat
+///   2. Under attack (enemy &lt; 20m OR squad in combat) → AttackTarget + squad Attack
 ///   3. Inside enemy/neutral zone: enemy &lt; 10m → AttackTarget; else → CaptureZone
 ///   4. Enemy &lt; 15m + HP advantage → AttackTarget (clear blockers)
 ///   5. bestObjectiveZone → sprint toward it
@@ -18,7 +18,7 @@ using Unity.Transforms;
 ///
 /// DEFENDER priorities:
 ///   1. Dead → Idle
-///   2. HP &lt; 30% → Retreat
+///   2. Under attack (enemy &lt; 20m OR squad in combat) → AttackTarget + squad Attack
 ///   3. Own zone under attack (threatZone) → DefendZone (sprint)
 ///   4. Inside own zone + enemy &lt; 12m → AttackTarget
 ///   5. Enemy &lt; 15m + HP advantage → AttackTarget
@@ -32,7 +32,6 @@ using Unity.Transforms;
 [UpdateBefore(typeof(HeroAIExecutionSystem))]
 public partial class HeroAIBalancedSystem : SystemBase
 {
-    private const float LowHealthThreshold   = 0.30f;
     private const float EngageRangeSq        = 15f * 15f;   // general engage distance
     private const float DefendZoneRangeSq    = 12f * 12f;   // defender attacks enemy while in own zone
     private const float CaptureEngageRangeSq = 10f * 10f;   // attacker fights while standing on zone
@@ -64,13 +63,15 @@ public partial class HeroAIBalancedSystem : SystemBase
                 continue;
             }
 
-            // 2. Low health → retreat
-            if (bb.selfHealthPercent < LowHealthThreshold && bb.spawnPositionCached)
+            // 2. Under attack (enemy within 20m OR squad in combat) → commit to combat, no running
+            if (bb.isUnderAttack && bb.nearestEnemyHero != Entity.Null)
             {
-                dec.action           = AIActionType.Retreat;
-                dec.targetPosition   = bb.spawnPosition;
-                dec.shouldSprint     = true;
-                dec.squadOrder       = SquadOrderType.FollowHero;
+                dec.action           = AIActionType.AttackTarget;
+                dec.targetEntity     = bb.nearestEnemyHero;
+                dec.targetPosition   = bb.nearestEnemyPosition;
+                dec.shouldSprint     = false;
+                dec.shouldAttack     = true;
+                dec.squadOrder       = SquadOrderType.Attack;
                 dec.hasNewSquadOrder = true;
                 SystemAPI.SetComponent(entity, dec);
                 continue;

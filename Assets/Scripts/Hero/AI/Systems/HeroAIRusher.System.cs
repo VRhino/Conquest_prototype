@@ -16,7 +16,7 @@ using Unity.Transforms;
 [UpdateBefore(typeof(HeroAIExecutionSystem))]
 public partial class HeroAIRusherSystem : SystemBase
 {
-    private const float BlockingRangeSq = 10f * 10f;   // attack enemy if < 10m
+    private const float BlockingRangeSq = 10f * 10f;   // fallback: attack enemy if < 10m (already under attack)
 
     protected override void OnUpdate()
     {
@@ -41,9 +41,23 @@ public partial class HeroAIRusherSystem : SystemBase
                 continue;
             }
 
+            // 2. Under attack (enemy within 20m OR squad in combat) → commit to combat, no running
+            if (bb.isUnderAttack && bb.nearestEnemyHero != Entity.Null)
+            {
+                dec.action           = AIActionType.AttackTarget;
+                dec.targetEntity     = bb.nearestEnemyHero;
+                dec.targetPosition   = bb.nearestEnemyPosition;
+                dec.shouldSprint     = false;
+                dec.shouldAttack     = true;
+                dec.squadOrder       = SquadOrderType.Attack;
+                dec.hasNewSquadOrder = true;
+                SystemAPI.SetComponent(entity, dec);
+                continue;
+            }
+
             int selfTeamInt = bb.selfIsAttacker ? 1 : 2;
 
-            // 2. Inside an enemy/neutral zone → stay and hold it
+            // 3. Inside an enemy/neutral zone → stay and hold it
             if (bb.isInsideAnyZone && bb.zoneImInside != Entity.Null
                 && bb.zoneImInsideInfo.teamOwner != selfTeamInt)
             {
@@ -58,7 +72,7 @@ public partial class HeroAIRusherSystem : SystemBase
                 continue;
             }
 
-            // 3. Enemy hero close enough to be blocking → attack
+            // 4. Enemy hero close enough to be blocking → attack
             if (bb.nearestEnemyHero != Entity.Null && bb.nearestEnemyDistanceSq <= BlockingRangeSq)
             {
                 dec.action           = AIActionType.AttackTarget;
@@ -72,7 +86,7 @@ public partial class HeroAIRusherSystem : SystemBase
                 continue;
             }
 
-            // 4. Rush to best objective zone
+            // 5. Rush to best objective zone
             if (bb.bestObjectiveZone != Entity.Null)
             {
                 dec.action           = AIActionType.CaptureZone;
@@ -85,7 +99,7 @@ public partial class HeroAIRusherSystem : SystemBase
                 continue;
             }
 
-            // 5. No objectives left → idle
+            // 6. No objectives left → idle
             dec.action = AIActionType.Idle;
             SystemAPI.SetComponent(entity, dec);
         }
