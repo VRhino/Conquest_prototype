@@ -96,13 +96,13 @@ public static class HeroAttributeValidator
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <returns>ID único del héroe</returns>
-    public static string GetHeroId(HeroData heroData)
+    public static string GetHeroId(IHeroIdentity hero)
     {
-        if (heroData == null)
+        if (hero == null)
             return string.Empty;
 
         // Los nombres de héroe son únicos globalmente, no necesitamos ID compuesto
-        return heroData.heroName;
+        return hero.HeroName;
     }
 
     /// <summary>

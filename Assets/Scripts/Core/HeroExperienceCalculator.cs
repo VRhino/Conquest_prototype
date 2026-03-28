@@ -118,23 +118,23 @@ public static class HeroExperienceCalculator
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <returns>Estructura con información detallada del progreso</returns>
-    public static ExperienceInfo GetExperienceInfo(HeroData heroData)
+    public static ExperienceInfo GetExperienceInfo(IHeroProgression progression)
     {
-        if (heroData == null)
+        if (progression == null)
         {
             Debug.LogWarning("[HeroExperienceCalculator] HeroData es null.");
             return new ExperienceInfo();
         }
 
-        int currentLevel = GetCurrentLevel(heroData.currentXP);
+        int currentLevel = GetCurrentLevel(progression.CurrentXP);
         int xpForNextLevel = GetXPForNextLevel(currentLevel);
-        float progress = GetLevelProgress(heroData.currentXP, currentLevel);
+        float progress = GetLevelProgress(progression.CurrentXP, currentLevel);
         int xpAtCurrentLevel = GetTotalXPForLevel(currentLevel);
-        int currentLevelXP = heroData.currentXP - xpAtCurrentLevel;
+        int currentLevelXP = progression.CurrentXP - xpAtCurrentLevel;
 
         return new ExperienceInfo
         {
-            currentXP = heroData.currentXP,
+            currentXP = progression.CurrentXP,
             currentLevel = currentLevel,
             xpInCurrentLevel = currentLevelXP,
             xpNeededForNextLevel = xpForNextLevel,

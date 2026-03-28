@@ -10,6 +10,7 @@ using UnityEngine.Events;
 public static class InventoryEventService
 {
     private static HeroData _currentHero;
+    private static Action _saveAction;
 
     // Eventos del inventario
     public static event Action OnInventoryChanged;
@@ -25,9 +26,10 @@ public static class InventoryEventService
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
     /// </summary>
-    public static void Initialize(HeroData hero)
+    public static void Initialize(HeroData hero, Action saveAction = null)
     {
         _currentHero = hero ?? throw new ArgumentNullException(nameof(hero));
+        _saveAction  = saveAction ?? _saveAction; // preserve existing callback if none provided
         LogInfo($"Event service initialized for hero: {_currentHero.heroName}");
     }
 
@@ -133,18 +135,16 @@ public static class InventoryEventService
             return;
         }
 
+        if (_saveAction == null)
+        {
+            LogWarning("Cannot save - no save action configured (pass saveAction to Initialize)");
+            return;
+        }
+
         try
         {
-            // Conectar con el sistema de guardado existente
-            if (PlayerSessionService.CurrentPlayer != null)
-            {
-                SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
-                LogInfo("Hero data auto-saved successfully");
-            }
-            else
-            {
-                LogWarning("Cannot save - no current player in session");
-            }
+            _saveAction.Invoke();
+            LogInfo("Hero data auto-saved successfully");
         }
         catch (Exception ex)
         {

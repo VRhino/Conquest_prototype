@@ -18,9 +18,9 @@ public static class HeroLeadershipCalculator
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <returns>Liderazgo total (base + equipment stats)</returns>
-    public static float CalculateLeadership(HeroData heroData)
+    public static float CalculateLeadership(IHeroInventory heroInventory)
     {
-        if (heroData?.equipment == null)
+        if (heroInventory?.Equipment == null)
         {
             Debug.LogWarning("[HeroLeadershipCalculator] HeroData o equipment es null, usando valor base.");
             return BASE_LEADERSHIP;
@@ -29,11 +29,11 @@ public static class HeroLeadershipCalculator
         float totalLeadership = BASE_LEADERSHIP;
 
         // Sumar liderazgo de todas las piezas de armadura equipadas
-        totalLeadership += GetLeadershipFromEquipmentSlot(heroData.equipment.helmet);
-        totalLeadership += GetLeadershipFromEquipmentSlot(heroData.equipment.torso);
-        totalLeadership += GetLeadershipFromEquipmentSlot(heroData.equipment.gloves);
-        totalLeadership += GetLeadershipFromEquipmentSlot(heroData.equipment.pants);
-        totalLeadership += GetLeadershipFromEquipmentSlot(heroData.equipment.boots);
+        totalLeadership += GetLeadershipFromEquipmentSlot(heroInventory.Equipment.helmet);
+        totalLeadership += GetLeadershipFromEquipmentSlot(heroInventory.Equipment.torso);
+        totalLeadership += GetLeadershipFromEquipmentSlot(heroInventory.Equipment.gloves);
+        totalLeadership += GetLeadershipFromEquipmentSlot(heroInventory.Equipment.pants);
+        totalLeadership += GetLeadershipFromEquipmentSlot(heroInventory.Equipment.boots);
 
         // Nota: Las armas NO proporcionan liderazgo según especificación del usuario
 

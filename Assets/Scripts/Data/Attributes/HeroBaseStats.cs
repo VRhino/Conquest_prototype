@@ -24,9 +24,9 @@ public struct HeroBaseStats
     /// </summary>
     /// <param name="heroData">Source hero data</param>
     /// <returns>Base stats structure</returns>
-    public static HeroBaseStats FromHeroData(HeroData heroData)
+    public static HeroBaseStats FromHeroData(IHeroProgression progression)
     {
-        if (heroData == null)
+        if (progression == null)
         {
             return new HeroBaseStats
             {
@@ -39,10 +39,10 @@ public struct HeroBaseStats
 
         return new HeroBaseStats
         {
-            baseStrength = heroData.strength,
-            baseDexterity = heroData.dexterity,
-            baseArmor = heroData.armor,
-            baseVitality = heroData.vitality
+            baseStrength = progression.Strength,
+            baseDexterity = progression.Dexterity,
+            baseArmor = progression.Armor,
+            baseVitality = progression.Vitality
         };
     }
 }

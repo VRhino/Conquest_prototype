@@ -65,9 +65,9 @@ public static class DataCacheService
     }
 
     // Helper method for generating hero keys
-    private static string GetHeroKey(HeroData heroData)
+    private static string GetHeroKey(IHeroIdentity hero)
     {
-        return string.IsNullOrEmpty(heroData.heroName) ? heroData.classId : heroData.heroName;
+        return string.IsNullOrEmpty(hero.HeroName) ? hero.ClassId : hero.HeroName;
     }
 
     /// <summary>
@@ -133,9 +133,9 @@ public static class DataCacheService
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <returns>Estructura con los stats base puros</returns>
-    public static HeroBaseStats GetBaseStats(HeroData heroData)
+    public static HeroBaseStats GetBaseStats(IHeroProgression progression)
     {
-        return HeroBaseStats.FromHeroData(heroData);
+        return HeroBaseStats.FromHeroData(progression);
     }
 
     /// <summary>
@@ -180,17 +180,17 @@ public static class DataCacheService
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>Valor base puro sin modificaciones</returns>
-    public static float GetPureBaseValue(HeroData heroData, string attributeName)
+    public static float GetPureBaseValue(IHeroProgression progression, string attributeName)
     {
-        if (heroData == null || string.IsNullOrEmpty(attributeName))
+        if (progression == null || string.IsNullOrEmpty(attributeName))
             return 0f;
 
         switch (attributeName.ToLower())
         {
-            case "strength": return heroData.strength;
-            case "dexterity": return heroData.dexterity;
-            case "armor": return heroData.armor;
-            case "vitality": return heroData.vitality;
+            case "strength": return progression.Strength;
+            case "dexterity": return progression.Dexterity;
+            case "armor": return progression.Armor;
+            case "vitality": return progression.Vitality;
             case "leadership": return BASE_LEADERSHIP_VALUE;
             default:
                 Debug.LogWarning($"[DataCacheService] Atributo no reconocido: {attributeName}");
@@ -204,9 +204,9 @@ public static class DataCacheService
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>Bonificación del equipamiento</returns>
-    public static float GetEquipmentBonusValue(HeroData heroData, string attributeName)
+    public static float GetEquipmentBonusValue(IHeroProgression progression, string attributeName)
     {
-        if (heroData == null || string.IsNullOrEmpty(attributeName))
+        if (progression == null || string.IsNullOrEmpty(attributeName))
             return 0f;
 
         var equipmentBonuses = GetEquipmentBonuses();
@@ -230,9 +230,9 @@ public static class DataCacheService
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>Base + Equipamiento</returns>
-    public static float GetBaseWithEquipment(HeroData heroData, string attributeName)
+    public static float GetBaseWithEquipment(IHeroProgression progression, string attributeName)
     {
-        return GetPureBaseValue(heroData, attributeName) + GetEquipmentBonusValue(heroData, attributeName);
+        return GetPureBaseValue(progression, attributeName) + GetEquipmentBonusValue(progression, attributeName);
     }
 
     /// <summary>
@@ -243,9 +243,9 @@ public static class DataCacheService
     /// <param name="attributeName">Nombre del atributo</param>
     /// <param name="temporaryMods">Modificaciones temporales</param>
     /// <returns>Base + Equipamiento + Temporales</returns>
-    public static float GetFinalCalculatedValue(HeroData heroData, string attributeName, EquipmentBonuses temporaryMods = default)
+    public static float GetFinalCalculatedValue(IHeroProgression progression, string attributeName, EquipmentBonuses temporaryMods = default)
     {
-        var baseWithEquipment = GetBaseWithEquipment(heroData, attributeName);
+        var baseWithEquipment = GetBaseWithEquipment(progression, attributeName);
         
         if (!temporaryMods.HasBonuses)
             return baseWithEquipment;
