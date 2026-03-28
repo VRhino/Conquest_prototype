@@ -10,6 +10,12 @@ using UnityEngine.AI;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class SquadNavigationSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var transformLookup = GetComponentLookup<LocalTransform>(true);

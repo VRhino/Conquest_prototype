@@ -19,6 +19,12 @@ public partial class SquadVisualManagementSystem : SystemBase
     private const string WeaponHitboxChildName = "WeaponHitbox";
     private static readonly int ShaderBaseColor = Shader.PropertyToID("_BaseColor");
 
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);

@@ -11,6 +11,12 @@ using UnityEngine;
 [UpdateAfter(typeof(FormationSystem))]
 public partial class GridFormationUpdateSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         // Actualizar posiciones target cuando las unidades cambien de grid slot

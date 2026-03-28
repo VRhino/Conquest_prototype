@@ -25,6 +25,7 @@ public partial class SquadControlSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         _mainCamera = Camera.main;
     }
 

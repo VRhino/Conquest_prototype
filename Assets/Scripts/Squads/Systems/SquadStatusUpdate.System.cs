@@ -9,6 +9,12 @@ using Unity.Collections;
 [UpdateAfter(typeof(DamageCalculationSystem))]
 public partial class SquadStatusUpdateSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);

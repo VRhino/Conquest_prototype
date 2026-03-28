@@ -18,6 +18,7 @@ public partial class DestinationMarkerSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         _ecbSystem = World.GetOrCreateSystemManaged<BeginSimulationEntityCommandBufferSystem>();
     }
 

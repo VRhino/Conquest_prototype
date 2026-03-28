@@ -12,6 +12,12 @@ using Unity.Collections;
 [UpdateAfter(typeof(GridFormationUpdateSystem))]
 public partial class UnitFollowFormationSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         Dependency.Complete();

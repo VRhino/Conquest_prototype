@@ -11,6 +11,12 @@ using Unity.Transforms;
 [UpdateBefore(typeof(SquadFSMSystem))]
 public partial class SquadAISystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);

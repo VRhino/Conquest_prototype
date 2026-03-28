@@ -15,6 +15,12 @@ using UnityEngine;
 [UpdateAfter(typeof(HeroAIExecutionSystem))]
 public partial class HeroAttackSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;

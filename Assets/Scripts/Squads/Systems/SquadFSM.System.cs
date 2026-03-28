@@ -10,6 +10,12 @@ using UnityEngine;
 [UpdateAfter(typeof(SquadOrderSystem))]
 public partial class SquadFSMSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;

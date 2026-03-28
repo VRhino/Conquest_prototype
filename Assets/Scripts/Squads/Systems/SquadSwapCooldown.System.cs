@@ -8,6 +8,12 @@ using Unity.Entities;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class SquadSwapCooldownSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;

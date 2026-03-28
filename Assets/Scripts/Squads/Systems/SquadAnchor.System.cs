@@ -20,6 +20,12 @@ using Unity.Transforms;
 [UpdateBefore(typeof(FormationSystem))]
 public partial class SquadAnchorSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ownerLookup    = GetComponentLookup<SquadOwnerComponent>(true);

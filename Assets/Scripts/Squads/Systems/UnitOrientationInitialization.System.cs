@@ -7,6 +7,12 @@ using Unity.Entities;
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class UnitOrientationInitializationSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);

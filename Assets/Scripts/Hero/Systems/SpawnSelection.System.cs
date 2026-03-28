@@ -9,6 +9,12 @@ using Unity.Entities;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class SpawnSelectionSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);

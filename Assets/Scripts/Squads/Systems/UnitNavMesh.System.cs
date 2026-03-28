@@ -45,6 +45,8 @@ public partial class UnitNavMeshSystem : SystemBase
 
     protected override void OnCreate()
     {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         _unitToOrder  = new NativeHashMap<Entity, SquadOrderType>(256, Allocator.Persistent);
         _unitToIntent = new NativeHashMap<Entity, TacticalIntent>(256, Allocator.Persistent);
     }

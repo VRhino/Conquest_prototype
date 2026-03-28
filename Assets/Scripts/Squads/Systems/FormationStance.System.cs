@@ -17,6 +17,11 @@ using Unity.Entities;
 [UpdateAfter(typeof(UnitFormationStateSystem))]
 public partial struct FormationStanceSystem : ISystem
 {
+    public void OnCreate(ref SystemState state)
+    {
+        state.RequireForUpdate<MatchStateComponent>();
+    }
+
     public void OnUpdate(ref SystemState state)
     {
         foreach (var (units, squadState) in

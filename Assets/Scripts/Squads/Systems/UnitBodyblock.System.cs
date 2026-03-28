@@ -51,6 +51,12 @@ public partial class UnitBodyblockSystem : SystemBase
     private readonly Dictionary<(int, int), List<int>>  _grid           = new();
     private          Vector3[]                          _offsets        = new Vector3[256];
 
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;

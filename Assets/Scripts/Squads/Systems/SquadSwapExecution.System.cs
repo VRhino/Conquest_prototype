@@ -12,6 +12,12 @@ using Unity.Transforms;
 [UpdateBefore(typeof(SquadSpawningSystem))]
 public partial class SquadSwapExecutionSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);

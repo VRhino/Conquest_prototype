@@ -17,6 +17,7 @@ public partial class SquadOrderSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         _ecbSystem = World.GetOrCreateSystemManaged<BeginSimulationEntityCommandBufferSystem>();
     }
 

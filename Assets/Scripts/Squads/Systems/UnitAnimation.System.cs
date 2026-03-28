@@ -16,6 +16,12 @@ using ConquestTactics.Animation;
 [UpdateAfter(typeof(SquadSpawningSystem))]
 public partial class UnitAnimationSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         // Delta time para calcular velocidad

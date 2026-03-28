@@ -8,6 +8,12 @@ using Unity.Transforms;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class HeroRespawnSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;

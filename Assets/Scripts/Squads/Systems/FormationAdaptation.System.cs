@@ -12,6 +12,12 @@ using UnityEngine;
 [UpdateAfter(typeof(SquadControlSystem))]
 public partial class FormationAdaptationSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);

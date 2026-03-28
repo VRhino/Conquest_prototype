@@ -12,6 +12,7 @@ public partial class SquadProgressionSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         RequireForUpdate<SquadProgressComponent>();
     }
 

@@ -7,6 +7,12 @@ using UnityEngine;
 [UpdateAfter(typeof(GridFormationUpdateSystem))]
 public partial struct UnitFormationStateSystem : ISystem
 {
+    public void OnCreate(ref SystemState state)
+    {
+        state.RequireForUpdate<MatchStateComponent>();
+        state.RequireForUpdate<SquadSpawnConfigComponent>();
+    }
+
     public void OnUpdate(ref SystemState state)
     {
         float dt = SystemAPI.Time.DeltaTime;

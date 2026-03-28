@@ -12,6 +12,12 @@ using Unity.Transforms;
 [UpdateAfter(typeof(SquadSwapSystem))]
 public partial class SquadSwapChannelingSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;

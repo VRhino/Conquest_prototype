@@ -15,6 +15,7 @@ public partial class HeroLevelSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         _saveData = LocalSaveSystem.LoadProgress();
     }
 

@@ -13,6 +13,12 @@ using Unity.Transforms;
 [UpdateAfter(typeof(SquadFSMSystem))]
 public partial class RetreatLogicSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;

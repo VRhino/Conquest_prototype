@@ -14,6 +14,7 @@ public partial class SquadSpawningSystem : SystemBase
     protected override void OnCreate()
     {
         RequireForUpdate<SquadSpawnConfigComponent>();
+        RequireForUpdate<MatchStateComponent>();
     }
 
     protected override void OnUpdate()

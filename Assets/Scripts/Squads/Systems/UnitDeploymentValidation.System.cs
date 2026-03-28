@@ -17,6 +17,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
     protected override void OnCreate()
     {
         base.OnCreate();
+        RequireForUpdate<MatchStateComponent>();
         _progress = LocalSaveSystem.LoadProgress();
     }
 
