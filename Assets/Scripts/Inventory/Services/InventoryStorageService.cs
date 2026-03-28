@@ -11,7 +11,7 @@ using UnityEngine;
 /// </summary>
 public static class InventoryStorageService
 {
-    private static HeroData _currentHero;
+    private static IHeroInventory _currentHero;
     private static int _inventoryLimit = 72;
 
     /// <summary>Límite máximo de slots del inventario.</summary>
@@ -26,16 +26,17 @@ public static class InventoryStorageService
     /// </summary>
     public static void Initialize(HeroData hero)
     {
-        _currentHero = hero ?? throw new ArgumentNullException(nameof(hero));
-        
-        if (_currentHero.inventory == null)
+        if (hero == null) throw new ArgumentNullException(nameof(hero));
+
+        if (hero.inventory == null)
         {
-            _currentHero.inventory = new List<InventoryItem>();
+            hero.inventory = new List<InventoryItem>();
             LogInfo("Initialized empty inventory for hero");
         }
-        
+
+        _currentHero = (IHeroInventory)hero;
         ValidateInventoryIntegrity();
-        LogInfo($"Storage service initialized for hero: {_currentHero.heroName}");
+        LogInfo($"Storage service initialized for hero: {hero.heroName}");
     }
 
     #region Add Operations
@@ -62,7 +63,7 @@ public static class InventoryStorageService
         }
 
         // Buscar slot disponible
-        int availableSlot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.inventory, _inventoryLimit);
+        int availableSlot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.Inventory, _inventoryLimit);
         if (availableSlot == -1)
         {
             LogWarning("No available slots in inventory");
@@ -70,7 +71,7 @@ public static class InventoryStorageService
         }
 
         item.slotIndex = availableSlot;
-        _currentHero.inventory.Add(item);
+        _currentHero.Inventory.Add(item);
         
         LogInfo($"Added {item.itemId} to slot {availableSlot}");
         return true;
@@ -91,7 +92,7 @@ public static class InventoryStorageService
         }
 
         item.slotIndex = targetSlotIndex;
-        _currentHero.inventory.Add(item);
+        _currentHero.Inventory.Add(item);
         
         LogInfo($"Added {item.itemId} to specific slot {targetSlotIndex}");
         return true;
@@ -108,7 +109,7 @@ public static class InventoryStorageService
     {
         if (!ValidateRemoveOperation(item)) return false;
 
-        bool removed = _currentHero.inventory.Remove(item);
+        bool removed = _currentHero.Inventory.Remove(item);
         if (removed)
         {
             LogInfo($"Removed specific item {item.itemId} from slot {item.slotIndex}");
@@ -146,7 +147,7 @@ public static class InventoryStorageService
         // Si la cantidad llega a 0, remover el item completamente
         if (stackableItem.quantity <= 0)
         {
-            _currentHero.inventory.Remove(stackableItem);
+            _currentHero.Inventory.Remove(stackableItem);
             LogInfo($"Removed empty stack of {itemId}");
         }
         else
@@ -206,7 +207,7 @@ public static class InventoryStorageService
     {
         if (string.IsNullOrEmpty(instanceId)) return null;
         
-        return _currentHero.inventory.FirstOrDefault(item => item.instanceId == instanceId);
+        return _currentHero.Inventory.FirstOrDefault(item => item.instanceId == instanceId);
     }
 
     /// <summary>
@@ -216,7 +217,7 @@ public static class InventoryStorageService
     {
         if (string.IsNullOrEmpty(itemId)) return null;
         
-        return _currentHero.inventory.FirstOrDefault(item => item.itemId == itemId);
+        return _currentHero.Inventory.FirstOrDefault(item => item.itemId == itemId);
     }
 
     /// <summary>
@@ -224,7 +225,7 @@ public static class InventoryStorageService
     /// </summary>
     public static List<InventoryItem> GetItemsOfType(ItemType itemType)
     {
-        return _currentHero.inventory.Where(item => item.itemType == itemType).ToList();
+        return _currentHero.Inventory.Where(item => item.itemType == itemType).ToList();
     }
 
     public static List<InventoryItem> GetItemsByTypeAndCategory(InventoryItem item)
@@ -243,14 +244,14 @@ public static class InventoryStorageService
 
         if (itemType == ItemType.Weapon)
         {
-            return _currentHero.inventory
+            return _currentHero.Inventory
                 .Where(i => i.itemType == ItemType.Weapon)
                 .ToList();
         }
 
         if (itemType == ItemType.Armor)
         {
-            return _currentHero.inventory
+            return _currentHero.Inventory
                 .Where(i => i.itemType == ItemType.Armor &&
                             InventoryUtils.GetItemData(i.itemId)?.itemCategory == itemCategory)
                 .ToList();
@@ -264,7 +265,7 @@ public static class InventoryStorageService
     /// </summary>
     public static List<InventoryItem> GetAllItems()
     {
-        return new List<InventoryItem>(_currentHero.inventory);
+        return new List<InventoryItem>(_currentHero.Inventory);
     }
 
     /// <summary>
@@ -272,7 +273,7 @@ public static class InventoryStorageService
     /// </summary>
     public static int GetItemCount(string itemId)
     {
-        return _currentHero.inventory
+        return _currentHero.Inventory
             .Where(item => item.itemId == itemId)
             .Sum(item => item.quantity);
     }
@@ -283,8 +284,8 @@ public static class InventoryStorageService
     public static bool HasSpace()
     {
         Debug.Assert(_currentHero != null, "Current hero is not initialized");
-        Debug.Assert(_currentHero.inventory != null, "Current hero inventory is not initialized");
-        return _currentHero.inventory.Count < _inventoryLimit;
+        Debug.Assert(_currentHero.Inventory != null, "Current hero inventory is not initialized");
+        return _currentHero.Inventory.Count < _inventoryLimit;
     }
 
     /// <summary>
@@ -292,7 +293,7 @@ public static class InventoryStorageService
     /// </summary>
     public static InventoryItem GetItemAtSlot(int slotIndex)
     {
-        return _currentHero.inventory.FirstOrDefault(item => item.slotIndex == slotIndex);
+        return _currentHero.Inventory.FirstOrDefault(item => item.slotIndex == slotIndex);
     }
 
     #endregion
@@ -301,13 +302,13 @@ public static class InventoryStorageService
 
     private static InventoryItem FindStackableItem(string itemId)
     {
-        return _currentHero.inventory.FirstOrDefault(item => 
+        return _currentHero.Inventory.FirstOrDefault(item => 
             item.itemId == itemId && item.IsStackable);
     }
 
     private static bool IsSlotOccupied(int slotIndex)
     {
-        return _currentHero.inventory.Any(item => item.slotIndex == slotIndex);
+        return _currentHero.Inventory.Any(item => item.slotIndex == slotIndex);
     }
 
     private static bool IsValidSlotIndex(int slotIndex)
@@ -319,17 +320,17 @@ public static class InventoryStorageService
 
     private static void ValidateInventoryIntegrity()
     {
-        if (_currentHero?.inventory == null) return;
+        if (_currentHero?.Inventory == null) return;
 
         // Remover items nulos
-        int removed = _currentHero.inventory.RemoveAll(item => item == null);
+        int removed = _currentHero.Inventory.RemoveAll(item => item == null);
         if (removed > 0)
         {
             LogWarning($"Removed {removed} null items from inventory");
         }
 
         // Validar slots únicos para equipment
-        var equipmentItems = _currentHero.inventory.Where(item => item.IsEquipment).ToList();
+        var equipmentItems = _currentHero.Inventory.Where(item => item.IsEquipment).ToList();
         var duplicateSlots = equipmentItems
             .GroupBy(item => item.slotIndex)
             .Where(group => group.Count() > 1)
@@ -342,7 +343,7 @@ public static class InventoryStorageService
             var items = duplicateGroup.Skip(1).ToList();
             foreach (var item in items)
             {
-                int newSlot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.inventory, _inventoryLimit);
+                int newSlot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.Inventory, _inventoryLimit);
                 if (newSlot != -1)
                 {
                     item.slotIndex = newSlot;
@@ -358,7 +359,7 @@ public static class InventoryStorageService
 
     private static bool ValidateAddOperation(InventoryItem item)
     {
-        if (_currentHero?.inventory == null)
+        if (_currentHero?.Inventory == null)
         {
             LogError("Inventory not initialized");
             return false;
@@ -381,7 +382,7 @@ public static class InventoryStorageService
 
     private static bool ValidateRemoveOperation(InventoryItem item)
     {
-        if (_currentHero?.inventory == null)
+        if (_currentHero?.Inventory == null)
         {
             LogError("Inventory not initialized");
             return false;
@@ -393,7 +394,7 @@ public static class InventoryStorageService
             return false;
         }
 
-        if (!_currentHero.inventory.Contains(item))
+        if (!_currentHero.Inventory.Contains(item))
         {
             LogWarning($"Item {item.itemId} not found in inventory");
             return false;
@@ -404,7 +405,7 @@ public static class InventoryStorageService
 
     private static bool ValidateOperation(string itemId, int quantity)
     {
-        if (_currentHero?.inventory == null)
+        if (_currentHero?.Inventory == null)
         {
             LogError("Inventory not initialized");
             return false;

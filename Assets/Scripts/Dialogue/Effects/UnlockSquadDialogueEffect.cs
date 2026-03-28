@@ -30,14 +30,15 @@ namespace ConquestTactics.Dialogue
         }
 
         // Verificar si ya está desbloqueado
-        if (hero.availableSquads.Contains(targetSquadId))
+        var heroSquads = (IHeroSquads)hero;
+        if (heroSquads.AvailableSquads.Contains(targetSquadId))
         {
             Debug.LogWarning($"[UnlockSquadDialogueEffect] Squad {targetSquadId} already unlocked");
             return false;
         }
 
         // Desbloquear el escuadrón
-        hero.availableSquads.Add(targetSquadId);
+        heroSquads.AvailableSquads.Add(targetSquadId);
 
         if (showNotification)
         {
@@ -68,7 +69,7 @@ namespace ConquestTactics.Dialogue
         string targetSquadId = squadId;
         
         // No ejecutar si ya está desbloqueado
-        return !hero.availableSquads.Contains(targetSquadId);
+        return !((IHeroSquads)hero).AvailableSquads.Contains(targetSquadId);
     }
 
     public override int GetExecutionPriority()

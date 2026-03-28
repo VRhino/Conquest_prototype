@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public static class CurrencyService
 {
-    private static HeroData _currentHero;
+    private static IHeroEconomyMutator _currentHero;
 
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
@@ -15,15 +15,14 @@ public static class CurrencyService
     /// <param name="hero">Datos del héroe activo</param>
     public static void Initialize(HeroData hero)
     {
-        _currentHero = hero;
-        
-        if (_currentHero == null)
+        if (hero == null)
         {
             LogError("Cannot initialize CurrencyService with null hero");
             return;
         }
+        _currentHero = (IHeroEconomyMutator)hero;
 
-        LogInfo($"CurrencyService initialized. Current Bronze: {_currentHero.bronze}");
+        LogInfo($"CurrencyService initialized. Current Bronze: {_currentHero.Bronze}");
     }
 
     /// <summary>
@@ -36,9 +35,9 @@ public static class CurrencyService
         if (!ValidateOperation(cost))
             return false;
 
-        bool hasSufficient = _currentHero.bronze >= cost;
+        bool hasSufficient = _currentHero.Bronze >= cost;
         
-        LogInfo($"Checking Bronze sufficiency: Required={cost}, Available={_currentHero.bronze}, Sufficient={hasSufficient}");
+        LogInfo($"Checking Bronze sufficiency: Required={cost}, Available={_currentHero.Bronze}, Sufficient={hasSufficient}");
         return hasSufficient;
     }
 
@@ -54,17 +53,17 @@ public static class CurrencyService
 
         if (!HasSufficientBronze(amount))
         {
-            LogWarning($"Cannot debit Bronze: insufficient funds. Required={amount}, Available={_currentHero.bronze}");
+            LogWarning($"Cannot debit Bronze: insufficient funds. Required={amount}, Available={_currentHero.Bronze}");
             return false;
         }
 
-        int previousAmount = _currentHero.bronze;
-        _currentHero.bronze -= amount;
+        int previousAmount = _currentHero.Bronze;
+        _currentHero.Bronze -= amount;
         
         // Asegurar que nunca sea negativo
-        _currentHero.bronze = Mathf.Max(0, _currentHero.bronze);
+        _currentHero.Bronze = Mathf.Max(0, _currentHero.Bronze);
 
-        LogInfo($"Bronze debited successfully: {previousAmount} -> {_currentHero.bronze} (debited: {amount})");
+        LogInfo($"Bronze debited successfully: {previousAmount} -> {_currentHero.Bronze} (debited: {amount})");
         
         // Disparar evento de cambio de inventario para persistencia
         InventoryEventService.TriggerInventoryChanged();
@@ -82,10 +81,10 @@ public static class CurrencyService
         if (!ValidateOperation(amount))
             return false;
 
-        int previousAmount = _currentHero.bronze;
-        _currentHero.bronze += amount;
+        int previousAmount = _currentHero.Bronze;
+        _currentHero.Bronze += amount;
 
-        LogInfo($"Bronze credited successfully: {previousAmount} -> {_currentHero.bronze} (credited: {amount})");
+        LogInfo($"Bronze credited successfully: {previousAmount} -> {_currentHero.Bronze} (credited: {amount})");
         
         // Disparar evento de cambio de inventario para persistencia
         InventoryEventService.TriggerInventoryChanged();
@@ -105,7 +104,7 @@ public static class CurrencyService
             return 0;
         }
 
-        return _currentHero.bronze;
+        return _currentHero.Bronze;
     }
 
     /// <summary>
@@ -113,7 +112,7 @@ public static class CurrencyService
     /// </summary>
     /// <param name="hero">Héroe del cual obtener el Bronze</param>
     /// <returns>Cantidad de Bronze del héroe especificado</returns>
-    public static int GetBronzeAmount(HeroData hero)
+    public static int GetBronzeAmount(IHeroEconomy hero)
     {
         if (hero == null)
         {
@@ -121,7 +120,7 @@ public static class CurrencyService
             return 0;
         }
 
-        return hero.bronze;
+        return hero.Bronze;
     }
 
     /// <summary>

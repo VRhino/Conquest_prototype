@@ -170,7 +170,7 @@ public static class HeroTempAttributeService
     /// <param name="heroId">ID del héroe</param>
     /// <param name="heroData">Datos base del héroe</param>
     /// <returns>Puntos usados en modificaciones temporales</returns>
-    public static int CalculateUsedTempPoints(string heroId, HeroData heroData)
+    public static int CalculateUsedTempPoints(string heroId, IHeroProgression heroData)
     {
         if (!HasTempChanges(heroId) || heroData == null) return 0;
 
@@ -194,14 +194,14 @@ public static class HeroTempAttributeService
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>Valor original del atributo</returns>
-    private static float GetOriginalValue(HeroData heroData, string attributeName)
+    private static float GetOriginalValue(IHeroProgression heroData, string attributeName)
     {
         switch (attributeName.ToLower())
         {
-            case "strength": return heroData.strength;
-            case "dexterity": return heroData.dexterity;
-            case "armor": return heroData.armor;
-            case "vitality": return heroData.vitality;
+            case "strength": return heroData.Strength;
+            case "dexterity": return heroData.Dexterity;
+            case "armor": return heroData.Armor;
+            case "vitality": return heroData.Vitality;
             default: return 0f;
         }
     }
@@ -212,11 +212,11 @@ public static class HeroTempAttributeService
     /// <param name="heroId">ID del héroe</param>
     /// <param name="heroData">Datos del héroe</param>
     /// <returns>Puntos disponibles después de modificaciones temporales</returns>
-    public static int GetAvailablePoints(string heroId, HeroData heroData)
+    public static int GetAvailablePoints(string heroId, IHeroProgression heroData)
     {
         if (heroData == null) return 0;
-        
+
         int usedTempPoints = CalculateUsedTempPoints(heroId, heroData);
-        return heroData.attributePoints - usedTempPoints;
+        return heroData.AttributePoints - usedTempPoints;
     }
 }

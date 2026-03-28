@@ -11,28 +11,28 @@ using Data.Items;
 /// </summary>
 public static class EquipmentManagerService
 {
-    private static HeroData _currentHero;
+    private static IHeroInventoryMutator _currentHero;
 
     #region Equipment Access Dictionaries
 
     private static readonly Dictionary<(ItemType, ItemCategory), System.Func<InventoryItem>> _equipmentGetters = new()
     {
-        { (ItemType.Weapon, ItemCategory.None), () => _currentHero.equipment.weapon },
-        { (ItemType.Armor, ItemCategory.Helmet), () => _currentHero.equipment.helmet },
-        { (ItemType.Armor, ItemCategory.Torso), () => _currentHero.equipment.torso },
-        { (ItemType.Armor, ItemCategory.Gloves), () => _currentHero.equipment.gloves },
-        { (ItemType.Armor, ItemCategory.Pants), () => _currentHero.equipment.pants },
-        { (ItemType.Armor, ItemCategory.Boots), () => _currentHero.equipment.boots }
+        { (ItemType.Weapon, ItemCategory.None), () => _currentHero.Equipment.weapon },
+        { (ItemType.Armor, ItemCategory.Helmet), () => _currentHero.Equipment.helmet },
+        { (ItemType.Armor, ItemCategory.Torso), () => _currentHero.Equipment.torso },
+        { (ItemType.Armor, ItemCategory.Gloves), () => _currentHero.Equipment.gloves },
+        { (ItemType.Armor, ItemCategory.Pants), () => _currentHero.Equipment.pants },
+        { (ItemType.Armor, ItemCategory.Boots), () => _currentHero.Equipment.boots }
     };
 
     private static readonly Dictionary<(ItemType, ItemCategory), System.Action<InventoryItem>> _equipmentSetters = new()
     {
-        { (ItemType.Weapon, ItemCategory.None), item => _currentHero.equipment.weapon = item },
-        { (ItemType.Armor, ItemCategory.Helmet), item => _currentHero.equipment.helmet = item },
-        { (ItemType.Armor, ItemCategory.Torso), item => _currentHero.equipment.torso = item },
-        { (ItemType.Armor, ItemCategory.Gloves), item => _currentHero.equipment.gloves = item },
-        { (ItemType.Armor, ItemCategory.Pants), item => _currentHero.equipment.pants = item },
-        { (ItemType.Armor, ItemCategory.Boots), item => _currentHero.equipment.boots = item },
+        { (ItemType.Weapon, ItemCategory.None), item => _currentHero.Equipment.weapon = item },
+        { (ItemType.Armor, ItemCategory.Helmet), item => _currentHero.Equipment.helmet = item },
+        { (ItemType.Armor, ItemCategory.Torso), item => _currentHero.Equipment.torso = item },
+        { (ItemType.Armor, ItemCategory.Gloves), item => _currentHero.Equipment.gloves = item },
+        { (ItemType.Armor, ItemCategory.Pants), item => _currentHero.Equipment.pants = item },
+        { (ItemType.Armor, ItemCategory.Boots), item => _currentHero.Equipment.boots = item },
     };
 
     #endregion
@@ -111,15 +111,16 @@ public static class EquipmentManagerService
     /// </summary>
     public static void Initialize(HeroData hero)
     {
-        _currentHero = hero ?? throw new ArgumentNullException(nameof(hero));
-        
-        if (_currentHero.equipment == null)
+        if (hero == null) throw new ArgumentNullException(nameof(hero));
+        _currentHero = (IHeroInventoryMutator)hero;
+
+        if (_currentHero.Equipment == null)
         {
-            _currentHero.equipment = new Equipment();
+            _currentHero.Equipment = new Equipment();
             Log("Initialized empty equipment for hero", LogType.Info);
         }
-        
-        Log($"Equipment manager initialized for hero: {_currentHero.heroName}", LogType.Info);
+
+        Log($"Equipment manager initialized for hero: {hero.heroName}", LogType.Info);
     }
 
     #region Equipment Operations
@@ -285,7 +286,7 @@ public static class EquipmentManagerService
     /// </summary>
     public static InventoryItem GetEquippedItem(ItemType itemType, ItemCategory itemCategory)
     {
-        if (_currentHero?.equipment == null) return null;
+        if (_currentHero?.Equipment == null) return null;
         itemCategory = itemType == ItemType.Weapon ? ItemCategory.None : itemCategory;
         var key = (itemType, itemCategory);
         return _equipmentGetters.TryGetValue(key, out var getter) ? getter() : null;
@@ -296,16 +297,16 @@ public static class EquipmentManagerService
     /// </summary>
     public static InventoryItem[] GetAllEquippedItems()
     {
-        if (_currentHero?.equipment == null) return new InventoryItem[0];
+        if (_currentHero?.Equipment == null) return new InventoryItem[0];
 
         return new InventoryItem[]
         {
-            _currentHero.equipment.weapon,
-            _currentHero.equipment.helmet,
-            _currentHero.equipment.torso,
-            _currentHero.equipment.gloves,
-            _currentHero.equipment.pants,
-            _currentHero.equipment.boots
+            _currentHero.Equipment.weapon,
+            _currentHero.Equipment.helmet,
+            _currentHero.Equipment.torso,
+            _currentHero.Equipment.gloves,
+            _currentHero.Equipment.pants,
+            _currentHero.Equipment.boots
         };
     }
 
@@ -506,7 +507,7 @@ public static class EquipmentManagerService
     /// </summary>
     private static InventoryItem GetIncompatibleWeapon(ArmorType armorType)
     {
-        var equippedWeapon = _currentHero?.equipment?.weapon;
+        var equippedWeapon = _currentHero?.Equipment?.weapon;
         if (equippedWeapon == null || !equippedWeapon.IsEquipment) return null;
 
         var weaponData = InventoryUtils.GetItemData(equippedWeapon.itemId);
@@ -603,7 +604,7 @@ public static class EquipmentManagerService
 
     private static bool ValidateEquipOperation(InventoryItem item)
     {
-        if (_currentHero?.equipment == null)
+        if (_currentHero?.Equipment == null)
         {
             Log("Equipment not initialized", LogType.Error);
             return false;
@@ -627,7 +628,7 @@ public static class EquipmentManagerService
 
     private static bool SetEquippedItem(ItemType itemType, ItemCategory itemCategory, InventoryItem item)
     {
-        if (_currentHero?.equipment == null) return false;
+        if (_currentHero?.Equipment == null) return false;
         if(item != null) item.slotIndex = -1; //Lo sacamos del inventario
         itemCategory = itemType == ItemType.Weapon ? ItemCategory.None : itemCategory;
         var key = (itemType, itemCategory);

@@ -30,7 +30,7 @@ namespace ConquestTactics.Dialogue
         }
 
         // Agregar experiencia al héroe
-        hero.currentXP += targetExperience;
+        ((IHeroProgressionMutator)hero).CurrentXP += targetExperience;
 
         if (showNotification)
         {

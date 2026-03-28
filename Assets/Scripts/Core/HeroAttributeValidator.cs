@@ -25,7 +25,7 @@ public static class HeroAttributeValidator
     /// <param name="newValue">Nuevo valor propuesto</param>
     /// <param name="pointsRequired">Puntos de atributo requeridos para el cambio</param>
     /// <returns>True si la modificación es válida, False si no</returns>
-    public static bool CanModifyAttribute(HeroData heroData, string attributeName, float newValue, int pointsRequired = 1)
+    public static bool CanModifyAttribute(IHeroProgression heroData, string attributeName, float newValue, int pointsRequired = 1)
     {
         if (heroData == null || string.IsNullOrEmpty(attributeName)) return false;
 
@@ -46,7 +46,7 @@ public static class HeroAttributeValidator
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>Tupla con valores mínimo y máximo</returns>
-    public static (float min, float max) GetAttributeLimits(HeroData heroData, string attributeName)
+    public static (float min, float max) GetAttributeLimits(IHeroProgression heroData, string attributeName)
     {
         if (heroData == null || string.IsNullOrEmpty(attributeName))
             return (0f, 0f);
@@ -74,7 +74,7 @@ public static class HeroAttributeValidator
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="requiredPoints">Puntos requeridos</param>
     /// <returns>True si tiene suficientes puntos, False si no</returns>
-    public static bool HasEnoughPoints(HeroData heroData, int requiredPoints)
+    public static bool HasEnoughPoints(IHeroProgression heroData, int requiredPoints)
     {
         if (heroData == null) return false;
 
@@ -82,7 +82,7 @@ public static class HeroAttributeValidator
         if (requiredPoints <= 0) return true;
 
         // Obtener puntos disponibles considerando cambios temporales
-        string heroId = GetHeroId(heroData);
+        string heroId = GetHeroId(heroData as IHeroIdentity);
         int availablePoints = HeroTempAttributeService.GetAvailablePoints(heroId, heroData);
         
         bool hasEnough = availablePoints >= requiredPoints;
@@ -112,13 +112,13 @@ public static class HeroAttributeValidator
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>True si se puede incrementar, False si no</returns>
-    public static bool CanIncrementAttribute(HeroData heroData, string attributeName)
+    public static bool CanIncrementAttribute(IHeroProgression heroData, string attributeName)
     {
         if (heroData == null || string.IsNullOrEmpty(attributeName))
             return false;
 
         // CORREGIDO: Usar método claro para obtener valor final
-        string heroId = GetHeroId(heroData);
+        string heroId = GetHeroId(heroData as IHeroIdentity);
         float currentValue = HeroTempAttributeService.GetFinalAttributeValue(heroId, attributeName);
         float newValue = currentValue + 1f;
 
@@ -134,13 +134,13 @@ public static class HeroAttributeValidator
     /// <param name="heroData">Datos del héroe</param>
     /// <param name="attributeName">Nombre del atributo</param>
     /// <returns>True si se puede decrementar, False si no</returns>
-    public static bool CanDecrementAttribute(HeroData heroData, string attributeName)
+    public static bool CanDecrementAttribute(IHeroProgression heroData, string attributeName)
     {
         if (heroData == null || string.IsNullOrEmpty(attributeName))
             return false;
 
         // CORREGIDO: Usar método claro para obtener valor final
-        string heroId = GetHeroId(heroData);
+        string heroId = GetHeroId(heroData as IHeroIdentity);
         float currentValue = HeroTempAttributeService.GetFinalAttributeValue(heroId, attributeName);
         float newValue = currentValue - 1f;
 
@@ -152,7 +152,7 @@ public static class HeroAttributeValidator
     /// <summary>
     /// Obtiene los límites para atributos básicos (fuerza, destreza, etc.).
     /// </summary>
-    private static (float min, float max) GetBasicAttributeLimits(HeroData heroData, string attributeName)
+    private static (float min, float max) GetBasicAttributeLimits(IHeroProgression heroData, string attributeName)
     {
         // TODO: Implementar límites específicos por clase cuando esté disponible el sistema de clases completo
         // Por ahora usamos límites por defecto
@@ -162,17 +162,17 @@ public static class HeroAttributeValidator
     /// <summary>
     /// Obtiene los límites para liderazgo (calculado, no modificable directamente).
     /// </summary>
-    private static (float min, float max) GetLeadershipLimits(HeroData heroData)
+    private static (float min, float max) GetLeadershipLimits(IHeroProgression heroData)
     {
         // El liderazgo no se modifica directamente, se calcula basado en equipamiento
-        float currentLeadership = HeroLeadershipCalculator.CalculateLeadership(heroData);
+        float currentLeadership = HeroLeadershipCalculator.CalculateLeadership(heroData as IHeroInventory);
         return (currentLeadership, currentLeadership);
     }
 
     /// <summary>
     /// Validaciones específicas por tipo de atributo.
     /// </summary>
-    private static bool ValidateSpecificAttribute(HeroData heroData, string attributeName, float newValue)
+    private static bool ValidateSpecificAttribute(IHeroProgression heroData, string attributeName, float newValue)
     {
         switch (attributeName.ToLower())
         {
