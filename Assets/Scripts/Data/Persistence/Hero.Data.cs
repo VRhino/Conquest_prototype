@@ -4,9 +4,12 @@ using System.Collections.Generic;
 /// <summary>
 /// Persistent data for a single hero commander created by the player.
 /// Combines progression values with references to static definitions.
+/// Implements read/write interfaces so consumers can depend on narrow contracts
+/// without touching the serializable field layout (JsonUtility compatibility).
 /// </summary>
 [Serializable]
-public class HeroData
+public class HeroData : IHeroIdentity, IHeroProgression, IHeroEconomy, IHeroSquads, IHeroInventory,
+                        IHeroProgressionMutator, IHeroEconomyMutator, IHeroInventoryMutator
 {
     // Static references
 
@@ -93,4 +96,52 @@ public class HeroData
             equipment.boots?.itemId ?? string.Empty
         };
     }
+
+    // ── IHeroIdentity (read-only) ────────────────────────────────────────────
+    string      IHeroIdentity.ClassId  => classId;
+    string      IHeroIdentity.HeroName => heroName;
+    string      IHeroIdentity.Gender   => gender;
+    AvatarParts IHeroIdentity.Avatar   => avatar;
+
+    // ── IHeroProgression (read-only) ─────────────────────────────────────────
+    int       IHeroProgression.Level           => level;
+    int       IHeroProgression.CurrentXP       => currentXP;
+    int       IHeroProgression.AttributePoints => attributePoints;
+    int       IHeroProgression.PerkPoints      => perkPoints;
+    int       IHeroProgression.Strength        => strength;
+    int       IHeroProgression.Dexterity       => dexterity;
+    int       IHeroProgression.Armor           => armor;
+    int       IHeroProgression.Vitality        => vitality;
+    List<int> IHeroProgression.UnlockedPerks   => unlockedPerks;
+
+    // ── IHeroEconomy (read-only) ─────────────────────────────────────────────
+    int IHeroEconomy.Bronze => bronze;
+    int IHeroEconomy.Silver => silver;
+    int IHeroEconomy.Gold   => gold;
+
+    // ── IHeroSquads (read-only; lists are mutable by reference) ─────────────
+    List<string>            IHeroSquads.AvailableSquads => availableSquads;
+    List<LoadoutSaveData>   IHeroSquads.Loadouts        => loadouts;
+    List<SquadInstanceData> IHeroSquads.SquadProgress   => squadProgress;
+
+    // ── IHeroInventory (read-only; list is mutable by reference) ────────────
+    List<InventoryItem> IHeroInventory.Inventory => inventory;
+    Equipment           IHeroInventory.Equipment => equipment;
+
+    // ── IHeroProgressionMutator (read+write) ─────────────────────────────────
+    int IHeroProgressionMutator.CurrentXP       { get => currentXP;       set => currentXP = value; }
+    int IHeroProgressionMutator.AttributePoints { get => attributePoints; set => attributePoints = value; }
+    int IHeroProgressionMutator.PerkPoints      { get => perkPoints;      set => perkPoints = value; }
+    int IHeroProgressionMutator.Strength        { get => strength;        set => strength = value; }
+    int IHeroProgressionMutator.Dexterity       { get => dexterity;       set => dexterity = value; }
+    int IHeroProgressionMutator.Armor           { get => armor;           set => armor = value; }
+    int IHeroProgressionMutator.Vitality        { get => vitality;        set => vitality = value; }
+
+    // ── IHeroEconomyMutator (read+write) ────────────────────────────────────
+    int IHeroEconomyMutator.Bronze { get => bronze; set => bronze = value; }
+    int IHeroEconomyMutator.Silver { get => silver; set => silver = value; }
+    int IHeroEconomyMutator.Gold   { get => gold;   set => gold = value; }
+
+    // ── IHeroInventoryMutator (read+write) ───────────────────────────────────
+    Equipment IHeroInventoryMutator.Equipment { get => equipment; set => equipment = value; }
 }

@@ -24,7 +24,8 @@
       "Bash(python3:*)",
       "Bash(node:*)",
       "Bash(cd:*)",
-      "Bash(find /c/Users/VRINO/Desarrollo/Conquest_prototype -name *SquadFSMState* -o -name *UnitFormationState*)"
+      "Bash(find /c/Users/VRINO/Desarrollo/Conquest_prototype -name *SquadFSMState* -o -name *UnitFormationState*)",
+      "mcp__plugin_context-mode_context-mode__ctx_stats"
     ]
   },
   "hooks": {
