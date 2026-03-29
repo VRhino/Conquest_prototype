@@ -66,10 +66,10 @@ public partial class UnitBodyblockSystem : SystemBase
         // Iteramos todos los squads: si su formación es muro, marcamos cada
         // unidad del buffer. Coste: O(squads × units_per_squad).
         _unitIsWall.Clear();
-        foreach (var (state, buffer) in
-            SystemAPI.Query<RefRO<SquadStateComponent>, DynamicBuffer<SquadUnitElement>>())
+        foreach (var (formationComp, buffer) in
+            SystemAPI.Query<RefRO<FormationComponent>, DynamicBuffer<SquadUnitElement>>())
         {
-            bool wall = IsWallFormation(state.ValueRO.currentFormation);
+            bool wall = IsWallFormation(formationComp.ValueRO.currentFormation);
             foreach (var elem in buffer)
                 _unitIsWall[elem.Value] = wall;
         }

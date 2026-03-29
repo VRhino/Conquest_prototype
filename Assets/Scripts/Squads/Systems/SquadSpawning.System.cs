@@ -107,10 +107,8 @@ public partial class SquadSpawningSystem : SystemBase
 
             ecb.AddComponent(squad, new SquadStateComponent
             {
-                currentFormation = firstFormationType, // Formación inicial: primera del arreglo
                 currentOrder = initialOrder,
                 isExecutingOrder = false,
-                isInCombat = false,
                 formationChangeCooldown = 0f,
                 currentState = initialState,
                 transitionTo = initialState,
@@ -192,7 +190,7 @@ public partial class SquadSpawningSystem : SystemBase
                     unit,
                     ref firstFormation.gridPositions,
                     i, // unitIndex
-                    new SquadStateComponent { currentFormation = firstFormationType },
+                    new SquadStateComponent { currentState = initialState },
                     null,
                     formationAnchor, // usar el ancla del squad que ya incluye squadSpawnOffset
                     out int2 originalGridPos,

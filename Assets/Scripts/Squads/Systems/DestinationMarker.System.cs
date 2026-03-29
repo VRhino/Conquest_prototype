@@ -77,7 +77,8 @@ public partial class DestinationMarkerSystem : SystemBase
             if (squadData.formationLibrary.IsCreated)
             {
                 ref var formations = ref squadData.formationLibrary.Value.formations;
-                FormationType currentFormation = squadState.currentFormation;
+                var formationComp = SystemAPI.GetComponent<FormationComponent>(squadEntity);
+                FormationType currentFormation = formationComp.currentFormation;
                 
                 // Find the current formation in the library
                 for (int f = 0; f < formations.Length; f++)

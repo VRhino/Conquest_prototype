@@ -34,8 +34,8 @@ public partial class SquadProgressionSystem : SystemBase
                 continue;
 
             float xpGain = 10f;
-            if (SystemAPI.HasComponent<SquadStateComponent>(entity) &&
-                SystemAPI.GetComponent<SquadStateComponent>(entity).isInCombat)
+            if (SystemAPI.HasComponent<SquadAIComponent>(entity) &&
+                SystemAPI.GetComponent<SquadAIComponent>(entity).isInCombat)
                 xpGain = 50f;
             progress.ValueRW.currentXP += xpGain;
 

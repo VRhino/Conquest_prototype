@@ -20,8 +20,8 @@ public partial class SquadFSMSystem : SystemBase
     {
         float dt = SystemAPI.Time.DeltaTime;
 
-        foreach (var (state, units, entity) in SystemAPI
-                     .Query<RefRW<SquadStateComponent>, DynamicBuffer<SquadUnitElement>>()
+        foreach (var (state, ai, units, entity) in SystemAPI
+                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
             var s = state.ValueRW;
@@ -73,7 +73,7 @@ public partial class SquadFSMSystem : SystemBase
             {
                 desired = SquadFSMState.Retreating;
             }
-            else if (s.isInCombat)
+            else if (ai.ValueRO.isInCombat)
             {
                 desired = SquadFSMState.InCombat;
             }

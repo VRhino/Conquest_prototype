@@ -65,7 +65,7 @@ public class FormationVisualizer : MonoBehaviour
         }
 
         var leaderTransform = _entityManager.GetComponentData<LocalTransform>(leader);
-        var state = _entityManager.GetComponentData<SquadStateComponent>(_squadEntity);
+        var formationComp = _entityManager.GetComponentData<FormationComponent>(_squadEntity);
         var squadData = _entityManager.GetComponentData<SquadDataComponent>(_squadEntity);
         if (!squadData.formationLibrary.IsCreated)
         {
@@ -80,7 +80,7 @@ public class FormationVisualizer : MonoBehaviour
 
         for (int i = 0; i < formations.Length; i++)
         {
-            if (formations[i].formationType == state.currentFormation)
+            if (formations[i].formationType == formationComp.currentFormation)
             {
                 ref var formation = ref formations[i];
                 gridPositions = ref formation.gridPositions; // ✅ acceso por ref

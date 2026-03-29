@@ -80,11 +80,11 @@ public class SquadSectionController : MonoBehaviour
             _unitCountText.text = $"{status.aliveUnits}/{status.totalUnits}";
 
         // --- Active formation highlight ---
-        if (em.HasComponent<SquadStateComponent>(squadEntity))
+        if (em.HasComponent<FormationComponent>(squadEntity))
         {
-            var state = em.GetComponentData<SquadStateComponent>(squadEntity);
+            var formationComp = em.GetComponentData<FormationComponent>(squadEntity);
             foreach (var icon in _formationIcons)
-                icon.SetActive(icon.FormationType == state.currentFormation);
+                icon.SetActive(icon.FormationType == formationComp.currentFormation);
         }
 
         // --- Per-unit health bars ---

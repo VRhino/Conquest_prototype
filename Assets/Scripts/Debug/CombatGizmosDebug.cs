@@ -175,16 +175,16 @@ public class CombatGizmosDebug : MonoBehaviour
             centroid /= aliveCount;
 
             var data  = em.GetComponentData<SquadDataComponent>(entity);
-            var state = em.GetComponentData<SquadStateComponent>(entity);
+            var aiComp = em.GetComponentData<SquadAIComponent>(entity);
             bool hasTargets = em.HasBuffer<SquadTargetEntity>(entity)
                            && em.GetBuffer<SquadTargetEntity>(entity).Length > 0;
             var team = em.HasComponent<TeamComponent>(entity)
                      ? em.GetComponentData<TeamComponent>(entity).value : Team.None;
 
-            Color ringColor = GetDetectionColor(team, state.isInCombat, hasTargets);
+            Color ringColor = GetDetectionColor(team, aiComp.isInCombat, hasTargets);
             DrawWireCircle(centroid + new float3(0f, 0.05f, 0f), data.detectionRange, ringColor);
 
-            string label = $"{team} | {(state.isInCombat ? "COMBAT" : hasTargets ? "targets" : "idle")}";
+            string label = $"{team} | {(aiComp.isInCombat ? "COMBAT" : hasTargets ? "targets" : "idle")}";
             UnityEditor.Handles.color = ringColor;
             UnityEditor.Handles.Label((Vector3)centroid + Vector3.up * 2.5f, label);
         }

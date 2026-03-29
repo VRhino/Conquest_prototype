@@ -81,14 +81,10 @@ public partial class SquadOrderSystem : SystemBase
             }
 
             // Request formation change if needed
-            if (input.ValueRO.desiredFormation != state.ValueRO.currentFormation)
+            if (input.ValueRO.desiredFormation != formation.ValueRO.currentFormation)
             {
-                // NO cambiar currentFormation aquí - eso es responsabilidad del FormationSystem
-                // Solo actualizar FormationComponent si es necesario
-                if (formation.ValueRO.currentFormation != input.ValueRO.desiredFormation)
-                {
-                    formation.ValueRW.currentFormation = input.ValueRO.desiredFormation;
-                }
+                // Solo actualizar FormationComponent - es la fuente de verdad de formación
+                formation.ValueRW.currentFormation = input.ValueRO.desiredFormation;
             }
 
             // Request a state transition if using the FSM system

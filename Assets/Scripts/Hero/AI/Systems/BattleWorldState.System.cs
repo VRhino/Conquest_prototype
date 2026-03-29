@@ -37,6 +37,7 @@ public partial class BattleWorldStateSystem : SystemBase
     private ComponentLookup<SquadAIComponent>              _squadAILookup;
     private ComponentLookup<SquadStateComponent>           _squadStateLookup;
     private ComponentLookup<SquadOwnerComponent>           _squadOwnerLookup;
+    private ComponentLookup<FormationComponent>             _formationLookup;
     private ComponentLookup<SquadFormationAnchorComponent> _anchorLookup;
     private ComponentLookup<SupplyPointComponent>          _supplyLookup;
     private ComponentLookup<CapturePointProgressComponent> _captureLookup;
@@ -54,6 +55,7 @@ public partial class BattleWorldStateSystem : SystemBase
         _squadDataLookup     = GetComponentLookup<SquadDataComponent>(true);
         _squadAILookup       = GetComponentLookup<SquadAIComponent>(true);
         _squadStateLookup    = GetComponentLookup<SquadStateComponent>(true);
+        _formationLookup     = GetComponentLookup<FormationComponent>(true);
         _squadOwnerLookup    = GetComponentLookup<SquadOwnerComponent>(true);
         _anchorLookup        = GetComponentLookup<SquadFormationAnchorComponent>(true);
         _supplyLookup        = GetComponentLookup<SupplyPointComponent>(true);
@@ -87,6 +89,7 @@ public partial class BattleWorldStateSystem : SystemBase
         _squadDataLookup.Update(this);
         _squadAILookup.Update(this);
         _squadStateLookup.Update(this);
+        _formationLookup.Update(this);
         _squadOwnerLookup.Update(this);
         _anchorLookup.Update(this);
         _supplyLookup.Update(this);
@@ -191,7 +194,10 @@ public partial class BattleWorldStateSystem : SystemBase
                     if (_squadStateLookup.HasComponent(sq))
                     {
                         snap.squadCurrentOrder = _squadStateLookup[sq].currentOrder;
-                        snap.squadFormation    = _squadStateLookup[sq].currentFormation;
+                    }
+                    if (_formationLookup.HasComponent(sq))
+                    {
+                        snap.squadFormation    = _formationLookup[sq].currentFormation;
                     }
                 }
             }
@@ -254,7 +260,10 @@ public partial class BattleWorldStateSystem : SystemBase
             {
                 var st = _squadStateLookup[entity];
                 snap.currentOrder     = st.currentOrder;
-                snap.currentFormation = st.currentFormation;
+            }
+            if (_formationLookup.HasComponent(entity))
+            {
+                snap.currentFormation = _formationLookup[entity].currentFormation;
             }
 
             if (squadTeam == Team.TeamA)

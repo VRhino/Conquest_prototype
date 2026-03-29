@@ -44,8 +44,8 @@ public partial class SquadSwapSystem : SystemBase
             if (SystemAPI.HasComponent<HeroSquadReference>(entity))
             {
                 Entity squadEntity = SystemAPI.GetComponent<HeroSquadReference>(entity).squad;
-                if (SystemAPI.HasComponent<SquadStateComponent>(squadEntity) &&
-                    SystemAPI.GetComponent<SquadStateComponent>(squadEntity).isInCombat)
+                if (SystemAPI.HasComponent<SquadAIComponent>(squadEntity) &&
+                    SystemAPI.GetComponent<SquadAIComponent>(squadEntity).isInCombat)
                 {
                     ecb.RemoveComponent<SquadSwapRequest>(entity);
                     continue;

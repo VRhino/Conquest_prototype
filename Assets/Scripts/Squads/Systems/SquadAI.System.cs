@@ -111,7 +111,6 @@ public partial class SquadAISystem : SystemBase
 
             ai.ValueRW.tacticalIntent = desiredState;
             ai.ValueRW.isInCombat     = enemiesDetected || wasHit;
-            state.ValueRW.isInCombat  = enemiesDetected || wasHit;
 
 
         }

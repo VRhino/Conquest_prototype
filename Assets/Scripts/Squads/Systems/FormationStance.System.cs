@@ -24,10 +24,10 @@ public partial struct FormationStanceSystem : ISystem
 
     public void OnUpdate(ref SystemState state)
     {
-        foreach (var (units, squadState) in
-            SystemAPI.Query<DynamicBuffer<SquadUnitElement>, RefRO<SquadStateComponent>>())
+        foreach (var (units, formationComp) in
+            SystemAPI.Query<DynamicBuffer<SquadUnitElement>, RefRO<FormationComponent>>())
         {
-            var formation = squadState.ValueRO.currentFormation;
+            var formation = formationComp.ValueRO.currentFormation;
 
             for (int i = 0; i < units.Length; i++)
             {

@@ -23,13 +23,13 @@ public partial class FormationAdaptationSystem : SystemBase
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var transformLookup = GetComponentLookup<LocalTransform>(true);
         
-        foreach (var (env, state, units, squadEntity) in SystemAPI
+        foreach (var (env, ai, units, squadEntity) in SystemAPI
                      .Query<RefRW<EnvironmentAwarenessComponent>,
-                            RefRO<SquadStateComponent>,
+                            RefRO<SquadAIComponent>,
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
-            if (state.ValueRO.isInCombat || units.Length == 0)
+            if (ai.ValueRO.isInCombat || units.Length == 0)
                 continue;
 
             // Usar la posición del héroe para detectar obstáculos
