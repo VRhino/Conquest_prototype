@@ -184,8 +184,10 @@ namespace ConquestTactics.Visual
                     bool usesNavMesh = _navAgent != null && _navAgent.enabled && _navAgent.isOnNavMesh;
                     if (usesNavMesh)
                     {
-                        // NavMesh-driven: GO is authoritative — write GO position/rotation back to ECS
-                        if (_syncPosition)
+                        // [Sprint5] Position sync delegated to NavMeshPositionSyncSystem when syncPositionFromNavMesh == true
+                        bool ecsHandlesPosition = _entityManager.HasComponent<NavAgentComponent>(_heroEntity)
+                            && _entityManager.GetComponentData<NavAgentComponent>(_heroEntity).syncPositionFromNavMesh;
+                        if (_syncPosition && !ecsHandlesPosition)
                             ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);
                         if (_syncRotation)
                             ecsTransform.Rotation = transform.rotation;

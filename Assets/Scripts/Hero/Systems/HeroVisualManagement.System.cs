@@ -59,7 +59,8 @@ public partial class HeroVisualManagementSystem : SystemBase
         foreach (var (entity, agent) in pendingNavAgents)
         {
             EntityManager.AddComponentObject(entity, agent);
-            EntityManager.AddComponent<NavAgentComponent>(entity);
+            // Heroes: position sync stays in EntityVisualSync (syncPositionFromNavMesh = false)
+            EntityManager.AddComponentData(entity, new NavAgentComponent { syncPositionFromNavMesh = false });
         }
     }
     

@@ -42,7 +42,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         foreach (var (entity, agent) in pendingNavAgents)
         {
             EntityManager.AddComponentObject(entity, agent);
-            EntityManager.AddComponent<NavAgentComponent>(entity);
+            EntityManager.AddComponentData(entity, new NavAgentComponent { syncPositionFromNavMesh = true });
         }
     }
 

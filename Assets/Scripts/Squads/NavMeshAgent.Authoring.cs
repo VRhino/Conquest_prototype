@@ -16,7 +16,7 @@ public class NavMeshAgentAuthoring : MonoBehaviour
             var entity = GetEntity(TransformUsageFlags.Dynamic);
             var agent = authoring.GetComponent<NavMeshAgent>();
             AddComponentObject(entity, agent);
-            AddComponent<NavAgentComponent>(entity);
+            AddComponent(entity, new NavAgentComponent { syncPositionFromNavMesh = true });
         }
     }
 }

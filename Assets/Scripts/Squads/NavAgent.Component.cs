@@ -1,9 +1,13 @@
 using Unity.Entities;
 
 /// <summary>
-/// Tag component added to entities that have a <see cref="UnityEngine.AI.NavMeshAgent"/>
-/// attached through conversion.
+/// Added to entities that have a <see cref="UnityEngine.AI.NavMeshAgent"/> linked via managed component.
 /// </summary>
 public struct NavAgentComponent : IComponentData
 {
+    /// <summary>
+    /// True = NavMeshPositionSyncSystem owns the GO→ECS position sync each frame.
+    /// EntityVisualSync skips its position write for this entity when this is true.
+    /// </summary>
+    public bool syncPositionFromNavMesh;
 }
