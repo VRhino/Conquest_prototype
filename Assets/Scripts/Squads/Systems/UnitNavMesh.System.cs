@@ -178,10 +178,18 @@ public partial class UnitNavMeshSystem : SystemBase
                 {
                     agent.updateRotation = false;
                     float2 dir2D = math.normalizesafe(targetXZ - unitXZ);
-                    if (math.lengthsq(dir2D) > 0f)
+                    if (math.lengthsq(dir2D) > 0f
+                        && SystemAPI.HasComponent<UnitRotationIntentComponent>(entity))
                     {
-                        agent.transform.rotation = UnityEngine.Quaternion.LookRotation(
-                            new UnityEngine.Vector3(dir2D.x, 0f, dir2D.y));
+                        quaternion combatRot = quaternion.LookRotationSafe(
+                            new float3(dir2D.x, 0f, dir2D.y), math.up());
+                        var intent = SystemAPI.GetComponentRW<UnitRotationIntentComponent>(entity);
+                        if ((int)RotationSource.Combat > intent.ValueRO.priority)
+                        {
+                            intent.ValueRW.targetRotation = combatRot;
+                            intent.ValueRW.priority       = (int)RotationSource.Combat;
+                            intent.ValueRW.source         = RotationSource.Combat;
+                        }
                     }
                 }
                 else

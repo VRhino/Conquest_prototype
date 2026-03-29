@@ -147,6 +147,9 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddBuffer<DetectedEnemy>(squad);
             ecb.AddBuffer<SquadTargetEntity>(squad);
 
+            // [Sprint3] Anchor moving tag — starts disabled (hero is stationary at spawn)
+            ecb.AddComponent<SquadAnchorMovingTag>(squad);
+
             // Formation anchor — updated each frame by SquadAnchorSystem
             ecb.AddComponent(squad, new SquadFormationAnchorComponent
             {
@@ -337,6 +340,9 @@ public partial class SquadSpawningSystem : SystemBase
                     attackAnimationDuration = data.attackAnimationDuration,
                     kineticMultiplier       = data.kineticMultiplier
                 });
+
+                // [Sprint4] Rotation intent — consumed and reset each frame by UnitRotationResolutionSystem
+                ecb.AddComponent<UnitRotationIntentComponent>(unit);
 
                 // ── Weapon hitbox gate tag — activated by UnitAttackSystem during strike window ──
                 // Actual collision detection is done by WeaponHitboxBehaviour (GO BoxCollider trigger)

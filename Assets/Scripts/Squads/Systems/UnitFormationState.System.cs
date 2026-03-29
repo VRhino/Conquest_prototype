@@ -22,20 +22,16 @@ public partial struct UnitFormationStateSystem : ISystem
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
-            if (!SystemAPI.HasComponent<SquadOwnerComponent>(squadEntity))
-                continue;
-
             if (!SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
                 continue;
 
             var squadState = SystemAPI.GetComponent<SquadStateComponent>(squadEntity);
 
-            Entity hero = SystemAPI.GetComponent<SquadOwnerComponent>(squadEntity).hero;
-            if (!SystemAPI.HasComponent<LocalTransform>(hero) || !SystemAPI.HasComponent<HeroStateComponent>(hero))
+            if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
                 continue;
 
-            float3 heroPos = SystemAPI.GetComponent<LocalTransform>(hero).Position;
-            var heroState = SystemAPI.GetComponent<HeroStateComponent>(hero).State;
+            float3 heroPos = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity).position;
+            bool heroMovingForSquad = SystemAPI.IsComponentEnabled<SquadAnchorMovingTag>(squadEntity);
 
             // Determinar si el escuadrón está en modo Hold Position
             bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
@@ -152,8 +148,6 @@ public partial struct UnitFormationStateSystem : ISystem
                             break;
 
                         case UnitFormationState.Moving:
-                            // Obtener el estado de movimiento del héroe
-                            bool heroMovingForSquad = heroState == HeroState.Moving;
                             // Moving -> Formed: Unit reaches slot AND hero is within radius
                             if (inSlot && heroWithinRadius)
                             {

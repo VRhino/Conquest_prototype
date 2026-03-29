@@ -28,7 +28,7 @@ public partial class UnitFollowFormationSystem : SystemBase
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
         var targetLookup = GetComponentLookup<UnitLocalTargetComponent>();
         var transformLookup = GetComponentLookup<LocalTransform>();
-        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
+        var anchorLookup = GetComponentLookup<SquadFormationAnchorComponent>(true);
         var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
         
@@ -43,31 +43,21 @@ public partial class UnitFollowFormationSystem : SystemBase
             if (units.Length == 0)
                 continue;
 
-            if (!ownerLookup.HasComponent(entity))
-            {
-                Debug.LogWarning($"[UnitFollowFormationSystem] Squad {entity.Index} no tiene SquadOwnerComponent");
+            if (!anchorLookup.HasComponent(entity))
                 continue;
-            }
-            
-                
+
             if (!stateLookup.TryGetComponent(entity, out var squadState))
             {
                 Debug.LogWarning($"[UnitFollowFormationSystem] Squad {entity.Index} no tiene SquadStateComponent");
                 continue;
             }
 
-            Entity leader = ownerLookup[entity].hero;
-            if (!transformLookup.HasComponent(leader))
-            {
-                Debug.LogWarning($"[UnitFollowFormationSystem] Hero {leader.Index} del squad {entity.Index} no tiene LocalTransform o no existe");
-                continue;
-            }
-
-            float3 heroPosition = transformLookup[leader].Position;
-            LocalTransform leaderTransform = SystemAPI.GetComponent<LocalTransform>(leader);
-            
-            // Keep heroForward for orientation updates
-            float3 heroForward = math.forward(leaderTransform.Rotation);
+            var anchor = anchorLookup[entity];
+            float3 heroPosition = anchor.position;
+            // Keep heroForward for orientation — guard against zero-quaternion sentinel
+            float3 heroForward = math.lengthsq(anchor.rotation.value) > 0.01f
+                ? math.forward(anchor.rotation)
+                : math.forward();
 
             // Determinar el comportamiento según el estado del escuadrón
             bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
@@ -167,7 +157,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                     if (hasTargetOrientation)
                     {
                         float3 horizontalDir = math.normalizesafe(new float3(targetForward.x, 0, targetForward.z));
-                        if (math.lengthsq(horizontalDir) > 0.01f && navAgent != null)
+                        if (math.lengthsq(horizontalDir) > 0.01f && navAgent != null
+                            && SystemAPI.HasComponent<UnitRotationIntentComponent>(unit))
                         {
                             quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
                             float rotSpeed = 5f;
@@ -175,8 +166,16 @@ public partial class UnitFollowFormationSystem : SystemBase
                                 rotSpeed = SystemAPI.GetComponent<UnitOrientationComponent>(unit).rotationSpeed;
 
                             navAgent.updateRotation = false;
-                            Quaternion currentRot = navAgent.transform.rotation;
-                            navAgent.transform.rotation = Quaternion.Slerp(currentRot, targetRot, dt * rotSpeed);
+                            UnityEngine.Quaternion currentRot = navAgent.transform.rotation;
+                            quaternion slerpedRot = math.slerp((quaternion)currentRot, targetRot, dt * rotSpeed);
+
+                            var intent = SystemAPI.GetComponentRW<UnitRotationIntentComponent>(unit);
+                            if ((int)RotationSource.Formation > intent.ValueRO.priority)
+                            {
+                                intent.ValueRW.targetRotation = slerpedRot;
+                                intent.ValueRW.priority       = (int)RotationSource.Formation;
+                                intent.ValueRW.source         = RotationSource.Formation;
+                            }
                         }
                     }
                 }

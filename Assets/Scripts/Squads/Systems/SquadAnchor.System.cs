@@ -63,14 +63,17 @@ public partial class SquadAnchorSystem : SystemBase
                     float followOffset =
                         SystemAPI.GetSingleton<SquadSpawnConfigComponent>().followForwardOffset;
                     heroPos += math.forward(heroTx.Rotation) * followOffset;
+                    rotation = heroTx.Rotation;
                 }
 
                 position = heroPos;
-                // rotation stays default
             }
 
+            float3 prevPosition = anchor.ValueRO.position;
             anchor.ValueRW.position = position;
             anchor.ValueRW.rotation = rotation;
+            bool isMoving = math.lengthsq(position - prevPosition) > 0.01f;
+            SystemAPI.SetComponentEnabled<SquadAnchorMovingTag>(squadEntity, isMoving);
         }
     }
 }
