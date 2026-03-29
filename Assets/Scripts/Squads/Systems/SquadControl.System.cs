@@ -16,11 +16,16 @@ using System.Collections.Generic;
 public partial class SquadControlSystem : SystemBase
 {
     private Camera _mainCamera;
-    
+
     // Variables para el doble clic de X
     private float _lastXPressTime = 0f;
     private const float DOUBLE_CLICK_THRESHOLD = 0.5f; // Tiempo máximo entre clics para detectar doble clic
     private float _lastCPressTime = 0f; // Para doble clic de C
+
+    // [Sprint6] Insistence / heroOrdenCooldown constants
+    private const int   InsistenceCount  = 3;
+    private const float InsistenceWindow = 0.8f;
+    private const float CooldownDuration = 4f;
     
     protected override void OnCreate()
     {
@@ -117,13 +122,39 @@ public partial class SquadControlSystem : SystemBase
             formationChanged = true;
         }
 
+        // [Sprint6] Tick heroOrdenCooldown timers every frame regardless of input
+        float dt = SystemAPI.Time.DeltaTime;
+        foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
+        {
+            Entity tickSquad = heroSquadRef.ValueRO.squad;
+            if (!SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(tickSquad)) continue;
+            var intent = SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(tickSquad);
+            bool intentChanged = false;
+            if (intent.insistenceTimer > 0f) { intent.insistenceTimer -= dt; intentChanged = true; }
+            if (intent.heroOrdenCooldownTimer > 0f)
+            {
+                intent.heroOrdenCooldownTimer -= dt;
+                if (intent.heroOrdenCooldownTimer <= 0f)
+                {
+                    intent.heroOrdenCooldownActive = false;
+                    Debug.Log("[BattleTestDebug] heroOrdenCooldown DESACTIVADO");
+                }
+                intentChanged = true;
+            }
+            if (intentChanged) ecb.SetComponent(tickSquad, intent);
+        }
+
         if (!orderIssued && !formationChanged)
+        {
+            ecb.Playback(EntityManager);
+            ecb.Dispose();
             return;
+        }
 
         // Process input without debug logging
 
         // Collect all changes first, then apply them outside the iteration
-        var squadChanges = new List<(Entity squadEntity, SquadInputComponent input)>();
+        var squadChanges = new List<(Entity squadEntity, SquadInputComponent input, SquadPlayerOrderIntentComponent intent)>();
 
         // Encontrar el héroe local y su squad
         int heroCount = 0;
@@ -134,8 +165,11 @@ public partial class SquadControlSystem : SystemBase
             
             if (SystemAPI.HasComponent<SquadInputComponent>(squadEntity))
             {
-                var input = SystemAPI.GetComponent<SquadInputComponent>(squadEntity);
-                
+                var input  = SystemAPI.GetComponent<SquadInputComponent>(squadEntity);
+                var intent = SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(squadEntity)
+                    ? SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(squadEntity)
+                    : new SquadPlayerOrderIntentComponent();
+
                 // Toggle hurryToComander solo si hubo doble clic en C
                 if (isDoubleClickC)
                 {
@@ -149,6 +183,26 @@ public partial class SquadControlSystem : SystemBase
                     {
                         input.holdPosition = mouseWorldPosition;
                     }
+
+                    // [Sprint6] Insistence tracking
+                    if (newOrder == intent.orderType && intent.insistenceTimer > 0f)
+                        intent.insistenceCount++;
+                    else
+                    {
+                        intent.insistenceCount = 1;
+                        intent.insistenceTimer = InsistenceWindow;
+                    }
+
+                    if (intent.insistenceCount >= InsistenceCount && !intent.heroOrdenCooldownActive)
+                    {
+                        intent.heroOrdenCooldownActive = true;
+                        intent.heroOrdenCooldownTimer  = CooldownDuration;
+                        intent.insistenceCount         = 0;
+                        Debug.Log("[BattleTestDebug] heroOrdenCooldown ACTIVADO");
+                    }
+
+                    intent.orderType     = newOrder;
+                    intent.holdPosition  = mouseWorldPosition;
                 }
 
                 if (formationChanged)
@@ -160,12 +214,12 @@ public partial class SquadControlSystem : SystemBase
                         if (squadData.formationLibrary.IsCreated)
                         {
                             ref var formations = ref squadData.formationLibrary.Value.formations;
-                            
+
                             if (isDoubleClickX)
                             {
                                 // Lógica para doble clic X - cambiar a la siguiente formación disponible
                                 FormationType currentFormation = input.desiredFormation;
-                                
+
                                 // Encontrar el índice actual de la formación
                                 int currentIndex = -1;
                                 for (int i = 0; i < formations.Length; i++)
@@ -176,14 +230,13 @@ public partial class SquadControlSystem : SystemBase
                                         break;
                                     }
                                 }
-                                
+
                                 // Calcular el siguiente índice (circular)
                                 int nextIndex = (currentIndex + 1) % formations.Length;
                                 FormationType nextFormation = formations[nextIndex].formationType;
-                                
-                                input.desiredFormation = nextFormation;
-                                
-                                // Cambio cíclico de formación con doble clic X
+
+                                input.desiredFormation  = nextFormation;
+                                intent.desiredFormation = nextFormation;
                             }
                             else
                             {
@@ -192,8 +245,8 @@ public partial class SquadControlSystem : SystemBase
                                 if (formationIndex >= 0 && formationIndex < formations.Length)
                                 {
                                     FormationType newFormation = formations[formationIndex].formationType;
-                                    FormationType currentFormation = input.desiredFormation;
-                                    input.desiredFormation = newFormation;
+                                    input.desiredFormation  = newFormation;
+                                    intent.desiredFormation = newFormation;
                                 }
                                 else
                                 {
@@ -216,7 +269,7 @@ public partial class SquadControlSystem : SystemBase
                 }
 
                 input.hasNewOrder = true;
-                squadChanges.Add((squadEntity, input));
+                squadChanges.Add((squadEntity, input, intent));
             }
             else
             {
@@ -227,9 +280,11 @@ public partial class SquadControlSystem : SystemBase
         // Apply all collected changes using EntityCommandBuffer
         if (squadChanges.Count > 0)
         {
-            foreach (var (squadEntity, input) in squadChanges)
+            foreach (var (squadEntity, input, intent) in squadChanges)
             {
                 ecb.SetComponent(squadEntity, input);
+                if (SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(squadEntity))
+                    ecb.SetComponent(squadEntity, intent);
             }
             
             // Execute all deferred changes

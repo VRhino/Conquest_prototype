@@ -86,6 +86,13 @@ public class HeroCameraController : MonoBehaviour
 
     void Update()
     {
+        // Re-enforce cursor lock in case editor focus or a UI briefly released it
+        if (!disableCameraFollow && !DialogueUIState.IsDialogueOpen)
+        {
+            if (Cursor.lockState != CursorLockMode.Locked) Cursor.lockState = CursorLockMode.Locked;
+            if (Cursor.visible) Cursor.visible = false;
+        }
+
         if (_cameraEntity == Entity.Null || !_entityManager.Exists(_cameraEntity))
             FindCameraEntity();
 

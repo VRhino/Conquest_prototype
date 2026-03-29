@@ -150,6 +150,12 @@ public partial class SquadSpawningSystem : SystemBase
             // [Sprint3] Anchor moving tag — starts disabled (hero is stationary at spawn)
             ecb.AddComponent<SquadAnchorMovingTag>(squad);
 
+            // [Sprint6] Intent/Resolution components
+            ecb.AddComponent<SquadPlayerOrderIntentComponent>(squad);
+            ecb.AddComponent<SquadAIOrderIntentComponent>(squad);
+            ecb.AddComponent<SquadCombatReactionIntentComponent>(squad);
+            ecb.AddComponent<SquadResolvedOrderComponent>(squad);
+
             // Formation anchor — updated each frame by SquadAnchorSystem
             ecb.AddComponent(squad, new SquadFormationAnchorComponent
             {

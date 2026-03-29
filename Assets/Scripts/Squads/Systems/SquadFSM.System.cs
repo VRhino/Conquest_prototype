@@ -20,8 +20,9 @@ public partial class SquadFSMSystem : SystemBase
     {
         float dt = SystemAPI.Time.DeltaTime;
 
-        foreach (var (state, ai, fsmComp, units, entity) in SystemAPI
-                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, RefRW<SquadFSMComponent>, DynamicBuffer<SquadUnitElement>>()
+        foreach (var (state, ai, fsmComp, playerIntent, units, entity) in SystemAPI
+                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, RefRW<SquadFSMComponent>,
+                            RefRO<SquadPlayerOrderIntentComponent>, DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
             var s = state.ValueRW;
@@ -79,7 +80,7 @@ public partial class SquadFSMSystem : SystemBase
             {
                 desired = SquadFSMState.Retreating;
             }
-            else if (ai.ValueRO.isInCombat)
+            else if (ai.ValueRO.isInCombat && !playerIntent.ValueRO.heroOrdenCooldownActive)
             {
                 desired = SquadFSMState.InCombat;
             }
@@ -96,10 +97,10 @@ public partial class SquadFSMSystem : SystemBase
                 desired = SquadFSMState.Idle;
             }
 
-            // Enforce minimum time in combat
+            // Enforce minimum time in combat (bypassed when heroOrdenCooldown is active)
             if (s.currentState == SquadFSMState.InCombat && desired != SquadFSMState.InCombat)
             {
-                if (s.stateTimer < 3f)
+                if (s.stateTimer < 3f && !playerIntent.ValueRO.heroOrdenCooldownActive)
                     desired = SquadFSMState.InCombat;
             }
 

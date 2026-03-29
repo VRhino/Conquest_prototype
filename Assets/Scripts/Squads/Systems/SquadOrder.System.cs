@@ -26,24 +26,23 @@ public partial class SquadOrderSystem : SystemBase
         var ecb = _ecbSystem.CreateCommandBuffer().AsParallelWriter();
         var transformLookup = GetComponentLookup<LocalTransform>(true);
 
-        foreach (var (input, state, formation, owner, entity) in SystemAPI
+        foreach (var (input, state, formation, owner, resolved, entity) in SystemAPI
                      .Query<RefRW<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
                             RefRW<FormationComponent>,
-                            RefRO<SquadOwnerComponent>>()
+                            RefRO<SquadOwnerComponent>,
+                            RefRW<SquadResolvedOrderComponent>>()
                      .WithEntityAccess())
         {
-            if (!input.ValueRO.hasNewOrder)
+            if (!resolved.ValueRO.hasNewOrder)
                 continue;
 
-            // Process the order without debug logging
-
-            // Copy the requested order to the state component
-            state.ValueRW.currentOrder = input.ValueRO.orderType;
+            // Copy the winning order to the state component
+            state.ValueRW.currentOrder     = resolved.ValueRO.order;
             state.ValueRW.isExecutingOrder = true;
 
             // Handle Hold Position order specifically
-            if (input.ValueRO.orderType == SquadOrderType.HoldPosition)
+            if (resolved.ValueRO.order == SquadOrderType.HoldPosition)
             {
                 // Capture hero's current facing rotation for the formation
                 quaternion heroRotation = quaternion.identity;
@@ -57,16 +56,16 @@ public partial class SquadOrderSystem : SystemBase
                 if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                 {
                     var holdComponent = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(entity);
-                    holdComponent.ValueRW.holdCenter = input.ValueRO.holdPosition;
-                    holdComponent.ValueRW.holdRotation = heroRotation;
+                    holdComponent.ValueRW.holdCenter        = resolved.ValueRO.holdPosition;
+                    holdComponent.ValueRW.holdRotation      = heroRotation;
                     holdComponent.ValueRW.originalFormation = input.ValueRO.desiredFormation;
                 }
                 else
                 {
                     ecb.AddComponent(entity.Index, entity, new SquadHoldPositionComponent
                     {
-                        holdCenter = input.ValueRO.holdPosition,
-                        holdRotation = heroRotation,
+                        holdCenter        = resolved.ValueRO.holdPosition,
+                        holdRotation      = heroRotation,
                         originalFormation = input.ValueRO.desiredFormation
                     });
                 }
@@ -80,18 +79,19 @@ public partial class SquadOrderSystem : SystemBase
                 }
             }
 
-            // Request formation change if needed
+            // Request formation change if needed (formation still sourced from SquadInputComponent)
             if (input.ValueRO.desiredFormation != formation.ValueRO.currentFormation)
             {
-                // Solo actualizar FormationComponent - es la fuente de verdad de formación
                 formation.ValueRW.currentFormation = input.ValueRO.desiredFormation;
             }
 
-            // Request a state transition if using the FSM system
-            var newState = OrderToState(input.ValueRO.orderType);
+            // Request a state transition via the FSM system
+            var newState = OrderToState(resolved.ValueRO.order);
             state.ValueRW.transitionTo = newState;
 
-            input.ValueRW.hasNewOrder = false;
+            // Clear both flags so the order is not re-processed next frame
+            resolved.ValueRW.hasNewOrder = false;
+            input.ValueRW.hasNewOrder    = false;
         }
 
         _ecbSystem.AddJobHandleForProducer(Dependency);
