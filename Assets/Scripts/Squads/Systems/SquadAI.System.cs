@@ -21,9 +21,10 @@ public partial class SquadAISystem : SystemBase
     {
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
 
-        foreach (var (ai, state, dataRef, units, entity) in SystemAPI
+        foreach (var (ai, state, combatState, dataRef, units, entity) in SystemAPI
                      .Query<RefRW<SquadAIComponent>,
                             RefRW<SquadStateComponent>,
+                            RefRW<SquadCombatStateComponent>,
                             RefRO<SquadDataReference>,
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
@@ -112,7 +113,9 @@ public partial class SquadAISystem : SystemBase
             ai.ValueRW.tacticalIntent = desiredState;
             ai.ValueRW.isInCombat     = enemiesDetected || wasHit;
 
-
+            // [Sprint2 dual-write] SquadCombatStateComponent mirrors SquadAIComponent
+            combatState.ValueRW.isInCombat    = enemiesDetected || wasHit;
+            combatState.ValueRW.engagedTarget = ai.ValueRO.targetEntity;
         }
     }
 }

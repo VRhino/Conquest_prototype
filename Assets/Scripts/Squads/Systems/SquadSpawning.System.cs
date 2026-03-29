@@ -125,6 +125,23 @@ public partial class SquadSpawningSystem : SystemBase
             // Agregar buffer para el patrón de formación
             ecb.AddBuffer<FormationPatternElement>(squad);
 
+            // [Sprint2] Nuevos componentes — fuentes de verdad futuras (dual-write activo)
+            ecb.AddComponent(squad, new SquadCombatStateComponent
+            {
+                isInCombat    = false,
+                engagedTarget = Entity.Null
+            });
+            ecb.AddComponent(squad, new SquadFSMComponent
+            {
+                currentState = initialState,
+                stateTimer   = 0f
+            });
+            ecb.AddComponent(squad, new SquadActiveFormationComponent
+            {
+                currentFormation        = firstFormationType,
+                formationChangeCooldown = 0f
+            });
+
             // Buffers de combate y detección de enemigos
             ecb.AddComponent<SquadAIComponent>(squad);
             ecb.AddBuffer<DetectedEnemy>(squad);

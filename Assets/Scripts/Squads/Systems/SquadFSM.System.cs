@@ -20,8 +20,8 @@ public partial class SquadFSMSystem : SystemBase
     {
         float dt = SystemAPI.Time.DeltaTime;
 
-        foreach (var (state, ai, units, entity) in SystemAPI
-                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, DynamicBuffer<SquadUnitElement>>()
+        foreach (var (state, ai, fsmComp, units, entity) in SystemAPI
+                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, RefRW<SquadFSMComponent>, DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
             var s = state.ValueRW;
@@ -56,6 +56,9 @@ public partial class SquadFSMSystem : SystemBase
             {
                 s.transitionTo = SquadFSMState.KO;
                 state.ValueRW = s;
+                // [Sprint2 dual-write]
+                fsmComp.ValueRW.currentState = s.currentState;
+                fsmComp.ValueRW.stateTimer   = s.stateTimer;
                 continue;
             }
 
@@ -63,6 +66,9 @@ public partial class SquadFSMSystem : SystemBase
             if (s.currentState == SquadFSMState.Retreating && s.retreatTriggered)
             {
                 state.ValueRW = s;
+                // [Sprint2 dual-write]
+                fsmComp.ValueRW.currentState = s.currentState;
+                fsmComp.ValueRW.stateTimer   = s.stateTimer;
                 continue;
             }
 
@@ -104,6 +110,9 @@ public partial class SquadFSMSystem : SystemBase
 
             s.transitionTo = desired;
             state.ValueRW = s;
+            // [Sprint2 dual-write]
+            fsmComp.ValueRW.currentState = s.currentState;
+            fsmComp.ValueRW.stateTimer   = s.stateTimer;
         }
     }
 }

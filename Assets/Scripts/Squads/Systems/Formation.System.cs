@@ -21,16 +21,18 @@ public partial class FormationSystem : SystemBase
         float deltaTime = SystemAPI.Time.DeltaTime;
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        foreach (var (input, state, formationComp, squadData, units, squadEntity) in SystemAPI
+        foreach (var (input, state, formationComp, activeFormation, squadData, units, squadEntity) in SystemAPI
                     .Query<RefRO<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
                             RefRW<FormationComponent>,
+                            RefRW<SquadActiveFormationComponent>,
                             RefRO<SquadDataComponent>,
                             DynamicBuffer<SquadUnitElement>>()
                     .WithEntityAccess())
         {
             var s = state.ValueRW;
             s.formationChangeCooldown = math.max(0f, s.formationChangeCooldown - deltaTime);
+            activeFormation.ValueRW.formationChangeCooldown = s.formationChangeCooldown;
 
             if (input.ValueRO.desiredFormation == formationComp.ValueRO.currentFormation ||
                 s.formationChangeCooldown > 0f)
@@ -123,6 +125,9 @@ public partial class FormationSystem : SystemBase
 
             formationComp.ValueRW.currentFormation = input.ValueRO.desiredFormation;
             s.formationChangeCooldown = 1f;
+            // [Sprint2 dual-write]
+            activeFormation.ValueRW.currentFormation      = input.ValueRO.desiredFormation;
+            activeFormation.ValueRW.formationChangeCooldown = 1f;
 
             // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
             if (s.currentState == SquadFSMState.HoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
