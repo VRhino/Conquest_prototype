@@ -43,7 +43,7 @@ public partial class DestinationMarkerSystem : SystemBase
         var transformLookup = GetComponentLookup<LocalTransform>(true);
         var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
-        var squadDataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var squadDefLookup = GetComponentLookup<SquadDefinitionComponent>(true);
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
         var isLocalPlayerLookup = GetComponentLookup<IsLocalPlayer>(true);
         
@@ -63,20 +63,20 @@ public partial class DestinationMarkerSystem : SystemBase
             if (!stateLookup.TryGetComponent(squadEntity, out var squadState))
                 continue;
                 
-            if (!squadDataLookup.TryGetComponent(squadEntity, out var squadData))
+            if (!squadDefLookup.TryGetComponent(squadEntity, out var squadDef))
                 continue;
-                
+
             // Use the anchor computed by SquadAnchorSystem (handles hold/retreat/follow cases)
             if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
                 continue;
             var anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
             float3 heroPosition = anchor.position;
 
-            // Get current formation gridPositions from squad data
-            ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
-            if (squadData.formationLibrary.IsCreated)
+            // Get current formation gridPositions from squad definition
+            ref BlobArray<int2> gridPositions = ref squadDef.formationLibrary.Value.formations[0].gridPositions;
+            if (squadDef.formationLibrary.IsCreated)
             {
-                ref var formations = ref squadData.formationLibrary.Value.formations;
+                ref var formations = ref squadDef.formationLibrary.Value.formations;
                 var formationComp = SystemAPI.GetComponent<FormationComponent>(squadEntity);
                 FormationType currentFormation = formationComp.currentFormation;
                 

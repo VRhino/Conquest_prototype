@@ -36,6 +36,7 @@ public partial class UnitStatScalingSystem : SystemBase
             return;
 
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var defLookup  = GetComponentLookup<SquadDefinitionComponent>(true);
         var unitBufferLookup = GetBufferLookup<SquadUnitElement>();
 
         foreach (var (progress, dataRef, squad) in SystemAPI
@@ -44,8 +45,9 @@ public partial class UnitStatScalingSystem : SystemBase
         {
             if (!dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 continue;
+            defLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var def);
 
-            UnitStatsUtility.ApplyStatsToSquad(squad, data, progress.ValueRO.level, EntityManager, unitBufferLookup);
+            UnitStatsUtility.ApplyStatsToSquad(squad, data, def.leadershipCost, progress.ValueRO.level, EntityManager, unitBufferLookup);
         }
     }
 

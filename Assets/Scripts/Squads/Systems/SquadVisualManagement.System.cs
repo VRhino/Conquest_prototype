@@ -76,10 +76,10 @@ public partial class SquadVisualManagementSystem : SystemBase
         Entity parentSquad = FindParentSquad(unitEntity);
         SquadType squadType = SquadType.Squires; // Default
         
-        if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDataComponent>(parentSquad))
+        if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDefinitionComponent>(parentSquad))
         {
-            var squadData = EntityManager.GetComponentData<SquadDataComponent>(parentSquad);
-            squadType = squadData.squadType;
+            var squadDef = EntityManager.GetComponentData<SquadDefinitionComponent>(parentSquad);
+            squadType = squadDef.squadType;
         }
         
         // Buscar el prefab visual

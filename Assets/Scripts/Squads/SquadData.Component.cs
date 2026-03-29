@@ -11,8 +11,6 @@ public struct SquadDataComponent : IComponentData
     public float baseSpeed;
     public float mass;
     public float weight;
-    /// <summary>Classification of squad units.</summary>
-    public SquadType squadType;
     public float block;
 
     public float slashingDefense;
@@ -34,27 +32,13 @@ public struct SquadDataComponent : IComponentData
     public float reloadSpeed;
     public int ammoCapacity;
 
-    public int leadershipCost;
-    public BehaviorProfile behaviorProfile;
-
     /// <summary>Progression curves sampled per level.</summary>
     public BlobAssetReference<SquadProgressionCurveBlob> curves;
-
-    /// <summary>Formation patterns available to this squad type.</summary>
-    public BlobAssetReference<FormationLibraryBlob> formationLibrary;
-
-    /// <summary>Prefab entity used to instantiate squad units.</summary>
-    public Entity unitPrefab;
-
-    public int unitCount;
-    /// <summary>Formation grid size (cells in X, cells in Y)</summary>
-    public int2 GridSize;
 
     public float attackRange;
     public float attackInterval;
     public float criticalChance;
     public float criticalMultiplier;
-    public float detectionRange;
 
     // Strike window timing
     public float strikeWindowStart;

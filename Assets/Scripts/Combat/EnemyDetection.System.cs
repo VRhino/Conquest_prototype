@@ -37,9 +37,9 @@ public partial class EnemyDetectionSystem : SystemBase
         _squadUnitLookup.Update(this);
 
         // PASS 1 — squad level: detect enemy units within detectionRange
-        foreach (var (dataA, teamA, unitsA, detectedEnemies, squadTargets, entityA) in
+        foreach (var (defA, teamA, unitsA, detectedEnemies, squadTargets, entityA) in
                  SystemAPI.Query<
-                     RefRO<SquadDataComponent>,
+                     RefRO<SquadDefinitionComponent>,
                      RefRO<TeamComponent>,
                      DynamicBuffer<SquadUnitElement>,
                      DynamicBuffer<DetectedEnemy>,
@@ -64,7 +64,7 @@ public partial class EnemyDetectionSystem : SystemBase
                 continue;
 
             centroidA /= aliveCount;
-            float detectionRangeSq = dataA.ValueRO.detectionRange * dataA.ValueRO.detectionRange;
+            float detectionRangeSq = defA.ValueRO.detectionRange * defA.ValueRO.detectionRange;
 
             // Scan all other squads for enemy units within range
             foreach (var (dataB, teamB, unitsB, entityB) in

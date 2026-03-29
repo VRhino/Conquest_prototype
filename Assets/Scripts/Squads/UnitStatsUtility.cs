@@ -14,6 +14,7 @@ public static class UnitStatsUtility
     public static void ApplyStatsToSquad(
         Entity squadEntity,
         SquadDataComponent data,
+        int leadershipCost,
         int level,
         EntityManager entityManager,
         BufferLookup<SquadUnitElement> unitBufferLookup)
@@ -35,7 +36,7 @@ public static class UnitStatsUtility
             if (!entityManager.Exists(unitElement.Value))
                 continue;
 
-            ApplyStatsToUnit(unitElement.Value, data, healthMul, damageMul, defenseMul, speedMul, entityManager);
+            ApplyStatsToUnit(unitElement.Value, data, leadershipCost, healthMul, damageMul, defenseMul, speedMul, entityManager);
         }
     }
 
@@ -45,6 +46,7 @@ public static class UnitStatsUtility
     public static void ApplyStatsToUnit(
         Entity unitEntity,
         SquadDataComponent data,
+        int leadershipCost,
         float healthMul,
         float damageMul,
         float defenseMul,
@@ -72,7 +74,7 @@ public static class UnitStatsUtility
             slashingPenetration = data.slashingPenetration,
             piercingPenetration = data.piercingPenetration,
             bluntPenetration = data.bluntPenetration,
-            leadershipCost = data.leadershipCost
+            leadershipCost = leadershipCost
         };
 
         // Apply main stats

@@ -22,6 +22,7 @@ public partial class SquadSpawningSystem : SystemBase
         Dependency.Complete();
         var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var defLookup  = GetComponentLookup<SquadDefinitionComponent>(true);
         var isLocalPlayerLookup = GetComponentLookup<IsLocalPlayer>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
@@ -39,13 +40,14 @@ public partial class SquadSpawningSystem : SystemBase
             }
 
             if (!dataLookup.TryGetComponent(selection.ValueRO.squadDataEntity, out var data))
-            {
                 continue;
-            }
+
+            if (!defLookup.TryGetComponent(selection.ValueRO.squadDataEntity, out var def))
+                continue;
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
 #if UNITY_EDITOR
-            ecb.SetName(squad, $"Squad_{selection.ValueRO.instanceId}_{data.squadType}");
+            ecb.SetName(squad, $"Squad_{selection.ValueRO.instanceId}_{def.squadType}");
 #endif
 
             // Configurar posición inicial del squad offset delante del héroe
@@ -60,11 +62,22 @@ public partial class SquadSpawningSystem : SystemBase
             // Squad created successfully
 
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
+            ecb.AddComponent(squad, new SquadDefinitionComponent
+            {
+                squadType        = def.squadType,
+                behaviorProfile  = def.behaviorProfile,
+                formationLibrary = def.formationLibrary,
+                unitCount        = def.unitCount,
+                GridSize         = def.GridSize,
+                unitPrefab       = def.unitPrefab,
+                leadershipCost   = def.leadershipCost,
+                detectionRange   = def.detectionRange
+            });
             ecb.AddComponent(squad, new SquadDataReference { dataEntity = squad }); // Self-ref so SquadAISystem can find this squad
             ecb.AddComponent(squad, new SquadStatsComponent
             {
-                squadType = data.squadType,
-                behaviorProfile = data.behaviorProfile
+                squadType = def.squadType,
+                behaviorProfile = def.behaviorProfile
             });
             // Note: Formation library is now included directly in SquadDataComponent
             ecb.AddComponent(squad, new SquadProgressComponent
@@ -79,8 +92,8 @@ public partial class SquadSpawningSystem : SystemBase
             // Solo las unidades individuales tienen visuales
 
             // Obtener la primera formación disponible en el arreglo como formación por defecto (índice 0)
-            var firstFormationType = data.formationLibrary.Value.formations.Length > 0
-                ? data.formationLibrary.Value.formations[0].formationType
+            var firstFormationType = def.formationLibrary.Value.formations.Length > 0
+                ? def.formationLibrary.Value.formations[0].formationType
                 : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
 
             // Todos los squads comienzan en HoldPosition para que el jugador se oriente antes de mover
@@ -178,7 +191,7 @@ public partial class SquadSpawningSystem : SystemBase
 
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);
 
-            ref var formations = ref data.formationLibrary.Value.formations;
+            ref var formations = ref def.formationLibrary.Value.formations;
             ref var firstFormation = ref formations[0]; // Always use index 0 for initial spawn
 
             int unitCount = firstFormation.gridPositions.Length;
@@ -210,7 +223,7 @@ public partial class SquadSpawningSystem : SystemBase
                 // Crear unidad ECS (solo lógica, sin visuales)
                 Entity unit = ecb.CreateEntity();
 #if UNITY_EDITOR
-                ecb.SetName(unit, $"Unit_{i}_{data.squadType}_Sq{selection.ValueRO.instanceId}");
+                ecb.SetName(unit, $"Unit_{i}_{def.squadType}_Sq{selection.ValueRO.instanceId}");
 #endif
                 FormationPositionCalculator.CalculateDesiredPosition(
                     unit,
@@ -235,7 +248,7 @@ public partial class SquadSpawningSystem : SystemBase
                 // Agregar referencia visual para la unidad
                 ecb.AddComponent(unit, new UnitVisualReference
                 {
-                    visualPrefabName = GetUnitVisualPrefabName(data.squadType)
+                    visualPrefabName = GetUnitVisualPrefabName(def.squadType)
                 });
 
                 // Añadir componentes ECS de la unidad (todos excepto visuales)
@@ -409,12 +422,12 @@ public partial class SquadSpawningSystem : SystemBase
 
                             // Find the SquadDataIDComponent entity to get unit count
                             int totalUnitsForSquad = unitCount; // fallback
-                            foreach (var (idComp, dataComp) in SystemAPI
-                                         .Query<RefRO<SquadDataIDComponent>, RefRO<SquadDataComponent>>())
+                            foreach (var (idComp, defComp) in SystemAPI
+                                         .Query<RefRO<SquadDataIDComponent>, RefRO<SquadDefinitionComponent>>())
                             {
                                 if (idComp.ValueRO.id == map.baseSquadID)
                                 {
-                                    totalUnitsForSquad = dataComp.ValueRO.formationLibrary.Value.formations[0].gridPositions.Length;
+                                    totalUnitsForSquad = defComp.ValueRO.formationLibrary.Value.formations[0].gridPositions.Length;
                                     break;
                                 }
                             }

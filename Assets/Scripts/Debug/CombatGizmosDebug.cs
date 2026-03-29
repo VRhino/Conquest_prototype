@@ -151,7 +151,7 @@ public class CombatGizmosDebug : MonoBehaviour
     void DrawSquadDetectionRanges(EntityManager em)
     {
         var query = em.CreateEntityQuery(
-            ComponentType.ReadOnly<SquadDataComponent>(),
+            ComponentType.ReadOnly<SquadDefinitionComponent>(),
             ComponentType.ReadOnly<SquadStateComponent>());
 
         var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
@@ -174,7 +174,7 @@ public class CombatGizmosDebug : MonoBehaviour
             if (aliveCount == 0) continue;
             centroid /= aliveCount;
 
-            var data  = em.GetComponentData<SquadDataComponent>(entity);
+            var data  = em.GetComponentData<SquadDefinitionComponent>(entity);
             var aiComp = em.GetComponentData<SquadAIComponent>(entity);
             bool hasTargets = em.HasBuffer<SquadTargetEntity>(entity)
                            && em.GetBuffer<SquadTargetEntity>(entity).Length > 0;

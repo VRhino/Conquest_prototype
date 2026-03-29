@@ -19,13 +19,12 @@ public partial class SquadAISystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var dataLookup = GetComponentLookup<SquadDataComponent>(true);
-
-        foreach (var (ai, state, combatState, dataRef, units, entity) in SystemAPI
+        foreach (var (ai, state, combatState, dataRef, def, units, entity) in SystemAPI
                      .Query<RefRW<SquadAIComponent>,
                             RefRW<SquadStateComponent>,
                             RefRW<SquadCombatStateComponent>,
                             RefRO<SquadDataReference>,
+                            RefRO<SquadDefinitionComponent>,
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
@@ -70,9 +69,7 @@ public partial class SquadAISystem : SystemBase
                 }
             }
 
-            BehaviorProfile profile = BehaviorProfile.Versatile;
-            if (dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
-                profile = data.behaviorProfile;
+            BehaviorProfile profile = def.ValueRO.behaviorProfile;
 
             TacticalIntent  desiredState;
             switch (profile)

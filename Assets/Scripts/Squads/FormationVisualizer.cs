@@ -66,15 +66,14 @@ public class FormationVisualizer : MonoBehaviour
 
         var leaderTransform = _entityManager.GetComponentData<LocalTransform>(leader);
         var formationComp = _entityManager.GetComponentData<FormationComponent>(_squadEntity);
-        var squadData = _entityManager.GetComponentData<SquadDataComponent>(_squadEntity);
-        if (!squadData.formationLibrary.IsCreated)
+        var squadDef = _entityManager.GetComponentData<SquadDefinitionComponent>(_squadEntity);
+        if (!squadDef.formationLibrary.IsCreated)
         {
             _positions = System.Array.Empty<Vector3>();
             return;
         }
 
-        // ✅ Corrección: acceder a blob por referencia
-        ref var formations = ref squadData.formationLibrary.Value.formations;
+        ref var formations = ref squadDef.formationLibrary.Value.formations;
         ref BlobArray<int2> gridPositions = ref formations[0].gridPositions; 
         bool found = false;
 

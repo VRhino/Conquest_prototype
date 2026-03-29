@@ -27,19 +27,19 @@ public partial class GridFormationUpdateSystem : SystemBase
             if (units.Length == 0) continue;
             
             // Get squad data and state to access formation library
-            if (!SystemAPI.HasComponent<SquadDataComponent>(squadEntity) ||
+            if (!SystemAPI.HasComponent<SquadDefinitionComponent>(squadEntity) ||
                 !SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
                 continue;
 
-            var squadData  = SystemAPI.GetComponent<SquadDataComponent>(squadEntity);
+            var squadDef  = SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity);
             var squadState = SystemAPI.GetComponent<SquadStateComponent>(squadEntity);
             var formationComp = SystemAPI.GetComponent<FormationComponent>(squadEntity);
 
-            // Get current formation gridPositions from squad data
-            ref BlobArray<int2> gridPositions = ref squadData.formationLibrary.Value.formations[0].gridPositions;
-            if (squadData.formationLibrary.IsCreated)
+            // Get current formation gridPositions from squad definition
+            ref BlobArray<int2> gridPositions = ref squadDef.formationLibrary.Value.formations[0].gridPositions;
+            if (squadDef.formationLibrary.IsCreated)
             {
-                ref var formations = ref squadData.formationLibrary.Value.formations;
+                ref var formations = ref squadDef.formationLibrary.Value.formations;
                 FormationType currentFormation = formationComp.currentFormation;
                 
                 // Find the current formation in the library

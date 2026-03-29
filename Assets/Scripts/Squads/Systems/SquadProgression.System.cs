@@ -22,6 +22,7 @@ public partial class SquadProgressionSystem : SystemBase
             return;
 
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var defLookup  = GetComponentLookup<SquadDefinitionComponent>(true);
         var abilityLookup = GetBufferLookup<AbilityByLevelElement>(true);
         var unitBufferLookup = GetBufferLookup<SquadUnitElement>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
@@ -32,6 +33,7 @@ public partial class SquadProgressionSystem : SystemBase
         {
             if (!dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 continue;
+            defLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var def);
 
             float xpGain = 10f;
             if (SystemAPI.HasComponent<SquadAIComponent>(entity) &&
@@ -45,7 +47,7 @@ public partial class SquadProgressionSystem : SystemBase
                 progress.ValueRW.level += 1;
                 progress.ValueRW.xpToNextLevel = CalculateNext(progress.ValueRO.level);
 
-                UnitStatsUtility.ApplyStatsToSquad(entity, data, progress.ValueRO.level, EntityManager, unitBufferLookup);
+                UnitStatsUtility.ApplyStatsToSquad(entity, data, def.leadershipCost, progress.ValueRO.level, EntityManager, unitBufferLookup);
                 UnlockAbility(entity, dataRef.ValueRO.dataEntity, progress.ValueRO.level, abilityLookup);
                 // Note: Formations are now always available from SquadDataComponent.formationLibrary
 

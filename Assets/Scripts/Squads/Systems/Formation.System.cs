@@ -21,12 +21,12 @@ public partial class FormationSystem : SystemBase
         float deltaTime = SystemAPI.Time.DeltaTime;
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        foreach (var (input, state, formationComp, activeFormation, squadData, units, squadEntity) in SystemAPI
+        foreach (var (input, state, formationComp, activeFormation, squadDef, units, squadEntity) in SystemAPI
                     .Query<RefRO<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
                             RefRW<FormationComponent>,
                             RefRW<SquadActiveFormationComponent>,
-                            RefRO<SquadDataComponent>,
+                            RefRO<SquadDefinitionComponent>,
                             DynamicBuffer<SquadUnitElement>>()
                     .WithEntityAccess())
         {
@@ -41,7 +41,7 @@ public partial class FormationSystem : SystemBase
                 continue;
             }
 
-            if (!squadData.ValueRO.formationLibrary.IsCreated || units.Length == 0)
+            if (!squadDef.ValueRO.formationLibrary.IsCreated || units.Length == 0)
             {
                 state.ValueRW = s;
                 continue;
@@ -55,7 +55,7 @@ public partial class FormationSystem : SystemBase
             }
             float3 heroPosition = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity).position;
 
-            ref var formations = ref squadData.ValueRO.formationLibrary.Value.formations;
+            ref var formations = ref squadDef.ValueRO.formationLibrary.Value.formations;
 
             // Find the desired formation
             int formationIndex = -1;

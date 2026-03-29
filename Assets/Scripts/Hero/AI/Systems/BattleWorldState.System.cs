@@ -34,6 +34,7 @@ public partial class BattleWorldStateSystem : SystemBase
     private ComponentLookup<HeroLifeComponent>             _lifeLookup;
     private ComponentLookup<HeroSquadReference>            _squadRefLookup;
     private ComponentLookup<SquadDataComponent>            _squadDataLookup;
+    private ComponentLookup<SquadDefinitionComponent>      _squadDefLookup;
     private ComponentLookup<SquadAIComponent>              _squadAILookup;
     private ComponentLookup<SquadStateComponent>           _squadStateLookup;
     private ComponentLookup<SquadOwnerComponent>           _squadOwnerLookup;
@@ -53,6 +54,7 @@ public partial class BattleWorldStateSystem : SystemBase
         _lifeLookup          = GetComponentLookup<HeroLifeComponent>(true);
         _squadRefLookup      = GetComponentLookup<HeroSquadReference>(true);
         _squadDataLookup     = GetComponentLookup<SquadDataComponent>(true);
+        _squadDefLookup      = GetComponentLookup<SquadDefinitionComponent>(true);
         _squadAILookup       = GetComponentLookup<SquadAIComponent>(true);
         _squadStateLookup    = GetComponentLookup<SquadStateComponent>(true);
         _formationLookup     = GetComponentLookup<FormationComponent>(true);
@@ -87,6 +89,7 @@ public partial class BattleWorldStateSystem : SystemBase
         _lifeLookup.Update(this);
         _squadRefLookup.Update(this);
         _squadDataLookup.Update(this);
+        _squadDefLookup.Update(this);
         _squadAILookup.Update(this);
         _squadStateLookup.Update(this);
         _formationLookup.Update(this);
@@ -183,12 +186,10 @@ public partial class BattleWorldStateSystem : SystemBase
 
                 if (snap.hasSquad)
                 {
+                    if (_squadDefLookup.HasComponent(sq))
+                        snap.squadType = _squadDefLookup[sq].squadType;
                     if (_squadDataLookup.HasComponent(sq))
-                    {
-                        var sd = _squadDataLookup[sq];
-                        snap.squadType      = sd.squadType;
-                        snap.isRangedSquad  = sd.isRangedUnit;
-                    }
+                        snap.isRangedSquad = _squadDataLookup[sq].isRangedUnit;
                     if (_squadAILookup.HasComponent(sq))
                         snap.squadIsInCombat = _squadAILookup[sq].isInCombat;
                     if (_squadStateLookup.HasComponent(sq))
@@ -244,12 +245,10 @@ public partial class BattleWorldStateSystem : SystemBase
                 isRanged  = false,
             };
 
+            if (_squadDefLookup.HasComponent(entity))
+                snap.squadType = _squadDefLookup[entity].squadType;
             if (_squadDataLookup.HasComponent(entity))
-            {
-                var sd = _squadDataLookup[entity];
-                snap.squadType = sd.squadType;
-                snap.isRanged  = sd.isRangedUnit;
-            }
+                snap.isRanged = _squadDataLookup[entity].isRangedUnit;
             if (_squadAILookup.HasComponent(entity))
             {
                 var ai = _squadAILookup[entity];

@@ -207,13 +207,13 @@ public partial class SquadControlSystem : SystemBase
 
                 if (formationChanged)
                 {
-                    // Obtener la biblioteca de formaciones del squad data
-                    if (SystemAPI.HasComponent<SquadDataComponent>(squadEntity))
+                    // Obtener la biblioteca de formaciones del squad definition
+                    if (SystemAPI.HasComponent<SquadDefinitionComponent>(squadEntity))
                     {
-                        var squadData = SystemAPI.GetComponent<SquadDataComponent>(squadEntity);
-                        if (squadData.formationLibrary.IsCreated)
+                        var squadDef = SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity);
+                        if (squadDef.formationLibrary.IsCreated)
                         {
-                            ref var formations = ref squadData.formationLibrary.Value.formations;
+                            ref var formations = ref squadDef.formationLibrary.Value.formations;
 
                             if (isDoubleClickX)
                             {

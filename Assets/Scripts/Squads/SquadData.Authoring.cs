@@ -33,7 +33,6 @@ public class SquadDataAuthoring : MonoBehaviour
                 baseSpeed = authoring.data.baseSpeed,
                 mass = authoring.data.massValue,
                 weight = authoring.data.totalWeight,
-                squadType = authoring.data.type,
                 block = authoring.data.block,
                 slashingDefense = authoring.data.slashingDefense,
                 piercingDefense = authoring.data.piercingDefense,
@@ -50,21 +49,27 @@ public class SquadDataAuthoring : MonoBehaviour
                 fireRate = authoring.data.fireRate,
                 reloadSpeed = authoring.data.reloadSpeed,
                 ammoCapacity = authoring.data.ammo,
-                leadershipCost = authoring.data.leadershipCost,
-                behaviorProfile = authoring.data.behaviorProfile,
                 curves = default,
-                formationLibrary = formationLibrary,
-                unitPrefab = prefabEntity,
-                unitCount = authoring.data.unitCount,
                 attackRange = authoring.data.attackRange,
                 attackInterval = authoring.data.attackInterval,
                 criticalChance = authoring.data.criticalChance,
                 criticalMultiplier = authoring.data.criticalMultiplier,
-                detectionRange = authoring.data.detectionRange,
                 strikeWindowStart = authoring.data.strikeWindowStart,
                 strikeWindowDuration = authoring.data.strikeWindowDuration,
                 attackAnimationDuration = authoring.data.attackAnimationDuration,
                 kineticMultiplier = authoring.data.kineticMultiplier
+            });
+
+            AddComponent(entity, new SquadDefinitionComponent
+            {
+                squadType        = authoring.data.type,
+                behaviorProfile  = authoring.data.behaviorProfile,
+                formationLibrary = formationLibrary,
+                unitPrefab       = prefabEntity,
+                unitCount        = authoring.data.unitCount,
+                GridSize         = default,
+                leadershipCost   = authoring.data.leadershipCost,
+                detectionRange   = authoring.data.detectionRange
             });
 
             AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(authoring.data.id) });

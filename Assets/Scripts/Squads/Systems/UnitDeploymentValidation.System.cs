@@ -126,6 +126,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
     void SaveEquipment()
     {
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
+        var defLookup  = GetComponentLookup<SquadDefinitionComponent>(true);
         bool save = false;
 
         var deadLookup = GetComponentLookup<IsDeadComponent>(true);
@@ -137,6 +138,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
         {
             if (!dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 continue;
+            defLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var def);
 
             LocalSaveSystem.SquadInstanceData record = null;
             foreach (var r in _progress.squads)
@@ -164,7 +166,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
                 _progress.squads.Add(new LocalSaveSystem.SquadInstanceData
                 {
                     id = instance.ValueRO.id,
-                    squadType = data.squadType,
+                    squadType = def.squadType,
                     armorPercent = newPercent
                 });
                 save = true;
