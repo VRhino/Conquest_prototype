@@ -396,8 +396,6 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 Debug.LogWarning($"Squad spawn: hero {entity} NO tiene TeamComponent al spawnear");
             }
-            // Añadir HeroStateComponent al héroe (no es destructivo, solo se sobrescribe si ya existe)
-            ecb.AddComponent(entity, new HeroStateComponent { State = HeroState.Idle });
 
             // Initialize InactiveSquadElement buffer for squad swap (only on first spawn, when buffer doesn't exist yet)
             if (!SystemAPI.HasBuffer<InactiveSquadElement>(entity))

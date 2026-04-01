@@ -43,31 +43,38 @@ public partial class UnitNavMeshSystem : SystemBase
     // Unit → squad tactical intent map, rebuilt every frame.
     private NativeHashMap<Entity, TacticalIntent> _unitToIntent;
 
+    // Unit → squad FSM state map, rebuilt every frame.
+    private NativeHashMap<Entity, SquadFSMState> _unitToFSMState;
+
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
-        _unitToOrder  = new NativeHashMap<Entity, SquadOrderType>(256, Allocator.Persistent);
-        _unitToIntent = new NativeHashMap<Entity, TacticalIntent>(256, Allocator.Persistent);
+        _unitToOrder    = new NativeHashMap<Entity, SquadOrderType>(256, Allocator.Persistent);
+        _unitToIntent   = new NativeHashMap<Entity, TacticalIntent>(256, Allocator.Persistent);
+        _unitToFSMState = new NativeHashMap<Entity, SquadFSMState>(256, Allocator.Persistent);
     }
 
     protected override void OnDestroy()
     {
-        if (_unitToOrder.IsCreated)  _unitToOrder.Dispose();
-        if (_unitToIntent.IsCreated) _unitToIntent.Dispose();
+        if (_unitToOrder.IsCreated)    _unitToOrder.Dispose();
+        if (_unitToIntent.IsCreated)   _unitToIntent.Dispose();
+        if (_unitToFSMState.IsCreated) _unitToFSMState.Dispose();
     }
 
     protected override void OnUpdate()
     {
-        // ── Phase 0: build unit → squad order/intent maps ───────────────────
+        // ── Phase 0: build unit → squad order/intent/state maps ────────────
         _unitToOrder.Clear();
         _unitToIntent.Clear();
+        _unitToFSMState.Clear();
 
         foreach (var (state, units, squadEntity) in
             SystemAPI.Query<RefRO<SquadStateComponent>, DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
-            SquadOrderType order = state.ValueRO.currentOrder;
+            SquadOrderType order    = state.ValueRO.currentOrder;
+            SquadFSMState  fsmState = state.ValueRO.currentState;
             TacticalIntent intent = SystemAPI.HasComponent<SquadAIComponent>(squadEntity)
                 ? SystemAPI.GetComponent<SquadAIComponent>(squadEntity).tacticalIntent
                 : TacticalIntent.Idle;
@@ -79,6 +86,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 {
                     _unitToOrder.TryAdd(u, order);
                     _unitToIntent.TryAdd(u, intent);
+                    _unitToFSMState.TryAdd(u, fsmState);
                 }
             }
         }
@@ -105,6 +113,10 @@ public partial class UnitNavMeshSystem : SystemBase
             float3 unitPos    = transform.ValueRO.Position;
             float3 destination = targetPos.ValueRO.position; // default: formation slot
 
+            // Read squad state early — needed by leash bypass and movement gate.
+            _unitToOrder.TryGetValue(entity, out SquadOrderType squadOrder);
+            _unitToFSMState.TryGetValue(entity, out SquadFSMState squadFSMState);
+
             // Read optional combat components
             bool   hasCombat    = SystemAPI.HasComponent<UnitCombatComponent>(entity)
                                 && SystemAPI.HasComponent<UnitWeaponComponent>(entity);
@@ -120,11 +132,13 @@ public partial class UnitNavMeshSystem : SystemBase
                     combatTarget = Entity.Null;
 
                 // Leash: only pursue if enemy is within leashDistance of the unit's formation slot.
-                // Skipped when tacticalIntent == Attacking — SquadAI already decided to engage.
+                // Bypassed when tacticalIntent == Attacking (SquadAI decided to engage)
+                // OR when squad FSM is InCombat (unit must pursue target, not return to slot).
                 _unitToIntent.TryGetValue(entity, out TacticalIntent tacticalIntent);
                 bool isAttacking = tacticalIntent == TacticalIntent.Attacking;
+                bool isInCombat  = squadFSMState == SquadFSMState.InCombat;
 
-                if (!isAttacking
+                if (!isAttacking && !isInCombat
                     && combatTarget != Entity.Null
                     && SystemAPI.HasComponent<LocalTransform>(combatTarget))
                 {
@@ -136,7 +150,6 @@ public partial class UnitNavMeshSystem : SystemBase
             }
 
             // HoldPosition: unidades van a su slot y se quedan; no persiguen targets.
-            _unitToOrder.TryGetValue(entity, out SquadOrderType squadOrder);
             bool isHoldingPosition = squadOrder == SquadOrderType.HoldPosition;
 
             if (combatTarget != Entity.Null
@@ -205,11 +218,17 @@ public partial class UnitNavMeshSystem : SystemBase
 
 
 
-            // Gate: respect the randomized reaction delay.
-            // Combat targets always bypass the delay — units must fight back immediately.
-            if (formState.ValueRO.State == UnitFormationState.Waiting && combatTarget == Entity.Null)
+            // Gate: movement decision based on squad FSM state.
+            if (squadFSMState == SquadFSMState.InCombat)
             {
-                agent.ResetPath(); // hold until delay expires
+                if (combatTarget != Entity.Null)
+                    agent.SetDestination(destination); // SetDestination overrides any previous path naturally
+                else
+                    agent.ResetPath(); // No target available — stop in place
+            }
+            else if (formState.ValueRO.State == UnitFormationState.Waiting && combatTarget == Entity.Null)
+            {
+                agent.ResetPath(); // hold until randomized reaction delay expires
             }
             else
             {

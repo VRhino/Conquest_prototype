@@ -14,4 +14,5 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float unitMoveDelayMax;    // Delay máximo antes de moverse (orden de formación)
     public float unitFollowDelayMin;  // Delay mínimo antes de moverse (follow héroe)
     public float unitFollowDelayMax;  // Delay máximo antes de moverse (follow héroe)
+    public float minCombatDuration;   // Segundos mínimos en InCombat tras perder enemigos de rango
 }

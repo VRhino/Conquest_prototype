@@ -154,8 +154,6 @@ Busca el bloque de spawn de AI (cerca de línea 531). Añade **2 líneas** junto
 em.AddComponent<RusherBehaviorActive>(heroEntity);
 em.SetComponentEnabled<RusherBehaviorActive>(heroEntity, false);
 em.AddComponent<BalancedBehaviorActive>(heroEntity);   // activo por defecto
-em.AddComponent<TacticianBehaviorActive>(heroEntity);
-em.SetComponentEnabled<TacticianBehaviorActive>(heroEntity, false);
 // ↓ Añadir aquí:
 em.AddComponent<{NombreBehavior}BehaviorActive>(heroEntity);
 em.SetComponentEnabled<{NombreBehavior}BehaviorActive>(heroEntity, false);
@@ -199,6 +197,6 @@ Sin structural changes, Burst-friendly, efectivo el próximo frame.
 |----------|-----|--------|-----------|
 | Rusher | `RusherBehaviorActive` | `HeroAIRusherSystem` | Rush directo a objetivos, pelea solo si le bloquean |
 | Balanced | `BalancedBehaviorActive` | `HeroAIBalancedSystem` | Evalúa amenazas, se retira con HP bajo, defiende zonas propias |
-| Tactician | `TacticianBehaviorActive` | `HeroAITacticianSystem` | Coordinación de equipo (stub — extiende Balanced) |
+| Tactician | `TacticianBehaviorActive` | `HeroAITacticianSystem` | Coordinación de equipo — **pendiente de implementar** |
 
 **Arquitectura completa:** ver `Docs/RemoteHeroAI_Architecture.md`

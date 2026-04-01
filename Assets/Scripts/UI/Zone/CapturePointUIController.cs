@@ -21,6 +21,7 @@ public class CapturePointUIController : MonoBehaviour
     [SerializeField] Color _neutralColor = Color.gray;
     [SerializeField] Color _playerColor = Color.blue;
     [SerializeField] Color _enemyColor = Color.red;
+    [SerializeField] Color _contestedColor = new Color(1f, 0.6f, 0f, 1f);
 
     [Header("World Tracking")]
     [SerializeField] Transform _worldTarget;
@@ -103,7 +104,11 @@ public class CapturePointUIController : MonoBehaviour
         {
             var prog = _em.GetComponentData<CapturePointProgressComponent>(_zoneEntity);
             if (_progressFill != null)
+            {
                 _progressFill.fillAmount = prog.captureProgress / 100f;
+                if (prog.isContested)
+                    _progressFill.color = _contestedColor;
+            }
             if (_contestedGroup != null)
                 _contestedGroup.alpha = prog.isContested ? 1f : 0f;
         }

@@ -43,7 +43,9 @@ Ubicación: `Assets/Scripts/Hero/AI/Components/`
 |-----------|------|-------------|
 | `TeamWorldState` | Managed singleton | Servicio de datos centralizado. Vistas por equipo con filtro de visibilidad. Agnóstico de intención. |
 | `HeroAITag` | Tag struct | Marca héroes AI. Nunca en local player. |
-| `HeroBehaviorProfileComponent` | Struct | Enum `{Rusher, Balanced, Tactician}` que selecciona behavior activo. Swappable en runtime. |
+| `RusherBehaviorActive` | IEnableableComponent | Tag que activa el behavior Rusher en este héroe. Swappable en runtime. |
+| `BalancedBehaviorActive` | IEnableableComponent | Tag que activa el behavior Balanced en este héroe. Swappable en runtime. |
+| `IsAttackerRole` | Tag struct | Marca héroes con rol atacante según match config. |
 | `HeroAIBlackboard` | Managed class | Output de Perception. Solo datos derived per-hero (distancias, proximidad). Sin listas. |
 | `HeroAIDecision` | Struct | Output de Decision. Interfaz estable que Execution traduce a comandos. |
 
@@ -171,8 +173,8 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
     HeroAIPerceptionSystem       (AI only, tick-gated 5 frames)
         ↓
     HeroAIRusherSystem    ┐
-    HeroAIBalancedSystem  ├── solo 1 corre por entidad (profile check)
-    HeroAITacticianSystem ┘
+    HeroAIBalancedSystem  ├── solo 1 corre por entidad (IEnableableComponent tag check)
+                          ┘
         ↓
     HeroAIExecutionSystem        → HeroMoveIntent + SquadInputComponent + NavMeshAgent
         ↓
@@ -189,7 +191,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 
 | Sistema | Cambio | Impacto |
 |---------|--------|---------|
-| `BattleSceneController.SpawnRemoteHero()` | Agregar `HeroAITag`, `HeroBehaviorProfileComponent`, `HeroAIBlackboard`, `HeroAIDecision`, `HeroMoveIntent` al spawn | Mínimo — solo spawn |
+| `BattleSceneController.SpawnRemoteHero()` | Agregar `HeroAITag`, `RusherBehaviorActive`/`BalancedBehaviorActive`, `IsAttackerRole`, `HeroAIBlackboard`, `HeroAIDecision`, `HeroMoveIntent` al spawn | Mínimo — solo spawn |
 | `HeroAttackSystem` | Segundo `foreach` con `WithAll<HeroAITag>()` leyendo `HeroAIDecision.shouldAttack` | Loop separado, local player path intacto |
 | `SquadOrderSystem` | **Sin cambios** — ya procesa todos los squads sin filtro | — |
 | `HeroMovementSystem` | **Sin cambios** — AI usa NavMeshAgent, no este system | — |
@@ -202,19 +204,19 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 Assets/Scripts/Hero/AI/
     Components/
         HeroAITag.Component.cs
-        HeroBehaviorProfile.Component.cs
+        RusherBehaviorActive.Component.cs
+        BalancedBehaviorActive.Component.cs
+        IsAttackerRole.cs
         HeroAIBlackboard.Component.cs
         HeroAIDecision.Component.cs
-        TeamWorldState.Component.cs        ← NUEVO
+        TeamWorldState.Component.cs
     Systems/
-        BattleWorldState.System.cs         ← NUEVO
+        BattleWorldState.System.cs
         HeroAIPerception.System.cs
         HeroAIRusher.System.cs
         HeroAIBalanced.System.cs
-        HeroAITactician.System.cs
         HeroAIExecution.System.cs
     Enums/
-        HeroAIBehavior.Type.cs
         AIActionType.Type.cs
 ```
 

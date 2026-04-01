@@ -25,17 +25,20 @@ public partial class HeroAIExecutionSystem : SystemBase
 
     private ComponentLookup<HeroSquadReference>  _squadRefLookup;
     private ComponentLookup<SquadInputComponent> _squadInputLookup;
+    private ComponentLookup<SquadStateComponent> _squadStateLookup;
 
     protected override void OnCreate()
     {
         _squadRefLookup   = GetComponentLookup<HeroSquadReference>(true);
         _squadInputLookup = GetComponentLookup<SquadInputComponent>(false);
+        _squadStateLookup = GetComponentLookup<SquadStateComponent>(true);
     }
 
     protected override void OnUpdate()
     {
         _squadRefLookup.Update(this);
         _squadInputLookup.Update(this);
+        _squadStateLookup.Update(this);
 
         foreach (var (decision, transform, stats, life, entity) in
                  SystemAPI.Query<RefRW<HeroAIDecision>,
@@ -106,11 +109,22 @@ public partial class HeroAIExecutionSystem : SystemBase
                 Entity squadEntity = _squadRefLookup[entity].squad;
                 if (SystemAPI.Exists(squadEntity) && _squadInputLookup.HasComponent(squadEntity))
                 {
-                    var squadInput          = _squadInputLookup[squadEntity];
-                    squadInput.orderType    = dec.squadOrder;
-                    squadInput.holdPosition = dec.squadOrderPosition;
-                    squadInput.hasNewOrder  = true;
-                    _squadInputLookup[squadEntity] = squadInput;
+                    // BUG-006: block movement orders while squad is in active combat.
+                    // Attack orders are always allowed; movement orders would cause units to
+                    // physically leave detection range and break the combat engagement.
+                    bool isMovementOrder = dec.squadOrder == SquadOrderType.FollowHero
+                                       || dec.squadOrder == SquadOrderType.HoldPosition;
+                    bool squadInCombat   = _squadStateLookup.HasComponent(squadEntity)
+                                       && _squadStateLookup[squadEntity].currentState == SquadFSMState.InCombat;
+
+                    if (!isMovementOrder || !squadInCombat)
+                    {
+                        var squadInput          = _squadInputLookup[squadEntity];
+                        squadInput.orderType    = dec.squadOrder;
+                        squadInput.holdPosition = dec.squadOrderPosition;
+                        squadInput.hasNewOrder  = true;
+                        _squadInputLookup[squadEntity] = squadInput;
+                    }
                 }
             }
 

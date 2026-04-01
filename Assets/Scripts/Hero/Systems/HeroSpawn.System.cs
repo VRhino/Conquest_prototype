@@ -185,9 +185,6 @@ public partial class HeroSpawnSystem : SystemBase
                 Debug.LogError("[HeroSpawnSystem] selectedSquadBaseID is EMPTY — HeroSquadSelectionComponent will NOT be added, squads will not spawn.");
             }
 
-            // Añadir HeroStateComponent para que CameraBootstrapSystem pueda encontrar al héroe
-            // (SquadSpawningSystem también lo añade, pero no corre en FeudoScene sin squads)
-            entityManager.AddComponentData(heroEntity, new HeroStateComponent { State = HeroState.Idle });
 
             if (_enableDebugLogs)
             {

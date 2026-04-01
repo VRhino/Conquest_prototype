@@ -9,6 +9,7 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
+[UpdateAfter(typeof(SquadFSMSystem))]
 public partial class UnitTargetingSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -23,10 +24,10 @@ public partial class UnitTargetingSystem : SystemBase
                             DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
-            bool allow = ai.ValueRO.tacticalIntent == TacticalIntent.Attacking &&
-                         (state.ValueRO.currentOrder == SquadOrderType.Attack ||
-                          state.ValueRO.currentOrder == SquadOrderType.FollowHero ||
-                          state.ValueRO.currentOrder == SquadOrderType.HoldPosition);
+            // InCombat state is the sole gate for targeting — regardless of how it was
+            // triggered (V press, damage received, squadmate hit). All three triggers
+            // correctly set currentState=InCombat via the FSM; that is the source of truth.
+            bool allow = state.ValueRO.currentState == SquadFSMState.InCombat;
 
 
 

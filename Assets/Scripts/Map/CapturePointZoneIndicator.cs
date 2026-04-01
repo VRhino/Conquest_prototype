@@ -15,6 +15,7 @@ public class CapturePointZoneIndicator : MonoBehaviour
     [SerializeField] Color _neutralColor = new Color(0.5f, 0.5f, 0.5f, 0.4f);
     [SerializeField] Color _alliedColor = new Color(0.2f, 0.4f, 1f, 0.4f);
     [SerializeField] Color _enemyColor = new Color(1f, 0.2f, 0.2f, 0.4f);
+    [SerializeField] Color _contestedColor = new Color(1f, 0.6f, 0f, 0.4f);
 
     [Header("Fallback")]
     [SerializeField] float _fallbackRadius = 10f;
@@ -117,7 +118,7 @@ public class CapturePointZoneIndicator : MonoBehaviour
         var zone = _em.GetComponentData<ZoneTriggerComponent>(_zoneEntity);
 
         var progress = _em.GetComponentData<CapturePointProgressComponent>(_zoneEntity);
-        Color color = ResolveColor(zone.teamOwner, progress.isBeingCaptured, playerTeam);
+        Color color = ResolveColor(zone.teamOwner, progress.isBeingCaptured, progress.isContested, playerTeam);
 
         float captureProgress = progress.isBeingCaptured ? progress.captureProgress / 100f : 0f;
         int hash = color.GetHashCode() * 31 + captureProgress.GetHashCode();
@@ -138,8 +139,9 @@ public class CapturePointZoneIndicator : MonoBehaviour
         }
     }
 
-    Color ResolveColor(int teamOwner, bool isBeingCaptured, Team playerTeam)
+    Color ResolveColor(int teamOwner, bool isBeingCaptured, bool isContested, Team playerTeam)
     {
+        if (isContested) return _contestedColor;
         if (isBeingCaptured) return _neutralColor;
         if (teamOwner == 0) return _neutralColor;
         if ((Team)teamOwner == playerTeam) return _alliedColor;

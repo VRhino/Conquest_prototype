@@ -15,6 +15,7 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float unitMoveDelayMax       = 1.0f;
     public float unitFollowDelayMin     = 0.5f;
     public float unitFollowDelayMax     = 1.5f;
+    public float minCombatDuration      = 1f;
 
     class Baker : Baker<SquadSpawnConfigAuthoring>
     {
@@ -34,7 +35,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 unitMoveDelayMin    = authoring.unitMoveDelayMin,
                 unitMoveDelayMax    = authoring.unitMoveDelayMax,
                 unitFollowDelayMin  = authoring.unitFollowDelayMin,
-                unitFollowDelayMax  = authoring.unitFollowDelayMax
+                unitFollowDelayMax  = authoring.unitFollowDelayMax,
+                minCombatDuration   = authoring.minCombatDuration
             });
         }
     }

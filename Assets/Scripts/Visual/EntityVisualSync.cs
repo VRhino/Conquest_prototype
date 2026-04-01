@@ -47,6 +47,7 @@ namespace ConquestTactics.Visual
         private CharacterController _characterController;
         private NavMeshAgent _navAgent;
         private EcsAnimationInputAdapter _animAdapter;
+        private Animator _animator;
         private bool _positionInitialized = false;
         private float _verticalVelocity = 0f;
         private const float GRAVITY = -9.81f;
@@ -64,6 +65,7 @@ namespace ConquestTactics.Visual
             }
             _navAgent     = GetComponent<NavMeshAgent>();
             _animAdapter  = GetComponentInChildren<EcsAnimationInputAdapter>(true);
+            _animator     = GetComponentInChildren<Animator>(true);
         }
 
         private void Start()
@@ -93,11 +95,12 @@ namespace ConquestTactics.Visual
                 {
                     var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
 
-                    // Safe teleport: disable CC before setting position to avoid internal state desync
+                    // Safe teleport: disable CC before setting position to avoid internal state desync.
+                    // Only re-enable for local hero — remote heroes use NavMeshAgent, not CC.
                     if (_characterController != null) _characterController.enabled = false;
                     transform.position = ecsTransform.Position;
                     transform.rotation = ecsTransform.Rotation;
-                    if (_characterController != null) _characterController.enabled = true;
+                    if (_characterController != null) _characterController.enabled = IsLocalHero;
 
                     _positionInitialized = true;
                     if (_enableDebugLogs)
@@ -208,6 +211,18 @@ namespace ConquestTactics.Visual
                     }
                 }
             }
+            // BUG-001: consume attack trigger from ECS and fire animator
+            if (_animator != null && _entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
+            {
+                var animData = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
+                if (animData.triggerAttack)
+                {
+                    _animator.SetTrigger("TriggerAttack");
+                    animData.triggerAttack = false;
+                    _entityManager.SetComponentData(_heroEntity, animData);
+                }
+            }
+
             _lastSyncTime = Time.time;
         }
         

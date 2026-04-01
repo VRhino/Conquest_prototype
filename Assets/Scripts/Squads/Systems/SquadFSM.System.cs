@@ -19,6 +19,9 @@ public partial class SquadFSMSystem : SystemBase
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;
+        float minCombatDuration = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
+            ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().minCombatDuration
+            : 1f;
 
         foreach (var (state, ai, fsmComp, playerIntent, units, entity) in SystemAPI
                      .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, RefRW<SquadFSMComponent>,
@@ -55,7 +58,9 @@ public partial class SquadFSMSystem : SystemBase
             }
             if (allDead)
             {
+                s.currentState = SquadFSMState.KO;
                 s.transitionTo = SquadFSMState.KO;
+                s.stateTimer   = 0f;
                 state.ValueRW = s;
                 // [Sprint2 dual-write]
                 fsmComp.ValueRW.currentState = s.currentState;
@@ -100,7 +105,7 @@ public partial class SquadFSMSystem : SystemBase
             // Enforce minimum time in combat (bypassed when heroOrdenCooldown is active)
             if (s.currentState == SquadFSMState.InCombat && desired != SquadFSMState.InCombat)
             {
-                if (s.stateTimer < 3f && !playerIntent.ValueRO.heroOrdenCooldownActive)
+                if (s.stateTimer < minCombatDuration && !playerIntent.ValueRO.heroOrdenCooldownActive)
                     desired = SquadFSMState.InCombat;
             }
 
@@ -108,6 +113,14 @@ public partial class SquadFSMSystem : SystemBase
                 s.retreatTriggered = true;
 
 
+            // Apply condition-based transition immediately so downstream
+            // systems (UnitTargetingSystem, UnitNavMeshSystem) see the
+            // correct currentState in the same frame.
+            if (desired != s.currentState)
+            {
+                s.currentState = desired;
+                s.stateTimer   = 0f;
+            }
 
             s.transitionTo = desired;
             state.ValueRW = s;

@@ -1,6 +1,6 @@
 # Remote Heroes — Pipeline de Movimiento y Animaciones
 
-> Fecha de análisis: 2026-03-28
+> Fecha de análisis: 2026-03-29 (actualizado — pipeline cambió en sprint 6-7)
 > Scope: todo héroe sin `IsLocalPlayer` component (héroes controlados por AI/remote)
 
 ---
@@ -230,7 +230,7 @@ Para remote heroes el problema es doble: además de que nadie lee el flag, `EcsA
 
 ## 6. Sistema de Órdenes y Combate de Unidades
 
-> Fecha de análisis: 2026-03-28
+> Fecha de análisis: 2026-03-29 (actualizado — pipeline cambió en sprint 6-7)
 > Scope: comportamiento de squads cuando reciben daño o detectan enemigos mientras ejecutan órdenes de movimiento
 
 ### 6.1 Estado actual del sistema
@@ -239,11 +239,16 @@ Para remote heroes el problema es doble: además de que nadie lee el flag, `EcsA
 ```
 Teclado (C/X/V/F1-F4)
   → SquadControlSystem  [solo IsLocalSquadActive]
-    → SquadInputComponent.hasNewOrder = true
+    ├─ SquadInputComponent.hasNewOrder = true
+    └─ SquadPlayerOrderIntentComponent  ← NUEVO (sprint 6-7)
+         insistenceCount / insistenceTimer / heroOrdenCooldownActive / heroOrdenCooldownTimer
+         (si misma orden × 3 en 0.8s → activa cooldown de 4s)
       → SquadOrderSystem
         → SquadStateComponent.currentOrder
           → SquadFSMSystem
-            → SquadFSMState (Idle | FollowingHero | HoldingPosition | InCombat | Retreating | KO)
+            ├─ Entrada a InCombat bloqueada si heroOrdenCooldownActive
+            ├─ Salida de InCombat bypassa timer mínimo si heroOrdenCooldownActive
+            └─ SquadFSMState (Idle | FollowingHero | HoldingPosition | InCombat | Retreating | KO)
               → UnitNavMeshSystem + UnitFollowFormationSystem
 ```
 
@@ -277,8 +282,23 @@ UnitNavMeshSystem
 | `IsEngagingTag` | `Assets/Scripts/Squads/` | unidad en engagement, omite orientación de formación |
 
 #### Condición de salida de combate actual
-- Solo tiempo: 3 segundos mínimo en `SquadFSMSystem` (hardcoded, no parametrizable)
-- No hay chequeo de: "todos los enemigos muertos", "enemigo salió del rango", "todas las unidades muertas"
+- Tiempo mínimo de 3 segundos en `SquadFSMSystem` (hardcoded)
+- **Bypass** del timer si `heroOrdenCooldownActive = true` (local player únicamente)
+- Aún no evalúa: "todos los enemigos muertos", "enemigo salió del rango", "todas las unidades muertas"
+
+#### Nuevo componente: SquadPlayerOrderIntentComponent (sprint 6-7)
+**Archivo**: `Assets/Scripts/Squads/Components/SquadPlayerOrderIntent.Component.cs`
+
+| Campo | Tipo | Uso |
+|-------|------|-----|
+| `insistenceCount` | int | Cuántas veces se repitió la misma orden |
+| `insistenceTimer` | float | Ventana de 0.8s para detectar repeticiones |
+| `heroOrdenCooldownActive` | bool | Cooldown activo: ignora InCombat |
+| `heroOrdenCooldownTimer` | float | Tiempo restante del cooldown (4s) |
+
+**Constantes en `SquadControl.System.cs`**: `InsistenceCount=3`, `InsistenceWindow=0.8s`, `CooldownDuration=4s`
+
+Este componente solo existe/se activa para squads del jugador local. Los squads AI nunca pasan por `SquadControl.System`, por lo que `heroOrdenCooldownActive` nunca se activa para ellos.
 
 ---
 
@@ -308,74 +328,70 @@ UnitNavMeshSystem
 **Severidad**: Alta
 **Afecta**: Squads de remote heroes
 
-**Síntoma**: El AI (`HeroAIExecutionSystem`) puede emitir una orden de movimiento que saca al squad del estado `InCombat` incluso cuando hay enemigos activos en rango de detección. Las unidades abandonan el combate a mitad de engagement.
+**Síntoma**: El AI (`HeroAIExecution.System`) puede emitir una orden de movimiento que saca al squad del estado `InCombat` incluso cuando hay enemigos activos en rango de detección. Las unidades abandonan el combate a mitad de engagement.
 
-**Causa raíz**: `SquadFSMSystem` tiene un mínimo de 3 segundos en `InCombat`, pero pasado ese tiempo cualquier `currentOrder` de movimiento escrito por `HeroAIExecutionSystem` puede hacer transicionar el FSM a `FollowingHero`. No existe una comprobación de "¿hay enemigos activos en rango?" antes de permitir la salida de `InCombat` para squads de remote heroes.
+**Causa raíz actualizada** (sprint 6-7 cambió el pipeline):
+- `SquadFSM.System` ahora respeta `heroOrdenCooldownActive`, pero ese flag **solo se activa desde `SquadControl.System`** (input local). Los squads de remote heroes nunca tienen `heroOrdenCooldownActive = true`.
+- `HeroAIExecution.System` escribe `SquadInputComponent.hasNewOrder = true` verificando únicamente `life.isAlive && dec.hasNewSquadOrder` — **no verifica si el squad está en `InCombat`**.
+- Resultado: pasados los 3 segundos mínimos de `InCombat`, cualquier orden del AI desencadena transición a `FollowingHero` aunque haya enemigos vivos en rango.
 
 **Archivos**:
-- `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — condición de salida de InCombat (solo timer)
-- `Assets/Scripts/Hero/AI/Systems/HeroAIExecution.System.cs` — escribe SquadInputComponent sin respetar InCombat
+- `Assets/Scripts/Hero/AI/Systems/HeroAIExecution.System.cs` — escribe `SquadInputComponent` sin verificar estado `InCombat`
+- `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — condición de salida de `InCombat`: timer (3s) sin verificar `DetectedEnemy` buffer
 
 ---
 
-#### BUG-007 — No existe el sistema `heroOrdenCooldown` para squads del local hero
-**Severidad**: Alta
-**Afecta**: Squad del local hero (IsLocalSquadActive)
+#### ~~BUG-007~~ — FIXED (sprint 6-7)
+**Era**: Sistema `heroOrdenCooldown` para squads del local hero no existía
 
-**Síntoma**: Cuando el jugador emite órdenes de movimiento repetidas rápidamente (doble/triple tap) para sacar al squad de un combate, las unidades NO responden — el FSM permanece en `InCombat` los 3 segundos mínimos y luego sigue reaccionando a cualquier enemigo en rango. No hay mecanismo para que el jugador fuerce el movimiento mediante órdenes insistentes.
-
-**Causa raíz**: No existen:
-- Componente `HeroOrdenCooldown` (ni similar)
-- Contador de "cuántas veces se emitió la misma orden en ventana T"
-- Lógica en `SquadControlSystem` o `SquadOrderSystem` que detecte órdenes repetidas y eleve su prioridad
-- Estado `MovimientoForzado` en el FSM del squad
-
-**Archivos donde debe implementarse**:
-- `Assets/Scripts/Squads/Systems/SquadControl.System.cs` — detección de orden repetida + ventana de tiempo
-- `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — nuevo estado o flag de override
-- `Assets/Scripts/Squads/Components/SquadStateComponent.cs` — campos: `ordenRepeatCount`, `ordenRepeatTimer`, `heroOrdenCooldownActive`, `heroOrdenCooldownTimer`
+**Implementado en**:
+- `Assets/Scripts/Squads/Components/SquadPlayerOrderIntent.Component.cs` — nuevo componente con `insistenceCount`, `insistenceTimer`, `heroOrdenCooldownActive`, `heroOrdenCooldownTimer`
+- `Assets/Scripts/Squads/Systems/SquadControl.System.cs` — detecta 3 pulsaciones de la misma orden en 0.8s → activa cooldown de 4s
+- `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — respeta el flag: bloquea entrada a `InCombat` y bypassa timer de salida cuando `heroOrdenCooldownActive = true`
 
 ---
 
-#### BUG-008 — Condición de salida de InCombat solo por timer, no por estado real del combate
+#### BUG-008 — Condición de salida de InCombat no refleja estado real del combate
 **Severidad**: Media
 **Afecta**: Todos los squads
 
-**Síntoma**: Después de 3 segundos en `InCombat`, el squad puede transicionar a otro estado aunque:
+**Síntoma**: Después de 3 segundos en `InCombat`, el squad puede transicionar aunque:
 - Todavía hay enemigos vivos dentro del rango de detección
-- Las unidades están en medio de un ataque (IsEngagingTag activo)
+- Las unidades están en medio de un ataque (`IsEngagingTag` activo)
 
-Inversamente, el squad puede permanecer en `InCombat` 3 segundos aunque el único enemigo murió en el frame 2.
+Inversamente, puede permanecer en `InCombat` 3 segundos aunque el único enemigo murió en el frame 2.
 
-**Causa raíz**: `SquadFSMSystem` usa únicamente un timer hardcoded. No evalúa `DetectedEnemy.buffer.IsEmpty` ni el estado de los targets.
+**Causa raíz actualizada** (sprint 6-7 cambió parcialmente):
+- `SquadFSM.System` ahora usa: **timer (3s) + bypass por `heroOrdenCooldownActive`**
+- El bypass ayuda al jugador local, pero **no resuelve el problema semántico**: ni para squads locales ni remotos se evalúa `DetectedEnemy.buffer.IsEmpty` ni si los targets siguen vivos
+- `ai.isInCombat` (de `SquadAIComponent`) es la fuente de verdad para entrar a `InCombat`, pero ese flag tampoco verifica si los enemigos siguen en rango al momento de evaluar la salida
 
-**Archivo**: `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — condición de salida de InCombat
+**Archivo**: `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — condición de salida de `InCombat`
 
 ---
 
-#### BUG-009 — No hay distinción de comportamiento local vs remote en el FSM del squad al recibir órdenes durante combate
-**Severidad**: Media
-**Afecta**: Lógica de prioridad de órdenes
+#### BUG-009 — Distinción local vs remote en FSM es implícita, no explícita
+**Severidad**: Media (reducida — comportamiento local ya funciona)
+**Afecta**: Lógica de prioridad de órdenes (principalmente squads remotos)
 
-**Síntoma**: `SquadFSMSystem` y `SquadOrderSystem` tratan de forma idéntica las órdenes provenientes del jugador local y las generadas por `HeroAIExecutionSystem`. No existe ningún flag o componente que marque "esta orden viene de un jugador humano con intención insistente" vs "esta orden viene del AI y debe ceder al combate activo".
+**Síntoma**: `SquadOrder.System` trata de forma idéntica las órdenes del jugador local y las del AI. No hay metadata de origen en la orden.
 
-**Causa raíz**: `SquadInputComponent.hasNewOrder` es un bool sin metadata de origen. No hay:
-- Campo `isPlayerForced` en `SquadInputComponent`
-- Distinción en `SquadOrderSystem` entre squads de `IsLocalSquadActive` vs squads de `HeroAITag`
-- Prioridad diferenciada en el FSM para cada origen de orden
+**Estado actualizado** (sprint 6-7):
+- La distinción existe **implícitamente**: `heroOrdenCooldownActive` solo se activa vía `SquadControl.System` (input local). Los squads AI nunca pasan por ese sistema, por lo que su flag permanece `false`.
+- `SquadFSM.System` rama de `heroOrdenCooldownActive` efectivamente es solo-local.
+- **Lo que sigue faltando**: `SquadOrder.System` no tiene distinción explícita. Si en el futuro el AI necesita un comportamiento diferenciado más granular, el mecanismo implícito no será suficiente.
 
 **Archivos**:
-- `Assets/Scripts/Squads/Components/SquadInput.Component.cs` — falta campo de origen/prioridad
-- `Assets/Scripts/Squads/Systems/SquadOrder.System.cs` — falta distinción local vs remote
-- `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` — falta rama de lógica por origen de orden
+- `Assets/Scripts/Squads/Components/SquadInput.Component.cs` — `isPlayerForced` aún no existe
+- `Assets/Scripts/Squads/Systems/SquadOrder.System.cs` — no distingue origen de la orden
 
 ---
 
 ### 6.4 Resumen de bugs — Sistema de órdenes y combate
 
-| ID | Severidad | Fix sugerido |
-|----|-----------|-------------|
-| BUG-006 | **Alta** | En `SquadFSMSystem`, bloquear transición desde `InCombat` para squads de remote heroes mientras `DetectedEnemy` buffer no esté vacío. |
-| BUG-007 | **Alta** | Añadir `ordenRepeatCount` + `ordenRepeatTimer` a `SquadStateComponent`. En `SquadControlSystem`, detectar N pulsaciones de la misma orden en ventana T y activar `heroOrdenCooldownActive`. En FSM, ese flag fuerza salida de `InCombat` ignorando enemigos. |
-| BUG-008 | Media | Reemplazar timer hardcoded por condición compuesta: `timer > minDuration && DetectedEnemy.IsEmpty`. |
-| BUG-009 | Media | Añadir `bool isPlayerForced` a `SquadInputComponent`. `SquadControlSystem` lo setea a `true`. FSM lo usa para decidir si una orden puede interrumpir `InCombat`. |
+| ID | Severidad | Estado | Fix sugerido |
+|----|-----------|--------|-------------|
+| BUG-006 | **Alta** | Abierto | En `HeroAIExecution.System`, verificar `SquadFSMState.InCombat` antes de emitir órdenes de movimiento. En `SquadFSM.System`, bloquear salida de `InCombat` para squads remotos mientras `DetectedEnemy` buffer no esté vacío. |
+| ~~BUG-007~~ | ~~Alta~~ | **FIXED** (sprint 6-7) | Implementado en `SquadPlayerOrderIntentComponent` + `SquadControl.System` + `SquadFSM.System`. |
+| BUG-008 | Media | Abierto | Reemplazar timer hardcoded por condición compuesta: `timer > minDuration && DetectedEnemy.IsEmpty`. El bypass de `heroOrdenCooldownActive` ya existe, falta la condición semántica de "enemigos fuera de rango". |
+| BUG-009 | Media (reducida) | Parcial | La distinción funciona implícitamente via `heroOrdenCooldownActive`. Fix completo requiere `bool isPlayerForced` en `SquadInputComponent` y rama explícita en `SquadOrder.System`. |
