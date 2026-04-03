@@ -268,6 +268,12 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private Vector3 _moveDirection;
         private Vector3 _previousRotation;
 
+        /// <summary>
+        /// When true, rotation is managed externally (e.g. NavMeshAgent for remote AI heroes).
+        /// FaceMoveDirection() is skipped — the agent already rotates the body correctly.
+        /// </summary>
+        public bool ExternalRotationControl { get; set; }
+
         // REMOVED: All jump, fall, crouch, lock-on, aiming variables
 
         #endregion
@@ -609,6 +615,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private void FaceMoveDirection()
         {
+            if (ExternalRotationControl) return;
             Vector3 characterForward = new Vector3(transform.forward.x, 0f, transform.forward.z).normalized;
             Vector3 characterRight = new Vector3(transform.right.x, 0f, transform.right.z).normalized;
             Vector3 directionForward = new Vector3(_moveDirection.x, 0f, _moveDirection.z).normalized;

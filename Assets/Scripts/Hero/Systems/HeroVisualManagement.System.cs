@@ -128,6 +128,10 @@ public partial class HeroVisualManagementSystem : SystemBase
             var animAdapter = visualInstance.GetComponentInChildren<ConquestTactics.Animation.EcsAnimationInputAdapter>(true);
             if (animAdapter != null) animAdapter.enabled = false;
 
+            // NavMeshAgent ya rota el body correctamente — evitar que FaceMoveDirection lo sobreescriba con la cámara del jugador local
+            var animController = visualInstance.GetComponentInChildren<Synty.AnimationBaseLocomotion.Samples.SamplePlayerAnimationController_ECS>(true);
+            if (animController != null) animController.ExternalRotationControl = true;
+
             // Aplicar partes visuales del héroe remoto si hay datos de apariencia disponibles
             if (EntityManager.HasComponent<HeroAppearanceComponent>(entity))
             {
