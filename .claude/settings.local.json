@@ -26,7 +26,8 @@
       "Bash(cd:*)",
       "Bash(find /c/Users/VRINO/Desarrollo/Conquest_prototype -name *SquadFSMState* -o -name *UnitFormationState*)",
       "mcp__plugin_context-mode_context-mode__ctx_stats",
-      "Bash(ls -lh /c/Users/VRINO/.claude/plans/*squad* /c/Users/VRINO/.claude/plans/ANALYSIS*)"
+      "Bash(ls -lh /c/Users/VRINO/.claude/plans/*squad* /c/Users/VRINO/.claude/plans/ANALYSIS*)",
+      "mcp__plugin_context-mode_context-mode__ctx_index"
     ]
   },
   "hooks": {

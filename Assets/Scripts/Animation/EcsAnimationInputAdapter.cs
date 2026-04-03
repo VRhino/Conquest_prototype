@@ -82,6 +82,9 @@ namespace ConquestTactics.Animation
         
         // Cache para evitar allocaciones
         private EntityQuery _heroQuery;
+
+        // Sprint state for DriveFromVelocity (remote AI heroes)
+        private bool _prevSprinting;
         
         #endregion
         
@@ -314,7 +317,7 @@ namespace ConquestTactics.Animation
         /// </summary>
         /// <param name="worldVelocity">NavMeshAgent.velocity in world space</param>
         /// <param name="maxSpeed">NavMeshAgent.speed (used to normalize 0-1)</param>
-        public void DriveFromVelocity(Vector3 worldVelocity, float maxSpeed)
+        public void DriveFromVelocity(Vector3 worldVelocity, float maxSpeed, bool isSprinting = false)
         {
             float speed  = worldVelocity.magnitude;
             bool  moving = speed > _inputThreshold;
@@ -333,6 +336,13 @@ namespace ConquestTactics.Animation
                 _movementInputDuration = 0f;
                 _inputStartTime        = 0f;
             }
+
+            // Sprint event dispatch for remote AI heroes (local hero fires via ProcessInputEvents)
+            if (isSprinting && !_prevSprinting)
+                onSprintActivated?.Invoke();
+            else if (!isSprinting && _prevSprinting)
+                onSprintDeactivated?.Invoke();
+            _prevSprinting = isSprinting;
         }
         
         /// <summary>

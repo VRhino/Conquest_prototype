@@ -172,9 +172,9 @@ namespace ConquestTactics.Visual
             {
                 var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
                 bool isHero = _entityManager.HasComponent<HeroMoveIntent>(_heroEntity);
-                if (isHero && _positionInitialized)
+                if (isHero && _positionInitialized && IsLocalHero)
                 {
-                    // Hero: GO is authoritative — write GO position and rotation back to ECS
+                    // Local hero: GO is authoritative — write GO position and rotation back to ECS
                     ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);
                     if (_syncRotation)
                     {
@@ -184,6 +184,9 @@ namespace ConquestTactics.Visual
                 }
                 else
                 {
+                    // Lazy-init: NavMeshAgent is added dynamically after Awake by HeroVisualManagementSystem
+                    if (_navAgent == null)
+                        _navAgent = GetComponent<NavMeshAgent>();
                     bool usesNavMesh = _navAgent != null && _navAgent.enabled && _navAgent.isOnNavMesh;
                     if (usesNavMesh)
                     {
@@ -198,8 +201,14 @@ namespace ConquestTactics.Visual
 
                         // Drive animations from NavMeshAgent velocity (replaces RemoteHeroAnimationDriver)
                         if (_animAdapter != null)
+                        {
+                            bool heroIsSprinting = _entityManager.HasComponent<HeroAIDecision>(_heroEntity)
+                                && _entityManager.GetComponentData<HeroAIDecision>(_heroEntity).shouldSprint
+                                && _navAgent.velocity.sqrMagnitude > 0.01f;
                             _animAdapter.DriveFromVelocity(_navAgent.velocity,
-                                _navAgent.speed > 0f ? _navAgent.speed : 1f);
+                                _navAgent.speed > 0f ? _navAgent.speed : 1f,
+                                heroIsSprinting);
+                        }
                     }
                     else
                     {
