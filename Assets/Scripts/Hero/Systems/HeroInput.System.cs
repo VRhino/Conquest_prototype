@@ -83,7 +83,7 @@ public partial class HeroInputSystem : SystemBase
             interact = keyboard.fKey.wasPressedThisFrame;
         }
 
-        if (mouse != null)
+        if (mouse != null && DialogueUIState.IsDialogueOpen == false)
         {
             attack = mouse.leftButton.isPressed;
         }

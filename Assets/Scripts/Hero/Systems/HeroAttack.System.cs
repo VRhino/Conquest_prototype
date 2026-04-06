@@ -47,16 +47,9 @@ public partial class HeroAttackSystem : SystemBase
             {
                 c.isAttacking = true;
                 c.attackCooldown = 0.7f;
+                c.attackAnimationTimer = 0f;
                 anim.ValueRW.triggerAttack = true;
                 stamina.ValueRW.currentStamina -= 15f;
-
-                if (SystemAPI.Exists(c.activeWeapon) &&
-                    SystemAPI.HasComponent<WeaponColliderComponent>(c.activeWeapon))
-                {
-                    var weapon = SystemAPI.GetComponentRW<WeaponColliderComponent>(c.activeWeapon);
-                    weapon.ValueRW.owner = entity;
-                    weapon.ValueRW.isActive = true;
-                }
             }
 
             combat.ValueRW = c;
@@ -83,16 +76,33 @@ public partial class HeroAttackSystem : SystemBase
             {
                 c.isAttacking = true;
                 c.attackCooldown = 0.7f;
+                c.attackAnimationTimer = 0f;
                 anim.ValueRW.triggerAttack = true;
                 stamina.ValueRW.currentStamina -= 15f;
+            }
 
-                if (SystemAPI.Exists(c.activeWeapon) &&
-                    SystemAPI.HasComponent<WeaponColliderComponent>(c.activeWeapon))
-                {
-                    var weapon = SystemAPI.GetComponentRW<WeaponColliderComponent>(c.activeWeapon);
-                    weapon.ValueRW.owner = entity;
-                    weapon.ValueRW.isActive = true;
-                }
+            combat.ValueRW = c;
+        }
+
+        // Phase 2+3: tick attack animation timer, gate WeaponHitboxActiveTag, reset when done
+        foreach (var (combat, entity) in
+                 SystemAPI.Query<RefRW<HeroCombatComponent>>().WithEntityAccess())
+        {
+            if (!combat.ValueRO.isAttacking) continue;
+
+            var c = combat.ValueRW;
+            c.attackAnimationTimer += deltaTime;
+
+            bool inWindow = c.attackAnimationTimer >= c.strikeWindowStart &&
+                            c.attackAnimationTimer <= c.strikeWindowStart + c.strikeWindowDuration;
+            SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, inWindow && !c.hitboxFired);
+
+            if (c.attackAnimationTimer >= c.attackAnimationDuration)
+            {
+                c.isAttacking = false;
+                c.attackAnimationTimer = 0f;
+                c.hitboxFired = false;
+                SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
             }
 
             combat.ValueRW = c;

@@ -150,6 +150,11 @@ public partial class HeroVisualManagementSystem : SystemBase
         var syncScript = VisualSyncUtility.SetupVisualSync(visualInstance);
         syncScript.SetHeroEntity(entity);
 
+        // Wire weapon hitbox to this hero entity (requires BoxCollider + WeaponHitboxBehaviour on weapon bone child)
+        var hitboxBehaviour = visualInstance.GetComponentInChildren<WeaponHitboxBehaviour>(true);
+        if (hitboxBehaviour != null)
+            hitboxBehaviour.ownerUnit = entity;
+
         // Heroes remotos usan NavMeshAgent para navegar sin teleport
         if (!isLocalPlayer && pendingNavAgents != null)
         {

@@ -37,12 +37,17 @@ public class WeaponHitboxBehaviour : MonoBehaviour
             return;
         }
 
-        // One hit per swing
-        var combat = em.GetComponentData<UnitCombatComponent>(ownerUnit);
-        if (combat.hitboxFired)
+        // One hit per swing — branch on owner type
+        bool isHeroOwner = em.HasComponent<HeroCombatComponent>(ownerUnit);
+        if (isHeroOwner)
         {
-
-            return;
+            var heroCombat = em.GetComponentData<HeroCombatComponent>(ownerUnit);
+            if (heroCombat.hitboxFired) return;
+        }
+        else
+        {
+            var unitCombat = em.GetComponentData<UnitCombatComponent>(ownerUnit);
+            if (unitCombat.hitboxFired) return;
         }
 
         // Resolve target entity from the collider's visual GO
@@ -74,31 +79,57 @@ public class WeaponHitboxBehaviour : MonoBehaviour
         // Dead check
         if (em.HasComponent<IsDeadComponent>(target)) return;
 
-        // Build PendingDamageEvent
-        var weapon = em.GetComponentData<UnitWeaponComponent>(ownerUnit);
-        bool crit = Random.value <= weapon.criticalChance;
-        float attackerSpeed = em.HasComponent<ConquestTactics.Animation.UnitAnimationMovementComponent>(ownerUnit)
-            ? em.GetComponentData<ConquestTactics.Animation.UnitAnimationMovementComponent>(ownerUnit).CurrentSpeed
-            : 0f;
-
-        em.AddComponentData(ownerUnit, new PendingDamageEvent
+        // Build PendingDamageEvent — branch on owner type
+        if (isHeroOwner)
         {
-            target           = target,
-            damageSource     = ownerUnit,
-            damageProfile    = weapon.damageProfile,
-            sourceTeam       = hasTeam ? em.GetComponentData<TeamComponent>(ownerUnit).value : Team.None,
-            category         = crit ? DamageCategory.Critical : DamageCategory.Normal,
-            multiplier       = crit ? weapon.criticalMultiplier : 1f,
-            attackDirection  = transform.forward,
-            attackerSpeed    = attackerSpeed,
-            attackerPosition = transform.position
-        });
+            var heroCombat = em.GetComponentData<HeroCombatComponent>(ownerUnit);
+            bool crit = Random.value <= heroCombat.criticalChance;
+            em.AddComponentData(ownerUnit, new PendingDamageEvent
+            {
+                target           = target,
+                damageSource     = ownerUnit,
+                damageProfile    = ownerUnit,   // hero entity carries DamageProfileComponent directly
+                sourceTeam       = hasTeam ? em.GetComponentData<TeamComponent>(ownerUnit).value : Team.None,
+                category         = crit ? DamageCategory.Critical : DamageCategory.Normal,
+                multiplier       = crit ? heroCombat.criticalMultiplier : 1f,
+                attackDirection  = transform.forward,
+                attackerSpeed    = 0f,
+                attackerPosition = transform.position
+            });
 
-        // Spawn hit impact VFX at contact point
-        Vector3 contactPoint = other.ClosestPoint(transform.position);
-        HitImpactEffectManager.Instance?.Spawn(contactPoint);
+            Vector3 contactPointHero = other.ClosestPoint(transform.position);
+            HitImpactEffectManager.Instance?.Spawn(contactPointHero);
 
-        combat.hitboxFired = true;
-        em.SetComponentData(ownerUnit, combat);
+            heroCombat.hitboxFired = true;
+            em.SetComponentData(ownerUnit, heroCombat);
+        }
+        else
+        {
+            var weapon = em.GetComponentData<UnitWeaponComponent>(ownerUnit);
+            bool crit = Random.value <= weapon.criticalChance;
+            float attackerSpeed = em.HasComponent<ConquestTactics.Animation.UnitAnimationMovementComponent>(ownerUnit)
+                ? em.GetComponentData<ConquestTactics.Animation.UnitAnimationMovementComponent>(ownerUnit).CurrentSpeed
+                : 0f;
+
+            em.AddComponentData(ownerUnit, new PendingDamageEvent
+            {
+                target           = target,
+                damageSource     = ownerUnit,
+                damageProfile    = weapon.damageProfile,
+                sourceTeam       = hasTeam ? em.GetComponentData<TeamComponent>(ownerUnit).value : Team.None,
+                category         = crit ? DamageCategory.Critical : DamageCategory.Normal,
+                multiplier       = crit ? weapon.criticalMultiplier : 1f,
+                attackDirection  = transform.forward,
+                attackerSpeed    = attackerSpeed,
+                attackerPosition = transform.position
+            });
+
+            Vector3 contactPointUnit = other.ClosestPoint(transform.position);
+            HitImpactEffectManager.Instance?.Spawn(contactPointUnit);
+
+            var unitCombat = em.GetComponentData<UnitCombatComponent>(ownerUnit);
+            unitCombat.hitboxFired = true;
+            em.SetComponentData(ownerUnit, unitCombat);
+        }
     }
 }

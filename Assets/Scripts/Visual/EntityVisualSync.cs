@@ -220,7 +220,7 @@ namespace ConquestTactics.Visual
                     }
                 }
             }
-            // BUG-001: consume attack trigger from ECS and fire animator
+            // Sync attack animation state from ECS → Animator
             if (_animator != null && _entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
             {
                 var animData = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
@@ -229,6 +229,13 @@ namespace ConquestTactics.Visual
                     _animator.SetTrigger("TriggerAttack");
                     animData.triggerAttack = false;
                     _entityManager.SetComponentData(_heroEntity, animData);
+                }
+
+                // Drive IsAttacking bool so the Animator Controller can exit the attack state
+                if (_entityManager.HasComponent<HeroCombatComponent>(_heroEntity))
+                {
+                    bool attacking = _entityManager.GetComponentData<HeroCombatComponent>(_heroEntity).isAttacking;
+                    _animator.SetBool("IsAttacking", attacking);
                 }
             }
 

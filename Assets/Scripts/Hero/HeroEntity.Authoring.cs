@@ -97,5 +97,18 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
         // Componentes de marcado
         AddComponent<IsLocalPlayer>(entity);
         AddComponent<HeroInputComponent>(entity);
+
+        // Componentes de combate — necesarios para que HeroAttackSystem funcione
+        AddComponent(entity, new HeroCombatComponent
+        {
+            strikeWindowStart       = 0.2f,
+            strikeWindowDuration    = 0.15f,
+            attackAnimationDuration = 0.6f,
+            criticalChance          = 0.1f,
+            criticalMultiplier      = 1.5f
+        });
+        AddComponent<HeroAnimationComponent>(entity);
+        AddComponent<WeaponHitboxActiveTag>(entity);
+        SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
     }
 }

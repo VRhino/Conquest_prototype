@@ -121,20 +121,30 @@ public partial class HeroSpawnSystem : SystemBase
             }
 
             // Ensure HeroHealthComponent is initialized so DamageCalculationSystem can apply damage.
+            // Read real max HP from cache (populated by PlayerSessionService.SetSelectedHero before battle).
+            float realMaxHealth = 0f;
+            if (PlayerSessionService.SelectedHero != null)
+            {
+                var selectedHero = PlayerSessionService.SelectedHero;
+                string cacheKey = string.IsNullOrEmpty(selectedHero.heroName) ? selectedHero.classId : selectedHero.heroName;
+                realMaxHealth = DataCacheService.GetHeroCalculatedAttributes(cacheKey).maxHealth;
+                Debug.Log($"[BattleTestDebug] HeroSpawnSystem: cacheKey={cacheKey}, realMaxHealth={realMaxHealth}");
+            }
+            if (realMaxHealth <= 0f) realMaxHealth = 200f; // fallback de emergencia
+
             if (entityManager.HasComponent<HeroHealthComponent>(heroEntity))
             {
                 var heroHealth = entityManager.GetComponentData<HeroHealthComponent>(heroEntity);
-                if (heroHealth.maxHealth <= 0f)
-                    heroHealth.maxHealth = 200f;
-                heroHealth.currentHealth = heroHealth.maxHealth;
+                heroHealth.maxHealth = realMaxHealth;
+                heroHealth.currentHealth = realMaxHealth;
                 entityManager.SetComponentData(heroEntity, heroHealth);
             }
             else
             {
                 entityManager.AddComponentData(heroEntity, new HeroHealthComponent
                 {
-                    maxHealth = 200f,
-                    currentHealth = 200f
+                    maxHealth = realMaxHealth,
+                    currentHealth = realMaxHealth
                 });
             }
 
