@@ -47,3 +47,11 @@ Assets/Debug/EntityDumps.meta
 Assets/TextMesh Pro/Examples & Extras/
 Assets/Travis Game Assets/
 
+#graphify
+graphify-out/
+
+#antigravity
+.agents
+
+#Control
+Issues/

@@ -50,7 +50,9 @@ public partial class HeroVisualManagementSystem : SystemBase
             }
 
             bool isLocal = SystemAPI.HasComponent<IsLocalPlayer>(entity);
-            CreateVisualForEntity(entity, spawn.ValueRO.visualPrefabId.ToString(), transform.ValueRO, ecb, isLocal, pendingNavAgents);
+            string baseId = spawn.ValueRO.visualPrefabId.ToString();
+            string prefabKey = isLocal ? baseId : baseId + "_Remote";
+            CreateVisualForEntity(entity, prefabKey, transform.ValueRO, ecb, isLocal, pendingNavAgents);
         }
         ecb.Playback(EntityManager);
         ecb.Dispose();
@@ -88,17 +90,9 @@ public partial class HeroVisualManagementSystem : SystemBase
         // Instanciar el GameObject visual
         GameObject visualInstance = Object.Instantiate(visualPrefab);
 
-        // Safe teleport: disable CharacterController before setting position to prevent internal state desync
-        var cc = visualInstance.GetComponent<CharacterController>();
-        if (cc != null) cc.enabled = false;
-
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
-
-        // Re-enable CharacterController only for local hero.
-        // Remote heroes use NavMeshAgent — keeping CC active would conflict with the agent.
-        if (cc != null && isLocalPlayer) cc.enabled = true;
 
         // Asignar layer "Heroes" para culling de distancia nativo
         int heroesLayer = LayerMask.NameToLayer("Heroes");
@@ -123,15 +117,6 @@ public partial class HeroVisualManagementSystem : SystemBase
         }
         else
         {
-            // Héroes remotos no deben leer input local — deshabilitar el adaptador de animación
-            // (EntityVisualSync lo pilota desde la velocidad del NavMeshAgent)
-            var animAdapter = visualInstance.GetComponentInChildren<ConquestTactics.Animation.EcsAnimationInputAdapter>(true);
-            if (animAdapter != null) animAdapter.enabled = false;
-
-            // NavMeshAgent ya rota el body correctamente — evitar que FaceMoveDirection lo sobreescriba con la cámara del jugador local
-            var animController = visualInstance.GetComponentInChildren<Synty.AnimationBaseLocomotion.Samples.SamplePlayerAnimationController_ECS>(true);
-            if (animController != null) animController.ExternalRotationControl = true;
-
             // Aplicar partes visuales del héroe remoto si hay datos de apariencia disponibles
             if (EntityManager.HasComponent<HeroAppearanceComponent>(entity))
             {
@@ -155,22 +140,15 @@ public partial class HeroVisualManagementSystem : SystemBase
         if (hitboxBehaviour != null)
             hitboxBehaviour.ownerUnit = entity;
 
-        // Heroes remotos usan NavMeshAgent para navegar sin teleport
-        if (!isLocalPlayer && pendingNavAgents != null)
+        // Heroes remotos: forzar posición NavMesh al spawn (agente viene del prefab Player_Remote)
+        if (!isLocalPlayer)
         {
             var agent = visualInstance.GetComponent<NavMeshAgent>();
-            if (agent == null)
+            if (agent != null)
             {
-                Debug.LogWarning("[HeroVisualManagementSystem] NavMeshAgent missing from hero visual prefab — adding programmatically. Add NavMeshAgent to the prefab to suppress this warning.");
-                agent = visualInstance.AddComponent<NavMeshAgent>();
-                agent.stoppingDistance = 0.5f;
-                agent.autoBraking     = true;
-                agent.angularSpeed    = 360f;
-                agent.acceleration    = 12f;
-                // speed is overridden each frame by HeroAIExecutionSystem using stats.baseSpeed
+                agent.Warp(visualInstance.transform.position);
+                pendingNavAgents?.Add((entity, agent));
             }
-            agent.Warp(visualInstance.transform.position); // fuerza posición al spawn, evita warp al NavMesh más cercano
-            pendingNavAgents.Add((entity, agent));
         }
 
         // Marcar la entidad como teniendo un visual instanciado (siempre, incluso si hubo error en customización)

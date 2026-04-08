@@ -74,6 +74,10 @@ namespace Synty.AnimationBaseLocomotion.Samples
         [SerializeField]
         private HeroCameraController _cameraController;
         
+        [Tooltip("When true, rotation is managed externally (e.g. NavMeshAgent for remote AI heroes)")]
+        [SerializeField]
+        public bool ExternalRotationControl;
+        
         [Tooltip("ECS Input Adapter handles player input from ECS system")]
         [SerializeField]
         private EcsAnimationInputAdapter _inputAdapter; // CHANGED: InputReader -> EcsAnimationInputAdapter
@@ -267,14 +271,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private Vector3 _currentRotation = new Vector3(0f, 0f, 0f);
         private Vector3 _moveDirection;
         private Vector3 _previousRotation;
-
-        /// <summary>
-        /// When true, rotation is managed externally (e.g. NavMeshAgent for remote AI heroes).
-        /// FaceMoveDirection() is skipped — the agent already rotates the body correctly.
-        /// </summary>
-        public bool ExternalRotationControl { get; set; }
-
-        // REMOVED: All jump, fall, crouch, lock-on, aiming variables
+    
 
         #endregion
 

@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
 using ConquestTactics.Animation;
+using Synty.AnimationBaseLocomotion.Samples;
 
 namespace ConquestTactics.Visual
 {
@@ -46,9 +47,20 @@ namespace ConquestTactics.Visual
         private const float SYNC_INTERVAL = 0.016f;
         private CharacterController _characterController;
         private NavMeshAgent _navAgent;
-        private EcsAnimationInputAdapter _animAdapter;
         private Animator _animator;
+
+        // Animator hashes for direct remote-hero locomotion driving
+        private static readonly int _moveSpeedHash            = Animator.StringToHash("MoveSpeed");
+        private static readonly int _currentGaitHash          = Animator.StringToHash("CurrentGait");
+        private static readonly int _isGroundedHash           = Animator.StringToHash("IsGrounded");
+        private static readonly int _isStoppedHash            = Animator.StringToHash("IsStopped");
+        private static readonly int _movementInputHeldHash    = Animator.StringToHash("MovementInputHeld");
+        private static readonly int _movementInputPressedHash = Animator.StringToHash("MovementInputPressed");
+        private static readonly int _movementInputTappedHash  = Animator.StringToHash("MovementInputTapped");
+        private static readonly int _isWalkingHash            = Animator.StringToHash("IsWalking");
+        private static readonly int _forwardStrafeHash        = Animator.StringToHash("ForwardStrafe");
         private bool _positionInitialized = false;
+        private bool _remoteWasMoving = false;
         private float _verticalVelocity = 0f;
         private const float GRAVITY = -9.81f;
         private const float TERMINAL_VELOCITY = -50f;
@@ -64,7 +76,6 @@ namespace ConquestTactics.Visual
                     Debug.Log("[EntityVisualSync] CharacterController habilitado para movimiento visual");
             }
             _navAgent     = GetComponent<NavMeshAgent>();
-            _animAdapter  = GetComponentInChildren<EcsAnimationInputAdapter>(true);
             _animator     = GetComponentInChildren<Animator>(true);
         }
 
@@ -91,6 +102,17 @@ namespace ConquestTactics.Visual
             {
                 // Setear IsLocalHero si la entidad tiene el tag IsLocalPlayer
                 IsLocalHero = _entityManager.HasComponent<IsLocalPlayer>(_heroEntity);
+
+                // Remote heroes: disable local-player animation components so they don't
+                // overwrite the Animator values that EntityVisualSync drives directly.
+                if (!IsLocalHero)
+                {
+                    var animController = GetComponentInChildren<SamplePlayerAnimationController_ECS>(true);
+                    if (animController != null) animController.enabled = false;
+                    var inputAdapter = GetComponentInChildren<EcsAnimationInputAdapter>(true);
+                    if (inputAdapter != null) inputAdapter.enabled = false;
+                }
+
                 if (_entityManager.HasComponent<LocalTransform>(_heroEntity))
                 {
                     var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
@@ -108,6 +130,17 @@ namespace ConquestTactics.Visual
                 }
                 if (_enableDebugLogs)
                     Debug.Log($"[EntityVisualSync] IsLocalHero seteado a {IsLocalHero} para entidad {_heroEntity}");
+
+                // [BattleTestDebug] Remote hero setup summary
+                if (!IsLocalHero)
+                {
+                    var navAgentCheck = GetComponent<NavMeshAgent>();
+                    var animCheck     = GetComponentInChildren<Animator>(true);
+                    var ctrlCheck     = GetComponentInChildren<SamplePlayerAnimationController_ECS>(true);
+                    string animCtrlName = (animCheck != null && animCheck.runtimeAnimatorController != null)
+                        ? animCheck.runtimeAnimatorController.name : "NULL";
+                    Debug.Log($"[BattleTestDebug][RemoteSetup] {gameObject.name} | NavMeshAgent={navAgentCheck != null} navEnabled={navAgentCheck?.enabled} navOnMesh={navAgentCheck?.isOnNavMesh} | Animator={animCheck != null} animCtrl={animCtrlName} | SampleCtrl={ctrlCheck != null} ctrlEnabled={ctrlCheck?.enabled}");
+                }
             }
 
             DisableConflictingComponents();
@@ -187,7 +220,16 @@ namespace ConquestTactics.Visual
                     // Lazy-init: NavMeshAgent is added dynamically after Awake by HeroVisualManagementSystem
                     if (_navAgent == null)
                         _navAgent = GetComponent<NavMeshAgent>();
-                    bool usesNavMesh = _navAgent != null && _navAgent.enabled && _navAgent.isOnNavMesh;
+
+                    bool navNull    = _navAgent == null;
+                    bool navEnabled = !navNull && _navAgent.enabled;
+                    bool navOnMesh  = !navNull && _navAgent.isOnNavMesh;
+                    bool usesNavMesh = navEnabled && navOnMesh;
+
+                    // [BattleTestDebug] Log why usesNavMesh is false (once per 60 frames)
+                    if (!usesNavMesh && Time.frameCount % 60 == 0)
+                        Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} usesNavMesh=FALSE | navNull={navNull} navEnabled={navEnabled} navOnMesh={navOnMesh} IsLocalHero={IsLocalHero}");
+
                     if (usesNavMesh)
                     {
                         // [Sprint5] Position sync delegated to NavMeshPositionSyncSystem when syncPositionFromNavMesh == true
@@ -199,15 +241,59 @@ namespace ConquestTactics.Visual
                             ecsTransform.Rotation = transform.rotation;
                         _entityManager.SetComponentData(_heroEntity, ecsTransform);
 
-                        // Drive animations from NavMeshAgent velocity (replaces RemoteHeroAnimationDriver)
-                        if (_animAdapter != null)
+                        // Drive locomotion animation directly from NavMeshAgent velocity.
+                        // No dependency on EcsAnimationInputAdapter or SamplePlayerAnimationController —
+                        // the remote prefab only needs an Animator with MoveSpeed/CurrentGait/IsGrounded params.
+                        if (_animator != null)
                         {
-                            bool heroIsSprinting = _entityManager.HasComponent<HeroAIDecision>(_heroEntity)
+                            float speed    = _navAgent.velocity.magnitude;
+                            float maxSpeed = _navAgent.speed > 0f ? _navAgent.speed : 1f;
+                            bool sprinting = _entityManager.HasComponent<HeroAIDecision>(_heroEntity)
                                 && _entityManager.GetComponentData<HeroAIDecision>(_heroEntity).shouldSprint
-                                && _navAgent.velocity.sqrMagnitude > 0.01f;
-                            _animAdapter.DriveFromVelocity(_navAgent.velocity,
-                                _navAgent.speed > 0f ? _navAgent.speed : 1f,
-                                heroIsSprinting);
+                                && speed > 0.1f;
+
+                            // GaitState: 0=Idle, 1=Walk, 2=Run, 3=Sprint
+                            int gait = 0;
+                            if (speed > 0.1f)
+                            {
+                                if (sprinting)              gait = 3;
+                                else if (speed / maxSpeed > 0.6f) gait = 2;
+                                else                        gait = 1;
+                            }
+
+                            bool isMoving = speed > 0.1f;
+
+                            // [BattleTestDebug] Log animation state every 60 frames
+                            if (Time.frameCount % 60 == 0)
+                                Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} speed={speed:F2} gait={gait} isMoving={isMoving} fwdStrafe={( isMoving ? 1f : 0f )} animState={_animator.GetCurrentAnimatorStateInfo(0).fullPathHash} animCtrl={(_animator.runtimeAnimatorController != null ? _animator.runtimeAnimatorController.name : "NULL")}");
+
+                            bool justStartedMoving = isMoving && !_remoteWasMoving;
+                            bool justStoppedMoving = !isMoving && _remoteWasMoving;
+
+                            _animator.SetFloat(_moveSpeedHash, isMoving ? speed : 0f);
+                            _animator.SetInteger(_currentGaitHash, gait);
+                            _animator.SetBool(_isGroundedHash, true);
+                            _animator.SetBool(_isStoppedHash, !isMoving);
+                            _animator.SetBool(_movementInputHeldHash, isMoving);
+                            _animator.SetBool(_movementInputPressedHash, isMoving);
+                            _animator.SetBool(_isWalkingHash, gait == 1);
+                            _animator.SetFloat(_forwardStrafeHash, isMoving ? 1f : 0f);
+                            // MovementInputTapped must be a ONE-FRAME pulse — keeping it true causes
+                            // the controller to loop back to the start state every frame.
+                            _animator.SetBool(_movementInputTappedHash, justStartedMoving);
+
+                            if (justStartedMoving)
+                                Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} movement STARTED");
+                            else if (justStoppedMoving)
+                                Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} movement STOPPED");
+
+                            _remoteWasMoving = isMoving;
+                        }
+                        else
+                        {
+                            // [BattleTestDebug] Animator missing
+                            if (Time.frameCount % 60 == 0)
+                                Debug.LogWarning($"[BattleTestDebug][RemoteAnim] {gameObject.name} _animator is NULL — cannot drive animations");
                         }
                     }
                     else

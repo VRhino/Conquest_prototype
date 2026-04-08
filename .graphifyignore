@@ -1,0 +1,11 @@
+# .graphifyignore
+vendor/
+node_modules/
+dist/
+*.generated.py
+library/
+Temp/
+Packages/
+Assets/Synty
+Assets/Travis*
+Assets/TextMesh*
