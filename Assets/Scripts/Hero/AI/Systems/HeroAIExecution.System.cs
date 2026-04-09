@@ -55,7 +55,7 @@ public partial class HeroAIExecutionSystem : SystemBase
             float  speed   = stats.ValueRO.baseSpeed;
             bool   shouldMove = life.ValueRO.isAlive && dec.action != AIActionType.Idle;
 
-            // NavMeshAgent is added by HeroVisualManagementSystem when the visual prefab is ready.
+            // NavMeshAgent is added by HeroVisualInstantiationSystem when the visual prefab is ready.
             // Guard prevents ArgumentException during the frames between ECS spawn and visual instantiation.
             NavMeshAgent agent = null;
             if (EntityManager.HasComponent<NavMeshAgent>(entity))

@@ -45,7 +45,7 @@ public class FCTEntry : MonoBehaviour
 
     public void Activate(Vector3 worldPos, DamageCategory type, float value, Sprite iconSprite)
     {
-        Debug.Log($"[BattleTestDebug] FCTEntry.Activate: type={type}, value={value:F1}, pos={worldPos}, label={(label == null ? "NULL" : "OK")}");
+
 
         transform.position   = worldPos;
         transform.localScale = Vector3.one * worldScale;

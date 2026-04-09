@@ -42,13 +42,13 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 bool tMissing = !SystemAPI.Exists(p.target);
                 bool pMissing = !SystemAPI.Exists(p.damageProfile);
-                UnityEngine.Debug.LogWarning($"[BattleTestDebug] DamageCalc DISCARD: targetMissing={tMissing}, profileMissing={pMissing}, attacker={entity}");
+
                 ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
             }
 
             if (SystemAPI.HasComponent<IsDeadComponent>(p.target))
             {
-                UnityEngine.Debug.LogWarning($"[BattleTestDebug] DamageCalc DISCARD: target={p.target} already dead");
+
                 ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
             }
 
@@ -58,7 +58,7 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 if (SystemAPI.GetComponent<TeamComponent>(p.target).value == p.sourceTeam)
                 {
-                    UnityEngine.Debug.LogWarning($"[BattleTestDebug] DamageCalc DISCARD: friendly fire attacker={entity} target={p.target} team={p.sourceTeam}");
+
                     ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
                 }
             }
@@ -155,7 +155,7 @@ public partial class DamageCalculationSystem : SystemBase
 
 
             if (FloatingCombatTextManager.Instance == null)
-                UnityEngine.Debug.LogWarning("[BattleTestDebug] DamageCalc: FloatingCombatTextManager.Instance es NULL — ¿está el FCTManager en la escena?");
+
 
             const float FctYOffset = 1.8f;
 

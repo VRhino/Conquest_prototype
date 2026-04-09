@@ -116,7 +116,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         }
         else
         {
-            Debug.LogWarning($"[BattleTestDebug] WeaponHitbox child NOT FOUND on visual GO for unit={unitEntity} (prefab={visualPrefab.name})");
+
         }
 
         var agent = visualInstance.GetComponent<NavMeshAgent>();

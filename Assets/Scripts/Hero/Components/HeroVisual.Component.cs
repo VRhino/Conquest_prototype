@@ -18,3 +18,9 @@ public struct HeroVisualInstance : IComponentData
     /// <summary>ID del GameObject visual asociado a esta entidad.</summary>
     public int visualInstanceId;
 }
+
+/// <summary>
+/// Tag que marca un héroe como habiendo tenido su apariencia visual (avatar + equipment) aplicada.
+/// Añadido por HeroVisualAppearanceSystem después de aplicar la customización al GameObject.
+/// </summary>
+public struct HeroVisualAppearanceApplied : IComponentData { }

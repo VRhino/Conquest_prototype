@@ -137,7 +137,7 @@ public partial class SquadControlSystem : SystemBase
                 if (intent.heroOrdenCooldownTimer <= 0f)
                 {
                     intent.heroOrdenCooldownActive = false;
-                    Debug.Log("[BattleTestDebug] heroOrdenCooldown DESACTIVADO");
+
                 }
                 intentChanged = true;
             }
@@ -198,7 +198,7 @@ public partial class SquadControlSystem : SystemBase
                         intent.heroOrdenCooldownActive = true;
                         intent.heroOrdenCooldownTimer  = CooldownDuration;
                         intent.insistenceCount         = 0;
-                        Debug.Log("[BattleTestDebug] heroOrdenCooldown ACTIVADO");
+
                     }
 
                     intent.orderType     = newOrder;

@@ -16,7 +16,7 @@ public partial class HeroInitializationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        Debug.Log("[BattleTestDebug] HeroInitializationSystem.OnUpdate running");
+
         var defLookup = GetComponentLookup<HeroClassDefinitionComponent>(true);
         var perkLookup = GetBufferLookup<ValidPerkElement>(true);
         var staminaLookup = SystemAPI.GetComponentLookup<StaminaComponent>(false);
@@ -121,7 +121,7 @@ public partial class HeroInitializationSystem : SystemBase
             health.maxHealth = calculatedAttributes.maxHealth;
             health.currentHealth = calculatedAttributes.maxHealth;
             healthLookup[entity] = health;
-            Debug.Log($"[BattleTestDebug] HeroInitialization: maxHealth={calculatedAttributes.maxHealth}, usingCache={usingCache}, entity={entity}");
+
 
             var stamina = staminaLookup[entity];
             stamina.maxStamina = calculatedAttributes.stamina;

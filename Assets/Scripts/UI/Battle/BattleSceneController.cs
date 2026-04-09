@@ -589,7 +589,7 @@ public class BattleSceneController : MonoBehaviour
             squadQuery.Dispose();
         }
 
-        // Adjuntar datos visuales para que HeroVisualManagementSystem aplique partes al héroe remoto
+        // Adjuntar datos visuales para que HeroVisualAppearanceSystem aplique partes al héroe remoto
         em.AddComponentObject(heroEntity, new HeroAppearanceComponent
         {
             avatar    = heroData.avatar    ?? new AvatarParts(),

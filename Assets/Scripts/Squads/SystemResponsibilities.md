@@ -25,12 +25,22 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Output**: entidad héroe con todos sus componentes + `HeroSquadSelectionComponent` linkeando a la escuadra activa (`instanceId = 0`)
 - **Nota**: el `instanceId = 0` debe mantenerse sincronizado con `BattleSceneController.SyncBattleDataToECS` que asigna ID 0 a la escuadra activa
 
-### HeroVisualManagementSystem
-- **Responsabilidad**: Instancia el prefab visual del héroe y configura `EntityVisualSync`
+### HeroVisualInstantiationSystem
+- **Responsabilidad**: Instancia el prefab visual del héroe y configura `EntityVisualSync`, hitbox y NavMeshAgent
 - **Output**: `HeroVisualInstance`, GameObject con `EntityVisualSync` configurado
-- **NavMeshAgent**: Para héroes remotos, llama `agent.Warp(position)` post-spawn y valida `agent.isOnNavMesh`
+- **NavMeshAgent**: Para héroes remotos, llama `agent.Warp(position)` post-spawn
 - **Proceso post-ECB**: Recolecta `NavMeshAgent` en lista durante OnUpdate, adjunta tras playback del ECB
 - **Usa**: `VisualPrefabRegistry`, `VisualSyncUtility.SetupVisualSync()`
+
+### HeroVisualAppearanceSystem
+- **Responsabilidad**: Aplica customización de avatar (head, hair, beard, eyebrow) y equipamiento visual al spawn
+- **Output**: `HeroVisualAppearanceApplied` tag — garantiza que la apariencia se aplica una única vez por héroe
+- **Cubre**: héroe local (vía `PlayerSessionService.SelectedHero`) y héroe remoto (vía `HeroAppearanceComponent`)
+
+### HeroVisualEquipmentSystem
+- **Responsabilidad**: Actualiza visualmente el equipamiento del héroe local en tiempo real (equip/unequip)
+- **Trigger**: eventos `InventoryManager.OnItemEquipped` / `OnItemUnequipped`
+- **Usa**: `AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId`, `AvatarVisualUtils.UnequipSlotVisual`
 
 ---
 

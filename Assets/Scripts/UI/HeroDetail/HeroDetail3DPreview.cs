@@ -123,7 +123,7 @@ public class HeroDetail3DPreview : MonoBehaviour, IPointerDownHandler, IPointerU
         {
             previewCamera.targetTexture = renderTexture;
             
-            // Usar el layer "Heroes" que es el que asigna HeroVisualManagementSystem
+            // Usar el layer "Heroes" que es el que asigna HeroVisualInstantiationSystem
             int heroLayer = LayerMask.NameToLayer("Heroes");
             if (heroLayer == -1)
             {

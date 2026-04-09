@@ -122,15 +122,28 @@ namespace ConquestTactics.Visual
                 if (_enableDebugLogs)
                     Debug.Log($"[EntityVisualSync] IsLocalHero seteado a {IsLocalHero} para entidad {_heroEntity}");
 
-                // [BattleTestDebug] Remote hero setup summary
+                // Verification check for remote hero setup
                 if (!IsLocalHero)
                 {
                     var navAgentCheck = GetComponent<NavMeshAgent>();
                     var animCheck     = GetComponentInChildren<Animator>(true);
                     var ctrlCheck     = GetComponentInChildren<SamplePlayerAnimationController_ECS>(true);
+                    
+                    bool componentsValid = navAgentCheck != null && animCheck != null && ctrlCheck != null;
                     string animCtrlName = (animCheck != null && animCheck.runtimeAnimatorController != null)
                         ? animCheck.runtimeAnimatorController.name : "NULL";
-                    Debug.Log($"[BattleTestDebug][RemoteSetup] {gameObject.name} | NavMeshAgent={navAgentCheck != null} navEnabled={navAgentCheck?.enabled} navOnMesh={navAgentCheck?.isOnNavMesh} | Animator={animCheck != null} animCtrl={animCtrlName} | SampleCtrl={ctrlCheck != null} ctrlEnabled={ctrlCheck?.enabled}");
+
+                    if (_showDebugLines || !componentsValid)
+                    {
+                        string status = componentsValid ? "SUCCESS" : "INCOMPLETE";
+                        string logMsg = $"[EntityVisualSync] Remote setup {status} for {gameObject.name} | " +
+                                        $"NavMeshAgent={navAgentCheck != null} (enabled={navAgentCheck?.enabled}, onMesh={navAgentCheck?.isOnNavMesh}) | " +
+                                        $"Animator={animCheck != null} ({animCtrlName}) | " +
+                                        $"SampleCtrl={ctrlCheck != null} (enabled={ctrlCheck?.enabled})";
+
+                        if (componentsValid) Debug.Log(logMsg);
+                        else Debug.LogWarning(logMsg);
+                    }
                 }
             }
 
@@ -208,7 +221,7 @@ namespace ConquestTactics.Visual
                 }
                 else
                 {
-                    // Lazy-init: NavMeshAgent is added dynamically after Awake by HeroVisualManagementSystem
+                    // Lazy-init: NavMeshAgent is added dynamically after Awake by HeroVisualInstantiationSystem
                     if (_navAgent == null)
                         _navAgent = GetComponent<NavMeshAgent>();
 
@@ -217,9 +230,7 @@ namespace ConquestTactics.Visual
                     bool navOnMesh  = !navNull && _navAgent.isOnNavMesh;
                     bool usesNavMesh = navEnabled && navOnMesh;
 
-                    // [BattleTestDebug] Log why usesNavMesh is false (once per 60 frames)
-                    if (!usesNavMesh && Time.frameCount % 60 == 0)
-                        Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} usesNavMesh=FALSE | navNull={navNull} navEnabled={navEnabled} navOnMesh={navOnMesh} IsLocalHero={IsLocalHero}");
+
 
                     if (usesNavMesh)
                     {
@@ -254,9 +265,7 @@ namespace ConquestTactics.Visual
 
                             bool isMoving = speed > 0.1f;
 
-                            // [BattleTestDebug] Log animation state every 60 frames
-                            if (Time.frameCount % 60 == 0)
-                                Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} speed={speed:F2} gait={gait} isMoving={isMoving} fwdStrafe={( isMoving ? 1f : 0f )} animState={_animator.GetCurrentAnimatorStateInfo(0).fullPathHash} animCtrl={(_animator.runtimeAnimatorController != null ? _animator.runtimeAnimatorController.name : "NULL")}");
+
 
                             bool justStartedMoving = isMoving && !_remoteWasMoving;
                             bool justStoppedMoving = !isMoving && _remoteWasMoving;
@@ -273,10 +282,7 @@ namespace ConquestTactics.Visual
                             // the controller to loop back to the start state every frame.
                             _animator.SetBool(AnimationHashes.MovementInputTapped, justStartedMoving);
 
-                            if (justStartedMoving)
-                                Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} movement STARTED");
-                            else if (justStoppedMoving)
-                                Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} movement STOPPED");
+
 
                             _remoteWasMoving = isMoving;
 
@@ -298,9 +304,7 @@ namespace ConquestTactics.Visual
                         }
                         else
                         {
-                            // [BattleTestDebug] Animator missing
-                            if (Time.frameCount % 60 == 0)
-                                Debug.LogWarning($"[BattleTestDebug][RemoteAnim] {gameObject.name} _animator is NULL — cannot drive animations");
+
                         }
                     }
                     else

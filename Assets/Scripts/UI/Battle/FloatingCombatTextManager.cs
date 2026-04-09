@@ -25,7 +25,7 @@ public class FloatingCombatTextManager : MonoBehaviour
 
         if (prefab == null)
         {
-            Debug.LogError("[BattleTestDebug] FCTManager.Awake: prefab NO asignado — el FCT no funcionará.");
+
             return;
         }
 

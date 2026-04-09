@@ -127,5 +127,5 @@ UnitNavMeshSystem → UnitBodyblockSystem
 3. Ambos squads Moving cruzándose → se empujan mutuamente, ninguno se detiene completamente
 4. Héroe remoto Moving vs formación Line enemiga → héroe bloqueado
 5. Héroe local (CharacterController) vs unidades con CapsuleCollider → bloqueado físicamente
-6. Console `[BattleTestDebug]` → sin errores NavMesh ni warnings de pathfinding
+6. Sin errores NavMesh ni warnings de pathfinding en consola.
 7. Tunear `WallStrength` y `BodyblockRadius` si el efecto es demasiado suave/agresivo

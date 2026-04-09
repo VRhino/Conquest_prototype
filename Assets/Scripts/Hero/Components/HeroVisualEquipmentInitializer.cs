@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Componente que se asegura de que el HeroVisualManagementSystem esté activo
+/// Componente que se asegura de que el HeroVisualEquipmentSystem esté activo
 /// y conectado a los eventos de equipamiento. Se puede añadir a cualquier GameObject
 /// en la escena de juego para garantizar la funcionalidad.
 /// </summary>
@@ -25,7 +25,7 @@ public class HeroVisualEquipmentInitializer : MonoBehaviour
             Debug.Log("[HeroVisualEquipmentInitializer] Initializing hero visual equipment system...");
         }
 
-        // El HeroVisualManagementSystem se inicializa automáticamente como parte del ECS
+        // El HeroVisualEquipmentSystem se inicializa automáticamente como parte del ECS
         // Este componente solo sirve como punto de debug y verificación
 
         // Verificar que el nuevo sistema de inventario está disponible
@@ -58,10 +58,10 @@ public class HeroVisualEquipmentInitializer : MonoBehaviour
     {
         if (enableDebugLogs)
         {
-            Debug.Log("[HeroVisualEquipmentInitializer] Force refresh triggered - this would need to be implemented in HeroVisualManagementSystem");
+            Debug.Log("[HeroVisualEquipmentInitializer] Force refresh triggered - this would need to be implemented in HeroVisualEquipmentSystem");
         }
 
-        // En el futuro, podrías agregar un método público al HeroVisualManagementSystem
+        // En el futuro, podrías agregar un método público al HeroVisualEquipmentSystem
         // para forzar un refresh completo del equipamiento visual
     }
 }

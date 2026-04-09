@@ -49,7 +49,7 @@ public partial class UnitDeathSystem : SystemBase
 
     private static GameObject FindGameObjectByInstanceId(int instanceId)
     {
-        // Same pattern as HeroVisualManagementSystem — acceptable cost for rare death events
+        // Same pattern as HeroVisualEquipmentSystem — acceptable cost for rare death events
         var all = Object.FindObjectsOfType<GameObject>();
         return System.Array.Find(all, o => o.GetInstanceID() == instanceId);
     }

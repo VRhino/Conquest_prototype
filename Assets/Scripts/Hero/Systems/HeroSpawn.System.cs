@@ -128,7 +128,7 @@ public partial class HeroSpawnSystem : SystemBase
                 var selectedHero = PlayerSessionService.SelectedHero;
                 string cacheKey = string.IsNullOrEmpty(selectedHero.heroName) ? selectedHero.classId : selectedHero.heroName;
                 realMaxHealth = DataCacheService.GetHeroCalculatedAttributes(cacheKey).maxHealth;
-                Debug.Log($"[BattleTestDebug] HeroSpawnSystem: cacheKey={cacheKey}, realMaxHealth={realMaxHealth}");
+
             }
             if (realMaxHealth <= 0f) realMaxHealth = 200f; // fallback de emergencia
 

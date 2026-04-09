@@ -54,13 +54,13 @@ public class WeaponHitboxBehaviour : MonoBehaviour
         var sync = other.GetComponentInParent<EntityVisualSync>();
         if (sync == null)
         {
-            Debug.LogWarning($"[BattleTestDebug] EntityVisualSync NOT FOUND in parent of {other.name}");
+
             return;
         }
         Entity target = sync.GetHeroEntity();
         if (target == Entity.Null || !em.Exists(target))
         {
-            Debug.LogWarning($"[BattleTestDebug] Target entity NULL from sync on {other.name}");
+
             return;
         }
 
