@@ -154,9 +154,6 @@ public partial class DamageCalculationSystem : SystemBase
 
 
 
-            if (FloatingCombatTextManager.Instance == null)
-
-
             const float FctYOffset = 1.8f;
 
             // Apply to unit or hero — determinar willKill del resultado (una sola lectura de HP)

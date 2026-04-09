@@ -23,15 +23,11 @@ public class VisualPrefabRegistry : MonoBehaviour
         get
         {
             if (_instance == null)
-            {
-                _instance = FindObjectOfType<VisualPrefabRegistry>();
-                if (_instance == null)
-                {
-                    GameObject go = new GameObject("VisualPrefabRegistry");
-                    _instance = go.AddComponent<VisualPrefabRegistry>();
-                    DontDestroyOnLoad(go);
-                }
-            }
+                _instance = FindFirstObjectByType<VisualPrefabRegistry>();
+            if (_instance == null)
+                throw new System.InvalidOperationException(
+                    "[VisualPrefabRegistry] No hay una instancia en escena. " +
+                    "Agrega el GameObject con VisualPrefabRegistry y su VisualPrefabConfiguration configurada.");
             return _instance;
         }
     }
