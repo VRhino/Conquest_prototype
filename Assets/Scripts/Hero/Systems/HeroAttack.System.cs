@@ -19,12 +19,14 @@ public partial class HeroAttackSystem : SystemBase
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
+        RequireForUpdate<HeroGameplayConfigComponent>();
     }
 
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
         var physicsWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().PhysicsWorld;
+        var cfg = SystemAPI.GetSingleton<HeroGameplayConfigComponent>();
 
         // Process attack input and start animations
         foreach (var (input, combat, stamina, life, anim, entity) in
@@ -43,13 +45,13 @@ public partial class HeroAttackSystem : SystemBase
             c.attackCooldown = math.max(0f, c.attackCooldown - deltaTime);
 
             if (input.ValueRO.IsAttackPressed && !c.isAttacking && c.attackCooldown <= 0f &&
-                !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= 15f)
+                !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= cfg.attackStaminaCost)
             {
                 c.isAttacking = true;
-                c.attackCooldown = 0.7f;
+                c.attackCooldown = cfg.attackCooldown;
                 c.attackAnimationTimer = 0f;
                 anim.ValueRW.triggerAttack = true;
-                stamina.ValueRW.currentStamina -= 15f;
+                stamina.ValueRW.currentStamina -= cfg.attackStaminaCost;
             }
 
             combat.ValueRW = c;
@@ -72,13 +74,13 @@ public partial class HeroAttackSystem : SystemBase
             c.attackCooldown = math.max(0f, c.attackCooldown - deltaTime);
 
             if (decision.ValueRO.shouldAttack && !c.isAttacking && c.attackCooldown <= 0f &&
-                !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= 15f)
+                !stamina.ValueRO.isExhausted && stamina.ValueRO.currentStamina >= cfg.attackStaminaCost)
             {
                 c.isAttacking = true;
-                c.attackCooldown = 0.7f;
+                c.attackCooldown = cfg.attackCooldown;
                 c.attackAnimationTimer = 0f;
                 anim.ValueRW.triggerAttack = true;
-                stamina.ValueRW.currentStamina -= 15f;
+                stamina.ValueRW.currentStamina -= cfg.attackStaminaCost;
             }
 
             combat.ValueRW = c;
@@ -155,7 +157,7 @@ public partial class HeroAttackSystem : SystemBase
                         damageProfile = weaponData.ValueRO.damageProfile,
                         sourceTeam = team,
                         category = crit ? DamageCategory.Critical : DamageCategory.Normal,
-                        multiplier = crit ? 1.5f : 1f
+                        multiplier = crit ? cfg.criticalDamageMultiplier : 1f
                     });
                 }
             }

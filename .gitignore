@@ -49,6 +49,7 @@ Assets/Travis Game Assets/
 
 #graphify
 graphify-out/
+.graphify_uncached.txt
 
 #antigravity
 .agents

@@ -49,16 +49,7 @@ namespace ConquestTactics.Visual
         private NavMeshAgent _navAgent;
         private Animator _animator;
 
-        // Animator hashes for direct remote-hero locomotion driving
-        private static readonly int _moveSpeedHash            = Animator.StringToHash("MoveSpeed");
-        private static readonly int _currentGaitHash          = Animator.StringToHash("CurrentGait");
-        private static readonly int _isGroundedHash           = Animator.StringToHash("IsGrounded");
-        private static readonly int _isStoppedHash            = Animator.StringToHash("IsStopped");
-        private static readonly int _movementInputHeldHash    = Animator.StringToHash("MovementInputHeld");
-        private static readonly int _movementInputPressedHash = Animator.StringToHash("MovementInputPressed");
-        private static readonly int _movementInputTappedHash  = Animator.StringToHash("MovementInputTapped");
-        private static readonly int _isWalkingHash            = Animator.StringToHash("IsWalking");
-        private static readonly int _forwardStrafeHash        = Animator.StringToHash("ForwardStrafe");
+        // Animation parameter hashes are centralized in AnimationHashes.cs
         private bool _positionInitialized = false;
         private bool _remoteWasMoving = false;
         private float _verticalVelocity = 0f;
@@ -270,17 +261,17 @@ namespace ConquestTactics.Visual
                             bool justStartedMoving = isMoving && !_remoteWasMoving;
                             bool justStoppedMoving = !isMoving && _remoteWasMoving;
 
-                            _animator.SetFloat(_moveSpeedHash, isMoving ? speed : 0f);
-                            _animator.SetInteger(_currentGaitHash, gait);
-                            _animator.SetBool(_isGroundedHash, true);
-                            _animator.SetBool(_isStoppedHash, !isMoving);
-                            _animator.SetBool(_movementInputHeldHash, isMoving);
-                            _animator.SetBool(_movementInputPressedHash, isMoving);
-                            _animator.SetBool(_isWalkingHash, gait == 1);
-                            _animator.SetFloat(_forwardStrafeHash, isMoving ? 1f : 0f);
+                            _animator.SetFloat(AnimationHashes.MoveSpeed, isMoving ? speed : 0f);
+                            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
+                            _animator.SetBool(AnimationHashes.IsGrounded, true);
+                            _animator.SetBool(AnimationHashes.IsStopped, !isMoving);
+                            _animator.SetBool(AnimationHashes.MovementInputHeld, isMoving);
+                            _animator.SetBool(AnimationHashes.MovementInputPressed, isMoving);
+                            _animator.SetBool(AnimationHashes.IsWalking, gait == 1);
+                            _animator.SetFloat(AnimationHashes.ForwardStrafe, isMoving ? 1f : 0f);
                             // MovementInputTapped must be a ONE-FRAME pulse — keeping it true causes
                             // the controller to loop back to the start state every frame.
-                            _animator.SetBool(_movementInputTappedHash, justStartedMoving);
+                            _animator.SetBool(AnimationHashes.MovementInputTapped, justStartedMoving);
 
                             if (justStartedMoving)
                                 Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} movement STARTED");
@@ -288,6 +279,22 @@ namespace ConquestTactics.Visual
                                 Debug.Log($"[BattleTestDebug][RemoteAnim] {gameObject.name} movement STOPPED");
 
                             _remoteWasMoving = isMoving;
+
+                            // Drive upper body params to prevent T-pose (BUG-002)
+                            // For remote AI heroes: headLookX/Y are replicated from the server via HeroAnimationComponent.
+                            // For local-context AI heroes: values default to 0 (neutral head pose).
+                            float remoteHeadLookX = 0f;
+                            float remoteHeadLookY = 0f;
+                            if (_entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
+                            {
+                                var remoteAnim = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
+                                remoteHeadLookX = remoteAnim.headLookX;
+                                remoteHeadLookY = remoteAnim.headLookY;
+                            }
+                            _animator.SetFloat(AnimationHashes.HeadLookX, remoteHeadLookX);
+                            _animator.SetFloat(AnimationHashes.HeadLookY, remoteHeadLookY);
+                            _animator.SetFloat(AnimationHashes.BodyLookX, 0f);
+                            _animator.SetFloat(AnimationHashes.BodyLookY, 0f);
                         }
                         else
                         {
@@ -312,7 +319,7 @@ namespace ConquestTactics.Visual
                 var animData = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
                 if (animData.triggerAttack)
                 {
-                    _animator.SetTrigger("TriggerAttack");
+                    _animator.SetTrigger(AnimationHashes.TriggerAttack);
                     animData.triggerAttack = false;
                     _entityManager.SetComponentData(_heroEntity, animData);
                 }
@@ -321,7 +328,7 @@ namespace ConquestTactics.Visual
                 if (_entityManager.HasComponent<HeroCombatComponent>(_heroEntity))
                 {
                     bool attacking = _entityManager.GetComponentData<HeroCombatComponent>(_heroEntity).isAttacking;
-                    _animator.SetBool("IsAttacking", attacking);
+                    _animator.SetBool(AnimationHashes.IsAttacking, attacking);
                 }
             }
 

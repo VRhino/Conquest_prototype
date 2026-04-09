@@ -59,8 +59,9 @@ public partial class SquadAISystem : SystemBase
                     }
 
                     // Consume retaliation pulse set by DamageCalculationSystem
-                    if (!wasHit
-                        && SystemAPI.HasComponent<IsUnderAttackTag>(u)
+                    // Always disable the tag on ALL units (not just the first) to prevent
+                    // lingering tags keeping isInCombat=true across multiple frames (BUG-008)
+                    if (SystemAPI.HasComponent<IsUnderAttackTag>(u)
                         && SystemAPI.IsComponentEnabled<IsUnderAttackTag>(u))
                     {
                         wasHit = true;

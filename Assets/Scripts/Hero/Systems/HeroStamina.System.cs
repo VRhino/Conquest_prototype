@@ -7,9 +7,16 @@ using Unity.Mathematics;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class HeroStaminaSystem : SystemBase
 {
+    protected override void OnCreate()
+    {
+        base.OnCreate();
+        RequireForUpdate<HeroGameplayConfigComponent>();
+    }
+
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
+        var cfg = SystemAPI.GetSingleton<HeroGameplayConfigComponent>();
 
         foreach (var (input, stats, life, stamina, entity) in
                  SystemAPI.Query<RefRO<HeroInputComponent>,
@@ -30,31 +37,31 @@ public partial class HeroStaminaSystem : SystemBase
             {
                 if (input.ValueRO.IsSprintPressed)
                 {
-                    data.currentStamina -= 10f * deltaTime;
+                    data.currentStamina -= cfg.sprintStaminaCostPerSecond * deltaTime;
                     performedAction = true;
                 }
 
                 if (input.ValueRO.IsAttackPressed)
                 {
-                    data.currentStamina -= 15f;
+                    data.currentStamina -= cfg.attackStaminaCost;
                     performedAction = true;
                 }
 
                 if (input.ValueRO.UseSkill1)
                 {
-                    data.currentStamina -= 20f;
+                    data.currentStamina -= cfg.skill1StaminaCost;
                     performedAction = true;
                 }
 
                 if (input.ValueRO.UseSkill2)
                 {
-                    data.currentStamina -= 25f;
+                    data.currentStamina -= cfg.skill2StaminaCost;
                     performedAction = true;
                 }
 
                 if (input.ValueRO.UseUltimate)
                 {
-                    data.currentStamina -= 40f;
+                    data.currentStamina -= cfg.ultimateStaminaCost;
                     performedAction = true;
                 }
             }
@@ -72,7 +79,7 @@ public partial class HeroStaminaSystem : SystemBase
             {
                 data.isExhausted = true;
             }
-            else if (data.currentStamina > data.maxStamina * 0.2f) // Recupera cuando tiene más del 20%
+            else if (data.currentStamina > data.maxStamina * cfg.exhaustionRecoveryThreshold)
             {
                 data.isExhausted = false;
             }

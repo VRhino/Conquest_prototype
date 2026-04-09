@@ -110,5 +110,8 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
         AddComponent<HeroAnimationComponent>(entity);
         AddComponent<WeaponHitboxActiveTag>(entity);
         SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
+
+        // Mark as detectable so EnemyDetectionSystem targets this entity
+        AddComponent<DetectableEntityTag>(entity);
     }
 }

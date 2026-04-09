@@ -2,6 +2,8 @@
 // Removes unnecessary features (jump, crouch, lock-on, aiming) for tactical game
 
 using ConquestTactics.Animation;
+using ConquestTactics.Visual;
+using Unity.Entities;
 using UnityEngine;
 
 namespace Synty.AnimationBaseLocomotion.Samples
@@ -27,43 +29,9 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         #endregion
 
-        #region Animation Variable Hashes (Simplified)
+        // Animation parameter hashes are centralized in AnimationHashes.cs
 
-        // Keep only locomotion-related hashes
-        private readonly int _movementInputTappedHash = Animator.StringToHash("MovementInputTapped");
-        private readonly int _movementInputPressedHash = Animator.StringToHash("MovementInputPressed");
-        private readonly int _movementInputHeldHash = Animator.StringToHash("MovementInputHeld");
-        private readonly int _shuffleDirectionXHash = Animator.StringToHash("ShuffleDirectionX");
-        private readonly int _shuffleDirectionZHash = Animator.StringToHash("ShuffleDirectionZ");
 
-        private readonly int _moveSpeedHash = Animator.StringToHash("MoveSpeed");
-        private readonly int _currentGaitHash = Animator.StringToHash("CurrentGait");
-
-        private readonly int _strafeDirectionXHash = Animator.StringToHash("StrafeDirectionX");
-        private readonly int _strafeDirectionZHash = Animator.StringToHash("StrafeDirectionZ");
-
-        private readonly int _forwardStrafeHash = Animator.StringToHash("ForwardStrafe");
-        private readonly int _cameraRotationOffsetHash = Animator.StringToHash("CameraRotationOffset");
-        private readonly int _isStrafingHash = Animator.StringToHash("IsStrafing");
-        private readonly int _isTurningInPlaceHash = Animator.StringToHash("IsTurningInPlace");
-
-        private readonly int _isWalkingHash = Animator.StringToHash("IsWalking");
-        private readonly int _isStoppedHash = Animator.StringToHash("IsStopped");
-        private readonly int _isStartingHash = Animator.StringToHash("IsStarting");
-        private readonly int _isGroundedHash = Animator.StringToHash("IsGrounded"); // READDED: IsGrounded para evitar que el Animator quede en "Fall" state
-        private readonly int _forceGroundedTransitionHash = Animator.StringToHash("ForceGroundedTransition"); // ADDED: Trigger para forzar salida del estado fall
-
-        private readonly int _leanValueHash = Animator.StringToHash("LeanValue");
-        private readonly int _headLookXHash = Animator.StringToHash("HeadLookX");
-        private readonly int _headLookYHash = Animator.StringToHash("HeadLookY");
-        private readonly int _bodyLookXHash = Animator.StringToHash("BodyLookX");
-        private readonly int _bodyLookYHash = Animator.StringToHash("BodyLookY");
-
-        private readonly int _locomotionStartDirectionHash = Animator.StringToHash("LocomotionStartDirection");
-
-        // REMOVED: Jump, Fall, Crouch, Aiming, Lock-on hashes
-
-        #endregion
 
         #region Player Settings Variables
 
@@ -81,6 +49,11 @@ namespace Synty.AnimationBaseLocomotion.Samples
         [Tooltip("ECS Input Adapter handles player input from ECS system")]
         [SerializeField]
         private EcsAnimationInputAdapter _inputAdapter; // CHANGED: InputReader -> EcsAnimationInputAdapter
+
+        // Cached reference to write head look values back to ECS (BUG-002)
+        private EntityVisualSync _entityVisualSync;
+        private EntityManager _ecsEntityManager;
+        private bool _ecsReady;
         
         [Tooltip("Animator component for controlling player animations")]
         [SerializeField]
@@ -333,7 +306,16 @@ namespace Synty.AnimationBaseLocomotion.Samples
             SwitchState(AnimationState.Locomotion);
 
             if (_animator != null)
-                _animator.SetBool(_isGroundedHash, true);
+                _animator.SetBool(AnimationHashes.IsGrounded, true);
+
+            // Cache ECS references for head look write-back (BUG-002)
+            _entityVisualSync = GetComponentInParent<EntityVisualSync>(true);
+            var world = World.DefaultGameObjectInjectionWorld;
+            if (world != null && world.IsCreated)
+            {
+                _ecsEntityManager = world.EntityManager;
+                _ecsReady = true;
+            }
         }
 
         private void OnDestroy()
@@ -441,44 +423,58 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private void UpdateAnimatorController()
         {
             // Set only necessary animator parameters
-            _animator.SetFloat(_leanValueHash, _leanValue);
-            _animator.SetFloat(_headLookXHash, _headLookX);
-            _animator.SetFloat(_headLookYHash, _headLookY);
-            _animator.SetFloat(_bodyLookXHash, _bodyLookX);
-            _animator.SetFloat(_bodyLookYHash, _bodyLookY);
+            _animator.SetFloat(AnimationHashes.LeanValue, _leanValue);
+            _animator.SetFloat(AnimationHashes.HeadLookX, _headLookX);
+            _animator.SetFloat(AnimationHashes.HeadLookY, _headLookY);
+            _animator.SetFloat(AnimationHashes.BodyLookX, _bodyLookX);
+            _animator.SetFloat(AnimationHashes.BodyLookY, _bodyLookY);
 
-            _animator.SetFloat(_isStrafingHash, _isStrafing ? 1.0f : 0.0f);
-            
+            // Write head look values to ECS so EntityVisualSync can replicate them to remote heroes (BUG-002)
+            if (_ecsReady && _entityVisualSync != null)
+            {
+                var entity = _entityVisualSync.GetHeroEntity();
+                if (entity != Entity.Null && _ecsEntityManager.Exists(entity)
+                    && _ecsEntityManager.HasComponent<HeroAnimationComponent>(entity))
+                {
+                    var animComp = _ecsEntityManager.GetComponentData<HeroAnimationComponent>(entity);
+                    animComp.headLookX = _headLookX;
+                    animComp.headLookY = _headLookY;
+                    _ecsEntityManager.SetComponentData(entity, animComp);
+                }
+            }
+
+            _animator.SetFloat(AnimationHashes.IsStrafing, _isStrafing ? 1.0f : 0.0f);
+
             // MODIFICADO: Si no hay input, asegurarse de que MoveSpeed es 0 inmediatamente
             if (_inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE)
             {
-                _animator.SetFloat(_moveSpeedHash, 0);
+                _animator.SetFloat(AnimationHashes.MoveSpeed, 0);
             }
             else
             {
-                _animator.SetFloat(_moveSpeedHash, _speed2D);
+                _animator.SetFloat(AnimationHashes.MoveSpeed, _speed2D);
             }
-            
-            _animator.SetInteger(_currentGaitHash, (int) _currentGait);
 
-            _animator.SetFloat(_strafeDirectionXHash, _strafeDirectionX);
-            _animator.SetFloat(_strafeDirectionZHash, _strafeDirectionZ);
-            _animator.SetFloat(_forwardStrafeHash, _forwardStrafe);
-            _animator.SetFloat(_cameraRotationOffsetHash, _cameraRotationOffset);
+            _animator.SetInteger(AnimationHashes.CurrentGait, (int) _currentGait);
 
-            _animator.SetBool(_movementInputHeldHash, _movementInputHeld);
-            _animator.SetBool(_movementInputPressedHash, _movementInputPressed);
-            _animator.SetBool(_movementInputTappedHash, _movementInputTapped);
-            _animator.SetFloat(_shuffleDirectionXHash, _shuffleDirectionX);
-            _animator.SetFloat(_shuffleDirectionZHash, _shuffleDirectionZ);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionX, _strafeDirectionX);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, _strafeDirectionZ);
+            _animator.SetFloat(AnimationHashes.ForwardStrafe, _forwardStrafe);
+            _animator.SetFloat(AnimationHashes.CameraRotationOffset, _cameraRotationOffset);
 
-            _animator.SetBool(_isTurningInPlaceHash, _isTurningInPlace);
-            _animator.SetBool(_isWalkingHash, _isWalking);
-            _animator.SetBool(_isStoppedHash, _isStopped);
-            _animator.SetFloat(_locomotionStartDirectionHash, _locomotionStartDirection);
+            _animator.SetBool(AnimationHashes.MovementInputHeld, _movementInputHeld);
+            _animator.SetBool(AnimationHashes.MovementInputPressed, _movementInputPressed);
+            _animator.SetBool(AnimationHashes.MovementInputTapped, _movementInputTapped);
+            _animator.SetFloat(AnimationHashes.ShuffleDirectionX, _shuffleDirectionX);
+            _animator.SetFloat(AnimationHashes.ShuffleDirectionZ, _shuffleDirectionZ);
+
+            _animator.SetBool(AnimationHashes.IsTurningInPlace, _isTurningInPlace);
+            _animator.SetBool(AnimationHashes.IsWalking, _isWalking);
+            _animator.SetBool(AnimationHashes.IsStopped, _isStopped);
+            _animator.SetFloat(AnimationHashes.LocomotionStartDirection, _locomotionStartDirection);
 
             // ADDED: Siempre establecer IsGrounded en true para evitar que el Animator quede en "Fall" state
-            _animator.SetBool(_isGroundedHash, true);
+            _animator.SetBool(AnimationHashes.IsGrounded, true);
 
             // REMOVED: Jump, fall, crouch, grounded, aiming parameters
         }
@@ -739,7 +735,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
                     if (!_isStarting)
                     {
                         _locomotionStartDirection = _newDirectionDifferenceAngle;
-                        _animator.SetFloat(_locomotionStartDirectionHash, _locomotionStartDirection);
+                        _animator.SetFloat(AnimationHashes.LocomotionStartDirection, _locomotionStartDirection);
                     }
 
                     _leanDelay = _LOCOMOTION_START_DELAY;
@@ -754,7 +750,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
             }
 
             _isStarting = isStartingCheck;
-            _animator.SetBool(_isStartingHash, _isStarting);
+            _animator.SetBool(AnimationHashes.IsStarting, _isStarting);
         }
 
         private void UpdateStrafeDirection(float TargetZ, float TargetX)

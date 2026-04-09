@@ -42,27 +42,7 @@ namespace ConquestTactics.Visual
         private Animator _animator;
         private UnitAnimationAdapter _animationAdapter;
         
-        // Hashes de parámetros del animator (AC_Polygon_Masculine.controller)
-        private readonly int _moveSpeedHash = Animator.StringToHash("MoveSpeed");
-        private readonly int _isStoppedHash = Animator.StringToHash("IsStopped");
-        private readonly int _currentGaitHash = Animator.StringToHash("CurrentGait");
-        private readonly int _isGroundedHash = Animator.StringToHash("IsGrounded");
-        private readonly int _isWalkingHash = Animator.StringToHash("IsWalking");
-        
-        // Estados adicionales para compatibilidad con AC_Polygon
-        private readonly int _strafeDirectionXHash = Animator.StringToHash("StrafeDirectionX");
-        private readonly int _strafeDirectionZHash = Animator.StringToHash("StrafeDirectionZ");
-        
-        // Parámetros adicionales que pueden ser necesarios para el controller AC_Polygon_Masculine
-        private readonly int _movementInputPressedHash = Animator.StringToHash("MovementInputPressed");
-        private readonly int _forceGroundedTransitionHash = Animator.StringToHash("ForceGroundedTransition");
-        
-        // Triggers para forzar transiciones específicas
-        private readonly int _forceLocomotionHash = Animator.StringToHash("ForceLocomotion");
-        private readonly int _forceIdleHash = Animator.StringToHash("ForceIdle");
-
-        // Combat layer
-        private readonly int _isAttackingHash = Animator.StringToHash("IsAttacking");
+        // Animation parameter hashes are centralized in AnimationHashes.cs
         
         // Variable para detectar cambios de estado
         private bool _wasMovingLastFrame = false;
@@ -84,15 +64,15 @@ namespace ConquestTactics.Visual
             }
             
             // Inicializar los valores del Animator
-            _animator.SetBool(_isGroundedHash, true); // Siempre grounded para evitar problemas de Fall state
-            _animator.SetBool(_isStoppedHash, true); // Iniciar detenido
-            _animator.SetFloat(_moveSpeedHash, 0f); // Velocidad inicial 0
-            _animator.SetInteger(_currentGaitHash, 0); // Gait inicial = Idle
-            _animator.SetBool(_isWalkingHash, false); // No está caminando inicialmente
-            
+            _animator.SetBool(AnimationHashes.IsGrounded, true); // Siempre grounded para evitar problemas de Fall state
+            _animator.SetBool(AnimationHashes.IsStopped, true); // Iniciar detenido
+            _animator.SetFloat(AnimationHashes.MoveSpeed, 0f); // Velocidad inicial 0
+            _animator.SetInteger(AnimationHashes.CurrentGait, 0); // Gait inicial = Idle
+            _animator.SetBool(AnimationHashes.IsWalking, false); // No está caminando inicialmente
+
             // Resetear direcciones de strafe
-            _animator.SetFloat(_strafeDirectionXHash, 0f);
-            _animator.SetFloat(_strafeDirectionZHash, 1f); // Forward direction
+            _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f); // Forward direction
             
             // Forzar una transición al estado grounded
             //_animator.SetTrigger(_forceGroundedTransitionHash);
@@ -120,11 +100,11 @@ namespace ConquestTactics.Visual
             }
             
             // Activar los triggers directamente al inicio
-            _animator.SetBool(_isGroundedHash, true);
-            _animator.SetBool(_isStoppedHash, true);
-            _animator.SetFloat(_moveSpeedHash, 0f);
-            _animator.SetInteger(_currentGaitHash, 0);
-            _animator.SetBool(_isWalkingHash, false);
+            _animator.SetBool(AnimationHashes.IsGrounded, true);
+            _animator.SetBool(AnimationHashes.IsStopped, true);
+            _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
+            _animator.SetInteger(AnimationHashes.CurrentGait, 0);
+            _animator.SetBool(AnimationHashes.IsWalking, false);
             //_animator.SetTrigger(_forceIdleHash);
             
             // Log del nombre exacto del AnimatorController para verificación
@@ -132,9 +112,9 @@ namespace ConquestTactics.Visual
             {
                 Debug.Log($"[UnitAnimatorController] Animator inicializado en {gameObject.name}");
                 Debug.Log($"[UnitAnimatorController] Controller: {_animator.runtimeAnimatorController.name}");
-                Debug.Log($"[UnitAnimatorController] Tiene parámetro MoveSpeed: {AnimatorHasParameter(_moveSpeedHash)}");
-                Debug.Log($"[UnitAnimatorController] Tiene parámetro IsStopped: {AnimatorHasParameter(_isStoppedHash)}");
-                Debug.Log($"[UnitAnimatorController] Tiene parámetro CurrentGait: {AnimatorHasParameter(_currentGaitHash)}");
+                Debug.Log($"[UnitAnimatorController] Tiene parámetro MoveSpeed: {AnimatorHasParameter(AnimationHashes.MoveSpeed)}");
+                Debug.Log($"[UnitAnimatorController] Tiene parámetro IsStopped: {AnimatorHasParameter(AnimationHashes.IsStopped)}");
+                Debug.Log($"[UnitAnimatorController] Tiene parámetro CurrentGait: {AnimatorHasParameter(AnimationHashes.CurrentGait)}");
                 // Log de todos los parámetros actuales del Animator
                 string paramStates = $"[UnitAnimatorController] Estado inicial de parámetros para {gameObject.name} (InstanceID: {gameObject.GetInstanceID()}):";
                 foreach (var param in _animator.parameters)
@@ -204,37 +184,34 @@ namespace ConquestTactics.Visual
                                 currentState.IsName("Locomotion");
             
             // Forzar una transición al estado grounded si está en fall state
-            _animator.SetBool(_isGroundedHash, true);
-            
+            _animator.SetBool(AnimationHashes.IsGrounded, true);
+
             if (currentState.IsName("Base Layer.Fall.Falling") || currentState.IsName("Falling"))
             {
-                _animator.SetTrigger(_forceGroundedTransitionHash);
+                _animator.SetTrigger(AnimationHashes.ForceGroundedTransition);
             }
-            
+
             // MODIFICADO: Forzar valores para las animaciones
             // Primero actualizamos parámetros principales en el orden correcto
-            
+
             // 0. Forzar parámetros adicionales requeridos por el Animator Controller
-            // _animator.SetBool("isStarting", false);
-            // _animator.SetBool("isJumping", false);
-            // _animator.SetBool("MovementInputTapper", false);
-            _animator.SetBool("MovementInputPressed", false);
-            _animator.SetBool("MovementInputHeld", isMovingThisFrame);
-            
+            _animator.SetBool(AnimationHashes.MovementInputPressed, false);
+            _animator.SetBool(AnimationHashes.MovementInputHeld, isMovingThisFrame);
+
             // 1. Activar/desactivar movementInput (crítico para transiciones)
-            _animator.SetBool(_movementInputPressedHash, !isMovingThisFrame);
-            
+            _animator.SetBool(AnimationHashes.MovementInputPressed, !isMovingThisFrame);
+
             // 2. Establecer velocidad (crítico para determinar qué animación se muestra)
-            _animator.SetFloat(_moveSpeedHash, speed2D);
-            
+            _animator.SetFloat(AnimationHashes.MoveSpeed, speed2D);
+
             // 3. Forzar el estado IsStopped a false cuando hay movimiento (prioridad máxima)
             if (isMovingThisFrame)
             {
-                _animator.SetBool(_isStoppedHash, false);
+                _animator.SetBool(AnimationHashes.IsStopped, false);
             }
             else
             {
-                _animator.SetBool(_isStoppedHash, true);
+                _animator.SetBool(AnimationHashes.IsStopped, true);
             }
             
             // 4. Establecer gait explícitamente
@@ -252,10 +229,10 @@ namespace ConquestTactics.Visual
             {
                 gait = 0; // Idle
             }
-            _animator.SetInteger(_currentGaitHash, gait);
-            
+            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
+
             // 5. Establecer IsWalking para mayor claridad
-            _animator.SetBool(_isWalkingHash, false);
+            _animator.SetBool(AnimationHashes.IsWalking, false);
             
             // 6. Forzar transiciones con triggers si el estado no coincide con el esperado
             // Esto soluciona problemas donde el animator no responde a los parámetros regulares
@@ -298,29 +275,28 @@ namespace ConquestTactics.Visual
                 }
             }
             
-            _animator.SetInteger(_currentGaitHash, gait);
-            
+            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
+
             // Configurar caminando o corriendo - más explícito
-            bool isWalking = false;
-            _animator.SetBool(_isWalkingHash, isWalking);
-            
+            _animator.SetBool(AnimationHashes.IsWalking, false);
+
             // Parámetros de dirección para compatibilidad con AC_Polygon
             if (!_isStopped)
             {
                 // No aplicamos smoothing para direcciones para que sean más responsivas
-                _animator.SetFloat(_strafeDirectionXHash, _animationAdapter.MovementVector.x);
-                _animator.SetFloat(_strafeDirectionZHash, _animationAdapter.MovementVector.y);
+                _animator.SetFloat(AnimationHashes.StrafeDirectionX, _animationAdapter.MovementVector.x);
+                _animator.SetFloat(AnimationHashes.StrafeDirectionZ, _animationAdapter.MovementVector.y);
             }
             else
             {
                 // En estado detenido, resetear strafe directions
-                _animator.SetFloat(_strafeDirectionXHash, 0f);
-                _animator.SetFloat(_strafeDirectionZHash, 1f); // Forward direction cuando está detenido
+                _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
+                _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f); // Forward direction cuando está detenido
             }
-            
+
             // Combat layer — pasar estado de ataque al Animator
-            if (AnimatorHasParameter(_isAttackingHash))
-                _animator.SetBool(_isAttackingHash, _animationAdapter.IsAttacking);
+            if (AnimatorHasParameter(AnimationHashes.IsAttacking))
+                _animator.SetBool(AnimationHashes.IsAttacking, _animationAdapter.IsAttacking);
 
             // Guardar estado para detectar cambios en el próximo frame
             _wasMovingLastFrame = isMovingThisFrame;
@@ -410,13 +386,13 @@ namespace ConquestTactics.Visual
         /// </summary>
         public void ForceMovementAnimation()
         {
-            _animator.SetBool(_isGroundedHash, true);
-            _animator.SetBool(_isStoppedHash, false);
-            _animator.SetFloat(_moveSpeedHash, 0.5f); // Velocidad media
-            _animator.SetInteger(_currentGaitHash, 1); // Walk
-            _animator.SetBool(_movementInputPressedHash, true);
-            _animator.SetBool(_isWalkingHash, true);
-            _animator.SetTrigger(_forceLocomotionHash);
+            _animator.SetBool(AnimationHashes.IsGrounded, true);
+            _animator.SetBool(AnimationHashes.IsStopped, false);
+            _animator.SetFloat(AnimationHashes.MoveSpeed, 0.5f); // Velocidad media
+            _animator.SetInteger(AnimationHashes.CurrentGait, 1); // Walk
+            _animator.SetBool(AnimationHashes.MovementInputPressed, true);
+            _animator.SetBool(AnimationHashes.IsWalking, true);
+            _animator.SetTrigger(AnimationHashes.ForceLocomotion);
             if (_enableDebugLogs)
             {
                 // Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de movimiento para {gameObject.name}");
@@ -428,12 +404,12 @@ namespace ConquestTactics.Visual
         /// </summary>
         public void ForceIdleAnimation()
         {
-            _animator.SetBool(_isGroundedHash, true);
-            _animator.SetBool(_isStoppedHash, true);
-            _animator.SetFloat(_moveSpeedHash, 0f);
-            _animator.SetInteger(_currentGaitHash, 0); // Idle
-            _animator.SetBool(_movementInputPressedHash, false);
-            _animator.SetBool(_isWalkingHash, false);
+            _animator.SetBool(AnimationHashes.IsGrounded, true);
+            _animator.SetBool(AnimationHashes.IsStopped, true);
+            _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
+            _animator.SetInteger(AnimationHashes.CurrentGait, 0); // Idle
+            _animator.SetBool(AnimationHashes.MovementInputPressed, false);
+            _animator.SetBool(AnimationHashes.IsWalking, false);
             // _animator.SetTrigger(_forceIdleHash);
             if (_enableDebugLogs)
             {

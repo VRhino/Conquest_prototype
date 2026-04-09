@@ -113,16 +113,17 @@ public partial class EnemyDetectionSystem : SystemBase
                     unitBuf.Add(new UnitDetectedEnemy { Value = squadTargets[j].Value });
             }
 
-            // PASS 3 — detect enemy heroes within detectionRange and append to each unit's buffer
-            foreach (var (heroTeam, heroTransform, heroLife, heroEntity) in
+            // PASS 3 — detect any DetectableEntityTag enemy within detectionRange and append to each unit's buffer
+            foreach (var (heroTeam, heroTransform, heroEntity) in
                      SystemAPI.Query<
                          RefRO<TeamComponent>,
-                         RefRO<LocalTransform>,
-                         RefRO<HeroLifeComponent>>()
+                         RefRO<LocalTransform>>()
+                     .WithAll<DetectableEntityTag>()
                      .WithEntityAccess())
             {
                 if (heroTeam.ValueRO.value == teamA.ValueRO.value) continue;
-                if (!heroLife.ValueRO.isAlive) continue;
+                // If the entity has a HeroLifeComponent, respect its alive state
+                if (_heroLifeLookup.HasComponent(heroEntity) && !_heroLifeLookup[heroEntity].isAlive) continue;
 
                 float distSq = math.distancesq(centroidA, heroTransform.ValueRO.Position);
                 if (distSq > detectionRangeSq) continue;

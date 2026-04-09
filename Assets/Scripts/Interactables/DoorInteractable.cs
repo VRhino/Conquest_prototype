@@ -14,10 +14,8 @@ namespace ConquestTactics.Interactables
         [Header("Interaction Prompt")]
         [SerializeField] private NpcPromptBillboard _promptBillboard;
 
-        private const string OpenTrigger  = "Open";
-        private const string CloseTrigger = "Close";
-        private const string TextOpen     = "Presiona F para abrir";
-        private const string TextClose    = "Presiona F para cerrar";
+        private const string TextOpen  = "Presiona F para abrir";
+        private const string TextClose = "Presiona F para cerrar";
 
         private bool _isOpen       = false;
         private bool _playerInside = false;
@@ -65,7 +63,7 @@ namespace ConquestTactics.Interactables
         private void ToggleDoor()
         {
             _isOpen = !_isOpen;
-            _doorAnimator?.SetTrigger(_isOpen ? OpenTrigger : CloseTrigger);
+            _doorAnimator?.SetTrigger(_isOpen ? AnimationHashes.DoorOpen : AnimationHashes.DoorClose);
             ShowPrompt();
         }
 

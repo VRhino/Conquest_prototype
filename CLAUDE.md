@@ -72,6 +72,7 @@ Prefer these over direct data access: `HeroDataService`, `SquadDataService`, `Da
 ## graphify
 
 Knowledge graph at `graphify-out/`.
-- Before answering architecture questions, read `graphify-out/GRAPH_REPORT.md`
-- If `graphify-out/wiki/index.md` exists, navigate it instead of reading raw files
-- After modifying code: run `python3 -c "from graphify.watch import _rebuild_code; from pathlib import Path; _rebuild_code(Path('.'))"` to update graph
+- Before answering architecture questions, read `graphify-out/GRAPH_REPORT.md` (god nodes, communities, surprising connections)
+- Open `graphify-out/obsidian/` as an Obsidian vault for interactive navigation (3,551 notes, community overviews, graph.canvas)
+- Interactive HTML graph: `graphify-out/graph.html` (open in browser)
+- After modifying code: run `/graphify --update` to incrementally rebuild the graph
