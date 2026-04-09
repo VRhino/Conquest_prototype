@@ -6,8 +6,8 @@ using TMPro;
 
 /// <summary>
 /// Handles real time updates for the in-game HUD during combat.
-/// It reads ECS component data from the local player and
-/// reflects the values on the Unity UI.
+/// Reads UIHeroBattleDataComponent (written by UIBattleDataSystem) instead of
+/// querying gameplay ECS components directly.
 /// </summary>
 public class HUDController : MonoBehaviour
 {
@@ -71,91 +71,94 @@ public class HUDController : MonoBehaviour
     private bool _squadInitialized;
     private bool _externalOverride;
 
-    void Update()
-    {
-        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+    // ── Cached ECS references ─────────────────────────────────────────────────
+    private World        _world;
+    private EntityManager _em;
+    private EntityQuery  _uiDataQuery;
+    private EntityQuery  _captureIconQuery;
+    private EntityQuery  _dataContainerQuery;
 
-        UpdateHeroSection(em);
-        CheckSquadChangeEvent(em);
-        InitializeSquadIfNeeded(em);
-        _squadSectionController?.UpdateFromECS(em);
-        UpdateCaptureBar(em);
-        UpdateCapturePointIcons(em);
+    void Awake()
+    {
+        _world = World.DefaultGameObjectInjectionWorld;
+        _em    = _world.EntityManager;
+
+        _uiDataQuery       = _em.CreateEntityQuery(ComponentType.ReadOnly<UIHeroBattleDataComponent>());
+        _captureIconQuery  = _em.CreateEntityQuery(
+            ComponentType.ReadOnly<CapturePointTag>(),
+            ComponentType.ReadOnly<ZoneTriggerComponent>());
+        _dataContainerQuery = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
     }
 
-    void UpdateHeroSection(EntityManager em)
+    void OnDestroy()
+    {
+        _uiDataQuery.Dispose();
+        _captureIconQuery.Dispose();
+        _dataContainerQuery.Dispose();
+    }
+
+    void Update()
+    {
+        if (_uiDataQuery.IsEmptyIgnoreFilter) return;
+        var data = _em.GetComponentData<UIHeroBattleDataComponent>(_uiDataQuery.GetSingletonEntity());
+
+        UpdateHeroSection(data);
+        CheckSquadChangeEvent(data);
+        InitializeSquadIfNeeded();
+        _squadSectionController?.UpdateFromECS(_em);
+        UpdateCaptureBar(data);
+        UpdateCapturePointIcons();
+    }
+
+    void UpdateHeroSection(UIHeroBattleDataComponent data)
     {
         if (_heroSection != null && !_heroSection.activeSelf)
             return;
-    
-        var query = em.CreateEntityQuery(
-            ComponentType.ReadOnly<HeroHealthComponent>(),
-            ComponentType.ReadOnly<StaminaComponent>(),
-            ComponentType.ReadOnly<IsLocalPlayer>());
-        if (query.IsEmptyIgnoreFilter)
-            return;
-        Entity hero = query.GetSingletonEntity();
-        var health = em.GetComponentData<HeroHealthComponent>(hero);
-        var stamina = em.GetComponentData<StaminaComponent>(hero);
-       
+
         if (_healthFill != null)
-            _healthFill.fillAmount = health.maxHealth > 0f ? health.currentHealth / health.maxHealth : 0f;
+            _healthFill.fillAmount = data.maxHealth > 0f ? data.currentHealth / data.maxHealth : 0f;
         if (_staminaFill != null)
-            _staminaFill.fillAmount = stamina.maxStamina > 0f ? stamina.currentStamina / stamina.maxStamina : 0f;
+            _staminaFill.fillAmount = data.maxStamina > 0f ? data.currentStamina / data.maxStamina : 0f;
         if (_healthText != null)
-            _healthText.text = $"{Mathf.CeilToInt(health.currentHealth)} / {Mathf.CeilToInt(health.maxHealth)}";
+            _healthText.text = $"{Mathf.CeilToInt(data.currentHealth)} / {Mathf.CeilToInt(data.maxHealth)}";
         if (_staminaText != null)
-            _staminaText.text = $"{Mathf.CeilToInt(stamina.currentStamina)} / {Mathf.CeilToInt(stamina.maxStamina)}";
+            _staminaText.text = $"{Mathf.CeilToInt(data.currentStamina)} / {Mathf.CeilToInt(data.maxStamina)}";
 
         foreach (var slot in _abilitySlots)
-            slot?.UpdateSlot(em);
+            slot?.UpdateSlot(_em);
     }
 
-    void CheckSquadChangeEvent(EntityManager em)
+    void CheckSquadChangeEvent(UIHeroBattleDataComponent data)
     {
-        var evtQuery = em.CreateEntityQuery(ComponentType.ReadOnly<SquadChangeEvent>());
-        if (evtQuery.IsEmptyIgnoreFilter) return;
+        // UIBattleDataSystem consumed the SquadChangeEvent entity — we just read the result.
+        if (!data.squadChangedThisFrame) return;
 
-        var evtEntity = evtQuery.GetSingletonEntity();
-        var evt = em.GetComponentData<SquadChangeEvent>(evtEntity);
-
-        // Consume the event entity so it doesn't fire again
-        em.DestroyEntity(evtEntity);
-
-        // Look up baseSquadID for the new squad from SquadIdMapElement buffer
-        var dcQuery = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
-        if (!dcQuery.IsEmptyIgnoreFilter)
+        if (_dataContainerQuery.IsEmptyIgnoreFilter) return;
+        var dcEntity = _dataContainerQuery.GetSingletonEntity();
+        if (_em.HasBuffer<SquadIdMapElement>(dcEntity))
         {
-            var dcEntity = dcQuery.GetSingletonEntity();
-            if (em.HasBuffer<SquadIdMapElement>(dcEntity))
+            var mapBuffer = _em.GetBuffer<SquadIdMapElement>(dcEntity);
+            for (int i = 0; i < mapBuffer.Length; i++)
             {
-                var mapBuffer = em.GetBuffer<SquadIdMapElement>(dcEntity);
-                for (int i = 0; i < mapBuffer.Length; i++)
+                if (mapBuffer[i].squadId == data.newSquadId)
                 {
-                    if (mapBuffer[i].squadId == evt.newSquadId)
-                    {
-                        string baseId = mapBuffer[i].baseSquadID.ToString();
-                        var squadData = SquadDataService.GetSquadById(baseId);
-                        if (squadData != null && _squadSectionController != null)
-                        {
-                            _squadSectionController.Initialize(squadData);
-                        }
-                        break;
-                    }
+                    string baseId   = mapBuffer[i].baseSquadID.ToString();
+                    var    squadData = SquadDataService.GetSquadById(baseId);
+                    if (squadData != null && _squadSectionController != null)
+                        _squadSectionController.Initialize(squadData);
+                    break;
                 }
             }
         }
     }
 
-    void InitializeSquadIfNeeded(EntityManager em)
+    void InitializeSquadIfNeeded()
     {
         if (_squadInitialized || _squadSectionController == null) return;
+        if (_dataContainerQuery.IsEmptyIgnoreFilter) return;
 
-        var query = em.CreateEntityQuery(typeof(DataContainerComponent));
-        if (query.IsEmptyIgnoreFilter) return;
-
-        var data = em.GetComponentData<DataContainerComponent>(query.GetSingletonEntity());
-        string squadId = data.selectedSquadBaseID.ToString();
+        var dc      = _em.GetComponentData<DataContainerComponent>(_dataContainerQuery.GetSingletonEntity());
+        string squadId = dc.selectedSquadBaseID.ToString();
         if (string.IsNullOrEmpty(squadId)) return;
 
         var squadData = SquadDataService.GetSquadById(squadId);
@@ -181,47 +184,33 @@ public class HUDController : MonoBehaviour
         if (_captureBarSection != null) _captureBarSection.SetActive(false);
     }
 
-    void UpdateCaptureBar(EntityManager em)
+    void UpdateCaptureBar(UIHeroBattleDataComponent data)
     {
         if (_externalOverride) return;
 
-        var query = em.CreateEntityQuery(typeof(LocalHeroCaptureStateComponent));
-        if (query.IsEmptyIgnoreFilter)
-        {
-            _captureBarSection?.SetActive(false);
-            return;
-        }
-
-        var state = em.GetComponentData<LocalHeroCaptureStateComponent>(query.GetSingletonEntity());
-
         if (_captureBarSection != null)
-            _captureBarSection.SetActive(state.isInZone);
+            _captureBarSection.SetActive(data.isInCaptureZone);
 
-        if (!state.isInZone)
-            return;
+        if (!data.isInCaptureZone) return;
 
         if (_captureProgressFill != null)
-            _captureProgressFill.fillAmount = state.captureProgress / 100f;
+            _captureProgressFill.fillAmount = data.captureProgress / 100f;
 
         if (_captureProgressText != null)
-            _captureProgressText.text = $"{Mathf.RoundToInt(state.captureProgress)}%";
+            _captureProgressText.text = $"{Mathf.RoundToInt(data.captureProgress)}%";
     }
 
-    void UpdateCapturePointIcons(EntityManager em)
+    void UpdateCapturePointIcons()
     {
         if (_capturePointIconsContainer == null || _capturePointIconPrefab == null)
             return;
 
-        var query = em.CreateEntityQuery(
-            ComponentType.ReadOnly<CapturePointTag>(),
-            ComponentType.ReadOnly<ZoneTriggerComponent>());
-
         // Build set of zoneIds that should be visible along with label data
         var visibleZones = new Dictionary<int, (byte label, bool isFinal)>();
-        var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp);
+        var entities = _captureIconQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
         for (int i = 0; i < entities.Length; i++)
         {
-            var zone = em.GetComponentData<ZoneTriggerComponent>(entities[i]);
+            var zone = _em.GetComponentData<ZoneTriggerComponent>(entities[i]);
             if (zone.isActive && !zone.isLocked)
                 visibleZones[zone.zoneId] = (zone.pointLabel, zone.isFinal);
         }
