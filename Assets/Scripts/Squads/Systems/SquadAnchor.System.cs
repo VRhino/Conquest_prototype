@@ -1,6 +1,5 @@
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
 
 /// <summary>
 /// Computes the squad's formation anchor (position + rotation) each frame
@@ -9,7 +8,7 @@ using Unity.Transforms;
 /// Three cases in priority order:
 ///   1. HoldingPosition → holdCenter + holdRotation
 ///   2. Retreating      → retreatTarget + default rotation
-///   3. Default (Follow)→ heroPos + forward * followForwardOffset + default rotation
+///   3. Default (Follow)→ heroPos + forward * followForwardOffset + hero rotation
 ///
 /// Centralises all anchor logic so FormationSystem, GridFormationUpdateSystem,
 /// and DestinationMarkerSystem can simply read the component instead of each
@@ -28,11 +27,10 @@ public partial class SquadAnchorSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var ownerLookup    = GetComponentLookup<SquadOwnerComponent>(true);
-        var transformLookup = GetComponentLookup<LocalTransform>(true);
-
-        foreach (var (state, anchor, squadEntity) in SystemAPI
-                     .Query<RefRO<SquadStateComponent>, RefRW<SquadFormationAnchorComponent>>()
+        foreach (var (state, anchor, heroWorldPos, squadEntity) in SystemAPI
+                     .Query<RefRO<SquadStateComponent>,
+                            RefRW<SquadFormationAnchorComponent>,
+                            RefRO<HeroWorldPositionComponent>>()
                      .WithEntityAccess())
         {
             float3    position;
@@ -53,20 +51,12 @@ public partial class SquadAnchorSystem : SystemBase
             }
             else
             {
-                if (!HeroPositionUtility.TryGetHeroPosition(
-                        squadEntity, ownerLookup, transformLookup, out float3 heroPos))
-                    continue;
-
-                if (ownerLookup.TryGetComponent(squadEntity, out var owner)
-                    && transformLookup.TryGetComponent(owner.hero, out var heroTx))
-                {
-                    float followOffset =
-                        SystemAPI.GetSingleton<SquadSpawnConfigComponent>().followForwardOffset;
-                    heroPos += math.forward(heroTx.Rotation) * followOffset;
-                    rotation = heroTx.Rotation;
-                }
-
+                float followOffset =
+                    SystemAPI.GetSingleton<SquadSpawnConfigComponent>().followForwardOffset;
+                float3 heroPos = heroWorldPos.ValueRO.position
+                                 + math.forward(heroWorldPos.ValueRO.rotation) * followOffset;
                 position = heroPos;
+                rotation = heroWorldPos.ValueRO.rotation;
             }
 
             float3 prevPosition = anchor.ValueRO.position;

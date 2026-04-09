@@ -90,8 +90,6 @@ public partial class HeroVisualAppearanceSystem : SystemBase
         var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
         if (avatarPartDatabase == null) return;
 
-        ItemService.Initialize();
-
         var baseVisualPartIds = new System.Collections.Generic.List<string>();
         if (!string.IsNullOrEmpty(avatar.headId))    baseVisualPartIds.Add(avatar.headId);
         if (!string.IsNullOrEmpty(avatar.hairId))    baseVisualPartIds.Add(avatar.hairId);

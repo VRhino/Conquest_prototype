@@ -57,6 +57,11 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddComponent(squad, LocalTransform.FromPosition(formationAnchor));
 
             ecb.AddComponent(squad, new SquadOwnerComponent { hero = entity });
+            ecb.AddComponent(squad, new HeroWorldPositionComponent
+            {
+                position = heroTransform.ValueRO.Position,
+                rotation = heroTransform.ValueRO.Rotation
+            });
             if (isLocalPlayerLookup.HasComponent(entity))
                 ecb.AddComponent<IsLocalSquadActive>(squad);
             // Squad created successfully

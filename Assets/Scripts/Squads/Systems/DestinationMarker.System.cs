@@ -41,23 +41,18 @@ public partial class DestinationMarkerSystem : SystemBase
         }
         
         var transformLookup = GetComponentLookup<LocalTransform>(true);
-        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
         var squadDefLookup = GetComponentLookup<SquadDefinitionComponent>(true);
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
-        var isLocalPlayerLookup = GetComponentLookup<IsLocalPlayer>(true);
-        
+
         // Process each squad to update destination markers for their units
-        foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
+        // WithAll<IsLocalSquadActive> filters to local player squads only
+        foreach (var (units, squadEntity) in SystemAPI
+                     .Query<DynamicBuffer<SquadUnitElement>>()
+                     .WithAll<IsLocalSquadActive>()
+                     .WithEntityAccess())
         {
             if (units.Length == 0)
-                continue;
-                
-            if (!ownerLookup.TryGetComponent(squadEntity, out var squadOwner))
-                continue;
-
-            // Solo generar markers para squads del jugador local
-            if (!isLocalPlayerLookup.HasComponent(squadOwner.hero))
                 continue;
 
             if (!stateLookup.TryGetComponent(squadEntity, out var squadState))

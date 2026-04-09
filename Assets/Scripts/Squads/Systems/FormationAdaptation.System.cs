@@ -1,6 +1,5 @@
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
@@ -20,21 +19,16 @@ public partial class FormationAdaptationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var ownerLookup = GetComponentLookup<SquadOwnerComponent>(true);
-        var transformLookup = GetComponentLookup<LocalTransform>(true);
-        
-        foreach (var (env, ai, units, squadEntity) in SystemAPI
+        foreach (var (env, ai, heroWorldPos, units) in SystemAPI
                      .Query<RefRW<EnvironmentAwarenessComponent>,
                             RefRO<SquadAIComponent>,
-                            DynamicBuffer<SquadUnitElement>>()
-                     .WithEntityAccess())
+                            RefRO<HeroWorldPositionComponent>,
+                            DynamicBuffer<SquadUnitElement>>())
         {
             if (ai.ValueRO.isInCombat || units.Length == 0)
                 continue;
 
-            // Usar la posición del héroe para detectar obstáculos
-            if (!HeroPositionUtility.TryGetHeroPosition(squadEntity, ownerLookup, transformLookup, out float3 heroPos))
-                continue;
+            float3 heroPos = heroWorldPos.ValueRO.position;
             var envData = env.ValueRW;
             
             // Detectar obstáculos para que las unidades puedan usar esta información
