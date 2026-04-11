@@ -11,8 +11,7 @@ public class FloatingCombatTextManager : MonoBehaviour
 
     [SerializeField] private FCTEntry prefab;
 
-    [Tooltip("Sprites indexados por DamageCategory. El tamaño del array se ajusta automáticamente al enum.")]
-    [SerializeField] private Sprite[] icons = new Sprite[System.Enum.GetValues(typeof(DamageCategory)).Length];
+    [SerializeField] private FCTCategoryConfig categoryConfig;
 
     [SerializeField] private int poolSize = 20;
 
@@ -47,10 +46,9 @@ public class FloatingCombatTextManager : MonoBehaviour
 
     public void Spawn(Vector3 worldPos, DamageCategory type, float dmgValue)
     {
-
-        Sprite iconSprite = (int)type < icons.Length ? icons[(int)type] : null;
-        FCTEntry entry = _pool.Count > 0 ? _pool.Dequeue() : CreateOverflow();
-        entry.Activate(worldPos, type, dmgValue, iconSprite);
+        FCTCategoryEntry entry = categoryConfig != null ? categoryConfig.GetEntry(type) : null;
+        FCTEntry fct = _pool.Count > 0 ? _pool.Dequeue() : CreateOverflow();
+        fct.Activate(worldPos, entry, dmgValue);
     }
 
     private void ReturnToPool(FCTEntry entry)

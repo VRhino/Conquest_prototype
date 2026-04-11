@@ -21,21 +21,6 @@ public class FCTEntry : MonoBehaviour
     [Tooltip("Escala world-space del FCT completo.")]
     [SerializeField] private float worldScale = 0.005f;
 
-    [Header("Font Scale por tipo")]
-    [SerializeField] private float fontScaleCritical = 1.4f;
-    [SerializeField] private float fontScaleDeath    = 1.2f;
-
-    [Header("Colores por tipo")]
-    [SerializeField] private Color colorNormal      = Color.white;
-    [SerializeField] private Color colorCritical    = new Color(1f, 0.85f, 0f);       // #FFD700
-    [SerializeField] private Color colorBlocked     = new Color(0.2f, 0.8f, 1f);      // cyan
-    [SerializeField] private Color colorDeath       = new Color(1f, 0.2f, 0.2f);      // #FF3333
-    [SerializeField] private Color colorShieldBreak = new Color(1f, 0.6f, 0f);        // naranja
-
-    private const string LabelCritical    = "CRITICO";
-    private const string LabelBlocked     = "BLOQ";
-    private const string LabelShieldBreak = "ESCUDO ROTO";
-
     private const float ArcWidth     = 1.2f;  // desplazamiento horizontal total (derecha)
     private const float ArcHeight    = 1.0f;  // altura del punto de control de la cima
     private const float Duration      = 1.2f;
@@ -45,14 +30,12 @@ public class FCTEntry : MonoBehaviour
 
     private Coroutine _activeCoroutine;
 
-    public void Activate(Vector3 worldPos, DamageCategory type, float value, Sprite iconSprite)
+    public void Activate(Vector3 worldPos, FCTCategoryEntry entry, float value)
     {
-
-
         transform.position   = worldPos;
         transform.localScale = Vector3.one * worldScale;
 
-        ConfigureVisuals(type, value, iconSprite);
+        ConfigureVisuals(entry, value);
 
         gameObject.SetActive(true);
 
@@ -60,55 +43,31 @@ public class FCTEntry : MonoBehaviour
         _activeCoroutine = StartCoroutine(AnimateRoutine());
     }
 
-    private void ConfigureVisuals(DamageCategory type, float value, Sprite iconSprite)
+    private void ConfigureVisuals(FCTCategoryEntry entry, float value)
     {
         label.fontSize = baseFontSize;
         icon.enabled   = false;
 
-        switch (type)
+        if (entry == null)
         {
-            case DamageCategory.Normal:
-                label.text  = Mathf.RoundToInt(value).ToString();
-                label.color = colorNormal;
-                break;
-
-            case DamageCategory.Critical:
-                label.text     = $"{LabelCritical} {Mathf.RoundToInt(value)}";
-                label.color    = colorCritical;
-                label.fontSize = baseFontSize * fontScaleCritical;
-                break;
-
-            case DamageCategory.Blocked:
-                label.text  = value > 0f ? $"{LabelBlocked} {Mathf.RoundToInt(value)}" : LabelBlocked;
-                label.color = colorBlocked;
-                SetIcon(iconSprite);
-                break;
-
-            case DamageCategory.ShieldBreak:
-                label.text     = LabelShieldBreak;
-                label.color    = colorShieldBreak;
-                label.fontSize = baseFontSize * fontScaleCritical;
-                break;
-
-            case DamageCategory.Death:
-                label.text     = Mathf.RoundToInt(value).ToString();
-                label.color    = colorDeath;
-                label.fontSize = baseFontSize * fontScaleDeath;
-                SetIcon(iconSprite);
-                break;
-
-            default:
-                label.text  = Mathf.RoundToInt(value).ToString();
-                label.color = colorNormal;
-                break;
+            label.text  = Mathf.RoundToInt(value).ToString();
+            label.color = Color.white;
+            return;
         }
-    }
 
-    private void SetIcon(Sprite sprite)
-    {
-        if (sprite == null) return;
-        icon.sprite  = sprite;
-        icon.enabled = true;
+        label.color    = entry.color;
+        label.fontSize = baseFontSize * entry.fontScale;
+
+        string numberPart = entry.showValue ? Mathf.RoundToInt(value).ToString() : string.Empty;
+        label.text = string.IsNullOrEmpty(entry.label)
+            ? numberPart
+            : string.IsNullOrEmpty(numberPart) ? entry.label : $"{entry.label} {numberPart}";
+
+        if (entry.icon != null)
+        {
+            icon.sprite  = entry.icon;
+            icon.enabled = true;
+        }
     }
 
     private void LateUpdate()
