@@ -137,44 +137,77 @@ dañoEfectivo = baseDamage × multiplier × (1 − mitigación)
 
 El escudo se evalúa **antes** de la fórmula de daño. Si un golpe es bloqueado, no se reduce la salud.
 
-### 6.1 Componente de escudo
+**Solo las unidades/héroes cuyo prefab visual contiene un `ShieldHitboxBehaviour` tienen escudo.** El componente ECS `UnitShieldComponent` se agrega automáticamente en runtime al detectar dicho MonoBehaviour — no todas las unidades tienen escudo.
+
+### 6.1 Patrón de descubrimiento (prefab-based)
+
+El mismo patrón que `WeaponHitboxBehaviour`:
+
+```
+[Editor]
+  Prefab Visual
+    └── ShieldHitbox (child GO) ← solo en prefabs con escudo
+          ├── ShieldHitboxBehaviour (orientation, maxBlockOverride, regenRateOverride)
+          └── BoxCollider
+
+[Runtime — visual instantiation]
+  SquadVisualManagementSystem / HeroVisualInstantiationSystem
+    └── GetComponentInChildren<ShieldHitboxBehaviour>(true)
+          └── Si existe → wire ownerUnit + ecb.AddComponent<UnitShieldComponent>
+```
+
+### 6.2 Resolución de valores (prioridad)
+
+| Prioridad | Fuente | Condición |
+|---|---|---|
+| 1 | `ShieldHitboxBehaviour.maxBlockOverride` | Si > 0 en el prefab |
+| 2 | `SquadDataComponent.block` | Si el override es 0 y el squad tiene valor |
+| 3 | Default (100f unidades / 100f héroes) | Fallback |
+
+Misma lógica para `regenRate` con `blockRegenRate` de `SquadData`.
+
+### 6.3 Componente de escudo
 
 `UnitShieldComponent` almacena:
 - `currentBlock`: puntos de bloqueo disponibles.
 - `maxBlock`: capacidad máxima.
-- `regenRate`: puntos regenerados por segundo fuera de combate.
+- `regenRate`: puntos regenerados por segundo.
 - `orientation`: dirección desde la que protege el escudo.
 
-### 6.2 Orientaciones de escudo
+### 6.4 Orientaciones de escudo
 
 | Orientación | Descripción |
 |---|---|
-| Forward | Bloquea ataques frontales (dot(`attackDirection`, `shield.forward`) > 0.5) |
+| Forward | Bloquea ataques frontales (dot(`attackDirection`, `-targetForward`) > 0.5) |
 | Left / Right | Protección lateral (reservado; sin lógica activa actualmente) |
 | All | Bloquea desde cualquier dirección |
 
-### 6.3 Flujo de bloqueo
+### 6.5 Flujo de bloqueo
 
 ```
 PendingDamageEvent llega al objetivo
   │
+  ├─ ¿HasComponent<UnitShieldComponent>?
+  │     └─ No → daño pasa a la fórmula normal (unidad sin escudo)
+  │
   ├─ ¿currentBlock > 0?
-  │     └─ No → daño pasa a la fórmula normal
+  │     └─ No → daño pasa a la fórmula normal (escudo agotado)
   │
   ├─ ¿orientación cubre la dirección del ataque?
-  │     └─ No → daño pasa a la fórmula normal
+  │     └─ No → daño pasa a la fórmula normal (golpe lateral/trasero)
   │
   └─ Sí → currentBlock −= 50
            PendingDamageEvent eliminado (sin daño a salud)
+           FCT "BLOQ" emitido
 ```
 
-### 6.4 Regeneración de escudo
+### 6.6 Regeneración de escudo
 
 `BlockRegenSystem` incrementa `currentBlock` cada frame:
 ```
 currentBlock = min(maxBlock, currentBlock + regenRate × deltaTime)
 ```
-No hay condición explícita de "fuera de combate" en la implementación actual; el regen ocurre siempre.
+El regen ocurre siempre (no hay condición explícita de "fuera de combate").
 
 ---
 

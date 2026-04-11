@@ -42,6 +42,17 @@ public partial class HeroMovementSystem : SystemBase
                     currentSpeed *= stats.sprintMultiplier;
                 }
 
+                // Shield break stun: freeze hero movement
+                if (EntityManager.HasComponent<UnitShieldComponent>(entity))
+                {
+                    var heroShield = EntityManager.GetComponentData<UnitShieldComponent>(entity);
+                    if (heroShield.brokenTimer > 0f)
+                    {
+                        direction    = float3.zero;
+                        currentSpeed = 0f;
+                    }
+                }
+
                 if (EntityManager.HasComponent<HeroMoveIntent>(entity))
                 {
                     EntityManager.SetComponentData(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });

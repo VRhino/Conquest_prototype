@@ -7,6 +7,7 @@ using Unity.Entities;
 /// BraceWeaponSystem then applies per-row weapon overrides.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(SquadFSMSystem))]
 public partial class BraceWeaponActivationSystem : SystemBase
 {
     protected override void OnUpdate()

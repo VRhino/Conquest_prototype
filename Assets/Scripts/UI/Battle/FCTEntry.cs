@@ -26,13 +26,15 @@ public class FCTEntry : MonoBehaviour
     [SerializeField] private float fontScaleDeath    = 1.2f;
 
     [Header("Colores por tipo")]
-    [SerializeField] private Color colorNormal   = Color.white;
-    [SerializeField] private Color colorCritical = new Color(1f, 0.85f, 0f);       // #FFD700
-    [SerializeField] private Color colorBlocked  = new Color(0.67f, 0.67f, 0.67f); // #AAAAAA
-    [SerializeField] private Color colorDeath    = new Color(1f, 0.2f, 0.2f);      // #FF3333
+    [SerializeField] private Color colorNormal      = Color.white;
+    [SerializeField] private Color colorCritical    = new Color(1f, 0.85f, 0f);       // #FFD700
+    [SerializeField] private Color colorBlocked     = new Color(0.2f, 0.8f, 1f);      // cyan
+    [SerializeField] private Color colorDeath       = new Color(1f, 0.2f, 0.2f);      // #FF3333
+    [SerializeField] private Color colorShieldBreak = new Color(1f, 0.6f, 0f);        // naranja
 
-    private const string LabelCritical = "CRITICO";
-    private const string LabelBlocked  = "BLOQ";
+    private const string LabelCritical    = "CRITICO";
+    private const string LabelBlocked     = "BLOQ";
+    private const string LabelShieldBreak = "ESCUDO ROTO";
 
     private const float ArcWidth     = 1.2f;  // desplazamiento horizontal total (derecha)
     private const float ArcHeight    = 1.0f;  // altura del punto de control de la cima
@@ -77,9 +79,15 @@ public class FCTEntry : MonoBehaviour
                 break;
 
             case DamageCategory.Blocked:
-                label.text  = LabelBlocked;
+                label.text  = value > 0f ? $"{LabelBlocked} {Mathf.RoundToInt(value)}" : LabelBlocked;
                 label.color = colorBlocked;
                 SetIcon(iconSprite);
+                break;
+
+            case DamageCategory.ShieldBreak:
+                label.text     = LabelShieldBreak;
+                label.color    = colorShieldBreak;
+                label.fontSize = baseFontSize * fontScaleCritical;
                 break;
 
             case DamageCategory.Death:

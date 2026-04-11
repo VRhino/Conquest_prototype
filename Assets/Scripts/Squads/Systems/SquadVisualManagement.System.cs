@@ -119,6 +119,48 @@ public partial class SquadVisualManagementSystem : SystemBase
 
         }
 
+        // Wire ShieldHitboxBehaviour → add UnitShieldComponent if prefab has shield
+        var shieldBehaviour = visualInstance.GetComponentInChildren<ShieldHitboxBehaviour>(true);
+        if (shieldBehaviour != null)
+        {
+            shieldBehaviour.ownerUnit = unitEntity;
+
+            // Resolve shield values: prefab override > SquadData > config defaults
+            var shieldCfg = SystemAPI.GetSingleton<ShieldConfigComponent>();
+            float maxBlock = shieldBehaviour.maxBlockOverride > 0f
+                ? shieldBehaviour.maxBlockOverride
+                : shieldCfg.defaultMaxBlock;
+            float regenRate = shieldBehaviour.regenRateOverride > 0f
+                ? shieldBehaviour.regenRateOverride
+                : shieldCfg.defaultRegenRate;
+
+            if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDataComponent>(parentSquad))
+            {
+                var squadData = EntityManager.GetComponentData<SquadDataComponent>(parentSquad);
+                if (shieldBehaviour.maxBlockOverride <= 0f && squadData.block > 0f)
+                    maxBlock = squadData.block;
+                if (shieldBehaviour.regenRateOverride <= 0f && squadData.blockRegenRate > 0f)
+                    regenRate = squadData.blockRegenRate;
+            }
+
+            float breakStunDuration = shieldCfg.defaultBreakStunDuration;
+            if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDataComponent>(parentSquad))
+            {
+                var squadData2 = EntityManager.GetComponentData<SquadDataComponent>(parentSquad);
+                if (squadData2.shieldBreakStunDuration > 0f)
+                    breakStunDuration = squadData2.shieldBreakStunDuration;
+            }
+
+            ecb.AddComponent(unitEntity, new UnitShieldComponent
+            {
+                currentBlock      = maxBlock,
+                maxBlock          = maxBlock,
+                regenRate         = regenRate,
+                orientation       = shieldBehaviour.orientation,
+                breakStunDuration = breakStunDuration
+            });
+        }
+
         var agent = visualInstance.GetComponent<NavMeshAgent>();
         if (agent != null)
         {

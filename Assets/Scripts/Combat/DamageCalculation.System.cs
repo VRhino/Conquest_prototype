@@ -16,7 +16,10 @@ using Unity.Transforms;
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
 ///   Height:  +10% per metre of vertical advantage (> 0.5 m threshold)
 ///
-/// Shield check runs before damage: blocks frontal hits when currentBlock > 0.
+/// Shield check runs AFTER damage is calculated so the block absorbs the real
+/// effective damage. If block goes to 0 the shield breaks, triggering a stun of
+/// breakStunDuration seconds (from UnitShieldComponent). During stun the unit
+/// cannot move and receives damage normally.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadAISystem))]
@@ -24,6 +27,8 @@ public partial class DamageCalculationSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        var shieldCfg         = SystemAPI.GetSingleton<ShieldConfigComponent>();
+        const float FctYOffset = 1.8f;
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
         var shieldLookup      = GetComponentLookup<UnitShieldComponent>();
@@ -36,19 +41,13 @@ public partial class DamageCalculationSystem : SystemBase
         {
             var p = pending.ValueRO;
 
-
-
             if (!SystemAPI.Exists(p.target) || !SystemAPI.Exists(p.damageProfile))
             {
-                bool tMissing = !SystemAPI.Exists(p.target);
-                bool pMissing = !SystemAPI.Exists(p.damageProfile);
-
                 ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
             }
 
             if (SystemAPI.HasComponent<IsDeadComponent>(p.target))
             {
-
                 ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
             }
 
@@ -58,46 +57,11 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 if (SystemAPI.GetComponent<TeamComponent>(p.target).value == p.sourceTeam)
                 {
-
                     ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
                 }
             }
 
-            // Shield block check — intercepts frontal attacks before hurtbox
-            if (shieldLookup.HasComponent(p.target) && shieldLookup[p.target].currentBlock > 0f)
-            {
-                var shield  = shieldLookup[p.target];
-                bool blocked = false;
-                if (transformLookup.HasComponent(p.target))
-                {
-                    float3 targetFwd = math.forward(transformLookup[p.target].Rotation);
-                    float  dot       = math.dot(math.normalizesafe(p.attackDirection), -targetFwd);
-                    blocked = shield.orientation switch
-                    {
-                        ShieldOrientation.Forward => dot > 0.5f,
-                        ShieldOrientation.All     => true,
-                        _                         => false
-                    };
-                }
-                if (blocked)
-                {
-
-                    shield.currentBlock     = math.max(0f, shield.currentBlock - 50f);
-                    shieldLookup[p.target]  = shield;
-                    ecb.RemoveComponent<PendingDamageEvent>(entity);
-
-                    if (transformLookup.HasComponent(p.target))
-                    {
-                        float3 bp = transformLookup[p.target].Position;
-                        FloatingCombatTextManager.Instance?.Spawn(
-                            new UnityEngine.Vector3(bp.x, bp.y + 1.8f, bp.z),
-                            DamageCategory.Blocked, 0f);
-                    }
-                    continue;
-                }
-            }
-
-            // Resolve defense and penetration per type — sum contributions of all non-zero damage types
+            // --- Calculate effectiveDmg (before shield so block absorbs real damage) ---
             var profile = SystemAPI.GetComponent<DamageProfileComponent>(p.damageProfile);
 
             var def = defenseLookup.HasComponent(p.target)
@@ -137,7 +101,7 @@ public partial class DamageCalculationSystem : SystemBase
                     SystemAPI.HasComponent<UnitWeaponComponent>(p.damageSource))
                     km = SystemAPI.GetComponent<UnitWeaponComponent>(p.damageSource).kineticMultiplier;
 
-                const float kMaxSpeed   = 5f; // reference speed for normalization
+                const float kMaxSpeed  = 5f;
                 float kineticBonus = 1f + (p.attackerSpeed / kMaxSpeed) * km;
                 effectiveDmg *= kineticBonus;
             }
@@ -152,11 +116,59 @@ public partial class DamageCalculationSystem : SystemBase
 
             effectiveDmg = math.max(0f, effectiveDmg);
 
+            // --- Shield block check (absorbs effectiveDmg; shield not broken) ---
+            if (shieldLookup.HasComponent(p.target))
+            {
+                var shield = shieldLookup[p.target];
+                if (shield.currentBlock > 0f && shield.brokenTimer <= 0f)
+                {
+                    bool blocked = false;
+                    if (transformLookup.HasComponent(p.target))
+                    {
+                        float3 targetFwd = math.forward(transformLookup[p.target].Rotation);
+                        float  dot       = math.dot(math.normalizesafe(p.attackDirection), -targetFwd);
+                        blocked = shield.orientation switch
+                        {
+                            ShieldOrientation.Forward => dot > shieldCfg.forwardBlockDotThreshold,
+                            ShieldOrientation.All     => true,
+                            _                         => false
+                        };
+                    }
+                    if (blocked)
+                    {
+                        shield.currentBlock -= effectiveDmg;
+                        if (shield.currentBlock <= 0f)
+                        {
+                            // Shield break — stun the unit
+                            shield.currentBlock = 0f;
+                            shield.brokenTimer  = shield.breakStunDuration;
+                            if (transformLookup.HasComponent(p.target))
+                            {
+                                float3 bp = transformLookup[p.target].Position;
+                                FloatingCombatTextManager.Instance?.Spawn(
+                                    new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
+                                    DamageCategory.ShieldBreak, 0f);
+                            }
+                        }
+                        else
+                        {
+                            // Normal block — show absorbed damage amount
+                            if (transformLookup.HasComponent(p.target))
+                            {
+                                float3 bp = transformLookup[p.target].Position;
+                                FloatingCombatTextManager.Instance?.Spawn(
+                                    new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
+                                    DamageCategory.Blocked, effectiveDmg);
+                            }
+                        }
+                        shieldLookup[p.target] = shield;
+                        ecb.RemoveComponent<PendingDamageEvent>(entity);
+                        continue;
+                    }
+                }
+            }
 
-
-            const float FctYOffset = 1.8f;
-
-            // Apply to unit or hero — determinar willKill del resultado (una sola lectura de HP)
+            // --- Apply to unit or hero HP ---
             bool willKill = false;
             if (SystemAPI.HasComponent<HealthComponent>(p.target))
             {
@@ -182,7 +194,7 @@ public partial class DamageCalculationSystem : SystemBase
                     ecb.AddComponent<IsDeadComponent>(p.target);
             }
 
-            // Emitir FCT con categoría correcta
+            // FCT
             if (transformLookup.HasComponent(p.target))
             {
                 float3 tp = transformLookup[p.target].Position;

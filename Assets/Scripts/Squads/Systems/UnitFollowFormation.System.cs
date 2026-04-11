@@ -31,6 +31,7 @@ public partial class UnitFollowFormationSystem : SystemBase
         var anchorLookup = GetComponentLookup<SquadFormationAnchorComponent>(true);
         var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
+        var shieldLookup = GetComponentLookup<UnitShieldComponent>(true);
         
         // TODO: Las unidades pueden usar EnvironmentAwarenessComponent del escuadrón 
         // para adaptar su navegación individual (evitar obstáculos, ajustar velocidad, etc.)
@@ -88,20 +89,28 @@ public partial class UnitFollowFormationSystem : SystemBase
                     {
                         navMeshHandlesMovement = true;
 
-                        // Aplicar velocidad NavMesh dinámica (soporta hurryToCommander)
-                        float baseSpeed = SystemAPI.HasComponent<UnitStatsComponent>(unit)
-                            ? SystemAPI.GetComponent<UnitStatsComponent>(unit).speed
-                            : defaultMoveSpeed;
-                        float speedMultiplier = SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit)
-                            ? SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier
-                            : 1f;
+                        // Shield break stun: freeze movement
+                        if (shieldLookup.HasComponent(unit) && shieldLookup[unit].brokenTimer > 0f)
+                        {
+                            navAgent.speed = 0f;
+                        }
+                        else
+                        {
+                            // Aplicar velocidad NavMesh dinámica (soporta hurryToCommander)
+                            float baseSpeed = SystemAPI.HasComponent<UnitStatsComponent>(unit)
+                                ? SystemAPI.GetComponent<UnitStatsComponent>(unit).speed
+                                : defaultMoveSpeed;
+                            float speedMultiplier = SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit)
+                                ? SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier
+                                : 1f;
 
-                        bool hasCombatTarget = SystemAPI.HasComponent<UnitCombatComponent>(unit)
-                            && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
-                            && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
+                            bool hasCombatTarget = SystemAPI.HasComponent<UnitCombatComponent>(unit)
+                                && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
+                                && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
-                        if (hurryToComander || hasCombatTarget) speedMultiplier *= 2f;
-                        navAgent.speed = baseSpeed * speedMultiplier;
+                            if (hurryToComander || hasCombatTarget) speedMultiplier *= 2f;
+                            navAgent.speed = baseSpeed * speedMultiplier;
+                        }
                     }
                     else
                     {

@@ -19,6 +19,7 @@ using Unity.Transforms;
 ///     → isAttacking=false, apply attackInterval cooldown, reset for next swing
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(UnitTargetingSystem))]
 public partial class UnitAttackSystem : SystemBase
 {
     protected override void OnUpdate()

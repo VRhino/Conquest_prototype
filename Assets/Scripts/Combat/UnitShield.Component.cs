@@ -29,4 +29,10 @@ public struct UnitShieldComponent : IComponentData
 
     /// <summary>Direction the shield faces relative to the unit's forward.</summary>
     public ShieldOrientation orientation;
+
+    /// <summary>Seconds remaining in shield-break stun (>0 = broken: no block, no movement).</summary>
+    public float brokenTimer;
+
+    /// <summary>Stun duration in seconds when shield is fully depleted. Set at spawn from SquadData or config default.</summary>
+    public float breakStunDuration;
 }

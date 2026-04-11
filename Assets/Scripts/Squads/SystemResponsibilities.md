@@ -106,6 +106,93 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ---
 
+## ECS Systems (Combat)
+
+Pipeline de combate en orden de ejecución por frame:
+```
+EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [SquadFSMSystem]
+                        ↓ (UnitDeath)         ↓                    ↓
+                                        UnitTargeting        BraceWeaponActivation
+                                        CombatReaction            ↓
+                                              ↓              BraceWeapon
+                                        OrderResolution
+                                              ↓
+                                        UnitAttack → PendingDamageEvent → (next frame DamageCalculation)
+                                        BlockRegen
+```
+
+### EnemyDetectionSystem
+- **Responsabilidad**: Detecta squads enemigos en rango y popula los 3 buffers de detección por frame
+- **Output**: `DetectedEnemy` (por squad), `SquadTargetEntity` (por squad), `UnitDetectedEnemy` (por unidad)
+- **Orden**: `[UpdateBefore(SquadAISystem)]` — SquadAI necesita detección fresca para decidir intents
+- **Regla**: Solo escribe buffers de detección — nunca decide comportamiento ni asigna targets de unidades
+- **Algoritmo**: Distancia centroide (sin AABB/physics queries)
+
+### DamageCalculationSystem
+- **Responsabilidad**: Aplica `PendingDamageEvent` con mitigación flat-reduction por tipo de daño
+- **Output**: `HeroHealthComponent` / unit health reducido; elimina `PendingDamageEvent`; activa `IsUnderAttackTag`
+- **Orden**: `[UpdateBefore(SquadAISystem)]` — el daño debe resolverse antes de que el AI tome decisiones del frame
+- **Fórmula**: `contrib = max(rawDmg - netDefense, rawDmg * 0.05)` por tipo {Blunt, Slashing, Piercing}; bonuses cinético y de altura aplicados post-mitigación
+- **Shield check**: Bloquea hits si `HasComponent<UnitShieldComponent> && currentBlock > 0` — corre antes del daño; solo entidades cuyo prefab tiene `ShieldHitboxBehaviour` reciben este componente
+- **Regla**: Solo lee `PendingDamageEvent` — nunca decide cuándo atacar ni genera eventos de daño
+
+### UnitDeathSystem
+- **Responsabilidad**: Destruye entidades de unidades que llegaron a 0 HP tras `DamageCalculationSystem`
+- **Output**: Entidades eliminadas del World
+- **Orden**: `[UpdateAfter(DamageCalculationSystem)]`
+- **Regla**: Solo reacciona a health ≤ 0 — no aplica daño
+
+### UnitTargetingSystem
+- **Responsabilidad**: Asigna un target enemigo específico a cada unidad del squad según estado `InCombat`
+- **Output**: `UnitCombatComponent.combatTarget` por unidad
+- **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateAfter(SquadFSMSystem)]`
+- **Gate**: Solo asigna targets si `SquadFSMState.InCombat` — las tres formas de entrar en combate (tecla V, daño recibido, aliado impactado) convergen correctamente en el FSM
+- **Regla**: No decide cuándo entrar en combate — solo distribuye targets cuando ya está en `InCombat`
+
+### CombatReactionSystem
+- **Responsabilidad**: Convierte `SquadCombatStateComponent.isInCombat` en `SquadCombatReactionIntentComponent` para el pipeline de órdenes
+- **Output**: `SquadCombatReactionIntentComponent.reactToEnemy`, `.reactTarget`
+- **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateBefore(OrderResolutionSystem)]`
+- **Regla**: Solo traduce estado de combate a intent — no toma decisiones propias
+
+### OrderResolutionSystem
+- **Responsabilidad**: Árbitro de órdenes — resuelve el intent ganador entre Player, CombatReaction y AI
+- **Output**: `SquadResolvedOrderComponent` (orden ganadora del frame)
+- **Orden**: `[UpdateAfter(CombatReactionSystem)]` `[UpdateBefore(SquadOrderSystem)]`
+- **Prioridad local**: `heroOrdenCooldown activo → Player` / `reactToEnemy → CombatReaction` / `otherwise → Player`
+- **Prioridad remoto**: `reactToEnemy → CombatReaction` / `otherwise → AI`
+- **Regla**: Solo lee intents y escribe el resultado — nunca modifica estado de squad directamente
+
+### BraceWeaponActivationSystem
+- **Responsabilidad**: Detecta cuando un squad entra en `HoldingPosition` y activa `Brace` mode
+- **Output**: `SquadCombatModeComponent.mode = Brace` / `Normal`
+- **Orden**: `[UpdateAfter(SquadFSMSystem)]` — debe reaccionar a transiciones de estado del frame actual
+- **Regla**: No aplica weapon overrides — solo activa/desactiva el modo
+
+### BraceWeaponSystem
+- **Responsabilidad**: Aplica overrides de arma por fila (`BraceRowProfile`) cuando el squad está en Brace mode
+- **Output**: `UnitWeaponComponent` (shape/timing de arma) por unidad según su fila en la formación
+- **Orden**: `[UpdateAfter(BraceWeaponActivationSystem)]`
+- **Regla**: Solo aplica overrides cuando `mode == Brace` — no activa ni desactiva el modo
+
+### UnitAttackSystem
+- **Responsabilidad**: State machine de ataque por unidad — 3 fases: Decision → Strike window → Cooldown
+- **Output**: `WeaponHitboxActiveTag` (enable/disable), `PendingDamageEvent` generado por `WeaponHitboxBehaviour`
+- **Orden**: `[UpdateAfter(UnitTargetingSystem)]` — necesita `combatTarget` asignado para decidir ataque
+- **Fases**:
+  - Decision: target válido + en rango OBB + `!isAttacking` + cooldown=0 → `isAttacking=true`
+  - Strike window: timer en `[strikeWindowStart, strikeWindowStart+strikeWindowDuration]` → habilita `WeaponHitboxActiveTag`
+  - End: timer ≥ `attackAnimationDuration` → `isAttacking=false`, aplica `attackInterval` cooldown
+- **Regla**: No aplica daño directamente — el tag es la gate que `WeaponHitboxBehaviour` lee
+
+### BlockRegenSystem
+- **Responsabilidad**: Regenera `UnitShieldComponent.currentBlock` con `regenRate * dt` por frame
+- **Output**: `UnitShieldComponent.currentBlock` (incremento hasta `maxBlock`)
+- **Orden**: `[UpdateAfter(DamageCalculationSystem)]` — la regen ocurre DESPUÉS del daño del frame
+- **Regla**: Solo regenera — nunca bloquea hits (eso lo hace `DamageCalculationSystem`)
+
+---
+
 ## MonoBehaviour Controllers
 
 ### BattleSceneController

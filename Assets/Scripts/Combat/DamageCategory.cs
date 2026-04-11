@@ -7,5 +7,6 @@ public enum DamageCategory
     Critical,
     Ability,
     Blocked,
-    Death
+    Death,
+    ShieldBreak
 }

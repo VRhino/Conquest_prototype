@@ -38,6 +38,10 @@ Input → SquadControlSystem → SquadOrderSystem → SquadFSMSystem
 
 Hero: `HeroInputSystem → HeroMoveIntent → HeroMovementSystem → HeroStateSystem → HeroVisualManagementSystem → EntityVisualSync`
 
+Combat: `EnemyDetection → DamageCalculation → UnitDeath` (pre-AI, before SquadAISystem)
+`→ UnitTargeting → CombatReaction → OrderResolution` (post-AI arbitration)
+`→ BraceWeaponActivation → BraceWeapon → UnitAttack → BlockRegen` (execution)
+
 ### System Responsibility Rules
 
 Each system has ONE responsibility:

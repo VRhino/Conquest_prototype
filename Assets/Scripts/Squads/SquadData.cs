@@ -51,6 +51,8 @@ public class SquadData : ScriptableObject
     public int block;
     /// <summary>Block regeneration rate.</summary>
     public int blockRegenRate;
+    /// <summary>Stun duration in seconds when the shield is broken.</summary>
+    public float shieldBreakStunDuration;
 
     // Defenses
     /// <summary>Defense against slashing damage.</summary>

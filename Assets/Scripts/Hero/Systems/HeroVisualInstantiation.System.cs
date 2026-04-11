@@ -78,6 +78,26 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         if (hitboxBehaviour != null)
             hitboxBehaviour.ownerUnit = entity;
 
+        // Wire ShieldHitboxBehaviour → add UnitShieldComponent if hero prefab has shield
+        var shieldBehaviour = visualInstance.GetComponentInChildren<ShieldHitboxBehaviour>(true);
+        if (shieldBehaviour != null)
+        {
+            shieldBehaviour.ownerUnit = entity;
+
+            var shieldCfg   = SystemAPI.GetSingleton<ShieldConfigComponent>();
+            float maxBlock  = shieldBehaviour.maxBlockOverride  > 0f ? shieldBehaviour.maxBlockOverride  : shieldCfg.defaultMaxBlock;
+            float regenRate = shieldBehaviour.regenRateOverride > 0f ? shieldBehaviour.regenRateOverride : shieldCfg.defaultRegenRate;
+
+            ecb.AddComponent(entity, new UnitShieldComponent
+            {
+                currentBlock      = maxBlock,
+                maxBlock          = maxBlock,
+                regenRate         = regenRate,
+                orientation       = shieldBehaviour.orientation,
+                breakStunDuration = shieldCfg.defaultBreakStunDuration
+            });
+        }
+
         // Heroes remotos: NavMeshAgent viene del prefab Player_Remote — forzar posición al spawn
         if (!isLocalPlayer)
         {

@@ -12,6 +12,8 @@ public struct SquadDataComponent : IComponentData
     public float mass;
     public float weight;
     public float block;
+    public float blockRegenRate;
+    public float shieldBreakStunDuration;
 
     public float slashingDefense;
     public float piercingDefense;

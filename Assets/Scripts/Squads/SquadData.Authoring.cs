@@ -34,6 +34,8 @@ public class SquadDataAuthoring : MonoBehaviour
                 mass = authoring.data.massValue,
                 weight = authoring.data.totalWeight,
                 block = authoring.data.block,
+                blockRegenRate = authoring.data.blockRegenRate,
+                shieldBreakStunDuration = authoring.data.shieldBreakStunDuration,
                 slashingDefense = authoring.data.slashingDefense,
                 piercingDefense = authoring.data.piercingDefense,
                 bluntDefense = authoring.data.bluntDefense,
