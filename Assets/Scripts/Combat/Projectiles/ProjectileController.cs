@@ -17,11 +17,12 @@ using System.Collections.Generic;
 ///     Arc height scales with horizontal distance (clamped).
 ///
 ///   Straight (crossbowmen):
-///     Constant-speed movement directly toward the live target position.
+///     Constant-speed movement directly toward the fixed target snapshot.
 ///     Always points at the destination.
 ///
-/// On arrival: enqueues ProjectileImpactData → ProjectileImpactSystem →
-/// DamageCalculationSystem (unchanged pipeline, FCT included).
+/// Target lock behavior:
+///   Destination is captured once at fire time and never updated in flight.
+///   If the target moves away, projectile can miss (no fallback auto-hit).
 /// </summary>
 public class ProjectileController : MonoBehaviour
 {
@@ -47,7 +48,7 @@ public class ProjectileController : MonoBehaviour
     float   _multiplier;
     string  _poolKey;
 
-    float3              _lastKnownTargetPos;
+    float3               _impactPoint;
     ProjectileTrajectory _trajectory;
     bool                _impacted;
     float               _spawnTime;
@@ -93,11 +94,8 @@ public class ProjectileController : MonoBehaviour
         _spawnTime       = Time.time;
         _startPos        = new Vector3(spawnPos.x, spawnPos.y, spawnPos.z);
 
-        // Default fallback destination
-        _lastKnownTargetPos = spawnPos + attackDir * 20f;
-
-        // Try to sample real target position immediately
-        RefreshTargetPos();
+        // Capture a fixed destination at shot time (non-homing projectile).
+        _impactPoint = CaptureImpactPoint(spawnPos, attackDir, target);
 
         transform.position = _startPos;
 
@@ -113,7 +111,7 @@ public class ProjectileController : MonoBehaviour
 
     void InitArc()
     {
-        Vector3 dest     = V3(_lastKnownTargetPos);
+        Vector3 dest      = V3(_impactPoint);
         float   horizDist = Vector2.Distance(
             new Vector2(_startPos.x, _startPos.z),
             new Vector2(dest.x, dest.z));
@@ -129,7 +127,7 @@ public class ProjectileController : MonoBehaviour
 
     void InitStraight()
     {
-        Vector3 dest = V3(_lastKnownTargetPos);
+        Vector3 dest = V3(_impactPoint);
         Vector3 dir  = dest - _startPos;
         if (dir.sqrMagnitude > 0.001f)
             transform.forward = dir.normalized;
@@ -141,8 +139,6 @@ public class ProjectileController : MonoBehaviour
     {
         if (_impacted) return;
 
-        RefreshTargetPos();
-
         if (_trajectory == ProjectileTrajectory.Arc)
             MoveArc();
         else
@@ -153,7 +149,7 @@ public class ProjectileController : MonoBehaviour
     {
         _elapsed += Time.deltaTime;
         float t    = Mathf.Clamp01(_elapsed / _flightDuration);
-        Vector3 dest = V3(_lastKnownTargetPos);
+        Vector3 dest = V3(_impactPoint);
 
         // Parabolic position
         Vector3 flat = Vector3.Lerp(_startPos, dest, t);
@@ -169,12 +165,12 @@ public class ProjectileController : MonoBehaviour
         bool closeEnough = Vector3.Distance(transform.position, dest) < impactDistance;
 
         if (arrived || closeEnough)
-            TriggerImpact(HitType.Body, _target);
+            TriggerImpact(HitType.Body, Entity.Null);
     }
 
     void MoveStraight()
     {
-        Vector3 dest  = V3(_lastKnownTargetPos);
+        Vector3 dest  = V3(_impactPoint);
         Vector3 delta = dest - transform.position;
         float   dist  = delta.magnitude;
 
@@ -185,23 +181,25 @@ public class ProjectileController : MonoBehaviour
         }
 
         if (dist < impactDistance)
-            TriggerImpact(HitType.Body, _target);
+            TriggerImpact(HitType.Body, Entity.Null);
     }
 
     // -----------------------------------------------------------------------
 
-    void RefreshTargetPos()
+    float3 CaptureImpactPoint(float3 spawnPos, float3 attackDir, Entity target)
     {
-        if (_target == Entity.Null) return;
+        float3 fallback = spawnPos + attackDir * 20f;
+        if (target == Entity.Null) return fallback;
+
         var world = World.DefaultGameObjectInjectionWorld;
-        if (world == null || !world.IsCreated) return;
+        if (world == null || !world.IsCreated) return fallback;
 
         var em = world.EntityManager;
-        if (em.Exists(_target) && em.HasComponent<LocalTransform>(_target))
-        {
-            var lt = em.GetComponentData<LocalTransform>(_target);
-            _lastKnownTargetPos = lt.Position + new float3(0f, 0.9f, 0f);
-        }
+        if (!em.Exists(target) || !em.HasComponent<LocalTransform>(target))
+            return fallback;
+
+        var lt = em.GetComponentData<LocalTransform>(target);
+        return lt.Position + new float3(0f, 0.9f, 0f);
     }
 
     /// <summary>
@@ -249,7 +247,7 @@ public class ProjectileController : MonoBehaviour
         _impacted = true;
         RestoreIgnoredSpawnCollisions();
 
-        Entity damageTarget = actualTarget != Entity.Null ? actualTarget : _target;
+        Entity damageTarget = actualTarget;
 
         if (damageTarget != Entity.Null && _damageProfile != Entity.Null)
         {

@@ -57,3 +57,7 @@ graphify-out/
 #Control
 Issues/
 .aider*
+
+# Local AI agent config (do not commit)
+AGENTS.md
+.agents/

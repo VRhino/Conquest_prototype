@@ -34,7 +34,9 @@ public partial class UnitTargetingSystem : SystemBase
 
 
             // Temporary map to track how many units are attacking each enemy
-            var enemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
+            var meleeEnemyCounts  = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
+            var rangedEnemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
+            int rangedUnitsInSquad = 0;
 
             // First pass: choose closest target for each unit
             for (int i = 0; i < units.Length; i++)
@@ -44,6 +46,8 @@ public partial class UnitTargetingSystem : SystemBase
                     continue;
 
                 var combat = SystemAPI.GetComponentRW<UnitCombatComponent>(unit);
+                bool isRanged = SystemAPI.HasComponent<UnitRangedStatsComponent>(unit);
+                if (isRanged) rangedUnitsInSquad++;
 
                 if (!allow)
                 {
@@ -98,10 +102,16 @@ public partial class UnitTargetingSystem : SystemBase
                     combat.ValueRW.target = bestEnemy;
                 }
 
-                if (combat.ValueRW.target != Entity.Null)
+                // Target-cap accounting is melee-only.
+                if (!isRanged && combat.ValueRW.target != Entity.Null)
                 {
-                    enemyCounts.TryAdd(combat.ValueRW.target, 0);
-                    enemyCounts[combat.ValueRW.target] = enemyCounts[combat.ValueRW.target] + 1;
+                    meleeEnemyCounts.TryAdd(combat.ValueRW.target, 0);
+                    meleeEnemyCounts[combat.ValueRW.target] = meleeEnemyCounts[combat.ValueRW.target] + 1;
+                }
+                else if (isRanged && combat.ValueRW.target != Entity.Null)
+                {
+                    rangedEnemyCounts.TryAdd(combat.ValueRW.target, 0);
+                    rangedEnemyCounts[combat.ValueRW.target] = rangedEnemyCounts[combat.ValueRW.target] + 1;
                 }
             }
 
@@ -110,6 +120,10 @@ public partial class UnitTargetingSystem : SystemBase
             {
                 Entity unit = units[i].Value;
                 if (!SystemAPI.Exists(unit) || !SystemAPI.HasComponent<UnitCombatComponent>(unit))
+                    continue;
+
+                // Ranged units are excluded from target cap redistribution.
+                if (SystemAPI.HasComponent<UnitRangedStatsComponent>(unit))
                     continue;
 
                 var combat = SystemAPI.GetComponentRW<UnitCombatComponent>(unit);
@@ -128,7 +142,7 @@ public partial class UnitTargetingSystem : SystemBase
                         continue;
                 }
 
-                if (!enemyCounts.TryGetValue(combat.ValueRO.target, out int count) || count <= maxPerTarget)
+                if (!meleeEnemyCounts.TryGetValue(combat.ValueRO.target, out int count) || count <= maxPerTarget)
                     continue;
 
                 if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
@@ -142,21 +156,96 @@ public partial class UnitTargetingSystem : SystemBase
                         continue;
 
                     int current = 0;
-                    enemyCounts.TryGetValue(candidate, out current);
+                    meleeEnemyCounts.TryGetValue(candidate, out current);
                     if (current < maxPerTarget)
                     {
-                        enemyCounts[combat.ValueRO.target] = count - 1;
+                        meleeEnemyCounts[combat.ValueRO.target] = count - 1;
                         combat.ValueRW.target = candidate;
-                        enemyCounts.TryAdd(candidate, 0);
-                        enemyCounts[candidate] = current + 1;
+                        meleeEnemyCounts.TryAdd(candidate, 0);
+                        meleeEnemyCounts[candidate] = current + 1;
                         break;
                     }
                 }
             }
 
+            // Third pass: soft target spreading for ranged units.
+            // If multiple targets are available, avoid over-focusing one target.
+            // If there is only one practical target, concentration is allowed.
+            for (int i = 0; i < units.Length; i++)
+            {
+                Entity unit = units[i].Value;
+                if (!SystemAPI.Exists(unit)
+                    || !SystemAPI.HasComponent<UnitCombatComponent>(unit)
+                    || !SystemAPI.HasComponent<UnitRangedStatsComponent>(unit))
+                    continue;
 
+                var combat = SystemAPI.GetComponentRW<UnitCombatComponent>(unit);
+                if (combat.ValueRO.target == Entity.Null)
+                    continue;
 
-            enemyCounts.Dispose();
+                if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
+                    continue;
+
+                var detected = SystemAPI.GetBuffer<UnitDetectedEnemy>(unit);
+                if (detected.Length == 0)
+                    continue;
+
+                int availableTargets = 0;
+                for (int j = 0; j < detected.Length; j++)
+                {
+                    Entity candidate = detected[j].Value;
+                    if (candidate == Entity.Null || !SystemAPI.Exists(candidate))
+                        continue;
+                    availableTargets++;
+                }
+
+                // No dispersion needed when there is no real alternative.
+                if (availableTargets <= 1)
+                    continue;
+
+                if (!rangedEnemyCounts.TryGetValue(combat.ValueRO.target, out int currentCount))
+                    continue;
+
+                int softCap = math.max(
+                    1,
+                    (int)math.ceil((float)rangedUnitsInSquad / availableTargets));
+
+                // Small slack avoids excessive retarget churn.
+                if (currentCount <= softCap + 1)
+                    continue;
+
+                Entity bestCandidate = combat.ValueRO.target;
+                int bestCount = currentCount;
+
+                for (int j = 0; j < detected.Length; j++)
+                {
+                    Entity candidate = detected[j].Value;
+                    if (candidate == combat.ValueRO.target
+                        || candidate == Entity.Null
+                        || !SystemAPI.Exists(candidate))
+                        continue;
+
+                    int candidateCount = 0;
+                    rangedEnemyCounts.TryGetValue(candidate, out candidateCount);
+                    if (candidateCount < bestCount)
+                    {
+                        bestCount = candidateCount;
+                        bestCandidate = candidate;
+                    }
+                }
+
+                // Reassign only when it actually improves spreading.
+                if (bestCandidate != combat.ValueRO.target && bestCount + 1 < currentCount)
+                {
+                    rangedEnemyCounts[combat.ValueRO.target] = currentCount - 1;
+                    rangedEnemyCounts.TryAdd(bestCandidate, 0);
+                    rangedEnemyCounts[bestCandidate] = bestCount + 1;
+                    combat.ValueRW.target = bestCandidate;
+                }
+            }
+
+            meleeEnemyCounts.Dispose();
+            rangedEnemyCounts.Dispose();
 
             // Third pass: sync IsEngagingTag so other systems can query engagement state
             for (int i = 0; i < units.Length; i++)

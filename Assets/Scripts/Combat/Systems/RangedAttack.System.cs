@@ -126,9 +126,11 @@ public partial class RangedAttackSystem : SystemBase
             bool  crit       = rngCrit.NextFloat() < weapon.ValueRO.criticalChance;
             float multiplier = crit ? weapon.ValueRO.criticalMultiplier : 1f;
 
-            // Compute direction with accuracy scatter
+            // Compute direction with accuracy scatter.
+            // accuracy is authored as 1..100 (100 = perfect precision).
+            float normalizedAccuracy = math.saturate(rangedStats.ValueRO.accuracy / 100f);
             float3 baseDir = math.normalizesafe(toTarget);
-            float  spread  = math.max(0f, 1f - rangedStats.ValueRO.accuracy) * 0.15f;
+            float  spread  = (1f - normalizedAccuracy) * 0.15f;
             float3 dir     = baseDir;
             if (spread > 0f)
             {

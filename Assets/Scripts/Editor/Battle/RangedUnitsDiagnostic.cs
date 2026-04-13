@@ -120,9 +120,9 @@ public static class RangedUnitsDiagnostic
         else
             OK($"{label} ammo = {r.ammo}");
 
-        // Accuracy (0 is technically valid but suspicious)
-        if (r.accuracy <= 0f)
-            Debug.LogWarning($"[RangedDiagnostic] {label} accuracy = {r.accuracy} — spread = max(0, 1 - accuracy) * 0.15 will be 0.15 (maximum scatter).");
+        // Accuracy is authored as 1..100.
+        if (r.accuracy < 1f || r.accuracy > 100f)
+            Debug.LogWarning($"[RangedDiagnostic] {label} accuracy = {r.accuracy} — expected range is 1..100.");
 
         return errors;
     }
