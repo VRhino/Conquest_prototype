@@ -88,21 +88,39 @@ public static class UnitStatsUtility
         {
             var rangedStats = new UnitRangedStatsComponent
             {
-                range = data.range,
-                accuracy = data.accuracy,
-                fireRate = data.fireRate,
-                reloadSpeed = data.reloadSpeed,
-                totalAmmo = data.ammoCapacity
+                range             = data.range,
+                accuracy          = data.accuracy,
+                fireRate          = data.fireRate,
+                reloadSpeed       = data.reloadSpeed,
+                totalAmmo         = data.ammoCapacity,
+                projectilePoolKey = data.projectilePoolKey,
+                trajectory        = data.projectileTrajectory
             };
 
             if (entityManager.HasComponent<UnitRangedStatsComponent>(unitEntity))
                 entityManager.SetComponentData(unitEntity, rangedStats);
             else
                 entityManager.AddComponentData(unitEntity, rangedStats);
+
+            // Initialize ranged attack state (ammo full, not reloading)
+            var attackState = new RangedAttackStateComponent
+            {
+                isReloading = false,
+                reloadTimer = 0f,
+                currentAmmo = data.ammoCapacity,
+                shotTimer   = 0f
+            };
+
+            if (entityManager.HasComponent<RangedAttackStateComponent>(unitEntity))
+                entityManager.SetComponentData(unitEntity, attackState);
+            else
+                entityManager.AddComponentData(unitEntity, attackState);
         }
         else if (entityManager.HasComponent<UnitRangedStatsComponent>(unitEntity))
         {
             entityManager.RemoveComponent<UnitRangedStatsComponent>(unitEntity);
+            if (entityManager.HasComponent<RangedAttackStateComponent>(unitEntity))
+                entityManager.RemoveComponent<RangedAttackStateComponent>(unitEntity);
         }
     }
 }

@@ -298,6 +298,13 @@ namespace ConquestTactics.Visual
             if (AnimatorHasParameter(AnimationHashes.IsAttacking))
                 _animator.SetBool(AnimationHashes.IsAttacking, _animationAdapter.IsAttacking);
 
+            // Ranged combat layer — trigger de disparo y bool de recarga
+            if (_animationAdapter.JustShot && AnimatorHasParameter(AnimationHashes.TriggerShoot))
+                _animator.SetTrigger(AnimationHashes.TriggerShoot);
+
+            if (AnimatorHasParameter(AnimationHashes.IsReloading))
+                _animator.SetBool(AnimationHashes.IsReloading, _animationAdapter.IsReloadingRanged);
+
             // Guardar estado para detectar cambios en el próximo frame
             _wasMovingLastFrame = isMovingThisFrame;
             

@@ -30,6 +30,12 @@ namespace ConquestTactics.Animation
         // Si la unidad está ejecutando un ataque (strike window activa)
         public bool IsAttacking { get; private set; } = false;
 
+        // Ranged: true durante exactamente un frame cuando se dispara un proyectil
+        public bool JustShot { get; private set; } = false;
+
+        // Ranged: true mientras la unidad está recargando (sin munición)
+        public bool IsReloadingRanged { get; private set; } = false;
+
         // Velocidad 2D real (sin normalizar, en unidades por segundo)
         public float Speed2D { get; private set; }
 
@@ -229,6 +235,19 @@ namespace ConquestTactics.Animation
                 else
                 {
                     IsAttacking = false;
+                }
+
+                // Leer estado de disparo/recarga desde RangedAttackStateComponent
+                if (_entityManager.HasComponent<RangedAttackStateComponent>(_unitEntity))
+                {
+                    var rangedState = _entityManager.GetComponentData<RangedAttackStateComponent>(_unitEntity);
+                    JustShot         = rangedState.isFiring;
+                    IsReloadingRanged = rangedState.isReloading;
+                }
+                else
+                {
+                    JustShot          = false;
+                    IsReloadingRanged = false;
                 }
 
                 // Actualizar propiedades

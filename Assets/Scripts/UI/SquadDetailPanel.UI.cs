@@ -209,23 +209,34 @@ public class SquadDetailPanel : MonoBehaviour
 
     private void fillStatsPanel(SquadData data)
     {
+        var m = data.meleeData;
+        var r = data.rangedData;
+
+        // Damage/penetration: melee first, fallback ranged
+        float pierceDmg  = m != null ? m.piercingDamage      : r?.piercingDamage      ?? 0f;
+        float slashDmg   = m != null ? m.slashingDamage      : r?.slashingDamage      ?? 0f;
+        float bluntDmg   = m != null ? m.bluntDamage         : r?.bluntDamage         ?? 0f;
+        float piercePen  = m != null ? m.piercingPenetration : r?.piercingPenetration ?? 0f;
+        float slashPen   = m != null ? m.slashingPenetration : r?.slashingPenetration ?? 0f;
+        float bluntPen   = m != null ? m.bluntPenetration    : r?.bluntPenetration    ?? 0f;
+
         if (healthText != null) healthText.text = data.baseHealth.ToString();
         if (statsUnitCountText != null) statsUnitCountText.text = data.unitCount.ToString();
         if (speedText != null) speedText.text = data.baseSpeed.ToString("F1");
         if (statsLeadershipText != null) statsLeadershipText.text = data.leadershipCost.ToString();
-        if (rangeText != null) rangeText.text = data.range.ToString() == "0" ? "-" : data.range.ToString();
-        if (ammoText != null) ammoText.text = data.ammo.ToString() == "0" ? "-" : data.ammo.ToString();
-        if (piercingPenText != null) piercingPenText.text = data.piercingPenetration.ToString();
-        if (slashingPenText != null) slashingPenText.text = data.slashingPenetration.ToString();
-        if (bluntPenText != null) bluntPenText.text = data.bluntPenetration.ToString();
-        if (piercingDmgText != null) piercingDmgText.text = data.piercingDamage.ToString();
-        if (slashingDmgText != null) slashingDmgText.text = data.slashingDamage.ToString();
-        if (bluntDmgText != null) bluntDmgText.text = data.bluntDamage.ToString();
+        if (rangeText != null) rangeText.text = r != null ? r.range.ToString() : "-";
+        if (ammoText != null) ammoText.text = r != null ? r.ammo.ToString() : "-";
+        if (piercingPenText != null) piercingPenText.text = piercePen.ToString();
+        if (slashingPenText != null) slashingPenText.text = slashPen.ToString();
+        if (bluntPenText != null) bluntPenText.text = bluntPen.ToString();
+        if (piercingDmgText != null) piercingDmgText.text = pierceDmg.ToString();
+        if (slashingDmgText != null) slashingDmgText.text = slashDmg.ToString();
+        if (bluntDmgText != null) bluntDmgText.text = bluntDmg.ToString();
         if (piercingDefText != null) piercingDefText.text = data.piercingDefense.ToString();
         if (slashingDefText != null) slashingDefText.text = data.slashingDefense.ToString();
         if (bluntDefText != null) bluntDefText.text = data.bluntDefense.ToString();
-        if (blockText != null) blockText.text = data.block.ToString() == "0" ? "-" : data.block.ToString();
-        if (blockRegenText != null) blockRegenText.text = data.blockRegenRate.ToString() == "0" ? "-" : data.blockRegenRate.ToString();
+        if (blockText != null) blockText.text = data.block == 0 ? "-" : data.block.ToString();
+        if (blockRegenText != null) blockRegenText.text = data.blockRegenRate == 0 ? "-" : data.blockRegenRate.ToString();
     }
 
     private void fillFormations(SquadData data)

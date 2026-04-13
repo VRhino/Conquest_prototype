@@ -1,11 +1,29 @@
 using System.Collections.Generic;
 using UnityEngine;
+
 /// <summary>
-/// Detailed configuration data for a squad type used by the game systems.
+/// Configuración base de un squad. Los módulos opcionales (<see cref="meleeData"/>,
+/// <see cref="rangedData"/>) habilitan los comportamientos correspondientes cuando están asignados.
 /// </summary>
 [CreateAssetMenu(menuName = "Squads/Squad Data")]
 public class SquadData : ScriptableObject
 {
+    // ── Combat Modules ────────────────────────────────────────────────────────
+    [Header("Combat Modules")]
+    /// <summary>Datos de combate melee. Si es null el squad no puede atacar cuerpo a cuerpo.</summary>
+    public SquadMeleeData meleeData;
+    /// <summary>Datos de combate ranged. Si es null el squad no puede atacar a distancia.</summary>
+    public SquadRangedData rangedData;
+
+    [Header("Progression")]
+    /// <summary>Curvas de progresión por nivel para este squad.</summary>
+    public SquadProgressionData progressionData;
+
+    /// <summary>True si el squad puede atacar a distancia (rangedData asignado).</summary>
+    public bool IsRanged => rangedData != null;
+    /// <summary>True si el squad puede atacar en melee (meleeData asignado).</summary>
+    public bool IsMelee  => meleeData  != null;
+
     // Identification
     /// <summary>Unique identifier for this squad type.</summary>
     public string id = string.Empty;
@@ -62,68 +80,9 @@ public class SquadData : ScriptableObject
     /// <summary>Defense against blunt damage.</summary>
     public float bluntDefense;
 
-    // Damage and penetration
-    /// <summary>Slashing damage dealt.</summary>
-    public float slashingDamage;
-    /// <summary>Piercing damage dealt.</summary>
-    public float piercingDamage;
-    /// <summary>Blunt damage dealt.</summary>
-    public float bluntDamage;
-    /// <summary>Slashing penetration value.</summary>
-    public float slashingPenetration;
-    /// <summary>Piercing penetration value.</summary>
-    public float piercingPenetration;
-    /// <summary>Blunt penetration value.</summary>
-    public float bluntPenetration;
-
-    // Ranged-only attributes
-    /// <summary>True if the squad attacks from range.</summary>
-    public bool isDistanceUnit;
-    /// <summary>Maximum effective range.</summary>
-    public float range;
-    /// <summary>Base accuracy percentage.</summary>
-    public float accuracy;
-    /// <summary>Time between shots.</summary>
-    public float fireRate;
-    /// <summary>Time required to reload.</summary>
-    public float reloadSpeed;
-    /// <summary>Total ammunition carried.</summary>
-    public int ammo;
-
-    // Progression curves
-    /// <summary>Health scaling per level.</summary>
-    public AnimationCurve healthCurve;
-    /// <summary>Damage scaling per level.</summary>
-    public AnimationCurve damageCurve;
-    /// <summary>Defense scaling per level.</summary>
-    public AnimationCurve defenseCurve;
-    /// <summary>Speed scaling per level.</summary>
-    public AnimationCurve speedCurve;
-
-    // Combat parameters
-    /// <summary>Melee attack range in world units.</summary>
-    public float attackRange = 2f;
-    /// <summary>Time in seconds between attacks.</summary>
-    public float attackInterval = 1.5f;
-    /// <summary>Probability of a critical hit (0–1).</summary>
-    public float criticalChance = 0.05f;
-    /// <summary>Damage multiplier applied on a critical hit.</summary>
-    public float criticalMultiplier = 1.5f;
-
+    // ── Detection (base — compartido por melee y ranged) ─────────────────────
     /// <summary>Radius in world units within which enemies are detected.</summary>
     public float detectionRange = 8f;
-
-    // Strike window timing
-    /// <summary>Seconds from animation start when hitbox activates.</summary>
-    public float strikeWindowStart = 0.35f;
-    /// <summary>Duration the hitbox stays active.</summary>
-    public float strikeWindowDuration = 0.15f;
-    /// <summary>Total duration of the attack animation.</summary>
-    public float attackAnimationDuration = 1.0f;
-
-    // Kinetic
-    /// <summary>Scales penetration bonus from attacker speed.</summary>
-    public float kineticMultiplier = 0.3f;
 
     // Squad size
     /// <summary>Total number of units in this squad.</summary>

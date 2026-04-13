@@ -33,6 +33,8 @@ public struct SquadDataComponent : IComponentData
     public float fireRate;
     public float reloadSpeed;
     public int ammoCapacity;
+    public FixedString32Bytes projectilePoolKey;
+    public ProjectileTrajectory projectileTrajectory;
 
     /// <summary>Progression curves sampled per level.</summary>
     public BlobAssetReference<SquadProgressionCurveBlob> curves;

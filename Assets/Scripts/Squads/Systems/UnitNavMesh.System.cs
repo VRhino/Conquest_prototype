@@ -120,6 +120,7 @@ public partial class UnitNavMeshSystem : SystemBase
             // Read optional combat components
             bool   hasCombat    = SystemAPI.HasComponent<UnitCombatComponent>(entity)
                                 && SystemAPI.HasComponent<UnitWeaponComponent>(entity);
+            bool   isRanged     = SystemAPI.HasComponent<UnitRangedStatsComponent>(entity);
             Entity combatTarget = Entity.Null;
             float  attackRange  = 1.5f; // fallback
 
@@ -127,6 +128,9 @@ public partial class UnitNavMeshSystem : SystemBase
             {
                 combatTarget = SystemAPI.GetComponent<UnitCombatComponent>(entity).target;
                 attackRange  = SystemAPI.GetComponent<UnitWeaponComponent>(entity).attackRange;
+                // Ranged units must stop at bow range, not melee weapon range
+                if (isRanged)
+                    attackRange = SystemAPI.GetComponent<UnitRangedStatsComponent>(entity).range;
 
                 if (combatTarget != Entity.Null && !SystemAPI.Exists(combatTarget))
                     combatTarget = Entity.Null;
@@ -159,7 +163,10 @@ public partial class UnitNavMeshSystem : SystemBase
                 float2 unitXZ   = new float2(unitPos.x,        unitPos.z);
                 float2 targetXZ = new float2(targetWorldPos.x, targetWorldPos.z);
                 float  dist     = math.distance(unitXZ, targetXZ);
-                float  stopDist = attackRange * StopDistanceFactor;
+                
+                // Ranged units stop immediately when in range; melee units push closer (0.75x) 
+                // to stay inside the directional AABB bounds.
+                float  stopDist = isRanged ? attackRange : (attackRange * StopDistanceFactor);
 
                 if (dist > stopDist)
                 {
@@ -187,7 +194,10 @@ public partial class UnitNavMeshSystem : SystemBase
                 // ── Rotation: face target when in close range ────────────────
                 // Escribir al GO directamente — EntityVisualSync sincroniza GO→ECS,
                 // por lo que escribir a ECS transform sería sobreescrito en el mismo frame.
-                if (dist <= EngagementRange)
+                float facingRange = SystemAPI.HasComponent<UnitRangedStatsComponent>(entity)
+                    ? attackRange + 0.25f  // already set to ranged range above, added tolerance
+                    : EngagementRange;
+                if (dist <= facingRange)
                 {
                     agent.updateRotation = false;
                     float2 dir2D = math.normalizesafe(targetXZ - unitXZ);

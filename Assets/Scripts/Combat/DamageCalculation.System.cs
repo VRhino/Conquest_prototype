@@ -27,7 +27,6 @@ public partial class DamageCalculationSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        var shieldCfg         = SystemAPI.GetSingleton<ShieldConfigComponent>();
         const float FctYOffset = 1.8f;
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
@@ -116,55 +115,40 @@ public partial class DamageCalculationSystem : SystemBase
 
             effectiveDmg = math.max(0f, effectiveDmg);
 
-            // --- Shield block check (absorbs effectiveDmg; shield not broken) ---
-            if (shieldLookup.HasComponent(p.target))
+            // --- Shield block check (absorbs effectiveDmg when shield collider was hit) ---
+            if (shieldLookup.HasComponent(p.target) && p.hitType == HitType.Shield)
             {
                 var shield = shieldLookup[p.target];
                 if (shield.currentBlock > 0f && shield.brokenTimer <= 0f)
                 {
-                    bool blocked = false;
-                    if (transformLookup.HasComponent(p.target))
+                    shield.currentBlock -= effectiveDmg;
+                    if (shield.currentBlock <= 0f)
                     {
-                        float3 targetFwd = math.forward(transformLookup[p.target].Rotation);
-                        float  dot       = math.dot(math.normalizesafe(p.attackDirection), -targetFwd);
-                        blocked = shield.orientation switch
+                        // Shield break — stun the unit
+                        shield.currentBlock = 0f;
+                        shield.brokenTimer  = shield.breakStunDuration;
+                        if (transformLookup.HasComponent(p.target))
                         {
-                            ShieldOrientation.Forward => dot > shieldCfg.forwardBlockDotThreshold,
-                            ShieldOrientation.All     => true,
-                            _                         => false
-                        };
+                            float3 bp = transformLookup[p.target].Position;
+                            FloatingCombatTextManager.Instance?.Spawn(
+                                new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
+                                DamageCategory.ShieldBreak, 0f);
+                        }
                     }
-                    if (blocked)
+                    else
                     {
-                        shield.currentBlock -= effectiveDmg;
-                        if (shield.currentBlock <= 0f)
+                        // Normal block — show absorbed damage amount
+                        if (transformLookup.HasComponent(p.target))
                         {
-                            // Shield break — stun the unit
-                            shield.currentBlock = 0f;
-                            shield.brokenTimer  = shield.breakStunDuration;
-                            if (transformLookup.HasComponent(p.target))
-                            {
-                                float3 bp = transformLookup[p.target].Position;
-                                FloatingCombatTextManager.Instance?.Spawn(
-                                    new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
-                                    DamageCategory.ShieldBreak, 0f);
-                            }
+                            float3 bp = transformLookup[p.target].Position;
+                            FloatingCombatTextManager.Instance?.Spawn(
+                                new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
+                                DamageCategory.Blocked, effectiveDmg);
                         }
-                        else
-                        {
-                            // Normal block — show absorbed damage amount
-                            if (transformLookup.HasComponent(p.target))
-                            {
-                                float3 bp = transformLookup[p.target].Position;
-                                FloatingCombatTextManager.Instance?.Spawn(
-                                    new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
-                                    DamageCategory.Blocked, effectiveDmg);
-                            }
-                        }
-                        shieldLookup[p.target] = shield;
-                        ecb.RemoveComponent<PendingDamageEvent>(entity);
-                        continue;
                     }
+                    shieldLookup[p.target] = shield;
+                    ecb.RemoveComponent<PendingDamageEvent>(entity);
+                    continue;
                 }
             }
 

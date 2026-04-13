@@ -79,6 +79,11 @@ public class WeaponHitboxBehaviour : MonoBehaviour
         // Dead check
         if (em.HasComponent<IsDeadComponent>(target)) return;
 
+        // Detect which collider was contacted first — shield wins if its collider is touched
+        HitType hitType = other.GetComponent<ShieldHitboxBehaviour>() != null
+            ? HitType.Shield
+            : HitType.Body;
+
         // Build PendingDamageEvent — branch on owner type
         if (isHeroOwner)
         {
@@ -92,9 +97,9 @@ public class WeaponHitboxBehaviour : MonoBehaviour
                 sourceTeam       = hasTeam ? em.GetComponentData<TeamComponent>(ownerUnit).value : Team.None,
                 category         = crit ? DamageCategory.Critical : DamageCategory.Normal,
                 multiplier       = crit ? heroCombat.criticalMultiplier : 1f,
-                attackDirection  = transform.forward,
                 attackerSpeed    = 0f,
-                attackerPosition = transform.position
+                attackerPosition = transform.position,
+                hitType          = hitType
             });
 
             Vector3 contactPointHero = other.ClosestPoint(transform.position);
@@ -119,9 +124,9 @@ public class WeaponHitboxBehaviour : MonoBehaviour
                 sourceTeam       = hasTeam ? em.GetComponentData<TeamComponent>(ownerUnit).value : Team.None,
                 category         = crit ? DamageCategory.Critical : DamageCategory.Normal,
                 multiplier       = crit ? weapon.criticalMultiplier : 1f,
-                attackDirection  = transform.forward,
                 attackerSpeed    = attackerSpeed,
-                attackerPosition = transform.position
+                attackerPosition = transform.position,
+                hitType          = hitType
             });
 
             Vector3 contactPointUnit = other.ClosestPoint(transform.position);

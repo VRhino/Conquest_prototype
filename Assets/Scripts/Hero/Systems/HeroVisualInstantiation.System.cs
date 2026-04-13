@@ -20,8 +20,8 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         var pendingNavAgents = new List<(Entity entity, NavMeshAgent agent)>();
 
-        foreach (var (spawn, transform, entity) in
-                 SystemAPI.Query<RefRO<HeroSpawnComponent>, RefRO<LocalTransform>>()
+        foreach (var (spawn, transform, team, entity) in
+                 SystemAPI.Query<RefRO<HeroSpawnComponent>, RefRO<LocalTransform>, RefRO<TeamComponent>>()
                           .WithNone<HeroVisualInstance>()
                           .WithEntityAccess())
         {
@@ -30,7 +30,7 @@ public partial class HeroVisualInstantiationSystem : SystemBase
             bool isLocal = SystemAPI.HasComponent<IsLocalPlayer>(entity);
             string baseId = spawn.ValueRO.visualPrefabId.ToString();
             string prefabKey = isLocal ? baseId : baseId + "_Remote";
-            CreateVisualForEntity(entity, prefabKey, transform.ValueRO, ecb, isLocal, pendingNavAgents);
+            CreateVisualForEntity(entity, prefabKey, transform.ValueRO, ecb, isLocal, pendingNavAgents, team.ValueRO.value);
         }
 
         ecb.Playback(EntityManager);
@@ -47,7 +47,7 @@ public partial class HeroVisualInstantiationSystem : SystemBase
 
     private void CreateVisualForEntity(Entity entity, string visualPrefabId,
         LocalTransform transform, EntityCommandBuffer ecb, bool isLocalPlayer,
-        List<(Entity, NavMeshAgent)> pendingNavAgents)
+        List<(Entity, NavMeshAgent)> pendingNavAgents, Team team = Team.None)
     {
         GameObject visualPrefab = VisualPrefabRegistry.Instance.GetPrefab(visualPrefabId);
         if (visualPrefab == null)
@@ -61,8 +61,9 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
 
-        // Asignar layer "Heroes" para culling de distancia nativo
-        int heroesLayer = LayerMask.NameToLayer("Heroes");
+        // Asignar layer por equipo para colisiones selectivas entre teams
+        string heroLayerName = team == Team.TeamB ? "Heroes_B" : "Heroes_A";
+        int heroesLayer = LayerMask.NameToLayer(heroLayerName);
         if (heroesLayer >= 0)
             SetLayerRecursively(visualInstance, heroesLayer);
 

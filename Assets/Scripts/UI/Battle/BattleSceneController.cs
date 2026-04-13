@@ -89,24 +89,31 @@ public class BattleSceneController : MonoBehaviour
         var cam = Camera.main;
         if (cam == null) return;
 
-        int unitsLayer = LayerMask.NameToLayer("Units");
-        if (unitsLayer < 0)
+        float[] distances = new float[32];
+        bool anyLayer = false;
+
+        foreach (string name in new[] { "Units", "Units_A", "Units_B" })
         {
-            Debug.LogWarning("[BattleSceneController] Layer 'Units' no encontrado — omitiendo layerCullDistances.");
-            return;
+            int idx = LayerMask.NameToLayer(name);
+            if (idx < 0) continue;
+            cam.cullingMask |= (1 << idx);
+            distances[idx] = 120f;
+            anyLayer = true;
         }
 
-        // Asegurar que el layer "Units" esté incluido en la culling mask
-        cam.cullingMask |= (1 << unitsLayer);
-
-        float[] distances = new float[32];
-        distances[unitsLayer] = 120f;
-
-        int heroesLayer = LayerMask.NameToLayer("Heroes");
-        if (heroesLayer >= 0)
+        foreach (string name in new[] { "Heroes", "Heroes_A", "Heroes_B" })
         {
-            cam.cullingMask |= (1 << heroesLayer);
-            distances[heroesLayer] = 150f;
+            int idx = LayerMask.NameToLayer(name);
+            if (idx < 0) continue;
+            cam.cullingMask |= (1 << idx);
+            distances[idx] = 150f;
+            anyLayer = true;
+        }
+
+        if (!anyLayer)
+        {
+            Debug.LogWarning("[BattleSceneController] No se encontraron layers de unidades/héroes — omitiendo layerCullDistances.");
+            return;
         }
 
         cam.layerCullDistances = distances;

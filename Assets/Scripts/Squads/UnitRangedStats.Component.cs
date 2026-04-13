@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 
 /// <summary>
@@ -11,4 +12,10 @@ public struct UnitRangedStatsComponent : IComponentData
     public float fireRate;
     public float reloadSpeed;
     public int totalAmmo;
+
+    /// <summary>ObjectPool key used to spawn the correct projectile prefab (e.g. "archer_arrow").</summary>
+    public FixedString32Bytes projectilePoolKey;
+
+    /// <summary>How the projectile travels: Arc (archers) or Straight (crossbowmen).</summary>
+    public ProjectileTrajectory trajectory;
 }

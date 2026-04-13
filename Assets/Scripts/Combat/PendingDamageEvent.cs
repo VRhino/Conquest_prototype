@@ -1,5 +1,8 @@
 using Unity.Entities;
 
+/// <summary>Which physical collider the attack contacted first.</summary>
+public enum HitType : byte { Body = 0, Shield = 1 }
+
 /// <summary>
 /// Component used as an event to signal that an entity should receive damage.
 /// The damage is applied by a separate system.
@@ -25,12 +28,12 @@ public struct PendingDamageEvent : IComponentData
     public float multiplier;
 
     // ── Context for damage formula ────────────────────────────────────────────
-    /// <summary>Direction the attack came from (used for shield orientation check).</summary>
-    public Unity.Mathematics.float3 attackDirection;
-
     /// <summary>Attacker speed at the moment of impact (used for kinetic bonus).</summary>
     public float attackerSpeed;
 
     /// <summary>World position of the attacker (used for height bonus).</summary>
     public Unity.Mathematics.float3 attackerPosition;
+
+    /// <summary>Which physical collider was contacted first (Body or Shield).</summary>
+    public HitType hitType;
 }

@@ -97,8 +97,12 @@ public partial class SquadVisualManagementSystem : SystemBase
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.name = $"Unit_{unitEntity.Index}_Visual";
 
-        // Asignar layer "Units" para culling de distancia nativo por cámara
-        int unitsLayer = LayerMask.NameToLayer("Units");
+        // Asignar layer por equipo para colisiones selectivas entre teams
+        Team unitTeam = EntityManager.HasComponent<TeamComponent>(unitEntity)
+            ? EntityManager.GetComponentData<TeamComponent>(unitEntity).value
+            : Team.None;
+        string unitLayerName = unitTeam == Team.TeamB ? "Units_B" : "Units_A";
+        int unitsLayer = LayerMask.NameToLayer(unitLayerName);
         int targetLayer = unitsLayer >= 0 ? unitsLayer : 0;
         SetLayerRecursively(visualInstance, targetLayer);
 

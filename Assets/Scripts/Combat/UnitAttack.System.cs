@@ -30,6 +30,7 @@ public partial class UnitAttackSystem : SystemBase
                  SystemAPI.Query<RefRW<UnitCombatComponent>,
                                   RefRO<UnitWeaponComponent>,
                                   RefRO<LocalTransform>>()
+                          .WithNone<UnitRangedStatsComponent>()
                           .WithEntityAccess())
         {
             ref var c = ref combat.ValueRW;

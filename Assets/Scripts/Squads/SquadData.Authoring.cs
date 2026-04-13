@@ -19,84 +19,101 @@ public class SquadDataAuthoring : MonoBehaviour
                 return;
 
             var entity = GetEntity(TransformUsageFlags.None);
+            var d      = authoring.data;
+            var melee  = d.meleeData;
+            var ranged = d.rangedData;
 
-            Entity prefabEntity = authoring.data.prefab != null
-                ? GetEntity(authoring.data.prefab, TransformUsageFlags.Dynamic)
+            Entity prefabEntity = d.prefab != null
+                ? GetEntity(d.prefab, TransformUsageFlags.Dynamic)
                 : Entity.Null;
 
             // Bake formation library
-            var formationLibrary = BakeFormationLibrary(authoring.data.gridFormations);
+            var formationLibrary = BakeFormationLibrary(d.gridFormations);
+
+            float slashDmg  = melee != null ? melee.slashingDamage        : ranged?.slashingDamage        ?? 0f;
+            float pierceDmg = melee != null ? melee.piercingDamage        : ranged?.piercingDamage        ?? 0f;
+            float bluntDmg  = melee != null ? melee.bluntDamage           : ranged?.bluntDamage           ?? 0f;
+            float slashPen  = melee != null ? melee.slashingPenetration   : ranged?.slashingPenetration   ?? 0f;
+            float piercePen = melee != null ? melee.piercingPenetration   : ranged?.piercingPenetration   ?? 0f;
+            float bluntPen  = melee != null ? melee.bluntPenetration      : ranged?.bluntPenetration      ?? 0f;
+
+            bool   isRanged      = ranged != null;
+            string poolKey       = ranged?.projectilePoolKey ?? string.Empty;
 
             AddComponent(entity, new SquadDataComponent
             {
-                baseHealth = authoring.data.baseHealth,
-                baseSpeed = authoring.data.baseSpeed,
-                mass = authoring.data.massValue,
-                weight = authoring.data.totalWeight,
-                block = authoring.data.block,
-                blockRegenRate = authoring.data.blockRegenRate,
-                shieldBreakStunDuration = authoring.data.shieldBreakStunDuration,
-                slashingDefense = authoring.data.slashingDefense,
-                piercingDefense = authoring.data.piercingDefense,
-                bluntDefense = authoring.data.bluntDefense,
-                slashingDamage = authoring.data.slashingDamage,
-                piercingDamage = authoring.data.piercingDamage,
-                bluntDamage = authoring.data.bluntDamage,
-                slashingPenetration = authoring.data.slashingPenetration,
-                piercingPenetration = authoring.data.piercingPenetration,
-                bluntPenetration = authoring.data.bluntPenetration,
-                isRangedUnit = authoring.data.isDistanceUnit,
-                range = authoring.data.range,
-                accuracy = authoring.data.accuracy,
-                fireRate = authoring.data.fireRate,
-                reloadSpeed = authoring.data.reloadSpeed,
-                ammoCapacity = authoring.data.ammo,
+                baseHealth = d.baseHealth,
+                baseSpeed = d.baseSpeed,
+                mass = d.massValue,
+                weight = d.totalWeight,
+                block = d.block,
+                blockRegenRate = d.blockRegenRate,
+                shieldBreakStunDuration = d.shieldBreakStunDuration,
+                slashingDefense = d.slashingDefense,
+                piercingDefense = d.piercingDefense,
+                bluntDefense = d.bluntDefense,
+                slashingDamage = slashDmg,
+                piercingDamage = pierceDmg,
+                bluntDamage = bluntDmg,
+                slashingPenetration = slashPen,
+                piercingPenetration = piercePen,
+                bluntPenetration = bluntPen,
+                isRangedUnit = isRanged,
+                range            = ranged?.range        ?? 0f,
+                accuracy         = ranged?.accuracy     ?? 0f,
+                fireRate         = ranged?.fireRate     ?? 0f,
+                reloadSpeed      = ranged?.reloadSpeed  ?? 0f,
+                ammoCapacity     = ranged?.ammo         ?? 0,
+                projectilePoolKey = string.IsNullOrEmpty(poolKey)
+                    ? default
+                    : new FixedString32Bytes(poolKey),
+                projectileTrajectory = ranged?.projectileTrajectory ?? default,
                 curves = default,
-                attackRange = authoring.data.attackRange,
-                attackInterval = authoring.data.attackInterval,
-                criticalChance = authoring.data.criticalChance,
-                criticalMultiplier = authoring.data.criticalMultiplier,
-                strikeWindowStart = authoring.data.strikeWindowStart,
-                strikeWindowDuration = authoring.data.strikeWindowDuration,
-                attackAnimationDuration = authoring.data.attackAnimationDuration,
-                kineticMultiplier = authoring.data.kineticMultiplier
+                attackRange             = melee?.attackRange             ?? 2f,
+                attackInterval          = melee?.attackInterval          ?? 1.5f,
+                criticalChance          = melee?.criticalChance          ?? 0.05f,
+                criticalMultiplier      = melee?.criticalMultiplier      ?? 1.5f,
+                strikeWindowStart       = melee?.strikeWindowStart       ?? 0.35f,
+                strikeWindowDuration    = melee?.strikeWindowDuration    ?? 0.15f,
+                attackAnimationDuration = melee?.attackAnimationDuration ?? 1.0f,
+                kineticMultiplier       = melee?.kineticMultiplier       ?? 0.3f
             });
 
             AddComponent(entity, new SquadDefinitionComponent
             {
-                squadType        = authoring.data.type,
-                behaviorProfile  = authoring.data.behaviorProfile,
+                squadType        = d.type,
+                behaviorProfile  = d.behaviorProfile,
                 formationLibrary = formationLibrary,
                 unitPrefab       = prefabEntity,
-                unitCount        = authoring.data.unitCount,
+                unitCount        = d.unitCount,
                 GridSize         = default,
-                leadershipCost   = authoring.data.leadershipCost,
-                detectionRange   = authoring.data.detectionRange
+                leadershipCost   = d.leadershipCost,
+                detectionRange   = d.detectionRange
             });
 
-            AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(authoring.data.id) });
+            AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(d.id) });
 
             AddComponent(entity, new SquadStatsComponent
             {
-                squadType = authoring.data.type,
-                behaviorProfile = authoring.data.behaviorProfile
+                squadType = d.type,
+                behaviorProfile = d.behaviorProfile
             });
 
             var statsBuffer = AddBuffer<UnitStatsBufferElement>(entity);
             statsBuffer.Add(new UnitStatsBufferElement
             {
-                health = (int)authoring.data.baseHealth,
-                speed = (int)authoring.data.baseSpeed,
-                mass = (int)authoring.data.massValue,
-                weightClass = (int)authoring.data.totalWeight,
-                blockValue = authoring.data.block,
-                slashingDamage = authoring.data.slashingDamage,
-                piercingDamage = authoring.data.piercingDamage,
-                bluntDamage = authoring.data.bluntDamage,
-                slashingDefense = authoring.data.slashingDefense,
-                piercingDefense = authoring.data.piercingDefense,
-                bluntDefense = authoring.data.bluntDefense,
-                leadershipCost = authoring.data.leadershipCost
+                health = (int)d.baseHealth,
+                speed = (int)d.baseSpeed,
+                mass = (int)d.massValue,
+                weightClass = (int)d.totalWeight,
+                blockValue = d.block,
+                slashingDamage = slashDmg,
+                piercingDamage = pierceDmg,
+                bluntDamage = bluntDmg,
+                slashingDefense = d.slashingDefense,
+                piercingDefense = d.piercingDefense,
+                bluntDefense = d.bluntDefense,
+                leadershipCost = d.leadershipCost
             });
         }
 

@@ -375,6 +375,30 @@ public partial class SquadSpawningSystem : SystemBase
                 ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);
 
                 ecb.AddBuffer<UnitDetectedEnemy>(unit);
+
+                // Ranged-only components — added at spawn so RangedAttackSystem can
+                // process units immediately without waiting for UnitStatScalingSystem.
+                if (data.isRangedUnit)
+                {
+                    ecb.AddComponent(unit, new UnitRangedStatsComponent
+                    {
+                        range             = data.range,
+                        accuracy          = data.accuracy,
+                        fireRate          = data.fireRate,
+                        reloadSpeed       = data.reloadSpeed,
+                        totalAmmo         = data.ammoCapacity,
+                        projectilePoolKey = data.projectilePoolKey,
+                        trajectory        = data.projectileTrajectory
+                    });
+                    ecb.AddComponent(unit, new RangedAttackStateComponent
+                    {
+                        isReloading = false,
+                        reloadTimer = 0f,
+                        currentAmmo = data.ammoCapacity,
+                        shotTimer   = 0f
+                    });
+                }
+
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
 

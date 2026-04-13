@@ -33,7 +33,10 @@
       "Bash(python:*)",
       "Bash(/c/Users/VRINO/AppData/Local/Programs/Python/Python312/python:*)",
       "Bash(ls -la \"C:\\\\Users\\\\VRINO\\\\Desarrollo\\\\Conquest_prototype\\\\.graphify_chunk_\"*)",
-      "Skill(no-magic-params)"
+      "Skill(no-magic-params)",
+      "Bash(grep -i '.cs$')",
+      "Bash(pip install:*)",
+      "mcp__ide__getDiagnostics"
     ]
   },
   "hooks": {
@@ -61,6 +64,6 @@
     ]
   },
   "enabledPlugins": {
-    "context-mode@context-mode": true
+    "context-mode@context-mode": false
   }
 }

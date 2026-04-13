@@ -44,6 +44,10 @@ public static class AnimationHashes
     public static readonly int IsAttacking            = Animator.StringToHash("IsAttacking");
     public static readonly int TriggerAttack          = Animator.StringToHash("TriggerAttack");
 
+    // Ranged combat
+    public static readonly int TriggerShoot           = Animator.StringToHash("TriggerShoot");
+    public static readonly int IsReloading            = Animator.StringToHash("IsReloading");
+
     // Interactables
     public static readonly int DoorOpen               = Animator.StringToHash("Open");
     public static readonly int DoorClose              = Animator.StringToHash("Close");
