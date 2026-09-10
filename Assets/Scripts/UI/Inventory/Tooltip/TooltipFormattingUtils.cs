@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Data.Items;
-using Unity.Entities.UniversalDelegates;
 
 /// <summary>
 /// Utilidades centralizadas para formateo de tooltips.

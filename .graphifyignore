@@ -9,3 +9,16 @@ Packages/
 Assets/Synty
 Assets/Travis*
 Assets/TextMesh*
+Assets/SceneDependencyCache
+Assets/Settings/model
+.claude/
+.agentes/
+.vscode/
+worktrees/
+.vs/
+Issues/
+Logs/
+CLAUDE.md
+*.csproj
+*.sln
+graphify-out/

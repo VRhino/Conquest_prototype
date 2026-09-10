@@ -207,13 +207,13 @@ public class HeroCameraController : MonoBehaviour
     /// <summary>
     /// Busca el GameObject visual por su InstanceID.
     /// </summary>
-    private GameObject FindVisualByInstanceId(int instanceId)
+    private GameObject FindVisualByInstanceId(EntityId instanceId)
     {
-        if (instanceId == 0) return null;
+        if (instanceId == EntityId.None) return null;
         var allVisuals = GameObject.FindObjectsOfType<ConquestTactics.Visual.EntityVisualSync>();
         foreach (var visual in allVisuals)
         {
-            if (visual.gameObject.GetInstanceID() == instanceId)
+            if (visual.gameObject.GetEntityId() == instanceId)
                 return visual.gameObject;
         }
         return null;

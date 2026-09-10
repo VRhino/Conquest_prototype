@@ -130,9 +130,9 @@ public partial class HeroVisualEquipmentSystem : SystemBase
         }
     }
 
-    private static GameObject FindGameObjectById(int instanceId)
+    private static GameObject FindGameObjectById(EntityId instanceId)
     {
         var allObjects = Object.FindObjectsOfType<GameObject>();
-        return System.Array.Find(allObjects, obj => obj.GetInstanceID() == instanceId);
+        return System.Array.Find(allObjects, obj => obj.GetEntityId() == instanceId);
     }
 }

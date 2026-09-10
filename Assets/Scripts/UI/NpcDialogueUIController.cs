@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using ConquestTactics.Dialogue;
 using TMPro;
-using Unity.Entities.UniversalDelegates;
 using UnityEngine;
 using UnityEngine.UI;
 

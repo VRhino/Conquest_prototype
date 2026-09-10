@@ -116,7 +116,7 @@ namespace ConquestTactics.Visual
                 Debug.Log($"[UnitAnimatorController] Tiene parámetro IsStopped: {AnimatorHasParameter(AnimationHashes.IsStopped)}");
                 Debug.Log($"[UnitAnimatorController] Tiene parámetro CurrentGait: {AnimatorHasParameter(AnimationHashes.CurrentGait)}");
                 // Log de todos los parámetros actuales del Animator
-                string paramStates = $"[UnitAnimatorController] Estado inicial de parámetros para {gameObject.name} (InstanceID: {gameObject.GetInstanceID()}):";
+                string paramStates = $"[UnitAnimatorController] Estado inicial de parámetros para {gameObject.name} (EntityId: {gameObject.GetEntityId()}):";
                 foreach (var param in _animator.parameters)
                 {
                     switch (param.type)

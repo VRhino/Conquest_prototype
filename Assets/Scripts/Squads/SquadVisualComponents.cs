@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
+using UnityEngine;
 
 /// <summary>
 /// Componentes para el manejo de visuales de unidades.
@@ -26,7 +27,7 @@ public struct UnitVisualReference : IComponentData
 public struct UnitVisualInstance : IComponentData
 {
     /// <summary>ID de instancia del GameObject visual creado</summary>
-    public int visualInstanceId;
+    public EntityId visualInstanceId;
     
     /// <summary>Referencia al squad al que pertenece esta unidad</summary>
     public Entity parentSquad;

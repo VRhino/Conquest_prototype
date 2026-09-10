@@ -47,10 +47,10 @@ public partial class UnitDeathSystem : SystemBase
         ecb.Dispose();
     }
 
-    private static GameObject FindGameObjectByInstanceId(int instanceId)
+    private static GameObject FindGameObjectByInstanceId(EntityId instanceId)
     {
         // Same pattern as HeroVisualEquipmentSystem — acceptable cost for rare death events
         var all = Object.FindObjectsOfType<GameObject>();
-        return System.Array.Find(all, o => o.GetInstanceID() == instanceId);
+        return System.Array.Find(all, o => o.GetEntityId() == instanceId);
     }
 }

@@ -1,4 +1,5 @@
 using Unity.Entities;
+using UnityEngine;
 
 /// <summary>
 /// Componente que almacena la referencia al prefab visual del héroe.
@@ -16,7 +17,7 @@ public struct HeroVisualReference : IComponentData
 public struct HeroVisualInstance : IComponentData
 {
     /// <summary>ID del GameObject visual asociado a esta entidad.</summary>
-    public int visualInstanceId;
+    public EntityId visualInstanceId;
 }
 
 /// <summary>

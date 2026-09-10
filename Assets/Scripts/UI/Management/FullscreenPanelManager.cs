@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using ConquestTactics.Dialogue;
-using UnityEditor.SearchService;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,7 +12,7 @@ using UnityEngine.UI;
 public class FullscreenPanelManager : MonoBehaviour
 {
     // Exclusivity flag for reward dialog
-    [SerializeField] public bool IsRewardDialogOpen { get; private set; } = false;
+    public bool IsRewardDialogOpen { get; private set; } = false;
 
     /// <summary>
     /// Call this when the reward dialog is opened to block other panels.

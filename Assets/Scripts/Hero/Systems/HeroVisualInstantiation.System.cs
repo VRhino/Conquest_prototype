@@ -112,7 +112,7 @@ public partial class HeroVisualInstantiationSystem : SystemBase
 
         ecb.AddComponent(entity, new HeroVisualInstance
         {
-            visualInstanceId = visualInstance.GetInstanceID()
+            visualInstanceId = visualInstance.GetEntityId()
         });
     }
 

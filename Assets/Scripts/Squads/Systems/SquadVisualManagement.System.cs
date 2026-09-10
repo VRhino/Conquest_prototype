@@ -175,7 +175,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         // Marcar la unidad como teniendo visual
         ecb.AddComponent(unitEntity, new UnitVisualInstance
         {
-            visualInstanceId = visualInstance.GetInstanceID(),
+            visualInstanceId = visualInstance.GetEntityId(),
             parentSquad = parentSquad
         });
         
