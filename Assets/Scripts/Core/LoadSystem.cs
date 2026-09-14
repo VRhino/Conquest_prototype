@@ -40,6 +40,12 @@ public static class LoadSystem
         {
             Debug.LogError("No player data available to load hero.");
             hero = null;
+            return;
+        }
+        if (player.heroes == null || player.heroes.Count == 0)
+        {
+            hero = null;
+            return;
         }
         hero = player.heroes[0]; // Cargar el primer héroe para pruebas
         if (hero == null)

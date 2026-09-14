@@ -51,6 +51,8 @@ namespace ConquestTactics.Visual
 
         // Animation parameter hashes are centralized in AnimationHashes.cs
         private bool _positionInitialized = false;
+        private uint _appliedPositionRevision;
+        public bool DebugLogging { get => _enableDebugLogs; set => _enableDebugLogs = value; }
         private bool _remoteWasMoving = false;
         private float _verticalVelocity = 0f;
         private const float GRAVITY = -9.81f;
@@ -147,7 +149,7 @@ namespace ConquestTactics.Visual
                 }
             }
 
-            DisableConflictingComponents();
+            ConfigureMovementAuthority();
             _targetPosition = transform.position;
             _targetRotation = transform.rotation;
             if (_enableDebugLogs)
@@ -173,7 +175,13 @@ namespace ConquestTactics.Visual
                     Debug.Log("[EntityVisualSync] Update skipped: IsValidSetup() == false");
                 return;
             }
-            if (_characterController != null && _characterController.enabled && IsValidSetup())
+            bool teleported = ApplySpawnPose();
+            bool canMove = !_entityManager.HasComponent<HeroLifeComponent>(_heroEntity)
+                || _entityManager.GetComponentData<HeroLifeComponent>(_heroEntity).isAlive;
+            if (_entityManager.HasComponent<HeroSpawnComponent>(_heroEntity))
+                canMove &= _entityManager.GetComponentData<HeroSpawnComponent>(_heroEntity).hasSpawned;
+            if (!canMove) _verticalVelocity = 0f;
+            if (!teleported && canMove && _characterController != null && _characterController.enabled && IsValidSetup())
             {
                 if (_entityManager.HasComponent<HeroMoveIntent>(_heroEntity))
                 {
@@ -378,7 +386,7 @@ namespace ConquestTactics.Visual
                 else
                     _heroEntity = heroEntities[0];
                 _hasValidTarget = true;
-                DisableConflictingComponents();
+                ConfigureMovementAuthority();
                 if (_enableDebugLogs)
                     Debug.Log($"[EntityVisualSync] Entidad héroe encontrada: {_heroEntity}");
             }
@@ -411,6 +419,24 @@ namespace ConquestTactics.Visual
         
         //
         
+        // Transitional hybrid bridge: consume ECS spawn poses without writing an acknowledgement to ECS.
+        private bool ApplySpawnPose()
+        {
+            if (!IsLocalHero || !_entityManager.HasComponent<HeroSpawnComponent>(_heroEntity))
+                return false;
+            var spawn = _entityManager.GetComponentData<HeroSpawnComponent>(_heroEntity);
+            if (!spawn.hasSpawned || spawn.positionRevision == _appliedPositionRevision)
+                return false;
+            bool wasEnabled = _characterController != null && _characterController.enabled;
+            if (wasEnabled) _characterController.enabled = false;
+            transform.SetPositionAndRotation(spawn.spawnPosition, spawn.spawnRotation);
+            if (wasEnabled) _characterController.enabled = true;
+            _verticalVelocity = 0f;
+            _positionInitialized = true;
+            _appliedPositionRevision = spawn.positionRevision;
+            return true;
+        }
+
         public void SetHeroEntity(Entity heroEntity)
         {
             if (_entityManager == null || _world == null || !_world.IsCreated)
@@ -424,9 +450,10 @@ namespace ConquestTactics.Visual
                 }
             }
             _heroEntity = heroEntity;
+            _appliedPositionRevision = 0;
             _isManuallyConfigured = true;
             _hasValidTarget = true;
-            DisableConflictingComponents();
+            ConfigureMovementAuthority();
             if (_enableDebugLogs)
                 Debug.Log($"[EntityVisualSync] Entidad configurada manualmente: {heroEntity}");
         }
@@ -457,14 +484,20 @@ namespace ConquestTactics.Visual
             }
         }
         
-        private void DisableConflictingComponents()
+        private void ConfigureMovementAuthority()
         {
+            if (_entityManager == null || _heroEntity == Entity.Null
+                || !_entityManager.Exists(_heroEntity))
+                return;
+
+            bool isLocal = _entityManager.HasComponent<IsLocalPlayer>(_heroEntity);
+            IsLocalHero = isLocal;
             CharacterController characterController = GetComponent<CharacterController>();
-            if (characterController != null && characterController.enabled)
+            if (characterController != null && characterController.enabled != isLocal)
             {
+                characterController.enabled = isLocal;
                 if (_enableDebugLogs)
-                    Debug.LogWarning($"[EntityVisualSync] Disabling CharacterController on {gameObject.name} to prevent position conflicts");
-                characterController.enabled = true;
+                    Debug.Log($"[EntityVisualSync] CharacterController {(isLocal ? "enabled" : "disabled")} for {gameObject.name}");
             }
         }
     }

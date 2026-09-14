@@ -9,10 +9,12 @@ using Unity.Mathematics;
 /// <c>LoadoutSystem</c> when composing the player's loadout.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(UnitDeathSystem))]
+[UpdateAfter(typeof(SquadProgressionSystem))]
 public partial class UnitDeploymentValidationSystem : SystemBase
 {
     LocalSaveSystem.PlayerProgressData _progress;
-    bool _initialized;
+    bool _equipmentSavedForPostMatch;
 
     protected override void OnCreate()
     {
@@ -23,17 +25,18 @@ public partial class UnitDeploymentValidationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        if (!_initialized)
-        {
-            InitializeEquipment();
-            _initialized = true;
-        }
+        InitializeEquipment();
 
         if (IsPostMatch())
         {
-            SaveEquipment();
+            if (!_equipmentSavedForPostMatch)
+            {
+                SaveEquipment();
+                _equipmentSavedForPostMatch = true;
+            }
             return;
         }
+        _equipmentSavedForPostMatch = false;
 
         if (!IsPreparationPhase()) return;
 
@@ -92,22 +95,20 @@ public partial class UnitDeploymentValidationSystem : SystemBase
 
     void InitializeEquipment()
     {
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
-        foreach (var (equip, dataRef, instance) in SystemAPI
+        foreach (var (equip, dataRef, instance, entity) in SystemAPI
                      .Query<RefRW<UnitEquipmentComponent>,
                             RefRO<SquadDataReference>,
-                            RefRO<SquadInstanceComponent>>())
+                            RefRO<SquadInstanceComponent>>()
+                     .WithAll<IsLocalSquadActive>().WithNone<SquadEquipmentInitialized>()
+                     .WithEntityAccess())
         {
             if (!dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 continue;
 
-            LocalSaveSystem.SquadInstanceData record = null;
-            foreach (var r in _progress.squads)
-                if (r.id == instance.ValueRO.id)
-                {
-                    record = r;
-                    break;
-                }
+            var record = LocalSaveSystem.FindSquad(_progress, instance.ValueRO.id, instance.ValueRO.persistentId.ToString());
+            ecb.AddComponent<SquadEquipmentInitialized>(entity);
             if (record != null)
             {
                 equip.ValueRW.armorPercent = math.clamp(record.armorPercent, 0f, 100f);
@@ -121,10 +122,13 @@ public partial class UnitDeploymentValidationSystem : SystemBase
                 equip.ValueRW.isDeployable = true;
             }
         }
+        ecb.Playback(EntityManager);
     }
 
     void SaveEquipment()
     {
+        // Other systems may have saved XP since OnCreate.
+        _progress = LocalSaveSystem.LoadProgress();
         var dataLookup = GetComponentLookup<SquadDataComponent>(true);
         var defLookup  = GetComponentLookup<SquadDefinitionComponent>(true);
         bool save = false;
@@ -134,20 +138,16 @@ public partial class UnitDeploymentValidationSystem : SystemBase
                      .Query<RefRW<UnitEquipmentComponent>,
                             RefRO<SquadDataReference>,
                             RefRO<SquadInstanceComponent>,
-                            DynamicBuffer<SquadUnitElement>>())
+                            DynamicBuffer<SquadUnitElement>>()
+                     .WithAll<IsLocalSquadActive>())
         {
             if (!dataLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var data))
                 continue;
             defLookup.TryGetComponent(dataRef.ValueRO.dataEntity, out var def);
 
-            LocalSaveSystem.SquadInstanceData record = null;
-            foreach (var r in _progress.squads)
-                if (r.id == instance.ValueRO.id)
-                {
-                    record = r;
-                    break;
-                }
-            float total = units.Length;
+            var record = LocalSaveSystem.FindSquad(_progress, instance.ValueRO.id, instance.ValueRO.persistentId.ToString());
+            // UnitDeathSystem removes dead units from the buffer; its current length is not the initial count.
+            float total = math.max(instance.ValueRO.initialUnitCount, units.Length);
             int alive = 0;
             for (int i = 0; i < units.Length; i++)
             {
@@ -166,6 +166,7 @@ public partial class UnitDeploymentValidationSystem : SystemBase
                 _progress.squads.Add(new LocalSaveSystem.SquadInstanceData
                 {
                     id = instance.ValueRO.id,
+                    persistentId = instance.ValueRO.persistentId.ToString(),
                     squadType = def.squadType,
                     armorPercent = newPercent
                 });

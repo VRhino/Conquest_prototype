@@ -1,0 +1,5 @@
+{
+  "name": "Conquest.IconCreator.Editor",
+  "references": ["Game.ECS"],
+  "includePlatforms": ["Editor"]
+}

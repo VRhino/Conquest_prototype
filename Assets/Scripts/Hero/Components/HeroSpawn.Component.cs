@@ -19,6 +19,9 @@ public struct HeroSpawnComponent : IComponentData
     /// <summary>True when the hero has been placed at the spawn.</summary>
     public bool hasSpawned;
 
+    /// <summary>Incremented by spawn when publishing a new pose; visuals consume each revision once.</summary>
+    public uint positionRevision;
+
     /// <summary>
     /// Unique identifier for the visual prefab used for this hero.
     public FixedString64Bytes visualPrefabId;

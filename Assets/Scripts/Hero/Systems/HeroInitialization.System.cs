@@ -114,7 +114,9 @@ public partial class HeroInitializationSystem : SystemBase
                     baseVitality = attributes.vitality
                 };
 
-                calculatedAttributes = HeroCalculatedAttributes.Calculate(baseStats, DataCacheService.GetEquipmentBonuses(), EquipmentBonuses.Empty, classData);
+                var equipment = SystemAPI.HasComponent<IsLocalPlayer>(entity)
+                    ? DataCacheService.GetEquipmentBonuses() : EquipmentBonuses.Empty;
+                calculatedAttributes = HeroCalculatedAttributes.Calculate(baseStats, equipment, EquipmentBonuses.Empty, classData);
             }
 
             var health = healthLookup[entity];

@@ -31,6 +31,9 @@ public partial class SquadAnchorSystem : SystemBase
     {
         var targetBufferLookup = GetBufferLookup<SquadTargetEntity>(true);
         var transformLookup    = GetComponentLookup<LocalTransform>(true);
+        float anchorSpeedThreshold = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
+            ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().anchorMovingSpeedThreshold : 0.1f;
+        float deltaTime = SystemAPI.Time.DeltaTime;
 
         foreach (var (state, anchor, heroWorldPos, data, squadEntity) in SystemAPI
                      .Query<RefRO<SquadStateComponent>,
@@ -42,17 +45,19 @@ public partial class SquadAnchorSystem : SystemBase
             float3     position;
             quaternion rotation = default; // default == zero quaternion (no-rotation sentinel)
 
-            if (state.ValueRO.currentState == SquadFSMState.HoldingPosition
+            if (state.ValueRO.currentOrder == SquadOrderType.HoldPosition
+                && state.ValueRO.currentState != SquadFSMState.Retreating
                 && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
             {
                 var hold = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
                 position = hold.holdCenter;
                 rotation = hold.holdRotation;
             }
-            else if (state.ValueRO.currentState == SquadFSMState.Retreating
-                     && SystemAPI.HasComponent<RetreatComponent>(squadEntity))
+            else if (state.ValueRO.currentState == SquadFSMState.Retreating)
             {
-                position = SystemAPI.GetComponent<RetreatComponent>(squadEntity).retreatTarget;
+                position = SystemAPI.HasComponent<RetreatComponent>(squadEntity)
+                    ? SystemAPI.GetComponent<RetreatComponent>(squadEntity).retreatTarget : anchor.ValueRO.position;
+                if (!SystemAPI.HasComponent<RetreatComponent>(squadEntity)) rotation = anchor.ValueRO.rotation;
                 // rotation stays default
             }
             else if (state.ValueRO.currentState == SquadFSMState.InCombat
@@ -86,9 +91,17 @@ public partial class SquadAnchorSystem : SystemBase
             float3 prevPosition = anchor.ValueRO.position;
             anchor.ValueRW.position = position;
             anchor.ValueRW.rotation = rotation;
-            bool isMoving = math.lengthsq(position - prevPosition) > 0.01f;
+            bool isMoving = IsMovingAtSpeed(prevPosition, position, deltaTime,
+                anchorSpeedThreshold);
             SystemAPI.SetComponentEnabled<SquadAnchorMovingTag>(squadEntity, isMoving);
         }
+    }
+
+    public static bool IsMovingAtSpeed(float3 previous, float3 current, float deltaTime, float threshold)
+    {
+        if (deltaTime <= 0f) return false;
+        float minDistance = math.max(0f, threshold) * deltaTime;
+        return math.distancesq(previous, current) > minDistance * minDistance;
     }
 
     /// <summary>

@@ -12,9 +12,12 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Regla**: Solo lee input — nunca modifica estado de héroe ni squads
 
 ### HeroMovementSystem
-- **Responsabilidad**: Mueve el héroe en base a `HeroMoveIntent`
-- **Output**: `LocalTransform`
-- **Regla**: No lee input directamente — solo procesa `HeroMoveIntent`
+- **Responsabilidad actual**: Calcula intención desde input, cámara y stats, después de input y spawn.
+- **Output**: `HeroMoveIntent`; lo limpia si el héroe está muerto, sin ubicación de spawn o sin cámara.
+- El movimiento físico sigue en el puente híbrido; extraer el motor es una fase posterior.
+
+### HeroRespawnSystem
+- Lee `HeroHealthComponent`, después de daño y antes de spawn. Detecta muerte, cuenta el cooldown y solicita ubicación poniendo `hasSpawned = false` al revivir.
 
 ### HeroStateSystem
 - **Responsabilidad**: Detecta cambio de estado del héroe (Idle/Moving)
@@ -22,13 +25,14 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### HeroSpawnSystem
 - **Responsabilidad**: Crea la entidad ECS del héroe local al inicio de la batalla
+- Publica `spawnPosition`, `spawnRotation` y una nueva `positionRevision` al colocar al héroe. Sin punto válido no confirma ubicación ni incrementa revisión.
 - **Output**: entidad héroe con todos sus componentes + `HeroSquadSelectionComponent` linkeando a la escuadra activa (`instanceId = 0`)
 - **Nota**: el `instanceId = 0` debe mantenerse sincronizado con `BattleSceneController.SyncBattleDataToECS` que asigna ID 0 a la escuadra activa
 
 ### HeroVisualInstantiationSystem
 - **Responsabilidad**: Instancia el prefab visual del héroe y configura `EntityVisualSync`, hitbox y NavMeshAgent
 - **Output**: `HeroVisualInstance`, GameObject con `EntityVisualSync` configurado
-- **NavMeshAgent**: Para héroes remotos, llama `agent.Warp(position)` post-spawn
+- **NavMeshAgent**: Para héroes remotos intenta `Warp(position)` y, si falla, proyecta antes de repetir; una colocación imposible se advierte una vez
 - **Proceso post-ECB**: Recolecta `NavMeshAgent` en lista durante OnUpdate, adjunta tras playback del ECB
 - **Usa**: `VisualPrefabRegistry`, `VisualSyncUtility.SetupVisualSync()`
 
@@ -48,32 +52,50 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### SquadControlSystem
 - **Responsabilidad**: Captura órdenes de squad del jugador (C, X, V, F1-F4)
-- **Output**: `SquadInputComponent`
+- **Output**: `SquadInputComponent` y `SquadPlayerOrderIntentComponent`, antes del resolvedor. Cambiar solo formación no reemite movimiento.
+
+### HeroAIExecutionSystem
+- Controla el `NavMeshAgent` remoto y publica `SquadAIOrderIntentComponent` antes del resolvedor.
+- Proyecta objetivos, comprueba `SetDestination`/`pathStatus`, retiene fallos hasta que el objetivo cambie y limpia `HeroMoveIntent` si no puede navegar.
+- Conserva solicitudes de escuadra durante combate; no arbitra ni escribe entrada legacy.
 
 ### SquadOrderSystem
-- **Responsabilidad**: Convierte `SquadInputComponent` en cambios de estado de squad
+- **Responsabilidad**: Aplica `SquadResolvedOrderComponent` a estado y componente hold, con playback antes del cálculo del ancla.
 - **Output**: `SquadStateComponent`
+- No confirma `FormationComponent.currentFormation`.
 
 ### SquadFSMSystem
 - **Responsabilidad**: Gestiona transiciones de estado del squad (Following/Holding/Retreating)
 - **Regla**: Solo transiciones — no mueve unidades
+- Mantiene retiradas comprometidas incluso tras la última baja. No inicia retirada por un booleano del dueño sin componentes operativos.
+
+### SquadOwnerDeathRetreatSystem
+- Después de HeroRespawn y antes de órdenes/intercambio/HUD, conecta HeroLife con una retirada persistente y actualiza lastOwnerAlive.
+- Sin punto aliado, conserva petición y ancla. No reinicia retiradas de intercambio ni permite duplicación al revivir el dueño.
+- RetreatLogic persiste efectivos y limpia la referencia solo si sigue apuntando a la escuadra retirada. Spawning excluye dueño muerto y reservas eliminadas.
 
 ### FormationSystem
 - **Responsabilidad**: Calcula posiciones de formación según tipo y centro del squad
 - **Output**: `UnitTargetPositionComponent` por unidad
+- Consume `desiredFormation` independientemente de movimiento; confirma formación, slots, espaciado y cooldown tras validar capacidad del patrón.
+- Usa centro fraccional y rotación normalizada. En cambios explícitos reasigna slotIndex; la actualización continua conserva esos índices tras bajas.
 
 ### UnitFormationStateSystem
 - **Responsabilidad**: Gestiona todos los cambios de estado de unidades (Moving/Formed/Waiting)
 - **Regla**: Único owner de transiciones de estado de unidades
+- Decide por error de cada unidad respecto a su slot; no usa la unidad más alejada como gate global. Umbrales en SquadSpawnConfig.
 
 ### UnitNavMeshSystem
 - **Responsabilidad**: Única autoridad para decisiones NavMesh por unidad: destino + rotación
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]` `[UpdateBefore(UnitFollowFormationSystem)]`
 - **Owner exclusivo**: `agent.SetDestination()` y `agent.updateRotation`
 - **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition)
+- Mantener posición preserva el ancla y los slots incluso en combate. Seguimiento aplica leash también en `InCombat`; `Attack` permite perseguir. Sin objetivo elegible se vuelve al slot respetando `Waiting`.
+- Proyecta slots y stop-points al NavMesh. `NavAgentComponent` conserva el destino efectivo; fallos de proyección/path usan fallback estable y reintentan cuando cambia el slot.
 - **Rotación combate**: Si dist ≤ 3.5u → `updateRotation=false` + rota `LocalTransform` para mirar al target
 - **Rotación normal**: `updateRotation=true` — NavMesh controla la orientación durante movimiento
 - **`UnitTargetPositionComponent`**: solo lectura — nunca escribe (ownership exclusivo de sistemas de formación)
+- **Llegada**: `UnitFormationStateSystem` y `SquadNavigationSystem` comparan contra el destino efectivo asociado al slot solicitado.
 
 ### UnitFollowFormationSystem
 - **Responsabilidad**: Mueve unidades sin NavMesh + aplica rotación Formed para unidades NavMesh
@@ -88,10 +110,12 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ### UnitBodyblockSystem
 - **Responsabilidad**: Repulsión física per-frame entre entidades de equipos distintos via `agent.Move()`
 - **Cubre**: unidades vs unidades + héroes remotos vs unidades (héroe local bloqueado por CapsuleCollider físico)
-- **Fuerza**: `WallStrength = 60f` para Line/Testudo/Wedge/Square en estado Formed; `RepulsionStrength = 8f` para Dispersed/Column
+- **Fuerza**: valores configurables en `SquadSpawnConfig`; por defecto 60 para Line/Testudo/Wedge/Square en estado Formed y 8 para Dispersed/Column
 - **Regla**: Solo cross-team — aliados nunca se repelen; `Formed vs Formed` sin push (evita vibración)
-- **Algoritmo**: Spatial grid (cell = `BodyblockRadius`) → 9 celdas vecinas → O(n×k)
-- **Orden**: `[UpdateAfter(UnitNavMeshSystem)]`
+- **Algoritmo**: Spatial grid (cell = `bodyblockRadius`) → 9 celdas vecinas → O(n×k)
+- **Orden**: después de `UnitNavMeshSystem` y antes de `NavMeshPositionSyncSystem`, para capturar la corrección en ECS en el mismo ciclo
+- **Tiempo**: clamp en m/s mediante `bodyblockMaxPushSpeed * deltaTime`; parámetros en SquadSpawnConfig.
+- **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.
 - **Ref**: `Docs/Mechanics/BodyblockSystem.md`
 
 ### FormationStanceSystem
@@ -159,8 +183,9 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Responsabilidad**: Árbitro de órdenes — resuelve el intent ganador entre Player, CombatReaction y AI
 - **Output**: `SquadResolvedOrderComponent` (orden ganadora del frame)
 - **Orden**: `[UpdateAfter(CombatReactionSystem)]` `[UpdateBefore(SquadOrderSystem)]`
-- **Prioridad local**: `heroOrdenCooldown activo → Player` / `reactToEnemy → CombatReaction` / `otherwise → Player`
-- **Prioridad remoto**: `reactToEnemy → CombatReaction` / `otherwise → AI`
+- **Prioridad local**: ante nueva orden, insistencia activa o HoldPosition conserva Player; en otro caso la reacción puede sustituirla.
+- **Prioridad remoto**: HoldPosition conserva AI; para otras órdenes una reacción puede sustituirlas temporalmente. Sin reacción vuelve a la intención conservada.
+- Detecta cambios de destino, objetivo y formación además de tipo/fuente para órdenes remotas.
 - **Regla**: Solo lee intents y escribe el resultado — nunca modifica estado de squad directamente
 
 ### BraceWeaponActivationSystem
@@ -207,10 +232,12 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Timer expired**: defensores ganan (`winnerTeam = 2`)
 
 ### EntityVisualSync
-- **Responsabilidad**: Sincroniza `LocalTransform` ECS → `transform` de GameObject cada frame
+- **Responsabilidad**: puente híbrido de visual, movimiento y sincronización según el tipo de entidad
+- Compatibilidad actual: el héroe local consume cada revisión de spawn una vez, deshabilita temporalmente CharacterController, aplica pose y reinicia gravedad. Ese frame no ejecuta movimiento; muerto o esperando ubicación tampoco consume intención residual.
+- Héroe local: `CharacterController` activo, GameObject → ECS. Héroe remoto: `NavMeshAgent` activo, GameObject → ECS. El controller se configura desde `IsLocalPlayer`.
+- La confirmación de revisión es local al visual, no una escritura nueva en ECS.
 - **Safe teleport**: Deshabilita `CharacterController` antes de aplicar posición ECS, lo rehabilita después
 - **Constantes**: `GROUND_CHECK_BUFFER = -0.5f`, `TERMINAL_VELOCITY = -50f`
-- **Regla**: Solo lee ECS — nunca escribe en ECS
 
 ---
 
@@ -232,3 +259,25 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 
 ### UnitStatsUtility
 - Aplicación de stats para sistemas de progresión
+- Sincroniza también salud, defensa y perfil de daño usados por combate.
+- Conserva el porcentaje de salud y el estado de munición/recarga.
+
+### BattleBootstrapSystem
+- Consume peticiones administradas del controlador de batalla; es dueño de las escrituras del bootstrap local en ECS.
+- Conserva identidad persistente, progreso y efectivos en SquadIdMapElement.
+- Los mapas de escuadras remotas pertenecen a cada héroe, no al singleton local.
+
+### SquadProgressionSystem / UnitStatScalingSystem
+- Progresión consume SquadXPEvent una vez; no genera recompensas por permanecer en PostPartida.
+- El escalado inicial ocurre una vez por instancia y después solo para las escuadras indicadas por eventos.
+- La fórmula y entrega autenticada de BattleResult siguen pendientes; estos eventos son locales.
+
+## Estado de migración de movimiento — 2026-09-14
+
+Actualización geométrica: centro fraccional, validación segura de blobs/cuaterniones, slots estables y movimiento del ancla por velocidad. Referencia y límites: `Docs/Arquitectura/7_Formacion_Geometria_FPS_2026-09-14.md`.
+
+Actualización posterior: conectada la retirada por muerte del dueño con espera persistente de destino y conservación de efectivos. Referencia y límites: `Docs/Arquitectura/6_Retirada_Muerte_Dueno_2026-09-14.md`. Los párrafos históricos siguientes describen el alcance anterior de intercambio.
+
+Actualización de intercambio: `SquadSwapExecutionSystem` valida reemplazo antes de retirar y consume cooldown solo al aceptar. `SquadNavigationSystem` ahora observa llegada sin escribir destinos; `RetreatLogicSystem` espera a todos los supervivientes en sus slots o timeout. `SquadOrderSystem` respeta el bloqueo de retirada. La retirada por muerte del dueño sigue pendiente. Referencia: `Docs/Arquitectura/5_Intercambio_Retirada_2026-09-14.md`.
+
+Las reglas ECS/visual de este documento son el objetivo, no una descripción totalmente cumplida por el legacy. `HeroMovementSystem` aún calcula intención; `EntityVisualSync` mueve el CharacterController y devuelve posición a ECS. El respawn local usa pose revisionada. Intercambio/retirada por reemplazo tienen las correcciones descritas arriba; muerte del dueño y autoridad general del motor siguen pendientes. Referencias: fases 3, 4 y 5 en `Docs/Arquitectura/`.

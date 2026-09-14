@@ -10,6 +10,7 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadSwapSystem))]
+[UpdateAfter(typeof(HeroRespawnSystem))]
 public partial class SquadSwapChannelingSystem : SystemBase
 {
     protected override void OnCreate()
@@ -81,10 +82,6 @@ public partial class SquadSwapChannelingSystem : SystemBase
                 ecb.AddComponent(entity, new SquadSwapExecuteTag
                 {
                     newSquadId = channeling.ValueRO.targetSquadId
-                });
-                ecb.AddComponent(entity, new SquadSwapCooldownComponent
-                {
-                    remainingTime = 10f
                 });
                 ecb.RemoveComponent<SquadSwapChannelingComponent>(entity);
             }

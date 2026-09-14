@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
-using UnityEditor;
 using System;
 
 #if UNITY_EDITOR
+using UnityEditor;
 
 namespace BattleDrakeStudios.Utilities {
 

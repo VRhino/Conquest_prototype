@@ -8,6 +8,8 @@ public struct SquadInstanceComponent : IComponentData
 {
     /// <summary>Unique identifier of the squad instance.</summary>
     public int id;
+    public Unity.Collections.FixedString64Bytes persistentId;
+    public int initialUnitCount;
 }
 
 /// <summary>

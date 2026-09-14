@@ -40,14 +40,14 @@ public partial class DamageCalculationSystem : SystemBase
         {
             var p = pending.ValueRO;
 
-            if (!SystemAPI.Exists(p.target) || !SystemAPI.Exists(p.damageProfile))
+            if (!SystemAPI.Exists(p.target) || !SystemAPI.HasComponent<DamageProfileComponent>(p.damageProfile))
             {
-                ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
+                CompleteEvent(ref ecb, entity, p); continue;
             }
 
             if (SystemAPI.HasComponent<IsDeadComponent>(p.target))
             {
-                ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
+                CompleteEvent(ref ecb, entity, p); continue;
             }
 
             // Friendly fire check
@@ -56,7 +56,7 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 if (SystemAPI.GetComponent<TeamComponent>(p.target).value == p.sourceTeam)
                 {
-                    ecb.RemoveComponent<PendingDamageEvent>(entity); continue;
+                    CompleteEvent(ref ecb, entity, p); continue;
                 }
             }
 
@@ -147,7 +147,7 @@ public partial class DamageCalculationSystem : SystemBase
                         }
                     }
                     shieldLookup[p.target] = shield;
-                    ecb.RemoveComponent<PendingDamageEvent>(entity);
+                    CompleteEvent(ref ecb, entity, p);
                     continue;
                 }
             }
@@ -190,10 +190,15 @@ public partial class DamageCalculationSystem : SystemBase
                     cat, effectiveDmg);
             }
 
-            ecb.RemoveComponent<PendingDamageEvent>(entity);
+            CompleteEvent(ref ecb, entity, p);
         }
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+    static void CompleteEvent(ref EntityCommandBuffer ecb, Entity entity, PendingDamageEvent pending)
+    {
+        if (pending.destroyEntityAfterProcessing) ecb.DestroyEntity(entity);
+        else ecb.RemoveComponent<PendingDamageEvent>(entity);
     }
 }

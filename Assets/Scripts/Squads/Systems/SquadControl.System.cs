@@ -12,15 +12,16 @@ using System.Collections.Generic;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadOrderSystem))]
+[UpdateBefore(typeof(OrderResolutionSystem))]
 [UpdateBefore(typeof(FormationSystem))]
 public partial class SquadControlSystem : SystemBase
 {
     private Camera _mainCamera;
 
     // Variables para el doble clic de X
-    private float _lastXPressTime = 0f;
+    private float _lastXPressTime = float.NegativeInfinity;
     private const float DOUBLE_CLICK_THRESHOLD = 0.5f; // Tiempo máximo entre clics para detectar doble clic
-    private float _lastCPressTime = 0f; // Para doble clic de C
+    private float _lastCPressTime = float.NegativeInfinity; // Para doble clic de C
 
     // [Sprint6] Insistence / heroOrdenCooldown constants
     private const int   InsistenceCount  = 3;
@@ -37,7 +38,7 @@ public partial class SquadControlSystem : SystemBase
     protected override void OnUpdate()
     {
         // Create temporary command buffer for deferred entity changes
-        var ecb = new EntityCommandBuffer(Allocator.Temp);
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
             
         if (_mainCamera == null)
             _mainCamera = Camera.main;
@@ -141,13 +142,12 @@ public partial class SquadControlSystem : SystemBase
                 }
                 intentChanged = true;
             }
-            if (intentChanged) ecb.SetComponent(tickSquad, intent);
+            if (intentChanged) SystemAPI.SetComponent(tickSquad, intent);
         }
 
         if (!orderIssued && !formationChanged)
         {
             ecb.Playback(EntityManager);
-            ecb.Dispose();
             return;
         }
 
@@ -214,6 +214,7 @@ public partial class SquadControlSystem : SystemBase
                         if (squadDef.formationLibrary.IsCreated)
                         {
                             ref var formations = ref squadDef.formationLibrary.Value.formations;
+                            if (formations.Length == 0) continue;
 
                             if (isDoubleClickX)
                             {
@@ -268,7 +269,8 @@ public partial class SquadControlSystem : SystemBase
                     }
                 }
 
-                input.hasNewOrder = true;
+                // FormationSystem consumes desiredFormation independently of movement orders.
+                input.hasNewOrder = input.hasNewOrder || orderIssued;
                 squadChanges.Add((squadEntity, input, intent));
             }
             else
@@ -289,13 +291,8 @@ public partial class SquadControlSystem : SystemBase
             
             // Execute all deferred changes
             ecb.Playback(EntityManager);
-            ecb.Dispose();
             
         // Apply changes via EntityCommandBuffer
-        }
-        else
-        {
-            ecb.Dispose();
         }
     }
 

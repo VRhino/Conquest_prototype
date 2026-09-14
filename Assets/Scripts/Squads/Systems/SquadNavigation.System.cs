@@ -1,13 +1,12 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine.AI;
 
 /// <summary>
-/// Moves the leader of a squad towards <see cref="SquadNavigationComponent.targetPosition"/>
-/// using a NavMeshAgent when available.
+/// Monitors navigation completion. UnitNavMeshSystem owns movement destinations.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(GridFormationUpdateSystem))]
 public partial class SquadNavigationSystem : SystemBase
 {
     protected override void OnCreate()
@@ -18,8 +17,6 @@ public partial class SquadNavigationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        var transformLookup = GetComponentLookup<LocalTransform>(true);
-        var navAgentLookup = GetComponentLookup<NavAgentComponent>();
 
         foreach (var (nav, state, units, entity) in SystemAPI
                      .Query<RefRW<SquadNavigationComponent>,
@@ -30,24 +27,34 @@ public partial class SquadNavigationSystem : SystemBase
             if (!nav.ValueRO.isNavigating || units.Length == 0)
                 continue;
 
-            Entity leader = units[0].Value;
-            if (!SystemAPI.Exists(leader) || !transformLookup.HasComponent(leader))
-                continue;
-
-            float3 leaderPos = transformLookup[leader].Position;
-            float distSq = math.distancesq(leaderPos, nav.ValueRO.targetPosition);
-            if (distSq <= nav.ValueRO.arrivalThreshold * nav.ValueRO.arrivalThreshold)
-            {
+            if (HasArrived(EntityManager, units, nav.ValueRO.targetPosition, nav.ValueRO.arrivalThreshold))
                 nav.ValueRW.isNavigating = false;
-                continue;
-            }
-
-            if (navAgentLookup.HasComponent(leader))
-            {
-                var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(leader);
-                if (agent != null && agent.enabled)
-                    agent.SetDestination(nav.ValueRO.targetPosition);
-            }
         }
+    }
+
+    public static bool HasArrived(EntityManager em, DynamicBuffer<SquadUnitElement> units, float3 fallback, float threshold)
+    {
+        for (int i = 0; i < units.Length; i++)
+        {
+            Entity unit = units[i].Value;
+            if (!em.Exists(unit) || em.HasComponent<IsDeadComponent>(unit)) continue;
+            if (!em.HasComponent<LocalTransform>(unit)) return false;
+            float3 requested = em.HasComponent<UnitTargetPositionComponent>(unit)
+                ? em.GetComponentData<UnitTargetPositionComponent>(unit).position : fallback;
+            float3 destination = GetEffectiveFormationDestination(em, unit, requested);
+            if (math.distancesq(em.GetComponentData<LocalTransform>(unit).Position, destination)
+                > math.square(math.max(0, threshold))) return false;
+        }
+        return true;
+    }
+
+    public static float3 GetEffectiveFormationDestination(EntityManager em, Entity unit, float3 requested)
+    {
+        if (!em.HasComponent<NavAgentComponent>(unit)) return requested;
+        var navigation = em.GetComponentData<NavAgentComponent>(unit);
+        return navigation.hasEffectiveFormationDestination
+            && math.distancesq(navigation.lastFormationRequest, requested) <= 0.0001f
+            ? navigation.effectiveFormationDestination
+            : requested;
     }
 }

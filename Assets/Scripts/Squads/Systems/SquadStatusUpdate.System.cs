@@ -26,6 +26,8 @@ public partial class SquadStatusUpdateSystem : SystemBase
 
             if (!SystemAPI.Exists(squadEntity))
                 continue;
+            if (SystemAPI.HasComponent<SquadOwnerDeathRetreatComponent>(squadEntity))
+                continue;
 
             bool hasStatus = SystemAPI.HasComponent<SquadStatusComponent>(squadEntity);
 

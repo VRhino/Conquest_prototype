@@ -34,7 +34,8 @@ public partial class SquadSpawningSystem : SystemBase
                      .WithNone<HeroSquadReference>()
                      .WithEntityAccess())
         {
-            if (!spawn.ValueRO.hasSpawned)
+            if (!spawn.ValueRO.hasSpawned || (SystemAPI.HasComponent<HeroLifeComponent>(entity)
+                && !SystemAPI.GetComponent<HeroLifeComponent>(entity).isAlive))
             {
                 continue;
             }
@@ -44,6 +45,27 @@ public partial class SquadSpawningSystem : SystemBase
 
             if (!defLookup.TryGetComponent(selection.ValueRO.squadDataEntity, out var def))
                 continue;
+            if (!def.formationLibrary.IsCreated || def.formationLibrary.Value.formations.Length == 0)
+                continue;
+            Entity mapOwner = entity;
+            if (!SystemAPI.HasBuffer<SquadIdMapElement>(mapOwner) && isLocalPlayerLookup.HasComponent(entity) &&
+                SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var localContainer))
+                mapOwner = localContainer;
+            SquadIdMapElement snapshot = default;
+            if (SystemAPI.HasBuffer<SquadIdMapElement>(mapOwner))
+                foreach (var entry in SystemAPI.GetBuffer<SquadIdMapElement>(mapOwner))
+                    if (entry.squadId == selection.ValueRO.instanceId) { snapshot = entry; break; }
+            int formationIndex = math.clamp(snapshot.formationIndex, 0, def.formationLibrary.Value.formations.Length - 1);
+            if (def.formationLibrary.Value.formations[formationIndex].gridPositions.Length == 0)
+                continue;
+            bool eliminated = false;
+            if (SystemAPI.HasBuffer<InactiveSquadElement>(entity))
+                foreach (var reserve in SystemAPI.GetBuffer<InactiveSquadElement>(entity))
+                    if (reserve.squadId == selection.ValueRO.instanceId)
+                    { eliminated = reserve.isEliminated || reserve.aliveUnits <= 0; break; }
+            if (eliminated) continue;
+            int initialLevel = snapshot.hasSnapshot ? snapshot.level : 1;
+            float initialXP = snapshot.hasSnapshot ? snapshot.currentXP : 0f;
             // Create squad entity (ECS-only, sin visuales)
             Entity squad = ecb.CreateEntity();
 #if UNITY_EDITOR
@@ -79,6 +101,12 @@ public partial class SquadSpawningSystem : SystemBase
                 detectionRange   = def.detectionRange
             });
             ecb.AddComponent(squad, new SquadDataReference { dataEntity = squad }); // Self-ref so SquadAISystem can find this squad
+            if (SystemAPI.HasBuffer<AbilityByLevelElement>(selection.ValueRO.squadDataEntity))
+            {
+                var abilitySource = SystemAPI.GetBuffer<AbilityByLevelElement>(selection.ValueRO.squadDataEntity);
+                var abilityTarget = ecb.AddBuffer<AbilityByLevelElement>(squad);
+                foreach (var ability in abilitySource) abilityTarget.Add(ability);
+            }
             ecb.AddComponent(squad, new SquadStatsComponent
             {
                 squadType = def.squadType,
@@ -87,18 +115,21 @@ public partial class SquadSpawningSystem : SystemBase
             // Note: Formation library is now included directly in SquadDataComponent
             ecb.AddComponent(squad, new SquadProgressComponent
             {
-                level = 1,
-                currentXP = 0f,
-                xpToNextLevel = 100f
+                level = initialLevel,
+                currentXP = initialXP,
+                xpToNextLevel = SquadProgressionSystem.CalculateNext(initialLevel)
             });
-            ecb.AddComponent(squad, new SquadInstanceComponent { id = selection.ValueRO.instanceId });
+            ecb.AddComponent(squad, new SquadInstanceComponent
+            {
+                id = selection.ValueRO.instanceId, persistentId = snapshot.persistentId
+            });
 
             // Los squads son entidades lógicas sin visual propio
             // Solo las unidades individuales tienen visuales
 
             // Obtener la primera formación disponible en el arreglo como formación por defecto (índice 0)
             var firstFormationType = def.formationLibrary.Value.formations.Length > 0
-                ? def.formationLibrary.Value.formations[0].formationType
+                ? def.formationLibrary.Value.formations[formationIndex].formationType
                 : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
 
             // Todos los squads comienzan en HoldPosition para que el jugador se oriente antes de mover
@@ -197,12 +228,20 @@ public partial class SquadSpawningSystem : SystemBase
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);
 
             ref var formations = ref def.formationLibrary.Value.formations;
-            ref var firstFormation = ref formations[0]; // Always use index 0 for initial spawn
+            ref var firstFormation = ref formations[formationIndex];
+            float2 formationCenter = FormationPositionCalculator.CalculateFormationCenter(ref firstFormation.gridPositions);
 
-            int unitCount = firstFormation.gridPositions.Length;
+            int unitCount = math.min(math.max(0, def.unitCount), firstFormation.gridPositions.Length);
+            if (snapshot.hasSnapshot) unitCount = math.min(unitCount, snapshot.totalUnits);
+            ecb.SetComponent(squad, new SquadInstanceComponent
+            {
+                id = selection.ValueRO.instanceId, persistentId = snapshot.persistentId,
+                initialUnitCount = unitCount
+            });
 
             // Check if this is a re-invocation with reduced units (squad swap)
             int spawnCount = unitCount;
+            if (snapshot.hasSnapshot) spawnCount = math.min(spawnCount, snapshot.aliveUnits);
             if (SystemAPI.HasBuffer<InactiveSquadElement>(entity))
             {
                 var inactiveBuffer = SystemAPI.GetBuffer<InactiveSquadElement>(entity);
@@ -210,16 +249,18 @@ public partial class SquadSpawningSystem : SystemBase
                 {
                     if (inactiveBuffer[b].squadId == selection.ValueRO.instanceId)
                     {
-                        spawnCount = inactiveBuffer[b].aliveUnits;
+                        spawnCount = math.clamp(inactiveBuffer[b].aliveUnits, 0, unitCount);
                         inactiveBuffer.RemoveAt(b);
                         break;
                     }
                 }
             }
 
-            // Compute level-1 speed using curve + weight (same formula as UnitStatsUtility)
+            // Compute saved-level speed using curve + weight (same formula as UnitStatsUtility)
             // UnitStatScalingSystem will override this on level changes.
-            float spawnSpeedMul = data.curves.IsCreated ? data.curves.Value.speed[0] : 1f; // index 0 = level 1
+            float spawnSpeedMul = 1f;
+            if (data.curves.IsCreated)
+                spawnSpeedMul = SquadProgressionCurves.Read(ref data.curves.Value.speed, initialLevel);
             int spawnWeightCategory = (int)math.round(data.weight);
             float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.baseSpeed, spawnSpeedMul, spawnWeightCategory);
 
@@ -234,6 +275,7 @@ public partial class SquadSpawningSystem : SystemBase
                     unit,
                     ref firstFormation.gridPositions,
                     i, // unitIndex
+                    formationCenter,
                     new SquadStateComponent { currentState = initialState },
                     null,
                     formationAnchor, // usar el ancla del squad que ya incluye squadSpawnOffset
@@ -348,9 +390,10 @@ public partial class SquadSpawningSystem : SystemBase
                 });
                 ecb.AddComponent(unit, new PenetrationComponent
                 {
-                    bluntPenetration  = data.bluntPenetration,
-                    slashPenetration  = data.slashingPenetration,
-                    piercePenetration = data.piercingPenetration
+                    // Base penetration lives on the weapon profile. This is the additive bonus.
+                    bluntPenetration  = 0f,
+                    slashPenetration  = 0f,
+                    piercePenetration = 0f
                 });
                 ecb.AddComponent(unit, new UnitWeaponComponent
                 {
@@ -431,10 +474,9 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 var inactiveBuffer = ecb.AddBuffer<InactiveSquadElement>(entity);
                 // Read the SquadIdMapElement buffer from DataContainer to get int→string mapping
-                var dcQuery = GetEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
-                if (!dcQuery.IsEmptyIgnoreFilter)
+                if (SystemAPI.HasBuffer<SquadIdMapElement>(mapOwner))
                 {
-                    Entity dcEntity = dcQuery.GetSingletonEntity();
+                    Entity dcEntity = mapOwner;
                     if (SystemAPI.HasBuffer<SquadIdMapElement>(dcEntity))
                     {
                         var mapBuffer = SystemAPI.GetBuffer<SquadIdMapElement>(dcEntity);
@@ -454,18 +496,20 @@ public partial class SquadSpawningSystem : SystemBase
                             {
                                 if (idComp.ValueRO.id == map.baseSquadID)
                                 {
-                                    totalUnitsForSquad = defComp.ValueRO.formationLibrary.Value.formations[0].gridPositions.Length;
+                                    totalUnitsForSquad = math.max(0, defComp.ValueRO.unitCount);
                                     break;
                                 }
                             }
 
+                            if (map.hasSnapshot) totalUnitsForSquad = math.min(totalUnitsForSquad, map.totalUnits);
+                            int aliveUnitsForSquad = map.hasSnapshot ? math.min(totalUnitsForSquad, map.aliveUnits) : totalUnitsForSquad;
                             inactiveBuffer.Add(new InactiveSquadElement
                             {
                                 squadId = map.squadId,
                                 baseSquadID = map.baseSquadID,
-                                aliveUnits = totalUnitsForSquad,
+                                aliveUnits = aliveUnitsForSquad,
                                 totalUnits = totalUnitsForSquad,
-                                isEliminated = false
+                                isEliminated = aliveUnitsForSquad == 0
                             });
                         }
                     }

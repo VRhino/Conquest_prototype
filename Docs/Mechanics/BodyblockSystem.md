@@ -63,15 +63,10 @@ por las mismas reglas que una unidad Moving.
 ### Héroe local
 El héroe local usa `CharacterController` + sincronización de `LocalTransform`. Su
 `NavMeshAgent` no está activo en el NavMesh (`isOnNavMesh = false`) → el sistema lo
-excluye automáticamente. El bloqueo se delega a física:
-
-**Acción requerida en Unity Editor:**
-Agregar un `CapsuleCollider` (non-trigger) a cada prefab visual de unidad:
-- Radius ≈ `0.35f`, Height ≈ `1.8f`, Center Y ≈ `0.9f`
-- Layer: `Default` (o el layer que usa el CharacterController del héroe)
-
-El `CharacterController` del héroe no puede atravesar colliders no-trigger → bloqueo
-natural sin código adicional.
+excluye automáticamente. El bloqueo se delega a física. Los tres prefabs de unidad
+registrados contienen un `CapsuleCollider` no trigger; la matriz ignora héroe-unidad
+del mismo equipo y conserva la colisión contra el equipo enemigo. El contrato está
+cubierto por PlayMode.
 
 ---
 
@@ -86,24 +81,26 @@ Escala máxima: 900 unidades (450 por equipo). Brute-force O(n²) → inaceptabl
 
 ---
 
-## Constantes (tunear en play mode)
+## Configuración (`SquadSpawnConfig`)
 
-| Constante          | Valor  | Descripción                                        |
-|--------------------|--------|----------------------------------------------------|
-| `BodyblockRadius`  | 0.8 m  | Radio de colisión; también es el `CellSize`        |
-| `RepulsionStrength`| 8f     | Fuerza Moving vs Moving / Formed no-muro           |
-| `WallStrength`     | 60f    | Fuerza cuando formación-muro bloquea a un móvil    |
-| `MaxPushPerFrame`  | 0.3 m  | Clamp máximo de desplazamiento por frame           |
+| Campo                           | Valor por defecto | Descripción                                      |
+|---------------------------------|-------------------|--------------------------------------------------|
+| `bodyblockRadius`               | 0.8 m             | Radio de colisión y tamaño de celda              |
+| `bodyblockRepulsionStrength`    | 8                 | Fuerza Moving vs Moving / Formed no-muro         |
+| `bodyblockWallStrength`         | 60                | Fuerza cuando una formación-muro bloquea         |
+| `bodyblockMaxPushSpeed`         | 18 m/s            | Velocidad máxima de corrección, independiente FPS|
+| `bodyblockEngagingRadius`       | 0.35 m            | Radio reducido entre unidades Engaging           |
+| `bodyblockEngagingStrength`     | 3                 | Fuerza suave entre unidades Engaging             |
 
 ---
 
 ## Orden de ejecución
 
 ```
-UnitNavMeshSystem → UnitBodyblockSystem
+UnitNavMeshSystem → UnitBodyblockSystem → NavMeshPositionSyncSystem
 ```
 
-`UpdateAfter(UnitNavMeshSystem)` garantiza que el `SetDestination()` ya fue emitido.
+El destino se decide primero, el bodyblock aplica `agent.Move()` después y la posición corregida se copia a ECS en el mismo ciclo.
 
 ---
 
@@ -115,6 +112,7 @@ UnitNavMeshSystem → UnitBodyblockSystem
 | Push fuera del NavMesh              | `agent.Move()` clampea automáticamente                               |
 | Unidad desplazada de su slot        | `UnitFormationStateSystem` detecta → Moving → se auto-corrige        |
 | Agent no en NavMesh                 | Guard `agent.isOnNavMesh` (mismo patrón que UnitNavMeshSystem)       |
+| Dos enemigos exactamente solapados  | Dirección horizontal determinista derivada del par de entidades      |
 | Héroe local sin NavMeshAgent activo | Excluido por `isOnNavMesh`; bloqueado por CapsuleCollider físico     |
 | Dos formaciones-muro enfrentadas    | `Formed vs Formed = sin push` → sin vibración, contacto estático OK  |
 

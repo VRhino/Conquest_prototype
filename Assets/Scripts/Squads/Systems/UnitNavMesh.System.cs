@@ -40,68 +40,52 @@ public partial class UnitNavMeshSystem : SystemBase
     // Unit → squad order map, rebuilt every frame.
     private NativeHashMap<Entity, SquadOrderType> _unitToOrder;
 
-    // Unit → squad tactical intent map, rebuilt every frame.
-    private NativeHashMap<Entity, TacticalIntent> _unitToIntent;
-
-    // Unit → squad FSM state map, rebuilt every frame.
-    private NativeHashMap<Entity, SquadFSMState> _unitToFSMState;
-
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
         _unitToOrder    = new NativeHashMap<Entity, SquadOrderType>(256, Allocator.Persistent);
-        _unitToIntent   = new NativeHashMap<Entity, TacticalIntent>(256, Allocator.Persistent);
-        _unitToFSMState = new NativeHashMap<Entity, SquadFSMState>(256, Allocator.Persistent);
     }
 
     protected override void OnDestroy()
     {
         if (_unitToOrder.IsCreated)    _unitToOrder.Dispose();
-        if (_unitToIntent.IsCreated)   _unitToIntent.Dispose();
-        if (_unitToFSMState.IsCreated) _unitToFSMState.Dispose();
     }
 
     protected override void OnUpdate()
     {
-        // ── Phase 0: build unit → squad order/intent/state maps ────────────
+        // ── Phase 0: build unit → squad order map ────────────
         _unitToOrder.Clear();
-        _unitToIntent.Clear();
-        _unitToFSMState.Clear();
 
         foreach (var (state, units, squadEntity) in
             SystemAPI.Query<RefRO<SquadStateComponent>, DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
             SquadOrderType order    = state.ValueRO.currentOrder;
-            SquadFSMState  fsmState = state.ValueRO.currentState;
-            TacticalIntent intent = SystemAPI.HasComponent<SquadAIComponent>(squadEntity)
-                ? SystemAPI.GetComponent<SquadAIComponent>(squadEntity).tacticalIntent
-                : TacticalIntent.Idle;
-
             for (int i = 0; i < units.Length; i++)
             {
                 Entity u = units[i].Value;
                 if (u != Entity.Null)
                 {
                     _unitToOrder.TryAdd(u, order);
-                    _unitToIntent.TryAdd(u, intent);
-                    _unitToFSMState.TryAdd(u, fsmState);
                 }
             }
         }
 
         // Read leash distance once — avoids per-unit singleton lookup
-        float leashDistance = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
-            ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().unitLeashDistance
-            : 6f;
+        bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
+        var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
+        float leashDistance = hasConfig ? config.unitLeashDistance : 6f;
+        float sampleRadius = hasConfig ? math.max(0.01f, config.navMeshDestinationSampleRadius) : 2f;
+        float retryDistance = hasConfig ? math.max(0.01f, config.navMeshFailureRetryDistance) : 1f;
+        float arrivalThreshold = hasConfig ? math.max(0.01f, config.slotArrivalThreshold) : 0.2f;
 
         // ── Phase 1: movement + rotation decision per NavMesh unit ───────────
-        foreach (var (targetPos, formState, transform, entity) in
+        foreach (var (targetPos, formState, navigationState, transform, entity) in
             SystemAPI.Query<RefRO<UnitTargetPositionComponent>,
                             RefRO<UnitFormationStateComponent>,
+                            RefRW<NavAgentComponent>,
                             RefRW<LocalTransform>>()
-                     .WithAll<NavAgentComponent>()
                      .WithEntityAccess())
         {
             var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(entity);
@@ -110,12 +94,18 @@ public partial class UnitNavMeshSystem : SystemBase
 
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
 
-            float3 unitPos    = transform.ValueRO.Position;
-            float3 destination = targetPos.ValueRO.position; // default: formation slot
+            float3 unitPos = transform.ValueRO.Position;
+            float3 requestedSlot = targetPos.ValueRO.position;
+            var navigation = navigationState.ValueRO;
+            DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
+                arrivalThreshold, ref navigation);
+            float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
+                unitPos, sampleRadius, retryDistance, ref navigation);
+            float3 destination = formationDestination;
+            bool usesFormationDestination = true;
 
-            // Read squad state early — needed by leash bypass and movement gate.
+            // Tactical order controls pursuit independently of combat state.
             _unitToOrder.TryGetValue(entity, out SquadOrderType squadOrder);
-            _unitToFSMState.TryGetValue(entity, out SquadFSMState squadFSMState);
 
             // Read optional combat components
             bool   hasCombat    = SystemAPI.HasComponent<UnitCombatComponent>(entity)
@@ -135,20 +125,14 @@ public partial class UnitNavMeshSystem : SystemBase
                 if (combatTarget != Entity.Null && !SystemAPI.Exists(combatTarget))
                     combatTarget = Entity.Null;
 
-                // Leash: only pursue if enemy is within leashDistance of the unit's formation slot.
-                // Bypassed when tacticalIntent == Attacking (SquadAI decided to engage)
-                // OR when squad FSM is InCombat (unit must pursue target, not return to slot).
-                _unitToIntent.TryGetValue(entity, out TacticalIntent tacticalIntent);
-                bool isAttacking = tacticalIntent == TacticalIntent.Attacking;
-                bool isInCombat  = squadFSMState == SquadFSMState.InCombat;
-
-                if (!isAttacking && !isInCombat
-                    && combatTarget != Entity.Null
+                // A combat state does not authorize pursuit outside the formation leash.
+                if (combatTarget != Entity.Null
                     && SystemAPI.HasComponent<LocalTransform>(combatTarget))
                 {
                     float3 slotPos    = targetPos.ValueRO.position;
                     float3 enemyPos3D = SystemAPI.GetComponent<LocalTransform>(combatTarget).Position;
-                    if (math.distancesq(enemyPos3D, slotPos) > leashDistance * leashDistance)
+                    if (squadOrder != SquadOrderType.HoldPosition
+                        && !CanPursueTarget(squadOrder, slotPos, enemyPos3D, leashDistance))
                         combatTarget = Entity.Null; // out of leash — return to formation slot
                 }
             }
@@ -168,7 +152,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 // to stay inside the directional AABB bounds.
                 float  stopDist = isRanged ? attackRange : (attackRange * StopDistanceFactor);
 
-                if (dist > stopDist)
+                if (!isHoldingPosition && dist > stopDist)
                 {
                     float2 baseDir = math.normalizesafe(unitXZ - targetXZ);
 
@@ -184,11 +168,13 @@ public partial class UnitNavMeshSystem : SystemBase
 
                     float2 stopXZ = targetXZ + rotatedDir * stopDist;
                     destination   = new float3(stopXZ.x, unitPos.y, stopXZ.y);
+                    usesFormationDestination = false;
                 }
-                else
+                else if (!isHoldingPosition)
                 {
                     // Already in attack range — stay at current position
                     destination = unitPos;
+                    usesFormationDestination = false;
                 }
 
                 // ── Rotation: face target when in close range ────────────────
@@ -228,22 +214,109 @@ public partial class UnitNavMeshSystem : SystemBase
 
 
 
-            // Gate: movement decision based on squad FSM state.
-            if (squadFSMState == SquadFSMState.InCombat)
-            {
-                if (combatTarget != Entity.Null)
-                    agent.SetDestination(destination); // SetDestination overrides any previous path naturally
-                else
-                    agent.ResetPath(); // No target available — stop in place
-            }
-            else if (formState.ValueRO.State == UnitFormationState.Waiting && combatTarget == Entity.Null)
+            // Without an eligible pursuit target, return to the slot even in combat.
+            // Holding units retain their combat target for facing/attacks, not movement.
+            if (formState.ValueRO.State == UnitFormationState.Waiting
+                && (combatTarget == Entity.Null || isHoldingPosition))
             {
                 agent.ResetPath(); // hold until randomized reaction delay expires
+                navigation.hasIssuedCommand = false;
             }
             else
             {
-                agent.SetDestination(destination);
+                if (!usesFormationDestination
+                    && !TrySampleDestination(agent, destination, sampleRadius, out destination))
+                {
+                    destination = formationDestination;
+                    usesFormationDestination = true;
+                }
+
+                if (agent.SetDestination(destination))
+                {
+                    navigation.lastCommandDestination = destination;
+                    navigation.hasIssuedCommand = true;
+                    navigation.lastCommandWasFormation = usesFormationDestination;
+                }
+                else if (usesFormationDestination)
+                {
+                    RejectFormationDestination(agent, requestedSlot, unitPos, ref navigation);
+                }
             }
+
+            navigationState.ValueRW = navigation;
         }
+    }
+
+    private static float3 ResolveFormationDestination(NavMeshAgent agent, float3 requested,
+        float3 current, float sampleRadius, float retryDistance, ref NavAgentComponent navigation)
+    {
+        if (navigation.formationDestinationFailed
+            && math.distancesq(navigation.lastFormationRequest, requested) < math.square(retryDistance))
+            return navigation.effectiveFormationDestination;
+
+        navigation.lastFormationRequest = requested;
+        navigation.hasEffectiveFormationDestination = true;
+        if (TrySampleDestination(agent, requested, sampleRadius, out float3 resolved))
+        {
+            navigation.effectiveFormationDestination = resolved;
+            navigation.formationDestinationFailed = false;
+            return resolved;
+        }
+
+        RejectFormationDestination(agent, requested, current, ref navigation);
+        return current;
+    }
+
+    private static void DetectFailedFormationPath(NavMeshAgent agent, float3 requested,
+        float3 current, float retryDistance, float arrivalThreshold, ref NavAgentComponent navigation)
+    {
+        if (!navigation.hasIssuedCommand || !navigation.lastCommandWasFormation
+            || agent.pathPending
+            || math.distancesq(navigation.lastFormationRequest, requested) >= math.square(retryDistance))
+            return;
+
+        bool isFar = math.distancesq(current, navigation.lastCommandDestination)
+            > math.square(arrivalThreshold);
+        if (agent.pathStatus != NavMeshPathStatus.PathComplete || (!agent.hasPath && isFar))
+            RejectFormationDestination(agent, requested, current, ref navigation);
+    }
+
+    private static void RejectFormationDestination(NavMeshAgent agent, float3 requested,
+        float3 current, ref NavAgentComponent navigation)
+    {
+        navigation.lastFormationRequest = requested;
+        navigation.effectiveFormationDestination = current;
+        navigation.hasEffectiveFormationDestination = true;
+        navigation.formationDestinationFailed = true;
+        navigation.hasIssuedCommand = false;
+        agent.ResetPath();
+    }
+
+    public static bool TrySampleDestination(NavMeshAgent agent, float3 requested,
+        float sampleRadius, out float3 resolved)
+    {
+        var filter = new NavMeshQueryFilter
+        {
+            agentTypeID = agent.agentTypeID,
+            areaMask = agent.areaMask
+        };
+        if (NavMesh.SamplePosition(requested, out NavMeshHit hit,
+                math.max(0.01f, sampleRadius), filter))
+        {
+            resolved = hit.position;
+            return true;
+        }
+
+        resolved = default;
+        return false;
+    }
+
+    /// <summary>Movement permission; target acquisition and attacking remain separate.</summary>
+    public static bool CanPursueTarget(SquadOrderType order, float3 slot, float3 target, float leashDistance)
+    {
+        if (order == SquadOrderType.HoldPosition)
+            return false;
+        return order == SquadOrderType.Attack
+            || math.distancesq(slot, target) <= math.square(math.max(0f, leashDistance));
     }
 }

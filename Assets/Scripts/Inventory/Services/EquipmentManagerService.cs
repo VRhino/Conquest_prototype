@@ -366,9 +366,15 @@ public static class EquipmentManagerService
     /// Calcula el total de stats proporcionados por todo el equipment equipado.
     /// </summary>
     public static Dictionary<string, float> CalculateTotalEquipmentStats()
+        => CalculateTotalEquipmentStats(_currentHero);
+
+    public static Dictionary<string, float> CalculateTotalEquipmentStats(IHeroInventory hero)
     {
         var totalStats = new Dictionary<string, float>();
-        var equippedItems = GetAllEquippedItems();
+        var equipment = hero?.Equipment;
+        if (equipment == null) return totalStats;
+        var equippedItems = new[] { equipment.weapon, equipment.helmet, equipment.torso,
+            equipment.gloves, equipment.pants, equipment.boots };
 
         if (equippedItems.Length == 0) Debug.LogWarning("[EquipmentManager] No equipped items found for stat calculation");
         

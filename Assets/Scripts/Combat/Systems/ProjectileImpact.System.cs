@@ -32,6 +32,7 @@ public partial class ProjectileImpactSystem : SystemBase
             var reqEntity = EntityManager.CreateEntity();
             EntityManager.AddComponentData(reqEntity, new PendingDamageEvent
             {
+                destroyEntityAfterProcessing = true,
                 target           = data.target,
                 damageSource     = data.shooter,
                 damageProfile    = data.damageProfile,

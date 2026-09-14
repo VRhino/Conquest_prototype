@@ -17,8 +17,8 @@ public partial struct UnitFormationStateSystem : ISystem
     {
         float dt = SystemAPI.Time.DeltaTime;
         var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
-        const float formationRadiusSq = 100f; // 10m squared — supports up to 20-unit formations
-        const float slotThresholdSq = 0.04f; // ~0.2m threshold for being "in slot" (reducido de 0.25f)
+        float slotThresholdSq = math.square(math.max(0f, spawnConfig.slotArrivalThreshold));
+        float holdPositionThresholdSq = math.square(math.max(0f, spawnConfig.holdReformThreshold));
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -30,16 +30,12 @@ public partial struct UnitFormationStateSystem : ISystem
             if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
                 continue;
 
-            float3 heroPos = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity).position;
             bool heroMovingForSquad = SystemAPI.IsComponentEnabled<SquadAnchorMovingTag>(squadEntity);
 
             // Determinar si el escuadrón está en modo Hold Position
-            bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
+            bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
+                && squadState.currentState != SquadFSMState.Retreating;
 
-            var localTransformLookup = SystemAPI.GetComponentLookup<LocalTransform>(true);
-            float farestDistSq = FormationPositionCalculator.GetFarestUnitDistanceSq(units, localTransformLookup, heroPos, out Entity farestUnit);
-            bool heroWithinRadius = farestDistSq <= formationRadiusSq;
-            
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;
@@ -52,7 +48,9 @@ public partial struct UnitFormationStateSystem : ISystem
 
                 if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
                     continue;
-                float3 desiredSlotPos = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+                float3 requestedSlotPos = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+                float3 desiredSlotPos = SquadNavigationSystem.GetEffectiveFormationDestination(
+                    state.EntityManager, unit, requestedSlotPos);
 
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
 
@@ -73,7 +71,6 @@ public partial struct UnitFormationStateSystem : ISystem
                     // En Hold Position: transiciones de estado simplificadas
                     // Las unidades solo se mueven si están muy lejos de su posición asignada
                     // Usar un threshold más grande solo para detectar si necesita reorganizarse
-                    const float holdPositionThresholdSq = 1.0f; // 1 metro cuadrado para cambios de formación (reducido de 4.0f)
                     switch (stateComp.State)
                     {
                         case UnitFormationState.Formed:
@@ -122,7 +119,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             // Formed -> Waiting: Hero leaves grid radius OR unit is far from assigned slot (formation changed)
                             bool nearAssignedSlot = FormationPositionCalculator.IsUnitInSlot(
                                 currentPos, desiredSlotPos, slotThresholdSq);
-                            if (!heroWithinRadius || !nearAssignedSlot)
+                            if (!nearAssignedSlot)
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;
@@ -140,7 +137,7 @@ public partial struct UnitFormationStateSystem : ISystem
                                 if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
                             }
                             // Waiting -> Formed: Hero returns to radius while still waiting
-                            else if (heroWithinRadius && inSlot)
+                            else if (inSlot)
                             {
                                 stateComp.State = UnitFormationState.Formed;
                                 stateComp.DelayTimer = 0f;
@@ -149,7 +146,7 @@ public partial struct UnitFormationStateSystem : ISystem
 
                         case UnitFormationState.Moving:
                             // Moving -> Formed: Unit reaches slot AND hero is within radius
-                            if (inSlot && heroWithinRadius)
+                            if (inSlot)
                             {
                                 if (!heroMovingForSquad)
                                 {

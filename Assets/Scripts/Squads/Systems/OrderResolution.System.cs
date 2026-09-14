@@ -14,8 +14,8 @@ using Unity.Mathematics;
 ///     1. combatReaction.reactToEnemy → CombatReaction wins (blocks movement)
 ///     2. Otherwise                   → AI wins
 ///
-/// hasNewOrder is only set to true when the winning order or source changes,
-/// except for local squads which forward input.hasNewOrder directly.
+/// Remote orders are reissued when their payload changes. Local explicit requests
+/// are forwarded directly. HoldPosition is never replaced by a combat reaction.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(CombatReactionSystem))]
@@ -66,7 +66,8 @@ public partial class OrderResolutionSystem : SystemBase
                     resolved.ValueRW.targetEntity = Entity.Null;
                     resolved.ValueRW.source       = OrderSource.Player;
                 }
-                else if (combatReaction.ValueRO.reactToEnemy)
+                else if (combatReaction.ValueRO.reactToEnemy
+                         && playerIntent.ValueRO.orderType != SquadOrderType.HoldPosition)
                 {
                     // Combat reaction blocks the movement order
                     resolved.ValueRW.order       = SquadOrderType.Attack;
@@ -92,8 +93,10 @@ public partial class OrderResolutionSystem : SystemBase
                 SquadOrderType winningOrder;
                 Entity         winningTarget;
                 OrderSource    winningSource;
+                float3         winningPosition = default;
 
-                if (combatReaction.ValueRO.reactToEnemy)
+                if (combatReaction.ValueRO.reactToEnemy
+                    && aiIntent.ValueRO.suggestedOrder != SquadOrderType.HoldPosition)
                 {
                     winningOrder  = SquadOrderType.Attack;
                     winningTarget = combatReaction.ValueRO.reactTarget;
@@ -104,14 +107,19 @@ public partial class OrderResolutionSystem : SystemBase
                     winningOrder  = aiIntent.ValueRO.suggestedOrder;
                     winningTarget = aiIntent.ValueRO.targetEntity;
                     winningSource = OrderSource.AI;
+                    if (winningOrder == SquadOrderType.HoldPosition)
+                        winningPosition = aiIntent.ValueRO.holdPosition;
                 }
 
                 // Only issue a new order when something actually changed
                 bool orderChanged = winningOrder  != resolved.ValueRO.order
-                                 || winningSource != resolved.ValueRO.source;
+                                 || winningSource != resolved.ValueRO.source
+                                 || winningTarget != resolved.ValueRO.targetEntity
+                                 || math.any(winningPosition != resolved.ValueRO.holdPosition)
+                                 || input.ValueRO.desiredFormation != resolved.ValueRO.formation;
 
                 resolved.ValueRW.order       = winningOrder;
-                resolved.ValueRW.holdPosition = default;
+                resolved.ValueRW.holdPosition = winningPosition;
                 resolved.ValueRW.targetEntity = winningTarget;
                 resolved.ValueRW.source       = winningSource;
                 resolved.ValueRW.formation    = input.ValueRO.desiredFormation;

@@ -138,8 +138,11 @@ public class DataCacheService : MonoBehaviour
     }
 
     public static EquipmentBonuses GetEquipmentBonuses()
+        => GetEquipmentBonuses(PlayerSessionService.SelectedHero);
+
+    public static EquipmentBonuses GetEquipmentBonuses(IHeroInventory hero)
     {
-        var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats();
+        var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats(hero);
         return new EquipmentBonuses
         {
             strengthBonus  = equipmentStats.ContainsKey("Strength")  ? (int)equipmentStats["Strength"]  : 0,
@@ -153,7 +156,7 @@ public class DataCacheService : MonoBehaviour
     {
         if (heroData == null) return HeroCalculatedAttributes.Empty;
         var baseStats        = GetBaseStats(heroData);
-        var equipmentBonuses = GetEquipmentBonuses();
+        var equipmentBonuses = GetEquipmentBonuses(heroData);
         var classDefinition  = HeroClassManager.GetClassDefinition(heroData.classId);
         return HeroCalculatedAttributes.Calculate(baseStats, equipmentBonuses, temporaryMods, classDefinition);
     }
@@ -177,7 +180,7 @@ public class DataCacheService : MonoBehaviour
     public static float GetEquipmentBonusValue(IHeroProgression progression, string attributeName)
     {
         if (progression == null || string.IsNullOrEmpty(attributeName)) return 0f;
-        var equipmentBonuses = GetEquipmentBonuses();
+        var equipmentBonuses = GetEquipmentBonuses(progression as IHeroInventory);
         switch (attributeName.ToLower())
         {
             case "strength":  return equipmentBonuses.strengthBonus;

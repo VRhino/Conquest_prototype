@@ -22,7 +22,7 @@ public class SquadInstanceData
     /// <summary>Current squad level.</summary>
     public int level = 1;
 
-    /// <summary>Total experience accumulated by this squad.</summary>
+    /// <summary>Experience towards the next level (same semantics as the squad detail UI).</summary>
     public int experience = 0;
 
     // Unlocks and selections

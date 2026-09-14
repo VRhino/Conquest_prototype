@@ -23,8 +23,8 @@ public partial class HeroLevelSystem : SystemBase
     {
         if (!_initialized)
         {
-            InitializeProgressComponent();
-            _initialized = true;
+            _initialized = InitializeProgressComponent();
+            if (!_initialized) return;
         }
 
         if (!SystemAPI.TryGetSingletonEntity<HeroProgressComponent>(out var entity))
@@ -60,23 +60,27 @@ public partial class HeroLevelSystem : SystemBase
             save = true;
         }
 
+        // Playback destroys event entities and invalidates RefRW handles.
+        var snapshot = progress.ValueRO;
         ecb.Playback(EntityManager);
         ecb.Dispose();
 
-        if (save || IsPostMatch())
+        if (save)
         {
-            _saveData.level = progress.ValueRO.level;
-            _saveData.currentXP = progress.ValueRO.currentXP;
-            _saveData.perkPoints = progress.ValueRO.perkPoints;
-            LocalSaveSystem.SaveProgress(_saveData);
+            LocalSaveSystem.UpdateProgress(latest =>
+            {
+                latest.level = snapshot.level;
+                latest.currentXP = snapshot.currentXP;
+                latest.perkPoints = snapshot.perkPoints;
+            });
         }
     }
 
-    void InitializeProgressComponent()
+    bool InitializeProgressComponent()
     {
         var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<HeroProgressComponent>());
         if (q.IsEmptyIgnoreFilter)
-            return;
+            return false;
 
         Entity entity = q.GetSingletonEntity();
         var progress = EntityManager.GetComponentData<HeroProgressComponent>(entity);
@@ -85,6 +89,7 @@ public partial class HeroLevelSystem : SystemBase
         progress.xpToNextLevel = CalculateNext(_saveData.level);
         progress.perkPoints = _saveData.perkPoints;
         EntityManager.SetComponentData(entity, progress);
+        return true;
     }
 
     static int CalculateNext(int level)
@@ -92,12 +97,4 @@ public partial class HeroLevelSystem : SystemBase
         return (int)math.floor(100 * math.pow(1.2f, level - 1));
     }
 
-    bool IsPostMatch()
-    {
-        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
-        if (q.IsEmptyIgnoreFilter)
-            return false;
-        var state = q.GetSingleton<GameStateComponent>();
-        return state.currentPhase == GamePhase.PostPartida;
-    }
 }

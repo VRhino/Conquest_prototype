@@ -35,6 +35,7 @@ public static class LocalSaveSystem
     public class SquadInstanceData
     {
         public int id;
+        public string persistentId = string.Empty;
         public SquadType squadType;
         public int level = 1;
         public float currentXP = 0f;
@@ -45,28 +46,17 @@ public static class LocalSaveSystem
 
     static string FilePath => Path.Combine(Application.persistentDataPath, "player_progress.json");
 
-    /// <summary>Loads the player progress file or returns a new instance.</summary>
-    public static PlayerProgressData LoadProgress()
+    public static SquadInstanceData FindSquad(PlayerProgressData data, int id, string persistentId)
     {
-        if (!File.Exists(FilePath))
-            return new PlayerProgressData();
-
-        try
-        {
-            string json = File.ReadAllText(FilePath);
-            return JsonUtility.FromJson<PlayerProgressData>(json);
-        }
-        catch
-        {
-            return new PlayerProgressData();
-        }
+        // Never match a modern instance against a recycled battle-local integer.
+        return data.squads.Find(s => s != null && (!string.IsNullOrEmpty(persistentId)
+            ? s.persistentId == persistentId : string.IsNullOrEmpty(s.persistentId) && s.id == id));
     }
 
-    /// <summary>Serializes the given data to disk.</summary>
-    public static void SaveProgress(PlayerProgressData data)
-    {
-        string json = JsonUtility.ToJson(data, true);
-        File.WriteAllText(FilePath, json);
-    }
+    static ProgressFileStore Store => new ProgressFileStore(FilePath);
+
+    public static PlayerProgressData LoadProgress() => Store.Load();
+    public static void SaveProgress(PlayerProgressData data) => Store.Save(data);
+    public static void UpdateProgress(Action<PlayerProgressData> update) => Store.Update(update);
 }
 

@@ -17,3 +17,9 @@ public struct HeroAbilityBufferElement : IBufferElementData
     /// <summary>Ability category mapped to input.</summary>
     public AbilityCategory category;
 }
+
+/// <summary>Definition referenced by HeroAbilityComponent slots.</summary>
+public struct HeroAbilityDefinitionComponent : IComponentData
+{
+    public HeroAbilityBufferElement data;
+}

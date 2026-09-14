@@ -28,6 +28,11 @@ public static class FormationGridSystem
         );
     }
 
+    public static float3 GridToRelativeWorld(float2 gridPos)
+    {
+        return new float3(gridPos.x * CELL_WIDTH, 0f, gridPos.y * CELL_DEPTH);
+    }
+
     /// <summary>
     /// Convierte una posición del mundo a coordenadas de cuadrícula.
     /// </summary>

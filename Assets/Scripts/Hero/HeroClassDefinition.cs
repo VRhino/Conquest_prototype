@@ -23,6 +23,13 @@ public class HeroClassDefinition : ScriptableObject
     public int baseArmor;
     public int baseVitality;
 
+    [Header("Attribute validation limits")]
+    public int minStrength, minDexterity, minArmor, minVitality;
+    public int maxStrength = int.MaxValue;
+    public int maxDexterity = int.MaxValue;
+    public int maxArmor = int.MaxValue;
+    public int maxVitality = int.MaxValue;
+
     [Header("Constantes de Cálculo")]
     public float baseHealth = 100f;
     public float baseStamina = 100f;

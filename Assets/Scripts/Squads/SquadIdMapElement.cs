@@ -13,4 +13,11 @@ public struct SquadIdMapElement : IBufferElementData
 
     /// <summary>Base squad string ID for ECS lookup.</summary>
     public FixedString64Bytes baseSquadID;
+    public FixedString64Bytes persistentId;
+    public bool hasSnapshot;
+    public int level;
+    public float currentXP;
+    public int totalUnits;
+    public int aliveUnits;
+    public int formationIndex;
 }

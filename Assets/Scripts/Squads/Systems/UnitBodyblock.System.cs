@@ -15,17 +15,9 @@ using UnityEngine.AI;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitNavMeshSystem))]
+[UpdateBefore(typeof(NavMeshPositionSyncSystem))]
 public partial class UnitBodyblockSystem : SystemBase
 {
-    // ── Tuneable constants ────────────────────────────────────────────────────
-    private const float BodyblockRadius   = 0.8f;   // radio de colisión per-entidad
-    private const float RepulsionStrength = 8f;     // fuerza Moving vs Moving
-    private const float WallStrength      = 60f;    // fuerza cuando una formación-muro bloquea
-    private const float MaxPushPerFrame   = 0.3f;   // clamp de desplazamiento por frame
-    private const float EngagingRadius    = 0.35f;  // solo previene overlap físico entre engaging
-    private const float EngagingStrength  = 3f;     // suave — no empuja fuera de rango de ataque
-    private const float CellSize          = BodyblockRadius;
-
     // ── Formaciones que actúan como muro sólido ───────────────────────────────
     // Line / Testudo / Wedge / Square / ShieldWall forman una pared continua; Dispersed y Column no.
     private static bool IsWallFormation(FormationType f) =>
@@ -39,6 +31,7 @@ public partial class UnitBodyblockSystem : SystemBase
     private struct AgentData
     {
         public NavMeshAgent       agent;
+        public Entity             entity;
         public float3             position;
         public UnitFormationState state;   // héroes = siempre Moving
         public Team               team;
@@ -55,12 +48,20 @@ public partial class UnitBodyblockSystem : SystemBase
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
+        RequireForUpdate<SquadSpawnConfigComponent>();
     }
 
     protected override void OnUpdate()
     {
         float dt = SystemAPI.Time.DeltaTime;
         if (dt <= 0f) return;
+        var config = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
+        float radius = math.max(0.01f, config.bodyblockRadius);
+        float repulsionStrength = math.max(0f, config.bodyblockRepulsionStrength);
+        float wallStrength = math.max(0f, config.bodyblockWallStrength);
+        float maxPushSpeed = math.max(0f, config.bodyblockMaxPushSpeed);
+        float engagingRadius = math.clamp(config.bodyblockEngagingRadius, 0f, radius);
+        float engagingStrength = math.max(0f, config.bodyblockEngagingStrength);
 
         // ── 0. Build unit→isWall map from squad formation data ────────────────
         // Iteramos todos los squads: si su formación es muro, marcamos cada
@@ -96,6 +97,7 @@ public partial class UnitBodyblockSystem : SystemBase
             _agents.Add(new AgentData
             {
                 agent      = agent,
+                entity     = entity,
                 position   = new float3(pos.x, pos.y, pos.z),
                 state      = formState,
                 team       = teamComp.ValueRO.value,
@@ -120,6 +122,7 @@ public partial class UnitBodyblockSystem : SystemBase
             _agents.Add(new AgentData
             {
                 agent    = agent,
+                entity   = entity,
                 position = new float3(pos.x, pos.y, pos.z),
                 state    = UnitFormationState.Moving,   // héroe = siempre activo
                 team     = teamComp.ValueRO.value,
@@ -140,7 +143,7 @@ public partial class UnitBodyblockSystem : SystemBase
         _grid.Clear();
         for (int i = 0; i < count; i++)
         {
-            var cell = ToCell(_agents[i].position);
+            var cell = ToCell(_agents[i].position, radius);
             if (!_grid.TryGetValue(cell, out var bucket))
             {
                 bucket = new List<int>(4);
@@ -150,11 +153,11 @@ public partial class UnitBodyblockSystem : SystemBase
         }
 
         // ── 4. Repulsion ──────────────────────────────────────────────────────
-        float radiusSq = BodyblockRadius * BodyblockRadius;
+        float radiusSq = radius * radius;
 
         for (int i = 0; i < count; i++)
         {
-            var cellI = ToCell(_agents[i].position);
+            var cellI = ToCell(_agents[i].position, radius);
 
             for (int dx = -1; dx <= 1; dx++)
             for (int dz = -1; dz <= 1; dz++)
@@ -170,11 +173,13 @@ public partial class UnitBodyblockSystem : SystemBase
                     float3 diff = _agents[i].position - _agents[j].position;
                     diff.y = 0f;
                     float distSq = math.lengthsq(diff);
-                    if (distSq >= radiusSq || distSq < 1e-6f) continue;
+                    if (distSq >= radiusSq) continue;
 
-                    float dist    = math.sqrt(distSq);
-                    float overlap = BodyblockRadius - dist;
-                    float3 dir    = diff / dist;  // i → dirección alejándose de j
+                    float dist = math.sqrt(distSq);
+                    float overlap = radius - dist;
+                    float3 dir = distSq < 1e-6f
+                        ? GetOverlapDirection(_agents[i].entity, _agents[j].entity)
+                        : diff / dist;
 
                     bool iMoving = _agents[i].state == UnitFormationState.Moving;
                     bool jMoving = _agents[j].state == UnitFormationState.Moving;
@@ -184,10 +189,10 @@ public partial class UnitBodyblockSystem : SystemBase
                     // Engaging vs Engaging → repulsión suave solo para prevenir overlap
                     if (iEng && jEng)
                     {
-                        float engRadSq = EngagingRadius * EngagingRadius;
+                        float engRadSq = engagingRadius * engagingRadius;
                         if (distSq >= engRadSq) continue;
-                        float eOverlap = EngagingRadius - dist;
-                        float eMag     = eOverlap * EngagingStrength * dt;
+                        float eOverlap = engagingRadius - dist;
+                        float eMag     = eOverlap * engagingStrength * dt;
                         var   ePush    = new Vector3(dir.x * eMag * 0.5f, 0f, dir.z * eMag * 0.5f);
                         _offsets[i] += ePush;
                         _offsets[j] -= ePush;
@@ -204,7 +209,7 @@ public partial class UnitBodyblockSystem : SystemBase
                     if (!iMoving && jMoving)
                     {
                         // i es muro, j se mueve → solo j recibe push (lejos de i)
-                        float str  = _agents[i].isWall ? WallStrength : RepulsionStrength;
+                        float str  = _agents[i].isWall ? wallStrength : repulsionStrength;
                         float mag  = overlap * str * dt;
                         // dir apunta de j hacia i → negarlo para alejar j de i
                         _offsets[j] -= new Vector3(dir.x * mag, 0f, dir.z * mag);
@@ -212,7 +217,7 @@ public partial class UnitBodyblockSystem : SystemBase
                     else if (iMoving && !jMoving)
                     {
                         // j es muro, i se mueve → solo i recibe push (lejos de j)
-                        float str  = _agents[j].isWall ? WallStrength : RepulsionStrength;
+                        float str  = _agents[j].isWall ? wallStrength : repulsionStrength;
                         float mag  = overlap * str * dt;
                         // dir apunta de j hacia i → aplicarlo para alejar i de j
                         _offsets[i] += new Vector3(dir.x * mag, 0f, dir.z * mag);
@@ -220,7 +225,7 @@ public partial class UnitBodyblockSystem : SystemBase
                     else
                     {
                         // Ambos Moving → 50/50
-                        float mag  = overlap * RepulsionStrength * dt;
+                        float mag  = overlap * repulsionStrength * dt;
                         var   push = new Vector3(dir.x * mag * 0.5f, 0f, dir.z * mag * 0.5f);
                         _offsets[i] += push;
                         _offsets[j] -= push;
@@ -235,14 +240,27 @@ public partial class UnitBodyblockSystem : SystemBase
             var offset = _offsets[i];
             if (offset == Vector3.zero) continue;
 
-            float len = offset.magnitude;
-            if (len > MaxPushPerFrame)
-                offset *= MaxPushPerFrame / len;
+            offset = ClampOffsetPerSecond(offset, maxPushSpeed, dt);
 
             _agents[i].agent.Move(offset);
         }
     }
 
-    private static (int, int) ToCell(float3 pos) =>
-        ((int)math.floor(pos.x / CellSize), (int)math.floor(pos.z / CellSize));
+    public static Vector3 ClampOffsetPerSecond(Vector3 offset, float maxSpeed, float deltaTime)
+    {
+        float maxDistance = math.max(0f, maxSpeed) * math.max(0f, deltaTime);
+        float len = offset.magnitude;
+        return len > maxDistance && len > 0f ? offset * (maxDistance / len) : offset;
+    }
+
+    public static float3 GetOverlapDirection(Entity first, Entity second)
+    {
+        uint hash = math.hash(new uint4((uint)first.Index, (uint)first.Version,
+            (uint)second.Index, (uint)second.Version));
+        float angle = (hash / (float)uint.MaxValue) * math.PI * 2f;
+        return new float3(math.cos(angle), 0f, math.sin(angle));
+    }
+
+    private static (int, int) ToCell(float3 pos, float cellSize) =>
+        ((int)math.floor(pos.x / cellSize), (int)math.floor(pos.z / cellSize));
 }

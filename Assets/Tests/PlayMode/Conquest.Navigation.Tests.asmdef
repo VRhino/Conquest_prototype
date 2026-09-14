@@ -1,0 +1,5 @@
+{
+  "name": "Conquest.Navigation.Tests",
+  "references": ["Game.ECS", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Transforms"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

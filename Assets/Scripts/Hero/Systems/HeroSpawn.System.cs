@@ -155,6 +155,7 @@ public partial class HeroSpawnSystem : SystemBase
                 spawnComponent.hasSpawned = true;
                 spawnComponent.spawnPosition = spawnPosition;
                 spawnComponent.spawnRotation = spawnRotation;
+                spawnComponent.positionRevision++;
                 spawnComponent.spawnId = dataForInstantiate.selectedSpawnID;
                 entityManager.SetComponentData(heroEntity, spawnComponent);
             }
@@ -259,6 +260,7 @@ public partial class HeroSpawnSystem : SystemBase
                     var rotation = CalculateSpawnRotation(correctedPosition, (int)team.ValueRO.value);
                     spawnData.ValueRW.spawnPosition = correctedPosition;
                     spawnData.ValueRW.spawnRotation = rotation;
+                    spawnData.ValueRW.positionRevision++;
                     transform.ValueRW.Position = correctedPosition;
                     transform.ValueRW.Rotation = rotation;
                     Debug.Log($"[HeroSpawnSystem.cs] Set LocalTransform.Position = {correctedPosition}");

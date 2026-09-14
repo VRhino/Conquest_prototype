@@ -8,6 +8,7 @@ using UnityEngine;
 /// Assigns target positions to squad units based on the selected formation.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(SquadOrderSystem))]
 public partial class FormationSystem : SystemBase
 {
     protected override void OnCreate()
@@ -53,7 +54,8 @@ public partial class FormationSystem : SystemBase
                 state.ValueRW = s;
                 continue;
             }
-            float3 heroPosition = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity).position;
+            var formationAnchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
+            float3 heroPosition = formationAnchor.position;
 
             ref var formations = ref squadDef.ValueRO.formationLibrary.Value.formations;
 
@@ -83,7 +85,13 @@ public partial class FormationSystem : SystemBase
 
             int squadUnitCount = units.Length;
             ref var gridPositions = ref formation.gridPositions;
+            float2 formationCenter = FormationPositionCalculator.CalculateFormationCenter(ref gridPositions);
             int positionsToUse = math.min(squadUnitCount, gridPositions.Length);
+            if (gridPositions.Length < squadUnitCount)
+            {
+                state.ValueRW = s;
+                continue; // Do not commit a layout that cannot assign every unit.
+            }
 
             for (int i = 0; i < positionsToUse; i++)
             {
@@ -95,13 +103,15 @@ public partial class FormationSystem : SystemBase
                     unit,
                     ref gridPositions,
                     i, // unitIndex
+                    formationCenter,
                     state.ValueRW, // SquadStateComponent
                     holdComponent, // SquadHoldPositionComponent? — use actual value instead of null
                     heroPosition, // heroPos
                     out int2 originalGridPos,
                     out float3 gridOffset,
                     out float3 worldPos,
-                    true);
+                    true,
+                    formationAnchor.rotation);
 
                 UpdateUnitPosition(unit, worldPos, new float3(originalGridPos.x, 0, originalGridPos.y), i, ecb);
 
@@ -109,6 +119,7 @@ public partial class FormationSystem : SystemBase
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
                 {
                     var gridSlot = SystemAPI.GetComponentRW<UnitGridSlotComponent>(unit);
+                    gridSlot.ValueRW.slotIndex = i;
                     gridSlot.ValueRW.gridPosition = originalGridPos; // Mantener posición original
                     gridSlot.ValueRW.worldOffset = gridOffset; // Usar offset directo sin centrado
                 }
@@ -130,7 +141,7 @@ public partial class FormationSystem : SystemBase
             activeFormation.ValueRW.formationChangeCooldown = 1f;
 
             // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
-            if (s.currentState == SquadFSMState.HoldingPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+            if (s.currentOrder == SquadOrderType.HoldPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
             {
                 var holdCompRW = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity);
                 holdCompRW.ValueRW.originalFormation = input.ValueRO.desiredFormation;

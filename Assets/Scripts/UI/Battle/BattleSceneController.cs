@@ -281,86 +281,7 @@ public class BattleSceneController : MonoBehaviour
     /// </summary>
     private void SyncBattleDataToECS()
     {
-        var localHeroName = PlayerSessionService.SelectedHero?.heroName;
-        if (string.IsNullOrEmpty(localHeroName)) return;
-
-        BattleHeroData localHero = _currentBattleData.findHeroDataByName(localHeroName);
-        if (localHero == null)
-        {
-            Debug.LogError($"SyncBattleDataToECS: findHeroDataByName('{localHeroName}') returned null. Attackers: [{string.Join(", ", _currentBattleData.attackers.ConvertAll(h => h.heroName))}] Defenders: [{string.Join(", ", _currentBattleData.defenders.ConvertAll(h => h.heroName))}]");
-            return;
-        }
-
-
-        // Parsear el string ID a int (IDs deben ser numéricos puros: "1", "2", "3")
-        int spawnID = 1;
-        if (!string.IsNullOrEmpty(localHero.spawnPointId))
-        {
-            if (int.TryParse(localHero.spawnPointId, out int parsedSpawnId))
-            {
-                spawnID = parsedSpawnId;
-            }
-            else
-            {
-                Debug.LogWarning($"[BattleSceneController] spawnPointId '{localHero.spawnPointId}' no es un entero válido. Usando default (1).");
-            }
-        }
-
-        // Mapear Side a teamID
-        int teamID = _currentBattleData.playerSide(localHeroName) == Side.Defenders ? 2 : 1;
-
-        // Actualizar el System(ECS) a través de EntityManager
-        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
-        var query = em.CreateEntityQuery(typeof(DataContainerComponent));
-
-        if (!query.IsEmpty)
-        {
-            var entity = query.GetSingletonEntity();
-            var data = em.GetComponentData<DataContainerComponent>(entity);
-
-            data.selectedSpawnID = spawnID;
-            data.teamID = teamID;
-            // Asegurar isReady=true para iniciar
-            data.isReady = true;
-
-            if (localHero.squadInstances != null && localHero.squadInstances.Count > 0)
-            {
-                data.selectedSquadBaseID = new FixedString64Bytes(localHero.squadInstances[0].baseSquadID);
-
-                // Asignar IDs enteros secuenciales (0, 1, 2, ...) a cada instancia de escuadra.
-                // ID 0 = escuadra activa → coincide con HeroSpawnSystem que hardcodea instanceId = 0.
-                data.selectedSquads.Clear();
-                for (int i = 0; i < localHero.squadInstances.Count; i++)
-                    data.selectedSquads.Add(i);
-
-                // Poblar el buffer de mapping usando las instancias directamente
-                if (em.HasBuffer<SquadIdMapElement>(entity))
-                {
-                    var mapBuffer = em.GetBuffer<SquadIdMapElement>(entity);
-                    mapBuffer.Clear();
-                    for (int i = 0; i < localHero.squadInstances.Count; i++)
-                    {
-                        mapBuffer.Add(new SquadIdMapElement
-                        {
-                            squadId = i,
-                            baseSquadID = new FixedString64Bytes(localHero.squadInstances[i].baseSquadID)
-                        });
-                    }
-                }
-            }
-
-            else
-            {
-                Debug.LogError($"SyncBattleDataToECS: Hero '{localHeroName}' has 0 squadInstances — selectedSquadBaseID will NOT be set, squads will not spawn.");
-            }
-
-            em.SetComponentData(entity, data);
-            Debug.Log($"[BattleSceneController] ECS DataContainerComponent sync: spawnID={spawnID}, teamID={teamID}");
-        }
-        else
-        {
-            Debug.LogError("[BattleSceneController] No se encontró el singleton DataContainerComponent para sincronizar.");
-        }
+        BattleBootstrapRequests.SubmitLocal(_currentBattleData, PlayerSessionService.SelectedHero?.heroName);
     }
 
     /// <summary>
@@ -595,6 +516,8 @@ public class BattleSceneController : MonoBehaviour
             squadEntities.Dispose();
             squadQuery.Dispose();
         }
+
+        BattleBootstrapRequests.SubmitRemote(World.DefaultGameObjectInjectionWorld, heroEntity, heroData.squadInstances);
 
         // Adjuntar datos visuales para que HeroVisualAppearanceSystem aplique partes al héroe remoto
         em.AddComponentObject(heroEntity, new HeroAppearanceComponent

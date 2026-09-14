@@ -19,22 +19,21 @@ public partial class EnemyDetectionSystem : SystemBase
     private ComponentLookup<LocalTransform>  _transformLookup;
     private ComponentLookup<HeroLifeComponent> _heroLifeLookup;
     private BufferLookup<UnitDetectedEnemy>  _unitDetectedLookup;
-    private BufferLookup<SquadUnitElement>   _squadUnitLookup;
+    static readonly Unity.Profiling.ProfilerMarker DetectionMarker = new Unity.Profiling.ProfilerMarker("Conquest.EnemyDetection");
 
     protected override void OnCreate()
     {
         _transformLookup    = GetComponentLookup<LocalTransform>(true);
         _heroLifeLookup     = GetComponentLookup<HeroLifeComponent>(true);
         _unitDetectedLookup = GetBufferLookup<UnitDetectedEnemy>(false);
-        _squadUnitLookup    = GetBufferLookup<SquadUnitElement>(true);
     }
 
     protected override void OnUpdate()
     {
+        using var detectionSample = DetectionMarker.Auto();
         _transformLookup.Update(this);
         _heroLifeLookup.Update(this);
         _unitDetectedLookup.Update(this);
-        _squadUnitLookup.Update(this);
 
         // PASS 1 — squad level: detect enemy units within detectionRange
         foreach (var (defA, teamA, unitsA, detectedEnemies, squadTargets, entityA) in
@@ -48,6 +47,9 @@ public partial class EnemyDetectionSystem : SystemBase
         {
             detectedEnemies.Clear();
             squadTargets.Clear();
+            // Clear before any early exit, otherwise dead/empty squads retain old targets.
+            foreach (var unit in unitsA)
+                if (_unitDetectedLookup.HasBuffer(unit.Value)) _unitDetectedLookup[unit.Value].Clear();
 
             // Compute centroid of squad A from alive unit positions
             float3 centroidA  = float3.zero;
@@ -55,7 +57,7 @@ public partial class EnemyDetectionSystem : SystemBase
             for (int i = 0; i < unitsA.Length; i++)
             {
                 Entity uA = unitsA[i].Value;
-                if (!SystemAPI.Exists(uA) || !_transformLookup.HasComponent(uA))
+                if (!SystemAPI.Exists(uA) || !_transformLookup.HasComponent(uA) || SystemAPI.HasComponent<IsDeadComponent>(uA))
                     continue;
                 centroidA += _transformLookup[uA].Position;
                 aliveCount++;
@@ -83,7 +85,7 @@ public partial class EnemyDetectionSystem : SystemBase
                 for (int j = 0; j < unitsB.Length; j++)
                 {
                     Entity uB = unitsB[j].Value;
-                    if (!SystemAPI.Exists(uB) || !_transformLookup.HasComponent(uB))
+                    if (!SystemAPI.Exists(uB) || !_transformLookup.HasComponent(uB) || SystemAPI.HasComponent<IsDeadComponent>(uB))
                         continue;
 
                     float3 posB = _transformLookup[uB].Position;
@@ -122,6 +124,7 @@ public partial class EnemyDetectionSystem : SystemBase
                      .WithEntityAccess())
             {
                 if (heroTeam.ValueRO.value == teamA.ValueRO.value) continue;
+                if (SystemAPI.HasComponent<IsDeadComponent>(heroEntity)) continue;
                 // If the entity has a HeroLifeComponent, respect its alive state
                 if (_heroLifeLookup.HasComponent(heroEntity) && !_heroLifeLookup[heroEntity].isAlive) continue;
 

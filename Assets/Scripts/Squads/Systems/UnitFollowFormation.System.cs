@@ -61,7 +61,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                 : math.forward();
 
             // Determinar el comportamiento según el estado del escuadrón
-            bool isHoldingPosition = squadState.currentState == SquadFSMState.HoldingPosition;
+            bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
+                && squadState.currentState != SquadFSMState.Retreating;
 
             // Detectar si el squad tiene la bandera hurryToComander activa
             bool hurryToComander = false;

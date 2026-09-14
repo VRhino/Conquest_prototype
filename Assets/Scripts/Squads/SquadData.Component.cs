@@ -61,6 +61,12 @@ public struct AbilityByLevelElement : IBufferElementData
     public Entity Value;
 }
 
+public struct SquadAbilityDefinitionComponent : IComponentData
+{
+    public FixedString64Bytes name;
+    public float cooldown;
+}
+
 /// <summary>
 /// Component used on squad entities to reference their <see cref="SquadDataComponent"/> entity.
 /// </summary>

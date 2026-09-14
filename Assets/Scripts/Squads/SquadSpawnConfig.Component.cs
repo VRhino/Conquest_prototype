@@ -2,6 +2,20 @@ using Unity.Entities;
 
 public struct SquadSpawnConfigComponent : IComponentData
 {
+    public float ownerDeathRetreatDuration;
+    public float retreatArrivalThreshold;
+    public float slotArrivalThreshold;
+    public float holdReformThreshold;
+    public float anchorMovingSpeedThreshold;
+    public float bodyblockRadius;
+    public float bodyblockRepulsionStrength;
+    public float bodyblockWallStrength;
+    public float bodyblockMaxPushSpeed;
+    public float bodyblockEngagingRadius;
+    public float bodyblockEngagingStrength;
+    public float navMeshDestinationSampleRadius;
+    public float navMeshFailureRetryDistance;
+    public float heroAIArrivalDistance;
     public float squadSpawnOffset;    // Distancia delante del héroe al spawnear el squad
     public float unitMinDistance;     // Distancia mínima entre unidades (spacing)
     public float unitRepelForce;      // Fuerza de repulsión entre unidades

@@ -1,8 +1,9 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
-/// Written by SquadAISystem each frame for squads owned by remote heroes (AI-controlled).
-/// Carries the AI tactical intent and suggested order.
+/// Written by HeroAIExecutionSystem for squads owned by remote heroes (AI-controlled).
+/// Persists the requested order while combat reactions temporarily override it.
 /// Read by OrderResolutionSystem.
 /// </summary>
 public struct SquadAIOrderIntentComponent : IComponentData
@@ -15,4 +16,7 @@ public struct SquadAIOrderIntentComponent : IComponentData
 
     /// <summary>Primary target entity for the suggested order.</summary>
     public Entity targetEntity;
+
+    /// <summary>World-space destination for HoldPosition.</summary>
+    public float3 holdPosition;
 }

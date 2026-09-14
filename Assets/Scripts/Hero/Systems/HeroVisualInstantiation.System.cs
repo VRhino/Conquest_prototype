@@ -19,6 +19,10 @@ public partial class HeroVisualInstantiationSystem : SystemBase
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
         var pendingNavAgents = new List<(Entity entity, NavMeshAgent agent)>();
+        float navSampleRadius = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
+            ? Mathf.Max(0.01f, SystemAPI.GetSingleton<SquadSpawnConfigComponent>()
+                .navMeshDestinationSampleRadius)
+            : 2f;
 
         foreach (var (spawn, transform, team, entity) in
                  SystemAPI.Query<RefRO<HeroSpawnComponent>, RefRO<LocalTransform>, RefRO<TeamComponent>>()
@@ -30,7 +34,8 @@ public partial class HeroVisualInstantiationSystem : SystemBase
             bool isLocal = SystemAPI.HasComponent<IsLocalPlayer>(entity);
             string baseId = spawn.ValueRO.visualPrefabId.ToString();
             string prefabKey = isLocal ? baseId : baseId + "_Remote";
-            CreateVisualForEntity(entity, prefabKey, transform.ValueRO, ecb, isLocal, pendingNavAgents, team.ValueRO.value);
+            CreateVisualForEntity(entity, prefabKey, transform.ValueRO, ecb, isLocal,
+                pendingNavAgents, team.ValueRO.value, navSampleRadius);
         }
 
         ecb.Playback(EntityManager);
@@ -47,7 +52,7 @@ public partial class HeroVisualInstantiationSystem : SystemBase
 
     private void CreateVisualForEntity(Entity entity, string visualPrefabId,
         LocalTransform transform, EntityCommandBuffer ecb, bool isLocalPlayer,
-        List<(Entity, NavMeshAgent)> pendingNavAgents, Team team = Team.None)
+        List<(Entity, NavMeshAgent)> pendingNavAgents, Team team, float navSampleRadius)
     {
         GameObject visualPrefab = VisualPrefabRegistry.Instance.GetPrefab(visualPrefabId);
         if (visualPrefab == null)
@@ -105,7 +110,8 @@ public partial class HeroVisualInstantiationSystem : SystemBase
             var agent = visualInstance.GetComponent<NavMeshAgent>();
             if (agent != null)
             {
-                agent.Warp(visualInstance.transform.position);
+                if (!TryPlaceRemoteAgent(agent, visualInstance.transform.position, navSampleRadius))
+                    Debug.LogWarning($"[HeroVisualInstantiationSystem] Remote hero {entity.Index} could not be placed on NavMesh.");
                 pendingNavAgents.Add((entity, agent));
             }
         }
@@ -114,6 +120,16 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         {
             visualInstanceId = visualInstance.GetEntityId()
         });
+    }
+
+    public static bool TryPlaceRemoteAgent(NavMeshAgent agent, Vector3 requestedPosition,
+        float sampleRadius)
+    {
+        if (agent == null || !agent.enabled) return false;
+        if (agent.Warp(requestedPosition)) return true;
+        return UnitNavMeshSystem.TrySampleDestination(agent, requestedPosition,
+                Mathf.Max(0.01f, sampleRadius), out var resolved)
+            && agent.Warp(resolved);
     }
 
     private static void SetLayerRecursively(GameObject obj, int layer)

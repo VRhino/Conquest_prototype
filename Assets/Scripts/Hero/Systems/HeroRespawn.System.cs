@@ -6,6 +6,8 @@ using Unity.Transforms;
 /// Handles respawning the hero after a death timer expires.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(DamageCalculationSystem))]
+[UpdateBefore(typeof(HeroSpawnSystem))]
 public partial class HeroRespawnSystem : SystemBase
 {
     protected override void OnCreate()
@@ -20,7 +22,7 @@ public partial class HeroRespawnSystem : SystemBase
 
         foreach (var (life, health, spawn) in
                  SystemAPI.Query<RefRW<HeroLifeComponent>,
-                                 RefRW<HealthComponent>,
+                                 RefRW<HeroHealthComponent>,
                                  RefRW<HeroSpawnComponent>>()
                                  .WithAll<IsLocalPlayer>())
         {

@@ -1,41 +1,44 @@
 using Unity.Entities;
+using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
-/// System that interprets the <see cref="SquadInputComponent"/> and updates
+/// System that applies the <see cref="SquadResolvedOrderComponent"/> and updates
 /// <see cref="SquadStateComponent"/> accordingly. It only runs when a new
 /// order has been issued.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 public partial class SquadOrderSystem : SystemBase
 {
-    private EntityCommandBuffer.ParallelWriter _ecb;
-    private BeginSimulationEntityCommandBufferSystem _ecbSystem;
-
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
-        _ecbSystem = World.GetOrCreateSystemManaged<BeginSimulationEntityCommandBufferSystem>();
     }
 
     protected override void OnUpdate()
     {
-        var ecb = _ecbSystem.CreateCommandBuffer().AsParallelWriter();
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
         var transformLookup = GetComponentLookup<LocalTransform>(true);
 
-        foreach (var (input, state, formation, owner, resolved, entity) in SystemAPI
+        foreach (var (input, state, owner, resolved, entity) in SystemAPI
                      .Query<RefRW<SquadInputComponent>,
                             RefRW<SquadStateComponent>,
-                            RefRW<FormationComponent>,
                             RefRO<SquadOwnerComponent>,
                             RefRW<SquadResolvedOrderComponent>>()
                      .WithEntityAccess())
         {
             if (!resolved.ValueRO.hasNewOrder)
                 continue;
+
+            if (state.ValueRO.retreatTriggered)
+            {
+                resolved.ValueRW.hasNewOrder = false;
+                input.ValueRW.hasNewOrder = false;
+                continue; // An order arriving during retirement cannot unlock the retreat.
+            }
 
             // Copy the winning order to the state component
             state.ValueRW.currentOrder     = resolved.ValueRO.order;
@@ -62,7 +65,7 @@ public partial class SquadOrderSystem : SystemBase
                 }
                 else
                 {
-                    ecb.AddComponent(entity.Index, entity, new SquadHoldPositionComponent
+                    ecb.AddComponent(entity, new SquadHoldPositionComponent
                     {
                         holdCenter        = resolved.ValueRO.holdPosition,
                         holdRotation      = heroRotation,
@@ -75,15 +78,11 @@ public partial class SquadOrderSystem : SystemBase
                 // Remove SquadHoldPositionComponent when not in Hold Position
                 if (SystemAPI.HasComponent<SquadHoldPositionComponent>(entity))
                 {
-                    ecb.RemoveComponent<SquadHoldPositionComponent>(entity.Index, entity);
+                    ecb.RemoveComponent<SquadHoldPositionComponent>(entity);
                 }
             }
 
-            // Request formation change if needed (formation still sourced from SquadInputComponent)
-            if (input.ValueRO.desiredFormation != formation.ValueRO.currentFormation)
-            {
-                formation.ValueRW.currentFormation = input.ValueRO.desiredFormation;
-            }
+            // FormationSystem alone commits the requested formation after assigning slots.
 
             // Request a state transition via the FSM system
             var newState = OrderToState(resolved.ValueRO.order);
@@ -94,7 +93,8 @@ public partial class SquadOrderSystem : SystemBase
             input.ValueRW.hasNewOrder    = false;
         }
 
-        _ecbSystem.AddJobHandleForProducer(Dependency);
+        // Anchor/formation systems must see hold additions/removals in this frame.
+        ecb.Playback(EntityManager);
     }
 
     static SquadFSMState OrderToState(SquadOrderType order)

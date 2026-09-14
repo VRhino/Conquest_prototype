@@ -3,13 +3,16 @@ using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine.AI;
 
+// HasComponent<NavMeshAgent> must also be safe before any visual has been spawned.
+[assembly: RegisterUnityEngineComponentType(typeof(NavMeshAgent))]
+
 /// <summary>
 /// Execution layer for the Remote Hero AI pipeline.
 /// Reads <see cref="HeroAIDecision"/> (written by one behavior system) and translates it
 /// into low-level commands that the existing game systems already understand:
 ///   - <see cref="HeroMoveIntent"/>     → picked up by HeroStateSystem for animation
 ///   - <see cref="NavMeshAgent"/>       → handles terrain-aware pathfinding
-///   - <see cref="SquadInputComponent"/> → picked up by SquadOrderSystem (no changes needed there)
+///   - <see cref="SquadAIOrderIntentComponent"/> → arbitrated by OrderResolutionSystem
 ///
 /// Attack intent is NOT handled here — it is read directly by HeroAttackSystem's AI loop.
 ///
@@ -18,27 +21,29 @@ using UnityEngine.AI;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroAIRusherSystem))]
 [UpdateAfter(typeof(HeroAIBalancedSystem))]
+[UpdateBefore(typeof(OrderResolutionSystem))]
 public partial class HeroAIExecutionSystem : SystemBase
 {
-    private const float ArrivalDistanceSq  = 1.5f * 1.5f;  // stop moving when this close to target
     private const float MinVelocitySqForIntent = 0.01f;    // below this desiredVelocity = not moving
 
     private ComponentLookup<HeroSquadReference>  _squadRefLookup;
-    private ComponentLookup<SquadInputComponent> _squadInputLookup;
-    private ComponentLookup<SquadStateComponent> _squadStateLookup;
+    private ComponentLookup<SquadAIOrderIntentComponent> _squadIntentLookup;
 
     protected override void OnCreate()
     {
         _squadRefLookup   = GetComponentLookup<HeroSquadReference>(true);
-        _squadInputLookup = GetComponentLookup<SquadInputComponent>(false);
-        _squadStateLookup = GetComponentLookup<SquadStateComponent>(true);
+        _squadIntentLookup = GetComponentLookup<SquadAIOrderIntentComponent>(false);
     }
 
     protected override void OnUpdate()
     {
         _squadRefLookup.Update(this);
-        _squadInputLookup.Update(this);
-        _squadStateLookup.Update(this);
+        _squadIntentLookup.Update(this);
+        bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
+        var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
+        float sampleRadius = hasConfig ? math.max(0.01f, config.navMeshDestinationSampleRadius) : 2f;
+        float retryDistance = hasConfig ? math.max(0.01f, config.navMeshFailureRetryDistance) : 1f;
+        float arrivalDistance = hasConfig ? math.max(0f, config.heroAIArrivalDistance) : 1.5f;
 
         foreach (var (decision, transform, stats, life, entity) in
                  SystemAPI.Query<RefRW<HeroAIDecision>,
@@ -61,42 +66,88 @@ public partial class HeroAIExecutionSystem : SystemBase
             if (EntityManager.HasComponent<NavMeshAgent>(entity))
                 agent = EntityManager.GetComponentObject<NavMeshAgent>(entity);
 
-            if (agent != null)
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
             {
+                var navigation = EntityManager.HasComponent<NavAgentComponent>(entity)
+                    ? EntityManager.GetComponentData<NavAgentComponent>(entity)
+                    : default;
                 if (shouldMove)
                 {
                     float3 selfPos = transform.ValueRO.Position;
-                    float  distSq  = math.distancesq(selfPos, dec.targetPosition);
-                    bool   arrived = distSq <= ArrivalDistanceSq;
+                    float3 requested = dec.targetPosition;
+                    bool sameFailedCommand = navigation.commandFailed
+                        && math.distancesq(navigation.lastFailedCommand, requested)
+                            < math.square(retryDistance);
 
-                    if (!arrived)
+                    if (!sameFailedCommand
+                        && UnitNavMeshSystem.TrySampleDestination(agent, requested,
+                            sampleRadius, out float3 resolved))
                     {
-                        float agentSpeed = dec.shouldSprint
-                            ? stats.ValueRO.baseSpeed * stats.ValueRO.sprintMultiplier
-                            : stats.ValueRO.baseSpeed;
-                        agent.speed     = agentSpeed;
-                        agent.isStopped = false;
-                        agent.SetDestination(new UnityEngine.Vector3(
-                            dec.targetPosition.x, dec.targetPosition.y, dec.targetPosition.z));
-
-                        // Derive world-space direction from NavMesh desired velocity
-                        // so HeroStateSystem can detect movement → play walk/run animation
-                        UnityEngine.Vector3 vel = agent.desiredVelocity;
-                        if (vel.sqrMagnitude > MinVelocitySqForIntent)
+                        bool previousPathFailed = navigation.hasIssuedCommand
+                            && !navigation.lastCommandWasFormation
+                            && !agent.pathPending
+                            && math.distancesq(navigation.lastCommandDestination, resolved) <= 0.0001f
+                            && agent.pathStatus != NavMeshPathStatus.PathComplete;
+                        if (previousPathFailed)
                         {
-                            moveDir = math.normalize(new float3(vel.x, vel.y, vel.z));
-                            speed   = agentSpeed;
+                            RejectCommand(agent, requested, ref navigation);
+                        }
+                        else
+                        {
+                            navigation.commandFailed = false;
+                            float distSq = math.distancesq(selfPos, resolved);
+                            bool arrived = distSq <= math.square(arrivalDistance);
+
+                            if (!arrived)
+                            {
+                                float agentSpeed = dec.shouldSprint
+                                    ? stats.ValueRO.baseSpeed * stats.ValueRO.sprintMultiplier
+                                    : stats.ValueRO.baseSpeed;
+                                agent.speed = agentSpeed;
+                                agent.isStopped = false;
+                                if (agent.SetDestination(resolved))
+                                {
+                                    navigation.lastCommandDestination = resolved;
+                                    navigation.hasIssuedCommand = true;
+                                    navigation.lastCommandWasFormation = false;
+                                }
+                                else
+                                {
+                                    RejectCommand(agent, requested, ref navigation);
+                                }
+
+                                // Derive world-space direction from NavMesh desired velocity
+                                // so HeroStateSystem can detect movement → play walk/run animation
+                                UnityEngine.Vector3 vel = agent.desiredVelocity;
+                                if (vel.sqrMagnitude > MinVelocitySqForIntent)
+                                {
+                                    moveDir = math.normalize(new float3(vel.x, vel.y, vel.z));
+                                    speed = agentSpeed;
+                                }
+                            }
+                            else
+                            {
+                                StopAgent(agent, ref navigation);
+                            }
                         }
                     }
                     else
                     {
-                        agent.isStopped = true;
+                        if (!sameFailedCommand)
+                        {
+                            RejectCommand(agent, requested, ref navigation);
+                        }
+                        else
+                            StopAgent(agent, ref navigation, false);
                     }
                 }
                 else
                 {
-                    agent.isStopped = true;
+                    StopAgent(agent, ref navigation);
                 }
+
+                if (EntityManager.HasComponent<NavAgentComponent>(entity))
+                    EntityManager.SetComponentData(entity, navigation);
             }
 
             // Write HeroMoveIntent so HeroStateSystem picks up movement state for animations
@@ -107,29 +158,35 @@ public partial class HeroAIExecutionSystem : SystemBase
             if (life.ValueRO.isAlive && dec.hasNewSquadOrder && _squadRefLookup.HasComponent(entity))
             {
                 Entity squadEntity = _squadRefLookup[entity].squad;
-                if (SystemAPI.Exists(squadEntity) && _squadInputLookup.HasComponent(squadEntity))
+                if (SystemAPI.Exists(squadEntity) && _squadIntentLookup.HasComponent(squadEntity))
                 {
-                    // BUG-006: block movement orders while squad is in active combat.
-                    // Attack orders are always allowed; movement orders would cause units to
-                    // physically leave detection range and break the combat engagement.
-                    bool isMovementOrder = dec.squadOrder == SquadOrderType.FollowHero
-                                       || dec.squadOrder == SquadOrderType.HoldPosition;
-                    bool squadInCombat   = _squadStateLookup.HasComponent(squadEntity)
-                                       && _squadStateLookup[squadEntity].currentState == SquadFSMState.InCombat;
-
-                    if (!isMovementOrder || !squadInCombat)
-                    {
-                        var squadInput          = _squadInputLookup[squadEntity];
-                        squadInput.orderType    = dec.squadOrder;
-                        squadInput.holdPosition = dec.squadOrderPosition;
-                        squadInput.hasNewOrder  = true;
-                        _squadInputLookup[squadEntity] = squadInput;
-                    }
+                    // Publish even during combat: arbitration must not discard the request.
+                    var intent = _squadIntentLookup[squadEntity];
+                    intent.suggestedOrder = dec.squadOrder;
+                    intent.holdPosition = dec.squadOrderPosition;
+                    intent.targetEntity = Entity.Null;
+                    _squadIntentLookup[squadEntity] = intent;
                 }
             }
 
             // Clear the one-shot squad order flag
             decision.ValueRW.hasNewSquadOrder = false;
         }
+    }
+
+    private static void RejectCommand(NavMeshAgent agent, float3 requested,
+        ref NavAgentComponent navigation)
+    {
+        navigation.lastFailedCommand = requested;
+        navigation.commandFailed = true;
+        StopAgent(agent, ref navigation);
+    }
+
+    private static void StopAgent(NavMeshAgent agent, ref NavAgentComponent navigation,
+        bool resetPath = true)
+    {
+        if (resetPath && agent.isOnNavMesh) agent.ResetPath();
+        agent.isStopped = true;
+        navigation.hasIssuedCommand = false;
     }
 }

@@ -14,7 +14,8 @@ public static class FormationPositionCalculator
         SquadHoldPositionComponent? holdComponent,
         float3 heroPos)
     {
-        return (squadState.currentState == SquadFSMState.HoldingPosition && holdComponent.HasValue)
+        return (squadState.currentOrder == SquadOrderType.HoldPosition
+                && squadState.currentState != SquadFSMState.Retreating && holdComponent.HasValue)
             ? holdComponent.Value.holdCenter
             : heroPos;
     }
@@ -51,43 +52,33 @@ public static class FormationPositionCalculator
         quaternion formationRotation = default
         )
     {
+        float2 formationCenter = CalculateFormationCenter(ref gridPositions);
+        return CalculateDesiredPosition(unit, ref gridPositions, unitIndex, formationCenter,
+            squadState, holdComponent, heroPos, out originalGridPos, out gridOffset,
+            out worldPos, adjustForTerrain, formationRotation);
+    }
+
+    public static float3 CalculateDesiredPosition(
+        Entity unit,
+        ref BlobArray<int2> gridPositions,
+        int unitIndex,
+        float2 formationCenter,
+        in SquadStateComponent squadState,
+        SquadHoldPositionComponent? holdComponent,
+        float3 heroPos,
+        out int2 originalGridPos,
+        out float3 gridOffset,
+        out float3 worldPos,
+        bool adjustForTerrain,
+        quaternion formationRotation = default)
+    {
         float3 squadCenter = GetSquadCenter(squadState, holdComponent, heroPos);
         var squadOrigin = squadCenter;
         originalGridPos = gridPositions[unitIndex];
-                            
-        //calculo la poscicion central ubicando al heroe en el centro de la formacion
-        int2 minGrid = new int2(int.MaxValue, int.MaxValue);
-        int2 maxGrid = new int2(int.MinValue, int.MinValue);
-
-        //busco los limites del grid
-        for (int j = 0; j < gridPositions.Length; j++)
-        {
-            minGrid.x = math.min(minGrid.x, gridPositions[j].x);
-            minGrid.y = math.min(minGrid.y, gridPositions[j].y);
-            maxGrid.x = math.max(maxGrid.x, gridPositions[j].x);
-            maxGrid.y = math.max(maxGrid.y, gridPositions[j].y);
-        }
-        //calculo el centro del grid
-        int2 formationCenter = new int2(
-            (int)math.round((minGrid.x + maxGrid.x) / 2.0f),
-            (int)math.round((minGrid.y + maxGrid.y) / 2.0f)
-        );
-
-        // Calculo la posicion central relativa al centro de la formacion
-        int2 centeredGridPos = new int2(
-            originalGridPos.x - formationCenter.x,
-            originalGridPos.y - formationCenter.y
-        );
-
-        //convierto la posicion central a world offset
+        float2 centeredGridPos = new float2(originalGridPos) - formationCenter;
         gridOffset = FormationGridSystem.GridToRelativeWorld(centeredGridPos);
-
-        // Rotate grid offset if a valid non-identity rotation is provided
-        // default(quaternion) = (0,0,0,0) which is invalid, so check w != 0
-        if (formationRotation.value.w != 0f && !formationRotation.Equals(quaternion.identity))
-        {
-            gridOffset = math.mul(formationRotation, gridOffset);
-        }
+        if (math.lengthsq(formationRotation.value) > 1e-6f)
+            gridOffset = math.mul(math.normalize(formationRotation), gridOffset);
 
         float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
 
@@ -102,59 +93,17 @@ public static class FormationPositionCalculator
         return worldPos;
     }
 
-    /// <summary>
-    /// Obtiene la distancia al cuadrado entre el héroe y la unidad más cercana del escuadrón.
-    /// </summary>
-    /// <param name="units">Buffer de unidades del escuadrón</param>
-    /// <param name="transformLookup">Lookup de transformaciones</param>
-    /// <param name="heroPosition">Posición del héroe</param>
-    /// <param name="closestUnit">Salida: la unidad más cercana encontrada</param>
-    /// <returns>La distancia al cuadrado a la unidad más cercana, o float.MaxValue si no hay unidades válidas</returns>
-    public static float GetClosestUnitDistanceSq(DynamicBuffer<SquadUnitElement> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, out Entity closestUnit)
+    public static float2 CalculateFormationCenter(ref BlobArray<int2> gridPositions)
     {
-        float closestDistSq = float.MaxValue;
-        closestUnit = Entity.Null;
-        
-        foreach (var unitElement in units)
+        if (gridPositions.Length == 0) return float2.zero;
+        int2 minGrid = gridPositions[0];
+        int2 maxGrid = gridPositions[0];
+        for (int i = 1; i < gridPositions.Length; i++)
         {
-            Entity unit = unitElement.Value;
-            if (transformLookup.HasComponent(unit))
-            {
-                float3 unitPosition = transformLookup[unit].Position;
-                float distSq = math.lengthsq(heroPosition - unitPosition);
-                
-                if (distSq < closestDistSq)
-                {
-                    closestDistSq = distSq;
-                    closestUnit = unit;
-                }
-            }
+            minGrid = math.min(minGrid, gridPositions[i]);
+            maxGrid = math.max(maxGrid, gridPositions[i]);
         }
-
-        return closestDistSq;
+        return (new float2(minGrid) + new float2(maxGrid)) * 0.5f;
     }
 
-    // Devuelve la distancia al cuadrado entre el héroe y la unidad más lejana del escuadrón
-    public static float GetFarestUnitDistanceSq(DynamicBuffer<SquadUnitElement> units, ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, out Entity farestUnit)
-    {
-        float farestDistSq = float.MinValue;
-        farestUnit = Entity.Null;
-        
-        foreach (var unitElement in units)
-        {
-            Entity unit = unitElement.Value;
-            if (transformLookup.HasComponent(unit))
-            {
-                float3 unitPosition = transformLookup[unit].Position;
-                float distSq = math.lengthsq(heroPosition - unitPosition);
-                
-                if (distSq > farestDistSq)
-                {
-                    farestDistSq = distSq;
-                    farestUnit = unit;
-                }
-            }
-        }
-        return farestDistSq;
-    }
 }

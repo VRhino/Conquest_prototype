@@ -11,6 +11,7 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadFSMSystem))]
+[UpdateAfter(typeof(SquadNavigationSystem))]
 public partial class RetreatLogicSystem : SystemBase
 {
     protected override void OnCreate()
@@ -23,7 +24,6 @@ public partial class RetreatLogicSystem : SystemBase
     {
         float dt = SystemAPI.Time.DeltaTime;
 
-        var transformLookup = GetComponentLookup<LocalTransform>(true);
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (state, retreat, nav, units, entity) in SystemAPI
@@ -43,17 +43,8 @@ public partial class RetreatLogicSystem : SystemBase
             if (nav.ValueRW.arrivalThreshold <= 0f)
                 nav.ValueRW.arrivalThreshold = 0.5f;
 
-            bool reached = false;
-            if (units.Length > 0)
-            {
-                Entity leader = units[0].Value;
-                if (SystemAPI.Exists(leader) && transformLookup.HasComponent(leader))
-                {
-                    float3 pos = transformLookup[leader].Position;
-                    float distSq = math.distancesq(pos, retreat.ValueRO.retreatTarget);
-                    reached = distSq <= nav.ValueRO.arrivalThreshold * nav.ValueRO.arrivalThreshold;
-                }
-            }
+            bool reached = SquadNavigationSystem.HasArrived(EntityManager, units,
+                retreat.ValueRO.retreatTarget, nav.ValueRO.arrivalThreshold);
 
             if (reached || retreat.ValueRO.retreatTimer >= retreat.ValueRO.retreatDuration)
             {
@@ -93,6 +84,9 @@ public partial class RetreatLogicSystem : SystemBase
                 }
 
                 // Destroy all unit entities before destroying the squad
+                if (SystemAPI.HasComponent<SquadOwnerDeathRetreatComponent>(entity))
+                    PersistOwnerDeathRetreat(entity, units, ecb);
+
                 for (int u = 0; u < units.Length; u++)
                 {
                     Entity unitEntity = units[u].Value;
@@ -108,5 +102,43 @@ public partial class RetreatLogicSystem : SystemBase
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+
+    private void PersistOwnerDeathRetreat(Entity squad, DynamicBuffer<SquadUnitElement> units, EntityCommandBuffer ecb)
+    {
+        var em = EntityManager;
+        if (!em.HasComponent<SquadOwnerComponent>(squad) || !em.HasComponent<SquadInstanceComponent>(squad)) return;
+        Entity hero = em.GetComponentData<SquadOwnerComponent>(squad).hero;
+        if (!em.Exists(hero)) return;
+        var instance = em.GetComponentData<SquadInstanceComponent>(squad);
+        var entry = new InactiveSquadElement { squadId = instance.id,
+            totalUnits = math.max(instance.initialUnitCount, units.Length) };
+        for (int i = 0; i < units.Length; i++)
+            if (em.Exists(units[i].Value) && !em.HasComponent<IsDeadComponent>(units[i].Value)) entry.aliveUnits++;
+        entry.isEliminated = entry.aliveUnits == 0;
+        Entity mapOwner = hero;
+        if (!em.HasBuffer<SquadIdMapElement>(hero) && em.HasComponent<IsLocalPlayer>(hero)
+            && SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var container)) mapOwner = container;
+        if (em.HasBuffer<SquadIdMapElement>(mapOwner))
+            foreach (var mapping in em.GetBuffer<SquadIdMapElement>(mapOwner))
+                if (mapping.squadId == instance.id) { entry.baseSquadID = mapping.baseSquadID; break; }
+        if (entry.baseSquadID.IsEmpty && em.HasComponent<HeroSquadSelectionComponent>(hero))
+        {
+            var selection = em.GetComponentData<HeroSquadSelectionComponent>(hero);
+            if (selection.instanceId == instance.id && em.HasComponent<SquadDataIDComponent>(selection.squadDataEntity))
+                entry.baseSquadID = em.GetComponentData<SquadDataIDComponent>(selection.squadDataEntity).id;
+        }
+        if (em.HasBuffer<InactiveSquadElement>(hero))
+        {
+            var reserves = em.GetBuffer<InactiveSquadElement>(hero);
+            for (int i = reserves.Length - 1; i >= 0; i--)
+                if (reserves[i].squadId == instance.id) reserves.RemoveAt(i);
+            reserves.Add(entry);
+        }
+        else ecb.AddBuffer<InactiveSquadElement>(hero).Add(entry);
+
+        // A different/new squad reference must never be removed by old retirement cleanup.
+        if (em.HasComponent<HeroSquadReference>(hero) && em.GetComponentData<HeroSquadReference>(hero).squad == squad)
+            ecb.RemoveComponent<HeroSquadReference>(hero);
     }
 }

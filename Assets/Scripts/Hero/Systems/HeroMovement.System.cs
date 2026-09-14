@@ -10,6 +10,8 @@ using UnityEngine;
 /// Applies sprint multiplier when sprinting and stamina is available.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(HeroInputSystem))]
+[UpdateAfter(typeof(HeroSpawnSystem))]
 public partial class HeroMovementSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -29,13 +31,17 @@ public partial class HeroMovementSystem : SystemBase
             var stamina = EntityManager.GetComponentData<StaminaComponent>(entity);
             var life = EntityManager.GetComponentData<HeroLifeComponent>(entity);
 
-            if (!life.isAlive)
-                continue;
-
             float2 moveInput = input.MoveInput;
             var cam = Camera.main;
-            if (cam == null)
+            bool awaitingSpawn = EntityManager.HasComponent<HeroSpawnComponent>(entity)
+                && !EntityManager.GetComponentData<HeroSpawnComponent>(entity).hasSpawned;
+            if (!life.isAlive || awaitingSpawn || cam == null)
+            {
+                // Never leave the previous frame's movement request live on an early exit.
+                if (EntityManager.HasComponent<HeroMoveIntent>(entity))
+                    EntityManager.SetComponentData(entity, default(HeroMoveIntent));
                 continue;
+            }
 
             Vector3 camForward = cam.transform.forward;
             camForward.y = 0f;

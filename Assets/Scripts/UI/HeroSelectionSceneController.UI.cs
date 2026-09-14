@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using Data.Items;
-using UnityEditor.SearchService;
 
 public class HeroSelectionSceneController : MonoBehaviour
 {
@@ -169,20 +168,30 @@ public class HeroSelectionSceneController : MonoBehaviour
             return;
         }
 
-        // Confirmación simple usando un diálogo nativo de Unity
-        // Si usas un sistema de UI propio, reemplaza esto por tu popup
-        bool confirm = UnityEditor.EditorUtility.DisplayDialog(
-            "Delete Hero",
-            $"Are you sure you want to delete hero '{selectedHero.heroName}'? This action cannot be undone.",
-            "Delete",
-            "Cancel"
-        );
-        if (!confirm)
-        {
-            Debug.Log("Eliminación cancelada por el usuario.");
-            return;
-        }
+        heroPendingDeletion = selectedHero;
+    }
 
+    HeroData heroPendingDeletion;
+
+    void OnDisable() => heroPendingDeletion = null;
+
+    void OnGUI()
+    {
+        if (heroPendingDeletion == null) return;
+        var rect = new Rect((Screen.width - 420f) / 2f, (Screen.height - 170f) / 2f, 420f, 170f);
+        GUI.ModalWindow(73101, rect, _ =>
+        {
+            GUILayout.Label($"Delete hero '{heroPendingDeletion.heroName}'? This action cannot be undone.");
+            if (GUILayout.Button("Cancel")) heroPendingDeletion = null;
+            if (GUILayout.Button("Delete")) ConfirmHeroDeletion();
+        }, "Delete Hero");
+    }
+
+    void ConfirmHeroDeletion()
+    {
+        var heroToDelete = heroPendingDeletion;
+        heroPendingDeletion = null;
+        if (heroToDelete == null) return;
         var player = PlayerSessionService.CurrentPlayer;
         if (player == null)
         {
@@ -190,15 +199,16 @@ public class HeroSelectionSceneController : MonoBehaviour
             return;
         }
 
-        if (player.heroes.Remove(selectedHero))
+        if (player.heroes.Remove(heroToDelete))
         {
             SaveSystem.SavePlayer(player);
             LoadHeroButtons();
-            Debug.Log($"Héroe '{selectedHero.heroName}' eliminado correctamente.");
+            if (selectedHero == heroToDelete) selectedHero = null;
+            Debug.Log($"Héroe '{heroToDelete.heroName}' eliminado correctamente.");
         }
         else
         {
-            Debug.LogWarning($"No se pudo eliminar el héroe '{selectedHero.heroName}'.");
+            Debug.LogWarning($"No se pudo eliminar el héroe '{heroToDelete.heroName}'.");
         }
     }
     void OnExitPressed()

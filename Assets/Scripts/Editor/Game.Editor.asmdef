@@ -1,0 +1,5 @@
+{
+  "name": "Game.Editor",
+  "references": ["Game.ECS", "Unity.Entities", "Unity.Entities.Hybrid", "Unity.Mathematics", "Unity.Collections", "Unity.Transforms", "Unity.TextMeshPro", "Unity.InputSystem"],
+  "includePlatforms": ["Editor"]
+}

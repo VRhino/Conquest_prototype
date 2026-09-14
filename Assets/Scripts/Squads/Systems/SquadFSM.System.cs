@@ -30,6 +30,16 @@ public partial class SquadFSMSystem : SystemBase
         {
             var s = state.ValueRW;
 
+            // Retirement must also complete when its final unit dies (do not divert to KO).
+            if (s.retreatTriggered && s.currentState == SquadFSMState.Retreating)
+            {
+                s.transitionTo = SquadFSMState.Retreating;
+                state.ValueRW = s;
+                fsmComp.ValueRW.currentState = s.currentState;
+                fsmComp.ValueRW.stateTimer = s.stateTimer;
+                continue;
+            }
+
             // Apply pending transition
             if (s.currentState != s.transitionTo)
             {
@@ -68,24 +78,10 @@ public partial class SquadFSMSystem : SystemBase
                 continue;
             }
 
-            // Lock Retreating state once triggered (swap or owner death)
-            if (s.currentState == SquadFSMState.Retreating && s.retreatTriggered)
-            {
-                state.ValueRW = s;
-                // [Sprint2 dual-write]
-                fsmComp.ValueRW.currentState = s.currentState;
-                fsmComp.ValueRW.stateTimer   = s.stateTimer;
-                continue;
-            }
-
             // Determine next state based on conditions
             SquadFSMState desired = s.currentState;
 
-            if (!s.lastOwnerAlive && !s.retreatTriggered)
-            {
-                desired = SquadFSMState.Retreating;
-            }
-            else if (ai.ValueRO.isInCombat && !playerIntent.ValueRO.heroOrdenCooldownActive)
+            if (ai.ValueRO.isInCombat && !playerIntent.ValueRO.heroOrdenCooldownActive)
             {
                 desired = SquadFSMState.InCombat;
             }

@@ -1,0 +1,5 @@
+{
+  "name": "Conquest.ModularCharacter.Editor",
+  "references": ["Game.ECS", "Conquest.IconCreator.Editor"],
+  "includePlatforms": ["Editor"]
+}

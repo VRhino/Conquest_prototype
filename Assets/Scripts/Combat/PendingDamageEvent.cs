@@ -9,6 +9,8 @@ public enum HitType : byte { Body = 0, Shield = 1 }
 /// </summary>
 public struct PendingDamageEvent : IComponentData
 {
+    /// <summary>True only when the event owns its disposable entity (projectiles).</summary>
+    public bool destroyEntityAfterProcessing;
     /// <summary>Entity that will receive the damage.</summary>
     public Entity target;
 

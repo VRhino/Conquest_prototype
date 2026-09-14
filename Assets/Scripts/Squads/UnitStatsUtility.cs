@@ -23,14 +23,19 @@ public static class UnitStatsUtility
             return;
 
         // Calculate multipliers based on level
-        int index = math.clamp(level - 1, 0, data.curves.Value.health.Length - 1);
-        float healthMul = data.curves.Value.health[index];
-        float damageMul = data.curves.Value.damage[index];
-        float defenseMul = data.curves.Value.defense[index];
-        float speedMul = data.curves.Value.speed[index];
+        float healthMul = 1f, damageMul = 1f, defenseMul = 1f, speedMul = 1f;
+        if (data.curves.IsCreated)
+        {
+            ref var curves = ref data.curves.Value;
+            healthMul = SquadProgressionCurves.Read(ref curves.health, level);
+            damageMul = SquadProgressionCurves.Read(ref curves.damage, level);
+            defenseMul = SquadProgressionCurves.Read(ref curves.defense, level);
+            speedMul = SquadProgressionCurves.Read(ref curves.speed, level);
+        }
 
         // Apply stats to each unit
-        DynamicBuffer<SquadUnitElement> units = unitBufferLookup[squadEntity];
+        // Applying a missing component may invalidate DynamicBuffer handles.
+        using var units = unitBufferLookup[squadEntity].ToNativeArray(Allocator.Temp);
         foreach (var unitElement in units)
         {
             if (!entityManager.Exists(unitElement.Value))
@@ -84,6 +89,34 @@ public static class UnitStatsUtility
             entityManager.AddComponentData(unitEntity, stats);
 
         // Apply ranged stats if applicable
+        if (entityManager.HasComponent<HealthComponent>(unitEntity))
+        {
+            var health = entityManager.GetComponentData<HealthComponent>(unitEntity);
+            float fraction = health.maxHealth > 0f ? math.saturate(health.currentHealth / health.maxHealth) : 0f;
+            health.maxHealth = stats.health;
+            health.currentHealth = stats.health * fraction;
+            entityManager.SetComponentData(unitEntity, health);
+        }
+        if (entityManager.HasComponent<DefenseComponent>(unitEntity))
+            entityManager.SetComponentData(unitEntity, new DefenseComponent
+            {
+                bluntDefense = stats.bluntDefense,
+                slashDefense = stats.slashingDefense,
+                pierceDefense = stats.piercingDefense
+            });
+        if (entityManager.HasComponent<UnitWeaponComponent>(unitEntity))
+        {
+            var profileEntity = entityManager.GetComponentData<UnitWeaponComponent>(unitEntity).damageProfile;
+            if (entityManager.HasComponent<DamageProfileComponent>(profileEntity))
+            {
+                var profile = entityManager.GetComponentData<DamageProfileComponent>(profileEntity);
+                profile.bluntDamage = stats.bluntDamage;
+                profile.slashingDamage = stats.slashingDamage;
+                profile.piercingDamage = stats.piercingDamage;
+                entityManager.SetComponentData(profileEntity, profile);
+            }
+        }
+
         if (data.isRangedUnit)
         {
             var rangedStats = new UnitRangedStatsComponent
@@ -111,9 +144,8 @@ public static class UnitStatsUtility
                 shotTimer   = 0f
             };
 
-            if (entityManager.HasComponent<RangedAttackStateComponent>(unitEntity))
-                entityManager.SetComponentData(unitEntity, attackState);
-            else
+            // Recalculation must not refill ammo or interrupt a reload.
+            if (!entityManager.HasComponent<RangedAttackStateComponent>(unitEntity))
                 entityManager.AddComponentData(unitEntity, attackState);
         }
         else if (entityManager.HasComponent<UnitRangedStatsComponent>(unitEntity))

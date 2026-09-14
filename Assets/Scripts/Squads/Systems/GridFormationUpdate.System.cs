@@ -33,25 +33,20 @@ public partial class GridFormationUpdateSystem : SystemBase
 
             var squadDef  = SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity);
             var squadState = SystemAPI.GetComponent<SquadStateComponent>(squadEntity);
+            if (!SystemAPI.HasComponent<FormationComponent>(squadEntity)) continue;
             var formationComp = SystemAPI.GetComponent<FormationComponent>(squadEntity);
 
-            // Get current formation gridPositions from squad definition
-            ref BlobArray<int2> gridPositions = ref squadDef.formationLibrary.Value.formations[0].gridPositions;
-            if (squadDef.formationLibrary.IsCreated)
-            {
-                ref var formations = ref squadDef.formationLibrary.Value.formations;
-                FormationType currentFormation = formationComp.currentFormation;
-                
-                // Find the current formation in the library
-                for (int f = 0; f < formations.Length; f++)
-                {
-                    if (formations[f].formationType == currentFormation)
-                    {
-                        gridPositions = ref formations[f].gridPositions;
-                        break;
-                    }
-                }
-            }
+            if (!squadDef.formationLibrary.IsCreated
+                || squadDef.formationLibrary.Value.formations.Length == 0) continue;
+            ref var formations = ref squadDef.formationLibrary.Value.formations;
+            int formationIndex = -1;
+            for (int f = 0; f < formations.Length; f++)
+                if (formations[f].formationType == formationComp.currentFormation)
+                { formationIndex = f; break; }
+            if (formationIndex < 0) continue;
+            ref BlobArray<int2> gridPositions = ref formations[formationIndex].gridPositions;
+            if (gridPositions.Length == 0) continue;
+            float2 formationCenter = FormationPositionCalculator.CalculateFormationCenter(ref gridPositions);
             
             if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
                 continue;
@@ -73,7 +68,8 @@ public partial class GridFormationUpdateSystem : SystemBase
                 
                 // Use unified position calculator with current formation
                 float3 targetPos = float3.zero;
-                if (gridPositions.Length > 0 && i < gridPositions.Length)
+                int slotIndex = gridSlot.slotIndex;
+                if (slotIndex >= 0 && slotIndex < gridPositions.Length)
                 {
                     // Rotation already computed by SquadAnchorSystem (holdRotation or default)
                     quaternion formationRotation = anchorComp.rotation;
@@ -81,7 +77,8 @@ public partial class GridFormationUpdateSystem : SystemBase
                     FormationPositionCalculator.CalculateDesiredPosition(
                         unit,
                         ref gridPositions,
-                        i, // unitIndex
+                        slotIndex,
+                        formationCenter,
                         squadState,
                         holdComponent,
                         heroPos,

@@ -10,6 +10,9 @@ deben modificarlo salvo petición explícita del autor.
 
 ## Documentos vigentes
 
+- [`../Arquitectura/1_Arquitectura_Actual.md`](../Arquitectura/1_Arquitectura_Actual.md): línea base verificada
+  del modelo y los flujos que existen hoy en Conquest; es la referencia de estado actual frente a las
+  propuestas de esta carpeta.
 - [`01_Modelo_de_cooperacion.md`](01_Modelo_de_cooperacion.md): propiedad, flujo de propuestas y reglas de trabajo.
 - [`02_Arquitectura_objetivo.md`](02_Arquitectura_objetivo.md): división del juego unificado y flujo real de batalla.
 - [`03_Modelo_compartido_entidades_v0.md`](03_Modelo_compartido_entidades_v0.md): inventario y propuesta de entidades compartidas.

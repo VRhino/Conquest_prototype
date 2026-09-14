@@ -10,4 +10,18 @@ public struct NavAgentComponent : IComponentData
     /// EntityVisualSync skips its position write for this entity when this is true.
     /// </summary>
     public bool syncPositionFromNavMesh;
+
+    /// <summary>Last raw formation slot evaluated by UnitNavMeshSystem.</summary>
+    public Unity.Mathematics.float3 lastFormationRequest;
+
+    /// <summary>Reachable projection used by arrival/state systems.</summary>
+    public Unity.Mathematics.float3 effectiveFormationDestination;
+
+    public Unity.Mathematics.float3 lastCommandDestination;
+    public Unity.Mathematics.float3 lastFailedCommand;
+    public bool hasEffectiveFormationDestination;
+    public bool formationDestinationFailed;
+    public bool hasIssuedCommand;
+    public bool lastCommandWasFormation;
+    public bool commandFailed;
 }

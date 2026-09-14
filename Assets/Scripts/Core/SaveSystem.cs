@@ -20,8 +20,7 @@ namespace Core.Persistence
         }
         public void Save(PlayerData data)
         {
-            string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(filePath, json);
+            AtomicJsonFile.Write(filePath, data);
         }
         public PlayerData Load()
         {
