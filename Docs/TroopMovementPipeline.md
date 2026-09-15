@@ -45,18 +45,18 @@ Todos los sistemas pertenecen al `SimulationSystemGroup`.
 El héroe es el punto de referencia para la formación de tropas. Su pipeline:
 
 ```
-HeroInputSystem → HeroMovementSystem → HeroMoveIntent → EntityVisualSync
+HeroInputSystem → HeroMovementSystem → HeroMoveIntent → LocalHeroCharacterMotor
 ```
 
 | Sistema | Lee | Escribe |
 |---------|-----|---------|
 | `HeroInputSystem` | Teclado/Mouse | `HeroInputComponent` (MoveInput, IsSprintPressed, etc.) |
 | `HeroMovementSystem` | `HeroInputComponent`, `HeroStatsComponent`, `StaminaComponent` | `HeroMoveIntent` (Direction, Speed) |
-| `EntityVisualSync` | `HeroMoveIntent`, vida y revisión de spawn | Mueve el `CharacterController` local y publica su pose en `LocalTransform` |
+| `LocalHeroCharacterMotor` | `HeroMoveIntent`, vida y revisión de spawn | Mueve el `CharacterController` y publica `LocalTransform` + `HeroMotorStateComponent` |
 
-No existe actualmente `HeroStateSystem`, `HeroStateComponent` ni un componente compartido de posición anterior. La animación local deriva el movimiento de la intención/pose visual; la animación remota usa la velocidad del `NavMeshAgent`.
+No existe actualmente `HeroStateSystem` ni `HeroStateComponent`. La animación local combina dirección/eventos de input con velocidad y grounded confirmados por `HeroMotorStateComponent`; la animación remota usa la velocidad del `NavMeshAgent`.
 
-**Autoridad física:** para el héroe local, el **GameObject es autoritativo**. `EntityVisualSync` usa `CharacterController.Move()` con gravedad y escribe la posición de vuelta al ECS. Para unidades y héroes remotos con `syncPositionFromNavMesh`, el `NavMeshAgent` también es la autoridad física y `NavMeshPositionSyncSystem` publica su posición en ECS.
+**Autoridad física:** para el héroe local, `LocalHeroCharacterMotor` es el único ejecutor y el `CharacterController` resuelve el resultado físico. Para unidades y héroes remotos con `syncPositionFromNavMesh`, el `NavMeshAgent` es la autoridad física y `NavMeshPositionSyncSystem` publica su posición en ECS.
 
 ---
 
@@ -338,7 +338,7 @@ Se ejecuta cada frame en `Update()` (MonoBehaviour):
 
 | Entidad | Dirección de sync | Detalle |
 |---------|-------------------|---------|
-| **Héroe** | GameObject → ECS | Lee `transform.position/rotation`, escribe a `LocalTransform` del ECS |
+| **Héroe local** | Delegado | Vincula el visual; `LocalHeroCharacterMotor` ejecuta y publica la pose |
 | **Unidad/remoto NavMesh** | GameObject/NavMesh → ECS | `NavMeshPositionSyncSystem` copia la posición física; `EntityVisualSync` evita duplicar esa escritura |
 
 La posición física no se interpola en ECS; la rotación pasa por `UnitRotationIntentComponent` y su sistema de resolución.
@@ -395,6 +395,7 @@ La posición física no se interpola en ECS; la rotación pasa por `UnitRotation
 | `LocalTransform` | Pose publicada en ECS | `NavMeshPositionSyncSystem`, `UnitRotationResolutionSystem` |
 | `HeroInputComponent` | Input del héroe (WASD, sprint, skills) | `HeroInputSystem` |
 | `HeroMoveIntent` | Dirección y velocidad de movimiento | `HeroMovementSystem` |
+| `HeroMotorStateComponent` | Velocidad y contacto físico confirmados | `LocalHeroCharacterMotor` |
 | `UnitDestinationMarkerComponent` | Referencia al marcador visual | `DestinationMarkerSystem` |
 
 ---

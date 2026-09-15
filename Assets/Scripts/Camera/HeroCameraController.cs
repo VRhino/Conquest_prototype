@@ -191,6 +191,14 @@ public class HeroCameraController : MonoBehaviour
         disableCameraFollow = !enabled;
     }
 
+    /// <summary>Orient a newly spawned camera along the entrance route, without changing shared settings.</summary>
+    public void SetOrbitHeading(float yawDegrees, float pitchDegrees = 8f)
+    {
+        _yaw = yawDegrees;
+        _pitch = Mathf.Clamp(pitchDegrees, -60f, 80f);
+        _mouseX = _mouseY = _scroll = 0;
+    }
+
     void FindCameraEntity()
     {
         var query = _entityManager.CreateEntityQuery(

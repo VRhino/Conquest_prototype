@@ -14,7 +14,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ### HeroMovementSystem
 - **Responsabilidad actual**: Calcula intención desde input, cámara y stats, después de input y spawn.
 - **Output**: `HeroMoveIntent`; lo limpia si el héroe está muerto, sin ubicación de spawn o sin cámara.
-- El movimiento físico sigue en el puente híbrido; extraer el motor es una fase posterior.
+- No modifica la pose: el movimiento físico pertenece a `LocalHeroCharacterMotor`.
 
 ### HeroRespawnSystem
 - Lee `HeroHealthComponent`, después de daño y antes de spawn. Detecta muerte, cuenta el cooldown y solicita ubicación poniendo `hasSpawned = false` al revivir.
@@ -229,12 +229,18 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Timer expired**: defensores ganan (`winnerTeam = 2`)
 
 ### EntityVisualSync
-- **Responsabilidad**: puente híbrido de visual, movimiento y sincronización según el tipo de entidad
-- Compatibilidad actual: el héroe local consume cada revisión de spawn una vez, deshabilita temporalmente CharacterController, aplica pose y reinicia gravedad. Ese frame no ejecuta movimiento; muerto o esperando ubicación tampoco consume intención residual.
-- Héroe local: `CharacterController` activo, GameObject → ECS. Héroe remoto: `NavMeshAgent` activo, GameObject → ECS. El controller se configura desde `IsLocalPlayer`.
-- La confirmación de revisión es local al visual, no una escritura nueva en ECS.
-- **Safe teleport**: Deshabilita `CharacterController` antes de aplicar posición ECS, lo rehabilita después
-- **Constantes**: `GROUND_CHECK_BUFFER = -0.5f`, `TERMINAL_VELOCITY = -50f`
+- **Responsabilidad**: vincula entidad y representación, sincroniza visuales no locales y conduce animación remota/ataques.
+- Decide local/remoto desde `IsLocalPlayer`, pero delega toda locomoción local a `LocalHeroCharacterMotor`.
+- Nunca llama `CharacterController.Move()` ni escribe la pose local en ECS.
+
+### LocalHeroCharacterMotor
+- **Responsabilidad**: único ejecutor físico del héroe local.
+- **Input**: `HeroMoveIntent`, `HeroLifeComponent` y revisiones de `HeroSpawnComponent`.
+- **Ejecución**: gravedad, suelo, escalones y colisiones mediante `CharacterController.Move()`.
+- **Output confirmado**: `LocalTransform` y `HeroMotorStateComponent` (velocidad real, grounded, laterales y techo).
+- `EcsAnimationInputAdapter` usa la velocidad horizontal y grounded confirmados; el input conserva dirección y eventos de sprint, pero ya no puede activar carrera si el controller está bloqueado.
+- **Safe teleport**: deshabilita temporalmente el controller, aplica la pose, reinicia gravedad y consume una sola vez cada revisión.
+- El motor no se crea ni permanece activo para héroes remotos.
 
 ---
 
@@ -277,4 +283,4 @@ Actualización posterior: conectada la retirada por muerte del dueño con espera
 
 Actualización de intercambio: `SquadSwapExecutionSystem` valida reemplazo antes de retirar y consume cooldown solo al aceptar. `SquadNavigationSystem` ahora observa llegada sin escribir destinos; `RetreatLogicSystem` espera a todos los supervivientes en sus slots o timeout. `SquadOrderSystem` respeta el bloqueo de retirada. La retirada por muerte del dueño sigue pendiente. Referencia: `Docs/Arquitectura/5_Intercambio_Retirada_2026-09-14.md`.
 
-Las reglas ECS/visual de este documento son el objetivo, no una descripción totalmente cumplida por el legacy. `HeroMovementSystem` aún calcula intención; `EntityVisualSync` mueve el CharacterController y devuelve posición a ECS. El respawn local usa pose revisionada. Intercambio/retirada por reemplazo tienen las correcciones descritas arriba; muerte del dueño y autoridad general del motor siguen pendientes. Referencias: fases 3, 4 y 5 en `Docs/Arquitectura/`.
+El contrato local vigente es `HeroMovementSystem → HeroMoveIntent → LocalHeroCharacterMotor → LocalTransform/HeroMotorStateComponent`. `EntityVisualSync` ya no ejecuta movimiento local. El respawn conserva pose revisionada. Referencias: fases 4, 10 y 14 en `Docs/Arquitectura/`.

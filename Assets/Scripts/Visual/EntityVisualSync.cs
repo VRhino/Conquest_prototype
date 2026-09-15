@@ -45,29 +45,15 @@ namespace ConquestTactics.Visual
         private bool _isManuallyConfigured = false;
         private float _lastSyncTime;
         private const float SYNC_INTERVAL = 0.016f;
-        private CharacterController _characterController;
         private NavMeshAgent _navAgent;
         private Animator _animator;
 
         // Animation parameter hashes are centralized in AnimationHashes.cs
-        private bool _positionInitialized = false;
-        private uint _appliedPositionRevision;
         public bool DebugLogging { get => _enableDebugLogs; set => _enableDebugLogs = value; }
         private bool _remoteWasMoving = false;
-        private float _verticalVelocity = 0f;
-        private const float GRAVITY = -9.81f;
-        private const float TERMINAL_VELOCITY = -50f;
-        private const float GROUND_CHECK_BUFFER = -0.5f;
         
         private void Awake()
         {
-            _characterController = GetComponent<CharacterController>();
-            if (_characterController != null && !_characterController.enabled)
-            {
-                _characterController.enabled = true;
-                if (_enableDebugLogs)
-                    Debug.Log("[EntityVisualSync] CharacterController habilitado para movimiento visual");
-            }
             _navAgent     = GetComponent<NavMeshAgent>();
             _animator     = GetComponentInChildren<Animator>(true);
         }
@@ -110,14 +96,10 @@ namespace ConquestTactics.Visual
                 {
                     var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
 
-                    // Safe teleport: disable CC before setting position to avoid internal state desync.
-                    // Only re-enable for local hero — remote heroes use NavMeshAgent, not CC.
-                    if (_characterController != null) _characterController.enabled = false;
-                    transform.position = ecsTransform.Position;
-                    transform.rotation = ecsTransform.Rotation;
-                    if (_characterController != null) _characterController.enabled = IsLocalHero;
-
-                    _positionInitialized = true;
+                    // Local placement is owned by LocalHeroCharacterMotor. Remote/unit
+                    // visuals can initialize directly because their CC is disabled.
+                    if (!IsLocalHero)
+                        transform.SetPositionAndRotation(ecsTransform.Position, ecsTransform.Rotation);
                     if (_enableDebugLogs)
                         Debug.Log($"[EntityVisualSync] Posición visual inicializada desde ECS: {ecsTransform.Position}");
                 }
@@ -175,60 +157,16 @@ namespace ConquestTactics.Visual
                     Debug.Log("[EntityVisualSync] Update skipped: IsValidSetup() == false");
                 return;
             }
-            bool teleported = ApplySpawnPose();
-            bool canMove = !_entityManager.HasComponent<HeroLifeComponent>(_heroEntity)
-                || _entityManager.GetComponentData<HeroLifeComponent>(_heroEntity).isAlive;
-            if (_entityManager.HasComponent<HeroSpawnComponent>(_heroEntity))
-                canMove &= _entityManager.GetComponentData<HeroSpawnComponent>(_heroEntity).hasSpawned;
-            if (!canMove) _verticalVelocity = 0f;
-            if (!teleported && canMove && _characterController != null && _characterController.enabled && IsValidSetup())
-            {
-                if (_entityManager.HasComponent<HeroMoveIntent>(_heroEntity))
-                {
-                    var moveIntent = _entityManager.GetComponentData<HeroMoveIntent>(_heroEntity);
-                    Vector3 moveDir = new Vector3(moveIntent.Direction.x, 0f, moveIntent.Direction.z);
-                    float speed = moveIntent.Speed;
-                    Vector3 velocity = moveDir * speed;
-                    if (_enableDebugLogs)
-                    {
-                        Debug.Log($"[EntityVisualSync] Frame {Time.frameCount} | moveIntent.Direction: {moveIntent.Direction} | moveIntent.Speed: {moveIntent.Speed}");
-                        Debug.Log($"[EntityVisualSync] Frame {Time.frameCount} | PreMove Position: {transform.position}");
-                        Debug.Log($"[EntityVisualSync] Frame {Time.frameCount} | velocity: {velocity}");
-                    }
-                    if (!_characterController.isGrounded)
-                    {
-                        _verticalVelocity += GRAVITY * Time.deltaTime;
-                        if (_verticalVelocity < TERMINAL_VELOCITY)
-                            _verticalVelocity = TERMINAL_VELOCITY;
-                    }
-                    else
-                    {
-                        _verticalVelocity = GROUND_CHECK_BUFFER;
-                    }
-                    velocity.y = _verticalVelocity;
-                    _characterController.Move(velocity * Time.deltaTime);
-                    if (_enableDebugLogs)
-                    {
-                        Debug.Log($"[EntityVisualSync] Frame {Time.frameCount} | PostMove Position: {transform.position}");
-                    }
-                }
-            }
             if (_syncPosition || _syncRotation)
             {
-                var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
-                bool isHero = _entityManager.HasComponent<HeroMoveIntent>(_heroEntity);
-                if (isHero && _positionInitialized && IsLocalHero)
+                if (IsLocalHero)
                 {
-                    // Local hero: GO is authoritative — write GO position and rotation back to ECS
-                    ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);
-                    if (_syncRotation)
-                    {
-                        ecsTransform.Rotation = transform.rotation;
-                    }
-                    _entityManager.SetComponentData(_heroEntity, ecsTransform);
+                    // LocalHeroCharacterMotor is the sole local pose writer.
+                    EnsureLocalMotorBound();
                 }
                 else
                 {
+                    var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
                     // Lazy-init: NavMeshAgent is added dynamically after Awake by HeroVisualInstantiationSystem
                     if (_navAgent == null)
                         _navAgent = GetComponent<NavMeshAgent>();
@@ -417,26 +355,6 @@ namespace ConquestTactics.Visual
             }
         }
         
-        //
-        
-        // Transitional hybrid bridge: consume ECS spawn poses without writing an acknowledgement to ECS.
-        private bool ApplySpawnPose()
-        {
-            if (!IsLocalHero || !_entityManager.HasComponent<HeroSpawnComponent>(_heroEntity))
-                return false;
-            var spawn = _entityManager.GetComponentData<HeroSpawnComponent>(_heroEntity);
-            if (!spawn.hasSpawned || spawn.positionRevision == _appliedPositionRevision)
-                return false;
-            bool wasEnabled = _characterController != null && _characterController.enabled;
-            if (wasEnabled) _characterController.enabled = false;
-            transform.SetPositionAndRotation(spawn.spawnPosition, spawn.spawnRotation);
-            if (wasEnabled) _characterController.enabled = true;
-            _verticalVelocity = 0f;
-            _positionInitialized = true;
-            _appliedPositionRevision = spawn.positionRevision;
-            return true;
-        }
-
         public void SetHeroEntity(Entity heroEntity)
         {
             if (_entityManager == null || _world == null || !_world.IsCreated)
@@ -450,7 +368,6 @@ namespace ConquestTactics.Visual
                 }
             }
             _heroEntity = heroEntity;
-            _appliedPositionRevision = 0;
             _isManuallyConfigured = true;
             _hasValidTarget = true;
             ConfigureMovementAuthority();
@@ -492,13 +409,35 @@ namespace ConquestTactics.Visual
 
             bool isLocal = _entityManager.HasComponent<IsLocalPlayer>(_heroEntity);
             IsLocalHero = isLocal;
-            CharacterController characterController = GetComponent<CharacterController>();
-            if (characterController != null && characterController.enabled != isLocal)
+
+            var motor = GetComponent<LocalHeroCharacterMotor>();
+            if (isLocal)
             {
-                characterController.enabled = isLocal;
-                if (_enableDebugLogs)
-                    Debug.Log($"[EntityVisualSync] CharacterController {(isLocal ? "enabled" : "disabled")} for {gameObject.name}");
+                if (motor == null)
+                    motor = gameObject.AddComponent<LocalHeroCharacterMotor>();
+                motor.DebugLogging = _enableDebugLogs;
+                motor.Bind(_world, _heroEntity, _syncPosition, _syncRotation);
             }
+            else
+            {
+                if (motor != null)
+                    motor.ReleaseAuthority();
+                var characterController = GetComponent<CharacterController>();
+                if (characterController != null)
+                    characterController.enabled = false;
+            }
+        }
+
+        private void EnsureLocalMotorBound()
+        {
+            if (!IsLocalHero)
+                return;
+            var motor = GetComponent<LocalHeroCharacterMotor>();
+            if (motor == null)
+                motor = gameObject.AddComponent<LocalHeroCharacterMotor>();
+            motor.DebugLogging = _enableDebugLogs;
+            if (!motor.IsBound)
+                motor.Bind(_world, _heroEntity, _syncPosition, _syncRotation);
         }
     }
 }

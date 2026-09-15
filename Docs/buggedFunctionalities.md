@@ -93,18 +93,15 @@ if (!isLocalPlayer && pendingNavAgents != null)
 
 ```
 [LOCAL HERO]
-HeroInputComponent (teclado/mouse)
-  → EcsAnimationInputAdapter (HABILITADO)
+HeroInputComponent (dirección, walk y sprint) + HeroMotorStateComponent (velocidad real, grounded)
+  → EcsAnimationInputAdapter
     → SamplePlayerAnimationController_ECS.Update()
       → Animator.SetFloat / SetBool (MoveSpeed, CurrentGait, IsWalking...)
 
 [REMOTE HERO]
 NavMeshAgent.velocity
-  → EntityVisualSync.Update():194–197
-    → EcsAnimationInputAdapter.DriveFromVelocity(velocity, speed)
-      → Solo setea _moveComposite y _movementInputDetected
-        → SamplePlayerAnimationController_ECS.Update()
-          → Animator.SetFloat(MoveSpeed), SetInt(CurrentGait), SetBool(IsWalking, IsStopped)
+  → EntityVisualSync
+    → Animator (locomoción remota directa; adaptador y controller local deshabilitados)
 ```
 
 ### Deshabilitación del EcsAnimationInputAdapter
@@ -112,14 +109,14 @@ NavMeshAgent.velocity
 `HeroVisualManagement.System.cs:125–128`:
 ```csharp
 // Héroes remotos no deben leer input local — deshabilitar el adaptador de animación
-// (EntityVisualSync lo pilota desde la velocidad del NavMeshAgent)
+// EntityVisualSync pilota directamente el Animator desde la velocidad NavMesh
 var animAdapter = visualInstance.GetComponentInChildren<EcsAnimationInputAdapter>(true);
 if (animAdapter != null) animAdapter.enabled = false;
 ```
 
-### DriveFromVelocity — lo que SÍ alimenta
+### DriveFromVelocity — compatibilidad
 
-`EcsAnimationInputAdapter.cs:317–336` — solo alimenta:
+El método permanece como adaptador reutilizable, pero el flujo remoto vigente escribe directamente al Animator. Cuando se usa, alimenta:
 - `_moveComposite` → `Vector2(0, normalizedSpeed)`
 - `_movementInputDetected` → `bool`
 - `movementDuration` → contador de tiempo en movimiento
@@ -202,13 +199,13 @@ Para remote heroes el problema es doble: además de que nadie lee el flag, `EcsA
 
 ---
 
-### BUG-005 — CharacterController habilitado brevemente en remote heroes al inicio
+### BUG-005 — CharacterController habilitado brevemente en remote heroes al inicio — RESUELTO
 **Severidad**: Baja
 **Afecta**: Remote heroes, solo durante el frame de spawn
 
 **Síntoma**: Posible jitter o desplazamiento leve al spawnear un remote hero.
 
-**Causa raíz**: `EntityVisualSync.cs:97–100` deshabilita CC, setea posición, y re-habilita CC para **todos** los heroes. Después, `HeroVisualManagementSystem.cs:99–100` deshabilita CC para remote heroes. Existe una ventana de frames entre la inicialización del sync y la ejecución del sistema de visual management donde el remote hero tiene CC habilitado. Si el NavMeshAgent ya está activo en ese intervalo, ambos componentes compiten por la posición del transform.
+**Resolución actual**: `EntityVisualSync.Awake()` ya no habilita el controller. La autoridad se configura después de vincular la entidad: solo `IsLocalPlayer` recibe `LocalHeroCharacterMotor`; el remoto deshabilita el `CharacterController` inmediatamente.
 
 **Archivos**:
 - `Assets/Scripts/Visual/EntityVisualSync.cs:97–100` — re-habilita CC sin distinción
@@ -224,7 +221,7 @@ Para remote heroes el problema es doble: además de que nadie lee el flag, `EcsA
 | BUG-002 | Media | Extender `DriveFromVelocity` o agregar un método separado en `EntityVisualSync` que alimente look-at target y strafe desde `HeroAIDecision.targetPosition`. |
 | BUG-003 | Baja | Agregar `NavMeshAgent` al visual prefab del héroe para eliminar el AddComponent en runtime. |
 | BUG-004 | **Resuelto** | Eliminados `HeroStateComponent` y `HeroStateSystem`; animación conectada a sus fuentes reales. |
-| BUG-005 | Baja | En `EntityVisualSync.Initialize()`, no re-habilitar el CC si la entidad tiene `HeroAITag`. |
+| BUG-005 | **Resuelto** | Solo el motor de una entidad `IsLocalPlayer` puede habilitar y mover el `CharacterController`. |
 
 ---
 

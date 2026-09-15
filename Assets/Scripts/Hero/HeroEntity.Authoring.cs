@@ -97,6 +97,7 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
         // Componentes de marcado
         AddComponent<IsLocalPlayer>(entity);
         AddComponent<HeroInputComponent>(entity);
+        AddComponent<HeroMotorStateComponent>(entity);
 
         // Componentes de combate — necesarios para que HeroAttackSystem funcione
         AddComponent(entity, new HeroCombatComponent

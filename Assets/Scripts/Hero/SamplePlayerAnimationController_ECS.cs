@@ -306,7 +306,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
             SwitchState(AnimationState.Locomotion);
 
             if (_animator != null)
-                _animator.SetBool(AnimationHashes.IsGrounded, true);
+                _animator.SetBool(AnimationHashes.IsGrounded, _inputAdapter._isGrounded);
 
             // Cache ECS references for head look write-back (BUG-002)
             _entityVisualSync = GetComponentInParent<EntityVisualSync>(true);
@@ -473,8 +473,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _animator.SetBool(AnimationHashes.IsStopped, _isStopped);
             _animator.SetFloat(AnimationHashes.LocomotionStartDirection, _locomotionStartDirection);
 
-            // ADDED: Siempre establecer IsGrounded en true para evitar que el Animator quede en "Fall" state
-            _animator.SetBool(AnimationHashes.IsGrounded, true);
+            _animator.SetBool(AnimationHashes.IsGrounded, _inputAdapter._isGrounded);
 
             // REMOVED: Jump, fall, crouch, grounded, aiming parameters
         }

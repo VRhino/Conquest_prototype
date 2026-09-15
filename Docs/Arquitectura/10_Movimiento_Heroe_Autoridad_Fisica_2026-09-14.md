@@ -4,7 +4,7 @@ Fecha: 2026-09-14. Séptima fase del pipeline de movimiento. Cambios locales sin
 
 ## Autoridad actual
 
-- Héroe local: `HeroMoveIntent` expresa la intención; `EntityVisualSync` mueve el `CharacterController`; la posición y rotación del GameObject vuelven a `LocalTransform`.
+- Héroe local: `HeroMoveIntent` expresa la intención; desde la fase 14, `LocalHeroCharacterMotor` mueve el `CharacterController` y publica el resultado en `LocalTransform` y `HeroMotorStateComponent`.
 - Héroe remoto: `HeroAIExecutionSystem` controla el `NavMeshAgent`; `EntityVisualSync` copia GameObject/NavMesh hacia ECS y conduce la animación.
 - Unidades: `UnitNavMeshSystem` controla destinos; `NavMeshPositionSyncSystem` copia la posición a ECS.
 
@@ -12,7 +12,7 @@ El modelo continúa siendo híbrido, pero cada caso tiene ahora una sola autorid
 
 ## Cambios aplicados
 
-- `EntityVisualSync.ConfigureMovementAuthority()` activa el `CharacterController` únicamente para la entidad con `IsLocalPlayer`. Corrige el método anterior, que anunciaba desactivación pero siempre escribía `enabled = true`.
+- `EntityVisualSync.ConfigureMovementAuthority()` activa y vincula `LocalHeroCharacterMotor` únicamente para la entidad con `IsLocalPlayer`; los remotos mantienen el `CharacterController` desactivado.
 - `HeroAIExecutionSystem` comprueba `enabled` e `isOnNavMesh` antes de operar sobre el agente.
 - Los objetivos de IA se proyectan con el mismo filtro y radio navegable que los destinos de unidades.
 - Se comprueban el retorno de `SetDestination()` y el `pathStatus` posterior. Un destino fallido se recuerda y solo se reintenta cuando cambia al menos `navMeshFailureRetryDistance`.
@@ -39,10 +39,10 @@ unity test . --mode PlayMode --filter 'SquadNavigationRegressionTests|HeroVisual
 unity run . --timeout 300 -- -nographics -executeMethod ArchitectureBuildValidation.CompilePlayerScripts -logFile Logs/hero-movement-final-player-compile.log
 ```
 
-Resultado: **58/58 EditMode**, **8/8 PlayMode** y **64 assemblies de Player Windows** compiladas correctamente.
+Resultado histórico de esta fase: **58/58 EditMode**, **8/8 PlayMode** y **64 assemblies de Player Windows**. La extracción posterior se valida en [Motor local del héroe](14_Motor_Local_Heroe_2026-09-15.md).
 
 PlayMode verifica destino remoto fuera del NavMesh, ausencia de excepción, detención, limpieza de intención y matriz de colisión aliado/enemigo.
 
 ## Límites
 
-La integración sigue dependiendo del orden entre Simulation ECS y `MonoBehaviour.Update`; no se ha convertido el héroe local a un motor ECS puro. Los colliders de las unidades se mueven como parte de GameObjects gobernados por NavMeshAgent y no por Rigidbody. Es una decisión válida para el prototipo, pero debe perfilarse junto con el bodyblock en la prueba de 900 unidades.
+La integración continúa siendo híbrida por diseño: ECS decide y `CharacterController` resuelve terreno y colisiones. La fase 14 encapsula esa frontera en un único motor, aunque la entrega de intención y resultado todavía cruza `SimulationSystemGroup`/`MonoBehaviour.Update`.

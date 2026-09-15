@@ -27,6 +27,11 @@ namespace ConquestTactics.Animation
         /// True si se detecta input de movimiento
         /// </summary>
         public bool _movementInputDetected { get; private set; }
+
+        /// <summary>
+        /// Confirmed grounded state from the local CharacterController motor.
+        /// </summary>
+        public bool _isGrounded { get; private set; } = true;
         
         /// <summary>
         /// Delta del mouse para control de cámara (mantenido para compatibilidad)
@@ -188,11 +193,28 @@ namespace ConquestTactics.Animation
                 // Obtener el componente de input del héroe
                 var heroInput = _entityManager.GetComponentData<HeroInputComponent>(_heroEntity);
                 
-                // Convertir float2 a Vector2 para compatibilidad
-                _moveComposite = new Vector2(heroInput.MoveInput.x, heroInput.MoveInput.y);
-                
-                // Detectar si hay input de movimiento
-                _movementInputDetected = math.lengthsq(heroInput.MoveInput) > (_inputThreshold * _inputThreshold);
+                Vector2 requestedMove = new Vector2(heroInput.MoveInput.x, heroInput.MoveInput.y);
+                bool requestedMovement = math.lengthsq(heroInput.MoveInput)
+                    > (_inputThreshold * _inputThreshold);
+
+                // Once the physical motor is available, animation follows confirmed
+                // horizontal displacement rather than raw input. This prevents running
+                // in place while CharacterController is blocked by geometry.
+                if (_entityManager.HasComponent<HeroMotorStateComponent>(_heroEntity))
+                {
+                    var motor = _entityManager.GetComponentData<HeroMotorStateComponent>(_heroEntity);
+                    float horizontalSpeedSq = math.lengthsq(new float2(motor.velocity.x, motor.velocity.z));
+                    _movementInputDetected = horizontalSpeedSq > (_inputThreshold * _inputThreshold);
+                    _moveComposite = _movementInputDetected ? requestedMove : Vector2.zero;
+                    _isGrounded = motor.isGrounded;
+                }
+                else
+                {
+                    // Compatibility for scenes/fixtures that have not baked the motor result yet.
+                    _moveComposite = requestedMove;
+                    _movementInputDetected = requestedMovement;
+                    _isGrounded = true;
+                }
                 
                 // TODO: Agregar mouse delta si se necesita en el futuro
                 // _mouseDelta = new Vector2(heroInput.MouseDelta.x, heroInput.MouseDelta.y);
@@ -209,6 +231,7 @@ namespace ConquestTactics.Animation
                 // Resetear valores en caso de error
                 _moveComposite = Vector2.zero;
                 _movementInputDetected = false;
+                _isGrounded = true;
             }
         }
         
@@ -325,6 +348,7 @@ namespace ConquestTactics.Animation
 
             _moveComposite         = moving ? new Vector2(0f, normalized) : Vector2.zero;
             _movementInputDetected = moving;
+            _isGrounded            = true;
 
             if (moving)
             {

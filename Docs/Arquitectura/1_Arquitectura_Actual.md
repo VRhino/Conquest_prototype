@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Versión** | 1.1 |
-| **Actualizado** | 2026-09-14 |
-| **Verificado contra** | base `5f52f8cab1127357174c56b74a7b191f01171a00` + reparaciones locales sin commit |
+| **Versión** | 1.2 |
+| **Actualizado** | 2026-09-15 |
+| **Verificado contra** | commits `7ec35082`, `e4eede48` + extracción local del motor documentada en fase 14 |
 | **Motor** | Unity 6000.5.8f1 |
 | **Runtime de datos** | Entities 6.5.0, arquitectura híbrida ECS/GameObject |
 
@@ -17,6 +17,7 @@
 
 | Versión | Fecha | Cambio |
 |---|---|---|
+| 1.2 | 2026-09-15 | Pipeline de squads estabilizado y locomoción local encapsulada como intención ECS → `LocalHeroCharacterMotor` → estado confirmado ECS. |
 | 1.1 | 2026-09-14 | Reparaciones de compilación, bake compartido, progresión, guardado, combate e identidad ECS. Ver [registro y límites de validación](2_Reparaciones_Arquitectura_2026-09-14.md). |
 | 1.0 | 2026-09-13 | Inventario inicial verificado del modelo persistente, catálogos ScriptableObject, DTO de batalla, puente entre escenas, entidades ECS y estado real del contrato de red. Se documenta la coexistencia de dos persistencias locales. |
 

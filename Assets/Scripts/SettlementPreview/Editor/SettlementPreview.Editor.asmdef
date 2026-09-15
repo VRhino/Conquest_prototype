@@ -1,0 +1,5 @@
+{
+  "name": "SettlementPreview.Editor",
+  "references": ["Game.ECS", "Unity.Entities", "Unity.Collections", "Unity.Scenes", "Unity.Transforms", "Unity.Mathematics", "Unity.InputSystem"],
+  "includePlatforms": ["Editor"]
+}

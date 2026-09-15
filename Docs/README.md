@@ -11,6 +11,9 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ### Arquitectura
 
+- [Motor local del héroe](./Arquitectura/14_Motor_Local_Heroe_2026-09-15.md):
+  Frontera explícita entre intención ECS, CharacterController y resultado físico confirmado.
+
 - [Limpieza de estado muerto en movimiento](./Arquitectura/13_Limpieza_Estado_Movimiento_2026-09-15.md):
   Componentes sin lectores retirados y referencia del pipeline actual corregida.
 

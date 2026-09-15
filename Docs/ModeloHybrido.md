@@ -778,7 +778,7 @@ El modelo híbrido distingue dos tipos de movimiento de héroe según si es loca
 
 | **Tipo** | **Movimiento** | **Componente** |
 |----------|---------------|----------------|
-| **Héroe local** | `CharacterController` — el jugador controla el movimiento | `EntityVisualSync` lee ECS, mueve el CharacterController |
+| **Héroe local** | `CharacterController` — ECS publica intención y el motor resuelve movimiento | `LocalHeroCharacterMotor` |
 | **Héroe remoto** | `NavMeshAgent` — IA/red controla el movimiento | `NavMeshAgent.Warp()` en spawn, luego agente libre |
 
 **Orden de inicialización (spawn):**

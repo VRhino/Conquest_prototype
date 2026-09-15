@@ -1,0 +1,2372 @@
+{
+  "gameId": "local",
+  "instante": 1767412860000,
+  "version": 3140,
+  "jugadorId": "usuario-2",
+  "faccionId": "faccion-custom-0",
+  "mapaId": "v15-s888",
+  "estadoMapa": {
+    "extraido": {
+      "piedra-48-1062-1366": 985,
+      "piedra-125-1110-1394": 640,
+      "piedra-231-1153-1350": 510,
+      "piedra-202-1127-1331": 380,
+      "piedra-17-1094-1336": 375,
+      "cobre-18-1055-1300": 130
+    },
+    "regeneraEn": {}
+  },
+  "facciones": [
+    {
+      "id": "faccion-custom-0",
+      "nombre": "Micenas",
+      "reyId": null,
+      "embajadorId": null,
+      "nivel": 2,
+      "experiencia": 68,
+      "ciudadanosIds": [
+        "usuario-9",
+        "usuario-2"
+      ],
+      "reputacion": 0
+    }
+  ],
+  "asentamientos": [
+    {
+      "id": "asentamiento-0-1108-1328",
+      "faccionId": "faccion-custom-0",
+      "jugadoresFundadoresIds": [
+        "usuario-9"
+      ],
+      "posicion": {
+        "x": 1108.18246821646,
+        "y": 1327.8540357034037
+      },
+      "nivel": 2,
+      "nivelActual": 2,
+      "rachaMantenimientoSano": 2315,
+      "fundadoEn": 1767258420000,
+      "radioPotencial": 90,
+      "poblacion": {
+        "pesants": 600,
+        "artesanos": 200,
+        "nobleza": 0
+      },
+      "almacen": {
+        "madera": {
+          "cantidad": 2781.6,
+          "capacidad": 2800
+        },
+        "piedra": {
+          "cantidad": 2792.2,
+          "capacidad": 2800
+        },
+        "trigo": {
+          "cantidad": 6720,
+          "capacidad": 6800
+        },
+        "cobre": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "estano": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "oro": {
+          "cantidad": 461.1079999999988,
+          "capacidad": 2800
+        },
+        "livestock": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "lingoteCobre": {
+          "cantidad": 2.5,
+          "capacidad": 2800
+        },
+        "lingoteEstano": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "lingoteBronce": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "cuero": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "cueroCurtido": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "cueroCalidad": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "armaMadera": {
+          "cantidad": 2800,
+          "capacidad": 2800
+        },
+        "armaCobre": {
+          "cantidad": 2800,
+          "capacidad": 2800
+        },
+        "armaBronce": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "armaBronceCalidad": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "armaduraBasica": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "armaduraIntermedia": {
+          "cantidad": 0,
+          "capacidad": 2800
+        },
+        "armaduraBronce": {
+          "cantidad": 0,
+          "capacidad": 2800
+        }
+      },
+      "edificios": [
+        {
+          "id": "edificio-asentamiento-0-1108-1328-centro-urbano",
+          "tipo": "centroUrbano",
+          "posicion": {
+            "x": 0,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "anclaLlena": true
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-vivienda-inicial-0",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 0,
+            "y": 15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-vivienda-inicial-1",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -15,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-vivienda-inicial-2",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 0,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-granja-inicial",
+          "tipo": "granja",
+          "posicion": {
+            "x": 78,
+            "y": -93
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "pausadoPorAlmacenLleno": false,
+          "nivelInterno": 4
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-5",
+          "tipo": "lenera",
+          "posicion": {
+            "x": 15,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-148",
+          "prioridad": 10100
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-6",
+          "tipo": "cantera",
+          "posicion": {
+            "x": 1093.9518250524998,
+            "y": 1336.102104280144
+          },
+          "estado": "activo",
+          "ambito": "mapa",
+          "fuenteId": "piedra-17-1094-1336",
+          "prioridad": 5100
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-7",
+          "tipo": "lenera",
+          "posicion": {
+            "x": -15,
+            "y": 6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-148",
+          "prioridad": 10030
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-8",
+          "tipo": "lenera",
+          "posicion": {
+            "x": 15,
+            "y": 6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-148",
+          "prioridad": 10030
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-9",
+          "tipo": "cantera",
+          "posicion": {
+            "x": 1126.596458721906,
+            "y": 1330.750699620694
+          },
+          "estado": "activo",
+          "ambito": "mapa",
+          "fuenteId": "piedra-202-1127-1331",
+          "prioridad": 5040,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-10",
+          "tipo": "lenera",
+          "posicion": {
+            "x": 6,
+            "y": 15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-0",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-11",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 6,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1086.6666666666667
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-12",
+          "tipo": "lenera",
+          "posicion": {
+            "x": -15,
+            "y": -6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-0",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-13",
+          "tipo": "cantera",
+          "posicion": {
+            "x": 1153.4631927497685,
+            "y": 1349.779924377799
+          },
+          "estado": "activo",
+          "ambito": "mapa",
+          "fuenteId": "piedra-231-1153-1350",
+          "prioridad": 5040,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-14",
+          "tipo": "lenera",
+          "posicion": {
+            "x": -6,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-0",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-15",
+          "tipo": "granero",
+          "posicion": {
+            "x": -15,
+            "y": 18
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1100,
+          "nivelInterno": 3
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-16",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 18,
+            "y": -6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1100
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-17",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 12,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-18",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -12,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085.3333333333333
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-20",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 0,
+            "y": -21
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1091.6023217187674
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-19",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 12,
+            "y": 15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085.5555555555557
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-21",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 3,
+            "y": 21
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1090
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-22",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -21,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085.7142857142858
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-23",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 24,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1090.909090909091
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-24",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -21,
+            "y": 6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-25",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 21,
+            "y": 6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085.1851851851852
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-26",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -9,
+            "y": -21
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1086
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-27",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -24,
+            "y": -6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1086.060606060606
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-28",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 9,
+            "y": -24
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1086.111111111111
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-29",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 21,
+            "y": 15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1085.6410256410256
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-32",
+          "tipo": "patioDeGremios",
+          "posicion": {
+            "x": -24,
+            "y": -27
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-30",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 21,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1095.7142857142858
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-31",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 0,
+            "y": 27
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.7095508094126
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-33",
+          "tipo": "armeria",
+          "posicion": {
+            "x": -3,
+            "y": -30
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": true,
+          "prioridad": 500,
+          "pausadoPorAlmacenLleno": true
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-34",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -21,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1091.5555555555557
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-36",
+          "tipo": "minaCobre",
+          "posicion": {
+            "x": 1054.7140636481345,
+            "y": 1300.3927045501769
+          },
+          "estado": "activo",
+          "ambito": "mapa",
+          "fuenteId": "cobre-18-1055-1300",
+          "prioridad": 5100
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-35",
+          "tipo": "cantera",
+          "posicion": {
+            "x": 1062.0735744014382,
+            "y": 1366.473332978785
+          },
+          "estado": "activo",
+          "ambito": "mapa",
+          "fuenteId": "piedra-48-1062-1366",
+          "prioridad": 5040,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-37",
+          "tipo": "lenera",
+          "posicion": {
+            "x": -27,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-35",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-38",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 27,
+            "y": 6
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1089.1666666666667
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-39",
+          "tipo": "lenera",
+          "posicion": {
+            "x": 15,
+            "y": -24
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-35",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-40",
+          "tipo": "lenera",
+          "posicion": {
+            "x": 15,
+            "y": 24
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-92",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-41",
+          "tipo": "cantera",
+          "posicion": {
+            "x": 1110.3237550705671,
+            "y": 1393.5197913087904
+          },
+          "estado": "activo",
+          "ambito": "mapa",
+          "fuenteId": "piedra-125-1110-1394",
+          "prioridad": 5040,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-42",
+          "tipo": "almacen",
+          "posicion": {
+            "x": -12,
+            "y": 27
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1090.0578381916205
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-43",
+          "tipo": "lenera",
+          "posicion": {
+            "x": -27,
+            "y": -12
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "fuenteId": "bosque-92",
+          "prioridad": 10030,
+          "pausadoPorAlmacenLleno": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-45",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 24,
+            "y": 21
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1095.1612903225807
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-44",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 21,
+            "y": -21
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1093.3333333333333
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-46",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 27,
+            "y": 15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1091.111111111111
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-47",
+          "tipo": "almacen",
+          "posicion": {
+            "x": 12,
+            "y": -30
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1095.3846153846155
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-48",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -21,
+            "y": 27
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1089.8245614035088
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-49",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 21,
+            "y": 27
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1089.6666666666667
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-50",
+          "tipo": "pozo",
+          "posicion": {
+            "x": 3,
+            "y": 36
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": false
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-51",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 12,
+            "y": 33
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1089.8412698412699
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-52",
+          "tipo": "armeria",
+          "posicion": {
+            "x": -36,
+            "y": 0
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 500,
+          "pausadoPorAlmacenLleno": true
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-53",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -6,
+            "y": 36
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1090.3030303030303
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-54",
+          "tipo": "armeria",
+          "posicion": {
+            "x": 0,
+            "y": -42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "rotado": true,
+          "prioridad": 500,
+          "pausadoPorAlmacenLleno": true
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-55",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 18,
+            "y": 33
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1090.7246376811595
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-56",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -12,
+            "y": 36
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1091.111111111111
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-57",
+          "tipo": "fundicion",
+          "posicion": {
+            "x": -39,
+            "y": -15
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 500,
+          "nivelInterno": 2
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-58",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -18,
+            "y": 36
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1091.2
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-59",
+          "tipo": "fundicion",
+          "posicion": {
+            "x": -21,
+            "y": -42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 500,
+          "nivelInterno": 2
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-60",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 24,
+            "y": 33
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1091.7948717948718
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-61",
+          "tipo": "fundicion",
+          "posicion": {
+            "x": -48,
+            "y": -3
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 500,
+          "nivelInterno": 2
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-62",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -6,
+            "y": 42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.0987654320988
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-63",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 12,
+            "y": 42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.3809523809523
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-64",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -12,
+            "y": 42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.4137931034484
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-65",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 3,
+            "y": 45
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.4444444444443
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-66",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 18,
+            "y": 42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.6881720430108
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-67",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -18,
+            "y": 42
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1092.9166666666667
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-68",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 9,
+            "y": 48
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1093.1313131313132
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-69",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 15,
+            "y": 48
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1093.3333333333333
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-70",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 0,
+            "y": 51
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1093.3333333333333
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-71",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -6,
+            "y": 51
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1093.7037037037037
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-72",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": -12,
+            "y": 51
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1093.873873873874
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-73",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 6,
+            "y": 54
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1094.2105263157896
+        },
+        {
+          "id": "edificio-asentamiento-0-1108-1328-74",
+          "tipo": "vivienda",
+          "posicion": {
+            "x": 0,
+            "y": 57
+          },
+          "estado": "activo",
+          "ambito": "asentamiento",
+          "prioridad": 1094.3589743589744
+        }
+      ],
+      "cargos": {
+        "gobernadorId": null,
+        "tesoreroId": null,
+        "generalId": null,
+        "maestroObrasId": null,
+        "sacerdoteId": null
+      },
+      "casasCompradas": [
+        "usuario-9",
+        "usuario-2"
+      ],
+      "politicasActivas": [],
+      "escuadrones": [],
+      "medidorMantenimiento": 100,
+      "extractoresTicksSinCupo": {
+        "cantera": 0,
+        "minaCobre": 0
+      },
+      "nutricionPoblacion": 100
+    }
+  ],
+  "asentamientosAvistados": [],
+  "asentamientosConocidos": [],
+  "territorioPorEjercito": {},
+  "exploracion": {
+    "tamanoCelda": 25,
+    "columnas": 80,
+    "filas": 80,
+    "celdas": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003e000000000000000080ff0000000000000000c0ff0100000000000000e0ff0300000000007800f0ff030000000000fcffffff030000000000ffffffff010000000000ffffff43000000000080ffffff01000000000080ffffff000000000000c0ffff7f000000000000c0ffffff000000000000c0ff3bfe00000000000080ff03fe01000000000080ff01fc01000000000000ff00fc010000000000007c00fc010000000000000000fe010000000000000000fe010000000000000000fe0000000000000000007c00000000000000000038000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "visibles": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003c000000000000000000ff000000000000000000ff010000000000000080ff030000000000000080ff0300000000000000c0ff0300000000000000c0ff0300000000000000c0ff030000000000000080ff030000000000000080ff010000000000000000ff0000000000000000007c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "caravanas": [],
+  "caravanasAvistadas": [],
+  "ejercitos": [],
+  "ejercitosAvistados": [],
+  "acuerdos": [],
+  "ordenes": [],
+  "relaciones": [],
+  "titulos": [
+    {
+      "nombre": "Facción más grande",
+      "poseedorId": "faccion-custom-0",
+      "valorMetrica": 1
+    },
+    {
+      "nombre": "Mayor poder económico",
+      "poseedorId": "faccion-custom-0",
+      "valorMetrica": 461.1079999999988
+    },
+    {
+      "nombre": "Ejército más grande",
+      "poseedorId": "faccion-custom-0",
+      "valorMetrica": 0
+    }
+  ],
+  "caminos": [],
+  "campamentosBandidos": [
+    {
+      "id": "campamento-0",
+      "posicion": {
+        "x": 1127.420260105282,
+        "y": 1224.5059804990888
+      },
+      "bosqueId": "bosque-148",
+      "asentamientoId": "asentamiento-0-1108-1328",
+      "poder": 30
+    }
+  ],
+  "historial": [
+    {
+      "momento": "2026-01-03T04:01:00.000Z",
+      "mensaje": "Vuelve a casa en asentamiento-0-1108-1328 y su columna se deshace."
+    },
+    {
+      "momento": "2026-01-03T03:21:00.000Z",
+      "mensaje": "Se pone en marcha hacia asentamiento-0-1108-1328."
+    },
+    {
+      "momento": "2026-01-03T03:21:00.000Z",
+      "mensaje": "Compra casa en asentamiento-0-1108-1328 y obtiene ciudadanía."
+    }
+  ],
+  "zonas": [
+    {
+      "asentamientoId": "asentamiento-0-1108-1328",
+      "poligono": [
+        {
+          "x": 1198.18246821646,
+          "y": 1327.8540357034037
+        },
+        {
+          "x": 1197.412505740103,
+          "y": 1339.6013930032084
+        },
+        {
+          "x": 1195.1157925824762,
+          "y": 1351.1477497626306
+        },
+        {
+          "x": 1191.3316261424757,
+          "y": 1362.2955446162619
+        },
+        {
+          "x": 1186.1247545570595,
+          "y": 1372.8540357034037
+        },
+        {
+          "x": 1179.584268842671,
+          "y": 1382.6425643141886
+        },
+        {
+          "x": 1171.8220785232493,
+          "y": 1391.493646010193
+        },
+        {
+          "x": 1162.9709968272448,
+          "y": 1399.2558363296148
+        },
+        {
+          "x": 1153.18246821646,
+          "y": 1405.7963220440033
+        },
+        {
+          "x": 1142.623977129318,
+          "y": 1411.0031936294195
+        },
+        {
+          "x": 1131.4761822756868,
+          "y": 1414.78736006942
+        },
+        {
+          "x": 1119.9298255162646,
+          "y": 1417.0840732270467
+        },
+        {
+          "x": 1108.18246821646,
+          "y": 1417.8540357034037
+        },
+        {
+          "x": 1096.4351109166553,
+          "y": 1417.0840732270467
+        },
+        {
+          "x": 1084.888754157233,
+          "y": 1414.78736006942
+        },
+        {
+          "x": 1073.7409593036018,
+          "y": 1411.0031936294195
+        },
+        {
+          "x": 1063.18246821646,
+          "y": 1405.7963220440033
+        },
+        {
+          "x": 1053.393939605675,
+          "y": 1399.2558363296148
+        },
+        {
+          "x": 1044.5428579096706,
+          "y": 1391.493646010193
+        },
+        {
+          "x": 1036.7806675902489,
+          "y": 1382.6425643141886
+        },
+        {
+          "x": 1030.2401818758603,
+          "y": 1372.8540357034037
+        },
+        {
+          "x": 1025.0333102904442,
+          "y": 1362.2955446162619
+        },
+        {
+          "x": 1021.2491438504438,
+          "y": 1351.1477497626306
+        },
+        {
+          "x": 1018.952430692817,
+          "y": 1339.6013930032084
+        },
+        {
+          "x": 1018.1824682164599,
+          "y": 1327.8540357034037
+        },
+        {
+          "x": 1018.952430692817,
+          "y": 1316.106678403599
+        },
+        {
+          "x": 1021.2491438504438,
+          "y": 1304.5603216441768
+        },
+        {
+          "x": 1025.0333102904442,
+          "y": 1293.4125267905456
+        },
+        {
+          "x": 1030.2401818758603,
+          "y": 1282.8540357034037
+        },
+        {
+          "x": 1036.7806675902489,
+          "y": 1273.0655070926189
+        },
+        {
+          "x": 1044.5428579096706,
+          "y": 1264.2144253966144
+        },
+        {
+          "x": 1053.393939605675,
+          "y": 1256.4522350771927
+        },
+        {
+          "x": 1063.18246821646,
+          "y": 1249.9117493628044
+        },
+        {
+          "x": 1073.7409593036018,
+          "y": 1244.704877777388
+        },
+        {
+          "x": 1084.888754157233,
+          "y": 1240.9207113373875
+        },
+        {
+          "x": 1096.4351109166553,
+          "y": 1238.6239981797607
+        },
+        {
+          "x": 1108.18246821646,
+          "y": 1237.8540357034037
+        },
+        {
+          "x": 1119.9298255162646,
+          "y": 1238.6239981797607
+        },
+        {
+          "x": 1131.4761822756868,
+          "y": 1240.9207113373875
+        },
+        {
+          "x": 1142.623977129318,
+          "y": 1244.704877777388
+        },
+        {
+          "x": 1153.18246821646,
+          "y": 1249.9117493628041
+        },
+        {
+          "x": 1162.9709968272448,
+          "y": 1256.4522350771927
+        },
+        {
+          "x": 1171.8220785232493,
+          "y": 1264.2144253966144
+        },
+        {
+          "x": 1179.584268842671,
+          "y": 1273.0655070926189
+        },
+        {
+          "x": 1186.1247545570593,
+          "y": 1282.8540357034037
+        },
+        {
+          "x": 1191.3316261424757,
+          "y": 1293.4125267905456
+        },
+        {
+          "x": 1195.1157925824762,
+          "y": 1304.5603216441768
+        },
+        {
+          "x": 1197.412505740103,
+          "y": 1316.106678403599
+        }
+      ]
+    }
+  ],
+  "zonasFusionadas": [
+    {
+      "faccionId": "faccion-custom-0",
+      "contornos": [
+        [
+          {
+            "x": 1108.18246821646,
+            "y": 1237.8540357034037
+          },
+          {
+            "x": 1073.18246821646,
+            "y": 1244.996325470442
+          },
+          {
+            "x": 1046.0966911774215,
+            "y": 1262.8540357034037
+          },
+          {
+            "x": 1025.324757983498,
+            "y": 1292.8540357034037
+          },
+          {
+            "x": 1018.1824682164599,
+            "y": 1327.8540357034037
+          },
+          {
+            "x": 1025.324757983498,
+            "y": 1362.8540357034037
+          },
+          {
+            "x": 1043.18246821646,
+            "y": 1389.9398127424422
+          },
+          {
+            "x": 1073.18246821646,
+            "y": 1410.7117459363656
+          },
+          {
+            "x": 1108.18246821646,
+            "y": 1417.8540357034037
+          },
+          {
+            "x": 1143.18246821646,
+            "y": 1410.7117459363656
+          },
+          {
+            "x": 1170.2682452554984,
+            "y": 1392.8540357034037
+          },
+          {
+            "x": 1191.0401784494218,
+            "y": 1362.8540357034037
+          },
+          {
+            "x": 1198.18246821646,
+            "y": 1327.8540357034037
+          },
+          {
+            "x": 1191.0401784494218,
+            "y": 1292.8540357034037
+          },
+          {
+            "x": 1173.18246821646,
+            "y": 1265.7682586643652
+          },
+          {
+            "x": 1143.18246821646,
+            "y": 1244.996325470442
+          }
+        ]
+      ]
+    }
+  ],
+  "trazadoPorAsentamiento": {
+    "asentamiento-0-1108-1328": {
+      "calles": [
+        {
+          "x": -15,
+          "y": -39,
+          "ancho": 6,
+          "alto": 3
+        },
+        {
+          "x": -33,
+          "y": -36,
+          "ancho": 21,
+          "alto": 3
+        },
+        {
+          "x": -33,
+          "y": -33,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": -33,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -33,
+          "y": -30,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": -30,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 18,
+          "y": -30,
+          "ancho": 9,
+          "alto": 3
+        },
+        {
+          "x": -33,
+          "y": -27,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": -27,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -27,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -48,
+          "y": -24,
+          "ancho": 18,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": -24,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -24,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -48,
+          "y": -21,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -33,
+          "y": -21,
+          "ancho": 21,
+          "alto": 3
+        },
+        {
+          "x": 6,
+          "y": -21,
+          "ancho": 12,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -21,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -48,
+          "y": -18,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -30,
+          "y": -18,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": -18,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 15,
+          "y": -18,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -18,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -48,
+          "y": -15,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": -15,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 15,
+          "y": -15,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -15,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -48,
+          "y": -12,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -21,
+          "y": -12,
+          "ancho": 33,
+          "alto": 3
+        },
+        {
+          "x": -21,
+          "y": -9,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -12,
+          "y": -9,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": -9,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -9,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -21,
+          "y": -6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -12,
+          "y": -6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": -6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 24,
+          "y": -6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -12,
+          "y": -3,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": -3,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -12,
+          "y": 0,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 0,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -30,
+          "y": 3,
+          "ancho": 6,
+          "alto": 3
+        },
+        {
+          "x": -12,
+          "y": 3,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 3,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -27,
+          "y": 6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -12,
+          "y": 6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 6,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -27,
+          "y": 9,
+          "ancho": 54,
+          "alto": 3
+        },
+        {
+          "x": 15,
+          "y": 12,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 15,
+          "y": 15,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 18,
+          "ancho": 9,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 21,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 6,
+          "y": 24,
+          "ancho": 6,
+          "alto": 3
+        },
+        {
+          "x": 6,
+          "y": 27,
+          "ancho": 12,
+          "alto": 3
+        },
+        {
+          "x": -21,
+          "y": 30,
+          "ancho": 30,
+          "alto": 3
+        },
+        {
+          "x": -3,
+          "y": 33,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 6,
+          "y": 33,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -3,
+          "y": 36,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 6,
+          "y": 36,
+          "ancho": 21,
+          "alto": 3
+        },
+        {
+          "x": -3,
+          "y": 39,
+          "ancho": 12,
+          "alto": 3
+        },
+        {
+          "x": 21,
+          "y": 39,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -3,
+          "y": 42,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 6,
+          "y": 42,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 21,
+          "y": 42,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": -18,
+          "y": 45,
+          "ancho": 18,
+          "alto": 3
+        },
+        {
+          "x": 18,
+          "y": 45,
+          "ancho": 6,
+          "alto": 3
+        },
+        {
+          "x": 18,
+          "y": 48,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 51,
+          "ancho": 12,
+          "alto": 3
+        },
+        {
+          "x": 9,
+          "y": 54,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 3,
+          "y": 57,
+          "ancho": 9,
+          "alto": 3
+        }
+      ],
+      "caminos": [
+        {
+          "x": 60,
+          "y": -75,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -72,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -69,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -66,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -63,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -60,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -57,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -54,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -51,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -48,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -45,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -42,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -39,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -36,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -33,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -30,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -27,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -24,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -21,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -18,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 60,
+          "y": -15,
+          "ancho": 3,
+          "alto": 3
+        },
+        {
+          "x": 12,
+          "y": -12,
+          "ancho": 51,
+          "alto": 3
+        }
+      ],
+      "huellas": {
+        "edificio-asentamiento-0-1108-1328-centro-urbano": {
+          "x": -9,
+          "y": -9,
+          "ancho": 18,
+          "alto": 18
+        },
+        "edificio-asentamiento-0-1108-1328-vivienda-inicial-0": {
+          "x": -3,
+          "y": 12,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-vivienda-inicial-1": {
+          "x": -18,
+          "y": -3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-vivienda-inicial-2": {
+          "x": -3,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-granja-inicial": {
+          "x": 60,
+          "y": -111,
+          "ancho": 36,
+          "alto": 36
+        },
+        "edificio-asentamiento-0-1108-1328-5": {
+          "x": 12,
+          "y": -3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-7": {
+          "x": -18,
+          "y": 3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-8": {
+          "x": 12,
+          "y": 3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-10": {
+          "x": 3,
+          "y": 12,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-11": {
+          "x": 3,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-12": {
+          "x": -18,
+          "y": -9,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-14": {
+          "x": -9,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-15": {
+          "x": -27,
+          "y": 12,
+          "ancho": 24,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-16": {
+          "x": 12,
+          "y": -9,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-17": {
+          "x": 9,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-18": {
+          "x": -15,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-20": {
+          "x": -6,
+          "y": -24,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-19": {
+          "x": 9,
+          "y": 12,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-21": {
+          "x": -3,
+          "y": 18,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-22": {
+          "x": -24,
+          "y": -3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-23": {
+          "x": 18,
+          "y": -3,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-24": {
+          "x": -24,
+          "y": 3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-25": {
+          "x": 18,
+          "y": 3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-26": {
+          "x": -12,
+          "y": -24,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-27": {
+          "x": -27,
+          "y": -9,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-28": {
+          "x": 6,
+          "y": -27,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-29": {
+          "x": 18,
+          "y": 12,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-32": {
+          "x": -30,
+          "y": -33,
+          "ancho": 12,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-30": {
+          "x": 18,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-31": {
+          "x": -6,
+          "y": 24,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-33": {
+          "x": -12,
+          "y": -36,
+          "ancho": 18,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-34": {
+          "x": -24,
+          "y": -18,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-37": {
+          "x": -30,
+          "y": -3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-38": {
+          "x": 24,
+          "y": 3,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-39": {
+          "x": 12,
+          "y": -27,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-40": {
+          "x": 12,
+          "y": 21,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-42": {
+          "x": -18,
+          "y": 24,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-43": {
+          "x": -30,
+          "y": -15,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-45": {
+          "x": 18,
+          "y": 18,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-44": {
+          "x": 18,
+          "y": -24,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-46": {
+          "x": 24,
+          "y": 12,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-47": {
+          "x": 6,
+          "y": -33,
+          "ancho": 12,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-48": {
+          "x": -24,
+          "y": 24,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-49": {
+          "x": 18,
+          "y": 24,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-50": {
+          "x": 0,
+          "y": 33,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-51": {
+          "x": 9,
+          "y": 30,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-52": {
+          "x": -42,
+          "y": -9,
+          "ancho": 12,
+          "alto": 18
+        },
+        "edificio-asentamiento-0-1108-1328-53": {
+          "x": -9,
+          "y": 33,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-54": {
+          "x": -9,
+          "y": -48,
+          "ancho": 18,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-55": {
+          "x": 15,
+          "y": 30,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-56": {
+          "x": -15,
+          "y": 33,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-57": {
+          "x": -45,
+          "y": -21,
+          "ancho": 12,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-58": {
+          "x": -21,
+          "y": 33,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-59": {
+          "x": -27,
+          "y": -48,
+          "ancho": 12,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-60": {
+          "x": 21,
+          "y": 30,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-61": {
+          "x": -54,
+          "y": -9,
+          "ancho": 12,
+          "alto": 12
+        },
+        "edificio-asentamiento-0-1108-1328-62": {
+          "x": -9,
+          "y": 39,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-63": {
+          "x": 9,
+          "y": 39,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-64": {
+          "x": -15,
+          "y": 39,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-65": {
+          "x": 0,
+          "y": 42,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-66": {
+          "x": 15,
+          "y": 39,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-67": {
+          "x": -21,
+          "y": 39,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-68": {
+          "x": 6,
+          "y": 45,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-69": {
+          "x": 12,
+          "y": 45,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-70": {
+          "x": -3,
+          "y": 48,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-71": {
+          "x": -9,
+          "y": 48,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-72": {
+          "x": -15,
+          "y": 48,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-73": {
+          "x": 3,
+          "y": 51,
+          "ancho": 6,
+          "alto": 6
+        },
+        "edificio-asentamiento-0-1108-1328-74": {
+          "x": -3,
+          "y": 54,
+          "ancho": 6,
+          "alto": 6
+        }
+      },
+      "murallas": []
+    }
+  },
+  "preciosReferencia": {
+    "madera": 0.4,
+    "piedra": 0.48,
+    "trigo": 0.6000000000000001,
+    "cobre": 9,
+    "estano": 18,
+    "livestock": 6
+  },
+  "produccionDeAsentamiento": [
+    {
+      "tipo": "granja",
+      "recurso": "trigo",
+      "activos": 1,
+      "cantidadPorMinuto": 106.91579355047266
+    },
+    {
+      "tipo": "lenera",
+      "recurso": "madera",
+      "activos": 10,
+      "cantidadPorMinuto": 39.06509992163658
+    },
+    {
+      "tipo": "cantera",
+      "recurso": "piedra",
+      "activos": 5,
+      "cantidadPorMinuto": 25
+    },
+    {
+      "tipo": "minaCobre",
+      "recurso": "cobre",
+      "activos": 1,
+      "cantidadPorMinuto": 5
+    },
+    {
+      "tipo": "armeria",
+      "recurso": "armaCobre",
+      "activos": 3,
+      "cantidadPorMinuto": 2.5
+    },
+    {
+      "tipo": "armeria",
+      "recurso": "armaMadera",
+      "activos": 3,
+      "cantidadPorMinuto": 6
+    }
+  ]
+}

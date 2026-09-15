@@ -45,7 +45,8 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         foreach (var (entity, agent) in pendingNavAgents)
         {
             EntityManager.AddComponentObject(entity, agent);
-            // Heroes: position sync stays in EntityVisualSync (syncPositionFromNavMesh = false)
+            // Remote heroes keep their visual/NavMesh sync in EntityVisualSync.
+            // Local heroes publish through LocalHeroCharacterMotor instead.
             EntityManager.AddComponentData(entity, new NavAgentComponent { syncPositionFromNavMesh = false });
         }
     }
