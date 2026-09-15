@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Versión** | 1.2 |
+| **Versión** | 1.3 |
 | **Actualizado** | 2026-09-15 |
-| **Verificado contra** | commits `7ec35082`, `e4eede48` + extracción local del motor documentada en fase 14 |
+| **Verificado contra** | commit `3eef0e17` y grafo generado desde el mismo commit |
 | **Motor** | Unity 6000.5.8f1 |
 | **Runtime de datos** | Entities 6.5.0, arquitectura híbrida ECS/GameObject |
 
@@ -17,6 +17,7 @@
 
 | Versión | Fecha | Cambio |
 |---|---|---|
+| 1.3 | 2026-09-15 | Consolidados autoridad física, targeting escalable, limpieza de estado muerto, motor local y animación remota separada. |
 | 1.2 | 2026-09-15 | Pipeline de squads estabilizado y locomoción local encapsulada como intención ECS → `LocalHeroCharacterMotor` → estado confirmado ECS. |
 | 1.1 | 2026-09-14 | Reparaciones de compilación, bake compartido, progresión, guardado, combate e identidad ECS. Ver [registro y límites de validación](2_Reparaciones_Arquitectura_2026-09-14.md). |
 | 1.0 | 2026-09-13 | Inventario inicial verificado del modelo persistente, catálogos ScriptableObject, DTO de batalla, puente entre escenas, entidades ECS y estado real del contrato de red. Se documenta la coexistencia de dos persistencias locales. |
@@ -119,9 +120,11 @@ RUNTIME ECS
 | Runtime táctico | ECS components/buffers | Estado mutable y simulación de una batalla | No se guarda como World ECS |
 | Visual | GameObjects y MonoBehaviours | Render, animación, HUD, colliders y efectos | Prefabs/assets |
 
-Regla de arquitectura existente: el estado de simulación se modifica desde ECS. La capa visual consume ECS a
-través de `EntityVisualSync`, registros visuales y componentes puente; no debe convertirse en otra fuente de
-verdad del combate.
+Regla de arquitectura existente: ECS decide intención y estado de gameplay. La física híbrida devuelve a ECS
+el resultado confirmado: `LocalHeroCharacterMotor` ejecuta el `CharacterController` local y
+`NavMeshPositionSyncSystem` publica la pose de agentes remotos/unidades. `EntityVisualSync` vincula entidad y
+GameObject, mientras `RemoteHeroAnimationDriver` sólo conduce presentación. Ningún componente visual decide
+combate, órdenes o destinos.
 
 ## 5. Persistencia principal: `player_save.json`
 
@@ -503,7 +506,7 @@ Composición conceptual observada:
 | Identidad/configuración | `HeroClassComponent`, `HeroClassReference`, `HeroAttributesComponent` |
 | Progreso | `HeroProgressComponent` |
 | Vida/combate | `HeroLifeComponent`, `HeroHealthComponent`, `HeroCombatComponent`, `StaminaComponent` |
-| Movimiento/input | `HeroInputComponent`, `HeroMoveIntent`, `HeroStatsComponent` |
+| Movimiento/input | `HeroInputComponent`, `HeroMoveIntent`, `HeroStatsComponent`, `HeroSpawnComponent`, `HeroMotorStateComponent` |
 | Apariencia | `HeroAppearanceComponent`, `HeroVisualReference`, `HeroVisualInstance` |
 | Propiedad táctica | `HeroSquadSelectionComponent`, `HeroSquadReference` |
 | Multijugador simulado | `TeamComponent`, `IsLocalPlayer` o componentes AI |
@@ -538,11 +541,11 @@ Composición conceptual:
 | Definición | `SquadDataReference`, `SquadDefinitionComponent` |
 | Miembros | `DynamicBuffer<SquadUnitElement>` |
 | Progreso | `SquadProgressComponent`, abilities desbloqueadas |
-| Orden/estado | `SquadStateComponent`, `SquadFSMComponent`, intents y orden resuelta |
+| Orden/estado | `SquadStateComponent`, `SquadFSMComponent`, `SquadPlayerOrderIntentComponent`, `SquadAIOrderIntentComponent`, `SquadCombatReactionIntentComponent`, `SquadResolvedOrderComponent` |
 | Formación | `FormationComponent`, formación activa, anchor y patrón |
 | Navegación | `SquadNavigationComponent`, `NavAgentComponent` |
 | Combate | `SquadCombatComponent`, targets y reacción |
-| Swap/retirada | cooldown, channeling, tags y requests de cambio |
+| Swap/retirada | cooldown, channeling, `RetreatComponent`, `SquadOwnerDeathRetreatComponent`, tags y requests de cambio |
 
 ### 11.5 Entidades de unidad
 
@@ -634,6 +637,18 @@ No constituyen persistencia ni un bus de red. Son mecanismos internos entre sist
 Las referencias `Entity` sólo son válidas dentro del World ECS que las creó. No son IDs persistentes ni deben
 cruzar un contrato de red.
 
+### 12.3 Autoridad física y presentación híbrida
+
+| Rol | Intención | Ejecutor físico | Resultado publicado | Animación |
+|---|---|---|---|---|
+| Héroe local | `HeroMovementSystem` → `HeroMoveIntent` | `LocalHeroCharacterMotor` → `CharacterController.Move()` | `LocalTransform` + `HeroMotorStateComponent` | Adaptador/controlador ECS local |
+| Héroe remoto/IA | `HeroAIExecutionSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` → `LocalTransform` | `RemoteHeroAnimationDriver` |
+| Unidad | formación/targeting → `UnitNavMeshSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` → `LocalTransform` | adaptador de unidad |
+
+`EntityVisualSync` selecciona y vincula el contrato correspondiente, sincroniza visuales sin autoridad NavMesh y gestiona el ciclo de vida del GameObject. Ya no llama `CharacterController.Move()` ni escribe parámetros de locomoción remota. El pulso de ataque local continúa temporalmente en este bridge y está registrado como deuda abierta.
+
+El pipeline de órdenes de squad también tiene escritor único: productor local, IA y reacción de combate publican intents separados; `OrderResolutionSystem` escribe `SquadResolvedOrderComponent` y `SquadOrderSystem` aplica sólo el resultado. La navegación de squad observa llegada, mientras el motor de unidad conserva la autoridad sobre destinos.
+
 ## 13. Estado actual del contrato de red
 
 No existe un contrato de red implementado en este commit.
@@ -661,7 +676,7 @@ Por tanto, `BattleData` es un DTO interno de transición local, no un contrato w
 |---|---|
 | Referencias Unity | `BattleData.mapData` es un `MapDataSO` |
 | Identidad de héroe | Se usa `heroName` para buscar al participante |
-| Identidad de squad | Cambia de GUID string a índice `int` secuencial |
+| Identidad de squad | Conserva GUID en `persistentId`, pero además usa un índice `int` temporal dentro del World ECS |
 | Spawn | `string` en `BattleHeroData`, `int` en ECS |
 | Equipo | Se copian objetos `InventoryItem` completos |
 | Mutabilidad | `BattleHeroData` reutiliza instancias del modelo persistente |
@@ -752,8 +767,11 @@ Según la arquitectura híbrida vigente:
 - las clases persistentes representan datos duraderos, no entidades ECS;
 - `BattleData` es una proyección temporal y no debe confundirse con el perfil completo;
 - las referencias `Entity` y los componentes visuales son internas al runtime;
-- GameObjects/MonoBehaviours no deben mutar directamente el estado ECS;
-- `EntityVisualSync` y los registros de prefabs son la frontera ECS → visual;
+- GameObjects/MonoBehaviours no deben decidir estado de gameplay; los motores híbridos sólo publican resultado físico confirmado;
+- `EntityVisualSync` y los registros de prefabs forman la frontera de vinculación y pose;
+- `LocalHeroCharacterMotor` es el único ejecutor del `CharacterController` local;
+- `NavMeshAgent` es la autoridad física para héroes remotos y unidades navegables; `NavMeshPositionSyncSystem` publica esa pose en ECS;
+- `RemoteHeroAnimationDriver` consume velocidad NavMesh y estado ECS sin escribir pose ni destinos;
 - cualquier contrato con BronzeAge debe usar DTO neutrales, sin `UnityEngine.Object` ni `Entity`.
 
 ## 17. Fuentes de código principales
@@ -833,5 +851,6 @@ Cuando cambie alguna estructura documentada:
 6. revisar la matriz de identidades;
 7. volver a contar los assets registrados si cambia un catálogo;
 8. distinguir claramente hechos actuales de propuestas futuras.
+9. revisar `ModeloHybrido.md`, `TroopMovementPipeline.md` y las guías de prefabs si cambia una frontera ECS/GameObject.
 
 Un documento de arquitectura sin commit de verificación debe considerarse potencialmente obsoleto.

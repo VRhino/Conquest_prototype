@@ -5,6 +5,8 @@ Bienvenido a la documentación oficial de **Conquest Tactics**, desarrollado act
 
 Este repositorio documenta todos los aspectos técnicos y de diseño del juego, incluyendo la arquitectura de sistemas, persistencia de datos, guías para desarrolladores, detalles de implementación y procesos de refactorización. Aquí encontrarás recursos para entender cómo funciona el juego internamente, cómo extenderlo y cómo contribuir de forma efectiva.
 
+La fuente canónica del estado implementado es `Arquitectura/1_Arquitectura_Actual.md`, complementada por las fases numeradas y `TroopMovementPipeline.md`. `GDD.md` expresa diseño de producto y `TDD.md` conserva también diseño técnico histórico; una afirmación de esos documentos no implica por sí sola que esté implementada.
+
 La documentación está organizada por temas clave, cubriendo desde la estructura de datos y sistemas principales, hasta guías prácticas para agregar nuevas funcionalidades, realizar pruebas y mantener la calidad del código.
 
 ## Índice de Documentos
@@ -61,6 +63,8 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ### Referencias técnicas
 
+- [buggedFunctionalities.md](./buggedFunctionalities.md):
+  Registro vigente de problemas abiertos, reparaciones cerradas y límites de validación.
 - [ConfiguracionPrefabs_ECS_Visual.md](./ConfiguracionPrefabs_ECS_Visual.md):
   Guía para configurar prefabs visuales y su integración con ECS.
 - [Existing_Databases.md](./Existing_Databases.md):
@@ -68,17 +72,19 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 - [Funcionalidades.md](./Funcionalidades.md):
   Resumen de las funcionalidades principales implementadas en el juego.
 - [GDD.md](./GDD.md):
-  Documento de diseño general del juego (Game Design Document).
+  Diseño de producto y comportamiento objetivo; no es inventario de implementación.
 - [Hero_detail_prefab_structure.md](./Hero_detail_prefab_structure.md):
   Estructura interna de cómo están configurados los prefabs de detalle del héroe.
 - [ModeloHybrido.md](./ModeloHybrido.md):
-  Explicación del modelo híbrido visual/ECS utilizado en el proyecto.
+  Contrato vigente del modelo híbrido visual/ECS y sus autoridades físicas.
 - [ScriptableObjects_Architecture.md](./ScriptableObjects_Architecture.md):
   Arquitectura y manejo de los datos del juego utilizando Scriptable Objects.
 - [squad_prefab_relationships.md](./squad_prefab_relationships.md):
   Documentación de las relaciones entre prefabs de escuadrones y su configuración.
+- [Mechanics/HeroDeath.md](./Mechanics/HeroDeath.md):
+  Comportamiento implementado de muerte, retirada inmediata, persistencia de supervivientes y respawn.
 - [TDD.md](./TDD.md):
-  Guía para el desarrollo orientado a pruebas (Test Driven Development).
+  Diseño técnico histórico y objetivo; consultar arquitectura actual para implementación vigente.
 - [tooltip_prefab_structure.md](./tooltip_prefab_structure.md):
   Guía técnica enfocada en la estructura base de los prefabs de tooltip de la interfaz.
 

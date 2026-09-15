@@ -2,6 +2,8 @@
 
 > Fecha: 2026-03-28
 > Scope: todos los subsistemas fuera de Squad/Unit movement (ya documentado en SquadCombatRefactor_Architecture.md)
+>
+> **Instantánea histórica.** Las severidades y fixes propuestos corresponden al código de esa fecha y no deben usarse como backlog vigente. Consulte [estado actual de problemas](buggedFunctionalities.md), [arquitectura actual](Arquitectura/1_Arquitectura_Actual.md) y las fases numeradas para saber qué fue corregido y qué permanece abierto.
 
 ---
 

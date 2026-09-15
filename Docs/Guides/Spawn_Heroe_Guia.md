@@ -1,5 +1,7 @@
 # Guía: Cómo Funciona el Spawn del Héroe
 
+> Actualizada el 2026-09-15. El spawn publica una pose revisionada; `LocalHeroCharacterMotor`, no `EntityVisualSync`, ejecuta el teleport físico del héroe local.
+
 ## Resumen del Flujo
 
 El spawn del héroe utiliza un pipeline ECS (Entity Component System) donde varias piezas colaboran:
@@ -67,6 +69,8 @@ Este prefab tiene dos Authorings:
 | `HeroSquadSelectionComponent` | `squadDataEntity`, `instanceId` (opcional) |
 | `IsLocalPlayer` | Tag component (sin datos) |
 | `HeroInputComponent` | Componente de input |
+| `HeroMoveIntent` | Intención de movimiento producida por ECS |
+| `HeroMotorStateComponent` | Velocidad y contactos físicos confirmados |
 
 #### `HeroClassAuthoring` (segundo script)
 - Referencia a un `classDefinition` ScriptableObject.
@@ -135,8 +139,8 @@ new DataContainerComponent
    - Si no encuentra match exacto, busca cualquier SpawnPoint del mismo `teamID`.
    - **Instancia** la entidad con `EntityManager.Instantiate(heroPrefab.prefab)`.
    - Ajusta la posición Y al terreno con `FormationPositionCalculator.calculateTerraindHeight()`.
-   - Marca `hasSpawned = true`.
-4. **Si ya existe héroe** pero `hasSpawned == false`, lo reposiciona en el spawn point correcto.
+   - Publica `spawnPosition`/`spawnRotation`, incrementa `positionRevision` y marca `hasSpawned = true`.
+4. **Si ya existe héroe** pero `hasSpawned == false`, selecciona la nueva pose y revisión. `LocalHeroCharacterMotor` consume esa revisión una vez y aplica el teleport seguro mediante `CharacterController`.
 
 ---
 

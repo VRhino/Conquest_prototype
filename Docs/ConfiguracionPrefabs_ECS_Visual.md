@@ -1,399 +1,151 @@
-# Configuración de Prefabs ECS + Visual para Sistema de Animaciones
+# Configuración vigente de prefabs ECS y visuales
 
-## Resumen de Arquitectura
+Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
 
-En Unity 2022.3.x con Entities 1.3.14, la arquitectura utiliza dos prefabs separados que trabajan juntos. La instanciación y vinculación es **automática**: `HeroSpawnSystem` crea la entidad ECS y `HeroVisualManagementSystem` instancia el visual; para squads, `SquadSpawningSystem` crea las entidades y `SquadVisualManagementSystem` instancia los visuals. `VisualPrefabRegistry` gestiona el lookup de prefabs.
+Esta guía describe el montaje actual del runtime híbrido. Los componentes de movimiento y animación se asignan según la entidad vinculada; no todos deben serializarse en todos los prefabs.
 
-1. **`HeroEntity_pure.prefab`** - Entidad ECS pura (lógica)
-2. **`ModularCharacter.prefab`** - Representación visual (GameObject híbrido)
+## Contrato general
 
-## 🎯 Prefab 1: HeroEntity_pure.prefab (Entidad ECS Pura)
-
-### Configuración Actual ✅
-Este prefab ya debería tener los siguientes Authoring Components:
-
-```
-HeroEntity_pure.prefab
-├── GameObject Root
-    ├── HeroAuthoring (script)
-    ├── HeroStatsAuthoring
-    ├── HeroInputAuthoring
-    ├── HeroMovementAuthoring  
-    ├── HeroCombatAuthoring
-    ├── HeroLifeAuthoring
-    ├── StaminaAuthoring
-    └── IsLocalPlayerAuthoring
+```text
+Entidad ECS
+  ├─ definición, identidad, vida, combate e intención
+  ├─ HeroVisualInstantiationSystem / SquadVisualManagementSystem
+  ▼
+GameObject visual
+  ├─ EntityVisualSync               vínculo y pose
+  ├─ LocalHeroCharacterMotor        sólo héroe IsLocalPlayer, runtime
+  ├─ RemoteHeroAnimationDriver      sólo héroe remoto, runtime
+  └─ Animator / CharacterController / NavMeshAgent según rol
 ```
 
-### ⚠️ Verificaciones Necesarias
+`VisualPrefabRegistry` resuelve prefabs desde `VisualPrefabConfiguration`. Los sistemas de gestión visual instancian el GameObject, añaden u obtienen `EntityVisualSync` mediante `VisualSyncUtility` y vinculan la entidad. No se debe colocar una segunda copia manual del visual para una entidad que ya participa en ese flujo.
 
-1. **HeroInputAuthoring debe generar HeroInputComponent** con las nuevas propiedades:
-```csharp
-// Verificar que HeroInputAuthoring genere:
-public struct HeroInputComponent : IComponentData
-{
-    public float2 MoveInput;
-    public bool IsSprintPressed;
-    public bool IsAttackPressed;
-    public bool UseSkill1;
-    public bool UseSkill2;
-    public bool UseUltimate;
-    public bool IsWalkTogglePressed; // ← NUEVO
-}
+## Héroe local
+
+El prefab visual local necesita:
+
+- `Animator` con su Runtime Animator Controller.
+- `CharacterController` configurado para cápsula, escalones, pendientes y colisiones.
+- `SamplePlayerAnimationController_ECS`.
+- `EcsAnimationInputAdapter`.
+- colliders/hitbox y renderers requeridos por presentación.
+
+Al vincular una entidad con `IsLocalPlayer`, `EntityVisualSync` añade o reutiliza `LocalHeroCharacterMotor`. No es obligatorio serializar el motor en el prefab.
+
+Flujo actual:
+
+```text
+HeroInputSystem
+  → HeroMovementSystem
+  → HeroMoveIntent
+  → LocalHeroCharacterMotor
+  → CharacterController.Move
+  → LocalTransform + HeroMotorStateComponent
+  → EcsAnimationInputAdapter
+  → SamplePlayerAnimationController_ECS
+  → Animator
 ```
 
-2. **Transform debe estar configurado** para la posición inicial del héroe
+El Animator usa la velocidad y el grounded confirmados de `HeroMotorStateComponent`; el input sólo conserva dirección y eventos walk/sprint. Un controller bloqueado no debe producir animación de carrera.
 
-### 🔧 No Requiere Cambios Adicionales
-- ✅ Este prefab mantiene su configuración actual
-- ✅ Solo contiene lógica ECS pura
-- ✅ No tiene componentes visuales ni de animación
+## Héroe remoto o IA
 
-## 🎭 Prefab 2: ModularCharacter.prefab (Visual + Animación)
+El visual remoto necesita:
 
-### Configuración ANTES (Sistema Tradicional)
-```
-ModularCharacter.prefab
-├── Root GameObject
-    ├── Animator
-    ├── SamplePlayerAnimationController (ANTIGUO)
-    ├── InputReader (ANTIGUO)
-    ├── SampleCameraController
-    ├── CharacterController
-    └── Modular Character Assets (Synty)
-        ├── Meshes
-        ├── Materials
-        └── Bones/Skeleton
-```
+- `Animator` compatible con los hashes definidos en `AnimationHashes`.
+- `NavMeshAgent`, ya sea en el prefab o añadido por `HeroVisualInstantiationSystem`.
+- la misma geometría visual/hitbox que corresponda al héroe.
 
-### Configuración DESPUÉS (Sistema ECS Híbrido) ✅
+Al vincular una entidad no local con `HeroMoveIntent`:
 
-```
-ModularCharacter.prefab
-├── Root GameObject
-    ├── Animator (mantener)
-    ├── SamplePlayerAnimationController_ECS (NUEVO) 🔥
-    ├── EcsAnimationInputAdapter (NUEVO) 🔥
-    ├── HeroCameraController (ACTUALIZADO) 🔥
-    ├── CharacterController (mantener)
-    ├── EntityVisualSync (NUEVO) 🔥
-    └── Modular Character Assets (Synty)
-        ├── Meshes (mantener)
-        ├── Materials (mantener)
-        └── Bones/Skeleton (mantener)
+- el `CharacterController` se deshabilita;
+- cualquier `LocalHeroCharacterMotor` libera autoridad;
+- `RemoteHeroAnimationDriver` se añade o vincula;
+- `EcsAnimationInputAdapter` y `SamplePlayerAnimationController_ECS` se deshabilitan para impedir escritores competidores.
+
+Flujo actual:
+
+```text
+HeroAIExecutionSystem
+  → NavMeshAgent.SetDestination
+  → movimiento físico NavMesh
+  ├─ NavMeshPositionSyncSystem → LocalTransform
+  └─ RemoteHeroAnimationDriver → Animator
 ```
 
-### 🔄 Cambios Específicos en ModularCharacter.prefab
+El driver remoto puede leer `HeroAIDecision`, `HeroAnimationComponent` y `HeroCombatComponent`, pero nunca escribe transform, destino o intención.
 
-#### 1. ELIMINAR Componentes Antiguos
-- ❌ **SamplePlayerAnimationController** (original de Synty)
-- ❌ **InputReader** (sistema de input tradicional)
-- ❌ **SampleCameraController** (reemplazado por HeroCameraController)
+## Unidades de squad
 
-#### 2. AGREGAR Componentes Nuevos
+Los prefabs visuales de unidad se registran por `SquadType` en `VisualPrefabConfiguration`. `SquadVisualManagementSystem` instancia y vincula cada unidad mediante `EntityVisualSync`.
 
-##### A) SamplePlayerAnimationController_ECS
-```csharp
-// Configuración en el Inspector:
-[Header("External Components")]
-Camera Controller: [Asignar HeroCameraController] ← ACTUALIZADO
-Input Adapter: [Asignar EcsAnimationInputAdapter]
-Animator: [Asignar Animator del prefab]
-Controller: [Asignar CharacterController]
+Una unidad ordinaria no tiene `HeroMoveIntent`, por lo que no recibe `LocalHeroCharacterMotor` ni `RemoteHeroAnimationDriver`. Su movimiento pertenece a `UnitNavMeshSystem`; `NavMeshPositionSyncSystem` publica la pose resultante en ECS y el adaptador de animación de unidad consume su propio estado.
 
-[Header("Player Locomotion")]
-Always Strafe: true
-Walk Speed: 1.4
-Run Speed: 2.5
-Sprint Speed: 7.0
-Speed Change Damping: 10
-Rotation Smoothing: 10
+## Parámetros de Animator
+
+Los nombres no deben repetirse como strings en scripts: se centralizan en `Assets/Scripts/Shared/AnimationHashes.cs`. El controller usado por héroes debe conservar, como mínimo, los parámetros que consumen los controladores activos, incluidos locomoción, grounded, look y ataque.
+
+No elimine `IsGrounded`: el héroe local publica el contacto real del `CharacterController` y el remoto lo establece desde su contrato NavMesh.
+
+## Registro y creación runtime
+
+```text
+VisualPrefabConfiguration
+  → VisualPrefabRegistry
+  → HeroVisualInstantiationSystem / SquadVisualManagementSystem
+  → Instantiate(prefab)
+  → VisualSyncUtility.SetupVisualSync
+  → EntityVisualSync.SetHeroEntity
+  → selección local/remoto/unidad
 ```
 
-##### B) EcsAnimationInputAdapter
-```csharp
-// Configuración en el Inspector:
-[Header("ECS Configuration")]
-Auto Find Hero Entity: true
-Input Threshold: 0.01
+Requisitos:
 
-[Header("Debug")]
-Enable Debug Logs: false (true para testing)
-```
+1. `VisualPrefabRegistry` y su configuración deben estar disponibles en la escena.
+2. Los IDs o tipos usados por ECS deben tener una entrada visual válida o un fallback deliberado.
+3. El héroe ECS debe hornear `HeroMoveIntent`, `HeroLifeComponent`, `HeroSpawnComponent` y `HeroMotorStateComponent` para el flujo local completo.
+4. Los héroes remotos deben tener `HeroAITag`, decisión IA, `HeroMoveIntent` y componentes de navegación configurados.
+5. El NavMesh y los puntos de spawn deben estar horneados y activos antes de emitir destinos.
 
-##### C) EntityVisualSync (NUEVO - Crear este script)
-```csharp
-// Este script sincroniza la posición entre la entidad ECS y el GameObject visual
-using Unity.Entities;
-using Unity.Transforms;
-using UnityEngine;
+## Checklist
 
-public class EntityVisualSync : MonoBehaviour
-{
-    [SerializeField] private bool _autoFindHeroEntity = true;
-    [SerializeField] private bool _syncPosition = true;
-    [SerializeField] private bool _syncRotation = true;
-    
-    private Entity _heroEntity;
-    private EntityManager _entityManager;
-    private World _world;
-    
-    void Start()
-    {
-        _world = World.DefaultGameObjectInjectionWorld;
-        _entityManager = _world.EntityManager;
-        
-        if (_autoFindHeroEntity)
-        {
-            FindHeroEntity();
-        }
-    }
-    
-    void Update()
-    {
-        SyncTransformFromEcs();
-    }
-    
-    private void FindHeroEntity()
-    {
-        var query = _entityManager.CreateEntityQuery(typeof(HeroInputComponent));
-        if (query.CalculateEntityCount() > 0)
-        {
-            _heroEntity = query.GetSingletonEntity();
-        }
-    }
-    
-    private void SyncTransformFromEcs()
-    {
-        if (_heroEntity == Entity.Null || !_entityManager.Exists(_heroEntity))
-            return;
-            
-        var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
-        
-        if (_syncPosition)
-        {
-            transform.position = ecsTransform.Position;
-        }
-        
-        if (_syncRotation)
-        {
-            transform.rotation = ecsTransform.Rotation;
-        }
-    }
-}
-```
+### Prefab ECS del héroe
 
-#### 3. CONFIGURAR Animator Controller
+- [ ] Sin renderer ni lógica visual duplicada.
+- [ ] Componentes de identidad, equipo, stats, vida, salud, spawn e input horneados.
+- [ ] `HeroMoveIntent` y `HeroMotorStateComponent` presentes.
+- [ ] `IsLocalPlayer` sólo en la instancia local.
 
-##### Parámetros a Mantener en el Animator Controller:
-- ✅ MovementInputTapped (bool)
-- ✅ MovementInputPressed (bool)
-- ✅ MovementInputHeld (bool)
-- ✅ ShuffleDirectionX (float)
-- ✅ ShuffleDirectionZ (float)
-- ✅ MoveSpeed (float)
-- ✅ CurrentGait (int)
-- ✅ StrafeDirectionX (float)
-- ✅ StrafeDirectionZ (float)
-- ✅ ForwardStrafe (float)
-- ✅ CameraRotationOffset (float)
-- ✅ IsStrafing (float)
-- ✅ IsTurningInPlace (bool)
-- ✅ IsWalking (bool)
-- ✅ IsStopped (bool)
-- ✅ IsStarting (bool)
-- ✅ LeanValue (float)
-- ✅ HeadLookX (float)
-- ✅ HeadLookY (float)
-- ✅ BodyLookX (float)
-- ✅ BodyLookY (float)
-- ✅ LocomotionStartDirection (float)
+### Prefab visual del héroe
 
-##### Parámetros eliminados del Animator Controller:
-Los siguientes parámetros fueron eliminados por no ser necesarios en el modelo híbrido:
-IsJumping, FallingDuration, IsCrouching, IsGrounded, y cualquier parámetro relacionado con aiming/lock-on.
+- [ ] `Animator` y controller compatibles con `AnimationHashes`.
+- [ ] `CharacterController` correctamente dimensionado para el héroe local.
+- [ ] Adaptador/controlador ECS de animación local configurados.
+- [ ] Sin scripts antiguos de input que compitan con ECS.
+- [ ] `NavMeshAgent` configurado en prefab o creación runtime aceptada explícitamente.
 
-## 🔗 Sincronización Entre Prefabs
+### Prefab visual de unidad
 
-### Durante Runtime
-1. **HeroEntity_pure.prefab** se instancia como Entity ECS
-2. **ModularCharacter.prefab** se instancia como GameObject
-3. **EntityVisualSync** conecta ambos automáticamente
-4. **EcsAnimationInputAdapter** lee del Entity ECS
-5. **SamplePlayerAnimationController_ECS** maneja las animaciones
+- [ ] Registrado bajo el `SquadType` correcto.
+- [ ] Animator/adaptador de unidad configurado.
+- [ ] Sin componentes exclusivos del héroe local o remoto.
+- [ ] Escala, collider y pivote coherentes con NavMesh y formación.
 
-### Flujo de Datos
-```
-Input Hardware
-    ↓
-HeroInputSystem (ECS)
-    ↓
-HeroInputComponent (Entity)
-    ↓
-EcsAnimationInputAdapter (GameObject)
-    ↓
-SamplePlayerAnimationController_ECS (GameObject)
-    ↓
-Animator (Synty Animations)
-```
+## Validación vigente
 
-## 📂 Scripts Necesarios a Crear
+Las regresiones de autoridad comprueban que:
 
-### 1. EntityVisualSync.cs
-```csharp
-// Crear en: Assets/Scripts/Visual/EntityVisualSync.cs
-// (Ya mostrado arriba)
-```
+- sólo el héroe local recibe un motor con autoridad sobre `CharacterController`;
+- un héroe remoto recibe `RemoteHeroAnimationDriver` y mantiene el controller deshabilitado;
+- una unidad no recibe ninguno de esos componentes;
+- la animación local usa movimiento físico confirmado.
 
-### 2. Actualizar HeroInputAuthoring (si es necesario)
-```csharp
-// Verificar que incluya la nueva propiedad:
-public bool isWalkTogglePressed;
+La última matriz documentada en fase 15 pasó 62/62 EditMode, 12/12 PlayMode y compiló 64 assemblies de Player Windows.
 
-// En GetComponent():
-return new HeroInputComponent
-{
-    MoveInput = float2.zero,
-    IsSprintPressed = false,
-    IsAttackPressed = false,
-    UseSkill1 = false,
-    UseSkill2 = false,
-    UseUltimate = false,
-    IsWalkTogglePressed = false // ← NUEVO
-};
-```
+## Referencias
 
-## 🎮 Setup en Escena
-
-### Flujo Automatizado (Producción)
-
-El setup de prefabs en escena es **completamente automatizado**. No se requiere colocar manualmente prefabs en la escena ni configurar spawners.
-
-**Héroe:**
-```
-HeroSpawnSystem (ECS)
-    ↓ Crea la entidad ECS pura
-HeroVisualManagementSystem (ECS)
-    ↓ Detecta entidades sin visual (WithNone<HeroVisualInstance>)
-    ↓ Obtiene el prefab visual via VisualPrefabRegistry
-    ↓ Instancia el GameObject visual automáticamente
-    ↓ Configura EntityVisualSync para sincronización
-```
-
-**Squads / Unidades:**
-```
-SquadSpawningSystem (ECS)
-    ↓ Crea las entidades ECS de squad y unidades
-SquadVisualManagementSystem (ECS)
-    ↓ Detecta entidades de unidad sin visual (WithNone<UnitVisualInstance>)
-    ↓ Obtiene el prefab visual via VisualPrefabRegistry
-    ↓ Instancia los GameObjects de unidad automáticamente
-    ↓ Configura EntityVisualSync por cada unidad
-```
-
-Ambos sistemas de visual management consultan `VisualPrefabRegistry` (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`), que a su vez lee la configuración de `VisualPrefabConfiguration` (`Assets/Scripts/Hero/VisualPrefabConfiguration.cs`).
-
-**Requisitos para que funcione:**
-1. `VisualPrefabRegistry` debe estar presente como singleton en la escena
-2. `VisualPrefabConfiguration` debe tener los prefabs registrados con sus claves
-3. Los spawn points deben estar configurados en la escena
-
-## ✅ Checklist de Configuración
-
-### HeroEntity_pure.prefab
-- [ ] Mantiene todos los Authoring Components existentes
-- [ ] HeroInputAuthoring incluye `IsWalkTogglePressed`
-- [ ] Transform configurado en posición inicial
-- [ ] No tiene componentes visuales
-
-### ModularCharacter.prefab
-- [ ] Eliminado `SamplePlayerAnimationController` original
-- [ ] Eliminado `InputReader`
-- [ ] Agregado `SamplePlayerAnimationController_ECS`
-- [ ] Agregado `EcsAnimationInputAdapter`
-- [ ] Agregado `EntityVisualSync`
-- [ ] Todas las referencias conectadas en el Inspector
-- [ ] Animator Controller limpiado (sin parámetros innecesarios)
-
-### Herramientas de Validación
-- [ ] Usar `PrefabConfigurationValidator` para verificar configuración
-- [ ] Usar `HybridHeroSpawner` para setup de escena
-- [ ] Usar `EcsAnimationTester` para debugging
-
-### Testing
-- [ ] Ambos prefabs pueden instanciarse sin errores
-- [ ] El input ECS se refleja en las animaciones
-- [ ] Las transiciones idle/walk/run/sprint funcionan
-- [ ] El sistema de strafe responde correctamente
-- [ ] No hay errores en consola relacionados con parámetros faltantes
-
-## 🛠️ Herramientas de Desarrollo Incluidas
-
-### 1. PrefabConfigurationValidator
-**Ubicación:** `Assets/Scripts/Testing/PrefabConfigurationValidator.cs`
-
-**Propósito:** Valida que ambos prefabs tengan la configuración correcta.
-
-**Uso:**
-1. Agregar el componente a un GameObject en la escena
-2. Asignar los prefabs a validar
-3. Ejecutar "Validate Configuration" desde el Context Menu
-4. Revisar los logs para verificar la configuración
-
-### 2. HeroVisualManagementSystem (Existente)
-**Ubicación:** `Assets/Scripts/Hero/HeroVisualManagementSystem.cs`
-
-**Propósito:** Sistema ECS que maneja automáticamente la creación de GameObjects visuales.
-
-**Uso:** 
-- Funciona automáticamente después del HeroSpawnSystem
-- Crea automáticamente el ModularCharacter.prefab cuando se spawnea una entidad
-- No requiere configuración manual
-
-### 3. EcsAnimationTester
-**Ubicación:** `Assets/Scripts/Testing/EcsAnimationTester.cs`
-
-**Propósito:** Debug y testing del sistema de animaciones ECS.
-
-**Uso:**
-1. Agregar a un GameObject con los componentes de animación
-2. Activar "Show Debug Info" para información en tiempo real
-3. Usar "Enable Manual Testing" para pruebas manuales con teclado
-
-### 4. HybridSystemMonitor
-**Ubicación:** `Assets/Scripts/Testing/HybridSystemMonitor.cs`
-
-**Propósito:** Monitor en tiempo real del estado del sistema híbrido completo.
-
-**Uso:**
-1. Agregar a cualquier GameObject en la escena
-2. Activar "Show On Screen Info" para overlay visual
-3. Los componentes se detectan automáticamente
-4. Usar "Log Current Status" para reportes detallados en consola
-
-## 🔧 VisualPrefabRegistry y Configuración
-
-La gestión centralizada de prefabs visuales se realiza a través de:
-
-- **`VisualPrefabRegistry`** (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`): Singleton MonoBehaviour que gestiona el registro, caching y lookup de prefabs visuales en runtime. Es utilizado por `HeroVisualManagementSystem` y `SquadVisualManagementSystem` para obtener los prefabs correctos al instanciar visuals.
-- **`VisualPrefabConfiguration`** (`Assets/Scripts/Hero/VisualPrefabConfiguration.cs`): ScriptableObject que define la lista de prefabs disponibles con sus claves de búsqueda (por ejemplo `"HeroSynty"`, `"SquirePrefab"`).
-
-### Convención de nombres para prefabs de unidades
-
-Los prefabs visuales de unidades (esqueletos/skeletons para visualización) siguen la convención `*_GO_Squeleton.prefab`. Ejemplos:
-- `Assets/Resources/Squads/Squires/Squires_GO_Squeleton.prefab`
-- `Assets/Resources/Squads/Spearmen/Spearmen_GO_Squeleton.prefab`
-- `Assets/Resources/Squads/Levy_Archers/Levy_Archer_GO_Squeleton.prefab`
-
-Estos prefabs se ubican bajo `Assets/Resources/Squads/<TipoSquad>/` y son los que `SquadVisualManagementSystem` instancia automáticamente para cada unidad.
-
-## 🚀 Resultado Final
-
-Con esta configuración tendrás:
-- **Separación limpia** entre lógica ECS y visuales
-- **Input unificado** procesado por ECS
-- **Animaciones de calidad** de Synty mantenidas
-- **Arquitectura escalable** para múltiples héroes
-- **Performance mejorada** con procesamiento batch ECS
-
-¡La configuración híbrida ECS + Visual está lista! 🎉
+- [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md)
+- [Movimiento del héroe y autoridad física](Arquitectura/10_Movimiento_Heroe_Autoridad_Fisica_2026-09-14.md)
+- [Motor local del héroe](Arquitectura/14_Motor_Local_Heroe_2026-09-15.md)
+- [Animación remota separada](Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md)
+- [Pipeline de movimiento de tropas](TroopMovementPipeline.md)

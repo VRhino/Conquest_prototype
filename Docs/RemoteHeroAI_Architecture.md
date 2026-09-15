@@ -1,5 +1,6 @@
 # Remote Hero AI — Arquitectura
 
+> Estado implementado actualizado el 2026-09-15 y verificado contra `3eef0e17`.
 > Diseño del sistema de comportamiento para héroes remotos (non-local-player).
 > Todos los behaviors compiten para **ganar la partida**. La diferencia es la sofisticación táctica.
 
@@ -9,7 +10,7 @@
 
 Cada behavior es un archivo `.System.cs` aislado. Agregar o quitar un behavior = agregar o quitar un archivo. Zero cambios en Perception, Execution, ni en ningún sistema existente.
 
-La capa de Execution escribe a las mismas interfaces que usa el jugador local (`HeroMoveIntent`, `SquadInputComponent`), así todo el pipeline downstream (movimiento, animación, squads) funciona sin modificaciones.
+La capa de Execution reutiliza `HeroMoveIntent` como descripción de movimiento, pero la autoridad física remota es el `NavMeshAgent`. Para órdenes de squad publica `SquadAIOrderIntentComponent`, que compite en `OrderResolutionSystem`; para presentación, `RemoteHeroAnimationDriver` consume la velocidad confirmada del agente.
 
 **Separación QUÉ hay / QUÉ me importa / QUÉ hago**:
 - `BattleWorldState` → **QUÉ hay** en el mundo (datos crudos, filtrados por visibilidad)
@@ -26,11 +27,11 @@ La capa de Execution escribe a las mismas interfaces que usa el jugador local (`
  Lee: mundo ECS completo         Tick-gated (5 frames)          HeroAIBalanced.System          Lee: HeroAIDecision
  Filtra: fog-of-war via          Lee: TeamWorldState            HeroAITactician.System         Escribe:
  DetectedEnemy buffers           Calcula: derived per-hero      (solo 1 corre por entidad)       → HeroMoveIntent
- Escribe: TeamWorldState         Escribe: HeroAIBlackboard      Lee: TeamWorldState +            → SquadInputComponent
+ Escribe: TeamWorldState         Escribe: HeroAIBlackboard      Lee: TeamWorldState +            → SquadAIOrderIntentComponent
  (singleton managed)             (agnóstico de intención)       HeroAIBlackboard                → NavMeshAgent.SetDestination
                                                                 Escribe: HeroAIDecision          │
                                                                                                  ▼
-                                                                                       Pipeline existente INTACTO
+                                                                                       Pipeline compartido por contratos
 ```
 
 ---
@@ -157,8 +158,8 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 ### HeroAIExecution.System
 - Lee `HeroAIDecision`, traduce a comandos:
   - **Movimiento**: `NavMeshAgent.SetDestination()` + `HeroMoveIntent`; la animación remota deriva locomoción de la velocidad NavMesh
-  - **Ataque**: setea `HeroCombatComponent` si `shouldAttack`
-  - **Squad orders**: escribe a `SquadInputComponent { orderType, holdPosition, hasNewOrder = true }` via `HeroSquadReference`
+  - **Ataque**: no lo ejecuta; `HeroAttackSystem` lee directamente `HeroAIDecision.shouldAttack` después de Execution
+  - **Squad orders**: escribe `SquadAIOrderIntentComponent` vía `HeroSquadReference`; `OrderResolutionSystem` decide frente a intención del jugador y reacción de combate
 
 ---
 
@@ -176,10 +177,12 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
     HeroAIBalancedSystem  ├── solo 1 corre por entidad (IEnableableComponent tag check)
                           ┘
         ↓
-    HeroAIExecutionSystem        → HeroMoveIntent + SquadInputComponent + NavMeshAgent
+    HeroAIExecutionSystem        → HeroMoveIntent + SquadAIOrderIntentComponent + NavMeshAgent
         ↓
     HeroMovementSystem           (local only, sin cambios)
-    SquadOrderSystem             (procesa TODOS los squads ← sin filtro IsLocalPlayer)
+    OrderResolutionSystem        (arbitra Player / CombatReaction / AI)
+        ↓
+    SquadOrderSystem             (aplica sólo SquadResolvedOrderComponent)
     HeroAttackSystem             (+ segundo loop para AI heroes)
     NavMeshPositionSyncSystem    (publica pose remota NavMesh → ECS)
     EntityVisualSync             (vincula entidad y sincroniza pose)
@@ -194,7 +197,8 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 |---------|--------|---------|
 | `BattleSceneController.SpawnRemoteHero()` | Agregar `HeroAITag`, `RusherBehaviorActive`/`BalancedBehaviorActive`, `IsAttackerRole`, `HeroAIBlackboard`, `HeroAIDecision`, `HeroMoveIntent` al spawn | Mínimo — solo spawn |
 | `HeroAttackSystem` | Segundo `foreach` con `WithAll<HeroAITag>()` leyendo `HeroAIDecision.shouldAttack` | Loop separado, local player path intacto |
-| `SquadOrderSystem` | **Sin cambios** — ya procesa todos los squads sin filtro | — |
+| `OrderResolutionSystem` | Arbitra intents de jugador, reacción de combate e IA y conserva su `OrderSource` | Evita escritores competidores |
+| `SquadOrderSystem` | Consume únicamente la orden resuelta y respeta el bloqueo de retirada | Aplicación única |
 | `HeroMovementSystem` | **Sin cambios** — AI usa NavMeshAgent, no este system | — |
 
 ---
@@ -245,6 +249,6 @@ Assets/Scripts/Hero/AI/
 | El héroe local en `allyHeroes` **y** en `visibleEnemyHeroes` del contrario | Regla uniforme: todos los héroes (local o AI) siguen la misma lógica de visibilidad. |
 | NavMeshAgent para movimiento | Ya está en remote heroes. Obstacle avoidance + pathfinding gratuito. |
 | 1 system por behavior | Open/Closed: agregar behavior = nuevo archivo, sin tocar existentes. |
-| `SquadInputComponent` para orders | `SquadOrderSystem` ya procesa todos los squads sin filtro — reutilización 100%. |
+| `SquadAIOrderIntentComponent` para órdenes | Reutiliza el arbitraje común sin escribir directamente el estado aplicado ni competir con jugador/combate. |
 | Segundo loop en `HeroAttackSystem` | Local player path completamente intacto. |
 | `BattleWorldState` corre todos los frames | Datos siempre frescos. `HeroAIPerception` (5 frames) es la capa cara — el servicio de datos es barato. |

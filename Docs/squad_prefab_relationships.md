@@ -1,5 +1,7 @@
 # Relación entre Squad Data, ECS Prefab y Visual Prefab
 
+> Actualizado el 2026-09-15. La autoridad de movimiento de unidades es `UnitNavMeshSystem`/`NavMeshAgent`; `EntityVisualSync` vincula la representación y no instala motores de héroe en unidades.
+
 Este documento detalla cómo se conectan los datos de configuración de los escuadrones con las entidades de ECS y sus representaciones visuales en Unity.
 
 ## 1. SquadData (ScriptableObject)
@@ -38,7 +40,7 @@ Este sistema reacciona a la creación de unidades:
 1.  Busca entidades que tengan `UnitVisualReference` pero no tengan una instancia visual todavía.
 2.  Usa el `visualPrefabName` para obtener el prefab real desde `VisualPrefabRegistry.Instance`.
 3.  Instancia el GameObject visual en la escena de Unity.
-4.  Añade el componente `EntityVisualSync` al GameObject para sincronizar su Transform con la entidad ECS.
+4.  Añade el componente `EntityVisualSync` al GameObject para vincularlo con la entidad. Cuando el agente publica pose mediante `NavMeshPositionSyncSystem`, el bridge evita duplicar esa escritura.
 5.  Añade `UnitVisualInstance` a la entidad ECS para guardar el ID de la instancia y evitar duplicados.
 
 ---
@@ -52,4 +54,4 @@ Este sistema reacciona a la creación de unidades:
 | `SquadDataComponent` | Almacena el `unitPrefab` (el ECS-only prefab). |
 | `UnitVisualReference` | Contiene el nombre del prefab visual a buscar en el registro. |
 | `UnitVisualInstance` | Guarda la referencia a la instancia del GameObject creado. |
-| `EntityVisualSync` | Script de MonoBehaviour que sincroniza el Visual con el ECS. |
+| `EntityVisualSync` | Vincula entidad y GameObject y sincroniza pose según el contrato del rol. Una unidad no recibe `LocalHeroCharacterMotor` ni `RemoteHeroAnimationDriver`. |

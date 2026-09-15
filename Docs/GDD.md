@@ -1,5 +1,7 @@
 # GDD
 
+> **Documento de diseño de producto.** Describe intención, reglas deseadas y alcance futuro; no certifica por sí mismo el estado del código. Para comportamiento implementado consulte [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md), las fases de [Arquitectura](Arquitectura/) y el [pipeline de movimiento](TroopMovementPipeline.md).
+
 ## 📌 Nombre tentativo: Conquest Tactics
 
 ---

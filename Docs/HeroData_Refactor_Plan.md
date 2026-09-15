@@ -2,6 +2,8 @@
 
 > Fecha: 2026-03-28
 > Contexto: `CouplingAnalysis.md` sección A-01
+>
+> **Plan histórico.** Algunas fases e interfaces ya fueron aplicadas y el inventario de consumidores puede haber cambiado. Para el estado implementado consulte [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md) y para deuda vigente [estado actual de problemas](buggedFunctionalities.md).
 
 ---
 

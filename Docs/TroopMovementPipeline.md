@@ -2,6 +2,8 @@
 
 Documento técnico que describe el flujo completo de movimiento de las tropas (squads/units), desde la captura de input del jugador hasta la representación visual en pantalla.
 
+Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
+
 ---
 
 ## 1. Resumen General
@@ -9,7 +11,7 @@ Documento técnico que describe el flujo completo de movimiento de las tropas (s
 ```
 Input (teclado/mouse)
   ↓
-SquadControlSystem         — captura input, escribe SquadInputComponent
+SquadControlSystem         — captura input, publica intención del jugador
   ↓
 OrderResolutionSystem      — arbitra intent del jugador, IA y reacción de combate
   ↓
@@ -88,7 +90,7 @@ Si la misma tecla se presiona dos veces dentro del threshold, se activa la acci�
 
 Al presionar X, el sistema lanza un raycast contra el layer de terreno. Si falla, usa un plano fallback en Y=0. La posición resultante se guarda en `SquadInputComponent.holdPosition`.
 
-### Componente de salida
+### Componentes de salida
 
 ```csharp
 public struct SquadInputComponent : IComponentData
@@ -101,12 +103,14 @@ public struct SquadInputComponent : IComponentData
 }
 ```
 
+`SquadInputComponent` conserva flags y configuración compartida, pero la orden local candidata se publica en `SquadPlayerOrderIntentComponent`. La IA publica `SquadAIOrderIntentComponent` y `CombatReactionSystem` publica `SquadCombatReactionIntentComponent`; ningún productor escribe directamente el estado aplicado.
+
 ---
 
 ## 4. Procesamiento de Órdenes — `SquadOrderSystem`
 
 **Archivo:** `Assets/Scripts/Squads/Systems/SquadOrder.System.cs`
-**Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`, `[UpdateAfter(typeof(SquadControlSystem))]`
+**Orden relevante:** `OrderResolutionSystem` se ejecuta después de reacción de combate y antes de `SquadOrderSystem`.
 
 ### Conversión de órdenes a estado
 
@@ -119,12 +123,13 @@ public struct SquadInputComponent : IComponentData
 
 ### Lógica
 
-1. Lee `SquadInputComponent` (solo si `hasNewOrder == true`)
-2. Copia la orden al `SquadStateComponent`:
-   - `currentOrder`, `isExecutingOrder`, `transitionTo`, `currentFormation`
-3. Actualiza `FormationComponent.currentFormation`
-4. **Hold Position:** crea/actualiza `SquadHoldPositionComponent` con `holdCenter` y `originalFormation`
-5. **Otros estados:** elimina `SquadHoldPositionComponent` si existe
+1. `OrderResolutionSystem` arbitra intención de jugador, IA y reacción de combate y escribe `SquadResolvedOrderComponent` con `OrderSource`.
+2. `SquadOrderSystem` procesa sólo `resolved.hasNewOrder`.
+3. Si `retreatTriggered` está activo, descarta la orden sin desbloquear la retirada.
+4. Copia `order`, `isExecutingOrder` y `transitionTo` a `SquadStateComponent`.
+5. **Hold Position:** crea/actualiza `SquadHoldPositionComponent` con centro, rotación y formación original.
+6. **Otros estados:** elimina `SquadHoldPositionComponent` si existe.
+7. No confirma formación: `FormationSystem` lo hace únicamente después de validar y asignar slots.
 
 ---
 
@@ -150,15 +155,17 @@ SquadFSMState:
 | Desde | Hacia | Condición |
 |-------|-------|-----------|
 | Cualquiera | Estado pendiente | `transitionTo` != estado actual |
-| `InCombat` | Otro estado | Solo después de **mínimo 3 segundos** en combate |
+| `InCombat` | Otro estado | Tras `SquadSpawnConfigComponent.minCombatDuration`, salvo override insistente del jugador |
 | Cualquiera | `KO` | Todas las unidades del buffer `SquadUnitElement` están muertas |
-| Cualquiera | `Retreating` | `lastOwnerAlive == false` y no se ha activado retreat |
+| Cualquiera | `Retreating` | Petición operativa de swap o `SquadOwnerDeathRetreatSystem` |
 
 ### Lógica
 
 - Aplica transición pendiente: `currentState = transitionTo`
 - Incrementa `stateTimer` cada frame con `deltaTime`
-- Enforces mínimo de 3s en combate antes de permitir salida
+- Mantiene `InCombat` mientras `SquadAIComponent.isInCombat`, salvo override insistente del jugador
+- Lee `minCombatDuration` desde `SquadSpawnConfigComponent` (fallback interno de 1 s)
+- Conserva retiradas comprometidas incluso al morir la última unidad; no crea por sí misma componentes de retirada
 
 ---
 
@@ -384,7 +391,7 @@ La animación tampoco forma ya parte de este puente. Para un héroe remoto, `Rem
 | `SquadInputComponent` | Input del jugador (orden, formación, hurry) | `SquadControlSystem` |
 | `SquadStateComponent` | Estado actual del escuadrón, timer, orden | `SquadOrderSystem`, `SquadFSMSystem` |
 | `SquadHoldPositionComponent` | Centro y formación de Hold Position | `SquadOrderSystem` |
-| `FormationComponent` | Formación actual del escuadrón | `SquadOrderSystem` |
+| `FormationComponent` / `SquadActiveFormationComponent` | Formación confirmada y cooldown | `FormationSystem` |
 | `SquadDataComponent` | Datos del escuadrón (formationLibrary blob) | Setup/Spawn |
 | `UnitTargetPositionComponent` | Posición deseada (slot de formación) | `FormationSystem`, `GridFormationUpdateSystem` |
 | `UnitGridSlotComponent` | Coordenadas de grilla y offset world | `FormationSystem` |

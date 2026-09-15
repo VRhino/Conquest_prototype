@@ -8,7 +8,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### HeroInputSystem
 - **Responsabilidad**: Captura raw input del jugador (WASD, mouse, hotkeys)
-- **Output**: `HeroInputComponent`, `HeroMoveIntent`
+- **Output**: `HeroInputComponent` y `PlayerInteractionComponent`; `HeroMovementSystem` produce después `HeroMoveIntent`
 - **Regla**: Solo lee input — nunca modifica estado de héroe ni squads
 
 ### HeroMovementSystem
@@ -256,7 +256,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 
 ### VisualSyncUtility (`Assets/Scripts/Shared/VisualSyncUtility.cs`)
 - `SetupVisualSync(GameObject)` — configura `AnimatorCullingMode.CullCompletely` y añade/obtiene `EntityVisualSync`
-- Usada por: `HeroVisualManagementSystem`, `SquadVisualManagementSystem`
+- Usada por: `HeroVisualInstantiationSystem`, `SquadVisualManagementSystem`
 
 ### GameTags (`Assets/Scripts/Shared/GameTags.cs`)
 - Constantes de tags de Unity: `Player = "Player"`, `Terrain = "Terrain"`

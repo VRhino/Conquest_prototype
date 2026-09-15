@@ -1,1090 +1,193 @@
-# Modelo Híbrido ECS-GameObject - Conquest Tactics
+# Modelo híbrido ECS–GameObject
 
-> **Documento histórico.** Los diagramas de esta página conservan nombres y responsabilidades anteriores a la reparación del pipeline. La referencia vigente está en [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md), [Movimiento del héroe](Arquitectura/10_Movimiento_Heroe_Autoridad_Fisica_2026-09-14.md) y [Pipeline de movimiento de tropas](TroopMovementPipeline.md).
+Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
 
-## 📋 Índice
+Este documento describe el modelo híbrido implementado. La estructura completa de datos, persistencia y DTO de batalla está en [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md); el detalle temporal de squads está en [Pipeline de movimiento](TroopMovementPipeline.md).
 
-1. [🏗️ Arquitectura General](#🏗️-arquitectura-general)
-2. [🔄 Flujo de Sincronización](#🔄-flujo-de-sincronización)
-3. [⚙️ Sistemas Principales](#⚙️-sistemas-principales)
-4. [🎮 Flujo de Juego](#🎮-flujo-de-juego)
-5. [💾 Componentes y Datos](#💾-componentes-y-datos)
-6. [🎯 Estados del Sistema](#🎯-estados-del-sistema)
-7. [🔧 Implementación Técnica](#🔧-implementación-técnica)
-8. [✅ Ventajas del Modelo](#✅-ventajas-del-modelo)
+## Principio rector
 
----
+ECS conserva identidad, intención y estado de gameplay. Los GameObjects aportan capacidades de Unity que el ECS actual no reemplaza —`CharacterController`, `NavMeshAgent`, `Animator`, render, colliders y efectos— y devuelven únicamente resultados físicos confirmados por puentes explícitos.
 
-## 🏗️ Arquitectura General
-
-### Diagrama de Arquitectura Híbrida
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           CONQUEST TACTICS - MODELO HÍBRIDO                     │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌─────────────────────┐              ┌─────────────────────────────────────┐   │
-│  │    ECS WORLD        │              │        GAMEOBJECT WORLD             │   │
-│  │   (Lógica Pura)     │              │      (Visualización Pura)           │   │
-│  │                     │              │                                     │   │
-│  │  ┌───────────────┐  │              │  ┌─────────────────────────────┐    │   │
-│  │  │     HERO      │  │◄────────────►│  │       SYNTY PREFABS         │    │   │
-│  │  │   Entity      │  │              │  │                             │    │   │
-│  │  │               │  │              │  │  ┌─────────────────────┐    │    │   │
-│  │  │ ▣ LocalTransf │  │              │  │  │   HeroSynty.prefab  │    │    │   │
-│  │  │ ▣ HeroStats   │  │              │  │  │   + EntityVisualSync│    │    │   │
-│  │  │ ▣ HeroInput   │  │              │  │  └─────────────────────┘    │    │   │
-│  │  │ ▣ HeroState   │  │              │  │                             │    │   │
-│  │  │ ▣ IsLocalPlyr │  │              │  │  ┌─────────────────────┐    │    │   │
-│  │  └───────────────┘  │              │  │  │  SquirePrefab.prefab│    │    │   │
-│  │                     │              │  │  │  + EntityVisualSync │    │    │   │
-│  │  ┌───────────────┐  │              │  │  └─────────────────────┘    │    │   │
-│  │  │     SQUAD     │  │              │  │                             │    │   │
-│  │  │   Entity      │  │              │  │  ┌─────────────────────┐    │    │   │
-│  │  │               │  │              │  │  │  ArcherPrefab.prefab│    │    │   │
-│  │  │ ▣ SquadData   │  │              │  │  │  + EntityVisualSync │    │    │   │
-│  │  │ ▣ SquadOwner  │  │              │  │  └─────────────────────┘    │    │   │
-│  │  │ ▣ SquadState  │  │              │  │                             │    │   │
-│  │  │ ▣ UnitBuffer  │  │              │  └─────────────────────────────┘    │   │
-│  │  └───────────────┘  │              │                                     │   │
-│  │                     │              │  ┌─────────────────────────────┐    │   │
-│  │  ┌───────────────┐  │              │  │    INSTANCIAS RUNTIME       │    │   │
-│  │  │   UNIT 1-N    │  │              │  │                             │    │   │
-│  │  │   Entities    │  │              │  │  GameObject heroVisual      │    │   │
-│  │  │               │  │              │  │  ├─ EntityVisualSync        │    │   │
-│  │  │ ▣ UnitStats   │  │              │  │  ├─ Synty Components        │    │   │
-│  │  │ ▣ UnitFormSt  │  │              │  │  └─ Visual Assets           │    │   │
-│  │  │ ▣ UnitTarget  │  │              │  │                             │    │   │
-│  │  │ ▣ UnitGridSl  │  │              │  │  GameObject[] unitVisuals   │    │   │
-│  │  │ ▣ LocalTransf │  │              │  │  ├─ EntityVisualSync        │    │   │
-│  │  └───────────────┘  │              │  │  ├─ Synty Components        │    │   │
-│  └─────────────────────┘              │  │  └─ Visual Assets           │    │   │
-│                                       │  └─────────────────────────────┘    │   │
-└─────────────────────────────────────────────────────────────────────────────────┘
-
-        ▲                                               ▲
-        │                                               │
-        └─────────────── SINCRONIZACIÓN ────────────────┘
-                      (EntityVisualSync.Update())
+```text
+ECS: decisión e intención
+        │
+        ▼
+motor físico apropiado de Unity
+        │
+        ▼
+pose/contactos confirmados
+        │
+        ├──→ ECS para simulación posterior
+        └──→ Animator para presentación
 ```
 
-### Principios de Separación
+No existe una única dirección universal ECS → GameObject. La dirección depende del rol y está definida por contrato.
 
-| **Aspecto** | **ECS World** | **GameObject World** |
-|-------------|---------------|---------------------|
-| **Responsabilidad** | Lógica de juego, estado, cálculos | Visualización, animación, audio |
-| **Datos** | Componentes ECS puros | Referencias visuales, materials |
-| **Rendimiento** | Optimizado con Burst/Jobs | Rendering pipeline tradicional |
-| **Escalabilidad** | Cientos de entidades | Limitado por GPU/rendering |
-| **Modificación** | Solo via Systems | Solo via sincronización |
+## Entidades y representaciones
 
----
-
-## 🔄 Flujo de Sincronización
-
-### Diagrama de Sincronización Automática
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                           SINCRONIZACIÓN TIEMPO REAL                           │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│   ECS SYSTEMS                    SYNC LAYER                  GAMEOBJECTS       │
-│                                                                                 │
-│  ┌─────────────────┐             ┌─────────────┐             ┌───────────────┐  │
-│  │ HeroMovementSys │────────────►│EntityVisual │────────────►│ Hero Visual   │  │
-│  │                 │  Transform  │    Sync     │  position   │   GameObject  │  │
-│  │ ▣ Input→Move    │    Data     │             │  rotation   │               │  │
-│  │ ▣ LocalTransf   │             │ ▣ entity    │   scale     │ ▣ Transform   │  │
-│  └─────────────────┘             │ ▣ entityMgr │             │ ▣ Renderer    │  │
-│                                  │ ▣ Update()  │             │ ▣ Animator    │  │
-│  ┌─────────────────┐             └─────────────┘             └───────────────┘  │
-│  │UnitFormationSys │                    │                                      │
-│  │                 │                    │                                      │
-│  │ ▣ Formation     │                    ▼                                      │
-│  │ ▣ TargetPos     │             ┌─────────────┐             ┌───────────────┐  │
-│  └─────────────────┘             │EntityVisual │────────────►│ Unit 1 Visual │  │
-│           │                      │    Sync     │             │   GameObject  │  │
-│           ▼                      │             │             │               │  │
-│  ┌─────────────────┐             │ ▣ entity    │             │ ▣ Transform   │  │
-│  │UnitFollowFormSys│────────────►│ ▣ entityMgr │             │ ▣ Renderer    │  │
-│  │                 │  Transform  │ ▣ Update()  │             │ ▣ Animator    │  │
-│  │ ▣ Move to Pos   │    Data     └─────────────┘             └───────────────┘  │
-│  │ ▣ LocalTransf   │                    │                                      │
-│  └─────────────────┘                    │                                      │
-│                                         ▼                                      │
-│                                  ┌─────────────┐             ┌───────────────┐  │
-│                                  │EntityVisual │────────────►│ Unit N Visual │  │
-│                                  │    Sync     │             │   GameObject  │  │
-│                                  │             │             │               │  │
-│                                  │ ▣ entity    │             │ ▣ Transform   │  │
-│                                  │ ▣ entityMgr │             │ ▣ Renderer    │  │
-│                                  │ ▣ Update()  │             │ ▣ Animator    │  │
-│                                  └─────────────┘             └───────────────┘  │
-│                                                                                 │
-│                              EVERY FRAME                                       │
-│                          (MonoBehaviour.Update)                                │
-└─────────────────────────────────────────────────────────────────────────────────┘
+```text
+Hero entity 1 ── 0..1 HeroVisualInstance ── 1 GameObject de héroe
+      │
+      └── 0..1 HeroSquadReference ── 1 Squad entity
+                                      │
+                                      └── 0..N SquadUnitElement ── Unit entity
+                                                                         │
+                                                                         └── 0..1 UnitVisualInstance
 ```
 
-### Código de Sincronización
+Los componentes `HeroVisualInstance` y `UnitVisualInstance` son managed components runtime. No forman parte de persistencia ni de un contrato de red.
 
-```csharp
-public class EntityVisualSync : MonoBehaviour
-{
-    [Header("Entity Sync Configuration")]
-    public Entity entity;
-    public EntityManager entityManager;
-    
-    private void Update()
-    {
-        // Validar entidad existe
-        if (!IsEntityValid()) return;
-        
-        // Sincronizar transform ECS → GameObject
-        if (entityManager.HasComponent<LocalTransform>(entity))
-        {
-            var ecsTransform = entityManager.GetComponentData<LocalTransform>(entity);
-            
-            transform.position = ecsTransform.Position;
-            transform.rotation = ecsTransform.Rotation;
-            transform.localScale = originalScale * ecsTransform.Scale;
-        }
-        
-        // Sincronizar estado de vida
-        if (entityManager.HasComponent<HeroLifeComponent>(entity))
-        {
-            var life = entityManager.GetComponentData<HeroLifeComponent>(entity);
-            gameObject.SetActive(life.isAlive);
-        }
-    }
-}
+## Matriz de autoridad
+
+| Caso | Intención/decisión | Ejecutor físico | Publicación a ECS | Presentación |
+|---|---|---|---|---|
+| Héroe local | `HeroInputSystem` → `HeroMovementSystem` → `HeroMoveIntent` | `LocalHeroCharacterMotor` → `CharacterController.Move()` | El motor escribe `LocalTransform` y `HeroMotorStateComponent` | `EcsAnimationInputAdapter` + `SamplePlayerAnimationController_ECS` |
+| Héroe remoto/IA | `HeroAIExecutionSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` | `RemoteHeroAnimationDriver` |
+| Unidad navegable | formación/targeting → `UnitNavMeshSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` | adaptador/controlador de unidad |
+| Visual sin NavMesh | sistema ECS propietario | pose ECS | no aplica | `EntityVisualSync` copia ECS → GameObject |
+
+Reglas:
+
+- Sólo `LocalHeroCharacterMotor` puede habilitar y mover el `CharacterController` del héroe local.
+- Un héroe remoto mantiene su `CharacterController` deshabilitado.
+- `RemoteHeroAnimationDriver` no escribe pose, órdenes ni destinos.
+- `EntityVisualSync` no ejecuta movimiento local ni conduce locomoción remota.
+- Para agentes con `NavAgentComponent.syncPositionFromNavMesh`, la publicación de pose pertenece a `NavMeshPositionSyncSystem`; `EntityVisualSync` no duplica esa escritura.
+
+## Héroe local
+
+```text
+hardware
+  → HeroInputSystem
+  → HeroInputComponent
+  → HeroMovementSystem
+  → HeroMoveIntent { Direction, Speed }
+  → LocalHeroCharacterMotor
+  → CharacterController.Move
+  ├─ LocalTransform
+  └─ HeroMotorStateComponent { velocity, grounded, hitSides, hitCeiling }
 ```
 
----
+`HeroMovementSystem` no integra `LocalTransform`: transforma input a intención relativa a cámara, aplica sprint/stamina y bloqueos de gameplay, y limpia la intención al morir, esperar spawn o no disponer de cámara.
 
-## ⚙️ Sistemas Principales
+El motor local procesa gravedad, suelo, pendientes, escalones y colisiones. Su velocidad horizontal confirmada alimenta la animación, de modo que una intención bloqueada por geometría no produce carrera visual.
 
-### Diagrama de Sistemas y Flujo de Datos
+### Spawn y teleport
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              SISTEMAS PRINCIPALES                              │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│    INPUT LAYER              LOGIC LAYER              VISUAL LAYER              │
-│                                                                                 │
-│  ┌─────────────┐           ┌─────────────────┐        ┌──────────────────┐      │
-│  │HeroInputSys │──────────►│HeroMovementSys  │───────►│HeroVisualMgmtSys │      │
-│  │             │  Input    │                 │ ECS    │                  │      │
-│  │▣ Mouse      │   Data    │▣ Input→Movement │ Data   │▣ Spawn Visual    │      │
-│  │▣ Keyboard   │           │▣ Speed Calc     │        │▣ Setup Sync      │      │
-│  │▣ Commands   │           │▣ LocalTransform │        └──────────────────┘      │
-│  └─────────────┘           └─────────────────┘               │                 │
-│        │                           │                         ▼                 │
-│        │                           ▼                ┌──────────────────┐       │
-│        │                  ┌─────────────────┐       │   HERO VISUAL    │       │
-│        │                  │  HeroStateSystem│       │   GAMEOBJECT     │       │
-│        │                  │                 │       │                  │       │
-│        │                  │▣ Idle/Moving    │       │▣ Synty Prefab    │       │
-│        │                  │▣ State Track    │       │▣ EntityVisualSync│       │
-│        │                  └─────────────────┘       └──────────────────┘       │
-│        │                                                                       │
-│        ▼                                                                       │
-│  ┌─────────────┐           ┌─────────────────┐        ┌──────────────────┐      │
-│  │SquadCtrlSys │──────────►│SquadOrderSystem │───────►│SquadVisualMgmtSys│      │
-│  │             │  Squad    │                 │ Squad  │                  │      │
-│  │▣ Formation  │  Orders   │▣ Order→State    │ State  │▣ Spawn Units     │      │
-│  │▣ Hold Pos   │           │▣ Input Process  │        │▣ Setup Unit Sync │      │
-│  │▣ Commands   │           └─────────────────┘        └──────────────────┘      │
-│  └─────────────┘                   │                         │                 │
-│                                    ▼                         ▼                 │
-│                           ┌─────────────────┐       ┌──────────────────┐       │
-│                           │ FormationSystem │       │   UNIT VISUALS   │       │
-│                           │                 │       │   GAMEOBJECTS    │       │
-│                           │▣ Calc Positions │       │                  │       │
-│                           │▣ Grid Layout    │       │▣ Synty Prefabs   │       │
-│                           │▣ Target Update  │       │▣ EntityVisualSync│       │
-│                           └─────────────────┘       └──────────────────┘       │
-│                                    │                                           │
-│                                    ▼                                           │
-│                           ┌─────────────────┐                                  │
-│                           │UnitFormStateSys │                                  │
-│                           │                 │                                  │
-│                           │▣ State Manager  │                                  │
-│                           │▣ Moving/Formed  │                                  │
-│                           │▣ Transition Logic│                                 │
-│                           └─────────────────┘                                  │
-│                                    │                                           │
-│                                    ▼                                           │
-│                           ┌─────────────────┐                                  │
-│                           │UnitFollowFormSys│                                  │
-│                           │                 │                                  │
-│                           │▣ Physical Move  │                                  │
-│                           │▣ Speed Calc     │                                  │
-│                           │▣ LocalTransform │                                  │
-│                           └─────────────────┘                                  │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+`HeroSpawnSystem` selecciona un punto válido, actualiza `HeroSpawnComponent.spawnPosition/spawnRotation`, incrementa `positionRevision` y publica la pose ECS. El motor consume cada revisión una sola vez, deshabilita temporalmente el controller, aplica la pose, reinicia velocidad vertical y vuelve a publicar el resultado confirmado. Un spawn sin punto válido no incrementa la revisión.
+
+## Héroe remoto
+
+```text
+HeroAIPerceptionSystem
+  → HeroAIBlackboard
+  → HeroAIRusherSystem / HeroAIBalancedSystem
+  → HeroAIDecision
+  → HeroAIExecutionSystem
+      ├─ proyección/validación de destino
+      ├─ NavMeshAgent.SetDestination
+      ├─ HeroMoveIntent informativo
+      └─ SquadAIOrderIntentComponent
 ```
 
-### Responsabilidades por Sistema
+El `NavMeshAgent` mueve el GameObject. `NavMeshPositionSyncSystem` publica la pose física a `LocalTransform`. `RemoteHeroAnimationDriver` lee velocidad real, sprint decidido y componentes de combate para escribir el `Animator`; deshabilita los consumidores de input local.
 
-| **Sistema** | **Responsabilidad** | **Input** | **Output** |
-|-------------|-------------------|-----------|------------|
-| `HeroInputSystem` | Captura input del jugador | Mouse, Keyboard | HeroInputComponent, HeroMoveIntent |
-| `HeroMovementSystem` | Mueve héroe según intent | HeroMoveIntent | LocalTransform |
-| `HeroStateSystem` | Detecta estado héroe | Transform changes | HeroStateComponent |
-| `SquadControlSystem` | Captura órdenes de squad | Input | SquadInputComponent |
-| `SquadOrderSystem` | Procesa órdenes | SquadInputComponent | SquadStateComponent |
-| `FormationSystem` | Calcula posiciones formación | Squad state | UnitTargetPositionComponent |
-| `UnitFormationStateSystem` | Gestiona estados unidades | Positions, distances | UnitFormationStateComponent |
-| `UnitFollowFormationSystem` | Mueve unidades físicamente | Target positions | LocalTransform |
-| `HeroVisualManagementSystem` | Crea visuales héroe | Hero spawn | GameObject + sync |
-| `SquadVisualManagementSystem` | Crea visuales unidades | Unit spawn | GameObjects + sync |
+Un destino inválido se proyecta al NavMesh. Los fallos se recuerdan y sólo se reintentan al cambiar suficientemente la orden, evitando `SetDestination` repetido cada frame.
 
----
+## Squads y unidades
 
-## 🎮 Flujo de Juego
-
-### Diagrama de Flujo Completo
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              FLUJO DE JUEGO COMPLETO                           │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│   FASE 1: INICIALIZACIÓN                                                       │
-│   ┌─────────────────────────────────────────────────────────────────────────┐   │
-│   │                                                                         │   │
-│   │  1. HeroSpawnSystem                    2. HeroVisualManagementSystem    │   │
-│   │     │                                     │                            │   │
-│   │     ▼                                     ▼                            │   │
-│   │  ┌──────────────┐                    ┌──────────────┐                  │   │
-│   │  │ Hero Entity  │                    │ Hero Visual  │                  │   │
-│   │  │              │                    │              │                  │   │
-│   │  │▣ LocalTransf │                    │▣ Synty Prefab│                  │   │
-│   │  │▣ HeroStats   │◄──────────────────►│▣ VisualSync  │                  │   │
-│   │  │▣ HeroInput   │     Sync Setup     │▣ Transform   │                  │   │
-│   │  │▣ IsLocalPlr  │                    │▣ Renderer    │                  │   │
-│   │  └──────────────┘                    └──────────────┘                  │   │
-│   │         │                                                               │   │
-│   │         ▼                                                               │   │
-│   │  3. SquadSpawningSystem                4. SquadVisualManagementSystem   │   │
-│   │     │                                     │                            │   │
-│   │     ▼                                     ▼                            │   │
-│   │  ┌──────────────┐                    ┌──────────────┐                  │   │
-│   │  │ Squad Entity │                    │ Unit Visuals │                  │   │
-│   │  │              │                    │              │                  │   │
-│   │  │▣ SquadData   │                    │▣ Unit 1 GO   │                  │   │
-│   │  │▣ SquadOwner  │◄──────────────────►│▣ Unit 2 GO   │                  │   │
-│   │  │▣ SquadState  │     Sync Setup     │▣ Unit N GO   │                  │   │
-│   │  │▣ UnitBuffer  │                    │▣ VisualSyncs │                  │   │
-│   │  └──────────────┘                    └──────────────┘                  │   │
-│   │                                                                         │   │
-│   └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-│   FASE 2: GAMEPLAY LOOP                                                        │
-│   ┌─────────────────────────────────────────────────────────────────────────┐   │
-│   │                                                                         │   │
-│   │    INPUT                LOGIC PROCESSING              VISUAL UPDATE     │   │
-│   │      │                        │                           │             │   │
-│   │      ▼                        ▼                           ▼             │   │
-│   │  ┌─────────┐              ┌─────────┐                ┌─────────┐        │   │
-│   │  │Player   │              │ECS      │                │Visual   │        │   │
-│   │  │Input    │─────────────►│Systems  │───────────────►│Sync     │        │   │
-│   │  │         │   Commands   │         │  ECS Data     │         │        │   │
-│   │  │▣ WASD   │              │▣ Hero   │                │▣ Hero   │        │   │
-│   │  │▣ Mouse  │              │▣ Squad  │                │▣ Units  │        │   │
-│   │  │▣ Keys   │              │▣ Units  │                │▣ Update │        │   │
-│   │  └─────────┘              └─────────┘                └─────────┘        │   │
-│   │                                                                         │   │
-│   │    SPECIFIC FLOW EXAMPLE: HERO MOVEMENT                                 │   │
-│   │    ┌─────────────────────────────────────────────────────────────────┐   │   │
-│   │    │                                                                 │   │   │
-│   │    │  Input │ Logic Processing │ Data Update │ Visual Sync            │   │   │
-│   │    │   │    │        │         │      │      │     │                  │   │   │
-│   │    │   ▼    │        ▼         │      ▼      │     ▼                  │   │   │
-│   │    │ WASD───┼─►HeroInputSys────┼─►MoveIntent─┼─►HeroMoveSys─►LocalTr   │   │   │
-│   │    │ Mouse  │                  │             │        │                │   │   │
-│   │    │        │                  │             │        ▼                │   │   │
-│   │    │        │                  │             │  EntityVisualSync      │   │   │
-│   │    │        │                  │             │        │                │   │   │
-│   │    │        │                  │             │        ▼                │   │   │
-│   │    │        │                  │             │  GameObject.transform   │   │   │
-│   │    │                                                                 │   │   │
-│   │    └─────────────────────────────────────────────────────────────────┘   │   │
-│   │                                                                         │   │
-│   └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-│   FASE 3: UI Y FEEDBACK                                                        │
-│   ┌─────────────────────────────────────────────────────────────────────────┐   │
-│   │                                                                         │   │
-│   │  HUD Controller (MonoBehaviour)                                         │   │
-│   │      │                                                                  │   │
-│   │      ▼                                                                  │   │
-│   │  ┌─────────────────────────────────────────────────────────────────┐    │   │
-│   │  │                                                                 │    │   │
-│   │  │  void Update() {                                                │    │   │
-│   │  │      // Lee ECS directamente                                    │    │   │
-│   │  │      var em = World.DefaultGameObjectInjectionWorld.EntityMgr;  │    │   │
-│   │  │      var hero = em.GetSingletonEntity<IsLocalPlayer>();         │    │   │
-│   │  │      var health = em.GetComponentData<HeroHealth>(hero);        │    │   │
-│   │  │                                                                 │    │   │
-│   │  │      // Actualiza UI                                            │    │   │
-│   │  │      healthBar.fillAmount = health.current / health.max;        │    │   │
-│   │  │  }                                                              │    │   │
-│   │  │                                                                 │    │   │
-│   │  └─────────────────────────────────────────────────────────────────┘    │   │
-│   │                                                                         │   │
-│   └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+```text
+Productores
+  SquadControlSystem ───────→ SquadPlayerOrderIntentComponent
+  HeroAIExecutionSystem ────→ SquadAIOrderIntentComponent
+  CombatReactionSystem ─────→ SquadCombatReactionIntentComponent
+                                  │
+                                  ▼
+                         OrderResolutionSystem
+                                  │
+                                  ▼
+                         SquadResolvedOrderComponent
+                                  │
+                                  ▼
+                           SquadOrderSystem
+                                  │
+                 ┌────────────────┼─────────────────┐
+                 ▼                ▼                 ▼
+          SquadFSMSystem     FormationSystem   SquadAnchorSystem
+                                  │                 │
+                                  └────────┬────────┘
+                                           ▼
+                          UnitFormationStateSystem
+                                           ▼
+                     UnitTargetingSystem / UnitNavMeshSystem
+                                           ▼
+                      UnitFollowFormationSystem / bodyblock
+                                           ▼
+                              NavMeshPositionSyncSystem
 ```
 
----
+La orden resuelta conserva origen y prioridad. `SquadOrderSystem` aplica la orden ganadora, pero sólo `FormationSystem` confirma formación, slots y cooldown después de validar el patrón.
 
-## 💾 Componentes y Datos
+`HoldPosition` conserva un ancla táctica aunque el squad entre en combate. Targeting selecciona candidatos compartidos por squad y mantiene sólo el objetivo final como estado por unidad. La navegación de squad observa llegada; el sistema motor de unidades es el único que escribe destinos.
 
-### Estructura de Datos ECS
+## Retirada y muerte del dueño
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            COMPONENTES ECS POR ENTIDAD                         │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  HERO ENTITY                        SQUAD ENTITY                               │
-│  ┌─────────────────────────┐        ┌─────────────────────────┐                │
-│  │                         │        │                         │                │
-│  │ ▣ LocalTransform        │        │ ▣ LocalTransform        │                │
-│  │   └─ Position           │        │   └─ Squad Center       │                │
-│  │   └─ Rotation           │        │                         │                │
-│  │   └─ Scale              │        │ ▣ SquadDataComponent    │                │
-│  │                         │        │   └─ squadType          │                │
-│  │ ▣ HeroStatsComponent    │        │   └─ formationLibrary   │                │
-│  │   └─ baseSpeed          │        │   └─ behaviorProfile    │                │
-│  │   └─ sprintMultiplier   │        │                         │                │
-│  │                         │        │ ▣ SquadOwnerComponent   │                │
-│  │ ▣ HeroInputComponent    │        │   └─ hero (Entity ref)  │                │
-│  │   └─ movement           │        │                         │                │
-│  │   └─ mousePosition      │        │ ▣ SquadStateComponent   │                │
-│  │   └─ squadOrders        │        │   └─ currentState       │                │
-│  │                         │        │   └─ currentFormation   │                │
-│  │ ▣ HeroStateComponent    │        │   └─ holdCenter         │                │
-│  │   └─ State (Idle/Move)  │        │                         │                │
-│  │                         │        │ ▣ SquadUnitElement[]    │                │
-│  │ ▣ HeroHealthComponent   │        │   └─ Buffer of Units    │                │
-│  │   └─ currentHealth      │        │                         │                │
-│  │   └─ maxHealth          │        │ ▣ SquadProgressComponent│                │
-│  │                         │        │   └─ level              │                │
-│  │ ▣ StaminaComponent      │        │   └─ currentXP          │                │
-│  │   └─ currentStamina     │        │                         │                │
-│  │   └─ maxStamina         │        └─────────────────────────┘                │
-│  │                         │                                                   │
-│  │ ▣ IsLocalPlayer (Tag)   │                                                   │
-│  │                         │                                                   │
-│  │ ▣ HeroVisualReference   │        UNIT ENTITIES (1-N per Squad)              │
-│  │   └─ visualPrefab       │        ┌─────────────────────────┐                │
-│  │                         │        │                         │                │
-│  │ ▣ HeroVisualInstance    │        │ ▣ LocalTransform        │                │
-│  │   └─ visualInstanceId   │        │   └─ Current Position   │                │
-│  │                         │        │                         │                │
-│  │ ▣ HeroSquadReference    │        │ ▣ UnitStatsComponent    │                │
-│  │   └─ squad (Entity ref) │        │   └─ baseStats          │                │
-│  │                         │        │   └─ scaledStats        │                │
-│  └─────────────────────────┘        │                         │                │
-│                                     │ ▣ UnitFormationStateComp│               │
-│                                     │   └─ state (Moving/Form)│               │
-│                                     │                         │                │
-│                                     │ ▣ UnitTargetPositionComp│               │
-│                                     │   └─ position (float3)  │               │
-│                                     │                         │                │
-│                                     │ ▣ UnitGridSlotComponent │               │
-│                                     │   └─ gridPosition       │               │
-│                                     │   └─ slotIndex          │               │
-│                                     │   └─ worldOffset        │               │
-│                                     │                         │                │
-│                                     │ ▣ UnitSpacingComponent  │               │
-│                                     │   └─ minDistance        │               │
-│                                     │   └─ repelForce         │               │
-│                                     │                         │                │
-│                                     │ ▣ UnitOwnerComponent    │               │
-│                                     │   └─ squad (Entity ref) │               │
-│                                     │   └─ hero (Entity ref)  │               │
-│                                     │                         │                │
-│                                     │ ▣ UnitVisualReference   │               │
-│                                     │   └─ visualPrefabName   │               │
-│                                     │                         │                │
-│                                     │ ▣ UnitVisualInstance    │               │
-│                                     │   └─ visualInstanceId   │               │
-│                                     │   └─ parentSquad        │               │
-│                                     │                         │                │
-│                                     └─────────────────────────┘                │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
+La muerte del héroe local es detectada por `HeroRespawnSystem` desde `HeroHealthComponent`. Mientras está muerto se consume `deathTimer`; al expirar se restaura salud y `HeroSpawnSystem` solicita una nueva pose revisionada.
+
+En paralelo, `SquadOwnerDeathRetreatSystem` compromete inmediatamente la retirada de su squad activo:
+
+- registra `SquadOwnerDeathRetreatComponent`;
+- fija FSM y transición en `Retreating`;
+- bloquea órdenes mediante `retreatTriggered`;
+- elimina `IsLocalSquadActive`;
+- usa un punto aliado activo, o espera conservando la decisión si aún no existe.
+
+`RetreatLogicSystem` espera llegada de todos los supervivientes a sus slots o el timeout configurado. Antes de destruir squad y unidades persiste efectivos en `InactiveSquadElement` y elimina `HeroSquadReference` sólo si todavía apunta a esa instancia. El respawn del dueño no cancela una retirada ya comprometida.
+
+## Creación y ciclo de vida visual
+
+```text
+entidad sin instancia visual
+  → HeroVisualInstantiationSystem / SquadVisualManagementSystem
+  → VisualPrefabRegistry
+  → Instantiate(GameObject)
+  → VisualSyncUtility.SetupVisualSync
+  → EntityVisualSync.SetHeroEntity
+  → configuración de autoridad por componentes
 ```
 
-### Componentes de Sincronización Visual
+Si la entidad vinculada desaparece, `EntityVisualSync` destruye el GameObject asociado. Los sistemas de gestión son dueños de la creación; UI y gameplay no deben instanciar representaciones paralelas.
 
-```csharp
-// HERO VISUAL COMPONENTS
-public struct HeroVisualReference : IComponentData
-{
-    public Entity visualPrefab;  // Prefab ECS reference
-}
+## Animación
 
-public struct HeroVisualInstance : IComponentData  
-{
-    public int visualInstanceId; // GameObject InstanceID
-}
+| Rol | Fuente de locomoción | Dueño del Animator |
+|---|---|---|
+| Local | `HeroMotorStateComponent.velocity/isGrounded` + eventos de input | `SamplePlayerAnimationController_ECS` mediante `EcsAnimationInputAdapter` |
+| Remoto | `NavMeshAgent.velocity` + `HeroAIDecision.shouldSprint` | `RemoteHeroAnimationDriver` |
+| Unidad | estado/velocidad del agente de unidad | adaptadores de unidad |
 
-// UNIT VISUAL COMPONENTS  
-public struct UnitVisualReference : IComponentData
-{
-    public FixedString64Bytes visualPrefabName; // "SquirePrefab", "ArcherPrefab"
-    public Entity visualPrefab;                 // Optional direct reference
-}
+Los hashes están centralizados en `AnimationHashes`. El pulso `HeroAnimationComponent.triggerAttack` se consume una vez; el estado sostenido proviene de `HeroCombatComponent.isAttacking`.
 
-public struct UnitVisualInstance : IComponentData
-{
-    public int visualInstanceId; // GameObject InstanceID
-    public Entity parentSquad;   // Squad this unit belongs to
-}
-```
+## Límites actuales
 
----
+- El orden relativo ECS `SimulationSystemGroup` ↔ `MonoBehaviour.Update` sigue siendo una frontera híbrida, no una simulación física ECS determinista.
+- `EntityVisualSync` aún conserva el consumo del ataque local; su extracción requiere coordinar un único consumidor con el controlador local de animación.
+- La autoridad remota actual es IA/NavMesh local. No existe todavía reconciliación, snapshots ni autoridad de servidor implementada.
+- `Entity`, `UnityEngine.Object`, `NavMeshAgent` y managed components no pueden formar parte del DTO neutral con BronzeAge.
 
-## 🎯 Estados del Sistema
+## Validación vigente
 
-### Diagrama de Estados y Transiciones
+- 62/62 pruebas EditMode.
+- 12/12 pruebas PlayMode.
+- 64 assemblies de Player Windows compiladas.
+- Pruebas específicas cubren motor local, teleport revisionado, exclusión de autoridad remota, animación confirmada y ausencia de drivers de héroe en unidades.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              ESTADOS DEL SISTEMA                               │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  HERO STATES                    SQUAD STATES                  UNIT STATES      │
-│                                                                                 │
-│  ┌─────────────┐               ┌─────────────────┐           ┌──────────────┐   │
-│  │    IDLE     │               │ FOLLOWING_HERO  │           │    MOVING    │   │
-│  │             │               │                 │           │              │   │
-│  │ ▣ No input  │               │ ▣ Units follow  │           │ ▣ To target  │   │
-│  │ ▣ Stationary│               │ ▣ Dynamic form  │           │ ▣ Speed calc │   │
-│  │ ▣ Squad idle│               │ ▣ Hero centered │           │ ▣ Path find  │   │
-│  └─────────────┘               └─────────────────┘           └──────────────┘   │
-│         │                             │       ▲                     │   ▲      │
-│         │ movement > 0.05m            │       │                     │   │      │
-│         ▼                             ▼       │ hero moves          │   │      │
-│  ┌─────────────┐               ┌─────────────────┐                  │   │      │
-│  │   MOVING    │               │ HOLDING_POSITION│                  │   │      │
-│  │             │               │                 │           reached│   │not   │
-│  │ ▣ Has input │               │ ▣ Fixed center  │           target │   │in    │
-│  │ ▣ Position  │               │ ▣ Units guard   │                  │   │slot  │
-│  │   changes   │               │ ▣ Static form   │                  ▼   │      │
-│  │ ▣ Squad     │               └─────────────────┘           ┌──────────────┐   │
-│  │   follows   │                       │       ▲            │   FORMED     │   │
-│  └─────────────┘                       │       │            │              │   │
-│         │                              │       │ hold pos   │ ▣ In position│   │
-│         │ no movement                   │       │ command    │ ▣ Formation  │   │
-│         └───────────────────────────────┘       │            │   complete   │   │
-│                                                 │            │ ▣ Ready for  │   │
-│                                 retreat trigger │            │   commands   │   │
-│                                                 ▼            └──────────────┘   │
-│                                        ┌─────────────────┐                      │
-│                                        │   RETREATING    │           │          │
-│                                        │                 │           │formation │
-│                                        │ ▣ Return to base│           │broken    │
-│                                        │ ▣ Avoid enemies │           ▼          │
-│                                        │ ▣ Hero dead     │   ┌──────────────┐   │
-│                                        └─────────────────┘   │   WAITING    │   │
-│                                                              │              │   │
-│                                                              │ ▣ Delay      │   │
-│                                                              │ ▣ Transition │   │
-│                                                              │ ▣ Cooldown   │   │
-│                                                              └──────────────┘   │
-│                                                                                 │
-│  MATCH STATES                                                                   │
-│  ┌─────────────────────────────────────────────────────────────────────────┐   │
-│  │                                                                         │   │
-│  │  WaitingForPlayers ──► PreparationPhase ──► CombatPhase ──► VictoryPhase│   │
-│  │         │                      │                  │              │      │   │
-│  │         ▼                      ▼                  ▼              ▼      │   │
-│  │    ┌─────────┐          ┌─────────────┐    ┌──────────┐    ┌─────────┐ │   │
-│  │    │Lobby    │          │Squad        │    │Active    │    │Results  │ │   │
-│  │    │waiting  │          │selection    │    │combat    │    │display  │ │   │
-│  │    │players  │          │& loadout    │    │gameplay  │    │& cleanup│ │   │
-│  │    └─────────┘          └─────────────┘    └──────────┘    └─────────┘ │   │
-│  │                                                                         │   │
-│  └─────────────────────────────────────────────────────────────────────────┘   │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+## Referencias
 
-### Transiciones de Estado
-
-| **Estado Origen** | **Trigger** | **Estado Destino** | **Sistema Responsable** |
-|------------------|-------------|-------------------|------------------------|
-| Hero Idle | Movement input > 0.05m | Hero Moving | HeroStateSystem |
-| Hero Moving | No input | Hero Idle | HeroStateSystem |
-| Squad Following | Hold position command | Squad Holding | SquadFSMSystem |
-| Squad Holding | Follow hero command | Squad Following | SquadFSMSystem |
-| Unit Moving | Distance to slot < 0.2m | Unit Formed | UnitFormationStateSystem |
-| Unit Formed | Formation changed | Unit Moving | UnitFormationStateSystem |
-| Unit Formed | Hero moves far | Unit Moving | UnitFormationStateSystem |
-
----
-
-## 🔧 Implementación Técnica
-
-### Setup Inicial de Entidades
-
-```csharp
-// 1. HERO SPAWNING
-public partial class HeroSpawnSystem : SystemBase
-{
-    protected override void OnUpdate()
-    {
-        foreach (var (spawnRequest, entity) in 
-                 SystemAPI.Query<RefRO<SpawnSelectionRequest>>().WithEntityAccess())
-        {
-            // Crear entidad héroe ECS
-            Entity hero = EntityManager.CreateEntity(
-                typeof(LocalTransform),
-                typeof(HeroStatsComponent),
-                typeof(HeroInputComponent),
-                typeof(HeroStateComponent),
-                typeof(HeroHealthComponent),
-                typeof(StaminaComponent),
-                typeof(IsLocalPlayer),
-                typeof(HeroVisualReference)
-            );
-            
-            // Configurar posición inicial
-            EntityManager.SetComponentData(hero, LocalTransform.FromPosition(spawnPoint));
-            
-            // Marcar para creación visual
-            EntityManager.SetComponentData(hero, new HeroSpawnComponent { hasSpawned = true });
-        }
-    }
-}
-
-// 2. HERO VISUAL CREATION
-// HeroVisualManagementSystem queries for hero entities that don't yet have a visual
-// and automatically instantiates the visual GameObject via VisualPrefabRegistry.
-public partial class HeroVisualManagementSystem : SystemBase
-{
-    protected override void OnUpdate()
-    {
-        foreach (var (spawn, visualRef, transform, entity) in
-                 SystemAPI.Query<RefRO<HeroSpawnComponent>,
-                                 RefRO<HeroVisualReference>,
-                                 RefRO<LocalTransform>>()
-                        .WithNone<HeroVisualInstance>()
-                        .WithEntityAccess())
-        {
-            // Obtain visual prefab via VisualPrefabRegistry singleton
-            // (Assets/Scripts/Hero/VisualPrefabRegistry.cs)
-            // which caches prefab lookups from VisualPrefabConfiguration
-            var registry = VisualPrefabRegistry.Instance;
-            GameObject prefab = registry.GetPrefab("HeroSynty");
-
-            // Instanciar GameObject visual
-            GameObject visual = Object.Instantiate(prefab);
-            visual.transform.position = transform.ValueRO.Position;
-
-            // Setup sincronización
-            EntityVisualSync sync = visual.GetComponent<EntityVisualSync>();
-            sync.SetupSync(entity, EntityManager);
-
-            // Marcar como instanciado
-            EntityManager.AddComponentData(entity, new HeroVisualInstance
-            {
-                visualInstanceId = visual.GetInstanceID()
-            });
-        }
-    }
-}
-```
-
-### Hero-Squad Entity Linking
-
-`HeroSpawnSystem` vincula el héroe local a su escuadra activa mediante `HeroSquadSelectionComponent`. El linking ocurre en el momento del spawn y usa `instanceId = 0` para identificar la escuadra activa (slot 0):
-
-```csharp
-// HeroSpawnSystem — linking héroe → escuadra activa
-em.AddComponentData(heroEntity, new HeroSquadSelectionComponent
-{
-    squadDataEntity = squadEntities[i],  // referencia a la entidad ECS de SquadData
-    instanceId = 0                        // 0 = escuadra activa; coincide con BattleSceneController.SyncBattleDataToECS
-});
-```
-
-El sistema valida que `selectedSquadBaseID` sea no-vacío antes de buscar la escuadra; si no se encuentra, loguea un warning y no agrega el componente. `BattleSceneController.SyncBattleDataToECS` asigna IDs enteros secuenciales (0, 1, 2…) a las instancias de escuadra, siendo ID 0 la activa — esto debe mantenerse sincronizado con el hardcode `instanceId = 0` en `HeroSpawnSystem`.
-
-### Gestión de Squad y Unidades
-
-```csharp
-// 3. SQUAD SPAWNING
-public partial class SquadSpawningSystem : SystemBase  
-{
-    protected override void OnUpdate()
-    {
-        foreach (var (selection, entity) in 
-                 SystemAPI.Query<RefRO<HeroSquadSelectionComponent>>()
-                        .WithNone<HeroSquadReference>()
-                        .WithEntityAccess())
-        {
-            // Crear squad ECS-only (sin visual)
-            Entity squad = EntityManager.CreateEntity(
-                typeof(LocalTransform),
-                typeof(SquadDataComponent), 
-                typeof(SquadOwnerComponent),
-                typeof(SquadStateComponent),
-                typeof(SquadProgressComponent)
-            );
-            
-            // Configurar propietario
-            EntityManager.SetComponentData(squad, new SquadOwnerComponent { hero = entity });
-            
-            // Crear buffer de unidades
-            var unitBuffer = EntityManager.AddBuffer<SquadUnitElement>(squad);
-            
-            // Crear unidades individuales
-            for (int i = 0; i < unitCount; i++)
-            {
-                Entity unit = CreateUnitEntity(squad, entity, i);
-                unitBuffer.Add(new SquadUnitElement { Value = unit });
-            }
-            
-            // Vincular squad al héroe
-            EntityManager.AddComponentData(entity, new HeroSquadReference { squad = squad });
-        }
-    }
-    
-    private Entity CreateUnitEntity(Entity squad, Entity hero, int index)
-    {
-        Entity unit = EntityManager.CreateEntity(
-            typeof(LocalTransform),
-            typeof(UnitStatsComponent),
-            typeof(UnitFormationStateComponent),
-            typeof(UnitTargetPositionComponent), 
-            typeof(UnitGridSlotComponent),
-            typeof(UnitSpacingComponent),
-            typeof(UnitOwnerComponent),
-            typeof(UnitVisualReference)
-        );
-        
-        // Configurar componentes iniciales
-        EntityManager.SetComponentData(unit, new UnitOwnerComponent 
-        { 
-            squad = squad, 
-            hero = hero 
-        });
-        
-        return unit;
-    }
-}
-```
-
-### Sistema de Movimiento y Formaciones
-
-El flujo de movimiento del héroe utiliza `HeroMoveIntent` (`Assets/Scripts/Hero/Components/HeroMoveIntent.Component.cs`) como componente intermedio que convierte el input crudo en intención de movimiento. Esto separa la captura de input del procesamiento de movimiento:
-
-```
-HeroInputSystem → HeroInputComponent → HeroMoveIntent → HeroMovementSystem → LocalTransform
-```
-
-```csharp
-// 4. MOVEMENT PROCESSING
-// HeroMovementSystem reads from HeroMoveIntent (not raw input) to move the hero.
-// HeroMoveIntent bridges input capture to movement processing.
-public partial class HeroMovementSystem : SystemBase
-{
-    protected override void OnUpdate()
-    {
-        foreach (var (moveIntent, stats, transform, entity) in
-                 SystemAPI.Query<RefRO<HeroMoveIntent>,
-                                RefRO<HeroStatsComponent>,
-                                RefRW<LocalTransform>>()
-                        .WithAll<IsLocalPlayer>()
-                        .WithEntityAccess())
-        {
-            float3 movement = moveIntent.ValueRO.Direction;
-            float speed = stats.ValueRO.baseSpeed;
-            
-            // Aplicar movimiento
-            var t = transform.ValueRW;
-            t.Position += movement * speed * SystemAPI.Time.DeltaTime;
-            
-            // Rotación hacia dirección
-            if (math.lengthsq(movement) > 0.01f)
-            {
-                t.Rotation = quaternion.LookRotationSafe(movement, math.up());
-            }
-        }
-    }
-}
-
-// 5. FORMATION MANAGEMENT
-public partial class FormationSystem : SystemBase
-{
-    protected override void OnUpdate()
-    {
-        foreach (var (input, state, data, units, entity) in
-                 SystemAPI.Query<RefRO<SquadInputComponent>,
-                                RefRW<SquadStateComponent>,
-                                RefRO<SquadDataComponent>,
-                                DynamicBuffer<SquadUnitElement>>()
-                        .WithEntityAccess())
-        {
-            // Procesar cambio de formación
-            if (input.ValueRO.desiredFormation != state.ValueRO.currentFormation)
-            {
-                UpdateFormation(state, data, units, input.ValueRO.desiredFormation);
-            }
-        }
-    }
-    
-    private void UpdateFormation(RefRW<SquadStateComponent> state,
-                               RefRO<SquadDataComponent> data,
-                               DynamicBuffer<SquadUnitElement> units,
-                               FormationType newFormation)
-    {
-        // Obtener posiciones de nueva formación
-        var gridPositions = GetFormationGrid(data.ValueRO, newFormation);
-        
-        // Asignar posiciones objetivo a unidades
-        for (int i = 0; i < units.Length; i++)
-        {
-            Entity unit = units[i].Value;
-            float3 targetPos = CalculateUnitPosition(gridPositions, i);
-            
-            SystemAPI.SetComponent(unit, new UnitTargetPositionComponent 
-            { 
-                position = targetPos 
-            });
-        }
-        
-        // Actualizar estado
-        state.ValueRW.currentFormation = newFormation;
-    }
-}
-```
-
-### NavMesh Integration & Safe Teleport Pattern
-
-El modelo híbrido distingue dos tipos de movimiento de héroe según si es local o remoto:
-
-| **Tipo** | **Movimiento** | **Componente** |
-|----------|---------------|----------------|
-| **Héroe local** | `CharacterController` — ECS publica intención y el motor resuelve movimiento | `LocalHeroCharacterMotor` |
-| **Héroe remoto** | `NavMeshAgent` — IA/red controla el movimiento | `NavMeshAgent.Warp()` en spawn, luego agente libre |
-
-**Orden de inicialización (spawn):**
-1. `HeroSpawnSystem` crea la entidad ECS con `LocalTransform` en la posición de spawn
-2. `HeroVisualManagementSystem` instancia el prefab visual y obtiene el `NavMeshAgent`
-3. Para héroes remotos: `agent.Warp(visualInstance.transform.position)` — fuerza la posición sin buscar el punto NavMesh más cercano
-4. Validar `agent.isOnNavMesh` antes de activar el sync frame-a-frame
-
-**Safe Teleport Pattern (CharacterController):**
-
-`EntityVisualSync` deshabilita el `CharacterController` antes de aplicar cualquier cambio de posición proveniente de ECS, y lo rehabilita después. Esto evita que el CharacterController corrija o invalide la posición ECS durante el sync:
-
-```csharp
-// EntityVisualSync — patrón seguro para teleporte/posicionamiento
-if (_characterController != null && _characterController.enabled)
-{
-    _characterController.enabled = false;
-    transform.position = ecsPosition;
-    _characterController.enabled = true;
-}
-else
-{
-    transform.position = ecsPosition;
-}
-```
-
-**Constantes clave en EntityVisualSync:**
-- `GROUND_CHECK_BUFFER = -0.5f` — offset vertical para detección de suelo en simulación de gravedad
-- `TERMINAL_VELOCITY = -50f` — velocidad vertical máxima de caída (cap de gravedad simulada)
-
-### Sincronización Visual Automática
-
-```csharp
-// 6. VISUAL SYNC COMPONENT
-public class EntityVisualSync : MonoBehaviour
-{
-    [Header("Sync Configuration")]
-    public Entity entity;
-    public EntityManager entityManager;
-    
-    [Header("Visual State")]
-    [SerializeField] private Vector3 originalPrefabScale;
-    [SerializeField] private bool scaleInitialized = false;
-    [SerializeField] private bool entityExists = false;
-    
-    private void Update()
-    {
-        SyncWithEntity();
-    }
-    
-    private void SyncWithEntity()
-    {
-        // Validar entidad
-        if (!IsEntityValid()) 
-        {
-            entityExists = false;
-            return;
-        }
-        
-        entityExists = true;
-        
-        // Sincronizar transform
-        if (entityManager.HasComponent<LocalTransform>(entity))
-        {
-            var ecsTransform = entityManager.GetComponentData<LocalTransform>(entity);
-            
-            // Posición y rotación
-            transform.position = ecsTransform.Position;
-            transform.rotation = ecsTransform.Rotation;
-            
-            // Escala (conservar escala original del prefab)
-            if (!scaleInitialized)
-            {
-                originalPrefabScale = transform.localScale;
-                scaleInitialized = true;
-            }
-            transform.localScale = originalPrefabScale * ecsTransform.Scale;
-        }
-        
-        // Sincronizar estado de vida
-        if (entityManager.HasComponent<HeroLifeComponent>(entity))
-        {
-            var life = entityManager.GetComponentData<HeroLifeComponent>(entity);
-            gameObject.SetActive(life.isAlive);
-        }
-    }
-    
-    private bool IsEntityValid()
-    {
-        try
-        {
-            return entityManager.World != null && 
-                   entityManager.World.IsCreated && 
-                   entity != Entity.Null && 
-                   entityManager.Exists(entity);
-        }
-        catch (System.ObjectDisposedException)
-        {
-            return false;
-        }
-    }
-    
-    public void SetupSync(Entity targetEntity, EntityManager manager)
-    {
-        entity = targetEntity;
-        entityManager = manager;
-        
-        if (!scaleInitialized)
-        {
-            originalPrefabScale = transform.localScale;
-            scaleInitialized = true;
-        }
-    }
-    
-    private void OnDestroy()
-    {
-        // Limpiar referencia ECS si existe
-        if (IsEntityValid() && 
-            entityManager.HasComponent<HeroVisualInstance>(entity))
-        {
-            try
-            {
-                entityManager.RemoveComponent<HeroVisualInstance>(entity);
-            }
-            catch (System.ObjectDisposedException)
-            {
-                // EntityManager ya destruido, no hay nada que limpiar
-            }
-        }
-    }
-}
-```
-
----
-
-## ✅ Ventajas del Modelo
-
-### 🚀 Rendimiento y Escalabilidad
-
-| **Aspecto** | **Modelo Tradicional** | **Modelo Híbrido** | **Mejora** |
-|-------------|----------------------|-------------------|------------|
-| **Lógica de 100 unidades** | 100 MonoBehaviours | 1 ECS System | 10-50x más rápido |
-| **Memoria** | Fragmentada por GOs | Contigua en ECS | Mejor cache locality |
-| **Pathfinding** | Individual por unidad | Batch processing | Burst compilation |
-| **Formaciones** | N² cálculos | Vectorizado | SIMD optimizations |
-
-### 🛠️ Mantenibilidad y Desarrollo
-
-```csharp
-// ANTES: Lógica mixta en GameObject
-public class UnitBehaviour : MonoBehaviour
-{
-    public float health;
-    public Vector3 targetPosition;
-    
-    void Update()
-    {
-        // Lógica + visualización mezcladas
-        MoveTowardsTarget();
-        UpdateHealthBar();
-        CheckFormation();
-        // etc...
-    }
-}
-
-// DESPUÉS: Separación clara
-// ECS System (solo lógica)
-public partial class UnitMovementSystem : SystemBase 
-{
-    protected override void OnUpdate()
-    {
-        Entities.ForEach((ref LocalTransform transform, 
-                         in UnitTargetPositionComponent target) =>
-        {
-            // Solo lógica pura, optimizada por Burst
-            transform.Position = math.lerp(transform.Position, 
-                                         target.position, 
-                                         deltaTime * speed);
-        }).ScheduleParallel();
-    }
-}
-
-// GameObject (solo visual)
-public class EntityVisualSync : MonoBehaviour
-{
-    void Update()
-    {
-        // Solo sincronización, sin lógica de juego
-        transform.position = ecsTransform.Position;
-    }
-}
-```
-
-### 🎨 Flexibilidad con Assets
-
-La gestión de prefabs visuales está centralizada en dos archivos:
-- **`VisualPrefabRegistry`** (`Assets/Scripts/Hero/VisualPrefabRegistry.cs`): Singleton MonoBehaviour que gestiona el lookup y caching de prefabs visuales en runtime. Tanto `HeroVisualManagementSystem` como `SquadVisualManagementSystem` lo usan para obtener los prefabs a instanciar.
-- **`VisualPrefabConfiguration`** (`Assets/Scripts/Hero/VisualPrefabConfiguration.cs`): ScriptableObject que define los prefabs disponibles y sus claves de búsqueda.
-
-```csharp
-// SISTEMA DATA-DRIVEN
-[CreateAssetMenu]
-public class VisualPrefabConfiguration : ScriptableObject
-{
-    [System.Serializable]
-    public class PrefabEntry
-    {
-        public string key;           // "HeroSynty", "SquirePrefab"
-        public GameObject prefab;    // Synty Studio asset
-        public string description;   // Para editor
-    }
-    
-    public PrefabEntry[] prefabs;
-}
-
-// USO DINÁMICO
-public class VisualPrefabRegistry : MonoBehaviour
-{
-    public static VisualPrefabRegistry Instance { get; private set; }
-    
-    [SerializeField] private VisualPrefabConfiguration configuration;
-    private Dictionary<string, GameObject> prefabCache;
-    
-    public GameObject GetPrefab(string key)
-    {
-        // Búsqueda optimizada con cache
-        if (prefabCache.TryGetValue(key, out GameObject prefab))
-            return prefab;
-            
-        // Fallback y logging para debugging
-        Debug.LogWarning($"Prefab visual '{key}' no encontrado");
-        return null;
-    }
-}
-```
-
-### 🔄 Debugging y Herramientas
-
-```csharp
-// ENTITY DEBUGGER INTEGRATION
-public class EntityVisualSync : MonoBehaviour
-{
-    [Header("Debug Info")]
-    [SerializeField] private bool showDebugInfo = false;
-    [SerializeField] private Vector3 lastEntityPosition;
-    [SerializeField] private bool entityExists = false;
-    
-    private void OnDrawGizmosSelected()
-    {
-        if (showDebugInfo && entityExists)
-        {
-            // Visualización del link ECS-GameObject
-            Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(transform.position, 0.5f);
-            Gizmos.color = Color.blue;
-            Gizmos.DrawLine(transform.position, 
-                           transform.position + transform.forward * 2f);
-        }
-    }
-}
-```
-
-### 📊 Métricas de Rendimiento
-
-**Pruebas internas con 200 unidades:**
-
-| **Operación** | **GameObject Puro** | **ECS Híbrido** | **Speedup** |
-|--------------|-------------------|-----------------|-------------|
-| Formation update | 15.2ms | 0.8ms | 19x |
-| Pathfinding batch | 45.1ms | 2.1ms | 21x |
-| Unit stats scaling | 8.7ms | 0.3ms | 29x |
-| Health updates | 12.4ms | 0.4ms | 31x |
-| **Total frame time** | **81.4ms** | **3.6ms** | **23x** |
-
-### 🎯 Casos de Uso Ideales
-
-1. **RTS/Strategy Games**: Cientos de unidades con lógica compleja
-2. **MMO Battles**: Muchos jugadores con squads
-3. **Tower Defense**: Enemigos masivos con pathfinding
-4. **Simulation Games**: Sistemas complejos con mucha lógica
-5. **Any Game**: Que necesite rendimiento ECS pero assets visuales tradicionales
-
----
-
-## 📝 Conclusiones
-
-El modelo híbrido ECS-GameObject implementado en Conquest Tactics representa una **solución óptima** para proyectos que necesitan:
-
-- **Alto rendimiento** para lógica de juego
-- **Flexibilidad visual** con assets comerciales (Synty Studios)
-- **Mantenibilidad** a largo plazo
-- **Escalabilidad** para equipos de desarrollo
-
-### Decisiones de Diseño Clave
-
-1. **ECS para lógica**: Sistemas especializados, datos orientados, Burst compilation
-2. **GameObjects para visuales**: Compatibilidad con pipeline tradicional, assets externos
-3. **Sincronización automática**: EntityVisualSync minimiza código boilerplate
-4. **Separación estricta**: Sin lógica en GameObjects, sin visuales en ECS
-5. **Sistema data-driven**: Configuración externa, fácil expansión
-
-### Resultado Final
-
-Una arquitectura **robusta**, **performante** y **mantenible** que aprovecha lo mejor de ambos mundos, permitiendo que Conquest Tactics escale desde prototipos con pocas unidades hasta batallas masivas con cientos de entidades sin sacrificar calidad visual ni flexibilidad de desarrollo.
-
----
-
-*Documentación generada para Conquest Tactics - Modelo Híbrido ECS-GameObject*  
-*Versión: Unity 2022.3.x | ECS 1.3.14 | Julio 2025*
+- [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md)
+- [Pipeline de movimiento](TroopMovementPipeline.md)
+- [Control de squads](Arquitectura/3_Control_Escuadras_2026-09-14.md)
+- [Retirada por muerte](Arquitectura/6_Retirada_Muerte_Dueno_2026-09-14.md)
+- [Destinos NavMesh](Arquitectura/9_Destinos_NavMesh_Fallos_Path_2026-09-14.md)
+- [Motor local](Arquitectura/14_Motor_Local_Heroe_2026-09-15.md)
+- [Animación remota](Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md)
