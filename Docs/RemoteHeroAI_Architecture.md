@@ -182,7 +182,8 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
     SquadOrderSystem             (procesa TODOS los squads ← sin filtro IsLocalPlayer)
     HeroAttackSystem             (+ segundo loop para AI heroes)
     NavMeshPositionSyncSystem    (publica pose remota NavMesh → ECS)
-    EntityVisualSync             (sincroniza visual y deriva locomoción remota)
+    EntityVisualSync             (vincula entidad y sincroniza pose)
+    RemoteHeroAnimationDriver    (NavMesh/ECS confirmado → Animator)
 ```
 
 ---

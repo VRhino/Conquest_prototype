@@ -229,8 +229,9 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Timer expired**: defensores ganan (`winnerTeam = 2`)
 
 ### EntityVisualSync
-- **Responsabilidad**: vincula entidad y representación, sincroniza visuales no locales y conduce animación remota/ataques.
+- **Responsabilidad**: vincula entidad y representación y sincroniza la pose de visuales no locales.
 - Decide local/remoto desde `IsLocalPlayer`, pero delega toda locomoción local a `LocalHeroCharacterMotor`.
+- Delega la presentación de héroes remotos a `RemoteHeroAnimationDriver`; no escribe parámetros de locomoción remota.
 - Nunca llama `CharacterController.Move()` ni escribe la pose local en ECS.
 
 ### LocalHeroCharacterMotor
@@ -241,6 +242,13 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - `EcsAnimationInputAdapter` usa la velocidad horizontal y grounded confirmados; el input conserva dirección y eventos de sprint, pero ya no puede activar carrera si el controller está bloqueado.
 - **Safe teleport**: deshabilita temporalmente el controller, aplica la pose, reinicia gravedad y consume una sola vez cada revisión.
 - El motor no se crea ni permanece activo para héroes remotos.
+
+### RemoteHeroAnimationDriver
+- **Responsabilidad**: presentación de locomoción y combate del héroe remoto.
+- **Input confirmado**: velocidad del `NavMeshAgent`, `HeroAIDecision`, `HeroAnimationComponent` y `HeroCombatComponent`.
+- **Output**: parámetros y triggers del `Animator`; no escribe transforms, destinos ni intención ECS.
+- Deshabilita los adaptadores de input/animación local para evitar dos escritores sobre el mismo Animator.
+- Sólo se instala para entidades remotas con `HeroMoveIntent`; los visuales de unidades no reciben este componente.
 
 ---
 
@@ -283,4 +291,4 @@ Actualización posterior: conectada la retirada por muerte del dueño con espera
 
 Actualización de intercambio: `SquadSwapExecutionSystem` valida reemplazo antes de retirar y consume cooldown solo al aceptar. `SquadNavigationSystem` ahora observa llegada sin escribir destinos; `RetreatLogicSystem` espera a todos los supervivientes en sus slots o timeout. `SquadOrderSystem` respeta el bloqueo de retirada. La retirada por muerte del dueño sigue pendiente. Referencia: `Docs/Arquitectura/5_Intercambio_Retirada_2026-09-14.md`.
 
-El contrato local vigente es `HeroMovementSystem → HeroMoveIntent → LocalHeroCharacterMotor → LocalTransform/HeroMotorStateComponent`. `EntityVisualSync` ya no ejecuta movimiento local. El respawn conserva pose revisionada. Referencias: fases 4, 10 y 14 en `Docs/Arquitectura/`.
+El contrato local vigente es `HeroMovementSystem → HeroMoveIntent → LocalHeroCharacterMotor → LocalTransform/HeroMotorStateComponent`. `EntityVisualSync` ya no ejecuta movimiento local ni conduce la animación remota. El respawn conserva pose revisionada. Referencias: fases 4, 10, 14 y 15 en `Docs/Arquitectura/`.

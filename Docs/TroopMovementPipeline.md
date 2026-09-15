@@ -343,6 +343,8 @@ Se ejecuta cada frame en `Update()` (MonoBehaviour):
 
 La posición física no se interpola en ECS; la rotación pasa por `UnitRotationIntentComponent` y su sistema de resolución.
 
+La animación tampoco forma ya parte de este puente. Para un héroe remoto, `RemoteHeroAnimationDriver` lee la velocidad confirmada del `NavMeshAgent` y el estado ECS de IA/combate, y escribe exclusivamente el `Animator`. No se añade a unidades ni tiene autoridad sobre pose o destino.
+
 ---
 
 ## 10. Mecánicas Especiales

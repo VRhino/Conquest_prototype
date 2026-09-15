@@ -5,7 +5,7 @@ Fecha: 2026-09-14. Séptima fase del pipeline de movimiento. Cambios locales sin
 ## Autoridad actual
 
 - Héroe local: `HeroMoveIntent` expresa la intención; desde la fase 14, `LocalHeroCharacterMotor` mueve el `CharacterController` y publica el resultado en `LocalTransform` y `HeroMotorStateComponent`.
-- Héroe remoto: `HeroAIExecutionSystem` controla el `NavMeshAgent`; `EntityVisualSync` copia GameObject/NavMesh hacia ECS y conduce la animación.
+- Héroe remoto: `HeroAIExecutionSystem` controla el `NavMeshAgent`; `NavMeshPositionSyncSystem` publica la pose en ECS y, desde la fase 15, `RemoteHeroAnimationDriver` conduce exclusivamente la animación.
 - Unidades: `UnitNavMeshSystem` controla destinos; `NavMeshPositionSyncSystem` copia la posición a ECS.
 
 El modelo continúa siendo híbrido, pero cada caso tiene ahora una sola autoridad de movimiento activa.

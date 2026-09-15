@@ -20,7 +20,7 @@ HeroInputSystem
 
 - Se extrajeron de `EntityVisualSync` gravedad, `CharacterController.Move()`, inhibición por muerte/spawn, teleports revisionados y publicación de la pose local.
 - `LocalHeroCharacterMotor` es el único componente autorizado a habilitar y mover el controller local.
-- `EntityVisualSync` conserva vinculación, sincronización de unidades/remotos y animación. Para el héroe local solo asegura que el motor correcto esté vinculado.
+- `EntityVisualSync` conserva vinculación y sincronización de unidades/remotos. Para el héroe local solo asegura que el motor correcto esté vinculado; la animación remota se separó posteriormente en la fase 15.
 - El motor se añade exclusivamente cuando la entidad tiene `IsLocalPlayer`; una entidad remota desactiva inmediatamente su controller.
 - `HeroMotorStateComponent` forma parte del arquetipo horneado y expone `velocity`, `isGrounded`, `hitSides` y `hitCeiling`.
 - `EcsAnimationInputAdapter` activa locomoción solo con velocidad horizontal confirmada. Conserva del input la dirección y los eventos walk/sprint, y propaga el grounded real al Animator.
@@ -41,3 +41,5 @@ Una revisión nueva de `HeroSpawnComponent.positionRevision` se consume una vez.
 ## Límite
 
 El diseño sigue siendo híbrido y depende del intercambio entre ECS y `MonoBehaviour.Update`. Esto es intencional para conservar `CharacterController`; el futuro contrato de red deberá transportar intención y estado confirmado/reconciliado, no asumir que `LocalTransform` es una integración ECS pura.
+
+Continuación: [Animación remota separada](./15_Animacion_Remota_Separada_2026-09-15.md).

@@ -81,6 +81,7 @@
 - Before preserving compatibility state, prove that it has a reader. Write-only ECS components and command buffers are dead pipeline cost, not architecture.
 - Split hybrid authority by contract: ECS owns movement intent, one CharacterController motor owns physical execution, and ECS receives a separate confirmed result. A visual sync component should not also be the motor.
 - Locomotion animation should use confirmed horizontal velocity, not raw input alone; otherwise blocked movement still looks like running. Keep input only for direction and button events.
+- A hybrid pose bridge must not also own remote animation. Bind a presentation-only driver to confirmed NavMesh/ECS state, keep it away from transforms and destinations, and exclude ordinary unit visuals explicitly.
 
 ## Architecture repairs (2026-09-14)
 

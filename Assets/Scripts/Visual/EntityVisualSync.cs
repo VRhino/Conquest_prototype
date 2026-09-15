@@ -4,7 +4,6 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
 using ConquestTactics.Animation;
-using Synty.AnimationBaseLocomotion.Samples;
 
 namespace ConquestTactics.Visual
 {
@@ -50,7 +49,6 @@ namespace ConquestTactics.Visual
 
         // Animation parameter hashes are centralized in AnimationHashes.cs
         public bool DebugLogging { get => _enableDebugLogs; set => _enableDebugLogs = value; }
-        private bool _remoteWasMoving = false;
         
         private void Awake()
         {
@@ -82,16 +80,6 @@ namespace ConquestTactics.Visual
                 // Setear IsLocalHero si la entidad tiene el tag IsLocalPlayer
                 IsLocalHero = _entityManager.HasComponent<IsLocalPlayer>(_heroEntity);
 
-                // Remote heroes: disable local-player animation components so they don't
-                // overwrite the Animator values that EntityVisualSync drives directly.
-                if (!IsLocalHero)
-                {
-                    var animController = GetComponentInChildren<SamplePlayerAnimationController_ECS>(true);
-                    if (animController != null) animController.enabled = false;
-                    var inputAdapter = GetComponentInChildren<EcsAnimationInputAdapter>(true);
-                    if (inputAdapter != null) inputAdapter.enabled = false;
-                }
-
                 if (_entityManager.HasComponent<LocalTransform>(_heroEntity))
                 {
                     var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_heroEntity);
@@ -106,29 +94,6 @@ namespace ConquestTactics.Visual
                 if (_enableDebugLogs)
                     Debug.Log($"[EntityVisualSync] IsLocalHero seteado a {IsLocalHero} para entidad {_heroEntity}");
 
-                // Verification check for remote hero setup
-                if (!IsLocalHero)
-                {
-                    var navAgentCheck = GetComponent<NavMeshAgent>();
-                    var animCheck     = GetComponentInChildren<Animator>(true);
-                    var ctrlCheck     = GetComponentInChildren<SamplePlayerAnimationController_ECS>(true);
-                    
-                    bool componentsValid = navAgentCheck != null && animCheck != null && ctrlCheck != null;
-                    string animCtrlName = (animCheck != null && animCheck.runtimeAnimatorController != null)
-                        ? animCheck.runtimeAnimatorController.name : "NULL";
-
-                    if (_showDebugLines || !componentsValid)
-                    {
-                        string status = componentsValid ? "SUCCESS" : "INCOMPLETE";
-                        string logMsg = $"[EntityVisualSync] Remote setup {status} for {gameObject.name} | " +
-                                        $"NavMeshAgent={navAgentCheck != null} (enabled={navAgentCheck?.enabled}, onMesh={navAgentCheck?.isOnNavMesh}) | " +
-                                        $"Animator={animCheck != null} ({animCtrlName}) | " +
-                                        $"SampleCtrl={ctrlCheck != null} (enabled={ctrlCheck?.enabled})";
-
-                        if (componentsValid) Debug.Log(logMsg);
-                        else Debug.LogWarning(logMsg);
-                    }
-                }
             }
 
             ConfigureMovementAuthority();
@@ -189,69 +154,6 @@ namespace ConquestTactics.Visual
                             ecsTransform.Rotation = transform.rotation;
                         _entityManager.SetComponentData(_heroEntity, ecsTransform);
 
-                        // Drive locomotion animation directly from NavMeshAgent velocity.
-                        // No dependency on EcsAnimationInputAdapter or SamplePlayerAnimationController —
-                        // the remote prefab only needs an Animator with MoveSpeed/CurrentGait/IsGrounded params.
-                        if (_animator != null)
-                        {
-                            float speed    = _navAgent.velocity.magnitude;
-                            float maxSpeed = _navAgent.speed > 0f ? _navAgent.speed : 1f;
-                            bool sprinting = _entityManager.HasComponent<HeroAIDecision>(_heroEntity)
-                                && _entityManager.GetComponentData<HeroAIDecision>(_heroEntity).shouldSprint
-                                && speed > 0.1f;
-
-                            // GaitState: 0=Idle, 1=Walk, 2=Run, 3=Sprint
-                            int gait = 0;
-                            if (speed > 0.1f)
-                            {
-                                if (sprinting)              gait = 3;
-                                else if (speed / maxSpeed > 0.6f) gait = 2;
-                                else                        gait = 1;
-                            }
-
-                            bool isMoving = speed > 0.1f;
-
-
-
-                            bool justStartedMoving = isMoving && !_remoteWasMoving;
-                            bool justStoppedMoving = !isMoving && _remoteWasMoving;
-
-                            _animator.SetFloat(AnimationHashes.MoveSpeed, isMoving ? speed : 0f);
-                            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
-                            _animator.SetBool(AnimationHashes.IsGrounded, true);
-                            _animator.SetBool(AnimationHashes.IsStopped, !isMoving);
-                            _animator.SetBool(AnimationHashes.MovementInputHeld, isMoving);
-                            _animator.SetBool(AnimationHashes.MovementInputPressed, isMoving);
-                            _animator.SetBool(AnimationHashes.IsWalking, gait == 1);
-                            _animator.SetFloat(AnimationHashes.ForwardStrafe, isMoving ? 1f : 0f);
-                            // MovementInputTapped must be a ONE-FRAME pulse — keeping it true causes
-                            // the controller to loop back to the start state every frame.
-                            _animator.SetBool(AnimationHashes.MovementInputTapped, justStartedMoving);
-
-
-
-                            _remoteWasMoving = isMoving;
-
-                            // Drive upper body params to prevent T-pose (BUG-002)
-                            // For remote AI heroes: headLookX/Y are replicated from the server via HeroAnimationComponent.
-                            // For local-context AI heroes: values default to 0 (neutral head pose).
-                            float remoteHeadLookX = 0f;
-                            float remoteHeadLookY = 0f;
-                            if (_entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
-                            {
-                                var remoteAnim = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
-                                remoteHeadLookX = remoteAnim.headLookX;
-                                remoteHeadLookY = remoteAnim.headLookY;
-                            }
-                            _animator.SetFloat(AnimationHashes.HeadLookX, remoteHeadLookX);
-                            _animator.SetFloat(AnimationHashes.HeadLookY, remoteHeadLookY);
-                            _animator.SetFloat(AnimationHashes.BodyLookX, 0f);
-                            _animator.SetFloat(AnimationHashes.BodyLookY, 0f);
-                        }
-                        else
-                        {
-
-                        }
                     }
                     else
                     {
@@ -264,7 +166,8 @@ namespace ConquestTactics.Visual
                 }
             }
             // Sync attack animation state from ECS → Animator
-            if (_animator != null && _entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
+            if (IsLocalHero && _animator != null
+                && _entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
             {
                 var animData = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
                 if (animData.triggerAttack)
@@ -411,8 +314,11 @@ namespace ConquestTactics.Visual
             IsLocalHero = isLocal;
 
             var motor = GetComponent<LocalHeroCharacterMotor>();
+            var remoteAnimation = GetComponent<RemoteHeroAnimationDriver>();
             if (isLocal)
             {
+                if (remoteAnimation != null)
+                    remoteAnimation.Release();
                 if (motor == null)
                     motor = gameObject.AddComponent<LocalHeroCharacterMotor>();
                 motor.DebugLogging = _enableDebugLogs;
@@ -425,6 +331,18 @@ namespace ConquestTactics.Visual
                 var characterController = GetComponent<CharacterController>();
                 if (characterController != null)
                     characterController.enabled = false;
+
+                bool isRemoteHero = _entityManager.HasComponent<HeroMoveIntent>(_heroEntity);
+                if (isRemoteHero)
+                {
+                    if (remoteAnimation == null)
+                        remoteAnimation = gameObject.AddComponent<RemoteHeroAnimationDriver>();
+                    remoteAnimation.Bind(_world, _heroEntity);
+                }
+                else if (remoteAnimation != null)
+                {
+                    remoteAnimation.Release();
+                }
             }
         }
 

@@ -11,6 +11,9 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ### Arquitectura
 
+- [Animación remota separada](./Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md):
+  Responsabilidad exclusiva del Animator remoto, separada del puente de pose y del motor local.
+
 - [Motor local del héroe](./Arquitectura/14_Motor_Local_Heroe_2026-09-15.md):
   Frontera explícita entre intención ECS, CharacterController y resultado físico confirmado.
 

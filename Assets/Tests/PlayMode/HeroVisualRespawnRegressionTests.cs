@@ -87,6 +87,8 @@ public class HeroVisualRespawnRegressionTests
             Assert.That(sync.IsLocalHero, Is.False);
             Assert.That(controller.enabled, Is.False);
             Assert.That(visual.GetComponent<LocalHeroCharacterMotor>(), Is.Null);
+            Assert.That(visual.GetComponent<RemoteHeroAnimationDriver>(), Is.Not.Null);
+            Assert.That(visual.GetComponent<RemoteHeroAnimationDriver>().IsBound, Is.True);
         }
         finally
         {
@@ -130,6 +132,31 @@ public class HeroVisualRespawnRegressionTests
             Assert.That(adapter._movementInputDetected, Is.True);
             Assert.That(adapter._moveComposite.y, Is.EqualTo(1f));
             Assert.That(adapter._isGrounded, Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(visual);
+            World.DefaultGameObjectInjectionWorld = previousWorld;
+        }
+    }
+
+    [Test]
+    public void UnitVisualDoesNotReceiveRemoteHeroAnimationDriver()
+    {
+        var previousWorld = World.DefaultGameObjectInjectionWorld;
+        using var world = new World("Unit visual animation ownership regression");
+        World.DefaultGameObjectInjectionWorld = world;
+        var visual = new GameObject("Unit visual fixture");
+        try
+        {
+            var unit = world.EntityManager.CreateEntity(typeof(LocalTransform));
+            world.EntityManager.SetComponentData(unit, LocalTransform.Identity);
+            var sync = visual.AddComponent<EntityVisualSync>();
+            sync.DebugLogging = false;
+            sync.SetHeroEntity(unit);
+
+            Assert.That(visual.GetComponent<RemoteHeroAnimationDriver>(), Is.Null);
+            Assert.That(visual.GetComponent<LocalHeroCharacterMotor>(), Is.Null);
         }
         finally
         {
