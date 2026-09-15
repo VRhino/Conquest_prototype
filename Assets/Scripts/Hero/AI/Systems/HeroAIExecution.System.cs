@@ -10,7 +10,7 @@ using UnityEngine.AI;
 /// Execution layer for the Remote Hero AI pipeline.
 /// Reads <see cref="HeroAIDecision"/> (written by one behavior system) and translates it
 /// into low-level commands that the existing game systems already understand:
-///   - <see cref="HeroMoveIntent"/>     → picked up by HeroStateSystem for animation
+///   - <see cref="HeroMoveIntent"/>     → consumed by visual movement and animation
 ///   - <see cref="NavMeshAgent"/>       → handles terrain-aware pathfinding
 ///   - <see cref="SquadAIOrderIntentComponent"/> → arbitrated by OrderResolutionSystem
 ///
@@ -117,7 +117,7 @@ public partial class HeroAIExecutionSystem : SystemBase
                                 }
 
                                 // Derive world-space direction from NavMesh desired velocity
-                                // so HeroStateSystem can detect movement → play walk/run animation
+                                // so visual synchronization can drive locomotion animation
                                 UnityEngine.Vector3 vel = agent.desiredVelocity;
                                 if (vel.sqrMagnitude > MinVelocitySqForIntent)
                                 {
@@ -150,7 +150,7 @@ public partial class HeroAIExecutionSystem : SystemBase
                     EntityManager.SetComponentData(entity, navigation);
             }
 
-            // Write HeroMoveIntent so HeroStateSystem picks up movement state for animations
+            // Publish movement intent for visual movement and animation consumers.
             if (SystemAPI.HasComponent<HeroMoveIntent>(entity))
                 SystemAPI.SetComponent(entity, new HeroMoveIntent { Direction = moveDir, Speed = speed });
 

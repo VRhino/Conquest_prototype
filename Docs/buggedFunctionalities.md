@@ -188,16 +188,16 @@ Para remote heroes el problema es doble: además de que nadie lee el flag, `EcsA
 
 ---
 
-### BUG-004 — HeroStateComponent desconectado del sistema de animación
+### BUG-004 — HeroStateComponent desconectado del sistema de animación — RESUELTO
 **Severidad**: Baja
 **Afecta**: Local y remote heroes
 
-**Síntoma**: `HeroStateComponent` existe en ECS con valores `Moving`/`Idle`, pero no tiene efecto observable en la animación.
+**Resolución actual**: se eliminaron `HeroStateComponent` y `HeroStateSystem`. La animación local consume la intención/pose visual y la remota deriva locomoción de la velocidad del `NavMeshAgent`.
 
-**Causa raíz**: `HeroState.System.cs` calcula el estado por distancia (threshold 0.0025 units²), pero `SamplePlayerAnimationController_ECS` no lee `HeroStateComponent` — lee directamente de `EcsAnimationInputAdapter`. El componente ECS es redundante para animación y puede divergir del estado visual.
+**Causa raíz histórica**: `HeroState.System.cs` calculaba un estado redundante que ningún consumidor de animación leía y que podía divergir del estado visual.
 
 **Archivos**:
-- `Assets/Scripts/Hero/Systems/HeroState.System.cs:27` — calcula estado
+- `Assets/Scripts/Hero/Systems/HeroState.System.cs` — eliminado
 - `Assets/Scripts/Hero/SamplePlayerAnimationController_ECS.cs` — no lo lee
 
 ---
@@ -223,7 +223,7 @@ Para remote heroes el problema es doble: además de que nadie lee el flag, `EcsA
 | BUG-001 | **Alta** | En `SamplePlayerAnimationController_ECS`, leer `HeroAnimationComponent.triggerAttack` y llamar `Animator.SetTrigger("Attack")`. Para remote heroes, hacerlo desde `EntityVisualSync` leyendo el componente ECS directo. |
 | BUG-002 | Media | Extender `DriveFromVelocity` o agregar un método separado en `EntityVisualSync` que alimente look-at target y strafe desde `HeroAIDecision.targetPosition`. |
 | BUG-003 | Baja | Agregar `NavMeshAgent` al visual prefab del héroe para eliminar el AddComponent en runtime. |
-| BUG-004 | Baja | Decidir si `HeroStateComponent` debe ser la fuente de verdad para animación (y conectarlo) o eliminarlo por ser redundante. |
+| BUG-004 | **Resuelto** | Eliminados `HeroStateComponent` y `HeroStateSystem`; animación conectada a sus fuentes reales. |
 | BUG-005 | Baja | En `EntityVisualSync.Initialize()`, no re-habilitar el CC si la entidad tiene `HeroAITag`. |
 
 ---
@@ -256,7 +256,7 @@ Teclado (C/X/V/F1-F4)
 ```
 EnemyDetectionSystem  (distancia al centroide)
   → DetectedEnemy buffer (squad-level)
-  → UnitDetectedEnemy buffer (por unidad)
+  → SquadTargetEntity buffer (candidatos compartidos por squad)
         ↓
 DamageCalculationSystem  (daño recibido)
   → IsUnderAttackTag  (pulso de 1 frame)

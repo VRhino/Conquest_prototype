@@ -156,7 +156,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 
 ### HeroAIExecution.System
 - Lee `HeroAIDecision`, traduce a comandos:
-  - **Movimiento**: `NavMeshAgent.SetDestination()` + `HeroMoveIntent` (para que HeroStateSystem detecte movimiento → animación)
+  - **Movimiento**: `NavMeshAgent.SetDestination()` + `HeroMoveIntent`; la animación remota deriva locomoción de la velocidad NavMesh
   - **Ataque**: setea `HeroCombatComponent` si `shouldAttack`
   - **Squad orders**: escribe a `SquadInputComponent { orderType, holdPosition, hasNewOrder = true }` via `HeroSquadReference`
 
@@ -181,8 +181,8 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
     HeroMovementSystem           (local only, sin cambios)
     SquadOrderSystem             (procesa TODOS los squads ← sin filtro IsLocalPlayer)
     HeroAttackSystem             (+ segundo loop para AI heroes)
-    HeroStateSystem              (procesa TODOS los heroes ← sin cambios)
-    EntityVisualSync             (sin cambios)
+    NavMeshPositionSyncSystem    (publica pose remota NavMesh → ECS)
+    EntityVisualSync             (sincroniza visual y deriva locomoción remota)
 ```
 
 ---

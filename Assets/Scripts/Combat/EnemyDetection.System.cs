@@ -7,7 +7,6 @@ using Unity.Transforms;
 /// detection buffers every frame:
 ///   - <see cref="DetectedEnemy"/> (per squad) — enemy squad entities in range
 ///   - <see cref="SquadTargetEntity"/> (per squad) — individual enemy unit entities in range
-///   - <see cref="UnitDetectedEnemy"/> (per unit) — propagated from the squad's SquadTargetEntity
 ///
 /// Runs before <see cref="SquadAISystem"/> so intent is decided with fresh data.
 /// Uses an AABB-free centroid distance check — no physics queries required.
@@ -18,14 +17,12 @@ public partial class EnemyDetectionSystem : SystemBase
 {
     private ComponentLookup<LocalTransform>  _transformLookup;
     private ComponentLookup<HeroLifeComponent> _heroLifeLookup;
-    private BufferLookup<UnitDetectedEnemy>  _unitDetectedLookup;
     static readonly Unity.Profiling.ProfilerMarker DetectionMarker = new Unity.Profiling.ProfilerMarker("Conquest.EnemyDetection");
 
     protected override void OnCreate()
     {
         _transformLookup    = GetComponentLookup<LocalTransform>(true);
         _heroLifeLookup     = GetComponentLookup<HeroLifeComponent>(true);
-        _unitDetectedLookup = GetBufferLookup<UnitDetectedEnemy>(false);
     }
 
     protected override void OnUpdate()
@@ -33,7 +30,6 @@ public partial class EnemyDetectionSystem : SystemBase
         using var detectionSample = DetectionMarker.Auto();
         _transformLookup.Update(this);
         _heroLifeLookup.Update(this);
-        _unitDetectedLookup.Update(this);
 
         // PASS 1 — squad level: detect enemy units within detectionRange
         foreach (var (defA, teamA, unitsA, detectedEnemies, squadTargets, entityA) in
@@ -47,10 +43,6 @@ public partial class EnemyDetectionSystem : SystemBase
         {
             detectedEnemies.Clear();
             squadTargets.Clear();
-            // Clear before any early exit, otherwise dead/empty squads retain old targets.
-            foreach (var unit in unitsA)
-                if (_unitDetectedLookup.HasBuffer(unit.Value)) _unitDetectedLookup[unit.Value].Clear();
-
             // Compute centroid of squad A from alive unit positions
             float3 centroidA  = float3.zero;
             int    aliveCount = 0;
@@ -69,11 +61,11 @@ public partial class EnemyDetectionSystem : SystemBase
             float detectionRangeSq = defA.ValueRO.detectionRange * defA.ValueRO.detectionRange;
 
             // Scan all other squads for enemy units within range
-            foreach (var (dataB, teamB, unitsB, entityB) in
+            foreach (var (teamB, unitsB, entityB) in
                      SystemAPI.Query<
-                         RefRO<SquadDataComponent>,
                          RefRO<TeamComponent>,
                          DynamicBuffer<SquadUnitElement>>()
+                     .WithAll<SquadDataComponent>()
                      .WithEntityAccess())
             {
                 if (entityB == entityA)
@@ -102,20 +94,7 @@ public partial class EnemyDetectionSystem : SystemBase
                 }
             }
 
-            // PASS 2 — propagate SquadTargetEntity to each own unit's UnitDetectedEnemy buffer
-            for (int i = 0; i < unitsA.Length; i++)
-            {
-                Entity uA = unitsA[i].Value;
-                if (!SystemAPI.Exists(uA) || !_unitDetectedLookup.HasBuffer(uA))
-                    continue;
-
-                var unitBuf = _unitDetectedLookup[uA];
-                unitBuf.Clear();
-                for (int j = 0; j < squadTargets.Length; j++)
-                    unitBuf.Add(new UnitDetectedEnemy { Value = squadTargets[j].Value });
-            }
-
-            // PASS 3 — detect any DetectableEntityTag enemy within detectionRange and append to each unit's buffer
+            // PASS 2 — append detectable non-squad enemies (for example heroes).
             foreach (var (heroTeam, heroTransform, heroEntity) in
                      SystemAPI.Query<
                          RefRO<TeamComponent>,
@@ -134,13 +113,7 @@ public partial class EnemyDetectionSystem : SystemBase
                 // Signal squad-level detection so SquadAISystem sets TacticalIntent.Attacking
                 detectedEnemies.Add(new DetectedEnemy { Value = heroEntity });
 
-                for (int i = 0; i < unitsA.Length; i++)
-                {
-                    Entity uA = unitsA[i].Value;
-                    if (!SystemAPI.Exists(uA) || !_unitDetectedLookup.HasBuffer(uA))
-                        continue;
-                    _unitDetectedLookup[uA].Add(new UnitDetectedEnemy { Value = heroEntity });
-                }
+                squadTargets.Add(new SquadTargetEntity { Value = heroEntity });
             }
 
         }

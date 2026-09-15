@@ -264,11 +264,11 @@ El ciclo de detección precede al ataque:
 
 ```
 EnemyDetectionSystem (cada frame)
-   ├─ Pase 1: detecta unidades enemigas dentro del rango del squad (distancia al centroide)
-   ├─ Pase 2: propaga lista SquadTargetEntity → UnitDetectedEnemy por unidad
-   └─ Limpia y repuebla buffers cada frame
+   ├─ Detecta squads y entidades enemigas dentro del rango del squad (distancia al centroide)
+   └─ Limpia y repuebla DetectedEnemy y SquadTargetEntity una vez por squad
 
 UnitTargetingSystem (cada frame)
+   ├─ Consume directamente el SquadTargetEntity compartido
    ├─ Asigna UnitCombatComponent.target al enemigo más cercano disponible
    └─ Redistribuye si >3 unidades apuntan al mismo objetivo
 ```
@@ -338,7 +338,7 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | `Assets/Scripts/Combat/BlockRegen.System.cs` | Regenera currentBlock de todos los escudos cada frame |
 | `Assets/Scripts/Hero/Systems/HeroRespawn.System.cs` | Gestiona muerte y respawn del héroe vía deathTimer |
 | `Assets/Scripts/Combat/UnitTargeting.System.cs` | Asigna target a cada unidad; redistribuye si hay concentración excesiva |
-| `Assets/Scripts/Combat/EnemyDetection.System.cs` | Detecta enemigos en rango y propaga buffers UnitDetectedEnemy |
+| `Assets/Scripts/Combat/EnemyDetection.System.cs` | Detecta enemigos en rango y publica candidatos compartidos en SquadTargetEntity |
 | `Assets/Scripts/Combat/BraceWeaponActivation.System.cs` | Activa/desactiva modo Brace al entrar/salir de HoldingPosition |
 | `Assets/Scripts/Combat/BraceWeapon.System.cs` | Aplica perfiles de arma por fila durante modo Brace |
 

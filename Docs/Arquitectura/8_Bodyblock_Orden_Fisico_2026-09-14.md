@@ -28,4 +28,4 @@ Resultado final: **58/58 EditMode**, **5/5 PlayMode** y **64 assemblies de Playe
 
 No cambia la política de aliados ni la ausencia de resolución entre dos muros formados enemigos. Necesitan validación de diseño en batalla masiva.
 
-La cuadrícula sigue usando `Dictionary`/`List` administrados en main thread y puede asignar buckets tras `Clear`; se mantiene hasta perfilar 900 unidades. No se migra a Native containers/Burst sin evidencia. El bloqueo del héroe local depende de colliders de prefab y no queda certificado por este fixture de agentes.
+Actualización posterior: la cuadrícula conserva `Dictionary`/`List` administrados en main thread, pero reutiliza sus buckets mediante pool. El stress test de 900 agentes midió 0 bytes administrados en frame caliente; véase la fase 11. No se migra a Native containers/Burst sin evidencia. El contrato físico del héroe local quedó certificado en la fase 10.

@@ -18,24 +18,38 @@ public partial class UnitTargetingSystem : SystemBase
             ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().maxUnitsPerTarget
             : 2;
 
-        foreach (var (ai, state, units, squadEntity) in SystemAPI
-                     .Query<RefRO<SquadAIComponent>,
-                            RefRO<SquadStateComponent>,
-                            DynamicBuffer<SquadUnitElement>>()
-                     .WithEntityAccess())
+        foreach (var (state, units, detected) in SystemAPI
+                     .Query<RefRO<SquadStateComponent>,
+                            DynamicBuffer<SquadUnitElement>,
+                            DynamicBuffer<SquadTargetEntity>>()
+                     .WithAll<SquadAIComponent>())
         {
             // InCombat state is the sole gate for targeting — regardless of how it was
             // triggered (V press, damage received, squadmate hit). All three triggers
             // correctly set currentState=InCombat via the FSM; that is the source of truth.
             bool allow = state.ValueRO.currentState == SquadFSMState.InCombat;
 
+            // Squads outside combat (or without candidates) only need stale combat state
+            // cleared. Avoid allocating the two native accounting maps on this common path.
+            if (!allow || detected.Length == 0)
+            {
+                for (int i = 0; i < units.Length; i++)
+                {
+                    Entity unit = units[i].Value;
+                    if (!SystemAPI.Exists(unit) || !SystemAPI.HasComponent<UnitCombatComponent>(unit))
+                        continue;
 
-
-
+                    SystemAPI.GetComponentRW<UnitCombatComponent>(unit).ValueRW.target = Entity.Null;
+                    if (SystemAPI.HasComponent<IsEngagingTag>(unit))
+                        SystemAPI.SetComponentEnabled<IsEngagingTag>(unit, false);
+                }
+                continue;
+            }
 
             // Temporary map to track how many units are attacking each enemy
-            var meleeEnemyCounts  = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
-            var rangedEnemyCounts = new NativeParallelHashMap<Entity, int>(16, Allocator.Temp);
+            int initialCapacity = math.max(16, detected.Length);
+            var meleeEnemyCounts  = new NativeParallelHashMap<Entity, int>(initialCapacity, Allocator.Temp);
+            var rangedEnemyCounts = new NativeParallelHashMap<Entity, int>(initialCapacity, Allocator.Temp);
             int rangedUnitsInSquad = 0;
 
             // First pass: choose closest target for each unit
@@ -48,28 +62,6 @@ public partial class UnitTargetingSystem : SystemBase
                 var combat = SystemAPI.GetComponentRW<UnitCombatComponent>(unit);
                 bool isRanged = SystemAPI.HasComponent<UnitRangedStatsComponent>(unit);
                 if (isRanged) rangedUnitsInSquad++;
-
-                if (!allow)
-                {
-                    combat.ValueRW.target = Entity.Null;
-                    continue;
-                }
-
-                if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
-                {
-
-                    combat.ValueRW.target = Entity.Null;
-                    continue;
-                }
-
-                var detected = SystemAPI.GetBuffer<UnitDetectedEnemy>(unit);
-
-                if (detected.Length == 0)
-                {
-
-                    combat.ValueRW.target = Entity.Null;
-                    continue;
-                }
 
                 bool currentValid = false;
                 for (int j = 0; j < detected.Length; j++)
@@ -145,10 +137,6 @@ public partial class UnitTargetingSystem : SystemBase
                 if (!meleeEnemyCounts.TryGetValue(combat.ValueRO.target, out int count) || count <= maxPerTarget)
                     continue;
 
-                if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
-                    continue;
-                var detected = SystemAPI.GetBuffer<UnitDetectedEnemy>(unit);
-
                 for (int j = 0; j < detected.Length; j++)
                 {
                     Entity candidate = detected[j].Value;
@@ -183,10 +171,6 @@ public partial class UnitTargetingSystem : SystemBase
                 if (combat.ValueRO.target == Entity.Null)
                     continue;
 
-                if (!SystemAPI.HasBuffer<UnitDetectedEnemy>(unit))
-                    continue;
-
-                var detected = SystemAPI.GetBuffer<UnitDetectedEnemy>(unit);
                 if (detected.Length == 0)
                     continue;
 
@@ -247,7 +231,7 @@ public partial class UnitTargetingSystem : SystemBase
             meleeEnemyCounts.Dispose();
             rangedEnemyCounts.Dispose();
 
-            // Third pass: sync IsEngagingTag so other systems can query engagement state
+            // Fourth pass: sync IsEngagingTag so other systems can query engagement state
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;

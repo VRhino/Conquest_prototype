@@ -19,10 +19,6 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ### HeroRespawnSystem
 - Lee `HeroHealthComponent`, después de daño y antes de spawn. Detecta muerte, cuenta el cooldown y solicita ubicación poniendo `hasSpawned = false` al revivir.
 
-### HeroStateSystem
-- **Responsabilidad**: Detecta cambio de estado del héroe (Idle/Moving)
-- **Output**: `HeroStateComponent`
-
 ### HeroSpawnSystem
 - **Responsabilidad**: Crea la entidad ECS del héroe local al inicio de la batalla
 - Publica `spawnPosition`, `spawnRotation` y una nueva `positionRevision` al colocar al héroe. Sin punto válido no confirma ubicación ni incrementa revisión.
@@ -112,7 +108,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Cubre**: unidades vs unidades + héroes remotos vs unidades (héroe local bloqueado por CapsuleCollider físico)
 - **Fuerza**: valores configurables en `SquadSpawnConfig`; por defecto 60 para Line/Testudo/Wedge/Square en estado Formed y 8 para Dispersed/Column
 - **Regla**: Solo cross-team — aliados nunca se repelen; `Formed vs Formed` sin push (evita vibración)
-- **Algoritmo**: Spatial grid (cell = `bodyblockRadius`) → 9 celdas vecinas → O(n×k)
+- **Algoritmo**: Spatial grid (cell = `bodyblockRadius`) → 9 celdas vecinas → O(n×k); buckets administrados reutilizados mediante pool
 - **Orden**: después de `UnitNavMeshSystem` y antes de `NavMeshPositionSyncSystem`, para capturar la corrección en ECS en el mismo ciclo
 - **Tiempo**: clamp en m/s mediante `bodyblockMaxPushSpeed * deltaTime`; parámetros en SquadSpawnConfig.
 - **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.
@@ -146,10 +142,10 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 ```
 
 ### EnemyDetectionSystem
-- **Responsabilidad**: Detecta squads enemigos en rango y popula los 3 buffers de detección por frame
-- **Output**: `DetectedEnemy` (por squad), `SquadTargetEntity` (por squad), `UnitDetectedEnemy` (por unidad)
+- **Responsabilidad**: Detecta squads y entidades enemigas en rango y publica dos buffers compartidos por squad
+- **Output**: `DetectedEnemy` (squads enemigos) y `SquadTargetEntity` (candidatos individuales)
 - **Orden**: `[UpdateBefore(SquadAISystem)]` — SquadAI necesita detección fresca para decidir intents
-- **Regla**: Solo escribe buffers de detección — nunca decide comportamiento ni asigna targets de unidades
+- **Regla**: Solo escribe buffers compartidos de detección — nunca decide comportamiento ni asigna targets de unidades
 - **Algoritmo**: Distancia centroide (sin AABB/physics queries)
 
 ### DamageCalculationSystem
@@ -168,7 +164,8 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 
 ### UnitTargetingSystem
 - **Responsabilidad**: Asigna un target enemigo específico a cada unidad del squad según estado `InCombat`
-- **Output**: `UnitCombatComponent.combatTarget` por unidad
+- **Input compartido**: `SquadTargetEntity`; no existe una copia de candidatos por unidad
+- **Output**: `UnitCombatComponent.target` por unidad
 - **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateAfter(SquadFSMSystem)]`
 - **Gate**: Solo asigna targets si `SquadFSMState.InCombat` — las tres formas de entrar en combate (tecla V, daño recibido, aliado impactado) convergen correctamente en el FSM
 - **Regla**: No decide cuándo entrar en combate — solo distribuye targets cuando ya está en `InCombat`

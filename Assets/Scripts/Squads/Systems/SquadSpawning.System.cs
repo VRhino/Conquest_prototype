@@ -417,8 +417,6 @@ public partial class SquadSpawningSystem : SystemBase
                 ecb.AddComponent<WeaponHitboxActiveTag>(unit);
                 ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);
 
-                ecb.AddBuffer<UnitDetectedEnemy>(unit);
-
                 // Ranged-only components — added at spawn so RangedAttackSystem can
                 // process units immediately without waiting for UnitStatScalingSystem.
                 if (data.isRangedUnit)

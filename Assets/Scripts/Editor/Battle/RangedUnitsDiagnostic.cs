@@ -238,17 +238,17 @@ public static class RangedUnitsDiagnostic
         else if (progressCount > 0)
             OK($"[ECS] {progressCount}/{squadCount} squad(s) have SquadProgressComponent (required by UnitStatScalingSystem).");
 
-        // Check UnitDetectedEnemy buffer exists on ranged units
+        // Detection candidates are stored once per squad, not duplicated per unit.
         var detectedBufQuery = em.CreateEntityQuery(
-            ComponentType.ReadOnly<UnitRangedStatsComponent>(),
-            ComponentType.ReadOnly<UnitDetectedEnemy>());
+            ComponentType.ReadOnly<SquadUnitElement>(),
+            ComponentType.ReadOnly<SquadTargetEntity>());
         int withBufferCount = detectedBufQuery.CalculateEntityCount();
         detectedBufQuery.Dispose();
 
         if (rangedStatsCount > 0 && withBufferCount == 0)
-            Warn($"[ECS] Ranged units exist but none have a UnitDetectedEnemy buffer — EnemyDetectionSystem may not have propagated detections yet, or units were spawned without the buffer.", ref warnings);
+            Warn($"[ECS] Ranged units exist but no squad has a SquadTargetEntity buffer — EnemyDetectionSystem cannot publish candidates.", ref warnings);
         else if (withBufferCount > 0)
-            OK($"[ECS] {withBufferCount} ranged unit(s) have UnitDetectedEnemy buffer.");
+            OK($"[ECS] {withBufferCount} squad(s) have a shared SquadTargetEntity buffer.");
 
         return errors;
     }

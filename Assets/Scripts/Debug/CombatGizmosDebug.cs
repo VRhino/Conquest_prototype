@@ -114,10 +114,10 @@ public class CombatGizmosDebug : MonoBehaviour
                     }
                 }
 
-                // Draw detected enemies (gray lines to all detected enemies in buffer)
-                if (showDetectedLines && em.HasBuffer<UnitDetectedEnemy>(unit))
+                // Draw the squad's shared candidate list; it is identical for every unit.
+                if (showDetectedLines && em.HasBuffer<SquadTargetEntity>(squad))
                 {
-                    var detected = em.GetBuffer<UnitDetectedEnemy>(unit, true);
+                    var detected = em.GetBuffer<SquadTargetEntity>(squad, true);
                     UnityEditor.Handles.color = new Color(0.7f, 0.7f, 0.7f, 0.25f);
                     foreach (var d in detected)
                     {

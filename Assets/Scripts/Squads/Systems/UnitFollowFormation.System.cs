@@ -2,11 +2,11 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
-using Unity.Collections;
 
 /// <summary>
-/// Moves each unit of a squad towards its assigned formation slot relative to
-/// the squad leader.
+/// Applies NavMesh speed and formation-orientation policy after
+/// <see cref="UnitNavMeshSystem"/> has selected the physical destination.
+/// The historical class name is retained to avoid a broad type/asset migration.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(GridFormationUpdateSystem))]
@@ -26,18 +26,14 @@ public partial class UnitFollowFormationSystem : SystemBase
         float dt = SystemAPI.Time.DeltaTime;
 
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
-        var targetLookup = GetComponentLookup<UnitLocalTargetComponent>();
         var transformLookup = GetComponentLookup<LocalTransform>();
         var anchorLookup = GetComponentLookup<SquadFormationAnchorComponent>(true);
-        var prevLeaderPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>();
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
         var shieldLookup = GetComponentLookup<UnitShieldComponent>(true);
         
         // TODO: Las unidades pueden usar EnvironmentAwarenessComponent del escuadrón 
         // para adaptar su navegación individual (evitar obstáculos, ajustar velocidad, etc.)
         // var environmentLookup = GetComponentLookup<EnvironmentAwarenessComponent>(true);
-
-        var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (units, entity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -54,7 +50,6 @@ public partial class UnitFollowFormationSystem : SystemBase
             }
 
             var anchor = anchorLookup[entity];
-            float3 heroPosition = anchor.position;
             // Keep heroForward for orientation — guard against zero-quaternion sentinel
             float3 heroForward = math.lengthsq(anchor.rotation.value) > 0.01f
                 ? math.forward(anchor.rotation)
@@ -129,15 +124,6 @@ public partial class UnitFollowFormationSystem : SystemBase
                     
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                // Mantener posición previa del líder actualizada (leída por otros sistemas)
-                if (prevLeaderPosLookup.HasComponent(unit))
-                    prevLeaderPosLookup[unit] = new UnitPrevLeaderPosComponent { value = heroPosition };
-                else
-                    ecb.AddComponent(unit, new UnitPrevLeaderPosComponent { value = heroPosition });
-
-                // Get unit's grid slot
-                var gridSlot = slotLookup[unit];
-
                 // Read target position already calculated by GridFormationUpdateSystem
                 if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
                     continue;
@@ -190,67 +176,6 @@ public partial class UnitFollowFormationSystem : SystemBase
                     }
                 }
 
-                // Update visual target regardless of state for UI purposes
-                if (targetLookup.HasComponent(unit))
-                {
-                    var target = targetLookup[unit];
-                    target.targetPosition = slotPos;
-                    targetLookup[unit] = target;
-                }
-            }
-        }
-        
-        ecb.Playback(EntityManager);
-        ecb.Dispose();
-    }
-
-    /// <summary>
-    /// Actualiza la orientación de una unidad basada en su configuración de orientación.
-    /// </summary>
-    private void UpdateUnitOrientation(Entity unit, ref LocalTransform transform, float3 heroPos, float3 heroForward, float3 movementDirection, float deltaTime, UnitOrientationType orientationType)
-    {
-        float rotationSpeed = 5f;
-        
-        if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
-        {
-            var orientationComp = SystemAPI.GetComponent<UnitOrientationComponent>(unit);
-            rotationSpeed = orientationComp.rotationSpeed;
-        }
-
-        float3 targetDirection = float3.zero;
-        bool shouldRotate = true;
-
-        switch (orientationType)
-        {
-            case UnitOrientationType.None:
-                shouldRotate = false;
-                break;
-
-            case UnitOrientationType.FaceHero:
-                targetDirection = math.normalizesafe(heroPos - transform.Position);
-                break;
-
-            case UnitOrientationType.MatchHeroDirection:
-                // Usar la dirección del héroe que ya tenemos
-                targetDirection = heroForward;
-                break;
-
-            case UnitOrientationType.FaceMovementDirection:
-                targetDirection = math.normalizesafe(movementDirection);
-                break;
-        }
-
-        if (shouldRotate && math.lengthsq(targetDirection) > 0.01f)
-        {
-            // Limitar la rotación solo al plano horizontal (eliminar componente Y)
-            float3 horizontalDirection = new float3(targetDirection.x, 0, targetDirection.z);
-            horizontalDirection = math.normalizesafe(horizontalDirection);
-            
-            // Solo rotar si hay suficiente componente horizontal
-            if (math.lengthsq(horizontalDirection) > 0.01f)
-            {
-                quaternion targetRotation = quaternion.LookRotationSafe(horizontalDirection, math.up());
-                transform.Rotation = math.slerp(transform.Rotation, targetRotation, deltaTime * rotationSpeed);
             }
         }
     }

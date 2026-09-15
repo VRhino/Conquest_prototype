@@ -150,6 +150,30 @@ public class SquadControlRegressionTests
         Assert.That(FormationPositionCalculator.GetSquadCenter(state, hold, retreat), Is.EqualTo(retreat));
     }
 
+    [Test]
+    public void FollowAnchorUsesSafeDefaultsWhenSpawnConfigIsAbsent()
+    {
+        var squad = CreateSquad();
+        em.AddComponentData(squad, new SquadFormationAnchorComponent());
+        em.AddComponent<SquadAnchorMovingTag>(squad);
+        em.AddComponentData(squad, new SquadDataComponent());
+        em.AddComponentData(squad, new HeroWorldPositionComponent
+        {
+            position = new float3(10, 0, 20),
+            rotation = quaternion.identity
+        });
+        em.SetComponentData(squad, new SquadStateComponent
+        {
+            currentOrder = SquadOrderType.FollowHero,
+            currentState = SquadFSMState.FollowingHero
+        });
+
+        world.GetOrCreateSystemManaged<SquadAnchorSystem>().Update();
+
+        Assert.That(em.GetComponentData<SquadFormationAnchorComponent>(squad).position,
+            Is.EqualTo(new float3(10, 0, 22)));
+    }
+
     [TestCase(true)]
     [TestCase(false)]
     public void FormationIsCommittedWithSlotsNotByOrderApplication(bool movementOrder)

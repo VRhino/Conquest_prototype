@@ -11,9 +11,13 @@ Input (teclado/mouse)
   ↓
 SquadControlSystem         — captura input, escribe SquadInputComponent
   ↓
-SquadOrderSystem           — convierte input en órdenes de estado
+OrderResolutionSystem      — arbitra intent del jugador, IA y reacción de combate
+  ↓
+SquadOrderSystem           — aplica la orden resuelta
   ↓
 SquadFSMSystem             — máquina de estados del escuadrón
+  ↓
+SquadAnchorSystem          — única autoridad del ancla de formación
   ↓
 FormationSystem            — asigna posiciones de formación iniciales
   ↓
@@ -21,11 +25,15 @@ GridFormationUpdateSystem  — sincroniza posiciones de slot cada frame
   ↓
 UnitFormationStateSystem   — máquina de estados por unidad (Formed/Waiting/Moving)
   ↓
-UnitFollowFormationSystem  — movimiento físico de unidades
+UnitNavMeshSystem          — única autoridad de destinos y movimiento NavMesh
   ↓
-DestinationMarkerSystem    — marcadores visuales de destino
+UnitFollowFormationSystem  — velocidad y orientación de formación
   ↓
-EntityVisualSync           — sincronización ECS → GameObject (visual)
+UnitBodyblockSystem        — corrección física entre enemigos
+  ↓
+NavMeshPositionSyncSystem  — posición NavMesh GameObject → ECS
+  ↓
+UnitRotationResolutionSystem — resuelve la intención de rotación
 ```
 
 Todos los sistemas pertenecen al `SimulationSystemGroup`.
@@ -37,18 +45,18 @@ Todos los sistemas pertenecen al `SimulationSystemGroup`.
 El héroe es el punto de referencia para la formación de tropas. Su pipeline:
 
 ```
-HeroInputSystem → HeroMovementSystem → HeroStateSystem → EntityVisualSync
+HeroInputSystem → HeroMovementSystem → HeroMoveIntent → EntityVisualSync
 ```
 
 | Sistema | Lee | Escribe |
 |---------|-----|---------|
 | `HeroInputSystem` | Teclado/Mouse | `HeroInputComponent` (MoveInput, IsSprintPressed, etc.) |
 | `HeroMovementSystem` | `HeroInputComponent`, `HeroStatsComponent`, `StaminaComponent` | `HeroMoveIntent` (Direction, Speed) |
-| `HeroStateSystem` | `LocalTransform`, `UnitPrevLeaderPosComponent` | `HeroStateComponent` (State: Idle/Moving) |
+| `EntityVisualSync` | `HeroMoveIntent`, vida y revisión de spawn | Mueve el `CharacterController` local y publica su pose en `LocalTransform` |
 
-**Detección de movimiento:** compara posición actual vs anterior; si `distSq > 0.0025f` → `HeroState.Moving`, sino `Idle`.
+No existe actualmente `HeroStateSystem`, `HeroStateComponent` ni un componente compartido de posición anterior. La animación local deriva el movimiento de la intención/pose visual; la animación remota usa la velocidad del `NavMeshAgent`.
 
-**Autoridad visual:** Para el héroe, el **GameObject es autoritativo**. `EntityVisualSync` usa `CharacterController.Move()` con gravedad (`-9.81f`) y escribe la posición de vuelta al ECS. Para las unidades es al revés: **ECS es autoritativo**.
+**Autoridad física:** para el héroe local, el **GameObject es autoritativo**. `EntityVisualSync` usa `CharacterController.Move()` con gravedad y escribe la posición de vuelta al ECS. Para unidades y héroes remotos con `syncPositionFromNavMesh`, el `NavMeshAgent` también es la autoridad física y `NavMeshPositionSyncSystem` publica su posición en ECS.
 
 ---
 
@@ -272,52 +280,41 @@ Usa la **unidad más lejana** para determinar si todas las unidades están dentr
 
 ---
 
-## 8. Movimiento Físico — `UnitFollowFormationSystem`
+## 8. Movimiento físico — `UnitNavMeshSystem`
 
-**Archivo:** `Assets/Scripts/Squads/Systems/UnitFollowFormation.System.cs`
-**Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`, `[UpdateAfter(typeof(GridFormationUpdateSystem))]`
+**Archivo:** `Assets/Scripts/Squads/Systems/UnitNavMesh.System.cs`
+**Atributos:** después de `UnitFormationStateSystem` y `UnitTargetingSystem`; antes de `UnitFollowFormationSystem`.
 
 ### Condición de movimiento
 
-Solo mueve unidades cuyo `UnitFormationStateComponent.State == Moving`.
+Es la única autoridad que llama `NavMeshAgent.SetDestination()`. El destino efectivo es el slot de formación o un punto de parada próximo al objetivo de combate. Las unidades `Waiting` sin persecución elegible conservan su espera; `HoldPosition` nunca autoriza persecución.
 
 ### Cálculo de velocidad
 
 ```
-finalSpeed = baseSpeed × speedMultiplier × hurryBonus
+finalSpeed = baseSpeed × speedMultiplier × hurryOrCombatBonus
 
 donde:
   baseSpeed       = UnitStatsComponent.velocidad  (fallback: defaultMoveSpeed = 5f)
   speedMultiplier = UnitMoveSpeedVariation.speedMultiplier
-  hurryBonus      = 2.0 si hurryToComander activo, sino 1.0
+  hurryOrCombatBonus = 2.0 si hurryToComander o existe target válido, sino 1.0
 ```
 
-### Paso de movimiento
+### Destino y autoridad
 
 ```
-diff = targetPosition - currentPosition
-step = normalize(diff) × finalSpeed × deltaTime
-
-// Anti-overshoot: si |step| > |diff|, clamp a diff
-if (lengthsq(step) > distSq) → step = diff
+UnitTargetPositionComponent
+  → proyección con NavMesh.SamplePosition
+  → NavMeshAgent.SetDestination(destino efectivo)
+  → UnitBodyblockSystem aplica agent.Move(offset)
+  → NavMeshPositionSyncSystem copia agent.transform.position a LocalTransform
 ```
-
-### Condición de parada
-
-```
-stoppingDistanceSq = 0.04f  (~0.2m)
-```
-
-- **Hold Position:** para cuando `distSq <= stoppingDistanceSq`
-- **Follow Hero (héroe quieto):** para cuando `distSq <= stoppingDistanceSq`
-- **Follow Hero (héroe moviéndose):** no para, sigue moviéndose
 
 ### Orientación
 
-- Tipo por defecto: `UnitOrientationType.FaceMovementDirection`
-- Interpolación: `math.slerp()` con `rotationSpeed × deltaTime`
-- `rotationSpeed = 5f` rad/s
-- Solo plano horizontal (ignora componente Y)
+- `UnitNavMeshSystem` publica orientación de combate cuando el objetivo está próximo.
+- `UnitFollowFormationSystem` publica orientación disciplinada hacia el héroe o el ancla de Hold cuando la unidad está formada y no está engaging.
+- `UnitRotationResolutionSystem` aplica la intención ganadora; no hay una segunda ruta directa de rotación ECS.
 
 ---
 
@@ -342,9 +339,9 @@ Se ejecuta cada frame en `Update()` (MonoBehaviour):
 | Entidad | Dirección de sync | Detalle |
 |---------|-------------------|---------|
 | **Héroe** | GameObject → ECS | Lee `transform.position/rotation`, escribe a `LocalTransform` del ECS |
-| **Unidad** | ECS → GameObject | Lee `LocalTransform` del ECS, escribe a `transform.position/rotation` |
+| **Unidad/remoto NavMesh** | GameObject/NavMesh → ECS | `NavMeshPositionSyncSystem` copia la posición física; `EntityVisualSync` evita duplicar esa escritura |
 
-No hay interpolación en la sincronización — asignación directa de posición.
+La posición física no se interpola en ECS; la rotación pasa por `UnitRotationIntentComponent` y su sistema de resolución.
 
 ---
 
@@ -393,10 +390,11 @@ No hay interpolación en la sincronización — asignación directa de posición
 | `UnitStatsComponent` | Stats de la unidad (velocidad, etc.) | Setup/Spawn |
 | `UnitMoveSpeedVariation` | Multiplicador individual de velocidad | Setup/Spawn |
 | `UnitSpacingComponent` | Slot de spacing en formación | `FormationSystem` |
-| `LocalTransform` | Posición/rotación en ECS | `UnitFollowFormationSystem` |
+| `NavAgentComponent` | Estado del destino efectivo, fallos y autoridad NavMesh | `UnitNavMeshSystem` |
+| `UnitRotationIntentComponent` | Propuesta priorizada de orientación | NavMesh/Follow; aplicada por `UnitRotationResolutionSystem` |
+| `LocalTransform` | Pose publicada en ECS | `NavMeshPositionSyncSystem`, `UnitRotationResolutionSystem` |
 | `HeroInputComponent` | Input del héroe (WASD, sprint, skills) | `HeroInputSystem` |
 | `HeroMoveIntent` | Dirección y velocidad de movimiento | `HeroMovementSystem` |
-| `HeroStateComponent` | Estado del héroe (Idle/Moving) | `HeroStateSystem` |
 | `UnitDestinationMarkerComponent` | Referencia al marcador visual | `DestinationMarkerSystem` |
 
 ---
@@ -406,19 +404,15 @@ No hay interpolación en la sincronización — asignación directa de posición
 Todos en `SimulationSystemGroup`. El orden se define por atributos `[UpdateAfter]` y `[UpdateBefore]`:
 
 ```
-1.  HeroInputSystem
-2.  HeroMovementSystem
-3.  HeroStateSystem
-4.  SquadControlSystem          [UpdateBefore(SquadOrderSystem, FormationSystem)]
-5.  SquadOrderSystem            [UpdateAfter(SquadControlSystem)]
-6.  SquadFSMSystem              [UpdateAfter(SquadOrderSystem)]
-7.  FormationSystem
-8.  GridFormationUpdateSystem   [UpdateAfter(FormationSystem)]
-9.  UnitFormationStateSystem    [UpdateAfter(GridFormationUpdateSystem)]
-10. UnitFollowFormationSystem   [UpdateAfter(GridFormationUpdateSystem)]
-11. DestinationMarkerSystem     [UpdateAfter(UnitFollowFormationSystem)]
-12. SquadVisualManagementSystem [UpdateAfter(SquadSpawningSystem)]
-13. EntityVisualSync            (MonoBehaviour Update — después de todos los sistemas ECS)
+1.  HeroInputSystem → HeroMovementSystem
+2.  EnemyDetectionSystem → SquadAISystem → CombatReactionSystem
+3.  SquadControlSystem → OrderResolutionSystem → SquadOrderSystem → SquadFSMSystem
+4.  UnitTargetingSystem
+5.  SquadAnchorSystem → FormationSystem → GridFormationUpdateSystem
+6.  UnitFormationStateSystem → UnitNavMeshSystem
+7.  UnitFollowFormationSystem → UnitBodyblockSystem → NavMeshPositionSyncSystem
+8.  UnitRotationResolutionSystem
+9.  DestinationMarkerSystem / UnitAnimationSystem / visuales
 ```
 
-> **Nota:** `UnitFormationStateSystem` y `UnitFollowFormationSystem` ambos declaran `[UpdateAfter(GridFormationUpdateSystem)]` pero no tienen dependencia explícita entre sí. Unity puede ejecutarlos en cualquier orden relativo, aunque en la práctica el state system tiende a ejecutarse primero.
+Las dependencias críticas están declaradas de forma explícita: `UnitNavMeshSystem` espera a `UnitFormationStateSystem` y `UnitTargetingSystem`, y fuerza a `UnitFollowFormationSystem` a ejecutarse después. `UnitBodyblockSystem` corrige la pose antes de que `NavMeshPositionSyncSystem` la publique en ECS.

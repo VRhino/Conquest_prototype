@@ -1,5 +1,7 @@
 # Modelo Híbrido ECS-GameObject - Conquest Tactics
 
+> **Documento histórico.** Los diagramas de esta página conservan nombres y responsabilidades anteriores a la reparación del pipeline. La referencia vigente está en [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md), [Movimiento del héroe](Arquitectura/10_Movimiento_Heroe_Autoridad_Fisica_2026-09-14.md) y [Pipeline de movimiento de tropas](TroopMovementPipeline.md).
+
 ## 📋 Índice
 
 1. [🏗️ Arquitectura General](#🏗️-arquitectura-general)

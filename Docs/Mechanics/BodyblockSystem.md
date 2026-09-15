@@ -77,7 +77,8 @@ Escala máxima: 900 unidades (450 por equipo). Brute-force O(n²) → inaceptabl
 - **Cell size = `BodyblockRadius` (0.8 m)**
 - Cada entidad se inserta en `(floor(x/cellSize), floor(z/cellSize))`
 - Consulta: 9 celdas vecinas (3×3) → ~18 checks/entidad → ~16,200 checks totales
-- Estructura: `Dictionary<(int,int), List<int>>` — `.Clear()` cada frame
+- Estructura: `Dictionary<(int,int), List<int>>` con pool persistente de buckets
+- Tras el calentamiento, las listas de celdas se reutilizan sin asignación administrada
 
 ---
 

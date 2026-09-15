@@ -1,7 +1,6 @@
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 using ConquestTactics.Animation;
 
 /// <summary>
@@ -30,7 +29,6 @@ public partial class UnitAnimationSystem : SystemBase
         
         // Lookup para componentes
         var transformLookup = GetComponentLookup<LocalTransform>(true);
-        var prevPosLookup = GetComponentLookup<UnitPrevLeaderPosComponent>(true);
         var statsLookup = GetComponentLookup<UnitStatsComponent>(true);
         
         // Para cada unidad con componente de animación, actualizar datos de movimiento

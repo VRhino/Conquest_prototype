@@ -1,5 +1,7 @@
 # TDD
 
+> Las secciones de implementación de este TDD describen el diseño histórico y pueden conservar tipos retirados. Para el código vigente consulte [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md) y el [pipeline de movimiento](TroopMovementPipeline.md).
+
 ## Índice Técnico (TDD)
 
 ### 1. 🧱 Arquitectura General del Proyecto

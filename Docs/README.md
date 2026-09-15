@@ -11,6 +11,15 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ### Arquitectura
 
+- [Limpieza de estado muerto en movimiento](./Arquitectura/13_Limpieza_Estado_Movimiento_2026-09-15.md):
+  Componentes sin lectores retirados y referencia del pipeline actual corregida.
+
+- [Detección y targeting a escala](./Arquitectura/12_Deteccion_Targeting_Escala_2026-09-15.md):
+  Candidatos compartidos por squad, eliminación de copias por unidad y medición con 900 unidades.
+
+- [Escala de bodyblock con 900 agentes](./Arquitectura/11_Escala_Bodyblock_900_Agentes_2026-09-14.md):
+  Pool de buckets, frame caliente sin GC y medición reproducible.
+
 - [Movimiento del héroe y autoridad física](./Arquitectura/10_Movimiento_Heroe_Autoridad_Fisica_2026-09-14.md):
   Autoridad local/remota, destinos IA y contrato de colisiones por equipo.
 

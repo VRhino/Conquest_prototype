@@ -42,7 +42,11 @@ public partial class UnitBodyblockSystem : SystemBase
     private readonly List<AgentData>                    _agents         = new();
     private readonly Dictionary<Entity, bool>           _unitIsWall     = new();
     private readonly Dictionary<(int, int), List<int>>  _grid           = new();
+    private readonly List<List<int>>                    _bucketPool     = new();
     private          Vector3[]                          _offsets        = new Vector3[256];
+    private int _usedBucketCount;
+
+    public int DebugBucketPoolSize => _bucketPool.Count;
 
     protected override void OnCreate()
     {
@@ -141,12 +145,13 @@ public partial class UnitBodyblockSystem : SystemBase
 
         // ── 3. Build spatial grid ─────────────────────────────────────────────
         _grid.Clear();
+        _usedBucketCount = 0;
         for (int i = 0; i < count; i++)
         {
             var cell = ToCell(_agents[i].position, radius);
             if (!_grid.TryGetValue(cell, out var bucket))
             {
-                bucket = new List<int>(4);
+                bucket = AcquireBucket();
                 _grid[cell] = bucket;
             }
             bucket.Add(i);
@@ -263,4 +268,13 @@ public partial class UnitBodyblockSystem : SystemBase
 
     private static (int, int) ToCell(float3 pos, float cellSize) =>
         ((int)math.floor(pos.x / cellSize), (int)math.floor(pos.z / cellSize));
+
+    private List<int> AcquireBucket()
+    {
+        if (_usedBucketCount == _bucketPool.Count)
+            _bucketPool.Add(new List<int>(4));
+        var bucket = _bucketPool[_usedBucketCount++];
+        bucket.Clear();
+        return bucket;
+    }
 }

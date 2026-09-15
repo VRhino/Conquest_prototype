@@ -169,11 +169,87 @@ public class SquadNavigationRegressionTests
         }
     }
 
-    static Entity CreateBodyblockUnit(EntityManager em, GameObject visual, Team team, int agentType)
+    [Test, Timeout(60000)]
+    public void NineHundredBodyblockAgentsReuseSpatialBucketsAfterWarmup()
+    {
+        using var world = new World("Bodyblock 900-agent stress");
+        var em = world.EntityManager;
+        em.CreateEntity(typeof(MatchStateComponent));
+        em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
+        {
+            bodyblockRadius = 0.8f, bodyblockRepulsionStrength = 8f,
+            bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f,
+            bodyblockEngagingRadius = 0.35f, bodyblockEngagingStrength = 3f
+        });
+        var sources = new System.Collections.Generic.List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(60, 0.2f, 60), transform = Matrix4x4.Translate(new Vector3(0, -0.1f, 0)), area = 0 }
+        };
+        var settings = NavMesh.GetSettingsByIndex(0);
+        var data = NavMeshBuilder.BuildNavMeshData(settings, sources,
+            new Bounds(Vector3.zero, new Vector3(65, 5, 65)), Vector3.zero, Quaternion.identity);
+        var navData = NavMesh.AddNavMeshData(data);
+        var visuals = new System.Collections.Generic.List<GameObject>(900);
+        try
+        {
+            for (int z = 0; z < 30; z++)
+            for (int x = 0; x < 30; x++)
+            {
+                var visual = new GameObject($"Bodyblock stress {x}-{z}");
+                visuals.Add(visual);
+                var position = new Vector3((x - 14.5f) * 1.2f, 0f, (z - 14.5f) * 1.2f);
+                CreateBodyblockUnit(em, visual, (x + z) % 2 == 0 ? Team.TeamA : Team.TeamB,
+                    settings.agentTypeID, position);
+            }
+
+            world.SetTime(new Unity.Core.TimeData(0, 1f / 60f));
+            var system = world.GetOrCreateSystemManaged<UnitBodyblockSystem>();
+            system.Update();
+            int warmedBucketCount = system.DebugBucketPoolSize;
+            long allocatedBefore = System.GC.GetAllocatedBytesForCurrentThread();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            system.Update();
+            watch.Stop();
+            long allocatedBytes = System.GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+            Assert.That(warmedBucketCount, Is.GreaterThan(0));
+            Assert.That(system.DebugBucketPoolSize, Is.EqualTo(warmedBucketCount),
+                "El segundo frame no debe crear listas de celdas nuevas.");
+            TestContext.WriteLine($"Bodyblock 900 agents warm-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
+                $"managed allocation: {allocatedBytes} bytes, buckets: {warmedBucketCount}");
+
+            // Pack all agents into a 1.45 x 1.45 m area to exercise the contact-heavy case.
+            for (int i = 0; i < visuals.Count; i++)
+            {
+                int x = i % 30;
+                int z = i / 30;
+                Assert.That(visuals[i].GetComponent<NavMeshAgent>().Warp(
+                    new Vector3((x - 14.5f) * 0.05f, 0f, (z - 14.5f) * 0.05f)), Is.True);
+            }
+            system.Update();
+            allocatedBefore = System.GC.GetAllocatedBytesForCurrentThread();
+            watch.Restart();
+            system.Update();
+            watch.Stop();
+            allocatedBytes = System.GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            TestContext.WriteLine($"Bodyblock 900 agents dense-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
+                $"managed allocation: {allocatedBytes} bytes, buckets retained: {system.DebugBucketPoolSize}");
+        }
+        finally
+        {
+            foreach (var visual in visuals) Object.DestroyImmediate(visual);
+            navData.Remove();
+            Object.DestroyImmediate(data);
+        }
+    }
+
+    static Entity CreateBodyblockUnit(EntityManager em, GameObject visual, Team team, int agentType,
+        Vector3? startPosition = null)
     {
         var agent = visual.AddComponent<NavMeshAgent>();
         agent.agentTypeID = agentType;
-        Assert.That(agent.Warp(Vector3.zero), Is.True);
+        Assert.That(agent.Warp(startPosition ?? Vector3.zero), Is.True);
         var entity = em.CreateEntity(typeof(NavAgentComponent), typeof(TeamComponent),
             typeof(UnitFormationStateComponent));
         em.SetComponentData(entity, new TeamComponent { value = team });

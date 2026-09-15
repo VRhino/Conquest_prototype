@@ -269,4 +269,104 @@ public class ArchitectureRegressionTests
         world.GetOrCreateSystemManaged<UnitStatScalingSystem>().Update();
         Assert.That(em.GetBuffer<UnlockedAbilityElement>(squad)[0].Value, Is.EqualTo(ability));
     }
+
+    [Test]
+    public void EnemyDetectionKeepsOneCandidateBufferPerSquadAtNineHundredUnits()
+    {
+        Entity CreateDetectionSquad(Team team, float xOffset)
+        {
+            var squad = em.CreateEntity(typeof(SquadDefinitionComponent), typeof(SquadDataComponent),
+                typeof(TeamComponent), typeof(SquadAIComponent), typeof(SquadStateComponent));
+            em.SetComponentData(squad, new SquadDefinitionComponent { detectionRange = 1000f });
+            em.SetComponentData(squad, new TeamComponent { value = team });
+            em.SetComponentData(squad, new SquadStateComponent { currentState = SquadFSMState.InCombat });
+            em.AddBuffer<SquadUnitElement>(squad);
+            em.AddBuffer<DetectedEnemy>(squad);
+            em.AddBuffer<SquadTargetEntity>(squad);
+            for (int i = 0; i < 450; i++)
+            {
+                var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitCombatComponent));
+                em.SetComponentData(unit, LocalTransform.FromPosition(new float3(
+                    xOffset + (i % 30), 0f, i / 30)));
+                em.GetBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
+            }
+            return squad;
+        }
+
+        var squadA = CreateDetectionSquad(Team.TeamA, 0f);
+        var squadB = CreateDetectionSquad(Team.TeamB, 40f);
+        var system = world.GetOrCreateSystemManaged<EnemyDetectionSystem>();
+        system.Update();
+
+        long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        system.Update();
+        watch.Stop();
+        long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+
+        Assert.That(em.GetBuffer<SquadTargetEntity>(squadA).Length, Is.EqualTo(450));
+        Assert.That(em.GetBuffer<SquadTargetEntity>(squadB).Length, Is.EqualTo(450));
+        Assert.That(em.GetBuffer<DetectedEnemy>(squadA).Length, Is.EqualTo(1));
+        Assert.That(em.GetBuffer<DetectedEnemy>(squadB).Length, Is.EqualTo(1));
+        TestContext.WriteLine($"Enemy detection 900 units warm-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
+            $"managed allocation: {allocatedBytes} bytes, candidate entries: 900");
+
+        var targeting = world.GetOrCreateSystemManaged<UnitTargetingSystem>();
+        targeting.Update();
+        allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        watch.Restart();
+        targeting.Update();
+        watch.Stop();
+        allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+        int assignedTargets = 0;
+        foreach (var unit in em.GetBuffer<SquadUnitElement>(squadA))
+            if (em.GetComponentData<UnitCombatComponent>(unit.Value).target != Entity.Null)
+                assignedTargets++;
+        foreach (var unit in em.GetBuffer<SquadUnitElement>(squadB))
+            if (em.GetComponentData<UnitCombatComponent>(unit.Value).target != Entity.Null)
+                assignedTargets++;
+        Assert.That(assignedTargets, Is.EqualTo(900));
+        TestContext.WriteLine($"Unit targeting 900 units warm-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
+            $"managed allocation: {allocatedBytes} bytes");
+    }
+
+    [Test]
+    public void UnitTargetingConsumesSharedSquadCandidates()
+    {
+        var nearEnemy = em.CreateEntity(typeof(LocalTransform));
+        var farEnemy = em.CreateEntity(typeof(LocalTransform));
+        em.SetComponentData(nearEnemy, LocalTransform.FromPosition(new float3(2, 0, 0)));
+        em.SetComponentData(farEnemy, LocalTransform.FromPosition(new float3(10, 0, 0)));
+        var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitCombatComponent));
+        em.SetComponentData(unit, LocalTransform.Identity);
+        var squad = em.CreateEntity(typeof(SquadAIComponent), typeof(SquadStateComponent));
+        em.SetComponentData(squad, new SquadStateComponent { currentState = SquadFSMState.InCombat });
+        em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
+        var candidates = em.AddBuffer<SquadTargetEntity>(squad);
+        candidates.Add(new SquadTargetEntity { Value = farEnemy });
+        candidates.Add(new SquadTargetEntity { Value = nearEnemy });
+
+        world.GetOrCreateSystemManaged<UnitTargetingSystem>().Update();
+
+        Assert.That(em.GetComponentData<UnitCombatComponent>(unit).target, Is.EqualTo(nearEnemy));
+    }
+
+    [Test]
+    public void UnitTargetingClearsStaleEngagementOutsideCombat()
+    {
+        var staleTarget = em.CreateEntity(typeof(LocalTransform));
+        var unit = em.CreateEntity(typeof(UnitCombatComponent), typeof(IsEngagingTag));
+        em.SetComponentData(unit, new UnitCombatComponent { target = staleTarget });
+        em.SetComponentEnabled<IsEngagingTag>(unit, true);
+
+        var squad = em.CreateEntity(typeof(SquadAIComponent), typeof(SquadStateComponent));
+        em.SetComponentData(squad, new SquadStateComponent { currentState = SquadFSMState.Idle });
+        em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
+        em.AddBuffer<SquadTargetEntity>(squad).Add(new SquadTargetEntity { Value = staleTarget });
+
+        world.GetOrCreateSystemManaged<UnitTargetingSystem>().Update();
+
+        Assert.That(em.GetComponentData<UnitCombatComponent>(unit).target, Is.EqualTo(Entity.Null));
+        Assert.That(em.IsComponentEnabled<IsEngagingTag>(unit), Is.False);
+    }
 }

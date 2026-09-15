@@ -31,8 +31,10 @@ public partial class SquadAnchorSystem : SystemBase
     {
         var targetBufferLookup = GetBufferLookup<SquadTargetEntity>(true);
         var transformLookup    = GetComponentLookup<LocalTransform>(true);
-        float anchorSpeedThreshold = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
-            ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().anchorMovingSpeedThreshold : 0.1f;
+        bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
+        var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
+        float anchorSpeedThreshold = hasConfig ? config.anchorMovingSpeedThreshold : 0.1f;
+        float followForwardOffset = hasConfig ? config.followForwardOffset : 2f;
         float deltaTime = SystemAPI.Time.DeltaTime;
 
         foreach (var (state, anchor, heroWorldPos, data, squadEntity) in SystemAPI
@@ -80,10 +82,8 @@ public partial class SquadAnchorSystem : SystemBase
             }
             else
             {
-                float followOffset =
-                    SystemAPI.GetSingleton<SquadSpawnConfigComponent>().followForwardOffset;
                 float3 heroPos = heroWorldPos.ValueRO.position
-                                 + math.forward(heroWorldPos.ValueRO.rotation) * followOffset;
+                                 + math.forward(heroWorldPos.ValueRO.rotation) * followForwardOffset;
                 position = heroPos;
                 rotation = heroWorldPos.ValueRO.rotation;
             }
