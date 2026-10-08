@@ -1,4 +1,3 @@
-using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -37,50 +36,28 @@ public partial class UnitNavMeshSystem : SystemBase
     // Within this distance the unit turns to face the target manually.
     private const float EngagementRange = 3.5f;
 
-    // Unit → squad order map, rebuilt every frame.
-    private NativeHashMap<Entity, SquadOrderType> _unitToOrder;
-
     protected override void OnCreate()
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
-        _unitToOrder    = new NativeHashMap<Entity, SquadOrderType>(256, Allocator.Persistent);
-    }
-
-    protected override void OnDestroy()
-    {
-        if (_unitToOrder.IsCreated)    _unitToOrder.Dispose();
     }
 
     protected override void OnUpdate()
     {
-        // ── Phase 0: build unit → squad order map ────────────
-        _unitToOrder.Clear();
-
-        foreach (var (state, units, squadEntity) in
-            SystemAPI.Query<RefRO<SquadStateComponent>, DynamicBuffer<SquadUnitElement>>()
-                     .WithEntityAccess())
-        {
-            SquadOrderType order    = state.ValueRO.currentOrder;
-            for (int i = 0; i < units.Length; i++)
-            {
-                Entity u = units[i].Value;
-                if (u != Entity.Null)
-                {
-                    _unitToOrder.TryAdd(u, order);
-                }
-            }
-        }
-
         // Read leash distance once — avoids per-unit singleton lookup
         bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
         var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
         float leashDistance = hasConfig ? config.unitLeashDistance : 6f;
         float sampleRadius = hasConfig ? math.max(0.01f, config.navMeshDestinationSampleRadius) : 2f;
+        float destinationChangeThreshold = hasConfig && config.navMeshDestinationChangeThreshold > 0f
+            ? config.navMeshDestinationChangeThreshold : 0.25f;
         float retryDistance = hasConfig ? math.max(0.01f, config.navMeshFailureRetryDistance) : 1f;
+        float retryInterval = hasConfig && config.navMeshFailureRetryInterval > 0f
+            ? config.navMeshFailureRetryInterval : 1f;
+        double now = SystemAPI.Time.ElapsedTime;
         float arrivalThreshold = hasConfig ? math.max(0.01f, config.slotArrivalThreshold) : 0.2f;
 
-        // ── Phase 1: movement + rotation decision per NavMesh unit ───────────
+        // Movement + rotation decision per NavMesh unit.
         foreach (var (targetPos, formState, navigationState, transform, entity) in
             SystemAPI.Query<RefRO<UnitTargetPositionComponent>,
                             RefRO<UnitFormationStateComponent>,
@@ -98,14 +75,21 @@ public partial class UnitNavMeshSystem : SystemBase
             float3 requestedSlot = targetPos.ValueRO.position;
             var navigation = navigationState.ValueRO;
             DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
-                arrivalThreshold, ref navigation);
+                arrivalThreshold, now, retryInterval, ref navigation);
             float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
-                unitPos, sampleRadius, retryDistance, ref navigation);
+                unitPos, sampleRadius, retryDistance, destinationChangeThreshold,
+                now, retryInterval, ref navigation);
             float3 destination = formationDestination;
             bool usesFormationDestination = true;
 
             // Tactical order controls pursuit independently of combat state.
-            _unitToOrder.TryGetValue(entity, out SquadOrderType squadOrder);
+            SquadOrderType squadOrder = default;
+            if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
+            {
+                Entity squad = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
+                if (SystemAPI.Exists(squad) && SystemAPI.HasComponent<SquadStateComponent>(squad))
+                    squadOrder = SystemAPI.GetComponent<SquadStateComponent>(squad).currentOrder;
+            }
 
             // Read optional combat components
             bool   hasCombat    = SystemAPI.HasComponent<UnitCombatComponent>(entity)
@@ -225,13 +209,29 @@ public partial class UnitNavMeshSystem : SystemBase
             else
             {
                 if (!usesFormationDestination
+                    && navigation.hasIssuedCommand && !navigation.lastCommandWasFormation
+                    && math.distancesq(destination, navigation.lastCommandDestination)
+                        < math.square(destinationChangeThreshold))
+                    destination = navigation.lastCommandDestination;
+                else if (!usesFormationDestination
                     && !TrySampleDestination(agent, destination, sampleRadius, out destination))
                 {
                     destination = formationDestination;
                     usesFormationDestination = true;
                 }
 
-                if (agent.SetDestination(destination))
+                bool commandStillValid = navigation.hasIssuedCommand
+                    && navigation.lastCommandWasFormation == usesFormationDestination
+                    && math.distancesq(destination, navigation.lastCommandDestination)
+                        < math.square(destinationChangeThreshold)
+                    && (agent.pathPending
+                        || (agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
+                        || math.distancesq(unitPos, destination) < math.square(arrivalThreshold));
+                if (commandStillValid)
+                {
+                    // Keep the current path; issuing it again each frame forces NavMesh to recalculate.
+                }
+                else if (agent.SetDestination(destination))
                 {
                     navigation.lastCommandDestination = destination;
                     navigation.hasIssuedCommand = true;
@@ -239,7 +239,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
                 else if (usesFormationDestination)
                 {
-                    RejectFormationDestination(agent, requestedSlot, unitPos, ref navigation);
+                    RejectFormationDestination(agent, requestedSlot, unitPos, now, retryInterval, ref navigation);
                 }
             }
 
@@ -248,10 +248,18 @@ public partial class UnitNavMeshSystem : SystemBase
     }
 
     private static float3 ResolveFormationDestination(NavMeshAgent agent, float3 requested,
-        float3 current, float sampleRadius, float retryDistance, ref NavAgentComponent navigation)
+        float3 current, float sampleRadius, float retryDistance,
+        float destinationChangeThreshold, double now,
+        float retryInterval, ref NavAgentComponent navigation)
     {
         if (navigation.formationDestinationFailed
-            && math.distancesq(navigation.lastFormationRequest, requested) < math.square(retryDistance))
+            && math.distancesq(navigation.lastFormationRequest, requested) < math.square(retryDistance)
+            && now < navigation.nextFormationRetryTime)
+            return navigation.effectiveFormationDestination;
+
+        if (navigation.hasEffectiveFormationDestination && !navigation.formationDestinationFailed
+            && math.distancesq(navigation.lastFormationRequest, requested)
+                < math.square(destinationChangeThreshold))
             return navigation.effectiveFormationDestination;
 
         navigation.lastFormationRequest = requested;
@@ -260,15 +268,17 @@ public partial class UnitNavMeshSystem : SystemBase
         {
             navigation.effectiveFormationDestination = resolved;
             navigation.formationDestinationFailed = false;
+            navigation.nextFormationRetryTime = 0;
             return resolved;
         }
 
-        RejectFormationDestination(agent, requested, current, ref navigation);
+        RejectFormationDestination(agent, requested, current, now, retryInterval, ref navigation);
         return current;
     }
 
     private static void DetectFailedFormationPath(NavMeshAgent agent, float3 requested,
-        float3 current, float retryDistance, float arrivalThreshold, ref NavAgentComponent navigation)
+        float3 current, float retryDistance, float arrivalThreshold, double now,
+        float retryInterval, ref NavAgentComponent navigation)
     {
         if (!navigation.hasIssuedCommand || !navigation.lastCommandWasFormation
             || agent.pathPending
@@ -278,16 +288,17 @@ public partial class UnitNavMeshSystem : SystemBase
         bool isFar = math.distancesq(current, navigation.lastCommandDestination)
             > math.square(arrivalThreshold);
         if (agent.pathStatus != NavMeshPathStatus.PathComplete || (!agent.hasPath && isFar))
-            RejectFormationDestination(agent, requested, current, ref navigation);
+            RejectFormationDestination(agent, requested, current, now, retryInterval, ref navigation);
     }
 
     private static void RejectFormationDestination(NavMeshAgent agent, float3 requested,
-        float3 current, ref NavAgentComponent navigation)
+        float3 current, double now, float retryInterval, ref NavAgentComponent navigation)
     {
         navigation.lastFormationRequest = requested;
         navigation.effectiveFormationDestination = current;
         navigation.hasEffectiveFormationDestination = true;
         navigation.formationDestinationFailed = true;
+        navigation.nextFormationRetryTime = now + retryInterval;
         navigation.hasIssuedCommand = false;
         agent.ResetPath();
     }

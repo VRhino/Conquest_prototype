@@ -7,5 +7,6 @@ public enum GamePhase
     Matchmaking,
     BattlePreparation,
     Combate,
-    PostPartida
+    PostPartida,
+    WorldMap
 }

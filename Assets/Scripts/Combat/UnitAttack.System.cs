@@ -11,7 +11,7 @@ using Unity.Transforms;
 ///
 ///   Phase 2 — Strike window:
 ///     timer in [strikeWindowStart, strikeWindowStart+strikeWindowDuration]
-///     → WeaponHitboxActiveTag enabled on the unit (WeaponHitboxBehaviour reads this gate)
+///     → WeaponHitboxActiveTag enabled on the unit (contact queue reads this gate)
 ///     → outside window → disable tag
 ///
 ///   Phase 3 — End of animation:
@@ -47,12 +47,11 @@ public partial class UnitAttackSystem : SystemBase
                              && c.attackAnimationTimer <  weapon.ValueRO.strikeWindowStart
                                                         + weapon.ValueRO.strikeWindowDuration;
 
-                // Gate WeaponHitboxBehaviour — tag lives on the unit entity itself
+                // Gate contact admission — tag lives on the unit entity itself
                 if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
                 {
-                    bool wasInWindow = SystemAPI.IsComponentEnabled<WeaponHitboxActiveTag>(entity);
-                    SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, inWindow);
-
+                    SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity,
+                        inWindow && !c.hitboxFired);
                 }
 
                 // Phase 3 — animation done

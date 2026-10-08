@@ -1,0 +1,11 @@
+{
+  "trees": 192974,
+  "minimumSeparation": 17.0000763,
+  "crossSectorNeighborPairs": 30454,
+  "deterministic": true,
+  "heightSamplesUnchanged": 798768,
+  "resources": 1354,
+  "independentTerrainData": true,
+  "spacingVerified": true,
+  "masksVerified": true
+}

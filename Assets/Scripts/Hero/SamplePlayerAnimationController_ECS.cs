@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Synty.AnimationBaseLocomotion.Samples
 {
+    [DefaultExecutionOrder(-60)]
     public class SamplePlayerAnimationController_ECS : MonoBehaviour
     {
         #region Enum (Simplified)
@@ -73,21 +74,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
         [SerializeField]
         private bool _alwaysStrafe = true;
         
-        [Tooltip("Slowest movement speed of the player when set to a walk state")]
-        [SerializeField]
-        private float _walkSpeed = 1.4f;
-        
-        [Tooltip("Default movement speed of the player")]
-        [SerializeField]
-        private float _runSpeed = 2.5f;
-        
-        [Tooltip("Top movement speed of the player")]
-        [SerializeField]
-        private float _sprintSpeed = 7f;
-        
-        [Tooltip("Damping factor for changing speed")]
-        [SerializeField]
-        private float _speedChangeDamping = 10f;
+        [SerializeField] private LocomotionAnimationSettings _locomotion = new LocomotionAnimationSettings();
         
         [Tooltip("Rotation smoothing factor.")]
         [SerializeField]
@@ -221,7 +208,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private AnimationState _currentState = AnimationState.Base;
         
         // Keep locomotion variables
-        private bool _isSprinting;
         private bool _isStarting;
         private bool _isStopped = true;
         private bool _isStrafing;
@@ -231,7 +217,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private bool _movementInputPressed;
         private bool _movementInputTapped;
         
-        private float _currentMaxSpeed;
         private float _locomotionStartDirection;
         private float _locomotionStartTimer;
         private float _newDirectionDifferenceAngle;
@@ -257,7 +242,6 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private const float _TURN_IN_PLACE_ANGLE = 10f;
         private const float _LOCOMOTION_START_DELAY = 0.2f;
         private const float _MAX_LEAN_ROTATION_RATE = 275.0f;
-        private float _targetMaxSpeed;
         private float _rotationRate;
         private float _initialLeanValue;
         private float _initialTurnValue;
@@ -350,13 +334,11 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private void ActivateSprint()
         {
             EnableWalk(false);
-            _isSprinting = true;
             _isStrafing = false;
         }
 
         private void DeactivateSprint()
         {
-            _isSprinting = false;
             if (_alwaysStrafe)
             {
                 _isStrafing = true;
@@ -446,13 +428,14 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _animator.SetFloat(AnimationHashes.IsStrafing, _isStrafing ? 1.0f : 0.0f);
 
             // MODIFICADO: Si no hay input, asegurarse de que MoveSpeed es 0 inmediatamente
-            if (_inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE)
+            if (!_inputAdapter._movementInputDetected)
             {
                 _animator.SetFloat(AnimationHashes.MoveSpeed, 0);
             }
             else
             {
-                _animator.SetFloat(AnimationHashes.MoveSpeed, _speed2D);
+                _animator.SetFloat(AnimationHashes.MoveSpeed, _locomotion.GetBlendSpeed(
+                    _speed2D, _inputAdapter.BaseSpeed, _inputAdapter.SprintSpeed, _inputAdapter.IsSprinting));
             }
 
             _animator.SetInteger(AnimationHashes.CurrentGait, (int) _currentGait);
@@ -469,7 +452,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
             _animator.SetFloat(AnimationHashes.ShuffleDirectionZ, _shuffleDirectionZ);
 
             _animator.SetBool(AnimationHashes.IsTurningInPlace, _isTurningInPlace);
-            _animator.SetBool(AnimationHashes.IsWalking, _isWalking);
+            _animator.SetBool(AnimationHashes.IsWalking, _currentGait == GaitState.Walk);
             _animator.SetBool(AnimationHashes.IsStopped, _isStopped);
             _animator.SetFloat(AnimationHashes.LocomotionStartDirection, _locomotionStartDirection);
 
@@ -496,9 +479,11 @@ namespace Synty.AnimationBaseLocomotion.Samples
             // ADAPTED: Use _inputAdapter instead of _inputReader
             if (_inputAdapter._movementInputDetected)
             {
-                if (_inputAdapter._movementInputDuration == 0)
+                if (_inputAdapter.MovementStartedThisFrame)
                 {
                     _movementInputTapped = true;
+                    _movementInputPressed = false;
+                    _movementInputHeld = false;
                 }
                 else if (_inputAdapter._movementInputDuration > 0 && 
                          _inputAdapter._movementInputDuration < _buttonHoldThreshold)
@@ -514,18 +499,20 @@ namespace Synty.AnimationBaseLocomotion.Samples
                     _movementInputHeld = true;
                 }
 
-                _inputAdapter._movementInputDuration += Time.deltaTime;
             }
             else
             {
-                _inputAdapter._movementInputDuration = 0;
                 _movementInputTapped = false;
                 _movementInputPressed = false;
                 _movementInputHeld = false;
             }
 
             // ADAPTED: Use _inputAdapter._moveComposite
-            if (_cameraController != null)
+            if (_inputAdapter.HorizontalVelocity.sqrMagnitude > 0f)
+            {
+                _moveDirection = _inputAdapter.HorizontalVelocity.normalized;
+            }
+            else if (_cameraController != null)
             {
                 _moveDirection = (_cameraController.GetCameraForwardZeroedYNormalised() * _inputAdapter._moveComposite.y)
                     + (_cameraController.GetCameraRightZeroedYNormalised() * _inputAdapter._moveComposite.x);
@@ -543,13 +530,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
         private void Move()
         {
-            if (_inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE)
-            {
-                _speed2D = 0f;
-                return;
-            }
-
-            _speed2D = Mathf.Round(_currentMaxSpeed * 1000f) / 1000f;
+            _speed2D = _inputAdapter.HorizontalSpeed;
         }
 
         // REMOVED: ApplyGravity() - not needed without jump/fall
@@ -558,51 +539,17 @@ namespace Synty.AnimationBaseLocomotion.Samples
         {
             CalculateInput();
 
-            // SIMPLIFIED: Without grounded, crouching checks
-            if (_isSprinting)
-            {
-                _targetMaxSpeed = _sprintSpeed;
-            }
-            else if (_isWalking)
-            {
-                _targetMaxSpeed = _walkSpeed;
-            }
-            else
-            {
-                _targetMaxSpeed = _runSpeed;
-            }
-
-            _currentMaxSpeed = Mathf.Lerp(_currentMaxSpeed, _targetMaxSpeed, _ANIMATION_DAMP_TIME * Time.deltaTime);
-
             Vector3 playerForwardVector = transform.forward;
             _newDirectionDifferenceAngle = playerForwardVector != _moveDirection
                 ? Vector3.SignedAngle(playerForwardVector, _moveDirection, Vector3.up)
                 : 0f;
 
-            CalculateGait();
         }
 
         private void CalculateGait()
         {
-            float runThreshold = (_walkSpeed + _runSpeed) / 2;
-            float sprintThreshold = (_runSpeed + _sprintSpeed) / 2;
-
-            if (_speed2D < 0.01)
-            {
-                _currentGait = GaitState.Idle;
-            }
-            else if (_speed2D < runThreshold)
-            {
-                _currentGait = GaitState.Walk;
-            }
-            else if (_speed2D < sprintThreshold)
-            {
-                _currentGait = GaitState.Run;
-            }
-            else
-            {
-                _currentGait = GaitState.Sprint;
-            }
+            _currentGait = (GaitState)_locomotion.GetGait(
+                _speed2D, _inputAdapter.BaseSpeed, _inputAdapter.IsSprinting);
         }
 
         private void FaceMoveDirection()
@@ -704,7 +651,7 @@ namespace Synty.AnimationBaseLocomotion.Samples
         private void CheckIfStopped()
         {
             // MODIFICADO: Usar threshold más bajo y considerar el input directamente
-            bool noInput = _inputAdapter._moveComposite.sqrMagnitude < _INPUT_DEADZONE;
+            bool noInput = !_inputAdapter._movementInputDetected;
             bool noVelocity = _speed2D < _VELOCITY_STOP_THRESHOLD;
             
             _isStopped = noInput || (noVelocity && _moveDirection.magnitude == 0);
@@ -797,7 +744,8 @@ namespace Synty.AnimationBaseLocomotion.Samples
 
             float leanSmoothness = 5;
 
-            float referenceValue = _speed2D / _sprintSpeed;
+            float referenceSpeed = Mathf.Max(_inputAdapter.BaseSpeed, _inputAdapter.SprintSpeed);
+            float referenceValue = referenceSpeed > 0f ? _speed2D / referenceSpeed : 0f;
             _leanValue = CalculateSmoothedValue(
                 _leanValue,
                 _initialLeanValue,
@@ -924,10 +872,11 @@ namespace Synty.AnimationBaseLocomotion.Samples
             CalculateRotationalAdditives(_enableLean, _enableHeadTurn, _enableBodyTurn);
 
             CalculateMoveDirection();
+            Move();
+            CalculateGait();
             CheckIfStarting();
             CheckIfStopped();
             FaceMoveDirection();
-            Move();
             UpdateAnimatorController();
         }
 

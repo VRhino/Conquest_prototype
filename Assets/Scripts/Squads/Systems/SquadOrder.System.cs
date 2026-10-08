@@ -61,7 +61,7 @@ public partial class SquadOrderSystem : SystemBase
                     var holdComponent = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(entity);
                     holdComponent.ValueRW.holdCenter        = resolved.ValueRO.holdPosition;
                     holdComponent.ValueRW.holdRotation      = heroRotation;
-                    holdComponent.ValueRW.originalFormation = input.ValueRO.desiredFormation;
+                    holdComponent.ValueRW.originalFormation = resolved.ValueRO.formation;
                 }
                 else
                 {
@@ -69,7 +69,7 @@ public partial class SquadOrderSystem : SystemBase
                     {
                         holdCenter        = resolved.ValueRO.holdPosition,
                         holdRotation      = heroRotation,
-                        originalFormation = input.ValueRO.desiredFormation
+                        originalFormation = resolved.ValueRO.formation
                     });
                 }
             }

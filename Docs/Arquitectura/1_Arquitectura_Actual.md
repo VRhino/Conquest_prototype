@@ -63,6 +63,9 @@ No se ejecutaron pruebas de juego para redactar esta versión: es una verificaci
 assets. La fecha y el commit deben actualizarse cuando cambie alguna forma serializada, identidad, relación o
 flujo descrito aquí.
 
+Validación posterior (2026-09-26): se añadieron pruebas PlayMode sobre `BattleTestScene`.
+Su cobertura y límites se describen en [Pruebas integradas de batalla](3_Pruebas_Integradas_Batalla.md).
+
 ## 3. Vista global
 
 ```text
@@ -318,7 +321,7 @@ Los módulos opcionales determinan capacidad de combate:
 - ambos pueden existir, aunque el bake actual prioriza los valores de daño melee cuando hay ambos.
 
 `SquadDatabaseAuthoring` y `SquadDataAuthoring` convierten estas definiciones a entidades ECS estáticas con
-`SquadDataComponent`, `SquadDefinitionComponent`, `SquadDataIDComponent`, `SquadStatsComponent`, buffers de
+`SquadDataComponent`, `SquadDefinitionComponent`, `SquadDataIDComponent`, buffers de
 stats y blobs de formaciones.
 
 ### 7.2 Items
@@ -520,7 +523,7 @@ Cada `SquadData` horneado produce una entidad consultable por `SquadDataIDCompon
 
 - stats y módulos de combate en `SquadDataComponent`;
 - identidad/configuración en `SquadDefinitionComponent`;
-- tipo y comportamiento en `SquadStatsComponent`;
+- tipo y comportamiento en `SquadDefinitionComponent`;
 - prefab de unidad como `Entity`;
 - biblioteca blob de formaciones;
 - buffer de stats base.
@@ -529,6 +532,8 @@ Las entidades de definición no son las instancias desplegadas. `HeroSquadSelect
 apunta a la definición horneada. El spawn copia los datos a la escuadra desplegada y establece
 `SquadDataReference.dataEntity = squad`: esta segunda referencia apunta a la propia instancia.
 Ambos bakers comparten `SquadDefinitionBaker<T>`, registran los blobs y crean el buffer de habilidades.
+
+En runtime, `SquadSpawningSystem` decide snapshot, formación, slots y reservas; `SquadUnitSpawnBuilder` añade los componentes iniciales de cada unidad. `SquadControlSystem` lee las teclas locales y `SquadPlayerCommandResolver` resuelve el comando antes de publicarlo a ECS.
 
 ### 11.4 Entidad de squad desplegado
 
@@ -539,9 +544,9 @@ Composición conceptual:
 | Identidad runtime | `SquadInstanceComponent` |
 | Propiedad | `SquadOwnerComponent.hero` |
 | Definición | `SquadDataReference`, `SquadDefinitionComponent` |
-| Miembros | `DynamicBuffer<SquadUnitElement>` |
+| Miembros | `DynamicBuffer<SquadUnitElement>` en el squad y `UnitOwnerComponent` en cada unidad |
 | Progreso | `SquadProgressComponent`, abilities desbloqueadas |
-| Orden/estado | `SquadStateComponent`, `SquadFSMComponent`, `SquadPlayerOrderIntentComponent`, `SquadAIOrderIntentComponent`, `SquadCombatReactionIntentComponent`, `SquadResolvedOrderComponent` |
+| Orden/estado | `SquadStateComponent`, `SquadPlayerOrderIntentComponent`, `SquadAIOrderIntentComponent`, `SquadCombatReactionIntentComponent`, `SquadResolvedOrderComponent` |
 | Formación | `FormationComponent`, formación activa, anchor y patrón |
 | Navegación | `SquadNavigationComponent`, `NavAgentComponent` |
 | Combate | `SquadCombatComponent`, targets y reacción |
@@ -645,7 +650,11 @@ cruzar un contrato de red.
 | Héroe remoto/IA | `HeroAIExecutionSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` → `LocalTransform` | `RemoteHeroAnimationDriver` |
 | Unidad | formación/targeting → `UnitNavMeshSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` → `LocalTransform` | adaptador de unidad |
 
+`HeroAIExecutionSystem` conserva una ruta NavMesh válida mientras el destino no cambie más que `navMeshDestinationChangeThreshold`; si la ruta falla, aplica la política de reintento. Así evita recalcular la misma ruta cada frame.
+
 `EntityVisualSync` selecciona y vincula el contrato correspondiente, sincroniza visuales sin autoridad NavMesh y gestiona el ciclo de vida del GameObject. Ya no llama `CharacterController.Move()` ni escribe parámetros de locomoción remota. El pulso de ataque local continúa temporalmente en este bridge y está registrado como deuda abierta.
+
+Para el héroe local, el controlador de animación ajusta la orientación del visual en `Update`, pero no ejecuta el desplazamiento. `LocalHeroCharacterMotor` mueve el `CharacterController` y publica la rotación visual definitiva a ECS en `LateUpdate`, evitando que `LocalTransform` conserve la orientación del fotograma anterior.
 
 El pipeline de órdenes de squad también tiene escritor único: productor local, IA y reacción de combate publican intents separados; `OrderResolutionSystem` escribe `SquadResolvedOrderComponent` y `SquadOrderSystem` aplica sólo el resultado. La navegación de squad observa llegada, mientras el motor de unidad conserva la autoridad sobre destinos.
 

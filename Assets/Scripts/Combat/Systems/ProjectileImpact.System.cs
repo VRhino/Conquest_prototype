@@ -22,8 +22,7 @@ public partial class ProjectileImpactSystem : SystemBase
             processed++;
 
             if (data.target == Unity.Entities.Entity.Null ||
-                !SystemAPI.Exists(data.target) ||
-                !SystemAPI.Exists(data.damageProfile))
+                !SystemAPI.Exists(data.target))
                 continue;
 
             if (SystemAPI.HasComponent<IsDeadComponent>(data.target))
@@ -36,6 +35,8 @@ public partial class ProjectileImpactSystem : SystemBase
                 target           = data.target,
                 damageSource     = data.shooter,
                 damageProfile    = data.damageProfile,
+                hasInlineDamageProfile = true,
+                inlineDamageProfile = data.damageProfileSnapshot,
                 sourceTeam       = data.sourceTeam,
                 category         = data.multiplier > 1f
                                        ? DamageCategory.Critical

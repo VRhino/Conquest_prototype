@@ -149,12 +149,13 @@ Sistema de feedback visual que muestra el resultado de cada golpe sobre la unida
 
 ## 5.7 Hitbox Weapon System (Commit e59b3d62)
 
-El sistema de combate del héroe usa hitboxes por arma (no raycast). Las armas tienen colliders habilitados solo durante el swing activo:
+El combate cuerpo a cuerpo usa colliders de arma como detectores físicos (no raycast). El collider puede permanecer activo, pero `WeaponHitboxActiveTag` habilita la admisión de contactos únicamente durante la ventana del golpe:
 
 - **Shields**: colliders propios que bloquean proyectiles y ataques frontales
 - **Detección de enemigos**: los hitboxes del arma detectan entidades enemigas con `TeamComponent` diferente al atacante
 - **Capas**: las armas y escudos usan layers dedicados para evitar auto-colisión entre el héroe y sus propias armas
-- El sistema se activa via animación (Animation Events) — no via ECS Systems — porque la detección de hitbox es una responsabilidad visual/física del lado GameObject
+- `WeaponHitboxBehaviour` informa contactos al puente `MeleeContactQueue`; no modifica componentes ECS. `MeleeContactResolutionSystem` valida la ventana, el equipo y el objetivo, prioriza el escudo frente al cuerpo del mismo objetivo y crea un evento de daño desechable.
+- `HeroAttackSystem` y `UnitAttackSystem` gobiernan la ventana del golpe desde ECS; el contacto físico se detecta en GameObject. Los contactos con el arma inactiva se descartan antes de entrar en la cola.
 
 ## 10. 🔐 Seguridad y Backend (Para expansión futura)
 
@@ -348,7 +349,7 @@ Doble clic X → Line (índice 0) // Vuelve al inicio
 - `SquadControlSystem` detecta doble clic mediante `Time.time` y threshold de 0.5s
 - Busca índice actual en el array de formaciones del `SquadDataComponent`
 - Calcula siguiente índice usando operador módulo: `(currentIndex + 1) % formations.Length`
-- Actualiza `SquadInputComponent.desiredFormation` con nueva formación
+- Actualiza `SquadPlayerOrderIntentComponent.desiredFormation` con la formación solicitada; `FormationSystem` consume la orden resuelta
 
 ### 🧩 UI de Escuadra Activa:
 
@@ -3050,7 +3051,7 @@ Sistema visual que muestra marcadores en el mundo 3D para indicar las posiciones
 - Responde a `SquadStateComponent.currentState` para limitar funcionamiento a Hold Position
 
 **Con entrada del usuario:**
-- Recibe posiciones de mouse desde `SquadInputComponent.holdPosition`
+- Recibe posiciones de mouse desde `SquadPlayerOrderIntentComponent.holdPosition`
 - Usa posición del mouse como `squadCenter` en lugar de posición del héroe
 
 🧩 **Características técnicas:**

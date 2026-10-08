@@ -43,7 +43,7 @@ public class SquadSwapRegressionTests
             em.SetComponentData(data, new SquadDataIDComponent { id = "new" });
             if (failure != 1)
                 em.AddComponentData(data, new SquadDefinitionComponent
-                { unitCount = 1, unitPrefab = em.CreateEntity(typeof(Prefab)), formationLibrary = failure == 5 ? default : blob });
+                { unitCount = 1, formationLibrary = failure == 5 ? default : blob });
             var old = em.CreateEntity(typeof(SquadStateComponent), typeof(SquadInstanceComponent), typeof(IsLocalSquadActive));
             em.SetComponentData(old, new SquadInstanceComponent { id = 1, initialUnitCount = 6 });
             em.AddBuffer<SquadUnitElement>(old).Add(new SquadUnitElement { Value = em.CreateEntity() });

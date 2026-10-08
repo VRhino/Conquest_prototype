@@ -3,7 +3,6 @@ using UnityEngine.InputSystem;
 using UnityEngine;
 using Unity.Mathematics;
 using Unity.Transforms;
-using Unity.Collections;
 using System.Collections.Generic;
 
 /// <summary>
@@ -23,11 +22,6 @@ public partial class SquadControlSystem : SystemBase
     private const float DOUBLE_CLICK_THRESHOLD = 0.5f; // Tiempo máximo entre clics para detectar doble clic
     private float _lastCPressTime = float.NegativeInfinity; // Para doble clic de C
 
-    // [Sprint6] Insistence / heroOrdenCooldown constants
-    private const int   InsistenceCount  = 3;
-    private const float InsistenceWindow = 0.8f;
-    private const float CooldownDuration = 4f;
-    
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -37,16 +31,32 @@ public partial class SquadControlSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        // Create temporary command buffer for deferred entity changes
-        using var ecb = new EntityCommandBuffer(Allocator.Temp);
-            
+        // Timers must advance even while input devices are disconnected or UI owns input.
+        float dt = SystemAPI.Time.DeltaTime;
+        foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
+        {
+            Entity tickSquad = heroSquadRef.ValueRO.squad;
+            if (!SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(tickSquad)) continue;
+            var intent = SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(tickSquad);
+            bool intentChanged = false;
+            if (intent.insistenceTimer > 0f) { intent.insistenceTimer -= dt; intentChanged = true; }
+            if (intent.heroOrdenCooldownTimer > 0f)
+            {
+                intent.heroOrdenCooldownTimer -= dt;
+                if (intent.heroOrdenCooldownTimer <= 0f)
+                    intent.heroOrdenCooldownActive = false;
+                intentChanged = true;
+            }
+            if (intentChanged) SystemAPI.SetComponent(tickSquad, intent);
+        }
+
         if (_mainCamera == null)
             _mainCamera = Camera.main;
             
         var keyboard = Keyboard.current;
         var mouse = Mouse.current;
         
-        if (keyboard == null || mouse == null)
+        if (keyboard == null || mouse == null || DialogueUIState.IsDialogueOpen)
             return;
 
         bool orderIssued = false;
@@ -123,44 +133,27 @@ public partial class SquadControlSystem : SystemBase
             formationChanged = true;
         }
 
-        // [Sprint6] Tick heroOrdenCooldown timers every frame regardless of input
-        float dt = SystemAPI.Time.DeltaTime;
-        foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
-        {
-            Entity tickSquad = heroSquadRef.ValueRO.squad;
-            if (!SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(tickSquad)) continue;
-            var intent = SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(tickSquad);
-            bool intentChanged = false;
-            if (intent.insistenceTimer > 0f) { intent.insistenceTimer -= dt; intentChanged = true; }
-            if (intent.heroOrdenCooldownTimer > 0f)
-            {
-                intent.heroOrdenCooldownTimer -= dt;
-                if (intent.heroOrdenCooldownTimer <= 0f)
-                {
-                    intent.heroOrdenCooldownActive = false;
-
-                }
-                intentChanged = true;
-            }
-            if (intentChanged) SystemAPI.SetComponent(tickSquad, intent);
-        }
-
         if (!orderIssued && !formationChanged)
-        {
-            ecb.Playback(EntityManager);
             return;
-        }
 
         // Process input without debug logging
 
         // Collect all changes first, then apply them outside the iteration
         var squadChanges = new List<(Entity squadEntity, SquadInputComponent input, SquadPlayerOrderIntentComponent intent)>();
+        var command = new SquadControlCommand
+        {
+            orderIssued = orderIssued,
+            order = newOrder,
+            holdPosition = mouseWorldPosition,
+            toggleHurry = isDoubleClickC,
+            formationRequested = formationChanged,
+            formationIndex = formationIndex,
+            cycleFormation = isDoubleClickX
+        };
 
         // Encontrar el héroe local y su squad
-        int heroCount = 0;
         foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
         {
-            heroCount++;
             Entity squadEntity = heroSquadRef.ValueRO.squad;
             
             if (SystemAPI.HasComponent<SquadInputComponent>(squadEntity))
@@ -170,129 +163,21 @@ public partial class SquadControlSystem : SystemBase
                     ? SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(squadEntity)
                     : new SquadPlayerOrderIntentComponent();
 
-                // Toggle hurryToComander solo si hubo doble clic en C
-                if (isDoubleClickC)
-                {
-                    input.hurryToComander = !input.hurryToComander;
-                }
-
-                if (orderIssued)
-                {
-                    input.orderType = newOrder;
-                    if (newOrder == SquadOrderType.HoldPosition)
-                    {
-                        input.holdPosition = mouseWorldPosition;
-                    }
-
-                    // [Sprint6] Insistence tracking
-                    if (newOrder == intent.orderType && intent.insistenceTimer > 0f)
-                        intent.insistenceCount++;
-                    else
-                    {
-                        intent.insistenceCount = 1;
-                        intent.insistenceTimer = InsistenceWindow;
-                    }
-
-                    if (intent.insistenceCount >= InsistenceCount && !intent.heroOrdenCooldownActive)
-                    {
-                        intent.heroOrdenCooldownActive = true;
-                        intent.heroOrdenCooldownTimer  = CooldownDuration;
-                        intent.insistenceCount         = 0;
-
-                    }
-
-                    intent.orderType     = newOrder;
-                    intent.holdPosition  = mouseWorldPosition;
-                }
-
-                if (formationChanged)
-                {
-                    // Obtener la biblioteca de formaciones del squad definition
-                    if (SystemAPI.HasComponent<SquadDefinitionComponent>(squadEntity))
-                    {
-                        var squadDef = SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity);
-                        if (squadDef.formationLibrary.IsCreated)
-                        {
-                            ref var formations = ref squadDef.formationLibrary.Value.formations;
-                            if (formations.Length == 0) continue;
-
-                            if (isDoubleClickX)
-                            {
-                                // Lógica para doble clic X - cambiar a la siguiente formación disponible
-                                FormationType currentFormation = input.desiredFormation;
-
-                                // Encontrar el índice actual de la formación
-                                int currentIndex = -1;
-                                for (int i = 0; i < formations.Length; i++)
-                                {
-                                    if (formations[i].formationType == currentFormation)
-                                    {
-                                        currentIndex = i;
-                                        break;
-                                    }
-                                }
-
-                                // Calcular el siguiente índice (circular)
-                                int nextIndex = (currentIndex + 1) % formations.Length;
-                                FormationType nextFormation = formations[nextIndex].formationType;
-
-                                input.desiredFormation  = nextFormation;
-                                intent.desiredFormation = nextFormation;
-                            }
-                            else
-                            {
-                                // Lógica original para F1-F4
-                                // Verificar que el índice solicitado existe
-                                if (formationIndex >= 0 && formationIndex < formations.Length)
-                                {
-                                    FormationType newFormation = formations[formationIndex].formationType;
-                                    input.desiredFormation  = newFormation;
-                                    intent.desiredFormation = newFormation;
-                                }
-                                else
-                                {
-                                    // Índice de formación no válido
-                                    continue; // No procesar este cambio
-                                }
-                            }
-                        }
-                        else
-                        {
-                            // La biblioteca de formaciones no está creada
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        // El componente SquadData no está presente
-                        continue;
-                    }
-                }
-
-                // FormationSystem consumes desiredFormation independently of movement orders.
-                input.hasNewOrder = input.hasNewOrder || orderIssued;
+                var definition = SystemAPI.HasComponent<SquadDefinitionComponent>(squadEntity)
+                    ? SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity)
+                    : default;
+                if (!SquadPlayerCommandResolver.TryApply(command, definition, ref input, ref intent))
+                    continue;
                 squadChanges.Add((squadEntity, input, intent));
             }
-            else
-            {
-                // Squad entity doesn't have SquadInputComponent
-            }
         }
-        
-        // Apply all collected changes using EntityCommandBuffer
-        if (squadChanges.Count > 0)
+
+        // Apply after the hero query: no structural changes or command buffer are needed.
+        foreach (var (squadEntity, input, intent) in squadChanges)
         {
-            foreach (var (squadEntity, input, intent) in squadChanges)
-            {
-                ecb.SetComponent(squadEntity, input);
-                if (SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(squadEntity))
-                    ecb.SetComponent(squadEntity, intent);
-            }
-            
-            // Execute all deferred changes
-            ecb.Playback(EntityManager);
-            
-        // Apply changes via EntityCommandBuffer
+            EntityManager.SetComponentData(squadEntity, input);
+            if (EntityManager.HasComponent<SquadPlayerOrderIntentComponent>(squadEntity))
+                EntityManager.SetComponentData(squadEntity, intent);
         }
     }
 

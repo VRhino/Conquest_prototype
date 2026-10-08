@@ -1,13 +1,91 @@
+using System.Collections;
 using NUnit.Framework;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
+using UnityEngine.TestTools;
 using ConquestTactics.Animation;
 using ConquestTactics.Visual;
 
+[DefaultExecutionOrder(0)]
+public sealed class LocalHeroRotationTestWriter : MonoBehaviour
+{
+    private void Update()
+    {
+        transform.Rotate(0f, 15f, 0f, Space.World);
+    }
+}
+
 public class HeroVisualRespawnRegressionTests
 {
+    [Test]
+    public void VerticalDisplacementDoesNotAnimateUnitLocomotion()
+    {
+        using var world = new World("Horizontal animation regression");
+        var em = world.EntityManager;
+        em.CreateEntity(typeof(MatchStateComponent));
+        var config = em.CreateEntity(typeof(SquadSpawnConfigComponent));
+        em.SetComponentData(config, new SquadSpawnConfigComponent {
+            animationMovingSpeedThreshold = 0.05f, animationRunningSpeedRatio = 0.6f
+        });
+        var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitStatsComponent),
+            typeof(UnitAnimationMovementComponent));
+        em.SetComponentData(unit, LocalTransform.FromPosition(new float3(0, 4, 0)));
+        em.SetComponentData(unit, new UnitStatsComponent { speed = 3.5f });
+        world.SetTime(new Unity.Core.TimeData(1d, 0.1f));
+        world.GetOrCreateSystemManaged<UnitAnimationSystem>().Update();
+        var animation = em.GetComponentData<UnitAnimationMovementComponent>(unit);
+        Assert.That(animation.IsMoving, Is.False);
+        Assert.That(animation.CurrentSpeed, Is.Zero);
+        Assert.That(animation.PreviousPosition.y, Is.EqualTo(4f));
+    }
+
+    [Test]
+    public void BlendCoordinatesTrackAcceptedGaitAcrossGameplaySpeeds()
+    {
+        var settings = new LocomotionAnimationSettings();
+        foreach (float baseSpeed in new[] { 2f, 3.5f, 5f })
+        {
+            Assert.That(settings.GetGait(baseSpeed, baseSpeed, false), Is.EqualTo(LocomotionGait.Run));
+            Assert.That(settings.GetBlendSpeed(baseSpeed, baseSpeed, baseSpeed * 2f, false), Is.EqualTo(5f));
+            Assert.That(settings.GetGait(baseSpeed * 2f, baseSpeed, true), Is.EqualTo(LocomotionGait.Sprint));
+            Assert.That(settings.GetBlendSpeed(baseSpeed * 2f, baseSpeed, baseSpeed * 2f, true), Is.EqualTo(12f));
+            Assert.That(settings.GetGait(0f, baseSpeed, true), Is.EqualTo(LocomotionGait.Idle));
+            Assert.That(settings.GetBlendSpeed(0f, baseSpeed, baseSpeed * 2f, true), Is.Zero);
+        }
+    }
+
+    [UnityTest]
+    public IEnumerator LocalMotorPublishesFinalVisualRotationInTheSameFrame()
+    {
+        using var world = new World("Local hero final rotation regression");
+        var visual = new GameObject("Local hero rotation fixture");
+        try
+        {
+            var em = world.EntityManager;
+            var hero = em.CreateEntity(typeof(LocalTransform), typeof(IsLocalPlayer));
+            em.SetComponentData(hero, LocalTransform.Identity);
+            visual.AddComponent<CharacterController>();
+            var motor = visual.AddComponent<LocalHeroCharacterMotor>();
+            motor.Bind(world, hero, true, true);
+            visual.AddComponent<LocalHeroRotationTestWriter>();
+
+            yield return null;
+            // Batchmode does not invoke WaitForEndOfFrame. FixedUpdate resumes
+            // after the prior frame's LateUpdate and before the next Update.
+            yield return new WaitForFixedUpdate();
+
+            var published = em.GetComponentData<LocalTransform>(hero);
+            Assert.That(Quaternion.Angle(published.Rotation, visual.transform.rotation),
+                Is.LessThan(0.01f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(visual);
+        }
+    }
+
     [Test]
     public void SpawnRevisionTeleportsOnceAndDeadHeroIgnoresStaleMovement()
     {

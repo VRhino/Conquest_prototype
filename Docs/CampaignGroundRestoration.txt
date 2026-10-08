@@ -1,0 +1,1 @@
+Restored V9 regional ground on 48 detailed and 48 overview terrains. Exact detailed alphamaps; overview resampled. Heights and 67497 tree instances unchanged. Existing Yoge textures and V9 mountain materials retained.

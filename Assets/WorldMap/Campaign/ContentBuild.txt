@@ -1,0 +1,3 @@
+Succeeded
+Duration=7,4321676
+Output=Library/com.unity.addressables/aa/Windows/settings.json

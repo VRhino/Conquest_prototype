@@ -111,8 +111,9 @@ public partial class SquadSwapExecutionSystem : SystemBase
             }
 
             var definition = SystemAPI.GetComponent<SquadDefinitionComponent>(newSquadDataEntity);
+            // SquadSpawningSystem builds unit entities directly.
             if (!definition.formationLibrary.IsCreated || definition.formationLibrary.Value.formations.Length == 0
-                || definition.unitCount <= 0 || !SystemAPI.Exists(definition.unitPrefab))
+                || definition.unitCount <= 0)
             {
                 ecb.RemoveComponent<SquadSwapExecuteTag>(entity);
                 continue;

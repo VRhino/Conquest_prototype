@@ -9,7 +9,7 @@ namespace Conquest.SettlementPreview.Editor
 {
     public static class SettlementPreviewBuilder
     {
-        public const string ScenePath = "Assets/Scenes/SettlementPreview.unity";
+        public const string ScenePath = "Assets/Scenes/WorldMapTools/SettlementPreview.unity";
         [MenuItem("Tools/BronzeAge/Crear o abrir asentamiento de prueba")]
         public static void Create()
         {

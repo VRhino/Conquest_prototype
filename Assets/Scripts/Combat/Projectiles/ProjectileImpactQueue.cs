@@ -19,6 +19,7 @@ public struct ProjectileImpactData
     public Entity shooter;
     public Entity target;
     public Entity damageProfile;
+    public DamageProfileComponent damageProfileSnapshot;
     public Team   sourceTeam;
 
     /// <summary>World position where the projectile was fired from (for height bonus).</summary>

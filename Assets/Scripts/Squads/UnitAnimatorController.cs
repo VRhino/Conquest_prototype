@@ -8,6 +8,7 @@ namespace ConquestTactics.Visual
     /// Conecta el UnitAnimationAdapter con el Animator usando los parámetros
     /// del AC_Polygon_Masculine.controller.
     /// </summary>
+    [DefaultExecutionOrder(-60)]
     [RequireComponent(typeof(Animator))]
     [RequireComponent(typeof(UnitAnimationAdapter))]
     public class UnitAnimatorController : MonoBehaviour
@@ -17,12 +18,7 @@ namespace ConquestTactics.Visual
         [Header("Animation Settings")]
         [Tooltip("Velocidad de transición entre animaciones")]
         [SerializeField] private float _animationDampTime = 0.1f;
-        
-        [Tooltip("Velocidad de rotación para mirar hacia la dirección del movimiento")]
-        [SerializeField] private float _rotationSpeed = 10f;
-        
-        [Tooltip("Si está habilitado, la unidad rotará hacia la dirección del movimiento")]
-        [SerializeField] private bool _rotateToMovementDirection = true;
+        [SerializeField, Min(0f)] private float _debugMovementBlendSpeed = 3f;
         
         [Header("Debug")]
         [Tooltip("Mostrar información de debug")]
@@ -54,6 +50,7 @@ namespace ConquestTactics.Visual
         private void Awake()
         {
             _animator = GetComponent<Animator>();
+            _animator.applyRootMotion = false;
             _animationAdapter = GetComponent<UnitAnimationAdapter>();
             
             if (_animator == null || _animationAdapter == null)
@@ -143,11 +140,6 @@ namespace ConquestTactics.Visual
         private void Update()
         {
             UpdateAnimationParameters();
-            
-            if (_rotateToMovementDirection)
-            {
-                RotateToMovementDirection();
-            }
         }
         
         #endregion
@@ -159,188 +151,41 @@ namespace ConquestTactics.Visual
         /// </summary>
         private void UpdateAnimationParameters()
         {
-            // Usar la velocidad real 2D expuesta por el adapter
-            float speed2D = _animationAdapter.Speed2D;
-            _currentSpeed = speed2D;
+            _currentSpeed = _animationAdapter.Speed2D;
             _isStopped = _animationAdapter.IsStopped;
             _isRunning = _animationAdapter.IsRunning;
             _isSprinting = _animationAdapter.IsSprinting;
+            bool moving = !_isStopped;
+            bool started = moving && !_wasMovingLastFrame;
+            var gait = _animationAdapter.Gait;
+            Vector2 direction = moving ? _animationAdapter.MovementVector : Vector2.up;
 
-            // Log de valores recibidos del adapter para comparar
-            if (_enableDebugLogs && Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"[UnitAnimatorController][Adapter] {gameObject.name} - Adapter: Speed={_animationAdapter.NormalizedSpeed:F2}, Stopped={_animationAdapter.IsStopped}, Running={_animationAdapter.IsRunning}, Vec={_animationAdapter.MovementVector}");
-            }
-
-            // Detectar cambios de estado para forzar transiciones
-            bool isMovingThisFrame = !_isStopped;
-            bool stateChanged = isMovingThisFrame != _wasMovingLastFrame;
-            
-            // IMPORTANTE: Verificar el estado actual del Animator
-            AnimatorStateInfo currentState = _animator.GetCurrentAnimatorStateInfo(0);
-            bool isInIdleState = currentState.IsName("Base Layer.Idle Standing.Idle_Standing") || 
-                                currentState.IsName("Idle_Standing");
-            bool isInLocoState = currentState.IsName("Base Layer.Locomotion Standing.Locomotion") || 
-                                currentState.IsName("Locomotion");
-            
-            // Forzar una transición al estado grounded si está en fall state
             _animator.SetBool(AnimationHashes.IsGrounded, true);
-
-            if (currentState.IsName("Base Layer.Fall.Falling") || currentState.IsName("Falling"))
-            {
-                _animator.SetTrigger(AnimationHashes.ForceGroundedTransition);
-            }
-
-            // MODIFICADO: Forzar valores para las animaciones
-            // Primero actualizamos parámetros principales en el orden correcto
-
-            // 0. Forzar parámetros adicionales requeridos por el Animator Controller
-            _animator.SetBool(AnimationHashes.MovementInputPressed, false);
-            _animator.SetBool(AnimationHashes.MovementInputHeld, isMovingThisFrame);
-
-            // 1. Activar/desactivar movementInput (crítico para transiciones)
-            _animator.SetBool(AnimationHashes.MovementInputPressed, !isMovingThisFrame);
-
-            // 2. Establecer velocidad (crítico para determinar qué animación se muestra)
-            _animator.SetFloat(AnimationHashes.MoveSpeed, speed2D);
-
-            // 3. Forzar el estado IsStopped a false cuando hay movimiento (prioridad máxima)
-            if (isMovingThisFrame)
-            {
-                _animator.SetBool(AnimationHashes.IsStopped, false);
-            }
+            _animator.SetBool(AnimationHashes.IsStopped, !moving);
+            _animator.SetBool(AnimationHashes.MovementInputTapped, started);
+            _animator.SetBool(AnimationHashes.MovementInputPressed, started);
+            _animator.SetBool(AnimationHashes.MovementInputHeld, moving && !started);
+            _animator.SetInteger(AnimationHashes.CurrentGait, (int)gait);
+            _animator.SetBool(AnimationHashes.IsWalking, gait == LocomotionGait.Walk);
+            if (moving)
+                _animator.SetFloat(AnimationHashes.MoveSpeed, _animationAdapter.AnimatorSpeed,
+                    _animationDampTime, Time.deltaTime);
             else
-            {
-                _animator.SetBool(AnimationHashes.IsStopped, true);
-            }
-            
-            // 4. Establecer gait explícitamente
-            int gait;
-            if (isMovingThisFrame)
-            {
-                if (_isSprinting)
-                    gait = 3; // Sprint
-                else if (_isRunning)
-                    gait = 2; // Run
-                else
-                    gait = 1; // Walk
-            }
-            else
-            {
-                gait = 0; // Idle
-            }
-            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
+                _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
+            _animator.SetFloat(AnimationHashes.IsStrafing, moving ? 1f : 0f);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionX, direction.x);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, direction.y);
+            _animator.SetFloat(AnimationHashes.ForwardStrafe, direction.y >= 0f ? 1f : 0f);
 
-            // 5. Establecer IsWalking para mayor claridad
-            _animator.SetBool(AnimationHashes.IsWalking, false);
-            
-            // 6. Forzar transiciones con triggers si el estado no coincide con el esperado
-            // Esto soluciona problemas donde el animator no responde a los parámetros regulares
-            
-            if (isMovingThisFrame && isInIdleState) 
-            {
-                //_animator.SetTrigger(_forceLocomotionHash);
-                if (_enableDebugLogs)
-                {
-                    // Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de IDLE para {gameObject.name} - Speed: {_currentSpeed:F2}");
-                }
-            }
-            else if (!isMovingThisFrame && isInLocoState && currentState.normalizedTime > 0.25f)
-            {
-                //_animator.SetTrigger(_forceIdleHash);
-                if (_enableDebugLogs)
-                {
-                    // Debug.LogWarning($"[UnitAnimatorController] CORRECCIÓN: Forzando salida de LOCOMOTION para {gameObject.name}");
-                }
-            }
-            
-            // Si cambió de estado, aplicar triggers correspondientes
-            if (stateChanged)
-            {
-                if (isMovingThisFrame)
-                {
-                    // _animator.SetTrigger(_forceLocomotionHash);
-                    if (_enableDebugLogs)
-                    {
-                        Debug.Log($"[UnitAnimatorController] Cambio: IDLE → LOCOMOCIÓN para {gameObject.name}");
-                    }
-                }
-                else
-                {
-                    // _animator.SetTrigger(_forceIdleHash);
-                    if (_enableDebugLogs)
-                    {
-                        Debug.Log($"[UnitAnimatorController] Cambio: LOCOMOCIÓN → IDLE para {gameObject.name}");
-                    }
-                }
-            }
-            
-            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
-
-            // Configurar caminando o corriendo - más explícito
-            _animator.SetBool(AnimationHashes.IsWalking, false);
-
-            // Parámetros de dirección para compatibilidad con AC_Polygon
-            if (!_isStopped)
-            {
-                // No aplicamos smoothing para direcciones para que sean más responsivas
-                _animator.SetFloat(AnimationHashes.StrafeDirectionX, _animationAdapter.MovementVector.x);
-                _animator.SetFloat(AnimationHashes.StrafeDirectionZ, _animationAdapter.MovementVector.y);
-            }
-            else
-            {
-                // En estado detenido, resetear strafe directions
-                _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
-                _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f); // Forward direction cuando está detenido
-            }
-
-            // Combat layer — pasar estado de ataque al Animator
             if (AnimatorHasParameter(AnimationHashes.IsAttacking))
                 _animator.SetBool(AnimationHashes.IsAttacking, _animationAdapter.IsAttacking);
-
-            // Ranged combat layer — trigger de disparo y bool de recarga
             if (_animationAdapter.JustShot && AnimatorHasParameter(AnimationHashes.TriggerShoot))
                 _animator.SetTrigger(AnimationHashes.TriggerShoot);
-
             if (AnimatorHasParameter(AnimationHashes.IsReloading))
                 _animator.SetBool(AnimationHashes.IsReloading, _animationAdapter.IsReloadingRanged);
+            _wasMovingLastFrame = moving;
+        }
 
-            // Guardar estado para detectar cambios en el próximo frame
-            _wasMovingLastFrame = isMovingThisFrame;
-            
-            // Registrar información de debugging en el log
-            if (_enableDebugLogs && Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"[UnitAnimatorController] {gameObject.name} - Speed: {_currentSpeed:F2}, Stopped: {_isStopped}, " +
-                          $"Running: {_isRunning}, Sprinting: {_isSprinting}, Gait: {gait}, AnimState: {GetCurrentAnimatorStateName()}");
-            }
-        }
-        
-        /// <summary>
-        /// Rota la unidad para que mire hacia la dirección del movimiento
-        /// </summary>
-        private void RotateToMovementDirection()
-        {
-            if (_isStopped || _animationAdapter.MovementVector.sqrMagnitude < 0.01f)
-                return;
-                
-            Vector3 direction = new Vector3(
-                _animationAdapter.MovementVector.x,
-                0f,
-                _animationAdapter.MovementVector.y
-            ).normalized;
-            
-            if (direction.sqrMagnitude > 0.01f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.Slerp(
-                    transform.rotation,
-                    targetRotation,
-                    _rotationSpeed * Time.deltaTime
-                );
-            }
-        }
-        
         /// <summary>
         /// Obtiene el nombre del estado actual del animator para depuración
         /// </summary>
@@ -395,11 +240,12 @@ namespace ConquestTactics.Visual
         {
             _animator.SetBool(AnimationHashes.IsGrounded, true);
             _animator.SetBool(AnimationHashes.IsStopped, false);
-            _animator.SetFloat(AnimationHashes.MoveSpeed, 0.5f); // Velocidad media
-            _animator.SetInteger(AnimationHashes.CurrentGait, 1); // Walk
+            _animator.SetFloat(AnimationHashes.MoveSpeed, _debugMovementBlendSpeed);
+            _animator.SetInteger(AnimationHashes.CurrentGait, (int)LocomotionGait.Walk);
             _animator.SetBool(AnimationHashes.MovementInputPressed, true);
             _animator.SetBool(AnimationHashes.IsWalking, true);
-            _animator.SetTrigger(AnimationHashes.ForceLocomotion);
+            if (AnimatorHasParameter(AnimationHashes.ForceLocomotion))
+                _animator.SetTrigger(AnimationHashes.ForceLocomotion);
             if (_enableDebugLogs)
             {
                 // Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de movimiento para {gameObject.name}");
@@ -417,7 +263,8 @@ namespace ConquestTactics.Visual
             _animator.SetInteger(AnimationHashes.CurrentGait, 0); // Idle
             _animator.SetBool(AnimationHashes.MovementInputPressed, false);
             _animator.SetBool(AnimationHashes.IsWalking, false);
-            // _animator.SetTrigger(_forceIdleHash);
+            _animator.SetBool(AnimationHashes.MovementInputTapped, false);
+            _animator.SetBool(AnimationHashes.MovementInputHeld, false);
             if (_enableDebugLogs)
             {
                 // Debug.LogWarning($"[UnitAnimatorController] FORZANDO animación de idle para {gameObject.name}");

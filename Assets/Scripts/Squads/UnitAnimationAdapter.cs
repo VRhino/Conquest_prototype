@@ -9,6 +9,7 @@ namespace ConquestTactics.Animation
     /// Similar a EcsAnimationInputAdapter pero no depende de input del jugador,
     /// solo se basa en el movimiento calculado por el ECS.
     /// </summary>
+    [DefaultExecutionOrder(-80)]
     public class UnitAnimationAdapter : MonoBehaviour
     {
         #region Public Properties
@@ -38,6 +39,8 @@ namespace ConquestTactics.Animation
 
         // Velocidad 2D real (sin normalizar, en unidades por segundo)
         public float Speed2D { get; private set; }
+        public float AnimatorSpeed { get; private set; }
+        public LocomotionGait Gait { get; private set; }
 
         // Si la unidad está en postura de escudos trabados (Shield Wall)
         public bool IsBraced { get; private set; } = false;
@@ -54,11 +57,8 @@ namespace ConquestTactics.Animation
         [SerializeField] private bool _autoFindEntity = true;
         
         [Header("Animation Settings")]
-        [Tooltip("Umbral de velocidad por encima del cual se considera que la unidad está corriendo")]
-        [SerializeField] private float _runningThreshold = 0.6f;
-        
-        [Tooltip("Umbral de velocidad por debajo del cual se considera que la unidad está detenida")]
-        [SerializeField] private float _stoppedThreshold = 0.05f;
+        [SerializeField] private LocomotionAnimationSettings _locomotion = new LocomotionAnimationSettings();
+        [SerializeField, Min(0f)] private float _debugBaseSpeed = 3.5f;
         
         [Tooltip("Modo de depuración que fuerza el estado de movimiento para probar animaciones")]
         [SerializeField] private bool _forceMovementDebugMode = false;
@@ -79,7 +79,6 @@ namespace ConquestTactics.Animation
         private World _world;
         
         // Cache para evitar allocaciones
-        private EntityQuery _unitQuery;
         
         #endregion
         
@@ -123,8 +122,6 @@ namespace ConquestTactics.Animation
             
             _entityManager = _world.EntityManager;
             
-            // Crear query para encontrar entidades de unidades
-            _unitQuery = _entityManager.CreateEntityQuery(typeof(UnitAnimationMovementComponent));
         }
         
         private void FindAssociatedEntity()
@@ -142,31 +139,8 @@ namespace ConquestTactics.Animation
                 return;
             }
             
-            // Alternativa: intentar encontrar por nombre/instancia
-            // Este método es menos robusto pero sirve como fallback
-            var allUnits = _unitQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
-            if (allUnits.Length > 0)
-            {
-                // Buscar una entidad que coincida con este GameObject
-                // En una implementación real, deberías tener un mecanismo más robusto
-                // para mapear GameObjects a entidades ECS
-                
-                _unitEntity = allUnits[0]; // Temporalmente usar la primera como ejemplo
-                
-                if (_enableDebugLogs)
-                {
-                    Debug.Log($"[UnitAnimationAdapter] Asignando entidad fallback: {_unitEntity}");
-                }
-            }
-            else
-            {
-                if (_enableDebugLogs)
-                {
-                    Debug.LogWarning($"[UnitAnimationAdapter] No se encontraron entidades con UnitAnimationMovementComponent para {gameObject.name}");
-                }
-            }
-            
-            allUnits.Dispose();
+            // A visual must never borrow the first unit's animation state.
+            _unitEntity = Entity.Null;
         }
         
         private bool IsValidSetup()
@@ -201,9 +175,12 @@ namespace ConquestTactics.Animation
                 {
                     NormalizedSpeed = _forcedDebugSpeed;
                     MovementVector = new Vector2(0, 1); // Dirección adelante
-                    IsStopped = NormalizedSpeed < _stoppedThreshold;
-                    IsRunning = NormalizedSpeed >= _runningThreshold;
-                    IsSprinting = NormalizedSpeed >= 1f;
+                    Speed2D = NormalizedSpeed * _debugBaseSpeed;
+                    Gait = _locomotion.GetGait(Speed2D, _debugBaseSpeed, false);
+                    AnimatorSpeed = _locomotion.GetBlendSpeed(Speed2D, _debugBaseSpeed, _debugBaseSpeed, false);
+                    IsStopped = Gait == LocomotionGait.Idle;
+                    IsRunning = Gait == LocomotionGait.Run;
+                    IsSprinting = Gait == LocomotionGait.Sprint;
                     
                     // Log especial para modo debug
                     if (_enableDebugLogs && Time.frameCount % 60 == 0)
@@ -260,53 +237,22 @@ namespace ConquestTactics.Animation
                 IsBraced = animData.CurrentStance == UnitStance.BracedShields;
                 SlotRow   = animData.SlotRow;
                 
-                MovementVector = new Vector2(animData.MovementDirection.x, animData.MovementDirection.z);
-                
-                // Si el vector de movimiento es muy pequeño pero la velocidad no lo es,
-                // asegurarnos de tener una dirección válida
-                if (MovementVector.sqrMagnitude < 0.01f && NormalizedSpeed > _stoppedThreshold)
-                {
-                    MovementVector = new Vector2(0, 1); // Dirección adelante por defecto
-                }
-                
-                // Comprobar si realmente hay movimiento físico (basado en Vector3.Distance)
-                // Esto podría detectar cambios de posición incluso si el sistema ECS no reporta velocidad
-                bool physicalMovement = false;
-                if (_entityManager.HasComponent<LocalTransform>(_unitEntity))
-                {
-                    var ecsTransform = _entityManager.GetComponentData<LocalTransform>(_unitEntity);
-                    float distance = Vector3.Distance(transform.position, new Vector3(ecsTransform.Position.x, ecsTransform.Position.y, ecsTransform.Position.z));
-                    physicalMovement = distance > _stoppedThreshold * Time.deltaTime;
-                }
-                
-                // Determinar estados, priorizando el movimiento físico observado
-                IsStopped = !physicalMovement && NormalizedSpeed < _stoppedThreshold;
-                IsRunning = NormalizedSpeed >= _runningThreshold && NormalizedSpeed < 0.8f;
-                IsSprinting = NormalizedSpeed >= 0.8f;
-                
-                // Si la unidad no se ha movido desde el spawn, forzar valores a cero y detenido
-                if (animData.CurrentSpeed < _stoppedThreshold && MovementVector.sqrMagnitude < 0.0001f)
-                {
-                    NormalizedSpeed = 0f;
-                    MovementVector = Vector2.zero;
-                    IsStopped = true;
-                    IsRunning = false;
-                    IsSprinting = false;
-                    if (_enableDebugLogs)
-                    {
-                        Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} - Sin movimiento desde spawn: Speed=0, Vec=Vector2.zero, IsStopped=true");
-                    }
-                }
-                
-                // Modo de depuración para forzar movimiento
-                if (_forceMovementDebugMode)
-                {
-                    NormalizedSpeed = _forcedDebugSpeed;
-                    MovementVector = new Vector2(1, 0); // Forzar dirección
-                    IsStopped = NormalizedSpeed < _stoppedThreshold;
-                    IsRunning = NormalizedSpeed >= _runningThreshold;
-                }
-                
+                // Convert world velocity to the visual root's local forward/right axes.
+                Vector3 worldDirection = new Vector3(animData.MovementDirection.x, 0f, animData.MovementDirection.z);
+                Vector3 localDirection = transform.InverseTransformDirection(worldDirection);
+                MovementVector = new Vector2(localDirection.x, localDirection.z);
+                bool sprintAllowed = animData.MaxSpeed > 0f
+                    && animData.RequestedSpeed > animData.MaxSpeed * _locomotion.sprintSpeedRatio;
+                Gait = animData.IsMoving
+                    ? _locomotion.GetGait(Speed2D, animData.MaxSpeed, sprintAllowed)
+                    : LocomotionGait.Idle;
+                IsStopped = Gait == LocomotionGait.Idle;
+                IsRunning = Gait == LocomotionGait.Run;
+                IsSprinting = Gait == LocomotionGait.Sprint;
+                AnimatorSpeed = IsStopped ? 0f : _locomotion.GetBlendSpeed(
+                    Speed2D, animData.MaxSpeed, animData.RequestedSpeed, sprintAllowed);
+                if (IsStopped) MovementVector = Vector2.zero;
+
                 if (_enableDebugLogs && Time.frameCount % 120 == 0) // Log cada ~2 segundos
                 {
                     Debug.Log($"[UnitAnimationAdapter.cs][{gameObject.name}] Entity: {_unitEntity} - Speed: {NormalizedSpeed:F2}, Stopped: {IsStopped}, Running: {IsRunning}");
@@ -319,6 +265,8 @@ namespace ConquestTactics.Animation
                 // Valores por defecto en caso de error
                 NormalizedSpeed = 0f;
                 Speed2D = 0f;
+                AnimatorSpeed = 0f;
+                Gait = LocomotionGait.Idle;
                 MovementVector = Vector2.zero;
                 IsStopped = true;
                 IsRunning = false;

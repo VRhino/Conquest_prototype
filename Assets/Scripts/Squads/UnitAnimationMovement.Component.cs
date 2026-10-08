@@ -15,6 +15,9 @@ namespace ConquestTactics.Animation
         
         // Velocidad máxima de la unidad (para normalizar)
         public float MaxSpeed;
+
+        // Accepted navigation speed, including hurry/charge. MaxSpeed remains the base stat.
+        public float RequestedSpeed;
         
         // Dirección normalizada de movimiento
         public float3 MovementDirection;

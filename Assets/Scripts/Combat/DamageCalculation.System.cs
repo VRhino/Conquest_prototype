@@ -40,7 +40,8 @@ public partial class DamageCalculationSystem : SystemBase
         {
             var p = pending.ValueRO;
 
-            if (!SystemAPI.Exists(p.target) || !SystemAPI.HasComponent<DamageProfileComponent>(p.damageProfile))
+            if (!SystemAPI.Exists(p.target) || (!p.hasInlineDamageProfile
+                && !SystemAPI.HasComponent<DamageProfileComponent>(p.damageProfile)))
             {
                 CompleteEvent(ref ecb, entity, p); continue;
             }
@@ -61,7 +62,9 @@ public partial class DamageCalculationSystem : SystemBase
             }
 
             // --- Calculate effectiveDmg (before shield so block absorbs real damage) ---
-            var profile = SystemAPI.GetComponent<DamageProfileComponent>(p.damageProfile);
+            var profile = p.hasInlineDamageProfile
+                ? p.inlineDamageProfile
+                : SystemAPI.GetComponent<DamageProfileComponent>(p.damageProfile);
 
             var def = defenseLookup.HasComponent(p.target)
                 ? defenseLookup[p.target]

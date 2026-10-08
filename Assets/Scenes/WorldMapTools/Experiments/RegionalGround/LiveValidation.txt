@@ -1,0 +1,9 @@
+Sectors=48
+Layers=8
+Pixels=3145728
+Trees=192974
+Resources=1354
+Serialized sum error=0,0117647890001535
+Shared borders=82
+Maximum border layer difference=0
+Mean border layer difference=0

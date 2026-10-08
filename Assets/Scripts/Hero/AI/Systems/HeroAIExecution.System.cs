@@ -42,7 +42,12 @@ public partial class HeroAIExecutionSystem : SystemBase
         bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
         var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
         float sampleRadius = hasConfig ? math.max(0.01f, config.navMeshDestinationSampleRadius) : 2f;
+        float destinationChangeThreshold = hasConfig && config.navMeshDestinationChangeThreshold > 0f
+            ? config.navMeshDestinationChangeThreshold : 0.25f;
         float retryDistance = hasConfig ? math.max(0.01f, config.navMeshFailureRetryDistance) : 1f;
+        float retryInterval = hasConfig && config.navMeshFailureRetryInterval > 0f
+            ? config.navMeshFailureRetryInterval : 1f;
+        double now = SystemAPI.Time.ElapsedTime;
         float arrivalDistance = hasConfig ? math.max(0f, config.heroAIArrivalDistance) : 1.5f;
 
         foreach (var (decision, transform, stats, life, entity) in
@@ -77,7 +82,8 @@ public partial class HeroAIExecutionSystem : SystemBase
                     float3 requested = dec.targetPosition;
                     bool sameFailedCommand = navigation.commandFailed
                         && math.distancesq(navigation.lastFailedCommand, requested)
-                            < math.square(retryDistance);
+                            < math.square(retryDistance)
+                        && now < navigation.nextCommandRetryTime;
 
                     if (!sameFailedCommand
                         && UnitNavMeshSystem.TrySampleDestination(agent, requested,
@@ -86,11 +92,12 @@ public partial class HeroAIExecutionSystem : SystemBase
                         bool previousPathFailed = navigation.hasIssuedCommand
                             && !navigation.lastCommandWasFormation
                             && !agent.pathPending
-                            && math.distancesq(navigation.lastCommandDestination, resolved) <= 0.0001f
-                            && agent.pathStatus != NavMeshPathStatus.PathComplete;
+                            && math.distancesq(navigation.lastCommandDestination, resolved)
+                                < math.square(destinationChangeThreshold)
+                            && (!agent.hasPath || agent.pathStatus != NavMeshPathStatus.PathComplete);
                         if (previousPathFailed)
                         {
-                            RejectCommand(agent, requested, ref navigation);
+                            RejectCommand(agent, requested, now, retryInterval, ref navigation);
                         }
                         else
                         {
@@ -100,12 +107,21 @@ public partial class HeroAIExecutionSystem : SystemBase
 
                             if (!arrived)
                             {
-                                float agentSpeed = dec.shouldSprint
+                                bool hasSprintStamina = !EntityManager.HasComponent<StaminaComponent>(entity)
+                                    || (!EntityManager.GetComponentData<StaminaComponent>(entity).isExhausted
+                                        && EntityManager.GetComponentData<StaminaComponent>(entity).currentStamina > 0f);
+                                float agentSpeed = dec.shouldSprint && hasSprintStamina
                                     ? stats.ValueRO.baseSpeed * stats.ValueRO.sprintMultiplier
                                     : stats.ValueRO.baseSpeed;
                                 agent.speed = agentSpeed;
                                 agent.isStopped = false;
-                                if (agent.SetDestination(resolved))
+                                if (IsCurrentPathValid(navigation, resolved,
+                                        destinationChangeThreshold, agent.pathPending,
+                                        agent.hasPath, agent.pathStatus))
+                                {
+                                    // Retain the existing path instead of forcing a recalculation.
+                                }
+                                else if (agent.SetDestination(resolved))
                                 {
                                     navigation.lastCommandDestination = resolved;
                                     navigation.hasIssuedCommand = true;
@@ -113,7 +129,7 @@ public partial class HeroAIExecutionSystem : SystemBase
                                 }
                                 else
                                 {
-                                    RejectCommand(agent, requested, ref navigation);
+                                    RejectCommand(agent, requested, now, retryInterval, ref navigation);
                                 }
 
                                 // Derive world-space direction from NavMesh desired velocity
@@ -135,7 +151,7 @@ public partial class HeroAIExecutionSystem : SystemBase
                     {
                         if (!sameFailedCommand)
                         {
-                            RejectCommand(agent, requested, ref navigation);
+                            RejectCommand(agent, requested, now, retryInterval, ref navigation);
                         }
                         else
                             StopAgent(agent, ref navigation, false);
@@ -175,11 +191,22 @@ public partial class HeroAIExecutionSystem : SystemBase
     }
 
     private static void RejectCommand(NavMeshAgent agent, float3 requested,
-        ref NavAgentComponent navigation)
+        double now, float retryInterval, ref NavAgentComponent navigation)
     {
         navigation.lastFailedCommand = requested;
         navigation.commandFailed = true;
+        navigation.nextCommandRetryTime = now + retryInterval;
         StopAgent(agent, ref navigation);
+    }
+
+    public static bool IsCurrentPathValid(NavAgentComponent navigation, float3 destination,
+        float destinationChangeThreshold, bool pathPending, bool hasPath,
+        NavMeshPathStatus pathStatus)
+    {
+        return navigation.hasIssuedCommand && !navigation.lastCommandWasFormation
+            && math.distancesq(navigation.lastCommandDestination, destination)
+                < math.square(destinationChangeThreshold)
+            && (pathPending || (hasPath && pathStatus == NavMeshPathStatus.PathComplete));
     }
 
     private static void StopAgent(NavMeshAgent agent, ref NavAgentComponent navigation,

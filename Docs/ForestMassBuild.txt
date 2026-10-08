@@ -1,0 +1,1 @@
+Forest mass representation: 67497 crowns unchanged; dense interiors=45417; open edges=8950; thin prototypes replaced=9706; average diameter=80,1u. Original terrain assets preserved; no positions, heights, resources or economic forest mask changed.

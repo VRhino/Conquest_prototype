@@ -23,8 +23,8 @@ public partial class SquadFSMSystem : SystemBase
             ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().minCombatDuration
             : 1f;
 
-        foreach (var (state, ai, fsmComp, playerIntent, units, entity) in SystemAPI
-                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, RefRW<SquadFSMComponent>,
+        foreach (var (state, ai, playerIntent, units, entity) in SystemAPI
+                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>,
                             RefRO<SquadPlayerOrderIntentComponent>, DynamicBuffer<SquadUnitElement>>()
                      .WithEntityAccess())
         {
@@ -35,8 +35,6 @@ public partial class SquadFSMSystem : SystemBase
             {
                 s.transitionTo = SquadFSMState.Retreating;
                 state.ValueRW = s;
-                fsmComp.ValueRW.currentState = s.currentState;
-                fsmComp.ValueRW.stateTimer = s.stateTimer;
                 continue;
             }
 
@@ -72,9 +70,6 @@ public partial class SquadFSMSystem : SystemBase
                 s.transitionTo = SquadFSMState.KO;
                 s.stateTimer   = 0f;
                 state.ValueRW = s;
-                // [Sprint2 dual-write]
-                fsmComp.ValueRW.currentState = s.currentState;
-                fsmComp.ValueRW.stateTimer   = s.stateTimer;
                 continue;
             }
 
@@ -120,9 +115,6 @@ public partial class SquadFSMSystem : SystemBase
 
             s.transitionTo = desired;
             state.ValueRW = s;
-            // [Sprint2 dual-write]
-            fsmComp.ValueRW.currentState = s.currentState;
-            fsmComp.ValueRW.stateTimer   = s.stateTimer;
         }
     }
 }

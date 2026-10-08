@@ -60,9 +60,13 @@ No existe actualmente `HeroStateSystem` ni `HeroStateComponent`. La animación l
 
 **Autoridad física:** para el héroe local, `LocalHeroCharacterMotor` es el único ejecutor y el `CharacterController` resuelve el resultado físico. Para unidades y héroes remotos con `syncPositionFromNavMesh`, el `NavMeshAgent` es la autoridad física y `NavMeshPositionSyncSystem` publica su posición en ECS.
 
+La orientación local la aplica `SamplePlayerAnimationController_ECS` sobre el visual durante `Update`. El motor publica en `LateUpdate` esa rotación final en `LocalTransform`, después de resolver el desplazamiento con `CharacterController`; la animación no mueve físicamente al héroe.
+
 ---
 
 ## 3. Captura de Input — `SquadControlSystem`
+
+La lectura de teclado permanece aquí; `SquadPlayerCommandResolver` aplica la combinación de orden, formación y hurry sin depender del dispositivo. Una formación no disponible no cancela una orden válida emitida en el mismo fotograma.
 
 **Archivo:** `Assets/Scripts/Squads/Systems/SquadControl.System.cs`
 **Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`, `[UpdateBefore(typeof(SquadOrderSystem))]`, `[UpdateBefore(typeof(FormationSystem))]`
@@ -88,22 +92,19 @@ Si la misma tecla se presiona dos veces dentro del threshold, se activa la acci�
 
 ### Raycast para Hold Position
 
-Al presionar X, el sistema lanza un raycast contra el layer de terreno. Si falla, usa un plano fallback en Y=0. La posición resultante se guarda en `SquadInputComponent.holdPosition`.
+Al presionar X, el sistema lanza un raycast contra el layer de terreno. Si falla, usa un plano fallback en Y=0. La posición resultante se guarda en `SquadPlayerOrderIntentComponent.holdPosition`.
 
 ### Componentes de salida
 
 ```csharp
 public struct SquadInputComponent : IComponentData
 {
-    public SquadOrderType orderType;
     public bool hasNewOrder;
-    public FormationType desiredFormation;
-    public float3 holdPosition;
     public bool hurryToComander;
 }
 ```
 
-`SquadInputComponent` conserva flags y configuración compartida, pero la orden local candidata se publica en `SquadPlayerOrderIntentComponent`. La IA publica `SquadAIOrderIntentComponent` y `CombatReactionSystem` publica `SquadCombatReactionIntentComponent`; ningún productor escribe directamente el estado aplicado.
+`SquadInputComponent` conserva flags transitorios. La orden y formación solicitadas por el jugador se publican en `SquadPlayerOrderIntentComponent`. La IA publica `SquadAIOrderIntentComponent` y `CombatReactionSystem` publica `SquadCombatReactionIntentComponent`; ningún productor escribe directamente el estado aplicado.
 
 ---
 
@@ -177,6 +178,7 @@ SquadFSMState:
 **Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`
 
 - Asigna posiciones de formación cuando cambia la formación seleccionada
+- Lee la formación solicitada desde `SquadResolvedOrderComponent`; un cambio de formación no reemite la orden de movimiento
 - Lee `SquadDataComponent.formationLibrary` (blob asset)
 - Cooldown entre cambios de formación: **1 segundo** (`formationChangeCooldown = 1f`)
 - Lee `SquadHoldPositionComponent` si existe y lo pasa a `CalculateDesiredPosition()` para que en modo Hold Position las posiciones se calculen respecto al holdCenter
@@ -388,16 +390,17 @@ La animación tampoco forma ya parte de este puente. Para un héroe remoto, `Rem
 
 | Componente | Propósito | Escrito por |
 |------------|-----------|-------------|
-| `SquadInputComponent` | Input del jugador (orden, formación, hurry) | `SquadControlSystem` |
+| `SquadInputComponent` | Flags transitorios de orden nueva y hurry | `SquadControlSystem` |
 | `SquadStateComponent` | Estado actual del escuadrón, timer, orden | `SquadOrderSystem`, `SquadFSMSystem` |
 | `SquadHoldPositionComponent` | Centro y formación de Hold Position | `SquadOrderSystem` |
-| `FormationComponent` / `SquadActiveFormationComponent` | Formación confirmada y cooldown | `FormationSystem` |
+| `FormationComponent` / `SquadStateComponent.formationChangeCooldown` | Formación confirmada y cooldown | `FormationSystem` |
+| `UnitOwnerComponent` | Referencia de la unidad a su squad y héroe | `SquadSpawningSystem` |
 | `SquadDataComponent` | Datos del escuadrón (formationLibrary blob) | Setup/Spawn |
 | `UnitTargetPositionComponent` | Posición deseada (slot de formación) | `FormationSystem`, `GridFormationUpdateSystem` |
 | `UnitGridSlotComponent` | Coordenadas de grilla y offset world | `FormationSystem` |
 | `UnitFormationStateComponent` | Estado de la unidad (Formed/Waiting/Moving) | `UnitFormationStateSystem` |
 | `UnitStatsComponent` | Stats de la unidad (velocidad, etc.) | Setup/Spawn |
-| `UnitMoveSpeedVariation` | Multiplicador individual de velocidad | Setup/Spawn |
+| `UnitMoveSpeedVariation` | Multiplicador opcional de velocidad; el sistema usa 1 si falta | Sin productor en el spawn actual; `UnitFollowFormationSystem` lo consume si está presente |
 | `UnitSpacingComponent` | Slot de spacing en formación | `FormationSystem` |
 | `NavAgentComponent` | Estado del destino efectivo, fallos y autoridad NavMesh | `UnitNavMeshSystem` |
 | `UnitRotationIntentComponent` | Propuesta priorizada de orientación | NavMesh/Follow; aplicada por `UnitRotationResolutionSystem` |

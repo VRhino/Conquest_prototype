@@ -1,0 +1,1 @@
+Local A/B: 2 route points, 0 ms measured in Editor; all segments clear. Synthetic: detour around water; closed barrier rejected; outside destination rejected; diagonal corner blocked. Grid 512x384; cells 62,5u; source SHA matches manifest.

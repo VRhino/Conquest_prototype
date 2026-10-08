@@ -1,0 +1,1 @@
+Coastal faces match canonical export: 113502 triangles; 82 exact height seams; trees anchored; sector-local meshes; revision=costas-1

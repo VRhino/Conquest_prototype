@@ -16,6 +16,8 @@ public class ScenePhaseUpdater : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // Additive content (terrain / ECS subscenes) must not replace the owning scene phase.
+        if (mode == LoadSceneMode.Additive) return;
         // Actualizar GamePhase basado en la escena cargada, por si no se hizo antes
         SceneTransitionService.UpdateGamePhase(scene.name);
     }

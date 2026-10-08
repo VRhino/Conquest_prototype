@@ -1,0 +1,16 @@
+Scene=Assets/WorldMap/Experiments/MountainsV9/WorldMapMountainsV9.unity
+Sectors=48
+Height resolution=257
+Trees=178665
+Resources=1360
+Tin=56
+Copper=240
+Regions with both metals=16
+Shared borders=82
+Height border difference metres=0
+Layer border difference=0
+Layer sum error=0,0117647890001535
+Forest root error metres=2,95639038085938E-05
+R16 import error metres=0,0152802876982605
+Overview canopy groups=25823
+Overview instanced batches=27

@@ -19,10 +19,9 @@ public partial class SquadAISystem : SystemBase
 
     protected override void OnUpdate()
     {
-        foreach (var (ai, state, combatState, dataRef, def, units, entity) in SystemAPI
+        foreach (var (ai, state, dataRef, def, units, entity) in SystemAPI
                      .Query<RefRW<SquadAIComponent>,
                             RefRW<SquadStateComponent>,
-                            RefRW<SquadCombatStateComponent>,
                             RefRO<SquadDataReference>,
                             RefRO<SquadDefinitionComponent>,
                             DynamicBuffer<SquadUnitElement>>()
@@ -111,9 +110,6 @@ public partial class SquadAISystem : SystemBase
             ai.ValueRW.tacticalIntent = desiredState;
             ai.ValueRW.isInCombat     = enemiesDetected || wasHit;
 
-            // [Sprint2 dual-write] SquadCombatStateComponent mirrors SquadAIComponent
-            combatState.ValueRW.isInCombat    = enemiesDetected || wasHit;
-            combatState.ValueRW.engagedTarget = ai.ValueRO.targetEntity;
         }
     }
 }

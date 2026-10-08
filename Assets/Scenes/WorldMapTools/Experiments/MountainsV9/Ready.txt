@@ -1,0 +1,4 @@
+Worldgen regional-16
+Source=C:/Users/VRINO/.codex/worktrees/worldgen-relieve/BronzeAgeFase0/exports-regional/campaign-anatolia-v9-seed42/manifest.json
+Terrain=48
+Trees=178665

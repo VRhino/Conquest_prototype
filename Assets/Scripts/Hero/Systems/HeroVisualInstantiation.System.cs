@@ -62,6 +62,13 @@ public partial class HeroVisualInstantiationSystem : SystemBase
             return;
         }
 
+        if (visualPrefab.GetComponentInChildren<ShieldHitboxBehaviour>(true) != null
+            && !SystemAPI.HasSingleton<ShieldConfigComponent>())
+        {
+            Debug.LogError($"[HeroVisualInstantiationSystem] ShieldConfigComponent missing for {visualPrefabId}; visual creation deferred.");
+            return;
+        }
+
         GameObject visualInstance = Object.Instantiate(visualPrefab);
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;

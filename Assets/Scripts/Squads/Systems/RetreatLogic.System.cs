@@ -96,6 +96,11 @@ public partial class RetreatLogicSystem : SystemBase
                     }
                 }
 
+                if (SystemAPI.HasComponent<SquadDamageProfileReference>(entity))
+                {
+                    Entity profile = SystemAPI.GetComponent<SquadDamageProfileReference>(entity).Value;
+                    if (SystemAPI.Exists(profile)) ecb.DestroyEntity(profile);
+                }
                 ecb.DestroyEntity(entity);
             }
         }

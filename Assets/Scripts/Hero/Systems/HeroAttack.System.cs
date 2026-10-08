@@ -7,10 +7,11 @@ using UnityEngine;
 /// <summary>
 /// Manages hero attack state: input/AI decision → attack initiation, cooldown,
 /// animation timer, and WeaponHitboxActiveTag gating.
-/// Hit detection and PendingDamageEvent creation are handled by WeaponHitboxBehaviour.
+/// WeaponHitboxBehaviour reports contacts; MeleeContactResolutionSystem creates damage events.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroAIExecutionSystem))]
+[UpdateAfter(typeof(HeroRespawnSystem))]
 public partial class HeroAttackSystem : SystemBase
 {
     protected override void OnCreate()
@@ -87,6 +88,19 @@ public partial class HeroAttackSystem : SystemBase
         foreach (var (combat, entity) in
                  SystemAPI.Query<RefRW<HeroCombatComponent>>().WithEntityAccess())
         {
+            if (SystemAPI.HasComponent<HeroLifeComponent>(entity)
+                && !SystemAPI.GetComponent<HeroLifeComponent>(entity).isAlive)
+            {
+                var deadCombat = combat.ValueRW;
+                deadCombat.isAttacking = false;
+                deadCombat.attackAnimationTimer = 0f;
+                deadCombat.hitboxFired = false;
+                combat.ValueRW = deadCombat;
+                if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
+                    SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
+                continue;
+            }
+
             if (!combat.ValueRO.isAttacking) continue;
 
             var c = combat.ValueRW;

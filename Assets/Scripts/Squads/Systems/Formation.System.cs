@@ -22,20 +22,18 @@ public partial class FormationSystem : SystemBase
         float deltaTime = SystemAPI.Time.DeltaTime;
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        foreach (var (input, state, formationComp, activeFormation, squadDef, units, squadEntity) in SystemAPI
-                    .Query<RefRO<SquadInputComponent>,
+        foreach (var (resolved, state, formationComp, squadDef, units, squadEntity) in SystemAPI
+                    .Query<RefRO<SquadResolvedOrderComponent>,
                             RefRW<SquadStateComponent>,
                             RefRW<FormationComponent>,
-                            RefRW<SquadActiveFormationComponent>,
                             RefRO<SquadDefinitionComponent>,
                             DynamicBuffer<SquadUnitElement>>()
                     .WithEntityAccess())
         {
             var s = state.ValueRW;
             s.formationChangeCooldown = math.max(0f, s.formationChangeCooldown - deltaTime);
-            activeFormation.ValueRW.formationChangeCooldown = s.formationChangeCooldown;
 
-            if (input.ValueRO.desiredFormation == formationComp.ValueRO.currentFormation ||
+            if (resolved.ValueRO.formation == formationComp.ValueRO.currentFormation ||
                 s.formationChangeCooldown > 0f)
             {
                 state.ValueRW = s;
@@ -63,7 +61,7 @@ public partial class FormationSystem : SystemBase
             int formationIndex = -1;
             for (int i = 0; i < formations.Length; i++)
             {
-                if (formations[i].formationType == input.ValueRO.desiredFormation)
+                if (formations[i].formationType == resolved.ValueRO.formation)
                 {
                     formationIndex = i;
                     break;
@@ -134,17 +132,14 @@ public partial class FormationSystem : SystemBase
                 }
             }
 
-            formationComp.ValueRW.currentFormation = input.ValueRO.desiredFormation;
+            formationComp.ValueRW.currentFormation = resolved.ValueRO.formation;
             s.formationChangeCooldown = 1f;
-            // [Sprint2 dual-write]
-            activeFormation.ValueRW.currentFormation      = input.ValueRO.desiredFormation;
-            activeFormation.ValueRW.formationChangeCooldown = 1f;
 
             // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
             if (s.currentOrder == SquadOrderType.HoldPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
             {
                 var holdCompRW = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity);
-                holdCompRW.ValueRW.originalFormation = input.ValueRO.desiredFormation;
+                holdCompRW.ValueRW.originalFormation = resolved.ValueRO.formation;
                 // Mantener el mismo holdCenter para que la formación se reorganice en el mismo lugar
             }
 

@@ -1,0 +1,5 @@
+Sectores=48
+Capas=8
+Alturas preservadas=798768
+Árboles preservados=192974
+Error de normalización=2,38418579101563E-07

@@ -1,0 +1,5 @@
+Sector prefabs=48; each separately addressable; shared assets=87
+Detailed crowns=67580; distant terrain=48 x 33
+Water triangles partitioned=186480; resource IDs preserved
+Scene contains no detailed TerrainData or sector prefab references
+Local travel=12 u/s; city=1.4; army=1.8; entry=18

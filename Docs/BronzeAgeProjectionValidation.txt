@@ -1,0 +1,1 @@
+Synthetic player projection: own-column position; visible city overrides memory; 6 invalid contracts rejected; stale snapshot cannot rewind actor; local movement disabled in authoritative mode; interior never invents an exterior position. No live server request performed.

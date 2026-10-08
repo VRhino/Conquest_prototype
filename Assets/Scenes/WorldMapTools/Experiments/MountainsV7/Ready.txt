@@ -1,0 +1,4 @@
+Worldgen regional-14
+Source=C:/Users/VRINO/.codex/worktrees/worldgen-relieve/BronzeAgeFase0/exports-regional/campaign-massifs-v7-seed42/manifest.json
+Terrain=48
+Trees=177024

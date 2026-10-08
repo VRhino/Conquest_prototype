@@ -149,6 +149,31 @@ public class ArchitectureRegressionTests
     }
 
     [Test]
+    public void ProjectileDamageSnapshotSurvivesSquadProfileRetirement()
+    {
+        var target = em.CreateEntity(typeof(HealthComponent));
+        em.SetComponentData(target, new HealthComponent { maxHealth = 100, currentHealth = 100 });
+        var retiredProfile = em.CreateEntity(typeof(DamageProfileComponent));
+        var snapshot = new DamageProfileComponent { bluntDamage = 10 };
+        em.DestroyEntity(retiredProfile);
+        var evt = em.CreateEntity(typeof(PendingDamageEvent));
+        em.SetComponentData(evt, new PendingDamageEvent
+        {
+            target = target,
+            damageProfile = retiredProfile,
+            hasInlineDamageProfile = true,
+            inlineDamageProfile = snapshot,
+            multiplier = 1,
+            destroyEntityAfterProcessing = true
+        });
+
+        world.GetOrCreateSystemManaged<DamageCalculationSystem>().Update();
+
+        Assert.That(em.GetComponentData<HealthComponent>(target).currentHealth, Is.EqualTo(90));
+        Assert.That(em.Exists(evt), Is.False);
+    }
+
+    [Test]
     public void PersistentSquadLookupDoesNotReuseBattleLocalId()
     {
         var data = new LocalSaveSystem.PlayerProgressData();
@@ -234,10 +259,103 @@ public class ArchitectureRegressionTests
             var units = em.GetBuffer<SquadUnitElement>(squad);
             Assert.That(units.Length, Is.EqualTo(2));
             var unit = units[0].Value;
+            var unitOwner = em.GetComponentData<UnitOwnerComponent>(unit);
+            Assert.That(unitOwner.squad, Is.EqualTo(squad));
+            Assert.That(unitOwner.hero, Is.EqualTo(hero));
             var profileEntity = em.GetComponentData<UnitWeaponComponent>(unit).damageProfile;
             var profile = em.GetComponentData<DamageProfileComponent>(profileEntity);
             var bonus = em.GetComponentData<PenetrationComponent>(unit);
             Assert.That(profile.bluntPenetration + bonus.bluntPenetration, Is.EqualTo(3));
+        }
+        finally { blob.Dispose(); }
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void UnitSpawnBuilderPreservesMeleeAndOptionalRangedComponents(bool ranged)
+    {
+        var squad = em.CreateEntity();
+        var hero = em.CreateEntity();
+        var profile = em.CreateEntity();
+        var unit = em.CreateEntity();
+        var position = new float3(2f, 0f, 3f);
+        var context = new SquadUnitSpawnContext
+        {
+            squad = squad,
+            hero = hero,
+            damageProfile = profile,
+            data = new SquadDataComponent
+            {
+                baseHealth = 80f,
+                attackRange = 2f,
+                isRangedUnit = ranged,
+                ammoCapacity = 12
+            },
+            config = new SquadSpawnConfigComponent
+            { unitMinDistance = 0.7f, unitRepelForce = 2f },
+            squadType = SquadType.Archers,
+            speed = 4.5f,
+            rotation = quaternion.identity
+        };
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
+        SquadUnitSpawnBuilder.Configure(ecb, unit, context, 1,
+            new int2(1, 0), new float3(0.5f, 0f, 0f), position);
+        ecb.Playback(em);
+
+        Assert.That(em.GetComponentData<UnitOwnerComponent>(unit).squad, Is.EqualTo(squad));
+        Assert.That(em.GetComponentData<UnitOwnerComponent>(unit).hero, Is.EqualTo(hero));
+        Assert.That(em.GetComponentData<LocalTransform>(unit).Position, Is.EqualTo(position));
+        Assert.That(em.GetComponentData<UnitStatsComponent>(unit).speed, Is.EqualTo(4.5f));
+        Assert.That(em.GetComponentData<UnitWeaponComponent>(unit).damageProfile, Is.EqualTo(profile));
+        Assert.That(em.IsComponentEnabled<WeaponHitboxActiveTag>(unit), Is.False);
+        Assert.That(em.HasComponent<UnitRangedStatsComponent>(unit), Is.EqualTo(ranged));
+        Assert.That(em.HasComponent<RangedAttackStateComponent>(unit), Is.EqualTo(ranged));
+        if (ranged)
+            Assert.That(em.GetComponentData<RangedAttackStateComponent>(unit).currentAmmo, Is.EqualTo(12));
+    }
+
+    [Test]
+    public void SpawnBuildsReserveCountsFromTheirOwnDefinitions()
+    {
+        using var builder = new BlobBuilder(Allocator.Temp);
+        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
+        var forms = builder.Allocate(ref root.formations, 1);
+        forms[0].formationType = FormationType.Line;
+        var positions = builder.Allocate(ref forms[0].gridPositions, 2);
+        positions[0] = int2.zero;
+        positions[1] = new int2(1, 0);
+        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        try
+        {
+            em.CreateEntity(typeof(SquadSpawnConfigComponent));
+            em.CreateEntity(typeof(MatchStateComponent));
+            var active = em.CreateEntity(typeof(SquadDataComponent),
+                typeof(SquadDefinitionComponent), typeof(SquadDataIDComponent));
+            em.SetComponentData(active, new SquadDataComponent { baseHealth = 100, baseSpeed = 5 });
+            em.SetComponentData(active, new SquadDefinitionComponent { formationLibrary = blob, unitCount = 2 });
+            em.SetComponentData(active, new SquadDataIDComponent { id = "active" });
+            var reserve = em.CreateEntity(typeof(SquadDataIDComponent), typeof(SquadDefinitionComponent));
+            em.SetComponentData(reserve, new SquadDataIDComponent { id = "reserve" });
+            em.SetComponentData(reserve, new SquadDefinitionComponent { unitCount = 5 });
+            var hero = em.CreateEntity(typeof(HeroSpawnComponent), typeof(HeroSquadSelectionComponent),
+                typeof(LocalTransform), typeof(TeamComponent));
+            em.SetComponentData(hero, new HeroSpawnComponent { hasSpawned = true });
+            em.SetComponentData(hero, LocalTransform.Identity);
+            em.SetComponentData(hero, new HeroSquadSelectionComponent { squadDataEntity = active, instanceId = 0 });
+            em.SetComponentData(hero, new TeamComponent { value = Team.TeamA });
+            var map = em.AddBuffer<SquadIdMapElement>(hero);
+            map.Add(new SquadIdMapElement { squadId = 0, baseSquadID = "active" });
+            map.Add(new SquadIdMapElement { squadId = 1, baseSquadID = "reserve",
+                hasSnapshot = true, totalUnits = 4, aliveUnits = 3 });
+
+            world.GetOrCreateSystemManaged<SquadSpawningSystem>().Update();
+
+            var reserves = em.GetBuffer<InactiveSquadElement>(hero);
+            Assert.That(reserves.Length, Is.EqualTo(1));
+            Assert.That(reserves[0].squadId, Is.EqualTo(1));
+            Assert.That(reserves[0].totalUnits, Is.EqualTo(4));
+            Assert.That(reserves[0].aliveUnits, Is.EqualTo(3));
+            Assert.That(reserves[0].isEliminated, Is.False);
         }
         finally { blob.Dispose(); }
     }

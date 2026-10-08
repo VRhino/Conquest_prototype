@@ -145,6 +145,9 @@ public partial class RangedAttackSystem : SystemBase
                 ? teamLookup[entity].value
                 : Team.None;
 
+            if (!SystemAPI.HasComponent<DamageProfileComponent>(weapon.ValueRO.damageProfile))
+                continue;
+
             // Emit projectile spawn request
             Entity req = ecb.CreateEntity();
             ecb.AddComponent(req, new ProjectileSpawnRequest
@@ -154,6 +157,7 @@ public partial class RangedAttackSystem : SystemBase
                 spawnPosition   = myPos,
                 attackDirection = dir,
                 damageProfile   = weapon.ValueRO.damageProfile,
+                damageProfileSnapshot = SystemAPI.GetComponent<DamageProfileComponent>(weapon.ValueRO.damageProfile),
                 sourceTeam      = sourceTeam,
                 multiplier      = multiplier,
                 poolKey         = rangedStats.ValueRO.projectilePoolKey,

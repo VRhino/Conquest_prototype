@@ -82,7 +82,7 @@ namespace Conquest.SettlementPreview
             {
                 var value = input.ValueRO;
                 value.IsAttackPressed = false; value.UseSkill1 = false; value.UseSkill2 = false; value.UseUltimate = false;
-                if (!SettlementWalkMode.Instance || !SettlementWalkMode.Instance.Ready) { value.MoveInput = float2.zero; value.IsSprintPressed = false; }
+                if (!SettlementWalkMode.Instance || !SettlementWalkMode.Instance.Ready || SettlementWalkMode.Instance.PointerFree) { value.MoveInput = float2.zero; value.IsSprintPressed = false; }
                 input.ValueRW = value;
                 if (EntityManager.HasComponent<PlayerInteractionComponent>(entity))
                 {

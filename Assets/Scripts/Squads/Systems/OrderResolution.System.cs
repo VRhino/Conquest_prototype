@@ -14,8 +14,8 @@ using Unity.Mathematics;
 ///     1. combatReaction.reactToEnemy → CombatReaction wins (blocks movement)
 ///     2. Otherwise                   → AI wins
 ///
-/// Remote orders are reissued when their payload changes. Local explicit requests
-/// are forwarded directly. HoldPosition is never replaced by a combat reaction.
+/// Orders are reissued when their winning payload changes or a local player
+/// explicitly repeats a command. HoldPosition is never replaced by a combat reaction.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(CombatReactionSystem))]
@@ -38,11 +38,12 @@ public partial class OrderResolutionSystem : SystemBase
         _localPlayerLookup.Update(this);
         _ownerLookup.Update(this);
 
-        foreach (var (playerIntent, aiIntent, combatReaction, input, resolved, entity) in SystemAPI
+        foreach (var (playerIntent, aiIntent, combatReaction, input, formation, resolved, entity) in SystemAPI
             .Query<RefRO<SquadPlayerOrderIntentComponent>,
                    RefRO<SquadAIOrderIntentComponent>,
                    RefRO<SquadCombatReactionIntentComponent>,
                    RefRO<SquadInputComponent>,
+                   RefRO<FormationComponent>,
                    RefRW<SquadResolvedOrderComponent>>()
             .WithEntityAccess())
         {
@@ -52,40 +53,45 @@ public partial class OrderResolutionSystem : SystemBase
             if (isLocal)
             {
                 // Local squad: forward player order, apply combat blocking unless heroOrdenCooldown active
-                if (!input.ValueRO.hasNewOrder)
-                {
-                    resolved.ValueRW.hasNewOrder = false;
-                    continue;
-                }
-
+                SquadOrderType winningOrder;
+                float3 winningPosition = default;
+                Entity winningTarget = Entity.Null;
+                OrderSource winningSource;
                 if (playerIntent.ValueRO.heroOrdenCooldownActive)
                 {
                     // Player insisted — override combat reaction
-                    resolved.ValueRW.order       = playerIntent.ValueRO.orderType;
-                    resolved.ValueRW.holdPosition = playerIntent.ValueRO.holdPosition;
-                    resolved.ValueRW.targetEntity = Entity.Null;
-                    resolved.ValueRW.source       = OrderSource.Player;
+                    winningOrder = playerIntent.ValueRO.orderType;
+                    winningPosition = winningOrder == SquadOrderType.HoldPosition
+                        ? playerIntent.ValueRO.holdPosition : default;
+                    winningSource = OrderSource.Player;
                 }
                 else if (combatReaction.ValueRO.reactToEnemy
                          && playerIntent.ValueRO.orderType != SquadOrderType.HoldPosition)
                 {
                     // Combat reaction blocks the movement order
-                    resolved.ValueRW.order       = SquadOrderType.Attack;
-                    resolved.ValueRW.holdPosition = default;
-                    resolved.ValueRW.targetEntity = combatReaction.ValueRO.reactTarget;
-                    resolved.ValueRW.source       = OrderSource.CombatReaction;
+                    winningOrder = SquadOrderType.Attack;
+                    winningTarget = combatReaction.ValueRO.reactTarget;
+                    winningSource = OrderSource.CombatReaction;
                 }
                 else
                 {
                     // Normal player order
-                    resolved.ValueRW.order       = playerIntent.ValueRO.orderType;
-                    resolved.ValueRW.holdPosition = playerIntent.ValueRO.holdPosition;
-                    resolved.ValueRW.targetEntity = Entity.Null;
-                    resolved.ValueRW.source       = OrderSource.Player;
+                    winningOrder = playerIntent.ValueRO.orderType;
+                    winningPosition = winningOrder == SquadOrderType.HoldPosition
+                        ? playerIntent.ValueRO.holdPosition : default;
+                    winningSource = OrderSource.Player;
                 }
 
+                bool orderChanged = winningOrder != resolved.ValueRO.order
+                    || winningSource != resolved.ValueRO.source
+                    || winningTarget != resolved.ValueRO.targetEntity
+                    || math.any(winningPosition != resolved.ValueRO.holdPosition);
+                resolved.ValueRW.order = winningOrder;
+                resolved.ValueRW.holdPosition = winningPosition;
+                resolved.ValueRW.targetEntity = winningTarget;
+                resolved.ValueRW.source = winningSource;
                 resolved.ValueRW.formation   = playerIntent.ValueRO.desiredFormation;
-                resolved.ValueRW.hasNewOrder = true;
+                resolved.ValueRW.hasNewOrder = input.ValueRO.hasNewOrder || orderChanged;
             }
             else
             {
@@ -115,14 +121,14 @@ public partial class OrderResolutionSystem : SystemBase
                 bool orderChanged = winningOrder  != resolved.ValueRO.order
                                  || winningSource != resolved.ValueRO.source
                                  || winningTarget != resolved.ValueRO.targetEntity
-                                 || math.any(winningPosition != resolved.ValueRO.holdPosition)
-                                 || input.ValueRO.desiredFormation != resolved.ValueRO.formation;
+                                 || math.any(winningPosition != resolved.ValueRO.holdPosition);
 
                 resolved.ValueRW.order       = winningOrder;
                 resolved.ValueRW.holdPosition = winningPosition;
                 resolved.ValueRW.targetEntity = winningTarget;
                 resolved.ValueRW.source       = winningSource;
-                resolved.ValueRW.formation    = input.ValueRO.desiredFormation;
+                // AI orders do not request formation changes.
+                resolved.ValueRW.formation    = formation.ValueRO.currentFormation;
                 resolved.ValueRW.hasNewOrder  = orderChanged;
             }
         }

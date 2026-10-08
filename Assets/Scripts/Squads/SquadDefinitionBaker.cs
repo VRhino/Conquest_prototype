@@ -15,10 +15,6 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             var melee  = d.meleeData;
             var ranged = d.rangedData;
 
-            Entity prefabEntity = d.prefab != null
-                ? GetEntity(d.prefab, TransformUsageFlags.Dynamic)
-                : Entity.Null;
-
             // Bake formation library
             var formationLibrary = BakeFormationLibrary(d.gridFormations);
             AddBlobAsset(ref formationLibrary, out _);
@@ -99,7 +95,6 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 squadType        = d.type,
                 behaviorProfile  = d.behaviorProfile,
                 formationLibrary = formationLibrary,
-                unitPrefab       = prefabEntity,
                 unitCount        = d.unitCount,
                 GridSize         = default,
                 leadershipCost   = d.leadershipCost,
@@ -107,12 +102,6 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             });
 
             AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(d.id) });
-
-            AddComponent(entity, new SquadStatsComponent
-            {
-                squadType = d.type,
-                behaviorProfile = d.behaviorProfile
-            });
 
             var statsBuffer = AddBuffer<UnitStatsBufferElement>(entity);
             statsBuffer.Add(new UnitStatsBufferElement

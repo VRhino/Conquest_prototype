@@ -43,6 +43,7 @@ public class ProjectileController : MonoBehaviour
     Entity  _shooter;
     Entity  _target;
     Entity  _damageProfile;
+    DamageProfileComponent _damageProfileSnapshot;
     Team    _sourceTeam;
     float3  _spawnPosition;
     float   _multiplier;
@@ -76,6 +77,7 @@ public class ProjectileController : MonoBehaviour
         float3              spawnPos,
         float3              attackDir,
         Entity              damageProfile,
+        DamageProfileComponent damageProfileSnapshot,
         Team                sourceTeam,
         float               multiplier,
         string              poolKey,
@@ -84,6 +86,7 @@ public class ProjectileController : MonoBehaviour
         _shooter         = shooter;
         _target          = target;
         _damageProfile   = damageProfile;
+        _damageProfileSnapshot = damageProfileSnapshot;
         _sourceTeam      = sourceTeam;
         _spawnPosition   = spawnPos;
         _multiplier      = multiplier;
@@ -256,6 +259,7 @@ public class ProjectileController : MonoBehaviour
                 shooter          = _shooter,
                 target           = damageTarget,
                 damageProfile    = _damageProfile,
+                damageProfileSnapshot = _damageProfileSnapshot,
                 sourceTeam       = _sourceTeam,
                 attackerPosition = _spawnPosition,
                 multiplier       = _multiplier,

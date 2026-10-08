@@ -55,7 +55,7 @@ public partial class SquadVisualManagementSystem : SystemBase
         foreach (var (unitVisualRef, transform, entity) in
                  SystemAPI.Query<RefRO<UnitVisualReference>,
                                  RefRO<LocalTransform>>()
-                        .WithNone<UnitVisualInstance>()
+                        .WithNone<UnitVisualInstance, IsDeadComponent>()
                         .WithEntityAccess())
         {
             CreateVisualForUnit(entity, unitVisualRef.ValueRO, transform.ValueRO, ecb, pendingNavAgents);
@@ -72,8 +72,12 @@ public partial class SquadVisualManagementSystem : SystemBase
     private void CreateVisualForUnit(Entity unitEntity, UnitVisualReference visualRef,
         LocalTransform transform, EntityCommandBuffer ecb, List<(Entity, NavMeshAgent)> pendingNavAgents)
     {
-        // Buscar el squad padre para determinar el tipo
-        Entity parentSquad = FindParentSquad(unitEntity);
+        // Runtime units carry their owner; retain the buffer lookup for older baked units.
+        Entity parentSquad = EntityManager.HasComponent<UnitOwnerComponent>(unitEntity)
+            ? EntityManager.GetComponentData<UnitOwnerComponent>(unitEntity).squad
+            : Entity.Null;
+        if (parentSquad == Entity.Null || !EntityManager.Exists(parentSquad))
+            parentSquad = FindParentSquad(unitEntity);
         SquadType squadType = SquadType.Squires; // Default
         
         if (parentSquad != Entity.Null && EntityManager.HasComponent<SquadDefinitionComponent>(parentSquad))
@@ -88,6 +92,13 @@ public partial class SquadVisualManagementSystem : SystemBase
         if (visualPrefab == null)
         {
             Debug.LogWarning($"[SquadVisualManagementSystem] Prefab visual de unidad no encontrado: {visualRef.visualPrefabName}");
+            return;
+        }
+
+        if (visualPrefab.GetComponentInChildren<ShieldHitboxBehaviour>(true) != null
+            && !SystemAPI.HasSingleton<ShieldConfigComponent>())
+        {
+            Debug.LogError($"[SquadVisualManagementSystem] ShieldConfigComponent missing for {visualRef.visualPrefabName}; visual creation deferred.");
             return;
         }
         

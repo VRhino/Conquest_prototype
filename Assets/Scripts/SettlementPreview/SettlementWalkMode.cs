@@ -13,6 +13,10 @@ namespace Conquest.SettlementPreview
         [Min(.3f)] public float clearanceRadius = .38f;
         [Min(1.8f)] public float clearanceHeight = 1.9f;
         [Min(0)] public float spawnLift = .12f;
+        public bool enterOnStart;
+        public bool allowPreviewExit = true;
+        public bool PointerFree { get; private set; }
+        private System.Collections.IEnumerator Start() { if (!enterOnStart) yield break; yield return null; Enter(); }
         public bool Requested { get; private set; }
         public Vector3 SpawnPosition { get; private set; }
         public Quaternion SpawnRotation { get; private set; }
@@ -81,7 +85,7 @@ namespace Conquest.SettlementPreview
         public void Exit()
         {
             bool wasRequested = Requested;
-            Requested = false;
+            Requested = false; PointerFree = false;
             if (heroCamera) { heroCamera.SetActive(false); Destroy(heroCamera); heroCamera = null; }
             if (Ready && preview && preview.viewCamera)
             {
@@ -94,7 +98,13 @@ namespace Conquest.SettlementPreview
         }
         private void Update()
         {
-            if (Requested && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Exit();
+            if (Requested && allowPreviewExit && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Exit();
+            if (Ready && !allowPreviewExit && heroCamera) {
+                PointerFree = Keyboard.current != null && (Keyboard.current.leftAltKey.isPressed || Keyboard.current.rightAltKey.isPressed);
+                var cameraController = heroCamera.GetComponent<HeroCameraController>();
+                if (cameraController) cameraController.enabled = !PointerFree;
+                if (PointerFree) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
+            }
             if (Requested && !Ready && Time.unscaledTime-requestedAt > 20) Fail("No se pudo cargar el héroe. Revisa la subescena SettlementHeroWorld.");
         }
     }

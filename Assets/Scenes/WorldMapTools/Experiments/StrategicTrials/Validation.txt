@@ -1,0 +1,6 @@
+Regions=5; Kingdoms per region=2; Cities per region=4; Influence checks=120
+Diagnostic focuses=21; Corridors=10
+Resource IDs and exclusive ownership checked at all levels; multiple same-type nodes allowed
+Terrain heights unchanged across 48 tiles; original forest trees=178665
+Speed=12; city scale=1.4; army scale=1.8
+No authoritative state mutated; weighted corridors separate from direct travel times

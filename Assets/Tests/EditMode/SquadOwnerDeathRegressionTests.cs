@@ -36,7 +36,7 @@ public class SquadOwnerDeathRegressionTests
         em.SetComponentData(hero, new HeroSquadSelectionComponent { squadDataEntity = definition, instanceId = 7 });
         squad = em.CreateEntity(typeof(SquadOwnerComponent), typeof(TeamComponent), typeof(SquadStateComponent),
             typeof(SquadInstanceComponent), typeof(IsLocalSquadActive), typeof(SquadAIComponent),
-            typeof(SquadFSMComponent), typeof(SquadPlayerOrderIntentComponent));
+            typeof(SquadPlayerOrderIntentComponent));
         em.SetComponentData(squad, new SquadOwnerComponent { hero = hero });
         em.SetComponentData(squad, new SquadInstanceComponent { id = 7, initialUnitCount = 3 });
         em.SetComponentData(hero, new HeroSquadReference { squad = squad });
@@ -155,5 +155,33 @@ public class SquadOwnerDeathRegressionTests
         em.SetComponentData(unit, LocalTransform.Identity);
         world.GetOrCreateSystemManaged<RetreatLogicSystem>().Update();
         Assert.That(em.GetComponentData<HeroSquadReference>(hero).squad, Is.EqualTo(newer));
+    }
+
+    [Test]
+    public void DeadUnitWithoutVisualIsRemovedFromItsSquad()
+    {
+        em.AddComponent<UnitVisualReference>(unit);
+        em.AddComponentData(unit, new UnitOwnerComponent { squad = squad, hero = hero });
+        em.AddComponent<IsDeadComponent>(unit);
+
+        world.GetOrCreateSystemManaged<UnitDeathSystem>().Update();
+
+        Assert.That(em.Exists(unit), Is.False);
+        Assert.That(em.GetBuffer<SquadUnitElement>(squad).Length, Is.Zero);
+    }
+
+    [Test]
+    public void RetirementReleasesTheSquadsDamageProfile()
+    {
+        var profile = em.CreateEntity(typeof(DamageProfileComponent));
+        em.AddComponentData(squad, new SquadDamageProfileReference { Value = profile });
+        AddPoint();
+        Retire();
+        em.SetComponentData(unit, LocalTransform.Identity);
+
+        world.GetOrCreateSystemManaged<RetreatLogicSystem>().Update();
+
+        Assert.That(em.Exists(squad), Is.False);
+        Assert.That(em.Exists(profile), Is.False);
     }
 }

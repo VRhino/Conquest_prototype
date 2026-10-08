@@ -1,9 +1,7 @@
 using Unity.Entities;
-using Unity.Mathematics;
-using Unity.Transforms;
 
 /// <summary>
-/// Handles respawning the hero after a death timer expires.
+/// Marks heroes dead at zero health and respawns the local hero after its death timer.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(DamageCalculationSystem))]
@@ -20,11 +18,11 @@ public partial class HeroRespawnSystem : SystemBase
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
 
-        foreach (var (life, health, spawn) in
+        foreach (var (life, health, spawn, entity) in
                  SystemAPI.Query<RefRW<HeroLifeComponent>,
                                  RefRW<HeroHealthComponent>,
                                  RefRW<HeroSpawnComponent>>()
-                                 .WithAll<IsLocalPlayer>())
+                                 .WithEntityAccess())
         {
             if (life.ValueRO.isAlive)
             {
@@ -35,6 +33,11 @@ public partial class HeroRespawnSystem : SystemBase
                 }
                 continue;
             }
+
+            // Remote heroes have no respawn contract; they remain dead so AI and
+            // squad-owner systems stop acting on their behalf.
+            if (!EntityManager.HasComponent<IsLocalPlayer>(entity))
+                continue;
 
             life.ValueRW.deathTimer -= deltaTime;
             if (life.ValueRO.deathTimer <= 0f)

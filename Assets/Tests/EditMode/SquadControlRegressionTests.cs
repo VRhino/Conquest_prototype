@@ -34,6 +34,48 @@ public class SquadControlRegressionTests
     }
 
     [Test]
+    public void InvalidFormationDoesNotDiscardSimultaneousMovementOrder()
+    {
+        using var builder = new BlobBuilder(Allocator.Temp);
+        ref var library = ref builder.ConstructRoot<FormationLibraryBlob>();
+        var formations = builder.Allocate(ref library.formations, 2);
+        formations[0].formationType = FormationType.Line;
+        formations[1].formationType = FormationType.Column;
+        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        try
+        {
+            var definition = new SquadDefinitionComponent { formationLibrary = blob };
+            var input = new SquadInputComponent();
+            var intent = new SquadPlayerOrderIntentComponent { desiredFormation = FormationType.Line };
+            var hold = new float3(3f, 0f, 7f);
+
+            Assert.That(SquadPlayerCommandResolver.TryApply(new SquadControlCommand
+            {
+                orderIssued = true, order = SquadOrderType.HoldPosition,
+                holdPosition = hold, formationRequested = true, formationIndex = 3
+            }, definition, ref input, ref intent), Is.True);
+            Assert.That(intent.orderType, Is.EqualTo(SquadOrderType.HoldPosition));
+            Assert.That(intent.holdPosition, Is.EqualTo(hold));
+            Assert.That(intent.desiredFormation, Is.EqualTo(FormationType.Line));
+            Assert.That(input.hasNewOrder, Is.True);
+
+            input.hasNewOrder = false;
+            Assert.That(SquadPlayerCommandResolver.TryApply(new SquadControlCommand
+            { formationRequested = true, formationIndex = 1 }, definition,
+                ref input, ref intent), Is.True);
+            Assert.That(intent.desiredFormation, Is.EqualTo(FormationType.Column));
+            Assert.That(input.hasNewOrder, Is.False);
+
+            Assert.That(SquadPlayerCommandResolver.TryApply(new SquadControlCommand
+            { formationRequested = true, cycleFormation = true }, definition,
+                ref input, ref intent), Is.True);
+            Assert.That(intent.desiredFormation, Is.EqualTo(FormationType.Line));
+            Assert.That(input.hasNewOrder, Is.False);
+        }
+        finally { blob.Dispose(); }
+    }
+
+    [Test]
     public void HeroAIPublishesToResolverAndPreservesHoldDestination()
     {
         var squad = CreateSquad();
@@ -75,6 +117,30 @@ public class SquadControlRegressionTests
         Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(squad).hasNewOrder, Is.True);
     }
 
+    [Test]
+    public void FormationChangeDoesNotReissueMovementOrder()
+    {
+        var squad = CreateSquad(local: true);
+        em.SetComponentData(squad, new SquadPlayerOrderIntentComponent
+        { orderType = SquadOrderType.FollowHero, desiredFormation = FormationType.Line });
+        em.SetComponentData(squad, new SquadInputComponent { hasNewOrder = true });
+        var resolver = world.GetOrCreateSystemManaged<OrderResolutionSystem>();
+        var orders = world.GetOrCreateSystemManaged<SquadOrderSystem>();
+        resolver.Update();
+        orders.Update();
+
+        var intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
+        intent.desiredFormation = FormationType.Column;
+        em.SetComponentData(squad, intent);
+        resolver.Update();
+
+        var resolved = em.GetComponentData<SquadResolvedOrderComponent>(squad);
+        Assert.That(resolved.formation, Is.EqualTo(FormationType.Column));
+        Assert.That(resolved.hasNewOrder, Is.False);
+        Assert.That(em.GetComponentData<SquadStateComponent>(squad).currentOrder,
+            Is.EqualTo(SquadOrderType.FollowHero));
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public void CombatReactionDoesNotReplaceHoldOrder(bool local)
@@ -107,6 +173,34 @@ public class SquadControlRegressionTests
         var resolved = em.GetComponentData<SquadResolvedOrderComponent>(squad);
         Assert.That(resolved.order, Is.EqualTo(SquadOrderType.FollowHero));
         Assert.That(resolved.hasNewOrder, Is.True);
+    }
+
+    [Test]
+    public void LocalFollowOrderResumesWhenCombatReactionEnds()
+    {
+        var squad = CreateSquad(local: true);
+        em.SetComponentData(squad, new SquadPlayerOrderIntentComponent
+        { orderType = SquadOrderType.FollowHero });
+        var resolver = world.GetOrCreateSystemManaged<OrderResolutionSystem>();
+        var orders = world.GetOrCreateSystemManaged<SquadOrderSystem>();
+        resolver.Update();
+        orders.Update();
+
+        em.SetComponentData(squad, new SquadCombatReactionIntentComponent
+        { reactToEnemy = true, reactTarget = em.CreateEntity() });
+        resolver.Update();
+        Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(squad).order,
+            Is.EqualTo(SquadOrderType.Attack));
+        orders.Update();
+        Assert.That(em.GetComponentData<SquadStateComponent>(squad).currentOrder,
+            Is.EqualTo(SquadOrderType.Attack));
+
+        em.SetComponentData(squad, new SquadCombatReactionIntentComponent());
+        resolver.Update();
+        Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(squad).hasNewOrder, Is.True);
+        orders.Update();
+        Assert.That(em.GetComponentData<SquadStateComponent>(squad).currentOrder,
+            Is.EqualTo(SquadOrderType.FollowHero));
     }
 
     [Test]
@@ -182,7 +276,6 @@ public class SquadControlRegressionTests
         var unit = em.CreateEntity(typeof(UnitGridSlotComponent), typeof(UnitSpacingComponent));
         em.SetComponentData(unit, new UnitGridSlotComponent { slotIndex = 99 });
         em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
-        em.AddComponent<SquadActiveFormationComponent>(squad);
         em.AddComponentData(squad, new SquadFormationAnchorComponent { rotation = quaternion.identity });
         using var builder = new BlobBuilder(Allocator.Temp);
         ref var library = ref builder.ConstructRoot<FormationLibraryBlob>();
@@ -194,14 +287,14 @@ public class SquadControlRegressionTests
         try
         {
             em.AddComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
-            em.SetComponentData(squad, new SquadInputComponent { desiredFormation = FormationType.Column });
+            em.SetComponentData(squad, new SquadInputComponent());
             em.SetComponentData(squad, new SquadResolvedOrderComponent
-            { order = SquadOrderType.FollowHero, hasNewOrder = movementOrder });
+            { order = SquadOrderType.FollowHero, formation = FormationType.Column,
+                hasNewOrder = movementOrder });
             world.GetOrCreateSystemManaged<SquadOrderSystem>().Update();
             Assert.That(em.GetComponentData<FormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.Line));
             world.GetOrCreateSystemManaged<FormationSystem>().Update();
             Assert.That(em.GetComponentData<FormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.Column));
-            Assert.That(em.GetComponentData<SquadActiveFormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.Column));
             Assert.That(em.GetComponentData<UnitGridSlotComponent>(unit).gridPosition, Is.EqualTo(new int2(2, 3)));
             Assert.That(em.GetComponentData<UnitGridSlotComponent>(unit).slotIndex, Is.Zero);
             Assert.That(em.GetComponentData<UnitSpacingComponent>(unit).Slot, Is.EqualTo(new int2(2, 3)));

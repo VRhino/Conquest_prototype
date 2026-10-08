@@ -7,6 +7,8 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float slotArrivalThreshold;
     public float holdReformThreshold;
     public float anchorMovingSpeedThreshold;
+    public float animationMovingSpeedThreshold;
+    public float animationRunningSpeedRatio;
     public float bodyblockRadius;
     public float bodyblockRepulsionStrength;
     public float bodyblockWallStrength;
@@ -14,7 +16,9 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float bodyblockEngagingRadius;
     public float bodyblockEngagingStrength;
     public float navMeshDestinationSampleRadius;
+    public float navMeshDestinationChangeThreshold;
     public float navMeshFailureRetryDistance;
+    public float navMeshFailureRetryInterval;
     public float heroAIArrivalDistance;
     public float squadSpawnOffset;    // Distancia delante del héroe al spawnear el squad
     public float unitMinDistance;     // Distancia mínima entre unidades (spacing)

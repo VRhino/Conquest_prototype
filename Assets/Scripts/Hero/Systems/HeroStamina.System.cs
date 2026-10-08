@@ -2,9 +2,12 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 /// <summary>
-/// Manages stamina consumption and regeneration for the local hero based on input.
+/// Regenerates hero stamina and charges only continuous sprint movement.
+/// One-shot actions charge stamina when their execution starts.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(HeroAttackSystem))]
+[UpdateAfter(typeof(HeroMovementSystem))]
 public partial class HeroStaminaSystem : SystemBase
 {
     protected override void OnCreate()
@@ -18,12 +21,10 @@ public partial class HeroStaminaSystem : SystemBase
         float deltaTime = SystemAPI.Time.DeltaTime;
         var cfg = SystemAPI.GetSingleton<HeroGameplayConfigComponent>();
 
-        foreach (var (input, stats, life, stamina, entity) in
-                 SystemAPI.Query<RefRO<HeroInputComponent>,
-                                 RefRO<HeroStatsComponent>,
+        foreach (var (stats, life, stamina, entity) in
+                 SystemAPI.Query<RefRO<HeroStatsComponent>,
                                  RefRO<HeroLifeComponent>,
                                  RefRW<StaminaComponent>>()
-                        .WithAll<IsLocalPlayer>()
                         .WithEntityAccess())
         {
             if (!life.ValueRO.isAlive)
@@ -31,46 +32,19 @@ public partial class HeroStaminaSystem : SystemBase
 
             var data = stamina.ValueRW;
 
-            bool performedAction = false;
-
-            if (!data.isExhausted)
+            bool sprinting = false;
+            if (!data.isExhausted && SystemAPI.HasComponent<HeroMoveIntent>(entity))
             {
-                if (input.ValueRO.IsSprintPressed)
-                {
-                    data.currentStamina -= cfg.sprintStaminaCostPerSecond * deltaTime;
-                    performedAction = true;
-                }
-
-                if (input.ValueRO.IsAttackPressed)
-                {
-                    data.currentStamina -= cfg.attackStaminaCost;
-                    performedAction = true;
-                }
-
-                if (input.ValueRO.UseSkill1)
-                {
-                    data.currentStamina -= cfg.skill1StaminaCost;
-                    performedAction = true;
-                }
-
-                if (input.ValueRO.UseSkill2)
-                {
-                    data.currentStamina -= cfg.skill2StaminaCost;
-                    performedAction = true;
-                }
-
-                if (input.ValueRO.UseUltimate)
-                {
-                    data.currentStamina -= cfg.ultimateStaminaCost;
-                    performedAction = true;
-                }
+                var movement = SystemAPI.GetComponent<HeroMoveIntent>(entity);
+                sprinting = math.lengthsq(movement.Direction) > 0f
+                    && movement.Speed > stats.ValueRO.baseSpeed + 0.001f;
             }
 
-            // Regeneración de stamina solo si no se realizaron acciones
-            if (!performedAction)
-            {
+            if (sprinting)
+                data.currentStamina -= cfg.sprintStaminaCostPerSecond * deltaTime;
+            else if (!SystemAPI.HasComponent<HeroCombatComponent>(entity)
+                     || !SystemAPI.GetComponent<HeroCombatComponent>(entity).isAttacking)
                 data.currentStamina += data.regenRate * deltaTime;
-            }
 
             data.currentStamina = math.clamp(data.currentStamina, 0f, data.maxStamina);
 

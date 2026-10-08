@@ -11,6 +11,7 @@ namespace Conquest.SettlementPreview
     public sealed class SettlementPreview : MonoBehaviour
     {
         public TextAsset source;
+        public bool showPreviewUI = true;
         [Tooltip("Optional. Leave empty to select the only settlement in a projection automatically.")]
         public string settlementId = "";
         [Tooltip("Combat scale: 3 local units per street cell become 10.5 Unity units. Hero stays at scale 1.")]
@@ -227,6 +228,7 @@ namespace Conquest.SettlementPreview
         }
         private void OnGUI()
         {
+            if (!showPreviewUI) return;
             var walk = GetComponent<SettlementWalkMode>();
             if (walk && walk.Requested)
             {

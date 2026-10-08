@@ -1,0 +1,4 @@
+48 independent sectors; all 48 height arrays match source within Terrain quantization; 1360 unique resources; 67497 campaign crowns
+Scene does not reference detailed TerrainData or sector prefabs
+48 low-resolution terrains with no collider or trees; at most 9 nearby sectors
+Return camera pose preserved; accepted scales unchanged

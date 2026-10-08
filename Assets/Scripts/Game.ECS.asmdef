@@ -1,17 +1,18 @@
 {
-	"name": "Game.ECS",
-	"references": [
-		"Unity.Entities",
-		"Unity.Entities.Graphics",
-		"Unity.Mathematics",
-		"Unity.Transforms",
-		"Unity.RenderPipelines.Universal",
-		"Unity.Rendering.Hybrid",
-		"Unity.Burst",
-		"Unity.Physics",
-		"Unity.TextMeshPro",
-		"Unity.InputSystem",
-		"Unity.Collections",
-		"Unity.Entities.Hybrid"
-        ]
+  "name": "Game.ECS",
+  "references": [
+    "Unity.Entities",
+    "Unity.Entities.Graphics",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.RenderPipelines.Universal",
+    "Unity.Rendering.Hybrid",
+    "Unity.Burst",
+    "Unity.Physics",
+    "Unity.TextMeshPro",
+    "Unity.InputSystem",
+    "Unity.Collections",
+    "Unity.Entities.Hybrid",
+    "Conquest.WorldMap"
+  ]
 }

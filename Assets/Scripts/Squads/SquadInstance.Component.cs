@@ -12,6 +12,12 @@ public struct SquadInstanceComponent : IComponentData
     public int initialUnitCount;
 }
 
+/// <summary>Damage profile owned by this runtime squad and released on retirement.</summary>
+public struct SquadDamageProfileReference : IComponentData
+{
+    public Entity Value;
+}
+
 /// <summary>
 /// Authoring behaviour used to assign a squad instance ID on prefabs.
 /// </summary>

@@ -14,6 +14,7 @@ namespace ConquestTactics.Visual
     [DisallowMultipleComponent]
     public sealed class RemoteHeroAnimationDriver : MonoBehaviour
     {
+        [SerializeField] private LocomotionAnimationSettings _locomotion = new LocomotionAnimationSettings();
         private World _world;
         private Entity _heroEntity = Entity.Null;
         private NavMeshAgent _navAgent;
@@ -79,31 +80,31 @@ namespace ConquestTactics.Visual
 
         private void DriveLocomotion()
         {
-            float speed = _navAgent.velocity.magnitude;
-            float maxSpeed = _navAgent.speed > 0f ? _navAgent.speed : 1f;
+            Vector3 velocity = _navAgent.velocity;
+            velocity.y = 0f;
+            float speed = velocity.magnitude;
             var entityManager = _world.EntityManager;
-            bool sprinting = entityManager.HasComponent<HeroAIDecision>(_heroEntity)
-                && entityManager.GetComponentData<HeroAIDecision>(_heroEntity).shouldSprint
-                && speed > 0.1f;
-            bool isMoving = speed > 0.1f;
-
-            int gait = 0;
-            if (isMoving)
-            {
-                if (sprinting) gait = 3;
-                else if (speed / maxSpeed > 0.6f) gait = 2;
-                else gait = 1;
-            }
+            float baseSpeed = entityManager.HasComponent<HeroStatsComponent>(_heroEntity)
+                ? entityManager.GetComponentData<HeroStatsComponent>(_heroEntity).baseSpeed
+                : _navAgent.speed;
+            bool sprinting = _navAgent.speed > baseSpeed * _locomotion.sprintSpeedRatio;
+            var gait = _locomotion.GetGait(speed, baseSpeed, sprinting);
+            bool isMoving = gait != LocomotionGait.Idle;
+            Vector3 direction = isMoving ? transform.InverseTransformDirection(velocity.normalized) : Vector3.forward;
 
             bool justStartedMoving = isMoving && !_wasMoving;
-            _animator.SetFloat(AnimationHashes.MoveSpeed, isMoving ? speed : 0f);
-            _animator.SetInteger(AnimationHashes.CurrentGait, gait);
+            _animator.SetFloat(AnimationHashes.MoveSpeed,
+                _locomotion.GetBlendSpeed(speed, baseSpeed, _navAgent.speed, sprinting));
+            _animator.SetInteger(AnimationHashes.CurrentGait, (int)gait);
             _animator.SetBool(AnimationHashes.IsGrounded, true);
             _animator.SetBool(AnimationHashes.IsStopped, !isMoving);
-            _animator.SetBool(AnimationHashes.MovementInputHeld, isMoving);
-            _animator.SetBool(AnimationHashes.MovementInputPressed, isMoving);
-            _animator.SetBool(AnimationHashes.IsWalking, gait == 1);
-            _animator.SetFloat(AnimationHashes.ForwardStrafe, isMoving ? 1f : 0f);
+            _animator.SetBool(AnimationHashes.MovementInputHeld, isMoving && !justStartedMoving);
+            _animator.SetBool(AnimationHashes.MovementInputPressed, justStartedMoving);
+            _animator.SetBool(AnimationHashes.IsWalking, gait == LocomotionGait.Walk);
+            _animator.SetFloat(AnimationHashes.IsStrafing, isMoving ? 1f : 0f);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionX, direction.x);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, direction.z);
+            _animator.SetFloat(AnimationHashes.ForwardStrafe, direction.z >= 0f ? 1f : 0f);
             _animator.SetBool(AnimationHashes.MovementInputTapped, justStartedMoving);
             _wasMoving = isMoving;
 
@@ -131,6 +132,9 @@ namespace ConquestTactics.Visual
             _animator.SetBool(AnimationHashes.MovementInputTapped, false);
             _animator.SetBool(AnimationHashes.IsWalking, false);
             _animator.SetFloat(AnimationHashes.ForwardStrafe, 0f);
+            _animator.SetFloat(AnimationHashes.IsStrafing, 0f);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
+            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f);
             _wasMoving = false;
         }
 

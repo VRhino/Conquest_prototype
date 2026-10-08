@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -14,47 +13,6 @@ public partial class HeroInputSystem : SystemBase
 {
     
     private bool uiInteractionState;
-    [WithAll(typeof(IsLocalPlayer))]
-    partial struct HeroInputJob : IJobEntity
-    {
-        public float2 moveInput;
-        public bool isSprinting;
-        public bool useSkill1;
-        public bool useSkill2;
-        public bool useUltimate;
-        public bool isAttacking;
-        public bool interactPressed;
-
-        [NativeDisableParallelForRestriction]
-        public ComponentLookup<PlayerInteractionComponent> interactionLookup;
-
-        public EntityCommandBuffer.ParallelWriter ecb;
-
-        public void Execute(Entity entity, [EntityIndexInQuery] int sortKey, ref HeroInputComponent input)
-        {
-            input.MoveInput = moveInput;
-            input.IsSprintPressed = isSprinting;
-            input.UseSkill1 = useSkill1;
-            input.UseSkill2 = useSkill2;
-            input.UseUltimate = useUltimate;
-            input.IsAttackPressed = isAttacking;
-
-            if (interactionLookup.HasComponent(entity))
-            {
-                var inter = interactionLookup[entity];
-                inter.interactPressed = interactPressed;
-                interactionLookup[entity] = inter;
-            }
-            else
-            {
-                ecb.AddComponent(sortKey, entity, new PlayerInteractionComponent
-                {
-                    interactPressed = interactPressed
-                });
-            }
-        }
-    }
-
     protected override void OnUpdate()
     {
         var keyboard = Keyboard.current;
@@ -68,8 +26,6 @@ public partial class HeroInputSystem : SystemBase
         bool attack = false;
         bool interact = false;
 
-        // Solo loguea si hay input relevante
-        bool hasInput = false;
         if (keyboard != null && DialogueUIState.IsDialogueOpen == false)
         {
             if (keyboard.aKey.isPressed) move.x -= 1f;
@@ -88,32 +44,29 @@ public partial class HeroInputSystem : SystemBase
             attack = mouse.leftButton.isPressed;
         }
 
-        hasInput = (move.x != 0 || move.y != 0 || sprint || skill1 || skill2 || ultimate || attack || interact);
-
         // --- Abrir/cerrar inventario y hero detail solo en la escena del feudo ---
 
         manageUIDisplays();
-        var ecb = new EntityCommandBuffer(Allocator.TempJob);
-
-        var job = new HeroInputJob
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
+        foreach (var (input, entity) in SystemAPI.Query<RefRW<HeroInputComponent>>()
+                     .WithAll<IsLocalPlayer>().WithEntityAccess())
         {
-            moveInput = move,
-            isSprinting = sprint,
-            useSkill1 = skill1,
-            useSkill2 = skill2,
-            useUltimate = ultimate,
-            isAttacking = attack,
-            interactPressed = interact,
-            interactionLookup = GetComponentLookup<PlayerInteractionComponent>(),
-            ecb = ecb.AsParallelWriter()
-        };
+            input.ValueRW.MoveInput = move;
+            input.ValueRW.IsSprintPressed = sprint;
+            input.ValueRW.UseSkill1 = skill1;
+            input.ValueRW.UseSkill2 = skill2;
+            input.ValueRW.UseUltimate = ultimate;
+            input.ValueRW.IsAttackPressed = attack;
 
-        var handle = job.ScheduleParallel(Dependency);
-        Dependency = handle;
-
-        handle.Complete(); // Solo si necesitas efectos inmediatos, como el ecb.Playback
+            if (SystemAPI.HasComponent<PlayerInteractionComponent>(entity))
+            {
+                var interaction = SystemAPI.GetComponentRW<PlayerInteractionComponent>(entity);
+                interaction.ValueRW.interactPressed = interact;
+            }
+            else
+                ecb.AddComponent(entity, new PlayerInteractionComponent { interactPressed = interact });
+        }
         ecb.Playback(EntityManager);
-        ecb.Dispose();
     }
 
     private void manageUIDisplays()
@@ -145,7 +98,7 @@ public partial class HeroInputSystem : SystemBase
 
         if (keyboardInput.escapeKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleEscapeKeyPress();
 
-        if (keyboardInput.altKey.isPressed)
+        if (keyboardInput.altKey.wasPressedThisFrame)
         {
             uiInteractionState = !uiInteractionState;
             FullscreenPanelManager.Instance.SetUIInteractionState(uiInteractionState);

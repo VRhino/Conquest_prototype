@@ -9,6 +9,7 @@ namespace ConquestTactics.Animation
     /// Adaptador que conecta el sistema ECS de input con el SamplePlayerAnimationController de Synty.
     /// Simula la interfaz del InputReader original pero obtiene los datos del sistema ECS.
     /// </summary>
+    [DefaultExecutionOrder(-80)]
     public class EcsAnimationInputAdapter : MonoBehaviour
     {
         #region Public Properties (Simulan InputReader)
@@ -21,7 +22,14 @@ namespace ConquestTactics.Animation
         /// <summary>
         /// Duración del input de movimiento (para detectar tapped/pressed/held)
         /// </summary>
-        public float _movementInputDuration { get; set; }
+        public float _movementInputDuration { get; private set; }
+
+        public float HorizontalSpeed { get; private set; }
+        public Vector3 HorizontalVelocity { get; private set; }
+        public float BaseSpeed { get; private set; }
+        public float SprintSpeed { get; private set; }
+        public bool IsSprinting { get; private set; }
+        public bool MovementStartedThisFrame { get; private set; }
         
         /// <summary>
         /// True si se detecta input de movimiento
@@ -84,13 +92,11 @@ namespace ConquestTactics.Animation
         private bool _previousSprintPressed;
         private bool _previousWalkTogglePressed;
         private float _inputStartTime;
+        private bool _wasMoving;
         
         // Cache para evitar allocaciones
         private EntityQuery _heroQuery;
 
-        // Sprint state for DriveFromVelocity (remote AI heroes)
-        private bool _prevSprinting;
-        
         #endregion
         
         #region Unity Lifecycle
@@ -197,14 +203,25 @@ namespace ConquestTactics.Animation
                 bool requestedMovement = math.lengthsq(heroInput.MoveInput)
                     > (_inputThreshold * _inputThreshold);
 
+                BaseSpeed = 0f;
+                SprintSpeed = 0f;
+                IsSprinting = false;
+                if (_entityManager.HasComponent<HeroStatsComponent>(_heroEntity))
+                {
+                    var stats = _entityManager.GetComponentData<HeroStatsComponent>(_heroEntity);
+                    BaseSpeed = stats.baseSpeed;
+                    SprintSpeed = stats.baseSpeed * stats.sprintMultiplier;
+                }
+
                 // Once the physical motor is available, animation follows confirmed
                 // horizontal displacement rather than raw input. This prevents running
                 // in place while CharacterController is blocked by geometry.
                 if (_entityManager.HasComponent<HeroMotorStateComponent>(_heroEntity))
                 {
                     var motor = _entityManager.GetComponentData<HeroMotorStateComponent>(_heroEntity);
-                    float horizontalSpeedSq = math.lengthsq(new float2(motor.velocity.x, motor.velocity.z));
-                    _movementInputDetected = horizontalSpeedSq > (_inputThreshold * _inputThreshold);
+                    HorizontalVelocity = new Vector3(motor.velocity.x, 0f, motor.velocity.z);
+                    HorizontalSpeed = HorizontalVelocity.magnitude;
+                    _movementInputDetected = HorizontalSpeed > _inputThreshold;
                     _moveComposite = _movementInputDetected ? requestedMove : Vector2.zero;
                     _isGrounded = motor.isGrounded;
                 }
@@ -214,7 +231,13 @@ namespace ConquestTactics.Animation
                     _moveComposite = requestedMove;
                     _movementInputDetected = requestedMovement;
                     _isGrounded = true;
+                    HorizontalSpeed = 0f;
+                    HorizontalVelocity = Vector3.zero;
                 }
+
+                if (_movementInputDetected && _entityManager.HasComponent<HeroMoveIntent>(_heroEntity))
+                    IsSprinting = BaseSpeed > 0f
+                        && _entityManager.GetComponentData<HeroMoveIntent>(_heroEntity).Speed > BaseSpeed;
                 
                 // TODO: Agregar mouse delta si se necesita en el futuro
                 // _mouseDelta = new Vector2(heroInput.MouseDelta.x, heroInput.MouseDelta.y);
@@ -232,6 +255,9 @@ namespace ConquestTactics.Animation
                 _moveComposite = Vector2.zero;
                 _movementInputDetected = false;
                 _isGrounded = true;
+                HorizontalSpeed = 0f;
+                HorizontalVelocity = Vector3.zero;
+                IsSprinting = false;
             }
         }
         
@@ -245,7 +271,7 @@ namespace ConquestTactics.Animation
                 var heroInput = _entityManager.GetComponentData<HeroInputComponent>(_heroEntity);
                 
                 // Obtener estados actuales de botones
-                bool currentSprintPressed = heroInput.IsSprintPressed;
+                bool currentSprintPressed = IsSprinting;
                 bool currentWalkTogglePressed = heroInput.IsWalkTogglePressed;
                 
                 // Procesar eventos de sprint
@@ -291,9 +317,10 @@ namespace ConquestTactics.Animation
         /// </summary>
         private void UpdateMovementTiming()
         {
+            MovementStartedThisFrame = _movementInputDetected && !_wasMoving;
             if (_movementInputDetected)
             {
-                if (_movementInputDuration == 0)
+                if (MovementStartedThisFrame)
                 {
                     _inputStartTime = Time.time;
                 }
@@ -304,6 +331,7 @@ namespace ConquestTactics.Animation
                 _movementInputDuration = 0;
                 _inputStartTime = 0;
             }
+            _wasMoving = _movementInputDetected;
         }
         
         #endregion
@@ -332,43 +360,6 @@ namespace ConquestTactics.Animation
             FindHeroEntity();
         }
 
-        /// <summary>
-        /// Drives animation input from a NavMeshAgent velocity (used by remote AI heroes).
-        /// Called each frame by <see cref="ConquestTactics.Visual.EntityVisualSync"/> when the
-        /// NavMeshAgent is active, so SamplePlayerAnimationController receives valid values
-        /// without touching local player input.
-        /// </summary>
-        /// <param name="worldVelocity">NavMeshAgent.velocity in world space</param>
-        /// <param name="maxSpeed">NavMeshAgent.speed (used to normalize 0-1)</param>
-        public void DriveFromVelocity(Vector3 worldVelocity, float maxSpeed, bool isSprinting = false)
-        {
-            float speed  = worldVelocity.magnitude;
-            bool  moving = speed > _inputThreshold;
-            float normalized = maxSpeed > 0.001f ? Mathf.Clamp01(speed / maxSpeed) : 0f;
-
-            _moveComposite         = moving ? new Vector2(0f, normalized) : Vector2.zero;
-            _movementInputDetected = moving;
-            _isGrounded            = true;
-
-            if (moving)
-            {
-                if (_movementInputDuration == 0f) _inputStartTime = Time.time;
-                _movementInputDuration = Time.time - _inputStartTime;
-            }
-            else
-            {
-                _movementInputDuration = 0f;
-                _inputStartTime        = 0f;
-            }
-
-            // Sprint event dispatch for remote AI heroes (local hero fires via ProcessInputEvents)
-            if (isSprinting && !_prevSprinting)
-                onSprintActivated?.Invoke();
-            else if (!isSprinting && _prevSprinting)
-                onSprintDeactivated?.Invoke();
-            _prevSprinting = isSprinting;
-        }
-        
         /// <summary>
         /// Simula el evento de walk toggle (para testing o uso manual)
         /// </summary>

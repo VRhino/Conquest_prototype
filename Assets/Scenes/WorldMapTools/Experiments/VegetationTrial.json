@@ -1,0 +1,16 @@
+{
+    "package": "1.1.0",
+    "sectors": 48,
+    "trees": 192974,
+    "candidates": 1346668,
+    "seed": 42,
+    "minimumSpacing": 17.0,
+    "maximumSpacing": 75.0,
+    "densityBands": [
+        7212,
+        11678,
+        21209,
+        152875
+    ],
+    "generationSeconds": 7.892410399999999
+}

@@ -1,0 +1,10 @@
+Local campaign validation
+Fast Play Mode: 600 units / 50 simulated seconds: entry denied; 1200 units / 100 simulated seconds: entry allowed.
+Packed Play Mode: BundledAssetProvider confirmed. 9 detailed sectors loaded.
+Zone switch: 18 loads / 9 releases, zero pending, no streaming error.
+Packed local journey: travelled=1200; remaining=0; entryAllowed=true.
+Entry: SettlementPreview, one CampaignSceneBridge.
+Return: WorldMapCampaign, travelled=1200; remaining=0; 9 sectors; one bridge.
+Console errors after stop: 0.
+Editor settings restored: Fast Play Mode, runInBackground=false.
+Not a player build or FPS benchmark. No real server session or movement orders.

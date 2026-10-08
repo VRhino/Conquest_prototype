@@ -1,57 +1,23 @@
-# Relación entre Squad Data, ECS Prefab y Visual Prefab
+# Relación entre SquadData, unidades ECS y visuales
 
-> Actualizado el 2026-09-15. La autoridad de movimiento de unidades es `UnitNavMeshSystem`/`NavMeshAgent`; `EntityVisualSync` vincula la representación y no instala motores de héroe en unidades.
+> Actualizado el 2026-09-26. Describe el camino de despliegue usado por `SquadSpawningSystem`.
 
-Este documento detalla cómo se conectan los datos de configuración de los escuadrones con las entidades de ECS y sus representaciones visuales en Unity.
+## Datos y baking
 
-## 1. SquadData (ScriptableObject)
-El `SquadData` es el punto de entrada y la "fuente de verdad" para un tipo de escuadrón.
+`SquadData` es el ScriptableObject con estadísticas, formaciones y datos de presentación. `SquadDefinitionBaker` crea una entidad de datos con `SquadDataComponent`, `SquadDefinitionComponent` y la biblioteca de formaciones. El campo `SquadData.prefab` puede seguir sirviendo a la interfaz, pero no se convierte en un `unitPrefab` dentro de `SquadDefinitionComponent`.
 
-*   **`prefab` (GameObject):** Este es el **ECS Prefab**. Es un GameObject vacío que contiene el componente `UnitEntityAuthoring`. No tiene malla ni renderers; su única función es definir qué componentes de lógica ECS tendrá cada unidad del escuadrón.
-*   **`visualPrefabName` (string):** Es el nombre identificador del **Visual Prefab**. Este nombre se usa en tiempo de ejecución para buscar el GameObject real (con mallas, animaciones, etc.) en el `VisualPrefabRegistry`.
+`UnitEntityAuthoring` y su baker todavía existen para prefabs ECS antiguos o independientes. El despliegue de squads no instancia ese prefab.
 
----
+## Despliegue
 
-## 2. Proceso de Baking (Conversión a ECS)
-Existen dos niveles de baking:
+1. `SquadSpawningSystem` elige snapshot, formación y slots; crea el squad y cada unidad ECS mediante `CreateEntity`. `SquadUnitSpawnBuilder` compone los componentes iniciales de cada unidad.
+2. Cada unidad recibe `UnitOwnerComponent` con referencias al squad y al héroe. El squad mantiene su `DynamicBuffer<SquadUnitElement>` con las mismas unidades.
+3. El sistema compone estadísticas, combate, slot y `UnitVisualReference` desde los datos del squad. `GetUnitVisualPrefabName` elige la clave visual a partir de `SquadType`.
+4. `SquadVisualManagementSystem` busca esa clave en `VisualPrefabRegistry`, instancia el GameObject y vincula `EntityVisualSync`, hitbox y `NavMeshAgent`.
+5. `UnitNavMeshSystem` controla el destino del agente; `NavMeshPositionSyncSystem` publica la posición confirmada en ECS. Al morir la unidad, `UnitDeathSystem` elimina el visual y la pertenencia al buffer.
 
-### A. Squad Data Entity
-`SquadDataAuthoring` toma el ScriptableObject y crea una entidad de datos persistente:
-*   El `GameObject prefab` se convierte en una `Entity` de tipo prefab-only y se guarda en `SquadDataComponent.unitPrefab`.
-*   Toda la estadística (vida, velocidad, etc.) se guarda en componentes y buffers de esta entidad.
+## Referencias principales
 
-### B. Unit ECS Prefab
-El GameObject asignado al campo `prefab` del `SquadData` tiene un `UnitEntityAuthoring` que:
-*   Define componentes de lógica como `UnitSpacingComponent`, `UnitOrientationComponent`, etc.
-*   **Importante:** También guarda el `visualPrefabName` en un componente `UnitVisualReference`.
+`SquadData` → entidad de datos del squad → `SquadSpawningSystem` → unidad ECS (`UnitOwnerComponent`, `UnitVisualReference`) → `VisualPrefabRegistry` → GameObject visual.
 
----
-
-## 3. Flujo en Tiempo de Ejecución
-
-### Fase 1: Spawning (`SquadSpawningSystem`)
-Cuando un héroe aparece, este sistema:
-1.  Crea la entidad lógica del **Squad**.
-2.  Instancia N entidades de **Unit** usando el `unitPrefab` (el ECS Prefab).
-3.  **Nota Detectada:** Actualmente, el `SquadSpawningSystem` tiene un mapeo interno (`GetUnitVisualPrefabName`) que asigna el nombre del visual basado en el `SquadType`, lo cual podría estar ignorando el valor configurado directamente en el ScriptableObject en algunos casos.
-
-### Fase 2: Visualización (`SquadVisualManagementSystem`)
-Este sistema reacciona a la creación de unidades:
-1.  Busca entidades que tengan `UnitVisualReference` pero no tengan una instancia visual todavía.
-2.  Usa el `visualPrefabName` para obtener el prefab real desde `VisualPrefabRegistry.Instance`.
-3.  Instancia el GameObject visual en la escena de Unity.
-4.  Añade el componente `EntityVisualSync` al GameObject para vincularlo con la entidad. Cuando el agente publica pose mediante `NavMeshPositionSyncSystem`, el bridge evita duplicar esa escritura.
-5.  Añade `UnitVisualInstance` a la entidad ECS para guardar el ID de la instancia y evitar duplicados.
-
----
-
-## Resumen de la Cadena de Referencias
-`SquadData (SO)` ➔ `SquadDataComponent.unitPrefab (Entity)` ➔ `Spawned Unit (Entity)` ➔ `UnitVisualReference (Component)` ➔ `Visual GameObject (UnityEngine.Object)`
-
-## Componentes Clave
-| Componente | Función |
-| :--- | :--- |
-| `SquadDataComponent` | Almacena el `unitPrefab` (el ECS-only prefab). |
-| `UnitVisualReference` | Contiene el nombre del prefab visual a buscar en el registro. |
-| `UnitVisualInstance` | Guarda la referencia a la instancia del GameObject creado. |
-| `EntityVisualSync` | Vincula entidad y GameObject y sincroniza pose según el contrato del rol. Una unidad no recibe `LocalHeroCharacterMotor` ni `RemoteHeroAnimationDriver`. |
+La clave visual del camino actual procede de `SquadType`. Si se quiere usar una clave personalizada del ScriptableObject, debe añadirse explícitamente a este contrato de spawn y probarse con prefabs reales.

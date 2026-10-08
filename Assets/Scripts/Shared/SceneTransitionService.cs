@@ -7,6 +7,9 @@ public static class SceneTransitionService
 {
     public static class SceneNames
     {
+        public const string WorldMap = "WorldMapCampaign";
+        public const string SettlementPreview = "SettlementPreview";
+        public const string Settlement = "SettlementScene";
         public const string Login = "LoginScene";
         public const string HeroSelection = "HeroSelectionScene";
         public const string AvatarCreator = "AvatarCreator";
@@ -19,6 +22,9 @@ public static class SceneTransitionService
 
     private static readonly Dictionary<string, GamePhase> SceneToPhaseMap = new()
     {
+        { SceneNames.WorldMap, GamePhase.WorldMap },
+        { SceneNames.SettlementPreview, GamePhase.Feudo },
+        { SceneNames.Settlement, GamePhase.Feudo },
         { SceneNames.Login, GamePhase.Login },
         { SceneNames.HeroSelection, GamePhase.CharacterSelection },
         { SceneNames.CharacterSelection, GamePhase.CharacterSelection },
@@ -66,8 +72,10 @@ public static class SceneTransitionService
 
     public static void UpdateGamePhase(GamePhase newPhase)
     {
-        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
-        var query = em.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world == null || !world.IsCreated) return;
+        var em = world.EntityManager;
+        using var query = em.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
         if (!query.IsEmpty)
         {
             var entity = query.GetSingletonEntity();

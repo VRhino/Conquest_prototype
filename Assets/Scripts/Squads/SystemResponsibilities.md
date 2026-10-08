@@ -48,7 +48,13 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### SquadControlSystem
 - **Responsabilidad**: Captura órdenes de squad del jugador (C, X, V, F1-F4)
-- **Output**: `SquadInputComponent` y `SquadPlayerOrderIntentComponent`, antes del resolvedor. Cambiar solo formación no reemite movimiento.
+- **Output**: `SquadInputComponent` (flags transitorios) y `SquadPlayerOrderIntentComponent` (orden y formación solicitadas), antes del resolvedor. Cambiar solo formación no reemite movimiento.
+- `SquadPlayerCommandResolver` aplica la petición sin leer dispositivos ni mutar ECS directamente; una formación inválida no descarta una orden válida simultánea.
+
+### SquadSpawningSystem
+- Crea la escuadra activa y sus unidades a partir de la definición horneada y del snapshot de campaña.
+- `SquadUnitSpawnBuilder` compone los componentes iniciales de cada unidad después de que el sistema calcule su slot; no selecciona órdenes, snapshots ni posiciones.
+- Al inicializar reservas, construye una tabla temporal de tamaños por ID de definición una sola vez; no recorre todas las definiciones por cada reserva.
 
 ### HeroAIExecutionSystem
 - Controla el `NavMeshAgent` remoto y publica `SquadAIOrderIntentComponent` antes del resolvedor.
@@ -73,7 +79,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ### FormationSystem
 - **Responsabilidad**: Calcula posiciones de formación según tipo y centro del squad
 - **Output**: `UnitTargetPositionComponent` por unidad
-- Consume `desiredFormation` independientemente de movimiento; confirma formación, slots, espaciado y cooldown tras validar capacidad del patrón.
+- Consume `SquadResolvedOrderComponent.formation` independientemente de movimiento; confirma formación, slots, espaciado y cooldown tras validar capacidad del patrón.
 - Usa centro fraccional y rotación normalizada. En cambios explícitos reasigna slotIndex; la actualización continua conserva esos índices tras bajas.
 
 ### UnitFormationStateSystem
@@ -87,7 +93,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Owner exclusivo**: `agent.SetDestination()` y `agent.updateRotation`
 - **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition)
 - Mantener posición preserva el ancla y los slots incluso en combate. Seguimiento aplica leash también en `InCombat`; `Attack` permite perseguir. Sin objetivo elegible se vuelve al slot respetando `Waiting`.
-- Proyecta slots y stop-points al NavMesh. `NavAgentComponent` conserva el destino efectivo; fallos de proyección/path usan fallback estable y reintentan cuando cambia el slot.
+- Lee la orden desde `UnitOwnerComponent.squad`. Proyecta slots y stop-points al NavMesh. `NavAgentComponent` conserva el destino efectivo y usa `navMeshDestinationChangeThreshold` para evitar reemitir destinos sin cambios; fallos de proyección/path usan fallback estable y reintentan cuando cambia el slot.
 - **Rotación combate**: Si dist ≤ 3.5u → `updateRotation=false` + rota `LocalTransform` para mirar al target
 - **Rotación normal**: `updateRotation=true` — NavMesh controla la orientación durante movimiento
 - **`UnitTargetPositionComponent`**: solo lectura — nunca escribe (ownership exclusivo de sistemas de formación)
@@ -171,7 +177,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Regla**: No decide cuándo entrar en combate — solo distribuye targets cuando ya está en `InCombat`
 
 ### CombatReactionSystem
-- **Responsabilidad**: Convierte `SquadCombatStateComponent.isInCombat` en `SquadCombatReactionIntentComponent` para el pipeline de órdenes
+- **Responsabilidad**: Convierte `SquadAIComponent.isInCombat` en `SquadCombatReactionIntentComponent` para el pipeline de órdenes
 - **Output**: `SquadCombatReactionIntentComponent.reactToEnemy`, `.reactTarget`
 - **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateBefore(OrderResolutionSystem)]`
 - **Regla**: Solo traduce estado de combate a intent — no toma decisiones propias
@@ -182,14 +188,13 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Orden**: `[UpdateAfter(CombatReactionSystem)]` `[UpdateBefore(SquadOrderSystem)]`
 - **Prioridad local**: ante nueva orden, insistencia activa o HoldPosition conserva Player; en otro caso la reacción puede sustituirla.
 - **Prioridad remoto**: HoldPosition conserva AI; para otras órdenes una reacción puede sustituirlas temporalmente. Sin reacción vuelve a la intención conservada.
-- Detecta cambios de destino, objetivo y formación además de tipo/fuente para órdenes remotas.
+- Detecta cambios de destino y objetivo además de tipo/fuente para órdenes remotas. La formación viaja en el resultado sin reemitir movimiento.
 - **Regla**: Solo lee intents y escribe el resultado — nunca modifica estado de squad directamente
 
 ### BraceWeaponActivationSystem
-- **Responsabilidad**: Detecta cuando un squad entra en `HoldingPosition` y activa `Brace` mode
-- **Output**: `SquadCombatModeComponent.mode = Brace` / `Normal`
-- **Orden**: `[UpdateAfter(SquadFSMSystem)]` — debe reaccionar a transiciones de estado del frame actual
-- **Regla**: No aplica weapon overrides — solo activa/desactiva el modo
+- **Estado actual**: La activación automática de `Brace` está deshabilitada (`shouldBrace = false`). Si un squad estaba en `Brace`, lo devuelve a `Normal`.
+- **Orden**: `[UpdateAfter(SquadFSMSystem)]`
+- **Regla**: No aplica weapon overrides.
 
 ### BraceWeaponSystem
 - **Responsabilidad**: Aplica overrides de arma por fila (`BraceRowProfile`) cuando el squad está en Brace mode
@@ -239,13 +244,13 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Input**: `HeroMoveIntent`, `HeroLifeComponent` y revisiones de `HeroSpawnComponent`.
 - **Ejecución**: gravedad, suelo, escalones y colisiones mediante `CharacterController.Move()`.
 - **Output confirmado**: `LocalTransform` y `HeroMotorStateComponent` (velocidad real, grounded, laterales y techo).
-- `EcsAnimationInputAdapter` usa la velocidad horizontal y grounded confirmados; el input conserva dirección y eventos de sprint, pero ya no puede activar carrera si el controller está bloqueado.
+- `EcsAnimationInputAdapter` usa velocidad horizontal y grounded confirmados; el sprint visual procede de la intención aceptada. `SamplePlayerAnimationController_ECS` convierte la velocidad física a las coordenadas del Blend Tree mediante `LocomotionAnimationSettings`.
 - **Safe teleport**: deshabilita temporalmente el controller, aplica la pose, reinicia gravedad y consume una sola vez cada revisión.
 - El motor no se crea ni permanece activo para héroes remotos.
 
 ### RemoteHeroAnimationDriver
 - **Responsabilidad**: presentación de locomoción y combate del héroe remoto.
-- **Input confirmado**: velocidad del `NavMeshAgent`, `HeroAIDecision`, `HeroAnimationComponent` y `HeroCombatComponent`.
+- **Input confirmado**: velocidad horizontal y límite aceptado del `NavMeshAgent`, `HeroStatsComponent`, `HeroAnimationComponent` y `HeroCombatComponent`. Una petición IA de sprint por sí sola no cambia la animación.
 - **Output**: parámetros y triggers del `Animator`; no escribe transforms, destinos ni intención ECS.
 - Deshabilita los adaptadores de input/animación local para evitar dos escritores sobre el mismo Animator.
 - Sólo se instala para entidades remotas con `HeroMoveIntent`; los visuales de unidades no reciben este componente.
@@ -255,7 +260,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 ## Shared Utilities
 
 ### VisualSyncUtility (`Assets/Scripts/Shared/VisualSyncUtility.cs`)
-- `SetupVisualSync(GameObject)` — configura `AnimatorCullingMode.CullCompletely` y añade/obtiene `EntityVisualSync`
+- `SetupVisualSync(GameObject)` — configura `AnimatorCullingMode.CullCompletely`, desactiva root motion en los Animators hijos y añade/obtiene `EntityVisualSync`.
 - Usada por: `HeroVisualInstantiationSystem`, `SquadVisualManagementSystem`
 
 ### GameTags (`Assets/Scripts/Shared/GameTags.cs`)

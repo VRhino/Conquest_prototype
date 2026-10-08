@@ -1,7 +1,7 @@
 using Unity.Entities;
 
 /// <summary>
-/// Reads SquadCombatStateComponent (isInCombat) and SquadAIComponent (targetEntity)
+/// Reads squad combat engagement and target from SquadAIComponent
 /// and writes SquadCombatReactionIntentComponent each frame.
 /// Runs after SquadAISystem so combat state is up to date,
 /// and before OrderResolutionSystem so the intent is ready to be resolved.
@@ -19,12 +19,11 @@ public partial class CombatReactionSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        foreach (var (combatState, ai, combatReaction) in SystemAPI
-            .Query<RefRO<SquadCombatStateComponent>,
-                   RefRO<SquadAIComponent>,
+        foreach (var (ai, combatReaction) in SystemAPI
+            .Query<RefRO<SquadAIComponent>,
                    RefRW<SquadCombatReactionIntentComponent>>())
         {
-            combatReaction.ValueRW.reactToEnemy = combatState.ValueRO.isInCombat;
+            combatReaction.ValueRW.reactToEnemy = ai.ValueRO.isInCombat;
             combatReaction.ValueRW.reactTarget  = ai.ValueRO.targetEntity;
         }
     }

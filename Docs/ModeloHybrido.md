@@ -90,7 +90,7 @@ HeroAIPerceptionSystem
       └─ SquadAIOrderIntentComponent
 ```
 
-El `NavMeshAgent` mueve el GameObject. `NavMeshPositionSyncSystem` publica la pose física a `LocalTransform`. `RemoteHeroAnimationDriver` lee velocidad real, sprint decidido y componentes de combate para escribir el `Animator`; deshabilita los consumidores de input local.
+El `NavMeshAgent` mueve el GameObject. `NavMeshPositionSyncSystem` publica la pose física a `LocalTransform`. `RemoteHeroAnimationDriver` lee velocidad horizontal real, límite de velocidad aceptado y componentes de combate para escribir el `Animator`; deshabilita los consumidores de input local. Los tres drivers comparten `LocomotionAnimationSettings` para convertir velocidades físicas al Blend Tree. Root motion está desactivado. Validación: `Docs/Arquitectura/16_Animacion_Locomocion_2026-10-08.md`.
 
 Un destino inválido se proyecta al NavMesh. Los fallos se recuerdan y sólo se reintentan al cambiar suficientemente la orden, evitando `SetDestination` repetido cada frame.
 

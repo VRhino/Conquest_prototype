@@ -1,0 +1,4 @@
+Worldgen regional-15
+Source=C:/Users/VRINO/.codex/worktrees/worldgen-relieve/BronzeAgeFase0/exports-regional/campaign-landforms-v8-seed42/manifest.json
+Terrain=48
+Trees=178008

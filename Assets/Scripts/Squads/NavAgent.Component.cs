@@ -24,4 +24,6 @@ public struct NavAgentComponent : IComponentData
     public bool hasIssuedCommand;
     public bool lastCommandWasFormation;
     public bool commandFailed;
+    public double nextFormationRetryTime;
+    public double nextCommandRetryTime;
 }

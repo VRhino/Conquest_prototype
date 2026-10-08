@@ -1,0 +1,11 @@
+{
+  "name": "Conquest.WorldMap.Editor",
+  "references": [
+    "Conquest.WorldMap",
+    "sc.vegetationspawner.runtime",
+    "Unity.Addressables.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

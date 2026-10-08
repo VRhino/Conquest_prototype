@@ -1,0 +1,8 @@
+12 representative settlements / 5 kingdoms (at least 2 each)
+12/12 existing stone and forest start witnesses
+Minimum centre spacing=1091,18; level 5 non-overlap verified
+No shared resource node across all six levels
+Every counted node has a visible marker
+Speed=12; army scale=1.8; city scale=1.4
+Forest proxy tiles=6; height arrays unchanged
+Geographic feasibility only, not economic viability or global capacity.

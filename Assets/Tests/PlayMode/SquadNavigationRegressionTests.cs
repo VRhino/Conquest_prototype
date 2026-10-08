@@ -8,6 +8,29 @@ using UnityEngine.AI;
 public class SquadNavigationRegressionTests
 {
     [Test]
+    public void RemoteHeroRetainsValidPathUntilDestinationChangesOrPathFails()
+    {
+        var navigation = new NavAgentComponent
+        {
+            hasIssuedCommand = true,
+            lastCommandDestination = new float3(4f, 0f, 5f)
+        };
+        var nearDestination = new float3(4.1f, 0f, 5f);
+        const float threshold = 0.25f;
+
+        Assert.That(HeroAIExecutionSystem.IsCurrentPathValid(navigation, nearDestination,
+            threshold, true, false, NavMeshPathStatus.PathInvalid), Is.True);
+        Assert.That(HeroAIExecutionSystem.IsCurrentPathValid(navigation, nearDestination,
+            threshold, false, true, NavMeshPathStatus.PathComplete), Is.True);
+        Assert.That(HeroAIExecutionSystem.IsCurrentPathValid(navigation, new float3(5f, 0f, 5f),
+            threshold, false, true, NavMeshPathStatus.PathComplete), Is.False);
+        Assert.That(HeroAIExecutionSystem.IsCurrentPathValid(navigation, nearDestination,
+            threshold, false, true, NavMeshPathStatus.PathPartial), Is.False);
+        Assert.That(HeroAIExecutionSystem.IsCurrentPathValid(navigation, nearDestination,
+            threshold, false, false, NavMeshPathStatus.PathInvalid), Is.False);
+    }
+
+    [Test]
     public void RemoteHeroRejectsOffMeshDecisionWithoutLeavingMovementIntent()
     {
         using var world = new World("Remote hero invalid destination");
@@ -48,6 +71,7 @@ public class SquadNavigationRegressionTests
             Assert.That(navigation.commandFailed, Is.True);
             Assert.That(agent.isStopped, Is.True);
             Assert.That(math.lengthsq(intent.Direction), Is.Zero);
+            Assert.That(navigation.nextCommandRetryTime, Is.GreaterThan(0));
         }
         finally
         {
@@ -118,6 +142,20 @@ public class SquadNavigationRegressionTests
             Assert.That(math.distance(navigation.effectiveFormationDestination, float3.zero), Is.LessThan(0.01f));
             Assert.That(math.distance(SquadNavigationSystem.GetEffectiveFormationDestination(
                 em, unit, unreachable), float3.zero), Is.LessThan(0.01f));
+
+            // A previously failed but now reachable slot must be sampled again
+            // after the retry interval, even when the requested slot is unchanged.
+            var reachable = new float3(1, 0, 1);
+            navigation.lastFormationRequest = reachable;
+            navigation.nextFormationRetryTime = 2;
+            em.SetComponentData(unit, navigation);
+            em.SetComponentData(unit, new UnitTargetPositionComponent { position = reachable });
+            world.SetTime(new Unity.Core.TimeData(1, 0.1f));
+            world.GetOrCreateSystemManaged<UnitNavMeshSystem>().Update();
+            Assert.That(em.GetComponentData<NavAgentComponent>(unit).formationDestinationFailed, Is.True);
+            world.SetTime(new Unity.Core.TimeData(3, 0.1f));
+            world.GetOrCreateSystemManaged<UnitNavMeshSystem>().Update();
+            Assert.That(em.GetComponentData<NavAgentComponent>(unit).formationDestinationFailed, Is.False);
         }
         finally
         {
@@ -302,6 +340,7 @@ public class SquadNavigationRegressionTests
             var squad = em.CreateEntity(typeof(SquadStateComponent));
             em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
             em.SetComponentData(squad, new SquadStateComponent { currentOrder = order, currentState = SquadFSMState.InCombat });
+            em.AddComponentData(unit, new UnitOwnerComponent { squad = squad });
             world.GetOrCreateSystemManaged<UnitNavMeshSystem>().Update();
             if (expectSlot)
             {

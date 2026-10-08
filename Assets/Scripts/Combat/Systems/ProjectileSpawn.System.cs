@@ -40,6 +40,7 @@ public partial class ProjectileSpawnSystem : SystemBase
                         r.spawnPosition,
                         r.attackDirection,
                         r.damageProfile,
+                        r.damageProfileSnapshot,
                         r.sourceTeam,
                         r.multiplier,
                         r.poolKey.ToString(),

@@ -8,6 +8,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float slotArrivalThreshold = 0.2f;
     public float holdReformThreshold = 1f;
     public float anchorMovingSpeedThreshold = 0.1f;
+    [Min(0f)] public float animationMovingSpeedThreshold = 0.05f;
+    [Range(0f, 1f)] public float animationRunningSpeedRatio = 0.6f;
     public float bodyblockRadius = 0.8f;
     public float bodyblockRepulsionStrength = 8f;
     public float bodyblockWallStrength = 60f;
@@ -15,7 +17,9 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float bodyblockEngagingRadius = 0.35f;
     public float bodyblockEngagingStrength = 3f;
     public float navMeshDestinationSampleRadius = 2f;
+    public float navMeshDestinationChangeThreshold = 0.25f;
     public float navMeshFailureRetryDistance = 1f;
+    public float navMeshFailureRetryInterval = 1f;
     public float heroAIArrivalDistance = 1.5f;
     public float squadSpawnOffset = 5f;
     public float unitMinDistance   = 1.5f;
@@ -56,6 +60,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 slotArrivalThreshold = authoring.slotArrivalThreshold,
                 holdReformThreshold = authoring.holdReformThreshold,
                 anchorMovingSpeedThreshold = authoring.anchorMovingSpeedThreshold,
+                animationMovingSpeedThreshold = authoring.animationMovingSpeedThreshold,
+                animationRunningSpeedRatio = authoring.animationRunningSpeedRatio,
                 bodyblockRadius = authoring.bodyblockRadius,
                 bodyblockRepulsionStrength = authoring.bodyblockRepulsionStrength,
                 bodyblockWallStrength = authoring.bodyblockWallStrength,
@@ -63,7 +69,9 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 bodyblockEngagingRadius = authoring.bodyblockEngagingRadius,
                 bodyblockEngagingStrength = authoring.bodyblockEngagingStrength,
                 navMeshDestinationSampleRadius = authoring.navMeshDestinationSampleRadius,
+                navMeshDestinationChangeThreshold = authoring.navMeshDestinationChangeThreshold,
                 navMeshFailureRetryDistance = authoring.navMeshFailureRetryDistance,
+                navMeshFailureRetryInterval = authoring.navMeshFailureRetryInterval,
                 heroAIArrivalDistance = authoring.heroAIArrivalDistance
             });
         }

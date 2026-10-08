@@ -79,6 +79,27 @@ namespace ConquestTactics.Visual
             Tick(Time.deltaTime);
         }
 
+        private void LateUpdate()
+        {
+            // The local animation controller may rotate the root during Update,
+            // after this motor has moved it. Publish that final orientation so
+            // ECS does not observe a one-frame-old rotation.
+            if (!_syncRotation || !IsValidBinding())
+                return;
+
+            var entityManager = _world.EntityManager;
+            if (!entityManager.HasComponent<LocalTransform>(_heroEntity))
+                return;
+
+            var pose = entityManager.GetComponentData<LocalTransform>(_heroEntity);
+            quaternion finalRotation = transform.rotation;
+            if (math.all(pose.Rotation.value == finalRotation.value))
+                return;
+
+            pose.Rotation = finalRotation;
+            entityManager.SetComponentData(_heroEntity, pose);
+        }
+
         public void Tick(float deltaTime)
         {
             if (!IsValidBinding() || _controller == null || !_controller.enabled)

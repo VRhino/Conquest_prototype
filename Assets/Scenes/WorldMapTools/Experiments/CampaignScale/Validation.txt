@@ -1,0 +1,9 @@
+Route=1200 units
+Travel=100 game seconds
+Halfway=600 units in 50 seconds
+Entry radius=18 units: denied at 19, allowed at 17
+Acceleration=10x retains 100 game seconds
+Terrain height arrays unchanged=4
+Native reference trees=178665
+Max route slope=1,64187121391296
+Max forest root error=2,95639038085938E-05

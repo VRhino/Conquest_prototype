@@ -21,6 +21,9 @@ public struct ProjectileSpawnRequest : IComponentData
     /// <summary>Entity carrying the DamageProfileComponent to apply on impact.</summary>
     public Entity             damageProfile;
 
+    /// <summary>Fire-time snapshot, independent of squad lifetime.</summary>
+    public DamageProfileComponent damageProfileSnapshot;
+
     public Team               sourceTeam;
 
     /// <summary>1f for normal, criticalMultiplier for critical (rolled at fire time).</summary>

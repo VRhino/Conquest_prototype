@@ -210,12 +210,13 @@ public partial class HeroSpawnSystem : SystemBase
     {
         var spawnPointQuery = GetEntityQuery(ComponentType.ReadOnly<SpawnPointComponent>());
         var spawnPoints = spawnPointQuery.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
+        var ecb = new EntityCommandBuffer(Allocator.Temp);
 
-        foreach (var (life, spawnData, team, transform) in SystemAPI.Query<RefRO<HeroLifeComponent>,
+        foreach (var (life, spawnData, team, transform, entity) in SystemAPI.Query<RefRO<HeroLifeComponent>,
                                    RefRW<HeroSpawnComponent>,
                                    RefRO<TeamComponent>,
                                    RefRW<LocalTransform>>()
-                        .WithAll<IsLocalPlayer>())
+                        .WithAll<IsLocalPlayer>().WithEntityAccess())
         {
             if (!spawnData.ValueRO.hasSpawned && life.ValueRO.isAlive)
             {
@@ -265,6 +266,8 @@ public partial class HeroSpawnSystem : SystemBase
                     transform.ValueRW.Rotation = rotation;
                     Debug.Log($"[HeroSpawnSystem.cs] Set LocalTransform.Position = {correctedPosition}");
                     spawnData.ValueRW.hasSpawned = true;
+                    if (EntityManager.HasComponent<IsDeadComponent>(entity))
+                        ecb.RemoveComponent<IsDeadComponent>(entity);
 
                     if (_enableDebugLogs)
                     {
@@ -274,6 +277,8 @@ public partial class HeroSpawnSystem : SystemBase
             }
         }
 
+        ecb.Playback(EntityManager);
+        ecb.Dispose();
         spawnPoints.Dispose();
     }
 

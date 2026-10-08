@@ -1,0 +1,1 @@
+Canonical coast revision=costas-1; segments=304; triangles=113502; detailed sectors=48; overview sectors=48; changed height samples=44673; crowns=67497; removed on water/steep slopes=0. Resource IDs and planar positions preserved. Source=C:/Users/VRINO/.codex/worktrees/worldgen-relieve/BronzeAgeFase0/exports-regional/campaign-coasts-v1-seed42/manifest.json
