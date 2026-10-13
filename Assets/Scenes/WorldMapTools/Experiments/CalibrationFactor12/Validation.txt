@@ -1,0 +1,15 @@
+City A actual geometry radius: 7,069 u (limit 9,6)
+City B actual geometry radius: 7,069 u (limit 9,6)
+Animated hero scale: 6 (user-approved; not legacy symbol height10)
+Light: 6,0 u/s; 360 u in 60,000 s
+SoloHero: 6,6 u/s; 360 u in 54,545 s
+Mounted: 8,4 u/s; 360 u in 42,857 s
+HorseCaravan: 7,2 u/s; 360 u in 50,000 s
+CamelCaravan: 5,6 u/s; 360 u in 64,286 s
+Medium: 4,8 u/s; 360 u in 75,000 s
+Heavy: 3,6 u/s; 360 u in 100,000 s
+ReturningFoundation: 3,0 u/s; 360 u in 120,000 s
+PASS: camera width180 at 16:9,4:3,21:9; horizontal screen crossing30s; return pose retains zoom.
+PASS: radii72/120/180/240/300/360; equal-level rival clipping; gate denied25/allowed23; substeps match.
+Geography SHA256: 51f1ef7b9836be40ea89563ddfc3575c93c23610f9865b8a25f41341071d2f2d
+Loaded sectors: 9; streaming error: 

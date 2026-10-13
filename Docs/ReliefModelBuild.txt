@@ -1,0 +1,1 @@
+Seed=42; mountains=24; snow=5; coastal rocks=18; triangles=49665; batches=39; fingerprint=3b0f6b022205afbdc3d6030d1e2030f636e4d5978672fa18af8a4ece9874dfaf. Heights, paint, forests, navigation and resource IDs unchanged; all footprints avoid walkable cells and resource nodes.

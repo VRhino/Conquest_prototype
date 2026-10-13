@@ -61,12 +61,12 @@ namespace Conquest.WorldMap.Editor
             return prefabs;
         }
 
-        sealed class Model
+        public sealed class Model
         {
             public readonly List<Part> parts=new List<Part>();
             public Bounds bounds;
         }
-        sealed class Part { public Mesh mesh;public Material material;public int submesh;public Matrix4x4 transform; }
+        public sealed class Part { public Mesh mesh;public Material material;public int submesh;public Matrix4x4 transform; }
         sealed class Bucket {public Part part;public bool distant,always;public readonly List<Matrix4x4> matrices=new List<Matrix4x4>();}
 
         static WorldMapSyntyInstances Bake(WorldMapSyntySettings settings,Terrain[] terrains,BronzeAge.RegionalMapTool.BronzeAgeRegionalMarker[] resources,LineRenderer[] rivers)
@@ -209,7 +209,7 @@ namespace Conquest.WorldMap.Editor
             return false;
         }
 
-        static Model ReadModel(GameObject prefab,Dictionary<Material,Material> materials)
+        public static Model ReadModel(GameObject prefab,Dictionary<Material,Material> materials)
         {
             var model=new Model();bool first=true;
             var filters=prefab.GetComponentsInChildren<MeshFilter>(true);
@@ -233,7 +233,7 @@ namespace Conquest.WorldMap.Editor
             Debug.Log($"SYNTY_MODEL {prefab.name}: height={model.bounds.size.y:F2}m, meshParts={model.parts.Count}");return model;
         }
 
-        static Bounds TransformBounds(Bounds b,Matrix4x4 m)
+        public static Bounds TransformBounds(Bounds b,Matrix4x4 m)
         {
             var bounds=new Bounds(m.MultiplyPoint3x4(b.center),Vector3.zero);
             for(int i=0;i<8;i++)bounds.Encapsulate(m.MultiplyPoint3x4(b.center+Vector3.Scale(b.extents,new Vector3((i&1)==0?-1:1,(i&2)==0?-1:1,(i&4)==0?-1:1))));
