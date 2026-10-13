@@ -1,0 +1,5 @@
+PASS: ground click; current-position replacement; pause/resume; 6u/s; water/outside rejection.
+PASS: city picking preserved; the shared GUI click handler excludes the trial panel.
+PASS: remote height-field click and separate camera/hero streaming (13 sectors).
+PASS: real sector boundary crossed, no fall/jump; calibrated hero root scale6 unchanged.
+PASS: smoothing rejects steep slopes; cancelling a yielding search never applies a stale order.

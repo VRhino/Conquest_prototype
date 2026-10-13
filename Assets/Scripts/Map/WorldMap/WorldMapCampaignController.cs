@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.InputSystem;
@@ -10,8 +11,21 @@ namespace Conquest.WorldMap {
   public WorldMapLocalNavigation navigation;
   public string travelStatus="Elige un destino";
   public float RemainingDistance{get{float d=0;var p=actor.position;for(int i=segment;i<demoRoute.Length;i++){var q=demoRoute[i];d+=Vector2.Distance(new Vector2(p.x,p.z),new Vector2(q.x,q.z));p=q;}return d;}}
-  public bool TravelTo(Vector3 destination){if(authoritativePosition)return false;if(!navigation||navigation.sourceSHA256!=streamer.manifest.sourceSHA256){travelStatus="Falta navegación para este mundo";return false;}if(!navigation.TryRoute(actor.position,destination,out var route,out var error)){travelStatus=error;return false;}demoRoute=route;segment=1;travelled=0;moving=true;follow=true;focus=actor.position;travelStatus="En camino";return true;}
-  public void StopTravel(){moving=false;travelStatus="Viaje detenido";}
+  public bool IsPlanning{get;private set;}
+  public bool HasDestination{get;private set;}
+  [Min(64)] public int searchNodesPerFrame=512;
+  [Min(1)] public float streamingLookAhead=300;
+  Coroutine routeSearch;int orderVersion;
+  public event Action RouteChanged;
+  public bool TravelTo(Vector3 destination){if(authoritativePosition)return false;if(!navigation||navigation.sourceSHA256!=streamer.manifest.sourceSHA256){travelStatus="Falta navegación para este mundo";return false;}if(!navigation.Walkable(destination)){travelStatus="Destino bloqueado: agua o pendiente excesiva";return false;}CancelSearch();moving=false;IsPlanning=true;travelStatus="Calculando ruta…";int version=orderVersion;routeSearch=StartCoroutine(FindRoute(actor.position,destination,version));return true;}
+  IEnumerator FindRoute(Vector3 origin,Vector3 destination,int version){yield return navigation.Search(origin,destination,(route,error)=>{if(version!=orderVersion)return;IsPlanning=false;routeSearch=null;if(route==null){travelStatus=error;return;}demoRoute=route;segment=1;travelled=0;moving=true;HasDestination=true;travelStatus="En camino";RouteChanged?.Invoke();},searchNodesPerFrame);}
+  void CancelSearch(){orderVersion++;if(routeSearch!=null)StopCoroutine(routeSearch);routeSearch=null;IsPlanning=false;}
+  public void StopTravel(){CancelSearch();moving=false;travelStatus="Viaje en pausa";}
+  public void ResumeTravel(){if(authoritativePosition||IsPlanning||demoRoute==null||segment>=demoRoute.Length)return;moving=true;HasDestination=true;travelStatus="En camino";RouteChanged?.Invoke();}
+  public void ClearDestination(){StopTravel();HasDestination=false;RouteChanged?.Invoke();}
+  void OnDisable(){CancelSearch();}
+  public bool TravelAtScreen(Vector2 screen){var ray=mapCamera.ScreenPointToRay(screen);var hits=Physics.RaycastAll(ray,mapCamera.farClipPlane,~0,QueryTriggerInteraction.Ignore);Array.Sort(hits,(a,b)=>a.distance.CompareTo(b.distance));foreach(var hit in hits)if(hit.collider is TerrainCollider)return TravelTo(hit.point);if(navigation&&navigation.Raycast(ray,mapCamera.farClipPlane,out var point))return TravelTo(point);travelStatus="El clic queda fuera del mapa";return false;}
+  public bool TravelAtGuiPoint(Vector2 pointer,params Rect[] excluded){foreach(var panel in excluded)if(panel.Contains(pointer))return false;return TravelAtScreen(new Vector2(pointer.x,Screen.height-pointer.y));}
   public WorldMapScaleContract scaleContract;
   public CampaignTravelKind travelKind=CampaignTravelKind.Light;
   [Min(.01f)] public float movementSpeed=6;
@@ -22,7 +36,7 @@ namespace Conquest.WorldMap {
   public bool moving,follow=true;
   public bool showDiagnostics;
   [NonSerialized] public bool authoritativePosition;
-  public void ApplyAuthoritativePosition(Vector3 position){moving=false;actor.position=new Vector3(position.x,streamer.SurfaceHeight(position)+actorLift,position.z);if(follow)focus=actor.position;}
+  public void ApplyAuthoritativePosition(Vector3 position){ClearDestination();actor.position=new Vector3(position.x,streamer.SurfaceHeight(position)+actorLift,position.z);if(follow)focus=actor.position;}
   public WorldMapSettlementTarget selectedSettlement;
   public bool CanEnterSelected=>!authoritativePosition&&selectedSettlement&&streamer.TryHeight(actor.position,out _)&&selectedSettlement.DistanceFrom(actor.position)<=entryDistance;
   public void RequestSelectedEntry(){if(CanEnterSelected)EnterRequested?.Invoke();}
@@ -39,9 +53,9 @@ namespace Conquest.WorldMap {
   void Update(){
    Advance(Time.deltaTime);
    if(streamer.TryHeight(actor.position,out var h))actor.position=new Vector3(actor.position.x,Mathf.Max(seaHeight,h)+actorLift,actor.position.z);
-   if(follow)focus=actor.position;streamer.focus=moving?actor.position:focus;ApplyCamera();
+   if(follow)focus=actor.position;streamer.focus=focus;streamer.trackedActor=actor;streamer.trackTravel=moving;streamer.travelLookAhead=actor.position;if(moving&&segment<demoRoute.Length){var lead=demoRoute[segment]-actor.position;lead.y=0;streamer.travelLookAhead=actor.position+Vector3.ClampMagnitude(lead,streamingLookAhead);}ApplyCamera();
    fpsElapsed+=Time.unscaledDeltaTime;fpsFrames++;if(fpsElapsed>=2){fps=fpsFrames/fpsElapsed;fpsElapsed=0;fpsFrames=0;}
-   var k=Keyboard.current;if(k!=null){if(k.f3Key.wasPressedThisFrame)showDiagnostics=!showDiagnostics;var v=new Vector3((k.dKey.isPressed?1:0)-(k.aKey.isPressed?1:0),0,(k.wKey.isPressed?1:0)-(k.sKey.isPressed?1:0));if(v.sqrMagnitude>0){follow=false;focus+=Quaternion.Euler(0,yaw,0)*v*viewSize*Time.unscaledDeltaTime;}}
+   var k=Keyboard.current;if(k!=null){if(k.f3Key.wasPressedThisFrame)showDiagnostics=!showDiagnostics;if(k.spaceKey.wasPressedThisFrame){if(moving||IsPlanning)StopTravel();else ResumeTravel();}var v=new Vector3((k.dKey.isPressed?1:0)-(k.aKey.isPressed?1:0),0,(k.wKey.isPressed?1:0)-(k.sKey.isPressed?1:0));if(v.sqrMagnitude>0){follow=false;focus+=Quaternion.Euler(0,yaw,0)*v*viewSize*Time.unscaledDeltaTime;}}
   }
   // Local fixture only. A future authoritative projection supplies route and pose instead.
   public void Advance(float seconds){if(authoritativePosition||!moving)return;float budget=movementSpeed*seconds;
@@ -61,7 +75,7 @@ namespace Conquest.WorldMap {
   public void SetVisibleGroundWidth(float width){visibleWidthTarget=width;ApplyCamera();}
   public void ZoomBy(float multiplier){if(scaleContract){float current=visibleWidthTarget>0?visibleWidthTarget:VisibleGroundWidth();SetVisibleGroundWidth(Mathf.Clamp(current*multiplier,scaleContract.ToUnity(scaleContract.minimumVisibleWidth),scaleContract.ToUnity(scaleContract.maximumVisibleWidth)));}else viewSize=Mathf.Clamp(viewSize*multiplier,minZoom,maxZoom);}
   public CampaignReturnPose Capture()=>new CampaignReturnPose{worldId=streamer.manifest.worldId,actor=actor.position,focus=focus,viewSize=viewSize,pitch=pitch,yaw=yaw,travelled=travelled,segment=segment,follow=follow,route=(Vector3[])demoRoute.Clone(),visibleWidthTarget=visibleWidthTarget};
-  public void Restore(CampaignReturnPose p){actor.position=p.actor;focus=p.focus;viewSize=p.viewSize;pitch=p.pitch;yaw=p.yaw;travelled=p.travelled;segment=p.segment;visibleWidthTarget=p.visibleWidthTarget;if(p.route!=null&&p.route.Length>=2)demoRoute=p.route;moving=false;travelStatus="De vuelta al mapa";follow=p.follow;}
+  public void Restore(CampaignReturnPose p){CancelSearch();actor.position=p.actor;focus=p.focus;viewSize=p.viewSize;pitch=p.pitch;yaw=p.yaw;travelled=p.travelled;segment=p.segment;visibleWidthTarget=p.visibleWidthTarget;if(p.route!=null&&p.route.Length>=2)demoRoute=p.route;moving=false;HasDestination=segment<demoRoute.Length;travelStatus="De vuelta al mapa";follow=p.follow;RouteChanged?.Invoke();}
   void OnGUI(){
    if(!showDiagnostics)return;
    if(text==null)text=new GUIStyle(GUI.skin.label){wordWrap=true,fontSize=13};var panel=new Rect(18,18,320,410);GUI.color=new Color(.06f,.09f,.10f,.96f);GUI.DrawTexture(panel,Texture2D.whiteTexture);GUI.color=Color.white;GUILayout.BeginArea(new Rect(32,28,292,390));

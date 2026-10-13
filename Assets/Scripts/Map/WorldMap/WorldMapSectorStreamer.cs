@@ -13,6 +13,9 @@ namespace Conquest.WorldMap {
   [Min(.05f)] public float reconcileInterval=.2f;
   [Min(1)] public float failureRetrySeconds=30;
   public Vector3 focus;
+  public Transform trackedActor;
+  [NonSerialized] public bool trackTravel;
+  [NonSerialized] public Vector3 travelLookAhead;
   public int LoadedCount=>loaded.Count;public int PendingCount=>pending.HasValue?1:0;
   public int TotalLoads{get;private set;}public int TotalReleases{get;private set;}
   public float LastLoadMilliseconds{get;private set;}
@@ -29,11 +32,13 @@ namespace Conquest.WorldMap {
    return Enumerable.Range(0,manifest.sectors.Length).Where(i=>Mathf.Abs(manifest.sectors[i].column-x)<=preloadRadius&&Mathf.Abs(manifest.sectors[i].row-z)<=preloadRadius)
     .OrderBy(i=>(manifest.sectors[i].origin+new Vector3(manifest.sectorSize/2,0,manifest.sectorSize/2)-p).sqrMagnitude).ToArray();
   }
+  // Camera can explore independently. Keep actor terrain resident and preload the next travel tile.
+  public int[] ActiveDesiredIndices(){var result=new List<int>();if(trackedActor){result.AddRange(DesiredIndices(trackedActor.position));if(trackTravel){int next=Array.FindIndex(manifest.sectors,s=>travelLookAhead.x>=s.origin.x&&travelLookAhead.z>=s.origin.z&&travelLookAhead.x<s.origin.x+manifest.sectorSize&&travelLookAhead.z<s.origin.z+manifest.sectorSize);if(next>=0&&!result.Contains(next))result.Add(next);}}foreach(int i in DesiredIndices(focus))if(!result.Contains(i))result.Add(i);return result.ToArray();}
   IEnumerator Stream(){
    if(!manifest||manifest.sectors==null){Error="Falta manifiesto de campaña";yield break;}
    while(true){
     if(Suspended){yield return null;continue;}
-    var indices=DesiredIndices(focus);desired=new HashSet<int>(indices);
+    var indices=ActiveDesiredIndices();desired=new HashSet<int>(indices);
     foreach(var index in loaded.Keys.Where(i=>!desired.Contains(i)).ToArray())Release(index);
     foreach(int index in indices){
      if(loaded.ContainsKey(index)||(failures.TryGetValue(index,out float retry)&&Time.unscaledTime<retry))continue;
@@ -43,7 +48,7 @@ namespace Conquest.WorldMap {
      LastLoadMilliseconds=(Time.realtimeSinceStartup-started)*1000;
      if(handle.Status!=AsyncOperationStatus.Succeeded){Error=$"Sector {manifest.sectors[index].id}: {handle.OperationException?.Message}";failures[index]=Time.unscaledTime+failureRetrySeconds;Addressables.Release(handle);break;}
      // Camera can move while an asynchronous request is in flight.
-     if(Suspended||!DesiredIndices(focus).Contains(index)){ReleaseHandle(handle);break;}
+     if(Suspended||!ActiveDesiredIndices().Contains(index)){ReleaseHandle(handle);break;}
      var sector=handle.Result.GetComponent<WorldMapCampaignSector>();
      if(!sector||!sector.terrain){Error="Sector sin Terrain";ReleaseHandle(handle);failures[index]=Time.unscaledTime+failureRetrySeconds;break;}
      sector.Bind(viewCamera);loaded.Add(index,handle);TotalLoads++;Error="";

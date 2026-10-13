@@ -16,6 +16,7 @@ namespace Conquest.WorldMap
         bool previousBackground;
         GUIStyle label;
         public WorldMapScaleContract Contract => campaign.scaleContract;
+        public Rect PanelRect => new Rect(12,12,315,Mathf.Min(Screen.height-24,590));
         public float BaselineDistance => Vector2.Distance(new Vector2(baselineRoute[0].x, baselineRoute[0].z), new Vector2(baselineRoute[baselineRoute.Length-1].x, baselineRoute[baselineRoute.Length-1].z));
 
         void OnEnable() { if (!Application.isPlaying) return; previousBackground=Application.runInBackground; Application.runInBackground=true; }
@@ -28,14 +29,14 @@ namespace Conquest.WorldMap
         }
         public void ResetTrial()
         {
-            campaign.StopTravel(); campaign.demoRoute = (Vector3[])baselineRoute.Clone();
+            campaign.ClearDestination(); campaign.demoRoute = (Vector3[])baselineRoute.Clone();
             campaign.segment = 1; campaign.travelled = 0;
             campaign.actor.position = baselineRoute[0] + Vector3.up * campaign.actorLift;
             campaign.follow = true; campaign.focus = campaign.actor.position;
             campaign.streamer.focus = campaign.focus;
             campaign.SetVisibleGroundWidth(Contract.ToUnity(Contract.visibleGroundWidth));
         }
-        public void BeginTrial() { ResetTrial(); campaign.moving = true; campaign.travelStatus = "Prueba en curso"; }
+        public void BeginTrial() { ResetTrial(); campaign.ResumeTravel(); campaign.travelStatus = "Prueba en curso"; }
         public void SetLevel(int level)
         {
             influenceLevel = Mathf.Clamp(level, 0, 5);
@@ -70,7 +71,7 @@ namespace Conquest.WorldMap
         void OnGUI()
         {
             if (label == null) label = new GUIStyle(GUI.skin.label) { wordWrap = true, fontSize = 14 };
-            var panel = new Rect(12, 12, 315, Mathf.Min(Screen.height - 24, 590));
+            var panel = PanelRect;
             GUI.color = new Color(.06f, .08f, .10f, .95f); GUI.DrawTexture(panel, Texture2D.whiteTexture); GUI.color = Color.white;
             GUILayout.BeginArea(new Rect(panel.x+12, panel.y+10, panel.width-24, panel.height-20));
             GUILayout.Label("CALIBRACIÓN · FACTOR 12", label);
@@ -81,7 +82,8 @@ namespace Conquest.WorldMap
             GUILayout.BeginHorizontal(); SpeedButton("Pesada", CampaignTravelKind.Heavy); SpeedButton("Fundación vuelta", CampaignTravelKind.ReturningFoundation); GUILayout.EndHorizontal();
             GUILayout.Label($"Vecinas: {BaselineDistance:F0} u · {BaselineDistance/campaign.movementSpeed:F1} s sin obstáculos", label);
             GUILayout.BeginHorizontal(); if (GUILayout.Button("Viajar A → B")) BeginTrial(); if (GUILayout.Button("Reiniciar")) ResetTrial(); GUILayout.EndHorizontal();
-            if (GUILayout.Button(campaign.moving ? "Pausar viaje" : "Continuar viaje")) campaign.moving = !campaign.moving;
+            if (GUILayout.Button(campaign.moving || campaign.IsPlanning ? "Pausar viaje" : "Continuar viaje")) { if(campaign.moving || campaign.IsPlanning)campaign.StopTravel();else campaign.ResumeTravel(); }
+            GUILayout.Label($"{campaign.travelStatus} · faltan {campaign.RemainingDistance:F0} u / {campaign.RemainingDistance/campaign.movementSpeed:F0} s", label);
             GUILayout.Label($"Recorrido: {campaign.travelled:F1} u · {campaign.travelled/campaign.movementSpeed:F1} s de movimiento", label);
             GUILayout.Label($"Ancho medido: {campaign.VisibleGroundWidth():F1} u · cruce {campaign.VisibleGroundWidth()/campaign.movementSpeed:F1} s", label);
             GUILayout.BeginHorizontal(); if (GUILayout.Button("Cámara habitual")) { campaign.follow=true; campaign.focus=campaign.actor.position; campaign.SetVisibleGroundWidth(Contract.ToUnity(Contract.visibleGroundWidth)); }
@@ -89,11 +91,12 @@ namespace Conquest.WorldMap
             GUILayout.Label($"Influencia: {(influenceLevel == 0 ? "Inicial" : "Nivel "+influenceLevel)} · radio {Contract.InfluenceUnity(influenceLevel):F0} u", label);
             GUILayout.BeginHorizontal(); for (int i=0; i<=5; i++) if (GUILayout.Button(i==0 ? "Inicio" : "N"+i)) SetLevel(i); GUILayout.EndHorizontal();
             GUILayout.Label("Anillos de referencia, con recorte entre dos rivales del mismo nivel. No simulan propiedad del servidor.", label);
-            GUILayout.Label("WASD: cámara · rueda: zoom · botón derecho: girar", label);
+            GUILayout.Label("Clic: destino · espacio: pausa/seguir · WASD: cámara · rueda: zoom · derecho: girar", label);
             GUILayout.Label($"Sectores {campaign.streamer.LoadedCount} · pendientes {campaign.streamer.PendingCount}", label);
             if (!string.IsNullOrEmpty(campaign.streamer.Error)) GUILayout.Label(campaign.streamer.Error, label);
             GUILayout.EndArea();
             var e = Event.current; if (panel.Contains(e.mousePosition)) return;
+            if (e.type==EventType.MouseDown && e.button==0) { campaign.TravelAtGuiPoint(e.mousePosition,panel); e.Use(); }
             if (e.type==EventType.ScrollWheel) { campaign.ZoomBy(Mathf.Exp(e.delta.y*.08f)); e.Use(); }
             if (e.type==EventType.MouseDrag && e.button==1) { campaign.yaw+=e.delta.x*.25f; campaign.pitch=Mathf.Clamp(campaign.pitch+e.delta.y*.25f,35,70); e.Use(); }
         }

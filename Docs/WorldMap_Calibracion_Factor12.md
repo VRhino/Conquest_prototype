@@ -53,6 +53,8 @@ La geografía conserva su SHA256 `51f1ef7b9836be40ea89563ddfc3575c93c23610f9865b
 
 ## Héroe animado de campaña
 
+Desde 2026-10-13, el ensayo admite también destinos por clic, ruta visible y pausa/reanudación, conservando la prueba A–B. Véase [Movimiento por clic](WorldMap_Movimiento_Por_Clic.md).
+
 `Assets/WorldMap/Campaign/Symbols/Hero.prefab` deriva del héroe por defecto del registro visual de FeudoScene: `ModularHeroVisual`, avatar humanoide y `AC_Polygon_Masculine` de Synty. La apariencia de ensayo usa la misma base de partes del avatar y conserva 14 piezas visibles. No altera el prefab de Feudo ni sus controles.
 
 `WorldMapHeroPresentation` observa el desplazamiento horizontal confirmado por el controlador de campaña y alimenta los parámetros del Animator. Usa las reglas de gait y hashes compartidos, ajusta la cadencia al tamaño de la miniatura y desactiva root motion. El héroe de campaña no contiene entrada WASD, CharacterController, NavMeshAgent, EntityVisualSync ni controladores de combate. WASD del worldmap desplaza exclusivamente la cámara.
