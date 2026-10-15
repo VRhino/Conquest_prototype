@@ -136,10 +136,10 @@ Capturas con idéntica cámara: `Assets/Screenshots/vegetation-spawner-trial.png
 `Assets/Screenshots/vegetation-baseline.png`. Se ha revisado el aspecto y la compilación, pero todavía
 no existe un benchmark CPU/GPU. La distribución Poisson resulta más uniforme que las agrupaciones actuales.
 
-Addressables tiene un grupo local `WorldMap-Lab` y la dirección `worldmap/lab` para esta escena de ensayo.
-Esto prepara una prueba de carga de escena; todavía no implementa streaming por sectores ni construye bundles.
-La preview principal no está registrada en este grupo. Antes de una prueba en Player, construir el contenido
-Addressables; después implementar sectores y sus dependencias para el mapa de juego.
+Addressables conserva el grupo local `WorldMap-Lab` y la dirección `worldmap/lab` para validar esta escena en el Editor; el grupo está excluido del build del juego.
+Esto mantiene la prueba de carga disponible para desarrollo sin empaquetarla en Player. La preview principal no está
+registrada en este grupo. Antes de una prueba en Player, construir el contenido Addressables e implementar sectores
+y sus dependencias para el mapa de juego.
 
 `AgentScripts/WorldMapLabSetup.cs` se ejecuta en memoria mediante la CLI de Unity y valida todos los valores
 de altura, referencias de TerrainCollider, datos independientes, referencias de cámara/raíz y recursos.

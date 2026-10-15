@@ -11,8 +11,8 @@ using System.Collections.Generic;
 /// Supports two trajectory modes set at fire time via ProjectileTrajectory:
 ///
 ///   Arc (archers):
-///     position(t) = lerp(startPos, targetPos, t) + up * arcHeight * sin(π * t)
-///     tangent(t)  = (targetPos - startPos) + up * arcHeight * π * cos(π * t)
+///     position(t) = lerp(startPos, targetPos, t) + up * arcHeight * sin(Ï€ * t)
+///     tangent(t)  = (targetPos - startPos) + up * arcHeight * Ï€ * cos(Ï€ * t)
 ///     Arrow points upward at launch, tilts down as it descends.
 ///     Arc height scales with horizontal distance (clamped).
 ///
@@ -55,6 +55,10 @@ public class ProjectileController : MonoBehaviour
     float               _spawnTime;
 
     readonly List<ColliderPair> _ignoredSpawnPairs = new();
+    private Collider[] _projectileColliders;
+    private readonly List<Collider> _fallbackShooterColliders = new();
+
+    private void Awake() => _projectileColliders = GetComponentsInChildren<Collider>(true);
 
     // --- arc-only state ---
     Vector3 _startPos;
@@ -81,7 +85,8 @@ public class ProjectileController : MonoBehaviour
         Team                sourceTeam,
         float               multiplier,
         string              poolKey,
-        ProjectileTrajectory trajectory)
+        ProjectileTrajectory trajectory,
+        IReadOnlyList<Collider> shooterColliders = null)
     {
         _shooter         = shooter;
         _target          = target;
@@ -107,7 +112,14 @@ public class ProjectileController : MonoBehaviour
         else
             InitStraight();
 
-        IgnoreShooterCollisions();
+        if (shooterColliders == null)
+        {
+            _fallbackShooterColliders.Clear();
+            if (VisualSyncUtility.TryGetVisual(World.DefaultGameObjectInjectionWorld, shooter, out var visual))
+                visual.GetComponentsInChildren(true, _fallbackShooterColliders);
+            shooterColliders = _fallbackShooterColliders;
+        }
+        IgnoreShooterCollisions(shooterColliders);
     }
 
     // -----------------------------------------------------------------------
@@ -286,39 +298,24 @@ public class ProjectileController : MonoBehaviour
         return em.GetComponentData<TeamComponent>(other).value == _sourceTeam;
     }
 
-    void IgnoreShooterCollisions()
+    void IgnoreShooterCollisions(IReadOnlyList<Collider> shooterColliders)
     {
         RestoreIgnoredSpawnCollisions();
-
-        var world = World.DefaultGameObjectInjectionWorld;
-        if (world == null || !world.IsCreated || _shooter == Entity.Null)
-            return;
-
-        var projectileColliders = GetComponentsInChildren<Collider>(true);
-        if (projectileColliders == null || projectileColliders.Length == 0)
-            return;
-
-        var allSyncs = FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None);
-        foreach (var sync in allSyncs)
+        if (shooterColliders == null || _projectileColliders == null) return;
+        foreach (var projectileCollider in _projectileColliders)
         {
-            if (sync == null || sync.GetHeroEntity() != _shooter) continue;
-
-            var shooterColliders = sync.GetComponentsInChildren<Collider>(true);
-            foreach (var pCol in projectileColliders)
+            if (projectileCollider == null) continue;
+            for (int i = 0; i < shooterColliders.Count; i++)
             {
-                if (pCol == null) continue;
-                foreach (var sCol in shooterColliders)
+                var shooterCollider = shooterColliders[i];
+                if (shooterCollider == null) continue;
+                Physics.IgnoreCollision(projectileCollider, shooterCollider, true);
+                _ignoredSpawnPairs.Add(new ColliderPair
                 {
-                    if (sCol == null) continue;
-                    Physics.IgnoreCollision(pCol, sCol, true);
-                    _ignoredSpawnPairs.Add(new ColliderPair
-                    {
-                        projectileCollider = pCol,
-                        shooterCollider = sCol
-                    });
-                }
+                    projectileCollider = projectileCollider,
+                    shooterCollider = shooterCollider
+                });
             }
-            break;
         }
     }
 

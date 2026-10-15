@@ -70,7 +70,7 @@ public class SupplyPointUIController : MonoBehaviour
             var heroName = PlayerSessionService.SelectedHero?.heroName;
             if (!string.IsNullOrEmpty(heroName))
             {
-                var battleHero = battleController.CurrentBattleData.findHeroDataByName(heroName);
+                var battleHero = battleController.CurrentBattleData.FindHero(PlayerSessionService.SelectedHero);
                 if (battleHero != null)
                 {
                     _squadInstances = battleHero.squadInstances;
@@ -430,8 +430,7 @@ public class SupplyPointUIController : MonoBehaviour
         if (_interactPrompt != null) _interactPrompt.SetActive(false);
         RefreshSquadList();
         DialogueUIState.IsDialogueOpen = true;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        SceneTransitionService.ApplyCursorState(true);
         if (HeroCameraController.Instance != null)
             HeroCameraController.Instance.SetCameraFollowEnabled(false);
     }
@@ -443,8 +442,7 @@ public class SupplyPointUIController : MonoBehaviour
         _selectedSquadId = -1;
         if (_acceptButton != null) _acceptButton.interactable = false;
         DialogueUIState.IsDialogueOpen = false;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        SceneTransitionService.ApplyCursorState(false);
         if (HeroCameraController.Instance != null)
             HeroCameraController.Instance.SetCameraFollowEnabled(true);
         HidePanel();
@@ -455,8 +453,7 @@ public class SupplyPointUIController : MonoBehaviour
         if (_isPanelOpen)
         {
             DialogueUIState.IsDialogueOpen = false;
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            SceneTransitionService.ApplyCursorState(false);
             if (HeroCameraController.Instance != null)
                 HeroCameraController.Instance.SetCameraFollowEnabled(true);
         }

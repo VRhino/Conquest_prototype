@@ -42,6 +42,10 @@ namespace Data.Items
         /// <param name="quantity">Cantidad/intensidad del efecto</param>
         /// <returns>True si el efecto se ejecutó correctamente</returns>
         public abstract bool Execute(HeroData hero, int quantity = 1);
+        public virtual bool RequiresSelection => false;
+        public virtual bool BeginSelection(HeroData hero, System.Func<System.Collections.Generic.List<string>, bool> selected,
+            System.Action cancelled) => false;
+        public virtual bool ExecuteSelection(HeroData hero, System.Collections.Generic.List<string> selected) => false;
 
         /// <summary>
         /// Obtiene una descripción del efecto que se aplicará.

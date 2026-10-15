@@ -36,9 +36,6 @@ public class ItemService : MonoBehaviour
     private EnhancedItemDatabase _itemDatabase;
     private Dictionary<string, ItemDataSO> _itemCache;
     private Dictionary<ItemType, List<ItemDataSO>> _itemsByType;
-    private Dictionary<ItemCategory, List<ItemDataSO>> _itemsByCategory;
-    private Dictionary<ArmorType, List<ItemDataSO>> _itemsByArmorType;
-    private Dictionary<ItemRarity, List<ItemDataSO>> _itemsByRarity;
     private bool _isInitialized = false;
 
     #endregion
@@ -212,9 +209,6 @@ public class ItemService : MonoBehaviour
 
         _itemCache          = new Dictionary<string, ItemDataSO>();
         _itemsByType        = new Dictionary<ItemType, List<ItemDataSO>>();
-        _itemsByCategory    = new Dictionary<ItemCategory, List<ItemDataSO>>();
-        _itemsByArmorType   = new Dictionary<ArmorType, List<ItemDataSO>>();
-        _itemsByRarity      = new Dictionary<ItemRarity, List<ItemDataSO>>();
 
         foreach (var item in allItems)
         {
@@ -230,14 +224,8 @@ public class ItemService : MonoBehaviour
             if (!_itemsByType.ContainsKey(item.itemType))     _itemsByType[item.itemType]         = new List<ItemDataSO>();
             _itemsByType[item.itemType].Add(item);
 
-            if (!_itemsByCategory.ContainsKey(item.itemCategory)) _itemsByCategory[item.itemCategory] = new List<ItemDataSO>();
-            _itemsByCategory[item.itemCategory].Add(item);
 
-            if (!_itemsByArmorType.ContainsKey(item.armorType))   _itemsByArmorType[item.armorType]   = new List<ItemDataSO>();
-            _itemsByArmorType[item.armorType].Add(item);
 
-            if (!_itemsByRarity.ContainsKey(item.rarity))         _itemsByRarity[item.rarity]         = new List<ItemDataSO>();
-            _itemsByRarity[item.rarity].Add(item);
         }
 
         Debug.Log($"[ItemService] Cache built successfully: {_itemCache.Count} items indexed");
@@ -247,9 +235,6 @@ public class ItemService : MonoBehaviour
     {
         _itemCache?.Clear();
         _itemsByType?.Clear();
-        _itemsByCategory?.Clear();
-        _itemsByArmorType?.Clear();
-        _itemsByRarity?.Clear();
     }
 
     #endregion

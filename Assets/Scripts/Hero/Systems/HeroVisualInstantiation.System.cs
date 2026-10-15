@@ -15,10 +15,19 @@ using System.Collections.Generic;
 [UpdateAfter(typeof(HeroSpawnSystem))]
 public partial class HeroVisualInstantiationSystem : SystemBase
 {
+    private readonly List<(Entity entity, NavMeshAgent agent)> _pendingNavAgents = new();
+    protected override void OnCreate()
+    {
+        RequireForUpdate(GetEntityQuery(ComponentType.ReadOnly<HeroSpawnComponent>(),
+            ComponentType.ReadOnly<LocalTransform>(), ComponentType.ReadOnly<TeamComponent>(),
+            ComponentType.Exclude<HeroVisualInstance>(), ComponentType.Exclude<IsDeadComponent>()));
+    }
+
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
-        var pendingNavAgents = new List<(Entity entity, NavMeshAgent agent)>();
+        var pendingNavAgents = _pendingNavAgents;
+        pendingNavAgents.Clear();
         float navSampleRadius = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
             ? Mathf.Max(0.01f, SystemAPI.GetSingleton<SquadSpawnConfigComponent>()
                 .navMeshDestinationSampleRadius)
@@ -26,7 +35,7 @@ public partial class HeroVisualInstantiationSystem : SystemBase
 
         foreach (var (spawn, transform, team, entity) in
                  SystemAPI.Query<RefRO<HeroSpawnComponent>, RefRO<LocalTransform>, RefRO<TeamComponent>>()
-                          .WithNone<HeroVisualInstance>()
+                          .WithNone<HeroVisualInstance, IsDeadComponent>()
                           .WithEntityAccess())
         {
             if (!spawn.ValueRO.hasSpawned) continue;

@@ -210,7 +210,7 @@ public static class InventoryUtils
     /// <param name="stats1">Primer diccionario de stats</param>
     /// <param name="stats2">Segundo diccionario de stats</param>
     /// <returns>True si son iguales</returns>
-    private static bool AreStatDictionariesEqual(Dictionary<string, float> stats1, Dictionary<string, float> stats2)
+    private static bool AreStatDictionariesEqual(IReadOnlyDictionary<string, float> stats1, IReadOnlyDictionary<string, float> stats2)
     {
         if (stats1 == null && stats2 == null) return true;
         if (stats1 == null || stats2 == null) return false;

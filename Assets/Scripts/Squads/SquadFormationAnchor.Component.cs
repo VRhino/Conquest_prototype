@@ -10,4 +10,5 @@ public struct SquadFormationAnchorComponent : IComponentData
 {
     public float3    position;
     public quaternion rotation;
+    public uint revision;
 }

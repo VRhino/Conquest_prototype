@@ -13,13 +13,17 @@ public class FullscreenPanelManager : MonoBehaviour
 {
     // Exclusivity flag for reward dialog
     public bool IsRewardDialogOpen { get; private set; } = false;
+    private bool rewardPreviousUIMode;
 
     /// <summary>
     /// Call this when the reward dialog is opened to block other panels.
     /// </summary>
     public void NotifyRewardDialogOpened()
     {
+        if (IsRewardDialogOpen) return;
+        rewardPreviousUIMode = isUIModeEnabled;
         IsRewardDialogOpen = true;
+        SetUIInteractionState(true);
     }
 
     /// <summary>
@@ -28,6 +32,7 @@ public class FullscreenPanelManager : MonoBehaviour
     public void NotifyRewardDialogClosed()
     {
         IsRewardDialogOpen = false;
+        SetUIInteractionState(rewardPreviousUIMode);
     }
     #region Singleton Pattern
 
@@ -73,7 +78,6 @@ public class FullscreenPanelManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
             InitializeManager();
         }
         else
@@ -86,6 +90,7 @@ public class FullscreenPanelManager : MonoBehaviour
     {
         if (Instance == this)
         {
+            SetUIInteractionState(false);
             Instance = null;
         }
     }
@@ -109,6 +114,7 @@ public class FullscreenPanelManager : MonoBehaviour
 
         // Registrar paneles automáticamente si están asignados
         RegisterPanelsFromSerializedFields();
+        FindObjectOfType<RewardDialogUIController>(true)?.Initialize();
 
         // Configurar botones del HUD si están asignados
         SetupHUDButtons();
@@ -311,10 +317,10 @@ public class FullscreenPanelManager : MonoBehaviour
     {
         if (_currentActivePanel != null)
         {
-            var panelType = _currentActivePanel.GetType();
-            var method = typeof(FullscreenPanelManager).GetMethod("ClosePanel");
-            var genericMethod = method.MakeGenericMethod(panelType);
-            genericMethod.Invoke(this, null);
+            if (IsRewardDialogOpen) return;
+            _currentActivePanel.ClosePanel();
+            _currentActivePanel = null;
+            SetUIInteractionState(false);
         }
     }
 
@@ -334,12 +340,11 @@ public class FullscreenPanelManager : MonoBehaviour
     /// </summary>
     public void SetUIInteractionState(bool enableUIMode)
     {
+        enableUIMode = SceneTransitionService.ApplyCursorState(enableUIMode);
         isUIModeEnabled = enableUIMode;
         if (enableUIMode)
         {
             // Activar modo UI: cursor visible y cámara deshabilitada
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
             DialogueUIState.IsDialogueOpen = true;
             // Deshabilitar la cámara del héroe
             if (HeroCameraController.Instance != null)
@@ -350,8 +355,6 @@ public class FullscreenPanelManager : MonoBehaviour
         else
         {
             // Desactivar modo UI: cursor bloqueado y cámara habilitada
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
             DialogueUIState.IsDialogueOpen = false;
             // Habilitar la cámara del héroe
             if (HeroCameraController.Instance != null)

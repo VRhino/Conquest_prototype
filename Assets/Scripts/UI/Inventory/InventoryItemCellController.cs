@@ -6,7 +6,7 @@ using Data.Items;
 public class InventoryItemCellController : BaseItemCellController
 {
     // Drag & drop y cellIndex son específicos de inventario
-    private Component _dragHandler;
+    private InventoryDragHandler _dragHandler;
     [SerializeField] private int _cellIndex = -1;
     
     // Implementación de la propiedad abstracta de la base
@@ -20,26 +20,22 @@ public class InventoryItemCellController : BaseItemCellController
 
     private void InitializeDragHandler()
     {
-        var dragHandlerType = System.Type.GetType("InventoryDragHandler");
-        if (dragHandlerType != null)
-        {
-            _dragHandler = GetComponent(dragHandlerType);
+            _dragHandler = GetComponent<InventoryDragHandler>();
             if (_dragHandler == null)
-                _dragHandler = gameObject.AddComponent(dragHandlerType);
-        }
+                _dragHandler = gameObject.AddComponent<InventoryDragHandler>();
     }
 
     public override void SetItem(InventoryItem item, ItemDataSO itemData)
     {
         base.SetItem(item, itemData);
         // Actualizar drag handler
-        CallDragHandlerMethod(item != null && itemData != null ? "SetItemData" : "ClearItemData", item, itemData, _cellIndex);
+        _dragHandler?.SetItemData(item, itemData, _cellIndex);
     }
 
     public override void Clear()
     {
         base.Clear();
-        CallDragHandlerMethod("ClearItemData");
+        _dragHandler?.ClearItemData();
     }
 
     /// <summary>
@@ -48,26 +44,9 @@ public class InventoryItemCellController : BaseItemCellController
     public void SetCellIndex(int index)
     {
         _cellIndex = index;
-        CallDragHandlerMethod("SetItemData", null, null, _cellIndex);
+        _dragHandler?.SetItemData(_currentItem, _currentItemData, _cellIndex);
     }
 
-    /// <summary>
-    /// Llama un método del drag handler usando reflexión para evitar dependencias de compilación.
-    /// </summary>
-    private void CallDragHandlerMethod(string methodName, params object[] parameters)
-    {
-        if (_dragHandler == null) return;
-        try
-        {
-            var method = _dragHandler.GetType().GetMethod(methodName);
-            method?.Invoke(_dragHandler, parameters);
-        }
-        catch (System.Exception ex)
-        {
-            Debug.LogWarning($"[InventoryItemCellController] Error calling drag handler method {methodName}: {ex.Message}");
-        }
-    }
-    
     public void ResetDefaultEvents()
     {
         if (_interaction is InventoryItemCellInteraction interaction)

@@ -5,6 +5,8 @@ using Data.Items;
 using System;
 using System.Numerics;
 
+public enum ItemInteractionContext { Inventory, Equipment, StoreProduct, StoreInventory, Reward, Selection }
+
 /// <summary>
 /// Clase base abstracta para celdas y slots de inventario/equipamiento.
 /// Centraliza la lógica y referencias visuales comunes.
@@ -39,10 +41,15 @@ public abstract class BaseItemCellController : MonoBehaviour
     private bool _isInitialized = false;
 
     public string CellId => cellId;
+    public InventoryItem CurrentItem => _currentItem;
+    public ItemDataSO CurrentItemData => _currentItemData;
+    public ItemInteractionContext Context { get; private set; }
+    public void SetContext(ItemInteractionContext context) => Context = context;
 
 
     public virtual void Initialize()
     {
+        if (_isInitialized) return;
         _interaction = (BaseItemCellInteraction)GetComponent(InteractionType);
         if (_interaction == null)
             _interaction = (BaseItemCellInteraction)gameObject.AddComponent(InteractionType); 
@@ -65,10 +72,13 @@ public abstract class BaseItemCellController : MonoBehaviour
         _currentItemData = itemData;
 
         bool hasItem = item != null && itemData != null;
-        itemPanel.SetActive(hasItem);
+        itemPanel?.SetActive(hasItem);
 
         if (!hasItem)
+        {
+            Clear();
             return;
+        }
 
         SetItemVisuals(itemData);
 
@@ -180,10 +190,11 @@ public abstract class BaseItemCellController : MonoBehaviour
     /// </summary>
     public virtual void Clear()
     {
-        itemPanel.SetActive(false);
+        itemPanel?.SetActive(false);
+        stackText?.gameObject.SetActive(false);
+        SetSelected(false);
         _currentItem = null;
         _currentItemData = null;
         if (_interaction != null) _interaction.ClearItem();
-        else Debug.LogWarning($"[BaseItemCellController] No interaction component found on cell {cellId} to clear item.");
     }
 }

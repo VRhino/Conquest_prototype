@@ -12,12 +12,19 @@ using UnityEngine;
 [UpdateBefore(typeof(DamageCalculationSystem))]
 public partial class MeleeContactResolutionSystem : SystemBase
 {
+    private readonly Dictionary<Entity, MeleeContact> _contactsByAttacker = new();
+    private EntityArchetype _damageEventArchetype;
+
+    protected override void OnCreate()
+        => _damageEventArchetype = EntityManager.CreateArchetype(typeof(PendingDamageEvent));
+
     protected override void OnUpdate()
     {
         int pendingCount = MeleeContactQueue.Pending.Count;
         if (pendingCount == 0) return;
         var em = EntityManager;
-        var contactsByAttacker = new Dictionary<Entity, MeleeContact>();
+        var contactsByAttacker = _contactsByAttacker;
+        contactsByAttacker.Clear();
         for (int i = 0; i < pendingCount && MeleeContactQueue.Pending.TryDequeue(out var contact); i++)
         {
             if (contact.world != World)
@@ -98,8 +105,8 @@ public partial class MeleeContactResolutionSystem : SystemBase
                 continue;
 
             bool critical = Random.value <= criticalChance;
-            var eventEntity = em.CreateEntity();
-            em.AddComponentData(eventEntity, new PendingDamageEvent
+            var eventEntity = em.CreateEntity(_damageEventArchetype);
+            em.SetComponentData(eventEntity, new PendingDamageEvent
             {
                 destroyEntityAfterProcessing = true,
                 target = contact.target,

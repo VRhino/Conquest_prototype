@@ -9,7 +9,7 @@
 
 ## 📦 1. Crear el Scriptable Object del Item
 
-Ubicación: `Assets/Resources/items/`
+Ubicación: `Assets/Resources/Items/`
 
 📌 En EL menu superior → `Tools -> Items -> Item Creator Wizard`
 
@@ -19,7 +19,7 @@ NOTA: al usar el itemCreatorWizard se crea una carpeta para dicho item en la rut
 
 ## 2. completar el itemDataSO
 
-Ubicación: `Assets/Resources/items/{ID}/{ID}.asset`
+Ubicación: `Assets/Resources/Items/{ID}/{ID}.asset`
 
 ### 2.1 Campos del nuevo ítem:
 
@@ -38,7 +38,7 @@ Ubicación: `Assets/Resources/items/{ID}/{ID}.asset`
 
 ## 3. Asegurarse que este en ItemSODatabase
 
-Ubicacion: `Assets/Resources/items/ItemSODatabase.asset`
+Ubicacion: `Assets/Resources/Items/ItemSODatabase.asset`
 
 ---
 

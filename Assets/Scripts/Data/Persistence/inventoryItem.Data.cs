@@ -69,7 +69,7 @@ public class InventoryItem
     /// Propiedad para acceder a los stats como diccionario.
     /// Reconstruye el cache automáticamente si es necesario.
     /// </summary>
-    public Dictionary<string, float> GeneratedStats
+    public IReadOnlyDictionary<string, float> GeneratedStats
     {
         get
         {
@@ -81,7 +81,7 @@ public class InventoryItem
         }
         set
         {
-            _statsCache = value;
+            _statsCache = value == null ? new Dictionary<string, float>() : new Dictionary<string, float>(value);
             SerializeStatsFromCache();
         }
     }
@@ -113,7 +113,8 @@ public class InventoryItem
     /// <param name="value">Valor del stat</param>
     public void SetStat(string statName, float value)
     {
-        GeneratedStats[statName] = value;
+        _ = GeneratedStats;
+        _statsCache[statName] = value;
         SerializeStatsFromCache();
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Servicio centralizado para gestionar el matchmaking de batallas.
@@ -51,6 +52,7 @@ public class MatchmakingService : MonoBehaviour
     private MatchmakingState _currentState = MatchmakingState.Idle;
     private Coroutine _matchmakingCoroutine;
     private HeroData _currentHero;
+    private string _queueOriginScene;
     [SerializeField] private MatchmakingUI _matchmakingUI;
 
     #endregion
@@ -115,6 +117,8 @@ public class MatchmakingService : MonoBehaviour
             return;
         }
 
+        var origin = SceneManager.GetActiveScene();
+        _queueOriginScene = string.IsNullOrEmpty(origin.path) ? origin.name : origin.path;
         _currentHero = heroData;
         _currentState = MatchmakingState.Searching;
 
@@ -152,6 +156,19 @@ public class MatchmakingService : MonoBehaviour
 
         OnMatchmakingCancelled?.Invoke();
         Debug.Log("[MatchmakingService] Matchmaking cancelled");
+    }
+
+    /// <summary>Return from the results screen to the scene where this queue began.</summary>
+    public void ReturnFromBattle()
+    {
+        if (SceneManager.GetActiveScene().name != SceneTransitionService.SceneNames.PostBattle) return;
+        string destination = string.IsNullOrEmpty(_queueOriginScene)
+            ? SceneTransitionService.SceneNames.Feudo : _queueOriginScene;
+        CancelMatchmaking(); // Clear Assigned/Search state so a second queue can start.
+        BattleTransitionData.Instance.ClearData();
+        BattleTransitionData.Instance.WinnerTeam = 0;
+        _queueOriginScene = null;
+        SceneTransitionService.LoadScene(destination);
     }
 
     #endregion

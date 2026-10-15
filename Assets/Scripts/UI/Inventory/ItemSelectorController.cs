@@ -32,6 +32,8 @@ public class ItemSelectorController : MonoBehaviour
     private int _totalPages = 0;
     private bool _isInitialized = false;
     private const int ITEMS_PER_PAGE = 10;
+    [SerializeField, Min(1)] private int itemsPerPage = ITEMS_PER_PAGE;
+    [SerializeField] private Vector2 popupOffset = new Vector2(10, -10);
 
     // Callbacks asignados externamente
     private Action<InventoryItem, ItemDataSO> _onItemClicked;
@@ -79,7 +81,7 @@ public class ItemSelectorController : MonoBehaviour
 
         // Ajustar la posición del widget
         RectTransform rectTransform = GetComponent<RectTransform>();
-        Vector3 offset = new Vector3(10f, -10f, 0f); // Desplazamiento para evitar solapamiento
+        Vector3 offset = popupOffset;
         rectTransform.position = targetPosition + offset;
 
         Show();
@@ -101,13 +103,14 @@ public class ItemSelectorController : MonoBehaviour
         if (_isInitialized) return;
 
         // Instanciar las 10 celdas
-        for (int i = 0; i < ITEMS_PER_PAGE; i++)
+        for (int i = 0; i < Mathf.Max(1, itemsPerPage); i++)
         {
             GameObject cellObj = Instantiate(itemCellPrefab, itemContainer);
             ItemCellController cell = cellObj.GetComponent<ItemCellController>();
             if (cell != null)
             {
                 cell.SetItem(null, null);
+                cell.SetContext(ItemInteractionContext.Selection);
                 ConnectWithTooltipsEvents(cell);
                 _itemCells.Add(cell);
             }
@@ -188,7 +191,7 @@ public class ItemSelectorController : MonoBehaviour
 
     private void RecalculatePagination()
     {
-        _totalPages = Mathf.CeilToInt((float)_allItems.Count / ITEMS_PER_PAGE);
+        _totalPages = Mathf.CeilToInt((float)_allItems.Count / _itemCells.Count);
         UpdateChevronVisibility();
     }
 
@@ -247,7 +250,7 @@ public class ItemSelectorController : MonoBehaviour
 
     private void RenderCurrentPage()
     {
-        int startIndex = _currentPageIndex * ITEMS_PER_PAGE;
+        int startIndex = _currentPageIndex * _itemCells.Count;
         for (int i = 0; i < _itemCells.Count; i++)
         {
             int itemIndex = startIndex + i;

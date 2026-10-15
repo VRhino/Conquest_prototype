@@ -8,6 +8,36 @@ using UnityEngine.AI;
 public class SquadNavigationRegressionTests
 {
     [Test]
+    public void PooledProjectileRestoresPreviousShooterCollisionsOnReuseAndDisable()
+    {
+        var shooterA = new GameObject("Projectile shooter A");
+        var shooterB = new GameObject("Projectile shooter B");
+        var projectile = new GameObject("Projectile collision regression");
+        var colliderA = shooterA.AddComponent<BoxCollider>();
+        var colliderB = shooterB.AddComponent<BoxCollider>();
+        var projectileCollider = projectile.AddComponent<BoxCollider>();
+        var controller = projectile.AddComponent<ProjectileController>();
+        try
+        {
+            controller.Initialize(Entity.Null, Entity.Null, float3.zero, math.forward(), Entity.Null,
+                default, Team.None, 1, "test", ProjectileTrajectory.Straight, new[] { colliderA });
+            Assert.That(Physics.GetIgnoreCollision(projectileCollider, colliderA), Is.True);
+            controller.Initialize(Entity.Null, Entity.Null, float3.zero, math.forward(), Entity.Null,
+                default, Team.None, 1, "test", ProjectileTrajectory.Straight, new[] { colliderB });
+            Assert.That(Physics.GetIgnoreCollision(projectileCollider, colliderA), Is.False);
+            Assert.That(Physics.GetIgnoreCollision(projectileCollider, colliderB), Is.True);
+            projectile.SetActive(false);
+            Assert.That(Physics.GetIgnoreCollision(projectileCollider, colliderB), Is.False);
+        }
+        finally
+        {
+            Object.DestroyImmediate(projectile);
+            Object.DestroyImmediate(shooterA);
+            Object.DestroyImmediate(shooterB);
+        }
+    }
+
+    [Test]
     public void RemoteHeroRetainsValidPathUntilDestinationChangesOrPathFails()
     {
         var navigation = new NavAgentComponent
@@ -105,7 +135,8 @@ public class SquadNavigationRegressionTests
     {
         using var world = new World("Off-mesh formation fallback");
         var em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
         em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
         {
             slotArrivalThreshold = 0.2f,
@@ -170,9 +201,11 @@ public class SquadNavigationRegressionTests
     {
         using var world = new World("Bodyblock integration");
         var em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
         em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
         {
+            bodyblockJobBatchSize = 32, bodyblockParallelThreshold = 128,
             bodyblockRadius = 0.8f, bodyblockRepulsionStrength = 8f,
             bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f,
             bodyblockEngagingRadius = 0.35f, bodyblockEngagingStrength = 3f
@@ -212,9 +245,11 @@ public class SquadNavigationRegressionTests
     {
         using var world = new World("Bodyblock 900-agent stress");
         var em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
         em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
         {
+            bodyblockJobBatchSize = 32, bodyblockParallelThreshold = 128,
             bodyblockRadius = 0.8f, bodyblockRepulsionStrength = 8f,
             bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f,
             bodyblockEngagingRadius = 0.35f, bodyblockEngagingStrength = 3f
@@ -303,7 +338,8 @@ public class SquadNavigationRegressionTests
     {
         using var world = new World("Squad navigation regression");
         var em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
         var sources = new System.Collections.Generic.List<NavMeshBuildSource>
         {
             new NavMeshBuildSource

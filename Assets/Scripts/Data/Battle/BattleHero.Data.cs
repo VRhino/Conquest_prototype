@@ -8,6 +8,7 @@ using System.Collections.Generic;
 [Serializable]
 public class BattleHeroData
 {
+    public string heroId = string.Empty;
     /// <summary>Name of the hero participating in the battle.</summary>
     public string heroName = string.Empty;
 

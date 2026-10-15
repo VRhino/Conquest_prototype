@@ -11,6 +11,10 @@ using Unity.Entities;
 public partial class ProjectileImpactSystem : SystemBase
 {
     const int MaxImpactsPerFrame = 50;
+    private EntityArchetype _damageEventArchetype;
+
+    protected override void OnCreate()
+        => _damageEventArchetype = EntityManager.CreateArchetype(typeof(PendingDamageEvent));
 
     protected override void OnUpdate()
     {
@@ -28,8 +32,8 @@ public partial class ProjectileImpactSystem : SystemBase
             if (SystemAPI.HasComponent<IsDeadComponent>(data.target))
                 continue;
 
-            var reqEntity = EntityManager.CreateEntity();
-            EntityManager.AddComponentData(reqEntity, new PendingDamageEvent
+            var reqEntity = EntityManager.CreateEntity(_damageEventArchetype);
+            EntityManager.SetComponentData(reqEntity, new PendingDamageEvent
             {
                 destroyEntityAfterProcessing = true,
                 target           = data.target,

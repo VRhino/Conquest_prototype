@@ -1,4 +1,4 @@
-using Unity.Collections;
+using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -10,8 +10,13 @@ using Unity.Transforms;
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
 [UpdateAfter(typeof(SquadFSMSystem))]
+[UpdateAfter(typeof(UnitDeathSystem))]
 public partial class UnitTargetingSystem : SystemBase
 {
+    private readonly HashSet<Entity> _validTargets = new();
+    private readonly Dictionary<Entity, int> _meleeCounts = new();
+    private readonly Dictionary<Entity, int> _rangedCounts = new();
+
     protected override void OnUpdate()
     {
         int maxPerTarget = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
@@ -27,7 +32,9 @@ public partial class UnitTargetingSystem : SystemBase
             // InCombat state is the sole gate for targeting — regardless of how it was
             // triggered (V press, damage received, squadmate hit). All three triggers
             // correctly set currentState=InCombat via the FSM; that is the source of truth.
-            bool allow = state.ValueRO.currentState == SquadFSMState.InCombat;
+            bool allow = state.ValueRO.currentState == SquadFSMState.InCombat
+                && (!SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
+                    || match.currentState == MatchState.InBattle);
 
             // Squads outside combat (or without candidates) only need stale combat state
             // cleared. Avoid allocating the two native accounting maps on this common path.
@@ -46,10 +53,21 @@ public partial class UnitTargetingSystem : SystemBase
                 continue;
             }
 
-            // Temporary map to track how many units are attacking each enemy
-            int initialCapacity = math.max(16, detected.Length);
-            var meleeEnemyCounts  = new NativeParallelHashMap<Entity, int>(initialCapacity, Allocator.Temp);
-            var rangedEnemyCounts = new NativeParallelHashMap<Entity, int>(initialCapacity, Allocator.Temp);
+            _validTargets.Clear();
+            _meleeCounts.Clear();
+            _rangedCounts.Clear();
+            for (int j = 0; j < detected.Length; j++)
+            {
+                Entity candidate = detected[j].Value;
+                if (!SystemAPI.Exists(candidate) || !SystemAPI.HasComponent<LocalTransform>(candidate)
+                    || SystemAPI.HasComponent<IsDeadComponent>(candidate)) continue;
+                if (SystemAPI.HasComponent<HeroLifeComponent>(candidate)
+                    && !SystemAPI.GetComponent<HeroLifeComponent>(candidate).isAlive) continue;
+                _validTargets.Add(candidate);
+            }
+            int availableTargets = _validTargets.Count;
+            var meleeEnemyCounts = _meleeCounts;
+            var rangedEnemyCounts = _rangedCounts;
             int rangedUnitsInSquad = 0;
 
             // First pass: choose closest target for each unit
@@ -63,15 +81,7 @@ public partial class UnitTargetingSystem : SystemBase
                 bool isRanged = SystemAPI.HasComponent<UnitRangedStatsComponent>(unit);
                 if (isRanged) rangedUnitsInSquad++;
 
-                bool currentValid = false;
-                for (int j = 0; j < detected.Length; j++)
-                {
-                    if (detected[j].Value == combat.ValueRO.target)
-                    {
-                        currentValid = true;
-                        break;
-                    }
-                }
+                bool currentValid = _validTargets.Contains(combat.ValueRO.target);
 
                 if (!currentValid)
                 {
@@ -81,7 +91,7 @@ public partial class UnitTargetingSystem : SystemBase
                     for (int j = 0; j < detected.Length; j++)
                     {
                         Entity enemy = detected[j].Value;
-                        if (!SystemAPI.Exists(enemy) || !SystemAPI.HasComponent<LocalTransform>(enemy))
+                        if (!_validTargets.Contains(enemy))
                             continue;
                         float3 enemyPos = SystemAPI.GetComponent<LocalTransform>(enemy).Position;
                         float dist = math.distancesq(unitPos, enemyPos);
@@ -140,7 +150,7 @@ public partial class UnitTargetingSystem : SystemBase
                 for (int j = 0; j < detected.Length; j++)
                 {
                     Entity candidate = detected[j].Value;
-                    if (candidate == combat.ValueRO.target)
+                    if (candidate == combat.ValueRO.target || !_validTargets.Contains(candidate))
                         continue;
 
                     int current = 0;
@@ -174,15 +184,6 @@ public partial class UnitTargetingSystem : SystemBase
                 if (detected.Length == 0)
                     continue;
 
-                int availableTargets = 0;
-                for (int j = 0; j < detected.Length; j++)
-                {
-                    Entity candidate = detected[j].Value;
-                    if (candidate == Entity.Null || !SystemAPI.Exists(candidate))
-                        continue;
-                    availableTargets++;
-                }
-
                 // No dispersion needed when there is no real alternative.
                 if (availableTargets <= 1)
                     continue;
@@ -206,7 +207,7 @@ public partial class UnitTargetingSystem : SystemBase
                     Entity candidate = detected[j].Value;
                     if (candidate == combat.ValueRO.target
                         || candidate == Entity.Null
-                        || !SystemAPI.Exists(candidate))
+                        || !_validTargets.Contains(candidate))
                         continue;
 
                     int candidateCount = 0;
@@ -227,9 +228,6 @@ public partial class UnitTargetingSystem : SystemBase
                     combat.ValueRW.target = bestCandidate;
                 }
             }
-
-            meleeEnemyCounts.Dispose();
-            rangedEnemyCounts.Dispose();
 
             // Fourth pass: sync IsEngagingTag so other systems can query engagement state
             for (int i = 0; i < units.Length; i++)

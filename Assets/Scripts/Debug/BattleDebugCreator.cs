@@ -63,6 +63,7 @@ public static class BattleDebugCreator
     {
         BattleHeroData battleHero = new BattleHeroData
         {
+            heroId = HeroAttributeValidator.GetHeroId(heroData),
             heroName = heroData.heroName,
             classID = heroData.classId,
             level = heroData.level,

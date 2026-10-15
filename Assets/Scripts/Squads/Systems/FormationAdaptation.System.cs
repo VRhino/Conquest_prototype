@@ -15,10 +15,12 @@ public partial class FormationAdaptationSystem : SystemBase
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
+        RequireForUpdate<SquadSpawnConfigComponent>();
     }
 
     protected override void OnUpdate()
     {
+        if (!SystemAPI.GetSingleton<SquadSpawnConfigComponent>().enableEnvironmentAdaptation) return;
         foreach (var (env, ai, heroWorldPos, units) in SystemAPI
                      .Query<RefRW<EnvironmentAwarenessComponent>,
                             RefRO<SquadAIComponent>,

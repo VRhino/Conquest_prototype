@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Versión** | 1.3 |
-| **Actualizado** | 2026-09-15 |
-| **Verificado contra** | commit `3eef0e17` y grafo generado desde el mismo commit |
+| **Versión** | 1.8 |
+| **Actualizado** | 2026-10-14 |
+| **Verificado contra** | base `22c6a785` más cambios locales del 2026-10-14; validación en la revisión de sistemas |
 | **Motor** | Unity 6000.5.8f1 |
 | **Runtime de datos** | Entities 6.5.0, arquitectura híbrida ECS/GameObject |
 
@@ -17,6 +17,11 @@
 
 | Versión | Fecha | Cambio |
 |---|---|---|
+| 1.8 | 2026-10-14 | Política de cursor por escena; preparación admite clicks reales y PostBattle devuelve a la escena de origen de cola, reiniciando matchmaking. 131 EditMode, 30 PlayMode y compilación Player verificadas. |
+| 1.7 | 2026-10-13 | XP de squad vuelve a la instancia GUID en HeroData; revisión independiente, commit por evento y panel sincronizado con ECS. Contenedor v3 compatible con 0/1/2. |
+| 1.6 | 2026-10-13 | XP con destinatario GUID capturado por bootstrap; commit sobre HeroData y progressRevision; IDs ausentes confirmados al aceptar batalla; atributos temporales y vista de XP corregidos. Contenedor v2 compatible con 0/1. |
+| 1.5 | 2026-10-13 | Almacenamiento versionado único con importación de progreso heredado, preservación de campos entre escritores y perfil renderizado en BattleTestScene. |
+| 1.4 | 2026-10-13 | Identidad persistente de héroe en caché/DTO/bootstrap, contratos de fase y frescura, trabajo visual/combate reutilizado y cálculo bodyblock nativo. Se mantienen ambos formatos de persistencia. |
 | 1.3 | 2026-09-15 | Consolidados autoridad física, targeting escalable, limpieza de estado muerto, motor local y animación remota separada. |
 | 1.2 | 2026-09-15 | Pipeline de squads estabilizado y locomoción local encapsulada como intención ECS → `LocalHeroCharacterMotor` → estado confirmado ECS. |
 | 1.1 | 2026-09-14 | Reparaciones de compilación, bake compartido, progresión, guardado, combate e identidad ECS. Ver [registro y límites de validación](2_Reparaciones_Arquitectura_2026-09-14.md). |
@@ -71,16 +76,19 @@ Su cobertura y límites se describen en [Pruebas integradas de batalla](3_Prueba
 ```text
 PERSISTENCIA LOCAL Y SESIÓN
 
-  player_save.json                         player_progress.json
-        │                                          │
-        ▼                                          ▼
-    PlayerData                         LocalSaveSystem.PlayerProgressData
-        │                                          │
-        └── HeroData                               ├── LoadoutData
-              ├── LoadoutSaveData                 └── LocalSaveSystem.SquadInstanceData
-              ├── SquadInstanceData
-              ├── InventoryItem / Equipment
-              └── AvatarParts
+  player_progress.json (heredado; se conserva para importación)
+        │ importación única al guardar el perfil sin versión
+        ▼
+  player_save.json (saveVersion = 3)
+        └── PlayerData
+              ├── battleProgress: LocalSaveSystem.PlayerProgressData
+              │     ├── LoadoutData
+              │     └── LocalSaveSystem.SquadInstanceData
+              └── heroes: HeroData[]
+                    ├── LoadoutSaveData
+                    ├── SquadInstanceData
+                    ├── InventoryItem / Equipment
+                    └── AvatarParts
                         │
                         │ IDs y referencias de Unity
                         ▼
@@ -117,7 +125,7 @@ RUNTIME ECS
 |---|---|---|---|
 | Sesión | `PlayerSessionService` | Mantiene `CurrentPlayer` y `SelectedHero` en memoria | No directamente |
 | Persistencia principal | POCOs `[Serializable]` | Perfil, héroes, inventario, equipo, loadouts y progreso de squads | `player_save.json` |
-| Persistencia ECS heredada | Clases anidadas de `LocalSaveSystem` | Nivel, loadouts y estado de despliegue consumido por sistemas ECS/UI | `player_progress.json` |
+| Persistencia ECS heredada | Clases anidadas de `LocalSaveSystem` | Nivel, loadouts y despliegue consumidos por sistemas ECS/UI; propietario antiguo desconocido | `PlayerData.battleProgress` en `player_save.json`; fallback antes de crear perfil |
 | Configuración | `ScriptableObject` | Definiciones estáticas, balance y referencias visuales | Assets Unity |
 | Proyección de batalla | `BattleData`, `BattleHeroData` | Selección temporal de participantes y datos necesarios para abrir una batalla | Sólo memoria |
 | Runtime táctico | ECS components/buffers | Estado mutable y simulación de una batalla | No se guarda como World ECS |
@@ -137,6 +145,8 @@ Archivo: `Assets/Scripts/Data/Persistence/Player.Data.cs`.
 
 | Campo | Tipo | Significado |
 |---|---|---|
+| `saveVersion` | `int` | Versión del contenedor; 0 heredada, 1 consolidada, 2 con revisión de héroe, 3 con revisión de squad |
+| `battleProgress` | `LocalSaveSystem.PlayerProgressData` | Progreso heredado conservado sin inferir dueño |
 | `playerName` | `string` | Nombre visible de la cuenta local |
 | `accountLevel` | `int` | Nivel global de cuenta |
 | `accountXP` | `int` | Experiencia global de cuenta |
@@ -153,6 +163,17 @@ PlayerData 1 ── 0..N HeroData
 `Application.persistentDataPath/player_save.json`. `LoadSystem` reconstruye la misma raíz mediante
 `JsonUtility.FromJson<PlayerData>`.
 
+La XP nueva se guarda en el HeroData identificado por GUID. `progressRevision` impide que un snapshot
+anterior de inventario revierta nivel, XP o perkPoints ya guardados. Cambios de un snapshot vigente
+siguen permitidos. El commit sincroniza la sesión y recalcula caché sólo si cambia el nivel.
+Un ID ausente en JSON puede ser generado por el inicializador de HeroData: el lector inspecciona
+las identidades serializadas con el DTO neutral y marca requiresIdentitySave. Bootstrap confirma
+esos IDs con backup antes de recompensas dirigidas; cargar sigue siendo pasivo.
+`battleProgress` conserva el esquema antiguo sin inferir dueño. La XP nueva de squad se guarda por
+GUID de héroe e instancia en HeroData.squadProgress. Su propia progressRevision protege nivel/experience,
+conservando formación y efectivos. Sólo después del commit se publican los cambios ECS/mapa y el evento
+se consume; un fallo posterior de otro evento no reproduce los commits anteriores.
+
 ### 5.2 `HeroData`
 
 Archivo: `Assets/Scripts/Data/Persistence/Hero.Data.cs`.
@@ -161,7 +182,7 @@ Archivo: `Assets/Scripts/Data/Persistence/Hero.Data.cs`.
 
 | Grupo | Campos principales |
 |---|---|
-| Identidad | `classId`, `heroName`, `gender`, `avatar` |
+| Identidad | `heroId`, `classId`, `heroName`, `gender`, `avatar` |
 | Progresión | `level`, `currentXP`, `attributePoints`, `perkPoints` |
 | Economía | `bronze`, `silver`, `gold` |
 | Atributos base | `strength`, `dexterity`, `armor`, `vitality` |
@@ -173,8 +194,10 @@ Implementa interfaces de lectura y mutación (`IHeroIdentity`, `IHeroProgression
 `IHeroSquads`, `IHeroInventory` y variantes mutadoras), pero esas interfaces no cambian la forma JSON: los
 campos públicos siguen siendo el contrato efectivo de persistencia.
 
-No existe `heroId`. El nombre `heroName` actúa como identidad práctica en varios flujos, incluida la búsqueda
-del participante local dentro de `BattleData`.
+`heroId` es un GUID persistente independiente del nombre visible. Se conserva en JSON y se completa
+para guardados antiguos al cargarlos; queda persistido en el siguiente guardado. La caché, los atributos
+temporales y el DTO/bootstrap local usan esta identidad. `BattleData.FindHero` admite un nombre único
+como fallback sólo cuando el DTO es heredado y carece de ID; rechaza coincidencias ambiguas.
 
 ### 5.3 Loadouts y escuadras persistentes
 
@@ -257,7 +280,7 @@ bones por género.
 
 Son datos visuales persistentes; las referencias a prefabs no deberían convertirse en autoridad de gameplay.
 
-## 6. Persistencia paralela: `player_progress.json`
+## 6. Progresión heredada consolidada en `PlayerData.battleProgress`
 
 Archivo: `Assets/Scripts/Shared/LocalSave.System.cs`.
 
@@ -276,7 +299,7 @@ Este modelo no es equivalente al principal:
 
 | Concepto | Modelo principal | Modelo de `LocalSaveSystem` |
 |---|---|---|
-| Archivo | `player_save.json` | `player_progress.json` |
+| Almacenamiento | `player_save.json` | Bloque `battleProgress` del mismo archivo; origen heredado `player_progress.json` |
 | Squad ID | `string` GUID | `int` |
 | Definición de squad | `baseSquadID: string` | `squadType: SquadType` |
 | XP de squad | `int experience` | `float currentXP` |
@@ -291,8 +314,13 @@ Consumidores encontrados:
 - `LoadoutSelectionUI`;
 - `UnitDeploymentValidationSystem`.
 
-Por tanto, no es código muerto. La coexistencia de ambos archivos es una bifurcación vigente de fuente de
-verdad y una frontera explícita para cualquier migración o contrato de red.
+No es código muerto. Desde la revisión del 2026-10-13, LocalSaveProvider y ProgressFileStore comparten
+lock y escriben un único perfil versionado. La importación del archivo antiguo ocurre al guardar, mantiene
+su original y el backup del perfil; cargar no escribe. Antes de existir un perfil se permite el escritor antiguo.
+Las versiones futuras se rechazan. Un snapshot de inventario no sustituye progreso más reciente.
+
+El bloque conserva su propio esquema y no se atribuye a ningún HeroData: falta identidad de dueño en el
+formato anterior. Unificar almacenamiento no resuelve automáticamente esta deuda de modelo.
 
 ## 7. Catálogos y definiciones ScriptableObject
 
@@ -372,7 +400,7 @@ crean como entidades ECS de escena.
 | Catálogo | Contenido observado |
 |---|---|
 | Squads | 3 referencias: `sqd01`, `arc01`, `spm01` |
-| Items | 19 referencias serializadas en `ItemSODatabase`; 18 assets `ItemDataSO` localizados bajo `Assets/Resources/items/` |
+| Items | 19 referencias serializadas en `ItemSODatabase`; 18 assets `ItemDataSO` localizados bajo `Assets/Resources/Items/` |
 | Mapas | 1 mapa: `default` |
 | Clases de héroe | `Bow`, `Spear`, `TwoHandedSword`, `SwordAndShield` bajo `Scripts/Resources/Data/HeroClasses/`, más otro asset `Spear` fuera de esa ruta |
 
@@ -396,7 +424,8 @@ BattleData
 └── BattleTimer: int
 ```
 
-`playerSide` y `findHeroDataByName` localizan al participante mediante `heroName`.
+`FindHero` localiza el participante local por `heroId` y `GetSide` usa el participante resuelto.
+`playerSide` y `findHeroDataByName` conservan la API por nombre para consumidores heredados.
 
 ### 8.2 `BattleHeroData`
 
@@ -404,6 +433,7 @@ Archivo: `Assets/Scripts/Data/Battle/BattleHero.Data.cs`.
 
 ```text
 BattleHeroData
+├── heroId
 ├── heroName
 ├── classID
 ├── level
@@ -438,7 +468,13 @@ BattleData
         ▼
 BattleTransitionData.SetBattleData
         │
-        │ cambio de escena
+        │ cambio a preparación
+        ▼
+BattlePreparationController
+        │ selección de tropas/spawn y botón Inicio o timer
+        ▼
+BattleTransitionData.SetBattleData
+        │ cambio a BattleScene
         ▼
 BattleSceneController
         ├── SyncBattleDataToECS       configura al jugador local
@@ -450,12 +486,16 @@ BattleSceneController
 
 No hay serialización, copia defensiva, validación de versión ni transporte en este tramo.
 
+SceneTransitionService aplica cursor visible/libre tras cargar interfaces (incluidas preparación y postbatalla). Cámara, paneles y supply usan la misma política, por lo que cerrar un popup no restaura el bloqueo de gameplay en esas escenas.
+
+MatchmakingService captura el path de la escena al aceptar la cola. El botón Salir de PostBattle reutiliza MatchmakingUI, vuelve a ese path y limpia Assigned/temporizadores para permitir otra cola; conserva el héroe seleccionado. Se restaura la escena, sin snapshot de la posición exacta previa. La pantalla de resultados completa sigue pendiente.
+
 ## 10. Puente `BattleData` → ECS
 
 `BattleSceneController.SyncBattleDataToECS` entrega una petición administrada a
 `BattleBootstrapRequests`. `BattleBootstrapSystem` es quien escribe el estado local en ECS:
 
-1. obtiene `PlayerSessionService.SelectedHero.heroName`;
+1. obtiene la identidad persistente de `PlayerSessionService.SelectedHero` y conserva el nombre para DTO heredados;
 2. busca el `BattleHeroData` por nombre;
 3. convierte `spawnPointId: string` a `int`, con fallback `1`;
 4. deriva `teamID` desde la pertenencia a attackers/defenders;
@@ -684,7 +724,7 @@ Por tanto, `BattleData` es un DTO interno de transición local, no un contrato w
 | Problema | Estado actual |
 |---|---|
 | Referencias Unity | `BattleData.mapData` es un `MapDataSO` |
-| Identidad de héroe | Se usa `heroName` para buscar al participante |
+| Identidad de héroe | `heroId` en caché y participante local; nombre único como compatibilidad para DTO heredados |
 | Identidad de squad | Conserva GUID en `persistentId`, pero además usa un índice `int` temporal dentro del World ECS |
 | Spawn | `string` en `BattleHeroData`, `int` en ECS |
 | Equipo | Se copian objetos `InventoryItem` completos |
@@ -698,7 +738,7 @@ Por tanto, `BattleData` es un DTO interno de transición local, no un contrato w
 | Concepto | Tipo actual | Ámbito real | Observación |
 |---|---|---|---|
 | Jugador local | `playerID: int` y `playerName: string` | Sesión/ECS | No existe un ID global persistente inequívoco |
-| Héroe | `heroName: string` | Perfil/batalla | Nombre visible usado como llave |
+| Héroe | `heroId: string` | Perfil/batalla | GUID estable; `heroName` es presentación y fallback heredado |
 | Clase | `classId`/`classID: string` y `HeroClass` enum | Persistencia/batalla/ECS | Naming y representación no uniformes |
 | Instancia de squad | `SquadInstanceData.id: string` | Persistencia | Se genera como GUID |
 | Squad runtime | `id: int` + `persistentId: FixedString64Bytes` | World ECS / correlación persistente | Índice temporal y GUID separados |
@@ -714,20 +754,23 @@ Por tanto, `BattleData` es un DTO interno de transición local, no un contrato w
 
 Esta sección registra hechos del estado actual; no decide todavía su solución.
 
-### A-01. Dos fuentes de persistencia local
+### A-01. Esquemas de progresión distintos; almacenamiento consolidado
 
-`player_save.json` y `player_progress.json` mantienen progresión, loadouts y squads con esquemas distintos y
-consumidores activos.
+`player_save.json` versión 3 contiene el perfil y `battleProgress`. Se conserva `player_progress.json`
+para importación compatible; los consumidores ECS/UI usan el bloque canónico una vez existe el perfil.
+Sigue pendiente atribuir a un dueño los datos antiguos que carecen de identidad.
 
 ### A-02. `HeroData` es un agregado muy amplio
 
 Identidad, economía, atributos, progreso, inventario, equipo, avatar, perks y squads comparten una misma forma
 serializada. Las interfaces reducen el acoplamiento de consumidores, pero no separan el almacenamiento.
 
-### A-03. Identidad de héroe basada en nombre
+### A-03. Identidad de héroe basada en nombre — corregida para el flujo local en 1.4
 
-`BattleData.findHeroDataByName` y `playerSide` dependen de `heroName`. Nombres duplicados o renombrados pueden
-romper la correlación.
+`HeroData.heroId` se propaga al DTO local, selección, supply y bootstrap. Cachés y atributos temporales
+usan el mismo ID. Un DTO sin ID sólo se resuelve por nombre si hay una coincidencia única. Las API
+heredadas por nombre permanecen para compatibilidad; el futuro contrato de BronzeAge sigue requiriendo
+su propia identidad autoritativa, no el GUID generado por este cliente.
 
 ### A-04. Remapeo con pérdida de identidad de squad — corregido en 1.1
 

@@ -44,7 +44,7 @@ public static class HeroTempAttributeService
     public static HeroCalculatedAttributes GetAttributesWithTempChanges(string heroId)
     {
         var heroData = PlayerSessionService.SelectedHero;
-        if (heroData == null || heroData.heroName != heroId)
+        if (heroData == null || HeroAttributeValidator.GetHeroId(heroData) != heroId)
         {
             Debug.LogWarning($"[HeroTempAttributeService] No se encontró hero data para: {heroId}");
             return HeroCalculatedAttributes.Empty;
@@ -74,7 +74,7 @@ public static class HeroTempAttributeService
 
         var changes = _tempChanges[heroId];
         var heroData = PlayerSessionService.SelectedHero;
-        if (heroData == null) return EquipmentBonuses.Empty;
+        if (heroData == null || HeroAttributeValidator.GetHeroId(heroData) != heroId) return EquipmentBonuses.Empty;
 
         // CORREGIDO: Calcular diferencias entre valores temporales y valores con equipamiento
         var result = new EquipmentBonuses();
@@ -152,7 +152,7 @@ public static class HeroTempAttributeService
     public static float GetFinalAttributeValue(string heroId, string attributeName)
     {
         var heroData = PlayerSessionService.SelectedHero;
-        if (heroData == null) return 0f;
+        if (heroData == null || HeroAttributeValidator.GetHeroId(heroData) != heroId) return 0f;
 
         if (!HasTempChanges(heroId))
             return DataCacheService.GetBaseWithEquipment(heroData, attributeName);
@@ -172,7 +172,8 @@ public static class HeroTempAttributeService
     /// <returns>Puntos usados en modificaciones temporales</returns>
     public static int CalculateUsedTempPoints(string heroId, IHeroProgression heroData)
     {
-        if (!HasTempChanges(heroId) || heroData == null) return 0;
+        if (!HasTempChanges(heroId) || heroData is not IHeroIdentity identity
+            || HeroAttributeValidator.GetHeroId(identity) != heroId) return 0;
 
         var changes = _tempChanges[heroId];
         int usedPoints = 0;

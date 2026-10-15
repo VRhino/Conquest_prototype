@@ -14,7 +14,8 @@ public static class ItemEffectSystem
     /// <param name="item">Ítem consumible a usar</param>
     /// <param name="hero">Héroe sobre el que aplicar los efectos</param>
     /// <returns>True si se usó exitosamente</returns>
-    public static bool UseConsumableItem(InventoryItem item, HeroData hero)
+    public static bool UseConsumableItem(InventoryItem item, HeroData hero,
+        ItemEffect selectedEffect = null, System.Collections.Generic.List<string> selectedItems = null)
     {
         if (item == null)
         {
@@ -69,7 +70,10 @@ public static class ItemEffectSystem
         {
             try
             {
-                if (!effect.Execute(hero, 1))
+                bool executed = effect.RequiresSelection
+                    ? effect == selectedEffect && selectedItems != null && effect.ExecuteSelection(hero, selectedItems)
+                    : effect.Execute(hero, 1);
+                if (!executed)
                 {
                     allSucceeded = false;
                     LogError($"Failed to execute effect: {effect.DisplayName}");

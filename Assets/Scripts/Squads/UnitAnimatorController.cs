@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using ConquestTactics.Animation;
 
 namespace ConquestTactics.Visual
@@ -36,6 +37,9 @@ namespace ConquestTactics.Visual
         
         // Referencias a componentes
         private Animator _animator;
+        private RuntimeAnimatorController _parameterController;
+        private bool _parametersCached;
+        private readonly HashSet<int> _parameterHashes = new();
         private UnitAnimationAdapter _animationAdapter;
         
         // Animation parameter hashes are centralized in AnimationHashes.cs
@@ -218,15 +222,15 @@ namespace ConquestTactics.Visual
         {
             if (_animator == null) return false;
             
-            foreach (AnimatorControllerParameter param in _animator.parameters)
+            if (!_parametersCached || _parameterController != _animator.runtimeAnimatorController)
             {
-                if (param.nameHash == parameterHash)
-                {
-                    return true;
-                }
+                _parameterHashes.Clear();
+                foreach (var parameter in _animator.parameters)
+                    _parameterHashes.Add(parameter.nameHash);
+                _parameterController = _animator.runtimeAnimatorController;
+                _parametersCached = true;
             }
-            
-            return false;
+            return _parameterHashes.Contains(parameterHash);
         }
         
         #endregion

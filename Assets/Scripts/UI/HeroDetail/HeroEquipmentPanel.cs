@@ -46,16 +46,19 @@ public class HeroEquipmentPanel : MonoBehaviour
 
     // Estado de inicialización
     private bool _isInitialized = false;
+    private bool _eventsConnected;
 
     // Referencia al héroe actual
     private HeroData _currentHero;
 
     public void SetTooltipManager(TooltipManager manager)
     {
+        if (tooltipManager == manager) return;
+        CleanupTooltipIntegration();
         if (manager != null)
         {
             tooltipManager = manager;
-            manager.SetEnableComparisonTooltips(false);
+            InitializeTooltipIntegration();
         }
         else
         {
@@ -82,7 +85,13 @@ public class HeroEquipmentPanel : MonoBehaviour
 
     void Start() { if (autoInitializeOnStart) InitializePanel(); }
 
-    void OnEnable() { if (_isInitialized && autoPopulateOnEnable) RefreshAllSlots(); }
+    void OnEnable()
+    {
+        if (!_isInitialized) return;
+        SubscribeToEquipmentEvents();
+        if (autoPopulateOnEnable) RefreshAllSlots();
+    }
+    void OnDisable() => UnsubscribeFromEquipmentEvents();
 
     #endregion
 
@@ -97,6 +106,7 @@ public class HeroEquipmentPanel : MonoBehaviour
 
         CreateSlotMap();
         InitializeIndividualSlots();
+        InitializeTooltipIntegration();
         SubscribeToEquipmentEvents();
         _isInitialized = true;
 
@@ -227,7 +237,8 @@ public class HeroEquipmentPanel : MonoBehaviour
     public List<HeroEquipmentSlotController> GetAllSlots()
     {
         var slots = new List<HeroEquipmentSlotController>();
-        foreach (var slot in _slotMap.Values)
+        foreach (var slot in _slotMap != null ? _slotMap.Values.ToArray() :
+                     new[] { helmetSlot, torsoSlot, glovesSlot, pantsSlot, bootsSlot, weaponSlot })
         {
             if (slot != null) slots.Add(slot);
         }
@@ -251,11 +262,9 @@ public class HeroEquipmentPanel : MonoBehaviour
     /// </summary>
     private void SubscribeToEquipmentEvents()
     {
-        // Suscribirse a eventos de EquipmentManagerService si existen
-        // TODO: Implementar eventos de equipment change en EquipmentManagerService
-
-        // Inicializar tooltip integration
-        InitializeTooltipIntegration();
+        if (_eventsConnected) return;
+        InventoryEventService.OnEquipmentChanged += RefreshAllSlots;
+        _eventsConnected = true;
 
         Debug.Log("[HeroEquipmentPanel] Subscribed to equipment events");
     }
@@ -265,7 +274,9 @@ public class HeroEquipmentPanel : MonoBehaviour
     /// </summary>
     private void UnsubscribeFromEquipmentEvents()
     {
-        // TODO: Desuscribirse de eventos cuando se implementen
+        if (!_eventsConnected) return;
+        InventoryEventService.OnEquipmentChanged -= RefreshAllSlots;
+        _eventsConnected = false;
 
         Debug.Log("[HeroEquipmentPanel] Unsubscribed from equipment events");
     }

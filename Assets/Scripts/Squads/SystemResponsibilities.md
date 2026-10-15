@@ -1,5 +1,23 @@
 # System Responsibilities & Data Flow
 
+## Contratos actualizados — 2026-10-14
+
+- SceneTransitionService aplica la política de cursor del destino tras cargar; HeroCamera/FullscreenPanelManager/SupplyPointUI la respetan. Las interfaces requieren cursor libre incluso al cerrar paneles.
+- MatchmakingService conserva la escena de origen de cola; MatchmakingUI en PostBattle sólo atiende Salir y restablece el estado de cola al retornar.
+- DamageCalculation → UnitDeath → EnemyDetection → BattleWorldState → decisiones/órdenes → targeting.
+- HeroRespawn precede detección y captura; MatchController resuelve captura antes del snapshot.
+- Un bootstrap local aceptado reinicia MatchState/rearma MatchController antes de resolver el nuevo frame.
+- BattleWorldState publica fase incluso fuera de InBattle y precede SquadAI: detección/salud/zonas frescas, estado táctico del ciclo previo.
+- LocalHeroCaptureTracker lee después de CaptureZoneTrigger y SupplyInteraction.
+- UnitAttack/RangedAttack leen pose después de NavMeshPositionSync y excluyen atacantes muertos. Fin de batalla limpia ataques/intenciones y detiene agentes; cleanup y presentación siguen disponibles.
+- VisualSyncUtility registra instancias por World/Entity; EntityVisualSync registra/desregistra su vínculo. ProjectileSpawn entrega colliders del tirador sin búsquedas de escena.
+- Bodyblock calcula los mismos pares en un job Burst con buffers nativos persistentes; sólo el puente managed aplica NavMeshAgent.Move. Su peor caso denso sigue siendo cuadrático, sin recortar contactos.
+- Gestores visuales sólo actualizan con instancias pendientes; contactos y targeting reutilizan scratch. Eventos de daño nacen en su arquetipo final y conservan consumo durante el mismo frame.
+- GridFormationUpdate omite geometría de slots estables mediante la revisión del ancla y una clave de orden/estado, formación, slot y terreno; remuestrea alturas al cambiar Terrain, TerrainData, origen o heightmap.
+- InventoryEventService publica OnEquipmentChanged una vez por transacción de equipo exitosa o cambio de contexto. Guardar no invalida atributos; el cambio de sesión sí.
+- HeroData/BattleHeroData conservan heroId; bootstrap/preparación/supply resuelven por ID y admiten sólo fallback heredado no ambiguo. Ambos archivos de guardado siguen coexistiendo.
+
+
 Este archivo documenta las responsabilidades específicas de cada sistema ECS y controlador MonoBehaviour del juego. Cada sistema tiene **una sola responsabilidad** — no agregar concerns fuera de su scope.
 
 ---
@@ -36,11 +54,6 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: Aplica customización de avatar (head, hair, beard, eyebrow) y equipamiento visual al spawn
 - **Output**: `HeroVisualAppearanceApplied` tag — garantiza que la apariencia se aplica una única vez por héroe
 - **Cubre**: héroe local (vía `PlayerSessionService.SelectedHero`) y héroe remoto (vía `HeroAppearanceComponent`)
-
-### HeroVisualEquipmentSystem
-- **Responsabilidad**: Actualiza visualmente el equipamiento del héroe local en tiempo real (equip/unequip)
-- **Trigger**: eventos `InventoryManager.OnItemEquipped` / `OnItemUnequipped`
-- **Usa**: `AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId`, `AvatarVisualUtils.UnequipSlotVisual`
 
 ---
 
@@ -238,6 +251,19 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - Decide local/remoto desde `IsLocalPlayer`, pero delega toda locomoción local a `LocalHeroCharacterMotor`.
 - Delega la presentación de héroes remotos a `RemoteHeroAnimationDriver`; no escribe parámetros de locomoción remota.
 - Nunca llama `CharacterController.Move()` ni escribe la pose local en ECS.
+- Vincula `HeroVisualEquipmentInitializer` al visual local; no aplica cambios de inventario.
+
+### HeroVisualEquipmentInitializer
+- **Responsabilidad**: aplica la apariencia del equipamiento confirmado al visual local vinculado por `EntityVisualSync`.
+- **Trigger**: `InventoryManager.OnInventoryChanged`; sólo actualiza cuando cambia el conjunto de objetos equipados.
+- Restaura las piezas base retiradas y aplica las piezas finales con `AvatarVisualUtils`; no busca todos los GameObjects ni modifica ECS.
+
+### Inventory and UI
+- `PlayerSessionService` establece el héroe compartido por los servicios existentes y notifica el cambio de contexto sin guardar una operación.
+- `InventoryEventService.RunTransaction` conserva el estado previo de mochila, slots, stats y monedas; un fallo revierte todo, un éxito guarda y publica el estado final una vez.
+- La tienda y el arrastre envían operaciones a los servicios; las vistas no modifican directamente los datos persistentes.
+- Consumibles con selección sólo se consumen cuando se entrega toda la recompensa. El diálogo admite confirmación, cancelación y reintento.
+- Celdas y tooltips usan un contexto de interacción explícito para inventario, equipo, producto, venta, selector y recompensa.
 
 ### LocalHeroCharacterMotor
 - **Responsabilidad**: único ejecutor físico del héroe local.
@@ -297,3 +323,9 @@ Actualización posterior: conectada la retirada por muerte del dueño con espera
 Actualización de intercambio: `SquadSwapExecutionSystem` valida reemplazo antes de retirar y consume cooldown solo al aceptar. `SquadNavigationSystem` ahora observa llegada sin escribir destinos; `RetreatLogicSystem` espera a todos los supervivientes en sus slots o timeout. `SquadOrderSystem` respeta el bloqueo de retirada. La retirada por muerte del dueño sigue pendiente. Referencia: `Docs/Arquitectura/5_Intercambio_Retirada_2026-09-14.md`.
 
 El contrato local vigente es `HeroMovementSystem → HeroMoveIntent → LocalHeroCharacterMotor → LocalTransform/HeroMotorStateComponent`. `EntityVisualSync` ya no ejecuta movimiento local ni conduce la animación remota. El respawn conserva pose revisionada. Referencias: fases 4, 10, 14 y 15 en `Docs/Arquitectura/`.
+
+### Progresión de héroe
+
+BattleBootstrapSystem captura el GUID y la progresión de HeroData en HeroProgressComponent al aceptar la partida. HeroLevelSystem consume sólo XPEventComponent dirigido a ese GUID; guarda antes de modificar ECS/consumir el evento, sin leer SelectedHero ni escribir el bloque heredado sin dueño. Un ticket legado puede usar el GUID explícito del llamador validado en el perfil. SaveSystem confirma el dueño único, actualiza revisión y sesión, y conserva los otros héroes.
+
+SquadProgressionSystem valida dueño e instancia contra el mapa capturado y guarda en HeroData.squadProgress. Consume cada evento confirmado sobre un snapshot, después del commit y antes de procesar el siguiente; actualiza mapa/ECS y genera LevelUp. La identidad remota sólo cambia runtime, sin escribir el perfil local. El bloque de progreso antiguo no recibe XP nueva.

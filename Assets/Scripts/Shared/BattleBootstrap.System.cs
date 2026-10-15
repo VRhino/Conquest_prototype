@@ -8,15 +8,17 @@ public static class BattleBootstrapRequests
 {
     internal static BattleData Battle;
     internal static string LocalHeroName;
+    internal static string LocalHeroId;
     internal static readonly List<(World world, Entity hero, SquadIdMapElement[] squads)> Remote = new();
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { Battle = null; LocalHeroName = null; Remote.Clear(); }
+    static void Reset() { Battle = null; LocalHeroName = null; LocalHeroId = null; Remote.Clear(); }
 
-    public static void SubmitLocal(BattleData battle, string heroName)
+    public static void SubmitLocal(BattleData battle, string heroName, string heroId = null)
     {
         Battle = battle;
         LocalHeroName = heroName;
+        LocalHeroId = heroId;
     }
 
     public static void SubmitRemote(World world, Entity hero, List<SquadInstanceData> squads)
@@ -49,6 +51,7 @@ public static class BattleBootstrapRequests
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(HeroSpawnSystem))]
 [UpdateBefore(typeof(SquadSpawningSystem))]
+[UpdateBefore(typeof(MatchControllerSystem))]
 public partial class BattleBootstrapSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -56,9 +59,15 @@ public partial class BattleBootstrapSystem : SystemBase
         var battle = BattleBootstrapRequests.Battle;
         if (battle != null && SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var container))
         {
-            var hero = battle.findHeroDataByName(BattleBootstrapRequests.LocalHeroName);
+            var hero = battle.FindHero(BattleBootstrapRequests.LocalHeroId, BattleBootstrapRequests.LocalHeroName);
             if (hero != null)
             {
+                var player = PlayerSessionService.CurrentPlayer;
+                if (player?.requiresIdentitySave == true)
+                {
+                    SaveSystem.SavePlayer(player);
+                    if (player.requiresIdentitySave) return; // Retain the request until identity can be committed.
+                }
                 var data = EntityManager.GetComponentData<DataContainerComponent>(container);
                 var maps = BattleBootstrapRequests.Snapshot(hero.squadInstances);
                 data.selectedSquads.Clear();
@@ -68,11 +77,36 @@ public partial class BattleBootstrapSystem : SystemBase
                 {
                     int.TryParse(hero.spawnPointId, out int spawn);
                     data.selectedSpawnID = spawn > 0 ? spawn : 1;
-                    data.teamID = battle.playerSide(hero.heroName) == Side.Defenders ? 2 : 1;
+                    data.teamID = battle.GetSide(hero) == Side.Defenders ? 2 : 1;
                     data.isReady = maps.Length > 0;
                     if (maps.Length > 0) data.selectedSquadBaseID = maps[0].baseSquadID;
                     for (int i = 0; i < maps.Length; i++) data.selectedSquads.Add(i);
                     SetMap(container, maps);
+                    string ownerId = string.IsNullOrEmpty(hero.heroId) ? BattleBootstrapRequests.LocalHeroId : hero.heroId;
+                    var owner = HeroDataService.FindById(PlayerSessionService.CurrentPlayer, ownerId);
+                    var progress = new HeroProgressComponent
+                    {
+                        heroId = owner != null ? new FixedString64Bytes(owner.heroId) : default,
+                        level = owner?.level ?? hero.level,
+                        currentXP = owner?.currentXP ?? 0,
+                        perkPoints = owner?.perkPoints ?? 0,
+                        xpToNextLevel = HeroExperienceCalculator.GetBattleXPForNextLevel(owner?.level ?? hero.level)
+                    };
+                    if (EntityManager.HasComponent<HeroProgressComponent>(container))
+                        EntityManager.SetComponentData(container, progress);
+                    else EntityManager.AddComponentData(container, progress);
+                    if (data.isReady && SystemAPI.TryGetSingletonEntity<MatchStateComponent>(out var matchEntity))
+                    {
+                        var match = EntityManager.GetComponentData<MatchStateComponent>(matchEntity);
+                        match.currentState = MatchState.InBattle;
+                        match.stateTimer = 0f;
+                        match.victoryConditionMet = false;
+                        match.winnerTeam = 0;
+                        match.playersReady = 0;
+                        EntityManager.SetComponentData(matchEntity, match);
+                        var controller = World.GetExistingSystemManaged<MatchControllerSystem>();
+                        if (controller != null) controller.Enabled = true;
+                    }
                 }
                 else
                     UnityEngine.Debug.LogError("Battle loadout exceeds DataContainer selectedSquads capacity.");

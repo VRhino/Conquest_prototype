@@ -8,6 +8,7 @@ using UnityEngine;
 public static class CurrencyService
 {
     private static IHeroEconomyMutator _currentHero;
+    public static void Reset() => _currentHero = null;
 
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
@@ -82,6 +83,7 @@ public static class CurrencyService
             return false;
 
         int previousAmount = _currentHero.Bronze;
+        if ((long)previousAmount + amount > int.MaxValue) return false;
         _currentHero.Bronze += amount;
 
         LogInfo($"Bronze credited successfully: {previousAmount} -> {_currentHero.Bronze} (credited: {amount})");

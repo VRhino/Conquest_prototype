@@ -7,6 +7,8 @@ using Unity.Transforms;
 /// or supply zone and writes the result to the <see cref="LocalHeroCaptureStateComponent"/> singleton.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(CaptureZoneTriggerSystem))]
+[UpdateAfter(typeof(SupplyInteractionSystem))]
 public partial class LocalHeroCaptureTrackerSystem : SystemBase
 {
     private Entity _stateEntity;

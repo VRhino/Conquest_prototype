@@ -18,7 +18,7 @@ public static class ItemInstanceService
     public static InventoryItem CreateItem(string protoItemId, int quantity = 1)
     {
         var protoItem = InventoryUtils.GetItemData(protoItemId);
-        if (protoItem == null)
+        if (protoItem == null || quantity <= 0)
         {
             Debug.LogError($"[ItemInstanceService] ProtoItem not found: {protoItemId}");
             return null;
@@ -66,7 +66,7 @@ public static class ItemInstanceService
     /// <returns>True si se pueden stackear</returns>
     public static bool CanStack(InventoryItem item1, InventoryItem item2)
     {
-        if (item1 == null || item2 == null) 
+        if (item1 == null || item2 == null || ReferenceEquals(item1, item2) || item1.quantity <= 0 || item2.quantity <= 0)
             return false;
 
         // Ambos deben ser del mismo protoItem
@@ -94,7 +94,9 @@ public static class ItemInstanceService
             return false;
         }
 
-        targetItem.quantity += sourceItem.quantity;
+        long total = (long)targetItem.quantity + sourceItem.quantity;
+        if (total > int.MaxValue) return false;
+        targetItem.quantity = (int)total;
         LogInfo($"Stacked {sourceItem.quantity} {sourceItem.itemId} into existing stack. New total: {targetItem.quantity}");
         
         return true;

@@ -20,6 +20,7 @@ public class TooltipStatsSystem : ITooltipComponent
 
     // Lista de entries activas
     private List<GameObject> _statEntries = new List<GameObject>();
+    private int _usedEntries;
 
     #region ITooltipComponent Implementation
 
@@ -38,6 +39,8 @@ public class TooltipStatsSystem : ITooltipComponent
     public void Cleanup()
     {
         ClearStats();
+        foreach (var entry in _statEntries) if (entry != null) Object.Destroy(entry);
+        _statEntries.Clear();
         _controller = null;
         _statsPanel = null;
         _statsContainer = null;
@@ -68,7 +71,7 @@ public class TooltipStatsSystem : ITooltipComponent
         _statsPanel?.SetActive(true);
 
         // Verificar si hay comparación disponible
-        bool hasComparison = ComparisonTooltipUtils.ShouldShowComparison(itemData);
+        bool hasComparison = _controller.isDual && ComparisonTooltipUtils.ShouldShowComparison(itemData);
 
         if (hasComparison && _controller.CurrentTooltipType == TooltipType.Primary)
         {
@@ -89,9 +92,9 @@ public class TooltipStatsSystem : ITooltipComponent
         foreach (GameObject entry in _statEntries)
         {
             if (entry != null)
-                Object.Destroy(entry);
+                entry.SetActive(false);
         }
-        _statEntries.Clear();
+        _usedEntries = 0;
 
         if (_statsPanel != null)
             _statsPanel.SetActive(false);
@@ -140,6 +143,13 @@ public class TooltipStatsSystem : ITooltipComponent
 
     #region Stat Entry Creation
 
+    private GameObject GetEntry()
+    {
+        if (_usedEntries == _statEntries.Count)
+            _statEntries.Add(Object.Instantiate(_statEntryPrefab, _statsContainer));
+        return _statEntries[_usedEntries++];
+    }
+
     /// <summary>
     /// Crea una entrada de estadística regular.
     /// </summary>
@@ -147,11 +157,10 @@ public class TooltipStatsSystem : ITooltipComponent
     {
         if (_statEntryPrefab == null || _statsContainer == null) return;
 
-        GameObject entry = Object.Instantiate(_statEntryPrefab, _statsContainer);
-        _statEntries.Add(entry);
+        GameObject entry = GetEntry();
 
         // Configurar textos de la entry
-        TMP_Text[] texts = entry.GetComponentsInChildren<TMP_Text>();
+        TMP_Text[] texts = entry.GetComponentsInChildren<TMP_Text>(true);
         if (texts.Length >= 2)
         {
             // Primer texto: nombre de la estadística
@@ -179,11 +188,10 @@ public class TooltipStatsSystem : ITooltipComponent
     {
         if (_statEntryPrefab == null || _statsContainer == null) return;
 
-        GameObject entry = Object.Instantiate(_statEntryPrefab, _statsContainer);
-        _statEntries.Add(entry);
+        GameObject entry = GetEntry();
 
         // Configurar textos de la entry
-        TMP_Text[] texts = entry.GetComponentsInChildren<TMP_Text>();
+        TMP_Text[] texts = entry.GetComponentsInChildren<TMP_Text>(true);
         if (texts.Length >= 2)
         {
             // Primer texto: nombre de la estadística

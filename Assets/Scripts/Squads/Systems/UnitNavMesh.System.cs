@@ -44,6 +44,7 @@ public partial class UnitNavMeshSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        bool battleActive = SystemAPI.GetSingleton<MatchStateComponent>().currentState == MatchState.InBattle;
         // Read leash distance once — avoids per-unit singleton lookup
         bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
         var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
@@ -69,6 +70,14 @@ public partial class UnitNavMeshSystem : SystemBase
             if (agent == null || !agent.enabled || !agent.isOnNavMesh)
                 continue;
 
+            if (!battleActive)
+            {
+                if (agent.hasPath || agent.pathPending) agent.ResetPath();
+                if (!agent.isStopped) agent.isStopped = true;
+                navigationState.ValueRW.hasIssuedCommand = false;
+                continue;
+            }
+            if (agent.isStopped) agent.isStopped = false;
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
 
             float3 unitPos = transform.ValueRO.Position;

@@ -126,7 +126,7 @@ public partial class HeroSpawnSystem : SystemBase
             if (PlayerSessionService.SelectedHero != null)
             {
                 var selectedHero = PlayerSessionService.SelectedHero;
-                string cacheKey = string.IsNullOrEmpty(selectedHero.heroName) ? selectedHero.classId : selectedHero.heroName;
+                string cacheKey = HeroAttributeValidator.GetHeroId(selectedHero);
                 realMaxHealth = DataCacheService.GetHeroCalculatedAttributes(cacheKey).maxHealth;
 
             }

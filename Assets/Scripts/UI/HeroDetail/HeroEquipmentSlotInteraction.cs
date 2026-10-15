@@ -71,7 +71,13 @@ public class HeroEquipmentSlotInteraction : BaseItemCellInteraction
         Action<InventoryItem, ItemDataSO, HeroEquipmentSlotController> onEquipmentSlotClicked = null)
     {
         base.SetEvents(HandleItemClickedForwarding, onItemRightClicked);
-        OnEquipmentSlotClicked += onEquipmentSlotClicked;
+        OnEquipmentSlotClicked = onEquipmentSlotClicked;
+    }
+
+    public override void RemoveEvents()
+    {
+        base.RemoveEvents();
+        OnEquipmentSlotClicked = null;
     }
 
     #endregion

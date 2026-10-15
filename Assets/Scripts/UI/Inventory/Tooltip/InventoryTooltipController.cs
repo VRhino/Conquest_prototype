@@ -70,6 +70,8 @@ public class InventoryTooltipController : MonoBehaviour
     /// Tipo actual del tooltip configurado en este controlador.
     /// </summary>
     public TooltipType CurrentTooltipType => tooltipType;
+    public ItemInteractionContext InteractionContext { get; private set; }
+    public void SetInteractionContext(ItemInteractionContext context) => InteractionContext = context;
 
     // *** PROPIEDADES PUBLICAS PARA COMPONENTES ***
     // Los componentes acceden a estas propiedades para realizar su trabajo

@@ -136,7 +136,8 @@ public class HeroLifecycleRegressionTests
     {
         using var world = new World("Hero attack stamina regression");
         var em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
         var config = em.CreateEntity(typeof(HeroGameplayConfigComponent));
         em.SetComponentData(config, new HeroGameplayConfigComponent
         { attackStaminaCost = 15f, attackCooldown = 1f });

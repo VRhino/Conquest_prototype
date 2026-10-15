@@ -13,6 +13,7 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitTargetingSystem))]
+[UpdateAfter(typeof(NavMeshPositionSyncSystem))]
 public partial class RangedAttackSystem : SystemBase
 {
     EndSimulationEntityCommandBufferSystem _ecbSystem;
@@ -24,6 +25,8 @@ public partial class RangedAttackSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
+            || match.currentState == MatchState.InBattle;
         float dt   = SystemAPI.Time.DeltaTime;
         uint  seed = (uint)(SystemAPI.Time.ElapsedTime * 10000.0 + 1.0);
 
@@ -43,6 +46,7 @@ public partial class RangedAttackSystem : SystemBase
                      RefRO<UnitRangedStatsComponent>,
                      RefRO<UnitWeaponComponent>,
                      RefRO<LocalTransform>>()
+                          .WithNone<IsDeadComponent>()
                           .WithEntityAccess())
         {
             ref var state = ref rangedState.ValueRW;
@@ -50,6 +54,7 @@ public partial class RangedAttackSystem : SystemBase
 
             // Clear one-frame firing signal from previous frame
             state.isFiring = false;
+            if (!battleActive) continue;
 
             // Tick timers
             state.shotTimer   = math.max(0f, state.shotTimer   - dt);

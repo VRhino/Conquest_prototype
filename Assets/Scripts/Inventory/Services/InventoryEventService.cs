@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
@@ -11,9 +12,150 @@ public static class InventoryEventService
 {
     private static HeroData _currentHero;
     private static Action _saveAction;
+    private static List<Action> _pendingEvents;
+    private static bool _pendingChange;
+    private static bool _pendingEquipmentChange;
+
+    /// <summary>Roll back the complete operation; save and notify only its final state.</summary>
+    public static bool RunTransaction(Func<bool> operation)
+    {
+        if (_currentHero == null || operation == null) return false;
+        if (_pendingEvents != null) return operation();
+
+        var snapshot = new InventorySnapshot(_currentHero);
+        _pendingEvents = new List<Action>();
+        _pendingChange = false;
+        bool succeeded;
+        try { succeeded = operation(); }
+        catch (Exception ex)
+        {
+            LogWarning($"Operation reverted: {ex.Message}");
+            succeeded = false;
+        }
+        var notifications = _pendingEvents;
+        bool changed = _pendingChange;
+        bool equipmentChanged = _pendingEquipmentChange;
+        _pendingEquipmentChange = false;
+        _pendingEvents = null;
+        _pendingChange = false;
+        if (!succeeded)
+        {
+            snapshot.Restore();
+            return false;
+        }
+        if (changed)
+        {
+            AutoSaveHeroData();
+            foreach (var notification in notifications) notification();
+            if (equipmentChanged) Notify(OnEquipmentChanged);
+            Notify(OnInventoryChanged);
+        }
+        return true;
+    }
+
+    public static void Reset()
+    {
+        _pendingEquipmentChange = false;
+        _currentHero = null;
+        _saveAction = null;
+        _pendingEvents = null;
+        _pendingChange = false;
+    }
+
+    /// <summary>Rebind views to a new session without saving an inventory operation.</summary>
+    public static void NotifyContextChanged()
+    {
+        Notify(OnEquipmentChanged);
+        Notify(OnInventoryChanged);
+    }
+
+    private static void Publish(Action notification, bool equipmentChanged = false)
+    {
+        if (_pendingEvents != null)
+        {
+            _pendingEvents.Add(notification);
+            _pendingEquipmentChange |= equipmentChanged;
+            _pendingChange = true;
+        }
+        else
+        {
+            AutoSaveHeroData();
+            notification();
+            if (equipmentChanged) Notify(OnEquipmentChanged);
+            Notify(OnInventoryChanged);
+        }
+    }
+
+    private static void Notify(Action listeners)
+    {
+        if (listeners == null) return;
+        foreach (Action listener in listeners.GetInvocationList())
+            try { listener(); }
+            catch (Exception ex) { LogError($"Inventory observer failed: {ex.Message}"); }
+    }
+
+    private static void Notify<T>(Action<T> listeners, T value)
+    {
+        if (listeners == null) return;
+        foreach (Action<T> listener in listeners.GetInvocationList())
+            try { listener(value); }
+            catch (Exception ex) { LogError($"Inventory observer failed: {ex.Message}"); }
+    }
+
+    private static void Notify<T, U>(Action<T, U> listeners, T first, U second)
+    {
+        if (listeners == null) return;
+        foreach (Action<T, U> listener in listeners.GetInvocationList())
+            try { listener(first, second); }
+            catch (Exception ex) { LogError($"Inventory observer failed: {ex.Message}"); }
+    }
+
+    private sealed class InventorySnapshot
+    {
+        readonly HeroData hero;
+        readonly List<InventoryItem> inventory;
+        readonly Equipment equipment, slots;
+        readonly Dictionary<InventoryItem, (int quantity, int slot, int price, Dictionary<string, float> stats)> items = new();
+        readonly int bronze, silver, gold;
+        readonly UnityEngine.Random.State randomState;
+
+        public InventorySnapshot(HeroData hero)
+        {
+            this.hero = hero;
+            inventory = new List<InventoryItem>(hero.inventory);
+            equipment = hero.equipment;
+            slots = new Equipment { weapon = equipment.weapon, helmet = equipment.helmet,
+                torso = equipment.torso, gloves = equipment.gloves, pants = equipment.pants, boots = equipment.boots };
+            foreach (var item in inventory.Concat(new[] { slots.weapon, slots.helmet, slots.torso,
+                         slots.gloves, slots.pants, slots.boots }))
+                if (item != null && !items.ContainsKey(item))
+                    items[item] = (item.quantity, item.slotIndex, item.price, new Dictionary<string, float>(item.GeneratedStats));
+            bronze = hero.bronze; silver = hero.silver; gold = hero.gold;
+            randomState = UnityEngine.Random.state;
+        }
+
+        public void Restore()
+        {
+            hero.inventory.Clear();
+            hero.inventory.AddRange(inventory);
+            hero.equipment = equipment;
+            equipment.weapon = slots.weapon; equipment.helmet = slots.helmet; equipment.torso = slots.torso;
+            equipment.gloves = slots.gloves; equipment.pants = slots.pants; equipment.boots = slots.boots;
+            foreach (var pair in items)
+            {
+                pair.Key.quantity = pair.Value.quantity;
+                pair.Key.slotIndex = pair.Value.slot;
+                pair.Key.price = pair.Value.price;
+                pair.Key.GeneratedStats = pair.Value.stats;
+            }
+            hero.bronze = bronze; hero.silver = silver; hero.gold = gold;
+            UnityEngine.Random.state = randomState;
+        }
+    }
 
     // Eventos del inventario
     public static event Action OnInventoryChanged;
+    public static event Action OnEquipmentChanged;
     public static event Action<InventoryItem> OnItemAdded;
     public static event Action<InventoryItem> OnItemRemoved;
     public static event Action<InventoryItem, InventoryItem> OnItemEquipped;
@@ -22,6 +164,12 @@ public static class InventoryEventService
     
     // Eventos para confirmación de equipamiento
     public static event Action<InventoryItem, string, UnityAction, UnityAction> OnEquipmentConfirmationRequired;
+    public static bool RequestConfirmation(InventoryItem item, string message, Action confirm, Action cancel = null)
+    {
+        if (OnEquipmentConfirmationRequired == null) return false;
+        OnEquipmentConfirmationRequired.Invoke(item, message, () => confirm?.Invoke(), () => cancel?.Invoke());
+        return true;
+    }
 
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
@@ -29,7 +177,7 @@ public static class InventoryEventService
     public static void Initialize(HeroData hero, Action saveAction = null)
     {
         _currentHero = hero ?? throw new ArgumentNullException(nameof(hero));
-        _saveAction  = saveAction ?? _saveAction; // preserve existing callback if none provided
+        if (saveAction != null) _saveAction = saveAction;
         LogInfo($"Event service initialized for hero: {_currentHero.heroName}");
     }
 
@@ -40,9 +188,8 @@ public static class InventoryEventService
     /// </summary>
     public static void TriggerInventoryChanged()
     {
-        OnInventoryChanged?.Invoke();
-        AutoSaveHeroData();
-        LogInfo("Inventory changed event triggered");
+        if (_pendingEvents != null) _pendingChange = true;
+        else { AutoSaveHeroData(); Notify(OnInventoryChanged); }
     }
 
     /// <summary>
@@ -52,8 +199,7 @@ public static class InventoryEventService
     {
         if (item == null) return;
         
-        OnItemAdded?.Invoke(item);
-        TriggerInventoryChanged();
+        Publish(() => Notify(OnItemAdded, item));
         LogInventoryOperation($"Item added: {item.itemId} (Quantity: {item.quantity})");
     }
 
@@ -64,8 +210,7 @@ public static class InventoryEventService
     {
         if (item == null) return;
         
-        OnItemRemoved?.Invoke(item);
-        TriggerInventoryChanged();
+        Publish(() => Notify(OnItemRemoved, item));
         LogInventoryOperation($"Item removed: {item.itemId} (Quantity: {item.quantity})");
     }
 
@@ -74,8 +219,8 @@ public static class InventoryEventService
     /// </summary>
     public static void TriggerItemEquipped(InventoryItem equippedItem, InventoryItem unequippedItem = null)
     {
-        OnItemEquipped?.Invoke(equippedItem, unequippedItem);
-        TriggerInventoryChanged();
+        if (equippedItem == null) return;
+        Publish(() => Notify(OnItemEquipped, equippedItem, unequippedItem), equipmentChanged: true);
         
         string message = $"Item equipped: {equippedItem.itemId}";
         if (unequippedItem != null)
@@ -92,8 +237,7 @@ public static class InventoryEventService
     {
         if (item == null) return;
         
-        OnItemUnequipped?.Invoke(item);
-        TriggerInventoryChanged();
+        Publish(() => Notify(OnItemUnequipped, item), equipmentChanged: true);
         LogInventoryOperation($"Item unequipped: {item.itemId}");
     }
 
@@ -104,8 +248,7 @@ public static class InventoryEventService
     {
         if (item == null) return;
         
-        OnItemUsed?.Invoke(item);
-        TriggerInventoryChanged();
+        Publish(() => Notify(OnItemUsed, item));
         LogInventoryOperation($"Item used: {item.itemId}");
     }
 
@@ -263,9 +406,9 @@ public static class InventoryEventService
         bool foundInInventory = inventory.Any(item => 
             item.instanceId == equippedItem.instanceId);
 
-        if (!foundInInventory)
+        if (foundInInventory)
         {
-            LogWarning($"Equipped {slotName} ({equippedItem.itemId}) not found in inventory");
+            LogWarning($"Equipped {slotName} ({equippedItem.itemId}) is duplicated in inventory");
         }
     }
 
@@ -348,11 +491,13 @@ public static class InventoryEventService
     public static void ClearAllEventListeners()
     {
         OnInventoryChanged = null;
+        OnEquipmentChanged = null;
         OnItemAdded = null;
         OnItemRemoved = null;
         OnItemEquipped = null;
         OnItemUnequipped = null;
         OnItemUsed = null;
+        OnEquipmentConfirmationRequired = null;
         
         LogInfo("All event listeners cleared");
     }

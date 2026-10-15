@@ -45,8 +45,10 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     private List<InventoryItemCellController> _cellControllers = new List<InventoryItemCellController>();
     private HeroData _currentHero;
     private InventoryItem[] slotItems;
+    private (InventoryItem item, ItemDataSO data, int quantity, int price, int statsHash)[] _displayedItems;
 
-    // Propiedades públicas para InventoryUIUtils
+
+    // Consultas del estado visual de la grilla.
     public ItemFilter CurrentFilter => _currentFilter;
     public List<InventoryItemCellController> CellControllers => _cellControllers;
     public InventoryItem[] SlotItems => slotItems;
@@ -77,20 +79,16 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     {
         // Suscribirse a eventos del inventario usando InventoryManager
         InventoryManager.OnInventoryChanged += RefreshFullUI;
-        InventoryManager.OnItemAdded += OnItemChanged;
-        InventoryManager.OnItemRemoved += OnItemChanged;
         
         // Inicializar array visual si aún no está creado
         if (slotItems == null)
-            slotItems = new InventoryItem[gridWidth * gridHeight];
+            slotItems = new InventoryItem[InventoryManager.InventoryLimit];
     }
 
     void OnDisable()
     {
         // Desuscribirse de eventos usando InventoryManager
         InventoryManager.OnInventoryChanged -= RefreshFullUI;
-        InventoryManager.OnItemAdded -= OnItemChanged;
-        InventoryManager.OnItemRemoved -= OnItemChanged;
     }
 
     /// <summary>
@@ -131,12 +129,16 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         // Limpiar grilla existente
         foreach (Transform child in gridContainer)
         {
+            var cell = child.GetComponent<InventoryItemCellController>();
+            if (cell != null) tooltipManager?.DisconnectCellFromTooltip(cell);
             Destroy(child.gameObject);
         }
         _cellControllers.Clear();
 
         // Crear las 72 celdas (9x8)
-        int totalCells = gridWidth * gridHeight;
+        int totalCells = InventoryManager.InventoryLimit;
+        gridHeight = Mathf.CeilToInt((float)totalCells / Mathf.Max(1, gridWidth));
+        slotItems = new InventoryItem[totalCells];
         for (int i = 0; i < totalCells; i++)
         {
             GameObject cellObject = Instantiate(inventoryItemCellPrefab, gridContainer);
@@ -203,7 +205,12 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
             slotItems = new InventoryItem[gridWidth * gridHeight];
 
         // Inicializar el servicio de inventario
-        InventoryManager.Initialize(heroData);
+        if (!ReferenceEquals(PlayerSessionService.SelectedHero, heroData)) PlayerSessionService.SetSelectedHero(heroData);
+        if (_cellControllers.Count != InventoryManager.InventoryLimit)
+        {
+            CreateInventoryGrid();
+            InitializeTooltipSystem();
+        }
 
         // Mostrar el panel
         if (mainPanel != null)
@@ -246,6 +253,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         foreach (var cell in _cellControllers)
         {
             cell.RemoveEvents();
+            cell.SetContext(ItemInteractionContext.StoreInventory);
             cell.SetEvents(onItemClicked, onItemRightClicked);
         }
     }
@@ -255,6 +263,7 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         foreach (var cell in _cellControllers)
         {
             cell.RemoveEvents();
+            cell.SetContext(ItemInteractionContext.Inventory);
             cell.ResetDefaultEvents();
         }
         ClosePanel();
@@ -330,7 +339,9 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     /// </summary>
     public void RefreshFullUI()
     {
-        if (_currentHero == null) return;
+        if (!IsPanelOpen) return;
+        _currentHero = InventoryManager.GetCurrentHero();
+        if (_currentHero == null) { ClosePanel(); return; }
 
         UpdateInventoryDisplay();
         UpdateMoneyDisplay();
@@ -365,7 +376,9 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         if (_currentHero == null || _cellControllers.Count == 0)
             return; // Early exit if no hero or cell controllers
 
-        int totalCells = gridWidth * gridHeight;
+        int totalCells = _cellControllers.Count;
+        if (_displayedItems == null || _displayedItems.Length != totalCells)
+            _displayedItems = new (InventoryItem, ItemDataSO, int, int, int)[totalCells];
         
         // Limpiar array visual completo
         Array.Clear(slotItems, 0, slotItems.Length);
@@ -397,13 +410,20 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         for (int i = 0; i < totalCells && i < _cellControllers.Count; i++)
         {
             var cellController = _cellControllers[i];
-            cellController.SetCellIndex(i);
-            
             var item = slotItems[i];
+            var data = item != null ? InventoryUtils.GetItemData(item.itemId) : null;
+            int statsHash = 0;
+            if (item != null)
+                foreach (var stat in item.GeneratedStats)
+                    statsHash ^= HashCode.Combine(stat.Key, stat.Value);
+            var previous = _displayedItems[i];
+            if (ReferenceEquals(cellController.CurrentItem, item) && ReferenceEquals(previous.item, item)
+                && ReferenceEquals(previous.data, data) && previous.quantity == (item?.quantity ?? 0)
+                && previous.price == (item?.price ?? 0) && previous.statsHash == statsHash) continue;
+            _displayedItems[i] = (item, data, item?.quantity ?? 0, item?.price ?? 0, statsHash);
             if (item != null)
             {
-                ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
-                cellController.SetItem(item, itemData);
+                cellController.SetItem(item, data);
             }
             else
             {
@@ -457,15 +477,6 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
     }
 
     /// <summary>
-    /// Callback para cuando cambian los ítems en el inventario.
-    /// </summary>
-    /// <param name="item">Ítem que cambió</param>
-    private void OnItemChanged(InventoryItem item)
-    {
-        RefreshFullUI(); // Ahora usa el método unificado que actualiza todo
-    }
-
-    /// <summary>
     /// Intercambia ítems entre dos celdas de la grilla.
     /// Llamado por el sistema de drag and drop.
     /// NUEVO: Solo permite intercambio cuando filtro es "All".
@@ -488,7 +499,9 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         }
 
         // Validar índices
-        int totalCells = gridWidth * gridHeight;
+        int totalCells = _cellControllers.Count;
+        if (_displayedItems == null || _displayedItems.Length != totalCells)
+            _displayedItems = new (InventoryItem, ItemDataSO, int, int, int)[totalCells];
         if (sourceCellIndex < 0 || sourceCellIndex >= totalCells ||
             targetCellIndex < 0 || targetCellIndex >= totalCells)
         {
@@ -504,25 +517,10 @@ public class InventoryPanelController : MonoBehaviour, IFullscreenPanel
         if (sourceItem == null && targetItem == null)
             return;
 
-        // Actualizar slotIndex de los ítems si existen
-        if (sourceItem != null)
-            sourceItem.slotIndex = targetCellIndex;
-        
-        if (targetItem != null)
-            targetItem.slotIndex = sourceCellIndex;
-
-        // Intercambiar en el array visual
-        slotItems[sourceCellIndex] = targetItem;
-        slotItems[targetCellIndex] = sourceItem;
-
-        // Actualizar visualización completa
-        RefreshFullUI();
-        
-        // Guardar cambios (el inventario persistente se actualiza automáticamente por las referencias)
-        if (PlayerSessionService.CurrentPlayer != null)
-        {
-            SaveSystem.SavePlayer(PlayerSessionService.CurrentPlayer);
-        }
+        if (sourceCellIndex == targetCellIndex) return;
+        if (sourceItem != null && targetItem != null) InventoryManager.SwapItemSlots(sourceItem, targetItem);
+        else if (sourceItem != null) InventoryManager.MoveItemToSlot(sourceItem, targetCellIndex);
+        else InventoryManager.MoveItemToSlot(targetItem, sourceCellIndex);
     }
 
     #region Debug & Validation

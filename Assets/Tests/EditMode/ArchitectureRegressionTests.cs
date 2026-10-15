@@ -224,6 +224,225 @@ public class ArchitectureRegressionTests
     }
 
     [Test]
+    public void UnifiedSaveImportsLegacyWithoutAssigningAnOwnerOrReimporting()
+    {
+        WithSaveFiles((profilePath, progressPath) =>
+        {
+            var legacy = new ProgressFileStore(progressPath);
+            legacy.Update(p => { p.level = 7; p.currentXP = 45; p.perkPoints = 3;
+                p.loadouts.Add(new LocalSaveSystem.LoadoutData { name = "Legacy", squadIDs = new() { 8 } });
+                p.squads.Add(new LocalSaveSystem.SquadInstanceData { id = 8, persistentId = "legacy-squad", armorPercent = 70 }); });
+            var hero = new HeroData { heroName = "Modern", level = 2 };
+            var original = new PlayerData { playerName = "Player", gold = 21, heroes = new() { hero } };
+            File.WriteAllText(profilePath, JsonUtility.ToJson(original));
+            string originalProfile = File.ReadAllText(profilePath);
+            string originalProgress = File.ReadAllText(progressPath);
+            var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+            var imported = provider.Load();
+            Assert.That(File.ReadAllText(profilePath), Is.EqualTo(originalProfile), "Load must be read-only.");
+            Assert.That(imported.battleProgress.level, Is.EqualTo(7));
+            Assert.That(imported.heroes[0].level, Is.EqualTo(2), "Legacy owner is unknown.");
+            Assert.That(imported.heroes[0].heroId, Is.EqualTo(hero.heroId));
+            provider.Save(imported);
+            legacy.Update(p => p.level = 99);
+            var result = provider.Load();
+            Assert.That(result.saveVersion, Is.EqualTo(Core.Persistence.LocalSaveProvider.CurrentVersion));
+            Assert.That(result.battleProgress.level, Is.EqualTo(7));
+            Assert.That(result.battleProgress.currentXP, Is.EqualTo(45));
+            Assert.That(result.battleProgress.perkPoints, Is.EqualTo(3));
+            Assert.That(result.battleProgress.loadouts[0].squadIDs[0], Is.EqualTo(8));
+            Assert.That(result.battleProgress.squads[0].persistentId, Is.EqualTo("legacy-squad"));
+            Assert.That(result.battleProgress.squads[0].armorPercent, Is.EqualTo(70));
+            Assert.That(File.ReadAllText(progressPath + ".bak"), Is.EqualTo(originalProgress));
+            Assert.That(File.Exists(profilePath + ".bak"), Is.True);
+        });
+    }
+
+    [Test]
+    public void UnifiedProgressAndStaleInventoryWritesPreserveEachOthersFields()
+    {
+        WithSaveFiles((profilePath, progressPath) =>
+        {
+            var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+            provider.Save(new PlayerData { playerName = "Player", gold = 21 });
+            var inventorySnapshot = provider.Load();
+            var progress = new ProgressFileStore(progressPath, profilePath);
+            progress.Update(p => p.currentXP = 45);
+            inventorySnapshot.gold = 75;
+            provider.Save(inventorySnapshot);
+            progress.Update(p => p.squads.Add(new LocalSaveSystem.SquadInstanceData { persistentId = "squad", armorPercent = 60 }));
+            var final = provider.Load();
+            Assert.That(final.gold, Is.EqualTo(75));
+            Assert.That(final.battleProgress.currentXP, Is.EqualTo(45));
+            Assert.That(final.battleProgress.squads[0].armorPercent, Is.EqualTo(60));
+            Assert.That(File.Exists(progressPath), Is.False, "After a profile exists there is one active writer.");
+        });
+    }
+
+    [Test]
+    public void ProgressBeforeProfileCreationRemainsAvailableForFirstSave()
+    {
+        WithSaveFiles((profilePath, progressPath) =>
+        {
+            var progress = new ProgressFileStore(progressPath, profilePath);
+            progress.Update(p => p.currentXP = 56);
+            var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+            Assert.That(provider.Load(), Is.Null, "Progress must not fabricate an empty player profile.");
+            string original = File.ReadAllText(progressPath);
+            provider.Save(new PlayerData { playerName = "New" });
+            progress.Update(p => p.currentXP = 67);
+            Assert.That(provider.Load().battleProgress.currentXP, Is.EqualTo(67));
+            Assert.That(File.ReadAllText(progressPath), Is.EqualTo(original));
+        });
+    }
+
+    [Test]
+    public void FutureSaveVersionIsRejectedEvenWhenAnOlderBackupExists()
+    {
+        WithSaveFiles((profilePath, progressPath) =>
+        {
+            var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+            provider.Save(new PlayerData { playerName = "Old" });
+            provider.Save(new PlayerData { playerName = "New" });
+            string future = "{\"saveVersion\":99,\"unknownField\":\"preserve\"}";
+            File.WriteAllText(profilePath, future);
+            Assert.Throws<NotSupportedException>(() => provider.Load());
+            Assert.Throws<NotSupportedException>(() => provider.Save(new PlayerData()));
+            Assert.Throws<NotSupportedException>(() => new ProgressFileStore(progressPath, profilePath).Update(p => p.level++));
+            Assert.That(File.ReadAllText(profilePath), Is.EqualTo(future));
+        });
+    }
+
+    [Test]
+    public void LegacyProgressBackupIsImportedWhenItsPrimaryFileIsMissing()
+    {
+        WithSaveFiles((profilePath, progressPath) =>
+        {
+            var legacy = new ProgressFileStore(progressPath);
+            legacy.Update(p => p.currentXP = 56);
+            legacy.Update(p => p.currentXP = 67);
+            File.Delete(progressPath);
+            var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+            provider.Save(new PlayerData());
+            Assert.That(provider.Load().battleProgress.currentXP, Is.EqualTo(56));
+            Assert.That(File.Exists(progressPath + ".bak"), Is.True);
+        });
+    }
+
+    [Test]
+    public void CorruptProfileRecoversBackupAndCorruptLegacyDoesNotBecomeEmptyProgress()
+    {
+        WithSaveFiles((profilePath, progressPath) =>
+        {
+            var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+            provider.Save(new PlayerData { gold = 21 });
+            provider.Save(new PlayerData { gold = 75 });
+            File.WriteAllText(profilePath, "{broken");
+            Assert.That(provider.Load().gold, Is.EqualTo(21));
+            File.Delete(profilePath + ".bak");
+            Assert.Throws<InvalidDataException>(() => provider.Save(new PlayerData()));
+            Assert.That(File.ReadAllText(profilePath), Is.EqualTo("{broken"));
+            File.Delete(profilePath);
+            File.WriteAllText(progressPath, "{broken");
+            Assert.Throws<InvalidDataException>(() => provider.Save(new PlayerData()));
+            Assert.That(File.Exists(profilePath), Is.False);
+            Assert.That(File.ReadAllText(progressPath), Is.EqualTo("{broken"));
+        });
+    }
+
+    static void WithSaveFiles(Action<string, string> action)
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "conquest-unified-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string profile = Path.Combine(directory, "player_save.json");
+        string progress = Path.Combine(directory, "player_progress.json");
+        try { action(profile, progress); }
+        finally
+        {
+            foreach (string path in new[] { profile, progress })
+                foreach (string suffix in new[] { "", ".bak", ".tmp" })
+                    if (File.Exists(path + suffix)) File.Delete(path + suffix);
+            Directory.Delete(directory);
+        }
+    }
+
+    [Test]
+    public void StaleInventorySaveCannotRevertCommittedHeroXpButKeepsInventoryChanges()
+    {
+        var previousProvider = (Core.Persistence.ISaveProvider)typeof(SaveSystem)
+            .GetField("_provider", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+        try
+        {
+            WithSaveFiles((profilePath, progressPath) =>
+            {
+                var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+                var first = new HeroData { heroName = "Same name" };
+                var second = new HeroData { heroName = "Same name" };
+                provider.Save(new PlayerData { gold = 20, heroes = new() { first, second } });
+                var stale = provider.Load();
+                SaveSystem.SetProvider(provider);
+                Assert.That(SaveSystem.TryUpdateHeroProgress(first.heroId, 2, 50, 1), Is.True);
+                stale.gold = 75;
+                stale.heroes[0].bronze = 300;
+                provider.Save(stale);
+                var result = provider.Load();
+                var updated = HeroDataService.FindById(result, first.heroId);
+                Assert.That(result.gold, Is.EqualTo(75));
+                Assert.That(updated.bronze, Is.EqualTo(300));
+                Assert.That(updated.level, Is.EqualTo(2));
+                Assert.That(updated.currentXP, Is.EqualTo(50));
+                Assert.That(updated.perkPoints, Is.EqualTo(1));
+                Assert.That(updated.progressRevision, Is.EqualTo(1));
+                Assert.That(HeroDataService.FindById(result, second.heroId).level, Is.EqualTo(1));
+                // A current snapshot can intentionally spend its perk points.
+                updated.perkPoints = 0;
+                provider.Save(result);
+                Assert.That(HeroDataService.FindById(provider.Load(), first.heroId).perkPoints, Is.Zero);
+            });
+        }
+        finally { SaveSystem.SetProvider(previousProvider); }
+    }
+
+    [Test]
+    public void SquadProgressCommitPreservesRosterFieldsAndSurvivesAStaleInventorySave()
+    {
+        var previousProvider = (Core.Persistence.ISaveProvider)typeof(SaveSystem)
+            .GetField("_provider", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+        try
+        {
+            WithSaveFiles((profilePath, progressPath) =>
+            {
+                var provider = new Core.Persistence.LocalSaveProvider(profilePath, progressPath);
+                var owner = new HeroData();
+                owner.squadProgress.Add(new SquadInstanceData { id = "owned", baseSquadID = "base",
+                    unitsInSquad = 12, unitsKilled = 2, unitsInjured = 1, selectedFormationIndex = 3 });
+                provider.Save(new PlayerData { heroes = new() { owner } });
+                var stale = provider.Load();
+                SaveSystem.SetProvider(provider);
+                Assert.That(SaveSystem.TryUpdateSquadProgress(owner.heroId, "owned", 2, 50), Is.True);
+                var afterXp = SquadDataService.FindInstanceById(HeroDataService.FindById(provider.Load(), owner.heroId), "owned");
+                Assert.That(afterXp.unitsKilled, Is.EqualTo(2));
+                Assert.That(afterXp.unitsInjured, Is.EqualTo(1));
+                Assert.That(afterXp.unitsInSquad, Is.EqualTo(12));
+                Assert.That(afterXp.selectedFormationIndex, Is.EqualTo(3));
+                stale.gold = 75;
+                stale.heroes[0].squadProgress[0].selectedFormationIndex = 4;
+                provider.Save(stale);
+                var result = provider.Load();
+                var final = SquadDataService.FindInstanceById(HeroDataService.FindById(result, owner.heroId), "owned");
+                Assert.That(result.gold, Is.EqualTo(75));
+                Assert.That(final.level, Is.EqualTo(2));
+                Assert.That(final.experience, Is.EqualTo(50));
+                Assert.That(final.progressRevision, Is.EqualTo(1));
+                Assert.That(final.selectedFormationIndex, Is.EqualTo(4));
+                Assert.That(final.unitsAlive, Is.EqualTo(9));
+                Assert.That(result.battleProgress.squads, Is.Empty);
+            });
+        }
+        finally { SaveSystem.SetProvider(previousProvider); }
+    }
+
+    [Test]
     public void SpawnUsesSnapshotIdentityLevelAndSurvivors()
     {
         using var builder = new BlobBuilder(Allocator.Temp);
@@ -487,4 +706,239 @@ public class ArchitectureRegressionTests
         Assert.That(em.GetComponentData<UnitCombatComponent>(unit).target, Is.EqualTo(Entity.Null));
         Assert.That(em.IsComponentEnabled<IsEngagingTag>(unit), Is.False);
     }
+    [Test]
+    public void EndMatchPublishesInactiveSnapshotAndStopsStaleAIDecision()
+    {
+        var match = em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(match, new MatchStateComponent { currentState = MatchState.InBattle });
+        var snapshot = world.GetOrCreateSystemManaged<BattleWorldStateSystem>();
+        snapshot.Update();
+        var ws = em.GetComponentObject<TeamWorldState>(em.CreateEntityQuery(typeof(TeamWorldState)).GetSingletonEntity());
+        Assert.That(ws.match.isActive, Is.True);
+        em.SetComponentData(match, new MatchStateComponent { currentState = MatchState.EndMatch });
+        snapshot.Update();
+        Assert.That(ws.match.isActive, Is.False);
+        Assert.That(ws.match.state, Is.EqualTo(MatchState.EndMatch));
+
+        var hero = em.CreateEntity(typeof(HeroAITag), typeof(RusherBehaviorActive), typeof(LocalTransform),
+            typeof(HeroLifeComponent), typeof(HeroAIDecision));
+        em.SetComponentData(hero, new HeroLifeComponent { isAlive = true });
+        em.AddComponentObject(hero, new HeroAIBlackboard
+        { selfIsAlive = true, matchIsActive = true, bestObjectiveZone = match, bestObjectivePosition = new float3(10,0,0) });
+        em.SetComponentData(hero, new HeroAIDecision { action = AIActionType.AttackTarget, shouldAttack = true });
+        world.GetOrCreateSystemManaged<HeroAIRusherSystem>().Update();
+        var decision = em.GetComponentData<HeroAIDecision>(hero);
+        Assert.That(decision.action, Is.EqualTo(AIActionType.Idle));
+        Assert.That(decision.shouldAttack, Is.False);
+        Assert.That(decision.hasNewSquadOrder, Is.False);
+    }
+
+    [Test]
+    public void DeadAttackerCannotBeginMeleeSwingOrEmitProjectile()
+    {
+        var target = em.CreateEntity(typeof(LocalTransform), typeof(HealthComponent));
+        em.SetComponentData(target, LocalTransform.Identity);
+        em.SetComponentData(target, new HealthComponent { currentHealth = 100, maxHealth = 100 });
+        var profile = em.CreateEntity(typeof(DamageProfileComponent));
+        var melee = em.CreateEntity(typeof(LocalTransform), typeof(UnitCombatComponent), typeof(UnitWeaponComponent), typeof(IsDeadComponent));
+        em.SetComponentData(melee, LocalTransform.Identity);
+        em.SetComponentData(melee, new UnitCombatComponent { target = target });
+        em.SetComponentData(melee, new UnitWeaponComponent { attackRange = 5, damageProfile = profile });
+        var ranged = em.CreateEntity(typeof(LocalTransform), typeof(UnitCombatComponent), typeof(UnitWeaponComponent),
+            typeof(UnitRangedStatsComponent), typeof(RangedAttackStateComponent), typeof(IsDeadComponent));
+        em.SetComponentData(ranged, LocalTransform.Identity);
+        em.SetComponentData(ranged, new UnitCombatComponent { target = target });
+        em.SetComponentData(ranged, new UnitWeaponComponent { damageProfile = profile });
+        em.SetComponentData(ranged, new UnitRangedStatsComponent { range = 10 });
+        em.SetComponentData(ranged, new RangedAttackStateComponent { currentAmmo = 3 });
+        world.GetOrCreateSystemManaged<UnitAttackSystem>().Update();
+        world.GetOrCreateSystemManaged<RangedAttackSystem>().Update();
+        world.GetOrCreateSystemManaged<EndSimulationEntityCommandBufferSystem>().Update();
+        Assert.That(em.GetComponentData<UnitCombatComponent>(melee).isAttacking, Is.False);
+        Assert.That(em.GetComponentData<RangedAttackStateComponent>(ranged).currentAmmo, Is.EqualTo(3));
+        Assert.That(em.CreateEntityQuery(typeof(ProjectileSpawnRequest)).CalculateEntityCount(), Is.Zero);
+    }
+
+    [Test]
+    public void EndMatchClearsActiveMeleeHitbox()
+    {
+        var match = em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(match, new MatchStateComponent { currentState = MatchState.EndMatch });
+        var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitWeaponComponent),
+            typeof(UnitCombatComponent), typeof(WeaponHitboxActiveTag));
+        em.SetComponentData(unit, new UnitCombatComponent { isAttacking = true, attackAnimationTimer = 1 });
+        em.SetComponentEnabled<WeaponHitboxActiveTag>(unit, true);
+        world.GetOrCreateSystemManaged<UnitAttackSystem>().Update();
+        Assert.That(em.GetComponentData<UnitCombatComponent>(unit).isAttacking, Is.False);
+        Assert.That(em.IsComponentEnabled<WeaponHitboxActiveTag>(unit), Is.False);
+    }
+
+    [Test]
+    public void TargetingIgnoresDeadCandidateEvenWhenItsTransformStillExists()
+    {
+        var dead = em.CreateEntity(typeof(LocalTransform), typeof(IsDeadComponent));
+        var alive = em.CreateEntity(typeof(LocalTransform));
+        em.SetComponentData(dead, LocalTransform.Identity);
+        em.SetComponentData(alive, LocalTransform.FromPosition(new float3(10,0,0)));
+        var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitCombatComponent));
+        em.SetComponentData(unit, LocalTransform.Identity);
+        em.SetComponentData(unit, new UnitCombatComponent { target = dead });
+        var squad = em.CreateEntity(typeof(SquadAIComponent), typeof(SquadStateComponent));
+        em.SetComponentData(squad, new SquadStateComponent { currentState = SquadFSMState.InCombat });
+        em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
+        var candidates = em.AddBuffer<SquadTargetEntity>(squad);
+        candidates.Add(new SquadTargetEntity { Value = dead });
+        candidates.Add(new SquadTargetEntity { Value = alive });
+        world.GetOrCreateSystemManaged<UnitTargetingSystem>().Update();
+        Assert.That(em.GetComponentData<UnitCombatComponent>(unit).target, Is.EqualTo(alive));
+    }
+
+    [Test]
+    public void VisualLookupSeparatesWorldsAndDoesNotUnregisterReplacement()
+    {
+        using var otherWorld = new World("Other visual lookup world");
+        var entity = em.CreateEntity();
+        var host = new GameObject("Visual lookup regression");
+        var replacementHost = new GameObject("Replacement visual lookup regression");
+        host.SetActive(false);
+        replacementHost.SetActive(false);
+        var visual = host.AddComponent<ConquestTactics.Visual.EntityVisualSync>();
+        var replacement = replacementHost.AddComponent<ConquestTactics.Visual.EntityVisualSync>();
+        try
+        {
+            VisualSyncUtility.Register(world, entity, visual);
+            Assert.That(VisualSyncUtility.TryGetVisual(world, entity, out var found), Is.True);
+            Assert.That(found, Is.SameAs(visual));
+            Assert.That(VisualSyncUtility.TryGetVisual(otherWorld, entity, out _), Is.False);
+            VisualSyncUtility.Register(world, entity, replacement);
+            VisualSyncUtility.Unregister(world, entity, visual);
+            Assert.That(VisualSyncUtility.TryGetVisual(world, entity, out found), Is.True);
+            Assert.That(found, Is.SameAs(replacement));
+        }
+        finally
+        {
+            VisualSyncUtility.Unregister(world, entity, replacement);
+            UnityEngine.Object.DestroyImmediate(host);
+            UnityEngine.Object.DestroyImmediate(replacementHost);
+        }
+    }
+
+    [Test]
+    public void CampaignRouteSearchesRemainIndependentWhenInterleavedAndCancelled()
+    {
+        var navigation = ScriptableObject.CreateInstance<Conquest.WorldMap.WorldMapLocalNavigation>();
+        navigation.columns = 5;
+        navigation.rows = 5;
+        navigation.cellSize = 1;
+        navigation.blocked = new byte[25];
+        navigation.heights = new float[25];
+        navigation.blocked[12] = 1;
+        Vector3[] first = null, second = null;
+        var a = navigation.Search(navigation.Center(0), navigation.Center(24), (route, _) => first = route, 1);
+        var b = navigation.Search(navigation.Center(4), navigation.Center(20), (route, _) => second = route, 1);
+        try
+        {
+            Assert.That(a.MoveNext(), Is.True);
+            Assert.That(b.MoveNext(), Is.True);
+            (a as IDisposable)?.Dispose();
+            while (b.MoveNext()) { }
+            Assert.That(first, Is.Null);
+            Assert.That(second, Is.Not.Null);
+            Assert.That(second[0], Is.EqualTo(navigation.Center(4)));
+            Assert.That(second[second.Length - 1], Is.EqualTo(navigation.Center(20)));
+            for (int i = 1; i < second.Length; i++)
+                Assert.That(navigation.SegmentClear(second[i - 1], second[i]), Is.True);
+        }
+        finally
+        {
+            (a as IDisposable)?.Dispose();
+            (b as IDisposable)?.Dispose();
+            UnityEngine.Object.DestroyImmediate(navigation);
+        }
+    }
+
+    [Test]
+    public void CampaignDesiredSectorSnapshotsAreOrderedAndIndependent()
+    {
+        var manifest = ScriptableObject.CreateInstance<Conquest.WorldMap.WorldMapCampaignManifest>();
+        manifest.sectorSize = 10;
+        manifest.worldSize = new Vector2(30, 10);
+        manifest.sectors = new[]
+        {
+            new Conquest.WorldMap.CampaignSectorAddress { column = 0, row = 0, origin = Vector3.zero },
+            new Conquest.WorldMap.CampaignSectorAddress { column = 1, row = 0, origin = new Vector3(10,0,0) },
+            new Conquest.WorldMap.CampaignSectorAddress { column = 2, row = 0, origin = new Vector3(20,0,0) }
+        };
+        var host = new GameObject("Sector planning regression");
+        host.SetActive(false);
+        var streamer = host.AddComponent<Conquest.WorldMap.WorldMapSectorStreamer>();
+        streamer.manifest = manifest;
+        streamer.preloadRadius = 1;
+        try
+        {
+            var first = streamer.DesiredIndices(new Vector3(5,0,5));
+            Assert.That(first, Is.EqualTo(new[] { 0, 1 }));
+            var second = streamer.DesiredIndices(new Vector3(25,0,5));
+            Assert.That(second, Is.EqualTo(new[] { 2, 1 }));
+            Assert.That(first, Is.EqualTo(new[] { 0, 1 }));
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(host);
+            UnityEngine.Object.DestroyImmediate(manifest);
+        }
+    }
+
+    [Test]
+    public void BattleLookupUsesPersistentIdentityAndRejectsAmbiguousLegacyNames()
+    {
+        var selected = new HeroData { heroName = "Shared name" };
+        var battle = new BattleData();
+        var impostor = new BattleHeroData { heroId = Guid.NewGuid().ToString("N"), heroName = selected.heroName };
+        var actual = new BattleHeroData { heroId = selected.heroId, heroName = selected.heroName };
+        battle.attackers.Add(impostor);
+        battle.defenders.Add(actual);
+        Assert.That(battle.FindHero(selected), Is.SameAs(actual));
+        Assert.That(battle.GetSide(actual), Is.EqualTo(Side.Defenders));
+        actual.heroId = string.Empty;
+        impostor.heroId = string.Empty;
+        Assert.That(battle.FindHero(selected), Is.Null);
+        battle.attackers.Clear();
+        Assert.That(battle.FindHero(selected), Is.SameAs(actual));
+        actual.heroId = Guid.NewGuid().ToString("N");
+        Assert.That(battle.FindHero(selected), Is.Null);
+    }
+
+    [Test]
+    public void NewBattleBootstrapRearmsEndedMatchInTheSameWorld()
+    {
+        var previousWorld = World.DefaultGameObjectInjectionWorld;
+        World.DefaultGameObjectInjectionWorld = world;
+        try
+        {
+            var match = em.CreateEntity(typeof(MatchStateComponent));
+            em.SetComponentData(match, new MatchStateComponent
+            { currentState = MatchState.EndMatch, winnerTeam = 2, victoryConditionMet = true });
+            var controller = world.GetOrCreateSystemManaged<MatchControllerSystem>();
+            controller.Update();
+            Assert.That(controller.Enabled, Is.False);
+            em.CreateEntity(typeof(DataContainerComponent));
+            var participant = new BattleHeroData { heroId = "persistent-local", heroName = "Local" };
+            participant.squadInstances.Add(new SquadInstanceData
+            { id = "squad-instance", baseSquadID = "test-squad", unitsInSquad = 1 });
+            var battle = new BattleData();
+            battle.attackers.Add(participant);
+            BattleBootstrapRequests.SubmitLocal(battle, participant.heroName, participant.heroId);
+            world.GetOrCreateSystemManaged<BattleBootstrapSystem>().Update();
+            var restarted = em.GetComponentData<MatchStateComponent>(match);
+            Assert.That(restarted.currentState, Is.EqualTo(MatchState.InBattle));
+            Assert.That(restarted.victoryConditionMet, Is.False);
+            Assert.That(restarted.winnerTeam, Is.Zero);
+            Assert.That(controller.Enabled, Is.True);
+            controller.Update();
+            Assert.That(em.GetComponentData<MatchStateComponent>(match).currentState, Is.EqualTo(MatchState.InBattle));
+        }
+        finally { World.DefaultGameObjectInjectionWorld = previousWorld; }
+    }
+
 }

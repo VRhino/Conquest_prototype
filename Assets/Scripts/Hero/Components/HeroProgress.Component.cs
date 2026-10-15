@@ -5,6 +5,8 @@ using Unity.Entities;
 /// </summary>
 public struct HeroProgressComponent : IComponentData
 {
+    /// <summary>Persistent owner captured by accepted battle bootstrap.</summary>
+    public Unity.Collections.FixedString64Bytes heroId;
     /// <summary>Current hero level.</summary>
     public int level;
 

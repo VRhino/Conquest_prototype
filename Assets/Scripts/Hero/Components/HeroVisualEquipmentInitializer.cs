@@ -1,67 +1,62 @@
+using System.Collections.Generic;
+using System.Linq;
+using ConquestTactics.Visual;
+using Data.Avatar;
 using UnityEngine;
 
-/// <summary>
-/// Componente que se asegura de que el HeroVisualEquipmentSystem esté activo
-/// y conectado a los eventos de equipamiento. Se puede añadir a cualquier GameObject
-/// en la escena de juego para garantizar la funcionalidad.
-/// </summary>
+/// <summary>Updates the linked local visual after a completed inventory change.</summary>
 public class HeroVisualEquipmentInitializer : MonoBehaviour
 {
-    [Header("Debug Settings")]
-    [SerializeField] private bool enableDebugLogs = true;
+    [SerializeField] private bool enableDebugLogs = false;
+    [SerializeField] private AvatarPartDatabase avatarPartDatabase;
+    readonly List<InventoryItem> visibleEquipment = new();
+    EntityVisualSync sync;
+    HeroData boundHero;
 
-    void Start()
+    public void Bind(EntityVisualSync visualSync)
     {
-        InitializeVisualEquipmentSystem();
+        sync = visualSync;
+        boundHero = PlayerSessionService.SelectedHero;
+        visibleEquipment.Clear();
+        if (boundHero != null && sync.IsLocalHero)
+            visibleEquipment.AddRange(EquipmentManagerService.GetAllEquippedItems());
     }
 
-    /// <summary>
-    /// Verifica que el sistema de gestión visual esté funcionando.
-    /// </summary>
-    private void InitializeVisualEquipmentSystem()
+    void OnEnable() => InventoryManager.OnInventoryChanged += HandleInventoryChange;
+    void OnDisable() => InventoryManager.OnInventoryChanged -= HandleInventoryChange;
+    void HandleInventoryChange()
     {
-        if (enableDebugLogs)
-        {
-            Debug.Log("[HeroVisualEquipmentInitializer] Initializing hero visual equipment system...");
-        }
-
-        // El HeroVisualEquipmentSystem se inicializa automáticamente como parte del ECS
-        // Este componente solo sirve como punto de debug y verificación
-
-        // Verificar que el nuevo sistema de inventario está disponible
-        if (InventoryManager.IsInitialized)
-        {
-            if (enableDebugLogs)
-            {
-                Debug.Log("[HeroVisualEquipmentInitializer] InventoryManager is initialized and ready");
-            }
-        }
-        else
-        {
-            if (enableDebugLogs)
-            {
-                Debug.Log("[HeroVisualEquipmentInitializer] InventoryManager not yet initialized - this is normal on startup");
-            }
-        }
-
-        if (enableDebugLogs)
-        {
-            Debug.Log("[HeroVisualEquipmentInitializer] Hero visual equipment system initialization complete");
-        }
+        if (!visibleEquipment.SequenceEqual(EquipmentManagerService.GetAllEquippedItems())) ForceRefreshHeroVisual();
     }
 
-    /// <summary>
-    /// Método de debug para forzar una actualización visual completa del héroe.
-    /// </summary>
     [ContextMenu("Force Refresh Hero Visual")]
     public void ForceRefreshHeroVisual()
     {
-        if (enableDebugLogs)
+        if (sync == null || !sync.IsLocalHero || boundHero == null
+            || !ReferenceEquals(boundHero, PlayerSessionService.SelectedHero)) return;
+        if (avatarPartDatabase == null)
+            avatarPartDatabase = Resources.Load<AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
+        if (avatarPartDatabase == null) return;
+        var equipped = EquipmentManagerService.GetAllEquippedItems();
+        var gender = boundHero.gender == "Male" ? Gender.Male : Gender.Female;
+        foreach (var previous in visibleEquipment)
         {
-            Debug.Log("[HeroVisualEquipmentInitializer] Force refresh triggered - this would need to be implemented in HeroVisualEquipmentSystem");
+            if (previous == null || equipped.Contains(previous)) continue;
+            var data = InventoryUtils.GetItemData(previous.itemId);
+            if (data != null)
+                AvatarVisualUtils.UnequipSlotVisual(transform, avatarPartDatabase,
+                    data.itemType, data.itemCategory, gender, boundHero);
         }
-
-        // En el futuro, podrías agregar un método público al HeroVisualEquipmentSystem
-        // para forzar un refresh completo del equipamiento visual
+        // Apply final pieces after restoring bases, including overlapping attachments.
+        foreach (var item in equipped)
+        {
+            if (item == null) continue;
+            var data = InventoryUtils.GetItemData(item.itemId);
+            if (data != null && !string.IsNullOrEmpty(data.visualPartId))
+                AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(transform, avatarPartDatabase, data.visualPartId, gender);
+        }
+        visibleEquipment.Clear();
+        visibleEquipment.AddRange(equipped);
+        if (enableDebugLogs) Debug.Log("[HeroVisualEquipmentInitializer] Local equipment refreshed");
     }
 }

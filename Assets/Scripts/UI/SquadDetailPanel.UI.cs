@@ -111,8 +111,7 @@ public class SquadDetailPanel : MonoBehaviour
     // Ejemplo de cálculo de exp para siguiente nivel (ajusta según tu sistema real)
     private int GetExpForNextLevel(int level, SquadData data)
     {
-        // Placeholder: 100 * nivel
-        return 1000;
+        return level >= SquadProgressionCurves.MaxLevel ? 0 : (int)SquadProgressionSystem.CalculateNext(level);
     }
     private void SetLayerRecursively(GameObject obj, int layer)
     {
@@ -189,12 +188,12 @@ public class SquadDetailPanel : MonoBehaviour
     private void fillProgress(SquadInstanceData instance, SquadData data)
     {
         if (currentLevelText != null) currentLevelText.text = instance.level.ToString();
-        if (maxLevelText != null) maxLevelText.text = "10"; // Placeholder
+        if (maxLevelText != null) maxLevelText.text = SquadProgressionCurves.MaxLevel.ToString();
         int expForNext = GetExpForNextLevel(instance.level, data);
         if (experienceFill != null)
-            experienceFill.fillAmount = expForNext > 0 ? (float)instance.experience / expForNext : 0f;
+            experienceFill.fillAmount = expForNext > 0 ? Mathf.Clamp01((float)instance.experience / expForNext) : 1f;
         if (experiencePointsText != null)
-            experiencePointsText.text = $"{instance.experience}/{expForNext}";
+            experiencePointsText.text = expForNext > 0 ? $"{instance.experience}/{expForNext}" : "MAX";
 
     }
 

@@ -24,6 +24,10 @@ public struct NavAgentComponent : IComponentData
     public bool hasIssuedCommand;
     public bool lastCommandWasFormation;
     public bool commandFailed;
+    public bool hasProjectedCommand;
+    public Unity.Mathematics.float3 lastProjectionRequest;
+    public Unity.Mathematics.float3 projectedCommandDestination;
+    public double nextProjectionRefreshTime;
     public double nextFormationRetryTime;
     public double nextCommandRetryTime;
 }

@@ -8,6 +8,19 @@ using UnityEngine;
 /// </summary>
 public static class SquadDataService
 {
+    public static SquadInstanceData FindInstanceById(HeroData hero, string instanceId)
+    {
+        if (hero?.squadProgress == null || string.IsNullOrEmpty(instanceId)) return null;
+        SquadInstanceData found = null;
+        foreach (var squad in hero.squadProgress)
+        {
+            if (squad == null || squad.id != instanceId) continue;
+            if (found != null) return null;
+            found = squad;
+        }
+        return found;
+    }
+
     #region Private Fields
     
     private static SquadDatabase _squadDatabase;

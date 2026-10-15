@@ -23,6 +23,7 @@ public partial class HeroAttackSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        bool battleActive = SystemAPI.GetSingleton<MatchStateComponent>().currentState == MatchState.InBattle;
         float deltaTime = SystemAPI.Time.DeltaTime;
         var cfg = SystemAPI.GetSingleton<HeroGameplayConfigComponent>();
 
@@ -36,7 +37,7 @@ public partial class HeroAttackSystem : SystemBase
                         .WithAll<IsLocalPlayer>()
                         .WithEntityAccess())
         {
-            if (!life.ValueRO.isAlive)
+            if (!battleActive || !life.ValueRO.isAlive)
                 continue;
 
             var c = combat.ValueRW;
@@ -65,7 +66,7 @@ public partial class HeroAttackSystem : SystemBase
                           .WithAll<HeroAITag>()
                           .WithEntityAccess())
         {
-            if (!life.ValueRO.isAlive)
+            if (!battleActive || !life.ValueRO.isAlive)
                 continue;
 
             var c = combat.ValueRW;
@@ -88,8 +89,8 @@ public partial class HeroAttackSystem : SystemBase
         foreach (var (combat, entity) in
                  SystemAPI.Query<RefRW<HeroCombatComponent>>().WithEntityAccess())
         {
-            if (SystemAPI.HasComponent<HeroLifeComponent>(entity)
-                && !SystemAPI.GetComponent<HeroLifeComponent>(entity).isAlive)
+            if (!battleActive || (SystemAPI.HasComponent<HeroLifeComponent>(entity)
+                && !SystemAPI.GetComponent<HeroLifeComponent>(entity).isAlive))
             {
                 var deadCombat = combat.ValueRW;
                 deadCombat.isAttacking = false;

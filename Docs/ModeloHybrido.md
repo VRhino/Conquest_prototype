@@ -177,10 +177,13 @@ Los hashes están centralizados en `AnimationHashes`. El pulso `HeroAnimationCom
 
 ## Validación vigente
 
-- 62/62 pruebas EditMode.
-- 12/12 pruebas PlayMode.
-- 64 assemblies de Player Windows compiladas.
-- Pruebas específicas cubren motor local, teleport revisionado, exclusión de autoridad remota, animación confirmada y ausencia de drivers de héroe en unidades.
+- SceneTransitionService define cursor libre en escenas de interfaz; cámara y paneles respetan esa política. Matchmaking conserva la escena de origen y la salida de PostBattle permite otra cola.
+
+- 131/131 pruebas EditMode (2026-10-14).
+- 30/30 pruebas PlayMode (2026-10-14); fixture de 900 agentes y perfil renderizado explícito también pasan.
+- 69 assemblies de Player Windows compiladas (2026-10-14).
+- Pruebas específicas cubren motor local, teleport revisionado, autoridad/animación, fases y reinicio de batalla, muerte/targeting, colisiones de proyectiles, identidad persistente, commit de inventario, cancelación de rutas y repulsión de 900 agentes.
+- Resultados y límites de rendimiento: [Revisión de sistemas](Arquitectura/19_Revision_Sistemas_Optimizacion_2026-10-13.md).
 
 ## Referencias
 

@@ -2,6 +2,7 @@ using Unity.Entities;
 
 public struct SquadSpawnConfigComponent : IComponentData
 {
+    public bool enableEnvironmentAdaptation;
     public float ownerDeathRetreatDuration;
     public float retreatArrivalThreshold;
     public float slotArrivalThreshold;
@@ -10,6 +11,9 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float animationMovingSpeedThreshold;
     public float animationRunningSpeedRatio;
     public float bodyblockRadius;
+    public float bodyblockOverlapEpsilonSq;
+    public int bodyblockJobBatchSize;
+    public int bodyblockParallelThreshold;
     public float bodyblockRepulsionStrength;
     public float bodyblockWallStrength;
     public float bodyblockMaxPushSpeed;

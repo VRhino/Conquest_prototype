@@ -109,7 +109,7 @@ public static class StatComparisonUtils
     /// <param name="stats">Diccionario de estadísticas</param>
     /// <param name="statName">Nombre de la estadística</param>
     /// <returns>Valor de la estadística o 0 si no se encuentra</returns>
-    private static float GetStatValue(Dictionary<string, float> stats, string statName)
+    private static float GetStatValue(IReadOnlyDictionary<string, float> stats, string statName)
     {
         if (stats == null) return 0f;
 

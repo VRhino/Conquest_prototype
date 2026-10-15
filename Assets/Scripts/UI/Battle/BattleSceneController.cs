@@ -281,7 +281,7 @@ public class BattleSceneController : MonoBehaviour
     /// </summary>
     private void SyncBattleDataToECS()
     {
-        BattleBootstrapRequests.SubmitLocal(_currentBattleData, PlayerSessionService.SelectedHero?.heroName);
+        BattleBootstrapRequests.SubmitLocal(_currentBattleData, PlayerSessionService.SelectedHero?.heroName, PlayerSessionService.SelectedHero?.heroId);
     }
 
     /// <summary>
@@ -325,7 +325,13 @@ public class BattleSceneController : MonoBehaviour
         // Slot counter: clave = spawnID * 100 + teamID
         // Reservar slot 0 para el héroe local en su spawn point
         var slotCounter = new Dictionary<int, int>();
-        BattleHeroData localHero = _currentBattleData.findHeroDataByName(localHeroName);
+        BattleHeroData localHero = _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
+        if (localHero == null)
+        {
+            spawnPoints.Dispose();
+            Debug.LogError("[BattleSceneController] Local participant identity is missing or ambiguous.");
+            yield break;
+        }
         if (localHero != null)
         {
             int localSpawnID = 1;
@@ -334,7 +340,7 @@ public class BattleSceneController : MonoBehaviour
                 if (int.TryParse(localHero.spawnPointId, out int parsed))
                     localSpawnID = parsed;
             }
-            int localTeamID = _currentBattleData.playerSide(localHeroName) == Side.Defenders ? 2 : 1;
+            int localTeamID = _currentBattleData.GetSide(localHero) == Side.Defenders ? 2 : 1;
             slotCounter[localSpawnID * 100 + localTeamID] = 1; // slot 0 ya ocupado por el local
         }
 
@@ -342,12 +348,12 @@ public class BattleSceneController : MonoBehaviour
         var remoteHeroes = new List<(BattleHeroData heroData, int teamID)>();
         foreach (var hero in _currentBattleData.attackers)
         {
-            if (hero.heroName != localHeroName)
+            if (!ReferenceEquals(hero, localHero))
                 remoteHeroes.Add((hero, 1)); // teamID 1 = TeamA = Attackers
         }
         foreach (var hero in _currentBattleData.defenders)
         {
-            if (hero.heroName != localHeroName)
+            if (!ReferenceEquals(hero, localHero))
                 remoteHeroes.Add((hero, 2)); // teamID 2 = TeamB = Defenders
         }
 

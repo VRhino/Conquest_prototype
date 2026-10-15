@@ -13,6 +13,7 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadAISystem))]
+[UpdateAfter(typeof(HeroRespawnSystem))]
 public partial class EnemyDetectionSystem : SystemBase
 {
     private ComponentLookup<LocalTransform>  _transformLookup;

@@ -212,6 +212,7 @@ namespace ConquestTactics.Visual
 
         private void FindHeroEntity()
         {
+            VisualSyncUtility.Unregister(_world, _heroEntity, this);
             if (_heroQuery.IsEmpty)
             {
                 if (_enableDebugLogs)
@@ -258,8 +259,11 @@ namespace ConquestTactics.Visual
             }
         }
         
+        private void OnDestroy() => VisualSyncUtility.Unregister(_world, _heroEntity, this);
+
         public void SetHeroEntity(Entity heroEntity)
         {
+            VisualSyncUtility.Unregister(_world, _heroEntity, this);
             if (_entityManager == null || _world == null || !_world.IsCreated)
             {
                 InitializeEcsReferences();
@@ -310,8 +314,18 @@ namespace ConquestTactics.Visual
                 || !_entityManager.Exists(_heroEntity))
                 return;
 
+            VisualSyncUtility.Register(_world, _heroEntity, this);
             bool isLocal = _entityManager.HasComponent<IsLocalPlayer>(_heroEntity);
             IsLocalHero = isLocal;
+
+            var equipmentVisual = GetComponent<HeroVisualEquipmentInitializer>();
+            if (isLocal && equipmentVisual == null)
+                equipmentVisual = gameObject.AddComponent<HeroVisualEquipmentInitializer>();
+            if (equipmentVisual != null)
+            {
+                equipmentVisual.enabled = isLocal;
+                equipmentVisual.Bind(this);
+            }
 
             var motor = GetComponent<LocalHeroCharacterMotor>();
             var remoteAnimation = GetComponent<RemoteHeroAnimationDriver>();

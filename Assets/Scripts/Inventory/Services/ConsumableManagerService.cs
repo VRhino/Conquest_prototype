@@ -11,12 +11,15 @@ using Data.Items;
 public static class ConsumableManagerService
 {
     private static HeroData _currentHero;
+    private static readonly HashSet<InventoryItem> pendingUses = new();
+    public static void Reset() { _currentHero = null; pendingUses.Clear(); }
 
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
     /// </summary>
     public static void Initialize(HeroData hero)
     {
+        if (!ReferenceEquals(_currentHero, hero)) pendingUses.Clear();
         _currentHero = hero ?? throw new ArgumentNullException(nameof(hero));
         LogInfo($"Consumable manager initialized for hero: {_currentHero.heroName}");
     }
@@ -27,42 +30,35 @@ public static class ConsumableManagerService
     /// Usa un consumible, aplicando sus efectos y reduciendo la cantidad.
     /// </summary>
     public static bool UseConsumable(InventoryItem item)
-    {
-        if (!ValidateConsumableOperation(item)) return false;
-
-        ItemDataSO itemData = InventoryUtils.GetItemData(item.itemId);
-        if (itemData == null)
-        {
-            LogError($"Item data not found for: {item.itemId}");
-            return false;
-        }
-
-        // Aplicar efectos del consumible
-        if (!ApplyConsumableEffects(itemData, item))
-        {
-            LogWarning($"Failed to apply effects for {item.itemId}");
-            return false;
-        }
-
-        // Reducir cantidad
-        item.quantity--;
-        LogInfo($"Used {item.itemId}. Remaining quantity: {item.quantity}");
-
-        // Si se agotó, remover del inventario
-        if (item.quantity <= 0)
-        {
-            InventoryStorageService.RemoveSpecificItem(item);
-            LogInfo($"Consumed all {item.itemId} - removed from inventory");
-        }
-
-        InventoryEventService.TriggerItemUsed(item);
-        return true;
-    }
+        => UseConsumableQuantity(item, 1);
 
     /// <summary>
     /// Usa múltiples unidades de un consumible de una vez.
     /// </summary>
     public static bool UseConsumableQuantity(InventoryItem item, int quantity)
+    {
+        if (!ValidateConsumableOperation(item) || quantity <= 0 || quantity > item.quantity || pendingUses.Contains(item)) return false;
+        var interactive = InventoryUtils.GetItemData(item.itemId).effects?.Where(effect => effect != null && effect.RequiresSelection).ToArray();
+        if (interactive != null && interactive.Length != 0)
+        {
+            if (interactive.Length != 1 || quantity != 1) return false;
+            var hero = _currentHero;
+            pendingUses.Add(item);
+            bool opened = interactive[0].BeginSelection(hero, selected =>
+            {
+                if (!ReferenceEquals(hero, _currentHero) || !pendingUses.Contains(item)) return false;
+                bool success = InventoryEventService.RunTransaction(() => UseConsumableQuantityCore(item, quantity, interactive[0], selected));
+                if (success) pendingUses.Remove(item);
+                return success;
+            }, () => pendingUses.Remove(item));
+            if (!opened) pendingUses.Remove(item);
+            return opened;
+        }
+        return InventoryEventService.RunTransaction(() => UseConsumableQuantityCore(item, quantity));
+    }
+
+    private static bool UseConsumableQuantityCore(InventoryItem item, int quantity,
+        ItemEffect selectedEffect = null, List<string> selectedItems = null)
     {
         if (!ValidateConsumableOperation(item)) return false;
 
@@ -85,24 +81,26 @@ public static class ConsumableManagerService
             return false;
         }
 
+        // Reserve consumption first so a reward can use the slot released by the final unit.
+        if (itemData.consumeOnUse) item.quantity -= quantity;
+        if (item.quantity == 0 && !InventoryStorageService.RemoveSpecificItem(item)) return false;
+
         // Aplicar efectos múltiples veces
         for (int i = 0; i < quantity; i++)
         {
-            if (!ApplyConsumableEffects(itemData, item))
+            if (!ItemEffectSystem.UseConsumableItem(item, _currentHero, selectedEffect, selectedItems))
             {
                 LogWarning($"Failed to apply effects for {item.itemId} (iteration {i + 1})");
-                // Continuar con las aplicaciones restantes
+                return false;
             }
         }
 
         // Reducir cantidad total
-        item.quantity -= quantity;
         LogInfo($"Used {quantity}x {item.itemId}. Remaining quantity: {item.quantity}");
 
         // Si se agotó, remover del inventario
         if (item.quantity <= 0)
         {
-            InventoryStorageService.RemoveSpecificItem(item);
             LogInfo($"Consumed all {item.itemId} - removed from inventory");
         }
 
@@ -118,14 +116,18 @@ public static class ConsumableManagerService
     /// Combina dos stacks del mismo item.
     /// </summary>
     public static bool CombineStacks(InventoryItem targetStack, InventoryItem sourceStack)
+        => InventoryEventService.RunTransaction(() => CombineStacksCore(targetStack, sourceStack));
+
+    private static bool CombineStacksCore(InventoryItem targetStack, InventoryItem sourceStack)
     {
+        if (!InventoryStorageService.Contains(targetStack) || !InventoryStorageService.Contains(sourceStack)) return false;
         if (!ItemInstanceService.CanStack(targetStack, sourceStack))
         {
             LogWarning($"Cannot combine stacks: {targetStack?.itemId} and {sourceStack?.itemId}");
             return false;
         }
 
-        int totalQuantity = targetStack.quantity + sourceStack.quantity;
+        long totalQuantity = (long)targetStack.quantity + sourceStack.quantity;
         
         // Verificar límite máximo de stack (sin límite específico en ItemData, usar valor alto)
         var itemData = InventoryUtils.GetItemData(targetStack.itemId);
@@ -155,6 +157,9 @@ public static class ConsumableManagerService
     /// Divide un stack en dos partes.
     /// </summary>
     public static bool SplitStack(InventoryItem originalStack, int quantityToSplit)
+        => InventoryEventService.RunTransaction(() => SplitStackCore(originalStack, quantityToSplit));
+
+    private static bool SplitStackCore(InventoryItem originalStack, int quantityToSplit)
     {
         if (!ValidateStackOperation(originalStack)) return false;
 
@@ -171,7 +176,8 @@ public static class ConsumableManagerService
         }
 
         // Crear nuevo stack con la cantidad dividida
-        var newStack = ItemInstanceService.CreateItem(originalStack.itemId, quantityToSplit);
+        var newStack = new InventoryItem { itemId = originalStack.itemId, itemType = originalStack.itemType,
+            quantity = quantityToSplit, price = originalStack.price };
         if (newStack == null)
         {
             LogError($"Failed to create new stack for {originalStack.itemId}");
@@ -182,7 +188,8 @@ public static class ConsumableManagerService
         originalStack.quantity -= quantityToSplit;
 
         // Agregar el nuevo stack al inventario
-        if (!InventoryStorageService.AddExistingItem(newStack))
+        int slot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.inventory, InventoryStorageService.InventoryLimit);
+        if (!InventoryStorageService.AddExistingItemAtSlot(newStack, slot))
         {
             LogError("Failed to add new stack to inventory");
             // Revertir cambios
@@ -300,6 +307,8 @@ public static class ConsumableManagerService
             return false;
         }
 
+        if (!InventoryStorageService.Contains(item)) return false;
+
         if (item.quantity <= 1)
         {
             LogWarning("Cannot split stack with quantity <= 1");
@@ -307,17 +316,6 @@ public static class ConsumableManagerService
         }
 
         return true;
-    }
-
-    private static bool ApplyConsumableEffects(ItemDataSO itemData, InventoryItem item)
-    {
-        // Usar el sistema de efectos existente (ItemEffectSystem)
-        bool effectsApplied = ItemEffectSystem.UseConsumableItem(item, _currentHero);
-        
-        if (effectsApplied) LogInfo($"Successfully applied effects for consumable: {item.itemId}");
-        else LogWarning($"Failed to apply effects for consumable: {item.itemId}");
-        
-        return effectsApplied;
     }
 
     #endregion

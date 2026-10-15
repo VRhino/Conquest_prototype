@@ -29,12 +29,9 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
     {
         if (_currentItem == null || _currentItemData == null) return;
         ItemDataSO itemData = _currentItemData;
-        bool success = InventoryManager.EquipItem(_currentItem);
-
-        if (success)
-            Debug.Log($"[InventoryItemCellInteraction] Ítem equipado: {itemData.name}");
-        else
-            Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {_currentItemData.name}");
+        if (!InventoryManager.RequestEquipItem(_currentItem, success =>
+            { if (success) Debug.Log($"[InventoryItemCellInteraction] Ítem equipado: {itemData.name}"); }))
+            Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {itemData.name}");
     }
 
     /// <summary>
@@ -44,11 +41,9 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
     {
         if (_currentItem == null || _currentItemData == null) return;
 
-        bool success = InventoryManager.UseConsumable(_currentItem);
+        bool success = InventoryManager.RequestUseConsumable(_currentItem);
         
-        if (success)
-            NotifyTooltipSystemAfterItemAction();
-        else
+        if (!success)
             Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo usar: {_currentItemData.name}");
     }
 
@@ -67,19 +62,4 @@ public class InventoryItemCellInteraction : BaseItemCellInteraction
             Debug.LogWarning($"[InventoryItemCellInteraction] Tipo de ítem no soportado para click derecho: {itemData.itemType}");
     }
 
-    /// <summary>
-    /// Notifica al sistema de tooltips después de una acción que puede cambiar el inventario.
-    /// Esto asegura que los tooltips se mantengan sincronizados.
-    /// </summary>
-    private void NotifyTooltipSystemAfterItemAction()
-    {
-        // Buscar el manager de tooltips
-        TooltipManager tooltipManager = FindObjectOfType<TooltipManager>();
-        if (tooltipManager != null)
-        {
-            // Forzar validación del tooltip actual
-            tooltipManager.ForceValidateTooltip();
-            Debug.Log("[InventoryItemCellInteraction] Tooltip system notified after item action");
-        }
-    }
 }

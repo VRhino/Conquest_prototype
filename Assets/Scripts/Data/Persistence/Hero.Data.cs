@@ -11,6 +11,8 @@ using System.Collections.Generic;
 public class HeroData : IHeroIdentity, IHeroProgression, IHeroEconomy, IHeroSquads, IHeroInventory,
                         IHeroProgressionMutator, IHeroEconomyMutator, IHeroInventoryMutator
 {
+    public string heroId = Guid.NewGuid().ToString("N");
+
     // Static references
 
     /// <summary>Identifier of the hero class ScriptableObject.</summary>
@@ -28,6 +30,9 @@ public class HeroData : IHeroIdentity, IHeroProgression, IHeroEconomy, IHeroSqua
 
     /// <summary>Experience points accumulated towards the next level.</summary>
     public int currentXP = 0;
+
+    /// <summary>Revision of committed progression, used to reject stale inventory snapshots.</summary>
+    public int progressRevision;
 
     /// <summary>Unspent attribute points.</summary>
     public int attributePoints = 0;

@@ -6,6 +6,20 @@ using System.Collections.Generic;
 /// </summary>
 public static class HeroDataService
 {
+    /// <summary>Only a unique persistent identity can receive saved progression.</summary>
+    public static HeroData FindById(PlayerData player, string heroId)
+    {
+        if (player?.heroes == null || string.IsNullOrEmpty(heroId)) return null;
+        HeroData found = null;
+        foreach (var hero in player.heroes)
+        {
+            if (hero == null || hero.heroId != heroId) continue;
+            if (found != null) return null;
+            found = hero;
+        }
+        return found;
+    }
+
     /// <summary>
     /// Crea una nueva instancia de HeroData con los valores y recursos iniciales por defecto.
     /// Inyecta automáticamente el progreso de los escuadrones iniciales permitidos.

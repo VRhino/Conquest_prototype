@@ -73,6 +73,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
     public void InitializeSlot(ItemType equipmentSlotType, ItemCategory equipmentSlotCategory)
     {
         slotType = equipmentSlotType;
+        SetContext(ItemInteractionContext.Equipment);
         slotCategory = equipmentSlotCategory;
         SetupPlaceholderVisuals();
 
@@ -137,7 +138,6 @@ public class HeroEquipmentSlotController : BaseItemCellController
         }
 
         // Inicializar EquipmentManagerService si es necesario
-        EquipmentManagerService.Initialize(PlayerSessionService.SelectedHero);
         
         // Obtener item equipado usando EquipmentManagerService
         var equippedItem = EquipmentManagerService.GetEquippedItem(slotType, slotCategory);

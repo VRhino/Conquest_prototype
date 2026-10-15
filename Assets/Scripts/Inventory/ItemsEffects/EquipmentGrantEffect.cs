@@ -20,6 +20,9 @@ public class EquipmentGrantEffect : ItemEffect
     /// Ejecuta el efecto de otorgar equipment al héroe
     /// </summary>
     public override bool Execute(HeroData hero, int quantity = 1)
+        => InventoryEventService.RunTransaction(() => ExecuteCore(hero, quantity));
+
+    private bool ExecuteCore(HeroData hero, int quantity)
     {
         if (!CanExecute(hero))
         {
@@ -42,7 +45,6 @@ public class EquipmentGrantEffect : ItemEffect
             return false;
         }
 
-        bool success = true;
         int successfulGrants = 0;
 
         // Crear múltiples instancias si la cantidad es mayor a 1
@@ -53,31 +55,27 @@ public class EquipmentGrantEffect : ItemEffect
             if (newEquipment == null)
             {
                 LogError($"Failed to create equipment instance for '{targetItemId}'");
-                success = false;
-                continue;
+                return false;
             }
 
             // Intentar agregar al inventario
-            bool added = false;
-            added = InventoryManager.CreateAndAddItem(targetItemId, 1);
+            bool added = InventoryManager.AddExistingItem(newEquipment);
 
             if (added)
             {
                 successfulGrants++;
                 LogInfo($"Successfully granted equipment '{itemData.name}' to hero '{hero.heroName}'");
                 
-                // Notificar evento
-                InventoryEventService.TriggerItemAdded(newEquipment);
             }
             else
             {
                 LogWarning($"Failed to add equipment '{targetItemId}' to inventory - no space available");
-                success = false;
+                return false;
             }
         }
 
-        // Consideramos éxito si al menos una instancia se agregó correctamente
-        bool finalSuccess = successfulGrants > 0;
+        // La recompensa completa debe entregarse o revertirse.
+        bool finalSuccess = successfulGrants == quantity && quantity > 0;
         
         if (finalSuccess)
         {
@@ -92,7 +90,7 @@ public class EquipmentGrantEffect : ItemEffect
     /// </summary>
     public override bool CanExecute(HeroData hero)
     {
-        if (!base.CanExecute(hero))
+        if (!base.CanExecute(hero) || !ReferenceEquals(hero, InventoryManager.GetCurrentHero()))
             return false;
 
         // Validar item ID

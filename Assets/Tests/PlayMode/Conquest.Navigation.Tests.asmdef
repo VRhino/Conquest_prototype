@@ -1,5 +1,16 @@
 {
   "name": "Conquest.Navigation.Tests",
-  "references": ["Game.ECS", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Transforms", "Unity.InputSystem"],
-  "optionalUnityReferences": ["TestAssemblies"]
+  "references": [
+    "Game.ECS",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.InputSystem",
+    "Unity.ugui",
+    "Unity.TextMeshPro"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
 }

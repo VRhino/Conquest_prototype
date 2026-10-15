@@ -1,4 +1,6 @@
 using Unity.Entities;
+using UnityEngine;
+using System.Collections.Generic;
 
 /// <summary>
 /// ECS-to-GameObject bridge: reads ProjectileSpawnRequest entities created by
@@ -10,6 +12,7 @@ using Unity.Entities;
 public partial class ProjectileSpawnSystem : SystemBase
 {
     EndSimulationEntityCommandBufferSystem _ecbSystem;
+    private readonly List<Collider> _shooterColliders = new();
 
     protected override void OnCreate()
     {
@@ -34,6 +37,9 @@ public partial class ProjectileSpawnSystem : SystemBase
                 var controller = go.GetComponent<ProjectileController>();
                 if (controller != null)
                 {
+                    _shooterColliders.Clear();
+                    if (VisualSyncUtility.TryGetVisual(World, r.shooter, out var shooterVisual))
+                        shooterVisual.GetComponentsInChildren(true, _shooterColliders);
                     controller.Initialize(
                         r.shooter,
                         r.target,
@@ -44,7 +50,8 @@ public partial class ProjectileSpawnSystem : SystemBase
                         r.sourceTeam,
                         r.multiplier,
                         r.poolKey.ToString(),
-                        r.trajectory);
+                        r.trajectory,
+                        _shooterColliders);
                 }
             }
 

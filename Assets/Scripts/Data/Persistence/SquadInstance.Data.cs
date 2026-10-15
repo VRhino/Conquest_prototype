@@ -24,6 +24,7 @@ public class SquadInstanceData
 
     /// <summary>Experience towards the next level (same semantics as the squad detail UI).</summary>
     public int experience = 0;
+    public int progressRevision;
 
     // Unlocks and selections
 

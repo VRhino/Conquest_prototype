@@ -6,10 +6,12 @@ using UnityEngine.AI;
 /// <summary>
 /// Consumes IsDeadComponent on units: destroys their visual GO if present, removes the unit
 /// from its squad's SquadUnitElement buffer, and destroys the ECS entity.
-/// Runs the frame after DamageCalculationSystem sets IsDeadComponent.
+/// Runs after damage playback and before enemy detection and targeting.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(DamageCalculationSystem))]
+[UpdateBefore(typeof(EnemyDetectionSystem))]
+[UpdateBefore(typeof(UnitTargetingSystem))]
 public partial class UnitDeathSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -75,7 +77,7 @@ public partial class UnitDeathSystem : SystemBase
 
     private static GameObject FindGameObjectByInstanceId(EntityId instanceId)
     {
-        // Same pattern as HeroVisualEquipmentSystem — acceptable cost for rare death events
+        // Visual lookup is limited to the rare unit death event.
         var all = Object.FindObjectsOfType<GameObject>();
         return System.Array.Find(all, o => o.GetEntityId() == instanceId);
     }

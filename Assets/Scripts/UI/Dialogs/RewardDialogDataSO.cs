@@ -34,4 +34,9 @@ public abstract class RewardDialogDataSO : ScriptableObject
     /// <param name="selectedItems">The list of selected ItemData (empty if not selectable)</param>
     /// <param name="hero">The hero receiving the rewards</param>
     public abstract void DeliverRewards(List<string> selectedItemsIds, HeroData hero);
+    public virtual bool TryDeliverRewards(List<string> selectedItemsIds, HeroData hero)
+    {
+        DeliverRewards(selectedItemsIds, hero);
+        return true;
+    }
 }

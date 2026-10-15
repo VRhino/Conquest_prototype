@@ -6,6 +6,10 @@ using UnityEngine;
 /// </summary>
 public static class HeroExperienceCalculator
 {
+    /// <summary>Battle rewards retain the original floor-based, per-level XP threshold.</summary>
+    public static int GetBattleXPForNextLevel(int currentLevel) => Mathf.FloorToInt(
+        ExperienceConstants.BASE_XP_PER_LEVEL * Mathf.Pow(ExperienceConstants.XP_GROWTH_FACTOR,
+            Mathf.Max(ExperienceConstants.MIN_LEVEL, currentLevel) - ExperienceConstants.MIN_LEVEL));
     /// <summary>
     /// Constantes para el sistema de experiencia.
     /// </summary>
@@ -53,11 +57,7 @@ public static class HeroExperienceCalculator
         if (level <= ExperienceConstants.MIN_LEVEL)
             return 0;
 
-        // Fórmula exponencial: cada nivel requiere más XP que el anterior
-        float xpRequired = ExperienceConstants.BASE_XP_PER_LEVEL * 
-                          Mathf.Pow(ExperienceConstants.XP_GROWTH_FACTOR, level - 2);
-        
-        return Mathf.RoundToInt(xpRequired);
+        return GetBattleXPForNextLevel(level - 1);
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ public static class HeroExperienceCalculator
     /// <summary>
     /// Calcula el progreso hacia el siguiente nivel como porcentaje (0.0 - 1.0).
     /// </summary>
-    /// <param name="currentXP">Experiencia total acumulada</param>
+    /// <param name="currentXP">Experiencia restante del nivel actual, igual que HeroData/ECS.</param>
     /// <param name="currentLevel">Nivel actual del héroe</param>
     /// <returns>Progreso hacia el siguiente nivel (0.0 = inicio del nivel actual, 1.0 = listo para subir)</returns>
     public static float GetLevelProgress(int currentXP, int currentLevel)
@@ -103,14 +103,12 @@ public static class HeroExperienceCalculator
         if (currentLevel >= ExperienceConstants.MAX_LEVEL)
             return 1.0f; // Nivel máximo alcanzado
 
-        int xpAtCurrentLevel = GetTotalXPForLevel(currentLevel);
         int xpNeededForNext = GetXPForNextLevel(currentLevel);
-        int currentLevelXP = currentXP - xpAtCurrentLevel;
 
         if (xpNeededForNext <= 0)
             return 1.0f;
 
-        return Mathf.Clamp01((float)currentLevelXP / xpNeededForNext);
+        return Mathf.Clamp01((float)currentXP / xpNeededForNext);
     }
 
     /// <summary>
@@ -126,11 +124,10 @@ public static class HeroExperienceCalculator
             return new ExperienceInfo();
         }
 
-        int currentLevel = GetCurrentLevel(progression.CurrentXP);
+        int currentLevel = Mathf.Max(ExperienceConstants.MIN_LEVEL, progression.Level);
         int xpForNextLevel = GetXPForNextLevel(currentLevel);
         float progress = GetLevelProgress(progression.CurrentXP, currentLevel);
-        int xpAtCurrentLevel = GetTotalXPForLevel(currentLevel);
-        int currentLevelXP = progression.CurrentXP - xpAtCurrentLevel;
+        int currentLevelXP = Mathf.Max(0, progression.CurrentXP);
 
         return new ExperienceInfo
         {

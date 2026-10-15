@@ -1,100 +1,50 @@
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 
-/// <summary>
-/// Aggregates XP events for the player hero and handles level progression.
-/// </summary>
+/// <summary>Commits explicitly addressed hero XP; legacy unowned progress remains untouched.</summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(BattleBootstrapSystem))]
 public partial class HeroLevelSystem : SystemBase
 {
-    LocalSaveSystem.PlayerProgressData _saveData;
-    bool _initialized;
-
     protected override void OnCreate()
     {
-        base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
-        _saveData = LocalSaveSystem.LoadProgress();
+        RequireForUpdate<XPEventComponent>();
     }
 
     protected override void OnUpdate()
     {
-        if (!_initialized)
-        {
-            _initialized = InitializeProgressComponent();
-            if (!_initialized) return;
-        }
-
-        if (!SystemAPI.TryGetSingletonEntity<HeroProgressComponent>(out var entity))
-            return;
-
-        var progress = SystemAPI.GetComponentRW<HeroProgressComponent>(entity);
+        if (!SystemAPI.TryGetSingletonEntity<HeroProgressComponent>(out var entity)) return;
+        var progress = EntityManager.GetComponentData<HeroProgressComponent>(entity);
+        if (progress.heroId.IsEmpty) return;
         int gainedXP = 0;
-        var ecb = new EntityCommandBuffer(Allocator.Temp);
-
+        using var ecb = new EntityCommandBuffer(Allocator.Temp);
         foreach (var (xp, evt) in SystemAPI.Query<RefRO<XPEventComponent>>().WithEntityAccess())
         {
-            gainedXP += xp.ValueRO.amount;
+            // A stale event from another battle/hero is consumed without awarding it to this owner.
+            if (xp.ValueRO.heroId == progress.heroId && xp.ValueRO.amount > 0)
+                gainedXP = checked(gainedXP + xp.ValueRO.amount);
             ecb.DestroyEntity(evt);
         }
-
-        bool save = false;
-
         if (gainedXP > 0)
         {
-            progress.ValueRW.currentXP += gainedXP;
-            save = true;
-        }
-
-        while (progress.ValueRO.currentXP >= progress.ValueRO.xpToNextLevel)
-        {
-            progress.ValueRW.currentXP -= progress.ValueRO.xpToNextLevel;
-            progress.ValueRW.level += 1;
-            progress.ValueRW.perkPoints += 1;
-            progress.ValueRW.xpToNextLevel = CalculateNext(progress.ValueRO.level);
-
-            Entity evt = ecb.CreateEntity();
-            ecb.AddComponent(evt, new LevelUpEvent { newLevel = progress.ValueRO.level });
-            save = true;
-        }
-
-        // Playback destroys event entities and invalidates RefRW handles.
-        var snapshot = progress.ValueRO;
-        ecb.Playback(EntityManager);
-        ecb.Dispose();
-
-        if (save)
-        {
-            LocalSaveSystem.UpdateProgress(latest =>
+            int oldLevel = progress.level;
+            progress.currentXP = checked(progress.currentXP + gainedXP);
+            progress.xpToNextLevel = HeroExperienceCalculator.GetBattleXPForNextLevel(progress.level);
+            while (progress.currentXP >= progress.xpToNextLevel && progress.xpToNextLevel > 0)
             {
-                latest.level = snapshot.level;
-                latest.currentXP = snapshot.currentXP;
-                latest.perkPoints = snapshot.perkPoints;
-            });
+                progress.currentXP -= progress.xpToNextLevel;
+                progress.level++;
+                progress.perkPoints++;
+                progress.xpToNextLevel = HeroExperienceCalculator.GetBattleXPForNextLevel(progress.level);
+            }
+            // Persist first: a failed commit leaves both ECS and reward events unchanged for retry.
+            if (!SaveSystem.TryUpdateHeroProgress(progress.heroId.ToString(), progress.level,
+                progress.currentXP, progress.perkPoints)) return;
+            EntityManager.SetComponentData(entity, progress);
+            for (int level = oldLevel + 1; level <= progress.level; level++)
+                ecb.AddComponent(ecb.CreateEntity(), new LevelUpEvent { newLevel = level });
         }
+        ecb.Playback(EntityManager);
     }
-
-    bool InitializeProgressComponent()
-    {
-        var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<HeroProgressComponent>());
-        if (q.IsEmptyIgnoreFilter)
-            return false;
-
-        Entity entity = q.GetSingletonEntity();
-        var progress = EntityManager.GetComponentData<HeroProgressComponent>(entity);
-        progress.level = _saveData.level;
-        progress.currentXP = _saveData.currentXP;
-        progress.xpToNextLevel = CalculateNext(_saveData.level);
-        progress.perkPoints = _saveData.perkPoints;
-        EntityManager.SetComponentData(entity, progress);
-        return true;
-    }
-
-    static int CalculateNext(int level)
-    {
-        return (int)math.floor(100 * math.pow(1.2f, level - 1));
-    }
-
 }

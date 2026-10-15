@@ -4,7 +4,7 @@
 
 | Database | Clase | Ubicación | Descripción |
 |----------|-------|-----------|-------------|
-| ItemDatabase | `EnhancedItemDatabase` | `Assets/Resources/items/` | Base de datos de items, armas y equipamiento |
+| ItemDatabase | `EnhancedItemDatabase` | `Assets/Resources/Items/` | Base de datos de items, armas y equipamiento |
 | AvatarPartDatabase | `AvatarPartDatabase` | `Assets/Resources/` | Partes visuales del avatar del héroe |
 | DialogueEffectDatabase | `DialogueEffectDatabase` | `Assets/Resources/` | Efectos ejecutables desde diálogos con NPCs |
 | SquadDatabase | `SquadDatabase` | `Assets/Resources/Squads/` | Datos base de todos los tipos de escuadra |

@@ -209,7 +209,7 @@ public class BattlePreparationController : MonoBehaviour
             _preparationMapControllerUI = mapInstance.GetComponent<PreparationMapControllerUI>();
             if (_preparationMapControllerUI != null)
             {
-                _preparationMapControllerUI.Initialize(_currentBattleData.playerSide(PlayerSessionService.SelectedHero.heroName));
+                _preparationMapControllerUI.Initialize(_currentBattleData.GetSide(_currentBattleData.FindHero(PlayerSessionService.SelectedHero)));
                 _preparationMapControllerUI.SubscribeToSpawnPointSelected(OnSpawnPointSelected);
             }
             else Debug.LogWarning($"[BattlePreparationController] El prefab del mapa no tiene PreparationMapControllerUI: {mapPrefab.name}");
@@ -320,8 +320,7 @@ public class BattlePreparationController : MonoBehaviour
 
     private void initializeLocalHero(HeroData localHero)
     {
-        InventoryStorageService.Initialize(localHero);
-        InventoryManager.Initialize(localHero);
+        if (!ReferenceEquals(PlayerSessionService.SelectedHero, localHero)) PlayerSessionService.SetSelectedHero(localHero);
     }
 
 
@@ -383,7 +382,7 @@ public class BattlePreparationController : MonoBehaviour
         List<InventoryItem> items = InventoryStorageService.GetItemsByTypeAndCategory(slotController.SlotType, slotController.SlotCategory);
         if (items == null || items.Count == 0)
         {
-            Debug.LogWarning($"[BattlePreparationController] No hay items disponibles para el tipo y categoría del item: {itemData.name}");
+            Debug.LogWarning($"[BattlePreparationController] No hay items disponibles para {slotController.SlotType}.{slotController.SlotCategory}");
             return;
         }
         RectTransform slotRect = _equipmentPanel.GetSlotTransform(slotController.SlotType, slotController.SlotCategory);
@@ -393,15 +392,10 @@ public class BattlePreparationController : MonoBehaviour
 
     private void OnItemClicked(InventoryItem item, ItemDataSO itemData)
     {
-        if (item == null || itemData == null) Debug.LogWarning("[BattlePreparationController] Item o ItemData nulo en OnItemClicked");
-        //equipar el item clicado
-        bool success = InventoryManager.EquipItem(item);
-
-        if (success)
-        {
-            _equipmentPanel.PopulateFromSelectedHero();
+        if (item == null || itemData == null) return;
+        if (InventoryManager.RequestEquipItem(item, success =>
+            { if (success) _equipmentPanel.PopulateFromSelectedHero(); }))
             _itemPopUpSelector.Hide();
-        }
         else
             Debug.LogWarning($"[InventoryItemCellInteraction] No se pudo equipar: {itemData.name}");
     }
@@ -420,7 +414,13 @@ public class BattlePreparationController : MonoBehaviour
             return;
         }
 
-        _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName).spawnPointId = spawnPoint.spawnPointId;
+        var localHero = _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
+        if (localHero == null)
+        {
+            Debug.LogError("[BattlePreparationController] Local participant identity is missing or ambiguous.");
+            return;
+        }
+        localHero.spawnPointId = spawnPoint.spawnPointId;
         //[TODO] enviar el evento de battle data updated
         Debug.Log($"[BattlePreparationController] Spawn point seleccionado: {spawnPoint.name}");
     }
@@ -428,7 +428,7 @@ public class BattlePreparationController : MonoBehaviour
     private void OnPreparationTimerFinished()
     {
         if (_isActiveUI) DisconnectAllEvents();
-        BattleHeroData localHeroData = _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName);
+        BattleHeroData localHeroData = _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
         if (string.IsNullOrEmpty(localHeroData.spawnPointId))
         {
             localHeroData.spawnPointId = _preparationMapControllerUI.GetDefaultSpawnPointId();
@@ -465,7 +465,7 @@ public class BattlePreparationController : MonoBehaviour
         }
 
         // 1. Sincronizar squads seleccionados del footer en BattleData
-        BattleHeroData localHeroData = _currentBattleData.findHeroDataByName(PlayerSessionService.SelectedHero.heroName);
+        BattleHeroData localHeroData = _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
         if (localHeroData != null)
         {
             List<string> selectedSquadIDs = _footerController.GetSelectedSquadInstanceIDs();

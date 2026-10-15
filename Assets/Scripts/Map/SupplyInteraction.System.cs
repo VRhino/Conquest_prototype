@@ -8,6 +8,7 @@ using Unity.Transforms;
 /// Heroes can capture the zone for their team and receive benefits when owned.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(HeroRespawnSystem))]
 public partial class SupplyInteractionSystem : SystemBase
 {
     protected override void OnUpdate()

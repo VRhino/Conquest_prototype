@@ -24,6 +24,9 @@ public static class LoadSystem
         try
         {
             var data = _provider.Load();
+            if (data?.heroes != null)
+                foreach (var hero in data.heroes)
+                    if (hero != null) HeroAttributeValidator.GetHeroId(hero);
             return data;
         }
         catch (Exception e)

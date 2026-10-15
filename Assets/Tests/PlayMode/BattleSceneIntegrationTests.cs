@@ -22,6 +22,12 @@ public class BattleSceneIntegrationTests
 {
     const string ScenePath = "Assets/Scenes/BattleTestScene.unity";
     const float ReadyTimeout = 60f;
+    const string PrepPath = "Assets/Scenes/GameScenes/BattlePrepScene.unity";
+    const string FullBattlePath = "Assets/Scenes/GameScenes/BattleScene.unity";
+    const int FullBattleHeroesPerSide = 10;
+    bool fullBattleProfile;
+    string loadedScenePath;
+    int expectedFullBattleUnits;
     sealed class MemorySave : ISaveProvider
     {
         public PlayerData Player;
@@ -40,16 +46,24 @@ public class BattleSceneIntegrationTests
     EntityManager em;
     World previousWorld, testWorld;
     bool worldSwapped;
+    ProgressFileStore previousProgressStore;
+    string progressDirectory;
 
     [UnitySetUp]
     public IEnumerator SetUp()
     {
+        fullBattleProfile = TestContext.CurrentContext.Test.Name == nameof(FullBattlePreparationRenderedPerformanceProfile);
+        loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
         keyboard = null;
         mouse = null;
         previousSave = GetProvider(typeof(SaveSystem));
         previousLoad = GetProvider(typeof(LoadSystem));
+        previousProgressStore = LocalSaveSystem.Store;
+        progressDirectory = System.IO.Path.Combine(Application.temporaryCachePath,
+            "battle-integration-" + Guid.NewGuid().ToString("N"));
+        LocalSaveSystem.Store = new ProgressFileStore(System.IO.Path.Combine(progressDirectory, "progress.json"));
         previousPlayer = PlayerSessionService.CurrentPlayer;
         previousHero = PlayerSessionService.SelectedHero;
         previousBackground = Application.runInBackground;
@@ -88,6 +102,26 @@ public class BattleSceneIntegrationTests
         };
         remote.squadInstances.Add(SquadDataService.CreateSquadInstance("sqd01"));
         battle.defenders.Add(remote);
+        if (fullBattleProfile)
+        {
+            var definition = SquadDataService.GetSquadById(reserve.baseSquadID);
+            reserve.unitsInSquad = definition.unitCount;
+            battle = BattleDebugCreator.CreateBattleWithLocalHero(local, Team.TeamA,
+                FullBattleHeroesPerSide - 1, FullBattleHeroesPerSide, EnemySquadMode.Fixed, definition);
+            battle.PreparationTimer = 600;
+            int participantIndex = 0;
+            foreach (var participant in battle.attackers.Concat(battle.defenders))
+            {
+                if (participant.heroId == local.heroId) continue;
+                participant.heroId = Guid.NewGuid().ToString();
+                participant.heroName = "FullBattleRemote" + participantIndex++;
+                var instance = SquadDataService.CreateSquadInstance(definition.id);
+                instance.unitsInSquad = definition.unitCount;
+                participant.squadInstances.Clear();
+                participant.squadInstances.Add(instance);
+            }
+            expectedFullBattleUnits = FullBattleHeroesPerSide * 2 * definition.unitCount;
+        }
         BattleTransitionData.Instance.SetBattleData(battle);
         SceneTransitionService.UpdateGamePhase(GamePhase.Combate);
         keyboard = InputSystem.AddDevice<Keyboard>("IntegrationKeyboard");
@@ -100,8 +134,25 @@ public class BattleSceneIntegrationTests
         World.DefaultGameObjectInjectionWorld = null;
         worldSwapped = true;
         testWorld = DefaultWorldInitialization.Initialize("Battle integration world");
-        yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath,
-            new LoadSceneParameters(LoadSceneMode.Single));
+        if (fullBattleProfile)
+        {
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(PrepPath,
+                new LoadSceneParameters(LoadSceneMode.Single));
+            SceneTransitionService.UpdateGamePhase(GamePhase.BattlePreparation);
+            yield return null; // Footer.Start binds the selected loadout and button.
+            var footer = UnityEngine.Object.FindAnyObjectByType<FooterController>();
+            Assert.That(footer, Is.Not.Null);
+            Assert.That(footer.GetSelectedSquadInstanceIDs(), Does.Contain(reserve.id));
+            var startButton = (UnityEngine.UI.Button)typeof(FooterController)
+                .GetField("startBattleButton", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(footer);
+            Assert.That(startButton, Is.Not.Null);
+            startButton.onClick.Invoke(); // Exercise the production preparation transition.
+            yield return Until(() => SceneManager.GetActiveScene().path == FullBattlePath,
+                ReadyTimeout, "Preparation did not load the production battle scene.");
+        }
+        else
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath,
+                new LoadSceneParameters(LoadSceneMode.Single));
         yield return Until(() =>
         {
             var world = World.DefaultGameObjectInjectionWorld;
@@ -249,7 +300,8 @@ public class BattleSceneIntegrationTests
         InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
         yield return Until(() => adapter.HorizontalSpeed > stats.baseSpeed * 0.9f, 8f,
             "Hero failed to reach normal physical speed.");
-        yield return new WaitForSeconds(0.5f);
+        yield return Until(() => animator.GetCurrentAnimatorClipInfo(0).Any(c => c.weight > 0.1f
+            && c.clip.name.Contains("Run")), 3f, "Normal movement must actually play a run clip.");
         Assert.That(animator.GetInteger(AnimationHashes.CurrentGait), Is.EqualTo((int)LocomotionGait.Run));
         Assert.That(animator.GetFloat(AnimationHashes.MoveSpeed),
             Is.EqualTo(settings.runBlendSpeed).Within(0.2f));
@@ -473,6 +525,168 @@ public class BattleSceneIntegrationTests
         }
     }
 
+    // Equipment changes must refresh only the linked local visual, including empty slots.
+    [UnityTest]
+    public IEnumerator BattleSceneEquipmentRefreshesTheLinkedVisualAfterACompletedChange()
+    {
+        var sync = UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
+            .Single(s => s.IsLocalHero);
+        Assert.That(sync.GetComponent<HeroVisualEquipmentInitializer>(), Is.Not.Null);
+        var database = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
+        var gender = PlayerSessionService.SelectedHero.gender == "Male" ? Gender.Male : Gender.Female;
+        var definition = ItemService.GetItemsByType(ItemType.Armor).First(d =>
+            d.itemCategory == ItemCategory.Torso && d.IsEquipment && !string.IsNullOrEmpty(d.visualPartId)
+            && Data.Avatar.AvatarVisualUtils.FindAvatarPartById(database, d.visualPartId) != null);
+        var item = ItemInstanceService.CreateItem(definition.id);
+        Assert.That(InventoryManager.AddExistingItem(item), Is.True);
+        Assert.That(InventoryManager.EquipItem(item), Is.True);
+        var part = Data.Avatar.AvatarVisualUtils.FindAvatarPartById(database, definition.visualPartId);
+        int verified = 0;
+        foreach (var attachment in part.attachments)
+        {
+            string target = gender == Gender.Male ? attachment.boneTargetMale : attachment.boneTargetFemale;
+            string prefab = gender == Gender.Male ? attachment.prefabPathMale : attachment.prefabPathFemale;
+            var bone = sync.transform.Find(target) ?? Data.Avatar.AvatarVisualUtils.FindDeepChild(sync.transform, target);
+            if (bone == null || string.IsNullOrEmpty(prefab)) continue;
+            foreach (Transform child in bone)
+                if (child.name == prefab) { Assert.That(child.gameObject.activeSelf, Is.True); verified++; }
+        }
+        Assert.That(verified, Is.GreaterThan(0), "No equipped visual attachment was checked.");
+        Assert.That(InventoryManager.UnequipItem(ItemType.Armor, ItemCategory.Torso), Is.True);
+        Assert.That(InventoryManager.GetCurrentHero().equipment.torso, Is.Null);
+        Assert.That(sync.GetComponent<HeroVisualEquipmentInitializer>().isActiveAndEnabled, Is.True);
+        yield return null;
+    }
+
+    [UnityTest, Explicit("Production preparation-to-battle flow and rendered N vs N Editor profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfile()
+    {
+        int expectedHeroes = FullBattleHeroesPerSide * 2;
+        using var heroes = em.CreateEntityQuery(typeof(HeroSpawnComponent), typeof(HeroVisualInstance));
+        using var squads = em.CreateEntityQuery(typeof(SquadInstanceComponent), typeof(SquadUnitElement));
+        using var units = em.CreateEntityQuery(typeof(UnitFormationStateComponent), typeof(NavAgentComponent));
+        yield return Until(() => heroes.CalculateEntityCount() == expectedHeroes
+            && squads.CalculateEntityCount() == expectedHeroes
+            && units.CalculateEntityCount() == expectedFullBattleUnits, ReadyTimeout,
+            "The production flow did not deploy the complete hero/squad/unit roster.");
+        using (var entities = heroes.ToEntityArray(Unity.Collections.Allocator.Temp))
+        {
+            int attackers = 0, defenders = 0;
+            foreach (var entity in entities)
+            {
+                var team = em.GetComponentData<TeamComponent>(entity).value;
+                if (team == Team.TeamA) attackers++;
+                if (team == Team.TeamB) defenders++;
+                var ownedSquad = em.GetComponentData<HeroSquadReference>(entity).squad;
+                Assert.That(em.Exists(ownedSquad) && em.HasBuffer<SquadUnitElement>(ownedSquad), Is.True);
+                Assert.That(em.GetBuffer<SquadUnitElement>(ownedSquad).Length, Is.GreaterThan(0));
+            }
+            Assert.That(attackers, Is.EqualTo(FullBattleHeroesPerSide));
+            Assert.That(defenders, Is.EqualTo(FullBattleHeroesPerSide));
+        }
+        InputSystem.QueueStateEvent(mouse, new MouseState
+        {
+            position = new Vector2(Screen.width / 2f, Screen.height / 2f)
+        });
+        yield return Press(Key.X);
+        Assert.That(em.GetComponentData<SquadPlayerOrderIntentComponent>(squad).orderType,
+            Is.EqualTo(SquadOrderType.HoldPosition), "HoldPosition failed in the production scene.");
+        var bodyblock = testWorld.GetExistingSystemManaged<UnitBodyblockSystem>();
+        yield return Until(() => bodyblock.DebugContactPairs > 0, 120f,
+            "The autonomous battle did not produce opposing-team bodyblock contact.");
+        yield return RenderedPerformanceProfile(FullBattlePath,
+            "Logs/system-optimization-full-battle-profile.json", 600, expectedHeroes, expectedFullBattleUnits);
+    }
+
+    [UnityTest, Explicit("Rendered Editor profile; run separately from functional regressions.")]
+    public IEnumerator BattleSceneRenderedPerformanceProfile()
+    {
+        yield return RenderedPerformanceProfile(ScenePath,
+            "Logs/system-optimization-rendered-profile.json", 300, 2, 24);
+    }
+
+    IEnumerator RenderedPerformanceProfile(string scenePath, string outputPath, int sampleCount,
+        int initialHeroes, int initialUnits)
+    {
+        UnityEditor.EditorApplication.ExecuteMenuItem("Window/General/Game");
+        if (!fullBattleProfile) yield return new WaitForSeconds(4f);
+        using (var squads = em.CreateEntityQuery(typeof(SquadInstanceComponent)))
+            yield return Until(() => squads.CalculateEntityCount() >= 2, ReadyTimeout,
+                "Both squads must be present for the profile.");
+        int renderedFrames = 0;
+        Action<UnityEngine.Rendering.ScriptableRenderContext, Camera> pipelineRendered = (_, camera) =>
+        { if (camera.cameraType == CameraType.Game) renderedFrames++; };
+        Camera.CameraCallback builtinRendered = camera =>
+        { if (camera.cameraType == CameraType.Game) renderedFrames++; };
+        UnityEngine.Rendering.RenderPipelineManager.endCameraRendering += pipelineRendered;
+        Camera.onPostRender += builtinRendered;
+        try
+        {
+            if (!fullBattleProfile) for (int i = 0; i < 120; i++) yield return null;
+            var elapsed = new double[sampleCount];
+            var cpu = new double[sampleCount];
+            var bodyblock = new double[sampleCount];
+            var detection = new double[sampleCount];
+            var allocations = new double[sampleCount];
+            var candidatePairs = new double[sampleCount];
+            var contactPairs = new double[sampleCount];
+            var bodyblockSystem = testWorld.GetExistingSystemManaged<UnitBodyblockSystem>();
+            using var mainRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Internal, "Main Thread", 1);
+            using var bodyRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.Bodyblock", 1);
+            using var detectionRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.EnemyDetection", 1);
+            using var allocationRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Memory, "GC Allocated In Frame", 1);
+            Assert.That(mainRecorder.Valid, Is.True, "Main Thread recorder unavailable.");
+            renderedFrames = 0;
+            double previous = Time.realtimeSinceStartupAsDouble;
+            for (int i = 0; i < sampleCount; i++)
+            {
+                // Capture contacts before yielding so the first detected collision is included.
+                candidatePairs[i] = bodyblockSystem.DebugCandidatePairs;
+                contactPairs[i] = bodyblockSystem.DebugContactPairs;
+                yield return null;
+                double now = Time.realtimeSinceStartupAsDouble;
+                elapsed[i] = (now - previous) * 1000d;
+                previous = now;
+                cpu[i] = mainRecorder.LastValue / 1000000d;
+                bodyblock[i] = bodyRecorder.Valid ? bodyRecorder.LastValue / 1000000d : -1d;
+                detection[i] = detectionRecorder.Valid ? detectionRecorder.LastValue / 1000000d : -1d;
+                allocations[i] = allocationRecorder.Valid ? allocationRecorder.LastValue : -1d;
+            }
+            Assert.That(renderedFrames, Is.GreaterThan(0), "No game camera rendered during the sample.");
+            if (fullBattleProfile)
+                Assert.That(contactPairs.Max(), Is.GreaterThan(0), "The profile missed all bodyblock contacts.");
+            using var units = em.CreateEntityQuery(typeof(UnitFormationStateComponent));
+            using var heroes = em.CreateEntityQuery(typeof(HeroSpawnComponent));
+            string json = FormattableString.Invariant($@"{{
+  ""scene"": ""{scenePath}"", ""editor"": ""{Application.unityVersion}"",
+  ""width"": {Screen.width}, ""height"": {Screen.height}, ""sampleCount"": {sampleCount},
+  ""renderedCameraFrames"": {renderedFrames}, ""units"": {units.CalculateEntityCount()}, ""heroes"": {heroes.CalculateEntityCount()},
+  ""initialHeroes"": {initialHeroes}, ""initialUnits"": {initialUnits},
+  ""framesWithContact"": {contactPairs.Count(value => value > 0)},
+  ""candidatePairs"": {ProfilePercentiles(candidatePairs)}, ""contactPairs"": {ProfilePercentiles(contactPairs)},
+  ""vSyncCount"": {QualitySettings.vSyncCount}, ""targetFrameRate"": {Application.targetFrameRate},
+  ""wallFrameMs"": {ProfilePercentiles(elapsed)}, ""mainThreadMs"": {ProfilePercentiles(cpu)},
+  ""bodyblockMs"": {ProfilePercentiles(bodyblock)}, ""detectionMs"": {ProfilePercentiles(detection)},
+  ""gcBytesPerFrame"": {ProfilePercentiles(allocations)},
+  ""limitations"": ""Editor + test runner; no before/after baseline, no Player/GPU claim. -1 means unavailable counter.""
+}}");
+            System.IO.Directory.CreateDirectory("Logs");
+            System.IO.File.WriteAllText(outputPath, json);
+            TestContext.WriteLine(json);
+        }
+        finally
+        {
+            UnityEngine.Rendering.RenderPipelineManager.endCameraRendering -= pipelineRendered;
+            Camera.onPostRender -= builtinRendered;
+        }
+    }
+
+    static string ProfilePercentiles(double[] values)
+    {
+        Array.Sort(values);
+        return FormattableString.Invariant($"{{\"p50\":{values[(int)Math.Ceiling(values.Length * 0.50) - 1]},\"p95\":{values[(int)Math.Ceiling(values.Length * 0.95) - 1]},\"p99\":{values[(int)Math.Ceiling(values.Length * 0.99) - 1]},\"max\":{values[values.Length - 1]}}}");
+    }
+
     [UnityTearDown]
     public IEnumerator TearDown()
     {
@@ -483,7 +697,8 @@ public class BattleSceneIntegrationTests
         if (testWorld != null && testWorld.IsCreated)
             ScriptBehaviourUpdateOrder.RemoveWorldFromCurrentPlayerLoop(testWorld);
         // Keep the memory provider installed until scene destruction has completed.
-        var scene = SceneManager.GetSceneByPath(ScenePath);
+        var scene = SceneManager.GetSceneByPath(loadedScenePath);
+        if (!scene.IsValid() || !scene.isLoaded) scene = SceneManager.GetSceneByPath(PrepPath);
         if (scene.IsValid() && scene.isLoaded)
         {
             SceneManager.CreateScene("IntegrationCleanup");
@@ -496,6 +711,14 @@ public class BattleSceneIntegrationTests
         if (previousHero != null) PlayerSessionService.SetSelectedHero(previousHero);
         SaveSystem.SetProvider(previousSave);
         LoadSystem.SetProvider(previousLoad);
+        LocalSaveSystem.Store = previousProgressStore;
+        if (progressDirectory != null)
+        {
+            string path = System.IO.Path.Combine(progressDirectory, "progress.json");
+            foreach (string suffix in new[] { "", ".bak", ".tmp" })
+                if (System.IO.File.Exists(path + suffix)) System.IO.File.Delete(path + suffix);
+            if (System.IO.Directory.Exists(progressDirectory)) System.IO.Directory.Delete(progressDirectory);
+        }
         Application.runInBackground = previousBackground;
         UnityEngine.Random.state = previousRandom;
         if (worldSwapped)

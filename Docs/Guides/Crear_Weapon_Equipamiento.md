@@ -52,7 +52,7 @@ Ubicación: `Assets/Resources/Data/Avatar/AvatarPartsDatabase`
 
 ## 📦 4. Crear el Scriptable Object del Item
 
-Ubicación: `Assets/Resources/items/`
+Ubicación: `Assets/Resources/Items/`
 
 📌 En EL menu superior → `Tools -> Items -> Item Creator Wizard`
 
@@ -64,7 +64,7 @@ NOTA: al usar el itemCreatorWizard se crea una carpeta para dicho item en la rut
 
 ## 5. completar el itemDataSO
 
-Ubicación: `Assets/Resources/items/weapons/{ID}/{ID}.asset`
+Ubicación: `Assets/Resources/Items/weapons/{ID}/{ID}.asset`
 
 ### 5.1 Campos del nuevo ítem:
 
@@ -83,7 +83,7 @@ Ubicación: `Assets/Resources/items/weapons/{ID}/{ID}.asset`
 
 ## 6. Asegurarse que este en ItemSODatabase
 
-Ubicacion: `Assets/Resources/items/ItemSODatabase.asset`
+Ubicacion: `Assets/Resources/Items/ItemSODatabase.asset`
 
 ---
 

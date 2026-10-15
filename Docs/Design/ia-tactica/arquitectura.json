@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {"title": "IA táctica · propuesta integrada", "quality_profile": "showcase"},
+  "components": [
+    {"id":"sim-state","type":"database","label":"Estado real","sublabel":"Daño · detección · captura","tag":"EXISTE","pos":[60,100],"size":[260,84]},
+    {"id":"team-knowledge","type":"security","label":"Conocimiento del equipo","sublabel":"Memoria y datos permitidos","tag":"EXTENDER","pos":[470,100],"size":[260,84]},
+    {"id":"team-command","type":"backend","label":"Comandante","sublabel":"Objetivos y asignaciones","tag":"PROPUESTO","pos":[880,100],"size":[260,84]},
+    {"id":"group-plan","type":"backend","label":"Grupo y engagement","sublabel":"Roles · reservas · preparación","tag":"PROPUESTO","pos":[880,340],"size":[260,84]},
+    {"id":"actor-choice","type":"backend","label":"Decisión del bot","sublabel":"Utility AI sobre HeroAIDecision","tag":"EXTENDER","pos":[470,340],"size":[260,84]},
+    {"id":"actor-execution","type":"messagebus","label":"Intenciones operativas","sublabel":"HeroAIExecution y pedido squad","tag":"EXTENDER","pos":[60,340],"size":[260,84]},
+    {"id":"order-arbitration","type":"backend","label":"Resolvedor de órdenes","sublabel":"OrderResolution: autoridad única","tag":"EXISTE","pos":[60,580],"size":[260,84]},
+    {"id":"physical-execution","type":"backend","label":"Ejecución existente","sublabel":"Formación · navegación · combate","tag":"REUTILIZAR","pos":[470,580],"size":[260,84]},
+    {"id":"execution-feedback","type":"messagebus","label":"Feedback confirmado","sublabel":"Revisión · preparación · fallo","tag":"PROPUESTO","pos":[880,580],"size":[260,84]}
+  ],
+  "connections": [
+    {"from":"sim-state","to":"team-knowledge","label":"observaciones"},
+    {"from":"team-knowledge","to":"team-command","label":"vista permitida"},
+    {"from":"team-command","to":"group-plan","label":"misión","labelDy":80},
+    {"from":"group-plan","to":"actor-choice","label":"rol y límites"},
+    {"from":"actor-choice","to":"actor-execution","label":"acción elegida"},
+    {"from":"actor-execution","to":"order-arbitration","label":"petición","labelDy":80},
+    {"from":"order-arbitration","to":"physical-execution","label":"orden resuelta"},
+    {"from":"physical-execution","to":"execution-feedback","label":"resultado real"}
+  ],
+  "cards": [
+    {"dot":"emerald","title":"Base del repo","items":["ECS conserva gameplay y decisiones.","NavMeshAgent ejecuta; el puente confirma pose."]},
+    {"dot":"amber","title":"Planificación nueva","items":["Mapa táctico y riesgo alimentan los candidatos.","El grupo coordina bots; no controla humanos."]},
+    {"dot":"cyan","title":"Siguiente ciclo","items":["Feedback vuelve al grupo y comandante.","Snapshot usa estado táctico previo; sin ciclo de dependencias."]}
+  ]
+}

@@ -149,8 +149,7 @@ public class TooltipContentRenderer : ITooltipComponent
     private void SetupContentPanel(InventoryItem item, ItemDataSO itemData)
     {
         // Configurar descripción
-        if (_descriptionText != null && !string.IsNullOrEmpty(itemData.description))
-            _descriptionText.text = itemData.description;
+        if (_descriptionText != null) _descriptionText.text = itemData.description ?? string.Empty;
 
         // Configurar categoría
         if (_categoryText != null)
@@ -170,8 +169,7 @@ public class TooltipContentRenderer : ITooltipComponent
         // Configurar durabilidad (placeholder - implementar cuando esté el sistema)
         if (_durabilityText != null)
         {
-            _durabilityText.text = "100/100";
-            _durabilityText.gameObject.SetActive(true);
+            _durabilityText.gameObject.SetActive(false);
         }
 
         // Configurar precio
@@ -188,7 +186,9 @@ public class TooltipContentRenderer : ITooltipComponent
                 displayPrice = ItemPricingService.CalculateItemPrice(itemData, item);
             }
             
-            _priceText.text = displayPrice.ToString();
+            _priceText.text = _controller.InteractionContext == ItemInteractionContext.StoreInventory
+                ? ((long)ItemPricingService.CalculateItemSellPrice(itemData, item) * item.quantity).ToString()
+                : displayPrice.ToString();
             _priceText.gameObject.SetActive(true);
         }
         else if (_priceText != null)
@@ -204,7 +204,7 @@ public class TooltipContentRenderer : ITooltipComponent
     {
         if (_actionText == null) return;
 
-        string actionString = TooltipFormattingUtils.GetActionText(itemData, _controller.CurrentTooltipType);
+        string actionString = TooltipFormattingUtils.GetActionText(itemData, _controller.CurrentTooltipType, _controller.InteractionContext);
 
         if (!string.IsNullOrEmpty(actionString))
         {

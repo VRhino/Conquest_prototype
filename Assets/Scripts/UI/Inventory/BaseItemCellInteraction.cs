@@ -43,6 +43,7 @@ public abstract class BaseItemCellInteraction : MonoBehaviour, IPointerClickHand
 
     public virtual void SetEvents(Action<InventoryItem, ItemDataSO> onItemClicked, Action<InventoryItem, ItemDataSO> onItemRightClicked)
     {
+        RemoveEvents();
         _OnClick = onItemClicked;
         _OnRightClick = onItemRightClicked;
         OnItemClicked += onItemClicked;

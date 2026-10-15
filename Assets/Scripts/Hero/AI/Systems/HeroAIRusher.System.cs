@@ -34,7 +34,9 @@ public partial class HeroAIRusherSystem : SystemBase
             float3 self = transform.ValueRO.Position;
 
             // 1. Dead → do nothing
-            if (!bb.selfIsAlive)
+            if (!life.ValueRO.isAlive || !bb.matchIsActive
+                || (SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
+                    && match.currentState != MatchState.InBattle))
             {
                 dec.action = AIActionType.Idle;
                 SystemAPI.SetComponent(entity, dec);

@@ -41,7 +41,7 @@ public class TooltipDataValidator : ITooltipComponent
         }
 
         var currentHero = PlayerSessionService.SelectedHero;
-        if (currentHero?.inventory == null)
+        if (currentHero?.inventory == null && _controller.InteractionContext != ItemInteractionContext.StoreProduct)
         {
             _controller.LifecycleManager.HideTooltip();
             return;
@@ -51,8 +51,13 @@ public class TooltipDataValidator : ITooltipComponent
         var currentItemData = _controller.LifecycleManager.CurrentItemData;
 
         // Buscar item actualizado
-        var updatedItem = InventoryUtils.GetUpdatedTooltipItem(currentItem, currentHero.inventory);
-        if (updatedItem != null && InventoryUtils.HasTooltipRelevantChanges(currentItem, updatedItem))
+        bool exists = _controller.InteractionContext == ItemInteractionContext.StoreProduct ||
+            (_controller.InteractionContext == ItemInteractionContext.Equipment
+                ? EquipmentManagerService.GetAllEquippedItems().Contains(currentItem)
+                : InventoryStorageService.Contains(currentItem));
+        if (!exists) { _controller.LifecycleManager.HideTooltip(); return; }
+        var updatedItem = currentItem;
+        if (updatedItem != null)
         {
             // Refrescar tooltip con datos actualizados
             var itemData = InventoryUtils.GetItemData(updatedItem.itemId);

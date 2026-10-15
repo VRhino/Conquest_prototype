@@ -92,7 +92,7 @@ public static class HeroAttributeValidator
 
     /// <summary>
     /// Obtiene el ID único del héroe para identificarlo en los sistemas de cache.
-    /// Simplificado para usar solo heroName ya que los nombres son únicos globalmente.
+    /// Usa identidad persistente, independiente del nombre visible.
     /// </summary>
     /// <param name="heroData">Datos del héroe</param>
     /// <returns>ID único del héroe</returns>
@@ -101,8 +101,12 @@ public static class HeroAttributeValidator
         if (hero == null)
             return string.Empty;
 
-        // Los nombres de héroe son únicos globalmente, no necesitamos ID compuesto
-        return hero.HeroName;
+        if (hero is HeroData data)
+        {
+            if (string.IsNullOrEmpty(data.heroId)) data.heroId = System.Guid.NewGuid().ToString("N");
+            return data.heroId;
+        }
+        return string.IsNullOrEmpty(hero.HeroName) ? hero.ClassId : hero.HeroName;
     }
 
     /// <summary>

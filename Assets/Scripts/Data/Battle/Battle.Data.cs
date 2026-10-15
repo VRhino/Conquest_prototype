@@ -33,6 +33,46 @@ public class BattleData
         attackers.Clear();
         defenders.Clear();
     }
+    public BattleHeroData FindHero(HeroData hero)
+        => hero == null ? null : FindHero(hero.heroId, hero.heroName);
+
+    public BattleHeroData FindHero(string persistentId, string legacyName)
+    {
+        BattleHeroData found = null;
+        foreach (var candidate in attackers)
+            if (!string.IsNullOrEmpty(persistentId) && candidate.heroId == persistentId)
+            {
+                if (found != null) return null;
+                found = candidate;
+            }
+        foreach (var candidate in defenders)
+            if (!string.IsNullOrEmpty(persistentId) && candidate.heroId == persistentId)
+            {
+                if (found != null) return null;
+                found = candidate;
+            }
+        if (found != null) return found;
+        if (string.IsNullOrEmpty(legacyName)) return null;
+        // Only legacy DTOs without identity may fall back to a name. Ambiguity is rejected.
+        foreach (var candidate in attackers)
+            if (candidate.heroName == legacyName && (string.IsNullOrEmpty(persistentId) || string.IsNullOrEmpty(candidate.heroId)))
+            {
+                if (found != null) return null;
+                found = candidate;
+            }
+        foreach (var candidate in defenders)
+            if (candidate.heroName == legacyName && (string.IsNullOrEmpty(persistentId) || string.IsNullOrEmpty(candidate.heroId)))
+            {
+                if (found != null) return null;
+                found = candidate;
+            }
+        return found;
+    }
+
+    public Side GetSide(BattleHeroData hero)
+        => hero == null ? Side.None : attackers.Contains(hero) ? Side.Attackers
+            : defenders.Contains(hero) ? Side.Defenders : Side.None;
+
     public BattleHeroData findHeroDataByName(string heroName)
     {
         foreach (var hero in attackers)

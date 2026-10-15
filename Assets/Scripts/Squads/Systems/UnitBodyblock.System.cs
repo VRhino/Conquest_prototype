@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using Unity.Entities;
+using Unity.Collections;
+using Unity.Burst;
+using Unity.Jobs;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.AI;
@@ -43,10 +46,16 @@ public partial class UnitBodyblockSystem : SystemBase
     private readonly Dictionary<Entity, bool>           _unitIsWall     = new();
     private readonly Dictionary<(int, int), List<int>>  _grid           = new();
     private readonly List<List<int>>                    _bucketPool     = new();
-    private          Vector3[]                          _offsets        = new Vector3[256];
+    private NativeArray<RepulsionAgent> _nativeAgents;
+    private NativeArray<float3> _nativeOffsets;
+    private NativeParallelMultiHashMap<int2, int> _nativeGrid;
+    private NativeArray<int2> _pairCounts;
     private int _usedBucketCount;
 
     public int DebugBucketPoolSize => _bucketPool.Count;
+    public int DebugCandidatePairs { get; private set; }
+    public int DebugContactPairs { get; private set; }
+    private static readonly Unity.Profiling.ProfilerMarker BodyblockMarker = new("Conquest.Bodyblock");
 
     protected override void OnCreate()
     {
@@ -57,6 +66,10 @@ public partial class UnitBodyblockSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        using var sample = BodyblockMarker.Auto();
+        DebugCandidatePairs = 0;
+        DebugContactPairs = 0;
+        if (SystemAPI.GetSingleton<MatchStateComponent>().currentState != MatchState.InBattle) return;
         float dt = SystemAPI.Time.DeltaTime;
         if (dt <= 0f) return;
         var config = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
@@ -138,10 +151,7 @@ public partial class UnitBodyblockSystem : SystemBase
         if (count < 2) return;
 
         // ── 2. Ensure offset buffer ───────────────────────────────────────────
-        if (_offsets.Length < count)
-            _offsets = new Vector3[count * 2];
-        for (int i = 0; i < count; i++)
-            _offsets[i] = Vector3.zero;
+
 
         // ── 3. Build spatial grid ─────────────────────────────────────────────
         _grid.Clear();
@@ -158,97 +168,132 @@ public partial class UnitBodyblockSystem : SystemBase
         }
 
         // ── 4. Repulsion ──────────────────────────────────────────────────────
-        float radiusSq = radius * radius;
-
+        EnsureNativeCapacity(count);
+        _nativeGrid.Clear();
         for (int i = 0; i < count; i++)
         {
-            var cellI = ToCell(_agents[i].position, radius);
-
-            for (int dx = -1; dx <= 1; dx++)
-            for (int dz = -1; dz <= 1; dz++)
+            var source = _agents[i];
+            _nativeAgents[i] = new RepulsionAgent
             {
-                var neighborCell = (cellI.Item1 + dx, cellI.Item2 + dz);
-                if (!_grid.TryGetValue(neighborCell, out var bucket)) continue;
-
-                foreach (int j in bucket)
-                {
-                    if (j <= i) continue;
-                    if (_agents[i].team == _agents[j].team) continue;
-
-                    float3 diff = _agents[i].position - _agents[j].position;
-                    diff.y = 0f;
-                    float distSq = math.lengthsq(diff);
-                    if (distSq >= radiusSq) continue;
-
-                    float dist = math.sqrt(distSq);
-                    float overlap = radius - dist;
-                    float3 dir = distSq < 1e-6f
-                        ? GetOverlapDirection(_agents[i].entity, _agents[j].entity)
-                        : diff / dist;
-
-                    bool iMoving = _agents[i].state == UnitFormationState.Moving;
-                    bool jMoving = _agents[j].state == UnitFormationState.Moving;
-                    bool iEng    = _agents[i].isEngaging;
-                    bool jEng    = _agents[j].isEngaging;
-
-                    // Engaging vs Engaging → repulsión suave solo para prevenir overlap
-                    if (iEng && jEng)
-                    {
-                        float engRadSq = engagingRadius * engagingRadius;
-                        if (distSq >= engRadSq) continue;
-                        float eOverlap = engagingRadius - dist;
-                        float eMag     = eOverlap * engagingStrength * dt;
-                        var   ePush    = new Vector3(dir.x * eMag * 0.5f, 0f, dir.z * eMag * 0.5f);
-                        _offsets[i] += ePush;
-                        _offsets[j] -= ePush;
-                        continue;
-                    }
-
-                    // Engaging vs non-engaging → engaging actúa como muro estático
-                    if (iEng) iMoving = false;
-                    if (jEng) jMoving = false;
-
-                    // Formed vs Formed → sin push (dos paredes estáticas, evita vibración)
-                    if (!iMoving && !jMoving) continue;
-
-                    if (!iMoving && jMoving)
-                    {
-                        // i es muro, j se mueve → solo j recibe push (lejos de i)
-                        float str  = _agents[i].isWall ? wallStrength : repulsionStrength;
-                        float mag  = overlap * str * dt;
-                        // dir apunta de j hacia i → negarlo para alejar j de i
-                        _offsets[j] -= new Vector3(dir.x * mag, 0f, dir.z * mag);
-                    }
-                    else if (iMoving && !jMoving)
-                    {
-                        // j es muro, i se mueve → solo i recibe push (lejos de j)
-                        float str  = _agents[j].isWall ? wallStrength : repulsionStrength;
-                        float mag  = overlap * str * dt;
-                        // dir apunta de j hacia i → aplicarlo para alejar i de j
-                        _offsets[i] += new Vector3(dir.x * mag, 0f, dir.z * mag);
-                    }
-                    else
-                    {
-                        // Ambos Moving → 50/50
-                        float mag  = overlap * repulsionStrength * dt;
-                        var   push = new Vector3(dir.x * mag * 0.5f, 0f, dir.z * mag * 0.5f);
-                        _offsets[i] += push;
-                        _offsets[j] -= push;
-                    }
-                }
-            }
+                entity = source.entity, position = source.position, state = source.state,
+                team = source.team, isWall = source.isWall, isEngaging = source.isEngaging
+            };
+            _nativeGrid.Add(new int2((int)math.floor(source.position.x / radius),
+                (int)math.floor(source.position.z / radius)), i);
         }
+        var job = new RepulsionJob
+        {
+            Agents = _nativeAgents, Offsets = _nativeOffsets, Grid = _nativeGrid, Counts = _pairCounts,
+            radius = radius, dt = dt, repulsionStrength = repulsionStrength,
+            wallStrength = wallStrength, engagingRadius = engagingRadius, engagingStrength = engagingStrength,
+            overlapEpsilonSq = math.max(math.EPSILON, config.bodyblockOverlapEpsilonSq)
+        };
+        if (count >= math.max(1, config.bodyblockParallelThreshold))
+            job.Schedule(count, math.max(1, config.bodyblockJobBatchSize)).Complete();
+        else job.Run(count);
 
         // ── 5. Apply ──────────────────────────────────────────────────────────
         for (int i = 0; i < count; i++)
         {
-            var offset = _offsets[i];
+            DebugCandidatePairs += _pairCounts[i].x;
+            DebugContactPairs += _pairCounts[i].y;
+            var offset = (Vector3)_nativeOffsets[i];
             if (offset == Vector3.zero) continue;
 
             offset = ClampOffsetPerSecond(offset, maxPushSpeed, dt);
 
             _agents[i].agent.Move(offset);
         }
+        // Each pair was examined from both agents; publish unique-pair counts.
+        DebugCandidatePairs /= 2;
+        DebugContactPairs /= 2;
+    }
+
+    private struct RepulsionAgent
+    {
+        public Entity entity;
+        public float3 position;
+        public UnitFormationState state;
+        public Team team;
+        public bool isWall, isEngaging;
+    }
+
+    [BurstCompile]
+    private struct RepulsionJob : IJobParallelFor
+    {
+        [ReadOnly] public NativeArray<RepulsionAgent> Agents;
+        [ReadOnly] public NativeParallelMultiHashMap<int2, int> Grid;
+        [WriteOnly] public NativeArray<float3> Offsets;
+        [WriteOnly] public NativeArray<int2> Counts;
+        public float radius, dt, repulsionStrength, wallStrength, engagingRadius, engagingStrength, overlapEpsilonSq;
+
+        public void Execute(int i)
+        {
+            float3 offset = float3.zero;
+            int candidates = 0, contacts = 0;
+            var current = Agents[i];
+            var cell = new int2((int)math.floor(current.position.x / radius),
+                (int)math.floor(current.position.z / radius));
+            float radiusSq = radius * radius;
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                if (!Grid.TryGetFirstValue(cell + new int2(dx, dz), out int j, out var iterator)) continue;
+                do
+                {
+                    if (j == i) continue;
+                    var other = Agents[j];
+                    if (current.team == other.team) continue;
+                    candidates++;
+                    float3 diff = current.position - other.position;
+                    diff.y = 0f;
+                    float distSq = math.lengthsq(diff);
+                    if (distSq >= radiusSq) continue;
+                    contacts++;
+                    float dist = math.sqrt(distSq);
+                    // Canonical pair ordering preserves the old direction at exact overlap.
+                    float3 dir = distSq < overlapEpsilonSq
+                        ? (i < j ? GetOverlapDirection(current.entity, other.entity)
+                            : -GetOverlapDirection(other.entity, current.entity))
+                        : diff / dist;
+                    if (current.isEngaging && other.isEngaging)
+                    {
+                        if (distSq >= engagingRadius * engagingRadius) continue;
+                        offset += dir * ((engagingRadius - dist) * engagingStrength * dt * 0.5f);
+                        continue;
+                    }
+                    bool moving = current.state == UnitFormationState.Moving && !current.isEngaging;
+                    bool otherMoving = other.state == UnitFormationState.Moving && !other.isEngaging;
+                    if (!moving) continue;
+                    float strength = otherMoving ? repulsionStrength * 0.5f
+                        : other.isWall ? wallStrength : repulsionStrength;
+                    offset += dir * ((radius - dist) * strength * dt);
+                } while (Grid.TryGetNextValue(out j, ref iterator));
+            }
+            Offsets[i] = offset;
+            Counts[i] = new int2(candidates, contacts);
+        }
+    }
+
+    private void EnsureNativeCapacity(int count)
+    {
+        if (_nativeAgents.IsCreated && _nativeAgents.Length >= count) return;
+        if (_nativeAgents.IsCreated) _nativeAgents.Dispose();
+        if (_nativeOffsets.IsCreated) _nativeOffsets.Dispose();
+        if (_pairCounts.IsCreated) _pairCounts.Dispose();
+        if (_nativeGrid.IsCreated) _nativeGrid.Dispose();
+        _nativeAgents = new NativeArray<RepulsionAgent>(count, Allocator.Persistent);
+        _nativeOffsets = new NativeArray<float3>(count, Allocator.Persistent);
+        _pairCounts = new NativeArray<int2>(count, Allocator.Persistent);
+        _nativeGrid = new NativeParallelMultiHashMap<int2, int>(count, Allocator.Persistent);
+    }
+
+    protected override void OnDestroy()
+    {
+        if (_nativeAgents.IsCreated) _nativeAgents.Dispose();
+        if (_nativeOffsets.IsCreated) _nativeOffsets.Dispose();
+        if (_nativeGrid.IsCreated) _nativeGrid.Dispose();
+        if (_pairCounts.IsCreated) _pairCounts.Dispose();
     }
 
     public static Vector3 ClampOffsetPerSecond(Vector3 offset, float maxSpeed, float deltaTime)

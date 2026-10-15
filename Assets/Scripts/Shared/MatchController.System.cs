@@ -8,6 +8,8 @@ using UnityEngine.SceneManagement;
 /// broadcasts <see cref="GameStateChangeEvent"/> on transitions.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(CaptureZoneTriggerSystem))]
+[UpdateAfter(typeof(SupplyInteractionSystem))]
 public partial class MatchControllerSystem : SystemBase
 {
     protected override void OnCreate()

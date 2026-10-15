@@ -44,7 +44,8 @@ public static class LocalSaveSystem
         public List<FormationType> unlockedFormations = new();
     }
 
-    static string FilePath => Path.Combine(Application.persistentDataPath, "player_progress.json");
+    static string FilePath => Path.Combine(Application.persistentDataPath,
+        Core.Persistence.LocalSaveProvider.LegacyProgressFileName);
 
     public static SquadInstanceData FindSquad(PlayerProgressData data, int id, string persistentId)
     {
@@ -53,7 +54,9 @@ public static class LocalSaveSystem
             ? s.persistentId == persistentId : string.IsNullOrEmpty(s.persistentId) && s.id == id));
     }
 
-    static ProgressFileStore Store => new ProgressFileStore(FilePath);
+    /// <summary>Injectable store; standalone custom stores preserve the legacy contract.</summary>
+    public static ProgressFileStore Store { get; set; } = new ProgressFileStore(FilePath,
+        Path.Combine(Application.persistentDataPath, Core.Persistence.LocalSaveProvider.ProfileFileName));
 
     public static PlayerProgressData LoadProgress() => Store.Load();
     public static void SaveProgress(PlayerProgressData data) => Store.Save(data);

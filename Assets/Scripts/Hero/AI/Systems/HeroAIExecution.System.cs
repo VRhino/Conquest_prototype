@@ -37,6 +37,8 @@ public partial class HeroAIExecutionSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
+            || match.currentState == MatchState.InBattle;
         _squadRefLookup.Update(this);
         _squadIntentLookup.Update(this);
         bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
@@ -58,12 +60,13 @@ public partial class HeroAIExecutionSystem : SystemBase
                           .WithAll<HeroAITag>()
                           .WithEntityAccess())
         {
+            if (!battleActive) decision.ValueRW = default;
             var dec = decision.ValueRO;
 
             // ── Movement via NavMeshAgent ─────────────────────────────────────────
             float3 moveDir = float3.zero;
             float  speed   = stats.ValueRO.baseSpeed;
-            bool   shouldMove = life.ValueRO.isAlive && dec.action != AIActionType.Idle;
+            bool   shouldMove = battleActive && life.ValueRO.isAlive && dec.action != AIActionType.Idle;
 
             // NavMeshAgent is added by HeroVisualInstantiationSystem when the visual prefab is ready.
             // Guard prevents ArgumentException during the frames between ECS spawn and visual instantiation.
@@ -85,10 +88,23 @@ public partial class HeroAIExecutionSystem : SystemBase
                             < math.square(retryDistance)
                         && now < navigation.nextCommandRetryTime;
 
-                    if (!sameFailedCommand
-                        && UnitNavMeshSystem.TrySampleDestination(agent, requested,
-                            sampleRadius, out float3 resolved))
+                    float3 resolved = navigation.projectedCommandDestination;
+                    bool reuseProjection = navigation.hasProjectedCommand && !navigation.commandFailed
+                        && now < navigation.nextProjectionRefreshTime
+                        && math.distancesq(navigation.lastProjectionRequest, requested)
+                            < math.square(destinationChangeThreshold);
+                    bool projected = !sameFailedCommand && (reuseProjection
+                        || UnitNavMeshSystem.TrySampleDestination(agent, requested, sampleRadius, out resolved));
+                    if (projected)
                     {
+                        if (!reuseProjection)
+                        {
+                            navigation.hasProjectedCommand = true;
+                            navigation.lastProjectionRequest = requested;
+                            navigation.projectedCommandDestination = resolved;
+                            // Revalidate periodically for dynamic NavMesh changes, using the existing retry cadence.
+                            navigation.nextProjectionRefreshTime = now + retryInterval;
+                        }
                         bool previousPathFailed = navigation.hasIssuedCommand
                             && !navigation.lastCommandWasFormation
                             && !agent.pathPending
@@ -171,7 +187,7 @@ public partial class HeroAIExecutionSystem : SystemBase
                 SystemAPI.SetComponent(entity, new HeroMoveIntent { Direction = moveDir, Speed = speed });
 
             // ── Squad Orders ──────────────────────────────────────────────────────
-            if (life.ValueRO.isAlive && dec.hasNewSquadOrder && _squadRefLookup.HasComponent(entity))
+            if (battleActive && life.ValueRO.isAlive && dec.hasNewSquadOrder && _squadRefLookup.HasComponent(entity))
             {
                 Entity squadEntity = _squadRefLookup[entity].squad;
                 if (SystemAPI.Exists(squadEntity) && _squadIntentLookup.HasComponent(squadEntity))
@@ -195,6 +211,7 @@ public partial class HeroAIExecutionSystem : SystemBase
     {
         navigation.lastFailedCommand = requested;
         navigation.commandFailed = true;
+        navigation.hasProjectedCommand = false;
         navigation.nextCommandRetryTime = now + retryInterval;
         StopAgent(agent, ref navigation);
     }
@@ -212,8 +229,8 @@ public partial class HeroAIExecutionSystem : SystemBase
     private static void StopAgent(NavMeshAgent agent, ref NavAgentComponent navigation,
         bool resetPath = true)
     {
-        if (resetPath && agent.isOnNavMesh) agent.ResetPath();
-        agent.isStopped = true;
+        if (resetPath && agent.isOnNavMesh && (agent.hasPath || agent.pathPending)) agent.ResetPath();
+        if (!agent.isStopped) agent.isStopped = true;
         navigation.hasIssuedCommand = false;
     }
 }

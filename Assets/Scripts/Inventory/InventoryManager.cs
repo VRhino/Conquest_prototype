@@ -47,6 +47,7 @@ public static class InventoryManager
         ConsumableManagerService.Initialize(hero);
 
         _isInitialized = true;
+        StoreTransactionService.Initialize(hero);
         LogInfo($"Inventory system initialized for hero: {hero.heroName}");
         
         // Validar integridad después de la inicialización
@@ -62,6 +63,18 @@ public static class InventoryManager
     /// Obtiene el héroe actual.
     /// </summary>
     public static HeroData GetCurrentHero() => _currentHero;
+
+    public static void Reset()
+    {
+        _currentHero = null;
+        _isInitialized = false;
+        InventoryStorageService.Reset();
+        EquipmentManagerService.Reset();
+        ConsumableManagerService.Reset();
+        StoreTransactionService.Reset();
+        CurrencyService.Reset();
+        InventoryEventService.Reset();
+    }
 
     #endregion
 
@@ -172,7 +185,9 @@ public static class InventoryManager
     {
         if (!ValidateInitialization()) return false;
 
-        return InventoryStorageService.MoveItemToSlot(item, targetSlotIndex);
+        bool success = InventoryStorageService.MoveItemToSlot(item, targetSlotIndex);
+        if (success) InventoryEventService.TriggerInventoryChanged();
+        return success;
     }
 
     /// <summary>
@@ -182,7 +197,9 @@ public static class InventoryManager
     {
         if (!ValidateInitialization()) return false;
 
-        return InventoryStorageService.SwapItemSlots(item1, item2);
+        bool success = InventoryStorageService.SwapItemSlots(item1, item2);
+        if (success) InventoryEventService.TriggerInventoryChanged();
+        return success;
     }
 
     #endregion
@@ -196,8 +213,21 @@ public static class InventoryManager
     {
         if (!ValidateInitialization()) return false;
 
-        return InventoryStorageService.RemoveItemQuantity(itemId, quantity);
+        bool success = InventoryStorageService.RemoveItemQuantity(itemId, quantity);
+        if (success) InventoryEventService.TriggerInventoryChanged();
+        return success;
     }
+
+    public static bool RemoveItemQuantity(InventoryItem item, int quantity)
+    {
+        if (!ValidateInitialization()) return false;
+        bool success = InventoryStorageService.RemoveItemQuantity(item, quantity);
+        if (success) InventoryEventService.TriggerInventoryChanged();
+        return success;
+    }
+
+    public static bool UnequipItem(ItemType type, ItemCategory category)
+        => ValidateInitialization() && EquipmentManagerService.UnequipItem(type, category);
 
     #endregion
 
@@ -211,6 +241,30 @@ public static class InventoryManager
         if (!ValidateInitialization()) return false;
 
         return EquipmentManagerService.EquipItem(item);
+    }
+
+    public static bool RequestEquipItem(InventoryItem item, Action<bool> completed = null)
+    {
+        if (!ValidateInitialization()) return false;
+        var compatibility = EquipmentManagerService.GetCompatibility(item);
+        if (!compatibility.HasInventorySpace) { completed?.Invoke(false); return false; }
+        var definition = InventoryUtils.GetItemData(item.itemId);
+        if (compatibility.RequiresConfirmation || definition.requiresConfirmation)
+            return InventoryEventService.RequestConfirmation(item,
+                compatibility.RequiresConfirmation ? compatibility.WarningMessage : $"¿Equipar {definition.name}?",
+                () => { bool result = EquipItem(item); completed?.Invoke(result); }, () => completed?.Invoke(false));
+        bool success = EquipItem(item);
+        completed?.Invoke(success);
+        return success;
+    }
+
+    public static bool RequestUseConsumable(InventoryItem item)
+    {
+        if (!ValidateInitialization() || !CanUseItem(item)) return false;
+        var definition = InventoryUtils.GetItemData(item.itemId);
+        return definition.requiresConfirmation
+            ? InventoryEventService.RequestConfirmation(item, $"¿Usar {definition.name}?", () => UseConsumable(item))
+            : UseConsumable(item);
     }
 
     #endregion
@@ -441,6 +495,9 @@ public static class InventoryManager
     /// Orden: Armaduras → Armas → Consumibles/Visuales, por rareza dentro de cada tipo.
     /// </summary>
     public static bool SortByType()
+        => ValidateInitialization() && InventoryEventService.RunTransaction(SortByTypeCore);
+
+    private static bool SortByTypeCore()
     {
         if (!ValidateInitialization()) return false;
 

@@ -16,6 +16,8 @@ public partial class HeroMovementSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
+            || match.currentState == MatchState.InBattle;
         var query = GetEntityQuery(
             ComponentType.ReadOnly<IsLocalPlayer>(),
             ComponentType.ReadOnly<HeroInputComponent>(),
@@ -35,7 +37,7 @@ public partial class HeroMovementSystem : SystemBase
             var cam = Camera.main;
             bool awaitingSpawn = EntityManager.HasComponent<HeroSpawnComponent>(entity)
                 && !EntityManager.GetComponentData<HeroSpawnComponent>(entity).hasSpawned;
-            if (!life.isAlive || awaitingSpawn || cam == null)
+            if (!battleActive || !life.isAlive || awaitingSpawn || cam == null)
             {
                 // Never leave the previous frame's movement request live on an early exit.
                 if (EntityManager.HasComponent<HeroMoveIntent>(entity))

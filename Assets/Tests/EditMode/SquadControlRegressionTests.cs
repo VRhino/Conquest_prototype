@@ -14,7 +14,8 @@ public class SquadControlRegressionTests
     {
         world = new World("Squad control regression");
         em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
     }
 
     [TearDown]

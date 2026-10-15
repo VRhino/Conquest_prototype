@@ -8,6 +8,7 @@ using Unity.Transforms;
 /// Progress advances when only attackers are in range.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
+[UpdateAfter(typeof(HeroRespawnSystem))]
 public partial class CaptureZoneTriggerSystem : SystemBase
 {
     protected override void OnUpdate()

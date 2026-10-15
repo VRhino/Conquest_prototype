@@ -20,7 +20,7 @@ public static class SceneTransitionService
         public const string PostBattle = "PostBattleScene";
     }
 
-    private static readonly Dictionary<string, GamePhase> SceneToPhaseMap = new()
+    private static readonly Dictionary<string, GamePhase> SceneToPhaseMap = new(System.StringComparer.OrdinalIgnoreCase)
     {
         { SceneNames.WorldMap, GamePhase.WorldMap },
         { SceneNames.SettlementPreview, GamePhase.Feudo },
@@ -35,34 +35,56 @@ public static class SceneTransitionService
         { SceneNames.PostBattle, GamePhase.PostPartida }
     };
 
+    /// <summary>Interface scenes always own a free pointer, even when a nested panel closes.</summary>
+    public static bool RequiresFreeCursor
+    {
+        get
+        {
+            if (!SceneToPhaseMap.TryGetValue(SceneManager.GetActiveScene().name, out var phase)) return false;
+            return phase == GamePhase.Login || phase == GamePhase.CharacterSelection
+                || phase == GamePhase.AvatarCreation || phase == GamePhase.BattlePreparation
+                || phase == GamePhase.PostPartida || phase == GamePhase.WorldMap;
+        }
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void RegisterSceneCursorPolicy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Scene unload callbacks may restore gameplay lock; apply the destination policy afterwards.
+        if (RequiresFreeCursor) ApplyCursorState(true);
+    }
+
+    public static bool ApplyCursorState(bool uiRequested)
+    {
+        bool free = uiRequested || RequiresFreeCursor;
+        var mode = free ? CursorLockMode.None : CursorLockMode.Locked;
+        if (Cursor.lockState != mode) Cursor.lockState = mode;
+        if (Cursor.visible != free) Cursor.visible = free;
+        return free;
+    }
+
     public static void LoadScene(string sceneName)
     {
-        // Actualizar GamePhase antes de cargar la escena
-        if (SceneToPhaseMap.TryGetValue(sceneName, out var newPhase)) UpdateGamePhase(newPhase);
-        else
-        {
-            Debug.LogWarning($"No se encontró mapeo para la escena {sceneName}. Usando GamePhase.Login por defecto.");
-            UpdateGamePhase(GamePhase.Login);
-        }
-
+        UpdateGamePhase(sceneName);
         SceneManager.LoadScene(sceneName);
     }
 
     public static void LoadSceneAsync(string sceneName)
     {
-        if (SceneToPhaseMap.TryGetValue(sceneName, out var newPhase)) UpdateGamePhase(newPhase);
-        else
-        {
-            Debug.LogWarning($"No se encontró mapeo para la escena {sceneName}. Usando GamePhase.Login por defecto.");
-            UpdateGamePhase(GamePhase.Login);
-        }
-
+        UpdateGamePhase(sceneName);
         SceneManager.LoadSceneAsync(sceneName);
     }
 
     public static void UpdateGamePhase(string sceneName)
     {
-        if (SceneToPhaseMap.TryGetValue(sceneName, out var newPhase)) UpdateGamePhase(newPhase);
+        string sceneKey = System.IO.Path.GetFileNameWithoutExtension(sceneName);
+        if (SceneToPhaseMap.TryGetValue(sceneKey, out var newPhase)) UpdateGamePhase(newPhase);
         else
         {
             Debug.LogWarning($"No se encontró mapeo para la escena {sceneName}. Usando GamePhase.Login por defecto.");

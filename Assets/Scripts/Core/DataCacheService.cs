@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -42,8 +41,6 @@ public class DataCacheService : MonoBehaviour
 
     // Equipment event listeners management
     private bool _eventListenersInitialized = false;
-    private Coroutine _debounceCoroutine = null;
-    private bool _updatePending = false;
 
     // Base leadership value for all heroes
     private const float BASE_LEADERSHIP_VALUE = 700f;
@@ -100,6 +97,9 @@ public class DataCacheService : MonoBehaviour
     {
         if (string.IsNullOrEmpty(heroId))
             return HeroCalculatedAttributes.Empty;
+        var selected = PlayerSessionService.SelectedHero;
+        if (selected != null && (heroId == selected.heroName || heroId == selected.classId))
+            heroId = GetHeroKey(selected);
         _attributeCache.TryGetValue(heroId, out var attributes);
         return attributes;
     }
@@ -226,8 +226,7 @@ public class DataCacheService : MonoBehaviour
         if (_eventListenersInitialized) return;
         try
         {
-            InventoryEventService.OnItemEquipped   += OnItemEquipped;
-            InventoryEventService.OnItemUnequipped += OnItemUnequipped;
+            InventoryEventService.OnEquipmentChanged += OnEquipmentChanged;
             _eventListenersInitialized = true;
         }
         catch (System.Exception e)
@@ -241,16 +240,9 @@ public class DataCacheService : MonoBehaviour
         if (!_eventListenersInitialized) return;
         try
         {
-            InventoryEventService.OnItemEquipped   -= OnItemEquipped;
-            InventoryEventService.OnItemUnequipped -= OnItemUnequipped;
+            InventoryEventService.OnEquipmentChanged -= OnEquipmentChanged;
             _eventListenersInitialized = false;
 
-            if (_debounceCoroutine != null)
-            {
-                StopCoroutine(_debounceCoroutine);
-                _debounceCoroutine = null;
-                _updatePending = false;
-            }
         }
         catch (System.Exception e)
         {
@@ -258,49 +250,16 @@ public class DataCacheService : MonoBehaviour
         }
     }
 
-    private void OnItemEquipped(InventoryItem equippedItem, InventoryItem unequippedItem)
+    private void OnEquipmentChanged()
     {
-        if (equippedItem?.IsEquipment == true) ScheduleCacheUpdate();
+        // A successful transaction emits this once, after its final equipment is known.
+        // Publish derived attributes before the general inventory refresh or scene transition.
+        var currentHero = PlayerSessionService.SelectedHero;
+        if (currentHero != null) CacheAttributesInternal(currentHero);
     }
-
-    private void OnItemUnequipped(InventoryItem item)
-    {
-        if (item?.IsEquipment == true) ScheduleCacheUpdate();
-    }
-
-    private void ScheduleCacheUpdate()
-    {
-        if (_updatePending) return;
-        _updatePending = true;
-        if (_debounceCoroutine != null)
-            StopCoroutine(_debounceCoroutine);
-        _debounceCoroutine = StartCoroutine(DebouncedCacheUpdate());
-    }
-
-    private IEnumerator DebouncedCacheUpdate()
-    {
-        yield return new WaitForSeconds(0.1f);
-        try
-        {
-            var currentHero = PlayerSessionService.SelectedHero;
-            if (currentHero == null)
-            {
-                Debug.LogWarning("[DataCacheService] No selected hero to update cache for");
-                yield break;
-            }
-            CacheAttributesInternal(currentHero);
-        }
-        finally
-        {
-            _updatePending = false;
-            _debounceCoroutine = null;
-        }
-    }
-
-    // ─── Static wrappers (call sites unchanged) ──────────────────────────────
 
     private static string GetHeroKey(IHeroIdentity hero)
-        => string.IsNullOrEmpty(hero.HeroName) ? hero.ClassId : hero.HeroName;
+        => HeroAttributeValidator.GetHeroId(hero);
 
     public static void Clear()                                                          => Instance.ClearInternal();
     public static void CacheAttributes(HeroData heroData)                              => Instance.CacheAttributesInternal(heroData);

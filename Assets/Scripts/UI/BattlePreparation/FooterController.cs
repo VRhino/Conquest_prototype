@@ -181,7 +181,7 @@ public class FooterController : MonoBehaviour
             }
         }
         
-        float availableLeadership = DataCacheService.getHeroLeadership(_currentHero.heroName);
+        float availableLeadership = DataCacheService.getHeroLeadership(HeroAttributeValidator.GetHeroId(_currentHero));
         if (totalLeadershipText != null)
         {
             totalLeadershipText.text = $"{_totalLeadershipCost}/{(int)availableLeadership}";
@@ -324,7 +324,7 @@ public class FooterController : MonoBehaviour
         if (troopsSelectorController != null)
         {
             // Calcular liderazgo máximo disponible
-            float maxLeadership = DataCacheService.getHeroLeadership(_currentHero.heroName);
+            float maxLeadership = DataCacheService.getHeroLeadership(HeroAttributeValidator.GetHeroId(_currentHero));
 
             // Inicializar el selector con los datos actuales
             troopsSelectorController.Initialize(_currentHero, _heroSquadInstanceIDs, maxLeadership);

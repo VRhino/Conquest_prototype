@@ -210,8 +210,73 @@
 - Keep root motion disabled when CharacterController/NavMesh owns movement; inspect imported clip averageSpeed before blaming root motion. Use an upper-body combat mask and compare leg poses with combat weight off/on at the same animation time.
 - Integration animation tests need stable physical conditions: align blockers with the requested movement direction after grounding/camera initialization; use a clear NavMesh corridor for full-speed remote tests. Crowd-limited motion correctly produces a slower gait.
 
+
+- Inventory refactor (2026-10-09): una operación compuesta debe devolver todas sus piezas o revertirse, incluidos monedas, cantidades, slots y stats. Publicar eventos específicos sólo sobre el estado final y guardar/publicar el evento general una vez; no confiar en rollback parcial de cada vista.
+- Dividir una pila necesita colocación explícita sin autoapilado. Calcular compatibilidad de equipo con el slot que libera la entrada; vender usa cantidad y referencia de la pila seleccionada.
+- Una selección de recompensa es una operación pendiente. No consumir hasta entregar, cancelar debe liberar la pendiente, clonar el SO de configuración y proteger aceptar y ofertas de tienda contra callbacks repetidos antes de Destroy.
+- Las celdas reutilizadas deben limpiar datos tanto en controller como interacción/drag. Reasignar callbacks de forma idempotente; filas de tooltip ocultas requieren GetComponentsInChildren(..., true) al refrescar texto.
+- Los paneles ligados a una escena no deben persistir referencias a sus GameObjects al descargarla. Limpiar el modo UI al destruir el gestor: un flag modal residual puede bloquear input de movimiento en las pruebas siguientes.
+- Validar inventario con providers en memoria, UI con las escenas/prefabs reales y apariencia con EntityVisualSync local. No crear servicios DontDestroyOnLoad mediante sus APIs de juego desde eval de EditMode. Separar el spawn ajeno al propósito de una prueba de UI y documentar el aislamiento.
+
 - Calibración de campaña (2026-10-12): `viewSize` no es el ancho visible. Medir los rayos laterales al plano del jugador, ajustar según el aspecto real y verificar posiciones proyectadas; preservar el ancho al retornar entre escenas. Compartir unidades/reloj en un perfil y probar el recorrido sobre sectores cargados. Antes de manipular accesos, comprobar el tipo real: `WorldMapSettlementTarget.entrance` es una posición Vector3, no un Transform.
 
 - Héroe de campaña (2026-10-12): el rig modular importado no da una medida fiable del tamaño animado mediante BakeMesh antes de evaluar el Animator; la normalización produjo un factor 534 y un héroe gigante. Conservar la escala visual aprobada por el usuario (6) en el perfil y comprobar tamaño en Play, sin convertir ese tamaño en una distancia estratégica ni recalcularlo al reconstruir la prueba.
 
 - Navegación de campaña (2026-10-13): verificar pendientes también al simplificar una ruta; una máscara de celdas libre no garantiza que el segmento sea seguro. Separar residencia de terreno del héroe y de la cámara. Reutilizar el visual de ruta existente para evitar dos líneas superpuestas; los clics remotos deben funcionar sin depender de colliders de sectores cargados.
+
+
+## Sistemas y optimización — 2026-10-13
+
+- RequireForUpdate de MatchState sólo garantiza existencia: las decisiones/ataques deben comprobar fase y limpiar intención/rutas al salir de combate.
+- Ordenar productores y consumidores de snapshots exige definir frescura por dato. Leer FSM después de las decisiones que alimenta introduce un ciclo; fijar estado táctico previo y percepción física actual.
+- Filtrar atacantes muertos independientemente de destrucción; daño → cleanup → detección/targeting debe ser explícito. Los proyectiles ya disparados conservan su snapshot de daño.
+- Guardar JSON no es motivo para vaciar toda la caché de atributos. Invalidar por cambio de dominio/sesión, manteniendo eventos precisos de equipo y rollback transaccional.
+- Nombre visible no es identidad de caché ni de participante de batalla: conservar GUID en JSON/DTO; rechazar fallback por nombre ambiguo o un ID explícito distinto.
+- Registros de visuales necesitan clave World/Entity y desregistro al sustituir/destruir el vínculo. Colliders prestados se consumen al inicializar, sin retener listas scratch compartidas; restaurar IgnoreCollision al reutilizar/desactivar.
+- Pool de A* requiere un contexto por iterator activo y Dispose explícito al cancelar. El finally sólo limpia el contexto que posee, sin borrar una búsqueda nueva iniciada por un callback.
+- Burst calcula sobre datos nativos; NavMeshAgent/Animator permanecen en el puente managed. Disponer memoria persistente al destruir el sistema y procesar sólo el conteo vigente.
+- Los fixtures de combate deben establecer InBattle: el valor inicial de MatchState representa otra fase. No relajar un gate correcto para acomodar un fixture incompleto.
+- Antes de EditMode comprobar que el Editor haya salido de Play Mode. La API puede dejar el runner pendiente si la escena de prueba anterior sigue ejecutándose.
+- En Windows, usar encoding UTF-8 explícito en cada lectura/escritura Python; la codificación predeterminada puede convertir comentarios y textos UTF-8 en mojibake.
+
+- La actualización derivada de equipamiento pertenece al commit exitoso, antes del evento general de inventario: un debounce con coroutine puede dejar stats antiguos al entrar inmediatamente en batalla. Coalescer la transacción permite recalcular una vez sin ese retraso.
+
+- Si un World se reutiliza entre partidas, el bootstrap aceptado debe reiniciar MatchState y reactivar MatchController; de otro modo un gate correcto de EndMatch deja detenida la siguiente batalla.
+
+- Al paralelizar repulsión, cada agente escribe sólo su propio offset; visitar pares en ambos sentidos evita carreras sin desactivar checks de seguridad. Usar orden canónico para dirección de solapamiento y reducir contadores después del job; comparar casos dispersos y densos porque el scheduling puede costar más con pocos contactos.
+
+- Consolidar archivos no autoriza inferir propiedad: preservar progresión heredada sin dueño en un bloque explícito, versionar el contenedor y rechazar versiones futuras. Los escritores de equipo y progresión deben compartir lock y preservar el estado más reciente del otro dominio; cargar no migra archivos en disco.
+- Las pruebas de escena deben inyectar también el store de progresión, además de SaveSystem/LoadSystem, para que un perfil de rendimiento no modifique guardados reales. Confirmar eventos de render durante el muestreo y separar coste de Editor/runner de un Player.
+
+- JsonUtility puede materializar objetos anidados vacíos para campos null/ausentes: una migración de bloque debe usar versión/proveniencia, no sólo `??=`, para no confundir defaults con datos ya importados. Cubrir JSON del formato anterior serializado por Unity además de JSON escrito a mano.
+
+- Los eventos de XP necesitan destinatario persistente; capturarlo al aceptar el bootstrap y no leer SelectedHero al consumir la recompensa. Reasignar el singleton al iniciar otra partida y descartar eventos de otro dueño.
+- Commit de recompensa antes de consumir evento o modificar ECS. Un proveedor puede devolver un objeto vivo: clonar/stagear impide que un fallo de Save mute el estado original. Una revisión por héroe preserva XP reciente frente a snapshots viejos de inventario, sin bloquear cambios del snapshot actual.
+- Tras migrar identidad a GUID, revisar comparaciones internas con heroName en servicios auxiliares. Modificaciones temporales y cálculo de puntos deben verificar que el ID corresponde al héroe usado como base.
+
+- JsonUtility ejecuta inicializadores de HeroData para un heroId ausente: comprobar únicamente string.IsNullOrEmpty tras cargar puede ocultar IDs regenerados. Inspeccionar la identidad serializada con el DTO neutral sin generador y marcar el perfil; confirmar IDs al aceptar bootstrap antes de recompensas dirigidas. Carga pasiva y backup del formato original siguen siendo obligatorios.
+
+- Una velocidad/gait de carrera no garantiza que la transición del Animator haya finalizado tras medio segundo: esperar el clip real con plazo y mantener las aserciones de peso/velocidad. Un fallo intermitente de integración merece corregir esa condición temporal, no eliminar la comprobación del clip.
+
+- HeroData/ECS mantienen XP restante por nivel; una vista no debe inferir Level con una función de XP total ni restar de nuevo los umbrales históricos. Usar el Level guardado y el mismo threshold floor del consumidor de recompensas.
+
+- La progresión de squad debe volver a la misma instancia GUID del HeroData que consume el bootstrap, no sólo al mapa runtime o al archivo antiguo. Verificar GUID e índice de roster antes de persistir; los índices battle-local se reciclan.
+- Si un lote tiene varios commits, un ECB diferido de destrucción puede duplicar recompensas anteriores al fallar una posterior. Procesar un snapshot de eventos y consumir cada commit confirmado de inmediato, sin iterar una query viva durante cambios estructurales.
+- Mantener revisiones independientes de héroe y squad: proteger sólo sus campos XP/nivel, conservando formación, inventario y efectivos de otros dominios. El commit lee el perfil más reciente y actualiza la sesión por dueño/instancia explícitos.
+- Los paneles no deben usar thresholds/caps placeholder cuando el consumidor ECS ya define la fórmula y el máximo. Mostrar XP restante con el cálculo compartido.
+
+- IsLocalSquadActive es estado de control, no identidad de dueño: la retirada lo elimina antes de destruir el squad. Identificar recompensas por dueño local persistente y roster validado también después de perder esa etiqueta.
+
+- Una escena de prueba con configuración completa puede ocultar dependencias ausentes en la escena de producción. Validar preparación → escena real y comprobar los singletons requeridos por sus prefabs; BattleScene necesitaba ShieldConfigAuthoring para crear tropas con escudo. Corregir el authoring mediante Editor, sin inyectar valores sólo en el test.
+- Para perfilar bodyblock durante combate, registrar contactos en la propia ventana y empezar al detectar el choque: una espera de calentamiento posterior puede dejar una muestra sin contactos aunque el flujo haya combatido antes.
+
+- Ground está registrado como layer, no como tag. CompareTag con un nombre no registrado lanza una excepción aunque el hit sea otro objeto. Al proyectar órdenes, comprobar la capa Ground/TerrainCollider y conservar fallback; validar la orden con cursor en la escena real, no sólo la entrada de teclado.
+
+- Cursor.lockState y Cursor.visible sobreviven al cambio de escena. Una interfaz debe aplicar su política al terminar la carga, después de los OnDestroy que restauran gameplay; cerrar paneles o recibir foco tampoco debe bloquear el cursor en BattlePrep/PostBattle. Probar entrada desde cursor Locked y clicks reales del InputSystem, no sólo invocar onClick.
+
+- Guardar la escena de origen al aceptar la entrada en cola, no al cargar preparación/resultados. El servicio persistente debe limpiar Assigned y su coroutine antes de volver para permitir otra partida; cargar por path requiere normalizar sólo la clave de fase y conservar el path para SceneManager.
+
+- En Windows, comprobar que el alias de ejecución `unity.exe` no precede a la instalación oficial de Unity CLI en `PATH`. Si `unity status` devuelve `PIPELINE_LOAD_PENDING`, comparar `Packages/manifest.json`, `packages-lock.json` y `Library/PackageCache`; traer el Editor al frente hasta resolver/recompilar el paquete y verificar tanto el descriptor `.unity-pipeline-port` como `unity status` en estado `ready`.
+- Para omitir cálculos ECS estables, invalidar la caché con todos sus inputs de gameplay y entorno. En formación: pose del ancla revisionada, orden/estado, formación, slot, dueño y Terrain/Data/origen/heightmap; al cambiar terreno hay que volver a muestrear altura aunque el slot conserve X/Z.
+- Unity CLI: invocar `C:\Users\VRINO\AppData\Local\Unity\bin\unity.exe` cuando WindowsApps intercepte el alias. Si el menú muestra Start deshabilitado pero CLI no descubre el servidor, detenerlo y arrancarlo desde Window/Pipeline; confirmar `ready` con CLI. Cerrar la sesión de computer use al terminar la intervención.
+- Organización de Resources: `Resources.Load` ignora mayúsculas; una diferencia de capitalización no demuestra un fallo de carga. Separar la normalización de nombres de una reparación funcional; mover desde AssetDatabase, conservar GUID y comprobar las cargas antes y después.

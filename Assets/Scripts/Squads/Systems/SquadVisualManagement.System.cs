@@ -15,6 +15,7 @@ using System.Collections.Generic;
 [UpdateAfter(typeof(SquadSpawningSystem))]
 public partial class SquadVisualManagementSystem : SystemBase
 {
+    private readonly List<(Entity entity, NavMeshAgent agent)> _pendingNavAgents = new();
     private const string DetectorChildName    = "Detector";
     private const string WeaponHitboxChildName = "WeaponHitbox";
     private static readonly int ShaderBaseColor = Shader.PropertyToID("_BaseColor");
@@ -23,12 +24,16 @@ public partial class SquadVisualManagementSystem : SystemBase
     {
         base.OnCreate();
         RequireForUpdate<MatchStateComponent>();
+        RequireForUpdate(GetEntityQuery(ComponentType.ReadOnly<UnitVisualReference>(),
+            ComponentType.ReadOnly<LocalTransform>(), ComponentType.Exclude<UnitVisualInstance>(),
+            ComponentType.Exclude<IsDeadComponent>()));
     }
 
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
-        var pendingNavAgents = new List<(Entity entity, NavMeshAgent agent)>();
+        var pendingNavAgents = _pendingNavAgents;
+        pendingNavAgents.Clear();
 
         // Solo crear visuales para unidades individuales
         // Los squads son entidades lógicas sin visual propio

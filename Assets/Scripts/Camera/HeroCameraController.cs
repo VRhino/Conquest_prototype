@@ -80,8 +80,7 @@ public class HeroCameraController : MonoBehaviour
         // Calcular el offset local respecto a la rotación de referencia
         Quaternion referenceRot = Quaternion.Euler(REFERENCE_PITCH, REFERENCE_YAW, 0f);
         _offsetLocal = Quaternion.Inverse(referenceRot) * REFERENCE_OFFSET_GLOBAL;
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        SceneTransitionService.ApplyCursorState(false);
     }
 
     void Update()
@@ -89,8 +88,7 @@ public class HeroCameraController : MonoBehaviour
         // Re-enforce cursor lock in case editor focus or a UI briefly released it
         if (!disableCameraFollow && !DialogueUIState.IsDialogueOpen)
         {
-            if (Cursor.lockState != CursorLockMode.Locked) Cursor.lockState = CursorLockMode.Locked;
-            if (Cursor.visible) Cursor.visible = false;
+            SceneTransitionService.ApplyCursorState(false);
         }
 
         if (_cameraEntity == Entity.Null || !_entityManager.Exists(_cameraEntity))

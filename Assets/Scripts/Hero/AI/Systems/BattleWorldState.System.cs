@@ -19,6 +19,12 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(HeroAIPerceptionSystem))]
+[UpdateAfter(typeof(EnemyDetectionSystem))]
+[UpdateAfter(typeof(HeroRespawnSystem))]
+[UpdateAfter(typeof(CaptureZoneTriggerSystem))]
+[UpdateAfter(typeof(SupplyInteractionSystem))]
+[UpdateAfter(typeof(MatchControllerSystem))]
+[UpdateBefore(typeof(SquadAISystem))]
 public partial class BattleWorldStateSystem : SystemBase
 {
     private Entity _singletonEntity;
@@ -76,11 +82,16 @@ public partial class BattleWorldStateSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        // Only run during active battle
-        if (!SystemAPI.TryGetSingleton<MatchStateComponent>(out var matchComp))
-            return;
-        if (matchComp.currentState != MatchState.InBattle)
-            return;
+        var ws = EntityManager.GetComponentObject<TeamWorldState>(_singletonEntity);
+        bool hasMatch = SystemAPI.TryGetSingleton<MatchStateComponent>(out var matchComp);
+        ws.match = new MatchContext
+        {
+            isActive = hasMatch && matchComp.currentState == MatchState.InBattle,
+            stateTimer = matchComp.stateTimer,
+            winnerTeam = matchComp.winnerTeam,
+            state = matchComp.currentState
+        };
+        if (!ws.match.isActive) return;
 
         // Refresh lookups
         _teamLookup.Update(this);
@@ -101,16 +112,8 @@ public partial class BattleWorldStateSystem : SystemBase
         _aiTagLookup.Update(this);
         _detectedEnemyLookup.Update(this);
 
-        var ws = EntityManager.GetComponentObject<TeamWorldState>(_singletonEntity);
-
-        // ── Match context ──────────────────────────────────────────────────
-        ws.match = new MatchContext
-        {
-            isActive   = true,
-            stateTimer = matchComp.stateTimer,
-            winnerTeam = matchComp.winnerTeam,
-            state      = matchComp.currentState
-        };
+        // Health/detection/zones are fresh; tactical squad state is the previous
+        // decision cycle. Reading this frame's FSM here would create feedback.
 
         // ── Spawn positions (cached once) ──────────────────────────────────
         if (!ws.spawnsCached)

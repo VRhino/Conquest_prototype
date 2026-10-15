@@ -15,11 +15,11 @@ namespace Conquest.WorldMap {
   public bool HasDestination{get;private set;}
   [Min(64)] public int searchNodesPerFrame=512;
   [Min(1)] public float streamingLookAhead=300;
-  Coroutine routeSearch;int orderVersion;
+  Coroutine routeSearch;IEnumerator activeRouteSearch;int orderVersion;
   public event Action RouteChanged;
   public bool TravelTo(Vector3 destination){if(authoritativePosition)return false;if(!navigation||navigation.sourceSHA256!=streamer.manifest.sourceSHA256){travelStatus="Falta navegación para este mundo";return false;}if(!navigation.Walkable(destination)){travelStatus="Destino bloqueado: agua o pendiente excesiva";return false;}CancelSearch();moving=false;IsPlanning=true;travelStatus="Calculando ruta…";int version=orderVersion;routeSearch=StartCoroutine(FindRoute(actor.position,destination,version));return true;}
-  IEnumerator FindRoute(Vector3 origin,Vector3 destination,int version){yield return navigation.Search(origin,destination,(route,error)=>{if(version!=orderVersion)return;IsPlanning=false;routeSearch=null;if(route==null){travelStatus=error;return;}demoRoute=route;segment=1;travelled=0;moving=true;HasDestination=true;travelStatus="En camino";RouteChanged?.Invoke();},searchNodesPerFrame);}
-  void CancelSearch(){orderVersion++;if(routeSearch!=null)StopCoroutine(routeSearch);routeSearch=null;IsPlanning=false;}
+  IEnumerator FindRoute(Vector3 origin,Vector3 destination,int version){var search=navigation.Search(origin,destination,(route,error)=>{if(version!=orderVersion)return;IsPlanning=false;routeSearch=null;if(route==null){travelStatus=error;return;}demoRoute=route;segment=1;travelled=0;moving=true;HasDestination=true;travelStatus="En camino";RouteChanged?.Invoke();},searchNodesPerFrame);activeRouteSearch=search;try{yield return search;}finally{(search as IDisposable)?.Dispose();if(ReferenceEquals(activeRouteSearch,search))activeRouteSearch=null;}}
+  void CancelSearch(){orderVersion++;if(routeSearch!=null)StopCoroutine(routeSearch);(activeRouteSearch as IDisposable)?.Dispose();activeRouteSearch=null;routeSearch=null;IsPlanning=false;}
   public void StopTravel(){CancelSearch();moving=false;travelStatus="Viaje en pausa";}
   public void ResumeTravel(){if(authoritativePosition||IsPlanning||demoRoute==null||segment>=demoRoute.Length)return;moving=true;HasDestination=true;travelStatus="En camino";RouteChanged?.Invoke();}
   public void ClearDestination(){StopTravel();HasDestination=false;RouteChanged?.Invoke();}

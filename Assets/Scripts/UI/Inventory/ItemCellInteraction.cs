@@ -1,4 +1,7 @@
 public class ItemCellInteraction : BaseItemCellInteraction
 {
-    // Implementación específica para la interacción de celdas de item
+    public override void OnPointerClick(UnityEngine.EventSystems.PointerEventData eventData)
+    {
+        if (_currentItem != null && _currentItemData != null) base.OnPointerClick(eventData);
+    }
 }

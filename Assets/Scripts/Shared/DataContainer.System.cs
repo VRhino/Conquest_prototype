@@ -20,7 +20,7 @@ public partial class DataContainerSystem : SystemBase
             Entity entity = em.CreateEntity(typeof(DataContainerComponent), typeof(HeroProgressComponent));
             em.AddBuffer<SquadIdMapElement>(entity);
 
-            var save = LocalSaveSystem.LoadProgress();
+            // Hero progression is captured from the addressed profile by battle bootstrap.
 
             em.SetComponentData(entity, new DataContainerComponent
             {
@@ -37,10 +37,10 @@ public partial class DataContainerSystem : SystemBase
 
             em.SetComponentData(entity, new HeroProgressComponent
             {
-                level = save.level,
-                currentXP = save.currentXP,
-                xpToNextLevel = CalculateNext(save.level),
-                perkPoints = save.perkPoints
+                level = 1,
+                currentXP = 0,
+                xpToNextLevel = HeroExperienceCalculator.GetBattleXPForNextLevel(1),
+                perkPoints = 0
             });
         }
     }
@@ -50,8 +50,4 @@ public partial class DataContainerSystem : SystemBase
         // This system only holds persistent data; no per-frame logic required.
     }
 
-    static int CalculateNext(int level)
-    {
-        return (int)Unity.Mathematics.math.floor(100 * Unity.Mathematics.math.pow(1.2f, level - 1));
-    }
 }

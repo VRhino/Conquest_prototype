@@ -13,6 +13,7 @@ public static class PlayerSessionService
             return;
         }
 
+        Clear();
         CurrentPlayer = data;
         SelectedHero = null; // Reiniciar héroe por si hay cambio de usuario
     }
@@ -24,22 +25,17 @@ public static class PlayerSessionService
             Debug.LogError("PlayerSessionService: Tried to set null HeroData.");
             return;
         }
-        EquipmentManagerService.Initialize(hero);
-        DataCacheService.CacheAttributes(hero); // Usar método específico de cache
-        InventoryEventService.Initialize(hero, () => SaveSystem.SavePlayer(CurrentPlayer));
-
-        // Limpiar listeners del héroe anterior
-        if (SelectedHero != null)
-        {
-            DataCacheService.CleanupEventListeners();
-        }
-
+        DataCacheService.CleanupEventListeners();
         SelectedHero = hero;
+        InventoryManager.Initialize(hero);
+        InventoryEventService.Initialize(hero, () => SaveSystem.SavePlayer(CurrentPlayer));
+        DataCacheService.CacheAttributes(hero);
         Debug.Log($"[PlayerSessionService]Hero seleccionado: {hero.heroName}");
         Debug.Log($"[PlayerSessionService]Pantalones del héroe seleccionado: {hero.equipment.pants}");
         
         // Inicializar listeners para el nuevo héroe
         DataCacheService.InitializeEventListeners();
+        InventoryEventService.NotifyContextChanged();
     }
 
     public static bool IsSessionActive => CurrentPlayer != null;
@@ -49,9 +45,12 @@ public static class PlayerSessionService
     {
         // Limpiar listeners antes de cerrar sesión
         DataCacheService.CleanupEventListeners();
+        DataCacheService.Clear();
+        InventoryManager.Reset();
         
         CurrentPlayer = null;
         SelectedHero = null;
+        InventoryEventService.NotifyContextChanged();
         Debug.Log("Sesión reiniciada.");
     }
 }

@@ -277,9 +277,14 @@ public static class TooltipFormattingUtils
     /// </summary>
     /// <param name="itemData">Datos del ítem</param>
     /// <returns>Texto de acción formateado</returns>
-    public static string GetActionText(ItemDataSO itemData, TooltipType currentTooltipType)
+    public static string GetActionText(ItemDataSO itemData, TooltipType currentTooltipType,
+        ItemInteractionContext context = ItemInteractionContext.Inventory)
     {
         if (itemData == null) return "";
+        if (context == ItemInteractionContext.StoreInventory) return "Clic derecho: Vender";
+        if (context == ItemInteractionContext.StoreProduct) return "Comprar con el botón";
+        if (context == ItemInteractionContext.Selection || context == ItemInteractionContext.Reward) return "Clic: Seleccionar";
+        if (context == ItemInteractionContext.Equipment && currentTooltipType != TooltipType.Secondary) return "Clic: Cambiar · Clic derecho: Desequipar";
         if (currentTooltipType == TooltipType.Secondary)
         {
             return "Equipado";

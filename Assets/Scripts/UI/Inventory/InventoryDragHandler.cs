@@ -12,6 +12,9 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     [Header("Drag Settings")]
     [SerializeField] private Canvas parentCanvas;
     [SerializeField] private GraphicRaycaster graphicRaycaster;
+    [SerializeField, Range(0, 1)] private float sourceAlpha = 0.6f;
+    [SerializeField, Range(0, 1)] private float dragAlpha = 0.8f;
+    private InventoryPanelController _panel;
     
     private InventoryItemCellController _cellController;
     private InventoryItem _currentItem;
@@ -31,6 +34,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     void Awake()
     {
         _cellController = GetComponent<InventoryItemCellController>();
+        _panel = GetComponentInParent<InventoryPanelController>();
         
         // Buscar el Canvas padre si no está asignado
         if (parentCanvas == null)
@@ -85,7 +89,8 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
             return;
 
         // NUEVO: Verificar si el drag & drop está habilitado según el filtro actual
-        var inventoryPanel = FindObjectOfType<InventoryPanelController>();
+        var inventoryPanel = _panel;
+        if (parentCanvas == null || inventoryPanel == null) return;
         if (inventoryPanel != null && !inventoryPanel.CanPerformDragDrop())
         {
             Debug.LogWarning("[InventoryDragHandler] Drag & Drop is disabled when filters are active");
@@ -96,7 +101,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
         
         // Hacer la celda original semi-transparente durante el drag
         if (_originalCanvasGroup != null)
-            _originalCanvasGroup.alpha = 0.6f;
+            _originalCanvasGroup.alpha = sourceAlpha;
     }
 
     public void OnDrag(PointerEventData eventData)
@@ -117,6 +122,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (_dragVisual == null) return;
         // Restaurar transparencia de la celda original
         if (_originalCanvasGroup != null)
             _originalCanvasGroup.alpha = 1f;
@@ -131,6 +137,12 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
         }
 
         // Limpiar visual de drag
+        DestroyDragVisual();
+    }
+
+    private void OnDisable()
+    {
+        if (_originalCanvasGroup != null) _originalCanvasGroup.alpha = 1;
         DestroyDragVisual();
     }
 
@@ -154,11 +166,11 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
         
         // Agregar RectTransform
         RectTransform rectTransform = _dragVisual.AddComponent<RectTransform>();
-        rectTransform.sizeDelta = new Vector2(72, 72); // Tamaño de la celda
+        rectTransform.sizeDelta = ((RectTransform)transform).rect.size;
         
         // Agregar CanvasGroup para controlar transparencia
         _dragCanvasGroup = _dragVisual.AddComponent<CanvasGroup>();
-        _dragCanvasGroup.alpha = 0.8f;
+        _dragCanvasGroup.alpha = dragAlpha;
         _dragCanvasGroup.blocksRaycasts = false; // No debe interferir con el raycast
         
         // Agregar Image y configurar sprite
@@ -194,11 +206,12 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     {
         // Realizar raycast para encontrar objetos bajo el cursor
         var raycastResults = new System.Collections.Generic.List<RaycastResult>();
+        if (graphicRaycaster == null) return null;
         graphicRaycaster.Raycast(eventData, raycastResults);
         
         foreach (var result in raycastResults)
         {
-            InventoryDragHandler handler = result.gameObject.GetComponent<InventoryDragHandler>();
+            InventoryDragHandler handler = result.gameObject.GetComponentInParent<InventoryDragHandler>();
             if (handler != null && handler != this)
                 return handler;
         }
@@ -212,7 +225,7 @@ public class InventoryDragHandler : MonoBehaviour, IBeginDragHandler, IDragHandl
     /// <param name="targetHandler">Handler de la celda objetivo</param>
     private void PerformItemSwap(InventoryDragHandler targetHandler)
     {
-        if (targetHandler == null)
+        if (targetHandler == null || targetHandler._panel != _panel)
             return;
 
         // Obtener datos de ambas celdas

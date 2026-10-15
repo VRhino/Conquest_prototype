@@ -6,15 +6,22 @@ using UnityEngine;
 /// <summary>Atomic JSON storage with field-scoped transactions and injectable file location.</summary>
 public sealed class ProgressFileStore
 {
-    static readonly object Gate = new object();
     readonly string path;
-    public ProgressFileStore(string filePath) => path = Path.GetFullPath(filePath);
+    readonly Core.Persistence.LocalSaveProvider profile;
+    static object Gate => Core.Persistence.LocalSaveProvider.Gate;
+    public ProgressFileStore(string filePath, string profilePath = null)
+    {
+        path = Path.GetFullPath(filePath);
+        if (profilePath != null) profile = new Core.Persistence.LocalSaveProvider(profilePath, path);
+    }
 
     public LocalSaveSystem.PlayerProgressData Load()
     {
         lock (Gate)
         {
-            if (!File.Exists(path)) return new LocalSaveSystem.PlayerProgressData();
+            var canonical = profile?.Load();
+            if (canonical != null) return canonical.battleProgress;
+            if (!File.Exists(path) && !File.Exists(path + ".bak")) return new LocalSaveSystem.PlayerProgressData();
             try { return Read(path); }
             catch (Exception error) when (error is IOException || error is ArgumentException || error is InvalidDataException)
             {
@@ -38,6 +45,7 @@ public sealed class ProgressFileStore
         if (data == null) throw new ArgumentNullException(nameof(data));
         lock (Gate)
         {
+            if (profile != null && profile.SaveBattleProgress(data)) return;
             AtomicJsonFile.Write(path, data);
         }
     }

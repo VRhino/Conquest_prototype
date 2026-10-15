@@ -75,9 +75,9 @@ public class TooltipLifecycleManager : ITooltipComponent
             return;
         }
 
-        // Si es el mismo ítem, no hacer nada
-        if (_isShowing && _currentItem == item && _currentItemData == itemData)
-            return;
+        _controller.StopAllCoroutines();
+        if (_controller.TooltipPanel != null) _controller.TooltipPanel.SetActive(false);
+        _isShowing = false;
 
         _currentItem = item;
         _currentItemData = itemData;
@@ -104,6 +104,8 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// </summary>
     public void ShowTooltipInstant(InventoryItem item, ItemDataSO itemData, string cellId)
     {
+        _controller.StopAllCoroutines();
+        if (item == null || itemData == null) { HideTooltip(); return; }
         _currentItem = item;
         _currentItemData = itemData;
         _showTimer = 0f;
@@ -178,6 +180,7 @@ public class TooltipLifecycleManager : ITooltipComponent
     /// Obtiene el estado actual del tooltip.
     /// </summary>
     public bool IsShowing => _isShowing;
+    public void UpdateMousePosition(Vector3 position) => _lastMousePosition = position;
 
     /// <summary>
     /// Obtiene el ítem actualmente mostrado.

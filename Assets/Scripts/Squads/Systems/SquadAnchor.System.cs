@@ -89,8 +89,13 @@ public partial class SquadAnchorSystem : SystemBase
             }
 
             float3 prevPosition = anchor.ValueRO.position;
+            quaternion prevRotation = anchor.ValueRO.rotation;
+            bool poseChanged = !math.all(prevPosition == position)
+                               || !math.all(prevRotation.value == rotation.value);
             anchor.ValueRW.position = position;
             anchor.ValueRW.rotation = rotation;
+            if (poseChanged)
+                anchor.ValueRW.revision++;
             bool isMoving = IsMovingAtSpeed(prevPosition, position, deltaTime,
                 anchorSpeedThreshold);
             SystemAPI.SetComponentEnabled<SquadAnchorMovingTag>(squadEntity, isMoving);

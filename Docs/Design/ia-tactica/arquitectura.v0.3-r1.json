@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "IA táctica · control compartido",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "allowed-knowledge",
+      "type": "database",
+      "label": "Conocimiento permitido",
+      "sublabel": "Observaciones · memoria · riesgo",
+      "tag": "EXTENDER",
+      "pos": [
+        60,
+        100
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "team-missions",
+      "type": "backend",
+      "label": "Mando de equipo",
+      "sublabel": "Asedio · defensa · objetivos del modo",
+      "tag": "PROPUESTO",
+      "pos": [
+        470,
+        100
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "tactical-group",
+      "type": "backend",
+      "label": "Grupo táctico",
+      "sublabel": "Misiones · roles · preparación",
+      "tag": "PROPUESTO",
+      "pos": [
+        880,
+        100
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "human-controller",
+      "type": "external",
+      "label": "Jugador humano",
+      "sublabel": "Input local o jugador remoto",
+      "tag": "PRODUCTOR",
+      "pos": [
+        60,
+        340
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "shared-control",
+      "type": "messagebus",
+      "label": "Control compartido",
+      "sublabel": "Mismos comandos y posibilidades",
+      "tag": "PRINCIPIO ACORDADO",
+      "pos": [
+        470,
+        340
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "bot-controller",
+      "type": "backend",
+      "label": "Controlador del bot",
+      "sublabel": "Elige acciones para su héroe",
+      "tag": "PROPUESTO",
+      "pos": [
+        880,
+        340
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "common-validation",
+      "type": "security",
+      "label": "Reglas comunes",
+      "sublabel": "Permisos · costes · arbitraje",
+      "tag": "UNIFICAR FRONTERA",
+      "pos": [
+        60,
+        580
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "game-capabilities",
+      "type": "backend",
+      "label": "Capacidades del juego",
+      "sublabel": "Héroe · escuadra · unidades",
+      "tag": "REUTILIZAR",
+      "pos": [
+        470,
+        580
+      ],
+      "size": [
+        260,
+        84
+      ]
+    },
+    {
+      "id": "observed-result",
+      "type": "database",
+      "label": "Resultados observables",
+      "sublabel": "Estado real · rechazo · progreso",
+      "tag": "CONTRATO COMÚN",
+      "pos": [
+        880,
+        580
+      ],
+      "size": [
+        260,
+        84
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "allowed-knowledge",
+      "to": "team-missions",
+      "label": "vista del equipo"
+    },
+    {
+      "from": "team-missions",
+      "to": "tactical-group",
+      "label": "objetivo conjunto"
+    },
+    {
+      "from": "tactical-group",
+      "to": "bot-controller",
+      "label": "misión local",
+      "labelDy": 80
+    },
+    {
+      "from": "human-controller",
+      "to": "shared-control",
+      "label": "acción solicitada"
+    },
+    {
+      "from": "bot-controller",
+      "to": "shared-control",
+      "label": "acción solicitada"
+    },
+    {
+      "from": "shared-control",
+      "to": "common-validation",
+      "label": "comando",
+      "route": "orthogonal-v"
+    },
+    {
+      "from": "common-validation",
+      "to": "game-capabilities",
+      "label": "acción válida"
+    },
+    {
+      "from": "game-capabilities",
+      "to": "observed-result",
+      "label": "resultado real"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Mismos canales",
+      "items": [
+        "Humano y bot solicitan acciones de gameplay.",
+        "La procedencia no añade poderes ni excepciones."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Capacidades independientes",
+      "items": [
+        "Cohesión y conducta individual son compartidas.",
+        "ECS conserva autoridad; puentes confirman física."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Coordinación por encima",
+      "items": [
+        "El cerebro evalúa preparación y solicita acciones.",
+        "Los resultados alimentan la siguiente decisión."
+      ]
+    }
+  ]
+}

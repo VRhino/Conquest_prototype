@@ -10,6 +10,14 @@ using static DataCacheService;
 [Serializable]
 public class PlayerData
 {
+    /// <summary>Runtime provenance: generated IDs must be saved before addressed rewards can be committed.</summary>
+    [NonSerialized] public bool requiresIdentitySave;
+    /// <summary>Zero denotes the original, unversioned profile.</summary>
+    public int saveVersion;
+
+    /// <summary>Legacy battle progression, preserved without guessing its hero owner.</summary>
+    public LocalSaveSystem.PlayerProgressData battleProgress;
+
     /// <summary>Display name chosen by the player.</summary>
     public string playerName = string.Empty;
 

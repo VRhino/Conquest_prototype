@@ -12,6 +12,7 @@ using Data.Items;
 public static class EquipmentManagerService
 {
     private static IHeroInventoryMutator _currentHero;
+    public static void Reset() => _currentHero = null;
 
     #region Equipment Access Dictionaries
 
@@ -56,55 +57,6 @@ public static class EquipmentManagerService
     /// <summary>
     /// Tipos de conflicto de compatibilidad de equipamiento.
     /// </summary>
-    public enum CompatibilityConflictType
-    {
-        None,
-        WeaponIncompatibleWithArmor,
-        ArmorIncompatibleWithWeapon
-    }
-
-    /// <summary>
-    /// Estructura de datos que contiene información sobre la compatibilidad de equipamiento.
-    /// </summary>
-    [Serializable]
-    public struct EquipmentCompatibilityInfo
-    {
-        public bool RequiresConfirmation;
-        public string[] IncompatiblePieceNames;
-        public List<InventoryItem> IncompatiblePieces;
-        public bool HasInventorySpace;
-        public string WarningMessage;
-        public CompatibilityConflictType ConflictType;
-
-        public EquipmentCompatibilityInfo(
-            bool requiresConfirmation,
-            List<InventoryItem> incompatiblePieces = null,
-            bool hasInventorySpace = true,
-            string warningMessage = "",
-            CompatibilityConflictType conflictType = CompatibilityConflictType.None)
-        {
-            RequiresConfirmation = requiresConfirmation;
-            IncompatiblePieces = incompatiblePieces ?? new List<InventoryItem>();
-            HasInventorySpace = hasInventorySpace;
-            WarningMessage = warningMessage;
-            ConflictType = conflictType;
-
-            // Generar nombres de piezas incompatibles
-            if (IncompatiblePieces != null && IncompatiblePieces.Count > 0)
-            {
-                IncompatiblePieceNames = new string[IncompatiblePieces.Count];
-                for (int i = 0; i < IncompatiblePieces.Count; i++)
-                {
-                    var itemData = InventoryUtils.GetItemData(IncompatiblePieces[i].itemId);
-                    IncompatiblePieceNames[i] = itemData?.name ?? IncompatiblePieces[i].itemId;
-                }
-            }
-            else
-            {
-                IncompatiblePieceNames = new string[0];
-            }
-        }
-    }
 
     /// <summary>
     /// Inicializa el servicio con el héroe activo.
@@ -130,10 +82,20 @@ public static class EquipmentManagerService
     /// Incluye validaciones de compatibilidad de armadura y confirmaciones de usuario.
     /// </summary>
     public static bool EquipItem(InventoryItem item)
+        => InventoryEventService.RunTransaction(() => EquipItemCore(item));
+
+    public static EquipmentCompatibilityInfo GetCompatibility(InventoryItem item)
+    {
+        if (!CanEquipItem(item) || !InventoryStorageService.Contains(item))
+            return new EquipmentCompatibilityInfo(false, hasInventorySpace: false);
+        return CheckEquipmentCompatibility(item, InventoryUtils.GetItemData(item.itemId));
+    }
+
+    private static bool EquipItemCore(InventoryItem item)
     {
         if (!ValidateEquipOperation(item))
         {
-            Log($"Invalid equip operation for item: {item.itemId}", LogType.Error);
+            Log($"Invalid equip operation for item: {item?.itemId}", LogType.Warning);
             return false;
         }
 
@@ -144,7 +106,9 @@ public static class EquipmentManagerService
             return false;
         }
 
-       executeCompatibilityValidations(item, itemData);
+        var compatibility = CheckEquipmentCompatibility(item, itemData);
+        if (!compatibility.HasInventorySpace) return false;
+        var currentlyEquipped = GetEquippedItem(itemData.itemType, itemData.itemCategory);
 
         int originalSlot = item.slotIndex;
         if (!InventoryStorageService.RemoveSpecificItem(item))
@@ -154,7 +118,7 @@ public static class EquipmentManagerService
         }
 
         // PASO 2: Obtener el item actualmente equipado en este slot
-        var currentlyEquipped = GetEquippedItem(itemData.itemType, itemData.itemCategory);
+        if (!UnequipIncompatiblePieces(compatibility.IncompatiblePieces)) return false;
 
         // PASO 3: Equipar el nuevo item
         if (!SetEquippedItem(itemData.itemType, itemData.itemCategory, item))
@@ -193,35 +157,13 @@ public static class EquipmentManagerService
         return true;
     }
 
-    private static bool executeCompatibilityValidations(InventoryItem item, ItemDataSO itemData)
-    {
-        var compatibilityInfo = CheckEquipmentCompatibility(item, itemData);
-        if (compatibilityInfo.RequiresConfirmation)
-        {
-            if (!compatibilityInfo.HasInventorySpace)
-            {
-                Log($"Cannot equip {item.itemId}: {compatibilityInfo.WarningMessage}", LogType.Warning);
-                return false;
-            }
-
-            // TODO: Integrar con sistema UI para mostrar confirmación
-            // Por ahora, proceder automáticamente (para testing)
-            Log($"Equipment compatibility warning: {compatibilityInfo.WarningMessage}", LogType.Info);
-
-            // Desequipar piezas incompatibles ANTES de continuar
-            if (!UnequipIncompatiblePieces(compatibilityInfo.IncompatiblePieces))
-            {
-                Log($"Failed to unequip incompatible pieces for {item.itemId}", LogType.Error);
-                return false;
-            }
-        }
-        return true;
-    }
-
     /// <summary>
     /// Desequipa un item de un slot específico y lo devuelve al inventario.
     /// </summary>
     public static bool UnequipItem(ItemType itemType, ItemCategory itemCategory)
+        => InventoryEventService.RunTransaction(() => UnequipItemCore(itemType, itemCategory));
+
+    private static bool UnequipItemCore(ItemType itemType, ItemCategory itemCategory)
     {
         var equippedItem = GetEquippedItem(itemType, itemCategory);
         if (equippedItem == null)
@@ -243,6 +185,9 @@ public static class EquipmentManagerService
     /// Intercambia directamente dos items de equipment sin pasar por el inventario.
     /// </summary>
     public static bool SwapEquipment(ItemType slotType1, ItemCategory itemCategory1, ItemType slotType2, ItemCategory itemCategory2)
+        => InventoryEventService.RunTransaction(() => SwapEquipmentCore(slotType1, itemCategory1, slotType2, itemCategory2));
+
+    private static bool SwapEquipmentCore(ItemType slotType1, ItemCategory itemCategory1, ItemType slotType2, ItemCategory itemCategory2)
     {
         var item1 = GetEquippedItem(slotType1, itemCategory1);
         var item2 = GetEquippedItem(slotType2, itemCategory2);
@@ -254,13 +199,13 @@ public static class EquipmentManagerService
         }
 
         // Verificar que los items pueden equiparse en los slots destino
-        if (item1 != null && !CanEquipInSlot(item1, slotType2))
+        if (item1 != null && !CanEquipInSlot(item1, slotType2, itemCategory2))
         {
             Log($"{item1.itemId} cannot be equipped in {slotType2} slot", LogType.Warning);
             return false;
         }
 
-        if (item2 != null && !CanEquipInSlot(item2, slotType1))
+        if (item2 != null && !CanEquipInSlot(item2, slotType1, itemCategory1))
         {
             Log($"{item2.itemId} cannot be equipped in {slotType1} slot", LogType.Warning);
             return false;
@@ -273,6 +218,9 @@ public static class EquipmentManagerService
         string swapInfo = $"Swapped equipment: {slotType1} <-> {slotType2}";
         Log(swapInfo, LogType.Info);
         InventoryEventService.LogInventoryOperation(swapInfo);
+        InventoryEventService.TriggerInventoryChanged();
+        if (item1 != null) InventoryEventService.TriggerItemEquipped(item1);
+        if (item2 != null) InventoryEventService.TriggerItemEquipped(item2);
 
         return true;
     }
@@ -362,6 +310,12 @@ public static class EquipmentManagerService
         return itemData.itemType == slotType;
     }
 
+    public static bool CanEquipInSlot(InventoryItem item, ItemType slotType, ItemCategory category)
+    {
+        if (!CanEquipInSlot(item, slotType)) return false;
+        return slotType == ItemType.Weapon || InventoryUtils.GetItemData(item.itemId).itemCategory == category;
+    }
+
     /// <summary>
     /// Calcula el total de stats proporcionados por todo el equipment equipado.
     /// </summary>
@@ -426,9 +380,10 @@ public static class EquipmentManagerService
             ? GetIncompatibleArmorPieces(itemData.itemCategory) 
             : new List<InventoryItem> { GetIncompatibleWeapon(itemData.armorType) }.Where(x => x != null).ToList();
         
-        if (incompatibleItems.Count == 0) return new EquipmentCompatibilityInfo(false);
-        
-        bool hasSpace = ValidateInventorySpaceForUnequip(incompatibleItems);
+        var previous = GetEquippedItem(itemData.itemType, itemData.itemCategory);
+        int returnedCount = incompatibleItems.Count + (previous != null && !incompatibleItems.Contains(previous) ? 1 : 0);
+        bool hasSpace = InventoryStorageService.GetAllItems().Count - 1 + returnedCount <= InventoryStorageService.InventoryLimit;
+        if (incompatibleItems.Count == 0) return new EquipmentCompatibilityInfo(false, hasInventorySpace: hasSpace);
         string warningMessage = BuildCompatibilityWarningMessage(itemData, incompatibleItems, isWeapon, hasSpace);
         
         return new EquipmentCompatibilityInfo(true, incompatibleItems, hasSpace, warningMessage, 
@@ -452,22 +407,6 @@ public static class EquipmentManagerService
         }
         
         return message;
-    }
-
-    /// <summary>
-    /// Verifica la compatibilidad de un arma con la armadura equipada.
-    /// </summary>
-    private static EquipmentCompatibilityInfo CheckWeaponCompatibility(InventoryItem item, ItemDataSO itemData)
-    {
-        return CheckCompatibility(item, itemData, true);
-    }
-
-    /// <summary>
-    /// Verifica la compatibilidad de una armadura con el arma equipada.
-    /// </summary>
-    private static EquipmentCompatibilityInfo CheckArmorCompatibility(InventoryItem item, ItemDataSO itemData)
-    {
-        return CheckCompatibility(item, itemData, false);
     }
 
     /// <summary>
@@ -554,30 +493,6 @@ public static class EquipmentManagerService
         return true;
     }
 
-    /// <summary>
-    /// Valida si hay espacio suficiente en el inventario para desequipar las piezas especificadas.
-    /// </summary>
-    private static bool ValidateInventorySpaceForUnequip(List<InventoryItem> itemsToUnequip)
-    {
-        if (itemsToUnequip == null || itemsToUnequip.Count == 0)
-        {
-            return true;
-        }
-
-        // Simulamos que necesitamos al menos 1 slot por ítem
-        // Para una validación más precisa, podríamos calcular el espacio exacto
-        for (int i = 0; i < itemsToUnequip.Count; i++)
-        {
-            if (!InventoryStorageService.HasSpace())
-            {
-                Log($"Not enough inventory space for unequipping {itemsToUnequip.Count} pieces", LogType.Warning);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     #endregion
 
     #region Private Helper Methods
@@ -619,9 +534,7 @@ public static class EquipmentManagerService
         if (!CanEquipItem(item)) return false;
 
         // Verificar que el item está en el inventario
-        var inventoryItems = InventoryStorageService.GetAllItems();
-        bool itemInInventory = inventoryItems.Any(invItem => 
-            invItem.instanceId == item.instanceId);
+        bool itemInInventory = InventoryStorageService.Contains(item);
 
         if (!itemInInventory)
         {

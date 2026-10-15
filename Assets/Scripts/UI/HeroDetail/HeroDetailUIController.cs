@@ -139,10 +139,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         _currentHeroData = heroData;
         
         // Inicializar el InventoryManager para que los equipment slots puedan funcionar
-        if (!InventoryManager.IsInitialized)
-        {
-            InventoryManager.Initialize(heroData);
-        }
+        if (!ReferenceEquals(PlayerSessionService.SelectedHero, heroData)) PlayerSessionService.SetSelectedHero(heroData);
         
         // Recalcular atributos para asegurar que incluyan los stats del equipamiento actual
         DataCacheService.CacheAttributes(PlayerSessionService.SelectedHero); // Usar método específico de cache
@@ -330,7 +327,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         List<InventoryItem> items = InventoryStorageService.GetItemsByTypeAndCategory(slotController.SlotType, slotController.SlotCategory);
         if (items == null || items.Count == 0)
         {
-            Debug.LogWarning($"[HeroDetailUIController] No hay items disponibles para el tipo y categoría del item: {itemData.name}");
+            Debug.LogWarning($"[HeroDetailUIController] No hay items disponibles para {slotController.SlotType}.{slotController.SlotCategory}");
             return;
         }
         RectTransform slotRect = _equipmentPanel.GetSlotTransform(slotController.SlotType, slotController.SlotCategory);
@@ -347,7 +344,7 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
         if (slotController == null) return;
 
         if (!slotController.CanUnequipCurrentItem()) return;
-        bool success = EquipmentManagerService.UnequipItem(item.itemType, itemData.itemCategory);
+        bool success = InventoryManager.UnequipItem(item.itemType, itemData.itemCategory);
         if (success)
         {
             slotController.Clear();
@@ -364,17 +361,9 @@ public class HeroDetailUIController : MonoBehaviour, IFullscreenPanel
     {
         if (item == null || itemData == null || _equipmentPanel == null) return;
 
-        bool success = InventoryManager.EquipItem(item);
-
-        if (success)
-        {
-            Debug.Log($"[HeroDetailUIController] Item equipado: {itemData.name}");
-            PopulateEquipmentSlots();
-        }
-        else
-        {
+        if (!InventoryManager.RequestEquipItem(item, success =>
+            { if (success) PopulateEquipmentSlots(); }))
             Debug.LogWarning($"[HeroDetailUIController] No se pudo equipar el item: {itemData.name}");
-        }
         _itemSelector.Hide();
     }
 

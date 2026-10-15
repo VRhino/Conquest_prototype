@@ -20,10 +20,13 @@ using Unity.Transforms;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitTargetingSystem))]
+[UpdateAfter(typeof(NavMeshPositionSyncSystem))]
 public partial class UnitAttackSystem : SystemBase
 {
     protected override void OnUpdate()
     {
+        bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
+            || match.currentState == MatchState.InBattle;
         float dt = SystemAPI.Time.DeltaTime;
 
         foreach (var (combat, weapon, transform, entity) in
@@ -31,9 +34,18 @@ public partial class UnitAttackSystem : SystemBase
                                   RefRO<UnitWeaponComponent>,
                                   RefRO<LocalTransform>>()
                           .WithNone<UnitRangedStatsComponent>()
+                          .WithNone<IsDeadComponent>()
                           .WithEntityAccess())
         {
             ref var c = ref combat.ValueRW;
+            if (!battleActive)
+            {
+                c.isAttacking = false;
+                c.attackAnimationTimer = 0f;
+                if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
+                    SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
+                continue;
+            }
 
             // Always tick cooldown
             c.attackCooldown = math.max(0f, c.attackCooldown - dt);

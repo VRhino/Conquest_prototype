@@ -1,53 +1,34 @@
 using UnityEngine;
 using Data.Items;
+using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// ItemEffect that opens a RewardDialog for the player to choose one of several weapons.
-/// </summary>
 [CreateAssetMenu(fileName = "ChooseWeaponRewardEffect", menuName = "Items/Effects/Choose Weapon Reward", order = 10)]
 public class ChooseWeaponRewardEffect : ItemEffect
 {
-    [Header("Reward Dialog Settings")]
     [SerializeField] private RewardDialogDataSO rewardDialogData;
-    [SerializeField] private List<string> weaponItemIds = new List<string>();
-
+    [SerializeField] private List<string> weaponItemIds = new();
+    public override bool RequiresSelection => true;
     public override bool Execute(HeroData hero, int quantity = 1)
+        => quantity == 1 && BeginSelection(hero, ids => ExecuteSelection(hero, ids), null);
+    public override bool BeginSelection(HeroData hero, Func<List<string>, bool> selected, Action cancelled)
     {
-        if (hero == null || rewardDialogData == null || weaponItemIds == null || weaponItemIds.Count < 2)
-        {
-            Debug.LogError("[ChooseWeaponRewardEffect] Invalid configuration or hero");
-            return false;
-        }
-
-        // Configure dialog for weapon selection
-        rewardDialogData.title = "Choose Your Weapon";
-        rewardDialogData.description = "Select one weapon from the available options.";
-        rewardDialogData.rewardItemIds = weaponItemIds;
-        rewardDialogData.allowSelection = true;
-        rewardDialogData.minSelection = 1;
-        rewardDialogData.maxSelection = 1;
-        rewardDialogData.buttonText = "Accept";
-
-        // Find or create the RewardDialogUIController in the scene
-        var dialogController = Object.FindObjectOfType<RewardDialogUIController>(true);
-        if (dialogController == null)
-        {
-            Debug.LogError("[ChooseWeaponRewardEffect] No RewardDialogUIController found in scene");
-            return false;
-        }
-
-        dialogController.Open(rewardDialogData, hero);
+        if (!CanExecute(hero)) return false;
+        var dialog = UnityEngine.Object.FindObjectOfType<RewardDialogUIController>(true);
+        if (dialog == null || dialog.IsOpen) return false;
+        var data = Instantiate(rewardDialogData);
+        data.title = "Elige tu arma";
+        data.description = "Selecciona un arma para recibirla.";
+        data.rewardItemIds = new List<string>(weaponItemIds);
+        data.allowSelection = true;
+        data.minSelection = data.maxSelection = 1;
+        data.buttonText = "Aceptar";
+        dialog.Open(data, hero, selected, cancelled, true);
         return true;
     }
-
-    public override string GetPreviewText(int quantity = 1)
-    {
-        return "Choose one weapon from the available options.";
-    }
-
+    public override bool ExecuteSelection(HeroData hero, List<string> ids)
+        => ids != null && ids.Count == 1 && weaponItemIds.Contains(ids[0]) && rewardDialogData.TryDeliverRewards(ids, hero);
+    public override string GetPreviewText(int quantity = 1) => "Elige un arma de las opciones disponibles.";
     public override bool CanExecute(HeroData hero)
-    {
-        return hero != null && weaponItemIds != null && weaponItemIds.Count >= 2;
-    }
+        => hero != null && rewardDialogData != null && weaponItemIds != null && weaponItemIds.Count > 1;
 }

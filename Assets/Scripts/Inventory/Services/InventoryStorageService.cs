@@ -13,6 +13,12 @@ public static class InventoryStorageService
 {
     private static IHeroInventory _currentHero;
     private static int _inventoryLimit = 72;
+    public static void Reset() => _currentHero = null;
+
+    public static bool Contains(InventoryItem item) => item != null && _currentHero?.Inventory?.Contains(item) == true;
+
+    public static bool CanAddItem(InventoryItem item)
+        => item != null && (HasSpace() || (item.IsStackable && FindStackableItem(item.itemId) != null));
 
     /// <summary>Límite máximo de slots del inventario.</summary>
     public static int InventoryLimit 
@@ -136,6 +142,13 @@ public static class InventoryStorageService
             return false;
         }
 
+        return RemoveItemQuantity(stackableItem, quantity);
+    }
+
+    public static bool RemoveItemQuantity(InventoryItem stackableItem, int quantity)
+    {
+        if (!ValidateRemoveOperation(stackableItem) || quantity <= 0 || !stackableItem.IsStackable) return false;
+        string itemId = stackableItem.itemId;
         if (stackableItem.quantity < quantity)
         {
             LogWarning($"Insufficient quantity. Required: {quantity}, Available: {stackableItem.quantity}");
@@ -265,7 +278,7 @@ public static class InventoryStorageService
     /// </summary>
     public static List<InventoryItem> GetAllItems()
     {
-        return new List<InventoryItem>(_currentHero.Inventory);
+        return _currentHero?.Inventory == null ? new List<InventoryItem>() : new List<InventoryItem>(_currentHero.Inventory);
     }
 
     /// <summary>
@@ -283,9 +296,7 @@ public static class InventoryStorageService
     /// </summary>
     public static bool HasSpace()
     {
-        Debug.Assert(_currentHero != null, "Current hero is not initialized");
-        Debug.Assert(_currentHero.Inventory != null, "Current hero inventory is not initialized");
-        return _currentHero.Inventory.Count < _inventoryLimit;
+        return _currentHero?.Inventory != null && InventoryUtils.FindNextAvailableSlotIndex(_currentHero.Inventory, _inventoryLimit) >= 0;
     }
 
     /// <summary>
@@ -302,7 +313,7 @@ public static class InventoryStorageService
 
     private static InventoryItem FindStackableItem(string itemId)
     {
-        return _currentHero.Inventory.FirstOrDefault(item => 
+        return _currentHero?.Inventory?.FirstOrDefault(item => 
             item.itemId == itemId && item.IsStackable);
     }
 
@@ -329,27 +340,18 @@ public static class InventoryStorageService
             LogWarning($"Removed {removed} null items from inventory");
         }
 
-        // Validar slots únicos para equipment
-        var equipmentItems = _currentHero.Inventory.Where(item => item.IsEquipment).ToList();
-        var duplicateSlots = equipmentItems
-            .GroupBy(item => item.slotIndex)
-            .Where(group => group.Count() > 1)
-            .ToList();
-
-        foreach (var duplicateGroup in duplicateSlots)
+        var occupied = new HashSet<int>();
+        foreach (var item in _currentHero.Inventory)
         {
-            LogWarning($"Found duplicate items in slot {duplicateGroup.Key}");
-            // Reasignar slots a items duplicados
-            var items = duplicateGroup.Skip(1).ToList();
-            foreach (var item in items)
+            if (item.slotIndex >= 0 && item.slotIndex < _inventoryLimit && occupied.Add(item.slotIndex)) continue;
+            int newSlot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.Inventory, _inventoryLimit);
+            if (newSlot >= 0)
             {
-                int newSlot = InventoryUtils.FindNextAvailableSlotIndex(_currentHero.Inventory, _inventoryLimit);
-                if (newSlot != -1)
-                {
-                    item.slotIndex = newSlot;
-                    LogInfo($"Reassigned {item.itemId} to slot {newSlot}");
-                }
+                item.slotIndex = newSlot;
+                occupied.Add(newSlot);
+                LogInfo($"Reassigned {item.itemId} to slot {newSlot}");
             }
+            else LogWarning($"No free slot to repair {item.itemId}; item preserved.");
         }
     }
 
@@ -376,6 +378,9 @@ public static class InventoryStorageService
             LogError("Item ID cannot be empty");
             return false;
         }
+
+        if (item.quantity <= 0 || (item.IsEquipment && item.quantity != 1) || Contains(item)) return false;
+        if (item.IsEquipment && _currentHero.Inventory.Any(other => other.instanceId == item.instanceId)) return false;
 
         return true;
     }

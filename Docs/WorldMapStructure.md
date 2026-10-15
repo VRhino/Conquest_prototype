@@ -5,6 +5,8 @@
 - Assets/Scenes/WorldMapTools/SettlementPreview.unity: visor del asentamiento para inspeccion. BattleScene permanece en GameScenes.
 - Assets/Scenes/WorldMapTools/WorldMapPreview.unity: preview global para autoria.
 - Assets/Scenes/WorldMapTools/Experiments: pruebas de balance y representacion con sus datos auxiliares; fuera del flujo del jugador.
+- La cadena `MountainsV9 -> CampaignScale -> CampaignRegion -> StrategicTrials` conserva fuentes reproducibles para construir la campaña; MountainsV7 y MountainsV8 son referencias históricas bajo `Experiments`, no contenido del juego.
+- `AddressableAssetsData/AssetGroups/WorldMap-Lab` excluye `LandscapeLab` de la build (`m_IncludeInBuild: 0`); no mover fuentes de `WorldMapTools` sin actualizar primero sus constructores de Editor.
 - Assets/Scripts/Map/WorldMap: runtime, streaming, datos y representacion; ensamblado Conquest.WorldMap.
 - Assets/Scripts/Map/CampaignSceneBridge.cs: adaptacion al servicio compartido de escenas, fuera del ensamblado visual para evitar dependencias circulares.
 - Assets/Scripts/Editor/WorldMap: herramientas de importacion y construccion; ensamblado exclusivo del Editor.

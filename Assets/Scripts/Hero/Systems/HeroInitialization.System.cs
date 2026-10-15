@@ -76,7 +76,7 @@ public partial class HeroInitializationSystem : SystemBase
             if (SystemAPI.HasComponent<IsLocalPlayer>(entity) && PlayerSessionService.SelectedHero != null)
             {
                 var selectedHero = PlayerSessionService.SelectedHero;
-                string cacheKey = string.IsNullOrEmpty(selectedHero.heroName) ? selectedHero.classId : selectedHero.heroName;
+                string cacheKey = HeroAttributeValidator.GetHeroId(selectedHero);
                 var cached = DataCacheService.GetHeroCalculatedAttributes(cacheKey);
                 if (cached.maxHealth > 0f)
                 {

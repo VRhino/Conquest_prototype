@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Componente de UI para gestionar la interfaz del matchmaking.
@@ -9,6 +10,8 @@ using TMPro;
 public class MatchmakingUI : MonoBehaviour
 {
     #region UI References
+
+    [SerializeField] private string postBattleExitLabel = "Salir";
 
     [Header("Main Elements")]
     [SerializeField] private Button matchmakingButton;
@@ -30,8 +33,20 @@ public class MatchmakingUI : MonoBehaviour
 
     #region Unity Lifecycle
 
+    void Start()
+    {
+        if (SceneManager.GetActiveScene().name != SceneTransitionService.SceneNames.PostBattle) return;
+        Initialize();
+        if (matchmakingButton != null)
+        {
+            var label = matchmakingButton.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null) label.text = postBattleExitLabel;
+        }
+    }
+
     public void Initialize()
     {
+        UnsubscribeFromEvents(); // Scene re-entry must not duplicate the button or service listeners.
         InitializeUI();
         SubscribeToEvents();
     }
@@ -57,7 +72,8 @@ public class MatchmakingUI : MonoBehaviour
     private void SubscribeToEvents()
     {
         Debug.Log("[MatchmakingUI] Subscribing to events");
-        if (MatchmakingService.Instance != null)
+        if (MatchmakingService.Instance != null
+            && SceneManager.GetActiveScene().name != SceneTransitionService.SceneNames.PostBattle)
         {
             Debug.Log("[MatchmakingUI] MatchmakingService instance found and subscribing to its events");
             MatchmakingService.Instance.OnMatchmakingStarted += OnMatchmakingStarted;
@@ -92,6 +108,12 @@ public class MatchmakingUI : MonoBehaviour
 
     private void OnMatchmakingButtonPressed()
     {
+        if (SceneManager.GetActiveScene().name == SceneTransitionService.SceneNames.PostBattle)
+        {
+            if (MatchmakingService.Instance != null) MatchmakingService.Instance.ReturnFromBattle();
+            else SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Feudo);
+            return;
+        }
         if (MatchmakingService.Instance == null)
         {
             Debug.LogError("[MatchmakingUI] MatchmakingService not found");

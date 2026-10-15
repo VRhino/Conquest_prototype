@@ -39,6 +39,7 @@ public class StoreItemController : MonoBehaviour
         InventoryItem inventoryItem = ItemInstanceService.CreateItem(itemData.id);
         _productData = inventoryItem;
         _tooltipManager = tooltipManager;
+        itemCellController.SetContext(ItemInteractionContext.StoreProduct);
         itemCellController.SetItem(inventoryItem, itemData);
         productNameText.text = itemData.name;
         costText.text = inventoryItem.price.ToString();
