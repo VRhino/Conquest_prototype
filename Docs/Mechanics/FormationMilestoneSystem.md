@@ -105,6 +105,10 @@ UnitAnimationAdapter (MonoBehaviour, sync layer)
 
 ---
 
+### Llegada con histéresis (lote 1 de movimiento, 2026-10-19)
+
+`UnitStartedMovingTag` y `UnitArrivedAtSlotTag` se activan a partir de los eventos de `FormationArrival.Step` (`StartedMoving` y `Arrived`). `Arrived` se emite una sola vez por llegada: cuando la unidad está a menos de `arrivalRadiusIn` y el ancla lleva `arrivalCalmTime` quieta. Una vuelta a `Formed` desde `Waiting` sin haberse movido (`Resettled`) no emite el hito.
+
 ## Mecanismo de pulso (IEnableableComponent)
 
 Los tags son `IEnableableComponent`: la entidad **siempre tiene el componente** en memoria,

@@ -88,6 +88,10 @@ El sistema de grid asigna a cada unidad un **slot** dentro de la formación:
 2. `FormationPositionCalculator` calcula la posición 3D de cada slot relativa al centro del squad, usando `calculateTerrainHeight` para ajustar la elevación del terreno.
 3. `UnitFollowFormation.System.cs` mueve cada unidad hacia su slot asignado frame a frame.
 4. `UnitFormationState.System.cs` gestiona las transiciones de estado de las unidades (`Moving` / `Formed` / `Waiting`) en respuesta al movimiento de formación.
+   - **Llegada con histéresis** (`FormationArrival.Step`): una unidad entra en `Formed` por debajo de `arrivalRadiusIn` (0,2 m) cuando el ancla lleva `arrivalCalmTime` (0,15 s) quieta, y solo sale por encima de `arrivalRadiusOut` (0,5 m) o de `holdReformRadius` en Hold.
+   - **Arranque por filas** (`FormationStartDelay`): al salir de `Formed`, la espera es `fila × startRowDelay` (0,08 s) más una variación determinista por slot de hasta `startJitterDelay` (0,1 s). La fila delantera (mayor `gridPosition.y`) sale primero.
+   - **Destino adelantado** (`UnitNavMeshSystem`, `FormationDestinationPrediction`): con el slot en marcha, el agente recibe el slot proyectado adelantado `destinationLeadTime` (0,4 s, tope 1 m) y solo se reenvía al cambiar más de `max(0,25 m, v × 0,25 s)`.
+   - Todos estos valores viven en `Assets/ScriptableObjects/Movement/DefaultMovementTuning.asset` (`MovementTuningConfig`), horneado como `MovementTuningComponent` por `SquadSpawnConfigAuthoring`.
 5. `GridFormationUpdate.System.cs` recalcula el grid cuando cambia la formación o el número de unidades.
 
 El centro de la formación sigue al **punto de destino del squad** (orden de movimiento) o permanece en su posición actual (Hold Position).

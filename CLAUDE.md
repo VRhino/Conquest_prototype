@@ -9,7 +9,7 @@
 
 ## Project
 
-**Conquest Tactics** — Unity 2022.3.x + DOTS/ECS (Entities 1.3.14). Squad-based 3v3 PvP tactical game.
+**Conquest Tactics** — Unity 6 (6000.5) + DOTS/ECS (Entities 6.5). Squad-based 3v3 PvP tactical game.
 Docs: `Docs/ModeloHybrido.md` (architecture), `Docs/GDD.md`, `Docs/TDD.md`, `Assets/Scripts/Squads/SystemResponsibilities.md`.
 
 ## Architecture: Hybrid ECS-GameObject Model
@@ -72,6 +72,7 @@ Prefer these over direct data access: `HeroDataService`, `SquadDataService`, `Da
 - `GameTags` (`Assets/Scripts/Shared/GameTags.cs`) — tag constants; avoid magic strings
 - `VisualSyncUtility` (`Assets/Scripts/Shared/VisualSyncUtility.cs`) — configures `AnimatorCullingMode`, gets/adds `EntityVisualSync`
 - `UnitStatsUtility` — stat application for progression systems
+- `MovementTuningConfig` (`Assets/ScriptableObjects/Movement/DefaultMovementTuning.asset`) — unit movement tuning (arrival radii, start delays, destination lead, movement constants), baked as the `MovementTuningComponent` singleton by `SquadSpawnConfigAuthoring`; do not hardcode movement values in systems
 
 ## graphify
 

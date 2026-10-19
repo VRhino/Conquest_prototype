@@ -392,3 +392,32 @@ Notas del entorno:
   `MovementBaseline` ignoran los errores registrados.
 - Con el editor manejado por MCP no hay foco en la ventana Game. Los escenarios usan una copia temporal de
   `InputSettings` para que el teclado virtual llegue al juego.
+
+## 9. Resultado del lote 1 (C1-C4, 2026-10-20)
+
+C1-C4 están hechos en la rama `feat/movement-batch1` (commits `bc167bfc` C4, `d14b87f0` C1, `48ce814f` C2, `47e78e2e` C3).
+Mismas escenas y grabador que en §8.
+
+| Métrica | S1 antes | S1 después | S3 antes | S3 después | Objetivo §5.1 |
+|---|---|---|---|---|---|
+| Transiciones extra tras llegar (media / máx.) | 0,00 / 0 | 0,00 / 0 | 0,67 / 2 | **0,00 / 0** | ≤ 1 |
+| Formado al 95 % | 1,77 s | **0,67 s** | 1,83 s | **0,61 s** | ≤ 2 s |
+| Arranque repartido (primera a última unidad) | 0,87 s | **0,23 s** | 0,82 s | **0,18 s** | — |
+| Última unidad en arrancar | 1,47 s | **0,40 s** | 1,50 s | **0,37 s** | < 0,5 s |
+| Error al slot en marcha (media / p95) | 3,59 / 5,18 m | **1,30 / 1,57 m** | 2,65 / 4,77 m | **1,09 / 1,54 m** | media ≤ 0,35·s |
+| `SetDestination` por unidad y segundo en marcha | — | — | 5,4 | **4,7** | ≤ 4 |
+| Proyecciones de NavMesh por unidad y segundo en marcha | — | — | 10,6 | 11,1 | sin regresión |
+| ms `UnitFormationState` / `UnitNavMesh` | 0,11 / 0,25 | 0,13 / 0,21 | 0,13 / 0,23 | 0,14 / 0,22 | sin regresión |
+
+Lectura:
+- **Se acabaron el parpadeo y el acordeón.** No queda ninguna transición extra al llegar, y la tropa arranca entera en
+  menos de 0,4 s, con la fila delantera primero.
+- **El error en marcha baja a la mitad o menos**, pero sigue lejos del objetivo (≈ 0,35 m). Lo que falta es la ley de
+  seguimiento con recuperación (C9, lote 2): hoy los rezagados no aceleran.
+- **`SetDestination` en marcha queda en 4,7**, por debajo de la línea base, aunque ahora toda la tropa se mueve.
+  Las proyecciones no crecen: el adelanto se suma al slot ya proyectado.
+- Ajuste fuera del plan: el factor de reenvío pasó de 0,05 s a **0,25 s**. Con 0,05 s se mandaban unos 11 comandos por
+  segundo en marcha. Ahora la validación exige que ese factor sea menor que el tiempo de adelanto.
+
+Pendiente de medir: el caso de 900 agentes en escena real (S8). Las regresiones `NineHundredBodyblockAgents…` siguen en
+verde, pero no cubren el coste de C3 a esa escala.

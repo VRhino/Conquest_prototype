@@ -286,3 +286,12 @@
 - Un timeout del dispatcher de Pipeline no cancela necesariamente la operación del Editor. Comprobar el resultado durable (XML, log de compilación y ensamblados) antes de repetir una operación costosa o declarar fallo.
 - Un DynamicBuffer adquirido en un fixture queda invalidado por AddBuffer/AddComponent/CreateEntity posteriores. Terminar cambios estructurales antes de adquirirlo o volver a pedirlo después de cada cambio; no debilitar los checks de seguridad de Collections para que la prueba pase.
 - En herramientas de render, invalidar clones por el hash de dependencias del pipeline, además del GUID; clonar también renderer features y guardar sólo los assets propios. Verificar las APIs de EditorGraphicsSettings: un getter público no implica setter en la versión instalada.
+
+## Lote 1 de movimiento y escenarios medidos por MCP (2026-10-20)
+
+- Con el editor manejado por MCP, la ventana Game no tiene el foco y el Input System descarta el teclado. Los escenarios de PlayMode con un teclado virtual usan una copia temporal de `InputSettings` (`AllDeviceInputAlwaysGoesToGameView` + `IgnoreFocus`) y la restauran al acabar. Si el objeto anterior fue destruido, se crea uno por defecto.
+- En `BattleTestScene` la escuadra local no arranca en FollowHero: hay que pulsar C (o fijar la orden) antes de esperar que siga al héroe. El héroe remoto aparece unos 40 m por delante (+z), así que un escenario de marcha debe ir hacia −z para no acabar en combate.
+- `BattleSceneIntegrationTests` falla en SetUp si falta el paquete ignorado por git «Travis Game Assets» (`HitImpactEffectManager.hitEffectPrefab`). No se tapa en general: solo los escenarios explícitos de medición ignoran los errores registrados.
+- `run_tests` en PlayMode responde 400 aunque la ejecución sí arranca. Esperar con `wait_for` a que `EditorApplication.isPlaying` pase a true y luego a false, y leer `test_status`. No lanzar otra ejecución hasta que el editor haya salido de Play Mode.
+- Un umbral de reenvío de destino demasiado fino duplica `SetDestination` en cuanto la tropa sigue de verdad al héroe. Para medirlo, separar por fases (marcha frente a parada) en lugar de usar una media global. Para no duplicar las proyecciones de NavMesh, adelantar el slot ya proyectado en lugar de proyectar el punto adelantado.
+- Un sistema de métricas de solo lectura con `ProfilerRecorder` debe usar el nombre de marcador de Entities, que es `"<nombre del World> <nombre del sistema>"`.
