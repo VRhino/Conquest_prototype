@@ -18,7 +18,7 @@ using UnityEditor.SceneManagement;
 using ConquestTactics.Animation;
 using ConquestTactics.Visual;
 
-public class BattleSceneIntegrationTests
+public partial class BattleSceneIntegrationTests
 {
     const string ScenePath = "Assets/Scenes/BattleTestScene.unity";
     const float ReadyTimeout = 60f;
@@ -56,6 +56,7 @@ public class BattleSceneIntegrationTests
         fullBattleProfile = TestContext.CurrentContext.Test.Name.StartsWith(
             nameof(FullBattlePreparationRenderedPerformanceProfile), StringComparison.Ordinal);
         renderVariant = null;
+        ConfigureMovementBaselineLogging();
         loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;

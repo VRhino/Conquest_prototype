@@ -8,7 +8,10 @@
     "Unity.Transforms",
     "Unity.InputSystem",
     "Unity.ugui",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "Unity.Recorder.Editor",
+    "Unity.Recorder.Base",
+    "Unity.Recorder"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

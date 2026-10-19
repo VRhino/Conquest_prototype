@@ -35,8 +35,11 @@ public partial class UnitNavMeshSystem : SystemBase
     private static int _projectionFrame = -1;
     private static int _projectionRequests;
     private static int _projectionFailures;
+    private static int _setDestinationCalls;
     public static long DebugTotalProjectionRequests { get; private set; }
     public static long DebugTotalProjectionFailures { get; private set; }
+    /// <summary>Debug-only count of NavMeshAgent.SetDestination calls (movement metrics).</summary>
+    public static long DebugTotalSetDestinationCalls { get; private set; }
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetProjectionCounters()
@@ -44,8 +47,10 @@ public partial class UnitNavMeshSystem : SystemBase
         _projectionFrame = -1;
         _projectionRequests = 0;
         _projectionFailures = 0;
+        _setDestinationCalls = 0;
         DebugTotalProjectionRequests = 0;
         DebugTotalProjectionFailures = 0;
+        DebugTotalSetDestinationCalls = 0;
     }
 
     public static int DebugProjectionRequestsThisFrame
@@ -58,6 +63,11 @@ public partial class UnitNavMeshSystem : SystemBase
         get { RefreshProjectionCounters(); return _projectionFailures; }
     }
 
+    public static int DebugSetDestinationCallsThisFrame
+    {
+        get { RefreshProjectionCounters(); return _setDestinationCalls; }
+    }
+
     private static void RefreshProjectionCounters()
     {
         int frame = UnityEngine.Time.frameCount;
@@ -65,6 +75,16 @@ public partial class UnitNavMeshSystem : SystemBase
         _projectionFrame = frame;
         _projectionRequests = 0;
         _projectionFailures = 0;
+        _setDestinationCalls = 0;
+    }
+
+    /// <summary>Counts a SetDestination call (accepted or not) and passes its result through.</summary>
+    private static bool CountSetDestinationAnd(bool accepted)
+    {
+        RefreshProjectionCounters();
+        _setDestinationCalls++;
+        DebugTotalSetDestinationCalls++;
+        return accepted;
     }
 
     // Stop at 75 % of attackRange — keeps unit inside the directional AABB.
@@ -277,7 +297,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 {
                     // Keep the current path; issuing it again each frame forces NavMesh to recalculate.
                 }
-                else if (agent.SetDestination(destination))
+                else if (CountSetDestinationAnd(agent.SetDestination(destination)))
                 {
                     navigation.lastCommandDestination = destination;
                     navigation.hasIssuedCommand = true;
