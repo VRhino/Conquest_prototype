@@ -58,6 +58,7 @@ namespace ConquestTactics.Visual
 
         private void Start()
         {
+            ProtectAnimatedGameplayHitboxes();
             if (_enableDebugLogs)
                 Debug.Log($"[EntityVisualSync] Start ejecutándose en {gameObject.name}");
             InitializeEcsReferences();
@@ -148,11 +149,27 @@ namespace ConquestTactics.Visual
                         // [Sprint5] Position sync delegated to NavMeshPositionSyncSystem when syncPositionFromNavMesh == true
                         bool ecsHandlesPosition = _entityManager.HasComponent<NavAgentComponent>(_heroEntity)
                             && _entityManager.GetComponentData<NavAgentComponent>(_heroEntity).syncPositionFromNavMesh;
+                        bool transformChanged = false;
                         if (_syncPosition && !ecsHandlesPosition)
-                            ecsTransform.Position = new float3(transform.position.x, transform.position.y, transform.position.z);
+                        {
+                            var visualPosition = new float3(transform.position.x, transform.position.y, transform.position.z);
+                            if (!math.all(ecsTransform.Position == visualPosition))
+                            {
+                                ecsTransform.Position = visualPosition;
+                                transformChanged = true;
+                            }
+                        }
                         if (_syncRotation)
-                            ecsTransform.Rotation = transform.rotation;
-                        _entityManager.SetComponentData(_heroEntity, ecsTransform);
+                        {
+                            var visualRotation = (quaternion)transform.rotation;
+                            if (!math.all(ecsTransform.Rotation.value == visualRotation.value))
+                            {
+                                ecsTransform.Rotation = visualRotation;
+                                transformChanged = true;
+                            }
+                        }
+                        if (transformChanged)
+                            _entityManager.SetComponentData(_heroEntity, ecsTransform);
 
                     }
                     else
@@ -370,6 +387,31 @@ namespace ConquestTactics.Visual
             motor.DebugLogging = _enableDebugLogs;
             if (!motor.IsBound)
                 motor.Bind(_world, _heroEntity, _syncPosition, _syncRotation);
+        }
+
+        private void ProtectAnimatedGameplayHitboxes()
+        {
+            var animators = GetComponentsInChildren<Animator>(true);
+            var weaponHitboxes = GetComponentsInChildren<WeaponHitboxBehaviour>(true);
+            var shieldHitboxes = GetComponentsInChildren<ShieldHitboxBehaviour>(true);
+            foreach (var animator in animators)
+            {
+                if (HasHitboxDrivenByAnimator(animator, weaponHitboxes)
+                    || HasHitboxDrivenByAnimator(animator, shieldHitboxes))
+                    animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            }
+        }
+
+        private static bool HasHitboxDrivenByAnimator<T>(Animator animator, T[] hitboxes)
+            where T : Component
+        {
+            foreach (var hitbox in hitboxes)
+            {
+                var hitboxTransform = hitbox.transform;
+                if (hitboxTransform == animator.transform || hitboxTransform.IsChildOf(animator.transform))
+                    return true;
+            }
+            return false;
         }
     }
 }

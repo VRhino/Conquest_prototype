@@ -44,15 +44,12 @@ public partial class UnitBodyblockSystem : SystemBase
 
     private readonly List<AgentData>                    _agents         = new();
     private readonly Dictionary<Entity, bool>           _unitIsWall     = new();
-    private readonly Dictionary<(int, int), List<int>>  _grid           = new();
-    private readonly List<List<int>>                    _bucketPool     = new();
     private NativeArray<RepulsionAgent> _nativeAgents;
     private NativeArray<float3> _nativeOffsets;
     private NativeParallelMultiHashMap<int2, int> _nativeGrid;
     private NativeArray<int2> _pairCounts;
-    private int _usedBucketCount;
 
-    public int DebugBucketPoolSize => _bucketPool.Count;
+    public int DebugNativeAgentCapacity => _nativeAgents.IsCreated ? _nativeAgents.Length : 0;
     public int DebugCandidatePairs { get; private set; }
     public int DebugContactPairs { get; private set; }
     private static readonly Unity.Profiling.ProfilerMarker BodyblockMarker = new("Conquest.Bodyblock");
@@ -153,21 +150,7 @@ public partial class UnitBodyblockSystem : SystemBase
         // ── 2. Ensure offset buffer ───────────────────────────────────────────
 
 
-        // ── 3. Build spatial grid ─────────────────────────────────────────────
-        _grid.Clear();
-        _usedBucketCount = 0;
-        for (int i = 0; i < count; i++)
-        {
-            var cell = ToCell(_agents[i].position, radius);
-            if (!_grid.TryGetValue(cell, out var bucket))
-            {
-                bucket = AcquireBucket();
-                _grid[cell] = bucket;
-            }
-            bucket.Add(i);
-        }
-
-        // ── 4. Repulsion ──────────────────────────────────────────────────────
+        // ── 3. Repulsion ──────────────────────────────────────────────────────
         EnsureNativeCapacity(count);
         _nativeGrid.Clear();
         for (int i = 0; i < count; i++)
@@ -192,7 +175,7 @@ public partial class UnitBodyblockSystem : SystemBase
             job.Schedule(count, math.max(1, config.bodyblockJobBatchSize)).Complete();
         else job.Run(count);
 
-        // ── 5. Apply ──────────────────────────────────────────────────────────
+        // ── 4. Apply ──────────────────────────────────────────────────────────
         for (int i = 0; i < count; i++)
         {
             DebugCandidatePairs += _pairCounts[i].x;
@@ -309,17 +292,5 @@ public partial class UnitBodyblockSystem : SystemBase
             (uint)second.Index, (uint)second.Version));
         float angle = (hash / (float)uint.MaxValue) * math.PI * 2f;
         return new float3(math.cos(angle), 0f, math.sin(angle));
-    }
-
-    private static (int, int) ToCell(float3 pos, float cellSize) =>
-        ((int)math.floor(pos.x / cellSize), (int)math.floor(pos.z / cellSize));
-
-    private List<int> AcquireBucket()
-    {
-        if (_usedBucketCount == _bucketPool.Count)
-            _bucketPool.Add(new List<int>(4));
-        var bucket = _bucketPool[_usedBucketCount++];
-        bucket.Clear();
-        return bucket;
     }
 }

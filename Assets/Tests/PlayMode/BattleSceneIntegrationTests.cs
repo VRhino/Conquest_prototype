@@ -26,6 +26,7 @@ public class BattleSceneIntegrationTests
     const string FullBattlePath = "Assets/Scenes/GameScenes/BattleScene.unity";
     const int FullBattleHeroesPerSide = 10;
     bool fullBattleProfile;
+    string renderVariant;
     string loadedScenePath;
     int expectedFullBattleUnits;
     sealed class MemorySave : ISaveProvider
@@ -52,7 +53,9 @@ public class BattleSceneIntegrationTests
     [UnitySetUp]
     public IEnumerator SetUp()
     {
-        fullBattleProfile = TestContext.CurrentContext.Test.Name == nameof(FullBattlePreparationRenderedPerformanceProfile);
+        fullBattleProfile = TestContext.CurrentContext.Test.Name.StartsWith(
+            nameof(FullBattlePreparationRenderedPerformanceProfile), StringComparison.Ordinal);
+        renderVariant = null;
         loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
@@ -283,6 +286,98 @@ public class BattleSceneIntegrationTests
             inlineDamageProfile = new DamageProfileComponent { bluntDamage = 100000f },
             sourceTeam = Team.TeamB, multiplier = 1f, hitType = HitType.Body
         });
+    }
+
+    [UnityTest]
+    public IEnumerator BattleSceneHeroAttackBridgesUseMatchingAnimatorParametersAndConsumeTrigger()
+    {
+        Entity remote;
+        using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroVisualInstance), typeof(NavMeshAgent)))
+        {
+            yield return Until(() => query.CalculateEntityCount() == 1, 10f,
+                "Remote hero visual must be ready for the animation bridge check.");
+            remote = query.GetSingletonEntity();
+        }
+
+        var localSync = UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
+            .Single(sync => sync.GetHeroEntity() == hero);
+        var remoteAgent = em.GetComponentObject<NavMeshAgent>(remote);
+        var remoteSync = remoteAgent.GetComponent<EntityVisualSync>();
+        var remoteDriver = remoteAgent.GetComponent<RemoteHeroAnimationDriver>();
+        Assert.That(localSync.IsLocalHero, Is.True, "Local visual must use the EntityVisualSync attack bridge.");
+        Assert.That(remoteSync, Is.Not.Null);
+        Assert.That(remoteSync.IsLocalHero, Is.False, "Remote visual must not use the local attack bridge.");
+        Assert.That(remoteDriver, Is.Not.Null);
+        Assert.That(remoteDriver.IsBound, Is.True);
+
+        var localAnimator = localSync.GetComponentInChildren<Animator>(true);
+        var remoteAnimator = remoteAgent.GetComponentInChildren<Animator>(true);
+        AssertCombatParameterTypes(localAnimator, "local hero");
+        AssertCombatParameterTypes(remoteAnimator, "remote hero");
+
+        var localAttack = em.GetComponentData<HeroCombatComponent>(hero);
+        localAttack.isAttacking = true;
+        em.SetComponentData(hero, localAttack);
+        var localAnimation = em.GetComponentData<HeroAnimationComponent>(hero);
+        localAnimation.triggerAttack = true;
+        em.SetComponentData(hero, localAnimation);
+
+        var localUpdate = typeof(EntityVisualSync).GetMethod("Update",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(localUpdate, Is.Not.Null, "EntityVisualSync.Update reflection target is missing.");
+        localUpdate.Invoke(localSync, null);
+        Assert.That(localAnimator.GetBool(AnimationHashes.IsAttacking), Is.True,
+            "Local EntityVisualSync did not publish isAttacking to the Animator.");
+        Assert.That(em.GetComponentData<HeroAnimationComponent>(hero).triggerAttack, Is.False,
+            "Local EntityVisualSync did not consume the one-shot attack trigger.");
+
+        localAttack.isAttacking = false;
+        em.SetComponentData(hero, localAttack);
+        localUpdate.Invoke(localSync, null);
+        Assert.That(localAnimator.GetBool(AnimationHashes.IsAttacking), Is.False,
+            "Local EntityVisualSync did not publish the released attack state.");
+
+        var remoteAttack = em.GetComponentData<HeroCombatComponent>(remote);
+        remoteAttack.isAttacking = true;
+        em.SetComponentData(remote, remoteAttack);
+        var remoteAnimation = em.GetComponentData<HeroAnimationComponent>(remote);
+        remoteAnimation.triggerAttack = true;
+        em.SetComponentData(remote, remoteAnimation);
+
+        var driveCombat = typeof(RemoteHeroAnimationDriver).GetMethod("DriveCombatAnimation",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.That(driveCombat, Is.Not.Null, "Remote combat bridge reflection target is missing.");
+        driveCombat.Invoke(remoteDriver, null);
+        Assert.That(remoteAnimator.GetBool(AnimationHashes.IsAttacking), Is.True,
+            "RemoteHeroAnimationDriver did not publish isAttacking to the Animator.");
+        Assert.That(em.GetComponentData<HeroAnimationComponent>(remote).triggerAttack, Is.False,
+            "RemoteHeroAnimationDriver did not consume the one-shot attack trigger.");
+
+        remoteAttack.isAttacking = false;
+        em.SetComponentData(remote, remoteAttack);
+        driveCombat.Invoke(remoteDriver, null);
+        Assert.That(remoteAnimator.GetBool(AnimationHashes.IsAttacking), Is.False,
+            "RemoteHeroAnimationDriver did not publish the released attack state.");
+    }
+
+    static void AssertCombatParameterTypes(Animator animator, string visualName)
+    {
+        Assert.That(animator, Is.Not.Null, visualName + " Animator is missing.");
+        var parameters = animator.parameters;
+        var attacking = parameters.SingleOrDefault(parameter => parameter.name == "IsAttacking");
+        Assert.That(attacking, Is.Not.Null,
+            visualName + " Animator must expose the canonical IsAttacking parameter name.");
+        Assert.That(attacking.nameHash, Is.EqualTo(AnimationHashes.IsAttacking),
+            visualName + " IsAttacking name hash must match AnimationHashes.");
+        Assert.That(attacking.type, Is.EqualTo(AnimatorControllerParameterType.Bool),
+            visualName + " IsAttacking parameter must be Bool.");
+        var trigger = parameters.SingleOrDefault(parameter => parameter.name == "TriggerAttack");
+        Assert.That(trigger, Is.Not.Null,
+            visualName + " Animator must expose the canonical TriggerAttack parameter name.");
+        Assert.That(trigger.nameHash, Is.EqualTo(AnimationHashes.TriggerAttack),
+            visualName + " TriggerAttack name hash must match AnimationHashes.");
+        Assert.That(trigger.type, Is.EqualTo(AnimatorControllerParameterType.Trigger),
+            visualName + " TriggerAttack parameter must be Trigger.");
     }
 
     [UnityTest]
@@ -525,6 +620,60 @@ public class BattleSceneIntegrationTests
         }
     }
 
+    [UnityTest]
+    public IEnumerator BattleSceneMeleeWeaponRigsContinueAnimatingOutsideAllCameraFrusta()
+    {
+        foreach (var path in new[] {
+            "Assets/Resources/Squads/Squires/Squires_GO_Squeleton.prefab",
+            "Assets/Resources/Squads/Spearmen/Spearmen_GO_Squeleton.prefab" })
+        {
+            var entity = em.CreateEntity(typeof(LocalTransform), typeof(UnitAnimationMovementComponent),
+                typeof(UnitCombatComponent));
+            var position = new Vector3(10000f, 0f, 10000f);
+            em.SetComponentData(entity, LocalTransform.FromPosition(position));
+            var visual = UnityEngine.Object.Instantiate(UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(path),
+                position, Quaternion.identity);
+            try
+            {
+                var agent = visual.GetComponent<NavMeshAgent>();
+                if (agent != null) agent.enabled = false;
+                var sync = VisualSyncUtility.SetupVisualSync(visual);
+                sync.SetHeroEntity(entity);
+                visual.GetComponent<UnitAnimationAdapter>().SetUnitEntity(entity);
+                yield return null; // Run the production Start/culling policy.
+                sync.enabled = false;
+                var animator = visual.GetComponentInChildren<Animator>();
+                var hitbox = visual.GetComponentInChildren<WeaponHitboxBehaviour>(true);
+                Assert.That(hitbox, Is.Not.Null, path);
+                Assert.That(animator.cullingMode, Is.EqualTo(AnimatorCullingMode.AlwaysAnimate), path);
+                em.SetComponentData(entity, new UnitCombatComponent { isAttacking = true });
+                int combatLayer = animator.GetLayerIndex("Combat");
+                Assert.That(combatLayer, Is.GreaterThanOrEqualTo(0), path);
+                yield return Until(() => animator.GetCurrentAnimatorStateInfo(combatLayer).shortNameHash
+                    == Animator.StringToHash("Attack"), 3f, "Offscreen attack clip did not start: " + path);
+                Vector3 previousPosition = hitbox.transform.position;
+                Quaternion previousRotation = hitbox.transform.rotation;
+                float maxDistance = 0f, maxAngle = 0f;
+                for (int i = 0; i < 30; i++)
+                {
+                    yield return null;
+                    maxDistance = Mathf.Max(maxDistance, Vector3.Distance(previousPosition, hitbox.transform.position));
+                    maxAngle = Mathf.Max(maxAngle, Quaternion.Angle(previousRotation, hitbox.transform.rotation));
+                }
+                Assert.That(visual.GetComponentsInChildren<Renderer>().All(renderer => !renderer.isVisible),
+                    Is.True, "The offscreen fixture was visible to a camera: " + path);
+                Assert.That(maxDistance > 0.01f || maxAngle > 0.5f, Is.True,
+                    "The actual weapon collider's rig froze outside the frustum: " + path);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(visual);
+                if (em.Exists(entity)) em.DestroyEntity(entity);
+            }
+            yield return null;
+        }
+    }
+
     // Equipment changes must refresh only the linked local visual, including empty slots.
     [UnityTest]
     public IEnumerator BattleSceneEquipmentRefreshesTheLinkedVisualAfterACompletedChange()
@@ -592,10 +741,58 @@ public class BattleSceneIntegrationTests
         Assert.That(em.GetComponentData<SquadPlayerOrderIntentComponent>(squad).orderType,
             Is.EqualTo(SquadOrderType.HoldPosition), "HoldPosition failed in the production scene.");
         var bodyblock = testWorld.GetExistingSystemManaged<UnitBodyblockSystem>();
+        using (var match = em.CreateEntityQuery(typeof(MatchStateComponent)))
+        {
+            Assert.That(match.CalculateEntityCount(), Is.EqualTo(1), "Expected a single battle state.");
+            Assert.That(match.GetSingleton<MatchStateComponent>().currentState, Is.EqualTo(MatchState.InBattle));
+        }
         yield return Until(() => bodyblock.DebugContactPairs > 0, 120f,
-            "The autonomous battle did not produce opposing-team bodyblock contact.");
+            "The autonomous battle did not produce opposing-team bodyblock contact.",
+            () => WriteBattleContactDiagnostics(bodyblock));
         yield return RenderedPerformanceProfile(FullBattlePath,
-            "Logs/system-optimization-full-battle-profile.json", 600, expectedHeroes, expectedFullBattleUnits);
+            renderVariant == null ? "Logs/system-optimization-full-battle-profile.json"
+                : $"Logs/system-optimization-full-battle-{renderVariant}.json",
+            600, expectedHeroes, expectedFullBattleUnits);
+    }
+
+    [UnityTest, Explicit("Isolated Forward baseline; restores the active render profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfileAForward() => RunRenderExperiment("AForward");
+
+    [UnityTest, Explicit("Forward+ without Resident Drawer; restores the active render profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfileBForwardPlus() => RunRenderExperiment("BForwardPlus");
+
+    [UnityTest, Explicit("Forward+ with Resident Drawer; restores the active render profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfileCForwardPlusGRD() => RunRenderExperiment("CForwardPlusGRD");
+
+    [UnityTest, Explicit("Resident Drawer with GPU occlusion; restores the active render profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfileDForwardPlusGRDOcclusion() => RunRenderExperiment("DForwardPlusGRDOcclusion");
+
+    [UnityTest, Explicit("SSAO disabled in a clone of the active profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfileSSAOOff() => RunRenderExperiment("SSAOOff");
+
+    [UnityTest, Explicit("SSAO enabled in a clone of the active profile.")]
+    public IEnumerator FullBattlePreparationRenderedPerformanceProfileSSAOOn() => RunRenderExperiment("SSAOOn");
+
+    IEnumerator RunRenderExperiment(string variant)
+    {
+        // Editor tooling stays out of the runtime/test assembly dependency graph.
+        var tools = Type.GetType("Conquest.Editor.Optimization.RenderOptimizationExperiments, Game.Editor");
+        Assert.That(tools, Is.Not.Null, "Render experiment Editor tools are unavailable.");
+        var begin = tools.GetMethod("Begin", BindingFlags.Public | BindingFlags.Static);
+        var restore = tools.GetMethod("Restore", BindingFlags.Public | BindingFlags.Static);
+        Assert.That(begin, Is.Not.Null);
+        Assert.That(restore, Is.Not.Null);
+        renderVariant = variant;
+        try
+        {
+            begin.Invoke(null, new object[] { variant });
+            yield return FullBattlePreparationRenderedPerformanceProfile();
+        }
+        finally
+        {
+            restore.Invoke(null, null);
+            renderVariant = null;
+        }
     }
 
     [UnityTest, Explicit("Rendered Editor profile; run separately from functional regressions.")]
@@ -609,6 +806,13 @@ public class BattleSceneIntegrationTests
         int initialHeroes, int initialUnits)
     {
         UnityEditor.EditorApplication.ExecuteMenuItem("Window/General/Game");
+        var renderTools = Type.GetType("Conquest.Editor.Optimization.RenderOptimizationExperiments, Game.Editor");
+        var census = renderTools?.GetMethod("Census", BindingFlags.Public | BindingFlags.Static);
+        if (census != null)
+        {
+            System.IO.Directory.CreateDirectory("Logs");
+            System.IO.File.WriteAllText(outputPath + ".census.json", (string)census.Invoke(null, null));
+        }
         if (!fullBattleProfile) yield return new WaitForSeconds(4f);
         using (var squads = em.CreateEntityQuery(typeof(SquadInstanceComponent)))
             yield return Until(() => squads.CalculateEntityCount() >= 2, ReadyTimeout,
@@ -627,15 +831,34 @@ public class BattleSceneIntegrationTests
             var cpu = new double[sampleCount];
             var bodyblock = new double[sampleCount];
             var detection = new double[sampleCount];
+            var targeting = new double[sampleCount];
+            var detectionSnapshot = new double[sampleCount];
+            var detectionSearch = new double[sampleCount];
+            var detectionPublish = new double[sampleCount];
+            var detectionChecks = new double[sampleCount];
+            var publishedTargets = new double[sampleCount];
+            var targetingChecks = new double[sampleCount];
+            var retargets = new double[sampleCount];
+            var projection = new double[sampleCount];
+            var projectionRequests = new double[sampleCount];
+            var projectionFailures = new double[sampleCount];
             var allocations = new double[sampleCount];
             var candidatePairs = new double[sampleCount];
             var contactPairs = new double[sampleCount];
             var bodyblockSystem = testWorld.GetExistingSystemManaged<UnitBodyblockSystem>();
+            var detectionSystem = testWorld.GetExistingSystemManaged<EnemyDetectionSystem>();
+            var targetingSystem = testWorld.GetExistingSystemManaged<UnitTargetingSystem>();
             using var mainRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Internal, "Main Thread", 1);
             using var bodyRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.Bodyblock", 1);
             using var detectionRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.EnemyDetection", 1);
+            using var snapshotRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.EnemyDetection.Snapshot", 1);
+            using var searchRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.EnemyDetection.SearchAndWait", 1);
+            using var publishRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.EnemyDetection.Publish", 1);
+            using var targetingRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.UnitTargeting", 1);
+            using var projectionRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Scripts, "Conquest.NavMeshProjection", 1);
             using var allocationRecorder = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Memory, "GC Allocated In Frame", 1);
             Assert.That(mainRecorder.Valid, Is.True, "Main Thread recorder unavailable.");
+            Assert.That(targetingRecorder.Valid, Is.True, "Unit targeting recorder unavailable.");
             renderedFrames = 0;
             double previous = Time.realtimeSinceStartupAsDouble;
             for (int i = 0; i < sampleCount; i++)
@@ -643,13 +866,26 @@ public class BattleSceneIntegrationTests
                 // Capture contacts before yielding so the first detected collision is included.
                 candidatePairs[i] = bodyblockSystem.DebugCandidatePairs;
                 contactPairs[i] = bodyblockSystem.DebugContactPairs;
+                detectionChecks[i] = detectionSystem.DebugExactDistanceChecks;
+                publishedTargets[i] = detectionSystem.DebugPublishedTargets;
+                targetingChecks[i] = targetingSystem.DebugCandidateChecks;
+                retargets[i] = targetingSystem.DebugRetargetCount;
+                long projectionRequestsBefore = UnitNavMeshSystem.DebugTotalProjectionRequests;
+                long projectionFailuresBefore = UnitNavMeshSystem.DebugTotalProjectionFailures;
                 yield return null;
+                projectionRequests[i] = UnitNavMeshSystem.DebugTotalProjectionRequests - projectionRequestsBefore;
+                projectionFailures[i] = UnitNavMeshSystem.DebugTotalProjectionFailures - projectionFailuresBefore;
                 double now = Time.realtimeSinceStartupAsDouble;
                 elapsed[i] = (now - previous) * 1000d;
                 previous = now;
                 cpu[i] = mainRecorder.LastValue / 1000000d;
                 bodyblock[i] = bodyRecorder.Valid ? bodyRecorder.LastValue / 1000000d : -1d;
                 detection[i] = detectionRecorder.Valid ? detectionRecorder.LastValue / 1000000d : -1d;
+                detectionSnapshot[i] = snapshotRecorder.Valid ? snapshotRecorder.LastValue / 1000000d : -1d;
+                detectionSearch[i] = searchRecorder.Valid ? searchRecorder.LastValue / 1000000d : -1d;
+                detectionPublish[i] = publishRecorder.Valid ? publishRecorder.LastValue / 1000000d : -1d;
+                targeting[i] = targetingRecorder.LastValue / 1000000d;
+                projection[i] = projectionRecorder.Valid ? projectionRecorder.LastValue / 1000000d : -1d;
                 allocations[i] = allocationRecorder.Valid ? allocationRecorder.LastValue : -1d;
             }
             Assert.That(renderedFrames, Is.GreaterThan(0), "No game camera rendered during the sample.");
@@ -659,6 +895,7 @@ public class BattleSceneIntegrationTests
             using var heroes = em.CreateEntityQuery(typeof(HeroSpawnComponent));
             string json = FormattableString.Invariant($@"{{
   ""scene"": ""{scenePath}"", ""editor"": ""{Application.unityVersion}"",
+  ""renderVariant"": ""{renderVariant ?? "Production"}"",
   ""width"": {Screen.width}, ""height"": {Screen.height}, ""sampleCount"": {sampleCount},
   ""renderedCameraFrames"": {renderedFrames}, ""units"": {units.CalculateEntityCount()}, ""heroes"": {heroes.CalculateEntityCount()},
   ""initialHeroes"": {initialHeroes}, ""initialUnits"": {initialUnits},
@@ -667,6 +904,12 @@ public class BattleSceneIntegrationTests
   ""vSyncCount"": {QualitySettings.vSyncCount}, ""targetFrameRate"": {Application.targetFrameRate},
   ""wallFrameMs"": {ProfilePercentiles(elapsed)}, ""mainThreadMs"": {ProfilePercentiles(cpu)},
   ""bodyblockMs"": {ProfilePercentiles(bodyblock)}, ""detectionMs"": {ProfilePercentiles(detection)},
+  ""targetingMs"": {ProfilePercentiles(targeting)},
+  ""detectionSnapshotMs"": {ProfilePercentiles(detectionSnapshot)}, ""detectionSearchAndWaitMs"": {ProfilePercentiles(detectionSearch)}, ""detectionPublishMs"": {ProfilePercentiles(detectionPublish)},
+  ""detectionExactChecks"": {ProfilePercentiles(detectionChecks)}, ""publishedTargets"": {ProfilePercentiles(publishedTargets)},
+  ""targetingCandidateChecks"": {ProfilePercentiles(targetingChecks)}, ""retargets"": {ProfilePercentiles(retargets)},
+  ""navMeshProjectionMs"": {ProfilePercentiles(projection)},
+  ""projectionRequestsPerFrame"": {ProfilePercentiles(projectionRequests)}, ""projectionFailuresPerFrame"": {ProfilePercentiles(projectionFailures)},
   ""gcBytesPerFrame"": {ProfilePercentiles(allocations)},
   ""limitations"": ""Editor + test runner; no before/after baseline, no Player/GPU claim. -1 means unavailable counter.""
 }}");
@@ -741,11 +984,37 @@ public class BattleSceneIntegrationTests
         yield return null;
     }
 
-    static IEnumerator Until(Func<bool> ready, float seconds, string failure)
+    void WriteBattleContactDiagnostics(UnitBodyblockSystem bodyblock)
+    {
+        var text = new System.Text.StringBuilder();
+        text.AppendLine($"time={Time.time} candidates={bodyblock.DebugCandidatePairs} contacts={bodyblock.DebugContactPairs}");
+        using (var query = em.CreateEntityQuery(typeof(MatchStateComponent)))
+        using (var states = query.ToComponentDataArray<MatchStateComponent>(Unity.Collections.Allocator.Temp))
+            for (int i = 0; i < states.Length; i++) text.AppendLine($"match[{i}]={states[i].currentState}");
+        using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroAIDecision), typeof(TeamComponent)))
+        using (var entities = query.ToEntityArray(Unity.Collections.Allocator.Temp))
+            foreach (var entity in entities)
+            {
+                var decision = em.GetComponentData<HeroAIDecision>(entity);
+                text.Append($"hero={entity} team={em.GetComponentData<TeamComponent>(entity).value} action={decision.action} target={decision.targetPosition}");
+                if (em.HasComponent<NavMeshAgent>(entity))
+                {
+                    var agent = em.GetComponentObject<NavMeshAgent>(entity);
+                    if (agent != null && agent.enabled && agent.isOnNavMesh)
+                        text.Append($" pos={agent.transform.position} path={agent.pathStatus} remaining={agent.remainingDistance} velocity={agent.velocity}");
+                    else text.Append(" agent inactive/off mesh");
+                }
+                text.AppendLine();
+            }
+        TestContext.WriteLine(text.ToString());
+    }
+
+    static IEnumerator Until(Func<bool> ready, float seconds, string failure, Action onTimeout = null)
     {
         float deadline = Time.realtimeSinceStartup + seconds;
         while (!ready())
         {
+            if (Time.realtimeSinceStartup >= deadline) onTimeout?.Invoke();
             Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline), failure);
             yield return null;
         }

@@ -30,6 +30,43 @@ using UnityEngine.AI;
 [UpdateBefore(typeof(UnitFollowFormationSystem))]
 public partial class UnitNavMeshSystem : SystemBase
 {
+    private static readonly Unity.Profiling.ProfilerMarker ProjectionMarker =
+        new Unity.Profiling.ProfilerMarker("Conquest.NavMeshProjection");
+    private static int _projectionFrame = -1;
+    private static int _projectionRequests;
+    private static int _projectionFailures;
+    public static long DebugTotalProjectionRequests { get; private set; }
+    public static long DebugTotalProjectionFailures { get; private set; }
+
+    [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetProjectionCounters()
+    {
+        _projectionFrame = -1;
+        _projectionRequests = 0;
+        _projectionFailures = 0;
+        DebugTotalProjectionRequests = 0;
+        DebugTotalProjectionFailures = 0;
+    }
+
+    public static int DebugProjectionRequestsThisFrame
+    {
+        get { RefreshProjectionCounters(); return _projectionRequests; }
+    }
+
+    public static int DebugProjectionFailuresThisFrame
+    {
+        get { RefreshProjectionCounters(); return _projectionFailures; }
+    }
+
+    private static void RefreshProjectionCounters()
+    {
+        int frame = UnityEngine.Time.frameCount;
+        if (_projectionFrame == frame) return;
+        _projectionFrame = frame;
+        _projectionRequests = 0;
+        _projectionFailures = 0;
+    }
+
     // Stop at 75 % of attackRange — keeps unit inside the directional AABB.
     private const float StopDistanceFactor = 0.75f;
 
@@ -315,6 +352,10 @@ public partial class UnitNavMeshSystem : SystemBase
     public static bool TrySampleDestination(NavMeshAgent agent, float3 requested,
         float sampleRadius, out float3 resolved)
     {
+        using var projectionSample = ProjectionMarker.Auto();
+        RefreshProjectionCounters();
+        _projectionRequests++;
+        DebugTotalProjectionRequests++;
         var filter = new NavMeshQueryFilter
         {
             agentTypeID = agent.agentTypeID,
@@ -328,6 +369,8 @@ public partial class UnitNavMeshSystem : SystemBase
         }
 
         resolved = default;
+        _projectionFailures++;
+        DebugTotalProjectionFailures++;
         return false;
     }
 

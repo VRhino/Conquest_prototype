@@ -1,12 +1,100 @@
+using System.Collections;
 using NUnit.Framework;
+using ConquestTactics.Animation;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.TestTools;
 
 public class SquadNavigationRegressionTests
 {
+    [Test]
+    public void UnitAnimationFallsBackToPoseDeltaWhenNavAgentComponentHasNoManagedAgent()
+    {
+        using var world = new World("Unit animation missing NavMeshAgent fallback");
+        var em = world.EntityManager;
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
+        em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
+        {
+            animationMovingSpeedThreshold = 0.05f,
+            animationRunningSpeedRatio = 0.6f
+        });
+
+        var entity = em.CreateEntity(typeof(NavAgentComponent), typeof(LocalTransform),
+            typeof(UnitAnimationMovementComponent), typeof(UnitStatsComponent));
+        em.SetComponentData(entity, LocalTransform.FromPosition(new float3(3f, 0f, 0f)));
+        em.SetComponentData(entity, new UnitAnimationMovementComponent
+        {
+            PreviousPosition = float3.zero
+        });
+        em.SetComponentData(entity, new UnitStatsComponent { speed = 3f });
+
+        world.SetTime(new Unity.Core.TimeData(0, 1f));
+        world.GetOrCreateSystemManaged<NavMeshPositionSyncSystem>().Update();
+        world.GetOrCreateSystemManaged<UnitAnimationSystem>().Update();
+
+        var animation = em.GetComponentData<UnitAnimationMovementComponent>(entity);
+        Assert.That(animation.HasNavMeshAgentSnapshot, Is.False);
+        Assert.That(animation.CurrentSpeed, Is.EqualTo(3f).Within(0.001f));
+        Assert.That(animation.IsMoving, Is.True);
+        Assert.That(animation.MovementDirection.x, Is.EqualTo(1f).Within(0.001f));
+    }
+
+    [UnityTest]
+    public IEnumerator VisualSyncKeepsAnimatedGameplayHitboxesUpdatingWithoutGlobalAlwaysAnimate()
+    {
+        var hitboxVisual = new GameObject("Hitbox animation culling regression");
+        var shieldVisual = new GameObject("Shield animation culling regression");
+        var visualOnly = new GameObject("Visual-only culling regression");
+        try
+        {
+            var hitboxAnimator = hitboxVisual.AddComponent<Animator>();
+            hitboxAnimator.cullingMode = AnimatorCullingMode.CullCompletely;
+            var hitbox = new GameObject("WeaponHitbox");
+            hitbox.transform.SetParent(hitboxVisual.transform);
+            hitbox.AddComponent<BoxCollider>();
+            hitbox.AddComponent<WeaponHitboxBehaviour>();
+            var hitboxSync = hitboxVisual.AddComponent<ConquestTactics.Visual.EntityVisualSync>();
+
+            var shieldAnimator = shieldVisual.AddComponent<Animator>();
+            shieldAnimator.cullingMode = AnimatorCullingMode.CullCompletely;
+            var shieldHitbox = new GameObject("ShieldHitbox");
+            shieldHitbox.transform.SetParent(shieldVisual.transform);
+            shieldHitbox.AddComponent<BoxCollider>();
+            shieldHitbox.AddComponent<ShieldHitboxBehaviour>();
+            var shieldSync = shieldVisual.AddComponent<ConquestTactics.Visual.EntityVisualSync>();
+
+            var visualOnlyAnimator = visualOnly.AddComponent<Animator>();
+            visualOnlyAnimator.cullingMode = AnimatorCullingMode.CullCompletely;
+            var visualOnlySync = visualOnly.AddComponent<ConquestTactics.Visual.EntityVisualSync>();
+            var autoFindField = typeof(ConquestTactics.Visual.EntityVisualSync).GetField(
+                "_autoFindHeroEntity", System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic);
+            Assert.That(autoFindField, Is.Not.Null);
+            autoFindField.SetValue(hitboxSync, false);
+            autoFindField.SetValue(shieldSync, false);
+            autoFindField.SetValue(visualOnlySync, false);
+
+            yield return null;
+
+            Assert.That(hitboxAnimator.cullingMode, Is.EqualTo(AnimatorCullingMode.AlwaysAnimate),
+                "An Animator that drives a weapon hitbox must keep updating outside the camera.");
+            Assert.That(shieldAnimator.cullingMode, Is.EqualTo(AnimatorCullingMode.AlwaysAnimate),
+                "An Animator that drives a shield hitbox must keep updating outside the camera.");
+            Assert.That(visualOnlyAnimator.cullingMode, Is.EqualTo(AnimatorCullingMode.CullCompletely),
+                "Visuals without gameplay hitboxes should retain Animator culling.");
+        }
+        finally
+        {
+            Object.DestroyImmediate(hitboxVisual);
+            Object.DestroyImmediate(shieldVisual);
+            Object.DestroyImmediate(visualOnly);
+        }
+    }
+
     [Test]
     public void PooledProjectileRestoresPreviousShooterCollisionsOnReuseAndDisable()
     {
@@ -196,6 +284,103 @@ public class SquadNavigationRegressionTests
         }
     }
 
+    [UnityTest, Explicit("Diagnostic-only comparison of NavMesh projection APIs; not a production navigation path.")]
+    public IEnumerator LowLevelProjectionComparisonReportsDivergenceWithoutChangingNavigation()
+    {
+        var sources = new System.Collections.Generic.List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource
+            {
+                shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(8f, 0.2f, 20f),
+                transform = Matrix4x4.Translate(new Vector3(-6f, -0.1f, 0f)),
+                area = 0
+            },
+            new NavMeshBuildSource
+            {
+                shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(8f, 0.2f, 20f),
+                transform = Matrix4x4.Translate(new Vector3(6f, -0.1f, 0f)),
+                area = 2
+            }
+        };
+        var settings = NavMesh.GetSettingsByIndex(0);
+        var data = NavMeshBuilder.BuildNavMeshData(settings, sources,
+            new Bounds(Vector3.zero, new Vector3(30f, 8f, 24f)), Vector3.zero, Quaternion.identity);
+        var navData = NavMesh.AddNavMeshData(data);
+        var agentObject = new GameObject("Low-level projection navigation sentinel");
+        agentObject.transform.position = new Vector3(-8f, 0f, -8f);
+        try
+        {
+            var agent = agentObject.AddComponent<NavMeshAgent>();
+            agent.agentTypeID = settings.agentTypeID;
+            agent.areaMask = NavMesh.AllAreas;
+            Assert.That(agent.Warp(new Vector3(-8f, 0f, -8f)), Is.True,
+                "The synthetic plane must accept the sentinel agent before comparison.");
+            agent.isStopped = true;
+            Vector3 requestedDestination = new(-5f, 0f, -5f);
+            Assert.That(agent.SetDestination(requestedDestination), Is.True);
+            yield return null;
+
+            Vector3[] positions = new Vector3[64];
+            positions[0] = new Vector3(-6f, 0f, 0f);       // Interior of area 0.
+            positions[1] = new Vector3(-2.05f, 0f, 0f);    // Edge of area 0.
+            positions[2] = Vector3.zero;                   // Gap between the two surfaces.
+            positions[3] = new Vector3(6f, 0f, 0f);        // Interior of area 2.
+            positions[4] = new Vector3(15f, 0f, 0f);       // Outside both surfaces.
+            positions[5] = new Vector3(-6f, 2f, 0f);       // Height offset from the plane.
+            for (int i = 6; i < positions.Length; i++)
+            {
+                int column = (i - 6) % 10;
+                int row = (i - 6) / 10;
+                positions[i] = new Vector3(-12f + column * (24f / 9f), (row % 2) * 1.5f,
+                    -9f + row * 3f);
+            }
+
+            var tools = System.Type.GetType("Conquest.Editor.Optimization.RenderOptimizationExperiments, Game.Editor");
+            var compare = tools?.GetMethod("CompareLowLevelProjection",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            Assert.That(compare, Is.Not.Null, "The installed Editor diagnostic helper must be available.");
+            string allAreasJson = (string)compare.Invoke(null, new object[]
+            {
+                positions, settings.agentTypeID, NavMesh.AllAreas, 2.5f,
+                new Vector3(2.5f, 2.5f, 2.5f), 0.25f, 64
+            });
+            string areaZeroJson = (string)compare.Invoke(null, new object[]
+            {
+                positions, settings.agentTypeID, 1 << 0, 2.5f,
+                new Vector3(2.5f, 2.5f, 2.5f), 0.25f, 64
+            });
+            string areaTwoJson = (string)compare.Invoke(null, new object[]
+            {
+                positions, settings.agentTypeID, 1 << 2, 2.5f,
+                new Vector3(2.5f, 2.5f, 2.5f), 0.25f, 64
+            });
+
+            Assert.That(allAreasJson, Does.Contain("\"samples\": 64"));
+            Assert.That(allAreasJson, Does.Contain("\"validityMismatches\""));
+            Assert.That(areaZeroJson, Does.Contain("\"samples\": 64"));
+            Assert.That(areaTwoJson, Does.Contain("\"samples\": 64"));
+            Assert.That(Vector3.Distance(agent.destination, requestedDestination), Is.LessThan(0.001f),
+                "The diagnostic comparison must not change the active NavMeshAgent destination.");
+            Assert.That(Vector3.Distance(agent.nextPosition, new Vector3(-8f, 0f, -8f)), Is.LessThan(0.05f),
+                "The stopped sentinel agent must remain at its original location.");
+
+            string report = "{\n  \"allAreas\": " + allAreasJson + ",\n  \"areaZeroOnly\": " + areaZeroJson +
+                            ",\n  \"areaTwoOnly\": " + areaTwoJson + "\n}";
+            const string outputPath = "Logs/unity6-optimization-round2/lowlevel-projection.json";
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(outputPath));
+            System.IO.File.WriteAllText(outputPath, report);
+            TestContext.WriteLine(report);
+        }
+        finally
+        {
+            Object.DestroyImmediate(agentObject);
+            navData.Remove();
+            Object.DestroyImmediate(data);
+        }
+    }
+
     [Test]
     public void ExactEnemyOverlapIsSeparatedBeforePositionSync()
     {
@@ -241,7 +426,7 @@ public class SquadNavigationRegressionTests
     }
 
     [Test, Timeout(60000)]
-    public void NineHundredBodyblockAgentsReuseSpatialBucketsAfterWarmup()
+    public void NineHundredBodyblockAgentsReuseNativeStorageAfterWarmup()
     {
         using var world = new World("Bodyblock 900-agent stress");
         var em = world.EntityManager;
@@ -279,18 +464,27 @@ public class SquadNavigationRegressionTests
             world.SetTime(new Unity.Core.TimeData(0, 1f / 60f));
             var system = world.GetOrCreateSystemManaged<UnitBodyblockSystem>();
             system.Update();
-            int warmedBucketCount = system.DebugBucketPoolSize;
+            int warmedNativeCapacity = system.DebugNativeAgentCapacity;
+            var watch = new System.Diagnostics.Stopwatch();
+            watch.Start();
             long allocatedBefore = System.GC.GetAllocatedBytesForCurrentThread();
-            var watch = System.Diagnostics.Stopwatch.StartNew();
+            watch.Restart();
             system.Update();
             watch.Stop();
             long allocatedBytes = System.GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            int sparseCandidatePairs = system.DebugCandidatePairs;
+            int sparseContactPairs = system.DebugContactPairs;
+            uint sparsePositionFingerprint = GetPositionFingerprint(visuals);
 
-            Assert.That(warmedBucketCount, Is.GreaterThan(0));
-            Assert.That(system.DebugBucketPoolSize, Is.EqualTo(warmedBucketCount),
-                "El segundo frame no debe crear listas de celdas nuevas.");
+            Assert.That(warmedNativeCapacity, Is.GreaterThanOrEqualTo(900));
+            Assert.That(system.DebugNativeAgentCapacity, Is.EqualTo(warmedNativeCapacity),
+                "La capacidad nativa debe reutilizarse después del calentamiento.");
+            Assert.That(allocatedBytes, Is.Zero,
+                "El frame sparse no debe crear asignaciones administradas en el hilo principal.");
             TestContext.WriteLine($"Bodyblock 900 agents warm-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
-                $"managed allocation: {allocatedBytes} bytes, buckets: {warmedBucketCount}");
+                $"managed allocation: {allocatedBytes} bytes, native capacity: {warmedNativeCapacity}, " +
+                $"candidate pairs: {sparseCandidatePairs}, contact pairs: {sparseContactPairs}, " +
+                $"position fingerprint: {sparsePositionFingerprint:X8}");
 
             // Pack all agents into a 1.45 x 1.45 m area to exercise the contact-heavy case.
             for (int i = 0; i < visuals.Count; i++)
@@ -306,8 +500,20 @@ public class SquadNavigationRegressionTests
             system.Update();
             watch.Stop();
             allocatedBytes = System.GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            int denseCandidatePairs = system.DebugCandidatePairs;
+            int denseContactPairs = system.DebugContactPairs;
+            uint densePositionFingerprint = GetPositionFingerprint(visuals);
+            Assert.That(system.DebugNativeAgentCapacity, Is.EqualTo(warmedNativeCapacity),
+                "La capacidad nativa debe mantenerse estable en el caso denso.");
+            Assert.That(allocatedBytes, Is.Zero,
+                "El frame denso no debe crear asignaciones administradas en el hilo principal.");
+            Assert.That(denseContactPairs, Is.GreaterThan(0),
+                "El caso denso debe ejercitar contactos de bodyblock.");
+            Assert.That(denseCandidatePairs, Is.GreaterThanOrEqualTo(denseContactPairs));
             TestContext.WriteLine($"Bodyblock 900 agents dense-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
-                $"managed allocation: {allocatedBytes} bytes, buckets retained: {system.DebugBucketPoolSize}");
+                $"managed allocation: {allocatedBytes} bytes, native capacity: {system.DebugNativeAgentCapacity}, " +
+                $"candidate pairs: {denseCandidatePairs}, contact pairs: {denseContactPairs}, " +
+                $"position fingerprint: {densePositionFingerprint:X8}");
         }
         finally
         {
@@ -329,6 +535,22 @@ public class SquadNavigationRegressionTests
         em.SetComponentData(entity, new UnitFormationStateComponent { State = UnitFormationState.Moving });
         em.AddComponentObject(entity, agent);
         return entity;
+    }
+
+    static uint GetPositionFingerprint(System.Collections.Generic.List<GameObject> visuals)
+    {
+        unchecked
+        {
+            uint fingerprint = 2166136261;
+            foreach (var visual in visuals)
+            {
+                var position = visual.transform.position;
+                fingerprint = (fingerprint ^ (uint)Mathf.RoundToInt(position.x * 10000f)) * 16777619;
+                fingerprint = (fingerprint ^ (uint)Mathf.RoundToInt(position.y * 10000f)) * 16777619;
+                fingerprint = (fingerprint ^ (uint)Mathf.RoundToInt(position.z * 10000f)) * 16777619;
+            }
+            return fingerprint;
+        }
     }
 
     [TestCase(SquadOrderType.HoldPosition, true)]

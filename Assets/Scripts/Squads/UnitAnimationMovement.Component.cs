@@ -18,6 +18,11 @@ namespace ConquestTactics.Animation
 
         // Accepted navigation speed, including hurry/charge. MaxSpeed remains the base stat.
         public float RequestedSpeed;
+
+        // Snapshot taken by NavMeshPositionSyncSystem after physical NavMesh movement.
+        public float3 NavMeshVelocity;
+        public bool HasNavMeshAgentSnapshot;
+        public bool HasValidNavMeshSnapshot;
         
         // Dirección normalizada de movimiento
         public float3 MovementDirection;

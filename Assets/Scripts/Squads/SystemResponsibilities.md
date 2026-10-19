@@ -127,7 +127,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Cubre**: unidades vs unidades + héroes remotos vs unidades (héroe local bloqueado por CapsuleCollider físico)
 - **Fuerza**: valores configurables en `SquadSpawnConfig`; por defecto 60 para Line/Testudo/Wedge/Square en estado Formed y 8 para Dispersed/Column
 - **Regla**: Solo cross-team — aliados nunca se repelen; `Formed vs Formed` sin push (evita vibración)
-- **Algoritmo**: Spatial grid (cell = `bodyblockRadius`) → 9 celdas vecinas → O(n×k); buckets administrados reutilizados mediante pool
+- **Algoritmo**: Spatial grid nativo persistente (cell = `bodyblockRadius`) → 9 celdas vecinas → O(n×k); el job Burst consume este único grid, sin duplicado managed
 - **Orden**: después de `UnitNavMeshSystem` y antes de `NavMeshPositionSyncSystem`, para capturar la corrección en ECS en el mismo ciclo
 - **Tiempo**: clamp en m/s mediante `bodyblockMaxPushSpeed * deltaTime`; parámetros en SquadSpawnConfig.
 - **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.

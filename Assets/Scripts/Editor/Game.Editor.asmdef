@@ -1,5 +1,5 @@
 {
   "name": "Game.Editor",
-  "references": ["Game.ECS", "Unity.Entities", "Unity.Entities.Hybrid", "Unity.Mathematics", "Unity.Collections", "Unity.Transforms", "Unity.TextMeshPro", "Unity.InputSystem"],
+  "references": ["Game.ECS", "Unity.Entities", "Unity.Entities.Hybrid", "Unity.Mathematics", "Unity.Collections", "Unity.Transforms", "Unity.TextMeshPro", "Unity.InputSystem", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Core.Editor", "Unity.RenderPipelines.GPUDriven.Runtime", "Unity.RenderPipelines.Universal.Runtime"],
   "includePlatforms": ["Editor"]
 }

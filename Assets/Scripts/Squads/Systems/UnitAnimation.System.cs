@@ -63,7 +63,24 @@ public partial class UnitAnimationSystem : SystemBase
             }
             
             float requestedSpeed = maxSpeed;
-            if (EntityManager.HasComponent<UnityEngine.AI.NavMeshAgent>(entity))
+            // NavMeshPositionSyncSystem snapshots post-move velocity for normal units.
+            // Keep the managed fallback for legacy/partial entities without NavAgentComponent.
+            if (EntityManager.HasComponent<NavAgentComponent>(entity)
+                && animComponent.ValueRO.HasNavMeshAgentSnapshot)
+            {
+                if (animComponent.ValueRO.HasValidNavMeshSnapshot)
+                {
+                    movementVector = animComponent.ValueRO.NavMeshVelocity;
+                    speedMagnitude = math.length(movementVector);
+                    requestedSpeed = animComponent.ValueRO.RequestedSpeed;
+                }
+                else
+                {
+                    movementVector = float3.zero;
+                    speedMagnitude = 0f;
+                }
+            }
+            else if (EntityManager.HasComponent<UnityEngine.AI.NavMeshAgent>(entity))
             {
                 var agent = EntityManager.GetComponentObject<UnityEngine.AI.NavMeshAgent>(entity);
                 if (agent != null && agent.enabled && agent.isOnNavMesh)

@@ -635,8 +635,9 @@ public class ArchitectureRegressionTests
         var system = world.GetOrCreateSystemManaged<EnemyDetectionSystem>();
         system.Update();
 
-        long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
         var watch = System.Diagnostics.Stopwatch.StartNew();
+        long allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        watch.Restart();
         system.Update();
         watch.Stop();
         long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
@@ -645,8 +646,14 @@ public class ArchitectureRegressionTests
         Assert.That(em.GetBuffer<SquadTargetEntity>(squadB).Length, Is.EqualTo(450));
         Assert.That(em.GetBuffer<DetectedEnemy>(squadA).Length, Is.EqualTo(1));
         Assert.That(em.GetBuffer<DetectedEnemy>(squadB).Length, Is.EqualTo(1));
+        Assert.That(system.DebugObserverCount, Is.EqualTo(2));
+        Assert.That(system.DebugCandidateOccurrences, Is.EqualTo(900));
+        Assert.That(system.DebugExactDistanceChecks, Is.EqualTo(900));
+        Assert.That(system.DebugPublishedTargets, Is.EqualTo(900));
+        Assert.That(allocatedBytes, Is.Zero, "Warmed detection must reuse storage without main-thread managed allocation.");
         TestContext.WriteLine($"Enemy detection 900 units warm-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
-            $"managed allocation: {allocatedBytes} bytes, candidate entries: 900");
+            $"managed allocation: {allocatedBytes} bytes, candidate entries: {system.DebugCandidateOccurrences}, " +
+            $"grid cells: {system.DebugGridCellVisits}, exact checks: {system.DebugExactDistanceChecks}");
 
         var targeting = world.GetOrCreateSystemManaged<UnitTargetingSystem>();
         targeting.Update();
@@ -664,7 +671,284 @@ public class ArchitectureRegressionTests
                 assignedTargets++;
         Assert.That(assignedTargets, Is.EqualTo(900));
         TestContext.WriteLine($"Unit targeting 900 units warm-frame: {watch.Elapsed.TotalMilliseconds:F2} ms, " +
-            $"managed allocation: {allocatedBytes} bytes");
+            $"managed allocation: {allocatedBytes} bytes, candidate checks: {targeting.DebugCandidateChecks}, " +
+            $"retargets: {targeting.DebugRetargetCount}");
+    }
+
+    [Test]
+    public void EnemyDetectionPreservesNegativeRadiusBoundaryAndDuplicateOrder()
+    {
+        Entity CreateUnit(float x, float y = 0f, bool dead = false)
+        {
+            var unit = dead
+                ? em.CreateEntity(typeof(LocalTransform), typeof(IsDeadComponent))
+                : em.CreateEntity(typeof(LocalTransform));
+            em.SetComponentData(unit, LocalTransform.FromPosition(new float3(x, y, 0f)));
+            return unit;
+        }
+
+        Entity CreateSquad(Team team, float range, params Entity[] members)
+        {
+            var squad = em.CreateEntity(typeof(SquadDefinitionComponent), typeof(SquadDataComponent),
+                typeof(TeamComponent));
+            em.SetComponentData(squad, new SquadDefinitionComponent { detectionRange = range });
+            em.SetComponentData(squad, new TeamComponent { value = team });
+            em.AddBuffer<DetectedEnemy>(squad);
+            em.AddBuffer<SquadTargetEntity>(squad);
+            var units = em.AddBuffer<SquadUnitElement>(squad);
+            foreach (var member in members)
+                units.Add(new SquadUnitElement { Value = member });
+            return squad;
+        }
+
+        var observerUnit = CreateUnit(0f);
+        var observer = CreateSquad(Team.TeamA, -2f, observerUnit);
+        var firstEnemy = CreateUnit(1f);
+        var boundaryEnemy = CreateUnit(0f, 2f);
+        var deadEnemy = CreateUnit(0.5f, dead: true);
+        var enemySquad = CreateSquad(Team.TeamB, -1f,
+            firstEnemy, firstEnemy, boundaryEnemy, deadEnemy);
+        var hero = em.CreateEntity(typeof(TeamComponent), typeof(LocalTransform), typeof(DetectableEntityTag));
+        em.SetComponentData(hero, new TeamComponent { value = Team.TeamB });
+        em.SetComponentData(hero, LocalTransform.FromPosition(new float3(2f, 0f, 0f)));
+
+        world.GetOrCreateSystemManaged<EnemyDetectionSystem>().Update();
+
+        var detected = em.GetBuffer<DetectedEnemy>(observer);
+        Assert.That(detected.Length, Is.EqualTo(2));
+        Assert.That(detected[0].Value, Is.EqualTo(enemySquad));
+        Assert.That(detected[1].Value, Is.EqualTo(hero));
+        var targets = em.GetBuffer<SquadTargetEntity>(observer);
+        Assert.That(targets.Length, Is.EqualTo(4));
+        Assert.That(targets[0].Value, Is.EqualTo(firstEnemy));
+        Assert.That(targets[1].Value, Is.EqualTo(firstEnemy));
+        Assert.That(targets[2].Value, Is.EqualTo(boundaryEnemy));
+        Assert.That(targets[3].Value, Is.EqualTo(hero));
+    }
+
+    [Test]
+    public void EnemyDetectionSpatialIndexPrunesDistantOccurrences()
+    {
+        Entity CreateDetectionSquad(Team team, float xOffset)
+        {
+            var squad = em.CreateEntity(typeof(SquadDefinitionComponent), typeof(SquadDataComponent),
+                typeof(TeamComponent));
+            em.SetComponentData(squad, new SquadDefinitionComponent { detectionRange = 2f });
+            em.SetComponentData(squad, new TeamComponent { value = team });
+            em.AddBuffer<SquadUnitElement>(squad);
+            em.AddBuffer<DetectedEnemy>(squad);
+            em.AddBuffer<SquadTargetEntity>(squad);
+            for (int i = 0; i < 100; i++)
+            {
+                var unit = em.CreateEntity(typeof(LocalTransform));
+                em.SetComponentData(unit, LocalTransform.FromPosition(new float3(xOffset + i * 10f, 0f, 0f)));
+                em.GetBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
+            }
+            return squad;
+        }
+
+        var squadA = CreateDetectionSquad(Team.TeamA, 0f);
+        var squadB = CreateDetectionSquad(Team.TeamB, 5000f);
+        var system = world.GetOrCreateSystemManaged<EnemyDetectionSystem>();
+
+        system.Update();
+
+        Assert.That(em.GetBuffer<SquadTargetEntity>(squadA).Length, Is.Zero);
+        Assert.That(em.GetBuffer<SquadTargetEntity>(squadB).Length, Is.Zero);
+        Assert.That(system.DebugCandidateOccurrences, Is.EqualTo(200));
+        Assert.That(system.DebugExactDistanceChecks, Is.LessThan(200));
+    }
+
+    [Test]
+    public void EnemyDetectionMatchesOriginalBruteForceScanAcrossEdgeCasesAndRespawn()
+    {
+        Entity CreateUnit(float3 position, bool hasTransform = true, bool dead = false)
+        {
+            var entity = em.CreateEntity();
+            if (hasTransform)
+                em.AddComponentData(entity, LocalTransform.FromPosition(position));
+            if (dead)
+                em.AddComponent<IsDeadComponent>(entity);
+            return entity;
+        }
+
+        Entity CreateSquad(Team team, float range, params Entity[] members)
+        {
+            var squad = em.CreateEntity(typeof(SquadDefinitionComponent), typeof(SquadDataComponent),
+                typeof(TeamComponent));
+            em.SetComponentData(squad, new SquadDefinitionComponent { detectionRange = range });
+            em.SetComponentData(squad, new TeamComponent { value = team });
+            em.AddBuffer<DetectedEnemy>(squad);
+            em.AddBuffer<SquadTargetEntity>(squad);
+            var units = em.AddBuffer<SquadUnitElement>(squad);
+            foreach (var member in members)
+                units.Add(new SquadUnitElement { Value = member });
+            return squad;
+        }
+
+        Entity CreateHero(Team team, float3 position, bool alive, bool deadTag = false)
+        {
+            var hero = em.CreateEntity(typeof(TeamComponent), typeof(LocalTransform), typeof(DetectableEntityTag),
+                typeof(HeroLifeComponent));
+            em.SetComponentData(hero, new TeamComponent { value = team });
+            em.SetComponentData(hero, LocalTransform.FromPosition(position));
+            em.SetComponentData(hero, new HeroLifeComponent { isAlive = alive });
+            if (deadTag)
+                em.AddComponent<IsDeadComponent>(hero);
+            return hero;
+        }
+
+        var origin = CreateUnit(float3.zero);
+        CreateSquad(Team.TeamA, 0f, origin);
+        var negativeRangeObserverUnit = CreateUnit(new float3(0f, 0f, 0f));
+        CreateSquad(Team.TeamB, -2f, negativeRangeObserverUnit);
+        var nanCentroidUnit = CreateUnit(new float3(float.NaN, 0f, 0f));
+        CreateSquad(Team.TeamA, float.NaN, nanCentroidUnit);
+        var infinityRangeObserverUnit = CreateUnit(new float3(1e30f, 0f, 0f));
+        CreateSquad(Team.None, float.PositiveInfinity, infinityRangeObserverUnit);
+        var deadObserverUnit = CreateUnit(float3.zero, dead: true);
+        var noTransformObserverUnit = CreateUnit(float3.zero, hasTransform: false);
+        CreateSquad(Team.TeamB, 3f, deadObserverUnit, noTransformObserverUnit);
+
+        var duplicate = CreateUnit(new float3(1f, 0f, 0f));
+        var boundary = CreateUnit(new float3(0f, 2f, 0f));
+        var nanCandidate = CreateUnit(new float3(float.NaN, 0f, 0f));
+        var infiniteCandidate = CreateUnit(new float3(float.PositiveInfinity, 0f, 0f));
+        var hugeCandidate = CreateUnit(new float3(2e30f, 0f, 0f));
+        var deadCandidate = CreateUnit(float3.zero, dead: true);
+        var missingTransformCandidate = CreateUnit(float3.zero, hasTransform: false);
+        var destroyedCandidate = CreateUnit(float3.zero);
+        em.DestroyEntity(destroyedCandidate);
+        var overlapHero = CreateHero(Team.TeamB, new float3(0f, 0f, 0f), alive: true);
+        CreateSquad(Team.TeamB, 0f, duplicate, duplicate, boundary, nanCandidate,
+            infiniteCandidate, hugeCandidate, deadCandidate, missingTransformCandidate, destroyedCandidate,
+            overlapHero);
+        var candidateSquadBUnit = CreateUnit(new float3(0f, 0f, 0f));
+        CreateSquad(Team.TeamA, 0f, candidateSquadBUnit);
+        CreateHero(Team.TeamB, float3.zero, alive: true);
+        CreateHero(Team.TeamB, float3.zero, alive: false);
+        CreateHero(Team.TeamB, float3.zero, alive: true, deadTag: true);
+        var respawningHero = CreateHero(Team.TeamB, float3.zero, alive: false, deadTag: true);
+        CreateHero(Team.TeamA, new float3(0f, float.NegativeInfinity, 0f), alive: true);
+
+        var system = world.GetOrCreateSystemManaged<EnemyDetectionSystem>();
+
+        System.Collections.Generic.Dictionary<Entity, (System.Collections.Generic.List<Entity> Detected,
+            System.Collections.Generic.List<Entity> Targets)> ScanOriginal()
+        {
+            var expected = new System.Collections.Generic.Dictionary<Entity,
+                (System.Collections.Generic.List<Entity>, System.Collections.Generic.List<Entity>)>();
+            var observerQuery = em.CreateEntityQuery(typeof(SquadDefinitionComponent), typeof(TeamComponent),
+                typeof(SquadUnitElement), typeof(DetectedEnemy), typeof(SquadTargetEntity));
+            var squadQuery = em.CreateEntityQuery(typeof(TeamComponent), typeof(SquadUnitElement),
+                typeof(SquadDataComponent));
+            var heroQuery = em.CreateEntityQuery(typeof(TeamComponent), typeof(LocalTransform),
+                typeof(DetectableEntityTag));
+            try
+            {
+                using var observers = observerQuery.ToEntityArray(Allocator.Temp);
+                using var squads = squadQuery.ToEntityArray(Allocator.Temp);
+                using var heroes = heroQuery.ToEntityArray(Allocator.Temp);
+                foreach (var observer in observers)
+                {
+                    var detected = new System.Collections.Generic.List<Entity>();
+                    var targets = new System.Collections.Generic.List<Entity>();
+                    var unitsA = em.GetBuffer<SquadUnitElement>(observer);
+                    float3 centroid = float3.zero;
+                    int aliveCount = 0;
+                    for (int i = 0; i < unitsA.Length; i++)
+                    {
+                        Entity unit = unitsA[i].Value;
+                        if (!em.Exists(unit) || !em.HasComponent<LocalTransform>(unit)
+                            || em.HasComponent<IsDeadComponent>(unit))
+                            continue;
+                        centroid += em.GetComponentData<LocalTransform>(unit).Position;
+                        aliveCount++;
+                    }
+                    if (aliveCount > 0)
+                    {
+                        centroid /= aliveCount;
+                        Team teamA = em.GetComponentData<TeamComponent>(observer).value;
+                        float range = em.GetComponentData<SquadDefinitionComponent>(observer).detectionRange;
+                        float rangeSquared = range * range;
+                        foreach (var enemySquad in squads)
+                        {
+                            if (enemySquad == observer)
+                                continue;
+                            Team teamB = em.GetComponentData<TeamComponent>(enemySquad).value;
+                            if (teamB == teamA)
+                                continue;
+
+                            bool squadRegistered = false;
+                            var unitsB = em.GetBuffer<SquadUnitElement>(enemySquad);
+                            for (int j = 0; j < unitsB.Length; j++)
+                            {
+                                Entity unit = unitsB[j].Value;
+                                if (!em.Exists(unit) || !em.HasComponent<LocalTransform>(unit)
+                                    || em.HasComponent<IsDeadComponent>(unit))
+                                    continue;
+                                float3 position = em.GetComponentData<LocalTransform>(unit).Position;
+                                if (math.distancesq(centroid, position) > rangeSquared)
+                                    continue;
+                                if (!squadRegistered)
+                                {
+                                    detected.Add(enemySquad);
+                                    squadRegistered = true;
+                                }
+                                targets.Add(unit);
+                            }
+                        }
+
+                        foreach (var hero in heroes)
+                        {
+                            if (em.GetComponentData<TeamComponent>(hero).value == teamA)
+                                continue;
+                            if (em.HasComponent<IsDeadComponent>(hero))
+                                continue;
+                            if (em.HasComponent<HeroLifeComponent>(hero)
+                                && !em.GetComponentData<HeroLifeComponent>(hero).isAlive)
+                                continue;
+                            float3 position = em.GetComponentData<LocalTransform>(hero).Position;
+                            if (math.distancesq(centroid, position) > rangeSquared)
+                                continue;
+                            detected.Add(hero);
+                            targets.Add(hero);
+                        }
+                    }
+                    expected.Add(observer, (detected, targets));
+                }
+            }
+            finally
+            {
+                observerQuery.Dispose();
+                squadQuery.Dispose();
+                heroQuery.Dispose();
+            }
+            return expected;
+        }
+
+        void AssertMatchesOriginalScan()
+        {
+            var expected = ScanOriginal();
+            system.Update();
+            foreach (var pair in expected)
+            {
+                var actualDetected = em.GetBuffer<DetectedEnemy>(pair.Key);
+                var actualTargets = em.GetBuffer<SquadTargetEntity>(pair.Key);
+                Assert.That(actualDetected.Length, Is.EqualTo(pair.Value.Detected.Count), $"Detected length for {pair.Key}");
+                Assert.That(actualTargets.Length, Is.EqualTo(pair.Value.Targets.Count), $"Targets length for {pair.Key}");
+                for (int i = 0; i < actualDetected.Length; i++)
+                    Assert.That(actualDetected[i].Value, Is.EqualTo(pair.Value.Detected[i]), $"Detected[{i}] for {pair.Key}");
+                for (int i = 0; i < actualTargets.Length; i++)
+                    Assert.That(actualTargets[i].Value, Is.EqualTo(pair.Value.Targets[i]), $"Targets[{i}] for {pair.Key}");
+            }
+        }
+
+        AssertMatchesOriginalScan();
+
+        em.RemoveComponent<IsDeadComponent>(respawningHero);
+        em.SetComponentData(respawningHero, new HeroLifeComponent { isAlive = true });
+        AssertMatchesOriginalScan();
     }
 
     [Test]

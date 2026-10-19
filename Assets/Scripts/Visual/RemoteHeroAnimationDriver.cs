@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ConquestTactics.Animation;
 using Synty.AnimationBaseLocomotion.Samples;
 using Unity.Entities;
@@ -21,6 +22,13 @@ namespace ConquestTactics.Visual
         private Animator _animator;
         private bool _wasMoving;
         private bool _isBound;
+        private readonly Dictionary<int, float> _floatParameterCache = new();
+        private readonly Dictionary<int, int> _integerParameterCache = new();
+        private readonly Dictionary<int, bool> _boolParameterCache = new();
+        private Animator _cachedParameterAnimator;
+        private RuntimeAnimatorController _cachedParameterController;
+        private bool _cachedAnimatorEnabled;
+        private bool _hasParameterCacheState;
 
         public bool IsBound => IsValidBinding();
 
@@ -36,6 +44,7 @@ namespace ConquestTactics.Visual
             _heroEntity = heroEntity;
             _isBound = world != null && world.IsCreated && heroEntity != Entity.Null;
             CacheComponents();
+            InvalidateAnimatorParameterCache();
 
             if (!_isBound)
             {
@@ -58,6 +67,7 @@ namespace ConquestTactics.Visual
             _isBound = false;
             _heroEntity = Entity.Null;
             _wasMoving = false;
+            InvalidateAnimatorParameterCache();
             enabled = false;
         }
 
@@ -69,6 +79,7 @@ namespace ConquestTactics.Visual
             CacheComponents();
             if (_animator == null)
                 return;
+            RefreshAnimatorParameterCache();
 
             if (_navAgent != null && _navAgent.enabled && _navAgent.isOnNavMesh)
                 DriveLocomotion();
@@ -93,19 +104,19 @@ namespace ConquestTactics.Visual
             Vector3 direction = isMoving ? transform.InverseTransformDirection(velocity.normalized) : Vector3.forward;
 
             bool justStartedMoving = isMoving && !_wasMoving;
-            _animator.SetFloat(AnimationHashes.MoveSpeed,
+            SetAnimatorFloat(AnimationHashes.MoveSpeed,
                 _locomotion.GetBlendSpeed(speed, baseSpeed, _navAgent.speed, sprinting));
-            _animator.SetInteger(AnimationHashes.CurrentGait, (int)gait);
-            _animator.SetBool(AnimationHashes.IsGrounded, true);
-            _animator.SetBool(AnimationHashes.IsStopped, !isMoving);
-            _animator.SetBool(AnimationHashes.MovementInputHeld, isMoving && !justStartedMoving);
-            _animator.SetBool(AnimationHashes.MovementInputPressed, justStartedMoving);
-            _animator.SetBool(AnimationHashes.IsWalking, gait == LocomotionGait.Walk);
-            _animator.SetFloat(AnimationHashes.IsStrafing, isMoving ? 1f : 0f);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionX, direction.x);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, direction.z);
-            _animator.SetFloat(AnimationHashes.ForwardStrafe, direction.z >= 0f ? 1f : 0f);
-            _animator.SetBool(AnimationHashes.MovementInputTapped, justStartedMoving);
+            SetAnimatorInteger(AnimationHashes.CurrentGait, (int)gait);
+            SetAnimatorBool(AnimationHashes.IsGrounded, true);
+            SetAnimatorBool(AnimationHashes.IsStopped, !isMoving);
+            SetAnimatorBool(AnimationHashes.MovementInputHeld, isMoving && !justStartedMoving);
+            SetAnimatorBool(AnimationHashes.MovementInputPressed, justStartedMoving);
+            SetAnimatorBool(AnimationHashes.IsWalking, gait == LocomotionGait.Walk);
+            SetAnimatorFloat(AnimationHashes.IsStrafing, isMoving ? 1f : 0f);
+            SetAnimatorFloat(AnimationHashes.StrafeDirectionX, direction.x);
+            SetAnimatorFloat(AnimationHashes.StrafeDirectionZ, direction.z);
+            SetAnimatorFloat(AnimationHashes.ForwardStrafe, direction.z >= 0f ? 1f : 0f);
+            SetAnimatorBool(AnimationHashes.MovementInputTapped, justStartedMoving);
             _wasMoving = isMoving;
 
             float headLookX = 0f;
@@ -116,25 +127,25 @@ namespace ConquestTactics.Visual
                 headLookX = animation.headLookX;
                 headLookY = animation.headLookY;
             }
-            _animator.SetFloat(AnimationHashes.HeadLookX, headLookX);
-            _animator.SetFloat(AnimationHashes.HeadLookY, headLookY);
-            _animator.SetFloat(AnimationHashes.BodyLookX, 0f);
-            _animator.SetFloat(AnimationHashes.BodyLookY, 0f);
+            SetAnimatorFloat(AnimationHashes.HeadLookX, headLookX);
+            SetAnimatorFloat(AnimationHashes.HeadLookY, headLookY);
+            SetAnimatorFloat(AnimationHashes.BodyLookX, 0f);
+            SetAnimatorFloat(AnimationHashes.BodyLookY, 0f);
         }
 
         private void DriveStoppedLocomotion()
         {
-            _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
-            _animator.SetInteger(AnimationHashes.CurrentGait, 0);
-            _animator.SetBool(AnimationHashes.IsStopped, true);
-            _animator.SetBool(AnimationHashes.MovementInputHeld, false);
-            _animator.SetBool(AnimationHashes.MovementInputPressed, false);
-            _animator.SetBool(AnimationHashes.MovementInputTapped, false);
-            _animator.SetBool(AnimationHashes.IsWalking, false);
-            _animator.SetFloat(AnimationHashes.ForwardStrafe, 0f);
-            _animator.SetFloat(AnimationHashes.IsStrafing, 0f);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f);
+            SetAnimatorFloat(AnimationHashes.MoveSpeed, 0f);
+            SetAnimatorInteger(AnimationHashes.CurrentGait, 0);
+            SetAnimatorBool(AnimationHashes.IsStopped, true);
+            SetAnimatorBool(AnimationHashes.MovementInputHeld, false);
+            SetAnimatorBool(AnimationHashes.MovementInputPressed, false);
+            SetAnimatorBool(AnimationHashes.MovementInputTapped, false);
+            SetAnimatorBool(AnimationHashes.IsWalking, false);
+            SetAnimatorFloat(AnimationHashes.ForwardStrafe, 0f);
+            SetAnimatorFloat(AnimationHashes.IsStrafing, 0f);
+            SetAnimatorFloat(AnimationHashes.StrafeDirectionX, 0f);
+            SetAnimatorFloat(AnimationHashes.StrafeDirectionZ, 1f);
             _wasMoving = false;
         }
 
@@ -155,14 +166,78 @@ namespace ConquestTactics.Visual
             if (entityManager.HasComponent<HeroCombatComponent>(_heroEntity))
             {
                 bool attacking = entityManager.GetComponentData<HeroCombatComponent>(_heroEntity).isAttacking;
-                _animator.SetBool(AnimationHashes.IsAttacking, attacking);
+                SetAnimatorBool(AnimationHashes.IsAttacking, attacking);
             }
         }
 
         private void CacheComponents()
         {
             if (_navAgent == null) _navAgent = GetComponent<NavMeshAgent>();
-            if (_animator == null) _animator = GetComponentInChildren<Animator>(true);
+            if (_animator == null)
+            {
+                var animator = GetComponentInChildren<Animator>(true);
+                if (animator != _animator)
+                {
+                    _animator = animator;
+                    InvalidateAnimatorParameterCache();
+                }
+            }
+        }
+
+        private void OnEnable() => InvalidateAnimatorParameterCache();
+
+        private void OnDisable() => InvalidateAnimatorParameterCache();
+
+        private void RefreshAnimatorParameterCache()
+        {
+            var controller = _animator.runtimeAnimatorController;
+            bool animatorEnabled = _animator.isActiveAndEnabled;
+            if (_hasParameterCacheState && _cachedParameterAnimator == _animator
+                && _cachedParameterController == controller
+                && _cachedAnimatorEnabled == animatorEnabled)
+                return;
+
+            _floatParameterCache.Clear();
+            _integerParameterCache.Clear();
+            _boolParameterCache.Clear();
+            _cachedParameterAnimator = _animator;
+            _cachedParameterController = controller;
+            _cachedAnimatorEnabled = animatorEnabled;
+            _hasParameterCacheState = true;
+        }
+
+        private void InvalidateAnimatorParameterCache()
+        {
+            _floatParameterCache.Clear();
+            _integerParameterCache.Clear();
+            _boolParameterCache.Clear();
+            _cachedParameterAnimator = null;
+            _cachedParameterController = null;
+            _hasParameterCacheState = false;
+        }
+
+        private void SetAnimatorFloat(int parameter, float value)
+        {
+            if (_floatParameterCache.TryGetValue(parameter, out float previous) && previous.Equals(value))
+                return;
+            _animator.SetFloat(parameter, value);
+            _floatParameterCache[parameter] = value;
+        }
+
+        private void SetAnimatorInteger(int parameter, int value)
+        {
+            if (_integerParameterCache.TryGetValue(parameter, out int previous) && previous == value)
+                return;
+            _animator.SetInteger(parameter, value);
+            _integerParameterCache[parameter] = value;
+        }
+
+        private void SetAnimatorBool(int parameter, bool value)
+        {
+            if (_boolParameterCache.TryGetValue(parameter, out bool previous) && previous == value)
+                return;
+            _animator.SetBool(parameter, value);
+            _boolParameterCache[parameter] = value;
         }
 
         private bool IsValidBinding()

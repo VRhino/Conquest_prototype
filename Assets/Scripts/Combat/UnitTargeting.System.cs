@@ -13,12 +13,22 @@ using Unity.Transforms;
 [UpdateAfter(typeof(UnitDeathSystem))]
 public partial class UnitTargetingSystem : SystemBase
 {
+    private static readonly Unity.Profiling.ProfilerMarker TargetingMarker =
+        new Unity.Profiling.ProfilerMarker("Conquest.UnitTargeting");
+
     private readonly HashSet<Entity> _validTargets = new();
     private readonly Dictionary<Entity, int> _meleeCounts = new();
     private readonly Dictionary<Entity, int> _rangedCounts = new();
 
+    public int DebugCandidateChecks { get; private set; }
+    public int DebugRetargetCount { get; private set; }
+
     protected override void OnUpdate()
     {
+        using var targetingSample = TargetingMarker.Auto();
+        DebugCandidateChecks = 0;
+        DebugRetargetCount = 0;
+
         int maxPerTarget = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
             ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().maxUnitsPerTarget
             : 2;
@@ -58,6 +68,7 @@ public partial class UnitTargetingSystem : SystemBase
             _rangedCounts.Clear();
             for (int j = 0; j < detected.Length; j++)
             {
+                DebugCandidateChecks++;
                 Entity candidate = detected[j].Value;
                 if (!SystemAPI.Exists(candidate) || !SystemAPI.HasComponent<LocalTransform>(candidate)
                     || SystemAPI.HasComponent<IsDeadComponent>(candidate)) continue;
@@ -85,11 +96,13 @@ public partial class UnitTargetingSystem : SystemBase
 
                 if (!currentValid)
                 {
+                    Entity previousTarget = combat.ValueRO.target;
                     float3 unitPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                     float bestDist = float.MaxValue;
                     Entity bestEnemy = Entity.Null;
                     for (int j = 0; j < detected.Length; j++)
                     {
+                        DebugCandidateChecks++;
                         Entity enemy = detected[j].Value;
                         if (!_validTargets.Contains(enemy))
                             continue;
@@ -101,6 +114,8 @@ public partial class UnitTargetingSystem : SystemBase
                             bestEnemy = enemy;
                         }
                     }
+                    if (bestEnemy != Entity.Null && bestEnemy != previousTarget)
+                        DebugRetargetCount++;
                     combat.ValueRW.target = bestEnemy;
                 }
 
@@ -149,6 +164,7 @@ public partial class UnitTargetingSystem : SystemBase
 
                 for (int j = 0; j < detected.Length; j++)
                 {
+                    DebugCandidateChecks++;
                     Entity candidate = detected[j].Value;
                     if (candidate == combat.ValueRO.target || !_validTargets.Contains(candidate))
                         continue;
@@ -159,6 +175,7 @@ public partial class UnitTargetingSystem : SystemBase
                     {
                         meleeEnemyCounts[combat.ValueRO.target] = count - 1;
                         combat.ValueRW.target = candidate;
+                        DebugRetargetCount++;
                         meleeEnemyCounts.TryAdd(candidate, 0);
                         meleeEnemyCounts[candidate] = current + 1;
                         break;
@@ -204,6 +221,7 @@ public partial class UnitTargetingSystem : SystemBase
 
                 for (int j = 0; j < detected.Length; j++)
                 {
+                    DebugCandidateChecks++;
                     Entity candidate = detected[j].Value;
                     if (candidate == combat.ValueRO.target
                         || candidate == Entity.Null
@@ -226,6 +244,7 @@ public partial class UnitTargetingSystem : SystemBase
                     rangedEnemyCounts.TryAdd(bestCandidate, 0);
                     rangedEnemyCounts[bestCandidate] = bestCount + 1;
                     combat.ValueRW.target = bestCandidate;
+                    DebugRetargetCount++;
                 }
             }
 
