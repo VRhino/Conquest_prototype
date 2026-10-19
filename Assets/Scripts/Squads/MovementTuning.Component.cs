@@ -13,11 +13,7 @@ public struct MovementTuningComponent : IComponentData
     public float arrivalCalmTime;
     public float holdReformRadius;
 
-    // Start delays. The random ranges are the current behaviour; C2 replaces them with row stagger.
-    public float followStartDelayMin;
-    public float followStartDelayMax;
-    public float holdStartDelayMin;
-    public float holdStartDelayMax;
+    // Start delays: front row first, then startRowDelay per row plus a deterministic jitter.
     public float startRowDelay;
     public float startJitterDelay;
 
@@ -42,10 +38,6 @@ public struct MovementTuningComponent : IComponentData
         arrivalRadiusOut = 0.5f,
         arrivalCalmTime = 0.15f,
         holdReformRadius = 1f,
-        followStartDelayMin = 0.5f,
-        followStartDelayMax = 1.5f,
-        holdStartDelayMin = 0.5f,
-        holdStartDelayMax = 1f,
         startRowDelay = 0.08f,
         startJitterDelay = 0.1f,
         destinationChangeMin = 0.25f,
@@ -71,8 +63,7 @@ public struct MovementTuningComponent : IComponentData
         if (t.arrivalRadiusOut > cellSize * 0.5f) return $"arrivalRadiusOut must not exceed half a grid cell ({cellSize * 0.5f}).";
         if (t.arrivalRadiusIn >= cellSize * 0.25f) return $"arrivalRadiusIn must be smaller than a quarter grid cell ({cellSize * 0.25f}).";
         if (t.holdReformRadius < t.arrivalRadiusIn) return "holdReformRadius must not be smaller than arrivalRadiusIn.";
-        if (t.followStartDelayMin > t.followStartDelayMax || t.holdStartDelayMin > t.holdStartDelayMax)
-            return "Start delay minimums must not exceed their maximums.";
+        if (t.startRowDelay < 0f || t.startJitterDelay < 0f) return "Start delays must not be negative.";
         if (t.destinationLeadTime < 0f || t.destinationLeadMaxDistance < 0f) return "Destination lead must not be negative.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
         return null;

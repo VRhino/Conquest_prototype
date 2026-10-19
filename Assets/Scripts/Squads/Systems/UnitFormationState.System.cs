@@ -35,6 +35,12 @@ public partial struct UnitFormationStateSystem : ISystem
             bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
                 && squadState.currentState != SquadFSMState.Retreating;
 
+            // Front row = largest grid y (local forward); start delays are staggered from it.
+            int frontRowY = int.MinValue;
+            for (int i = 0; i < units.Length; i++)
+                if (SystemAPI.HasComponent<UnitGridSlotComponent>(units[i].Value))
+                    frontRowY = math.max(frontRowY, SystemAPI.GetComponent<UnitGridSlotComponent>(units[i].Value).gridPosition.y);
+
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;
@@ -69,9 +75,12 @@ public partial struct UnitFormationStateSystem : ISystem
                     stateComp.DelayDuration, out var arrivalEvent);
 
                 if (arrivalEvent == FormationArrivalEvent.LeftSlot)
-                    stateComp.DelayDuration = isHoldingPosition
-                        ? UnityEngine.Random.Range(tuning.holdStartDelayMin, tuning.holdStartDelayMax)
-                        : UnityEngine.Random.Range(tuning.followStartDelayMin, tuning.followStartDelayMax);
+                {
+                    var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
+                    stateComp.DelayDuration = FormationStartDelay.Compute(
+                        FormationStartDelay.RowRank(slot.gridPosition, frontRowY), slot.slotIndex,
+                        slot.gridPosition, tuning.startRowDelay, tuning.startJitterDelay);
+                }
                 if (hasMilestoneTags && arrivalEvent == FormationArrivalEvent.StartedMoving)
                     SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
                 if (hasMilestoneTags && arrivalEvent == FormationArrivalEvent.Arrived)

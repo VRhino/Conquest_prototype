@@ -18,10 +18,6 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0.01f)] public float holdReformRadius = 1f;
 
     [Header("Start delays")]
-    [Min(0f)] public float followStartDelayMin = 0.5f;
-    [Min(0f)] public float followStartDelayMax = 1.5f;
-    [Min(0f)] public float holdStartDelayMin = 0.5f;
-    [Min(0f)] public float holdStartDelayMax = 1f;
     [Tooltip("Extra delay per row behind the front row (s). The Dispersed formation will use a larger jitter.")]
     [Min(0f)] public float startRowDelay = 0.08f;
     [Tooltip("Deterministic per-unit jitter added to the row delay (s).")]
@@ -47,10 +43,6 @@ public class MovementTuningConfig : ScriptableObject
         arrivalRadiusOut = arrivalRadiusOut,
         arrivalCalmTime = arrivalCalmTime,
         holdReformRadius = holdReformRadius,
-        followStartDelayMin = followStartDelayMin,
-        followStartDelayMax = followStartDelayMax,
-        holdStartDelayMin = holdStartDelayMin,
-        holdStartDelayMax = holdStartDelayMax,
         startRowDelay = startRowDelay,
         startJitterDelay = startJitterDelay,
         destinationChangeMin = destinationChangeMin,
