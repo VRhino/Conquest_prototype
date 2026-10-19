@@ -115,6 +115,9 @@ public partial class UnitNavMeshSystem : SystemBase
         float meleeStopDistanceFactor = tuning.meleeStopDistanceFactor;
         // Within this distance a melee unit turns to face its target manually.
         float combatFacingRange = tuning.combatFacingRange;
+        float dt = SystemAPI.Time.DeltaTime;
+        // Below this slot speed the formation command is the slot itself (no lead).
+        float leadSpeedThresholdSq = math.square(hasConfig ? config.anchorMovingSpeedThreshold : 0.1f);
 
         // Movement + rotation decision per NavMesh unit.
         foreach (var (targetPos, formState, navigationState, transform, entity) in
@@ -141,6 +144,10 @@ public partial class UnitNavMeshSystem : SystemBase
             float3 unitPos = transform.ValueRO.Position;
             float3 requestedSlot = targetPos.ValueRO.position;
             var navigation = navigationState.ValueRO;
+            float3 slotVelocity = FormationDestinationPrediction.UpdateSlotVelocity(
+                ref navigation.previousRequestedSlot, ref navigation.hasPreviousRequestedSlot,
+                ref navigation.slotVelocity, requestedSlot, dt, tuning.slotVelocitySmoothing,
+                2f * tuning.destinationLeadMaxDistance);
             DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
                 arrivalThreshold, now, retryInterval, ref navigation);
             float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
@@ -275,6 +282,26 @@ public partial class UnitNavMeshSystem : SystemBase
             }
             else
             {
+                float commandChangeThreshold = destinationChangeThreshold;
+                if (usesFormationDestination)
+                {
+                    // Lead the moving slot; the arrival check keeps using the real slot (effectiveFormationDestination).
+                    commandChangeThreshold = FormationDestinationPrediction.ChangeThreshold(slotVelocity,
+                        tuning.destinationChangeMin, tuning.destinationChangeSpeedFactor);
+                    if (math.lengthsq(slotVelocity.xz) > leadSpeedThresholdSq && !navigation.formationDestinationFailed)
+                    {
+                        // Lead the already projected slot: no extra NavMesh projection per command; the agent
+                        // paths to the nearest reachable point if the lead leaves the surface.
+                        float3 predicted = FormationDestinationPrediction.Predict(formationDestination, slotVelocity,
+                            tuning.destinationLeadTime, tuning.destinationLeadMaxDistance);
+                        destination = navigation.hasIssuedCommand && navigation.lastCommandWasFormation
+                            && math.distancesq(predicted, navigation.lastCommandDestination)
+                                < math.square(commandChangeThreshold)
+                            ? navigation.lastCommandDestination
+                            : predicted;
+                    }
+                }
+
                 if (!usesFormationDestination
                     && navigation.hasIssuedCommand && !navigation.lastCommandWasFormation
                     && math.distancesq(destination, navigation.lastCommandDestination)
@@ -290,7 +317,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 bool commandStillValid = navigation.hasIssuedCommand
                     && navigation.lastCommandWasFormation == usesFormationDestination
                     && math.distancesq(destination, navigation.lastCommandDestination)
-                        < math.square(destinationChangeThreshold)
+                        < math.square(commandChangeThreshold)
                     && (agent.pathPending
                         || (agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
                         || math.distancesq(unitPos, destination) < math.square(arrivalThreshold));

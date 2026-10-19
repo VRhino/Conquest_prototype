@@ -25,7 +25,8 @@ public class MovementTuningConfig : ScriptableObject
 
     [Header("Formation destination")]
     [Min(0.01f)] public float destinationChangeMin = 0.25f;
-    [Min(0f)] public float destinationChangeSpeedFactor = 0.05f;
+    [Tooltip("Seconds of slot travel before the formation command is re-sent; keep below destinationLeadTime.")]
+    [Min(0f)] public float destinationChangeSpeedFactor = 0.25f;
     [Min(0f)] public float destinationLeadTime = 0.4f;
     [Min(0f)] public float destinationLeadMaxDistance = 1f;
     [Min(0.01f)] public float slotVelocitySmoothing = 0.15f;

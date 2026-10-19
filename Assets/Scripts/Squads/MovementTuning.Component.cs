@@ -41,7 +41,7 @@ public struct MovementTuningComponent : IComponentData
         startRowDelay = 0.08f,
         startJitterDelay = 0.1f,
         destinationChangeMin = 0.25f,
-        destinationChangeSpeedFactor = 0.05f,
+        destinationChangeSpeedFactor = 0.25f,
         destinationLeadTime = 0.4f,
         destinationLeadMaxDistance = 1f,
         slotVelocitySmoothing = 0.15f,
@@ -66,6 +66,9 @@ public struct MovementTuningComponent : IComponentData
         if (t.startRowDelay < 0f || t.startJitterDelay < 0f) return "Start delays must not be negative.";
         if (t.destinationLeadTime < 0f || t.destinationLeadMaxDistance < 0f) return "Destination lead must not be negative.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
+        // The command must be re-sent before the agent reaches it, or the lead stops paying off.
+        if (t.destinationLeadTime > 0f && t.destinationChangeSpeedFactor >= t.destinationLeadTime)
+            return "destinationChangeSpeedFactor must be smaller than destinationLeadTime.";
         return null;
     }
 }
