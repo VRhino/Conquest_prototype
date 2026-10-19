@@ -10,15 +10,15 @@ public partial struct UnitFormationStateSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<MatchStateComponent>();
-        state.RequireForUpdate<SquadSpawnConfigComponent>();
+        state.RequireForUpdate<MovementTuningComponent>();
     }
 
     public void OnUpdate(ref SystemState state)
     {
         float dt = SystemAPI.Time.DeltaTime;
-        var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
-        float slotThresholdSq = math.square(math.max(0f, spawnConfig.slotArrivalThreshold));
-        float holdPositionThresholdSq = math.square(math.max(0f, spawnConfig.holdReformThreshold));
+        var tuning = SystemAPI.GetSingleton<MovementTuningComponent>();
+        float slotThresholdSq = math.square(math.max(0f, tuning.arrivalRadiusIn));
+        float holdPositionThresholdSq = math.square(math.max(0f, tuning.holdReformRadius));
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -79,7 +79,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(spawnConfig.unitMoveDelayMin, spawnConfig.unitMoveDelayMax);
+                                stateComp.DelayDuration = UnityEngine.Random.Range(tuning.holdStartDelayMin, tuning.holdStartDelayMax);
                             }
                             break;
                         case UnitFormationState.Waiting:
@@ -123,7 +123,7 @@ public partial struct UnitFormationStateSystem : ISystem
                             {
                                 stateComp.State = UnitFormationState.Waiting;
                                 stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(spawnConfig.unitFollowDelayMin, spawnConfig.unitFollowDelayMax);
+                                stateComp.DelayDuration = UnityEngine.Random.Range(tuning.followStartDelayMin, tuning.followStartDelayMax);
                             }
                             break;
 

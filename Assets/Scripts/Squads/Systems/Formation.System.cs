@@ -20,6 +20,9 @@ public partial class FormationSystem : SystemBase
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
+        float formationChangeCooldown = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>().formationChangeCooldown
+            : MovementTuningComponent.Default.formationChangeCooldown;
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         foreach (var (resolved, state, formationComp, squadDef, units, squadEntity) in SystemAPI
@@ -133,7 +136,7 @@ public partial class FormationSystem : SystemBase
             }
 
             formationComp.ValueRW.currentFormation = resolved.ValueRO.formation;
-            s.formationChangeCooldown = 1f;
+            s.formationChangeCooldown = formationChangeCooldown;
 
             // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
             if (s.currentOrder == SquadOrderType.HoldPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))

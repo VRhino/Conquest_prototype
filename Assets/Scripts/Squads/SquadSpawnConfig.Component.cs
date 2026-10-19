@@ -5,8 +5,6 @@ public struct SquadSpawnConfigComponent : IComponentData
     public bool enableEnvironmentAdaptation;
     public float ownerDeathRetreatDuration;
     public float retreatArrivalThreshold;
-    public float slotArrivalThreshold;
-    public float holdReformThreshold;
     public float anchorMovingSpeedThreshold;
     public float animationMovingSpeedThreshold;
     public float animationRunningSpeedRatio;
@@ -32,9 +30,5 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float followForwardOffset; // Distancia delante del héroe al formar en Follow/Attack
     public float unitLeashDistance;   // Max distance (from formation slot) a unit will chase an enemy
     public int   maxUnitsPerTarget;   // Max units allowed to target the same enemy
-    public float unitMoveDelayMin;    // Delay mínimo antes de moverse (orden de formación)
-    public float unitMoveDelayMax;    // Delay máximo antes de moverse (orden de formación)
-    public float unitFollowDelayMin;  // Delay mínimo antes de moverse (follow héroe)
-    public float unitFollowDelayMax;  // Delay máximo antes de moverse (follow héroe)
     public float minCombatDuration;   // Segundos mínimos en InCombat tras perder enemigos de rango
 }

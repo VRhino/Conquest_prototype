@@ -227,7 +227,6 @@ public class SquadNavigationRegressionTests
             new MatchStateComponent { currentState = MatchState.InBattle });
         em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
         {
-            slotArrivalThreshold = 0.2f,
             navMeshDestinationSampleRadius = 0.5f,
             navMeshFailureRetryDistance = 1f
         });

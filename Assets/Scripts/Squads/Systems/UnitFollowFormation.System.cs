@@ -24,6 +24,8 @@ public partial class UnitFollowFormationSystem : SystemBase
         const float defaultMoveSpeed = 5f; // Fallback en caso de que no haya UnitStatsComponent
 
         float dt = SystemAPI.Time.DeltaTime;
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
 
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
         var transformLookup = GetComponentLookup<LocalTransform>();
@@ -104,7 +106,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                                 && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
                                 && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
-                            if (hurryToComander || hasCombatTarget) speedMultiplier *= 2f;
+                            if (hurryToComander || hasCombatTarget) speedMultiplier *= tuning.hurrySpeedMultiplier;
                             navAgent.speed = baseSpeed * speedMultiplier;
                         }
                     }
@@ -157,7 +159,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                             && SystemAPI.HasComponent<UnitRotationIntentComponent>(unit))
                         {
                             quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
-                            float rotSpeed = 5f;
+                            float rotSpeed = tuning.formedRotationSpeed;
                             if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
                                 rotSpeed = SystemAPI.GetComponent<UnitOrientationComponent>(unit).rotationSpeed;
 

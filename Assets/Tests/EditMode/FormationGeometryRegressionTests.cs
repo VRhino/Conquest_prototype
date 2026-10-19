@@ -96,8 +96,7 @@ public class FormationGeometryRegressionTests
         using var world = new World("Per-unit formation state");
         var em = world.EntityManager;
         em.CreateEntity(typeof(MatchStateComponent));
-        em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
-        { slotArrivalThreshold = 0.2f, holdReformThreshold = 1 });
+        em.AddComponentData(em.CreateEntity(), MovementTuningComponent.Default);
         var squad = em.CreateEntity(typeof(SquadStateComponent), typeof(SquadFormationAnchorComponent));
         em.AddComponent<SquadAnchorMovingTag>(squad);
         em.SetComponentEnabled<SquadAnchorMovingTag>(squad, false);

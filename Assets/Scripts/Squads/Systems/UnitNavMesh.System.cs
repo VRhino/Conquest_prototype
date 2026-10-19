@@ -87,12 +87,6 @@ public partial class UnitNavMeshSystem : SystemBase
         return accepted;
     }
 
-    // Stop at 75 % of attackRange — keeps unit inside the directional AABB.
-    private const float StopDistanceFactor = 0.75f;
-
-    // Within this distance the unit turns to face the target manually.
-    private const float EngagementRange = 3.5f;
-
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -113,7 +107,14 @@ public partial class UnitNavMeshSystem : SystemBase
         float retryInterval = hasConfig && config.navMeshFailureRetryInterval > 0f
             ? config.navMeshFailureRetryInterval : 1f;
         double now = SystemAPI.Time.ElapsedTime;
-        float arrivalThreshold = hasConfig ? math.max(0.01f, config.slotArrivalThreshold) : 0.2f;
+        // Movement tuning is optional here so navigation keeps safe defaults in reduced worlds.
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
+        float arrivalThreshold = math.max(0.01f, tuning.arrivalRadiusIn);
+        // Melee units stop at this fraction of attackRange to stay inside the directional AABB.
+        float meleeStopDistanceFactor = tuning.meleeStopDistanceFactor;
+        // Within this distance a melee unit turns to face its target manually.
+        float combatFacingRange = tuning.combatFacingRange;
 
         // Movement + rotation decision per NavMesh unit.
         foreach (var (targetPos, formState, navigationState, transform, entity) in
@@ -200,7 +201,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 
                 // Ranged units stop immediately when in range; melee units push closer (0.75x) 
                 // to stay inside the directional AABB bounds.
-                float  stopDist = isRanged ? attackRange : (attackRange * StopDistanceFactor);
+                float  stopDist = isRanged ? attackRange : (attackRange * meleeStopDistanceFactor);
 
                 if (!isHoldingPosition && dist > stopDist)
                 {
@@ -232,7 +233,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 // por lo que escribir a ECS transform sería sobreescrito en el mismo frame.
                 float facingRange = SystemAPI.HasComponent<UnitRangedStatsComponent>(entity)
                     ? attackRange + 0.25f  // already set to ranged range above, added tolerance
-                    : EngagementRange;
+                    : combatFacingRange;
                 if (dist <= facingRange)
                 {
                     agent.updateRotation = false;
