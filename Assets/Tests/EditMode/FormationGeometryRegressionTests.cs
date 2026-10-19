@@ -96,7 +96,9 @@ public class FormationGeometryRegressionTests
         using var world = new World("Per-unit formation state");
         var em = world.EntityManager;
         em.CreateEntity(typeof(MatchStateComponent));
-        em.AddComponentData(em.CreateEntity(), MovementTuningComponent.Default);
+        var tuning = MovementTuningComponent.Default;
+        tuning.arrivalCalmTime = 0f; // One update with no elapsed time; the calm window is covered by ArrivalHysteresisTests.
+        em.AddComponentData(em.CreateEntity(), tuning);
         var squad = em.CreateEntity(typeof(SquadStateComponent), typeof(SquadFormationAnchorComponent));
         em.AddComponent<SquadAnchorMovingTag>(squad);
         em.SetComponentEnabled<SquadAnchorMovingTag>(squad, false);
