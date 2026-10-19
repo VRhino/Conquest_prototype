@@ -1,7 +1,7 @@
 # CQ-011 — Tipos de batalla, convocatoria del asedio, salidas de héroe y bandos mixtos
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Alta — cambia qué modos de partida monta el servidor de batalla y cuándo recibe el ticket
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-10-06
@@ -112,3 +112,31 @@ El canal `batalla/<battleId>` (doc 02 §3.5) lleva los hechos públicos: `abiert
   siguiente y se reasigna sin él.
 - Un héroe eliminado sin reaparición, o que abandona, sale con su motivo y queda herido si `derrotado`.
 - `BattleResult` cubre a todos los que siguen dentro y trae `derrotado` en cada uno.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta el ciclo y las necesidades; implementación pendiente de cerrar los huecos de contrato.
+CQ-010 queda sustituida. Mensajes de `battle.proto` por sesión 05 reemplazan las rutas HTTP.
+
+- Modos actuales: asedio, campo abierto (`solitarios`), caravana (`DISPUTA`/`AGUANTE`), bandidos,
+  saqueo de pueblo y avanzada por etapa. Las nuevas modalidades amplían esta propuesta.
+  El resultado incorpora `carros_perdidos`; BronzeAge calcula carga y destrucción persistentes.
+- `BattleMapReference.mapa_id` es hash del artefacto. Terreno y paquete deben coincidir; no elegir
+  una escena por semilla o nombre local. La geometría urbana resuelta se recibe del servidor.
+- Una salida `no_conectado` obliga a esperar ticket/revisión nuevos y descartar asignación/tokens
+  anteriores. En curso, quitar del resultado solo las salidas confirmadas por BronzeAge.
+- Conservar presencia de `derrotado`: ausente y `false` no son equivalentes. No sacar como derrotado
+  a un desconectado cuyo bando todavía no ha resuelto; conservarlo para el cierre o acordar una salida
+  con consecuencia diferida. `SalidaBatalla` tampoco publica XP/botín del saliente.
+- Falta concretar entrega privada de instancia/token, renovación de tokens, confirmación y errores
+  de mensajes de batalla, y recuperación del registro tras desconexión (G2-G4).
+- Preservar la necesidad humana de cola de excedentes; el contrato aún no entrega explícitamente
+  sus reservas/promoción. Unity no puede admitir participantes que BronzeAge no haya autorizado (G10).
+- Hay captura y ciclo local reutilizables, pero no selección de todos estos modos ni servidor
+  autoritativo de red. El respawn actual solo cubre al héroe local. Reaparición por modo, rendición y
+  condiciones de victoria necesitan diseño/configuración tácticos; las opciones históricas no se
+  aprueban automáticamente con este dictamen.
+
+El `.proto` define la forma; no prueba implementación: el núcleo Rust observado aún deja
+`ComandoSesion::Batalla` sin procesar. La [revisión conjunta](README.md) recoge evidencias, criterios
+de conservación y dependencias para el cierre completo.

@@ -1,7 +1,7 @@
 # CQ-008 — Aedas: presencia en el mundo 3D y en la interfaz
 
 **Destino:** `Conquest_prototype`
-**Estado:** BORRADOR
+**Estado:** ACEPTADO
 **Prioridad:** Baja — nada de Unity depende de esto para jugar una batalla; es presentación de una mecánica nueva del mundo estratégico
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-10-05
@@ -65,3 +65,22 @@ Comandos nuevos: `comprarTecnologiaAeda`, `empezarEpica`, `abandonarEpica` (todo
 
 El contrato HTTP/OpenAPI de la proyección del jugador (`ProyeccionJugador`) todavía no vive en `src/contratos/v1/`; hoy se consume como
 tipo del backend. Si Conquest quiere fixtures de estos campos, que lo diga y BronzeAge los publica con el resto de la proyección.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta la presentación estratégica; implementación pendiente. Ya existen `AedaItinerante`,
+`AedaResidente`, `EpicaEnCurso`, `TecnologiasFaccion` y `EstadoTecnologia` en el contrato Protobuf.
+Los itinerantes traen `Plan`; evaluarlo con el reloj y respetar visibilidad/revocación del servidor.
+
+Comprar tecnología, empezar y abandonar épica son órdenes tipadas de sesión. La interfaz sigue
+`Delta`/`ResultadoOrden` y muestra los rechazos; no recalcula reglas ni consulta la proyección entera.
+
+Faltan dos piezas para cumplir toda la petición:
+
+- Textos, capítulos, requisitos y enfriamientos disponibles en archivo común versionado o proyección
+  explícita. El `.proto` actual no incluye todos los campos resumidos en esta propuesta histórica.
+- Historia de crónica para un cliente nuevo: `EventoDominio` sirve para novedades, pero no existe
+  consulta/entidad histórica equivalente a `/cronica`. Reanudación por versión no sustituye esa
+  historia cuando el servidor manda una foto. Definir identidad, orden, paginación y deduplicación.
+
+Pendientes G7/G8 en la [revisión conjunta](README.md). No ampliar `BattleTicket` por esta mecánica.

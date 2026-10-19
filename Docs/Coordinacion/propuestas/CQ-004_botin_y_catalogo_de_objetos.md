@@ -1,7 +1,7 @@
 # CQ-004 — Botín en el resultado de batalla y catálogo de objetos
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Media — hace falta antes del primer schema de `BattleResult`
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-09-14
@@ -114,3 +114,24 @@ guarda el objeto entero.
 4. ¿Dónde vive el tamaño de la rejilla (`maxSlots`)? ¿Es fijo o depende del héroe?
 5. ¿Qué otras fuentes de objetos y monedas tiene Conquest fuera de la batalla (tienda, recompensas)? En
    BronzeAge el héroe no tiene hoy ninguna otra vía, y habría que decidir si existen.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta botín y catálogo; implementación pendiente de completar el contrato. Usar `Botin`,
+`ObjetoBotin`, `ResultadoHeroe.botin` y `repeated Estadistica` actuales, no copiar `serializedStats`.
+
+Respuestas desde el código actual:
+
+- Existen consumo con descuento de cantidad (`ConsumableManagerService`), tienda
+  (`StoreTransactionService`), efectos de moneda/equipo y recompensas de diálogo. No constituyen
+  operaciones persistentes autorizadas del modo conectado.
+- `InventoryStorageService.InventoryLimit` parte de 72 y es configurable; no es hoy capacidad por héroe.
+- La compatibilidad y el desequipado automático están en `EquipmentManagerService`. BronzeAge debe
+  validar la operación persistente completa, incluyendo el espacio para piezas desequipadas.
+- No se identificó una mecánica de durabilidad. No introducir pérdida/daño de equipo por inferencia.
+
+`orders.proto` no ofrece equipar/desequipar/consumir/comprar objetos del héroe. El ticket no entrega
+consumibles y el resultado no comunica gasto. Tampoco bastan casillas libres para conocer los stacks
+existentes. Publicar catálogo, política de capacidad/apilamiento y mutaciones antes de habilitarlos.
+Las salidas anticipadas necesitan una vía para su botín, pues no aparecen en el resultado final.
+Ver G4/G6/G7 y criterios actuales en la [revisión conjunta](README.md).

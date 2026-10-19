@@ -1,7 +1,7 @@
 # CQ-010 — Desconexión y abandono de un héroe en una batalla de Unity (D33b)
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** SUSTITUIDO — por [CQ-011](CQ-011_tipos_de_batalla_y_salidas.md)
 **Prioridad:** Media — hoy no bloquea (con todos los bots y las batallas con números); bloquea abrir partidas con jugadores humanos en batallas de Unity
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-10-06
@@ -76,3 +76,18 @@ se cierra.
 - Un héroe que pulsa «abandonar batalla» queda derrotado en el resultado aunque su bando gane.
 - Un héroe que se desconecta y no vuelve recibe el resultado de su bando.
 - `BattleResult` sigue cubriendo a todos (conservación de efectivos, CQ-005 §3).
+
+## Revisión de Conquest — 2026-10-15
+
+La necesidad de reconexión y la distinción entre abandono y desconexión siguen vigentes. CQ-011 las
+absorbe y el contrato actual las expresa mediante `SalidaBatalla` y `ResultadoHeroe.derrotado`.
+No implementar `/abandonos`, `AbandonoBatalla` ni `porHeroe.salida` descritos aquí.
+
+Reconectar debe recuperar la misma instancia y estado sin repetir spawn/reservas. La entrega privada
+de instancia/token al jugador aún necesita forma de mensaje en la sesión (G2).
+
+Para que una desconexión sin regreso reciba el resultado de su bando, mantener al héroe reservado
+hasta conocerlo; una salida temprana con `derrotado` fijo no permite representar esa decisión futura.
+Conducta de la tropa durante la ausencia y plazos de gracia son configuración táctica pendiente,
+sin convertir una caída de transporte en abandono. Recompensas de salidas y confirmaciones requieren
+G3/G4. Detalle en CQ-011 y en la [revisión conjunta](README.md).

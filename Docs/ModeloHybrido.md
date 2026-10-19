@@ -1,6 +1,6 @@
 # Modelo híbrido ECS–GameObject
 
-Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
+Actualizado: 2026-10-19. Contratos revisados contra la implementación actual.
 
 Este documento describe el modelo híbrido implementado. La estructura completa de datos, persistencia y DTO de batalla está en [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md); el detalle temporal de squads está en [Pipeline de movimiento](TroopMovementPipeline.md).
 
@@ -42,8 +42,8 @@ Los componentes `HeroVisualInstance` y `UnitVisualInstance` son managed componen
 | Caso | Intención/decisión | Ejecutor físico | Publicación a ECS | Presentación |
 |---|---|---|---|---|
 | Héroe local | `HeroInputSystem` → `HeroMovementSystem` → `HeroMoveIntent` | `LocalHeroCharacterMotor` → `CharacterController.Move()` | El motor escribe `LocalTransform` y `HeroMotorStateComponent` | `EcsAnimationInputAdapter` + `SamplePlayerAnimationController_ECS` |
-| Héroe remoto/IA | `HeroAIExecutionSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` | `RemoteHeroAnimationDriver` |
-| Unidad navegable | formación/targeting → `UnitNavMeshSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` | adaptador/controlador de unidad |
+| Héroe remoto/IA | `HeroAIExecutionSystem` | `NavMeshAgent` | `EntityVisualSync` copia al ECS los cambios de pose (su `syncPositionFromNavMesh` es `false`) | `RemoteHeroAnimationDriver` |
+| Unidad navegable | formación/targeting → `UnitNavMeshSystem` | `NavMeshAgent` | `NavMeshPositionSyncSystem` publica posición; `EntityVisualSync` puede publicar rotación distinta | adaptador/controlador de unidad |
 | Visual sin NavMesh | sistema ECS propietario | pose ECS | no aplica | `EntityVisualSync` copia ECS → GameObject |
 
 Reglas:
@@ -52,7 +52,8 @@ Reglas:
 - Un héroe remoto mantiene su `CharacterController` deshabilitado.
 - `RemoteHeroAnimationDriver` no escribe pose, órdenes ni destinos.
 - `EntityVisualSync` no ejecuta movimiento local ni conduce locomoción remota.
-- Para agentes con `NavAgentComponent.syncPositionFromNavMesh`, la publicación de pose pertenece a `NavMeshPositionSyncSystem`; `EntityVisualSync` no duplica esa escritura.
+- Para unidades con `NavAgentComponent.syncPositionFromNavMesh == true`, `NavMeshPositionSyncSystem` publica la posición confirmada post-movimiento. `EntityVisualSync` no vuelve a escribirla; todavía publica una rotación distinta cuando cambia.
+- Los héroes remotos se crean con `syncPositionFromNavMesh == false`: `NavMeshPositionSyncSystem` no publica su posición y `EntityVisualSync` conserva el puente legado GameObject → ECS para los cambios de posición/rotación.
 
 ## Héroe local
 
@@ -90,7 +91,7 @@ HeroAIPerceptionSystem
       └─ SquadAIOrderIntentComponent
 ```
 
-El `NavMeshAgent` mueve el GameObject. `NavMeshPositionSyncSystem` publica la pose física a `LocalTransform`. `RemoteHeroAnimationDriver` lee velocidad horizontal real, límite de velocidad aceptado y componentes de combate para escribir el `Animator`; deshabilita los consumidores de input local. Los tres drivers comparten `LocomotionAnimationSettings` para convertir velocidades físicas al Blend Tree. Root motion está desactivado. Validación: `Docs/Arquitectura/16_Animacion_Locomocion_2026-10-08.md`.
+El `NavMeshAgent` mueve el GameObject. Los héroes remotos llevan `syncPositionFromNavMesh == false`, por lo que `EntityVisualSync` copia al `LocalTransform` solo los campos de pose que cambian. `NavMeshPositionSyncSystem` sí atiende unidades con la opción activa y captura después del movimiento la velocidad horizontal confirmada y el límite del agente en `UnitAnimationMovementComponent`; `UnitAnimationSystem` consume ese snapshot más tarde en el mismo `SimulationSystemGroup`, evitando volver a consultar el componente managed del agente para esas unidades. `RemoteHeroAnimationDriver` lee la velocidad real del agente y componentes de combate. Su caché omite escrituras repetidas de parámetros float/int/bool y se invalida al cambiar binding, Animator, controller o estado enabled; los triggers siguen enviándose como eventos. Deshabilita los consumidores de input local. Los drivers comparten `LocomotionAnimationSettings` para convertir velocidades físicas al Blend Tree. Root motion está desactivado. Validación: `Docs/Arquitectura/16_Animacion_Locomocion_2026-10-08.md`.
 
 Un destino inválido se proyecta al NavMesh. Los fallos se recuerdan y sólo se reintentan al cambiar suficientemente la orden, evitando `SetDestination` repetido cada frame.
 
@@ -129,6 +130,8 @@ Productores
 La orden resuelta conserva origen y prioridad. `SquadOrderSystem` aplica la orden ganadora, pero sólo `FormationSystem` confirma formación, slots y cooldown después de validar el patrón.
 
 `HoldPosition` conserva un ancla táctica aunque el squad entre en combate. Targeting selecciona candidatos compartidos por squad y mantiene sólo el objetivo final como estado por unidad. La navegación de squad observa llegada; el sistema motor de unidades es el único que escribe destinos.
+
+`EnemyDetectionSystem` captura ocurrencias de candidatos vivos y usa un índice espacial XZ como broadphase; un job Burst filtra equipo y distancia exacta. Completa antes de publicar los buffers en el mismo frame para que `SquadAISystem` consuma detección fresca con orden estable.
 
 ## Retirada y muerte del dueño
 
@@ -172,6 +175,7 @@ Los hashes están centralizados en `AnimationHashes`. El pulso `HeroAnimationCom
 
 - El orden relativo ECS `SimulationSystemGroup` ↔ `MonoBehaviour.Update` sigue siendo una frontera híbrida, no una simulación física ECS determinista.
 - `EntityVisualSync` aún conserva el consumo del ataque local; su extracción requiere coordinar un único consumidor con el controlador local de animación.
+- `VisualSyncUtility` inicia los Animator con `CullCompletely`; `EntityVisualSync` eleva a `AlwaysAnimate` solo los Animator que contienen un `WeaponHitboxBehaviour` o `ShieldHitboxBehaviour` en su jerarquía. Los demás conservan culling. Mantener rigs de hitbox activos fuera de cámara tiene coste de CPU y protege la detección física de contactos; no es una optimización global de animación.
 - La autoridad remota actual es IA/NavMesh local. No existe todavía reconciliación, snapshots ni autoridad de servidor implementada.
 - `Entity`, `UnityEngine.Object`, `NavMeshAgent` y managed components no pueden formar parte del DTO neutral con BronzeAge.
 

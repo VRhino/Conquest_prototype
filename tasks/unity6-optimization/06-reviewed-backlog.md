@@ -46,3 +46,19 @@ Las tareas que cambian assets o escenas se ejecutan mediante Unity CLI/Editor co
 El orquestador revisó las cinco entregas y contrastó hallazgos principales con fuentes, configuración y documentación oficial. Corrigió: afirmación equivocada de ausencia de PackageCache; frescura del grafo con checkout sucio; referencia a un componente inexistente; afirmación de single writer contradicha por `EntityVisualSync`; referencia de orden de sistemas sustituida por Entities 6.5; afirmación de inspección del Editor cuando sólo se leyó la fuente instalada de RenderGraphSettings; y sospecha incorrecta de ausencia de orden en UnitAnimationAdapter. La revisión cruzada de Luna añadió preservar multiplicidad de candidatos, pues SquadAnchor también consume el buffer. Para SSAO se aisló la variable en un mismo perfil. Las correcciones están incorporadas en los informes, no en código.
 
 Estado actual: cinco investigaciones y revisión cruzada completadas; primera implementación validada con 130 EditMode y 31 PlayMode, perfil renderizado pequeño y compilación de scripts Player. Pipeline operativo en 7800. El perfil completo falló esperando contactos y no sirve como baseline; esa es la próxima investigación antes de optimizar detección. Se conservan cambios locales previos; ver el registro 08 para evidencias y límites.
+
+## Estado posterior de implementación — 2026-10-19
+
+Este estado sustituye las prioridades históricas anteriores; evidencia y límites en [09](09-remaining-implementation.md).
+
+| Tareas | Estado real |
+|---|---|
+| OPT-01/02/03/04 | Grid managed retirado; instrumentación, snapshot/índice persistentes y job Burst de detección implementados. Diferencial aprobado con Burst on/off. Coste de detección medido; no se afirma ganancia global de FPS ni A/B histórico controlado. |
+| OPT-05/06 | Escrituras redundantes evitadas y snapshot físico compartido para animación; contratos híbridos y regresiones revisados. Ahorro aislado del puente no demostrado. |
+| OPT-07 | Spike ejecutado y completado; se rechaza sustituir SamplePosition por diferencias de validez y ausencia de ventaja en la muestra. |
+| OPT-08 | Censo runtime implementado y ejecutado con totales activos separados y detalle acotado. Candidatos heurísticos; falta confirmar batching efectivo en Frame Debugger. |
+| OPT-09/10/11 | Seis perfiles reversibles implementados. Capturas válidas A/B/C y SSAO off/on; GRD inicializa. D sin captura con contacto válida. No se promueven ajustes de producción; comparación render-only y validación visual pendientes. |
+| OPT-12/13 | Caché de parámetros y protección de rigs de melee fuera de cámara implementadas. Test verifica movimiento del hitbox, no entrega completa de daño; no se introduce LOD/cadencia reducida sin evidencia. |
+| OPT-00 | 133 EditMode y 34 PlayMode previas aprobadas; repetición final PlayMode y compilación Player scripts en cierre. Timeouts de contacto de perfiles explícitos conservados como fallos, separados de regresiones funcionales. |
+
+Cierre: repetición final PlayMode 34/34 aprobada; no se repite compilación Player. El usuario solicita integrar todo en main y cerrar esta ronda conservando los límites de validación anteriores.

@@ -1,6 +1,6 @@
 # System Responsibilities & Data Flow
 
-## Contratos actualizados — 2026-10-14
+## Contratos actualizados — 2026-10-19
 
 - SceneTransitionService aplica la política de cursor del destino tras cargar; HeroCamera/FullscreenPanelManager/SupplyPointUI la respetan. Las interfaces requieren cursor libre incluso al cerrar paneles.
 - MatchmakingService conserva la escena de origen de cola; MatchmakingUI en PostBattle sólo atiende Salir y restablece el estado de cola al retornar.
@@ -10,6 +10,11 @@
 - BattleWorldState publica fase incluso fuera de InBattle y precede SquadAI: detección/salud/zonas frescas, estado táctico del ciclo previo.
 - LocalHeroCaptureTracker lee después de CaptureZoneTrigger y SupplyInteraction.
 - UnitAttack/RangedAttack leen pose después de NavMeshPositionSync y excluyen atacantes muertos. Fin de batalla limpia ataques/intenciones y detiene agentes; cleanup y presentación siguen disponibles.
+- `NavMeshPositionSyncSystem` captura posición de agentes con sync habilitado y snapshot físico de velocidad/límite para animación de unidades; `UnitAnimationSystem` lo consume después en el mismo grupo.
+- Héroes remotos se crean con `syncPositionFromNavMesh = false`; `EntityVisualSync` mantiene para ellos el puente GO → ECS y evita `SetComponentData` cuando la pose no cambia. En unidades con sync activo publica la posición NavMesh y conserva la publicación de una rotación distinta.
+- EnemyDetection construye candidatos y un índice espacial nativo reutilizable, busca vecinos/exact distance en `SearchCandidatesJob` Burst, completa el job antes de publicar los buffers en el mismo frame.
+- `RemoteHeroAnimationDriver` omite escrituras de parámetros sin cambios con caché invalidada al cambiar binding/Animator/controller/estado enabled; los triggers se siguen enviando como eventos.
+- `EntityVisualSync` pone `AlwaysAnimate` solo en Animator que contienen un hitbox de arma o escudo en su jerarquía; los demás mantienen culling.
 - VisualSyncUtility registra instancias por World/Entity; EntityVisualSync registra/desregistra su vínculo. ProjectileSpawn entrega colliders del tirador sin búsquedas de escena.
 - Bodyblock calcula los mismos pares en un job Burst con buffers nativos persistentes; sólo el puente managed aplica NavMeshAgent.Move. Su peor caso denso sigue siendo cuadrático, sin recortar contactos.
 - Gestores visuales sólo actualizan con instancias pendientes; contactos y targeting reutilizan scratch. Eventos de daño nacen en su arquetipo final y conservan consumo durante el mismo frame.
@@ -133,6 +138,17 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.
 - **Ref**: `Docs/Mechanics/BodyblockSystem.md`
 
+### NavMeshPositionSyncSystem
+- **Responsabilidad**: captura resultados físicos del `NavMeshAgent` después del movimiento.
+- **Posición ECS**: copia la posición del agente válido solo cuando `NavAgentComponent.syncPositionFromNavMesh` está activo; no escribe la rotación.
+- **Snapshot de animación**: guarda validez, velocidad horizontal confirmada y `agent.speed` en `UnitAnimationMovementComponent` cuando el agente está disponible. Agentes inválidos publican velocidad cero.
+- **Orden**: después de `UnitNavMeshSystem`/bodyblock y antes de `UnitRotationResolutionSystem` y `UnitAnimationSystem`.
+
+### UnitAnimationSystem
+- **Responsabilidad**: actualiza el movimiento de animación a partir de la pose del frame.
+- Para unidades con snapshot de NavMesh usa la velocidad confirmada que publicó `NavMeshPositionSyncSystem`, evitando volver a consultar el componente managed; conserva el fallback por delta de pose para entidades sin snapshot de agente.
+- **Orden**: después de `NavMeshPositionSyncSystem` y `UnitRotationResolutionSystem`.
+
 ### FormationStanceSystem
 - **Responsabilidad**: Lee milestone tags de pulso 1 frame (`UnitStartedMovingTag`, `UnitArrivedAtSlotTag`) → actualiza `UnitFormationStanceComponent` + propaga `CurrentStance` y `SlotRow` a `UnitAnimationMovementComponent`
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]`
@@ -165,7 +181,8 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Output**: `DetectedEnemy` (squads enemigos) y `SquadTargetEntity` (candidatos individuales)
 - **Orden**: `[UpdateBefore(SquadAISystem)]` — SquadAI necesita detección fresca para decidir intents
 - **Regla**: Solo escribe buffers compartidos de detección — nunca decide comportamiento ni asigna targets de unidades
-- **Algoritmo**: Distancia centroide (sin AABB/physics queries)
+- **Algoritmo**: snapshot de candidatos y broadphase XZ en contenedores nativos persistentes; `SearchCandidatesJob` Burst filtra por equipo y distancia exacta. Ordena índices para conservar el orden de candidatos antes de publicar los buffers.
+- **Sincronicidad**: completa el job antes de publicar `DetectedEnemy` y `SquadTargetEntity` en el mismo frame de simulación.
 
 ### DamageCalculationSystem
 - **Responsabilidad**: Aplica `PendingDamageEvent` con mitigación flat-reduction por tipo de daño
@@ -250,7 +267,9 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Responsabilidad**: vincula entidad y representación y sincroniza la pose de visuales no locales.
 - Decide local/remoto desde `IsLocalPlayer`, pero delega toda locomoción local a `LocalHeroCharacterMotor`.
 - Delega la presentación de héroes remotos a `RemoteHeroAnimationDriver`; no escribe parámetros de locomoción remota.
-- Nunca llama `CharacterController.Move()` ni escribe la pose local en ECS.
+- Nunca llama `CharacterController.Move()`. Con NavMesh válido, si `syncPositionFromNavMesh` es `true` no copia posición al ECS (lo hace `NavMeshPositionSyncSystem`); puede publicar una rotación distinta. Para héroes remotos con flag `false`, conserva el puente GO → ECS de posición/rotación y escribe solo si alguno cambió. En visuales sin NavMesh válido mantiene el flujo ECS → GO.
+- Consume el pulso de ataque del héroe local; no cambiar de propietario sin coordinar el consumidor del Animator.
+- Protege fuera de cámara únicamente Animator antecesores de hitboxes de arma/escudo con `AlwaysAnimate`; los Animator sin esos hitboxes conservan `CullCompletely`.
 - Vincula `HeroVisualEquipmentInitializer` al visual local; no aplica cambios de inventario.
 
 ### HeroVisualEquipmentInitializer
@@ -279,6 +298,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Input confirmado**: velocidad horizontal y límite aceptado del `NavMeshAgent`, `HeroStatsComponent`, `HeroAnimationComponent` y `HeroCombatComponent`. Una petición IA de sprint por sí sola no cambia la animación.
 - **Output**: parámetros y triggers del `Animator`; no escribe transforms, destinos ni intención ECS.
 - Deshabilita los adaptadores de input/animación local para evitar dos escritores sobre el mismo Animator.
+- Evita escribir de nuevo parámetros float/int/bool que no cambiaron; invalida la caché al cambiar el binding, referencia/estado del Animator o controller. Los triggers de ataque no se deduplican.
 - Sólo se instala para entidades remotas con `HeroMoveIntent`; los visuales de unidades no reciben este componente.
 
 ---
@@ -286,7 +306,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 ## Shared Utilities
 
 ### VisualSyncUtility (`Assets/Scripts/Shared/VisualSyncUtility.cs`)
-- `SetupVisualSync(GameObject)` — configura `AnimatorCullingMode.CullCompletely`, desactiva root motion en los Animators hijos y añade/obtiene `EntityVisualSync`.
+- `SetupVisualSync(GameObject)` — configura inicialmente `AnimatorCullingMode.CullCompletely`, desactiva root motion en los Animators hijos y añade/obtiene `EntityVisualSync`. `EntityVisualSync` solo cambia a `AlwaysAnimate` los rigs que contienen hitboxes de arma/escudo; esa excepción mantiene funcionalidad y tiene coste de CPU en esos rigs.
 - Usada por: `HeroVisualInstantiationSystem`, `SquadVisualManagementSystem`
 
 ### GameTags (`Assets/Scripts/Shared/GameTags.cs`)

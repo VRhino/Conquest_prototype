@@ -1,7 +1,7 @@
 # CQ-007 — Escena del campamento de mercenarios
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Media — sin ella el héroe que nace o entra en un campamento no tiene escena que ver en Unity
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-10-05
@@ -110,3 +110,21 @@ mercado, fondos y población; los usa el cliente estratégico.
 - ¿Queréis la orientación de la puerta fija (sur) o conviene que la planta la oriente hacia el camino de entrada?
 - La vista caminable de otros héroes dentro del mismo campamento (presencia visible) no está definida por BronzeAge todavía: sería
   la siguiente propuesta si Conquest la necesita.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta el interior 3D; implementación condicionada a publicar la planta actual. Usar el ámbito
+`CAMPAMENTO` y `Heroe.ubicacion.campamento_id`; la escena sigue el estado confirmado y `Revocado` la libera.
+
+**Hueco de contrato:** el actual `CampamentoMercenarios.edificios` es una lista de tipos. No existen
+`EscenaCampamento`, posiciones/huellas, calles, empalizada ni versión de trazado del campamento en los
+`.proto` leídos. No basta con migrar el nombre del JSON. El contrato 06 encarga el trazado al servidor;
+Conquest no debe reconstruirlo desde el ID ni tratarlo como terreno inmutable del paquete de mundo.
+
+Reutilizar la construcción por huellas de `SettlementPreview` con un adaptador del modelo de sesión;
+su lector actual de JSON no es el contrato nuevo. Para el primer blockout no hace falta `visualSeed`;
+las variantes decorativas pueden derivarse de IDs/versiones artísticas. La orientación de la puerta
+se representa según la planta publicada. `residentes_ids` no publica posiciones caminables compartidas.
+
+Se mantiene la necesidad completa de aceptación: planta recibida, calles, puerta y huellas coherentes,
+sin solapes y con unidades locales documentadas. Pendiente G5 de la [revisión conjunta](README.md).

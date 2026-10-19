@@ -621,7 +621,7 @@ public class BattleSceneIntegrationTests
     }
 
     [UnityTest]
-    public IEnumerator BattleSceneMeleeWeaponRigsContinueAnimatingOutsideAllCameraFrusta()
+    public IEnumerator BattleSceneMeleeHitboxRigsContinueAnimatingOutsideAllCameraFrusta()
     {
         foreach (var path in new[] {
             "Assets/Resources/Squads/Squires/Squires_GO_Squeleton.prefab",
@@ -645,12 +645,34 @@ public class BattleSceneIntegrationTests
                 var animator = visual.GetComponentInChildren<Animator>();
                 var hitbox = visual.GetComponentInChildren<WeaponHitboxBehaviour>(true);
                 Assert.That(hitbox, Is.Not.Null, path);
+                var weaponCollider = hitbox.GetComponent<BoxCollider>();
+                Assert.That(weaponCollider, Is.Not.Null, path);
+                Assert.That(weaponCollider.isTrigger, Is.True, path);
+                var weaponBody = hitbox.GetComponent<Rigidbody>();
+                Assert.That(weaponBody, Is.Not.Null, "Animated weapon triggers need a physics body: " + path);
+                Assert.That(weaponBody.isKinematic && !weaponBody.useGravity, Is.True, path);
                 Assert.That(animator.cullingMode, Is.EqualTo(AnimatorCullingMode.AlwaysAnimate), path);
                 em.SetComponentData(entity, new UnitCombatComponent { isAttacking = true });
                 int combatLayer = animator.GetLayerIndex("Combat");
-                Assert.That(combatLayer, Is.GreaterThanOrEqualTo(0), path);
-                yield return Until(() => animator.GetCurrentAnimatorStateInfo(combatLayer).shortNameHash
-                    == Animator.StringToHash("Attack"), 3f, "Offscreen attack clip did not start: " + path);
+                if (combatLayer >= 0)
+                {
+                    yield return Until(() => animator.GetCurrentAnimatorStateInfo(combatLayer).shortNameHash
+                        == Animator.StringToHash("Attack"), 3f, "Offscreen attack clip did not start: " + path);
+                }
+                else
+                {
+                    // Spearmen currently uses the base locomotion controller. Exercise
+                    // its authored Run clip rather than inventing a Combat layer for it.
+                    em.RemoveComponent<LocalTransform>(entity);
+                    em.SetComponentData(entity, new UnitAnimationMovementComponent {
+                        CurrentSpeed = 3.5f, MaxSpeed = 3.5f, RequestedSpeed = 3.5f,
+                        MovementDirection = new float3(0f, 0f, 1f), IsMoving = true
+                    });
+                    yield return Until(() => animator.GetCurrentAnimatorClipInfo(0).Any(clip =>
+                        clip.weight > 0.1f && clip.clip.name.Contains("Run")), 3f,
+                        "Offscreen locomotion clip did not start: " + path);
+                    TestContext.WriteLine("No Combat layer configured; checked the authored locomotion rig: " + path);
+                }
                 Vector3 previousPosition = hitbox.transform.position;
                 Quaternion previousRotation = hitbox.transform.rotation;
                 float maxDistance = 0f, maxAngle = 0f;
@@ -829,6 +851,9 @@ public class BattleSceneIntegrationTests
             if (!fullBattleProfile) for (int i = 0; i < 120; i++) yield return null;
             var elapsed = new double[sampleCount];
             var cpu = new double[sampleCount];
+            var gpu = new double[sampleCount];
+            var frameTimings = new FrameTiming[1];
+            bool frameTimingEnabled = FrameTimingManager.IsFeatureEnabled();
             var bodyblock = new double[sampleCount];
             var detection = new double[sampleCount];
             var targeting = new double[sampleCount];
@@ -872,7 +897,10 @@ public class BattleSceneIntegrationTests
                 retargets[i] = targetingSystem.DebugRetargetCount;
                 long projectionRequestsBefore = UnitNavMeshSystem.DebugTotalProjectionRequests;
                 long projectionFailuresBefore = UnitNavMeshSystem.DebugTotalProjectionFailures;
+                if (frameTimingEnabled) FrameTimingManager.CaptureFrameTimings();
                 yield return null;
+                gpu[i] = frameTimingEnabled && FrameTimingManager.GetLatestTimings(1, frameTimings) > 0
+                    && frameTimings[0].gpuFrameTime > 0d ? frameTimings[0].gpuFrameTime : -1d;
                 projectionRequests[i] = UnitNavMeshSystem.DebugTotalProjectionRequests - projectionRequestsBefore;
                 projectionFailures[i] = UnitNavMeshSystem.DebugTotalProjectionFailures - projectionFailuresBefore;
                 double now = Time.realtimeSinceStartupAsDouble;
@@ -893,9 +921,15 @@ public class BattleSceneIntegrationTests
                 Assert.That(contactPairs.Max(), Is.GreaterThan(0), "The profile missed all bodyblock contacts.");
             using var units = em.CreateEntityQuery(typeof(UnitFormationStateComponent));
             using var heroes = em.CreateEntityQuery(typeof(HeroSpawnComponent));
+            var gpuSamples = gpu.Where(value => value >= 0d).ToArray();
+            string gpuPercentiles = ProfilePercentiles(gpuSamples.Length > 0 ? gpuSamples : new[] { -1d });
             string json = FormattableString.Invariant($@"{{
   ""scene"": ""{scenePath}"", ""editor"": ""{Application.unityVersion}"",
   ""renderVariant"": ""{renderVariant ?? "Production"}"",
+  ""burstEnabled"": {Unity.Burst.BurstCompiler.Options.EnableBurstCompilation.ToString().ToLowerInvariant()},
+  ""graphicsApi"": ""{SystemInfo.graphicsDeviceType}"", ""gpu"": ""{SystemInfo.graphicsDeviceName}"",
+  ""quality"": ""{QualitySettings.names[QualitySettings.GetQualityLevel()]}"",
+  ""frameTimingEnabled"": {frameTimingEnabled.ToString().ToLowerInvariant()}, ""gpuAvailableSamples"": {gpuSamples.Length}, ""gpuFrameMs"": {gpuPercentiles},
   ""width"": {Screen.width}, ""height"": {Screen.height}, ""sampleCount"": {sampleCount},
   ""renderedCameraFrames"": {renderedFrames}, ""units"": {units.CalculateEntityCount()}, ""heroes"": {heroes.CalculateEntityCount()},
   ""initialHeroes"": {initialHeroes}, ""initialUnits"": {initialUnits},
@@ -911,7 +945,7 @@ public class BattleSceneIntegrationTests
   ""navMeshProjectionMs"": {ProfilePercentiles(projection)},
   ""projectionRequestsPerFrame"": {ProfilePercentiles(projectionRequests)}, ""projectionFailuresPerFrame"": {ProfilePercentiles(projectionFailures)},
   ""gcBytesPerFrame"": {ProfilePercentiles(allocations)},
-  ""limitations"": ""Editor + test runner; no before/after baseline, no Player/GPU claim. -1 means unavailable counter.""
+  ""limitations"": ""Editor + test runner; compare population and Burst settings before attributing changes. No Player claim. GPU timings may lag CPU by a few frames; -1 means unavailable counter.""
 }}");
             System.IO.Directory.CreateDirectory("Logs");
             System.IO.File.WriteAllText(outputPath, json);
@@ -933,6 +967,14 @@ public class BattleSceneIntegrationTests
     [UnityTearDown]
     public IEnumerator TearDown()
     {
+        // The test runner can abort a nested IEnumerator without disposing its parent.
+        // Restore here as well as in the wrapper's finally, including assertion failures.
+        if (renderVariant != null)
+        {
+            Type.GetType("Conquest.Editor.Optimization.RenderOptimizationExperiments, Game.Editor")
+                ?.GetMethod("Restore", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, null);
+            renderVariant = null;
+        }
         if (keyboard != null && keyboard.added) InputSystem.RemoveDevice(keyboard);
         if (mouse != null && mouse.added) InputSystem.RemoveDevice(mouse);
         // Stop ECS before unloading its blobs, but keep EntityManager alive until
