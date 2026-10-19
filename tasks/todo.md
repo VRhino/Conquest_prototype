@@ -197,7 +197,7 @@ Después de cada C, no solo al final: compilar, revisar la consola y pasar los t
 - [x] `Docs/Mechanics/FormationMilestoneSystem.md` y `Docs/Mechanics/Formations.md`: radios de llegada, arranque por filas y que los parámetros viven en `MovementTuningConfig`.
 - [x] `Docs/Design/Movimiento_Formaciones.md`: marcar C1-C4 como hechos, con las métricas antes y después.
 - [x] `CLAUDE.md`: añadir `MovementTuningConfig` en "Core Services / Shared Utilities". Aprovechar para corregir la versión de Entities (1.3.14 → 6.5.0, desfase n.º 5).
-- [ ] Si hay correcciones durante la implementación, anotar el patrón en `tasks/lessons.md`.
+- [x] Si hay correcciones durante la implementación, anotar el patrón en `tasks/lessons.md`.
 
 ## Decisiones antes de implementar (valores por defecto confirmados por el usuario, 2026-10-19)
 - `r_out` = 0,5 m y `arrivalCalmTime` = 0,15 s.
