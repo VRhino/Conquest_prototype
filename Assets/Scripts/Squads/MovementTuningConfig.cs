@@ -37,6 +37,10 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
 
+    [Header("Acceleration limits (paso 5)")]
+    [Tooltip("Units may slow down this many times faster than they speed up (a person stops faster than they start).")]
+    [Min(1f)] public float brakingFactor = 2.5f;
+
     [Header("Ally avoidance (C14, ORCA)")]
     public bool avoidanceEnabled = true;
     [Tooltip("Allies closer than this are avoided (m).")]
@@ -87,6 +91,7 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        brakingFactor = brakingFactor,
         avoidanceEnabled = avoidanceEnabled,
         avoidanceNeighborRadius = avoidanceNeighborRadius,
         avoidanceMaxNeighbors = avoidanceMaxNeighbors,

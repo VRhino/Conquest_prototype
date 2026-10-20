@@ -2,6 +2,7 @@ using NUnit.Framework;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>Data-driven formation layout: templates by soldiers alive, spacing, noise, Scatter, roles and rows.</summary>
@@ -154,6 +155,56 @@ public class FormationLayoutTests
             Assert.That(em.GetComponentData<UnitGridSlotComponent>(units[1]).slotIndex, Is.EqualTo(0));
             Assert.That(em.GetComponentData<UnitGridSlotComponent>(units[2]).slotIndex, Is.EqualTo(1));
             Assert.That(em.GetComponentData<UnitGridSlotComponent>(units[1]).localPosition.x, Is.EqualTo(-0.5f));
+        }
+        finally { blob.Dispose(); }
+    }
+
+    [Test]
+    public void FormationChangeDealsEachUnitTheNearestSlot()
+    {
+        using var world = new World("Nearest slot on formation change");
+        var em = world.EntityManager;
+        em.CreateEntity(typeof(MatchStateComponent));
+        // Line: slot 0 left (-0.5), slot 1 right (+0.5). Column: slot 0 front (+0.5 y), slot 1 back.
+        var line = new FormationTemplate { minUnits = 0, slots = FormationSlotRoles.Assign(new[] { new Vector2(-0.5f, 0), new Vector2(0.5f, 0) }, false) };
+        var column = new FormationTemplate { minUnits = 0, slots = FormationSlotRoles.Assign(new[] { new Vector2(0, 0.5f), new Vector2(0, -0.5f) }, false) };
+        var builder = new BlobBuilder(Allocator.Temp);
+        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
+        var formations = builder.Allocate(ref root.formations, 2);
+        foreach (var (index, type, template) in new[] { (0, FormationType.Line, line), (1, FormationType.Column, column) })
+        {
+            formations[index].formationType = type;
+            formations[index].spacing = 1f;
+            var templates = builder.Allocate(ref formations[index].templates, 1);
+            var slots = builder.Allocate(ref templates[0].slots, 2);
+            for (int k = 0; k < 2; k++)
+                slots[k] = new FormationSlotBlob { position = template.slots[k].position, row = template.slots[k].row };
+        }
+        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        builder.Dispose();
+        try
+        {
+            var squad = em.CreateEntity(typeof(SquadResolvedOrderComponent), typeof(SquadStateComponent),
+                typeof(FormationComponent), typeof(SquadDefinitionComponent));
+            em.AddComponentData(squad, new SquadFormationAnchorComponent { rotation = quaternion.identity });
+            em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
+            em.SetComponentData(squad, new FormationComponent
+            { currentFormation = FormationType.Line, templateIndex = 0, layoutUnitCount = 2, spacing = 1f, scale = 1f });
+            em.SetComponentData(squad, new SquadResolvedOrderComponent { formation = FormationType.Column });
+            // Unit 0 stands behind, unit 1 in front: index order would make both cross.
+            var behind = em.CreateEntity(typeof(UnitTargetPositionComponent));
+            em.AddComponentData(behind, LocalTransform.FromPosition(new float3(-0.5f, 0, -0.4f)));
+            var ahead = em.CreateEntity(typeof(UnitTargetPositionComponent));
+            em.AddComponentData(ahead, LocalTransform.FromPosition(new float3(0.5f, 0, 0.4f)));
+            var buffer = em.AddBuffer<SquadUnitElement>(squad);
+            buffer.Add(new SquadUnitElement { Value = behind });
+            buffer.Add(new SquadUnitElement { Value = ahead });
+
+            world.GetOrCreateSystemManaged<FormationSystem>().Update();
+
+            Assert.That(em.GetComponentData<FormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.Column));
+            Assert.That(em.GetComponentData<UnitGridSlotComponent>(ahead).slotIndex, Is.EqualTo(0));
+            Assert.That(em.GetComponentData<UnitGridSlotComponent>(behind).slotIndex, Is.EqualTo(1));
         }
         finally { blob.Dispose(); }
     }

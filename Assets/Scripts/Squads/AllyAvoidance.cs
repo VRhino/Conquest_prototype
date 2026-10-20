@@ -36,6 +36,20 @@ public static class AllyAvoidance
         public float collisionResolveTime;
     }
 
+    /// <summary>
+    /// Velocity reachable this frame: moves from <paramref name="current"/> towards <paramref name="target"/> by at most
+    /// <paramref name="maxDelta"/> (acceleration × dt), or <paramref name="maxBrakeDelta"/> when slowing down, so avoidance
+    /// never changes speed faster than the agent can.
+    /// </summary>
+    public static float2 LimitAcceleration(float2 current, float2 target, float maxDelta, float maxBrakeDelta)
+    {
+        if (math.lengthsq(target) < math.lengthsq(current)) maxDelta = math.max(maxDelta, maxBrakeDelta);
+        float2 delta = target - current;
+        float lengthSq = math.lengthsq(delta);
+        if (maxDelta <= 0f || lengthSq <= maxDelta * maxDelta) return target;
+        return current + delta * (maxDelta / math.sqrt(lengthSq));
+    }
+
     /// <summary>Fills <paramref name="velocities"/> with the avoiding velocity of every agent (unsteered ones keep theirs).</summary>
     public static void Run(NativeArray<Agent> agents, NativeArray<float2> velocities, in Settings settings)
     {

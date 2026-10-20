@@ -125,7 +125,10 @@ public partial class UnitAvoidanceSystem : SystemBase
         {
             var agent = _navAgents[i];
             if (agent == null) continue;
-            float2 v = velocities[i];
+            // Respect the agent's acceleration: writing the solved velocity directly bypassed it (spikes > 20 m/s²).
+            float2 current = ((float3)agent.velocity).xz;
+            float2 v = AllyAvoidance.LimitAcceleration(current, velocities[i], agent.acceleration * dt,
+                agent.acceleration * tuning.brakingFactor * dt);
             agent.velocity = new UnityEngine.Vector3(v.x, agent.velocity.y, v.y);
         }
     }

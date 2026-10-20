@@ -166,8 +166,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         return new MovementUnitSample
         {
             frame = frame, time = time, squad = squadIndex,
-            unit = SystemAPI.HasComponent<UnitGridSlotComponent>(unit)
-                ? SystemAPI.GetComponent<UnitGridSlotComponent>(unit).slotIndex : bufferIndex,
+            // Entity index: slot indices change when a new layout re-deals slots by distance.
+            unit = unit.Index,
             state = SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State,
             slotDistance = math.distance(position.xz, slot.xz),
             x = position.x, z = position.z, yaw = math.atan2(forward.x, forward.z),

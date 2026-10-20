@@ -107,6 +107,16 @@ public class OrcaSolverTests
     }
 
     [Test]
+    public void AvoidanceNeverChangesVelocityFasterThanTheAgentAccelerates()
+    {
+        float2 turned = AllyAvoidance.LimitAcceleration(new float2(3f, 0f), new float2(0f, 3f), 8f / 60f, 20f / 60f);
+        Assert.That(math.distance(turned, new float2(3f, 0f)), Is.EqualTo(8f / 60f).Within(1e-5f));
+        float2 braked = AllyAvoidance.LimitAcceleration(new float2(3f, 0f), float2.zero, 8f / 60f, 20f / 60f);
+        Assert.That(braked.x, Is.EqualTo(3f - 20f / 60f).Within(1e-5f));
+        Assert.That(AllyAvoidance.LimitAcceleration(new float2(1f, 0f), new float2(1.05f, 0f), 0.1f, 0.1f), Is.EqualTo(new float2(1.05f, 0f)));
+    }
+
+    [Test]
     public void EnemiesAreNotAvoided()
     {
         using var agents = new NativeArray<AllyAvoidance.Agent>(new[]

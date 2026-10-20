@@ -65,6 +65,14 @@ public class SlotFollowSpeedTests
     }
 
     [Test]
+    public void SpeedCapChangesAtMostByTheAccelerationPerFrame()
+    {
+        Assert.That(FormationFollowSpeed.Approach(3f, 6f, 8f / 60f, 20f / 60f), Is.EqualTo(3f + 8f / 60f).Within(1e-5f));
+        Assert.That(FormationFollowSpeed.Approach(6f, 3f, 8f / 60f, 20f / 60f), Is.EqualTo(6f - 20f / 60f).Within(1e-5f));
+        Assert.That(FormationFollowSpeed.Approach(3f, 3.05f, 8f / 60f, 20f / 60f), Is.EqualTo(3.05f).Within(1e-5f));
+    }
+
+    [Test]
     public void ForcedRunWinsAtAnyDistance()
     {
         Assert.That(FormationFollowSpeed.Gear(MovementGear.Walk, 0f, true, S), Is.EqualTo(MovementGear.Run));

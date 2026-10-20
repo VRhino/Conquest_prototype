@@ -107,8 +107,10 @@ public partial class UnitFollowFormationSystem : SystemBase
                                 && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
                                 && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
-                            navAgent.speed = FollowSpeed(unit, baseSpeed * speedMultiplier,
+                            float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
                                 hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
+                            navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
+                                navAgent.acceleration * dt, navAgent.acceleration * tuning.brakingFactor * dt);
                         }
                     }
                     else

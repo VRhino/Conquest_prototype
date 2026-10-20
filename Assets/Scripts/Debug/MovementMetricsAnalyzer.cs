@@ -81,6 +81,9 @@ public sealed class MovementMetricsSummary
     public int leashViolations;
     public int turnRateViolationFrames;
     public int gearChanges;
+    /// <summary>Share of unit samples whose acceleration exceeds <see cref="MovementMetricsAnalyzer.AccelerationSpikeLimit"/>.</summary>
+    public float accelerationSpikeRatio;
+    public float maxAcceleration;
 
     public override string ToString()
     {
@@ -99,6 +102,7 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  attackers per target: max={maxAttackersPerTarget} p95={p95AttackersPerTarget.ToString("F1", c)}");
         s.AppendLine($"  leash violations (reacting, beyond the leash > {MovementMetricsAnalyzer.LeashPersistence.ToString("F1", c)} s): {leashViolations}");
         s.AppendLine($"  combat turn frames above the cap: {turnRateViolationFrames}; gear changes: {gearChanges}");
+        s.AppendLine($"  acceleration above {MovementMetricsAnalyzer.AccelerationSpikeLimit.ToString("F0", c)} m/s2: {(accelerationSpikeRatio * 100f).ToString("F1", c)} % of samples, max {maxAcceleration.ToString("F0", c)} m/s2");
         s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)}");
         return s.ToString();
     }
@@ -116,6 +120,7 @@ public static class MovementMetricsAnalyzer
     public const float StartWindow = 3f;        // Longest wait for a unit to leave its slot.
     public const float MinStillDuration = 0.5f; // Ignores single-frame anchor pauses.
     public const float LeashPersistence = 0.5f; // Seconds beyond the leash before counting a violation.
+    public const float AccelerationSpikeLimit = 20f; // m/s²: well above any agent (8-12 m/s²), so only jolts count.
     public const float EnemyOverlapPersistence = 0.3f; // Enemy pairs overlapping longer than this are counted.
     public const float ContactRange = 2.5f;     // Units this close to their target count as attackers on it.
 
@@ -279,6 +284,7 @@ public static class MovementMetricsAnalyzer
             ? perTarget[Math.Min(perTarget.Count - 1, (int)(0.95f * perTarget.Count))] : 0f;
 
         float turnCap = limits.combatTurnRateDegrees * 1.1f * (float)(Math.PI / 180.0);
+        int accelerationSamples = 0, accelerationSpikes = 0;
         foreach (var series in units.GroupBy(u => (u.squad, u.unit)).Select(g => g.OrderBy(u => u.frame).ToList()))
         {
             float beyondSince = -1f;
@@ -302,8 +308,21 @@ public static class MovementMetricsAnalyzer
                     if (delta / dt > turnCap) summary.turnRateViolationFrames++;
                 }
                 if (u.gear >= 0 && p.gear >= 0 && u.gear != p.gear) summary.gearChanges++;
+
+                // Acceleration from three consecutive positions.
+                if (i < 2 || dt <= 1e-4f) continue;
+                var q = series[i - 2];
+                float dtPrev = p.time - q.time;
+                if (dtPrev <= 1e-4f) continue;
+                float vx = (u.x - p.x) / dt, vz = (u.z - p.z) / dt;
+                float pvx = (p.x - q.x) / dtPrev, pvz = (p.z - q.z) / dtPrev;
+                float acceleration = (float)Math.Sqrt((vx - pvx) * (vx - pvx) + (vz - pvz) * (vz - pvz)) / dt;
+                accelerationSamples++;
+                if (acceleration > AccelerationSpikeLimit) accelerationSpikes++;
+                summary.maxAcceleration = Math.Max(summary.maxAcceleration, acceleration);
             }
         }
+        summary.accelerationSpikeRatio = accelerationSamples > 0 ? (float)accelerationSpikes / accelerationSamples : 0f;
     }
 
     static float WrapAngle(float radians)

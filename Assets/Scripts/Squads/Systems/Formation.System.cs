@@ -1,12 +1,15 @@
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 
 /// <summary>
 /// Single writer of the formation layout of each squad (<see cref="FormationComponent"/>) and of every unit slot
 /// (<see cref="UnitGridSlotComponent"/>). Rebuilds the layout when the player changes formation (with cooldown),
 /// when the number of soldiers alive calls for another template, and when a spacing request arrives.
-/// Slot k keeps going to unit k of the squad buffer; units are never reordered.
+/// A new layout (formation or template change) deals each unit the nearest free slot (greedy by distance, only on
+/// the event), so units do not cross the whole formation; otherwise every unit keeps its slot.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadOrderSystem))]
@@ -92,17 +95,20 @@ public partial class FormationSystem : SystemBase
             var anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
             SquadHoldPositionComponent? holdComponent = SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity)
                 ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : null;
-            // A new template re-deals slots in buffer order; otherwise each unit keeps its slot index.
             bool redeal = formationRequested || templateChanged;
+            var slotOf = new NativeArray<int>(units.Length, Allocator.Temp);
+            if (redeal)
+                AssignNearestSlots(ref formation, templateIndex, spacing, seed, units, s, holdComponent, anchor, slotOf);
+            else
+                for (int i = 0; i < units.Length; i++)
+                    slotOf[i] = SystemAPI.HasComponent<UnitGridSlotComponent>(units[i].Value)
+                        ? SystemAPI.GetComponent<UnitGridSlotComponent>(units[i].Value).slotIndex : i;
 
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;
                 if (!SystemAPI.Exists(unit)) continue;
-                int slotIndex = i;
-                if (!redeal && SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
-                    slotIndex = SystemAPI.GetComponent<UnitGridSlotComponent>(unit).slotIndex;
-                if (!FormationPositionCalculator.TryBuildSlot(ref formation, templateIndex, slotIndex, spacing, seed,
+                if (!FormationPositionCalculator.TryBuildSlot(ref formation, templateIndex, slotOf[i], spacing, seed,
                         out var slot))
                     continue;
 
@@ -142,5 +148,50 @@ public partial class FormationSystem : SystemBase
 
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+
+    readonly List<(float distSq, int unit, int slot)> _pairs = new();
+
+    /// <summary>
+    /// Greedy nearest assignment (Movimiento_Formaciones.md L-2): every unit/slot pair sorted by distance, taken while
+    /// both are free. Units without a position take the remaining slots in buffer order. N ≤ ~30, so N² on the event.
+    /// </summary>
+    void AssignNearestSlots(ref FormationDataBlob formation, int templateIndex, float spacing, uint seed,
+        DynamicBuffer<SquadUnitElement> units, in SquadStateComponent state, SquadHoldPositionComponent? hold,
+        in SquadFormationAnchorComponent anchor, NativeArray<int> slotOf)
+    {
+        int n = units.Length;
+        float3 center = FormationPositionCalculator.GetSquadCenter(state, hold, anchor.position);
+        quaternion inverse = math.lengthsq(anchor.rotation.value) > 1e-6f
+            ? math.inverse(math.normalize(anchor.rotation)) : quaternion.identity;
+
+        _pairs.Clear();
+        for (int u = 0; u < n; u++)
+        {
+            slotOf[u] = -1;
+            Entity unit = units[u].Value;
+            if (!SystemAPI.Exists(unit) || !SystemAPI.HasComponent<LocalTransform>(unit)) continue;
+            float2 local = math.mul(inverse, SystemAPI.GetComponent<LocalTransform>(unit).Position - center).xz;
+            for (int k = 0; k < n; k++)
+                if (FormationPositionCalculator.TryBuildSlot(ref formation, templateIndex, k, spacing, seed, out var slot))
+                    _pairs.Add((math.distancesq(local, slot.localOffset.xz), u, k));
+        }
+        _pairs.Sort((a, b) => a.distSq.CompareTo(b.distSq));
+
+        var taken = new NativeArray<bool>(n, Allocator.Temp);
+        foreach (var (_, unit, slot) in _pairs)
+        {
+            if (slotOf[unit] >= 0 || taken[slot]) continue;
+            slotOf[unit] = slot;
+            taken[slot] = true;
+        }
+        int next = 0;
+        for (int u = 0; u < n; u++)
+        {
+            if (slotOf[u] >= 0) continue;
+            while (next < n && taken[next]) next++;
+            slotOf[u] = next < n ? next : u;
+            if (next < n) taken[next] = true;
+        }
     }
 }

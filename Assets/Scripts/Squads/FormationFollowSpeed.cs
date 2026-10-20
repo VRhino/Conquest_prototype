@@ -41,6 +41,17 @@ public static class FormationFollowSpeed
         return previous;
     }
 
+    /// <summary>
+    /// Speed cap of this frame: rises towards <paramref name="target"/> by at most <paramref name="maxDelta"/>
+    /// (acceleration × dt) and falls by at most <paramref name="maxBrakeDelta"/>. A sudden lower cap made the agent
+    /// cut its velocity in one frame.
+    /// </summary>
+    public static float Approach(float current, float target, float maxDelta, float maxBrakeDelta)
+    {
+        if (maxDelta <= 0f) return target;
+        return current + math.clamp(target - current, -math.max(maxDelta, maxBrakeDelta), maxDelta);
+    }
+
     /// <summary>Top speed of a gear.</summary>
     public static float MaxSpeed(float baseSpeed, MovementGear gear, in Settings s)
         => baseSpeed * (gear == MovementGear.Run ? s.runSpeedMultiplier : 1f);
