@@ -1,10 +1,11 @@
 # Plan: formaciones por datos (modelo de la referencia) y reparación del movimiento
 
-Estado: **plan, pendiente de aprobación**. Fecha: 2026-10-20. Rama prevista: `feat/formation-layout`, a partir de `feat/movement-batch2`.
+Estado: **plan aprobado en lo esencial; pendiente de arrancar**. Fecha: 2026-10-20. Rama prevista: `feat/formation-layout`, a partir de `feat/movement-batch2`.
 
 Origen:
 - Petición del usuario: sustituir la rejilla fija de Conquest por un modelo repensado a partir de Conqueror's Blade, y después reparar los tirones y la llegada al slot.
-- Referencia (solo patrones, sin código ni datos): `game-re/notes/formations-orders.md` §1-2 y §7, `game-re/notes/mounts-movement.md` §6.
+- Referencia (solo patrones, sin código ni datos): `game-re/notes/formations-orders.md` §1-2 y §7, `game-re/notes/mounts-movement.md` §6, `game-re/notes/formation-postures.md`.
+- Lo que queda fuera de este plan, con el porqué y cómo abordarlo: `Docs/Por_Abordar/`.
 - Diseño: `Docs/Design/Movimiento_Formaciones.md` §3 (espaciado `s`), D7 (§7) y §10 (lote 2).
 
 ## Qué cambia, en una frase por capa
@@ -14,7 +15,10 @@ Origen:
 | Posición de la ranura | celda entera × `CELL_WIDTH` (constante de código) | `ranura (float2) × espaciado × escala de escuadra + ruido determinista` |
 | Plantilla | una por tipo de formación | la primera con `mínimo ≤ vivos`; al caer soldados, cambia de forma |
 | Espaciado | igual para todo, no cambia | por formación, cambiable en partida, con suelo de 0,3 m |
-| Fila | se deduce de `gridPosition.y` | dato explícito de la ranura (`row`, 0 = frente) |
+| Fila | se deduce de `gridPosition.y` (y la animación la recibe invertida) | dato explícito de la ranura (`row`, 0 = frente) |
+| Rumbo del soldado | todos miran hacia donde mira la escuadra | **rumbo local por ranura**, girado con la formación (los costados pueden mirar hacia fuera) |
+| Papel del soldado | no existe | **papel por ranura**: `Front`, `Flank`, `Interior`, `Rear` |
+| Postura | `BracedShields` solo al llegar en `ShieldWall`; no llega al Animator | postura por (formación, papel, estado), con efecto en la defensa y la animación (paso 6) |
 | Dispersa | rejilla escrita a mano | disposición Scatter: celdas distintas al azar (semilla por escuadra) × escala + desplazamiento |
 | Cuerpo y evitación | radio combinado = espaciado (1 m), parche de 0,9 en C14 | radio del cuerpo independiente; el radio entre compañeros sale del espaciado vigente de la escuadra |
 | Encaje en la malla | radio global de 2 m | `min(espaciado, 0,65)` |
@@ -26,9 +30,12 @@ Lo que **no** se copia de la referencia: el reparto ranura k = soldado k se mant
 2. **Ruido orgánico:** radio 0,08 m y ±3° en Línea y Cuña; 0 en Testudo. Determinista por (escuadra, ranura), para que no tiemble entre frames.
 3. **Plantillas por número de soldados:** el modelo las admite. Las formaciones actuales se migran con **una sola plantilla** (se comportan como hoy). Las plantillas reducidas (p. ej. 15, 10 y 5 lanceros) son trabajo de contenido aparte.
 4. **Espaciado en partida:** componente y API para cambiarlo (habilidades, órdenes "apretar/abrir"). Sin tecla asignada en este lote.
+5. **Papel por ranura en la migración:** fila delantera = `Front`; columnas extremas del resto = `Flank`; última fila = `Rear`; el resto = `Interior`. Se puede retocar en el editor.
+6. **Rumbo por ranura en la migración:** 0° (hacia delante) en todas. En Testudo, los `Flank` miran hacia fuera (±90°) y la `Rear`, hacia atrás (180°).
+7. **Posturas por defecto (paso 6):** Testudo: `Front` escudo al frente, `Flank` escudo al costado, `Interior` y `Rear` escudo arriba. ShieldWall: todos escudo al frente y afianzados. El resto: normal.
 
 ## Paso 1. Modelo de datos
-- [ ] `FormationDefinition` (ScriptableObject, `Squads/Formations/`): `formationType`, `formationIcon`, `layout` (`Template` | `Scatter`), `spacing`, `noiseRadius`, `noiseAngleDegrees`, `templates[]` (`minUnits`, `slots[]` con `position` float2 en unidades de espaciado y `row`), y para Scatter `scatterScale` y `scatterJitter`.
+- [ ] `FormationDefinition` (ScriptableObject, `Squads/Formations/`): `formationType`, `formationIcon`, `layout` (`Template` | `Scatter`), `spacing`, `noiseRadius`, `noiseAngleDegrees`, `templates[]` (`minUnits`, `slots[]` con `position` float2 en unidades de espaciado, `row`, `role` (`FormationSlotRole`) y `headingDegrees` local), y para Scatter `scatterScale` y `scatterJitter`.
 - [ ] Validación en el SO y en el baker: espaciado ≥ 0,3 (si no, 0,3 con aviso, como la referencia); plantillas ordenadas por `minUnits` descendente; ninguna ranura repetida; aviso si `spacing < 2·bodyRadius` (Testudo lo acepta).
 - [ ] Blob nuevo `FormationLibraryBlob` v2 (`FormationDataBlob`: tipo, disposición, espaciado, ruido, plantillas con `BlobArray<FormationSlotBlob>`). `SquadDefinitionBaker.BakeFormationLibrary` lo construye.
 - [ ] `SquadData.gridFormations` → `formations` (`FormationDefinition[]`), con `FormerlySerializedAs` solo durante la migración.
@@ -39,10 +46,11 @@ Lo que **no** se copia de la referencia: el reparto ranura k = soldado k se mant
 ## Paso 2. Disposición en tiempo de ejecución
 - [ ] Funciones puras `FormationLayout` (Burst): `SelectTemplate(ref formation, aliveCount)`, `SlotLocal(ref formation, template, slotIndex, spacing, squadSeed)` (con ruido determinista), `ScatterCells(n, seed)` (celdas enteras distintas, sin la (0,0)), `Center(ref template)`.
 - [ ] `FormationComponent` gana `spacing` (vigente) y `scale` (de la escuadra, por defecto 1). Su único escritor es `FormationSystem`; `SquadFormationSpacingRequest` (componente de petición) lo cambia en partida, con suelo de 0,3 m.
-- [ ] `UnitGridSlotComponent`: `gridPosition int2` → `localPosition float2` y `row int`. `slotIndex` y `worldOffset` siguen.
+- [ ] `UnitGridSlotComponent`: `gridPosition int2` → `localPosition float2`, `row int`, `role` y `headingLocal` (radianes). `slotIndex` y `worldOffset` siguen.
+- [ ] Orientación al formar: `UnitFollowFormationSystem` orienta a la unidad `Formed` con `rotación de la formación × rumbo de su ranura` (con ruido angular determinista) en lugar del rumbo de la escuadra.
 - [ ] `FormationPositionCalculator`, `FormationSystem`, `GridFormationUpdateSystem` (incluida su caché: entra el espaciado vigente y la plantilla), `DestinationMarkerSystem`, `SquadSpawningSystem`, `SquadSwapExecutionSystem` y `FormationVisualizer` pasan a la API nueva.
 - [ ] Cambio de plantilla por bajas: `FormationSystem` re-elige la plantilla cuando cambia el número de vivos (como la referencia) y reescribe los slots sin reordenar unidades.
-- [ ] Consumidores de la fila: `FormationStartDelay` (C2), `BraceWeaponSystem`, `FormationStanceSystem` y `SquadUnitSpawnBuilder` leen `row`.
+- [ ] Consumidores de la fila: `FormationStartDelay` (C2), `BraceWeaponSystem`, `FormationStanceSystem` y `SquadUnitSpawnBuilder` leen `row`. Se corrige así la fila invertida que hoy recibe la animación (`SlotRow`).
 
 ## Paso 3. Consumidores del espaciado
 - [ ] `UnitAvoidanceSystem`: `squadmateCombinedRadius = min(2·bodyRadius, 0,9·espaciado de la escuadra)` por agente (dato nuevo en `AllyAvoidance.Agent`); "cerca del slot" = menos de un espaciado. Se quita la dependencia de `CELL_WIDTH`.
@@ -51,7 +59,7 @@ Lo que **no** se copia de la referencia: el reparto ranura k = soldado k se mant
 
 ## Paso 4. Tests y medida
 - [ ] Ayudante de test común para construir bibliotecas de formación (hoy hay 7 tests que montan blobs a mano con `int2`).
-- [ ] EditMode `FormationLayoutTests`: selección de plantilla por vivos; posición = ranura × espaciado × escala; ruido determinista y acotado; Scatter sin celdas repetidas; suelo de 0,3; filas.
+- [ ] EditMode `FormationLayoutTests`: selección de plantilla por vivos; posición = ranura × espaciado × escala; ruido determinista y acotado; Scatter sin celdas repetidas; suelo de 0,3; filas; rumbo de ranura girado con la formación; papeles de la migración.
 - [ ] Actualizar `FormationGeometryRegressionTests`, `ArchitectureRegressionTests`, `SquadControlRegressionTests`, `SquadOwnerDeathRegressionTests`, `SquadSwapRegressionTests`, `MovementTuningCoherenceTests`.
 - [ ] S1, S3, S4 y S6 contra el cierre del lote 2. Esperado: la huella crece un 10 % en Línea; solapes aliados al formar ≤ los de §10; formado ≤ 1 s.
 
@@ -63,9 +71,20 @@ Medido al cierre del lote 2 (aceleraciones por encima de 20 m/s², con agentes d
 - [ ] Métrica nueva en el analizador: porcentaje de frames con aceleración > 2·`a` y desvío de llegada. Objetivo: 0 % por encima de 20 m/s² y desvío ≤ 1,2.
 - [ ] Reconsiderar el parche de C14 con el espaciado nuevo (1,1 m deja holgura frente al cuerpo de 1 m).
 
+## Paso 6. Posturas por ranura (aparte, tras el paso 5)
+Patrón de la referencia (`game-re/notes/formation-postures.md`): la ranura da el papel y el rumbo; la postura es un dato de cada soldado y cambia también por dónde se le puede golpear. Aquí lo resuelve un solo sistema.
+- [ ] Datos: `FormationDefinition.postures`: tabla papel → postura para el estado formado (y opcionalmente en marcha). `UnitStance` pasa a `Normal`, `ShieldFront`, `ShieldSide`, `ShieldUp` y `Braced`.
+- [ ] `UnitPostureSystem`, único escritor de `UnitFormationStanceComponent`: calcula la postura por (formación, papel, estado formado / en marcha / en combate). Sustituye la regla fija de `FormationStanceSystem`, que se elimina.
+- [ ] Defensa: la dirección de bloqueo sale de la postura y del rumbo, no del prefab. `ShieldOrientation` gana `Up` (cubre lo que viene desde arriba: flechas en parábola). `DamageCalculationSystem` usa la orientación vigente de la unidad.
+- [ ] Animación: parámetros `Stance` (int) y `SlotRole` (int) en `UnitAnimationAdapter` y en los Animator Controllers de las tropas con escudo. Inventario previo de clips disponibles (escudo al frente, al costado y arriba). Si falta alguno, se deja la postura activa en lógica y se avisa (contenido pendiente en `Docs/Por_Abordar/`).
+- [ ] Tests: EditMode de la tabla papel → postura y de la dirección de bloqueo con `Up`; PlayMode: en Testudo formada, una flecha en parábola contra el interior se bloquea y una flecha frontal contra un `Flank` no.
+- [ ] Medida: vídeo de Testudo y ShieldWall formadas y en marcha; comprobar que la postura no parpadea al llegar (usa la histéresis de C1).
+
 ## Documentación al cerrar
 - [ ] `Docs/Design/Movimiento_Formaciones.md`: §11 con el modelo nuevo y la medida; actualizar L-2 y la fila `s` de §3.
 - [ ] `Assets/Scripts/Squads/SystemResponsibilities.md` y `CLAUDE.md` (cambia el escritor y los datos de formación).
+- [ ] `Docs/Mechanics/` (nuevo o ampliado): posturas, papel de ranura y dirección de bloqueo.
+- [ ] `Docs/Por_Abordar/`: marcar lo que este plan haya cerrado.
 - [ ] `tasks/lessons.md`.
 
 ## Riesgos

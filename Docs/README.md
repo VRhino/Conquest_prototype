@@ -61,6 +61,11 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 - [Coordinacion/README.md](./Coordinacion/README.md):
   Punto de intercambio con BronzeAge y acceso a la arquitectura objetivo y al modelo compartido propuesto.
 
+### Por abordar
+
+- [Por abordar](./Por_Abordar/README.md):
+  Lo que los planes dejan fuera a propósito, con el porqué y cómo retomarlo (formaciones, posturas y movimiento).
+
 ### Referencias técnicas
 
 - [buggedFunctionalities.md](./buggedFunctionalities.md):
