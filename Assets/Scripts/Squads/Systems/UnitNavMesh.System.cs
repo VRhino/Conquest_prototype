@@ -158,11 +158,14 @@ public partial class UnitNavMeshSystem : SystemBase
 
             // Tactical order controls pursuit independently of combat state.
             SquadOrderType squadOrder = default;
+            OrderSource orderSource = OrderSource.Player;
             if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
             {
                 Entity squad = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
                 if (SystemAPI.Exists(squad) && SystemAPI.HasComponent<SquadStateComponent>(squad))
                     squadOrder = SystemAPI.GetComponent<SquadStateComponent>(squad).currentOrder;
+                if (SystemAPI.Exists(squad) && SystemAPI.HasComponent<SquadResolvedOrderComponent>(squad))
+                    orderSource = SystemAPI.GetComponent<SquadResolvedOrderComponent>(squad).source;
             }
 
             // Read optional combat components
@@ -190,7 +193,7 @@ public partial class UnitNavMeshSystem : SystemBase
                     float3 slotPos    = targetPos.ValueRO.position;
                     float3 enemyPos3D = SystemAPI.GetComponent<LocalTransform>(combatTarget).Position;
                     if (squadOrder != SquadOrderType.HoldPosition
-                        && !CanPursueTarget(squadOrder, slotPos, enemyPos3D, leashDistance))
+                        && !CanPursueTarget(squadOrder, orderSource, slotPos, enemyPos3D, leashDistance))
                         combatTarget = Entity.Null; // out of leash — return to formation slot
                 }
             }
@@ -431,10 +434,18 @@ public partial class UnitNavMeshSystem : SystemBase
 
     /// <summary>Movement permission; target acquisition and attacking remain separate.</summary>
     public static bool CanPursueTarget(SquadOrderType order, float3 slot, float3 target, float leashDistance)
+        => CanPursueTarget(order, OrderSource.Player, slot, target, leashDistance);
+
+    /// <summary>
+    /// Only an Attack the player or the AI ordered pursues freely; an Attack produced by a combat
+    /// reaction stays within the leash of the unit's slot (C6).
+    /// </summary>
+    public static bool CanPursueTarget(SquadOrderType order, OrderSource source, float3 slot, float3 target,
+        float leashDistance)
     {
         if (order == SquadOrderType.HoldPosition)
             return false;
-        return order == SquadOrderType.Attack
+        return (order == SquadOrderType.Attack && source != OrderSource.CombatReaction)
             || math.distancesq(slot, target) <= math.square(math.max(0f, leashDistance));
     }
 }

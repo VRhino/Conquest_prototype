@@ -314,4 +314,14 @@ public class SquadControlRegressionTests
         Assert.That(UnitNavMeshSystem.CanPursueTarget(order, float3.zero, new float3(distance, 0, 0), 6), Is.EqualTo(expected));
     }
 
+    [TestCase(OrderSource.CombatReaction, 1f, true)]
+    [TestCase(OrderSource.CombatReaction, 20f, false)]
+    [TestCase(OrderSource.Player, 20f, true)]
+    [TestCase(OrderSource.AI, 20f, true)]
+    public void CombatReactionAttackStaysWithinTheLeash(OrderSource source, float distance, bool expected)
+    {
+        Assert.That(UnitNavMeshSystem.CanPursueTarget(SquadOrderType.Attack, source, float3.zero,
+            new float3(distance, 0, 0), 6), Is.EqualTo(expected));
+    }
+
 }
