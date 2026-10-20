@@ -109,6 +109,8 @@ public partial class UnitFollowFormationSystem : SystemBase
 
                             float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
                                 hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
+                            targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, isHoldingPosition,
+                                navAgent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction));
                             navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
                                 navAgent.acceleration * dt, navAgent.acceleration * tuning.brakingFactor * dt);
                         }
@@ -194,6 +196,20 @@ public partial class UnitFollowFormationSystem : SystemBase
     /// Speed and gear of a NavMesh unit (C9): a unit following its slot matches the slot speed plus a
     /// catch-up term within its gear; hurry and combat run at full Run speed; other states walk.
     /// </summary>
+    /// <summary>Braking cap towards the last command when it stays put (stopped slot, melee stop point).</summary>
+    float ArrivalSpeed(Entity unit, bool isHoldingPosition, float deceleration)
+    {
+        if (!SystemAPI.HasComponent<NavAgentComponent>(unit)) return float.PositiveInfinity;
+        var navigation = SystemAPI.GetComponent<NavAgentComponent>(unit);
+        float slotSpeed = isHoldingPosition ? 0f : math.length(navigation.slotVelocity.xz);
+        if (!navigation.hasIssuedCommand
+            || !FormationFollowSpeed.IsStillDestination(navigation.lastCommandWasFormation, slotSpeed))
+            return float.PositiveInfinity;
+        float3 position = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+        return FormationFollowSpeed.ArrivalSpeed(
+            math.distance(position.xz, navigation.lastCommandDestination.xz), deceleration);
+    }
+
     float FollowSpeed(Entity unit, float baseSpeed, bool forceRun, bool isHoldingPosition,
         in FormationFollowSpeed.Settings settings)
     {

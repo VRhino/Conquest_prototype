@@ -29,6 +29,7 @@ public struct MovementTuningComponent : IComponentData
     public float formedRotationSpeed;
     public float runSpeedMultiplier;
     public float formationChangeCooldown;
+    public float arrivalDecelerationFraction; // Planned arrival braking as a fraction of acceleration x brakingFactor
     public float brakingFactor; // Deceleration allowed as a multiple of the agent acceleration.
     public bool avoidanceEnabled; // Allies dodge each other by velocity (C14).
     public float avoidanceNeighborRadius; // Allies closer than this are avoided (m, C14).
@@ -63,6 +64,7 @@ public struct MovementTuningComponent : IComponentData
         formedRotationSpeed = 5f,
         runSpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        arrivalDecelerationFraction = 0.6f,
         brakingFactor = 2.5f,
         avoidanceEnabled = true,
         avoidanceNeighborRadius = 4f,

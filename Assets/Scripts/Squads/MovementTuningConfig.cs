@@ -37,6 +37,10 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
 
+    [Header("Arrival braking (M12/M13)")]
+    [Tooltip("Units heading for a still destination (stopped slot, melee stop point) cap their speed at sqrt(2 a d), with a = this fraction of acceleration x brakingFactor, so they arrive slow instead of stopping in one frame. 0 = off.")]
+    [Min(0f)] public float arrivalDecelerationFraction = 0.6f;
+
     [Header("Acceleration limits (paso 5)")]
     [Tooltip("Units may slow down this many times faster than they speed up (a person stops faster than they start).")]
     [Min(1f)] public float brakingFactor = 2.5f;
@@ -91,6 +95,7 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        arrivalDecelerationFraction = arrivalDecelerationFraction,
         brakingFactor = brakingFactor,
         avoidanceEnabled = avoidanceEnabled,
         avoidanceNeighborRadius = avoidanceNeighborRadius,

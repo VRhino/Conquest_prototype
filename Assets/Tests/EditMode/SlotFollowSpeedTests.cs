@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Unity.Mathematics;
 
 /// <summary>Slot-following speed and Walk/Run gear (C9).</summary>
 public class SlotFollowSpeedTests
@@ -70,6 +71,37 @@ public class SlotFollowSpeedTests
         Assert.That(FormationFollowSpeed.Approach(3f, 6f, 8f / 60f, 20f / 60f), Is.EqualTo(3f + 8f / 60f).Within(1e-5f));
         Assert.That(FormationFollowSpeed.Approach(6f, 3f, 8f / 60f, 20f / 60f), Is.EqualTo(6f - 20f / 60f).Within(1e-5f));
         Assert.That(FormationFollowSpeed.Approach(3f, 3.05f, 8f / 60f, 20f / 60f), Is.EqualTo(3.05f).Within(1e-5f));
+    }
+
+    [Test]
+    public void ArrivalCapLetsTheUnitStopWithinTheRemainingDistance()
+    {
+        const float decel = 12f, dt = 1f / 60f;
+        Assert.That(FormationFollowSpeed.ArrivalSpeed(1.5f, decel), Is.EqualTo(6f).Within(1e-4f));
+        Assert.That(FormationFollowSpeed.ArrivalSpeed(0f, decel), Is.EqualTo(0f));
+        Assert.That(float.IsPositiveInfinity(FormationFollowSpeed.ArrivalSpeed(1f, 0f)), Is.True);
+
+        // Run at 6 m/s towards a still point 3 m away: the capped speed brakes on the way in, no frame drops
+        // more than the braking limit and the unit is nearly still when it gets there.
+        float speed = 6f, distance = 3f, maxDrop = 0f;
+        while (distance > 0.02f)
+        {
+            float cap = math.min(6f, FormationFollowSpeed.ArrivalSpeed(distance, decel));
+            float next = FormationFollowSpeed.Approach(speed, cap, 8f * dt, 20f * dt);
+            maxDrop = math.max(maxDrop, (speed - next) / dt);
+            speed = next;
+            distance -= speed * dt;
+        }
+        Assert.That(maxDrop, Is.LessThanOrEqualTo(20f + 1e-3f));
+        Assert.That(speed, Is.LessThan(1f));
+    }
+
+    [Test]
+    public void OnlyStillDestinationsAreBrakedInto()
+    {
+        Assert.That(FormationFollowSpeed.IsStillDestination(true, 3f), Is.False);
+        Assert.That(FormationFollowSpeed.IsStillDestination(true, 0.1f), Is.True);
+        Assert.That(FormationFollowSpeed.IsStillDestination(false, 3f), Is.True);
     }
 
     [Test]

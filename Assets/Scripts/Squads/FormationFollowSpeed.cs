@@ -52,6 +52,23 @@ public static class FormationFollowSpeed
         return current + math.clamp(target - current, -math.max(maxDelta, maxBrakeDelta), maxDelta);
     }
 
+    /// <summary>
+    /// Highest speed from which the unit can still stop within <paramref name="distance"/> braking at
+    /// <paramref name="deceleration"/>: √(2·a·d). Capping the speed with it makes a unit heading for a still
+    /// destination brake on the way in; without it the agent stopped in one frame on arrival (M12/M13).
+    /// <paramref name="deceleration"/> ≤ 0 means no cap.
+    /// </summary>
+    public static float ArrivalSpeed(float distance, float deceleration)
+    {
+        if (deceleration <= 0f) return float.PositiveInfinity;
+        return math.sqrt(2f * deceleration * math.max(0f, distance));
+    }
+
+    /// <summary>Whether the destination stays put, so the unit should brake into it: a slot slower than
+    /// <see cref="StillSlotSpeed"/>, or any non-formation destination (melee stop point).</summary>
+    public static bool IsStillDestination(bool commandIsFormation, float slotSpeed)
+        => !commandIsFormation || slotSpeed < StillSlotSpeed;
+
     /// <summary>Top speed of a gear.</summary>
     public static float MaxSpeed(float baseSpeed, MovementGear gear, in Settings s)
         => baseSpeed * (gear == MovementGear.Run ? s.runSpeedMultiplier : 1f);
