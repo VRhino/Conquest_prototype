@@ -1,213 +1,211 @@
-# Plan: lote 1 de movimiento (C1-C4)
+# Plan: lote 2 de movimiento (C5, C6, C7, C9, C14)
 
-Estado: **implementado** en la rama `feat/movement-batch1` (2026-10-20). Resultados en `Docs/Design/Movimiento_Formaciones.md` §9.
-Origen: `Docs/Design/Movimiento_Formaciones.md`: §2 (L-3 y L-4), §3 (parámetros), §4 (C1-C4) y §7 (decisiones D1-D11).
+Estado: **solo planificación, sin implementar**. Fecha: 2026-10-20. Rama prevista: `feat/movement-batch2`, a partir de `feat/movement-batch1`.
+
+Origen:
+- `Docs/Design/Movimiento_Formaciones.md`: §2 (L-3, L-6, L-7, L-8), §3, §4 (C5-C9, C14), §7 (decisiones D1-D11) y §9 (resultado del lote 1).
+- Lote 1 archivado en `tasks/movement-batch1-plan.md`.
 
 ## Objetivo
-Eliminar tres problemas visibles sin cambiar la arquitectura:
-- el arranque en acordeón;
-- el parpadeo al llegar al slot;
-- el avance a tirones al seguir al héroe.
+Que la tropa se pegue y se separe como en la referencia:
+- **Contacto:** paran a una distancia derivada de los cuerpos y del alcance del arma, sin meterse dentro del enemigo (C5).
+- **Combate:** no persiguen más allá de la correa cuando reaccionan a un enemigo (C6), y giran hacia él sin hacerlo en un solo frame (C7).
+- **Marcha:** recuperan su slot en marcha, con marcha de carrera explícita (C9).
+- **Aliados:** dejan de atravesarse, gracias a la evitación recíproca ORCA (C14, decisión D1).
 
-Antes hay que sacar las constantes de movimiento a un único asset de ajuste. Cada cambio cabe en un commit y se mide por separado.
+## Decisiones que gobiernan el lote (de §7)
+- **D1, aliados:** se esquivan por velocidad (ORCA), sin empuje. Responsabilidad 0,5 entre soldados y 1,0 del soldado frente al héroe y los obstáculos. Vecinos a ≤ 4 m. Radio combinado de 1 m.
+- **D2, enemigos:** no se esquivan entre sí; los separa la distancia de parada (C5). El interruptor de colisión por escuadra (C16) queda para el lote 3.
+- **D4, héroe y tropa:** el tope de recuperación es la velocidad de la marcha; si el soldado se queda lejos, pasa a marcha de carrera. El héroe no se frena.
+- **D8, escala:** 900 agentes es un objetivo real. Los sistemas nuevos no deben sumar más de 2 ms con 900 agentes.
+- **D10, cuerpo:** radio de 0,5 m (`rc`) para evitación y contacto.
 
 ## Fuera de este lote
-- Distancia de parada derivada y correa en combate (C5-C6).
-- Giro limitado (C7).
-- Ley de seguimiento con marcha de carrera (C9).
-- ORCA (C14).
-- Lote 3 entero.
-
-Las constantes de combate solo **se mueven** al asset, con su valor actual: el lote 1 no cambia el equilibrio del combate.
+- C8, la separación posicional; solo se hace si ORCA se retrasa.
+- C10-C13, C15 y C16: lote 3.
+- El radio por tipo de unidad (L5-5) y las monturas.
 
 ## Orden de trabajo
-C4 primero, porque los demás leen sus parámetros. Después C1, C2 y C3, un commit por cambio, en ese orden.
+1. Paso 0 (métricas y escenarios nuevos, más línea base del lote 2).
+2. C7, porque es pequeño y aislado.
+3. C5.
+4. C6.
+5. C9.
+6. C14.
+
+Un commit por paso, medido contra la línea base. El cuello de botella es C14 (ORCA); el resto son cambios acotados en sistemas que ya existen.
 
 ---
 
 ## Cómo se trabaja con Unity
-El editor está abierto y conectado por MCP: proyecto `Conquest_prototype`, Unity 6000.5.8f1, 177 tests listados. Dudas de uso: sesión "Integración Unity con Claude Desktop".
+Igual que en el lote 1 (ver `tasks/movement-batch1-plan.md`, "Cómo se trabaja con Unity"). Cuidados aprendidos:
+- `run_tests` en PlayMode responde 400 aunque la ejecución arranca. Esperar con `wait_for` a que `isPlaying` pase a true y después a false, y leer `test_status`.
+- Tras cada recompilación, esperar a que `isCompiling` sea false antes del siguiente comando.
+- Para leer resultados EditMode, filtrar por clase (`filter`), porque la salida completa es muy larga.
+- Los escenarios `MovementBaseline` ya resuelven el foco de entrada, la orden FollowHero (tecla C) y la dirección de marcha (−z).
 
-| Necesidad | Herramienta | Cuidado |
-|---|---|---|
-| Estado del editor y compilación | `editor_status`, `recompile_status`, `console` | Tras cada cambio de código: esperar a que termine de compilar y revisar errores de consola antes de seguir. |
-| Tests EditMode | `run_tests` con `mode=editor` y `filter` por clase | — |
-| Tests PlayMode | `run_tests` con `mode=playmode`, `async_tests=true` y luego `test_status` | Antes, `save_all`; el editor no debe estar en Play Mode; no lanzar otros comandos mientras corren. Los `[Explicit]` (p. ej. `BattleSceneRenderedPerformanceProfile`) solo con `include_explicit=true`. |
-| Encontrar y editar la configuración en escena | `open_scene`, `find_gameobjects` (`type=SquadSpawnConfigAuthoring`), `get_serialized_fields`, `set_serialized_field`, `save_scene` | Hacerlo en cada escena con el authoring: producción y `BattleTestScene`. |
-| Crear el asset de ajuste | `create_asset` (tras compilar la clase) | — |
-| Fotos de control | `capture_game_view` con `save_path` | Unos pocos fps como mucho: sirve para fotos, no para vídeo. |
-| Vídeo | Unity Recorder (`com.unity.recorder`, aprobado), lanzado por un script de Editor | Instalar con `package_add` en el Paso 0; la salida va fuera de `Assets/` y fuera de git. |
-| Instantánea del ECS en Play Mode | `eval` (C# de un solo uso, timeout de 5 s) | No sirve para muestrear cada frame. |
-| Métricas por frame y marcadores del Profiler | Grabador de solo Editor (Paso 0) con `ProfilerRecorder` | No hay herramienta MCP para el Profiler; `get_performance_stats` solo da render, memoria y tiempo de frame. |
+## Paso 0. Métricas de contacto y separación, y escenarios nuevos
+- [ ] Ampliar `MovementMetricsRecorderSystem` (sigue siendo de solo lectura y solo para Editor/Development):
+  - por unidad: objetivo de combate, distancia al objetivo, `IsEngagingTag`, distancia a su slot de formación, marcha actual (cuando exista C9) y velocidad del agente;
+  - por frame: pares aliados solapados (`dist < 0,9 · 2rc`, dentro de la escuadra y entre escuadras aliadas) y pares enemigos solapados.
+  - Los pares se calculan con una rejilla 2D, no O(n²), para que el grabador aguante 900 agentes.
+- [ ] Ampliar `MovementMetricsAnalyzer` con sus tests:
+  - solapes aliados y enemigos por frame (media y p95), y pares enemigos solapados más de 0,3 s;
+  - distancia en contacto: media y mínimo de la distancia al objetivo mientras se ataca;
+  - atacantes por objetivo (máximo y p95);
+  - unidades en reacción de combate a más de la correa de su slot;
+  - frames en los que el giro de combate supera la velocidad angular máxima (para C7).
+- [ ] Escenario **S4, cambio de formación**: con la escuadra quieta, cambiar Línea → Cuña → Línea (F2/F1, como `BattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders`). Repetirlo marchando. Las unidades se cruzan, así que es el caso que mide ORCA entre aliados.
+- [ ] Escenario **S6, choque**: marchar con W hacia el héroe remoto, unos 40 m en +z, hasta que haya reacción de combate, y mantener 15 s de melé. Mide la parada en contacto, los solapes con enemigos, la correa y el giro de combate.
+- [ ] Escenario **S8, coste con 900 agentes**: benchmark EditMode explícito del solver de ORCA y del grabador, con 900 agentes sintéticos (Burst y `Stopwatch`), sin escena.
+  - La escena real de 900 agentes (`BattleSceneRenderedPerformanceProfile`) falla hoy en SetUp por el paquete de VFX que falta (ver `tasks/lessons.md`): es la decisión pendiente n.º 6.
+- [ ] Grabar la línea base del lote 2: S1, S3, S4 y S6 con vídeo y CSV, sobre el estado final del lote 1.
+- [ ] Correr EditMode completo y PlayMode `SquadNavigationRegressionTests` como referencia en verde.
 
-## Paso 0. Escena de pruebas, grabador y línea base
-- [x] Actualizar `BattleTestScene` con los valores de la escena de producción (decisión D11). Hoy usa `followForwardOffset` 3 y retardos de 0,3-0,6.
-  - Localizar las escenas con `find_gameobjects` (`type=SquadSpawnConfigAuthoring`), abriendo cada escena candidata, y comparar con `get_serialized_fields`.
-  - Lección: una escena de prueba con configuración completa puede ocultar dependencias que faltan en producción. Hay que comprobar los singletons en ambas.
-- [x] Crear `MovementMetricsRecorder` en `Assets/Scripts/Debug/`, compilado solo con `UNITY_EDITOR || DEVELOPMENT_BUILD`.
-  - Solo lee: ni escribe componentes ni contiene lógica de juego.
-  - Cada frame vuelca a CSV (`Logs/MovementMetrics/<escena>_<fecha>.csv`): por unidad, el estado de formación, la distancia al slot y el error al destino.
-  - Por escuadra: el número de transiciones de estado y si el ancla se mueve.
-  - Lee `Conquest.NavMeshProjection` y el tiempo de `UnitFormationState` y `UnitNavMesh` con `ProfilerRecorder`.
-  - Añadir a `UnitNavMeshSystem` un contador de `SetDestination` de solo depuración, siguiendo el patrón de los contadores de proyección que ya existen (:33-68).
-- [x] Instalar Unity Recorder (aprobado): `package_add` con `com.unity.recorder` y una versión fijada compatible con Unity 6000.5.
-  - Después, `package_status`, compilación y consola limpias.
-  - Commit propio que solo toca `Packages/manifest.json` y `packages-lock.json`.
-- [x] Crear el script de Editor `MovementBaselineCapture` en `Assets/Scripts/Editor/Optimization/`.
-  - Configura Recorder por código (`RecorderControllerSettings` + `MovieRecorderSettings`): MP4, 30 fps, resolución fija, cámara fija y duración fija por escena.
-  - Arranca a la vez el `MovementMetricsRecorder`, para que vídeo y CSV compartan el mismo intervalo.
-  - Salida en `Recordings/MovementBaseline/<escena>_<fecha>.mp4`, fuera de `Assets/`. Añadir `Recordings/` a `.gitignore`.
-- [x] Grabar la línea base en `BattleTestScene` con el grabador y el vídeo activos:
-  - S1 (marcha recta de 20 s);
-  - S3 (10 ciclos de parar, marchar y parar).
+## C7. Giro de combate con velocidad angular limitada
+**Qué:** hoy `UnitRotationResolutionSystem` asigna la rotación de golpe (`agent.transform.rotation = intent`), así que una unidad que entra en combate gira 180° en un frame. Con C7, la rotación de origen `Combat` avanza a `combatTurnRate · dt` como máximo (L5-4). El giro de formación sigue con su slerp actual: por D5, la rejilla gira entera y la suavidad la da el seguimiento.
 
-  Hacer también fotos de control con `capture_game_view` en momentos fijos: al arrancar, a mitad de la marcha y 1 s tras parar.
-- [x] Sacar del CSV las métricas de partida:
-  - oscilaciones de estado en los 3 s posteriores a la llegada;
-  - tiempo hasta quedar formado (95 % dentro de `r_in`);
-  - diferencia entre la primera y la última unidad en arrancar;
-  - `SetDestination` por unidad y por segundo;
-  - ms de `UnitFormationState` y `UnitNavMesh`.
-- [x] Correr la batería actual para tener la referencia en verde: `run_tests` EditMode completo y PlayMode `SquadNavigationRegressionTests` y `BattleSceneIntegrationTests`, más `NineHundredBodyblockAgentsReuseNativeStorageAfterWarmup` como caso de escala (D8).
+- [ ] Función pura `UnitTurn.Step(current, target, maxDegreesPerSecond, dt)` en `Squads/UnitTurn.cs`, equivalente a `RotateTowards` con `quaternion`, compatible con Burst.
+- [ ] `UnitRotationResolutionSystem`: si `intent.source == RotationSource.Combat`, aplicar `UnitTurn.Step` con `tuning.combatTurnRate`; el resto de fuentes, igual que ahora. Sigue siendo el único sistema que escribe la rotación (lección: un solo dueño de la rotación del root).
+- [ ] Tuning nuevo: `combatTurnRate` = 450 °/s (rango del documento: 360-540).
+- [ ] Tests EditMode `UnitTurnTests`:
+  - nunca supera `rate · dt`;
+  - llega exactamente al objetivo cuando falta menos de un paso;
+  - no depende del sentido del giro.
+- [ ] Comprobación en S6: 0 frames por encima de la velocidad angular máxima, y un giro de 180° tarda unos 0,4 s.
 
-## C4. Asset de ajuste de movimiento (`MovementTuningConfig`)
-**Qué:** un ScriptableObject con los parámetros de movimiento, horneado como singleton ECS, con una sola fuente de verdad.
+**Riesgo:** bajo. Durante unos 0,2-0,4 s la unidad puede atacar sin estar orientada del todo; `UnitAttack` no exige orientación (comprobado: solo mide distancia).
 
-- [x] Crear el ScriptableObject `MovementTuningConfig` en `Assets/Scripts/Squads/MovementTuningConfig.cs` y su asset por defecto en `Assets/ScriptableObjects/Movement/DefaultMovementTuning.asset`.
-- [x] Crear `MovementTuningComponent` (IComponentData singleton) con los campos de la tabla de abajo.
-- [x] Hornearlo desde `SquadSpawnConfigAuthoring`:
-  - nuevo campo `movementTuning` y `DependsOn(asset)` en el baker, en la misma entidad que `SquadSpawnConfigComponent`;
-  - si falta el asset: hornear los valores por defecto y emitir un aviso de horneado. Lección: validar los singletons requeridos antes de instanciar visuales.
-- [x] Validación en `OnValidate`/baker, con aviso y sin error. Las reglas de coherencia de §3 que aplican a este lote:
-  - `rIn < rOut`;
-  - `rOut ≤ s/2` y `rIn < s/4`, con `s` = tamaño de celda de `FormationGridSystem` (1,0 hoy);
-  - `leadTime ≥ 0`.
+## C5. Distancia de parada derivada de los cuerpos y del alcance
+**Qué:** en el código, `attackRange` es la distancia del origen del atacante al borde lejano de su hitbox (`BraceWeaponProfiles.Component.cs:31`). Hoy los melé paran a `0,75 · attackRange` desde el centro del objetivo: los lanceros a 0,75 m, con dos cuerpos de 0,5 m, es decir, dentro del enemigo. La parada se deriva así, **sin cambiar los datos de armas** (L-7 adaptado a esta semántica):
 
-  Si D7 lleva el espaciado al SO de formación, la regla pasará a usar el `s` de cada formación.
-- [x] Hacer que lean el singleton (`RequireForUpdate<MovementTuningComponent>`):
-  - `UnitFormationStateSystem`;
-  - `UnitNavMeshSystem` (`StopDistanceFactor` :71, `EngagementRange` :74 y el umbral de llegada :96);
-  - `UnitFollowFormationSystem` (`rotSpeed = 5f` :160 y `*= 2f` :107);
-  - `FormationSystem` (`formationChangeCooldown = 1f` :136).
-- [x] Quitar de `SquadSpawnConfigAuthoring/Component` los campos que pasan al asset: `slotArrivalThreshold`, `holdReformThreshold`, `unitMoveDelayMin/Max` y `unitFollowDelayMin/Max`.
-  - Lección: no dejar campos de solo escritura.
-  - `navMeshDestinationChangeThreshold` **se queda**: también lo usa `HeroAIExecution.System.cs:47`.
-- [x] Actualizar los tests que construyen la configuración a mano: `Tests/EditMode/FormationGeometryRegressionTests.cs:100` y `Tests/PlayMode/SquadNavigationRegressionTests.cs:230`. Ambos deben crear también el singleton nuevo.
-- [x] Asignar el asset en todas las escenas que tengan `SquadSpawnConfigAuthoring` (producción y `BattleTestScene`).
-- [x] Test EditMode `MovementTuningCoherenceTests`: el asset por defecto cumple las reglas de arriba.
+```
+reach          = attackRange − rcA                (alcance del arma por delante del propio cuerpo)
+golpe posible  = d ≤ attackRange + rcB            (el hitbox alcanza el cuerpo del objetivo)
+d_parada       = rcA + rcB + k_stop · reach       (sin solape en reposo y dentro del golpe)
+d_reanudar     = attackRange + rcB                (si se aleja de ahí, vuelve a acercarse)
+```
 
-Campos del lote 1 (los nuevos, en negrita; los demás conservan su valor actual):
+Ejemplos con `rc` = 0,5 y `k_stop` = 0,6:
+- lanceros (`attackRange` 1,0): reach 0,5, parada a 1,30 m, golpe hasta 1,5 m;
+- escuderos (`attackRange` 1,5): reach 1,0, parada a 1,60 m, golpe hasta 2,0 m.
 
-| Campo | Valor inicial | Sustituye a |
-|---|---|---|
-| `arrivalRadiusIn` (r_in) | 0,2 m | `slotArrivalThreshold` |
-| **`arrivalRadiusOut`** (r_out) | 0,5 m | (no existe; hoy es el mismo 0,2) |
-| **`arrivalCalmTime`** | 0,15 s | — |
-| `holdReformRadius` | 1,0 m | `holdReformThreshold` |
-| **`startRowDelay`** | 0,08 s | `unitFollowDelayMin/Max` y `unitMoveDelayMin/Max` |
-| **`startJitterDelay`** | 0,10 s | ídem |
-| `destinationChangeMin` | 0,25 m | `navMeshDestinationChangeThreshold` (solo en formación) |
-| **`destinationChangeSpeedFactor`** | 0,05 s | — |
-| **`destinationLeadTime`** | 0,4 s | — |
-| **`slotVelocitySmoothing`** | 0,15 s | — |
-| **`destinationLeadMaxDistance`** | 1,0 m | — |
-| `meleeStopDistanceFactor` | 0,75 | `StopDistanceFactor` (constante) |
-| `combatFacingRange` | 3,5 m | `EngagementRange` (constante) |
-| `formedRotationSpeed` | 5 | `rotSpeed = 5f` |
-| `hurrySpeedMultiplier` | 2 | `*= 2f` |
-| `formationChangeCooldown` | 1 s | `= 1f` |
+Arqueros: parada a `rangedStopFraction · range` (0,92) y reanudar a `range` (fin del temblor).
 
-**Riesgo:** bajo; no cambia el comportamiento. **Comprobación:** los tests EditMode y PlayMode existentes pasan sin cambiar sus expectativas, y la escena se ve igual que en la línea base.
+- [ ] Función pura `MeleeReach` en `Combat/MeleeReach.cs`: `StopDistance`, `ResumeDistance` e `InAttackRange(dist, attackRange, rcTarget)`.
+- [ ] `UnitNavMeshSystem` (:204, `stopDist`): usar `MeleeReach.StopDistance`. Hoy la unidad para solo si `dist > stopDist`; con C5 habrá histéresis: se acerca si `dist > d_reanudar` y se queda si `dist ≤ d_reanudar`, y el destino de aproximación es el anillo a `d_parada`.
+- [ ] `UnitAttackSystem` (:106) y `UnitTargetingSystem` (:157): "en rango" pasa a ser `MeleeReach.InAttackRange` (`dist ≤ attackRange + rcB`), coherente con el hitbox. Sin esto, los lanceros parados a 1,3 m nunca empezarían a atacar.
+- [ ] Tuning: `bodyRadius` = 0,5 (D10); `meleeStopReachFraction` (`k_stop`) = 0,6, que sustituye a `meleeStopDistanceFactor`; `rangedStopFraction` = 0,92.
+- [ ] Validación en el baker de la escuadra (`SquadDefinitionBaker`): aviso si `attackRange − bodyRadius < 0,2` (un arma que no sobresale del cuerpo).
+- [ ] Validación de coherencia del tuning: `0 < k_stop < 1` y `rangedStopFraction < 1`.
+- [ ] Tests:
+  - EditMode `StopDistanceTests` con todas las escuadras horneadas (`Resources/Squads`): `d_parada ≥ 2rc + ε` y `d_parada < attackRange + rc`;
+  - ampliar `MeleeContactRegressionTests`: el golpe conecta desde `d_parada`.
+- [ ] Comprobación en S6: 0 pares enemigos solapados más de 0,3 s, y la distancia media en contacto queda cerca de `d_parada`.
 
-## C1. Histéresis de llegada
-**Qué:** dos radios en lugar de uno. Se entra en Formado por debajo de `r_in`, con el ancla parada durante `arrivalCalmTime`, y se sale por encima de `r_out` (L-4).
+**Riesgo:** medio. Cambia el equilibrio, porque se ataca desde un poco más lejos (coherente con el hitbox), y el borde del abanico de ±45° del objetivo se recalcula. Revisar en vídeo que el golpe visual conecta.
 
-- [x] Extraer la lógica de transición a una función pura compatible con Burst, en un fichero nuevo `Squads/FormationArrival.cs`. Debe recibir: estado, distancia², `rIn²`, `rOut²`, si el ancla se mueve, el temporizador de calma y dt. Así se puede probar sin escena.
-- [x] Añadir `CalmTimer` a `UnitFormationStateComponent`. Acumula mientras la unidad está dentro de `r_in` y `SquadAnchorMovingTag` está desactivado; se pone a 0 en cualquier otro caso.
-- [x] En `UnitFormationStateSystem`, rama normal:
-  - **de Formado a En espera** solo si `d > r_out` (hoy :120-122);
-  - **de En movimiento o En espera a Formado** si `d < r_in` y `CalmTimer ≥ arrivalCalmTime` (hoy :140, :149).
+## C6. Correa activa en reacción de combate
+**Qué:** hoy, con reacción de combate, `OrderResolutionSystem` (:68-75) pone la orden `Attack`, y `CanPursueTarget` (`UnitNavMesh.System.cs`) devuelve siempre true para `Attack`. Así `unitLeashDistance` (6 m) no se aplica nunca en combate. Con C6, la correa rige cuando el origen es `OrderSource.CombatReaction`. Un `Attack` ordenado por el jugador sigue sin correa.
 
-  La regla actual de `heroMovingForSquad` (:149-162) se conserva: con el ancla en marcha, la unidad sigue En movimiento.
-- [x] Rama Hold: se mantiene `holdReformRadius` como radio de salida y `r_in` como radio de entrada; no cambia de comportamiento.
-- [x] `UnitArrivedAtSlotTag` debe seguir disparándose una sola vez al entrar en Formado, para no romper los hitos de `FormationMilestoneSystem.md`.
-- [x] `UnitNavMeshSystem` sigue usando `r_in` para `commandStillValid` y para detectar rutas fallidas (:96, :275, :335).
-- [x] Tests EditMode en `ArrivalHysteresisTests`:
-  - con ruido de ±`r_in` alrededor de cada radio, como máximo una transición;
-  - entra en Formado solo con el ancla parada `arrivalCalmTime`;
-  - sale solo por encima de `r_out`.
+- [ ] `UnitNavMeshSystem`: leer `SquadResolvedOrderComponent.source` de la escuadra (de solo lectura; el escritor sigue siendo `OrderResolutionSystem`).
+- [ ] Añadir una sobrecarga `CanPursueTarget(order, source, slot, target, leash)`. La actual se mantiene para los tests existentes (`SquadControlRegressionTests.PursuitDependsOnOrderAndLeashNotCombatState`).
+- [ ] Mantener 6 m desde el slot de la unidad. La fórmula `R + 2·d_parada` del documento mide desde el ancla, pero aquí la distancia se mide desde el slot, y 6 m ≈ 2 + 2·1,5 + margen. Se revisa si S6 muestra persecuciones cortas.
+- [ ] Tests EditMode: casos nuevos de `PursuitDependsOnOrderAndLeashNotCombatState` con `source = CombatReaction` (con correa) y `source = Player` (sin correa).
+- [ ] Comprobación en S6: 0 unidades en reacción de combate a más de la correa de su slot durante más de 0,5 s.
 
-**Riesgo:** bajo. Una unidad formada puede quedar hasta 0,5 m fuera de su slot sin recolocarse; se acepta porque lo absorbe la rejilla de 1 m. **Comprobación (S3):** como máximo 1 oscilación por unidad en los 3 s posteriores a la llegada.
+**Riesgo:** medio. Las escuadras persiguen menos en reacción; el jugador conserva la persecución con V (`Attack`).
 
-## C2. Arranque determinista por filas
-**Qué:** sustituir el `Random.Range` de 0,5-1,5 s por un retardo que depende de la fila más una pequeña variación por identidad (L-4). La fila delantera sale primero y desaparece el acordeón.
+## C9. Seguimiento con recuperación y marchas explícitas
+**Qué:** hoy `navAgent.speed = baseSpeed · variación`, con un `× hurrySpeedMultiplier` (2) solo con prisa u objetivo de combate. Los rezagados no recuperan (error en marcha de 1,1-1,3 m tras el lote 1). Con C9 (L-3 con D4):
 
-- [x] Crear la función pura `FormationStartDelay.Compute(rowRank, slotIndex, gridPosition, rowDelay, jitterDelay)` en `Squads/FormationStartDelay.cs`:
-  - `t = rowRank · rowDelay + hash01(slotIndex, gridPosition) · jitterDelay`;
-  - el hash usa `math.hash`, sin `UnityEngine.Random`. Así es reproducible y queda listo para red (T4).
-- [x] Calcular `rowRank` a partir de `UnitGridSlotComponent.gridPosition.y`, la profundidad (`GridToRelativeWorld`: y → z):
-  - en una primera pasada por las unidades de la escuadra, dentro del mismo bucle de `UnitFormationStateSystem`, se saca `maxY`;
-  - `rowRank = maxY − y`.
-  - **Antes, confirmar el signo** (que la fila delantera sea la de mayor y) con `FormationGeometryRegressionTests`.
-- [x] Sustituir los dos `Random.Range` de `UnitFormationStateSystem` (:82 Hold y :126 normal) por `FormationStartDelay.Compute`. Ya no queda ningún uso de `UnityEngine.Random` en el sistema.
-- [x] Mantener la semántica de En espera: en `UnitNavMeshSystem:249-254` la unidad espera quieta, y eso es lo que produce la onda de arranque.
-- [x] Perfil por formación (D3): en este lote hay un solo perfil. Dejar anotado en el asset que la formación Dispersa usará `jitterDelay` mayor cuando llegue el perfil por formación.
-- [x] Tests EditMode en `StartDelayTests`:
-  - mismas entradas dan el mismo retardo;
-  - el retardo de la fila delantera es menor o igual que el de cualquier fila trasera;
-  - el máximo, con 4 filas, es como mucho `4·0,08 + 0,1 ≈ 0,42 s`.
+```
+d      = |slot − pos| (XZ)        v_ff = |slotVelocity| (ya existe, C3)
+marcha = Run  si prisa, objetivo de combate o d > runEnterDistance
+         Walk si d < runExitDistance (histéresis)
+v_max  = baseSpeed · variación · (Run ? runSpeedMultiplier : 1)
+v      = clamp(v_ff + max(0, (d − r_in) / followRecoveryTime), followMinSpeedRatio · baseSpeed, v_max)
+```
 
-**Riesgo:** bajo; se pierde algo de aspecto orgánico, que compensa la variación por identidad. **Comprobación (S3):** la fila delantera arranca primero y el último en salir lo hace en menos de 0,5 s.
+- [ ] Enum `MovementGear` (`Walk`, `Run`) en `Squads/Enums`, y componente `UnitMovementGearComponent { gear }`, cuyo único escritor es `UnitFollowFormationSystem`. Ocupa 1 byte y está pensado para la red. El ×2 actual pasa a ser `runSpeedMultiplier` (renombrando `hurrySpeedMultiplier`).
+- [ ] Función pura `FormationFollowSpeed.Compute(...)` en `Squads/FormationFollowSpeed.cs`, que devuelve la velocidad y la marcha.
+- [ ] `UnitFollowFormationSystem` (:96-108): aplicar la función solo a unidades que siguen formación (`Moving`). En Hold, `v_ff` = 0. En combate, marcha Run como hoy. `Waiting` no cambia (`ResetPath`).
+- [ ] Tuning: `runEnterDistance` = 1,5 m, `runExitDistance` = 0,6 m, `followRecoveryTime` = 1,0 s, `followMinSpeedRatio` = 0,3.
+- [ ] Coherencia: `runExitDistance < runEnterDistance` y `followRecoveryTime > 0`.
+- [ ] Animación: `UnitAnimationSystem` sigue leyendo la velocidad confirmada del agente (sin cambios). Revisar en vídeo que el paso a carrera se ve en la animación (`animationRunningSpeedRatio` = 0,6).
+- [ ] Tests EditMode `SlotFollowSpeedTests`:
+  - `v` es monótona en `d`;
+  - nunca supera `v_max` de la marcha;
+  - con `d` = 0, `v = v_ff`;
+  - la histéresis entre Walk y Run no oscila con ruido alrededor de los umbrales.
+- [ ] Comprobación en S1 y S3: error en marcha de media ≤ 0,5 m (objetivo final 0,35·s), sin oscilaciones nuevas al llegar ni cambios Walk/Run más de una vez por arranque.
 
-## C3. Destino con predicción y umbral dinámico
-**Qué:** mandar al agente a un punto adelantado `leadTime` según la velocidad del slot, para que no frene contra un destino que se mueve a saltos (L-3).
+**Riesgo:** medio. Interactúa con C3 (destino adelantado) y con la animación. Si el héroe esprinta por encima de la carrera, la tropa se queda atrás, como pide D4.
 
-- [x] Añadir a `NavAgentComponent`: `prevRequestedSlot`, `slotVelocity` y `hasSlotVelocity`. Solo los escribe `UnitNavMeshSystem`, que ya es el único que llama a `SetDestination`.
-- [x] En `UnitNavMeshSystem`, antes de `ResolveFormationDestination` (:125):
-  - `slotVelocity` = media móvil exponencial de `(requested − prev)/dt`, solo en XZ, con constante `slotVelocitySmoothing`;
-  - si el slot salta más de `destinationLeadMaxDistance · 2` en un frame (cambio de formación o teletransporte), se reinicia a 0.
-- [x] Crear la función pura `FormationDestinationPrediction.Predict(requested, slotVelocity, leadTime, maxLead)` = `requested + clampLength(v · leadTime, maxLead)`. Va en `Squads/FormationDestinationPrediction.cs`.
-- [x] Umbral dinámico de cambio de destino: `max(destinationChangeMin, |slotVelocity| · destinationChangeSpeedFactor)`. Solo para destinos de formación; el héroe y el combate no cambian.
-- [x] **Separar la intención del destino efectivo.** Lección: no sobrescribir lo que pertenece a la formación para reparar la navegación.
-  - `effectiveFormationDestination` sigue siendo la proyección del **slot real**: la leen `GetEffectiveFormationDestination` y la llegada de C1.
-  - El punto predicho **solo** se usa como comando de `SetDestination`.
-  - Si el punto predicho no cae en la malla, el comando vuelve al slot real proyectado.
-- [x] Coste: proyectar el punto predicho solo cuando `|slotVelocity| > 0,1` y el comando cambie más del umbral; si no, se reutiliza la proyección del slot. Medir el marcador `Conquest.NavMeshProjection` contra la línea base.
-- [x] Con el ancla parada, `slotVelocity` tiende a 0 y el comportamiento es idéntico al actual.
-- [x] Tests:
-  - EditMode `DestinationPredictionTests`: la predicción no supera `maxLead`, con velocidad 0 devuelve el slot, y el salto de slot reinicia la velocidad;
-  - PlayMode, ampliando `SquadNavigationRegressionTests`: en marcha recta, `SetDestination` como máximo 4 veces por unidad y segundo, sin regresión en la llegada.
+## C14. Evitación recíproca ORCA entre aliados
+**Qué:** hoy `UnitNavMeshSystem:139` fuerza `NoObstacleAvoidance` y `UnitBodyblockSystem:229` ignora a los aliados, así que se atraviesan. ORCA, según van den Berg, Guy, Lin y Manocha, "Reciprocal n-body collision avoidance" (2011), implementado con código propio a partir del paper: cada agente busca la velocidad más cercana a la deseada que no colisione en un horizonte τ, con un semiplano por vecino y un programa lineal 2D.
 
-**Riesgo:** bajo-medio. Junto a una pared, el punto predicho puede caer fuera de la malla; lo cubre el fallback. **Comprobación (S1):** velocidad sin dientes de sierra y menos `SetDestination` por segundo que en la línea base.
+- [ ] **Sistema nuevo `UnitAvoidanceSystem`** (`Squads/Systems/UnitAvoidance.System.cs`):
+  - Va después de `UnitFollowFormationSystem` (velocidad preferida y marcha ya decididas) y antes de `UnitBodyblockSystem` y `NavMeshPositionSyncSystem`.
+  - Es el único escritor de la velocidad evitada.
+  - Respeta la regla de `CLAUDE.md` de un sistema por responsabilidad: solo evita, no decide destinos ni velocidades de marcha.
+- [ ] Datos de entrada por agente:
+  - posición;
+  - velocidad actual (`agent.velocity`);
+  - velocidad preferida (`agent.desiredVelocity`, limitada a `agent.speed`);
+  - radio (`bodyRadius`);
+  - equipo y escuadra.
+- [ ] Vecinos y responsabilidad:
+  - rejilla espacial propia de celda `avoidanceNeighborRadius` (4 m) y como mucho `avoidanceMaxNeighbors` (8) vecinos, los más cercanos (tope por presupuesto, D8);
+  - con soldados aliados, responsabilidad 0,5;
+  - con el héroe local y los héroes, responsabilidad 1,0: el soldado se aparta y el héroe no entra en el solver;
+  - con enemigos no hay evitación (D2).
+- [ ] Horizonte: `avoidanceTimeHorizon` = 2 s en marcha y `avoidanceTimeHorizonNear` = 1 s cuando la unidad está a menos de un espaciado de su slot. Así esquiva pronto en marcha y ajusta cerca al formar; la referencia usa 5 s y 1 s.
+- [ ] Solver como job Burst (`IJobParallelFor`) sobre arrays nativos persistentes, como el bodyblock (lección: memoria persistente y procesar solo el conteo vigente). Salida: velocidad nueva por agente.
+- [ ] Aplicación en el puente managed: `agent.velocity = nueva` para las unidades en `Moving` o con objetivo. A las unidades `Formed` quietas se las considera vecinas (los demás las esquivan) pero no se les cambia la velocidad.
+  - Lección: aplicar el movimiento antes del snapshot autoritativo NavMesh → ECS.
+- [ ] Rejilla compartida: en la v1 cada sistema tiene la suya. Si S8 da más de 1 ms, extraer un `UnitSpatialGridSystem` con un solo escritor que alimente al bodyblock y a ORCA (se decide con la medida).
+- [ ] Tuning: `avoidanceNeighborRadius` = 4, `avoidanceMaxNeighbors` = 8, `avoidanceTimeHorizon` = 2, `avoidanceTimeHorizonNear` = 1 y `avoidanceEnabled` (interruptor para comparar).
+- [ ] Tests:
+  - EditMode `OrcaSolverTests`, todos puros: dos agentes de frente se esquivan sin tocarse; un agente con responsabilidad 1 frente al héroe cede del todo; sin vecinos, la velocidad no cambia; nunca supera la velocidad máxima;
+  - benchmark explícito con 900 agentes, ≤ 1 ms;
+  - PlayMode: `SquadNavigationRegressionTests` en verde, y un caso nuevo de dos aliados cruzándose sin solaparse.
+- [ ] Comprobación en S4 y S1: 0 pares aliados solapados en marcha estable y menos del 1 % de los pares en cambio de formación; el tiempo hasta formar no empeora más de 0,3 s.
+
+**Riesgo:** alto. Puede frenar la llegada al slot si los vecinos formados empujan, porque el horizonte cercano es corto. También hay que verificar que `agent.velocity` asignado convive con el `Move` del bodyblock. Si no converge, el plan B es C8 (separación posicional) para el lote 2 y ORCA pasa al lote 3.
 
 ---
 
 ## Validación del lote
-Después de cada C, no solo al final: compilar, revisar la consola y pasar los tests EditMode. PlayMode y el grabador, al cerrar cada C.
-- [x] EditMode con `run_tests` (`mode=editor`): todos los tests nuevos y los existentes (`FormationGeometry`, `SquadControl`, `Bodyblock`, `MeleeContact`, `Architecture`).
-- [x] PlayMode con `run_tests` (`mode=playmode`, `async_tests=true`, tras `save_all`): `SquadNavigationRegressionTests` y `BattleSceneIntegrationTests`.
-- [x] `BattleTestScene`: repetir S1 y S3 con `MovementBaselineCapture`, con el mismo vídeo, el mismo grabador y las mismas fotos de control. Comparar los vídeos lado a lado y los CSV con la línea base. Objetivos:
-  - como máximo 1 oscilación al llegar;
-  - formado en 2 s como máximo;
-  - el último en arrancar, en menos de 0,5 s;
-  - menos `SetDestination` por segundo.
-- [ ] Escala (D8: 900 agentes es el objetivo real): `NineHundredBodyblockAgentsReuseNativeStorageAfterWarmup` y el test explícito `BattleSceneRenderedPerformanceProfile` (`include_explicit=true`), más los ms de `UnitFormationState` y `UnitNavMesh` del grabador en el caso denso de `Docs/Arquitectura/11_*`. Sin regresión frente a la línea base.
+Tras cada C: compilación, consola y tests EditMode del paso. Al cerrar cada C: PlayMode y los escenarios afectados.
+- [ ] EditMode completo y PlayMode `SquadNavigationRegressionTests`.
+- [ ] S1, S3, S4 y S6 con vídeo y CSV, comparados con la línea base del lote 2. Objetivos de §5.1:
+  - solapes aliados 0 en marcha estable;
+  - pares enemigos solapados más de 0,3 s: 0;
+  - formado ≤ 2 s;
+  - error en marcha (media ≤ 0,5 m en este lote);
+  - unidades fuera de la correa en reacción: 0.
+- [ ] Coste (D8): benchmark de 900 agentes y ms de `UnitFollowFormation`, `UnitAvoidance` y `UnitNavMesh` en S6; ≤ 2 ms sumados.
 
 ## Documentación al cerrar el lote
-- [x] `Docs/Mechanics/FormationMilestoneSystem.md` y `Docs/Mechanics/Formations.md`: radios de llegada, arranque por filas y que los parámetros viven en `MovementTuningConfig`.
-- [x] `Docs/Design/Movimiento_Formaciones.md`: marcar C1-C4 como hechos, con las métricas antes y después.
-- [x] `CLAUDE.md`: añadir `MovementTuningConfig` en "Core Services / Shared Utilities". Aprovechar para corregir la versión de Entities (1.3.14 → 6.5.0, desfase n.º 5).
-- [x] Si hay correcciones durante la implementación, anotar el patrón en `tasks/lessons.md`.
+- [ ] `Docs/Design/Movimiento_Formaciones.md`: §10 con los resultados del lote 2.
+- [ ] `Docs/Mechanics/BodyblockSystem.md`: relación con ORCA (aliados por velocidad, enemigos por bodyblock y parada).
+- [ ] `Docs/Mechanics/UnitEngageSystem.md`: parada derivada, "en rango" con el radio del objetivo y correa en reacción.
+- [ ] `Docs/Mechanics/DamageMechanics.md`: solo si cambia algo del contacto (sin cambios de fórmula previstos).
+- [ ] `tasks/lessons.md` con lo aprendido.
 
-## Decisiones antes de implementar (valores por defecto confirmados por el usuario, 2026-10-19)
-- `r_out` = 0,5 m y `arrivalCalmTime` = 0,15 s.
-- `destinationLeadTime` = 0,4 s, con un tope de 1 m.
-- El arranque por filas también en Hold (hoy usa un aleatorio de 0,5-1,0 s).
-- Quitar sin transición los campos antiguos de `SquadSpawnConfigAuthoring`. Hay que reasignar el asset en las escenas en el mismo commit.
-- ~~Unity Recorder~~ **Aprobado (2026-10-19)**: se usará `com.unity.recorder` para grabar vídeo. Todavía no está instalado; se instala en el Paso 0.
+## Decisiones antes de implementar (valores por defecto propuestos)
+1. `k_stop` = 0,6. Con él, los lanceros paran a 1,30 m y los escuderos a 1,60 m.
+2. Cambiar "en rango" a `attackRange + radio del objetivo`, coherente con el hitbox. Se ataca un poco más lejos que hoy.
+3. Que los lanceros solo sobresalgan 0,5 m de su cuerpo (`attackRange` 1,0) es un dato de diseño. ¿Se deja así o se sube su alcance? No forma parte de este lote.
+4. Giro de combate a 450 °/s.
+5. Marcha de carrera por encima de 1,5 m del slot y vuelta a paso por debajo de 0,6 m. Tiempo de recuperación de 1 s.
+6. ORCA con un tope de 8 vecinos (la referencia no limita), horizonte de 2 s en marcha y 1 s cerca del slot.
+7. Escena real de 900 agentes: o importar el paquete "Travis Game Assets" (lo haces tú), o extender a los tests de rendimiento la excepción de logs de los escenarios de medición.
 
 ---
 
 ## Hecho anteriormente
+- [x] Lote 1 de movimiento (C1-C4): plan en `tasks/movement-batch1-plan.md` y resultados en `Docs/Design/Movimiento_Formaciones.md` §9.
 - [x] Comparación por sistema con la referencia y el informe `Docs/Design/Aprendizajes_Referencia.md`.
 - [x] Estudio de movimiento y formaciones `Docs/Design/Movimiento_Formaciones.md`, con las decisiones del usuario en §7.
