@@ -304,3 +304,14 @@
 - Una ley de recuperación proporcional frena la llegada cuando el slot ya está quieto. Con el slot parado, dejar que el agente llegue a la velocidad de su marcha y frene con su propio `autoBraking`.
 - Al limitar la persecución (correa), revisar los escenarios que daban por hecho el contacto: S6 paraba al empezar la reacción, a 8-9 m del enemigo, y dejó de llegar a la melé.
 - S6 cambia mucho de un run a otro, y dentro de la suite completa se comporta distinto que solo. Comparar con dos o más corridas y mirar el CSV (reacción, objetivo, ataque) antes de atribuir un cambio al código.
+
+## Formaciones por datos y reparación del movimiento (2026-10-20)
+
+- Tras añadir un campo a un struct que usan jobs Burst, comprobar los tests con Burst activado y desactivado. Una vez Burst siguió ejecutando la disposición vieja del struct (leía `steered` donde ahora estaba `squadSpacing`) hasta que se reordenaron los campos y se recompiló. Síntoma: los mismos resultados erróneos con Burst, correctos sin él.
+- Para sustituir un ScriptableObject sin romper referencias, renombrar la clase y el archivo conservando el `.meta` (mismo GUID de script), leer los datos viejos con `FormerlySerializedAs` en un campo oculto y convertirlos una vez desde un menú del editor. Escuadras, interfaz y prefabs siguen apuntando al mismo asset.
+- No identificar unidades por su índice de slot en las métricas: cuando el reparto cambia, todas parecen "teletransportarse" en el mismo frame. Usar la entidad.
+- Escribir `agent.velocity` directamente se salta la aceleración del agente (picos de 200 m/s²). Partir de la velocidad actual y limitar el cambio por frame; permitir frenar más rápido que acelerar, o las unidades pegadas a su slot se pasan medio metro cuando el héroe para.
+- "Ranura k = soldado k" solo funciona si las plantillas de todas las formaciones mantienen la ranura k en una zona parecida. Si no, al cambiar de formación la tropa se cruza y ORCA la bloquea; repartir por cercanía en el evento.
+- Antes de diseñar una "dirección de bloqueo", comprobar cómo se decide de verdad: aquí el bloqueo es el collider del escudo colgado de la mano, y `UnitShieldComponent.orientation` no lo leía nadie.
+- Una métrica de solapes con umbral fijo marca como fallo una formación compacta a propósito (Testudo a 0,8 m). Hacerla relativa al espaciado de la formación.
+- En Bash, los heredocs con plantillas JS que contienen comillas invertidas y `${…}` pueden romper el comando. Escribir el script a un archivo con la herramienta de escritura y ejecutarlo.

@@ -13,11 +13,13 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M4 | Animación del paso a carrera | Media | Pendiente |
 | M5 | Llegada del ancla (C10) | Media | Pendiente (lote 3) |
 | M6 | Anillo de contacto sin cupo duro (C11) | Media | Pendiente (lote 3) |
-| M7 | Reasignación de slots por distancia (C12) | Baja | En duda |
+| M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
 | M8 | Detalles de ORCA respecto a la referencia | Media | Pendiente |
 | M9 | Memoria por frame en la evitación | Baja | Pendiente |
 | M10 | Variación de S6 entre corridas | Media | Pendiente |
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
+| M12 | Picos de aceleración en la melé por el bodyblock | Media | Pendiente |
+| M13 | Llegada más lenta al frenar con aceleración limitada | Media | Pendiente |
 
 ---
 
@@ -84,8 +86,10 @@ al morir o cambiar de objetivo.
 ## M7. Reasignación de slots por distancia (C12)
 **Qué es.** Al cambiar de formación, repartir las ranuras minimizando el recorrido total en lugar de por índice.
 
-**En duda.** La referencia **no** reasigna: ranura k = soldado k, con id estable. **[dec]** Con plantillas que conservan el
-orden (F1 de `Formaciones_y_Posturas.md`), quizá no haga falta. Medir los cruces en S4 con el modelo nuevo antes de decidir.
+**Hecho (2026-10-20, `e0aa54a1`).** La referencia no reasigna (ranura k = soldado k) **[dec]**, pero sus plantillas se diseñan
+para que la ranura k quede cerca entre formaciones. Las de Conquest no: en S4 (Línea ↔ Testudo) media tropa atravesaba a la
+otra y había 6-7 atascos. Ahora, al rehacer la disposición, cada unidad toma la ranura libre más cercana (voraz, solo en el
+evento): 0 atascos. Si en el futuro las plantillas se diseñan con orden coherente (F1), se puede volver a "k = k".
 
 ## M8. Detalles de ORCA respecto a la referencia
 **Qué es.** Diferencias conscientes del C14 actual frente a lo leído en la referencia:
@@ -116,6 +120,23 @@ corridas sin combate).
 
 **Cómo abordarlo.** Fijar la semilla de la IA enemiga y del ruido, esperar a un estado inicial idéntico antes de medir y
 repetir el escenario tres veces, informando de la mediana.
+
+## M12. Picos de aceleración en la melé por el bodyblock
+**Qué es.** Fuera de la melé los picos (> 20 m/s²) bajaron a menos del 1 %; en S6 quedan en un 2 % con máximos de unos
+180 m/s².
+
+**Por qué queda fuera.** Vienen de `UnitBodyblockSystem`, que separa enemigos con `agent.Move` (un desplazamiento directo que
+no pasa por la aceleración del agente), y no de la evitación ni de la velocidad de seguimiento.
+
+**Cómo abordarlo.** Limitar el empuje por frame a lo que la aceleración permite, o pasarlo a velocidad como en ORCA. Hay que
+cuidar que dos enemigos solapados se sigan separando (M2).
+
+## M13. Llegada más lenta al frenar con aceleración limitada
+**Qué es.** Desde que la velocidad respeta la aceleración, el tiempo hasta formar sube (S3 0,51 → 0,83 s, S4 unos 2 s). Antes la
+unidad frenaba en un frame, que era justamente el tirón.
+
+**Cómo abordarlo.** Que la unidad empiece a frenar antes: con C10 (llegada del ancla, M5) el slot no se para en seco cuando
+para el héroe; o subir `brakingFactor` midiendo que no reaparezcan los tirones.
 
 ## M11. Separación posicional (C8)
 **Qué es.** Empuje entre aliados en el bodyblock, como paso intermedio antes de ORCA.

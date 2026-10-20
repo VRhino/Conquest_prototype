@@ -90,10 +90,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - RetreatLogic persiste efectivos y limpia la referencia solo si sigue apuntando a la escuadra retirada. Spawning excluye dueño muerto y reservas eliminadas.
 
 ### FormationSystem
-- **Responsabilidad**: Calcula posiciones de formación según tipo y centro del squad
-- **Output**: `UnitTargetPositionComponent` por unidad
-- Consume `SquadResolvedOrderComponent.formation` independientemente de movimiento; confirma formación, slots, espaciado y cooldown tras validar capacidad del patrón.
-- Usa centro fraccional y rotación normalizada. En cambios explícitos reasigna slotIndex; la actualización continua conserva esos índices tras bajas.
+- **Responsabilidad**: Único escritor de la disposición de la escuadra (`FormationComponent`: formación, plantilla, espaciado, escala, semilla) y de cada `UnitGridSlotComponent` (ranura, posición local, fila, papel, rumbo, desplazamiento local).
+- **Datos**: `FormationDefinition` (plantillas por soldados vivos, espaciado propio, ruido, Scatter, tabla de posturas) horneado en `FormationLibraryBlob`; funciones puras en `FormationLayout`.
+- **Cuándo rehace la disposición**: cambio de formación pedido (con cooldown), cambio de plantilla por bajas, o `SquadFormationSpacingRequest` (que consume y elimina).
+- **Reparto**: en una disposición nueva, cada unidad toma la ranura libre más cercana (voraz, solo en el evento); si no cambia la plantilla, cada unidad conserva su ranura tras bajas.
+- **Output**: también el `UnitTargetPositionComponent` inicial; después lo mantiene `GridFormationUpdateSystem`, que solo gira el desplazamiento local con el ancla.
 
 ### UnitFormationStateSystem
 - **Responsabilidad**: Gestiona todos los cambios de estado de unidades (Moving/Formed/Waiting)
@@ -113,8 +114,8 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Llegada**: `UnitFormationStateSystem` y `SquadNavigationSystem` comparan contra el destino efectivo asociado al slot solicitado.
 
 ### UnitFollowFormationSystem
-- **Responsabilidad**: Mueve unidades sin NavMesh + aplica rotación Formed para unidades NavMesh
-- **Output**: `LocalTransform` (non-NavMesh), `navAgent.transform.rotation` (NavMesh Formed state)
+- **Responsabilidad**: Velocidad de seguimiento y marcha (C9, `UnitMovementGearComponent`) + rotación Formed para unidades NavMesh
+- **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
 - **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 
@@ -133,11 +134,17 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.
 - **Ref**: `Docs/Mechanics/BodyblockSystem.md`
 
-### FormationStanceSystem
-- **Responsabilidad**: Lee milestone tags de pulso 1 frame (`UnitStartedMovingTag`, `UnitArrivedAtSlotTag`) → actualiza `UnitFormationStanceComponent` + propaga `CurrentStance` y `SlotRow` a `UnitAnimationMovementComponent`
+### UnitAvoidanceSystem
+- **Responsabilidad**: Evitación por velocidad entre aliados (ORCA, C14); único escritor de la velocidad evitada (`agent.velocity`).
+- **Regla**: enemigos no se esquivan (D2); dentro de la escuadra solo las unidades que se mueven, con radio combinado 0,9 × espaciado; la velocidad cambia como mucho a la aceleración del agente.
+- **Orden**: después de `UnitFollowFormationSystem`, antes de `UnitBodyblockSystem` y `NavMeshPositionSyncSystem`.
+- **Ref**: `Docs/Mechanics/BodyblockSystem.md`, `Docs/Design/Movimiento_Formaciones.md` §10-11
+
+### UnitPostureSystem
+- **Responsabilidad**: Único escritor de `UnitFormationStanceComponent`: postura por papel de ranura según la tabla de la formación (formado / en marcha); en melé conserva la de formado. Propaga postura, fila y papel a `UnitAnimationMovementComponent`.
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]`
-- **NO hace**: no cambia estado de formación (`UnitFormationStateComponent`), no mueve unidades, no escribe `SquadStateComponent`
-- **Ref**: `Docs/Mechanics/FormationMilestoneSystem.md`
+- **NO hace**: no cambia estado de formación, no mueve unidades.
+- **Ref**: `Docs/Mechanics/FormationPostures.md`
 
 ### DestinationMarkerSystem
 - **Responsabilidad**: Lee estado de squad para mostrar el marcador de destino (Hold Position)

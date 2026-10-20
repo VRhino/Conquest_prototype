@@ -11,18 +11,20 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | Pendiente (contenido) |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | Pendiente |
-| F3 | Clips de animación de las posturas | Alta | Bloqueado (contenido) |
-| F4 | Cuerpo de impactos por postura | Media | Pendiente |
+| F3 | Clips de animación de las posturas | Alta | Bloqueado (contenido; inventario hecho, no hay clips) |
+| F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
 | F7 | Orden de llenado de ranuras (grupos de orden) | Media | Pendiente |
-| F8 | Cambiar el espaciado desde el juego (orden o habilidad) | Media | Pendiente |
+| F8 | Cambiar el espaciado desde el juego (orden o habilidad) | Media | Parcial: API hecha, sin orden |
 | F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Pendiente |
 | F10 | Ruido aleatorio por publicación frente a determinista | Baja | Decidido: determinista |
 | F11 | Disposición dinámica y "seguir al líder con retardo" | Baja | Pendiente |
 | F12 | Cohesión como consulta: quórum, aislados y terreno no apto | Media | Pendiente |
 | F13 | Postura al ir subido a escaleras, torres o máquinas | Baja | Pendiente (sin asedio) |
 | F14 | Media vuelta (invertir filas en giros grandes) | Baja | Descartado por D5 |
+| F15 | Radios de llegada por formación | Media | Pendiente |
+| F16 | `UnitShieldComponent.orientation` sin lectores | Baja | Pendiente |
 
 ---
 
@@ -75,6 +77,10 @@ haciendo ese inventario.
 **Cómo abordarlo.** Inventario de clips → lista de los que faltan → decidir si se compran, se hacen con retargeting o se
 crean poses estáticas con IK de brazo como solución temporal.
 
+**Inventario (2026-10-20).** En `Assets/` solo hay `Animations/Sword And Shield Slash.fbx`; ningún clip de escudo al frente,
+al costado ni arriba. La lógica ya está (`UnitPostureSystem`, parámetros `Stance` y `SlotRole`): falta el contenido y los
+estados del Animator que lo usen. Ver `Docs/Mechanics/FormationPostures.md`.
+
 ## F4. Cuerpo de impactos por postura
 **Qué es.** En la referencia, cambiar la postura reconstruye el cuerpo de impactos del actor ("dummy body"): levantar el
 escudo cambia qué zonas reciben golpes. **[dec]** flujo, **[obs]** efecto.
@@ -83,8 +89,9 @@ escudo cambia qué zonas reciben golpes. **[dec]** flujo, **[obs]** efecto.
 los colliders del cuerpo es más caro y solo merece la pena si el combate distingue zonas (cabeza, torso, piernas).
 
 **A considerar.**
-- Hoy el escudo es un `BoxCollider` hijo del prefab (`ShieldHitboxBehaviour`) y el bloqueo se decide por producto escalar en
-  `DamageCalculationSystem`. Mover el collider del escudo con la postura sería el paso intermedio.
+- El escudo es un `BoxCollider` en la malla del escudo, que cuelga de la mano (`Hand_L/Off_Hand_Weapon_Carrier`); el bloqueo es
+  físico (el golpe o la flecha choca antes con ese collider). Por tanto, **con clips de postura el cuerpo de impactos cambia
+  solo**, como en la referencia. Mover el collider por código pelearía con la animación.
 - Los golpes a la cabeza (la referencia tiene clase de golpe "cabeza") dependen de esto.
 
 **Cómo abordarlo.** Primero medir con el paso 6 si el bloqueo por dirección basta (flechas en parábola contra el interior de
@@ -173,6 +180,18 @@ como último recurso tras C13.
 
 **Por qué queda fuera.** Conquest no tiene asedio todavía. Cuando lo tenga, la tabla de posturas del paso 6 se amplía con
 "montado en objeto".
+
+## F15. Radios de llegada por formación
+**Qué es.** `MovementTuningComponent.Validate` comprueba los radios de llegada contra un espaciado de referencia de 1 m. La
+Testudo (0,8 m) queda fuera de esa regla a propósito: `arrivalRadiusOut` = 0,5 m es más de la mitad de su espaciado.
+
+**Cómo abordarlo.** Radios de llegada proporcionales al espaciado de la formación (por ejemplo, `r_out = 0,45·s`) o un perfil
+de llegada por formación (D3). Medir en S4 que la Testudo no oscile al formar.
+
+## F16. `UnitShieldComponent.orientation` sin lectores
+**Qué es.** Se rellena desde `ShieldHitboxBehaviour.orientation` del prefab, pero ningún sistema lo lee (el bloqueo es el collider).
+
+**Cómo abordarlo.** Eliminarlo, o usarlo si se añade un bloqueo por ángulo para golpes sin física (habilidades de área).
 
 ## F14. Media vuelta
 **Qué es.** Invertir el orden de filas en giros grandes en lugar de rotar la rejilla.

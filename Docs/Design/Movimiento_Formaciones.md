@@ -470,3 +470,48 @@ Ajustes fuera de las decisiones por defecto del plan:
 
 Pendiente: S8 (900 agentes en escena real, necesita el paquete de VFX ausente), el error en marcha ≤ 0,5 m, los solapes
 enemigos persistentes en S6 y el coste de llegada en S4.
+
+## 11. Formaciones por datos y reparación del movimiento (2026-10-20)
+
+Rama `feat/formation-layout` (desde `feat/movement-batch2`): `9c78b418` (modelo y disposición), `0130321c` (proyección del
+slot, tests y métrica), `e0aa54a1` (aceleración, frenado y reparto por cercanía) y `3c91f408` (posturas). Plan en
+`tasks/todo.md`; lo que queda fuera, en `Docs/Por_Abordar/`.
+
+### Modelo nuevo (patrón de la referencia, `game-re/notes/formations-orders.md` y `formation-postures.md`)
+- `FormationDefinition` sustituye a la rejilla de celdas de 1 m: disposición Template o Scatter, **espaciado propio** (suelo
+  0,3 m), ruido orgánico determinista por escuadra y ranura, **plantillas por soldados vivos**, y por ranura fila, **papel**
+  (`Front`, `Flank`, `Interior`, `Rear`) y **rumbo** local. Tabla de **posturas** por papel.
+- `FormationSystem` es el único escritor de la disposición y de los slots. Al rehacerla (cambio de formación, de plantilla
+  por bajas o de espaciado) cada unidad toma la **ranura libre más cercana** (L-2); si no, conserva la suya.
+- `GridFormationUpdateSystem` solo gira el desplazamiento local con el ancla; el slot se proyecta en la malla con
+  `min(espaciado, 0,65)` antes del radio ancho (L3-04).
+- La fila deja de salir invertida: `BraceWeaponSystem` y la animación recibían `gridPosition.y`, con el frente en la y más alta.
+
+### Medida (mismos escenarios; la métrica de solapes entre compañeros pasa a ser relativa a su espaciado)
+| Métrica | Cierre del lote 2 (§10) | Después |
+|---|---|---|
+| Aceleración > 20 m/s² (S1 / S3 / S4) | 0,7 / 3,3 / 6,7 % (máx. 197 m/s²) | **0,2 / 0,6 / 0,7 %** (máx. 37 m/s²) |
+| Atascos al cambiar de formación (S4, > 0,5 s parado lejos del slot) | 6-7 | **0** |
+| Formado al 95 % (S1 / S3 / S4) | 0,43 / 0,51 / 0,93 s | 0,43 / 0,83 / 1,97-2,43 s |
+| Error al slot en marcha (S1 / S3 / S4) | 0,57 / 0,60 / 1,12 m | 0,59 / 0,76 / 0,99 m |
+| Solapes aliados en marcha (S1 / S3 / S4) | 0,04 / 0,13 / 0,64 | 0,00 / 0,00 / 0,78 |
+| S6 aceleración > 20 m/s² | — | 2,0 % (máx. 181 m/s²) |
+
+Lectura:
+- **Se acabaron los tirones** fuera de la melé. Venían de ORCA, que escribía `agent.velocity` saltándose la aceleración del
+  agente, y de C9, que bajaba `agent.speed` de golpe. Ahora la velocidad cambia como mucho a la aceleración del agente y
+  frena hasta `brakingFactor` (2,5) veces más rápido, como una persona.
+- **La tropa ya no se atasca al cambiar de formación.** Con "ranura k = soldado k", las plantillas de Línea y Testudo no se
+  corresponden en el espacio y media tropa atravesaba a la otra; el reparto por cercanía lo resuelve.
+- **La llegada tarda más en S3 y S4** que al cierre del lote 2: el frenado ya no es instantáneo (antes la unidad paraba en un
+  frame, que era el tirón) y el espaciado de Línea pasa de 1,0 a 1,1 m. S4 forma en unos 2 s, en el límite de §5.1.
+- **En la melé (S6) quedan picos** que vienen de los empujes del bodyblock entre enemigos (M12 en `Docs/Por_Abordar`).
+
+### Desviaciones respecto al plan
+- Los assets se migraron **en el sitio** (mismo script con otro nombre, mismo GUID) en lugar de crear assets nuevos: no hubo
+  que repuntar escuadras, interfaz ni prefabs.
+- Scatter usa el espaciado como tamaño de celda y el ruido como desplazamiento, sin campos propios.
+- Los radios de llegada se validan contra el espaciado de referencia (1 m); la Testudo (0,8 m) aprieta a propósito.
+- El reparto por cercanía (C12) entró aquí: sin él, S4 se atascaba.
+- La defensa por postura no usa `ShieldOrientation`: ese campo no lo lee nadie y el bloqueo es el collider del escudo, que
+  cuelga de la mano. La defensa saldrá de los clips de postura, que no hay en el proyecto (`Docs/Mechanics/FormationPostures.md`).

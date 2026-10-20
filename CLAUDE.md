@@ -50,7 +50,8 @@ Each system has ONE responsibility:
 - **SquadFSMSystem**: squad-level state transitions only
 - **UnitFormationStateSystem**: owns all unit state transitions (Moving/Formed/Waiting)
 - **UnitFollowFormationSystem**: moves units physically; never changes state
-- **FormationSystem**: formation slot positions only
+- **FormationSystem**: formation layout and unit slots only (single writer of `FormationComponent` and `UnitGridSlotComponent`; data in `FormationDefinition`)
+- **UnitPostureSystem**: unit posture per slot role only
 - **DestinationMarkerSystem**: reads state, never writes it
 
 ### Visual Instantiation (Automated)
