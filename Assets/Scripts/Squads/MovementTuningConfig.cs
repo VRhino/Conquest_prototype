@@ -37,6 +37,19 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
 
+    [Header("Ally avoidance (C14, ORCA)")]
+    public bool avoidanceEnabled = true;
+    [Tooltip("Allies closer than this are avoided (m).")]
+    [Min(0.5f)] public float avoidanceNeighborRadius = 4f;
+    [Tooltip("Nearest allies considered per unit.")]
+    [Min(0f)] public float avoidanceMaxNeighbors = 8f;
+    [Tooltip("Collisions further away in time are ignored (s).")]
+    [Min(0.1f)] public float avoidanceTimeHorizon = 2f;
+    [Tooltip("Time horizon within one spacing of the slot (s).")]
+    [Min(0.1f)] public float avoidanceTimeHorizonNear = 1f;
+    [Tooltip("Time to separate overlapping allies (s).")]
+    [Min(0.02f)] public float avoidanceCollisionResolveTime = 0.25f;
+
     [Header("Slot following (C9)")]
     [Tooltip("Switch to Run beyond this distance to the slot (m).")]
     [Min(0f)] public float runEnterDistance = 0.9f;
@@ -74,6 +87,12 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        avoidanceEnabled = avoidanceEnabled,
+        avoidanceNeighborRadius = avoidanceNeighborRadius,
+        avoidanceMaxNeighbors = avoidanceMaxNeighbors,
+        avoidanceTimeHorizon = avoidanceTimeHorizon,
+        avoidanceTimeHorizonNear = avoidanceTimeHorizonNear,
+        avoidanceCollisionResolveTime = avoidanceCollisionResolveTime,
         runEnterDistance = runEnterDistance,
         runExitDistance = runExitDistance,
         followRecoveryTime = followRecoveryTime,

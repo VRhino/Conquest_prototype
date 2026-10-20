@@ -29,6 +29,12 @@ public struct MovementTuningComponent : IComponentData
     public float formedRotationSpeed;
     public float runSpeedMultiplier;
     public float formationChangeCooldown;
+    public bool avoidanceEnabled; // Allies dodge each other by velocity (C14).
+    public float avoidanceNeighborRadius; // Allies closer than this are avoided (m, C14).
+    public float avoidanceMaxNeighbors; // Nearest allies considered per unit.
+    public float avoidanceTimeHorizon; // Collisions further away in time are ignored (s).
+    public float avoidanceTimeHorizonNear; // Time horizon within one spacing of the slot (s).
+    public float avoidanceCollisionResolveTime; // Time to separate overlapping allies (s).
     public float runEnterDistance; // Switch to Run beyond this distance to the slot (m).
     public float runExitDistance; // Back to Walk below this distance to the slot (m).
     public float followRecoveryTime; // Seconds to close the gap to the slot.
@@ -56,6 +62,12 @@ public struct MovementTuningComponent : IComponentData
         formedRotationSpeed = 5f,
         runSpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        avoidanceEnabled = true,
+        avoidanceNeighborRadius = 4f,
+        avoidanceMaxNeighbors = 8f,
+        avoidanceTimeHorizon = 2f,
+        avoidanceTimeHorizonNear = 1f,
+        avoidanceCollisionResolveTime = 0.25f,
         runEnterDistance = 0.9f,
         runExitDistance = 0.45f,
         followRecoveryTime = 0.5f,
@@ -84,6 +96,8 @@ public struct MovementTuningComponent : IComponentData
         if (t.bodyRadius <= 0f) return "bodyRadius must be positive.";
         if (t.runExitDistance >= t.runEnterDistance) return "runExitDistance must be smaller than runEnterDistance.";
         if (t.followRecoveryTime <= 0f) return "followRecoveryTime must be positive.";
+        if (t.avoidanceTimeHorizonNear > t.avoidanceTimeHorizon) return "avoidanceTimeHorizonNear must not exceed avoidanceTimeHorizon.";
+        if (t.avoidanceMaxNeighbors > 28f) return "avoidanceMaxNeighbors must not exceed 28.";
         if (t.runExitDistance <= t.arrivalRadiusIn) return "runExitDistance must exceed arrivalRadiusIn.";
         if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
