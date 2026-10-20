@@ -34,8 +34,18 @@ public class MovementTuningConfig : ScriptableObject
     [Header("Movement constants (moved from code, unchanged values)")]
     [Min(0f)] public float combatFacingRange = 3.5f;
     [Min(0f)] public float formedRotationSpeed = 5f;
-    [Min(1f)] public float hurrySpeedMultiplier = 2f;
+    [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
+
+    [Header("Slot following (C9)")]
+    [Tooltip("Switch to Run beyond this distance to the slot (m).")]
+    [Min(0f)] public float runEnterDistance = 0.9f;
+    [Tooltip("Back to Walk below this distance to the slot (m).")]
+    [Min(0f)] public float runExitDistance = 0.45f;
+    [Tooltip("Seconds to close the gap to the slot.")]
+    [Min(0.05f)] public float followRecoveryTime = 0.5f;
+    [Tooltip("Minimum following speed as a fraction of the base speed.")]
+    [Min(0f)] public float followMinSpeedRatio = 0.3f;
     [Tooltip("Body radius used for contact distances and ally avoidance (m).")]
     [Min(0.1f)] public float bodyRadius = 0.5f;
     [Tooltip("Melee units stop at bodies + this fraction of the weapon reach beyond their own body.")]
@@ -62,8 +72,12 @@ public class MovementTuningConfig : ScriptableObject
         slotVelocitySmoothing = slotVelocitySmoothing,
         combatFacingRange = combatFacingRange,
         formedRotationSpeed = formedRotationSpeed,
-        hurrySpeedMultiplier = hurrySpeedMultiplier,
+        runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        runEnterDistance = runEnterDistance,
+        runExitDistance = runExitDistance,
+        followRecoveryTime = followRecoveryTime,
+        followMinSpeedRatio = followMinSpeedRatio,
         bodyRadius = bodyRadius,
         meleeStopReachFraction = meleeStopReachFraction,
         rangedStopFraction = rangedStopFraction,

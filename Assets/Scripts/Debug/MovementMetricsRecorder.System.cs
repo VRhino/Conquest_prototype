@@ -171,7 +171,9 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             x = position.x, z = position.z, yaw = math.atan2(forward.x, forward.z),
             team = SystemAPI.HasComponent<TeamComponent>(unit) ? (int)SystemAPI.GetComponent<TeamComponent>(unit).value : -1,
             target = target, targetDistance = targetDistance, attacking = attacking, reacting = reacting,
-            gear = -1, speed = speed
+            gear = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
+                ? (int)SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : -1,
+            speed = speed
         };
     }
 

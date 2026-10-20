@@ -1,0 +1,60 @@
+using Unity.Mathematics;
+
+/// <summary>
+/// Slot-following speed with recovery (Movimiento_Formaciones.md L-3 with decision D4): the unit moves at the
+/// slot's speed plus a proportional catch-up term, never faster than its current gear, and switches to Run
+/// when it falls far behind (with hysteresis so the gear does not flicker).
+/// </summary>
+public static class FormationFollowSpeed
+{
+    /// <summary>
+    /// Below this slot speed the slot is treated as still: the unit arrives at its gear speed and the
+    /// agent's own braking, as before C9, instead of crawling in on the recovery term.
+    /// </summary>
+    public const float StillSlotSpeed = 0.5f;
+
+    public struct Settings
+    {
+        public float arrivalRadius;     // No catch-up inside this distance (r_in).
+        public float recoveryTime;      // Seconds to close the gap (T_rec).
+        public float minSpeedRatio;     // Floor as a fraction of the base speed.
+        public float runEnterDistance;  // Switch to Run beyond this distance to the slot.
+        public float runExitDistance;   // Back to Walk below this distance.
+        public float runSpeedMultiplier;
+
+        public static Settings From(in MovementTuningComponent t) => new Settings
+        {
+            arrivalRadius = t.arrivalRadiusIn,
+            recoveryTime = t.followRecoveryTime,
+            minSpeedRatio = t.followMinSpeedRatio,
+            runEnterDistance = t.runEnterDistance,
+            runExitDistance = t.runExitDistance,
+            runSpeedMultiplier = t.runSpeedMultiplier,
+        };
+    }
+
+    /// <summary>Gear for this frame given the previous one; forced Run (hurry, combat) wins.</summary>
+    public static MovementGear Gear(MovementGear previous, float distanceToSlot, bool forceRun, in Settings s)
+    {
+        if (forceRun || distanceToSlot > s.runEnterDistance) return MovementGear.Run;
+        if (distanceToSlot < s.runExitDistance) return MovementGear.Walk;
+        return previous;
+    }
+
+    /// <summary>Top speed of a gear.</summary>
+    public static float MaxSpeed(float baseSpeed, MovementGear gear, in Settings s)
+        => baseSpeed * (gear == MovementGear.Run ? s.runSpeedMultiplier : 1f);
+
+    /// <summary>
+    /// Speed command: v_ff + max(0, (d − r_in)/T), clamped to [minRatio·base, gear speed]; a still slot is
+    /// approached at the gear speed.
+    /// </summary>
+    public static float Speed(float baseSpeed, float slotSpeed, float distanceToSlot, MovementGear gear, in Settings s)
+    {
+        float max = MaxSpeed(baseSpeed, gear, s);
+        if (slotSpeed < StillSlotSpeed) return max;
+        float min = math.min(max, baseSpeed * s.minSpeedRatio);
+        float recovery = math.max(0f, distanceToSlot - s.arrivalRadius) / math.max(1e-3f, s.recoveryTime);
+        return math.clamp(slotSpeed + recovery, min, max);
+    }
+}

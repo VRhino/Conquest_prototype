@@ -27,8 +27,12 @@ public struct MovementTuningComponent : IComponentData
     // Constants moved out of system code with their current values
     public float combatFacingRange;
     public float formedRotationSpeed;
-    public float hurrySpeedMultiplier;
+    public float runSpeedMultiplier;
     public float formationChangeCooldown;
+    public float runEnterDistance; // Switch to Run beyond this distance to the slot (m).
+    public float runExitDistance; // Back to Walk below this distance to the slot (m).
+    public float followRecoveryTime; // Seconds to close the gap to the slot.
+    public float followMinSpeedRatio; // Minimum following speed as a fraction of the base speed.
     public float bodyRadius; // Body radius for contact and avoidance, m (D10).
     public float meleeStopReachFraction; // Melee stop: fraction of the weapon reach past the body (C5).
     public float rangedStopFraction; // Ranged stop as a fraction of range (C5).
@@ -50,8 +54,12 @@ public struct MovementTuningComponent : IComponentData
         slotVelocitySmoothing = 0.15f,
         combatFacingRange = 3.5f,
         formedRotationSpeed = 5f,
-        hurrySpeedMultiplier = 2f,
+        runSpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        runEnterDistance = 0.9f,
+        runExitDistance = 0.45f,
+        followRecoveryTime = 0.5f,
+        followMinSpeedRatio = 0.3f,
         bodyRadius = 0.5f,
         meleeStopReachFraction = 0.6f,
         rangedStopFraction = 0.92f,
@@ -74,6 +82,10 @@ public struct MovementTuningComponent : IComponentData
         if (t.meleeStopReachFraction <= 0f || t.meleeStopReachFraction >= 1f) return "meleeStopReachFraction must be between 0 and 1.";
         if (t.rangedStopFraction <= 0f || t.rangedStopFraction >= 1f) return "rangedStopFraction must be between 0 and 1.";
         if (t.bodyRadius <= 0f) return "bodyRadius must be positive.";
+        if (t.runExitDistance >= t.runEnterDistance) return "runExitDistance must be smaller than runEnterDistance.";
+        if (t.followRecoveryTime <= 0f) return "followRecoveryTime must be positive.";
+        if (t.runExitDistance <= t.arrivalRadiusIn) return "runExitDistance must exceed arrivalRadiusIn.";
+        if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
         // The command must be re-sent before the agent reaches it, or the lead stops paying off.
         if (t.destinationLeadTime > 0f && t.destinationChangeSpeedFactor >= t.destinationLeadTime)

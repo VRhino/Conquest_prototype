@@ -80,7 +80,7 @@ public partial class BattleSceneIntegrationTests
 
     const float S4SettleSeconds = 4f;     // Time for a formation change to complete before the next one.
     const float S4MarchSeconds = 3f;
-    const float S6ApproachTimeout = 20f;  // March towards the remote squad until a combat reaction starts.
+    const float S6ApproachTimeout = 20f;  // March towards the remote squad until the first unit strikes.
     const float S6MeleeSeconds = 15f;
 
     /// <summary>S4: formation changes while still and while marching; units cross each other's paths.</summary>
@@ -113,7 +113,10 @@ public partial class BattleSceneIntegrationTests
         finally { RestoreInputSettings(previousInput); }
     }
 
-    /// <summary>S6: march at the remote squad (+z) until the squad reacts, then hold the melee.</summary>
+    /// <summary>
+    /// S6: march at the remote squad (+z) until one of our units strikes, then hold the melee. The squad only
+    /// pursues within its leash when reacting (C6), so the hero has to carry it into contact.
+    /// </summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS6Clash()
     {
@@ -127,8 +130,7 @@ public partial class BattleSceneIntegrationTests
                 var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
                 float deadline = Time.time + S6ApproachTimeout;
-                while (Time.time < deadline && em.GetComponentData<SquadResolvedOrderComponent>(squad).source
-                       != OrderSource.CombatReaction)
+                while (Time.time < deadline && !AnySquadUnitAttacking())
                     yield return null;
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 yield return new WaitForSeconds(S6MeleeSeconds);
@@ -136,6 +138,15 @@ public partial class BattleSceneIntegrationTests
             }
         }
         finally { RestoreInputSettings(previousInput); }
+    }
+
+    bool AnySquadUnitAttacking()
+    {
+        foreach (var element in em.GetBuffer<SquadUnitElement>(squad))
+            if (em.Exists(element.Value) && em.HasComponent<UnitCombatComponent>(element.Value)
+                && em.GetComponentData<UnitCombatComponent>(element.Value).isAttacking)
+                return true;
+        return false;
     }
 
     IEnumerator PressWhileHeld(Key key, Key held)

@@ -26,6 +26,7 @@ public partial class UnitFollowFormationSystem : SystemBase
         float dt = SystemAPI.Time.DeltaTime;
         var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
             ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
+        var followSpeed = FormationFollowSpeed.Settings.From(tuning);
 
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
         var transformLookup = GetComponentLookup<LocalTransform>();
@@ -106,8 +107,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                                 && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
                                 && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
-                            if (hurryToComander || hasCombatTarget) speedMultiplier *= tuning.hurrySpeedMultiplier;
-                            navAgent.speed = baseSpeed * speedMultiplier;
+                            navAgent.speed = FollowSpeed(unit, baseSpeed * speedMultiplier,
+                                hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
                         }
                     }
                     else
@@ -180,5 +181,41 @@ public partial class UnitFollowFormationSystem : SystemBase
 
             }
         }
+    }
+
+    /// <summary>
+    /// Speed and gear of a NavMesh unit (C9): a unit following its slot matches the slot speed plus a
+    /// catch-up term within its gear; hurry and combat run at full Run speed; other states walk.
+    /// </summary>
+    float FollowSpeed(Entity unit, float baseSpeed, bool forceRun, bool isHoldingPosition,
+        in FormationFollowSpeed.Settings settings)
+    {
+        var previous = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
+            ? SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : MovementGear.Walk;
+        bool following = SystemAPI.HasComponent<UnitFormationStateComponent>(unit)
+            && SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State == UnitFormationState.Moving
+            && SystemAPI.HasComponent<UnitTargetPositionComponent>(unit);
+
+        MovementGear gear;
+        float speed;
+        if (forceRun || !following)
+        {
+            gear = forceRun ? MovementGear.Run : MovementGear.Walk;
+            speed = FormationFollowSpeed.MaxSpeed(baseSpeed, gear, settings);
+        }
+        else
+        {
+            float3 position = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+            float3 slot = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+            float distance = math.distance(position.xz, slot.xz);
+            float slotSpeed = !isHoldingPosition && SystemAPI.HasComponent<NavAgentComponent>(unit)
+                ? math.length(SystemAPI.GetComponent<NavAgentComponent>(unit).slotVelocity.xz) : 0f;
+            gear = FormationFollowSpeed.Gear(previous, distance, false, settings);
+            speed = FormationFollowSpeed.Speed(baseSpeed, slotSpeed, distance, gear, settings);
+        }
+
+        if (gear != previous && SystemAPI.HasComponent<UnitMovementGearComponent>(unit))
+            SystemAPI.SetComponent(unit, new UnitMovementGearComponent { gear = gear });
+        return speed;
     }
 }

@@ -136,6 +136,7 @@ public static class SquadUnitSpawnBuilder
             kineticMultiplier = data.kineticMultiplier
         });
         ecb.AddComponent<UnitRotationIntentComponent>(unit);
+        ecb.AddComponent<UnitMovementGearComponent>(unit);
         ecb.AddComponent<WeaponHitboxActiveTag>(unit);
         ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);
 
