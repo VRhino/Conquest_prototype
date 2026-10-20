@@ -66,7 +66,7 @@ public partial struct FormationStanceSystem : ISystem
                 animComp.CurrentStance = stanceComp.stance;
 
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
-                    animComp.SlotRow = SystemAPI.GetComponent<UnitGridSlotComponent>(unit).gridPosition.y;
+                    animComp.SlotRow = SystemAPI.GetComponent<UnitGridSlotComponent>(unit).row;
 
                 SystemAPI.SetComponent(unit, animComp);
             }

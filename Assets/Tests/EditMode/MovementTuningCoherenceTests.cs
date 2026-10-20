@@ -9,7 +9,7 @@ public class MovementTuningCoherenceTests
     [Test]
     public void BuiltInDefaultsAreCoherent()
     {
-        Assert.That(MovementTuningComponent.Validate(MovementTuningComponent.Default, FormationGridSystem.CELL_WIDTH),
+        Assert.That(MovementTuningComponent.Validate(MovementTuningComponent.Default, MovementTuningComponent.ReferenceSpacing),
             Is.Null);
     }
 
@@ -30,7 +30,7 @@ public class MovementTuningCoherenceTests
     {
         var asset = AssetDatabase.LoadAssetAtPath<MovementTuningConfig>(DefaultAssetPath);
         Assert.That(asset, Is.Not.Null, $"Missing {DefaultAssetPath}.");
-        Assert.That(MovementTuningComponent.Validate(asset.ToComponent(), FormationGridSystem.CELL_WIDTH), Is.Null);
+        Assert.That(MovementTuningComponent.Validate(asset.ToComponent(), MovementTuningComponent.ReferenceSpacing), Is.Null);
     }
 
     [Test]
@@ -38,6 +38,6 @@ public class MovementTuningCoherenceTests
     {
         var tuning = MovementTuningComponent.Default;
         tuning.arrivalRadiusOut = tuning.arrivalRadiusIn;
-        Assert.That(MovementTuningComponent.Validate(tuning, FormationGridSystem.CELL_WIDTH), Is.Not.Null);
+        Assert.That(MovementTuningComponent.Validate(tuning, MovementTuningComponent.ReferenceSpacing), Is.Not.Null);
     }
 }

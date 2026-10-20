@@ -57,7 +57,7 @@ public partial class SquadSpawningSystem : SystemBase
                 foreach (var entry in SystemAPI.GetBuffer<SquadIdMapElement>(mapOwner))
                     if (entry.squadId == selection.ValueRO.instanceId) { snapshot = entry; break; }
             int formationIndex = math.clamp(snapshot.formationIndex, 0, def.formationLibrary.Value.formations.Length - 1);
-            if (def.formationLibrary.Value.formations[formationIndex].gridPositions.Length == 0)
+            if (FormationLayout.Capacity(ref def.formationLibrary.Value.formations[formationIndex]) == 0)
                 continue;
             bool eliminated = false;
             if (SystemAPI.HasBuffer<InactiveSquadElement>(entity))
@@ -217,9 +217,8 @@ public partial class SquadSpawningSystem : SystemBase
 
             ref var formations = ref def.formationLibrary.Value.formations;
             ref var firstFormation = ref formations[formationIndex];
-            float2 formationCenter = FormationPositionCalculator.CalculateFormationCenter(ref firstFormation.gridPositions);
 
-            int unitCount = math.min(math.max(0, def.unitCount), firstFormation.gridPositions.Length);
+            int unitCount = math.min(math.max(0, def.unitCount), FormationLayout.Capacity(ref firstFormation));
             if (snapshot.hasSnapshot) unitCount = math.min(unitCount, snapshot.totalUnits);
             ecb.SetComponent(squad, new SquadInstanceComponent
             {
@@ -264,25 +263,31 @@ public partial class SquadSpawningSystem : SystemBase
                 rotation = heroRotation
             };
 
+            // Initial layout: template for the soldiers spawned, spacing as authored, seed stable for the battle.
+            int templateIndex = FormationLayout.SelectTemplate(ref firstFormation, spawnCount);
+            uint layoutSeed = FormationLayout.Seed(selection.ValueRO.instanceId);
+            float spawnSpacing = FormationLayout.EffectiveSpacing(firstFormation.spacing, 1f);
+            ecb.SetComponent(squad, new FormationComponent
+            {
+                currentFormation = firstFormationType,
+                templateIndex = templateIndex,
+                layoutUnitCount = spawnCount,
+                spacing = spawnSpacing,
+                scale = 1f,
+                layoutSeed = layoutSeed
+            });
+            var spawnState = new SquadStateComponent { currentState = initialState };
+
             for (int i = 0; i < spawnCount; i++)
             {
+                if (!FormationPositionCalculator.TryBuildSlot(ref firstFormation, templateIndex, i, spawnSpacing,
+                        layoutSeed, out var slot))
+                    break;
+                // The anchor already includes squadSpawnOffset.
+                float3 worldPos = FormationPositionCalculator.DesiredPosition(slot.localOffset, spawnState, null,
+                    formationAnchor, heroRotation, true);
                 Entity unit = ecb.CreateEntity();
-                FormationPositionCalculator.CalculateDesiredPosition(
-                    unit,
-                    ref firstFormation.gridPositions,
-                    i, // unitIndex
-                    formationCenter,
-                    new SquadStateComponent { currentState = initialState },
-                    null,
-                    formationAnchor, // usar el ancla del squad que ya incluye squadSpawnOffset
-                    out int2 originalGridPos,
-                    out float3 gridOffset,
-                    out float3 worldPos,
-                    true,
-                    heroRotation);
-
-                SquadUnitSpawnBuilder.Configure(ecb, unit, unitContext, i,
-                    originalGridPos, gridOffset, worldPos);
+                SquadUnitSpawnBuilder.Configure(ecb, unit, unitContext, slot, worldPos);
                 unitBuffer.Add(new SquadUnitElement { Value = unit });
             }
 

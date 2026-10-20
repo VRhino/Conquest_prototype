@@ -27,8 +27,6 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float navMeshFailureRetryInterval = 1f;
     public float heroAIArrivalDistance = 1.5f;
     public float squadSpawnOffset = 5f;
-    public float unitMinDistance   = 1.5f;
-    public float unitRepelForce    = 1f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
     public float followForwardOffset    = 2f;
@@ -51,8 +49,6 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
             {
                 enableEnvironmentAdaptation = authoring.enableEnvironmentAdaptation,
                 squadSpawnOffset    = authoring.squadSpawnOffset,
-                unitMinDistance     = authoring.unitMinDistance,
-                unitRepelForce      = authoring.unitRepelForce,
                 unitRotationSpeed   = authoring.unitRotationSpeed,
                 heroSlotSpacing     = authoring.heroSlotSpacing,
                 followForwardOffset = authoring.followForwardOffset,

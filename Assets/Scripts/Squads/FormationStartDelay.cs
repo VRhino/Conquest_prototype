@@ -7,14 +7,11 @@ using Unity.Mathematics;
 /// </summary>
 public static class FormationStartDelay
 {
-    /// <param name="rowRank">0 for the front row (largest grid y), 1 for the next one, and so on.</param>
-    public static float Compute(int rowRank, int slotIndex, int2 gridPosition, float rowDelay, float jitterDelay)
+    /// <param name="rowRank">Slot row: 0 for the front row, 1 for the next one, and so on.</param>
+    public static float Compute(int rowRank, int slotIndex, float rowDelay, float jitterDelay)
     {
-        uint hash = math.hash(new int3(slotIndex, gridPosition.x, gridPosition.y));
+        uint hash = math.hash(new int2(slotIndex, rowRank));
         float jitter01 = (hash & 0xFFFFFF) / (float)0x1000000; // [0, 1)
         return math.max(0, rowRank) * rowDelay + jitter01 * jitterDelay;
     }
-
-    /// <summary>Row rank from the grid: the front row is the one with the largest y (local forward).</summary>
-    public static int RowRank(int2 gridPosition, int frontRowY) => frontRowY - gridPosition.y;
 }

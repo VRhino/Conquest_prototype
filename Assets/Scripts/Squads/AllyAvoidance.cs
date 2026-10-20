@@ -21,6 +21,7 @@ public static class AllyAvoidance
         public float2 preferred;   // Velocity the agent would take without neighbours.
         public float maxSpeed;
         public float timeHorizon;
+        public float squadSpacing; // Formation spacing of its squad (m).
         public int team;
         public int squad;          // -1 for bodies outside any squad (heroes).
         public bool steered;       // Gets a new velocity and shares the avoidance.
@@ -31,7 +32,7 @@ public static class AllyAvoidance
         public float neighborRadius;
         public int maxNeighbors;
         public float combinedRadius;
-        public float squadmateCombinedRadius; // Between units of the same squad.
+        public float squadmateSpacingFraction; // Squadmates keep this fraction of their spacing apart.
         public float collisionResolveTime;
     }
 
@@ -101,7 +102,8 @@ struct AllyAvoidanceSolveJob : IJobParallelFor
             AllyAvoidance.Agent other = agents[nearest[n]];
             float responsibility = other.steered ? 0.5f : 1f;
             float combinedRadius = self.squad >= 0 && other.squad == self.squad
-                ? settings.squadmateCombinedRadius : settings.combinedRadius;
+                ? math.min(settings.combinedRadius, settings.squadmateSpacingFraction * self.squadSpacing)
+                : settings.combinedRadius;
             lines.Add(OrcaSolver.Line(other.position - self.position, self.velocity - other.velocity,
                 self.velocity, combinedRadius, self.timeHorizon, settings.collisionResolveTime,
                 responsibility));

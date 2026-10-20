@@ -1,11 +1,12 @@
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
-using UnityEngine;
 
 /// <summary>
-/// Assigns target positions to squad units based on the selected formation.
+/// Single writer of the formation layout of each squad (<see cref="FormationComponent"/>) and of every unit slot
+/// (<see cref="UnitGridSlotComponent"/>). Rebuilds the layout when the player changes formation (with cooldown),
+/// when the number of soldiers alive calls for another template, and when a spacing request arrives.
+/// Slot k keeps going to unit k of the squad buffer; units are never reordered.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadOrderSystem))]
@@ -35,147 +36,111 @@ public partial class FormationSystem : SystemBase
         {
             var s = state.ValueRW;
             s.formationChangeCooldown = math.max(0f, s.formationChangeCooldown - deltaTime);
+            var current = formationComp.ValueRO;
 
-            if (resolved.ValueRO.formation == formationComp.ValueRO.currentFormation ||
-                s.formationChangeCooldown > 0f)
+            if (!squadDef.ValueRO.formationLibrary.IsCreated || units.Length == 0
+                || !SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
             {
                 state.ValueRW = s;
                 continue;
             }
+            ref var library = ref squadDef.ValueRO.formationLibrary.Value;
 
-            if (!squadDef.ValueRO.formationLibrary.IsCreated || units.Length == 0)
+            bool spacingRequested = SystemAPI.HasComponent<SquadFormationSpacingRequest>(squadEntity);
+            float scale = current.scale > 0f ? current.scale : 1f;
+            if (spacingRequested)
             {
-                state.ValueRW = s;
-                continue;
+                scale = math.max(0.01f, SystemAPI.GetComponent<SquadFormationSpacingRequest>(squadEntity).scale);
+                ecb.RemoveComponent<SquadFormationSpacingRequest>(squadEntity);
             }
 
-            // Use the anchor computed by SquadAnchorSystem (handles hold/retreat/follow cases)
-            if (!SystemAPI.HasComponent<SquadFormationAnchorComponent>(squadEntity))
+            bool formationRequested = resolved.ValueRO.formation != current.currentFormation
+                && s.formationChangeCooldown <= 0f;
+            FormationType type = formationRequested ? resolved.ValueRO.formation : current.currentFormation;
+            int formationIndex = FormationLayout.Find(ref library, type);
+            if (formationIndex < 0)
             {
-                state.ValueRW = s;
-                continue;
-            }
-            var formationAnchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
-            float3 heroPosition = formationAnchor.position;
-
-            ref var formations = ref squadDef.ValueRO.formationLibrary.Value.formations;
-
-            // Find the desired formation
-            int formationIndex = -1;
-            for (int i = 0; i < formations.Length; i++)
-            {
-                if (formations[i].formationType == resolved.ValueRO.formation)
+                // Unknown formation: keep the current layout, but still apply a spacing request to it.
+                formationRequested = false;
+                type = current.currentFormation;
+                formationIndex = FormationLayout.Find(ref library, type);
+                if (formationIndex < 0)
                 {
-                    formationIndex = i;
-                    break;
-                }
-            }
-
-            if (formationIndex == -1)
-            {
-                state.ValueRW = s;
-                continue;
-            }
-            //se tiene la formacion deseada
-            ref var formation = ref formations[formationIndex];
-
-            // Read hold component if squad is in HoldPosition mode
-            SquadHoldPositionComponent? holdComponent = null;
-            if (SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
-                holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
-
-            int squadUnitCount = units.Length;
-            ref var gridPositions = ref formation.gridPositions;
-            float2 formationCenter = FormationPositionCalculator.CalculateFormationCenter(ref gridPositions);
-            int positionsToUse = math.min(squadUnitCount, gridPositions.Length);
-            if (gridPositions.Length < squadUnitCount)
-            {
-                state.ValueRW = s;
-                continue; // Do not commit a layout that cannot assign every unit.
-            }
-
-            for (int i = 0; i < positionsToUse; i++)
-            {
-                // entidad
-                Entity unit = units[i].Value;
-                if (!SystemAPI.Exists(unit))
+                    state.ValueRW = s;
                     continue;
-                FormationPositionCalculator.CalculateDesiredPosition(
-                    unit,
-                    ref gridPositions,
-                    i, // unitIndex
-                    formationCenter,
-                    state.ValueRW, // SquadStateComponent
-                    holdComponent, // SquadHoldPositionComponent? — use actual value instead of null
-                    heroPosition, // heroPos
-                    out int2 originalGridPos,
-                    out float3 gridOffset,
-                    out float3 worldPos,
-                    true,
-                    formationAnchor.rotation);
-
-                UpdateUnitPosition(unit, worldPos, new float3(originalGridPos.x, 0, originalGridPos.y), i, ecb);
-
-                // Update grid slot component - mantener posición original en gridPosition
-                if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
-                {
-                    var gridSlot = SystemAPI.GetComponentRW<UnitGridSlotComponent>(unit);
-                    gridSlot.ValueRW.slotIndex = i;
-                    gridSlot.ValueRW.gridPosition = originalGridPos; // Mantener posición original
-                    gridSlot.ValueRW.worldOffset = gridOffset; // Usar offset directo sin centrado
-                }
-                else
-                {
-                    ecb.AddComponent(unit, new UnitGridSlotComponent
-                    {
-                        gridPosition = originalGridPos, // Mantener posición original
-                        slotIndex = i,
-                        worldOffset = gridOffset // Usar offset directo sin centrado
-                    });
                 }
             }
-
-            formationComp.ValueRW.currentFormation = resolved.ValueRO.formation;
-            s.formationChangeCooldown = formationChangeCooldown;
-
-            // Si el escuadrón está en Hold Position, actualizar el componente para reflejar la nueva formación
-            if (s.currentOrder == SquadOrderType.HoldPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+            ref var formation = ref library.formations[formationIndex];
+            if (FormationLayout.Capacity(ref formation) < units.Length)
             {
-                var holdCompRW = SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity);
-                holdCompRW.ValueRW.originalFormation = resolved.ValueRO.formation;
-                // Mantener el mismo holdCenter para que la formación se reorganice en el mismo lugar
+                // Do not commit a layout that cannot place every unit.
+                state.ValueRW = s;
+                continue;
+            }
+
+            int templateIndex = FormationLayout.SelectTemplate(ref formation, units.Length);
+            bool templateChanged = templateIndex != current.templateIndex || units.Length != current.layoutUnitCount
+                && formation.layout == FormationLayoutKind.Scatter;
+            if (!formationRequested && !spacingRequested && !templateChanged)
+            {
+                state.ValueRW = s;
+                continue;
+            }
+
+            float spacing = FormationLayout.EffectiveSpacing(formation.spacing, scale);
+            uint seed = current.layoutSeed;
+            var anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
+            SquadHoldPositionComponent? holdComponent = SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity)
+                ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : null;
+            // A new template re-deals slots in buffer order; otherwise each unit keeps its slot index.
+            bool redeal = formationRequested || templateChanged;
+
+            for (int i = 0; i < units.Length; i++)
+            {
+                Entity unit = units[i].Value;
+                if (!SystemAPI.Exists(unit)) continue;
+                int slotIndex = i;
+                if (!redeal && SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
+                    slotIndex = SystemAPI.GetComponent<UnitGridSlotComponent>(unit).slotIndex;
+                if (!FormationPositionCalculator.TryBuildSlot(ref formation, templateIndex, slotIndex, spacing, seed,
+                        out var slot))
+                    continue;
+
+                if (SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
+                    SystemAPI.SetComponent(unit, slot);
+                else
+                    ecb.AddComponent(unit, slot);
+
+                float3 worldPos = FormationPositionCalculator.DesiredPosition(slot.localOffset, s, holdComponent,
+                    anchor.position, anchor.rotation, true);
+                if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                    SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit).ValueRW.position = worldPos;
+                else
+                    ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
+            }
+
+            formationComp.ValueRW = new FormationComponent
+            {
+                currentFormation = type,
+                templateIndex = templateIndex,
+                layoutUnitCount = units.Length,
+                spacing = spacing,
+                scale = scale,
+                layoutSeed = seed
+            };
+
+            if (formationRequested)
+            {
+                s.formationChangeCooldown = formationChangeCooldown;
+                // Hold Position: keep the same centre so the new formation is laid out in place.
+                if (s.currentOrder == SquadOrderType.HoldPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
+                    SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity).ValueRW.originalFormation = type;
             }
 
             state.ValueRW = s;
         }
 
-        // Execute all deferred changes
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }
-
-    private void UpdateUnitPosition(Entity unit, float3 worldPos, float3 originalGridPos, int slotIndex, EntityCommandBuffer ecb)
-    {
-        // Update UnitTargetPositionComponent
-        if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
-        {
-            var targetPos = SystemAPI.GetComponentRW<UnitTargetPositionComponent>(unit);
-            targetPos.ValueRW.position = worldPos;
-        }
-        else
-        {
-            ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPos });
-        }
-
-        // Actualizar el campo Slot de UnitSpacingComponent si existe
-        if (SystemAPI.HasComponent<UnitSpacingComponent>(unit))
-        {
-            var spacingComp = SystemAPI.GetComponentRW<UnitSpacingComponent>(unit);
-            spacingComp.ValueRW.Slot = new int2((int)originalGridPos.x, (int)originalGridPos.z);
-        }
-
-        // State management is handled by UnitFormationStateSystem
-        // This system only handles position calculation
-    }
-
 }

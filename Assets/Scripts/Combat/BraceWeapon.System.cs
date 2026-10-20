@@ -28,7 +28,7 @@ public partial class BraceWeaponSystem : SystemBase
                 if (!weaponLookup.HasComponent(unit))   continue;
                 if (!gridSlotLookup.HasComponent(unit)) continue;
 
-                int row = gridSlotLookup[unit].gridPosition.y;
+                int row = gridSlotLookup[unit].row; // 0 = front rank, as the profiles expect
 
                 for (int p = 0; p < profiles.Length; p++)
                 {

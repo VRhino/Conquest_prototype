@@ -15,8 +15,7 @@ public struct UnitTargetPositionComponent : IComponentData
     public SquadOrderType cachedOrder;
     public SquadFSMState cachedState;
     public int cachedSlotIndex;
-    public int2 cachedGridPosition;
-    public float3 cachedWorldOffset;
+    public float3 cachedLocalOffset;
     public bool hasFormationCache;
 
     public bool hasTerrainHeight;

@@ -57,54 +57,15 @@ public class FormationVisualizer : MonoBehaviour
             return;
         }
 
-        Entity leader = units[0].Value;
-        if (!_entityManager.Exists(leader))
+        // Slot targets already follow the anchor (GridFormationUpdateSystem); show them as they are.
+        if (_positions.Length != units.Length)
+            _positions = new Vector3[units.Length];
+        for (int i = 0; i < units.Length; i++)
         {
-            _positions = System.Array.Empty<Vector3>();
-            return;
-        }
-
-        var leaderTransform = _entityManager.GetComponentData<LocalTransform>(leader);
-        var formationComp = _entityManager.GetComponentData<FormationComponent>(_squadEntity);
-        var squadDef = _entityManager.GetComponentData<SquadDefinitionComponent>(_squadEntity);
-        if (!squadDef.formationLibrary.IsCreated)
-        {
-            _positions = System.Array.Empty<Vector3>();
-            return;
-        }
-
-        ref var formations = ref squadDef.formationLibrary.Value.formations;
-        ref BlobArray<int2> gridPositions = ref formations[0].gridPositions; 
-        bool found = false;
-
-        for (int i = 0; i < formations.Length; i++)
-        {
-            if (formations[i].formationType == formationComp.currentFormation)
-            {
-                ref var formation = ref formations[i];
-                gridPositions = ref formation.gridPositions; // ✅ acceso por ref
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-        {
-            _positions = System.Array.Empty<Vector3>();
-            return;
-        }
-
-        // Only visualize positions for squad units (exclude leader/hero)
-        int squadUnitCount = units.Length - 1; // Exclude leader
-        int positionsToShow = math.min(squadUnitCount, gridPositions.Length);
-        if (_positions.Length != positionsToShow)
-            _positions = new Vector3[positionsToShow];
-
-        for (int i = 0; i < positionsToShow; i++)
-        {
-            // Convert grid position to world offset
-            float3 worldOffset = FormationGridSystem.GridToRelativeWorld(gridPositions[i]);
-            _positions[i] = (Vector3)(leaderTransform.Position + worldOffset);
+            Entity unit = units[i].Value;
+            _positions[i] = _entityManager.Exists(unit) && _entityManager.HasComponent<UnitTargetPositionComponent>(unit)
+                ? (Vector3)_entityManager.GetComponentData<UnitTargetPositionComponent>(unit).position
+                : Vector3.zero;
         }
     }
 

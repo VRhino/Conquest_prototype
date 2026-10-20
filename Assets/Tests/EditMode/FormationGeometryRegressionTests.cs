@@ -6,34 +6,20 @@ using Unity.Transforms;
 
 public class FormationGeometryRegressionTests
 {
-    static BlobAssetReference<FormationLibraryBlob> CreateFormation(params int2[] points)
-    {
-        using var builder = new BlobBuilder(Allocator.Temp);
-        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
-        var formations = builder.Allocate(ref root.formations, 1);
-        formations[0].formationType = FormationType.Line;
-        var grid = builder.Allocate(ref formations[0].gridPositions, points.Length);
-        for (int i = 0; i < points.Length; i++) grid[i] = points[i];
-        return builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
-    }
-
     [Test]
     public void EvenFormationHasFractionalUnbiasedCenter()
     {
-        var blob = CreateFormation(new int2(0, 0), new int2(1, 0));
+        var blob = TestFormationLibrary.FromCells(new int2(0, 0), new int2(1, 0));
         try
         {
-            ref var grid = ref blob.Value.formations[0].gridPositions;
-            float2 center = FormationPositionCalculator.CalculateFormationCenter(ref grid);
-            Assert.That(center, Is.EqualTo(new float2(0.5f, 0)));
             var state = new SquadStateComponent();
-            FormationPositionCalculator.CalculateDesiredPosition(Entity.Null, ref grid, 0, center,
-                state, null, float3.zero, out _, out var left, out _, false);
-            FormationPositionCalculator.CalculateDesiredPosition(Entity.Null, ref grid, 1, center,
-                state, null, float3.zero, out _, out var right, out _, false);
-            Assert.That(left.x, Is.EqualTo(-0.5f));
-            Assert.That(right.x, Is.EqualTo(0.5f));
-            Assert.That((left + right) * 0.5f, Is.EqualTo(float3.zero));
+            var left = TestFormationLibrary.Slot(blob, 0);
+            var right = TestFormationLibrary.Slot(blob, 1);
+            float3 l = FormationPositionCalculator.DesiredPosition(left.localOffset, state, null, float3.zero, quaternion.identity, false);
+            float3 r = FormationPositionCalculator.DesiredPosition(right.localOffset, state, null, float3.zero, quaternion.identity, false);
+            Assert.That(l.x, Is.EqualTo(-0.5f));
+            Assert.That(r.x, Is.EqualTo(0.5f));
+            Assert.That((l + r) * 0.5f, Is.EqualTo(float3.zero));
         }
         finally { blob.Dispose(); }
     }
@@ -41,15 +27,13 @@ public class FormationGeometryRegressionTests
     [Test]
     public void ValidHalfTurnQuaternionWithZeroWRotatesFormation()
     {
-        var blob = CreateFormation(new int2(0, 0), new int2(2, 0));
+        var blob = TestFormationLibrary.FromCells(new int2(0, 0), new int2(2, 0));
         try
         {
-            ref var grid = ref blob.Value.formations[0].gridPositions;
-            float2 center = FormationPositionCalculator.CalculateFormationCenter(ref grid);
-            FormationPositionCalculator.CalculateDesiredPosition(Entity.Null, ref grid, 0, center,
-                default, null, float3.zero, out _, out var offset, out _, false,
-                new quaternion(0, 1, 0, 0));
-            Assert.That(offset.x, Is.EqualTo(1f).Within(0.0001f));
+            var slot = TestFormationLibrary.Slot(blob, 0);
+            float3 position = FormationPositionCalculator.DesiredPosition(slot.localOffset, default, null, float3.zero,
+                new quaternion(0, 1, 0, 0), false);
+            Assert.That(position.x, Is.EqualTo(1f).Within(0.0001f));
         }
         finally { blob.Dispose(); }
     }
@@ -60,14 +44,14 @@ public class FormationGeometryRegressionTests
         using var world = new World("Stable formation slot");
         var em = world.EntityManager;
         em.CreateEntity(typeof(MatchStateComponent));
-        var blob = CreateFormation(new int2(0, 0), new int2(1, 0), new int2(2, 0));
+        var blob = TestFormationLibrary.FromCells(new int2(0, 0), new int2(1, 0), new int2(2, 0));
         try
         {
             var squad = em.CreateEntity(typeof(SquadDefinitionComponent), typeof(SquadStateComponent),
                 typeof(FormationComponent), typeof(SquadFormationAnchorComponent));
             em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
             var survivor = em.CreateEntity(typeof(UnitGridSlotComponent), typeof(UnitTargetPositionComponent));
-            em.SetComponentData(survivor, new UnitGridSlotComponent { slotIndex = 2 });
+            em.SetComponentData(survivor, TestFormationLibrary.Slot(blob, 2));
             em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = survivor });
             world.GetOrCreateSystemManaged<GridFormationUpdateSystem>().Update();
             Assert.That(em.GetComponentData<UnitTargetPositionComponent>(survivor).position.x,

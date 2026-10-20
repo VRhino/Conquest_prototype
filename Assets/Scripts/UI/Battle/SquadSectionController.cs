@@ -48,13 +48,13 @@ public class SquadSectionController : MonoBehaviour
         // Spawn formation icons
         ClearContainer(_formationsContainer);
         _formationIcons.Clear();
-        for (int i = 0; i < squadData.gridFormations.Length; i++)
+        for (int i = 0; i < squadData.formations.Length; i++)
         {
             var go = Instantiate(_formationIconPrefab, _formationsContainer);
             var ctrl = go.GetComponent<HUDFormationIconController>();
             if (ctrl != null)
             {
-                ctrl.Initialize(squadData.gridFormations[i], i);
+                ctrl.Initialize(squadData.formations[i], i);
                 _formationIcons.Add(ctrl);
             }
         }

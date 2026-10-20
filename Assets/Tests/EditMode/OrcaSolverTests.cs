@@ -8,7 +8,7 @@ public class OrcaSolverTests
 {
     static readonly AllyAvoidance.Settings Settings = new AllyAvoidance.Settings
     {
-        neighborRadius = 4f, maxNeighbors = 8, combinedRadius = 1f, squadmateCombinedRadius = 0.9f,
+        neighborRadius = 4f, maxNeighbors = 8, combinedRadius = 1f, squadmateSpacingFraction = 0.9f,
         collisionResolveTime = 0.25f,
     };
 
@@ -16,7 +16,7 @@ public class OrcaSolverTests
         new AllyAvoidance.Agent
         {
             position = position, velocity = preferred, preferred = preferred, maxSpeed = 3f,
-            timeHorizon = 2f, team = team, squad = -1, steered = steered,
+            timeHorizon = 2f, team = team, squad = -1, squadSpacing = 1f, steered = steered,
         };
 
     /// <summary>Moves the agents with the avoiding velocity; returns the smallest distance between agents 0 and 1.</summary>

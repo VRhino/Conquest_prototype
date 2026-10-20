@@ -31,12 +31,7 @@ public class SquadSwapRegressionTests
         var em = world.EntityManager;
         em.CreateEntity(typeof(MatchStateComponent));
         em.CreateEntity(typeof(SquadSpawnConfigComponent));
-        using var builder = new BlobBuilder(Allocator.Temp);
-        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
-        var formations = builder.Allocate(ref root.formations, 1);
-        var grid = builder.Allocate(ref formations[0].gridPositions, 1);
-        grid[0] = int2.zero;
-        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        var blob = TestFormationLibrary.FromCells(int2.zero);
         try
         {
             var data = em.CreateEntity(typeof(SquadDataIDComponent), typeof(SquadDataComponent));

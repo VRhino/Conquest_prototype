@@ -153,6 +153,11 @@ public partial class UnitFollowFormationSystem : SystemBase
                         hasTargetOrientation = true;
                     }
 
+                    // Each slot has its own facing relative to the formation (flanks may face outward).
+                    if (hasTargetOrientation && SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
+                        targetForward = math.mul(quaternion.RotateY(SystemAPI.GetComponent<UnitGridSlotComponent>(unit).headingLocal),
+                            targetForward);
+
                     if (hasTargetOrientation)
                     {
                         float3 horizontalDir = math.normalizesafe(new float3(targetForward.x, 0, targetForward.z));

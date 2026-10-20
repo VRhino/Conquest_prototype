@@ -71,7 +71,12 @@ public partial class UnitAvoidanceSystem : SystemBase
             float2 preferred = ((float3)agent.desiredVelocity).xz;
             float maxSpeed = agent.speed;
             if (math.lengthsq(preferred) > maxSpeed * maxSpeed) preferred = math.normalize(preferred) * maxSpeed;
-            bool nearSlot = math.distance(position, slot.ValueRO.position.xz) < FormationGridSystem.CELL_WIDTH;
+            Entity squadEntity = SystemAPI.HasComponent<UnitOwnerComponent>(entity)
+                ? SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad : Entity.Null;
+            float squadSpacing = squadEntity != Entity.Null && SystemAPI.HasComponent<FormationComponent>(squadEntity)
+                ? math.max(FormationDefinition.MinSpacing, SystemAPI.GetComponent<FormationComponent>(squadEntity).spacing)
+                : MovementTuningComponent.ReferenceSpacing;
+            bool nearSlot = math.distance(position, slot.ValueRO.position.xz) < squadSpacing;
 
             _agents.Add(new AllyAvoidance.Agent
             {
@@ -81,8 +86,8 @@ public partial class UnitAvoidanceSystem : SystemBase
                 maxSpeed = maxSpeed,
                 timeHorizon = nearSlot ? tuning.avoidanceTimeHorizonNear : tuning.avoidanceTimeHorizon,
                 team = (int)team.ValueRO.value,
-                squad = SystemAPI.HasComponent<UnitOwnerComponent>(entity)
-                    ? SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad.Index : -1,
+                squad = squadEntity != Entity.Null ? squadEntity.Index : -1,
+                squadSpacing = squadSpacing,
                 steered = steered,
             });
             _navAgents.Add(steered ? agent : null);
@@ -112,8 +117,7 @@ public partial class UnitAvoidanceSystem : SystemBase
             neighborRadius = tuning.avoidanceNeighborRadius,
             maxNeighbors = (int)tuning.avoidanceMaxNeighbors,
             combinedRadius = 2f * tuning.bodyRadius,
-            squadmateCombinedRadius = math.min(2f * tuning.bodyRadius,
-                SquadmateSpacingFraction * FormationGridSystem.CELL_WIDTH),
+            squadmateSpacingFraction = SquadmateSpacingFraction,
             collisionResolveTime = tuning.avoidanceCollisionResolveTime,
         });
 

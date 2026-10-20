@@ -45,7 +45,7 @@ namespace ConquestTactics.Animation
         // Postura táctica actual (Normal, BracedShields…). Escrita por FormationStanceSystem.
         public UnitStance CurrentStance;
 
-        // Fila en la formación (gridPosition.y). 0 = fila delantera.
+        // Fila en la formación (UnitGridSlotComponent.row). 0 = fila delantera.
         // Usada por el Animator para seleccionar variante de animación (ej. escudo al frente vs arriba).
         public int SlotRow;
     }

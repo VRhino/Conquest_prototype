@@ -105,7 +105,7 @@ public class MovementTuningConfig : ScriptableObject
 
     void OnValidate()
     {
-        var issue = MovementTuningComponent.Validate(ToComponent(), FormationGridSystem.CELL_WIDTH);
+        var issue = MovementTuningComponent.Validate(ToComponent(), MovementTuningComponent.ReferenceSpacing);
         if (issue != null) Debug.LogWarning($"[MovementTuningConfig] {name}: {issue}", this);
     }
 }

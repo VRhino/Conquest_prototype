@@ -274,17 +274,11 @@ public class SquadControlRegressionTests
     public void FormationIsCommittedWithSlotsNotByOrderApplication(bool movementOrder)
     {
         var squad = CreateSquad();
-        var unit = em.CreateEntity(typeof(UnitGridSlotComponent), typeof(UnitSpacingComponent));
+        var unit = em.CreateEntity(typeof(UnitGridSlotComponent));
         em.SetComponentData(unit, new UnitGridSlotComponent { slotIndex = 99 });
         em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
         em.AddComponentData(squad, new SquadFormationAnchorComponent { rotation = quaternion.identity });
-        using var builder = new BlobBuilder(Allocator.Temp);
-        ref var library = ref builder.ConstructRoot<FormationLibraryBlob>();
-        var formations = builder.Allocate(ref library.formations, 1);
-        formations[0].formationType = FormationType.Column;
-        var grid = builder.Allocate(ref formations[0].gridPositions, 1);
-        grid[0] = new int2(2, 3);
-        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        var blob = TestFormationLibrary.FromCells(FormationType.Column, 1f, new int2(2, 3));
         try
         {
             em.AddComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
@@ -296,9 +290,11 @@ public class SquadControlRegressionTests
             Assert.That(em.GetComponentData<FormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.Line));
             world.GetOrCreateSystemManaged<FormationSystem>().Update();
             Assert.That(em.GetComponentData<FormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.Column));
-            Assert.That(em.GetComponentData<UnitGridSlotComponent>(unit).gridPosition, Is.EqualTo(new int2(2, 3)));
-            Assert.That(em.GetComponentData<UnitGridSlotComponent>(unit).slotIndex, Is.Zero);
-            Assert.That(em.GetComponentData<UnitSpacingComponent>(unit).Slot, Is.EqualTo(new int2(2, 3)));
+            var slot = em.GetComponentData<UnitGridSlotComponent>(unit);
+            Assert.That(slot.slotIndex, Is.Zero);
+            Assert.That(slot.localPosition, Is.EqualTo(float2.zero));
+            Assert.That(slot.row, Is.Zero);
+            Assert.That(slot.role, Is.EqualTo(FormationSlotRole.Front));
             Assert.That(em.GetComponentData<SquadStateComponent>(squad).formationChangeCooldown, Is.GreaterThan(0));
         }
         finally { blob.Dispose(); }

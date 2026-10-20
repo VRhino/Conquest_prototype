@@ -45,8 +45,9 @@ public class SquadData : ScriptableObject
     public SquadRarity rarity = SquadRarity.levy_tier;
 
     // Formations and leadership
-    /// <summary>Grid-based formations the squad can adopt.</summary>
-    public GridFormationScriptableObject[] gridFormations;
+    /// <summary>Formations the squad can adopt (F1, F2…).</summary>
+    [UnityEngine.Serialization.FormerlySerializedAs("gridFormations")]
+    public FormationDefinition[] formations;
     /// <summary>Leadership cost to deploy the squad.</summary>
     public int leadershipCost;
     /// <summary>Default tactical behavior profile.</summary>

@@ -80,14 +80,17 @@ public struct MovementTuningComponent : IComponentData
 
     /// <summary>
     /// Coherence rules of Movimiento_Formaciones.md §3 that apply to these fields.
-    /// <paramref name="cellSize"/> is the formation grid spacing. Returns null when coherent.
+    /// <paramref name="cellSize"/> is the formation spacing (usually <see cref="ReferenceSpacing"/>). Returns null when coherent.
     /// </summary>
+    /// <summary>Spacing of a regular formation (m); compact ones such as Testudo tighten it on purpose.</summary>
+    public const float ReferenceSpacing = 1f;
+
     public static string Validate(in MovementTuningComponent t, float cellSize)
     {
         if (t.arrivalRadiusIn <= 0f) return "arrivalRadiusIn must be positive.";
         if (t.arrivalRadiusIn >= t.arrivalRadiusOut) return "arrivalRadiusIn must be smaller than arrivalRadiusOut.";
-        if (t.arrivalRadiusOut > cellSize * 0.5f) return $"arrivalRadiusOut must not exceed half a grid cell ({cellSize * 0.5f}).";
-        if (t.arrivalRadiusIn >= cellSize * 0.25f) return $"arrivalRadiusIn must be smaller than a quarter grid cell ({cellSize * 0.25f}).";
+        if (t.arrivalRadiusOut > cellSize * 0.5f) return $"arrivalRadiusOut must not exceed half the formation spacing ({cellSize * 0.5f}).";
+        if (t.arrivalRadiusIn >= cellSize * 0.25f) return $"arrivalRadiusIn must be smaller than a quarter of the formation spacing ({cellSize * 0.25f}).";
         if (t.holdReformRadius < t.arrivalRadiusIn) return "holdReformRadius must not be smaller than arrivalRadiusIn.";
         if (t.startRowDelay < 0f || t.startJitterDelay < 0f) return "Start delays must not be negative.";
         if (t.destinationLeadTime < 0f || t.destinationLeadMaxDistance < 0f) return "Destination lead must not be negative.";

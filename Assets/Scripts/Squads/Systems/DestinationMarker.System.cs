@@ -67,26 +67,12 @@ public partial class DestinationMarkerSystem : SystemBase
             var anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squadEntity);
             float3 heroPosition = anchor.position;
 
-            if (!squadDef.formationLibrary.IsCreated
-                || squadDef.formationLibrary.Value.formations.Length == 0
-                || !SystemAPI.HasComponent<FormationComponent>(squadEntity)) continue;
-            ref var formations = ref squadDef.formationLibrary.Value.formations;
-            var formationComp = SystemAPI.GetComponent<FormationComponent>(squadEntity);
-            int formationIndex = -1;
-            for (int f = 0; f < formations.Length; f++)
-                if (formations[f].formationType == formationComp.currentFormation)
-                { formationIndex = f; break; }
-            if (formationIndex < 0) continue;
-            ref BlobArray<int2> gridPositions = ref formations[formationIndex].gridPositions;
-            if (gridPositions.Length == 0) continue;
-            
             // Anchor already holds the correct center (hold/retreat/follow) from SquadAnchorSystem
-            float3 squadCenter = heroPosition;
             bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
                 && squadState.currentState != SquadFSMState.Retreating;
-            float2 formationCenter = gridPositions.Length > 0
-                ? FormationPositionCalculator.CalculateFormationCenter(ref gridPositions) : float2.zero;
-            
+            SquadHoldPositionComponent? holdComponent = SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity)
+                ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : null;
+
             // Process each unit in the squad
             for (int i = 0; i < units.Length; i++)
             {
@@ -97,35 +83,9 @@ public partial class DestinationMarkerSystem : SystemBase
                 if (!slotLookup.TryGetComponent(unit, out var gridSlot))
                     continue;
                     
-                // Calculate desired position for this unit
-                float3 desiredPosition = float3.zero;
-                
-                int slotIndex = gridSlot.slotIndex;
-                if (slotIndex >= 0 && slotIndex < gridPositions.Length)
-                {
-                    // Rotation already computed by SquadAnchorSystem (holdRotation or default)
-                    quaternion formationRotation = anchor.rotation;
+                float3 desiredPosition = FormationPositionCalculator.DesiredPosition(gridSlot.localOffset, squadState,
+                    holdComponent, heroPosition, anchor.rotation, true);
 
-                    FormationPositionCalculator.CalculateDesiredPosition(
-                        unit,
-                        ref gridPositions,
-                        slotIndex,
-                        formationCenter,
-                        squadState,
-                        SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity) ? SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity) : (SquadHoldPositionComponent?)null,
-                        heroPosition,
-                        out int2 originalGridPos,
-                        out float3 gridOffset,
-                        out float3 worldPos,
-                        true,
-                        formationRotation);
-                    desiredPosition = worldPos;
-                }
-                else
-                {
-                    desiredPosition = squadCenter + gridSlot.worldOffset;
-                }
-                
                 // Check if unit should have a marker (SOLO en Hold Position)
                 bool shouldShowMarker = false;
                 if (isHoldingPosition && SystemAPI.HasComponent<UnitFormationStateComponent>(unit))
