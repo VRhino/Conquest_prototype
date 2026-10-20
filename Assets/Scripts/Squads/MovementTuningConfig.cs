@@ -38,6 +38,10 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1f)] public float hurrySpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
 
+    [Header("Combat contact")]
+    [Tooltip("Maximum turn speed (deg/s) when a unit turns to face its combat target.")]
+    [Min(0f)] public float combatTurnRate = 450f;
+
     public MovementTuningComponent ToComponent() => new MovementTuningComponent
     {
         arrivalRadiusIn = arrivalRadiusIn,
@@ -56,6 +60,7 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         hurrySpeedMultiplier = hurrySpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        combatTurnRate = combatTurnRate,
     };
 
     void OnValidate()

@@ -30,6 +30,7 @@ public struct MovementTuningComponent : IComponentData
     public float formedRotationSpeed;
     public float hurrySpeedMultiplier;
     public float formationChangeCooldown;
+    public float combatTurnRate; // Max combat turn speed, degrees per second (C7).
 
     /// <summary>Values used when no tuning asset is assigned (and by tests).</summary>
     public static MovementTuningComponent Default => new MovementTuningComponent
@@ -50,6 +51,7 @@ public struct MovementTuningComponent : IComponentData
         formedRotationSpeed = 5f,
         hurrySpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        combatTurnRate = 450f,
     };
 
     /// <summary>
