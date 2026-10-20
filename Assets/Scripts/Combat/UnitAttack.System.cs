@@ -28,6 +28,8 @@ public partial class UnitAttackSystem : SystemBase
         bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
             || match.currentState == MatchState.InBattle;
         float dt = SystemAPI.Time.DeltaTime;
+        float bodyRadius = (SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default).bodyRadius;
 
         foreach (var (combat, weapon, transform, entity) in
                  SystemAPI.Query<RefRW<UnitCombatComponent>,
@@ -103,7 +105,7 @@ public partial class UnitAttackSystem : SystemBase
 
             float3 toTarget = targetPos - transform.ValueRO.Position;
             float  dist2D   = math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
-            bool   inRange  = dist2D <= weapon.ValueRO.attackRange;
+            bool   inRange  = MeleeReach.InAttackRange(dist2D, weapon.ValueRO.attackRange, bodyRadius);
 
             if (inRange && c.attackCooldown <= 0f)
             {

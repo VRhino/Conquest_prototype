@@ -32,11 +32,16 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0.01f)] public float slotVelocitySmoothing = 0.15f;
 
     [Header("Movement constants (moved from code, unchanged values)")]
-    [Min(0f)] public float meleeStopDistanceFactor = 0.75f;
     [Min(0f)] public float combatFacingRange = 3.5f;
     [Min(0f)] public float formedRotationSpeed = 5f;
     [Min(1f)] public float hurrySpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
+    [Tooltip("Body radius used for contact distances and ally avoidance (m).")]
+    [Min(0.1f)] public float bodyRadius = 0.5f;
+    [Tooltip("Melee units stop at bodies + this fraction of the weapon reach beyond their own body.")]
+    [Min(0f)] public float meleeStopReachFraction = 0.6f;
+    [Tooltip("Ranged units stop at this fraction of their range and approach again beyond it.")]
+    [Min(0f)] public float rangedStopFraction = 0.92f;
 
     [Header("Combat contact")]
     [Tooltip("Maximum turn speed (deg/s) when a unit turns to face its combat target.")]
@@ -55,11 +60,13 @@ public class MovementTuningConfig : ScriptableObject
         destinationLeadTime = destinationLeadTime,
         destinationLeadMaxDistance = destinationLeadMaxDistance,
         slotVelocitySmoothing = slotVelocitySmoothing,
-        meleeStopDistanceFactor = meleeStopDistanceFactor,
         combatFacingRange = combatFacingRange,
         formedRotationSpeed = formedRotationSpeed,
         hurrySpeedMultiplier = hurrySpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        bodyRadius = bodyRadius,
+        meleeStopReachFraction = meleeStopReachFraction,
+        rangedStopFraction = rangedStopFraction,
         combatTurnRate = combatTurnRate,
     };
 

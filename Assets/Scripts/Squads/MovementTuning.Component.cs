@@ -25,11 +25,13 @@ public struct MovementTuningComponent : IComponentData
     public float slotVelocitySmoothing;
 
     // Constants moved out of system code with their current values
-    public float meleeStopDistanceFactor;
     public float combatFacingRange;
     public float formedRotationSpeed;
     public float hurrySpeedMultiplier;
     public float formationChangeCooldown;
+    public float bodyRadius; // Body radius for contact and avoidance, m (D10).
+    public float meleeStopReachFraction; // Melee stop: fraction of the weapon reach past the body (C5).
+    public float rangedStopFraction; // Ranged stop as a fraction of range (C5).
     public float combatTurnRate; // Max combat turn speed, degrees per second (C7).
 
     /// <summary>Values used when no tuning asset is assigned (and by tests).</summary>
@@ -46,11 +48,13 @@ public struct MovementTuningComponent : IComponentData
         destinationLeadTime = 0.4f,
         destinationLeadMaxDistance = 1f,
         slotVelocitySmoothing = 0.15f,
-        meleeStopDistanceFactor = 0.75f,
         combatFacingRange = 3.5f,
         formedRotationSpeed = 5f,
         hurrySpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        bodyRadius = 0.5f,
+        meleeStopReachFraction = 0.6f,
+        rangedStopFraction = 0.92f,
         combatTurnRate = 450f,
     };
 
@@ -67,6 +71,9 @@ public struct MovementTuningComponent : IComponentData
         if (t.holdReformRadius < t.arrivalRadiusIn) return "holdReformRadius must not be smaller than arrivalRadiusIn.";
         if (t.startRowDelay < 0f || t.startJitterDelay < 0f) return "Start delays must not be negative.";
         if (t.destinationLeadTime < 0f || t.destinationLeadMaxDistance < 0f) return "Destination lead must not be negative.";
+        if (t.meleeStopReachFraction <= 0f || t.meleeStopReachFraction >= 1f) return "meleeStopReachFraction must be between 0 and 1.";
+        if (t.rangedStopFraction <= 0f || t.rangedStopFraction >= 1f) return "rangedStopFraction must be between 0 and 1.";
+        if (t.bodyRadius <= 0f) return "bodyRadius must be positive.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
         // The command must be re-sent before the agent reaches it, or the lead stops paying off.
         if (t.destinationLeadTime > 0f && t.destinationChangeSpeedFactor >= t.destinationLeadTime)

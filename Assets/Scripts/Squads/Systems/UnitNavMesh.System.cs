@@ -111,8 +111,8 @@ public partial class UnitNavMeshSystem : SystemBase
         var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
             ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
         float arrivalThreshold = math.max(0.01f, tuning.arrivalRadiusIn);
-        // Melee units stop at this fraction of attackRange to stay inside the directional AABB.
-        float meleeStopDistanceFactor = tuning.meleeStopDistanceFactor;
+        // Contact distances derive from body radii and weapon reach (C5, MeleeReach).
+        float bodyRadius = tuning.bodyRadius;
         // Within this distance a melee unit turns to face its target manually.
         float combatFacingRange = tuning.combatFacingRange;
         float dt = SystemAPI.Time.DeltaTime;
@@ -206,11 +206,16 @@ public partial class UnitNavMeshSystem : SystemBase
                 float2 targetXZ = new float2(targetWorldPos.x, targetWorldPos.z);
                 float  dist     = math.distance(unitXZ, targetXZ);
                 
-                // Ranged units stop immediately when in range; melee units push closer (0.75x) 
-                // to stay inside the directional AABB bounds.
-                float  stopDist = isRanged ? attackRange : (attackRange * meleeStopDistanceFactor);
+                // Stop with bodies apart and the target inside the hit; approach again only beyond the
+                // resume distance, so units do not shuffle in and out at the edge of their reach (C5).
+                float stopDist = isRanged
+                    ? MeleeReach.RangedStopDistance(attackRange, tuning.rangedStopFraction)
+                    : MeleeReach.StopDistance(attackRange, bodyRadius, bodyRadius, tuning.meleeStopReachFraction);
+                float resumeDist = isRanged ? attackRange : MeleeReach.ResumeDistance(attackRange, bodyRadius);
+                if (dist > resumeDist) navigation.combatApproaching = true;
+                else if (dist <= stopDist) navigation.combatApproaching = false;
 
-                if (!isHoldingPosition && dist > stopDist)
+                if (!isHoldingPosition && navigation.combatApproaching)
                 {
                     float2 baseDir = math.normalizesafe(unitXZ - targetXZ);
 
@@ -230,7 +235,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
                 else if (!isHoldingPosition)
                 {
-                    // Already in attack range — stay at current position
+                    // Within reach — stay at current position
                     destination = unitPos;
                     usesFormationDestination = false;
                 }
@@ -268,6 +273,8 @@ public partial class UnitNavMeshSystem : SystemBase
             {
                 // Sin combat target activo, o en HoldPosition — NavMesh maneja rotación.
                 agent.updateRotation = true;
+                // A new target is approached until the stop distance.
+                navigation.combatApproaching = true;
             }
 
 

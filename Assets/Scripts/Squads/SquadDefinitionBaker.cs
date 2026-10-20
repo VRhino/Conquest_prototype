@@ -6,6 +6,9 @@ using UnityEngine;
 /// <summary>Single conversion path for standalone and database squad definitions.</summary>
 public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
 {
+        /// <summary>Weapon reach beyond the body below which melee contact degenerates (C5).</summary>
+        const float MinimumMeleeReach = 0.2f;
+
         protected void BakeSquad(Entity entity, SquadData d)
         {
             DependsOn(d);
@@ -14,6 +17,10 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             if (d.progressionData != null) DependsOn(d.progressionData);
             var melee  = d.meleeData;
             var ranged = d.rangedData;
+            if (melee != null
+                && MeleeReach.Reach(melee.attackRange, MovementTuningComponent.Default.bodyRadius) < MinimumMeleeReach)
+                Debug.LogWarning($"[SquadDefinitionBaker] {d.name}: attackRange {melee.attackRange} leaves less than " +
+                                 $"{MinimumMeleeReach} m of reach beyond the body radius; units will fight while touching.");
 
             // Bake formation library
             var formationLibrary = BakeFormationLibrary(d.gridFormations);
