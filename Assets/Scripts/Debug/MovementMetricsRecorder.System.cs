@@ -20,6 +20,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
 {
     // Two bodies of 0.5 m closer than 90 % of their combined radius count as overlapping (Movimiento_Formaciones §5.1).
     const float OverlapDistance = 0.9f;
+    /// <summary>Squadmates overlap only when closer than this fraction of their formation spacing (Testudo is tight on purpose).</summary>
+    const float SquadmateOverlapFraction = 0.9f;
 
     static bool _recording;
     static string _label;
@@ -32,7 +34,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     ProfilerRecorder _navMeshTime;
     ProfilerRecorder _followFormationTime;
     ProfilerRecorder _avoidanceTime;
-    readonly List<(float3 position, int team, int index)> _bodies = new();
+    readonly List<(float3 position, int team, int index, int squad, float spacing)> _bodies = new();
     readonly Dictionary<int2, List<int>> _grid = new();
     readonly HashSet<long> _overlapNow = new();
     readonly HashSet<int> _focusUnits = new();
@@ -200,7 +202,11 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         {
             float3 p = transform.ValueRO.Position;
             int index = _bodies.Count;
-            _bodies.Add((p, (int)team.ValueRO.value, entity.Index));
+            Entity squad = SystemAPI.HasComponent<UnitOwnerComponent>(entity)
+                ? SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad : Entity.Null;
+            float spacing = squad != Entity.Null && SystemAPI.HasComponent<FormationComponent>(squad)
+                ? SystemAPI.GetComponent<FormationComponent>(squad).spacing : MovementTuningComponent.ReferenceSpacing;
+            _bodies.Add((p, (int)team.ValueRO.value, entity.Index, squad.Index, spacing));
             var key = new int2((int)math.floor(p.x), (int)math.floor(p.z));
             if (!_grid.TryGetValue(key, out var list)) _grid[key] = list = new List<int>();
             list.Add(index);
@@ -220,7 +226,10 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 {
                     if (j <= i) continue;
                     var b = _bodies[j];
-                    if (math.distancesq(a.position.xz, b.position.xz) >= limitSq) continue;
+                    float distSq = math.distancesq(a.position.xz, b.position.xz);
+                    if (distSq >= limitSq) continue;
+                    if (a.squad == b.squad && distSq >= math.square(SquadmateOverlapFraction * math.min(a.spacing, b.spacing)))
+                        continue;
                     bool involvesFocus = _focusUnits.Count == 0 || _focusUnits.Contains(a.index) || _focusUnits.Contains(b.index);
                     if (!involvesFocus) continue;
                     if (a.team == b.team) { ally++; continue; }

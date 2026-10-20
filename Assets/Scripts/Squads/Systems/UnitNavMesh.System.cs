@@ -150,8 +150,18 @@ public partial class UnitNavMeshSystem : SystemBase
                 2f * tuning.destinationLeadMaxDistance);
             DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
                 arrivalThreshold, now, retryInterval, ref navigation);
+            // Project the slot within its own cell first (min(spacing, 0.65), L3-04) so it never lands in a
+            // neighbour's slot; the wide radius is only the fallback.
+            float slotSampleRadius = math.min(sampleRadius, MaxSlotSampleRadius);
+            if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
+            {
+                Entity owner = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
+                if (SystemAPI.HasComponent<FormationComponent>(owner))
+                    slotSampleRadius = math.min(slotSampleRadius,
+                        math.max(FormationDefinition.MinSpacing, SystemAPI.GetComponent<FormationComponent>(owner).spacing));
+            }
             float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
-                unitPos, sampleRadius, retryDistance, destinationChangeThreshold,
+                unitPos, slotSampleRadius, sampleRadius, retryDistance, destinationChangeThreshold,
                 now, retryInterval, ref navigation);
             float3 destination = formationDestination;
             bool usesFormationDestination = true;
@@ -351,8 +361,11 @@ public partial class UnitNavMeshSystem : SystemBase
         }
     }
 
+    /// <summary>Largest radius used to project a slot onto the NavMesh before the wide fallback.</summary>
+    const float MaxSlotSampleRadius = 0.65f;
+
     private static float3 ResolveFormationDestination(NavMeshAgent agent, float3 requested,
-        float3 current, float sampleRadius, float retryDistance,
+        float3 current, float slotSampleRadius, float fallbackSampleRadius, float retryDistance,
         float destinationChangeThreshold, double now,
         float retryInterval, ref NavAgentComponent navigation)
     {
@@ -368,7 +381,9 @@ public partial class UnitNavMeshSystem : SystemBase
 
         navigation.lastFormationRequest = requested;
         navigation.hasEffectiveFormationDestination = true;
-        if (TrySampleDestination(agent, requested, sampleRadius, out float3 resolved))
+        if (TrySampleDestination(agent, requested, slotSampleRadius, out float3 resolved)
+            || (fallbackSampleRadius > slotSampleRadius
+                && TrySampleDestination(agent, requested, fallbackSampleRadius, out resolved)))
         {
             navigation.effectiveFormationDestination = resolved;
             navigation.formationDestinationFailed = false;
