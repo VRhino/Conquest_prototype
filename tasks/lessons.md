@@ -295,3 +295,12 @@
 - `run_tests` en PlayMode responde 400 aunque la ejecución sí arranca. Esperar con `wait_for` a que `EditorApplication.isPlaying` pase a true y luego a false, y leer `test_status`. No lanzar otra ejecución hasta que el editor haya salido de Play Mode.
 - Un umbral de reenvío de destino demasiado fino duplica `SetDestination` en cuanto la tropa sigue de verdad al héroe. Para medirlo, separar por fases (marcha frente a parada) en lugar de usar una media global. Para no duplicar las proyecciones de NavMesh, adelantar el slot ya proyectado en lugar de proyectar el punto adelantado.
 - Un sistema de métricas de solo lectura con `ProfilerRecorder` debe usar el nombre de marcador de Entities, que es `"<nombre del World> <nombre del sistema>"`.
+
+## Lote 2 de movimiento (2026-10-20)
+
+- Burst no encontró como punto de entrada los `IJobParallelFor` anidados en una clase `static` (el log decía "not a known Burst entry point" y el job corría en managed, igual de lento con Burst activado que sin él). Declarar los jobs como structs de nivel superior y comprobar con un benchmark que Burst los aplica: comparar el tiempo con `BurstCompiler.Options.EnableBurstCompilation` en false y en true.
+- ORCA con un radio combinado igual al espaciado de la rejilla deja cada slot en contacto con sus vecinos, y una fila formada es un muro que ORCA no rodea (no planifica caminos). Dentro de la escuadra, esquivar solo a las unidades que se mueven y con un radio por debajo del espaciado.
+- Un umbral de cambio de marcha (Walk → Run) por encima del retraso real de arranque nunca se dispara. Medir primero el retraso en marcha estable (≈ 1 m) y poner la entrada por debajo y la salida por encima del retraso al que se quiere volver.
+- Una ley de recuperación proporcional frena la llegada cuando el slot ya está quieto. Con el slot parado, dejar que el agente llegue a la velocidad de su marcha y frene con su propio `autoBraking`.
+- Al limitar la persecución (correa), revisar los escenarios que daban por hecho el contacto: S6 paraba al empezar la reacción, a 8-9 m del enemigo, y dejó de llegar a la melé.
+- S6 cambia mucho de un run a otro, y dentro de la suite completa se comporta distinto que solo. Comparar con dos o más corridas y mirar el CSV (reacción, objetivo, ataque) antes de atribuir un cambio al código.

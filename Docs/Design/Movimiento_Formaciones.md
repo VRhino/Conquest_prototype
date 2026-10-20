@@ -421,3 +421,52 @@ Lectura:
 
 Pendiente de medir: el caso de 900 agentes en escena real (S8). Las regresiones `NineHundredBodyblockAgents…` siguen en
 verde, pero no cubren el coste de C3 a esa escala.
+
+## 10. Resultado del lote 2 (C5, C6, C7, C9, C14, 2026-10-20)
+
+Hechos en la rama `feat/movement-batch2`: `9e902f7d` (paso 0, métricas y escenarios S4 y S6), `855cb964` C7,
+`f9877397` C5, `48278bda` C6, `ac5ae209` C9 y `7e32714b` C14. Mismos escenarios y grabador que en §8 y §9.
+La línea base es la del paso 0, medida antes de C7.
+
+| Métrica | Línea base | Después | Objetivo §5.1 |
+|---|---|---|---|
+| S1 error al slot en marcha (media) | 1,25 m | **0,57 m** | ≤ 0,5 m en este lote |
+| S3 error al slot en marcha (media) | 1,02 m | **0,60 m** | ≤ 0,5 m en este lote |
+| S4 error al slot en marcha (media) | 1,99 m | **1,12 m** | — |
+| Formado al 95 % (S1 / S3 / S4) | 0,63 / 0,58 / 1,17 s | **0,43 / 0,51 / 0,93 s** | ≤ 2 s |
+| Solapes aliados por frame en marcha (S1 / S3 / S4) | 3,8 / 3,4 / 11,5 | **0,04 / 0,13 / 0,64** | 0 |
+| S6 frames de giro de combate por encima del tope | 27 | **2-5** | 0 |
+| S6 pares enemigos solapados más de 0,3 s (máx.) | 16-32 | **5-11** | 0 |
+| S6 distancia de contacto atacando (media / mín.) | 1,22 / 0,11 m | 1,25-1,55 / 0,12-1,23 m | ≥ 2·rc |
+| S6 unidades en reacción fuera de la correa | 0-20 | 0 (S6 antiguo), 1-6 (S6 nuevo) | 0 |
+| Coste S6 (`UnitFormationState` + `UnitNavMesh` + `UnitFollowFormation` + `UnitAvoidance`) | — | **1,16 ms** | ≤ 2 ms |
+| Benchmark ORCA, 900 agentes (mediana) | — | **0,65 ms** | ≤ 1 ms |
+
+S6 cambia de un run a otro; las cifras con rango son de dos o más corridas. Desde C9, S6 marcha hasta el primer golpe
+en lugar de parar al empezar la reacción: con la correa de C6 la escuadra ya no persigue al enemigo desde la distancia
+de reacción (8-9 m), y el escenario antiguo dejaba de llegar al cuerpo a cuerpo.
+
+Lectura:
+- **Los aliados ya no se atraviesan en marcha.** ORCA baja los solapes entre 30 y 100 veces sin empujes.
+- **El error en marcha baja a la mitad**, pero queda en 0,6 m, por encima del 0,5 m del lote. La causa es D4: el tope de la
+  marcha Walk es la velocidad del héroe, así que el retraso que se acumula al arrancar solo se recupera en Run. La tropa
+  corre una vez por arranque (de 0,9 m a 0,45 m del slot) y luego camina con ese pequeño retraso.
+- **El giro de combate respeta el tope** (C7) y **la parada deja los cuerpos separados** casi siempre (C5). Los solapes
+  enemigos persistentes bajan, pero no llegan a 0: sigue habiendo empujes en la melé que la parada no controla.
+- **S4 tarda 0,6 s más en formar que solo con C9** (0,30 → 0,93 s). Sigue dentro del objetivo de 2 s, pero supera el
+  margen de +0,3 s que pedía el plan para C14.
+
+Ajustes fuera de las decisiones por defecto del plan:
+- **Marchas (C9):** se pedía Run por encima de 1,5 m y Walk por debajo de 0,6 m, con 1 s de recuperación. Con esos valores
+  el retraso de arranque (≈ 1 m) caía dentro de la banda y la tropa nunca corría: error de 1,03 m. Quedan en
+  **0,9 m / 0,45 m y 0,5 s**. Con el slot quieto (< 0,5 m/s), la unidad llega a la velocidad de la marcha, como antes; con
+  solo la ley de recuperación, la llegada pasaba de 0,6 a 1 s.
+- **Radio entre compañeros de escuadra (C14):** D1 fija un radio combinado de 1 m, pero el espaciado de la rejilla también
+  es 1 m. Con ese radio, cada slot queda en contacto con sus vecinos y una fila formada es un muro que ORCA no sabe rodear
+  (S4 no llegaba a formar). Dentro de la escuadra solo se esquivan las unidades que se mueven, con radio combinado de
+  **0,9 m** (0,9 del espaciado). Frente a otras escuadras y a los héroes se mantiene 1 m.
+- **Separación de solapes en ORCA:** se usa un tiempo de resolución de 0,25 s (`avoidanceCollisionResolveTime`) en lugar del
+  paso de simulación del paper, para no meter tirones de varios m/s cuando dos cuerpos ya se tocan.
+
+Pendiente: S8 (900 agentes en escena real, necesita el paquete de VFX ausente), el error en marcha ≤ 0,5 m, los solapes
+enemigos persistentes en S6 y el coste de llegada en S4.
