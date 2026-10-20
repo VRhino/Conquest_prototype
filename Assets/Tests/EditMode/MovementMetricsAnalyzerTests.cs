@@ -47,6 +47,36 @@ public class MovementMetricsAnalyzerTests
         Assert.That(MovementMetricsAnalyzer.Analyze("pause", frames, units).stops, Is.EqualTo(0));
     }
 
+    [Test]
+    public void ContactMetricsCountAttackersLeashAndTurnRate()
+    {
+        var frames = new List<MovementFrameSample>();
+        var units = new List<MovementUnitSample>();
+        for (int f = 0; f <= 20; f++)
+        {
+            float t = f * Dt;
+            frames.Add(new MovementFrameSample { frame = f, time = t, deltaTime = Dt, squad = 1,
+                allyOverlaps = f < 10 ? 2 : 0, persistentEnemyOverlaps = f == 15 ? 1 : 0 });
+            // Unit 0 attacks target 7 from 1.3 m and snaps 90° in one frame at f = 5.
+            var a = Unit(f, t, 0, UnitFormationState.Moving);
+            a.target = 7; a.targetDistance = 1.3f; a.attacking = true; a.yaw = f >= 5 ? 1.5708f : 0f;
+            // Unit 1 also on target 7, reacting and 8 m from its slot for the whole run (one leash violation).
+            var b = Unit(f, t, 1, UnitFormationState.Moving);
+            b.target = 7; b.targetDistance = 2f; b.reacting = true; b.slotDistance = 8f;
+            units.Add(a); units.Add(b);
+        }
+
+        var s = MovementMetricsAnalyzer.Analyze("contact", frames, units);
+
+        Assert.That(s.maxAttackersPerTarget, Is.EqualTo(2));
+        Assert.That(s.meanContactDistance, Is.EqualTo(1.3f).Within(1e-4f));
+        Assert.That(s.leashViolations, Is.EqualTo(1));
+        Assert.That(s.turnRateViolationFrames, Is.EqualTo(1));
+        Assert.That(s.maxAllyOverlaps, Is.EqualTo(2));
+        Assert.That(s.maxPersistentEnemyOverlaps, Is.EqualTo(1));
+    }
+
     static MovementUnitSample Unit(int frame, float time, int unit, UnitFormationState state) =>
-        new MovementUnitSample { frame = frame, time = time, squad = 1, unit = unit, state = state };
+        new MovementUnitSample { frame = frame, time = time, squad = 1, unit = unit, state = state,
+            target = -1, targetDistance = -1f, gear = -1 };
 }

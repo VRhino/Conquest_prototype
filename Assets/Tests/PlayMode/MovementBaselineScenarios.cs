@@ -78,6 +78,75 @@ public partial class BattleSceneIntegrationTests
         finally { RestoreInputSettings(previousInput); }
     }
 
+    const float S4SettleSeconds = 4f;     // Time for a formation change to complete before the next one.
+    const float S4MarchSeconds = 3f;
+    const float S6ApproachTimeout = 20f;  // March towards the remote squad until a combat reaction starts.
+    const float S6MeleeSeconds = 15f;
+
+    /// <summary>S4: formation changes while still and while marching; units cross each other's paths.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS4FormationChange()
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        try
+        {
+            yield return PrepareBaseline();
+            using (MovementVideoCapture.Start("S4"))
+            {
+                MovementMetricsRecorderSystem.Begin("S4", squad);
+                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                yield return Press(Key.F2);
+                yield return new WaitForSeconds(S4SettleSeconds);
+                yield return Press(Key.F1);
+                yield return new WaitForSeconds(S4SettleSeconds);
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
+                yield return new WaitForSeconds(1f);
+                yield return PressWhileHeld(Key.F2, MarchKey);
+                yield return new WaitForSeconds(S4MarchSeconds);
+                yield return PressWhileHeld(Key.F1, MarchKey);
+                yield return new WaitForSeconds(S4MarchSeconds);
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return new WaitForSeconds(S4SettleSeconds);
+                ReportBaseline(start);
+            }
+        }
+        finally { RestoreInputSettings(previousInput); }
+    }
+
+    /// <summary>S6: march at the remote squad (+z) until the squad reacts, then hold the melee.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS6Clash()
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        try
+        {
+            yield return PrepareBaseline();
+            using (MovementVideoCapture.Start("S6"))
+            {
+                MovementMetricsRecorderSystem.Begin("S6", squad);
+                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+                float deadline = Time.time + S6ApproachTimeout;
+                while (Time.time < deadline && em.GetComponentData<SquadResolvedOrderComponent>(squad).source
+                       != OrderSource.CombatReaction)
+                    yield return null;
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return new WaitForSeconds(S6MeleeSeconds);
+                ReportBaseline(start);
+            }
+        }
+        finally { RestoreInputSettings(previousInput); }
+    }
+
+    IEnumerator PressWhileHeld(Key key, Key held)
+    {
+        InputSystem.QueueStateEvent(keyboard, new KeyboardState(held, key));
+        yield return null;
+        yield return null;
+        InputSystem.QueueStateEvent(keyboard, new KeyboardState(held));
+        yield return null;
+    }
+
     /// <summary>
     /// The editor is driven remotely and usually has no Game view focus; by default the Input System then
     /// drops keyboard input. A temporary settings copy routes all input to the game for this run only,
