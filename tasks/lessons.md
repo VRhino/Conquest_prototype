@@ -315,3 +315,10 @@
 - Antes de diseñar una "dirección de bloqueo", comprobar cómo se decide de verdad: aquí el bloqueo es el collider del escudo colgado de la mano, y `UnitShieldComponent.orientation` no lo leía nadie.
 - Una métrica de solapes con umbral fijo marca como fallo una formación compacta a propósito (Testudo a 0,8 m). Hacerla relativa al espaciado de la formación.
 - En Bash, los heredocs con plantillas JS que contienen comillas invertidas y `${…}` pueden romper el comando. Escribir el script a un archivo con la herramienta de escritura y ejecutarlo.
+
+## Frenado de llegada (M12, M13, 2026-10-21)
+
+- Antes de arreglar un pico, demostrar de dónde viene. Los picos de S6 se habían atribuido al bodyblock; un registro temporal de cada caída de `agent.velocity` mayor de 1,5 m/s en un frame, con el estado del agente (camino, destino, aturdimiento), mostró que eran paradas del propio `NavMeshAgent`. Y el CSV solo graba la escuadra enfocada: no sirve para medir distancias a enemigos.
+- El `autoBraking` del `NavMeshAgent` no frena con antelación: si llega a un destino quieto a 4 m/s, para en un frame. Mandar "quédate aquí" (destino = posición actual) a una unidad en marcha es una parada instantánea. Limitar la velocidad con √(2·a·d) hacia destinos quietos y, para parar, apuntar al punto donde termina de frenar.
+- No poner rampa (aceleración limitada) a una corrección de posición tipo muelle como el bodyblock: con retardo se pasa, sigue empujando cuando el contacto ya terminó y oscila. Si el problema es el tamaño del empujón, limitar su tope.
+- S6 varía tanto entre corridas (solapes 8-15, picos 1,9-3,5 % sin cambiar nada) que una sola corrida no decide nada. Usar un parámetro que apague el cambio (aquí `arrivalDecelerationFraction` = 0) y comparar 3 o más corridas de cada lado sin recompilar.

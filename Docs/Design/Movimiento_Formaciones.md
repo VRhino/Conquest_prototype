@@ -515,3 +515,40 @@ Lectura:
 - El reparto por cercanía (C12) entró aquí: sin él, S4 se atascaba.
 - La defensa por postura no usa `ShieldOrientation`: ese campo no lo lee nadie y el bloqueo es el collider del escudo, que
   cuelga de la mano. La defensa saldrá de los clips de postura, que no hay en el proyecto (`Docs/Mechanics/FormationPostures.md`).
+
+## 12. Frenado de llegada: picos en la melé y llegada al slot (M12, M13, 2026-10-21)
+
+### Causa (medida, no supuesta)
+El §11 atribuía los picos de S6 al bodyblock. Al clasificar los picos del CSV y registrar en el juego cada caída brusca de
+`agent.velocity`, el origen resultó ser otro: **el propio `NavMeshAgent` parando en un frame** al llegar a un destino quieto
+yendo deprisa.
+- Melé: al entrar en la distancia de parada (1,6 m) a 3,5-4,5 m/s, `UnitNavMeshSystem` mandaba "quédate donde estás"
+  (destino = posición actual) y el agente pasaba de 4 m/s a 0. Eran 185 de 195 paradas bruscas registradas.
+- Slot: cuando el héroe para, el slot queda a 0,2-0,5 m de la unidad que aún va a 3 m/s, y llega en uno o dos frames.
+
+Se probó también la hipótesis del §11 (empuje del bodyblock como velocidad con aceleración limitada): no mejoró los picos,
+subió los solapes y hacía oscilar el empuje (es un muelle; con retardo se pasa y sigue empujando). Se descartó.
+
+### Cambio
+- **Tope de llegada** (`UnitFollowFormationSystem`, `FormationFollowSpeed.ArrivalSpeed`): si el destino está quieto (slot
+  más lento que 0,5 m/s, o cualquier destino de combate), la velocidad no pasa de √(2·a·d), con d la distancia al último
+  destino mandado y a = aceleración × `brakingFactor` × `arrivalDecelerationFraction` (0,6 → 12 m/s²). La unidad frena por el
+  camino y llega casi parada.
+- **Punto de parada en la melé** (`UnitNavMeshSystem`, `MeleeReach.BrakingStopPoint`): al entrar en alcance, el destino es
+  el punto donde termina de frenar (v²/2a por delante), sin acercarse al objetivo más de dos radios de cuerpo + holgura.
+
+### Medida (S6: 3 corridas base y 6 con el cambio; S1-S4: 2 corridas)
+| Métrica | Antes | Después |
+|---|---|---|
+| S6 aceleración > 20 m/s² | 1,9-3,5 % (media 2,6), máx. 198-282 | 1,0-2,4 % (media 1,5), máx. 110-144 |
+| S6 pares enemigos solapados > 0,3 s | 8 / 11 / 15 | 8-13 (media 10,7) |
+| Formado al 95 % S3 (media / peor parada) | 0,83 / 1,10 s | 0,75 / 1,43 s |
+| Formado al 95 % S4 | 1,97-2,43 s | **1,03-1,07 s** |
+| S1 / S3 / S4 aceleración > 20 m/s² | 0,1-0,2 / 0,6 / 0,7 % | 0,1 / 0,7 / 0,5-0,7 % |
+
+Lectura:
+- Los picos grandes de la melé bajan a la mitad y los solapes no empeoran (S6 varía mucho entre corridas, M10).
+- S4 forma en la mitad de tiempo. En S3 mejora la media, pero la primera parada (unidades aún corriendo para recuperar)
+  tarda más porque ahora frena en el último metro y medio. Con 0,8 en lugar de 0,6 S3 y S4 empeoraban (más rodeo).
+- Quedan picos en la melé: unidades que entran en alcance ya pegadas al objetivo (sin sitio para frenar) y los empujes del
+  bodyblock. Siguen en `Docs/Por_Abordar/Movimiento.md` (M12).

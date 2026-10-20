@@ -18,8 +18,8 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M9 | Memoria por frame en la evitación | Baja | Pendiente |
 | M10 | Variación de S6 entre corridas | Media | Pendiente |
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
-| M12 | Picos de aceleración en la melé por el bodyblock | Media | Pendiente |
-| M13 | Llegada más lenta al frenar con aceleración limitada | Media | Pendiente |
+| M12 | Picos de aceleración en la melé | Media | **Mitad hecha** (frenado de llegada); quedan picos de contacto |
+| M13 | Llegada más lenta al frenar con aceleración limitada | Media | **Hecho** en S4; S3 con matiz (primera parada) |
 
 ---
 
@@ -121,22 +121,36 @@ corridas sin combate).
 **Cómo abordarlo.** Fijar la semilla de la IA enemiga y del ruido, esperar a un estado inicial idéntico antes de medir y
 repetir el escenario tres veces, informando de la mediana.
 
-## M12. Picos de aceleración en la melé por el bodyblock
-**Qué es.** Fuera de la melé los picos (> 20 m/s²) bajaron a menos del 1 %; en S6 quedan en un 2 % con máximos de unos
-180 m/s².
+## M12. Picos de aceleración en la melé
+**Qué es.** Fuera de la melé los picos (> 20 m/s²) están por debajo del 1 %. En S6 eran un 2-3,5 % con máximos de 200-280 m/s².
 
-**Por qué queda fuera.** Vienen de `UnitBodyblockSystem`, que separa enemigos con `agent.Move` (un desplazamiento directo que
-no pasa por la aceleración del agente), y no de la evitación ni de la velocidad de seguimiento.
+**Hecho en parte (2026-10-21, `Movimiento_Formaciones.md` §12).** La causa principal no era el bodyblock, como se suponía,
+sino el `NavMeshAgent` parando en un frame al llegar a un destino quieto (destino = posición actual en la melé, slot recién
+parado). Con el tope de llegada √(2·a·d) y el punto de parada al frenar, S6 queda en un 1,5 % de media con máximos de unos
+130 m/s², sin más solapes.
 
-**Cómo abordarlo.** Limitar el empuje por frame a lo que la aceleración permite, o pasarlo a velocidad como en ORCA. Hay que
-cuidar que dos enemigos solapados se sigan separando (M2).
+**Lo que queda y por qué.**
+- Unidades que entran en alcance **ya pegadas al objetivo** (los dos se acercan corriendo): no hay sitio para frenar sin
+  meterse en su cuerpo, y paran casi en seco. El arreglo de fondo es el anillo de contacto (C11, M6): reservar el puesto
+  antes de llegar y frenar hacia él.
+- Los **empujes del bodyblock** (`agent.Move`, hasta `bodyblockMaxPushSpeed` = 18 m/s por frame en muros). Se probó pasarlo a
+  una velocidad con aceleración limitada (10 m/s²): no bajó los picos, subió los solapes y el empuje oscilaba, porque es un
+  muelle y con retardo se pasa y sigue empujando cuando el contacto ya terminó. Descartado.
+
+**Cómo abordarlo.** Primero C11. Después, si siguen los picos de contacto, probar un `bodyblockMaxPushSpeed` menor fuera de
+los muros (18 m/s es para que un muro no se atraviese) midiendo los solapes (M2), en lugar de rampas sobre el empuje. Para
+medir, usar el detector de caídas de `agent.velocity` por frame (se quitó tras usarlo; está descrito en §12) y separar enemigos en el
+CSV, que hoy solo graba la escuadra enfocada.
 
 ## M13. Llegada más lenta al frenar con aceleración limitada
-**Qué es.** Desde que la velocidad respeta la aceleración, el tiempo hasta formar sube (S3 0,51 → 0,83 s, S4 unos 2 s). Antes la
-unidad frenaba en un frame, que era justamente el tirón.
+**Qué es.** Desde que la velocidad respeta la aceleración, el tiempo hasta formar subió (S3 0,51 → 0,83 s, S4 unos 2 s).
 
-**Cómo abordarlo.** Que la unidad empiece a frenar antes: con C10 (llegada del ancla, M5) el slot no se para en seco cuando
-para el héroe; o subir `brakingFactor` midiendo que no reaparezcan los tirones.
+**Hecho (2026-10-21, `Movimiento_Formaciones.md` §12).** La unidad frena hacia un destino quieto con el tope √(2·a·d)
+(`arrivalDecelerationFraction` = 0,6): S4 forma en 1,03-1,07 s y la media de S3 baja a 0,75 s.
+
+**Lo que queda.** En S3 la primera parada tarda más (1,10 → 1,43 s): las unidades aún corren para recuperar el retraso del
+arranque y ahora frenan en el último metro y medio. Subir la fracción a 0,8 empeoraba S3 y S4 (más rodeo). Se resuelve mejor
+reduciendo ese retraso (M1) o con la llegada del ancla (C10, M5), que hace que el slot no se pare en seco cuando para el héroe.
 
 ## M11. Separación posicional (C8)
 **Qué es.** Empuje entre aliados en el bodyblock, como paso intermedio antes de ORCA.

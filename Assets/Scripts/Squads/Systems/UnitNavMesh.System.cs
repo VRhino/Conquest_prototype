@@ -248,8 +248,13 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
                 else if (!isHoldingPosition)
                 {
-                    // Within reach — stay at current position
-                    destination = unitPos;
+                    // Within reach — come to rest where braking ends (without reaching the target's body);
+                    // aiming at the current position stopped the agent in one frame (M12).
+                    float2 velocityXZ = new float2(agent.velocity.x, agent.velocity.z);
+                    float2 restXZ = MeleeReach.BrakingStopPoint(unitXZ, velocityXZ,
+                        agent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction,
+                        dist - (2f * bodyRadius + MeleeReach.BodyClearance));
+                    destination = new float3(restXZ.x, unitPos.y, restXZ.y);
                     usesFormationDestination = false;
                 }
 

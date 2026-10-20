@@ -105,7 +105,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: Única autoridad para decisiones NavMesh por unidad: destino + rotación
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]` `[UpdateBefore(UnitFollowFormationSystem)]`
 - **Owner exclusivo**: `agent.SetDestination()` y `agent.updateRotation`
-- **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition)
+- **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition); ya en alcance, el punto donde termina de frenar (`MeleeReach.BrakingStopPoint`), nunca "aquí" yendo deprisa
 - Mantener posición preserva el ancla y los slots incluso en combate. Seguimiento aplica leash también en `InCombat`; `Attack` permite perseguir. Sin objetivo elegible se vuelve al slot respetando `Waiting`.
 - Lee la orden desde `UnitOwnerComponent.squad`. Proyecta slots y stop-points al NavMesh. `NavAgentComponent` conserva el destino efectivo y usa `navMeshDestinationChangeThreshold` para evitar reemitir destinos sin cambios; fallos de proyección/path usan fallback estable y reintentan cuando cambia el slot.
 - **Rotación combate**: Si dist ≤ 3.5u → `updateRotation=false` + rota `LocalTransform` para mirar al target
@@ -115,7 +115,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### UnitFollowFormationSystem
 - **Responsabilidad**: Velocidad de seguimiento y marcha (C9, `UnitMovementGearComponent`) + rotación Formed para unidades NavMesh
-- **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
+- **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido; hacia un destino quieto, como mucho √(2·a·d) para llegar frenando), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
 - **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 

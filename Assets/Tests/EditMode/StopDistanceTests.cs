@@ -53,4 +53,18 @@ public class StopDistanceTests
             Assert.That(MeleeReach.InAttackRange(stop, range, tuning.bodyRadius), Is.True, squad.name);
         }
     }
+
+    [Test]
+    public void MovingUnitInReachRestsWhereBrakingEnds()
+    {
+        var position = new Unity.Mathematics.float2(0f, 0f);
+        var velocity = new Unity.Mathematics.float2(0f, 4f);
+        // 4² / (2·12) = 0.667 m ahead along the velocity.
+        var rest = MeleeReach.BrakingStopPoint(position, velocity, 12f, 5f);
+        Assert.That(rest.y, Is.EqualTo(16f / 24f).Within(1e-4f));
+        Assert.That(rest.x, Is.EqualTo(0f).Within(1e-6f));
+        // Never further than allowed (the target's body), and a still unit stays put.
+        Assert.That(MeleeReach.BrakingStopPoint(position, velocity, 12f, 0.2f).y, Is.EqualTo(0.2f).Within(1e-5f));
+        Assert.That(MeleeReach.BrakingStopPoint(position, Unity.Mathematics.float2.zero, 12f, 5f), Is.EqualTo(position));
+    }
 }
