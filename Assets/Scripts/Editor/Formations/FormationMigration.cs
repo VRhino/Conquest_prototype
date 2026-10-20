@@ -10,6 +10,47 @@ public static class FormationMigration
     [MenuItem("Tools/Formations/Migrate Legacy Grid Formations")]
     public static void MigrateAll() => Debug.Log($"[FormationMigration] {Run()}");
 
+    [MenuItem("Tools/Formations/Apply Default Postures")]
+    public static void ApplyPosturesMenu() => Debug.Log($"[FormationMigration] {ApplyDefaultPostures()}");
+
+    /// <summary>
+    /// Default posture tables (tasks/todo.md, decision 7) for shield formations that have none yet: Testudo front
+    /// shield in front, flanks to the side, interior and rear over the head; Shield Wall braced when formed.
+    /// </summary>
+    public static string ApplyDefaultPostures()
+    {
+        int applied = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:FormationDefinition"))
+        {
+            var formation = AssetDatabase.LoadAssetAtPath<FormationDefinition>(AssetDatabase.GUIDToAssetPath(guid));
+            if (formation == null || (formation.postures != null && formation.postures.Length > 0)) continue;
+            if (formation.formationType == FormationType.Testudo)
+                formation.postures = new[]
+                {
+                    Posture(FormationSlotRole.Front, UnitStance.ShieldFront, UnitStance.ShieldFront),
+                    Posture(FormationSlotRole.Flank, UnitStance.ShieldSide, UnitStance.ShieldSide),
+                    Posture(FormationSlotRole.Interior, UnitStance.ShieldUp, UnitStance.ShieldUp),
+                    Posture(FormationSlotRole.Rear, UnitStance.ShieldUp, UnitStance.ShieldUp),
+                };
+            else if (formation.formationType == FormationType.ShieldWall)
+                formation.postures = new[]
+                {
+                    Posture(FormationSlotRole.Front, UnitStance.BracedShields, UnitStance.ShieldFront),
+                    Posture(FormationSlotRole.Flank, UnitStance.BracedShields, UnitStance.ShieldFront),
+                    Posture(FormationSlotRole.Interior, UnitStance.BracedShields, UnitStance.ShieldFront),
+                    Posture(FormationSlotRole.Rear, UnitStance.BracedShields, UnitStance.ShieldFront),
+                };
+            else continue;
+            EditorUtility.SetDirty(formation);
+            applied++;
+        }
+        AssetDatabase.SaveAssets();
+        return $"postures applied to {applied} formation(s)";
+    }
+
+    static FormationRolePosture Posture(FormationSlotRole role, UnitStance formed, UnitStance moving) =>
+        new FormationRolePosture { role = role, formed = formed, moving = moving };
+
     /// <summary>Converts every formation that still holds the legacy grid; returns a one-line report.</summary>
     public static string Run()
     {

@@ -20,7 +20,8 @@ public static class TestFormationLibrary
 
     /// <summary>Any formation, from authoring data.</summary>
     public static BlobAssetReference<FormationLibraryBlob> Build(FormationType type, FormationLayoutKind layout,
-        float spacing, float noiseRadius, float noiseAngleDegrees, FormationTemplate[] templates)
+        float spacing, float noiseRadius, float noiseAngleDegrees, FormationTemplate[] templates,
+        FormationRolePosture[] postures = null)
     {
         var builder = new BlobBuilder(Allocator.Temp);
         ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
@@ -30,6 +31,10 @@ public static class TestFormationLibrary
         formations[0].spacing = spacing;
         formations[0].noiseRadius = noiseRadius;
         formations[0].noiseAngle = math.radians(noiseAngleDegrees);
+        postures ??= System.Array.Empty<FormationRolePosture>();
+        var postureArray = builder.Allocate(ref formations[0].postures, postures.Length);
+        for (int k = 0; k < postures.Length; k++)
+            postureArray[k] = new FormationPostureBlob { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving };
         templates ??= System.Array.Empty<FormationTemplate>();
         var templateArray = builder.Allocate(ref formations[0].templates, templates.Length);
         for (int t = 0; t < templates.Length; t++)

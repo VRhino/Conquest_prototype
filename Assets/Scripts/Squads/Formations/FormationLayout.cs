@@ -86,6 +86,15 @@ public static class FormationLayout
         return new float3(p.x, 0f, p.y);
     }
 
+    /// <summary>Posture of a slot role in this formation (Normal when the role has none).</summary>
+    public static UnitStance Posture(ref FormationDataBlob formation, FormationSlotRole role, bool moving)
+    {
+        for (int i = 0; i < formation.postures.Length; i++)
+            if (formation.postures[i].role == role)
+                return moving ? formation.postures[i].moving : formation.postures[i].formed;
+        return UnitStance.Normal;
+    }
+
     /// <summary>Spacing in effect for a formation scaled by the squad, never below the floor.</summary>
     public static float EffectiveSpacing(float formationSpacing, float squadScale)
     {

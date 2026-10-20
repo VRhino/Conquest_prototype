@@ -157,6 +157,12 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 formation.noiseRadius = Mathf.Max(0f, definition.noiseRadius);
                 formation.noiseAngle = math.radians(Mathf.Max(0f, definition.noiseAngleDegrees));
 
+                var postures = definition.postures ?? System.Array.Empty<FormationRolePosture>();
+                var postureArray = builder.Allocate(ref formation.postures, postures.Length);
+                for (int k = 0; k < postures.Length; k++)
+                    postureArray[k] = new FormationPostureBlob
+                    { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving };
+
                 var templates = definition.layout == FormationLayoutKind.Template && definition.templates != null
                     ? definition.templates : System.Array.Empty<FormationTemplate>();
                 var templateArray = builder.Allocate(ref formation.templates, templates.Length);

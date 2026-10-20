@@ -27,6 +27,9 @@ public class FormationDefinition : ScriptableObject
     [Tooltip("Templates by minimum soldiers alive; the first one whose minimum fits is used. Ignored by Scatter.")]
     public FormationTemplate[] templates = System.Array.Empty<FormationTemplate>();
 
+    [Tooltip("Posture per slot role (shield front, side or up). Roles not listed use Normal.")]
+    public FormationRolePosture[] postures = System.Array.Empty<FormationRolePosture>();
+
     /// <summary>Integer cells of the replaced grid model, read once by the migration.</summary>
     [SerializeField, HideInInspector, FormerlySerializedAs("gridPositions")]
     private Vector2Int[] legacyGridPositions;

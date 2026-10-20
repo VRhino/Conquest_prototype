@@ -23,6 +23,16 @@ public struct FormationDataBlob
     public float noiseAngle;
     /// <summary>Templates sorted by minimum soldiers alive, largest first. Empty for Scatter.</summary>
     public BlobArray<FormationTemplateBlob> templates;
+    /// <summary>Posture per slot role; roles not listed use Normal.</summary>
+    public BlobArray<FormationPostureBlob> postures;
+}
+
+/// <summary>Posture of one slot role.</summary>
+public struct FormationPostureBlob
+{
+    public FormationSlotRole role;
+    public UnitStance formed;
+    public UnitStance moving;
 }
 
 /// <summary>Layout used while at least <see cref="minUnits"/> soldiers are alive.</summary>

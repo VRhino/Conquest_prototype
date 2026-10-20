@@ -31,6 +31,15 @@ public struct FormationSlot
     public float headingDegrees;
 }
 
+/// <summary>Posture of the soldiers of one slot role, formed and while the formation moves.</summary>
+[Serializable]
+public struct FormationRolePosture
+{
+    public FormationSlotRole role;
+    public UnitStance formed;
+    public UnitStance moving;
+}
+
 /// <summary>A layout used while at least <see cref="minUnits"/> soldiers are alive.</summary>
 [Serializable]
 public class FormationTemplate

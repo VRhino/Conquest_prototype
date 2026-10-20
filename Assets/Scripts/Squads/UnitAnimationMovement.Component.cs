@@ -42,11 +42,14 @@ namespace ConquestTactics.Animation
         // Posición previa de la unidad (para cálculo de movimiento frame a frame)
         public float3 PreviousPosition;
 
-        // Postura táctica actual (Normal, BracedShields…). Escrita por FormationStanceSystem.
+        // Postura actual (Normal, BracedShields, ShieldFront, ShieldSide, ShieldUp). Escrita por UnitPostureSystem.
         public UnitStance CurrentStance;
 
         // Fila en la formación (UnitGridSlotComponent.row). 0 = fila delantera.
         // Usada por el Animator para seleccionar variante de animación (ej. escudo al frente vs arriba).
         public int SlotRow;
+
+        // Papel de la ranura (FormationSlotRole: 0 interior, 1 frente, 2 costado, 3 retaguardia).
+        public int SlotRole;
     }
 }

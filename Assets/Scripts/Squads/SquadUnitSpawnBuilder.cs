@@ -77,7 +77,8 @@ public static class SquadUnitSpawnBuilder
             StoppedTime = 0f,
             PreviousPosition = worldPosition,
             CurrentStance = UnitStance.Normal,
-            SlotRow = slot.row
+            SlotRow = slot.row,
+            SlotRole = (int)slot.role
         });
         ecb.AddComponent(unit, new UnitStatsComponent
         {

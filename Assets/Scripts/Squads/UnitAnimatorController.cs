@@ -187,6 +187,10 @@ namespace ConquestTactics.Visual
                 _animator.SetTrigger(AnimationHashes.TriggerShoot);
             if (AnimatorHasParameter(AnimationHashes.IsReloading))
                 _animator.SetBool(AnimationHashes.IsReloading, _animationAdapter.IsReloadingRanged);
+            if (AnimatorHasParameter(AnimationHashes.Stance))
+                _animator.SetInteger(AnimationHashes.Stance, _animationAdapter.Stance);
+            if (AnimatorHasParameter(AnimationHashes.SlotRole))
+                _animator.SetInteger(AnimationHashes.SlotRole, _animationAdapter.SlotRole);
             _wasMovingLastFrame = moving;
         }
 

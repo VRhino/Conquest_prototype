@@ -47,6 +47,9 @@ namespace ConquestTactics.Animation
 
         // Fila en la formación (0 = fila delantera). Usado por blend tree de animación.
         public int SlotRow { get; private set; } = 0;
+        // Postura (UnitStance) y papel de la ranura (FormationSlotRole), para elegir la variante de escudo.
+        public int Stance { get; private set; } = 0;
+        public int SlotRole { get; private set; } = 0;
 
         #endregion
         
@@ -236,6 +239,8 @@ namespace ConquestTactics.Animation
                 // Postura táctica y fila de formación (para blend tree de Shield Wall)
                 IsBraced = animData.CurrentStance == UnitStance.BracedShields;
                 SlotRow   = animData.SlotRow;
+                Stance    = (int)animData.CurrentStance;
+                SlotRole  = animData.SlotRole;
                 
                 // Convert world velocity to the visual root's local forward/right axes.
                 Vector3 worldDirection = new Vector3(animData.MovementDirection.x, 0f, animData.MovementDirection.z);

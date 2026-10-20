@@ -47,6 +47,9 @@ public static class AnimationHashes
     // Ranged combat
     public static readonly int TriggerShoot           = Animator.StringToHash("TriggerShoot");
     public static readonly int IsReloading            = Animator.StringToHash("IsReloading");
+    // Formation posture (UnitStance) and slot role (FormationSlotRole): optional, only on shield troop controllers.
+    public static readonly int Stance                 = Animator.StringToHash("Stance");
+    public static readonly int SlotRole               = Animator.StringToHash("SlotRole");
 
     // Interactables
     public static readonly int DoorOpen               = Animator.StringToHash("Open");
