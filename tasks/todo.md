@@ -48,8 +48,10 @@ anticrítico), T1 de `Aprendizajes_Referencia.md` (regla de combinación).
   aturdimiento, ahora también se paran. Un primer intento paraba en seco con `speed <= 0` y volvía S1 no determinista
   (saltaba la marcha en los primeros frames, antes de resolver la velocidad). La animación de unidad conserva
   su velocidad de referencia mientras la velocidad es 0.
-- [ ] **5. Escudo absorbente (L1-06).** `AbsorbShieldComponent {valor, expiraEn}` entre el cálculo y la vida: absorbe
+- [x] **5. Escudo absorbente (L1-06).** `AbsorbShieldComponent {valor, expiraEn}` entre el cálculo y la vida: absorbe
   primero y el exceso pasa a la vida; un golpe de 0 no lo consume. Sin fuente todavía (la darán las habilidades).
+  Hecho: regla pura `AbsorbShield.Absorb` y su aplicación en `DamageCalculationSystem` tras el bloqueo físico; un golpe
+  absorbido entero se muestra como bloqueado y no llega a la vida; el escudo agotado o caducado se quita.
 - [ ] **6. Crítico como la referencia (L1-04).** `CritFormula` (tasa y daño extra) con los stats de la pila; base del arma
   equivalente a hoy.
 - [ ] **7. Tablas de progresión (L7-5).** La XP de escuadra (`100 × 1,1^n`) y el desbloqueo cada 10 niveles pasan a una

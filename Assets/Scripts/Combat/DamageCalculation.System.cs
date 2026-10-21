@@ -24,6 +24,9 @@ using Unity.Transforms;
 /// breakStunDuration seconds (from UnitShieldComponent): a MoveSpeed override to 0 on the
 /// modifier stack (<see cref="StatEffects.Immobilize"/>). During stun the unit cannot move
 /// and receives damage normally.
+///
+/// An <see cref="AbsorbShieldComponent"/> on the target then takes the damage first
+/// (<see cref="AbsorbShield.Absorb"/>); only the excess reaches health.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadAISystem))]
@@ -130,6 +133,23 @@ public partial class DamageCalculationSystem : SystemBase
                     CompleteEvent(ref ecb, entity, p);
                     continue;
                 }
+            }
+
+            // --- Absorb shield (L1-06): takes the hit first, only the excess reaches HP ---
+            if (SystemAPI.HasComponent<AbsorbShieldComponent>(p.target))
+            {
+                var absorb = SystemAPI.GetComponent<AbsorbShieldComponent>(p.target);
+                float toHealth = AbsorbShield.Absorb(ref absorb, effectiveDmg, now);
+                if (AbsorbShield.IsActive(absorb, now)) SystemAPI.SetComponent(p.target, absorb);
+                else ecb.RemoveComponent<AbsorbShieldComponent>(p.target);
+                if (toHealth <= 0f && effectiveDmg > 0f)
+                {
+                    if (transformLookup.HasComponent(p.target))
+                        Feedback(ref ecb, transformLookup[p.target].Position, DamageCategory.Blocked, effectiveDmg);
+                    CompleteEvent(ref ecb, entity, p);
+                    continue;
+                }
+                effectiveDmg = toHealth;
             }
 
             // --- Apply to unit or hero HP ---
