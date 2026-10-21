@@ -19,6 +19,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float bodyblockRepulsionStrength = 8f;
     public float bodyblockWallStrength = 60f;
     public float bodyblockMaxPushSpeed = 18f;
+    [Tooltip("Enemy contacts resolve like colliding capsules: each unit moves just enough to undo the overlap (half each when both move, all of it against a still unit or a wall), with no spring. Off: the old spring push scaled by the strengths below.")]
+    public bool bodyblockResolveOverlapOnly = true;
     public float bodyblockEngagingRadius = 0.35f;
     public float bodyblockEngagingStrength = 3f;
     public float navMeshDestinationSampleRadius = 2f;
@@ -67,6 +69,7 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 bodyblockRepulsionStrength = authoring.bodyblockRepulsionStrength,
                 bodyblockWallStrength = authoring.bodyblockWallStrength,
                 bodyblockMaxPushSpeed = authoring.bodyblockMaxPushSpeed,
+                bodyblockResolveOverlapOnly = authoring.bodyblockResolveOverlapOnly,
                 bodyblockEngagingRadius = authoring.bodyblockEngagingRadius,
                 bodyblockEngagingStrength = authoring.bodyblockEngagingStrength,
                 navMeshDestinationSampleRadius = authoring.navMeshDestinationSampleRadius,

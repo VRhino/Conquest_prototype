@@ -12,6 +12,10 @@ using UnityEngine.AI;
 /// Cubre unidades vs unidades y héroes remotos vs unidades.
 /// No modifica el NavMesh, no usa carving, no usa CharacterController.
 ///
+/// Con `bodyblockResolveOverlapOnly` (por defecto) el contacto funciona como una cápsula, igual que la referencia, que no
+/// tiene empuje entre soldados: cada unidad se aparta solo lo justo para deshacer el solape (la mitad cada una si las dos
+/// se mueven), sin muelle que se pase ni siga empujando. Sin él, el empuje de muelle anterior (M2, §18).
+///
 /// Para el héroe local (que usa CharacterController en lugar de NavMeshAgent activo),
 /// el bloqueo se logra agregando un CapsuleCollider a los prefabs visuales de unidades:
 /// el CharacterController del héroe queda bloqueado físicamente sin código adicional.
@@ -169,7 +173,8 @@ public partial class UnitBodyblockSystem : SystemBase
             Agents = _nativeAgents, Offsets = _nativeOffsets, Grid = _nativeGrid, Counts = _pairCounts,
             radius = radius, dt = dt, repulsionStrength = repulsionStrength,
             wallStrength = wallStrength, engagingRadius = engagingRadius, engagingStrength = engagingStrength,
-            overlapEpsilonSq = math.max(math.EPSILON, config.bodyblockOverlapEpsilonSq)
+            overlapEpsilonSq = math.max(math.EPSILON, config.bodyblockOverlapEpsilonSq),
+            resolveOverlapOnly = config.bodyblockResolveOverlapOnly
         };
         if (count >= math.max(1, config.bodyblockParallelThreshold))
             job.Schedule(count, math.max(1, config.bodyblockJobBatchSize)).Complete();
@@ -209,6 +214,7 @@ public partial class UnitBodyblockSystem : SystemBase
         [WriteOnly] public NativeArray<float3> Offsets;
         [WriteOnly] public NativeArray<int2> Counts;
         public float radius, dt, repulsionStrength, wallStrength, engagingRadius, engagingStrength, overlapEpsilonSq;
+        public bool resolveOverlapOnly;
 
         public void Execute(int i)
         {
@@ -242,12 +248,20 @@ public partial class UnitBodyblockSystem : SystemBase
                     if (current.isEngaging && other.isEngaging)
                     {
                         if (distSq >= engagingRadius * engagingRadius) continue;
-                        offset += dir * ((engagingRadius - dist) * engagingStrength * dt * 0.5f);
+                        offset += dir * (resolveOverlapOnly
+                            ? OverlapCorrection(dist, engagingRadius, BothMovingShare)
+                            : (engagingRadius - dist) * engagingStrength * dt * 0.5f);
                         continue;
                     }
                     bool moving = current.state == UnitFormationState.Moving && !current.isEngaging;
                     bool otherMoving = other.state == UnitFormationState.Moving && !other.isEngaging;
                     if (!moving) continue;
+                    if (resolveOverlapOnly)
+                    {
+                        // Like a capsule: undo the overlap, shared when both move, all of it otherwise.
+                        offset += dir * OverlapCorrection(dist, radius, otherMoving ? BothMovingShare : 1f);
+                        continue;
+                    }
                     float strength = otherMoving ? repulsionStrength * 0.5f
                         : other.isWall ? wallStrength : repulsionStrength;
                     offset += dir * ((radius - dist) * strength * dt);
@@ -278,6 +292,16 @@ public partial class UnitBodyblockSystem : SystemBase
         if (_nativeGrid.IsCreated) _nativeGrid.Dispose();
         if (_pairCounts.IsCreated) _pairCounts.Dispose();
     }
+
+    /// <summary>Each of two moving units undoes half of their overlap.</summary>
+    public const float BothMovingShare = 0.5f;
+
+    /// <summary>
+    /// Capsule-like contact: how far a unit moves to undo its share of an overlap (contact − distance), and
+    /// nothing once they no longer overlap. Unlike the spring it never overshoots or keeps pushing.
+    /// </summary>
+    public static float OverlapCorrection(float distance, float contactDistance, float share)
+        => math.max(0f, contactDistance - distance) * math.saturate(share);
 
     public static Vector3 ClampOffsetPerSecond(Vector3 offset, float maxSpeed, float deltaTime)
     {

@@ -15,6 +15,7 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float bodyblockRepulsionStrength;
     public float bodyblockWallStrength;
     public float bodyblockMaxPushSpeed;
+    public bool  bodyblockResolveOverlapOnly; // Capsule-like collision instead of the spring push.
     public float bodyblockEngagingRadius;
     public float bodyblockEngagingStrength;
     public float navMeshDestinationSampleRadius;

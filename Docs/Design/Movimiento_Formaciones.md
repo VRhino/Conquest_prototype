@@ -676,3 +676,24 @@ Así el anillo de contacto sí se llena. `contactRingEnabled` en el tuning permi
 | Máx. atacantes por objetivo | 6 | 6 (5-9) |
 
 Ni lleno mejora el anillo la melé de forma medible: los solapes (M2) no vienen del reparto alrededor del objetivo.
+
+## 18. Contacto entre enemigos como colisión, no como muelle (M2, M12, 2026-10-21)
+
+La referencia no tiene empuje entre soldados **[dec]** (`game-re/notes/mounts-movement.md` §6): ORCA solo esquiva, los
+soldados enemigos no se esquivan por defecto, lo que impide atravesarse es la cápsula PhysX (`createCapsuleController`,
+interruptor `setAllSoildersCollision`) y el único desplazamiento forzado es el retroceso del golpe (`hit_curve`). Aquí ORCA
+también ignora a los enemigos (D2), y el bodyblock hacía de cápsula, pero como muelle: empujaba según una fuerza
+(8 o 60 en muros), podía pasarse y peleaba con el agente que seguía andando hacia el enemigo.
+
+**Cambio.** `bodyblockResolveOverlapOnly` (activo por defecto): cada unidad se aparta solo lo justo para deshacer el solape
+(contacto − distancia), la mitad si las dos se mueven y todo si la otra está quieta o es un muro. Sin solape no hay empuje.
+El muelle queda detrás del interruptor para comparar.
+
+| Mediana de 3 | Muelle S6 | Colisión S6 | Muelle S7 | Colisión S7 |
+|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 15 | 17 | 19 | **9** |
+| Aceleración > 20 m/s² | 1,3 % | 1,1 % | 1,4 % | **0,7 %** |
+| Máx. aceleración | 207 m/s² | **130 m/s²** | 128 m/s² | 129 m/s² |
+
+Lectura: en la melé con muchos atacantes por enemigo (S7) los solapes y los picos bajan a la mitad; en S6 los solapes quedan
+dentro del ruido y el máximo de aceleración baja. El bodyblock ya no contradice al agente: deshace el solape y nada más.

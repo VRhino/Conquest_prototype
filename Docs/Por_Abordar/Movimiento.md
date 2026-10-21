@@ -8,7 +8,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
 | M1 | Error al slot en marcha por encima de 0,5 m | Alta | **Hecho** (S1 0,51 m con C10 y margen en Walk) |
-| M2 | Solapes enemigos persistentes en la melé (S6) | Alta | Pendiente |
+| M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Mejorado**: S7 de 19 a 9 con contacto tipo cápsula |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
 | M4 | Animación del paso a carrera | Media | Pendiente |
 | M5 | Llegada del ancla (C10) | Media | **Hecho** |
@@ -53,6 +53,11 @@ bodyblock, los objetivos que se mueven y la falta de reparto alrededor del objet
 
 **A considerar.** El anillo de contacto (C11, M6) es el arreglo de fondo: coloca a los atacantes alrededor del objetivo en
 lugar de amontonarlos en la línea recta. El interruptor de colisión por escuadra (C16) cambia el caso del Muro de escudos.
+
+**Avance (2026-10-21, `Movimiento_Formaciones.md` §17-18).** El anillo, incluso lleno (S7), no cambió los solapes. Lo que sí:
+que el bodyblock deje de ser un muelle y resuelva solo el solape, como la cápsula de la referencia: S7 baja de 19 a 9 pares y
+de 1,4 a 0,7 % de picos; S6 queda en 15-17 pares. Siguiente paso posible: el retroceso del golpe (`hit_curve` en la referencia)
+en lugar de dejar que los cuerpos se aprieten, y el interruptor de colisión por escuadra (C16).
 
 ## M3. Escena real con 900 agentes (S8)
 **Qué es.** La medida obligatoria de D8: 900 agentes en escena real con todos los sistemas nuevos, con un presupuesto de

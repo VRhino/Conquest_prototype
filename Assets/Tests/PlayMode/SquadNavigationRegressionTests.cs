@@ -395,7 +395,7 @@ public class SquadNavigationRegressionTests
         {
             bodyblockJobBatchSize = 32, bodyblockParallelThreshold = 128,
             bodyblockRadius = 0.8f, bodyblockRepulsionStrength = 8f,
-            bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f,
+            bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f, bodyblockResolveOverlapOnly = true,
             bodyblockEngagingRadius = 0.35f, bodyblockEngagingStrength = 3f
         });
         var sources = new System.Collections.Generic.List<NavMeshBuildSource>
@@ -439,7 +439,7 @@ public class SquadNavigationRegressionTests
         {
             bodyblockJobBatchSize = 32, bodyblockParallelThreshold = 128,
             bodyblockRadius = 0.8f, bodyblockRepulsionStrength = 8f,
-            bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f,
+            bodyblockWallStrength = 60f, bodyblockMaxPushSpeed = 18f, bodyblockResolveOverlapOnly = true,
             bodyblockEngagingRadius = 0.35f, bodyblockEngagingStrength = 3f
         });
         var sources = new System.Collections.Generic.List<NavMeshBuildSource>

@@ -14,6 +14,17 @@ public class BodyblockRegressionTests
     }
 
     [Test]
+    public void CapsuleContactUndoesOnlyTheOverlap()
+    {
+        // 0.8 m contact, centres 0.5 m apart: 0.3 m of overlap.
+        Assert.That(UnitBodyblockSystem.OverlapCorrection(0.5f, 0.8f, UnitBodyblockSystem.BothMovingShare),
+            Is.EqualTo(0.15f).Within(1e-5f));
+        Assert.That(UnitBodyblockSystem.OverlapCorrection(0.5f, 0.8f, 1f), Is.EqualTo(0.3f).Within(1e-5f));
+        // Apart: no push at all, so it can never overshoot or keep pushing.
+        Assert.That(UnitBodyblockSystem.OverlapCorrection(0.9f, 0.8f, 1f), Is.EqualTo(0f));
+    }
+
+    [Test]
     public void ExactOverlapGetsAStableFiniteDirection()
     {
         using var world = new World("Bodyblock direction");
