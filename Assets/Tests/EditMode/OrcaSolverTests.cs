@@ -142,6 +142,26 @@ public class OrcaSolverTests
             Assert.That(math.length(v), Is.LessThanOrEqualTo(3f + 1e-3f));
     }
 
+    [Test]
+    public void ReusedGridGivesTheSameVelocitiesAndStopsGrowing()
+    {
+        var crowd = new AllyAvoidance.Agent[64];
+        var random = new Random(3);
+        for (int i = 0; i < crowd.Length; i++)
+            crowd[i] = Walker(new float2(i % 8, i / 8), random.NextFloat2Direction() * 3f, team: 0);
+        using var agents = new NativeArray<AllyAvoidance.Agent>(crowd, Allocator.TempJob);
+        using var fresh = new NativeArray<float2>(crowd.Length, Allocator.TempJob);
+        using var reused = new NativeArray<float2>(crowd.Length, Allocator.TempJob);
+        using var grid = new NativeParallelMultiHashMap<int2, int>(1, Allocator.Persistent);
+        AllyAvoidance.Run(agents, fresh, Settings);
+        AllyAvoidance.Run(agents, reused, grid, Settings);
+        int capacity = grid.Capacity;
+        AllyAvoidance.Run(agents, reused, grid, Settings); // Second frame: same data, no growth.
+        Assert.That(grid.Capacity, Is.EqualTo(capacity));
+        for (int i = 0; i < crowd.Length; i++)
+            Assert.That(math.distance(fresh[i], reused[i]), Is.LessThan(1e-5f), $"agent {i}");
+    }
+
     [Test, Explicit("Benchmark (D8): 900 agents must solve in at most 1 ms.")]
     public void NineHundredAgentsSolveWithinOneMillisecond()
     {
@@ -151,13 +171,15 @@ public class OrcaSolverTests
             crowd[i] = Walker(new float2(i % 30, i / 30), random.NextFloat2Direction() * 3f, team: i % 2);
         using var agents = new NativeArray<AllyAvoidance.Agent>(crowd, Allocator.TempJob);
         using var velocities = new NativeArray<float2>(crowd.Length, Allocator.TempJob);
-        for (int i = 0; i < 5; i++) AllyAvoidance.Run(agents, velocities, Settings); // Warm-up and Burst compile.
+        // The system reuses one persistent grid (M9); measure that path.
+        using var grid = new NativeParallelMultiHashMap<int2, int>(1, Allocator.Persistent);
+        for (int i = 0; i < 5; i++) AllyAvoidance.Run(agents, velocities, grid, Settings); // Warm-up and Burst compile.
 
         var samples = new double[21];
         for (int i = 0; i < samples.Length; i++)
         {
             var watch = Stopwatch.StartNew();
-            AllyAvoidance.Run(agents, velocities, Settings);
+            AllyAvoidance.Run(agents, velocities, grid, Settings);
             samples[i] = watch.Elapsed.TotalMilliseconds;
         }
         System.Array.Sort(samples);

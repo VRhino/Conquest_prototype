@@ -53,8 +53,19 @@ public static class AllyAvoidance
     /// <summary>Fills <paramref name="velocities"/> with the avoiding velocity of every agent (unsteered ones keep theirs).</summary>
     public static void Run(NativeArray<Agent> agents, NativeArray<float2> velocities, in Settings settings)
     {
-        float cellSize = math.max(0.5f, settings.neighborRadius);
         using var grid = new NativeParallelMultiHashMap<int2, int>(math.max(1, agents.Length), Allocator.TempJob);
+        Run(agents, velocities, grid, settings);
+    }
+
+    /// <summary>
+    /// Same, reusing a caller-owned grid (M9): it is cleared and only grows, so a warm frame allocates nothing.
+    /// </summary>
+    public static void Run(NativeArray<Agent> agents, NativeArray<float2> velocities,
+        NativeParallelMultiHashMap<int2, int> grid, in Settings settings)
+    {
+        float cellSize = math.max(0.5f, settings.neighborRadius);
+        grid.Clear();
+        if (grid.Capacity < agents.Length) grid.Capacity = agents.Length;
         new AllyAvoidanceGridJob { agents = agents, cellSize = cellSize, grid = grid.AsParallelWriter() }
             .Schedule(agents.Length, 64).Complete();
         new AllyAvoidanceSolveJob

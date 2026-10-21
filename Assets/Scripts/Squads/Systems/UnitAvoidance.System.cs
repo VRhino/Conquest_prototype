@@ -24,7 +24,11 @@ public partial class UnitAvoidanceSystem : SystemBase
 
     readonly List<NavMeshAgent> _navAgents = new();
     NativeList<AllyAvoidance.Agent> _agents;
-    NativeHashMap<Entity, float2> _heroPreviousPositions;
+    // Persistent and grow-only (M9): a warm frame allocates nothing.
+    NativeParallelMultiHashMap<int2, int> _grid;
+    NativeList<float2> _velocities;
+    // Hero positions of the last frame; rebuilt into the other map each frame so heroes that left drop out.
+    NativeHashMap<Entity, float2> _heroPreviousPositions, _heroCurrentPositions;
 
     protected override void OnCreate()
     {
@@ -32,12 +36,18 @@ public partial class UnitAvoidanceSystem : SystemBase
         RequireForUpdate<MatchStateComponent>();
         _agents = new NativeList<AllyAvoidance.Agent>(256, Allocator.Persistent);
         _heroPreviousPositions = new NativeHashMap<Entity, float2>(16, Allocator.Persistent);
+        _heroCurrentPositions = new NativeHashMap<Entity, float2>(16, Allocator.Persistent);
+        _grid = new NativeParallelMultiHashMap<int2, int>(256, Allocator.Persistent);
+        _velocities = new NativeList<float2>(256, Allocator.Persistent);
     }
 
     protected override void OnDestroy()
     {
         if (_agents.IsCreated) _agents.Dispose();
         if (_heroPreviousPositions.IsCreated) _heroPreviousPositions.Dispose();
+        if (_heroCurrentPositions.IsCreated) _heroCurrentPositions.Dispose();
+        if (_grid.IsCreated) _grid.Dispose();
+        if (_velocities.IsCreated) _velocities.Dispose();
         base.OnDestroy();
     }
 
@@ -94,6 +104,7 @@ public partial class UnitAvoidanceSystem : SystemBase
         }
 
         // Heroes: obstacles moving at the velocity estimated from their last position.
+        _heroCurrentPositions.Clear();
         foreach (var (team, transform, entity) in SystemAPI
                      .Query<RefRO<TeamComponent>, RefRO<LocalTransform>>()
                      .WithAll<HeroSpawnComponent>()
@@ -102,7 +113,7 @@ public partial class UnitAvoidanceSystem : SystemBase
             float2 position = transform.ValueRO.Position.xz;
             float2 velocity = _heroPreviousPositions.TryGetValue(entity, out float2 previous)
                 ? (position - previous) / dt : float2.zero;
-            _heroPreviousPositions[entity] = position;
+            _heroCurrentPositions[entity] = position;
             _agents.Add(new AllyAvoidance.Agent
             {
                 position = position, velocity = velocity, team = (int)team.ValueRO.value, squad = -1, steered = false,
@@ -110,9 +121,12 @@ public partial class UnitAvoidanceSystem : SystemBase
             _navAgents.Add(null);
         }
 
+        (_heroPreviousPositions, _heroCurrentPositions) = (_heroCurrentPositions, _heroPreviousPositions);
+
         if (_agents.Length == 0) return;
-        using var velocities = new NativeArray<float2>(_agents.Length, Allocator.TempJob);
-        AllyAvoidance.Run(_agents.AsArray(), velocities, new AllyAvoidance.Settings
+        _velocities.ResizeUninitialized(_agents.Length);
+        var velocities = _velocities.AsArray();
+        AllyAvoidance.Run(_agents.AsArray(), velocities, _grid, new AllyAvoidance.Settings
         {
             neighborRadius = tuning.avoidanceNeighborRadius,
             maxNeighbors = (int)tuning.avoidanceMaxNeighbors,
