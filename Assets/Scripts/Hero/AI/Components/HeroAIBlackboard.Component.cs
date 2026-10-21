@@ -3,7 +3,7 @@ using Unity.Mathematics;
 
 /// <summary>
 /// Per-hero derived perception cache. Written by <see cref="HeroAIPerceptionSystem"/>
-/// every N frames using data from <see cref="TeamWorldState"/>.
+/// on each think of the hero (<see cref="AIThinkClock"/>) using data from <see cref="TeamWorldState"/>.
 ///
 /// Contains ONLY per-hero computed values (distances, "am I inside a zone?", etc.).
 /// Raw team/world data lives in <see cref="TeamWorldState"/> — behaviors read both.
@@ -65,4 +65,13 @@ public class HeroAIBlackboard : IComponentData
     /// <summary>Spawn point position for this hero's team (used for Retreat action).</summary>
     public float3 spawnPosition;
     public bool   spawnPositionCached;
+
+    // =========================================================
+    // Decision clock (AIThinkClock, L4-01) — written by HeroAIPerceptionSystem
+    // =========================================================
+    public bool   thinkClockStarted;
+    public double nextThinkTime;
+    public double lastThinkTime;
+    /// <summary>Simulation seconds since the previous think (0 on the first one).</summary>
+    public float  thinkDeltaTime;
 }

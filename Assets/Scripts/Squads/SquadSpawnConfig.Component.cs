@@ -23,6 +23,8 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float navMeshFailureRetryDistance;
     public float navMeshFailureRetryInterval;
     public float heroAIArrivalDistance;
+    public float heroAIThinkInterval;    // s between thinks of one AI hero (L4-01)
+    public int   heroAIMaxThinksPerFrame;
     public float squadSpawnOffset;    // Distancia delante del héroe al spawnear el squad
     public float unitRotationSpeed;   // Velocidad de rotación inicial de las unidades
     public float heroSlotSpacing;     // Espacio lateral entre slots de héroe (metros)

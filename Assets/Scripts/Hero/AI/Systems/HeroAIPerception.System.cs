@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -8,8 +9,9 @@ using Unity.Transforms;
 /// and computes per-hero derived values (distances, "am I inside a zone?", nearest enemy, etc.)
 /// into each hero's <see cref="HeroAIBlackboard"/>.
 ///
-/// Runs every 5 frames for performance. All raw world data comes from
-/// <see cref="BattleWorldStateSystem"/> — this system never queries the world directly.
+/// Each AI hero thinks on its own clock (<see cref="AIThinkClock"/>, L4-01): every <c>heroAIThinkInterval</c>
+/// seconds of simulation time, phased by its entity, at most <c>heroAIMaxThinksPerFrame</c> per frame (most overdue
+/// first). All raw world data comes from <see cref="BattleWorldStateSystem"/> — this system never queries the world directly.
 ///
 /// Pipeline position:
 ///   BattleWorldStateSystem → HeroAIPerceptionSystem → [Behaviors] → HeroAIExecutionSystem
@@ -20,29 +22,63 @@ using Unity.Transforms;
 public partial class HeroAIPerceptionSystem : SystemBase
 {
     private const float UnderAttackRangeSq = 20f * 20f;
+    // Fallbacks when no SquadSpawnConfig is baked (reduced test worlds).
+    private const float DefaultThinkInterval = 0.1f;
+    private const int DefaultMaxThinksPerFrame = 8;
+
+    private readonly List<(double due, Entity entity)> _due = new();
 
     protected override void OnUpdate()
     {
-        // Tick-gate: only update every 5 frames for performance
-        if (UnityEngine.Time.frameCount % 5 != 0) return;
-
         // Read centralized world state
         if (!SystemAPI.ManagedAPI.TryGetSingleton<TeamWorldState>(out var ws))
             return;
         if (!ws.match.isActive) return;
 
-        // Per AI-hero: compute derived values from TeamWorldState
-        foreach (var (transform, health, stamina, life, team, entity) in
-                 SystemAPI.Query<RefRO<LocalTransform>,
-                                 RefRO<HeroHealthComponent>,
-                                 RefRO<StaminaComponent>,
-                                 RefRO<HeroLifeComponent>,
-                                 RefRO<TeamComponent>>()
-                          .WithAll<HeroAITag>()
-                          .WithEntityAccess())
+        bool hasConfig = SystemAPI.HasSingleton<SquadSpawnConfigComponent>();
+        var config = hasConfig ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>() : default;
+        float interval = hasConfig && config.heroAIThinkInterval > 0f ? config.heroAIThinkInterval : DefaultThinkInterval;
+        int maxThinks = hasConfig && config.heroAIMaxThinksPerFrame > 0 ? config.heroAIMaxThinksPerFrame : DefaultMaxThinksPerFrame;
+        double now = SystemAPI.Time.ElapsedTime;
+
+        // Who is due: each hero on its own phase; the most overdue think first, up to the per-frame cap.
+        _due.Clear();
+        foreach (var (_, entity) in SystemAPI.Query<RefRO<LocalTransform>>()
+                     .WithAll<HeroAITag, HeroHealthComponent, StaminaComponent>()
+                     .WithAll<HeroLifeComponent, TeamComponent>()
+                     .WithEntityAccess())
         {
             var bb = EntityManager.GetComponentObject<HeroAIBlackboard>(entity);
             if (bb == null) continue;
+            if (!bb.thinkClockStarted)
+            {
+                bb.thinkClockStarted = true;
+                bb.nextThinkTime = now + AIThinkClock.Phase(entity, interval);
+                bb.lastThinkTime = now;
+            }
+            if (now >= bb.nextThinkTime) _due.Add((bb.nextThinkTime, entity));
+        }
+        _due.Sort((a, b) => a.due != b.due ? a.due.CompareTo(b.due) : a.entity.Index.CompareTo(b.entity.Index));
+        for (int i = 0; i < _due.Count && i < maxThinks; i++)
+        {
+            Entity entity = _due[i].entity;
+            var bb = EntityManager.GetComponentObject<HeroAIBlackboard>(entity);
+            bb.thinkDeltaTime = (float)(now - bb.lastThinkTime);
+            bb.lastThinkTime = now;
+            bb.nextThinkTime = AIThinkClock.Next(_due[i].due, now, interval);
+            Think(entity, bb, ws);
+        }
+    }
+
+    /// <summary>Refreshes the derived values of one AI hero from <see cref="TeamWorldState"/>.</summary>
+    void Think(Entity entity, HeroAIBlackboard bb, TeamWorldState ws)
+    {
+        var transform = SystemAPI.GetComponentRO<LocalTransform>(entity);
+        var health = SystemAPI.GetComponentRO<HeroHealthComponent>(entity);
+        var stamina = SystemAPI.GetComponentRO<StaminaComponent>(entity);
+        var life = SystemAPI.GetComponentRO<HeroLifeComponent>(entity);
+        var team = SystemAPI.GetComponentRO<TeamComponent>(entity);
+        {
 
             float3 selfPos  = transform.ValueRO.Position;
             Team   selfTeam = team.ValueRO.value;

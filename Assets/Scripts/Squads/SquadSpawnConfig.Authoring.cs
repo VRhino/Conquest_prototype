@@ -28,6 +28,10 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float navMeshFailureRetryDistance = 1f;
     public float navMeshFailureRetryInterval = 1f;
     public float heroAIArrivalDistance = 1.5f;
+    [Tooltip("Seconds of simulation time between two thinks of one AI hero (L4-01). Each hero has its own phase.")]
+    [Min(0.01f)] public float heroAIThinkInterval = 0.1f;
+    [Tooltip("At most this many AI heroes think in one frame; the most overdue go first.")]
+    [Min(1)] public int heroAIMaxThinksPerFrame = 8;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -76,7 +80,9 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 navMeshDestinationChangeThreshold = authoring.navMeshDestinationChangeThreshold,
                 navMeshFailureRetryDistance = authoring.navMeshFailureRetryDistance,
                 navMeshFailureRetryInterval = authoring.navMeshFailureRetryInterval,
-                heroAIArrivalDistance = authoring.heroAIArrivalDistance
+                heroAIArrivalDistance = authoring.heroAIArrivalDistance,
+                heroAIThinkInterval = authoring.heroAIThinkInterval,
+                heroAIMaxThinksPerFrame = authoring.heroAIMaxThinksPerFrame
             });
         }
     }

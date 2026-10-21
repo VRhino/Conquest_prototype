@@ -121,7 +121,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
   4. **Zonas** — snapshot de zonas activas (Capture + Supply); siempre visibles para ambos equipos
 
 ### HeroAIPerception.System
-- Tick-gated: corre cada 5 frames
+- Reloj de decisión (`AIThinkClock`, L4-01): cada héroe IA piensa cada `heroAIThinkInterval` s (0,1 s) de tiempo de simulación, con fase propia por hash de su entidad y como mucho `heroAIMaxThinksPerFrame` (8) por frame, los más atrasados primero. Antes: `Time.frameCount % 5`, todos en el mismo frame y dependiente de los FPS.
 - **Lee**: `TeamWorldState` (datos ya recolectados — no hace queries propios al mundo ECS)
 - Calcula derived per-hero: distancias a enemigos visibles, `isInsideZone`, `bestObjectiveZone`, `threatZone`, `nearestEnemyHero`
 - **Escribe**: `HeroAIBlackboard` (solo datos derived per-hero, sin listas)
