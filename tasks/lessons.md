@@ -340,3 +340,4 @@
 
 - Con escenarios reproducibles, una corrida por variante basta para S1-S4, pero las llegadas son caóticas: un cambio pequeño en la trayectoria mueve el tiempo hasta formar unas décimas en cualquier sentido. Una mejora que solo aparece en el tiempo hasta formar de un escenario no prueba nada por sí sola; contrastarla con el error en marcha y con los demás escenarios antes de atribuirla.
 - Una regla que tiene sentido en el diseño (no acelerar si la unidad va adelantada a su slot) empeoró S4. Probar cada hipótesis por separado con su medida y quitar la que no ayuda, aunque "debería" ayudar.
+- Al copiar un parámetro de la referencia, mirar cuánto tiempo está activo, no solo su valor. El horizonte de 5 s de CB solo vale en el primer cambio de estado del soldado y después baja a 1 s; copiar "5 s" retrasó las llegadas, y 1 s (lo habitual allí) las mejoró.

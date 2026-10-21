@@ -39,7 +39,7 @@ public struct MovementTuningComponent : IComponentData
     public bool avoidanceEnabled; // Allies dodge each other by velocity (C14).
     public float avoidanceNeighborRadius; // Allies closer than this are avoided (m, C14).
     public float avoidanceMaxNeighbors; // Nearest allies considered per unit.
-    public float avoidanceTimeHorizon; // Collisions further away in time are ignored (s).
+    public float avoidanceTimeHorizon; // Collisions further away in time are ignored (s); 1 s, the reference after its first state change (M8).
     public float avoidanceTimeHorizonNear; // Time horizon within one spacing of the slot (s).
     public float avoidanceCollisionResolveTime; // Time to separate overlapping allies (s).
     public float runEnterDistance; // Switch to Run beyond this distance to the slot (m).
@@ -79,7 +79,7 @@ public struct MovementTuningComponent : IComponentData
         avoidanceEnabled = true,
         avoidanceNeighborRadius = 4f,
         avoidanceMaxNeighbors = 8f,
-        avoidanceTimeHorizon = 2f,
+        avoidanceTimeHorizon = 1f,
         avoidanceTimeHorizonNear = 1f,
         avoidanceCollisionResolveTime = 0.25f,
         runEnterDistance = 0.9f,

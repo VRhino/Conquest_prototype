@@ -637,3 +637,27 @@ Lectura:
   descartó.
 - Las llegadas son sensibles: con escenarios ya reproducibles, un cambio pequeño en la trayectoria mueve el tiempo hasta
   formar unas décimas, en un sentido u otro.
+
+## 16. ORCA frente a la referencia y memoria de la evitación (M8, M9, 2026-10-21)
+
+### M9: memoria
+`UnitAvoidanceSystem` reutiliza la rejilla espacial y el buffer de velocidades (persistentes, solo crecen); antes los reservaba
+con `TempJob` cada frame. El mapa de posiciones previas de los héroes se reconstruye cada frame, así que los héroes que
+desaparecen ya no se quedan en él. Las velocidades son idénticas (test) y el benchmark de 900 agentes baja de 0,65 a 0,48 ms
+de mediana.
+
+### M8: horizonte de tiempo
+En la referencia **[dec]** el horizonte contra vecinos es 5 s cuando el soldado pasa de "sin estado" a un estado y 1 s en las
+transiciones siguientes (`game-re/notes/mounts-movement.md` §6). Como sus soldados cambian de estado de motor a menudo, la
+mayor parte del tiempo están a 1 s. Aquí se usaba 2 s en marcha y 1 s cerca del slot. Medido (con C10 y el margen de M1):
+
+| τ en marcha | Formado S1 | Formado S3 (media / peor) | Formado S4 | Error en marcha S1 / S3 / S4 | S6 solapes (mediana) |
+|---|---|---|---|---|---|
+| 2 s (antes) | 0,17 s | 0,90 / 1,70 s | 1,00 s | 0,51 / 0,71 / 1,16 m | 14 |
+| 5 s | 0,47 s | 0,82 / 1,07 s | 1,27 s | 0,50 / 0,74 / 1,19 m | 9 (1 corrida) |
+| **1 s (queda)** | **0,17 s** | **0,87 / 1,33 s** | **0,50 s** | **0,50 / 0,68 / 0,84 m** | 15 |
+
+Los solapes entre compañeros no cambian con τ (S4: 1,3 por frame en las tres variantes). Con 1 s las unidades esquivan más
+tarde y ceden menos, y la tropa llega antes sin chocar más. Quedan como en la referencia sin tocar: la responsabilidad
+(0,5 / 1,0 con héroes, ya igual), el radio de vecinos (4 m, igual) y el número de vecinos (aquí 8 por presupuesto; la
+referencia no lo limita).

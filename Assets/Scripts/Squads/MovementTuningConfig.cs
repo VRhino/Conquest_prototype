@@ -68,7 +68,7 @@ public class MovementTuningConfig : ScriptableObject
     [Tooltip("Nearest allies considered per unit.")]
     [Min(0f)] public float avoidanceMaxNeighbors = 8f;
     [Tooltip("Collisions further away in time are ignored (s).")]
-    [Min(0.1f)] public float avoidanceTimeHorizon = 2f;
+    [Min(0.1f)] public float avoidanceTimeHorizon = 1f;
     [Tooltip("Time horizon within one spacing of the slot (s).")]
     [Min(0.1f)] public float avoidanceTimeHorizonNear = 1f;
     [Tooltip("Time to separate overlapping allies (s).")]

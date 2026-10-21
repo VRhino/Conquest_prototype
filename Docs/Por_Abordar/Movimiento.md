@@ -14,8 +14,8 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M5 | Llegada del ancla (C10) | Media | **Hecho** |
 | M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; sin efecto medible aún en S6 |
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
-| M8 | Detalles de ORCA respecto a la referencia | Media | Pendiente |
-| M9 | Memoria por frame en la evitación | Baja | Pendiente |
+| M8 | Detalles de ORCA respecto a la referencia | Media | **Hecho** (horizonte 1 s) |
+| M9 | Memoria por frame en la evitación | Baja | **Hecho** |
 | M10 | Variación de S6 entre corridas | Media | **Mitad hecha**: aproximación idéntica y mediana; la melé aún diverge |
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
 | M12 | Picos de aceleración en la melé | Media | **Mitad hecha** (frenado de llegada); quedan picos de contacto |
@@ -116,6 +116,11 @@ evento): 0 atascos. Si en el futuro las plantillas se diseñan con orden coheren
 **Cómo abordarlo.** Revisar tras el paso 5 (límite de aceleración) y con el espaciado nuevo. El horizonte de 5 s puede dar
 esquivas más tempranas y suaves en los cruces entre escuadras.
 
+**Hecho (2026-10-21, `Movimiento_Formaciones.md` §16).** Se midieron 1, 2 y 5 s. 5 s retrasaba las llegadas de S1 y S4; 1 s,
+que es lo que la referencia usa tras su primer cambio de estado, mejora todas las llegadas (S4 de 1,00 a 0,50 s) sin más
+solapes entre compañeros. Queda 1 s. Sigue distinto a propósito: 8 vecinos como máximo (presupuesto) y la separación de
+solapes en 0,25 s.
+
 ## M9. Memoria por frame en la evitación
 **Qué es.** `UnitAvoidanceSystem` reserva la rejilla y las velocidades con `TempJob` cada frame, y el mapa de posiciones
 previas de los héroes no borra entradas de héroes que ya no existen.
@@ -126,6 +131,9 @@ fallo visible.
 **Cómo abordarlo.** Pasar a memoria persistente con capacidad que solo crece (como el bodyblock) y limpiar el mapa de héroes
 cuando la entidad desaparece. Si S8 supera el presupuesto, compartir la rejilla espacial con el bodyblock
 (`UnitSpatialGridSystem`, un solo escritor).
+
+**Hecho (2026-10-21, `c404b6fb`).** Rejilla y velocidades persistentes; mapa de héroes reconstruido cada frame. 900 agentes:
+0,48 ms de mediana. Compartir la rejilla con el bodyblock queda para cuando S8 lo pida.
 
 ## M10. Variación de S6 entre corridas
 **Qué es.** S6 cambia mucho de una corrida a otra, y dentro de la suite completa se comporta distinto que solo (hubo
