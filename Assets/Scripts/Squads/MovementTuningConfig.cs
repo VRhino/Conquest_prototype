@@ -36,6 +36,12 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0f)] public float formedRotationSpeed = 5f;
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
+
+    [Header("Anchor arrival (C10)")]
+    [Tooltip("The squad anchor follows its target point (hero + offset, hold point, retreat point) with its own velocity: it speeds up at most at this rate and brakes in advance so it stops on the target. While marching it trails by v^2/(2a). 0 = the anchor copies the hero exactly (behaviour before C10).")]
+    [Min(0f)] public float anchorAcceleration = 8f;
+    [Tooltip("Beyond this distance to its target the anchor jumps instead of travelling (spawn, respawn, teleport).")]
+    [Min(0f)] public float anchorSnapDistance = 10f;
     [Tooltip("An attacker only reserves a ring slot within this angle of the side it comes from; slots round the back of the target lie among its own comrades. Without a slot it waits outside.")]
     [Min(0f)] public float contactRingMaxArcDegrees = 60f;
 
@@ -101,6 +107,8 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        anchorAcceleration = anchorAcceleration,
+        anchorSnapDistance = anchorSnapDistance,
         contactRingMaxArcDegrees = contactRingMaxArcDegrees,
         contactRingMargin = contactRingMargin,
         arrivalDecelerationFraction = arrivalDecelerationFraction,

@@ -11,4 +11,6 @@ public struct SquadFormationAnchorComponent : IComponentData
     public float3    position;
     public quaternion rotation;
     public uint revision;
+    /// <summary>Horizontal velocity of the anchor's arrival (C10), m/s; zero while it copies its target.</summary>
+    public float3    velocity;
 }

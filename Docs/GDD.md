@@ -239,6 +239,7 @@ El jugador es un **comandante táctico con presencia física en el campo**, que:
 - No atacan por iniciativa propia sin dirección.
 - Tienen un **ángulo de visión** limitado: enemigos fuera de visión no son detetados.
 - Siempre mantienen **formación activa** salvo que estén desorganizadas o en combate caótico.
+- La formación se coloca alrededor de un **ancla** que sigue al héroe con aceleración propia: al arrancar y al parar, la escuadra queda hasta medio metro más separada del héroe en vez de moverse pegada a él, y a cambio arranca y se detiene sin tirones (C10, `anchorAcceleration`; 0 la pega al héroe).
 - Prioridad de ataque: objetivo más cercano.
 
 ---

@@ -12,6 +12,9 @@ using Unity.Transforms;
 ///   3. InCombat ranged → stop at range * 0.85 from enemy centroid; freeze if already in range
 ///   4. Default (Follow)→ heroPos + forward * followForwardOffset + hero rotation
 ///
+/// The result is the anchor's target: the anchor travels to it with AnchorArrival (C10), so it trails a moving
+/// hero slightly and starts and stops smoothly; rotation is applied directly (D5).
+///
 /// Centralises all anchor logic so FormationSystem, GridFormationUpdateSystem,
 /// and DestinationMarkerSystem can simply read the component instead of each
 /// duplicating this branching logic.
@@ -36,6 +39,8 @@ public partial class SquadAnchorSystem : SystemBase
         float anchorSpeedThreshold = hasConfig ? config.anchorMovingSpeedThreshold : 0.1f;
         float followForwardOffset = hasConfig ? config.followForwardOffset : 2f;
         float deltaTime = SystemAPI.Time.DeltaTime;
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
 
         foreach (var (state, anchor, heroWorldPos, data, squadEntity) in SystemAPI
                      .Query<RefRO<SquadStateComponent>,
@@ -90,6 +95,12 @@ public partial class SquadAnchorSystem : SystemBase
 
             float3 prevPosition = anchor.ValueRO.position;
             quaternion prevRotation = anchor.ValueRO.rotation;
+            // C10: travel to the target instead of copying it, so slots start and stop with the anchor's
+            // acceleration rather than in one frame; rotation still follows directly (D5).
+            float3 velocity = anchor.ValueRO.velocity;
+            position = AnchorArrival.Step(prevPosition, ref velocity, position, tuning.anchorAcceleration,
+                tuning.brakingFactor, tuning.anchorSnapDistance, deltaTime);
+            anchor.ValueRW.velocity = velocity;
             bool poseChanged = !math.all(prevPosition == position)
                                || !math.all(prevRotation.value == rotation.value);
             anchor.ValueRW.position = position;

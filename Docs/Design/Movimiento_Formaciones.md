@@ -585,3 +585,35 @@ frame durante toda la aproximación. Divergen desde los primeros contactos de la
 Lectura: dentro del ruido de la melé no hay mejora ni empeoramiento claros. En S6 (una escuadra por bando, con el cupo de 2
 por escuadra del targeting) el anillo casi nunca se llena, así que su efecto es pequeño. Se mantiene porque sustituye un
 reparto implícito por posiciones explícitas y probadas; su prueba de verdad es una melé con varias escuadras contra una.
+
+## 14. Llegada del ancla (C10, M5, 2026-10-21)
+
+### Cambio
+El ancla deja de copiar al héroe (L-1, reducido por D5 a la posición). `SquadAnchorSystem` sigue calculando el punto objetivo
+(héroe + desplazamiento, punto de mantener posición, de retirada o de tiro), pero el ancla viaja hasta él con
+`AnchorArrival`:
+- Acelera como mucho a `anchorAcceleration` (8 m/s²).
+- Frena con antelación: la velocidad no pasa de √(2·a·d), así que se detiene en el punto sin pasarse. Para frenar admite
+  hasta `brakingFactor` × a.
+- Más allá de `anchorSnapDistance` (10 m: aparición, reaparición) salta.
+- La rotación sigue directa (D5). En marcha el ancla va v²/(2a) por detrás del punto: unos 0,56 m a 3 m/s.
+- Con `anchorAcceleration` = 0 vuelve el comportamiento anterior (ancla = héroe), para comparar.
+
+### Medida (paso fijo; S1-S4 son reproducibles con una corrida; S6 dos corridas válidas)
+| Métrica | Sin C10 | Con C10 |
+|---|---|---|
+| Formado al 95 % S1 | 0,43 s | **0,27 s** |
+| Formado al 95 % S3 (media / peor parada) | 0,93 / 2,27 s | **0,81 / 1,70 s** |
+| Formado al 95 % S4 | 1,37 s | **0,60 s** |
+| Error al slot en marcha S1 / S3 / S4 | 0,69 / 0,88 / 1,15 m | **0,61 / 0,71 / 1,04 m** |
+| Aceleración > 20 m/s² S1 / S3 / S4 | 0,1 / 0,8 / 0,7 % | 0,2 / 0,4 / 0,6 % |
+| S6 aceleración > 20 m/s² | 1,3-2,9 % | 0,7-0,9 % |
+| S6 pares enemigos solapados > 0,3 s | 9-21 | 14-18 |
+
+Lectura:
+- Mejoran todas las llegadas, también la primera parada de S3 (la que empeoró en §12): la tropa frena con el ancla en vez de
+  encontrarse el slot parado de golpe. S4 forma en menos de la mitad de tiempo.
+- El error al slot en marcha baja, pero S1 sigue en 0,61 m frente al objetivo de 0,5 m (M1).
+- Coste para el jugador: al arrancar y al parar, la escuadra se separa del héroe hasta medio metro más. Queda anotado en el
+  GDD (§4.3).
+- Una corrida de S6 falló por el arnés ("Scripted input did not move the hero", ya visto antes); no cuenta en la tabla.

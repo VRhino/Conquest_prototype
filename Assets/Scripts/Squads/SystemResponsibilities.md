@@ -94,6 +94,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - Sin punto aliado, conserva petición y ancla. No reinicia retiradas de intercambio ni permite duplicación al revivir el dueño.
 - RetreatLogic persiste efectivos y limpia la referencia solo si sigue apuntando a la escuadra retirada. Spawning excluye dueño muerto y reservas eliminadas.
 
+### SquadAnchorSystem
+- **Responsabilidad**: Único escritor de `SquadFormationAnchorComponent` (posición, rotación, velocidad) y de `SquadAnchorMovingTag`. Calcula el punto objetivo (mantener posición, retirada, distancia de tiro o héroe + desplazamiento) y lleva el ancla hasta él con `AnchorArrival` (C10: aceleración `anchorAcceleration`, frenado √(2·a·d), salto más allá de `anchorSnapDistance`); la rotación va directa (D5)
+- **Orden**: `[UpdateAfter(UnitTargetingSystem)]` `[UpdateBefore(FormationSystem)]`
+- **Ref**: `Docs/Design/Movimiento_Formaciones.md` L-1 y §14
+
 ### FormationSystem
 - **Responsabilidad**: Único escritor de la disposición de la escuadra (`FormationComponent`: formación, plantilla, espaciado, escala, semilla) y de cada `UnitGridSlotComponent` (ranura, posición local, fila, papel, rumbo, desplazamiento local).
 - **Datos**: `FormationDefinition` (plantillas por soldados vivos, espaciado propio, ruido, Scatter, tabla de posturas) horneado en `FormationLibraryBlob`; funciones puras en `FormationLayout`.

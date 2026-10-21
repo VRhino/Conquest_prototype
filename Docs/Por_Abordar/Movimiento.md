@@ -7,11 +7,11 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 ## Resumen
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
-| M1 | Error al slot en marcha por encima de 0,5 m | Alta | Pendiente |
+| M1 | Error al slot en marcha por encima de 0,5 m | Alta | Pendiente (0,61 m tras C10) |
 | M2 | Solapes enemigos persistentes en la melé (S6) | Alta | Pendiente |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
 | M4 | Animación del paso a carrera | Media | Pendiente |
-| M5 | Llegada del ancla (C10) | Media | Pendiente (lote 3) |
+| M5 | Llegada del ancla (C10) | Media | **Hecho** |
 | M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; sin efecto medible aún en S6 |
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
 | M8 | Detalles de ORCA respecto a la referencia | Media | Pendiente |
@@ -72,9 +72,13 @@ cambia de marcha (`animationRunningSpeedRatio` = 0,6).
 **Qué es.** Que el ancla de la escuadra tenga velocidad y aceleración propias (llegada tipo *arrive*) en lugar de ser el héroe
 exacto. Por D5, sin limitar el giro.
 
-**Por qué queda fuera.** Lote 3. Cambia la sensación de mando: el héroe y la tropa se separan un poco al arrancar y frenar.
+**Hecho (2026-10-21, `Movimiento_Formaciones.md` §14).** `AnchorArrival` en `SquadAnchorSystem` (`anchorAcceleration` 8 m/s²,
+salto a más de 10 m). Mejora todas las llegadas (S4 de 1,37 a 0,60 s; la peor parada de S3 de 2,27 a 1,70 s) y el error en
+marcha. La separación héroe-escuadra al arrancar y parar queda en el GDD (§4.3). Con `anchorAcceleration` = 0 se vuelve al
+ancla pegada al héroe.
 
-**A considerar.** Puede reducir M1. Rompe la identidad héroe = ancla, que debe quedar en el GDD.
+**A considerar.** Si en juego se nota la separación al arrancar, subir `anchorAcceleration` (menos retraso, arranque más
+brusco) antes de quitarlo.
 
 ## M6. Anillo de contacto sin cupo duro (C11)
 **Qué es.** Reservar puestos alrededor de cada objetivo para colocar a los atacantes, con saturación blanda (D6): los que no
