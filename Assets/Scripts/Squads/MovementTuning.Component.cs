@@ -29,6 +29,8 @@ public struct MovementTuningComponent : IComponentData
     public float formedRotationSpeed;
     public float runSpeedMultiplier;
     public float formationChangeCooldown;
+    public float hitKnockbackDistance; // How far a body hit pushes a unit away from the attacker, m; 0 = off
+    public float hitKnockbackDuration; // Seconds the knock-back takes (smoothstep: peak acceleration 6 D / T^2)
     public float walkCatchUpRatio; // Walk cap while recovering behind a moving slot, as a multiple of the Walk speed (M1)
     public float anchorAcceleration; // Anchor arrival acceleration, m/s2; 0 = anchor copies the hero (C10)
     public float anchorSnapDistance; // Beyond this distance to its target the anchor jumps (spawn, respawn), m
@@ -70,6 +72,8 @@ public struct MovementTuningComponent : IComponentData
         formedRotationSpeed = 5f,
         runSpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        hitKnockbackDistance = 0.3f,
+        hitKnockbackDuration = 0.35f,
         walkCatchUpRatio = 1.05f,
         anchorAcceleration = 8f,
         anchorSnapDistance = 10f,

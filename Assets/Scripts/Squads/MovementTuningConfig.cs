@@ -37,6 +37,12 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
 
+    [Header("Hit knock-back")]
+    [Tooltip("A hit that reaches a unit's body pushes it this far away from the attacker (the reference's hit_curve pattern). 0 = no knock-back.")]
+    [Min(0f)] public float hitKnockbackDistance = 0.3f;
+    [Tooltip("Seconds the push takes. It starts and ends at rest; peak acceleration is 6 x distance / duration^2 (0.3 m in 0.35 s gives about 15 m/s2).")]
+    [Min(0f)] public float hitKnockbackDuration = 0.35f;
+
     [Header("Walk catch-up (M1)")]
     [Tooltip("Behind a moving slot in Walk, a unit may go up to this multiple of its Walk speed to recover the start-up delay without switching to Run. 1 = never above the Walk speed (decision D4 before M1).")]
     [Min(1f)] public float walkCatchUpRatio = 1.05f;
@@ -113,6 +119,8 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        hitKnockbackDistance = hitKnockbackDistance,
+        hitKnockbackDuration = hitKnockbackDuration,
         walkCatchUpRatio = walkCatchUpRatio,
         anchorAcceleration = anchorAcceleration,
         anchorSnapDistance = anchorSnapDistance,

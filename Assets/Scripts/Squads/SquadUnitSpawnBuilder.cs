@@ -59,6 +59,9 @@ public static class SquadUnitSpawnBuilder
         ecb.SetComponentEnabled<IsEngagingTag>(unit, false);
         ecb.AddComponent<IsUnderAttackTag>(unit);
         ecb.SetComponentEnabled<IsUnderAttackTag>(unit, false);
+        ecb.AddComponent<UnitHitImpactComponent>(unit);
+        ecb.SetComponentEnabled<UnitHitImpactComponent>(unit, false);
+        ecb.AddComponent<UnitHitKnockbackComponent>(unit);
 
         ecb.AddComponent(unit, new UnitFormationStanceComponent { stance = UnitStance.Normal });
         ecb.AddComponent(unit, slot);

@@ -697,3 +697,27 @@ El muelle queda detrás del interruptor para comparar.
 
 Lectura: en la melé con muchos atacantes por enemigo (S7) los solapes y los picos bajan a la mitad; en S6 los solapes quedan
 dentro del ruido y el máximo de aceleración baja. El bodyblock ya no contradice al agente: deshace el solape y nada más.
+
+## 19. Retroceso del golpe (patrón de `hit_curve`, 2026-10-21)
+
+En la referencia **[dec]** el golpe abre una reacción con etapas y aplica `hit_curve` como desplazamiento de motor (el
+retroceso), con una pequeña sacudida (`game-re/notes/combat-timing-defense.md` §4). Los valores de la curva están en datos
+cifrados.
+
+**Cambio.**
+- `DamageCalculationSystem` marca `UnitHitImpactComponent` (evento con la dirección desde el atacante) cuando un golpe llega al
+  cuerpo de una unidad: no si lo para el escudo ni si la mata.
+- `UnitHitKnockbackSystem` (después del bodyblock, antes de la sincronización) lo consume y empuja a la unidad con
+  `agent.Move` a lo largo de `HitKnockback`: una curva *smoothstep* que arranca y acaba en reposo, con
+  `hitKnockbackDistance` 0,3 m en `hitKnockbackDuration` 0,35 s (aceleración pico 6·D/T² ≈ 15 m/s²). Un golpe nuevo reinicia
+  el empuje. 0 lo apaga.
+
+| Mediana de 3 | S6 sin | S6 con | S7 sin | S7 con |
+|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 17 | 16 | 9 | 10 |
+| Aceleración > 20 m/s² | 1,1 % | 1,4 % | 0,7 % | 0,7 % |
+| Máx. aceleración | 130 m/s² | 222 m/s² | 129 m/s² | 159 m/s² |
+
+Lectura: no cambia los solapes y sube algo los picos, porque suma movimiento al del agente y al de la colisión. No es un
+arreglo de M2, sino un elemento de sensación de golpe, como en la referencia. Queda activo; se decide viéndolo en juego.
+Falta, si se quiere acercar más: la sacudida y que el retroceso dependa del tipo de golpe y del arma.

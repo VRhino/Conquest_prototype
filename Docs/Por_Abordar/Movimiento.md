@@ -56,8 +56,8 @@ lugar de amontonarlos en la línea recta. El interruptor de colisión por escuad
 
 **Avance (2026-10-21, `Movimiento_Formaciones.md` §17-18).** El anillo, incluso lleno (S7), no cambió los solapes. Lo que sí:
 que el bodyblock deje de ser un muelle y resuelva solo el solape, como la cápsula de la referencia: S7 baja de 19 a 9 pares y
-de 1,4 a 0,7 % de picos; S6 queda en 15-17 pares. Siguiente paso posible: el retroceso del golpe (`hit_curve` en la referencia)
-en lugar de dejar que los cuerpos se aprieten, y el interruptor de colisión por escuadra (C16).
+de 1,4 a 0,7 % de picos; S6 queda en 15-17 pares. El retroceso del golpe (§19) se probó y no cambia los solapes:
+queda como sensación de golpe. Siguiente paso posible: el interruptor de colisión por escuadra (C16).
 
 ## M3. Escena real con 900 agentes (S8)
 **Qué es.** La medida obligatoria de D8: 900 agentes en escena real con todos los sistemas nuevos, con un presupuesto de

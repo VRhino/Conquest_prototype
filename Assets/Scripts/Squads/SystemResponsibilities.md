@@ -150,6 +150,12 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.
 - **Ref**: `Docs/Mechanics/BodyblockSystem.md`
 
+### UnitHitKnockbackSystem
+- **Responsabilidad**: Retroceso del golpe (patrón de `hit_curve` de la referencia): consume `UnitHitImpactComponent` (lo habilita `DamageCalculationSystem` en cada golpe que llega al cuerpo sin matar) y empuja a la unidad lejos del atacante con `agent.Move` a lo largo de `HitKnockback` (`hitKnockbackDistance` en `hitKnockbackDuration`, smoothstep).
+- **Owner exclusivo**: `UnitHitKnockbackComponent`
+- **Orden**: después de `UnitBodyblockSystem`, antes de `NavMeshPositionSyncSystem`.
+- **Ref**: `Docs/Design/Movimiento_Formaciones.md` §19
+
 ### UnitAvoidanceSystem
 - **Responsabilidad**: Evitación por velocidad entre aliados (ORCA, C14); único escritor de la velocidad evitada (`agent.velocity`).
 - **Regla**: enemigos no se esquivan (D2); dentro de la escuadra solo las unidades que se mueven, con radio combinado 0,9 × espaciado; la velocidad cambia como mucho a la aceleración del agente.

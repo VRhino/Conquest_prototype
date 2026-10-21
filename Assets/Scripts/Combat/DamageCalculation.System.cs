@@ -170,6 +170,15 @@ public partial class DamageCalculationSystem : SystemBase
                 // Signal the squad to retaliate (consumed by SquadAISystem this frame)
                 if (SystemAPI.HasComponent<IsUnderAttackTag>(p.target))
                     ecb.SetComponentEnabled<IsUnderAttackTag>(p.target, true);
+
+                // Body hit: knock the unit back, away from the attacker (consumed by UnitHitKnockbackSystem).
+                if (!willKill && SystemAPI.HasComponent<UnitHitImpactComponent>(p.target)
+                    && transformLookup.HasComponent(p.target))
+                {
+                    float2 away = transformLookup[p.target].Position.xz - p.attackerPosition.xz;
+                    ecb.SetComponent(p.target, new UnitHitImpactComponent { direction = math.normalizesafe(away) });
+                    ecb.SetComponentEnabled<UnitHitImpactComponent>(p.target, true);
+                }
             }
             else if (SystemAPI.HasComponent<HeroHealthComponent>(p.target))
             {
