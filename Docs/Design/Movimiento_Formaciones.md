@@ -552,3 +552,36 @@ Lectura:
   tarda más porque ahora frena en el último metro y medio. Con 0,8 en lugar de 0,6 S3 y S4 empeoraban (más rodeo).
 - Quedan picos en la melé: unidades que entran en alcance ya pegadas al objetivo (sin sitio para frenar) y los empujes del
   bodyblock. Siguen en `Docs/Por_Abordar/Movimiento.md` (M12).
+
+## 13. Anillo de contacto (C11, M6) y escenarios reproducibles (M10, 2026-10-21)
+
+### Reproducibilidad (M10)
+Los escenarios fijaban 30 fps solo mientras grababan; la carga y la preparación corrían al ritmo real del editor. Ahora el
+paso es fijo desde el `SetUp` y `Random` se vuelve a sembrar antes del escenario: tres corridas de S6 son idénticas frame a
+frame durante toda la aproximación. Divergen desde los primeros contactos de la melé (hipótesis: disparadores de PhysX sin
+*Enhanced Determinism*). Cada corrida guarda su resumen en JSON y *Tools > Movement > Median Of Last 3 Runs* da la mediana.
+
+### Anillo (L-7, D6)
+- `MeleeContactRingSystem` (entre `UnitTargetingSystem` y `UnitNavMeshSystem`, único escritor de
+  `MeleeContactSlotComponent`): cada objetivo de melé tiene un anillo de radio = la menor distancia de parada de sus
+  atacantes, con ⌊2π·r / (2·rc + m)⌋ posiciones en ángulos fijos del mundo (8 para los lanceros, `m` =
+  `contactRingMargin` 0,2 m).
+- Cada atacante reserva la posición libre más cercana al lado del que viene y la conserva mientras su objetivo no cambie; los
+  más cercanos eligen primero. Solo dentro de ±`contactRingMaxArcDegrees` (60°) de su lado: las posiciones de detrás del
+  objetivo caen entre sus compañeros, y la primera versión (sin ese límite) subió los solapes. Sin hueco, espera a
+  `d_reanudar + s_arco` (sin cupo duro: el cupo sigue en el targeting).
+- Se reconstruye cada frame desde los atacantes vivos: muerte o cambio de objetivo liberan la posición sin eventos.
+- `UnitNavMeshSystem` va a la posición reservada en lugar del abanico de ±45° por índice áureo (que queda como respaldo para
+  unidades sin el componente).
+
+### Medida (S6, 3 corridas por variante, mediana; paso fijo)
+| Métrica | Sin anillo | Anillo completo | Anillo ±60° (queda) |
+|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 9 (9-10) | 13 (9-15) | 10 (9-21) |
+| Aceleración > 20 m/s² | 2,0 % | 1,4 % | 2,0 % |
+| Máx. aceleración | 206 m/s² | 150 m/s² | 172 m/s² |
+| Máx. atacantes por objetivo | 5 | 3 | 4 |
+
+Lectura: dentro del ruido de la melé no hay mejora ni empeoramiento claros. En S6 (una escuadra por bando, con el cupo de 2
+por escuadra del targeting) el anillo casi nunca se llena, así que su efecto es pequeño. Se mantiene porque sustituye un
+reparto implícito por posiciones explícitas y probadas; su prueba de verdad es una melé con varias escuadras contra una.

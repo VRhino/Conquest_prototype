@@ -29,6 +29,8 @@ public struct MovementTuningComponent : IComponentData
     public float formedRotationSpeed;
     public float runSpeedMultiplier;
     public float formationChangeCooldown;
+    public float contactRingMaxArcDegrees; // Attackers only reserve ring slots within this angle of the side they come from, degrees (C11)
+    public float contactRingMargin; // Gap between neighbouring attackers on a contact ring, m (C11: s_arco = 2 rc + m)
     public float arrivalDecelerationFraction; // Planned arrival braking as a fraction of acceleration x brakingFactor
     public float brakingFactor; // Deceleration allowed as a multiple of the agent acceleration.
     public bool avoidanceEnabled; // Allies dodge each other by velocity (C14).
@@ -64,6 +66,8 @@ public struct MovementTuningComponent : IComponentData
         formedRotationSpeed = 5f,
         runSpeedMultiplier = 2f,
         formationChangeCooldown = 1f,
+        contactRingMaxArcDegrees = 60f,
+        contactRingMargin = 0.2f,
         arrivalDecelerationFraction = 0.6f,
         brakingFactor = 2.5f,
         avoidanceEnabled = true,

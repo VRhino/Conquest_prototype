@@ -12,7 +12,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
 | M4 | Animación del paso a carrera | Media | Pendiente |
 | M5 | Llegada del ancla (C10) | Media | Pendiente (lote 3) |
-| M6 | Anillo de contacto sin cupo duro (C11) | Media | Pendiente (lote 3) |
+| M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; sin efecto medible aún en S6 |
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
 | M8 | Detalles de ORCA respecto a la referencia | Media | Pendiente |
 | M9 | Memoria por frame en la evitación | Baja | Pendiente |
@@ -80,8 +80,13 @@ exacto. Por D5, sin limitar el giro.
 **Qué es.** Reservar puestos alrededor de cada objetivo para colocar a los atacantes, con saturación blanda (D6): los que no
 tienen hueco esperan a `d_reanudar + s`.
 
-**Por qué queda fuera.** Lote 3. Necesita un sistema nuevo de reservas (`MeleeSlotReservationSystem`) y liberar las reservas
-al morir o cambiar de objetivo.
+**Hecho (2026-10-21, `Movimiento_Formaciones.md` §13).** `MeleeContactRingSystem` reserva posiciones en el anillo, solo
+dentro de ±60° del lado del atacante; sin hueco, espera fuera. En S6 no cambia los números más allá del ruido: con una
+escuadra por bando el anillo casi nunca se llena.
+
+**Lo que queda.** Medirlo en una melé de varias escuadras contra una (escenario nuevo, S7) y, si se confirma que ayuda,
+añadir el "ancla suave" de L-7 (quien ya está en su posición no recibe empuje del bodyblock). La saturación blanda en la
+puntuación de objetivos (D6, `p' = p·(1 − n·k)`) sigue sin hacer: hoy el targeting usa un cupo de 2 por escuadra.
 
 ## M7. Reasignación de slots por distancia (C12)
 **Qué es.** Al cambiar de formación, repartir las ranuras minimizando el recorrido total en lugar de por índice.

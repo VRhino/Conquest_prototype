@@ -225,24 +225,49 @@ public partial class UnitNavMeshSystem : SystemBase
                     ? MeleeReach.RangedStopDistance(attackRange, tuning.rangedStopFraction)
                     : MeleeReach.StopDistance(attackRange, bodyRadius, bodyRadius, tuning.meleeStopReachFraction);
                 float resumeDist = isRanged ? attackRange : MeleeReach.ResumeDistance(attackRange, bodyRadius);
+
+                // Contact ring (C11): a reserved slot is the approach point; with the ring full the unit
+                // waits further out, on its own side, instead of piling in.
+                int ringState = 0; // 0 = no ring (fallback fan), 1 = slot, 2 = waiting
+                float2 ringXZ = default;
+                if (!isRanged && SystemAPI.HasComponent<MeleeContactSlotComponent>(entity))
+                {
+                    var ring = SystemAPI.GetComponent<MeleeContactSlotComponent>(entity);
+                    if (ring.target == combatTarget && ring.slot >= 0)
+                    {
+                        ringState = 1;
+                        ringXZ = ContactRing.SlotPosition(targetXZ, ring.slot, ring.slotCount, ring.radius);
+                    }
+                    else if (ring.target == combatTarget)
+                    {
+                        ringState = 2;
+                        float shift = ContactRing.WaitDistance(resumeDist, 2f * bodyRadius + tuning.contactRingMargin)
+                            - stopDist;
+                        stopDist += shift;
+                        resumeDist += shift;
+                    }
+                }
+
                 if (dist > resumeDist) navigation.combatApproaching = true;
                 else if (dist <= stopDist) navigation.combatApproaching = false;
 
                 if (!isHoldingPosition && navigation.combatApproaching)
                 {
                     float2 baseDir = math.normalizesafe(unitXZ - targetXZ);
+                    float2 rotatedDir = baseDir;
+                    if (ringState == 0)
+                    {
+                        // Without a ring reservation: stable per-unit offset (golden ratio), ±45°.
+                        float angleOffset = (math.frac(entity.Index * 0.618034f) - 0.5f) * math.PI * 0.5f;
+                        float cosA = math.cos(angleOffset);
+                        float sinA = math.sin(angleOffset);
+                        rotatedDir = new float2(
+                            baseDir.x * cosA - baseDir.y * sinA,
+                            baseDir.x * sinA + baseDir.y * cosA
+                        );
+                    }
 
-                    // Offset angular estable por unidad (golden ratio → distribución uniforme)
-                    float angleOffset = (math.frac(entity.Index * 0.618034f) - 0.5f) * math.PI * 0.5f; // ±45°
-
-                    float cosA = math.cos(angleOffset);
-                    float sinA = math.sin(angleOffset);
-                    float2 rotatedDir = new float2(
-                        baseDir.x * cosA - baseDir.y * sinA,
-                        baseDir.x * sinA + baseDir.y * cosA
-                    );
-
-                    float2 stopXZ = targetXZ + rotatedDir * stopDist;
+                    float2 stopXZ = ringState == 1 ? ringXZ : targetXZ + rotatedDir * stopDist;
                     destination   = new float3(stopXZ.x, unitPos.y, stopXZ.y);
                     usesFormationDestination = false;
                 }

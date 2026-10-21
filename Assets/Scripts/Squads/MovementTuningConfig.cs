@@ -36,6 +36,12 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0f)] public float formedRotationSpeed = 5f;
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
+    [Tooltip("An attacker only reserves a ring slot within this angle of the side it comes from; slots round the back of the target lie among its own comrades. Without a slot it waits outside.")]
+    [Min(0f)] public float contactRingMaxArcDegrees = 60f;
+
+    [Header("Contact ring (C11)")]
+    [Tooltip("Gap between neighbouring attackers on a target's contact ring. Slots = floor(2 pi d_stop / (2 bodyRadius + margin)); attackers without a slot wait at d_resume + (2 bodyRadius + margin).")]
+    [Min(0f)] public float contactRingMargin = 0.2f;
 
     [Header("Arrival braking (M12/M13)")]
     [Tooltip("Units heading for a still destination (stopped slot, melee stop point) cap their speed at sqrt(2 a d), with a = this fraction of acceleration x brakingFactor, so they arrive slow instead of stopping in one frame. 0 = off.")]
@@ -95,6 +101,8 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        contactRingMaxArcDegrees = contactRingMaxArcDegrees,
+        contactRingMargin = contactRingMargin,
         arrivalDecelerationFraction = arrivalDecelerationFraction,
         brakingFactor = brakingFactor,
         avoidanceEnabled = avoidanceEnabled,

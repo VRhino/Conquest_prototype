@@ -46,6 +46,7 @@ public static class SquadUnitSpawnBuilder
         });
 
         ecb.AddComponent<UnitCombatComponent>(unit);
+        ecb.AddComponent(unit, new MeleeContactSlotComponent { target = Entity.Null, slot = -1 });
         ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPosition });
         ecb.AddComponent(unit, new UnitFormationStateComponent
         { State = UnitFormationState.Formed });

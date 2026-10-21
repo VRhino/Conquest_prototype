@@ -113,6 +113,12 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **`UnitTargetPositionComponent`**: solo lectura — nunca escribe (ownership exclusivo de sistemas de formación)
 - **Llegada**: `UnitFormationStateSystem` y `SquadNavigationSystem` comparan contra el destino efectivo asociado al slot solicitado.
 
+### MeleeContactRingSystem
+- **Responsabilidad**: Anillo de contacto (C11, L-7): reserva para cada atacante cuerpo a cuerpo una posición en el anillo de su objetivo (radio = menor distancia de parada, ⌊2π·r / (2·bodyRadius + contactRingMargin)⌋ posiciones en ángulos fijos del mundo); con el anillo lleno, espera (slot −1)
+- **Owner exclusivo**: `MeleeContactSlotComponent`
+- **Orden**: `[UpdateAfter(UnitTargetingSystem)]` `[UpdateBefore(UnitNavMeshSystem)]`
+- **Regla**: Sin cupo duro (D6): el cupo sigue en `UnitTargetingSystem`. Se reconstruye cada frame desde los atacantes vivos; muerte o cambio de objetivo liberan la posición sin eventos. `UnitNavMeshSystem` solo lee la reserva (va a la posición, o espera a `d_reanudar + s_arco`)
+
 ### UnitFollowFormationSystem
 - **Responsabilidad**: Velocidad de seguimiento y marcha (C9, `UnitMovementGearComponent`) + rotación Formed para unidades NavMesh
 - **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido; hacia un destino quieto, como mucho √(2·a·d) para llegar frenando), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
