@@ -52,8 +52,13 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   (como la referencia: el control prohíbe por defecto). Verificado en Play: el héroe IA ataca por la puerta.
 - [x] **5. Interrupción (L2-4).** `interrupt`/`yield`, aparcada, fases no interrumpibles; fin al morir, al acabar la batalla y
   al cambiar de escuadra.
-- [ ] **6. Efectos genéricos.** Daño en área/cono, modificador temporal, embestida y escudo absorbente; datos para las 16
+- [x] **6. Efectos genéricos.** Daño en área/cono, modificador temporal, embestida y escudo absorbente; datos para las 16
   habilidades de clase según el GDD.
+  Hecho: `SkillEffectSystem` (área/cono por `PendingDamageEvent`, modificador temporal a sí mismo / escuadra / aliados /
+  enemigos en radio, escudo absorbente) y embestida (`HeroDashComponent`, local y IA). Datos de las 16 en sus assets;
+  aproximaciones: Flecha Silenciadora ralentiza (no hay "silencio"), Muro de Púas es daño + ralentización en área (no
+  zona persistente), las del arco usan área delante hasta el proyectil del paso 9. Verificado en Play: Q embiste y
+  enfría 12 s; E sube la defensa un 30 % y caduca a los 8 s. La IA aún solo usa el ataque básico.
 - [ ] **7. Combo del ataque básico (L2-3).** Cadena de 3 con ventana de encadenado y memoria de entrada.
 - [ ] **8. Carga (L2-6).** Fase sin fin + soltar avanza a la fase final.
 - [ ] **9. Multiproyectil y tope (L2-7).** Esquema de lanzador (modo, cuenta, ángulo) y tope de proyectiles vivos que descarta

@@ -1,5 +1,7 @@
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
 
 /// <summary>
 /// Runs every hero's skills (Aprendizajes_Referencia.md L2-1, L2-2), the player's and the AI's alike: advances the
@@ -20,18 +22,22 @@ public partial class SkillExecutionSystem : SystemBase
     NativeList<SkillEvent> _fired;
     /// <summary>Events of a parked skill: its clock runs, but nothing it would do happens while it is set aside.</summary>
     NativeList<SkillEvent> _discarded;
+    /// <summary>Effect events of this frame, created as requests for <see cref="SkillEffectSystem"/> after the loop.</summary>
+    NativeList<SkillEffectRequestComponent> _effects;
 
     protected override void OnCreate()
     {
         RequireForUpdate<MatchStateComponent>();
         _fired = new NativeList<SkillEvent>(16, Allocator.Persistent);
         _discarded = new NativeList<SkillEvent>(16, Allocator.Persistent);
+        _effects = new NativeList<SkillEffectRequestComponent>(16, Allocator.Persistent);
     }
 
     protected override void OnDestroy()
     {
         _fired.Dispose();
         _discarded.Dispose();
+        _effects.Dispose();
     }
 
     protected override void OnUpdate()
@@ -68,7 +74,7 @@ public partial class SkillExecutionSystem : SystemBase
             {
                 _fired.Clear();
                 bool ended = SkillTimeline.Advance(ref skills[inst.skillIndex].skill.Value, ref inst, dt, _fired);
-                Apply(entity, ref inst, ref c);
+                Apply(entity, ref inst, ref c, skills[inst.skillIndex].skillId);
                 if (ended)
                 {
                     End(ref inst, ref c, skills, now);
@@ -86,6 +92,10 @@ public partial class SkillExecutionSystem : SystemBase
 
             PublishState(entity, inst, ref c);
         }
+
+        foreach (var request in _effects)
+            EntityManager.SetComponentData(EntityManager.CreateEntity(typeof(SkillEffectRequestComponent)), request);
+        _effects.Clear();
     }
 
     void TryLaunch(Entity entity, SkillSlot slot, DynamicBuffer<HeroSkillElement> skills, ref SkillInstanceComponent inst,
@@ -125,11 +135,11 @@ public partial class SkillExecutionSystem : SystemBase
         CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
         _fired.Clear();
         SkillTimeline.Start(ref skill, ref inst, index, _fired);
-        Apply(entity, ref inst, ref combat);
+        Apply(entity, ref inst, ref combat, skills[index].skillId);
     }
 
-    /// <summary>Events of the core lifecycle; the effect events are applied from step 6 on.</summary>
-    void Apply(Entity entity, ref SkillInstanceComponent inst, ref HeroCombatComponent combat)
+    /// <summary>Applies the lifecycle events and queues the effect ones with the caster's pose and team.</summary>
+    void Apply(Entity entity, ref SkillInstanceComponent inst, ref HeroCombatComponent combat, int skillId)
     {
         foreach (var e in _fired)
         {
@@ -146,8 +156,30 @@ public partial class SkillExecutionSystem : SystemBase
                 case SkillEventType.HitboxClose:
                     inst.hitboxOpen = false;
                     break;
+                case SkillEventType.AreaDamage:
+                case SkillEventType.ApplyModifier:
+                case SkillEventType.AbsorbShield:
+                case SkillEventType.Dash:
+                    _effects.Add(Effect(entity, skillId, e));
+                    break;
             }
         }
+    }
+
+    SkillEffectRequestComponent Effect(Entity caster, int skillId, in SkillEvent e)
+    {
+        var pose = SystemAPI.HasComponent<LocalTransform>(caster) ? SystemAPI.GetComponent<LocalTransform>(caster) : LocalTransform.Identity;
+        float3 forward = math.mul(pose.Rotation, new float3(0f, 0f, 1f));
+        forward.y = 0f;
+        return new SkillEffectRequestComponent
+        {
+            caster = caster,
+            skillId = skillId,
+            effect = e,
+            origin = pose.Position,
+            forward = math.normalizesafe(forward, new float3(0f, 0f, 1f)),
+            team = SystemAPI.HasComponent<TeamComponent>(caster) ? SystemAPI.GetComponent<TeamComponent>(caster).value : Team.None,
+        };
     }
 
     bool Immobilised(Entity entity)

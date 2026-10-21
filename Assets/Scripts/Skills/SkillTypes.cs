@@ -44,7 +44,10 @@ public enum SkillTarget : byte
 {
     Self,
     OwnSquad,
+    /// <summary>Allied heroes and units within <see cref="SkillEvent.radius"/> of the caster, the caster included.</summary>
     AlliesInRadius,
+    /// <summary>Enemies within <see cref="SkillEvent.radius"/> of the effect's centre (caster + forward × distance).</summary>
+    EnemiesInRadius,
 }
 
 /// <summary>
@@ -73,6 +76,7 @@ public struct SkillEvent
     /// <summary>Damage multiplier (area damage), modifier value or shield amount.</summary>
     public float value;
     public float duration;
+    /// <summary>Dash length, or how far in front of the caster an area effect is centred.</summary>
     public float distance;
     public StatId stat;
     public ModifierOp op;

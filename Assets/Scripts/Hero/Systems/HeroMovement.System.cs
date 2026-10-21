@@ -69,6 +69,13 @@ public partial class HeroMovementSystem : SystemBase
                 currentSpeed *= stats.sprintMultiplier;
             }
 
+            // A skill dash takes over the movement while it lasts.
+            if (EntityManager.HasComponent<HeroDashComponent>(entity))
+            {
+                var dash = EntityManager.GetComponentData<HeroDashComponent>(entity);
+                if (dash.Active(SystemAPI.Time.ElapsedTime)) { direction = dash.direction; currentSpeed = dash.speed; }
+            }
+
             if (EntityManager.HasComponent<HeroMoveIntent>(entity))
             {
                 EntityManager.SetComponentData(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });
