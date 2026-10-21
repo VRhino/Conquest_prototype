@@ -8,6 +8,11 @@ public struct SkillRequestComponent : IComponentData, IEnableableComponent
 {
     public SkillSlot slot;
     public double requestedAt;
+    /// <summary>Slots whose key is held this frame (bit = 1 &lt;&lt; slot), written every frame even with no request: releasing
+    /// the key of a charging skill moves it to its release phase (L2-6).</summary>
+    public byte heldSlots;
+
+    public static byte Bit(SkillSlot slot) => (byte)(1 << (int)slot);
 }
 
 /// <summary>

@@ -93,6 +93,41 @@ public class SkillInterruptTests
     }
 
     [Test]
+    public void AChargeWaitsWhileTheKeyIsHeldAndReleasesOnLettingGo()
+    {
+        var ability = ScriptableObject.CreateInstance<HeroAbility>();
+        ability.abilityName = "Charged Shot";
+        ability.category = HeroAbilityCategory.R;
+        ability.phases = new[]
+        {
+            new SkillPhase { duration = 0.2f, interruptible = true },
+            new SkillPhase { duration = -1f, interruptible = true, charge = true },
+            new SkillPhase { duration = 0.3f, final = true },
+        };
+        ability.events = new[] { new SkillEvent { phase = 2, type = SkillEventType.Dash, distance = 1f, duration = 0.1f } };
+        using var charged = SkillBlobBuilder.Build(ability);
+        Object.DestroyImmediate(ability);
+        _em.GetBuffer<HeroSkillElement>(_hero).Add(new HeroSkillElement { slot = SkillSlot.R, skillId = charged.Value.id, skill = charged });
+        byte held = SkillRequestComponent.Bit(SkillSlot.R);
+
+        void Hold(double t, bool down, bool press)
+        {
+            _world.SetTime(new Unity.Core.TimeData(t, 0.1f));
+            _em.SetComponentData(_hero, new SkillRequestComponent { slot = SkillSlot.R, requestedAt = t, heldSlots = down ? held : (byte)0 });
+            _em.SetComponentEnabled<SkillRequestComponent>(_hero, press);
+            _system.Update();
+        }
+
+        Hold(0.0, true, true);
+        for (int i = 1; i <= 30; i++) Hold(i * 0.1, true, false);
+        Assert.That(Current.phase, Is.EqualTo(1), "Three seconds held: still charging.");
+        Assert.That(_em.CreateEntityQuery(typeof(SkillEffectRequestComponent)).CalculateEntityCount(), Is.EqualTo(0));
+        Hold(3.1, false, false);
+        Assert.That(Current.phase, Is.EqualTo(2), "Released: the final phase.");
+        Assert.That(_em.CreateEntityQuery(typeof(SkillEffectRequestComponent)).CalculateEntityCount(), Is.EqualTo(1), "Its event fired.");
+    }
+
+    [Test]
     public void ASquadSwapRequestOrAStunEndsTheCurrentAndTheParkedSkill()
     {
         Step(0.0, SkillSlot.Q);

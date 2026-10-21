@@ -74,7 +74,12 @@ public partial class SkillExecutionSystem : SystemBase
             if (inst.active && Valid(skills, inst.skillIndex))
             {
                 _fired.Clear();
-                bool ended = SkillTimeline.Advance(ref skills[inst.skillIndex].skill.Value, ref inst, dt, _fired);
+                ref var running = ref skills[inst.skillIndex].skill.Value;
+                bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired);
+                // Charge (L2-6): letting go of the key moves a waiting skill to its release phase.
+                byte held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
+                if (!ended && (held & SkillRequestComponent.Bit(skills[inst.skillIndex].slot)) == 0)
+                    ended = SkillTimeline.Release(ref running, ref inst, _fired);
                 Apply(entity, ref inst, ref c, skills[inst.skillIndex].skillId);
                 if (ended)
                 {

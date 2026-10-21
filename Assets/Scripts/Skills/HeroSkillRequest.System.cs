@@ -18,6 +18,7 @@ public partial class HeroSkillRequestSystem : SystemBase
                      .WithAll<IsLocalPlayer>()
                      .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState))
         {
+            request.ValueRW.heldSlots = Held(input.ValueRO);
             if (TryPick(input.ValueRO, out var slot)) Request(request, wants, slot, now);
         }
 
@@ -26,6 +27,7 @@ public partial class HeroSkillRequestSystem : SystemBase
                      .WithAll<HeroAITag>()
                      .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState))
         {
+            request.ValueRW.heldSlots = decision.ValueRO.shouldAttack ? SkillRequestComponent.Bit(SkillSlot.Basic) : (byte)0;
             if (decision.ValueRO.shouldAttack) Request(request, wants, SkillSlot.Basic, now);
         }
     }
@@ -42,9 +44,21 @@ public partial class HeroSkillRequestSystem : SystemBase
         return false;
     }
 
+    static byte Held(in HeroInputComponent input)
+    {
+        byte held = 0;
+        if (input.IsAttackPressed) held |= SkillRequestComponent.Bit(SkillSlot.Basic);
+        if (input.UseSkill1) held |= SkillRequestComponent.Bit(SkillSlot.Q);
+        if (input.UseSkill2) held |= SkillRequestComponent.Bit(SkillSlot.E);
+        if (input.UseSkill3) held |= SkillRequestComponent.Bit(SkillSlot.R);
+        if (input.UseUltimate) held |= SkillRequestComponent.Bit(SkillSlot.Ultimate);
+        return held;
+    }
+
     static void Request(RefRW<SkillRequestComponent> request, EnabledRefRW<SkillRequestComponent> wants, SkillSlot slot, double now)
     {
-        request.ValueRW = new SkillRequestComponent { slot = slot, requestedAt = now };
+        request.ValueRW.slot = slot;
+        request.ValueRW.requestedAt = now;
         wants.ValueRW = true;
     }
 }

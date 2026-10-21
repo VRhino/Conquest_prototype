@@ -49,6 +49,24 @@ public static class SkillTimeline
         }
     }
 
+    /// <summary>
+    /// Releases a charge (L2-6, skill-lifecycle.md §4): from a phase without end, the skill moves to the next phase (the
+    /// release); a wait that is the last phase just ends. Returns true when the skill ended.
+    /// </summary>
+    public static bool Release(ref SkillBlob skill, ref SkillInstanceComponent instance, NativeList<SkillEvent> fired)
+    {
+        if (!instance.active || skill.phases[instance.phase].duration >= 0f) return false;
+        instance.phase++;
+        instance.phaseTime = 0f;
+        if (instance.phase >= skill.phases.Length)
+        {
+            instance.active = false;
+            return true;
+        }
+        Collect(ref skill, instance.phase, 0f, 0f, true, fired);
+        return false;
+    }
+
     /// <summary>Whether the current phase lets another skill in (§3.1); an idle hero is always free.</summary>
     public static bool Interruptible(ref SkillBlob skill, in SkillInstanceComponent instance)
         => !instance.active || (instance.phase < skill.phases.Length && skill.phases[instance.phase].interruptible);
