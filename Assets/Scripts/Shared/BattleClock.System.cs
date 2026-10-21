@@ -1,8 +1,8 @@
 using Unity.Entities;
 
 /// <summary>
-/// Counts the battle clock down while the match is <see cref="MatchState.InBattle"/> (L7-1). When it reaches zero the
-/// defenders win, as before, but decided in ECS rather than by the HUD's countdown.
+/// Counts the battle clock down while the match is <see cref="MatchState.InBattle"/> (L7-1). When it reaches zero it
+/// emits <see cref="BattleTimeExpiredEvent"/> once; <see cref="MatchOutcomeSystem"/> decides the result (L7-2).
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(BattleBootstrapSystem))]
@@ -21,8 +21,7 @@ public partial class BattleClockSystem : SystemBase
         // More than one match state can exist briefly (subscene + system); act only on a single one.
         if (!SystemAPI.TryGetSingletonEntity<MatchStateComponent>(out var matchEntity)) return;
         if (!SystemAPI.TryGetSingletonEntity<BattleClockComponent>(out var clockEntity)) return;
-        var match = SystemAPI.GetComponentRW<MatchStateComponent>(matchEntity);
-        if (match.ValueRO.currentState != MatchState.InBattle) return;
+        if (SystemAPI.GetComponent<MatchStateComponent>(matchEntity).currentState != MatchState.InBattle) return;
 
         var clock = SystemAPI.GetComponentRW<BattleClockComponent>(clockEntity);
         if (clock.ValueRO.expired) return;
@@ -30,10 +29,6 @@ public partial class BattleClockSystem : SystemBase
         if (clock.ValueRO.remainingSeconds > 0f) return;
 
         clock.ValueRW.expired = true;
-        if (!match.ValueRO.victoryConditionMet)
-        {
-            match.ValueRW.victoryConditionMet = true;
-            match.ValueRW.winnerTeam = 2; // Defenders win on timer expiry.
-        }
+        EntityManager.CreateEntity(typeof(BattleTimeExpiredEvent));
     }
 }

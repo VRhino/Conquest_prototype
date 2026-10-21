@@ -285,7 +285,15 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Layer culling**: Units a 120 m, Heroes a 150 m; `layerCullSpherical = true`
 - **Loading screen**: Descartada cuando todos los `HeroVisualInstance` están listos + 3 s delay; timeout de seguridad a 30 s
 - **Victory/Defeat**: Monitorea `MatchStateComponent.EndMatch`, activa `_victoryDefeatPanel`, guarda `WinnerTeam` en `BattleTransitionData`
-- **Timer expired**: defensores ganan (`winnerTeam = 2`)
+- **Reloj**: solo muestra `BattleClockComponent` (L7-1); no cuenta ni escribe el resultado
+
+### BattleClockSystem
+- **Responsabilidad**: Descuenta `BattleClockComponent` en `InBattle`; al llegar a 0 emite `BattleTimeExpiredEvent` una vez (L7-1)
+- **Orden**: después de `BattleBootstrapSystem`, antes de `MatchControllerSystem`
+
+### MatchOutcomeSystem
+- **Responsabilidad**: Único escritor de `MatchStateComponent.winnerTeam` y `victoryConditionMet` (L7-2): consume `FinalZoneCapturedEvent` y `BattleTimeExpiredEvent` con orden fijo (gana la captura) y nunca sobrescribe un resultado decidido
+- **Orden**: después de `CaptureZoneTriggerSystem` y `BattleClockSystem`, antes de `MatchControllerSystem`
 
 ### EntityVisualSync
 - **Responsabilidad**: vincula entidad y representación y sincroniza la pose de visuales no locales.

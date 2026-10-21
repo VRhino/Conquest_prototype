@@ -47,15 +47,16 @@ El timer de partida es el eje de la asimetría atacante/defensor:
 ## 4. Victoria por timer (tiempo agotado)
 
 1. `BattleClockSystem` descuenta el reloj con `SystemAPI.Time.DeltaTime` solo en `MatchState.InBattle`.
-2. Al llegar a 0 marca `expired` y, si nadie ha ganado aún, escribe en `MatchStateComponent`:
-   `winnerTeam = 2` (defensores), `victoryConditionMet = true`.
-3. `MatchControllerSystem` detecta el flag y pasa a `MatchState.EndMatch`.
+2. Al llegar a 0 marca `expired` y emite `BattleTimeExpiredEvent` una vez.
+3. `MatchOutcomeSystem` (único escritor del resultado, L7-2) escribe `winnerTeam = 2` (defensores) y
+   `victoryConditionMet = true` si nadie ha ganado aún.
+4. `MatchControllerSystem` detecta el flag y pasa a `MatchState.EndMatch`.
 
 ## 5. Victoria instantánea (captura de base)
 
-1. Al completarse la captura de la zona final, `CaptureZoneTriggerSystem` escribe `winnerTeam = capturingTeam`
-   (1 si captura el atacante) y `victoryConditionMet = true`.
-2. `MatchControllerSystem` pasa a `EndMatch` en el mismo frame.
+1. Al completarse la captura de la zona final, `CaptureZoneTriggerSystem` emite `FinalZoneCapturedEvent`.
+2. `MatchOutcomeSystem` escribe `winnerTeam = capturingTeam` (1 si captura el atacante), `victoryConditionMet = true` y
+   la fase `PostPartida`; `MatchControllerSystem` pasa a `EndMatch`.
 
 ---
 
@@ -63,7 +64,7 @@ El timer de partida es el eje de la asimetría atacante/defensor:
 
 | Caso | Resolución |
 |------|-----------|
-| Captura final y fin del reloj en el mismo frame | La captura corre antes (`CaptureZoneTriggerSystem` → `MatchControllerSystem`; el reloj no sobrescribe un resultado ya decidido) |
+| Captura final y fin del reloj en el mismo frame | `MatchOutcomeSystem` resuelve con orden fijo: gana la captura. Un resultado ya decidido no se sobrescribe |
 | Reloj en el cap y se captura un punto normal | Se queda en el cap |
 | El HUD | `BattleSceneController` solo muestra `BattleClock.Format(restante)` (mm:ss); no cuenta ni decide |
 
@@ -75,7 +76,8 @@ El timer de partida es el eje de la asimetría atacante/defensor:
 |---------|-----|
 | `Assets/Scripts/Shared/BattleClock.Component.cs` | `BattleClockComponent`: restante, cap, extensión, expirado |
 | `Assets/Scripts/Shared/BattleClock.cs` | Reglas puras: duración inicial, extensión con cap, tick, formato |
-| `Assets/Scripts/Shared/BattleClock.System.cs` | Descuenta el reloj y da la victoria a los defensores al expirar |
+| `Assets/Scripts/Shared/BattleClock.System.cs` | Descuenta el reloj y emite `BattleTimeExpiredEvent` al expirar |
+| `Assets/Scripts/Shared/MatchOutcome.System.cs` | Único escritor del resultado (`MatchWinner`: 0 / 1 atacantes / 2 defensores) |
 | `Assets/Scripts/Shared/BattleBootstrap.System.cs` | Crea el reloj al entrar en batalla |
 | `Assets/Scripts/Map/BattleTimerExtension.System.cs` | Extiende el reloj por captura |
 | `Assets/Scripts/Shared/MatchController.System.cs` | Transición a `EndMatch` cuando `victoryConditionMet` |

@@ -106,18 +106,11 @@ public partial class CaptureZoneTriggerSystem : SystemBase
                     }
                 }
 
-                if (zone.ValueRO.isFinal &&
-                    SystemAPI.TryGetSingletonEntity<GameStateComponent>(out var stateEntity))
+                // The final zone decides the match; MatchOutcomeSystem writes the result (L7-2).
+                if (zone.ValueRO.isFinal)
                 {
-                    var state = SystemAPI.GetComponentRW<GameStateComponent>(stateEntity);
-                    state.ValueRW.currentPhase = GamePhase.PostPartida;
-
-                    if (SystemAPI.TryGetSingletonEntity<MatchStateComponent>(out var matchEntity))
-                    {
-                        var match = SystemAPI.GetComponentRW<MatchStateComponent>(matchEntity);
-                        match.ValueRW.victoryConditionMet = true;
-                        match.ValueRW.winnerTeam = progress.ValueRO.capturingTeam;
-                    }
+                    Entity final = ecb.CreateEntity();
+                    ecb.AddComponent(final, new FinalZoneCapturedEvent { capturingTeam = progress.ValueRO.capturingTeam });
                 }
             }
         }

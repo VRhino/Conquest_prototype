@@ -44,9 +44,17 @@ public class BattleClockTests
         Assert.That(em.GetComponentData<MatchStateComponent>(match).victoryConditionMet, Is.False);
 
         system.Update();
-        var state = em.GetComponentData<MatchStateComponent>(match);
         Assert.That(em.GetComponentData<BattleClockComponent>(clock).expired, Is.True);
+        using var events = em.CreateEntityQuery(typeof(BattleTimeExpiredEvent));
+        Assert.That(events.CalculateEntityCount(), Is.EqualTo(1));
+        system.Update(); // Expired: no second event.
+        Assert.That(events.CalculateEntityCount(), Is.EqualTo(1));
+
+        // The single resolver turns it into the defenders' victory.
+        world.GetOrCreateSystemManaged<MatchOutcomeSystem>().Update();
+        var state = em.GetComponentData<MatchStateComponent>(match);
         Assert.That(state.victoryConditionMet, Is.True);
-        Assert.That(state.winnerTeam, Is.EqualTo(2), "Defenders win when the clock runs out.");
+        Assert.That(state.winnerTeam, Is.EqualTo(MatchWinner.Defenders));
+        Assert.That(events.CalculateEntityCount(), Is.EqualTo(0), "Events are consumed.");
     }
 }

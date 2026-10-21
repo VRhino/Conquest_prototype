@@ -70,13 +70,10 @@ Las transiciones entre estados son:
 
 Al completarse la captura de un punto **normal** (no el de base):
 
-1. El sistema llama a `BattleSceneController.ExtendTimer(seconds)`.
-2. El timer de partida se incrementa, sin exceder el cap de 1800 s (30 min).
-3. Si el timer ya está en el cap, la extensión no tiene efecto.
-
-La extensión es procesada por `BattleTimerExtension.System.cs` que detecta el evento de captura y emite la llamada.
-
-> El valor exacto de extensión por captura es [configurable — verificar en código / `Battle.Data.cs`].
+1. `CaptureZoneTriggerSystem` emite `ZoneCapturedEvent`.
+2. `BattleTimerExtensionSystem` suma `captureTimeExtensionSeconds` (300 s por defecto, en `MapDataSO`) al reloj de ECS
+   (`BattleClockComponent`), sin pasar de `maxBattleDurationSeconds` (1800 s por defecto).
+3. Si el reloj ya está en el cap, se queda en el cap. Detalle en `MatchTimer.md`.
 
 ---
 
@@ -85,12 +82,12 @@ La extensión es procesada por `BattleTimerExtension.System.cs` que detecta el e
 Capturar el punto de **base** termina la partida de forma inmediata:
 
 1. La captura se completa → `CapturePointProgress` llega a 100%.
-2. El sistema detecta que el punto es de tipo `Base`.
-3. Se escribe `victoryConditionMet = true` en `MatchStateComponent` con `winnerTeam = 0` (atacantes).
-4. `MatchController.System.cs` detecta el flag en el mismo frame y emite `MatchState.EndMatch`.
+2. La zona es la final (`ZoneTriggerComponent.isFinal`): `CaptureZoneTriggerSystem` emite `FinalZoneCapturedEvent` con el equipo que captura.
+3. `MatchOutcomeSystem` (único escritor del resultado) escribe `victoryConditionMet = true` y `winnerTeam = 1` (atacantes; 2 serían los defensores) y pone la fase `PostPartida`.
+4. `MatchController.System.cs` detecta el flag y emite `MatchState.EndMatch`.
 5. La escena transiciona a `PostBattleScene`.
 
-No hay animación de captura diferida — la victoria ocurre en el frame en que se completa la barra.
+No hay animación de captura diferida: el evento se crea en el frame en que se completa la barra y se resuelve en el siguiente.
 
 ---
 
@@ -99,11 +96,11 @@ No hay animación de captura diferida — la victoria ocurre en el frame en que 
 | Caso | Resolución |
 |------|-----------|
 | Dos héroes atacantes en la zona | El progreso avanza normalmente; múltiples atacantes no aceleran la captura — basta con que haya al menos uno |
-| Héroe defensor entra mientras barra está al 99% | Captura se pausa; el progreso se conserva; al salir el defensor continúa desde 99% |
+| Héroe defensor entra mientras barra está al 99% | Con atacantes y defensores la zona queda disputada y el progreso se congela; si quedan solo defensores, **retrocede** a la velocidad de captura |
 | Zona bloqueada: héroe atacante entra | No ocurre nada — la zona no responde a presencia hasta desbloquearse |
-| Héroe muere durante captura | Si era el único atacante en zona, la barra se pausa; si hay otro atacante aliado, continúa |
-| Timer llega a 0 exactamente cuando se completa captura | La victoria del atacante tiene prioridad sobre el fin de tiempo [verificar orden de sistemas en `MatchController`] |
-| Captura de punto normal cuando timer está en cap (30 min) | `ExtendTimer` se llama pero la extensión es ignorada — el timer permanece en el cap |
+| Héroe muere durante captura | Si era el único atacante en zona y no hay nadie más, la barra se queda donde estaba; si hay otro atacante aliado, continúa |
+| Timer llega a 0 cuando se completa la captura final | `MatchOutcomeSystem` da prioridad a la captura si ambos eventos coinciden; un resultado ya decidido no se sobrescribe |
+| Captura de punto normal cuando el reloj está en el cap | El reloj se queda en el cap |
 
 ---
 
@@ -142,7 +139,7 @@ Los siguientes archivos ya contienen implementación parcial o relacionada:
 | `Assets/Scripts/Map/CapturePoint.Tag.cs` | Tag para consultar entidades de puntos de captura |
 | `Assets/Scripts/Map/CapturePointProgress.Component.cs` | `float progress` (0–1), `CapturePointType type` (Normal/Base), `bool isBlocked`, `int ownerTeam` |
 | `Assets/Scripts/Map/ZoneTrigger.Component.cs` | `float radius`, usado por el sistema de detección de zona |
-| `Assets/Scripts/Shared/MatchState.Component.cs` | `bool victoryConditionMet`, `int winnerTeam`, `float remainingTime` |
+| `Assets/Scripts/Shared/MatchState.Component.cs` | `bool victoryConditionMet`, `int winnerTeam` (0 / 1 atacantes / 2 defensores); el tiempo vive en `BattleClockComponent` |
 
 ### Sistemas ECS
 
@@ -151,7 +148,8 @@ Los siguientes archivos ya contienen implementación parcial o relacionada:
 | `Assets/Scripts/Map/CaptureZoneTrigger.System.cs` | Detecta presencia de equipos en zona, pausa/reanuda progreso |
 | `Assets/Scripts/Map/LocalHeroCaptureTracker.System.cs` | Acumula puntos de captura del héroe local para el post-batalla |
 | `Assets/Scripts/Map/BattleTimerExtension.System.cs` | Extiende el timer al completarse una captura normal |
-| `Assets/Scripts/Shared/MatchController.System.cs` | Detecta `victoryConditionMet` o timer = 0 y termina la partida |
+| `Assets/Scripts/Shared/MatchOutcome.System.cs` | Único escritor del resultado: captura final o fin del reloj |
+| `Assets/Scripts/Shared/MatchController.System.cs` | Pasa a `EndMatch` cuando `victoryConditionMet` |
 
 ### UI y Setup
 
