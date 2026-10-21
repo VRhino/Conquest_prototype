@@ -273,6 +273,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 u.gear, u.speed.ToString("F3", c)));
         File.WriteAllText(prefix + "_units.csv", units.ToString());
         File.WriteAllText(prefix + "_summary.txt", summary.ToString());
+        File.WriteAllText(prefix + "_summary.json", UnityEngine.JsonUtility.ToJson(summary, true)); // For medians (M10).
         return directory;
     }
 }

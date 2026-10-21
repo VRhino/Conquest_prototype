@@ -79,4 +79,23 @@ public class MovementMetricsAnalyzerTests
     static MovementUnitSample Unit(int frame, float time, int unit, UnitFormationState state) =>
         new MovementUnitSample { frame = frame, time = time, squad = 1, unit = unit, state = state,
             target = -1, targetDistance = -1f, gear = -1 };
+
+    [Test]
+    public void MedianCombinesRunsFieldByField()
+    {
+        var runs = new List<MovementMetricsSummary>
+        {
+            new MovementMetricsSummary { label = "S6", maxPersistentEnemyOverlaps = 8, accelerationSpikeRatio = 0.03f, maxAcceleration = 280f },
+            new MovementMetricsSummary { label = "S6", maxPersistentEnemyOverlaps = 15, accelerationSpikeRatio = 0.01f, maxAcceleration = 110f },
+            new MovementMetricsSummary { label = "S6", maxPersistentEnemyOverlaps = 11, accelerationSpikeRatio = 0.02f, maxAcceleration = 200f },
+        };
+        var median = MovementMetricsAnalyzer.Median(runs);
+        Assert.That(median.maxPersistentEnemyOverlaps, Is.EqualTo(11));
+        Assert.That(median.accelerationSpikeRatio, Is.EqualTo(0.02f).Within(1e-6f));
+        Assert.That(median.maxAcceleration, Is.EqualTo(200f));
+        Assert.That(median.label, Does.StartWith("S6"));
+
+        runs.RemoveAt(2); // Even count: mean of the two middle values.
+        Assert.That(MovementMetricsAnalyzer.Median(runs).maxAcceleration, Is.EqualTo(195f).Within(1e-3f));
+    }
 }

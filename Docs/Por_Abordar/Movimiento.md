@@ -16,7 +16,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
 | M8 | Detalles de ORCA respecto a la referencia | Media | Pendiente |
 | M9 | Memoria por frame en la evitación | Baja | Pendiente |
-| M10 | Variación de S6 entre corridas | Media | Pendiente |
+| M10 | Variación de S6 entre corridas | Media | **Mitad hecha**: aproximación idéntica y mediana; la melé aún diverge |
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
 | M12 | Picos de aceleración en la melé | Media | **Mitad hecha** (frenado de llegada); quedan picos de contacto |
 | M13 | Llegada más lenta al frenar con aceleración limitada | Media | **Hecho** en S4; S3 con matiz (primera parada) |
@@ -118,8 +118,21 @@ cuando la entidad desaparece. Si S8 supera el presupuesto, compartir la rejilla 
 **Qué es.** S6 cambia mucho de una corrida a otra, y dentro de la suite completa se comporta distinto que solo (hubo
 corridas sin combate).
 
-**Cómo abordarlo.** Fijar la semilla de la IA enemiga y del ruido, esperar a un estado inicial idéntico antes de medir y
-repetir el escenario tres veces, informando de la mediana.
+**Hecho en parte (2026-10-21).**
+- La causa principal era el paso de tiempo: el grabador fijaba 30 fps solo mientras filmaba, y la carga de la escena y la
+  preparación (unos 8 s) corrían al ritmo real del editor. Cada corrida llegaba a la medida en otro estado. Ahora los
+  escenarios corren a paso fijo desde el `SetUp` y vuelven a sembrar `Random` antes de preparar. Resultado: tres corridas
+  seguidas son **idénticas frame a frame durante toda la aproximación** (antes ni el primer frame coincidía).
+- La mediana: cada corrida guarda también `<escenario>_<fecha>_summary.json`, y el menú *Tools > Movement > Median Of Last
+  3 Runs* (`MovementMetricsMedian.Write(n)`) escribe `<escenario>_median_summary.txt` con la mediana campo a campo.
+
+**Lo que queda.** Las corridas siguen separándose desde los primeros contactos de la melé (una adquiere objetivo un frame
+antes que otra). Hipótesis **[hip]**: los golpes se detectan con disparadores de PhysX, y `Enhanced Determinism` está
+desactivado en *Project Settings > Physics*, así que el orden de los contactos puede cambiar entre corridas.
+
+**Cómo abordarlo.** Probar a activar `Enhanced Determinism` (es un ajuste de todo el proyecto, con algo de coste en CPU:
+decisión del usuario) y repetir tres corridas. Si con eso coinciden, la mediana deja de hacer falta para S6; si no, buscar
+el siguiente origen comparando el CSV frame a frame (`cmp` sobre las columnas de posición).
 
 ## M12. Picos de aceleración en la melé
 **Qué es.** Fuera de la melé los picos (> 20 m/s²) están por debajo del 1 %. En S6 eran un 2-3,5 % con máximos de 200-280 m/s².

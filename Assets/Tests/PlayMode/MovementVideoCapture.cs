@@ -14,7 +14,7 @@ sealed class MovementVideoCapture : System.IDisposable
 {
     const int Width = 1280;
     const int Height = 720;
-    const float FrameRate = 30f;
+    public const float FrameRate = 30f;
 
     readonly RecorderController controller;
     readonly RecorderControllerSettings controllerSettings;

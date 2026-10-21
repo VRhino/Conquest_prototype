@@ -47,6 +47,7 @@ public struct MovementFrameSample
 }
 
 /// <summary>Aggregated baseline metrics. Negative values mean "not observed".</summary>
+[Serializable]
 public sealed class MovementMetricsSummary
 {
     public string label;
@@ -123,6 +124,27 @@ public static class MovementMetricsAnalyzer
     public const float AccelerationSpikeLimit = 20f; // m/s²: well above any agent (8-12 m/s²), so only jolts count.
     public const float EnemyOverlapPersistence = 0.3f; // Enemy pairs overlapping longer than this are counted.
     public const float ContactRange = 2.5f;     // Units this close to their target count as attackers on it.
+
+    /// <summary>
+    /// Field-by-field median of several runs of one scenario (M10): the melee in S6 diverges between runs from
+    /// the first contacts on, so one run decides nothing. Even counts take the mean of the two middle values.
+    /// </summary>
+    public static MovementMetricsSummary Median(IReadOnlyList<MovementMetricsSummary> runs)
+    {
+        if (runs == null || runs.Count == 0) throw new ArgumentException("No runs to combine.", nameof(runs));
+        var median = new MovementMetricsSummary { label = $"{runs[0].label} median of {runs.Count}" };
+        foreach (var field in typeof(MovementMetricsSummary).GetFields())
+        {
+            if (field.FieldType == typeof(string)) continue;
+            var values = runs.Select(r => Convert.ToDouble(field.GetValue(r), CultureInfo.InvariantCulture))
+                .OrderBy(v => v).ToArray();
+            int mid = values.Length / 2;
+            double value = values.Length % 2 == 1 ? values[mid] : (values[mid - 1] + values[mid]) / 2.0;
+            field.SetValue(median, Convert.ChangeType(field.FieldType == typeof(int) ? Math.Round(value) : value,
+                field.FieldType, CultureInfo.InvariantCulture));
+        }
+        return median;
+    }
 
     /// <summary>Contact-phase thresholds the summary is evaluated against.</summary>
     public struct ContactLimits

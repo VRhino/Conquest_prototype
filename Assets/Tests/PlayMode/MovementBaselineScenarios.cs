@@ -175,16 +175,28 @@ public partial class BattleSceneIntegrationTests
 
     /// <summary>
     /// Baseline scenarios measure movement, not scene health: the scene logs a known error while the
-    /// git-ignored hit VFX asset pack is missing, so only these explicit runs ignore logged errors.
+    /// git-ignored hit VFX asset pack is missing, so only these explicit runs ignore logged errors. They also
+    /// run at a fixed step from the start (M10).
     /// </summary>
-    void ConfigureMovementBaselineLogging()
+    void ConfigureMovementBaseline()
     {
-        if (TestContext.CurrentContext.Test.Name.StartsWith("MovementBaseline", System.StringComparison.Ordinal))
-            LogAssert.ignoreFailingMessages = true;
+        previousCaptureFramerate = Time.captureFramerate;
+        if (!TestContext.CurrentContext.Test.Name.StartsWith("MovementBaseline", System.StringComparison.Ordinal))
+            return;
+        LogAssert.ignoreFailingMessages = true;
+        // M10: the recorder fixed the step only while filming, so scene load and preparation ran at the
+        // editor's real frame rate and every run reached the measurement in a different state. Fix it from
+        // the start; TearDown restores it.
+        Time.captureFramerate = (int)MovementVideoCapture.FrameRate;
     }
+
+    /// <summary>Random seed of the fixture; baseline scenarios reapply it after loading so their rolls do not depend on setup.</summary>
+    const int BaselineRandomSeed = 7319;
+    int previousCaptureFramerate;
 
     IEnumerator PrepareBaseline()
     {
+        UnityEngine.Random.InitState(BaselineRandomSeed);
         yield return new WaitForSeconds(BaselineSettleSeconds);
         yield return Until(() =>
         {

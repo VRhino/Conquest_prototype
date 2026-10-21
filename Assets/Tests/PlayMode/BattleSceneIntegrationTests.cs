@@ -56,7 +56,7 @@ public partial class BattleSceneIntegrationTests
         fullBattleProfile = TestContext.CurrentContext.Test.Name.StartsWith(
             nameof(FullBattlePreparationRenderedPerformanceProfile), StringComparison.Ordinal);
         renderVariant = null;
-        ConfigureMovementBaselineLogging();
+        ConfigureMovementBaseline();
         loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
@@ -73,7 +73,7 @@ public partial class BattleSceneIntegrationTests
         previousBackground = Application.runInBackground;
         previousRandom = UnityEngine.Random.state;
         Application.runInBackground = true;
-        UnityEngine.Random.InitState(7319);
+        UnityEngine.Random.InitState(BaselineRandomSeed);
         var memory = new MemorySave();
         SaveSystem.SetProvider(memory);
         LoadSystem.SetProvider(memory);
@@ -965,6 +965,7 @@ public partial class BattleSceneIntegrationTests
         }
         Application.runInBackground = previousBackground;
         UnityEngine.Random.state = previousRandom;
+        Time.captureFramerate = previousCaptureFramerate;
         if (worldSwapped)
         {
             World.DefaultGameObjectInjectionWorld = previousWorld;
