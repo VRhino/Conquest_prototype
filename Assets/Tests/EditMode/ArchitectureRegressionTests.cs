@@ -62,6 +62,8 @@ public class ArchitectureRegressionTests
         UnitStatsUtility.ApplyStatsToUnit(unit, new SquadDataComponent
         { baseHealth = 100, baseSpeed = 5, bluntDamage = 10, bluntDefense = 20, isRangedUnit = true, ammoCapacity = 50 },
             1, 2, 3, 4, 1, em);
+        // Level scaling goes through the modifier stack; the resolver writes the derived stats (T1).
+        world.GetOrCreateSystemManaged<StatResolveSystem>().Update();
         Assert.That(em.GetComponentData<HealthComponent>(unit).maxHealth, Is.EqualTo(200));
         Assert.That(em.GetComponentData<HealthComponent>(unit).currentHealth, Is.EqualTo(50));
         Assert.That(em.GetComponentData<DefenseComponent>(unit).bluntDefense, Is.EqualTo(80));

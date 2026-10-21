@@ -8,6 +8,24 @@ using Unity.Mathematics;
 /// </summary>
 public static class UnitStatsUtility
 {
+    static readonly StatId[] DefenseStats = { StatId.BluntDefense, StatId.SlashDefense, StatId.PierceDefense };
+    static readonly StatId[] DamageStats = { StatId.BluntDamage, StatId.SlashDamage, StatId.PierceDamage };
+
+    /// <summary>Base damage and penetration of the squad profile, with the level ratio on damage.</summary>
+    static void SeedSquadProfile(EntityManager em, Entity profile, SquadDataComponent data, float damageMul)
+    {
+        StatStack.Ensure(em, profile);
+        StatStack.SetBase(em, profile, StatId.BluntDamage, data.bluntDamage);
+        StatStack.SetBase(em, profile, StatId.SlashDamage, data.slashingDamage);
+        StatStack.SetBase(em, profile, StatId.PierceDamage, data.piercingDamage);
+        StatStack.SetBase(em, profile, StatId.BluntPenetration, data.bluntPenetration);
+        StatStack.SetBase(em, profile, StatId.SlashPenetration, data.slashingPenetration);
+        StatStack.SetBase(em, profile, StatId.PiercePenetration, data.piercingPenetration);
+        StatStack.ClearSource(em, profile, ModifierSource.Level);
+        foreach (var stat in DamageStats) StatStack.AddLevelMultiplier(em, profile, stat, damageMul);
+        StatStack.MarkDirty(em, profile);
+    }
+
     /// <summary>
     /// Applies level-scaled stats to all units in a squad.
     /// </summary>
@@ -58,63 +76,56 @@ public static class UnitStatsUtility
         float speedMul,
         EntityManager entityManager)
     {
-        // Calculate final speed using centralized utility
+        // Level-1 speed: the weight category is part of the base; the level curve is a modifier.
         int weightCategory = (int)math.round(data.weight);
-        float finalSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.baseSpeed, speedMul, weightCategory);
+        float baseSpeed = UnitSpeedCalculator.CalculateFinalSpeed(data.baseSpeed, 1f, weightCategory);
 
-        // Create main stats component
-        var stats = new UnitStatsComponent
-        {
-            health = data.baseHealth * healthMul,
-            speed = finalSpeed,
-            mass = data.mass,
-            weight = weightCategory,
-            block = data.block,
-            slashingDefense = data.slashingDefense * defenseMul,
-            piercingDefense = data.piercingDefense * defenseMul,
-            bluntDefense = data.bluntDefense * defenseMul,
-            slashingDamage = data.slashingDamage * damageMul,
-            piercingDamage = data.piercingDamage * damageMul,
-            bluntDamage = data.bluntDamage * damageMul,
-            slashingPenetration = data.slashingPenetration,
-            piercingPenetration = data.piercingPenetration,
-            bluntPenetration = data.bluntPenetration,
-            leadershipCost = leadershipCost
-        };
-
-        // Apply main stats
+        // Identity fields (not stats) stay with the spawner and this utility.
         if (entityManager.HasComponent<UnitStatsComponent>(unitEntity))
-            entityManager.SetComponentData(unitEntity, stats);
-        else
-            entityManager.AddComponentData(unitEntity, stats);
-
-        // Apply ranged stats if applicable
-        if (entityManager.HasComponent<HealthComponent>(unitEntity))
         {
-            var health = entityManager.GetComponentData<HealthComponent>(unitEntity);
-            float fraction = health.maxHealth > 0f ? math.saturate(health.currentHealth / health.maxHealth) : 0f;
-            health.maxHealth = stats.health;
-            health.currentHealth = stats.health * fraction;
-            entityManager.SetComponentData(unitEntity, health);
+            var identity = entityManager.GetComponentData<UnitStatsComponent>(unitEntity);
+            identity.mass = data.mass;
+            identity.weight = weightCategory;
+            identity.block = data.block;
+            identity.leadershipCost = leadershipCost;
+            identity.slashingPenetration = data.slashingPenetration;
+            identity.piercingPenetration = data.piercingPenetration;
+            identity.bluntPenetration = data.bluntPenetration;
+            entityManager.SetComponentData(unitEntity, identity);
         }
-        if (entityManager.HasComponent<DefenseComponent>(unitEntity))
-            entityManager.SetComponentData(unitEntity, new DefenseComponent
+        else
+            entityManager.AddComponentData(unitEntity, new UnitStatsComponent
             {
-                bluntDefense = stats.bluntDefense,
-                slashDefense = stats.slashingDefense,
-                pierceDefense = stats.piercingDefense
+                mass = data.mass, weight = weightCategory, block = data.block, leadershipCost = leadershipCost,
+                slashingPenetration = data.slashingPenetration, piercingPenetration = data.piercingPenetration,
+                bluntPenetration = data.bluntPenetration,
             });
+
+        // Stats go through the modifier stack (T1): squad data is the base, the level curves are Level ratios.
+        // StatResolveSystem writes health (keeping its fraction), defense and UnitStatsComponent.
+        StatStack.Ensure(entityManager, unitEntity);
+        StatStack.SetBase(entityManager, unitEntity, StatId.MaxHealth, data.baseHealth);
+        StatStack.SetBase(entityManager, unitEntity, StatId.MoveSpeed, baseSpeed);
+        StatStack.SetBase(entityManager, unitEntity, StatId.BluntDefense, data.bluntDefense);
+        StatStack.SetBase(entityManager, unitEntity, StatId.SlashDefense, data.slashingDefense);
+        StatStack.SetBase(entityManager, unitEntity, StatId.PierceDefense, data.piercingDefense);
+        StatStack.SetBase(entityManager, unitEntity, StatId.BluntDamage, data.bluntDamage);
+        StatStack.SetBase(entityManager, unitEntity, StatId.SlashDamage, data.slashingDamage);
+        StatStack.SetBase(entityManager, unitEntity, StatId.PierceDamage, data.piercingDamage);
+        // Weapon penetration lives on the squad profile; the unit's own is an additive bonus (0 by default).
+        StatStack.ClearSource(entityManager, unitEntity, ModifierSource.Level);
+        StatStack.AddLevelMultiplier(entityManager, unitEntity, StatId.MaxHealth, healthMul);
+        StatStack.AddLevelMultiplier(entityManager, unitEntity, StatId.MoveSpeed, speedMul);
+        foreach (var stat in DefenseStats) StatStack.AddLevelMultiplier(entityManager, unitEntity, stat, defenseMul);
+        foreach (var stat in DamageStats) StatStack.AddLevelMultiplier(entityManager, unitEntity, stat, damageMul);
+        StatStack.MarkDirty(entityManager, unitEntity);
+
+        // The squad's shared damage profile carries its own stack: base damage and penetration, level ratio on damage.
         if (entityManager.HasComponent<UnitWeaponComponent>(unitEntity))
         {
             var profileEntity = entityManager.GetComponentData<UnitWeaponComponent>(unitEntity).damageProfile;
-            if (entityManager.HasComponent<DamageProfileComponent>(profileEntity))
-            {
-                var profile = entityManager.GetComponentData<DamageProfileComponent>(profileEntity);
-                profile.bluntDamage = stats.bluntDamage;
-                profile.slashingDamage = stats.slashingDamage;
-                profile.piercingDamage = stats.piercingDamage;
-                entityManager.SetComponentData(profileEntity, profile);
-            }
+            if (entityManager.Exists(profileEntity) && entityManager.HasComponent<DamageProfileComponent>(profileEntity))
+                SeedSquadProfile(entityManager, profileEntity, data, damageMul);
         }
 
         if (data.isRangedUnit)

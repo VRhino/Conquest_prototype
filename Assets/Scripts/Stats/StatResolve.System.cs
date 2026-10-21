@@ -8,15 +8,20 @@ using Unity.Mathematics;
 /// modifier expires, and writes every target component the entity has:
 /// <list type="bullet">
 /// <item><see cref="HealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current value keeps its fraction).</item>
-/// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage, penetration).</item>
+/// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
+/// penetration and identity fields stay as the spawner wrote them).</item>
 /// <item><see cref="DamageProfileComponent"/> (damage and penetration; a squad's units share their squad's profile
 /// entity, so it carries its own stats). <see cref="PenetrationComponent"/> only on entities without a profile, so
 /// penetration is never counted twice.</item>
 /// </list>
 /// Expired modifiers are removed here.
+/// Runs after <see cref="UnitStatScalingSystem"/>, so a unit spawned or levelled this frame has its stats before anything
+/// reads them. It cannot also be before <see cref="DamageCalculationSystem"/>: damage already runs before respawn and
+/// spawning, and Entities hangs on an ordering cycle instead of reporting it (SystemOrderTests guards this). A modifier
+/// added during the frame is seen by damage on the next one.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateBefore(typeof(DamageCalculationSystem))]
+[UpdateAfter(typeof(UnitStatScalingSystem))]
 public partial class StatResolveSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -98,9 +103,6 @@ public partial class StatResolveSystem : SystemBase
             s.ValueRW.bluntDamage = Stat(b, m, StatId.BluntDamage, now);
             s.ValueRW.slashingDamage = Stat(b, m, StatId.SlashDamage, now);
             s.ValueRW.piercingDamage = Stat(b, m, StatId.PierceDamage, now);
-            s.ValueRW.bluntPenetration = Stat(b, m, StatId.BluntPenetration, now);
-            s.ValueRW.slashingPenetration = Stat(b, m, StatId.SlashPenetration, now);
-            s.ValueRW.piercingPenetration = Stat(b, m, StatId.PiercePenetration, now);
         }
     }
 }

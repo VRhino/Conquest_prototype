@@ -348,3 +348,8 @@
 - Antes de añadir valores a un componente de configuración, comprobar que su authoring está en las escenas donde se usa. `HeroGameplayConfigAuthoring` solo estaba en `SettlementHeroWorld`, así que en batalla `HeroAttackSystem` y `HeroStaminaSystem` (`RequireForUpdate`) no tienen su singleton.
 - Para quitar a un MonoBehaviour la escritura de estado de ECS (reloj, resultado), mover primero la regla a ECS y dejar al MonoBehaviour solo leyendo. Un resultado con varios escritores se arregla con eventos y un único resolvedor con orden fijo.
 - Una consulta de ECS guardada en un MonoBehaviour debe crearse por mundo: los tests cambian de mundo y la consulta del mundo viejo deja de valer.
+
+## Pila de modificadores: Unity congelado al entrar en Play (2026-10-21)
+
+- Un ciclo en `[UpdateBefore]`/`[UpdateAfter]` dentro de un grupo no da error en Entities: `ComponentSystemSorter.FindExactCycleInSystemGraph` gira para siempre al crear el mundo y el editor se congela entrando en Play, con la barra de Burst a medias (la barra es lo último que se pintó, no la causa). Antes de añadir un atributo de orden, mirar qué ordena ya el sistema de destino; `SystemOrderTests` lo comprueba en EditMode.
+- Para un editor colgado sin depurador: muestrear el puntero de instrucción del hilo caliente (SuspendThread + GetThreadContext), mapearlo a su módulo (aquí una dll de `Library/BurstCache/JIT`) y sacar los nombres de método del `.obj` de `JIT/Hashes/Objects` que contiene el hash del export. Así se llega a la función en minutos, sin hacer bisección a ciegas.
