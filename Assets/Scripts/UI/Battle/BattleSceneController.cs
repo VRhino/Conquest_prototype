@@ -24,7 +24,9 @@ public class BattleSceneController : MonoBehaviour
     [SerializeField] private GameObject _victoryObject;
     [SerializeField] private GameObject _defeatObject;
 
-    private TimerController _timerController;
+    private EntityQuery _battleClockQuery;
+    private World _battleClockWorld;
+    private int _shownClockSeconds = -1;
     private bool _loadingScreenDismissed;
     private int _spawnedRemoteCount;
     private bool _matchEndHandled;
@@ -35,7 +37,6 @@ public class BattleSceneController : MonoBehaviour
     private const float MaxLoadingScreenTime = 30f;
     private float _loadingStartTime;
 
-    private const int MaxBattleDurationSeconds = 1800; // 30 min cap
 
     #endregion
 
@@ -123,6 +124,7 @@ public class BattleSceneController : MonoBehaviour
     void Update()
     {
         HandleMatchEnd();
+        UpdateBattleTimerDisplay();
 
         if (_loadingScreenDismissed || _loadingScreen == null) return;
 
@@ -257,22 +259,28 @@ public class BattleSceneController : MonoBehaviour
     }
 
     /// <summary>
-    /// Configura e inicia el timer de batalla.
+    /// El reloj de batalla vive en ECS (`BattleClockComponent`, L7-1): lo inicia el bootstrap, lo descuenta
+    /// `BattleClockSystem` y lo extiende cada captura. Aquí solo se muestra.
     /// </summary>
-    private void InitializeBattleTimer()
+    private void InitializeBattleTimer() => _shownClockSeconds = -1;
+
+    /// <summary>Muestra el tiempo restante del reloj de ECS; no lo modifica.</summary>
+    private void UpdateBattleTimerDisplay()
     {
-        int battleSeconds = _currentBattleData.BattleTimer;
-        if (battleSeconds <= 0 && _currentBattleData.mapData != null)
-            battleSeconds = _currentBattleData.mapData.battleDuration;
-        if (battleSeconds <= 0)
-            battleSeconds = 900; // fallback 15 min
-
-        _timerController = gameObject.AddComponent<TimerController>();
-        _timerController.Initialize(battleSeconds, _battleTimerDisplay);
-        _timerController.OnTimerFinished += OnBattleTimerExpired;
-        _timerController.SetCountDownSecs(battleSeconds);
-
-        Debug.Log($"[BattleSceneController] Battle timer iniciado: {battleSeconds}s");
+        if (_battleTimerDisplay == null) return;
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (world == null || !world.IsCreated) return;
+        if (_battleClockWorld != world)
+        {
+            _battleClockQuery = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<BattleClockComponent>());
+            _battleClockWorld = world;
+        }
+        if (_battleClockQuery.CalculateEntityCount() != 1) return;
+        float remaining = _battleClockQuery.GetSingleton<BattleClockComponent>().remainingSeconds;
+        int seconds = (int)Mathf.Ceil(Mathf.Max(0f, remaining));
+        if (seconds == _shownClockSeconds) return;
+        _shownClockSeconds = seconds;
+        _battleTimerDisplay.text = BattleClock.Format(remaining);
     }
 
     /// <summary>
@@ -587,53 +595,7 @@ public class BattleSceneController : MonoBehaviour
     /// </summary>
     public BattleData CurrentBattleData => _currentBattleData;
 
-    /// <summary>
-    /// Extiende el timer de batalla por la cantidad de segundos indicada, sin superar el máximo de 30 minutos.
-    /// </summary>
-    public void ExtendTimer(int seconds)
-    {
-        if (_timerController == null || seconds <= 0) return;
-
-        // Calcular cuánto tiempo queda y cuánto podemos agregar sin superar el cap
-        int currentRemaining = _timerController.SecondsRemaining;
-        int maxExtension = MaxBattleDurationSeconds - currentRemaining;
-        int actualExtension = Mathf.Min(seconds, maxExtension);
-
-        if (actualExtension <= 0)
-        {
-            Debug.Log("[BattleSceneController] Timer ya está en el máximo (30 min), no se extiende.");
-            return;
-        }
-
-        _timerController.AddSeconds(actualExtension);
-        Debug.Log($"[BattleSceneController] Timer extendido +{actualExtension}s (restante: {currentRemaining + actualExtension}s)");
-    }
-
     #endregion
 
-    #region Timer Events
 
-    /// <summary>
-    /// Se invoca cuando el timer de batalla llega a cero. Victoria para los defensores.
-    /// </summary>
-    private void OnBattleTimerExpired()
-    {
-        Debug.Log("[BattleSceneController] Timer de batalla expirado — victoria de defensores.");
-
-        var world = World.DefaultGameObjectInjectionWorld;
-        if (world == null) return;
-
-        var em = world.EntityManager;
-        var query = em.CreateEntityQuery(typeof(MatchStateComponent));
-        if (!query.IsEmpty)
-        {
-            var entity = query.GetSingletonEntity();
-            var match = em.GetComponentData<MatchStateComponent>(entity);
-            match.victoryConditionMet = true;
-            match.winnerTeam = 2; // Defenders win on timer expiry
-            em.SetComponentData(entity, match);
-        }
-    }
-
-    #endregion
 }

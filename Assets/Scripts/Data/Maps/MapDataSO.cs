@@ -23,6 +23,10 @@ namespace Data.Maps
 
         [Header("Battle Configuration")]
         [SerializeField] private int _battleDurationSeconds = 1800; // En segundos (30 minutos por defecto)
+        [Tooltip("Segundos que se añaden al reloj por cada zona capturada.")]
+        [SerializeField] private int _captureTimeExtensionSeconds = BattleClock.DefaultCaptureExtensionSeconds;
+        [Tooltip("Las extensiones nunca dejan el reloj por encima de esto.")]
+        [SerializeField] private int _maxBattleDurationSeconds = BattleClock.DefaultMaxBattleSeconds;
 
         [Header("Scene Reference")]
         [SerializeField] private GameObject _preparationMap;
@@ -36,6 +40,8 @@ namespace Data.Maps
         public List<string> attackerSpawnPointIds => _attackerSpawnPointIds;
         public List<string> defenderSpawnPointIds => _defenderSpawnPointIds;
         public int battleDuration => _battleDurationSeconds;
+        public int captureTimeExtensionSeconds => _captureTimeExtensionSeconds;
+        public int maxBattleDurationSeconds => _maxBattleDurationSeconds;
         public GameObject preparationMap => _preparationMap;
 
         #endregion

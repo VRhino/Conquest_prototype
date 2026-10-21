@@ -54,6 +54,22 @@ public static class BattleBootstrapRequests
 [UpdateBefore(typeof(MatchControllerSystem))]
 public partial class BattleBootstrapSystem : SystemBase
 {
+    /// <summary>Starts (or restarts) the battle clock from the battle and its map (L7-1).</summary>
+    void StartBattleClock(BattleData battle)
+    {
+        var map = battle.mapData;
+        var clock = new BattleClockComponent
+        {
+            remainingSeconds = BattleClock.InitialSeconds(battle.BattleTimer, map != null ? map.battleDuration : 0),
+            maxSeconds = map != null ? map.maxBattleDurationSeconds : BattleClock.DefaultMaxBattleSeconds,
+            captureExtensionSeconds = map != null ? map.captureTimeExtensionSeconds : BattleClock.DefaultCaptureExtensionSeconds,
+        };
+        if (SystemAPI.TryGetSingletonEntity<BattleClockComponent>(out var entity))
+            EntityManager.SetComponentData(entity, clock);
+        else
+            EntityManager.AddComponentData(EntityManager.CreateEntity(), clock);
+    }
+
     protected override void OnUpdate()
     {
         var battle = BattleBootstrapRequests.Battle;
@@ -106,6 +122,7 @@ public partial class BattleBootstrapSystem : SystemBase
                         EntityManager.SetComponentData(matchEntity, match);
                         var controller = World.GetExistingSystemManaged<MatchControllerSystem>();
                         if (controller != null) controller.Enabled = true;
+                        StartBattleClock(battle);
                     }
                 }
                 else
