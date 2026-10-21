@@ -23,6 +23,7 @@ public partial class MeleeContactResolutionSystem : SystemBase
         int pendingCount = MeleeContactQueue.Pending.Count;
         if (pendingCount == 0) return;
         var em = EntityManager;
+        uint tick = CombatRandom.Tick(SystemAPI.Time.ElapsedTime);
         var contactsByAttacker = _contactsByAttacker;
         contactsByAttacker.Clear();
         for (int i = 0; i < pendingCount && MeleeContactQueue.Pending.TryDequeue(out var contact); i++)
@@ -104,7 +105,8 @@ public partial class MeleeContactResolutionSystem : SystemBase
             if (!em.Exists(damageProfile) || !em.HasComponent<DamageProfileComponent>(damageProfile))
                 continue;
 
-            bool critical = Random.value <= criticalChance;
+            // Seeded by (tick, attacker): the same hit rolls the same on replay or server (L1-05).
+            bool critical = CombatRandom.RollCritical(tick, contact.attacker, criticalChance);
             var eventEntity = em.CreateEntity(_damageEventArchetype);
             em.SetComponentData(eventEntity, new PendingDamageEvent
             {

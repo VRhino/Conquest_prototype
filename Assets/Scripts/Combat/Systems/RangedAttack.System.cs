@@ -28,7 +28,7 @@ public partial class RangedAttackSystem : SystemBase
         bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
             || match.currentState == MatchState.InBattle;
         float dt   = SystemAPI.Time.DeltaTime;
-        uint  seed = (uint)(SystemAPI.Time.ElapsedTime * 10000.0 + 1.0);
+        uint  tick = CombatRandom.Tick(SystemAPI.Time.ElapsedTime);
 
         var ecb              = _ecbSystem.CreateCommandBuffer();
         var transformLookup  = GetComponentLookup<LocalTransform>(true);
@@ -37,7 +37,6 @@ public partial class RangedAttackSystem : SystemBase
         var teamLookup       = GetComponentLookup<TeamComponent>(true);
         var isDeadLookup     = GetComponentLookup<IsDeadComponent>(true);
 
-        uint unitIndex = 0;
 
         foreach (var (combat, rangedState, rangedStats, weapon, transform, entity) in
                  SystemAPI.Query<
@@ -126,9 +125,8 @@ public partial class RangedAttackSystem : SystemBase
                 continue;
             }
 
-            // Roll critical (unique seed per unit per frame)
-            var   rngCrit    = new Unity.Mathematics.Random(seed + unitIndex * 1234567u);
-            bool  crit       = rngCrit.NextFloat() < weapon.ValueRO.criticalChance;
+            // Seeded by (tick, shooter), not by query order (L1-05).
+            bool  crit       = CombatRandom.RollCritical(tick, entity, weapon.ValueRO.criticalChance);
             float multiplier = crit ? weapon.ValueRO.criticalMultiplier : 1f;
 
             // Compute direction with accuracy scatter.
@@ -139,7 +137,7 @@ public partial class RangedAttackSystem : SystemBase
             float3 dir     = baseDir;
             if (spread > 0f)
             {
-                var rngSpread = new Unity.Mathematics.Random(seed + unitIndex * 7654321u);
+                var rngSpread = CombatRandom.ForHit(tick, entity, CombatRandom.SpreadSalt);
                 dir = math.normalizesafe(baseDir + new float3(
                     rngSpread.NextFloat(-spread, spread),
                     0f,
@@ -175,7 +173,6 @@ public partial class RangedAttackSystem : SystemBase
                 : 1f;
             state.isFiring = true;    // consumed by UnitAnimationAdapter this frame
 
-            unitIndex++;
         }
     }
 }

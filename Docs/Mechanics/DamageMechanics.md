@@ -18,7 +18,7 @@ Características clave:
 |---|---|---|
 | Fórmula (§5) | `Combat/DamageFormula.cs` (`DamageFormula.Compute`, pura; constantes en `CombatTuning`) | Sincronizado (D1 y L1-03 de `Docs/Design/Aprendizajes_Referencia.md`) |
 | Escudo (§6) | `DamageCalculation.System.cs`, `ShieldHitboxBehaviour`, `BlockRegen.System.cs` | Sincronizado; la orientación no se usa |
-| Crítico (§5.3) | `MeleeContactResolution.System.cs`, `RangedAttack.System.cs` | Sincronizado |
+| Crítico (§5.3) | `CombatRandom.RollCritical` desde `MeleeContactResolution.System.cs` y `RangedAttack.System.cs` | Sincronizado; tirada reproducible (L1-05) |
 
 ---
 
@@ -119,7 +119,7 @@ dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura      (nunca neg
 
 | Bonificación | Condición de activación | Fórmula |
 |---|---|---|
-| **Crítico** | tirada `≤ criticalChance` del arma | `multiplier = criticalMultiplier` (ej. 1.5×) |
+| **Crítico** | tirada `< criticalChance` del arma, sembrada por (tick, atacante) con `CombatRandom` (L1-05) | `multiplier = criticalMultiplier` (ej. 1.5×) |
 | **Cinética** | `attackerSpeed > 0` | `× (1 + (velocidad / 5.0) × kineticMultiplier)`; `kineticMultiplier` del arma (0.3 si no hay) |
 | **Altura** | Atacante > 0.5 m sobre el objetivo | `× (1 + deltaAltura × 0.1)` (~10 % por metro) |
 
