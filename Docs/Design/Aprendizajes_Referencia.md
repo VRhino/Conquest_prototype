@@ -339,7 +339,7 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 | 8 | `Docs/Mechanics/DamageMechanics.md` | `forwardBlockDotThreshold` y orientación | `DamageCalculation` no los usa | Del informe L1, sin comprobar; **doc corregido (D1, 2026-10-21)** |
 | 9 | Código | `FormationAdaptationSystem` calcula `requiresAdaptation` | Nadie lo consume (TODO en `UnitFollowFormation`) | Del informe L3, sin comprobar; **doc corregido (D1, 2026-10-21)** |
 | 10 | Informe L2 | "No hay entrada Q/E/R/F" | `HeroInputSystem` sí escribe `UseSkill1/UseSkill2/UseUltimate` (`HeroInput.System.cs:56-58`); falta el consumidor | Corregido |
-| 11 | Escenas de batalla | `HeroAttackSystem` y `HeroStaminaSystem` exigen `HeroGameplayConfigComponent` (`RequireForUpdate`) | `HeroGameplayConfigAuthoring` solo está en `SettlementHeroWorld.unity`; ninguna subescena de batalla lo tiene | Encontrado en D1 (estático): comprobar en juego si el héroe ataca y gasta aguante; si no, añadir el authoring a las subescenas de batalla |
+| 11 | Escenas de batalla | `HeroAttackSystem` y `HeroStaminaSystem` exigen `HeroGameplayConfigComponent` (`RequireForUpdate`) | `HeroGameplayConfigAuthoring` solo está en `SettlementHeroWorld.unity`; ninguna subescena de batalla lo tiene | **Confirmado en juego y corregido (2026-10-21):** sin la config, `HeroAttackSystem` (también el ataque de los héroes IA) y `HeroStaminaSystem` no corrían en batalla. Añadido `HeroGameplayConfig` a las dos subescenas de batalla; test `BattleSubsceneConfigTests` |
 
 Cierre de la verificación: se confirmaron 13 afirmaciones (Q/E/R/F sin lanzador con matiz de input, huecos de formación,
 `NoObstacleAvoidance` y aliados ignorados, `frameCount % 5`, `MatchTimer` en MonoBehaviour, `DamageMechanics.md`
