@@ -30,4 +30,12 @@ public struct NavAgentComponent : IComponentData
     public double nextProjectionRefreshTime;
     public double nextFormationRetryTime;
     public double nextCommandRetryTime;
+
+    /// <summary>Requested slot of the previous frame and its smoothed horizontal velocity (destination lead).</summary>
+    public Unity.Mathematics.float3 previousRequestedSlot;
+    public Unity.Mathematics.float3 slotVelocity;
+    public bool hasPreviousRequestedSlot;
+
+    /// <summary>Closing in on the combat target until the stop distance; set again beyond the resume distance.</summary>
+    public bool combatApproaching;
 }

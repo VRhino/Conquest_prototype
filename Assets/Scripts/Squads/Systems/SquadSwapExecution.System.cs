@@ -132,7 +132,7 @@ public partial class SquadSwapExecutionSystem : SystemBase
                         snapshotAllowsSpawn = !entry.hasSnapshot || entry.totalUnits > 0;
                         break;
                     }
-            if (!snapshotAllowsSpawn || definition.formationLibrary.Value.formations[formationIndex].gridPositions.Length == 0)
+            if (!snapshotAllowsSpawn || FormationLayout.Capacity(ref definition.formationLibrary.Value.formations[formationIndex]) == 0)
             {
                 ecb.RemoveComponent<SquadSwapExecuteTag>(entity);
                 continue;

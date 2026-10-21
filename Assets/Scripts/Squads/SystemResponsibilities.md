@@ -95,10 +95,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - RetreatLogic persiste efectivos y limpia la referencia solo si sigue apuntando a la escuadra retirada. Spawning excluye dueño muerto y reservas eliminadas.
 
 ### FormationSystem
-- **Responsabilidad**: Calcula posiciones de formación según tipo y centro del squad
-- **Output**: `UnitTargetPositionComponent` por unidad
-- Consume `SquadResolvedOrderComponent.formation` independientemente de movimiento; confirma formación, slots, espaciado y cooldown tras validar capacidad del patrón.
-- Usa centro fraccional y rotación normalizada. En cambios explícitos reasigna slotIndex; la actualización continua conserva esos índices tras bajas.
+- **Responsabilidad**: Único escritor de la disposición de la escuadra (`FormationComponent`: formación, plantilla, espaciado, escala, semilla) y de cada `UnitGridSlotComponent` (ranura, posición local, fila, papel, rumbo, desplazamiento local).
+- **Datos**: `FormationDefinition` (plantillas por soldados vivos, espaciado propio, ruido, Scatter, tabla de posturas) horneado en `FormationLibraryBlob`; funciones puras en `FormationLayout`.
+- **Cuándo rehace la disposición**: cambio de formación pedido (con cooldown), cambio de plantilla por bajas, o `SquadFormationSpacingRequest` (que consume y elimina).
+- **Reparto**: en una disposición nueva, cada unidad toma la ranura libre más cercana (voraz, solo en el evento); si no cambia la plantilla, cada unidad conserva su ranura tras bajas.
+- **Output**: también el `UnitTargetPositionComponent` inicial; después lo mantiene `GridFormationUpdateSystem`, que solo gira el desplazamiento local con el ancla.
 
 ### UnitFormationStateSystem
 - **Responsabilidad**: Gestiona todos los cambios de estado de unidades (Moving/Formed/Waiting)
@@ -109,7 +110,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: Única autoridad para decisiones NavMesh por unidad: destino + rotación
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]` `[UpdateBefore(UnitFollowFormationSystem)]`
 - **Owner exclusivo**: `agent.SetDestination()` y `agent.updateRotation`
-- **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition)
+- **Destino**: formación slot (default) ó stop-point cerca del target (si hay combatTarget y orden ≠ HoldPosition); ya en alcance, el punto donde termina de frenar (`MeleeReach.BrakingStopPoint`), nunca "aquí" yendo deprisa
 - Mantener posición preserva el ancla y los slots incluso en combate. Seguimiento aplica leash también en `InCombat`; `Attack` permite perseguir. Sin objetivo elegible se vuelve al slot respetando `Waiting`.
 - Lee la orden desde `UnitOwnerComponent.squad`. Proyecta slots y stop-points al NavMesh. `NavAgentComponent` conserva el destino efectivo y usa `navMeshDestinationChangeThreshold` para evitar reemitir destinos sin cambios; fallos de proyección/path usan fallback estable y reintentan cuando cambia el slot.
 - **Rotación combate**: Si dist ≤ 3.5u → `updateRotation=false` + rota `LocalTransform` para mirar al target
@@ -117,9 +118,15 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **`UnitTargetPositionComponent`**: solo lectura — nunca escribe (ownership exclusivo de sistemas de formación)
 - **Llegada**: `UnitFormationStateSystem` y `SquadNavigationSystem` comparan contra el destino efectivo asociado al slot solicitado.
 
+### MeleeContactRingSystem
+- **Responsabilidad**: Anillo de contacto (C11, L-7): reserva para cada atacante cuerpo a cuerpo una posición en el anillo de su objetivo (radio = menor distancia de parada, ⌊2π·r / (2·bodyRadius + contactRingMargin)⌋ posiciones en ángulos fijos del mundo); con el anillo lleno, espera (slot −1)
+- **Owner exclusivo**: `MeleeContactSlotComponent`
+- **Orden**: `[UpdateAfter(UnitTargetingSystem)]` `[UpdateBefore(UnitNavMeshSystem)]`
+- **Regla**: Sin cupo duro (D6): el cupo sigue en `UnitTargetingSystem`. Se reconstruye cada frame desde los atacantes vivos; muerte o cambio de objetivo liberan la posición sin eventos. `UnitNavMeshSystem` solo lee la reserva (va a la posición, o espera a `d_reanudar + s_arco`)
+
 ### UnitFollowFormationSystem
-- **Responsabilidad**: Mueve unidades sin NavMesh + aplica rotación Formed para unidades NavMesh
-- **Output**: `LocalTransform` (non-NavMesh), `navAgent.transform.rotation` (NavMesh Formed state)
+- **Responsabilidad**: Velocidad de seguimiento y marcha (C9, `UnitMovementGearComponent`) + rotación Formed para unidades NavMesh
+- **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido; hacia un destino quieto, como mucho √(2·a·d) para llegar frenando), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
 - **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 
@@ -138,6 +145,12 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Solapamiento exacto**: dirección determinista por par de entidades; no se omite el contacto.
 - **Ref**: `Docs/Mechanics/BodyblockSystem.md`
 
+### UnitAvoidanceSystem
+- **Responsabilidad**: Evitación por velocidad entre aliados (ORCA, C14); único escritor de la velocidad evitada (`agent.velocity`).
+- **Regla**: enemigos no se esquivan (D2); dentro de la escuadra solo las unidades que se mueven, con radio combinado 0,9 × espaciado; la velocidad cambia como mucho a la aceleración del agente.
+- **Orden**: después de `UnitFollowFormationSystem`, antes de `UnitBodyblockSystem` y `NavMeshPositionSyncSystem`.
+- **Ref**: `Docs/Mechanics/BodyblockSystem.md`, `Docs/Design/Movimiento_Formaciones.md` §10-11
+
 ### NavMeshPositionSyncSystem
 - **Responsabilidad**: captura resultados físicos del `NavMeshAgent` después del movimiento.
 - **Posición ECS**: copia la posición del agente válido solo cuando `NavAgentComponent.syncPositionFromNavMesh` está activo; no escribe la rotación.
@@ -149,11 +162,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - Para unidades con snapshot de NavMesh usa la velocidad confirmada que publicó `NavMeshPositionSyncSystem`, evitando volver a consultar el componente managed; conserva el fallback por delta de pose para entidades sin snapshot de agente.
 - **Orden**: después de `NavMeshPositionSyncSystem` y `UnitRotationResolutionSystem`.
 
-### FormationStanceSystem
-- **Responsabilidad**: Lee milestone tags de pulso 1 frame (`UnitStartedMovingTag`, `UnitArrivedAtSlotTag`) → actualiza `UnitFormationStanceComponent` + propaga `CurrentStance` y `SlotRow` a `UnitAnimationMovementComponent`
+### UnitPostureSystem
+- **Responsabilidad**: Único escritor de `UnitFormationStanceComponent`: postura por papel de ranura según la tabla de la formación (formado / en marcha); en melé conserva la de formado. Propaga postura, fila y papel a `UnitAnimationMovementComponent`.
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]`
-- **NO hace**: no cambia estado de formación (`UnitFormationStateComponent`), no mueve unidades, no escribe `SquadStateComponent`
-- **Ref**: `Docs/Mechanics/FormationMilestoneSystem.md`
+- **NO hace**: no cambia estado de formación, no mueve unidades.
+- **Ref**: `Docs/Mechanics/FormationPostures.md`
 
 ### DestinationMarkerSystem
 - **Responsabilidad**: Lee estado de squad para mostrar el marcador de destino (Hold Position)

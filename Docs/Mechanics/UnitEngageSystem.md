@@ -46,13 +46,24 @@ O(total_units). Evita joins por unidad.
 ```
 destination = formationSlot    // default: formation slot (UnitTargetPositionComponent)
 
-if combatTarget exists:
-    dist     = distanceXZ(unit, target)
-    stopDist = attackRange × 0.75       // dentro del AABB de ataque
+// Correa (C6): un Attack que viene de una reacción de combate solo persigue dentro de
+// unitLeashDistance desde el slot; el Attack del jugador o de la IA persigue sin correa.
+if combatTarget exists AND CanPursueTarget(order, resolvedOrder.source, slot, target, leash):
+    dist       = distanceXZ(unit, target)
+    // Parada derivada (C5, MeleeReach): cuerpos separados y objetivo dentro del golpe.
+    reach      = attackRange − bodyRadius
+    stopDist   = clamp(2·bodyRadius + meleeStopReachFraction·reach,
+                       2·bodyRadius + 0.05, attackRange + bodyRadius)
+    resumeDist = attackRange + bodyRadius        // a distancia: range·rangedStopFraction / range
+    // Histéresis: se acerca hasta stopDist y no vuelve a avanzar hasta pasar resumeDist.
+    if dist > resumeDist: combatApproaching = true
+    elif dist <= stopDist: combatApproaching = false
 
     // Destino
-    if order != HoldPosition AND dist > stopDist:
-        destination = targetPos + normalize(unitPos - targetPos) × stopDist
+    if order != HoldPosition AND combatApproaching:
+        destination = targetPos + rotatedDir(±45°) × stopDist
+    elif order != HoldPosition:
+        destination = unitPos                    // dentro del alcance: quieto
 
     // Rotación
     if dist <= EngagementRange (3.5u):
@@ -70,8 +81,19 @@ agent.SetDestination(destination)
 
 | Constante | Valor | Descripción |
 |-----------|-------|-------------|
-| `StopDistanceFactor` | `0.75f` | Fracción de `attackRange` donde la unidad se detiene |
-| `EngagementRange` | `3.5f` | Distancia (u) para activar rotación manual |
+Todas viven en `MovementTuningConfig` (`DefaultMovementTuning.asset`):
+
+| Constante | Valor | Descripción |
+|-----------|-------|-------------|
+| `bodyRadius` | `0.5` | Radio del cuerpo (D10), para parada, "en rango" y evitación |
+| `meleeStopReachFraction` | `0.6` | Parte del alcance útil (`attackRange − bodyRadius`) que se recorre más allá del contacto |
+| `rangedStopFraction` | `0.92` | Parada a distancia, como fracción de `range` |
+| `combatFacingRange` | `3.5` | Distancia para activar la rotación manual hacia el objetivo |
+| `combatTurnRate` | `450` °/s | Tope del giro de combate (C7, `UnitRotationResolutionSystem`) |
+
+"En rango" (`UnitAttackSystem`, `UnitTargetingSystem`) usa `MeleeReach.InAttackRange`:
+`dist ≤ attackRange + bodyRadius`, porque `attackRange` llega al borde del hitbox, no al centro del objetivo.
+El baker de escuadras avisa si un arma deja menos de 0,2 m de alcance útil más allá del cuerpo.
 
 ## Relación con UnitFollowFormationSystem
 

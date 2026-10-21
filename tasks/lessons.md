@@ -295,3 +295,43 @@
 - Un censo de renderers puede incluir cientos de miles de piezas modulares inactivas. Conservar totales completos y limitar filas de detalle a una muestra activa; no serializar inventarios enormes junto a una medición de rendimiento.
 - Cambiar UniversalRendererData.renderingMode desde una herramienta no garantiza persistencia. Marcar el renderer propio como dirty, guardarlo y comprobar el modo tras recarga; reaplicar la configuración a clones experimentales existentes antes de medir GRD.
 - Unity Test Runner puede abortar un IEnumerator anidado sin disponer el enumerador padre. Restaurar overrides globales también en UnityTearDown; no depender exclusivamente del finally del wrapper cuando una aserción interna falla.
+
+## Lote 1 de movimiento y escenarios medidos por MCP (2026-10-20)
+
+- Con el editor manejado por MCP, la ventana Game no tiene el foco y el Input System descarta el teclado. Los escenarios de PlayMode con un teclado virtual usan una copia temporal de `InputSettings` (`AllDeviceInputAlwaysGoesToGameView` + `IgnoreFocus`) y la restauran al acabar. Si el objeto anterior fue destruido, se crea uno por defecto.
+- En `BattleTestScene` la escuadra local no arranca en FollowHero: hay que pulsar C (o fijar la orden) antes de esperar que siga al héroe. El héroe remoto aparece unos 40 m por delante (+z), así que un escenario de marcha debe ir hacia −z para no acabar en combate.
+- `BattleSceneIntegrationTests` falla en SetUp si falta el paquete ignorado por git «Travis Game Assets» (`HitImpactEffectManager.hitEffectPrefab`). No se tapa en general: solo los escenarios explícitos de medición ignoran los errores registrados.
+- `run_tests` en PlayMode responde 400 aunque la ejecución sí arranca. Esperar con `wait_for` a que `EditorApplication.isPlaying` pase a true y luego a false, y leer `test_status`. No lanzar otra ejecución hasta que el editor haya salido de Play Mode.
+- Un umbral de reenvío de destino demasiado fino duplica `SetDestination` en cuanto la tropa sigue de verdad al héroe. Para medirlo, separar por fases (marcha frente a parada) en lugar de usar una media global. Para no duplicar las proyecciones de NavMesh, adelantar el slot ya proyectado en lugar de proyectar el punto adelantado.
+- Un sistema de métricas de solo lectura con `ProfilerRecorder` debe usar el nombre de marcador de Entities, que es `"<nombre del World> <nombre del sistema>"`.
+
+## Lote 2 de movimiento (2026-10-20)
+
+- Burst no encontró como punto de entrada los `IJobParallelFor` anidados en una clase `static` (el log decía "not a known Burst entry point" y el job corría en managed, igual de lento con Burst activado que sin él). Declarar los jobs como structs de nivel superior y comprobar con un benchmark que Burst los aplica: comparar el tiempo con `BurstCompiler.Options.EnableBurstCompilation` en false y en true.
+- ORCA con un radio combinado igual al espaciado de la rejilla deja cada slot en contacto con sus vecinos, y una fila formada es un muro que ORCA no rodea (no planifica caminos). Dentro de la escuadra, esquivar solo a las unidades que se mueven y con un radio por debajo del espaciado.
+- Un umbral de cambio de marcha (Walk → Run) por encima del retraso real de arranque nunca se dispara. Medir primero el retraso en marcha estable (≈ 1 m) y poner la entrada por debajo y la salida por encima del retraso al que se quiere volver.
+- Una ley de recuperación proporcional frena la llegada cuando el slot ya está quieto. Con el slot parado, dejar que el agente llegue a la velocidad de su marcha y frene con su propio `autoBraking`.
+- Al limitar la persecución (correa), revisar los escenarios que daban por hecho el contacto: S6 paraba al empezar la reacción, a 8-9 m del enemigo, y dejó de llegar a la melé.
+- S6 cambia mucho de un run a otro, y dentro de la suite completa se comporta distinto que solo. Comparar con dos o más corridas y mirar el CSV (reacción, objetivo, ataque) antes de atribuir un cambio al código.
+
+## Formaciones por datos y reparación del movimiento (2026-10-20)
+
+- Tras añadir un campo a un struct que usan jobs Burst, comprobar los tests con Burst activado y desactivado. Una vez Burst siguió ejecutando la disposición vieja del struct (leía `steered` donde ahora estaba `squadSpacing`) hasta que se reordenaron los campos y se recompiló. Síntoma: los mismos resultados erróneos con Burst, correctos sin él.
+- Para sustituir un ScriptableObject sin romper referencias, renombrar la clase y el archivo conservando el `.meta` (mismo GUID de script), leer los datos viejos con `FormerlySerializedAs` en un campo oculto y convertirlos una vez desde un menú del editor. Escuadras, interfaz y prefabs siguen apuntando al mismo asset.
+- No identificar unidades por su índice de slot en las métricas: cuando el reparto cambia, todas parecen "teletransportarse" en el mismo frame. Usar la entidad.
+- Escribir `agent.velocity` directamente se salta la aceleración del agente (picos de 200 m/s²). Partir de la velocidad actual y limitar el cambio por frame; permitir frenar más rápido que acelerar, o las unidades pegadas a su slot se pasan medio metro cuando el héroe para.
+- "Ranura k = soldado k" solo funciona si las plantillas de todas las formaciones mantienen la ranura k en una zona parecida. Si no, al cambiar de formación la tropa se cruza y ORCA la bloquea; repartir por cercanía en el evento.
+- Antes de diseñar una "dirección de bloqueo", comprobar cómo se decide de verdad: aquí el bloqueo es el collider del escudo colgado de la mano, y `UnitShieldComponent.orientation` no lo leía nadie.
+- Una métrica de solapes con umbral fijo marca como fallo una formación compacta a propósito (Testudo a 0,8 m). Hacerla relativa al espaciado de la formación.
+- En Bash, los heredocs con plantillas JS que contienen comillas invertidas y `${…}` pueden romper el comando. Escribir el script a un archivo con la herramienta de escritura y ejecutarlo.
+
+## Frenado de llegada (M12, M13, 2026-10-21)
+
+- Antes de arreglar un pico, demostrar de dónde viene. Los picos de S6 se habían atribuido al bodyblock; un registro temporal de cada caída de `agent.velocity` mayor de 1,5 m/s en un frame, con el estado del agente (camino, destino, aturdimiento), mostró que eran paradas del propio `NavMeshAgent`. Y el CSV solo graba la escuadra enfocada: no sirve para medir distancias a enemigos.
+- El `autoBraking` del `NavMeshAgent` no frena con antelación: si llega a un destino quieto a 4 m/s, para en un frame. Mandar "quédate aquí" (destino = posición actual) a una unidad en marcha es una parada instantánea. Limitar la velocidad con √(2·a·d) hacia destinos quietos y, para parar, apuntar al punto donde termina de frenar.
+- No poner rampa (aceleración limitada) a una corrección de posición tipo muelle como el bodyblock: con retardo se pasa, sigue empujando cuando el contacto ya terminó y oscila. Si el problema es el tamaño del empujón, limitar su tope.
+- S6 varía tanto entre corridas (solapes 8-15, picos 1,9-3,5 % sin cambiar nada) que una sola corrida no decide nada. Usar un parámetro que apague el cambio (aquí `arrivalDecelerationFraction` = 0) y comparar 3 o más corridas de cada lado sin recompilar.
+
+## Reproducibilidad de los escenarios (M10, 2026-10-21)
+
+- Un escenario que solo fija el paso de tiempo mientras graba no es reproducible: la carga y la preparación corren al ritmo real del editor y cada corrida empieza a medir en otro estado. Fijar `Time.captureFramerate` desde el `SetUp`, restaurarlo en el `TearDown` y volver a sembrar `Random` justo antes del escenario. Comprobarlo con `cmp` sobre las columnas de posición de dos CSV: deben coincidir hasta el primer evento no determinista.

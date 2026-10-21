@@ -22,14 +22,13 @@ public struct SquadUnitSpawnContext
 public static class SquadUnitSpawnBuilder
 {
     public static void Configure(EntityCommandBuffer ecb, Entity unit,
-        SquadUnitSpawnContext context, int index, int2 gridPosition,
-        float3 gridOffset, float3 worldPosition)
+        SquadUnitSpawnContext context, in UnitGridSlotComponent slot, float3 worldPosition)
     {
         var data = context.data;
         ecb.AddComponent(unit, new UnitOwnerComponent
         { squad = context.squad, hero = context.hero });
 #if UNITY_EDITOR
-        ecb.SetName(unit, $"Unit_{index}_{context.squadType}_Sq{context.instanceId}");
+        ecb.SetName(unit, $"Unit_{slot.slotIndex}_{context.squadType}_Sq{context.instanceId}");
 #endif
         ecb.AddComponent(unit, new LocalTransform
         {
@@ -47,12 +46,7 @@ public static class SquadUnitSpawnBuilder
         });
 
         ecb.AddComponent<UnitCombatComponent>(unit);
-        ecb.AddComponent(unit, new UnitSpacingComponent
-        {
-            minDistance = context.config.unitMinDistance,
-            repelForce = context.config.unitRepelForce,
-            Slot = gridPosition
-        });
+        ecb.AddComponent(unit, new MeleeContactSlotComponent { target = Entity.Null, slot = -1 });
         ecb.AddComponent(unit, new UnitTargetPositionComponent { position = worldPosition });
         ecb.AddComponent(unit, new UnitFormationStateComponent
         { State = UnitFormationState.Formed });
@@ -67,12 +61,7 @@ public static class SquadUnitSpawnBuilder
         ecb.SetComponentEnabled<IsUnderAttackTag>(unit, false);
 
         ecb.AddComponent(unit, new UnitFormationStanceComponent { stance = UnitStance.Normal });
-        ecb.AddComponent(unit, new UnitGridSlotComponent
-        {
-            gridPosition = gridPosition,
-            slotIndex = index,
-            worldOffset = gridOffset
-        });
+        ecb.AddComponent(unit, slot);
         ecb.AddComponent(unit, new UnitOrientationComponent
         {
             orientationType = UnitOrientationType.MatchHeroDirection,
@@ -89,7 +78,8 @@ public static class SquadUnitSpawnBuilder
             StoppedTime = 0f,
             PreviousPosition = worldPosition,
             CurrentStance = UnitStance.Normal,
-            SlotRow = gridPosition.y
+            SlotRow = slot.row,
+            SlotRole = (int)slot.role
         });
         ecb.AddComponent(unit, new UnitStatsComponent
         {
@@ -136,6 +126,7 @@ public static class SquadUnitSpawnBuilder
             kineticMultiplier = data.kineticMultiplier
         });
         ecb.AddComponent<UnitRotationIntentComponent>(unit);
+        ecb.AddComponent<UnitMovementGearComponent>(unit);
         ecb.AddComponent<WeaponHitboxActiveTag>(unit);
         ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);
 

@@ -18,7 +18,7 @@ using UnityEditor.SceneManagement;
 using ConquestTactics.Animation;
 using ConquestTactics.Visual;
 
-public class BattleSceneIntegrationTests
+public partial class BattleSceneIntegrationTests
 {
     const string ScenePath = "Assets/Scenes/BattleTestScene.unity";
     const float ReadyTimeout = 60f;
@@ -56,6 +56,7 @@ public class BattleSceneIntegrationTests
         fullBattleProfile = TestContext.CurrentContext.Test.Name.StartsWith(
             nameof(FullBattlePreparationRenderedPerformanceProfile), StringComparison.Ordinal);
         renderVariant = null;
+        ConfigureMovementBaseline();
         loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
@@ -72,7 +73,7 @@ public class BattleSceneIntegrationTests
         previousBackground = Application.runInBackground;
         previousRandom = UnityEngine.Random.state;
         Application.runInBackground = true;
-        UnityEngine.Random.InitState(7319);
+        UnityEngine.Random.InitState(BaselineRandomSeed);
         var memory = new MemorySave();
         SaveSystem.SetProvider(memory);
         LoadSystem.SetProvider(memory);
@@ -1006,6 +1007,7 @@ public class BattleSceneIntegrationTests
         }
         Application.runInBackground = previousBackground;
         UnityEngine.Random.state = previousRandom;
+        Time.captureFramerate = previousCaptureFramerate;
         if (worldSwapped)
         {
             World.DefaultGameObjectInjectionWorld = previousWorld;

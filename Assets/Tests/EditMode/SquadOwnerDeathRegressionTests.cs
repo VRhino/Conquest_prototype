@@ -19,12 +19,7 @@ public class SquadOwnerDeathRegressionTests
         em.CreateEntity(typeof(MatchStateComponent));
         em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
         { ownerDeathRetreatDuration = 5, retreatArrivalThreshold = 0.5f });
-        using var builder = new BlobBuilder(Allocator.Temp);
-        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
-        var forms = builder.Allocate(ref root.formations, 1);
-        var positions = builder.Allocate(ref forms[0].gridPositions, 3);
-        for (int i = 0; i < 3; i++) positions[i] = new int2(i, 0);
-        blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        blob = TestFormationLibrary.FromCells(new int2(0, 0), new int2(1, 0), new int2(2, 0));
         var definition = em.CreateEntity(typeof(SquadDataComponent), typeof(SquadDefinitionComponent), typeof(SquadDataIDComponent));
         em.SetComponentData(definition, new SquadDefinitionComponent { formationLibrary = blob, unitCount = 3 });
         em.SetComponentData(definition, new SquadDataComponent { baseHealth = 100 });

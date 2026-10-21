@@ -296,9 +296,9 @@ public static class SquadDataService
 
         // Generar índices de formaciones permitidas a partir de las formaciones del ScriptableObject
         var permittedFormations = new List<int>();
-        if (squadData.gridFormations != null)
+        if (squadData.formations != null)
         {
-            for (int i = 0; i < squadData.gridFormations.Length; i++)
+            for (int i = 0; i < squadData.formations.Length; i++)
                 permittedFormations.Add(i);
         }
 

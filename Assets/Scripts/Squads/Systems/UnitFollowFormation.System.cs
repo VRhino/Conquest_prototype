@@ -24,6 +24,9 @@ public partial class UnitFollowFormationSystem : SystemBase
         const float defaultMoveSpeed = 5f; // Fallback en caso de que no haya UnitStatsComponent
 
         float dt = SystemAPI.Time.DeltaTime;
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
+        var followSpeed = FormationFollowSpeed.Settings.From(tuning);
 
         var slotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
         var transformLookup = GetComponentLookup<LocalTransform>();
@@ -104,8 +107,12 @@ public partial class UnitFollowFormationSystem : SystemBase
                                 && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
                                 && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
-                            if (hurryToComander || hasCombatTarget) speedMultiplier *= 2f;
-                            navAgent.speed = baseSpeed * speedMultiplier;
+                            float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
+                                hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
+                            targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, isHoldingPosition,
+                                navAgent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction));
+                            navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
+                                navAgent.acceleration * dt, navAgent.acceleration * tuning.brakingFactor * dt);
                         }
                     }
                     else
@@ -150,6 +157,11 @@ public partial class UnitFollowFormationSystem : SystemBase
                         hasTargetOrientation = true;
                     }
 
+                    // Each slot has its own facing relative to the formation (flanks may face outward).
+                    if (hasTargetOrientation && SystemAPI.HasComponent<UnitGridSlotComponent>(unit))
+                        targetForward = math.mul(quaternion.RotateY(SystemAPI.GetComponent<UnitGridSlotComponent>(unit).headingLocal),
+                            targetForward);
+
                     if (hasTargetOrientation)
                     {
                         float3 horizontalDir = math.normalizesafe(new float3(targetForward.x, 0, targetForward.z));
@@ -157,7 +169,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                             && SystemAPI.HasComponent<UnitRotationIntentComponent>(unit))
                         {
                             quaternion targetRot = quaternion.LookRotationSafe(horizontalDir, math.up());
-                            float rotSpeed = 5f;
+                            float rotSpeed = tuning.formedRotationSpeed;
                             if (SystemAPI.HasComponent<UnitOrientationComponent>(unit))
                                 rotSpeed = SystemAPI.GetComponent<UnitOrientationComponent>(unit).rotationSpeed;
 
@@ -178,5 +190,55 @@ public partial class UnitFollowFormationSystem : SystemBase
 
             }
         }
+    }
+
+    /// <summary>
+    /// Speed and gear of a NavMesh unit (C9): a unit following its slot matches the slot speed plus a
+    /// catch-up term within its gear; hurry and combat run at full Run speed; other states walk.
+    /// </summary>
+    /// <summary>Braking cap towards the last command when it stays put (stopped slot, melee stop point).</summary>
+    float ArrivalSpeed(Entity unit, bool isHoldingPosition, float deceleration)
+    {
+        if (!SystemAPI.HasComponent<NavAgentComponent>(unit)) return float.PositiveInfinity;
+        var navigation = SystemAPI.GetComponent<NavAgentComponent>(unit);
+        float slotSpeed = isHoldingPosition ? 0f : math.length(navigation.slotVelocity.xz);
+        if (!navigation.hasIssuedCommand
+            || !FormationFollowSpeed.IsStillDestination(navigation.lastCommandWasFormation, slotSpeed))
+            return float.PositiveInfinity;
+        float3 position = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+        return FormationFollowSpeed.ArrivalSpeed(
+            math.distance(position.xz, navigation.lastCommandDestination.xz), deceleration);
+    }
+
+    float FollowSpeed(Entity unit, float baseSpeed, bool forceRun, bool isHoldingPosition,
+        in FormationFollowSpeed.Settings settings)
+    {
+        var previous = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
+            ? SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : MovementGear.Walk;
+        bool following = SystemAPI.HasComponent<UnitFormationStateComponent>(unit)
+            && SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State == UnitFormationState.Moving
+            && SystemAPI.HasComponent<UnitTargetPositionComponent>(unit);
+
+        MovementGear gear;
+        float speed;
+        if (forceRun || !following)
+        {
+            gear = forceRun ? MovementGear.Run : MovementGear.Walk;
+            speed = FormationFollowSpeed.MaxSpeed(baseSpeed, gear, settings);
+        }
+        else
+        {
+            float3 position = SystemAPI.GetComponent<LocalTransform>(unit).Position;
+            float3 slot = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+            float distance = math.distance(position.xz, slot.xz);
+            float slotSpeed = !isHoldingPosition && SystemAPI.HasComponent<NavAgentComponent>(unit)
+                ? math.length(SystemAPI.GetComponent<NavAgentComponent>(unit).slotVelocity.xz) : 0f;
+            gear = FormationFollowSpeed.Gear(previous, distance, false, settings);
+            speed = FormationFollowSpeed.Speed(baseSpeed, slotSpeed, distance, gear, settings);
+        }
+
+        if (gear != previous && SystemAPI.HasComponent<UnitMovementGearComponent>(unit))
+            SystemAPI.SetComponent(unit, new UnitMovementGearComponent { gear = gear });
+        return speed;
     }
 }

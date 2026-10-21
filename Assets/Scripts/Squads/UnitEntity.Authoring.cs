@@ -10,12 +10,6 @@ public class UnitEntityAuthoring : MonoBehaviour
     [Header("Unit ECS Configuration")]
     [Tooltip("Velocidad base de movimiento")]
     public float baseSpeed = 3.5f;
-
-    [Tooltip("Radio mínimo para evitar colisiones")]
-    public float minDistance = 1.5f;
-
-    [Tooltip("Fuerza de repulsión contra otras unidades")]
-    public float repelForce = 1f;
     [Tooltip("data del escuadrón al que pertenece esta unidad")]
     public SquadData squadData;
 }
@@ -38,12 +32,6 @@ public class UnitEntityBaker : Baker<UnitEntityAuthoring>
         });
         
         AddComponent<UnitCombatComponent>(entity);
-        
-        AddComponent(entity, new UnitSpacingComponent
-        {
-            minDistance = authoring.minDistance,
-            repelForce = authoring.repelForce
-        });
         
         AddComponent<UnitTargetPositionComponent>(entity);
         AddComponent<UnitFormationStateComponent>(entity);

@@ -35,8 +35,11 @@ public partial class UnitNavMeshSystem : SystemBase
     private static int _projectionFrame = -1;
     private static int _projectionRequests;
     private static int _projectionFailures;
+    private static int _setDestinationCalls;
     public static long DebugTotalProjectionRequests { get; private set; }
     public static long DebugTotalProjectionFailures { get; private set; }
+    /// <summary>Debug-only count of NavMeshAgent.SetDestination calls (movement metrics).</summary>
+    public static long DebugTotalSetDestinationCalls { get; private set; }
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetProjectionCounters()
@@ -44,8 +47,10 @@ public partial class UnitNavMeshSystem : SystemBase
         _projectionFrame = -1;
         _projectionRequests = 0;
         _projectionFailures = 0;
+        _setDestinationCalls = 0;
         DebugTotalProjectionRequests = 0;
         DebugTotalProjectionFailures = 0;
+        DebugTotalSetDestinationCalls = 0;
     }
 
     public static int DebugProjectionRequestsThisFrame
@@ -58,6 +63,11 @@ public partial class UnitNavMeshSystem : SystemBase
         get { RefreshProjectionCounters(); return _projectionFailures; }
     }
 
+    public static int DebugSetDestinationCallsThisFrame
+    {
+        get { RefreshProjectionCounters(); return _setDestinationCalls; }
+    }
+
     private static void RefreshProjectionCounters()
     {
         int frame = UnityEngine.Time.frameCount;
@@ -65,13 +75,17 @@ public partial class UnitNavMeshSystem : SystemBase
         _projectionFrame = frame;
         _projectionRequests = 0;
         _projectionFailures = 0;
+        _setDestinationCalls = 0;
     }
 
-    // Stop at 75 % of attackRange — keeps unit inside the directional AABB.
-    private const float StopDistanceFactor = 0.75f;
-
-    // Within this distance the unit turns to face the target manually.
-    private const float EngagementRange = 3.5f;
+    /// <summary>Counts a SetDestination call (accepted or not) and passes its result through.</summary>
+    private static bool CountSetDestinationAnd(bool accepted)
+    {
+        RefreshProjectionCounters();
+        _setDestinationCalls++;
+        DebugTotalSetDestinationCalls++;
+        return accepted;
+    }
 
     protected override void OnCreate()
     {
@@ -93,7 +107,17 @@ public partial class UnitNavMeshSystem : SystemBase
         float retryInterval = hasConfig && config.navMeshFailureRetryInterval > 0f
             ? config.navMeshFailureRetryInterval : 1f;
         double now = SystemAPI.Time.ElapsedTime;
-        float arrivalThreshold = hasConfig ? math.max(0.01f, config.slotArrivalThreshold) : 0.2f;
+        // Movement tuning is optional here so navigation keeps safe defaults in reduced worlds.
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
+        float arrivalThreshold = math.max(0.01f, tuning.arrivalRadiusIn);
+        // Contact distances derive from body radii and weapon reach (C5, MeleeReach).
+        float bodyRadius = tuning.bodyRadius;
+        // Within this distance a melee unit turns to face its target manually.
+        float combatFacingRange = tuning.combatFacingRange;
+        float dt = SystemAPI.Time.DeltaTime;
+        // Below this slot speed the formation command is the slot itself (no lead).
+        float leadSpeedThresholdSq = math.square(hasConfig ? config.anchorMovingSpeedThreshold : 0.1f);
 
         // Movement + rotation decision per NavMesh unit.
         foreach (var (targetPos, formState, navigationState, transform, entity) in
@@ -120,21 +144,38 @@ public partial class UnitNavMeshSystem : SystemBase
             float3 unitPos = transform.ValueRO.Position;
             float3 requestedSlot = targetPos.ValueRO.position;
             var navigation = navigationState.ValueRO;
+            float3 slotVelocity = FormationDestinationPrediction.UpdateSlotVelocity(
+                ref navigation.previousRequestedSlot, ref navigation.hasPreviousRequestedSlot,
+                ref navigation.slotVelocity, requestedSlot, dt, tuning.slotVelocitySmoothing,
+                2f * tuning.destinationLeadMaxDistance);
             DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
                 arrivalThreshold, now, retryInterval, ref navigation);
+            // Project the slot within its own cell first (min(spacing, 0.65), L3-04) so it never lands in a
+            // neighbour's slot; the wide radius is only the fallback.
+            float slotSampleRadius = math.min(sampleRadius, MaxSlotSampleRadius);
+            if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
+            {
+                Entity owner = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
+                if (SystemAPI.HasComponent<FormationComponent>(owner))
+                    slotSampleRadius = math.min(slotSampleRadius,
+                        math.max(FormationDefinition.MinSpacing, SystemAPI.GetComponent<FormationComponent>(owner).spacing));
+            }
             float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
-                unitPos, sampleRadius, retryDistance, destinationChangeThreshold,
+                unitPos, slotSampleRadius, sampleRadius, retryDistance, destinationChangeThreshold,
                 now, retryInterval, ref navigation);
             float3 destination = formationDestination;
             bool usesFormationDestination = true;
 
             // Tactical order controls pursuit independently of combat state.
             SquadOrderType squadOrder = default;
+            OrderSource orderSource = OrderSource.Player;
             if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
             {
                 Entity squad = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
                 if (SystemAPI.Exists(squad) && SystemAPI.HasComponent<SquadStateComponent>(squad))
                     squadOrder = SystemAPI.GetComponent<SquadStateComponent>(squad).currentOrder;
+                if (SystemAPI.Exists(squad) && SystemAPI.HasComponent<SquadResolvedOrderComponent>(squad))
+                    orderSource = SystemAPI.GetComponent<SquadResolvedOrderComponent>(squad).source;
             }
 
             // Read optional combat components
@@ -162,7 +203,7 @@ public partial class UnitNavMeshSystem : SystemBase
                     float3 slotPos    = targetPos.ValueRO.position;
                     float3 enemyPos3D = SystemAPI.GetComponent<LocalTransform>(combatTarget).Position;
                     if (squadOrder != SquadOrderType.HoldPosition
-                        && !CanPursueTarget(squadOrder, slotPos, enemyPos3D, leashDistance))
+                        && !CanPursueTarget(squadOrder, orderSource, slotPos, enemyPos3D, leashDistance))
                         combatTarget = Entity.Null; // out of leash — return to formation slot
                 }
             }
@@ -178,32 +219,67 @@ public partial class UnitNavMeshSystem : SystemBase
                 float2 targetXZ = new float2(targetWorldPos.x, targetWorldPos.z);
                 float  dist     = math.distance(unitXZ, targetXZ);
                 
-                // Ranged units stop immediately when in range; melee units push closer (0.75x) 
-                // to stay inside the directional AABB bounds.
-                float  stopDist = isRanged ? attackRange : (attackRange * StopDistanceFactor);
+                // Stop with bodies apart and the target inside the hit; approach again only beyond the
+                // resume distance, so units do not shuffle in and out at the edge of their reach (C5).
+                float stopDist = isRanged
+                    ? MeleeReach.RangedStopDistance(attackRange, tuning.rangedStopFraction)
+                    : MeleeReach.StopDistance(attackRange, bodyRadius, bodyRadius, tuning.meleeStopReachFraction);
+                float resumeDist = isRanged ? attackRange : MeleeReach.ResumeDistance(attackRange, bodyRadius);
 
-                if (!isHoldingPosition && dist > stopDist)
+                // Contact ring (C11): a reserved slot is the approach point; with the ring full the unit
+                // waits further out, on its own side, instead of piling in.
+                int ringState = 0; // 0 = no ring (fallback fan), 1 = slot, 2 = waiting
+                float2 ringXZ = default;
+                if (!isRanged && SystemAPI.HasComponent<MeleeContactSlotComponent>(entity))
+                {
+                    var ring = SystemAPI.GetComponent<MeleeContactSlotComponent>(entity);
+                    if (ring.target == combatTarget && ring.slot >= 0)
+                    {
+                        ringState = 1;
+                        ringXZ = ContactRing.SlotPosition(targetXZ, ring.slot, ring.slotCount, ring.radius);
+                    }
+                    else if (ring.target == combatTarget)
+                    {
+                        ringState = 2;
+                        float shift = ContactRing.WaitDistance(resumeDist, 2f * bodyRadius + tuning.contactRingMargin)
+                            - stopDist;
+                        stopDist += shift;
+                        resumeDist += shift;
+                    }
+                }
+
+                if (dist > resumeDist) navigation.combatApproaching = true;
+                else if (dist <= stopDist) navigation.combatApproaching = false;
+
+                if (!isHoldingPosition && navigation.combatApproaching)
                 {
                     float2 baseDir = math.normalizesafe(unitXZ - targetXZ);
+                    float2 rotatedDir = baseDir;
+                    if (ringState == 0)
+                    {
+                        // Without a ring reservation: stable per-unit offset (golden ratio), ±45°.
+                        float angleOffset = (math.frac(entity.Index * 0.618034f) - 0.5f) * math.PI * 0.5f;
+                        float cosA = math.cos(angleOffset);
+                        float sinA = math.sin(angleOffset);
+                        rotatedDir = new float2(
+                            baseDir.x * cosA - baseDir.y * sinA,
+                            baseDir.x * sinA + baseDir.y * cosA
+                        );
+                    }
 
-                    // Offset angular estable por unidad (golden ratio → distribución uniforme)
-                    float angleOffset = (math.frac(entity.Index * 0.618034f) - 0.5f) * math.PI * 0.5f; // ±45°
-
-                    float cosA = math.cos(angleOffset);
-                    float sinA = math.sin(angleOffset);
-                    float2 rotatedDir = new float2(
-                        baseDir.x * cosA - baseDir.y * sinA,
-                        baseDir.x * sinA + baseDir.y * cosA
-                    );
-
-                    float2 stopXZ = targetXZ + rotatedDir * stopDist;
+                    float2 stopXZ = ringState == 1 ? ringXZ : targetXZ + rotatedDir * stopDist;
                     destination   = new float3(stopXZ.x, unitPos.y, stopXZ.y);
                     usesFormationDestination = false;
                 }
                 else if (!isHoldingPosition)
                 {
-                    // Already in attack range — stay at current position
-                    destination = unitPos;
+                    // Within reach — come to rest where braking ends (without reaching the target's body);
+                    // aiming at the current position stopped the agent in one frame (M12).
+                    float2 velocityXZ = new float2(agent.velocity.x, agent.velocity.z);
+                    float2 restXZ = MeleeReach.BrakingStopPoint(unitXZ, velocityXZ,
+                        agent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction,
+                        dist - (2f * bodyRadius + MeleeReach.BodyClearance));
+                    destination = new float3(restXZ.x, unitPos.y, restXZ.y);
                     usesFormationDestination = false;
                 }
 
@@ -212,7 +288,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 // por lo que escribir a ECS transform sería sobreescrito en el mismo frame.
                 float facingRange = SystemAPI.HasComponent<UnitRangedStatsComponent>(entity)
                     ? attackRange + 0.25f  // already set to ranged range above, added tolerance
-                    : EngagementRange;
+                    : combatFacingRange;
                 if (dist <= facingRange)
                 {
                     agent.updateRotation = false;
@@ -240,6 +316,8 @@ public partial class UnitNavMeshSystem : SystemBase
             {
                 // Sin combat target activo, o en HoldPosition — NavMesh maneja rotación.
                 agent.updateRotation = true;
+                // A new target is approached until the stop distance.
+                navigation.combatApproaching = true;
             }
 
 
@@ -254,6 +332,26 @@ public partial class UnitNavMeshSystem : SystemBase
             }
             else
             {
+                float commandChangeThreshold = destinationChangeThreshold;
+                if (usesFormationDestination)
+                {
+                    // Lead the moving slot; the arrival check keeps using the real slot (effectiveFormationDestination).
+                    commandChangeThreshold = FormationDestinationPrediction.ChangeThreshold(slotVelocity,
+                        tuning.destinationChangeMin, tuning.destinationChangeSpeedFactor);
+                    if (math.lengthsq(slotVelocity.xz) > leadSpeedThresholdSq && !navigation.formationDestinationFailed)
+                    {
+                        // Lead the already projected slot: no extra NavMesh projection per command; the agent
+                        // paths to the nearest reachable point if the lead leaves the surface.
+                        float3 predicted = FormationDestinationPrediction.Predict(formationDestination, slotVelocity,
+                            tuning.destinationLeadTime, tuning.destinationLeadMaxDistance);
+                        destination = navigation.hasIssuedCommand && navigation.lastCommandWasFormation
+                            && math.distancesq(predicted, navigation.lastCommandDestination)
+                                < math.square(commandChangeThreshold)
+                            ? navigation.lastCommandDestination
+                            : predicted;
+                    }
+                }
+
                 if (!usesFormationDestination
                     && navigation.hasIssuedCommand && !navigation.lastCommandWasFormation
                     && math.distancesq(destination, navigation.lastCommandDestination)
@@ -269,7 +367,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 bool commandStillValid = navigation.hasIssuedCommand
                     && navigation.lastCommandWasFormation == usesFormationDestination
                     && math.distancesq(destination, navigation.lastCommandDestination)
-                        < math.square(destinationChangeThreshold)
+                        < math.square(commandChangeThreshold)
                     && (agent.pathPending
                         || (agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
                         || math.distancesq(unitPos, destination) < math.square(arrivalThreshold));
@@ -277,7 +375,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 {
                     // Keep the current path; issuing it again each frame forces NavMesh to recalculate.
                 }
-                else if (agent.SetDestination(destination))
+                else if (CountSetDestinationAnd(agent.SetDestination(destination)))
                 {
                     navigation.lastCommandDestination = destination;
                     navigation.hasIssuedCommand = true;
@@ -293,8 +391,11 @@ public partial class UnitNavMeshSystem : SystemBase
         }
     }
 
+    /// <summary>Largest radius used to project a slot onto the NavMesh before the wide fallback.</summary>
+    const float MaxSlotSampleRadius = 0.65f;
+
     private static float3 ResolveFormationDestination(NavMeshAgent agent, float3 requested,
-        float3 current, float sampleRadius, float retryDistance,
+        float3 current, float slotSampleRadius, float fallbackSampleRadius, float retryDistance,
         float destinationChangeThreshold, double now,
         float retryInterval, ref NavAgentComponent navigation)
     {
@@ -310,7 +411,9 @@ public partial class UnitNavMeshSystem : SystemBase
 
         navigation.lastFormationRequest = requested;
         navigation.hasEffectiveFormationDestination = true;
-        if (TrySampleDestination(agent, requested, sampleRadius, out float3 resolved))
+        if (TrySampleDestination(agent, requested, slotSampleRadius, out float3 resolved)
+            || (fallbackSampleRadius > slotSampleRadius
+                && TrySampleDestination(agent, requested, fallbackSampleRadius, out resolved)))
         {
             navigation.effectiveFormationDestination = resolved;
             navigation.formationDestinationFailed = false;
@@ -376,10 +479,18 @@ public partial class UnitNavMeshSystem : SystemBase
 
     /// <summary>Movement permission; target acquisition and attacking remain separate.</summary>
     public static bool CanPursueTarget(SquadOrderType order, float3 slot, float3 target, float leashDistance)
+        => CanPursueTarget(order, OrderSource.Player, slot, target, leashDistance);
+
+    /// <summary>
+    /// Only an Attack the player or the AI ordered pursues freely; an Attack produced by a combat
+    /// reaction stays within the leash of the unit's slot (C6).
+    /// </summary>
+    public static bool CanPursueTarget(SquadOrderType order, OrderSource source, float3 slot, float3 target,
+        float leashDistance)
     {
         if (order == SquadOrderType.HoldPosition)
             return false;
-        return order == SquadOrderType.Attack
+        return (order == SquadOrderType.Attack && source != OrderSource.CombatReaction)
             || math.distancesq(slot, target) <= math.square(math.max(0f, leashDistance));
     }
 }

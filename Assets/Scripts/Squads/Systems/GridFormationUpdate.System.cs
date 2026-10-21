@@ -41,8 +41,6 @@ public partial class GridFormationUpdateSystem : SystemBase
             if (!SystemAPI.HasComponent<SquadDefinitionComponent>(squadEntity) ||
                 !SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
                 continue;
-
-            var squadDef  = SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity);
             var squadState = SystemAPI.GetComponent<SquadStateComponent>(squadEntity);
             if (!SystemAPI.HasComponent<FormationComponent>(squadEntity)) continue;
             var formationComp = SystemAPI.GetComponent<FormationComponent>(squadEntity);
@@ -71,8 +69,7 @@ public partial class GridFormationUpdateSystem : SystemBase
                     || target.cachedOrder != squadState.currentOrder
                     || target.cachedState != squadState.currentState
                     || target.cachedSlotIndex != slot.slotIndex
-                    || !math.all(target.cachedGridPosition == slot.gridPosition)
-                    || !math.all(target.cachedWorldOffset == slot.worldOffset)
+                    || !math.all(target.cachedLocalOffset == slot.localOffset)
                     || target.hasTerrainHeight != (terrain != null)
                     || target.terrainInstanceId != terrainId
                     || target.terrainDataId != terrainDataId
@@ -86,62 +83,23 @@ public partial class GridFormationUpdateSystem : SystemBase
             if (!needsUpdate)
                 continue;
 
-            if (!squadDef.formationLibrary.IsCreated
-                || squadDef.formationLibrary.Value.formations.Length == 0) continue;
-            ref var formations = ref squadDef.formationLibrary.Value.formations;
-            int formationIndex = -1;
-            for (int f = 0; f < formations.Length; f++)
-                if (formations[f].formationType == formationComp.currentFormation)
-                { formationIndex = f; break; }
-            if (formationIndex < 0) continue;
-            ref BlobArray<int2> gridPositions = ref formations[formationIndex].gridPositions;
-            if (gridPositions.Length == 0) continue;
-            float2 formationCenter = FormationPositionCalculator.CalculateFormationCenter(ref gridPositions);
-            
             float3 heroPos = anchorComp.position;
 
             // Obtener el componente de hold position si existe (needed by FormationPositionCalculator)
             SquadHoldPositionComponent? holdComponent = null;
             if (SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
                 holdComponent = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
-            
-            // Actualizar target positions basadas en grid slots
+
+            // Slot offsets come from FormationSystem; here they only follow the anchor (position and rotation).
             for (int i = 0; i < units.Length; i++)
             {
                 Entity unit = units[i].Value;
                 if (!SystemAPI.HasComponent<UnitGridSlotComponent>(unit)) continue;
-                
-                var gridSlot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
-                
-                // Use unified position calculator with current formation
-                float3 targetPos = float3.zero;
-                int slotIndex = gridSlot.slotIndex;
-                if (slotIndex >= 0 && slotIndex < gridPositions.Length)
-                {
-                    // Rotation already computed by SquadAnchorSystem (holdRotation or default)
-                    quaternion formationRotation = anchorComp.rotation;
 
-                    FormationPositionCalculator.CalculateDesiredPosition(
-                        unit,
-                        ref gridPositions,
-                        slotIndex,
-                        formationCenter,
-                        squadState,
-                        holdComponent,
-                        heroPos,
-                        out int2 originalGridPos,
-                        out float3 gridOffset,
-                        out float3 worldPos,
-                        false,
-                        formationRotation);
-                    targetPos = worldPos;
-                }
-                else
-                {
-                    // Fallback to grid slot offset if no formation data available
-                    targetPos = heroPos + gridSlot.worldOffset;
-                }
-                
+                var gridSlot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
+                float3 targetPos = FormationPositionCalculator.DesiredPosition(gridSlot.localOffset, squadState,
+                    holdComponent, heroPos, anchorComp.rotation, false);
+
                 // Actualizar target position si existe el componente
                 if (SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
                 {
@@ -180,8 +138,7 @@ public partial class GridFormationUpdateSystem : SystemBase
                     cached.cachedOrder = squadState.currentOrder;
                     cached.cachedState = squadState.currentState;
                     cached.cachedSlotIndex = gridSlot.slotIndex;
-                    cached.cachedGridPosition = gridSlot.gridPosition;
-                    cached.cachedWorldOffset = gridSlot.worldOffset;
+                    cached.cachedLocalOffset = gridSlot.localOffset;
                     cached.hasFormationCache = true;
                 }
             }

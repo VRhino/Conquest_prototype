@@ -244,7 +244,7 @@ public class SquadDetailPanel : MonoBehaviour
         if (formationsContainer != null && formationItemPrefab != null)
         {
             foreach (Transform c in formationsContainer) Destroy(c.gameObject);
-            foreach (var formation in data.gridFormations)
+            foreach (var formation in data.formations)
             {
                 var go = Instantiate(formationItemPrefab, formationsContainer);
                 var formationOptionUI = go.GetComponentInChildren<FormationOptionUI>();

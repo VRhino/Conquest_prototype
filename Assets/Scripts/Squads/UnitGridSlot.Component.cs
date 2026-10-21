@@ -2,28 +2,20 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 /// <summary>
-/// Componente que almacena la posición de una unidad en la cuadrícula local de su formación.
-/// Reemplaza el sistema de localOffsets por posiciones discretas en cuadrícula.
+/// Slot of a unit in its squad formation. Single writer: <see cref="FormationSystem"/> (initial values from
+/// <see cref="SquadSpawningSystem"/>). Readers rotate <see cref="localOffset"/> by the formation anchor.
 /// </summary>
 public struct UnitGridSlotComponent : IComponentData
 {
-    /// <summary>
-    /// Posición en la cuadrícula local (enteros)
-    /// (0,0) representa el centro de la formación (primera unidad)
-    /// </summary>
-    [UnityEngine.SerializeField]
-    public int2 gridPosition;
-    
-    /// <summary>
-    /// Índice de la unidad en el buffer del squad
-    /// </summary>
-    [UnityEngine.SerializeField]
+    /// <summary>Slot index in the current template; stays with the unit when others die.</summary>
     public int slotIndex;
-    
-    /// <summary>
-    /// Posición en el mundo calculada desde la cuadrícula
-    /// (para caché, se actualiza cuando cambia la formación)
-    /// </summary>
-    [UnityEngine.SerializeField]
-    public float3 worldOffset;
+    /// <summary>Slot position in spacing units, without noise (+y = forward).</summary>
+    public float2 localPosition;
+    /// <summary>Rank from the front (0 = front row).</summary>
+    public int row;
+    public FormationSlotRole role;
+    /// <summary>Local facing with noise, radians clockwise from the formation forward.</summary>
+    public float headingLocal;
+    /// <summary>Unrotated offset from the anchor in metres, with spacing and noise applied.</summary>
+    public float3 localOffset;
 }

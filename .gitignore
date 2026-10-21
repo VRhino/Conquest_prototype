@@ -61,3 +61,6 @@ Issues/
 # Local AI agent config (do not commit)
 AGENTS.md
 .agents/
+
+# Movement baseline videos (Unity Recorder)
+Recordings/

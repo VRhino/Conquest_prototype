@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine.AI;
 
 /// <summary>
@@ -24,6 +25,10 @@ public partial class UnitRotationResolutionSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        float dt = SystemAPI.Time.DeltaTime;
+        float combatTurnRate = (SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default).combatTurnRate;
+
         foreach (var (intent, entity) in SystemAPI
                      .Query<RefRW<UnitRotationIntentComponent>>()
                      .WithAll<NavAgentComponent>()
@@ -33,7 +38,13 @@ public partial class UnitRotationResolutionSystem : SystemBase
             {
                 var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(entity);
                 if (agent != null)
-                    agent.transform.rotation = (UnityEngine.Quaternion)intent.ValueRO.targetRotation;
+                {
+                    // Combat facing turns at a capped rate (C7); formation intents already arrive smoothed.
+                    quaternion target = intent.ValueRO.targetRotation;
+                    agent.transform.rotation = intent.ValueRO.source == RotationSource.Combat
+                        ? (UnityEngine.Quaternion)UnitTurn.Step(agent.transform.rotation, target, combatTurnRate, dt)
+                        : (UnityEngine.Quaternion)target;
+                }
             }
 
             // Reset for next frame — priority=0 means "no override, let NavMesh handle"

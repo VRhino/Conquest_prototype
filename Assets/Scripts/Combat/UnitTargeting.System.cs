@@ -32,6 +32,8 @@ public partial class UnitTargetingSystem : SystemBase
         int maxPerTarget = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
             ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().maxUnitsPerTarget
             : 2;
+        float bodyRadius = (SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default).bodyRadius;
 
         foreach (var (state, units, detected) in SystemAPI
                      .Query<RefRO<SquadStateComponent>,
@@ -155,7 +157,7 @@ public partial class UnitTargetingSystem : SystemBase
                     float3 uPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
                     float3 tPos = SystemAPI.GetComponent<LocalTransform>(combat.ValueRO.target).Position;
                     float atkRange = SystemAPI.GetComponent<UnitWeaponComponent>(unit).attackRange;
-                    if (math.distancesq(uPos, tPos) <= atkRange * atkRange)
+                    if (MeleeReach.InAttackRange(math.distance(uPos.xz, tPos.xz), atkRange, bodyRadius))
                         continue;
                 }
 

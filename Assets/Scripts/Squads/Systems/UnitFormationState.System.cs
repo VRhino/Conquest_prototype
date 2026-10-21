@@ -10,15 +10,14 @@ public partial struct UnitFormationStateSystem : ISystem
     public void OnCreate(ref SystemState state)
     {
         state.RequireForUpdate<MatchStateComponent>();
-        state.RequireForUpdate<SquadSpawnConfigComponent>();
+        state.RequireForUpdate<MovementTuningComponent>();
     }
 
     public void OnUpdate(ref SystemState state)
     {
         float dt = SystemAPI.Time.DeltaTime;
-        var spawnConfig = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
-        float slotThresholdSq = math.square(math.max(0f, spawnConfig.slotArrivalThreshold));
-        float holdPositionThresholdSq = math.square(math.max(0f, spawnConfig.holdReformThreshold));
+        var tuning = SystemAPI.GetSingleton<MovementTuningComponent>();
+        var radii = FormationArrivalRadii.From(tuning);
 
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
@@ -35,6 +34,7 @@ public partial struct UnitFormationStateSystem : ISystem
             // Determinar si el escuadrón está en modo Hold Position
             bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
                 && squadState.currentState != SquadFSMState.Retreating;
+
 
             for (int i = 0; i < units.Length; i++)
             {
@@ -54,8 +54,7 @@ public partial struct UnitFormationStateSystem : ISystem
 
                 float3 currentPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
 
-                // Use unified position checker
-                bool inSlot = FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, slotThresholdSq);
+                float distSq = math.lengthsq(desiredSlotPos - currentPos);
 
                 // ── Milestone tags: reset to off each frame, then re-enable on transition ──
                 bool hasMilestoneTags = SystemAPI.HasComponent<UnitStartedMovingTag>(unit);
@@ -65,108 +64,21 @@ public partial struct UnitFormationStateSystem : ISystem
                     SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, false);
                 }
 
-                // State transition logic
-                if (isHoldingPosition)
-                {
-                    // En Hold Position: transiciones de estado simplificadas
-                    // Las unidades solo se mueven si están muy lejos de su posición asignada
-                    // Usar un threshold más grande solo para detectar si necesita reorganizarse
-                    switch (stateComp.State)
-                    {
-                        case UnitFormationState.Formed:
-                            // Cambiar a Waiting si está fuera de la posición asignada
-                            if (!FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, holdPositionThresholdSq))
-                            {
-                                stateComp.State = UnitFormationState.Waiting;
-                                stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(spawnConfig.unitMoveDelayMin, spawnConfig.unitMoveDelayMax);
-                            }
-                            break;
-                        case UnitFormationState.Waiting:
-                            // Esperar el delay antes de pasar a Moving
-                            stateComp.DelayTimer += dt;
-                            if (stateComp.DelayTimer >= stateComp.DelayDuration)
-                            {
-                                stateComp.State = UnitFormationState.Moving;
-                                stateComp.DelayTimer = 0f;
-                                if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
-                            }
-                            // Si vuelve a estar en slot durante el delay, regresar a Formed
-                            else if (FormationPositionCalculator.IsUnitInSlot(currentPos, desiredSlotPos, holdPositionThresholdSq))
-                            {
-                                stateComp.State = UnitFormationState.Formed;
-                                stateComp.DelayTimer = 0f;
-                            }
-                            break;
-                        case UnitFormationState.Moving:
-                            // Moving -> Formed: Unit reaches assigned position
-                            if (inSlot)
-                            {
-                                stateComp.State = UnitFormationState.Formed;
-                                stateComp.DelayTimer = 0f;
-                                if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, true);
-                            }
-                            break;
-                    }
-                }
-                else
-                {
-                    // Comportamiento normal de seguimiento al héroe
-                    // Usar thresholds normales para formaciones precisas
-                    switch (stateComp.State)
-                    {
-                        case UnitFormationState.Formed:
-                            // Formed -> Waiting: Hero leaves grid radius OR unit is far from assigned slot (formation changed)
-                            bool nearAssignedSlot = FormationPositionCalculator.IsUnitInSlot(
-                                currentPos, desiredSlotPos, slotThresholdSq);
-                            if (!nearAssignedSlot)
-                            {
-                                stateComp.State = UnitFormationState.Waiting;
-                                stateComp.DelayTimer = 0f;
-                                stateComp.DelayDuration = UnityEngine.Random.Range(spawnConfig.unitFollowDelayMin, spawnConfig.unitFollowDelayMax);
-                            }
-                            break;
+                // Arrival hysteresis (r_in / r_out / calm time). Hold Position leaves Formed above the hold radius.
+                stateComp.State = FormationArrival.Step(stateComp.State, distSq, radii, isHoldingPosition,
+                    heroMovingForSquad, dt, ref stateComp.CalmTimer, ref stateComp.DelayTimer,
+                    stateComp.DelayDuration, out var arrivalEvent);
 
-                        case UnitFormationState.Waiting:
-                            // Waiting -> Moving: Random delay expires
-                            stateComp.DelayTimer += dt;
-                            if (stateComp.DelayTimer >= stateComp.DelayDuration)
-                            {
-                                stateComp.State = UnitFormationState.Moving;
-                                stateComp.DelayTimer = 0f;
-                                if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
-                            }
-                            // Waiting -> Formed: Hero returns to radius while still waiting
-                            else if (inSlot)
-                            {
-                                stateComp.State = UnitFormationState.Formed;
-                                stateComp.DelayTimer = 0f;
-                            }
-                            break;
-
-                        case UnitFormationState.Moving:
-                            // Moving -> Formed: Unit reaches slot AND hero is within radius
-                            if (inSlot)
-                            {
-                                if (!heroMovingForSquad)
-                                {
-                                    // Si el héroe no se está moviendo, la unidad se forma
-                                    stateComp.State = UnitFormationState.Formed;
-                                    stateComp.DelayTimer = 0f;
-                                    if (hasMilestoneTags) SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, true);
-                                }
-                                else
-                                {
-                                    // Si el héroe se está moviendo, la unidad sigue al héroe
-                                    stateComp.State = UnitFormationState.Moving;
-                                }
-                            }
-                            // Note: If hero leaves radius while moving, unit continues moving
-                            // and will transition to Waiting only after reaching slot (if hero still out)
-                            // or directly to Formed if hero returns to radius when unit reaches slot
-                            break;
-                    }
+                if (arrivalEvent == FormationArrivalEvent.LeftSlot)
+                {
+                    var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
+                    stateComp.DelayDuration = FormationStartDelay.Compute(slot.row, slot.slotIndex,
+                        tuning.startRowDelay, tuning.startJitterDelay);
                 }
+                if (hasMilestoneTags && arrivalEvent == FormationArrivalEvent.StartedMoving)
+                    SystemAPI.SetComponentEnabled<UnitStartedMovingTag>(unit, true);
+                if (hasMilestoneTags && arrivalEvent == FormationArrivalEvent.Arrived)
+                    SystemAPI.SetComponentEnabled<UnitArrivedAtSlotTag>(unit, true);
 
                 SystemAPI.SetComponent(unit, stateComp);
             }

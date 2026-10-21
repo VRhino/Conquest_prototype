@@ -6,6 +6,9 @@ using UnityEngine;
 /// <summary>Single conversion path for standalone and database squad definitions.</summary>
 public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
 {
+        /// <summary>Weapon reach beyond the body below which melee contact degenerates (C5).</summary>
+        const float MinimumMeleeReach = 0.2f;
+
         protected void BakeSquad(Entity entity, SquadData d)
         {
             DependsOn(d);
@@ -14,9 +17,13 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             if (d.progressionData != null) DependsOn(d.progressionData);
             var melee  = d.meleeData;
             var ranged = d.rangedData;
+            if (melee != null
+                && MeleeReach.Reach(melee.attackRange, MovementTuningComponent.Default.bodyRadius) < MinimumMeleeReach)
+                Debug.LogWarning($"[SquadDefinitionBaker] {d.name}: attackRange {melee.attackRange} leaves less than " +
+                                 $"{MinimumMeleeReach} m of reach beyond the body radius; units will fight while touching.");
 
             // Bake formation library
-            var formationLibrary = BakeFormationLibrary(d.gridFormations);
+            var formationLibrary = BakeFormationLibrary(d.formations, d.name);
             AddBlobAsset(ref formationLibrary, out _);
             var curves = SquadProgressionCurves.Create(d.progressionData);
             AddBlobAsset(ref curves, out _);
@@ -121,38 +128,59 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             });
         }
 
-        private BlobAssetReference<FormationLibraryBlob> BakeFormationLibrary(GridFormationScriptableObject[] gridFormations)
+        private BlobAssetReference<FormationLibraryBlob> BakeFormationLibrary(FormationDefinition[] definitions, string squadName)
         {
             var builder = new BlobBuilder(Allocator.Temp);
             ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
+            int count = definitions?.Length ?? 0;
+            var formationArray = builder.Allocate(ref root.formations, count);
+            float bodyDiameter = 2f * MovementTuningComponent.Default.bodyRadius;
 
-            if (gridFormations == null || gridFormations.Length == 0)
+            for (int i = 0; i < count; i++)
             {
-                // No grid formations assigned to squad data
-                builder.Allocate(ref root.formations, 0);
-            }
-            else
-            {
-                var formationArray = builder.Allocate(ref root.formations, gridFormations.Length);
+                var definition = definitions[i];
+                if (definition == null) continue;
+                DependsOn(definition);
+                string issue = definition.Validate();
+                if (issue != null)
+                    Debug.LogWarning($"[SquadDefinitionBaker] {squadName}: formation {definition.name}: {issue}");
+                if (definition.HasLegacyGrid)
+                    Debug.LogWarning($"[SquadDefinitionBaker] {squadName}: formation {definition.name} still holds the legacy grid; run Tools/Formations/Migrate Legacy Grid Formations.");
+                if (definition.layout == FormationLayoutKind.Template && definition.EffectiveSpacing < bodyDiameter
+                    && definition.formationType != FormationType.Testudo)
+                    Debug.LogWarning($"[SquadDefinitionBaker] {squadName}: formation {definition.name} spacing {definition.EffectiveSpacing} m is below the body diameter ({bodyDiameter} m); bodies will overlap.");
 
-                for (int i = 0; i < gridFormations.Length; i++)
+                ref var formation = ref formationArray[i];
+                formation.formationType = definition.formationType;
+                formation.layout = definition.layout;
+                formation.spacing = definition.EffectiveSpacing;
+                formation.noiseRadius = Mathf.Max(0f, definition.noiseRadius);
+                formation.noiseAngle = math.radians(Mathf.Max(0f, definition.noiseAngleDegrees));
+
+                var postures = definition.postures ?? System.Array.Empty<FormationRolePosture>();
+                var postureArray = builder.Allocate(ref formation.postures, postures.Length);
+                for (int k = 0; k < postures.Length; k++)
+                    postureArray[k] = new FormationPostureBlob
+                    { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving };
+
+                var templates = definition.layout == FormationLayoutKind.Template && definition.templates != null
+                    ? definition.templates : System.Array.Empty<FormationTemplate>();
+                var templateArray = builder.Allocate(ref formation.templates, templates.Length);
+                for (int t = 0; t < templates.Length; t++)
                 {
-                    var gridForm = gridFormations[i];
-                    if (gridForm == null)
+                    var template = templates[t];
+                    var slots = template?.slots ?? System.Array.Empty<FormationSlot>();
+                    templateArray[t].minUnits = template?.minUnits ?? 0;
+                    var slotArray = builder.Allocate(ref templateArray[t].slots, slots.Length);
+                    for (int k = 0; k < slots.Length; k++)
                     {
-                        // Grid formation is null, skipping
-                        continue;
-                    }
-
-                    DependsOn(gridForm);
-                    formationArray[i].formationType = gridForm.formationType;
-
-                    // Store original grid positions from ScriptableObject
-                    Vector2Int[] originalPositions = gridForm.gridPositions ?? System.Array.Empty<Vector2Int>();
-                    var gridPositions = builder.Allocate(ref formationArray[i].gridPositions, originalPositions.Length);
-                    for (int j = 0; j < originalPositions.Length; j++)
-                    {
-                        gridPositions[j] = new int2(originalPositions[j].x, originalPositions[j].y);
+                        slotArray[k] = new FormationSlotBlob
+                        {
+                            position = slots[k].position,
+                            row = math.max(0, slots[k].row),
+                            role = slots[k].role,
+                            heading = math.radians(slots[k].headingDegrees)
+                        };
                     }
                 }
             }

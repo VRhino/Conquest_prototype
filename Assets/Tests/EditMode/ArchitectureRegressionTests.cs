@@ -210,20 +210,6 @@ public class ArchitectureRegressionTests
     }
 
     [Test]
-    public void FormationCompatibilityMethodsHaveTheSameOutput()
-    {
-        var formation = ScriptableObject.CreateInstance<GridFormationScriptableObject>();
-        try
-        {
-            Assert.That(formation.GetWorldOffsets(), Is.Empty);
-            formation.gridPositions = new[] { new Vector2Int(2, 3), new Vector2Int(4, 5) };
-            CollectionAssert.AreEqual(formation.GetWorldOffsets(), formation.GetAbsoluteWorldOffsets());
-            CollectionAssert.AreEqual(formation.GetWorldOffsets(), formation.GetCenteredWorldOffsets());
-        }
-        finally { UnityEngine.Object.DestroyImmediate(formation); }
-    }
-
-    [Test]
     public void UnifiedSaveImportsLegacyWithoutAssigningAnOwnerOrReimporting()
     {
         WithSaveFiles((profilePath, progressPath) =>
@@ -445,13 +431,7 @@ public class ArchitectureRegressionTests
     [Test]
     public void SpawnUsesSnapshotIdentityLevelAndSurvivors()
     {
-        using var builder = new BlobBuilder(Allocator.Temp);
-        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
-        var forms = builder.Allocate(ref root.formations, 1);
-        forms[0].formationType = FormationType.Line;
-        var positions = builder.Allocate(ref forms[0].gridPositions, 4);
-        for (int i = 0; i < 4; i++) positions[i] = new int2(i, 0);
-        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        var blob = TestFormationLibrary.FromCells(new int2(0, 0), new int2(1, 0), new int2(2, 0), new int2(3, 0));
         try
         {
             em.CreateEntity(typeof(SquadSpawnConfigComponent));
@@ -510,15 +490,14 @@ public class ArchitectureRegressionTests
                 isRangedUnit = ranged,
                 ammoCapacity = 12
             },
-            config = new SquadSpawnConfigComponent
-            { unitMinDistance = 0.7f, unitRepelForce = 2f },
+            config = new SquadSpawnConfigComponent(),
             squadType = SquadType.Archers,
             speed = 4.5f,
             rotation = quaternion.identity
         };
         using var ecb = new EntityCommandBuffer(Allocator.Temp);
-        SquadUnitSpawnBuilder.Configure(ecb, unit, context, 1,
-            new int2(1, 0), new float3(0.5f, 0f, 0f), position);
+        SquadUnitSpawnBuilder.Configure(ecb, unit, context,
+            new UnitGridSlotComponent { slotIndex = 1, localOffset = new float3(0.5f, 0f, 0f) }, position);
         ecb.Playback(em);
 
         Assert.That(em.GetComponentData<UnitOwnerComponent>(unit).squad, Is.EqualTo(squad));
@@ -536,14 +515,7 @@ public class ArchitectureRegressionTests
     [Test]
     public void SpawnBuildsReserveCountsFromTheirOwnDefinitions()
     {
-        using var builder = new BlobBuilder(Allocator.Temp);
-        ref var root = ref builder.ConstructRoot<FormationLibraryBlob>();
-        var forms = builder.Allocate(ref root.formations, 1);
-        forms[0].formationType = FormationType.Line;
-        var positions = builder.Allocate(ref forms[0].gridPositions, 2);
-        positions[0] = int2.zero;
-        positions[1] = new int2(1, 0);
-        var blob = builder.CreateBlobAssetReference<FormationLibraryBlob>(Allocator.Persistent);
+        var blob = TestFormationLibrary.FromCells(int2.zero, new int2(1, 0));
         try
         {
             em.CreateEntity(typeof(SquadSpawnConfigComponent));

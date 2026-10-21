@@ -1,5 +1,10 @@
 # Formation Milestone System — Framework de hitos del ciclo de vida de unidades
 
+> **Actualización 2026-10-20.** `FormationStanceSystem` ya no existe. La postura la decide `UnitPostureSystem` por papel de
+> ranura y estado (formado / en marcha), con la tabla de posturas de cada `FormationDefinition`, y no lee los milestone
+> tags: ver [FormationPostures.md](./FormationPostures.md). Los tags `UnitStartedMovingTag` y `UnitArrivedAtSlotTag` siguen
+> existiendo para otros consumidores; las secciones de abajo que describen `FormationStanceSystem` quedan como historia.
+
 ## Propósito
 
 Permite enganchar comportamientos a momentos específicos del ciclo de vida del movimiento de
@@ -59,7 +64,7 @@ Escritos por `FormationStanceSystem` al detectar un milestone tag activo.
 | Sistema                    | Grupo                   | UpdateAfter                   | Responsabilidad única                                                           |
 |----------------------------|-------------------------|-------------------------------|---------------------------------------------------------------------------------|
 | `UnitFormationStateSystem` | `SimulationSystemGroup` | `GridFormationUpdateSystem`   | Owner de transiciones de estado. Resetea tags al inicio, los activa en transición. |
-| `FormationStanceSystem`    | `SimulationSystemGroup` | `UnitFormationStateSystem`    | Lee milestone tags → actualiza `UnitFormationStanceComponent` + propaga a `UnitAnimationMovementComponent`. |
+| `UnitPostureSystem`        | `SimulationSystemGroup` | `UnitFormationStateSystem`    | Postura por papel de ranura (tabla de la formación) → `UnitFormationStanceComponent` + propaga a `UnitAnimationMovementComponent`. Sustituye a `FormationStanceSystem`. |
 
 Archivos:
 - `Assets/Scripts/Squads/Systems/UnitFormationState.System.cs`
@@ -104,6 +109,10 @@ UnitAnimationAdapter (MonoBehaviour, sync layer)
 ```
 
 ---
+
+### Llegada con histéresis (lote 1 de movimiento, 2026-10-19)
+
+`UnitStartedMovingTag` y `UnitArrivedAtSlotTag` se activan a partir de los eventos de `FormationArrival.Step` (`StartedMoving` y `Arrived`). `Arrived` se emite una sola vez por llegada: cuando la unidad está a menos de `arrivalRadiusIn` y el ancla lleva `arrivalCalmTime` quieta. Una vuelta a `Formed` desde `Waiting` sin haberse movido (`Resettled`) no emite el hito.
 
 ## Mecanismo de pulso (IEnableableComponent)
 

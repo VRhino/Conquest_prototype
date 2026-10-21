@@ -13,6 +13,13 @@ Repulsión física per-frame con `agent.Move()`:
 - `agent.Move(offset)` aplica desplazamiento one-shot y clampea al mesh automáticamente
 - Compatible con `SetDestination()` que ya usa `UnitNavMeshSystem`
 
+## Relación con la evitación de aliados (lote 2, C14)
+
+El bodyblock solo separa **enemigos**. Los aliados no se empujan: se esquivan por velocidad en
+`UnitAvoidanceSystem` (ORCA, ver `Docs/Design/Movimiento_Formaciones.md` §10). Entre enemigos no hay
+evitación (D2): los mantiene a distancia la parada derivada del cuerpo y del alcance (C5) y, si llegan a
+solaparse, este sistema.
+
 ## Archivo
 
 `Assets/Scripts/Squads/Systems/UnitBodyblock.System.cs`
@@ -98,10 +105,11 @@ Escala máxima: 900 unidades (450 por equipo). Brute-force O(n²) → inaceptabl
 ## Orden de ejecución
 
 ```
-UnitNavMeshSystem → UnitBodyblockSystem → NavMeshPositionSyncSystem
+UnitNavMeshSystem → UnitFollowFormationSystem → UnitAvoidanceSystem → UnitBodyblockSystem → NavMeshPositionSyncSystem
 ```
 
-El destino se decide primero, el bodyblock aplica `agent.Move()` después y la posición corregida se copia a ECS en el mismo ciclo.
+El destino y la velocidad se deciden primero, la evitación fija `agent.velocity` entre aliados, el bodyblock aplica
+`agent.Move()` entre enemigos y la posición corregida se copia a ECS en el mismo ciclo.
 
 ---
 

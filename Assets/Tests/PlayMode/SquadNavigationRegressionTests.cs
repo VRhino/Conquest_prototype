@@ -227,7 +227,6 @@ public class SquadNavigationRegressionTests
             new MatchStateComponent { currentState = MatchState.InBattle });
         em.AddComponentData(em.CreateEntity(), new SquadSpawnConfigComponent
         {
-            slotArrivalThreshold = 0.2f,
             navMeshDestinationSampleRadius = 0.5f,
             navMeshFailureRetryDistance = 1f
         });
@@ -525,6 +524,88 @@ public class SquadNavigationRegressionTests
             navData.Remove();
             Object.DestroyImmediate(data);
         }
+    }
+
+    [UnityTest, Timeout(60000)]
+    public IEnumerator CrossingAlliesDoNotOverlapWithAvoidance()
+    {
+        float withoutAvoidance = 0f, withAvoidance = 0f;
+        yield return CrossAllies(false, d => withoutAvoidance = d);
+        yield return CrossAllies(true, d => withAvoidance = d);
+        Assert.That(withoutAvoidance, Is.LessThan(0.5f), "control: without avoidance the allies walk through each other");
+        Assert.That(withAvoidance, Is.GreaterThan(0.85f));
+    }
+
+    /// <summary>Two allies swap places head-on through UnitAvoidanceSystem; reports their closest distance.</summary>
+    static IEnumerator CrossAllies(bool avoidance, System.Action<float> report)
+    {
+        var world = new World("Ally avoidance crossing");
+        var em = world.EntityManager;
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
+        var tuning = MovementTuningComponent.Default;
+        tuning.avoidanceEnabled = avoidance;
+        em.AddComponentData(em.CreateEntity(), tuning);
+        var sources = new System.Collections.Generic.List<NavMeshBuildSource>
+        {
+            new NavMeshBuildSource { shape = NavMeshBuildSourceShape.Box,
+                size = new Vector3(20, 0.2f, 20), transform = Matrix4x4.Translate(new Vector3(0, -0.1f, 0)), area = 0 }
+        };
+        var settings = NavMesh.GetSettingsByIndex(0);
+        var data = NavMeshBuilder.BuildNavMeshData(settings, sources,
+            new Bounds(Vector3.zero, new Vector3(25, 5, 25)), Vector3.zero, Quaternion.identity);
+        var navData = NavMesh.AddNavMeshData(data);
+        var firstGo = new GameObject("Crossing A");
+        var secondGo = new GameObject("Crossing B");
+        try
+        {
+            var units = new[]
+            {
+                CreateCrossingUnit(em, firstGo, settings.agentTypeID, new Vector3(-5f, 0f, 0.05f), new Vector3(5f, 0f, 0.05f)),
+                CreateCrossingUnit(em, secondGo, settings.agentTypeID, new Vector3(5f, 0f, 0f), new Vector3(-5f, 0f, 0f)),
+            };
+            var system = world.GetOrCreateSystemManaged<UnitAvoidanceSystem>();
+            float closest = float.MaxValue;
+            double time = 0;
+            for (int frame = 0; frame < 360; frame++)
+            {
+                foreach (var (entity, visual) in new[] { (units[0], firstGo), (units[1], secondGo) })
+                    em.SetComponentData(entity, LocalTransform.FromPosition(visual.transform.position));
+                time += Time.deltaTime;
+                world.SetTime(new Unity.Core.TimeData(time, Mathf.Max(Time.deltaTime, 1e-3f)));
+                system.Update();
+                yield return null;
+                closest = Mathf.Min(closest, Vector3.Distance(firstGo.transform.position, secondGo.transform.position));
+            }
+            report(closest);
+        }
+        finally
+        {
+            Object.DestroyImmediate(firstGo);
+            Object.DestroyImmediate(secondGo);
+            navData.Remove();
+            Object.DestroyImmediate(data);
+            world.Dispose();
+        }
+    }
+
+    static Entity CreateCrossingUnit(EntityManager em, GameObject visual, int agentType, Vector3 start, Vector3 destination)
+    {
+        var agent = visual.AddComponent<NavMeshAgent>();
+        agent.agentTypeID = agentType;
+        agent.speed = 3f;
+        agent.acceleration = 20f;
+        agent.radius = 0.5f;
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+        Assert.That(agent.Warp(start), Is.True);
+        agent.SetDestination(destination);
+        var entity = em.CreateEntity(typeof(NavAgentComponent), typeof(TeamComponent),
+            typeof(UnitFormationStateComponent), typeof(UnitTargetPositionComponent), typeof(LocalTransform));
+        em.SetComponentData(entity, new TeamComponent { value = Team.TeamA });
+        em.SetComponentData(entity, new UnitFormationStateComponent { State = UnitFormationState.Moving });
+        em.SetComponentData(entity, new UnitTargetPositionComponent { position = destination });
+        em.AddComponentObject(entity, agent);
+        return entity;
     }
 
     static Entity CreateBodyblockUnit(EntityManager em, GameObject visual, Team team, int agentType,

@@ -16,7 +16,7 @@ public class HUDFormationIconController : MonoBehaviour
 
     public FormationType FormationType => _formationType;
 
-    public void Initialize(GridFormationScriptableObject formation, int index)
+    public void Initialize(FormationDefinition formation, int index)
     {
         _formationType = formation.formationType;
         if (_icon != null && formation.formationIcon != null)

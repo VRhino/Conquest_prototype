@@ -1,6 +1,5 @@
 using Unity.Entities;
 using Unity.Mathematics;
-using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
@@ -38,72 +37,42 @@ public static class FormationPositionCalculator
         return position.y; // Return original Y if no terrain
     }
 
-    public static float3 CalculateDesiredPosition(
-        Entity unit,
-        ref BlobArray<int2> gridPositions,
-        int unitIndex,
-        in SquadStateComponent squadState,
-        SquadHoldPositionComponent? holdComponent,
-        float3 heroPos,
-        out int2 originalGridPos,
-        out float3 gridOffset,
-        out float3 worldPos,
-        bool adjustForTerrain,
-        quaternion formationRotation = default
-        )
+    /// <summary>
+    /// World position of a slot: squad centre (hold centre or anchor) plus the slot offset rotated by the formation.
+    /// </summary>
+    public static float3 DesiredPosition(float3 localOffset, in SquadStateComponent squadState,
+        SquadHoldPositionComponent? holdComponent, float3 anchorPosition, quaternion formationRotation,
+        bool adjustForTerrain)
     {
-        float2 formationCenter = CalculateFormationCenter(ref gridPositions);
-        return CalculateDesiredPosition(unit, ref gridPositions, unitIndex, formationCenter,
-            squadState, holdComponent, heroPos, out originalGridPos, out gridOffset,
-            out worldPos, adjustForTerrain, formationRotation);
-    }
-
-    public static float3 CalculateDesiredPosition(
-        Entity unit,
-        ref BlobArray<int2> gridPositions,
-        int unitIndex,
-        float2 formationCenter,
-        in SquadStateComponent squadState,
-        SquadHoldPositionComponent? holdComponent,
-        float3 heroPos,
-        out int2 originalGridPos,
-        out float3 gridOffset,
-        out float3 worldPos,
-        bool adjustForTerrain,
-        quaternion formationRotation = default)
-    {
-        float3 squadCenter = GetSquadCenter(squadState, holdComponent, heroPos);
-        var squadOrigin = squadCenter;
-        originalGridPos = gridPositions[unitIndex];
-        float2 centeredGridPos = new float2(originalGridPos) - formationCenter;
-        gridOffset = FormationGridSystem.GridToRelativeWorld(centeredGridPos);
-        if (math.lengthsq(formationRotation.value) > 1e-6f)
-            gridOffset = math.mul(math.normalize(formationRotation), gridOffset);
-
-        float3 baseXZ = squadOrigin + new float3(gridOffset.x, 0, gridOffset.z);
-
-        // obtengo Unity terrain height
-        float y = baseXZ.y;
+        float3 center = GetSquadCenter(squadState, holdComponent, anchorPosition);
+        float3 offset = math.lengthsq(formationRotation.value) > 1e-6f
+            ? math.mul(math.normalize(formationRotation), localOffset) : localOffset;
+        float3 position = center + new float3(offset.x, 0f, offset.z);
         if (adjustForTerrain && UnityEngine.Terrain.activeTerrain != null)
-        {
-           y = calculateTerraindHeight(baseXZ);
-        }
-        worldPos = new float3(baseXZ.x, y, baseXZ.z);
-        
-        return worldPos;
+            position.y = calculateTerraindHeight(position);
+        return position;
     }
 
-    public static float2 CalculateFormationCenter(ref BlobArray<int2> gridPositions)
+    /// <summary>
+    /// Slot component for slot <paramref name="slotIndex"/> of the current layout. False when the layout has no such slot.
+    /// </summary>
+    public static bool TryBuildSlot(ref FormationDataBlob formation, int templateIndex, int slotIndex, float spacing,
+        uint seed, out UnitGridSlotComponent slot)
     {
-        if (gridPositions.Length == 0) return float2.zero;
-        int2 minGrid = gridPositions[0];
-        int2 maxGrid = gridPositions[0];
-        for (int i = 1; i < gridPositions.Length; i++)
+        slot = default;
+        if (!FormationLayout.TryGetSlot(ref formation, templateIndex, slotIndex, seed, out var data))
+            return false;
+        float3 offset = FormationLayout.LocalOffset(data, spacing, formation.noiseRadius, formation.noiseAngle,
+            seed, slotIndex, out float heading);
+        slot = new UnitGridSlotComponent
         {
-            minGrid = math.min(minGrid, gridPositions[i]);
-            maxGrid = math.max(maxGrid, gridPositions[i]);
-        }
-        return (new float2(minGrid) + new float2(maxGrid)) * 0.5f;
+            slotIndex = slotIndex,
+            localPosition = data.position,
+            row = data.row,
+            role = data.role,
+            headingLocal = heading,
+            localOffset = offset
+        };
+        return true;
     }
-
 }
