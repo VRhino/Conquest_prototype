@@ -411,6 +411,8 @@ SquadObstacleAvoidanceSystem:
 
 Detecta obstáculos en el camino y ajusta temporalmente la forma.
 
+> Estado (2026-10-21): este sistema no existe. La evitación entre aliados la hace `UnitAvoidanceSystem` (ORCA) y el contacto entre enemigos `UnitBodyblockSystem`; ver `Docs/Design/Movimiento_Formaciones.md` §10-18.
+
 ---
 
 ### 3.2 🧱 Comportamiento Reactivo en Formación

@@ -328,16 +328,17 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 
 | # | Documento | Dice | Código | Estado |
 |---|---|---|---|---|
-| 1 | `Docs/Mechanics/DamageMechanics.md:9,99-102,129,132,199` | Mitigación proporcional con cap 95 %, bloqueo con coste fijo de 50, orientación | Resta plana `max(raw - netDef, raw*0.05)` por tipo y escudo que absorbe el daño real hasta romperse (`Combat/DamageCalculation.System.cs:82-95,125-127`) | Verificado |
-| 2 | `Docs/Mechanics/Formations.md:79,101` | La formación se comprime automáticamente al perder unidades | Slots por identidad; supervivientes conservan slot (`Formation.System.cs:117-126`); `Docs/Arquitectura/7_*.md:35` lo reconoce como límite | Verificado |
+| 1 | `Docs/Mechanics/DamageMechanics.md:9,99-102,129,132,199` | Mitigación proporcional con cap 95 %, bloqueo con coste fijo de 50, orientación | Resta plana `max(raw - netDef, raw*0.05)` por tipo y escudo que absorbe el daño real hasta romperse (`Combat/DamageCalculation.System.cs:82-95,125-127`) | Verificado; **doc corregido (D1, 2026-10-21)** |
+| 2 | `Docs/Mechanics/Formations.md:79,101` | La formación se comprime automáticamente al perder unidades | Slots por identidad; supervivientes conservan slot (`Formation.System.cs:117-126`); `Docs/Arquitectura/7_*.md:35` lo reconoce como límite | Verificado; **doc corregido (D1, 2026-10-21)** |
 | 3 | `Docs/Mechanics/MatchTimer.md:62,101-102` | `MatchController` hace el tick y `MatchState` tiene `remainingTime` | El reloj es un MonoBehaviour (`BattleSceneController`) y `Shared/MatchState.Component.cs` no tiene `remainingTime` | Verificado |
 | 4 | `Docs/Mechanics/MatchTimer.md` y `CapturePoints.md` | `winnerTeam` 0 atacantes / 1 defensores; captura gana si coincide con el timer; captura se pausa con defensor | Componente: 1/2; la captura escribe `capturingTeam` (`CaptureZoneTrigger.System.cs:119`); con solo defensores el progreso retrocede (`:60-67`); ningún sistema ordena el empate | Verificado (convención: informe L7) |
-| 5 | `CLAUDE.md:12` | Unity 2022.3 / Entities 1.3.14 | `Packages/manifest.json` usa Entities 6.5.0 (Unity 6) | Verificado |
-| 6 | `Docs/Mechanics/Formations.md` vs `Docs/TroopMovementPipeline.md` | Listas de tipos de formación distintas (Cuña/Schiltron/Dispersa frente a Line/Dispersed/Testudo/Wedge/Column/Square); el código tiene también ShieldWall | Sin unificar | Del informe L3, sin comprobar |
-| 7 | `Docs/TDD.md:410` | `SquadObstacleAvoidanceSystem` | No existe en `Assets/Scripts` | Del informe L5, sin comprobar |
-| 8 | `Docs/Mechanics/DamageMechanics.md` | `forwardBlockDotThreshold` y orientación | `DamageCalculation` no los usa | Del informe L1, sin comprobar |
-| 9 | Código | `FormationAdaptationSystem` calcula `requiresAdaptation` | Nadie lo consume (TODO en `UnitFollowFormation`) | Del informe L3, sin comprobar |
+| 5 | `CLAUDE.md:12` | Unity 2022.3 / Entities 1.3.14 | `Packages/manifest.json` usa Entities 6.5.0 (Unity 6) | Verificado; **doc corregido (D1, 2026-10-21)** |
+| 6 | `Docs/Mechanics/Formations.md` vs `Docs/TroopMovementPipeline.md` | Listas de tipos de formación distintas (Cuña/Schiltron/Dispersa frente a Line/Dispersed/Testudo/Wedge/Column/Square); el código tiene también ShieldWall | Sin unificar | Del informe L3, sin comprobar; **doc corregido (D1, 2026-10-21)** |
+| 7 | `Docs/TDD.md:410` | `SquadObstacleAvoidanceSystem` | No existe en `Assets/Scripts` | Del informe L5, sin comprobar; **doc corregido (D1, 2026-10-21)** |
+| 8 | `Docs/Mechanics/DamageMechanics.md` | `forwardBlockDotThreshold` y orientación | `DamageCalculation` no los usa | Del informe L1, sin comprobar; **doc corregido (D1, 2026-10-21)** |
+| 9 | Código | `FormationAdaptationSystem` calcula `requiresAdaptation` | Nadie lo consume (TODO en `UnitFollowFormation`) | Del informe L3, sin comprobar; **doc corregido (D1, 2026-10-21)** |
 | 10 | Informe L2 | "No hay entrada Q/E/R/F" | `HeroInputSystem` sí escribe `UseSkill1/UseSkill2/UseUltimate` (`HeroInput.System.cs:56-58`); falta el consumidor | Corregido |
+| 11 | Escenas de batalla | `HeroAttackSystem` y `HeroStaminaSystem` exigen `HeroGameplayConfigComponent` (`RequireForUpdate`) | `HeroGameplayConfigAuthoring` solo está en `SettlementHeroWorld.unity`; ninguna subescena de batalla lo tiene | Encontrado en D1 (estático): comprobar en juego si el héroe ataca y gasta aguante; si no, añadir el authoring a las subescenas de batalla |
 
 Cierre de la verificación: se confirmaron 13 afirmaciones (Q/E/R/F sin lanzador con matiz de input, huecos de formación,
 `NoObstacleAvoidance` y aliados ignorados, `frameCount % 5`, `MatchTimer` en MonoBehaviour, `DamageMechanics.md`

@@ -6,10 +6,19 @@ El sistema de daño es **event-driven**: los ataques generan un `PendingDamageEv
 
 Características clave:
 - **3 tipos de daño**: Blunt, Slashing, Piercing — cada uno con defensa y penetración independiente.
-- **Mitigación capeada al 95%**: siempre llega al menos el 5% del daño base.
+- **Resta plana por tipo con suelo del 5 %**: la defensa neta (defensa − penetración) se resta del daño de cada tipo,
+  pero de cada tipo llega siempre al menos el 5 %.
 - **Bonificaciones situacionales**: velocidad cinética y ventaja de altura amplifican el daño.
 - **Golpe único por swing**: un atacante genera como máximo un evento de daño por animación de ataque.
-- **Escudo pre-cálculo**: el bloqueo de escudo se evalúa antes de aplicar la fórmula; si bloquea, no se reduce la salud.
+- **Escudo después del cálculo**: si el golpe tocó primero el collider del escudo, el escudo absorbe el daño ya calculado;
+  si se queda a 0 se rompe y aturde.
+
+### Estado frente al código (2026-10-21)
+| Apartado | Código de referencia | Estado |
+|---|---|---|
+| Fórmula (§5) | `Combat/DamageCalculation.System.cs` | Sincronizado (D1 de `Docs/Design/Aprendizajes_Referencia.md`) |
+| Escudo (§6) | `DamageCalculation.System.cs`, `ShieldHitboxBehaviour`, `BlockRegen.System.cs` | Sincronizado; la orientación no se usa |
+| Crítico (§5.3) | `MeleeContactResolution.System.cs`, `RangedAttack.System.cs` | Sincronizado |
 
 ---
 
@@ -77,65 +86,61 @@ Características clave:
 
 Cada tipo de daño mapea a campos específicos en los componentes de defensa y penetración:
 
-| Tipo de Daño | Campo de Defensa | Campo de Penetración |
-|---|---|---|
-| Blunt | `DefenseComponent.bluntDefense` | `DamageProfileComponent.penetration` + `PenetrationComponent.bluntPenetration` |
-| Slashing | `DefenseComponent.slashDefense` | `DamageProfileComponent.penetration` + `PenetrationComponent.slashPenetration` |
-| Piercing | `DefenseComponent.pierceDefense` | `DamageProfileComponent.penetration` + `PenetrationComponent.piercePenetration` |
+| Tipo de Daño | Daño | Defensa (objetivo) | Penetración (arma + atacante) |
+|---|---|---|---|
+| Blunt | `DamageProfileComponent.bluntDamage` | `DefenseComponent.bluntDefense` | `DamageProfileComponent.bluntPenetration` + `PenetrationComponent.bluntPenetration` |
+| Slashing | `DamageProfileComponent.slashingDamage` | `DefenseComponent.slashDefense` | `DamageProfileComponent.slashingPenetration` + `PenetrationComponent.slashPenetration` |
+| Piercing | `DamageProfileComponent.piercingDamage` | `DefenseComponent.pierceDefense` | `DamageProfileComponent.piercingPenetration` + `PenetrationComponent.piercePenetration` |
 
 **Notas:**
-- `DamageProfileComponent.penetration` es la penetración base del arma (siempre activa).
+- Un tipo con daño 0 no contribuye (ni siquiera con el suelo del 5 %).
 - `PenetrationComponent` en el atacante añade penetración extra por tipo; su presencia es opcional.
-- La defensa siempre se obtiene del **objetivo**; la penetración, del **atacante**.
+- La defensa siempre se obtiene del **objetivo**; la penetración, del perfil del arma y del **atacante**.
 
 ---
 
 ## 5. Fórmula de Cálculo de Daño
 
-### 5.1 Mitigación base
+### 5.1 Contribución de cada tipo
 
 ```
-ratio      = defensa / max(penetración, 0.001)
-mitigación = min(ratio, 0.95)
+bruto        = daño_tipo × multiplier
+defensaNeta  = max(defensa_tipo − (penetración_perfil + penetración_atacante), 0)
+contribución = max(bruto − defensaNeta, bruto × 0.05)      // suelo del 5 % por tipo
 ```
-
-El cap de 0.95 garantiza que siempre llegue al menos el **5% del daño base**, independientemente de la defensa.
 
 ### 5.2 Daño efectivo final
 
 ```
-dañoEfectivo = baseDamage × multiplier × (1 − mitigación)
-                           × bonoCinético
-                           × bonoAltura
+dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura      (nunca negativo)
 ```
 
 ### 5.3 Bonificaciones situacionales
 
 | Bonificación | Condición de activación | Fórmula |
 |---|---|---|
-| **Crítico** | `random(0,1) ≤ criticalChance` | `multiplier = criticalMultiplier` (ej. 1.5×) |
-| **Cinética** | `attackerSpeed > 0` | `× (1 + (velocidad / 5.0) × kineticMultiplier)` |
-| **Altura** | Atacante >0.5 m sobre objetivo | `× (1 + deltaAltura × 0.1)` (~10% por metro) |
+| **Crítico** | tirada `≤ criticalChance` del arma | `multiplier = criticalMultiplier` (ej. 1.5×) |
+| **Cinética** | `attackerSpeed > 0` | `× (1 + (velocidad / 5.0) × kineticMultiplier)`; `kineticMultiplier` del arma (0.3 si no hay) |
+| **Altura** | Atacante > 0.5 m sobre el objetivo | `× (1 + deltaAltura × 0.1)` (~10 % por metro) |
 
-- `kineticMultiplier` viene de `UnitWeaponComponent`; escala el bono por velocidad del atacante.
-- La ventaja de altura se calcula usando `attackerPosition.y − target.position.y`.
+- La ventaja de altura se calcula con `attackerPosition.y − target.position.y`.
 - El multiplicador crítico y la probabilidad son configurables por arma en `UnitWeaponComponent`.
 
 ### 5.4 Parámetros clave
 
 | Parámetro | Valor | Descripción |
 |---|---|---|
-| Penetración mínima | 0.001 | Evita división por cero |
-| Cap de mitigación | 0.95 | Daño mínimo garantizado: 5% |
+| Suelo por tipo | 5 % | Fracción del daño bruto de cada tipo que llega siempre |
 | Velocidad de referencia cinética | 5.0 m/s | Normaliza la bonificación |
-| Umbral de altura | 0.5 m | Diferencia mínima para activar bono |
-| Reducción de escudo por bloqueo | 50 pts | Costo fijo de bloquear un golpe |
+| Multiplicador cinético por defecto | 0.3 | Si el atacante no tiene `UnitWeaponComponent` |
+| Umbral de altura | 0.5 m | Diferencia mínima para activar el bono |
+| Bono de altura | 10 % por metro | Por encima del umbral |
 
 ---
 
 ## 6. Sistema de Escudo
 
-El escudo se evalúa **antes** de la fórmula de daño. Si un golpe es bloqueado, no se reduce la salud.
+El escudo se evalúa **después** de la fórmula: si el golpe tocó primero el collider del escudo (`PendingDamageEvent.hitType == Shield`), el escudo absorbe el daño efectivo ya calculado y no se reduce la salud.
 
 **Solo las unidades/héroes cuyo prefab visual contiene un `ShieldHitboxBehaviour` tienen escudo.** El componente ECS `UnitShieldComponent` se agrega automáticamente en runtime al detectar dicho MonoBehaviour — no todas las unidades tienen escudo.
 
@@ -172,33 +177,28 @@ Misma lógica para `regenRate` con `blockRegenRate` de `SquadData`.
 - `currentBlock`: puntos de bloqueo disponibles.
 - `maxBlock`: capacidad máxima.
 - `regenRate`: puntos regenerados por segundo.
-- `orientation`: dirección desde la que protege el escudo.
+- `brokenTimer` / `breakStunDuration`: aturdimiento tras romperse (la unidad no se mueve mientras dura).
+- `orientation`: **no tiene lectores**. El bloqueo lo decide el collider del escudo, que cuelga de la mano.
 
 ### 6.4 Orientaciones de escudo
 
-| Orientación | Descripción |
-|---|---|
-| Forward | Bloquea ataques frontales (dot(`attackDirection`, `-targetForward`) > 0.5) |
-| Left / Right | Protección lateral (reservado; sin lógica activa actualmente) |
-| All | Bloquea desde cualquier dirección |
+No hay lógica por orientación (ni `forwardBlockDotThreshold`): la dirección la decide la física, porque el golpe solo
+cuenta como bloqueado si el arma toca primero el collider del escudo. Ver `Docs/Por_Abordar/Formaciones_y_Posturas.md` F16.
 
 ### 6.5 Flujo de bloqueo
 
 ```
 PendingDamageEvent llega al objetivo
   │
-  ├─ ¿HasComponent<UnitShieldComponent>?
-  │     └─ No → daño pasa a la fórmula normal (unidad sin escudo)
+  ├─ Se calcula dañoEfectivo (§5)
   │
-  ├─ ¿currentBlock > 0?
-  │     └─ No → daño pasa a la fórmula normal (escudo agotado)
+  ├─ ¿hitType == Shield, tiene UnitShieldComponent, currentBlock > 0 y no está roto?
+  │     └─ No → dañoEfectivo se resta de la salud
   │
-  ├─ ¿orientación cubre la dirección del ataque?
-  │     └─ No → daño pasa a la fórmula normal (golpe lateral/trasero)
-  │
-  └─ Sí → currentBlock −= 50
-           PendingDamageEvent eliminado (sin daño a salud)
-           FCT "BLOQ" emitido
+  └─ Sí → currentBlock −= dañoEfectivo
+           ├─ currentBlock ≤ 0 → escudo roto: currentBlock = 0, brokenTimer = breakStunDuration, FCT "ROTO"
+           └─ si no → FCT "BLOQ" con el daño absorbido
+           (la salud no cambia)
 ```
 
 ### 6.6 Regeneración de escudo
@@ -281,14 +281,14 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 
 | Caso | Resolución |
 |------|-----------|
-| Penetración = 0 en el arma | Se usa mínimo 0.001 para evitar división por cero en el ratio |
-| Defensa muy alta sin penetración | Mitigación capeada al 95%; siempre llega al menos 5% del daño |
+| Penetración = 0 en el arma | La defensa se resta entera (defensa neta = defensa); el suelo del 5 % sigue valiendo |
+| Defensa muy alta sin penetración | De cada tipo con daño llega siempre al menos el 5 % del bruto |
 | Friendly fire | `DamageCalculationSystem` compara `TeamComponent`; descarta el evento si mismo equipo |
 | Hitbox activo durante múltiples frames | Flag `hitboxFired` garantiza un único `PendingDamageEvent` por swing |
-| Escudo con `currentBlock ≤ 0` | El chequeo falla; el daño pasa directamente a la fórmula normal |
-| Escudo `orientation = All` | Bloquea independientemente de `attackDirection` |
+| Escudo con `currentBlock ≤ 0` o roto (`brokenTimer > 0`) | No bloquea; el daño efectivo va a la salud |
+| Golpe que no toca primero el escudo | `hitType = Body`: va a la salud aunque la unidad tenga escudo (la orientación no se evalúa) |
 | Objetivo destruido entre la creación y el procesado del evento | `DamageCalculationSystem` verifica existencia de la entidad al inicio; descarta si no existe |
-| Múltiples atacantes en el mismo frame | Se procesan todos los `PendingDamageEvent` en orden; la salud puede caer a negativo, pero `IsDeadComponent` solo se añade una vez |
+| Múltiples atacantes en el mismo frame | Se procesan todos los `PendingDamageEvent` en orden; la salud se queda en 0 (no baja de 0) y `IsDeadComponent` solo se añade una vez |
 | Héroe sin stamina suficiente | `HeroAttackSystem` bloquea el swing; no se crea evento de daño |
 | Modo Brace activado | `BraceWeaponSystem` aplica perfiles por fila antes de que `UnitAttackSystem` evalúe rango/timing |
 
@@ -319,7 +319,7 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | `Assets/Scripts/Combat/UnitWeapon.Component.cs` | Stats del arma: damageProfile, attackRange, attackInterval, criticalChance, criticalMultiplier, hitbox shape, strike window, kineticMultiplier |
 | `Assets/Scripts/Combat/UnitCombat.Component.cs` | Estado de ataque de la unidad: target, attackCooldown, isAttacking, attackAnimationTimer, hitboxFired |
 | `Assets/Scripts/Combat/SquadCombat.Component.cs` | Parámetros de ataque a nivel squad: attackRange, attackInterval, attackTimer |
-| `Assets/Scripts/Combat/UnitShield.Component.cs` | Bloqueo de escudo: currentBlock, maxBlock, regenRate, orientation |
+| `Assets/Scripts/Combat/UnitShield.Component.cs` | Bloqueo de escudo: currentBlock, maxBlock, regenRate, brokenTimer, breakStunDuration (orientation sin lectores) |
 | `Assets/Scripts/Combat/WeaponHitbox.Component.cs` | WeaponHitboxOwner, WeaponHitboxRef, WeaponHitboxActiveTag (IEnableableComponent) |
 | `Assets/Scripts/Combat/WeaponCollider.Component.cs` | Hitbox del héroe: owner, isActive |
 | `Assets/Scripts/Combat/Team.Component.cs` | Equipo de la entidad: TeamComponent.value |

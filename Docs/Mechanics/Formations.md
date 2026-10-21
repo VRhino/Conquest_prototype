@@ -9,6 +9,15 @@ Las formaciones son configuraciones tácticas que los squads adoptan bajo instru
 - **No todas las formaciones están disponibles para todos los squads** — la compatibilidad depende del tipo de unidad y el nivel de la escuadra.
 - Los cambios de formación son inmediatos si el squad no está en medio de una carga activa.
 
+### Estado frente al código (2026-10-21)
+| Apartado | Código | Estado |
+|---|---|---|
+| Tipos de formación | `FormationType`: Line, Dispersed, Testudo, Wedge, Column, Square, ShieldWall | **Schiltron no existe en el código**; Column y Square existen pero no están en las tablas de este doc |
+| Bajas y huecos (§5) | Plantillas por soldados vivos y reparto por cercanía (`FormationSystem`) | Sincronizado; el detalle está en `Docs/Design/Movimiento_Formaciones.md` §11 |
+| Disposición y slots (§6) | `FormationDefinition` (datos), `FormationSystem` (reparto), `GridFormationUpdateSystem` (giro con el ancla) | Sincronizado; `FormationGrid.System.cs` ya no existe |
+| Adaptación dinámica (§5) | `FormationAdaptationSystem` calcula `requiresAdaptation` | **Nadie lo consume** (ver `Docs/Por_Abordar/Formaciones_y_Posturas.md`) |
+| Datos y posturas | `Docs/Mechanics/FormationPostures.md` | Sincronizado |
+
 ---
 
 ## 2. Tabla de formaciones
@@ -76,7 +85,7 @@ El cambio de formación **no interrumpe** el movimiento en curso — el squad co
 - **Unidades muertas**: los slots vacantes se redistribuyen para mantener la coherencia visual de la formación.
 - **Terreno**: si el terreno impide mantener la geometría exacta, las posiciones se ajustan manteniendo la orientación.
 
-El squad nunca queda con "huecos" visibles fijos — la formación se comprime automáticamente al perder unidades.
+Al perder unidades, cuando los vivos bajan del mínimo de la plantilla actual, la formación pasa a la plantilla más pequeña que les corresponde y cada unidad toma la ranura libre más cercana. Si la formación solo tiene una plantilla, quedan huecos hasta que se añadan plantillas reducidas (F1 en `Docs/Por_Abordar/Formaciones_y_Posturas.md`).
 
 ---
 
@@ -84,15 +93,15 @@ El squad nunca queda con "huecos" visibles fijos — la formación se comprime a
 
 El sistema de grid asigna a cada unidad un **slot** dentro de la formación:
 
-1. `FormationGrid.System.cs` asigna slots numéricos a las unidades activas del squad.
-2. `FormationPositionCalculator` calcula la posición 3D de cada slot relativa al centro del squad, usando `calculateTerrainHeight` para ajustar la elevación del terreno.
+1. `FormationSystem` elige la plantilla de `FormationDefinition` según los soldados vivos y reparte las ranuras (la libre más cercana al rehacer la disposición).
+2. `FormationPositionCalculator` calcula la posición 3D de cada slot relativa al centro del squad (ranura × espaciado + ruido determinista), usando `calculateTerrainHeight` para ajustar la elevación del terreno.
 3. `UnitFollowFormation.System.cs` mueve cada unidad hacia su slot asignado frame a frame.
 4. `UnitFormationState.System.cs` gestiona las transiciones de estado de las unidades (`Moving` / `Formed` / `Waiting`) en respuesta al movimiento de formación.
    - **Llegada con histéresis** (`FormationArrival.Step`): una unidad entra en `Formed` por debajo de `arrivalRadiusIn` (0,2 m) cuando el ancla lleva `arrivalCalmTime` (0,15 s) quieta, y solo sale por encima de `arrivalRadiusOut` (0,5 m) o de `holdReformRadius` en Hold.
-   - **Arranque por filas** (`FormationStartDelay`): al salir de `Formed`, la espera es `fila × startRowDelay` (0,08 s) más una variación determinista por slot de hasta `startJitterDelay` (0,1 s). La fila delantera (mayor `gridPosition.y`) sale primero.
+   - **Arranque por filas** (`FormationStartDelay`): al salir de `Formed`, la espera es `fila × startRowDelay` (0,08 s) más una variación determinista por slot de hasta `startJitterDelay` (0,1 s). La fila delantera (fila 0 de la ranura) sale primero.
    - **Destino adelantado** (`UnitNavMeshSystem`, `FormationDestinationPrediction`): con el slot en marcha, el agente recibe el slot proyectado adelantado `destinationLeadTime` (0,4 s, tope 1 m) y solo se reenvía al cambiar más de `max(0,25 m, v × 0,25 s)`.
    - Todos estos valores viven en `Assets/ScriptableObjects/Movement/DefaultMovementTuning.asset` (`MovementTuningConfig`), horneado como `MovementTuningComponent` por `SquadSpawnConfigAuthoring`.
-5. `GridFormationUpdate.System.cs` recalcula el grid cuando cambia la formación o el número de unidades.
+5. `GridFormationUpdate.System.cs` gira el desplazamiento local de cada slot con el ancla.
 
 El centro de la formación sigue al **punto de destino del squad** (orden de movimiento) o permanece en su posición actual (Hold Position).
 
@@ -102,7 +111,7 @@ El centro de la formación sigue al **punto de destino del squad** (orden de mov
 
 | Caso | Resolución |
 |------|-----------|
-| Squad con menos unidades que slots | `FormationGrid` asigna solo los slots disponibles; la geometría se comprime; no hay slots vacíos flotantes |
+| Squad con menos unidades que slots | Si hay una plantilla más pequeña para ese número de vivos se usa; si no, quedan slots vacíos |
 | Formación cambiada durante una carga activa | El cambio se encola; la formación anterior completa la carga y luego se aplica la nueva [verificar en `Formation.System.cs`] |
 | Squad en Hold Position al cambiar formación | La formación se reorganiza in situ; las unidades se mueven a sus nuevos slots sin salir del área de Hold |
 | Squad intenta formación no compatible con su tipo | La UI no permite la selección; el sistema ECS ignora el request si llega por error |
@@ -118,9 +127,8 @@ El centro de la formación sigue al **punto de destino del squad** (orden de mov
 | `Assets/Scripts/Squads/Formation.Component.cs` | Tipo de formación activa del squad, índice en la lista |
 | `Assets/Scripts/Squads/FormationLibraryBlob.cs` | Blob asset con todos los perfiles de formación (nombre, multiplicador, geometría de grid) |
 | `Assets/Scripts/Squads/Systems/Formation.System.cs` | Aplica la formación al squad; valida compatibilidad con el tipo de unidad |
-| `Assets/Scripts/Squads/Systems/FormationAdaptation.System.cs` | Adapta slots cuando mueren unidades o el terreno lo requiere |
-| `Assets/Scripts/Squads/Systems/FormationGrid.System.cs` | Asigna slots a unidades activas del squad |
-| `Assets/Scripts/Squads/Systems/GridFormationUpdate.System.cs` | Recalcula el grid al cambiar formación o número de unidades |
+| `Assets/Scripts/Squads/Systems/FormationAdaptation.System.cs` | Calcula `requiresAdaptation` (sin consumidor hoy) |
+| `Assets/Scripts/Squads/Systems/GridFormationUpdate.System.cs` | Gira el desplazamiento local de los slots con el ancla |
 | `Assets/Scripts/Squads/Systems/UnitFormationState.System.cs` | Gestiona estados Moving / Formed / Waiting de cada unidad |
 | `Assets/Scripts/Squads/Systems/UnitFollowFormation.System.cs` | Mueve físicamente cada unidad hacia su slot asignado |
 | `Assets/Scripts/Squads/FormationPositionCalculator.cs` | Calcula posiciones 3D de cada slot; `calculateTerrainHeight` para elevación |
