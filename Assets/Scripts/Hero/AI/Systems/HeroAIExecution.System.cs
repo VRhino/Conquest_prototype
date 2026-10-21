@@ -126,9 +126,13 @@ public partial class HeroAIExecutionSystem : SystemBase
                                 bool hasSprintStamina = !EntityManager.HasComponent<StaminaComponent>(entity)
                                     || (!EntityManager.GetComponentData<StaminaComponent>(entity).isExhausted
                                         && EntityManager.GetComponentData<StaminaComponent>(entity).currentStamina > 0f);
-                                float agentSpeed = dec.shouldSprint && hasSprintStamina
-                                    ? stats.ValueRO.baseSpeed * stats.ValueRO.sprintMultiplier
+                                // Walking speed from the stack: 0 while immobilised, which AI heroes ignored before.
+                                float walkSpeed = SystemAPI.HasComponent<MoveSpeedComponent>(entity)
+                                    ? SystemAPI.GetComponent<MoveSpeedComponent>(entity).value
                                     : stats.ValueRO.baseSpeed;
+                                float agentSpeed = dec.shouldSprint && hasSprintStamina
+                                    ? walkSpeed * stats.ValueRO.sprintMultiplier
+                                    : walkSpeed;
                                 agent.speed = agentSpeed;
                                 agent.isStopped = false;
                                 if (IsCurrentPathValid(navigation, resolved,

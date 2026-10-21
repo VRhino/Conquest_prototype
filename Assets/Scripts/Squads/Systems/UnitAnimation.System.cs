@@ -60,6 +60,8 @@ public partial class UnitAnimationSystem : SystemBase
             if (statsLookup.HasComponent(entity))
             {
                 maxSpeed = statsLookup[entity].speed;
+                // Immobilised (speed 0 on the stack): keep the last reference so gait and blend stay defined.
+                if (maxSpeed <= 0f) maxSpeed = animComponent.ValueRO.MaxSpeed;
             }
             
             float requestedSpeed = maxSpeed;

@@ -32,7 +32,6 @@ public partial class UnitFollowFormationSystem : SystemBase
         var transformLookup = GetComponentLookup<LocalTransform>();
         var anchorLookup = GetComponentLookup<SquadFormationAnchorComponent>(true);
         var stateLookup = GetComponentLookup<SquadStateComponent>(true);
-        var shieldLookup = GetComponentLookup<UnitShieldComponent>(true);
         
         // TODO: Las unidades pueden usar EnvironmentAwarenessComponent del escuadrón 
         // para adaptar su navegación individual (evitar obstáculos, ajustar velocidad, etc.)
@@ -88,32 +87,25 @@ public partial class UnitFollowFormationSystem : SystemBase
                     {
                         navMeshHandlesMovement = true;
 
-                        // Shield break stun: freeze movement
-                        if (shieldLookup.HasComponent(unit) && shieldLookup[unit].brokenTimer > 0f)
-                        {
-                            navAgent.speed = 0f;
-                        }
-                        else
-                        {
-                            // Aplicar velocidad NavMesh dinámica (soporta hurryToCommander)
-                            float baseSpeed = SystemAPI.HasComponent<UnitStatsComponent>(unit)
-                                ? SystemAPI.GetComponent<UnitStatsComponent>(unit).speed
-                                : defaultMoveSpeed;
-                            float speedMultiplier = SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit)
-                                ? SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier
-                                : 1f;
+                        // Aplicar velocidad NavMesh dinámica (soporta hurryToCommander). The speed is resolved by the
+                        // stack: a shield-break stun overrides it to 0, so the unit brakes to a stop like any arrival.
+                        float baseSpeed = SystemAPI.HasComponent<UnitStatsComponent>(unit)
+                            ? SystemAPI.GetComponent<UnitStatsComponent>(unit).speed
+                            : defaultMoveSpeed;
+                        float speedMultiplier = SystemAPI.HasComponent<UnitMoveSpeedVariation>(unit)
+                            ? SystemAPI.GetComponent<UnitMoveSpeedVariation>(unit).speedMultiplier
+                            : 1f;
 
-                            bool hasCombatTarget = SystemAPI.HasComponent<UnitCombatComponent>(unit)
-                                && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
-                                && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
+                        bool hasCombatTarget = SystemAPI.HasComponent<UnitCombatComponent>(unit)
+                            && SystemAPI.GetComponent<UnitCombatComponent>(unit).target != Entity.Null
+                            && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
-                            float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
-                                hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
-                            targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, isHoldingPosition,
-                                navAgent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction));
-                            navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
-                                navAgent.acceleration * dt, navAgent.acceleration * tuning.brakingFactor * dt);
-                        }
+                        float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
+                            hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
+                        targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, isHoldingPosition,
+                            navAgent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction));
+                        navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
+                            navAgent.acceleration * dt, navAgent.acceleration * tuning.brakingFactor * dt);
                     }
                     else
                     {

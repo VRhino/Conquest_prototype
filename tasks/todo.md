@@ -39,8 +39,15 @@ anticrítico), T1 de `Aprendizajes_Referencia.md` (regla de combinación).
   `BattleTestScene`: el local da 320/117/26,5/45,4, igual que el cálculo antiguo; el IA lleva su equipo.
   Hallazgos sin tocar: los héroes nunca han tenido penetración en batalla (la fórmula la calcula, nadie la aplicaba),
   se deja igual para no cambiar el balance; y la referencia rota de `HeroClassDefinition.prefab` sigue ahí.
-- [ ] **4. Velocidad con capas (L5-3).** `MoveSpeed` por la pila; el aturdimiento por rotura de escudo es un override a 0
+- [x] **4. Velocidad con capas (L5-3).** `MoveSpeed` por la pila; el aturdimiento por rotura de escudo es un override a 0
   con caducidad, y desaparece el `speed = 0` duplicado.
+  Hecho: `DamageCalculationSystem` añade el override (`StatEffects.Immobilize`) al romper el escudo; las unidades leen
+  `UnitStatsComponent.speed` y los héroes `MoveSpeedComponent` (velocidad resuelta; `HeroStatsComponent.baseSpeed`
+  sigue siendo la referencia de la marcha). Se quitan las comprobaciones de `brokenTimer` en `UnitFollowFormation` (la
+  unidad aturdida frena con su deceleración, como en una llegada) y `HeroMovement`; los héroes IA, que ignoraban el
+  aturdimiento, ahora también se paran. Un primer intento paraba en seco con `speed <= 0` y volvía S1 no determinista
+  (saltaba la marcha en los primeros frames, antes de resolver la velocidad). La animación de unidad conserva
+  su velocidad de referencia mientras la velocidad es 0.
 - [ ] **5. Escudo absorbente (L1-06).** `AbsorbShieldComponent {valor, expiraEn}` entre el cálculo y la vida: absorbe
   primero y el exceso pasa a la vida; un golpe de 0 no lo consume. Sin fuente todavía (la darán las habilidades).
 - [ ] **6. Crítico como la referencia (L1-04).** `CritFormula` (tasa y daño extra) con los stats de la pila; base del arma

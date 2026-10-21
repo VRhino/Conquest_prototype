@@ -10,7 +10,7 @@ using Unity.Mathematics;
 /// <item><see cref="HealthComponent"/>, <see cref="HeroHealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current
 /// value keeps its fraction). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
 /// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
-/// penetration and identity fields stay as the spawner wrote them).</item>
+/// penetration and identity fields stay as the spawner wrote them) and <see cref="MoveSpeedComponent"/> of heroes.</item>
 /// <item><see cref="DamageProfileComponent"/> (damage and penetration; a squad's units share their squad's profile
 /// entity, so it carries its own stats). <see cref="PenetrationComponent"/> only on entities without a profile, so
 /// penetration is never counted twice.</item>
@@ -102,6 +102,8 @@ public partial class StatResolveSystem : SystemBase
                 slashPenetration = stats.Get(StatId.SlashPenetration),
                 piercePenetration = stats.Get(StatId.PiercePenetration),
             });
+        if (SystemAPI.HasComponent<MoveSpeedComponent>(entity))
+            SystemAPI.SetComponent(entity, new MoveSpeedComponent { value = stats.Get(StatId.MoveSpeed) });
         if (SystemAPI.HasComponent<UnitStatsComponent>(entity))
         {
             var s = SystemAPI.GetComponentRW<UnitStatsComponent>(entity);

@@ -54,21 +54,19 @@ public partial class HeroMovementSystem : SystemBase
 
             float3 desired = (float3)(camForward * moveInput.y + camRight * moveInput.x);
             float3 direction = math.lengthsq(desired) > 0f ? math.normalize(desired) : float3.zero;
-            float currentSpeed = stats.baseSpeed;
-            if (input.IsSprintPressed && !stamina.isExhausted && stamina.currentStamina > 0f)
+            // Walking speed from the stack (0 while immobilised by a shield-break stun); heroes off the stack walk at
+            // their base speed.
+            float currentSpeed = EntityManager.HasComponent<MoveSpeedComponent>(entity)
+                ? EntityManager.GetComponentData<MoveSpeedComponent>(entity).value
+                : stats.baseSpeed;
+            if (currentSpeed <= 0f)
+            {
+                direction = float3.zero;
+                currentSpeed = 0f;
+            }
+            else if (input.IsSprintPressed && !stamina.isExhausted && stamina.currentStamina > 0f)
             {
                 currentSpeed *= stats.sprintMultiplier;
-            }
-
-            // Shield break stun: freeze hero movement
-            if (EntityManager.HasComponent<UnitShieldComponent>(entity))
-            {
-                var heroShield = EntityManager.GetComponentData<UnitShieldComponent>(entity);
-                if (heroShield.brokenTimer > 0f)
-                {
-                    direction = float3.zero;
-                    currentSpeed = 0f;
-                }
             }
 
             if (EntityManager.HasComponent<HeroMoveIntent>(entity))

@@ -21,8 +21,9 @@ using Unity.Transforms;
 ///
 /// Shield check runs AFTER damage is calculated so the block absorbs the real
 /// effective damage. If block goes to 0 the shield breaks, triggering a stun of
-/// breakStunDuration seconds (from UnitShieldComponent). During stun the unit
-/// cannot move and receives damage normally.
+/// breakStunDuration seconds (from UnitShieldComponent): a MoveSpeed override to 0 on the
+/// modifier stack (<see cref="StatEffects.Immobilize"/>). During stun the unit cannot move
+/// and receives damage normally.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadAISystem))]
@@ -34,6 +35,9 @@ public partial class DamageCalculationSystem : SystemBase
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
         var shieldLookup      = GetComponentLookup<UnitShieldComponent>();
+        var modifierLookup    = GetBufferLookup<StatModifier>();
+        var dirtyLookup       = GetComponentLookup<ModifiersDirty>();
+        double now            = SystemAPI.Time.ElapsedTime;
         var transformLookup   = GetComponentLookup<LocalTransform>(true);
         var ecb               = new EntityCommandBuffer(Allocator.Temp);
 
@@ -100,6 +104,13 @@ public partial class DamageCalculationSystem : SystemBase
                         // Shield break — stun the unit
                         shield.currentBlock = 0f;
                         shield.brokenTimer  = shield.breakStunDuration;
+                        // The stun itself is a speed override on the stack that expires on its own (L5-3).
+                        if (modifierLookup.HasBuffer(p.target))
+                        {
+                            StatEffects.Immobilize(modifierLookup[p.target], now + shield.breakStunDuration,
+                                StatEffects.ShieldBreakStun);
+                            if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
+                        }
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
