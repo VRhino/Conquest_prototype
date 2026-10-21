@@ -335,3 +335,8 @@
 ## Reproducibilidad de los escenarios (M10, 2026-10-21)
 
 - Un escenario que solo fija el paso de tiempo mientras graba no es reproducible: la carga y la preparación corren al ritmo real del editor y cada corrida empieza a medir en otro estado. Fijar `Time.captureFramerate` desde el `SetUp`, restaurarlo en el `TearDown` y volver a sembrar `Random` justo antes del escenario. Comprobarlo con `cmp` sobre las columnas de posición de dos CSV: deben coincidir hasta el primer evento no determinista.
+
+## Llegada del ancla y margen en Walk (C10, M1, 2026-10-21)
+
+- Con escenarios reproducibles, una corrida por variante basta para S1-S4, pero las llegadas son caóticas: un cambio pequeño en la trayectoria mueve el tiempo hasta formar unas décimas en cualquier sentido. Una mejora que solo aparece en el tiempo hasta formar de un escenario no prueba nada por sí sola; contrastarla con el error en marcha y con los demás escenarios antes de atribuirla.
+- Una regla que tiene sentido en el diseño (no acelerar si la unidad va adelantada a su slot) empeoró S4. Probar cada hipótesis por separado con su medida y quitar la que no ayuda, aunque "debería" ayudar.

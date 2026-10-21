@@ -21,6 +21,7 @@ public static class FormationFollowSpeed
         public float runEnterDistance;  // Switch to Run beyond this distance to the slot.
         public float runExitDistance;   // Back to Walk below this distance.
         public float runSpeedMultiplier;
+        public float walkCatchUpRatio;  // Walk cap while recovering, × the Walk speed (M1).
 
         public static Settings From(in MovementTuningComponent t) => new Settings
         {
@@ -30,6 +31,7 @@ public static class FormationFollowSpeed
             runEnterDistance = t.runEnterDistance,
             runExitDistance = t.runExitDistance,
             runSpeedMultiplier = t.runSpeedMultiplier,
+            walkCatchUpRatio = t.walkCatchUpRatio,
         };
     }
 
@@ -75,14 +77,16 @@ public static class FormationFollowSpeed
 
     /// <summary>
     /// Speed command: v_ff + max(0, (d − r_in)/T), clamped to [minRatio·base, gear speed]; a still slot is
-    /// approached at the gear speed.
+    /// approached at the gear speed. In Walk the cap is <see cref="Settings.walkCatchUpRatio"/> × the Walk speed, so a
+    /// unit that starts behind its moving slot can close the gap without switching to Run (M1).
     /// </summary>
     public static float Speed(float baseSpeed, float slotSpeed, float distanceToSlot, MovementGear gear, in Settings s)
     {
         float max = MaxSpeed(baseSpeed, gear, s);
         if (slotSpeed < StillSlotSpeed) return max;
         float min = math.min(max, baseSpeed * s.minSpeedRatio);
+        float cap = gear == MovementGear.Walk ? max * math.max(1f, s.walkCatchUpRatio) : max;
         float recovery = math.max(0f, distanceToSlot - s.arrivalRadius) / math.max(1e-3f, s.recoveryTime);
-        return math.clamp(slotSpeed + recovery, min, max);
+        return math.clamp(slotSpeed + recovery, min, cap);
     }
 }

@@ -37,6 +37,10 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
 
+    [Header("Walk catch-up (M1)")]
+    [Tooltip("Behind a moving slot in Walk, a unit may go up to this multiple of its Walk speed to recover the start-up delay without switching to Run. 1 = never above the Walk speed (decision D4 before M1).")]
+    [Min(1f)] public float walkCatchUpRatio = 1.05f;
+
     [Header("Anchor arrival (C10)")]
     [Tooltip("The squad anchor follows its target point (hero + offset, hold point, retreat point) with its own velocity: it speeds up at most at this rate and brakes in advance so it stops on the target. While marching it trails by v^2/(2a). 0 = the anchor copies the hero exactly (behaviour before C10).")]
     [Min(0f)] public float anchorAcceleration = 8f;
@@ -107,6 +111,7 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        walkCatchUpRatio = walkCatchUpRatio,
         anchorAcceleration = anchorAcceleration,
         anchorSnapDistance = anchorSnapDistance,
         contactRingMaxArcDegrees = contactRingMaxArcDegrees,

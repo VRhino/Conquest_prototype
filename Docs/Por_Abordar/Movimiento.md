@@ -7,7 +7,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 ## Resumen
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
-| M1 | Error al slot en marcha por encima de 0,5 m | Alta | Pendiente (0,61 m tras C10) |
+| M1 | Error al slot en marcha por encima de 0,5 m | Alta | **Hecho** (S1 0,51 m con C10 y margen en Walk) |
 | M2 | Solapes enemigos persistentes en la melé (S6) | Alta | Pendiente |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
 | M4 | Animación del paso a carrera | Media | Pendiente |
@@ -39,6 +39,10 @@ y luego camina con un pequeño retraso que no puede cerrar.
 
 **Cómo abordarlo.** Medir de nuevo tras el paso 5 (los tirones también afectan al seguimiento) y tras el espaciado nuevo
 (el slot de 1,1 m cambia la geometría). Si sigue por encima, plantear al usuario la opción del margen en Walk.
+
+**Hecho (2026-10-21, `Movimiento_Formaciones.md` §14-15).** La llegada del ancla (C10) bajó S1 a 0,61 m y el margen en
+Walk (`walkCatchUpRatio` 1,05, decidido por el usuario) a 0,51 m. S3 se queda en 0,71 m: ahí manda la marcha de carrera tras
+cada arranque. Coste: S4 forma en 1,00 s en lugar de 0,60 s, dentro del límite de 2 s.
 
 ## M2. Solapes enemigos persistentes en la melé
 **Qué es.** En S6 quedan entre 5 y 11 pares enemigos solapados más de 0,3 s (antes 16-32). La distancia media de contacto es

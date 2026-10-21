@@ -617,3 +617,23 @@ Lectura:
 - Coste para el jugador: al arrancar y al parar, la escuadra se separa del héroe hasta medio metro más. Queda anotado en el
   GDD (§4.3).
 - Una corrida de S6 falló por el arnés ("Scripted input did not move the hero", ya visto antes); no cuenta en la tabla.
+
+## 15. Margen de recuperación en Walk (M1, 2026-10-21)
+
+**Decisión del usuario (enmienda D4):** en Walk, una unidad detrás de su slot en marcha puede ir hasta `walkCatchUpRatio`
+(1,05) × su velocidad de Walk para recuperar el retraso del arranque sin pasar a Run. Con el slot quieto o en Run no cambia
+nada.
+
+| Métrica (con C10) | Sin margen | Con margen 1,05 |
+|---|---|---|
+| Error al slot en marcha S1 / S3 / S4 | 0,61 / 0,71 / 1,04 m | **0,51** / 0,71 / 1,16 m |
+| Formado al 95 % S1 / S3 (media) / S4 | 0,27 / 0,81 / 0,60 s | 0,17 / 0,90 / 1,00 s |
+| Aceleración > 20 m/s² S1 / S3 / S4 | 0,2 / 0,4 / 0,6 % | 0,2 / 0,4 / 0,6 % |
+
+Lectura:
+- S1 llega prácticamente al objetivo de 0,5 m en marcha.
+- S3 y S4 tardan algo más en formar, pero siguen dentro del límite de §5.1 (≤ 2 s) y mejor que antes de C10 (0,93 / 1,37 s).
+- Se probó además que una unidad adelantada a su slot no acelere (L-3). S4 empeoró a 1,50 s y S1/S3 no cambiaron, así que se
+  descartó.
+- Las llegadas son sensibles: con escenarios ya reproducibles, un cambio pequeño en la trayectoria mueve el tiempo hasta
+  formar unas décimas, en un sentido u otro.

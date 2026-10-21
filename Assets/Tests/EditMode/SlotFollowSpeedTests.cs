@@ -20,12 +20,27 @@ public class SlotFollowSpeedTests
     }
 
     [Test]
-    public void SpeedNeverExceedsTheGearTopSpeed()
+    public void SpeedNeverExceedsTheGearCap()
     {
+        // Run tops out at its speed; Walk at its speed × the catch-up margin (M1).
         foreach (MovementGear gear in new[] { MovementGear.Walk, MovementGear.Run })
+        {
+            float cap = FormationFollowSpeed.MaxSpeed(Base, gear, S) * (gear == MovementGear.Walk ? S.walkCatchUpRatio : 1f);
             for (float d = 0f; d < 20f; d += 0.5f)
-                Assert.That(FormationFollowSpeed.Speed(Base, 10f, d, gear, S),
-                    Is.LessThanOrEqualTo(FormationFollowSpeed.MaxSpeed(Base, gear, S) + 1e-5f));
+                Assert.That(FormationFollowSpeed.Speed(Base, 10f, d, gear, S), Is.LessThanOrEqualTo(cap + 1e-5f));
+        }
+    }
+
+    [Test]
+    public void WalkingUnitBehindAMovingSlotCatchesUpSlightlyFaster()
+    {
+        Assert.That(S.walkCatchUpRatio, Is.GreaterThan(1f));
+        // Slot marching at the Walk speed, unit 1 m behind: above the Walk speed, within the margin.
+        float v = FormationFollowSpeed.Speed(Base, Base, 1f, MovementGear.Walk, S);
+        Assert.That(v, Is.EqualTo(Base * S.walkCatchUpRatio).Within(1e-5f));
+        // On the slot it matches the slot; a still slot is approached at the plain Walk speed.
+        Assert.That(FormationFollowSpeed.Speed(Base, Base, 0f, MovementGear.Walk, S), Is.EqualTo(Base).Within(1e-5f));
+        Assert.That(FormationFollowSpeed.Speed(Base, 0f, 1f, MovementGear.Walk, S), Is.EqualTo(Base).Within(1e-5f));
     }
 
     [Test]
