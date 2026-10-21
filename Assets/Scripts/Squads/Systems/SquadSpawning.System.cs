@@ -112,7 +112,8 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 level = initialLevel,
                 currentXP = initialXP,
-                xpToNextLevel = SquadProgressionSystem.CalculateNext(initialLevel)
+                xpToNextLevel = SquadProgressionCurves.XPToNext(
+                    data.curves, initialLevel)
             });
             ecb.AddComponent(squad, new SquadInstanceComponent
             {

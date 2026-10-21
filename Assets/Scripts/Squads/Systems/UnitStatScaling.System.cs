@@ -34,21 +34,22 @@ public partial class UnitStatScalingSystem : SystemBase
                 ? EntityManager.GetComponentData<SquadDefinitionComponent>(source).leadershipCost : 0;
             int level = EntityManager.GetComponentData<SquadProgressComponent>(squad).level;
             UnitStatsUtility.ApplyStatsToSquad(squad, data, leadership, level, EntityManager, GetBufferLookup<SquadUnitElement>(true));
-            UpdateUnlocks(squad, source, level);
+            UpdateUnlocks(squad, source, data.curves, level);
             if (!EntityManager.HasComponent<SquadStatsInitialized>(squad))
                 EntityManager.AddComponent<SquadStatsInitialized>(squad);
         }
     }
 
-    void UpdateUnlocks(Entity squad, Entity source, int level)
+    void UpdateUnlocks(Entity squad, Entity source, BlobAssetReference<SquadProgressionCurveBlob> curves, int level)
     {
         if (!EntityManager.HasBuffer<AbilityByLevelElement>(source)) return;
         if (!EntityManager.HasBuffer<UnlockedAbilityElement>(squad))
             EntityManager.AddBuffer<UnlockedAbilityElement>(squad);
         var abilities = EntityManager.GetBuffer<AbilityByLevelElement>(source, true);
         var unlocked = EntityManager.GetBuffer<UnlockedAbilityElement>(squad);
-        for (int i = 0; i < abilities.Length && (i + 1) * 10 <= level; i++)
+        for (int i = 0; i < abilities.Length; i++)
         {
+            if (SquadProgressionCurves.UnlockLevel(curves, i) > level) continue; // Table in data (L7-5).
             var ability = abilities[i].Value;
             if (ability == Entity.Null) continue;
             bool exists = false;

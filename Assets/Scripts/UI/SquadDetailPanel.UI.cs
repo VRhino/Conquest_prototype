@@ -108,10 +108,10 @@ public class SquadDetailPanel : MonoBehaviour
         }
     }
 
-    // Ejemplo de cálculo de exp para siguiente nivel (ajusta según tu sistema real)
+    // XP to the next level from the squad's progression table (L7-5).
     private int GetExpForNextLevel(int level, SquadData data)
     {
-        return level >= SquadProgressionCurves.MaxLevel ? 0 : (int)SquadProgressionSystem.CalculateNext(level);
+        return level >= SquadProgressionCurves.MaxLevel ? 0 : (int)SquadProgressionCurves.XPToNext(data != null ? data.progressionData : null, level);
     }
     private void SetLayerRecursively(GameObject obj, int layer)
     {

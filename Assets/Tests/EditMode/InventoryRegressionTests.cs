@@ -616,7 +616,7 @@ public class InventoryRegressionTests
         manager.SetComponentData(squad, new SquadOwnerComponent { hero = container });
         manager.SetComponentData(squad, new SquadInstanceComponent { id = 0, persistentId = new FixedString64Bytes(data.id) });
         manager.SetComponentData(squad, new SquadProgressComponent { level = data.level, currentXP = data.experience,
-            xpToNextLevel = SquadProgressionSystem.CalculateNext(data.level) });
+            xpToNextLevel = SquadProgressionCurves.DefaultXPToNext(data.level) });
         return squad;
     }
 

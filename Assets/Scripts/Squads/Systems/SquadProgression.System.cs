@@ -50,15 +50,16 @@ public partial class SquadProgressionSystem : SystemBase
                 continue;
             }
             var progress = EntityManager.GetComponentData<SquadProgressComponent>(reward.squad);
+            var curves = CurvesOf(reward.squad);
             int oldLevel = progress.level;
             progress.level = math.clamp(progress.level, 1, SquadProgressionCurves.MaxLevel);
             progress.currentXP = math.max(0f, progress.currentXP) + reward.amount;
-            progress.xpToNextLevel = CalculateNext(progress.level);
+            progress.xpToNextLevel = SquadProgressionCurves.XPToNext(curves, progress.level);
             while (progress.level < SquadProgressionCurves.MaxLevel && progress.currentXP >= progress.xpToNextLevel)
             {
                 progress.currentXP -= progress.xpToNextLevel;
                 progress.level++;
-                progress.xpToNextLevel = CalculateNext(progress.level);
+                progress.xpToNextLevel = SquadProgressionCurves.XPToNext(curves, progress.level);
             }
             if (local)
             {
@@ -105,7 +106,14 @@ public partial class SquadProgressionSystem : SystemBase
         return -1;
     }
 
-    public static float CalculateNext(int level) => math.floor(100f * math.pow(1.1f, level - 1));
+    /// <summary>The squad's progression table (L7-5), through its data reference; not created if it has none.</summary>
+    BlobAssetReference<SquadProgressionCurveBlob> CurvesOf(Entity squad)
+    {
+        if (!EntityManager.HasComponent<SquadDataReference>(squad)) return default;
+        var source = EntityManager.GetComponentData<SquadDataReference>(squad).dataEntity;
+        return EntityManager.HasComponent<SquadDataComponent>(source)
+            ? EntityManager.GetComponentData<SquadDataComponent>(source).curves : default;
+    }
 }
 
 /// <summary>Local ECS delivery event, not an authenticated/network BattleResult.</summary>
