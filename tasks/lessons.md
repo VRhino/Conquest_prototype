@@ -342,3 +342,9 @@
 - Una regla que tiene sentido en el diseño (no acelerar si la unidad va adelantada a su slot) empeoró S4. Probar cada hipótesis por separado con su medida y quitar la que no ayuda, aunque "debería" ayudar.
 - Al copiar un parámetro de la referencia, mirar cuánto tiempo está activo, no solo su valor. El horizonte de 5 s de CB solo vale en el primer cambio de estado del soldado y después baja a 1 s; copiar "5 s" retrasó las llegadas, y 1 s (lo habitual allí) las mejoró.
 - Una corrección de posición entre enemigos modelada como muelle (empuje proporcional a una fuerza) pelea con el agente que sigue andando hacia el enemigo. Resolver solo el solape, como hace una cápsula, bajó a la mitad solapes y picos en la melé concurrida (S7). Antes de añadir un sistema "que separe", mirar qué hace la referencia: CB no tiene empuje entre soldados, solo ORCA y la cápsula de física.
+
+## Fase 0 de la referencia (2026-10-21)
+
+- Antes de añadir valores a un componente de configuración, comprobar que su authoring está en las escenas donde se usa. `HeroGameplayConfigAuthoring` solo estaba en `SettlementHeroWorld`, así que en batalla `HeroAttackSystem` y `HeroStaminaSystem` (`RequireForUpdate`) no tienen su singleton.
+- Para quitar a un MonoBehaviour la escritura de estado de ECS (reloj, resultado), mover primero la regla a ECS y dejar al MonoBehaviour solo leyendo. Un resultado con varios escritores se arregla con eventos y un único resolvedor con orden fijo.
+- Una consulta de ECS guardada en un MonoBehaviour debe crearse por mundo: los tests cambian de mundo y la consulta del mundo viejo deja de valer.

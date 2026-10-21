@@ -247,6 +247,7 @@ C1-C4 (datos y umbrales), luego C5-C9 (contacto, giro, separación y seguimiento
 lotes absorben la antigua Fase 3 y los retoques L3-03/L3-04 de la Fase 0. Después siguen las fases de abajo en su orden.
 
 **Fase 0 — Higiene y bajo riesgo (sin dependencias).**
+> **Hecha (2026-10-21, rama `feat/reference-phase0`):** D1, L4-01, L4-02, L7-1, L7-2, L1-03 y L1-05, un commit cada una (`tasks/todo.md`). L3-03 y L3-04 ya entraron con las formaciones por datos.
 D1 y sincronización de docs (sección 8); L4-01 y L4-02 (reloj y histéresis); L7-1 y L7-2 (reloj y resultado en ECS);
 L1-03 (daño puro) y L1-05 (RNG sembrado); L3-03/L3-04 como retoques. Estas piezas son prerrequisito de red (T4) y no
 dependen de nada.
