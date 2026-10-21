@@ -16,7 +16,7 @@ Características clave:
 ### Estado frente al código (2026-10-21)
 | Apartado | Código de referencia | Estado |
 |---|---|---|
-| Fórmula (§5) | `Combat/DamageCalculation.System.cs` | Sincronizado (D1 de `Docs/Design/Aprendizajes_Referencia.md`) |
+| Fórmula (§5) | `Combat/DamageFormula.cs` (`DamageFormula.Compute`, pura; constantes en `CombatTuning`) | Sincronizado (D1 y L1-03 de `Docs/Design/Aprendizajes_Referencia.md`) |
 | Escudo (§6) | `DamageCalculation.System.cs`, `ShieldHitboxBehaviour`, `BlockRegen.System.cs` | Sincronizado; la orientación no se usa |
 | Crítico (§5.3) | `MeleeContactResolution.System.cs`, `RangedAttack.System.cs` | Sincronizado |
 
@@ -378,6 +378,8 @@ else                    → PendingDamageEvent.category  (Normal / Ability)
 
 | Archivo | Rol |
 |---------|-----|
+| `Assets/Scripts/Combat/DamageFeedbackEvent.cs` | Evento de presentación que crea `DamageCalculationSystem` (posición, categoría, cantidad); la lógica de daño no llama a la UI |
+| `Assets/Scripts/Combat/DamageFeedbackPresentation.System.cs` | Consume los eventos en `PresentationSystemGroup` y llama a `FloatingCombatTextManager.Spawn` (1,8 m sobre el objetivo) |
 | `Assets/Scripts/UI/Battle/FloatingCombatTextManager.cs` | Singleton + pool (20 entradas). `Spawn(pos, category, dmg)` |
 | `Assets/Scripts/UI/Battle/FCTEntry.cs` | Canvas world-space por entrada. Billboard, animación float+fade, pool callback |
 | `Assets/Scripts/Combat/DamageCategory.cs` | Enum indexado por el manager para resolver sprite de icono |

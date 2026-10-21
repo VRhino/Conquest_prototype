@@ -16,6 +16,9 @@ using Unity.Transforms;
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
 ///   Height:  +10% per metre of vertical advantage (> 0.5 m threshold)
 ///
+/// The arithmetic is <see cref="DamageFormula.Compute"/> (pure, L1-03); this system gathers its inputs, applies shield
+/// and health, and emits <see cref="DamageFeedbackEvent"/>s for the floating text instead of calling UI.
+///
 /// Shield check runs AFTER damage is calculated so the block absorbs the real
 /// effective damage. If block goes to 0 the shield breaks, triggering a stun of
 /// breakStunDuration seconds (from UnitShieldComponent). During stun the unit
@@ -27,7 +30,7 @@ public partial class DamageCalculationSystem : SystemBase
 {
     protected override void OnUpdate()
     {
-        const float FctYOffset = 1.8f;
+        var combatTuning = CombatTuning.Default;
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
         var shieldLookup      = GetComponentLookup<UnitShieldComponent>();
@@ -74,49 +77,16 @@ public partial class DamageCalculationSystem : SystemBase
                 ? penetrationLookup[p.damageSource]
                 : default;
 
-            float effectiveDmg = 0f;
-
-            if (profile.bluntDamage > 0f)
+            // Pure formula (L1-03): every input gathered here, no lookups inside.
+            float kinetic = SystemAPI.Exists(p.damageSource) && SystemAPI.HasComponent<UnitWeaponComponent>(p.damageSource)
+                ? SystemAPI.GetComponent<UnitWeaponComponent>(p.damageSource).kineticMultiplier : -1f;
+            float heightDelta = transformLookup.HasComponent(p.target)
+                ? p.attackerPosition.y - transformLookup[p.target].Position.y : 0f;
+            float effectiveDmg = DamageFormula.Compute(new DamageInput
             {
-                float raw    = profile.bluntDamage * p.multiplier;
-                float netDef = math.max(def.bluntDefense - (profile.bluntPenetration + pen.bluntPenetration), 0f);
-                effectiveDmg += math.max(raw - netDef, raw * 0.05f);
-            }
-            if (profile.slashingDamage > 0f)
-            {
-                float raw    = profile.slashingDamage * p.multiplier;
-                float netDef = math.max(def.slashDefense - (profile.slashingPenetration + pen.slashPenetration), 0f);
-                effectiveDmg += math.max(raw - netDef, raw * 0.05f);
-            }
-            if (profile.piercingDamage > 0f)
-            {
-                float raw    = profile.piercingDamage * p.multiplier;
-                float netDef = math.max(def.pierceDefense - (profile.piercingPenetration + pen.piercePenetration), 0f);
-                effectiveDmg += math.max(raw - netDef, raw * 0.05f);
-            }
-
-            // Kinetic bonus — attacker speed increases penetration effectiveness
-            if (p.attackerSpeed > 0f)
-            {
-                float km = 0.3f;
-                if (SystemAPI.Exists(p.damageSource) &&
-                    SystemAPI.HasComponent<UnitWeaponComponent>(p.damageSource))
-                    km = SystemAPI.GetComponent<UnitWeaponComponent>(p.damageSource).kineticMultiplier;
-
-                const float kMaxSpeed  = 5f;
-                float kineticBonus = 1f + (p.attackerSpeed / kMaxSpeed) * km;
-                effectiveDmg *= kineticBonus;
-            }
-
-            // Height bonus — ~10% per metre of vertical advantage (threshold 0.5 m)
-            if (transformLookup.HasComponent(p.target))
-            {
-                float heightDelta = p.attackerPosition.y - transformLookup[p.target].Position.y;
-                if (heightDelta > 0.5f)
-                    effectiveDmg *= 1f + heightDelta * 0.1f;
-            }
-
-            effectiveDmg = math.max(0f, effectiveDmg);
+                profile = profile, multiplier = p.multiplier, defense = def, penetration = pen,
+                attackerSpeed = p.attackerSpeed, kineticMultiplier = kinetic, heightDelta = heightDelta,
+            }, combatTuning).effective;
 
             // --- Shield block check (absorbs effectiveDmg when shield collider was hit) ---
             if (shieldLookup.HasComponent(p.target) && p.hitType == HitType.Shield)
@@ -133,9 +103,7 @@ public partial class DamageCalculationSystem : SystemBase
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
-                            FloatingCombatTextManager.Instance?.Spawn(
-                                new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
-                                DamageCategory.ShieldBreak, 0f);
+                            Feedback(ref ecb, bp, DamageCategory.ShieldBreak, 0f);
                         }
                     }
                     else
@@ -144,9 +112,7 @@ public partial class DamageCalculationSystem : SystemBase
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
-                            FloatingCombatTextManager.Instance?.Spawn(
-                                new UnityEngine.Vector3(bp.x, bp.y + FctYOffset, bp.z),
-                                DamageCategory.Blocked, effectiveDmg);
+                            Feedback(ref ecb, bp, DamageCategory.Blocked, effectiveDmg);
                         }
                     }
                     shieldLookup[p.target] = shield;
@@ -197,9 +163,7 @@ public partial class DamageCalculationSystem : SystemBase
                 DamageCategory cat = willKill          ? DamageCategory.Death
                                    : p.multiplier > 1f ? DamageCategory.Critical
                                    :                     p.category;
-                FloatingCombatTextManager.Instance?.Spawn(
-                    new UnityEngine.Vector3(tp.x, tp.y + FctYOffset, tp.z),
-                    cat, effectiveDmg);
+                Feedback(ref ecb, tp, cat, effectiveDmg);
             }
 
             CompleteEvent(ref ecb, entity, p);
@@ -208,6 +172,13 @@ public partial class DamageCalculationSystem : SystemBase
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }
+    /// <summary>Floating text for the presentation layer (DamageFeedbackPresentationSystem).</summary>
+    static void Feedback(ref EntityCommandBuffer ecb, float3 position, DamageCategory category, float amount)
+    {
+        Entity evt = ecb.CreateEntity();
+        ecb.AddComponent(evt, new DamageFeedbackEvent { position = position, category = category, amount = amount });
+    }
+
     static void CompleteEvent(ref EntityCommandBuffer ecb, Entity entity, PendingDamageEvent pending)
     {
         if (pending.destroyEntityAfterProcessing) ecb.DestroyEntity(entity);
