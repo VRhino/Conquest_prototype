@@ -148,6 +148,12 @@ public partial class HeroInitializationSystem : SystemBase
     {
         if (!EntityManager.HasBuffer<CooldownGroupElement>(entity)) EntityManager.AddBuffer<CooldownGroupElement>(entity);
         if (!EntityManager.HasComponent<SkillInstanceComponent>(entity)) EntityManager.AddComponent<SkillInstanceComponent>(entity);
+        if (!EntityManager.HasComponent<ParkedSkillComponent>(entity)) EntityManager.AddComponent<ParkedSkillComponent>(entity);
+        if (!EntityManager.HasComponent<EndSkillsRequestComponent>(entity))
+        {
+            EntityManager.AddComponent<EndSkillsRequestComponent>(entity);
+            EntityManager.SetComponentEnabled<EndSkillsRequestComponent>(entity, false);
+        }
         if (!EntityManager.HasComponent<SkillRequestComponent>(entity))
         {
             EntityManager.AddComponent<SkillRequestComponent>(entity);

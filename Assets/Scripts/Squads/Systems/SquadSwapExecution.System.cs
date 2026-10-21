@@ -248,6 +248,10 @@ public partial class SquadSwapExecutionSystem : SystemBase
             // Remove HeroSquadReference to trigger SquadSpawningSystem on next frame
             ecb.RemoveComponent<HeroSquadReference>(entity);
 
+            // A squad swap ends the hero's skills (L2-4).
+            if (SystemAPI.HasComponent<EndSkillsRequestComponent>(entity))
+                ecb.SetComponentEnabled<EndSkillsRequestComponent>(entity, true);
+
             // Emit SquadChangeEvent
             ecb.AddComponent(entity, new SquadSwapCooldownComponent { remainingTime = 10f });
             Entity evt = ecb.CreateEntity();

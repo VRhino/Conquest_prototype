@@ -5,7 +5,9 @@ using Unity.Entities;
 /// Runs every hero's skills (Aprendizajes_Referencia.md L2-1, L2-2), the player's and the AI's alike: advances the
 /// current instance through its phases and applies its events, then evaluates the pending request with
 /// <see cref="SkillGate"/> and launches it (stamina and cooldown are charged at the start, as in the reference). A new
-/// skill replaces the current one when the current phase is interruptible.
+/// skill replaces the current one when the current phase is interruptible (<see cref="SkillRefresh.Interrupt"/>), or
+/// parks it and restores it when it ends (<see cref="SkillRefresh.Yield"/>, L2-4). Death, the end of the battle, control
+/// (a stun) and an <see cref="EndSkillsRequestComponent"/> end the current and the parked skill.
 /// Keeps <see cref="HeroCombatComponent.isAttacking"/>, <see cref="HeroCombatComponent.hitboxFired"/>, the attack
 /// animation trigger and <see cref="WeaponHitboxActiveTag"/> up to date for stamina, visuals and melee contacts.
 /// Replaces HeroAttackSystem and its duplicated player/AI paths.
@@ -16,14 +18,21 @@ using Unity.Entities;
 public partial class SkillExecutionSystem : SystemBase
 {
     NativeList<SkillEvent> _fired;
+    /// <summary>Events of a parked skill: its clock runs, but nothing it would do happens while it is set aside.</summary>
+    NativeList<SkillEvent> _discarded;
 
     protected override void OnCreate()
     {
         RequireForUpdate<MatchStateComponent>();
         _fired = new NativeList<SkillEvent>(16, Allocator.Persistent);
+        _discarded = new NativeList<SkillEvent>(16, Allocator.Persistent);
     }
 
-    protected override void OnDestroy() => _fired.Dispose();
+    protected override void OnDestroy()
+    {
+        _fired.Dispose();
+        _discarded.Dispose();
+    }
 
     protected override void OnUpdate()
     {
@@ -43,19 +52,28 @@ public partial class SkillExecutionSystem : SystemBase
             bool requested = SystemAPI.IsComponentEnabled<SkillRequestComponent>(entity);
             if (requested) SystemAPI.SetComponentEnabled<SkillRequestComponent>(entity, false);
 
-            if (!battle || !life.ValueRO.isAlive)
+            bool endRequested = SystemAPI.HasComponent<EndSkillsRequestComponent>(entity)
+                && SystemAPI.IsComponentEnabled<EndSkillsRequestComponent>(entity);
+            if (endRequested) SystemAPI.SetComponentEnabled<EndSkillsRequestComponent>(entity, false);
+            if (!battle || !life.ValueRO.isAlive || endRequested || Immobilised(entity))
             {
                 if (inst.active) End(ref inst, ref c, skills, now);
+                ClearParked(entity);
                 PublishState(entity, inst, ref c);
                 continue;
             }
 
+            AdvanceParked(entity, skills, dt);
             if (inst.active && Valid(skills, inst.skillIndex))
             {
                 _fired.Clear();
                 bool ended = SkillTimeline.Advance(ref skills[inst.skillIndex].skill.Value, ref inst, dt, _fired);
                 Apply(entity, ref inst, ref c);
-                if (ended) End(ref inst, ref c, skills, now);
+                if (ended)
+                {
+                    End(ref inst, ref c, skills, now);
+                    RestoreParked(entity, ref inst);
+                }
             }
             else if (inst.active)
             {
@@ -79,7 +97,7 @@ public partial class SkillExecutionSystem : SystemBase
         {
             inBattle = true,
             alive = true,
-            immobilised = SystemAPI.HasComponent<MoveSpeedComponent>(entity) && SystemAPI.GetComponent<MoveSpeedComponent>(entity).value <= 0f,
+            immobilised = Immobilised(entity),
             hasSkill = index >= 0,
             busy = busy,
             currentInterruptible = !busy || SkillTimeline.Interruptible(ref skills[inst.skillIndex].skill.Value, inst),
@@ -94,8 +112,14 @@ public partial class SkillExecutionSystem : SystemBase
         }
         if (SkillGate.Evaluate(input) != SkillRejection.None) return;
 
-        if (busy) End(ref inst, ref combat, skills, now); // Interrupt (L2-4 adds yield).
         ref var skill = ref skills[index].skill.Value;
+        if (busy)
+        {
+            ref var current = ref skills[inst.skillIndex].skill.Value;
+            bool inFinal = current.phases[inst.phase].final;
+            if (skill.refresh == SkillRefresh.Yield && !inFinal && TryPark(entity, inst)) inst.hitboxOpen = false;
+            else End(ref inst, ref combat, skills, now);
+        }
         stamina.currentStamina -= skill.staminaCost;
         float scale = SystemAPI.HasComponent<CooldownScaleComponent>(entity) ? SystemAPI.GetComponent<CooldownScaleComponent>(entity).value : 1f;
         CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
@@ -124,6 +148,51 @@ public partial class SkillExecutionSystem : SystemBase
                     break;
             }
         }
+    }
+
+    bool Immobilised(Entity entity)
+        => SystemAPI.HasComponent<MoveSpeedComponent>(entity) && SystemAPI.GetComponent<MoveSpeedComponent>(entity).value <= 0f;
+
+    /// <summary>Sets the current skill aside, if the hero has no parked one yet (only one, as in the reference).</summary>
+    bool TryPark(Entity entity, in SkillInstanceComponent inst)
+    {
+        if (!SystemAPI.HasComponent<ParkedSkillComponent>(entity)) return false;
+        var parked = SystemAPI.GetComponentRW<ParkedSkillComponent>(entity);
+        if (parked.ValueRO.active) return false;
+        var copy = inst;
+        copy.hitboxOpen = false;
+        parked.ValueRW = new ParkedSkillComponent { active = true, instance = copy };
+        return true;
+    }
+
+    void AdvanceParked(Entity entity, DynamicBuffer<HeroSkillElement> skills, float dt)
+    {
+        if (!SystemAPI.HasComponent<ParkedSkillComponent>(entity)) return;
+        var parked = SystemAPI.GetComponentRW<ParkedSkillComponent>(entity);
+        if (!parked.ValueRO.active) return;
+        if (!Valid(skills, parked.ValueRO.instance.skillIndex)) { parked.ValueRW.active = false; return; }
+        _discarded.Clear();
+        if (SkillTimeline.Advance(ref skills[parked.ValueRO.instance.skillIndex].skill.Value, ref parked.ValueRW.instance, dt, _discarded))
+            parked.ValueRW.active = false; // It ended while set aside.
+    }
+
+    void RestoreParked(Entity entity, ref SkillInstanceComponent inst)
+    {
+        if (!SystemAPI.HasComponent<ParkedSkillComponent>(entity)) return;
+        var parked = SystemAPI.GetComponentRW<ParkedSkillComponent>(entity);
+        if (!parked.ValueRO.active) return;
+        var restored = parked.ValueRO.instance;
+        restored.lastSkillId = inst.lastSkillId;
+        restored.lastEndedAt = inst.lastEndedAt;
+        restored.instanceId = inst.instanceId;
+        inst = restored;
+        parked.ValueRW.active = false;
+    }
+
+    void ClearParked(Entity entity)
+    {
+        if (SystemAPI.HasComponent<ParkedSkillComponent>(entity))
+            SystemAPI.GetComponentRW<ParkedSkillComponent>(entity).ValueRW.active = false;
     }
 
     static void End(ref SkillInstanceComponent inst, ref HeroCombatComponent combat, DynamicBuffer<HeroSkillElement> skills, double now)

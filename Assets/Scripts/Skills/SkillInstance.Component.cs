@@ -28,3 +28,19 @@ public struct SkillInstanceComponent : IComponentData
     public int lastSkillId;
     public double lastEndedAt;
 }
+
+/// <summary>
+/// The skill a <see cref="SkillRefresh.Yield"/> skill set aside (L2-4, skill-lifecycle.md §3.2): only one. It keeps its
+/// clock running while parked and becomes the current one again when the yield skill ends, if it has not ended itself.
+/// </summary>
+public struct ParkedSkillComponent : IComponentData
+{
+    public bool active;
+    public SkillInstanceComponent instance;
+}
+
+/// <summary>
+/// Asks <see cref="SkillExecutionSystem"/> to end the hero's skills, current and parked (external endings of the
+/// reference: here a squad swap). Death, the end of the battle and control end them without asking.
+/// </summary>
+public struct EndSkillsRequestComponent : IComponentData, IEnableableComponent { }

@@ -50,7 +50,7 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   Hecho (un commit para los dos, dependen entre sí): `SkillGate`, `HeroSkillRequestSystem`, `SkillTimeline` y
   `SkillExecutionSystem` sustituyen a `HeroAttackSystem`. El aturdimiento ahora impide lanzar también el ataque básico
   (como la referencia: el control prohíbe por defecto). Verificado en Play: el héroe IA ataca por la puerta.
-- [ ] **5. Interrupción (L2-4).** `interrupt`/`yield`, aparcada, fases no interrumpibles; fin al morir, al acabar la batalla y
+- [x] **5. Interrupción (L2-4).** `interrupt`/`yield`, aparcada, fases no interrumpibles; fin al morir, al acabar la batalla y
   al cambiar de escuadra.
 - [ ] **6. Efectos genéricos.** Daño en área/cono, modificador temporal, embestida y escudo absorbente; datos para las 16
   habilidades de clase según el GDD.
