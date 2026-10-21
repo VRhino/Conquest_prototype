@@ -124,6 +124,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 - Reloj de decisión (`AIThinkClock`, L4-01): cada héroe IA piensa cada `heroAIThinkInterval` s (0,1 s) de tiempo de simulación, con fase propia por hash de su entidad y como mucho `heroAIMaxThinksPerFrame` (8) por frame, los más atrasados primero. Antes: `Time.frameCount % 5`, todos en el mismo frame y dependiente de los FPS.
 - **Lee**: `TeamWorldState` (datos ya recolectados — no hace queries propios al mundo ECS)
 - Calcula derived per-hero: distancias a enemigos visibles, `isInsideZone`, `bestObjectiveZone`, `threatZone`, `nearestEnemyHero`
+- `isUnderAttack` (enemigo a menos de 20 m o escuadra en combate) pasa por un `DebouncedGate` (L4-02): se abre tras `heroAIUnderAttackOpenTime` (0,3 s) seguidos y se cierra tras `heroAIUnderAttackCloseTime` (1 s) sin la condición, para que los bots no cambien de rama por un tick.
 - **Escribe**: `HeroAIBlackboard` (solo datos derived per-hero, sin listas)
 
 ### HeroAIRusher.System — Behavior: Rush Objectives

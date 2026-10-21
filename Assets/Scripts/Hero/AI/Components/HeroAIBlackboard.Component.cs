@@ -28,7 +28,8 @@ public class HeroAIBlackboard : IComponentData
     public SquadType      ownSquadType;
     public bool           ownSquadIsRanged;
     public bool           squadIsInCombat;
-    public bool           isUnderAttack;       // true = enemy within 20m OR own squad is in combat
+    public bool           isUnderAttack;       // enemy within 20m OR own squad in combat, held 0.3 s to open / 1 s to close (L4-02)
+    public DebouncedGate  underAttackGate;
     public int            squadUnitCount;
     public SquadOrderType squadCurrentOrder;
 

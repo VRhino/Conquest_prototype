@@ -25,6 +25,8 @@ public partial class HeroAIPerceptionSystem : SystemBase
     // Fallbacks when no SquadSpawnConfig is baked (reduced test worlds).
     private const float DefaultThinkInterval = 0.1f;
     private const int DefaultMaxThinksPerFrame = 8;
+    private const float DefaultUnderAttackOpenTime = 0.3f;
+    private const float DefaultUnderAttackCloseTime = 1f;
 
     private readonly List<(double due, Entity entity)> _due = new();
 
@@ -40,6 +42,8 @@ public partial class HeroAIPerceptionSystem : SystemBase
         float interval = hasConfig && config.heroAIThinkInterval > 0f ? config.heroAIThinkInterval : DefaultThinkInterval;
         int maxThinks = hasConfig && config.heroAIMaxThinksPerFrame > 0 ? config.heroAIMaxThinksPerFrame : DefaultMaxThinksPerFrame;
         double now = SystemAPI.Time.ElapsedTime;
+        float openTime = hasConfig ? config.heroAIUnderAttackOpenTime : DefaultUnderAttackOpenTime;
+        float closeTime = hasConfig ? config.heroAIUnderAttackCloseTime : DefaultUnderAttackCloseTime;
 
         // Who is due: each hero on its own phase; the most overdue think first, up to the per-frame cap.
         _due.Clear();
@@ -66,12 +70,12 @@ public partial class HeroAIPerceptionSystem : SystemBase
             bb.thinkDeltaTime = (float)(now - bb.lastThinkTime);
             bb.lastThinkTime = now;
             bb.nextThinkTime = AIThinkClock.Next(_due[i].due, now, interval);
-            Think(entity, bb, ws);
+            Think(entity, bb, ws, openTime, closeTime);
         }
     }
 
     /// <summary>Refreshes the derived values of one AI hero from <see cref="TeamWorldState"/>.</summary>
-    void Think(Entity entity, HeroAIBlackboard bb, TeamWorldState ws)
+    void Think(Entity entity, HeroAIBlackboard bb, TeamWorldState ws, float openTime, float closeTime)
     {
         var transform = SystemAPI.GetComponentRO<LocalTransform>(entity);
         var health = SystemAPI.GetComponentRO<HeroHealthComponent>(entity);
@@ -138,9 +142,13 @@ public partial class HeroAIPerceptionSystem : SystemBase
             }
 
             // ── Under attack ──────────────────────────────────────────
-            bb.isUnderAttack = (bb.nearestEnemyHero != Entity.Null
-                                && bb.nearestEnemyDistanceSq <= UnderAttackRangeSq)
-                               || bb.squadIsInCombat;
+            // With hysteresis (L4-02): one tick of an enemy at 19.9 m no longer flips the bot into combat and back.
+            bool underAttackNow = (bb.nearestEnemyHero != Entity.Null
+                                   && bb.nearestEnemyDistanceSq <= UnderAttackRangeSq)
+                                  || bb.squadIsInCombat;
+            bb.underAttackGate = DebouncedGate.Step(bb.underAttackGate, underAttackNow, bb.thinkDeltaTime,
+                openTime, closeTime);
+            bb.isUnderAttack = bb.underAttackGate.open;
 
             // ── Zone-derived data ──────────────────────────────────────
             bb.isInsideAnyZone  = false;

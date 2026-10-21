@@ -32,6 +32,10 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     [Min(0.01f)] public float heroAIThinkInterval = 0.1f;
     [Tooltip("At most this many AI heroes think in one frame; the most overdue go first.")]
     [Min(1)] public int heroAIMaxThinksPerFrame = 8;
+    [Tooltip("An AI hero counts as under attack only after an enemy hero is near (or its squad fights) for this long (L4-02).")]
+    [Min(0f)] public float heroAIUnderAttackOpenTime = 0.3f;
+    [Tooltip("...and stops counting as under attack only after that has been false for this long.")]
+    [Min(0f)] public float heroAIUnderAttackCloseTime = 1f;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -82,7 +86,9 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 navMeshFailureRetryInterval = authoring.navMeshFailureRetryInterval,
                 heroAIArrivalDistance = authoring.heroAIArrivalDistance,
                 heroAIThinkInterval = authoring.heroAIThinkInterval,
-                heroAIMaxThinksPerFrame = authoring.heroAIMaxThinksPerFrame
+                heroAIMaxThinksPerFrame = authoring.heroAIMaxThinksPerFrame,
+                heroAIUnderAttackOpenTime = authoring.heroAIUnderAttackOpenTime,
+                heroAIUnderAttackCloseTime = authoring.heroAIUnderAttackCloseTime
             });
         }
     }
