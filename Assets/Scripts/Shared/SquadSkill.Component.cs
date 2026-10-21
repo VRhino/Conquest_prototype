@@ -11,6 +11,6 @@ public struct SquadSkillComponent : IComponentData
     /// <summary>Stamina or resource cost required to use the skill.</summary>
     public float staminaCost;
 
-    /// <summary>Entity with the <see cref="CooldownComponent"/> controlling this skill.</summary>
+    /// <summary>Entity with the <see cref="CooldownGroupElement"/> buffer controlling this skill.</summary>
     public Entity cooldownEntity;
 }

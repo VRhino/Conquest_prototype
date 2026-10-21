@@ -146,6 +146,11 @@ public partial class HeroInitializationSystem : SystemBase
     /// </summary>
     void SeedSkills(Entity entity, HeroClassDefinition classData)
     {
+        if (!EntityManager.HasBuffer<CooldownGroupElement>(entity)) EntityManager.AddBuffer<CooldownGroupElement>(entity);
+        if (!EntityManager.HasComponent<CooldownScaleComponent>(entity))
+            EntityManager.AddComponentData(entity, new CooldownScaleComponent { value = 1f });
+        StatStack.SetBase(EntityManager, entity, StatId.CooldownScale, 1f);
+
         var skills = EntityManager.HasBuffer<HeroSkillElement>(entity)
             ? EntityManager.GetBuffer<HeroSkillElement>(entity)
             : EntityManager.AddBuffer<HeroSkillElement>(entity);

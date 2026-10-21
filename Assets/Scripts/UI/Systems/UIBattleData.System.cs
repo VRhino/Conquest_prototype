@@ -34,6 +34,21 @@ public partial class UIBattleDataSystem : SystemBase
             break; // only one local player
         }
 
+        // ── Skill cooldowns ───────────────────────────────────────────────────
+        double now = SystemAPI.Time.ElapsedTime;
+        foreach (var (skills, groups) in
+                 SystemAPI.Query<DynamicBuffer<HeroSkillElement>, DynamicBuffer<CooldownGroupElement>>()
+                          .WithAll<IsLocalPlayer>())
+        {
+            foreach (var skill in skills)
+            {
+                int index = (int)skill.slot - (int)SkillSlot.Q;
+                if (index < 0 || index > 3 || !skill.skill.IsCreated) continue;
+                data.skillCooldown[index] = CooldownUtility.Fraction(groups, skill.skill.Value.cooldownGroup, now);
+            }
+            break;
+        }
+
         // ── Capture zone ──────────────────────────────────────────────────────
         if (SystemAPI.TryGetSingleton<LocalHeroCaptureStateComponent>(out var captureState))
         {

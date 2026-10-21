@@ -39,8 +39,10 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
 - [x] **1. Habilidades del héroe en batalla.** Las cuatro habilidades salen del SO de clase (`HeroClassManager`), no de la
   entidad de clase horneada (vacía, P2 de `Docs/Por_Abordar/Pila_Modificadores.md`). Blob de habilidad con fases y
   eventos; el SO `HeroAbility` gana fases, grupo de enfriamiento y efectos (con valores por defecto equivalentes).
-- [ ] **2. Enfriamientos por grupo (L2-5).** Buffer de grupos, `CooldownUtility` y `StatId.CooldownScale`; fuera
+- [x] **2. Enfriamientos por grupo (L2-5).** Buffer de grupos, `CooldownUtility` y `StatId.CooldownScale`; fuera
   `CooldownComponent`/`CooldownSystem` (y el HUD lee los grupos).
+  Hecho; el HUD recibe la fracción de Q/E/R/F por `UIBattleDataSystem`. El enfriamiento del cambio de escuadra sigue
+  en su propio componente (pasarlo a un grupo queda para cuando se toque el cambio de escuadra).
 - [ ] **3. Puerta y petición (L2-1).** `SkillGate` con motivos, `SkillRequestComponent`, teclas Q/E/R/F (interactuar a G) e IA
   por la misma petición.
 - [ ] **4. Instancia por fases (L2-2).** `SkillInstanceComponent` y el sistema de fases; el ataque básico pasa a ser una

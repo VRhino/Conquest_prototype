@@ -34,6 +34,8 @@ public enum StatId : byte
     Dexterity,
     Armor,
     Vitality,
+    /// <summary>Multiplier of every skill cooldown (base 1; a perk −0.2 ratio gives 0.8), capped by <see cref="CooldownUtility.MinScale"/>.</summary>
+    CooldownScale,
     Count,
 }
 

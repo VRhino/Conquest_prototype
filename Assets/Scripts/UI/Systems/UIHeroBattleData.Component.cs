@@ -1,4 +1,5 @@
 using Unity.Entities;
+using Unity.Mathematics;
 
 /// <summary>
 /// Singleton component written every frame by UIBattleDataSystem.
@@ -12,6 +13,9 @@ public struct UIHeroBattleDataComponent : IComponentData
     public float maxHealth;
     public float currentStamina;
     public float maxStamina;
+    // ── Skill cooldowns (L2-5) ───────────────────────────────────────────────
+    /// <summary>Fraction still to wait for Q, E, R and the ultimate (x, y, z, w); 0 = ready.</summary>
+    public float4 skillCooldown;
 
     // ── Capture zone ─────────────────────────────────────────────────────────
     public bool  isInCaptureZone;

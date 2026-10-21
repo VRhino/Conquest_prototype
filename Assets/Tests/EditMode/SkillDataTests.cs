@@ -76,5 +76,7 @@ public class SkillDataTests
         var slots = new System.Collections.Generic.HashSet<SkillSlot>();
         foreach (var s in skills) slots.Add(s.slot);
         Assert.That(slots, Is.EquivalentTo(new[] { SkillSlot.Basic, SkillSlot.Q, SkillSlot.E, SkillSlot.R, SkillSlot.Ultimate }));
+        Assert.That(em.HasBuffer<CooldownGroupElement>(hero), Is.True);
+        Assert.That(em.GetComponentData<CooldownScaleComponent>(hero).value, Is.EqualTo(1f));
     }
 }

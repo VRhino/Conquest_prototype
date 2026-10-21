@@ -16,25 +16,13 @@ public class HUDController : MonoBehaviour
     {
         public Image icon;
         public Image cooldownFill;
-        [Tooltip("Entity that holds a CooldownComponent")] public Entity abilityEntity = Entity.Null;
 
-        /// <summary>Updates the cooldown display.</summary>
-        public void UpdateSlot(EntityManager em)
+        /// <summary>Updates the cooldown display with the fraction still to wait (0 = ready).</summary>
+        public void UpdateSlot(float remainingFraction)
         {
-            if (abilityEntity == Entity.Null || cooldownFill == null)
-                return;
-
-            if (em.HasComponent<CooldownComponent>(abilityEntity))
-            {
-                var cd = em.GetComponentData<CooldownComponent>(abilityEntity);
-                if (cd.cooldownDuration > 0f)
-                    cooldownFill.fillAmount = cd.currentCooldown / cd.cooldownDuration;
-                else
-                    cooldownFill.fillAmount = 0f;
-
-                // Flash or hide fill when ready
-                cooldownFill.enabled = !cd.isReady;
-            }
+            if (cooldownFill == null) return;
+            cooldownFill.fillAmount = remainingFraction;
+            cooldownFill.enabled = remainingFraction > 0f; // Hidden when ready.
         }
     }
 
@@ -50,6 +38,7 @@ public class HUDController : MonoBehaviour
     [SerializeField] TMP_Text _staminaText;
 
     [Header("Ability Slots")]
+    [Tooltip("Q, E, R y definitiva (F), en ese orden.")]
     [SerializeField] AbilitySlot[] _abilitySlots = new AbilitySlot[4];
 
     [Header("Squad Section")]
@@ -124,8 +113,8 @@ public class HUDController : MonoBehaviour
         if (_staminaText != null)
             _staminaText.text = $"{Mathf.CeilToInt(data.currentStamina)} / {Mathf.CeilToInt(data.maxStamina)}";
 
-        foreach (var slot in _abilitySlots)
-            slot?.UpdateSlot(_em);
+        for (int i = 0; i < _abilitySlots.Length && i < 4; i++)
+            _abilitySlots[i]?.UpdateSlot(data.skillCooldown[i]);
     }
 
     void CheckSquadChangeEvent(UIHeroBattleDataComponent data)
