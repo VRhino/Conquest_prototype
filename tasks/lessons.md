@@ -322,3 +322,7 @@
 - El `autoBraking` del `NavMeshAgent` no frena con antelación: si llega a un destino quieto a 4 m/s, para en un frame. Mandar "quédate aquí" (destino = posición actual) a una unidad en marcha es una parada instantánea. Limitar la velocidad con √(2·a·d) hacia destinos quietos y, para parar, apuntar al punto donde termina de frenar.
 - No poner rampa (aceleración limitada) a una corrección de posición tipo muelle como el bodyblock: con retardo se pasa, sigue empujando cuando el contacto ya terminó y oscila. Si el problema es el tamaño del empujón, limitar su tope.
 - S6 varía tanto entre corridas (solapes 8-15, picos 1,9-3,5 % sin cambiar nada) que una sola corrida no decide nada. Usar un parámetro que apague el cambio (aquí `arrivalDecelerationFraction` = 0) y comparar 3 o más corridas de cada lado sin recompilar.
+
+## Reproducibilidad de los escenarios (M10, 2026-10-21)
+
+- Un escenario que solo fija el paso de tiempo mientras graba no es reproducible: la carga y la preparación corren al ritmo real del editor y cada corrida empieza a medir en otro estado. Fijar `Time.captureFramerate` desde el `SetUp`, restaurarlo en el `TearDown` y volver a sembrar `Random` justo antes del escenario. Comprobarlo con `cmp` sobre las columnas de posición de dos CSV: deben coincidir hasta el primer evento no determinista.
