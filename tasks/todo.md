@@ -26,12 +26,19 @@ anticrítico), T1 de `Aprendizajes_Referencia.md` (regla de combinación).
 - Las unidades comparten el perfil de daño de su escuadra: el daño se resuelve en la entidad de la escuadra.
 
 ## Pasos (un commit cada uno; EditMode verde y regresiones de PlayMode antes de cada commit)
-- [ ] **1. Núcleo T1.** Tipos, `StatMath`, `StatResolveSystem` con sus objetivos y tests puros y de sistema. Sin
+- [x] **1. Núcleo T1.** Tipos, `StatMath`, `StatResolveSystem` con sus objetivos y tests puros y de sistema. Sin
   consumidores nuevos todavía.
-- [ ] **2. Nivel de escuadra por la pila.** `UnitStatsUtility` deja de escribir stats: siembra la base desde
+- [x] **2. Nivel de escuadra por la pila.** `UnitStatsUtility` deja de escribir stats: siembra la base desde
   `SquadDataComponent` y añade modificadores `Level` (curvas − 1). Mismos números que hoy (tests de escalado).
-- [ ] **3. Héroes y equipo (L7-3).** Base desde los atributos del héroe; el equipo entra como modificadores `Equipment`
+- [x] **3. Héroes y equipo (L7-3).** Base desde los atributos del héroe; el equipo entra como modificadores `Equipment`
   para todos los héroes (IA incluidos). `HeroInitializationSystem` deja de escribir vida, aguante y defensa.
+  Hecho: los atributos son bases de la pila y el equipo modificadores planos sobre ellos; `HeroStatFormulaComponent`
+  (coeficientes de clase) deja que el resolvedor derive vida, aguante, daño y defensa. La clase sale del guardado (local)
+  o de `HeroClassComponent`, que pone `BattleSceneController` (remotos e IA): `HeroClassDefinition.prefab` apunta a un
+  asset que no existe y hornea una clase vacía, así que en batalla ningún héroe se inicializaba. Verificado en
+  `BattleTestScene`: el local da 320/117/26,5/45,4, igual que el cálculo antiguo; el IA lleva su equipo.
+  Hallazgos sin tocar: los héroes nunca han tenido penetración en batalla (la fórmula la calcula, nadie la aplicaba),
+  se deja igual para no cambiar el balance; y la referencia rota de `HeroClassDefinition.prefab` sigue ahí.
 - [ ] **4. Velocidad con capas (L5-3).** `MoveSpeed` por la pila; el aturdimiento por rotura de escudo es un override a 0
   con caducidad, y desaparece el `speed = 0` duplicado.
 - [ ] **5. Escudo absorbente (L1-06).** `AbsorbShieldComponent {valor, expiraEn}` entre el cálculo y la vida: absorbe

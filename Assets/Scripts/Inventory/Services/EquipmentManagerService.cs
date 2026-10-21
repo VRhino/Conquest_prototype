@@ -323,9 +323,12 @@ public static class EquipmentManagerService
         => CalculateTotalEquipmentStats(_currentHero);
 
     public static Dictionary<string, float> CalculateTotalEquipmentStats(IHeroInventory hero)
+        => CalculateTotalEquipmentStats(hero?.Equipment);
+
+    /// <summary>Sums the generated stats of the equipped items (any hero: local, remote or AI).</summary>
+    public static Dictionary<string, float> CalculateTotalEquipmentStats(Equipment equipment)
     {
         var totalStats = new Dictionary<string, float>();
-        var equipment = hero?.Equipment;
         if (equipment == null) return totalStats;
         var equippedItems = new[] { equipment.weapon, equipment.helmet, equipment.torso,
             equipment.gloves, equipment.pants, equipment.boots };

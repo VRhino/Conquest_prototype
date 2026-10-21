@@ -7,7 +7,8 @@ using Unity.Mathematics;
 /// and <see cref="StatModifier"/> with <see cref="StatMath.Resolve"/> when <see cref="ModifiersDirty"/> is enabled or a
 /// modifier expires, and writes every target component the entity has:
 /// <list type="bullet">
-/// <item><see cref="HealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current value keeps its fraction).</item>
+/// <item><see cref="HealthComponent"/>, <see cref="HeroHealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current
+/// value keeps its fraction). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
 /// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
 /// penetration and identity fields stay as the spawner wrote them).</item>
 /// <item><see cref="DamageProfileComponent"/> (damage and penetration; a squad's units share their squad's profile
@@ -46,15 +47,24 @@ public partial class StatResolveSystem : SystemBase
         }
     }
 
-    float Stat(DynamicBuffer<StatBaseElement> bases, NativeArray<StatModifier> mods, StatId stat, double now)
-        => math.max(0f, StatMath.Resolve(StatMath.Base(bases, stat), mods, stat, now));
-
     void Write(Entity entity, DynamicBuffer<StatBaseElement> b, NativeArray<StatModifier> m, double now)
     {
+        var stats = new Resolved { bases = b, modifiers = m, now = now };
+        if (SystemAPI.HasComponent<HeroStatFormulaComponent>(entity))
+            stats.UseHeroFormula(SystemAPI.GetComponent<HeroStatFormulaComponent>(entity));
+
         if (SystemAPI.HasComponent<HealthComponent>(entity))
         {
             var health = SystemAPI.GetComponentRW<HealthComponent>(entity);
-            float max = Stat(b, m, StatId.MaxHealth, now);
+            float max = stats.Get(StatId.MaxHealth);
+            float fraction = health.ValueRO.maxHealth > 0f ? math.saturate(health.ValueRO.currentHealth / health.ValueRO.maxHealth) : 1f;
+            health.ValueRW.maxHealth = max;
+            health.ValueRW.currentHealth = max * fraction;
+        }
+        if (SystemAPI.HasComponent<HeroHealthComponent>(entity))
+        {
+            var health = SystemAPI.GetComponentRW<HeroHealthComponent>(entity);
+            float max = stats.Get(StatId.MaxHealth);
             float fraction = health.ValueRO.maxHealth > 0f ? math.saturate(health.ValueRO.currentHealth / health.ValueRO.maxHealth) : 1f;
             health.ValueRW.maxHealth = max;
             health.ValueRW.currentHealth = max * fraction;
@@ -62,7 +72,7 @@ public partial class StatResolveSystem : SystemBase
         if (SystemAPI.HasComponent<StaminaComponent>(entity))
         {
             var stamina = SystemAPI.GetComponentRW<StaminaComponent>(entity);
-            float max = Stat(b, m, StatId.MaxStamina, now);
+            float max = stats.Get(StatId.MaxStamina);
             float fraction = stamina.ValueRO.maxStamina > 0f ? math.saturate(stamina.ValueRO.currentStamina / stamina.ValueRO.maxStamina) : 1f;
             stamina.ValueRW.maxStamina = max;
             stamina.ValueRW.currentStamina = max * fraction;
@@ -70,39 +80,71 @@ public partial class StatResolveSystem : SystemBase
         if (SystemAPI.HasComponent<DefenseComponent>(entity))
             SystemAPI.SetComponent(entity, new DefenseComponent
             {
-                bluntDefense = Stat(b, m, StatId.BluntDefense, now),
-                slashDefense = Stat(b, m, StatId.SlashDefense, now),
-                pierceDefense = Stat(b, m, StatId.PierceDefense, now),
+                bluntDefense = stats.Get(StatId.BluntDefense),
+                slashDefense = stats.Get(StatId.SlashDefense),
+                pierceDefense = stats.Get(StatId.PierceDefense),
             });
         bool hasProfile = SystemAPI.HasComponent<DamageProfileComponent>(entity);
         if (hasProfile)
             SystemAPI.SetComponent(entity, new DamageProfileComponent
             {
-                bluntDamage = Stat(b, m, StatId.BluntDamage, now),
-                slashingDamage = Stat(b, m, StatId.SlashDamage, now),
-                piercingDamage = Stat(b, m, StatId.PierceDamage, now),
-                bluntPenetration = Stat(b, m, StatId.BluntPenetration, now),
-                slashingPenetration = Stat(b, m, StatId.SlashPenetration, now),
-                piercingPenetration = Stat(b, m, StatId.PiercePenetration, now),
+                bluntDamage = stats.Get(StatId.BluntDamage),
+                slashingDamage = stats.Get(StatId.SlashDamage),
+                piercingDamage = stats.Get(StatId.PierceDamage),
+                bluntPenetration = stats.Get(StatId.BluntPenetration),
+                slashingPenetration = stats.Get(StatId.SlashPenetration),
+                piercingPenetration = stats.Get(StatId.PiercePenetration),
             });
         else if (SystemAPI.HasComponent<PenetrationComponent>(entity))
             SystemAPI.SetComponent(entity, new PenetrationComponent
             {
-                bluntPenetration = Stat(b, m, StatId.BluntPenetration, now),
-                slashPenetration = Stat(b, m, StatId.SlashPenetration, now),
-                piercePenetration = Stat(b, m, StatId.PiercePenetration, now),
+                bluntPenetration = stats.Get(StatId.BluntPenetration),
+                slashPenetration = stats.Get(StatId.SlashPenetration),
+                piercePenetration = stats.Get(StatId.PiercePenetration),
             });
         if (SystemAPI.HasComponent<UnitStatsComponent>(entity))
         {
             var s = SystemAPI.GetComponentRW<UnitStatsComponent>(entity);
-            s.ValueRW.health = Stat(b, m, StatId.MaxHealth, now);
-            s.ValueRW.speed = Stat(b, m, StatId.MoveSpeed, now);
-            s.ValueRW.bluntDefense = Stat(b, m, StatId.BluntDefense, now);
-            s.ValueRW.slashingDefense = Stat(b, m, StatId.SlashDefense, now);
-            s.ValueRW.piercingDefense = Stat(b, m, StatId.PierceDefense, now);
-            s.ValueRW.bluntDamage = Stat(b, m, StatId.BluntDamage, now);
-            s.ValueRW.slashingDamage = Stat(b, m, StatId.SlashDamage, now);
-            s.ValueRW.piercingDamage = Stat(b, m, StatId.PierceDamage, now);
+            s.ValueRW.health = stats.Get(StatId.MaxHealth);
+            s.ValueRW.speed = stats.Get(StatId.MoveSpeed);
+            s.ValueRW.bluntDefense = stats.Get(StatId.BluntDefense);
+            s.ValueRW.slashingDefense = stats.Get(StatId.SlashDefense);
+            s.ValueRW.piercingDefense = stats.Get(StatId.PierceDefense);
+            s.ValueRW.bluntDamage = stats.Get(StatId.BluntDamage);
+            s.ValueRW.slashingDamage = stats.Get(StatId.SlashDamage);
+            s.ValueRW.piercingDamage = stats.Get(StatId.PierceDamage);
+        }
+    }
+
+    /// <summary>
+    /// The stats of one entity: base and modifiers through <see cref="StatMath.Resolve"/>. On a hero the class formula
+    /// adds to each base what its resolved attributes give, so equipment and perks on an attribute reach every stat it
+    /// feeds.
+    /// </summary>
+    struct Resolved
+    {
+        public DynamicBuffer<StatBaseElement> bases;
+        public NativeArray<StatModifier> modifiers;
+        public double now;
+        bool hero;
+        HeroStatFormulaComponent formula;
+        float strength, dexterity, armor, vitality;
+
+        public void UseHeroFormula(in HeroStatFormulaComponent heroFormula)
+        {
+            strength = Get(StatId.Strength);
+            dexterity = Get(StatId.Dexterity);
+            armor = Get(StatId.Armor);
+            vitality = Get(StatId.Vitality);
+            formula = heroFormula;
+            hero = true;
+        }
+
+        public float Get(StatId stat)
+        {
+            float baseValue = StatMath.Base(bases, stat);
+            if (hero) baseValue += HeroStatFormula.Derived(formula, stat, strength, dexterity, armor, vitality);
+            return math.max(0f, StatMath.Resolve(baseValue, modifiers, stat, now));
         }
     }
 }

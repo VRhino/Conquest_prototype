@@ -141,8 +141,11 @@ public class DataCacheService : MonoBehaviour
         => GetEquipmentBonuses(PlayerSessionService.SelectedHero);
 
     public static EquipmentBonuses GetEquipmentBonuses(IHeroInventory hero)
+        => GetEquipmentBonuses(hero?.Equipment);
+
+    public static EquipmentBonuses GetEquipmentBonuses(Equipment equipment)
     {
-        var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats(hero);
+        var equipmentStats = EquipmentManagerService.CalculateTotalEquipmentStats(equipment);
         return new EquipmentBonuses
         {
             strengthBonus  = equipmentStats.ContainsKey("Strength")  ? (int)equipmentStats["Strength"]  : 0,

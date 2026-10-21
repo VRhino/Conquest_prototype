@@ -533,6 +533,12 @@ public class BattleSceneController : MonoBehaviour
 
         BattleBootstrapRequests.SubmitRemote(World.DefaultGameObjectInjectionWorld, heroEntity, heroData.squadInstances);
 
+        // Its class, so HeroInitializationSystem can put its stats and equipment on the modifier stack.
+        if (System.Enum.TryParse(heroData.classID, out HeroClass heroClass))
+            em.AddComponentData(heroEntity, new HeroClassComponent { heroClass = heroClass });
+        else
+            Debug.LogWarning($"[BattleSceneController] Clase desconocida '{heroData.classID}' para el héroe remoto '{heroData.heroName}'");
+
         // Adjuntar datos visuales para que HeroVisualAppearanceSystem aplique partes al héroe remoto
         em.AddComponentObject(heroEntity, new HeroAppearanceComponent
         {
