@@ -72,7 +72,7 @@ namespace Conquest.SettlementPreview
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     [UpdateAfter(typeof(HeroInputSystem))]
     [UpdateBefore(typeof(HeroMovementSystem))]
-    [UpdateBefore(typeof(HeroAttackSystem))]
+    [UpdateBefore(typeof(HeroSkillRequestSystem))]
     [UpdateBefore(typeof(HeroStaminaSystem))]
     public partial class SettlementWalkInputFilterSystem : SystemBase
     {
@@ -81,7 +81,7 @@ namespace Conquest.SettlementPreview
             foreach (var (input, entity) in SystemAPI.Query<RefRW<HeroInputComponent>>().WithAll<SettlementWalkingHero>().WithEntityAccess())
             {
                 var value = input.ValueRO;
-                value.IsAttackPressed = false; value.UseSkill1 = false; value.UseSkill2 = false; value.UseUltimate = false;
+                value.IsAttackPressed = false; value.UseSkill1 = false; value.UseSkill2 = false; value.UseSkill3 = false; value.UseUltimate = false;
                 if (!SettlementWalkMode.Instance || !SettlementWalkMode.Instance.Ready || SettlementWalkMode.Instance.PointerFree) { value.MoveInput = float2.zero; value.IsSprintPressed = false; }
                 input.ValueRW = value;
                 if (EntityManager.HasComponent<PlayerInteractionComponent>(entity))

@@ -15,7 +15,7 @@ namespace ConquestTactics.Triggers
         public string buildingID;
         private bool _playerInside = false;
         private GameObject _playerObject;
-        private string _promptText = "Presiona 'F' para interactuar";
+        private string _promptText = "Presiona 'G' para interactuar";
 
 
 

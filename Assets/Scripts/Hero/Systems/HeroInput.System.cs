@@ -22,6 +22,7 @@ public partial class HeroInputSystem : SystemBase
         bool sprint = false;
         bool skill1 = false;
         bool skill2 = false;
+        bool skill3 = false;
         bool ultimate = false;
         bool attack = false;
         bool interact = false;
@@ -35,8 +36,9 @@ public partial class HeroInputSystem : SystemBase
             sprint = keyboard.leftShiftKey.isPressed;
             skill1 = keyboard.qKey.isPressed;
             skill2 = keyboard.eKey.isPressed;
-            ultimate = keyboard.rKey.isPressed;
-            interact = keyboard.fKey.wasPressedThisFrame;
+            skill3 = keyboard.rKey.isPressed;
+            ultimate = keyboard.fKey.isPressed;
+            interact = keyboard.gKey.wasPressedThisFrame; // F is the ultimate (GDD); interacting moved to G.
         }
 
         if (mouse != null && DialogueUIState.IsDialogueOpen == false)
@@ -55,6 +57,7 @@ public partial class HeroInputSystem : SystemBase
             input.ValueRW.IsSprintPressed = sprint;
             input.ValueRW.UseSkill1 = skill1;
             input.ValueRW.UseSkill2 = skill2;
+            input.ValueRW.UseSkill3 = skill3;
             input.ValueRW.UseUltimate = ultimate;
             input.ValueRW.IsAttackPressed = attack;
 

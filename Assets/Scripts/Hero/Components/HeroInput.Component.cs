@@ -23,6 +23,8 @@ public struct HeroInputComponent : IComponentData
     public bool UseSkill2;
 
     /// <summary>True while R key is held.</summary>
+    public bool UseSkill3;
+    /// <summary>True while F key is held (the ultimate, as in the GDD).</summary>
     public bool UseUltimate;
 
     /// <summary>True when walk toggle key is pressed (for animation system).</summary>

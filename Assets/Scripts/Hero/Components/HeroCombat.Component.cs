@@ -9,15 +9,11 @@ public struct HeroCombatComponent : IComponentData
     /// <summary>Entity representing the currently active weapon.</summary>
     public Entity activeWeapon;
 
-    /// <summary>Cooldown time remaining before the next attack.</summary>
-    public float attackCooldown;
 
-    /// <summary>Set when the hero is in the middle of an attack animation.</summary>
+    /// <summary>Set while the hero runs a skill (written by <see cref="SkillExecutionSystem"/>).</summary>
     public bool isAttacking;
 
     // ── Strike window lifecycle ──
-    /// <summary>Time elapsed since the current attack started.</summary>
-    public float attackAnimationTimer;
     /// <summary>Prevents more than one hit per swing.</summary>
     public bool hitboxFired;
 

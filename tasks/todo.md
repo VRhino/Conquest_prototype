@@ -43,10 +43,13 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   `CooldownComponent`/`CooldownSystem` (y el HUD lee los grupos).
   Hecho; el HUD recibe la fracción de Q/E/R/F por `UIBattleDataSystem`. El enfriamiento del cambio de escuadra sigue
   en su propio componente (pasarlo a un grupo queda para cuando se toque el cambio de escuadra).
-- [ ] **3. Puerta y petición (L2-1).** `SkillGate` con motivos, `SkillRequestComponent`, teclas Q/E/R/F (interactuar a G) e IA
+- [x] **3. Puerta y petición (L2-1).** `SkillGate` con motivos, `SkillRequestComponent`, teclas Q/E/R/F (interactuar a G) e IA
   por la misma petición.
-- [ ] **4. Instancia por fases (L2-2).** `SkillInstanceComponent` y el sistema de fases; el ataque básico pasa a ser una
+- [x] **4. Instancia por fases (L2-2).** `SkillInstanceComponent` y el sistema de fases; el ataque básico pasa a ser una
   habilidad de fases y desaparece el trío fijo de ventanas de `HeroCombatComponent` y la lógica duplicada jugador/IA.
+  Hecho (un commit para los dos, dependen entre sí): `SkillGate`, `HeroSkillRequestSystem`, `SkillTimeline` y
+  `SkillExecutionSystem` sustituyen a `HeroAttackSystem`. El aturdimiento ahora impide lanzar también el ataque básico
+  (como la referencia: el control prohíbe por defecto). Verificado en Play: el héroe IA ataca por la puerta.
 - [ ] **5. Interrupción (L2-4).** `interrupt`/`yield`, aparcada, fases no interrumpibles; fin al morir, al acabar la batalla y
   al cambiar de escuadra.
 - [ ] **6. Efectos genéricos.** Daño en área/cono, modificador temporal, embestida y escudo absorbente; datos para las 16

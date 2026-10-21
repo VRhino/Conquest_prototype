@@ -71,7 +71,7 @@ namespace Conquest.SettlementPreview.Editor
                 var wallPosition = em.GetComponentData<LocalTransform>(hero).Position;
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 InputSystem.Update();
-                if (input.UseSkill1 || input.UseSkill2 || input.UseUltimate || input.IsAttackPressed) throw new Exception("Se filtró input de combate.");
+                if (input.UseSkill1 || input.UseSkill2 || input.UseSkill3 || input.UseUltimate || input.IsAttackPressed) throw new Exception("Se filtró input de combate.");
                 float wallZ = blocker.collider.bounds.min.z;
                 if (wallPosition.z > wallZ-.20f || wallPosition.z < wallZ-.65f) throw new Exception("Colisión con edificio incorrecta: " + wallPosition);
                 walk.Exit(); await Task.Delay(300);

@@ -2,7 +2,7 @@ using Unity.Entities;
 
 /// <summary>
 /// Singleton ECS component that holds hero gameplay tuning values.
-/// Baked from HeroGameplayConfigAuthoring. Read by HeroAttackSystem and HeroStaminaSystem.
+/// Baked from HeroGameplayConfigAuthoring. Read by HeroInitializationSystem (basic attack), SkillExecutionSystem and HeroStaminaSystem.
 /// </summary>
 public struct HeroGameplayConfigComponent : IComponentData
 {

@@ -14,7 +14,7 @@ using UnityEngine.AI;
 ///   - <see cref="NavMeshAgent"/>       → handles terrain-aware pathfinding
 ///   - <see cref="SquadAIOrderIntentComponent"/> → arbitrated by OrderResolutionSystem
 ///
-/// Attack intent is NOT handled here — it is read directly by HeroAttackSystem's AI loop.
+/// Attack intent is NOT handled here — HeroSkillRequestSystem turns it into a skill request (same gate as the player).
 ///
 /// Pipeline: [Behavior systems] → THIS → HeroMovementSystem (local-only, unchanged)
 /// </summary>

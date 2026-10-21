@@ -6,7 +6,7 @@ using Unity.Mathematics;
 /// One-shot actions charge stamina when their execution starts.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(HeroAttackSystem))]
+[UpdateAfter(typeof(SkillExecutionSystem))]
 [UpdateAfter(typeof(HeroMovementSystem))]
 public partial class HeroStaminaSystem : SystemBase
 {

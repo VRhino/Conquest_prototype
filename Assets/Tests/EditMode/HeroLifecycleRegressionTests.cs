@@ -98,16 +98,15 @@ public class HeroLifecycleRegressionTests
     {
         using var world = new World("Dead hero attack regression");
         var em = world.EntityManager;
-        em.CreateEntity(typeof(MatchStateComponent));
-        em.CreateEntity(typeof(HeroGameplayConfigComponent));
-        var hero = em.CreateEntity(typeof(HeroLifeComponent), typeof(HeroCombatComponent),
-            typeof(WeaponHitboxActiveTag));
-        em.SetComponentData(hero, new HeroLifeComponent { isAlive = false });
-        em.SetComponentData(hero, new HeroCombatComponent
-        { isAttacking = true, attackAnimationTimer = 0.25f, strikeWindowDuration = 0.5f });
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
+            new MatchStateComponent { currentState = MatchState.InBattle });
+        var combat = new HeroCombatComponent { isAttacking = true, strikeWindowStart = 0.1f, strikeWindowDuration = 0.5f, attackAnimationDuration = 1f };
+        using var basic = SkillBlobBuilder.BuildBasicAttack(combat, 0f, 0f);
+        var hero = SkillHero(em, basic, combat, alive: false);
+        em.SetComponentData(hero, new SkillInstanceComponent { active = true, phase = 1, phaseTime = 0.25f, hitboxOpen = true });
         em.SetComponentEnabled<WeaponHitboxActiveTag>(hero, true);
 
-        world.GetOrCreateSystemManaged<HeroAttackSystem>().Update();
+        world.GetOrCreateSystemManaged<SkillExecutionSystem>().Update();
 
         Assert.That(em.GetComponentData<HeroCombatComponent>(hero).isAttacking, Is.False);
         Assert.That(em.IsComponentEnabled<WeaponHitboxActiveTag>(hero), Is.False);
@@ -138,28 +137,26 @@ public class HeroLifecycleRegressionTests
         var em = world.EntityManager;
         em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)),
             new MatchStateComponent { currentState = MatchState.InBattle });
-        var config = em.CreateEntity(typeof(HeroGameplayConfigComponent));
-        em.SetComponentData(config, new HeroGameplayConfigComponent
-        { attackStaminaCost = 15f, attackCooldown = 1f });
-        var hero = em.CreateEntity(typeof(IsLocalPlayer), typeof(HeroInputComponent),
-            typeof(HeroCombatComponent), typeof(StaminaComponent), typeof(HeroLifeComponent),
-            typeof(HeroAnimationComponent), typeof(HeroStatsComponent),
-            typeof(WeaponHitboxActiveTag));
-        em.SetComponentData(hero, new HeroInputComponent { IsAttackPressed = true });
-        em.SetComponentData(hero, new HeroCombatComponent
-        { attackAnimationDuration = 2f, strikeWindowStart = 1f, strikeWindowDuration = 0.5f });
+        em.CreateSingleton(new HeroGameplayConfigComponent { attackStaminaCost = 15f, attackCooldown = 1f });
+        var combat = new HeroCombatComponent { attackAnimationDuration = 2f, strikeWindowStart = 1f, strikeWindowDuration = 0.5f };
+        using var basic = SkillBlobBuilder.BuildBasicAttack(combat, 15f, 1f);
+        var hero = SkillHero(em, basic, combat, alive: true);
+        em.AddComponent<IsLocalPlayer>(hero);
+        em.AddComponentData(hero, new HeroInputComponent { IsAttackPressed = true });
+        em.AddComponent<HeroStatsComponent>(hero);
         em.SetComponentData(hero, new StaminaComponent
         { currentStamina = 100f, maxStamina = 100f, regenRate = 10f });
-        em.SetComponentData(hero, new HeroLifeComponent { isAlive = true });
-        em.SetComponentEnabled<WeaponHitboxActiveTag>(hero, false);
         world.SetTime(new Unity.Core.TimeData(0, 0.1f));
 
-        var attack = world.GetOrCreateSystemManaged<HeroAttackSystem>();
+        var request = world.GetOrCreateSystemManaged<HeroSkillRequestSystem>();
+        var attack = world.GetOrCreateSystemManaged<SkillExecutionSystem>();
         var stamina = world.GetOrCreateSystemManaged<HeroStaminaSystem>();
+        request.Update();
         attack.Update();
         stamina.Update();
         Assert.That(em.GetComponentData<StaminaComponent>(hero).currentStamina,
             Is.EqualTo(85f).Within(0.001f));
+        request.Update();
         attack.Update();
         stamina.Update();
         Assert.That(em.GetComponentData<StaminaComponent>(hero).currentStamina,
@@ -190,5 +187,21 @@ public class HeroLifecycleRegressionTests
         stamina.Update();
         Assert.That(em.GetComponentData<StaminaComponent>(hero).currentStamina,
             Is.EqualTo(45f).Within(0.001f));
+    }
+
+    /// <summary>A hero with only its basic attack, for the skill lifecycle tests.</summary>
+    static Entity SkillHero(EntityManager em, BlobAssetReference<SkillBlob> basic, HeroCombatComponent combat, bool alive)
+    {
+        var hero = em.CreateEntity(typeof(HeroLifeComponent), typeof(HeroCombatComponent), typeof(StaminaComponent),
+            typeof(HeroAnimationComponent), typeof(WeaponHitboxActiveTag), typeof(SkillInstanceComponent),
+            typeof(SkillRequestComponent));
+        em.SetComponentData(hero, new HeroLifeComponent { isAlive = alive });
+        em.SetComponentData(hero, combat);
+        em.SetComponentEnabled<WeaponHitboxActiveTag>(hero, false);
+        em.SetComponentEnabled<SkillRequestComponent>(hero, false);
+        em.AddBuffer<CooldownGroupElement>(hero);
+        em.AddBuffer<HeroSkillElement>(hero).Add(new HeroSkillElement
+        { slot = SkillSlot.Basic, skillId = basic.Value.id, skill = basic });
+        return hero;
     }
 }

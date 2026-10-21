@@ -99,7 +99,7 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
         AddComponent<HeroInputComponent>(entity);
         AddComponent<HeroMotorStateComponent>(entity);
 
-        // Componentes de combate — necesarios para que HeroAttackSystem funcione
+        // Componentes de combate: las ventanas del arma forman el ataque básico (SkillBlobBuilder.BuildBasicAttack)
         AddComponent(entity, new HeroCombatComponent
         {
             strikeWindowStart       = 0.2f,
