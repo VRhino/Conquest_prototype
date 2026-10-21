@@ -661,3 +661,18 @@ Los solapes entre compañeros no cambian con τ (S4: 1,3 por frame en las tres v
 tarde y ceden menos, y la tropa llega antes sin chocar más. Quedan como en la referencia sin tocar: la responsabilidad
 (0,5 / 1,0 con héroes, ya igual), el radio de vecinos (4 m, igual) y el número de vecinos (aquí 8 por presupuesto; la
 referencia no lo limita).
+
+## 17. Escenario S7: varios atacantes por enemigo (M2, M6, 2026-10-21)
+
+Las escuadras aliadas las conduce la IA de héroe (zonas, comprobación de ventaja) y no se unen a un choque de forma fiable,
+así que S7 es S6 con el cupo del targeting subido a 6 atacantes por enemigo: lo que darían tres escuadras con su cupo de 2.
+Así el anillo de contacto sí se llena. `contactRingEnabled` en el tuning permite compararlo con el abanico anterior.
+
+| S7 (mediana de 3) | Sin anillo | Con anillo |
+|---|---|---|
+| Pares enemigos solapados > 0,3 s | 21 (12-26) | 19 (10-25) |
+| Aceleración > 20 m/s² | 0,8 % | 1,4 % |
+| Máx. aceleración | 113 m/s² | 128 m/s² |
+| Máx. atacantes por objetivo | 6 | 6 (5-9) |
+
+Ni lleno mejora el anillo la melé de forma medible: los solapes (M2) no vienen del reparto alrededor del objetivo.

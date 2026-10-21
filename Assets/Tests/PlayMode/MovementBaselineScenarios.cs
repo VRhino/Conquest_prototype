@@ -140,6 +140,52 @@ public partial class BattleSceneIntegrationTests
         finally { RestoreInputSettings(previousInput); }
     }
 
+    /// <summary>
+    /// Attackers allowed on one enemy in S7: three squads at the usual 2 per target. Allied squads are driven by the
+    /// hero AI (zones, advantage checks) and do not reliably join a clash, so S7 lets one squad concentrate as three
+    /// would, which is the case the contact ring exists for (C11, M2, M6).
+    /// </summary>
+    const int S7AttackersPerTarget = 6;
+
+    /// <summary>S7: S6 with several attackers per enemy, so contact rings fill up.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS7Crowd()
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        using var configQuery = em.CreateEntityQuery(typeof(SquadSpawnConfigComponent));
+        var configEntity = configQuery.GetSingletonEntity();
+        var config = em.GetComponentData<SquadSpawnConfigComponent>(configEntity);
+        int previousCap = config.maxUnitsPerTarget;
+        try
+        {
+            config.maxUnitsPerTarget = S7AttackersPerTarget;
+            em.SetComponentData(configEntity, config);
+            yield return PrepareBaseline();
+            using (MovementVideoCapture.Start("S7"))
+            {
+                MovementMetricsRecorderSystem.Begin("S7", squad);
+                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+                float deadline = Time.time + S6ApproachTimeout;
+                while (Time.time < deadline && !AnySquadUnitAttacking())
+                    yield return null;
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return new WaitForSeconds(S6MeleeSeconds);
+                ReportBaseline(start);
+            }
+        }
+        finally
+        {
+            RestoreInputSettings(previousInput);
+            if (em.Exists(configEntity))
+            {
+                config = em.GetComponentData<SquadSpawnConfigComponent>(configEntity);
+                config.maxUnitsPerTarget = previousCap;
+                em.SetComponentData(configEntity, config);
+            }
+        }
+    }
+
     bool AnySquadUnitAttacking()
     {
         foreach (var element in em.GetBuffer<SquadUnitElement>(squad))

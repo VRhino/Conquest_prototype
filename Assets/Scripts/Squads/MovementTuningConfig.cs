@@ -50,6 +50,8 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0f)] public float contactRingMaxArcDegrees = 60f;
 
     [Header("Contact ring (C11)")]
+    [Tooltip("Melee attackers reserve a slot on their target's ring. Off: the old fan of ±45° around the line to the target.")]
+    public bool contactRingEnabled = true;
     [Tooltip("Gap between neighbouring attackers on a target's contact ring. Slots = floor(2 pi d_stop / (2 bodyRadius + margin)); attackers without a slot wait at d_resume + (2 bodyRadius + margin).")]
     [Min(0f)] public float contactRingMargin = 0.2f;
 
@@ -115,6 +117,7 @@ public class MovementTuningConfig : ScriptableObject
         anchorAcceleration = anchorAcceleration,
         anchorSnapDistance = anchorSnapDistance,
         contactRingMaxArcDegrees = contactRingMaxArcDegrees,
+        contactRingEnabled = contactRingEnabled,
         contactRingMargin = contactRingMargin,
         arrivalDecelerationFraction = arrivalDecelerationFraction,
         brakingFactor = brakingFactor,

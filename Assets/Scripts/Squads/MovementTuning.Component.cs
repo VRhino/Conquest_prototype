@@ -33,6 +33,7 @@ public struct MovementTuningComponent : IComponentData
     public float anchorAcceleration; // Anchor arrival acceleration, m/s2; 0 = anchor copies the hero (C10)
     public float anchorSnapDistance; // Beyond this distance to its target the anchor jumps (spawn, respawn), m
     public float contactRingMaxArcDegrees; // Attackers only reserve ring slots within this angle of the side they come from, degrees (C11)
+    public bool contactRingEnabled; // Melee attackers reserve ring slots (C11); off = the old ±45° fan.
     public float contactRingMargin; // Gap between neighbouring attackers on a contact ring, m (C11: s_arco = 2 rc + m)
     public float arrivalDecelerationFraction; // Planned arrival braking as a fraction of acceleration x brakingFactor
     public float brakingFactor; // Deceleration allowed as a multiple of the agent acceleration.
@@ -73,6 +74,7 @@ public struct MovementTuningComponent : IComponentData
         anchorAcceleration = 8f,
         anchorSnapDistance = 10f,
         contactRingMaxArcDegrees = 60f,
+        contactRingEnabled = true,
         contactRingMargin = 0.2f,
         arrivalDecelerationFraction = 0.6f,
         brakingFactor = 2.5f,

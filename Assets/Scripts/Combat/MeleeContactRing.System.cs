@@ -42,6 +42,7 @@ public partial class MeleeContactRingSystem : SystemBase
         float bodyRadius = tuning.bodyRadius;
         float arcSpacing = 2f * bodyRadius + tuning.contactRingMargin;
         float maxArc = math.radians(tuning.contactRingMaxArcDegrees);
+        bool enabled = tuning.contactRingEnabled;
 
         // 1. Melee attackers with a living target; everyone else drops its reservation.
         _attackers.Clear();
@@ -53,7 +54,7 @@ public partial class MeleeContactRingSystem : SystemBase
                      .WithEntityAccess())
         {
             Entity target = combat.ValueRO.target;
-            if (target == Entity.Null || !SystemAPI.Exists(target) || !SystemAPI.HasComponent<LocalTransform>(target)
+            if (!enabled || target == Entity.Null || !SystemAPI.Exists(target) || !SystemAPI.HasComponent<LocalTransform>(target)
                 || SystemAPI.HasComponent<IsDeadComponent>(target))
             {
                 slot.ValueRW = new MeleeContactSlotComponent { target = Entity.Null, slot = -1 };
