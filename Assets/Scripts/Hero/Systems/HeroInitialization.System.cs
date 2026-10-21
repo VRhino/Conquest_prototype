@@ -121,6 +121,11 @@ public partial class HeroInitializationSystem : SystemBase
             StatStack.SetBase(EntityManager, entity, StatId.MoveSpeed, baseSpeed);
             EntityManager.AddComponentData(entity, new MoveSpeedComponent { value = baseSpeed });
         }
+        if (EntityManager.HasComponent<HeroCombatComponent>(entity))
+        {
+            var combat = EntityManager.GetComponentData<HeroCombatComponent>(entity);
+            StatStack.SeedCritical(EntityManager, entity, combat.criticalChance, combat.criticalMultiplier);
+        }
         StatStack.ClearSource(EntityManager, entity, ModifierSource.Equipment);
         AddEquipment(entity, StatId.Strength, equipment.strengthBonus);
         AddEquipment(entity, StatId.Dexterity, equipment.dexterityBonus);

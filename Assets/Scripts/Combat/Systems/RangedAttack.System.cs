@@ -36,6 +36,8 @@ public partial class RangedAttackSystem : SystemBase
         var heroLifeLookup   = GetComponentLookup<HeroLifeComponent>(true);
         var teamLookup       = GetComponentLookup<TeamComponent>(true);
         var isDeadLookup     = GetComponentLookup<IsDeadComponent>(true);
+        var critLookup       = GetComponentLookup<CritStatsComponent>(true);
+        float criticalFloor  = CombatTuning.Default.criticalExtraFloor;
 
 
         foreach (var (combat, rangedState, rangedStats, weapon, transform, entity) in
@@ -126,8 +128,17 @@ public partial class RangedAttackSystem : SystemBase
             }
 
             // Seeded by (tick, shooter), not by query order (L1-05).
-            bool  crit       = CombatRandom.RollCritical(tick, entity, weapon.ValueRO.criticalChance);
-            float multiplier = crit ? weapon.ValueRO.criticalMultiplier : 1f;
+            // Critical stats on the stack (L1-04), against the target's anti-critical; the weapon's own otherwise.
+            float critChance = weapon.ValueRO.criticalChance;
+            float critMultiplier = weapon.ValueRO.criticalMultiplier;
+            if (critLookup.HasComponent(entity))
+            {
+                var defenderCrit = critLookup.HasComponent(target) ? critLookup[target] : CritFormula.NoAntiCrit;
+                critChance = CritFormula.Rate(critLookup[entity]);
+                critMultiplier = CritFormula.Multiplier(critLookup[entity], defenderCrit, criticalFloor);
+            }
+            bool  crit       = CombatRandom.RollCritical(tick, entity, critChance);
+            float multiplier = crit ? critMultiplier : 1f;
 
             // Compute direction with accuracy scatter.
             // accuracy is authored as 1..100 (100 = perfect precision).

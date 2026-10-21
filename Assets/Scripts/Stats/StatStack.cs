@@ -44,5 +44,21 @@ public static class StatStack
         if (multiplier != 1f) Add(em, entity, stat, ModifierOp.Ratio, multiplier - 1f, ModifierSource.Level);
     }
 
+    /// <summary>
+    /// Critical bases equivalent to a weapon's <paramref name="chance"/> and <paramref name="multiplier"/> (L1-04), and
+    /// the <see cref="CritStatsComponent"/> the resolver writes them to. No anti-critical.
+    /// </summary>
+    public static void SeedCritical(EntityManager em, Entity entity, float chance, float multiplier)
+    {
+        SetBase(em, entity, StatId.CritValue, CritFormula.ValueForChance(chance));
+        SetBase(em, entity, StatId.CritParameter, CritFormula.UnitParameter);
+        SetBase(em, entity, StatId.CritDamageValue, CritFormula.DamageValueForMultiplier(multiplier));
+        SetBase(em, entity, StatId.CritDamageParameter, CritFormula.UnitParameter);
+        SetBase(em, entity, StatId.CritDamageRatio, 0f);
+        SetBase(em, entity, StatId.AntiCritValue, 0f);
+        SetBase(em, entity, StatId.AntiCritParameter, CritFormula.UnitParameter);
+        if (!em.HasComponent<CritStatsComponent>(entity)) em.AddComponent<CritStatsComponent>(entity);
+    }
+
     public static void MarkDirty(EntityManager em, Entity entity) => em.SetComponentEnabled<ModifiersDirty>(entity, true);
 }

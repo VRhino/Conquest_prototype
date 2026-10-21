@@ -52,8 +52,13 @@ anticrítico), T1 de `Aprendizajes_Referencia.md` (regla de combinación).
   primero y el exceso pasa a la vida; un golpe de 0 no lo consume. Sin fuente todavía (la darán las habilidades).
   Hecho: regla pura `AbsorbShield.Absorb` y su aplicación en `DamageCalculationSystem` tras el bloqueo físico; un golpe
   absorbido entero se muestra como bloqueado y no llega a la vida; el escudo agotado o caducado se quita.
-- [ ] **6. Crítico como la referencia (L1-04).** `CritFormula` (tasa y daño extra) con los stats de la pila; base del arma
+- [x] **6. Crítico como la referencia (L1-04).** `CritFormula` (tasa y daño extra) con los stats de la pila; base del arma
   equivalente a hoy.
+  Hecho: `CritFormula` (tasa `V/(P+V)`, extra `max(Vd/Pd − AV/AP + ratio, suelo)`, multiplicador `1 + extra`) y
+  `CritStatsComponent`, que escribe el resolvedor. `StatStack.SeedCritical` siembra bases equivalentes a la probabilidad
+  y el multiplicador del arma (valor `c/(1−c)` con parámetro 1; daño `m − 1`), en unidades y héroes; melé y distancia
+  usan la fórmula contra el anticrítico del objetivo. El suelo de 0,2 va en `CombatTuning`. Límite: un arma con
+  multiplicador menor que 1,2 haría 1,2 en el crítico (hoy todos los datos usan 1,5).
 - [ ] **7. Tablas de progresión (L7-5).** La XP de escuadra (`100 × 1,1^n`) y el desbloqueo cada 10 niveles pasan a una
   tabla en datos (ScriptableObject → blob).
 - [ ] **8. Documentación.** `DamageMechanics.md`, `SystemResponsibilities.md`, L7-6 en `Docs/Por_Abordar/`, lecciones.

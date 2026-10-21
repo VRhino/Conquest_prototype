@@ -10,7 +10,8 @@ using Unity.Mathematics;
 /// <item><see cref="HealthComponent"/>, <see cref="HeroHealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current
 /// value keeps its fraction). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
 /// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
-/// penetration and identity fields stay as the spawner wrote them) and <see cref="MoveSpeedComponent"/> of heroes.</item>
+/// penetration and identity fields stay as the spawner wrote them), <see cref="MoveSpeedComponent"/> of heroes and
+/// <see cref="CritStatsComponent"/>.</item>
 /// <item><see cref="DamageProfileComponent"/> (damage and penetration; a squad's units share their squad's profile
 /// entity, so it carries its own stats). <see cref="PenetrationComponent"/> only on entities without a profile, so
 /// penetration is never counted twice.</item>
@@ -101,6 +102,17 @@ public partial class StatResolveSystem : SystemBase
                 bluntPenetration = stats.Get(StatId.BluntPenetration),
                 slashPenetration = stats.Get(StatId.SlashPenetration),
                 piercePenetration = stats.Get(StatId.PiercePenetration),
+            });
+        if (SystemAPI.HasComponent<CritStatsComponent>(entity))
+            SystemAPI.SetComponent(entity, new CritStatsComponent
+            {
+                critValue = stats.Get(StatId.CritValue),
+                critParameter = stats.Get(StatId.CritParameter),
+                critDamageValue = stats.Get(StatId.CritDamageValue),
+                critDamageParameter = stats.Get(StatId.CritDamageParameter),
+                critDamageRatio = stats.Get(StatId.CritDamageRatio),
+                antiCritValue = stats.Get(StatId.AntiCritValue),
+                antiCritParameter = stats.Get(StatId.AntiCritParameter),
             });
         if (SystemAPI.HasComponent<MoveSpeedComponent>(entity))
             SystemAPI.SetComponent(entity, new MoveSpeedComponent { value = stats.Get(StatId.MoveSpeed) });

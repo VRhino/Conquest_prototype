@@ -13,6 +13,8 @@ public struct CombatTuning
     public float heightBonusThreshold;
     /// <summary>Extra damage per metre of height advantage.</summary>
     public float heightBonusPerMetre;
+    /// <summary>Lowest extra damage of a critical hit, whatever the defender's anti-critical (as in the reference).</summary>
+    public float criticalExtraFloor;
 
     public static CombatTuning Default => new CombatTuning
     {
@@ -21,6 +23,7 @@ public struct CombatTuning
         defaultKineticMultiplier = 0.3f,
         heightBonusThreshold = 0.5f,
         heightBonusPerMetre = 0.1f,
+        criticalExtraFloor = 0.2f,
     };
 }
 

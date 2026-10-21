@@ -24,6 +24,7 @@ public partial class MeleeContactResolutionSystem : SystemBase
         if (pendingCount == 0) return;
         var em = EntityManager;
         uint tick = CombatRandom.Tick(SystemAPI.Time.ElapsedTime);
+        float criticalFloor = CombatTuning.Default.criticalExtraFloor;
         var contactsByAttacker = _contactsByAttacker;
         contactsByAttacker.Clear();
         for (int i = 0; i < pendingCount && MeleeContactQueue.Pending.TryDequeue(out var contact); i++)
@@ -104,6 +105,15 @@ public partial class MeleeContactResolutionSystem : SystemBase
             }
             if (!em.Exists(damageProfile) || !em.HasComponent<DamageProfileComponent>(damageProfile))
                 continue;
+            // Critical stats on the stack (L1-04): rate from the attacker, extra damage against the target's anti-critical.
+            if (em.HasComponent<CritStatsComponent>(contact.attacker))
+            {
+                var attackerCrit = em.GetComponentData<CritStatsComponent>(contact.attacker);
+                var defenderCrit = em.HasComponent<CritStatsComponent>(contact.target)
+                    ? em.GetComponentData<CritStatsComponent>(contact.target) : CritFormula.NoAntiCrit;
+                criticalChance = CritFormula.Rate(attackerCrit);
+                criticalMultiplier = CritFormula.Multiplier(attackerCrit, defenderCrit, criticalFloor);
+            }
 
             // Seeded by (tick, attacker): the same hit rolls the same on replay or server (L1-05).
             bool critical = CombatRandom.RollCritical(tick, contact.attacker, criticalChance);

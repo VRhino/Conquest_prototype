@@ -118,6 +118,7 @@ public static class UnitStatsUtility
         StatStack.AddLevelMultiplier(entityManager, unitEntity, StatId.MoveSpeed, speedMul);
         foreach (var stat in DefenseStats) StatStack.AddLevelMultiplier(entityManager, unitEntity, stat, defenseMul);
         foreach (var stat in DamageStats) StatStack.AddLevelMultiplier(entityManager, unitEntity, stat, damageMul);
+        StatStack.SeedCritical(entityManager, unitEntity, data.criticalChance, data.criticalMultiplier);
         StatStack.MarkDirty(entityManager, unitEntity);
 
         // The squad's shared damage profile carries its own stack: base damage and penetration, level ratio on damage.
