@@ -1,5 +1,21 @@
 # System Responsibilities & Data Flow
 
+## Contratos actualizados — 2026-10-21 (pila de modificadores, Fase 1 de `Docs/Design/Aprendizajes_Referencia.md`)
+
+- `StatResolveSystem` es el **único escritor** de los stats derivados: vida y aguante máximos (`HealthComponent`,
+  `HeroHealthComponent`, `StaminaComponent`, conservando la fracción), `DefenseComponent`, `DamageProfileComponent` /
+  `PenetrationComponent`, los campos de combate de `UnitStatsComponent`, `MoveSpeedComponent` y `CritStatsComponent`.
+  Detalle de la regla y las fuentes: `Docs/Mechanics/DamageMechanics.md` §4.1.
+- Cada fuente la escribe su dueño y solo la suya, con `StatStack` (base y modificadores; `ClearSource` antes de añadir):
+  `UnitStatsUtility` (base de unidad y `Level`), `HeroInitializationSystem` (base de héroe y `Equipment`),
+  `DamageCalculationSystem` (`Effect`: aturdimiento). Nadie más escribe los derivados.
+- Movimiento lee la velocidad resuelta: `UnitStatsComponent.speed` (unidades) y `MoveSpeedComponent` (héroes);
+  `HeroStatsComponent.baseSpeed` es solo la referencia de marcha y sprint. No hay comprobaciones de `brokenTimer` fuera
+  del escudo.
+- **Orden sin ciclos.** `[UpdateBefore]`/`[UpdateAfter]` no pueden cerrar un ciclo dentro de un grupo: Entities no lo
+  reporta, gira para siempre y el editor se congela al entrar en Play. `SystemOrderTests` lo comprueba. Por eso
+  `StatResolveSystem` va después de `UnitStatScalingSystem` y no antes de `DamageCalculationSystem`.
+
 ## Contratos actualizados — 2026-10-19
 
 - SceneTransitionService aplica la política de cursor del destino tras cargar; HeroCamera/FullscreenPanelManager/SupplyPointUI la respetan. Las interfaces requieren cursor libre incluso al cerrar paneles.
@@ -36,11 +52,19 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### HeroMovementSystem
 - **Responsabilidad actual**: Calcula intención desde input, cámara y stats, después de input y spawn.
+- Velocidad de `MoveSpeedComponent` (0 mientras está aturdido: no se mueve ni gira); sin pila, `HeroStatsComponent.baseSpeed`.
 - **Output**: `HeroMoveIntent`; lo limpia si el héroe está muerto, sin ubicación de spawn o sin cámara.
 - No modifica la pose: el movimiento físico pertenece a `LocalHeroCharacterMotor`.
 
 ### HeroRespawnSystem
 - Lee `HeroHealthComponent`, después de daño y antes de spawn. Detecta muerte, cuenta el cooldown y solicita ubicación poniendo `hasSpawned = false` al revivir.
+
+### HeroInitializationSystem
+- **Responsabilidad**: atributos, habilidades y perks del héroe, y sus stats en la pila.
+- La clase sale del guardado (héroe local) o de `HeroClassComponent`, que pone `BattleSceneController` (remotos e IA):
+  la clase horneada en `HeroClassDefinition.prefab` está vacía (referencia rota).
+- Siembra atributos, velocidad y crítico como bases y el equipo como planos (`Equipment`). Nunca escribe vida, aguante,
+  defensa ni daño: los escribe `StatResolveSystem`.
 
 ### HeroSpawnSystem
 - **Responsabilidad**: Crea la entidad ECS del héroe local al inicio de la batalla
@@ -134,6 +158,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido; hacia un destino quieto, como mucho √(2·a·d) para llegar frenando), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
 - **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
+- La velocidad base es la resuelta por la pila; aturdida (0) frena con su deceleración, sin rama propia de aturdimiento.
 
 ### SquadVisualManagementSystem
 - **Responsabilidad**: Instancia prefabs visuales de unidades y configura `EntityVisualSync`
@@ -214,6 +239,8 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Orden**: `[UpdateBefore(SquadAISystem)]` — el daño debe resolverse antes de que el AI tome decisiones del frame
 - **Fórmula**: `contrib = max(rawDmg - netDefense, rawDmg * 0.05)` por tipo {Blunt, Slashing, Piercing}; bonuses cinético y de altura aplicados post-mitigación
 - **Shield check**: Bloquea hits si `HasComponent<UnitShieldComponent> && currentBlock > 0` — corre antes del daño; solo entidades cuyo prefab tiene `ShieldHitboxBehaviour` reciben este componente
+- **Aturdimiento**: al romper el escudo añade el override de velocidad a 0 con caducidad (`StatEffects.Immobilize`) y marca la pila.
+- **Escudo absorbente**: `AbsorbShieldComponent` se lleva el golpe antes que la vida (`AbsorbShield.Absorb`).
 - **Regla**: Solo lee `PendingDamageEvent` — nunca decide cuándo atacar ni genera eventos de daño
 
 ### UnitDeathSystem
@@ -352,9 +379,15 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - Matemáticas de formación y cálculo de altura de terreno (`calculateTerraindHeight`)
 
 ### UnitStatsUtility
-- Aplicación de stats para sistemas de progresión
-- Sincroniza también salud, defensa y perfil de daño usados por combate.
-- Conserva el porcentaje de salud y el estado de munición/recarga.
+- Aplicación de stats para sistemas de progresión.
+- Siembra las bases de la unidad (vida, velocidad, defensa, daño, crítico) y el nivel como modificadores `Level`; los
+  derivados los escribe `StatResolveSystem`, que conserva el porcentaje de salud.
+- Escribe los campos de identidad de `UnitStatsComponent` (masa, peso, bloqueo, liderazgo, penetración del arma) y el
+  estado de munición/recarga.
+
+### StatResolveSystem
+- **Responsabilidad**: recomponer los stats derivados desde la pila cuando hay `ModifiersDirty` o caduca un modificador.
+- **Orden**: después de `UnitStatScalingSystem`. Quita los modificadores caducados.
 
 ### BattleBootstrapSystem
 - Consume peticiones administradas del controlador de batalla; es dueño de las escrituras del bootstrap local en ECS.
@@ -364,7 +397,9 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 ### SquadProgressionSystem / UnitStatScalingSystem
 - Progresión consume SquadXPEvent una vez; no genera recompensas por permanecer en PostPartida.
 - El escalado inicial ocurre una vez por instancia y después solo para las escuadras indicadas por eventos.
-- La fórmula y entrega autenticada de BattleResult siguen pendientes; estos eventos son locales.
+- La XP por nivel y el nivel de desbloqueo de cada habilidad salen de la tabla de `SquadProgressionData` (blob de
+  `SquadDataComponent.curves`, L7-5); la fórmula `100 × 1,1^(n−1)` solo rellena huecos.
+- La entrega autenticada de BattleResult sigue pendiente; estos eventos son locales.
 
 ## Estado de migración de movimiento — 2026-09-14
 

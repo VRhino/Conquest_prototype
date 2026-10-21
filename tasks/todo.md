@@ -1,6 +1,6 @@
 # Plan: Fase 1 de `Docs/Design/Aprendizajes_Referencia.md` — pila de modificadores (T1)
 
-Estado: en curso (2026-10-21), rama `feat/reference-phase0` (sigue sobre la Fase 0).
+Estado: **hecha** (2026-10-21), rama `feat/reference-phase0` (sigue sobre la Fase 0), sin subir.
 Petición del usuario: continuar con la Fase 1. Plan anterior archivado en `tasks/reference-phase0-plan.md`.
 Referencia (solo patrones): `game-re/notes/mechanics.md` §2 (crítico), `damage-pipeline.md` (daño de crítico y
 anticrítico), T1 de `Aprendizajes_Referencia.md` (regla de combinación).
@@ -66,7 +66,10 @@ anticrítico), T1 de `Aprendizajes_Referencia.md` (regla de combinación).
   `SquadProgressionSystem`, `SquadSpawningSystem`, `UnitStatScalingSystem` y el panel de escuadra. Verificado en juego
   que el blob horneado trae la tabla (100, 110 … 1442). La revalidación de atributos por frame (resto de L7-5) queda
   fuera de este paso.
-- [ ] **8. Documentación.** `DamageMechanics.md`, `SystemResponsibilities.md`, L7-6 en `Docs/Por_Abordar/`, lecciones.
+- [x] **8. Documentación.** `DamageMechanics.md`, `SystemResponsibilities.md`, L7-6 en `Docs/Por_Abordar/`, lecciones.
+  Hecho: `DamageMechanics.md` §4.1 (origen de los stats), §5.3 (crítico), §6.3/§6.5 (aturdimiento) y §6.7 (escudo
+  absorbente); contratos de la pila y del orden sin ciclos en `SystemResponsibilities.md`; L7-6 y lo abierto en
+  `Docs/Por_Abordar/Pila_Modificadores.md`; Fase 1 y desfase 12 en `Aprendizajes_Referencia.md`.
 
 ## Verificación
 EditMode completo; PlayMode `SquadNavigationRegressionTests` y MovementBaseline (el combate sigue: S6/S7); prueba en

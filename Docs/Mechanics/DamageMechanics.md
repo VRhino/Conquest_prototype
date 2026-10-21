@@ -12,13 +12,17 @@ Características clave:
 - **Golpe único por swing**: un atacante genera como máximo un evento de daño por animación de ataque.
 - **Escudo después del cálculo**: si el golpe tocó primero el collider del escudo, el escudo absorbe el daño ya calculado;
   si se queda a 0 se rompe y aturde.
+- **Escudo absorbente** (§6.7): una reserva temporal, separada de la vida y del escudo físico, que se lleva el golpe primero.
+- **Stats desde la pila de modificadores** (§4.1): vida, defensa, daño, velocidad y crítico los escribe un único sistema.
 
-### Estado frente al código (2026-10-21)
+### Estado frente al código (2026-10-21, tras la Fase 1 de `Docs/Design/Aprendizajes_Referencia.md`)
 | Apartado | Código de referencia | Estado |
 |---|---|---|
+| Origen de los stats (§4.1) | `Stats/StatResolve.System.cs`, `Stats/StatMath.cs`, `Stats/StatStack.cs` | Sincronizado (T1) |
 | Fórmula (§5) | `Combat/DamageFormula.cs` (`DamageFormula.Compute`, pura; constantes en `CombatTuning`) | Sincronizado (D1 y L1-03 de `Docs/Design/Aprendizajes_Referencia.md`) |
-| Escudo (§6) | `DamageCalculation.System.cs`, `ShieldHitboxBehaviour`, `BlockRegen.System.cs` | Sincronizado; la orientación no se usa |
-| Crítico (§5.3) | `CombatRandom.RollCritical` desde `MeleeContactResolution.System.cs` y `RangedAttack.System.cs` | Sincronizado; tirada reproducible (L1-05) |
+| Escudo (§6) | `DamageCalculation.System.cs`, `ShieldHitboxBehaviour`, `BlockRegen.System.cs` | Sincronizado; la orientación no se usa; el aturdimiento va por la pila (L5-3) |
+| Escudo absorbente (§6.7) | `Combat/AbsorbShield.cs`, `AbsorbShield.Component.cs` | Sincronizado (L1-06); aún sin fuente |
+| Crítico (§5.3) | `Stats/CritFormula.cs`, tirada `CombatRandom.RollCritical` en `MeleeContactResolution.System.cs` y `RangedAttack.System.cs` | Sincronizado (L1-04); tirada reproducible (L1-05) |
 
 ---
 
@@ -97,6 +101,31 @@ Cada tipo de daño mapea a campos específicos en los componentes de defensa y p
 - `PenetrationComponent` en el atacante añade penetración extra por tipo; su presencia es opcional.
 - La defensa siempre se obtiene del **objetivo**; la penetración, del perfil del arma y del **atacante**.
 
+### 4.1 De dónde salen los stats (pila de modificadores, T1)
+
+Ningún sistema de combate escribe vida máxima, defensa, daño, velocidad ni crítico. Cada entidad lleva una base por stat
+(`StatBaseElement`, indexada por `StatId`) y una lista de modificadores (`StatModifier`: stat, operación, valor, fuente,
+id de fuente, caducidad). `StatResolveSystem` es el **único escritor** de los derivados y aplica una sola regla
+(`StatMath.Resolve`):
+
+```
+valor = override si hay alguno (gana el último)
+      = (1 + Σ ratios) × base + Σ planos      en otro caso; los modificadores caducados no cuentan
+```
+
+| Fuente | Quién la escribe | Qué añade |
+|---|---|---|
+| Base de unidad | `UnitStatsUtility.ApplyStatsToUnit` | vida, velocidad, defensas, daños y crítico desde `SquadDataComponent` |
+| `Level` | `UnitStatsUtility` | curva de nivel como ratio (`multiplicador − 1`) |
+| Base de héroe | `HeroInitializationSystem` | atributos (fuerza, destreza, armadura, vitalidad), velocidad y crítico |
+| `Equipment` | `HeroInitializationSystem` | equipo como planos sobre los atributos, para todos los héroes (IA incluidos) |
+| `Effect` | `DamageCalculationSystem` | aturdimiento por rotura de escudo: override de velocidad a 0 que caduca (§6.3) |
+
+En los héroes, `HeroStatFormulaComponent` (coeficientes de la clase) convierte los atributos resueltos en vida, aguante,
+daño y defensa. Los héroes no tienen penetración en batalla (nunca la tuvieron). El resolvedor conserva la fracción de
+vida y de aguante al cambiar el máximo. Corre después de `UnitStatScalingSystem`; un modificador añadido durante el
+frame lo ve el daño en el siguiente.
+
 ---
 
 ## 5. Fórmula de Cálculo de Daño
@@ -119,12 +148,15 @@ dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura      (nunca neg
 
 | Bonificación | Condición de activación | Fórmula |
 |---|---|---|
-| **Crítico** | tirada `< criticalChance` del arma, sembrada por (tick, atacante) con `CombatRandom` (L1-05) | `multiplier = criticalMultiplier` (ej. 1.5×) |
+| **Crítico** | tirada `< V / (P + V)` del atacante, sembrada por (tick, atacante) con `CombatRandom` (L1-05); el defensor no cuenta en la tasa | `multiplier = 1 + max(Vd / Pd − AV / AP + ratio, 0.2)`; `AV/AP` es el anticrítico del objetivo |
 | **Cinética** | `attackerSpeed > 0` | `× (1 + (velocidad / 5.0) × kineticMultiplier)`; `kineticMultiplier` del arma (0.3 si no hay) |
 | **Altura** | Atacante > 0.5 m sobre el objetivo | `× (1 + deltaAltura × 0.1)` (~10 % por metro) |
 
 - La ventaja de altura se calcula con `attackerPosition.y − target.position.y`.
-- El multiplicador crítico y la probabilidad son configurables por arma en `UnitWeaponComponent`.
+- Crítico como la referencia (L1-04, `CritFormula`), con los siete stats de crítico de la pila (`CritStatsComponent`). Las
+  bases de cada arma se derivan de su `criticalChance` y `criticalMultiplier` (valor `c / (1 − c)` con parámetro 1; daño
+  `m − 1`), así que el resultado es el de antes hasta que equipo o perks sumen a esos stats. Un arma con multiplicador
+  menor que 1.2 haría 1.2 por el suelo. Sin `CritStatsComponent`, el atacante usa la probabilidad y el multiplicador del arma.
 
 ### 5.4 Parámetros clave
 
@@ -135,6 +167,7 @@ dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura      (nunca neg
 | Multiplicador cinético por defecto | 0.3 | Si el atacante no tiene `UnitWeaponComponent` |
 | Umbral de altura | 0.5 m | Diferencia mínima para activar el bono |
 | Bono de altura | 10 % por metro | Por encima del umbral |
+| Suelo del daño extra de crítico | 0.2 | `CombatTuning.criticalExtraFloor`, como la referencia |
 
 ---
 
@@ -177,7 +210,9 @@ Misma lógica para `regenRate` con `blockRegenRate` de `SquadData`.
 - `currentBlock`: puntos de bloqueo disponibles.
 - `maxBlock`: capacidad máxima.
 - `regenRate`: puntos regenerados por segundo.
-- `brokenTimer` / `breakStunDuration`: aturdimiento tras romperse (la unidad no se mueve mientras dura).
+- `brokenTimer` / `breakStunDuration`: escudo roto (sin bloqueo ni regeneración mientras dura). El aturdimiento en sí es un
+  override de velocidad a 0 en la pila que caduca a la vez (`StatEffects.Immobilize`, L5-3): unidades, héroe local y héroes
+  IA lo ven en su velocidad resuelta; la unidad frena con su deceleración.
 - `orientation`: **no tiene lectores**. El bloqueo lo decide el collider del escudo, que cuelga de la mano.
 
 ### 6.4 Orientaciones de escudo
@@ -196,7 +231,8 @@ PendingDamageEvent llega al objetivo
   │     └─ No → dañoEfectivo se resta de la salud
   │
   └─ Sí → currentBlock −= dañoEfectivo
-           ├─ currentBlock ≤ 0 → escudo roto: currentBlock = 0, brokenTimer = breakStunDuration, FCT "ROTO"
+           ├─ currentBlock ≤ 0 → escudo roto: currentBlock = 0, brokenTimer = breakStunDuration, FCT "ROTO",
+           │                    velocidad 0 en la pila hasta ahora + breakStunDuration
            └─ si no → FCT "BLOQ" con el daño absorbido
            (la salud no cambia)
 ```
@@ -208,6 +244,18 @@ PendingDamageEvent llega al objetivo
 currentBlock = min(maxBlock, currentBlock + regenRate × deltaTime)
 ```
 El regen ocurre siempre (no hay condición explícita de "fuera de combate").
+
+### 6.7 Escudo absorbente (L1-06)
+
+`AbsorbShieldComponent {value, expiresAt}` es una reserva de absorción temporal, separada de la vida y del escudo físico.
+Tras el bloqueo físico, `DamageCalculationSystem` le pasa el daño efectivo (`AbsorbShield.Absorb`), como en la referencia:
+
+- absorbe primero y el exceso pasa a la vida;
+- un golpe de daño 0 no lo consume;
+- caducado (`expiresAt > 0` y pasado) no absorbe nada;
+- un golpe absorbido entero muestra el FCT de bloqueo y no toca la vida; agotado o caducado, el componente se quita.
+
+Aún no lo añade ninguna fuente; lo darán las habilidades.
 
 ---
 
@@ -301,7 +349,7 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | Archivo | Rol |
 |---------|-----|
 | `Assets/Scripts/Combat/DamageType.cs` | Enum: Blunt, Slashing, Piercing |
-| `Assets/Scripts/Combat/DamageCategory.cs` | Enum: Normal, Critical, Ability, Blocked, Death — indexa el tipo de FCT a mostrar |
+| `Assets/Scripts/Combat/DamageCategory.cs` | Enum: Normal, Critical, Ability, Blocked, Death, ShieldBreak — indexa el tipo de FCT a mostrar |
 | `Assets/Scripts/Combat/DamageProfile.cs` | ScriptableObject: baseDamage, damageType, penetration |
 | `Assets/Scripts/Combat/Team.cs` | Enum: None, TeamA, TeamB |
 
@@ -325,6 +373,11 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | `Assets/Scripts/Combat/Team.Component.cs` | Equipo de la entidad: TeamComponent.value |
 | `Assets/Scripts/Hero/Components/HeroLife.Component.cs` | Ciclo de vida del héroe: isAlive, deathTimer, respawnCooldown |
 | `Assets/Scripts/Combat/BraceWeaponProfiles.Component.cs` | SquadCombatModeComponent (Normal/Brace) y BraceRowProfile (buffer por fila) |
+| `Assets/Scripts/Combat/AbsorbShield.Component.cs` | Escudo absorbente: value, expiresAt (§6.7) |
+| `Assets/Scripts/Stats/StatTypes.cs` | `StatId`, `StatModifier`, `StatBaseElement`, `ModifiersDirty`, `StatModifierExpiry` (§4.1) |
+| `Assets/Scripts/Stats/CritStats.Component.cs` | Stats de crítico resueltos (§5.3) |
+| `Assets/Scripts/Stats/MoveSpeed.Component.cs` | Velocidad resuelta del héroe; 0 mientras está aturdido |
+| `Assets/Scripts/Stats/HeroStatFormula.cs` | Coeficientes de clase del héroe y su fórmula (§4.1) |
 
 ### Sistemas ECS
 
@@ -336,6 +389,7 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | `Assets/Scripts/Hero/Systems/HeroAttack.System.cs` | Ataque del héroe: verifica stamina, activa collider, detecta colisiones |
 | `Assets/Scripts/Combat/WeaponHitboxPosition.System.cs` | Actualiza posición del hitbox para seguir la punta del arma cada frame |
 | `Assets/Scripts/Combat/BlockRegen.System.cs` | Regenera currentBlock de todos los escudos cada frame |
+| `Assets/Scripts/Stats/StatResolve.System.cs` | Único escritor de los stats derivados desde la pila (§4.1) |
 | `Assets/Scripts/Hero/Systems/HeroRespawn.System.cs` | Gestiona muerte y respawn del héroe vía deathTimer |
 | `Assets/Scripts/Combat/UnitTargeting.System.cs` | Asigna target a cada unidad; redistribuye si hay concentración excesiva |
 | `Assets/Scripts/Combat/EnemyDetection.System.cs` | Detecta enemigos en rango y publica candidatos compartidos en SquadTargetEntity |

@@ -9,6 +9,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 |---|---|---|
 | [Formaciones_y_Posturas.md](./Formaciones_y_Posturas.md) | Datos de formación, plantillas, reparto, posturas, animación y defensa | `tasks/todo.md` (formaciones por datos), 2026-10-20 |
 | [Movimiento.md](./Movimiento.md) | Objetivos abiertos del lote 2, lote 3, escala y coste | `tasks/movement-batch2-plan.md` y `Docs/Design/Movimiento_Formaciones.md` §10 |
+| [Pila_Modificadores.md](./Pila_Modificadores.md) | Stats de objeto con `StatId` (L7-6) y lo que dejó abierto la pila de modificadores | `tasks/todo.md` (Fase 1 de `Aprendizajes_Referencia.md`), 2026-10-21 |
 
 ## Convenciones
 - **Estado:** `Pendiente`, `Bloqueado` (depende de algo externo, como contenido o un paquete) o `Hecho`.

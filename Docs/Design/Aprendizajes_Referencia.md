@@ -253,6 +253,9 @@ L1-03 (daño puro) y L1-05 (RNG sembrado); L3-03/L3-04 como retoques. Estas piez
 dependen de nada.
 
 **Fase 1 — Pila de modificadores (T1).**
+> **Hecha (2026-10-21, rama `feat/reference-phase0`):** núcleo T1, nivel de escuadra, héroes y equipo (L7-3, IA incluidos),
+> L5-3, L1-06, L1-04 y L7-5 (XP y desbloqueos), un commit cada paso (`tasks/todo.md`). Regla y fuentes en
+> `Docs/Mechanics/DamageMechanics.md` §4.1. L7-6 queda para después, en `Docs/Por_Abordar/Pila_Modificadores.md` P1.
 L1-01 y L7-3 con `StatId`; después L5-3 (velocidad), L1-06 (escudo absorbente), L1-04 (crítico por rating), L7-5
 (tablas) y L7-6 (ítems con `StatId`, tras decidir migración de guardados). Va antes que los perks.
 
@@ -340,6 +343,7 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 | 9 | Código | `FormationAdaptationSystem` calcula `requiresAdaptation` | Nadie lo consume (TODO en `UnitFollowFormation`) | Del informe L3, sin comprobar; **doc corregido (D1, 2026-10-21)** |
 | 10 | Informe L2 | "No hay entrada Q/E/R/F" | `HeroInputSystem` sí escribe `UseSkill1/UseSkill2/UseUltimate` (`HeroInput.System.cs:56-58`); falta el consumidor | Corregido |
 | 11 | Escenas de batalla | `HeroAttackSystem` y `HeroStaminaSystem` exigen `HeroGameplayConfigComponent` (`RequireForUpdate`) | `HeroGameplayConfigAuthoring` solo está en `SettlementHeroWorld.unity`; ninguna subescena de batalla lo tiene | **Confirmado en juego y corregido (2026-10-21):** sin la config, `HeroAttackSystem` (también el ataque de los héroes IA) y `HeroStaminaSystem` no corrían en batalla. Añadido `HeroGameplayConfig` a las dos subescenas de batalla; test `BattleSubsceneConfigTests` |
+| 12 | `Assets/Prefabs/Hero/HeroClassDefinition.prefab` | El prefab del héroe referencia su clase | Apunta a un `HeroClassDefinition` inexistente y hornea una clase vacía: en batalla `HeroInitializationSystem` no inicializaba a nadie | **Confirmado en juego (2026-10-21):** la Fase 1 toma la clase del guardado o de `HeroClassComponent`; la referencia sigue rota (`Docs/Por_Abordar/Pila_Modificadores.md` P2) |
 
 Cierre de la verificación: se confirmaron 13 afirmaciones (Q/E/R/F sin lanzador con matiz de input, huecos de formación,
 `NoObstacleAvoidance` y aliados ignorados, `frameCount % 5`, `MatchTimer` en MonoBehaviour, `DamageMechanics.md`
