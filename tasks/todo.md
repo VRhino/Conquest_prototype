@@ -36,7 +36,7 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   (aplicar buff) con su enfriamiento.
 
 ## Pasos (un commit cada uno; EditMode verde y regresiones de PlayMode antes de cada commit)
-- [ ] **1. Habilidades del héroe en batalla.** Las cuatro habilidades salen del SO de clase (`HeroClassManager`), no de la
+- [x] **1. Habilidades del héroe en batalla.** Las cuatro habilidades salen del SO de clase (`HeroClassManager`), no de la
   entidad de clase horneada (vacía, P2 de `Docs/Por_Abordar/Pila_Modificadores.md`). Blob de habilidad con fases y
   eventos; el SO `HeroAbility` gana fases, grupo de enfriamiento y efectos (con valores por defecto equivalentes).
 - [ ] **2. Enfriamientos por grupo (L2-5).** Buffer de grupos, `CooldownUtility` y `StatId.CooldownScale`; fuera

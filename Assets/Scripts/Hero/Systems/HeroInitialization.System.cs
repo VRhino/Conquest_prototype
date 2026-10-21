@@ -12,6 +12,11 @@ public partial class HeroInitializationSystem : SystemBase
     /// <summary>Heroes without a class to seed from, so they are not retried (and logged) every frame.</summary>
     readonly System.Collections.Generic.HashSet<Entity> _unseedable = new();
 
+    /// <summary>Skill blobs shared by the heroes of this world (L2-2).</summary>
+    readonly SkillLibrary _skills = new();
+
+    protected override void OnDestroy() => _skills.Dispose();
+
     protected override void OnUpdate()
     {
 
@@ -132,6 +137,33 @@ public partial class HeroInitializationSystem : SystemBase
         AddEquipment(entity, StatId.Armor, equipment.armorBonus);
         AddEquipment(entity, StatId.Vitality, equipment.vitalityBonus);
         StatStack.MarkDirty(EntityManager, entity);
+        SeedSkills(entity, classData);
+    }
+
+    /// <summary>
+    /// The skills the hero can launch (L2-1, L2-2): the basic attack from its weapon timings and the four class abilities
+    /// from the class asset, not from the baked class entity (empty in battle).
+    /// </summary>
+    void SeedSkills(Entity entity, HeroClassDefinition classData)
+    {
+        var skills = EntityManager.HasBuffer<HeroSkillElement>(entity)
+            ? EntityManager.GetBuffer<HeroSkillElement>(entity)
+            : EntityManager.AddBuffer<HeroSkillElement>(entity);
+        skills.Clear();
+        if (EntityManager.HasComponent<HeroCombatComponent>(entity)
+            && SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config))
+        {
+            var basic = _skills.GetBasicAttack(EntityManager.GetComponentData<HeroCombatComponent>(entity),
+                config.attackStaminaCost, config.attackCooldown);
+            skills.Add(new HeroSkillElement { slot = SkillSlot.Basic, skillId = basic.Value.id, skill = basic });
+        }
+        if (classData.abilities == null) return;
+        foreach (var ability in classData.abilities)
+        {
+            if (ability == null) continue;
+            var blob = _skills.Get(ability);
+            skills.Add(new HeroSkillElement { slot = SkillBlobBuilder.SlotOf(ability.category), skillId = blob.Value.id, skill = blob });
+        }
     }
 
     /// <summary>
