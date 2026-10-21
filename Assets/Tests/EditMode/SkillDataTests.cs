@@ -61,7 +61,7 @@ public class SkillDataTests
     {
         using var world = new World("Hero skills");
         var em = world.EntityManager;
-        em.CreateSingleton(new HeroGameplayConfigComponent { attackStaminaCost = 15f, attackCooldown = 0.7f });
+        em.CreateSingleton(new HeroGameplayConfigComponent { attackStaminaCost = 15f, attackCooldown = 0.7f, basicComboLength = 3, comboChainWindow = 0.4f });
         var hero = em.CreateEntity();
         em.AddComponentData(hero, new HeroClassComponent { heroClass = HeroClass.SwordAndShield });
         em.AddComponentData(hero, new HeroHealthComponent { maxHealth = 100f, currentHealth = 100f });
@@ -71,7 +71,7 @@ public class SkillDataTests
         world.GetOrCreateSystemManaged<HeroInitializationSystem>().Update();
 
         var skills = em.GetBuffer<HeroSkillElement>(hero);
-        Assert.That(skills.Length, Is.EqualTo(5));
+        Assert.That(skills.Length, Is.EqualTo(7), "Three hits of the basic attack chain and the four class abilities.");
         Assert.That(skills[0].slot, Is.EqualTo(SkillSlot.Basic));
         var slots = new System.Collections.Generic.HashSet<SkillSlot>();
         foreach (var s in skills) slots.Add(s.slot);

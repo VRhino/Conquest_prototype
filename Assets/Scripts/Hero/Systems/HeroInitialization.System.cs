@@ -1,5 +1,6 @@
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 /// <summary>
 /// Initializes hero attributes, abilities and perk lists when a hero is
@@ -170,9 +171,13 @@ public partial class HeroInitializationSystem : SystemBase
         if (EntityManager.HasComponent<HeroCombatComponent>(entity)
             && SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config))
         {
-            var basic = _skills.GetBasicAttack(EntityManager.GetComponentData<HeroCombatComponent>(entity),
-                config.attackStaminaCost, config.attackCooldown);
-            skills.Add(new HeroSkillElement { slot = SkillSlot.Basic, skillId = basic.Value.id, skill = basic });
+            var combat = EntityManager.GetComponentData<HeroCombatComponent>(entity);
+            int hits = math.max(1, config.basicComboLength);
+            for (int hit = 0; hit < hits; hit++)
+            {
+                var basic = _skills.GetBasicAttack(combat, config.attackStaminaCost, config.attackCooldown, hit, hits, config.comboChainWindow);
+                skills.Add(new HeroSkillElement { slot = SkillSlot.Basic, skillId = basic.Value.id, skill = basic });
+            }
         }
         if (classData.abilities == null) return;
         foreach (var ability in classData.abilities)

@@ -45,6 +45,7 @@ public partial class SkillExecutionSystem : SystemBase
         bool battle = SystemAPI.GetSingleton<MatchStateComponent>().currentState == MatchState.InBattle;
         float dt = SystemAPI.Time.DeltaTime;
         double now = SystemAPI.Time.ElapsedTime;
+        float inputBuffer = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.skillInputBuffer : 0f;
 
         foreach (var (skills, instance, combat, stamina, life, groups, entity) in SystemAPI
                      .Query<DynamicBuffer<HeroSkillElement>, RefRW<SkillInstanceComponent>, RefRW<HeroCombatComponent>,
@@ -87,8 +88,13 @@ public partial class SkillExecutionSystem : SystemBase
             }
 
             if (requested)
-                TryLaunch(entity, SystemAPI.GetComponent<SkillRequestComponent>(entity).slot, skills, ref inst, ref c,
-                    ref stamina.ValueRW, groups, now);
+            {
+                var request = SystemAPI.GetComponent<SkillRequestComponent>(entity);
+                var rejection = TryLaunch(entity, request.slot, skills, ref inst, ref c, ref stamina.ValueRW, groups, now);
+                // Input buffering (L2-3): a press the current phase turned down is kept for a moment.
+                if (rejection == SkillRejection.CurrentNotInterruptible && now - request.requestedAt <= inputBuffer)
+                    SystemAPI.SetComponentEnabled<SkillRequestComponent>(entity, true);
+            }
 
             PublishState(entity, inst, ref c);
         }
@@ -98,10 +104,10 @@ public partial class SkillExecutionSystem : SystemBase
         _effects.Clear();
     }
 
-    void TryLaunch(Entity entity, SkillSlot slot, DynamicBuffer<HeroSkillElement> skills, ref SkillInstanceComponent inst,
+    SkillRejection TryLaunch(Entity entity, SkillSlot slot, DynamicBuffer<HeroSkillElement> skills, ref SkillInstanceComponent inst,
         ref HeroCombatComponent combat, ref StaminaComponent stamina, DynamicBuffer<CooldownGroupElement> groups, double now)
     {
-        int index = Find(skills, slot);
+        int index = slot == SkillSlot.Basic ? FindChainHit(skills, inst, now) : Find(skills, slot);
         bool busy = inst.active && Valid(skills, inst.skillIndex);
         var input = new SkillGateInput
         {
@@ -120,7 +126,8 @@ public partial class SkillExecutionSystem : SystemBase
             input.cooldownReady = CooldownUtility.IsReady(groups, candidate.cooldownGroup, now);
             input.staminaCost = candidate.staminaCost;
         }
-        if (SkillGate.Evaluate(input) != SkillRejection.None) return;
+        var rejection = SkillGate.Evaluate(input);
+        if (rejection != SkillRejection.None) return rejection;
 
         ref var skill = ref skills[index].skill.Value;
         if (busy)
@@ -136,6 +143,41 @@ public partial class SkillExecutionSystem : SystemBase
         _fired.Clear();
         SkillTimeline.Start(ref skill, ref inst, index, _fired);
         Apply(entity, ref inst, ref combat, skills[index].skillId);
+        return SkillRejection.None;
+    }
+
+    /// <summary>
+    /// Which hit of the basic attack chain a press launches (L2-3; ref.: the next of a chain is accepted if the previous
+    /// one is its prerequisite or ended a moment ago): the next hit when the current one is in its final (recovery)
+    /// phase or ended within its chain window, otherwise the first; none while the last hit of the chain is running.
+    /// </summary>
+    static int FindChainHit(DynamicBuffer<HeroSkillElement> skills, in SkillInstanceComponent inst, double now)
+    {
+        int first = Find(skills, SkillSlot.Basic);
+        if (first < 0) return first;
+        int nextId = 0;
+        if (inst.active && Valid(skills, inst.skillIndex))
+        {
+            ref var current = ref skills[inst.skillIndex].skill.Value;
+            // The last hit closes the chain: no basic attack until it ends (abilities can still interrupt it).
+            if (skills[inst.skillIndex].slot == SkillSlot.Basic && current.nextSkillId == 0) return -1;
+            if (current.phases[inst.phase].final) nextId = current.nextSkillId;
+        }
+        else
+        {
+            int last = FindById(skills, inst.lastSkillId);
+            if (last >= 0 && now - inst.lastEndedAt <= skills[last].skill.Value.chainWindow) nextId = skills[last].skill.Value.nextSkillId;
+        }
+        int next = nextId != 0 ? FindById(skills, nextId) : -1;
+        return next >= 0 ? next : first;
+    }
+
+    static int FindById(DynamicBuffer<HeroSkillElement> skills, int skillId)
+    {
+        if (skillId == 0) return -1;
+        for (int i = 0; i < skills.Length; i++)
+            if (skills[i].skillId == skillId && skills[i].skill.IsCreated) return i;
+        return -1;
     }
 
     /// <summary>Applies the lifecycle events and queues the effect ones with the caster's pose and team.</summary>

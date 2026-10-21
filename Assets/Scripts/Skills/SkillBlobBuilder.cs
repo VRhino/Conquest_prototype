@@ -52,9 +52,11 @@ public static class SkillBlobBuilder
 
     /// <summary>
     /// The basic attack: windup until the strike opens, the strike (not interruptible) with the hitbox open, and the
-    /// recovery until the animation ends.
+    /// recovery until the animation ends. Hit <paramref name="hit"/> of a chain of <paramref name="hits"/> (L2-3) points
+    /// to the next one; only the first and the last start the cooldown, so the chain is not blocked by it.
     /// </summary>
-    public static BlobAssetReference<SkillBlob> BuildBasicAttack(in HeroCombatComponent combat, float staminaCost, float cooldown)
+    public static BlobAssetReference<SkillBlob> BuildBasicAttack(in HeroCombatComponent combat, float staminaCost, float cooldown,
+        int hit = 0, int hits = 1, float chainWindow = 0f)
     {
         float strikeEnd = combat.strikeWindowStart + combat.strikeWindowDuration;
         var phases = new[]
@@ -69,7 +71,11 @@ public static class SkillBlobBuilder
             new SkillEvent { phase = 1, type = SkillEventType.HitboxOpen },
             new SkillEvent { phase = 2, type = SkillEventType.HitboxClose },
         };
-        return Create(BasicAttackId, staminaCost, cooldown, DefaultGroup(SkillSlot.Basic), SkillRefresh.Interrupt, phases, events);
+        bool last = hit >= hits - 1;
+        bool cooled = hit == 0 || last;
+        var blob = Create(BasicAttackId + hit, staminaCost, cooled ? cooldown : 0f, cooled ? DefaultGroup(SkillSlot.Basic) : 0,
+            SkillRefresh.Interrupt, phases, events, last ? 0 : BasicAttackId + hit + 1, chainWindow);
+        return blob;
     }
 
     static SkillPhase[] DefaultPhases() => new[]
@@ -91,7 +97,7 @@ public static class SkillBlobBuilder
     }
 
     static BlobAssetReference<SkillBlob> Create(int id, float staminaCost, float cooldown, int group, SkillRefresh refresh,
-        SkillPhase[] phases, SkillEvent[] events)
+        SkillPhase[] phases, SkillEvent[] events, int nextSkillId = 0, float chainWindow = 0f)
     {
         using var builder = new BlobBuilder(Allocator.Temp);
         ref var root = ref builder.ConstructRoot<SkillBlob>();
@@ -100,6 +106,8 @@ public static class SkillBlobBuilder
         root.cooldown = cooldown;
         root.cooldownGroup = group;
         root.refresh = refresh;
+        root.nextSkillId = nextSkillId;
+        root.chainWindow = chainWindow;
         var p = builder.Allocate(ref root.phases, phases.Length);
         for (int i = 0; i < phases.Length; i++) p[i] = phases[i];
         var e = builder.Allocate(ref root.events, events.Length);

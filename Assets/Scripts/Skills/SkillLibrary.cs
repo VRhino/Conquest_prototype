@@ -9,7 +9,7 @@ using Unity.Entities;
 public sealed class SkillLibrary : IDisposable
 {
     readonly Dictionary<HeroAbility, BlobAssetReference<SkillBlob>> _abilities = new();
-    readonly Dictionary<(float, float, float, float, float), BlobAssetReference<SkillBlob>> _basics = new();
+    readonly Dictionary<(float, float, float, float, float, int, int, float), BlobAssetReference<SkillBlob>> _basics = new();
 
     public BlobAssetReference<SkillBlob> Get(HeroAbility ability)
     {
@@ -18,11 +18,13 @@ public sealed class SkillLibrary : IDisposable
         return blob;
     }
 
-    public BlobAssetReference<SkillBlob> GetBasicAttack(in HeroCombatComponent combat, float staminaCost, float cooldown)
+    public BlobAssetReference<SkillBlob> GetBasicAttack(in HeroCombatComponent combat, float staminaCost, float cooldown,
+        int hit, int hits, float chainWindow)
     {
-        var key = (combat.strikeWindowStart, combat.strikeWindowDuration, combat.attackAnimationDuration, staminaCost, cooldown);
+        var key = (combat.strikeWindowStart, combat.strikeWindowDuration, combat.attackAnimationDuration, staminaCost, cooldown,
+            hit, hits, chainWindow);
         if (!_basics.TryGetValue(key, out var blob))
-            _basics[key] = blob = SkillBlobBuilder.BuildBasicAttack(combat, staminaCost, cooldown);
+            _basics[key] = blob = SkillBlobBuilder.BuildBasicAttack(combat, staminaCost, cooldown, hit, hits, chainWindow);
         return blob;
     }
 

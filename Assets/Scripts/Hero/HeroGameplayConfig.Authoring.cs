@@ -13,6 +13,14 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
     public float attackCooldown           = 0.7f;
     public float criticalDamageMultiplier = 1.5f;
 
+    [Header("Skills")]
+    [Tooltip("Golpes de la cadena del ataque básico (combo).")]
+    public int basicComboLength = 3;
+    [Tooltip("Segundos tras acabar un golpe en los que el siguiente de la cadena aún se acepta.")]
+    public float comboChainWindow = 0.4f;
+    [Tooltip("Segundos que se recuerda una pulsación rechazada porque la fase actual no se puede interrumpir.")]
+    public float skillInputBuffer = 0.2f;
+
     [Header("Stamina")]
     public float sprintStaminaCostPerSecond   = 10f;
     public float skill1StaminaCost            = 20f;
@@ -32,6 +40,9 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
                 attackStaminaCost           = authoring.attackStaminaCost,
                 attackCooldown              = authoring.attackCooldown,
                 criticalDamageMultiplier    = authoring.criticalDamageMultiplier,
+                basicComboLength            = authoring.basicComboLength,
+                comboChainWindow            = authoring.comboChainWindow,
+                skillInputBuffer            = authoring.skillInputBuffer,
                 sprintStaminaCostPerSecond  = authoring.sprintStaminaCostPerSecond,
                 skill1StaminaCost           = authoring.skill1StaminaCost,
                 skill2StaminaCost           = authoring.skill2StaminaCost,
