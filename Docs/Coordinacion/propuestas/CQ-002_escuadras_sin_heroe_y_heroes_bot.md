@@ -1,7 +1,7 @@
 # CQ-002 — Escuadras sin héroe y héroes bot en el servidor de batalla
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Alta
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-09-13
@@ -81,3 +81,44 @@ BronzeAge las resuelve con números y nunca llegan a Unity.
 - ¿Cómo se representa en el servidor una escuadra sin comandante (formación por defecto, órdenes de IA)?
 - El comportamiento o la dificultad de un héroe bot: ¿va como parámetro del ticket (`BattleRules`) o es cosa
   de Conquest?
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta la necesidad; implementación pendiente. La forma actual usa
+`BattleParticipantSnapshot.es_bot`, `BattleSide.escuadras_sin_heroe` y `SquadSnapshot.heroe_id` opcional.
+
+- Ya existen IA de héroe, `SquadAISystem`, FSM y resolución de órdenes reutilizables. Falta el flujo
+  autónomo: `SquadSpawningSystem` parte de un héroe y añade `SquadOwnerComponent`.
+- Distinguir propietario persistente de comandante táctico. Una guarnición no pasa a control del dueño
+  presente ni se retira por la muerte de un héroe que no la manda. No inventar un héroe persistente.
+- Dificultad/perfiles son configuración táctica versionada de Conquest; solo requieren un campo de
+  contrato si BronzeAge debe elegirlos. Leer composición y capacidad del ticket/datos actuales.
+- Aceptar bando solo IA o vacío autorizado y producir resultado para todas las tropas autónomas.
+
+Las cifras de milicia, carreteros y capacidades de este texto no se fijan en código. La nota humana
+de cola y la incorporación autorizada se concilian con CQ-005/CQ-011 y G10 de la [revisión conjunta](README.md).
+
+### Trabajo de diseño existente — incorporado 2026-10-15
+
+El chat **«Localiza el último artefacto de Work»** (`01a139af-ee92-7cd3-82b4-605863f19fa1`)
+lleva el [diseño vivo de IA táctica v0.3](../../Design/ia-tactica/diseno-ia-tactica.html), apoyado en
+el [contraste con el repositorio](../../Arquitectura/20_Contraste_Handoff_IA_Tactica_2026-10-14.md)
+y el [plan de diseño](../../../tasks/tactical-ai-design-plan.md). Se incorpora como referencia de
+diseño en curso para CQ-002; las piezas de coordinación propuestas todavía no son gameplay implementado.
+
+- **D13 acordado:** el cerebro coordina héroes y solicita acciones mediante los mismos canales y
+  validaciones que un jugador humano. Movimiento, habilidades, formación, cohesión y comportamiento
+  individual pertenecen al gameplay compartido. En equipos mixtos, el humano conserva su control.
+- **D14 pendiente:** concretar el contrato común de control y resultados, incluyendo vigencia,
+  autoridad, locomoción, formación y feedback. CQ-002 debe encajar en esa frontera, evitando crear
+  otra vía de ejecución exclusiva para bots o atribuir autoridad nueva al cerebro.
+- El diseño contempla contactos compartidos con memoria/incertidumbre, coordinación por misiones
+  y un primer MVP de escudos y arqueros dentro de un alcance completo por fases.
+- **Caso aún por encajar:** guarnición, escolta, bandidos y carreteros sin héroe requieren definir
+  su productor de órdenes y despliegue autónomo reutilizando el gameplay común. El diseño centrado
+  en controladores de héroe no demuestra que esa excepción esté resuelta; no simularla creando un
+  héroe persistente ficticio ni asignando control al propietario ausente.
+
+Se mantiene la restricción expresa del usuario en ese trabajo: **hasta cerrar el diseño no se pasa
+a código de gameplay**. La aceptación de CQ-002 registra la necesidad y sus dependencias; no cierra
+D14 ni autoriza adelantar su implementación. La evolución de esa IA se sigue desde el diseño existente.

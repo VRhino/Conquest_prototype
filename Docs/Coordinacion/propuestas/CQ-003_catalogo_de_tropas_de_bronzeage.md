@@ -1,7 +1,7 @@
 # CQ-003 — Una definición de escuadra por cada tropa de BronzeAge
 
 **Destino:** `Conquest_prototype`
-**Estado:** ACEPTADO — PENDIENTE_DE_IMPLEMENTACION (revisión Codex y decisión del autor, 2026-09-13)
+**Estado:** ACEPTADO (implementación pendiente; revisiones 2026-09-13 y 2026-10-15)
 **Prioridad:** Media (necesaria antes de la primera batalla real con tropas de BronzeAge)
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-09-13
@@ -116,3 +116,20 @@ Además de los criterios originales:
   válido;
 - `efectivosAutorizados` del ticket prevalece sobre `unitCount`, y `SquadRarity`/`leadershipCost` nunca
   prevalecen sobre las reglas estratégicas recibidas de BronzeAge.
+
+## Revisión de Conquest — 2026-10-15
+
+Se conserva la aceptación y las decisiones anteriores. El mecanismo vigente es el catálogo del archivo
+común versionado y `SquadSnapshot.tropa_id`/`efectivos_autorizados` de Protobuf; la ruta
+`src/contratos/v1/catalogoTropas.json` pertenece al servidor TypeScript retirado.
+
+- El hito de once tropas originales se complementa con CQ-006; el catálogo vigente determina la
+  cobertura final. No congelar la versión histórica ni retirar IDs por no estar en la lista original.
+- La inspección confirma las tres bases `spm01`, `arc01`, `sqd01` y la ausencia de `meleeData`
+  serializado en `Spearmen.asset`; la reparación de esa base sigue pendiente.
+- Reutilizar el camino de snapshots de `SquadIdMapElement` y el spawn existente. Mantener ID canónico,
+  alias explícitos de migración, módulos independientes y rechazo de tropa desconocida antes del inicio.
+- El ticket autoriza efectivos; rareza y coste local no sustituyen las reglas estratégicas.
+
+Fijar distribución/versión del catálogo antes de dar compatibilidad por demostrada (G7).
+Detalle en la [revisión conjunta](README.md).

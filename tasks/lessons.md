@@ -1,5 +1,9 @@
 # Implementation lessons
 
+## Battle preparation countdown (2026-10-15)
+
+- Manual Start and preparation-time expiry must share the same final-countdown path; a direct scene transition bypasses the team review window. Keep the countdown duration Inspector-configurable.
+
 ## Integrated battle tests (2026-09-26)
 
 - Isolate SaveSystem and LoadSystem before initializing a session; inventory listeners can save as a side effect.
@@ -286,6 +290,11 @@
 - Un timeout del dispatcher de Pipeline no cancela necesariamente la operación del Editor. Comprobar el resultado durable (XML, log de compilación y ensamblados) antes de repetir una operación costosa o declarar fallo.
 - Un DynamicBuffer adquirido en un fixture queda invalidado por AddBuffer/AddComponent/CreateEntity posteriores. Terminar cambios estructurales antes de adquirirlo o volver a pedirlo después de cada cambio; no debilitar los checks de seguridad de Collections para que la prueba pase.
 - En herramientas de render, invalidar clones por el hash de dependencias del pipeline, además del GUID; clonar también renderer features y guardar sólo los assets propios. Verificar las APIs de EditorGraphicsSettings: un getter público no implica setter en la versión instalada.
+- Un objeto llamado WeaponHitbox con BoxCollider trigger no completa el contrato de melee: necesita WeaponHitboxBehaviour y un cuerpo físico configurado para emitir callbacks. Auditar componentes del prefab real desde el Editor; mantener collider y balance originales al reparar la conexión.
+- En pruebas NavMesh, comparar contra destination/nextPosition aceptados después de la proyección, no contra la coordenada solicitada: la altura del mesh horneado puede diferir. En animación, comprobar los clips y capas que tiene cada controller, sin asumir que todas las tropas comparten Combat.
+- Un censo de renderers puede incluir cientos de miles de piezas modulares inactivas. Conservar totales completos y limitar filas de detalle a una muestra activa; no serializar inventarios enormes junto a una medición de rendimiento.
+- Cambiar UniversalRendererData.renderingMode desde una herramienta no garantiza persistencia. Marcar el renderer propio como dirty, guardarlo y comprobar el modo tras recarga; reaplicar la configuración a clones experimentales existentes antes de medir GRD.
+- Unity Test Runner puede abortar un IEnumerator anidado sin disponer el enumerador padre. Restaurar overrides globales también en UnityTearDown; no depender exclusivamente del finally del wrapper cuando una aserción interna falla.
 
 ## Lote 1 de movimiento y escenarios medidos por MCP (2026-10-20)
 

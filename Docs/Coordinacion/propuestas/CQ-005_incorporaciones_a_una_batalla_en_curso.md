@@ -1,7 +1,7 @@
 # CQ-005 — Héroes que se unen a una batalla ya abierta
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Alta — cambia cómo el servidor de batalla forma los bandos
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-09-15
@@ -76,3 +76,23 @@ definiciones en `contratos.schema.json`. `battleResult.json` ya incluye a la her
    bando es; el punto de entrada es decisión táctica de Conquest.
 3. ¿Polling de `.../incorporaciones` os basta, o preferís que BronzeAge os avise? Hoy no hay canal de BronzeAge
    hacia el servidor de batalla.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta la necesidad; implementación pendiente. `IncorporacionBatalla` llega por
+`MensajeDeServidor.batalla` de la sesión 05. No implementar polling ni las rutas HTTP antiguas.
+
+- Deduplicar por batalla/secuencia, mantener registro al reconectar y no subir `ticket_revision` por
+  una incorporación. Conquest decide su punto de entrada; BronzeAge autoriza y reserva.
+- Hay spawn remoto reutilizable, pero falta admisión en red. Mantener participantes, reservas y
+  escuadras en un registro independiente de entidades ECS vivas y cambios de escena.
+- Con CQ-011, la completitud final es ticket más incorporaciones menos salidas confirmadas; incluir
+  tropas sin héroe. Una escuadra nunca desplegada tiene supervivientes iguales a efectivos autorizados,
+  muertos/desplegados/XP a cero, conservando soldados.
+- El antiguo `POST /tokens` no tiene sustituto equivalente en la dirección Unity → BronzeAge:
+  `TokensBatalla` está solo en la dirección contraria del `.proto`. Cerrar emisor y renovación.
+- Definir confirmación de mensajes, reanudación y carrera entre incorporación y cierre del resultado.
+  El caso de campal/persecución se rige por CQ-011 y el canon actual, no por la regla de misma Facción
+  de esta versión histórica.
+
+Pendientes G2/G3/G10 en la [revisión conjunta](README.md).

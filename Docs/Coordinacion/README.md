@@ -10,6 +10,17 @@ deben modificarlo salvo petición explícita del autor.
 
 ## Documentos vigentes
 
+**Actualización de referencias — 2026-10-15:** BronzeAge publica ahora el modelo en
+`Docs/Coordinacion/01_Modelo_de_datos.md`, la sesión en `05_Contrato_de_Sesion.md` y el mundo en
+`06_Contrato_de_Mundo.md`, respaldados por `proto/bronzeage/v1/`. Los acuerdos locales de septiembre
+conservan sus decisiones de producto/propiedad; sus mecanismos JSON/HTTP, semilla y tick deben leerse
+frente a esos contratos actuales. El modelo local `03` es inventario/propuesta histórica, no el
+esquema canónico de red.
+
+La [revisión de las once propuestas CQ](propuestas/README.md#revisión-de-conquest--2026-10-15)
+recoge qué necesidades siguen vigentes, cómo se adaptan al contrato actual, qué se reutiliza de
+Conquest y qué huecos requieren decisión del propietario del contrato.
+
 - [`../Arquitectura/1_Arquitectura_Actual.md`](../Arquitectura/1_Arquitectura_Actual.md): línea base verificada
   del modelo y los flujos que existen hoy en Conquest; es la referencia de estado actual frente a las
   propuestas de esta carpeta.

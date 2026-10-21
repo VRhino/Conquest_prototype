@@ -31,6 +31,8 @@ namespace Conquest.Editor.Optimization
         private const string VariantD = "DForwardPlusGRDOcclusion";
         private const string VariantSsaoOff = "SSAOOff";
         private const string VariantSsaoOn = "SSAOOn";
+        // Diagnostic output budget; totals remain complete even when details are sampled.
+        private const int MaxDetailedRendererRows = 256;
 
         private static readonly Dictionary<string, UniversalRenderPipelineAsset> Profiles =
             new Dictionary<string, UniversalRenderPipelineAsset>(StringComparer.Ordinal);
@@ -137,8 +139,10 @@ namespace Conquest.Editor.Optimization
         {
             var rows = new List<RendererRow>();
             int meshCount = 0;
+            int activeMeshCount = 0;
             int candidateCount = 0;
             int skinnedCount = 0;
+            int activeSkinnedCount = 0;
             int terrainCount = 0;
             int terrainTreeInstances = 0;
             int manualPathComponents = 0;
@@ -151,10 +155,16 @@ namespace Conquest.Editor.Optimization
                 if (renderer is SkinnedMeshRenderer)
                 {
                     skinnedCount++;
+                    if (!renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                        continue;
+                    activeSkinnedCount++;
+                    if (rows.Count >= MaxDetailedRendererRows)
+                        continue;
                     rows.Add(new RendererRow
                     {
                         kind = "SkinnedMeshRenderer",
                         hierarchy = GetHierarchyPath(renderer.transform),
+                        scene = renderer.gameObject.scene.path,
                         active = renderer.gameObject.activeInHierarchy,
                         enabled = renderer.enabled,
                         residentDrawerHeuristic = "excluded: skinned"
@@ -166,8 +176,12 @@ namespace Conquest.Editor.Optimization
                     continue;
 
                 meshCount++;
+                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                    continue;
+                activeMeshCount++;
                 bool hasMpb = renderer.HasPropertyBlock();
-                bool hasLppv = renderer.lightProbeProxyVolumeOverride != null || renderer.GetComponent<LightProbeProxyVolume>() != null;
+                bool hasLppv = renderer.lightProbeUsage == LightProbeUsage.UseProxyVolume
+                    || renderer.lightProbeProxyVolumeOverride != null || renderer.GetComponent<LightProbeProxyVolume>() != null;
                 bool hasUnsupportedMaterial = false;
                 var materialNames = new List<string>();
                 var shaderNames = new List<string>();
@@ -189,18 +203,26 @@ namespace Conquest.Editor.Optimization
                     shaderNames.Add(shader == null ? "<null>" : shader.name);
                     bool declaresDotsInstancing = shader != null && shader.keywordSpace.FindKeyword("DOTS_INSTANCING_ON").isValid;
                     materialFlags.Add(declaresDotsInstancing ? "DOTS_INSTANCING_ON" : "no-DOTS-instancing-keyword");
+                    materialFlags.Add("enableInstancing=" + material.enableInstancing);
                     if (!declaresDotsInstancing)
                         hasUnsupportedMaterial = true;
                 }
 
-                bool candidate = !hasMpb && !hasLppv && !hasUnsupportedMaterial;
+                bool candidate = renderer.enabled && renderer.gameObject.activeInHierarchy
+                    && !hasMpb && !hasLppv && !hasUnsupportedMaterial;
                 if (candidate)
                     candidateCount++;
 
+                if (rows.Count >= MaxDetailedRendererRows)
+                    continue;
                 rows.Add(new RendererRow
                 {
                     kind = "MeshRenderer",
                     hierarchy = GetHierarchyPath(renderer.transform),
+                    scene = renderer.gameObject.scene.path,
+                    inLodGroup = renderer.GetComponentInParent<LODGroup>() != null,
+                    lightProbeUsage = renderer.lightProbeUsage.ToString(),
+                    reflectionProbeUsage = renderer.reflectionProbeUsage.ToString(),
                     active = renderer.gameObject.activeInHierarchy,
                     enabled = renderer.enabled,
                     materials = string.Join(";", materialNames),
@@ -230,9 +252,13 @@ namespace Conquest.Editor.Optimization
                     typeName.Contains("WorldMapForestOverview", StringComparison.Ordinal))
                 {
                     manualPathComponents++;
+                    if (!component.enabled || !component.gameObject.activeInHierarchy
+                        || rows.Count >= MaxDetailedRendererRows)
+                        continue;
                     rows.Add(new RendererRow
                     {
                         kind = "manual-instancing component",
+                        scene = component.gameObject.scene.path,
                         hierarchy = GetHierarchyPath(component.transform),
                         active = component.gameObject.activeInHierarchy,
                         enabled = component.enabled,
@@ -248,17 +274,31 @@ namespace Conquest.Editor.Optimization
                     ? QualitySettings.names[QualitySettings.GetQualityLevel()]
                     : "<unknown>",
                 meshRenderers = meshCount,
+                activeMeshRenderers = activeMeshCount,
                 conservativeMeshCandidates = candidateCount,
                 skinnedMeshRenderers = skinnedCount,
+                activeSkinnedMeshRenderers = activeSkinnedCount,
+                detailedRowLimit = MaxDetailedRendererRows,
+                detailsAreSample = true,
                 terrains = terrainCount,
                 terrainTreeInstances = terrainTreeInstances,
                 knownManualInstancingComponents = manualPathComponents,
-                notes = "Candidate is only a conservative shader/MPB/proxy-volume heuristic; Unity's runtime eligibility and batching must be confirmed in Frame Debugger/Profiler. Terrain tree instances and manual draw calls are not MeshRenderer candidates.",
+                residentDrawerInitialized = GetResidentDrawerInitialization(),
+                gpuOcclusionEnabled = GPUResidentDrawer.IsInstanceOcclusionCullingEnabled(),
+                notes = "Totals cover all loaded scene renderers; active totals require enabled and activeInHierarchy. Details are a bounded sample of active renderers, not a full inventory. Candidate is only a conservative shader/MPB/proxy-volume heuristic; confirm runtime eligibility in Frame Debugger/Profiler. Terrain trees and manual draw calls are not MeshRenderer candidates.",
                 renderers = rows.ToArray()
             };
             string json = JsonUtility.ToJson(report, true);
             Debug.Log($"[RenderOptimizationExperiments] Census: MeshRenderer={meshCount}, candidatos heurísticos={candidateCount}, SkinnedMeshRenderer={skinnedCount}, Terrain={terrainCount}, árboles={terrainTreeInstances}, componentes de instancing manual conocidos={manualPathComponents}. JSON detallado devuelto por Census().");
             return json;
+        }
+
+        private static string GetResidentDrawerInitialization()
+        {
+            // Version-specific diagnostic only; never controls render settings.
+            var method = typeof(GPUResidentDrawer).GetMethod("IsInitialized",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            return method == null ? "unavailable" : (bool)method.Invoke(null, null) ? "initialized" : "inactive";
         }
 
         /// <summary>Reports hard prerequisites for an experiment. Support is still confirmed by runtime diagnostics and profiling.</summary>
@@ -495,12 +535,13 @@ namespace Conquest.Editor.Optimization
                     if (clone == null)
                     {
                         clone = ClonePipelineAndRenderers(source, folder, variant);
-                        ConfigureVariant(clone, variant);
-                        SaveOwnedAssets(clone);
                     }
                     Profiles[profileKey] = clone;
                 }
                 ValidateProfileRendererIsolation(source, clone, folder, variant);
+                // Reapply to existing owned clones too, including assets created by older tooling.
+                ConfigureVariant(clone, variant);
+                SaveOwnedAssets(clone);
             }
 
             s_ProfileSourceGuid = sourceGuid;
@@ -556,7 +597,10 @@ namespace Conquest.Editor.Optimization
                 foreach (ScriptableRendererData rendererData in pipeline.rendererDataList)
                 {
                     if (rendererData is UniversalRendererData universalRendererData)
+                    {
                         universalRendererData.renderingMode = desiredMode;
+                        EditorUtility.SetDirty(universalRendererData);
+                    }
                 }
             }
 
@@ -749,11 +793,17 @@ namespace Conquest.Editor.Optimization
         [Serializable]
         private sealed class CensusReport
         {
+            public string residentDrawerInitialized;
+            public bool gpuOcclusionEnabled;
             public string pipeline;
             public string quality;
             public int meshRenderers;
+            public int activeMeshRenderers;
             public int conservativeMeshCandidates;
             public int skinnedMeshRenderers;
+            public int activeSkinnedMeshRenderers;
+            public int detailedRowLimit;
+            public bool detailsAreSample;
             public int terrains;
             public int terrainTreeInstances;
             public int knownManualInstancingComponents;
@@ -765,7 +815,11 @@ namespace Conquest.Editor.Optimization
         private sealed class RendererRow
         {
             public string kind;
+            public string scene;
             public string hierarchy;
+            public bool inLodGroup;
+            public string lightProbeUsage;
+            public string reflectionProbeUsage;
             public bool active;
             public bool enabled;
             public string materials;

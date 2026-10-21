@@ -28,6 +28,7 @@ public class BattlePreparationController : MonoBehaviour
     [SerializeField] private FooterController _footerController;
     [Header("Timer Management")]
     [SerializeField] private TimerController _timerController;
+    [SerializeField, Min(1)] private int _finalCountdownSeconds = 10;
     [Header("Map Management")]
     [SerializeField] private GameObject _preparationMapContainer;
     private PreparationMapControllerUI _preparationMapControllerUI;
@@ -427,14 +428,21 @@ public class BattlePreparationController : MonoBehaviour
 
     private void OnPreparationTimerFinished()
     {
+        BeginFinalCountdown();
+    }
+
+    private void BeginFinalCountdown()
+    {
         if (_isActiveUI) DisconnectAllEvents();
+        _isActiveUI = false;
+
         BattleHeroData localHeroData = _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
         if (string.IsNullOrEmpty(localHeroData.spawnPointId))
         {
             localHeroData.spawnPointId = _preparationMapControllerUI.GetDefaultSpawnPointId();
         }
         _footerController.SetStartButtonInteractable(false);
-        _timerController.SetFinalCountdown(OnFinalCountdownFinished, 10);
+        _timerController.SetFinalCountdown(OnFinalCountdownFinished, _finalCountdownSeconds);
     }
 
     private void OnFinalCountdownFinished()
@@ -447,9 +455,7 @@ public class BattlePreparationController : MonoBehaviour
     {
         if (_isActiveUI)
         {
-            DisconnectAllEvents();
-            _isActiveUI = false;
-            TransitionToBattle();
+            BeginFinalCountdown();
         }
     }
 

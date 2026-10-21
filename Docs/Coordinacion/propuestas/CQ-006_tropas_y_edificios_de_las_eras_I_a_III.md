@@ -1,7 +1,7 @@
 # CQ-006 — Tropas y edificios de las Eras I-III de BronzeAge
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Media — necesaria antes de la primera batalla real con una tropa nueva
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-09-29
@@ -102,3 +102,24 @@ Los de CQ-003, sin cambios: unidades y Liderazgo los decide BronzeAge (`efectivo
 - ¿La falange (hoplitas, Espartiatas) y la formación cerrada (`disciplina_formacion`) son la misma mecánica táctica
   en Conquest, o dos distintas?
 - ¿Qué base provisional preferís para la caballería mientras no haya modelos de caballo?
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta la ampliación I-III; implementación pendiente. Complementa CQ-003 usando el archivo común
+versionado actual. La versión 4 y la lista de 26 son referencias históricas; Eras IV-V siguen pospuestas.
+
+- `UnitType.Cavalry` existe como clasificación, pero faltan mecánicas de montura/carga/carro. Los
+  assets provisionales deben permitir probar el comportamiento real; representar infantería como
+  caballería no cumple el criterio táctico.
+- Levas sin formación no equivalen a `Dispersed`: el spawn actual exige biblioteca y slots de
+  formación. Reutilizar combate/órdenes y adaptar ese requisito expresamente.
+- Resolver capacidades tácticas desde `SquadData` por `tropa_id`; no hace falta ampliar un enum
+  estratégico para cada combinación. Para carros, acordar qué unidad cuenta el ticket y sus bajas.
+- Reutilizar formaciones existentes para evaluar falange; disciplina y geometría de formación no se
+  declaran equivalentes sin concretar su comportamiento.
+- El visor puede dibujar tipos desconocidos con cubos, pero no tiene entrada específica de
+  `caballerizas`/`salaConsejo`. Las huellas y el ámbito de los extractores/pueblos se toman del modelo
+  nuevo y del trazado servido, no de una tabla local duplicada.
+
+No fijar velocidades de campaña ni costes estratégicos en las definiciones tácticas. Dependencias
+G5/G7 y detalle en la [revisión conjunta](README.md).

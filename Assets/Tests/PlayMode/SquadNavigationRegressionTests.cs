@@ -320,6 +320,10 @@ public class SquadNavigationRegressionTests
             Vector3 requestedDestination = new(-5f, 0f, -5f);
             Assert.That(agent.SetDestination(requestedDestination), Is.True);
             yield return null;
+            // NavMesh projects the request onto its baked surface (including height).
+            // Compare the accepted physical state, not the unprojected request.
+            Vector3 destinationBeforeComparison = agent.destination;
+            Vector3 positionBeforeComparison = agent.nextPosition;
 
             Vector3[] positions = new Vector3[64];
             positions[0] = new Vector3(-6f, 0f, 0f);       // Interior of area 0.
@@ -360,9 +364,9 @@ public class SquadNavigationRegressionTests
             Assert.That(allAreasJson, Does.Contain("\"validityMismatches\""));
             Assert.That(areaZeroJson, Does.Contain("\"samples\": 64"));
             Assert.That(areaTwoJson, Does.Contain("\"samples\": 64"));
-            Assert.That(Vector3.Distance(agent.destination, requestedDestination), Is.LessThan(0.001f),
+            Assert.That(Vector3.Distance(agent.destination, destinationBeforeComparison), Is.LessThan(0.001f),
                 "The diagnostic comparison must not change the active NavMeshAgent destination.");
-            Assert.That(Vector3.Distance(agent.nextPosition, new Vector3(-8f, 0f, -8f)), Is.LessThan(0.05f),
+            Assert.That(Vector3.Distance(agent.nextPosition, positionBeforeComparison), Is.LessThan(0.001f),
                 "The stopped sentinel agent must remain at its original location.");
 
             string report = "{\n  \"allAreas\": " + allAreasJson + ",\n  \"areaZeroOnly\": " + areaZeroJson +

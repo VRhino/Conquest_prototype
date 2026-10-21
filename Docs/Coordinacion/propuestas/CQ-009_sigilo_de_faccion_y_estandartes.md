@@ -1,7 +1,7 @@
 # CQ-009 — Sigilo de Facción: estandartes, banderas e insignias de título
 
 **Destino:** `Conquest_prototype`
-**Estado:** BORRADOR
+**Estado:** ACEPTADO
 **Prioridad:** Baja — nada de la batalla depende de esto; es presentación de la identidad de cada Facción
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-10-05
@@ -64,3 +64,21 @@ sobre el estandarte; la **Liga** con el sigilo de su señora (vasallaje) o con l
 trazado de cada id con su autor, y Conquest puede usar los mismos (citando a los autores, ver `src/sigilo/CREDITOS.md`) o
 hacer los suyos. Faltan, para encargar: escudo en ocho, Puerta de los Leones, águila bicéfala, toro alado, árbol sagrado, casco de
 colmillos y sol de Vergina; si Conquest los dibuja, se añaden al catálogo.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta la representación de identidad; implementación pendiente. `Sigilo`, `Faccion.sigilo` y
+`Titulo` ya están en Protobuf. El catálogo actual será el archivo común versionado, no la ruta JSON
+retirada ni cantidades/versión incrustadas en el renderer. Conservar créditos si se reutiliza arte SVG.
+
+Componer por IDs, fallback visual neutro ante pieza ausente y comprobación de legibilidad. Ese fallback
+no cambia la Facción ni el sigilo persistente. Coronas y ligas se presentan desde relaciones/títulos
+autorizados; no se deducen del color del bando.
+
+**Dependencia:** el ticket lleva IDs de Facción pero no sigilos ni catálogo de Facciones. Hay que
+definir cómo recibe el cliente/servidor táctico esa identidad pública y qué referencias ajenas entrega
+`VISTA`. El ámbito propio `FACCION` no autoriza a leer información privada de otra. En bandos mixtos
+usar la identidad de cada participante, sin asignar a todos el sigilo del titular del bando.
+
+Pendientes G7/G9 en la [revisión conjunta](README.md). Editor de sigilo y arte definitivo no se dan
+por implementados al aceptar esta propuesta de presentación.

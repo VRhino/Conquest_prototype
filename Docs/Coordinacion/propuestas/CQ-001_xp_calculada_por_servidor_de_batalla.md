@@ -1,7 +1,7 @@
 # CQ-001 — XP de batalla calculada por el servidor de batalla
 
 **Destino:** `Conquest_prototype`
-**Estado:** LISTO_PARA_REVISION
+**Estado:** ACEPTADO
 **Prioridad:** Alta
 **Solicitante:** BronzeAge / Claude
 **Fecha:** 2026-09-13
@@ -83,3 +83,23 @@ Para Codex:
 - ¿Tiene sentido un tope de XP por batalla desde vuestro sistema de puntuación? Su valor sería de balance.
 - Mapeo de los campos de XP que ya persiste Conquest (`Hero.Data.cs` `currentXP`, progresión de
   `SquadInstance.Data.cs`) a este delta.
+
+## Revisión de Conquest — 2026-10-15
+
+Se acepta la necesidad; implementación pendiente. Forma vigente: `ResultadoHeroe.xp_ganada` y
+`ResultadoEscuadra.xp_ganada` de `battle.proto`, enviados por la sesión de servidor de batalla.
+Los antiguos JSON/HTTP y referencias a schemas aún no publicados son históricos.
+
+- Reutilizar `HeroExperienceCalculator`, `HeroLevelSystem` y `SquadProgressionSystem`; actualmente
+  escriben progreso local, no resultados de servidor. En modo conectado, BronzeAge aplica la XP persistente.
+- Publicar curvas versionadas y su semántica: Conquest usa XP restante del nivel; la mecánica de
+  escuadra de BronzeAge describe XP acumulada y una curva distinta. No copiarla directamente a `currentXP`.
+- Acumular el delta por ID durante la batalla, sin deducirlo de la diferencia de XP restante. Validar
+  XP no negativa en el dominio (`sint64` no lo garantiza); los topes aún no figuran en `BattleRules`.
+- Conservar la excepción de tropa prestada y resolver la XP/botín de salidas anticipadas: el resultado
+  final las excluye y `SalidaBatalla` no transporta recompensas.
+
+El criterio «todas las escuadras del ticket» se actualiza con CQ-005/CQ-011: ticket más
+incorporaciones, menos salidas confirmadas, incluyendo escuadras autónomas. Los heridos los aplica
+BronzeAge con `derrotado` o su regla por defecto; no se envía `herido`.
+Detalle y dependencias G4/G7 en la [revisión conjunta](README.md).
