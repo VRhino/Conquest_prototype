@@ -46,7 +46,7 @@ Si el punto está bloqueado, no muestra barra de progreso y no responde a presen
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Nota sobre interrupción**: el defensor no necesita hacer ninguna acción; basta con entrar al radio. El progreso de captura acumulado **no se pierde** al ser interrumpido — continúa exactamente desde donde quedó cuando el defensor abandona la zona.
+**Nota sobre interrupción**: si atacantes y defensores coinciden en el radio, la zona queda disputada (`isContested`) y el progreso se congela, sin perderse. Si quedan solo defensores, el progreso **retrocede** a la velocidad de captura (`captureSpeed`) hasta 0 (`CaptureZoneTriggerSystem`).
 
 ---
 
@@ -58,7 +58,7 @@ Si el punto está bloqueado, no muestra barra de progreso y no responde a presen
 | **Bloqueado** | No capturable aún; su precondición no se cumplió | El punto anterior en la secuencia no ha sido capturado |
 | **Desbloqueado** | Capturable; precondición cumplida | Se capturó el punto anterior |
 | **En captura** | Barra activa avanzando | Héroe atacante en zona, sin defensores |
-| **Pausado** | Barra detenida, progreso conservado | Héroe defensor entró a la zona |
+| **Pausado** | Barra detenida, progreso conservado | Atacantes y defensores dentro de la zona a la vez (con solo defensores el progreso retrocede) |
 | **Capturado** | Pertenece al atacante — irreversible | Barra llegó al 100% |
 
 Las transiciones entre estados son:
@@ -84,7 +84,7 @@ Capturar el punto de **base** termina la partida de forma inmediata:
 1. La captura se completa → `CapturePointProgress` llega a 100%.
 2. La zona es la final (`ZoneTriggerComponent.isFinal`): `CaptureZoneTriggerSystem` emite `FinalZoneCapturedEvent` con el equipo que captura.
 3. `MatchOutcomeSystem` (único escritor del resultado) escribe `victoryConditionMet = true` y `winnerTeam = 1` (atacantes; 2 serían los defensores) y pone la fase `PostPartida`.
-4. `MatchController.System.cs` detecta el flag y emite `MatchState.EndMatch`.
+4. `MatchControllerSystem` (`MatchController.System.cs`) detecta el flag y emite `MatchState.EndMatch`.
 5. La escena transiciona a `PostBattleScene`.
 
 No hay animación de captura diferida: el evento se crea en el frame en que se completa la barra y se resuelve en el siguiente.
@@ -111,7 +111,7 @@ Los siguientes archivos ya contienen implementación parcial o relacionada:
 | Archivo | Rol |
 |---------|-----|
 | `Assets/Scripts/Map/CapturePoint.Tag.cs` | Tag ECS que identifica entidades de punto de captura |
-| `Assets/Scripts/Map/CapturePointProgress.Component.cs` | Componente con barra de progreso, estado y tipo (Normal/Base) |
+| `Assets/Scripts/Map/CapturePointProgress.Component.cs` | Componente con progreso (0–100), velocidad, equipo que captura y flags de disputa; el punto de base se marca con `ZoneTriggerComponent.isFinal` |
 | `Assets/Scripts/Map/ZoneTrigger.Component.cs` | Define el radio de detección de héroes |
 | `Assets/Scripts/Map/CaptureZoneTrigger.System.cs` | Detecta héroes dentro del radio, actualiza presencia de equipos |
 | `Assets/Scripts/Map/LocalHeroCaptureTracker.System.cs` | Rastrea el progreso del héroe local para mostrar en UI y post-batalla |
@@ -121,12 +121,9 @@ Los siguientes archivos ya contienen implementación parcial o relacionada:
 | `Assets/Scripts/Shared/MatchController.System.cs` | Evalúa condiciones de victoria cada frame y emite `EndMatch` |
 | `Assets/Scripts/UI/Zone/CapturePointUIController.cs` | Muestra barra de progreso, estado y color de zona en HUD |
 
-### Componentes / sistemas nuevos necesarios (estimado)
+### Desbloqueo en secuencia (ya implementado)
 
-| Componente / Sistema | Propósito |
-|----------------------|-----------|
-| `CapturePointUnlockSystem` | Detecta captura de punto N y desbloquea punto N+1 en la secuencia |
-| `CaptureProgressEvent` | Evento emitido al completar captura para comunicar a timer y victory check |
+No existe un `CapturePointUnlockSystem` ni un `CaptureProgressEvent`. `CaptureZoneTriggerSystem` desbloquea la zona siguiente al completar una captura: recorre las zonas con `ZoneLinkComponent.requiredZoneId` igual a la zona capturada y pone `ZoneTriggerComponent.isLocked = false`. `CapturePointSetup` añade el `ZoneLinkComponent`. Los consumidores reciben `ZoneCapturedEvent` y `FinalZoneCapturedEvent`.
 
 ---
 
@@ -137,8 +134,9 @@ Los siguientes archivos ya contienen implementación parcial o relacionada:
 | Archivo | Rol |
 |---------|-----|
 | `Assets/Scripts/Map/CapturePoint.Tag.cs` | Tag para consultar entidades de puntos de captura |
-| `Assets/Scripts/Map/CapturePointProgress.Component.cs` | `float progress` (0–1), `CapturePointType type` (Normal/Base), `bool isBlocked`, `int ownerTeam` |
-| `Assets/Scripts/Map/ZoneTrigger.Component.cs` | `float radius`, usado por el sistema de detección de zona |
+| `Assets/Scripts/Map/CapturePointProgress.Component.cs` | `float captureProgress` (0–100), `float captureSpeed`, `int capturingTeam`, `bool isContested`, `bool isBeingCaptured` |
+| `Assets/Scripts/Map/ZoneTrigger.Component.cs` | `ZoneTriggerComponent`: `zoneId`, `zoneType`, `teamOwner`, `isActive`, `radius`, `isLocked`, `isFinal`, `pointLabel` |
+| `Assets/Scripts/Map/ZoneLink.Component.cs` | `requiredZoneId`: zona que debe capturarse para desbloquear esta |
 | `Assets/Scripts/Shared/MatchState.Component.cs` | `bool victoryConditionMet`, `int winnerTeam` (0 / 1 atacantes / 2 defensores); el tiempo vive en `BattleClockComponent` |
 
 ### Sistemas ECS
