@@ -1,6 +1,6 @@
 # Muerte, retirada del squad y respawn del héroe
 
-Actualizado: 2026-09-15. Este documento describe el comportamiento implementado; la regla de producto “retirada 10 segundos antes del respawn” que aparece en GDD/TDD no está implementada actualmente.
+Actualizado: 2026-10-22 (verificado contra `HeroRespawn.System.cs`, `SquadSpawnConfig.Authoring.cs` y `RetreatLogic.System.cs`). Este documento describe el comportamiento implementado; la regla de producto “retirada 10 segundos antes del respawn” que aparece en GDD/TDD no está implementada actualmente.
 
 ## Resumen vigente
 
@@ -26,12 +26,12 @@ HeroHealthComponent.currentHealth <= 0
 | `HeroMoveIntent` | Intención local; se limpia mientras el héroe no puede moverse |
 | `HeroMotorStateComponent` | Velocidad/contactos confirmados del motor local |
 
-`HeroRespawnSystem` procesa sólo la entidad con `IsLocalPlayer`. Detecta muerte a partir de `HeroHealthComponent`, no de componentes de salud de unidades.
+`HeroRespawnSystem` marca la muerte de cualquier héroe a partir de `HeroHealthComponent` (no de componentes de salud de unidades), pero solo el héroe con `IsLocalPlayer` cuenta el `deathTimer` y revive: los héroes remotos/IA permanecen muertos.
 
 ## Secuencia de muerte
 
 1. El daño reduce `HeroHealthComponent.currentHealth`.
-2. `HeroRespawnSystem`, después de `DamageCalculationSystem`, marca `isAlive = false` y carga `deathTimer` con `respawnCooldown`.
+2. `HeroRespawnSystem`, `[UpdateAfter(DamageCalculationSystem)]` y `[UpdateBefore(HeroSpawnSystem)]`, marca `isAlive = false` y carga `deathTimer` con `respawnCooldown`.
 3. `HeroMovementSystem` limpia `HeroMoveIntent` al ver al héroe muerto.
 4. `LocalHeroCharacterMotor` tampoco ejecuta movimiento mientras `isAlive` sea falso.
 5. `SquadOwnerDeathRetreatSystem`, después de respawn y antes de órdenes/swap/HUD, detecta la transición del owner y compromete la retirada del squad.
@@ -111,7 +111,8 @@ Los valores efectivos dependen de los authorings/prefabs de la escena. Una durac
 
 ## Límites actuales
 
-- Sólo el héroe local participa en `HeroRespawnSystem`; el ciclo equivalente de héroes de red no está implementado.
+- Solo el héroe local revive en `HeroRespawnSystem`; los héroes remotos/IA quedan muertos y no hay ciclo de respawn equivalente.
+- Un héroe muerto no lanza habilidades: `SkillExecutionSystem` termina la habilidad en curso (`Docs/Mechanics/SkillsAndPerks.md`).
 - La desaparición/desconexión de la entidad owner no se interpreta automáticamente como muerte.
 - Cámara espectador, HUD de cooldown y navegación que evite concentración enemiga no quedan certificados por este pipeline.
 - El comportamiento temporal del GDD/TDD difiere: allí la retirada se plantea cerca del respawn; el código actual la inicia inmediatamente.
