@@ -38,4 +38,8 @@ public class HeroPerk : ScriptableObject
 
     /// <summary>Whether the perk is available from the start.</summary>
     public bool isUnlockedByDefault;
+
+    [Header("Effects (L7-4)")]
+    [Tooltip("Modificadores que da el perk: aura mientras se cumple la condición, o al golpear (al objetivo).")]
+    public PerkEffect[] effects = new PerkEffect[0];
 }

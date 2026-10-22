@@ -139,6 +139,30 @@ public partial class HeroInitializationSystem : SystemBase
         AddEquipment(entity, StatId.Vitality, equipment.vitalityBonus);
         StatStack.MarkDirty(EntityManager, entity);
         SeedSkills(entity, classData);
+        if (EntityManager.HasComponent<IsLocalPlayer>(entity) && PlayerSessionService.SelectedHero != null)
+            SeedPerks(entity, classData, PerkLoadout.ChosenIds(PlayerSessionService.SelectedHero));
+    }
+
+    readonly System.Collections.Generic.List<HeroPerk> _passives = new();
+    readonly System.Collections.Generic.List<HeroPerk> _actives = new();
+
+    /// <summary>
+    /// The perks of the hero's loadout (L7-4): each effect of the chosen passive perks goes to its
+    /// <see cref="HeroPerkElement"/> buffer, applied by the perk systems. Remote and AI heroes have no loadout perks.
+    /// </summary>
+    void SeedPerks(Entity entity, HeroClassDefinition classData, System.Collections.Generic.IEnumerable<int> chosenIds)
+    {
+        PerkLoadout.Select(classData.validClassPerks, chosenIds, _passives, _actives);
+        if (_passives.Count == 0) return;
+        var perks = EntityManager.HasBuffer<HeroPerkElement>(entity)
+            ? EntityManager.GetBuffer<HeroPerkElement>(entity)
+            : EntityManager.AddBuffer<HeroPerkElement>(entity);
+        perks.Clear();
+        foreach (var perk in _passives)
+            if (perk.effects != null)
+                foreach (var effect in perk.effects)
+                    perks.Add(new HeroPerkElement { perkId = perk.perkID, effect = effect });
+        if (!EntityManager.HasComponent<HeroMotionComponent>(entity)) EntityManager.AddComponent<HeroMotionComponent>(entity);
     }
 
     /// <summary>

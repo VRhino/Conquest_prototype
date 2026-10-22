@@ -67,7 +67,12 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   dispersión que crece con la velocidad del tirador y tope de 256 proyectiles en vuelo (`CombatTuning`). El disparo real
   no se vio en Play (en `BattleTestScene` ningún tirador tuvo objetivo). Pendiente: proyectil del héroe (las habilidades
   del arco siguen como área); hace falta un pool y prefab propios del héroe.
-- [ ] **10. Perks pasivos (L7-4).** Modificadores en el SO, carga del loadout (5 pasivos) y condiciones simples.
+- [x] **10. Perks pasivos (L7-4).** Modificadores en el SO, carga del loadout (5 pasivos) y condiciones simples.
+  Hecho: `PerkEffect` en el SO (aura o al golpear; condición héroe quieto / recién movido; objetivo propio, escuadra,
+  aliados en radio u objetivo del golpe), `PerkLoadout` (5 + 2 del loadout activo entre los de su clase), `HeroMotionSystem`,
+  `PerkAuraSystem` (refresca un modificador corto mientras se cumple) y `PerkOnHitSystem`. Datos: Línea Inquebrantable,
+  Cobertura de Hostigamiento y Estocada Desestabilizadora. Sin datos: Muro de Púas y Zona de Exclusión (piden daño por
+  contacto y zonas persistentes). Nadie elige perks todavía (no hay UI): el loadout llega vacío y nada cambia.
 - [ ] **11. Perks activos.** 2 huecos con tecla propia, por la puerta y con su enfriamiento.
 - [ ] **12. Documentación.** Mecánica de habilidades y perks, `SystemResponsibilities.md`, Por_Abordar y lecciones.
 

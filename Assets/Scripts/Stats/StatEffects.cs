@@ -18,15 +18,20 @@ public static class StatEffects
     /// stacking, and the skill's modifiers on other stats are left alone.
     /// </summary>
     public static void ApplyTimed(DynamicBuffer<StatModifier> modifiers, StatId stat, ModifierOp op, float value, double until, int effectId)
+        => ApplyTimed(modifiers, stat, op, value, until, ModifierSource.Effect, effectId);
+
+    /// <summary>Same, for another source (a perk aura refreshes its own modifier this way).</summary>
+    public static void ApplyTimed(DynamicBuffer<StatModifier> modifiers, StatId stat, ModifierOp op, float value, double until,
+        ModifierSource source, int sourceId)
     {
         for (int i = modifiers.Length - 1; i >= 0; i--)
         {
             var m = modifiers[i];
-            if (m.source == ModifierSource.Effect && m.sourceId == effectId && m.stat == stat) modifiers.RemoveAt(i);
+            if (m.source == source && m.sourceId == sourceId && m.stat == stat) modifiers.RemoveAt(i);
         }
         modifiers.Add(new StatModifier
         {
-            stat = stat, op = op, value = value, source = ModifierSource.Effect, sourceId = effectId, expiresAt = until,
+            stat = stat, op = op, value = value, source = source, sourceId = sourceId, expiresAt = until,
         });
     }
 
