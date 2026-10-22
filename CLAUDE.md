@@ -36,7 +36,9 @@ Input → SquadControlSystem → SquadOrderSystem → SquadFSMSystem
          SquadVisualManagementSystem → EntityVisualSync (per-unit)
 ```
 
-Hero: `HeroInputSystem → HeroMoveIntent → HeroMovementSystem → HeroStateSystem → HeroVisualManagementSystem → EntityVisualSync`
+Hero: `HeroInputSystem → HeroMoveIntent → HeroMovementSystem → HeroMotionSystem (HeroMotorStateComponent) → animación local / EntityVisualSync`. La instanciación visual la hacen `HeroVisualInstantiationSystem` y `HeroVisualAppearanceSystem`.
+
+Habilidades: `HeroInputSystem`/`HeroAIExecutionSystem → HeroSkillRequestSystem → SkillExecutionSystem → SkillEffectSystem`. Stats derivados: `StatResolveSystem` (único escritor). Ver `Docs/Mechanics/SkillsAndPerks.md`.
 
 Combat: `EnemyDetection → DamageCalculation → UnitDeath` (pre-AI, before SquadAISystem)
 `→ UnitTargeting → CombatReaction → OrderResolution` (post-AI arbitration)
@@ -56,7 +58,7 @@ Each system has ONE responsibility:
 
 ### Visual Instantiation (Automated)
 
-- **Hero**: `HeroSpawnSystem` → `HeroVisualManagementSystem` → `VisualPrefabRegistry` → instantiate + `EntityVisualSync`
+- **Hero**: `HeroSpawnSystem` → `HeroVisualInstantiationSystem` → `HeroVisualAppearanceSystem` → `VisualPrefabRegistry` → instantiate + `EntityVisualSync`
 - **Units**: `SquadSpawningSystem` → `SquadVisualManagementSystem` → `VisualPrefabRegistry` → instantiate + `EntityVisualSync`
 - **Supply Points**: `SupplyPointSetup` (MonoBehaviour) creates ECS entity → `SupplyPointZoneIndicator`
 
