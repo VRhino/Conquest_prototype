@@ -1,6 +1,6 @@
 # Modelo híbrido ECS–GameObject
 
-Actualizado: 2026-10-19. Contratos revisados contra la implementación actual.
+Actualizado: 2026-10-22. Contratos revisados contra la implementación actual (matriz de autoridad, orden de sistemas y nombres verificados contra el código).
 
 Este documento describe el modelo híbrido implementado. La estructura completa de datos, persistencia y DTO de batalla está en [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md); el detalle temporal de squads está en [Pipeline de movimiento](TroopMovementPipeline.md).
 
@@ -161,6 +161,22 @@ entidad sin instancia visual
 
 Si la entidad vinculada desaparece, `EntityVisualSync` destruye el GameObject asociado. Los sistemas de gestión son dueños de la creación; UI y gameplay no deben instanciar representaciones paralelas.
 
+## Habilidades, perks y stats
+
+Todo es ECS; el lado GameObject solo presenta (Animator, hitboxes, efectos).
+
+```text
+HeroInputSystem / HeroAIExecutionSystem
+  → HeroSkillRequestSystem      (SkillRequestComponent)
+  → SkillExecutionSystem        (fases de la habilidad; ataque básico incluido)
+  → SkillEffectSystem           (daño por PendingDamageEvent, modificadores, escudo, embestida)
+PerkAuraSystem / PerkOnHitSystem → modificadores con fuente Perk
+StatResolveSystem               (único escritor de los stats derivados)
+```
+
+- Los héroes de IA se desplazan en una embestida con `HeroAIDashSystem` (NavMeshAgent); el héroe local, con `HeroMovementSystem` y su `CharacterController`.
+- Detalle y contratos: `Docs/Mechanics/SkillsAndPerks.md` y `Docs/Mechanics/DamageMechanics.md` §4.1.
+
 ## Animación
 
 | Rol | Fuente de locomoción | Dueño del Animator |
@@ -183,7 +199,7 @@ Los hashes están centralizados en `AnimationHashes`. El pulso `HeroAnimationCom
 
 - SceneTransitionService define cursor libre en escenas de interfaz; cámara y paneles respetan esa política. Matchmaking conserva la escena de origen y la salida de PostBattle permite otra cola.
 
-- 131/131 pruebas EditMode (2026-10-14).
+- 131/131 pruebas EditMode (2026-10-14; no reejecutadas en la revisión del 2026-10-22).
 - 30/30 pruebas PlayMode (2026-10-14); fixture de 900 agentes y perfil renderizado explícito también pasan.
 - 69 assemblies de Player Windows compiladas (2026-10-14).
 - Pruebas específicas cubren motor local, teleport revisionado, autoridad/animación, fases y reinicio de batalla, muerte/targeting, colisiones de proyectiles, identidad persistente, commit de inventario, cancelación de rutas y repulsión de 900 agentes.

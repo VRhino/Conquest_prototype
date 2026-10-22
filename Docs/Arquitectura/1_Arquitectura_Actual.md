@@ -17,6 +17,7 @@
 
 | Versión | Fecha | Cambio |
 |---|---|---|
+| 1.9 | 2026-10-22 | Revisión documental sin cambio del modelo de persistencia: se añaden a la entidad de héroe y a las fuentes de código la pila de modificadores de stats, las habilidades y los perks, y el ancla/ajuste de movimiento de squads (posteriores a 1.8; las cifras de pruebas de 1.8 no se han reejecutado). |
 | 1.8 | 2026-10-14 | Política de cursor por escena; preparación admite clicks reales y PostBattle devuelve a la escena de origen de cola, reiniciando matchmaking. 131 EditMode, 30 PlayMode y compilación Player verificadas. |
 | 1.7 | 2026-10-13 | XP de squad vuelve a la instancia GUID en HeroData; revisión independiente, commit por evento y panel sincronizado con ECS. Contenedor v3 compatible con 0/1/2. |
 | 1.6 | 2026-10-13 | XP con destinatario GUID capturado por bootstrap; commit sobre HeroData y progressRevision; IDs ausentes confirmados al aceptar batalla; atributos temporales y vista de XP corregidos. Contenedor v2 compatible con 0/1. |
@@ -373,7 +374,7 @@ La instancia persistente no almacena el asset: conserva `itemId` y sus datos din
 - enum `HeroClass`;
 - atributos base;
 - constantes y multiplicadores de cálculo;
-- habilidades activas `HeroAbility`;
+- habilidades activas `HeroAbility` (el bake las deja como `HeroAbilityBufferElement` y `HeroInitializationSystem` rellena `HeroSkillElement` en runtime; ver `Docs/Mechanics/SkillsAndPerks.md`);
 - perks válidos `HeroPerk`.
 
 El bake convierte parte de esta definición a componentes y buffers ECS. No todos los campos del
@@ -550,6 +551,8 @@ Composición conceptual observada:
 | Progreso | `HeroProgressComponent` |
 | Vida/combate | `HeroLifeComponent`, `HeroHealthComponent`, `HeroCombatComponent`, `StaminaComponent` |
 | Movimiento/input | `HeroInputComponent`, `HeroMoveIntent`, `HeroStatsComponent`, `HeroSpawnComponent`, `HeroMotorStateComponent` |
+| Stats derivados | `StatBaseElement`/`StatModifier` (pila), `ModifiersDirty`, `MoveSpeedComponent`, `CritStatsComponent`; `StatResolveSystem` es el único escritor de los derivados (`Docs/Mechanics/DamageMechanics.md` §4.1) |
+| Habilidades y perks | `HeroSkillElement`, `SkillRequestComponent`, `SkillInstanceComponent`, `CooldownGroupElement`, `HeroPerkComponent`, `HeroPerkElement` (`Docs/Mechanics/SkillsAndPerks.md`) |
 | Apariencia | `HeroAppearanceComponent`, `HeroVisualReference`, `HeroVisualInstance` |
 | Propiedad táctica | `HeroSquadSelectionComponent`, `HeroSquadReference` |
 | Multijugador simulado | `TeamComponent`, `IsLocalPlayer` o componentes AI |
@@ -587,7 +590,7 @@ Composición conceptual:
 | Miembros | `DynamicBuffer<SquadUnitElement>` en el squad y `UnitOwnerComponent` en cada unidad |
 | Progreso | `SquadProgressComponent`, abilities desbloqueadas |
 | Orden/estado | `SquadStateComponent`, `SquadPlayerOrderIntentComponent`, `SquadAIOrderIntentComponent`, `SquadCombatReactionIntentComponent`, `SquadResolvedOrderComponent` |
-| Formación | `FormationComponent`, formación activa, anchor y patrón |
+| Formación | `FormationComponent`, formación activa, `SquadFormationAnchorComponent` (ancla) y patrón; ajuste del movimiento en el singleton `MovementTuningComponent` |
 | Navegación | `SquadNavigationComponent`, `NavAgentComponent` |
 | Combate | `SquadCombatComponent`, targets y reacción |
 | Swap/retirada | cooldown, channeling, `RetreatComponent`, `SquadOwnerDeathRetreatComponent`, tags y requests de cambio |
@@ -869,6 +872,7 @@ Según la arquitectura híbrida vigente:
 - `Assets/Scripts/Squads/`
 - `Assets/Scripts/Squads/Components/`
 - `Assets/Scripts/Combat/`
+- `Assets/Scripts/Stats/`, `Assets/Scripts/Skills/`, `Assets/Scripts/Perks/`
 - `Assets/Scripts/Map/`
 
 ## 18. Relación con la arquitectura compartida
