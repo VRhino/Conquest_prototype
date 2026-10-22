@@ -36,7 +36,7 @@ Input → SquadControlSystem → SquadOrderSystem → SquadFSMSystem
          SquadVisualManagementSystem → EntityVisualSync (per-unit)
 ```
 
-Hero: `HeroInputSystem → HeroMoveIntent → HeroMovementSystem → HeroMotionSystem (HeroMotorStateComponent) → animación local / EntityVisualSync`. La instanciación visual la hacen `HeroVisualInstantiationSystem` y `HeroVisualAppearanceSystem`.
+Hero: `HeroInputSystem → HeroMovementSystem → HeroMoveIntent → LocalHeroCharacterMotor` (MonoBehaviour físico; escribe `LocalTransform` y `HeroMotorStateComponent`) `→ animación local / EntityVisualSync`. La instanciación visual la hacen `HeroVisualInstantiationSystem` y `HeroVisualAppearanceSystem`.
 
 Habilidades: `HeroInputSystem`/`HeroAIExecutionSystem → HeroSkillRequestSystem → SkillExecutionSystem → SkillEffectSystem`. Stats derivados: `StatResolveSystem` (único escritor). Ver `Docs/Mechanics/SkillsAndPerks.md`.
 

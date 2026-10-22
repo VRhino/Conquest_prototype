@@ -87,6 +87,19 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Output**: entidad héroe con todos sus componentes + `HeroSquadSelectionComponent` linkeando a la escuadra activa (`instanceId = 0`)
 - **Nota**: el `instanceId = 0` debe mantenerse sincronizado con `BattleSceneController.SyncBattleDataToECS` que asigna ID 0 a la escuadra activa
 
+### HeroAIDashSystem
+- **Responsabilidad**: mueve a los héroes de IA a lo largo de un `HeroDashComponent` activo con su `NavMeshAgent` (la embestida del héroe local pasa por `HeroMovementSystem` y su `CharacterController`). El agente conserva su ruta; el dash suma el desplazamiento y se mantiene sobre el NavMesh.
+- **Orden**: `[UpdateAfter(SkillEffectSystem)]` `[UpdateAfter(HeroAIExecutionSystem)]`
+
+### HeroMotionSystem
+- **Responsabilidad**: mide cuánto lleva quieto y cuánto desde que se movió cada héroe con perks (`HeroMotionComponent`), desde su posición, igual para local e IA. Lo consumen las condiciones de perks; no mueve ni anima. Corre `[UpdateAfter(HeroMovementSystem)]`.
+
+### SettlementHeroLifecycleSystem / SettlementWalkInputFilterSystem
+- Solo para la vista previa de asentamiento (`Assets/Scripts/SettlementPreview/`). El primero crea y destruye el héroe de paseo antes de `CameraBootstrapSystem`; el segundo corre entre `HeroInputSystem` y `HeroMovementSystem`/`HeroSkillRequestSystem`/`HeroStaminaSystem` y descarta ataque e interacción conservando la locomoción.
+
+### CameraBootstrapSystem
+- **Responsabilidad**: crea la entidad de cámara y asigna como objetivo al héroe local (`IsLocalPlayer`). Corre en `InitializationSystemGroup`.
+
 ### HeroVisualInstantiationSystem
 - **Responsabilidad**: Instancia el prefab visual del héroe y configura `EntityVisualSync`, hitbox y NavMeshAgent
 - **Output**: `HeroVisualInstance`, GameObject con `EntityVisualSync` configurado
@@ -174,6 +187,20 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 - La velocidad base es la resuelta por la pila; aturdida (0) frena con su deceleración, sin rama propia de aturdimiento.
+
+### HeroPositionCacheSystem
+- **Responsabilidad**: copia cada frame la posición y rotación del héroe dueño a la entidad de su escuadra, para que `SquadAnchorSystem` y `FormationAdaptationSystem` no hagan búsquedas cruzadas Escuadra→Héroe.
+- **Orden**: `[UpdateBefore(SquadAnchorSystem)]`
+
+### SquadStatusUpdateSystem
+- **Responsabilidad**: rellena `SquadStatusComponent` de la escuadra del jugador local (unidades vivas / totales) para el HUD de batalla.
+- **Orden**: `[UpdateAfter(DamageCalculationSystem)]`
+
+### SquadSwapCooldownSystem
+- **Responsabilidad**: descuenta `SquadSwapCooldownComponent` en las entidades de héroe y lo quita al terminar. Ver `Docs/Mechanics/SquadSwap.md`.
+
+### UnitOrientationInitializationSystem
+- **Responsabilidad**: añade el componente de orientación a las unidades de escuadra que no lo tengan configurado. Corre en `InitializationSystemGroup`.
 
 ### SquadVisualManagementSystem
 - **Responsabilidad**: Instancia prefabs visuales de unidades y configura `EntityVisualSync`
@@ -287,6 +314,18 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - Detecta cambios de destino y objetivo además de tipo/fuente para órdenes remotas. La formación viaja en el resultado sin reemitir movimiento.
 - **Regla**: Solo lee intents y escribe el resultado — nunca modifica estado de squad directamente
 
+### ProjectileSpawnSystem
+- **Responsabilidad**: puente ECS → GameObject. Lee las `ProjectileSpawnRequest` que crea `RangedAttackSystem`, toma un proyectil del pool (`ObjectPoolSystem`), lo inicializa con `ProjectileController.Initialize()` y destruye la petición.
+- **Orden**: `[UpdateAfter(RangedAttackSystem)]`
+
+### ProjectileImpactSystem
+- **Responsabilidad**: vacía `ProjectileImpactQueue` cada frame y crea `PendingDamageEvent`, de modo que `DamageCalculationSystem` trate los impactos de proyectil igual que los de melé.
+- **Orden**: `[UpdateBefore(DamageCalculationSystem)]`
+
+### DamageFeedbackPresentationSystem
+- **Responsabilidad**: muestra el texto flotante de combate de cada `DamageFeedbackEvent` y lo destruye. Es la parte visual del daño, fuera de la lógica para que `DamageCalculationSystem` pueda correr sin UI.
+- **Grupo**: `PresentationSystemGroup`
+
 ### BraceWeaponActivationSystem
 - **Estado actual**: La activación automática de `Brace` está deshabilitada (`shouldBrace = false`). Si un squad estaba en `Brace`, lo devuelve a `Normal`.
 - **Orden**: `[UpdateAfter(SquadFSMSystem)]`
@@ -328,6 +367,9 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Loading screen**: Descartada cuando todos los `HeroVisualInstance` están listos + 3 s delay; timeout de seguridad a 30 s
 - **Victory/Defeat**: Monitorea `MatchStateComponent.EndMatch`, activa `_victoryDefeatPanel`, guarda `WinnerTeam` en `BattleTransitionData`
 - **Reloj**: solo muestra `BattleClockComponent` (L7-1); no cuenta ni escribe el resultado
+
+### MovementMetricsRecorderSystem
+- **Responsabilidad**: mientras graba, muestrea cada frame estado de formación, error de ranura, contacto de combate y contadores de navegación; `End()` escribe CSV en `Logs/MovementMetrics` y devuelve el resumen. Lo usan los escenarios PlayMode `MovementBaseline`. Desactivado hasta `Begin()`; corre en `PresentationSystemGroup`.
 
 ### BattleClockSystem
 - **Responsabilidad**: Descuenta `BattleClockComponent` en `InBattle`; al llegar a 0 emite `BattleTimeExpiredEvent` una vez (L7-1)
