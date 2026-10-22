@@ -356,3 +356,9 @@
 - Antes de mover un cálculo a otro sitio, comprobar en juego que el código antiguo de verdad se ejecuta. `HeroInitializationSystem` nunca inicializaba héroes en batalla (su clase horneada estaba vacía por una referencia rota) y la vida del héroe local solo salía de una escritura en `HeroSpawnSystem`; quitar esa escritura "duplicada" habría dejado al héroe con la vida del prefab.
 - Una condición nueva que "debería" darse solo en un caso (velocidad 0 = aturdido) puede darse también en frames donde el dato aún no está resuelto (la velocidad antes de pasar el resolvedor). Parar en seco con `speed <= 0` se saltaba la marcha en esos frames y volvió S1 no determinista; se vio comparando tres corridas por variante, no una. Mejor no añadir la rama y dejar que el caso caiga en el camino normal.
 - Al cambiar la forma de un blob horneado, comprobar en Play que la subescena se volvió a hornear y trae los campos nuevos antes de dar el paso por bueno.
+
+## Fase 2: habilidades y perks (2026-10-22)
+
+- NUnit reutiliza la misma instancia de la clase de tests para todos sus tests: un campo como el reloj de la prueba (`_t`) hay que ponerlo a cero en `SetUp`. Un test que pasa solo y falla en grupo apunta a estado compartido entre tests.
+- Un enfriamiento compartido bloquea una cadena de golpes si cada golpe lo inicia. En el combo, solo el primero y el último inician el enfriamiento; los intermedios van en el grupo 0.
+- Cuando una regla de diseño ("el tercer golpe cierra la cadena") depende de que dos valores de ajuste guarden una relación (enfriamiento ≥ animación), hay que hacerla explícita en el código: si no, un cambio de datos la rompe sin aviso.

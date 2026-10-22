@@ -1,6 +1,6 @@
 # Plan: Fase 2 de `Docs/Design/Aprendizajes_Referencia.md` — perks y lanzador de habilidades
 
-Estado: en curso (2026-10-21), rama `feat/reference-phase0` (sigue sobre las Fases 0 y 1, sin subir).
+Estado: **hecha** (2026-10-22), rama `feat/reference-phase0` (sobre las Fases 0 y 1), sin subir.
 Petición del usuario: "ve con la fase 2". Plan anterior archivado en `tasks/reference-phase1-plan.md`.
 Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `interrupt`/`yield`, carga),
 `preconditions.md` (condiciones de efectos), `effects-catalog.md` (efectos como modificadores), `mechanics.md` §7e.
@@ -77,7 +77,9 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   Hecho: teclas 1 y 2 (elegidas por defecto; libres en el juego). Cada perk activo es una habilidad corta "yield"
   (aparca el ataque en curso en lugar de cortarlo) con el enfriamiento del perk. Datos: Orden de Resistencia, Carga
   Coordinada y Flecha Marcadora. Sus `perkName` dicen "(Passive)" aunque son activos: dato a corregir por el usuario.
-- [ ] **12. Documentación.** Mecánica de habilidades y perks, `SystemResponsibilities.md`, Por_Abordar y lecciones.
+- [x] **12. Documentación.** Mecánica de habilidades y perks, `SystemResponsibilities.md`, Por_Abordar y lecciones.
+  Hecho: `Docs/Mechanics/SkillsAndPerks.md`, contratos en `SystemResponsibilities.md`, `Docs/Por_Abordar/Habilidades_Perks.md`,
+  `DamageMechanics.md`, `TDD.md` y `RemoteHeroAI_Architecture.md` al día, nota de la Fase 2 en `Aprendizajes_Referencia.md`.
 
 ## Verificación
 EditMode completo en cada paso; PlayMode S1/S6 cuando el paso toca combate o movimiento; en `BattleTestScene` (Play) que

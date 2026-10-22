@@ -45,7 +45,7 @@ Características clave:
 ┌─────────────────────────────────────────────────────────────┐
 │  FASE 1 — ATAQUE                                            │
 │                                                             │
-│  UnitAttackSystem / HeroAttackSystem                        │
+│  UnitAttackSystem / SkillExecutionSystem (héroe)            │
 │     │                                                       │
 │     ├─ Verifica cooldown, rango y stamina (héroe)           │
 │     ├─ Activa WeaponHitboxActiveTag / WeaponCollider        │
@@ -337,7 +337,7 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | Golpe que no toca primero el escudo | `hitType = Body`: va a la salud aunque la unidad tenga escudo (la orientación no se evalúa) |
 | Objetivo destruido entre la creación y el procesado del evento | `DamageCalculationSystem` verifica existencia de la entidad al inicio; descarta si no existe |
 | Múltiples atacantes en el mismo frame | Se procesan todos los `PendingDamageEvent` en orden; la salud se queda en 0 (no baja de 0) y `IsDeadComponent` solo se añade una vez |
-| Héroe sin stamina suficiente | `HeroAttackSystem` bloquea el swing; no se crea evento de daño |
+| Héroe sin stamina suficiente | `SkillGate` rechaza el ataque (`NotEnoughStamina`); no se crea evento de daño |
 | Modo Brace activado | `BraceWeaponSystem` aplica perfiles por fila antes de que `UnitAttackSystem` evalúe rango/timing |
 
 ---
@@ -386,7 +386,8 @@ Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignació
 | `Assets/Scripts/Combat/DamageCalculation.System.cs` | **Sistema central**: consume PendingDamageEvent, aplica fórmula, reduce salud, añade IsDeadComponent |
 | `Assets/Scripts/Combat/HitboxCollision.System.cs` | Detección AABB → crea PendingDamageEvent durante la ventana de golpe |
 | `Assets/Scripts/Combat/UnitAttack.System.cs` | FSM de 3 fases por unidad: decisión → ventana de golpe → fin de animación |
-| `Assets/Scripts/Hero/Systems/HeroAttack.System.cs` | Ataque del héroe: verifica stamina, activa collider, detecta colisiones |
+| `Assets/Scripts/Skills/SkillExecution.System.cs` | Habilidades del héroe, ataque básico incluido: puerta, fases, ventana del golpe (ver `SkillsAndPerks.md`) |
+| `Assets/Scripts/Skills/SkillEffect.System.cs` | Daño en área y efectos de las habilidades |
 | `Assets/Scripts/Combat/WeaponHitboxPosition.System.cs` | Actualiza posición del hitbox para seguir la punta del arma cada frame |
 | `Assets/Scripts/Combat/BlockRegen.System.cs` | Regenera currentBlock de todos los escudos cada frame |
 | `Assets/Scripts/Stats/StatResolve.System.cs` | Único escritor de los stats derivados desde la pila (§4.1) |
@@ -447,7 +448,7 @@ else                    → PendingDamageEvent.category  (Normal / Ability)
 ```
 Input (teclado/IA)
     ↓
-UnitAttackSystem / HeroAttackSystem
+UnitAttackSystem / SkillExecutionSystem (héroe)
     → activa WeaponHitboxActiveTag / WeaponCollider
     ↓
 HitboxCollisionSystem

@@ -260,6 +260,9 @@ L1-01 y L7-3 con `StatId`; después L5-3 (velocidad), L1-06 (escudo absorbente),
 (tablas) y L7-6 (ítems con `StatId`, tras decidir migración de guardados). Va antes que los perks.
 
 **Fase 2 — Perks y lanzador.**
+> **Hecha (2026-10-22, rama `feat/reference-phase0`):** L2-1, L2-2, L2-3, L2-4, L2-5, L2-6, L2-7 y L7-4, con efectos
+> genéricos para las 16 habilidades de clase (`tasks/todo.md`). Mecánica en `Docs/Mechanics/SkillsAndPerks.md`; lo que
+> queda, en `Docs/Por_Abordar/Habilidades_Perks.md`. L2-8 (proyectil en ECS) sigue fuera.
 L7-4 (perks, tras Fase 1). L2-1 (puerta) y L2-5 (cooldowns por grupo) antes que L2-2 (fases); después L2-3 (combos),
 L2-4 (interrupción), L2-6 (carga) y L2-7 (multiproyectil). El lanzador va antes que los combos; L2-5 usa
 `CooldownScale` de la pila de Fase 1.

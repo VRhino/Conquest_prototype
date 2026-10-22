@@ -155,7 +155,7 @@ El combate cuerpo a cuerpo usa colliders de arma como detectores físicos (no ra
 - **Detección de enemigos**: los hitboxes del arma detectan entidades enemigas con `TeamComponent` diferente al atacante
 - **Capas**: las armas y escudos usan layers dedicados para evitar auto-colisión entre el héroe y sus propias armas
 - `WeaponHitboxBehaviour` informa contactos al puente `MeleeContactQueue`; no modifica componentes ECS. `MeleeContactResolutionSystem` valida la ventana, el equipo y el objetivo, prioriza el escudo frente al cuerpo del mismo objetivo y crea un evento de daño desechable.
-- `HeroAttackSystem` y `UnitAttackSystem` gobiernan la ventana del golpe desde ECS; el contacto físico se detecta en GameObject. Los contactos con el arma inactiva se descartan antes de entrar en la cola.
+- `SkillExecutionSystem` (héroe; el ataque básico es una habilidad por fases) y `UnitAttackSystem` gobiernan la ventana del golpe desde ECS; el contacto físico se detecta en GameObject. Los contactos con el arma inactiva se descartan antes de entrar en la cola.
 
 ## 10. 🔐 Seguridad y Backend (Para expansión futura)
 
@@ -854,12 +854,11 @@ HeroStaminaSystem
 ```
 
 ```csharp
-HeroAttackSystem
-- Escucha input
-- Valida cooldown y stamina
-- Reproduce animación correcta
-- Activa collider de arma mediante Animation Events
-- Genera golpes críticos con multiplicador 1.5x según `criticalChance` del arma
+HeroSkillRequestSystem / SkillExecutionSystem (ver Docs/Mechanics/SkillsAndPerks.md)
+- Convierte la entrada (y la decisión de la IA) en una petición
+- SkillGate valida control, fase interrumpible, cadena, enfriamiento por grupo y aguante
+- Avanza las fases de la habilidad y aplica sus eventos (animación, golpe, efectos)
+- El crítico lo resuelve la pila (CritFormula) al crear el evento de daño
 ```
 
 ```csharp

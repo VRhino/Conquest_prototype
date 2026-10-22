@@ -159,7 +159,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 ### HeroAIExecution.System
 - Lee `HeroAIDecision`, traduce a comandos:
   - **Movimiento**: `NavMeshAgent.SetDestination()` + `HeroMoveIntent`; la animación remota deriva locomoción de la velocidad NavMesh
-  - **Ataque**: no lo ejecuta; `HeroAttackSystem` lee directamente `HeroAIDecision.shouldAttack` después de Execution
+  - **Ataque**: no lo ejecuta; `HeroSkillRequestSystem` convierte `HeroAIDecision.shouldAttack` en una petición que pasa por la misma puerta que la del jugador (`SkillExecutionSystem`)
   - **Squad orders**: escribe `SquadAIOrderIntentComponent` vía `HeroSquadReference`; `OrderResolutionSystem` decide frente a intención del jugador y reacción de combate
 
 ---
@@ -184,7 +184,8 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
     OrderResolutionSystem        (arbitra Player / CombatReaction / AI)
         ↓
     SquadOrderSystem             (aplica sólo SquadResolvedOrderComponent)
-    HeroAttackSystem             (+ segundo loop para AI heroes)
+    HeroSkillRequestSystem       (input local y decisión IA → petición)
+    SkillExecutionSystem         (misma puerta y fases para jugador e IA)
     NavMeshPositionSyncSystem    (publica pose remota NavMesh → ECS)
     EntityVisualSync             (vincula entidad y sincroniza pose)
     RemoteHeroAnimationDriver    (NavMesh/ECS confirmado → Animator)
@@ -197,7 +198,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 | Sistema | Cambio | Impacto |
 |---------|--------|---------|
 | `BattleSceneController.SpawnRemoteHero()` | Agregar `HeroAITag`, `RusherBehaviorActive`/`BalancedBehaviorActive`, `IsAttackerRole`, `HeroAIBlackboard`, `HeroAIDecision`, `HeroMoveIntent` al spawn | Mínimo — solo spawn |
-| `HeroAttackSystem` | Segundo `foreach` con `WithAll<HeroAITag>()` leyendo `HeroAIDecision.shouldAttack` | Loop separado, local player path intacto |
+| `HeroSkillRequestSystem` | Bucle con `WithAll<HeroAITag>()` que pide el ataque básico desde `HeroAIDecision.shouldAttack` | Misma puerta que el jugador (Fase 2, L2-1) |
 | `OrderResolutionSystem` | Arbitra intents de jugador, reacción de combate e IA y conserva su `OrderSource` | Evita escritores competidores |
 | `SquadOrderSystem` | Consume únicamente la orden resuelta y respeta el bloqueo de retirada | Aplicación única |
 | `HeroMovementSystem` | **Sin cambios** — AI usa NavMeshAgent, no este system | — |
@@ -251,5 +252,5 @@ Assets/Scripts/Hero/AI/
 | NavMeshAgent para movimiento | Ya está en remote heroes. Obstacle avoidance + pathfinding gratuito. |
 | 1 system por behavior | Open/Closed: agregar behavior = nuevo archivo, sin tocar existentes. |
 | `SquadAIOrderIntentComponent` para órdenes | Reutiliza el arbitraje común sin escribir directamente el estado aplicado ni competir con jugador/combate. |
-| Segundo loop en `HeroAttackSystem` | Local player path completamente intacto. |
+| Petición de la IA por la misma puerta | Una sola regla para jugador e IA; la IA aún solo pide el ataque básico. |
 | `BattleWorldState` corre todos los frames | Datos siempre frescos. `HeroAIPerception` (5 frames) es la capa cara — el servicio de datos es barato. |

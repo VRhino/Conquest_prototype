@@ -1,5 +1,20 @@
 # System Responsibilities & Data Flow
 
+## Contratos actualizados — 2026-10-22 (habilidades y perks, Fase 2 de `Docs/Design/Aprendizajes_Referencia.md`)
+
+- `HeroSkillRequestSystem` es el único que convierte entrada local y decisión de IA en `SkillRequestComponent`;
+  `SkillExecutionSystem` es el único que lanza, avanza, interrumpe y termina habilidades (ataque básico incluido) y el
+  único escritor de `HeroCombatComponent.isAttacking`/`hitboxFired`, `triggerAttack` y `WeaponHitboxActiveTag` del héroe.
+  Sustituye a `HeroAttackSystem`.
+- Las reglas de lanzamiento viven en `SkillGate` (pura); los enfriamientos en `CooldownGroupElement` con tiempo absoluto,
+  sin sistema por frame.
+- `SkillEffectSystem` aplica los efectos de las habilidades (daño por `PendingDamageEvent`, modificadores por la pila,
+  escudo absorbente, embestida). Nadie más interpreta `SkillEvent`.
+- Los perks no tienen lógica propia: `PerkAuraSystem` (auras con condición) y `PerkOnHitSystem` (al golpear) solo añaden
+  modificadores con fuente `Perk`. Los activos son habilidades.
+- Otro sistema que quiera cortar las habilidades de un héroe activa `EndSkillsRequestComponent` (hoy: el cambio de escuadra).
+- Detalle: `Docs/Mechanics/SkillsAndPerks.md`.
+
 ## Contratos actualizados — 2026-10-21 (pila de modificadores, Fase 1 de `Docs/Design/Aprendizajes_Referencia.md`)
 
 - `StatResolveSystem` es el **único escritor** de los stats derivados: vida y aguante máximos (`HealthComponent`,
