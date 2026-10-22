@@ -32,6 +32,8 @@ MapDataSO._preparationMap → referencia al prefab
 | `Map Id` | ID único del mapa (se llena automático desde el nombre del asset) | `"ForestMap"` |
 | `Map Name` | Nombre visible en la UI | `"Bosque de Thornwood"` |
 | `Battle Duration Seconds` | Duración base en segundos (mínimo 60) | `1800` |
+| `Capture Time Extension Seconds` | Segundos que suma al reloj cada captura normal | `300` (por defecto `BattleClock.DefaultCaptureExtensionSeconds`) |
+| `Max Battle Duration Seconds` | Tope del reloj | `1800` (por defecto `BattleClock.DefaultMaxBattleSeconds`) |
 | `Supply Point Ids` | IDs de los supply points del mapa | `"SP1"`, `"SP2"` |
 | `Capture Point Ids` | IDs de los capture points del mapa | `"CP1"`, `"CP2"`, `"CP3"` |
 | `Attacker Spawn Point Ids` | IDs de spawns de atacantes | `"1"`, `"2"`, `"3"` |
@@ -121,7 +123,8 @@ Cada mapa tiene **su propio prefab de minimapa**. Sigue los pasos a continuació
 | MapDataSO | `Assets/Resources/Maps/{NombreMapa}/{NombreMapa}.asset` |
 | MapDatabase | `Assets/Resources/Maps/MapDatabase.asset` |
 | Minimap Prefab | `Assets/Resources/Maps/{NombreMapa}/{NombreMapa}Minimap.prefab` |
-| Sprite del minimapa | `Assets/UI/Maps/{NombreMapa}/{NombreMapa}Image.png` |
+| Sprite del minimapa | ruta de ejemplo: `Assets/Resources/Maps/DefaultMap/DefaultMapImage.png` (el paso 3.2 sugiere `Assets/UI/Maps/`; elige una y úsala de forma coherente) |
+| Mapa de referencia | `Assets/Resources/Maps/DefaultMap/DefaultMap.asset` y `DefaultMapMinimap.prefab` |
 
 ---
 
