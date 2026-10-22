@@ -1,5 +1,7 @@
 # Crear_Armor_Equipamiento
 
+> Revisada contra el código el 2026-10-22 (menús `CreateAssetMenu`, `ItemCreatorWizard`, `ItemDataSO`, `CurrencyEffect`). La carpeta `Assets/Prefabs/Equipment/` que cita no existe hoy en el repositorio: usa la que corresponda a tus prefabs.
+
 # 🛡️ Cómo Crear un Equipment (Armor) desde Cero
 
 > Guía paso a paso para crear y registrar armaduras visuales y funcionales dentro del sistema de ítems y avatar del juego.
@@ -28,17 +30,18 @@ Modular_Character
 
 > Un torso de nivel alto puede incluir múltiples piezas visuales.
 
-el Prefab del heroe es ModularHeroVisual (Assets/Prefabs/esqueletos)
+el Prefab del heroe es ModularHeroVisual (`Assets/Prefabs/esqueletos/`)
 
 ---
 
 ## 🧾 3. Registrar el Visual Part ID
 
-Ubicación: `Assets/Resources/Data/Avatar/AvatarPartsDatabase`
+Ubicación: `Assets/Resources/Data/Avatar/AvatarPartDatabase.asset` (clase `AvatarPartDatabase`)
 
-### 3.1 Crear entradas `VisualPartEntry` para cada pieza visual
+### 3.1 Crear una `AvatarPartDefinition` (con sus `VisualAttachment`) por cada pieza visual
 
-- Campos requeridos:
+- En el código no existe `VisualPartEntry`: la lista es `AvatarPartDefinition` (`id`, `displayName`, `slot` de `AvatarSlot`, `attachments`) en la lista del slot de `AvatarPartDatabase`, y cada adjunto es un `VisualAttachment`. Los campos de la tabla son los del `VisualAttachment` (el identificador se llama `visualID`); `id`/`slot` van en la definición. No verifiqué qué id enlaza con `ItemDataSO.visualPartId`; copia el patrón de un ítem existente (p. ej. `Assets/Resources/Items/armors/BootHADef/`).
+- Campos:
 
 | Campo | Descripción |  |
 | --- | --- | --- |
@@ -93,7 +96,7 @@ Ubicacion: `Assets/Resources/Items/ItemSODatabase.asset`
 
 Ubicación: `Assets/ScriptableObjects/Items/`
 
-📌 Clic derecho → `Create → Item → StatsGenerators → [tipo de stat]`
+📌 Clic derecho → `Create → Items → Stat Generators → [tipo de stat]`
 
 ### 7.1 Campos del `StatsGenerator`
 

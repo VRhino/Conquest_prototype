@@ -1,5 +1,7 @@
 # Crear Consumible
 
+> Revisada contra el código el 2026-10-22 (menús `CreateAssetMenu`, `ItemCreatorWizard`, `ItemDataSO`, `CurrencyEffect`). La carpeta `Assets/Prefabs/Equipment/` que cita no existe hoy en el repositorio: usa la que corresponda a tus prefabs.
+
 # 🧪 Cómo Crear un Consumible desde Cero
 
 > Guía paso a paso para implementar objetos consumibles que otorgan efectos al jugador, como monedas.
@@ -44,9 +46,9 @@ Ubicacion: `Assets/Resources/Items/ItemSODatabase.asset`
 
 ## 🧬 4. Crear el efecto del Consumible (ItemEffect)
 
-Ubicación: `Assets/ScriptableObjects/Items/`
+Ubicación: `Assets/ScriptableObjects/Items/` (los efectos existentes están en la subcarpeta `itemEffects/`)
 
-📌 Clic derecho en la carpeta → `Create → Item → Effects → Currency`
+📌 Clic derecho en la carpeta → `Create → Items → Effects → Currency`
 
 ### 4.1 Tipo disponible: `CurrencyEffect`
 
@@ -97,7 +99,7 @@ Ubicación: `Assets/ScriptableObjects/Items/`
 
 ## 🗂️ Notas adicionales
 
-- El `CurrencyEffect` es el único disponible por ahora.
+- Efectos de ítem disponibles hoy (`Assets/Scripts/Inventory/ItemsEffects/`): `CurrencyEffect`, `EquipmentGrantEffect` (menú `Items/Effects/Equipment Grant`) y `ChooseWeaponRewardEffect` (`Items/Effects/Choose Weapon Reward`). Esta guía solo desarrolla el de monedas.
 - Puedes crear múltiples consumibles con distintos efectos de moneda.
 - La lógica de aplicación del efecto se gestiona al consumir el ítem desde el sistema de inventario.
 

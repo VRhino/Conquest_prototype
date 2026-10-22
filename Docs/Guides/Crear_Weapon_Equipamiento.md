@@ -1,5 +1,7 @@
 # Crear_Equipamiento(Arma)
 
+> Revisada contra el código el 2026-10-22 (menús `CreateAssetMenu`, `ItemCreatorWizard`, `ItemDataSO`, `CurrencyEffect`). La carpeta `Assets/Prefabs/Equipment/` que cita no existe hoy en el repositorio: usa la que corresponda a tus prefabs.
+
 # 🗡️ Cómo Crear un Equipamiento (Weapon) desde Cero
 
 > Guía completa para implementar armas visuales y funcionales dentro del sistema de ítems y personajes.
@@ -32,11 +34,12 @@ ModularHero
 
 ## 🧾 3. Registrar el Visual Part ID
 
-Ubicación: `Assets/Resources/Data/Avatar/AvatarPartsDatabase`
+Ubicación: `Assets/Resources/Data/Avatar/AvatarPartDatabase.asset` (clase `AvatarPartDatabase`)
 
-### 3.1 Crear un VisualPartEntry para el arma
+### 3.1 Crear una `AvatarPartDefinition` (con un `VisualAttachment`) para el arma
 
-- Campos requeridos:
+- En el código no existe `VisualPartEntry`: la lista es `AvatarPartDefinition` (`id`, `displayName`, `slot` de `AvatarSlot`, `attachments`) en la lista del slot de `AvatarPartDatabase`, y cada adjunto es un `VisualAttachment`. Los campos de la tabla son los del `VisualAttachment` (el identificador se llama `visualID`); `id`/`slot` van en la definición. No verifiqué qué id enlaza con `ItemDataSO.visualPartId`; copia el patrón de un ítem existente (p. ej. `Assets/Resources/Items/armors/BootHADef/`).
+- Campos:
 
 | Campo | Descripción | ejemplo |
 | --- | --- | --- |
@@ -91,7 +94,7 @@ Ubicacion: `Assets/Resources/Items/ItemSODatabase.asset`
 
 Ubicación: `Assets/ScriptableObjects/Items/`
 
-📌 Clic derecho en la carpeta → `Create → Item → StatsGenerators → [Tipo de stat]`
+📌 Clic derecho en la carpeta → `Create → Items → Stat Generators → [Tipo de stat]`
 
 ### 7.1 Campos del `StatsGenerator`
 

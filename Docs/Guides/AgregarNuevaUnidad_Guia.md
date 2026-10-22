@@ -13,7 +13,7 @@ Un squad se define con un `SquadData` (ScriptableObject) registrado en el `Squad
 
 ## 2. Crear el prefab visual de la unidad
 
-- Prefab con modelo, animaciones y materiales. Ubicación por convención: `Assets/Prefabs/Esqueletos/`.
+- Prefab con modelo, animaciones y materiales. Ubicación por convención: `Assets/Prefabs/esqueletos/`.
 - No lleva lógica de juego: `EntityVisualSync` lo configura al instanciarlo (`SquadVisualManagementSystem`).
 
 ## 3. Crear los datos de combate y progresión
