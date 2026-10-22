@@ -12,7 +12,10 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 ## Índice de Documentos
 
 ### Arquitectura
-> Los documentos numerados del 2 al 21 son registros fechados de cada intervención; describen el estado de su época y no se reescriben. El estado actual está en `1_Arquitectura_Actual.md`.- Más registros fechados: [16 Animación de locomoción](./Arquitectura/16_Animacion_Locomocion_2026-10-08.md), [17 Inventario y UI](./Arquitectura/17_Inventario_Control_UI_2026-10-08.md), [18 Limpieza](./Arquitectura/18_Inventario_Limpieza_2026-10-09.md), [19 Revisión de sistemas](./Arquitectura/19_Revision_Sistemas_Optimizacion_2026-10-13.md), [20 Contraste con la IA táctica](./Arquitectura/20_Contraste_Handoff_IA_Tactica_2026-10-14.md), [21 Estructura de assets](./Arquitectura/21_Revision_Estructura_Assets_2026-10-15.md).
+
+> Los documentos numerados del 2 al 21 son registros fechados de cada intervención; describen el estado de su época y no se reescriben. El estado actual está en `1_Arquitectura_Actual.md`.
+
+- Más registros fechados: [16 Animación de locomoción](./Arquitectura/16_Animacion_Locomocion_2026-10-08.md), [17 Inventario y UI](./Arquitectura/17_Inventario_Control_UI_2026-10-08.md), [18 Limpieza](./Arquitectura/18_Inventario_Limpieza_2026-10-09.md), [19 Revisión de sistemas](./Arquitectura/19_Revision_Sistemas_Optimizacion_2026-10-13.md), [20 Contraste con la IA táctica](./Arquitectura/20_Contraste_Handoff_IA_Tactica_2026-10-14.md), [21 Estructura de assets](./Arquitectura/21_Revision_Estructura_Assets_2026-10-15.md).
 
 - [Animación remota separada](./Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md):
   Responsabilidad exclusiva del Animator remoto, separada del puente de pose y del motor local.
