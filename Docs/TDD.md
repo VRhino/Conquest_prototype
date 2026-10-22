@@ -2,6 +2,51 @@
 
 > Las secciones de implementación de este TDD describen el diseño histórico y pueden conservar tipos retirados. Para el código vigente consulte [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md) y el [pipeline de movimiento](TroopMovementPipeline.md).
 
+## Estado frente al código (2026-10-22)
+
+Contraste hecho nombre a nombre: de los tipos `*System`, `*Component`, `*Service`, `*Manager` y `*Controller` citados en este documento, unos 100 no existen en `Assets/Scripts`. Aquí no se reescriben las secciones (son diseño e histórico); esta tabla indica qué parte está vigente y a qué tipos actuales corresponden los nombres antiguos. Si algo no figura aquí, no se pudo verificar.
+
+### Estado por sección
+
+| Sección | Estado | Referencia vigente |
+|---|---|---|
+| 1. Arquitectura general | ECS híbrido implementado; **1.6 Netcode no existe** (no hay contrato de red ni Netcode en el proyecto) | `ModeloHybrido.md`, `Arquitectura/1_Arquitectura_Actual.md` |
+| 2. Control y cámara | Implementado (`HeroInputSystem`, `HeroMovementSystem`, `LocalHeroCharacterMotor`, `HeroCameraController`, `OrbitCameraController`); modo espectador: existe el estado `Spectator` en `CameraState`, sin sistema que lo gobierne | `TroopMovementPipeline.md` |
+| 3. IA de escuadras | Implementado con otros nombres; la FSM tiene `Idle`, `FollowingHero`, `HoldingPosition`, `InCombat`, `Retreating`, `KO` | `Assets/Scripts/Squads/SystemResponsibilities.md`, `Mechanics/UnitEngageSystem.md` |
+| 4. Mapas | Zonas, captura y suministro implementados; **elementos destructibles (4.2) no existen** | `Mechanics/CapturePoints.md` |
+| 5. Combate y daño | Implementado; las fórmulas y nombres vigentes están en otro documento | `Mechanics/DamageMechanics.md`, `Mechanics/SkillsAndPerks.md` |
+| 6. Flujo de partida | Implementado | `Mechanics/HeroDeath.md`, `Mechanics/SquadSwap.md`, `Mechanics/CapturePoints.md`, `Mechanics/MatchTimer.md` |
+| 7. Progresión y guardado | Implementado en gran parte (`HeroLevelSystem`, `SquadProgressionSystem`, `SaveSystem`, `DataCacheService`) | `Arquitectura/1_Arquitectura_Actual.md` |
+| 8. Multijugador | **No implementado** (autoridad remota actual = IA local; sin reconciliación ni predicción) | `Arquitectura/1_Arquitectura_Actual.md` §13, `Coordinacion/` |
+| 9. UI y HUD | Parcial (`HUDController`, `MinimapController`, chat, preparación de batalla); **el scoreboard con Tab (9.6) no existe** | — |
+| 10. Seguridad y backend | **No implementado** (guardado solo local) | `Arquitectura/1_Arquitectura_Actual.md` |
+| 11. Extras | Liderazgo (`HeroLeadershipCalculator`) y estamina (`HeroStaminaSystem`) implementados | — |
+
+### Nombres de este documento sin equivalente exacto
+
+| Nombre en el TDD | Estado actual |
+|---|---|
+| `HeroStateSystem`, `HeroStateComponent` | No existen. Estado físico: `HeroMotorStateComponent` (lo escribe `LocalHeroCharacterMotor`) |
+| `HeroControllerSystem`, `MovementSystem`, `InputSystem`, `HeroStatsSystem` | `HeroInputSystem`, `HeroMovementSystem`, `HeroAttributeSystem` |
+| `StaminaSystem` | `HeroStaminaSystem` |
+| `SquadCommandSystem`, `OrderSystem`, `SquadSystem`, `SquadSelectionSystem` | `SquadControlSystem` → `OrderResolutionSystem` → `SquadOrderSystem` |
+| `SquadRetreatSystem`, `SquadRetreatComponent` | `RetreatLogicSystem`, `SquadOwnerDeathRetreatSystem`, `RetreatComponent` |
+| `SquadMovementComponent`, `SquadComponent` | `SquadStateComponent`, `SquadFormationAnchorComponent`, `FormationComponent` |
+| `UnitSpacingSystem`, `SquadCollisionSystem`, `SquadObstacleAvoidanceSystem`, `FormationConstraintSystem`, `SquadMassUtilitySystem` | `UnitAvoidanceSystem` (ORCA), `UnitBodyblockSystem`, `FormationSystem` |
+| `CombatSystem`, `SquadCombatSystem`, `SquadAttackSystem`, `DamageSystem`, `DeathSystem` | `EnemyDetectionSystem`, `UnitTargetingSystem`, `UnitAttackSystem`, `DamageCalculationSystem`, `UnitDeathSystem` |
+| `DamageToStructureSystem`, `DestructibleComponent`, `SiegePushSystem`, `SiegeInteractComponent`, `HealingZoneSystem` | No existen (no hay estructuras destructibles ni asedio) |
+| `BlockValueComponent`, `BlockingComponent`, `HeroBlockSystem`, `UnitBlockSystem`, `ArmorComponent` | `UnitShieldComponent` (+ `ShieldHitboxBehaviour`), `BlockRegenSystem`, `DefenseComponent` |
+| `AbilityComponent`, `AbilitySystem`, `SkillSystem`, `CooldownComponent`, `CooldownSystem`, `StaggerComponent`, `StaggerSystem` | `SkillRequestComponent`, `SkillInstanceComponent`, `HeroSkillElement`, `CooldownGroupElement`, `HeroSkillRequestSystem`, `SkillExecutionSystem`, `SkillEffectSystem`; el aturdimiento sale de `StatEffects.Immobilize` en `DamageCalculationSystem` |
+| `PerkComponent`, `PerkSystem`, `PerkManager` | `HeroPerkComponent`, `HeroPerkElement`, `PerkAuraSystem`, `PerkOnHitSystem` |
+| `CaptureZoneComponent`, `CaptureProgressComponent`, `CaptureZoneStatusSystem`, `ZoneDetectionSystem`, `ZoneInteractionSystem`, `SupplyCaptureSystem`, `SupplyPointStatusSystem`, `SupplyInteractionComponent` | `ZoneTriggerComponent`, `CapturePointProgressComponent`, `CaptureZoneTriggerSystem`, `SupplyInteractionSystem`, `SupplyPointComponent` |
+| `MatchController`, `GameManager`, `GameBootstrapSystem`, `SceneFlowManager`, `SceneLoaderSystem` | `MatchControllerSystem`, `BattleBootstrapSystem`, `SceneTransitionService` |
+| `SaveManager`, `LoadoutSystem`, `EquipamientoComponent`, `BarrackSystem` | `SaveSystem`/`LoadSystem`, servicios de inventario (`EquipmentManagerService`) y `BarracksMenuUIController` |
+| `NetworkManager`, `ClientPredictionSystem`, `HeroPredictionSystem`, `HeroReconciliationSystem`, `AllyPositionBroadcastSystem`, `SquadInterpolationSystem`, `MultiplayerScoreSystem` | No existen (sin red) |
+| `HUDSystem`, `HUDDataComponent`, `CanvasLayeredHUDSystem`, `BattleStatusUIController`, `UIManager`, `UIScreenController`, `UIBinderComponent`, `MinimapIconComponent`, `CaptureProgressUISystem` | No existen con esos nombres; la interfaz vive en `Assets/Scripts/UI/` (`HUDController`, `MinimapController`, `CapturePointUIController`) |
+| `CameraCollisionSystem`, `HeroCameraFollowSystem`, `HeroSpectatorCameraSystem` | No existen como sistemas ECS; la cámara es `HeroCameraController` / `OrbitCameraController` (MonoBehaviour) |
+| `HeroAnimationStateSystem`, `HeroAnimationControllerAuthoring`, `WeaponColliderAuthoring` | `RemoteHeroAnimationDriver`, `SamplePlayerAnimationController_ECS`, `WeaponHitboxBehaviour` |
+| `SquadAIController`, `SquadVisibilitySystem`, `TerrainTagSystem`, `NavMeshSystem`, `PerformanceTrackerSystem`, `HeroSpawnManager`, `HeroPreviewSystem` | Sin equivalente verificado |
+
 ## Índice Técnico (TDD)
 
 ### 1. 🧱 Arquitectura General del Proyecto
@@ -2721,6 +2766,8 @@ HeroStatsSystem accede vía GetCachedAttributes(heroId)
 
 ## 🌐 8. Multijugador (MVP)
 
+> ⚠️ Diseño no implementado (2026-10-22): no hay red, predicción ni reconciliación en el código.
+
 ---
 
 ### 🖧 8.1 Arquitectura de Red: Servidor Dedicado
@@ -3142,6 +3189,8 @@ Este sistema actúa como un HUD expandido y cumple funciones de *scoreboard*, ma
 - 🔍 Legibilidad asegurada en resoluciones desde 1280x720.
 
 ## 🔐 10. Seguridad y Backend (Para expansión futura)
+
+> ⚠️ Diseño no implementado (2026-10-22): el guardado es solo local.
 
 ---
 
