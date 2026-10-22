@@ -1,6 +1,8 @@
 # Squad Swap en Supply Points
 
-## 1. Resumen
+> Estado frente al código (2026-10-22): implementado. Duraciones verificadas en `SquadSwap.System.cs` (channeling 1 s), `SquadSwapExecution.System.cs` (retirada 5 s, cooldown 10 s). La retirada por muerte del dueño es otro flujo (`SquadOwnerDeathRetreatSystem`), descrito en `HeroDeath.md`. De las unidades que sobreviven solo se persiste el conteo (`InactiveSquadElement.aliveUnits`); al reinvocar aparecen con la vida base.
+
+
 
 El héroe puede cambiar su squad activo en un supply point aliado. La interacción sigue el patrón tipo NPC: acercarse al centro del supply point → presionar F → seleccionar squad en la UI → confirmar → channeling de 1 segundo → swap ejecutado.
 
@@ -77,15 +79,15 @@ El spawn del nuevo squad y la transición a `Retreating` del viejo ocurren en el
 | Parámetro | Valor |
 |-----------|-------|
 | Estado FSM | `Retreating` |
-| Duración | 5 segundos |
-| Dirección de movimiento | Hacia el punto de inicio del mapa del equipo (spawn point) |
+| Duración | Hasta 5 segundos (`RetreatComponent.retreatDuration`) o hasta que los supervivientes lleguen al destino, lo que ocurra antes |
+| Dirección de movimiento | Hacia `RetreatComponent.retreatTarget`; el squad navega con `SquadNavigationComponent` (`RetreatLogicSystem`) |
 | Vulnerable a daño | Sí |
 | Puede recibir órdenes | No |
 | Puede atacar | No |
 
 ### Resultado al finalizar la retirada
 
-- **Si sobrevive** (al menos 1 unidad viva al terminar los 5s):
+- **Si sobrevive** (al menos 1 unidad viva al terminar la retirada):
   - Se destruyen todas las entidades ECS y GameObjects visuales del squad
   - Se guarda el estado del squad: cantidad de unidades vivas y muertas
   - El squad queda disponible para ser invocado de nuevo
@@ -179,7 +181,7 @@ El channeling se cancela inmediatamente si ocurre cualquiera de los siguientes e
 
 ## 10. Infraestructura existente
 
-Los siguientes archivos ya contienen implementación parcial o relacionada:
+Archivos de la implementación (el swap completo está implementado; ver también la §11):
 
 | Archivo | Rol |
 |---------|-----|
@@ -188,23 +190,9 @@ Los siguientes archivos ya contienen implementación parcial o relacionada:
 | `Assets/Scripts/Squads/SquadChangeEvent.cs` | Evento emitido tras un swap exitoso |
 | `Assets/Scripts/UI/Zone/SupplyPointUIController.cs` | UI con botones de selección de squad |
 | `Assets/Scripts/Map/SupplyInteraction.System.cs` | Detección de héroes en zona, crea `SquadSwapRequest` al presionar F |
-| `Assets/Scripts/Squads/Components/PlayerInteractionComponent.cs` | Captura input F del héroe |
-| `Assets/Scripts/Squads/Components/SupplyPointComponent.cs` | Estado de la zona (contested, teamOwner, etc.) |
+| `Assets/Scripts/Hero/Components/PlayerInteraction.Component.cs` | Captura input F del héroe |
+| `Assets/Scripts/Map/SupplyPoint.Component.cs` | Estado de la zona (contested, teamOwner, etc.) |
 
-### Componentes nuevos necesarios (estimado)
-
-| Componente / Sistema | Propósito |
-|----------------------|-----------|
-| `SquadSwapChannelingComponent` | Timer de channeling (1s), referencia al squad seleccionado |
-| `SquadSwapCooldownComponent` | Timer de cooldown (10s) por héroe |
-| `SquadRetreatComponent` | Timer de retirada (5s), dirección de movimiento |
-| `InactiveSquadStateData` | Persistencia de estado de squads inactivos (unidades vivas/muertas) |
-| `SquadSwapChannelingSystem` | Procesa el channeling, verifica cancelaciones frame a frame |
-| `SquadRetreatSystem` | Mueve squads en retirada, destruye al finalizar, persiste estado |
-| Modificación a `SquadFSMSystem` | Agregar estado `Retreating` al FSM |
-| Modificación a `SquadSpawningSystem` | Soportar spawn con conteo reducido de unidades |
-
----
 
 ## 11. Technical Reference
 
@@ -222,9 +210,9 @@ Todos los archivos involucrados en la implementación del Squad Swap, organizado
 | `Assets/Scripts/Squads/InactiveSquadElement.cs` | Buffer element que almacena squads inactivos disponibles para reinvocación |
 | `Assets/Scripts/Squads/SquadRetreatingFromSwap.Component.cs` | Tag que identifica squads en retirada originados por un swap |
 | `Assets/Scripts/Squads/SquadIdMapElement.cs` | Buffer element que mapea índice int → string ID del squad |
-| `Assets/Scripts/Squads/Components/SquadState.Component.cs` | Estado FSM del squad (incluye estado `Retreating`) |
-| `Assets/Scripts/Squads/Components/Retreat.Component.cs` | Datos de retirada: timer, dirección, punto de destino |
-| `Assets/Scripts/Squads/Components/SquadNavigation.Component.cs` | Navegación del squad hacia el punto de retirada |
+| `Assets/Scripts/Squads/SquadState.Component.cs` | Estado FSM del squad (incluye estado `Retreating`) |
+| `Assets/Scripts/Squads/Retreat.Component.cs` | Datos de retirada: timer, dirección, punto de destino |
+| `Assets/Scripts/Squads/SquadNavigation.Component.cs` | Navegación del squad hacia el punto de retirada |
 | `Assets/Scripts/Hero/Components/HeroSquadReference.Component.cs` | Referencia al squad activo del héroe |
 | `Assets/Scripts/Hero/Components/HeroSquadSelection.Component.cs` | Selección de squad para el próximo spawn |
 
@@ -246,6 +234,5 @@ Todos los archivos involucrados en la implementación del Squad Swap, organizado
 | Archivo | Rol |
 |---------|-----|
 | `Assets/Scripts/UI/Zone/SupplyPointUIController.cs` | Panel de selección de squad, barra de channeling, indicador de cooldown |
-| `Assets/Scripts/UI/Zone/SquadButtonUI.cs` | Botón individual de squad en la UI de selección |
 | `Assets/Scripts/UI/Battle/BattleSceneController.cs` | Popula el buffer de mapeo de squad IDs al iniciar la batalla |
 | `Assets/Scripts/Shared/DataContainer.System.cs` | Crea el buffer `SquadIdMapElement` en la entidad de datos compartidos |
