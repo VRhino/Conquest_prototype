@@ -2,7 +2,7 @@
 
 Documento técnico que describe el flujo completo de movimiento de las tropas (squads/units), desde la captura de input del jugador hasta la representación visual en pantalla.
 
-Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
+Actualizado: 2026-10-22. Verificado contra el código de `Assets/Scripts/Squads` (atributos `[UpdateAfter]`/`[UpdateBefore]` y componentes). El diseño, las decisiones y las medidas del movimiento están en `Docs/Design/Movimiento_Formaciones.md`; la tabla de parámetros, en su §3. Los valores de `DefaultMovementTuning.asset` no se repiten aquí: el asset está en Git LFS y no se pudo leer al verificar este documento.
 
 ---
 
@@ -19,26 +19,36 @@ SquadOrderSystem           — aplica la orden resuelta
   ↓
 SquadFSMSystem             — máquina de estados del escuadrón
   ↓
+UnitTargetingSystem        — asigna objetivo a cada unidad (si InCombat)
+  ↓
 SquadAnchorSystem          — única autoridad del ancla de formación
   ↓
-FormationSystem            — asigna posiciones de formación iniciales
+FormationSystem            — disposición de la escuadra y ranura de cada unidad
   ↓
-GridFormationUpdateSystem  — sincroniza posiciones de slot cada frame
+GridFormationUpdateSystem  — mantiene la posición de cada slot respecto al ancla
   ↓
 UnitFormationStateSystem   — máquina de estados por unidad (Formed/Waiting/Moving)
   ↓
+MeleeContactRingSystem     — reserva de posición en el anillo del objetivo (melé)
+  ↓
 UnitNavMeshSystem          — única autoridad de destinos y movimiento NavMesh
   ↓
-UnitFollowFormationSystem  — velocidad y orientación de formación
+UnitFollowFormationSystem  — velocidad (marcha/carrera) y orientación de formación
   ↓
-UnitBodyblockSystem        — corrección física entre enemigos
+UnitAvoidanceSystem        — evitación por velocidad entre aliados (ORCA)
+  ↓
+UnitBodyblockSystem        — empuje entre enemigos (cápsulas)
+  ↓
+UnitHitKnockbackSystem     — retroceso del golpe
   ↓
 NavMeshPositionSyncSystem  — posición NavMesh GameObject → ECS
   ↓
 UnitRotationResolutionSystem — resuelve la intención de rotación
+  ↓
+UnitAnimationSystem / UnitPostureSystem / DestinationMarkerSystem
 ```
 
-Todos los sistemas pertenecen al `SimulationSystemGroup`.
+Todos los sistemas pertenecen al `SimulationSystemGroup`. El orden exacto se define por atributos y está en la §12.
 
 ---
 
@@ -175,37 +185,25 @@ SquadFSMState:
 ### FormationSystem
 
 **Archivo:** `Assets/Scripts/Squads/Systems/Formation.System.cs`
-**Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`
+**Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`, `[UpdateAfter(typeof(SquadOrderSystem))]`
 
-- Asigna posiciones de formación cuando cambia la formación seleccionada
-- Lee la formación solicitada desde `SquadResolvedOrderComponent`; un cambio de formación no reemite la orden de movimiento
-- Lee `SquadDataComponent.formationLibrary` (blob asset)
-- Cooldown entre cambios de formación: **1 segundo** (`formationChangeCooldown = 1f`)
-- Lee `SquadHoldPositionComponent` si existe y lo pasa a `CalculateDesiredPosition()` para que en modo Hold Position las posiciones se calculen respecto al holdCenter
-- Llama a `FormationPositionCalculator.CalculateDesiredPosition()` para cada unidad
-- Escribe `UnitTargetPositionComponent`, `UnitGridSlotComponent`, `UnitSpacingComponent`
+- Único escritor de `FormationComponent` (formación, plantilla, espaciado, escala, semilla) y de cada `UnitGridSlotComponent`.
+- Rehace la disposición cuando cambia la formación pedida (con cooldown `MovementTuningComponent.formationChangeCooldown`), cuando cambia la plantilla por bajas o cuando llega un `SquadFormationSpacingRequest`.
+- Lee la formación solicitada desde `SquadResolvedOrderComponent`; un cambio de formación no reemite la orden de movimiento.
+- Lee `SquadDataComponent.formationLibrary` (blob horneado desde `FormationDefinition`) y calcula slots con `FormationLayout` y `FormationPositionCalculator.TryBuildSlot()`.
+- Escribe el `UnitTargetPositionComponent` inicial; después lo mantiene `GridFormationUpdateSystem`.
 
 ### GridFormationUpdateSystem
 
 **Archivo:** `Assets/Scripts/Squads/Systems/GridFormationUpdate.System.cs`
 **Atributos:** `[UpdateInGroup(typeof(SimulationSystemGroup))]`, `[UpdateAfter(typeof(FormationSystem))]`
 
-- Se ejecuta **cada frame** después de `FormationSystem`
-- Recalcula `UnitTargetPositionComponent.position` usando `FormationPositionCalculator.CalculateDesiredPosition()`
-- Mantiene las posiciones de slot sincronizadas con el centro de formación (héroe o holdCenter)
+- Mantiene `UnitTargetPositionComponent.position` girando el desplazamiento local de cada slot con el ancla.
+- Omite la geometría de slots estables (revisión del ancla + clave de orden/estado, formación, slot y terreno) y remuestrea alturas al cambiar el terreno.
 
-### Tipos de formación
+### Tipos y datos de formación
 
-Line, Dispersed, Testudo, Wedge, Column, Square.
-
-### Blob Assets
-
-```
-FormationLibraryBlob
-  └── BlobArray<FormationDataBlob> formations
-        ├── FormationType formationType
-        └── BlobArray<int2> gridPositions    ← coordenadas discretas de grilla
-```
+`FormationType`: Line, Dispersed, Testudo, Wedge, Column, Square. Cada formación es un `FormationDefinition` con espaciado propio, ruido, plantillas por soldados vivos (o `Scatter`) y tabla de posturas; se hornea en `FormationLibraryBlob` (`FormationDataBlob`: tipo, layout, espaciado, ruido, plantillas, posturas). Ver `Docs/Mechanics/Formations.md` y `Docs/Mechanics/FormationPostures.md`.
 
 ### FormationPositionCalculator (utilidad central)
 
@@ -213,11 +211,11 @@ FormationLibraryBlob
 
 | Método | Propósito |
 |--------|-----------|
-| `GetSquadCenter()` | Retorna `holdCenter` en Hold Position, sino `heroPos` |
-| `CalculateDesiredPosition()` | Convierte posición de grilla a posición world. Centra la grilla, aplica `GridToRelativeWorld()`, ajusta altura de terreno |
+| `GetSquadCenter()` | Centro de la escuadra (héroe o centro de Hold Position) |
+| `DesiredPosition()` | Convierte un desplazamiento local de slot en posición mundo según el estado de la escuadra |
+| `TryBuildSlot()` | Construye un slot a partir de una plantilla del blob |
 | `IsUnitInSlot()` | Check de distancia entre unidad y slot deseado |
-| `GetFarestUnitDistanceSq()` | Distancia de la unidad más lejana (para verificar radio de 10m) |
-| `GetClosestUnitDistanceSq()` | Distancia de la unidad más cercana |
+| `calculateTerraindHeight()` | Altura del terreno en una posición |
 
 ---
 
@@ -229,101 +227,80 @@ FormationLibraryBlob
 ### Estados
 
 ```csharp
-public enum UnitFormationState
-{
-    Formed,   // En su slot asignado
-    Waiting,  // Esperando delay aleatorio antes de moverse
-    Moving    // Moviéndose hacia su slot
-}
+public enum UnitFormationState { Formed, Waiting, Moving }
 
 public struct UnitFormationStateComponent : IComponentData
 {
     public UnitFormationState State;
     public float DelayTimer;
     public float DelayDuration;
+    public float CalmTimer;
 }
 ```
 
-### Constantes
+La transición es una función pura, `FormationArrival.Step` (`Assets/Scripts/Squads/FormationArrival.cs`), con histéresis (L-4 de `Movimiento_Formaciones.md`). Decide por el error de **cada unidad** respecto a su slot; no usa la unidad más lejana como gate global. Los umbrales salen de `MovementTuningComponent`, no son constantes del sistema:
 
-| Nombre | Valor | Uso |
-|--------|-------|-----|
-| `formationRadiusSq` | `100f` (10m²) | Radio para considerar que el héroe está "cerca" (soporta formaciones de hasta 20 unidades) |
-| `slotThresholdSq` | `0.04f` (~0.2m²) | Distancia para considerar unidad "en slot" |
-| `holdPositionThresholdSq` | `1.0f` (1m²) | Distancia para detectar drift en Hold Position |
+| Parámetro | Uso |
+|-----------|-----|
+| `arrivalRadiusIn` | Se entra en `Formed` por debajo de este radio |
+| `arrivalRadiusOut` | Se sale de `Formed` por encima de este radio (seguir al héroe) |
+| `arrivalCalmTime` | Segundos dentro de `arrivalRadiusIn` con el ancla quieta antes de pasar a `Formed` |
+| `holdReformRadius` | Radio de salida de `Formed` en Hold Position |
+| `startRowDelay`, `startJitterDelay` | Retardo de arranque por fila y aleatorio (`FormationStartDelay.Compute`) |
 
-### Transiciones — Modo Follow Hero
-
-```
-Formed → Waiting:  El héroe sale del radio de 10m (usa GetFarestUnitDistanceSq)
-                   O la unidad ya no está cerca de su slot asignado (detecta cambios de formación)
-                   Delay aleatorio: 0.5–1.5s
-
-Waiting → Moving:  El delay expira (DelayTimer >= DelayDuration)
-
-Waiting → Formed:  El héroe vuelve al radio Y la unidad está en su slot
-
-Moving → Formed:   La unidad llega al slot (~0.2m)
-                   Y el héroe está dentro del radio
-                   Y el héroe está quieto (HeroState.Idle)
-
-Moving → Moving:   Si el héroe sigue moviéndose, la unidad continúa
-```
-
-### Transiciones — Modo Hold Position
+### Transiciones
 
 ```
-Formed → Waiting:  La unidad se aleja >1m de su slot
-                   Delay aleatorio: 0.5–1.0s
+Formed → Waiting:   la unidad supera el radio de salida (arrivalRadiusOut, o holdReformRadius en Hold)
+                    Se asigna un retardo de arranque
 
-Waiting → Moving:  El delay expira
+Waiting → Moving:   el retardo expira (DelayTimer >= DelayDuration)
 
-Waiting → Formed:  La unidad vuelve al slot durante el delay
+Waiting → Formed:   la unidad vuelve dentro del radio antes de que expire el retardo
+                    (en Hold basta con estar dentro de holdReformRadius; si no, calma)
 
-Moving → Formed:   La unidad llega al slot (~0.2m)
+Moving → Formed:    dentro de arrivalRadiusIn con el ancla quieta durante arrivalCalmTime
 ```
 
-### Detección de heroWithinRadius
-
-Usa la **unidad más lejana** para determinar si todas las unidades están dentro del radio. Si la más lejana está dentro, todas lo están.
+El estado del ancla se lee de `SquadAnchorMovingTag` (habilitable), no del estado del héroe. En Hold Position el sistema usa `holdReformRadius`. Con `UnitStartedMovingTag`/`UnitArrivedAtSlotTag` presentes publica los hitos (ver `Docs/Mechanics/FormationMilestoneSystem.md`).
 
 ---
 
-## 8. Movimiento físico — `UnitNavMeshSystem`
+## 8. Movimiento físico — `UnitNavMeshSystem` y seguimiento
 
 **Archivo:** `Assets/Scripts/Squads/Systems/UnitNavMesh.System.cs`
-**Atributos:** después de `UnitFormationStateSystem` y `UnitTargetingSystem`; antes de `UnitFollowFormationSystem`.
+**Atributos:** `[UpdateAfter(UnitFormationStateSystem)]`, `[UpdateAfter(UnitTargetingSystem)]`, `[UpdateBefore(UnitFollowFormationSystem)]`
 
-### Condición de movimiento
+### Destino
 
-Es la única autoridad que llama `NavMeshAgent.SetDestination()`. El destino efectivo es el slot de formación o un punto de parada próximo al objetivo de combate. Las unidades `Waiting` sin persecución elegible conservan su espera; `HoldPosition` nunca autoriza persecución.
-
-### Cálculo de velocidad
-
-```
-finalSpeed = baseSpeed × speedMultiplier × hurryOrCombatBonus
-
-donde:
-  baseSpeed       = UnitStatsComponent.velocidad  (fallback: defaultMoveSpeed = 5f)
-  speedMultiplier = UnitMoveSpeedVariation.speedMultiplier
-  hurryOrCombatBonus = 2.0 si hurryToComander o existe target válido, sino 1.0
-```
-
-### Destino y autoridad
+Es la única autoridad que llama `NavMeshAgent.SetDestination()`. El destino efectivo es el slot de formación o un punto de parada próximo al objetivo de combate (`MeleeReach.BrakingStopPoint`; en melé, la posición del anillo que reserva `MeleeContactRingSystem`). Las unidades `Waiting` sin persecución elegible conservan su espera; `HoldPosition` nunca autoriza persecución.
 
 ```
 UnitTargetPositionComponent
   → proyección con NavMesh.SamplePosition
   → NavMeshAgent.SetDestination(destino efectivo)
-  → UnitBodyblockSystem aplica agent.Move(offset)
+  → UnitAvoidanceSystem ajusta la velocidad entre aliados
+  → UnitBodyblockSystem aplica agent.Move(offset) entre enemigos
   → NavMeshPositionSyncSystem copia agent.transform.position a LocalTransform
 ```
+
+### Velocidad — `UnitFollowFormationSystem`
+
+**Atributos:** `[UpdateAfter(GridFormationUpdateSystem)]`; en la práctica corre después de `UnitNavMeshSystem`.
+
+La velocidad base es la resuelta por la pila de stats (`UnitStatsComponent.speed`), multiplicada por `UnitMoveSpeedVariation.speedMultiplier` si el componente existe. Sobre ella actúa el engranaje `UnitMovementGearComponent` (Walk/Run, histéresis `runEnterDistance`/`runExitDistance`, `runSpeedMultiplier`); `hurryToComander` (doble C) o un objetivo de combate fuerzan Run. Para seguir un slot en movimiento, `followRecoveryTime`, `followMinSpeedRatio` y `walkCatchUpRatio` acotan el margen de recuperación. `navAgent.speed` sube y baja como mucho a la aceleración del agente (frena hasta `brakingFactor` veces más rápido). Detalle y medidas: `Movimiento_Formaciones.md` L-3, §12 y §15.
 
 ### Orientación
 
 - `UnitNavMeshSystem` publica orientación de combate cuando el objetivo está próximo.
-- `UnitFollowFormationSystem` publica orientación disciplinada hacia el héroe o el ancla de Hold cuando la unidad está formada y no está engaging.
+- `UnitFollowFormationSystem` publica la orientación Formed (rumbo de la formación × rumbo de la ranura).
 - `UnitRotationResolutionSystem` aplica la intención ganadora; no hay una segunda ruta directa de rotación ECS.
+
+### Evitación, bodyblock y retroceso
+
+- `UnitAvoidanceSystem`: evitación por velocidad entre aliados (ORCA); enemigos no se esquivan.
+- `UnitBodyblockSystem`: empuje entre enemigos con cápsulas (`Docs/Mechanics/BodyblockSystem.md`).
+- `UnitHitKnockbackSystem`: retroceso del golpe.
 
 ---
 
@@ -361,18 +338,18 @@ La animación tampoco forma ya parte de este puente. Para un héroe remoto, `Rem
 ### Hold Position
 
 - Centro fijo en `SquadHoldPositionComponent.holdCenter` (posición del raycast al dar la orden)
-- Threshold de **1m** para detectar que una unidad salió de posición
+- La unidad sale de `Formed` al superar `holdReformRadius`
 - Las formaciones se recalculan respecto al `holdCenter` en vez del héroe
 
 ### Hurry to Commander (doble C)
 
-- Toggle que activa/desactiva `hurryToComander`
-- Duplica la velocidad de movimiento (`× 2.0`)
+- Toggle que activa/desactiva `SquadInputComponent.hurryToComander`
+- Fuerza el engranaje Run de `UnitFollowFormationSystem`
 
 ### Cycling de formaciones (doble X)
 
 - Avanza de forma circular por la librería de formaciones del escuadrón
-- Sujeto a cooldown de 1 segundo
+- Sujeto al cooldown `formationChangeCooldown`
 
 ### Marcadores de destino — DestinationMarkerSystem
 
@@ -393,15 +370,18 @@ La animación tampoco forma ya parte de este puente. Para un héroe remoto, `Rem
 | `SquadInputComponent` | Flags transitorios de orden nueva y hurry | `SquadControlSystem` |
 | `SquadStateComponent` | Estado actual del escuadrón, timer, orden | `SquadOrderSystem`, `SquadFSMSystem` |
 | `SquadHoldPositionComponent` | Centro y formación de Hold Position | `SquadOrderSystem` |
-| `FormationComponent` / `SquadStateComponent.formationChangeCooldown` | Formación confirmada y cooldown | `FormationSystem` |
+| `SquadFormationAnchorComponent` | Posición, rotación y velocidad del ancla | `SquadAnchorSystem` |
+| `FormationComponent` | Formación confirmada, plantilla, espaciado, escala, semilla | `FormationSystem` |
 | `UnitOwnerComponent` | Referencia de la unidad a su squad y héroe | `SquadSpawningSystem` |
 | `SquadDataComponent` | Datos del escuadrón (formationLibrary blob) | Setup/Spawn |
-| `UnitTargetPositionComponent` | Posición deseada (slot de formación) | `FormationSystem`, `GridFormationUpdateSystem` |
-| `UnitGridSlotComponent` | Coordenadas de grilla y offset world | `FormationSystem` |
+| `UnitTargetPositionComponent` | Posición deseada (slot de formación) | `FormationSystem` (inicial), `GridFormationUpdateSystem` |
+| `UnitGridSlotComponent` | Ranura, posición local, fila, papel, rumbo | `FormationSystem` |
 | `UnitFormationStateComponent` | Estado de la unidad (Formed/Waiting/Moving) | `UnitFormationStateSystem` |
-| `UnitStatsComponent` | Stats de la unidad (velocidad, etc.) | Setup/Spawn |
+| `UnitMovementGearComponent` | Engranaje Walk/Run | `UnitFollowFormationSystem` |
+| `MeleeContactSlotComponent` | Posición reservada en el anillo del objetivo | `MeleeContactRingSystem` |
+| `UnitStatsComponent` | Stats de la unidad (velocidad, etc.), derivados de la pila | `StatResolveSystem` |
 | `UnitMoveSpeedVariation` | Multiplicador opcional de velocidad; el sistema usa 1 si falta | Sin productor en el spawn actual; `UnitFollowFormationSystem` lo consume si está presente |
-| `UnitSpacingComponent` | Slot de spacing en formación | `FormationSystem` |
+| `MovementTuningComponent` | Singleton de ajuste del movimiento | Horneado por `SquadSpawnConfigAuthoring` desde `MovementTuningConfig` |
 | `NavAgentComponent` | Estado del destino efectivo, fallos y autoridad NavMesh | `UnitNavMeshSystem` |
 | `UnitRotationIntentComponent` | Propuesta priorizada de orientación | NavMesh/Follow; aplicada por `UnitRotationResolutionSystem` |
 | `LocalTransform` | Pose publicada en ECS | `NavMeshPositionSyncSystem`, `UnitRotationResolutionSystem` |
@@ -414,18 +394,24 @@ La animación tampoco forma ya parte de este puente. Para un héroe remoto, `Rem
 
 ## 12. Orden de Ejecución de Sistemas
 
-Todos en `SimulationSystemGroup`. El orden se define por atributos `[UpdateAfter]` y `[UpdateBefore]`:
+Todos en `SimulationSystemGroup`. Cadena declarada por `[UpdateAfter]`/`[UpdateBefore]` (verificada en el código):
 
 ```
 1.  HeroInputSystem → HeroMovementSystem
-2.  EnemyDetectionSystem → SquadAISystem → CombatReactionSystem
-3.  SquadControlSystem → OrderResolutionSystem → SquadOrderSystem → SquadFSMSystem
-4.  UnitTargetingSystem
-5.  SquadAnchorSystem → FormationSystem → GridFormationUpdateSystem
-6.  UnitFormationStateSystem → UnitNavMeshSystem
-7.  UnitFollowFormationSystem → UnitBodyblockSystem → NavMeshPositionSyncSystem
-8.  UnitRotationResolutionSystem
-9.  DestinationMarkerSystem / UnitAnimationSystem / visuales
+2.  EnemyDetectionSystem → SquadAISystem (Before SquadFSMSystem) → CombatReactionSystem
+3.  SquadControlSystem (Before SquadOrderSystem, OrderResolutionSystem, FormationSystem)
+    CombatReactionSystem → OrderResolutionSystem → SquadOrderSystem → SquadFSMSystem
+4.  UnitTargetingSystem (After SquadAISystem, SquadFSMSystem, UnitDeathSystem)
+5.  SquadAnchorSystem (After UnitTargetingSystem, Before FormationSystem)
+    FormationSystem (After SquadOrderSystem) → GridFormationUpdateSystem
+6.  UnitFormationStateSystem → UnitPostureSystem
+7.  MeleeContactRingSystem (After UnitTargetingSystem, Before UnitNavMeshSystem)
+    UnitNavMeshSystem (After UnitFormationStateSystem y UnitTargetingSystem)
+8.  UnitFollowFormationSystem → UnitAvoidanceSystem → UnitBodyblockSystem → UnitHitKnockbackSystem
+9.  NavMeshPositionSyncSystem (After UnitNavMeshSystem, Before UnitRotationResolutionSystem)
+10. UnitRotationResolutionSystem → UnitAnimationSystem / DestinationMarkerSystem / visuales
 ```
 
-Las dependencias críticas están declaradas de forma explícita: `UnitNavMeshSystem` espera a `UnitFormationStateSystem` y `UnitTargetingSystem`, y fuerza a `UnitFollowFormationSystem` a ejecutarse después. `UnitBodyblockSystem` corrige la pose antes de que `NavMeshPositionSyncSystem` la publique en ECS.
+Las dependencias críticas están declaradas de forma explícita: `UnitNavMeshSystem` espera a `UnitFormationStateSystem` y `UnitTargetingSystem` y fuerza a `UnitFollowFormationSystem` a ejecutarse después. `UnitBodyblockSystem` y `UnitHitKnockbackSystem` corrigen la pose antes de que `NavMeshPositionSyncSystem` la publique en ECS.
+
+Un ciclo de `[UpdateBefore]`/`[UpdateAfter]` dentro del grupo congela el editor al entrar en Play (Entities no lo reporta); `SystemOrderTests` lo comprueba.
