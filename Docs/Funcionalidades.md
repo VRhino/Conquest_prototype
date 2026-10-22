@@ -1,252 +1,78 @@
 # 🎮 Funcionalidades del Juego
 
-## 📋 Índice
-
-### 1. 🎯 Funcionalidades Core Implementadas
-### 2. 🔄 Funcionalidades En Desarrollo  
-### 3. 📅 Funcionalidades Planificadas
-### 4. 💡 Funcionalidades Adicionales (Ideas)
+Actualizado: 2026-10-22. Inventario por **presencia de código** en `Assets/Scripts` y de assets en `Assets/`; no es el resultado de una prueba jugable completa. Para el estado detallado de cada mecánica, ver los documentos enlazados. Leyenda: ✅ implementado en código, 🔄 parcial o sin validar de punta a punta, 📅 planificado (sin código), 💡 idea.
 
 ---
 
-## 1. 🎯 Funcionalidades Core Implementadas
+## 1. Implementado
 
-### 🧙‍♂️ **Control del Héroe**
-- ✅ Movimiento en tercera persona (WASD)
-- ✅ Sistema de input con Unity Input System
-- ✅ Input para habilidades de héroe (Q, E, R)
+### 🧙‍♂️ Control del héroe
+- ✅ Movimiento en tercera persona (WASD) con intención ECS y motor físico local (`HeroMovementSystem` → `LocalHeroCharacterMotor`). Sin salto. Ver `ModeloHybrido.md`.
+- ✅ Input con Unity Input System; stamina (`HeroStaminaSystem`) y sprint.
+- ✅ Habilidades por fases: ataque básico (clic), Q/E/R, definitiva (F), perks activos (1/2), enfriamientos y carga. Ver `Mechanics/SkillsAndPerks.md`.
+- ✅ Perks pasivos (auras y efectos al golpear) sobre la pila de modificadores de stats.
+- ✅ Cuatro clases de héroe con definición (`Resources/Data/HeroClasses`): SwordAndShield, TwoHandedSword, Spear, Bow.
+- ✅ Muerte, retirada del escuadrón y respawn del héroe local. Ver `Mechanics/HeroDeath.md`.
 
-### 🛡️ **Control de Escuadras**
-- ✅ Órdenes básicas (C: Seguir, X: Hold Position, V: Atacar)
-- ✅ Cambio de formaciones con teclas F1-F4
-- ✅ **NUEVO:** Cambio cíclico de formaciones con doble clic X
-- ✅ Detección de posición del mouse para Hold Position
+### 🛡️ Control de escuadras
+- ✅ Órdenes C (seguir), X (mantener posición), V (atacar); doble C alterna «ir deprisa».
+- ✅ Formaciones por F1–F4 y ciclo con doble X; seis tipos (Line, Dispersed, Testudo, Wedge, Column, Square) definidos por datos. Ver `Mechanics/Formations.md`.
+- ✅ Posturas por papel de ranura y hitos de formación. Ver `Mechanics/FormationPostures.md`, `Mechanics/FormationMilestoneSystem.md`.
+- ✅ Marcadores de destino en mantener posición (`DestinationMarkerSystem`).
+- ✅ Cambio de escuadra en puntos de suministro. Ver `Mechanics/SquadSwap.md`.
+- ✅ Cuatro tipos de escuadra: Squires, Archers, Pikemen, Spearmen (`SquadType`); liderazgo (`HeroLeadershipCalculator`).
 
-### 🧠 **Sistema de Formaciones**
-- ✅ Formaciones básicas: Line, Dispersed, Testudo, Wedge
-- ✅ Posicionamiento dinámico de unidades
-- ✅ Marcadores visuales para Hold Position
-- ✅ Rotación cíclica automática de formaciones
+### 🧠 Movimiento y combate de unidades
+- ✅ Pipeline de movimiento con ancla, ranuras, histéresis de llegada, marcha/carrera, evitación ORCA y empuje entre enemigos. Ver `TroopMovementPipeline.md`, `Design/Movimiento_Formaciones.md`, `Mechanics/BodyblockSystem.md`.
+- ✅ Detección, targeting y ataque cuerpo a cuerpo y a distancia (proyectiles); anillo de contacto. Ver `Mechanics/UnitEngageSystem.md`.
+- ✅ Daño por tipo (Blunt, Slashing, Piercing) con penetración, defensa, escudo, crítico y pila de stats. Ver `Mechanics/DamageMechanics.md`.
+- ✅ IA de héroes remotos (Rusher, Balanced) y de escuadras. Ver `RemoteHeroAI_Architecture.md`.
 
----
+### 🏗️ Mapas y partida
+- ✅ Puntos de captura en secuencia, captura final, reloj de batalla con extensión por captura. Ver `Mechanics/CapturePoints.md`, `Mechanics/MatchTimer.md`.
+- ✅ Puntos de suministro con interacción.
 
-## 2. 🔄 Funcionalidades En Desarrollo
+### 🧬 Progresión y datos
+- ✅ Nivel del héroe y progresión de escuadras (`HeroLevelSystem`, `SquadProgressionSystem`).
+- ✅ Guardado local con JSON (`SaveSystem`/`LoadSystem`); inventario, equipo y tienda con transacciones. Ver `Arquitectura/1_Arquitectura_Actual.md`.
 
-### 🧙‍♂️ **Sistema del Héroe**
-- 🔄 Animaciones básicas (Idle, Run, Attack)
-- 🔄 Sistema de stamina y cooldowns
-- ✅ Sistema de salto eliminado
-- 🔄 Implementación real de habilidades (Q, E, R)
-
-### 🛡️ **Sistema de Escuadras**
-- 🔄 Sistema de liderazgo para restricción de escuadras
-- 🔄 IA básica de unidades en formación
-- 🔄 Navegación con NavMesh
-
-### ⚔️ **Sistema de Combate**
-- 🔄 Combate del héroe con colliders animados
-- 🔄 Sistema de tipos de daño (Blunt, Slashing, Piercing)
-- 🔄 Cálculo de penetración y defensas
-- 🔄 Combate de escuadras por intervalos
-
-### 🎨 **Interfaz y HUD**
-- 🔄 HUD básico de batalla
-- 🔄 Minimapa funcional
-- 🔄 UI de preparación de batalla
-- 🔄 Sistema de marcadores de destino
-- 🔄 Chat básico entre jugadores
-
-### 🌐 **Multijugador**
-- 🔄 Netcode for GameObjects implementado
-- 🔄 Sincronización de héroes y escuadras
-- 🔄 Servidor dedicado
-- 🔄 Interpolación de movimiento
-
-### 🏗️ **Mapas y Escenarios**
-- 🔄 Sistema de captura de puntos
-- 🔄 Supply points funcionales
-- 🔄 Elementos destructibles
-- 🔄 Zonas de spawn
-
-### 🧬 **Progresión**
-- 🔄 Sistema de niveles del héroe
-- 🔄 Progresión de escuadras
-- 🔄 Sistema de perks y habilidades
-- 🔄 Guardado local de progreso
+### 🎨 Interfaz y escenas
+- ✅ HUD de batalla, minimapa (`MinimapController`), chat (`Chat.System`), preparación de batalla, panel de héroe e inventario.
+- ✅ Escenas: Login, CharacterSelection, AvatarCreator, Feudo, Barracón, BattlePrep, Battle, PostBattle, Settlement, WorldMapCampaign.
 
 ---
 
-## 3. 📅 Funcionalidades Planificadas
+## 2. Parcial o sin validar de punta a punta
 
-### 🎭 **Clases de Héroe**
-- 📅 Espada y Escudo
-- 📅 Espada a Dos Manos
-- 📅 Lanza
-- 📅 Arco
-- 📅 Habilidades exclusivas por clase
-
-### 🪖 **Tipos de Escuadras**
-- 📅 Escuderos
-- 📅 Arqueros
-- 📅 Piqueros
-- 📅 Lanceros
-- 📅 Habilidades y sinergias por tipo
-
-### 🎯 **Modos de Juego**
-- 📅 Asedio (Atacante vs Defensor)
-- 📅 Captura de puntos
-- 📅 Dominio territorial
-- 📅 Escort (escoltar objetivos)
-
-### 🏰 **Escenas del Juego**
-- 📅 Feudo (hub social)
-- 📅 Barracón (gestión de escuadras)
-- 📅 Matchmaking
-- 📅 Post-batalla
+- 🔄 Matchmaking: simulado, genera batallas locales de prueba.
+- 🔄 Multijugador: no hay contrato de red ni Netcode en el proyecto; la autoridad remota actual es IA local. Ver `Arquitectura/1_Arquitectura_Actual.md` §13 y `Coordinacion/`.
+- 🔄 Entrega autenticada de resultados de batalla (los eventos de XP son locales).
+- 🔄 Flujo de partida completo con todos los sistemas visuales y de UI (sin validación automatizada; ver `Mechanics/HeroDeath.md`, «Límites actuales»).
+- 🔄 Cámara espectador y HUD de enfriamiento de respawn.
 
 ---
 
-## 4. 💡 Funcionalidades Adicionales (Ideas)
+## 3. Planificado (sin código)
 
-### 🎮 **Mejoras de Gameplay**
-- 💡 Modo táctico con cámara elevada
-- 💡 Órdenes contextuales con click derecho
-- 💡 Menú radial para órdenes avanzadas
-- 💡 Sistema de flanqueo automático
-- 💡 Coordinación entre múltiples escuadras
-- 💡 **NUEVA:** Detección de rango por unidad más cercana al héroe (mejorar lógica Formed→Moving)
-- 💡 **NUEVA:** Posicionamiento manual con X mantenida + mouse (feedback visual de markers)
-
-### 🎨 **Calidad de Vida**
-- 💡 Replay system
-- 💡 Espectador avanzado
-- 💡 Customización de HUD
-- 💡 Presets de formaciones personalizados
-- 💡 Macros de órdenes
-
-### 🌟 **Características Avanzadas**
-- 💡 Maquinaria de asedio
-- 💡 Sistema de clima dinámico
-- 💡 Efectos de terreno en combate
-- 💡 Sistema de moral de tropas
-- 💡 Eventos dinámicos en batalla
-
-### 🎯 **Competitivo**
-- 💡 Ranked matchmaking
-- 💡 Temporadas competitivas
-- 💡 Torneos automáticos
-- 💡 Sistema de clanes
-- 💡 Estadísticas avanzadas
+- 📅 Posicionamiento manual de la formación con X mantenida + mouse (los sistemas propuestos `ManualPositioningSystem`, `FormationMarkerSystem` y `TerrainRaycastSystem` no existen).
+- 📅 Elementos destructibles (no hay código de destructibles).
+- 📅 Servidor dedicado e interpolación de movimiento remoto.
+- 📅 Modos de juego adicionales: dominio territorial, escolta.
 
 ---
 
-## 📊 Estado General del Proyecto
+## 4. Ideas
 
-| Categoría | Completado | En Desarrollo | Planificado |
-|-----------|------------|---------------|-------------|
-| **Core Gameplay** | 35% | 45% | 20% |
-| **Combate** | 0% | 60% | 40% |
-| **UI/UX** | 0% | 70% | 30% |
-| **Multijugador** | 0% | 80% | 20% |
-| **Progresión** | 0% | 40% | 60% |
-| **Contenido** | 10% | 30% | 60% |
+- 💡 Modo táctico con cámara elevada, órdenes contextuales con clic derecho, menú radial.
+- 💡 Flanqueo automático y coordinación entre escuadras.
+- 💡 Replay, espectador avanzado, personalización de HUD, presets de formaciones.
+- 💡 Maquinaria de asedio, clima dinámico, efectos de terreno, moral de tropas, eventos dinámicos.
+- 💡 Ranked, temporadas, torneos, clanes, estadísticas avanzadas.
 
 ---
 
-## 🎯 Próximas Prioridades
+## Notas
 
-1. **Sistema de Liderazgo** - Restricciones de escuadras por loadout
-2. **Animaciones Básicas** - Héroe y unidades
-3. **Sistema de Stamina** - Implementación completa (sin salto)
-4. **HUD Básico** - Interfaz funcional en motor
-5. **Netcode Básico** - Primera implementación multijugador
-
----
-
-## ⚠️ Notas Importantes
-
-- ✅ **Sistema de salto eliminado:** Se removieron todas las referencias al salto del héroe del código y diseño
-- **Prioridad en Core:** Enfocar en funcionalidades básicas antes de características avanzadas
-- **Testing requerido:** Muchas funcionalidades necesitan pruebas en motor Unity
-
----
-
-## 🔄 Mejoras Técnicas Específicas
-
-### 🎯 **1. Optimización de Detección de Rango (Formed↔Moving)** ✅
-
-**📋 Problema original:**
-- La lógica evaluaba la posición individual de cada unidad vs el héroe
-- Podía causar comportamiento inconsistente en formaciones grandes
-
-**🔧 Solución implementada:**
-- ✅ **Cambiado algoritmo para usar la unidad más cercana al héroe** como referencia
-- ✅ **Aplicada la misma lógica de transición** a todo el escuadrón basado en esa distancia
-- ✅ **Mejorada consistencia del comportamiento grupal**
-
-**⚙️ Implementación técnica:**
-```csharp
-// ANTES - Evaluar cada unidad individualmente:
-// foreach(unit) if(distance(unit, hero) > threshold) → Moving
-
-// AHORA - Usar unidad más cercana como referencia:
-public static bool isHeroInRange(DynamicBuffer<SquadUnitElement> units, 
-    ComponentLookup<LocalTransform> transformLookup, float3 heroPosition, float range)
-{
-    float closestDistSq = float.MaxValue;
-    bool hasValidUnit = false;
-    
-    foreach (var unitElement in units)
-    {
-        Entity unit = unitElement.Value;
-        if (transformLookup.HasComponent(unit))
-        {
-            float3 unitPosition = transformLookup[unit].Position;
-            float distSq = math.lengthsq(heroPosition - unitPosition);
-            
-            if (distSq < closestDistSq)
-            {
-                closestDistSq = distSq;
-                hasValidUnit = true;
-            }
-        }
-    }
-
-    return hasValidUnit && closestDistSq <= range;
-}
-```
-
-**🧩 Sistemas modificados:**
-- `FormationPositionCalculator.isHeroInRange()` - Refactorizado para usar unidad más cercana
-- `UnitFormationStateSystem` - Ahora usa lógica consistente para todo el escuadrón
-- `UnitFollowFormationSystem` - Beneficiado por la nueva lógica unificada
-
-### 🖱️ **2. Posicionamiento Manual con X Mantenida**
-
-**📋 Funcionalidad:**
-- **Input:** Mantener presionada la tecla `X`
-- **Visual:** Mostrar markers de destino de todas las unidades del escuadrón
-- **Interacción:** Markers siguen la posición del mouse en tiempo real
-- **Confirmación:** Al soltar `X`, las unidades se mueven hacia sus markers
-
-**🎨 Feedback visual:**
-- Markers semi-transparentes con líneas de conexión al mouse
-- Preview de la formación resultante
-- Indicadores de terreno válido/inválido
-
-**⚙️ Flujo de implementación:**
-1. **Detectar X presionada** → Activar modo posicionamiento manual
-2. **Mostrar markers** → Instanciar prefabs en posiciones de formación
-3. **Seguir mouse** → Raycast a terreno + offset de formación
-4. **Soltar X** → Confirmar posiciones y iniciar movimiento
-5. **Cleanup** → Destruir markers y aplicar nuevas posiciones objetivo
-
-**🧩 Sistemas involucrados:**
-- `SquadControlSystem` - Detección de input extendido
-- `ManualPositioningSystem` - ⚠️ **No implementado / Planificado** - Nuevo sistema para esta funcionalidad
-- `FormationMarkerSystem` - ⚠️ **No implementado / Planificado** - Extensión del sistema actual de markers
-- `TerrainRaycastSystem` - ⚠️ **No implementado / Planificado** - Validación de posiciones en terreno
-
----
-
-*Última actualización: 3 de Julio, 2025*
+- El sistema de salto del héroe fue eliminado del código y del diseño.
+- Los porcentajes de avance y la lista de «próximas prioridades» de versiones anteriores se retiraron: no se podían verificar contra el código. Las prioridades vigentes están en `tasks/todo.md` y en `Por_Abordar/`.
+- La lógica antigua «unidad más cercana al héroe» para Formed↔Moving ya no existe: ahora decide el error de cada unidad respecto a su ranura (`TroopMovementPipeline.md` §7).
