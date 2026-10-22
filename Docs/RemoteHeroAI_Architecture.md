@@ -1,6 +1,6 @@
 # Remote Hero AI — Arquitectura
 
-> Estado implementado actualizado el 2026-09-15 y verificado contra `3eef0e17`.
+> Revisado línea a línea contra el código el 2026-10-22 (anterior: 2026-09-15, `3eef0e17`).
 > Diseño del sistema de comportamiento para héroes remotos (non-local-player).
 > Todos los behaviors compiten para **ganar la partida**. La diferencia es la sofisticación táctica.
 
@@ -24,8 +24,8 @@ La capa de Execution reutiliza `HeroMoveIntent` como descripción de movimiento,
 ```
  DATA SERVICE                      PERCEPTION                        DECISION (swappable)              EXECUTION
  BattleWorldState.System  ──►  HeroAIPerception.System  ──►  HeroAIRusher.System      ──►  HeroAIExecution.System
- Lee: mundo ECS completo         Tick-gated (5 frames)          HeroAIBalanced.System          Lee: HeroAIDecision
- Filtra: fog-of-war via          Lee: TeamWorldState            HeroAITactician.System         Escribe:
+ Lee: mundo ECS completo         Reloj de decisión (0,1 s)         HeroAIBalanced.System          Lee: HeroAIDecision
+ Filtra: fog-of-war via          Lee: TeamWorldState            (Tactician: no existe) Escribe:
  DetectedEnemy buffers           Calcula: derived per-hero      (solo 1 corre por entidad)       → HeroMoveIntent
  Escribe: TeamWorldState         Escribe: HeroAIBlackboard      Lee: TeamWorldState +            → SquadAIOrderIntentComponent
  (singleton managed)             (agnóstico de intención)       HeroAIBlackboard                → NavMeshAgent.SetDestination
@@ -111,7 +111,7 @@ hasNewSquadOrder:   bool
 Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 
 ### BattleWorldState.System — Data Service
-- Corre **todos los frames** durante `MatchState.InBattle`; no corre fuera de batalla
+- Corre **todos los frames** y publica la fase del match (`MatchContext.isActive` solo es true en `MatchState.InBattle`; `state` lleva la fase real)
 - **Agnóstico de intención**: nunca calcula objetivos, amenazas ni prioridades
 - Crea el singleton `TeamWorldState` en `OnCreate`
 - 4 passes por frame:
@@ -148,13 +148,13 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
   6. `bestObjectiveZone` → CaptureZone, sprint solo fuera de combate
   7. Fallback → Idle, squad FollowHero
 
-### HeroAITactician.System — Behavior: Team Coordination (stub)
-- MVP: lógica idéntica a Balanced + acceso a `TeamWorldState`.
-- Lee `TeamWorldState` para advantage check (mismo patrón que Balanced).
-- Extensiones futuras:
-  - Leer `allyHeroes[].currentDecision` para no ir al mismo objetivo que un aliado
-  - Flanquear: atacar desde ángulo opuesto al aliado más cercano al enemigo
-  - Posicionamiento por rol: frontline (no-ranged) se coloca entre enemigo y arqueros aliados
+### HeroAITactician — no implementado
+
+No existe `HeroAITacticianSystem` ni `TacticianBehaviorActive`. Solo hay un diseño de coordinación de equipo en `Docs/Design/ia-tactica/` y `tasks/tactical-ai-design-plan.md`.
+
+### HeroAIDashSystem
+
+Mueve a los héroes de IA durante una embestida (`HeroDashComponent`) con su `NavMeshAgent`; corre después de `SkillEffectSystem` y de `HeroAIExecutionSystem`. Ver `Docs/Mechanics/SkillsAndPerks.md`.
 
 ### HeroAIExecution.System
 - Lee `HeroAIDecision`, traduce a comandos:
@@ -170,9 +170,9 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 [SimulationSystemGroup]
     HeroInputSystem              (local only, sin cambios)
     EnemyDetectionSystem         (sin cambios — puebla DetectedEnemy buffers)
-    BattleWorldStateSystem       (NUEVO — data service, todos los frames, solo InBattle)
+    BattleWorldStateSystem       (data service, todos los frames; After EnemyDetection, HeroRespawn, CaptureZoneTrigger, SupplyInteraction, MatchController; Before SquadAI)
         ↓
-    HeroAIPerceptionSystem       (AI only, tick-gated 5 frames)
+    HeroAIPerceptionSystem       (AI only, reloj de decisión por héroe)
         ↓
     HeroAIRusherSystem    ┐
     HeroAIBalancedSystem  ├── solo 1 corre por entidad (IEnableableComponent tag check)
@@ -197,7 +197,7 @@ Ubicación: `Assets/Scripts/Hero/AI/Systems/`
 
 | Sistema | Cambio | Impacto |
 |---------|--------|---------|
-| `BattleSceneController.SpawnRemoteHero()` | Agregar `HeroAITag`, `RusherBehaviorActive`/`BalancedBehaviorActive`, `IsAttackerRole`, `HeroAIBlackboard`, `HeroAIDecision`, `HeroMoveIntent` al spawn | Mínimo — solo spawn |
+| `BattleSceneController.SpawnRemoteHeroes()` | Agregar `HeroAITag`, `RusherBehaviorActive`/`BalancedBehaviorActive`, `IsAttackerRole`, `HeroAIBlackboard`, `HeroAIDecision`, `HeroMoveIntent` al spawn | Mínimo — solo spawn |
 | `HeroSkillRequestSystem` | Bucle con `WithAll<HeroAITag>()` que pide el ataque básico desde `HeroAIDecision.shouldAttack` | Misma puerta que el jugador (Fase 2, L2-1) |
 | `OrderResolutionSystem` | Arbitra intents de jugador, reacción de combate e IA y conserva su `OrderSource` | Evita escritores competidores |
 | `SquadOrderSystem` | Consume únicamente la orden resuelta y respeta el bloqueo de retirada | Aplicación única |
@@ -235,7 +235,7 @@ Assets/Scripts/Hero/AI/
 |------|----------|--------|
 | 1 — Skeleton | Componentes + Perception + Rusher + Execution | ✅ Completo |
 | 2 — BattleWorldState | `TeamWorldState` + `BattleWorldState.System` + refactor Blackboard y Perception | ✅ Completo |
-| 3 — Tactician con squad roles | Frontline se posiciona entre enemigo y arqueros aliados | 🔲 Pendiente |
+| 3 — Tactician con squad roles | Frontline se posiciona entre enemigo y arqueros aliados; ningún archivo existe | 🔲 Pendiente |
 | 4 — Polish | Tunning de thresholds, arrival distance, behavior swap en runtime | 🔲 Pendiente |
 
 ---
@@ -252,5 +252,5 @@ Assets/Scripts/Hero/AI/
 | NavMeshAgent para movimiento | Ya está en remote heroes. Obstacle avoidance + pathfinding gratuito. |
 | 1 system por behavior | Open/Closed: agregar behavior = nuevo archivo, sin tocar existentes. |
 | `SquadAIOrderIntentComponent` para órdenes | Reutiliza el arbitraje común sin escribir directamente el estado aplicado ni competir con jugador/combate. |
-| Petición de la IA por la misma puerta | Una sola regla para jugador e IA; la IA aún solo pide el ataque básico. |
-| `BattleWorldState` corre todos los frames | Datos siempre frescos. `HeroAIPerception` (5 frames) es la capa cara — el servicio de datos es barato. |
+| Petición de la IA por la misma puerta | Una sola regla para jugador e IA; `HeroSkillRequestSystem` solo convierte `shouldAttack` en el ataque básico (la IA no pide Q/E/R/F ni perks) |
+| `BattleWorldState` corre todos los frames | Datos siempre frescos. `HeroAIPerception` (reloj de decisión) es la capa cara — el servicio de datos es barato. |

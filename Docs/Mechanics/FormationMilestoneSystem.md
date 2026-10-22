@@ -1,20 +1,12 @@
-# Formation Milestone System — Framework de hitos del ciclo de vida de unidades
+# Formation Milestone System — Hitos del ciclo de vida de unidades
 
-> **Actualización 2026-10-20.** `FormationStanceSystem` ya no existe. La postura la decide `UnitPostureSystem` por papel de
-> ranura y estado (formado / en marcha), con la tabla de posturas de cada `FormationDefinition`, y no lee los milestone
-> tags: ver [FormationPostures.md](./FormationPostures.md). Los tags `UnitStartedMovingTag` y `UnitArrivedAtSlotTag` siguen
-> existiendo para otros consumidores; las secciones de abajo que describen `FormationStanceSystem` quedan como historia.
+Revisado línea a línea contra el código el 2026-10-22.
+
+> `FormationStanceSystem` ya no existe. La postura la decide `UnitPostureSystem` por papel de ranura y estado (formado / en marcha), con la tabla de posturas de cada `FormationDefinition`, y **no lee los hitos**: ver [FormationPostures.md](./FormationPostures.md). Hoy ningún sistema consume `UnitStartedMovingTag` ni `UnitArrivedAtSlotTag`; solo los escribe `UnitFormationStateSystem` y los añade `SquadUnitSpawnBuilder` al crear la unidad. El framework sigue disponible como contrato para quien necesite reaccionar a esas transiciones.
 
 ## Propósito
 
-Permite enganchar comportamientos a momentos específicos del ciclo de vida del movimiento de
-unidades **sin modificar los sistemas core** (`UnitFormationStateSystem`,
-`UnitFollowFormationSystem`, `FormationSystem`).
-
-Sin este framework, cualquier sistema que quisiera reaccionar a "la unidad acaba de llegar a su
-slot" tendría que duplicar la lógica de detección de `UnitFormationStateSystem` o acoplarse
-directamente a él. Los milestone tags actúan como señales de un solo frame — un contrato público
-que cualquier sistema downstream puede consumir de forma independiente.
+Permite enganchar comportamientos a momentos específicos del ciclo de vida del movimiento de unidades **sin modificar los sistemas core** (`UnitFormationStateSystem`, `UnitFollowFormationSystem`, `FormationSystem`). Los tags actúan como señales de un solo frame.
 
 ---
 
@@ -22,158 +14,56 @@ que cualquier sistema downstream puede consumir de forma independiente.
 
 ### Tags de hito (IEnableableComponent)
 
-| Componente              | Tipo                               | Descripción                                                     |
-|-------------------------|------------------------------------|-----------------------------------------------------------------|
-| `UnitStartedMovingTag`  | `IComponentData, IEnableableComponent` | Pulso 1 frame: unidad transiciona Waiting/Formed → Moving   |
-| `UnitArrivedAtSlotTag`  | `IComponentData, IEnableableComponent` | Pulso 1 frame: unidad transiciona Moving → Formed           |
+| Componente              | Descripción                                                     |
+|-------------------------|-----------------------------------------------------------------|
+| `UnitStartedMovingTag`  | Pulso 1 frame: la unidad pasa de Waiting a Moving               |
+| `UnitArrivedAtSlotTag`  | Pulso 1 frame: la unidad pasa de Moving a Formed                |
 
 Archivo: `Assets/Scripts/Squads/UnitFormationMilestone.Component.cs`
 
-### Componente de postura
+### Postura (escrita por `UnitPostureSystem`, no por los hitos)
 
-| Componente                     | Tipo            | Campo    | Descripción                                           |
-|--------------------------------|-----------------|----------|-------------------------------------------------------|
-| `UnitFormationStanceComponent` | `IComponentData`| `stance` | Postura táctica actual (enum `UnitStance`)            |
-
-Archivo: `Assets/Scripts/Squads/UnitFormationStance.Component.cs`
-
-### Enum de postura
-
-| Valor            | Int | Descripción                                                        |
-|------------------|-----|--------------------------------------------------------------------|
-| `Normal`         | 0   | Postura estándar de movimiento y combate                           |
-| `BracedShields`  | 1   | Shield Wall: escudos bloqueados, bonus de masa, actúa como muro NavMesh |
-
----
-
-## Campos añadidos a componentes existentes
-
-### `UnitAnimationMovementComponent` (`Assets/Scripts/Squads/UnitAnimationMovement.Component.cs`)
-
-| Campo           | Tipo         | Descripción                                                                  |
-|-----------------|--------------|------------------------------------------------------------------------------|
-| `CurrentStance` | `UnitStance` | Espejo de `UnitFormationStanceComponent.stance`. Leído por `UnitAnimationAdapter`. |
-| `SlotRow`       | `int`        | Fila en la formación (`UnitGridSlotComponent.gridPosition.y`). 0 = fila delantera. Selecciona variante de animación. |
-
-Escritos por `FormationStanceSystem` al detectar un milestone tag activo.
+`UnitFormationStanceComponent.stance` (enum `UnitStance`: `Normal`, `BracedShields`, `ShieldFront`, `ShieldSide`, `ShieldUp`). `UnitPostureSystem` la copia, junto con fila y papel de ranura, a `UnitAnimationMovementComponent` (`CurrentStance`, `SlotRow`, `SlotRole`), y `UnitAnimatorController` escribe los parámetros `Stance` y `SlotRole` del Animator si existen.
 
 ---
 
 ## Sistemas implicados
 
-| Sistema                    | Grupo                   | UpdateAfter                   | Responsabilidad única                                                           |
-|----------------------------|-------------------------|-------------------------------|---------------------------------------------------------------------------------|
-| `UnitFormationStateSystem` | `SimulationSystemGroup` | `GridFormationUpdateSystem`   | Owner de transiciones de estado. Resetea tags al inicio, los activa en transición. |
-| `UnitPostureSystem`        | `SimulationSystemGroup` | `UnitFormationStateSystem`    | Postura por papel de ranura (tabla de la formación) → `UnitFormationStanceComponent` + propaga a `UnitAnimationMovementComponent`. Sustituye a `FormationStanceSystem`. |
-
-Archivos:
-- `Assets/Scripts/Squads/Systems/UnitFormationState.System.cs`
-- `Assets/Scripts/Squads/Systems/FormationStance.System.cs`
+| Sistema                    | UpdateAfter                   | Responsabilidad                                                                 |
+|----------------------------|-------------------------------|---------------------------------------------------------------------------------|
+| `UnitFormationStateSystem` | `GridFormationUpdateSystem`   | Dueño de las transiciones. Resetea los tags al inicio de cada unidad y habilita el que corresponde |
+| `UnitPostureSystem`        | `UnitFormationStateSystem`    | Postura por papel de ranura; no lee los tags |
 
 ---
 
-## Flujo de datos
+## Mecanismo de pulso
 
 ```
-GridFormationUpdateSystem
-        │
-        ▼
-UnitFormationStateSystem
-  ┌─────────────────────────────────────────────────────────────┐
-  │  Por cada unidad:                                           │
-  │  1. Deshabilita UnitStartedMovingTag                        │
-  │  2. Deshabilita UnitArrivedAtSlotTag                        │
-  │  3. Evalúa transición de estado:                            │
-  │     Waiting → Moving  → habilita UnitStartedMovingTag       │
-  │     Moving  → Formed  → habilita UnitArrivedAtSlotTag       │
-  │     Waiting → Formed  → sin tag (transición silenciosa)     │
-  └─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-FormationStanceSystem
-  ┌─────────────────────────────────────────────────────────────┐
-  │  Por cada squad → por cada unidad:                          │
-  │  • Si UnitStartedMovingTag enabled:                         │
-  │      stance = Normal                                        │
-  │  • Si UnitArrivedAtSlotTag enabled:                         │
-  │      stance = ShieldWall ? BracedShields : Normal           │
-  │  • Escribe UnitFormationStanceComponent                     │
-  │  • Propaga CurrentStance + SlotRow a                        │
-  │    UnitAnimationMovementComponent                           │
-  └─────────────────────────────────────────────────────────────┘
-        │
-        ▼
-UnitAnimationAdapter (MonoBehaviour, sync layer)
-  Lee UnitAnimationMovementComponent.CurrentStance + SlotRow
-  → Animator Controller (IsBraced, SlotRow params)
+UnitFormationStateSystem (por unidad, solo si tiene los tags):
+  1. Deshabilita UnitStartedMovingTag y UnitArrivedAtSlotTag
+  2. Ejecuta FormationArrival.Step
+     StartedMoving (Waiting → Moving) → habilita UnitStartedMovingTag
+     Arrived       (Moving  → Formed)  → habilita UnitArrivedAtSlotTag
+     Resettled     (Waiting → Formed)  → sin tag (transición silenciosa)
 ```
 
----
+`Arrived` se emite una sola vez por llegada: la unidad está a menos de `arrivalRadiusIn` y el ancla lleva `arrivalCalmTime` quieta (ver `TroopMovementPipeline.md` §7). Una vuelta a `Formed` desde `Waiting` sin haberse movido (`Resettled`) no emite hito.
 
-### Llegada con histéresis (lote 1 de movimiento, 2026-10-19)
-
-`UnitStartedMovingTag` y `UnitArrivedAtSlotTag` se activan a partir de los eventos de `FormationArrival.Step` (`StartedMoving` y `Arrived`). `Arrived` se emite una sola vez por llegada: cuando la unidad está a menos de `arrivalRadiusIn` y el ancla lleva `arrivalCalmTime` quieta. Una vuelta a `Formed` desde `Waiting` sin haberse movido (`Resettled`) no emite el hito.
-
-## Mecanismo de pulso (IEnableableComponent)
-
-Los tags son `IEnableableComponent`: la entidad **siempre tiene el componente** en memoria,
-pero su estado enabled/disabled cambia por frame.
-
-Funcionamiento:
-
-1. **Reset al inicio** — `UnitFormationStateSystem` deshabilita ambos tags para cada unidad
-   **antes** de evaluar su transición. Garantiza que ningún frame "acumula" señales anteriores.
-2. **Activación en transición** — Solo si la transición ocurre en ese frame, el tag
-   correspondiente se habilita.
-3. **Lectura downstream** — `FormationStanceSystem` corre después y comprueba con
-   `SystemAPI.IsComponentEnabled<T>()`. Si ninguno está habilitado, salta la unidad (`continue`).
-4. **Limpieza automática** — En el siguiente frame, el reset del paso 1 deshabilita el tag
-   antes de que cualquier otro sistema pueda leerlo dos veces.
-
-Resultado: cada tag representa exactamente **una transición**, visible por **un único frame**.
+Los tags son `IEnableableComponent`: la entidad siempre tiene el componente, pero su estado enabled cambia por frame. Cada tag representa exactamente una transición, visible durante un único frame. No se deshabilitan manualmente desde otros sistemas: lo hace el reset del paso 1.
 
 ---
 
-## Caso de uso: Shield Wall
+## Cómo añadir un comportamiento nuevo
 
-### Activación
-
-1. El jugador ordena `ShieldWall` (F4 / menú radial).
-2. `FormationSystem` recalcula los slots de la nueva formación.
-3. Las unidades Formed detectan que su slot se desplazó → transicionan a `Waiting` → `Moving`.
-4. `UnitFormationStateSystem` habilita `UnitStartedMovingTag` en la transición `Waiting → Moving`.
-5. `FormationStanceSystem` lee el tag → `stance = Normal` (unidades en movimiento, escudos abajo).
-6. Las unidades llegan a sus nuevos slots → transición `Moving → Formed`.
-7. `UnitFormationStateSystem` habilita `UnitArrivedAtSlotTag`.
-8. `FormationStanceSystem` lee el tag, comprueba `formation == FormationType.ShieldWall` →
-   `stance = BracedShields`.
-9. Propaga `CurrentStance = BracedShields` y `SlotRow = gridPosition.y` a
-   `UnitAnimationMovementComponent`.
-
-### Efectos en cadena
-
-| Sistema / Capa          | Efecto                                                                    |
-|-------------------------|---------------------------------------------------------------------------|
-| `UnitBodyblockSystem`   | Lee `UnitFormationStanceComponent`. `BracedShields` → `WallStrength = 60f` (ya configurado por formación-muro). |
-| `UnitAnimationAdapter`  | Lee `CurrentStance` → activa param `IsBraced` en Animator.               |
-| `UnitAnimationAdapter`  | Lee `SlotRow` → selecciona variante (escudo al frente en fila 0, escudo en alto en filas posteriores). |
-
----
-
-## Cómo añadir un nuevo comportamiento al framework
-
-1. **No modifiques** `UnitFormationStateSystem` ni `FormationStanceSystem` salvo que necesites
-   un nuevo tipo de transición (nuevo milestone tag).
-2. Crea un nuevo sistema `[UpdateAfter(typeof(UnitFormationStateSystem))]` dentro de
-   `SimulationSystemGroup`.
-3. En su `OnUpdate`, itera sobre las entidades relevantes y comprueba:
+1. No modifiques `UnitFormationStateSystem` salvo que necesites un nuevo tipo de transición (nuevo tag).
+2. Crea un sistema `[UpdateAfter(typeof(UnitFormationStateSystem))]` en `SimulationSystemGroup`.
+3. Comprueba los tags:
    ```csharp
    bool startedMoving = SystemAPI.IsComponentEnabled<UnitStartedMovingTag>(unit);
    bool arrived       = SystemAPI.IsComponentEnabled<UnitArrivedAtSlotTag>(unit);
    if (!startedMoving && !arrived) continue;
    ```
 4. Aplica tu lógica solo en los frames en que el tag está activo.
-5. **No deshabilites los tags manualmente** — `UnitFormationStateSystem` se encarga del reset.
 
 ---
 
@@ -181,8 +71,12 @@ Resultado: cada tag representa exactamente **una transición**, visible por **un
 
 | Caso                                           | Comportamiento                                                                                  |
 |------------------------------------------------|-------------------------------------------------------------------------------------------------|
-| Squad sin `UnitStartedMovingTag` (pre-existente) | `hasMilestoneTags = false` en `UnitFormationStateSystem` → tags nunca se habilitan; `FormationStanceSystem` hace `continue` por cada unidad → sin efecto. Stance queda en valor por defecto (`Normal = 0`). |
-| Transición `Waiting → Formed` (héroe regresa mientras unidad espera) | **Sin tag**: ningún milestone se emite. La unidad pasa a Formed silenciosamente. Si estaba en `BracedShields` por un arribo previo, **mantiene** la postura hasta el próximo `StartedMoving`. |
-| Formación cambia mientras unidad está en `BracedShields` | La unidad sale de Formed → Waiting → Moving → emite `UnitStartedMovingTag` → `FormationStanceSystem` fuerza `stance = Normal`. Al llegar al nuevo slot, `UnitArrivedAtSlotTag` re-evalúa según la nueva formación. |
-| Unidad sin `UnitFormationStanceComponent`      | `FormationStanceSystem` hace `continue` antes de leer el tag → sin efecto, sin error.          |
-| Unidad sin `UnitAnimationMovementComponent`    | `FormationStanceSystem` actualiza `UnitFormationStanceComponent` pero salta la propagación de animación. |
+| Unidad sin los tags (`hasMilestoneTags = false`) | `UnitFormationStateSystem` no los habilita nunca; la transición de estado funciona igual |
+| `Waiting → Formed` (vuelve al radio durante la espera) | Sin tag: ningún hito |
+| Unidad sin `UnitAnimationMovementComponent` | `UnitPostureSystem` no propaga la postura a la animación |
+
+---
+
+## Historia
+
+Hasta el 2026-10-19 un `FormationStanceSystem` leía estos tags para fijar `BracedShields` en Shield Wall al llegar y `Normal` al ponerse en marcha, y `UnitBodyblockSystem` leía la postura para elegir la fuerza de muro. Ambas dependencias desaparecieron: la postura sale de la tabla por papel y el muro de bodyblock se decide por `FormationType` (ver `BodyblockSystem.md`).
