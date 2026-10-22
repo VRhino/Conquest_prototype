@@ -203,7 +203,7 @@ SquadFSMState:
 
 ### Tipos y datos de formación
 
-`FormationType`: Line, Dispersed, Testudo, Wedge, Column, Square. Cada formación es un `FormationDefinition` con espaciado propio, ruido, plantillas por soldados vivos (o `Scatter`) y tabla de posturas; se hornea en `FormationLibraryBlob` (`FormationDataBlob`: tipo, layout, espaciado, ruido, plantillas, posturas). Ver `Docs/Mechanics/Formations.md` y `Docs/Mechanics/FormationPostures.md`.
+`FormationType`: Line, Dispersed, Testudo, Wedge, Column, Square, ShieldWall. Cada formación es un `FormationDefinition` con espaciado propio, ruido, plantillas por soldados vivos (o `Scatter`) y tabla de posturas; se hornea en `FormationLibraryBlob` (`FormationDataBlob`: tipo, layout, espaciado, ruido, plantillas, posturas). Ver `Docs/Mechanics/Formations.md` y `Docs/Mechanics/FormationPostures.md`.
 
 ### FormationPositionCalculator (utilidad central)
 

@@ -16,7 +16,7 @@ Actualizado: 2026-10-22. Inventario por **presencia de código** en `Assets/Scri
 
 ### 🛡️ Control de escuadras
 - ✅ Órdenes C (seguir), X (mantener posición), V (atacar); doble C alterna «ir deprisa».
-- ✅ Formaciones por F1–F4 y ciclo con doble X; seis tipos (Line, Dispersed, Testudo, Wedge, Column, Square) definidos por datos. Ver `Mechanics/Formations.md`.
+- ✅ Formaciones por F1–F4 y ciclo con doble X; siete tipos (Line, Dispersed, Testudo, Wedge, Column, Square, ShieldWall) definidos por datos. Ver `Mechanics/Formations.md`.
 - ✅ Posturas por papel de ranura y hitos de formación. Ver `Mechanics/FormationPostures.md`, `Mechanics/FormationMilestoneSystem.md`.
 - ✅ Marcadores de destino en mantener posición (`DestinationMarkerSystem`).
 - ✅ Cambio de escuadra en puntos de suministro. Ver `Mechanics/SquadSwap.md`.

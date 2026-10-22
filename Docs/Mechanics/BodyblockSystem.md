@@ -28,6 +28,8 @@ solaparse, este sistema.
 
 ## Reglas de repulsión
 
+> Modo por defecto (`bodyblockResolveOverlapOnly = true`): el contacto funciona como una cápsula. Solo se mueve la unidad en `Moving` (y no `Engaging`), deshaciendo el solapamiento `radio − distancia` (la mitad si ambas se mueven; todo si la otra está parada); nunca empuja más allá del contacto. `bodyblockRepulsionStrength` y `bodyblockWallStrength` solo cuentan con `bodyblockResolveOverlapOnly = false` (muelle heredado). Dos unidades `Engaging` se separan con `bodyblockEngagingRadius`.
+
 | Unidad A        | Unidad B (enemigo)  | Push aplicado                          |
 |-----------------|---------------------|----------------------------------------|
 | Moving          | Formed / Waiting    | Solo A (la muro B empuja al móvil A)   |
@@ -39,7 +41,7 @@ solaparse, este sistema.
 
 ## Formaciones-muro vs formaciones abiertas
 
-La fuerza de repulsión varía según si la unidad estática es parte de una formación-muro:
+En el modo muelle heredado, la fuerza de repulsión varía según si la unidad estática es parte de una formación-muro:
 
 | Formación       | Tipo       | Fuerza al bloquear (`WallStrength`) |
 |-----------------|------------|--------------------------------------|
@@ -47,6 +49,7 @@ La fuerza de repulsión varía según si la unidad estática es parte de una for
 | Testudo         | Muro       | 60f                                  |
 | Wedge           | Muro       | 60f                                  |
 | Square          | Muro       | 60f                                  |
+| ShieldWall      | Muro       | 60f                                  |
 | Dispersed       | Abierta    | 8f (RepulsionStrength normal)        |
 | Column          | Abierta    | 8f (RepulsionStrength normal)        |
 
@@ -94,6 +97,7 @@ Escala máxima: 900 unidades (450 por equipo). Brute-force O(n²) → inaceptabl
 | Campo                           | Valor por defecto | Descripción                                      |
 |---------------------------------|-------------------|--------------------------------------------------|
 | `bodyblockRadius`               | 0.8 m             | Radio de colisión y tamaño de celda              |
+| `bodyblockResolveOverlapOnly`   | true              | Contacto tipo cápsula en vez de muelle           |
 | `bodyblockRepulsionStrength`    | 8                 | Fuerza Moving vs Moving / Formed no-muro         |
 | `bodyblockWallStrength`         | 60                | Fuerza cuando una formación-muro bloquea         |
 | `bodyblockMaxPushSpeed`         | 18 m/s            | Velocidad máxima de corrección, independiente FPS|

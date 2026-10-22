@@ -184,7 +184,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ### UnitFollowFormationSystem
 - **Responsabilidad**: Velocidad de seguimiento y marcha (C9, `UnitMovementGearComponent`) + rotación Formed para unidades NavMesh
 - **Output**: `navAgent.speed` (sube y baja como mucho a la aceleración del agente; frena hasta `brakingFactor` veces más rápido; hacia un destino quieto, como mucho √(2·a·d) para llegar frenando), intención de rotación Formed: rumbo de la formación × rumbo de la ranura
-- **Orden**: corre DESPUÉS de `UnitNavMeshSystem` — su rotación Formed es el último write (prioridad más alta)
+- **Orden**: corre DESPUÉS de `UnitNavMeshSystem`. Su rotación Formed es una intención de prioridad `Formation` (5): la de `Combat` (10) la supera; `UnitRotationResolutionSystem` aplica la ganadora
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 - La velocidad base es la resuelta por la pila; aturdida (0) frena con su deceleración, sin rama propia de aturdimiento.
 

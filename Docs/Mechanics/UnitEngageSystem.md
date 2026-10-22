@@ -1,5 +1,7 @@
 # UnitNavMeshSystem — Combat Engage Logic
 
+> Revisado línea a línea contra `UnitNavMesh.System.cs` el 2026-10-22. El pseudocódigo resume la lógica; el anillo de contacto y el punto de frenado se describen en `Docs/Design/Movimiento_Formaciones.md` (§13, §12). Los valores de `MovementTuningConfig` (LFS) no se pudieron leer y los de la tabla vienen del documento anterior.
+
 ## Responsabilidad
 
 `UnitNavMeshSystem` es la **única autoridad** para todas las decisiones de navegación
@@ -24,10 +26,11 @@ UnitFormationStateSystem
 [UnitNavMeshSystem]               ← engagement + movimiento + rotación combate
     → agent.SetDestination(destination)
     → agent.updateRotation = false/true
-    → LocalTransform.Rotation (cuando en EngagementRange)
-UnitFollowFormationSystem         ← orientación Formed (last write = prioridad más alta)
-    → navAgent.transform.rotation (Formed state, slerp hacia hero/hold direction)
-UnitBodyblockSystem               ← repulsión física cross-team
+    → UnitRotationIntentComponent (prioridad Combat, cuando en combatFacingRange); UnitRotationResolutionSystem la aplica
+UnitFollowFormationSystem         ← orientación Formed (intención de prioridad Formation = 5)
+    → UnitRotationIntentComponent (Formation) solo si no hay una de mayor prioridad (Combat = 10)
+MeleeContactRingSystem             ← (antes de UnitNavMeshSystem) reserva el anillo de contacto
+UnitAvoidanceSystem / UnitBodyblockSystem ← evitación entre aliados / contacto físico entre enemigos
 UnitAttackSystem                  ← dispara si target en AABB del arma
 ```
 
@@ -61,14 +64,16 @@ if combatTarget exists AND CanPursueTarget(order, resolvedOrder.source, slot, ta
 
     // Destino
     if order != HoldPosition AND combatApproaching:
-        destination = targetPos + rotatedDir(±45°) × stopDist
+        destination = posición reservada en el anillo (MeleeContactSlotComponent);
+                      sin reserva: targetPos + rotatedDir(±45°, desfase estable por unidad) × stopDist;
+                      anillo lleno: espera más lejos, en su lado
     elif order != HoldPosition:
-        destination = unitPos                    // dentro del alcance: quieto
+        destination = punto donde termina de frenar (MeleeReach.BrakingStopPoint), no "aquí" yendo deprisa
 
     // Rotación
-    if dist <= EngagementRange (3.5u):
+    if dist <= combatFacingRange (3.5; a distancia: attackRange + 0.25):
         updateRotation = false
-        LocalTransform.Rotation = LookAt(target)    // AABB apunta al enemigo
+        UnitRotationIntent(Combat) = LookAt(target)  // AABB apunta al enemigo
     else:
         updateRotation = true                        // NavMesh rota durante marcha
 else:
@@ -96,18 +101,7 @@ Todas viven en `MovementTuningConfig` (`DefaultMovementTuning.asset`):
 El baker de escuadras avisa si un arma deja menos de 0,2 m de alcance útil más allá del cuerpo.
 
 ## Relación con UnitFollowFormationSystem
-
-`UnitNavMeshSystem` corre **antes** que `UnitFollowFormationSystem` (atributo
-`[UpdateBefore(UnitFollowFormationSystem)]`).
-
-Para unidades en estado `Formed`:
-- `UnitNavMeshSystem` setea `updateRotation = true` (no hay target o fuera de rango)
-- `UnitFollowFormationSystem` corre después y sobreescribe con `updateRotation = false`
-  + `navAgent.transform.rotation = Slerp(heroForward / holdRotation)` — **última escritura gana**
-
-Esto asegura que unidades en formación siempre miren en la dirección del escuadrón,
-no en la del enemigo — comportamiento correcto para disciplina táctica.
-
+Las dos escriben `UnitRotationIntentComponent` y gana la mayor prioridad (`RotationSource`: NavMesh 0, Formation 5, Combat 10); `UnitRotationResolutionSystem` la aplica con tope `combatTurnRate`. Una unidad `Formed` sin objetivo mira en la dirección del escuadrón; en cuanto tiene objetivo a `combatFacingRange`, la intención de combate prevalece.
 ## HoldPosition
 
 Con `SquadOrderType.HoldPosition`:
