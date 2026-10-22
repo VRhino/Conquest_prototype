@@ -2,6 +2,8 @@
 
 Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
 
+> **Revisión 2026-10-22.** OPEN-001, OPEN-002, OPEN-005 y OPEN-006 se comprobaron contra el código y siguen abiertos (`EntityVisualSync` aún consume `triggerAttack`; `HeroVisualInstantiationSystem` aún resuelve el `NavMeshAgent`; sigue sin haber red). Desde entonces el pulso de ataque lo escribe `SkillExecutionSystem` (único escritor de `triggerAttack`, `Docs/Mechanics/SkillsAndPerks.md`) y el movimiento de formaciones cambió (`TroopMovementPipeline.md`). OPEN-003 y OPEN-004 no se reverificaron. Las cifras de pruebas de abajo son de la fase 15 y no se han reejecutado.
+
 Este documento es un registro de estado, no una lista histórica de síntomas. Las reparaciones detalladas viven en `Docs/Arquitectura/`; los problemas cerrados no deben seguir tratándose como comportamiento vigente.
 
 ## Resumen
