@@ -1,5 +1,7 @@
 # Arquitectura de ScriptableObjects: ItemEffects, StatsGenerator y DialogEffects
 
+> Revisado contra el código el 2026-10-22. Los nombres de tipos y rutas se corrigieron (`ItemDataSO`, `EnhancedItemDatabase`, carga desde `Resources/Items/ItemSODatabase`). Los ejemplos de código de las secciones «Ejemplos Prácticos», «Guía de Uso» y «Troubleshooting» son ilustrativos: usan sistemas que no existen en el proyecto (`TeleportSystem`, `BuffSystem`, `ShopSystem`) y no se han compilado. Además de los efectos de diálogo descritos aquí existen `OpenStoreDialogueEffect` y `OpenFullScreenMenuDialogueEffect`, y el inventario ya no pasa solo por la fachada `InventoryManager`: los servicios de `Assets/Scripts/Inventory/Services/` (`InventoryEventService`, `StoreTransactionService`, `ItemInstanceService`, …) hacen las transacciones.
+
 ## 📋 Índice
 1. [Introducción](#introducción)
 2. [Arquitectura General](#arquitectura-general)
@@ -69,8 +71,8 @@ Maneja efectos aplicables por ítems consumibles (pociones, pergaminos, etc.)
 ```
 Assets/Scripts/Data/Items/
 ├── ItemEffect.cs (Clase base abstracta)
-├── ItemDatabase.cs
-├── Item.Data.cs
+├── EnhancedItemDatabase.cs
+├── ItemDataSO.cs
 └── StatRange.cs
 
 Assets/Scripts/Inventory/
@@ -243,11 +245,11 @@ public static class ItemEffectSystem
 }
 ```
 
-### 🔗 Integración con ItemData
+### 🔗 Integración con ItemDataSO
 
 ```csharp
 [Serializable]
-public class ItemData
+public class ItemDataSO
 {
     // Para equipment
     public ItemStatGenerator statGenerator; // null para consumibles
@@ -764,7 +766,7 @@ public class DialogueEffectDatabase : ScriptableObject
 
 ```mermaid
 graph TB
-    A[ItemData ScriptableObject] --> B{Tipo de Item}
+    A[ItemDataSO ScriptableObject] --> B{Tipo de Item}
     B -->|Equipment| C[ItemStatGenerator]
     B -->|Consumible| D[ItemEffect[]]
     C --> E[GenerateStats]
@@ -783,7 +785,7 @@ graph TB
 [Serializable]
 public class InventoryItem
 {
-    [SerializeField] public string itemId;      // Referencia al ItemData
+    [SerializeField] public string itemId;      // Referencia al ItemDataSO
     [SerializeField] public int quantity;       // Cantidad (stackeables)
     [SerializeField] public string instanceId;  // ID único (equipment)
     
@@ -838,7 +840,7 @@ public static class InventoryManager
     public static bool AddItem(string itemId, int quantity)
     {
         // Crear instancia si es equipment
-        if (ItemDatabase.Instance.GetItemDataById(itemId)?.IsEquipment == true)
+        if (EnhancedItemDatabase.Instance.GetItemDataSOById(itemId)?.IsEquipment == true)
         {
             var item = ItemInstanceService.CreateItem(itemId, quantity);
             return AddExistingItem(item);
@@ -878,15 +880,15 @@ sequenceDiagram
     participant UI as UI/Player
     participant IM as InventoryManager
     participant IIS as ItemInstanceService
-    participant DB as ItemDatabase
+    participant DB as EnhancedItemDatabase
     participant SG as StatGenerator
     
     UI->>IM: AddItem("sword_basic", 1)
-    IM->>DB: GetItemDataById("sword_basic")
-    DB->>IM: ItemData (IsEquipment=true)
+    IM->>DB: GetItemDataSOById("sword_basic")
+    DB->>IM: ItemDataSO (IsEquipment=true)
     IM->>IIS: CreateItem("sword_basic", 1)
-    IIS->>DB: GetItemDataById("sword_basic")
-    DB->>IIS: ItemData with StatGenerator
+    IIS->>DB: GetItemDataSOById("sword_basic")
+    DB->>IIS: ItemDataSO with StatGenerator
     IIS->>SG: GenerateStats()
     SG->>IIS: Dictionary<string,float>
     IIS->>IM: InventoryItem with stats
@@ -923,7 +925,7 @@ sequenceDiagram
 **Uso**: Diferentes algoritmos para efectos y generación de stats
 ```csharp
 // Contexto
-ItemData itemData;
+ItemDataSO itemData;
 
 // Estrategia para efectos
 ItemEffect[] strategies = itemData.effects;
@@ -966,7 +968,7 @@ public static class ItemInstanceService
 {
     public static InventoryItem CreateItem(string itemId, int quantity)
     {
-        var itemData = ItemDatabase.Instance.GetItemDataById(itemId);
+        var itemData = EnhancedItemDatabase.Instance.GetItemDataSOById(itemId);
         
         var item = new InventoryItem
         {
@@ -1007,15 +1009,15 @@ public static class InventoryManager
 ### 5. 🔍 Singleton Pattern
 **Uso**: Bases de datos centralizadas
 ```csharp
-public class ItemDatabase : ScriptableObject
+public class EnhancedItemDatabase : ScriptableObject
 {
-    private static ItemDatabase _instance;
-    public static ItemDatabase Instance
+    private static EnhancedItemDatabase _instance;
+    public static EnhancedItemDatabase Instance
     {
         get
         {
             if (_instance == null)
-                _instance = Resources.Load<ItemDatabase>("Data/Items/ItemDatabase");
+                _instance = Resources.Load<EnhancedItemDatabase>("Items/ItemSODatabase");
             return _instance;
         }
     }
@@ -1096,7 +1098,7 @@ public class HealEffect : ItemEffect
 #### Paso 2: Crear el Asset
 1. Click derecho en Project → `Create → Items → Effects → Heal`
 2. Configurar valores en el Inspector
-3. Asignar a un ItemData en el array `effects`
+3. Asignar a un ItemDataSO en el array `effects`
 
 #### Paso 3: Probar
 ```csharp
@@ -1135,9 +1137,9 @@ public class MagicWeaponStatGenerator : ItemStatGenerator
 }
 ```
 
-#### Paso 2: Configurar en ItemData
+#### Paso 2: Configurar en ItemDataSO
 1. Crear el asset del generator
-2. Asignar al campo `statGenerator` del ItemData
+2. Asignar al campo `statGenerator` del ItemDataSO
 3. El sistema generará stats automáticamente al crear instancias
 
 ### 🛠️ Crear un Nuevo DialogueEffect
@@ -1314,7 +1316,7 @@ public class DynamicShopDialogueEffect : DialogueEffect
 **Objetivo**: Combinar múltiples efectos para crafting
 
 ```csharp
-// ItemData para "Crafting Recipe"
+// ItemDataSO para "Crafting Recipe"
 {
     "id": "sword_recipe",
     "name": "Iron Sword Recipe",  
@@ -1415,10 +1417,10 @@ public override bool CanExecute(HeroData hero)
 ```
 
 #### 3. "Stats not generating"
-**Causa**: Generator no asignado en ItemData
+**Causa**: Generator no asignado en ItemDataSO
 **Solución**:
 ```csharp
-// Verificar en ItemData
+// Verificar en ItemDataSO
 if (itemData.statGenerator == null)
 {
     Debug.LogError($"No stat generator assigned to {itemData.id}");
@@ -1489,7 +1491,7 @@ public class EffectsDebugWindow : EditorWindow
 
     private void ValidateItemDatabase()
     {
-        var database = ItemDatabase.Instance;
+        var database = EnhancedItemDatabase.Instance;
         database?.ValidateDatabase();
     }
     
