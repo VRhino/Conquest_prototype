@@ -1,6 +1,6 @@
 # Guía: Cómo Funciona el Spawn del Héroe
 
-> Actualizada el 2026-09-15. El spawn publica una pose revisionada; `LocalHeroCharacterMotor`, no `EntityVisualSync`, ejecuta el teleport físico del héroe local.
+> Actualizada el 2026-10-22 (revisada contra `HeroSpawn.System.cs`, `HeroEntity.Authoring.cs` y los authorings de clase). El spawn publica una pose revisionada; `LocalHeroCharacterMotor`, no `EntityVisualSync`, ejecuta el teleport físico del héroe local.
 
 ## Resumen del Flujo
 
@@ -72,8 +72,9 @@ Este prefab tiene dos Authorings:
 | `HeroMoveIntent` | Intención de movimiento producida por ECS |
 | `HeroMotorStateComponent` | Velocidad y contactos físicos confirmados |
 
-#### `HeroClassAuthoring` (segundo script)
-- Referencia a un `classDefinition` ScriptableObject.
+#### Authorings de clase
+- `HeroClassReferenceAuthoring` (`Assets/Scripts/Hero/HeroClassReference.Authoring.cs`) y `HeroClassDefinitionAuthoring` (`HeroClassDefinition.Authoring.cs`) no se llaman `HeroClassAuthoring`; no hay ningún tipo con ese nombre.
+- La clase efectiva no sale de la clase horneada en `Assets/Prefabs/Hero/HeroClassDefinition.prefab` (referencia vacía): `HeroInitializationSystem` la toma del guardado (héroe local) o de `HeroClassComponent` (remotos e IA). Los atributos, habilidades y perks los siembra ese sistema; los derivados los escribe `StatResolveSystem`.
 
 ### 2.2 Referencia al Prefab
 
