@@ -2,7 +2,8 @@ using Unity.Entities;
 
 /// <summary>
 /// Turns the local player's input and the AI's decision into one <see cref="SkillRequestComponent"/> per hero (L2-1):
-/// both go through the same gate afterwards. Attack button → basic attack; Q, E, R → class abilities; F → ultimate. A
+/// both go through the same gate afterwards. Attack button → basic attack; Q, E, R → class abilities; F → ultimate;
+/// 1, 2 → active perks. A
 /// held key keeps requesting, and the gate turns it down while the hero is busy or the skill is cooling down.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -39,6 +40,8 @@ public partial class HeroSkillRequestSystem : SystemBase
         if (input.UseSkill3) { slot = SkillSlot.R; return true; }
         if (input.UseSkill2) { slot = SkillSlot.E; return true; }
         if (input.UseSkill1) { slot = SkillSlot.Q; return true; }
+        if (input.UsePerk1) { slot = SkillSlot.ActivePerk1; return true; }
+        if (input.UsePerk2) { slot = SkillSlot.ActivePerk2; return true; }
         if (input.IsAttackPressed) { slot = SkillSlot.Basic; return true; }
         slot = default;
         return false;
@@ -52,6 +55,8 @@ public partial class HeroSkillRequestSystem : SystemBase
         if (input.UseSkill2) held |= SkillRequestComponent.Bit(SkillSlot.E);
         if (input.UseSkill3) held |= SkillRequestComponent.Bit(SkillSlot.R);
         if (input.UseUltimate) held |= SkillRequestComponent.Bit(SkillSlot.Ultimate);
+        if (input.UsePerk1) held |= SkillRequestComponent.Bit(SkillSlot.ActivePerk1);
+        if (input.UsePerk2) held |= SkillRequestComponent.Bit(SkillSlot.ActivePerk2);
         return held;
     }
 

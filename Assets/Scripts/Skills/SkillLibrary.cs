@@ -18,6 +18,15 @@ public sealed class SkillLibrary : IDisposable
         return blob;
     }
 
+    readonly Dictionary<(HeroPerk, SkillSlot), BlobAssetReference<SkillBlob>> _perks = new();
+
+    public BlobAssetReference<SkillBlob> GetPerk(HeroPerk perk, SkillSlot slot)
+    {
+        if (!_perks.TryGetValue((perk, slot), out var blob))
+            _perks[(perk, slot)] = blob = SkillBlobBuilder.BuildPerk(perk, slot);
+        return blob;
+    }
+
     public BlobAssetReference<SkillBlob> GetBasicAttack(in HeroCombatComponent combat, float staminaCost, float cooldown,
         int hit, int hits, float chainWindow)
     {
@@ -32,6 +41,8 @@ public sealed class SkillLibrary : IDisposable
     {
         foreach (var blob in _abilities.Values) blob.Dispose();
         foreach (var blob in _basics.Values) blob.Dispose();
+        foreach (var blob in _perks.Values) blob.Dispose();
+        _perks.Clear();
         _abilities.Clear();
         _basics.Clear();
     }

@@ -32,6 +32,26 @@ public class PerkTests
         foreach (var p in available) Object.DestroyImmediate(p);
     }
 
+    [Test]
+    public void AnActivePerkIsAShortYieldSkillWithItsCooldownAndModifiers()
+    {
+        var perk = Perk(2, false,
+            new PerkEffect { target = PerkTarget.AlliesInRadius, radius = 8f, stat = StatId.SlashDefense, op = ModifierOp.Ratio, value = 0.15f, duration = 6f },
+            new PerkEffect { target = PerkTarget.HitTarget, stat = StatId.MoveSpeed, value = -1f });
+        perk.cooldown = 30f;
+        using var blob = SkillBlobBuilder.BuildPerk(perk, SkillSlot.ActivePerk1);
+        Object.DestroyImmediate(perk);
+        ref var skill = ref blob.Value;
+        Assert.That(skill.refresh, Is.EqualTo(SkillRefresh.Yield), "It does not cut the current attack.");
+        Assert.That(skill.cooldown, Is.EqualTo(30f));
+        Assert.That(skill.cooldownGroup, Is.EqualTo(SkillBlobBuilder.DefaultGroup(SkillSlot.ActivePerk1)));
+        Assert.That(skill.staminaCost, Is.EqualTo(0f));
+        Assert.That(skill.events.Length, Is.EqualTo(1), "A hit-target effect needs a hit: skipped.");
+        Assert.That(skill.events[0].type, Is.EqualTo(SkillEventType.ApplyModifier));
+        Assert.That(skill.events[0].target, Is.EqualTo(SkillTarget.AlliesInRadius));
+        Assert.That(skill.events[0].duration, Is.EqualTo(6f));
+    }
+
     World _world;
     EntityManager _em;
 

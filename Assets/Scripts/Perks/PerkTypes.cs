@@ -29,6 +29,8 @@ public enum PerkTarget : byte
     AlliesInRadius,
     /// <summary>The entity the hit landed on (<see cref="PerkTrigger.OnHit"/> only).</summary>
     HitTarget,
+    /// <summary>Enemies within <see cref="PerkEffect.radius"/> of the hero (active perks).</summary>
+    EnemiesInRadius,
 }
 
 /// <summary>One effect of a perk: a modifier on the stack, given when the trigger and the condition say so.</summary>

@@ -73,7 +73,10 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   `PerkAuraSystem` (refresca un modificador corto mientras se cumple) y `PerkOnHitSystem`. Datos: Línea Inquebrantable,
   Cobertura de Hostigamiento y Estocada Desestabilizadora. Sin datos: Muro de Púas y Zona de Exclusión (piden daño por
   contacto y zonas persistentes). Nadie elige perks todavía (no hay UI): el loadout llega vacío y nada cambia.
-- [ ] **11. Perks activos.** 2 huecos con tecla propia, por la puerta y con su enfriamiento.
+- [x] **11. Perks activos.** 2 huecos con tecla propia, por la puerta y con su enfriamiento.
+  Hecho: teclas 1 y 2 (elegidas por defecto; libres en el juego). Cada perk activo es una habilidad corta "yield"
+  (aparca el ataque en curso en lugar de cortarlo) con el enfriamiento del perk. Datos: Orden de Resistencia, Carga
+  Coordinada y Flecha Marcadora. Sus `perkName` dicen "(Passive)" aunque son activos: dato a corregir por el usuario.
 - [ ] **12. Documentación.** Mecánica de habilidades y perks, `SystemResponsibilities.md`, Por_Abordar y lecciones.
 
 ## Verificación

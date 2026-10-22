@@ -78,6 +78,45 @@ public static class SkillBlobBuilder
         return blob;
     }
 
+    /// <summary>Length of the single phase of an active perk: its effects happen at the start.</summary>
+    public const float PerkCastDuration = 0.1f;
+
+    /// <summary>
+    /// An active perk (L7-4) as a skill: one short phase that applies each effect as a timed modifier, with the perk's
+    /// cooldown. It is <see cref="SkillRefresh.Yield"/>: it parks the current skill instead of cutting it.
+    /// </summary>
+    public static BlobAssetReference<SkillBlob> BuildPerk(HeroPerk perk, SkillSlot slot)
+    {
+        var phases = new[] { new SkillPhase { duration = PerkCastDuration, interruptible = true, final = true } };
+        var events = new System.Collections.Generic.List<SkillEvent>();
+        if (perk.effects != null)
+            foreach (var e in perk.effects)
+            {
+                if (!TryTarget(e.target, out var target)) continue;
+                events.Add(new SkillEvent
+                {
+                    type = SkillEventType.ApplyModifier, target = target, radius = e.radius,
+                    stat = e.stat, op = e.op, value = e.value, duration = e.duration > 0f ? e.duration : perk.duration,
+                });
+            }
+        return Create(PerkId(perk), 0f, perk.cooldown, DefaultGroup(slot), SkillRefresh.Yield, phases, events.ToArray());
+    }
+
+    /// <summary>Id of a perk as a skill: its perk id in a range of its own.</summary>
+    public static int PerkId(HeroPerk perk) => 0x08000000 | perk.perkID;
+
+    static bool TryTarget(PerkTarget target, out SkillTarget skillTarget)
+    {
+        switch (target)
+        {
+            case PerkTarget.Self: skillTarget = SkillTarget.Self; return true;
+            case PerkTarget.OwnSquad: skillTarget = SkillTarget.OwnSquad; return true;
+            case PerkTarget.AlliesInRadius: skillTarget = SkillTarget.AlliesInRadius; return true;
+            case PerkTarget.EnemiesInRadius: skillTarget = SkillTarget.EnemiesInRadius; return true;
+            default: skillTarget = default; return false; // A hit target needs a hit.
+        }
+    }
+
     static SkillPhase[] DefaultPhases() => new[]
     {
         new SkillPhase { duration = DefaultWindup, interruptible = true },

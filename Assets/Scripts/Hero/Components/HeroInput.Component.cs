@@ -26,6 +26,9 @@ public struct HeroInputComponent : IComponentData
     public bool UseSkill3;
     /// <summary>True while F key is held (the ultimate, as in the GDD).</summary>
     public bool UseUltimate;
+    /// <summary>True while 1 / 2 are held: the two active perks of the loadout (L7-4).</summary>
+    public bool UsePerk1;
+    public bool UsePerk2;
 
     /// <summary>True when walk toggle key is pressed (for animation system).</summary>
     public bool IsWalkTogglePressed;

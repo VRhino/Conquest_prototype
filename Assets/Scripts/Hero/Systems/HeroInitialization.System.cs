@@ -148,11 +148,19 @@ public partial class HeroInitializationSystem : SystemBase
 
     /// <summary>
     /// The perks of the hero's loadout (L7-4): each effect of the chosen passive perks goes to its
-    /// <see cref="HeroPerkElement"/> buffer, applied by the perk systems. Remote and AI heroes have no loadout perks.
+    /// <see cref="HeroPerkElement"/> buffer, applied by the perk systems; the two active ones become skills on keys 1 and 2.
+    /// Remote and AI heroes have no loadout perks.
     /// </summary>
     void SeedPerks(Entity entity, HeroClassDefinition classData, System.Collections.Generic.IEnumerable<int> chosenIds)
     {
         PerkLoadout.Select(classData.validClassPerks, chosenIds, _passives, _actives);
+        if (EntityManager.HasBuffer<HeroSkillElement>(entity))
+            for (int i = 0; i < _actives.Count; i++)
+            {
+                var slot = i == 0 ? SkillSlot.ActivePerk1 : SkillSlot.ActivePerk2;
+                var blob = _skills.GetPerk(_actives[i], slot);
+                EntityManager.GetBuffer<HeroSkillElement>(entity).Add(new HeroSkillElement { slot = slot, skillId = blob.Value.id, skill = blob });
+            }
         if (_passives.Count == 0) return;
         var perks = EntityManager.HasBuffer<HeroPerkElement>(entity)
             ? EntityManager.GetBuffer<HeroPerkElement>(entity)
