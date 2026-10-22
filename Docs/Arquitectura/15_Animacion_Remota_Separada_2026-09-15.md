@@ -1,5 +1,7 @@
 # Animación remota separada
 
+> **Registro histórico (2026-09-15).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Fecha: 2026-09-15. Continuación de la separación de responsabilidades iniciada con el motor local del héroe.
 
 ## Problema

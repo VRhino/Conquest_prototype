@@ -1,5 +1,7 @@
 # Animación y locomoción: reparación y validación
 
+> **Registro histórico (2026-10-08).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Fecha: 2026-10-08. Editor conectado: Unity 6000.5.8f1.
 
 ## Resultado

@@ -1,5 +1,7 @@
 # Motor local del héroe
 
+> **Registro histórico (2026-09-15).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Fecha: 2026-09-15. Undécima fase del pipeline de control y movimiento. Trabajo posterior al commit `e4eede48`.
 
 ## Decisión

@@ -1,5 +1,7 @@
 # Revisión de la estructura de Assets (2026-10-15)
 
+> **Registro histórico (2026-10-15).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 ## Estado de las propuestas
 
 - **R-Assets-01 — Inventariar carpetas, assemblies, escenas y referencias:** hecha. Solo lectura.

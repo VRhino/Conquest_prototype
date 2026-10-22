@@ -1,5 +1,7 @@
 # Limpieza de estado muerto en movimiento
 
+> **Registro histórico (2026-09-15).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Fecha: 2026-09-15. Décima fase del pipeline de control y movimiento. Trabajo posterior al commit `7ec35082`.
 
 ## Hallazgo

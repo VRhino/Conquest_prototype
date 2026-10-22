@@ -1,5 +1,7 @@
 # Pruebas integradas de batalla
 
+> **Registro histórico (2026-09-26).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Fecha: 2026-09-26. Editor: Unity 6000.5.8f1.
 
 Resultado verificado en el editor conectado: **16/16 tests PlayMode aprobados**,

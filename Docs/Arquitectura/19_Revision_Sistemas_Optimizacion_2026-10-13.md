@@ -1,5 +1,7 @@
 # Revisión de sistemas principales e interacciones
 
+> **Registro histórico (2026-10-13).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 - [x] **R01 — Hecha:** cerrar la IA al terminar la partida y permitir otra partida en el mismo World.
 - [x] **R02 — Hecha:** impedir ataques de unidades muertas y limpiar hitboxes al finalizar.
 - [x] **R03 — Hecha:** localizar al tirador mediante registro, sin buscar todos los visuales por proyectil.

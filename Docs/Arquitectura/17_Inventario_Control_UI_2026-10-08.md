@@ -1,5 +1,7 @@
 # Inventario: control, interfaz y simplificación
 
+> **Registro histórico (2026-10-08).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Revisión inicial: 2026-10-08, sobre `53fa5804`. Implementación y validación: 2026-10-09.
 
 Los apartados de diagnóstico describen el estado previo a la refactorización. El estado entregado y la cobertura están en «Cambios aplicados y validación», al final del documento.

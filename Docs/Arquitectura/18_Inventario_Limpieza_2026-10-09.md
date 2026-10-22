@@ -1,5 +1,7 @@
 # Inventario de limpieza · 9 de octubre de 2026
 
+> **Registro histórico (2026-10-09).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 **Pendiente de tu selección. No se ha eliminado ni modificado código, escenas, assets ni configuración en esta auditoría.** Los cambios de inventario previos se conservan.
 
 Hay **32 grupos**, con **3.744 archivos candidatos** y aproximadamente **1.556,82 MiB** en el checkout. El total incluye propuestas opcionales y condicionadas: **no es una propuesta de borrar todo**. Los tamaños excluyen `.meta`; eliminar assets del checkout no libera automáticamente sus objetos históricos de Git/LFS. Las builds y caches locales se distinguen de los archivos del proyecto.

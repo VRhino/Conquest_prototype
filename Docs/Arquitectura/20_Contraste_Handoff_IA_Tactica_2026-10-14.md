@@ -1,5 +1,7 @@
 # Contraste del handoff de IA táctica con Conquest Tactics
 
+> **Registro histórico (2026-10-14).** Describe el estado y las decisiones de esa fecha; no se reescribe. Para el estado vigente, ver [Arquitectura actual](1_Arquitectura_Actual.md) y, para movimiento, [TroopMovementPipeline](../TroopMovementPipeline.md). Los nombres de sistemas o valores citados aquí pueden haber cambiado.
+
 Fecha: 2026-10-14. Análisis estático del árbol de trabajo actual, incluyendo cambios locales. No se modificó código ni se ejecutaron nuevas pruebas de Unity.
 
 Fuente de diseño: `C:/Users/VRINO/Documents/Codex/2026-10-14/referenced-chatgpt-conversation-this-is-an/outputs/bronze-age-conquest-ia-handoff.html`.
