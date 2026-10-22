@@ -35,6 +35,9 @@ public struct SquadDataComponent : IComponentData
     public int ammoCapacity;
     public FixedString32Bytes projectilePoolKey;
     public ProjectileTrajectory projectileTrajectory;
+    /// <summary>Projectiles per shot and the fan they open into (L2-7).</summary>
+    public int projectilesPerShot;
+    public float fanAngleDegrees;
 
     /// <summary>Progression curves sampled per level.</summary>
     public BlobAssetReference<SquadProgressionCurveBlob> curves;

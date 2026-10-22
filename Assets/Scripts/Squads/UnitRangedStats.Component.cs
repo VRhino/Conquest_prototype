@@ -18,4 +18,7 @@ public struct UnitRangedStatsComponent : IComponentData
 
     /// <summary>How the projectile travels: Arc (archers) or Straight (crossbowmen).</summary>
     public ProjectileTrajectory trajectory;
+    /// <summary>Projectiles per shot (at least 1) and the total angle of their fan in degrees (L2-7).</summary>
+    public int projectilesPerShot;
+    public float fanAngleDegrees;
 }

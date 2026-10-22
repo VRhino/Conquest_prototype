@@ -1,3 +1,4 @@
+using ConquestTactics.Animation;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -37,6 +38,9 @@ public partial class RangedAttackSystem : SystemBase
         var teamLookup       = GetComponentLookup<TeamComponent>(true);
         var isDeadLookup     = GetComponentLookup<IsDeadComponent>(true);
         var critLookup       = GetComponentLookup<CritStatsComponent>(true);
+        var movementLookup   = GetComponentLookup<UnitAnimationMovementComponent>(true);
+        var statsLookup      = GetComponentLookup<UnitStatsComponent>(true);
+        var combatTuning     = CombatTuning.Default;
         float criticalFloor  = CombatTuning.Default.criticalExtraFloor;
 
 
@@ -140,11 +144,12 @@ public partial class RangedAttackSystem : SystemBase
             bool  crit       = CombatRandom.RollCritical(tick, entity, critChance);
             float multiplier = crit ? critMultiplier : 1f;
 
-            // Compute direction with accuracy scatter.
+            // Compute direction with accuracy scatter, wider while the shooter moves (L2-7).
             // accuracy is authored as 1..100 (100 = perfect precision).
-            float normalizedAccuracy = math.saturate(rangedStats.ValueRO.accuracy / 100f);
+            float speedFraction = movementLookup.HasComponent(entity) && statsLookup.HasComponent(entity) && statsLookup[entity].speed > 0f
+                ? movementLookup[entity].CurrentSpeed / statsLookup[entity].speed : 0f;
             float3 baseDir = math.normalizesafe(toTarget);
-            float  spread  = (1f - normalizedAccuracy) * 0.15f;
+            float  spread  = LauncherScheme.Spread(rangedStats.ValueRO.accuracy, speedFraction, combatTuning);
             float3 dir     = baseDir;
             if (spread > 0f)
             {
@@ -162,21 +167,26 @@ public partial class RangedAttackSystem : SystemBase
             if (!SystemAPI.HasComponent<DamageProfileComponent>(weapon.ValueRO.damageProfile))
                 continue;
 
-            // Emit projectile spawn request
-            Entity req = ecb.CreateEntity();
-            ecb.AddComponent(req, new ProjectileSpawnRequest
+            // Emit one projectile spawn request per projectile of the shot, fanned out (L2-7).
+            int count = math.max(1, rangedStats.ValueRO.projectilesPerShot);
+            var snapshot = SystemAPI.GetComponent<DamageProfileComponent>(weapon.ValueRO.damageProfile);
+            for (int p = 0; p < count; p++)
             {
-                shooter         = entity,
-                target          = target,
-                spawnPosition   = myPos,
-                attackDirection = dir,
-                damageProfile   = weapon.ValueRO.damageProfile,
-                damageProfileSnapshot = SystemAPI.GetComponent<DamageProfileComponent>(weapon.ValueRO.damageProfile),
-                sourceTeam      = sourceTeam,
-                multiplier      = multiplier,
-                poolKey         = rangedStats.ValueRO.projectilePoolKey,
-                trajectory      = rangedStats.ValueRO.trajectory
-            });
+                Entity req = ecb.CreateEntity();
+                ecb.AddComponent(req, new ProjectileSpawnRequest
+                {
+                    shooter         = entity,
+                    target          = target,
+                    spawnPosition   = myPos,
+                    attackDirection = LauncherScheme.FanDirection(dir, p, count, rangedStats.ValueRO.fanAngleDegrees),
+                    damageProfile   = weapon.ValueRO.damageProfile,
+                    damageProfileSnapshot = snapshot,
+                    sourceTeam      = sourceTeam,
+                    multiplier      = multiplier,
+                    poolKey         = rangedStats.ValueRO.projectilePoolKey,
+                    trajectory      = rangedStats.ValueRO.trajectory
+                });
+            }
 
             state.currentAmmo--;
             state.shotTimer = rangedStats.ValueRO.fireRate > 0f

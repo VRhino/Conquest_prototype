@@ -86,6 +86,8 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                     ? default
                     : new FixedString32Bytes(poolKey),
                 projectileTrajectory = ranged?.projectileTrajectory ?? default,
+                projectilesPerShot = ranged != null ? Unity.Mathematics.math.max(1, ranged.projectilesPerShot) : 1,
+                fanAngleDegrees = ranged?.fanAngleDegrees ?? 0f,
                 curves = curves,
                 attackRange             = melee?.attackRange             ?? 2f,
                 attackInterval          = melee?.attackInterval          ?? 1.5f,

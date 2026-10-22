@@ -139,7 +139,9 @@ public static class UnitStatsUtility
                 reloadSpeed       = data.reloadSpeed,
                 totalAmmo         = data.ammoCapacity,
                 projectilePoolKey = data.projectilePoolKey,
-                trajectory        = data.projectileTrajectory
+                trajectory        = data.projectileTrajectory,
+                projectilesPerShot = data.projectilesPerShot,
+                fanAngleDegrees   = data.fanAngleDegrees
             };
 
             if (entityManager.HasComponent<UnitRangedStatsComponent>(unitEntity))

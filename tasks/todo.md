@@ -61,8 +61,12 @@ Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `
   enfría 12 s; E sube la defensa un 30 % y caduca a los 8 s. La IA aún solo usa el ataque básico.
 - [x] **7. Combo del ataque básico (L2-3).** Cadena de 3 con ventana de encadenado y memoria de entrada.
 - [x] **8. Carga (L2-6).** Fase sin fin + soltar avanza a la fase final.
-- [ ] **9. Multiproyectil y tope (L2-7).** Esquema de lanzador (modo, cuenta, ángulo) y tope de proyectiles vivos que descarta
+- [x] **9. Multiproyectil y tope (L2-7).** Esquema de lanzador (modo, cuenta, ángulo) y tope de proyectiles vivos que descarta
   el más antiguo.
+  Hecho: `projectilesPerShot` y `fanAngleDegrees` por escuadra (`SquadRangedData`, por defecto 1 y 0: sin cambio),
+  dispersión que crece con la velocidad del tirador y tope de 256 proyectiles en vuelo (`CombatTuning`). El disparo real
+  no se vio en Play (en `BattleTestScene` ningún tirador tuvo objetivo). Pendiente: proyectil del héroe (las habilidades
+  del arco siguen como área); hace falta un pool y prefab propios del héroe.
 - [ ] **10. Perks pasivos (L7-4).** Modificadores en el SO, carga del loadout (5 pasivos) y condiciones simples.
 - [ ] **11. Perks activos.** 2 huecos con tecla propia, por la puerta y con su enfriamiento.
 - [ ] **12. Documentación.** Mecánica de habilidades y perks, `SystemResponsibilities.md`, Por_Abordar y lecciones.

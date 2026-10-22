@@ -15,6 +15,12 @@ public struct CombatTuning
     public float heightBonusPerMetre;
     /// <summary>Lowest extra damage of a critical hit, whatever the defender's anti-critical (as in the reference).</summary>
     public float criticalExtraFloor;
+    /// <summary>Lateral scatter of a shot at accuracy 0 (accuracy 100 = none).</summary>
+    public float inaccuracySpread;
+    /// <summary>Extra scatter at full speed, as a fraction of the standing one (the reference widens it when moving).</summary>
+    public float movingSpreadFactor;
+    /// <summary>Most projectiles in flight at once; past it the oldest is discarded (L2-7).</summary>
+    public int maxLiveProjectiles;
 
     public static CombatTuning Default => new CombatTuning
     {
@@ -24,6 +30,9 @@ public struct CombatTuning
         heightBonusThreshold = 0.5f,
         heightBonusPerMetre = 0.1f,
         criticalExtraFloor = 0.2f,
+        inaccuracySpread = 0.15f,
+        movingSpreadFactor = 1f,
+        maxLiveProjectiles = 256,
     };
 }
 

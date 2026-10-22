@@ -335,6 +335,21 @@ public class ProjectileController : MonoBehaviour
 
     static Vector3 V3(float3 v) => new Vector3(v.x, v.y, v.z);
 
+    /// <summary>Still flying (not landed, not back in the pool).</summary>
+    public bool InFlight => !_impacted && gameObject.activeInHierarchy;
+
+    /// <summary>Removes the projectile without a hit (the live-projectile cap, L2-7).</summary>
+    public void Discard()
+    {
+        if (_impacted) return;
+        _impacted = true;
+        RestoreIgnoredSpawnCollisions();
+        if (ObjectPoolSystem.Instance != null)
+            ObjectPoolSystem.Instance.ReturnToPool(_poolKey, gameObject);
+        else
+            gameObject.SetActive(false);
+    }
+
     void OnDisable()
     {
         RestoreIgnoredSpawnCollisions();

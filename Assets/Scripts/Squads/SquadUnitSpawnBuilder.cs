@@ -143,7 +143,9 @@ public static class SquadUnitSpawnBuilder
                 reloadSpeed = data.reloadSpeed,
                 totalAmmo = data.ammoCapacity,
                 projectilePoolKey = data.projectilePoolKey,
-                trajectory = data.projectileTrajectory
+                trajectory = data.projectileTrajectory,
+                projectilesPerShot = data.projectilesPerShot,
+                fanAngleDegrees = data.fanAngleDegrees
             });
             ecb.AddComponent(unit, new RangedAttackStateComponent
             {

@@ -28,4 +28,10 @@ public class SquadRangedData : ScriptableObject
     public string projectilePoolKey;
     public GameObject projectilePrefab;
     public ProjectileTrajectory projectileTrajectory;
+
+    [Header("Launcher (L2-7)")]
+    [Tooltip("Proyectiles por disparo; con más de uno salen en abanico.")]
+    [Min(1)] public int projectilesPerShot = 1;
+    [Tooltip("Apertura total del abanico en grados.")]
+    public float fanAngleDegrees = 0f;
 }
