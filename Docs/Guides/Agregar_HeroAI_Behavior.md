@@ -147,13 +147,13 @@ dec.hasNewSquadOrder = bool;
 
 **Archivo:** `Assets/Scripts/UI/Battle/BattleSceneController.cs`
 
-Busca el bloque de spawn de AI (cerca de línea 531). Añade **2 líneas** junto a los otros tags:
+Busca el bloque de spawn de AI (donde se añade `HeroAITag`, hoy alrededor de la línea 473). Hoy añade `RusherBehaviorActive` y `BalancedBehaviorActive` y activa uno al azar (50 %). Añade **2 líneas** junto a los otros tags y ajusta ese reparto:
 
 ```csharp
 // Todos los behaviors presentes — solo 1 activo a la vez
 em.AddComponent<RusherBehaviorActive>(heroEntity);
 em.SetComponentEnabled<RusherBehaviorActive>(heroEntity, false);
-em.AddComponent<BalancedBehaviorActive>(heroEntity);   // activo por defecto
+em.AddComponent<BalancedBehaviorActive>(heroEntity);   // el reparto Rusher/Balanced se decide justo debajo (Random.value)
 // ↓ Añadir aquí:
 em.AddComponent<{NombreBehavior}BehaviorActive>(heroEntity);
 em.SetComponentEnabled<{NombreBehavior}BehaviorActive>(heroEntity, false);
@@ -197,6 +197,8 @@ Sin structural changes, Burst-friendly, efectivo el próximo frame.
 |----------|-----|--------|-----------|
 | Rusher | `RusherBehaviorActive` | `HeroAIRusherSystem` | Rush directo a objetivos, pelea solo si le bloquean |
 | Balanced | `BalancedBehaviorActive` | `HeroAIBalancedSystem` | Evalúa amenazas, se retira con HP bajo, defiende zonas propias |
-| Tactician | `TacticianBehaviorActive` | `HeroAITacticianSystem` | Coordinación de equipo — **pendiente de implementar** |
+| Tactician | — | — | Coordinación de equipo — **no existe** (ni el tag ni el sistema); solo hay un diseño en `Docs/Design/ia-tactica/` |
+
+Revisado contra el código el 2026-10-22: el blackboard tiene además `isUnderAttack`, `squadUnitCount`, `matchIsActive`, `winnerTeam` y el reloj de decisión (`thinkClock*`, `nextThinkTime`). Usa los campos reales de `HeroAIBlackboard.Component.cs`.
 
 **Arquitectura completa:** ver `Docs/RemoteHeroAI_Architecture.md`

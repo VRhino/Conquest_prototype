@@ -1,101 +1,78 @@
+# Guía: Agregar un Nuevo Squad/Unidad al Juego
 
-# Guía Actualizada: Agregar un Nuevo Squad/Unidad al Juego
+Revisada contra el código el 2026-10-22 (tipos y campos de `SquadData`, `SquadDatabase`, `VisualPrefabConfiguration`, `FormationDefinition`). Las rutas de assets que no existen hoy en el repositorio se indican como «convención»; no se verificó el flujo completo en el editor.
 
-Esta guía describe el proceso actualizado y obligatorio para agregar una nueva unidad (Squad) completamente funcional al juego, incluyendo todos los assets, configuraciones y referencias necesarias.
+Un squad se define con un `SquadData` (ScriptableObject) registrado en el `SquadDatabase`, que `SquadDatabaseAuthoring` hornea a entidades ECS (una por `SquadData.id`). Los visuales se resuelven en tiempo de ejecución con `VisualPrefabRegistry` (ver `Docs/ConfiguracionPrefabs_ECS_Visual.md`).
 
 ---
 
-## 1. Crear el Prefab ECS de la Unidad
+## 1. Crear el prefab ECS de la unidad
 
-- Crea el prefab ECS de la unidad en:
-  - `Assets/Prefabs/Squads/{NombreUnidad}_ECS.prefab`
-- Este prefab debe tener el componente `UnitEntityAuthoring` correctamente configurado.
+- Prefab con el componente `UnitEntityAuthoring` (`Assets/Scripts/Squads/UnitEntity.Authoring.cs`) correctamente configurado.
+- Ubicación por convención: `Assets/Prefabs/Squads/`.
 
-## 2. Crear el Prefab Visual de la Unidad
+## 2. Crear el prefab visual de la unidad
 
-- Crea el prefab visual en:
-  - `Assets/Prefabs/Esqueletos/{NombreUnidad}_Visual.prefab`
-- Este prefab debe tener todos los componentes visuales, animaciones y materiales necesarios.
+- Prefab con modelo, animaciones y materiales. Ubicación por convención: `Assets/Prefabs/Esqueletos/`.
+- No lleva lógica de juego: `EntityVisualSync` lo configura al instanciarlo (`SquadVisualManagementSystem`).
 
-## 3. Crear el ScriptableObject SquadData
+## 3. Crear los datos de combate y progresión
 
-- Crea un nuevo `SquadData` en:
-  - `Assets/ScriptableObjects/Squad/{NombreDelSquad}.asset`
-- Configura:
-  - `id`: identificador único del squad
-  - `prefab`: referencia al prefab ECS creado en el paso 1
-  - `unitImage`: imagen miniatura de la unidad (ver paso 7)
-  - `icon`: icono de la unidad (ver paso 6)
-  - `gridFormations`: asigna las formaciones creadas en el paso 4
-  - `abilitiesByLevel`: asigna las habilidades creadas en el paso 5
-  - `visualPrefabName`: debe coincidir con el id definido en el paso 1 y 8
-  - Otros campos según el diseño de la unidad
+`SquadData` referencia módulos opcionales; crea los que correspondan:
 
-## 4. Crear las GridFormations
+- `meleeData` (`SquadMeleeData`) para combate cuerpo a cuerpo y `rangedData` (`SquadRangedData`) para distancia. Si es `null` el squad no ataca de ese modo.
+- `progressionData` (`SquadProgressionData`): curvas de XP y desbloqueo de habilidades por nivel.
+- Ejemplos existentes: `Assets/Resources/Squads/Squires/` y `Assets/Resources/Squads/Levy_Archers/`.
 
-- Crea los ScriptableObjects de formaciones en:
-  - `Assets/ScriptableObjects/Formations/{NombreDelSquadFormation}.asset`
-- Define la composición y tamaño de la formación según el squad.
+## 4. Crear las formaciones
+
+- Las formaciones son assets `FormationDefinition` (espaciado, ruido, plantillas por soldados vivos, posturas). Ver `Docs/Mechanics/Formations.md`.
+- Ejemplos: `Assets/Resources/Squads/Spearmen/Formations/` y `Assets/ScriptableObjects/Formations/`.
 
 ## 5. Crear las AbilityData
 
-- Crea los ScriptableObjects de habilidades en:
-  - `Assets/ScriptableObjects/Abilities/{NombreDelSquadAbility}.asset`
-- Asigna las habilidades que tendrá el squad.
+- Assets `AbilityData` (`Assets/Scripts/Squads/AbilityData.cs`) que el squad desbloquea al subir de nivel. El nivel de desbloqueo sale de `progressionData`.
 
-## 6. Crear el Icono del Squad
+## 6. Crear icono y miniatura
 
-- Crea el icono de la unidad y guárdalo en:
-  - `Assets/UI/units/{NombreDelSquadIcon}.png`
-- Este icono se usará en la UI y en el SquadData.
+- Iconos en `Assets/Art/UI/units/` (ruta de los existentes, p. ej. `escuderos.png`). El icono va en `icon` y la miniatura en `unitImage`.
 
-## 7. Crear la Imagen Miniatura (unitImage)
+## 7. Crear el SquadData
 
-- Genera una imagen miniatura de la unidad usando el prefab visual y guárdala en:
-  - `Assets/UI/units/{NombreDelSquadImage}_miniature.png`
-- Asigna esta imagen en el campo `unitImage` del SquadData.
+Asset `SquadData` (menú `Squads/Squad Data`); los existentes están en `Assets/Resources/Squads/{Nombre}/`. Campos principales:
 
-## 8. Registrar el VisualPrefab en VisualPrefabRegistryConfiguration
+| Campo | Contenido |
+|---|---|
+| `id` | Identificador único (lo usa el bake como clave) |
+| `squadName`, `type` (`SquadType`), `unitType`, `rarity` | Identidad y clasificación |
+| `prefab` | Prefab ECS del paso 1 |
+| `icon`, `background`, `unitImage` | Imágenes de UI |
+| `formations` | `FormationDefinition[]` del paso 4 (antes `gridFormations`) |
+| `abilitiesByLevel` | `AbilityData` del paso 5 |
+| `meleeData`, `rangedData`, `progressionData` | Módulos del paso 3 |
+| `leadershipCost`, `behaviorProfile`, `unitCount` | Despliegue e IA |
+| `baseHealth`, `baseSpeed`, `massValue`, `totalWeight`, `block`, `blockRegenRate`, `shieldBreakStunDuration`, defensas, `detectionRange` | Stats base; los derivados los resuelve `StatResolveSystem` |
+| `visualPrefabName` | Debe coincidir con el id de la entrada de visual del paso 8 |
 
-- Abre el asset:
-  - `Assets/ScriptableObjects/VisualPrefabConfig.asset`
-- Agrega una nueva entrada con:
-  - `id`: debe coincidir con el `visualPrefabName` definido en el SquadData
-  - `prefab`: referencia al prefab visual creado en el paso 2
+## 8. Registrar el visual en la configuración de prefabs
+
+- Añade una entrada `UnitPrefabEntry` (`squadType`, `unitId`, `displayName`, `visualPrefab`, `isDefault`) a la `VisualPrefabConfiguration` que usa el `VisualPrefabRegistry` de la escena.
+- En el repositorio hay `Assets/ScriptableObjects/VisualPrefabConfig.asset` y `Assets/Config/DefaultVisualPrefabConfig.asset`; no se verificó cuál referencia cada escena.
 
 ## 9. Añadir el SquadData al SquadDatabase
 
-- Abre el asset:
-  - `Assets/Scripts/Resources/Squad/SquadDatabase.asset`
-- Agrega el nuevo `SquadData` a la lista `allSquads`.
+- Abre `Assets/Resources/Squads/SquadDatabase.asset` y añade el `SquadData` a la lista `allSquads`.
+- `SquadDatabaseAuthoring` (en el subscene) lo hornea; los squads sin `id` se ignoran.
 
 ---
 
-## Resumen de Rutas y Nombres
+## Checklist rápido
 
-- Prefab ECS: `Assets/Prefabs/Squads/{NombreUnidad}_ECS.prefab`
-- Prefab Visual: `Assets/Prefabs/Esqueletos/{NombreUnidad}_Visual.prefab`
-- SquadData: `Assets/ScriptableObjects/Squad/{NombreDelSquad}.asset`
-- GridFormations: `Assets/ScriptableObjects/Formations/{NombreDelSquadFormation}.asset`
-- AbilityData: `Assets/ScriptableObjects/Abilities/{NombreDelSquadAbility}.asset`
-- Icono: `Assets/UI/units/{NombreDelSquadIcon}.png`
-- Imagen Miniatura: `Assets/UI/units/{NombreDelSquadImage}_miniature.png`
-- VisualPrefabConfig: `Assets/ScriptableObjects/VisualPrefabConfig.asset`
-- SquadDatabase: `Assets/Scripts/Resources/Squad/SquadDatabase.asset`
-
----
-
-## Checklist Rápido
-
-- [ ] Prefab ECS creado y configurado
-- [ ] Prefab visual creado y funcional
-- [ ] SquadData creado y referenciado
-- [ ] GridFormations asignadas
-- [ ] AbilityData asignadas
-- [ ] Icono y miniatura generados y asignados
-- [ ] VisualPrefabConfig actualizado
-- [ ] SquadDatabase actualizado
-
----
-
-¡Listo! Siguiendo estos pasos tu nueva unidad estará completamente integrada y funcional en el juego.
+- [ ] Prefab ECS con `UnitEntityAuthoring`
+- [ ] Prefab visual
+- [ ] `meleeData` / `rangedData` / `progressionData` según el tipo de squad
+- [ ] `FormationDefinition` asignadas en `formations`
+- [ ] `AbilityData` asignadas en `abilitiesByLevel`
+- [ ] Icono y miniatura asignados
+- [ ] `visualPrefabName` coincide con la entrada de `VisualPrefabConfiguration`
+- [ ] Squad añadido a `SquadDatabase.allSquads`
