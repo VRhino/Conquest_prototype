@@ -1,0 +1,86 @@
+# Plan: Fase 2 de `Docs/Design/Aprendizajes_Referencia.md` — perks y lanzador de habilidades
+
+Estado: **hecha** (2026-10-22), rama `feat/reference-phase0` (sobre las Fases 0 y 1), sin subir.
+Petición del usuario: "ve con la fase 2". Plan anterior archivado en `tasks/reference-phase1-plan.md`.
+Referencia (solo patrones): `game-re/notes/skill-lifecycle.md` (puerta, fases, `interrupt`/`yield`, carga),
+`preconditions.md` (condiciones de efectos), `effects-catalog.md` (efectos como modificadores), `mechanics.md` §7e.
+
+## Decisiones del usuario (2026-10-21)
+- **Teclas:** como el GDD. Q/E/R habilidades de clase, **F definitiva**; interactuar pasa a **G**.
+- **Alcance:** infraestructura completa (puerta, enfriamientos por grupo, fases, interrupción, carga) **más efectos
+  genéricos** reutilizables (golpe en área o cono, buff temporal a héroe o escuadra, embestida, escudo absorbente) para
+  que las 16 habilidades de clase hagan algo ya, con la animación de ataque como provisional.
+- **Perks como la referencia:** pasivos = modificadores de la pila con condiciones simples; activos = buff temporal con
+  enfriamiento lanzado por la misma puerta. Se eligen 5 + 2 en el loadout existente; el árbol de talentos y su UI quedan
+  para después.
+- **Ataque básico con combo:** cadena de 3 golpes con ventana de encadenado y memoria de entrada (~0,2 s); el tercero
+  cierra la cadena.
+
+## Diseño
+- **Habilidad = lista de fases** (ref.): cada fase con duración (negativa = sin fin), flags interrumpible / final / carga
+  y eventos con instante (abrir/cerrar golpe, aplicar efecto, disparar, disparo de animación). Datos en el SO
+  `HeroAbility` (ampliado) y convertidos a blob al inicializar al héroe; el ataque básico es también una habilidad.
+- **Instancia actual + aparcada** (`SkillInstanceComponent`, `ParkedSkillInstanceComponent`): `interrupt` sustituye,
+  `yield` aparca y restaura; la puerta solo deja pasar si la fase actual es interrumpible.
+- **Puerta única** `SkillGate.Evaluate` (pura, motivo de rechazo en un enum, orden fijo): vivo y en batalla →
+  control (inmovilizado) → fase actual interrumpible → cadena → enfriamiento → aguante. Jugador e IA piden con
+  `SkillRequestComponent` (enableable); un solo sistema arranca la habilidad.
+- **Enfriamiento por grupo y tiempo absoluto** (L2-5): `DynamicBuffer<CooldownGroupElement>{groupId, endTime}`; grupo 0 =
+  sin enfriamiento; la duración se escala con `StatId.CooldownScale` de la pila (con tope). Sustituye a
+  `CooldownSystem`, que itera cada frame.
+- **Efectos genéricos** como eventos de fase: daño en círculo/cono (por `PendingDamageEvent`), modificador temporal a
+  héroe / escuadra / aliados en radio (por la pila, fuente `Effect`), embestida (desplazamiento del héroe) y escudo
+  absorbente (L1-06).
+- **Perks** (L7-4): el SO `HeroPerk` lleva sus modificadores `{stat, op, valor, objetivo, condición}`; un sistema aplica los
+  pasivos con fuente `Perk` y activa/desactiva los condicionados; los activos son habilidades de un solo evento
+  (aplicar buff) con su enfriamiento.
+
+## Pasos (un commit cada uno; EditMode verde y regresiones de PlayMode antes de cada commit)
+- [x] **1. Habilidades del héroe en batalla.** Las cuatro habilidades salen del SO de clase (`HeroClassManager`), no de la
+  entidad de clase horneada (vacía, P2 de `Docs/Por_Abordar/Pila_Modificadores.md`). Blob de habilidad con fases y
+  eventos; el SO `HeroAbility` gana fases, grupo de enfriamiento y efectos (con valores por defecto equivalentes).
+- [x] **2. Enfriamientos por grupo (L2-5).** Buffer de grupos, `CooldownUtility` y `StatId.CooldownScale`; fuera
+  `CooldownComponent`/`CooldownSystem` (y el HUD lee los grupos).
+  Hecho; el HUD recibe la fracción de Q/E/R/F por `UIBattleDataSystem`. El enfriamiento del cambio de escuadra sigue
+  en su propio componente (pasarlo a un grupo queda para cuando se toque el cambio de escuadra).
+- [x] **3. Puerta y petición (L2-1).** `SkillGate` con motivos, `SkillRequestComponent`, teclas Q/E/R/F (interactuar a G) e IA
+  por la misma petición.
+- [x] **4. Instancia por fases (L2-2).** `SkillInstanceComponent` y el sistema de fases; el ataque básico pasa a ser una
+  habilidad de fases y desaparece el trío fijo de ventanas de `HeroCombatComponent` y la lógica duplicada jugador/IA.
+  Hecho (un commit para los dos, dependen entre sí): `SkillGate`, `HeroSkillRequestSystem`, `SkillTimeline` y
+  `SkillExecutionSystem` sustituyen a `HeroAttackSystem`. El aturdimiento ahora impide lanzar también el ataque básico
+  (como la referencia: el control prohíbe por defecto). Verificado en Play: el héroe IA ataca por la puerta.
+- [x] **5. Interrupción (L2-4).** `interrupt`/`yield`, aparcada, fases no interrumpibles; fin al morir, al acabar la batalla y
+  al cambiar de escuadra.
+- [x] **6. Efectos genéricos.** Daño en área/cono, modificador temporal, embestida y escudo absorbente; datos para las 16
+  habilidades de clase según el GDD.
+  Hecho: `SkillEffectSystem` (área/cono por `PendingDamageEvent`, modificador temporal a sí mismo / escuadra / aliados /
+  enemigos en radio, escudo absorbente) y embestida (`HeroDashComponent`, local y IA). Datos de las 16 en sus assets;
+  aproximaciones: Flecha Silenciadora ralentiza (no hay "silencio"), Muro de Púas es daño + ralentización en área (no
+  zona persistente), las del arco usan área delante hasta el proyectil del paso 9. Verificado en Play: Q embiste y
+  enfría 12 s; E sube la defensa un 30 % y caduca a los 8 s. La IA aún solo usa el ataque básico.
+- [x] **7. Combo del ataque básico (L2-3).** Cadena de 3 con ventana de encadenado y memoria de entrada.
+- [x] **8. Carga (L2-6).** Fase sin fin + soltar avanza a la fase final.
+- [x] **9. Multiproyectil y tope (L2-7).** Esquema de lanzador (modo, cuenta, ángulo) y tope de proyectiles vivos que descarta
+  el más antiguo.
+  Hecho: `projectilesPerShot` y `fanAngleDegrees` por escuadra (`SquadRangedData`, por defecto 1 y 0: sin cambio),
+  dispersión que crece con la velocidad del tirador y tope de 256 proyectiles en vuelo (`CombatTuning`). El disparo real
+  no se vio en Play (en `BattleTestScene` ningún tirador tuvo objetivo). Pendiente: proyectil del héroe (las habilidades
+  del arco siguen como área); hace falta un pool y prefab propios del héroe.
+- [x] **10. Perks pasivos (L7-4).** Modificadores en el SO, carga del loadout (5 pasivos) y condiciones simples.
+  Hecho: `PerkEffect` en el SO (aura o al golpear; condición héroe quieto / recién movido; objetivo propio, escuadra,
+  aliados en radio u objetivo del golpe), `PerkLoadout` (5 + 2 del loadout activo entre los de su clase), `HeroMotionSystem`,
+  `PerkAuraSystem` (refresca un modificador corto mientras se cumple) y `PerkOnHitSystem`. Datos: Línea Inquebrantable,
+  Cobertura de Hostigamiento y Estocada Desestabilizadora. Sin datos: Muro de Púas y Zona de Exclusión (piden daño por
+  contacto y zonas persistentes). Nadie elige perks todavía (no hay UI): el loadout llega vacío y nada cambia.
+- [x] **11. Perks activos.** 2 huecos con tecla propia, por la puerta y con su enfriamiento.
+  Hecho: teclas 1 y 2 (elegidas por defecto; libres en el juego). Cada perk activo es una habilidad corta "yield"
+  (aparca el ataque en curso en lugar de cortarlo) con el enfriamiento del perk. Datos: Orden de Resistencia, Carga
+  Coordinada y Flecha Marcadora. Sus `perkName` dicen "(Passive)" aunque son activos: dato a corregir por el usuario.
+- [x] **12. Documentación.** Mecánica de habilidades y perks, `SystemResponsibilities.md`, Por_Abordar y lecciones.
+  Hecho: `Docs/Mechanics/SkillsAndPerks.md`, contratos en `SystemResponsibilities.md`, `Docs/Por_Abordar/Habilidades_Perks.md`,
+  `DamageMechanics.md`, `TDD.md` y `RemoteHeroAI_Architecture.md` al día, nota de la Fase 2 en `Aprendizajes_Referencia.md`.
+
+## Verificación
+EditMode completo en cada paso; PlayMode S1/S6 cuando el paso toca combate o movimiento; en `BattleTestScene` (Play) que
+Q/E/R/F lanzan, respetan aguante y enfriamiento, y que el combo de 3 encadena; el héroe IA usa la misma puerta.

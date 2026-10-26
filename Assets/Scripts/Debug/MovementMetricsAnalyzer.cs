@@ -44,6 +44,8 @@ public struct MovementFrameSample
     public int allyOverlaps;            // Allied pairs closer than the overlap distance (all squads).
     public int enemyOverlaps;           // Enemy pairs closer than the overlap distance.
     public int persistentEnemyOverlaps; // Enemy pairs overlapping for longer than the persistence window.
+    public int stackedDestinations;     // Squadmate pairs whose movement destinations share a formation cell (S7).
+    public int detourDestinations;      // Units whose destination is reached only by a detour from the hero, or not at all (S7).
 }
 
 /// <summary>Aggregated baseline metrics. Negative values mean "not observed".</summary>
@@ -85,6 +87,12 @@ public sealed class MovementMetricsSummary
     /// <summary>Share of unit samples whose acceleration exceeds <see cref="MovementMetricsAnalyzer.AccelerationSpikeLimit"/>.</summary>
     public float accelerationSpikeRatio;
     public float maxAcceleration;
+    public float meanStackedDestinations;
+    public int maxStackedDestinations;
+    public float meanDetourDestinations;
+    public int maxDetourDestinations;
+    /// <summary>Episodes of a unit standing still far from its slot for longer than <see cref="MovementMetricsAnalyzer.StallPersistence"/>.</summary>
+    public int stalls;
 
     public override string ToString()
     {
@@ -104,6 +112,8 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  leash violations (reacting, beyond the leash > {MovementMetricsAnalyzer.LeashPersistence.ToString("F1", c)} s): {leashViolations}");
         s.AppendLine($"  combat turn frames above the cap: {turnRateViolationFrames}; gear changes: {gearChanges}");
         s.AppendLine($"  acceleration above {MovementMetricsAnalyzer.AccelerationSpikeLimit.ToString("F0", c)} m/s2: {(accelerationSpikeRatio * 100f).ToString("F1", c)} % of samples, max {maxAcceleration.ToString("F0", c)} m/s2");
+        s.AppendLine($"  destinations sharing a cell per frame: mean={meanStackedDestinations.ToString("F2", c)} max={maxStackedDestinations}; reached only by a detour: mean={meanDetourDestinations.ToString("F2", c)} max={maxDetourDestinations}");
+        s.AppendLine($"  stalls (still beyond {MovementMetricsAnalyzer.StallDistance.ToString("F1", c)} m of the slot > {MovementMetricsAnalyzer.StallPersistence.ToString("F1", c)} s): {stalls}");
         s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)}");
         return s.ToString();
     }
@@ -124,6 +134,9 @@ public static class MovementMetricsAnalyzer
     public const float AccelerationSpikeLimit = 20f; // m/s²: well above any agent (8-12 m/s²), so only jolts count.
     public const float EnemyOverlapPersistence = 0.3f; // Enemy pairs overlapping longer than this are counted.
     public const float ContactRange = 2.5f;     // Units this close to their target count as attackers on it.
+    public const float StallSpeed = 0.3f;       // m/s: below this a unit counts as standing still.
+    public const float StallDistance = 1f;      // m from its slot: a still unit closer than this has arrived.
+    public const float StallPersistence = 0.5f; // Seconds standing still far from the slot before counting a stall.
 
     /// <summary>
     /// Field-by-field median of several runs of one scenario (M10): the melee in S6 diverges between runs from
@@ -294,6 +307,11 @@ public static class MovementMetricsAnalyzer
         summary.maxAllyOverlaps = global.Count > 0 ? global.Max(f => f.allyOverlaps) : 0;
         summary.meanAllyOverlapsMarching = marching.Count > 0 ? (float)marching.Average(f => f.allyOverlaps) : 0f;
         summary.maxPersistentEnemyOverlaps = global.Count > 0 ? global.Max(f => f.persistentEnemyOverlaps) : 0;
+        // Destination checks are per squad, so they use every frame sample, not only the global ones.
+        summary.meanStackedDestinations = (float)frames.Average(f => f.stackedDestinations);
+        summary.maxStackedDestinations = frames.Max(f => f.stackedDestinations);
+        summary.meanDetourDestinations = (float)frames.Average(f => f.detourDestinations);
+        summary.maxDetourDestinations = frames.Max(f => f.detourDestinations);
 
         var contact = units.Where(u => u.attacking && u.targetDistance >= 0f).Select(u => u.targetDistance).ToList();
         summary.meanContactDistance = contact.Count > 0 ? contact.Average() : -1f;
@@ -311,9 +329,18 @@ public static class MovementMetricsAnalyzer
         {
             float beyondSince = -1f;
             bool counted = false;
+            float stillSince = -1f;
+            bool stallCounted = false;
             for (int i = 0; i < series.Count; i++)
             {
                 var u = series[i];
+                bool still = u.speed < StallSpeed && u.slotDistance > StallDistance;
+                if (!still) { stillSince = -1f; stallCounted = false; }
+                else
+                {
+                    if (stillSince < 0f) stillSince = u.time;
+                    if (!stallCounted && u.time - stillSince >= StallPersistence) { summary.stalls++; stallCounted = true; }
+                }
                 bool beyond = u.reacting && u.slotDistance > limits.leashDistance;
                 if (!beyond) { beyondSince = -1f; counted = false; }
                 else

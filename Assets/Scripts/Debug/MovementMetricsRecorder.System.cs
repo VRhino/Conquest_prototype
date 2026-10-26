@@ -22,6 +22,13 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     const float OverlapDistance = 0.9f;
     /// <summary>Squadmates overlap only when closer than this fraction of their formation spacing (Testudo is tight on purpose).</summary>
     const float SquadmateOverlapFraction = 0.9f;
+    /// <summary>Two destinations closer than this fraction of the spacing send two soldiers to one cell.</summary>
+    const float StackedFraction = 0.5f;
+    /// <summary>A path longer than this multiple of the straight distance (plus the slack) is a detour around a wall.</summary>
+    const float DetourFactor = 1.5f;
+    const float DetourSlack = 2f;
+    /// <summary>Search radius to put the hero and a destination on the NavMesh for the detour check, m.</summary>
+    const float DestinationSampleRadius = 1f;
 
     static bool _recording;
     static string _label;
@@ -38,6 +45,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     readonly Dictionary<int2, List<int>> _grid = new();
     readonly HashSet<long> _overlapNow = new();
     readonly HashSet<int> _focusUnits = new();
+    readonly List<float3> _destinations = new();
+    readonly NavMeshPath _path = new();
 
     public static bool IsRecording => _recording;
 
@@ -107,6 +116,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             bool reacting = SystemAPI.HasComponent<SquadResolvedOrderComponent>(squad)
                 && SystemAPI.GetComponent<SquadResolvedOrderComponent>(squad).source == OrderSource.CombatReaction;
             float3 anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squad).position;
+            CountDestinationProblems(squad, units, out int stacked, out int detours);
             FrameSamples.Add(new MovementFrameSample
             {
                 frame = frame, time = time, deltaTime = dt, squad = squad.Index,
@@ -115,7 +125,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 formationStateMs = Ms(_formationStateTime), navMeshMs = Ms(_navMeshTime),
                 followFormationMs = Ms(_followFormationTime), avoidanceMs = Ms(_avoidanceTime),
                 allyOverlaps = allyOverlaps, enemyOverlaps = enemyOverlaps,
-                persistentEnemyOverlaps = persistentEnemyOverlaps
+                persistentEnemyOverlaps = persistentEnemyOverlaps,
+                stackedDestinations = stacked, detourDestinations = detours
             });
 
             for (int i = 0; i < units.Length; i++)
@@ -130,10 +141,64 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         }
     }
 
-    MovementUnitSample SampleUnit(Entity unit, int bufferIndex, int squadIndex, int frame, float time, bool reacting)
+    /// <summary>Where the unit is actually heading in formation: its slot after NavMesh projection.</summary>
+    float3 MovementDestination(Entity unit)
     {
         float3 requested = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
-        float3 slot = SquadNavigationSystem.GetEffectiveFormationDestination(EntityManager, unit, requested);
+        return SquadNavigationSystem.GetEffectiveFormationDestination(EntityManager, unit, requested);
+    }
+
+    /// <summary>
+    /// S7 checks on the squad's formation destinations: pairs closer than <see cref="StackedFraction"/> of the spacing
+    /// (two soldiers sent to one cell) and destinations the hero only reaches with a detour (the far side of a wall).
+    /// </summary>
+    void CountDestinationProblems(Entity squad, DynamicBuffer<SquadUnitElement> units, out int stacked, out int detours)
+    {
+        stacked = detours = 0;
+        _destinations.Clear();
+        NavMeshQueryFilter filter = default;
+        bool hasFilter = false;
+        for (int i = 0; i < units.Length; i++)
+        {
+            Entity unit = units[i].Value;
+            if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit)) continue;
+            _destinations.Add(MovementDestination(unit));
+            if (hasFilter || !SystemAPI.ManagedAPI.HasComponent<NavMeshAgent>(unit)) continue;
+            var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(unit);
+            if (agent == null) continue;
+            filter = new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = agent.areaMask };
+            hasFilter = true;
+        }
+
+        float spacing = SystemAPI.HasComponent<FormationComponent>(squad)
+            ? SystemAPI.GetComponent<FormationComponent>(squad).spacing : MovementTuningComponent.ReferenceSpacing;
+        float stackedSq = math.square(StackedFraction * spacing);
+        for (int i = 0; i < _destinations.Count; i++)
+        for (int j = i + 1; j < _destinations.Count; j++)
+            if (math.distancesq(_destinations[i].xz, _destinations[j].xz) < stackedSq) stacked++;
+
+        if (!hasFilter || !SystemAPI.HasComponent<HeroWorldPositionComponent>(squad)) return;
+        float3 hero = SystemAPI.GetComponent<HeroWorldPositionComponent>(squad).position;
+        if (!NavMesh.SamplePosition(hero, out var heroHit, DestinationSampleRadius, filter)) return;
+        foreach (float3 destination in _destinations)
+        {
+            if (!NavMesh.SamplePosition(destination, out var hit, DestinationSampleRadius, filter)
+                || !NavMesh.CalculatePath(heroHit.position, hit.position, filter, _path)
+                || _path.status != NavMeshPathStatus.PathComplete)
+            {
+                detours++;
+                continue;
+            }
+            float length = 0f;
+            var corners = _path.corners;
+            for (int c = 1; c < corners.Length; c++) length += UnityEngine.Vector3.Distance(corners[c - 1], corners[c]);
+            if (length > DetourFactor * math.distance(heroHit.position, hit.position) + DetourSlack) detours++;
+        }
+    }
+
+    MovementUnitSample SampleUnit(Entity unit, int bufferIndex, int squadIndex, int frame, float time, bool reacting)
+    {
+        float3 slot = MovementDestination(unit);
         var transform = SystemAPI.GetComponent<LocalTransform>(unit);
         float3 position = transform.Position;
         quaternion rotation = transform.Rotation;
@@ -255,14 +320,14 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         Directory.CreateDirectory(directory);
         string prefix = Path.Combine(directory, $"{summary.label}_{stamp}");
 
-        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps\n");
+        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,stackedDestinations,detourDestinations\n");
         foreach (var f in FrameSamples)
             frames.AppendLine(string.Join(",", f.frame, f.time.ToString("F4", c), f.deltaTime.ToString("F4", c), f.squad,
                 f.anchorMoving ? 1 : 0, f.anchorX.ToString("F3", c), f.anchorZ.ToString("F3", c),
                 f.setDestinationCalls, f.projectionRequests,
                 f.formationStateMs.ToString("F4", c), f.navMeshMs.ToString("F4", c),
                 f.followFormationMs.ToString("F4", c), f.avoidanceMs.ToString("F4", c),
-                f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps));
+                f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps, f.stackedDestinations, f.detourDestinations));
         File.WriteAllText(prefix + "_frames.csv", frames.ToString());
 
         var units = new StringBuilder("frame,time,squad,unit,state,slotDistance,x,z,yaw,team,target,targetDistance,attacking,reacting,gear,speed\n");

@@ -76,6 +76,32 @@ public class MovementMetricsAnalyzerTests
         Assert.That(s.maxPersistentEnemyOverlaps, Is.EqualTo(1));
     }
 
+    [Test]
+    public void BottleneckMetricsCountSharedDestinationsDetoursAndStalls()
+    {
+        var frames = new List<MovementFrameSample>();
+        var units = new List<MovementUnitSample>();
+        for (int f = 0; f <= 20; f++)
+        {
+            float t = f * Dt;
+            frames.Add(new MovementFrameSample { frame = f, time = t, deltaTime = Dt, squad = 1,
+                stackedDestinations = f < 5 ? 3 : 0, detourDestinations = f == 10 ? 2 : 0 });
+            // Unit 0 stands 2 m from its slot from 0.5 s to 1.5 s (one stall); unit 1 is still but arrived.
+            var a = Unit(f, t, 0, UnitFormationState.Moving);
+            a.slotDistance = 2f; a.speed = t >= 0.5f && t < 1.5f ? 0f : 3f;
+            var b = Unit(f, t, 1, UnitFormationState.Formed);
+            b.slotDistance = 0.1f;
+            units.Add(a); units.Add(b);
+        }
+
+        var s = MovementMetricsAnalyzer.Analyze("S7", frames, units);
+
+        Assert.That(s.maxStackedDestinations, Is.EqualTo(3));
+        Assert.That(s.meanStackedDestinations, Is.EqualTo(15f / 21f).Within(1e-4f));
+        Assert.That(s.maxDetourDestinations, Is.EqualTo(2));
+        Assert.That(s.stalls, Is.EqualTo(1));
+    }
+
     static MovementUnitSample Unit(int frame, float time, int unit, UnitFormationState state) =>
         new MovementUnitSample { frame = frame, time = time, squad = 1, unit = unit, state = state,
             target = -1, targetDistance = -1f, gear = -1 };

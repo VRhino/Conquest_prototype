@@ -186,6 +186,101 @@ public partial class BattleSceneIntegrationTests
         }
     }
 
+    // S7 bottleneck (Movimiento_Formaciones.md §5.2): an L-shaped corridor 2 m wide (inside the walls) in front of the hero.
+    const float S7CorridorStart = 6f;     // Open ground between the hero and the corridor mouth, m.
+    const float S7FirstLeg = 10f;         // From the mouth to the centre of the corner, m.
+    const float S7SecondLeg = 10f;        // From the corner to the exit, m.
+    const float S7HalfWidth = 1f;         // Half the free width between the walls, m.
+    const float S7WallThickness = 0.5f;
+    const float S7WallHeight = 2f;
+    const float S7CarveSeconds = 1f;      // Lets the walls carve the NavMesh before the march.
+    const float S7LegTimeout = 15f;
+    const float S7TailSeconds = 6f;
+
+    /// <summary>
+    /// S7 bottleneck: the hero walks a Line formation through a 2 m corridor with a right-angle turn. Formation slots
+    /// fall inside the walls or on their far side; the summary counts destinations that share a cell, destinations
+    /// reached only by a detour and units stalled away from their slot (C13, L3-01).
+    /// </summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS7Bottleneck()
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        var walls = new System.Collections.Generic.List<GameObject>();
+        try
+        {
+            yield return PrepareBaseline();
+            // March keys are camera relative: S walks along -forward, D along +right.
+            var cameraTransform = Camera.main.transform;
+            var back = Vector3.ProjectOnPlane(-cameraTransform.forward, Vector3.up).normalized;
+            var right = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up).normalized;
+            var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+            BuildS7Corridor((Vector3)start, back, right, walls);
+            yield return new WaitForSeconds(S7CarveSeconds);
+
+            using (MovementVideoCapture.Start("S7Bottleneck"))
+            {
+                MovementMetricsRecorderSystem.Begin("S7Bottleneck", squad);
+                yield return WalkUntil(Key.S, back, (Vector3)start, S7CorridorStart + S7FirstLeg);
+                var corner = (Vector3)start + back * (S7CorridorStart + S7FirstLeg);
+                yield return WalkUntil(Key.D, right, corner, S7HalfWidth + S7SecondLeg + 2f);
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return new WaitForSeconds(S7TailSeconds);
+                var end = (Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                Assert.That(Vector3.Dot(end - corner, right), Is.GreaterThan(S7SecondLeg * 0.5f),
+                    "The hero did not take the turn of the corridor.");
+                ReportBaseline(start);
+            }
+        }
+        finally
+        {
+            RestoreInputSettings(previousInput);
+            foreach (var wall in walls) if (wall != null) Object.Destroy(wall);
+        }
+    }
+
+    /// <summary>Holds <paramref name="key"/> until the hero has advanced <paramref name="distance"/> along <paramref name="direction"/>.</summary>
+    IEnumerator WalkUntil(Key key, Vector3 direction, Vector3 from, float distance)
+    {
+        InputSystem.QueueStateEvent(keyboard, new KeyboardState(key));
+        float deadline = Time.time + S7LegTimeout;
+        while (Time.time < deadline
+               && Vector3.Dot((Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position - from, direction) < distance)
+            yield return null;
+    }
+
+    /// <summary>
+    /// Walls of an L corridor: the first leg runs along <paramref name="back"/> from the mouth to the corner, the second
+    /// along <paramref name="right"/>. Each wall carves the NavMesh and blocks the hero's collider.
+    /// </summary>
+    static void BuildS7Corridor(Vector3 origin, Vector3 back, Vector3 right, System.Collections.Generic.List<GameObject> walls)
+    {
+        float w = S7HalfWidth, t = S7WallThickness;
+        float mouth = S7CorridorStart, corner = S7CorridorStart + S7FirstLeg;
+        // (longitudinal from, to; lateral from, to) in the corridor frame: longitudinal along back, lateral along right.
+        Wall(mouth, corner + w + t, -w - t, -w);                  // Outer wall of the first leg, up to the corner.
+        Wall(mouth, corner - w, w, w + t);                        // Inner wall of the first leg, open at the turn.
+        Wall(corner + w, corner + w + t, -w - t, w + S7SecondLeg); // Outer wall of the second leg.
+        Wall(corner - w - t, corner - w, w, w + S7SecondLeg);      // Inner wall of the second leg.
+
+        void Wall(float along0, float along1, float across0, float across1)
+        {
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = "S7 corridor wall";
+            wall.transform.SetPositionAndRotation(
+                origin + back * (0.5f * (along0 + along1)) + right * (0.5f * (across0 + across1)) + Vector3.up * (0.5f * S7WallHeight),
+                Quaternion.LookRotation(back, Vector3.up));
+            // Local z runs along back, local x along -right for LookRotation(back); the box is symmetric, so only sizes matter.
+            wall.transform.localScale = new Vector3(across1 - across0, S7WallHeight, along1 - along0);
+            var obstacle = wall.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.size = Vector3.one;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = false;
+            walls.Add(wall);
+        }
+    }
+
     bool AnySquadUnitAttacking()
     {
         foreach (var element in em.GetBuffer<SquadUnitElement>(squad))
