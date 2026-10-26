@@ -20,6 +20,8 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
 | M12 | Picos de aceleración en la melé | Media | **Mitad hecha** (frenado de llegada); quedan picos de contacto |
 | M13 | Llegada más lenta al frenar con aceleración limitada | Media | **Hecho** en S4; S3 con matiz (primera parada) |
+| M14 | Aceleración en S7 multitud con C13 | Media | Pendiente (medir) |
+| M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
 
 ---
 
@@ -196,3 +198,27 @@ reduciendo ese retraso (M1) o con la llegada del ancla (C10, M5), que hace que e
 
 **Decisión.** No hace falta mientras ORCA funcione (D1). No debe coexistir con ORCA sin coordinar: habría dos escritores del
 desplazamiento.
+
+## M14. Aceleración en S7 multitud con C13
+**Qué es.** Con `FormationSlotResolveSystem` activo, S7 multitud da una mediana de 1,75 % de muestras por encima de 20 m/s²
+(4 corridas), frente a 0,9 % con el sistema apagado (3 corridas). Los solapes no cambian (14 frente a 12) y S6 queda dentro
+de su rango. La escuadra local no reubica ningún slot en la melé de las corridas limpias, y entonces sigue el camino
+antiguo.
+
+**Hipótesis [hip].** La escuadra enemiga sí reubica: su héroe aparece junto a un borde de la malla (z ≈ 37,8 en
+`BattleTestScene`). Eso cambia la melé de forma legítima. También puede ser solo la variación de M10.
+
+**Cómo abordarlo.** Junto con el bloque L4-04/L4-09, que toca los mismos sistemas: 5 corridas por variante y la validación
+apagada solo para el enemigo. Si la diferencia sigue con el enemigo sin reubicar, buscarla en `UnitNavMeshSystem` (rama del
+slot validado).
+
+## M15. Colas y coste de la validación en cuellos de botella (C13)
+**Qué es.** En el pasillo de S7, con C13 todos los soldados entran por la boca. En un paso transitable de 1 m hacen cola y se
+paran en la boca y en la esquina (4 paradas de más de 0,5 s). La validación hace unas 44 consultas por unidad y segundo en
+marcha dentro del pasillo; en campo abierto, unas 15. El sistema cuesta 0,15 ms por frame con dos escuadras.
+
+**A considerar.**
+- La cola es esperable. Se puede suavizar ordenando la entrada (reubicar primero a los más cercanos a la boca) o con F12
+  (cohesión como consulta: frenar el ancla mientras haya rezagados).
+- Coste: subir `slotResolveRevalidateDistance`, guardar entre validaciones las celdas ya comprobadas, o pasar la sonda a
+  `NavMeshQuery` en un job. Medir con S8 (M3) antes de optimizar.

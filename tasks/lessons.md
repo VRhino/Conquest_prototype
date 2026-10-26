@@ -381,3 +381,11 @@
 
 - Al recorrer un prefab modular para construir listas de piezas, usar GetComponentsInChildren<T>(true) si las piezas o sus contenedores están inactivos; la búsqueda por defecto los omite y puede dejar el asistente sin inicializar.
 
+## C13: slots validados sobre la NavMesh (2026-10-26)
+
+- Para cambiar a quién lee un destino, comprobar primero que el camino nuevo, cuando no cambia nada, se comporta igual que el antiguo. Medir S1/S4 con el interruptor apagado y encendido en el mismo código. Así salió que actualizar el destino efectivo cada frame, en vez de cada 0,25 m, llevaba S1 de 0,17 a 0,70 s sin reubicar ni un slot.
+- No identificar celdas redondeando posiciones de plantilla: las plantillas de ancho par están en medias celdas y, con ruido, dos vecinos caen en el mismo índice. La ocupación se mide por distancia en el marco de la formación.
+- `NavMesh.SamplePosition` devuelve el punto más cercano en 3D: con la malla por encima del terreno, también desplaza en horizontal. Para "el punto de la malla en esta posición", reproyectar desde la altura de la superficie.
+- Un dato de destino nuevo debe tener la misma altura que el antiguo. La unidad y la llegada dependen de ella (comparación en 3D), y `SetDestination` reemite si el camino sale parcial. Cambiar la altura del slot empeoró S1 y dobló los `SetDestination` en la melé.
+- No escribir en el proyecto mientras corre un test de PlayMode: preparar los ficheros nuevos en el scratchpad y copiarlos al terminar. Para aislar una causa, un cambio temporal marcado `TEMP A/B` y revertido en el mismo comando.
+- El filtro de nombres de `run_tests` es por subcadena y no admite `$`: un test cuyo nombre contiene a otro arrastra los dos.

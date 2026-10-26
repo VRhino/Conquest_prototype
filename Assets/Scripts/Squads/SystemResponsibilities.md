@@ -1,5 +1,17 @@
 # System Responsibilities & Data Flow
 
+## Contratos actualizados — 2026-10-26 (C13: slots validados sobre la NavMesh)
+
+- `FormationSlotResolveSystem` (después de `GridFormationUpdateSystem`, antes de `UnitFormationStateSystem` y
+  `SquadNavigationSystem`) es el único escritor de `UnitResolvedSlotComponent`. Valida por escuadra los slots de la
+  plantilla contra la NavMesh cuando un slot se ha movido más de `slotResolveRevalidateDistance`; los bloqueados o
+  tomados pasan a la celda libre más cercana (`FormationSlotResolver`, BFS por anillos, D9). Nunca rechaza la orden.
+- `UnitTargetPositionComponent` es la plantilla (lo escriben `FormationSystem` y `GridFormationUpdateSystem`).
+  `UnitNavMeshSystem`, `UnitFormationStateSystem`, `SquadNavigationSystem`, `UnitFollowFormationSystem`,
+  `UnitAvoidanceSystem` y el grabador de métricas leen el slot resuelto.
+- `UnitNavMeshSystem` no usa el radio ancho de 2 m con un slot validado; lo proyecta solo dentro de su celda.
+- Los radios de llegada salen de `FormationArrivalRadii` con el espaciado de la formación (F15).
+
 ## Contratos actualizados — 2026-10-22 (habilidades y perks, Fase 2 de `Docs/Design/Aprendizajes_Referencia.md`)
 
 - `HeroSkillRequestSystem` es el único que convierte entrada local y decisión de IA en `SkillRequestComponent`;
@@ -158,6 +170,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Reparto**: en una disposición nueva, cada unidad toma la ranura libre más cercana (voraz, solo en el evento); si no cambia la plantilla, cada unidad conserva su ranura tras bajas.
 - **Output**: también el `UnitTargetPositionComponent` inicial; después lo mantiene `GridFormationUpdateSystem`, que solo gira el desplazamiento local con el ancla.
 
+### FormationSlotResolveSystem
+- **Responsabilidad**: Único escritor de `UnitResolvedSlotComponent`: el slot al que va cada unidad, comprobado contra la NavMesh por escuadra (C13).
+- **Orden**: `[UpdateAfter(GridFormationUpdateSystem)]` `[UpdateBefore(UnitFormationStateSystem)]` `[UpdateBefore(SquadNavigationSystem)]`
+- **Regla**: Consulta la malla solo cuando la plantilla se ha movido más de `slotResolveRevalidateDistance`; entre medias arrastra la corrección. Un slot que pasa conserva la plantilla exacta; uno bloqueado (fuera de la malla o al otro lado de un borde visto desde el héroe) se desplaza por celdas enteras a la libre más cercana. Sin hueco, queda sin resolver y la navegación usa la plantilla. Con `slotResolveEnabled` apagado, copia la plantilla.
+
 ### UnitFormationStateSystem
 - **Responsabilidad**: Gestiona todos los cambios de estado de unidades (Moving/Formed/Waiting)
 - **Regla**: Único owner de transiciones de estado de unidades
@@ -173,7 +190,8 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Rotación combate**: Si dist ≤ 3.5u → `updateRotation=false` + rota `LocalTransform` para mirar al target
 - **Rotación normal**: `updateRotation=true` — NavMesh controla la orientación durante movimiento
 - **`UnitTargetPositionComponent`**: solo lectura — nunca escribe (ownership exclusivo de sistemas de formación)
-- **Llegada**: `UnitFormationStateSystem` y `SquadNavigationSystem` comparan contra el destino efectivo asociado al slot solicitado.
+- **Llegada**: `UnitFormationStateSystem` y `SquadNavigationSystem` comparan contra el destino efectivo asociado al slot resuelto (`UnitResolvedSlotComponent`).
+- **Slot validado** (C13): se proyecta solo dentro de su celda (`slotSnapRadiusMax`), nunca con el radio ancho.
 
 ### MeleeContactRingSystem
 - **Responsabilidad**: Anillo de contacto (C11, L-7): reserva para cada atacante cuerpo a cuerpo una posición en el anillo de su objetivo (radio = menor distancia de parada, ⌊2π·r / (2·bodyRadius + contactRingMargin)⌋ posiciones en ángulos fijos del mundo); con el anillo lleno, espera (slot −1)

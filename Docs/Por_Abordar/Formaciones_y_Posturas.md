@@ -10,7 +10,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | Pendiente (contenido) |
-| F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | Pendiente |
+| F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
 | F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros hecha (`04608ca2`); faltan ShieldWall, Testudo, estocadas y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
@@ -23,8 +23,9 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F12 | Cohesión como consulta: quórum, aislados y terreno no apto | Media | Pendiente |
 | F13 | Postura al ir subido a escaleras, torres o máquinas | Baja | Pendiente (sin asedio) |
 | F14 | Media vuelta (invertir filas en giros grandes) | Baja | Descartado por D5 |
-| F15 | Radios de llegada por formación | Media | Pendiente |
+| F15 | Radios de llegada por formación | Media | **Hecho** (`dcaf6dde`) |
 | F16 | `UnitShieldComponent.orientation` sin lectores | Baja | Pendiente |
+| F17 | Ocupación de celdas entre escuadras y plantilla por encaje | Media | Pendiente |
 
 ---
 
@@ -61,6 +62,11 @@ hace falta para que las formaciones por datos funcionen en terreno abierto. Ya e
 
 **Cómo abordarlo.** Escena S7 de `Docs/Design/Movimiento_Formaciones.md` §5.2 (pasillo y borde de acantilado): dos unidades
 nunca comparten celda y ninguna queda fuera de la malla.
+
+**Hecho (2026-10-26, `3000830d`, `Movimiento_Formaciones.md` §20).** `FormationSlotResolveSystem` valida los slots por
+escuadra cuando la plantilla se mueve más de 0,5 m y reubica los bloqueados en la celda libre más cercana (BFS por anillos,
+D9). En S7 cuello de botella ya no hay destinos que compartan celda ni al otro lado del muro. Se mantiene la plantilla; la
+elección de plantilla por encaje de la referencia queda en F17.
 
 ## F3. Clips de animación de las posturas
 **Qué es.** El paso 6 del plan conecta la postura con el Animator (parámetros `Stance` y `SlotRole`). Hacen falta clips de
@@ -192,6 +198,21 @@ Testudo (0,8 m) queda fuera de esa regla a propósito: `arrivalRadiusOut` = 0,5 
 
 **Cómo abordarlo.** Radios de llegada proporcionales al espaciado de la formación (por ejemplo, `r_out = 0,45·s`) o un perfil
 de llegada por formación (D3). Medir en S4 que la Testudo no oscile al formar.
+
+**Hecho (2026-10-26, `dcaf6dde`).** Los radios ajustados valen para 1 m; con un espaciado menor se reducen en proporción
+(`FormationArrivalRadii`, un solo cálculo para los tres lectores). Cumplen la regla la Testudo (0,8 m) y la Línea de lanceros
+(0,67 m), que también la incumplía. Test de coherencia sobre todas las formaciones; S4 sin oscilaciones. Un perfil de
+llegada por formación (D3) sigue siendo posible si hace falta más que el espaciado.
+
+## F17. Ocupación de celdas entre escuadras y plantilla por encaje
+**Qué es.** C13 reparte celdas dentro de una escuadra. Dos escuadras aliadas que se cruzan, o que comparten paso, pueden
+mandar soldados al mismo sitio. Tampoco se elige plantilla por encaje como en la referencia ("¿cabe esta plantilla?").
+
+**Por qué queda fuera.** D9 decidió mantener la plantilla. La ocupación entre escuadras necesita un mapa compartido de
+celdas, y hoy solo hay una escuadra activa por héroe.
+
+**Cómo abordarlo.** Escena S5 (cruce aliado en pasillo de 4 m). Las celdas que ya ha resuelto una escuadra entran como
+ocupadas en la siguiente, en un orden fijo por escuadra. Si se quiere, F1 + un "¿cabe?" por plantilla antes de reubicar.
 
 ## F16. `UnitShieldComponent.orientation` sin lectores
 **Qué es.** Se rellena desde `ShieldHitboxBehaviour.orientation` del prefab, pero ningún sistema lo lee (el bloqueo es el collider).

@@ -248,7 +248,7 @@ Orden: impacto visible / coste. Cada cambio respeta "un sistema, una responsabil
 | C10 | **Ancla con velocidad, aceleración y giro limitados** (L-1, L-5) | `SquadAnchorSystem` (:85-89) | Es el único escritor del ancla | Medio-alto: cambia la sensación de mando; héroe y tropa se separan | Escenas S2/S3; métricas de dispersión y de giro |
 | C11 | **Anillo de contacto con reserva** (L-7) | Sistema nuevo `MeleeSlotReservationSystem` entre `UnitTargeting` y `UnitNavMesh`; buffer `MeleeSlotBuffer` en el objetivo; `UnitNavMesh` solo lee el destino | Un sistema, un componente de reserva | Medio. Casos de objetivo móvil; liberar reservas al morir | Escena S6: 0 unidades apiladas; máx. atacantes = cupo |
 | C12 | **Asignación voraz por distancia y compactado** (L-2; L3-02) | `FormationSystem`; `FormationCompactSystem` nuevo | Eventos, no por frame | Bajo-medio. Cruces durante la reasignación | Escena S4: recorrido total y cruces vs. asignación por índice |
-| C13 | **Validación de slots en NavMesh** (L3-01/04) | `FormationSlotResolveSystem` nuevo, `UnitResolvedSlotComponent` | Consulta una vez por cambio de ancla | Medio (NavMeshQuery) | Escena S7: dos unidades no comparten celda |
+| C13 | **Validación de slots en NavMesh** (L3-01/04). **Hecho (§20)** | `FormationSlotResolveSystem` nuevo, `UnitResolvedSlotComponent` | Consulta una vez por cambio de ancla | Medio (NavMeshQuery) | Escena S7: dos unidades no comparten celda |
 | C14 | **ORCA / evitación avanzada** (L-6 nivel 2) | `UnitAvoidanceSystem` Burst (L5-1); `UnitDesiredVelocity` | Entre `UnitNavMesh` y `NavMeshPositionSync` | Alto. Solo si C8 no basta | Comparar solapes y ms con y sin él |
 | C15 | **Limpiar datos muertos**: cablear `UnitSpacingComponent` a `s`/`k_sep` o eliminarlo | `UnitSpacing.Component.cs`, authoring, builder | Quita ruido | Bajo | Grep: 0 campos sin lector |
 
@@ -721,3 +721,61 @@ cifrados.
 Lectura: no cambia los solapes y sube algo los picos, porque suma movimiento al del agente y al de la colisión. No es un
 arreglo de M2, sino un elemento de sensación de golpe, como en la referencia. Queda activo; se decide viéndolo en juego.
 Falta, si se quiere acercar más: la sacudida y que el retroceso dependa del tipo de golpe y del arma.
+
+## 20. Slots validados sobre la NavMesh (C13, L3-01, F2, F15, 2026-10-26)
+
+**Problema.** Cada soldado proyectaba su slot por separado: primero en su celda y, si fallaba, con un radio de 2 m. Con un
+muro, varios slots caían en el mismo borde (apilados en la esquina) o al otro lado del muro, que solo se alcanza rodeando.
+
+**Cambio** (patrón de la referencia **[dec]**: la formación es una rejilla local y los conflictos se reubican con un BFS de
+cuatro vecinos en la misma isla; código propio).
+- `FormationSlotResolveSystem`, después de `GridFormationUpdateSystem`, es el único escritor de
+  `UnitResolvedSlotComponent`. Por escuadra, y solo cuando un slot de la plantilla se ha movido más de
+  `slotResolveRevalidateDistance` (0,5 m) desde la última validación; entre medias arrastra la corrección.
+- Lógica pura en `FormationSlotResolver` (EditMode con una malla falsa):
+  - Un slot conserva su plantilla si se proyecta a la malla deslizando como mucho un cuarto de celda y se llega a él en
+    línea recta desde el origen. El origen es el ancla alcanzada desde el héroe y cortada en el primer borde, para que un
+    ancla metida en un muro no salte al otro lado. La "misma isla" se comprueba así, en local.
+  - Los demás prueban primero el desplazamiento que ya tenían y después la celda libre más cercana por anillos de
+    distancia de cuatro vecinos (BFS acotado a `slotResolveSearchCells`). Dentro del anillo gana la celda más cercana al
+    soldado. Se desplazan por celdas enteras y conservan su ruido.
+  - La ocupación se mide por distancia en el marco de la formación. Por índice de celda no vale: las plantillas de ancho
+    par están en medias celdas y, con ruido, el redondeo juntaba a dos vecinos.
+  - Sin hueco, el slot queda sin resolver y se usa la plantilla: nunca se rechaza la orden (D9).
+- Movimiento, llegada, seguimiento y evitación leen el slot resuelto; la plantilla no se toca.
+- Un slot que pasa conserva su plantilla exacta y `UnitNavMeshSystem` lo proyecta como antes dentro de su celda, pero
+  nunca con el radio ancho. Así el campo abierto y la melé no cambian.
+- F15: los radios de llegada se reducen en proporción cuando el espaciado es menor que 1 m (Testudo 0,8 m, Línea de
+  lanceros 0,67 m), para que siempre `r_in < s/4` y `r_out ≤ s/2`.
+
+**Escenario.** `MovementBaselineS7Bottleneck` (§5.2): pasillo de 2 m con giro en ángulo recto, hecho con muros que tallan la
+malla delante del héroe; la escuadra lo cruza en Línea. `MovementBaselineS7BottleneckWithoutSlotResolve` es el mismo
+escenario con `slotResolveEnabled` apagado, que reproduce exactamente el comportamiento anterior. El S7 de §17 pasa a
+llamarse S7 multitud.
+
+| S7 cuello de botella | Sin C13 | Con C13 |
+|---|---|---|
+| Destinos que comparten celda por frame (media / máx.) | 0,05 / 3 | **0,00 / 1** |
+| Destinos que el héroe solo alcanza rodeando (media / máx.) | 2,26 / 8 | **0,10 / 2** |
+| Formado al 95 % tras parar | no forma en 6 s | **4,2 s** |
+| Paradas lejos del slot (> 0,5 s) | 0 | 4 |
+| Consultas a la NavMesh en marcha, por unidad y segundo | 10,6 (proyecciones) | 44 (validación) + 11 |
+| Coste de `FormationSlotResolveSystem` (dos escuadras) | — | 0,15 ms |
+
+| Regresión | Antes | Con C13 |
+|---|---|---|
+| S1 formado / error al slot en marcha | 0,17 s / 0,50 m | 0,17 s / 0,50 m |
+| S4 formado / error al slot en marcha | 0,57 s / 0,89 m | 0,57 s / 0,89 m |
+| S6 pares enemigos solapados > 0,3 s | 10-18 | 11, 11 |
+| S7 multitud: solapados / aceleración > 20 m/s² (mediana) | 12 / 0,9 % (3 corridas) | 14 / 1,75 % (4 corridas) |
+
+Lectura:
+- En el pasillo ya nadie va al otro lado del muro ni comparte celda. Sin C13, media escuadra cruzaba por fuera rodeando los
+  muros. Con C13 todos entran, y las paradas son colas en la boca y en la esquina: un paso transitable de 1 m para 12
+  soldados.
+- S1 y S4 dan cifras idénticas porque los slots que pasan siguen el camino antiguo.
+- Dos intentos previos sí empeoraban la llegada (S1 de 0,17 a 0,70 s):
+  - actualizar el destino efectivo cada frame en vez de cada 0,25 m;
+  - darle al slot la altura de la malla (S1 0,37 s y el doble de `SetDestination` en la melé).
+- En S7 multitud la aceleración sale algo más alta. La melé varía mucho entre corridas (M10) y allí la escuadra local no
+  reubica ningún slot, así que queda como duda (M14 en `Docs/Por_Abordar/Movimiento.md`).

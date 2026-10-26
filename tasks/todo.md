@@ -1,6 +1,6 @@
 # Plan: C13 / L3-01 + F2 (+ F15) — slots validados sobre la NavMesh
 
-Estado: en curso (2026-10-26), rama `main` local, sin subir.
+Estado: **hecho** (2026-10-26), rama `main` local, sin subir. Resultados en `Docs/Design/Movimiento_Formaciones.md` §20.
 Petición: bloque 1 del plan de la referencia. Plan anterior archivado en `tasks/reference-phase2-plan.md`.
 Fuentes: `Docs/Design/Movimiento_Formaciones.md` (L-2, C13, D9, §5.2 S7), `Docs/Design/Aprendizajes_Referencia.md`
 (L3-01, L3-04), `Docs/Por_Abordar/Formaciones_y_Posturas.md` (F2, F15). Referencia (solo patrones): la formación es una
@@ -39,14 +39,19 @@ rechaza y el soldado se queda quieto.
   (`FormationArrivalRadii`, `FormationFollowSpeed`, umbral de llegada de `UnitNavMeshSystem`).
 
 ## Pasos (un commit cada uno; EditMode en verde y PlayMode S1/S6 antes de cada commit que toque movimiento)
-- [ ] **1. Escenario S7 cuello de botella y métricas.** `MovementBaselineS7Bottleneck`: pasillo de 2 m con giro hecho con
+- [x] **1. Escenario S7 cuello de botella y métricas.** `MovementBaselineS7Bottleneck`: pasillo de 2 m con giro hecho con
   muros que tallan la malla, delante del héroe; el héroe lo recorre en Línea. El grabador cuenta por frame destinos que
   comparten celda y destinos no alcanzables en línea recta desde el ancla. Línea base con el código actual.
-- [ ] **2. F15: radios de llegada por formación.** EditMode de coherencia para todas las formaciones; S4.
-- [ ] **3. `FormationSlotResolver` puro + EditMode.** Campo abierto (nada cambia), pasillo, muro con el otro lado
-  transitable, estabilidad, sin hueco, determinismo.
-- [ ] **4. Sistema, componente y lectores.** S7 con y sin `slotResolveEnabled`; S1/S4/S6 de regresión; S8 no existe (M3).
-- [ ] **5. Documentación.** `Movimiento_Formaciones.md` (sección nueva), `Aprendizajes_Referencia.md` §5,
+  Hecho (`3d505f65`): seis soldados cruzaban por fuera de los muros; hasta 8 destinos al otro lado y 3 pares por celda.
+- [x] **2. F15: radios de llegada por formación.** EditMode de coherencia para todas las formaciones; S4.
+  Hecho (`dcaf6dde`): también la Línea de lanceros (0,67 m) incumplía la regla.
+- [x] **3. `FormationSlotResolver` puro + EditMode.** Campo abierto (nada cambia), pasillo, muro con el otro lado
+  transitable, estabilidad, sin hueco, determinismo. Hecho (`154c1a9c`).
+- [x] **4. Sistema, componente y lectores.** S7 con y sin `slotResolveEnabled`; S1/S4/S6 de regresión; S8 no existe (M3).
+  Hecho (`3000830d`). Cambios frente al diseño, por lo medido: ocupación por distancia (no por índice de celda),
+  desempate por cercanía al soldado, revalidación cada 0,5 m, y el slot que pasa conserva la plantilla exacta con la
+  proyección de siempre dentro de su celda (sin el radio ancho). Abiertos: M14, M15, F17.
+- [x] **5. Documentación.** `Movimiento_Formaciones.md` (sección nueva), `Aprendizajes_Referencia.md` §5,
   `Docs/Por_Abordar` (F2, F15 y README), `SystemResponsibilities.md`, lecciones.
 
 ## Verificación

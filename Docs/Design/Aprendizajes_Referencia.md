@@ -173,7 +173,7 @@ combinan con Y, las listas son "cualquiera de" y los triestados distinguen "no i
 | ID | Título | Problema actual | Propuesta | Beneficio | Coste | Riesgo | Prio. |
 |---|---|---|---|---|---|---|---|
 | L3-02 (verificado) | Rellenar huecos tras bajas | Slots por identidad (`UnitGridSlotComponent`, `Squads/Systems/Formation.System.cs:117-126`): supervivientes conservan slot, huecos fijos; `Docs/Mechanics/Formations.md:79,101` afirma que se comprime y `Docs/Arquitectura/7_*.md:35` lo marca pendiente | Varios patrones por tipo con `minUnits` + `FormationCompactSystem` con asignación voraz por distancia, con intervalo | Sin huecos en combate largo; menos recorrido | M | B | A |
-| L3-01 | Validar slots sobre NavMesh por escuadra | Cada unidad proyecta su slot con `SamplePosition` radio 2 m por separado (`Squads/Systems/UnitNavMesh.System.cs:364`) | `FormationSlotResolveSystem` con `NavMeshQuery`, BFS acotado y `UnitResolvedSlotComponent`; solo al cambiar la revisión del ancla | Sin apilado en esquinas ni slots en otra isla | M | M | A |
+| L3-01 (hecho, C13) | Validar slots sobre NavMesh por escuadra | Cada unidad proyecta su slot con `SamplePosition` radio 2 m por separado (`Squads/Systems/UnitNavMesh.System.cs:364`) | `FormationSlotResolveSystem` con `NavMeshQuery`, BFS acotado y `UnitResolvedSlotComponent`; solo al cambiar la revisión del ancla | Sin apilado en esquinas ni slots en otra isla | M | M | A |
 | L3-03 | Jitter determinista en Dispersa | `Dispersed` es una rejilla fija de `int2` | `posJitter`/`yawJitter` por hash (unidad, slot) | Aspecto natural | S | B | M |
 | L3-04 | Radio de snap por formación | Un `navMeshDestinationSampleRadius` global de 2 m (`UnitNavMesh.System.cs:89`) | `snapRadius` en `FormationDataBlob` | Formaciones cerradas no se rompen | S | B | M |
 | L3-05 | Caducidad de órdenes | Temporizadores dispersos por IA | `expiresAt` en `SquadResolvedOrderComponent` | Menos temporizadores; contrato de red pequeño | S | B | B |
@@ -337,13 +337,14 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 - **Según alcance:** L5-8 solo con caballería (con L5-6); L7-8 cuando se haga la vista de `Tab`; L7-9 si el GDD la pide.
 
 ### Estado a 2026-10-26
-- **Hecho:** Fases 0, 1 y 2; lotes de movimiento C1-C12, C14 y C15 de `Movimiento_Formaciones.md`, que cubren L3-02 (C12),
-  L5-1 (C14), L5-2 (C9) y L5-4 (C7, con la decisión D5); L3-03 y L3-04 entraron con las formaciones por datos.
-- **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-01 (C13), L3-05, L3-06; L4-03, L4-04, L4-05, L4-06, L4-07;
+- **Hecho:** Fases 0, 1 y 2; lotes de movimiento C1-C15 de `Movimiento_Formaciones.md`, que cubren L3-02 (C12),
+  L5-1 (C14), L5-2 (C9), L5-4 (C7, con la decisión D5) y L3-01 (C13, 2026-10-26, §20: slots validados por escuadra con
+  BFS y D9); L3-03 y L3-04 entraron con las formaciones por datos.
+- **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-05, L3-06; L4-03, L4-04, L4-05, L4-06, L4-07;
   L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los 20 puntos "(amp.)".
-- **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H1-H9 habilidades y perks, P1-P6 pila, F1-F16 formaciones y
-  posturas, M1-M13 movimiento).
-- **Orden recomendado** (prioridad del usuario: movimiento y formación): L3-01/C13; L4-04 con L4-09; después L2-9 con H5.
+- **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H1-H9 habilidades y perks, P1-P6 pila, F1-F17 formaciones y
+  posturas, M1-M15 movimiento).
+- **Orden recomendado** (prioridad del usuario: movimiento y formación): L4-04 con L4-09; después L2-9 con H5.
 
 ## 6. Lo que no conviene copiar
 
