@@ -389,3 +389,12 @@
 - Un dato de destino nuevo debe tener la misma altura que el antiguo. La unidad y la llegada dependen de ella (comparación en 3D), y `SetDestination` reemite si el camino sale parcial. Cambiar la altura del slot empeoró S1 y dobló los `SetDestination` en la melé.
 - No escribir en el proyecto mientras corre un test de PlayMode: preparar los ficheros nuevos en el scratchpad y copiarlos al terminar. Para aislar una causa, un cambio temporal marcado `TEMP A/B` y revertido en el mismo comando.
 - El filtro de nombres de `run_tests` es por subcadena y no admite `$`: un test cuyo nombre contiene a otro arrastra los dos.
+
+## L4-04 + L4-09: puntuación de objetivo y búsqueda por escuadra (2026-10-26)
+
+- Medir la línea base con el mismo grabador que se usará después. Antes de tocar el targeting se añadió la métrica de cambios de objetivo y se midió el código viejo con ella; sin eso no habría con qué comparar la histéresis.
+- La melé no se decide con tres corridas. Tres variantes (sin búsqueda, radio mínimo 3 m, radio mínimo 6 m) dieron rangos de solapes que se cruzan (3-16). Lo robusto fue lo que se repetía en todas las corridas (picos de S6 a 2,4 % antes en las tres) y lo estructural (p95 de atacantes por objetivo). Elegir un valor dentro del ruido por coherencia de diseño (radio mínimo = correa), y decirlo, en vez de por una mediana de tres.
+- No dar por reproducible un escenario por lo que dijo un documento antiguo: S1 da hoy 0,17-0,43 s hasta formar con el mismo código. Antes de atribuir un cambio de S1 a un commit, repetir la corrida; usar como dato de regresión lo que sí se repite (error en marcha).
+- Un filtro nuevo sobre candidatos rompe tests que no hablan de él, porque sus posiciones eran arbitrarias (enemigo a 10 m de una escuadra quieta). Cambiar la posición incidental del test, no el filtro, y dejar que el test de escala diga explícitamente qué radio necesita.
+- Un escenario de estrés que imitaba algo con un cupo duro (S7: 6 por objetivo) hay que traducirlo al modelo nuevo por lo que representa (tres escuadras → cada atacante cuenta un tercio en la saturación), no por la cifra.
+- `unity command test_status` devuelve la duración de cada test; con eso se mide el coste de un test de escala sin buscar en el log.

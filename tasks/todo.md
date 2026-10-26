@@ -1,6 +1,6 @@
 # Plan: L4-04 + L4-09 — puntuación de objetivo con saturación blanda y búsqueda de enemigo por escuadra
 
-Estado: **en curso** (2026-10-26), rama `main` local, sin subir.
+Estado: **hecho** (2026-10-26), rama `main` local, sin subir. Resultados en `Docs/Design/Movimiento_Formaciones.md` §21.
 Petición: bloque 2 del plan de la referencia. Plan anterior archivado en `tasks/c13-slot-resolve-plan.md`.
 Fuentes: `Docs/Design/Aprendizajes_Referencia.md` (L4-04, L4-09), `Docs/Design/Movimiento_Formaciones.md` (D6, L-7, §13,
 §17-20), `Docs/Por_Abordar/Movimiento.md` (M2, M6, M12, M14). Referencia (solo patrones): puntuación por cercanía + foco de
@@ -42,12 +42,12 @@ su referencia y su foco, el radio de búsqueda se interpola con la velocidad y h
 - Métrica nueva: cambios de objetivo por unidad y segundo con objetivo (los que pasan de un enemigo a otro).
 
 ## Pasos (un commit cada uno; EditMode en verde y PlayMode S1/S6 antes de cada commit)
-- [ ] **1. Métrica de cambios de objetivo** (analizador + EditMode) y línea base: S1, S4, S6 ×3, S7 multitud ×5.
-- [ ] **2. `TargetScoring` y `EnemySearch` puros + EditMode.**
-- [ ] **3. `UnitTargetingSystem` con puntuación, saturación blanda e histéresis (L4-04)**; datos; adiós al cupo duro; S7 con
+- [x] **1. Métrica de cambios de objetivo** (analizador + EditMode) y línea base: S1, S4, S6 ×3, S7 multitud ×5. Hecho (`b39d44ed`).
+- [x] **2. `TargetScoring` y `EnemySearch` puros + EditMode.** Hecho (`b8f94afd`).
+- [x] **3. `UnitTargetingSystem` con puntuación, saturación blanda e histéresis (L4-04)**; datos; adiós al cupo duro; S7 con
   `k/3`. EditMode (reparto entre escuadras, histéresis, enganche). Medir S6 ×3, S7 ×5, S1, S4.
-- [ ] **4. Búsqueda por escuadra (L4-09)**: radio por estrategia y velocidad, filtro de cota. EditMode. Medir.
-- [ ] **5. Documentación**: `Movimiento_Formaciones.md` §21, `Aprendizajes_Referencia.md` §5, `Docs/Por_Abordar`
+- [x] **4. Búsqueda por escuadra (L4-09)**: radio por estrategia y velocidad, filtro de cota. EditMode. Medir.
+- [x] **5. Documentación**: `Movimiento_Formaciones.md` §21, `Aprendizajes_Referencia.md` §5, `Docs/Por_Abordar`
   (M2, M6, M12, M14 y README), `SystemResponsibilities.md`, lecciones.
 
 ## Verificación
@@ -55,3 +55,12 @@ su referencia y su foco, el radio de búsqueda se interpola con la velocidad y h
   comparar con la línea base de este bloque y con §20 (S6 11, 11; S7 14 / 1,75 %).
 - S1 y S4 idénticos (la marcha no tiene objetivos).
 - EditMode completo en verde.
+
+## Resultado
+- Pasos 3 y 4 en un solo commit (`7c82cbd3`): el sistema hace las dos cosas en la misma pasada; la búsqueda se midió
+  aparte apagándola con un cambio temporal. Cambio frente al diseño, por lo medido: radio mínimo 6 m (= la correa) en lugar
+  de 3 m, dentro del ruido pero coherente con lo que la escuadra puede perseguir.
+- S6: picos de aceleración 2,39 → 1,54 %, p95 de atacantes por objetivo 6 → 2, cambios de objetivo 0,22 → 0,16 por unidad y
+  segundo; solapes sin cambio (11 → 11,5). S7: picos 1,98 → 1,43 %, solapes 10 → 9,5. S1 y S4 iguales.
+- Abiertos: M2 (solapes, siguiente C16/F9), M12 (empujes del bodyblock), M16 (paradas en la melé), variantes de L4-09 que
+  piden L4-03 (línea de tiro) y una orden de atacar zona.

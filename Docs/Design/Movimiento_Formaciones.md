@@ -779,3 +779,64 @@ Lectura:
   - darle al slot la altura de la malla (S1 0,37 s y el doble de `SetDestination` en la melé).
 - En S7 multitud la aceleración sale algo más alta. La melé varía mucho entre corridas (M10) y allí la escuadra local no
   reubica ningún slot, así que queda como duda (M14 en `Docs/Por_Abordar/Movimiento.md`).
+
+## 21. Puntuación de objetivo con saturación blanda y búsqueda por escuadra (L4-04, L4-09, D6, 2026-10-26)
+
+**Problema.** `UnitTargetingSystem` elegía el enemigo más cercano y repartía con un cupo duro de 2 atacantes por objetivo
+**y por escuadra**: dos escuadras podían juntar 4 en el mismo enemigo, y el cupo cambiaba de objetivo a unidades que ya
+iban hacia él. Todo lo detectado (8 m al centroide, en 3D) era candidato, sin mirar la estrategia, la velocidad ni la cota.
+
+**Cambio** (patrón de la referencia **[dec]**, código y valores propios).
+- Lógica pura `TargetScoring` (L4-04): `(cercanía + foco + sesgo) · max(suelo, 1 − n·k) + histéresis`, con
+  cercanía = 1/(1 + d/4 m), `n` = atacantes de melé ya fijados en ese enemigo por **todas** las escuadras (D6: el enemigo
+  saturado pierde atractivo pero sigue elegible; `k` 0,35, suelo 0,1), foco +0,1 y bonus del objetivo actual +0,1. Se
+  puntúan los 6 candidatos más cercanos.
+- Una unidad en alcance de su objetivo no lo cambia. Las demás reevalúan cada 0,3 s con una fase por entidad (patrón de
+  L4-01: sin picos, independiente de los FPS) o al perder el objetivo.
+- Foco: el objetivo de la orden de ataque, o la escuadra enemiga contra la que ya pelean más unidades de la escuadra.
+- Lógica pura `EnemySearch` (L4-09): radio de combate por estrategia, medido más allá del contorno de la escuadra
+  alrededor del ancla (una unidad de flanco no ignora al enemigo de al lado). Mantener posición = 6 m (zona); ataque
+  ordenado por jugador o IA = 8 m (atacar avanzando); seguir al héroe o reacción = de 6 a 8 m con la velocidad del ancla
+  (máximo a 4 m/s). Arqueros: al menos su alcance. Filtro de cota: fuera si |Δy| > 3 m, o si pasa de un escalón de 0,5 m
+  con pendiente de más de 45°. Solo limita los objetivos **nuevos**: el actual se conserva mientras siga detectado.
+- Sin cupo duro: `maxUnitsPerTarget` desaparece. El anillo de contacto (C11) sigue colocando; la puntuación reparte.
+- S7 multitud: antes, un cupo de 6 por objetivo; ahora cada atacante cuenta un tercio en la saturación (tres escuadras).
+- Métrica nueva: cambios de objetivo (de un enemigo a otro) por unidad y segundo con objetivo.
+
+**Medida** (paso fijo; mediana y rango; la línea base es el código de §20 con la métrica nueva).
+
+| S6 choque | Antes (3) | L4-04 sin L4-09 (3) | L4-04 + L4-09, radio mínimo 3 m (3) | **Queda: radio mínimo 6 m (6)** |
+|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 11 (6-12) | 11 (7-13) | 8 (7-13) | 11,5 (3-16) |
+| Aceleración > 20 m/s² | 2,39 % (2,39-2,44) | 1,37 % | 1,81 % | **1,54 %** (0,88-2,32) |
+| Máx. aceleración | 197 m/s² | 136 m/s² | 156 m/s² | 150 m/s² |
+| Atacantes por objetivo (máx. / p95) | 6 / 6 | 2 / 2 | 6 / 2 | 2 / **2** |
+| Cambios de objetivo por unidad y s | 0,22 | 0,09 | 0,17 | 0,16 |
+
+| S7 multitud | Antes (5) | L4-04 sin L4-09 (3) | Radio mínimo 3 m (5) | **Queda: radio mínimo 6 m (6)** |
+|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 10 (2-11) | 10 (9-12) | 14 (10-15) | 9,5 (6-11) |
+| Aceleración > 20 m/s² | 1,98 % (0,78-2,53) | 1,23 % | 1,19 % | **1,43 %** (0,86-1,73) |
+| Máx. aceleración | 179 m/s² | 167 m/s² | 152 m/s² | 157 m/s² |
+| Atacantes por objetivo (máx. / p95) | 6 / 5 | 4 / 4 | 3 / 2 | 2,5 / **2** |
+| Cambios de objetivo por unidad y s | 0,25 | 0,21 | 0,18 | 0,21 |
+
+| Regresión | Antes | Después |
+|---|---|---|
+| S1 error al slot en marcha / formado al 95 % | 0,50 m / 0,17-0,43 s | 0,50 m / 0,17-0,37 s |
+| S4 error al slot en marcha / formado al 95 % | 0,88 m / 0,57 s | 0,89 m / 0,57 s |
+
+Lectura:
+- Los atacantes se reparten: el p95 por objetivo baja de 6 a 2 en S6 y de 5 a 2 en S7, y menos atacantes esperan fuera
+  del anillo (la distancia media de contacto baja de 1,75 a 1,40 m).
+- Los picos de aceleración de la melé (M12) bajan en S6 en todas las variantes con L4-04 (antes 2,39-2,44 % en las tres
+  corridas; ahora 0,9-2,3 %). En S7 bajan de 1,98 a 1,43 % de mediana, cerca del 0,9 % que daba S7 sin C13 (M14).
+- Los solapes enemigos (M2) **no cambian**: el rango de las variantes se cruza con el de antes. Confirma §17: los solapes no
+  vienen del reparto alrededor del objetivo. Queda el interruptor de colisión por escuadra (C16, F9).
+- El radio mínimo de 3 m frente a 6 m queda dentro del ruido de la melé; se fija en 6 m porque coincide con la correa
+  (`unitLeashDistance`): una escuadra quieta acepta los enemigos que podría perseguir. En la escena de pruebas, llana, el
+  filtro de cota no actúa; lo cubren los tests de EditMode.
+- Las «paradas» del resumen (unidad quieta a más de 1 m de su slot) suben en la melé (S6 de 13 a 26). **[hip]** Son
+  unidades quietas en su puesto de contacto, que con el reparto son más; fuera de la melé (S1, S4) no cambian.
+- S1 ya no es reproducible en el tiempo hasta formar: con el mismo código da 0,17, 0,37 y 0,43 s. El error en marcha sí se
+  repite exacto (0,50 m), así que es el dato de regresión de S1.

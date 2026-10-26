@@ -8,20 +8,21 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
 | M1 | Error al slot en marcha por encima de 0,5 m | Alta | **Hecho** (S1 0,51 m con C10 y margen en Walk) |
-| M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Mejorado**: S7 de 19 a 9 con contacto tipo cápsula |
+| M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Mejorado** (S7 de 19 a 9 con contacto tipo cápsula); el reparto (L4-04) no los cambia: medido |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
 | M4 | Animación del paso a carrera | Media | Pendiente |
 | M5 | Llegada del ancla (C10) | Media | **Hecho** |
-| M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; sin efecto medible aún en S6 |
+| M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; la saturación blanda de D6 ya está (L4-04) |
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
 | M8 | Detalles de ORCA respecto a la referencia | Media | **Hecho** (horizonte 1 s) |
 | M9 | Memoria por frame en la evitación | Baja | **Hecho** |
 | M10 | Variación de S6 entre corridas | Media | **Mitad hecha**: aproximación idéntica y mediana; la melé aún diverge |
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
-| M12 | Picos de aceleración en la melé | Media | **Mitad hecha** (frenado de llegada); quedan picos de contacto |
+| M12 | Picos de aceleración en la melé | Media | **Mejorado**: S6 de 2,4 a 1,5 % con L4-04 (frenado de llegada antes) |
 | M13 | Llegada más lenta al frenar con aceleración limitada | Media | **Hecho** en S4; S3 con matiz (primera parada) |
-| M14 | Aceleración en S7 multitud con C13 | Media | Pendiente (medir) |
+| M14 | Aceleración en S7 multitud con C13 | Media | **Hecho** (medido: dentro de M10; 1,4 % con L4-04) |
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
+| M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | Pendiente (comprobar en vídeo) |
 
 ---
 
@@ -60,6 +61,10 @@ lugar de amontonarlos en la línea recta. El interruptor de colisión por escuad
 que el bodyblock deje de ser un muelle y resuelva solo el solape, como la cápsula de la referencia: S7 baja de 19 a 9 pares y
 de 1,4 a 0,7 % de picos; S6 queda en 15-17 pares. El retroceso del golpe (§19) se probó y no cambia los solapes:
 queda como sensación de golpe. Siguiente paso posible: el interruptor de colisión por escuadra (C16).
+
+**Medido (2026-10-26, `Movimiento_Formaciones.md` §21).** El reparto de objetivos con saturación blanda (L4-04, D6) y la
+búsqueda por escuadra (L4-09) bajan el p95 de atacantes por objetivo de 6 a 2, pero los solapes no cambian: S6 11 → 11,5
+(rango 3-16) y S7 10 → 9,5 (6-11), con 6 corridas. Se confirma que no vienen del reparto. Lo siguiente sigue siendo C16 (F9).
 
 ## M3. Escena real con 900 agentes (S8)
 **Qué es.** La medida obligatoria de D8: 900 agentes en escena real con todos los sistemas nuevos, con un presupuesto de
@@ -102,6 +107,9 @@ escuadra por bando el anillo casi nunca se llena.
 **Lo que queda.** Medirlo en una melé de varias escuadras contra una (escenario nuevo, S7) y, si se confirma que ayuda,
 añadir el "ancla suave" de L-7 (quien ya está en su posición no recibe empuje del bodyblock). La saturación blanda en la
 puntuación de objetivos (D6, `p' = p·(1 − n·k)`) sigue sin hacer: hoy el targeting usa un cupo de 2 por escuadra.
+
+**Hecho lo de D6 (2026-10-26, L4-04, `Movimiento_Formaciones.md` §21).** El targeting puntúa con saturación blanda entre
+todas las escuadras y ya no hay cupo duro. Queda el "ancla suave" de L-7.
 
 ## M7. Reasignación de slots por distancia (C12)
 **Qué es.** Al cambiar de formación, repartir las ranuras minimizando el recorrido total en lugar de por índice.
@@ -162,6 +170,9 @@ desactivado en *Project Settings > Physics*, así que el orden de los contactos 
 decisión del usuario) y repetir tres corridas. Si con eso coinciden, la mediana deja de hacer falta para S6; si no, buscar
 el siguiente origen comparando el CSV frame a frame (`cmp` sobre las columnas de posición).
 
+**Nuevo (2026-10-26).** S1 tampoco se repite ya en el tiempo hasta formar: con el mismo código, tres corridas dan 0,17, 0,37
+y 0,43 s. El error en marcha sí se repite (0,50 m) y pasa a ser el dato de regresión de S1.
+
 ## M12. Picos de aceleración en la melé
 **Qué es.** Fuera de la melé los picos (> 20 m/s²) están por debajo del 1 %. En S6 eran un 2-3,5 % con máximos de 200-280 m/s².
 
@@ -182,6 +193,12 @@ parado). Con el tope de llegada √(2·a·d) y el punto de parada al frenar, S6 
 los muros (18 m/s es para que un muro no se atraviese) midiendo los solapes (M2), en lugar de rampas sobre el empuje. Para
 medir, usar el detector de caídas de `agent.velocity` por frame (se quitó tras usarlo; está descrito en §12) y separar enemigos en el
 CSV, que hoy solo graba la escuadra enfocada.
+
+**Avance (2026-10-26, L4-04, `Movimiento_Formaciones.md` §21).** Con el reparto por puntuación, la histéresis y el enganche
+(la unidad en alcance no cambia de objetivo), S6 baja de 2,4 % (2,39-2,44 en tres corridas) a 1,5 % de mediana (0,9-2,3,
+seis corridas) y el máximo de 197 a 150 m/s². Los cambios de objetivo bajan de 0,22 a 0,16 por unidad y segundo. Quedan los
+empujes del bodyblock y las llegadas ya pegadas al objetivo; el siguiente paso de arriba (tope de empuje fuera de los muros)
+sigue sin probar.
 
 ## M13. Llegada más lenta al frenar con aceleración limitada
 **Qué es.** Desde que la velocidad respeta la aceleración, el tiempo hasta formar subió (S3 0,51 → 0,83 s, S4 unos 2 s).
@@ -212,6 +229,12 @@ antiguo.
 apagada solo para el enemigo. Si la diferencia sigue con el enemigo sin reubicar, buscarla en `UnitNavMeshSystem` (rama del
 slot validado).
 
+**Medido (2026-10-26, `Movimiento_Formaciones.md` §21).** La línea base de este día (C13 activo, targeting antiguo) dio
+1,98 % de mediana en 5 corridas, con un rango de 0,78 a 2,53 %: la diferencia de §20 está dentro de la variación de M10.
+Con L4-04 + L4-09 queda en 1,43 % (0,86-1,73, 6 corridas), cerca del 0,9 % sin C13. No se probó la validación apagada solo
+para el enemigo, que pide un interruptor por escuadra; con la cifra actual no hace falta. Se da por cerrado salvo que S8
+(M3) muestre otra cosa.
+
 ## M15. Colas y coste de la validación en cuellos de botella (C13)
 **Qué es.** En el pasillo de S7, con C13 todos los soldados entran por la boca. En un paso transitable de 1 m hacen cola y se
 paran en la boca y en la esquina (4 paradas de más de 0,5 s). La validación hace unas 44 consultas por unidad y segundo en
@@ -222,3 +245,14 @@ marcha dentro del pasillo; en campo abierto, unas 15. El sistema cuesta 0,15 ms 
   (cohesión como consulta: frenar el ancla mientras haya rezagados).
 - Coste: subir `slotResolveRevalidateDistance`, guardar entre validaciones las celdas ya comprobadas, o pasar la sonda a
   `NavMeshQuery` en un job. Medir con S8 (M3) antes de optimizar.
+
+## M16. Más unidades quietas lejos de su slot en la melé tras L4-04
+**Qué es.** Desde L4-04 + L4-09 el resumen cuenta más "paradas" (unidad a menos de 0,3 m/s y a más de 1 m de su slot durante
+más de 0,5 s) en la melé: S6 de 13 a 26 de mediana y S7 de 15 a 31. Fuera de la melé (S1, S4) no cambian.
+
+**Hipótesis [hip].** Con el reparto hay más atacantes en su puesto de contacto, quietos y lejos de su slot de formación, y
+menos esperando o persiguiendo; la distancia media de contacto baja de 1,75 a 1,40 m. Sería lo esperado, pero la métrica no
+distingue esa parada de una unidad atascada sin objetivo.
+
+**Cómo abordarlo.** Revisar el vídeo de S6 (`Recordings/MovementBaseline`) y, si hace falta, contar en el analizador solo las
+paradas sin objetivo o lejos del objetivo.

@@ -192,13 +192,13 @@ por llamada explícita, sin sondeo; aquí se toma solo la caducidad y el evento.
 |---|---|---|---|---|---|---|---|
 | L4-01 (verificado) | Reloj de pensamiento escalonado | `Time.frameCount % 5` (`Hero/AI/Systems/HeroAIPerception.System.cs:27`), igual frame para todos los bots; `SquadAISystem` recorre todo por frame (`Squads/Systems/SquadAI.System.cs:26-100`) | `AIThinkClock` + `AIThinkSchedulerSystem`, fase por hash del `Entity`, periodo en singleton `AIConfig`, tope por frame | Independiente de FPS, sin picos, escala a 15v15 | S | B | A |
 | L4-02 (verificado) | Puertas con histéresis | `isUnderAttack` se activa por proximidad a 20 m o combate de escuadra (`HeroAIPerception.System.cs:105-107`); sin temporizadores | `DebouncedGate` (T_apertura/T_cierre) en el `HeroAIBlackboard` + compromiso mínimo de rama | Bots sin parpadeo; menos órdenes redundantes | S | B | A |
-| L4-04 | Puntuación de objetivo con saturación | Más cercano y dos pasadas de reparto (`Combat/UnitTargeting.System.cs:92-250`) | `Score` con 4 términos y candidatos K más cercanos | Menos retargets; O(K) por unidad | M | M | M |
+| L4-04 (hecho, `Movimiento_Formaciones.md` §21) | Puntuación de objetivo con saturación | Más cercano y dos pasadas de reparto (`Combat/UnitTargeting.System.cs:92-250`) | `Score` con 4 términos y candidatos K más cercanos | Menos retargets; O(K) por unidad | M | M | M |
 | L4-03 | Línea de visión con presupuesto de rayos | Detección solo por distancia al centroide (`Combat/EnemyDetection.System.cs:139-176`) | `LineOfSightBudgetSystem` por par escuadra-enemigo con cursor | Cobertura real, coste acotado | M | M | M |
 | L4-06 | IA server-only | Todos los bots corren localmente | Agrupar `EnemyDetection`, `SquadAI`, perfil bot y `OrderResolution` en grupos de servidor | Evita rediseñar con Netcode | M | M | M |
 | L4-05 | Sesgo de aggro / provocación | No existe aggro, solo represalia | `AggroBias` con expiración | Roles de tanque | S | B | B |
 | L4-07 | LOD de IA | Sin cotas; 15v15 sin medir | `AILodSystem` con tres niveles | Sostener 15v15 | M | M | B |
 | L4-08 (amp.) | Elegir aliado al que apoyar | La IA no elige aliados ni lanza habilidades (`Docs/Por_Abordar/Habilidades_Perks.md` H1) | Puntuación de aliado por cercanía, vida perdida y si es héroe, dentro de un radio; el elegido se mantiene mientras siga siendo válido | IA de curación y de buffs coherente | S-M | B | M |
-| L4-09 (amp.) | Búsqueda de enemigo por estrategia de escuadra | `EnemyDetection` usa la distancia al centroide con radio fijo (`Combat/EnemyDetection.System.cs:139-176`) | Radio de combate que crece con la velocidad de la escuadra, entre un mínimo y un máximo; descarte por diferencia de altura y por pendiente; variantes (arquero con línea de tiro, atacar avanzando, atacar una zona). Complementa L4-04 | Escuadras que no se enganchan con enemigos en otra cota | M | M | M |
+| L4-09 (amp., hecho con L4-04) | Búsqueda de enemigo por estrategia de escuadra | `EnemyDetection` usa la distancia al centroide con radio fijo (`Combat/EnemyDetection.System.cs:139-176`) | Radio de combate que crece con la velocidad de la escuadra, entre un mínimo y un máximo; descarte por diferencia de altura y por pendiente; variantes (arquero con línea de tiro, atacar avanzando, atacar una zona). Complementa L4-04 | Escuadras que no se enganchan con enemigos en otra cota | M | M | M |
 | L4-10 (amp.) | Efectos que ajustan la IA de escuadra | Los parámetros de IA son constantes de configuración | Parámetros de IA (radio de combate, pesos) como stats de la pila de la escuadra, con fuente `Effect` | Órdenes y habilidades tácticas sin código nuevo | S | B | B |
 
 **L4-01.** Ref.: cada contexto acumula `dt` y piensa a ~10 Hz; un cursor round-robin limita cuántos se actualizan por
@@ -339,12 +339,17 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 ### Estado a 2026-10-26
 - **Hecho:** Fases 0, 1 y 2; lotes de movimiento C1-C15 de `Movimiento_Formaciones.md`, que cubren L3-02 (C12),
   L5-1 (C14), L5-2 (C9), L5-4 (C7, con la decisión D5) y L3-01 (C13, 2026-10-26, §20: slots validados por escuadra con
-  BFS y D9); L3-03 y L3-04 entraron con las formaciones por datos.
-- **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-05, L3-06; L4-03, L4-04, L4-05, L4-06, L4-07;
-  L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los 20 puntos "(amp.)".
+  BFS y D9); L3-03 y L3-04 entraron con las formaciones por datos. L4-04 y L4-09 (2026-10-26,
+  `Movimiento_Formaciones.md` §21): puntuación de objetivo con saturación blanda entre escuadras (D6) e histéresis, y
+  búsqueda de enemigo por escuadra con radio por estrategia y velocidad y filtro de cota. De L4-09 quedan fuera las
+  variantes que piden L4-03 (arquero con línea de tiro) y una orden de "atacar una zona" con punto propio (hoy la zona es
+  el ancla de mantener posición).
+- **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-05, L3-06; L4-03, L4-05, L4-06, L4-07;
+  L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09.
 - **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H1-H9 habilidades y perks, P1-P6 pila, F1-F17 formaciones y
   posturas, M1-M15 movimiento).
-- **Orden recomendado** (prioridad del usuario: movimiento y formación): L4-04 con L4-09; después L2-9 con H5.
+- **Orden recomendado** (prioridad del usuario: movimiento y formación): L2-9 con H5; para los solapes de la melé (M2),
+  el interruptor de colisión por escuadra (C16, F9).
 
 ## 6. Lo que no conviene copiar
 
