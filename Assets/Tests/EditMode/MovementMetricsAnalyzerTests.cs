@@ -102,6 +102,28 @@ public class MovementMetricsAnalyzerTests
         Assert.That(s.stalls, Is.EqualTo(1));
     }
 
+    [Test]
+    public void TargetSwitchesCountOnlyChangesBetweenEnemies()
+    {
+        var frames = new List<MovementFrameSample>();
+        var units = new List<MovementUnitSample>();
+        for (int f = 0; f <= 20; f++)
+        {
+            float t = f * Dt;
+            frames.Add(new MovementFrameSample { frame = f, time = t, deltaTime = Dt, squad = 1 });
+            // Target 7, none at f = 5 (losing and taking a target is not a switch), 7 again, 9 from f = 12.
+            var a = Unit(f, t, 0, UnitFormationState.Moving);
+            a.target = f == 5 ? -1 : f < 12 ? 7 : 9;
+            a.targetDistance = a.target >= 0 ? 1f : -1f;
+            units.Add(a);
+        }
+
+        var s = MovementMetricsAnalyzer.Analyze("switch", frames, units);
+
+        // 18 steps with a target on both ends (20 minus the two around f = 5), one of them a switch.
+        Assert.That(s.targetSwitchesPerUnitPerSecond, Is.EqualTo(1f / (18 * Dt)).Within(1e-3f));
+    }
+
     static MovementUnitSample Unit(int frame, float time, int unit, UnitFormationState state) =>
         new MovementUnitSample { frame = frame, time = time, squad = 1, unit = unit, state = state,
             target = -1, targetDistance = -1f, gear = -1 };

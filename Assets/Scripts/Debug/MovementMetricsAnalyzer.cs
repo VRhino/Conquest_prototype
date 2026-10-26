@@ -90,6 +90,8 @@ public sealed class MovementMetricsSummary
     public int leashViolations;
     public int turnRateViolationFrames;
     public int gearChanges;
+    /// <summary>Changes from one enemy to another per unit and second with a target (L4-04 hysteresis).</summary>
+    public float targetSwitchesPerUnitPerSecond;
     /// <summary>Share of unit samples whose acceleration exceeds <see cref="MovementMetricsAnalyzer.AccelerationSpikeLimit"/>.</summary>
     public float accelerationSpikeRatio;
     public float maxAcceleration;
@@ -120,6 +122,7 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  attackers per target: max={maxAttackersPerTarget} p95={p95AttackersPerTarget.ToString("F1", c)}");
         s.AppendLine($"  leash violations (reacting, beyond the leash > {MovementMetricsAnalyzer.LeashPersistence.ToString("F1", c)} s): {leashViolations}");
         s.AppendLine($"  combat turn frames above the cap: {turnRateViolationFrames}; gear changes: {gearChanges}");
+        s.AppendLine($"  target switches per unit per second with a target: {targetSwitchesPerUnitPerSecond.ToString("F3", c)}");
         s.AppendLine($"  acceleration above {MovementMetricsAnalyzer.AccelerationSpikeLimit.ToString("F0", c)} m/s2: {(accelerationSpikeRatio * 100f).ToString("F1", c)} % of samples, max {maxAcceleration.ToString("F0", c)} m/s2");
         s.AppendLine($"  destinations sharing a cell per frame: mean={meanStackedDestinations.ToString("F2", c)} max={maxStackedDestinations}; reached only by a detour: mean={meanDetourDestinations.ToString("F2", c)} max={maxDetourDestinations}");
         s.AppendLine($"  slot validation (C13): relocated max={maxRelocatedSlots} unresolved max={maxUnresolvedSlots} queries marching per unit per second={slotQueriesMarchingPerUnitPerSecond.ToString("F2", c)}");
@@ -339,6 +342,8 @@ public static class MovementMetricsAnalyzer
 
         float turnCap = limits.combatTurnRateDegrees * 1.1f * (float)(Math.PI / 180.0);
         int accelerationSamples = 0, accelerationSpikes = 0;
+        int targetSwitches = 0;
+        float targetedTime = 0f;
         foreach (var series in units.GroupBy(u => (u.squad, u.unit)).Select(g => g.OrderBy(u => u.frame).ToList()))
         {
             float beyondSince = -1f;
@@ -371,6 +376,11 @@ public static class MovementMetricsAnalyzer
                     if (delta / dt > turnCap) summary.turnRateViolationFrames++;
                 }
                 if (u.gear >= 0 && p.gear >= 0 && u.gear != p.gear) summary.gearChanges++;
+                if (u.target >= 0 && p.target >= 0)
+                {
+                    targetedTime += dt;
+                    if (u.target != p.target) targetSwitches++;
+                }
 
                 // Acceleration from three consecutive positions.
                 if (i < 2 || dt <= 1e-4f) continue;
@@ -386,6 +396,7 @@ public static class MovementMetricsAnalyzer
             }
         }
         summary.accelerationSpikeRatio = accelerationSamples > 0 ? (float)accelerationSpikes / accelerationSamples : 0f;
+        summary.targetSwitchesPerUnitPerSecond = targetedTime > 0f ? targetSwitches / targetedTime : 0f;
     }
 
     static float WrapAngle(float radians)
