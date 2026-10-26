@@ -203,12 +203,24 @@ public partial class BattleSceneIntegrationTests
     /// reached only by a detour and units stalled away from their slot (C13, L3-01).
     /// </summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
-    public IEnumerator MovementBaselineS7Bottleneck()
+    public IEnumerator MovementBaselineS7Bottleneck() => RunS7Bottleneck("S7Bottleneck", true);
+
+    /// <summary>S7 bottleneck with the per-squad slot validation off: each unit projects its own slot, as before C13.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS7BottleneckWithoutSlotResolve() => RunS7Bottleneck("S7BottleneckNoResolve", false);
+
+    IEnumerator RunS7Bottleneck(string label, bool resolveSlots)
     {
         var previousInput = UseUnfocusedEditorInput();
         var walls = new System.Collections.Generic.List<GameObject>();
+        using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
+        var tuningEntity = tuningQuery.GetSingletonEntity();
+        var tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
+        bool previousResolve = tuning.slotResolveEnabled;
         try
         {
+            tuning.slotResolveEnabled = resolveSlots;
+            em.SetComponentData(tuningEntity, tuning);
             yield return PrepareBaseline();
             // March keys are camera relative: S walks along -forward, D along +right.
             var cameraTransform = Camera.main.transform;
@@ -218,9 +230,9 @@ public partial class BattleSceneIntegrationTests
             BuildS7Corridor((Vector3)start, back, right, walls);
             yield return new WaitForSeconds(S7CarveSeconds);
 
-            using (MovementVideoCapture.Start("S7Bottleneck"))
+            using (MovementVideoCapture.Start(label))
             {
-                MovementMetricsRecorderSystem.Begin("S7Bottleneck", squad);
+                MovementMetricsRecorderSystem.Begin(label, squad);
                 yield return WalkUntil(Key.S, back, (Vector3)start, S7CorridorStart + S7FirstLeg);
                 var corner = (Vector3)start + back * (S7CorridorStart + S7FirstLeg);
                 yield return WalkUntil(Key.D, right, corner, S7HalfWidth + S7SecondLeg + 2f);
@@ -236,6 +248,12 @@ public partial class BattleSceneIntegrationTests
         {
             RestoreInputSettings(previousInput);
             foreach (var wall in walls) if (wall != null) Object.Destroy(wall);
+            if (em.Exists(tuningEntity))
+            {
+                tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
+                tuning.slotResolveEnabled = previousResolve;
+                em.SetComponentData(tuningEntity, tuning);
+            }
         }
     }
 

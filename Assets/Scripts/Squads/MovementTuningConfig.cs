@@ -98,6 +98,16 @@ public class MovementTuningConfig : ScriptableObject
     [Tooltip("Ranged units stop at this fraction of their range and approach again beyond it.")]
     [Min(0f)] public float rangedStopFraction = 0.92f;
 
+    [Header("Formation slots on the NavMesh (C13)")]
+    [Tooltip("Each squad checks its slots against the NavMesh and moves blocked or taken ones to the nearest free cell. Off = each unit projects its own slot, as before C13.")]
+    public bool slotResolveEnabled = true;
+    [Tooltip("A squad checks its slots again once a template slot has moved this far since the last check (m).")]
+    [Min(0.01f)] public float slotResolveRevalidateDistance = 0.5f;
+    [Tooltip("Furthest a blocked slot looks for a free cell, in cells (four-neighbour distance).")]
+    [Min(1)] public int slotResolveSearchCells = 6;
+    [Tooltip("Largest radius used to put a slot on the NavMesh, capped at the formation spacing (m, L3-04).")]
+    [Min(0.01f)] public float slotSnapRadiusMax = 0.65f;
+
     [Header("Combat contact")]
     [Tooltip("Maximum turn speed (deg/s) when a unit turns to face its combat target.")]
     [Min(0f)] public float combatTurnRate = 450f;
@@ -143,6 +153,10 @@ public class MovementTuningConfig : ScriptableObject
         meleeStopReachFraction = meleeStopReachFraction,
         rangedStopFraction = rangedStopFraction,
         combatTurnRate = combatTurnRate,
+        slotResolveEnabled = slotResolveEnabled,
+        slotResolveRevalidateDistance = slotResolveRevalidateDistance,
+        slotResolveSearchCells = slotResolveSearchCells,
+        slotSnapRadiusMax = slotSnapRadiusMax,
     };
 
     void OnValidate()

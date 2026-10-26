@@ -24,6 +24,7 @@ namespace Squads
 
             AddComponent<UnitCombatComponent>(entity);
             AddComponent<UnitTargetPositionComponent>(entity);
+            AddComponent<UnitResolvedSlotComponent>(entity);
             // Los stats y datos base se asignan en runtime desde SquadDataComponent
         }
     }

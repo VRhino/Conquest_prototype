@@ -99,9 +99,10 @@ public class FormationGeometryRegressionTests
     static Entity CreateUnit(EntityManager em, float3 position, float3 target)
     {
         var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitGridSlotComponent),
-            typeof(UnitTargetPositionComponent), typeof(UnitFormationStateComponent));
+            typeof(UnitTargetPositionComponent), typeof(UnitResolvedSlotComponent), typeof(UnitFormationStateComponent));
         em.SetComponentData(unit, LocalTransform.FromPosition(position));
         em.SetComponentData(unit, new UnitTargetPositionComponent { position = target });
+        em.SetComponentData(unit, new UnitResolvedSlotComponent { position = target });
         em.SetComponentData(unit, new UnitFormationStateComponent { State = UnitFormationState.Moving });
         return unit;
     }

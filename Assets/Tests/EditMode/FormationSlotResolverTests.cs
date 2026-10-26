@@ -134,6 +134,32 @@ public class FormationSlotResolverTests
             Assert.That(again[i].position, Is.EqualTo(results[i].position));
     }
 
+    /// <summary>
+    /// An even-width line sits on half cells (±0.5, ±1.5, ±2.5 spacings): with noise, rounding offsets to cell indices
+    /// put two neighbours in one cell, which stacked soldiers in the S7 corridor.
+    /// </summary>
+    [Test]
+    public void EvenWidthLineWithNoiseNeverSharesACell()
+    {
+        var probe = Probe(new float4(-0.5f, -20f, 0.5f, 20f));
+        var requests = Line(6, 2, quaternion.identity);
+        for (int i = 0; i < requests.Count; i++)
+        {
+            // Deterministic noise of up to 0.08 spacings, as the authored Line formation has.
+            var request = requests[i];
+            var noise = new float2(math.sin(i * 1.7f), math.cos(i * 2.3f)) * 0.08f * Spacing;
+            request.localOffset += noise;
+            request.template += new float3(noise.x, 0f, noise.y);
+            requests[i] = request;
+        }
+
+        var results = Resolve(ref probe, float3.zero, quaternion.identity, requests);
+
+        foreach (var result in results)
+            Assert.That(result.status, Is.Not.EqualTo(FormationSlotResolveStatus.Unresolved));
+        AssertNoSharedCells(results);
+    }
+
     [Test]
     public void RotatedFormationRelocatesAlongItsOwnAxes()
     {

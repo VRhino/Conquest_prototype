@@ -119,8 +119,8 @@ public partial class UnitNavMeshSystem : SystemBase
         float leadSpeedThresholdSq = math.square(hasConfig ? config.anchorMovingSpeedThreshold : 0.1f);
 
         // Movement + rotation decision per NavMesh unit.
-        foreach (var (targetPos, formState, navigationState, transform, entity) in
-            SystemAPI.Query<RefRO<UnitTargetPositionComponent>,
+        foreach (var (resolvedSlot, formState, navigationState, transform, entity) in
+            SystemAPI.Query<RefRO<UnitResolvedSlotComponent>,
                             RefRO<UnitFormationStateComponent>,
                             RefRW<NavAgentComponent>,
                             RefRW<LocalTransform>>()
@@ -141,7 +141,9 @@ public partial class UnitNavMeshSystem : SystemBase
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
 
             float3 unitPos = transform.ValueRO.Position;
-            float3 requestedSlot = targetPos.ValueRO.position;
+            // The slot after FormationSlotResolveSystem (C13): already on the NavMesh unless it is Pending or Unresolved.
+            float3 requestedSlot = resolvedSlot.ValueRO.position;
+            bool slotOnNavMesh = resolvedSlot.ValueRO.IsOnNavMesh;
             var navigation = navigationState.ValueRO;
             float3 slotVelocity = FormationDestinationPrediction.UpdateSlotVelocity(
                 ref navigation.previousRequestedSlot, ref navigation.hasPreviousRequestedSlot,
@@ -149,7 +151,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 2f * tuning.destinationLeadMaxDistance);
             // Project the slot within its own cell first (min(spacing, 0.65), L3-04) so it never lands in a
             // neighbour's slot; the wide radius is only the fallback.
-            float slotSampleRadius = math.min(sampleRadius, MaxSlotSampleRadius);
+            float slotSampleRadius = math.min(sampleRadius, tuning.slotSnapRadiusMax);
             float spacing = MovementTuningComponent.ReferenceSpacing;
             if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
             {
@@ -164,7 +166,7 @@ public partial class UnitNavMeshSystem : SystemBase
             float arrivalThreshold = math.max(0.01f, FormationArrivalRadii.ArrivalRadiusIn(tuning, spacing));
             DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
                 arrivalThreshold, now, retryInterval, ref navigation);
-            float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
+            float3 formationDestination = ResolveFormationDestination(agent, requestedSlot, slotOnNavMesh,
                 unitPos, slotSampleRadius, sampleRadius, retryDistance, destinationChangeThreshold,
                 now, retryInterval, ref navigation);
             float3 destination = formationDestination;
@@ -204,7 +206,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 if (combatTarget != Entity.Null
                     && SystemAPI.HasComponent<LocalTransform>(combatTarget))
                 {
-                    float3 slotPos    = targetPos.ValueRO.position;
+                    float3 slotPos    = requestedSlot;
                     float3 enemyPos3D = SystemAPI.GetComponent<LocalTransform>(combatTarget).Position;
                     if (squadOrder != SquadOrderType.HoldPosition
                         && !CanPursueTarget(squadOrder, orderSource, slotPos, enemyPos3D, leashDistance))
@@ -395,10 +397,7 @@ public partial class UnitNavMeshSystem : SystemBase
         }
     }
 
-    /// <summary>Largest radius used to project a slot onto the NavMesh before the wide fallback.</summary>
-    const float MaxSlotSampleRadius = 0.65f;
-
-    private static float3 ResolveFormationDestination(NavMeshAgent agent, float3 requested,
+    private static float3 ResolveFormationDestination(NavMeshAgent agent, float3 requested, bool requestedOnNavMesh,
         float3 current, float slotSampleRadius, float fallbackSampleRadius, float retryDistance,
         float destinationChangeThreshold, double now,
         float retryInterval, ref NavAgentComponent navigation)
@@ -415,14 +414,24 @@ public partial class UnitNavMeshSystem : SystemBase
 
         navigation.lastFormationRequest = requested;
         navigation.hasEffectiveFormationDestination = true;
+        // A slot FormationSlotResolveSystem checked for the whole squad (C13) is on the NavMesh within its cell: it never
+        // takes the wide fallback, which piled slots on a wall or put them behind it; if even the cell projection
+        // misses, the checked slot itself is the destination.
         if (TrySampleDestination(agent, requested, slotSampleRadius, out float3 resolved)
-            || (fallbackSampleRadius > slotSampleRadius
+            || (!requestedOnNavMesh && fallbackSampleRadius > slotSampleRadius
                 && TrySampleDestination(agent, requested, fallbackSampleRadius, out resolved)))
         {
             navigation.effectiveFormationDestination = resolved;
             navigation.formationDestinationFailed = false;
             navigation.nextFormationRetryTime = 0;
             return resolved;
+        }
+        if (requestedOnNavMesh)
+        {
+            navigation.effectiveFormationDestination = requested;
+            navigation.formationDestinationFailed = false;
+            navigation.nextFormationRetryTime = 0;
+            return requested;
         }
 
         RejectFormationDestination(agent, requested, current, now, retryInterval, ref navigation);

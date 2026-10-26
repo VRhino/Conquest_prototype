@@ -53,6 +53,10 @@ public struct MovementTuningComponent : IComponentData
     public float meleeStopReachFraction; // Melee stop: fraction of the weapon reach past the body (C5).
     public float rangedStopFraction; // Ranged stop as a fraction of range (C5).
     public float combatTurnRate; // Max combat turn speed, degrees per second (C7).
+    public bool slotResolveEnabled; // Squads check their slots against the NavMesh (C13); off = each unit projects its own slot.
+    public float slotResolveRevalidateDistance; // Check again once a template slot has moved this far, m (C13).
+    public int slotResolveSearchCells; // Furthest a blocked slot looks for a free cell, in cells (C13).
+    public float slotSnapRadiusMax; // Largest radius to put a slot on the NavMesh, capped at the spacing, m (L3-04).
 
     /// <summary>Values used when no tuning asset is assigned (and by tests).</summary>
     public static MovementTuningComponent Default => new MovementTuningComponent
@@ -96,6 +100,10 @@ public struct MovementTuningComponent : IComponentData
         meleeStopReachFraction = 0.6f,
         rangedStopFraction = 0.92f,
         combatTurnRate = 450f,
+        slotResolveEnabled = true,
+        slotResolveRevalidateDistance = 0.5f,
+        slotResolveSearchCells = 6,
+        slotSnapRadiusMax = 0.65f,
     };
 
     /// <summary>
@@ -124,6 +132,9 @@ public struct MovementTuningComponent : IComponentData
         if (t.runExitDistance <= t.arrivalRadiusIn) return "runExitDistance must exceed arrivalRadiusIn.";
         if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
+        if (t.slotResolveRevalidateDistance <= 0f) return "slotResolveRevalidateDistance must be positive.";
+        if (t.slotResolveSearchCells < 1) return "slotResolveSearchCells must be at least 1.";
+        if (t.slotSnapRadiusMax <= 0f) return "slotSnapRadiusMax must be positive.";
         // The command must be re-sent before the agent reaches it, or the lead stops paying off.
         if (t.destinationLeadTime > 0f && t.destinationChangeSpeedFactor >= t.destinationLeadTime)
             return "destinationChangeSpeedFactor must be smaller than destinationLeadTime.";

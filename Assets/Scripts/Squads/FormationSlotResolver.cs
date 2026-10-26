@@ -38,6 +38,8 @@ public struct FormationSlotRequest
     public float2 localOffset;
     /// <summary>Cells the slot was moved at the previous validation; tried first so slots do not swap cells.</summary>
     public int2 previousShift;
+    /// <summary>Where the soldier is now: among equally near free cells, the closest to it wins.</summary>
+    public float3 unitPosition;
 }
 
 /// <summary>Where a slot ends up.</summary>
@@ -70,6 +72,13 @@ public sealed class FormationSlotResolver
         public int searchCells;
     }
 
+    /// <summary>
+    /// Two slots closer than this fraction of a cell (in the formation frame, before projection) share a cell. Slots
+    /// are compared by distance rather than by cell index: templates with an even width sit on half cells, and
+    /// rounding a half cell with noise would put two neighbours in one index.
+    /// </summary>
+    public const float SharedCellFraction = 0.5f;
+
     struct Cell
     {
         public bool valid;
@@ -77,7 +86,7 @@ public sealed class FormationSlotResolver
     }
 
     readonly Dictionary<int2, Cell> _cells = new();
-    readonly HashSet<int2> _occupied = new();
+    readonly List<float2> _taken = new();
     readonly List<int> _blocked = new();
     static readonly List<int2> RingOffsets = new();
     static int _ringOffsetsRadius = -1;
@@ -102,7 +111,7 @@ public sealed class FormationSlotResolver
         where TProbe : IFormationNavProbe
     {
         _cells.Clear();
-        _occupied.Clear();
+        _taken.Clear();
         _blocked.Clear();
         results.Clear();
         float spacing = math.max(FormationDefinition.MinSpacing, settings.spacing);
@@ -116,7 +125,7 @@ public sealed class FormationSlotResolver
             var request = requests[i];
             if (TestPoint(ref probe, origin, request.template, inverse, spacing, snapRadius, out float3 snapped))
             {
-                _occupied.Add(OwnCell(request.localOffset, spacing));
+                _taken.Add(request.localOffset);
                 results.Add(new FormationSlotResolution { position = snapped, status = FormationSlotResolveStatus.Template });
             }
             else
@@ -133,40 +142,50 @@ public sealed class FormationSlotResolver
         foreach (int i in _blocked)
         {
             var request = requests[i];
-            int2 own = OwnCell(request.localOffset, spacing);
             float3 position = default;
             bool found = !request.previousShift.Equals(int2.zero)
-                         && TryCell(ref probe, origin, request, own, request.previousShift, frame, inverse, spacing,
+                         && TryCell(ref probe, origin, request, request.previousShift, frame, inverse, spacing,
                              snapRadius, out position);
             int2 shift = request.previousShift;
+            // Ring by ring; within the nearest ring that has a free good cell, the one closest to the soldier, so
+            // relocated soldiers do not overtake or cross each other.
+            float bestSq = float.MaxValue;
             for (int k = 0; !found && k < RingOffsets.Count; k++)
             {
-                shift = RingOffsets[k];
-                found = TryCell(ref probe, origin, request, own, shift, frame, inverse, spacing, snapRadius, out position);
+                if (TryCell(ref probe, origin, request, RingOffsets[k], frame, inverse, spacing, snapRadius,
+                        out float3 candidate)
+                    && math.distancesq(candidate.xz, request.unitPosition.xz) < bestSq)
+                {
+                    bestSq = math.distancesq(candidate.xz, request.unitPosition.xz);
+                    shift = RingOffsets[k];
+                    position = candidate;
+                }
+                bool ringEnds = k + 1 == RingOffsets.Count || Ring(RingOffsets[k + 1]) != Ring(RingOffsets[k]);
+                found = ringEnds && bestSq < float.MaxValue;
             }
             if (!found) continue;
-            _occupied.Add(own + shift);
+            _taken.Add(request.localOffset + (float2)shift * spacing);
             results[i] = new FormationSlotResolution
                 { position = position, shift = shift, status = FormationSlotResolveStatus.Relocated };
         }
     }
 
-    /// <summary>Cell a slot belongs to: its offset rounded to whole spacings.</summary>
-    public static int2 OwnCell(float2 localOffset, float spacing) => (int2)math.floor(localOffset / spacing + 0.5f);
-
-    bool TryCell<TProbe>(ref TProbe probe, float3 origin, in FormationSlotRequest request, int2 own, int2 shift,
+    bool TryCell<TProbe>(ref TProbe probe, float3 origin, in FormationSlotRequest request, int2 shift,
         quaternion frame, quaternion inverse, float spacing, float snapRadius, out float3 position)
         where TProbe : IFormationNavProbe
     {
-        int2 cell = own + shift;
         position = default;
-        if (_occupied.Contains(cell)) return false;
-        if (!_cells.TryGetValue(cell, out var state))
+        float2 local = request.localOffset + (float2)shift * spacing;
+        float sharedSq = math.square(SharedCellFraction * spacing);
+        foreach (float2 taken in _taken)
+            if (math.distancesq(taken, local) < sharedSq) return false;
+        // Cells are cached by local position on a half-cell lattice, so slots of one template share the answer.
+        int2 key = (int2)math.round(local / (SharedCellFraction * spacing));
+        if (!_cells.TryGetValue(key, out var state))
         {
-            // The candidate keeps the slot's own offset within its cell; the first slot to look at a cell decides it.
             float3 candidate = request.template + math.mul(frame, new float3(shift.x, 0f, shift.y) * spacing);
             state.valid = TestPoint(ref probe, origin, candidate, inverse, spacing, snapRadius, out state.position);
-            _cells[cell] = state;
+            _cells[key] = state;
         }
         position = state.position;
         return state.valid;
@@ -190,9 +209,11 @@ public sealed class FormationSlotResolver
     }
 
     /// <summary>
-    /// Offsets by ring of four-neighbour distance (what a BFS from the cell visits layer by layer); inside a ring the
-    /// nearest first, then the same column (along the formation) before the side, then forward before back.
+    /// Offsets by ring of four-neighbour distance (what a BFS from the cell visits layer by layer). The order inside a
+    /// ring only breaks exact ties of distance to the soldier: nearest first, then the same column, then forward.
     /// </summary>
+    static int Ring(int2 offset) => math.abs(offset.x) + math.abs(offset.y);
+
     static void EnsureRingOffsets(int radius)
     {
         if (_ringOffsetsRadius == radius) return;

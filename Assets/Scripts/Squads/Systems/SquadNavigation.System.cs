@@ -39,8 +39,11 @@ public partial class SquadNavigationSystem : SystemBase
             Entity unit = units[i].Value;
             if (!em.Exists(unit) || em.HasComponent<IsDeadComponent>(unit)) continue;
             if (!em.HasComponent<LocalTransform>(unit)) return false;
-            float3 requested = em.HasComponent<UnitTargetPositionComponent>(unit)
-                ? em.GetComponentData<UnitTargetPositionComponent>(unit).position : fallback;
+            // The slot after NavMesh validation (C13); the template, then the fallback, for units without it.
+            float3 requested = em.HasComponent<UnitResolvedSlotComponent>(unit)
+                ? em.GetComponentData<UnitResolvedSlotComponent>(unit).position
+                : em.HasComponent<UnitTargetPositionComponent>(unit)
+                    ? em.GetComponentData<UnitTargetPositionComponent>(unit).position : fallback;
             float3 destination = GetEffectiveFormationDestination(em, unit, requested);
             if (math.distancesq(em.GetComponentData<LocalTransform>(unit).Position, destination)
                 > math.square(math.max(0, threshold))) return false;

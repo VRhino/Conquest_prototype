@@ -34,6 +34,7 @@ public class UnitEntityBaker : Baker<UnitEntityAuthoring>
         AddComponent<UnitCombatComponent>(entity);
         
         AddComponent<UnitTargetPositionComponent>(entity);
+        AddComponent<UnitResolvedSlotComponent>(entity);
         AddComponent<UnitFormationStateComponent>(entity);
         
         // Orientación básica (puede ser modificada por el squad data)

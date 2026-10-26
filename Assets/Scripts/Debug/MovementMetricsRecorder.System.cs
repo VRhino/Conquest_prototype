@@ -41,6 +41,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     ProfilerRecorder _navMeshTime;
     ProfilerRecorder _followFormationTime;
     ProfilerRecorder _avoidanceTime;
+    ProfilerRecorder _slotResolveTime;
     readonly List<(float3 position, int team, int index, int squad, float spacing)> _bodies = new();
     readonly Dictionary<int2, List<int>> _grid = new();
     readonly HashSet<long> _overlapNow = new();
@@ -80,6 +81,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         _navMeshTime = Recorder(nameof(UnitNavMeshSystem));
         _followFormationTime = Recorder(nameof(UnitFollowFormationSystem));
         _avoidanceTime = Recorder("UnitAvoidanceSystem");
+        _slotResolveTime = Recorder(nameof(FormationSlotResolveSystem));
     }
 
     ProfilerRecorder Recorder(string system) =>
@@ -91,6 +93,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         _navMeshTime.Dispose();
         _followFormationTime.Dispose();
         _avoidanceTime.Dispose();
+        _slotResolveTime.Dispose();
     }
 
     static double Ms(ProfilerRecorder recorder) => recorder.Valid ? recorder.LastValue * 1e-6 : -1;
@@ -103,6 +106,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         float dt = SystemAPI.Time.DeltaTime;
         int setDestination = UnitNavMeshSystem.DebugSetDestinationCallsThisFrame;
         int projections = UnitNavMeshSystem.DebugProjectionRequestsThisFrame;
+        int slotQueries = FormationSlotResolveSystem.DebugQueriesThisFrame;
 
         FillFocusUnits();
         CountOverlaps(time, out int allyOverlaps, out int enemyOverlaps, out int persistentEnemyOverlaps);
@@ -116,7 +120,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             bool reacting = SystemAPI.HasComponent<SquadResolvedOrderComponent>(squad)
                 && SystemAPI.GetComponent<SquadResolvedOrderComponent>(squad).source == OrderSource.CombatReaction;
             float3 anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squad).position;
-            CountDestinationProblems(squad, units, out int stacked, out int detours);
+            CountDestinationProblems(squad, units, out int stacked, out int detours, out int relocated, out int unresolved);
             FrameSamples.Add(new MovementFrameSample
             {
                 frame = frame, time = time, deltaTime = dt, squad = squad.Index,
@@ -124,9 +128,11 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 setDestinationCalls = setDestination, projectionRequests = projections,
                 formationStateMs = Ms(_formationStateTime), navMeshMs = Ms(_navMeshTime),
                 followFormationMs = Ms(_followFormationTime), avoidanceMs = Ms(_avoidanceTime),
+                slotResolveMs = Ms(_slotResolveTime),
                 allyOverlaps = allyOverlaps, enemyOverlaps = enemyOverlaps,
                 persistentEnemyOverlaps = persistentEnemyOverlaps,
-                stackedDestinations = stacked, detourDestinations = detours
+                stackedDestinations = stacked, detourDestinations = detours,
+                relocatedSlots = relocated, unresolvedSlots = unresolved, slotResolveQueries = slotQueries
             });
 
             for (int i = 0; i < units.Length; i++)
@@ -144,7 +150,9 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     /// <summary>Where the unit is actually heading in formation: its slot after NavMesh projection.</summary>
     float3 MovementDestination(Entity unit)
     {
-        float3 requested = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+        float3 requested = SystemAPI.HasComponent<UnitResolvedSlotComponent>(unit)
+            ? SystemAPI.GetComponent<UnitResolvedSlotComponent>(unit).position
+            : SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
         return SquadNavigationSystem.GetEffectiveFormationDestination(EntityManager, unit, requested);
     }
 
@@ -152,9 +160,10 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     /// S7 checks on the squad's formation destinations: pairs closer than <see cref="StackedFraction"/> of the spacing
     /// (two soldiers sent to one cell) and destinations the hero only reaches with a detour (the far side of a wall).
     /// </summary>
-    void CountDestinationProblems(Entity squad, DynamicBuffer<SquadUnitElement> units, out int stacked, out int detours)
+    void CountDestinationProblems(Entity squad, DynamicBuffer<SquadUnitElement> units, out int stacked, out int detours,
+        out int relocated, out int unresolved)
     {
-        stacked = detours = 0;
+        stacked = detours = relocated = unresolved = 0;
         _destinations.Clear();
         NavMeshQueryFilter filter = default;
         bool hasFilter = false;
@@ -163,6 +172,12 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             Entity unit = units[i].Value;
             if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit)) continue;
             _destinations.Add(MovementDestination(unit));
+            if (SystemAPI.HasComponent<UnitResolvedSlotComponent>(unit))
+            {
+                var status = SystemAPI.GetComponent<UnitResolvedSlotComponent>(unit).status;
+                if (status == FormationSlotResolveStatus.Relocated) relocated++;
+                else if (status == FormationSlotResolveStatus.Unresolved) unresolved++;
+            }
             if (hasFilter || !SystemAPI.ManagedAPI.HasComponent<NavMeshAgent>(unit)) continue;
             var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(unit);
             if (agent == null) continue;
@@ -240,7 +255,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             target = target, targetDistance = targetDistance, attacking = attacking, reacting = reacting,
             gear = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
                 ? (int)SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : -1,
-            speed = speed
+            speed = speed, destX = slot.x, destZ = slot.z
         };
     }
 
@@ -320,22 +335,23 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         Directory.CreateDirectory(directory);
         string prefix = Path.Combine(directory, $"{summary.label}_{stamp}");
 
-        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,stackedDestinations,detourDestinations\n");
+        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,stackedDestinations,detourDestinations,relocatedSlots,unresolvedSlots,slotResolveQueries\n");
         foreach (var f in FrameSamples)
             frames.AppendLine(string.Join(",", f.frame, f.time.ToString("F4", c), f.deltaTime.ToString("F4", c), f.squad,
                 f.anchorMoving ? 1 : 0, f.anchorX.ToString("F3", c), f.anchorZ.ToString("F3", c),
                 f.setDestinationCalls, f.projectionRequests,
                 f.formationStateMs.ToString("F4", c), f.navMeshMs.ToString("F4", c),
                 f.followFormationMs.ToString("F4", c), f.avoidanceMs.ToString("F4", c),
-                f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps, f.stackedDestinations, f.detourDestinations));
+                f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps, f.stackedDestinations, f.detourDestinations,
+                f.relocatedSlots, f.unresolvedSlots, f.slotResolveQueries));
         File.WriteAllText(prefix + "_frames.csv", frames.ToString());
 
-        var units = new StringBuilder("frame,time,squad,unit,state,slotDistance,x,z,yaw,team,target,targetDistance,attacking,reacting,gear,speed\n");
+        var units = new StringBuilder("frame,time,squad,unit,state,slotDistance,x,z,yaw,team,target,targetDistance,attacking,reacting,gear,speed,destX,destZ\n");
         foreach (var u in UnitSamples)
             units.AppendLine(string.Join(",", u.frame, u.time.ToString("F4", c), u.squad, u.unit, u.state,
                 u.slotDistance.ToString("F4", c), u.x.ToString("F3", c), u.z.ToString("F3", c), u.yaw.ToString("F4", c),
                 u.team, u.target, u.targetDistance.ToString("F3", c), u.attacking ? 1 : 0, u.reacting ? 1 : 0,
-                u.gear, u.speed.ToString("F3", c)));
+                u.gear, u.speed.ToString("F3", c), u.destX.ToString("F3", c), u.destZ.ToString("F3", c)));
         File.WriteAllText(prefix + "_units.csv", units.ToString());
         File.WriteAllText(prefix + "_summary.txt", summary.ToString());
         File.WriteAllText(prefix + "_summary.json", UnityEngine.JsonUtility.ToJson(summary, true)); // For medians (M10).

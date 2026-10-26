@@ -66,7 +66,7 @@ public partial class UnitAvoidanceSystem : SystemBase
         // Units: movers steer, everyone else is an obstacle.
         foreach (var (team, formation, slot, transform, entity) in SystemAPI
                      .Query<RefRO<TeamComponent>, RefRO<UnitFormationStateComponent>,
-                            RefRO<UnitTargetPositionComponent>, RefRO<LocalTransform>>()
+                            RefRO<UnitResolvedSlotComponent>, RefRO<LocalTransform>>()
                      .WithAll<NavAgentComponent>()
                      .WithEntityAccess())
         {

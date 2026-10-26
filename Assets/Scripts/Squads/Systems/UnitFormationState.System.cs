@@ -48,9 +48,10 @@ public partial struct UnitFormationStateSystem : ISystem
 
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                // The slot after NavMesh validation (C13), not the raw template.
+                if (!SystemAPI.HasComponent<UnitResolvedSlotComponent>(unit))
                     continue;
-                float3 requestedSlotPos = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+                float3 requestedSlotPos = SystemAPI.GetComponent<UnitResolvedSlotComponent>(unit).position;
                 float3 desiredSlotPos = SquadNavigationSystem.GetEffectiveFormationDestination(
                     state.EntityManager, unit, requestedSlotPos);
 

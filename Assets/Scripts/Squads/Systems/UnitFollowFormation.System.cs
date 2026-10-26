@@ -128,10 +128,9 @@ public partial class UnitFollowFormationSystem : SystemBase
                     
                 var stateComp = SystemAPI.GetComponent<UnitFormationStateComponent>(unit);
 
-                // Read target position already calculated by GridFormationUpdateSystem
-                if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit))
+                // Units need a slot (resolved on the NavMesh by FormationSlotResolveSystem).
+                if (!SystemAPI.HasComponent<UnitResolvedSlotComponent>(unit))
                     continue;
-                float3 slotPos = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
 
                 // Orientación para unidades Formed — responsabilidad principal de este sistema.
                 // Skip si la unidad está en combate: UnitNavMeshSystem ya rotó hacia el target.
@@ -214,7 +213,7 @@ public partial class UnitFollowFormationSystem : SystemBase
             ? SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : MovementGear.Walk;
         bool following = SystemAPI.HasComponent<UnitFormationStateComponent>(unit)
             && SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State == UnitFormationState.Moving
-            && SystemAPI.HasComponent<UnitTargetPositionComponent>(unit);
+            && SystemAPI.HasComponent<UnitResolvedSlotComponent>(unit);
 
         MovementGear gear;
         float speed;
@@ -226,7 +225,7 @@ public partial class UnitFollowFormationSystem : SystemBase
         else
         {
             float3 position = SystemAPI.GetComponent<LocalTransform>(unit).Position;
-            float3 slot = SystemAPI.GetComponent<UnitTargetPositionComponent>(unit).position;
+            float3 slot = SystemAPI.GetComponent<UnitResolvedSlotComponent>(unit).position;
             float distance = math.distance(position.xz, slot.xz);
             float slotSpeed = !isHoldingPosition && SystemAPI.HasComponent<NavAgentComponent>(unit)
                 ? math.length(SystemAPI.GetComponent<NavAgentComponent>(unit).slotVelocity.xz) : 0f;

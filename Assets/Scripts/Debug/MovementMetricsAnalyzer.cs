@@ -23,6 +23,7 @@ public struct MovementUnitSample
     public bool reacting;         // Squad order comes from a combat reaction.
     public int gear;              // MovementGear, -1 when unknown.
     public float speed;           // Agent horizontal speed.
+    public float destX, destZ;    // Formation destination the unit is heading for (after NavMesh validation).
 }
 
 /// <summary>Squad-level and global values observed in one frame.</summary>
@@ -41,11 +42,15 @@ public struct MovementFrameSample
     public double navMeshMs;
     public double followFormationMs;
     public double avoidanceMs;
+    public double slotResolveMs;
     public int allyOverlaps;            // Allied pairs closer than the overlap distance (all squads).
     public int enemyOverlaps;           // Enemy pairs closer than the overlap distance.
     public int persistentEnemyOverlaps; // Enemy pairs overlapping for longer than the persistence window.
     public int stackedDestinations;     // Squadmate pairs whose movement destinations share a formation cell (S7).
     public int detourDestinations;      // Units whose destination is reached only by a detour from the hero, or not at all (S7).
+    public int relocatedSlots;          // Slots moved to another cell by the NavMesh validation (C13).
+    public int unresolvedSlots;         // Slots the validation found no free cell for (C13).
+    public int slotResolveQueries;      // NavMesh queries of the slot validation this frame (all squads).
 }
 
 /// <summary>Aggregated baseline metrics. Negative values mean "not observed".</summary>
@@ -71,6 +76,7 @@ public sealed class MovementMetricsSummary
     public double meanNavMeshMs;
     public double meanFollowFormationMs;
     public double meanAvoidanceMs;
+    public double meanSlotResolveMs;
     public float setDestinationMarchingPerUnitPerSecond;
     public float projectionsMarchingPerUnitPerSecond;
     public float meanAllyOverlaps;
@@ -93,6 +99,9 @@ public sealed class MovementMetricsSummary
     public int maxDetourDestinations;
     /// <summary>Episodes of a unit standing still far from its slot for longer than <see cref="MovementMetricsAnalyzer.StallPersistence"/>.</summary>
     public int stalls;
+    public int maxRelocatedSlots;
+    public int maxUnresolvedSlots;
+    public float slotQueriesMarchingPerUnitPerSecond;
 
     public override string ToString()
     {
@@ -113,8 +122,9 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  combat turn frames above the cap: {turnRateViolationFrames}; gear changes: {gearChanges}");
         s.AppendLine($"  acceleration above {MovementMetricsAnalyzer.AccelerationSpikeLimit.ToString("F0", c)} m/s2: {(accelerationSpikeRatio * 100f).ToString("F1", c)} % of samples, max {maxAcceleration.ToString("F0", c)} m/s2");
         s.AppendLine($"  destinations sharing a cell per frame: mean={meanStackedDestinations.ToString("F2", c)} max={maxStackedDestinations}; reached only by a detour: mean={meanDetourDestinations.ToString("F2", c)} max={maxDetourDestinations}");
+        s.AppendLine($"  slot validation (C13): relocated max={maxRelocatedSlots} unresolved max={maxUnresolvedSlots} queries marching per unit per second={slotQueriesMarchingPerUnitPerSecond.ToString("F2", c)}");
         s.AppendLine($"  stalls (still beyond {MovementMetricsAnalyzer.StallDistance.ToString("F1", c)} m of the slot > {MovementMetricsAnalyzer.StallPersistence.ToString("F1", c)} s): {stalls}");
-        s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)}");
+        s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)} FormationSlotResolve={meanSlotResolveMs.ToString("F3", c)}");
         return s.ToString();
     }
 }
@@ -191,6 +201,7 @@ public static class MovementMetricsAnalyzer
         summary.meanNavMeshMs = navMs.Count > 0 ? navMs.Average() : -1;
         summary.meanFollowFormationMs = Mean(global.Select(f => f.followFormationMs));
         summary.meanAvoidanceMs = Mean(global.Select(f => f.avoidanceMs));
+        summary.meanSlotResolveMs = Mean(global.Select(f => f.slotResolveMs));
         AnalyzeContact(summary, frames, units, global, limits);
 
         var marching = new HashSet<(int, int)>(frames.Where(f => f.anchorMoving).Select(f => (f.squad, f.frame)));
@@ -302,6 +313,7 @@ public static class MovementMetricsAnalyzer
         {
             summary.setDestinationMarchingPerUnitPerSecond = marching.Sum(f => f.setDestinationCalls) / (summary.units * marchingTime);
             summary.projectionsMarchingPerUnitPerSecond = marching.Sum(f => f.projectionRequests) / (summary.units * marchingTime);
+            summary.slotQueriesMarchingPerUnitPerSecond = marching.Sum(f => f.slotResolveQueries) / (summary.units * marchingTime);
         }
         summary.meanAllyOverlaps = global.Count > 0 ? (float)global.Average(f => f.allyOverlaps) : 0f;
         summary.maxAllyOverlaps = global.Count > 0 ? global.Max(f => f.allyOverlaps) : 0;
@@ -312,6 +324,8 @@ public static class MovementMetricsAnalyzer
         summary.maxStackedDestinations = frames.Max(f => f.stackedDestinations);
         summary.meanDetourDestinations = (float)frames.Average(f => f.detourDestinations);
         summary.maxDetourDestinations = frames.Max(f => f.detourDestinations);
+        summary.maxRelocatedSlots = frames.Max(f => f.relocatedSlots);
+        summary.maxUnresolvedSlots = frames.Max(f => f.unresolvedSlots);
 
         var contact = units.Where(u => u.attacking && u.targetDistance >= 0f).Select(u => u.targetDistance).ToList();
         summary.meanContactDistance = contact.Count > 0 ? contact.Average() : -1f;
