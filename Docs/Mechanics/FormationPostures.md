@@ -7,7 +7,7 @@ de la plantilla da el **papel** y el **rumbo** del soldado; la **postura** es un
 - `FormationDefinition.templates[].slots[]`: posición (en unidades de espaciado), `row` (0 = frente), `role`
   (`Front`, `Flank`, `Interior`, `Rear`) y `headingDegrees` (rumbo local, 0 = hacia delante, 90 = derecha).
 - `FormationDefinition.postures[]`: por papel, postura **formado** y **en marcha** (`UnitStance`: `Normal`,
-  `BracedShields`, `ShieldFront`, `ShieldSide`, `ShieldUp`). Un papel sin entrada usa `Normal`.
+  `BracedShields`, `ShieldFront`, `ShieldSide`, `ShieldUp`, `SpearLineFront`, `SpearLineRear`). Un papel sin entrada usa `Normal`.
 - Valores por defecto (`Tools/Formations/Apply Default Postures`): Testudo con el frente escudo al frente, los costados
   escudo al costado (y mirando hacia fuera por su rumbo) y el interior y la retaguardia escudo arriba; Shield Wall
   afianzada al formar y escudo al frente en marcha.
@@ -28,6 +28,13 @@ arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de im
 ## Estado
 - Hecho: datos, reparto de papeles, rumbo por ranura, sistema de posturas y parámetros del Animator. Tests en
   `UnitPostureTests` y `FormationLayoutTests`.
-- Pendiente: los clips de escudo al frente, al costado y arriba (no hay en el proyecto) y los estados del Animator que
-  los usan; sin ellos la postura existe en la lógica pero no se ve ni cambia el bloqueo. Ver `Docs/Por_Abordar/` F3-F4.
+- Integrado (2026-10-24): Line de lanceros usa clips Humanoid propios para frente arrodillado y retaguardia con
+  escudo elevado. La segunda fila incluye sus extremos Flank. `AC_Spearmen` añade una capa al controlador de
+  locomoción existente; sale al moverse, atacar o cambiar de postura, restaurando los anclajes del equipo.
+  Desde el ajuste del 2026-10-26, Line usa 0,67 m entre columnas y 0,65 m entre filas, sin ruido,
+  para coincidir con el estudio de Blender. Proceso, aprendizajes y regeneración en
+  [Crear animaciones de formación](../Guides/Crear_Animaciones_De_Formacion.md).
+- Pendiente: clips específicos para las posturas genéricas de ShieldWall/Testudo (`ShieldFront`, `ShieldSide`,
+  `ShieldUp`, `BracedShields`). Las nuevas poses exclusivas de Line no se asignan a esas formaciones.
+  También faltan estocadas y transiciones coreografiadas para Line; actualmente usa mezcla entre poses.
 - `UnitShieldComponent.orientation` se rellena desde el prefab pero ningún sistema lo lee (dato muerto).

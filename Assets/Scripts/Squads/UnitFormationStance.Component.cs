@@ -15,6 +15,10 @@ public enum UnitStance
     ShieldSide    = 3,
     /// <summary>Shield over the head (interior of a testudo, against arrows).</summary>
     ShieldUp      = 4,
+    /// <summary>Kneeling spear and frontal shield, authored for the spearmen Line front rank.</summary>
+    SpearLineFront = 5,
+    /// <summary>Standing spear and overhead shield, authored for the spearmen Line rear rank.</summary>
+    SpearLineRear  = 6,
 }
 
 /// <summary>

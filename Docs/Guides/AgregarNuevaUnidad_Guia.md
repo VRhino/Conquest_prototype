@@ -28,6 +28,7 @@ Un squad se define con un `SquadData` (ScriptableObject) registrado en el `Squad
 
 - Las formaciones son assets `FormationDefinition` (espaciado, ruido, plantillas por soldados vivos, posturas). Ver `Docs/Mechanics/Formations.md`.
 - Ejemplos: `Assets/Resources/Squads/Spearmen/Formations/` y `Assets/ScriptableObjects/Formations/`.
+- Para crear e integrar sus poses, consultar [Crear animaciones de formación](Crear_Animaciones_De_Formacion.md).
 
 ## 5. Crear las AbilityData
 

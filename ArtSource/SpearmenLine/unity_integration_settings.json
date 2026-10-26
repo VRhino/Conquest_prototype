@@ -1,0 +1,13 @@
+{
+  "prefabPath": "Assets/Resources/Squads/Spearmen/Spearmen_GO_Squeleton.prefab",
+  "formationPath": "Assets/Resources/Squads/Spearmen/Formations/SpearmenLineFormation.asset",
+  "sourceControllerPath": "Assets/Synty/AnimationBaseLocomotion/Animations/Polygon/AC_Polygon_Masculine.controller",
+  "outputFolder": "Assets/Resources/Squads/Spearmen/Animations",
+  "poseSourcePath": "ArtSource/SpearmenLine/unity_pose_source.json",
+  "layerName": "Spear Line Formation",
+  "transitionSeconds": 0.25,
+  "clipSeconds": 1.0,
+  "sampleRate": 30,
+  "spearObjectName": "SM_Wep_Spear_06",
+  "shieldObjectName": "SM_Wep_Shield_Long_14"
+}

@@ -248,7 +248,7 @@ namespace BattleDrakeStudios.ModularCharacters {
         }
 
         private void SetupPartArray(ref GameObject[] partsArray, string path, bool isExisting) {
-            Transform[] gameObjectTransforms = GetComponentsInChildren<Transform>();
+            Transform[] gameObjectTransforms = GetComponentsInChildren<Transform>(true);
 
             Transform parentRoot = null;
 

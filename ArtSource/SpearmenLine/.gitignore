@@ -1,0 +1,7 @@
+# Disposable review outputs; retain source .blend files and exported pose data.
+*.blend1
+preview_*.png
+unity_line_integration.png
+source_inspection.json
+pose_review_report.json
+unity_*_test_results.json

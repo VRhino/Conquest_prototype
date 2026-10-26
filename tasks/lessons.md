@@ -1,5 +1,12 @@
 # Implementation lessons
 
+## Estudio de lanceros en Blender (2026-10-24)
+
+- Las máscaras de color de Synty son blancas fuera de la región seleccionada. Reproducir la selección de canales y el orden de mezcla del shader local; sumarlas directamente produce personajes casi blancos.
+- Normalizar la escala del armature y la de la malla por separado, conservando las matrices mundiales originales antes de modificar el padre. Verificar la alineación con las posiciones del prefab.
+- Para poses con armas, verificar el alcance de las muñecas y los cruces del eje de las lanzas contra todos los escudos, además de revisar imágenes. Un objetivo fuera del alcance se aproxima visualmente, pero no satisface la postura solicitada.
+- Generar un `.blend` en segundo plano no actualiza la ventana del usuario. Abrir el resultado y verificarlo; conservar primero cualquier cambio sin guardar de la sesión actual.
+
 ## Battle preparation countdown (2026-10-15)
 
 - Manual Start and preparation-time expiry must share the same final-countdown path; a direct scene transition bypasses the team review window. Keep the countdown duration Inspector-configurable.
@@ -362,3 +369,15 @@
 - NUnit reutiliza la misma instancia de la clase de tests para todos sus tests: un campo como el reloj de la prueba (`_t`) hay que ponerlo a cero en `SetUp`. Un test que pasa solo y falla en grupo apunta a estado compartido entre tests.
 - Un enfriamiento compartido bloquea una cadena de golpes si cada golpe lo inicia. En el combo, solo el primero y el último inician el enfriamiento; los intermedios van en el grupo 0.
 - Cuando una regla de diseño ("el tercer golpe cierra la cadena") depende de que dos valores de ajuste guarden una relación (enfriamiento ≥ animación), hay que hacerla explícita en el código: si no, un cambio de datos la rompe sin aviso.
+
+## Lanceros: poses Blender y Animator (2026-10-24)
+
+- Al convertir una pose a Humanoid, colocar primero la instancia temporal del prefab en el origen con rotación identidad. Su posición guardada de escena no debe entrar en HumanPose.bodyPosition ni en RootT.
+- Un clip que solo restaura Transform en una capa con estados Humanoid puede poner a cero la traslación del cuerpo y hundirlo. Un estado vacío con Write Defaults libera los canales a la capa base y restaura los anclajes; comprobarlo reproduciendo el Animator, no solo inspeccionando sus curvas.
+- AnyState con interrupción SourceThenDestination y sin Ordered Interruption reiniciaba la mezcla de entrada cada frame. Las pruebas deben entrar por parámetros y esperar el estado final, no usar Animator.Play para saltarse la transición.
+- Si el collider de daño es hermano de la malla del arma, animar el carrier común. Animar solo la malla deja el collider en otro lugar.
+
+## Modular Character Editor: piezas inactivas
+
+- Al recorrer un prefab modular para construir listas de piezas, usar GetComponentsInChildren<T>(true) si las piezas o sus contenedores están inactivos; la búsqueda por defecto los omite y puede dejar el asistente sin inicializar.
+
