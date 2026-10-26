@@ -1,6 +1,8 @@
 # Aprendizajes de la referencia para Conquest Tactics
 
-Estado: propuesta de diseño, no implementada. Fecha de la verificación: 2026-10-19.
+Estado: propuesta de diseño; las Fases 0, 1 y 2 están implementadas (§5). Fecha de la verificación: 2026-10-19.
+Ampliación del 2026-10-26: 20 puntos más sacados de las notas de `game-re` que el catálogo no recogía, marcados
+"(amp.)" en las tablas de la sección 4. El estado de todo lo pendiente está al final de la sección 5.
 Las propuestas marcadas "(verificado)" tienen su afirmación "Hoy en el proyecto" comprobada leyendo el código citado.
 
 **Prioridad declarada (2026-10-19):** lo primero es la experiencia de las unidades en pantalla: marcha, formación, giro,
@@ -103,6 +105,12 @@ Leyenda: coste S/M/L; riesgo B/M/A (bajo/medio/alto); prioridad A/M/B. "Ref." es
 | L1-08 | Golpes que ignoran escudo | Bloqueo depende del collider y `currentBlock > 0` (`DamageCalculation.System.cs:125`) | Flag `ignoresShield`/`shieldDamageMult` en el perfil de daño | Identidad de armas | S | B | B |
 | L1-07 | Suelo de vida / protección tras respawn | Vida cae a 0 sin mecanismo de supervivencia (`DamageCalculation.System.cs:172-185`) | `minHealthRatio` en `HeroHealthComponent` | Menos spawn-kill | S | B | B |
 | D1 (verificado) | Sincronizar `DamageMechanics.md` | Doc dice cap de mitigación 95 % y coste de bloqueo fijo 50; código resta plana `max(raw - netDef, raw*0.05)` y el escudo absorbe daño real (`DamageCalculation.System.cs:82-83,127`) | Reescribir doc y mover constantes a `CombatTuningConfig` | Diseño no balancea contra una fórmula inexistente | S | B | A |
+| L1-09 (amp.) | Reacción al golpe por tipo y clase de objetivo | Solo hay retroceso del cuerpo (`Combat/HitKnockback.cs`) y aturdimiento al romperse el escudo (`Combat/DamageCalculation.System.cs:113`); sin tipos de reacción ni inmunidad | Enum `HitReaction` (ninguna, retroceso, derribo, despedido, rotura de guardia) por golpe, con permiso por clase de objetivo (soldado, héroe, grande) y un stat de resistencia al control que la anula | Golpes con peso distinto; base de las animaciones de reacción | M | M | M |
+| L1-10 (amp.) | Desgaste del bloqueo por arma | El escudo absorbe el daño real hasta romperse (`DamageCalculation.System.cs:98-129`); todas las armas lo gastan igual | Multiplicador de daño al bloqueo en el perfil de daño, y daño al aguante del héroe que bloquea; va junto a L1-08 | Armas contundentes que abren escudos | S | B | M |
+| L1-11 (amp.) | Bonus de carga por aproximación | El daño no depende de cómo se llega al golpe | Bonus del atacante según la distancia recorrida hacia el objetivo, en su dirección, justo antes del golpe; con umbral y tope por arma | Carga de lanceros y de la futura caballería | M | M | M |
+| L1-12 (amp.) | Variación aleatoria del daño | Para la misma entrada el daño es siempre el mismo (`DamageFormula`) | Factor `1 ± f` por arma o habilidad, tirado con el RNG sembrado del golpe (L1-05) | Números menos mecánicos sin perder reproducibilidad | S | B | B |
+| L1-13 (amp.) | Robo de vida | No existe | Stat de la pila: fracción del daño hecho que cura al atacante, aplicada después de restar la vida | Perks y habilidades de sustento | S | B | B |
+| L1-14 (amp.) | Modificadores por terreno según el tipo de unidad | El terreno no afecta a los stats | El tipo de unidad declara modificadores por tipo de terreno (vida, daño, defensa, velocidad), aplicados con una fuente propia según el terreno del mapa | Identidad de cada unidad según el mapa | M | B | B |
 
 **L1-01.** Ref.: el poder se compone con una fórmula de ratios sumados + planos y un override; los efectos no conocen el
 atributo. Ver T1. **L1-03.** Ref.: la calculadora es una cadena de etapas con entradas explícitas y desglose de salida
@@ -113,6 +121,13 @@ rendimientos decrecientes habitual en RPG. **L1-06.** Ref.: el escudo de buff ab
 un golpe de daño 0 no lo consume. **L1-08.** Ref.: hay golpes que perforan la defensa y reacciones que dependen de la
 clase del objetivo. **L1-07.** Ref.: un suelo de vida fijado externamente, `max(vida - daño, suelo*vidaMax)`. **D1.**
 Ref.: la nota de daño mantiene una tabla de cambios cada vez que el código cambia.
+**L1-09 (amp.).** Ref.: el tipo de reacción lo decide un preprocesado del golpe, con un permiso por clase de objetivo que
+un atributo puede forzar o anular; la inmunidad al control consiste en sustituir ese atributo. **L1-10.** Ref.: el golpe
+lleva un daño propio contra el bloqueo y contra el aguante, aparte del daño a la vida. **L1-11.** Ref.: el bonus de carga
+usa la distancia proyectada sobre la dirección del atacante, acotada, y solo cuenta por encima de un umbral del arma.
+**L1-12.** Ref.: cada habilidad declara una amplitud de dispersión y el factor se tira al construir el golpe. **L1-13.**
+Ref.: el robo de vida es un stat más de los efectos. **L1-14.** Ref.: los modificadores de terreno los declara el tipo de
+unidad, filtrados por el terreno del nivel, y se suman a los ratios antes de multiplicar (T1).
 
 ### 4.2 Habilidades
 
@@ -126,6 +141,13 @@ Ref.: la nota de daño mantiene una tabla de cambios cada vez que el código cam
 | L2-7 | Multiproyectil y tope de proyectiles | Un proyectil por petición; sin tope de vivos (`RangedAttack.System.cs:140-150`) | `LauncherScheme` (modo, cuenta, ángulo) y descarte del más antiguo | Abanico, ballesta, protección ante picos | M | B | M |
 | L2-6 | Carga / mantener pulsado | No existe (GDD ~977-1078 la requiere) | Fase `esCarga` infinita + evento "soltar" | Tiro cargado | S (tras L2-2) | B | B |
 | L2-8 | Proyectil simulado en ECS | `ProjectileController` (MonoBehaviour) y `ConcurrentQueue` estática | `ProjectileComponent` + sistema Burst con raycast Unity Physics | Determinismo, rendimiento | L | A | B |
+| L2-9 (amp.) | Habilidades de escuadra por el mismo lanzador | El GDD (§4.6, §12.3) las pide; hay datos (`SquadAbilityDefinitionComponent`, `AbilityByLevelElement`, `abilityUnlockLevel`) pero ningún sistema las lanza | La escuadra pide con `SkillRequestComponent`, pasa por `SkillGate` y enfría en su propio `CooldownGroupElement`; los efectos reutilizan `SkillEffectSystem` | Cierra el mayor hueco frente al GDD sin un segundo lanzador | M | M | A |
+| L2-10 (amp.) | Pilas y duración de los efectos | `StatModifier` no tiene pilas; reaplicar un efecto añade otro modificador (`Stats/StatTypes.cs:49-59`) | `maxStacks` y modo al reaplicar (refrescar, apilar, ignorar); stats de duración del efecto, del lado de quien lo aplica y de quien lo recibe | Efectos acumulables y resistencia a la duración | M | M | M |
+| L2-11 (amp.) | Daño en el tiempo | No existe (`Docs/Por_Abordar/Habilidades_Perks.md` H4); Flecha Llameante se aproxima con daño directo | Efecto con periodo y duración que emite un `PendingDamageEvent` en cada tic | Quemadura, sangrado, veneno | S-M | B | M |
+| L2-12 (amp.) | Velocidad de ataque | Las fases duran lo que dice el blob (`Skills/SkillTimeline.cs`); ningún stat las acorta | Stat de velocidad de ataque; las fases marcadas dividen su duración por él y la animación se acelera en la misma proporción | Buffs de ritmo; armas rápidas | S | B | M |
+| L2-13 (amp.) | Tope de objetivos por habilidad | El daño en área golpea a todos los que están dentro (`Skills/SkillEffect.System.cs`, `SkillArea.Contains`) | Máximo de objetivos en el evento de efecto, los más cercanos primero | Áreas que se pueden equilibrar contra escuadras de 30 | S | B | M |
+| L2-14 (amp.) | Efectos ligados a la habilidad | Los modificadores de una habilidad solo caducan por tiempo | Marcar el modificador con la instancia que lo creó y retirarlo cuando la habilidad termina o la interrumpen | Posturas y canalizaciones sin efectos residuales | S | B | B |
+| L2-15 (amp.) | Condiciones de efecto más ricas | `PerkCondition` solo tiene `HeroStill` y `HeroMovedRecently` (`Perks/PerkTypes.cs:15-22`) | Probabilidad, tipo de objetivo (héroe, soldado, clase), objetivo o atacante con un efecto activo, soldados restantes de la escuadra en un rango; combinadas con Y y con triestados | Los perks del GDD que hoy no tienen datos | M | B | M |
 
 **L2-1.** Ref.: toda habilidad pasa por una puerta con comprobaciones en orden fijo y código de motivo de rechazo; el
 estado de control prohíbe por defecto. La corrección frente al informe: el input existe; falta el consumidor. Solo hay 3
@@ -138,6 +160,13 @@ prerrequisito o ha pasado poco desde que acabó; el *input buffering* es prácti
 modo, cuenta y ángulo; dispersión creciente con el movimiento; tope duro de proyectiles vivos. **L2-6.** Ref.: la carga
 es una fase de duración infinita; soltar avanza a la final. **L2-8.** Ref.: el proyectil vive en un gestor con id con
 generación, no como GameObject. Rompe el principio "la física de GO no decide lógica" mientras no se migre; justificar.
+**L2-9 (amp.).** Ref.: las escuadras lanzan sus habilidades con el mismo ciclo de vida que el héroe, y el enfriamiento es
+por escuadra, no por soldado (ver §6). **L2-10.** Ref.: la duración y las pilas máximas son stats que modifican por
+separado quien aplica el efecto y quien lo recibe. **L2-11.** Ref.: el daño en el tiempo es un efecto con periodo y
+duración propios. **L2-12.** Ref.: solo las fases marcadas escalan con la velocidad, y la animación se reproduce a la
+proporción correspondiente. **L2-13.** Ref.: cada habilidad lleva un número máximo de impactos, modificable por efectos.
+**L2-14.** Ref.: al terminar una habilidad se retiran los efectos enlazados a ella. **L2-15.** Ref.: las condiciones se
+combinan con Y, las listas son "cualquiera de" y los triestados distinguen "no importa", "debe" y "no debe".
 
 ### 4.3 Formaciones
 
@@ -168,6 +197,9 @@ por llamada explícita, sin sondeo; aquí se toma solo la caducidad y el evento.
 | L4-06 | IA server-only | Todos los bots corren localmente | Agrupar `EnemyDetection`, `SquadAI`, perfil bot y `OrderResolution` en grupos de servidor | Evita rediseñar con Netcode | M | M | M |
 | L4-05 | Sesgo de aggro / provocación | No existe aggro, solo represalia | `AggroBias` con expiración | Roles de tanque | S | B | B |
 | L4-07 | LOD de IA | Sin cotas; 15v15 sin medir | `AILodSystem` con tres niveles | Sostener 15v15 | M | M | B |
+| L4-08 (amp.) | Elegir aliado al que apoyar | La IA no elige aliados ni lanza habilidades (`Docs/Por_Abordar/Habilidades_Perks.md` H1) | Puntuación de aliado por cercanía, vida perdida y si es héroe, dentro de un radio; el elegido se mantiene mientras siga siendo válido | IA de curación y de buffs coherente | S-M | B | M |
+| L4-09 (amp.) | Búsqueda de enemigo por estrategia de escuadra | `EnemyDetection` usa la distancia al centroide con radio fijo (`Combat/EnemyDetection.System.cs:139-176`) | Radio de combate que crece con la velocidad de la escuadra, entre un mínimo y un máximo; descarte por diferencia de altura y por pendiente; variantes (arquero con línea de tiro, atacar avanzando, atacar una zona). Complementa L4-04 | Escuadras que no se enganchan con enemigos en otra cota | M | M | M |
+| L4-10 (amp.) | Efectos que ajustan la IA de escuadra | Los parámetros de IA son constantes de configuración | Parámetros de IA (radio de combate, pesos) como stats de la pila de la escuadra, con fuente `Effect` | Órdenes y habilidades tácticas sin código nuevo | S | B | B |
 
 **L4-01.** Ref.: cada contexto acumula `dt` y piensa a ~10 Hz; un cursor round-robin limita cuántos se actualizan por
 frame. Fuente pública: *time slicing* / tick rate de IA. Riesgo concreto: no perder pulsos de `IsUnderAttackTag` (BUG-008).
@@ -176,6 +208,10 @@ requiere intérprete de árboles. **L4-04.** Ref.: puntuación por cercanía + f
 aliados ya asignados y bonus al objetivo actual (histéresis). **L4-03.** Ref.: máscara de visibilidad con rayos pedidos en
 round-robin y presupuesto por paso de física. **L4-06.** Ref.: el servidor decide qué enemigos ve cada escuadra. **L4-05.**
 Ref.: sesgo por escuadra sumado a la puntuación. **L4-07.** Ref.: tope de soldados considerados y LOD por distancia.
+**L4-08 (amp.).** Ref.: la IA de apoyo elige el aliado con mayor puntuación (cercanía, vida perdida, héroe) y lo mantiene
+mientras sigue siendo válido y no aparece otro claramente mejor. **L4-09.** Ref.: cada estrategia de escuadra fija su
+referencia y su foco; el radio de búsqueda se interpola con la velocidad y hay filtros de altura y pendiente. **L4-10.**
+Ref.: los efectos pueden cambiar los parámetros de la estrategia de IA a la que van dirigidos.
 
 ### 4.5 Movimiento
 
@@ -187,6 +223,8 @@ Ref.: sesgo por escuadra sumado a la puntuación. **L4-07.** Ref.: tope de solda
 | L5-4 | Giro proporcional con tope | Asignación directa de rotación en `UnitRotationResolution` | `RotateTowards` con `turnRateMoving/Idle` | Sin giros de 180° en un frame | S | B | M |
 | L5-5 | Radio escalable | `bodyblockRadius` único de 0,8 m | `UnitBodyRadius`, celda = máximo | Prepara unidades grandes | S | B | B |
 | L5-6 | Vínculo jinete-montura | No hay monturas | `MountBinding` + `MotorMode` | Evita rediseño | L | M | B |
+| L5-7 (amp.) | Aguante según la marcha | Solo el sprint del héroe gasta aguante (`Hero/Systems/HeroStamina.System.cs`); las escuadras corren sin coste | Coste por marcha (cantidad fija, % del máximo o por segundo) para escuadras, escalado por la pila; sin aguante, la marcha de carrera baja un nivel | Correr tiene un precio táctico | S-M | M | B |
+| L5-8 (amp.) | Montura: arco de ataque y aguante propio | No hay monturas | Arco de giro respecto a la montura fuera del cual el jinete no ataca; aguante de la montura aparte del del jinete | Evita rediseño si llega la caballería | S (tras L5-6) | B | B |
 
 **L5-1.** Ref.: ORCA (van den Berg et al., "Reciprocal n-body collision avoidance", RVO2, Apache-2.0): un semiplano por
 vecino y un programa lineal para la velocidad más cercana a la deseada; el esfuerzo se reparte con responsabilidad 0,5
@@ -195,6 +233,8 @@ de marcha en enum de cuatro posiciones con tabla de velocidades por motor; la an
 inferirla. **L5-3.** Ref.: base por marcha × varios multiplicadores independientes, con override y "sin override".
 **L5-4.** Ref.: giro `min(k*|error|, giroMax)*dt` con giro máximo distinto parado y en marcha. **L5-5/6.** Ref.: radios
 propios por actor; el jinete reenvía el input al motor de la montura.
+**L5-7 (amp.).** Ref.: el aguante elige un modo según el motor y la marcha, con tres formas de coste. **L5-8.** Ref.: si el
+jinete gira fuera del arco permitido respecto a la montura, pierde la capacidad de atacar.
 
 ### 4.6 Red
 
@@ -230,6 +270,8 @@ Entities mientras héroe y unidades se muevan con `CharacterController` y `NavMe
 | L7-5 | Curvas de XP y desbloqueos en datos | XP de escuadra `100 × 1,1^n` en código; `(i+1)*10`; atributos revalidados por frame | `ProgressionTable` SO a blob; validar atributos al asignar | Balance sin recompilar | S | B | M |
 | L7-6 | Stats de objeto con `StatId` | `Dictionary<string,float>` (`Inventory/statsGenerators/BasicArmorStatGenerator.cs:23-46`) | `{statId, valor}` + semilla de generación | Guardado pequeño; validable en servidor | M | M | M |
 | L7-7 | Estados de captura explícitos | Cuatro flags en `CapturePointProgress.Component.cs`; doc define 6 estados | Enum `ZoneState` y `CaptureMode` en SO | HUD sin reconstruir; variantes por campo | S | B | M |
+| L7-8 (amp.) | Marcador por equipo y escuadra | No hay estadísticas de partida; la vista de `Tab` del GDD (§12.1.1) no existe | Buffer de estadísticas por equipo con una fila por escuadra (bajas, daño, capturas), escrito a partir de los eventos de daño y de captura | Base del marcador y del resumen de partida | M | B | M |
+| L7-9 (amp.) | Maestría que sustituye una habilidad | No existe | Un desbloqueo que sustituye el id de una habilidad (o de una fase) por otro al montar el loadout | Progresión de arma sin lógica nueva en el lanzador | S | B | B |
 
 **L7-1/2.** Ref.: el inicio y el fin de partida son una transición de estado autoritativa; el cliente solo hace cuenta atrás
 visual y hay un único mensaje de fin con resultado. **L7-3/4.** Ref.: el poder no se calcula por fuente; equipo, talentos y
@@ -237,6 +279,8 @@ huecos inyectan efectos en listas por fase de uso, y un talento no lleva lógica
 de XP y función lineal a trozos acumulada (tarifa progresiva) para atributos. **L7-6.** Ref.: ids estables de efecto y
 referencia a fila de diseño más lista corta de extras. **L7-7.** Ref.: progreso y propietario los decide la capa
 autoritativa; variantes de captura.
+**L7-8 (amp.).** Ref.: las estadísticas se agrupan por equipo y, dentro, por escuadra, con unos pocos contadores y banderas
+por escuadra. **L7-9.** Ref.: la maestría no añade lógica: sustituye la habilidad lanzada por otra.
 
 ## 5. Hoja de ruta por fases
 
@@ -283,6 +327,23 @@ de órdenes). Aquí se confirma el checklist T4.
 l6-03 (cuantización, puro y sin dependencias de red) y l6-08 (`NetTick`), luego l6-04 (transporte), l6-01 y l6-02
 (autoridad y réplica por equipo), l6-06 (ticket) y l6-05 (latido/reconexión). Decisión previa obligatoria: Netcode for
 Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo antes de escribir el protocolo propio.
+
+**Ampliación (2026-10-26).** Dónde encajan los puntos "(amp.)":
+- **Fase 2b — Habilidades de escuadra y efectos:** L2-9 primero (prioridad alta), después L2-15, L2-10, L2-11, L2-13,
+  L2-12 y L2-14. Junto con la elección de perks (H5) cierran lo que el GDD pide de habilidades.
+- **Combate, junto a L1-02 y L1-08:** L1-10, L1-11, L1-12, L1-13 y L1-14; L1-09 cuando haya animaciones de reacción.
+- **Fase 3 (movimiento):** L5-7, que se apoya en las marchas (L5-2, ya hechas con C9).
+- **Fase 4 (IA):** L4-09 con L4-04; L4-08 con H1 (la IA usa habilidades); L4-10 después de L2-9.
+- **Según alcance:** L5-8 solo con caballería (con L5-6); L7-8 cuando se haga la vista de `Tab`; L7-9 si el GDD la pide.
+
+### Estado a 2026-10-26
+- **Hecho:** Fases 0, 1 y 2; lotes de movimiento C1-C12, C14 y C15 de `Movimiento_Formaciones.md`, que cubren L3-02 (C12),
+  L5-1 (C14), L5-2 (C9) y L5-4 (C7, con la decisión D5); L3-03 y L3-04 entraron con las formaciones por datos.
+- **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-01 (C13), L3-05, L3-06; L4-03, L4-04, L4-05, L4-06, L4-07;
+  L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los 20 puntos "(amp.)".
+- **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H1-H9 habilidades y perks, P1-P6 pila, F1-F16 formaciones y
+  posturas, M1-M13 movimiento).
+- **Orden recomendado** (prioridad del usuario: movimiento y formación): L3-01/C13; L4-04 con L4-09; después L2-9 con H5.
 
 ## 6. Lo que no conviene copiar
 

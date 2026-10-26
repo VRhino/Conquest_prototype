@@ -11,7 +11,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | Pendiente (contenido) |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | Pendiente |
-| F3 | Clips de animación de las posturas | Alta | Bloqueado (contenido; inventario hecho, no hay clips) |
+| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros hecha (`04608ca2`); faltan ShieldWall, Testudo, estocadas y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
@@ -80,6 +80,11 @@ crean poses estáticas con IK de brazo como solución temporal.
 **Inventario (2026-10-20).** En `Assets/` solo hay `Animations/Sword And Shield Slash.fbx`; ningún clip de escudo al frente,
 al costado ni arriba. La lógica ya está (`UnitPostureSystem`, parámetros `Stance` y `SlotRole`): falta el contenido y los
 estados del Animator que lo usen. Ver `Docs/Mechanics/FormationPostures.md`.
+
+**Avance (2026-10-26, `04608ca2`).** La Línea de lanceros ya tiene sus dos clips (fila delantera de rodillas con el escudo
+al frente, trasera de pie con el escudo arriba) y una capa en `AC_Spearmen` que se abandona al moverse, atacar o cambiar de
+formación. El proceso está en `Docs/Guides/Crear_Animaciones_De_Formacion.md`. Faltan las posturas de Muro de escudos y
+Testudo, las estocadas y las transiciones.
 
 ## F4. Cuerpo de impactos por postura
 **Qué es.** En la referencia, cambiar la postura reconstruye el cuerpo de impactos del actor ("dummy body"): levantar el
