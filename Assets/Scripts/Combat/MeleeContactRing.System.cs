@@ -6,7 +6,8 @@ using Unity.Transforms;
 /// <summary>
 /// Contact ring (Movimiento_Formaciones.md L-7, C11): every melee target gets a ring of positions at the stop
 /// distance and each attacker reserves one, keeping it while its target stays the same. Attackers that find the
-/// ring full wait further out (D6, soft saturation: no hard cap here, targeting keeps its own). Single writer
+/// ring full wait further out (D6: no hard cap anywhere; the target score of UnitTargetingSystem spreads attackers
+/// with soft saturation, the ring only places them). Single writer
 /// of <see cref="MeleeContactSlotComponent"/>; reservations are rebuilt every frame from the attackers alive, so
 /// death or a new target frees a slot without any event.
 /// </summary>

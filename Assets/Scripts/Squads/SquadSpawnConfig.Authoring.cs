@@ -41,7 +41,6 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public float heroSlotSpacing        = 10f;
     public float followForwardOffset    = 2f;
     public float unitLeashDistance      = 6f;
-    public int   maxUnitsPerTarget      = 2;
     public float minCombatDuration      = 1f;
 
     class Baker : Baker<SquadSpawnConfigAuthoring>
@@ -63,7 +62,6 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 heroSlotSpacing     = authoring.heroSlotSpacing,
                 followForwardOffset = authoring.followForwardOffset,
                 unitLeashDistance   = authoring.unitLeashDistance,
-                maxUnitsPerTarget   = authoring.maxUnitsPerTarget,
                 minCombatDuration   = authoring.minCombatDuration,
                 ownerDeathRetreatDuration = authoring.ownerDeathRetreatDuration,
                 retreatArrivalThreshold = authoring.retreatArrivalThreshold,

@@ -130,7 +130,7 @@ public struct MovementTuningComponent : IComponentData
         targetCandidateCount = 6,
         targetReevaluateInterval = 0.3f,
         enemySearchEnabled = true,
-        enemySearchRadiusMin = 3f,
+        enemySearchRadiusMin = 6f,
         enemySearchRadiusMax = 8f,
         enemySearchFullRadiusSpeed = 4f,
         enemySearchMaxHeightDifference = 3f,

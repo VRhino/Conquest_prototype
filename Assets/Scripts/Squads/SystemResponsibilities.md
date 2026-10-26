@@ -197,7 +197,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: Anillo de contacto (C11, L-7): reserva para cada atacante cuerpo a cuerpo una posición en el anillo de su objetivo (radio = menor distancia de parada, ⌊2π·r / (2·bodyRadius + contactRingMargin)⌋ posiciones en ángulos fijos del mundo); con el anillo lleno, espera (slot −1)
 - **Owner exclusivo**: `MeleeContactSlotComponent`
 - **Orden**: `[UpdateAfter(UnitTargetingSystem)]` `[UpdateBefore(UnitNavMeshSystem)]`
-- **Regla**: Sin cupo duro (D6): el cupo sigue en `UnitTargetingSystem`. Se reconstruye cada frame desde los atacantes vivos; muerte o cambio de objetivo liberan la posición sin eventos. `UnitNavMeshSystem` solo lee la reserva (va a la posición, o espera a `d_reanudar + s_arco`)
+- **Regla**: Sin cupo duro (D6): el reparto entre objetivos lo hace la puntuación con saturación blanda de `UnitTargetingSystem` (L4-04); el anillo solo coloca. Se reconstruye cada frame desde los atacantes vivos; muerte o cambio de objetivo liberan la posición sin eventos. `UnitNavMeshSystem` solo lee la reserva (va a la posición, o espera a `d_reanudar + s_arco`)
 
 ### UnitFollowFormationSystem
 - **Responsabilidad**: Velocidad de seguimiento y marcha (C9, `UnitMovementGearComponent`) + rotación Formed para unidades NavMesh
@@ -316,6 +316,8 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateAfter(SquadFSMSystem)]`
 - **Gate**: Solo asigna targets si `SquadFSMState.InCombat` — las tres formas de entrar en combate (tecla V, daño recibido, aliado impactado) convergen correctamente en el FSM
 - **Regla**: No decide cuándo entrar en combate — solo distribuye targets cuando ya está en `InCombat`
+- **Búsqueda por escuadra (L4-09, `EnemySearch`)**: de los candidatos detectados, solo son objetivos nuevos los que quedan dentro del radio de combate de la estrategia (mantener posición = mínimo; ataque ordenado = máximo; seguir o reacción = interpolado con la velocidad del ancla; arqueros, al menos su alcance), medido más allá del contorno de la escuadra, y a la misma cota (altura y pendiente). El objetivo actual se conserva mientras siga detectado.
+- **Puntuación de melé (L4-04, D6, `TargetScoring`)**: K candidatos más cercanos; `(cercanía + foco + sesgo) · max(suelo, 1 − n·k) + histéresis`, con `n` = atacantes de melé ya fijados en ese enemigo por **todas** las escuadras. Sin cupo duro. Una unidad en alcance de su objetivo no lo cambia; las demás reevalúan cada `targetReevaluateInterval` con fase por entidad. Foco: objetivo de la orden de ataque, o la escuadra enemiga contra la que más pelean. Arqueros: el más cercano y el reparto suave de siempre.
 
 ### CombatReactionSystem
 - **Responsabilidad**: Convierte `SquadAIComponent.isInCombat` en `SquadCombatReactionIntentComponent` para el pipeline de órdenes

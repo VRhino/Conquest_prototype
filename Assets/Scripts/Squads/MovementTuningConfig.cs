@@ -133,8 +133,8 @@ public class MovementTuningConfig : ScriptableObject
     [Header("Squad enemy search (L4-09)")]
     [Tooltip("New targets only within the squad's combat radius and on its level. Off = every detected enemy, as before L4-09.")]
     public bool enemySearchEnabled = true;
-    [Tooltip("Combat radius beyond the squad's extent while still or holding a position (m).")]
-    [Min(0f)] public float enemySearchRadiusMin = 3f;
+    [Tooltip("Combat radius beyond the squad's extent while still or holding a position (m). Matches the leash (unitLeashDistance), so a still squad takes on the enemies it may chase.")]
+    [Min(0f)] public float enemySearchRadiusMin = 6f;
     [Tooltip("Combat radius beyond the squad's extent under an Attack order, or following at full speed (m).")]
     [Min(0f)] public float enemySearchRadiusMax = 8f;
     [Tooltip("Speed at which a squad following its hero reaches the largest combat radius (m/s).")]

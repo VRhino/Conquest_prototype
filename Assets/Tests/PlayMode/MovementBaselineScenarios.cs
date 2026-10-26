@@ -141,25 +141,26 @@ public partial class BattleSceneIntegrationTests
     }
 
     /// <summary>
-    /// Attackers allowed on one enemy in S7: three squads at the usual 2 per target. Allied squads are driven by the
-    /// hero AI (zones, advantage checks) and do not reliably join a clash, so S7 lets one squad concentrate as three
-    /// would, which is the case the contact ring exists for (C11, M2, M6).
+    /// Share of the soft saturation (D6) each attacker counts for in S7: one squad crowds an enemy as three would.
+    /// Allied squads are driven by the hero AI (zones, advantage checks) and do not reliably join a clash, so S7 lets
+    /// one squad concentrate as three would, which is the case the contact ring exists for (C11, M2, M6). Before L4-04
+    /// the same case was a hard cap of 6 attackers per target instead of 2.
     /// </summary>
-    const int S7AttackersPerTarget = 6;
+    const float S7SaturationShare = 1f / 3f;
 
     /// <summary>S7: S6 with several attackers per enemy, so contact rings fill up.</summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS7Crowd()
     {
         var previousInput = UseUnfocusedEditorInput();
-        using var configQuery = em.CreateEntityQuery(typeof(SquadSpawnConfigComponent));
-        var configEntity = configQuery.GetSingletonEntity();
-        var config = em.GetComponentData<SquadSpawnConfigComponent>(configEntity);
-        int previousCap = config.maxUnitsPerTarget;
+        using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
+        var tuningEntity = tuningQuery.GetSingletonEntity();
+        var tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
+        float previousSaturation = tuning.targetSaturationPerAttacker;
         try
         {
-            config.maxUnitsPerTarget = S7AttackersPerTarget;
-            em.SetComponentData(configEntity, config);
+            tuning.targetSaturationPerAttacker = previousSaturation * S7SaturationShare;
+            em.SetComponentData(tuningEntity, tuning);
             yield return PrepareBaseline();
             using (MovementVideoCapture.Start("S7"))
             {
@@ -177,11 +178,11 @@ public partial class BattleSceneIntegrationTests
         finally
         {
             RestoreInputSettings(previousInput);
-            if (em.Exists(configEntity))
+            if (em.Exists(tuningEntity))
             {
-                config = em.GetComponentData<SquadSpawnConfigComponent>(configEntity);
-                config.maxUnitsPerTarget = previousCap;
-                em.SetComponentData(configEntity, config);
+                tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
+                tuning.targetSaturationPerAttacker = previousSaturation;
+                em.SetComponentData(tuningEntity, tuning);
             }
         }
     }

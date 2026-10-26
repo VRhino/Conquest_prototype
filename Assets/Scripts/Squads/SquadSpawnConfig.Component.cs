@@ -32,6 +32,5 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float heroSlotSpacing;     // Espacio lateral entre slots de héroe (metros)
     public float followForwardOffset; // Distancia delante del héroe al formar en Follow/Attack
     public float unitLeashDistance;   // Max distance (from formation slot) a unit will chase an enemy
-    public int   maxUnitsPerTarget;   // Max units allowed to target the same enemy
     public float minCombatDuration;   // Segundos mínimos en InCombat tras perder enemigos de rango
 }

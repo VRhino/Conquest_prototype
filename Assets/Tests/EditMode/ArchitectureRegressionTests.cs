@@ -604,6 +604,10 @@ public class ArchitectureRegressionTests
             return squad;
         }
 
+        // Two 30 m wide squads with their centres 40 m apart: the combat radius (L4-09) must reach across, as detection does.
+        var wideSearch = MovementTuningComponent.Default;
+        wideSearch.enemySearchRadiusMin = wideSearch.enemySearchRadiusMax = 1000f;
+        em.SetComponentData(em.CreateEntity(typeof(MovementTuningComponent)), wideSearch);
         var squadA = CreateDetectionSquad(Team.TeamA, 0f);
         var squadB = CreateDetectionSquad(Team.TeamB, 40f);
         var system = world.GetOrCreateSystemManaged<EnemyDetectionSystem>();
@@ -1037,7 +1041,7 @@ public class ArchitectureRegressionTests
         var dead = em.CreateEntity(typeof(LocalTransform), typeof(IsDeadComponent));
         var alive = em.CreateEntity(typeof(LocalTransform));
         em.SetComponentData(dead, LocalTransform.Identity);
-        em.SetComponentData(alive, LocalTransform.FromPosition(new float3(10,0,0)));
+        em.SetComponentData(alive, LocalTransform.FromPosition(new float3(2,0,0)));
         var unit = em.CreateEntity(typeof(LocalTransform), typeof(UnitCombatComponent));
         em.SetComponentData(unit, LocalTransform.Identity);
         em.SetComponentData(unit, new UnitCombatComponent { target = dead });
