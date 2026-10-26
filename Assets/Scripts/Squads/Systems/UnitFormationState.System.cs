@@ -17,8 +17,6 @@ public partial struct UnitFormationStateSystem : ISystem
     {
         float dt = SystemAPI.Time.DeltaTime;
         var tuning = SystemAPI.GetSingleton<MovementTuningComponent>();
-        var radii = FormationArrivalRadii.From(tuning);
-
         foreach (var (units, squadEntity) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
         {
             if (!SystemAPI.HasComponent<SquadStateComponent>(squadEntity))
@@ -30,6 +28,10 @@ public partial struct UnitFormationStateSystem : ISystem
                 continue;
 
             bool heroMovingForSquad = SystemAPI.IsComponentEnabled<SquadAnchorMovingTag>(squadEntity);
+            // Arrival radii follow the formation spacing (F15).
+            var radii = FormationArrivalRadii.From(tuning, SystemAPI.HasComponent<FormationComponent>(squadEntity)
+                ? SystemAPI.GetComponent<FormationComponent>(squadEntity).spacing
+                : MovementTuningComponent.ReferenceSpacing);
 
             // Determinar si el escuadrón está en modo Hold Position
             bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition

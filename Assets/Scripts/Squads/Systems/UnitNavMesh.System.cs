@@ -110,7 +110,6 @@ public partial class UnitNavMeshSystem : SystemBase
         // Movement tuning is optional here so navigation keeps safe defaults in reduced worlds.
         var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
             ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
-        float arrivalThreshold = math.max(0.01f, tuning.arrivalRadiusIn);
         // Contact distances derive from body radii and weapon reach (C5, MeleeReach).
         float bodyRadius = tuning.bodyRadius;
         // Within this distance a melee unit turns to face its target manually.
@@ -148,18 +147,23 @@ public partial class UnitNavMeshSystem : SystemBase
                 ref navigation.previousRequestedSlot, ref navigation.hasPreviousRequestedSlot,
                 ref navigation.slotVelocity, requestedSlot, dt, tuning.slotVelocitySmoothing,
                 2f * tuning.destinationLeadMaxDistance);
-            DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
-                arrivalThreshold, now, retryInterval, ref navigation);
             // Project the slot within its own cell first (min(spacing, 0.65), L3-04) so it never lands in a
             // neighbour's slot; the wide radius is only the fallback.
             float slotSampleRadius = math.min(sampleRadius, MaxSlotSampleRadius);
+            float spacing = MovementTuningComponent.ReferenceSpacing;
             if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
             {
                 Entity owner = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
                 if (SystemAPI.HasComponent<FormationComponent>(owner))
-                    slotSampleRadius = math.min(slotSampleRadius,
-                        math.max(FormationDefinition.MinSpacing, SystemAPI.GetComponent<FormationComponent>(owner).spacing));
+                {
+                    spacing = math.max(FormationDefinition.MinSpacing, SystemAPI.GetComponent<FormationComponent>(owner).spacing);
+                    slotSampleRadius = math.min(slotSampleRadius, spacing);
+                }
             }
+            // Arrival radius of this formation (F15).
+            float arrivalThreshold = math.max(0.01f, FormationArrivalRadii.ArrivalRadiusIn(tuning, spacing));
+            DetectFailedFormationPath(agent, requestedSlot, unitPos, retryDistance,
+                arrivalThreshold, now, retryInterval, ref navigation);
             float3 formationDestination = ResolveFormationDestination(agent, requestedSlot,
                 unitPos, slotSampleRadius, sampleRadius, retryDistance, destinationChangeThreshold,
                 now, retryInterval, ref navigation);

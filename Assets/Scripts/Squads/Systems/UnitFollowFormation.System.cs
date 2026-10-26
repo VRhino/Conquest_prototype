@@ -52,6 +52,11 @@ public partial class UnitFollowFormationSystem : SystemBase
             }
 
             var anchor = anchorLookup[entity];
+            // No catch-up inside the entry radius of this formation (F15).
+            followSpeed.arrivalRadius = FormationArrivalRadii.ArrivalRadiusIn(tuning,
+                SystemAPI.HasComponent<FormationComponent>(entity)
+                    ? SystemAPI.GetComponent<FormationComponent>(entity).spacing
+                    : MovementTuningComponent.ReferenceSpacing);
             // Keep heroForward for orientation — guard against zero-quaternion sentinel
             float3 heroForward = math.lengthsq(anchor.rotation.value) > 0.01f
                 ? math.forward(anchor.rotation)

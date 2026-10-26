@@ -1,3 +1,5 @@
+using Unity.Mathematics;
+
 /// <summary>What happened to a unit's formation state in one step.</summary>
 public enum FormationArrivalEvent : byte
 {
@@ -16,13 +18,34 @@ public struct FormationArrivalRadii
     public float holdSq;    // Leave Formed above this squared distance (Hold Position).
     public float calmTime;  // Seconds within inSq with a still anchor before becoming Formed.
 
-    public static FormationArrivalRadii From(in MovementTuningComponent tuning) => new FormationArrivalRadii
+    /// <summary>Radii for a formation at the reference spacing.</summary>
+    public static FormationArrivalRadii From(in MovementTuningComponent tuning) =>
+        From(tuning, MovementTuningComponent.ReferenceSpacing);
+
+    /// <summary>Radii for a formation with this spacing (F15): see <see cref="SpacingScale"/>.</summary>
+    public static FormationArrivalRadii From(in MovementTuningComponent tuning, float spacing)
     {
-        inSq = tuning.arrivalRadiusIn * tuning.arrivalRadiusIn,
-        outSq = tuning.arrivalRadiusOut * tuning.arrivalRadiusOut,
-        holdSq = tuning.holdReformRadius * tuning.holdReformRadius,
-        calmTime = tuning.arrivalCalmTime,
-    };
+        float scale = SpacingScale(spacing);
+        return new FormationArrivalRadii
+        {
+            inSq = math.square(tuning.arrivalRadiusIn * scale),
+            outSq = math.square(tuning.arrivalRadiusOut * scale),
+            holdSq = tuning.holdReformRadius * tuning.holdReformRadius,
+            calmTime = tuning.arrivalCalmTime,
+        };
+    }
+
+    /// <summary>Entry radius r_in for a formation with this spacing (F15).</summary>
+    public static float ArrivalRadiusIn(in MovementTuningComponent tuning, float spacing) =>
+        tuning.arrivalRadiusIn * SpacingScale(spacing);
+
+    /// <summary>
+    /// F15: the tuned arrival radii hold at the reference spacing; a tighter formation (Testudo, the spearmen Line)
+    /// shrinks them in proportion, so r_in &lt; s/4 and r_out ≤ s/2 hold for every formation. Wider formations keep
+    /// the tuned radii: arriving more loosely would only blur the formation.
+    /// </summary>
+    public static float SpacingScale(float spacing) =>
+        math.min(1f, math.max(FormationDefinition.MinSpacing, spacing) / MovementTuningComponent.ReferenceSpacing);
 }
 
 /// <summary>
