@@ -112,6 +112,40 @@ public class MovementTuningConfig : ScriptableObject
     [Tooltip("Maximum turn speed (deg/s) when a unit turns to face its combat target.")]
     [Min(0f)] public float combatTurnRate = 450f;
 
+    [Header("Melee target score (L4-04, D6)")]
+    [Tooltip("Proximity term of the score: 1 at contact, 0.5 at this distance (m).")]
+    [Min(0.01f)] public float targetScoreDistanceScale = 4f;
+    [Tooltip("Added to the score of an enemy in the squad's focus: the target of its Attack order, or the enemy squad most of its units fight.")]
+    public float targetScoreFocusBonus = 0.1f;
+    [Tooltip("Added to the score of an enemy hero. Negative keeps soldiers on soldiers.")]
+    public float targetScoreHeroBias = 0f;
+    [Tooltip("Soft saturation (D6): the score is multiplied by max(floor, 1 - n·k), n = melee attackers already on that enemy from every squad.")]
+    [Min(0f)] public float targetSaturationPerAttacker = 0.35f;
+    [Tooltip("A crowded enemy keeps at least this share of its score, so it stays eligible (no hard cap).")]
+    [Range(0.01f, 1f)] public float targetSaturationFloor = 0.1f;
+    [Tooltip("Hysteresis: added to the score of the current target, so a unit only switches to a clearly better one.")]
+    [Min(0f)] public float targetKeepBonus = 0.1f;
+    [Tooltip("Nearest candidates scored per unit.")]
+    [Min(1)] public int targetCandidateCount = 6;
+    [Tooltip("A melee unit not yet within reach looks at its target again every this many seconds, each with its own phase. 0 = every frame.")]
+    [Min(0f)] public float targetReevaluateInterval = 0.3f;
+
+    [Header("Squad enemy search (L4-09)")]
+    [Tooltip("New targets only within the squad's combat radius and on its level. Off = every detected enemy, as before L4-09.")]
+    public bool enemySearchEnabled = true;
+    [Tooltip("Combat radius beyond the squad's extent while still or holding a position (m).")]
+    [Min(0f)] public float enemySearchRadiusMin = 3f;
+    [Tooltip("Combat radius beyond the squad's extent under an Attack order, or following at full speed (m).")]
+    [Min(0f)] public float enemySearchRadiusMax = 8f;
+    [Tooltip("Speed at which a squad following its hero reaches the largest combat radius (m/s).")]
+    [Min(0f)] public float enemySearchFullRadiusSpeed = 4f;
+    [Tooltip("Enemies further above or below the squad are on another level (m).")]
+    [Min(0f)] public float enemySearchMaxHeightDifference = 3f;
+    [Tooltip("Height differences up to this ignore the slope limit (m).")]
+    [Min(0f)] public float enemySearchStepHeight = 0.5f;
+    [Tooltip("Steepest slope from the squad to a new enemy (degrees): an enemy on a wall beside the squad is left out.")]
+    [Range(0f, 89f)] public float enemySearchMaxSlopeDegrees = 45f;
+
     public MovementTuningComponent ToComponent() => new MovementTuningComponent
     {
         arrivalRadiusIn = arrivalRadiusIn,
@@ -157,6 +191,21 @@ public class MovementTuningConfig : ScriptableObject
         slotResolveRevalidateDistance = slotResolveRevalidateDistance,
         slotResolveSearchCells = slotResolveSearchCells,
         slotSnapRadiusMax = slotSnapRadiusMax,
+        targetScoreDistanceScale = targetScoreDistanceScale,
+        targetScoreFocusBonus = targetScoreFocusBonus,
+        targetScoreHeroBias = targetScoreHeroBias,
+        targetSaturationPerAttacker = targetSaturationPerAttacker,
+        targetSaturationFloor = targetSaturationFloor,
+        targetKeepBonus = targetKeepBonus,
+        targetCandidateCount = targetCandidateCount,
+        targetReevaluateInterval = targetReevaluateInterval,
+        enemySearchEnabled = enemySearchEnabled,
+        enemySearchRadiusMin = enemySearchRadiusMin,
+        enemySearchRadiusMax = enemySearchRadiusMax,
+        enemySearchFullRadiusSpeed = enemySearchFullRadiusSpeed,
+        enemySearchMaxHeightDifference = enemySearchMaxHeightDifference,
+        enemySearchStepHeight = enemySearchStepHeight,
+        enemySearchMaxSlopeDegrees = enemySearchMaxSlopeDegrees,
     };
 
     void OnValidate()

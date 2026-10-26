@@ -58,6 +58,23 @@ public struct MovementTuningComponent : IComponentData
     public int slotResolveSearchCells; // Furthest a blocked slot looks for a free cell, in cells (C13).
     public float slotSnapRadiusMax; // Largest radius to put a slot on the NavMesh, capped at the spacing, m (L3-04).
 
+    // Melee target score (L4-04, D6) and squad enemy search (L4-09); UnitTargetingSystem.
+    public float targetScoreDistanceScale; // Distance at which the proximity term halves, m.
+    public float targetScoreFocusBonus; // Added for an enemy of the squad's focus.
+    public float targetScoreHeroBias; // Added for an enemy hero; negative keeps soldiers off heroes.
+    public float targetSaturationPerAttacker; // k of D6: score × max(floor, 1 − n·k) with n attackers already on the enemy.
+    public float targetSaturationFloor; // A crowded enemy keeps at least this share of its score (stays eligible).
+    public float targetKeepBonus; // Hysteresis: added for the current target.
+    public int targetCandidateCount; // K nearest candidates scored per unit.
+    public float targetReevaluateInterval; // A melee unit looks at its target again every this many seconds, s.
+    public bool enemySearchEnabled; // New targets only within the squad's combat radius and level (L4-09); off = all detected.
+    public float enemySearchRadiusMin; // Combat radius beyond the squad's extent when still or holding, m.
+    public float enemySearchRadiusMax; // ... when attacking or at full speed, m.
+    public float enemySearchFullRadiusSpeed; // Squad speed at which a following squad reaches the largest radius, m/s.
+    public float enemySearchMaxHeightDifference; // Enemies further above or below are on another level, m.
+    public float enemySearchStepHeight; // Height differences up to this ignore the slope limit, m.
+    public float enemySearchMaxSlopeDegrees; // Steepest slope from the squad to a new enemy, degrees.
+
     /// <summary>Values used when no tuning asset is assigned (and by tests).</summary>
     public static MovementTuningComponent Default => new MovementTuningComponent
     {
@@ -104,6 +121,21 @@ public struct MovementTuningComponent : IComponentData
         slotResolveRevalidateDistance = 0.5f,
         slotResolveSearchCells = 6,
         slotSnapRadiusMax = 0.65f,
+        targetScoreDistanceScale = 4f,
+        targetScoreFocusBonus = 0.1f,
+        targetScoreHeroBias = 0f,
+        targetSaturationPerAttacker = 0.35f,
+        targetSaturationFloor = 0.1f,
+        targetKeepBonus = 0.1f,
+        targetCandidateCount = 6,
+        targetReevaluateInterval = 0.3f,
+        enemySearchEnabled = true,
+        enemySearchRadiusMin = 3f,
+        enemySearchRadiusMax = 8f,
+        enemySearchFullRadiusSpeed = 4f,
+        enemySearchMaxHeightDifference = 3f,
+        enemySearchStepHeight = 0.5f,
+        enemySearchMaxSlopeDegrees = 45f,
     };
 
     /// <summary>
@@ -135,6 +167,13 @@ public struct MovementTuningComponent : IComponentData
         if (t.slotResolveRevalidateDistance <= 0f) return "slotResolveRevalidateDistance must be positive.";
         if (t.slotResolveSearchCells < 1) return "slotResolveSearchCells must be at least 1.";
         if (t.slotSnapRadiusMax <= 0f) return "slotSnapRadiusMax must be positive.";
+        if (t.targetSaturationFloor <= 0f || t.targetSaturationFloor > 1f)
+            return "targetSaturationFloor must be above 0 (a crowded enemy stays eligible) and at most 1.";
+        if (t.targetCandidateCount < 1) return "targetCandidateCount must be at least 1.";
+        if (t.enemySearchRadiusMin < 0f || t.enemySearchRadiusMax < t.enemySearchRadiusMin)
+            return "enemySearchRadiusMax must not be smaller than enemySearchRadiusMin, and both not negative.";
+        if (t.enemySearchStepHeight > t.enemySearchMaxHeightDifference)
+            return "enemySearchStepHeight must not exceed enemySearchMaxHeightDifference.";
         // The command must be re-sent before the agent reaches it, or the lead stops paying off.
         if (t.destinationLeadTime > 0f && t.destinationChangeSpeedFactor >= t.destinationLeadTime)
             return "destinationChangeSpeedFactor must be smaller than destinationLeadTime.";
