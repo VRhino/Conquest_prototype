@@ -11,21 +11,6 @@ using TMPro;
 /// </summary>
 public class HUDController : MonoBehaviour
 {
-    [System.Serializable]
-    public class AbilitySlot
-    {
-        public Image icon;
-        public Image cooldownFill;
-
-        /// <summary>Updates the cooldown display with the fraction still to wait (0 = ready).</summary>
-        public void UpdateSlot(float remainingFraction)
-        {
-            if (cooldownFill == null) return;
-            cooldownFill.fillAmount = remainingFraction;
-            cooldownFill.enabled = remainingFraction > 0f; // Hidden when ready.
-        }
-    }
-
     [Header("Section Toggles")]
     [SerializeField] GameObject _heroSection;
     [SerializeField] GameObject _abilitiesSection;
@@ -36,10 +21,6 @@ public class HUDController : MonoBehaviour
     [SerializeField] Image _staminaFill;
     [SerializeField] TMP_Text _healthText;
     [SerializeField] TMP_Text _staminaText;
-
-    [Header("Ability Slots")]
-    [Tooltip("Q, E, R y definitiva (F), en ese orden.")]
-    [SerializeField] AbilitySlot[] _abilitySlots = new AbilitySlot[4];
 
     [Header("Squad Section")]
     [SerializeField] SquadSectionController _squadSectionController;
@@ -59,6 +40,8 @@ public class HUDController : MonoBehaviour
     private Dictionary<int, GameObject> _capturePointIcons = new();
     private bool _squadInitialized;
     private bool _externalOverride;
+    /// <summary>Skill bar (H6, H10), created from Resources so the scene needs no slots.</summary>
+    private SkillBarController _skillBar;
 
     // ── Cached ECS references ─────────────────────────────────────────────────
     private World        _world;
@@ -77,11 +60,13 @@ public class HUDController : MonoBehaviour
             ComponentType.ReadOnly<CapturePointTag>(),
             ComponentType.ReadOnly<ZoneTriggerComponent>());
         _dataContainerQuery = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
+        _skillBar = SkillBarController.Spawn();
     }
 
     void OnDestroy()
     {
         // Al salir de Play el mundo puede destruirse antes que el HUD; sus consultas ya se liberaron con él.
+        if (_skillBar != null) Destroy(_skillBar.gameObject);
         if (_world == null || !_world.IsCreated) return;
         _uiDataQuery.Dispose();
         _captureIconQuery.Dispose();
@@ -94,6 +79,7 @@ public class HUDController : MonoBehaviour
         var data = _em.GetComponentData<UIHeroBattleDataComponent>(_uiDataQuery.GetSingletonEntity());
 
         UpdateHeroSection(data);
+        if (_skillBar != null) _skillBar.Apply(data);
         CheckSquadChangeEvent(data);
         InitializeSquadIfNeeded();
         _squadSectionController?.UpdateFromECS(_em);
@@ -114,9 +100,6 @@ public class HUDController : MonoBehaviour
             _healthText.text = $"{Mathf.CeilToInt(data.currentHealth)} / {Mathf.CeilToInt(data.maxHealth)}";
         if (_staminaText != null)
             _staminaText.text = $"{Mathf.CeilToInt(data.currentStamina)} / {Mathf.CeilToInt(data.maxStamina)}";
-
-        for (int i = 0; i < _abilitySlots.Length && i < 4; i++)
-            _abilitySlots[i]?.UpdateSlot(data.skillCooldown[i]);
     }
 
     void CheckSquadChangeEvent(UIHeroBattleDataComponent data)

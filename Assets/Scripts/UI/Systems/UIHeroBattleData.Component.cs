@@ -1,5 +1,16 @@
+using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
+
+/// <summary>What the skill bar shows for one slot.</summary>
+public struct UISkillSlotData
+{
+    /// <summary>Skill in the slot (<see cref="SkillBlob.id"/>); 0 = empty or not unlocked yet.</summary>
+    public int skillId;
+    /// <summary>Fraction still to wait, 1 → 0; 0 = ready.</summary>
+    public float cooldown;
+    /// <summary>Seconds still to wait.</summary>
+    public float remaining;
+}
 
 /// <summary>
 /// Singleton component written every frame by UIBattleDataSystem.
@@ -13,9 +24,20 @@ public struct UIHeroBattleDataComponent : IComponentData
     public float maxHealth;
     public float currentStamina;
     public float maxStamina;
-    // ── Skill cooldowns (L2-5) ───────────────────────────────────────────────
-    /// <summary>Fraction still to wait for Q, E, R and the ultimate (x, y, z, w); 0 = ready.</summary>
-    public float4 skillCooldown;
+    // ── Skill bar (L2-5, H6, H10) ────────────────────────────────────────────
+    /// <summary>
+    /// One entry per launchable slot, from <see cref="SkillSlot.Q"/> to <see cref="SkillSlot.Squad3"/> (index = slot − Q):
+    /// the hero's Q, E, R, ultimate and active perks, then the abilities of the local active squad.
+    /// </summary>
+    public FixedList128Bytes<UISkillSlotData> skills;
+
+    public const int SkillSlotCount = SkillSlot.Squad3 - SkillSlot.Q + 1;
+
+    public readonly UISkillSlotData Skill(SkillSlot slot)
+    {
+        int index = slot - SkillSlot.Q;
+        return index >= 0 && index < skills.Length ? skills[index] : default;
+    }
 
     // ── Capture zone ─────────────────────────────────────────────────────────
     public bool  isInCaptureZone;

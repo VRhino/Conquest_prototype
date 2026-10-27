@@ -173,6 +173,17 @@ public partial class BattleSceneIntegrationTests
     }
 
     [UnityTest]
+    public IEnumerator BattleSceneShowsTheSkillBarWithTheHeroSkills()
+    {
+        // H6, H10: HUDController creates the bar from Resources; the scene has no slots of its own.
+        Assert.That(UnityEngine.Object.FindFirstObjectByType<SkillBarController>(), Is.Not.Null, "The HUD did not create the skill bar.");
+        using var query = em.CreateEntityQuery(typeof(UIHeroBattleDataComponent));
+        yield return Until(() => !query.IsEmptyIgnoreFilter
+            && query.GetSingleton<UIHeroBattleDataComponent>().Skill(SkillSlot.Q).skillId != 0, 10f,
+            "The bar data never carried the hero's Q skill.");
+    }
+
+    [UnityTest]
     public IEnumerator BattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders()
     {
         using (var squads = em.CreateEntityQuery(typeof(SquadInstanceComponent)))

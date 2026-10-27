@@ -34,18 +34,21 @@ public partial class UIBattleDataSystem : SystemBase
             break; // only one local player
         }
 
-        // ── Skill cooldowns ───────────────────────────────────────────────────
+        // ── Skill bar: the hero's slots, then its active squad's ─────────────────
         double now = SystemAPI.Time.ElapsedTime;
+        data.skills.Length = UIHeroBattleDataComponent.SkillSlotCount;
         foreach (var (skills, groups) in
                  SystemAPI.Query<DynamicBuffer<HeroSkillElement>, DynamicBuffer<CooldownGroupElement>>()
                           .WithAll<IsLocalPlayer>())
         {
-            foreach (var skill in skills)
-            {
-                int index = (int)skill.slot - (int)SkillSlot.Q;
-                if (index < 0 || index > 3 || !skill.skill.IsCreated) continue;
-                data.skillCooldown[index] = CooldownUtility.Fraction(groups, skill.skill.Value.cooldownGroup, now);
-            }
+            WriteSkills(ref data.skills, skills, groups, now, SkillSlot.Q, SkillSlot.ActivePerk2);
+            break;
+        }
+        foreach (var (skills, groups) in
+                 SystemAPI.Query<DynamicBuffer<HeroSkillElement>, DynamicBuffer<CooldownGroupElement>>()
+                          .WithAll<IsLocalSquadActive>())
+        {
+            WriteSkills(ref data.skills, skills, groups, now, SkillSlot.Squad1, SkillSlot.Squad3);
             break;
         }
 
@@ -77,5 +80,22 @@ public partial class UIBattleDataSystem : SystemBase
         }
 
         SystemAPI.SetComponent(_singletonEntity, data);
+    }
+
+    /// <summary>Writes the skills in slots <paramref name="first"/>..<paramref name="last"/> with their cooldown.</summary>
+    static void WriteSkills(ref Unity.Collections.FixedList128Bytes<UISkillSlotData> slots, DynamicBuffer<HeroSkillElement> skills,
+        DynamicBuffer<CooldownGroupElement> groups, double now, SkillSlot first, SkillSlot last)
+    {
+        foreach (var skill in skills)
+        {
+            if (skill.slot < first || skill.slot > last || !skill.skill.IsCreated) continue;
+            int group = skill.skill.Value.cooldownGroup;
+            slots[skill.slot - SkillSlot.Q] = new UISkillSlotData
+            {
+                skillId = skill.skillId,
+                cooldown = CooldownUtility.Fraction(groups, group, now),
+                remaining = CooldownUtility.Remaining(groups, group, now)
+            };
+        }
     }
 }
