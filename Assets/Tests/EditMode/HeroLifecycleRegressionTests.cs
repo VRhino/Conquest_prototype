@@ -94,6 +94,68 @@ public class HeroLifecycleRegressionTests
     }
 
     [Test]
+    public void DeathPresentationAnimatesHidesAfterDelayAndShowsOnlyAtRespawnPose()
+    {
+        using var world = new World("Hero death presentation regression");
+        var em = world.EntityManager;
+        em.CreateSingleton(new HeroGameplayConfigComponent { deathVisualHideDelay = 1.5f });
+        var hero = em.CreateEntity(typeof(HeroLifeComponent), typeof(HeroSpawnComponent),
+            typeof(HeroDeathPresentationComponent));
+        em.SetComponentData(hero, new HeroLifeComponent { isAlive = true });
+        em.SetComponentData(hero, new HeroSpawnComponent { hasSpawned = true });
+        var system = world.GetOrCreateSystemManaged<HeroDeathPresentationSystem>();
+        world.SetTime(new Unity.Core.TimeData(0, 1));
+
+        system.Update();
+        var state = em.GetComponentData<HeroDeathPresentationComponent>(hero);
+        Assert.That(state.isDead || state.visualHidden, Is.False);
+        Assert.That(state.deathRevision, Is.Zero);
+
+        em.SetComponentData(hero, new HeroLifeComponent { isAlive = false });
+        system.Update();
+        state = em.GetComponentData<HeroDeathPresentationComponent>(hero);
+        Assert.That(state.isDead, Is.True);
+        Assert.That(state.deathRevision, Is.EqualTo(1), "The death must be announced once to the Animator.");
+        Assert.That(state.visualHidden, Is.False, "The body stays visible during the death animation.");
+        system.Update();
+        Assert.That(em.GetComponentData<HeroDeathPresentationComponent>(hero).visualHidden, Is.False);
+        system.Update();
+        state = em.GetComponentData<HeroDeathPresentationComponent>(hero);
+        Assert.That(state.visualHidden, Is.True, "The body must be hidden once the configured delay has passed.");
+        Assert.That(state.deathRevision, Is.EqualTo(1));
+
+        // HeroRespawnSystem revives first; the visual waits for HeroSpawnSystem to publish the pose.
+        em.SetComponentData(hero, new HeroLifeComponent { isAlive = true });
+        em.SetComponentData(hero, new HeroSpawnComponent { hasSpawned = false });
+        system.Update();
+        Assert.That(em.GetComponentData<HeroDeathPresentationComponent>(hero).visualHidden, Is.True);
+        em.SetComponentData(hero, new HeroSpawnComponent { hasSpawned = true });
+        system.Update();
+        state = em.GetComponentData<HeroDeathPresentationComponent>(hero);
+        Assert.That(state.isDead || state.visualHidden, Is.False);
+
+        em.SetComponentData(hero, new HeroLifeComponent { isAlive = false });
+        system.Update();
+        Assert.That(em.GetComponentData<HeroDeathPresentationComponent>(hero).deathRevision, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void DeathPresentationWithoutConfigUsesTheDefaultDelay()
+    {
+        using var world = new World("Hero death presentation default delay");
+        var em = world.EntityManager;
+        var hero = em.CreateEntity(typeof(HeroLifeComponent), typeof(HeroSpawnComponent),
+            typeof(HeroDeathPresentationComponent));
+        var system = world.GetOrCreateSystemManaged<HeroDeathPresentationSystem>();
+        world.SetTime(new Unity.Core.TimeData(0, HeroGameplayConfigComponent.DefaultDeathVisualHideDelay * 0.6f));
+        system.Update();
+        system.Update();
+        Assert.That(em.GetComponentData<HeroDeathPresentationComponent>(hero).visualHidden, Is.False);
+        system.Update();
+        Assert.That(em.GetComponentData<HeroDeathPresentationComponent>(hero).visualHidden, Is.True);
+    }
+
+    [Test]
     public void DeadHeroCannotKeepAnActiveAttackHitbox()
     {
         using var world = new World("Dead hero attack regression");

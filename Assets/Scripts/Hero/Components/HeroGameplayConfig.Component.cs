@@ -24,4 +24,10 @@ public struct HeroGameplayConfigComponent : IComponentData
 
     /// <summary>Fraction of maxStamina above which exhaustion is cleared (e.g. 0.2 = 20%).</summary>
     public float exhaustionRecoveryThreshold;
+
+    /// <summary>Seconds a dead hero's body stays visible (death animation) before its visual is hidden.</summary>
+    public float deathVisualHideDelay;
+
+    /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.</summary>
+    public const float DefaultDeathVisualHideDelay = 3f;
 }

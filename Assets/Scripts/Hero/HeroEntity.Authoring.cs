@@ -47,7 +47,8 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
             deathTimer = authoring.deathTimer,
             respawnCooldown = authoring.respawnCooldown
         });
-        
+        AddComponent<HeroDeathPresentationComponent>(entity);
+
         AddComponent(entity, new HeroSpawnComponent
         {
             spawnId = authoring.spawnId,

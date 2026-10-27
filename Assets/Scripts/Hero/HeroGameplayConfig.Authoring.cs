@@ -30,6 +30,10 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
     [Tooltip("Fraction of maxStamina required to clear exhaustion (0.2 = 20%)")]
     public float exhaustionRecoveryThreshold  = 0.2f;
 
+    [Header("Death")]
+    [Tooltip("Segundos que el cuerpo de un héroe muerto sigue visible (animación de muerte) antes de ocultarse.")]
+    public float deathVisualHideDelay = HeroGameplayConfigComponent.DefaultDeathVisualHideDelay;
+
     class Baker : Baker<HeroGameplayConfigAuthoring>
     {
         public override void Bake(HeroGameplayConfigAuthoring authoring)
@@ -48,6 +52,7 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
                 skill2StaminaCost           = authoring.skill2StaminaCost,
                 ultimateStaminaCost         = authoring.ultimateStaminaCost,
                 exhaustionRecoveryThreshold = authoring.exhaustionRecoveryThreshold,
+                deathVisualHideDelay        = authoring.deathVisualHideDelay,
             });
         }
     }
