@@ -420,3 +420,23 @@
   comprobación debe cortar las siguientes. En `UnitAnimationAdapter.IsValidSetup` se añadió `IsCreated` a `worldOk`,
   pero `existsOk` no dependía de `worldOk`, así que `Exists` se seguía llamando con el mundo destruido. La pila de la
   segunda corrida (línea 155 en vez de 154) lo delató.
+
+## Presentación de la muerte del héroe (2026-10-27)
+
+- Un disparo único hacia el Animator no necesita que la capa visual "consuma" un flag en ECS. Con un contador
+  (`deathRevision`) que solo escribe el sistema, cada visual recuerda la última revisión que vio y dispara cuando cambia.
+  Así se cumple "ECS nunca se modifica desde los GameObjects". `triggerAttack` todavía sigue el patrón viejo: el visual
+  lo pone a falso en ECS.
+- Mostrar el visual de nuevo con `isAlive` no basta: `HeroRespawnSystem` revive antes de que `HeroSpawnSystem` publique
+  la pose, y el cuerpo saldría un frame donde murió. El sistema de presentación va después de `HeroSpawnSystem` y espera
+  a `hasSpawned`. El presentador aplica en `LateUpdate`, cuando el motor local ya ha movido el cuerpo.
+- En un test de la secuencia completa, el enfriamiento de reaparición tiene que ser mayor que el retardo de ocultar. Con
+  el `respawnCooldown = 1` de antes, el héroe reaparecía antes de ocultarse y el estado oculto no se llegaba a ver.
+- `ut.js` llama a `unity` con `shell: true`: un `|` en el filtro de tests lo interpreta la shell como tubería y la
+  corrida no arranca (`notStarted`). Se filtra por la clase o se lanzan los tests uno a uno.
+- Lo de `UnitAnimationAdapter` se repetía en `EntityVisualSync.Update`: la comprobación "la entidad ya no existe" llamaba
+  a `Exists` con el mundo destruido y ensuciaba el `SetUp` del test siguiente. Antes de usar el `EntityManager` guardado,
+  hay que mirar `World.IsCreated`.
+- Para añadir el estado al Animator se usó `eval_file` con `AnimatorController.AddParameter`, `AddState` (sin clip,
+  `writeDefaultValues = false`), `AddAnyStateTransition` y `AddExitTransition`. Unity reordena `m_StateMachineTransitions`
+  al guardar. El diff se ve grande, pero solo cambia el orden.
