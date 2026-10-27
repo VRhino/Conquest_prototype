@@ -77,7 +77,7 @@ public partial class SkillExecutionSystem : SystemBase
                 ref var running = ref skills[inst.skillIndex].skill.Value;
                 bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired);
                 // Charge (L2-6): letting go of the key moves a waiting skill to its release phase.
-                byte held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
+                ushort held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
                 if (!ended && (held & SkillRequestComponent.Bit(skills[inst.skillIndex].slot)) == 0)
                     ended = SkillTimeline.Release(ref running, ref inst, _fired);
                 Apply(entity, ref inst, ref c, skills[inst.skillIndex].skillId);

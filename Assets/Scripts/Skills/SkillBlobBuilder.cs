@@ -28,16 +28,27 @@ public static class SkillBlobBuilder
     };
 
     /// <summary>Stable id of an ability (FNV-1a of its name), so saves and the network can name it.</summary>
-    public static int IdOf(HeroAbility ability)
+    public static int IdOf(HeroAbility ability) => IdOf(ability.abilityName ?? ability.name);
+
+    /// <summary>Stable id of a squad ability, from its name like a hero ability.</summary>
+    public static int IdOf(AbilityData ability) => IdOf(ability.abilityName ?? ability.name);
+
+    static int IdOf(string name)
     {
         unchecked
         {
             uint hash = 2166136261;
-            foreach (char c in ability.abilityName ?? ability.name)
+            foreach (char c in name)
                 hash = (hash ^ c) * 16777619;
             return (int)(hash | 0x10000u); // Keeps it away from the small basic-attack ids.
         }
     }
+
+    /// <summary>Squad abilities a squad can carry: one slot each, from <see cref="SkillSlot.Squad1"/> on.</summary>
+    public const int MaxSquadAbilities = 3;
+
+    /// <summary>Slot of the squad ability at <paramref name="index"/> of its unlock order.</summary>
+    public static SkillSlot SquadSlot(int index) => (SkillSlot)((int)SkillSlot.Squad1 + index);
 
     public static BlobAssetReference<SkillBlob> Build(HeroAbility ability)
     {
@@ -100,6 +111,18 @@ public static class SkillBlobBuilder
                 });
             }
         return Create(PerkId(perk), 0f, perk.cooldown, DefaultGroup(slot), SkillRefresh.Yield, phases, events.ToArray());
+    }
+
+    /// <summary>
+    /// A squad ability (L2-9) in <paramref name="slot"/>: its own phases and events, or, if it declares no phases, one short
+    /// cast phase that fires its events at the start. No stamina; it cools down in the squad's own groups.
+    /// </summary>
+    public static BlobAssetReference<SkillBlob> BuildSquadAbility(AbilityData ability, SkillSlot slot)
+    {
+        bool hasPhases = ability.phases != null && ability.phases.Length > 0;
+        var phases = hasPhases ? ability.phases : new[] { new SkillPhase { duration = PerkCastDuration, interruptible = true, final = true } };
+        return Create(IdOf(ability), 0f, ability.cooldown, ability.cooldownGroup != 0 ? ability.cooldownGroup : DefaultGroup(slot),
+            SkillRefresh.Interrupt, phases, ability.events ?? new SkillEvent[0]);
     }
 
     /// <summary>Id of a perk as a skill: its perk id in a range of its own.</summary>

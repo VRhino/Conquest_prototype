@@ -29,17 +29,25 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             AddBlobAsset(ref curves, out _);
             var abilityEntities = new System.Collections.Generic.List<AbilityByLevelElement>();
             if (d.abilitiesByLevel != null)
-                foreach (var ability in d.abilitiesByLevel)
+                for (int a = 0; a < d.abilitiesByLevel.Count; a++)
                 {
+                    var ability = d.abilitiesByLevel[a];
                     Entity abilityEntity = Entity.Null;
-                    if (ability != null)
+                    if (ability != null && a >= SkillBlobBuilder.MaxSquadAbilities)
+                        Debug.LogWarning($"[SquadDefinitionBaker] {d.name}: ability {ability.name} is past the {SkillBlobBuilder.MaxSquadAbilities} squad ability slots; ignored.");
+                    else if (ability != null)
                     {
                         DependsOn(ability);
+                        var slot = SkillBlobBuilder.SquadSlot(a);
+                        var skill = SkillBlobBuilder.BuildSquadAbility(ability, slot);
+                        AddBlobAsset(ref skill, out _);
                         abilityEntity = CreateAdditionalEntity(TransformUsageFlags.None);
                         AddComponent(abilityEntity, new SquadAbilityDefinitionComponent
                         {
                             name = new FixedString64Bytes(ability.abilityName ?? string.Empty),
-                            cooldown = ability.cooldown
+                            cooldown = ability.cooldown,
+                            slot = slot,
+                            skill = skill,
                         });
                     }
                     // Preserve empty slots: index determines unlock level.

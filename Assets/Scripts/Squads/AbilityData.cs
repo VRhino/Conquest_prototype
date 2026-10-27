@@ -1,7 +1,9 @@
 using UnityEngine;
 
 /// <summary>
-/// Basic description of a squad ability unlockable through progression.
+/// A squad ability unlocked through progression (GDD 4.6), launched by the squad through the same gate, phases and
+/// effects as hero skills (Aprendizajes_Referencia.md L2-9). Turned into a <see cref="SkillBlob"/> when the squad is
+/// baked; its slot is its place in <see cref="SquadData.abilitiesByLevel"/>.
 /// </summary>
 [CreateAssetMenu(menuName = "Squads/Ability Data")]
 public class AbilityData : ScriptableObject
@@ -14,4 +16,14 @@ public class AbilityData : ScriptableObject
     public string description;
     /// <summary>Cooldown in seconds before reuse.</summary>
     public float cooldown;
+
+    [Header("Lifecycle (empty = one short cast phase)")]
+    [Tooltip("Fases en orden. Duración negativa = sin fin (espera de carga); la final es la última.")]
+    public SkillPhase[] phases = new SkillPhase[0];
+
+    [Tooltip("Eventos por fase e instante. Para una escuadra, Self y OwnSquad son sus soldados; el área sale del centro de la escuadra hacia donde mira.")]
+    public SkillEvent[] events = new SkillEvent[0];
+
+    [Tooltip("Grupo de enfriamiento de la escuadra; 0 = el de su hueco.")]
+    public int cooldownGroup;
 }

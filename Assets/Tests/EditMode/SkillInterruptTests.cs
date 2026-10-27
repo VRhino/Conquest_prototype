@@ -108,12 +108,12 @@ public class SkillInterruptTests
         using var charged = SkillBlobBuilder.Build(ability);
         Object.DestroyImmediate(ability);
         _em.GetBuffer<HeroSkillElement>(_hero).Add(new HeroSkillElement { slot = SkillSlot.R, skillId = charged.Value.id, skill = charged });
-        byte held = SkillRequestComponent.Bit(SkillSlot.R);
+        ushort held = SkillRequestComponent.Bit(SkillSlot.R);
 
         void Hold(double t, bool down, bool press)
         {
             _world.SetTime(new Unity.Core.TimeData(t, 0.1f));
-            _em.SetComponentData(_hero, new SkillRequestComponent { slot = SkillSlot.R, requestedAt = t, heldSlots = down ? held : (byte)0 });
+            _em.SetComponentData(_hero, new SkillRequestComponent { slot = SkillSlot.R, requestedAt = t, heldSlots = down ? held : (ushort)0 });
             _em.SetComponentEnabled<SkillRequestComponent>(_hero, press);
             _system.Update();
         }

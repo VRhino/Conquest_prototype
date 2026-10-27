@@ -79,4 +79,33 @@ public class SkillDataTests
         Assert.That(em.HasBuffer<CooldownGroupElement>(hero), Is.True);
         Assert.That(em.GetComponentData<CooldownScaleComponent>(hero).value, Is.EqualTo(1f));
     }
+
+    [Test]
+    public void SquadAbilityWithoutPhasesIsOneCastPhaseInItsSlotGroupWithoutStamina()
+    {
+        var ability = ScriptableObject.CreateInstance<AbilityData>();
+        ability.abilityName = "Test Brace";
+        ability.cooldown = 30f;
+        ability.events = new[] { new SkillEvent { type = SkillEventType.ApplyModifier, target = SkillTarget.OwnSquad, stat = StatId.SlashDefense, value = 0.25f, duration = 8f } };
+        var slot = SkillBlobBuilder.SquadSlot(1);
+        var blob = SkillBlobBuilder.BuildSquadAbility(ability, slot);
+        try
+        {
+            ref var skill = ref blob.Value;
+            Assert.That(slot, Is.EqualTo(SkillSlot.Squad2));
+            Assert.That(skill.id, Is.EqualTo(SkillBlobBuilder.IdOf(ability)));
+            Assert.That(skill.staminaCost, Is.EqualTo(0f));
+            Assert.That(skill.cooldown, Is.EqualTo(30f));
+            Assert.That(skill.cooldownGroup, Is.EqualTo(SkillBlobBuilder.DefaultGroup(SkillSlot.Squad2)));
+            Assert.That(skill.phases.Length, Is.EqualTo(1));
+            Assert.That(skill.phases[0].final && skill.phases[0].interruptible, Is.True);
+            Assert.That(skill.events.Length, Is.EqualTo(1));
+            Assert.That(skill.events[0].target, Is.EqualTo(SkillTarget.OwnSquad));
+        }
+        finally
+        {
+            blob.Dispose();
+            Object.DestroyImmediate(ability);
+        }
+    }
 }

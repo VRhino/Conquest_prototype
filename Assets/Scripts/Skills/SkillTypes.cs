@@ -11,6 +11,10 @@ public enum SkillSlot : byte
     Ultimate,
     ActivePerk1,
     ActivePerk2,
+    /// <summary>Squad abilities (L2-9), in the order they unlock; launched by the squad, not the hero.</summary>
+    Squad1,
+    Squad2,
+    Squad3,
 }
 
 /// <summary>

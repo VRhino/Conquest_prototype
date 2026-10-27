@@ -64,10 +64,13 @@ public struct AbilityByLevelElement : IBufferElementData
     public Entity Value;
 }
 
+/// <summary>A baked squad ability (L2-9): its name, cooldown and the skill the squad launches, in its slot.</summary>
 public struct SquadAbilityDefinitionComponent : IComponentData
 {
     public FixedString64Bytes name;
     public float cooldown;
+    public SkillSlot slot;
+    public BlobAssetReference<SkillBlob> skill;
 }
 
 /// <summary>
