@@ -18,27 +18,23 @@ public class HeroStatStackTests
 
         using var world = new World("Hero stats");
         var em = world.EntityManager;
-        var classEntity = em.CreateEntity();
-        em.AddComponentData(classEntity, new HeroClassDefinitionComponent
-        {
-            heroClass = HeroClass.SwordAndShield,
-            baseStrength = 12, baseDexterity = 9, baseArmor = 7, baseVitality = 11,
-        });
         var hero = em.CreateEntity();
-        em.AddComponentData(hero, new HeroClassReference { classEntity = classEntity });
+        em.AddComponentData(hero, new HeroClassComponent { heroClass = HeroClass.SwordAndShield });
         em.AddComponentData(hero, new HeroHealthComponent { maxHealth = 100f, currentHealth = 100f });
         em.AddComponentData(hero, new StaminaComponent { maxStamina = 100f, currentStamina = 100f });
         var armour = new InventoryItem { itemId = "test_torso", instanceId = "test-1" };
         armour.GeneratedStats = new Dictionary<string, float> { ["Vitality"] = 5f, ["Armor"] = 3f };
         em.AddComponentObject(hero, new HeroAppearanceComponent { equipment = new Equipment { torso = armour } });
 
-        var init = world.GetOrCreateSystemManaged<HeroInitializationSystem>();
-        init.Update(); // adds the attributes
-        init.Update(); // seeds the stack
+        world.GetOrCreateSystemManaged<HeroInitializationSystem>().Update();
         world.GetOrCreateSystemManaged<StatResolveSystem>().Update();
 
         var expected = HeroCalculatedAttributes.Calculate(
-            new HeroBaseStats { baseStrength = 12, baseDexterity = 9, baseArmor = 7, baseVitality = 11 },
+            new HeroBaseStats
+            {
+                baseStrength = classData.baseStrength, baseDexterity = classData.baseDexterity,
+                baseArmor = classData.baseArmor, baseVitality = classData.baseVitality
+            },
             new EquipmentBonuses { vitalityBonus = 5, armorBonus = 3 }, EquipmentBonuses.Empty, classData);
         var health = em.GetComponentData<HeroHealthComponent>(hero);
         Assert.That(health.maxHealth, Is.EqualTo(expected.maxHealth).Within(1e-3f));
@@ -58,8 +54,7 @@ public class HeroStatStackTests
     [Test]
     public void AIHeroSpawnedWithOnlyItsClassUsesTheClassAttributesAndItsEquipment()
     {
-        // In battle the class definition prefab bakes no class (its asset reference is broken), so remote and AI heroes
-        // get their class at spawn (BattleSceneController) and must not depend on the baked class entity.
+        // Remote and AI heroes get their class at spawn (BattleSceneController); class data comes from HeroClassManager.
         var classData = HeroClassManager.GetClassDefinition(ClassId);
         using var world = new World("AI hero stats");
         var em = world.EntityManager;

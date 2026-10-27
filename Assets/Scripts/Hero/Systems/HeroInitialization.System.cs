@@ -3,9 +3,8 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 /// <summary>
-/// Initializes hero attributes, abilities and perk lists when a hero is
-/// created or loaded from saved progression, and puts its stats on the modifier stack
-/// (<see cref="StatResolveSystem"/> writes health, stamina, defence and damage from it).
+/// Puts each new hero's stats, skills and perks on the modifier stack from its class asset (<see cref="HeroClassManager"/>
+/// is the only source of class data; <see cref="StatResolveSystem"/> writes health, stamina, defence and damage from it).
 /// </summary>
 [UpdateInGroup(typeof(InitializationSystemGroup))]
 public partial class HeroInitializationSystem : SystemBase
@@ -20,51 +19,7 @@ public partial class HeroInitializationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-
-        var defLookup = GetComponentLookup<HeroClassDefinitionComponent>(true);
-        var perkLookup = GetBufferLookup<ValidPerkElement>(true);
-
-        var ecb = new EntityCommandBuffer(Allocator.Temp);
-
-        foreach (var (classRef, entity) in SystemAPI
-                     .Query<RefRO<HeroClassReference>>()
-                     .WithNone<HeroAttributesComponent>()
-                     .WithEntityAccess())
-        {
-            if (!defLookup.TryGetComponent(classRef.ValueRO.classEntity, out var def))
-                continue;
-
-            ecb.AddComponent(entity, new HeroAttributesComponent
-            {
-                strength = def.baseStrength,
-                dexterity = def.baseDexterity,
-                armor = def.baseArmor,
-                vitality = def.baseVitality,
-                classDefinition = classRef.ValueRO.classEntity
-            });
-
-            ecb.AddComponent(entity, new HeroAbilityComponent
-            {
-                abilityQ = def.abilityQ,
-                abilityE = def.abilityE,
-                abilityR = def.abilityR,
-                ultimate = def.ultimate
-            });
-
-            if (perkLookup.HasBuffer(classRef.ValueRO.classEntity))
-            {
-                var source = perkLookup[classRef.ValueRO.classEntity];
-                var dest = ecb.AddBuffer<ValidPerkElement>(entity);
-                foreach (var perk in source)
-                    dest.Add(perk);
-            }
-        }
-
-        ecb.Playback(EntityManager);
-        ecb.Dispose();
-
-        // Heroes whose stats are not on the stack yet (after the playback, so new heroes already have their attributes).
-        // Seeding makes structural changes, so it runs after the query.
+        // Heroes whose stats are not on the stack yet. Seeding makes structural changes, so it runs after the query.
         var pending = new NativeList<Entity>(Allocator.Temp);
         foreach (var (_, entity) in SystemAPI.Query<RefRO<HeroHealthComponent>>()
                      .WithAll<StaminaComponent>()
@@ -98,7 +53,7 @@ public partial class HeroInitializationSystem : SystemBase
         else
         {
             classData = HeroClassManager.GetClassDefinition(ClassIdOf(entity));
-            baseStats = ClassAttributesOf(entity, classData);
+            baseStats = ClassAttributesOf(classData);
             equipment = EntityManager.HasComponent<HeroAppearanceComponent>(entity)
                 ? DataCacheService.GetEquipmentBonuses(EntityManager.GetComponentObject<HeroAppearanceComponent>(entity).equipment)
                 : EquipmentBonuses.Empty;
@@ -221,30 +176,18 @@ public partial class HeroInitializationSystem : SystemBase
     }
 
     /// <summary>
-    /// Class of a hero that is not the local one: the class set at spawn (remote and AI heroes), or the class definition
-    /// entity it was baked with.
+    /// Class of a hero that is not the local one: the class set at spawn (remote and AI heroes).
     /// </summary>
     string ClassIdOf(Entity entity)
     {
-        if (EntityManager.HasComponent<HeroClassComponent>(entity))
-            return EntityManager.GetComponentData<HeroClassComponent>(entity).heroClass.ToString();
-        if (EntityManager.HasComponent<HeroAttributesComponent>(entity))
-        {
-            var classEntity = EntityManager.GetComponentData<HeroAttributesComponent>(entity).classDefinition;
-            if (EntityManager.HasComponent<HeroClassDefinitionComponent>(classEntity))
-                return EntityManager.GetComponentData<HeroClassDefinitionComponent>(classEntity).heroClass.ToString();
-        }
-        return null;
+        return EntityManager.HasComponent<HeroClassComponent>(entity)
+            ? EntityManager.GetComponentData<HeroClassComponent>(entity).heroClass.ToString()
+            : null;
     }
 
-    /// <summary>The hero's attributes when it has them (validated against its class), else its class's base ones.</summary>
-    HeroBaseStats ClassAttributesOf(Entity entity, HeroClassDefinition classData)
+    /// <summary>The base attributes of the hero's class (remote and AI heroes have no save to take them from).</summary>
+    static HeroBaseStats ClassAttributesOf(HeroClassDefinition classData)
     {
-        if (EntityManager.HasComponent<HeroAttributesComponent>(entity))
-        {
-            var a = EntityManager.GetComponentData<HeroAttributesComponent>(entity);
-            return new HeroBaseStats { baseStrength = a.strength, baseDexterity = a.dexterity, baseArmor = a.armor, baseVitality = a.vitality };
-        }
         if (classData == null) return default;
         return new HeroBaseStats
         {
