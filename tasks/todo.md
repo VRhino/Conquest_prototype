@@ -60,6 +60,6 @@ colisión."
       `SquadSwapCooldownComponent` y `SquadSwapCooldownSystem`.
 - [x] H13: `InactiveSquadElement.cooldowns` guarda los grupos activos de la escuadra al retirarla (cambio o muerte del
       dueño) y `SquadSpawningSystem` los restaura.
-- [ ] P2: **parado, decisión del usuario.** El prefab hornea una sola clase para todos los héroes; asignar un asset
-      daría a todos esos atributos. Opciones en `Docs/Por_Abordar/Pila_Modificadores.md` P2.
+- [x] P2, opción (a) del usuario: fuera la ruta horneada (prefab de clase, authorings, componente en `HeroEntity_Pure`,
+      componentes sin lector y `HeroAttributeSystem`, con lo que P4 también queda cerrado). `HeroClassManager`, única fuente.
 - [x] EditMode en verde (355 de 355) y commit.

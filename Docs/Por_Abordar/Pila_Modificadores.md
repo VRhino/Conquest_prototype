@@ -7,9 +7,9 @@ plan en `tasks/todo.md`). La regla y las fuentes están en `Docs/Mechanics/Damag
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
 | P1 | Stats de objeto con `StatId` (L7-6) | Media | Pendiente (decisión del usuario: para después, documentado) |
-| P2 | Referencia rota de `HeroClassDefinition.prefab` | Media | Pendiente |
+| P2 | Referencia rota de `HeroClassDefinition.prefab` | Media | **Hecho** (2026-10-27, bloque 4: ruta horneada quitada) |
 | P3 | Penetración de los héroes en batalla | Baja | Pendiente (decisión de balance) |
-| P4 | Atributos revalidados cada frame (resto de L7-5) | Baja | Pendiente |
+| P4 | Atributos revalidados cada frame (resto de L7-5) | Baja | **Hecho** (2026-10-27: el sistema se quitó con P2) |
 | P5 | Suelo del crítico con multiplicadores menores que 1,2 | Baja | Pendiente (sin datos afectados hoy) |
 | P6 | Prefab de VFX de impacto ausente: `BattleSceneIntegrationTests` falla en el SetUp | Media | Bloqueado (contenido) |
 
@@ -36,6 +36,13 @@ si se adopta) y conservar la lectura antigua un tiempo. Después, `GetEquipmentB
 del ítem se convierte en un modificador.
 
 ## P2. Referencia rota de `HeroClassDefinition.prefab`
+**Hecho (2026-10-27, opción (a) del usuario).** Se quitó la ruta horneada: `HeroClassDefinition.prefab`, sus authorings
+(`HeroClassDefinitionAuthoring`, `HeroClassReferenceAuthoring` y su componente en `HeroEntity_Pure`), `HeroClassReference`,
+`HeroClassDefinitionComponent`, `ValidPerkElement`, `HeroAttributesComponent`, `HeroAbilityComponent`,
+`HeroAbilityBufferElement`, `HeroAttributeSystem`, `AttributeLimitEvent`, `HeroAttributeType` y `AbilityCategory`. La clase
+sale del guardado o de `HeroClassComponent`, y sus datos solo de `HeroClassManager`. Si algún día hace falta validar
+atributos contra la clase, se hace al asignarlos (L7-5) con el asset de `HeroClassManager`.
+
 **Qué es.** `Assets/Prefabs/Hero/HeroClassDefinition.prefab` apunta a un `HeroClassDefinition` que no existe (guid
 `e1db06423e48ce842bcbde49b3ea580f`), así que hornea una entidad de clase vacía. En batalla, `HeroInitializationSystem` nunca
 inicializaba héroes: la vida del héroe local solo salía de una escritura en `HeroSpawnSystem`.
@@ -62,6 +69,9 @@ daño del héroe se creaba sin ella. `HeroStatFormula` la deja fuera a propósit
 escuadras con defensa alta.
 
 ## P4. Atributos revalidados cada frame
+**Hecho (2026-10-27).** `HeroAttributeSystem` se quitó con P2: en batalla no validaba nada, porque ningún héroe tenía
+`HeroAttributesComponent`.
+
 **Qué es.** `HeroAttributeSystem` valida los atributos contra los límites de la clase en cada frame fuera de combate. L7-5
 propone validarlos al asignarlos. El paso 7 solo movió la XP y los desbloqueos a datos.
 

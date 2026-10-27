@@ -73,8 +73,7 @@ Este prefab tiene dos Authorings:
 | `HeroMotorStateComponent` | Velocidad y contactos físicos confirmados |
 
 #### Authorings de clase
-- `HeroClassReferenceAuthoring` (`Assets/Scripts/Hero/HeroClassReference.Authoring.cs`) y `HeroClassDefinitionAuthoring` (`HeroClassDefinition.Authoring.cs`) no se llaman `HeroClassAuthoring`; no hay ningún tipo con ese nombre.
-- La clase efectiva no sale de la clase horneada en `Assets/Prefabs/Hero/HeroClassDefinition.prefab` (referencia vacía): `HeroInitializationSystem` la toma del guardado (héroe local) o de `HeroClassComponent` (remotos e IA). Los atributos, habilidades y perks los siembra ese sistema; los derivados los escribe `StatResolveSystem`.
+- No hay authoring de clase: la ruta horneada (`HeroClassDefinition.prefab` y sus authorings) se quitó el 2026-10-27 (P2). `HeroInitializationSystem` toma la clase del guardado (héroe local) o de `HeroClassComponent` (remotos e IA), y sus datos de `HeroClassManager`. Los atributos, habilidades y perks los siembra ese sistema; los derivados los escribe `StatResolveSystem`.
 
 ### 2.2 Referencia al Prefab
 

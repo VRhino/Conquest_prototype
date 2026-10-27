@@ -547,7 +547,7 @@ Composición conceptual observada:
 
 | Área | Componentes representativos |
 |---|---|
-| Identidad/configuración | `HeroClassComponent`, `HeroClassReference`, `HeroAttributesComponent` |
+| Identidad/configuración | `HeroClassComponent` (datos de clase en `HeroClassManager`) |
 | Progreso | `HeroProgressComponent` |
 | Vida/combate | `HeroLifeComponent`, `HeroHealthComponent`, `HeroCombatComponent`, `StaminaComponent` |
 | Movimiento/input | `HeroInputComponent`, `HeroMoveIntent`, `HeroStatsComponent`, `HeroSpawnComponent`, `HeroMotorStateComponent` |

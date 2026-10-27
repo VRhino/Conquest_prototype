@@ -89,8 +89,8 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### HeroInitializationSystem
 - **Responsabilidad**: atributos, habilidades y perks del héroe, y sus stats en la pila.
-- La clase sale del guardado (héroe local) o de `HeroClassComponent`, que pone `BattleSceneController` (remotos e IA):
-  la clase horneada en `HeroClassDefinition.prefab` está vacía (referencia rota).
+- La clase sale del guardado (héroe local) o de `HeroClassComponent`, que pone `BattleSceneController` (remotos e IA), y
+  sus datos de `HeroClassManager`, la única fuente (P2: ya no hay clase horneada).
 - Siembra atributos, velocidad y crítico como bases y el equipo como planos (`Equipment`). Nunca escribe vida, aguante,
   defensa ni daño: los escribe `StatResolveSystem`.
 
