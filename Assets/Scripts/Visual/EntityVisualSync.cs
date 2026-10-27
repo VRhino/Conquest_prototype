@@ -46,6 +46,7 @@ namespace ConquestTactics.Visual
         private const float SYNC_INTERVAL = 0.016f;
         private NavMeshAgent _navAgent;
         private Animator _animator;
+        private readonly HeroDeathAnimationBridge _deathAnimation = new HeroDeathAnimationBridge();
 
         // Animation parameter hashes are centralized in AnimationHashes.cs
         public bool DebugLogging { get => _enableDebugLogs; set => _enableDebugLogs = value; }
@@ -107,6 +108,9 @@ namespace ConquestTactics.Visual
         private void Update()
         {
             // If the linked ECS entity was destroyed, destroy this visual GameObject
+            // A destroyed world (scene unload, test teardown) is not an entity death.
+            if (_world == null || !_world.IsCreated)
+                return;
             if (_hasValidTarget && _heroEntity != Entity.Null && _entityManager != null
                 && (!_entityManager.Exists(_heroEntity)))
             {
@@ -201,6 +205,9 @@ namespace ConquestTactics.Visual
                     _animator.SetBool(AnimationHashes.IsAttacking, attacking);
                 }
             }
+            // Remote heroes get their death animation from RemoteHeroAnimationDriver.
+            if (IsLocalHero)
+                _deathAnimation.Apply(_entityManager, _heroEntity, _animator);
 
             _lastSyncTime = Time.time;
         }
@@ -342,6 +349,14 @@ namespace ConquestTactics.Visual
             {
                 equipmentVisual.enabled = isLocal;
                 equipmentVisual.Bind(this);
+            }
+
+            if (_entityManager.HasComponent<HeroDeathPresentationComponent>(_heroEntity))
+            {
+                var deathPresenter = GetComponent<HeroDeathVisualPresenter>();
+                if (deathPresenter == null)
+                    deathPresenter = gameObject.AddComponent<HeroDeathVisualPresenter>();
+                deathPresenter.Bind(_world, _heroEntity);
             }
 
             var motor = GetComponent<LocalHeroCharacterMotor>();

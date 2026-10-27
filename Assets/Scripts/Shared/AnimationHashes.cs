@@ -43,6 +43,9 @@ public static class AnimationHashes
     // Combat
     public static readonly int IsAttacking            = Animator.StringToHash("IsAttacking");
     public static readonly int TriggerAttack          = Animator.StringToHash("TriggerAttack");
+    // Hero death (HeroDeathPresentationComponent): optional, only on hero controllers.
+    public static readonly int TriggerDeath           = Animator.StringToHash("TriggerDeath");
+    public static readonly int IsDead                 = Animator.StringToHash("IsDead");
 
     // Ranged combat
     public static readonly int TriggerShoot           = Animator.StringToHash("TriggerShoot");

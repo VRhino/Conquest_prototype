@@ -29,6 +29,7 @@ namespace ConquestTactics.Visual
         private RuntimeAnimatorController _cachedParameterController;
         private bool _cachedAnimatorEnabled;
         private bool _hasParameterCacheState;
+        private readonly HeroDeathAnimationBridge _deathAnimation = new HeroDeathAnimationBridge();
 
         public bool IsBound => IsValidBinding();
 
@@ -168,6 +169,8 @@ namespace ConquestTactics.Visual
                 bool attacking = entityManager.GetComponentData<HeroCombatComponent>(_heroEntity).isAttacking;
                 SetAnimatorBool(AnimationHashes.IsAttacking, attacking);
             }
+
+            _deathAnimation.Apply(entityManager, _heroEntity, _animator);
         }
 
         private void CacheComponents()

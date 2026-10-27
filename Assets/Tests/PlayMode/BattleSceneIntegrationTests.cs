@@ -257,24 +257,77 @@ public partial class BattleSceneIntegrationTests
         Assert.That(em.GetBuffer<SquadUnitElement>(squad).Length, Is.EqualTo(count - 1),
             "Unit death did not compact squad membership.");
 
+        // The respawn must come after the body is hidden, so the whole sequence is observed.
+        float hideDelay = HeroDeathHideDelay();
         var life = em.GetComponentData<HeroLifeComponent>(hero);
-        life.respawnCooldown = 1f;
+        life.respawnCooldown = hideDelay + 1f;
         em.SetComponentData(hero, life);
+        var localSync = UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
+            .Single(sync => sync.GetHeroEntity() == hero);
+        var presenter = localSync.GetComponent<HeroDeathVisualPresenter>();
+        Assert.That(presenter, Is.Not.Null, "The local hero visual must carry the death presenter.");
+        var renderers = localSync.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled).ToArray();
+        Assert.That(renderers, Is.Not.Empty);
+        var animator = localSync.GetComponentInChildren<Animator>(true);
+        uint deathRevision = em.GetComponentData<HeroDeathPresentationComponent>(hero).deathRevision;
         uint revision = em.GetComponentData<HeroSpawnComponent>(hero).positionRevision;
         QueueLethalDamage(hero);
         yield return Until(() => !em.GetComponentData<HeroLifeComponent>(hero).isAlive,
             5f, "Lethal damage did not mark the hero dead.");
+        yield return Until(() => em.GetComponentData<HeroDeathPresentationComponent>(hero).deathRevision > deathRevision
+            && animator.GetBool(AnimationHashes.IsDead), 2f, "The local Animator did not receive the death.");
+        Assert.That(presenter.IsHidden, Is.False, "The body must stay visible during the death animation.");
+        yield return Until(() => presenter.IsHidden, hideDelay + 2f, "The dead hero's visual was not hidden.");
+        Assert.That(renderers.All(r => !r.enabled), Is.True, "A renderer of the dead hero stayed visible.");
+        Assert.That(em.GetComponentData<HeroLifeComponent>(hero).isAlive, Is.False);
         yield return Until(() => em.GetComponentData<HeroLifeComponent>(hero).isAlive
             && em.GetComponentData<HeroSpawnComponent>(hero).positionRevision > revision,
             10f, "Local hero did not publish a respawn pose.");
-        yield return null;
+        yield return Until(() => !presenter.IsHidden, 2f, "The respawned hero's visual was not shown again.");
         yield return new WaitForFixedUpdate();
+        Assert.That(renderers.All(r => r.enabled), Is.True, "The respawned hero is missing renderers.");
+        Assert.That(animator.GetBool(AnimationHashes.IsDead), Is.False);
         Assert.That(em.HasComponent<IsDeadComponent>(hero), Is.False);
         var health = em.GetComponentData<HeroHealthComponent>(hero);
         Assert.That(health.currentHealth, Is.EqualTo(health.maxHealth));
         var spawn = em.GetComponentData<HeroSpawnComponent>(hero);
         Assert.That(math.distance(em.GetComponentData<LocalTransform>(hero).Position.xz,
             spawn.spawnPosition.xz), Is.LessThan(0.5f), "Motor did not consume the respawn pose.");
+        Assert.That(math.distance(((float3)localSync.transform.position).xz, spawn.spawnPosition.xz),
+            Is.LessThan(0.5f), "The visual reappeared away from the respawn pose.");
+    }
+
+    [UnityTest]
+    public IEnumerator BattleSceneRemoteHeroDeathAnimatesThenHidesTheBody()
+    {
+        Entity remote;
+        using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroVisualInstance), typeof(NavMeshAgent)))
+        {
+            yield return Until(() => query.CalculateEntityCount() == 1, 10f,
+                "Remote hero visual must be ready for the death check.");
+            remote = query.GetSingletonEntity();
+        }
+        var visual = em.GetComponentObject<NavMeshAgent>(remote).gameObject;
+        var presenter = visual.GetComponent<HeroDeathVisualPresenter>();
+        Assert.That(presenter, Is.Not.Null, "The remote hero visual must carry the death presenter.");
+        var animator = visual.GetComponentInChildren<Animator>(true);
+        var renderers = visual.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled).ToArray();
+        Assert.That(renderers, Is.Not.Empty);
+
+        QueueLethalDamage(remote);
+        yield return Until(() => em.GetComponentData<HeroDeathPresentationComponent>(remote).isDead
+            && animator.GetBool(AnimationHashes.IsDead), 5f, "The remote Animator did not receive the death.");
+        yield return Until(() => presenter.IsHidden, HeroDeathHideDelay() + 2f,
+            "The dead remote hero's visual was not hidden.");
+        Assert.That(renderers.All(r => !r.enabled), Is.True, "A renderer of the dead remote hero stayed visible.");
+    }
+
+    float HeroDeathHideDelay()
+    {
+        using var query = em.CreateEntityQuery(typeof(HeroGameplayConfigComponent));
+        return query.CalculateEntityCount() == 1
+            ? query.GetSingleton<HeroGameplayConfigComponent>().deathVisualHideDelay
+            : HeroGameplayConfigComponent.DefaultDeathVisualHideDelay;
     }
 
     void QueueLethalDamage(Entity target)
@@ -285,7 +338,9 @@ public partial class BattleSceneIntegrationTests
             destroyEntityAfterProcessing = true, target = target,
             hasInlineDamageProfile = true,
             inlineDamageProfile = new DamageProfileComponent { bluntDamage = 100000f },
-            sourceTeam = Team.TeamB, multiplier = 1f, hitType = HitType.Body
+            sourceTeam = em.HasComponent<TeamComponent>(target)
+                && em.GetComponentData<TeamComponent>(target).value == Team.TeamB ? Team.TeamA : Team.TeamB,
+            multiplier = 1f, hitType = HitType.Body
         });
     }
 
