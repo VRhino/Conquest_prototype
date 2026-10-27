@@ -27,6 +27,7 @@ public struct SquadSpawnConfigComponent : IComponentData
     public int   heroAIMaxThinksPerFrame;
     public float heroAIUnderAttackOpenTime;  // s the raw condition must hold to open (L4-02)
     public float heroAIUnderAttackCloseTime; // s it must be false to close
+    public HeroAISkillTuning heroAISkills;   // AI use of skills and choice of an ally (H1, L4-08)
     public float squadSpawnOffset;    // Distancia delante del héroe al spawnear el squad
     public float unitRotationSpeed;   // Velocidad de rotación inicial de las unidades
     public float heroSlotSpacing;     // Espacio lateral entre slots de héroe (metros)

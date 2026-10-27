@@ -36,6 +36,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     [Min(0f)] public float heroAIUnderAttackOpenTime = 0.3f;
     [Tooltip("...and stops counting as under attack only after that has been false for this long.")]
     [Min(0f)] public float heroAIUnderAttackCloseTime = 1f;
+    [Tooltip("Cuándo usa la IA sus habilidades y a qué aliado apoya (H1, L4-08).")]
+    public HeroAISkillTuning heroAISkills = HeroAISkillTuning.Default;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -86,7 +88,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 heroAIThinkInterval = authoring.heroAIThinkInterval,
                 heroAIMaxThinksPerFrame = authoring.heroAIMaxThinksPerFrame,
                 heroAIUnderAttackOpenTime = authoring.heroAIUnderAttackOpenTime,
-                heroAIUnderAttackCloseTime = authoring.heroAIUnderAttackCloseTime
+                heroAIUnderAttackCloseTime = authoring.heroAIUnderAttackCloseTime,
+                heroAISkills = authoring.heroAISkills.OrDefault()
             });
         }
     }

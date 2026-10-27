@@ -6,7 +6,7 @@ using Unity.Entities;
 /// both go through the same gate afterwards. Attack button → basic attack; Q, E, R → class abilities; F → ultimate;
 /// 1, 2 → active perks. A held key keeps requesting, and the gate turns it down while the hero is busy or the skill is
 /// cooling down. 3, 4, 5 → the abilities of the hero's active squad (L2-9): the request goes to the squad, which launches
-/// them itself.
+/// them itself. AI heroes request the skill and squad ability their decision names (H1), or the basic attack.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroInputSystem))]
@@ -43,13 +43,22 @@ public partial class HeroSkillRequestSystem : SystemBase
                 });
         }
 
-        foreach (var (decision, request, wants) in SystemAPI
+        foreach (var (decision, request, wants, entity) in SystemAPI
                      .Query<RefRO<HeroAIDecision>, RefRW<SkillRequestComponent>, EnabledRefRW<SkillRequestComponent>>()
                      .WithAll<HeroAITag>()
-                     .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState))
+                     .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
+                     .WithEntityAccess())
         {
-            request.ValueRW.heldSlots = decision.ValueRO.shouldAttack ? SkillRequestComponent.Bit(SkillSlot.Basic) : (ushort)0;
-            if (decision.ValueRO.shouldAttack) Request(request, wants, SkillSlot.Basic, now);
+            var d = decision.ValueRO;
+            request.ValueRW.heldSlots = d.shouldAttack ? SkillRequestComponent.Bit(SkillSlot.Basic) : (ushort)0;
+            // A skill the AI chose (H1) goes first; it is never held, so a charge releases on the next frame.
+            if (d.useSkill) Request(request, wants, d.skillSlot, now);
+            else if (d.shouldAttack) Request(request, wants, SkillSlot.Basic, now);
+            if (d.useSquadSkill && SystemAPI.HasComponent<HeroSquadReference>(entity))
+                squadRequests.Add(new SquadRequest
+                {
+                    squad = SystemAPI.GetComponent<HeroSquadReference>(entity).squad, wants = true, slot = d.squadSkillSlot,
+                });
         }
 
         // Squads are written after the hero loops: both are SkillRequestComponent.

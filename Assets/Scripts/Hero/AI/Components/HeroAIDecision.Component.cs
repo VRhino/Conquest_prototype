@@ -34,4 +34,18 @@ public struct HeroAIDecision : IComponentData
 
     /// <summary>True when a new squad order should be issued this frame.</summary>
     public bool hasNewSquadOrder;
+
+    // --- Skills (H1), written by HeroAISkillSystem on a think ---
+    /// <summary>Launch <see cref="skillSlot"/> instead of the basic attack this frame.</summary>
+    public bool useSkill;
+    public SkillSlot skillSlot;
+    /// <summary>Have the squad launch <see cref="squadSkillSlot"/> this frame (L2-9).</summary>
+    public bool useSquadSkill;
+    public SkillSlot squadSkillSlot;
+}
+
+/// <summary>The ally an AI hero chose to support (L4-08), kept between thinks while it stays valid.</summary>
+public struct HeroAISupportTarget : IComponentData
+{
+    public Entity ally;
 }
