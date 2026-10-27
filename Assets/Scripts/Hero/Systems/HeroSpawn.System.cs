@@ -99,6 +99,8 @@ public partial class HeroSpawnSystem : SystemBase
 #if UNITY_EDITOR
             entityManager.SetName(heroEntity, $"Hero_Team{(int)dataForInstantiate.teamID}");
 #endif
+            // El prefab hornea un equipo fijo; el del héroe local lo decide la batalla.
+            entityManager.SetComponentData(heroEntity, new TeamComponent { value = (Team)dataForInstantiate.teamID });
             var spawnRotation = CalculateSpawnRotation(spawnPosition, (int)dataForInstantiate.teamID);
             entityManager.SetComponentData(heroEntity, new LocalTransform
             {

@@ -454,3 +454,11 @@
   primero se pasa solo y luego en la clase entera; si ya fallaba antes que el test nuevo, el orden no es la causa.
 - `node ut.js test playmode BattleSceneIntegrationTests x` incluye los tests explícitos (perfiles de rendimiento, 26 en
   total) y varios fallan por su cuenta. Para comparar con el 11/11 de referencia, se lanza con `-` (sin explícitos).
+- Supply point "de mi equipo" que hay que reconquistar al entrar en batalla: no era la propiedad del punto
+  (`SupplyPointSetup` la pone bien desde `_initialTeam`), era el equipo del héroe local. `HeroSpawnSystem` instancia
+  `HeroEntity_Pure`, que hornea `TeamComponent = TeamA`, y nunca copiaba `DataContainer.teamID`. Como defensor, la UI
+  (lee `DataContainer`) y la lógica (captura, cambio de escuadra, daño: leen `TeamComponent`) discrepaban, y el héroe
+  capturaba su propio punto. Con TeamA no se ve nada: hay que reproducir como defensor. En `BattleScene` el punto de
+  defensores está anidado en `Block_02` (hidden city), no bajo `Atackers`; `BattleTestScene` no tiene ninguno.
+- Para probar captura en PlayMode, un aliado en el mismo spawn deja la zona disputada y la captura nunca avanza: el
+  test pasaba igual sin el arreglo. El perfil de defensor de `BattleSceneIntegrationTests` no añade el remoto.

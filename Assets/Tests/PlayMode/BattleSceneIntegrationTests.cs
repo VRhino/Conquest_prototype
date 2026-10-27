@@ -25,7 +25,7 @@ public partial class BattleSceneIntegrationTests
     const string PrepPath = "Assets/Scenes/GameScenes/BattlePrepScene.unity";
     const string FullBattlePath = "Assets/Scenes/GameScenes/BattleScene.unity";
     const int FullBattleHeroesPerSide = 10;
-    bool fullBattleProfile;
+    bool fullBattleProfile, defenderProfile;
     string renderVariant;
     string loadedScenePath;
     int expectedFullBattleUnits;
@@ -57,7 +57,8 @@ public partial class BattleSceneIntegrationTests
             nameof(FullBattlePreparationRenderedPerformanceProfile), StringComparison.Ordinal);
         renderVariant = null;
         ConfigureMovementBaseline();
-        loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
+        defenderProfile = TestContext.CurrentContext.Test.Name == nameof(BattleSceneDefenderStartsWithItsOwnSupplyPointAllied);
+        loadedScenePath = fullBattleProfile || defenderProfile ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
         keyboard = null;
@@ -96,7 +97,7 @@ public partial class BattleSceneIntegrationTests
         PlayerSessionService.SetPlayer(memory.Player);
         PlayerSessionService.SetSelectedHero(local);
 
-        var battle = BattleDebugCreator.CreateBattleWithLocalHero(local, Team.TeamA, 0, 0,
+        var battle = BattleDebugCreator.CreateBattleWithLocalHero(local, defenderProfile ? Team.TeamB : Team.TeamA, 0, 0,
             EnemySquadMode.Fixed, SquadDataService.GetSquadById("sqd01"));
         var remote = new BattleHeroData
         {
@@ -105,7 +106,7 @@ public partial class BattleSceneIntegrationTests
             spawnPointId = "4"
         };
         remote.squadInstances.Add(SquadDataService.CreateSquadInstance("sqd01"));
-        battle.defenders.Add(remote);
+        if (!defenderProfile) battle.defenders.Add(remote); // A defender ally at the same spawn would contest the zone.
         if (fullBattleProfile)
         {
             var definition = SquadDataService.GetSquadById(reserve.baseSquadID);
@@ -155,7 +156,7 @@ public partial class BattleSceneIntegrationTests
                 ReadyTimeout, "Preparation did not load the production battle scene.");
         }
         else
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath,
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(loadedScenePath,
                 new LoadSceneParameters(LoadSceneMode.Single));
         yield return Until(() =>
         {
@@ -181,6 +182,27 @@ public partial class BattleSceneIntegrationTests
         yield return Until(() => !query.IsEmptyIgnoreFilter
             && query.GetSingleton<UIHeroBattleDataComponent>().Skill(SkillSlot.Q).skillId != 0, 10f,
             "The bar data never carried the hero's Q skill.");
+    }
+
+    [UnityTest]
+    public IEnumerator BattleSceneDefenderStartsWithItsOwnSupplyPointAllied()
+    {
+        // The local hero is a defender in BattleScene: its team must come from the battle, not from the baked prefab,
+        // or capture and squad swap (which read TeamComponent) treat the defenders' supply point as enemy.
+        Assert.That(em.GetComponentData<TeamComponent>(hero).value, Is.EqualTo(Team.TeamB));
+        var owned = UnityEngine.Object.FindObjectsByType<SupplyPointSetup>(FindObjectsSortMode.None)
+            .Where(p => em.GetComponentData<ZoneTriggerComponent>(p.ZoneEntity).teamOwner == (int)Team.TeamB).ToArray();
+        Assert.That(owned, Is.Not.Empty, "BattleScene has no defenders' supply point.");
+        // Stretch the zone over the hero so SupplyInteractionSystem sees it inside.
+        var zone = em.GetComponentData<ZoneTriggerComponent>(owned[0].ZoneEntity);
+        zone.radius = math.distance(em.GetComponentData<LocalTransform>(hero).Position,
+            em.GetComponentData<LocalTransform>(owned[0].ZoneEntity).Position) + 5f;
+        em.SetComponentData(owned[0].ZoneEntity, zone);
+        yield return new WaitForSeconds(1f);
+        var supply = em.GetComponentData<SupplyPointComponent>(owned[0].ZoneEntity);
+        Assert.That(supply.isCapturing || supply.captureProgress > 0f, Is.False,
+            "The defender is capturing its own supply point.");
+        Assert.That(supply.currentTeam, Is.EqualTo((int)Team.TeamB));
     }
 
     [UnityTest]
