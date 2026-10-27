@@ -22,18 +22,21 @@ public partial class PerkOnHitSystem : SystemBase
     protected override void OnUpdate()
     {
         double now = SystemAPI.Time.ElapsedTime;
+        uint tick = CombatRandom.Tick(now);
         using var hits = _hits.ToComponentDataArray<PendingDamageEvent>(Allocator.Temp);
         foreach (var hit in hits)
         {
             var source = hit.damageSource;
             if (!SystemAPI.Exists(source) || !SystemAPI.HasBuffer<HeroPerkElement>(source)) continue;
             if (!SystemAPI.Exists(hit.target) || !SystemAPI.HasBuffer<StatModifier>(hit.target)) continue;
-            var motion = SystemAPI.HasComponent<HeroMotionComponent>(source) ? SystemAPI.GetComponent<HeroMotionComponent>(source) : default;
             bool applied = false;
             foreach (var perk in SystemAPI.GetBuffer<HeroPerkElement>(source))
             {
                 var e = perk.effect;
-                if (e.trigger != PerkTrigger.OnHit || e.target != PerkTarget.HitTarget || !PerkConditions.Met(e, motion)) continue;
+                if (e.trigger != PerkTrigger.OnHit || e.target != PerkTarget.HitTarget) continue;
+                float roll = PerkConditions.Roll(tick, source, hit.target, perk.perkId);
+                if (!PerkConditions.Met(e, PerkContext.Source(EntityManager, source, e, now, roll),
+                        PerkContext.Target(EntityManager, hit.target, e.effectStat, now))) continue;
                 StatEffects.ApplyTimed(SystemAPI.GetBuffer<StatModifier>(hit.target), e.stat, e.op, e.value, now + e.duration,
                     ModifierSource.Perk, perk.perkId);
                 applied = true;

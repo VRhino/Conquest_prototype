@@ -35,19 +35,22 @@ public partial class PerkAuraSystem : SystemBase
         foreach (var hero in heroes)
         {
             if (SystemAPI.HasComponent<HeroLifeComponent>(hero) && !SystemAPI.GetComponent<HeroLifeComponent>(hero).isAlive) continue;
-            var motion = SystemAPI.GetComponent<HeroMotionComponent>(hero);
             var perks = SystemAPI.GetBuffer<HeroPerkElement>(hero);
             for (int i = 0; i < perks.Length; i++)
             {
                 var perk = perks[i];
                 if (perk.effect.trigger != PerkTrigger.Always || now < perk.nextRefresh) continue;
-                if (!PerkConditions.Met(perk.effect, motion)) continue;
+                float roll = PerkConditions.Roll(CombatRandom.Tick(now), hero, hero, perk.perkId);
+                if (!PerkConditions.MetBySource(perk.effect, PerkContext.Source(EntityManager, hero, perk.effect, now, roll))) continue;
                 perk.nextRefresh = now + RefreshInterval;
                 perks[i] = perk;
 
                 targets.Clear();
                 SelectTargets(hero, perk.effect, targets);
-                foreach (var target in targets) Apply(target, perk, now + 2 * RefreshInterval);
+                bool filter = PerkConditions.NeedsTarget(perk.effect);
+                foreach (var target in targets)
+                    if (!filter || PerkConditions.MetByTarget(perk.effect, PerkContext.Target(EntityManager, target, perk.effect.effectStat, now)))
+                        Apply(target, perk, now + 2 * RefreshInterval);
             }
         }
         targets.Dispose();
