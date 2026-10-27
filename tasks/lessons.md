@@ -398,3 +398,21 @@
 - Un filtro nuevo sobre candidatos rompe tests que no hablan de él, porque sus posiciones eran arbitrarias (enemigo a 10 m de una escuadra quieta). Cambiar la posición incidental del test, no el filtro, y dejar que el test de escala diga explícitamente qué radio necesita.
 - Un escenario de estrés que imitaba algo con un cupo duro (S7: 6 por objetivo) hay que traducirlo al modelo nuevo por lo que representa (tres escuadras → cada atacante cuenta un tercio en la saturación), no por la cifra.
 - `unity command test_status` devuelve la duración de cada test; con eso se mide el coste de un test de escala sin buscar en el log.
+
+## Bloque 3: habilidades de escuadra, condiciones, panel de perks e IA (2026-10-27)
+
+- Al añadir valores a un enum que se usa como máscara de bits, revisar el ancho de la máscara. `SkillSlot` pasó de 7 a 10
+  valores y `heldSlots` era un `byte`: `1 << Squad2` ya no cabía. Se pasó a `ushort` antes de añadir los huecos.
+- En un test, crear todas las entidades antes de tomar un `DynamicBuffer`. Crear una entidad mientras se tiene el buffer
+  lo invalida, y el error ("BufferTypeHandle invalidated by a structural change") sale después, en el sistema que lo usa,
+  no en la línea del test.
+- Las pruebas de PlayMode de `BattleSceneIntegrationTests` fallan en el `SetUp` en esta copia: la escena registra un
+  error porque falta el paquete de VFX que git ignora (M3). No es una regresión. Para verificar un test nuevo de esa
+  clase, se usa un cambio `TEMP A/B` que ignora los errores de log solo para ese test, y se revierte en el mismo comando.
+  Los escenarios S1-S7 ya los ignoran.
+- Un panel nuevo puede entrar sin tocar una escena que el usuario tiene modificada: prefab en `Resources` que el gestor
+  de la escena instancia y registra desde código. Así se respetó la regla de no tocar `FeudoScene`.
+- Los scripts largos para `eval_file` se escriben con la herramienta de escritura, no con una heredoc de bash: una
+  heredoc con comillas y caracteres no ASCII se cortó sin aviso y el fichero no llegó a existir.
+- Lo que la IA decide en un pensamiento tiene que escribirse después de que el comportamiento escriba la decisión
+  entera: Rusher y Balanced hacen `new HeroAIDecision()` cada frame y borrarían cualquier campo escrito antes.

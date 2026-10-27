@@ -1,6 +1,6 @@
 # Plan: bloque 3 de la referencia — L2-9, L2-15, H5, H1 + L4-08
 
-Estado: en curso (2026-10-27), rama `main` local, sin subir. Plan anterior archivado en `tasks/l4-04-targeting-plan.md`.
+Estado: **hecho** (2026-10-27), rama `main` local, sin subir. Plan anterior archivado en `tasks/l4-04-targeting-plan.md`.
 Fuentes: `Docs/Design/Aprendizajes_Referencia.md` (L2-9, L2-15, L4-08), `Docs/Por_Abordar/Habilidades_Perks.md` (H1, H5),
 `Docs/Mechanics/SkillsAndPerks.md`, GDD §4.6, §6.2, §12.3. Referencia (solo patrones, ningún código ni dato): las escuadras
 lanzan con el mismo ciclo de vida que el héroe y enfrían por escuadra; las condiciones se combinan con Y, las listas son
@@ -54,14 +54,26 @@ vida perdida y si es héroe, y mantiene el elegido mientras siga valiendo.
 - L4-08: puntuación de aliado (cercanía, vida perdida, héroe) dentro de un radio, con histéresis sobre el elegido.
 
 ## Pasos (un commit cada uno; EditMode en verde antes de cada commit)
-- [ ] 1. L2-9 datos: huecos, `AbilityData` con fases y eventos, blob horneado. EditMode.
-- [ ] 2. L2-9 lanzador: componentes de escuadra, desbloqueo, ejecución, efectos, teclas. EditMode.
-- [ ] 3. L2-9 datos de juego: habilidades de Escuderos, Arqueros y Lanceros. Comprobar en Play que se lanzan al nivel.
-- [ ] 4. L2-15: condiciones nuevas con tests.
-- [ ] 5. H5: panel de perks.
-- [ ] 6. H1 + L4-08 (o documentarlos si no da tiempo).
-- [ ] 7. Docs: `SkillsAndPerks.md`, `Docs/Por_Abordar/` (README y Habilidades_Perks), §5 del catálogo, lecciones.
+- [x] 1. L2-9 datos: huecos, `AbilityData` con fases y eventos, blob horneado. EditMode. Hecho (`0d032c21`).
+- [x] 2. L2-9 lanzador: componentes de escuadra, desbloqueo, ejecución, efectos, teclas. EditMode. Hecho (`07476be5`).
+- [x] 3. L2-9 datos de juego: habilidades de Escuderos, Arqueros y Lanceros. Comprobar en Play que se lanzan al nivel.
+  Hecho (`875653a9`); test de PlayMode `BattleSceneSquadLaunchesItsAbilityAtItsUnlockLevel` en verde.
+- [x] 4. L2-15: condiciones nuevas con tests. Hecho (`cc2e19ab`).
+- [x] 5. H5: panel de perks. Hecho (`b1347d3f`): tecla K, prefab en `Resources/UI`, sin tocar `FeudoScene`.
+- [x] 6. H1 + L4-08. Hecho: `HeroAISkillSystem` y `HeroAISkills` con tests EditMode.
+- [x] 7. Docs: `SkillsAndPerks.md`, `Docs/Por_Abordar/` (README y Habilidades_Perks), §5 del catálogo, lecciones.
 
 ## Verificación
 - EditMode completo en verde (`node ut.js test editmode Conquest.Architecture.Tests asm`).
 - No se toca el movimiento ni la melé: PlayMode S1/S6 solo si algún paso acaba tocándolos.
+
+## Resultado
+- EditMode: 351 tests en verde. PlayMode nuevos: `BattleSceneSquadLaunchesItsAbilityAtItsUnlockLevel` (en verde con el
+  error conocido del VFX ignorado solo para la prueba, ver lecciones) y `PerkSelectionPanelTests` (en verde).
+- H1 cambia lo que hacen los héroes IA en la melé, así que se midió S1 ×1 y S6 ×5:
+  - S6, cuatro corridas válidas: solapes 9, 10, 7 y 11 (base: 11); picos de aceleración 0,6-1,5 % (base: 1,2-2,3 %);
+    p95 de atacantes por objetivo, 2.
+  - S1: 0,43 s hasta formar y 0,49 m de error en marcha, dentro de lo conocido.
+  - Una corrida de S6 falló en el arnés por 0,03 s ("FollowHero did not reach order resolution"); no se repitió en las
+    otras cuatro.
+- Abiertos: H10-H14 en `Docs/Por_Abordar/Habilidades_Perks.md`, el árbol de talentos de H5 y la decisión de teclas H11.

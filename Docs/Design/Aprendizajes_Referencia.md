@@ -141,13 +141,13 @@ unidad, filtrados por el terreno del nivel, y se suman a los ratios antes de mul
 | L2-7 | Multiproyectil y tope de proyectiles | Un proyectil por petición; sin tope de vivos (`RangedAttack.System.cs:140-150`) | `LauncherScheme` (modo, cuenta, ángulo) y descarte del más antiguo | Abanico, ballesta, protección ante picos | M | B | M |
 | L2-6 | Carga / mantener pulsado | No existe (GDD ~977-1078 la requiere) | Fase `esCarga` infinita + evento "soltar" | Tiro cargado | S (tras L2-2) | B | B |
 | L2-8 | Proyectil simulado en ECS | `ProjectileController` (MonoBehaviour) y `ConcurrentQueue` estática | `ProjectileComponent` + sistema Burst con raycast Unity Physics | Determinismo, rendimiento | L | A | B |
-| L2-9 (amp.) | Habilidades de escuadra por el mismo lanzador | El GDD (§4.6, §12.3) las pide; hay datos (`SquadAbilityDefinitionComponent`, `AbilityByLevelElement`, `abilityUnlockLevel`) pero ningún sistema las lanza | La escuadra pide con `SkillRequestComponent`, pasa por `SkillGate` y enfría en su propio `CooldownGroupElement`; los efectos reutilizan `SkillEffectSystem` | Cierra el mayor hueco frente al GDD sin un segundo lanzador | M | M | A |
+| L2-9 (amp., hecho, `SkillsAndPerks.md` §3.6) | Habilidades de escuadra por el mismo lanzador | El GDD (§4.6, §12.3) las pide; hay datos (`SquadAbilityDefinitionComponent`, `AbilityByLevelElement`, `abilityUnlockLevel`) pero ningún sistema las lanza | La escuadra pide con `SkillRequestComponent`, pasa por `SkillGate` y enfría en su propio `CooldownGroupElement`; los efectos reutilizan `SkillEffectSystem` | Cierra el mayor hueco frente al GDD sin un segundo lanzador | M | M | A |
 | L2-10 (amp.) | Pilas y duración de los efectos | `StatModifier` no tiene pilas; reaplicar un efecto añade otro modificador (`Stats/StatTypes.cs:49-59`) | `maxStacks` y modo al reaplicar (refrescar, apilar, ignorar); stats de duración del efecto, del lado de quien lo aplica y de quien lo recibe | Efectos acumulables y resistencia a la duración | M | M | M |
 | L2-11 (amp.) | Daño en el tiempo | No existe (`Docs/Por_Abordar/Habilidades_Perks.md` H4); Flecha Llameante se aproxima con daño directo | Efecto con periodo y duración que emite un `PendingDamageEvent` en cada tic | Quemadura, sangrado, veneno | S-M | B | M |
 | L2-12 (amp.) | Velocidad de ataque | Las fases duran lo que dice el blob (`Skills/SkillTimeline.cs`); ningún stat las acorta | Stat de velocidad de ataque; las fases marcadas dividen su duración por él y la animación se acelera en la misma proporción | Buffs de ritmo; armas rápidas | S | B | M |
 | L2-13 (amp.) | Tope de objetivos por habilidad | El daño en área golpea a todos los que están dentro (`Skills/SkillEffect.System.cs`, `SkillArea.Contains`) | Máximo de objetivos en el evento de efecto, los más cercanos primero | Áreas que se pueden equilibrar contra escuadras de 30 | S | B | M |
 | L2-14 (amp.) | Efectos ligados a la habilidad | Los modificadores de una habilidad solo caducan por tiempo | Marcar el modificador con la instancia que lo creó y retirarlo cuando la habilidad termina o la interrumpen | Posturas y canalizaciones sin efectos residuales | S | B | B |
-| L2-15 (amp.) | Condiciones de efecto más ricas | `PerkCondition` solo tiene `HeroStill` y `HeroMovedRecently` (`Perks/PerkTypes.cs:15-22`) | Probabilidad, tipo de objetivo (héroe, soldado, clase), objetivo o atacante con un efecto activo, soldados restantes de la escuadra en un rango; combinadas con Y y con triestados | Los perks del GDD que hoy no tienen datos | M | B | M |
+| L2-15 (amp., hecho, `SkillsAndPerks.md` §5) | Condiciones de efecto más ricas | `PerkCondition` solo tiene `HeroStill` y `HeroMovedRecently` (`Perks/PerkTypes.cs:15-22`) | Probabilidad, tipo de objetivo (héroe, soldado, clase), objetivo o atacante con un efecto activo, soldados restantes de la escuadra en un rango; combinadas con Y y con triestados | Los perks del GDD que hoy no tienen datos | M | B | M |
 
 **L2-1.** Ref.: toda habilidad pasa por una puerta con comprobaciones en orden fijo y código de motivo de rechazo; el
 estado de control prohíbe por defecto. La corrección frente al informe: el input existe; falta el consumidor. Solo hay 3
@@ -197,7 +197,7 @@ por llamada explícita, sin sondeo; aquí se toma solo la caducidad y el evento.
 | L4-06 | IA server-only | Todos los bots corren localmente | Agrupar `EnemyDetection`, `SquadAI`, perfil bot y `OrderResolution` en grupos de servidor | Evita rediseñar con Netcode | M | M | M |
 | L4-05 | Sesgo de aggro / provocación | No existe aggro, solo represalia | `AggroBias` con expiración | Roles de tanque | S | B | B |
 | L4-07 | LOD de IA | Sin cotas; 15v15 sin medir | `AILodSystem` con tres niveles | Sostener 15v15 | M | M | B |
-| L4-08 (amp.) | Elegir aliado al que apoyar | La IA no elige aliados ni lanza habilidades (`Docs/Por_Abordar/Habilidades_Perks.md` H1) | Puntuación de aliado por cercanía, vida perdida y si es héroe, dentro de un radio; el elegido se mantiene mientras siga siendo válido | IA de curación y de buffs coherente | S-M | B | M |
+| L4-08 (amp., hecho con H1, `SkillsAndPerks.md` §8) | Elegir aliado al que apoyar | La IA no elige aliados ni lanza habilidades (`Docs/Por_Abordar/Habilidades_Perks.md` H1) | Puntuación de aliado por cercanía, vida perdida y si es héroe, dentro de un radio; el elegido se mantiene mientras siga siendo válido | IA de curación y de buffs coherente | S-M | B | M |
 | L4-09 (amp., hecho con L4-04) | Búsqueda de enemigo por estrategia de escuadra | `EnemyDetection` usa la distancia al centroide con radio fijo (`Combat/EnemyDetection.System.cs:139-176`) | Radio de combate que crece con la velocidad de la escuadra, entre un mínimo y un máximo; descarte por diferencia de altura y por pendiente; variantes (arquero con línea de tiro, atacar avanzando, atacar una zona). Complementa L4-04 | Escuadras que no se enganchan con enemigos en otra cota | M | M | M |
 | L4-10 (amp.) | Efectos que ajustan la IA de escuadra | Los parámetros de IA son constantes de configuración | Parámetros de IA (radio de combate, pesos) como stats de la pila de la escuadra, con fuente `Effect` | Órdenes y habilidades tácticas sin código nuevo | S | B | B |
 
@@ -336,7 +336,7 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 - **Fase 4 (IA):** L4-09 con L4-04; L4-08 con H1 (la IA usa habilidades); L4-10 después de L2-9.
 - **Según alcance:** L5-8 solo con caballería (con L5-6); L7-8 cuando se haga la vista de `Tab`; L7-9 si el GDD la pide.
 
-### Estado a 2026-10-26
+### Estado a 2026-10-27
 - **Hecho:** Fases 0, 1 y 2; lotes de movimiento C1-C15 de `Movimiento_Formaciones.md`, que cubren L3-02 (C12),
   L5-1 (C14), L5-2 (C9), L5-4 (C7, con la decisión D5) y L3-01 (C13, 2026-10-26, §20: slots validados por escuadra con
   BFS y D9); L3-03 y L3-04 entraron con las formaciones por datos. L4-04 y L4-09 (2026-10-26,
@@ -344,12 +344,21 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   búsqueda de enemigo por escuadra con radio por estrategia y velocidad y filtro de cota. De L4-09 quedan fuera las
   variantes que piden L4-03 (arquero con línea de tiro) y una orden de "atacar una zona" con punto propio (hoy la zona es
   el ancla de mantener posición).
+- **Hecho en el bloque 3 (2026-10-27, `Docs/Mechanics/SkillsAndPerks.md` §3.6, §5 y §8):**
+  - L2-9: las escuadras lanzan sus habilidades por `SkillGate` con enfriamiento propio, al nivel de desbloqueo, con las
+    teclas 3, 4 y 5. Hay dos habilidades por escuadra (Escuderos, Arqueros y Lanceros).
+  - L2-15: condiciones de perk con probabilidad sembrada, tipo y clase del objetivo, triestados de efecto activo y
+    escuadra restante.
+  - H5: panel de perks del feudo.
+  - H1 con L4-08: la IA usa habilidades de clase y de escuadra, y elige y mantiene un aliado al que apoyar.
 - **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-05, L3-06; L4-03, L4-05, L4-06, L4-07;
-  L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09.
-- **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H1-H9 habilidades y perks, P1-P6 pila, F1-F17 formaciones y
+  L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
+  L2-9, L2-15 y L4-08.
+- **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H2-H14 habilidades y perks, P1-P6 pila, F1-F17 formaciones y
   posturas, M1-M15 movimiento).
-- **Orden recomendado** (prioridad del usuario: movimiento y formación): L2-9 con H5; para los solapes de la melé (M2),
-  el interruptor de colisión por escuadra (C16, F9).
+- **Orden recomendado** (prioridad del usuario: movimiento y formación): para los solapes de la melé (M2),
+  el interruptor de colisión por escuadra (C16, F9). En habilidades, L4-10 (efectos sobre la IA de escuadra, ya con L2-9)
+  y L2-10 (pilas), y H10 (habilidades de escuadra en el HUD).
 
 ## 6. Lo que no conviene copiar
 

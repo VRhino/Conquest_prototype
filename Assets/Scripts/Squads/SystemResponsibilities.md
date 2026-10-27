@@ -17,7 +17,8 @@
 - `HeroSkillRequestSystem` es el único que convierte entrada local y decisión de IA en `SkillRequestComponent`;
   `SkillExecutionSystem` es el único que lanza, avanza, interrumpe y termina habilidades (ataque básico incluido) y el
   único escritor de `HeroCombatComponent.isAttacking`/`hitboxFired`, `triggerAttack` y `WeaponHitboxActiveTag` del héroe.
-  Sustituye a `HeroAttackSystem`.
+  Sustituye a `HeroAttackSystem`. Las escuadras también son lanzadores (L2-9): sus peticiones (teclas 3-5 o IA) pasan
+  por el mismo sistema, y `UnitStatScalingSystem` añade sus habilidades al desbloquearlas.
 - Las reglas de lanzamiento viven en `SkillGate` (pura); los enfriamientos en `CooldownGroupElement` con tiempo absoluto,
   sin sistema por frame.
 - `SkillEffectSystem` aplica los efectos de las habilidades (daño por `PendingDamageEvent`, modificadores por la pila,
@@ -142,6 +143,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - Controla el `NavMeshAgent` remoto y publica `SquadAIOrderIntentComponent` antes del resolvedor.
 - Proyecta objetivos, comprueba `SetDestination`/`pathStatus`, retiene fallos hasta que el objetivo cambie y limpia `HeroMoveIntent` si no puede navegar.
 - Conserva solicitudes de escuadra durante combate; no arbitra ni escribe entrada legacy.
+
+### HeroAISkillSystem
+- En cada pensamiento del héroe IA, después de Rusher/Balanced y antes de `HeroSkillRequestSystem`, añade a
+  `HeroAIDecision` la habilidad de clase y la de escuadra que lanzar (H1), y escribe `HeroAISupportTarget` (L4-08).
+- Las reglas son puras (`HeroAISkills`). No lanza nada: la petición pasa por `HeroSkillRequestSystem` y `SkillGate`.
 
 ### SquadOrderSystem
 - **Responsabilidad**: Aplica `SquadResolvedOrderComponent` a estado y componente hold, con playback antes del cálculo del ancla.

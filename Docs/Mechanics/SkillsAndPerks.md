@@ -2,7 +2,8 @@
 
 Estado: implementado (2026-10-22, Fase 2 de `Docs/Design/Aprendizajes_Referencia.md`). Patrones tomados del análisis
 estático de la referencia (`game-re/notes/skill-lifecycle.md`, `preconditions.md`, `effects-catalog.md`); ningún código ni
-dato de la referencia.
+dato de la referencia. Ampliado el 2026-10-27 (bloque 3): habilidades de escuadra (L2-9, §3.6), condiciones ricas de los
+perks (L2-15), panel de perks del feudo (H5) y uso de habilidades por la IA con elección de aliado (H1, L4-08, §8).
 
 ## 1. Resumen
 
@@ -15,6 +16,8 @@ dato de la referencia.
   `SkillEffectSystem`.
 - Los **perks** son efectos con condición sobre la pila de modificadores, sin lógica propia. Los pasivos son auras o
   efectos al golpear; los activos son habilidades cortas.
+- Las **escuadras** lanzan sus habilidades con la misma puerta, las mismas fases y los mismos efectos, y enfrían en sus
+  propios grupos (§3.6).
 
 ## 2. Teclas
 
@@ -24,9 +27,15 @@ dato de la referencia.
 | Q / E / R | `Q` / `E` / `R` | Habilidades de clase |
 | F | `Ultimate` | Definitiva |
 | 1 / 2 | `ActivePerk1` / `ActivePerk2` | Perks activos del loadout |
+| 3 / 4 / 5 | `Squad1` / `Squad2` / `Squad3` | Habilidades de la escuadra activa, en orden de desbloqueo (las lanza la escuadra) |
 | G | — | Interactuar (antes F) |
+| K (feudo) | — | Panel de perks del loadout (H5) |
 
-Con varias teclas pulsadas gana la definitiva, luego R, E, Q, perks y el básico (`HeroSkillRequestSystem`).
+Con varias teclas pulsadas gana la definitiva, luego R, E, Q, perks y el básico (`HeroSkillRequestSystem`). Las teclas
+de escuadra van aparte: se pueden pulsar a la vez que una del héroe, y entre ellas gana la del último desbloqueo.
+
+El GDD (§12.3) pide 1/2/3 para la escuadra, pero la Fase 2 dio 1 y 2 a los perks activos: las de escuadra van en 3, 4 y
+5 hasta que el usuario decida (`Docs/Por_Abordar/Habilidades_Perks.md` H11).
 
 ## 3. Ciclo de vida
 
@@ -95,6 +104,33 @@ Su `areaRadius` y su `damageMultiplier` se convierten en un golpe en área al em
   siguiente (`SkillTimeline.Release`).
 - **Datos:** Disparo Enfocado (arco, Q) es un tiro cargado: tensar mientras se mantiene Q, disparo al soltar.
 
+### 3.6 Habilidades de escuadra (L2-9)
+
+Ref.: las escuadras lanzan con el mismo ciclo de vida que el héroe, y el enfriamiento es por escuadra, no por soldado.
+
+- **Datos:** `AbilityData` (`Squads/Ability Data`) tiene fases, eventos y grupo como `HeroAbility`; sin fases, es una
+  fase corta que dispara sus eventos al empezar. `SquadData.abilitiesByLevel` las ordena: la posición fija su hueco
+  (`Squad1`-`Squad3`, como máximo 3) y su nivel de desbloqueo (`SquadProgressionData.abilityUnlockLevels`, 10/20/30).
+  `SquadDefinitionBaker` hornea el blob en `SquadAbilityDefinitionComponent.skill`.
+- **Lanzador:** `SquadSpawningSystem` da a la escuadra `SkillRequestComponent`, `SkillInstanceComponent`,
+  `HeroSkillElement` y `CooldownGroupElement`. `UnitStatScalingSystem`, que ya llevaba los desbloqueos, añade cada
+  habilidad al buffer cuando la escuadra llega a su nivel (al aparecer o al subir).
+- **Ejecución:** `SkillExecutionSystem` recorre también las escuadras con la misma `SkillGate` (viva = le queda una unidad
+  viva; sin aguante), `SkillTimeline` y `CooldownUtility`. Los efectos salen del centro de sus unidades vivas, mirando
+  hacia donde mira su ancla, con su equipo. No hay aparcada ni golpe de arma ni animación (H2).
+- **Efectos:** para una escuadra, `Self` y `OwnSquad` son sus soldados; el daño en área usa su perfil de daño
+  (`SquadDamageProfileReference`); no hay embestida.
+- **Enfriamiento:** por entidad de escuadra. Al cambiar de escuadra y volver, la escuadra reaparece con sus grupos vacíos
+  (`Docs/Por_Abordar/Habilidades_Perks.md` H13).
+
+| Escuadra | Nivel 10 (tecla 3) | Nivel 20 (tecla 4) |
+|---|---|---|
+| Escuderos | Shield Brace: +30 % de defensa a la escuadra (10 s; 40 s) | Shield Bash: cono de 120°, 4 m, ×0,8, y −30 % de velocidad a los enemigos (3 s; 30 s) |
+| Arqueros | Focused Volley: +25 % de daño perforante (8 s; 35 s) | Light Step: +25 % de velocidad (8 s; 40 s) |
+| Lanceros | Bristling Spears: +20 % de daño perforante y +15 % de defensa (8 s; 40 s) | Coordinated Charge: +20 % de velocidad y de daño perforante (5 s; 45 s) |
+
+Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
+
 ## 4. Efectos (`SkillEventType`)
 
 | Evento | Qué hace |
@@ -133,8 +169,24 @@ Aproximaciones:
   - condición (`None`, `HeroStill` o `HeroMovedRecently`, con sus segundos);
   - objetivo (propio, escuadra, aliados en radio, objetivo del golpe o enemigos en radio);
   - modificador.
+- **Condiciones ricas (L2-15):** se combinan con Y con la de movimiento. Sus valores por defecto significan "no importa",
+  así que los assets anteriores no cambian:
+  - `chance`: probabilidad entre 0 y 1 (0 = siempre). La tirada es sembrada por tick, héroe, objetivo y perk (L1-05).
+  - `targetKind`: el objetivo es un héroe o un soldado.
+  - `targetSquadTypes`: el soldado es de alguna de estas clases.
+  - `targetHasEffect` y `selfHasEffect`: triestados (no importa, debe, no debe) sobre "tiene un efecto temporal activo en
+    `effectStat`" (fuente `Effect`).
+  - `squadAliveMin` y `squadAliveMax`: fracción de soldados vivos de su escuadra (un máximo de 0 = sin límite).
+
+  En las auras, lo del héroe se mira una vez y lo del objetivo filtra cada objetivo. Lógica pura en `PerkConditions`; el
+  contexto lo reúne `PerkContext`. Ningún perk usa aún las condiciones nuevas (H14).
 - **Selección:** `PerkLoadout` toma del loadout activo (`HeroData.loadouts[].perkIDs`) hasta 5 pasivos y 2 activos, entre
   los perks de la clase. Los héroes remotos y la IA no tienen perks de loadout.
+- **Panel del feudo (H5):** la tecla K abre `PerkSelectionPanel`. Es un prefab uGUI en `Resources/UI` que
+  `FullscreenPanelManager` instancia y registra, sin tocar la escena. Lista los perks de la clase que el héroe tiene
+  desbloqueados (`isUnlockedByDefault` o `HeroData.unlockedPerks`) y muestra los contadores 5 + 2. Cada botón añade o
+  quita el perk en `perkIDs` del loadout activo (lo crea si no hay ninguno) y guarda al momento. Reglas en
+  `PerkSelection`. El árbol de talentos y sus puntos, más adelante.
 - **Movimiento:** `HeroMotionSystem` mide cuánto lleva quieto el héroe y desde cuándo no se mueve.
 - **Auras:** `PerkAuraSystem` aplica los efectos `Always`. Mientras se cumple la condición, refresca cada 0,25 s un
   modificador que dura el doble (fuente `Perk`). Así sigue a la escuadra y se apaga solo.
@@ -156,7 +208,8 @@ Aproximaciones:
 ## 6. HUD
 
 `UIBattleDataSystem` copia en `UIHeroBattleDataComponent.skillCooldown` la fracción de enfriamiento de Q, E, R y F.
-`HUDController` la pinta en sus cuatro huecos. Los perks activos aún no tienen hueco en el HUD.
+`HUDController` la pinta en sus cuatro huecos. Los perks activos y las habilidades de escuadra aún no tienen hueco en el
+HUD (H6, H10).
 
 ## 7. Archivos
 
@@ -169,3 +222,27 @@ Aproximaciones:
 | `Skills/SkillEffect.System.cs`, `SkillArea.cs`, `HeroAIDash.System.cs` | Efectos |
 | `Skills/Cooldown.cs` | Grupos de enfriamiento y `CooldownScaleComponent` |
 | `Perks/PerkTypes.cs`, `PerkLoadout.cs`, `HeroMotion.System.cs`, `PerkAura.System.cs`, `PerkOnHit.System.cs` | Perks |
+| `Perks/PerkContext.cs` | Contexto de las condiciones ricas (L2-15) |
+| `Perks/PerkSelection.cs`, `UI/Perks/PerkSelectionPanelController.cs`, `PerkSelectionRow.cs` | Elección de perks en el feudo (H5) |
+| `Squads/AbilityData.cs`, `Squads/SquadDefinitionBaker.cs`, `Squads/Systems/UnitStatScaling.System.cs` | Habilidades de escuadra: datos, horneado y desbloqueo (L2-9) |
+| `Hero/AI/HeroAISkills.cs`, `Hero/AI/Systems/HeroAISkill.System.cs` | La IA usa habilidades y elige aliado (H1, L4-08) |
+
+## 8. IA (H1, L4-08)
+
+- **Cuándo piensa:** `HeroAISkillSystem` corre en cada pensamiento del héroe (`AIThinkClock`), después del
+  comportamiento (Rusher o Balanced) y antes de `HeroSkillRequestSystem`. Añade a `HeroAIDecision` dos cosas: la
+  habilidad de clase que lanzar (`useSkill`, `skillSlot`) y la habilidad de escuadra (`useSquadSkill`,
+  `squadSkillSlot`). La petición pasa por la misma puerta que la del jugador.
+- **Qué mira:** solo habilidades que la puerta dejaría pasar ahora (enfriamiento y aguante), en el orden F, R, E, Q.
+- **Para qué sirve cada habilidad** (`HeroAISkills.PurposeOf`, según sus eventos):
+  - ofensiva (daño en área o efecto a enemigos): con un héroe enemigo o `minEnemyUnits` soldados a su alcance;
+  - sobre sí mismo o su escuadra: mientras combate;
+  - sobre aliados en radio: cuando el aliado elegido está a su alcance y le falta al menos `supportMinMissingHealth` de
+    vida.
+- **Aliado (L4-08):** se puntúa cada aliado dentro de `allySearchRadius` por cercanía, vida perdida y si es héroe.
+  El elegido (`HeroAISupportTarget`) gana un bonus de `allyHysteresis`: otro tiene que superarlo claramente para quitarle
+  el puesto.
+- **Escuadra:** mientras su escuadra combate, la IA pide la primera habilidad de escuadra lista.
+- **Ajustes:** `SquadSpawnConfigAuthoring.heroAISkills`.
+- **Pendiente:** acercarse al aliado elegido, apuntar el cono hacia el grupo de enemigos y elegir las habilidades de
+  escuadra según su propósito (H12).
