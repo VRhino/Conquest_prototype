@@ -25,6 +25,9 @@ public partial class HeroInputSystem : SystemBase
         bool skill3 = false;
         bool perk1 = false;
         bool perk2 = false;
+        bool squad1 = false;
+        bool squad2 = false;
+        bool squad3 = false;
         bool ultimate = false;
         bool attack = false;
         bool interact = false;
@@ -42,6 +45,9 @@ public partial class HeroInputSystem : SystemBase
             ultimate = keyboard.fKey.isPressed;
             perk1 = keyboard.digit1Key.isPressed;
             perk2 = keyboard.digit2Key.isPressed;
+            squad1 = keyboard.digit3Key.isPressed;
+            squad2 = keyboard.digit4Key.isPressed;
+            squad3 = keyboard.digit5Key.isPressed;
             interact = keyboard.gKey.wasPressedThisFrame; // F is the ultimate (GDD); interacting moved to G.
         }
 
@@ -64,6 +70,9 @@ public partial class HeroInputSystem : SystemBase
             input.ValueRW.UseSkill3 = skill3;
             input.ValueRW.UsePerk1 = perk1;
             input.ValueRW.UsePerk2 = perk2;
+            input.ValueRW.UseSquadAbility1 = squad1;
+            input.ValueRW.UseSquadAbility2 = squad2;
+            input.ValueRW.UseSquadAbility3 = squad3;
             input.ValueRW.UseUltimate = ultimate;
             input.ValueRW.IsAttackPressed = attack;
 

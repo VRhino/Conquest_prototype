@@ -107,6 +107,12 @@ public partial class SquadSpawningSystem : SystemBase
                 var abilityTarget = ecb.AddBuffer<AbilityByLevelElement>(squad);
                 foreach (var ability in abilitySource) abilityTarget.Add(ability);
             }
+            // The squad launches its own abilities (L2-9); UnitStatScalingSystem adds each one as it unlocks.
+            ecb.AddComponent<SkillRequestComponent>(squad);
+            ecb.SetComponentEnabled<SkillRequestComponent>(squad, false);
+            ecb.AddComponent<SkillInstanceComponent>(squad);
+            ecb.AddBuffer<HeroSkillElement>(squad);
+            ecb.AddBuffer<CooldownGroupElement>(squad);
             // Formation library is carried by SquadDataComponent and SquadDefinitionComponent.
             ecb.AddComponent(squad, new SquadProgressComponent
             {

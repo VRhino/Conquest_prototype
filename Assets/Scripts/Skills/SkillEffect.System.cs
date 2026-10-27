@@ -72,11 +72,21 @@ public partial class SkillEffectSystem : SystemBase
         targets.Dispose();
     }
 
+    /// <summary>The caster's damage profile: its own (hero) or its squad's shared one (squad ability, L2-9).</summary>
+    bool TryGetProfile(Entity caster, out DamageProfileComponent profile)
+    {
+        profile = default;
+        Entity source = EntityManager.HasComponent<SquadDamageProfileReference>(caster)
+            ? EntityManager.GetComponentData<SquadDamageProfileReference>(caster).Value : caster;
+        if (!EntityManager.Exists(source) || !EntityManager.HasComponent<DamageProfileComponent>(source)) return false;
+        profile = EntityManager.GetComponentData<DamageProfileComponent>(source);
+        return true;
+    }
+
     void DealAreaDamage(in SkillEffectRequestComponent r, NativeArray<Entity> bodies, NativeArray<LocalTransform> positions,
         NativeArray<TeamComponent> teams)
     {
-        if (!EntityManager.HasComponent<DamageProfileComponent>(r.caster)) return;
-        var profile = EntityManager.GetComponentData<DamageProfileComponent>(r.caster);
+        if (!TryGetProfile(r.caster, out var profile)) return;
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
         for (int i = 0; i < bodies.Length; i++)
         {
@@ -103,14 +113,18 @@ public partial class SkillEffectSystem : SystemBase
     void SelectTargets(in SkillEffectRequestComponent r, NativeArray<Entity> bodies, NativeArray<LocalTransform> positions,
         NativeArray<TeamComponent> teams, NativeList<Entity> targets)
     {
+        // A squad caster (L2-9) is not a body: "self" and "own squad" are its units, and it is not added to its allies.
+        bool squadCaster = EntityManager.HasBuffer<SquadUnitElement>(r.caster);
         switch (r.effect.target)
         {
-            case SkillTarget.Self:
+            case SkillTarget.Self when !squadCaster:
                 targets.Add(r.caster);
                 break;
+            case SkillTarget.Self:
             case SkillTarget.OwnSquad:
-                if (!EntityManager.HasComponent<HeroSquadReference>(r.caster)) break;
-                var squad = EntityManager.GetComponentData<HeroSquadReference>(r.caster).squad;
+                var squad = squadCaster ? r.caster
+                    : EntityManager.HasComponent<HeroSquadReference>(r.caster) ? EntityManager.GetComponentData<HeroSquadReference>(r.caster).squad
+                    : Entity.Null;
                 if (!EntityManager.Exists(squad) || !EntityManager.HasBuffer<SquadUnitElement>(squad)) break;
                 foreach (var unit in EntityManager.GetBuffer<SquadUnitElement>(squad))
                     if (EntityManager.Exists(unit.Value)) targets.Add(unit.Value);
@@ -124,7 +138,7 @@ public partial class SkillEffectSystem : SystemBase
                     if ((teams[i].value == r.team) != allies) continue;
                     if (SkillArea.Contains(centre, r.forward, r.effect.radius, 0f, positions[i].Position)) targets.Add(bodies[i]);
                 }
-                if (allies && !targets.Contains(r.caster)) targets.Add(r.caster);
+                if (allies && !squadCaster && !targets.Contains(r.caster)) targets.Add(r.caster);
                 break;
         }
     }

@@ -57,6 +57,26 @@ public partial class UnitStatScalingSystem : SystemBase
                 if (entry.Value == ability) { exists = true; break; }
             if (!exists) unlocked.Add(new UnlockedAbilityElement { Value = ability });
         }
+        AddUnlockedSkills(squad);
+    }
+
+    /// <summary>Makes each unlocked ability launchable by the squad (L2-9): one skill per slot, added once.</summary>
+    void AddUnlockedSkills(Entity squad)
+    {
+        if (!EntityManager.HasBuffer<HeroSkillElement>(squad)) return;
+        var unlocked = EntityManager.GetBuffer<UnlockedAbilityElement>(squad, true);
+        var skills = EntityManager.GetBuffer<HeroSkillElement>(squad);
+        foreach (var entry in unlocked)
+        {
+            if (!EntityManager.HasComponent<SquadAbilityDefinitionComponent>(entry.Value)) continue;
+            var definition = EntityManager.GetComponentData<SquadAbilityDefinitionComponent>(entry.Value);
+            if (!definition.skill.IsCreated) continue;
+            bool present = false;
+            foreach (var skill in skills)
+                if (skill.slot == definition.slot) { present = true; break; }
+            if (!present)
+                skills.Add(new HeroSkillElement { slot = definition.slot, skillId = definition.skill.Value.id, skill = definition.skill });
+        }
     }
 }
 

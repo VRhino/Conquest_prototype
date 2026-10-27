@@ -82,6 +82,7 @@ namespace Conquest.SettlementPreview
             {
                 var value = input.ValueRO;
                 value.IsAttackPressed = false; value.UseSkill1 = false; value.UseSkill2 = false; value.UseSkill3 = false; value.UseUltimate = false; value.UsePerk1 = false; value.UsePerk2 = false;
+                value.UseSquadAbility1 = false; value.UseSquadAbility2 = false; value.UseSquadAbility3 = false;
                 if (!SettlementWalkMode.Instance || !SettlementWalkMode.Instance.Ready || SettlementWalkMode.Instance.PointerFree) { value.MoveInput = float2.zero; value.IsSprintPressed = false; }
                 input.ValueRW = value;
                 if (EntityManager.HasComponent<PlayerInteractionComponent>(entity))

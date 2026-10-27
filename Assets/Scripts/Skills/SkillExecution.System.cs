@@ -12,7 +12,8 @@ using Unity.Transforms;
 /// (a stun) and an <see cref="EndSkillsRequestComponent"/> end the current and the parked skill.
 /// Keeps <see cref="HeroCombatComponent.isAttacking"/>, <see cref="HeroCombatComponent.hitboxFired"/>, the attack
 /// animation trigger and <see cref="WeaponHitboxActiveTag"/> up to date for stamina, visuals and melee contacts.
-/// Replaces HeroAttackSystem and its duplicated player/AI paths.
+/// Replaces HeroAttackSystem and its duplicated player/AI paths. Squads run their abilities here too, with the same gate
+/// and timeline and cooldown groups of their own (L2-9).
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroSkillRequestSystem))]
@@ -104,9 +105,124 @@ public partial class SkillExecutionSystem : SystemBase
             PublishState(entity, inst, ref c);
         }
 
+        UpdateSquads(battle, dt, now);
+
         foreach (var request in _effects)
             EntityManager.SetComponentData(EntityManager.CreateEntity(typeof(SkillEffectRequestComponent)), request);
         _effects.Clear();
+    }
+
+    /// <summary>
+    /// Squads launch their abilities through the same gate and timeline (L2-9; ref.: same lifecycle as the hero, cooldown
+    /// per squad). A squad is alive while one of its units is; it has no stamina, no weapon hitbox and nothing to park.
+    /// Its effects come from the centre of its living units, facing where its anchor faces.
+    /// </summary>
+    void UpdateSquads(bool battle, float dt, double now)
+    {
+        foreach (var (skills, instance, groups, units, entity) in SystemAPI
+                     .Query<DynamicBuffer<HeroSkillElement>, RefRW<SkillInstanceComponent>, DynamicBuffer<CooldownGroupElement>,
+                         DynamicBuffer<SquadUnitElement>>()
+                     .WithAll<SkillRequestComponent>()
+                     .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)
+                     .WithEntityAccess())
+        {
+            ref var inst = ref instance.ValueRW;
+            bool requested = SystemAPI.IsComponentEnabled<SkillRequestComponent>(entity);
+            if (requested) SystemAPI.SetComponentEnabled<SkillRequestComponent>(entity, false);
+            bool alive = SquadCentre(units, out float3 centre);
+            if (!battle || !alive)
+            {
+                if (inst.active) EndInstance(ref inst, skills, now);
+                continue;
+            }
+            var origin = new SquadOrigin { position = centre, forward = SquadForward(entity), team = TeamOf(entity) };
+
+            if (inst.active && Valid(skills, inst.skillIndex))
+            {
+                _fired.Clear();
+                ref var running = ref skills[inst.skillIndex].skill.Value;
+                bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired);
+                ushort held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
+                if (!ended && (held & SkillRequestComponent.Bit(skills[inst.skillIndex].slot)) == 0)
+                    ended = SkillTimeline.Release(ref running, ref inst, _fired);
+                QueueEffects(entity, origin, skills[inst.skillIndex].skillId);
+                if (ended) EndInstance(ref inst, skills, now);
+            }
+            else if (inst.active)
+            {
+                inst.active = false;
+            }
+
+            if (!requested) continue;
+            var slot = SystemAPI.GetComponent<SkillRequestComponent>(entity).slot;
+            int index = Find(skills, slot);
+            bool busy = inst.active && Valid(skills, inst.skillIndex);
+            var input = new SkillGateInput
+            {
+                inBattle = true,
+                alive = true,
+                hasSkill = index >= 0,
+                busy = busy,
+                currentInterruptible = !busy || SkillTimeline.Interruptible(ref skills[inst.skillIndex].skill.Value, inst),
+                cooldownReady = index >= 0 && CooldownUtility.IsReady(groups, skills[index].skill.Value.cooldownGroup, now),
+            };
+            if (SkillGate.Evaluate(input) != SkillRejection.None) continue;
+
+            ref var skill = ref skills[index].skill.Value;
+            if (busy) EndInstance(ref inst, skills, now);
+            float scale = SystemAPI.HasComponent<CooldownScaleComponent>(entity) ? SystemAPI.GetComponent<CooldownScaleComponent>(entity).value : 1f;
+            CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
+            _fired.Clear();
+            SkillTimeline.Start(ref skill, ref inst, index, _fired);
+            QueueEffects(entity, origin, skills[index].skillId);
+        }
+    }
+
+    struct SquadOrigin
+    {
+        public float3 position;
+        public float3 forward;
+        public Team team;
+    }
+
+    /// <summary>Centre of the squad's living units; false when none is left.</summary>
+    bool SquadCentre(DynamicBuffer<SquadUnitElement> units, out float3 centre)
+    {
+        centre = float3.zero;
+        int alive = 0;
+        foreach (var unit in units)
+        {
+            if (!SystemAPI.Exists(unit.Value) || SystemAPI.HasComponent<IsDeadComponent>(unit.Value)
+                || !SystemAPI.HasComponent<LocalTransform>(unit.Value)) continue;
+            centre += SystemAPI.GetComponent<LocalTransform>(unit.Value).Position;
+            alive++;
+        }
+        if (alive == 0) return false;
+        centre /= alive;
+        return true;
+    }
+
+    float3 SquadForward(Entity squad)
+    {
+        quaternion rotation = SystemAPI.HasComponent<SquadFormationAnchorComponent>(squad)
+            ? SystemAPI.GetComponent<SquadFormationAnchorComponent>(squad).rotation
+            : SystemAPI.HasComponent<LocalTransform>(squad) ? SystemAPI.GetComponent<LocalTransform>(squad).Rotation : quaternion.identity;
+        float3 forward = math.mul(rotation, new float3(0f, 0f, 1f));
+        forward.y = 0f;
+        return math.normalizesafe(forward, new float3(0f, 0f, 1f));
+    }
+
+    Team TeamOf(Entity entity) => SystemAPI.HasComponent<TeamComponent>(entity) ? SystemAPI.GetComponent<TeamComponent>(entity).value : Team.None;
+
+    /// <summary>A squad only has effect events: animation and hitbox events belong to a hero's weapon.</summary>
+    void QueueEffects(Entity squad, in SquadOrigin origin, int skillId)
+    {
+        foreach (var e in _fired)
+            if (e.type == SkillEventType.AreaDamage || e.type == SkillEventType.ApplyModifier || e.type == SkillEventType.AbsorbShield)
+                _effects.Add(new SkillEffectRequestComponent
+                {
+                    caster = squad, skillId = skillId, effect = e, origin = origin.position, forward = origin.forward, team = origin.team,
+                });
     }
 
     SkillRejection TryLaunch(Entity entity, SkillSlot slot, DynamicBuffer<HeroSkillElement> skills, ref SkillInstanceComponent inst,
@@ -276,13 +392,18 @@ public partial class SkillExecutionSystem : SystemBase
 
     static void End(ref SkillInstanceComponent inst, ref HeroCombatComponent combat, DynamicBuffer<HeroSkillElement> skills, double now)
     {
+        EndInstance(ref inst, skills, now);
+        combat.hitboxFired = false;
+    }
+
+    static void EndInstance(ref SkillInstanceComponent inst, DynamicBuffer<HeroSkillElement> skills, double now)
+    {
         if (Valid(skills, inst.skillIndex)) inst.lastSkillId = skills[inst.skillIndex].skillId;
         inst.lastEndedAt = now;
         inst.active = false;
         inst.hitboxOpen = false;
         inst.phase = 0;
         inst.phaseTime = 0f;
-        combat.hitboxFired = false;
     }
 
     void PublishState(Entity entity, in SkillInstanceComponent inst, ref HeroCombatComponent combat)

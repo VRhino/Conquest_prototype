@@ -29,6 +29,10 @@ public struct HeroInputComponent : IComponentData
     /// <summary>True while 1 / 2 are held: the two active perks of the loadout (L7-4).</summary>
     public bool UsePerk1;
     public bool UsePerk2;
+    /// <summary>True while 3 / 4 / 5 are held: the abilities of the active squad (L2-9, GDD 12.3; 1 and 2 are the perks).</summary>
+    public bool UseSquadAbility1;
+    public bool UseSquadAbility2;
+    public bool UseSquadAbility3;
 
     /// <summary>True when walk toggle key is pressed (for animation system).</summary>
     public bool IsWalkTogglePressed;
