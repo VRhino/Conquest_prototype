@@ -416,3 +416,7 @@
   heredoc con comillas y caracteres no ASCII se cortó sin aviso y el fichero no llegó a existir.
 - Lo que la IA decide en un pensamiento tiene que escribirse después de que el comportamiento escriba la decisión
   entera: Rusher y Balanced hacen `new HeroAIDecision()` cada frame y borrarían cualquier campo escrito antes.
+- Un MonoBehaviour que guarda el `World` o el `EntityManager` tiene que comprobar `World.IsCreated` en cada uso, y esa
+  comprobación debe cortar las siguientes. En `UnitAnimationAdapter.IsValidSetup` se añadió `IsCreated` a `worldOk`,
+  pero `existsOk` no dependía de `worldOk`, así que `Exists` se seguía llamando con el mundo destruido. La pila de la
+  segunda corrida (línea 155 en vez de 154) lo delató.

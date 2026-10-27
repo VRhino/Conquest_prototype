@@ -148,9 +148,10 @@ namespace ConquestTactics.Animation
         
         private bool IsValidSetup()
         {
-            bool worldOk = _world != null;
+            // The visual can outlive its world for a frame (scene unload, test teardown): never touch a disposed one.
+            bool worldOk = _world != null && _world.IsCreated;
             bool entityManagerOk = _entityManager != null;
-            bool entityOk = _unitEntity != Entity.Null;
+            bool entityOk = worldOk && _unitEntity != Entity.Null;
             bool existsOk = entityOk && _entityManager.Exists(_unitEntity);
             bool hasComponentOk = existsOk && _entityManager.HasComponent<UnitAnimationMovementComponent>(_unitEntity);
 
