@@ -262,13 +262,9 @@ public partial class BattleSceneIntegrationTests
         var life = em.GetComponentData<HeroLifeComponent>(hero);
         life.respawnCooldown = hideDelay + 1f;
         em.SetComponentData(hero, life);
-        var localSync = UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
-            .Single(sync => sync.GetHeroEntity() == hero);
-        var presenter = localSync.GetComponent<HeroDeathVisualPresenter>();
-        Assert.That(presenter, Is.Not.Null, "The local hero visual must carry the death presenter.");
-        var renderers = localSync.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled).ToArray();
-        Assert.That(renderers, Is.Not.Empty);
-        var animator = localSync.GetComponentInChildren<Animator>(true);
+        var oldVisual = LocalHeroVisual();
+        Assert.That(oldVisual, Is.Not.Null);
+        var animator = oldVisual.GetComponentInChildren<Animator>(true);
         uint deathRevision = em.GetComponentData<HeroDeathPresentationComponent>(hero).deathRevision;
         uint revision = em.GetComponentData<HeroSpawnComponent>(hero).positionRevision;
         QueueLethalDamage(hero);
@@ -276,29 +272,40 @@ public partial class BattleSceneIntegrationTests
             5f, "Lethal damage did not mark the hero dead.");
         yield return Until(() => em.GetComponentData<HeroDeathPresentationComponent>(hero).deathRevision > deathRevision
             && animator.GetBool(AnimationHashes.IsDead), 2f, "The local Animator did not receive the death.");
-        Assert.That(presenter.IsHidden, Is.False, "The body must stay visible during the death animation.");
-        yield return Until(() => presenter.IsHidden, hideDelay + 2f, "The dead hero's visual was not hidden.");
-        Assert.That(renderers.All(r => !r.enabled), Is.True, "A renderer of the dead hero stayed visible.");
+        Assert.That(oldVisual.gameObject.activeInHierarchy, Is.True,
+            "The body must stay in the scene during the death animation.");
+        // Destroyed objects compare equal to null once Unity has released them.
+        yield return Until(() => oldVisual == null, hideDelay + 2f,
+            "The dead hero's visual was not removed from the hierarchy.");
+        Assert.That(em.HasComponent<HeroVisualInstance>(hero), Is.False);
+        Assert.That(LocalHeroVisual(), Is.Null, "A visual of the dead hero is still in the scene.");
         Assert.That(em.GetComponentData<HeroLifeComponent>(hero).isAlive, Is.False);
         yield return Until(() => em.GetComponentData<HeroLifeComponent>(hero).isAlive
             && em.GetComponentData<HeroSpawnComponent>(hero).positionRevision > revision,
             10f, "Local hero did not publish a respawn pose.");
-        yield return Until(() => !presenter.IsHidden, 2f, "The respawned hero's visual was not shown again.");
+        yield return Until(() => LocalHeroVisual() != null && em.HasComponent<HeroVisualInstance>(hero), 3f,
+            "The respawned hero's visual was not created again.");
+        yield return null;
         yield return new WaitForFixedUpdate();
-        Assert.That(renderers.All(r => r.enabled), Is.True, "The respawned hero is missing renderers.");
-        Assert.That(animator.GetBool(AnimationHashes.IsDead), Is.False);
+        var newVisual = LocalHeroVisual();
+        Assert.That(newVisual.IsLocalHero, Is.True, "The rebuilt visual must take the local motor again.");
+        Assert.That(newVisual.GetComponentInChildren<Animator>(true).GetBool(AnimationHashes.IsDead), Is.False);
         Assert.That(em.HasComponent<IsDeadComponent>(hero), Is.False);
         var health = em.GetComponentData<HeroHealthComponent>(hero);
         Assert.That(health.currentHealth, Is.EqualTo(health.maxHealth));
         var spawn = em.GetComponentData<HeroSpawnComponent>(hero);
         Assert.That(math.distance(em.GetComponentData<LocalTransform>(hero).Position.xz,
             spawn.spawnPosition.xz), Is.LessThan(0.5f), "Motor did not consume the respawn pose.");
-        Assert.That(math.distance(((float3)localSync.transform.position).xz, spawn.spawnPosition.xz),
+        Assert.That(math.distance(((float3)newVisual.transform.position).xz, spawn.spawnPosition.xz),
             Is.LessThan(0.5f), "The visual reappeared away from the respawn pose.");
     }
 
+    EntityVisualSync LocalHeroVisual() =>
+        UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
+            .SingleOrDefault(sync => sync.GetHeroEntity() == hero);
+
     [UnityTest]
-    public IEnumerator BattleSceneRemoteHeroDeathAnimatesThenHidesTheBody()
+    public IEnumerator BattleSceneRemoteHeroDeathAnimatesThenRemovesTheBody()
     {
         Entity remote;
         using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroVisualInstance), typeof(NavMeshAgent)))
@@ -308,18 +315,19 @@ public partial class BattleSceneIntegrationTests
             remote = query.GetSingletonEntity();
         }
         var visual = em.GetComponentObject<NavMeshAgent>(remote).gameObject;
-        var presenter = visual.GetComponent<HeroDeathVisualPresenter>();
-        Assert.That(presenter, Is.Not.Null, "The remote hero visual must carry the death presenter.");
         var animator = visual.GetComponentInChildren<Animator>(true);
-        var renderers = visual.GetComponentsInChildren<Renderer>(true).Where(r => r.enabled).ToArray();
-        Assert.That(renderers, Is.Not.Empty);
 
         QueueLethalDamage(remote);
         yield return Until(() => em.GetComponentData<HeroDeathPresentationComponent>(remote).isDead
             && animator.GetBool(AnimationHashes.IsDead), 5f, "The remote Animator did not receive the death.");
-        yield return Until(() => presenter.IsHidden, HeroDeathHideDelay() + 2f,
-            "The dead remote hero's visual was not hidden.");
-        Assert.That(renderers.All(r => !r.enabled), Is.True, "A renderer of the dead remote hero stayed visible.");
+        yield return Until(() => visual == null, HeroDeathHideDelay() + 2f,
+            "The dead remote hero's visual was not removed from the hierarchy.");
+        Assert.That(em.HasComponent<HeroVisualInstance>(remote), Is.False);
+        Assert.That(em.HasComponent<NavMeshAgent>(remote), Is.False,
+            "The dead remote hero must not keep a NavMeshAgent reference.");
+        // Remote heroes do not respawn: the body must not come back.
+        yield return new WaitForSeconds(1f);
+        Assert.That(em.HasComponent<HeroVisualInstance>(remote), Is.False);
     }
 
     float HeroDeathHideDelay()

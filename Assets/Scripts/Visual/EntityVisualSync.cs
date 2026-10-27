@@ -351,14 +351,6 @@ namespace ConquestTactics.Visual
                 equipmentVisual.Bind(this);
             }
 
-            if (_entityManager.HasComponent<HeroDeathPresentationComponent>(_heroEntity))
-            {
-                var deathPresenter = GetComponent<HeroDeathVisualPresenter>();
-                if (deathPresenter == null)
-                    deathPresenter = gameObject.AddComponent<HeroDeathVisualPresenter>();
-                deathPresenter.Bind(_world, _heroEntity);
-            }
-
             var motor = GetComponent<LocalHeroCharacterMotor>();
             var remoteAnimation = GetComponent<RemoteHeroAnimationDriver>();
             if (isLocal)

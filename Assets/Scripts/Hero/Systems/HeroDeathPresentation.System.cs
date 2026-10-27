@@ -3,9 +3,11 @@ using Unity.Entities;
 /// <summary>
 /// Single writer of HeroDeathPresentationComponent: counts deaths for the death animation, hides the
 /// visual once the configured delay has passed and shows it again after the respawn pose is published.
+/// HeroVisualInstantiationSystem reads it in the same frame to remove or rebuild the visual.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroSpawnSystem))]
+[UpdateBefore(typeof(HeroVisualInstantiationSystem))]
 public partial class HeroDeathPresentationSystem : SystemBase
 {
     protected override void OnUpdate()

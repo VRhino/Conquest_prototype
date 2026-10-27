@@ -440,3 +440,15 @@
 - Para añadir el estado al Animator se usó `eval_file` con `AnimatorController.AddParameter`, `AddState` (sin clip,
   `writeDefaultValues = false`), `AddAnyStateTransition` y `AddExitTransition`. Unity reordena `m_StateMachineTransitions`
   al guardar. El diff se ve grande, pero solo cambia el orden.
+- Ocultar los renderers no basta: un cuerpo invisible conserva su `CharacterController`, sus hitboxes y su
+  `NavMeshAgent`, y los demás siguen chocando con él o esquivándolo (corrección del usuario). El visual de un héroe muerto
+  se saca de la jerarquía y se vuelve a crear al reaparecer. Lo hace `HeroVisualInstantiationSystem`, que ya era dueño de
+  su ciclo de vida. Hay que quitar también las referencias que la entidad guardaba del objeto (`HeroVisualInstance`,
+  `NavMeshAgent`, `NavAgentComponent`) y la marca `HeroVisualAppearanceApplied`, para que el visual nuevo reciba la
+  apariencia.
+- Al ampliar el `RequireForUpdate` de un sistema, la consulta nueva tiene que ser tan estrecha como el caso que cubre.
+  Con "héroes con visual", `HeroVisualInstantiationSystem` pasó a correr todos los frames. Con "héroes muertos con
+  visual" (`IsDeadComponent`) vuelve a no correr en frames normales.
+- Los tests de `BattleSceneIntegrationTests` con plazo de tiempo real (W mueve 3 m en 5 s, velocidad física, tecla 3
+  lanza la habilidad) fallan por milisegundos cuando el editor va justo. Uno que falla así sin depender del cambio
+  primero se pasa solo y luego en la clase entera; si ya fallaba antes que el test nuevo, el orden no es la causa.

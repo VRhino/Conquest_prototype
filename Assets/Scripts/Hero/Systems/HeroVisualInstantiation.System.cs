@@ -10,6 +10,8 @@ using System.Collections.Generic;
 /// Instancia el GameObject visual para cada entidad héroe recién spawneada.
 /// Configura EntityVisualSync, weapon hitbox y NavMeshAgent.
 /// La apariencia de avatar y equipment la aplica HeroVisualAppearanceSystem.
+/// Cuando HeroDeathPresentationComponent pide ocultar un héroe muerto, destruye su visual (sin colisión
+/// ni agente en el campo) y lo vuelve a crear en la pose de reaparición.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroSpawnSystem))]
@@ -18,14 +20,20 @@ public partial class HeroVisualInstantiationSystem : SystemBase
     private readonly List<(Entity entity, NavMeshAgent agent)> _pendingNavAgents = new();
     protected override void OnCreate()
     {
-        RequireForUpdate(GetEntityQuery(ComponentType.ReadOnly<HeroSpawnComponent>(),
-            ComponentType.ReadOnly<LocalTransform>(), ComponentType.ReadOnly<TeamComponent>(),
-            ComponentType.Exclude<HeroVisualInstance>(), ComponentType.Exclude<IsDeadComponent>()));
+        RequireAnyForUpdate(
+            GetEntityQuery(ComponentType.ReadOnly<HeroSpawnComponent>(),
+                ComponentType.ReadOnly<LocalTransform>(), ComponentType.ReadOnly<TeamComponent>(),
+                ComponentType.Exclude<HeroVisualInstance>(), ComponentType.Exclude<IsDeadComponent>()),
+            // Only dead heroes that still have a body: alive frames keep the system idle.
+            GetEntityQuery(ComponentType.ReadOnly<HeroVisualInstance>(),
+                ComponentType.ReadOnly<HeroDeathPresentationComponent>(),
+                ComponentType.ReadOnly<IsDeadComponent>()));
     }
 
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
+        ReleaseHiddenVisuals(ecb);
         var pendingNavAgents = _pendingNavAgents;
         pendingNavAgents.Clear();
         float navSampleRadius = SystemAPI.HasSingleton<SquadSpawnConfigComponent>()
@@ -39,6 +47,8 @@ public partial class HeroVisualInstantiationSystem : SystemBase
                           .WithEntityAccess())
         {
             if (!spawn.ValueRO.hasSpawned) continue;
+            if (SystemAPI.HasComponent<HeroDeathPresentationComponent>(entity)
+                && SystemAPI.GetComponent<HeroDeathPresentationComponent>(entity).visualHidden) continue;
 
             bool isLocal = SystemAPI.HasComponent<IsLocalPlayer>(entity);
             string baseId = spawn.ValueRO.visualPrefabId.ToString();
@@ -57,6 +67,33 @@ public partial class HeroVisualInstantiationSystem : SystemBase
             // Remote heroes keep their visual/NavMesh sync in EntityVisualSync.
             // Local heroes publish through LocalHeroCharacterMotor instead.
             EntityManager.AddComponentData(entity, new NavAgentComponent { syncPositionFromNavMesh = false });
+        }
+    }
+
+    /// <summary>
+    /// Removes the visual of every hero whose death presentation asks to hide it, so the body leaves
+    /// the scene with its collider, hitboxes and NavMeshAgent. The creation pass rebuilds it after the respawn.
+    /// </summary>
+    private void ReleaseHiddenVisuals(EntityCommandBuffer ecb)
+    {
+        foreach (var (presentation, entity) in
+                 SystemAPI.Query<RefRO<HeroDeathPresentationComponent>>()
+                          .WithAll<HeroVisualInstance, IsDeadComponent>()
+                          .WithEntityAccess())
+        {
+            if (!presentation.ValueRO.visualHidden) continue;
+
+            if (VisualSyncUtility.TryGetVisual(World, entity, out var visual) && visual != null)
+            {
+                // Inactive at once so its collider and agent stop acting this frame; destroyed at frame end.
+                visual.gameObject.SetActive(false);
+                Object.Destroy(visual.gameObject);
+            }
+            ecb.RemoveComponent<HeroVisualInstance>(entity);
+            ecb.RemoveComponent<HeroVisualAppearanceApplied>(entity);
+            ecb.RemoveComponent<NavAgentComponent>(entity);
+            if (EntityManager.HasComponent<NavMeshAgent>(entity))
+                ecb.RemoveComponent<NavMeshAgent>(entity);
         }
     }
 
