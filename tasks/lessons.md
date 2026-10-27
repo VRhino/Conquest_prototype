@@ -452,3 +452,5 @@
 - Los tests de `BattleSceneIntegrationTests` con plazo de tiempo real (W mueve 3 m en 5 s, velocidad física, tecla 3
   lanza la habilidad) fallan por milisegundos cuando el editor va justo. Uno que falla así sin depender del cambio
   primero se pasa solo y luego en la clase entera; si ya fallaba antes que el test nuevo, el orden no es la causa.
+- `node ut.js test playmode BattleSceneIntegrationTests x` incluye los tests explícitos (perfiles de rendimiento, 26 en
+  total) y varios fallan por su cuenta. Para comparar con el 11/11 de referencia, se lanza con `-` (sin explícitos).
