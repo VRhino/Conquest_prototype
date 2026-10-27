@@ -63,3 +63,12 @@ colisión."
 - [x] P2, opción (a) del usuario: fuera la ruta horneada (prefab de clase, authorings, componente en `HeroEntity_Pure`,
       componentes sin lector y `HeroAttributeSystem`, con lo que P4 también queda cerrado). `HeroClassManager`, única fuente.
 - [x] EditMode en verde (355 de 355) y commit.
+
+# Barra de habilidades (2026-10-27): H6 + H10
+
+- [x] `UIHeroBattleDataComponent.skills`: un hueco por `SkillSlot` (Q..Squad3) con skill, fracción y segundos; lo
+      escribe `UIBattleDataSystem` desde el héroe local y su escuadra activa.
+- [x] `SkillBarController` + `SkillBarSlot` + `SkillIconCatalog`; prefab `Resources/UI/SkillBar` creado con `eval_file`;
+      `HUDController` lo crea (sin tocar `BattleScene`) y quita sus cuatro huecos sin conectar.
+- [x] Tests: `SkillBarDataTests` (EditMode) y `BattleSceneShowsTheSkillBarWithTheHeroSkills` (PlayMode).
+- [x] EditMode 357/357; BattleSceneIntegrationTests 12/12. Sin revisar a ojo en partida.

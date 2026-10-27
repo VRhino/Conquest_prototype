@@ -13,12 +13,12 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | [Pila_Modificadores.md](./Pila_Modificadores.md) | Stats de objeto con `StatId` (L7-6) y lo que dejó abierto la pila de modificadores | `tasks/todo.md` (Fase 1 de `Aprendizajes_Referencia.md`), 2026-10-21 |
 | [Muerte_Heroe.md](./Muerte_Heroe.md) | Animación de muerte, retirar el cuerpo y reaparecer | `tasks/todo.md` (presentación de la muerte del héroe), 2026-10-27 |
 
-## Estado general (2026-10-27, tras el bloque 4: H7, H8, H9, H13 y P2 con P4 hechos)
+## Estado general (2026-10-27, tras el bloque 4 y la barra de habilidades: H6-H10, H13, P2 y P4 hechos)
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
 |---|---|---|---|
 | Formaciones_y_Posturas.md | F1, F4, F6-F9, F11-F13, F16, F17 (F3 parcial) | F3 (clips de ShieldWall y Testudo) | F1, F17, F9 (C16, para M2) |
 | Movimiento.md | M2, M4, M10, M12, M15, M16 | M3 (paquete de VFX) | M2 (solapes en la melé: no vienen del reparto; siguiente, C16) |
-| Habilidades_Perks.md | H3, H4, H6, H10-H12, H14 (H5: falta el árbol) | H2 (animaciones) | H10 (habilidades de escuadra en el HUD), H11 (teclas, decisión del usuario) |
+| Habilidades_Perks.md | H3, H4, H11, H12, H14 (H5: falta el árbol; H10: lanzar con clic) | H2 (animaciones) | H11 (teclas, decisión del usuario) |
 | Pila_Modificadores.md | P1, P3, P5 | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 | D1 (clip de muerte) | D1 en cuanto haya clip; D5 (medir el coste de recrear el visual) |
 

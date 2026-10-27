@@ -11,11 +11,11 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H3 | Proyectil de las habilidades del arco del héroe | Media | Pendiente |
 | H4 | Efectos que faltan: silencio, zonas persistentes, daño por contacto | Baja | Pendiente |
 | H5 | Selección de perks (árbol de talentos y su UI) | Media | **Hecho** el panel (2026-10-27); el árbol y sus puntos, pendientes |
-| H6 | Huecos de los perks activos en el HUD | Baja | Pendiente |
+| H6 | Huecos de los perks activos en el HUD | Baja | **Hecho** (2026-10-27, barra de habilidades) |
 | H7 | Enfriamiento del cambio de escuadra como grupo | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H8 | Nombres de los perks activos dicen "(Passive)" | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H9 | `HUDController.OnDestroy` lanza al salir de Play | Baja | **Hecho** (2026-10-27, bloque 4) |
-| H10 | Habilidades de escuadra en el HUD | Media | Pendiente |
+| H10 | Habilidades de escuadra en el HUD | Media | **Hecho** (2026-10-27, se ven; lanzarlas con clic, pendiente) |
 | H11 | Teclas de las habilidades de escuadra (GDD 1/2/3, hoy 3/4/5) | Media | Pendiente (decisión del usuario) |
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
@@ -78,6 +78,11 @@ código ya lee `HeroData.loadouts[].perkIDs`, pero nada lo rellena: hoy ningún 
 (`unlockedPerks`). El árbol y sus puntos, después.
 
 ## H6. Perks activos en el HUD
+**Hecho (2026-10-27).** La barra de habilidades (`SkillBarController`, prefab en `Resources/UI/SkillBar`) muestra los
+nueve huecos con su icono y enfriamiento; ver `Docs/Mechanics/SkillsAndPerks.md` §6. Los cuatro huecos antiguos de
+`HUDController` no estaban conectados en ninguna escena y se quitaron. El enfriamiento del cambio de escuadra (H7) sigue
+viéndose solo en el panel del punto de suministro.
+
 `UIHeroBattleDataComponent.skillCooldown` solo lleva Q, E, R y F. Ampliarlo a los huecos 1 y 2 y añadir sus iconos.
 
 ## H7. Enfriamiento del cambio de escuadra
@@ -101,6 +106,9 @@ Al salir de Play, `HUDController.OnDestroy` libera consultas de un mundo ya dest
 pasaba antes de esta fase. Basta con comprobar que el mundo sigue creado antes de liberar.
 
 ## H10. Habilidades de escuadra en el HUD
+**Hecho en parte (2026-10-27).** Se ven en los huecos 3, 4 y 5 de la barra con su enfriamiento. Falta lanzarlas desde el
+HUD con el ratón (la barra no recibe clics) y el menú radial de `ALT` del GDD §12.3.
+
 El GDD (§4.6 y §12.3) pide lanzarlas desde el HUD y verlas con su enfriamiento. Hoy solo se lanzan con las teclas 3, 4
 y 5, y el HUD no las muestra. **Cómo abordarlo:**
 - llevar a `UIHeroBattleDataComponent` la fracción de enfriamiento de la escuadra activa

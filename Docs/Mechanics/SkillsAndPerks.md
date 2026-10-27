@@ -207,9 +207,14 @@ Aproximaciones:
 
 ## 6. HUD
 
-`UIBattleDataSystem` copia en `UIHeroBattleDataComponent.skillCooldown` la fracción de enfriamiento de Q, E, R y F.
-`HUDController` la pinta en sus cuatro huecos. Los perks activos y las habilidades de escuadra aún no tienen hueco en el
-HUD (H6, H10).
+`UIBattleDataSystem` escribe en `UIHeroBattleDataComponent.skills` un hueco por `SkillSlot`, de Q a `Squad3`: la habilidad
+(`skillId`, 0 si está vacío o sin desbloquear), la fracción de enfriamiento y los segundos que faltan. Q, E, R, F y los perks
+activos 1 y 2 salen del héroe local; 3, 4 y 5, de su escuadra activa (`IsLocalSquadActive`).
+
+`HUDController` crea la barra de habilidades desde `Resources/UI/SkillBar` (`SkillBarController`, H6 y H10), sin huecos en la
+escena: nueve huecos con icono, enfriamiento radial, segundos y tecla. Los huecos vacíos del héroe se atenúan y los de
+escuadra sin desbloquear se ocultan. Los iconos los busca `SkillIconCatalog` por el id del skill: habilidades y perks de la
+clase del héroe (`HeroClassManager`) y habilidades de todas las escuadras (`SquadDataService`).
 
 ## 7. Archivos
 
