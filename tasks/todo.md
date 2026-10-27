@@ -51,3 +51,15 @@ colisión."
 - [x] Tests de PlayMode: el local sale de la jerarquía y entra un visual nuevo, con motor local, en la pose de spawn;
       el remoto se retira sin agente y no vuelve.
 - [x] Docs: D2 y D3 hechos y D5 nuevo (coste de recrear) en `Docs/Por_Abordar/Muerte_Heroe.md`.
+
+# Bloque 4 (2026-10-27): H9, H8, P2, H7 + H13
+
+- [x] H9: `HUDController.OnDestroy` no libera consultas si el mundo ya no existe.
+- [x] H8: quitar "(Passive)" del `perkName` de los tres perks activos (assets LFS).
+- [x] H7: el cambio de escuadra usa el grupo `SquadSwapCooldown.Group` del `CooldownGroupElement` del héroe; fuera
+      `SquadSwapCooldownComponent` y `SquadSwapCooldownSystem`.
+- [x] H13: `InactiveSquadElement.cooldowns` guarda los grupos activos de la escuadra al retirarla (cambio o muerte del
+      dueño) y `SquadSpawningSystem` los restaura.
+- [ ] P2: **parado, decisión del usuario.** El prefab hornea una sola clase para todos los héroes; asignar un asset
+      daría a todos esos atributos. Opciones en `Docs/Por_Abordar/Pila_Modificadores.md` P2.
+- [x] EditMode en verde (355 de 355) y commit.

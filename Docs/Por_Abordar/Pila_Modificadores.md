@@ -47,6 +47,13 @@ se copian de la clase horneada.
 **Cómo abordarlo.** Asignar el asset correcto en el prefab (o una clase por héroe) y comprobar que `HeroAttributesComponent`
 y `HeroAbilityComponent` aparecen en batalla.
 
+**Revisión (2026-10-27, bloque 4).** Asignar un asset no basta: el prefab va en `HeroEntity_Pure`, el mismo para todos los
+héroes, y hornearía una sola clase. Todos, también los remotos y la IA de otra clase, tendrían sus atributos y
+`HeroAttributeSystem` los validaría contra límites ajenos. Además nada lee ya `HeroAbilityComponent` ni `ValidPerkElement`:
+habilidades y perks salen de `HeroClassManager`. **Decisión del usuario:** (a) quitar la ruta horneada (prefab, referencia
+y esos componentes) y dejar `HeroClassManager` como única fuente, o (b) hornear las cuatro clases y que
+`HeroInitializationSystem` elija la entidad por la clase del héroe.
+
 ## P3. Penetración de los héroes en batalla
 **Qué es.** `HeroCalculatedAttributes.Calculate` calcula penetración desde fuerza y destreza, pero nunca se aplicó: el perfil de
 daño del héroe se creaba sin ella. `HeroStatFormula` la deja fuera a propósito para no cambiar el balance.

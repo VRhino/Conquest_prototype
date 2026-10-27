@@ -12,13 +12,13 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H4 | Efectos que faltan: silencio, zonas persistentes, daño por contacto | Baja | Pendiente |
 | H5 | Selección de perks (árbol de talentos y su UI) | Media | **Hecho** el panel (2026-10-27); el árbol y sus puntos, pendientes |
 | H6 | Huecos de los perks activos en el HUD | Baja | Pendiente |
-| H7 | Enfriamiento del cambio de escuadra como grupo | Baja | Pendiente |
-| H8 | Nombres de los perks activos dicen "(Passive)" | Baja | Pendiente (dato) |
-| H9 | `HUDController.OnDestroy` lanza al salir de Play | Baja | Pendiente (anterior a la fase) |
+| H7 | Enfriamiento del cambio de escuadra como grupo | Baja | **Hecho** (2026-10-27, bloque 4) |
+| H8 | Nombres de los perks activos dicen "(Passive)" | Baja | **Hecho** (2026-10-27, bloque 4) |
+| H9 | `HUDController.OnDestroy` lanza al salir de Play | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H10 | Habilidades de escuadra en el HUD | Media | Pendiente |
 | H11 | Teclas de las habilidades de escuadra (GDD 1/2/3, hoy 3/4/5) | Media | Pendiente (decisión del usuario) |
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
-| H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | Pendiente |
+| H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H14 | Perks con las condiciones nuevas (L2-15) | Baja | Pendiente (datos) |
 
 Bloque 3 (2026-10-27, `tasks/todo.md`): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
@@ -81,14 +81,22 @@ código ya lee `HeroData.loadouts[].perkIDs`, pero nada lo rellena: hoy ningún 
 `UIHeroBattleDataComponent.skillCooldown` solo lleva Q, E, R y F. Ampliarlo a los huecos 1 y 2 y añadir sus iconos.
 
 ## H7. Enfriamiento del cambio de escuadra
+**Hecho (2026-10-27).** El cambio usa el grupo `SquadSwapCooldown.Group` (1000) del `CooldownGroupElement` del héroe,
+10 s sin escalar por `CooldownScale`. Se borraron `SquadSwapCooldownComponent` y `SquadSwapCooldownSystem`; `SquadSwapSystem`
+y `SupplyPointUIController` leen el grupo. Mostrarlo en el HUD va con H6/H10.
+
 `SquadSwapCooldownComponent` sigue con su propio temporizador por frame. Pasarlo a un `CooldownGroupElement` del héroe lo
 uniría con el resto (L2-5) y con la HUD.
 
 ## H8. Nombres de los perks activos
+**Hecho (2026-10-27).** Los tres assets ya no llevan "(Passive)" en `perkName`.
+
 Orden de Resistencia, Carga Coordinada y Flecha Marcadora tienen `isPassive = false` pero su `perkName` termina en
 "(Passive)". Es un dato de los assets.
 
 ## H9. `HUDController.OnDestroy` al salir de Play
+**Hecho (2026-10-27).** `OnDestroy` no libera nada si el mundo ya no está creado.
+
 Al salir de Play, `HUDController.OnDestroy` libera consultas de un mundo ya destruido y lanza `NullReferenceException`. Ya
 pasaba antes de esta fase. Basta con comprobar que el mundo sigue creado antes de liberar.
 
@@ -114,6 +122,9 @@ activos a otras teclas. Cambiarlo es tocar solo `HeroInputSystem` y la tabla de 
   fase actual no se puede interrumpir, lo reintenta en el siguiente pensamiento.
 
 ## H13. El enfriamiento de la escuadra se pierde al cambiarla
+**Hecho (2026-10-27).** `InactiveSquadElement.cooldowns` guarda los grupos aún activos (tiempo absoluto) al retirar la
+escuadra, por cambio o por muerte del dueño, y `SquadSpawningSystem` los restaura al sacarla de nuevo.
+
 Los grupos de enfriamiento viven en la entidad de la escuadra. Al cambiarla en un punto de suministro y volver a sacarla,
 la escuadra reaparece con los grupos vacíos. Si molesta en juego, guardar los grupos en `InactiveSquadElement` al
 retirarla y restaurarlos al aparecer, junto con H7.

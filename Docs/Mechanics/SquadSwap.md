@@ -68,7 +68,8 @@ Una vez que el channeling se completa exitosamente, se ejecuta la siguiente secu
    - Nuevo squad = activo (`SquadStateComponent.isActive = true`)
    - Viejo squad = inactivo (manejado por el estado `Retreating`)
 4. **Emisión de evento**: Se emite `SquadChangeEvent` con referencia al squad entrante y saliente.
-5. **Inicio de cooldown**: Timer de 10 segundos asociado al héroe.
+5. **Inicio de cooldown**: grupo de enfriamiento del héroe con fin absoluto a 10 s (sin sistema por frame). Los grupos de
+   las habilidades de la escuadra saliente se guardan en su `InactiveSquadElement` y vuelven con ella (H13).
 
 El spawn del nuevo squad y la transición a `Retreating` del viejo ocurren en el **mismo frame** para evitar estados intermedios sin squad.
 
@@ -204,7 +205,7 @@ Todos los archivos involucrados en la implementación del Squad Swap, organizado
 |---------|-----|
 | `Assets/Scripts/Squads/SquadSwapRequest.cs` | Solicitud de swap creada por input del jugador (squad seleccionado + zona) |
 | `Assets/Scripts/Squads/SquadSwapChanneling.Component.cs` | Timer de channeling (1s) y referencia al squad seleccionado |
-| `Assets/Scripts/Squads/SquadSwapCooldown.Component.cs` | Cooldown de 10s post-swap asociado al héroe |
+| `Assets/Scripts/Squads/SquadSwapCooldown.cs` | Cooldown de 10s post-swap: grupo `SquadSwapCooldown.Group` del `CooldownGroupElement` del héroe (H7) |
 | `Assets/Scripts/Squads/SquadSwapExecuteTag.cs` | Tag que marca al héroe para ejecutar el swap en el frame actual |
 | `Assets/Scripts/Squads/SquadChangeEvent.cs` | Evento emitido al completar un swap exitoso |
 | `Assets/Scripts/Squads/InactiveSquadElement.cs` | Buffer element que almacena squads inactivos disponibles para reinvocación |
@@ -227,7 +228,6 @@ Todos los archivos involucrados en la implementación del Squad Swap, organizado
 | `Assets/Scripts/Squads/Systems/SquadSpawning.System.cs` | Spawn del nuevo squad con conteo de unidades reducido si fue invocado previamente |
 | `Assets/Scripts/Squads/Systems/SquadFSM.System.cs` | Lockea estado `Retreating` para squads en retirada por swap |
 | `Assets/Scripts/Squads/Systems/RetreatLogic.System.cs` | Mueve squad en retirada, persiste estado de unidades, destruye entidades al finalizar |
-| `Assets/Scripts/Squads/Systems/SquadSwapCooldown.System.cs` | Tick del cooldown de 10s, remueve componente al expirar |
 
 ### UI y Setup
 

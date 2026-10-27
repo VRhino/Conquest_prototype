@@ -220,9 +220,6 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: rellena `SquadStatusComponent` de la escuadra del jugador local (unidades vivas / totales) para el HUD de batalla.
 - **Orden**: `[UpdateAfter(DamageCalculationSystem)]`
 
-### SquadSwapCooldownSystem
-- **Responsabilidad**: descuenta `SquadSwapCooldownComponent` en las entidades de héroe y lo quita al terminar. Ver `Docs/Mechanics/SquadSwap.md`.
-
 ### UnitOrientationInitializationSystem
 - **Responsabilidad**: añade el componente de orientación a las unidades de escuadra que no lo tengan configurado. Corre en `InitializationSystemGroup`.
 
