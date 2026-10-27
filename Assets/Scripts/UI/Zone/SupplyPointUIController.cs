@@ -323,7 +323,8 @@ public class SupplyPointUIController : MonoBehaviour
             _healingIndicator.SetActive(available);
 
         bool isChanneling = _em.HasComponent<SquadSwapChannelingComponent>(heroEnt);
-        bool onCooldown = _em.HasComponent<SquadSwapCooldownComponent>(heroEnt);
+        float cooldownLeft = SquadSwapCooldown.Remaining(_em, heroEnt, _em.World.Time.ElapsedTime);
+        bool onCooldown = cooldownLeft > 0f;
 
         // 4. Show "Press F" prompt when available and panel not open
         if (_interactPrompt != null)
@@ -369,10 +370,9 @@ public class SupplyPointUIController : MonoBehaviour
         {
             if (onCooldown)
             {
-                var cooldown = _em.GetComponentData<SquadSwapCooldownComponent>(heroEnt);
                 _cooldownIndicator.SetActive(true);
                 if (_cooldownText != null)
-                    _cooldownText.text = Mathf.CeilToInt(cooldown.remainingTime).ToString();
+                    _cooldownText.text = Mathf.CeilToInt(cooldownLeft).ToString();
             }
             else
             {
@@ -517,7 +517,7 @@ public class SupplyPointUIController : MonoBehaviour
         Entity hero = heroQuery.GetSingletonEntity();
 
         // Block if on cooldown or already channeling
-        if (_em.HasComponent<SquadSwapCooldownComponent>(hero) ||
+        if (SquadSwapCooldown.IsActive(_em, hero, _em.World.Time.ElapsedTime) ||
             _em.HasComponent<SquadSwapChannelingComponent>(hero))
             return;
 

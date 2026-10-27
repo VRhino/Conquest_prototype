@@ -22,6 +22,7 @@ public partial class SquadSwapExecutionSystem : SystemBase
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
+        double now = SystemAPI.Time.ElapsedTime;
 
         foreach (var (executeTag, team, entity) in SystemAPI
                      .Query<RefRO<SquadSwapExecuteTag>,
@@ -226,16 +227,21 @@ public partial class SquadSwapExecutionSystem : SystemBase
                     }
                 }
 
-                for (int i = inactiveBuffer.Length - 1; i >= 0; i--)
-                    if (inactiveBuffer[i].squadId == oldSquadId) inactiveBuffer.RemoveAt(i);
-                inactiveBuffer.Add(new InactiveSquadElement
+                var reserve = new InactiveSquadElement
                 {
                     squadId = oldSquadId,
                     baseSquadID = oldBaseSquadID,
                     aliveUnits = aliveCount,
                     totalUnits = totalCount,
                     isEliminated = aliveCount == 0
-                });
+                };
+                // Its ability cooldowns survive the swap (H13).
+                if (SystemAPI.HasBuffer<CooldownGroupElement>(oldSquad))
+                    reserve.SaveCooldowns(SystemAPI.GetBuffer<CooldownGroupElement>(oldSquad), now);
+
+                for (int i = inactiveBuffer.Length - 1; i >= 0; i--)
+                    if (inactiveBuffer[i].squadId == oldSquadId) inactiveBuffer.RemoveAt(i);
+                inactiveBuffer.Add(reserve);
             }
 
             // Update HeroSquadSelectionComponent for the new squad
@@ -253,7 +259,15 @@ public partial class SquadSwapExecutionSystem : SystemBase
                 ecb.SetComponentEnabled<EndSkillsRequestComponent>(entity, true);
 
             // Emit SquadChangeEvent
-            ecb.AddComponent(entity, new SquadSwapCooldownComponent { remainingTime = 10f });
+            if (SystemAPI.HasBuffer<CooldownGroupElement>(entity))
+                CooldownUtility.Start(SystemAPI.GetBuffer<CooldownGroupElement>(entity), SquadSwapCooldown.Group,
+                    SquadSwapCooldown.Duration, 1f, now);
+            else
+                ecb.AddBuffer<CooldownGroupElement>(entity).Add(new CooldownGroupElement
+                {
+                    groupId = SquadSwapCooldown.Group, endTime = now + SquadSwapCooldown.Duration,
+                    duration = SquadSwapCooldown.Duration
+                });
             Entity evt = ecb.CreateEntity();
             ecb.AddComponent(evt, new SquadChangeEvent { newSquadId = newSquadId });
 

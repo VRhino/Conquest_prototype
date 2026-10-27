@@ -21,4 +21,22 @@ public struct InactiveSquadElement : IBufferElementData
 
     /// <summary>True if all units are dead — squad cannot be re-invoked.</summary>
     public bool isEliminated;
+
+    /// <summary>
+    /// Ability cooldown groups still running when the squad left the field (H13). Times are absolute, so they are restored
+    /// as they are; a group that ended meanwhile is simply ready.
+    /// </summary>
+    public FixedList128Bytes<CooldownGroupElement> cooldowns;
+
+    public void SaveCooldowns(DynamicBuffer<CooldownGroupElement> groups, double now)
+    {
+        cooldowns.Clear();
+        for (int i = 0; i < groups.Length && cooldowns.Length < cooldowns.Capacity; i++)
+            if (groups[i].endTime > now) cooldowns.Add(groups[i]);
+    }
+
+    public void RestoreCooldowns(DynamicBuffer<CooldownGroupElement> groups)
+    {
+        for (int i = 0; i < cooldowns.Length; i++) groups.Add(cooldowns[i]);
+    }
 }

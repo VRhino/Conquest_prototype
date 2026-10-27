@@ -81,6 +81,8 @@ public class HUDController : MonoBehaviour
 
     void OnDestroy()
     {
+        // Al salir de Play el mundo puede destruirse antes que el HUD; sus consultas ya se liberaron con él.
+        if (_world == null || !_world.IsCreated) return;
         _uiDataQuery.Dispose();
         _captureIconQuery.Dispose();
         _dataContainerQuery.Dispose();

@@ -17,6 +17,7 @@ public partial class SquadSwapSystem : SystemBase
     protected override void OnUpdate()
     {
         var ecb = new EntityCommandBuffer(Allocator.Temp);
+        double now = SystemAPI.Time.ElapsedTime;
 
         foreach (var (request, life, team, entity) in SystemAPI
                      .Query<RefRO<SquadSwapRequest>,
@@ -34,7 +35,7 @@ public partial class SquadSwapSystem : SystemBase
 
             // Reject if already channeling or on cooldown
             if (SystemAPI.HasComponent<SquadSwapChannelingComponent>(entity) ||
-                SystemAPI.HasComponent<SquadSwapCooldownComponent>(entity))
+                SquadSwapCooldown.IsActive(EntityManager, entity, now))
             {
                 ecb.RemoveComponent<SquadSwapRequest>(entity);
                 continue;

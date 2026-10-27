@@ -42,6 +42,9 @@ public class SquadSwapRegressionTests
             var old = em.CreateEntity(typeof(SquadStateComponent), typeof(SquadInstanceComponent), typeof(IsLocalSquadActive));
             em.SetComponentData(old, new SquadInstanceComponent { id = 1, initialUnitCount = 6 });
             em.AddBuffer<SquadUnitElement>(old).Add(new SquadUnitElement { Value = em.CreateEntity() });
+            var oldCooldowns = em.AddBuffer<CooldownGroupElement>(old);
+            oldCooldowns.Add(new CooldownGroupElement { groupId = 8, endTime = 30, duration = 30 });
+            oldCooldowns.Add(new CooldownGroupElement { groupId = 9, endTime = -1, duration = 5 });
             var hero = em.CreateEntity(typeof(TeamComponent), typeof(HeroSquadReference),
                 typeof(HeroSquadSelectionComponent), typeof(HeroLifeComponent), typeof(HeroSpawnComponent),
                 typeof(LocalTransform), typeof(SquadSwapExecuteTag));
@@ -65,7 +68,7 @@ public class SquadSwapRegressionTests
                 Assert.That(em.GetComponentData<HeroSquadReference>(hero).squad, Is.EqualTo(old));
                 Assert.That(em.HasComponent<RetreatComponent>(old), Is.False);
                 Assert.That(em.HasComponent<IsLocalSquadActive>(old), Is.True);
-                Assert.That(em.HasComponent<SquadSwapCooldownComponent>(hero), Is.False);
+                Assert.That(SquadSwapCooldown.IsActive(em, hero, world.Time.ElapsedTime), Is.False);
                 Assert.That(em.GetBuffer<InactiveSquadElement>(hero).Length, Is.EqualTo(2));
             }
             else
@@ -73,13 +76,17 @@ public class SquadSwapRegressionTests
                 Assert.That(em.HasComponent<HeroSquadReference>(hero), Is.False);
                 Assert.That(em.HasComponent<RetreatComponent>(old), Is.True);
                 Assert.That(em.HasComponent<IsLocalSquadActive>(old), Is.False);
-                Assert.That(em.HasComponent<SquadSwapCooldownComponent>(hero), Is.True);
+                Assert.That(SquadSwapCooldown.IsActive(em, hero, world.Time.ElapsedTime), Is.True);
                 Assert.That(em.GetComponentData<HeroSquadSelectionComponent>(hero).squadDataEntity, Is.EqualTo(data));
                 var entries = em.GetBuffer<InactiveSquadElement>(hero);
                 Assert.That(entries.Length, Is.EqualTo(2));
                 Assert.That(entries[1].baseSquadID.ToString(), Is.EqualTo("remote-old"));
                 Assert.That(entries[1].totalUnits, Is.EqualTo(6));
                 Assert.That(entries[1].aliveUnits, Is.EqualTo(1));
+                // H13: only the group still running is kept, with its absolute end time.
+                Assert.That(entries[1].cooldowns.Length, Is.EqualTo(1));
+                Assert.That(entries[1].cooldowns[0].groupId, Is.EqualTo(8));
+                Assert.That(entries[1].cooldowns[0].endTime, Is.EqualTo(30));
             }
         }
         finally { blob.Dispose(); }
@@ -116,5 +123,23 @@ public class SquadSwapRegressionTests
         Assert.That(em.Exists(follower), Is.False);
         Assert.That(em.GetBuffer<InactiveSquadElement>(hero)[0].aliveUnits, Is.EqualTo(2));
         Assert.That(em.GetBuffer<InactiveSquadElement>(hero)[0].totalUnits, Is.EqualTo(6));
+    }
+
+    [Test]
+    public void ReserveRestoresRunningSquadCooldowns()
+    {
+        using var world = new World("Squad cooldown carry");
+        var em = world.EntityManager;
+        var from = em.AddBuffer<CooldownGroupElement>(em.CreateEntity());
+        from.Add(new CooldownGroupElement { groupId = 8, endTime = 30, duration = 30 });
+        from.Add(new CooldownGroupElement { groupId = 9, endTime = 4, duration = 5 });
+        var reserve = new InactiveSquadElement();
+        reserve.SaveCooldowns(from, 10);
+
+        var to = em.AddBuffer<CooldownGroupElement>(em.CreateEntity());
+        reserve.RestoreCooldowns(to);
+        Assert.That(to.Length, Is.EqualTo(1));
+        Assert.That(CooldownUtility.Remaining(to, 8, 12), Is.EqualTo(18f));
+        Assert.That(CooldownUtility.IsReady(to, 9, 12), Is.True);
     }
 }

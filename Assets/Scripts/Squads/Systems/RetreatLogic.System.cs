@@ -121,6 +121,8 @@ public partial class RetreatLogicSystem : SystemBase
         for (int i = 0; i < units.Length; i++)
             if (em.Exists(units[i].Value) && !em.HasComponent<IsDeadComponent>(units[i].Value)) entry.aliveUnits++;
         entry.isEliminated = entry.aliveUnits == 0;
+        if (em.HasBuffer<CooldownGroupElement>(squad))
+            entry.SaveCooldowns(em.GetBuffer<CooldownGroupElement>(squad, true), SystemAPI.Time.ElapsedTime);
         Entity mapOwner = hero;
         if (!em.HasBuffer<SquadIdMapElement>(hero) && em.HasComponent<IsLocalPlayer>(hero)
             && SystemAPI.TryGetSingletonEntity<DataContainerComponent>(out var container)) mapOwner = container;

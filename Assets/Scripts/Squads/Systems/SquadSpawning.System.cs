@@ -112,7 +112,7 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.SetComponentEnabled<SkillRequestComponent>(squad, false);
             ecb.AddComponent<SkillInstanceComponent>(squad);
             ecb.AddBuffer<HeroSkillElement>(squad);
-            ecb.AddBuffer<CooldownGroupElement>(squad);
+            var squadCooldowns = ecb.AddBuffer<CooldownGroupElement>(squad);
             // Formation library is carried by SquadDataComponent and SquadDefinitionComponent.
             ecb.AddComponent(squad, new SquadProgressComponent
             {
@@ -244,6 +244,7 @@ public partial class SquadSpawningSystem : SystemBase
                     if (inactiveBuffer[b].squadId == selection.ValueRO.instanceId)
                     {
                         spawnCount = math.clamp(inactiveBuffer[b].aliveUnits, 0, unitCount);
+                        inactiveBuffer[b].RestoreCooldowns(squadCooldowns);
                         inactiveBuffer.RemoveAt(b);
                         break;
                     }
