@@ -8,9 +8,9 @@ Contraste hecho contra `Assets/Scripts`. El resto de este documento es diseño y
 
 | Tema del GDD | Estado en el código |
 |---|---|
-| Habilidades de clase `Q/E/R` y definitiva `F`; 2 perks activos + 5 pasivos | Implementado. Los perks activos van en `1` y `2` (`Docs/Mechanics/SkillsAndPerks.md`) |
-| Habilidades de escuadra con `1/2/3` (§12.3) | No existe. `1` y `2` lanzan los perks activos; no hay tercer hueco ni habilidades de escuadra por tecla |
-| Interactuar / cambiar escuadra con `F` o `Tab` (supply point) | La interacción es `G`; `F` es la definitiva. El cambio de escuadra se inicia con la interacción en un supply point aliado no disputado (`Docs/Mechanics/SquadSwap.md`) |
+| Habilidades de clase `Q/E/R` y definitiva `F`; 2 perks activos + 5 pasivos | Implementado, con la definitiva en `T` y los perks activos en `4` y `5` (`Docs/Mechanics/SkillsAndPerks.md` §2) |
+| Habilidades de escuadra con `1/2/3` (§12.3) | Implementado: `1/2/3` lanzan las habilidades de la escuadra activa, en orden de desbloqueo; se ven en la barra de habilidades |
+| Interactuar / cambiar escuadra con `F` o `Tab` (supply point) | La interacción es `F` (la definitiva pasó a `T`). El cambio de escuadra se inicia con la interacción en un supply point aliado no disputado (`Docs/Mechanics/SquadSwap.md`) |
 | Vista de estado de batalla con `Tab` y sus sistemas (§12.1.1: `BattleStatusPanel`, `MinimapRendererExpanded`, `ScoreSyncSystem`, …) | No existe |
 | Menú radial con `ALT`; orden de mover con clic derecho (§12.3) | No existen. `ALT` solo alterna el cursor de interfaz; `SquadControlSystem` atiende `C`, `X`, `V`, `F1–F4` y doble `X`/doble `C` |
 | Respawn con cooldown que aumenta con cada muerte (§7.2) | Cooldown fijo, `HeroLifeComponent.respawnCooldown` (5 s por defecto en authoring) |

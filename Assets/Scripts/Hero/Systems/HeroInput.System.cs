@@ -43,11 +43,11 @@ public partial class HeroInputSystem : SystemBase
             skill2 = keyboard.eKey.isPressed;
             skill3 = keyboard.rKey.isPressed;
             ultimate = keyboard.tKey.isPressed;
-            perk1 = keyboard.digit1Key.isPressed;
-            perk2 = keyboard.digit2Key.isPressed;
-            squad1 = keyboard.digit3Key.isPressed;
-            squad2 = keyboard.digit4Key.isPressed;
-            squad3 = keyboard.digit5Key.isPressed;
+            perk1 = keyboard.digit4Key.isPressed;
+            perk2 = keyboard.digit5Key.isPressed;
+            squad1 = keyboard.digit1Key.isPressed; // Squad abilities on 1/2/3 (GDD 12.3), active perks on 4/5.
+            squad2 = keyboard.digit2Key.isPressed;
+            squad3 = keyboard.digit3Key.isPressed;
             interact = keyboard.fKey.wasPressedThisFrame; // The ultimate is on T so F stays for interacting.
         }
 

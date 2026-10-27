@@ -72,3 +72,5 @@ colisión."
       `HUDController` lo crea (sin tocar `BattleScene`) y quita sus cuatro huecos sin conectar.
 - [x] Tests: `SkillBarDataTests` (EditMode) y `BattleSceneShowsTheSkillBarWithTheHeroSkills` (PlayMode).
 - [x] EditMode 357/357; BattleSceneIntegrationTests 12/12. Sin revisar a ojo en partida.
+- [x] H11 (2026-10-27, decisión del usuario): escuadra en 1/2/3 (GDD §12.3), perks activos en 4/5; la barra pone la
+      escuadra delante de los perks.

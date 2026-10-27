@@ -26,16 +26,15 @@ perks (L2-15), panel de perks del feudo (H5) y uso de habilidades por la IA con 
 | Clic izquierdo | `Basic` | Ataque básico (cadena de 3 golpes) |
 | Q / E / R | `Q` / `E` / `R` | Habilidades de clase |
 | T | `Ultimate` | Definitiva (2026-10-27: F queda para interactuar) |
-| 1 / 2 | `ActivePerk1` / `ActivePerk2` | Perks activos del loadout |
-| 3 / 4 / 5 | `Squad1` / `Squad2` / `Squad3` | Habilidades de la escuadra activa, en orden de desbloqueo (las lanza la escuadra) |
+| 1 / 2 / 3 | `Squad1` / `Squad2` / `Squad3` | Habilidades de la escuadra activa, en orden de desbloqueo (las lanza la escuadra) |
+| 4 / 5 | `ActivePerk1` / `ActivePerk2` | Perks activos del loadout |
 | F | — | Interactuar (puntos de suministro, NPC del feudo) |
 | K (feudo) | — | Panel de perks del loadout (H5) |
 
 Con varias teclas pulsadas gana la definitiva, luego R, E, Q, perks y el básico (`HeroSkillRequestSystem`). Las teclas
 de escuadra van aparte: se pueden pulsar a la vez que una del héroe, y entre ellas gana la del último desbloqueo.
 
-El GDD (§12.3) pide 1/2/3 para la escuadra, pero la Fase 2 dio 1 y 2 a los perks activos: las de escuadra van en 3, 4 y
-5 hasta que el usuario decida (`Docs/Por_Abordar/Habilidades_Perks.md` H11).
+Mapa definitivo (2026-10-27, H11): la escuadra va en 1/2/3, como pide el GDD §12.3, y los perks activos en 4/5.
 
 ## 3. Ciclo de vida
 
@@ -209,7 +208,7 @@ Aproximaciones:
 
 `UIBattleDataSystem` escribe en `UIHeroBattleDataComponent.skills` un hueco por `SkillSlot`, de Q a `Squad3`: la habilidad
 (`skillId`, 0 si está vacío o sin desbloquear), la fracción de enfriamiento y los segundos que faltan. Q, E, R, T y los perks
-activos 1 y 2 salen del héroe local; 3, 4 y 5, de su escuadra activa (`IsLocalSquadActive`).
+activos 4 y 5 salen del héroe local; 1, 2 y 3, de su escuadra activa (`IsLocalSquadActive`).
 
 `HUDController` crea la barra de habilidades desde `Resources/UI/SkillBar` (`SkillBarController`, H6 y H10), sin huecos en la
 escena, abajo en el centro y por debajo de la barra de aguante: nueve huecos con icono, enfriamiento radial, segundos y tecla. Los huecos vacíos del héroe se atenúan y los de

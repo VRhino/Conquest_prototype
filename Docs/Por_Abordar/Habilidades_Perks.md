@@ -16,7 +16,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H8 | Nombres de los perks activos dicen "(Passive)" | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H9 | `HUDController.OnDestroy` lanza al salir de Play | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H10 | Habilidades de escuadra en el HUD | Media | **Hecho** (2026-10-27, se ven; lanzarlas con clic, pendiente) |
-| H11 | Teclas de las habilidades de escuadra (GDD 1/2/3, hoy 3/4/5) | Media | Pendiente (decisión del usuario) |
+| H11 | Teclas de las habilidades de escuadra (GDD 1/2/3, hoy 3/4/5) | Media | **Hecho** (2026-10-27: escuadra 1/2/3, perks 4/5) |
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H14 | Perks con las condiciones nuevas (L2-15) | Baja | Pendiente (datos) |
@@ -116,6 +116,9 @@ y 5, y el HUD no las muestra. **Cómo abordarlo:**
 - añadir huecos con icono (`AbilityData.icon`) en `HUDController`; va junto con H6.
 
 ## H11. Teclas de las habilidades de escuadra
+**Hecho (2026-10-27).** Decisión del usuario: la escuadra en 1/2/3 (como el GDD) y los perks activos en 4/5. En la
+barra de habilidades la escuadra va delante de los perks para que se lea 1-2-3-4-5.
+
 El GDD §12.3 pone las habilidades de escuadra en 1/2/3 (y en el menú radial `ALT`). La Fase 2 dio 1 y 2 a los perks
 activos, así que de momento van en 3/4/5 (`HeroInputSystem`). **Decisión del usuario:** dejar 3/4/5 o mover los perks
 activos a otras teclas. Cambiarlo es tocar solo `HeroInputSystem` y la tabla de `SkillsAndPerks.md` §2.
