@@ -148,6 +148,10 @@ public class FullscreenPanelManager : MonoBehaviour
         {
             RegisterPanel<NpcDialogueUIController>(dialoguePanel as IFullscreenPanel);
         }
+
+        // The perk panel (H5) comes from Resources, so the fief scene needs no reference to it.
+        var perkPanel = Resources.Load<PerkSelectionPanelController>(PerkSelectionPanelController.ResourcePath);
+        if (perkPanel != null) RegisterPanel<PerkSelectionPanelController>(Instantiate(perkPanel, transform));
     }
 
     private void SetupHUDButtons()
@@ -294,6 +298,11 @@ public class FullscreenPanelManager : MonoBehaviour
     public void HandleBarracksKeyPress()
     {
         RequestPanelToggle<BarracksMenuUIController>();
+    }
+
+    public void HandlePerksKeyPress()
+    {
+        RequestPanelToggle<PerkSelectionPanelController>();
     }
 
     public void HandleStoreOpen()

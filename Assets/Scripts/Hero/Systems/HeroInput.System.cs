@@ -114,6 +114,9 @@ public partial class HeroInputSystem : SystemBase
         // Manejo de las Barracas con tecla 'B'
         if (keyboardInput.bKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleBarracksKeyPress();
 
+        // Perks del loadout con tecla 'K' (H5)
+        if (keyboardInput.kKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandlePerksKeyPress();
+
         if (keyboardInput.escapeKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleEscapeKeyPress();
 
         if (keyboardInput.altKey.wasPressedThisFrame)
