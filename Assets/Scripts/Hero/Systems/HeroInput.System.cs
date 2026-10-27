@@ -42,13 +42,13 @@ public partial class HeroInputSystem : SystemBase
             skill1 = keyboard.qKey.isPressed;
             skill2 = keyboard.eKey.isPressed;
             skill3 = keyboard.rKey.isPressed;
-            ultimate = keyboard.fKey.isPressed;
+            ultimate = keyboard.tKey.isPressed;
             perk1 = keyboard.digit1Key.isPressed;
             perk2 = keyboard.digit2Key.isPressed;
             squad1 = keyboard.digit3Key.isPressed;
             squad2 = keyboard.digit4Key.isPressed;
             squad3 = keyboard.digit5Key.isPressed;
-            interact = keyboard.gKey.wasPressedThisFrame; // F is the ultimate (GDD); interacting moved to G.
+            interact = keyboard.fKey.wasPressedThisFrame; // The ultimate is on T so F stays for interacting.
         }
 
         if (mouse != null && DialogueUIState.IsDialogueOpen == false)

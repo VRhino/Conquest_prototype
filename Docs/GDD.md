@@ -144,7 +144,7 @@ Crear un flujo centrado en la **preparación táctica, liderazgo en combate y co
 ### ⚔️ Combate del Héroe
 
 - **Ataques básicos** (según clase/arma equipada).
-- **3 habilidades de clase** (Q, E, R) + **1 ultimate** (F), **FIJAS por clase** (no intercambiables).
+- **3 habilidades de clase** (Q, E, R) + **1 ultimate** (T; F es interactuar), **FIJAS por clase** (no intercambiables).
 - El daño del héroe es **complementario**, útil para asistir o rematar, **no para borrar unidades completas**.
 
 > **IMPORTANTE:** Las habilidades de clase (Q, E, R, F) son un sistema SEPARADO de los Perks. Las habilidades son fijas por clase y no se pueden cambiar. Los Perks son un sistema de talentos independiente con 2 activos + 5 pasivos configurables (ver sección 6.2).
@@ -680,7 +680,7 @@ Un héroe sin apoyo de sus tropas debe tener dificultades reales para sobrevivir
 - Lanza
 - Arco
 
-> Cada arma define la clase del héroe y otorga un set único de 3 habilidades de clase (Q, E, R) + 1 habilidad ultimate (F), FIJAS por clase. Los Perks son un sistema SEPARADO (ver sección 6.2).
+> Cada arma define la clase del héroe y otorga un set único de 3 habilidades de clase (Q, E, R) + 1 habilidad ultimate (T), FIJAS por clase. Los Perks son un sistema SEPARADO (ver sección 6.2).
 > 
 
 ### 🛡️ Armadura equipada

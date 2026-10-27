@@ -25,10 +25,10 @@ perks (L2-15), panel de perks del feudo (H5) y uso de habilidades por la IA con 
 |---|---|---|
 | Clic izquierdo | `Basic` | Ataque básico (cadena de 3 golpes) |
 | Q / E / R | `Q` / `E` / `R` | Habilidades de clase |
-| F | `Ultimate` | Definitiva |
+| T | `Ultimate` | Definitiva (2026-10-27: F queda para interactuar) |
 | 1 / 2 | `ActivePerk1` / `ActivePerk2` | Perks activos del loadout |
 | 3 / 4 / 5 | `Squad1` / `Squad2` / `Squad3` | Habilidades de la escuadra activa, en orden de desbloqueo (las lanza la escuadra) |
-| G | — | Interactuar (antes F) |
+| F | — | Interactuar (puntos de suministro, NPC del feudo) |
 | K (feudo) | — | Panel de perks del loadout (H5) |
 
 Con varias teclas pulsadas gana la definitiva, luego R, E, Q, perks y el básico (`HeroSkillRequestSystem`). Las teclas
@@ -150,7 +150,7 @@ Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
 
 ### 4.1 Habilidades de clase (datos en `Assets/ScriptableObjects/Hero/Abilities/`)
 
-| Clase | Q | E | R | F |
+| Clase | Q | E | R | T |
 |---|---|---|---|---|
 | Espada y escudo | Empuje de Escudo: embestida 3 m + cono 90° | Defensa Reforzada: +30 % de defensa a aliados (5 m, 8 s) | Intercepción: embestida 4 m + círculo | Muro Imparable: +50 % de defensa a aliados (6 m, 10 s) |
 | Espada a dos manos | Corte Giratorio: círculo 3 m ×1,2 | Carga Brutal: embestida 6 m + cono 120° | Lluvia de Acero: 3 golpes en cono | Juicio de Acero: cono ×2 + escuadra +20 % de daño (8 s) |
@@ -208,11 +208,11 @@ Aproximaciones:
 ## 6. HUD
 
 `UIBattleDataSystem` escribe en `UIHeroBattleDataComponent.skills` un hueco por `SkillSlot`, de Q a `Squad3`: la habilidad
-(`skillId`, 0 si está vacío o sin desbloquear), la fracción de enfriamiento y los segundos que faltan. Q, E, R, F y los perks
+(`skillId`, 0 si está vacío o sin desbloquear), la fracción de enfriamiento y los segundos que faltan. Q, E, R, T y los perks
 activos 1 y 2 salen del héroe local; 3, 4 y 5, de su escuadra activa (`IsLocalSquadActive`).
 
 `HUDController` crea la barra de habilidades desde `Resources/UI/SkillBar` (`SkillBarController`, H6 y H10), sin huecos en la
-escena: nueve huecos con icono, enfriamiento radial, segundos y tecla. Los huecos vacíos del héroe se atenúan y los de
+escena, abajo en el centro y por debajo de la barra de aguante: nueve huecos con icono, enfriamiento radial, segundos y tecla. Los huecos vacíos del héroe se atenúan y los de
 escuadra sin desbloquear se ocultan. Los iconos los busca `SkillIconCatalog` por el id del skill: habilidades y perks de la
 clase del héroe (`HeroClassManager`) y habilidades de todas las escuadras (`SquadDataService`).
 
