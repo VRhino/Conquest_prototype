@@ -876,3 +876,19 @@ restricción del movimiento, no una corrección. La cápsula que se mueve recort
 Lectura: los solapes enemigos persistentes desaparecen en las seis corridas y los picos bajan. Los solapes aliados y las
 paradas varían como antes entre corridas (M10); vigilar en vídeo que el frente no se quede parado detrás de un enemigo que
 no es su objetivo (P4 del plan: estado de bloqueo leído por `UnitTargetingSystem`).
+
+### P3: el retroceso con el mismo recorte (2026-10-28)
+`UnitHitKnockbackSystem` pasa a correr después de la evitación y **antes** del bodyblock, y con `enemyContactEnabled` recorta
+cada paso del retroceso contra los cuerpos enemigos (`EnemyContact.ClipStep`: puede cerrar el hueco hasta la distancia de
+contacto, nunca pasarla). Lo que quede lo deshace el bodyblock en el mismo frame. El retroceso no tiene variación aleatoria,
+así que no añade divergencia (M10).
+
+| Métrica (3 corridas, mediana) | S6 P0+P1 | S6 P0+P1+P3 | S7 P0+P1 | S7 P0+P1+P3 | S6 / S7 sin contacto (misma compilación) |
+|---|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 0 | **0** | 0 | **0** | 12 / 9 |
+| Aceleración > 20 m/s² | 1,5 % | 1,6 % | 1,1 % | 0,6 % | 1,5 / 0,8 % |
+| Aceleración máxima | 140 | 106 | 107 | 119 | 157 / 161 |
+| Distancia media de contacto atacando | 1,71 m | 1,55 | 1,52 | 1,47 | 1,35 / 1,23 |
+
+Lectura: neutro dentro del ruido de la melé; los solapes siguen en 0 y los máximos no suben. Se queda porque cierra el
+único camino que quedaba para meter una unidad en un enemigo sin pasar por el recorte.

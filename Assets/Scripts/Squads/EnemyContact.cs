@@ -12,7 +12,7 @@ using Unity.Mathematics;
 public static class EnemyContact
 {
     /// <summary>Contact passes per agent: removing one approach can add another against a second enemy.</summary>
-    const int Passes = 3;
+    public const int Passes = 3;
     /// <summary>Nearest enemies checked per agent.</summary>
     const int MaxEnemies = 8;
 
@@ -29,6 +29,10 @@ public static class EnemyContact
         float allowed = math.max(0f, distance - contactDistance) / math.max(1e-4f, closeTime);
         return approach > allowed ? velocity - normal * (approach - allowed) : velocity;
     }
+
+    /// <summary>A displacement that may close the gap to the enemy (contact distance minus distance) but never pass it.</summary>
+    public static float2 ClipStep(float2 step, float2 toEnemy, float contactDistance)
+        => Slide(step, toEnemy, contactDistance, 1f);
 
     /// <summary>
     /// Clips the velocity of every steered agent against the enemies near it. Reuses the grid

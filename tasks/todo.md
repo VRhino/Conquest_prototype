@@ -80,4 +80,5 @@ colisión."
 - [x] P1: `EnemyContact` ("chocar y resbalar") al final de `UnitAvoidanceSystem`; interruptor `enemyContactEnabled`.
 - [x] Tests: `EnemyContactTests` (EditMode); escenarios S6/S7 `LegacyContact` para comparar.
 - [x] Medida (3+3 corridas intercaladas): solapes enemigos > 0,3 s S6 9 → 0, S7 12 → 0; picos S6 1,8 → 1,5 %.
-- [ ] Siguiente: P3 (retroceso con el mismo recorte), P2 (interruptor por escuadra, F9), P4 (bloqueo leído por el objetivo).
+- [x] P3: el retroceso del golpe recorta su paso contra enemigos y corre antes del bodyblock (neutro; solapes en 0).
+- [ ] Siguiente: P2 (interruptor por escuadra, F9), P4 (bloqueo leído por el objetivo).

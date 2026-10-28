@@ -35,6 +35,17 @@ public class EnemyContactTests
     }
 
     [Test]
+    public void KnockBackStepStopsAtTheEnemyBody()
+    {
+        // 0.1 m of gap: a 0.3 m push towards the enemy only closes it (P3).
+        Assert.That(EnemyContact.ClipStep(new float2(0f, 0.3f), new float2(0f, 1.1f), Contact).y,
+            Is.EqualTo(0.1f).Within(1e-5f));
+        // Pushed away from the enemy: untouched.
+        Assert.That(EnemyContact.ClipStep(new float2(0f, -0.3f), new float2(0f, 1.1f), Contact),
+            Is.EqualTo(new float2(0f, -0.3f)));
+    }
+
+    [Test]
     public void OnlySteeredUnitsAreClippedAndOnlyAgainstEnemies()
     {
         var agents = new NativeArray<AllyAvoidance.Agent>(4, Allocator.TempJob);

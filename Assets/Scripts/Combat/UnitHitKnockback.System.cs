@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using Unity.Entities;
 using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine.AI;
 
 /// <summary>
@@ -7,13 +9,19 @@ using UnityEngine.AI;
 /// the attacker along <see cref="HitKnockback"/>'s curve, <c>hitKnockbackDistance</c> in <c>hitKnockbackDuration</c>.
 /// Starts from <see cref="UnitHitImpactComponent"/> (consumed here) and moves the agent with <c>agent.Move</c>, which keeps
 /// it on the NavMesh; a new hit restarts the push. Single writer of <see cref="UnitHitKnockbackComponent"/>.
-/// Runs after the bodyblock and before the position sync, so the push lands in ECS the same frame.
+/// With enemyContactEnabled the push slides along enemy bodies like any other movement (M2, P3): it never closes the gap to
+/// an enemy below the contact distance (<see cref="EnemyContact.ClipStep"/>). Runs after the avoidance and before the
+/// bodyblock, which undoes what is left the same frame, and before the position sync, so the push lands in ECS the same frame.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(UnitBodyblockSystem))]
+[UpdateAfter(typeof(UnitAvoidanceSystem))]
+[UpdateBefore(typeof(UnitBodyblockSystem))]
 [UpdateBefore(typeof(NavMeshPositionSyncSystem))]
 public partial class UnitHitKnockbackSystem : SystemBase
 {
+    readonly List<(float2 position, Team team)> _bodies = new();
+    bool _bodiesCollected;
+
     protected override void OnCreate()
     {
         base.OnCreate();
@@ -27,6 +35,7 @@ public partial class UnitHitKnockbackSystem : SystemBase
         float dt = SystemAPI.Time.DeltaTime;
         float distance = tuning.hitKnockbackDistance, duration = tuning.hitKnockbackDuration;
         bool enabled = distance > 0f && duration > 0f && dt > 0f;
+        _bodiesCollected = false;
 
         foreach (var (impact, knockback, entity) in SystemAPI
                      .Query<RefRO<UnitHitImpactComponent>, RefRW<UnitHitKnockbackComponent>>()
@@ -55,10 +64,35 @@ public partial class UnitHitKnockbackSystem : SystemBase
             if (agent != null && agent.enabled && agent.isOnNavMesh && step > 0f)
             {
                 float2 move = knockback.ValueRO.direction * step;
+                if (tuning.enemyContactEnabled && SystemAPI.HasComponent<TeamComponent>(entity))
+                    move = ClipAgainstEnemies(move, entity, 2f * tuning.bodyRadius);
                 agent.Move(new UnityEngine.Vector3(move.x, 0f, move.y));
             }
             knockback.ValueRW.elapsed += dt;
             if (knockback.ValueRO.elapsed >= duration) knockback.ValueRW.active = false;
         }
+    }
+
+    /// <summary>The push step left after the enemies around the unit. Bodies are gathered once, on the first push of the frame.</summary>
+    float2 ClipAgainstEnemies(float2 step, Entity entity, float contactDistance)
+    {
+        if (!_bodiesCollected)
+        {
+            _bodies.Clear();
+            foreach (var (team, transform) in SystemAPI.Query<RefRO<TeamComponent>, RefRO<LocalTransform>>()
+                         .WithAny<UnitFormationStateComponent, HeroSpawnComponent>())
+                _bodies.Add((transform.ValueRO.Position.xz, team.ValueRO.value));
+            _bodiesCollected = true;
+        }
+        float2 position = SystemAPI.GetComponent<LocalTransform>(entity).Position.xz;
+        Team own = SystemAPI.GetComponent<TeamComponent>(entity).value;
+        float reachSq = (contactDistance + math.length(step)) * (contactDistance + math.length(step));
+        for (int pass = 0; pass < EnemyContact.Passes; pass++)
+            foreach (var body in _bodies)
+            {
+                if (body.team == own || math.distancesq(body.position, position) > reachSq) continue;
+                step = EnemyContact.ClipStep(step, body.position - position, contactDistance);
+            }
+        return step;
     }
 }
