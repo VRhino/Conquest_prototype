@@ -87,6 +87,8 @@ public class MovementTuningConfig : ScriptableObject
     public bool enemyContactEnabled = true;
     [Tooltip("A moving unit closes its gap to an enemy in no less than this time, so it slows down just before contact instead of stopping in one frame (s).")]
     [Min(0f)] public float enemyContactLookaheadTime = 0.05f;
+    [Tooltip("While a melee unit swings it only brakes to a stop instead of adjusting its approach (P5, the reference locks the motor during the attack).")]
+    public bool attackMovementLock = true;
 
     [Header("Slot following (C9)")]
     [Tooltip("Switch to Run beyond this distance to the slot (m).")]
@@ -191,6 +193,7 @@ public class MovementTuningConfig : ScriptableObject
         avoidanceCollisionResolveTime = avoidanceCollisionResolveTime,
         enemyContactEnabled = enemyContactEnabled,
         enemyContactLookaheadTime = enemyContactLookaheadTime,
+        attackMovementLock = attackMovementLock,
         runEnterDistance = runEnterDistance,
         runExitDistance = runExitDistance,
         followRecoveryTime = followRecoveryTime,

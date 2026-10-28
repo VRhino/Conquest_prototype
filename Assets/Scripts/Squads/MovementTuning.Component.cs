@@ -47,6 +47,7 @@ public struct MovementTuningComponent : IComponentData
     public float avoidanceCollisionResolveTime; // Time to separate overlapping allies (s).
     public bool enemyContactEnabled; // Enemies touch at 2·bodyRadius and movers slide along them (M2, P0/P1).
     public float enemyContactLookaheadTime; // A mover closes its gap to an enemy in no less than this (s, P1).
+    public bool attackMovementLock; // While a melee unit swings it only brakes, it does not re-approach (P5).
     public float runEnterDistance; // Switch to Run beyond this distance to the slot (m).
     public float runExitDistance; // Back to Walk below this distance to the slot (m).
     public float followRecoveryTime; // Seconds to close the gap to the slot.
@@ -115,6 +116,7 @@ public struct MovementTuningComponent : IComponentData
         avoidanceCollisionResolveTime = 0.25f,
         enemyContactEnabled = true,
         enemyContactLookaheadTime = 0.05f,
+        attackMovementLock = true,
         runEnterDistance = 0.9f,
         runExitDistance = 0.45f,
         followRecoveryTime = 0.5f,

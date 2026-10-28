@@ -159,4 +159,13 @@ public class EnemyContactTests
         em.SetComponentData(unit, new UnitHitKnockbackComponent { active = false, passesEnemies = true });
         Assert.That(EnemyCollision.PassesEnemies(em, unit), Is.False, "Over when the push ends.");
     }
+
+    [Test]
+    public void SwingingUnitOnlyBrakesInsteadOfApproaching()
+    {
+        Assert.That(UnitNavMeshSystem.ApproachesTarget(true, false, false), Is.True);
+        Assert.That(UnitNavMeshSystem.ApproachesTarget(true, false, true), Is.False, "Mid-swing: brake, do not re-approach (P5).");
+        Assert.That(UnitNavMeshSystem.ApproachesTarget(true, true, false), Is.False, "Holding position.");
+        Assert.That(UnitNavMeshSystem.ApproachesTarget(false, false, false), Is.False, "Already within reach.");
+    }
 }

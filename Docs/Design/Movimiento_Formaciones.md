@@ -925,3 +925,22 @@ primer intento que imponía el objetivo subía el máximo de atacantes por objet
 Lectura: los solapes siguen en 0, el p95 de atacantes se mantiene en 2-3 (la línea aguanta) y las paradas no empeoran.
 Hay algo más de cambios de objetivo, que es lo esperado: es la unidad bloqueada tomando al enemigo que tiene delante.
 Falta comprobarlo en vídeo.
+
+### P5: mientras golpea, la unidad solo frena (M12, M16, 2026-10-28)
+La referencia cierra el motor durante las fases del ataque. En `UnitNavMeshSystem`, con `attackMovementLock` (activo por
+defecto) y `UnitCombatComponent.isAttacking`, una unidad cuerpo a cuerpo no va a su punto de aproximación: su destino es el
+punto donde acaba de frenar, como dentro del alcance (`UnitNavMeshSystem.ApproachesTarget`). Así no hace correcciones de
+último momento mientras el golpe se juega. Variantes `S6NoLock`/`S7NoLock` (`...NoAttackLock`) para comparar. Las métricas
+del golpe salen de `units.csv` (columna `attacking`).
+
+| Métrica (3 corridas, mediana) | S6 sin P5 | S6 con P5 | S7 sin P5 | S7 con P5 |
+|---|---|---|---|---|
+| Velocidad media mientras golpea | 0,52 m/s | **0,25** | 0,24 | **0,20** |
+| Fotogramas de golpe moviéndose a > 0,5 m/s | 27 % | **10 %** | 11 % | **8 %** |
+| Tiempo medio hasta el primer golpe | 7,2 s | 7,2 | 6,7 | 7,0 |
+| Fracción de fotogramas golpeando | 0,10 | 0,20 | 0,25 | 0,15 |
+| Pares enemigos solapados > 0,3 s | 0 | 0 | 0 | 0 |
+| Paradas | 22 | 37 | 39 | 25 |
+
+Lectura: hace lo que busca. La unidad se mueve la mitad o menos mientras golpea, y el primer golpe no se retrasa (S7, +0,3 s,
+dentro del rango). Las paradas y la fracción de tiempo golpeando cambian de signo entre S6 y S7: ruido de la melé.

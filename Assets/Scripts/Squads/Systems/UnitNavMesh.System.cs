@@ -5,7 +5,8 @@ using UnityEngine.AI;
 
 /// <summary>
 /// Single authority for all NavMesh movement decisions per unit:
-///   - SetDestination: formation slot OR stop-point near combat target
+///   - SetDestination: formation slot OR stop-point near combat target; while a melee swing plays the unit only brakes
+///     (P5, <see cref="ApproachesTarget"/>)
 ///   - updateRotation: NavMesh owns it while moving; disabled + manual when
 ///     in engagement range so the unit faces its target for the AABB check.
 ///
@@ -190,10 +191,14 @@ public partial class UnitNavMeshSystem : SystemBase
             bool   isRanged     = SystemAPI.HasComponent<UnitRangedStatsComponent>(entity);
             Entity combatTarget = Entity.Null;
             float  attackRange  = 1.5f; // fallback
+            bool   swinging     = false;
 
             if (hasCombat)
             {
                 combatTarget = SystemAPI.GetComponent<UnitCombatComponent>(entity).target;
+                // P5: the reference locks the motor while the attack plays; a melee swing only brakes.
+                swinging = tuning.attackMovementLock && !isRanged
+                    && SystemAPI.GetComponent<UnitCombatComponent>(entity).isAttacking;
                 attackRange  = SystemAPI.GetComponent<UnitWeaponComponent>(entity).attackRange;
                 // Ranged units must stop at bow range, not melee weapon range
                 if (isRanged)
@@ -257,7 +262,7 @@ public partial class UnitNavMeshSystem : SystemBase
                 if (dist > resumeDist) navigation.combatApproaching = true;
                 else if (dist <= stopDist) navigation.combatApproaching = false;
 
-                if (!isHoldingPosition && navigation.combatApproaching)
+                if (ApproachesTarget(navigation.combatApproaching, isHoldingPosition, swinging))
                 {
                     float2 baseDir = math.normalizesafe(unitXZ - targetXZ);
                     float2 rotatedDir = baseDir;
@@ -279,8 +284,8 @@ public partial class UnitNavMeshSystem : SystemBase
                 }
                 else if (!isHoldingPosition)
                 {
-                    // Within reach — come to rest where braking ends (without reaching the target's body);
-                    // aiming at the current position stopped the agent in one frame (M12).
+                    // Within reach, or swinging (P5) — come to rest where braking ends (without reaching the target's
+                    // body); aiming at the current position stopped the agent in one frame (M12).
                     float2 velocityXZ = new float2(agent.velocity.x, agent.velocity.z);
                     float2 restXZ = MeleeReach.BrakingStopPoint(unitXZ, velocityXZ,
                         agent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction,
@@ -489,6 +494,13 @@ public partial class UnitNavMeshSystem : SystemBase
         DebugTotalProjectionFailures++;
         return false;
     }
+
+    /// <summary>
+    /// A unit walks to its approach point only while approaching, not holding and not swinging; otherwise it brakes to
+    /// rest (P5: the reference locks the motor during the attack, so no last-moment corrections inside the reach).
+    /// </summary>
+    public static bool ApproachesTarget(bool combatApproaching, bool holdingPosition, bool swinging)
+        => combatApproaching && !holdingPosition && !swinging;
 
     /// <summary>Movement permission; target acquisition and attacking remain separate.</summary>
     public static bool CanPursueTarget(SquadOrderType order, float3 slot, float3 target, float leashDistance)

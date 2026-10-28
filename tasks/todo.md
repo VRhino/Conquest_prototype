@@ -85,4 +85,6 @@ colisión."
 - [x] P4: `EnemyContact` dice quién bloquea (±30°), `UnitAvoidanceSystem` lo guarda en `UnitBlockedComponent` y
   `UnitTargetingSystem` vuelve a puntuar con él y un bonus antes de la saturación tras `blockedRetargetTime` (0,5 s),
   para formar líneas de combate. Variantes S6/S7 `NoBlockedRetarget` para comparar.
-- [ ] Siguiente: P5 (bloquear el movimiento durante el golpe), P6, P7 (escenario S9).
+- [x] P5: mientras golpea, la unidad cuerpo a cuerpo solo frena (`attackMovementLock`). Velocidad al golpear S6 0,52 → 0,25 m/s;
+  primer golpe igual. Variantes S6/S7 `NoAttackLock`.
+- [ ] Siguiente: P6 (límite de cambio de dirección, solo si siguen los picos), P7 (escenario S9 de dos líneas).
