@@ -124,6 +124,34 @@ public class MovementMetricsAnalyzerTests
         Assert.That(s.targetSwitchesPerUnitPerSecond, Is.EqualTo(1f / (18 * Dt)).Within(1e-3f));
     }
 
+    [Test]
+    public void LineMetricsCountRearRanksAheadOfTheFrontAndTheFirstSwing()
+    {
+        var frames = new List<MovementFrameSample>();
+        var units = new List<MovementUnitSample>();
+        for (int f = 0; f < 2; f++)
+        {
+            float t = f * Dt;
+            frames.Add(new MovementFrameSample { frame = f, time = t, squad = 1, forwardX = 0f, forwardZ = 1f,
+                persistentEnemyOverlaps = 2, persistentEnemyOverlapsEngaged = 1 });
+            // Front rank on z = 0, engaged; the rear unit behind the line at f = 0 and through it at f = 1.
+            var front = Unit(f, t, 0, UnitFormationState.Moving);
+            front.row = 0; front.target = 9; front.targetDistance = 1f; front.attacking = f == 1; front.speed = 0.5f;
+            var rear = Unit(f, t, 1, UnitFormationState.Moving);
+            rear.row = 1; rear.z = f == 0 ? -1f : 1f;
+            units.Add(front);
+            units.Add(rear);
+        }
+
+        var s = MovementMetricsAnalyzer.Analyze("line", frames, units);
+
+        Assert.That(s.rearAheadOfFrontRatio, Is.EqualTo(0.5f).Within(1e-5f));
+        Assert.That(s.meanTimeToFirstSwing, Is.EqualTo(Dt).Within(1e-5f));
+        Assert.That(s.meanSpeedWhileSwinging, Is.EqualTo(0.5f).Within(1e-5f));
+        Assert.That(s.maxPersistentEnemyOverlapsEngaged, Is.EqualTo(1));
+        Assert.That(s.maxPersistentEnemyOverlapsFree, Is.EqualTo(1));
+    }
+
     static MovementUnitSample Unit(int frame, float time, int unit, UnitFormationState state) =>
         new MovementUnitSample { frame = frame, time = time, squad = 1, unit = unit, state = state,
             target = -1, targetDistance = -1f, gear = -1 };

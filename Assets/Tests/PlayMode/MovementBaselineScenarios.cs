@@ -200,6 +200,83 @@ public partial class BattleSceneIntegrationTests
         }
     }
 
+    const float S9ApproachTimeout = 25f; // Both heroes walk at each other until the first unit strikes.
+    const float S9MeleeSeconds = 15f;
+
+    /// <summary>
+    /// S9 (P7): two squads in Line clash head-on. The remote hero's AI is taken off and the test walks it, with its squad
+    /// following, at the local hero, who walks at it; both stop at the first swing and the melee runs. Measures the front
+    /// case S6/S7 do not isolate: persistent enemy overlaps with and without a target, rear ranks that step ahead of their
+    /// own front line, and the time to the first swing.
+    /// </summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS9LineClash() => RunLineClash("S9", true);
+
+    /// <summary>S9 with the melee contact of before M2 (no sliding, no blocked retarget, no lock while swinging).</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS9LineClashLegacy() => RunLineClash("S9Legacy", false);
+
+    IEnumerator RunLineClash(string label, bool m2)
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
+        var tuningEntity = tuningQuery.GetSingletonEntity();
+        var tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
+        var previous = tuning;
+        NavMeshAgent remoteAgent = null;
+        try
+        {
+            if (!m2)
+            {
+                tuning.enemyContactEnabled = false;
+                tuning.blockedRetargetTime = 0f;
+                tuning.attackMovementLock = false;
+                em.SetComponentData(tuningEntity, tuning);
+            }
+            yield return PrepareBaseline();
+
+            Unity.Entities.Entity remote;
+            using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroSquadReference), typeof(NavMeshAgent)))
+            {
+                yield return Until(() => query.CalculateEntityCount() == 1, 10f, "Remote hero agent missing.");
+                remote = query.GetSingletonEntity();
+            }
+            // The test drives the remote hero; its squad follows it in its spawn formation (Line for sqd01).
+            em.RemoveComponent<HeroAITag>(remote);
+            Unity.Entities.Entity remoteSquad = em.GetComponentData<HeroSquadReference>(remote).squad;
+            var intent = em.GetComponentData<SquadAIOrderIntentComponent>(remoteSquad);
+            intent.suggestedOrder = SquadOrderType.FollowHero;
+            intent.targetEntity = Unity.Entities.Entity.Null;
+            em.SetComponentData(remoteSquad, intent);
+            remoteAgent = em.GetComponentObject<NavMeshAgent>(remote);
+            remoteAgent.speed = em.GetComponentData<HeroStatsComponent>(remote).baseSpeed;
+            remoteAgent.isStopped = false;
+            yield return new WaitForSeconds(2f); // The remote squad leaves its hold and forms on its hero.
+
+            using (MovementVideoCapture.Start(label))
+            {
+                MovementMetricsRecorderSystem.Begin(label, squad);
+                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                Assert.That(remoteAgent.SetDestination((Vector3)start), Is.True, "The remote hero cannot path to the local hero.");
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+                float deadline = Time.time + S9ApproachTimeout;
+                while (Time.time < deadline && !AnySquadUnitAttacking())
+                    yield return null;
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                remoteAgent.isStopped = true;
+                Assert.That(AnySquadUnitAttacking(), Is.True, "The two lines never met.");
+                yield return new WaitForSeconds(S9MeleeSeconds);
+                ReportBaseline(start);
+            }
+        }
+        finally
+        {
+            RestoreInputSettings(previousInput);
+            if (em.Exists(tuningEntity))
+                em.SetComponentData(tuningEntity, previous);
+        }
+    }
+
     // S7 bottleneck (Movimiento_Formaciones.md §5.2): an L-shaped corridor 2 m wide (inside the walls) in front of the hero.
     const float S7CorridorStart = 6f;     // Open ground between the hero and the corridor mouth, m.
     const float S7FirstLeg = 10f;         // From the mouth to the centre of the corner, m.

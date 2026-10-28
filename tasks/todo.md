@@ -87,4 +87,6 @@ colisión."
   para formar líneas de combate. Variantes S6/S7 `NoBlockedRetarget` para comparar.
 - [x] P5: mientras golpea, la unidad cuerpo a cuerpo solo frena (`attackMovementLock`). Velocidad al golpear S6 0,52 → 0,25 m/s;
   primer golpe igual. Variantes S6/S7 `NoAttackLock`.
-- [ ] Siguiente: P6 (límite de cambio de dirección, solo si siguen los picos), P7 (escenario S9 de dos líneas).
+- [x] P7: escenario S9 (dos líneas de frente) y métricas de línea en el grabador. Solapes 10 → 0, pero filas de atrás por
+  delante de la primera 4 → 17 % y primer golpe +0,8 s.
+- [ ] Siguiente: que las filas de atrás no rebasen a la primera en S9; P6 solo si vuelven los picos.

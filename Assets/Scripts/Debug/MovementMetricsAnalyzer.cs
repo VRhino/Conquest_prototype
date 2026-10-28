@@ -24,6 +24,7 @@ public struct MovementUnitSample
     public int gear;              // MovementGear, -1 when unknown.
     public float speed;           // Agent horizontal speed.
     public float destX, destZ;    // Formation destination the unit is heading for (after NavMesh validation).
+    public int row;               // Formation rank from the front (0 = front row), -1 when unknown (S9).
 }
 
 /// <summary>Squad-level and global values observed in one frame.</summary>
@@ -36,6 +37,7 @@ public struct MovementFrameSample
     public bool anchorMoving;
     public float anchorX;
     public float anchorZ;
+    public float forwardX, forwardZ;    // Formation forward on the ground (S9 rank order).
     public int setDestinationCalls;
     public int projectionRequests;
     public double formationStateMs;
@@ -46,6 +48,7 @@ public struct MovementFrameSample
     public int allyOverlaps;            // Allied pairs closer than the overlap distance (all squads).
     public int enemyOverlaps;           // Enemy pairs closer than the overlap distance.
     public int persistentEnemyOverlaps; // Enemy pairs overlapping for longer than the persistence window.
+    public int persistentEnemyOverlapsEngaged; // ... of which a unit of the pair has a combat target (S9).
     public int stackedDestinations;     // Squadmate pairs whose movement destinations share a formation cell (S7).
     public int detourDestinations;      // Units whose destination is reached only by a detour from the hero, or not at all (S7).
     public int relocatedSlots;          // Slots moved to another cell by the NavMesh validation (C13).
@@ -83,6 +86,15 @@ public sealed class MovementMetricsSummary
     public int maxAllyOverlaps;
     public float meanAllyOverlapsMarching;
     public int maxPersistentEnemyOverlaps;
+    /// <summary>Persistent enemy overlaps split by whether a unit of the pair has a combat target (S9, P7).</summary>
+    public int maxPersistentEnemyOverlapsEngaged;
+    public int maxPersistentEnemyOverlapsFree;
+    /// <summary>Mean time from the start of the recording to each unit's first swing, s; -1 without swings (S9).</summary>
+    public float meanTimeToFirstSwing;
+    /// <summary>Mean agent speed while swinging (P5).</summary>
+    public float meanSpeedWhileSwinging;
+    /// <summary>Share of rear-rank samples in melee that stand ahead of their front rank's mean line (S9: the line holds).</summary>
+    public float rearAheadOfFrontRatio;
     public float meanContactDistance;
     public float minContactDistance;
     public int maxAttackersPerTarget;
@@ -118,6 +130,8 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  marching per unit per second: SetDestination={setDestinationMarchingPerUnitPerSecond.ToString("F2", c)} projections={projectionsMarchingPerUnitPerSecond.ToString("F2", c)}");
         s.AppendLine($"  ally overlaps per frame: mean={meanAllyOverlaps.ToString("F2", c)} max={maxAllyOverlaps} marching mean={meanAllyOverlapsMarching.ToString("F2", c)}");
         s.AppendLine($"  enemy pairs overlapping longer than {MovementMetricsAnalyzer.EnemyOverlapPersistence.ToString("F1", c)} s: max={maxPersistentEnemyOverlaps}");
+        s.AppendLine($"  of which engaged={maxPersistentEnemyOverlapsEngaged} free={maxPersistentEnemyOverlapsFree}; first swing after mean={meanTimeToFirstSwing.ToString("F2", c)}s; speed while swinging={meanSpeedWhileSwinging.ToString("F2", c)}m/s");
+        s.AppendLine($"  rear ranks ahead of their front line in melee: {(rearAheadOfFrontRatio * 100f).ToString("F1", c)} % of samples");
         s.AppendLine($"  contact distance while attacking: mean={meanContactDistance.ToString("F2", c)}m min={minContactDistance.ToString("F2", c)}m");
         s.AppendLine($"  attackers per target: max={maxAttackersPerTarget} p95={p95AttackersPerTarget.ToString("F1", c)}");
         s.AppendLine($"  leash violations (reacting, beyond the leash > {MovementMetricsAnalyzer.LeashPersistence.ToString("F1", c)} s): {leashViolations}");
@@ -322,6 +336,10 @@ public static class MovementMetricsAnalyzer
         summary.maxAllyOverlaps = global.Count > 0 ? global.Max(f => f.allyOverlaps) : 0;
         summary.meanAllyOverlapsMarching = marching.Count > 0 ? (float)marching.Average(f => f.allyOverlaps) : 0f;
         summary.maxPersistentEnemyOverlaps = global.Count > 0 ? global.Max(f => f.persistentEnemyOverlaps) : 0;
+        summary.maxPersistentEnemyOverlapsEngaged = global.Count > 0 ? global.Max(f => f.persistentEnemyOverlapsEngaged) : 0;
+        summary.maxPersistentEnemyOverlapsFree = global.Count > 0
+            ? global.Max(f => f.persistentEnemyOverlaps - f.persistentEnemyOverlapsEngaged) : 0;
+        AnalyzeLine(summary, frames, units);
         // Destination checks are per squad, so they use every frame sample, not only the global ones.
         summary.meanStackedDestinations = (float)frames.Average(f => f.stackedDestinations);
         summary.maxStackedDestinations = frames.Max(f => f.stackedDestinations);
@@ -397,6 +415,40 @@ public static class MovementMetricsAnalyzer
         }
         summary.accelerationSpikeRatio = accelerationSamples > 0 ? (float)accelerationSpikes / accelerationSamples : 0f;
         summary.targetSwitchesPerUnitPerSecond = targetedTime > 0f ? targetSwitches / targetedTime : 0f;
+    }
+
+    /// <summary>
+    /// S9 (P7): time to each unit's first swing, speed while swinging, and rear ranks that stand ahead of their front
+    /// rank's mean line along the formation forward, in frames where the squad has a unit with a target.
+    /// </summary>
+    static void AnalyzeLine(MovementMetricsSummary summary, IReadOnlyList<MovementFrameSample> frames,
+        IReadOnlyList<MovementUnitSample> units)
+    {
+        float start = frames.Min(f => f.time);
+        var firstSwings = units.Where(u => u.attacking).GroupBy(u => (u.squad, u.unit))
+            .Select(g => g.Min(u => u.time) - start).ToList();
+        summary.meanTimeToFirstSwing = firstSwings.Count > 0 ? firstSwings.Average() : -1f;
+        var swinging = units.Where(u => u.attacking).ToList();
+        summary.meanSpeedWhileSwinging = swinging.Count > 0 ? swinging.Average(u => u.speed) : 0f;
+
+        var forwards = new Dictionary<(int, int), (float x, float z)>();
+        foreach (var f in frames) forwards[(f.frame, f.squad)] = (f.forwardX, f.forwardZ);
+        int rear = 0, ahead = 0;
+        foreach (var group in units.GroupBy(u => (u.frame, u.squad)))
+        {
+            if (!forwards.TryGetValue(group.Key, out var fwd) || (fwd.x == 0f && fwd.z == 0f)) continue;
+            if (!group.Any(u => u.target >= 0)) continue;
+            var front = group.Where(u => u.row == 0).ToList();
+            if (front.Count == 0) continue;
+            float line = front.Average(u => u.x * fwd.x + u.z * fwd.z);
+            foreach (var u in group)
+            {
+                if (u.row <= 0) continue;
+                rear++;
+                if (u.x * fwd.x + u.z * fwd.z > line) ahead++;
+            }
+        }
+        summary.rearAheadOfFrontRatio = rear > 0 ? (float)ahead / rear : 0f;
     }
 
     static float WrapAngle(float radians)

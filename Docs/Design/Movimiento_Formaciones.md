@@ -944,3 +944,26 @@ del golpe salen de `units.csv` (columna `attacking`).
 
 Lectura: hace lo que busca. La unidad se mueve la mitad o menos mientras golpea, y el primer golpe no se retrasa (S7, +0,3 s,
 dentro del rango). Las paradas y la fracción de tiempo golpeando cambian de signo entre S6 y S7: ruido de la melé.
+
+### P7: escenario S9, dos líneas chocando de frente (2026-10-28)
+`MovementBaselineS9LineClash`: el test quita la IA al héroe remoto y lo lleva contra el héroe local, que avanza hacia él;
+las dos escuadras (sqd01, en Línea) los siguen y los dos héroes se paran en el primer golpe. `S9Legacy` es lo mismo con el
+contacto de antes de M2 (sin resbalar, sin bloqueo leído por el objetivo, sin frenar al golpear). El grabador mide además
+los solapes persistentes con y sin objetivo, el tiempo hasta el primer golpe, la velocidad mientras golpea y la fracción de
+muestras de filas de atrás por delante de la línea media de su primera fila durante la melé (`rearAheadOfFrontRatio`, con
+el rango de `UnitGridSlotComponent` y el avance del ancla).
+
+| Métrica (3 corridas, mediana) | S9 antes de M2 | S9 con M2 |
+|---|---|---|
+| Pares enemigos solapados > 0,3 s (con objetivo / sin) | 10 (10 / 0) | **0 (0 / 0)** |
+| Tiempo medio hasta el primer golpe | 3,8 s | 4,6 s |
+| Velocidad mientras golpea | 0,29 m/s | 0,21 m/s |
+| Filas de atrás por delante de su primera fila | 4 % | **17 %** |
+| Atacantes por objetivo (máx. / p95) | 2 / 2 | 2 / 2 |
+| Paradas | 23 | 32 |
+
+Lectura: los solapes del frente (todos con objetivo) desaparecen y la saturación mantiene 2 atacantes por enemigo. Pero
+las filas de atrás pasan más a menudo por delante de su primera fila: la primera fila se queda a la distancia de contacto
+y las de atrás, que resbalan por los lados, la rebasan. El primer golpe llega 0,8 s más tarde porque ya no se entra en el
+cuerpo del enemigo. Es lo siguiente a atacar para que la melé sea una línea: que las filas de atrás no busquen objetivo
+propio mientras la primera fila pelea, o que esperen detrás de ella.

@@ -42,7 +42,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     ProfilerRecorder _followFormationTime;
     ProfilerRecorder _avoidanceTime;
     ProfilerRecorder _slotResolveTime;
-    readonly List<(float3 position, int team, int index, int squad, float spacing)> _bodies = new();
+    readonly List<(float3 position, int team, int index, int squad, float spacing, bool engaged)> _bodies = new();
     readonly Dictionary<int2, List<int>> _grid = new();
     readonly HashSet<long> _overlapNow = new();
     readonly HashSet<int> _focusUnits = new();
@@ -109,7 +109,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         int slotQueries = FormationSlotResolveSystem.DebugQueriesThisFrame;
 
         FillFocusUnits();
-        CountOverlaps(time, out int allyOverlaps, out int enemyOverlaps, out int persistentEnemyOverlaps);
+        CountOverlaps(time, out int allyOverlaps, out int enemyOverlaps, out int persistentEnemyOverlaps,
+            out int persistentEngaged);
 
         foreach (var (units, squad) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>()
                      .WithAll<SquadFormationAnchorComponent>().WithEntityAccess())
@@ -119,18 +120,20 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 && SystemAPI.IsComponentEnabled<SquadAnchorMovingTag>(squad);
             bool reacting = SystemAPI.HasComponent<SquadResolvedOrderComponent>(squad)
                 && SystemAPI.GetComponent<SquadResolvedOrderComponent>(squad).source == OrderSource.CombatReaction;
-            float3 anchor = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squad).position;
+            var anchorData = SystemAPI.GetComponent<SquadFormationAnchorComponent>(squad);
+            float3 anchor = anchorData.position;
+            float2 forward = math.normalizesafe(math.mul(anchorData.rotation, math.forward()).xz);
             CountDestinationProblems(squad, units, out int stacked, out int detours, out int relocated, out int unresolved);
             FrameSamples.Add(new MovementFrameSample
             {
                 frame = frame, time = time, deltaTime = dt, squad = squad.Index,
-                anchorMoving = anchorMoving, anchorX = anchor.x, anchorZ = anchor.z,
+                anchorMoving = anchorMoving, anchorX = anchor.x, anchorZ = anchor.z, forwardX = forward.x, forwardZ = forward.y,
                 setDestinationCalls = setDestination, projectionRequests = projections,
                 formationStateMs = Ms(_formationStateTime), navMeshMs = Ms(_navMeshTime),
                 followFormationMs = Ms(_followFormationTime), avoidanceMs = Ms(_avoidanceTime),
                 slotResolveMs = Ms(_slotResolveTime),
                 allyOverlaps = allyOverlaps, enemyOverlaps = enemyOverlaps,
-                persistentEnemyOverlaps = persistentEnemyOverlaps,
+                persistentEnemyOverlaps = persistentEnemyOverlaps, persistentEnemyOverlapsEngaged = persistentEngaged,
                 stackedDestinations = stacked, detourDestinations = detours,
                 relocatedSlots = relocated, unresolvedSlots = unresolved, slotResolveQueries = slotQueries
             });
@@ -255,7 +258,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             target = target, targetDistance = targetDistance, attacking = attacking, reacting = reacting,
             gear = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
                 ? (int)SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : -1,
-            speed = speed, destX = slot.x, destZ = slot.z
+            speed = speed, destX = slot.x, destZ = slot.z,
+            row = SystemAPI.HasComponent<UnitGridSlotComponent>(unit) ? SystemAPI.GetComponent<UnitGridSlotComponent>(unit).row : -1
         };
     }
 
@@ -272,9 +276,9 @@ public partial class MovementMetricsRecorderSystem : SystemBase
     /// Body overlaps with a 1 m grid. With a squad filter only pairs that include one of its units count, so other
     /// squads (idle at their spawn, reserves) do not pollute the measured scenario.
     /// </summary>
-    void CountOverlaps(float time, out int ally, out int enemy, out int persistentEnemy)
+    void CountOverlaps(float time, out int ally, out int enemy, out int persistentEnemy, out int persistentEngaged)
     {
-        ally = enemy = persistentEnemy = 0;
+        ally = enemy = persistentEnemy = persistentEngaged = 0;
         _bodies.Clear();
         foreach (var cell in _grid.Values) cell.Clear();
         foreach (var (team, transform, entity) in SystemAPI.Query<RefRO<TeamComponent>, RefRO<LocalTransform>>()
@@ -286,7 +290,9 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 ? SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad : Entity.Null;
             float spacing = squad != Entity.Null && SystemAPI.HasComponent<FormationComponent>(squad)
                 ? SystemAPI.GetComponent<FormationComponent>(squad).spacing : MovementTuningComponent.ReferenceSpacing;
-            _bodies.Add((p, (int)team.ValueRO.value, entity.Index, squad.Index, spacing));
+            bool engaged = SystemAPI.HasComponent<UnitCombatComponent>(entity)
+                && SystemAPI.GetComponent<UnitCombatComponent>(entity).target != Entity.Null;
+            _bodies.Add((p, (int)team.ValueRO.value, entity.Index, squad.Index, spacing, engaged));
             var key = new int2((int)math.floor(p.x), (int)math.floor(p.z));
             if (!_grid.TryGetValue(key, out var list)) _grid[key] = list = new List<int>();
             list.Add(index);
@@ -317,7 +323,11 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                     long key = ((long)math.min(a.index, b.index) << 32) | (uint)math.max(a.index, b.index);
                     _overlapNow.Add(key);
                     if (!EnemyOverlapSince.TryGetValue(key, out float since)) EnemyOverlapSince[key] = since = time;
-                    if (time - since > MovementMetricsAnalyzer.EnemyOverlapPersistence) persistentEnemy++;
+                    if (time - since > MovementMetricsAnalyzer.EnemyOverlapPersistence)
+                    {
+                        persistentEnemy++;
+                        if (a.engaged || b.engaged) persistentEngaged++;
+                    }
                 }
             }
         }
@@ -335,23 +345,24 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         Directory.CreateDirectory(directory);
         string prefix = Path.Combine(directory, $"{summary.label}_{stamp}");
 
-        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,stackedDestinations,detourDestinations,relocatedSlots,unresolvedSlots,slotResolveQueries\n");
+        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,forwardX,forwardZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,persistentEnemyOverlapsEngaged,stackedDestinations,detourDestinations,relocatedSlots,unresolvedSlots,slotResolveQueries\n");
         foreach (var f in FrameSamples)
             frames.AppendLine(string.Join(",", f.frame, f.time.ToString("F4", c), f.deltaTime.ToString("F4", c), f.squad,
                 f.anchorMoving ? 1 : 0, f.anchorX.ToString("F3", c), f.anchorZ.ToString("F3", c),
+                f.forwardX.ToString("F3", c), f.forwardZ.ToString("F3", c),
                 f.setDestinationCalls, f.projectionRequests,
                 f.formationStateMs.ToString("F4", c), f.navMeshMs.ToString("F4", c),
                 f.followFormationMs.ToString("F4", c), f.avoidanceMs.ToString("F4", c),
-                f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps, f.stackedDestinations, f.detourDestinations,
+                f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps, f.persistentEnemyOverlapsEngaged, f.stackedDestinations, f.detourDestinations,
                 f.relocatedSlots, f.unresolvedSlots, f.slotResolveQueries));
         File.WriteAllText(prefix + "_frames.csv", frames.ToString());
 
-        var units = new StringBuilder("frame,time,squad,unit,state,slotDistance,x,z,yaw,team,target,targetDistance,attacking,reacting,gear,speed,destX,destZ\n");
+        var units = new StringBuilder("frame,time,squad,unit,state,slotDistance,x,z,yaw,team,target,targetDistance,attacking,reacting,gear,speed,destX,destZ,row\n");
         foreach (var u in UnitSamples)
             units.AppendLine(string.Join(",", u.frame, u.time.ToString("F4", c), u.squad, u.unit, u.state,
                 u.slotDistance.ToString("F4", c), u.x.ToString("F3", c), u.z.ToString("F3", c), u.yaw.ToString("F4", c),
                 u.team, u.target, u.targetDistance.ToString("F3", c), u.attacking ? 1 : 0, u.reacting ? 1 : 0,
-                u.gear, u.speed.ToString("F3", c), u.destX.ToString("F3", c), u.destZ.ToString("F3", c)));
+                u.gear, u.speed.ToString("F3", c), u.destX.ToString("F3", c), u.destZ.ToString("F3", c), u.row));
         File.WriteAllText(prefix + "_units.csv", units.ToString());
         File.WriteAllText(prefix + "_summary.txt", summary.ToString());
         File.WriteAllText(prefix + "_summary.json", UnityEngine.JsonUtility.ToJson(summary, true)); // For medians (M10).
