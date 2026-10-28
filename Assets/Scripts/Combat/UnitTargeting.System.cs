@@ -10,8 +10,9 @@ using Unity.Transforms;
 /// attackers each enemy already has across every squad (soft saturation, no hard cap) plus a bonus for the current
 /// target. A unit within reach of its target keeps it; the rest look again every few tenths of a second, with a phase
 /// per unit. New targets come only from the squad's enemy search (L4-09): the combat radius of its strategy and speed,
-/// and the same level. A unit stopped by an enemy that is not its target takes that enemy after
-/// <c>blockedRetargetTime</c> (P4, <see cref="UnitBlockedComponent"/>): the way out of pushing through one enemy to reach another.
+/// and the same level. A unit stopped by an enemy that is not its target scores again after <c>blockedRetargetTime</c> with
+/// that enemy in and a bonus for it (P4, <see cref="UnitBlockedComponent"/>): it takes the enemy in its way unless that
+/// one is already crowded, so the melee forms lines instead of pushing through one enemy to reach another, or piling up.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
@@ -122,20 +123,15 @@ public partial class UnitTargetingSystem : SystemBase
                     chosen = currentValid ? previous : ClosestSearchable(unit);
                     if (chosen != Entity.Null) _rangedCounts[chosen] = Count(_rangedCounts, chosen) + 1;
                 }
-                else if (TakesBlocker(unit, previous, currentValid, bodyRadius, now, tuning.blockedRetargetTime, out Entity blocker))
-                {
-                    chosen = blocker;
-                    if (previous != Entity.Null) _meleeCounts[previous] = Count(_meleeCounts, previous) - 1;
-                    _meleeCounts[chosen] = Count(_meleeCounts, chosen) + 1;
-                }
-                else if (currentValid && (InReach(unit, previous, bodyRadius)
+                else if (!BlockerDue(unit, previous, currentValid, bodyRadius, now, tuning.blockedRetargetTime, out Entity blocker)
+                         && currentValid && (InReach(unit, previous, bodyRadius)
                              || !TargetScoring.ReevaluationDue(unit.Index, now, deltaTime, tuning.targetReevaluateInterval)))
                 {
                     chosen = previous; // Engaged, or not its turn to look again.
                 }
                 else
                 {
-                    chosen = BestMeleeTarget(unit, currentValid ? previous : Entity.Null, focus, candidateCount, weights);
+                    chosen = BestMeleeTarget(unit, currentValid ? previous : Entity.Null, blocker, focus, candidateCount, weights);
                     if (chosen != previous)
                     {
                         if (previous != Entity.Null) _meleeCounts[previous] = Count(_meleeCounts, previous) - 1;
@@ -265,17 +261,19 @@ public partial class UnitTargetingSystem : SystemBase
         return focus;
     }
 
-    /// <summary>Best scored target among the K nearest searchable candidates and the current one.</summary>
-    private Entity BestMeleeTarget(Entity unit, Entity current, Entity focus, int candidateCount, in TargetScoreWeights w)
+    /// <summary>Best scored target among the K nearest searchable candidates, the current one and the blocker (P4).</summary>
+    private Entity BestMeleeTarget(Entity unit, Entity current, Entity blocker, Entity focus, int candidateCount,
+        in TargetScoreWeights w)
     {
         float3 unitPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
         int found = 0;
-        int currentIndex = -1;
+        int currentIndex = -1, blockerIndex = -1;
         for (int j = 0; j < _candidates.Count; j++)
         {
             DebugCandidateChecks++;
             var c = _candidates[j];
             if (c.entity == current) currentIndex = j;
+            if (c.entity == blocker) blockerIndex = j;
             if (!c.searchable) continue;
             TargetScoring.InsertNearest(_nearest, _nearestDistancesSq, ref found, candidateCount, j,
                 math.distancesq(unitPos.xz, c.position.xz));
@@ -283,29 +281,31 @@ public partial class UnitTargetingSystem : SystemBase
 
         Entity best = Entity.Null;
         float bestScore = float.MinValue;
-        for (int k = -1; k < found; k++)
+        for (int k = -2; k < found; k++)
         {
-            int j = k < 0 ? currentIndex : _nearest[k];
-            if (j < 0 || (k >= 0 && j == currentIndex)) continue;
+            // The current target and the blocker are scored even when they are not among the K nearest.
+            int j = k == -2 ? currentIndex : k == -1 ? blockerIndex : _nearest[k];
+            if (j < 0 || (k == -1 && j == currentIndex) || (k >= 0 && (j == currentIndex || j == blockerIndex))) continue;
             var c = _candidates[j];
             bool isCurrent = j == currentIndex;
             int others = Count(_meleeCounts, c.entity) - (isCurrent ? 1 : 0);
             float score = TargetScoring.Score(math.distance(unitPos.xz, c.position.xz),
-                focus != Entity.Null && (c.owner == focus || c.entity == focus), c.isHero, others, isCurrent, w);
+                focus != Entity.Null && (c.owner == focus || c.entity == focus), c.isHero, others, isCurrent, w,
+                j == blockerIndex);
             if (score > bestScore) { bestScore = score; best = c.entity; }
         }
         return best;
     }
 
-    /// <summary>The enemy blocking the unit, when it is time to take it as the target (P4).</summary>
-    private bool TakesBlocker(Entity unit, Entity previous, bool currentValid, float bodyRadius, double now,
+    /// <summary>The enemy blocking the unit, when it is time to score it (P4).</summary>
+    private bool BlockerDue(Entity unit, Entity previous, bool currentValid, float bodyRadius, double now,
         float threshold, out Entity blocker)
     {
         blocker = Entity.Null;
         if (threshold <= 0f || !SystemAPI.HasComponent<UnitBlockedComponent>(unit)) return false;
         var blocked = SystemAPI.GetComponent<UnitBlockedComponent>(unit);
         if (blocked.blocker == Entity.Null || blocked.blocker == previous) return false;
-        bool take = TargetScoring.TakeBlocker(_validTargets.Contains(blocked.blocker), now - blocked.since, threshold,
+        bool take = TargetScoring.BlockerDue(_validTargets.Contains(blocked.blocker), now - blocked.since, threshold,
             currentValid && InReach(unit, previous, bodyRadius));
         if (take) blocker = blocked.blocker;
         return take;

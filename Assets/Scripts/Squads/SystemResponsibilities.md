@@ -317,7 +317,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Responsabilidad**: Asigna un target enemigo específico a cada unidad del squad según estado `InCombat`
 - **Input compartido**: `SquadTargetEntity`; no existe una copia de candidatos por unidad
 - **Output**: `UnitCombatComponent.target` por unidad
-- **Bloqueo (M2 P4)**: lee `UnitBlockedComponent`; una unidad cuerpo a cuerpo bloqueada `blockedRetargetTime` (0,5 s) por un enemigo atacable, sin tener su objetivo al alcance, pasa a él
+- **Bloqueo (M2 P4)**: lee `UnitBlockedComponent`; una unidad cuerpo a cuerpo bloqueada `blockedRetargetTime` (0,5 s) por un enemigo atacable, sin tener su objetivo al alcance, vuelve a puntuar con él y `targetBlockerBonus` antes de la saturación (líneas, no montones)
 - **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateAfter(SquadFSMSystem)]`
 - **Gate**: Solo asigna targets si `SquadFSMState.InCombat` — las tres formas de entrar en combate (tecla V, daño recibido, aliado impactado) convergen correctamente en el FSM
 - **Regla**: No decide cuándo entrar en combate — solo distribuye targets cuando ya está en `InCombat`

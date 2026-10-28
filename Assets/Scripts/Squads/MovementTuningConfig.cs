@@ -135,8 +135,10 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1)] public int targetCandidateCount = 6;
     [Tooltip("A melee unit not yet within reach looks at its target again every this many seconds, each with its own phase. 0 = every frame.")]
     [Min(0f)] public float targetReevaluateInterval = 0.3f;
-    [Tooltip("A melee unit blocked this long by an enemy that is not its target takes that enemy as its target (P4). 0 = off.")]
+    [Tooltip("A melee unit blocked this long by an enemy that is not its target scores its targets again with that enemy in (P4). 0 = off.")]
     [Min(0f)] public float blockedRetargetTime = 0.5f;
+    [Tooltip("Added to the blocking enemy's score before the soft saturation (P4): it wins unless already crowded, so lines form instead of piles.")]
+    [Min(0f)] public float targetBlockerBonus = 0.5f;
 
     [Header("Squad enemy search (L4-09)")]
     [Tooltip("New targets only within the squad's combat radius and on its level. Off = every detected enemy, as before L4-09.")]
@@ -210,6 +212,7 @@ public class MovementTuningConfig : ScriptableObject
         targetCandidateCount = targetCandidateCount,
         targetReevaluateInterval = targetReevaluateInterval,
         blockedRetargetTime = blockedRetargetTime,
+        targetBlockerBonus = targetBlockerBonus,
         enemySearchEnabled = enemySearchEnabled,
         enemySearchRadiusMin = enemySearchRadiusMin,
         enemySearchRadiusMax = enemySearchRadiusMax,

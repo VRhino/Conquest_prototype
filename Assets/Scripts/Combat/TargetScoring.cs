@@ -9,6 +9,7 @@ public struct TargetScoreWeights
     public float saturationPerAttacker; // k in p' = p·(1 − n·k) (D6).
     public float saturationFloor;       // Lowest saturation factor: a crowded enemy stays eligible.
     public float keepBonus;             // Added for the current target (hysteresis).
+    public float blockerBonus;          // Added for the enemy that blocks the unit, before saturation (P4).
 
     public static TargetScoreWeights From(in MovementTuningComponent t) => new TargetScoreWeights
     {
@@ -18,6 +19,7 @@ public struct TargetScoreWeights
         saturationPerAttacker = t.targetSaturationPerAttacker,
         saturationFloor = t.targetSaturationFloor,
         keepBonus = t.targetKeepBonus,
+        blockerBonus = t.targetBlockerBonus,
     };
 }
 
@@ -40,12 +42,15 @@ public static class TargetScoring
         math.max(math.saturate(floor), 1f - math.max(0, otherAttackers) * math.max(0f, perAttacker));
 
     /// <param name="otherAttackers">Melee attackers already on the enemy, the scoring unit not included.</param>
+    /// <param name="isBlocker">The enemy stops the unit (P4): its bonus is scaled by the saturation like the rest, so a
+    /// crowded blocker loses to a free enemy and the melee keeps a line instead of piling up.</param>
     public static float Score(float distance, bool inFocus, bool isHero, int otherAttackers, bool isCurrent,
-        in TargetScoreWeights w)
+        in TargetScoreWeights w, bool isBlocker = false)
     {
         float baseScore = Proximity(distance, w.distanceScale)
             + (inFocus ? w.focusBonus : 0f)
-            + (isHero ? w.heroBias : 0f);
+            + (isHero ? w.heroBias : 0f)
+            + (isBlocker ? w.blockerBonus : 0f);
         return baseScore * Saturation(otherAttackers, w.saturationPerAttacker, w.saturationFloor)
             + (isCurrent ? w.keepBonus : 0f);
     }
@@ -73,11 +78,11 @@ public static class TargetScoring
     }
 
     /// <summary>
-    /// P4: a melee unit takes the enemy that blocks it once the block has lasted <paramref name="threshold"/> (the
-    /// hysteresis), if that enemy is attackable and the unit is not already within reach of its own target.
-    /// Threshold ≤ 0 = off.
+    /// P4: a melee unit scores its targets again with the enemy that blocks it once the block has lasted
+    /// <paramref name="threshold"/>, if that enemy is attackable and the unit is not already within reach of its own
+    /// target. Threshold ≤ 0 = off.
     /// </summary>
-    public static bool TakeBlocker(bool blockerAttackable, double blockedFor, float threshold, bool targetInReach)
+    public static bool BlockerDue(bool blockerAttackable, double blockedFor, float threshold, bool targetInReach)
         => threshold > 0f && blockerAttackable && !targetInReach && blockedFor >= threshold;
 
     /// <summary>

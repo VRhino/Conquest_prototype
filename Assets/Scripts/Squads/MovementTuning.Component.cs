@@ -69,7 +69,8 @@ public struct MovementTuningComponent : IComponentData
     public float targetKeepBonus; // Hysteresis: added for the current target.
     public int targetCandidateCount; // K nearest candidates scored per unit.
     public float targetReevaluateInterval; // A melee unit looks at its target again every this many seconds, s.
-    public float blockedRetargetTime; // Blocked this long by an enemy that is not its target, a melee unit takes it (P4), s; 0 = off.
+    public float blockedRetargetTime; // Blocked this long by an enemy that is not its target, a melee unit re-scores with it (P4), s; 0 = off.
+    public float targetBlockerBonus; // Added to the blocking enemy's score before saturation (P4): wins unless crowded.
     public bool enemySearchEnabled; // New targets only within the squad's combat radius and level (L4-09); off = all detected.
     public float enemySearchRadiusMin; // Combat radius beyond the squad's extent when still or holding, m.
     public float enemySearchRadiusMax; // ... when attacking or at full speed, m.
@@ -135,6 +136,7 @@ public struct MovementTuningComponent : IComponentData
         targetCandidateCount = 6,
         targetReevaluateInterval = 0.3f,
         blockedRetargetTime = 0.5f,
+        targetBlockerBonus = 0.5f,
         enemySearchEnabled = true,
         enemySearchRadiusMin = 6f,
         enemySearchRadiusMax = 8f,

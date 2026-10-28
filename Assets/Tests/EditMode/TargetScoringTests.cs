@@ -122,12 +122,24 @@ public class TargetScoringTests
     }
 
     [Test]
-    public void BlockerIsTakenAfterTheThresholdUnlessTheTargetIsInReach()
+    public void BlockerWinsUnlessItIsCrowdedSoTheMeleeKeepsALine()
     {
-        Assert.That(TargetScoring.TakeBlocker(true, 0.6, 0.5f, false), Is.True);
-        Assert.That(TargetScoring.TakeBlocker(true, 0.3, 0.5f, false), Is.False, "Not blocked long enough.");
-        Assert.That(TargetScoring.TakeBlocker(false, 2.0, 0.5f, false), Is.False, "Not attackable.");
-        Assert.That(TargetScoring.TakeBlocker(true, 2.0, 0.5f, true), Is.False, "Already fighting its target.");
-        Assert.That(TargetScoring.TakeBlocker(true, 2.0, 0f, false), Is.False, "Threshold 0 = off.");
+        var w = Weights;
+        // The enemy in the way, touching, against a free enemy 2.5 m off (P4).
+        float free = TargetScoring.Score(2.5f, false, false, 0, false, w);
+        Assert.That(TargetScoring.Score(0.9f, false, false, 1, false, w, isBlocker: true), Is.GreaterThan(free),
+            "With one attacker on it the blocker still wins.");
+        Assert.That(TargetScoring.Score(0.9f, false, false, 2, false, w, isBlocker: true), Is.LessThan(free),
+            "Crowded: the unit goes for the free enemy instead of piling up.");
+    }
+
+    [Test]
+    public void BlockerIsScoredAfterTheThresholdUnlessTheTargetIsInReach()
+    {
+        Assert.That(TargetScoring.BlockerDue(true, 0.6, 0.5f, false), Is.True);
+        Assert.That(TargetScoring.BlockerDue(true, 0.3, 0.5f, false), Is.False, "Not blocked long enough.");
+        Assert.That(TargetScoring.BlockerDue(false, 2.0, 0.5f, false), Is.False, "Not attackable.");
+        Assert.That(TargetScoring.BlockerDue(true, 2.0, 0.5f, true), Is.False, "Already fighting its target.");
+        Assert.That(TargetScoring.BlockerDue(true, 2.0, 0f, false), Is.False, "Threshold 0 = off.");
     }
 }
