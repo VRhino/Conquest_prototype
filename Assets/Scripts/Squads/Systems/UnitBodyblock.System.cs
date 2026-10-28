@@ -16,6 +16,10 @@ using UnityEngine.AI;
 /// tiene empuje entre soldados: cada unidad se aparta solo lo justo para deshacer el solape (la mitad cada una si las dos
 /// se mueven), sin muelle que se pase ni siga empujando. Sin él, el empuje de muelle anterior (M2, §18).
 ///
+/// Con `MovementTuningComponent.enemyContactEnabled` (P0) hay una sola distancia de contacto entre enemigos, 2·bodyRadius,
+/// peleen o no (antes 0,35 m con objetivo y 0,8 m sin él), y se corrige toda unidad que se mueve o pelea; la quieta no se
+/// toca. El recorte de velocidad de `EnemyContact` (P1) evita los solapes; aquí solo se deshacen los que ya existen.
+///
 /// Para el héroe local (que usa CharacterController en lugar de NavMeshAgent activo),
 /// el bloqueo se logra agregando un CapsuleCollider a los prefabs visuales de unidades:
 /// el CharacterController del héroe queda bloqueado físicamente sin código adicional.
@@ -74,7 +78,10 @@ public partial class UnitBodyblockSystem : SystemBase
         float dt = SystemAPI.Time.DeltaTime;
         if (dt <= 0f) return;
         var config = SystemAPI.GetSingleton<SquadSpawnConfigComponent>();
-        float radius = math.max(0.01f, config.bodyblockRadius);
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
+        bool singleContact = tuning.enemyContactEnabled && config.bodyblockResolveOverlapOnly;
+        float radius = math.max(0.01f, singleContact ? 2f * tuning.bodyRadius : config.bodyblockRadius);
         float repulsionStrength = math.max(0f, config.bodyblockRepulsionStrength);
         float wallStrength = math.max(0f, config.bodyblockWallStrength);
         float maxPushSpeed = math.max(0f, config.bodyblockMaxPushSpeed);
@@ -174,7 +181,7 @@ public partial class UnitBodyblockSystem : SystemBase
             radius = radius, dt = dt, repulsionStrength = repulsionStrength,
             wallStrength = wallStrength, engagingRadius = engagingRadius, engagingStrength = engagingStrength,
             overlapEpsilonSq = math.max(math.EPSILON, config.bodyblockOverlapEpsilonSq),
-            resolveOverlapOnly = config.bodyblockResolveOverlapOnly
+            resolveOverlapOnly = config.bodyblockResolveOverlapOnly, singleContact = singleContact
         };
         if (count >= math.max(1, config.bodyblockParallelThreshold))
             job.Schedule(count, math.max(1, config.bodyblockJobBatchSize)).Complete();
@@ -214,7 +221,7 @@ public partial class UnitBodyblockSystem : SystemBase
         [WriteOnly] public NativeArray<float3> Offsets;
         [WriteOnly] public NativeArray<int2> Counts;
         public float radius, dt, repulsionStrength, wallStrength, engagingRadius, engagingStrength, overlapEpsilonSq;
-        public bool resolveOverlapOnly;
+        public bool resolveOverlapOnly, singleContact;
 
         public void Execute(int i)
         {
@@ -245,6 +252,13 @@ public partial class UnitBodyblockSystem : SystemBase
                         ? (i < j ? GetOverlapDirection(current.entity, other.entity)
                             : -GetOverlapDirection(other.entity, current.entity))
                         : diff / dist;
+                    if (singleContact)
+                    {
+                        // One contact distance for every enemy pair; a still unit is never pushed (P0).
+                        if (!IsMobile(current)) continue;
+                        offset += dir * OverlapCorrection(dist, radius, IsMobile(other) ? BothMovingShare : 1f);
+                        continue;
+                    }
                     if (current.isEngaging && other.isEngaging)
                     {
                         if (distSq >= engagingRadius * engagingRadius) continue;
@@ -270,6 +284,8 @@ public partial class UnitBodyblockSystem : SystemBase
             Offsets[i] = offset;
             Counts[i] = new int2(candidates, contacts);
         }
+
+        static bool IsMobile(in RepulsionAgent agent) => agent.state == UnitFormationState.Moving || agent.isEngaging;
     }
 
     private void EnsureNativeCapacity(int count)

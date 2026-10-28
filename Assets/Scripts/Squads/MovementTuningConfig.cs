@@ -82,6 +82,12 @@ public class MovementTuningConfig : ScriptableObject
     [Tooltip("Time to separate overlapping allies (s).")]
     [Min(0.02f)] public float avoidanceCollisionResolveTime = 0.25f;
 
+    [Header("Enemy contact (M2)")]
+    [Tooltip("Enemy bodies touch at 2 x bodyRadius whether or not they fight (the bodyblock undoes overlaps below it), and a unit that moves slides along the enemies in front of it instead of walking into them: the part of its velocity that would close the gap faster than the gap allows is removed, the sideways part kept. A still unit is never pushed. Runs in UnitAvoidanceSystem, so it is off with avoidanceEnabled. Off = the bodyblock radii of SquadSpawnConfig, as before.")]
+    public bool enemyContactEnabled = true;
+    [Tooltip("A moving unit closes its gap to an enemy in no less than this time, so it slows down just before contact instead of stopping in one frame (s).")]
+    [Min(0f)] public float enemyContactLookaheadTime = 0.05f;
+
     [Header("Slot following (C9)")]
     [Tooltip("Switch to Run beyond this distance to the slot (m).")]
     [Min(0f)] public float runEnterDistance = 0.9f;
@@ -179,6 +185,8 @@ public class MovementTuningConfig : ScriptableObject
         avoidanceTimeHorizon = avoidanceTimeHorizon,
         avoidanceTimeHorizonNear = avoidanceTimeHorizonNear,
         avoidanceCollisionResolveTime = avoidanceCollisionResolveTime,
+        enemyContactEnabled = enemyContactEnabled,
+        enemyContactLookaheadTime = enemyContactLookaheadTime,
         runEnterDistance = runEnterDistance,
         runExitDistance = runExitDistance,
         followRecoveryTime = followRecoveryTime,

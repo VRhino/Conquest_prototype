@@ -10,8 +10,9 @@ using UnityEngine.AI;
 ///
 /// Reads the agent's steering (desiredVelocity, capped at the speed UnitFollowFormationSystem set) and writes
 /// agent.velocity for units that are following their slot or closing on a target. Formed, still units and
-/// heroes are obstacles the movers avoid alone; enemies are ignored (D2). Runs after the speed is set and
-/// before the bodyblock and the position sync.
+/// heroes are obstacles the movers avoid alone. Enemies are not avoided but slid along: with enemyContactEnabled the
+/// final velocity loses its approach to the enemies in front (<see cref="EnemyContact"/>, M2). Runs after the speed is
+/// set and before the bodyblock and the position sync.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitFollowFormationSystem))]
@@ -141,9 +142,20 @@ public partial class UnitAvoidanceSystem : SystemBase
             if (agent == null) continue;
             // Respect the agent's acceleration: writing the solved velocity directly bypassed it (spikes > 20 m/s²).
             float2 current = ((float3)agent.velocity).xz;
-            float2 v = AllyAvoidance.LimitAcceleration(current, velocities[i], agent.acceleration * dt,
+            velocities[i] = AllyAvoidance.LimitAcceleration(current, velocities[i], agent.acceleration * dt,
                 agent.acceleration * tuning.brakingFactor * dt);
-            agent.velocity = new UnityEngine.Vector3(v.x, agent.velocity.y, v.y);
+        }
+
+        // Last, so neither ORCA nor the acceleration limit can put the approach back (M2, P1).
+        if (tuning.enemyContactEnabled)
+            EnemyContact.Run(_agents.AsArray(), velocities, _grid, AllyAvoidance.CellSize(tuning.avoidanceNeighborRadius),
+                2f * tuning.bodyRadius, math.max(dt, tuning.enemyContactLookaheadTime));
+
+        for (int i = 0; i < _navAgents.Count; i++)
+        {
+            var agent = _navAgents[i];
+            if (agent == null) continue;
+            agent.velocity = new UnityEngine.Vector3(velocities[i].x, agent.velocity.y, velocities[i].y);
         }
     }
 }

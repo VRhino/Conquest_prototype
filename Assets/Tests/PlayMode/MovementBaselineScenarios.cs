@@ -118,27 +118,11 @@ public partial class BattleSceneIntegrationTests
     /// pursues within its leash when reacting (C6), so the hero has to carry it into contact.
     /// </summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
-    public IEnumerator MovementBaselineS6Clash()
-    {
-        var previousInput = UseUnfocusedEditorInput();
-        try
-        {
-            yield return PrepareBaseline();
-            using (MovementVideoCapture.Start("S6"))
-            {
-                MovementMetricsRecorderSystem.Begin("S6", squad);
-                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
-                float deadline = Time.time + S6ApproachTimeout;
-                while (Time.time < deadline && !AnySquadUnitAttacking())
-                    yield return null;
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                yield return new WaitForSeconds(S6MeleeSeconds);
-                ReportBaseline(start);
-            }
-        }
-        finally { RestoreInputSettings(previousInput); }
-    }
+    public IEnumerator MovementBaselineS6Clash() => RunClash("S6", 1f, true);
+
+    /// <summary>S6 with the enemy contact of before M2 P0/P1 (bodyblock radii of SquadSpawnConfig, no sliding).</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS6ClashLegacyContact() => RunClash("S6Legacy", 1f, false);
 
     /// <summary>
     /// Share of the soft saturation (D6) each attacker counts for in S7: one squad crowds an enemy as three would.
@@ -150,21 +134,28 @@ public partial class BattleSceneIntegrationTests
 
     /// <summary>S7: S6 with several attackers per enemy, so contact rings fill up.</summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
-    public IEnumerator MovementBaselineS7Crowd()
+    public IEnumerator MovementBaselineS7Crowd() => RunClash("S7", S7SaturationShare, true);
+
+    /// <summary>S7 with the enemy contact of before M2 P0/P1.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS7CrowdLegacyContact() => RunClash("S7Legacy", S7SaturationShare, false);
+
+    IEnumerator RunClash(string label, float saturationShare, bool enemyContact)
     {
         var previousInput = UseUnfocusedEditorInput();
         using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
         var tuningEntity = tuningQuery.GetSingletonEntity();
         var tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
-        float previousSaturation = tuning.targetSaturationPerAttacker;
+        var previous = tuning;
         try
         {
-            tuning.targetSaturationPerAttacker = previousSaturation * S7SaturationShare;
+            tuning.targetSaturationPerAttacker = previous.targetSaturationPerAttacker * saturationShare;
+            tuning.enemyContactEnabled = enemyContact;
             em.SetComponentData(tuningEntity, tuning);
             yield return PrepareBaseline();
-            using (MovementVideoCapture.Start("S7"))
+            using (MovementVideoCapture.Start(label))
             {
-                MovementMetricsRecorderSystem.Begin("S7", squad);
+                MovementMetricsRecorderSystem.Begin(label, squad);
                 var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
                 float deadline = Time.time + S6ApproachTimeout;
@@ -181,7 +172,8 @@ public partial class BattleSceneIntegrationTests
             if (em.Exists(tuningEntity))
             {
                 tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
-                tuning.targetSaturationPerAttacker = previousSaturation;
+                tuning.targetSaturationPerAttacker = previous.targetSaturationPerAttacker;
+                tuning.enemyContactEnabled = previous.enemyContactEnabled;
                 em.SetComponentData(tuningEntity, tuning);
             }
         }

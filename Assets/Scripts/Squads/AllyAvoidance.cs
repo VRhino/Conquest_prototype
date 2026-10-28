@@ -50,6 +50,9 @@ public static class AllyAvoidance
         return current + delta * (maxDelta / math.sqrt(lengthSq));
     }
 
+    /// <summary>Side of the grid cells <see cref="Run(NativeArray{Agent}, NativeArray{float2}, NativeParallelMultiHashMap{int2, int}, in Settings)"/> buckets the agents in.</summary>
+    public static float CellSize(float neighborRadius) => math.max(0.5f, neighborRadius);
+
     /// <summary>Fills <paramref name="velocities"/> with the avoiding velocity of every agent (unsteered ones keep theirs).</summary>
     public static void Run(NativeArray<Agent> agents, NativeArray<float2> velocities, in Settings settings)
     {
@@ -63,7 +66,7 @@ public static class AllyAvoidance
     public static void Run(NativeArray<Agent> agents, NativeArray<float2> velocities,
         NativeParallelMultiHashMap<int2, int> grid, in Settings settings)
     {
-        float cellSize = math.max(0.5f, settings.neighborRadius);
+        float cellSize = CellSize(settings.neighborRadius);
         grid.Clear();
         if (grid.Capacity < agents.Length) grid.Capacity = agents.Length;
         new AllyAvoidanceGridJob { agents = agents, cellSize = cellSize, grid = grid.AsParallelWriter() }

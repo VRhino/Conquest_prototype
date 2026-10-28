@@ -45,6 +45,8 @@ public struct MovementTuningComponent : IComponentData
     public float avoidanceTimeHorizon; // Collisions further away in time are ignored (s); 1 s, the reference after its first state change (M8).
     public float avoidanceTimeHorizonNear; // Time horizon within one spacing of the slot (s).
     public float avoidanceCollisionResolveTime; // Time to separate overlapping allies (s).
+    public bool enemyContactEnabled; // Enemies touch at 2·bodyRadius and movers slide along them (M2, P0/P1).
+    public float enemyContactLookaheadTime; // A mover closes its gap to an enemy in no less than this (s, P1).
     public float runEnterDistance; // Switch to Run beyond this distance to the slot (m).
     public float runExitDistance; // Back to Walk below this distance to the slot (m).
     public float followRecoveryTime; // Seconds to close the gap to the slot.
@@ -109,6 +111,8 @@ public struct MovementTuningComponent : IComponentData
         avoidanceTimeHorizon = 1f,
         avoidanceTimeHorizonNear = 1f,
         avoidanceCollisionResolveTime = 0.25f,
+        enemyContactEnabled = true,
+        enemyContactLookaheadTime = 0.05f,
         runEnterDistance = 0.9f,
         runExitDistance = 0.45f,
         followRecoveryTime = 0.5f,
@@ -161,6 +165,8 @@ public struct MovementTuningComponent : IComponentData
         if (t.followRecoveryTime <= 0f) return "followRecoveryTime must be positive.";
         if (t.avoidanceTimeHorizonNear > t.avoidanceTimeHorizon) return "avoidanceTimeHorizonNear must not exceed avoidanceTimeHorizon.";
         if (t.avoidanceMaxNeighbors > 28f) return "avoidanceMaxNeighbors must not exceed 28.";
+        if (t.enemyContactLookaheadTime < 0f) return "enemyContactLookaheadTime must not be negative.";
+        if (2f * t.bodyRadius + 0.5f > t.avoidanceNeighborRadius) return "avoidanceNeighborRadius must exceed the enemy contact distance (2·bodyRadius) by 0.5 m.";
         if (t.runExitDistance <= t.arrivalRadiusIn) return "runExitDistance must exceed arrivalRadiusIn.";
         if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
