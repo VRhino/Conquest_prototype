@@ -163,6 +163,11 @@ no son obstáculo.
 **A considerar.** Un Muro de escudos que bloquea a los enemigos necesita colisión real (bodyblock o ORCA frente a enemigos),
 no solo la distancia de parada. Hay que decidir cuál de los dos sistemas lo aplica para no tener dos escritores.
 
+**Decidido (2026-10-28, `Movimiento_Formaciones.md` §22).** El escritor frente a enemigos es `EnemyContact` (recorte de la
+velocidad en `UnitAvoidanceSystem`), con el bodyblock como red de seguridad; ORCA sigue solo con aliados. El interruptor
+por escuadra (P2 de `game-re/notes/battle-movement-combat.md`) debe leerlo `EnemyContact`: el par choca solo si los dos lo
+tienen activo. Hoy es global (`MovementTuningConfig.enemyContactEnabled`).
+
 ## F10. Ruido aleatorio por publicación frente a determinista
 **Qué es.** La referencia sortea el ruido de posición y de rumbo cada vez que publica las posiciones. **[dec]**
 

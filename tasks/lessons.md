@@ -462,3 +462,11 @@
   defensores está anidado en `Block_02` (hidden city), no bajo `Atackers`; `BattleTestScene` no tiene ninguno.
 - Para probar captura en PlayMode, un aliado en el mismo spawn deja la zona disputada y la captura nunca avanza: el
   test pasaba igual sin el arreglo. El perfil de defensor de `BattleSceneIntegrationTests` no añade el remoto.
+
+- En `ut.js test playmode <filtro> x`, el filtro es por nombre y por subcadena: `MovementBaselineS6Clash` también
+  lanza `MovementBaselineS6ClashLegacyContact`. Para variantes A/B, nombres que no sean prefijo uno de otro, o contar con
+  la corrida extra (med.js toma las últimas N por escenario).
+- Medir antes y después en la misma compilación con un interruptor del tuning y escenarios "Legacy", intercalando las
+  corridas: no hace falta volver atrás en git y el ruido de la melé (M10) afecta igual a las dos variantes.
+- Cambiar una tecla (H11) obliga a pasar BattleSceneIntegrationTests: `BattleSceneSquadAbilityTests` pulsa la tecla de la
+  escuadra. Buscar `Key.` en Assets/Tests antes de cerrar un cambio de input.

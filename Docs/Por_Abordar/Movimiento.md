@@ -8,7 +8,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
 | M1 | Error al slot en marcha por encima de 0,5 m | Alta | **Hecho** (S1 0,51 m con C10 y margen en Walk) |
-| M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Mejorado** (S7 de 19 a 9 con contacto tipo cápsula); el reparto (L4-04) no los cambia: medido |
+| M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Hecho** (2026-10-28, P0+P1: S6 de 9 a 0 y S7 de 12 a 0) |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
 | M4 | Animación del paso a carrera | Media | Pendiente |
 | M5 | Llegada del ancla (C10) | Media | **Hecho** |
@@ -18,7 +18,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M9 | Memoria por frame en la evitación | Baja | **Hecho** |
 | M10 | Variación de S6 entre corridas | Media | **Mitad hecha**: aproximación idéntica y mediana; la melé aún diverge |
 | M11 | Separación posicional (C8) | Baja | Descartado mientras ORCA funcione |
-| M12 | Picos de aceleración en la melé | Media | **Mejorado**: S6 de 2,4 a 1,5 % con L4-04 (frenado de llegada antes) |
+| M12 | Picos de aceleración en la melé | Media | **Mejorado**: S6 de 2,4 a 1,5 % con L4-04; con P0+P1, S6 1,8 → 1,5 % y S7 1,5 → 1,1 % (máx. 140 y 107) |
 | M13 | Llegada más lenta al frenar con aceleración limitada | Media | **Hecho** en S4; S3 con matiz (primera parada) |
 | M14 | Aceleración en S7 multitud con C13 | Media | **Hecho** (medido: dentro de M10; 1,4 % con L4-04) |
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
@@ -65,6 +65,12 @@ queda como sensación de golpe. Siguiente paso posible: el interruptor de colisi
 **Medido (2026-10-26, `Movimiento_Formaciones.md` §21).** El reparto de objetivos con saturación blanda (L4-04, D6) y la
 búsqueda por escuadra (L4-09) bajan el p95 de atacantes por objetivo de 6 a 2, pero los solapes no cambian: S6 11 → 11,5
 (rango 3-16) y S7 10 → 9,5 (6-11), con 6 corridas. Se confirma que no vienen del reparto. Lo siguiente sigue siendo C16 (F9).
+
+**Hecho (2026-10-28, `Movimiento_Formaciones.md` §22).** La causa: con objetivo el bodyblock usaba 0,35 m de contacto (la
+métrica, 0,9 m) y nunca corregía a quien pelea contra un quieto. P0 (una sola distancia, 2·bodyRadius) y P1 ("chocar y
+resbalar": la unidad que se mueve pierde la aproximación al enemigo antes de integrar, patrón de la referencia) dejan 0
+pares en las tres corridas de S6 y de S7 (antes 9 y 12). Queda vigilar paradas detrás de un enemigo que no es el objetivo
+(P4 de `game-re/notes/battle-movement-combat.md`) y el interruptor por escuadra (F9, P2).
 
 ## M3. Escena real con 900 agentes (S8)
 **Qué es.** La medida obligatoria de D8: 900 agentes en escena real con todos los sistemas nuevos, con un presupuesto de

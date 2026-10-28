@@ -840,3 +840,39 @@ Lectura:
   unidades quietas en su puesto de contacto, que con el reparto son más; fuera de la melé (S1, S4) no cambian.
 - S1 ya no es reproducible en el tiempo hasta formar: con el mismo código da 0,17, 0,37 y 0,43 s. El error en marcha sí se
   repite exacto (0,50 m), así que es el dato de regresión de S1.
+
+## 22. Contacto enemigo: una sola distancia y "chocar y resbalar" (M2, M12, P0/P1, 2026-10-28)
+
+**Problema.** Con objetivo (`IsEngagingTag`, lo normal en la melé) el bodyblock usaba 0,35 m de contacto entre enemigos;
+sin objetivo, 0,8 m; la métrica cuenta solape por debajo de 0,9 m. Los pares trabados entre 0,35 y 0,9 m no los corregía
+nadie. Además, una unidad que pelea contra un enemigo quieto no se corregía nunca, y el `NavMeshAgent` volvía a meterla en
+el enemigo cada frame: el bodyblock corrige después del movimiento y solo deshace la mitad si los dos se mueven.
+
+**Patrón de la referencia** (`game-re/notes/melee-contact.md` y `battle-movement-combat.md`): el contacto enemigo es una
+restricción del movimiento, no una corrección. La cápsula que se mueve recorta su desplazamiento contra las enemigas
+(quita la componente que entra y deja la tangencial) y la quieta no se mueve. ORCA solo para aliados: un escritor por relación.
+
+**Cambio** (interruptor `MovementTuningConfig.enemyContactEnabled`, por defecto activo).
+- P0, `UnitBodyblockSystem`: una sola distancia de contacto entre enemigos, `2·bodyRadius` (1,0 m), peleen o no; se corrige
+  toda unidad que se mueve o pelea (la mitad si el otro también) y nunca la quieta. Queda como red de seguridad.
+- P1, `EnemyContact` (lógica pura + job Burst), llamado al final de `UnitAvoidanceSystem`, después de ORCA y del límite de
+  aceleración: a la velocidad de cada unidad dirigida se le quita la aproximación a cada enemigo que cierre el hueco
+  (distancia − contacto) en menos de `enemyContactLookaheadTime` (0,05 s) o un frame; dentro del contacto, ninguna. Tres
+  pasadas sobre los 8 enemigos más cercanos al alcance. Reutiliza la rejilla de la evitación.
+- Escenarios `S6ClashLegacyContact` y `S7CrowdLegacyContact`: los mismos con el interruptor apagado, para comparar en la
+  misma compilación.
+
+### Medida (3 corridas por variante, intercaladas, mediana; misma compilación)
+| Métrica | S6 antes | S6 con P0+P1 | S7 antes | S7 con P0+P1 |
+|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 9 (7-12) | **0** (0, 0, 0) | 12 (9-17) | **0** (0, 0, 0) |
+| Aceleración > 20 m/s² | 1,8 % | 1,5 % | 1,5 % | 1,1 % |
+| Aceleración máxima | 203 m/s² | 140 | 181 | 107 |
+| Atacantes por objetivo p95 | 3 | 2 (una corrida 7) | 6 | 2 |
+| Distancia media de contacto atacando | 1,50 m | 1,71 | 1,37 | 1,52 |
+| Solapes aliados por frame (media) | 0,58 | 1,15 | 1,15 | 0,84 |
+| Paradas | 20 | 23 | 23 | 28 |
+
+Lectura: los solapes enemigos persistentes desaparecen en las seis corridas y los picos bajan. Los solapes aliados y las
+paradas varían como antes entre corridas (M10); vigilar en vídeo que el frente no se quede parado detrás de un enemigo que
+no es su objetivo (P4 del plan: estado de bloqueo leído por `UnitTargetingSystem`).

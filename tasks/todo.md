@@ -74,3 +74,10 @@ colisión."
 - [x] EditMode 357/357; BattleSceneIntegrationTests 12/12. Sin revisar a ojo en partida.
 - [x] H11 (2026-10-27, decisión del usuario): escuadra en 1/2/3 (GDD §12.3), perks activos en 4/5; la barra pone la
       escuadra delante de los perks.
+
+# Contacto enemigo en la melé (2026-10-28): P0 + P1 de `game-re/notes/battle-movement-combat.md`
+- [x] P0: `UnitBodyblockSystem` con una sola distancia de contacto enemigo (2·bodyRadius) y sin tocar al quieto.
+- [x] P1: `EnemyContact` ("chocar y resbalar") al final de `UnitAvoidanceSystem`; interruptor `enemyContactEnabled`.
+- [x] Tests: `EnemyContactTests` (EditMode); escenarios S6/S7 `LegacyContact` para comparar.
+- [x] Medida (3+3 corridas intercaladas): solapes enemigos > 0,3 s S6 9 → 0, S7 12 → 0; picos S6 1,8 → 1,5 %.
+- [ ] Siguiente: P3 (retroceso con el mismo recorte), P2 (interruptor por escuadra, F9), P4 (bloqueo leído por el objetivo).
