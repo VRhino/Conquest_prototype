@@ -106,6 +106,39 @@ public class EnemyContactTests
     }
 
     [Test]
+    public void BlockerIsTheNearestEnemyInFrontThatClips()
+    {
+        var preferred = new float2(0f, 3f);
+        Assert.That(EnemyContact.Blocks(preferred, preferred, new float2(0f, 1f), Contact, CloseTime), Is.True);
+        Assert.That(EnemyContact.Blocks(preferred, preferred, new float2(0.8f, 0.6f), Contact, CloseTime), Is.False,
+            "53° off the way: it clips, but it is beside the unit, not in front.");
+        Assert.That(EnemyContact.Blocks(preferred, preferred, new float2(0f, 3f), Contact, CloseTime), Is.False, "Too far to clip.");
+
+        var agents = new NativeArray<AllyAvoidance.Agent>(3, Allocator.TempJob);
+        var velocities = new NativeArray<float2>(3, Allocator.TempJob);
+        var blockers = new NativeArray<int>(3, Allocator.TempJob);
+        var grid = new NativeParallelMultiHashMap<int2, int>(3, Allocator.TempJob);
+        try
+        {
+            agents[0] = new AllyAvoidance.Agent { position = new float2(0f, 0f), team = 0, steered = true, preferred = preferred };
+            agents[1] = new AllyAvoidance.Agent { position = new float2(0.1f, 1.05f), team = 1 };
+            agents[2] = new AllyAvoidance.Agent { position = new float2(0f, 1f), team = 1 };
+            velocities[0] = preferred;
+            float cellSize = AllyAvoidance.CellSize(4f);
+            for (int i = 0; i < agents.Length; i++) grid.Add((int2)math.floor(agents[i].position / cellSize), i);
+
+            EnemyContact.Run(agents, velocities, grid, cellSize, Contact, CloseTime, blockers);
+
+            Assert.That(blockers[0], Is.EqualTo(2), "The nearest of the two in front.");
+            Assert.That(blockers[1], Is.EqualTo(-1), "Not steered: never blocked.");
+        }
+        finally
+        {
+            agents.Dispose(); velocities.Dispose(); blockers.Dispose(); grid.Dispose();
+        }
+    }
+
+    [Test]
     public void SquadSwitchAndHeavyHitTurnTheCollisionOff()
     {
         using var world = new World("Enemy collision");

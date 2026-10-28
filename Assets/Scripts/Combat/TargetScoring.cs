@@ -73,6 +73,14 @@ public static class TargetScoring
     }
 
     /// <summary>
+    /// P4: a melee unit takes the enemy that blocks it once the block has lasted <paramref name="threshold"/> (the
+    /// hysteresis), if that enemy is attackable and the unit is not already within reach of its own target.
+    /// Threshold ≤ 0 = off.
+    /// </summary>
+    public static bool TakeBlocker(bool blockerAttackable, double blockedFor, float threshold, bool targetInReach)
+        => threshold > 0f && blockerAttackable && !targetInReach && blockedFor >= threshold;
+
+    /// <summary>
     /// A unit looks at its target again every <paramref name="interval"/> seconds, with a phase from its entity so
     /// the squad does not re-think on one frame (L4-01 pattern); independent of the frame rate. Interval ≤ 0 = every frame.
     /// </summary>

@@ -124,6 +124,10 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS6ClashLegacyContact() => RunClash("S6Legacy", 1f, false);
 
+    /// <summary>S6 without taking the enemy that blocks the unit as its target (before M2 P4).</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS6ClashNoBlockedRetarget() => RunClash("S6NoBlock", 1f, true, false);
+
     /// <summary>
     /// Share of the soft saturation (D6) each attacker counts for in S7: one squad crowds an enemy as three would.
     /// Allied squads are driven by the hero AI (zones, advantage checks) and do not reliably join a clash, so S7 lets
@@ -140,7 +144,11 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS7CrowdLegacyContact() => RunClash("S7Legacy", S7SaturationShare, false);
 
-    IEnumerator RunClash(string label, float saturationShare, bool enemyContact)
+    /// <summary>S7 without taking the enemy that blocks the unit as its target (before M2 P4).</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS7CrowdNoBlockedRetarget() => RunClash("S7NoBlock", S7SaturationShare, true, false);
+
+    IEnumerator RunClash(string label, float saturationShare, bool enemyContact, bool blockedRetarget = true)
     {
         var previousInput = UseUnfocusedEditorInput();
         using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
@@ -151,6 +159,7 @@ public partial class BattleSceneIntegrationTests
         {
             tuning.targetSaturationPerAttacker = previous.targetSaturationPerAttacker * saturationShare;
             tuning.enemyContactEnabled = enemyContact;
+            if (!blockedRetarget) tuning.blockedRetargetTime = 0f;
             em.SetComponentData(tuningEntity, tuning);
             yield return PrepareBaseline();
             using (MovementVideoCapture.Start(label))
@@ -174,6 +183,7 @@ public partial class BattleSceneIntegrationTests
                 tuning = em.GetComponentData<MovementTuningComponent>(tuningEntity);
                 tuning.targetSaturationPerAttacker = previous.targetSaturationPerAttacker;
                 tuning.enemyContactEnabled = previous.enemyContactEnabled;
+                tuning.blockedRetargetTime = previous.blockedRetargetTime;
                 em.SetComponentData(tuningEntity, tuning);
             }
         }

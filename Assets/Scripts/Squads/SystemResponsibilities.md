@@ -248,6 +248,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Responsabilidad**: Evitación por velocidad entre aliados (ORCA, C14); único escritor de la velocidad evitada (`agent.velocity`).
 - **Regla**: enemigos no se esquivan (D2); dentro de la escuadra solo las unidades que se mueven, con radio combinado 0,9 × espaciado; la velocidad cambia como mucho a la aceleración del agente.
 - **Orden**: después de `UnitFollowFormationSystem`, antes de `UnitBodyblockSystem` y `NavMeshPositionSyncSystem`.
+- **Owner exclusivo**: `UnitBlockedComponent` (el enemigo que no es su objetivo y la para, desde `EnemyContact`; M2 P4).
 - **Ref**: `Docs/Mechanics/BodyblockSystem.md`, `Docs/Design/Movimiento_Formaciones.md` §10-11
 
 ### NavMeshPositionSyncSystem
@@ -316,6 +317,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Responsabilidad**: Asigna un target enemigo específico a cada unidad del squad según estado `InCombat`
 - **Input compartido**: `SquadTargetEntity`; no existe una copia de candidatos por unidad
 - **Output**: `UnitCombatComponent.target` por unidad
+- **Bloqueo (M2 P4)**: lee `UnitBlockedComponent`; una unidad cuerpo a cuerpo bloqueada `blockedRetargetTime` (0,5 s) por un enemigo atacable, sin tener su objetivo al alcance, pasa a él
 - **Orden**: `[UpdateAfter(SquadAISystem)]` `[UpdateAfter(SquadFSMSystem)]`
 - **Gate**: Solo asigna targets si `SquadFSMState.InCombat` — las tres formas de entrar en combate (tecla V, daño recibido, aliado impactado) convergen correctamente en el FSM
 - **Regla**: No decide cuándo entrar en combate — solo distribuye targets cuando ya está en `InCombat`

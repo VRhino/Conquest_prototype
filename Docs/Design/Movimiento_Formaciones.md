@@ -901,3 +901,23 @@ deja atravesar enemigos mientras dura el empuje (reacciones pesadas; hoy ningún
 PassesEnemies` lo resuelve por unidad y lo leen los tres escritores frente a enemigos: `EnemyContact` (vía
 `AllyAvoidance.Agent.passesEnemies`), el bodyblock y el recorte del retroceso. Los héroes siempre chocan. Con todo activo
 (el caso de hoy) S6 y S7 siguen con 0 solapes. Tests: `EnemyContactTests` (par con uno apagado; escuadra y golpe pesado).
+
+### P4: el enemigo que bloquea pasa a ser el objetivo (M2, M16, 2026-10-28)
+`EnemyContact` devuelve, por unidad que se mueve, el enemigo más cercano que le recorta la velocidad dentro de ±30° de su
+dirección deseada (`EnemyContact.Blocks`). `UnitAvoidanceSystem` lo guarda en `UnitBlockedComponent { blocker, since }`
+(único escritor), salvo que sea su propio objetivo: eso es la pelea, no un bloqueo. `UnitTargetingSystem` pasa una unidad
+cuerpo a cuerpo al que la bloquea cuando el bloqueo dura `blockedRetargetTime` (0,5 s; 0 = apagado), el que bloquea es
+atacable y la unidad no tiene su objetivo al alcance (`TargetScoring.TakeBlocker`). Es la salida de "empujar a través de un
+enemigo para llegar a otro". Variantes `S6NoBlock`/`S7NoBlock` (`...NoBlockedRetarget`) para comparar en la misma compilación.
+
+| Métrica (3 corridas, mediana) | S6 sin P4 | S6 con P4 | S7 sin P4 | S7 con P4 |
+|---|---|---|---|---|
+| Pares enemigos solapados > 0,3 s | 0 | 0 | 0 | 0 |
+| Paradas | 33 (31-41) | 26 (10-27) | 20 (11-28) | 34 (26-34) |
+| Cambios de objetivo por unidad y segundo | 0,11 | 0,22 | 0,24 | 0,09 |
+| Atacantes por objetivo (máx.) | 2 (2-5) | 6 (3-8) | 3 (3-5) | 4 (3-8) |
+| Aceleración > 20 m/s² | 1,3 % | 1,4 % | 1,5 % | 1,0 % |
+
+Lectura: sin efecto claro dentro del ruido. Las paradas bajan en S6 y suben en S7, y los cambios de objetivo van al revés.
+Lo único que se repite es que el máximo de atacantes por objetivo sube: tomar al que bloquea se salta la saturación blanda
+(D6). Si en vídeo se ven montones sobre un enemigo, el siguiente paso es exigir que el que bloquea no esté saturado.

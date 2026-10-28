@@ -82,4 +82,6 @@ colisión."
 - [x] Medida (3+3 corridas intercaladas): solapes enemigos > 0,3 s S6 9 → 0, S7 12 → 0; picos S6 1,8 → 1,5 %.
 - [x] P3: el retroceso del golpe recorta su paso contra enemigos y corre antes del bodyblock (neutro; solapes en 0).
 - [x] P2: `SquadEnemyCollisionComponent` por escuadra y `passesEnemies` por golpe; el par choca solo si los dos lo tienen.
-- [ ] Siguiente: P4 (bloqueo leído por el objetivo).
+- [x] P4: `EnemyContact` dice quién bloquea (±30°), `UnitAvoidanceSystem` lo guarda en `UnitBlockedComponent` y
+  `UnitTargetingSystem` pasa a él tras `blockedRetargetTime` (0,5 s). Variantes S6/S7 `NoBlockedRetarget` para comparar.
+- [ ] Siguiente: P5 (bloquear el movimiento durante el golpe), P6, P7 (escenario S9).

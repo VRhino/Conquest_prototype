@@ -120,4 +120,14 @@ public class TargetScoringTests
         Assert.That(EnemySearch.SameLevel(0f, new float3(0f, s.maxHeightDifference + 1f, 0f), 100f, s), Is.False,
             "Too high whatever the slope.");
     }
+
+    [Test]
+    public void BlockerIsTakenAfterTheThresholdUnlessTheTargetIsInReach()
+    {
+        Assert.That(TargetScoring.TakeBlocker(true, 0.6, 0.5f, false), Is.True);
+        Assert.That(TargetScoring.TakeBlocker(true, 0.3, 0.5f, false), Is.False, "Not blocked long enough.");
+        Assert.That(TargetScoring.TakeBlocker(false, 2.0, 0.5f, false), Is.False, "Not attackable.");
+        Assert.That(TargetScoring.TakeBlocker(true, 2.0, 0.5f, true), Is.False, "Already fighting its target.");
+        Assert.That(TargetScoring.TakeBlocker(true, 2.0, 0f, false), Is.False, "Threshold 0 = off.");
+    }
 }

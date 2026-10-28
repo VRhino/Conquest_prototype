@@ -10,7 +10,8 @@ using Unity.Transforms;
 /// attackers each enemy already has across every squad (soft saturation, no hard cap) plus a bonus for the current
 /// target. A unit within reach of its target keeps it; the rest look again every few tenths of a second, with a phase
 /// per unit. New targets come only from the squad's enemy search (L4-09): the combat radius of its strategy and speed,
-/// and the same level.
+/// and the same level. A unit stopped by an enemy that is not its target takes that enemy after
+/// <c>blockedRetargetTime</c> (P4, <see cref="UnitBlockedComponent"/>): the way out of pushing through one enemy to reach another.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
@@ -120,6 +121,12 @@ public partial class UnitTargetingSystem : SystemBase
                     rangedUnitsInSquad++;
                     chosen = currentValid ? previous : ClosestSearchable(unit);
                     if (chosen != Entity.Null) _rangedCounts[chosen] = Count(_rangedCounts, chosen) + 1;
+                }
+                else if (TakesBlocker(unit, previous, currentValid, bodyRadius, now, tuning.blockedRetargetTime, out Entity blocker))
+                {
+                    chosen = blocker;
+                    if (previous != Entity.Null) _meleeCounts[previous] = Count(_meleeCounts, previous) - 1;
+                    _meleeCounts[chosen] = Count(_meleeCounts, chosen) + 1;
                 }
                 else if (currentValid && (InReach(unit, previous, bodyRadius)
                              || !TargetScoring.ReevaluationDue(unit.Index, now, deltaTime, tuning.targetReevaluateInterval)))
@@ -288,6 +295,20 @@ public partial class UnitTargetingSystem : SystemBase
             if (score > bestScore) { bestScore = score; best = c.entity; }
         }
         return best;
+    }
+
+    /// <summary>The enemy blocking the unit, when it is time to take it as the target (P4).</summary>
+    private bool TakesBlocker(Entity unit, Entity previous, bool currentValid, float bodyRadius, double now,
+        float threshold, out Entity blocker)
+    {
+        blocker = Entity.Null;
+        if (threshold <= 0f || !SystemAPI.HasComponent<UnitBlockedComponent>(unit)) return false;
+        var blocked = SystemAPI.GetComponent<UnitBlockedComponent>(unit);
+        if (blocked.blocker == Entity.Null || blocked.blocker == previous) return false;
+        bool take = TargetScoring.TakeBlocker(_validTargets.Contains(blocked.blocker), now - blocked.since, threshold,
+            currentValid && InReach(unit, previous, bodyRadius));
+        if (take) blocker = blocked.blocker;
+        return take;
     }
 
     private Entity ClosestSearchable(Entity unit)

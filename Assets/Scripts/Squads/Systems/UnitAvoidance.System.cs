@@ -12,7 +12,8 @@ using UnityEngine.AI;
 /// agent.velocity for units that are following their slot or closing on a target. Formed, still units and
 /// heroes are obstacles the movers avoid alone. Enemies are not avoided but slid along: with enemyContactEnabled the
 /// final velocity loses its approach to the enemies in front (<see cref="EnemyContact"/>, M2), unless either unit has the
-/// enemy collision off (<see cref="EnemyCollision.PassesEnemies"/>, P2). Runs after the speed is
+/// enemy collision off (<see cref="EnemyCollision.PassesEnemies"/>, P2). The enemy that stops a unit and is not its target
+/// goes to <see cref="UnitBlockedComponent"/> (single writer, P4). Runs after the speed is
 /// set and before the bodyblock and the position sync.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -25,10 +26,12 @@ public partial class UnitAvoidanceSystem : SystemBase
     const float SquadmateSpacingFraction = 0.9f;
 
     readonly List<NavMeshAgent> _navAgents = new();
+    readonly List<Entity> _entities = new();
     NativeList<AllyAvoidance.Agent> _agents;
     // Persistent and grow-only (M9): a warm frame allocates nothing.
     NativeParallelMultiHashMap<int2, int> _grid;
     NativeList<float2> _velocities;
+    NativeList<int> _blockers;
     // Hero positions of the last frame; rebuilt into the other map each frame so heroes that left drop out.
     NativeHashMap<Entity, float2> _heroPreviousPositions, _heroCurrentPositions;
 
@@ -41,6 +44,7 @@ public partial class UnitAvoidanceSystem : SystemBase
         _heroCurrentPositions = new NativeHashMap<Entity, float2>(16, Allocator.Persistent);
         _grid = new NativeParallelMultiHashMap<int2, int>(256, Allocator.Persistent);
         _velocities = new NativeList<float2>(256, Allocator.Persistent);
+        _blockers = new NativeList<int>(256, Allocator.Persistent);
     }
 
     protected override void OnDestroy()
@@ -50,6 +54,7 @@ public partial class UnitAvoidanceSystem : SystemBase
         if (_heroCurrentPositions.IsCreated) _heroCurrentPositions.Dispose();
         if (_grid.IsCreated) _grid.Dispose();
         if (_velocities.IsCreated) _velocities.Dispose();
+        if (_blockers.IsCreated) _blockers.Dispose();
         base.OnDestroy();
     }
 
@@ -64,6 +69,7 @@ public partial class UnitAvoidanceSystem : SystemBase
 
         _agents.Clear();
         _navAgents.Clear();
+        _entities.Clear();
 
         // Units: movers steer, everyone else is an obstacle.
         foreach (var (team, formation, slot, transform, entity) in SystemAPI
@@ -104,6 +110,7 @@ public partial class UnitAvoidanceSystem : SystemBase
                 passesEnemies = EnemyCollision.PassesEnemies(EntityManager, entity),
             });
             _navAgents.Add(steered ? agent : null);
+            _entities.Add(entity);
         }
 
         // Heroes: obstacles moving at the velocity estimated from their last position.
@@ -122,6 +129,7 @@ public partial class UnitAvoidanceSystem : SystemBase
                 position = position, velocity = velocity, team = (int)team.ValueRO.value, squad = -1, steered = false,
             });
             _navAgents.Add(null);
+            _entities.Add(entity);
         }
 
         (_heroPreviousPositions, _heroCurrentPositions) = (_heroCurrentPositions, _heroPreviousPositions);
@@ -149,15 +157,36 @@ public partial class UnitAvoidanceSystem : SystemBase
         }
 
         // Last, so neither ORCA nor the acceleration limit can put the approach back (M2, P1).
+        _blockers.ResizeUninitialized(_agents.Length);
+        var blockers = _blockers.AsArray();
         if (tuning.enemyContactEnabled)
             EnemyContact.Run(_agents.AsArray(), velocities, _grid, AllyAvoidance.CellSize(tuning.avoidanceNeighborRadius),
-                2f * tuning.bodyRadius, math.max(dt, tuning.enemyContactLookaheadTime));
+                2f * tuning.bodyRadius, math.max(dt, tuning.enemyContactLookaheadTime), blockers);
+        else
+            for (int i = 0; i < blockers.Length; i++) blockers[i] = -1;
+        UpdateBlocked(blockers, SystemAPI.Time.ElapsedTime);
 
         for (int i = 0; i < _navAgents.Count; i++)
         {
             var agent = _navAgents[i];
             if (agent == null) continue;
             agent.velocity = new UnityEngine.Vector3(velocities[i].x, agent.velocity.y, velocities[i].y);
+        }
+    }
+
+    /// <summary>Records who blocks each unit; its own target in the way is no block, it is the fight (P4).</summary>
+    void UpdateBlocked(NativeArray<int> blockers, double now)
+    {
+        for (int i = 0; i < _entities.Count; i++)
+        {
+            Entity entity = _entities[i];
+            if (!SystemAPI.HasComponent<UnitBlockedComponent>(entity)) continue;
+            Entity blocker = blockers[i] >= 0 ? _entities[blockers[i]] : Entity.Null;
+            if (blocker != Entity.Null && SystemAPI.HasComponent<UnitCombatComponent>(entity)
+                && SystemAPI.GetComponent<UnitCombatComponent>(entity).target == blocker) blocker = Entity.Null;
+            var blocked = SystemAPI.GetComponentRW<UnitBlockedComponent>(entity);
+            if (blocked.ValueRO.blocker == blocker) continue;
+            blocked.ValueRW = new UnitBlockedComponent { blocker = blocker, since = now };
         }
     }
 }

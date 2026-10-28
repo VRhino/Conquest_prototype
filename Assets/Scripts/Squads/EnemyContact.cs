@@ -15,6 +15,8 @@ public static class EnemyContact
     public const int Passes = 3;
     /// <summary>Nearest enemies checked per agent.</summary>
     const int MaxEnemies = 8;
+    /// <summary>cos 30°: a blocker lies within ±30° of where the unit wants to go (P4).</summary>
+    public const float BlockCone = 0.866f;
 
     /// <summary>
     /// The velocity left after one enemy: the approach towards it may close the gap (contact distance minus distance)
@@ -34,6 +36,15 @@ public static class EnemyContact
     public static float2 ClipStep(float2 step, float2 toEnemy, float contactDistance)
         => Slide(step, toEnemy, contactDistance, 1f);
 
+    /// <summary>True when the enemy clips the velocity and lies within ±30° of the preferred direction: it stands in the way.</summary>
+    public static bool Blocks(float2 preferred, float2 velocity, float2 toEnemy, float contactDistance, float closeTime)
+    {
+        float distance = math.length(toEnemy);
+        if (distance < 1e-5f || math.lengthsq(preferred) < 1e-6f) return false;
+        if (math.dot(math.normalize(preferred), toEnemy / distance) < BlockCone) return false;
+        return math.any(Slide(velocity, toEnemy, contactDistance, closeTime) != velocity);
+    }
+
     /// <summary>
     /// Clips the velocity of every steered agent against the enemies near it. Reuses the grid
     /// <see cref="AllyAvoidance.Run(NativeArray{AllyAvoidance.Agent}, NativeArray{float2}, NativeParallelMultiHashMap{int2, int}, in AllyAvoidance.Settings)"/>
@@ -42,10 +53,20 @@ public static class EnemyContact
     public static void Run(NativeArray<AllyAvoidance.Agent> agents, NativeArray<float2> velocities,
         NativeParallelMultiHashMap<int2, int> grid, float cellSize, float contactDistance, float closeTime)
     {
+        using var blockers = new NativeArray<int>(agents.Length, Allocator.TempJob);
+        Run(agents, velocities, grid, cellSize, contactDistance, closeTime, blockers);
+    }
+
+    /// <summary>As above, and <paramref name="blockers"/> gets, per agent, the index of the nearest enemy that
+    /// <see cref="Blocks"/> it, or -1 (P4).</summary>
+    public static void Run(NativeArray<AllyAvoidance.Agent> agents, NativeArray<float2> velocities,
+        NativeParallelMultiHashMap<int2, int> grid, float cellSize, float contactDistance, float closeTime,
+        NativeArray<int> blockers)
+    {
         new EnemyContactJob
         {
             agents = agents, grid = grid, cellSize = cellSize, contactDistance = contactDistance,
-            closeTime = closeTime, velocities = velocities,
+            closeTime = closeTime, velocities = velocities, blockers = blockers,
         }.Schedule(agents.Length, 32).Complete();
     }
 
@@ -56,9 +77,11 @@ public static class EnemyContact
         [ReadOnly] public NativeParallelMultiHashMap<int2, int> grid;
         public float cellSize, contactDistance, closeTime;
         public NativeArray<float2> velocities;
+        [WriteOnly] public NativeArray<int> blockers;
 
         public void Execute(int i)
         {
+            blockers[i] = -1;
             var self = agents[i];
             // A pair collides only if both have the enemy collision on (P2).
             if (!self.steered || self.passesEnemies) return;
@@ -80,6 +103,15 @@ public static class EnemyContact
                 } while (grid.TryGetNextValue(out j, ref it));
             }
             if (enemies.Length == 0) return;
+            int blocker = -1;
+            float blockerDistanceSq = float.MaxValue;
+            for (int n = 0; n < enemies.Length; n++)
+            {
+                float2 toEnemy = agents[enemies[n]].position - self.position;
+                if (!Blocks(self.preferred, velocity, toEnemy, contactDistance, closeTime)) continue;
+                if (math.lengthsq(toEnemy) < blockerDistanceSq) { blockerDistanceSq = math.lengthsq(toEnemy); blocker = enemies[n]; }
+            }
+            blockers[i] = blocker;
             for (int pass = 0; pass < Passes; pass++)
                 for (int n = 0; n < enemies.Length; n++)
                     velocity = Slide(velocity, agents[enemies[n]].position - self.position, contactDistance, closeTime);

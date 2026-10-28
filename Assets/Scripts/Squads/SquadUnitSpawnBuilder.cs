@@ -63,6 +63,7 @@ public static class SquadUnitSpawnBuilder
         ecb.AddComponent<UnitHitImpactComponent>(unit);
         ecb.SetComponentEnabled<UnitHitImpactComponent>(unit, false);
         ecb.AddComponent<UnitHitKnockbackComponent>(unit);
+        ecb.AddComponent<UnitBlockedComponent>(unit);
 
         ecb.AddComponent(unit, new UnitFormationStanceComponent { stance = UnitStance.Normal });
         ecb.AddComponent(unit, slot);

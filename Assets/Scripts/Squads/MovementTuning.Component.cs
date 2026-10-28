@@ -69,6 +69,7 @@ public struct MovementTuningComponent : IComponentData
     public float targetKeepBonus; // Hysteresis: added for the current target.
     public int targetCandidateCount; // K nearest candidates scored per unit.
     public float targetReevaluateInterval; // A melee unit looks at its target again every this many seconds, s.
+    public float blockedRetargetTime; // Blocked this long by an enemy that is not its target, a melee unit takes it (P4), s; 0 = off.
     public bool enemySearchEnabled; // New targets only within the squad's combat radius and level (L4-09); off = all detected.
     public float enemySearchRadiusMin; // Combat radius beyond the squad's extent when still or holding, m.
     public float enemySearchRadiusMax; // ... when attacking or at full speed, m.
@@ -133,6 +134,7 @@ public struct MovementTuningComponent : IComponentData
         targetKeepBonus = 0.1f,
         targetCandidateCount = 6,
         targetReevaluateInterval = 0.3f,
+        blockedRetargetTime = 0.5f,
         enemySearchEnabled = true,
         enemySearchRadiusMin = 6f,
         enemySearchRadiusMax = 8f,
@@ -166,6 +168,7 @@ public struct MovementTuningComponent : IComponentData
         if (t.avoidanceTimeHorizonNear > t.avoidanceTimeHorizon) return "avoidanceTimeHorizonNear must not exceed avoidanceTimeHorizon.";
         if (t.avoidanceMaxNeighbors > 28f) return "avoidanceMaxNeighbors must not exceed 28.";
         if (t.enemyContactLookaheadTime < 0f) return "enemyContactLookaheadTime must not be negative.";
+        if (t.blockedRetargetTime < 0f) return "blockedRetargetTime must not be negative.";
         if (2f * t.bodyRadius + 0.5f > t.avoidanceNeighborRadius) return "avoidanceNeighborRadius must exceed the enemy contact distance (2·bodyRadius) by 0.5 m.";
         if (t.runExitDistance <= t.arrivalRadiusIn) return "runExitDistance must exceed arrivalRadiusIn.";
         if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";

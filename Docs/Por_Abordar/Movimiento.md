@@ -70,7 +70,8 @@ búsqueda por escuadra (L4-09) bajan el p95 de atacantes por objetivo de 6 a 2, 
 métrica, 0,9 m) y nunca corregía a quien pelea contra un quieto. P0 (una sola distancia, 2·bodyRadius) y P1 ("chocar y
 resbalar": la unidad que se mueve pierde la aproximación al enemigo antes de integrar, patrón de la referencia) dejan 0
 pares en las tres corridas de S6 y de S7 (antes 9 y 12). Queda vigilar paradas detrás de un enemigo que no es el objetivo
-(P4 de `game-re/notes/battle-movement-combat.md`). El interruptor por escuadra (F9, P2) está hecho (§22).
+(P4 de `game-re/notes/battle-movement-combat.md`). El interruptor por escuadra (F9, P2) y el bloqueo leído por el objetivo
+(P4) están hechos (§22).
 
 ## M3. Escena real con 900 agentes (S8)
 **Qué es.** La medida obligatoria de D8: 900 agentes en escena real con todos los sistemas nuevos, con un presupuesto de
