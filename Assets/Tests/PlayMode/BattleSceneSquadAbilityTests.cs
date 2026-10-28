@@ -25,8 +25,8 @@ public partial class BattleSceneIntegrationTests
 
         yield return Until(() => em.GetComponentData<MatchStateComponent>(GetMatchEntity()).currentState == MatchState.InBattle,
             60f, "The battle did not start.");
-        yield return Press(Key.Digit3);
-        yield return Until(() => UnitsWithModifier(skill.skillId) > 0, 5f, "Key 3 did not launch the squad's ability on its units.");
+        yield return Press(Key.Digit1);
+        yield return Until(() => UnitsWithModifier(skill.skillId) > 0, 5f, "Key 1 did not launch the squad's ability on its units.");
         Assert.That(CooldownUtility.IsReady(em.GetBuffer<CooldownGroupElement>(squad), skill.skill.Value.cooldownGroup,
             World.DefaultGameObjectInjectionWorld.Time.ElapsedTime), Is.False, "The squad cools down on its own.");
     }
