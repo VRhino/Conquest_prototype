@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using Unity.Entities;
 using Unity.Collections;
 using Unity.Mathematics;
 
@@ -73,5 +74,56 @@ public class EnemyContactTests
         {
             agents.Dispose(); velocities.Dispose(); grid.Dispose();
         }
+    }
+
+    [Test]
+    public void PairCollidesOnlyIfBothHaveTheCollisionOn()
+    {
+        var agents = new NativeArray<AllyAvoidance.Agent>(4, Allocator.TempJob);
+        var velocities = new NativeArray<float2>(4, Allocator.TempJob);
+        var grid = new NativeParallelMultiHashMap<int2, int>(4, Allocator.TempJob);
+        try
+        {
+            // 0 has the collision off; 2 heads at a touching enemy (3) that has it off. Neither is clipped (P2).
+            agents[0] = new AllyAvoidance.Agent { position = new float2(0f, 0f), team = 0, steered = true, passesEnemies = true };
+            agents[1] = new AllyAvoidance.Agent { position = new float2(0f, 1f), team = 1 };
+            agents[2] = new AllyAvoidance.Agent { position = new float2(10f, 0f), team = 0, steered = true };
+            agents[3] = new AllyAvoidance.Agent { position = new float2(10f, 1f), team = 1, passesEnemies = true };
+            velocities[0] = new float2(0f, 3f);
+            velocities[2] = new float2(0f, 3f);
+            float cellSize = AllyAvoidance.CellSize(4f);
+            for (int i = 0; i < agents.Length; i++) grid.Add((int2)math.floor(agents[i].position / cellSize), i);
+
+            EnemyContact.Run(agents, velocities, grid, cellSize, Contact, CloseTime);
+
+            Assert.That(velocities[0], Is.EqualTo(new float2(0f, 3f)), "The mover has the collision off.");
+            Assert.That(velocities[2], Is.EqualTo(new float2(0f, 3f)), "The enemy has the collision off.");
+        }
+        finally
+        {
+            agents.Dispose(); velocities.Dispose(); grid.Dispose();
+        }
+    }
+
+    [Test]
+    public void SquadSwitchAndHeavyHitTurnTheCollisionOff()
+    {
+        using var world = new World("Enemy collision");
+        var em = world.EntityManager;
+        var squad = em.CreateEntity();
+        var unit = em.CreateEntity(typeof(UnitHitKnockbackComponent));
+        em.AddComponentData(unit, new UnitOwnerComponent { squad = squad });
+        var hero = em.CreateEntity();
+
+        Assert.That(EnemyCollision.PassesEnemies(em, unit), Is.False, "Without the component the squad collides.");
+        Assert.That(EnemyCollision.PassesEnemies(em, hero), Is.False, "Bodies without squad always collide.");
+        em.AddComponentData(squad, new SquadEnemyCollisionComponent { enabled = false });
+        Assert.That(EnemyCollision.PassesEnemies(em, unit), Is.True);
+        em.SetComponentData(squad, new SquadEnemyCollisionComponent { enabled = true });
+        Assert.That(EnemyCollision.PassesEnemies(em, unit), Is.False);
+        em.SetComponentData(unit, new UnitHitKnockbackComponent { active = true, passesEnemies = true });
+        Assert.That(EnemyCollision.PassesEnemies(em, unit), Is.True, "A heavy hit lets it through while the push lasts.");
+        em.SetComponentData(unit, new UnitHitKnockbackComponent { active = false, passesEnemies = true });
+        Assert.That(EnemyCollision.PassesEnemies(em, unit), Is.False, "Over when the push ends.");
     }
 }

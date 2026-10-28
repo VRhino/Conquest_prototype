@@ -8,4 +8,6 @@ public struct UnitHitKnockbackComponent : IComponentData
     /// <summary>Seconds since the hit; at or above the duration the push is over.</summary>
     public float elapsed;
     public bool active;
+    /// <summary>While the push lasts the unit walks through enemy bodies (heavy reactions, P2); from the hit.</summary>
+    public bool passesEnemies;
 }

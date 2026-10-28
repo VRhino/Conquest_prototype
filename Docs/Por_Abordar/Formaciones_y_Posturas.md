@@ -17,7 +17,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
 | F7 | Orden de llenado de ranuras (grupos de orden) | Media | Pendiente |
 | F8 | Cambiar el espaciado desde el juego (orden o habilidad) | Media | Parcial: API hecha, sin orden |
-| F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Pendiente |
+| F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Parcial: interruptor de colisión enemiga hecho (P2); evitación fija |
 | F10 | Ruido aleatorio por publicación frente a determinista | Baja | Decidido: determinista |
 | F11 | Disposición dinámica y "seguir al líder con retardo" | Baja | Pendiente |
 | F12 | Cohesión como consulta: quórum, aislados y terreno no apto | Media | Pendiente |
@@ -167,6 +167,10 @@ no solo la distancia de parada. Hay que decidir cuál de los dos sistemas lo apl
 velocidad en `UnitAvoidanceSystem`), con el bodyblock como red de seguridad; ORCA sigue solo con aliados. El interruptor
 por escuadra (P2 de `game-re/notes/battle-movement-combat.md`) debe leerlo `EnemyContact`: el par choca solo si los dos lo
 tienen activo. Hoy es global (`MovementTuningConfig.enemyContactEnabled`).
+
+**Hecho en parte (2026-10-28, §22 P2).** `SquadEnemyCollisionComponent` por escuadra (sin él, activa) y `passesEnemies` por
+golpe, leídos por `EnemyContact`, el bodyblock y el retroceso con la regla "los dos activos". Falta: que algo lo apague (una
+habilidad de abrirse paso, golpes pesados) y las relaciones de evitación configurables por escuadra (ORCA sigue con reglas fijas).
 
 ## F10. Ruido aleatorio por publicación frente a determinista
 **Qué es.** La referencia sortea el ruido de posición y de rumbo cada vez que publica las posiciones. **[dec]**

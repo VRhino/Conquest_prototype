@@ -25,6 +25,7 @@ public static class AllyAvoidance
         public int team;
         public int squad;          // -1 for bodies outside any squad (heroes).
         public bool steered;       // Gets a new velocity and shares the avoidance.
+        public bool passesEnemies; // Enemy collision off (P2): EnemyContact ignores the pair.
     }
 
     public struct Settings

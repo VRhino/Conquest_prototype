@@ -892,3 +892,12 @@ así que no añade divergencia (M10).
 
 Lectura: neutro dentro del ruido de la melé; los solapes siguen en 0 y los máximos no suben. Se queda porque cierra el
 único camino que quedaba para meter una unidad en un enemigo sin pasar por el recorte.
+
+### P2: interruptor de colisión enemiga por escuadra y por golpe (F9/C16, D2, 2026-10-28)
+Regla de la referencia: un par de enemigos choca solo si **los dos** tienen la colisión activa. `SquadEnemyCollisionComponent
+{ enabled }` va en la escuadra; sin él cuenta como activa, así que solo se añade para apagarla (una habilidad de "abrirse
+paso"). Por golpe, `UnitHitImpactComponent.passesEnemies` pasa al retroceso (`UnitHitKnockbackComponent.passesEnemies`) y
+deja atravesar enemigos mientras dura el empuje (reacciones pesadas; hoy ningún golpe lo marca). `EnemyCollision.
+PassesEnemies` lo resuelve por unidad y lo leen los tres escritores frente a enemigos: `EnemyContact` (vía
+`AllyAvoidance.Agent.passesEnemies`), el bodyblock y el recorte del retroceso. Los héroes siempre chocan. Con todo activo
+(el caso de hoy) S6 y S7 siguen con 0 solapes. Tests: `EnemyContactTests` (par con uno apagado; escuadra y golpe pesado).

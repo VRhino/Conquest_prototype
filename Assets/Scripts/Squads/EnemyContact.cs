@@ -60,7 +60,8 @@ public static class EnemyContact
         public void Execute(int i)
         {
             var self = agents[i];
-            if (!self.steered) return;
+            // A pair collides only if both have the enemy collision on (P2).
+            if (!self.steered || self.passesEnemies) return;
             float2 velocity = velocities[i];
             // Only enemies the unit can reach before the gap must be closed matter.
             float reach = contactDistance + math.length(velocity) * closeTime;
@@ -73,7 +74,7 @@ public static class EnemyContact
                 if (!grid.TryGetFirstValue(cell + new int2(dx, dy), out int j, out var it)) continue;
                 do
                 {
-                    if (j == i || agents[j].team == self.team) continue;
+                    if (j == i || agents[j].team == self.team || agents[j].passesEnemies) continue;
                     if (math.distancesq(agents[j].position, self.position) > reachSq) continue;
                     if (enemies.Length < MaxEnemies) enemies.Add(j);
                 } while (grid.TryGetNextValue(out j, ref it));

@@ -19,6 +19,7 @@ using UnityEngine.AI;
 /// Con `MovementTuningComponent.enemyContactEnabled` (P0) hay una sola distancia de contacto entre enemigos, 2·bodyRadius,
 /// peleen o no (antes 0,35 m con objetivo y 0,8 m sin él), y se corrige toda unidad que se mueve o pelea; la quieta no se
 /// toca. El recorte de velocidad de `EnemyContact` (P1) evita los solapes; aquí solo se deshacen los que ya existen.
+/// Un par no choca si cualquiera de los dos tiene la colisión enemiga apagada (`EnemyCollision.PassesEnemies`, P2).
 ///
 /// Para el héroe local (que usa CharacterController en lugar de NavMeshAgent activo),
 /// el bloqueo se logra agregando un CapsuleCollider a los prefabs visuales de unidades:
@@ -48,6 +49,7 @@ public partial class UnitBodyblockSystem : SystemBase
         public Team               team;
         public bool               isWall;      // Formed + formación muro
         public bool               isEngaging;  // en combate cuerpo a cuerpo
+        public bool               passesEnemies; // colisión enemiga apagada (P2)
     }
 
     private readonly List<AgentData>                    _agents         = new();
@@ -128,6 +130,7 @@ public partial class UnitBodyblockSystem : SystemBase
                 team       = teamComp.ValueRO.value,
                 isWall     = isWall,
                 isEngaging = engaging,
+                passesEnemies = EnemyCollision.PassesEnemies(EntityManager, entity),
             });
         }
 
@@ -170,7 +173,8 @@ public partial class UnitBodyblockSystem : SystemBase
             _nativeAgents[i] = new RepulsionAgent
             {
                 entity = source.entity, position = source.position, state = source.state,
-                team = source.team, isWall = source.isWall, isEngaging = source.isEngaging
+                team = source.team, isWall = source.isWall, isEngaging = source.isEngaging,
+                passesEnemies = source.passesEnemies
             };
             _nativeGrid.Add(new int2((int)math.floor(source.position.x / radius),
                 (int)math.floor(source.position.z / radius)), i);
@@ -210,7 +214,7 @@ public partial class UnitBodyblockSystem : SystemBase
         public float3 position;
         public UnitFormationState state;
         public Team team;
-        public bool isWall, isEngaging;
+        public bool isWall, isEngaging, passesEnemies;
     }
 
     [BurstCompile]
@@ -240,6 +244,8 @@ public partial class UnitBodyblockSystem : SystemBase
                     if (j == i) continue;
                     var other = Agents[j];
                     if (current.team == other.team) continue;
+                    // A pair of enemies collides only if both have the collision on (P2).
+                    if (current.passesEnemies || other.passesEnemies) continue;
                     candidates++;
                     float3 diff = current.position - other.position;
                     diff.y = 0f;

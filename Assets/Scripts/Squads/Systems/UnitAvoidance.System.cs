@@ -11,7 +11,8 @@ using UnityEngine.AI;
 /// Reads the agent's steering (desiredVelocity, capped at the speed UnitFollowFormationSystem set) and writes
 /// agent.velocity for units that are following their slot or closing on a target. Formed, still units and
 /// heroes are obstacles the movers avoid alone. Enemies are not avoided but slid along: with enemyContactEnabled the
-/// final velocity loses its approach to the enemies in front (<see cref="EnemyContact"/>, M2). Runs after the speed is
+/// final velocity loses its approach to the enemies in front (<see cref="EnemyContact"/>, M2), unless either unit has the
+/// enemy collision off (<see cref="EnemyCollision.PassesEnemies"/>, P2). Runs after the speed is
 /// set and before the bodyblock and the position sync.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -100,6 +101,7 @@ public partial class UnitAvoidanceSystem : SystemBase
                 squad = squadEntity != Entity.Null ? squadEntity.Index : -1,
                 squadSpacing = squadSpacing,
                 steered = steered,
+                passesEnemies = EnemyCollision.PassesEnemies(EntityManager, entity),
             });
             _navAgents.Add(steered ? agent : null);
         }

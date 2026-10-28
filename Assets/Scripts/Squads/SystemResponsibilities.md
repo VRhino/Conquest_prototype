@@ -240,7 +240,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 
 ### UnitHitKnockbackSystem
 - **Responsabilidad**: Retroceso del golpe (patrón de `hit_curve` de la referencia): consume `UnitHitImpactComponent` (lo habilita `DamageCalculationSystem` en cada golpe que llega al cuerpo sin matar) y empuja a la unidad lejos del atacante con `agent.Move` a lo largo de `HitKnockback` (`hitKnockbackDistance` en `hitKnockbackDuration`, smoothstep).
-- **Owner exclusivo**: `UnitHitKnockbackComponent`
+- **Owner exclusivo**: `UnitHitKnockbackComponent` (copia `passesEnemies` del golpe: con él, el empujado atraviesa enemigos, P2)
 - **Orden**: después de `UnitBodyblockSystem`, antes de `NavMeshPositionSyncSystem`.
 - **Ref**: `Docs/Design/Movimiento_Formaciones.md` §19
 
