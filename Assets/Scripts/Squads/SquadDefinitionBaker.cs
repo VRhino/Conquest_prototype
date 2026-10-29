@@ -158,6 +158,7 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 formation.spacing = definition.EffectiveSpacing;
                 formation.noiseRadius = Mathf.Max(0f, definition.noiseRadius);
                 formation.noiseAngle = math.radians(Mathf.Max(0f, definition.noiseAngleDegrees));
+                formation.useNormalPostureInFreeCombat = definition.useNormalPostureInFreeCombat;
 
                 var postures = definition.postures ?? System.Array.Empty<FormationRolePosture>();
                 var postureArray = builder.Allocate(ref formation.postures, postures.Length);

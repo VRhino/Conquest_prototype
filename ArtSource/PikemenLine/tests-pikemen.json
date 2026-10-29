@@ -1,0 +1,76 @@
+{
+  "status": "completed",
+  "duration": 0.4,
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "inconclusive": 0
+  },
+  "results": [
+    {
+      "FullName": "PikemenFormationAnimationTests.BothPalmsStayOnTheShaftDuringThrust(PikeLineFront)",
+      "Status": "Passed",
+      "Duration": 0.1278842,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.BothPalmsStayOnTheShaftDuringThrust(PikeLineRear)",
+      "Status": "Passed",
+      "Duration": 0.0183769,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.CatalogEnablesRecruitmentForExistingHeroesWithoutGrantingTroops",
+      "Status": "Passed",
+      "Duration": 0.107789,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.FormationHasTwoStaggeredRanksWithCorrectPostures",
+      "Status": "Passed",
+      "Duration": 0.0155133,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.FreeCombatAttacksStandingRegardlessOfPreviousRank(PikeLineFront)",
+      "Status": "Passed",
+      "Duration": 0.0249812,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.FreeCombatAttacksStandingRegardlessOfPreviousRank(PikeLineRear)",
+      "Status": "Passed",
+      "Duration": 0.020942,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.FrontKneelsRearStandsAndPikesKeepDifferentElevations",
+      "Status": "Passed",
+      "Duration": 0.0170778,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.MovingReleasesKneelAndKeepsTwoHandedCarry(PikeLineFront)",
+      "Status": "Passed",
+      "Duration": 0.0168442,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "PikemenFormationAnimationTests.MovingReleasesKneelAndKeepsTwoHandedCarry(PikeLineRear)",
+      "Status": "Passed",
+      "Duration": 0.0174625,
+      "Message": null,
+      "StackTrace": null
+    }
+  ]
+}

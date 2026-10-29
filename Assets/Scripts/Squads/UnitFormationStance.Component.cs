@@ -19,6 +19,10 @@ public enum UnitStance
     SpearLineFront = 5,
     /// <summary>Standing spear and overhead shield, authored for the spearmen Line rear rank.</summary>
     SpearLineRear  = 6,
+    /// <summary>Kneeling two-handed pike, first rank.</summary>
+    PikeLineFront = 7,
+    /// <summary>Standing two-handed pike, supporting ranks.</summary>
+    PikeLineRear = 8,
 }
 
 /// <summary>

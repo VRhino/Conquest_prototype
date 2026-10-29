@@ -77,16 +77,7 @@ public static class SpearmenLineAnimationSetup
                     var meshLocal = Matrix4x4.TRS(mesh.localPosition, mesh.localRotation, mesh.localScale);
                     ApplyWorld(mesh.parent, Matrix(gear.delta) * originals[mesh] * meshLocal.inverse);
                 }
-                var humanPose = new HumanPose();
-                using (var handler = new HumanPoseHandler(animator.avatar, actor.transform)) handler.GetHumanPose(ref humanPose);
-                var clip = NewClip("SpearLine_" + pose.name, settings);
-                for (int i = 0; i < HumanTrait.MuscleCount; i++)
-                    Curve(clip, "", typeof(Animator), MuscleProperty(HumanTrait.MuscleName[i]), humanPose.muscles[i], settings.clipSeconds);
-                VectorCurve(clip, "", typeof(Animator), "RootT", humanPose.bodyPosition, settings.clipSeconds);
-                RotationCurve(clip, "", typeof(Animator), "RootQ", humanPose.bodyRotation, settings.clipSeconds);
-                foreach (var carrier in equipment) RecordTransform(clip, actor.transform, carrier, settings.clipSeconds);
-                clip.EnsureQuaternionContinuity();
-                SaveClip(clip, settings.outputFolder);
+                SaveClip(CapturePoseClip(actor, "SpearLine_" + pose.name, settings, equipment), settings.outputFolder);
             }
         }
         finally { EditorSceneManager.ClosePreviewScene(preview); }
@@ -176,7 +167,7 @@ public static class SpearmenLineAnimationSetup
         attack.AddCondition(AnimatorConditionMode.If, 0, AttackParameter);
     }
 
-    static void Transition(AnimatorStateTransition transition, float seconds)
+    public static void Transition(AnimatorStateTransition transition, float seconds)
     {
         transition.hasExitTime = false;
         transition.hasFixedDuration = true;
@@ -186,7 +177,7 @@ public static class SpearmenLineAnimationSetup
         // Unordered AnyState interruption can restart this same blend every frame.
         transition.orderedInterruption = true;
     }
-    static void Parameter(AnimatorController controller, string name, AnimatorControllerParameterType type)
+    public static void Parameter(AnimatorController controller, string name, AnimatorControllerParameterType type)
     {
         var existing = controller.parameters.FirstOrDefault(p => p.name == name);
         if (existing == null) controller.AddParameter(name, type);
@@ -217,7 +208,23 @@ public static class SpearmenLineAnimationSetup
             }
         return name;
     }
-    static void SaveClip(AnimationClip clip, string folder)
+    /// <summary>Shared authoring path: capture a posed unit and its equipment using its actual Humanoid avatar.</summary>
+    public static AnimationClip CapturePoseClip(GameObject actor, string name, Settings settings, params Transform[] equipment)
+    {
+        var animator = actor.GetComponent<Animator>();
+        var humanPose = new HumanPose();
+        using (var handler = new HumanPoseHandler(animator.avatar, actor.transform)) handler.GetHumanPose(ref humanPose);
+        var clip = NewClip(name, settings);
+        for (int i = 0; i < HumanTrait.MuscleCount; i++)
+            Curve(clip, "", typeof(Animator), MuscleProperty(HumanTrait.MuscleName[i]), humanPose.muscles[i], settings.clipSeconds);
+        VectorCurve(clip, "", typeof(Animator), "RootT", humanPose.bodyPosition, settings.clipSeconds);
+        RotationCurve(clip, "", typeof(Animator), "RootQ", humanPose.bodyRotation, settings.clipSeconds);
+        foreach (var carrier in equipment) RecordTransform(clip, actor.transform, carrier, settings.clipSeconds);
+        clip.EnsureQuaternionContinuity();
+        return clip;
+    }
+
+    public static void SaveClip(AnimationClip clip, string folder)
     {
         var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(folder + "/" + clip.name + ".anim");
         if (existing)

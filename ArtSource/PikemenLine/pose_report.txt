@@ -1,0 +1,11 @@
+Front max wrist target error: 0,00000 m
+Rear max wrist target error: 0,00000 m
+Carry max wrist target error: 0,00000 m
+Thrust Front frame 0 max wrist target error: 0,00000 m
+Thrust Front frame 1 max wrist target error: 0,00000 m
+Thrust Front frame 2 max wrist target error: 0,00000 m
+Thrust Front frame 3 max wrist target error: 0,00000 m
+Thrust Rear frame 0 max wrist target error: 0,00000 m
+Thrust Rear frame 1 max wrist target error: 0,00000 m
+Thrust Rear frame 2 max wrist target error: 0,00000 m
+Thrust Rear frame 3 max wrist target error: 0,00000 m

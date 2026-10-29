@@ -118,20 +118,25 @@ public static class SquadDataService
     {
         EnsureInitialized();
         
-        if (availableSquads == null || availableSquads.Count == 0)
-            return new List<SquadData>();
-        
         var result = new List<SquadData>();
-        
-        foreach (string squadId in availableSquads)
+        // Catalog defaults also apply to existing profiles, without rewriting their saves
+        // or granting troops. Explicit hero unlocks retain their original ordering.
+        var ids = new HashSet<string>();
+        foreach (string squadId in availableSquads ?? new List<string>())
         {
             var squadData = GetSquadById(squadId);
-            if (squadData == null) continue;
+            if (squadData == null || !ids.Add(squadId)) continue;
             
             // Aplicar filtro de tipo si se especifica
             if (filterType.HasValue && squadData.unitType != filterType.Value)
                 continue;
                 
+            result.Add(squadData);
+        }
+        foreach (var squadData in _squadCache.Values)
+        {
+            if (!squadData.availableForRecruitmentByDefault || !ids.Add(squadData.id)) continue;
+            if (filterType.HasValue && squadData.unitType != filterType.Value) continue;
             result.Add(squadData);
         }
         

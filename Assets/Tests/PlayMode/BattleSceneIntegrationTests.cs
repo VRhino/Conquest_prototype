@@ -26,6 +26,7 @@ public partial class BattleSceneIntegrationTests
     const string FullBattlePath = "Assets/Scenes/GameScenes/BattleScene.unity";
     const int FullBattleHeroesPerSide = 10;
     bool fullBattleProfile;
+    bool pikemenFlow;
     string renderVariant;
     string loadedScenePath;
     int expectedFullBattleUnits;
@@ -55,9 +56,10 @@ public partial class BattleSceneIntegrationTests
     {
         fullBattleProfile = TestContext.CurrentContext.Test.Name.StartsWith(
             nameof(FullBattlePreparationRenderedPerformanceProfile), StringComparison.Ordinal);
+        pikemenFlow = TestContext.CurrentContext.Test.Name == nameof(PikemenRecruitmentPreparationAndProductionBattle);
         renderVariant = null;
         ConfigureMovementBaseline();
-        loadedScenePath = fullBattleProfile ? FullBattlePath : ScenePath;
+        loadedScenePath = fullBattleProfile || pikemenFlow ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
         keyboard = null;
@@ -95,6 +97,23 @@ public partial class BattleSceneIntegrationTests
         memory.Player.heroes.Add(local);
         PlayerSessionService.SetPlayer(memory.Player);
         PlayerSessionService.SetSelectedHero(local);
+
+        if (pikemenFlow)
+        {
+            local.squadProgress.Clear();
+            loadout.squadInstanceIDs.Clear();
+            var data = SquadDataService.GetSquadById("pkm01");
+            Assert.That(SquadDataService.GetSquadsForHero(local.availableSquads, UnitType.Infantry), Does.Contain(data));
+            var barracksObject = new GameObject("RecruitmentFixture");
+            var barracks = barracksObject.AddComponent<BarracksMenuUIController>();
+            barracks.Open(local);
+            typeof(BarracksMenuUIController).GetMethod("OnSquadSelectedFromPanel", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(barracks, new object[] { data });
+            reserve = local.squadProgress.Single();
+            Assert.That(reserve.baseSquadID, Is.EqualTo("pkm01"));
+            Assert.That(memory.Player.heroes.Single().squadProgress.Single().id, Is.EqualTo(reserve.id));
+            UnityEngine.Object.Destroy(barracksObject);
+        }
 
         var battle = BattleDebugCreator.CreateBattleWithLocalHero(local, Team.TeamA, 0, 0,
             EnemySquadMode.Fixed, SquadDataService.GetSquadById("sqd01"));
@@ -138,7 +157,7 @@ public partial class BattleSceneIntegrationTests
         World.DefaultGameObjectInjectionWorld = null;
         worldSwapped = true;
         testWorld = DefaultWorldInitialization.Initialize("Battle integration world");
-        if (fullBattleProfile)
+        if (fullBattleProfile || pikemenFlow)
         {
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(PrepPath,
                 new LoadSceneParameters(LoadSceneMode.Single));
@@ -146,6 +165,15 @@ public partial class BattleSceneIntegrationTests
             yield return null; // Footer.Start binds the selected loadout and button.
             var footer = UnityEngine.Object.FindAnyObjectByType<FooterController>();
             Assert.That(footer, Is.Not.Null);
+            if (pikemenFlow)
+            {
+                Assert.That(footer.GetSelectedSquadInstanceIDs(), Is.Empty);
+                typeof(FooterController).GetMethod("OnPlaceholderClicked", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(footer, null);
+                var selector = UnityEngine.Object.FindAnyObjectByType<TroopsSelectorController>();
+                Assert.That(selector, Is.Not.Null);
+                typeof(TroopsSelectorController).GetMethod("OnSquadInstanceClicked", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .Invoke(selector, new object[] { reserve.id });
+            }
             Assert.That(footer.GetSelectedSquadInstanceIDs(), Does.Contain(reserve.id));
             var startButton = (UnityEngine.UI.Button)typeof(FooterController)
                 .GetField("startBattleButton", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(footer);
@@ -170,6 +198,63 @@ public partial class BattleSceneIntegrationTests
             return em.Exists(squad) && em.HasBuffer<SquadUnitElement>(squad)
                 && em.GetBuffer<SquadUnitElement>(squad).Length > 0;
         }, ReadyTimeout, "Local hero visual and squad did not become ready.");
+    }
+
+    [UnityTest]
+    public IEnumerator PikemenRecruitmentPreparationAndProductionBattle()
+    {
+        Assert.That(SceneManager.GetActiveScene().path, Is.EqualTo(FullBattlePath));
+        var data = SquadDataService.GetSquadById("pkm01");
+        Assert.That(em.GetComponentData<SquadDefinitionComponent>(squad).squadType, Is.EqualTo(SquadType.Pikemen));
+        yield return Until(() =>
+        {
+            var members = em.GetBuffer<SquadUnitElement>(squad);
+            for (int i = 0; i < members.Length; i++)
+                if (!em.HasComponent<NavMeshAgent>(members[i].Value)) return false;
+            return true;
+        }, 15f, "Pikemen visuals did not bind.");
+        var units = em.GetBuffer<SquadUnitElement>(squad);
+        Assert.That(units.Length, Is.EqualTo(data.unitCount));
+        for (int i = 0; i < units.Length; i++)
+        {
+            var unit = units[i].Value;
+            Assert.That(em.HasComponent<UnitRangedStatsComponent>(unit), Is.False);
+            var weapon = em.GetComponentData<UnitWeaponComponent>(unit);
+            Assert.That(weapon.attackRange, Is.EqualTo(data.meleeData.attackRange));
+            Assert.That(em.GetComponentData<DamageProfileComponent>(weapon.damageProfile).piercingDamage, Is.GreaterThan(0));
+            var visual = em.GetComponentObject<NavMeshAgent>(unit).gameObject;
+            Assert.That(visual.GetComponentInChildren<ShieldHitboxBehaviour>(true), Is.Null);
+            Assert.That(visual.GetComponentInChildren<WeaponHitboxBehaviour>(true).ownerUnit, Is.EqualTo(unit));
+            Assert.That(visual.GetComponent<Animator>().runtimeAnimatorController.name, Is.EqualTo("AC_Pikemen"));
+        }
+        yield return Press(Key.F2);
+        yield return Until(() => em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Dispersed,
+            10f, "Pikemen F2 formation did not apply.");
+        yield return Press(Key.F1);
+        yield return Until(() => em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Line,
+            10f, "Pikemen F1 line did not apply.");
+        var pikeLibrary = em.GetComponentData<SquadDefinitionComponent>(squad).formationLibrary;
+        Assert.That(pikeLibrary.Value.formations[0].useNormalPostureInFreeCombat, Is.True,
+            "Production subscene must rebake the free-combat posture setting.");
+        yield return Press(Key.V);
+        yield return Until(() => em.GetComponentData<SquadStateComponent>(squad).currentOrder == SquadOrderType.Attack,
+            5f, "V did not request free attack.");
+        yield return Until(() =>
+        {
+            var members = em.GetBuffer<SquadUnitElement>(squad);
+            for (int i = 0; i < members.Length; i++)
+                if (em.GetComponentData<UnitAnimationMovementComponent>(members[i].Value).CurrentStance != UnitStance.Normal)
+                    return false;
+            return true;
+        }, 5f, "V retained a rank-specific posture on a Pikemen unit.");
+        var leader = em.GetBuffer<SquadUnitElement>(squad)[0].Value;
+        float3 start = em.GetComponentData<LocalTransform>(leader).Position;
+        InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+        yield return Press(Key.C);
+        InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+        yield return Until(() => math.distance(start.xz, em.GetComponentData<LocalTransform>(leader).Position.xz) > 0.5f,
+            12f, "Pikemen did not follow the hero.");
+        InputSystem.QueueStateEvent(keyboard, new KeyboardState());
     }
 
     [UnityTest]

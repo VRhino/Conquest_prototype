@@ -381,3 +381,20 @@
 
 - Al recorrer un prefab modular para construir listas de piezas, usar GetComponentsInChildren<T>(true) si las piezas o sus contenedores están inactivos; la búsqueda por defecto los omite y puede dejar el asistente sin inicializar.
 
+## Piqueros: orientación y revisión de poses (2026-10-27)
+
+- Si el eje longitudinal de un arma es Y, `LookRotation` debe recibir un vector forward perpendicular al eje de la pica. Usar un forward fijo hacia abajo anulaba parte de la inclinación pedida. Comprobar el ángulo real de `carrier.up` después de reproducir el Animator.
+- Una pose correcta en los fotogramas de autoría no garantiza el agarre durante una estocada. Comprobar las dos palmas a lo largo del clip y limitar la extensión a lo que alcanza el brazo de ambas filas.
+- `AnimationClip.SampleAnimation` modifica la pose de una instancia de prefab, pero para conservar esa revisión al guardar hay que registrar sus overrides. La disposición de la revisión y la del asset de formación deben salir del mismo cálculo.
+
+## Alta de unidades: catálogo y partidas existentes (2026-10-28)
+
+- Dar de alta el prefab y `SquadDatabase` no basta: el barracón filtra por los desbloqueos guardados del héroe. Para contenido disponible por defecto, declarar esa disponibilidad en el catálogo y combinarla con los desbloqueos al consultar. No regalar instancias ni modificar guardados para conseguir que aparezca una opción de reclutamiento.
+- Verificar el flujo con el controlador del barracón, el selector de BattlePrep y la BattleScene de producción usando un proveedor de guardado temporal. Un test de poses o un spawn directo no prueba ese recorrido.
+- Al pasar de una revisión visual a una formación jugable, contrastar su separación con el diámetro de los cuerpos ECS; una fila visualmente correcta puede exigir posiciones que el sistema de separación nunca permitirá alcanzar.
+
+## Piqueros: ataque formado frente a combate libre (2026-10-28)
+
+- `IsEngagingTag` solo indica un objetivo de combate, no que el soldado deba conservar su postura de fila. Usarlo como equivalente a formado hacía que una primera fila arrodillada se agachara también tras la orden V. La selección debe considerar la orden de escuadra y la política de postura de la formación.
+- Comprobar Attack antes de tener objetivo y mientras está parado, además del golpe; de lo contrario la postura de fila reaparece entre estocadas. Verificar también HoldPosition atacando y la vuelta a formar.
+

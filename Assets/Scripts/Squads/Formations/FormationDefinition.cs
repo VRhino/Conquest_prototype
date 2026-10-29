@@ -30,6 +30,9 @@ public class FormationDefinition : ScriptableObject
     [Tooltip("Posture per slot role (shield front, side or up). Roles not listed use Normal.")]
     public FormationRolePosture[] postures = System.Array.Empty<FormationRolePosture>();
 
+    [Tooltip("Use Normal posture for an Attack order or pursuit outside Hold Position, even for a former front-rank soldier. Hold Position keeps the rank posture.")]
+    public bool useNormalPostureInFreeCombat;
+
     /// <summary>Integer cells of the replaced grid model, read once by the migration.</summary>
     [SerializeField, HideInInspector, FormerlySerializedAs("gridPositions")]
     private Vector2Int[] legacyGridPositions;

@@ -1,0 +1,76 @@
+{
+  "status": "completed",
+  "duration": 0.29,
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "inconclusive": 0
+  },
+  "results": [
+    {
+      "FullName": "SpearmenLineAnimationTests.ExitReleasesHumanoidAndRestoresEquipment(SpearLineFront,\"moving\")",
+      "Status": "Passed",
+      "Duration": 0.1089776,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.ExitReleasesHumanoidAndRestoresEquipment(SpearLineRear,\"moving\")",
+      "Status": "Passed",
+      "Duration": 0.0157287,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.ExitReleasesHumanoidAndRestoresEquipment(SpearLineFront,\"attack\")",
+      "Status": "Passed",
+      "Duration": 0.0153721,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.ExitReleasesHumanoidAndRestoresEquipment(SpearLineRear,\"attack\")",
+      "Status": "Passed",
+      "Duration": 0.0146231,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.ExitReleasesHumanoidAndRestoresEquipment(SpearLineFront,\"formation\")",
+      "Status": "Passed",
+      "Duration": 0.0152286,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.ExitReleasesHumanoidAndRestoresEquipment(SpearLineRear,\"formation\")",
+      "Status": "Passed",
+      "Duration": 0.0144483,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.HumanoidPosesKeepFeetGroundedAndSeparateTheTwoRanks",
+      "Status": "Passed",
+      "Duration": 0.0140797,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.LocomotionClipsAndColliderAttachmentsArePreserved",
+      "Status": "Passed",
+      "Duration": 0.0604884,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "SpearmenLineAnimationTests.PosesFollowTheSquadRootAndCanBeInterruptedDuringEntry",
+      "Status": "Passed",
+      "Duration": 0.0184819,
+      "Message": null,
+      "StackTrace": null
+    }
+  ]
+}

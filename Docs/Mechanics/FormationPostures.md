@@ -17,7 +17,7 @@ de la plantilla da el **papel** y el **rumbo** del soldado; la **postura** es un
 |---|---|
 | `FormationSystem` | Escribe papel, fila y rumbo de cada ranura en `UnitGridSlotComponent` al rehacer la disposición. |
 | `UnitFollowFormationSystem` | Orienta a la unidad formada con el rumbo de la formación × el rumbo de su ranura. |
-| `UnitPostureSystem` | Único escritor de `UnitFormationStanceComponent`: postura de la tabla según papel y estado; en melé conserva la de formado. Propaga postura, fila y papel a la animación. |
+| `UnitPostureSystem` | Único escritor de `UnitFormationStanceComponent`: postura de la tabla según papel y estado. Si la formación activa `useNormalPostureInFreeCombat`, una orden Attack o una persecución fuera de HoldPosition usa Normal; en HoldPosition conserva la postura por fila. Propaga postura, fila y papel a la animación. |
 | `UnitAnimatorController` | Escribe los parámetros `Stance` y `SlotRole` si el controller los declara. |
 
 ## Defensa
@@ -26,6 +26,11 @@ la mano (`Hand_L/Off_Hand_Weapon_Carrier`). Por eso la defensa por postura sale 
 arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de impactos por postura de la referencia.
 
 ## Estado
+- Pikemen (2026-10-28): Line activa `useNormalPostureInFreeCombat`. Mantener posición permite
+  estocadas desde la postura de cada fila; V (Attack) libera inmediatamente la postura incluso
+  antes de adquirir un objetivo. En combate libre el Animator usa la estocada de pie para ambas
+  filas. Volver a mantener posición y formar restaura las posturas de primera y segunda fila.
+  El ajuste es optativo: las formaciones anteriores conservan su comportamiento.
 - Hecho: datos, reparto de papeles, rumbo por ranura, sistema de posturas y parámetros del Animator. Tests en
   `UnitPostureTests` y `FormationLayoutTests`.
 - Integrado (2026-10-24): Line de lanceros usa clips Humanoid propios para frente arrodillado y retaguardia con

@@ -1,0 +1,76 @@
+{
+  "status": "completed",
+  "duration": 0.2,
+  "summary": {
+    "total": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "inconclusive": 0
+  },
+  "results": [
+    {
+      "FullName": "UnitPostureTests.PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(Attack,False,Formed,Normal,Normal)",
+      "Status": "Passed",
+      "Duration": 0.1683433,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(Attack,True,Moving,Normal,Normal)",
+      "Status": "Passed",
+      "Duration": 0.0004162,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(Attack,True,Formed,Normal,Normal)",
+      "Status": "Passed",
+      "Duration": 0.0003496,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(HoldPosition,True,Formed,PikeLineFront,PikeLineRear)",
+      "Status": "Passed",
+      "Duration": 0.0003384,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(FollowHero,False,Formed,PikeLineFront,PikeLineRear)",
+      "Status": "Passed",
+      "Duration": 0.0003492,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(FollowHero,True,Moving,Normal,Normal)",
+      "Status": "Passed",
+      "Duration": 0.0003615,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.SpearmenLineSlotsFeedBothRanksThenClearWhenMovingOrChangingFormation",
+      "Status": "Passed",
+      "Duration": 0.0034145,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.SystemSetsPostureByRoleAndStateAndFeedsTheAnimation",
+      "Status": "Passed",
+      "Duration": 0.0013854,
+      "Message": null,
+      "StackTrace": null
+    },
+    {
+      "FullName": "UnitPostureTests.TableGivesEachRoleItsPostureAndNormalOtherwise",
+      "Status": "Passed",
+      "Duration": 0.0002087,
+      "Message": null,
+      "StackTrace": null
+    }
+  ]
+}
