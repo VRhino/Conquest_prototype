@@ -390,6 +390,7 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 
 ### HeroVisualEquipmentInitializer
 - **Responsabilidad**: aplica la apariencia del equipamiento confirmado al visual local vinculado por `EntityVisualSync`.
+- Los rigs con `BattleHeroVisual` no reciben el actualizador dinámico; su cuerpo se monta una vez desde `HeroAppearanceComponent`. El servicio de equipo rechaza operaciones durante combate. Fuera de batalla se conserva el refresco de inventario.
 - **Trigger**: `InventoryManager.OnInventoryChanged`; sólo actualiza cuando cambia el conjunto de objetos equipados.
 - Restaura las piezas base retiradas y aplica las piezas finales con `AvatarVisualUtils`; no busca todos los GameObjects ni modifica ECS.
 

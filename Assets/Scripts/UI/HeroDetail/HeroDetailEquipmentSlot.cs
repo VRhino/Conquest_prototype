@@ -244,6 +244,7 @@ public class HeroEquipmentSlotController : BaseItemCellController
     /// <returns>True si se puede desequipar</returns>
     public bool CanUnequipCurrentItem()
     {
+        if (SceneTransitionService.IsBattleEquipmentLocked) return false;
         if (!HasEquippedItem)
             return false;
 

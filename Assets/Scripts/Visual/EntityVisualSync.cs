@@ -336,11 +336,12 @@ namespace ConquestTactics.Visual
             IsLocalHero = isLocal;
 
             var equipmentVisual = GetComponent<HeroVisualEquipmentInitializer>();
-            if (isLocal && equipmentVisual == null)
+            bool liveEquipment = isLocal && GetComponent<BattleHeroVisual>() == null;
+            if (liveEquipment && equipmentVisual == null)
                 equipmentVisual = gameObject.AddComponent<HeroVisualEquipmentInitializer>();
             if (equipmentVisual != null)
             {
-                equipmentVisual.enabled = isLocal;
+                equipmentVisual.enabled = liveEquipment;
                 equipmentVisual.Bind(this);
             }
 

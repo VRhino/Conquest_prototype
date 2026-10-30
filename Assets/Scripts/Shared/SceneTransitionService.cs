@@ -47,6 +47,22 @@ public static class SceneTransitionService
         }
     }
 
+    /// <summary>Equipment is frozen for the complete combat phase, including respawn.</summary>
+    public static bool IsBattleEquipmentLocked
+    {
+        get
+        {
+            var world = World.DefaultGameObjectInjectionWorld;
+            if (world != null && world.IsCreated)
+            {
+                using var query = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
+                if (query.CalculateEntityCount() == 1)
+                    return query.GetSingleton<GameStateComponent>().currentPhase == GamePhase.Combate;
+            }
+            return SceneManager.GetActiveScene().name == SceneNames.Battle;
+        }
+    }
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void RegisterSceneCursorPolicy()
     {

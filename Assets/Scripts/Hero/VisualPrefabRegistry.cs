@@ -17,6 +17,7 @@ public class VisualPrefabRegistry : MonoBehaviour
     
     private static VisualPrefabRegistry _instance;
     private Dictionary<string, GameObject> _runtimePrefabCache;
+    private readonly Dictionary<string, GameObject> _battlePrefabCache = new();
     
     public static VisualPrefabRegistry Instance
     {
@@ -57,6 +58,7 @@ public class VisualPrefabRegistry : MonoBehaviour
     private void InitializePrefabCache()
     {
         _runtimePrefabCache = new Dictionary<string, GameObject>();
+        _battlePrefabCache.Clear();
         
         if (config == null)
         {
@@ -73,6 +75,11 @@ public class VisualPrefabRegistry : MonoBehaviour
             {
                 string key = heroPrefab.heroId;
                 _runtimePrefabCache[key] = heroPrefab.visualPrefab;
+                if (heroPrefab.battleVisualPrefab != null)
+                {
+                    _battlePrefabCache[key] = heroPrefab.battleVisualPrefab;
+                    if (key == "Synty") _battlePrefabCache["HeroSynty"] = heroPrefab.battleVisualPrefab;
+                }
                 
                 // También agregar con clave legacy para compatibilidad
                 if (heroPrefab.heroId == "Synty")
@@ -90,11 +97,15 @@ public class VisualPrefabRegistry : MonoBehaviour
             {
                 string key = $"{unitPrefab.unitId}";
                 _runtimePrefabCache[key] = unitPrefab.visualPrefab;
+                if (unitPrefab.battleVisualPrefab != null) _battlePrefabCache[key] = unitPrefab.battleVisualPrefab;
                 
                 // También agregar claves legacy para compatibilidad
                 string legacyKey = GetLegacyUnitKey(unitPrefab.squadType);
                 if (!string.IsNullOrEmpty(legacyKey))
+                {
                     _runtimePrefabCache[legacyKey] = unitPrefab.visualPrefab;
+                    if (unitPrefab.battleVisualPrefab != null) _battlePrefabCache[legacyKey] = unitPrefab.battleVisualPrefab;
+                }
                 
                 totalPrefabs++;
                 Debug.Log($"[VisualPrefabRegistry] Cached unit prefab: {key}");
@@ -135,8 +146,9 @@ public class VisualPrefabRegistry : MonoBehaviour
     /// </summary>
     /// <param name="prefabKey">Clave del prefab</param>
     /// <returns>GameObject del prefab o null si no se encuentra</returns>
-    public GameObject GetPrefab(string prefabKey)
+    public GameObject GetPrefab(string prefabKey, bool forBattle = false)
     {
+        if (forBattle && _battlePrefabCache.TryGetValue(prefabKey, out var battlePrefab)) return battlePrefab;
         if (_runtimePrefabCache != null && _runtimePrefabCache.TryGetValue(prefabKey, out GameObject prefab))
         {
             return prefab;
@@ -172,10 +184,14 @@ public class VisualPrefabRegistry : MonoBehaviour
     /// </summary>
     /// <param name="squadType">Tipo de squad</param>
     /// <returns>GameObject de la unidad por defecto</returns>
-    public GameObject GetDefaultUnitPrefab(SquadType squadType = SquadType.Squires)
+    public GameObject GetDefaultUnitPrefab(SquadType squadType = SquadType.Squires, bool forBattle = false)
     {
         if (config == null) return null;
-        return config.GetUnitPrefab(squadType);
+        var original = config.GetUnitPrefab(squadType);
+        if (forBattle)
+            foreach (var entry in config.UnitPrefabs)
+                if (entry.visualPrefab == original && entry.battleVisualPrefab != null) return entry.battleVisualPrefab;
+        return original;
     }
     
     /// <summary>

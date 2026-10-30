@@ -82,7 +82,7 @@ public static class EquipmentManagerService
     /// Incluye validaciones de compatibilidad de armadura y confirmaciones de usuario.
     /// </summary>
     public static bool EquipItem(InventoryItem item)
-        => InventoryEventService.RunTransaction(() => EquipItemCore(item));
+        => !SceneTransitionService.IsBattleEquipmentLocked && InventoryEventService.RunTransaction(() => EquipItemCore(item));
 
     public static EquipmentCompatibilityInfo GetCompatibility(InventoryItem item)
     {
@@ -161,7 +161,7 @@ public static class EquipmentManagerService
     /// Desequipa un item de un slot específico y lo devuelve al inventario.
     /// </summary>
     public static bool UnequipItem(ItemType itemType, ItemCategory itemCategory)
-        => InventoryEventService.RunTransaction(() => UnequipItemCore(itemType, itemCategory));
+        => !SceneTransitionService.IsBattleEquipmentLocked && InventoryEventService.RunTransaction(() => UnequipItemCore(itemType, itemCategory));
 
     private static bool UnequipItemCore(ItemType itemType, ItemCategory itemCategory)
     {
@@ -185,7 +185,7 @@ public static class EquipmentManagerService
     /// Intercambia directamente dos items de equipment sin pasar por el inventario.
     /// </summary>
     public static bool SwapEquipment(ItemType slotType1, ItemCategory itemCategory1, ItemType slotType2, ItemCategory itemCategory2)
-        => InventoryEventService.RunTransaction(() => SwapEquipmentCore(slotType1, itemCategory1, slotType2, itemCategory2));
+        => !SceneTransitionService.IsBattleEquipmentLocked && InventoryEventService.RunTransaction(() => SwapEquipmentCore(slotType1, itemCategory1, slotType2, itemCategory2));
 
     private static bool SwapEquipmentCore(ItemType slotType1, ItemCategory itemCategory1, ItemType slotType2, ItemCategory itemCategory2)
     {
@@ -293,6 +293,7 @@ public static class EquipmentManagerService
     /// </summary>
     public static bool CanEquipItem(InventoryItem item)
     {
+        if (SceneTransitionService.IsBattleEquipmentLocked) return false;
         ItemDataSO itemData;
         return IsItemEquippable(item, out itemData);
     }

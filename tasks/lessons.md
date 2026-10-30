@@ -1,5 +1,11 @@
 # Implementation lessons
 
+## Visuales ligeros de batalla (2026-10-30)
+
+- Los adjuntos heredados pueden señalar una hoja de malla en lugar de su grupo. En el prefab original esa operación no tiene hijos y no hace nada; al extraer la hoja a un catálogo hay que conservar ese comportamiento o corregir los datos en una tarea explícita. La comparación de apariencias detectó este caso.
+- Un test que pasa no acredita que haya usado el prefab optimizado. Verificar el censo y la política de selección: crear un World nuevo después de asignar GamePhase al anterior deja el nuevo fuera de Combate. El bootstrap del ticket debe inicializar la fase del mundo receptor.
+- Distinguir el censo inicial del perfil de la carga estabilizada. No atribuir sus conteos iniciales a todos los soldados que aparecen después, ni convertir una reducción de componentes en una promesa de FPS.
+
 ## Estudio de lanceros en Blender (2026-10-24)
 
 - Las máscaras de color de Synty son blancas fuera de la región seleccionada. Reproducir la selección de canales y el orden de mezcla del shader local; sumarlas directamente produce personajes casi blancos.

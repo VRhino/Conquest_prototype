@@ -64,7 +64,8 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         LocalTransform transform, EntityCommandBuffer ecb, bool isLocalPlayer,
         List<(Entity, NavMeshAgent)> pendingNavAgents, Team team, float navSampleRadius)
     {
-        GameObject visualPrefab = VisualPrefabRegistry.Instance.GetPrefab(visualPrefabId);
+        bool inBattle = SceneTransitionService.IsBattleEquipmentLocked;
+        GameObject visualPrefab = VisualPrefabRegistry.Instance.GetPrefab(visualPrefabId, inBattle);
         if (visualPrefab == null)
         {
             Debug.LogWarning($"[HeroVisualInstantiationSystem] Prefab no encontrado para id: {visualPrefabId}");
@@ -79,6 +80,30 @@ public partial class HeroVisualInstantiationSystem : SystemBase
         }
 
         GameObject visualInstance = Object.Instantiate(visualPrefab);
+        if (inBattle)
+        {
+            var appearance = EntityManager.HasComponent<HeroAppearanceComponent>(entity)
+                ? EntityManager.GetComponentObject<HeroAppearanceComponent>(entity) : null;
+            if (appearance == null && isLocalPlayer && PlayerSessionService.SelectedHero != null)
+            {
+                var hero = PlayerSessionService.SelectedHero;
+                appearance = HeroAppearanceComponent.Capture(hero.avatar, hero.equipment, hero.gender);
+            }
+            try
+            {
+                if (appearance == null || !HeroVisualAppearanceSystem.ApplyHeroVisualCustomization(visualInstance, appearance))
+                    throw new System.InvalidOperationException("Battle appearance is not ready.");
+            }
+            catch (System.Exception ex)
+            {
+                visualInstance.SetActive(false);
+                Object.Destroy(visualInstance);
+                Debug.LogError($"[HeroVisualInstantiationSystem] {ex.Message}");
+                return;
+            }
+            if (!EntityManager.HasComponent<HeroAppearanceComponent>(entity)) ecb.AddComponent(entity, appearance);
+            ecb.AddComponent<HeroVisualAppearanceApplied>(entity);
+        }
         visualInstance.transform.position = transform.Position;
         visualInstance.transform.rotation = transform.Rotation;
         visualInstance.transform.localScale = Vector3.one * transform.Scale;
