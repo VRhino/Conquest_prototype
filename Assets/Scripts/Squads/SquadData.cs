@@ -33,6 +33,8 @@ public class SquadData : ScriptableObject
     public SquadType type;
     /// <summary>Unit type for this squad.</summary>
     public UnitType unitType;
+    [Tooltip("Shown in barracks for every hero, including existing saves. Does not grant a recruited instance.")]
+    public bool availableForRecruitmentByDefault;
     /// <summary>Icon used in menus.</summary>
     public Sprite icon;
     /// <summary>Background image for squad selection UI.</summary>

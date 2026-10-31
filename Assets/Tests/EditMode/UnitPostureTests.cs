@@ -7,6 +7,60 @@ using UnityEditor;
 /// <summary>Posture per slot role (paso 6): the formation's table, chosen by UnitPostureSystem.</summary>
 public class UnitPostureTests
 {
+    [TestCase(SquadOrderType.Attack, false, UnitFormationState.Formed, UnitStance.Normal, UnitStance.Normal)]
+    [TestCase(SquadOrderType.Attack, true, UnitFormationState.Moving, UnitStance.Normal, UnitStance.Normal)]
+    [TestCase(SquadOrderType.Attack, true, UnitFormationState.Formed, UnitStance.Normal, UnitStance.Normal)]
+    [TestCase(SquadOrderType.HoldPosition, true, UnitFormationState.Formed, UnitStance.PikeLineFront, UnitStance.PikeLineRear)]
+    [TestCase(SquadOrderType.FollowHero, false, UnitFormationState.Formed, UnitStance.PikeLineFront, UnitStance.PikeLineRear)]
+    [TestCase(SquadOrderType.FollowHero, true, UnitFormationState.Moving, UnitStance.Normal, UnitStance.Normal)]
+    public void PikemenFreeCombatReleasesRankPoseAndHoldRestoresIt(SquadOrderType order, bool engaging,
+        UnitFormationState arrivalState, UnitStance frontStance, UnitStance rearStance)
+    {
+        var line = AssetDatabase.LoadAssetAtPath<FormationDefinition>(
+            "Assets/Resources/Squads/Pikemen/Formations/Pikemen_Line.asset");
+        Assert.That(line.useNormalPostureInFreeCombat, Is.True);
+        using var world = new World("Pikemen formation versus free combat");
+        var em = world.EntityManager;
+        em.CreateEntity(typeof(MatchStateComponent));
+        var blob = TestFormationLibrary.Build(line.formationType, line.layout, line.spacing,
+            line.noiseRadius, line.noiseAngleDegrees, line.templates, line.postures, line.useNormalPostureInFreeCombat);
+        try
+        {
+            var squad = em.CreateEntity(typeof(FormationComponent), typeof(SquadDefinitionComponent), typeof(SquadStateComponent));
+            em.SetComponentData(squad, new FormationComponent { currentFormation = FormationType.Line });
+            em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
+            em.SetComponentData(squad, new SquadStateComponent { currentOrder = order });
+            var units = new Entity[2];
+            for (int i = 0; i < units.Length; i++)
+            {
+                units[i] = em.CreateEntity(typeof(UnitFormationStanceComponent), typeof(UnitAnimationMovementComponent), typeof(IsEngagingTag));
+                em.SetComponentEnabled<IsEngagingTag>(units[i], engaging);
+                em.AddComponentData(units[i], new UnitGridSlotComponent { row = i, role = i == 0 ? FormationSlotRole.Front : FormationSlotRole.Rear });
+                em.AddComponentData(units[i], new UnitFormationStateComponent { State = arrivalState });
+            }
+            var buffer = em.AddBuffer<SquadUnitElement>(squad);
+            foreach (var unit in units) buffer.Add(new SquadUnitElement { Value = unit });
+            var system = world.GetOrCreateSystem<UnitPostureSystem>();
+            system.Update(world.Unmanaged);
+            for (int i = 0; i < units.Length; i++)
+            {
+                var expected = i == 0 ? frontStance : rearStance;
+                Assert.That(em.GetComponentData<UnitFormationStanceComponent>(units[i]).stance, Is.EqualTo(expected));
+                Assert.That(em.GetComponentData<UnitAnimationMovementComponent>(units[i]).CurrentStance, Is.EqualTo(expected));
+            }
+            em.SetComponentData(squad, new SquadStateComponent { currentOrder = SquadOrderType.HoldPosition });
+            foreach (var unit in units)
+            {
+                em.SetComponentData(unit, new UnitFormationStateComponent { State = UnitFormationState.Formed });
+                em.SetComponentEnabled<IsEngagingTag>(unit, true);
+            }
+            system.Update(world.Unmanaged);
+            Assert.That(em.GetComponentData<UnitAnimationMovementComponent>(units[0]).CurrentStance, Is.EqualTo(UnitStance.PikeLineFront));
+            Assert.That(em.GetComponentData<UnitAnimationMovementComponent>(units[1]).CurrentStance, Is.EqualTo(UnitStance.PikeLineRear));
+        }
+        finally { blob.Dispose(); }
+    }
+
     [Test]
     public void SpearmenLineSlotsFeedBothRanksThenClearWhenMovingOrChangingFormation()
     {

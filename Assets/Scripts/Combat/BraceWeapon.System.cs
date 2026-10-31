@@ -8,6 +8,7 @@ using Unity.Entities;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(BraceWeaponActivationSystem))]
+[UpdateBefore(typeof(UnitTargetingSystem))]
 public partial class BraceWeaponSystem : SystemBase
 {
     protected override void OnUpdate()
@@ -15,12 +16,11 @@ public partial class BraceWeaponSystem : SystemBase
         var weaponLookup   = GetComponentLookup<UnitWeaponComponent>();
         var gridSlotLookup = GetComponentLookup<UnitGridSlotComponent>(true);
 
-        foreach (var (unitBuffer, mode, profiles) in
+        foreach (var (unitBuffer, mode, profiles, data) in
                  SystemAPI.Query<DynamicBuffer<SquadUnitElement>,
                                   RefRO<SquadCombatModeComponent>,
-                                  DynamicBuffer<BraceRowProfile>>())
+                                  DynamicBuffer<BraceRowProfile>, RefRO<SquadDataComponent>>())
         {
-            if (mode.ValueRO.mode != SquadCombatMode.Brace) continue;
 
             for (int u = 0; u < unitBuffer.Length; u++)
             {
@@ -29,6 +29,13 @@ public partial class BraceWeaponSystem : SystemBase
                 if (!gridSlotLookup.HasComponent(unit)) continue;
 
                 int row = gridSlotLookup[unit].row; // 0 = front rank, as the profiles expect
+                var baseline = weaponLookup[unit];
+                baseline.attackRange = data.ValueRO.attackRange;
+                baseline.strikeWindowStart = data.ValueRO.strikeWindowStart;
+                baseline.strikeWindowDuration = data.ValueRO.strikeWindowDuration;
+                baseline.attackAnimationDuration = data.ValueRO.attackAnimationDuration;
+                weaponLookup[unit] = baseline;
+                if (mode.ValueRO.mode != SquadCombatMode.Brace) continue;
 
                 for (int p = 0; p < profiles.Length; p++)
                 {

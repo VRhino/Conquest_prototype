@@ -1,5 +1,7 @@
 # Modelo híbrido ECS–GameObject
 
+Actualización de visuales (2026-10-30): el bootstrap captura una copia de la apariencia de batalla y los sistemas de spawn seleccionan `battleVisualPrefab` desde el registro durante combate. Las tropas usan prefabs fijos generados; `BattleHeroVisual` monta las mallas seleccionadas sobre el rig antes de vincularlo mediante `EntityVisualSync`. El montaje no escribe estado ECS. La apariencia corporal se conserva durante respawn y el servicio de inventario bloquea cambios de equipo en combate. Fuera de batalla siguen disponibles los prefabs completos de autoría.
+
 Actualizado: 2026-10-22. Contratos revisados contra la implementación actual (matriz de autoridad, orden de sistemas y nombres verificados contra el código).
 
 Este documento describe el modelo híbrido implementado. La estructura completa de datos, persistencia y DTO de batalla está en [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md); el detalle temporal de squads está en [Pipeline de movimiento](TroopMovementPipeline.md).

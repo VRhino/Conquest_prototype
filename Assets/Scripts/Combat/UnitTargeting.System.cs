@@ -115,7 +115,7 @@ public partial class UnitTargetingSystem : SystemBase
 
                 var combat = SystemAPI.GetComponentRW<UnitCombatComponent>(unit);
                 Entity previous = combat.ValueRO.target;
-                bool currentValid = _validTargets.Contains(previous);
+                bool currentValid = _validTargets.Contains(previous) && SquadCombatModeComponent.AllowsTarget(EntityManager, unit, previous);
                 Entity chosen;
                 if (SystemAPI.HasComponent<UnitRangedStatsComponent>(unit))
                 {
@@ -272,6 +272,7 @@ public partial class UnitTargetingSystem : SystemBase
         {
             DebugCandidateChecks++;
             var c = _candidates[j];
+            if (!SquadCombatModeComponent.AllowsTarget(EntityManager, unit, c.entity)) continue;
             if (c.entity == current) currentIndex = j;
             if (c.entity == blocker) blockerIndex = j;
             if (!c.searchable) continue;
@@ -305,7 +306,7 @@ public partial class UnitTargetingSystem : SystemBase
         if (threshold <= 0f || !SystemAPI.HasComponent<UnitBlockedComponent>(unit)) return false;
         var blocked = SystemAPI.GetComponent<UnitBlockedComponent>(unit);
         if (blocked.blocker == Entity.Null || blocked.blocker == previous) return false;
-        bool take = TargetScoring.BlockerDue(_validTargets.Contains(blocked.blocker), now - blocked.since, threshold,
+        bool take = TargetScoring.BlockerDue(_validTargets.Contains(blocked.blocker) && SquadCombatModeComponent.AllowsTarget(EntityManager, unit, blocked.blocker), now - blocked.since, threshold,
             currentValid && InReach(unit, previous, bodyRadius));
         if (take) blocker = blocked.blocker;
         return take;
@@ -320,7 +321,7 @@ public partial class UnitTargetingSystem : SystemBase
         {
             DebugCandidateChecks++;
             var c = _candidates[j];
-            if (!c.searchable) continue;
+            if (!c.searchable || !SquadCombatModeComponent.AllowsTarget(EntityManager, unit, c.entity)) continue;
             float dist = math.distancesq(unitPos, c.position);
             if (dist < bestDist) { bestDist = dist; best = c.entity; }
         }
@@ -371,7 +372,8 @@ public partial class UnitTargetingSystem : SystemBase
             {
                 DebugCandidateChecks++;
                 var candidate = _candidates[j];
-                if (candidate.entity == combat.ValueRO.target || !candidate.searchable)
+                if (candidate.entity == combat.ValueRO.target || !candidate.searchable
+                    || !SquadCombatModeComponent.AllowsTarget(EntityManager, unit, candidate.entity))
                     continue;
 
                 int candidateCount = Count(_rangedCounts, candidate.entity);

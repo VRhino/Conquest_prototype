@@ -540,12 +540,8 @@ public class BattleSceneController : MonoBehaviour
             Debug.LogWarning($"[BattleSceneController] Clase desconocida '{heroData.classID}' para el héroe remoto '{heroData.heroName}'");
 
         // Adjuntar datos visuales para que HeroVisualAppearanceSystem aplique partes al héroe remoto
-        em.AddComponentObject(heroEntity, new HeroAppearanceComponent
-        {
-            avatar    = heroData.avatar    ?? new AvatarParts(),
-            equipment = heroData.equipment ?? new Equipment(),
-            gender    = string.IsNullOrEmpty(heroData.gender) ? "Male" : heroData.gender
-        });
+        em.AddComponentObject(heroEntity, HeroAppearanceComponent.Capture(heroData.avatar, heroData.equipment,
+            string.IsNullOrEmpty(heroData.gender) ? "Male" : heroData.gender));
 
         Debug.Log($"[BattleSceneController] Héroe remoto '{heroData.heroName}' spawneado en {spawnPosition} (team={teamID})");
         return true;

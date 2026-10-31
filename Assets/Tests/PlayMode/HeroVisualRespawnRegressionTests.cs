@@ -20,6 +20,28 @@ public sealed class LocalHeroRotationTestWriter : MonoBehaviour
 public class HeroVisualRespawnRegressionTests
 {
     [Test]
+    public void LocalMotorIgnoresTinyDropsButReportsARealFall()
+    {
+        using var world = new World("Fall threshold regression");
+        var visual = new GameObject("Fall threshold fixture");
+        try
+        {
+            var em = world.EntityManager;
+            var hero = em.CreateEntity(typeof(LocalTransform), typeof(IsLocalPlayer), typeof(HeroMoveIntent));
+            em.SetComponentData(hero, LocalTransform.FromPosition(new float3(0, 1000, 0)));
+            visual.AddComponent<CharacterController>();
+            var motor = visual.AddComponent<LocalHeroCharacterMotor>();
+            motor.Bind(world, hero, true, true);
+            motor.Tick(0.01f);
+            Assert.That(em.GetComponentData<HeroMotorStateComponent>(hero).isGrounded, Is.True);
+            for (int i = 0; i < 4; i++) motor.Tick(0.05f);
+            Assert.That(em.GetComponentData<HeroMotorStateComponent>(hero).isGrounded, Is.False,
+                "A sustained drop must still enter the airborne state.");
+        }
+        finally { Object.DestroyImmediate(visual); }
+    }
+
+    [Test]
     public void VerticalDisplacementDoesNotAnimateUnitLocomotion()
     {
         using var world = new World("Horizontal animation regression");

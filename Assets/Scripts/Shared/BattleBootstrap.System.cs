@@ -85,6 +85,16 @@ public partial class BattleBootstrapSystem : SystemBase
                     if (player.requiresIdentitySave) return; // Retain the request until identity can be committed.
                 }
                 var data = EntityManager.GetComponentData<DataContainerComponent>(container);
+                // The accepted ticket owns the phase in this world, including direct test-scene
+                // loads where the previous world's scene transition cannot initialize it.
+                if (SystemAPI.TryGetSingletonEntity<GameStateComponent>(out var gameStateEntity))
+                {
+                    var gameState = EntityManager.GetComponentData<GameStateComponent>(gameStateEntity);
+                    gameState.currentPhase = GamePhase.Combate;
+                    EntityManager.SetComponentData(gameStateEntity, gameState);
+                }
+                EntityManager.AddComponentObject(container,
+                    HeroAppearanceComponent.Capture(hero.avatar, hero.equipment, hero.gender));
                 var maps = BattleBootstrapRequests.Snapshot(hero.squadInstances);
                 data.selectedSquads.Clear();
                 data.selectedSquadBaseID = default;

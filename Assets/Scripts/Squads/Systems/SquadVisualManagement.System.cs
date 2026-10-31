@@ -232,12 +232,12 @@ public partial class SquadVisualManagementSystem : SystemBase
         // Intentar por nombre específico primero
         if (!string.IsNullOrEmpty(prefabName))
         {
-            GameObject prefab = registry.GetPrefab(prefabName);
+            GameObject prefab = registry.GetPrefab(prefabName, SceneTransitionService.IsBattleEquipmentLocked);
             if (prefab != null) return prefab;
         }
         
         // Fallback al tipo de squad
-        return registry.GetDefaultUnitPrefab(squadType);
+        return registry.GetDefaultUnitPrefab(squadType, SceneTransitionService.IsBattleEquipmentLocked);
     }
 
     private void ApplyDetectorColor(GameObject visualInstance, Entity unitEntity, Entity parentSquad)

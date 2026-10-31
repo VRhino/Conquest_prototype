@@ -30,6 +30,8 @@ public class VisualPrefabConfiguration : ScriptableObject
         
         [Tooltip("Prefab visual del héroe")]
         public GameObject visualPrefab;
+        [Tooltip("Generated battle rig. Authoring and previews keep visualPrefab.")]
+        public GameObject battleVisualPrefab;
         
         [Tooltip("Es el prefab por defecto")]
         public bool isDefault;
@@ -52,6 +54,8 @@ public class VisualPrefabConfiguration : ScriptableObject
         
         [Tooltip("Prefab visual de la unidad")]
         public GameObject visualPrefab;
+        [Tooltip("Generated fixed battle appearance.")]
+        public GameObject battleVisualPrefab;
         
         [Tooltip("Es el prefab por defecto para este tipo de escuadrón")]
         public bool isDefault;

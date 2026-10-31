@@ -1,5 +1,11 @@
 # Implementation lessons
 
+## Visuales ligeros de batalla (2026-10-30)
+
+- Los adjuntos heredados pueden señalar una hoja de malla en lugar de su grupo. En el prefab original esa operación no tiene hijos y no hace nada; al extraer la hoja a un catálogo hay que conservar ese comportamiento o corregir los datos en una tarea explícita. La comparación de apariencias detectó este caso.
+- Un test que pasa no acredita que haya usado el prefab optimizado. Verificar el censo y la política de selección: crear un World nuevo después de asignar GamePhase al anterior deja el nuevo fuera de Combate. El bootstrap del ticket debe inicializar la fase del mundo receptor.
+- Distinguir el censo inicial del perfil de la carga estabilizada. No atribuir sus conteos iniciales a todos los soldados que aparecen después, ni convertir una reducción de componentes en una promesa de FPS.
+
 ## Estudio de lanceros en Blender (2026-10-24)
 
 - Las máscaras de color de Synty son blancas fuera de la región seleccionada. Reproducir la selección de canales y el orden de mezcla del shader local; sumarlas directamente produce personajes casi blancos.
@@ -470,3 +476,36 @@
   corridas: no hace falta volver atrás en git y el ruido de la melé (M10) afecta igual a las dos variantes.
 - Cambiar una tecla (H11) obliga a pasar BattleSceneIntegrationTests: `BattleSceneSquadAbilityTests` pulsa la tecla de la
   escuadra. Buscar `Key.` en Assets/Tests antes de cerrar un cambio de input.
+
+## Piqueros: orientación y revisión de poses (2026-10-27)
+
+- Si el eje longitudinal de un arma es Y, `LookRotation` debe recibir un vector forward perpendicular al eje de la pica. Usar un forward fijo hacia abajo anulaba parte de la inclinación pedida. Comprobar el ángulo real de `carrier.up` después de reproducir el Animator.
+- Una pose correcta en los fotogramas de autoría no garantiza el agarre durante una estocada. Comprobar las dos palmas a lo largo del clip y limitar la extensión a lo que alcanza el brazo de ambas filas.
+- `AnimationClip.SampleAnimation` modifica la pose de una instancia de prefab, pero para conservar esa revisión al guardar hay que registrar sus overrides. La disposición de la revisión y la del asset de formación deben salir del mismo cálculo.
+
+## Alta de unidades: catálogo y partidas existentes (2026-10-28)
+
+- Dar de alta el prefab y `SquadDatabase` no basta: el barracón filtra por los desbloqueos guardados del héroe. Para contenido disponible por defecto, declarar esa disponibilidad en el catálogo y combinarla con los desbloqueos al consultar. No regalar instancias ni modificar guardados para conseguir que aparezca una opción de reclutamiento.
+- Verificar el flujo con el controlador del barracón, el selector de BattlePrep y la BattleScene de producción usando un proveedor de guardado temporal. Un test de poses o un spawn directo no prueba ese recorrido.
+- Al pasar de una revisión visual a una formación jugable, contrastar su separación con el diámetro de los cuerpos ECS; una fila visualmente correcta puede exigir posiciones que el sistema de separación nunca permitirá alcanzar.
+
+## Piqueros: ataque formado frente a combate libre (2026-10-28)
+
+- `IsEngagingTag` solo indica un objetivo de combate, no que el soldado deba conservar su postura de fila. Usarlo como equivalente a formado hacía que una primera fila arrodillada se agachara también tras la orden V. La selección debe considerar la orden de escuadra y la política de postura de la formación.
+- Comprobar Attack antes de tener objetivo y mientras está parado, además del golpe; de lo contrario la postura de fila reaparece entre estocadas. Verificar también HoldPosition atacando y la vuelta a formar.
+
+
+## Contacto de suelo y escenas de producción (2026-10-30)
+
+- CharacterController.isGrounded puede perderse al bajar desniveles pequeños. Separar contacto físico de la señal de caída para gameplay/animación mediante distancia mínima y tolerancia temporal configurables; conservar gravedad y colisiones reales.
+- Las regresiones de BattleTestScene no acreditan BattleScene. Comprobar movimiento y contactos de armas reales en la escena de producción, sin inyectar PendingDamageEvent para acreditar golpes físicos.
+
+- En combates con muchas escuadras, una prueba de daño debe comprobar las dos escuadras involucradas: observar cualquier herido del mundo puede ocultar que el grupo del jugador no ataque. Reposicionar unidades para aislar contactos no reproduce el recorrido previo ni el estado de una sesión real atascada.
+
+## Brace y daño de Spearmen (2026-10-31)
+
+- Un prefab que reproduce ataques no garantiza que exista un perfil de daño: comprobar el módulo melee del SquadData y el daño resuelto. Spearmen carecía de meleeData.
+- La política de brace pertenece a cada formación y se copia al layout activo; no añadir otra lectura por frame de blobs de escena que pueden haberse descargado.
+- Revisar el grafo de orden antes de conectar sistemas: Activation después de Formation y antes de Targeting cierra el ciclo Targeting → Anchor → Formation.
+- Cancelar brace y cambiar a dispersa con C no requiere eliminar todas las posturas de marcha del sistema; conservar las posturas de otras formaciones.
+- En pruebas de combate entre tropas, aislar los ataques y el respawn de los héroes para no atribuirles el daño de las unidades ni perder la escuadra observada. Conservar el daño observado entre fotogramas y comprobar que las entidades siguen existiendo antes de generar diagnósticos.

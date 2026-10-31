@@ -34,16 +34,28 @@ public partial class UnitRotationResolutionSystem : SystemBase
                      .WithAll<NavAgentComponent>()
                      .WithEntityAccess())
         {
-            if (intent.ValueRO.priority > 0)
+            bool braced = SquadCombatModeComponent.TryGetBrace(EntityManager, entity, out var brace);
+            if (intent.ValueRO.priority > 0 || braced)
             {
                 var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(entity);
                 if (agent != null)
                 {
                     // Combat facing turns at a capped rate (C7); formation intents already arrive smoothed.
-                    quaternion target = intent.ValueRO.targetRotation;
-                    agent.transform.rotation = intent.ValueRO.source == RotationSource.Combat
+                    quaternion target = intent.ValueRO.priority > 0 ? intent.ValueRO.targetRotation
+                        : quaternion.LookRotationSafe(brace.forward, math.up());
+                    quaternion rotation = intent.ValueRO.source == RotationSource.Combat
                         ? (UnityEngine.Quaternion)UnitTurn.Step(agent.transform.rotation, target, combatTurnRate, dt)
                         : (UnityEngine.Quaternion)target;
+                    if (braced)
+                    {
+                        agent.updateRotation = false;
+                        float front = math.atan2(brace.forward.x, brace.forward.z);
+                        float3 facing = math.forward(rotation);
+                        float offset = math.atan2(facing.x, facing.z) - front;
+                        offset = math.atan2(math.sin(offset), math.cos(offset));
+                        rotation = quaternion.RotateY(front + math.clamp(offset, -brace.halfAngleRadians, brace.halfAngleRadians));
+                    }
+                    agent.transform.rotation = rotation;
                 }
             }
 

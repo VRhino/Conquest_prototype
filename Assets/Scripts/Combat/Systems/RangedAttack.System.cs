@@ -91,7 +91,7 @@ public partial class RangedAttackSystem : SystemBase
 
             // Validate target
             Entity target = c.target;
-            if (target == Entity.Null || !SystemAPI.Exists(target))
+            if (target == Entity.Null || !SystemAPI.Exists(target) || !SquadCombatModeComponent.AllowsTarget(EntityManager, entity, target))
             {
                 c.target = Entity.Null;
                 continue;

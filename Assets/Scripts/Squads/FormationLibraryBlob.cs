@@ -21,6 +21,10 @@ public struct FormationDataBlob
     public float noiseRadius;
     /// <summary>Organic facing noise per slot, radians.</summary>
     public float noiseAngle;
+    /// <summary>Release rank-specific poses for attack orders and pursuit outside Hold Position.</summary>
+    public bool useNormalPostureInFreeCombat;
+    public bool supportsBrace;
+    public float braceHalfAngleRadians;
     /// <summary>Templates sorted by minimum soldiers alive, largest first. Empty for Scatter.</summary>
     public BlobArray<FormationTemplateBlob> templates;
     /// <summary>Posture per slot role; roles not listed use Normal.</summary>

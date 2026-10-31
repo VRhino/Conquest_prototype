@@ -10,4 +10,12 @@ public class HeroAppearanceComponent : IComponentData
     public AvatarParts avatar   = new();
     public Equipment   equipment = new();
     public string      gender   = "Male";
+
+    public static HeroAppearanceComponent Capture(AvatarParts avatar, Equipment equipment, string gender)
+        => new HeroAppearanceComponent
+        {
+            avatar = avatar == null ? new AvatarParts() : UnityEngine.JsonUtility.FromJson<AvatarParts>(UnityEngine.JsonUtility.ToJson(avatar)),
+            equipment = equipment == null ? new Equipment() : UnityEngine.JsonUtility.FromJson<Equipment>(UnityEngine.JsonUtility.ToJson(equipment)),
+            gender = gender
+        };
 }

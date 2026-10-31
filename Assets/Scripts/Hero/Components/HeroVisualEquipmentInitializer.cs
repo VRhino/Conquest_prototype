@@ -26,12 +26,14 @@ public class HeroVisualEquipmentInitializer : MonoBehaviour
     void OnDisable() => InventoryManager.OnInventoryChanged -= HandleInventoryChange;
     void HandleInventoryChange()
     {
+        if (SceneTransitionService.IsBattleEquipmentLocked || GetComponent<BattleHeroVisual>() != null) return;
         if (!visibleEquipment.SequenceEqual(EquipmentManagerService.GetAllEquippedItems())) ForceRefreshHeroVisual();
     }
 
     [ContextMenu("Force Refresh Hero Visual")]
     public void ForceRefreshHeroVisual()
     {
+        if (SceneTransitionService.IsBattleEquipmentLocked) return;
         if (sync == null || !sync.IsLocalHero || boundHero == null
             || !ReferenceEquals(boundHero, PlayerSessionService.SelectedHero)) return;
         if (avatarPartDatabase == null)

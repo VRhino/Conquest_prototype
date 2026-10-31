@@ -203,6 +203,47 @@ public class InventoryRegressionTests
     }
 
     [Test]
+    public void BattleEquipmentLockRejectsEveryOperationWithoutSavingAndReleasesOutsideBattle()
+    {
+        var previousWorld = World.DefaultGameObjectInjectionWorld;
+        using var world = new World("Battle equipment policy");
+        World.DefaultGameObjectInjectionWorld = world;
+        try
+        {
+            var phase = world.EntityManager.CreateEntity(typeof(GameStateComponent));
+            world.EntityManager.SetComponentData(phase, new GameStateComponent { currentPhase = GamePhase.Combate });
+            var bow = Add("bow");
+            var helmet = Make("helmet");
+            hero.equipment.helmet = helmet;
+            ResetCounts();
+            Assert.That(InventoryManager.RequestEquipItem(bow), Is.False);
+            Assert.That(EquipmentManagerService.EquipItem(bow), Is.False);
+            Assert.That(EquipmentManagerService.UnequipItem(ItemType.Armor, ItemCategory.Helmet), Is.False);
+            Assert.That(EquipmentManagerService.SwapEquipment(ItemType.Armor, ItemCategory.Helmet, ItemType.Armor, ItemCategory.Torso), Is.False);
+            Assert.That(hero.equipment.helmet, Is.SameAs(helmet));
+            Assert.That(hero.inventory, Does.Contain(bow));
+            Assert.That(changes, Is.Zero);
+            Assert.That(saves, Is.Zero);
+            world.EntityManager.SetComponentData(phase, new GameStateComponent { currentPhase = GamePhase.Feudo });
+            Assert.That(EquipmentManagerService.EquipItem(bow), Is.True);
+        }
+        finally { World.DefaultGameObjectInjectionWorld = previousWorld; }
+    }
+
+    [Test]
+    public void BattleAppearanceSnapshotSurvivesChangesToPersistentAvatarAndEquipment()
+    {
+        hero.avatar.headId = "initial-head";
+        hero.equipment.helmet = Make("helmet");
+        var snapshot = HeroAppearanceComponent.Capture(hero.avatar, hero.equipment, "Male");
+        hero.avatar.headId = "changed-head";
+        hero.equipment.helmet.itemId = "torso";
+        hero.equipment.helmet = null;
+        Assert.That(snapshot.avatar.headId, Is.EqualTo("initial-head"));
+        Assert.That(snapshot.equipment.helmet.itemId, Is.EqualTo("helmet"));
+    }
+
+    [Test]
     public void FailedTransactionRestoresCurrencyItemsStatsAndEvents()
     {
         var item = Add("helmet");

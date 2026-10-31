@@ -23,13 +23,19 @@ public partial class HeroVisualAppearanceSystem : SystemBase
                           .WithNone<HeroVisualAppearanceApplied>()
                           .WithEntityAccess())
         {
-            var go = FindGameObjectById(visualInstance.ValueRO.visualInstanceId);
+            var go = VisualSyncUtility.TryGetVisual(World, entity, out var linked) ? linked.gameObject : null;
             if (go == null) continue;
 
-            try { ApplyHeroVisualCustomization(go); }
+            try
+            {
+                var appearance = EntityManager.HasComponent<HeroAppearanceComponent>(entity)
+                    ? EntityManager.GetComponentObject<HeroAppearanceComponent>(entity) : null;
+                if (!ApplyHeroVisualCustomization(go, appearance)) continue;
+            }
             catch (System.Exception ex)
             {
                 Debug.LogError($"[HeroVisualAppearanceSystem] Error aplicando apariencia local: {ex.Message}\n{ex.StackTrace}");
+                continue;
             }
 
             ecb.AddComponent<HeroVisualAppearanceApplied>(entity);
@@ -43,14 +49,15 @@ public partial class HeroVisualAppearanceSystem : SystemBase
         {
             if (!EntityManager.HasComponent<HeroAppearanceComponent>(entity)) continue;
 
-            var go = FindGameObjectById(visualInstance.ValueRO.visualInstanceId);
+            var go = VisualSyncUtility.TryGetVisual(World, entity, out var linked) ? linked.gameObject : null;
             if (go == null) continue;
 
             var appearance = EntityManager.GetComponentObject<HeroAppearanceComponent>(entity);
-            try { ApplyHeroVisualCustomization(go, appearance); }
+            try { if (!ApplyHeroVisualCustomization(go, appearance)) continue; }
             catch (System.Exception ex)
             {
                 Debug.LogError($"[HeroVisualAppearanceSystem] Error aplicando apariencia remota: {ex.Message}\n{ex.StackTrace}");
+                continue;
             }
 
             ecb.AddComponent<HeroVisualAppearanceApplied>(entity);
@@ -64,7 +71,7 @@ public partial class HeroVisualAppearanceSystem : SystemBase
     /// Aplica partes de avatar y equipamiento al GameObject visual.
     /// Si remoteAppearance es null, usa el héroe local (PlayerSessionService.SelectedHero).
     /// </summary>
-    private static void ApplyHeroVisualCustomization(GameObject visualInstance, HeroAppearanceComponent remoteAppearance = null)
+    public static bool ApplyHeroVisualCustomization(GameObject visualInstance, HeroAppearanceComponent remoteAppearance = null)
     {
         AvatarParts avatar;
         Equipment   equipment;
@@ -79,16 +86,21 @@ public partial class HeroVisualAppearanceSystem : SystemBase
         else
         {
             var heroData = PlayerSessionService.SelectedHero;
-            if (heroData == null) return;
+            if (heroData == null) return false;
             avatar    = heroData.avatar;
             equipment = heroData.equipment;
             gender    = heroData.gender;
         }
 
-        if (avatar == null) return;
+        if (avatar == null) return false;
 
         var avatarPartDatabase = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
-        if (avatarPartDatabase == null) return;
+        if (avatarPartDatabase == null) return false;
+
+        var lightweight = visualInstance.GetComponent<BattleHeroVisual>();
+        if (lightweight != null)
+            lightweight.Prepare(avatar, equipment, gender, avatarPartDatabase,
+                Resources.Load<AvatarBasePartsDefinition>("Data/Avatar/DefaultAvatarBasePartsDefinition"));
 
         var baseVisualPartIds = new System.Collections.Generic.List<string>();
         if (!string.IsNullOrEmpty(avatar.headId))    baseVisualPartIds.Add(avatar.headId);
@@ -115,11 +127,7 @@ public partial class HeroVisualAppearanceSystem : SystemBase
                 }
             }
         }
+        return true;
     }
 
-    private static GameObject FindGameObjectById(EntityId instanceId)
-    {
-        var allObjects = Object.FindObjectsOfType<GameObject>();
-        return System.Array.Find(allObjects, obj => obj.GetEntityId() == instanceId);
-    }
 }

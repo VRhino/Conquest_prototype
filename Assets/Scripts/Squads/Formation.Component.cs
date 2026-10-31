@@ -8,6 +8,9 @@ public struct FormationComponent : IComponentData
 {
     /// <summary>Formation selected by the player.</summary>
     public FormationType currentFormation;
+    /// <summary>Brace policy of the committed layout; copied while its formation blob is available.</summary>
+    public bool supportsBrace;
+    public float braceHalfAngleRadians;
     /// <summary>Template in use (Scatter: side of the cell square); -1 before the first layout.</summary>
     public int templateIndex;
     /// <summary>Soldiers alive when the layout was built.</summary>

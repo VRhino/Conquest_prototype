@@ -18,6 +18,11 @@ namespace ConquestTactics.Visual
         private const float TerminalVelocity = -50f;
         private const float GroundCheckBuffer = -0.5f;
 
+        [SerializeField, Min(0f)] private float fallGraceSeconds = 0.12f;
+        [SerializeField, Min(0f)] private float minimumFallDistance = 0.2f;
+        private float _airborneSeconds;
+        private float _lastSupportedHeight;
+
         private World _world;
         private Entity _heroEntity = Entity.Null;
         private CharacterController _controller;
@@ -63,6 +68,8 @@ namespace ConquestTactics.Visual
             _appliedPositionRevision = 0;
             EnsureMotorState();
             InitializeFromEntityPose();
+            _lastSupportedHeight = transform.position.y;
+            _airborneSeconds = 0f;
         }
 
         public void ReleaseAuthority()
@@ -140,7 +147,20 @@ namespace ConquestTactics.Visual
             float3 confirmedVelocity = !teleported && canMove && deltaTime > 0f
                 ? ((float3)transform.position - (float3)before) / deltaTime
                 : float3.zero;
-            PublishConfirmedState(entityManager, confirmedVelocity, collisionFlags);
+            bool supported = _controller.isGrounded || (collisionFlags & CollisionFlags.Below) != 0;
+            if (teleported || supported)
+            {
+                _airborneSeconds = 0f;
+                _lastSupportedHeight = transform.position.y;
+            }
+            else
+            {
+                _airborneSeconds += Mathf.Max(0f, deltaTime);
+                _lastSupportedHeight = Mathf.Max(_lastSupportedHeight, transform.position.y);
+            }
+            bool groundedForGameplay = supported || _airborneSeconds < fallGraceSeconds
+                || _lastSupportedHeight - transform.position.y < minimumFallDistance;
+            PublishConfirmedState(entityManager, confirmedVelocity, collisionFlags, groundedForGameplay);
         }
 
         private void InitializeFromEntityPose()
@@ -178,7 +198,7 @@ namespace ConquestTactics.Visual
         }
 
         private void PublishConfirmedState(EntityManager entityManager, float3 velocity,
-            CollisionFlags collisionFlags)
+            CollisionFlags collisionFlags, bool groundedForGameplay)
         {
             if (entityManager.HasComponent<LocalTransform>(_heroEntity))
             {
@@ -192,7 +212,7 @@ namespace ConquestTactics.Visual
             entityManager.SetComponentData(_heroEntity, new HeroMotorStateComponent
             {
                 velocity = velocity,
-                isGrounded = _controller.isGrounded,
+                isGrounded = groundedForGameplay,
                 hitSides = (collisionFlags & CollisionFlags.Sides) != 0,
                 hitCeiling = (collisionFlags & CollisionFlags.Above) != 0
             });

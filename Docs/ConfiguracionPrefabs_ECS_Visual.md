@@ -1,5 +1,16 @@
 # Configuración vigente de prefabs ECS y visuales
 
+## Visuales ligeros de batalla — 2026-10-30
+
+La configuración activa `Assets/ScriptableObjects/VisualPrefabConfig.asset` conserva `visualPrefab` para autoría y previsualizaciones y declara `battleVisualPrefab` para combate. `VisualPrefabRegistry` selecciona la alternativa cuando el sistema de spawn solicita el visual de batalla. Las configuraciones antiguas sin alternativa siguen usando su prefab original.
+
+Las cuatro tropas actuales usan prefabs generados en `Assets/Prefabs/BattleVisuals/`. El generador elimina hojas de geometría inactiva que no estén referenciadas por componentes o bindings de animación; conserva rig, colliders y hitboxes. Los héroes usan un rig ligero y un `BattleSkinCatalog` compartido: `BattleHeroVisual` monta las piezas finales antes del vínculo de sincronización y de asignar propietarios a las hitboxes. Las mallas y materiales permanecen compartidos.
+
+La apariencia se copia a `HeroAppearanceComponent` desde el ticket de batalla, se transfiere al héroe local y se conserva durante respawn. Equipar, desequipar e intercambiar equipo se bloquea durante `GamePhase.Combate`. El cambio de arma durante batalla todavía no está habilitado; sus objetos y hitboxes se mantienen separados para esa futura mecánica.
+
+Para regenerar, seleccionar `VisualPrefabConfiguration` y ejecutar `Tools > Characters > Generate Selected Battle Visual Configuration`. Repetirlo tras modificar las fuentes: todavía no hay invalidación automática por hash. No editar las salidas generadas como fuente de autoría. La comparación adicional está en `AgentScripts/ValidateBattleVisuals.cs`; valida cuatro tropas y 68 apariencias de héroe del catálogo actual. La transición entre variantes de futuras unidades se mantiene fuera de esta implementación.
+
+
 Actualizado: 2026-09-15. Verificado contra `3eef0e17`.
 
 Esta guía describe el montaje actual del runtime híbrido. Los componentes de movimiento y animación se asignan según la entidad vinculada; no todos deben serializarse en todos los prefabs.

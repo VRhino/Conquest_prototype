@@ -52,6 +52,18 @@ public static class SquadPlayerCommandResolver
 
             intent.orderType = command.order;
             intent.holdPosition = command.holdPosition;
+            if (command.order == SquadOrderType.FollowHero)
+            {
+                // A single follow command releases defensive combat and rank posture.
+                intent.heroOrdenCooldownActive = true;
+                intent.heroOrdenCooldownTimer = CooldownDuration;
+                if (definition.formationLibrary.IsCreated)
+                {
+                    ref var library = ref definition.formationLibrary.Value;
+                    if (FormationLayout.Find(ref library, FormationType.Dispersed) >= 0)
+                        intent.desiredFormation = FormationType.Dispersed;
+                }
+            }
         }
 
         if (validFormationChange)
