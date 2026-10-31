@@ -476,9 +476,11 @@ public partial class BattleSceneIntegrationTests
         var leaderAdapter = leaderAgent.GetComponent<UnitAnimationAdapter>();
         leaderAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         yield return new WaitForSeconds(0.3f);
+        // UnitAnimationSystem shows the agent's speed a frame later, and an agent can brake by more than 0.5 m/s in a frame.
+        float agentSpeed = new Vector2(leaderAgent.velocity.x, leaderAgent.velocity.z).magnitude;
+        yield return null;
         var movement = em.GetComponentData<UnitAnimationMovementComponent>(leader);
-        Assert.That(movement.CurrentSpeed, Is.EqualTo(new Vector2(leaderAgent.velocity.x,
-            leaderAgent.velocity.z).magnitude).Within(0.5f));
+        Assert.That(movement.CurrentSpeed, Is.EqualTo(agentSpeed).Within(0.1f));
         Assert.That(leaderAnimator.GetInteger(AnimationHashes.CurrentGait), Is.EqualTo((int)leaderAdapter.Gait));
         Assert.That(leaderAnimator.GetBool(AnimationHashes.IsStopped), Is.False);
         InputSystem.QueueStateEvent(keyboard, new KeyboardState());

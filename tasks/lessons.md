@@ -509,3 +509,8 @@
 - Revisar el grafo de orden antes de conectar sistemas: Activation después de Formation y antes de Targeting cierra el ciclo Targeting → Anchor → Formation.
 - Cancelar brace y cambiar a dispersa con C no requiere eliminar todas las posturas de marcha del sistema; conservar las posturas de otras formaciones.
 - En pruebas de combate entre tropas, aislar los ataques y el respawn de los héroes para no atribuirles el daño de las unidades ni perder la escuadra observada. Conservar el daño observado entre fotogramas y comprobar que las entidades siguen existiendo antes de generar diagnósticos.
+
+## Comparar valores de ECS y del agente (2026-10-31)
+
+- `UnitAnimationMovementComponent.CurrentSpeed` muestra `agent.velocity` un fotograma después, y un agente puede frenar más de 0,5 m/s en un fotograma (aceleración 8 × brakingFactor 2,5 × 0,03 s). Comparar con la velocidad del fotograma anterior, no ampliar la tolerancia.
+- Un test que pasa aislado y falla en su clase no prueba estado heredado: registrar los valores fotograma a fotograma antes de culpar al orden. Aquí solo cambiaba en qué fotograma caía la comprobación.
