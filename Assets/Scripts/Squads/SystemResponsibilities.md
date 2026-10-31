@@ -327,15 +327,15 @@ EnemyDetection ──→ DamageCalculation ──→ [SquadAISystem] ──→ [
 - **Grupo**: `PresentationSystemGroup`
 
 ### BraceWeaponActivationSystem
-- **Estado actual**: La activación automática de `Brace` está deshabilitada (`shouldBrace = false`). Si un squad estaba en `Brace`, lo devuelve a `Normal`.
-- **Orden**: `[UpdateAfter(SquadFSMSystem)]`
+- **Responsabilidad**: Activa `Brace` durante HoldPosition si la formación comprometida lo permite. Copia su arco y el frente de la orden; al seguir, atacar o retirarse devuelve el modo a Normal.
+- **Orden**: después de `SquadFSMSystem`, antes de `UnitTargetingSystem`. Lee la política copiada en `FormationComponent`; no consulta el blob de escena.
 - **Regla**: No aplica weapon overrides.
 
 ### BraceWeaponSystem
 - **Responsabilidad**: Aplica overrides de arma por fila (`BraceRowProfile`) cuando el squad está en Brace mode
 - **Output**: `UnitWeaponComponent` (shape/timing de arma) por unidad según su fila en la formación
 - **Orden**: `[UpdateAfter(BraceWeaponActivationSystem)]`
-- **Regla**: Solo aplica overrides cuando `mode == Brace` — no activa ni desactiva el modo
+- **Regla**: Aplica overrides en Brace y restaura los parámetros base al salir o cambiar de fila; no activa ni desactiva el modo.
 
 ### UnitAttackSystem
 - **Responsabilidad**: State machine de ataque por unidad — 3 fases: Decision → Strike window → Cooldown
@@ -474,3 +474,10 @@ El contrato local vigente es `HeroMovementSystem → HeroMoveIntent → LocalHer
 BattleBootstrapSystem captura el GUID y la progresión de HeroData en HeroProgressComponent al aceptar la partida. HeroLevelSystem consume sólo XPEventComponent dirigido a ese GUID; guarda antes de modificar ECS/consumir el evento, sin leer SelectedHero ni escribir el bloque heredado sin dueño. Un ticket legado puede usar el GUID explícito del llamador validado en el perfil. SaveSystem confirma el dueño único, actualiza revisión y sesión, y conserva los otros héroes.
 
 SquadProgressionSystem valida dueño e instancia contra el mapa capturado y guarda en HeroData.squadProgress. Consume cada evento confirmado sobre un snapshot, después del commit y antes de procesar el siguiente; actualiza mapa/ECS y genera LevelUp. La identidad remota sólo cambia runtime, sin escribir el perfil local. El bloque de progreso antiguo no recibe XP nueva.
+
+## Brace configurable — 2026-10-31
+
+- `FormationDefinition` declara soporte y arco frontal; `FormationSystem`/spawn copian la política a `FormationComponent`.
+- `BraceWeaponActivationSystem` deriva el modo desde HoldPosition y la política comprometida, después de FSM y antes de targeting. No ordenar después de FormationSystem: el camino UnitTargeting → SquadAnchor → FormationSystem cerraría un ciclo.
+- `UnitTargetingSystem`, `UnitAttackSystem`, `RangedAttackSystem` y `MeleeContactResolutionSystem` respetan arco y alcance. `UnitNavMeshSystem` conserva las ranuras mediante HoldPosition; `UnitRotationResolutionSystem` limita el giro físico final.
+- `SquadPlayerCommandResolver` libera brace al seguir, solicita dispersa y aplica prioridad temporal a la orden C. `FormationSystem` sigue siendo el único escritor del layout.

@@ -404,3 +404,18 @@
 - `IsEngagingTag` solo indica un objetivo de combate, no que el soldado deba conservar su postura de fila. Usarlo como equivalente a formado hacía que una primera fila arrodillada se agachara también tras la orden V. La selección debe considerar la orden de escuadra y la política de postura de la formación.
 - Comprobar Attack antes de tener objetivo y mientras está parado, además del golpe; de lo contrario la postura de fila reaparece entre estocadas. Verificar también HoldPosition atacando y la vuelta a formar.
 
+
+## Contacto de suelo y escenas de producción (2026-10-30)
+
+- CharacterController.isGrounded puede perderse al bajar desniveles pequeños. Separar contacto físico de la señal de caída para gameplay/animación mediante distancia mínima y tolerancia temporal configurables; conservar gravedad y colisiones reales.
+- Las regresiones de BattleTestScene no acreditan BattleScene. Comprobar movimiento y contactos de armas reales en la escena de producción, sin inyectar PendingDamageEvent para acreditar golpes físicos.
+
+- En combates con muchas escuadras, una prueba de daño debe comprobar las dos escuadras involucradas: observar cualquier herido del mundo puede ocultar que el grupo del jugador no ataque. Reposicionar unidades para aislar contactos no reproduce el recorrido previo ni el estado de una sesión real atascada.
+
+## Brace y daño de Spearmen (2026-10-31)
+
+- Un prefab que reproduce ataques no garantiza que exista un perfil de daño: comprobar el módulo melee del SquadData y el daño resuelto. Spearmen carecía de meleeData.
+- La política de brace pertenece a cada formación y se copia al layout activo; no añadir otra lectura por frame de blobs de escena que pueden haberse descargado.
+- Revisar el grafo de orden antes de conectar sistemas: Activation después de Formation y antes de Targeting cierra el ciclo Targeting → Anchor → Formation.
+- Cancelar brace y cambiar a dispersa con C no requiere eliminar todas las posturas de marcha del sistema; conservar las posturas de otras formaciones.
+- En pruebas de combate entre tropas, aislar los ataques y el respawn de los héroes para no atribuirles el daño de las unidades ni perder la escuadra observada. Conservar el daño observado entre fotogramas y comprobar que las entidades siguen existiendo antes de generar diagnósticos.

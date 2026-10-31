@@ -40,7 +40,9 @@ public partial class UnitAttackSystem : SystemBase
                           .WithEntityAccess())
         {
             ref var c = ref combat.ValueRW;
-            if (!battleActive)
+            // Losing a target outside the brace arc must not freeze an existing cooldown.
+            if (battleActive) c.attackCooldown = math.max(0f, c.attackCooldown - dt);
+            if (!battleActive || !SquadCombatModeComponent.AllowsTarget(EntityManager, entity, c.target))
             {
                 c.isAttacking = false;
                 c.attackAnimationTimer = 0f;
@@ -48,9 +50,6 @@ public partial class UnitAttackSystem : SystemBase
                     SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
                 continue;
             }
-
-            // Always tick cooldown
-            c.attackCooldown = math.max(0f, c.attackCooldown - dt);
 
             // ── Phase 2 & 3 — animation in progress ──────────────────────────
             if (c.isAttacking)

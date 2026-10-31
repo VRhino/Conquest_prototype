@@ -33,6 +33,11 @@ public class FormationDefinition : ScriptableObject
     [Tooltip("Use Normal posture for an Attack order or pursuit outside Hold Position, even for a former front-rank soldier. Hold Position keeps the rank posture.")]
     public bool useNormalPostureInFreeCombat;
 
+    [Tooltip("Hold Position activates brace for this squad formation.")]
+    public bool supportsBrace;
+    [Tooltip("Maximum turn to either side of the formation front while braced, in degrees.")]
+    [Range(0f, 90f)] public float braceHalfAngleDegrees = 30f;
+
     /// <summary>Integer cells of the replaced grid model, read once by the migration.</summary>
     [SerializeField, HideInInspector, FormerlySerializedAs("gridPositions")]
     private Vector2Int[] legacyGridPositions;

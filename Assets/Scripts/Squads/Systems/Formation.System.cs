@@ -58,7 +58,7 @@ public partial class FormationSystem : SystemBase
             }
 
             bool formationRequested = resolved.ValueRO.formation != current.currentFormation
-                && s.formationChangeCooldown <= 0f;
+                && (s.formationChangeCooldown <= 0f || resolved.ValueRO.order == SquadOrderType.FollowHero);
             FormationType type = formationRequested ? resolved.ValueRO.formation : current.currentFormation;
             int formationIndex = FormationLayout.Find(ref library, type);
             if (formationIndex < 0)
@@ -128,6 +128,8 @@ public partial class FormationSystem : SystemBase
             formationComp.ValueRW = new FormationComponent
             {
                 currentFormation = type,
+                supportsBrace = formation.supportsBrace,
+                braceHalfAngleRadians = formation.braceHalfAngleRadians,
                 templateIndex = templateIndex,
                 layoutUnitCount = units.Length,
                 spacing = spacing,

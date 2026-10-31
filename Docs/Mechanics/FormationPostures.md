@@ -43,3 +43,13 @@ arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de im
   `ShieldUp`, `BracedShields`). Las nuevas poses exclusivas de Line no se asignan a esas formaciones.
   También faltan estocadas y transiciones coreografiadas para Line; actualmente usa mezcla entre poses.
 - `UnitShieldComponent.orientation` se rellena desde el prefab pero ningún sistema lo lee (dato muerto).
+
+## Brace por formación (2026-10-31)
+
+- `FormationDefinition.supportsBrace` habilita brace al mantener posición (X) con esa formación. `braceHalfAngleDegrees` limita el giro a cada lado del frente fijado al dar la orden; 30 significa un arco total de 60 grados. Cada escuadra referencia sus propios assets de formación: compartir un asset comparte también su política.
+- Configuración inicial: Spearmen Line habilitado con 30 grados por lado. El sistema admite cualquier tipo de unidad y formación; las demás conservan brace deshabilitado hasta configurarlo.
+- `FormationSystem` y el spawn copian la política a `FormationComponent` junto al layout. `BraceWeaponActivationSystem` lee esa copia después de resolver órdenes y antes de targeting, sin consultar blobs durante la descarga de escenas. Un cambio de layout se refleja en brace en el siguiente ciclo de decisiones.
+- Brace mantiene los destinos de HoldPosition: los soldados ocupan sus ranuras sin perseguir. Targeting y ataques rechazan enemigos fuera del alcance del arma o del arco frontal; el resolver de contactos repite la comprobación para no aplicar impactos tras un cambio de posición. `UnitRotationResolutionSystem` limita la rotación final del GameObject al arco.
+- C cancela brace con una única orden, solicita Dispersed si está disponible en la escuadra y da prioridad temporal a seguir frente a la reacción de combate. La transición a dispersa no espera el cooldown de cambio de formación. V abandona brace para combatir libremente.
+- Los perfiles opcionales de arma por fila vuelven a los valores melee de la escuadra al salir de brace.
+- Spearmen tenía `meleeData` sin asignar. Se ha creado `Spearmen_Melee.asset` con daño perforante 100, penetración 20 y alcance 2 m como valores iniciales de balance, editables en ese asset.

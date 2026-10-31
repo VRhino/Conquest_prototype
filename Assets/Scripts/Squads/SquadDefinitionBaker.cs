@@ -159,6 +159,8 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 formation.noiseRadius = Mathf.Max(0f, definition.noiseRadius);
                 formation.noiseAngle = math.radians(Mathf.Max(0f, definition.noiseAngleDegrees));
                 formation.useNormalPostureInFreeCombat = definition.useNormalPostureInFreeCombat;
+                formation.supportsBrace = definition.supportsBrace;
+                formation.braceHalfAngleRadians = math.radians(math.clamp(definition.braceHalfAngleDegrees, 0f, 90f));
 
                 var postures = definition.postures ?? System.Array.Empty<FormationRolePosture>();
                 var postureArray = builder.Allocate(ref formation.postures, postures.Length);

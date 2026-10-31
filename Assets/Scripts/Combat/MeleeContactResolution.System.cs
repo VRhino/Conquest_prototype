@@ -39,6 +39,7 @@ public partial class MeleeContactResolutionSystem : SystemBase
             // Ignore non-candidates before choosing the first target for this swing.
             if (!em.Exists(contact.attacker) || !em.Exists(contact.target)
                 || contact.attacker == contact.target
+                || !SquadCombatModeComponent.AllowsTarget(em, contact.attacker, contact.target)
                 || em.HasComponent<IsDeadComponent>(contact.attacker)
                 || (em.HasComponent<HeroLifeComponent>(contact.attacker)
                     && !em.GetComponentData<HeroLifeComponent>(contact.attacker).isAlive)
@@ -63,6 +64,7 @@ public partial class MeleeContactResolutionSystem : SystemBase
         {
             if (!em.Exists(contact.attacker) || !em.Exists(contact.target)
                 || contact.attacker == contact.target
+                || !SquadCombatModeComponent.AllowsTarget(em, contact.attacker, contact.target)
                 || !em.HasComponent<WeaponHitboxActiveTag>(contact.attacker)
                 || !em.IsComponentEnabled<WeaponHitboxActiveTag>(contact.attacker)
                 || em.HasComponent<IsDeadComponent>(contact.target))

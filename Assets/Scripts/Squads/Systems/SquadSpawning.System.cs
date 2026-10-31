@@ -272,6 +272,8 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 currentFormation = firstFormationType,
                 templateIndex = templateIndex,
+                supportsBrace = firstFormation.supportsBrace,
+                braceHalfAngleRadians = firstFormation.braceHalfAngleRadians,
                 layoutUnitCount = spawnCount,
                 spacing = spawnSpacing,
                 scale = 1f,

@@ -59,7 +59,7 @@ public partial class BattleSceneIntegrationTests
         pikemenFlow = TestContext.CurrentContext.Test.Name == nameof(PikemenRecruitmentPreparationAndProductionBattle);
         renderVariant = null;
         ConfigureMovementBaseline();
-        loadedScenePath = fullBattleProfile || pikemenFlow ? FullBattlePath : ScenePath;
+        loadedScenePath = fullBattleProfile || pikemenFlow || TestContext.CurrentContext.Test.Name.StartsWith("ProductionBattleScene", StringComparison.Ordinal) ? FullBattlePath : ScenePath;
         worldSwapped = false;
         testWorld = null;
         keyboard = null;
@@ -85,7 +85,8 @@ public partial class BattleSceneIntegrationTests
         Assert.That(pool.Length, Is.GreaterThan(0), "Repository hero fixture is missing.");
         var local = pool[0];
         local.heroName = "IntegrationLocal";
-        var reserve = SquadDataService.CreateSquadInstance("sqd01");
+        string squadId = TestContext.CurrentContext.Test.Name.Contains("Spearmen") ? "spm01" : "sqd01";
+        var reserve = SquadDataService.CreateSquadInstance(squadId);
         Assert.That(reserve, Is.Not.Null, "Repository squad sqd01 is missing.");
         local.squadProgress.Clear();
         local.squadProgress.Add(reserve);
@@ -116,14 +117,14 @@ public partial class BattleSceneIntegrationTests
         }
 
         var battle = BattleDebugCreator.CreateBattleWithLocalHero(local, Team.TeamA, 0, 0,
-            EnemySquadMode.Fixed, SquadDataService.GetSquadById("sqd01"));
+            EnemySquadMode.Fixed, SquadDataService.GetSquadById(squadId));
         var remote = new BattleHeroData
         {
             heroName = "IntegrationRemote", classID = local.classId,
             gender = local.gender, avatar = local.avatar, equipment = local.equipment,
             spawnPointId = "4"
         };
-        remote.squadInstances.Add(SquadDataService.CreateSquadInstance("sqd01"));
+        remote.squadInstances.Add(SquadDataService.CreateSquadInstance(squadId));
         battle.defenders.Add(remote);
         if (fullBattleProfile)
         {
@@ -183,7 +184,7 @@ public partial class BattleSceneIntegrationTests
                 ReadyTimeout, "Preparation did not load the production battle scene.");
         }
         else
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath,
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(loadedScenePath,
                 new LoadSceneParameters(LoadSceneMode.Single));
         yield return Until(() =>
         {
@@ -256,6 +257,140 @@ public partial class BattleSceneIntegrationTests
             12f, "Pikemen did not follow the hero.");
         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
     }
+
+    [UnityTest]
+    public IEnumerator ProductionBattleSceneSpearmenDamageAndBraceRelease()
+    {
+        yield return VerifyProductionMeleeContacts(false);
+        var intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
+        intent.orderType = SquadOrderType.HoldPosition;
+        intent.desiredFormation = FormationType.Line;
+        intent.holdPosition = em.GetComponentData<LocalTransform>(hero).Position;
+        em.SetComponentData(squad, intent);
+        yield return Until(() => em.HasComponent<SquadCombatModeComponent>(squad)
+            && em.GetComponentData<SquadCombatModeComponent>(squad).mode == SquadCombatMode.Brace,
+            10f, "Spearmen line did not activate brace.");
+        yield return new WaitForSeconds(1f);
+        var brace = em.GetComponentData<SquadCombatModeComponent>(squad);
+        foreach (var member in em.GetBuffer<SquadUnitElement>(squad))
+        {
+            if (!em.Exists(member.Value)) continue;
+            var agent = em.GetComponentObject<NavMeshAgent>(member.Value);
+            Assert.That(SquadCombatModeComponent.InsideArc(brace.forward, agent.transform.forward,
+                brace.halfAngleRadians + 0.001f), Is.True, "Braced unit turned outside the front arc.");
+        }
+        yield return Press(Key.C);
+        yield return Until(() => em.GetComponentData<SquadCombatModeComponent>(squad).mode == SquadCombatMode.Normal
+            && em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Dispersed,
+            5f, "Follow did not release brace and line formation.");
+    }
+
+    [UnityTest]
+    public IEnumerator ProductionBattleSceneAttackAtEnemySpawnCausesDamage()
+        => VerifyProductionMeleeContacts(true);
+
+    [UnityTest]
+    public IEnumerator ProductionBattleSceneMeleeContactsCauseDamage()
+        => VerifyProductionMeleeContacts(false);
+
+    IEnumerator VerifyProductionMeleeContacts(bool atEnemySpawn)
+    {
+        yield return new WaitForSeconds(4f);
+        using var enemies = em.CreateEntityQuery(typeof(HeroAITag), typeof(NavMeshAgent), typeof(HeroSquadReference));
+        yield return Until(() => enemies.CalculateEntityCount() > 0, 10f, "Remote hero did not spawn.");
+        Entity enemy = Entity.Null;
+        using (var candidates = enemies.ToEntityArray(Unity.Collections.Allocator.Temp))
+            foreach (var candidate in candidates)
+                if (em.GetComponentData<TeamComponent>(candidate).value == Team.TeamB)
+                { enemy = candidate; break; }
+        Assert.That(enemy, Is.Not.EqualTo(Entity.Null));
+        testWorld.GetExistingSystemManaged<HeroSkillRequestSystem>().Enabled = false;
+        // This fixture tests troop combat. Keep hero deaths from replacing the observed squads.
+        foreach (var participant in new[] { hero, enemy })
+        {
+            StatStack.SetBase(em, participant, StatId.MaxHealth, 100000f);
+            StatStack.MarkDirty(em, participant);
+            var health = em.GetComponentData<HeroHealthComponent>(participant);
+            health.currentHealth = health.maxHealth = 100000f;
+            em.SetComponentData(participant, health);
+        }
+        if (atEnemySpawn)
+        {
+            var destination = em.GetComponentData<LocalTransform>(enemy).Position;
+            var spawn = em.GetComponentData<HeroSpawnComponent>(hero);
+            spawn.spawnPosition = destination + new float3(0, 0, 4);
+            spawn.positionRevision++;
+            em.SetComponentData(hero, spawn);
+            var localMembers = em.GetBuffer<SquadUnitElement>(squad).ToNativeArray(Unity.Collections.Allocator.Temp);
+            for (int i = 0; i < localMembers.Length; i++)
+            {
+                var unit = localMembers[i].Value;
+                var agent = em.GetComponentObject<NavMeshAgent>(unit);
+                Assert.That(agent.Warp(destination + new float3(i % 4, 0, 5 + i / 4)), Is.True);
+                var unitPose = em.GetComponentData<LocalTransform>(unit);
+                unitPose.Position = agent.transform.position;
+                em.SetComponentData(unit, unitPose);
+            }
+            localMembers.Dispose();
+            yield return null;
+        }
+        var enemySquad = em.GetComponentData<HeroSquadReference>(enemy).squad;
+        var origin = em.GetComponentData<LocalTransform>(hero).Position;
+        var enemyAgent = em.GetComponentObject<NavMeshAgent>(enemy);
+        if (!atEnemySpawn) Assert.That(enemyAgent.Warp(origin + new float3(0, 0, 4)), Is.True);
+        var pose = em.GetComponentData<LocalTransform>(enemy);
+        pose.Position = enemyAgent.transform.position;
+        em.SetComponentData(enemy, pose);
+        var members = em.GetBuffer<SquadUnitElement>(enemySquad).ToNativeArray(Unity.Collections.Allocator.Temp);
+        foreach (var member in members)
+        {
+            var agent = em.GetComponentObject<NavMeshAgent>(member.Value);
+            if (!atEnemySpawn) Assert.That(agent.Warp(origin + new float3(0, 0, 5)), Is.True);
+            var unitPose = em.GetComponentData<LocalTransform>(member.Value);
+            unitPose.Position = agent.transform.position;
+            em.SetComponentData(member.Value, unitPose);
+        }
+        members.Dispose();
+        yield return Press(Key.V);
+        using var healthQuery = em.CreateEntityQuery(typeof(UnitCombatComponent), typeof(HealthComponent));
+        bool teamAHurt = false, teamBHurt = false;
+        yield return Until(() =>
+        {
+            using var entities = healthQuery.ToEntityArray(Unity.Collections.Allocator.Temp);
+            foreach (var unit in entities)
+            {
+                var value = em.GetComponentData<HealthComponent>(unit);
+                if (value.currentHealth >= value.maxHealth) continue;
+                var owner = em.GetComponentData<UnitOwnerComponent>(unit).squad;
+                if (owner == squad) teamAHurt = true;
+                if (owner == enemySquad) teamBHurt = true;
+            }
+            return teamAHurt && teamBHurt;
+        }, 25f, "Both teams must receive real weapon damage after the attack order.", () =>
+        {
+            var report = new System.Text.StringBuilder();
+            foreach (var group in new[] { squad, enemySquad })
+            {
+                if (!em.Exists(group)) { report.AppendLine($"squad={group} no longer exists"); continue; }
+                report.AppendLine($"squad={group} state={em.GetComponentData<SquadStateComponent>(group).currentState} order={em.GetComponentData<SquadStateComponent>(group).currentOrder}");
+                foreach (var member in em.GetBuffer<SquadUnitElement>(group))
+                {
+                    var unit = member.Value;
+                    if (!em.Exists(unit)) continue;
+                    var combat = em.GetComponentData<UnitCombatComponent>(unit);
+                    var hp = em.GetComponentData<HealthComponent>(unit);
+                    var agent = em.GetComponentObject<NavMeshAgent>(unit);
+                    report.AppendLine($"unit={unit} hp={hp.currentHealth}/{hp.maxHealth} pos={agent.transform.position} target={combat.target} attacking={combat.isAttacking} hit={combat.hitboxFired} nav={agent.isOnNavMesh} dest={agent.destination}");
+                }
+            }
+            System.IO.Directory.CreateDirectory("Logs");
+            System.IO.File.WriteAllText("Logs/battle-spawn-combat-diagnostic.txt", report.ToString());
+        });
+    }
+
+    [UnityTest]
+    public IEnumerator ProductionBattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders()
+        => BattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders();
 
     [UnityTest]
     public IEnumerator BattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders()

@@ -94,7 +94,7 @@ public partial class UnitTargetingSystem : SystemBase
                 bool isRanged = SystemAPI.HasComponent<UnitRangedStatsComponent>(unit);
                 if (isRanged) rangedUnitsInSquad++;
 
-                bool currentValid = _validTargets.Contains(combat.ValueRO.target);
+                bool currentValid = _validTargets.Contains(combat.ValueRO.target) && SquadCombatModeComponent.AllowsTarget(EntityManager, unit, combat.ValueRO.target);
 
                 if (!currentValid)
                 {
@@ -106,7 +106,7 @@ public partial class UnitTargetingSystem : SystemBase
                     {
                         DebugCandidateChecks++;
                         Entity enemy = detected[j].Value;
-                        if (!_validTargets.Contains(enemy))
+                        if ((!_validTargets.Contains(enemy) || !SquadCombatModeComponent.AllowsTarget(EntityManager, unit, enemy)))
                             continue;
                         float3 enemyPos = SystemAPI.GetComponent<LocalTransform>(enemy).Position;
                         float dist = math.distancesq(unitPos, enemyPos);
@@ -168,7 +168,7 @@ public partial class UnitTargetingSystem : SystemBase
                 {
                     DebugCandidateChecks++;
                     Entity candidate = detected[j].Value;
-                    if (candidate == combat.ValueRO.target || !_validTargets.Contains(candidate))
+                    if (candidate == combat.ValueRO.target || (!_validTargets.Contains(candidate) || !SquadCombatModeComponent.AllowsTarget(EntityManager, unit, candidate)))
                         continue;
 
                     int current = 0;
@@ -227,7 +227,7 @@ public partial class UnitTargetingSystem : SystemBase
                     Entity candidate = detected[j].Value;
                     if (candidate == combat.ValueRO.target
                         || candidate == Entity.Null
-                        || !_validTargets.Contains(candidate))
+                        || (!_validTargets.Contains(candidate) || !SquadCombatModeComponent.AllowsTarget(EntityManager, unit, candidate)))
                         continue;
 
                     int candidateCount = 0;
