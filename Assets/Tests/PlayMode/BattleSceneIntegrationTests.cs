@@ -1015,34 +1015,22 @@ public partial class BattleSceneIntegrationTests
 
     // Equipment changes must refresh only the linked local visual, including empty slots.
     [UnityTest]
-    public IEnumerator BattleSceneEquipmentRefreshesTheLinkedVisualAfterACompletedChange()
+    public IEnumerator BattleSceneFreezesTheEquipmentAndLeavesTheLightVisualOutOfInventoryChanges()
     {
+        // Battle draws a snapshot of the appearance on a light visual, so nothing listens to the inventory here.
         var sync = UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
             .Single(s => s.IsLocalHero);
-        Assert.That(sync.GetComponent<HeroVisualEquipmentInitializer>(), Is.Not.Null);
-        var database = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
-        var gender = PlayerSessionService.SelectedHero.gender == "Male" ? Gender.Male : Gender.Female;
+        Assert.That(sync.GetComponent<BattleHeroVisual>(), Is.Not.Null);
+        Assert.That(sync.GetComponent<HeroVisualEquipmentInitializer>(), Is.Null);
+        Assert.That(SceneTransitionService.IsBattleEquipmentLocked, Is.True);
         var definition = ItemService.GetItemsByType(ItemType.Armor).First(d =>
-            d.itemCategory == ItemCategory.Torso && d.IsEquipment && !string.IsNullOrEmpty(d.visualPartId)
-            && Data.Avatar.AvatarVisualUtils.FindAvatarPartById(database, d.visualPartId) != null);
+            d.itemCategory == ItemCategory.Torso && d.IsEquipment);
         var item = ItemInstanceService.CreateItem(definition.id);
         Assert.That(InventoryManager.AddExistingItem(item), Is.True);
-        Assert.That(InventoryManager.EquipItem(item), Is.True);
-        var part = Data.Avatar.AvatarVisualUtils.FindAvatarPartById(database, definition.visualPartId);
-        int verified = 0;
-        foreach (var attachment in part.attachments)
-        {
-            string target = gender == Gender.Male ? attachment.boneTargetMale : attachment.boneTargetFemale;
-            string prefab = gender == Gender.Male ? attachment.prefabPathMale : attachment.prefabPathFemale;
-            var bone = sync.transform.Find(target) ?? Data.Avatar.AvatarVisualUtils.FindDeepChild(sync.transform, target);
-            if (bone == null || string.IsNullOrEmpty(prefab)) continue;
-            foreach (Transform child in bone)
-                if (child.name == prefab) { Assert.That(child.gameObject.activeSelf, Is.True); verified++; }
-        }
-        Assert.That(verified, Is.GreaterThan(0), "No equipped visual attachment was checked.");
-        Assert.That(InventoryManager.UnequipItem(ItemType.Armor, ItemCategory.Torso), Is.True);
-        Assert.That(InventoryManager.GetCurrentHero().equipment.torso, Is.Null);
-        Assert.That(sync.GetComponent<HeroVisualEquipmentInitializer>().isActiveAndEnabled, Is.True);
+        var equipped = InventoryManager.GetCurrentHero().equipment.torso;
+        Assert.That(InventoryManager.EquipItem(item), Is.False);
+        Assert.That(InventoryManager.UnequipItem(ItemType.Armor, ItemCategory.Torso), Is.False);
+        Assert.That(InventoryManager.GetCurrentHero().equipment.torso, Is.SameAs(equipped));
         yield return null;
     }
 
