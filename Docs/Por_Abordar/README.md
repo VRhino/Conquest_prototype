@@ -17,7 +17,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
 |---|---|---|---|
 | Formaciones_y_Posturas.md | F1, F4, F6-F9, F11-F13, F16, F17 (F3 parcial) | F3 (clips de ShieldWall y Testudo) | F1, F17 (F9: falta quien apague la colisión y la evitación por escuadra) |
-| Movimiento.md | M4, M10, M12, M15, M16 (M2 hecho el 2026-10-28) | M3 (paquete de VFX) | Ejecuciones de S9 con atascos donde las filas de atrás aún rebasan a la primera (39 % en 1 de 4; §22 P7); P6 de `game-re/notes/battle-movement-combat.md` solo si vuelven los picos |
+| Movimiento.md | M4, M10, M12, M15, M16 (M2 hecho el 2026-10-28) | M3 (paquete de VFX) | Filas de atrás que aún rebasan a la primera en S9 (media 10 % con la regla, 17 % sin ella; §22 P7); P6 de `game-re/notes/battle-movement-combat.md` solo si vuelven los picos |
 | Habilidades_Perks.md | H3, H4, H12, H14 (H5: falta el árbol; H10: lanzar con clic) | H2 (animaciones) | H10 (lanzar con clic y menú radial `ALT`) |
 | Pila_Modificadores.md | P1, P3, P5 | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 | D1 (clip de muerte) | D1 en cuanto haya clip; D5 (medir el coste de recrear el visual) |

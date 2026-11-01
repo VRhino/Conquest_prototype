@@ -68,10 +68,11 @@ public partial class OrderResolutionSystem : SystemBase
                 else if (combatReaction.ValueRO.reactToEnemy
                          && playerIntent.ValueRO.orderType != SquadOrderType.HoldPosition)
                 {
-                    // Combat reaction blocks the movement order
+                    // Combat reaction blocks the movement order; an ordered Attack stays ordered and free of the leash
                     winningOrder = SquadOrderType.Attack;
                     winningTarget = combatReaction.ValueRO.reactTarget;
-                    winningSource = OrderSource.CombatReaction;
+                    winningSource = playerIntent.ValueRO.orderType == SquadOrderType.Attack
+                        ? OrderSource.Player : OrderSource.CombatReaction;
                 }
                 else
                 {
@@ -106,7 +107,8 @@ public partial class OrderResolutionSystem : SystemBase
                 {
                     winningOrder  = SquadOrderType.Attack;
                     winningTarget = combatReaction.ValueRO.reactTarget;
-                    winningSource = OrderSource.CombatReaction;
+                    winningSource = aiIntent.ValueRO.suggestedOrder == SquadOrderType.Attack
+                        ? OrderSource.AI : OrderSource.CombatReaction;
                 }
                 else
                 {

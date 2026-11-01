@@ -206,6 +206,7 @@ public partial class BattleSceneIntegrationTests
     const float S9LineGap = 5f;          // Between the two hold points; both squads charge from there.
     const float S9HoldArrival = 1.5f;    // From the mean of a squad to its hold point.
     const float S9ChargeTimeout = 8f;
+    const float S9MeleeGrace = 3f;       // Longest pause without a swing at the end of the melee.
 
     /// <summary>
     /// S9 (P7): two squads in Line clash head-on with their heroes out of the melee. The remote hero's AI is taken off;
@@ -313,7 +314,19 @@ public partial class BattleSceneIntegrationTests
                 intent.targetEntity = squad;
                 em.SetComponentData(remoteSquad, intent);
                 yield return Until(AnySquadUnitAttacking, S9ChargeTimeout, "The two lines never met.");
-                yield return new WaitForSeconds(S9MeleeSeconds);
+                // A squad with nothing left to fight goes back to its hero, which is no melee to measure.
+                float meleeEnd = Time.time + S9MeleeSeconds;
+                float lastSwing = Time.time;
+                while (Time.time < meleeEnd)
+                {
+                    if (AnySquadUnitAttacking()) lastSwing = Time.time;
+                    yield return null;
+                }
+                Assert.That(meleeEnd - lastSwing, Is.LessThan(S9MeleeGrace), "The melee broke off before the end.");
+                Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(squad).source, Is.EqualTo(OrderSource.Player),
+                    "A combat reaction took over the ordered attack and leashed the squad.");
+                Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(remoteSquad).source, Is.EqualTo(OrderSource.AI),
+                    "A combat reaction took over the ordered attack and leashed the remote squad.");
                 Assert.That(em.GetComponentData<HeroLifeComponent>(hero).isAlive
                     && em.GetComponentData<HeroLifeComponent>(remote).isAlive, Is.True,
                     "A hero died: its squad withdrew and the melee was not measured.");

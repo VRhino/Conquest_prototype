@@ -89,5 +89,5 @@ colisión."
   primer golpe igual. Variantes S6/S7 `NoAttackLock`.
 - [x] P7: escenario S9 (dos líneas de frente) y métricas de línea en el grabador. Solapes 10 → 0, pero filas de atrás por
   delante de la primera 4 → 17 % y primer golpe +0,8 s.
-- [x] S9 con los héroes fuera de la melé (mueren y su escuadra se retira) y regla de filas traseras. Rebase con regla 0 / 0 / 0 / 39 %, sin ella 1 / 1 / 5 / 26 %.
-- [ ] Siguiente: por qué una de cada cuatro ejecuciones de S9 sale con atascos (26 stalls, primer golpe a 5 s) y rebase alto; P6 solo si vuelven los picos.
+- [x] S9 con los héroes fuera de la melé. Un Attack ordenado ya no lo pisa la reacción de combate (seguía atado a la correa y las escuadras volvían con su héroe). Rebase en melé real: con regla 0 / 0 / 16 / 25 %, sin ella 3 / 9 / 17 / 18 / 38 %.
+- [ ] Siguiente: el rebase que queda con la regla (media 10 %) y su medida; P6 solo si vuelven los picos.

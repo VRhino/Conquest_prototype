@@ -519,3 +519,5 @@
 
 - Si el héroe muere, su escuadra se retira: un escenario de combate entre tropas debe dejarlo fuera de la melé y comprobar que sigue vivo al terminar, o las métricas miden una retirada. Los S9 del 28-10 tenían ese defecto y sus cifras no valen.
 - Medir la distancia real entre héroes antes de fijar constantes del escenario: en BattleTestScene arrancan a unos 20 m.
+- Una métrica a cero puede significar que no hubo nada que medir: antes de leer «0 % y 0 atascos» como la mejor ejecución, comprobar en la línea de tiempo que hubo combate hasta el final. Aquí las ejecuciones «buenas» eran las que no tuvieron melé.
+- OrderResolution sobreescribía el Attack ordenado con el de reacción y lo ataba a la correa (C6). El origen de la orden importa tanto como la orden.
