@@ -156,7 +156,8 @@ public partial class FormationSystem : SystemBase
 
     /// <summary>
     /// Greedy nearest assignment (Movimiento_Formaciones.md L-2): every unit/slot pair sorted by distance, taken while
-    /// both are free. Units without a position take the remaining slots in buffer order. N ≤ ~30, so N² on the event.
+    /// both are free, then pairs swap slots so no paths cross (F1). Units without a position take the remaining slots
+    /// in buffer order. N ≤ ~30, so N² on the event.
     /// </summary>
     void AssignNearestSlots(ref FormationDataBlob formation, int templateIndex, float spacing, uint seed,
         DynamicBuffer<SquadUnitElement> units, in SquadStateComponent state, SquadHoldPositionComponent? hold,
@@ -167,16 +168,21 @@ public partial class FormationSystem : SystemBase
         quaternion inverse = math.lengthsq(anchor.rotation.value) > 1e-6f
             ? math.inverse(math.normalize(anchor.rotation)) : quaternion.identity;
 
+        var positions = new NativeArray<float2>(n, Allocator.Temp);
+        var slotPositions = new NativeArray<float2>(n, Allocator.Temp);
         _pairs.Clear();
         for (int u = 0; u < n; u++)
         {
             slotOf[u] = -1;
             Entity unit = units[u].Value;
             if (!SystemAPI.Exists(unit) || !SystemAPI.HasComponent<LocalTransform>(unit)) continue;
-            float2 local = math.mul(inverse, SystemAPI.GetComponent<LocalTransform>(unit).Position - center).xz;
+            positions[u] = math.mul(inverse, SystemAPI.GetComponent<LocalTransform>(unit).Position - center).xz;
             for (int k = 0; k < n; k++)
                 if (FormationPositionCalculator.TryBuildSlot(ref formation, templateIndex, k, spacing, seed, out var slot))
-                    _pairs.Add((math.distancesq(local, slot.localOffset.xz), u, k));
+                {
+                    slotPositions[k] = slot.localOffset.xz;
+                    _pairs.Add((math.distancesq(positions[u], slotPositions[k]), u, k));
+                }
         }
         _pairs.Sort((a, b) => a.distSq.CompareTo(b.distSq));
 
@@ -187,6 +193,8 @@ public partial class FormationSystem : SystemBase
             slotOf[unit] = slot;
             taken[slot] = true;
         }
+        FormationLayout.UncrossPaths(positions, slotPositions, slotOf);
+
         int next = 0;
         for (int u = 0; u < n; u++)
         {

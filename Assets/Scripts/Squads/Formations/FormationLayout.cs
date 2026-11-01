@@ -11,6 +11,9 @@ public static class FormationLayout
     /// <summary>Largest Scatter side whose cells fit the fixed list used to draw them.</summary>
     const int MaxScatterSide = 11;
 
+    /// <summary>Metres a swap must save; a fixed gain per swap keeps <see cref="UncrossPaths"/> finite.</summary>
+    const float MinSwapGain = 0.001f;
+
     /// <summary>Index of the formation of the given type in the library, or -1.</summary>
     public static int Find(ref FormationLibraryBlob library, FormationType type)
     {
@@ -44,6 +47,30 @@ public static class FormationLayout
             if (template.slots.Length > largestSlots) { largest = t; largestSlots = template.slots.Length; }
         }
         return largest;
+    }
+
+    /// <summary>
+    /// Swaps slots between pairs of units while that shortens their walk. Two straight paths that cross always get
+    /// shorter by swapping, so none remains. Units with a negative slot are left out.
+    /// </summary>
+    public static void UncrossPaths(NativeArray<float2> units, NativeArray<float2> slots, NativeArray<int> slotOf)
+    {
+        bool swapped = true;
+        while (swapped)
+        {
+            swapped = false;
+            for (int a = 0; a < units.Length; a++)
+                for (int b = a + 1; b < units.Length; b++)
+                {
+                    if (slotOf[a] < 0 || slotOf[b] < 0) continue;
+                    float2 slotA = slots[slotOf[a]], slotB = slots[slotOf[b]];
+                    float walked = math.distance(units[a], slotA) + math.distance(units[b], slotB);
+                    float exchanged = math.distance(units[a], slotB) + math.distance(units[b], slotA);
+                    if (exchanged > walked - MinSwapGain) continue;
+                    (slotOf[a], slotOf[b]) = (slotOf[b], slotOf[a]);
+                    swapped = true;
+                }
+        }
     }
 
     /// <summary>Slot <paramref name="slotIndex"/> of the chosen layout. False when there is none.</summary>

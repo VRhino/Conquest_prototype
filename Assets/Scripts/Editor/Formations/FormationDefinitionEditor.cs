@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Inspector for <see cref="FormationDefinition"/>: paints the slots of each template on a half-unit grid
-/// (top = front = local forward), shows rows, roles and facings, and recomputes them from the layout.
+/// (top = front = local forward), shows rows, roles and facings, and recomputes them from the layout. The other
+/// templates can show behind the current one, to keep slots near each other between templates (F1).
 /// </summary>
 [CustomEditor(typeof(FormationDefinition))]
 public class FormationDefinitionEditor : Editor
@@ -15,10 +16,12 @@ public class FormationDefinitionEditor : Editor
 
     int _template;
     bool _flanksFaceOutward;
+    bool _showOtherTemplates = true;
     GUIStyle _cell;
 
     static readonly Color Empty = new(0.22f, 0.22f, 0.22f);
     static readonly Color Anchor = new(0.9f, 0.7f, 0.1f);
+    static readonly Color OtherTemplate = new(0.45f, 0.45f, 0.45f);
     static readonly Dictionary<FormationSlotRole, Color> RoleColors = new()
     {
         { FormationSlotRole.Front, new Color(0.85f, 0.35f, 0.25f) },
@@ -61,6 +64,7 @@ public class FormationDefinitionEditor : Editor
 
         EditorGUILayout.BeginHorizontal();
         _flanksFaceOutward = EditorGUILayout.ToggleLeft("Flanks face outward, rear faces back", _flanksFaceOutward);
+        _showOtherTemplates = EditorGUILayout.ToggleLeft("Show other templates", _showOtherTemplates);
         if (GUILayout.Button("Recompute rows, roles and facing"))
             Modify(formation, "Recompute slot roles", () =>
                 template.slots = FormationSlotRoles.Assign(Positions(template), _flanksFaceOutward));
@@ -71,7 +75,7 @@ public class FormationDefinitionEditor : Editor
         EditorGUILayout.LabelField($"Slots: {template.slots.Length}   ·   footprint with spacing {formation.EffectiveSpacing:0.##} m: {Footprint(template, formation.EffectiveSpacing)}", EditorStyles.miniLabel);
         EditorGUILayout.LabelField("▲ FRONT (local forward)", EditorStyles.centeredGreyMiniLabel);
         DrawGrid(formation, template);
-        EditorGUILayout.LabelField("Colours: red front · blue flank · green interior · purple rear. Number = row, arrow = facing.", EditorStyles.miniLabel);
+        EditorGUILayout.LabelField("Colours: red front · blue flank · green interior · purple rear · grey other templates. Number = row, arrow = facing.", EditorStyles.miniLabel);
     }
 
     void DrawTemplateToolbar(FormationDefinition formation)
@@ -119,6 +123,11 @@ public class FormationDefinitionEditor : Editor
         };
         var bySlot = new Dictionary<Vector2, int>();
         for (int i = 0; i < template.slots.Length; i++) bySlot[template.slots[i].position] = i;
+        var others = new HashSet<Vector2>();
+        if (_showOtherTemplates)
+            foreach (var other in formation.templates)
+                if (other != template)
+                    foreach (var slot in other.slots) others.Add(slot.position);
 
         for (int gy = HalfExtent; gy >= -HalfExtent; gy--)
         {
@@ -129,7 +138,7 @@ public class FormationDefinitionEditor : Editor
                 bool occupied = bySlot.TryGetValue(position, out int index);
                 Color previous = GUI.backgroundColor;
                 GUI.backgroundColor = occupied ? RoleColors[template.slots[index].role]
-                    : gx == 0 && gy == 0 ? Anchor : Empty;
+                    : gx == 0 && gy == 0 ? Anchor : others.Contains(position) ? OtherTemplate : Empty;
                 string label = occupied ? $"{template.slots[index].row}{Arrow(template.slots[index].headingDegrees)}" : "";
                 if (GUILayout.Button(label, _cell))
                     Modify(formation, "Toggle slot", () => Toggle(template, position, occupied ? index : -1));
