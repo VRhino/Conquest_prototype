@@ -246,10 +246,13 @@ public class SquadNavigationRegressionTests
             agent.agentTypeID = settings.agentTypeID;
             Assert.That(agent.Warp(Vector3.zero), Is.True);
             var unit = em.CreateEntity(typeof(NavAgentComponent), typeof(LocalTransform),
-                typeof(UnitTargetPositionComponent), typeof(UnitFormationStateComponent));
+                typeof(UnitResolvedSlotComponent), typeof(UnitFormationStateComponent));
             em.SetComponentData(unit, LocalTransform.Identity);
             var unreachable = new float3(100, 0, 100);
-            em.SetComponentData(unit, new UnitTargetPositionComponent { position = unreachable });
+            em.SetComponentData(unit, new UnitResolvedSlotComponent
+            {
+                position = unreachable, status = FormationSlotResolveStatus.Unresolved
+            });
             em.SetComponentData(unit, new UnitFormationStateComponent { State = UnitFormationState.Moving });
             em.AddComponentObject(unit, agent);
 
@@ -267,7 +270,10 @@ public class SquadNavigationRegressionTests
             navigation.lastFormationRequest = reachable;
             navigation.nextFormationRetryTime = 2;
             em.SetComponentData(unit, navigation);
-            em.SetComponentData(unit, new UnitTargetPositionComponent { position = reachable });
+            em.SetComponentData(unit, new UnitResolvedSlotComponent
+            {
+                position = reachable, status = FormationSlotResolveStatus.Unresolved
+            });
             world.SetTime(new Unity.Core.TimeData(1, 0.1f));
             world.GetOrCreateSystemManaged<UnitNavMeshSystem>().Update();
             Assert.That(em.GetComponentData<NavAgentComponent>(unit).formationDestinationFailed, Is.True);
@@ -600,10 +606,13 @@ public class SquadNavigationRegressionTests
         Assert.That(agent.Warp(start), Is.True);
         agent.SetDestination(destination);
         var entity = em.CreateEntity(typeof(NavAgentComponent), typeof(TeamComponent),
-            typeof(UnitFormationStateComponent), typeof(UnitTargetPositionComponent), typeof(LocalTransform));
+            typeof(UnitFormationStateComponent), typeof(UnitResolvedSlotComponent), typeof(LocalTransform));
         em.SetComponentData(entity, new TeamComponent { value = Team.TeamA });
         em.SetComponentData(entity, new UnitFormationStateComponent { State = UnitFormationState.Moving });
-        em.SetComponentData(entity, new UnitTargetPositionComponent { position = destination });
+        em.SetComponentData(entity, new UnitResolvedSlotComponent
+        {
+            position = destination, status = FormationSlotResolveStatus.Template
+        });
         em.AddComponentObject(entity, agent);
         return entity;
     }
@@ -671,11 +680,14 @@ public class SquadNavigationRegressionTests
             var target = em.CreateEntity(typeof(LocalTransform));
             em.SetComponentData(target, LocalTransform.FromPosition(new float3(20, 0, 0)));
             var unit = em.CreateEntity(typeof(NavAgentComponent), typeof(LocalTransform),
-                typeof(UnitTargetPositionComponent), typeof(UnitFormationStateComponent),
+                typeof(UnitResolvedSlotComponent), typeof(UnitFormationStateComponent),
                 typeof(UnitCombatComponent), typeof(UnitWeaponComponent));
             em.SetComponentData(unit, LocalTransform.Identity);
             var slot = new float3(-4, 0, 0);
-            em.SetComponentData(unit, new UnitTargetPositionComponent { position = slot });
+            em.SetComponentData(unit, new UnitResolvedSlotComponent
+            {
+                position = slot, status = FormationSlotResolveStatus.Template
+            });
             em.SetComponentData(unit, new UnitFormationStateComponent { State = UnitFormationState.Moving });
             em.SetComponentData(unit, new UnitCombatComponent { target = target });
             em.SetComponentData(unit, new UnitWeaponComponent { attackRange = 1.5f });

@@ -521,3 +521,7 @@
 - Medir la distancia real entre héroes antes de fijar constantes del escenario: en BattleTestScene arrancan a unos 20 m.
 - Una métrica a cero puede significar que no hubo nada que medir: antes de leer «0 % y 0 atascos» como la mejor ejecución, comprobar en la línea de tiempo que hubo combate hasta el final. Aquí las ejecuciones «buenas» eran las que no tuvieron melé.
 - OrderResolution sobreescribía el Attack ordenado con el de reacción y lo ataba a la correa (C6). El origen de la orden importa tanto como la orden.
+
+## Tests con mundos reducidos (2026-11-01)
+
+- Cambiar la consulta de un sistema deja fuera, sin error, a las entidades de los tests que montan el mundo a mano: el test solo ve que nada ocurrió. Al cambiar una consulta, buscar en `Assets/Tests` quién crea esas entidades y pasar `SquadNavigationRegressionTests` entero. C13 cambió la consulta y 5 tests quedaron rotos hasta hoy.

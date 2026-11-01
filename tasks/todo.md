@@ -90,4 +90,5 @@ colisión."
 - [x] P7: escenario S9 (dos líneas de frente) y métricas de línea en el grabador. Solapes 10 → 0, pero filas de atrás por
   delante de la primera 4 → 17 % y primer golpe +0,8 s.
 - [x] S9 con los héroes fuera de la melé. Un Attack ordenado ya no lo pisa la reacción de combate (seguía atado a la correa y las escuadras volvían con su héroe). Rebase en melé real: con regla 0 / 0 / 16 / 25 %, sin ella 3 / 9 / 17 / 18 / 38 %.
+- [x] `SquadNavigationRegressionTests` 13/13: 5 tests seguían dando la plantilla a sistemas que desde C13 (3000830d) leen `UnitResolvedSlotComponent`; las unidades no entraban en la consulta. Solo tests, sin cambios de juego.
 - [ ] Siguiente: el rebase que queda con la regla (media 10 %) y su medida; P6 solo si vuelven los picos.
