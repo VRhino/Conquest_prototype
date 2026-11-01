@@ -124,6 +124,9 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             float3 anchor = anchorData.position;
             float2 forward = math.normalizesafe(math.mul(anchorData.rotation, math.forward()).xz);
             CountDestinationProblems(squad, units, out int stacked, out int detours, out int relocated, out int unresolved);
+            int templateIndex = SystemAPI.HasComponent<FormationComponent>(squad)
+                ? SystemAPI.GetComponent<FormationComponent>(squad).templateIndex : 0;
+            int alliedShared = CountAlliedSharedCells(squad);
             FrameSamples.Add(new MovementFrameSample
             {
                 frame = frame, time = time, deltaTime = dt, squad = squad.Index,
@@ -135,7 +138,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 allyOverlaps = allyOverlaps, enemyOverlaps = enemyOverlaps,
                 persistentEnemyOverlaps = persistentEnemyOverlaps, persistentEnemyOverlapsEngaged = persistentEngaged,
                 stackedDestinations = stacked, detourDestinations = detours,
-                relocatedSlots = relocated, unresolvedSlots = unresolved, slotResolveQueries = slotQueries
+                relocatedSlots = relocated, unresolvedSlots = unresolved, slotResolveQueries = slotQueries,
+                templateIndex = templateIndex, alliedSharedCells = alliedShared
             });
 
             for (int i = 0; i < units.Length; i++)
@@ -212,6 +216,33 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             for (int c = 1; c < corners.Length; c++) length += UnityEngine.Vector3.Distance(corners[c - 1], corners[c]);
             if (length > DetourFactor * math.distance(heroHit.position, hit.position) + DetourSlack) detours++;
         }
+    }
+
+    /// <summary>
+    /// Destination pairs of <paramref name="squad"/> (already in <see cref="_destinations"/>) and any allied squad closer
+    /// than <see cref="StackedFraction"/> of the wider spacing: two squads sending soldiers to one cell (S5, F17).
+    /// </summary>
+    int CountAlliedSharedCells(Entity squad)
+    {
+        if (!SystemAPI.HasComponent<TeamComponent>(squad) || !SystemAPI.HasComponent<FormationComponent>(squad)) return 0;
+        var team = SystemAPI.GetComponent<TeamComponent>(squad).value;
+        float spacing = SystemAPI.GetComponent<FormationComponent>(squad).spacing;
+        int shared = 0;
+        foreach (var (units, otherTeam, formation, other) in SystemAPI
+                     .Query<DynamicBuffer<SquadUnitElement>, RefRO<TeamComponent>, RefRO<FormationComponent>>().WithEntityAccess())
+        {
+            if (other == squad || otherTeam.ValueRO.value != team) continue;
+            float sharedSq = math.square(StackedFraction * math.max(spacing, formation.ValueRO.spacing));
+            for (int i = 0; i < units.Length; i++)
+            {
+                Entity unit = units[i].Value;
+                if (!SystemAPI.HasComponent<UnitTargetPositionComponent>(unit)) continue;
+                float2 destination = MovementDestination(unit).xz;
+                foreach (float3 mine in _destinations)
+                    if (math.distancesq(mine.xz, destination) < sharedSq) shared++;
+            }
+        }
+        return shared;
     }
 
     MovementUnitSample SampleUnit(Entity unit, int bufferIndex, int squadIndex, int frame, float time, bool reacting)
@@ -345,7 +376,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
         Directory.CreateDirectory(directory);
         string prefix = Path.Combine(directory, $"{summary.label}_{stamp}");
 
-        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,forwardX,forwardZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,persistentEnemyOverlapsEngaged,stackedDestinations,detourDestinations,relocatedSlots,unresolvedSlots,slotResolveQueries\n");
+        var frames = new StringBuilder("frame,time,dt,squad,anchorMoving,anchorX,anchorZ,forwardX,forwardZ,setDestination,projections,formationStateMs,navMeshMs,followFormationMs,avoidanceMs,allyOverlaps,enemyOverlaps,persistentEnemyOverlaps,persistentEnemyOverlapsEngaged,stackedDestinations,detourDestinations,relocatedSlots,unresolvedSlots,slotResolveQueries,templateIndex,alliedSharedCells\n");
         foreach (var f in FrameSamples)
             frames.AppendLine(string.Join(",", f.frame, f.time.ToString("F4", c), f.deltaTime.ToString("F4", c), f.squad,
                 f.anchorMoving ? 1 : 0, f.anchorX.ToString("F3", c), f.anchorZ.ToString("F3", c),
@@ -354,7 +385,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 f.formationStateMs.ToString("F4", c), f.navMeshMs.ToString("F4", c),
                 f.followFormationMs.ToString("F4", c), f.avoidanceMs.ToString("F4", c),
                 f.allyOverlaps, f.enemyOverlaps, f.persistentEnemyOverlaps, f.persistentEnemyOverlapsEngaged, f.stackedDestinations, f.detourDestinations,
-                f.relocatedSlots, f.unresolvedSlots, f.slotResolveQueries));
+                f.relocatedSlots, f.unresolvedSlots, f.slotResolveQueries, f.templateIndex, f.alliedSharedCells));
         File.WriteAllText(prefix + "_frames.csv", frames.ToString());
 
         var units = new StringBuilder("frame,time,squad,unit,state,slotDistance,x,z,yaw,team,target,targetDistance,attacking,reacting,gear,speed,destX,destZ,row\n");

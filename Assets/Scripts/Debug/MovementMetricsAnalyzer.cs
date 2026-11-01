@@ -54,6 +54,8 @@ public struct MovementFrameSample
     public int relocatedSlots;          // Slots moved to another cell by the NavMesh validation (C13).
     public int unresolvedSlots;         // Slots the validation found no free cell for (C13).
     public int slotResolveQueries;      // NavMesh queries of the slot validation this frame (all squads).
+    public int templateIndex;           // Template in use (F1); a change is a new layout for fewer soldiers.
+    public int alliedSharedCells;       // Pairs of destinations of this squad and an allied squad sharing a cell (S5, F17).
 }
 
 /// <summary>Aggregated baseline metrics. Negative values mean "not observed".</summary>
@@ -117,6 +119,19 @@ public sealed class MovementMetricsSummary
     public int maxRelocatedSlots;
     public int maxUnresolvedSlots;
     public float slotQueriesMarchingPerUnitPerSecond;
+    /// <summary>Layout changes for the soldiers alive (F1), measured in the formation frame: the march does not count as travel.</summary>
+    public int templateChanges;
+    public float meanTemplateChangeTravel;
+    public float maxTemplateChangeTravel;
+    public float meanTemplateChangeCrossings;
+    public int maxTemplateChangeCrossings;
+    /// <summary>Time for 95 % of the soldiers to reach their new slot after a template change, s; -1 without changes.</summary>
+    public float meanTemplateChangeReform;
+    public float maxTemplateChangeReform;
+    /// <summary>Destination pairs shared with an allied squad (S5, F17).</summary>
+    public float meanAlliedSharedCells;
+    public int maxAlliedSharedCells;
+    public float alliedSharedCellFrameRatio;
 
     public override string ToString()
     {
@@ -142,6 +157,8 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  acceleration above {MovementMetricsAnalyzer.AccelerationSpikeLimit.ToString("F0", c)} m/s2: {(accelerationSpikeRatio * 100f).ToString("F1", c)} % of samples, max {maxAcceleration.ToString("F0", c)} m/s2");
         s.AppendLine($"  destinations sharing a cell per frame: mean={meanStackedDestinations.ToString("F2", c)} max={maxStackedDestinations}; reached only by a detour: mean={meanDetourDestinations.ToString("F2", c)} max={maxDetourDestinations}");
         s.AppendLine($"  slot validation (C13): relocated max={maxRelocatedSlots} unresolved max={maxUnresolvedSlots} queries marching per unit per second={slotQueriesMarchingPerUnitPerSecond.ToString("F2", c)}");
+        s.AppendLine($"  template changes: {templateChanges}; travel per soldier mean={meanTemplateChangeTravel.ToString("F2", c)}m max={maxTemplateChangeTravel.ToString("F2", c)}m; crossings mean={meanTemplateChangeCrossings.ToString("F2", c)} max={maxTemplateChangeCrossings}; reformed mean={meanTemplateChangeReform.ToString("F2", c)}s max={maxTemplateChangeReform.ToString("F2", c)}s");
+        s.AppendLine($"  destinations sharing a cell with an allied squad: mean={meanAlliedSharedCells.ToString("F2", c)} max={maxAlliedSharedCells} in {(alliedSharedCellFrameRatio * 100f).ToString("F1", c)} % of frames");
         s.AppendLine($"  stalls (still beyond {MovementMetricsAnalyzer.StallDistance.ToString("F1", c)} m of the slot > {MovementMetricsAnalyzer.StallPersistence.ToString("F1", c)} s): {stalls}");
         s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)} FormationSlotResolve={meanSlotResolveMs.ToString("F3", c)}");
         return s.ToString();
@@ -167,6 +184,7 @@ public static class MovementMetricsAnalyzer
     public const float StallSpeed = 0.3f;       // m/s: below this a unit counts as standing still.
     public const float StallDistance = 1f;      // m from its slot: a still unit closer than this has arrived.
     public const float StallPersistence = 0.5f; // Seconds standing still far from the slot before counting a stall.
+    public const float TemplateChangeWindow = 4f; // Longest wait for a squad to reform after a template change, s.
 
     /// <summary>
     /// Field-by-field median of several runs of one scenario (M10): the melee in S6 diverges between runs from
@@ -211,6 +229,10 @@ public static class MovementMetricsAnalyzer
         summary.frames = frameNumbers.Count;
         summary.duration = frames.Max(f => f.time) - frames.Min(f => f.time);
         summary.units = units.Select(u => (u.squad, u.unit)).Distinct().Count();
+        AnalyzeTemplateChanges(summary, frames, units);
+        summary.meanAlliedSharedCells = (float)frames.Average(f => f.alliedSharedCells);
+        summary.maxAlliedSharedCells = frames.Max(f => f.alliedSharedCells);
+        summary.alliedSharedCellFrameRatio = (float)frames.Count(f => f.alliedSharedCells > 0) / frames.Count;
 
         var global = frames.GroupBy(f => f.frame).Select(g => g.First()).ToList();
         if (summary.units > 0 && summary.duration > 0f)
@@ -274,6 +296,90 @@ public static class MovementMetricsAnalyzer
     }
 
     /// <summary>Times where the anchor changes state and keeps the new state for MinStillDuration.</summary>
+    /// <summary>
+    /// Each change of template (F1): from the frame of the change until 95 % of the soldiers are back at a slot, or the
+    /// window ends. Travel and crossings use positions relative to the anchor, so they hold while the squad marches.
+    /// A soldier who dies meanwhile does not count.
+    /// </summary>
+    static void AnalyzeTemplateChanges(MovementMetricsSummary summary, IReadOnlyList<MovementFrameSample> frames,
+        IReadOnlyList<MovementUnitSample> units)
+    {
+        var travels = new List<float>();
+        var crossings = new List<int>();
+        var reforms = new List<float>();
+        foreach (var squad in frames.GroupBy(f => f.squad))
+        {
+            var series = squad.OrderBy(f => f.frame).ToList();
+            var byFrame = units.Where(u => u.squad == squad.Key).GroupBy(u => u.frame).ToDictionary(g => g.Key, g => g.ToList());
+            for (int i = 1; i < series.Count; i++)
+            {
+                if (series[i].templateIndex == series[i - 1].templateIndex) continue;
+                float start = series[i].time;
+                int end = i;
+                float reform = -1f;
+                for (int k = i; k < series.Count && series[k].time - start <= TemplateChangeWindow; k++)
+                {
+                    if (k > i && series[k].templateIndex != series[k - 1].templateIndex) break;
+                    end = k;
+                    if (!byFrame.TryGetValue(series[k].frame, out var present) || present.Count == 0) continue;
+                    if (present.Count(u => u.slotDistance <= StallDistance) >= FormedFraction * present.Count)
+                    {
+                        reform = series[k].time - start;
+                        break;
+                    }
+                }
+                reforms.Add(reform >= 0f ? reform : TemplateChangeWindow);
+
+                var paths = new Dictionary<int, GroundPath>();
+                for (int k = i; k <= end; k++)
+                {
+                    if (!byFrame.TryGetValue(series[k].frame, out var present)) continue;
+                    foreach (var u in present)
+                    {
+                        float x = u.x - series[k].anchorX, z = u.z - series[k].anchorZ;
+                        paths[u.unit] = paths.TryGetValue(u.unit, out var path)
+                            ? path.To(x, z) : new GroundPath { fromX = x, fromZ = z, toX = x, toZ = z };
+                    }
+                }
+                var alive = byFrame.TryGetValue(series[end].frame, out var last)
+                    ? last.Select(u => paths[u.unit]).ToList() : paths.Values.ToList();
+                travels.AddRange(alive.Select(p => p.length));
+                int crossed = 0;
+                for (int a = 0; a < alive.Count; a++)
+                for (int b = a + 1; b < alive.Count; b++)
+                    if (GroundPath.Cross(alive[a], alive[b])) crossed++;
+                crossings.Add(crossed);
+            }
+        }
+        summary.templateChanges = reforms.Count;
+        summary.meanTemplateChangeTravel = travels.Count > 0 ? travels.Average() : 0f;
+        summary.maxTemplateChangeTravel = travels.Count > 0 ? travels.Max() : 0f;
+        summary.meanTemplateChangeCrossings = crossings.Count > 0 ? (float)crossings.Average() : 0f;
+        summary.maxTemplateChangeCrossings = crossings.Count > 0 ? crossings.Max() : 0;
+        summary.meanTemplateChangeReform = reforms.Count > 0 ? reforms.Average() : -1f;
+        summary.maxTemplateChangeReform = reforms.Count > 0 ? reforms.Max() : -1f;
+    }
+
+    /// <summary>A soldier's walk in the formation frame: walked length, and its ends as a straight segment.</summary>
+    struct GroundPath
+    {
+        public float fromX, fromZ, toX, toZ, length;
+
+        public GroundPath To(float x, float z)
+        {
+            float dx = x - toX, dz = z - toZ;
+            return new GroundPath { fromX = fromX, fromZ = fromZ, toX = x, toZ = z,
+                length = length + (float)Math.Sqrt(dx * dx + dz * dz) };
+        }
+
+        static float Side(in GroundPath p, float x, float z) =>
+            (p.toX - p.fromX) * (z - p.fromZ) - (p.toZ - p.fromZ) * (x - p.fromX);
+
+        public static bool Cross(in GroundPath a, in GroundPath b) =>
+            Side(a, b.fromX, b.fromZ) * Side(a, b.toX, b.toZ) < 0f
+            && Side(b, a.fromX, a.fromZ) * Side(b, a.toX, a.toZ) < 0f;
+    }
+
     static IEnumerable<float> Transitions(List<MovementFrameSample> series, bool fromMoving)
     {
         for (int i = 1; i < series.Count; i++)

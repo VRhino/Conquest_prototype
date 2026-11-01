@@ -113,6 +113,201 @@ public partial class BattleSceneIntegrationTests
         finally { RestoreInputSettings(previousInput); }
     }
 
+    const float S4CasualtySpacing = 0.15f; // Between forced deaths, so soldiers fall one by one rather than in a frame.
+    static readonly int[] SquiresAliveSteps = { 10, 5 };
+    static readonly int[] SpearmenAliveSteps = { 15, 10, 5 };
+
+    /// <summary>S4 with casualties (F1): soldiers die by script down to each template, standing still and marching in turns.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS4CasualtiesLine() => RunCasualties("S4CasualtiesLine", Key.F1, SquiresAliveSteps);
+
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS4CasualtiesTestudo() => RunCasualties("S4CasualtiesTestudo", Key.F2, SquiresAliveSteps);
+
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS4CasualtiesSpearmenLine() => RunCasualties("S4CasualtiesSpearmenLine", Key.F1, SpearmenAliveSteps);
+
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS4CasualtiesSpearmenWedge() => RunCasualties("S4CasualtiesSpearmenWedge", Key.F3, SpearmenAliveSteps);
+
+    IEnumerator RunCasualties(string label, Key formationKey, int[] aliveSteps)
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        try
+        {
+            yield return PrepareBaseline();
+            yield return Press(formationKey); // Not every squad spawns in its first formation.
+            yield return new WaitForSeconds(S4SettleSeconds);
+            using (MovementVideoCapture.Start(label))
+            {
+                MovementMetricsRecorderSystem.Begin(label, squad);
+                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                for (int step = 0; step < aliveSteps.Length; step++)
+                {
+                    bool marching = step % 2 == 1;
+                    if (marching)
+                    {
+                        InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
+                        yield return new WaitForSeconds(1f);
+                    }
+                    yield return KillUntil(aliveSteps[step]);
+                    yield return new WaitForSeconds(marching ? S4MarchSeconds : S4SettleSeconds);
+                    if (marching) InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                }
+                yield return new WaitForSeconds(S4SettleSeconds);
+                ReportBaseline(start);
+            }
+        }
+        finally { RestoreInputSettings(previousInput); }
+    }
+
+    /// <summary>Marks random soldiers of the squad dead (seeded in PrepareBaseline) until <paramref name="alive"/> remain.</summary>
+    IEnumerator KillUntil(int alive)
+    {
+        while (true)
+        {
+            var units = em.GetBuffer<SquadUnitElement>(squad);
+            if (units.Length <= alive) yield break;
+            em.AddComponent<IsDeadComponent>(units[UnityEngine.Random.Range(0, units.Length)].Value);
+            yield return new WaitForSeconds(S4CasualtySpacing);
+        }
+    }
+
+    // S5 (Movimiento_Formaciones.md §5.2): a straight corridor 4 m wide; both squads march through it from opposite ends.
+    const float S5CorridorLength = 16f;
+    const float S5HalfWidth = 2f;
+    const float S5HeroLateral = 1f;      // Each hero keeps to one side, so they do not block each other; the anchor sits about this far to the hero's other side, so the two squads meet on the same line.
+    const float S5EndGap = 6f;           // Open ground between each hero and its mouth of the corridor, m.
+    const float S5WaypointArrival = 1f;
+    const float S5RemoteArrival = 4f;    // The remote squad has reached its end of the corridor.
+    const float S5RemoteTimeout = 70f;
+    const float S5WalkTimeout = 20f;
+    const float S5TailSeconds = 6f;
+
+    /// <summary>
+    /// S5: the remote squad changes side and walks a straight corridor towards the local one, which walks it the other way.
+    /// Both follow their hero in Line, wider than the corridor. Counts destinations shared by the two squads (F17).
+    /// </summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS5AlliedCrossing() => RunS5("S5");
+
+    IEnumerator RunS5(string label)
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        var walls = new System.Collections.Generic.List<GameObject>();
+        try
+        {
+            yield return PrepareBaseline();
+            Unity.Entities.Entity remote;
+            using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroSquadReference), typeof(NavMeshAgent)))
+            {
+                yield return Until(() => query.CalculateEntityCount() == 1, 10f, "Remote hero agent missing.");
+                remote = query.GetSingletonEntity();
+            }
+            em.RemoveComponent<HeroAITag>(remote);
+            Unity.Entities.Entity remoteSquad = em.GetComponentData<HeroSquadReference>(remote).squad;
+            var localTeam = em.GetComponentData<TeamComponent>(hero);
+            em.SetComponentData(remote, localTeam);
+            em.SetComponentData(remoteSquad, localTeam);
+            foreach (var element in em.GetBuffer<SquadUnitElement>(remoteSquad).ToNativeArray(Unity.Collections.Allocator.Temp))
+                em.SetComponentData(element.Value, localTeam);
+            var intent = em.GetComponentData<SquadAIOrderIntentComponent>(remoteSquad);
+            intent.suggestedOrder = SquadOrderType.FollowHero;
+            intent.targetEntity = Unity.Entities.Entity.Null;
+            em.SetComponentData(remoteSquad, intent);
+
+            // March keys are camera relative: S walks along -forward.
+            var cameraTransform = Camera.main.transform;
+            var back = Vector3.ProjectOnPlane(-cameraTransform.forward, Vector3.up).normalized;
+            var right = Vector3.ProjectOnPlane(cameraTransform.right, Vector3.up).normalized;
+            var start = (Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+            BuildS5Corridor(start + right * S5HeroLateral, back, walls);
+            yield return new WaitForSeconds(S7CarveSeconds);
+
+            float length = S5EndGap + S5CorridorLength + S5EndGap;
+            Vector3 remoteStart = start + back * length + right * (2f * S5HeroLateral);
+            Assert.That(NavMesh.SamplePosition(remoteStart, out var remoteHit, 2f, NavMesh.AllAreas), Is.True,
+                "No NavMesh at the far end of the corridor.");
+            var remoteAgent = em.GetComponentObject<NavMeshAgent>(remote);
+            Assert.That(remoteAgent.Warp(remoteHit.position), Is.True, "The remote hero could not enter the far end.");
+            remoteAgent.speed = em.GetComponentData<HeroStatsComponent>(remote).baseSpeed;
+            remoteAgent.isStopped = false;
+            yield return Until(() => Distance(remoteHit.position, remoteSquad) < S5RemoteArrival, S5RemoteTimeout,
+                "The remote squad did not reach the far end of the corridor.");
+
+            using (MovementVideoCapture.Start(label))
+            {
+                MovementMetricsRecorderSystem.Begin(label); // Both squads: each one's stalls and slots matter here.
+                // A single path may run outside a wall: the corridor is a long thin polygon of the carved NavMesh.
+                Vector3 lane = start + right * (2f * S5HeroLateral);
+                var remoteLegs = new[]
+                {
+                    lane + back * (S5EndGap + S5CorridorLength - S5WaypointArrival),
+                    lane + back * (S5EndGap + S5WaypointArrival),
+                    lane - back * S5EndGap
+                };
+                int remoteLeg = 0;
+                Assert.That(remoteAgent.SetDestination(remoteLegs[0]), Is.True, "The remote hero cannot reach the corridor.");
+                void NextRemoteLeg()
+                {
+                    if (remoteLeg + 1 >= remoteLegs.Length) return;
+                    Vector3 toLeg = remoteLegs[remoteLeg] - remoteAgent.transform.position;
+                    toLeg.y = 0f;
+                    if (toLeg.magnitude < S5WaypointArrival)
+                        Assert.That(remoteAgent.SetDestination(remoteLegs[++remoteLeg]), Is.True, "The remote hero cannot walk the corridor.");
+                }
+
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
+                float deadline = Time.time + S5WalkTimeout;
+                while (Time.time < deadline && Vector3.Dot(
+                           (Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position - start, back) < length)
+                {
+                    NextRemoteLeg();
+                    yield return null;
+                }
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                float tailEnd = Time.time + S5TailSeconds;
+                while (Time.time < tailEnd)
+                {
+                    NextRemoteLeg();
+                    yield return null;
+                }
+                Assert.That(Vector3.Dot((Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position - start, back),
+                    Is.GreaterThan(length * 0.5f), "The local hero did not cross the corridor.");
+                Assert.That(Vector3.Dot((Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(remote).Position - remoteHit.position, -back),
+                    Is.GreaterThan(length * 0.5f), "The remote hero did not cross the corridor.");
+                ReportBaseline((Unity.Mathematics.float3)start);
+            }
+        }
+        finally
+        {
+            RestoreInputSettings(previousInput);
+            foreach (var wall in walls) if (wall != null) Object.Destroy(wall);
+        }
+    }
+
+    /// <summary>The two long walls of the S5 corridor, centred on the line from <paramref name="origin"/> along <paramref name="back"/>.</summary>
+    static void BuildS5Corridor(Vector3 origin, Vector3 back, System.Collections.Generic.List<GameObject> walls)
+    {
+        var across = Vector3.Cross(Vector3.up, back);
+        foreach (float side in new[] { -1f, 1f })
+        {
+            var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = "S5 corridor wall";
+            wall.transform.SetPositionAndRotation(
+                origin + back * (S5EndGap + 0.5f * S5CorridorLength) + across * (side * (S5HalfWidth + 0.5f * S7WallThickness))
+                + Vector3.up * (0.5f * S7WallHeight),
+                Quaternion.LookRotation(back, Vector3.up));
+            wall.transform.localScale = new Vector3(S7WallThickness, S7WallHeight, S5CorridorLength);
+            var obstacle = wall.AddComponent<NavMeshObstacle>();
+            obstacle.shape = NavMeshObstacleShape.Box;
+            obstacle.size = Vector3.one;
+            obstacle.carving = true;
+            obstacle.carveOnlyStationary = false;
+            walls.Add(wall);
+        }
+    }
+
     /// <summary>
     /// S6: march at the remote squad (+z) until one of our units strikes, then hold the melee. The squad only
     /// pursues within its leash when reacting (C6), so the hero has to carry it into contact.
