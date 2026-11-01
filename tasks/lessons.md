@@ -525,3 +525,7 @@
 ## Tests con mundos reducidos (2026-11-01)
 
 - Cambiar la consulta de un sistema deja fuera, sin error, a las entidades de los tests que montan el mundo a mano: el test solo ve que nada ocurrió. Al cambiar una consulta, buscar en `Assets/Tests` quién crea esas entidades y pasar `SquadNavigationRegressionTests` entero. C13 cambió la consulta y 5 tests quedaron rotos hasta hoy.
+
+## Una métrica no es el defecto (2026-11-01)
+
+- Antes de crear reglas contra una métrica, ver qué soldados la mueven y dónde están. El «rebase» de S9 eran dos extremos de fila junto a la primera línea, y añadí una regla para algo que no ocurría.

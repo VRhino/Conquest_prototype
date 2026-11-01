@@ -967,3 +967,11 @@ las filas de atrás pasan más a menudo por delante de su primera fila: la prime
 y las de atrás, que resbalan por los lados, la rebasan. El primer golpe llega 0,8 s más tarde porque ya no se entra en el
 cuerpo del enemigo. Es lo siguiente a atacar para que la melé sea una línea: que las filas de atrás no busquen objetivo
 propio mientras la primera fila pelea, o que esperen detrás de ella.
+
+**Cierre (2026-11-01).** Con S9 corregido (héroes fuera de la melé, Attack ordenado sin correa), mirar cada soldado cambió
+la lectura: `rearAheadOfFrontRatio` no mide rebases. Compara con la línea media de la primera fila, así que cuenta a los
+extremos de la segunda fila que alargan la línea por el flanco y a los que llenan un hueco a la altura de la primera. Por
+eso `rearThroughFrontRatio` cuenta solo a quien está dentro del ancho de la primera fila y a más de 0,5 m de su soldado más
+adelantado: **0 % en las 5 corridas sin regla**. Se retira la regla de objetivo de filas traseras (`rearRankTargetDepth`):
+no mejoraba el primer golpe (4,7 s con ella, 4,8 s sin ella) y no había rebases que evitar. Sin regla, un extremo llegó a
+1,76 m por delante rodeando el flanco enemigo, que se considera melé normal. El grabador solo mide la escuadra local.

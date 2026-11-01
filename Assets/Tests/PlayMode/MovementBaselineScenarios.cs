@@ -222,11 +222,7 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS9LineClashLegacy() => RunLineClash("S9Legacy", false);
 
-    /// <summary>S9 with rear ranks free to take enemies deep beyond their front line (before the rank rule).</summary>
-    [UnityTest, Explicit, Category("MovementBaseline")]
-    public IEnumerator MovementBaselineS9LineClashNoRankRule() => RunLineClash("S9NoRank", true, false);
-
-    IEnumerator RunLineClash(string label, bool m2, bool rankRule = true)
+    IEnumerator RunLineClash(string label, bool m2)
     {
         var previousInput = UseUnfocusedEditorInput();
         using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
@@ -236,7 +232,6 @@ public partial class BattleSceneIntegrationTests
         NavMeshAgent remoteAgent = null;
         try
         {
-            if (!rankRule || !m2) tuning.rearRankTargetDepth = 0f;
             em.SetComponentData(tuningEntity, tuning);
             if (!m2)
             {

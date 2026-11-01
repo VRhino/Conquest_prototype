@@ -141,8 +141,6 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0f)] public float blockedRetargetTime = 0.5f;
     [Tooltip("Added to the blocking enemy's score before the soft saturation (P4): it wins unless already crowded, so lines form instead of piles.")]
     [Min(0f)] public float targetBlockerBonus = 0.5f;
-    [Tooltip("A rear-rank unit takes no enemy further than this beyond its own front rank's line, so it waits behind the line instead of slipping through it (S9). 0 = off.")]
-    [Min(0f)] public float rearRankTargetDepth = 2f;
 
     [Header("Squad enemy search (L4-09)")]
     [Tooltip("New targets only within the squad's combat radius and on its level. Off = every detected enemy, as before L4-09.")]
@@ -218,7 +216,6 @@ public class MovementTuningConfig : ScriptableObject
         targetReevaluateInterval = targetReevaluateInterval,
         blockedRetargetTime = blockedRetargetTime,
         targetBlockerBonus = targetBlockerBonus,
-        rearRankTargetDepth = rearRankTargetDepth,
         enemySearchEnabled = enemySearchEnabled,
         enemySearchRadiusMin = enemySearchRadiusMin,
         enemySearchRadiusMax = enemySearchRadiusMax,

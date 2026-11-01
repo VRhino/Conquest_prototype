@@ -13,8 +13,6 @@ using Unity.Transforms;
 /// and the same level. A unit stopped by an enemy that is not its target scores again after <c>blockedRetargetTime</c> with
 /// that enemy in and a bonus for it (P4, <see cref="UnitBlockedComponent"/>): it takes the enemy in its way unless that
 /// one is already crowded, so the melee forms lines instead of pushing through one enemy to reach another, or piling up.
-/// A rear-rank unit takes no enemy deeper than <c>rearRankTargetDepth</c> beyond its front rank's line (S9): it waits behind
-/// the line instead of slipping through it.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
@@ -40,10 +38,6 @@ public partial class UnitTargetingSystem : SystemBase
     private readonly Dictionary<Entity, int> _rangedCounts = new();
     private readonly Dictionary<Entity, int> _focusCounts = new();
     private int[] _nearest = new int[1];
-    // The squad's front line this frame (S9): formation forward and the mean depth of its front rank; NaN without one.
-    private float2 _forward;
-    private float _frontLine;
-    private float _rearRankDepth;
     private float[] _nearestDistancesSq = new float[1];
 
     public int DebugCandidateChecks { get; private set; }
@@ -110,7 +104,6 @@ public partial class UnitTargetingSystem : SystemBase
 
             BuildCandidates(squad, state.ValueRO.currentOrder, units, detected, tuning.enemySearchEnabled, search);
             Entity focus = SquadFocus(squad, state.ValueRO.currentOrder, units);
-            UpdateFrontLine(squad, units, tuning.rearRankTargetDepth);
             _rangedCounts.Clear();
             int rangedUnitsInSquad = 0;
 
@@ -275,15 +268,11 @@ public partial class UnitTargetingSystem : SystemBase
         float3 unitPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
         int found = 0;
         int currentIndex = -1, blockerIndex = -1;
-        bool rearRank = !float.IsNaN(_frontLine) && SystemAPI.HasComponent<UnitGridSlotComponent>(unit)
-            && SystemAPI.GetComponent<UnitGridSlotComponent>(unit).row > 0;
         for (int j = 0; j < _candidates.Count; j++)
         {
             DebugCandidateChecks++;
             var c = _candidates[j];
             if (!SquadCombatModeComponent.AllowsTarget(EntityManager, unit, c.entity)) continue;
-            if (rearRank && TargetScoring.BeyondFrontLine(math.dot(c.position.xz, _forward), _frontLine, _rearRankDepth))
-                continue;
             if (c.entity == current) currentIndex = j;
             if (c.entity == blocker) blockerIndex = j;
             if (!c.searchable) continue;
@@ -321,29 +310,6 @@ public partial class UnitTargetingSystem : SystemBase
             currentValid && InReach(unit, previous, bodyRadius));
         if (take) blocker = blocked.blocker;
         return take;
-    }
-
-    /// <summary>The squad's formation forward and the mean depth of its living front rank along it (S9).</summary>
-    private void UpdateFrontLine(Entity squad, DynamicBuffer<SquadUnitElement> units, float rearRankDepth)
-    {
-        _frontLine = float.NaN;
-        _rearRankDepth = rearRankDepth;
-        if (rearRankDepth <= 0f || !SystemAPI.HasComponent<SquadFormationAnchorComponent>(squad)) return;
-        _forward = math.normalizesafe(math.mul(SystemAPI.GetComponent<SquadFormationAnchorComponent>(squad).rotation,
-            math.forward()).xz);
-        if (math.lengthsq(_forward) < 1e-6f) return;
-        float sum = 0f;
-        int front = 0;
-        for (int i = 0; i < units.Length; i++)
-        {
-            Entity unit = units[i].Value;
-            if (!SystemAPI.Exists(unit) || SystemAPI.HasComponent<IsDeadComponent>(unit)
-                || !SystemAPI.HasComponent<UnitGridSlotComponent>(unit) || !SystemAPI.HasComponent<LocalTransform>(unit)
-                || SystemAPI.GetComponent<UnitGridSlotComponent>(unit).row != 0) continue;
-            sum += math.dot(SystemAPI.GetComponent<LocalTransform>(unit).Position.xz, _forward);
-            front++;
-        }
-        if (front > 0) _frontLine = sum / front;
     }
 
     private Entity ClosestSearchable(Entity unit)

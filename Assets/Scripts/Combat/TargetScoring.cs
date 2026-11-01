@@ -78,14 +78,6 @@ public static class TargetScoring
     }
 
     /// <summary>
-    /// S9: a rear-rank unit leaves out enemies deeper than <paramref name="maxDepth"/> beyond its front rank's line
-    /// (depths along the formation forward), so it fights at the line or waits behind it instead of slipping through
-    /// its own front to reach the enemy's rear ranks. The reference gets this from composition (P7). maxDepth ≤ 0 = off.
-    /// </summary>
-    public static bool BeyondFrontLine(float candidateDepth, float frontLine, float maxDepth)
-        => maxDepth > 0f && candidateDepth > frontLine + maxDepth;
-
-    /// <summary>
     /// P4: a melee unit scores its targets again with the enemy that blocks it once the block has lasted
     /// <paramref name="threshold"/>, if that enemy is attackable and the unit is not already within reach of its own
     /// target. Threshold ≤ 0 = off.

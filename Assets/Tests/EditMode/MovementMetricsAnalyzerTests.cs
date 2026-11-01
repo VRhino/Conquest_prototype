@@ -146,10 +146,40 @@ public class MovementMetricsAnalyzerTests
         var s = MovementMetricsAnalyzer.Analyze("line", frames, units);
 
         Assert.That(s.rearAheadOfFrontRatio, Is.EqualTo(0.5f).Within(1e-5f));
+        Assert.That(s.rearThroughFrontRatio, Is.EqualTo(0.5f).Within(1e-5f));
         Assert.That(s.meanTimeToFirstSwing, Is.EqualTo(Dt).Within(1e-5f));
         Assert.That(s.meanSpeedWhileSwinging, Is.EqualTo(0.5f).Within(1e-5f));
         Assert.That(s.maxPersistentEnemyOverlapsEngaged, Is.EqualTo(1));
         Assert.That(s.maxPersistentEnemyOverlapsFree, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void RearUnitAtTheFlankOrLevelWithTheFrontIsNotThroughIt()
+    {
+        var frames = new List<MovementFrameSample>
+        {
+            new MovementFrameSample { frame = 0, squad = 1, forwardX = 0f, forwardZ = 1f }
+        };
+        var units = new List<MovementUnitSample>();
+        // Front rank from x = 0 to x = 4 on z = 0.
+        foreach (float x in new[] { 0f, 4f })
+        {
+            var front = Unit(0, 0f, units.Count, UnitFormationState.Moving);
+            front.x = x; front.target = 9;
+            units.Add(front);
+        }
+        // Past the front at the flank; level with it in a gap; past it within its width.
+        foreach (var (x, z) in new[] { (6f, 1f), (2f, 0.1f), (2f, 1f) })
+        {
+            var rear = Unit(0, 0f, units.Count, UnitFormationState.Moving);
+            rear.row = 1; rear.x = x; rear.z = z;
+            units.Add(rear);
+        }
+
+        var s = MovementMetricsAnalyzer.Analyze("through", frames, units);
+
+        Assert.That(s.rearAheadOfFrontRatio, Is.EqualTo(1f).Within(1e-5f));
+        Assert.That(s.rearThroughFrontRatio, Is.EqualTo(1f / 3f).Within(1e-5f));
     }
 
     static MovementUnitSample Unit(int frame, float time, int unit, UnitFormationState state) =>

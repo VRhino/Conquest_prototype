@@ -122,16 +122,6 @@ public class TargetScoringTests
     }
 
     [Test]
-    public void RearRankLeavesOutEnemiesDeepBeyondItsFrontLine()
-    {
-        // Front line at depth 10; the enemy front at contact (11.2) is fair, its second rank (12.6) is not.
-        Assert.That(TargetScoring.BeyondFrontLine(11.2f, 10f, 2f), Is.False);
-        Assert.That(TargetScoring.BeyondFrontLine(12.6f, 10f, 2f), Is.True);
-        Assert.That(TargetScoring.BeyondFrontLine(8f, 10f, 2f), Is.False, "Beside or behind the line: fair.");
-        Assert.That(TargetScoring.BeyondFrontLine(50f, 10f, 0f), Is.False, "0 = off.");
-    }
-
-    [Test]
     public void BlockerWinsUnlessItIsCrowdedSoTheMeleeKeepsALine()
     {
         var w = Weights;

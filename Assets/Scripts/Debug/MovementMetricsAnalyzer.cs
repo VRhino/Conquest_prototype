@@ -95,6 +95,7 @@ public sealed class MovementMetricsSummary
     public float meanSpeedWhileSwinging;
     /// <summary>Share of rear-rank samples in melee that stand ahead of their front rank's mean line (S9: the line holds).</summary>
     public float rearAheadOfFrontRatio;
+    public float rearThroughFrontRatio;
     public float meanContactDistance;
     public float minContactDistance;
     public int maxAttackersPerTarget;
@@ -132,6 +133,7 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  enemy pairs overlapping longer than {MovementMetricsAnalyzer.EnemyOverlapPersistence.ToString("F1", c)} s: max={maxPersistentEnemyOverlaps}");
         s.AppendLine($"  of which engaged={maxPersistentEnemyOverlapsEngaged} free={maxPersistentEnemyOverlapsFree}; first swing after mean={meanTimeToFirstSwing.ToString("F2", c)}s; speed while swinging={meanSpeedWhileSwinging.ToString("F2", c)}m/s");
         s.AppendLine($"  rear ranks ahead of their front line in melee: {(rearAheadOfFrontRatio * 100f).ToString("F1", c)} % of samples");
+        s.AppendLine($"  rear ranks through their front in melee: {(rearThroughFrontRatio * 100f).ToString("F1", c)} % of samples");
         s.AppendLine($"  contact distance while attacking: mean={meanContactDistance.ToString("F2", c)}m min={minContactDistance.ToString("F2", c)}m");
         s.AppendLine($"  attackers per target: max={maxAttackersPerTarget} p95={p95AttackersPerTarget.ToString("F1", c)}");
         s.AppendLine($"  leash violations (reacting, beyond the leash > {MovementMetricsAnalyzer.LeashPersistence.ToString("F1", c)} s): {leashViolations}");
@@ -159,6 +161,7 @@ public static class MovementMetricsAnalyzer
     public const float MinStillDuration = 0.5f; // Ignores single-frame anchor pauses.
     public const float LeashPersistence = 0.5f; // Seconds beyond the leash before counting a violation.
     public const float AccelerationSpikeLimit = 20f; // m/s²: well above any agent (8-12 m/s²), so only jolts count.
+    public const float ThroughFrontMargin = 0.5f; // m past the foremost front-rank unit: a body radius, so standing level with it is not through.
     public const float EnemyOverlapPersistence = 0.3f; // Enemy pairs overlapping longer than this are counted.
     public const float ContactRange = 2.5f;     // Units this close to their target count as attackers on it.
     public const float StallSpeed = 0.3f;       // m/s: below this a unit counts as standing still.
@@ -419,7 +422,9 @@ public static class MovementMetricsAnalyzer
 
     /// <summary>
     /// S9 (P7): time to each unit's first swing, speed while swinging, and rear ranks that stand ahead of their front
-    /// rank's mean line along the formation forward, in frames where the squad has a unit with a target.
+    /// rank's mean line along the formation forward, in frames where the squad has a unit with a target. That count
+    /// includes rear units that extend the line at its flanks or fill a gap in it; "through" is only a rear unit within
+    /// the front rank's width and clearly past its foremost unit.
     /// </summary>
     static void AnalyzeLine(MovementMetricsSummary summary, IReadOnlyList<MovementFrameSample> frames,
         IReadOnlyList<MovementUnitSample> units)
@@ -433,7 +438,7 @@ public static class MovementMetricsAnalyzer
 
         var forwards = new Dictionary<(int, int), (float x, float z)>();
         foreach (var f in frames) forwards[(f.frame, f.squad)] = (f.forwardX, f.forwardZ);
-        int rear = 0, ahead = 0;
+        int rear = 0, ahead = 0, through = 0;
         foreach (var group in units.GroupBy(u => (u.frame, u.squad)))
         {
             if (!forwards.TryGetValue(group.Key, out var fwd) || (fwd.x == 0f && fwd.z == 0f)) continue;
@@ -441,14 +446,21 @@ public static class MovementMetricsAnalyzer
             var front = group.Where(u => u.row == 0).ToList();
             if (front.Count == 0) continue;
             float line = front.Average(u => u.x * fwd.x + u.z * fwd.z);
+            float foremost = front.Max(u => u.x * fwd.x + u.z * fwd.z);
+            float left = front.Min(u => u.x * fwd.z - u.z * fwd.x);
+            float right = front.Max(u => u.x * fwd.z - u.z * fwd.x);
             foreach (var u in group)
             {
                 if (u.row <= 0) continue;
                 rear++;
-                if (u.x * fwd.x + u.z * fwd.z > line) ahead++;
+                float depth = u.x * fwd.x + u.z * fwd.z;
+                float lateral = u.x * fwd.z - u.z * fwd.x;
+                if (depth > line) ahead++;
+                if (depth > foremost + ThroughFrontMargin && lateral >= left && lateral <= right) through++;
             }
         }
         summary.rearAheadOfFrontRatio = rear > 0 ? (float)ahead / rear : 0f;
+        summary.rearThroughFrontRatio = rear > 0 ? (float)through / rear : 0f;
     }
 
     static float WrapAngle(float radians)
