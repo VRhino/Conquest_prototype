@@ -514,3 +514,8 @@
 
 - `UnitAnimationMovementComponent.CurrentSpeed` muestra `agent.velocity` un fotograma después, y un agente puede frenar más de 0,5 m/s en un fotograma (aceleración 8 × brakingFactor 2,5 × 0,03 s). Comparar con la velocidad del fotograma anterior, no ampliar la tolerancia.
 - Un test que pasa aislado y falla en su clase no prueba estado heredado: registrar los valores fotograma a fotograma antes de culpar al orden. Aquí solo cambiaba en qué fotograma caía la comprobación.
+
+## Escenarios de combate con héroes (2026-11-01)
+
+- Si el héroe muere, su escuadra se retira: un escenario de combate entre tropas debe dejarlo fuera de la melé y comprobar que sigue vivo al terminar, o las métricas miden una retirada. Los S9 del 28-10 tenían ese defecto y sus cifras no valen.
+- Medir la distancia real entre héroes antes de fijar constantes del escenario: en BattleTestScene arrancan a unos 20 m.

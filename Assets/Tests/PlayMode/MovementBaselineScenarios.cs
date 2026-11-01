@@ -200,12 +200,17 @@ public partial class BattleSceneIntegrationTests
         }
     }
 
-    const float S9ApproachTimeout = 25f; // Both heroes walk at each other until the first unit strikes.
+    const float S9ApproachTimeout = 30f; // The two lines march to their hold points.
     const float S9MeleeSeconds = 15f;
+    const float S9HeroStandOff = 7f;     // Each hero stops this far from the clash (they start about 10 m away): a dead hero withdraws its squad.
+    const float S9LineGap = 5f;          // Between the two hold points; both squads charge from there.
+    const float S9HoldArrival = 1.5f;    // From the mean of a squad to its hold point.
+    const float S9ChargeTimeout = 8f;
 
     /// <summary>
-    /// S9 (P7): two squads in Line clash head-on. The remote hero's AI is taken off and the test walks it, with its squad
-    /// following, at the local hero, who walks at it; both stop at the first swing and the melee runs. Measures the front
+    /// S9 (P7): two squads in Line clash head-on with their heroes out of the melee. The remote hero's AI is taken off;
+    /// both heroes walk to a stand-off behind the clash while their squads hold points ahead of them, then both squads
+    /// are ordered to attack and the melee runs. Measures the front
     /// case S6/S7 do not isolate: persistent enemy overlaps with and without a target, rear ranks that step ahead of their
     /// own front line, and the time to the first swing.
     /// </summary>
@@ -216,7 +221,11 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS9LineClashLegacy() => RunLineClash("S9Legacy", false);
 
-    IEnumerator RunLineClash(string label, bool m2)
+    /// <summary>S9 with rear ranks free to take enemies deep beyond their front line (before the rank rule).</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS9LineClashNoRankRule() => RunLineClash("S9NoRank", true, false);
+
+    IEnumerator RunLineClash(string label, bool m2, bool rankRule = true)
     {
         var previousInput = UseUnfocusedEditorInput();
         using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
@@ -226,6 +235,8 @@ public partial class BattleSceneIntegrationTests
         NavMeshAgent remoteAgent = null;
         try
         {
+            if (!rankRule || !m2) tuning.rearRankTargetDepth = 0f;
+            em.SetComponentData(tuningEntity, tuning);
             if (!m2)
             {
                 tuning.enemyContactEnabled = false;
@@ -257,15 +268,55 @@ public partial class BattleSceneIntegrationTests
             {
                 MovementMetricsRecorderSystem.Begin(label, squad);
                 var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
-                Assert.That(remoteAgent.SetDestination((Vector3)start), Is.True, "The remote hero cannot path to the local hero.");
+                var remoteStart = em.GetComponentData<Unity.Transforms.LocalTransform>(remote).Position;
+                Vector3 centre = (Vector3)(start + remoteStart) * 0.5f;
+                Vector3 toRemote = ((Vector3)(remoteStart - start)).normalized;
+                float walk = Vector3.Dot(centre - (Vector3)start, toRemote) - S9HeroStandOff;
+                Assert.That(walk, Is.GreaterThan(MinimumHeroDisplacement), "The heroes start too close for a stand-off.");
+                Assert.That(remoteAgent.SetDestination(centre + toRemote * S9HeroStandOff), Is.True,
+                    "The remote hero cannot path to its stand-off.");
+
+                // Hold takes its facing from the hero, so both have to be walking at each other first.
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
+                yield return new WaitForSeconds(1f);
+                Vector3 localHold = centre - toRemote * (S9LineGap * 0.5f);
+                Vector3 remoteHold = centre + toRemote * (S9LineGap * 0.5f);
+                var playerIntent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
+                playerIntent.orderType = SquadOrderType.HoldPosition;
+                playerIntent.holdPosition = localHold;
+                em.SetComponentData(squad, playerIntent);
+                intent = em.GetComponentData<SquadAIOrderIntentComponent>(remoteSquad);
+                intent.suggestedOrder = SquadOrderType.HoldPosition;
+                intent.holdPosition = remoteHold;
+                em.SetComponentData(remoteSquad, intent);
+
                 float deadline = Time.time + S9ApproachTimeout;
-                while (Time.time < deadline && !AnySquadUnitAttacking())
+                bool walking = true;
+                while (Time.time < deadline
+                       && (walking || Distance(localHold, squad) > S9HoldArrival || Distance(remoteHold, remoteSquad) > S9HoldArrival))
+                {
+                    if (walking && Vector3.Dot((Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position
+                            - (Vector3)start, toRemote) >= walk)
+                    {
+                        InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                        walking = false;
+                    }
                     yield return null;
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                remoteAgent.isStopped = true;
-                Assert.That(AnySquadUnitAttacking(), Is.True, "The two lines never met.");
+                }
+                Assert.That(walking, Is.False, "The local hero did not reach its stand-off.");
+                Assert.That(Distance(localHold, squad), Is.LessThanOrEqualTo(S9HoldArrival), "The local line did not arrive.");
+                Assert.That(Distance(remoteHold, remoteSquad), Is.LessThanOrEqualTo(S9HoldArrival), "The remote line did not arrive.");
+
+                yield return Press(Key.V);
+                intent = em.GetComponentData<SquadAIOrderIntentComponent>(remoteSquad);
+                intent.suggestedOrder = SquadOrderType.Attack;
+                intent.targetEntity = squad;
+                em.SetComponentData(remoteSquad, intent);
+                yield return Until(AnySquadUnitAttacking, S9ChargeTimeout, "The two lines never met.");
                 yield return new WaitForSeconds(S9MeleeSeconds);
+                Assert.That(em.GetComponentData<HeroLifeComponent>(hero).isAlive
+                    && em.GetComponentData<HeroLifeComponent>(remote).isAlive, Is.True,
+                    "A hero died: its squad withdrew and the melee was not measured.");
                 ReportBaseline(start);
             }
         }
@@ -388,6 +439,23 @@ public partial class BattleSceneIntegrationTests
             obstacle.carveOnlyStationary = false;
             walls.Add(wall);
         }
+    }
+
+    /// <summary>Distance on the ground from <paramref name="point"/> to the mean position of the squad's living units.</summary>
+    float Distance(Vector3 point, Unity.Entities.Entity targetSquad)
+    {
+        Vector3 sum = Vector3.zero;
+        int count = 0;
+        foreach (var element in em.GetBuffer<SquadUnitElement>(targetSquad))
+        {
+            if (!em.Exists(element.Value)) continue;
+            sum += (Vector3)em.GetComponentData<Unity.Transforms.LocalTransform>(element.Value).Position;
+            count++;
+        }
+        if (count == 0) return float.MaxValue;
+        Vector3 offset = sum / count - point;
+        offset.y = 0f;
+        return offset.magnitude;
     }
 
     bool AnySquadUnitAttacking()

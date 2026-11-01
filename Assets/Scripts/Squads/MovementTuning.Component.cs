@@ -72,6 +72,7 @@ public struct MovementTuningComponent : IComponentData
     public float targetReevaluateInterval; // A melee unit looks at its target again every this many seconds, s.
     public float blockedRetargetTime; // Blocked this long by an enemy that is not its target, a melee unit re-scores with it (P4), s; 0 = off.
     public float targetBlockerBonus; // Added to the blocking enemy's score before saturation (P4): wins unless crowded.
+    public float rearRankTargetDepth; // A rear-rank unit takes no enemy further than this beyond its front rank's line (S9), m; 0 = off.
     public bool enemySearchEnabled; // New targets only within the squad's combat radius and level (L4-09); off = all detected.
     public float enemySearchRadiusMin; // Combat radius beyond the squad's extent when still or holding, m.
     public float enemySearchRadiusMax; // ... when attacking or at full speed, m.
@@ -139,6 +140,7 @@ public struct MovementTuningComponent : IComponentData
         targetReevaluateInterval = 0.3f,
         blockedRetargetTime = 0.5f,
         targetBlockerBonus = 0.5f,
+        rearRankTargetDepth = 2f,
         enemySearchEnabled = true,
         enemySearchRadiusMin = 6f,
         enemySearchRadiusMax = 8f,
@@ -173,6 +175,7 @@ public struct MovementTuningComponent : IComponentData
         if (t.avoidanceMaxNeighbors > 28f) return "avoidanceMaxNeighbors must not exceed 28.";
         if (t.enemyContactLookaheadTime < 0f) return "enemyContactLookaheadTime must not be negative.";
         if (t.blockedRetargetTime < 0f) return "blockedRetargetTime must not be negative.";
+        if (t.rearRankTargetDepth < 0f) return "rearRankTargetDepth must not be negative.";
         if (2f * t.bodyRadius + 0.5f > t.avoidanceNeighborRadius) return "avoidanceNeighborRadius must exceed the enemy contact distance (2·bodyRadius) by 0.5 m.";
         if (t.runExitDistance <= t.arrivalRadiusIn) return "runExitDistance must exceed arrivalRadiusIn.";
         if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";
