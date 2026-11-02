@@ -32,6 +32,9 @@ public class SquadSectionController : MonoBehaviour
     private readonly List<UnitHealthBarController> _sortBuffer = new();
     private bool _initialized;
 
+    /// <summary>The squad on show; the radial menu takes its formations from it.</summary>
+    public SquadData Squad => _squadData;
+
     /// <summary>
     /// Call once when squad data is known to set up static UI and formation icons.
     /// </summary>

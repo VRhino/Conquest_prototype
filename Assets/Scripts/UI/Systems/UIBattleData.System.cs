@@ -33,6 +33,11 @@ public partial class UIBattleDataSystem : SystemBase
             data.maxStamina     = stamina.ValueRO.maxStamina;
             break; // only one local player
         }
+        foreach (var life in SystemAPI.Query<RefRO<HeroLifeComponent>>().WithAll<IsLocalPlayer>())
+        {
+            data.heroAlive = life.ValueRO.isAlive;
+            break;
+        }
 
         // ── Skill bar: the hero's slots, then its active squad's ─────────────────
         double now = SystemAPI.Time.ElapsedTime;
@@ -66,6 +71,11 @@ public partial class UIBattleDataSystem : SystemBase
         {
             data.aliveUnits = status.ValueRO.aliveUnits;
             data.totalUnits = status.ValueRO.totalUnits;
+            break;
+        }
+        foreach (var formation in SystemAPI.Query<RefRO<FormationComponent>>().WithAll<IsLocalSquadActive>())
+        {
+            data.currentFormation = formation.ValueRO.currentFormation;
             break;
         }
 

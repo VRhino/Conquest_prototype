@@ -8,6 +8,7 @@ using UnityEngine;
 public class SkillIconCatalog
 {
     readonly Dictionary<int, Sprite> _icons = new();
+    readonly Dictionary<int, string> _squadNames = new();
 
     public void AddClass(HeroClassDefinition definition)
     {
@@ -24,11 +25,19 @@ public class SkillIconCatalog
     {
         if (squad == null || squad.abilitiesByLevel == null) return;
         foreach (var ability in squad.abilitiesByLevel)
-            if (ability != null) _icons[SkillBlobBuilder.IdOf(ability)] = ability.icon;
+            if (ability != null)
+            {
+                int id = SkillBlobBuilder.IdOf(ability);
+                _icons[id] = ability.icon;
+                _squadNames[id] = ability.abilityName;
+            }
     }
 
     /// <summary>The skill's icon, or null when it has none or is unknown.</summary>
     public Sprite Find(int skillId) => skillId != 0 && _icons.TryGetValue(skillId, out var icon) ? icon : null;
+
+    /// <summary>The squad ability's name, or null when it is unknown.</summary>
+    public string FindName(int skillId) => _squadNames.TryGetValue(skillId, out var name) ? name : null;
 
     public bool Contains(int skillId) => _icons.ContainsKey(skillId);
 }

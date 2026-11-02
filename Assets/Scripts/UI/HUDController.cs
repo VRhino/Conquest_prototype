@@ -42,6 +42,8 @@ public class HUDController : MonoBehaviour
     private bool _externalOverride;
     /// <summary>Skill bar (H6, H10), created from Resources so the scene needs no slots.</summary>
     private SkillBarController _skillBar;
+    /// <summary>ALT menu (H10), created the same way.</summary>
+    private BattleRadialMenu _radialMenu;
 
     // ── Cached ECS references ─────────────────────────────────────────────────
     private World        _world;
@@ -61,12 +63,14 @@ public class HUDController : MonoBehaviour
             ComponentType.ReadOnly<ZoneTriggerComponent>());
         _dataContainerQuery = _em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
         _skillBar = SkillBarController.Spawn();
+        _radialMenu = BattleRadialMenu.Spawn();
     }
 
     void OnDestroy()
     {
         // Al salir de Play el mundo puede destruirse antes que el HUD; sus consultas ya se liberaron con él.
         if (_skillBar != null) Destroy(_skillBar.gameObject);
+        if (_radialMenu != null) Destroy(_radialMenu.gameObject);
         if (_world == null || !_world.IsCreated) return;
         _uiDataQuery.Dispose();
         _captureIconQuery.Dispose();
@@ -83,6 +87,8 @@ public class HUDController : MonoBehaviour
         CheckSquadChangeEvent(data);
         InitializeSquadIfNeeded();
         _squadSectionController?.UpdateFromECS(_em);
+        if (_radialMenu != null)
+            _radialMenu.Apply(data, _squadSectionController?.Squad, _skillBar != null ? _skillBar.Icons : null);
         UpdateCaptureBar(data);
         UpdateCapturePointIcons();
     }
