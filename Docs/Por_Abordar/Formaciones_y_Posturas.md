@@ -9,15 +9,15 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 ## Resumen
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
-| F1 | Plantillas reducidas por número de soldados | Alta | Pendiente (contenido) |
+| F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`), pendiente el visto bueno de las formas |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
 | F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros hecha (`04608ca2`); faltan ShieldWall, Testudo, estocadas y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
-| F7 | Orden de llenado de ranuras (grupos de orden) | Media | Pendiente |
+| F7 | Orden de llenado de ranuras (grupos de orden) | Media | **Hecho de facto** con F1: el orden del asset es la prioridad |
 | F8 | Cambiar el espaciado desde el juego (orden o habilidad) | Media | Parcial: API hecha, sin orden |
-| F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Parcial: interruptor de colisión enemiga hecho (P2); evitación fija |
+| F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Parcial: interruptor de colisión enemiga hecho (P2); evitación fija. Sigue abierto tras F17 |
 | F10 | Ruido aleatorio por publicación frente a determinista | Baja | Decidido: determinista |
 | F11 | Disposición dinámica y "seguir al líder con retardo" | Baja | Pendiente |
 | F12 | Cohesión como consulta: quórum, aislados y terreno no apto | Media | Pendiente |
@@ -25,7 +25,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F14 | Media vuelta (invertir filas en giros grandes) | Baja | Descartado por D5 |
 | F15 | Radios de llegada por formación | Media | **Hecho** (`dcaf6dde`) |
 | F16 | `UnitShieldComponent.orientation` sin lectores | Baja | Pendiente |
-| F17 | Ocupación de celdas entre escuadras y plantilla por encaje | Media | Pendiente |
+| F17 | Ocupación de celdas entre escuadras y plantilla por encaje | Media | **Hecho** la ocupación (`8f3b45cf`); el "¿cabe?" por plantilla se descarta |
 
 ---
 
@@ -41,11 +41,26 @@ soldados es trabajo de contenido y de gusto, no de código.
 - Las plantillas deben conservar la forma reconocible (una cuña sigue siendo cuña) y los papeles (frente, costado, interior).
 - Al cambiar de plantilla, los soldados no se reordenan (ranura k = soldado k, como la referencia): si la plantilla nueva
   mueve mucho a alguien, habrá cruces. Conviene que la ranura k de la plantilla menor quede cerca de la ranura k de la mayor.
+  (Superado: desde C12 el reparto es por cercanía, ver "Hecho" abajo.)
 - Afecta a C2 (escalonado por fila) y a las posturas: la fila y el papel vienen de la plantilla nueva.
 
 **Cómo abordarlo.** Una plantilla por umbral (20, 15, 10, 5) para Spearmen y Squires; medir S4 con bajas forzadas (matar
 soldados por script) y contar cruces y recorrido total al cambiar de plantilla. El editor de plantillas del paso 1 debe
 mostrar todas las plantillas de una formación superpuestas.
+
+**Hecho (2026-11-02, `1eb56b03`, `Movimiento_Formaciones.md` §23).** Spearmen tiene plantillas de 20, 15, 10 y 5, y Squires
+de 12, 10 y 5: las de 20 y 15 no se usarían, porque Squires son 12. `SelectTemplate` exige ranuras para todos, así que
+`minUnits` es el tamaño de la plantilla siguiente más 1. No se vuelve a "ranura k = soldado k": tras las bajas los índices
+quedan dispersos, así que se mantiene el reparto de C12 y se anidan las plantillas (una ranura menor queda a 1,5 celdas o
+menos de una mayor). El voraz dejaba viajes largos que cruzaban a otros: ahora las parejas intercambian ranura mientras
+acorten su camino (`FormationLayout.UncrossPaths`), y Spearmen en línea pasa de 3,3 a 0,17 cruces por cambio.
+
+Queda abierto:
+- **Visto bueno de las formas.** Están medidas, pero el usuario aún no las ha aprobado. Las dudas son la cola central de la
+  cuña de 15 y 10, y la cruz de la tortuga de 5.
+- **Huecos dentro de una banda.** Entre dos cambios de plantilla los huecos quedan donde cayó el soldado:
+  `FormationCompactSystem` nunca se creó (L3-02).
+- **Formas sin validar en juego.** Las posturas de los papeles nuevos se han comprobado por datos, no a ojo.
 
 ## F2. Elección de plantilla por encaje en la malla y reubicación (C13)
 **Qué es.** La referencia prueba si la plantilla cabe en la malla de navegación antes de usarla (se puede desactivar por
@@ -139,6 +154,9 @@ que se llenan. Con menos soldados que ranuras, se ocupan primero las ranuras imp
 
 **Por qué queda fuera.** Con plantillas por número de soldados (F1) apenas sobran ranuras. Hoy se llenan por índice.
 
+**Hecho de facto (2026-11-02, F1).** Se usan solo las n primeras ranuras, así que las plantillas se ordenan por fila y de
+dentro afuera, y un test lo vigila. No hace falta el campo `fillOrder` mientras no haya escuadras mixtas (F6).
+
 **Cómo abordarlo.** Un campo `fillOrder` por ranura en la plantilla; el editor lo muestra como números. Solo tiene sentido
 junto con F1 o F6.
 
@@ -167,6 +185,12 @@ no solo la distancia de parada. Hay que decidir cuál de los dos sistemas lo apl
 velocidad en `UnitAvoidanceSystem`), con el bodyblock como red de seguridad; ORCA sigue solo con aliados. El interruptor
 por escuadra (P2 de `game-re/notes/battle-movement-combat.md`) debe leerlo `EnemyContact`: el par choca solo si los dos lo
 tienen activo. Hoy es global (`MovementTuningConfig.enemyContactEnabled`).
+
+**Tras F17 (2026-11-02): sigue abierto a propósito.** F17 reparte destinos; F9 es quién choca y quién esquiva en marcha, y
+son sistemas distintos (`FormationSlotResolveSystem` frente a `UnitAvoidanceSystem` y `UnitBodyblockSystem`). En S5 los
+solapes aliados bajan (máximo 11 a 8, media 1,65 a 1,26) sin tocar colisión ni evitación, y los atascos no empeoran de forma
+apreciable (1 a 1,5). Nada de S5 pide interruptores por escuadra: faltan quien apague la colisión y la evitación, y un caso
+de uso real, como un Muro de escudos.
 
 **Hecho en parte (2026-10-28, §22 P2).** `SquadEnemyCollisionComponent` por escuadra (sin él, activa) y `passesEnemies` por
 golpe, leídos por `EnemyContact`, el bodyblock y el retroceso con la regla "los dos activos". Falta: que algo lo apague (una
@@ -222,6 +246,15 @@ celdas, y hoy solo hay una escuadra activa por héroe.
 
 **Cómo abordarlo.** Escena S5 (cruce aliado en pasillo de 4 m). Las celdas que ya ha resuelto una escuadra entran como
 ocupadas en la siguiente, en un orden fijo por escuadra. Si se quiere, F1 + un "¿cabe?" por plantilla antes de reubicar.
+
+**Hecho (2026-11-02, `8f3b45cf`, `Movimiento_Formaciones.md` §23).** Las escuadras se resuelven por índice de entidad y las
+celdas de un aliado anterior cercano cuentan como ocupadas. Validar solo en el momento no basta: el fallo estaba entre dos
+validaciones, cuando dos escuadras que se cruzan derivan una hacia la otra. Por eso margen y frecuencia dependen de la
+velocidad relativa. En S5 se pasa de 9,5 pares compartidos de máximo a 0 en tres de cuatro corridas; la cuarta tuvo 1 par en
+1 fotograma de 488. Se apaga con `slotOccupancyEnabled`.
+
+El "¿cabe?" por plantilla se descarta: D9 mantiene la plantilla, y F1 ya elige por soldados. Sin hueco, el slot cae a la
+plantilla (sin resolver), como en C13.
 
 ## F16. `UnitShieldComponent.orientation` sin lectores
 **Qué es.** Se rellena desde `ShieldHitboxBehaviour.orientation` del prefab, pero ningún sistema lo lee (el bloqueo es el collider).

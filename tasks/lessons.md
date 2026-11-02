@@ -1,5 +1,22 @@
 # Implementation lessons
 
+## Plantillas y ocupación entre escuadras (2026-11-02)
+
+- Una cifra mala tras un cambio de varias piezas se decide con A/B: apagar solo esa pieza y repetir. Las tablas contra la línea base no distinguen ruido de causa, y en S6 y S7 la causa era la pieza que parecía inocente.
+- Una condición que se comprueba por eventos debe cumplirse también entre eventos. Comprobar la ocupación solo al validar dejó celdas compartidas en los huecos; hay que acotar lo que cambia hasta la siguiente comprobación.
+- Un margen de seguridad debe depender de lo que protege. El margen fijo apartaba a los aliados que marchaban juntos, que no pueden derivar; escalarlo con la velocidad relativa arregló el cruce y devolvió el resto a su sitio.
+- "Voraz" basta para repartir, no para evitar cruces: los últimos en elegir se llevan lo que sobra. Un paso de intercambio por parejas acaba con los cruces de rectas.
+
+## Corridas de PlayMode por CLI (2026-11-01)
+
+- En Windows, parar una tarea de bash no mata el `sh.exe` que lanzó: un guion en bucle queda huérfano y sigue enviando `run_tests` al mismo editor. Dos corridas a la vez abortan Play Mode y dejan el trabajo en "running" con el editor en "Hold on" más de una hora. Tras parar un guion, comprobar por línea de comandos que no queda ninguno vivo.
+- Un editor así se recupera con `unity command cancel_tests`; no hace falta matarlo. Antes de concluir nada, distinguir editor colgado de trabajo atascado: si `test_status` y `eval_file` responden, el editor vive.
+- Si `test_status` dice "running" pero Play Mode no arranca y `eval_file` agota el tiempo, mirar antes las ventanas del proceso: el diálogo "Scene(s) Have Been Modified" bloquea el hilo principal sin dejar rastro en el log. Lo abre el Test Runner si queda sucia una `InitTestScene` temporal. Comprobar el estado de las escenas antes de lanzar y parar si alguna está sucia; descartarla lo decide el usuario.
+- Una sola sesión en Unity incluye a las sesiones de otras tareas: mirar quién más trabaja en la carpeta antes de medir. Un `editor_play` ajeno aparece como fallos de preparación ("Scripted input did not move the hero") y no como choque. Tras apagar el editor, revisar también lo que otra sesión dejó tocado, como el autotick.
+- El lanzador debe negarse si hay otro vivo, preguntando al sistema y no a un fichero de PID, y debe tener un tope que cancele y corte el lote. Sin tope, un test atascado retuvo el lote 43 minutos sin avisar.
+- No probar ese bloqueo con el comando real: si el parche no se aplicó, lanza el test. Usar un proceso señuelo y un filtro que no exista.
+- Las cifras medidas mientras otro guion compartía el editor no valen: se repiten, aunque cada test parezca haber terminado bien.
+
 ## Visuales ligeros de batalla (2026-10-30)
 
 - Los adjuntos heredados pueden señalar una hoja de malla en lugar de su grupo. En el prefab original esa operación no tiene hijos y no hace nada; al extraer la hoja a un catálogo hay que conservar ese comportamiento o corregir los datos en una tarea explícita. La comparación de apariencias detectó este caso.

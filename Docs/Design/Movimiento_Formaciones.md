@@ -287,7 +287,7 @@ Notas de encaje:
 | S2 Giros | Giro de 45°, 90° y 180° a distintos yaw/s | Dispersión en giro, cruces de caminos |
 | S3 Arranque y parada | 10 ciclos parada-marcha-parada | Tiempo hasta formado, oscilaciones, acordeón |
 | S4 Cambio de formación | Línea→Cuña→Testudo→Línea, 12 y 8 unidades | Recorrido total, cruces |
-| S5 Cruce aliado | Dos escuadras aliadas en pasillo de 4 m, direcciones opuestas | Solapes aliados, bloqueos |
+| S5 Cruce aliado (hecho, §23) | Dos escuadras aliadas en pasillo de 4 m, direcciones opuestas | Solapes aliados, bloqueos, celdas compartidas |
 | S6 Choque | 12 contra 12 melé; luego 12 lanceros contra 12 escuderos | Apilado, solape en contacto, unidades sin objetivo, vuelta a formar |
 | S7 Cuello de botella | Pasillo de 2 m con giro | Slots fuera de malla, relocalizados |
 | S8 Estrés | 900 agentes (caso denso de `Arquitectura/11`) | ms por frame y asignaciones de GC |
@@ -975,3 +975,68 @@ eso `rearThroughFrontRatio` cuenta solo a quien está dentro del ancho de la pri
 adelantado: **0 % en las 5 corridas sin regla**. Se retira la regla de objetivo de filas traseras (`rearRankTargetDepth`):
 no mejoraba el primer golpe (4,7 s con ella, 4,8 s sin ella) y no había rebases que evitar. Sin regla, un extremo llegó a
 1,76 m por delante rodeando el flanco enemigo, que se considera melé normal. El grabador solo mide la escuadra local.
+
+## 23. Plantillas por soldados y ocupación entre escuadras (F1, F17, 2026-11-02)
+
+**Plantillas (F1, `1eb56b03`).** Spearmen tiene 20, 15, 10 y 5 ranuras en Línea y Cuña; Squires, 12, 10 y 5 en Línea y Tortuga.
+`minUnits` es el tamaño siguiente más 1, porque `SelectTemplate` exige una ranura por soldado. El orden del asset es la
+prioridad de llenado (fila, y de dentro afuera). La Cuña conserva punta y base con una cola central; la Tortuga de 5 es una
+cruz con frente, costados, interior y retaguardia. `FormationTemplateCoherenceTests` vigila tamaños, elección, orden, cercanía
+entre plantillas y papeles.
+
+**Reparto sin cruces.** Las plantillas no bastaban: el reparto voraz toma primero los pares más cercanos y deja a los últimos
+soldados viajes largos. Tras él, `FormationLayout.UncrossPaths` intercambia ranura entre parejas mientras acorten el camino.
+Dos rectas que se cruzan siempre se acortan al intercambiarse, así que no queda ninguna. También mejora el cambio de formación
+normal (S4). Cada intercambio debe ganar 1 mm, lo que garantiza que el bucle termina.
+
+Antes de F1 no había cambios de plantilla: cada formación tenía una sola, y los huecos de las bajas se quedaban ahí.
+
+| S4 con bajas, con F1 (mediana de 2) | Cambios | Recorrido medio / máx. | Cruces medios / máx. | Rehecho medio / máx. |
+|---|---|---|---|---|
+| Squires Línea | 2 | 0,41 / 0,93 m | 0 / 0 | 0,58 / 0,70 s |
+| Squires Tortuga | 2 | 0,51 / 2,16 m | 0 / 0 | 1,13 / 2,27 s |
+| Spearmen Línea | 3 | 0,75 / 2,83 m | 0,17 / 0,5 | 1,08 / 2,22 s |
+| Spearmen Cuña | 3 | 0,87 / 3,73 m | 0 / 0 | 0,82 / 1,32 s |
+
+Sin `UncrossPaths`, Spearmen Línea daba 3,33 cruces de media y un viaje de 5,77 m.
+
+**Ocupación (F17, `8f3b45cf`).** `FormationSlotResolveSystem` recorre las escuadras por índice de entidad. Las celdas de un
+aliado anterior cercano cuentan como ocupadas en `FormationSlotResolver`, y si ese aliado validó en el fotograma, la escuadra
+vuelve a validar.
+
+Hicieron falta dos correcciones, y las dos salieron de medir:
+- **Entre validaciones.** La primera versión dejó 6 pares compartidos en S5, casi todos en fotogramas sin validación: dos
+  escuadras de frente derivan 1 m entre sí en lo que cada una anda 0,5 m. Hay que validar más a menudo y reservar esa deriva.
+- **Marchar juntas no es cruzarse.** Con margen fijo, S6 y S7 subían de 0,56 a 0,73 m de error en marcha, con la ocupación como
+  causa (comparación A/B). Dos aliados en paralelo no derivan. Por eso se usa `RelativeDrift`, la velocidad relativa entre la
+  mayor de las dos: 0 juntas, 1 frente a una quieta, 2 de frente. Con ella salen la distancia entre validaciones y el margen,
+  con tope en `2 × slotResolveAllyRevalidateDistance` (0,5 m). Marchando juntas todo queda como sin F17.
+
+| S5 (4 corridas, mediana) | Sin ocupación | Con ocupación |
+|---|---|---|
+| Pares que comparten celda (media / máx.) | 0,80 / 9,5 | **0,00 / 0** (una corrida: 1 par en 1 fotograma de 488) |
+| Fotogramas con celda compartida | 17,6 % | **0 %** |
+| Solapes aliados (media / máx.) | 1,65 / 11 | 1,26 / 8 |
+| Atascos | 1 | 1,5 |
+| Consultas en marcha, por unidad y segundo | 22,7 | 32,3 |
+| Coste de `FormationSlotResolveSystem` | 0,25 ms | 0,29 ms |
+
+| Regresión (mediana) | Antes | Con F1 y F17 | Corridas |
+|---|---|---|---|
+| S1 formado / error en marcha | 0,17 s / 0,49 m | 0,40 s / 0,49 m | 1 |
+| S4 formado / error en marcha / aliados máx. | 1,07 s / 0,94 m / 17 | 0,77 s / 0,81 m / 17 | 1 |
+| S6 atascos / primer golpe / error | 41 / 7,77 s / 0,57 m | 34 / 7,09 s / 0,57 m | 4 |
+| S7 atascos / primer golpe / error | 26 / 6,78 s / 0,56 m | 18,5 / 5,68 s / 0,67 m | 4 |
+| S7 aceleración > 20 m/s² | 0,7 % | 1,3 % | 4 |
+| S9 atascos / primer golpe / error | 42 / 4,70 s / 1,63 m | 45 / 5,09 s / 1,61 m | 3 |
+| Solapes enemigos sostenidos, S6, S7 y S9 | 0 | 0 | |
+| S9 filas traseras cruzando el frente | 0 | 0 | 3 |
+
+Lectura:
+- La línea base de S5 se midió con F1, porque S5 no existía antes. "Antes" en la regresión es el código previo a F1.
+- S7 sigue peor en error y en aceleración: las cuatro corridas dan 0,58, 0,58, 0,76 y 0,84 m, y sin F17 daban 0,55-0,58 m. La
+  melé varía mucho (M10) y mejoran atascos y primer golpe, pero no se puede afirmar que no haya regresión: queda por vigilar.
+- S1 tarda 0,23 s más en formar. Es poco, pero es sistemático: viene del orden nuevo de las ranuras, que cambia el ruido por índice.
+- S4 formado es de una sola corrida: las dos anteriores con F1, sin el margen por velocidad relativa, dieron 0,43 y 0,50 s.
+- S9 da el primer golpe entre 4,72 y 5,13 s en las tres corridas, frente a 4,70 s antes: no mejora y queda algo por encima.
+- F9 sigue abierto: F17 reparte destinos y no cambia quién choca ni quién esquiva.

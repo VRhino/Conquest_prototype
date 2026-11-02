@@ -93,3 +93,58 @@ colisión."
 - [x] `SquadNavigationRegressionTests` 13/13: 5 tests seguían dando la plantilla a sistemas que desde C13 (3000830d) leen `UnitResolvedSlotComponent`; las unidades no entraban en la consulta. Solo tests, sin cambios de juego.
 - [x] Rebase de filas traseras cerrado: lo que quedaba eran extremos de la segunda fila alargando la línea o llenando huecos. `rearThroughFrontRatio` 0 % en 5 corridas; regla `rearRankTargetDepth` retirada (sin efecto medible).
 - [ ] Siguiente: P6 solo si vuelven los picos.
+
+# F1 + F17 (2026-11-01): plantillas por soldados vivos y ocupación entre escuadras aliadas
+
+Lo que el código dice y cambia el planteamiento de `Docs/Por_Abordar`:
+- Desde C12 el reparto al cambiar de plantilla es voraz por cercanía, no "ranura k = soldado k". Tras bajas los índices de
+  ranura ya son dispersos, así que volver a k = k no es posible sin compactar: se mantiene el voraz y las plantillas se anidan.
+- `SelectTemplate` exige `slots >= vivos`: un `minUnits` literal 15 con 15 ranuras caería en la plantilla mayor con 14 vivos.
+  Cada plantilla de N ranuras lleva `minUnits` = siguiente N + 1 (20: 16-20, 15: 11-15, 10: 6-10, 5: 1-5).
+- Con menos soldados que ranuras se llenan las n primeras: el orden del asset es la prioridad. Hay que ordenar las ranuras
+  (delante y al centro primero) o un cambio de formación con 17 vivos deja la cuña sin punta.
+- Squires son 12: plantillas 12, 10 y 5. Las de 20 y 15 no se usarían nunca.
+- S5 no existe: hay que construirla (dos escuadras aliadas por un pasillo de 4 m).
+
+Pasos:
+- [x] 1. Métricas: evento de cambio de plantilla (recorrido, cruces, tiempo) y celdas compartidas entre escuadras aliadas.
+- [x] 2. Escenarios S4Bajas (Squires y Spearmen, soldados muertos por script) y S5; medir la línea base.
+- [x] 3. F1: plantillas, orden de ranuras, editor con plantillas superpuestas y test de coherencia. Medir S4Bajas, S1, S6.
+- [x] 4. F17: `FormationSlotResolver` admite celdas ocupadas; `FormationSlotResolveSystem` en orden fijo y solo con aliados
+      cercanos. Tests EditMode. Medir S5.
+- [x] 5. Regresión S1, S4, S6, S7, S9.
+- [x] 6. Docs: `Por_Abordar` (F1, F2, F7, F9, F17, README), catálogo §5, `Movimiento_Formaciones.md`, lecciones.
+
+---
+
+# Plan: HUD de batalla sin solapes en pantallas pequeñas
+
+Estado: **en espera de que Unity quede libre** (2026-11-02). Rama `main` local, sin subir.
+
+## Problema
+En BattleTestScene, a 1280x720, los iconos de formación del panel de squad caen encima de las ranuras Q y E. Medido en
+Play: barra x 387..893, y 5..53; `FormationsSections` x 375..556, y 27..68. Su canvas sigue en Constant Pixel Size
+(escala 1) y `SkillBar` escala con la pantalla (0,667). BattleScene ya tiene el scaler correcto y a esa resolución deja
+17 px de separación, pero `SkillBar` usa otro modo de match y se pisa con el aguante con aspecto < 1,57 o > 2,0.
+
+## Solución (la de Feudo y BattlePrep)
+`CanvasScaler` en `Scale With Screen Size`, 1920x1080, `Expand`, y contenedores estirados en vez de tamaño fijo. Con
+Expand el canvas lógico nunca baja de 1920x1080, así que lo diseñado a esa medida cabe siempre. No hay Safe Area.
+
+Pasos:
+- [x] 1. BattleTestScene: scaler de Feudo e `InteractionPromp` en `y=92`, como en BattleScene (`de62733c`).
+- [x] 2. `SkillBar` y `PerkSelectionPanel`: `Expand`.
+- [x] 3. `SupplyPointUi`: raíz estirada en el prefab y overrides de las dos escenas.
+- [x] 4. Test EditMode: los canvas de batalla comparten scaler (el HUD está duplicado y ya se desincronizó una vez).
+- [x] 5. Capturas en Play de las dos escenas: 1920x1080, 1600x900, 1366x768, 1280x720, 1280x800, 1024x768 y 2560x1080.
+      Revisar también el contenido dinámico y la legibilidad a 1024x768.
+- [x] 6. EditMode y `BattleSceneIntegrationTests` en verde, lecciones y commit.
+
+Notas:
+- Sin prefab del HUD ni componente compartido: Feudo y BattlePrep lo tienen serializado y 44 RectTransform con
+  referencias de escena no compensan frente al test del paso 4.
+- `capture_game_view` guarda siempre bajo `Assets/`: borrar `Assets/Temp` al acabar.
+- Si BattleScene tiene cambios locales del usuario al empezar, parar y preguntar antes de mezclar nada.
+
+Estado: **hecho** (2026-11-02), rama `main` local, sin subir: `b355b32c` (métricas), `1eb56b03` (F1), `8f3b45cf` (F17).
+Falta el visto bueno del usuario a las formas de F1. Resultado en `Docs/Design/Movimiento_Formaciones.md` §23.

@@ -126,6 +126,9 @@ para que la ranura k quede cerca entre formaciones. Las de Conquest no: en S4 (L
 otra y había 6-7 atascos. Ahora, al rehacer la disposición, cada unidad toma la ranura libre más cercana (voraz, solo en el
 evento): 0 atascos. Si en el futuro las plantillas se diseñan con orden coherente (F1), se puede volver a "k = k".
 
+**Actualizado (2026-11-02, F1).** No se vuelve a "k = k": tras las bajas los índices quedan dispersos. Al voraz se le añade
+una pasada que intercambia ranura entre parejas mientras acorten su camino, de modo que no quedan trayectorias rectas cruzadas.
+
 ## M8. Detalles de ORCA respecto a la referencia
 **Qué es.** Diferencias conscientes del C14 actual frente a lo leído en la referencia:
 - Horizonte de tiempo: la referencia usa 5 s al pasar de "sin estado" a un estado y 1 s en las transiciones; aquí 2 s en
