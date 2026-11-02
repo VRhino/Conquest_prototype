@@ -60,14 +60,14 @@ public class HeroCameraController : MonoBehaviour
         if (playerInput != null)
         {
             playerInput.actions["Look"].performed += ctx => {
-                // Si el diálogo está abierto, ignorar input de cámara
-                if (DialogueUIState.IsDialogueOpen) return;
+                // Si el diálogo está abierto o el cursor es de la interfaz, ignorar input de cámara
+                if (DialogueUIState.IsDialogueOpen || BattleCommandInput.PointerMode) return;
                 var look = ctx.ReadValue<Vector2>();
                 _mouseX = look.x;
                 _mouseY = look.y;
             };
             playerInput.actions["Zoom"].performed += ctx => {
-                if (DialogueUIState.IsDialogueOpen) return;
+                if (DialogueUIState.IsDialogueOpen || BattleCommandInput.PointerMode) return;
                 _scroll = ctx.ReadValue<float>();
             };
             // playerInput.actions["Tactical"].performed += ctx => _tacticalMode = ctx.ReadValue<float>() > 0.5f;
@@ -88,7 +88,7 @@ public class HeroCameraController : MonoBehaviour
         // Re-enforce cursor lock in case editor focus or a UI briefly released it
         if (!disableCameraFollow && !DialogueUIState.IsDialogueOpen)
         {
-            SceneTransitionService.ApplyCursorState(false);
+            SceneTransitionService.ApplyCursorState(BattleCommandInput.PointerMode);
         }
 
         if (_cameraEntity == Entity.Null || !_entityManager.Exists(_cameraEntity))

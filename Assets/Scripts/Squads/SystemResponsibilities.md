@@ -74,7 +74,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ## ECS Systems (Hero)
 
 ### HeroInputSystem
-- **Responsabilidad**: Captura raw input del jugador (WASD, mouse, hotkeys)
+- **Responsabilidad**: Captura raw input del jugador (WASD, mouse, hotkeys) y las peticiones de la UI de batalla (`BattleCommandInput`), como un frame de la tecla
 - **Output**: `HeroInputComponent` y `PlayerInteractionComponent`; `HeroMovementSystem` produce después `HeroMoveIntent`
 - **Regla**: Solo lee input — nunca modifica estado de héroe ni squads
 

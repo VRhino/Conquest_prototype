@@ -1,10 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// Battle skill bar (H6, H10): the hero's Q, E, R and ultimate, its two active perks (1, 2) and the abilities of its active
-/// squad (3, 4, 5), each with its cooldown. It only shows <see cref="UIHeroBattleDataComponent.skills"/>, which
-/// <see cref="UIBattleDataSystem"/> writes; <see cref="HUDController"/> creates it from <see cref="ResourcePath"/>, so it
-/// needs no scene reference.
+/// Battle skill bar (H6, H10): the hero's Q, E, R and ultimate, its two active perks (4, 5) and the abilities of its active
+/// squad (1, 2, 3), each with its cooldown. It shows <see cref="UIHeroBattleDataComponent.skills"/>, which
+/// <see cref="UIBattleDataSystem"/> writes, and a click on a squad slot goes out through <see cref="BattleCommandInput"/>.
+/// <see cref="HUDController"/> creates it from <see cref="ResourcePath"/>, so it needs no scene reference.
 /// </summary>
 public class SkillBarController : MonoBehaviour
 {
@@ -15,11 +15,25 @@ public class SkillBarController : MonoBehaviour
 
     readonly SkillIconCatalog _icons = new();
     bool _squadsLoaded;
+    UIHeroBattleDataComponent _data;
+
+    public SkillIconCatalog Icons => _icons;
 
     public static SkillBarController Spawn()
     {
         var prefab = Resources.Load<SkillBarController>(ResourcePath);
         return prefab != null ? Instantiate(prefab) : null;
+    }
+
+    void Awake()
+    {
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null) continue;
+            var slot = (SkillSlot)((int)SkillSlot.Q + i);
+            if (BattleCommandInput.IsSquadSlot(slot))
+                slots[i].Clicked += () => BattleCommandInput.TryRequestSquadSkill(slot, _data.Skill(slot));
+        }
     }
 
     void Start()
@@ -30,6 +44,7 @@ public class SkillBarController : MonoBehaviour
 
     public void Apply(in UIHeroBattleDataComponent data)
     {
+        _data = data;
         for (int i = 0; i < slots.Length; i++)
         {
             if (slots[i] == null) continue;

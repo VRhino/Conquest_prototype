@@ -1,9 +1,14 @@
+using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-/// <summary>One slot of the skill bar: icon, radial cooldown and seconds left. Empty slots are dimmed or hidden.</summary>
-public class SkillBarSlot : MonoBehaviour
+/// <summary>
+/// One slot of the skill bar: icon, radial cooldown and seconds left. Empty slots are dimmed or hidden. It only receives
+/// clicks where the prefab lets it (the squad slots, H10); deciding what a click does is the bar's job.
+/// </summary>
+public class SkillBarSlot : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] Image icon;
     [SerializeField] Image cooldownFill;
@@ -14,6 +19,13 @@ public class SkillBarSlot : MonoBehaviour
 
     const float EmptyAlpha = 0.35f;
 
+    public event Action Clicked;
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Left) Clicked?.Invoke();
+    }
+
     public void Show(UISkillSlotData data, Sprite sprite)
     {
         bool empty = data.skillId == 0;
@@ -21,7 +33,7 @@ public class SkillBarSlot : MonoBehaviour
         if (icon != null)
         {
             icon.sprite = sprite;
-            icon.enabled = !empty;
+            icon.enabled = !empty && sprite != null;
         }
         bool cooling = !empty && data.cooldown > 0f;
         if (cooldownFill != null)

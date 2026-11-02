@@ -55,7 +55,8 @@ public partial class SquadControlSystem : SystemBase
             
         var keyboard = Keyboard.current;
         var mouse = Mouse.current;
-        
+        int uiFormation = BattleCommandInput.ConsumeFormation();
+
         if (keyboard == null || mouse == null || DialogueUIState.IsDialogueOpen)
             return;
 
@@ -130,6 +131,12 @@ public partial class SquadControlSystem : SystemBase
         else if (keyboard.f4Key.wasPressedThisFrame)
         {
             formationIndex = 3;
+            formationChanged = true;
+        }
+        else if (uiFormation >= 0)
+        {
+            // The radial menu asks for the same index as F1-F4 (H10).
+            formationIndex = uiFormation;
             formationChanged = true;
         }
 

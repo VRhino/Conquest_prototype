@@ -10,6 +10,9 @@ public struct UISkillSlotData
     public float cooldown;
     /// <summary>Seconds still to wait.</summary>
     public float remaining;
+
+    /// <summary>There is a skill and it has finished cooling down.</summary>
+    public readonly bool Ready => skillId != 0 && cooldown <= 0f;
 }
 
 /// <summary>
@@ -24,6 +27,7 @@ public struct UIHeroBattleDataComponent : IComponentData
     public float maxHealth;
     public float currentStamina;
     public float maxStamina;
+    public bool  heroAlive;
     // ── Skill bar (L2-5, H6, H10) ────────────────────────────────────────────
     /// <summary>
     /// One entry per launchable slot, from <see cref="SkillSlot.Q"/> to <see cref="SkillSlot.Squad3"/> (index = slot − Q):
@@ -51,4 +55,5 @@ public struct UIHeroBattleDataComponent : IComponentData
     // ── Squad status ─────────────────────────────────────────────────────────
     public int aliveUnits;
     public int totalUnits;
+    public FormationType currentFormation;
 }

@@ -13,6 +13,8 @@ public partial class HeroInputSystem : SystemBase
 {
     
     private bool uiInteractionState;
+    /// <summary>The left button went down for the UI; it does not attack until it is released (H10).</summary>
+    private bool uiOwnsClick;
     protected override void OnUpdate()
     {
         var keyboard = Keyboard.current;
@@ -31,6 +33,7 @@ public partial class HeroInputSystem : SystemBase
         bool ultimate = false;
         bool attack = false;
         bool interact = false;
+        var uiSquadSkill = BattleCommandInput.ConsumeSquadSkill();
 
         if (keyboard != null && DialogueUIState.IsDialogueOpen == false)
         {
@@ -53,7 +56,16 @@ public partial class HeroInputSystem : SystemBase
 
         if (mouse != null && DialogueUIState.IsDialogueOpen == false)
         {
-            attack = mouse.leftButton.isPressed;
+            uiOwnsClick = mouse.leftButton.isPressed && (uiOwnsClick || BattleCommandInput.PointerMode);
+            attack = mouse.leftButton.isPressed && !uiOwnsClick;
+        }
+
+        // A UI request is one frame of the key it stands for, so it follows the same path to SkillGate (H10).
+        if (DialogueUIState.IsDialogueOpen == false)
+        {
+            squad1 |= uiSquadSkill == SkillSlot.Squad1;
+            squad2 |= uiSquadSkill == SkillSlot.Squad2;
+            squad3 |= uiSquadSkill == SkillSlot.Squad3;
         }
 
         // --- Abrir/cerrar inventario y hero detail solo en la escena del feudo ---
