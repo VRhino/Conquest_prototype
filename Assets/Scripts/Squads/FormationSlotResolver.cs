@@ -52,13 +52,35 @@ public struct FormationSlotResolution
 }
 
 /// <summary>
+/// Ground rectangle holding the slots of one squad (F17): squads only look at each other's cells when these touch.
+/// </summary>
+public struct FormationSlotFootprint
+{
+    public float2 min;
+    public float2 max;
+
+    public static FormationSlotFootprint Empty => new() { min = float.MaxValue, max = float.MinValue };
+
+    public void Include(float3 point)
+    {
+        min = math.min(min, point.xz);
+        max = math.max(max, point.xz);
+    }
+
+    /// <summary>True when the two rectangles are closer than <paramref name="margin"/> along both axes.</summary>
+    public readonly bool Near(in FormationSlotFootprint other, float margin) =>
+        math.all(min - margin <= other.max) && math.all(other.min - margin <= max);
+}
+
+/// <summary>
 /// Validates the slots of one formation against the NavMesh (C13, L3-01; Movimiento_Formaciones.md L-2 and D9).
 /// The formation is a local grid whose cell is the spacing. A slot keeps its template position when that position
 /// projects onto the NavMesh within a quarter cell and a straight walk from the formation origin reaches it (the "same
 /// island" of the reference, checked locally: a slot behind a wall counts as blocked). Any other slot moves by
 /// whole cells to the nearest free cell that passes the same test, searching rings of four-neighbour distance around
 /// its own cell (a bounded BFS). The template is never rejected: a slot with no free cell stays unresolved and
-/// navigation falls back to the template. Pure and deterministic; the caches are reused between calls.
+/// navigation falls back to the template. Cells already resolved by an allied squad (F17) count as blocked in the same
+/// way. Pure and deterministic; the caches are reused between calls.
 /// </summary>
 public sealed class FormationSlotResolver
 {
@@ -70,6 +92,8 @@ public sealed class FormationSlotResolver
         public float snapRadius;
         /// <summary>Largest four-neighbour distance searched around a blocked slot, in cells.</summary>
         public int searchCells;
+        /// <summary>A point closer than this to an occupied cell of another squad counts as taken, m (F17).</summary>
+        public float occupiedRadius;
     }
 
     /// <summary>
@@ -88,6 +112,8 @@ public sealed class FormationSlotResolver
     readonly Dictionary<int2, Cell> _cells = new();
     readonly List<float2> _taken = new();
     readonly List<int> _blocked = new();
+    IReadOnlyList<float2> _occupied;
+    float _occupiedRadiusSq;
     static readonly List<int2> RingOffsets = new();
     static int _ringOffsetsRadius = -1;
 
@@ -105,15 +131,21 @@ public sealed class FormationSlotResolver
         return probe.TrySnap(center, radius, out origin);
     }
 
-    /// <summary>Resolves every slot of one formation. <paramref name="results"/> gets one entry per request, in order.</summary>
+    /// <summary>
+    /// Resolves every slot of one formation. <paramref name="results"/> gets one entry per request, in order.
+    /// <paramref name="occupied"/> holds ground positions (x, z) other squads already use, or null (F17).
+    /// </summary>
     public void Resolve<TProbe>(ref TProbe probe, float3 origin, quaternion rotation, in Settings settings,
-        IReadOnlyList<FormationSlotRequest> requests, List<FormationSlotResolution> results)
+        IReadOnlyList<FormationSlotRequest> requests, List<FormationSlotResolution> results,
+        IReadOnlyList<float2> occupied = null)
         where TProbe : IFormationNavProbe
     {
         _cells.Clear();
         _taken.Clear();
         _blocked.Clear();
         results.Clear();
+        _occupied = occupied;
+        _occupiedRadiusSq = math.square(settings.occupiedRadius);
         float spacing = math.max(FormationDefinition.MinSpacing, settings.spacing);
         float snapRadius = math.min(math.max(0.01f, settings.snapRadius), spacing);
         quaternion frame = math.lengthsq(rotation.value) > 1e-6f ? math.normalize(rotation) : quaternion.identity;
@@ -123,7 +155,8 @@ public sealed class FormationSlotResolver
         for (int i = 0; i < requests.Count; i++)
         {
             var request = requests[i];
-            if (TestPoint(ref probe, origin, request.template, inverse, spacing, snapRadius, out float3 snapped))
+            if (!IsOccupied(request.template)
+                && TestPoint(ref probe, origin, request.template, inverse, spacing, snapRadius, out float3 snapped))
             {
                 _taken.Add(request.localOffset);
                 results.Add(new FormationSlotResolution { position = snapped, status = FormationSlotResolveStatus.Template });
@@ -184,11 +217,21 @@ public sealed class FormationSlotResolver
         if (!_cells.TryGetValue(key, out var state))
         {
             float3 candidate = request.template + math.mul(frame, new float3(shift.x, 0f, shift.y) * spacing);
-            state.valid = TestPoint(ref probe, origin, candidate, inverse, spacing, snapRadius, out state.position);
+            state.valid = !IsOccupied(candidate)
+                          && TestPoint(ref probe, origin, candidate, inverse, spacing, snapRadius, out state.position);
             _cells[key] = state;
         }
         position = state.position;
         return state.valid;
+    }
+
+    /// <summary>True when another squad already uses a cell at this ground point (F17).</summary>
+    bool IsOccupied(float3 point)
+    {
+        if (_occupied == null) return false;
+        for (int i = 0; i < _occupied.Count; i++)
+            if (math.distancesq(_occupied[i], point.xz) < _occupiedRadiusSq) return true;
+        return false;
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using Unity.Mathematics;
 
 public class MovementMetricsAnalyzerTests
 {
@@ -34,6 +35,65 @@ public class MovementMetricsAnalyzerTests
         Assert.That(summary.meanStartSpread, Is.EqualTo(0.2f).Within(1e-4f));
         Assert.That(summary.maxLastStart, Is.EqualTo(0.3f).Within(1e-4f));
         Assert.That(summary.setDestinationPerUnitPerSecond, Is.EqualTo(61f / (2 * 6f)).Within(1e-3f));
+    }
+
+    [Test]
+    public void TemplateChangeMeasuresTravelCrossingsAndReformInTheFormationFrame()
+    {
+        var frames = new List<MovementFrameSample>();
+        var units = new List<MovementUnitSample>();
+        for (int f = 0; f <= 20; f++)
+        {
+            float t = f * Dt;
+            float anchorZ = f * 0.5f; // Marching: the march must not count as travel.
+            frames.Add(new MovementFrameSample { frame = f, time = t, squad = 1, anchorZ = anchorZ, templateIndex = f < 5 ? 0 : 1 });
+            // From f = 5 to f = 15 the two soldiers swap sides of the formation, crossing once.
+            float step = math.clamp((f - 5) / 10f, 0f, 1f);
+            units.Add(new MovementUnitSample { frame = f, time = t, squad = 1, unit = 0, x = -1f + 2f * step, z = anchorZ,
+                slotDistance = 2f * (1f - step) });
+            units.Add(new MovementUnitSample { frame = f, time = t, squad = 1, unit = 1, x = 1f - 2f * step, z = anchorZ,
+                slotDistance = 2f * (1f - step) });
+        }
+
+        var summary = MovementMetricsAnalyzer.Analyze("template", frames, units);
+
+        Assert.That(summary.templateChanges, Is.EqualTo(1));
+        Assert.That(summary.meanTemplateChangeReform, Is.EqualTo(0.5f).Within(1e-3f)); // 1 m from the slot, half way.
+        Assert.That(summary.meanTemplateChangeTravel, Is.EqualTo(1f).Within(1e-3f));
+        Assert.That(summary.maxTemplateChangeCrossings, Is.EqualTo(0)); // Stopped half way: they meet, they do not pass.
+    }
+
+    [Test]
+    public void TemplateChangeCountsPathsThatCross()
+    {
+        var frames = new List<MovementFrameSample>();
+        var units = new List<MovementUnitSample>();
+        for (int f = 0; f <= 20; f++)
+        {
+            float t = f * Dt;
+            frames.Add(new MovementFrameSample { frame = f, time = t, squad = 1, templateIndex = f < 5 ? 0 : 1 });
+            float step = math.clamp((f - 5) / 10f, 0f, 1f);
+            units.Add(new MovementUnitSample { frame = f, time = t, squad = 1, unit = 0, x = -1f + 2f * step, z = -0.1f + 0.2f * step,
+                slotDistance = 3f * (1f - step) });
+            units.Add(new MovementUnitSample { frame = f, time = t, squad = 1, unit = 1, x = 1f - 2f * step, z = -0.1f + 0.2f * step,
+                slotDistance = 3f * (1f - step) });
+        }
+
+        Assert.That(MovementMetricsAnalyzer.Analyze("cross", frames, units).maxTemplateChangeCrossings, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void AlliedSharedCellsAreSummarised()
+    {
+        var frames = new List<MovementFrameSample>();
+        for (int f = 0; f < 10; f++)
+            frames.Add(new MovementFrameSample { frame = f, time = f * Dt, squad = 1, alliedSharedCells = f < 2 ? 4 : 0 });
+
+        var summary = MovementMetricsAnalyzer.Analyze("allied", frames,
+            new List<MovementUnitSample> { Unit(0, 0f, 0, UnitFormationState.Moving) });
+
+        Assert.That(summary.maxAlliedSharedCells, Is.EqualTo(4));
+        Assert.That(summary.alliedSharedCellFrameRatio, Is.EqualTo(0.2f).Within(1e-4f));
     }
 
     [Test]

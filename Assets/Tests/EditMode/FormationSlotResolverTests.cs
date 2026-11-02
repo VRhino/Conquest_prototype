@@ -85,6 +85,18 @@ public class FormationSlotResolverTests
         return results;
     }
 
+    static readonly float4 OpenGround = new(-50f, -50f, 50f, 50f);
+
+    /// <summary>Resolves around the origin with other squads' cells taken (F17).</summary>
+    static List<FormationSlotResolution> ResolveAround(ref RectProbe probe, List<FormationSlotRequest> requests, List<float2> occupied)
+    {
+        var settings = Settings;
+        settings.occupiedRadius = 0.5f * Spacing;
+        var results = new List<FormationSlotResolution>();
+        new FormationSlotResolver().Resolve(ref probe, float3.zero, quaternion.identity, settings, requests, results, occupied);
+        return results;
+    }
+
     static void AssertNoSharedCells(List<FormationSlotResolution> results)
     {
         for (int i = 0; i < results.Count; i++)
@@ -227,6 +239,85 @@ public class FormationSlotResolverTests
         Assert.That(results[0].status, Is.EqualTo(FormationSlotResolveStatus.Unresolved));
         Assert.That(results[0].position, Is.EqualTo(requests[0].template));
         Assert.That(results[2].status, Is.EqualTo(FormationSlotResolveStatus.Unresolved));
+    }
+
+    [Test]
+    public void CellOfAnotherSquadCountsAsTaken()
+    {
+        var probe = Probe(OpenGround);
+        var requests = Line(3, 1, quaternion.identity);
+        var occupied = new List<float2> { requests[1].template.xz };
+        var results = ResolveAround(ref probe, requests, occupied);
+
+        Assert.That(results[0].status, Is.EqualTo(FormationSlotResolveStatus.Template));
+        Assert.That(results[2].status, Is.EqualTo(FormationSlotResolveStatus.Template));
+        Assert.That(results[1].status, Is.EqualTo(FormationSlotResolveStatus.Relocated));
+        Assert.That(math.distance(results[1].position.xz, occupied[0]), Is.GreaterThanOrEqualTo(Spacing - 1e-3f));
+        AssertNoSharedCells(results);
+    }
+
+    [Test]
+    public void SearchSkipsCellsOfAnotherSquad()
+    {
+        var probe = Probe(OpenGround);
+        var requests = Line(1, 1, quaternion.identity);
+        float2 cell = requests[0].template.xz;
+        var occupied = new List<float2>
+        {
+            cell, cell + new float2(Spacing, 0f), cell - new float2(Spacing, 0f),
+            cell + new float2(0f, Spacing), cell - new float2(0f, Spacing)
+        };
+        var results = ResolveAround(ref probe, requests, occupied);
+
+        Assert.That(results[0].status, Is.EqualTo(FormationSlotResolveStatus.Relocated));
+        foreach (float2 taken in occupied)
+            Assert.That(math.distance(results[0].position.xz, taken), Is.GreaterThanOrEqualTo(Spacing * 0.5f));
+    }
+
+    [Test]
+    public void DistantOccupiedCellsChangeNothing()
+    {
+        var probe = Probe(OpenGround);
+        var requests = Line(3, 1, quaternion.identity);
+        var alone = ResolveAround(ref probe, requests, null);
+        int queries = probe.queries;
+
+        probe.queries = 0;
+        var results = ResolveAround(ref probe, requests, new List<float2> { new(1000f, 1000f) });
+
+        Assert.That(probe.queries, Is.EqualTo(queries));
+        for (int i = 0; i < alone.Count; i++)
+            Assert.That(results[i].position, Is.EqualTo(alone[i].position));
+    }
+
+    [Test]
+    public void WithEveryCellOccupiedTheSlotFallsBackToItsTemplate()
+    {
+        var probe = Probe(OpenGround);
+        var requests = Line(1, 1, quaternion.identity);
+        var occupied = new List<float2>();
+        for (int x = -SearchCells; x <= SearchCells; x++)
+        for (int y = -SearchCells; y <= SearchCells; y++)
+            occupied.Add(requests[0].template.xz + new float2(x, y) * Spacing);
+        var results = ResolveAround(ref probe, requests, occupied);
+
+        Assert.That(results[0].status, Is.EqualTo(FormationSlotResolveStatus.Unresolved));
+        Assert.That(results[0].position, Is.EqualTo(requests[0].template));
+    }
+
+    [Test]
+    public void FootprintsAreNearOnlyWithinTheMargin()
+    {
+        var a = FormationSlotFootprint.Empty;
+        a.Include(new float3(0f, 0f, 0f));
+        a.Include(new float3(4f, 0f, 2f));
+        var b = FormationSlotFootprint.Empty;
+        b.Include(new float3(5f, 0f, 1f));
+
+        Assert.That(a.Near(b, 1.5f), Is.True);
+        Assert.That(b.Near(a, 1.5f), Is.True);
+        Assert.That(a.Near(b, 0.5f), Is.False);
+        Assert.That(FormationSlotFootprint.Empty.Near(a, 1000f), Is.False);
     }
 
     [Test]

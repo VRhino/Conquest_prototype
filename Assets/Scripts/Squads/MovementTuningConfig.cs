@@ -115,6 +115,10 @@ public class MovementTuningConfig : ScriptableObject
     [Min(1)] public int slotResolveSearchCells = 6;
     [Tooltip("Largest radius used to put a slot on the NavMesh, capped at the formation spacing (m, L3-04).")]
     [Min(0.01f)] public float slotSnapRadiusMax = 0.65f;
+    [Tooltip("Allied squads keep off each other's cells, in a fixed order per squad (F17). Off = each squad resolves its slots on its own.")]
+    public bool slotOccupancyEnabled = true;
+    [Tooltip("Revalidate distance for two allied squads walking head on (m). Twice this widens the cells they keep off, so keep that plus half a cell below a cell. Allies marching together keep the plain distance (F17).")]
+    [Min(0.01f)] public float slotResolveAllyRevalidateDistance = 0.25f;
 
     [Header("Combat contact")]
     [Tooltip("Maximum turn speed (deg/s) when a unit turns to face its combat target.")]
@@ -206,6 +210,8 @@ public class MovementTuningConfig : ScriptableObject
         slotResolveRevalidateDistance = slotResolveRevalidateDistance,
         slotResolveSearchCells = slotResolveSearchCells,
         slotSnapRadiusMax = slotSnapRadiusMax,
+        slotOccupancyEnabled = slotOccupancyEnabled,
+        slotResolveAllyRevalidateDistance = slotResolveAllyRevalidateDistance,
         targetScoreDistanceScale = targetScoreDistanceScale,
         targetScoreFocusBonus = targetScoreFocusBonus,
         targetScoreHeroBias = targetScoreHeroBias,

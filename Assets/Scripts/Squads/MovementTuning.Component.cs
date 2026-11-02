@@ -60,6 +60,8 @@ public struct MovementTuningComponent : IComponentData
     public float slotResolveRevalidateDistance; // Check again once a template slot has moved this far, m (C13).
     public int slotResolveSearchCells; // Furthest a blocked slot looks for a free cell, in cells (C13).
     public float slotSnapRadiusMax; // Largest radius to put a slot on the NavMesh, capped at the spacing, m (L3-04).
+    public bool slotOccupancyEnabled; // Cells of an earlier allied squad count as taken (F17); off = each squad on its own.
+    public float slotResolveAllyRevalidateDistance; // slotResolveRevalidateDistance for two allied squads walking head on, m; twice this widens the cells they keep off. Allies marching together keep the plain distance.
 
     // Melee target score (L4-04, D6) and squad enemy search (L4-09); UnitTargetingSystem.
     public float targetScoreDistanceScale; // Distance at which the proximity term halves, m.
@@ -129,6 +131,8 @@ public struct MovementTuningComponent : IComponentData
         slotResolveRevalidateDistance = 0.5f,
         slotResolveSearchCells = 6,
         slotSnapRadiusMax = 0.65f,
+        slotOccupancyEnabled = true,
+        slotResolveAllyRevalidateDistance = 0.25f,
         targetScoreDistanceScale = 4f,
         targetScoreFocusBonus = 0.1f,
         targetScoreHeroBias = 0f,
@@ -178,6 +182,7 @@ public struct MovementTuningComponent : IComponentData
         if (t.followMinSpeedRatio < 0f || t.followMinSpeedRatio > 1f) return "followMinSpeedRatio must be between 0 and 1.";
         if (t.destinationChangeMin <= 0f) return "destinationChangeMin must be positive.";
         if (t.slotResolveRevalidateDistance <= 0f) return "slotResolveRevalidateDistance must be positive.";
+        if (t.slotResolveAllyRevalidateDistance <= 0f) return "slotResolveAllyRevalidateDistance must be positive.";
         if (t.slotResolveSearchCells < 1) return "slotResolveSearchCells must be at least 1.";
         if (t.slotSnapRadiusMax <= 0f) return "slotSnapRadiusMax must be positive.";
         if (t.targetSaturationFloor <= 0f || t.targetSaturationFloor > 1f)

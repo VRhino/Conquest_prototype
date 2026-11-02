@@ -189,14 +189,24 @@ public partial class BattleSceneIntegrationTests
     /// Both follow their hero in Line, wider than the corridor. Counts destinations shared by the two squads (F17).
     /// </summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
-    public IEnumerator MovementBaselineS5AlliedCrossing() => RunS5("S5");
+    public IEnumerator MovementBaselineS5AlliedCrossing() => RunS5("S5", true);
 
-    IEnumerator RunS5(string label)
+    /// <summary>S5 with each squad resolving its slots on its own, as before F17.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS5AlliedCrossingWithoutOccupancy() => RunS5("S5NoOccupancy", false);
+
+    IEnumerator RunS5(string label, bool occupancy)
     {
         var previousInput = UseUnfocusedEditorInput();
         var walls = new System.Collections.Generic.List<GameObject>();
+        using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
+        var tuningEntity = tuningQuery.GetSingletonEntity();
+        var previous = em.GetComponentData<MovementTuningComponent>(tuningEntity);
         try
         {
+            var tuning = previous;
+            tuning.slotOccupancyEnabled = occupancy;
+            em.SetComponentData(tuningEntity, tuning);
             yield return PrepareBaseline();
             Unity.Entities.Entity remote;
             using (var query = em.CreateEntityQuery(typeof(HeroAITag), typeof(HeroSquadReference), typeof(NavMeshAgent)))
@@ -283,6 +293,7 @@ public partial class BattleSceneIntegrationTests
         {
             RestoreInputSettings(previousInput);
             foreach (var wall in walls) if (wall != null) Object.Destroy(wall);
+            if (em.Exists(tuningEntity)) em.SetComponentData(tuningEntity, previous);
         }
     }
 
