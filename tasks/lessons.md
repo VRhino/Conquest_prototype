@@ -546,3 +546,11 @@
 ## Una métrica no es el defecto (2026-11-01)
 
 - Antes de crear reglas contra una métrica, ver qué soldados la mueven y dónde están. El «rebase» de S9 eran dos extremos de fila junto a la primera línea, y añadí una regla para algo que no ocurría.
+
+## Canvas de batalla en pantallas pequeñas (2026-11-02)
+
+- Revisar el scaler de cada canvas raíz, también los que nacen en ejecución. `SkillBar` y `PerkSelectionPanel` son canvas propios: con un modo de match distinto al del HUD escalan distinto fuera de 16:9, y en 16:9 no se nota.
+- Con Expand, 1920x1080 es el tamaño mínimo del canvas lógico: lo que cabe a esa medida cabe siempre. Un panel a pantalla completa debe ir estirado, no con 1920x1080 fijos, o deja bandas en otros aspectos.
+- Las escenas duplicadas se desincronizan: el arreglo del cartel de `de62733c` solo llegó a BattleScene. Si se arregla una, comprobar la otra.
+- `capture_game_view` guarda bajo `Assets/` aunque se le pase `Temp/...`: borrar `Assets/Temp` con `AssetDatabase.DeleteAsset` al acabar.
+- Que una sesión aparezca inactiva no significa que el editor esté libre: puede estar esperando a su regresión en segundo plano. Esperar su aviso, y no escribir en `Assets/` entretanto, porque también dispara reimportaciones en ese editor.

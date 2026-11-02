@@ -115,11 +115,14 @@ Pasos:
 - [x] 5. Regresión S1, S4, S6, S7, S9.
 - [x] 6. Docs: `Por_Abordar` (F1, F2, F7, F9, F17, README), catálogo §5, `Movimiento_Formaciones.md`, lecciones.
 
+Estado: **hecho** (2026-11-02), rama `main` local, sin subir: `b355b32c` (métricas), `1eb56b03` (F1), `8f3b45cf` (F17).
+Falta el visto bueno del usuario a las formas de F1. Resultado en `Docs/Design/Movimiento_Formaciones.md` §23.
+
 ---
 
 # Plan: HUD de batalla sin solapes en pantallas pequeñas
 
-Estado: **en espera de que Unity quede libre** (2026-11-02). Rama `main` local, sin subir.
+Estado: **hecho** (2026-11-02), rama `main` local, sin subir.
 
 ## Problema
 En BattleTestScene, a 1280x720, los iconos de formación del panel de squad caen encima de las ranuras Q y E. Medido en
@@ -138,7 +141,7 @@ Pasos:
 - [x] 4. Test EditMode: los canvas de batalla comparten scaler (el HUD está duplicado y ya se desincronizó una vez).
 - [x] 5. Capturas en Play de las dos escenas: 1920x1080, 1600x900, 1366x768, 1280x720, 1280x800, 1024x768 y 2560x1080.
       Revisar también el contenido dinámico y la legibilidad a 1024x768.
-- [x] 6. EditMode y `BattleSceneIntegrationTests` en verde, lecciones y commit.
+- [x] 6. EditMode (421/421) y `BattleSceneIntegrationTests` (18/18) en verde, lecciones y commit.
 
 Notas:
 - Sin prefab del HUD ni componente compartido: Feudo y BattlePrep lo tienen serializado y 44 RectTransform con
@@ -146,5 +149,9 @@ Notas:
 - `capture_game_view` guarda siempre bajo `Assets/`: borrar `Assets/Temp` al acabar.
 - Si BattleScene tiene cambios locales del usuario al empezar, parar y preguntar antes de mezclar nada.
 
-Estado: **hecho** (2026-11-02), rama `main` local, sin subir: `b355b32c` (métricas), `1eb56b03` (F1), `8f3b45cf` (F17).
-Falta el visto bueno del usuario a las formas de F1. Resultado en `Docs/Design/Movimiento_Formaciones.md` §23.
+## Resultado
+- Las dos escenas, en las siete resoluciones: HUD y `SkillBar` con la misma escala, sin solapes ni elementos fuera de
+  pantalla entre barra, panel de squad, vida, aguante, cartel, temporizador y captura.
+- `SupplyPointUi` cubre la pantalla en 1024x768 y 2560x1080 (antes dejaba bandas en 4:3).
+- `BattleTestScene` añade reserialización de versión (TMP y renderers), la misma que ya tiene Feudo. `BattleScene` pierde
+  `_abilitySlots`, un campo serializado que ya no existe en el código.
