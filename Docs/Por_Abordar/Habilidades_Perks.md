@@ -15,7 +15,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H7 | Enfriamiento del cambio de escuadra como grupo | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H8 | Nombres de los perks activos dicen "(Passive)" | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H9 | `HUDController.OnDestroy` lanza al salir de Play | Baja | **Hecho** (2026-10-27, bloque 4) |
-| H10 | Habilidades de escuadra en el HUD | Media | **Hecho** (2026-10-27, se ven; lanzarlas con clic, pendiente) |
+| H10 | Habilidades de escuadra en el HUD | Media | **Hecho** (2026-11-02: se ven y se lanzan con clic y con el radial de `ALT`) |
 | H11 | Teclas de las habilidades de escuadra (GDD 1/2/3, hoy 3/4/5) | Media | **Hecho** (2026-10-27: escuadra 1/2/3, perks 4/5) |
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
@@ -106,14 +106,13 @@ Al salir de Play, `HUDController.OnDestroy` libera consultas de un mundo ya dest
 pasaba antes de esta fase. Basta con comprobar que el mundo sigue creado antes de liberar.
 
 ## H10. Habilidades de escuadra en el HUD
-**Hecho en parte (2026-10-27).** Se ven en los huecos 3, 4 y 5 de la barra con su enfriamiento. Falta lanzarlas desde el
-HUD con el ratón (la barra no recibe clics) y el menú radial de `ALT` del GDD §12.3.
+**Hecho (2026-11-02).** Se ven en la barra con su enfriamiento y se lanzan con 1/2/3, con clic y con el menú radial.
+Decisiones del usuario: `ALT` se mantiene, no se alterna; sin pausa; el radial lleva habilidades de escuadra y formaciones,
+y se elige con clic o soltando `ALT` sobre un sector; la barra solo admite clics con `ALT` mantenido, porque en batalla
+el cursor va bloqueado. Solo los huecos de escuadra reciben clics (GDD §4.6). Ver `Docs/Mechanics/SkillsAndPerks.md` §6.1.
 
-El GDD (§4.6 y §12.3) pide lanzarlas desde el HUD y verlas con su enfriamiento. Hoy solo se lanzan con las teclas 3, 4
-y 5, y el HUD no las muestra. **Cómo abordarlo:**
-- llevar a `UIHeroBattleDataComponent` la fracción de enfriamiento de la escuadra activa
-  (`CooldownUtility.Fraction` sobre los grupos de la escuadra);
-- añadir huecos con icono (`AbilityData.icon`) en `HUDController`; va junto con H6.
+Queda fuera, porque son datos: las habilidades de escuadra no tienen icono (`AbilityData.icon` vacío en sus seis assets), así
+que barra y radial enseñan la tecla, y el radial, además, el nombre.
 
 ## H11. Teclas de las habilidades de escuadra
 **Hecho (2026-10-27).** Decisión del usuario: la escuadra en 1/2/3 (como el GDD) y los perks activos en 4/5. En la

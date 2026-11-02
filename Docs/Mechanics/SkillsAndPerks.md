@@ -29,6 +29,7 @@ perks (L2-15), panel de perks del feudo (H5) y uso de habilidades por la IA con 
 | 1 / 2 / 3 | `Squad1` / `Squad2` / `Squad3` | Habilidades de la escuadra activa, en orden de desbloqueo (las lanza la escuadra) |
 | 4 / 5 | `ActivePerk1` / `ActivePerk2` | Perks activos del loadout |
 | F | — | Interactuar (puntos de suministro, NPC del feudo) |
+| `ALT` mantenido (batalla) | — | Menú radial y cursor libre (§6.1) |
 | K (feudo) | — | Panel de perks del loadout (H5) |
 
 Con varias teclas pulsadas gana la definitiva, luego R, E, Q, perks y el básico (`HeroSkillRequestSystem`). Las teclas
@@ -122,7 +123,7 @@ Ref.: las escuadras lanzan con el mismo ciclo de vida que el héroe, y el enfria
 - **Enfriamiento:** por entidad de escuadra. Al cambiar de escuadra y volver, la escuadra reaparece con sus grupos vacíos
   (`Docs/Por_Abordar/Habilidades_Perks.md` H13).
 
-| Escuadra | Nivel 10 (tecla 3) | Nivel 20 (tecla 4) |
+| Escuadra | Nivel 10 (tecla 1) | Nivel 20 (tecla 2) |
 |---|---|---|
 | Escuderos | Shield Brace: +30 % de defensa a la escuadra (10 s; 40 s) | Shield Bash: cono de 120°, 4 m, ×0,8, y −30 % de velocidad a los enemigos (3 s; 30 s) |
 | Arqueros | Focused Volley: +25 % de daño perforante (8 s; 35 s) | Light Step: +25 % de velocidad (8 s; 40 s) |
@@ -215,6 +216,27 @@ escena, abajo en el centro y por debajo de la barra de aguante: nueve huecos con
 escuadra sin desbloquear se ocultan. Los iconos los busca `SkillIconCatalog` por el id del skill: habilidades y perks de la
 clase del héroe (`HeroClassManager`) y habilidades de todas las escuadras (`SquadDataService`).
 
+### 6.1 Clic y menú radial (H10)
+
+En batalla el cursor va bloqueado. **Mantener `ALT`** lo libera (`BattleCommandInput.PointerMode`), quieta la cámara y
+muestra el menú radial; al soltarlo todo vuelve a su estado. El juego no se pausa: el héroe sigue andando y las teclas
+siguen funcionando. Con el cursor libre:
+
+- **Barra:** un clic en un hueco de escuadra lanza esa habilidad. Solo los de escuadra reciben clics: el GDD §4.6 pide
+  activar desde el HUD las habilidades de escuadra, y las de clase y los perks activos siguen con sus teclas.
+- **Radial:** habilidades de escuadra arriba y formaciones `F1-F4` abajo. Se elige con clic o soltando `ALT` sobre un
+  sector. Soltar en el centro, o fuera de la rueda, cancela.
+- **Sin ataque:** con `ALT` pulsado el clic izquierdo no ataca, y si el botón sigue pulsado al soltar `ALT`, tampoco hasta
+  soltarlo. Con `ALT` pulsado no se elige nada mientras el héroe está muerto o hay un panel abierto.
+
+**Camino:** la UI solo llama a `BattleCommandInput`, que no toca ECS. `HeroInputSystem` convierte la petición en un frame de
+`UseSquadAbilityN`, igual que la tecla, y `HeroSkillRequestSystem` y `SkillGate` hacen el resto. `SquadControlSystem` trata la
+formación como `F1-F4`. Un hueco vacío o en enfriamiento no emite nada; el enfriamiento se ve en el mismo hueco, también
+en el radial.
+
+`BattleRadialMenu` es un prefab de `Resources/UI` que crea `HUDController`, sin huecos en la escena. La geometría de los
+sectores está en `RadialMenuLayout` y sus radios en el prefab. Alt+Tab cierra el menú sin lanzar nada.
+
 ## 7. Archivos
 
 | Archivo | Rol |
@@ -229,6 +251,8 @@ clase del héroe (`HeroClassManager`) y habilidades de todas las escuadras (`Squ
 | `Perks/PerkContext.cs` | Contexto de las condiciones ricas (L2-15) |
 | `Perks/PerkSelection.cs`, `UI/Perks/PerkSelectionPanelController.cs`, `PerkSelectionRow.cs` | Elección de perks en el feudo (H5) |
 | `Squads/AbilityData.cs`, `Squads/SquadDefinitionBaker.cs`, `Squads/Systems/UnitStatScaling.System.cs` | Habilidades de escuadra: datos, horneado y desbloqueo (L2-9) |
+| `UI/SkillBar/SkillBarController.cs`, `SkillBarSlot.cs`, `SkillIconCatalog.cs` | Barra de habilidades (H6, H10) |
+| `UI/Battle/BattleCommandInput.cs`, `BattleRadialMenu.cs`, `RadialMenuLayout.cs` | Clic y menú radial de `ALT` (H10) |
 | `Hero/AI/HeroAISkills.cs`, `Hero/AI/Systems/HeroAISkill.System.cs` | La IA usa habilidades y elige aliado (H1, L4-08) |
 
 ## 8. IA (H1, L4-08)

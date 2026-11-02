@@ -1,3 +1,34 @@
+# Plan: H10, lanzar habilidades de escuadra con el ratón y menú radial de `ALT`
+
+Estado: **hecho** (2026-11-02), rama `main` local, sin subir.
+
+## Decisiones
+- Aprobadas por el usuario: `ALT` se mantiene (no se alterna), sin pausa; radial con habilidades de escuadra y formaciones
+  (GDD §12.3); se elige con clic o soltando `ALT` sobre un sector, y soltar en el centro cancela; la barra solo se puede
+  clicar con `ALT` mantenido; con `ALT` pulsado ningún clic ataca.
+- Clic solo en los huecos de escuadra: el GDD §4.6 pide activar desde el HUD las habilidades de escuadra. Las de clase y
+  los perks activos (§6.2) siguen con teclas.
+
+## Diseño
+- `BattleCommandInput` (estático, como `DialogueUIState`): `PointerMode` y una petición pendiente de un frame. La UI solo
+  escribe aquí.
+- `HeroInputSystem` convierte la petición en `UseSquadAbilityN` durante un frame: es la misma entrada que la tecla, así
+  que pasa por `HeroSkillRequestSystem` y `SkillGate`. `SquadControlSystem` hace lo mismo con `F1-F4`.
+- `HeroInputSystem` no ataca con `PointerMode` ni si el botón sigue pulsado al salir de él.
+- `HeroCameraController` deja el cursor libre y no gira ni hace zoom con `PointerMode`; sigue al héroe.
+- `SkillBarSlot` recibe el clic (`IPointerClickHandler`); `SkillBarController` lo traduce. Un hueco en enfriamiento no emite.
+- `BattleRadialMenu`: prefab en `Resources/UI`, lo crea `HUDController`, sin tocar escenas. Lee `ALT`, publica `PointerMode`
+  y emite. Geometría pura en `RadialMenuLayout`. Lo que muestra sale de `UIHeroBattleDataComponent`.
+
+## Pasos
+- [x] 1. Puente, entrada, cámara y clic en la barra, con tests EditMode.
+- [x] 2. Radial: datos, controlador, geometría, prefab y tests.
+- [x] 3. Integración BattleScene: clic y radial lanzan de verdad, enfriamiento, sin ataque.
+- [x] 4. Play con capturas y resoluciones pequeñas (radial, cartel de interacción, suministro, perks).
+- [x] 5. Docs: H10, `SkillsAndPerks.md`, README de Por_Abordar, GDD, lecciones.
+
+---
+
 # Plan: presentación de la muerte del héroe (animación, retirar el cuerpo y reaparecer)
 
 Estado: **hecho** (2026-10-27), rama `main` local, sin subir. Plan anterior archivado en `tasks/block3-skills-perks-plan.md`.

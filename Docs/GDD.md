@@ -12,7 +12,8 @@ Contraste hecho contra `Assets/Scripts`. El resto de este documento es diseño y
 | Habilidades de escuadra con `1/2/3` (§12.3) | Implementado: `1/2/3` lanzan las habilidades de la escuadra activa, en orden de desbloqueo; se ven en la barra de habilidades |
 | Interactuar / cambiar escuadra con `F` o `Tab` (supply point) | La interacción es `F` (la definitiva pasó a `T`). El cambio de escuadra se inicia con la interacción en un supply point aliado no disputado (`Docs/Mechanics/SquadSwap.md`) |
 | Vista de estado de batalla con `Tab` y sus sistemas (§12.1.1: `BattleStatusPanel`, `MinimapRendererExpanded`, `ScoreSyncSystem`, …) | No existe |
-| Menú radial con `ALT`; orden de mover con clic derecho (§12.3) | No existen. `ALT` solo alterna el cursor de interfaz; `SquadControlSystem` atiende `C`, `X`, `V`, `F1–F4` y doble `X`/doble `C` |
+| Menú radial con `ALT` (§12.3) | Implementado para habilidades de escuadra y formaciones: se mantiene `ALT`, sin pausa, con cursor libre (`Docs/Mechanics/SkillsAndPerks.md` §6.1). En el feudo, `ALT` sigue alternando el cursor de interfaz |
+| Orden de mover con clic derecho (§12.3) | No existe. `SquadControlSystem` atiende `C`, `X`, `V`, `F1–F4` y doble `X`/doble `C` |
 | Respawn con cooldown que aumenta con cada muerte (§7.2) | Cooldown fijo, `HeroLifeComponent.respawnCooldown` (5 s por defecto en authoring) |
 | Espectar aliados durante el tiempo muerto (§7.2) | No está implementado como flujo; solo existe el valor `Spectator` en `CameraState` |
 | Retirada de la escuadra «cuando faltan 10 s para el respawn», evitando zonas enemigas, y desaparición a los 5 s (§7.2) | La retirada empieza al morir el héroe, va al punto de spawn aliado, termina al llegar o a los 5 s (`ownerDeathRetreatDuration`) y conserva los supervivientes. No evita zonas enemigas (`Docs/Mechanics/HeroDeath.md`) |

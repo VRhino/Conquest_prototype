@@ -1,5 +1,16 @@
 # Implementation lessons
 
+## Clic en la barra y radial de ALT (2026-11-02)
+
+- Antes de añadir clics a un HUD de batalla, mirar el cursor: va bloqueado y `HeroCameraController` lo reimpone cada frame, así que un botón "sin más" no recibe nada nunca. Hace falta un modo con cursor libre, y es una decisión de diseño.
+- Un HUD creado desde `Resources` no recibe clics solo por tener `IPointerClickHandler`: su canvas necesita `GraphicRaycaster`, y el hueco, `raycastTarget` en un gráfico y `blocksRaycasts` en su `CanvasGroup`. Faltaban los tres.
+- Una petición de UI que entra como un frame de la tecla reutiliza puerta, memoria de entrada y prioridades sin duplicar nada. El puente solo debe impedir, nunca lanzar.
+- Una petición que nace al soltar `ALT` y un cierre de modo van en el mismo frame: no borrar las peticiones al apagar el modo, las consumen los sistemas de ese frame.
+- `Application.isFocused` es falso con el editor en segundo plano y deja mudos los tests y las sesiones por CLI. Para Alt+Tab basta el evento `OnApplicationFocus(false)`, que no bloquea lo que no perdió el foco.
+- `run_tests --filter` es una coincidencia parcial de un solo texto: no admite expresiones regulares ni listas, y devuelve 0 tests sin error. Para varios tests, una `[Category]` y `--filter_type category`. Además, `ut.js` va por la consola de Windows, que se come el `|`.
+- Una captura de un panel que forzamos con `SetActive` no prueba nada si su controlador lo oculta en el siguiente frame: abrirlo por su método y apagar lo que lo cierra.
+- Las capturas sacan defectos que los tests no ven: un `Image` encendido sin sprite es un cuadro blanco.
+
 ## Plantillas y ocupación entre escuadras (2026-11-02)
 
 - Una cifra mala tras un cambio de varias piezas se decide con A/B: apagar solo esa pieza y repetir. Las tablas contra la línea base no distinguen ruido de causa, y en S6 y S7 la causa era la pieza que parecía inocente.
