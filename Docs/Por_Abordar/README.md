@@ -16,7 +16,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 ## Estado general (2026-11-02, tras F1 y F17)
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
 |---|---|---|---|
-| Formaciones_y_Posturas.md | F4, F6, F8, F9, F11-F13, F16 (F3 parcial; F1 hecho, pendiente el visto bueno de las formas) | F3 (clips de ShieldWall y Testudo) | Visto bueno de F1; F9 cuando haya caso de uso (falta quien apague la colisión y la evitación por escuadra) |
+| Formaciones_y_Posturas.md | F4, F6, F8, F9, F11-F13, F16 (F3 parcial) | F3 (clips de ShieldWall y Testudo) | F9 cuando haya caso de uso (falta quien apague la colisión y la evitación por escuadra) |
 | Movimiento.md | M4, M10, M12, M15, M16 (M2 hecho el 2026-10-28) | M3 (paquete de VFX) | P6 de `game-re/notes/battle-movement-combat.md` solo si vuelven los picos |
 | Habilidades_Perks.md | H3, H4, H12, H14 (H5: falta el árbol; H10: lanzar con clic) | H2 (animaciones) | H10 (lanzar con clic y menú radial `ALT`) |
 | Pila_Modificadores.md | P1, P3, P5 | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |

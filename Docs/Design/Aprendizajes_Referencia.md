@@ -356,8 +356,7 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   L2-9, L2-15 y L4-08.
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).
-  Sigue sin compactarse dentro de un tramo. Los slots no se comparten entre escuadras aliadas (F17, `8f3b45cf`). Falta el
-  visto bueno de las formas.
+  Sigue sin compactarse dentro de un tramo. Los slots no se comparten entre escuadras aliadas (F17, `8f3b45cf`).
 - **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H2-H14 habilidades y perks, P1-P6 pila, F4-F16 formaciones y
   posturas, M1-M15 movimiento).
 - **Orden recomendado** (prioridad del usuario: movimiento y formación): para los solapes de la melé (M2),

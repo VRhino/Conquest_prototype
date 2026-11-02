@@ -9,7 +9,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 ## Resumen
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
-| F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`), pendiente el visto bueno de las formas |
+| F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`) y formas aprobadas por el usuario |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
 | F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros hecha (`04608ca2`); faltan ShieldWall, Testudo, estocadas y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
@@ -55,9 +55,10 @@ quedan dispersos, así que se mantiene el reparto de C12 y se anidan las plantil
 menos de una mayor). El voraz dejaba viajes largos que cruzaban a otros: ahora las parejas intercambian ranura mientras
 acorten su camino (`FormationLayout.UncrossPaths`), y Spearmen en línea pasa de 3,3 a 0,17 cruces por cambio.
 
+El usuario aprobó las formas el 2026-11-02, incluidas las que estaban en duda: la cola central de la cuña de 15 y 10, y la
+cruz de la tortuga de 5.
+
 Queda abierto:
-- **Visto bueno de las formas.** Están medidas, pero el usuario aún no las ha aprobado. Las dudas son la cola central de la
-  cuña de 15 y 10, y la cruz de la tortuga de 5.
 - **Huecos dentro de una banda.** Entre dos cambios de plantilla los huecos quedan donde cayó el soldado:
   `FormationCompactSystem` nunca se creó (L3-02).
 - **Formas sin validar en juego.** Las posturas de los papeles nuevos se han comprobado por datos, no a ojo.

@@ -116,7 +116,7 @@ Pasos:
 - [x] 6. Docs: `Por_Abordar` (F1, F2, F7, F9, F17, README), catálogo §5, `Movimiento_Formaciones.md`, lecciones.
 
 Estado: **hecho** (2026-11-02), rama `main` local, sin subir: `b355b32c` (métricas), `1eb56b03` (F1), `8f3b45cf` (F17).
-Falta el visto bueno del usuario a las formas de F1. Resultado en `Docs/Design/Movimiento_Formaciones.md` §23.
+Formas de F1 aprobadas por el usuario. Resultado en `Docs/Design/Movimiento_Formaciones.md` §23.
 
 ---
 
