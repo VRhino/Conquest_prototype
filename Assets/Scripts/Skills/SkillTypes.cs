@@ -47,6 +47,11 @@ public enum SkillEventType : byte
     /// <see cref="SkillEvent.duration"/>, only on hits that meet <see cref="SkillEvent.condition"/>.
     /// </summary>
     ApplyConditional,
+    /// <summary>
+    /// Taunt (L4-05): the squads of the enemies hit pull their melee targeting towards the caster (its squad, for a squad
+    /// ability) by <see cref="SkillEvent.value"/> for <see cref="SkillEvent.duration"/>.
+    /// </summary>
+    Taunt,
 }
 
 public enum SkillTarget : byte

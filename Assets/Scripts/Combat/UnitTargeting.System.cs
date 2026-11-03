@@ -137,7 +137,8 @@ public partial class UnitTargetingSystem : SystemBase
                 }
                 else
                 {
-                    chosen = BestMeleeTarget(unit, currentValid ? previous : Entity.Null, blocker, focus, candidateCount, squadWeights);
+                    chosen = BestMeleeTarget(unit, currentValid ? previous : Entity.Null, blocker, focus, candidateCount, squadWeights,
+                        squad, now);
                     if (chosen != previous)
                     {
                         if (previous != Entity.Null) _meleeCounts[previous] = Count(_meleeCounts, previous) - 1;
@@ -270,8 +271,9 @@ public partial class UnitTargetingSystem : SystemBase
 
     /// <summary>Best scored target among the K nearest searchable candidates, the current one and the blocker (P4).</summary>
     private Entity BestMeleeTarget(Entity unit, Entity current, Entity blocker, Entity focus, int candidateCount,
-        in TargetScoreWeights w)
+        in TargetScoreWeights w, Entity squad, double now)
     {
+        bool taunted = SystemAPI.HasBuffer<AggroBiasElement>(squad) && SystemAPI.GetBuffer<AggroBiasElement>(squad).Length > 0;
         float3 unitPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
         int found = 0;
         int currentIndex = -1, blockerIndex = -1;
@@ -297,9 +299,10 @@ public partial class UnitTargetingSystem : SystemBase
             var c = _candidates[j];
             bool isCurrent = j == currentIndex;
             int others = Count(_meleeCounts, c.entity) - (isCurrent ? 1 : 0);
+            float aggro = taunted ? AggroBias.For(SystemAPI.GetBuffer<AggroBiasElement>(squad), c.entity, c.owner, now) : 0f;
             float score = TargetScoring.Score(math.distance(unitPos.xz, c.position.xz),
                 focus != Entity.Null && (c.owner == focus || c.entity == focus), c.isHero, others, isCurrent, w,
-                j == blockerIndex);
+                j == blockerIndex, aggro);
             if (score > bestScore) { bestScore = score; best = c.entity; }
         }
         return best;

@@ -44,15 +44,17 @@ public static class TargetScoring
     /// <param name="otherAttackers">Melee attackers already on the enemy, the scoring unit not included.</param>
     /// <param name="isBlocker">The enemy stops the unit (P4): its bonus is scaled by the saturation like the rest, so a
     /// crowded blocker loses to a free enemy and the melee keeps a line instead of piling up.</param>
+    /// <param name="aggro">The squad's aggro bias towards this enemy (L4-05, taunt): added after the saturation, so a
+    /// taunting enemy keeps its pull however many already attack it.</param>
     public static float Score(float distance, bool inFocus, bool isHero, int otherAttackers, bool isCurrent,
-        in TargetScoreWeights w, bool isBlocker = false)
+        in TargetScoreWeights w, bool isBlocker = false, float aggro = 0f)
     {
         float baseScore = Proximity(distance, w.distanceScale)
             + (inFocus ? w.focusBonus : 0f)
             + (isHero ? w.heroBias : 0f)
             + (isBlocker ? w.blockerBonus : 0f);
         return baseScore * Saturation(otherAttackers, w.saturationPerAttacker, w.saturationFloor)
-            + (isCurrent ? w.keepBonus : 0f);
+            + (isCurrent ? w.keepBonus : 0f) + aggro;
     }
 
     /// <summary>

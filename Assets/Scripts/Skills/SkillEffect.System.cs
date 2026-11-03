@@ -54,12 +54,14 @@ public partial class SkillEffectSystem : SystemBase
                 case SkillEventType.ApplyModifier:
                 case SkillEventType.AbsorbShield:
                 case SkillEventType.ApplyConditional:
+                case SkillEventType.Taunt:
                     targets.Clear();
                     SelectTargets(r, bodies, positions, teams, targets);
                     foreach (var target in targets)
                     {
                         if (e.type == SkillEventType.ApplyModifier) ApplyModifier(target, r, now);
                         else if (e.type == SkillEventType.ApplyConditional) ApplyConditional(target, r, now);
+                        else if (e.type == SkillEventType.Taunt) Taunt(target, r, now);
                         else ApplyShield(target, e, now);
                     }
                     break;
@@ -170,6 +172,17 @@ public partial class SkillEffectSystem : SystemBase
                 condition = r.effect.condition, damageRatio = r.effect.value, source = ModifierSource.Effect,
                 sourceId = r.skillId, expiresAt = r.effect.duration > 0f ? now + r.effect.duration : 0,
             }, now);
+    }
+
+    /// <summary>Aggro bias of the target's squad towards the caster (L4-05); a recast refreshes it.</summary>
+    void Taunt(Entity target, in SkillEffectRequestComponent r, double now)
+    {
+        if (!EntityManager.HasComponent<UnitOwnerComponent>(target)) return; // Heroes pick targets on their own (H12).
+        Entity squad = EntityManager.GetComponentData<UnitOwnerComponent>(target).squad;
+        if (!EntityManager.Exists(squad)) return;
+        if (!EntityManager.HasBuffer<AggroBiasElement>(squad)) EntityManager.AddBuffer<AggroBiasElement>(squad);
+        AggroBias.Apply(EntityManager.GetBuffer<AggroBiasElement>(squad), r.caster, r.effect.value, r.skillId,
+            r.effect.duration > 0f ? now + r.effect.duration : 0, now);
     }
 
     void ApplyShield(Entity target, in SkillEvent e, double now)
