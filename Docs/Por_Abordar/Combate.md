@@ -7,7 +7,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 ## Resumen
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
-| C1 | Valores de los rasgos del golpe en los datos de cada arma | Media | Pendiente (decisión de balance) |
+| C1 | Valores de los rasgos del golpe en los datos de cada arma | Media | **Hecho** (2026-11-03, tabla aprobada) |
 | C2 | Terreno de los mapas y modificadores de cada tipo de escuadra | Media | Pendiente (decisión de diseño y datos) |
 | C3 | Datos de modificadores condicionados y perks que los den | Media | Pendiente (datos) |
 | C4 | Reacciones al golpe por tipo y clase de objetivo (L1-09) | Media | Bloqueado (animaciones) |
@@ -19,6 +19,12 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 ---
 
 ## C1. Valores de los rasgos del golpe
+**Hecho (2026-11-03).** El usuario aprobó la tabla de `Docs/Mechanics/DamageMechanics.md` §5.5 y está en los assets
+(`Resources/Squads/*` y `Resources/Data/HeroClasses/*`). S1, S6 y S9 siguen en verde. Quedan dos efectos a vigilar:
+- el escudo del héroe (unos 100 de bloqueo) se rompe casi de un golpe de soldado con o sin desgaste extra;
+- los rasgos del héroe apenas se notan contra escuadras, porque su daño casi no pasa la defensa (P3 en
+  `Pila_Modificadores.md`).
+
 **Qué es.** `HitTraits` (ignorar el escudo, desgaste del bloqueo y del aguante, variación, carga) está en
 `SquadMeleeData`, `SquadRangedData` y `HeroClassDefinition`, pero ningún asset lo rellena: todo vale 0, que es neutro.
 La mecánica funciona y está probada; los números son balance.

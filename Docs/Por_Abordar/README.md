@@ -22,7 +22,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | Habilidades_Perks.md | H3, H4, H12, H14 (H5: falta el árbol) | H2 (animaciones) | H14 (perks con las condiciones nuevas; son datos) |
 | Pila_Modificadores.md | P1, P3, P5 | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 | D1 (clip de muerte) | D1 en cuanto haya clip; D5 (medir el coste de recrear el visual) |
-| Combate.md | C1-C3, C5-C8 | C4 (L1-09, animaciones de reacción) | C1 (valores de los rasgos de cada arma; son datos de balance) |
+| Combate.md | C2, C3, C5-C8 (C1 hecho) | C4 (L1-09, animaciones de reacción) | C2 (terreno de los mapas y modificadores por escuadra) |
 
 Lo que el catálogo de la referencia aún no ha planificado (incluidos los 20 puntos añadidos el 2026-10-26, marcados
 "(amp.)") está en `Docs/Design/Aprendizajes_Referencia.md` §4, con su estado al final de §5. Cuando un plan los tome, lo

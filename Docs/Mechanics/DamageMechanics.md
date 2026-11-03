@@ -208,7 +208,22 @@ dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura × bonoCarga ×
 `HitTraits` va dentro de `DamageProfileComponent`, así que viaja con el perfil en línea del golpe (melé, proyectil y
 habilidad). Lo declara el arma: `SquadMeleeData.hitTraits` o `SquadRangedData.hitTraits` (soldados) y
 `HeroClassDefinition.hitTraits` (héroe). `StatResolveSystem` reescribe solo el daño y la penetración del perfil y deja los
-rasgos. Todos valen 0 por defecto, que es neutro: **hoy ningún asset los usa** (`Docs/Por_Abordar/Combate.md` C1).
+rasgos. Todos valen 0 por defecto, que es neutro.
+
+Valores aprobados por el usuario (2026-11-03, `Docs/Por_Abordar/Combate.md` C1). Ningún arma ignora el escudo:
+
+| Arma | Daño al bloqueo | Daño al aguante | Variación | Carga (umbral / pleno / bono) |
+|---|---|---|---|---|
+| Escuderos | 0 | 0,05 | 0,10 | — |
+| Lanceros | 0 | 0,05 | 0,10 | 4 m / 8 m / +0,40 |
+| Piqueros | +0,25 | 0,05 | 0,10 | — (anticarga: su fuerza es el Brace) |
+| Arqueros | −0,5 | 0 | 0,15 | — |
+| Héroe espada y escudo | 0 | 0,10 | 0,05 | 4 m / 8 m / +0,15 |
+| Héroe mandoble | +0,5 | 0,25 | 0,05 | 4 m / 8 m / +0,20 |
+| Héroe lanza | 0 | 0,10 | 0,05 | 3 m / 7 m / +0,35 |
+| Héroe arco | −0,5 | 0 | 0,05 | — |
+
+El umbral de 4 m deja fuera a quien llega andando (2,5-5 m en la ventana) y premia a quien llega corriendo (5-10 m).
 
 | Rasgo | Efecto |
 |---|---|
