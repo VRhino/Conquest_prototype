@@ -105,7 +105,11 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 strikeWindowDuration    = melee?.strikeWindowDuration    ?? 0.15f,
                 attackAnimationDuration = melee?.attackAnimationDuration ?? 1.0f,
                 kineticMultiplier       = melee?.kineticMultiplier       ?? 0.3f,
-                hitTraits               = melee != null ? melee.hitTraits : ranged != null ? ranged.hitTraits : default
+                hitTraits               = melee != null ? melee.hitTraits : ranged != null ? ranged.hitTraits : default,
+                staminaMax               = d.staminaMax,
+                staminaRunCostPerSoldier = d.staminaRunCostPerSoldier,
+                staminaRecoveryPerSecond = d.staminaRecoveryPerSecond,
+                staminaRecoverFraction   = d.staminaRecoverFraction
             });
 
             AddComponent(entity, new SquadDefinitionComponent

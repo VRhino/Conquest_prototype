@@ -59,6 +59,16 @@ public class SquadData : ScriptableObject
     /// <summary>Abilities unlocked as the squad levels up.</summary>
     public List<AbilityData> abilitiesByLevel;
 
+    [Header("Aguante de escuadra (L5-7)")]
+    [Tooltip("Aguante máximo de la escuadra. 0 = sin aguante: corre sin coste, como antes.")]
+    [Min(0f)] public float staminaMax;
+    [Tooltip("Aguante por segundo que gasta cada soldado que corre.")]
+    [Min(0f)] public float staminaRunCostPerSoldier;
+    [Tooltip("Aguante por segundo que recupera la escuadra mientras nadie corre.")]
+    [Min(0f)] public float staminaRecoveryPerSecond;
+    [Tooltip("Fracción del máximo que hay que recuperar, tras agotarse, para volver a correr.")]
+    [Range(0f, 1f)] public float staminaRecoverFraction = 0.3f;
+
     [Header("Modificadores condicionados (L1-02)")]
     [Tooltip("Daño extra (o reducido) que el tipo de escuadra hace o recibe solo cuando se cumple la condición del golpe.")]
     public List<ConditionalDamage> conditionalModifiers = new List<ConditionalDamage>();

@@ -90,6 +90,7 @@ public partial class SquadSpawningSystem : SystemBase
             // Squad created successfully
 
             ecb.AddComponent(squad, data); // Add the complete SquadDataComponent
+            ecb.AddComponent(squad, SquadStaminaComponent.From(data)); // Squad stamina (L5-7)
             ecb.AddComponent(squad, new SquadDefinitionComponent
             {
                 squadType        = def.squadType,

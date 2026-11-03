@@ -66,6 +66,10 @@ public partial class UnitFollowFormationSystem : SystemBase
             bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
                 && squadState.currentState != SquadFSMState.Retreating;
 
+            // An exhausted squad walks until it recovers (L5-7).
+            bool canRun = !SystemAPI.HasComponent<SquadStaminaComponent>(entity)
+                || !SystemAPI.GetComponent<SquadStaminaComponent>(entity).exhausted;
+
             // Detectar si el squad tiene la bandera hurryToComander activa
             bool hurryToComander = false;
             if (SystemAPI.HasComponent<SquadInputComponent>(entity))
@@ -106,7 +110,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                             && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
                         float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
-                            hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed);
+                            hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed, canRun);
                         targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, isHoldingPosition,
                             navAgent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction));
                         navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
@@ -207,8 +211,9 @@ public partial class UnitFollowFormationSystem : SystemBase
     }
 
     float FollowSpeed(Entity unit, float baseSpeed, bool forceRun, bool isHoldingPosition,
-        in FormationFollowSpeed.Settings settings)
+        in FormationFollowSpeed.Settings settings, bool canRun)
     {
+        forceRun &= canRun;
         var previous = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
             ? SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : MovementGear.Walk;
         bool following = SystemAPI.HasComponent<UnitFormationStateComponent>(unit)
@@ -229,7 +234,7 @@ public partial class UnitFollowFormationSystem : SystemBase
             float distance = math.distance(position.xz, slot.xz);
             float slotSpeed = !isHoldingPosition && SystemAPI.HasComponent<NavAgentComponent>(unit)
                 ? math.length(SystemAPI.GetComponent<NavAgentComponent>(unit).slotVelocity.xz) : 0f;
-            gear = FormationFollowSpeed.Gear(previous, distance, false, settings);
+            gear = canRun ? FormationFollowSpeed.Gear(previous, distance, false, settings) : MovementGear.Walk;
             speed = FormationFollowSpeed.Speed(baseSpeed, slotSpeed, distance, gear, settings);
         }
 

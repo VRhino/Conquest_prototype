@@ -57,6 +57,12 @@ public struct SquadDataComponent : IComponentData
 
     /// <summary>The weapon's hit traits (melee if any, else ranged), copied into the squad's damage profile.</summary>
     public HitTraits hitTraits;
+
+    // Squad stamina (L5-7); a maximum of 0 = none.
+    public float staminaMax;
+    public float staminaRunCostPerSoldier;
+    public float staminaRecoveryPerSecond;
+    public float staminaRecoverFraction;
 }
 
 /// <summary>
