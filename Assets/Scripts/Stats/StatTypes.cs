@@ -38,6 +38,8 @@ public enum StatId : byte
     CooldownScale,
     /// <summary>Fraction of max health a hit cannot take a hero below (L1-07); 0 = none. Respawn protection gives it.</summary>
     MinHealthRatio,
+    /// <summary>Fraction of the health a hit takes that heals the attacker (L1-13); 0 = none.</summary>
+    LifeSteal,
     Count,
 }
 

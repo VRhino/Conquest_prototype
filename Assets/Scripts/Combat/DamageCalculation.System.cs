@@ -164,12 +164,14 @@ public partial class DamageCalculationSystem : SystemBase
 
             // --- Apply to unit or hero HP ---
             bool willKill = false;
+            float healthTaken = 0f;
             if (SystemAPI.HasComponent<HealthComponent>(p.target))
             {
                 var hp = SystemAPI.GetComponentRW<HealthComponent>(p.target);
                 float prevHp = hp.ValueRO.currentHealth;
                 hp.ValueRW.currentHealth = math.max(0f, prevHp - effectiveDmg);
                 willKill = hp.ValueRO.currentHealth <= 0f;
+                healthTaken = prevHp - hp.ValueRO.currentHealth;
 
                 if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
@@ -194,9 +196,16 @@ public partial class DamageCalculationSystem : SystemBase
                 // Health floor (L1-07): a protected hero cannot be taken below it.
                 hp.ValueRW.currentHealth = HealthFloor.Apply(prevHp, effectiveDmg, hp.ValueRO.maxHealth, hp.ValueRO.minHealthRatio);
                 willKill = hp.ValueRO.currentHealth <= 0f;
+                healthTaken = prevHp - hp.ValueRO.currentHealth;
                 if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
             }
+
+            // --- Life steal (L1-13): the attacker heals a fraction of the health really taken, after it is taken ---
+            if (healthTaken > 0f && SystemAPI.Exists(p.damageSource)
+                && SystemAPI.HasComponent<CombatStatsComponent>(p.damageSource)
+                && !SystemAPI.HasComponent<IsDeadComponent>(p.damageSource))
+                StealLife(p.damageSource, healthTaken, SystemAPI.GetComponent<CombatStatsComponent>(p.damageSource).lifeSteal);
 
             // FCT
             if (transformLookup.HasComponent(p.target))
@@ -214,6 +223,21 @@ public partial class DamageCalculationSystem : SystemBase
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }
+    void StealLife(Entity attacker, float healthTaken, float ratio)
+    {
+        if (ratio <= 0f) return;
+        if (SystemAPI.HasComponent<HealthComponent>(attacker))
+        {
+            var hp = SystemAPI.GetComponentRW<HealthComponent>(attacker);
+            hp.ValueRW.currentHealth = LifeSteal.Heal(hp.ValueRO.currentHealth, hp.ValueRO.maxHealth, healthTaken, ratio);
+        }
+        else if (SystemAPI.HasComponent<HeroHealthComponent>(attacker))
+        {
+            var hp = SystemAPI.GetComponentRW<HeroHealthComponent>(attacker);
+            hp.ValueRW.currentHealth = LifeSteal.Heal(hp.ValueRO.currentHealth, hp.ValueRO.maxHealth, healthTaken, ratio);
+        }
+    }
+
     /// <summary>Floating text for the presentation layer (DamageFeedbackPresentationSystem).</summary>
     static void Feedback(ref EntityCommandBuffer ecb, float3 position, DamageCategory category, float amount)
     {
