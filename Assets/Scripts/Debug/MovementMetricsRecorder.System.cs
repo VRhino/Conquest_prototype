@@ -127,6 +127,8 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             int templateIndex = SystemAPI.HasComponent<FormationComponent>(squad)
                 ? SystemAPI.GetComponent<FormationComponent>(squad).templateIndex : 0;
             int alliedShared = CountAlliedSharedCells(squad);
+            var stamina = SystemAPI.HasComponent<SquadStaminaComponent>(squad)
+                ? SystemAPI.GetComponent<SquadStaminaComponent>(squad) : default;
             int gapSlots = 0;
             for (int i = 0; i < units.Length; i++)
                 if (SystemAPI.HasComponent<UnitGridSlotComponent>(units[i].Value)
@@ -143,7 +145,9 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 persistentEnemyOverlaps = persistentEnemyOverlaps, persistentEnemyOverlapsEngaged = persistentEngaged,
                 stackedDestinations = stacked, detourDestinations = detours,
                 relocatedSlots = relocated, unresolvedSlots = unresolved, slotResolveQueries = slotQueries,
-                templateIndex = templateIndex, alliedSharedCells = alliedShared, gapSlots = gapSlots
+                templateIndex = templateIndex, alliedSharedCells = alliedShared, gapSlots = gapSlots,
+                staminaFraction = stamina.max > 0f ? stamina.current / stamina.max : 1f,
+                staminaExhausted = stamina.exhausted
             });
 
             for (int i = 0; i < units.Length; i++)

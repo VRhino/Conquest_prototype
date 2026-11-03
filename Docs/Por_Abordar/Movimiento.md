@@ -24,7 +24,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | Pendiente (comprobar en vídeo) |
 | M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Bloqueado (sin caballería) |
-| M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | Pendiente (balance) |
+| M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** los datos (2026-11-03); falta la escala por la pila |
 
 ---
 
@@ -270,6 +270,22 @@ Lo que ya está preparado: el radio de cuerpo por tipo de escuadra (L5-5, `Squad
 hacia el objetivo (L1-11), el tipo de unidad en las condiciones de daño (L1-02) y el aguante por marcha (L5-7).
 
 ## M18. Datos del aguante de escuadra (L5-7)
+**Hecho los datos (2026-11-03, tabla aprobada).** Solo gasta quien corre de verdad: en marcha de carrera y por encima de
+`staminaRunSpeedFactor` (1,1) × su paso de marcha, porque un soldado con objetivo de combate está en marcha de carrera aunque
+luche quieto (en la melé, el 59-97 % de las muestras). El máximo es 10 por soldado, así que un sprint de toda la escuadra
+dura 10 / coste:
+
+| Escuadra | Máximo | Coste por soldado y s | Sprint completo | Recuperación por s | Vuelve a correr al |
+|---|---|---|---|---|---|
+| Escuderos | 120 | 0,8 | 12,5 s | 8 | 30 % |
+| Lanceros | 200 | 0,6 | 16,7 s | 13 | 30 % |
+| Piqueros | 200 | 0,9 | 11 s | 13 | 30 % |
+| Arqueros | 120 | 0,5 | 20 s | 8 | 30 % |
+
+En S1, S3, S4, S6, S7 y S9 (y sus variantes) el aguante mínimo de la escuadra medida queda entre el 79 y el 93 % y nunca se
+agota: el movimiento normal no cansa; cansan las cargas largas encadenadas. Queda: la escala del coste por la pila y una
+barra de aguante de escuadra en el HUD, si se quiere.
+
 **Qué es.** El aguante de escuadra funciona y está probado, pero ningún `SquadData` tiene `staminaMax`, así que hoy nadie
 se cansa. Además, el catálogo pedía que el coste escale con la pila de modificadores; aquí el coste es un dato fijo.
 **Cómo abordarlo.** Fijar máximo, coste por soldado y recuperación por tipo de escuadra (los soldados corren solos para

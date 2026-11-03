@@ -1,3 +1,4 @@
+using ConquestTactics.Animation;
 using NUnit.Framework;
 using Unity.Core;
 using Unity.Entities;
@@ -29,6 +30,15 @@ public class SquadStaminaTests
     }
 
     [Test]
+    public void OnlyARunFasterThanWalkingCounts()
+    {
+        Assert.That(SquadStamina.IsRunning(MovementGear.Run, 6f, 3f, 1.1f), Is.True);
+        Assert.That(SquadStamina.IsRunning(MovementGear.Run, 0f, 3f, 1.1f), Is.False, "Fighting standing in the Run gear.");
+        Assert.That(SquadStamina.IsRunning(MovementGear.Run, 3f, 3f, 1.1f), Is.False, "At walking pace.");
+        Assert.That(SquadStamina.IsRunning(MovementGear.Walk, 6f, 3f, 1.1f), Is.False);
+    }
+
+    [Test]
     public void AZeroMaximumMeansNoStamina()
     {
         var s = new SquadStaminaComponent { runCostPerSoldier = 1f };
@@ -37,17 +47,20 @@ public class SquadStaminaTests
     }
 
     [Test]
-    public void TheSystemCountsTheSoldiersInTheRunGear()
+    public void TheSystemCountsTheSoldiersThatReallyRun()
     {
         using var world = new World("Squad stamina");
         var em = world.EntityManager;
         var squad = em.CreateEntity();
         em.AddComponentData(squad, Pool());
         em.AddBuffer<SquadUnitElement>(squad);
-        for (int i = 0; i < 3; i++)
+        // Two run at 6 m/s, one fights standing in the Run gear, one walks.
+        float[] speeds = { 6f, 6f, 0f, 3f };
+        for (int i = 0; i < speeds.Length; i++)
         {
             var unit = em.CreateEntity();
-            em.AddComponentData(unit, new UnitMovementGearComponent { gear = i < 2 ? MovementGear.Run : MovementGear.Walk });
+            em.AddComponentData(unit, new UnitMovementGearComponent { gear = i < 3 ? MovementGear.Run : MovementGear.Walk });
+            em.AddComponentData(unit, new UnitAnimationMovementComponent { CurrentSpeed = speeds[i], MaxSpeed = 3f });
             em.GetBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
         }
         world.SetTime(new TimeData(1.0, 0.5f));

@@ -1093,7 +1093,9 @@ Lectura:
 la marcha de carrera gasta `staminaRunCostPerSoldier` por segundo y, mientras nadie corre, la escuadra recupera
 `staminaRecoveryPerSecond`. Agotada, `UnitFollowFormationSystem` no deja correr a sus soldados (tampoco con prisa ni en
 combate) hasta recuperar `staminaRecoverFraction` del máximo. Datos en `SquadData`; un máximo de 0 es neutro y ningún
-asset lo rellena aún (`Docs/Por_Abordar/Movimiento.md` M18).
+asset lo rellena aún (`Docs/Por_Abordar/Movimiento.md` M18). **Después (mismo día):** tabla aprobada por el usuario en los
+assets, y solo cuenta quien corre de verdad (marcha de carrera y más de 1,1 × su paso; luchar quieto no cansa). En S1-S9 el
+aguante mínimo queda entre el 79 y el 93 % y nunca se agota (M18).
 
 **L5-5.** `SquadData.bodyRadius` (0 = el de `MovementTuningConfig`, 0,5 m) llega a cada soldado como
 `UnitBodyRadiusComponent`. Las parejas usan la suma de sus dos cuerpos en el contacto enemigo (`EnemyContact`), la

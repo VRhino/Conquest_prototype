@@ -38,6 +38,8 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0f)] public float formationChangeCooldown = 1f;
     [Tooltip("Segundos tras una baja antes de rellenar los huecos de la formación (L3-02); las bajas de ese intervalo se rellenan juntas.")]
     [Min(0f)] public float formationCompactDelay = 1.5f;
+    [Tooltip("Un soldado gasta aguante de escuadra solo en marcha de carrera y por encima de esto × su paso de marcha (L5-7): luchar quieto no cansa.")]
+    [Min(1f)] public float staminaRunSpeedFactor = 1.1f;
 
     [Header("Hit knock-back")]
     [Tooltip("A hit that reaches a unit's body pushes it this far away from the attacker (the reference's hit_curve pattern). 0 = no knock-back.")]
@@ -182,6 +184,7 @@ public class MovementTuningConfig : ScriptableObject
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
         formationCompactDelay = formationCompactDelay,
+        staminaRunSpeedFactor = staminaRunSpeedFactor,
         hitKnockbackDistance = hitKnockbackDistance,
         hitKnockbackDuration = hitKnockbackDuration,
         walkCatchUpRatio = walkCatchUpRatio,
