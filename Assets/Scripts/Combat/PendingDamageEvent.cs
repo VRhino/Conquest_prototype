@@ -42,4 +42,10 @@ public struct PendingDamageEvent : IComponentData
 
     /// <summary>Which physical collider was contacted first (Body or Shield).</summary>
     public HitType hitType;
+
+    /// <summary>
+    /// Damage variance already rolled by whoever built the hit (L1-12, <see cref="CombatRandom.RollVariance"/>): the damage
+    /// is multiplied by 1 + this. 0 = no variance.
+    /// </summary>
+    public float varianceOffset;
 }

@@ -49,7 +49,7 @@ public partial class SkillEffectSystem : SystemBase
             switch (e.type)
             {
                 case SkillEventType.AreaDamage:
-                    DealAreaDamage(r, bodies, positions, teams);
+                    DealAreaDamage(r, bodies, positions, teams, CombatRandom.Tick(now));
                     break;
                 case SkillEventType.ApplyModifier:
                 case SkillEventType.AbsorbShield:
@@ -84,7 +84,7 @@ public partial class SkillEffectSystem : SystemBase
     }
 
     void DealAreaDamage(in SkillEffectRequestComponent r, NativeArray<Entity> bodies, NativeArray<LocalTransform> positions,
-        NativeArray<TeamComponent> teams)
+        NativeArray<TeamComponent> teams, uint tick)
     {
         if (!TryGetProfile(r.caster, out var profile)) return;
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
@@ -106,6 +106,7 @@ public partial class SkillEffectSystem : SystemBase
                 multiplier = r.effect.value,
                 attackerPosition = r.origin,
                 hitType = HitType.Body,
+                varianceOffset = CombatRandom.RollVariance(tick, r.caster, bodies[i], profile.traits.damageVariance),
             });
         }
     }

@@ -119,6 +119,7 @@ public partial class MeleeContactResolutionSystem : SystemBase
 
             // Seeded by (tick, attacker): the same hit rolls the same on replay or server (L1-05).
             bool critical = CombatRandom.RollCritical(tick, contact.attacker, criticalChance);
+            var profile = em.GetComponentData<DamageProfileComponent>(damageProfile);
             var eventEntity = em.CreateEntity(_damageEventArchetype);
             em.SetComponentData(eventEntity, new PendingDamageEvent
             {
@@ -127,13 +128,14 @@ public partial class MeleeContactResolutionSystem : SystemBase
                 damageSource = contact.attacker,
                 damageProfile = damageProfile,
                 hasInlineDamageProfile = true,
-                inlineDamageProfile = em.GetComponentData<DamageProfileComponent>(damageProfile),
+                inlineDamageProfile = profile,
                 sourceTeam = sourceTeam,
                 category = critical ? DamageCategory.Critical : DamageCategory.Normal,
                 multiplier = critical ? criticalMultiplier : 1f,
                 attackerSpeed = attackerSpeed,
                 attackerPosition = contact.attackerPosition,
-                hitType = contact.hitType
+                hitType = contact.hitType,
+                varianceOffset = CombatRandom.RollVariance(tick, contact.attacker, contact.target, profile.traits.damageVariance),
             });
 
             if (isHero)

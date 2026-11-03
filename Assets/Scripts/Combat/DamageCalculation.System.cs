@@ -94,6 +94,7 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 profile = profile, multiplier = p.multiplier, defense = def, penetration = pen,
                 attackerSpeed = p.attackerSpeed, kineticMultiplier = kinetic, heightDelta = heightDelta,
+                varianceOffset = p.varianceOffset,
             }, combatTuning).effective;
 
             // --- Shield block check (absorbs the hit when the shield collider was hit, L1-08/L1-10) ---

@@ -19,6 +19,7 @@ public partial class ProjectileImpactSystem : SystemBase
     protected override void OnUpdate()
     {
         int processed = 0;
+        uint tick = CombatRandom.Tick(SystemAPI.Time.ElapsedTime);
 
         while (processed < MaxImpactsPerFrame &&
                ProjectileImpactQueue.Pending.TryDequeue(out var data))
@@ -48,7 +49,10 @@ public partial class ProjectileImpactSystem : SystemBase
                 multiplier       = data.multiplier,
                 attackerSpeed    = 0f,
                 attackerPosition = data.attackerPosition,
-                hitType          = data.hitType
+                hitType          = data.hitType,
+                // Rolled when the hit is built, like the reference (L1-12).
+                varianceOffset   = CombatRandom.RollVariance(tick, data.shooter, data.target,
+                                       data.damageProfileSnapshot.traits.damageVariance),
             });
         }
     }
