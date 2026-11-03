@@ -177,8 +177,8 @@ combinan con Y, las listas son "cualquiera de" y los triestados distinguen "no i
 | L3-01 (hecho, C13) | Validar slots sobre NavMesh por escuadra | Cada unidad proyecta su slot con `SamplePosition` radio 2 m por separado (`Squads/Systems/UnitNavMesh.System.cs:364`) | `FormationSlotResolveSystem` con `NavMeshQuery`, BFS acotado y `UnitResolvedSlotComponent`; solo al cambiar la revisión del ancla | Sin apilado en esquinas ni slots en otra isla | M | M | A |
 | L3-03 | Jitter determinista en Dispersa | `Dispersed` es una rejilla fija de `int2` | `posJitter`/`yawJitter` por hash (unidad, slot) | Aspecto natural | S | B | M |
 | L3-04 | Radio de snap por formación | Un `navMeshDestinationSampleRadius` global de 2 m (`UnitNavMesh.System.cs:89`) | `snapRadius` en `FormationDataBlob` | Formaciones cerradas no se rompen | S | B | M |
-| L3-05 | Caducidad de órdenes | Temporizadores dispersos por IA | `expiresAt` en `SquadResolvedOrderComponent` | Menos temporizadores; contrato de red pequeño | S | B | B |
-| L3-06 | Cambio de formación por tag | `FormationSystem` recorre todas las escuadras cada frame (`Formation.System.cs:25-41`) | `FormationChangePendingTag` enableable | Trabajo casi nulo en 3v3 | S | B | B |
+| L3-05 (hecho, `Formations.md` §4) | Caducidad de órdenes | Temporizadores dispersos por IA | `expiresAt` en `SquadResolvedOrderComponent` | Menos temporizadores; contrato de red pequeño | S | B | B |
+| L3-06 (hecho, `Formations.md` §4) | Cambio de formación por tag | `FormationSystem` recorre todas las escuadras cada frame (`Formation.System.cs:25-41`) | `FormationChangePendingTag` enableable | Trabajo casi nulo en 3v3 | S | B | B |
 
 **L3-02.** Ref.: la plantilla se elige por número de miembros (primera con `min <= N`), así que la formación se recompone
 al bajar N. Asignación voraz basta con N<=30. **L3-01.** Ref.: la formación se convierte en destinos sobre una rejilla
@@ -352,7 +352,11 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
     escuadra restante.
   - H5: panel de perks del feudo.
   - H1 con L4-08: la IA usa habilidades de clase y de escuadra, y elige y mantiene un aliado al que apoyar.
-- **Pendiente del catálogo:** L2-8; L3-05, L3-06; L4-03, L4-05, L4-06, L4-07;
+- **Hecho en formaciones (2026-11-03, `Movimiento_Formaciones.md` §24):** L3-05 (los plazos de las órdenes son horas de
+  fin y viajan con la orden resuelta en `expiresAt`; mismo comportamiento), L3-06 (`FormationSystem` solo visita las
+  escuadras con `FormationChangePending`) y el resto de L3-02 (los huecos dentro de una plantilla se cierran 1,5 s tras la
+  primera baja, moviendo solo a los sobrantes).
+- **Pendiente del catálogo:** L2-8; L4-03, L4-05, L4-06, L4-07;
   L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
@@ -364,7 +368,8 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   receptor con el conjunto completo de condiciones), L1-11 (carga: metros recorridos hacia el objetivo, por decisión del
   usuario, con la estructura de umbral y tope de la referencia) y L1-14 (un terreno por mapa y modificadores por tipo de
   escuadra). La mecánica está; los datos (valores por arma, terrenos de los mapas, condicionados) quedan en
-  `Docs/Por_Abordar/Combate.md` C1-C3. **L1-09 queda bloqueado** por las animaciones de reacción (C4).
+  `Docs/Por_Abordar/Combate.md` C1-C3. **L1-09 queda bloqueado** por las animaciones de reacción (C4). C1 (valores por
+  arma) y C2 (terreno) se rellenaron después con tablas aprobadas por el usuario.
 - **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H2-H14 habilidades y perks, P1-P6 pila, F4-F16 formaciones y
   posturas, M1-M15 movimiento, C1-C8 combate).
 - **Orden recomendado** (prioridad del usuario: movimiento y formación): para los solapes de la melé (M2),

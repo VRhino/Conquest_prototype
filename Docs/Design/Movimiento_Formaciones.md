@@ -1040,3 +1040,33 @@ Lectura:
 - S4 formado es de una sola corrida: las dos anteriores con F1, sin el margen por velocidad relativa, dieron 0,43 y 0,50 s.
 - S9 da el primer golpe entre 4,72 y 5,13 s en las tres corridas, frente a 4,70 s antes: no mejora y queda algo por encima.
 - F9 sigue abierto: F17 reparte destinos y no cambia quién choca ni quién esquiva.
+
+## 24. Plazos de órdenes, marca de cambio y huecos dentro de una plantilla (L3-05, L3-06, L3-02, 2026-11-03)
+
+**L3-05 (`ec977b10`).** La insistencia del jugador (tres pulsaciones de la misma orden en 0,8 s, o FollowHero, hacen que
+su orden gane a la reacción de combate durante 4 s) deja de usar temporizadores que se descontaban cada frame: la ventana y
+la anulación son horas de fin en `SquadPlayerOrderIntentComponent`, y la orden resuelta lleva la suya en `expiresAt`
+(0 = hasta que la sustituyan). `SquadFSMSystem` lo lee de la orden resuelta. Mismo comportamiento.
+
+**L3-06 (`ba821fd5`).** `FormationSystem` solo visita las escuadras con `FormationChangePending` encendida. La encienden
+la orden resuelta con otra formación, la baja de un soldado y la petición de espaciado; el sistema la apaga al visitar. El
+enfriamiento del cambio es una hora absoluta. En S4 con bajas siguen saliendo los mismos cambios de plantilla (2, 2, 3 y 3).
+
+**Huecos (L3-02).** Con la misma plantilla y menos vivos, `FormationSystem` espera `formationCompactDelay` (1,5 s) desde la
+primera baja y mueve solo a los soldados de las ranuras sobrantes a los huecos de las n primeras, por cercanía y sin
+cruzarse (`FormationLayout.CompactSlots`). Métrica nueva en el registro: `gapSlots`, soldados fuera de las n primeras.
+
+| A/B en S6 (misma compilación, corridas seguidas) | Error en marcha | Atascos | Primer golpe |
+|---|---|---|---|
+| Con compactación (4) | 0,58 / 0,57 / 0,76 / 0,80 m | 34 / 27 / 33 / 47 | 8,1 / 8,0 / 6,5 / 6,0 s |
+| Sin compactación (3, espera de 100 000 s) | 0,84 / 0,54 / 0,83 m | 14 / 28 / 26 | 4,7 / 7,0 / 5,8 s |
+
+Lectura:
+- Los valores altos de error salen igual con y sin compactación: es la variación de la melé (M10), no la compactación.
+- En S6 la escuadra medida no tiene huecos en ningún fotograma (`gapSlots` = 0): sus bajas no la dejan con huecos dentro
+  de una plantilla durante la prueba. Solo podía influir la escuadra enemiga.
+- Los escenarios S4 con bajas no ejercitan la compactación: matan hasta cada umbral de plantilla en menos de 1,5 s, así
+  que el cambio de plantilla llega antes que la espera (`gapSlots` 11 % de fotogramas con y sin ella en BSL). La regla y
+  el sistema están probados en EditMode (`FormationCompactTests`); falta un escenario de juego con bajas espaciadas
+  (`Docs/Por_Abordar/Formaciones_y_Posturas.md` F18).
+- S1, S4, S9 y los cuatro S4 con bajas en verde; S9 sin cambios de tendencia (1,87 m de error, dentro del intervalo de §23).

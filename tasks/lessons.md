@@ -575,3 +575,10 @@
 - La penetración del soldado se suma a la del perfil en la fórmula: un modificador de penetración va solo al perfil, o cuenta dos veces.
 - En esta máquina no hay Python: las ediciones en lote van con un script de Node que comprueba que cada texto aparece exactamente una vez.
 - Mientras corre una tanda de PlayMode, adelantar trabajo en `Docs/` y `tasks/` (fuera de `Assets`) y dejar el código en el scratchpad, para no provocar una recompilación a mitad.
+
+## Formaciones: plazos, marca de cambio y huecos (2026-11-03)
+
+- Un temporizador que se descuenta cada frame se sustituye por una hora de fin: no hace falta ningún sistema que lo baje, y la hora viaja con el dato (`expiresAt`) para quien lo lea después.
+- Al pasar un sistema a "solo con marca", cada escritor de lo que el sistema mira tiene que encenderla: petición de formación, baja y espaciado. Si una petición debe esperar (enfriamiento), basta con que su escritor la vuelva a encender cada frame.
+- En un test de órdenes, la orden por defecto es FollowHero (valor 0 del enum), que se salta el enfriamiento de formación: fijar la orden explícitamente.
+- La compactación va dentro del único escritor de las ranuras (`FormationSystem`), no en un sistema aparte como proponía el catálogo.

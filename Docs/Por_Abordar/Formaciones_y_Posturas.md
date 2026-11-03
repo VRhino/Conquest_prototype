@@ -26,6 +26,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F15 | Radios de llegada por formación | Media | **Hecho** (`dcaf6dde`) |
 | F16 | `UnitShieldComponent.orientation` sin lectores | Baja | Pendiente |
 | F17 | Ocupación de celdas entre escuadras y plantilla por encaje | Media | **Hecho** la ocupación (`8f3b45cf`); el "¿cabe?" por plantilla se descarta |
+| F18 | Escenario de juego que ejercite el cierre de huecos | Media | Pendiente (la regla está probada en EditMode) |
 
 ---
 
@@ -59,8 +60,9 @@ El usuario aprobó las formas el 2026-11-02, incluidas las que estaban en duda: 
 cruz de la tortuga de 5.
 
 Queda abierto:
-- **Huecos dentro de una banda.** Entre dos cambios de plantilla los huecos quedan donde cayó el soldado:
-  `FormationCompactSystem` nunca se creó (L3-02).
+- **Huecos dentro de una banda.** **Hecho (2026-11-03):** `FormationSystem` los cierra 1,5 s tras la primera baja
+  (`FormationLayout.CompactSlots`; `Movimiento_Formaciones.md` §24). Va dentro de `FormationSystem`, el único escritor de
+  las ranuras, en vez de en un `FormationCompactSystem` aparte.
 - **Formas sin validar en juego.** Las posturas de los papeles nuevos se han comprobado por datos, no a ojo.
 
 ## F2. Elección de plantilla por encaje en la malla y reubicación (C13)
@@ -256,6 +258,14 @@ velocidad relativa. En S5 se pasa de 9,5 pares compartidos de máximo a 0 en tre
 
 El "¿cabe?" por plantilla se descarta: D9 mantiene la plantilla, y F1 ya elige por soldados. Sin hueco, el slot cae a la
 plantilla (sin resolver), como en C13.
+
+## F18. Escenario de juego que ejercite el cierre de huecos
+**Qué es.** Los huecos dentro de una plantilla se cierran 1,5 s tras la primera baja (L3-02,
+`Movimiento_Formaciones.md` §24), pero ningún escenario lo mide: los S4 con bajas matan hasta el umbral de la plantilla
+siguiente en menos de esa espera, y en S6 la escuadra medida no se queda con huecos.
+
+**Cómo abordarlo.** Una variante de S4 que mate de uno en uno con más de 1,5 s entre bajas y sin cruzar un umbral (por
+ejemplo, de 12 a 11 Escuderos), y que mida `gapSlots`, el recorrido de los que se mueven y si alguien cruza la formación.
 
 ## F16. `UnitShieldComponent.orientation` sin lectores
 **Qué es.** Se rellena desde `ShieldHitboxBehaviour.orientation` del prefab, pero ningún sistema lo lee (el bloqueo es el collider).

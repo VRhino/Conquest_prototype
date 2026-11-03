@@ -16,7 +16,7 @@ Las formaciones son configuraciones tácticas que los squads adoptan bajo instru
 | Multiplicador de masa por formación (§3) | No existe `massMultiplier`; la masa viene de `SquadData.massValue` | **Diseño no implementado**: la formación no cambia la masa |
 | Tabla de formaciones y compatibilidad por tipo de squad (§2) | La compatibilidad es qué formaciones lista cada `SquadData` | La tabla del diseño original (Schiltron, Muro de Escudos con multiplicadores) no existe tal cual; se conserva abajo como diseño |
 | Menú radial `ALT` | `ALT` solo alterna el cursor de interfaz | No implementado |
-| Bajas y huecos (§5) | Plantillas por soldados vivos y reparto por cercanía (`FormationSystem`) | Sincronizado; detalle en `Docs/Design/Movimiento_Formaciones.md` §11 |
+| Bajas y huecos (§5) | Plantillas por soldados vivos, reparto por cercanía y huecos cerrados con espera (`FormationSystem`, `FormationLayout.CompactSlots`) | Sincronizado (2026-11-03, L3-02); detalle en `Docs/Design/Movimiento_Formaciones.md` §11 y §24 |
 | Disposición y slots (§6) | `FormationDefinition`, `FormationSystem`, `GridFormationUpdateSystem` | Sincronizado; `FormationGrid.System.cs` ya no existe |
 | Adaptación dinámica (§5) | `FormationAdaptationSystem` calcula `requiresAdaptation` (espacio estrecho) | **Nadie lo consume** (ver `Docs/Por_Abordar/Formaciones_y_Posturas.md`) |
 | Datos y posturas | `Docs/Mechanics/FormationPostures.md` | Sincronizado |
@@ -57,7 +57,13 @@ No hay multiplicador de masa por formación. `SquadData.massValue` se hornea com
 | **Selección directa** | `F1`–`F4` | Índice 0–3 de la lista del squad |
 
 **Condiciones:**
-- `FormationSystem` aplica el cambio cuando la formación pedida difiere de la actual y `SquadStateComponent.formationChangeCooldown` ha llegado a 0; la petición viaja en `SquadResolvedOrderComponent`.
+- `FormationSystem` aplica el cambio cuando la formación pedida difiere de la actual y ha pasado
+  `SquadStateComponent.formationChangeReadyAt` (hora absoluta; `formationChangeCooldown` de `MovementTuningConfig`, 1 s).
+  FollowHero no espera. La petición viaja en `SquadResolvedOrderComponent`; una pedida durante el enfriamiento se aplica
+  al acabar.
+- **Solo se visitan las escuadras con cambios (L3-06).** `FormationChangePending` (enableable) la encienden
+  `OrderResolutionSystem` (formación pedida distinta de la actual), `UnitDeathSystem` (baja) y la petición de espaciado;
+  `FormationSystem` la apaga cuando no queda nada pendiente.
 - En **Hold Position** el centro se conserva y la formación se coloca en el sitio (`SquadHoldPositionComponent.originalFormation` se actualiza).
 - Un cambio de formación no reemite la orden de movimiento: el squad sigue hacia su destino y se reorganiza.
 
@@ -70,7 +76,14 @@ No hay multiplicador de masa por formación. `SquadData.massValue` se hornea com
 - **Unidades muertas**: los slots vacantes se redistribuyen para mantener la coherencia visual de la formación.
 - **Terreno**: si el terreno impide mantener la geometría exacta, las posiciones se ajustan manteniendo la orientación.
 
-Al perder unidades, cuando los vivos bajan del mínimo de la plantilla actual, la formación pasa a la plantilla más pequeña que les corresponde y cada unidad toma la ranura libre más cercana. Si la formación solo tiene una plantilla, quedan huecos hasta que se añadan plantillas reducidas (F1 en `Docs/Por_Abordar/Formaciones_y_Posturas.md`).
+Al perder unidades, cuando los vivos bajan del mínimo de la plantilla actual, la formación pasa a la plantilla más pequeña que les corresponde y cada unidad toma la ranura libre más cercana.
+
+**Huecos dentro de una plantilla (L3-02, 2026-11-03).** Si cae un soldado sin que cambie la plantilla, `FormationSystem`
+espera `formationCompactDelay` (`MovementTuningConfig`, 1,5 s) desde la primera baja, para agrupar las bajas seguidas, y
+luego cierra los huecos (`FormationLayout.CompactSlots`): los n vivos ocupan las n primeras ranuras de la plantilla, que
+es su orden de llenado. Solo se mueven los soldados que estaban en ranuras sobrantes (o sin ranura), cada uno al hueco
+libre más cercano y sin cruzarse con los otros que se mueven; los demás conservan su ranura. Un cambio de plantilla o de
+formación durante la espera lo reparte todo de nuevo y la cancela.
 
 ---
 

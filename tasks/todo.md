@@ -1,6 +1,6 @@
 # Plan: formaciones del catálogo (L3-05, L3-06 y compactar huecos de L3-02)
 
-Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.3.
+Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.3.
 
 ## Decisiones del usuario (2026-11-03)
 - **L3-05:** plazos como hora de fin. La orden resuelta lleva `expiresAt`; la insistencia del jugador y su ventana pasan
@@ -25,8 +25,8 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 ## Pasos (un commit por punto)
 - [x] 1. L3-05: plazos absolutos y `expiresAt`; tests; EditMode y S1/S6.
 - [x] 2. L3-06: marca de cambio pendiente y enfriamiento absoluto; tests; EditMode y S1/S4/S6.
-- [ ] 3. Huecos: compactación con espera; tests; EditMode y S4 con bajas (BL/BT/BSL/BSW), S1, S6, S9.
-- [ ] 4. Docs: `Movimiento_Formaciones.md`, `Formations.md`, catálogo §5, `Por_Abordar`, lecciones.
+- [x] 3. Huecos: compactación con espera; tests; EditMode y S4 con bajas (BL/BT/BSL/BSW), S1, S6, S9.
+- [x] 4. Docs: `Movimiento_Formaciones.md`, `Formations.md`, catálogo §5, `Por_Abordar`, lecciones.
 
 ---
 
