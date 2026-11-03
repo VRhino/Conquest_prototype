@@ -35,4 +35,13 @@ public struct SquadResolvedOrderComponent : IComponentData
 
     /// <summary>True = a new order was issued this frame and SquadOrderSystem should process it.</summary>
     public bool hasNewOrder;
+
+    /// <summary>
+    /// Simulation time at which this order stops winning on its own (L3-05): the end of the player's insisted override
+    /// of the combat reaction. 0 = it holds until another order replaces it.
+    /// </summary>
+    public double expiresAt;
+
+    /// <summary>Whether the order still wins on its own at <paramref name="now"/> (an override that has not lapsed).</summary>
+    public bool OverridesCombat(double now) => expiresAt > now;
 }

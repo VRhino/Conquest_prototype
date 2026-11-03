@@ -17,17 +17,18 @@ public struct SquadPlayerOrderIntentComponent : IComponentData
     /// <summary>World position for Hold Position orders.</summary>
     public float3 holdPosition;
 
-    // ── heroOrdenCooldown state ───────────────────────────────────────────────
+    // ── Insistence (L3-05: absolute simulation times, nothing counts down per frame) ──
 
     /// <summary>How many times the same order has been pressed within the insistence window.</summary>
     public int insistenceCount;
 
-    /// <summary>Time elapsed since the first press of the current insistence sequence.</summary>
-    public float insistenceTimer;
+    /// <summary>Simulation time at which the current insistence window closes.</summary>
+    public double insistenceEndsAt;
 
-    /// <summary>True = player insisted N times → movement overrides combat reaction.</summary>
-    public bool heroOrdenCooldownActive;
-
-    /// <summary>Remaining seconds of the heroOrdenCooldown.</summary>
-    public float heroOrdenCooldownTimer;
+    /// <summary>
+    /// Simulation time until which the player's order overrides the combat reaction (the player insisted, or ordered
+    /// FollowHero); 0 or past = no override. <see cref="OrderResolutionSystem"/> publishes it as the resolved order's
+    /// <see cref="SquadResolvedOrderComponent.expiresAt"/>.
+    /// </summary>
+    public double overrideEndsAt;
 }

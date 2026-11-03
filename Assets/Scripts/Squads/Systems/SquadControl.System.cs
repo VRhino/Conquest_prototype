@@ -31,24 +31,8 @@ public partial class SquadControlSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        // Timers must advance even while input devices are disconnected or UI owns input.
-        float dt = SystemAPI.Time.DeltaTime;
-        foreach (var heroSquadRef in SystemAPI.Query<RefRO<HeroSquadReference>>().WithAll<IsLocalPlayer>())
-        {
-            Entity tickSquad = heroSquadRef.ValueRO.squad;
-            if (!SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(tickSquad)) continue;
-            var intent = SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(tickSquad);
-            bool intentChanged = false;
-            if (intent.insistenceTimer > 0f) { intent.insistenceTimer -= dt; intentChanged = true; }
-            if (intent.heroOrdenCooldownTimer > 0f)
-            {
-                intent.heroOrdenCooldownTimer -= dt;
-                if (intent.heroOrdenCooldownTimer <= 0f)
-                    intent.heroOrdenCooldownActive = false;
-                intentChanged = true;
-            }
-            if (intentChanged) SystemAPI.SetComponent(tickSquad, intent);
-        }
+        // Insistence windows are end times (L3-05): nothing to count down here.
+        double now = SystemAPI.Time.ElapsedTime;
 
         if (_mainCamera == null)
             _mainCamera = Camera.main;
@@ -173,7 +157,7 @@ public partial class SquadControlSystem : SystemBase
                 var definition = SystemAPI.HasComponent<SquadDefinitionComponent>(squadEntity)
                     ? SystemAPI.GetComponent<SquadDefinitionComponent>(squadEntity)
                     : default;
-                if (!SquadPlayerCommandResolver.TryApply(command, definition, ref input, ref intent))
+                if (!SquadPlayerCommandResolver.TryApply(command, definition, ref input, ref intent, now))
                     continue;
                 squadChanges.Add((squadEntity, input, intent));
             }

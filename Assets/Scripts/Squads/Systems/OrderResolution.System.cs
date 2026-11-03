@@ -7,7 +7,8 @@ using Unity.Mathematics;
 ///
 /// Priority rules:
 ///   Local squad:
-///     1. heroOrdenCooldown active  → Player wins (movement override)
+///     1. insisted override not lapsed (now &lt; overrideEndsAt) → Player wins, and the resolved order carries that
+///        end as expiresAt (L3-05)
 ///     2. combatReaction.reactToEnemy → CombatReaction wins (blocks movement)
 ///     3. Otherwise                 → Player wins (normal order)
 ///   Remote squad:
@@ -37,6 +38,7 @@ public partial class OrderResolutionSystem : SystemBase
     {
         _localPlayerLookup.Update(this);
         _ownerLookup.Update(this);
+        double now = SystemAPI.Time.ElapsedTime;
 
         foreach (var (playerIntent, aiIntent, combatReaction, input, formation, resolved, entity) in SystemAPI
             .Query<RefRO<SquadPlayerOrderIntentComponent>,
@@ -52,12 +54,13 @@ public partial class OrderResolutionSystem : SystemBase
 
             if (isLocal)
             {
-                // Local squad: forward player order, apply combat blocking unless heroOrdenCooldown active
+                // Local squad: forward player order, apply combat blocking unless the insisted override holds
                 SquadOrderType winningOrder;
                 float3 winningPosition = default;
                 Entity winningTarget = Entity.Null;
                 OrderSource winningSource;
-                if (playerIntent.ValueRO.heroOrdenCooldownActive)
+                bool insisted = now < playerIntent.ValueRO.overrideEndsAt;
+                if (insisted)
                 {
                     // Player insisted — override combat reaction
                     winningOrder = playerIntent.ValueRO.orderType;
@@ -93,6 +96,7 @@ public partial class OrderResolutionSystem : SystemBase
                 resolved.ValueRW.source = winningSource;
                 resolved.ValueRW.formation   = playerIntent.ValueRO.desiredFormation;
                 resolved.ValueRW.hasNewOrder = input.ValueRO.hasNewOrder || orderChanged;
+                resolved.ValueRW.expiresAt   = insisted ? playerIntent.ValueRO.overrideEndsAt : 0;
             }
             else
             {
@@ -132,6 +136,7 @@ public partial class OrderResolutionSystem : SystemBase
                 // AI orders do not request formation changes.
                 resolved.ValueRW.formation    = formation.ValueRO.currentFormation;
                 resolved.ValueRW.hasNewOrder  = orderChanged;
+                resolved.ValueRW.expiresAt    = 0;
             }
         }
     }

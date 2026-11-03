@@ -54,7 +54,7 @@ public class SquadControlRegressionTests
             {
                 orderIssued = true, order = SquadOrderType.HoldPosition,
                 holdPosition = hold, formationRequested = true, formationIndex = 3
-            }, definition, ref input, ref intent), Is.True);
+            }, definition, ref input, ref intent, 0), Is.True);
             Assert.That(intent.orderType, Is.EqualTo(SquadOrderType.HoldPosition));
             Assert.That(intent.holdPosition, Is.EqualTo(hold));
             Assert.That(intent.desiredFormation, Is.EqualTo(FormationType.Line));
@@ -63,13 +63,13 @@ public class SquadControlRegressionTests
             input.hasNewOrder = false;
             Assert.That(SquadPlayerCommandResolver.TryApply(new SquadControlCommand
             { formationRequested = true, formationIndex = 1 }, definition,
-                ref input, ref intent), Is.True);
+                ref input, ref intent, 0), Is.True);
             Assert.That(intent.desiredFormation, Is.EqualTo(FormationType.Column));
             Assert.That(input.hasNewOrder, Is.False);
 
             Assert.That(SquadPlayerCommandResolver.TryApply(new SquadControlCommand
             { formationRequested = true, cycleFormation = true }, definition,
-                ref input, ref intent), Is.True);
+                ref input, ref intent, 0), Is.True);
             Assert.That(intent.desiredFormation, Is.EqualTo(FormationType.Line));
             Assert.That(input.hasNewOrder, Is.False);
         }

@@ -1,3 +1,35 @@
+# Plan: formaciones del catálogo (L3-05, L3-06 y compactar huecos de L3-02)
+
+Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.3.
+
+## Decisiones del usuario (2026-11-03)
+- **L3-05:** plazos como hora de fin. La orden resuelta lleva `expiresAt`; la insistencia del jugador y su ventana pasan
+  a horas absolutas de simulación (T2). Mismo comportamiento. La IA no gana órdenes que caduquen y la retirada no cambia.
+- **Huecos:** se compactan con una espera corta (config) tras la baja, agrupando las bajas seguidas. Solo se mueven los
+  soldados que ocupan ranuras sobrantes (de prioridad menor que el número de vivos), cada uno al hueco libre más cercano.
+
+## Diseño
+- **L3-05:** `SquadPlayerOrderIntentComponent` cambia `insistenceTimer`/`heroOrdenCooldownTimer`/`heroOrdenCooldownActive`
+  por `insistenceEndsAt` y `overrideEndsAt` (double). `SquadPlayerCommandResolver.TryApply` recibe `now`.
+  `SquadControlSystem` deja de descontar. `OrderResolutionSystem` decide la insistencia con `now < overrideEndsAt` y la
+  publica en `SquadResolvedOrderComponent.expiresAt` (0 = hasta que la sustituyan). `SquadFSMSystem` lee la orden
+  resuelta en vez de la intención del jugador.
+- **L3-06:** `FormationChangePending` (enableable) en cada escuadra. La encienden `OrderResolutionSystem` (formación pedida
+  distinta de la actual), `UnitDeathSystem` (baja) y `FormationSystem` al ver una petición de espaciado.
+  `FormationSystem` solo recorre las escuadras con la marca y la apaga cuando no queda nada pendiente. El enfriamiento del
+  cambio de formación pasa a hora absoluta (`formationChangeReadyAt`).
+- **Huecos:** en `FormationSystem` (único escritor de las ranuras). Con la misma plantilla y menos vivos, programa
+  `FormationComponent.compactAt = ahora + formationCompactDelay` (`MovementTuningConfig`) y, al llegar, reparte los
+  sobrantes a los huecos por cercanía (regla pura `FormationLayout.CompactSlots`).
+
+## Pasos (un commit por punto)
+- [x] 1. L3-05: plazos absolutos y `expiresAt`; tests; EditMode y S1/S6.
+- [ ] 2. L3-06: marca de cambio pendiente y enfriamiento absoluto; tests; EditMode y S1/S4/S6.
+- [ ] 3. Huecos: compactación con espera; tests; EditMode y S4 con bajas (BL/BT/BSL/BSW), S1, S6, S9.
+- [ ] 4. Docs: `Movimiento_Formaciones.md`, `Formations.md`, catálogo §5, `Por_Abordar`, lecciones.
+
+---
+
 # Plan: combate pendiente del catálogo de la referencia (L1-08, L1-10, L1-07, L1-12, L1-13, L1-02, L1-11, L1-14)
 
 Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.

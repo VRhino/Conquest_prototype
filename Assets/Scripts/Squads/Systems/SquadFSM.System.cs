@@ -23,12 +23,16 @@ public partial class SquadFSMSystem : SystemBase
             ? SystemAPI.GetSingleton<SquadSpawnConfigComponent>().minCombatDuration
             : 1f;
 
-        foreach (var (state, ai, playerIntent, units, entity) in SystemAPI
-                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>,
-                            RefRO<SquadPlayerOrderIntentComponent>, DynamicBuffer<SquadUnitElement>>()
+        double now = SystemAPI.Time.ElapsedTime;
+        foreach (var (state, ai, units, entity) in SystemAPI
+                     .Query<RefRW<SquadStateComponent>, RefRO<SquadAIComponent>, DynamicBuffer<SquadUnitElement>>()
+                     .WithAll<SquadPlayerOrderIntentComponent>()
                      .WithEntityAccess())
         {
             var s = state.ValueRW;
+            // The player's insisted override, as resolved (L3-05): its end travels with the order.
+            bool insisted = SystemAPI.HasComponent<SquadResolvedOrderComponent>(entity)
+                && SystemAPI.GetComponent<SquadResolvedOrderComponent>(entity).OverridesCombat(now);
 
             // Retirement must also complete when its final unit dies (do not divert to KO).
             if (s.retreatTriggered && s.currentState == SquadFSMState.Retreating)
@@ -76,7 +80,7 @@ public partial class SquadFSMSystem : SystemBase
             // Determine next state based on conditions
             SquadFSMState desired = s.currentState;
 
-            if (ai.ValueRO.isInCombat && !playerIntent.ValueRO.heroOrdenCooldownActive)
+            if (ai.ValueRO.isInCombat && !insisted)
             {
                 desired = SquadFSMState.InCombat;
             }
@@ -93,10 +97,10 @@ public partial class SquadFSMSystem : SystemBase
                 desired = SquadFSMState.Idle;
             }
 
-            // Enforce minimum time in combat (bypassed when heroOrdenCooldown is active)
+            // Enforce minimum time in combat (bypassed while the insisted override holds)
             if (s.currentState == SquadFSMState.InCombat && desired != SquadFSMState.InCombat)
             {
-                if (s.stateTimer < minCombatDuration && !playerIntent.ValueRO.heroOrdenCooldownActive)
+                if (s.stateTimer < minCombatDuration && !insisted)
                     desired = SquadFSMState.InCombat;
             }
 

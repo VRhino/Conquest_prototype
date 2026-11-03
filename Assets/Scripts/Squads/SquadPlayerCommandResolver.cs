@@ -19,9 +19,13 @@ public static class SquadPlayerCommandResolver
     private const float InsistenceWindow = 0.8f;
     private const float CooldownDuration = 4f;
 
+    /// <summary>
+    /// Applies <paramref name="command"/> at simulation time <paramref name="now"/>; the insistence window and the
+    /// override are stored as end times (L3-05), so nothing has to count them down.
+    /// </summary>
     public static bool TryApply(SquadControlCommand command,
         SquadDefinitionComponent definition, ref SquadInputComponent input,
-        ref SquadPlayerOrderIntentComponent intent)
+        ref SquadPlayerOrderIntentComponent intent, double now)
     {
         FormationType selectedFormation = intent.desiredFormation;
         bool validFormationChange = command.formationRequested
@@ -35,18 +39,17 @@ public static class SquadPlayerCommandResolver
 
         if (command.orderIssued)
         {
-            if (command.order == intent.orderType && intent.insistenceTimer > 0f)
+            if (command.order == intent.orderType && now < intent.insistenceEndsAt)
                 intent.insistenceCount++;
             else
             {
                 intent.insistenceCount = 1;
-                intent.insistenceTimer = InsistenceWindow;
+                intent.insistenceEndsAt = now + InsistenceWindow;
             }
 
-            if (intent.insistenceCount >= InsistenceCount && !intent.heroOrdenCooldownActive)
+            if (intent.insistenceCount >= InsistenceCount && now >= intent.overrideEndsAt)
             {
-                intent.heroOrdenCooldownActive = true;
-                intent.heroOrdenCooldownTimer = CooldownDuration;
+                intent.overrideEndsAt = now + CooldownDuration;
                 intent.insistenceCount = 0;
             }
 
@@ -55,8 +58,7 @@ public static class SquadPlayerCommandResolver
             if (command.order == SquadOrderType.FollowHero)
             {
                 // A single follow command releases defensive combat and rank posture.
-                intent.heroOrdenCooldownActive = true;
-                intent.heroOrdenCooldownTimer = CooldownDuration;
+                intent.overrideEndsAt = now + CooldownDuration;
                 if (definition.formationLibrary.IsCreated)
                 {
                     ref var library = ref definition.formationLibrary.Value;
