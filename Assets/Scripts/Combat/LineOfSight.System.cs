@@ -12,6 +12,7 @@ using UnityEngine;
 /// one soldier of the enemy squad at a time, at eye height. <see cref="EnemyDetectionSystem"/> publishes only the
 /// enemies a squad sees, on the next frame. Only writes <see cref="SquadVisibilityElement"/> and <see cref="SquadVisibilityCursor"/>.
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(EnemyDetectionSystem))]
 public partial class LineOfSightSystem : SystemBase

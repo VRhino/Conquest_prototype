@@ -7,6 +7,7 @@ using Unity.Transforms;
 /// detected enemies and squad cohesion. Movement or attacks are handled by
 /// other systems.
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadFSMSystem))]
 public partial class SquadAISystem : SystemBase

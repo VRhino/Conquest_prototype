@@ -18,6 +18,7 @@ using UnityEngine.AI;
 ///
 /// Pipeline: [Behavior systems] → THIS → HeroMovementSystem (local-only, unchanged)
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroAIRusherSystem))]
 [UpdateAfter(typeof(HeroAIBalancedSystem))]

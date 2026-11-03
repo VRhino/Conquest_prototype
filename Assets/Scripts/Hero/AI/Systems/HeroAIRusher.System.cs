@@ -11,6 +11,7 @@ using Unity.Transforms;
 ///
 /// Pipeline: HeroAIPerceptionSystem → THIS → HeroAIExecutionSystem
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroAIPerceptionSystem))]
 [UpdateBefore(typeof(HeroAIExecutionSystem))]

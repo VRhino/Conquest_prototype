@@ -16,6 +16,7 @@ using Unity.Transforms;
 /// <item>The squad's first ready ability while the squad fights.</item>
 /// </list>
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroAIRusherSystem))]
 [UpdateAfter(typeof(HeroAIBalancedSystem))]

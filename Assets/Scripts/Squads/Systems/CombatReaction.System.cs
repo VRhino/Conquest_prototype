@@ -6,6 +6,7 @@ using Unity.Entities;
 /// Runs after SquadAISystem so combat state is up to date,
 /// and before OrderResolutionSystem so the intent is ready to be resolved.
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
 [UpdateBefore(typeof(OrderResolutionSystem))]

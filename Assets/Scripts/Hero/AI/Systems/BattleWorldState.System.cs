@@ -17,6 +17,7 @@ using Unity.Transforms;
 /// Pipeline position:
 ///   BattleWorldStateSystem → HeroAIPerceptionSystem → [Behaviors] → HeroAIExecutionSystem
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(HeroAIPerceptionSystem))]
 [UpdateAfter(typeof(EnemyDetectionSystem))]

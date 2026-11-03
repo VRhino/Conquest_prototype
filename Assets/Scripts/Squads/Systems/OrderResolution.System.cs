@@ -18,6 +18,7 @@ using Unity.Mathematics;
 /// Orders are reissued when their winning payload changes or a local player
 /// explicitly repeats a command. HoldPosition is never replaced by a combat reaction.
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(CombatReactionSystem))]
 [UpdateBefore(typeof(SquadOrderSystem))]

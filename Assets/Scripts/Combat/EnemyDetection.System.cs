@@ -14,6 +14,7 @@ using Unity.Transforms;
 /// check after an XZ spatial broadphase; output order follows the original ECS
 /// query and dynamic-buffer order.
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateBefore(typeof(SquadAISystem))]
 [UpdateAfter(typeof(HeroRespawnSystem))]

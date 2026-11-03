@@ -14,6 +14,7 @@ using Unity.Transforms;
 /// that enemy in and a bonus for it (P4, <see cref="UnitBlockedComponent"/>): it takes the enemy in its way unless that
 /// one is already crowded, so the melee forms lines instead of pushing through one enemy to reach another, or piling up.
 /// </summary>
+[ServerAuthoritative] // Decides the match (L4-06)
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadAISystem))]
 [UpdateAfter(typeof(SquadFSMSystem))]

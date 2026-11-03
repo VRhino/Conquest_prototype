@@ -16,7 +16,7 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 - [x] 1. L4-10: stats de IA de escuadra en la pila, consumidos por detección y objetivo; tests; EditMode y S6/S7.
 - [x] 2. L4-05: `AggroBias` con caducidad en la puntuación de objetivo y evento `Taunt`; tests; EditMode y S6.
 - [x] 3. L4-03: visibilidad por pareja con presupuesto; detección y arqueros; tests; EditMode y S1/S6/S7/S9.
-- [ ] 4. L4-06: marca y test de arquitectura.
+- [x] 4. L4-06: marca y test de arquitectura.
 - [ ] 5. Docs: catálogo §5, `Movimiento_Formaciones.md` o doc de IA, `Por_Abordar` (L4-07), lecciones.
 
 ---
