@@ -63,6 +63,10 @@ public class SquadData : ScriptableObject
     [Tooltip("Daño extra (o reducido) que el tipo de escuadra hace o recibe solo cuando se cumple la condición del golpe.")]
     public List<ConditionalDamage> conditionalModifiers = new List<ConditionalDamage>();
 
+    [Header("Terreno (L1-14)")]
+    [Tooltip("Modificadores de vida, daño, defensa o velocidad de sus soldados según el terreno del mapa.")]
+    public List<TerrainModifier> terrainModifiers = new List<TerrainModifier>();
+
     // Base unit attributes
     /// <summary>Base health for each unit.</summary>
     public int baseHealth;

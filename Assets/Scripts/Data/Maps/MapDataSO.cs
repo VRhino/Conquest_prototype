@@ -28,6 +28,10 @@ namespace Data.Maps
         [Tooltip("Las extensiones nunca dejan el reloj por encima de esto.")]
         [SerializeField] private int _maxBattleDurationSeconds = BattleClock.DefaultMaxBattleSeconds;
 
+        [Header("Terrain (L1-14)")]
+        [Tooltip("Terreno del mapa: cada tipo de escuadra aplica los modificadores que declara para él.")]
+        [SerializeField] private BattleTerrain _terrain = BattleTerrain.Any;
+
         [Header("Scene Reference")]
         [SerializeField] private GameObject _preparationMap;
 
@@ -43,6 +47,7 @@ namespace Data.Maps
         public int captureTimeExtensionSeconds => _captureTimeExtensionSeconds;
         public int maxBattleDurationSeconds => _maxBattleDurationSeconds;
         public GameObject preparationMap => _preparationMap;
+        public BattleTerrain terrain => _terrain;
 
         #endregion
 

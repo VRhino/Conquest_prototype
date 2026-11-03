@@ -115,6 +115,13 @@ public partial class SquadSpawningSystem : SystemBase
                 var conditionalTarget = ecb.AddBuffer<SquadConditionalDamageElement>(squad);
                 foreach (var modifier in conditionalSource) conditionalTarget.Add(modifier);
             }
+            if (SystemAPI.HasBuffer<SquadTerrainModifierElement>(selection.ValueRO.squadDataEntity))
+            {
+                // Terrain modifiers of the squad type (L1-14); UnitStatScalingSystem applies those of the battle's terrain.
+                var terrainSource = SystemAPI.GetBuffer<SquadTerrainModifierElement>(selection.ValueRO.squadDataEntity);
+                var terrainTarget = ecb.AddBuffer<SquadTerrainModifierElement>(squad);
+                foreach (var modifier in terrainSource) terrainTarget.Add(modifier);
+            }
             // The squad launches its own abilities (L2-9); UnitStatScalingSystem adds each one as it unlocks.
             ecb.AddComponent<SkillRequestComponent>(squad);
             ecb.SetComponentEnabled<SkillRequestComponent>(squad, false);

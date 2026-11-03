@@ -65,11 +65,13 @@ public static class UnitStatsUtility
 
     /// <summary>
     /// What the squad type declares for its units besides its stats: its conditional damage modifiers (L1-02), as
-    /// permanent entries of source <see cref="ModifierSource.UnitType"/> on each unit. Replaces its own, so it can run
-    /// again on level-up.
+    /// permanent entries of source <see cref="ModifierSource.UnitType"/> on each unit, and its modifiers for the battle's
+    /// <paramref name="terrain"/> (L1-14), on the stack with source <see cref="ModifierSource.Terrain"/>. Replaces its
+    /// own, so it can run again on level-up.
     /// </summary>
-    public static void ApplySquadTypeModifiers(Entity squadEntity, EntityManager entityManager)
+    public static void ApplySquadTypeModifiers(Entity squadEntity, BattleTerrain terrain, EntityManager entityManager)
     {
+        ApplyTerrainModifiers(squadEntity, terrain, entityManager);
         if (!entityManager.HasBuffer<SquadUnitElement>(squadEntity)) return;
         using var declared = entityManager.HasBuffer<SquadConditionalDamageElement>(squadEntity)
             ? entityManager.GetBuffer<SquadConditionalDamageElement>(squadEntity, true).ToNativeArray(Allocator.Temp)
@@ -88,6 +90,36 @@ public static class UnitStatsUtility
                 {
                     condition = d.value.condition, damageRatio = d.value.damageRatio, source = ModifierSource.UnitType,
                 });
+        }
+    }
+
+    /// <summary>
+    /// Terrain modifiers on each unit and, for damage and penetration, on the squad's shared profile (<see cref="TerrainModifiers"/>).
+    /// </summary>
+    static void ApplyTerrainModifiers(Entity squadEntity, BattleTerrain terrain, EntityManager entityManager)
+    {
+        if (!entityManager.HasBuffer<SquadTerrainModifierElement>(squadEntity)
+            || !entityManager.HasBuffer<SquadUnitElement>(squadEntity)) return;
+        using var declared = entityManager.GetBuffer<SquadTerrainModifierElement>(squadEntity, true).ToNativeArray(Allocator.Temp);
+        Entity profile = entityManager.HasComponent<SquadDamageProfileReference>(squadEntity)
+            ? entityManager.GetComponentData<SquadDamageProfileReference>(squadEntity).Value : Entity.Null;
+        if (entityManager.Exists(profile) && entityManager.HasBuffer<StatModifier>(profile))
+        {
+            StatStack.ClearSource(entityManager, profile, ModifierSource.Terrain);
+            foreach (var d in declared)
+                if (TerrainModifiers.Applies(d.value, terrain) && TerrainModifiers.OnProfile(d.value.stat))
+                    StatStack.Add(entityManager, profile, d.value.stat, d.value.op, d.value.value, ModifierSource.Terrain);
+            StatStack.MarkDirty(entityManager, profile);
+        }
+        using var units = entityManager.GetBuffer<SquadUnitElement>(squadEntity, true).ToNativeArray(Allocator.Temp);
+        foreach (var unit in units)
+        {
+            if (!entityManager.Exists(unit.Value) || !entityManager.HasBuffer<StatModifier>(unit.Value)) continue;
+            StatStack.ClearSource(entityManager, unit.Value, ModifierSource.Terrain);
+            foreach (var d in declared)
+                if (TerrainModifiers.Applies(d.value, terrain) && TerrainModifiers.OnUnit(d.value.stat))
+                    StatStack.Add(entityManager, unit.Value, d.value.stat, d.value.op, d.value.value, ModifierSource.Terrain);
+            StatStack.MarkDirty(entityManager, unit.Value);
         }
     }
 

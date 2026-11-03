@@ -22,6 +22,9 @@ public partial class UnitStatScalingSystem : SystemBase
             targets.Add(EntityManager.GetComponentData<SquadLevelUpEvent>(evt).squad);
             EntityManager.DestroyEntity(evt);
         }
+        // The battle's terrain (L1-14); without a map, only the modifiers declared for any terrain apply.
+        var terrain = SystemAPI.TryGetSingleton<BattleTerrainComponent>(out var battleTerrain)
+            ? battleTerrain.value : BattleTerrain.Any;
         foreach (var squad in targets)
         {
             if (!EntityManager.HasComponent<SquadProgressComponent>(squad) ||
@@ -34,7 +37,7 @@ public partial class UnitStatScalingSystem : SystemBase
                 ? EntityManager.GetComponentData<SquadDefinitionComponent>(source).leadershipCost : 0;
             int level = EntityManager.GetComponentData<SquadProgressComponent>(squad).level;
             UnitStatsUtility.ApplyStatsToSquad(squad, data, leadership, level, EntityManager, GetBufferLookup<SquadUnitElement>(true));
-            UnitStatsUtility.ApplySquadTypeModifiers(squad, EntityManager);
+            UnitStatsUtility.ApplySquadTypeModifiers(squad, terrain, EntityManager);
             UpdateUnlocks(squad, source, data.curves, level);
             if (!EntityManager.HasComponent<SquadStatsInitialized>(squad))
                 EntityManager.AddComponent<SquadStatsInitialized>(squad);

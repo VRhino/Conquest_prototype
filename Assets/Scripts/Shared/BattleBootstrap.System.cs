@@ -70,6 +70,16 @@ public partial class BattleBootstrapSystem : SystemBase
             EntityManager.AddComponentData(EntityManager.CreateEntity(), clock);
     }
 
+    /// <summary>The terrain of the battle's map (L1-14); a map without one gives <see cref="BattleTerrain.Any"/>.</summary>
+    void SetBattleTerrain(BattleData battle)
+    {
+        var terrain = new BattleTerrainComponent { value = battle.mapData != null ? battle.mapData.terrain : BattleTerrain.Any };
+        if (SystemAPI.TryGetSingletonEntity<BattleTerrainComponent>(out var entity))
+            EntityManager.SetComponentData(entity, terrain);
+        else
+            EntityManager.AddComponentData(EntityManager.CreateEntity(), terrain);
+    }
+
     protected override void OnUpdate()
     {
         var battle = BattleBootstrapRequests.Battle;
@@ -133,6 +143,7 @@ public partial class BattleBootstrapSystem : SystemBase
                         var controller = World.GetExistingSystemManaged<MatchControllerSystem>();
                         if (controller != null) controller.Enabled = true;
                         StartBattleClock(battle);
+                        SetBattleTerrain(battle);
                     }
                 }
                 else

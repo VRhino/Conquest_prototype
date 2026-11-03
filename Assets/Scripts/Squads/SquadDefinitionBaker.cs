@@ -127,6 +127,11 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 foreach (var modifier in d.conditionalModifiers)
                     conditional.Add(new SquadConditionalDamageElement { value = modifier });
 
+            var terrain = AddBuffer<SquadTerrainModifierElement>(entity);
+            if (d.terrainModifiers != null)
+                foreach (var modifier in d.terrainModifiers)
+                    terrain.Add(new SquadTerrainModifierElement { value = modifier });
+
             var statsBuffer = AddBuffer<UnitStatsBufferElement>(entity);
             statsBuffer.Add(new UnitStatsBufferElement
             {

@@ -52,6 +52,8 @@ public enum ModifierSource : byte
     Level, Equipment, Perk, Effect,
     /// <summary>Declared by the unit's squad type (squad data), e.g. its conditional modifiers (L1-02).</summary>
     UnitType,
+    /// <summary>Declared by the squad type for the battle's terrain (L1-14).</summary>
+    Terrain,
 }
 
 /// <summary>One modifier on one stat. Written by the system that owns its source; read only by StatResolveSystem.</summary>
