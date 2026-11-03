@@ -8,7 +8,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
 | C1 | Valores de los rasgos del golpe en los datos de cada arma | Media | **Hecho** (2026-11-03, tabla aprobada) |
-| C2 | Terreno de los mapas y modificadores de cada tipo de escuadra | Media | Pendiente (decisión de diseño y datos) |
+| C2 | Terreno de los mapas y modificadores de cada tipo de escuadra | Media | **Hecho** (2026-11-03, tabla aprobada) |
 | C3 | Datos de modificadores condicionados y perks que los den | Media | Pendiente (datos) |
 | C4 | Reacciones al golpe por tipo y clase de objetivo (L1-09) | Media | Bloqueado (animaciones) |
 | C5 | Variación del daño por habilidad | Baja | Pendiente |
@@ -39,6 +39,10 @@ La mecánica funciona y está probada; los números son balance.
 más de lo querido.
 
 ## C2. Terreno de los mapas
+**Hecho (2026-11-03).** `DefaultMap` es `Plains` (neutra) y cada tipo de escuadra declara sus modificadores para
+Bosque, Montaña y Nieve (tabla en `Docs/Mechanics/DamageMechanics.md` §4.2). Con un solo mapa no cambia ninguna batalla:
+los datos quedan listos para el segundo mapa. Los héroes siguen sin modificadores de terreno.
+
 **Qué es.** `MapDataSO.terrain` existe, pero ningún mapa lo declara (vale `Any`) y ningún `SquadData` tiene
 `terrainModifiers`. Los tipos de terreno (`Plains`, `Forest`, `Mountain`, `Snow`) son una propuesta.
 

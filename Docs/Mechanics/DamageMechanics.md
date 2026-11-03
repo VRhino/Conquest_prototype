@@ -152,7 +152,16 @@ terreno:
   sustituye los de fuente `Terrain` por los del terreno actual. Vida, defensa y velocidad van a cada soldado; el daño, al
   soldado (solo se muestra) y al perfil compartido de la escuadra; la penetración, solo al perfil, porque la del soldado
   se suma a la del perfil en la fórmula.
-- Ningún tipo de escuadra declara aún modificadores de terreno (ver `Docs/Por_Abordar/Combate.md` C2).
+- Datos aprobados por el usuario (2026-11-03): `DefaultMap`, el único mapa de batalla, es `Plains`, y la Llanura es
+  neutra (la referencia), así que hoy el terreno no cambia ninguna batalla. Modificadores por tipo de escuadra, como
+  ratios ("defensa" y "daño" son los tres tipos):
+
+| Escuadra | Llanura | Bosque | Montaña | Nieve |
+|---|---|---|---|---|
+| Escuderos | — | +10 % defensa | −10 % velocidad | −10 % velocidad |
+| Lanceros | — | −15 % velocidad | −10 % velocidad | −10 % velocidad |
+| Piqueros | — | −15 % velocidad, −10 % daño | — | −10 % velocidad |
+| Arqueros | — | +15 % defensa | +10 % daño | −10 % daño, −10 % velocidad |
 
 ---
 
