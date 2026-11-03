@@ -28,4 +28,7 @@ public class SquadMeleeData : ScriptableObject
     public float criticalChance = 0.05f;
     public float criticalMultiplier = 1.5f;
     public float kineticMultiplier = 0.3f;
+
+    [Header("Hit Traits (L1-08, L1-10)")]
+    public HitTraits hitTraits;
 }

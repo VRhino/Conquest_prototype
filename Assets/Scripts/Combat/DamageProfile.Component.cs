@@ -15,4 +15,7 @@ public struct DamageProfileComponent : IComponentData
     public float bluntPenetration;
     public float slashingPenetration;
     public float piercingPenetration;
+
+    /// <summary>What the hit does besides its damage (L1-08, L1-10); not a stat, so the resolver keeps it.</summary>
+    public HitTraits traits;
 }

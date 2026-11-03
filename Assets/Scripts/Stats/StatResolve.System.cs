@@ -13,8 +13,8 @@ using Unity.Mathematics;
 /// penetration and identity fields stay as the spawner wrote them), <see cref="MoveSpeedComponent"/> and
 /// <see cref="CooldownScaleComponent"/> of heroes, and
 /// <see cref="CritStatsComponent"/>.</item>
-/// <item><see cref="DamageProfileComponent"/> (damage and penetration; a squad's units share their squad's profile
-/// entity, so it carries its own stats). <see cref="PenetrationComponent"/> only on entities without a profile, so
+/// <item><see cref="DamageProfileComponent"/> (damage and penetration; its hit traits are left alone; a squad's units
+/// share their squad's profile entity, so it carries its own stats). <see cref="PenetrationComponent"/> only on entities without a profile, so
 /// penetration is never counted twice.</item>
 /// </list>
 /// Expired modifiers are removed here.
@@ -88,15 +88,16 @@ public partial class StatResolveSystem : SystemBase
             });
         bool hasProfile = SystemAPI.HasComponent<DamageProfileComponent>(entity);
         if (hasProfile)
-            SystemAPI.SetComponent(entity, new DamageProfileComponent
-            {
-                bluntDamage = stats.Get(StatId.BluntDamage),
-                slashingDamage = stats.Get(StatId.SlashDamage),
-                piercingDamage = stats.Get(StatId.PierceDamage),
-                bluntPenetration = stats.Get(StatId.BluntPenetration),
-                slashingPenetration = stats.Get(StatId.SlashPenetration),
-                piercingPenetration = stats.Get(StatId.PiercePenetration),
-            });
+        {
+            // Only the stats: the weapon's hit traits stay as its owner wrote them.
+            var profile = SystemAPI.GetComponentRW<DamageProfileComponent>(entity);
+            profile.ValueRW.bluntDamage = stats.Get(StatId.BluntDamage);
+            profile.ValueRW.slashingDamage = stats.Get(StatId.SlashDamage);
+            profile.ValueRW.piercingDamage = stats.Get(StatId.PierceDamage);
+            profile.ValueRW.bluntPenetration = stats.Get(StatId.BluntPenetration);
+            profile.ValueRW.slashingPenetration = stats.Get(StatId.SlashPenetration);
+            profile.ValueRW.piercingPenetration = stats.Get(StatId.PiercePenetration);
+        }
         else if (SystemAPI.HasComponent<PenetrationComponent>(entity))
             SystemAPI.SetComponent(entity, new PenetrationComponent
             {

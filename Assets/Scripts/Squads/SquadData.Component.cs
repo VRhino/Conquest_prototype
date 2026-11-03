@@ -54,6 +54,9 @@ public struct SquadDataComponent : IComponentData
 
     // Kinetic
     public float kineticMultiplier;
+
+    /// <summary>The weapon's hit traits (melee if any, else ranged), copied into the squad's damage profile.</summary>
+    public HitTraits hitTraits;
 }
 
 /// <summary>

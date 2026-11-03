@@ -218,6 +218,7 @@ public partial class SquadSpawningSystem : SystemBase
                 bluntPenetration    = data.bluntPenetration,
                 slashingPenetration = data.slashingPenetration,
                 piercingPenetration = data.piercingPenetration,
+                traits              = data.hitTraits,
             });
 
             var unitBuffer = ecb.AddBuffer<SquadUnitElement>(squad);

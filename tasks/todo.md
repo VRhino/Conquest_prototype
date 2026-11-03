@@ -1,3 +1,54 @@
+# Plan: combate pendiente del catálogo de la referencia (L1-08, L1-10, L1-07, L1-12, L1-13, L1-02, L1-11, L1-14)
+
+Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
+L1-09 (reacciones al golpe) queda fuera: necesita animaciones; se documenta como bloqueado.
+
+## Decisiones del usuario (2026-11-03)
+- **L1-02:** el conjunto más completo del patrón: lado atacante o receptor; héroe o soldado; tipo de escuadra y tipo de
+  unidad (Infantry/Cavalry/Distance, `SquadData.unitType`); forma del golpe (melé, distancia, habilidad); habilidad del
+  golpe (lista de ids); probabilidad sembrada; efecto activo propio y del otro (triestados); golpe crítico (triestado);
+  vida del receptor en un rango; armadura total del otro en un rango. Todo con Y; listas "cualquiera de".
+- **L1-11:** misma estructura que la referencia (umbral del arma, peso `min(d/X, 1)`, tope) con `d` = metros recorridos
+  hacia el objetivo justo antes del golpe.
+- **L1-14:** un terreno por mapa (`MapDataSO`), declarado por la batalla; cada tipo de escuadra declara sus modificadores.
+- **L1-07:** `MinHealthRatio` como stat de la pila, escrito por `StatResolveSystem` en `HeroHealthComponent`; al
+  reaparecer, un modificador temporal (ratio y segundos en `HeroGameplayConfig`).
+
+## Diseño
+- **Rasgos del golpe** (`HitTraits`, serializable): van dentro de `DamageProfileComponent`, así viajan con el perfil en
+  línea de melé, proyectiles y habilidades. Fuente: `SquadMeleeData`/`SquadRangedData` (soldados) y `HeroClassDefinition`
+  (héroe). Valores por defecto neutros (0): ningún asset cambia de comportamiento sin datos. `StatResolveSystem` conserva
+  los rasgos al reescribir el perfil.
+- **L1-08/L1-10:** `ignoresShield` (el golpe no se bloquea), `blockDamageRatio` (daño al bloqueo = efectivo × (1 + r)) y
+  `staminaDamageRatio` (aguante que pierde un héroe que bloquea = efectivo × r). Regla pura `ShieldBlock.Resolve`.
+- **L1-07:** `StatId.MinHealthRatio`; `HealthFloor.Apply` = `max(vida − daño, min(vida, suelo · máx))`.
+- **L1-12:** `damageVariance` f del arma; el creador del golpe tira `1 ± f` con `CombatRandom` (sal propia, con el objetivo
+  en la semilla) y lo guarda en `PendingDamageEvent.varianceOffset` (0 = neutro); la fórmula lo multiplica al final.
+- **L1-13:** `StatId.LifeSteal`, derivado en `CombatStatsComponent` (nuevo, lo escribe `StatResolveSystem`); cura al
+  atacante la fracción de la vida realmente quitada, después de restarla.
+- **L1-02:** buffer `ConditionalModifier {condición, ratio de daño, fuente, id, caducidad}`; `DamageCalculationSystem` suma
+  los del atacante (lado Atacante) y del receptor (lado Receptor) que cumplen y multiplica el daño por `(1 + Σ)` una vez
+  (regla T1). Lógica pura en `HitConditions`. Fuentes: `SquadData` (permanente, en cada soldado) y un evento de
+  habilidad `ApplyConditional` (temporal). El evento de daño lleva `hitForm` y `skillId`.
+- **L1-11:** `ChargeTrackSystem` muestrea la posición de cada atacante (ventana en config); la melé guarda en el evento
+  la distancia recorrida hacia el objetivo; la fórmula aplica `1 + peso · maxBonus` si supera el umbral del arma.
+- **L1-14:** `BattleTerrain` (enum) en `MapDataSO`; `BattleBootstrapSystem` crea el singleton `BattleTerrainComponent`;
+  `SquadData.terrainModifiers` (terreno, stat, op, valor) entra en la pila con `ModifierSource.Terrain` al aplicar los
+  stats de cada soldado (y del perfil de la escuadra si el stat es de daño).
+- Sin números mágicos: rasgos en el SO del arma; ventana de carga y protección al reaparecer en config.
+
+## Pasos (un commit por punto o pareja)
+- [x] 1. L1-08 + L1-10: `HitTraits`, `ShieldBlock`, aguante del héroe; tests de la regla; EditMode, S1/S6.
+- [ ] 2. L1-07: stat `MinHealthRatio`, suelo en el daño, protección al reaparecer; tests.
+- [ ] 3. L1-12: variación sembrada en melé, proyectil y habilidad; tests (reproducible y acotada).
+- [ ] 4. L1-13: `LifeSteal`, `CombatStatsComponent`; tests.
+- [ ] 5. L1-02: condiciones, buffer, fuentes; tests de cada condición y de la suma.
+- [ ] 6. L1-11: muestreo de carga y bono; tests.
+- [ ] 7. L1-14: terreno del mapa y modificadores por tipo de escuadra; tests.
+- [ ] 8. Docs: `DamageMechanics.md`, catálogo §5, `Docs/Por_Abordar` (lo que quede abierto y L1-09 bloqueado), lecciones.
+
+---
+
 # Plan: H10, lanzar habilidades de escuadra con el ratón y menú radial de `ALT`
 
 Estado: **hecho** (2026-11-02), rama `main` local, sin subir.

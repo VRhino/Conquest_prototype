@@ -70,6 +70,10 @@ public partial class HeroInitializationSystem : SystemBase
         EntityManager.AddComponentData(entity, HeroStatFormula.From(classData));
         if (!EntityManager.HasComponent<DefenseComponent>(entity)) EntityManager.AddComponent<DefenseComponent>(entity);
         if (!EntityManager.HasComponent<DamageProfileComponent>(entity)) EntityManager.AddComponent<DamageProfileComponent>(entity);
+        // The class weapon's hit traits; its damage and penetration come from the stack.
+        var heroProfile = EntityManager.GetComponentData<DamageProfileComponent>(entity);
+        heroProfile.traits = classData.hitTraits;
+        EntityManager.SetComponentData(entity, heroProfile);
 
         StatStack.Ensure(EntityManager, entity);
         StatStack.SetBase(EntityManager, entity, StatId.Strength, baseStats.baseStrength);

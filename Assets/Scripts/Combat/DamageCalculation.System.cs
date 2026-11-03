@@ -20,7 +20,8 @@ using Unity.Transforms;
 /// and health, and emits <see cref="DamageFeedbackEvent"/>s for the floating text instead of calling UI.
 ///
 /// Shield check runs AFTER damage is calculated so the block absorbs the real
-/// effective damage. If block goes to 0 the shield breaks, triggering a stun of
+/// effective damage, scaled by the weapon's block ratio; a hit that ignores the shield goes to health, and a
+/// blocking hero loses stamina (<see cref="ShieldBlock"/>, L1-08/L1-10). If block goes to 0 the shield breaks, triggering a stun of
 /// breakStunDuration seconds (from UnitShieldComponent): a MoveSpeed override to 0 on the
 /// modifier stack (<see cref="StatEffects.Immobilize"/>). During stun the unit cannot move
 /// and receives damage normally.
@@ -95,13 +96,21 @@ public partial class DamageCalculationSystem : SystemBase
                 attackerSpeed = p.attackerSpeed, kineticMultiplier = kinetic, heightDelta = heightDelta,
             }, combatTuning).effective;
 
-            // --- Shield block check (absorbs effectiveDmg when shield collider was hit) ---
-            if (shieldLookup.HasComponent(p.target) && p.hitType == HitType.Shield)
+            // --- Shield block check (absorbs the hit when the shield collider was hit, L1-08/L1-10) ---
+            if (shieldLookup.HasComponent(p.target))
             {
                 var shield = shieldLookup[p.target];
-                if (shield.currentBlock > 0f && shield.brokenTimer <= 0f)
+                if (ShieldBlock.Blocks(shield, p.hitType, profile.traits))
                 {
-                    shield.currentBlock -= effectiveDmg;
+                    float blockDmg = ShieldBlock.BlockDamage(effectiveDmg, profile.traits);
+                    shield.currentBlock -= blockDmg;
+                    // A blocking hero also pays in stamina; HeroStaminaSystem handles exhaustion.
+                    if (SystemAPI.HasComponent<StaminaComponent>(p.target))
+                    {
+                        var stamina = SystemAPI.GetComponentRW<StaminaComponent>(p.target);
+                        stamina.ValueRW.currentStamina = math.max(0f,
+                            stamina.ValueRO.currentStamina - ShieldBlock.StaminaDamage(effectiveDmg, profile.traits));
+                    }
                     if (shield.currentBlock <= 0f)
                     {
                         // Shield break — stun the unit
@@ -122,11 +131,11 @@ public partial class DamageCalculationSystem : SystemBase
                     }
                     else
                     {
-                        // Normal block — show absorbed damage amount
+                        // Normal block — show what the shield lost
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
-                            Feedback(ref ecb, bp, DamageCategory.Blocked, effectiveDmg);
+                            Feedback(ref ecb, bp, DamageCategory.Blocked, blockDmg);
                         }
                     }
                     shieldLookup[p.target] = shield;
