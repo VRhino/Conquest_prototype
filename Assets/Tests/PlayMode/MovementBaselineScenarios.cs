@@ -161,6 +161,54 @@ public partial class BattleSceneIntegrationTests
         finally { RestoreInputSettings(previousInput); }
     }
 
+    // F18: soldiers fall one at a time, further apart than formationCompactDelay (1.5 s), without crossing a template
+    // threshold: Spearmen keep their 20-slot template down to 16 alive, so each death leaves a gap to close.
+    const int GapsAliveTarget = 16;
+    const float GapsCasualtySpacing = 3f;
+
+    /// <summary>
+    /// F18 (Movimiento_Formaciones.md §24): closing the gaps inside one template. Two deaths standing, two marching; at the
+    /// end no soldier may be outside the first n slots and the template must not have changed.
+    /// </summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS4GapsSpearmenLine()
+    {
+        var previousInput = UseUnfocusedEditorInput();
+        try
+        {
+            yield return PrepareBaseline();
+            yield return Press(Key.F1);
+            yield return new WaitForSeconds(S4SettleSeconds);
+            int template = em.GetComponentData<FormationComponent>(squad).templateIndex;
+            using (MovementVideoCapture.Start("S4GapsSpearmenLine"))
+            {
+                MovementMetricsRecorderSystem.Begin("S4GapsSpearmenLine", squad);
+                var start = em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position;
+                for (int death = 0; em.GetBuffer<SquadUnitElement>(squad).Length > GapsAliveTarget; death++)
+                {
+                    if (death == 2)
+                    {
+                        InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
+                        yield return new WaitForSeconds(1f);
+                    }
+                    yield return KillUntil(em.GetBuffer<SquadUnitElement>(squad).Length - 1);
+                    yield return new WaitForSeconds(GapsCasualtySpacing);
+                }
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+                yield return new WaitForSeconds(S4SettleSeconds);
+                ReportBaseline(start);
+            }
+            var units = em.GetBuffer<SquadUnitElement>(squad);
+            int outside = 0;
+            for (int i = 0; i < units.Length; i++)
+                if (em.GetComponentData<UnitGridSlotComponent>(units[i].Value).slotIndex >= units.Length) outside++;
+            Assert.That(em.GetComponentData<FormationComponent>(squad).templateIndex, Is.EqualTo(template),
+                "The deaths must stay inside one template.");
+            Assert.That(outside, Is.Zero, "Gaps left open after the compaction delay.");
+        }
+        finally { RestoreInputSettings(previousInput); }
+    }
+
     /// <summary>Marks random soldiers of the squad dead (seeded in PrepareBaseline) until <paramref name="alive"/> remain.</summary>
     IEnumerator KillUntil(int alive)
     {

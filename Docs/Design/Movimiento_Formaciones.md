@@ -1067,6 +1067,22 @@ Lectura:
   de una plantilla durante la prueba. Solo podía influir la escuadra enemiga.
 - Los escenarios S4 con bajas no ejercitan la compactación: matan hasta cada umbral de plantilla en menos de 1,5 s, así
   que el cambio de plantilla llega antes que la espera (`gapSlots` 11 % de fotogramas con y sin ella en BSL). La regla y
-  el sistema están probados en EditMode (`FormationCompactTests`); falta un escenario de juego con bajas espaciadas
-  (`Docs/Por_Abordar/Formaciones_y_Posturas.md` F18).
+  el sistema están probados en EditMode (`FormationCompactTests`). El escenario de juego es S4GapsSpearmenLine (F18, abajo).
 - S1, S4, S9 y los cuatro S4 con bajas en verde; S9 sin cambios de tendencia (1,87 m de error, dentro del intervalo de §23).
+
+**F18: escenario S4GapsSpearmenLine.** Lanceros en Línea pierden un soldado cada 3 s de 20 a 16 vivos (la plantilla de 20
+vale hasta 16, así que no cambia), dos parados y dos marchando. Al final exige la misma plantilla y ningún soldado fuera de
+las n primeras ranuras (`runs.sh GSL`).
+
+| S4GapsSpearmenLine | Huecos (media / máx.) | Fotogramas con hueco | Error en marcha | Solapes aliados (media / máx.) | Aceleración > 20 m/s² |
+|---|---|---|---|---|---|
+| Con compactación (2 corridas) | 0,34 / 1 | 34,0 % y 34,1 % | 0,53 / 0,54 m | 0,40 / 4 y 0,58 / 6 | 0,18 % / 0,22 % |
+| Sin compactación (1, espera de 100 000 s) | 2,40 / 3 | 100 % | 0,41 m | 0,55 / 6 | 0,09 % |
+
+Lectura:
+- Con compactación hay como mucho un hueco a la vez, y el 34 % de fotogramas con hueco es exactamente 4 bajas × 1,5 s de
+  espera sobre 17,6 s: cada hueco se cierra al acabar la espera.
+- Sin ella, el escenario falla (3 soldados fuera de las primeras ranuras: una de las bajas cayó en una ranura sobrante).
+  Esa corrida confirma también que el A/B de S6 cambiaba de verdad el valor horneado.
+- El error en marcha sube 0,12 m con la compactación: el soldado que va a cubrir el hueco cuenta como fuera de su ranura
+  mientras llega. No hay más solapes ni picos de aceleración que sin ella.

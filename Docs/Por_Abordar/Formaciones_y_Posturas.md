@@ -26,7 +26,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F15 | Radios de llegada por formación | Media | **Hecho** (`dcaf6dde`) |
 | F16 | `UnitShieldComponent.orientation` sin lectores | Baja | Pendiente |
 | F17 | Ocupación de celdas entre escuadras y plantilla por encaje | Media | **Hecho** la ocupación (`8f3b45cf`); el "¿cabe?" por plantilla se descarta |
-| F18 | Escenario de juego que ejercite el cierre de huecos | Media | Pendiente (la regla está probada en EditMode) |
+| F18 | Escenario de juego que ejercite el cierre de huecos | Media | **Hecho** (2026-11-03, S4GapsSpearmenLine) |
 
 ---
 
@@ -260,6 +260,9 @@ El "¿cabe?" por plantilla se descarta: D9 mantiene la plantilla, y F1 ya elige 
 plantilla (sin resolver), como en C13.
 
 ## F18. Escenario de juego que ejercite el cierre de huecos
+**Hecho (2026-11-03).** `MovementBaselineS4GapsSpearmenLine` mata de 20 a 16 Lanceros con 3 s entre bajas y exige que al
+final no quede ningún hueco; medidas en `Movimiento_Formaciones.md` §24. Sin compactación falla, como debe.
+
 **Qué es.** Los huecos dentro de una plantilla se cierran 1,5 s tras la primera baja (L3-02,
 `Movimiento_Formaciones.md` §24), pero ningún escenario lo mide: los S4 con bajas matan hasta el umbral de la plantilla
 siguiente en menos de esa espera, y en S6 la escuadra medida no se queda con huecos.
