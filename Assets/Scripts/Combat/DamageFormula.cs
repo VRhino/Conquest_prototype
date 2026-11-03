@@ -21,6 +21,8 @@ public struct CombatTuning
     public float movingSpreadFactor;
     /// <summary>Most projectiles in flight at once; past it the oldest is discarded (L2-7).</summary>
     public int maxLiveProjectiles;
+    /// <summary>How far back a charge is measured, s: the run-up counted is between half this and this (L1-11).</summary>
+    public float chargeWindowSeconds;
 
     public static CombatTuning Default => new CombatTuning
     {
@@ -33,6 +35,7 @@ public struct CombatTuning
         inaccuracySpread = 0.15f,
         movingSpreadFactor = 1f,
         maxLiveProjectiles = 256,
+        chargeWindowSeconds = 1f,
     };
 }
 
@@ -54,6 +57,8 @@ public struct DamageInput
     public float varianceOffset;
     /// <summary>Sum of the ratios of the conditional modifiers that hold for this hit (L1-02); 0 = none.</summary>
     public float conditionalRatio;
+    /// <summary>Metres the attacker came towards the target just before the hit (L1-11); the profile's traits rate it.</summary>
+    public float chargeDistance;
 }
 
 /// <summary>Result with the breakdown of each stage, for tests and for showing it.</summary>
@@ -62,6 +67,8 @@ public struct DamageResult
     public float blunt, slashing, piercing;
     public float kineticBonus;
     public float heightBonus;
+    /// <summary>Charge bonus of the weapon for the run-up (L1-11), 1 = none.</summary>
+    public float chargeBonus;
     /// <summary>Random factor of the hit, 1 ± the weapon's variance (L1-12).</summary>
     public float varianceFactor;
     /// <summary>1 + the conditional ratio of the hit, never negative (L1-02).</summary>
@@ -72,7 +79,7 @@ public struct DamageResult
 
 /// <summary>
 /// Damage formula as a pure function (Aprendizajes_Referencia.md L1-03): flat reduction per type with a floor,
-/// then kinetic and height bonuses, the rolled variance (L1-12) and the conditional modifiers' ratio (L1-02). Burst-friendly and testable without a world; shields and health are applied
+/// then kinetic, height and charge (L1-11) bonuses, the rolled variance (L1-12) and the conditional modifiers' ratio (L1-02). Burst-friendly and testable without a world; shields and health are applied
 /// by <see cref="DamageCalculationSystem"/>.
 /// </summary>
 public static class DamageFormula
@@ -91,6 +98,7 @@ public static class DamageFormula
             heightBonus = 1f,
             varianceFactor = math.max(0f, 1f + input.varianceOffset),
             conditionalFactor = math.max(0f, 1f + input.conditionalRatio),
+            chargeBonus = ChargeTrack.Bonus(input.chargeDistance, input.profile.traits),
         };
         if (input.attackerSpeed > 0f && tuning.kineticReferenceSpeed > 0f)
         {
@@ -99,8 +107,8 @@ public static class DamageFormula
         }
         if (input.heightDelta > tuning.heightBonusThreshold)
             r.heightBonus = 1f + input.heightDelta * tuning.heightBonusPerMetre;
-        r.effective = math.max(0f, (r.blunt + r.slashing + r.piercing) * r.kineticBonus * r.heightBonus * r.varianceFactor
-            * r.conditionalFactor);
+        r.effective = math.max(0f, (r.blunt + r.slashing + r.piercing) * r.kineticBonus * r.heightBonus * r.chargeBonus
+            * r.varianceFactor * r.conditionalFactor);
         return r;
     }
 

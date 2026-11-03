@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using ConquestTactics.Animation;
 using Unity.Entities;
+using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>
@@ -138,6 +139,7 @@ public partial class MeleeContactResolutionSystem : SystemBase
                 varianceOffset = CombatRandom.RollVariance(tick, contact.attacker, contact.target, profile.traits.damageVariance),
                 hitForm = HitForm.Melee,
                 skillId = RunningSkillId(em, contact.attacker),
+                chargeDistance = ChargeDistance(em, contact.attacker, contact.target, profile.traits),
             });
 
             if (isHero)
@@ -155,6 +157,15 @@ public partial class MeleeContactResolutionSystem : SystemBase
 
             HitImpactEffectManager.Instance?.Spawn(contact.contactPoint);
         }
+    }
+
+    /// <summary>How far the attacker came towards the target just before this swing (L1-11); 0 if its weapon cannot charge.</summary>
+    static float ChargeDistance(EntityManager em, Entity attacker, Entity target, in HitTraits traits)
+    {
+        if (traits.chargeMaxBonus <= 0f || !em.HasComponent<ChargeTrackComponent>(attacker)
+            || !em.HasComponent<LocalTransform>(attacker) || !em.HasComponent<LocalTransform>(target)) return 0f;
+        return ChargeTrack.Approach(em.GetComponentData<ChargeTrackComponent>(attacker),
+            em.GetComponentData<LocalTransform>(attacker).Position, em.GetComponentData<LocalTransform>(target).Position);
     }
 
     /// <summary>Id of the skill whose swing this is (a hero's basic attack or skill), or 0, for conditions (L1-02).</summary>

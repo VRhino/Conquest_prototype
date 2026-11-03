@@ -53,4 +53,7 @@ public struct PendingDamageEvent : IComponentData
     public HitForm hitForm;
     /// <summary>Skill the hit comes from (0 = none), for conditional modifiers (L1-02).</summary>
     public int skillId;
+
+    /// <summary>Metres the attacker came towards the target just before a melee hit (L1-11, <see cref="ChargeTrack"/>).</summary>
+    public float chargeDistance;
 }

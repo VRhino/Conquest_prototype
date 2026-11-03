@@ -110,6 +110,7 @@ public class HeroEntityBaker : Baker<HeroEntityAuthoring>
             criticalMultiplier      = 1.5f
         });
         AddComponent<HeroAnimationComponent>(entity);
+        AddComponent<ChargeTrackComponent>(entity); // Run-up of a charge (L1-11)
         AddComponent<WeaponHitboxActiveTag>(entity);
         SetComponentEnabled<WeaponHitboxActiveTag>(entity, false);
 
