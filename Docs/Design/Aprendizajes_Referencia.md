@@ -194,13 +194,13 @@ por llamada explícita, sin sondeo; aquí se toma solo la caducidad y el evento.
 | L4-01 (verificado) | Reloj de pensamiento escalonado | `Time.frameCount % 5` (`Hero/AI/Systems/HeroAIPerception.System.cs:27`), igual frame para todos los bots; `SquadAISystem` recorre todo por frame (`Squads/Systems/SquadAI.System.cs:26-100`) | `AIThinkClock` + `AIThinkSchedulerSystem`, fase por hash del `Entity`, periodo en singleton `AIConfig`, tope por frame | Independiente de FPS, sin picos, escala a 15v15 | S | B | A |
 | L4-02 (verificado) | Puertas con histéresis | `isUnderAttack` se activa por proximidad a 20 m o combate de escuadra (`HeroAIPerception.System.cs:105-107`); sin temporizadores | `DebouncedGate` (T_apertura/T_cierre) en el `HeroAIBlackboard` + compromiso mínimo de rama | Bots sin parpadeo; menos órdenes redundantes | S | B | A |
 | L4-04 (hecho, `Movimiento_Formaciones.md` §21) | Puntuación de objetivo con saturación | Más cercano y dos pasadas de reparto (`Combat/UnitTargeting.System.cs:92-250`) | `Score` con 4 términos y candidatos K más cercanos | Menos retargets; O(K) por unidad | M | M | M |
-| L4-03 | Línea de visión con presupuesto de rayos | Detección solo por distancia al centroide (`Combat/EnemyDetection.System.cs:139-176`) | `LineOfSightBudgetSystem` por par escuadra-enemigo con cursor | Cobertura real, coste acotado | M | M | M |
-| L4-06 | IA server-only | Todos los bots corren localmente | Agrupar `EnemyDetection`, `SquadAI`, perfil bot y `OrderResolution` en grupos de servidor | Evita rediseñar con Netcode | M | M | M |
-| L4-05 | Sesgo de aggro / provocación | No existe aggro, solo represalia | `AggroBias` con expiración | Roles de tanque | S | B | B |
-| L4-07 | LOD de IA | Sin cotas; 15v15 sin medir | `AILodSystem` con tres niveles | Sostener 15v15 | M | M | B |
+| L4-03 (hecho, `DamageMechanics.md` §9.1) | Línea de visión con presupuesto de rayos | Detección solo por distancia al centroide (`Combat/EnemyDetection.System.cs:139-176`) | `LineOfSightBudgetSystem` por par escuadra-enemigo con cursor | Cobertura real, coste acotado | M | M | M |
+| L4-06 (hecho: marca y test) | IA server-only | Todos los bots corren localmente | Agrupar `EnemyDetection`, `SquadAI`, perfil bot y `OrderResolution` en grupos de servidor | Evita rediseñar con Netcode | M | M | M |
+| L4-05 (hecho, §9.2) | Sesgo de aggro / provocación | No existe aggro, solo represalia | `AggroBias` con expiración | Roles de tanque | S | B | B |
+| L4-07 (aplazado, `Por_Abordar/IA.md` I1) | LOD de IA | Sin cotas; 15v15 sin medir | `AILodSystem` con tres niveles | Sostener 15v15 | M | M | B |
 | L4-08 (amp., hecho con H1, `SkillsAndPerks.md` §8) | Elegir aliado al que apoyar | La IA no elige aliados ni lanza habilidades (`Docs/Por_Abordar/Habilidades_Perks.md` H1) | Puntuación de aliado por cercanía, vida perdida y si es héroe, dentro de un radio; el elegido se mantiene mientras siga siendo válido | IA de curación y de buffs coherente | S-M | B | M |
 | L4-09 (amp., hecho con L4-04) | Búsqueda de enemigo por estrategia de escuadra | `EnemyDetection` usa la distancia al centroide con radio fijo (`Combat/EnemyDetection.System.cs:139-176`) | Radio de combate que crece con la velocidad de la escuadra, entre un mínimo y un máximo; descarte por diferencia de altura y por pendiente; variantes (arquero con línea de tiro, atacar avanzando, atacar una zona). Complementa L4-04 | Escuadras que no se enganchan con enemigos en otra cota | M | M | M |
-| L4-10 (amp.) | Efectos que ajustan la IA de escuadra | Los parámetros de IA son constantes de configuración | Parámetros de IA (radio de combate, pesos) como stats de la pila de la escuadra, con fuente `Effect` | Órdenes y habilidades tácticas sin código nuevo | S | B | B |
+| L4-10 (amp., hecho, §9.2) | Efectos que ajustan la IA de escuadra | Los parámetros de IA son constantes de configuración | Parámetros de IA (radio de combate, pesos) como stats de la pila de la escuadra, con fuente `Effect` | Órdenes y habilidades tácticas sin código nuevo | S | B | B |
 
 **L4-01.** Ref.: cada contexto acumula `dt` y piensa a ~10 Hz; un cursor round-robin limita cuántos se actualizan por
 frame. Fuente pública: *time slicing* / tick rate de IA. Riesgo concreto: no perder pulsos de `IsUnderAttackTag` (BUG-008).
@@ -356,7 +356,12 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   fin y viajan con la orden resuelta en `expiresAt`; mismo comportamiento), L3-06 (`FormationSystem` solo visita las
   escuadras con `FormationChangePending`) y el resto de L3-02 (los huecos dentro de una plantilla se cierran 1,5 s tras la
   primera baja, moviendo solo a los sobrantes).
-- **Pendiente del catálogo:** L2-8; L4-03, L4-05, L4-06, L4-07;
+- **Hecho en IA (2026-11-03, `DamageMechanics.md` §9):** L4-10 (radio de detección, radio de combate y sesgo hacia
+  héroes como stats de la pila de la escuadra), L4-05 (sesgo de aggro con caducidad y evento `Taunt`), L4-03 (línea de
+  visión por escuadra y enemigo con rayos por lotes y presupuesto, como la referencia pero sin bajar al soldado) y L4-06
+  (marca `[ServerAuthoritative]` y test de arquitectura, sin mover el orden). **L4-07 aplazado:** hay que medir antes
+  (`Docs/Por_Abordar/IA.md` I1).
+- **Pendiente del catálogo:** L2-8;
   L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y

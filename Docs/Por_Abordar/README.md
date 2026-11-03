@@ -12,6 +12,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | [Habilidades_Perks.md](./Habilidades_Perks.md) | Lo que deja abierto el lanzador de habilidades y los perks | `tasks/todo.md` (Fase 2 de `Aprendizajes_Referencia.md`), 2026-10-22 |
 | [Pila_Modificadores.md](./Pila_Modificadores.md) | Stats de objeto con `StatId` (L7-6) y lo que dejó abierto la pila de modificadores | `tasks/todo.md` (Fase 1 de `Aprendizajes_Referencia.md`), 2026-10-21 |
 | [Muerte_Heroe.md](./Muerte_Heroe.md) | Animación de muerte, retirar el cuerpo y reaparecer | `tasks/todo.md` (presentación de la muerte del héroe), 2026-10-27 |
+| [IA.md](./IA.md) | LOD de IA (L4-07), datos de provocación y de parámetros de IA, visibilidad por soldado | `tasks/todo.md` (IA del catálogo), 2026-11-03 |
 | [Combate.md](./Combate.md) | Datos de los rasgos del golpe, terreno y condicionados; reacciones al golpe (L1-09) | `tasks/todo.md` (combate pendiente del catálogo), 2026-11-03 |
 
 ## Estado general (2026-11-03, tras el combate del catálogo)
@@ -22,6 +23,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | Habilidades_Perks.md | H3, H4, H12, H14 (H5: falta el árbol) | H2 (animaciones) | H14 (perks con las condiciones nuevas; son datos) |
 | Pila_Modificadores.md | P1, P3, P5 | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 | D1 (clip de muerte) | D1 en cuanto haya clip; D5 (medir el coste de recrear el visual) |
+| IA.md | I1-I5 | — | I1 (medir el coste de la IA antes de un LOD) |
 | Combate.md | C3, C5-C8 (C1 y C2 hechos) | C4 (L1-09, animaciones de reacción) | C3 (datos de condicionados; el caso de libro espera a la caballería) |
 
 Lo que el catálogo de la referencia aún no ha planificado (incluidos los 20 puntos añadidos el 2026-10-26, marcados

@@ -582,3 +582,10 @@
 - Al pasar un sistema a "solo con marca", cada escritor de lo que el sistema mira tiene que encenderla: petición de formación, baja y espaciado. Si una petición debe esperar (enfriamiento), basta con que su escritor la vuelva a encender cada frame.
 - En un test de órdenes, la orden por defecto es FollowHero (valor 0 del enum), que se salta el enfriamiento de formación: fijar la orden explícitamente.
 - La compactación va dentro del único escritor de las ranuras (`FormationSystem`), no en un sistema aparte como proponía el catálogo.
+
+## IA: visibilidad, aggro y stats de escuadra (2026-11-03)
+
+- Si una salida filtrada alimenta al sistema que decide el filtro, hace falta una lista sin filtrar aparte (`SquadInRangeEnemy`): si no, lo oculto desaparece de la lista, vuelve como nuevo y parpadea.
+- `using var` sobre un `NativeArray` impide escribir en él (CS1654): para arrays que se rellenan, liberar con `try/finally`.
+- Los rayos de física funcionan en EditMode con `GameObject.CreatePrimitive` y `Physics.SyncTransforms()`: se puede probar la línea de visión con un muro real.
+- Un stat que pertenece a la escuadra pero lo aplican efectos dirigidos a soldados se redirige a su escuadra en el escritor del efecto; el refresco por fuente e id deja uno solo aunque lo alcancen treinta soldados.

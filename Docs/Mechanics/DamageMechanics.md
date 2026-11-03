@@ -450,16 +450,39 @@ El ciclo de detección precede al ataque:
 
 ```
 EnemyDetectionSystem (cada frame)
-   ├─ Detecta squads y entidades enemigas dentro del rango del squad (distancia al centroide)
-   └─ Limpia y repuebla DetectedEnemy y SquadTargetEntity una vez por squad
+   ├─ Enemigos dentro del alcance del squad (distancia al centroide × detectionRangeScale, L4-10) → SquadInRangeEnemy
+   └─ Solo los que el squad ve (L4-03) → DetectedEnemy y SquadTargetEntity
+
+LineOfSightSystem (cada frame, tras la detección)
+   └─ Rayos por lotes squad → enemigo con presupuesto; actualiza SquadVisibilityElement para el frame siguiente
 
 UnitTargetingSystem (cada frame)
-   ├─ Consume directamente el SquadTargetEntity compartido
-   ├─ Asigna UnitCombatComponent.target al enemigo más cercano disponible
-   └─ Redistribuye si >3 unidades apuntan al mismo objetivo
+   ├─ Consume el SquadTargetEntity compartido
+   └─ Puntúa los candidatos (L4-04, Docs/Design/Movimiento_Formaciones.md §21) + sesgo de héroe de la pila (L4-10)
+      + sesgo de aggro (L4-05)
 ```
 
-Solo las unidades en estado Attack, FollowHero o HoldPosition reciben asignación de target.
+Solo las unidades del squad en estado InCombat reciben objetivo.
+
+### 9.1 Línea de visión (L4-03, 2026-11-03)
+
+Patrón de la referencia, por pareja escuadra → enemigo (una escuadra o un héroe), no por soldado:
+- Un rayo de física (`RaycastCommand`) va del centro de la escuadra a un soldado del enemigo (cada vez otro) o al héroe,
+  a `eyeHeight` sobre el suelo, contra `blockingLayers` (Default y Ground: muros, edificios, relieve; no unidades, héroes
+  ni proyectiles; los triggers no cuentan).
+- Presupuesto de `raysPerFrame` rayos entre todas las escuadras, repartido según sus parejas; cada escuadra sigue un
+  cursor round-robin.
+- Una pareja nueva empieza visible; deja de verse cuando sus últimos `memory` rayos salen tapados, y vuelve con uno libre.
+- Lo que no se ve no entra en `DetectedEnemy` ni en `SquadTargetEntity`: la escuadra no entra en combate con ello y los
+  arqueros no lo eligen. Ajustes en `SquadSpawnConfig.lineOfSight`; `enabled = false` deja solo la distancia.
+
+### 9.2 Parámetros de IA como stats (L4-10) y aggro (L4-05)
+
+- La entidad de escuadra tiene su propia pila con `AIDetectionRange` y `AICombatRadius` (multiplicadores, base 1) y
+  `AIHeroBias` (base 0); `StatResolveSystem` los escribe en `SquadAIStatsComponent`. Un `ApplyModifier` de habilidad con
+  esos stats que alcanza a soldados va a su escuadra.
+- `AggroBiasElement` (en la escuadra) suma un sesgo hacia un enemigo, o su escuadra, a la puntuación de melé, después de
+  la saturación, hasta que caduca. Lo pone el evento de habilidad `Taunt`. No afecta a los arqueros ni a los héroes.
 
 ---
 

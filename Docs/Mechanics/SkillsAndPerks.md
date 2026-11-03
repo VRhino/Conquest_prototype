@@ -143,7 +143,10 @@ Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
 | `Dash` | Embestida de `distance` metros en `duration` segundos. El héroe local la hace con su controlador y la IA con su `NavMeshAgent` |
 | `ApplyConditional` | Modificador condicionado temporal (L1-02, `DamageMechanics.md` §5.6) a cada objetivo: ratio de daño `value` durante `duration`, solo en los golpes que cumplen `condition`. Al relanzar se refresca. Ninguna habilidad lo usa aún |
 
-Los golpes de `AreaDamage` llevan la forma `Ability` y el id de la habilidad, para las condiciones, y tiran la variación
+| `Taunt` | Provocación (L4-05): las escuadras de los enemigos alcanzados apuntan su melé al lanzador (a su escuadra, si es una habilidad de escuadra) con un sesgo `value` durante `duration`. Ninguna habilidad lo usa aún |
+
+Un `ApplyModifier` sobre los stats de IA de escuadra (`AIDetectionRange`, `AICombatRadius`, `AIHeroBias`, L4-10) se
+aplica a la escuadra de cada soldado alcanzado, una vez. Los golpes de `AreaDamage` llevan la forma `Ability` y el id de la habilidad, para las condiciones, y tiran la variación
 del arma del lanzador (L1-12).
 
 **Objetivos** (`SkillTarget`):

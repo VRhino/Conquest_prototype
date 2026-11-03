@@ -1,6 +1,6 @@
 # Plan: IA del catálogo (L4-10, L4-05, L4-03, L4-06; L4-07 aplazado)
 
-Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.4.
+Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.4.
 
 ## Decisiones del usuario (2026-11-03)
 - **L4-03:** el patrón de la referencia por pareja escuadra → enemigo (no por soldado): rayos de física contra el escenario
@@ -17,7 +17,7 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 - [x] 2. L4-05: `AggroBias` con caducidad en la puntuación de objetivo y evento `Taunt`; tests; EditMode y S6.
 - [x] 3. L4-03: visibilidad por pareja con presupuesto; detección y arqueros; tests; EditMode y S1/S6/S7/S9.
 - [x] 4. L4-06: marca y test de arquitectura.
-- [ ] 5. Docs: catálogo §5, `Movimiento_Formaciones.md` o doc de IA, `Por_Abordar` (L4-07), lecciones.
+- [x] 5. Docs: catálogo §5, `Movimiento_Formaciones.md` o doc de IA, `Por_Abordar` (L4-07), lecciones.
 
 ---
 
