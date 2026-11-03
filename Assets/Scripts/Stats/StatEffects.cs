@@ -1,4 +1,8 @@
 using Unity.Entities;
+using Unity.Mathematics;
+
+/// <summary>What reapplying a live effect does (L2-10).</summary>
+public enum EffectReapply : byte { Refresh, Stack, Ignore }
 
 /// <summary>
 /// Timed effects expressed as modifiers on the stack (Aprendizajes_Referencia.md L5-3): an effect is an override or
@@ -35,6 +39,30 @@ public static class StatEffects
         {
             stat = stat, op = op, value = value, source = source, sourceId = sourceId, expiresAt = until,
         });
+    }
+
+    /// <summary>
+    /// A timed modifier of a skill with stacks (L2-10; ref.: max stacks and a mode on reapplying). Refresh resets the
+    /// time and keeps one stack; Stack adds one up to <paramref name="maxStacks"/> and resets the time; Ignore leaves a
+    /// live one as it is. With <paramref name="maxStacks"/> ≤ 1 it behaves as a refresh.
+    /// </summary>
+    public static void ApplyStacked(DynamicBuffer<StatModifier> modifiers, StatId stat, ModifierOp op, float value, double until,
+        int effectId, int maxStacks, EffectReapply reapply, double now)
+    {
+        for (int i = 0; i < modifiers.Length; i++)
+        {
+            var m = modifiers[i];
+            if (m.source != ModifierSource.Effect || m.sourceId != effectId || m.stat != stat || StatMath.IsExpired(m, now)) continue;
+            if (reapply == EffectReapply.Ignore) return;
+            int stacks = reapply == EffectReapply.Stack ? math.min(StatMath.Stacks(m) + 1, math.max(1, maxStacks)) : 1;
+            m.stacks = (byte)math.min(stacks, byte.MaxValue);
+            m.value = value;
+            m.op = op;
+            m.expiresAt = until;
+            modifiers[i] = m;
+            return;
+        }
+        ApplyTimed(modifiers, stat, op, value, until, effectId);
     }
 
     public static void Immobilize(DynamicBuffer<StatModifier> modifiers, double until, int effectId)

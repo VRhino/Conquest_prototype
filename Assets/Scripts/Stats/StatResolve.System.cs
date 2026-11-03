@@ -127,7 +127,12 @@ public partial class StatResolveSystem : SystemBase
                 heroBias = StatMath.Resolve(StatMath.Base(b, StatId.AIHeroBias), m, StatId.AIHeroBias, now),
             });
         if (SystemAPI.HasComponent<CombatStatsComponent>(entity))
-            SystemAPI.SetComponent(entity, new CombatStatsComponent { lifeSteal = stats.Get(StatId.LifeSteal) });
+            SystemAPI.SetComponent(entity, new CombatStatsComponent
+            {
+                lifeSteal = stats.Get(StatId.LifeSteal),
+                effectDurationOut = stats.Get(StatId.EffectDurationOut),
+                effectDurationIn = stats.Get(StatId.EffectDurationIn),
+            });
         if (SystemAPI.HasComponent<CooldownScaleComponent>(entity))
             SystemAPI.SetComponent(entity, new CooldownScaleComponent { value = stats.Get(StatId.CooldownScale) });
         if (SystemAPI.HasComponent<UnitStatsComponent>(entity))

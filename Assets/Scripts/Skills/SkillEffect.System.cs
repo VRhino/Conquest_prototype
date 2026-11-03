@@ -63,7 +63,7 @@ public partial class SkillEffectSystem : SystemBase
                         if (e.type == SkillEventType.ApplyModifier) ApplyModifier(target, r, now);
                         else if (e.type == SkillEventType.ApplyConditional) ApplyConditional(target, r, now);
                         else if (e.type == SkillEventType.Taunt) Taunt(target, r, now);
-                        else ApplyShield(target, e, now);
+                        else ApplyShield(target, r, now);
                     }
                     break;
                 case SkillEventType.Dash:
@@ -177,7 +177,8 @@ public partial class SkillEffectSystem : SystemBase
         if (SquadAIStatsComponent.IsSquadStat(e.stat) && EntityManager.HasComponent<UnitOwnerComponent>(target))
             target = EntityManager.GetComponentData<UnitOwnerComponent>(target).squad;
         if (!EntityManager.Exists(target) || !EntityManager.HasBuffer<StatModifier>(target)) return;
-        StatEffects.ApplyTimed(EntityManager.GetBuffer<StatModifier>(target), e.stat, e.op, e.value, now + e.duration, r.skillId);
+        StatEffects.ApplyStacked(EntityManager.GetBuffer<StatModifier>(target), e.stat, e.op, e.value,
+            now + Duration(r, target), r.skillId, e.maxStacks, e.reapply, now);
         if (e.boundToSkill) Bind(target, r);
         if (EntityManager.HasComponent<ModifiersDirty>(target)) EntityManager.SetComponentEnabled<ModifiersDirty>(target, true);
     }
@@ -205,7 +206,7 @@ public partial class SkillEffectSystem : SystemBase
             new ConditionalModifier
             {
                 condition = r.effect.condition, damageRatio = r.effect.value, source = ModifierSource.Effect,
-                sourceId = r.skillId, expiresAt = r.effect.duration > 0f ? now + r.effect.duration : 0,
+                sourceId = r.skillId, expiresAt = r.effect.duration > 0f ? now + Duration(r, target) : 0,
             }, now);
     }
 
@@ -217,12 +218,23 @@ public partial class SkillEffectSystem : SystemBase
         if (!EntityManager.Exists(squad)) return;
         if (!EntityManager.HasBuffer<AggroBiasElement>(squad)) EntityManager.AddBuffer<AggroBiasElement>(squad);
         AggroBias.Apply(EntityManager.GetBuffer<AggroBiasElement>(squad), r.caster, r.effect.value, r.skillId,
-            r.effect.duration > 0f ? now + r.effect.duration : 0, now);
+            r.effect.duration > 0f ? now + Duration(r, squad) : 0, now);
     }
 
-    void ApplyShield(Entity target, in SkillEvent e, double now)
+    /// <summary>The event's duration scaled by the caster's and the target's effect duration stats (L2-10).</summary>
+    float Duration(in SkillEffectRequestComponent r, Entity target)
     {
-        var shield = new AbsorbShieldComponent { value = e.value, expiresAt = e.duration > 0f ? now + e.duration : 0 };
+        bool casterHas = EntityManager.HasComponent<CombatStatsComponent>(r.caster);
+        bool targetHas = EntityManager.HasComponent<CombatStatsComponent>(target);
+        return CombatStatsComponent.EffectDuration(r.effect.duration,
+            casterHas, casterHas ? EntityManager.GetComponentData<CombatStatsComponent>(r.caster) : default,
+            targetHas, targetHas ? EntityManager.GetComponentData<CombatStatsComponent>(target) : default);
+    }
+
+    void ApplyShield(Entity target, in SkillEffectRequestComponent r, double now)
+    {
+        var e = r.effect;
+        var shield = new AbsorbShieldComponent { value = e.value, expiresAt = e.duration > 0f ? now + Duration(r, target) : 0 };
         if (!EntityManager.HasComponent<AbsorbShieldComponent>(target))
             EntityManager.AddComponentData(target, shield);
         else if (!AbsorbShield.IsActive(EntityManager.GetComponentData<AbsorbShieldComponent>(target), now)

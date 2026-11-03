@@ -18,8 +18,8 @@ public static class StatMath
             if (m.stat != stat || IsExpired(m, now)) continue;
             switch (m.op)
             {
-                case ModifierOp.Ratio: ratio += m.value; break;
-                case ModifierOp.Flat: flat += m.value; break;
+                case ModifierOp.Ratio: ratio += m.value * Stacks(m); break;
+                case ModifierOp.Flat: flat += m.value * Stacks(m); break;
                 case ModifierOp.Override: overrideValue = m.value; overridden = true; break;
             }
         }
@@ -27,6 +27,9 @@ public static class StatMath
     }
 
     public static bool IsExpired(in StatModifier m, double now) => m.expiresAt > 0 && m.expiresAt <= now;
+
+    /// <summary>How many times a modifier counts (L2-10): its stacks, at least 1.</summary>
+    public static int Stacks(in StatModifier m) => m.stacks > 1 ? m.stacks : 1;
 
     /// <summary>Earliest future expiry (0 = none), so the resolver knows when to look again.</summary>
     public static double NextExpiry(NativeArray<StatModifier> modifiers, double now)

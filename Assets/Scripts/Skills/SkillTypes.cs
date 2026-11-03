@@ -101,6 +101,10 @@ public struct SkillEvent
     public int maxTargets;
     /// <summary>The modifier lasts only while this skill runs: it goes when the skill ends or is interrupted (L2-14).</summary>
     public bool boundToSkill;
+    /// <summary>Most stacks of the modifier (L2-10); 1 or less = no stacking.</summary>
+    public int maxStacks;
+    /// <summary>What recasting does to a live modifier of this skill: refresh, add a stack or ignore (L2-10).</summary>
+    public EffectReapply reapply;
 }
 
 /// <summary>A skill as data, built from its <see cref="HeroAbility"/> (or the hero's weapon timings for the basic attack).</summary>

@@ -194,6 +194,7 @@ public static class UnitStatsUtility
         foreach (var stat in DamageStats) StatStack.AddLevelMultiplier(entityManager, unitEntity, stat, damageMul);
         StatStack.SeedCritical(entityManager, unitEntity, data.criticalChance, data.criticalMultiplier);
         if (!entityManager.HasComponent<CombatStatsComponent>(unitEntity)) entityManager.AddComponent<CombatStatsComponent>(unitEntity);
+        StatStack.SeedEffectDurations(entityManager, unitEntity);
         StatStack.MarkDirty(entityManager, unitEntity);
 
         // The squad's shared damage profile carries its own stack: base damage and penetration, level ratio on damage.

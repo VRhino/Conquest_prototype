@@ -46,6 +46,10 @@ public enum StatId : byte
     AICombatRadius,
     /// <summary>Added to the target-score bias towards enemy heroes (L4-10; base 0).</summary>
     AIHeroBias,
+    /// <summary>Multiplier of the duration of the effects this entity applies (L2-10; base 1).</summary>
+    EffectDurationOut,
+    /// <summary>Multiplier of the duration of the effects this entity receives (L2-10; base 1).</summary>
+    EffectDurationIn,
     Count,
 }
 
@@ -73,6 +77,8 @@ public struct StatModifier : IBufferElementData
     public int sourceId;
     /// <summary>Simulation time at which it stops applying; 0 or less = permanent.</summary>
     public double expiresAt;
+    /// <summary>Stacks of the effect (L2-10): the value counts this many times; 0 = 1, as before stacking existed.</summary>
+    public byte stacks;
     /// <summary>Skill instance it is bound to (L2-14): removed when (<see cref="boundCaster"/>, <see cref="boundInstance"/>) stops running.</summary>
     public Entity boundCaster;
     public uint boundInstance;

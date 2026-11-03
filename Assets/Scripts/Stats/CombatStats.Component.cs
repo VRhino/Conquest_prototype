@@ -8,6 +8,17 @@ public struct CombatStatsComponent : IComponentData
 {
     /// <summary>Fraction of the health a hit really takes that heals the attacker (<see cref="StatId.LifeSteal"/>).</summary>
     public float lifeSteal;
+    /// <summary>Multipliers of the duration of the effects it applies and receives (L2-10).</summary>
+    public float effectDurationOut;
+    public float effectDurationIn;
+
+    /// <summary>Duration of an effect from <paramref name="caster"/> on <paramref name="target"/>: both sides scale it (L2-10).</summary>
+    public static float EffectDuration(float duration, bool casterHas, in CombatStatsComponent caster, bool targetHas,
+        in CombatStatsComponent target)
+        => duration * (casterHas ? Scale(caster.effectDurationOut) : 1f) * (targetHas ? Scale(target.effectDurationIn) : 1f);
+
+    /// <summary>A multiplier not yet resolved (0) counts as 1.</summary>
+    static float Scale(float multiplier) => multiplier > 0f ? multiplier : 1f;
 }
 
 /// <summary>

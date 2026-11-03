@@ -20,7 +20,7 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 
 ## Pasos (un commit por punto o pareja)
 - [x] 1. L2-13 + L2-14; tests; EditMode, S6.
-- [ ] 2. L2-10; tests; EditMode.
+- [x] 2. L2-10; tests; EditMode.
 - [ ] 3. L2-11 + Flecha Llameante; tests; EditMode.
 - [ ] 4. L2-12 + Animator; tests; EditMode y comprobación en Play.
 - [ ] 5. Docs: `SkillsAndPerks.md`, catálogo §5, `Por_Abordar`, lecciones.
