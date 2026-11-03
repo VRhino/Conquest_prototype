@@ -34,6 +34,12 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
     [Tooltip("Segundos que el cuerpo de un héroe muerto sigue visible (animación de muerte) antes de ocultarse.")]
     public float deathVisualHideDelay = HeroGameplayConfigComponent.DefaultDeathVisualHideDelay;
 
+    [Header("Respawn protection (L1-07)")]
+    [Tooltip("Segundos tras reaparecer durante los que un golpe no baja la vida del héroe del suelo. 0 = sin protección.")]
+    public float respawnProtectionSeconds = 5f;
+    [Tooltip("Ese suelo, como fracción de la vida máxima.")]
+    [Range(0f, 1f)] public float respawnProtectionHealthRatio = 0.3f;
+
     class Baker : Baker<HeroGameplayConfigAuthoring>
     {
         public override void Bake(HeroGameplayConfigAuthoring authoring)
@@ -53,6 +59,8 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
                 ultimateStaminaCost         = authoring.ultimateStaminaCost,
                 exhaustionRecoveryThreshold = authoring.exhaustionRecoveryThreshold,
                 deathVisualHideDelay        = authoring.deathVisualHideDelay,
+                respawnProtectionSeconds    = authoring.respawnProtectionSeconds,
+                respawnProtectionHealthRatio = authoring.respawnProtectionHealthRatio,
             });
         }
     }

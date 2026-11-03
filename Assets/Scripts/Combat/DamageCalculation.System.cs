@@ -190,7 +190,8 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 var hp = SystemAPI.GetComponentRW<HeroHealthComponent>(p.target);
                 float prevHp = hp.ValueRO.currentHealth;
-                hp.ValueRW.currentHealth = math.max(0f, prevHp - effectiveDmg);
+                // Health floor (L1-07): a protected hero cannot be taken below it.
+                hp.ValueRW.currentHealth = HealthFloor.Apply(prevHp, effectiveDmg, hp.ValueRO.maxHealth, hp.ValueRO.minHealthRatio);
                 willKill = hp.ValueRO.currentHealth <= 0f;
                 if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);

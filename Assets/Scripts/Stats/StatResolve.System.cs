@@ -8,7 +8,7 @@ using Unity.Mathematics;
 /// modifier expires, and writes every target component the entity has:
 /// <list type="bullet">
 /// <item><see cref="HealthComponent"/>, <see cref="HeroHealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current
-/// value keeps its fraction). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
+/// value keeps its fraction), and the hero's health floor (L1-07). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
 /// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
 /// penetration and identity fields stay as the spawner wrote them), <see cref="MoveSpeedComponent"/> and
 /// <see cref="CooldownScaleComponent"/> of heroes, and
@@ -70,6 +70,7 @@ public partial class StatResolveSystem : SystemBase
             float fraction = health.ValueRO.maxHealth > 0f ? math.saturate(health.ValueRO.currentHealth / health.ValueRO.maxHealth) : 1f;
             health.ValueRW.maxHealth = max;
             health.ValueRW.currentHealth = max * fraction;
+            health.ValueRW.minHealthRatio = math.saturate(stats.Get(StatId.MinHealthRatio));
         }
         if (SystemAPI.HasComponent<StaminaComponent>(entity))
         {

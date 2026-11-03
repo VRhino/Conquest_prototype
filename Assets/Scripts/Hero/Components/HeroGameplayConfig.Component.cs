@@ -28,6 +28,11 @@ public struct HeroGameplayConfigComponent : IComponentData
     /// <summary>Seconds a dead hero's body stays visible (death animation) before its visual is hidden.</summary>
     public float deathVisualHideDelay;
 
+    /// <summary>Seconds after a respawn during which the hero has a health floor (L1-07); 0 = no protection.</summary>
+    public float respawnProtectionSeconds;
+    /// <summary>That floor, as a fraction of max health.</summary>
+    public float respawnProtectionHealthRatio;
+
     /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.</summary>
     public const float DefaultDeathVisualHideDelay = 3f;
 }

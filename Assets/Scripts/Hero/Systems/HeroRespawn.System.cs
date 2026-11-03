@@ -1,7 +1,8 @@
 using Unity.Entities;
 
 /// <summary>
-/// Marks heroes dead at zero health and respawns the local hero after its death timer.
+/// Marks heroes dead at zero health and respawns the local hero after its death timer. On respawn it gives the hero a
+/// timed health floor on the modifier stack (L1-07), with the seconds and ratio of <see cref="HeroGameplayConfigComponent"/>.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(DamageCalculationSystem))]
@@ -17,6 +18,8 @@ public partial class HeroRespawnSystem : SystemBase
     protected override void OnUpdate()
     {
         float deltaTime = SystemAPI.Time.DeltaTime;
+        double now = SystemAPI.Time.ElapsedTime;
+        SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config);
 
         foreach (var (life, health, spawn, entity) in
                  SystemAPI.Query<RefRW<HeroLifeComponent>,
@@ -45,9 +48,21 @@ public partial class HeroRespawnSystem : SystemBase
                 life.ValueRW.isAlive = true;
                 life.ValueRW.deathTimer = life.ValueRO.respawnCooldown;
                 health.ValueRW.currentHealth = health.ValueRO.maxHealth;
+                Protect(entity, config, now);
 
                 spawn.ValueRW.hasSpawned = false;
             }
         }
+    }
+
+    /// <summary>Health floor for the protection window; StatResolveSystem writes it to the hero's health.</summary>
+    void Protect(Entity hero, in HeroGameplayConfigComponent config, double now)
+    {
+        if (config.respawnProtectionSeconds <= 0f || config.respawnProtectionHealthRatio <= 0f) return;
+        if (!EntityManager.HasBuffer<StatModifier>(hero)) return;
+        StatEffects.ApplyTimed(EntityManager.GetBuffer<StatModifier>(hero), StatId.MinHealthRatio, ModifierOp.Flat,
+            config.respawnProtectionHealthRatio, now + config.respawnProtectionSeconds, ModifierSource.Effect,
+            StatEffects.RespawnProtection);
+        if (EntityManager.HasComponent<ModifiersDirty>(hero)) EntityManager.SetComponentEnabled<ModifiersDirty>(hero, true);
     }
 }

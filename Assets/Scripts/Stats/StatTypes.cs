@@ -36,6 +36,8 @@ public enum StatId : byte
     Vitality,
     /// <summary>Multiplier of every skill cooldown (base 1; a perk −0.2 ratio gives 0.8), capped by <see cref="CooldownUtility.MinScale"/>.</summary>
     CooldownScale,
+    /// <summary>Fraction of max health a hit cannot take a hero below (L1-07); 0 = none. Respawn protection gives it.</summary>
+    MinHealthRatio,
     Count,
 }
 
