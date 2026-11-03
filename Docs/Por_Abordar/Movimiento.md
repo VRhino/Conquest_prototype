@@ -283,8 +283,8 @@ dura 10 / coste:
 | Arqueros | 120 | 0,5 | 20 s | 8 | 30 % |
 
 En S1, S3, S4, S6, S7 y S9 (y sus variantes) el aguante mínimo de la escuadra medida queda entre el 79 y el 93 % y nunca se
-agota: el movimiento normal no cansa; cansan las cargas largas encadenadas. Queda: la escala del coste por la pila y una
-barra de aguante de escuadra en el HUD, si se quiere.
+agota: el movimiento normal no cansa; cansan las cargas largas encadenadas. Queda: la escala del coste por la pila. Sin barra
+de aguante de escuadra en el HUD (decisión del usuario, 2026-11-03).
 
 **Qué es.** El aguante de escuadra funciona y está probado, pero ningún `SquadData` tiene `staminaMax`, así que hoy nadie
 se cansa. Además, el catálogo pedía que el coste escale con la pila de modificadores; aquí el coste es un dato fijo.
