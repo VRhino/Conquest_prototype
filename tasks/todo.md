@@ -1,3 +1,26 @@
+# Plan: IA del catálogo (L4-10, L4-05, L4-03, L4-06; L4-07 aplazado)
+
+Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.4.
+
+## Decisiones del usuario (2026-11-03)
+- **L4-03:** el patrón de la referencia por pareja escuadra → enemigo (no por soldado): rayos de física contra el escenario
+  (capas en config), cursor round-robin y presupuesto global por frame repartido por demanda; un enemigo nuevo empieza
+  visible. La detección solo publica enemigos visibles y los arqueros exigen línea de tiro.
+- **L4-05:** mecánica de sesgo de aggro con caducidad + evento de habilidad `Taunt`, sin asignarlo aún a ninguna habilidad.
+- **L4-06:** marca `[ServerAuthoritative]` en los sistemas que deciden y test de arquitectura; sin mover el orden.
+- **L4-07:** aplazado y documentado: hace falta medir en Player con escuadras de sobra antes de un LOD.
+- **L4-10 (mi elección, sin pregunta):** alcance de detección, radio de combate y sesgo hacia héroes como stats de la pila
+  de la escuadra (fuente `Effect`).
+
+## Pasos (un commit por punto)
+- [x] 1. L4-10: stats de IA de escuadra en la pila, consumidos por detección y objetivo; tests; EditMode y S6/S7.
+- [ ] 2. L4-05: `AggroBias` con caducidad en la puntuación de objetivo y evento `Taunt`; tests; EditMode y S6.
+- [ ] 3. L4-03: visibilidad por pareja con presupuesto; detección y arqueros; tests; EditMode y S1/S6/S7/S9.
+- [ ] 4. L4-06: marca y test de arquitectura.
+- [ ] 5. Docs: catálogo §5, `Movimiento_Formaciones.md` o doc de IA, `Por_Abordar` (L4-07), lecciones.
+
+---
+
 # Plan: formaciones del catálogo (L3-05, L3-06 y compactar huecos de L3-02)
 
 Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.3.

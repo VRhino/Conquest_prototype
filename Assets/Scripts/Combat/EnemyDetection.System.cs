@@ -168,7 +168,9 @@ public partial class EnemyDetectionSystem : SystemBase
                 continue;
 
             centroid /= aliveCount;
-            float range = definition.ValueRO.detectionRange;
+            // Effects may widen or narrow it (L4-10).
+            float range = definition.ValueRO.detectionRange * (SystemAPI.HasComponent<SquadAIStatsComponent>(entity)
+                ? SystemAPI.GetComponent<SquadAIStatsComponent>(entity).detectionRangeScale : 1f);
             float rangeSquared = range * range;
             _observers.Add(new DetectionObserver
             {

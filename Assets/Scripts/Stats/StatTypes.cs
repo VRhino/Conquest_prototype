@@ -40,6 +40,12 @@ public enum StatId : byte
     MinHealthRatio,
     /// <summary>Fraction of the health a hit takes that heals the attacker (L1-13); 0 = none.</summary>
     LifeSteal,
+    /// <summary>Multiplier of the squad's detection range (L4-10; base 1). Lives on the squad entity.</summary>
+    AIDetectionRange,
+    /// <summary>Multiplier of the squad's combat (enemy search) radius (L4-10; base 1).</summary>
+    AICombatRadius,
+    /// <summary>Added to the target-score bias towards enemy heroes (L4-10; base 0).</summary>
+    AIHeroBias,
     Count,
 }
 

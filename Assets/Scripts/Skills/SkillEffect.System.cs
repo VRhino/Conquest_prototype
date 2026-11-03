@@ -150,8 +150,12 @@ public partial class SkillEffectSystem : SystemBase
 
     void ApplyModifier(Entity target, in SkillEffectRequestComponent r, double now)
     {
-        if (!EntityManager.HasBuffer<StatModifier>(target)) return;
         var e = r.effect;
+        // A squad AI parameter (L4-10) lives on the soldier's squad; a recast refreshes it, so every soldier of the
+        // squad hitting the same modifier leaves one.
+        if (SquadAIStatsComponent.IsSquadStat(e.stat) && EntityManager.HasComponent<UnitOwnerComponent>(target))
+            target = EntityManager.GetComponentData<UnitOwnerComponent>(target).squad;
+        if (!EntityManager.Exists(target) || !EntityManager.HasBuffer<StatModifier>(target)) return;
         StatEffects.ApplyTimed(EntityManager.GetBuffer<StatModifier>(target), e.stat, e.op, e.value, now + e.duration, r.skillId);
         if (EntityManager.HasComponent<ModifiersDirty>(target)) EntityManager.SetComponentEnabled<ModifiersDirty>(target, true);
     }

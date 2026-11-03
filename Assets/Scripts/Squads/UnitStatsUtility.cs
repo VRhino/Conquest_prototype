@@ -94,6 +94,20 @@ public static class UnitStatsUtility
     }
 
     /// <summary>
+    /// The squad entity's own stack for its AI parameters (L4-10): bases 1, 1 and 0, so nothing changes until an effect
+    /// adds a modifier. Once per squad.
+    /// </summary>
+    public static void SeedSquadAI(Entity squadEntity, EntityManager entityManager)
+    {
+        if (entityManager.HasComponent<SquadAIStatsComponent>(squadEntity)) return;
+        StatStack.Ensure(entityManager, squadEntity);
+        StatStack.SetBase(entityManager, squadEntity, StatId.AIDetectionRange, 1f);
+        StatStack.SetBase(entityManager, squadEntity, StatId.AICombatRadius, 1f);
+        entityManager.AddComponentData(squadEntity, SquadAIStatsComponent.Neutral);
+        StatStack.MarkDirty(entityManager, squadEntity);
+    }
+
+    /// <summary>
     /// Terrain modifiers on each unit and, for damage and penetration, on the squad's shared profile (<see cref="TerrainModifiers"/>).
     /// </summary>
     static void ApplyTerrainModifiers(Entity squadEntity, BattleTerrain terrain, EntityManager entityManager)

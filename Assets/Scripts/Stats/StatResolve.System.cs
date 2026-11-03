@@ -11,7 +11,7 @@ using Unity.Mathematics;
 /// value keeps its fraction), and the hero's health floor (L1-07). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
 /// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
 /// penetration and identity fields stay as the spawner wrote them), <see cref="MoveSpeedComponent"/> and
-/// <see cref="CooldownScaleComponent"/> of heroes, <see cref="CritStatsComponent"/> and <see cref="CombatStatsComponent"/>.</item>
+/// <see cref="CooldownScaleComponent"/> of heroes, <see cref="CritStatsComponent"/>, <see cref="CombatStatsComponent"/> and the squad's <see cref="SquadAIStatsComponent"/>.</item>
 /// <item><see cref="DamageProfileComponent"/> (damage and penetration; its hit traits are left alone; a squad's units
 /// share their squad's profile entity, so it carries its own stats). <see cref="PenetrationComponent"/> only on entities without a profile, so
 /// penetration is never counted twice.</item>
@@ -118,6 +118,14 @@ public partial class StatResolveSystem : SystemBase
             });
         if (SystemAPI.HasComponent<MoveSpeedComponent>(entity))
             SystemAPI.SetComponent(entity, new MoveSpeedComponent { value = stats.Get(StatId.MoveSpeed) });
+        if (SystemAPI.HasComponent<SquadAIStatsComponent>(entity))
+            SystemAPI.SetComponent(entity, new SquadAIStatsComponent
+            {
+                detectionRangeScale = stats.Get(StatId.AIDetectionRange),
+                combatRadiusScale = stats.Get(StatId.AICombatRadius),
+                // A bias may be negative (keep soldiers off heroes): read it unclamped.
+                heroBias = StatMath.Resolve(StatMath.Base(b, StatId.AIHeroBias), m, StatId.AIHeroBias, now),
+            });
         if (SystemAPI.HasComponent<CombatStatsComponent>(entity))
             SystemAPI.SetComponent(entity, new CombatStatsComponent { lifeSteal = stats.Get(StatId.LifeSteal) });
         if (SystemAPI.HasComponent<CooldownScaleComponent>(entity))

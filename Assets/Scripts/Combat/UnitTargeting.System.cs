@@ -102,7 +102,13 @@ public partial class UnitTargetingSystem : SystemBase
                 continue;
             }
 
-            BuildCandidates(squad, state.ValueRO.currentOrder, units, detected, tuning.enemySearchEnabled, search);
+            // Squad AI parameters from its stack (L4-10).
+            var ai = SystemAPI.HasComponent<SquadAIStatsComponent>(squad)
+                ? SystemAPI.GetComponent<SquadAIStatsComponent>(squad) : SquadAIStatsComponent.Neutral;
+            var squadWeights = weights;
+            squadWeights.heroBias += ai.heroBias;
+            BuildCandidates(squad, state.ValueRO.currentOrder, units, detected, tuning.enemySearchEnabled, search,
+                ai.combatRadiusScale);
             Entity focus = SquadFocus(squad, state.ValueRO.currentOrder, units);
             _rangedCounts.Clear();
             int rangedUnitsInSquad = 0;
@@ -131,7 +137,7 @@ public partial class UnitTargetingSystem : SystemBase
                 }
                 else
                 {
-                    chosen = BestMeleeTarget(unit, currentValid ? previous : Entity.Null, blocker, focus, candidateCount, weights);
+                    chosen = BestMeleeTarget(unit, currentValid ? previous : Entity.Null, blocker, focus, candidateCount, squadWeights);
                     if (chosen != previous)
                     {
                         if (previous != Entity.Null) _meleeCounts[previous] = Count(_meleeCounts, previous) - 1;
@@ -166,7 +172,7 @@ public partial class UnitTargetingSystem : SystemBase
     /// beyond the squad's extent around the anchor, and the same level as the squad.
     /// </summary>
     private void BuildCandidates(Entity squad, SquadOrderType order, DynamicBuffer<SquadUnitElement> units,
-        DynamicBuffer<SquadTargetEntity> detected, bool searchEnabled, in EnemySearchSettings search)
+        DynamicBuffer<SquadTargetEntity> detected, bool searchEnabled, in EnemySearchSettings search, float radiusScale)
     {
         _validTargets.Clear();
         _candidates.Clear();
@@ -202,7 +208,8 @@ public partial class UnitTargetingSystem : SystemBase
             ? SystemAPI.GetComponent<SquadResolvedOrderComponent>(squad).source : OrderSource.Player;
         var strategy = EnemySearch.StrategyFor(order, source);
         // Archers search at least as far as they shoot.
-        float radius = math.max(EnemySearch.CombatRadius(strategy, math.length(anchor.velocity.xz), search), maxRangedRange);
+        float radius = math.max(EnemySearch.CombatRadius(strategy, math.length(anchor.velocity.xz), search) * radiusScale,
+            maxRangedRange);
 
         for (int j = 0; j < detected.Length; j++)
         {
