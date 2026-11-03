@@ -24,7 +24,7 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 
 ## Pasos (un commit por punto)
 - [x] 1. L3-05: plazos absolutos y `expiresAt`; tests; EditMode y S1/S6.
-- [ ] 2. L3-06: marca de cambio pendiente y enfriamiento absoluto; tests; EditMode y S1/S4/S6.
+- [x] 2. L3-06: marca de cambio pendiente y enfriamiento absoluto; tests; EditMode y S1/S4/S6.
 - [ ] 3. Huecos: compactación con espera; tests; EditMode y S4 con bajas (BL/BT/BSL/BSW), S1, S6, S9.
 - [ ] 4. Docs: `Movimiento_Formaciones.md`, `Formations.md`, catálogo §5, `Por_Abordar`, lecciones.
 

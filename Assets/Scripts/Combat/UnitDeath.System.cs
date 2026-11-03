@@ -57,6 +57,9 @@ public partial class UnitDeathSystem : SystemBase
                         break;
                     }
                 }
+                // One soldier fewer: the formation may change template or close the gap (L3-06).
+                if (EntityManager.HasComponent<FormationChangePending>(squad))
+                    EntityManager.SetComponentEnabled<FormationChangePending>(squad, true);
             }
 
             // Destroy ECS entity.

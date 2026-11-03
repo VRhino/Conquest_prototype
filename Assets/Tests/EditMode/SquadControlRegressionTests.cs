@@ -29,7 +29,7 @@ public class SquadControlRegressionTests
         var squad = em.CreateEntity(typeof(SquadOwnerComponent), typeof(SquadInputComponent),
             typeof(SquadPlayerOrderIntentComponent), typeof(SquadAIOrderIntentComponent),
             typeof(SquadCombatReactionIntentComponent), typeof(SquadResolvedOrderComponent),
-            typeof(SquadStateComponent), typeof(FormationComponent));
+            typeof(SquadStateComponent), typeof(FormationComponent), typeof(FormationChangePending));
         em.SetComponentData(squad, new SquadOwnerComponent { hero = hero });
         return squad;
     }
@@ -295,7 +295,7 @@ public class SquadControlRegressionTests
             Assert.That(slot.localPosition, Is.EqualTo(float2.zero));
             Assert.That(slot.row, Is.Zero);
             Assert.That(slot.role, Is.EqualTo(FormationSlotRole.Front));
-            Assert.That(em.GetComponentData<SquadStateComponent>(squad).formationChangeCooldown, Is.GreaterThan(0));
+            Assert.That(em.GetComponentData<SquadStateComponent>(squad).formationChangeReadyAt, Is.GreaterThan(0));
         }
         finally { blob.Dispose(); }
     }

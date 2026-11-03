@@ -97,6 +97,10 @@ public partial class OrderResolutionSystem : SystemBase
                 resolved.ValueRW.formation   = playerIntent.ValueRO.desiredFormation;
                 resolved.ValueRW.hasNewOrder = input.ValueRO.hasNewOrder || orderChanged;
                 resolved.ValueRW.expiresAt   = insisted ? playerIntent.ValueRO.overrideEndsAt : 0;
+                // A formation asked for and not yet committed keeps the squad on FormationSystem's list (L3-06).
+                if (playerIntent.ValueRO.desiredFormation != formation.ValueRO.currentFormation
+                    && SystemAPI.HasComponent<FormationChangePending>(entity))
+                    SystemAPI.SetComponentEnabled<FormationChangePending>(entity, true);
             }
             else
             {

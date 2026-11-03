@@ -167,12 +167,14 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 hasNewOrder = false
             });
+            // On for the first frame; FormationSystem turns it off when nothing is pending (L3-06).
+            ecb.AddComponent<FormationChangePending>(squad);
 
             ecb.AddComponent(squad, new SquadStateComponent
             {
                 currentOrder = initialOrder,
                 isExecutingOrder = false,
-                formationChangeCooldown = 0f,
+                formationChangeReadyAt = 0,
                 currentState = initialState,
                 transitionTo = initialState,
                 stateTimer = 0f,

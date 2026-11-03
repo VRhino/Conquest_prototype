@@ -10,6 +10,8 @@ using Unity.Transforms;
 /// when the number of soldiers alive calls for another template, and when a spacing request arrives.
 /// A new layout (formation or template change) deals each unit the nearest free slot (greedy by distance, only on
 /// the event), so units do not cross the whole formation; otherwise every unit keeps its slot.
+/// Only squads with <see cref="FormationChangePending"/> enabled are visited (L3-06); the tag is turned off here once
+/// nothing is pending. The formation-change cooldown is an absolute time (<see cref="SquadStateComponent.formationChangeReadyAt"/>).
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadOrderSystem))]
@@ -23,22 +25,31 @@ public partial class FormationSystem : SystemBase
 
     protected override void OnUpdate()
     {
-        float deltaTime = SystemAPI.Time.DeltaTime;
+        double now = SystemAPI.Time.ElapsedTime;
         float formationChangeCooldown = SystemAPI.HasSingleton<MovementTuningComponent>()
             ? SystemAPI.GetSingleton<MovementTuningComponent>().formationChangeCooldown
             : MovementTuningComponent.Default.formationChangeCooldown;
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
+        // A spacing request is a pending change too.
+        foreach (var pending in SystemAPI.Query<EnabledRefRW<FormationChangePending>>()
+                     .WithAll<SquadFormationSpacingRequest>()
+                     .WithOptions(EntityQueryOptions.IgnoreComponentEnabledState))
+            pending.ValueRW = true;
+
+        var settled = new NativeList<Entity>(Allocator.Temp);
         foreach (var (resolved, state, formationComp, squadDef, units, squadEntity) in SystemAPI
                     .Query<RefRO<SquadResolvedOrderComponent>,
                             RefRW<SquadStateComponent>,
                             RefRW<FormationComponent>,
                             RefRO<SquadDefinitionComponent>,
                             DynamicBuffer<SquadUnitElement>>()
+                    .WithAll<FormationChangePending>()
                     .WithEntityAccess())
         {
+            // Off after this visit; a request still waiting for the cooldown is turned on again by OrderResolutionSystem.
+            settled.Add(squadEntity);
             var s = state.ValueRW;
-            s.formationChangeCooldown = math.max(0f, s.formationChangeCooldown - deltaTime);
             var current = formationComp.ValueRO;
 
             if (!squadDef.ValueRO.formationLibrary.IsCreated || units.Length == 0
@@ -58,7 +69,7 @@ public partial class FormationSystem : SystemBase
             }
 
             bool formationRequested = resolved.ValueRO.formation != current.currentFormation
-                && (s.formationChangeCooldown <= 0f || resolved.ValueRO.order == SquadOrderType.FollowHero);
+                && (now >= s.formationChangeReadyAt || resolved.ValueRO.order == SquadOrderType.FollowHero);
             FormationType type = formationRequested ? resolved.ValueRO.formation : current.currentFormation;
             int formationIndex = FormationLayout.Find(ref library, type);
             if (formationIndex < 0)
@@ -139,7 +150,7 @@ public partial class FormationSystem : SystemBase
 
             if (formationRequested)
             {
-                s.formationChangeCooldown = formationChangeCooldown;
+                s.formationChangeReadyAt = now + formationChangeCooldown;
                 // Hold Position: keep the same centre so the new formation is laid out in place.
                 if (s.currentOrder == SquadOrderType.HoldPosition && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
                     SystemAPI.GetComponentRW<SquadHoldPositionComponent>(squadEntity).ValueRW.originalFormation = type;
@@ -148,6 +159,8 @@ public partial class FormationSystem : SystemBase
             state.ValueRW = s;
         }
 
+        foreach (var squad in settled) ecb.SetComponentEnabled<FormationChangePending>(squad, false);
+        settled.Dispose();
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }

@@ -132,7 +132,7 @@ public class FormationLayoutTests
         try
         {
             var squad = em.CreateEntity(typeof(SquadResolvedOrderComponent), typeof(SquadStateComponent),
-                typeof(FormationComponent), typeof(SquadDefinitionComponent));
+                typeof(FormationComponent), typeof(SquadDefinitionComponent), typeof(FormationChangePending));
             em.AddComponentData(squad, new SquadFormationAnchorComponent { rotation = quaternion.identity });
             em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
             em.SetComponentData(squad, new FormationComponent
@@ -185,7 +185,7 @@ public class FormationLayoutTests
         try
         {
             var squad = em.CreateEntity(typeof(SquadResolvedOrderComponent), typeof(SquadStateComponent),
-                typeof(FormationComponent), typeof(SquadDefinitionComponent));
+                typeof(FormationComponent), typeof(SquadDefinitionComponent), typeof(FormationChangePending));
             em.AddComponentData(squad, new SquadFormationAnchorComponent { rotation = quaternion.identity });
             em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
             em.SetComponentData(squad, new FormationComponent
@@ -219,7 +219,7 @@ public class FormationLayoutTests
         try
         {
             var squad = em.CreateEntity(typeof(SquadResolvedOrderComponent), typeof(SquadStateComponent),
-                typeof(FormationComponent), typeof(SquadDefinitionComponent));
+                typeof(FormationComponent), typeof(SquadDefinitionComponent), typeof(FormationChangePending));
             em.AddComponentData(squad, new SquadFormationAnchorComponent { rotation = quaternion.identity });
             em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
             em.SetComponentData(squad, new FormationComponent

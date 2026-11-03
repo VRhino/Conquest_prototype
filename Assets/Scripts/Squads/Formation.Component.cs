@@ -24,6 +24,14 @@ public struct FormationComponent : IComponentData
 }
 
 /// <summary>
+/// Enabled while a squad's layout may need rebuilding (Aprendizajes_Referencia.md L3-06): a formation was asked for, a
+/// soldier died, or a spacing request arrived. <see cref="FormationSystem"/> only visits squads with it enabled and
+/// turns it off once nothing is pending, so squads that do not change cost nothing.
+/// Turned on by <see cref="OrderResolutionSystem"/>, <see cref="UnitDeathSystem"/> and <see cref="FormationSystem"/>.
+/// </summary>
+public struct FormationChangePending : IComponentData, IEnableableComponent { }
+
+/// <summary>
 /// Request to tighten or open the formation of a squad: new spacing multiplier. Consumed and removed by
 /// <see cref="FormationSystem"/>.
 /// </summary>

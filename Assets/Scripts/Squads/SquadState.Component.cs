@@ -11,8 +11,8 @@ public struct SquadStateComponent : IComponentData
     /// <summary>True while the squad is executing an order.</summary>
     public bool isExecutingOrder;
 
-    /// <summary>Time remaining before another formation can be selected.</summary>
-    public float formationChangeCooldown;
+    /// <summary>Simulation time from which another formation can be selected (absolute, L3-06).</summary>
+    public double formationChangeReadyAt;
 
     /// <summary>Current tactical FSM state.</summary>
     public SquadFSMState currentState;
