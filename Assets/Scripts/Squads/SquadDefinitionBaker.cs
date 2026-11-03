@@ -106,6 +106,7 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 attackAnimationDuration = melee?.attackAnimationDuration ?? 1.0f,
                 kineticMultiplier       = melee?.kineticMultiplier       ?? 0.3f,
                 hitTraits               = melee != null ? melee.hitTraits : ranged != null ? ranged.hitTraits : default,
+                bodyRadius               = d.bodyRadius,
                 staminaMax               = d.staminaMax,
                 staminaRunCostPerSoldier = d.staminaRunCostPerSoldier,
                 staminaRecoveryPerSecond = d.staminaRecoveryPerSecond,

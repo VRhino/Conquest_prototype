@@ -132,6 +132,7 @@ public static class SquadUnitSpawnBuilder
         });
         ecb.AddComponent<UnitRotationIntentComponent>(unit);
         ecb.AddComponent<ChargeTrackComponent>(unit);
+        ecb.AddComponent(unit, new UnitBodyRadiusComponent { radius = data.bodyRadius }); // L5-5
         ecb.AddComponent<UnitMovementGearComponent>(unit);
         ecb.AddComponent<WeaponHitboxActiveTag>(unit);
         ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);

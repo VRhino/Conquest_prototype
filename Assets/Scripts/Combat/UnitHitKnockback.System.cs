@@ -21,7 +21,7 @@ using UnityEngine.AI;
 [UpdateBefore(typeof(NavMeshPositionSyncSystem))]
 public partial class UnitHitKnockbackSystem : SystemBase
 {
-    readonly List<(float2 position, Team team, bool passesEnemies)> _bodies = new();
+    readonly List<(float2 position, Team team, bool passesEnemies, float radius)> _bodies = new();
     bool _bodiesCollected;
 
     protected override void OnCreate()
@@ -69,7 +69,7 @@ public partial class UnitHitKnockbackSystem : SystemBase
                 float2 move = knockback.ValueRO.direction * step;
                 if (tuning.enemyContactEnabled && SystemAPI.HasComponent<TeamComponent>(entity)
                     && !EnemyCollision.PassesEnemies(EntityManager, entity))
-                    move = ClipAgainstEnemies(move, entity, 2f * tuning.bodyRadius);
+                    move = ClipAgainstEnemies(move, entity, tuning.bodyRadius);
                 agent.Move(new UnityEngine.Vector3(move.x, 0f, move.y));
             }
             knockback.ValueRW.elapsed += dt;
@@ -78,26 +78,33 @@ public partial class UnitHitKnockbackSystem : SystemBase
     }
 
     /// <summary>The push step left after the enemies around the unit. Bodies are gathered once, on the first push of the frame.</summary>
-    float2 ClipAgainstEnemies(float2 step, Entity entity, float contactDistance)
+    float2 ClipAgainstEnemies(float2 step, Entity entity, float defaultRadius)
     {
+        float selfRadius = BodyOf(entity, defaultRadius);
         if (!_bodiesCollected)
         {
             _bodies.Clear();
             foreach (var (team, transform, body) in SystemAPI.Query<RefRO<TeamComponent>, RefRO<LocalTransform>>()
                          .WithAny<UnitFormationStateComponent, HeroSpawnComponent>()
                          .WithEntityAccess())
-                _bodies.Add((transform.ValueRO.Position.xz, team.ValueRO.value, EnemyCollision.PassesEnemies(EntityManager, body)));
+                _bodies.Add((transform.ValueRO.Position.xz, team.ValueRO.value, EnemyCollision.PassesEnemies(EntityManager, body),
+                    BodyOf(body, defaultRadius)));
             _bodiesCollected = true;
         }
         float2 position = SystemAPI.GetComponent<LocalTransform>(entity).Position.xz;
         Team own = SystemAPI.GetComponent<TeamComponent>(entity).value;
-        float reachSq = (contactDistance + math.length(step)) * (contactDistance + math.length(step));
         for (int pass = 0; pass < EnemyContact.Passes; pass++)
             foreach (var body in _bodies)
             {
-                if (body.team == own || body.passesEnemies || math.distancesq(body.position, position) > reachSq) continue;
+                // Both bodies of the pair touch (L5-5).
+                float contactDistance = selfRadius + body.radius;
+                float reach = contactDistance + math.length(step);
+                if (body.team == own || body.passesEnemies || math.distancesq(body.position, position) > reach * reach) continue;
                 step = EnemyContact.ClipStep(step, body.position - position, contactDistance);
             }
         return step;
     }
+
+    float BodyOf(Entity entity, float fallback) => SystemAPI.HasComponent<UnitBodyRadiusComponent>(entity)
+        ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(entity).radius, fallback) : fallback;
 }

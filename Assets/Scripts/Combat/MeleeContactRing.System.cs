@@ -44,6 +44,7 @@ public partial class MeleeContactRingSystem : SystemBase
         float arcSpacing = 2f * bodyRadius + tuning.contactRingMargin;
         float maxArc = math.radians(tuning.contactRingMaxArcDegrees);
         bool enabled = tuning.contactRingEnabled;
+        var bodies = GetComponentLookup<UnitBodyRadiusComponent>(true);
 
         // 1. Melee attackers with a living target; everyone else drops its reservation.
         _attackers.Clear();
@@ -63,8 +64,9 @@ public partial class MeleeContactRingSystem : SystemBase
             }
             float2 position = transform.ValueRO.Position.xz;
             float2 targetPosition = SystemAPI.GetComponent<LocalTransform>(target).Position.xz;
-            float stop = MeleeReach.StopDistance(weapon.ValueRO.attackRange, bodyRadius, bodyRadius,
-                tuning.meleeStopReachFraction);
+            // Both bodies (L5-5).
+            float stop = MeleeReach.StopDistance(weapon.ValueRO.attackRange, BodyRadius.Of(bodies, unit, bodyRadius),
+                BodyRadius.Of(bodies, target, bodyRadius), tuning.meleeStopReachFraction);
             _attackers.Add(new Attacker
             {
                 unit = unit, target = target, position = position, targetPosition = targetPosition,

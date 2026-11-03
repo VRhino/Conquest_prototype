@@ -50,6 +50,7 @@ public partial class UnitBodyblockSystem : SystemBase
         public bool               isWall;      // Formed + formación muro
         public bool               isEngaging;  // en combate cuerpo a cuerpo
         public bool               passesEnemies; // colisión enemiga apagada (P2)
+        public float              body;        // radio del cuerpo (L5-5)
     }
 
     private readonly List<AgentData>                    _agents         = new();
@@ -131,6 +132,9 @@ public partial class UnitBodyblockSystem : SystemBase
                 isWall     = isWall,
                 isEngaging = engaging,
                 passesEnemies = EnemyCollision.PassesEnemies(EntityManager, entity),
+                body = SystemAPI.HasComponent<UnitBodyRadiusComponent>(entity)
+                    ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(entity).radius, tuning.bodyRadius)
+                    : tuning.bodyRadius,
             });
         }
 
@@ -155,11 +159,19 @@ public partial class UnitBodyblockSystem : SystemBase
                 state    = UnitFormationState.Moving,   // héroe = siempre activo
                 team     = teamComp.ValueRO.value,
                 isWall   = false,
+                body     = tuning.bodyRadius,
             });
         }
 
         int count = _agents.Count;
         if (count < 2) return;
+        // Single contact (P0): each pair touches at both bodies (L5-5); the grid cell fits the largest pair.
+        if (singleContact)
+        {
+            float largest = 0f;
+            for (int i = 0; i < count; i++) largest = math.max(largest, _agents[i].body);
+            radius = math.max(0.01f, 2f * largest);
+        }
 
         // ── 2. Ensure offset buffer ───────────────────────────────────────────
 
@@ -174,7 +186,7 @@ public partial class UnitBodyblockSystem : SystemBase
             {
                 entity = source.entity, position = source.position, state = source.state,
                 team = source.team, isWall = source.isWall, isEngaging = source.isEngaging,
-                passesEnemies = source.passesEnemies
+                passesEnemies = source.passesEnemies, body = source.body
             };
             _nativeGrid.Add(new int2((int)math.floor(source.position.x / radius),
                 (int)math.floor(source.position.z / radius)), i);
@@ -215,6 +227,7 @@ public partial class UnitBodyblockSystem : SystemBase
         public UnitFormationState state;
         public Team team;
         public bool isWall, isEngaging, passesEnemies;
+        public float body;
     }
 
     [BurstCompile]
@@ -250,7 +263,8 @@ public partial class UnitBodyblockSystem : SystemBase
                     float3 diff = current.position - other.position;
                     diff.y = 0f;
                     float distSq = math.lengthsq(diff);
-                    if (distSq >= radiusSq) continue;
+                    float pairRadius = singleContact ? current.body + other.body : radius;
+                    if (distSq >= pairRadius * pairRadius) continue;
                     contacts++;
                     float dist = math.sqrt(distSq);
                     // Canonical pair ordering preserves the old direction at exact overlap.
@@ -262,7 +276,7 @@ public partial class UnitBodyblockSystem : SystemBase
                     {
                         // One contact distance for every enemy pair; a still unit is never pushed (P0).
                         if (!IsMobile(current)) continue;
-                        offset += dir * OverlapCorrection(dist, radius, IsMobile(other) ? BothMovingShare : 1f);
+                        offset += dir * OverlapCorrection(dist, pairRadius, IsMobile(other) ? BothMovingShare : 1f);
                         continue;
                     }
                     if (current.isEngaging && other.isEngaging)

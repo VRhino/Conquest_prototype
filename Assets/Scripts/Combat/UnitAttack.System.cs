@@ -104,7 +104,9 @@ public partial class UnitAttackSystem : SystemBase
 
             float3 toTarget = targetPos - transform.ValueRO.Position;
             float  dist2D   = math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
-            bool   inRange  = MeleeReach.InAttackRange(dist2D, weapon.ValueRO.attackRange, bodyRadius);
+            bool   inRange  = MeleeReach.InAttackRange(dist2D, weapon.ValueRO.attackRange,
+                SystemAPI.HasComponent<UnitBodyRadiusComponent>(target)
+                    ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(target).radius, bodyRadius) : bodyRadius);
 
             if (inRange && c.attackCooldown <= 0f)
             {

@@ -232,10 +232,13 @@ public partial class UnitNavMeshSystem : SystemBase
                 
                 // Stop with bodies apart and the target inside the hit; approach again only beyond the
                 // resume distance, so units do not shuffle in and out at the edge of their reach (C5).
+                // Both bodies of the pair (L5-5).
+                float selfRadius = BodyOf(entity, bodyRadius);
+                float targetRadius = BodyOf(combatTarget, bodyRadius);
                 float stopDist = isRanged
                     ? MeleeReach.RangedStopDistance(attackRange, tuning.rangedStopFraction)
-                    : MeleeReach.StopDistance(attackRange, bodyRadius, bodyRadius, tuning.meleeStopReachFraction);
-                float resumeDist = isRanged ? attackRange : MeleeReach.ResumeDistance(attackRange, bodyRadius);
+                    : MeleeReach.StopDistance(attackRange, selfRadius, targetRadius, tuning.meleeStopReachFraction);
+                float resumeDist = isRanged ? attackRange : MeleeReach.ResumeDistance(attackRange, targetRadius);
 
                 // Contact ring (C11): a reserved slot is the approach point; with the ring full the unit
                 // waits further out, on its own side, instead of piling in.
@@ -252,7 +255,7 @@ public partial class UnitNavMeshSystem : SystemBase
                     else if (ring.target == combatTarget)
                     {
                         ringState = 2;
-                        float shift = ContactRing.WaitDistance(resumeDist, 2f * bodyRadius + tuning.contactRingMargin)
+                        float shift = ContactRing.WaitDistance(resumeDist, 2f * selfRadius + tuning.contactRingMargin)
                             - stopDist;
                         stopDist += shift;
                         resumeDist += shift;
@@ -289,7 +292,7 @@ public partial class UnitNavMeshSystem : SystemBase
                     float2 velocityXZ = new float2(agent.velocity.x, agent.velocity.z);
                     float2 restXZ = MeleeReach.BrakingStopPoint(unitXZ, velocityXZ,
                         agent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction,
-                        dist - (2f * bodyRadius + MeleeReach.BodyClearance));
+                        dist - (selfRadius + targetRadius + MeleeReach.BodyClearance));
                     destination = new float3(restXZ.x, unitPos.y, restXZ.y);
                     usesFormationDestination = false;
                 }
@@ -499,6 +502,10 @@ public partial class UnitNavMeshSystem : SystemBase
     /// A unit walks to its approach point only while approaching, not holding and not swinging; otherwise it brakes to
     /// rest (P5: the reference locks the motor during the attack, so no last-moment corrections inside the reach).
     /// </summary>
+    /// <summary>Body radius of a unit (L5-5), or <paramref name="fallback"/> for bodies without one.</summary>
+    float BodyOf(Entity entity, float fallback) => SystemAPI.HasComponent<UnitBodyRadiusComponent>(entity)
+        ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(entity).radius, fallback) : fallback;
+
     public static bool ApproachesTarget(bool combatApproaching, bool holdingPosition, bool swinging)
         => combatApproaching && !holdingPosition && !swinging;
 

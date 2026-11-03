@@ -86,10 +86,10 @@ public static class EnemyContact
             // A pair collides only if both have the enemy collision on (P2).
             if (!self.steered || self.passesEnemies) return;
             float2 velocity = velocities[i];
-            // Only enemies the unit can reach before the gap must be closed matter.
-            float reach = contactDistance + math.length(velocity) * closeTime;
-            float reachSq = reach * reach;
+            float selfRadius = AllyAvoidance.RadiusOf(self, contactDistance);
+            float travel = math.length(velocity) * closeTime;
             var enemies = new FixedList64Bytes<int>();
+            var contacts = new FixedList64Bytes<float>(); // Contact distance of each pair: both bodies (L5-5).
             int2 cell = (int2)math.floor(self.position / cellSize);
             for (int dx = -1; dx <= 1; dx++)
             for (int dy = -1; dy <= 1; dy++)
@@ -98,8 +98,10 @@ public static class EnemyContact
                 do
                 {
                     if (j == i || agents[j].team == self.team || agents[j].passesEnemies) continue;
-                    if (math.distancesq(agents[j].position, self.position) > reachSq) continue;
-                    if (enemies.Length < MaxEnemies) enemies.Add(j);
+                    // Only enemies the unit can reach before the gap must be closed matter.
+                    float pair = selfRadius + AllyAvoidance.RadiusOf(agents[j], contactDistance);
+                    if (math.distancesq(agents[j].position, self.position) > math.square(pair + travel)) continue;
+                    if (enemies.Length < MaxEnemies) { enemies.Add(j); contacts.Add(pair); }
                 } while (grid.TryGetNextValue(out j, ref it));
             }
             if (enemies.Length == 0) return;
@@ -108,13 +110,13 @@ public static class EnemyContact
             for (int n = 0; n < enemies.Length; n++)
             {
                 float2 toEnemy = agents[enemies[n]].position - self.position;
-                if (!Blocks(self.preferred, velocity, toEnemy, contactDistance, closeTime)) continue;
+                if (!Blocks(self.preferred, velocity, toEnemy, contacts[n], closeTime)) continue;
                 if (math.lengthsq(toEnemy) < blockerDistanceSq) { blockerDistanceSq = math.lengthsq(toEnemy); blocker = enemies[n]; }
             }
             blockers[i] = blocker;
             for (int pass = 0; pass < Passes; pass++)
                 for (int n = 0; n < enemies.Length; n++)
-                    velocity = Slide(velocity, agents[enemies[n]].position - self.position, contactDistance, closeTime);
+                    velocity = Slide(velocity, agents[enemies[n]].position - self.position, contacts[n], closeTime);
             velocities[i] = velocity;
         }
     }

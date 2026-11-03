@@ -108,6 +108,9 @@ public partial class UnitAvoidanceSystem : SystemBase
                 squadSpacing = squadSpacing,
                 steered = steered,
                 passesEnemies = EnemyCollision.PassesEnemies(EntityManager, entity),
+                radius = SystemAPI.HasComponent<UnitBodyRadiusComponent>(entity)
+                    ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(entity).radius, tuning.bodyRadius)
+                    : tuning.bodyRadius,
             });
             _navAgents.Add(steered ? agent : null);
             _entities.Add(entity);

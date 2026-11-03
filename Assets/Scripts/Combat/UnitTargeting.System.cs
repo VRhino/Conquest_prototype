@@ -345,8 +345,10 @@ public partial class UnitTargetingSystem : SystemBase
             return false;
         float3 uPos = SystemAPI.GetComponent<LocalTransform>(unit).Position;
         float3 tPos = SystemAPI.GetComponent<LocalTransform>(target).Position;
+        float targetRadius = SystemAPI.HasComponent<UnitBodyRadiusComponent>(target)
+            ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(target).radius, bodyRadius) : bodyRadius;
         return MeleeReach.InAttackRange(math.distance(uPos.xz, tPos.xz),
-            SystemAPI.GetComponent<UnitWeaponComponent>(unit).attackRange, bodyRadius);
+            SystemAPI.GetComponent<UnitWeaponComponent>(unit).attackRange, targetRadius);
     }
 
     /// <summary>

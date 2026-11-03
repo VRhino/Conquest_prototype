@@ -26,7 +26,11 @@ public static class AllyAvoidance
         public int squad;          // -1 for bodies outside any squad (heroes).
         public bool steered;       // Gets a new velocity and shares the avoidance.
         public bool passesEnemies; // Enemy collision off (P2): EnemyContact ignores the pair.
+        public float radius;       // Body radius (L5-5); 0 = half the default pair distance.
     }
+
+    /// <summary>Body radius of <paramref name="agent"/>, or half of <paramref name="defaultPair"/> when it has none (L5-5).</summary>
+    public static float RadiusOf(in Agent agent, float defaultPair) => agent.radius > 0f ? agent.radius : 0.5f * defaultPair;
 
     public struct Settings
     {
@@ -130,9 +134,11 @@ struct AllyAvoidanceSolveJob : IJobParallelFor
         {
             AllyAvoidance.Agent other = agents[nearest[n]];
             float responsibility = other.steered ? 0.5f : 1f;
+            float pairRadius = AllyAvoidance.RadiusOf(self, settings.combinedRadius)
+                + AllyAvoidance.RadiusOf(other, settings.combinedRadius);
             float combinedRadius = self.squad >= 0 && other.squad == self.squad
-                ? math.min(settings.combinedRadius, settings.squadmateSpacingFraction * self.squadSpacing)
-                : settings.combinedRadius;
+                ? math.min(pairRadius, settings.squadmateSpacingFraction * self.squadSpacing)
+                : pairRadius;
             lines.Add(OrcaSolver.Line(other.position - self.position, self.velocity - other.velocity,
                 self.velocity, combinedRadius, self.timeHorizon, settings.collisionResolveTime,
                 responsibility));

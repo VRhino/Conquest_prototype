@@ -59,6 +59,10 @@ public class SquadData : ScriptableObject
     /// <summary>Abilities unlocked as the squad levels up.</summary>
     public List<AbilityData> abilitiesByLevel;
 
+    [Header("Cuerpo (L5-5)")]
+    [Tooltip("Radio del cuerpo de cada soldado, m. 0 = el de MovementTuningConfig (0,5 m). Las unidades grandes (caballería) llevan más.")]
+    [Min(0f)] public float bodyRadius;
+
     [Header("Aguante de escuadra (L5-7)")]
     [Tooltip("Aguante máximo de la escuadra. 0 = sin aguante: corre sin coste, como antes.")]
     [Min(0f)] public float staminaMax;
