@@ -15,7 +15,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | [IA.md](./IA.md) | LOD de IA (L4-07), datos de provocación y de parámetros de IA, visibilidad por soldado | `tasks/todo.md` (IA del catálogo), 2026-11-03 |
 | [Combate.md](./Combate.md) | Datos de los rasgos del golpe, terreno y condicionados; reacciones al golpe (L1-09) | `tasks/todo.md` (combate pendiente del catálogo), 2026-11-03 |
 
-## Estado general (2026-11-03, tras el combate del catálogo)
+## Estado general (2026-11-03, tras combate, formaciones, IA y movimiento del catálogo)
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
 |---|---|---|---|
 | Formaciones_y_Posturas.md | F4, F6, F8, F9, F11-F13, F16 (F3 parcial; F18 hecho) | F3 (clips de ShieldWall y Testudo) | F9 cuando haya caso de uso (falta quien apague la colisión y la evitación por escuadra) |

@@ -369,7 +369,7 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).
-  Sigue sin compactarse dentro de un tramo. Los slots no se comparten entre escuadras aliadas (F17, `8f3b45cf`).
+  La compactación dentro de un tramo llegó el 2026-11-03 (§24). Los slots no se comparten entre escuadras aliadas (F17, `8f3b45cf`).
 - **Hecho en combate (2026-11-03, `Docs/Mechanics/DamageMechanics.md` §4.2, §5.5, §5.6, §7.4 y §7.5):** L1-08 y L1-10
   (rasgos del golpe en el perfil de daño: ignorar el escudo, desgaste del bloqueo y del aguante), L1-07 (suelo de vida como
   stat y protección al reaparecer), L1-12 (variación sembrada), L1-13 (robo de vida), L1-02 (condicionados de atacante y
