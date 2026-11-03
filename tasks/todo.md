@@ -1,6 +1,6 @@
 # Plan: combate pendiente del catálogo de la referencia (L1-08, L1-10, L1-07, L1-12, L1-13, L1-02, L1-11, L1-14)
 
-Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
+Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
 L1-09 (reacciones al golpe) queda fuera: necesita animaciones; se documenta como bloqueado.
 
 ## Decisiones del usuario (2026-11-03)
@@ -39,13 +39,21 @@ L1-09 (reacciones al golpe) queda fuera: necesita animaciones; se documenta como
 
 ## Pasos (un commit por punto o pareja)
 - [x] 1. L1-08 + L1-10: `HitTraits`, `ShieldBlock`, aguante del héroe; tests de la regla; EditMode, S1/S6.
-- [ ] 2. L1-07: stat `MinHealthRatio`, suelo en el daño, protección al reaparecer; tests.
-- [ ] 3. L1-12: variación sembrada en melé, proyectil y habilidad; tests (reproducible y acotada).
-- [ ] 4. L1-13: `LifeSteal`, `CombatStatsComponent`; tests.
-- [ ] 5. L1-02: condiciones, buffer, fuentes; tests de cada condición y de la suma.
-- [ ] 6. L1-11: muestreo de carga y bono; tests.
-- [ ] 7. L1-14: terreno del mapa y modificadores por tipo de escuadra; tests.
-- [ ] 8. Docs: `DamageMechanics.md`, catálogo §5, `Docs/Por_Abordar` (lo que quede abierto y L1-09 bloqueado), lecciones.
+- [x] 2. L1-07: stat `MinHealthRatio`, suelo en el daño, protección al reaparecer; tests.
+- [x] 3. L1-12: variación sembrada en melé, proyectil y habilidad; tests (reproducible y acotada).
+- [x] 4. L1-13: `LifeSteal`, `CombatStatsComponent`; tests.
+- [x] 5. L1-02: condiciones, buffer, fuentes; tests de cada condición y de la suma.
+- [x] 6. L1-11: muestreo de carga y bono; tests.
+- [x] 7. L1-14: terreno del mapa y modificadores por tipo de escuadra; tests.
+- [x] 8. Docs: `DamageMechanics.md`, catálogo §5, `Docs/Por_Abordar` (lo que quede abierto y L1-09 bloqueado), lecciones.
+
+## Resultado
+- Commits: `5fb4defc` (L1-08 + L1-10), `f84c7a17` (L1-07), `6c115b83` (L1-12), `84463226` (L1-13), `d2007943` (L1-02),
+  `579f81ff` (L1-11), `4974ca7d` (L1-14) y el de docs. EditMode 451/451; PlayMode S1 y S6 en verde tras cada punto, y S9
+  con la carga.
+- Toda la mecánica es neutra sin datos: ningún asset rellena aún rasgos, condicionados ni terrenos, así que el balance actual
+  no cambia. Lo abierto (valores, terrenos de los mapas, perks con condicionados, L1-09 bloqueado) está en
+  `Docs/Por_Abordar/Combate.md` C1-C8.
 
 ---
 

@@ -565,3 +565,13 @@
 - Las escenas duplicadas se desincronizan: el arreglo del cartel de `de62733c` solo llegó a BattleScene. Si se arregla una, comprobar la otra.
 - `capture_game_view` guarda bajo `Assets/` aunque se le pase `Temp/...`: borrar `Assets/Temp` con `AssetDatabase.DeleteAsset` al acabar.
 - Que una sesión aparezca inactiva no significa que el editor esté libre: puede estar esperando a su regresión en segundo plano. Esperar su aviso, y no escribir en `Assets/` entretanto, porque también dispara reimportaciones en ese editor.
+
+## Combate pendiente del catálogo (2026-11-03)
+
+- Un campo nuevo en un componente que reescribe el resolvedor de stats se pierde si el resolvedor hace `SetComponent(new ...)`: hay que escribir solo los campos de stat (RW) y dejar el resto.
+- Los eventos y perfiles se construyen con inicializadores en muchos sitios: un campo nuevo debe ser neutro a 0 (desplazamiento o ratio, no multiplicador), o todos los creadores que no lo conocen dan daño 0.
+- Las escuadras se referencian a sí mismas (`SquadDataReference.dataEntity = squad`): un buffer horneado en la entidad de datos no llega a la escuadra si `SquadSpawningSystem` no lo copia, como hace con `AbilityByLevelElement`.
+- Antes de portar un patrón de la referencia, leer su aritmética y no solo su nombre: la "carga" de la referencia premia rebasar al objetivo, no correr hacia él. Se preguntó al usuario y eligió adaptarla.
+- La penetración del soldado se suma a la del perfil en la fórmula: un modificador de penetración va solo al perfil, o cuenta dos veces.
+- En esta máquina no hay Python: las ediciones en lote van con un script de Node que comprueba que cada texto aparece exactamente una vez.
+- Mientras corre una tanda de PlayMode, adelantar trabajo en `Docs/` y `tasks/` (fuera de `Assets`) y dejar el código en el scratchpad, para no provocar una recompilación a mitad.

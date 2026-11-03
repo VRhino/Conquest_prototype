@@ -35,6 +35,6 @@ public class SquadRangedData : ScriptableObject
     [Tooltip("Apertura total del abanico en grados.")]
     public float fanAngleDegrees = 0f;
 
-    [Header("Hit Traits (L1-08, L1-10)")]
+    [Header("Hit Traits (L1-08, L1-10, L1-11, L1-12)")]
     public HitTraits hitTraits;
 }

@@ -61,7 +61,7 @@ public class HeroClassDefinition : ScriptableObject
     public float movementSpeedBase = 5f;
     public float movementSpeedDexMultiplier = 0.1f;
 
-    [Header("Golpe del arma (L1-08, L1-10)")]
+    [Header("Golpe del arma (L1-08, L1-10, L1-11, L1-12)")]
     public HitTraits hitTraits;
 
     /// <summary>List of active abilities available to this class.</summary>

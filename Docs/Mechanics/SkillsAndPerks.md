@@ -141,6 +141,10 @@ Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
 | `ApplyModifier` | Modificador temporal en la pila de cada objetivo (fuente `Effect`, id = la habilidad). Al relanzar se refresca, no se acumula |
 | `AbsorbShield` | Escudo absorbente (`value`, `duration`). Si ya hay uno, se queda el mayor |
 | `Dash` | Embestida de `distance` metros en `duration` segundos. El héroe local la hace con su controlador y la IA con su `NavMeshAgent` |
+| `ApplyConditional` | Modificador condicionado temporal (L1-02, `DamageMechanics.md` §5.6) a cada objetivo: ratio de daño `value` durante `duration`, solo en los golpes que cumplen `condition`. Al relanzar se refresca. Ninguna habilidad lo usa aún |
+
+Los golpes de `AreaDamage` llevan la forma `Ability` y el id de la habilidad, para las condiciones, y tiran la variación
+del arma del lanzador (L1-12).
 
 **Objetivos** (`SkillTarget`):
 - `Self`: el propio héroe.

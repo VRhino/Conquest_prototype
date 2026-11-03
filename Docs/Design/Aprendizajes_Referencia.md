@@ -1,6 +1,7 @@
 # Aprendizajes de la referencia para Conquest Tactics
 
-Estado: propuesta de diseño; las Fases 0, 1 y 2 están implementadas (§5). Fecha de la verificación: 2026-10-19.
+Estado: propuesta de diseño; las Fases 0, 1 y 2 y los puntos de combate (salvo L1-09) están implementados (§5). Fecha de
+la verificación: 2026-10-19.
 Ampliación del 2026-10-26: 20 puntos más sacados de las notas de `game-re` que el catálogo no recogía, marcados
 "(amp.)" en las tablas de la sección 4. El estado de todo lo pendiente está al final de la sección 5.
 Las propuestas marcadas "(verificado)" tienen su afirmación "Hoy en el proyecto" comprobada leyendo el código citado.
@@ -99,18 +100,18 @@ Leyenda: coste S/M/L; riesgo B/M/A (bajo/medio/alto); prioridad A/M/B. "Ref." es
 | L1-01 (verificado) | Pila de modificadores por stat | Stats fijados una vez; sin componente de buff; `HeroPerk.effectValue` sin lector (`Squads/UnitStatsUtility.cs:55-80`, `Perks/HeroPerk.Component.cs`) | Ver T1 | Perks, auras, debuffs sin tocar `DamageCalculation` | M | M | A |
 | L1-03 (verificado) | Fórmula de daño pura y Burst | Fórmula, escudo, vida y FCT en un `SystemBase` managed que llama a `FloatingCombatTextManager` (`Combat/DamageCalculation.System.cs:136,147,191`) | `static DamageFormula.Compute(in DamageInput)` con desglose; FCT vía buffer `DamageFeedbackEvent` + sistema visual aparte | Tests EditMode en ms; separa lógica de visual; base de servidor | S-M | B | A |
 | L1-05 (verificado) | RNG sembrado por golpe | Melee usa `Random.value` (`Combat/MeleeContactResolution.System.cs:107`); disparo usa `Unity.Mathematics.Random` (`Combat/Systems/RangedAttack.System.cs:130`) | `crit`/`rollBits` en `PendingDamageEvent`, semilla (tick, atacante) | Reproducible y verificable | S | B | M |
-| L1-02 | Canales atacante/objetivo y condicionados | El evento lleva contexto pero no hay "+X % contra caballería" (`PendingDamageEvent.cs`) | Modificadores condicionados con máscara de bits, evaluados solo en el impacto | Contrajuego entre composiciones | M | M | M |
+| L1-02 (hecho, `DamageMechanics.md` §5.6) | Canales atacante/objetivo y condicionados | El evento lleva contexto pero no hay "+X % contra caballería" (`PendingDamageEvent.cs`) | Modificadores condicionados con máscara de bits, evaluados solo en el impacto | Contrajuego entre composiciones | M | M | M |
 | L1-04 | Crítico con rendimientos decrecientes | Probabilidad fija por arma (`MeleeContactResolution.System.cs:107`, `HeroEntity.Authoring.cs:108`) | `rating/(rating+K)` y anti-crítico por defensa | Acumular crítico no rompe balance | S | B | M |
 | L1-06 | Escudo absorbente separado de la vida | `UnitShieldComponent` es solo físico (`DamageCalculation.System.cs:123-160`) | `AbsorbShield {value, expiresAt}` entre cálculo y resta de HP | Primer efecto defensivo temporal | S | B | M |
-| L1-08 | Golpes que ignoran escudo | Bloqueo depende del collider y `currentBlock > 0` (`DamageCalculation.System.cs:125`) | Flag `ignoresShield`/`shieldDamageMult` en el perfil de daño | Identidad de armas | S | B | B |
-| L1-07 | Suelo de vida / protección tras respawn | Vida cae a 0 sin mecanismo de supervivencia (`DamageCalculation.System.cs:172-185`) | `minHealthRatio` en `HeroHealthComponent` | Menos spawn-kill | S | B | B |
+| L1-08 (hecho, `DamageMechanics.md` §5.5) | Golpes que ignoran escudo | Bloqueo depende del collider y `currentBlock > 0` (`DamageCalculation.System.cs:125`) | Flag `ignoresShield`/`shieldDamageMult` en el perfil de daño | Identidad de armas | S | B | B |
+| L1-07 (hecho, `DamageMechanics.md` §7.4) | Suelo de vida / protección tras respawn | Vida cae a 0 sin mecanismo de supervivencia (`DamageCalculation.System.cs:172-185`) | `minHealthRatio` en `HeroHealthComponent` | Menos spawn-kill | S | B | B |
 | D1 (verificado) | Sincronizar `DamageMechanics.md` | Doc dice cap de mitigación 95 % y coste de bloqueo fijo 50; código resta plana `max(raw - netDef, raw*0.05)` y el escudo absorbe daño real (`DamageCalculation.System.cs:82-83,127`) | Reescribir doc y mover constantes a `CombatTuningConfig` | Diseño no balancea contra una fórmula inexistente | S | B | A |
-| L1-09 (amp.) | Reacción al golpe por tipo y clase de objetivo | Solo hay retroceso del cuerpo (`Combat/HitKnockback.cs`) y aturdimiento al romperse el escudo (`Combat/DamageCalculation.System.cs:113`); sin tipos de reacción ni inmunidad | Enum `HitReaction` (ninguna, retroceso, derribo, despedido, rotura de guardia) por golpe, con permiso por clase de objetivo (soldado, héroe, grande) y un stat de resistencia al control que la anula | Golpes con peso distinto; base de las animaciones de reacción | M | M | M |
-| L1-10 (amp.) | Desgaste del bloqueo por arma | El escudo absorbe el daño real hasta romperse (`DamageCalculation.System.cs:98-129`); todas las armas lo gastan igual | Multiplicador de daño al bloqueo en el perfil de daño, y daño al aguante del héroe que bloquea; va junto a L1-08 | Armas contundentes que abren escudos | S | B | M |
-| L1-11 (amp.) | Bonus de carga por aproximación | El daño no depende de cómo se llega al golpe | Bonus del atacante según la distancia recorrida hacia el objetivo, en su dirección, justo antes del golpe; con umbral y tope por arma | Carga de lanceros y de la futura caballería | M | M | M |
-| L1-12 (amp.) | Variación aleatoria del daño | Para la misma entrada el daño es siempre el mismo (`DamageFormula`) | Factor `1 ± f` por arma o habilidad, tirado con el RNG sembrado del golpe (L1-05) | Números menos mecánicos sin perder reproducibilidad | S | B | B |
-| L1-13 (amp.) | Robo de vida | No existe | Stat de la pila: fracción del daño hecho que cura al atacante, aplicada después de restar la vida | Perks y habilidades de sustento | S | B | B |
-| L1-14 (amp.) | Modificadores por terreno según el tipo de unidad | El terreno no afecta a los stats | El tipo de unidad declara modificadores por tipo de terreno (vida, daño, defensa, velocidad), aplicados con una fuente propia según el terreno del mapa | Identidad de cada unidad según el mapa | M | B | B |
+| L1-09 (amp., bloqueado: animaciones, `Por_Abordar/Combate.md` C4) | Reacción al golpe por tipo y clase de objetivo | Solo hay retroceso del cuerpo (`Combat/HitKnockback.cs`) y aturdimiento al romperse el escudo (`Combat/DamageCalculation.System.cs:113`); sin tipos de reacción ni inmunidad | Enum `HitReaction` (ninguna, retroceso, derribo, despedido, rotura de guardia) por golpe, con permiso por clase de objetivo (soldado, héroe, grande) y un stat de resistencia al control que la anula | Golpes con peso distinto; base de las animaciones de reacción | M | M | M |
+| L1-10 (amp., hecho, §5.5) | Desgaste del bloqueo por arma | El escudo absorbe el daño real hasta romperse (`DamageCalculation.System.cs:98-129`); todas las armas lo gastan igual | Multiplicador de daño al bloqueo en el perfil de daño, y daño al aguante del héroe que bloquea; va junto a L1-08 | Armas contundentes que abren escudos | S | B | M |
+| L1-11 (amp., hecho, §5.5) | Bonus de carga por aproximación | El daño no depende de cómo se llega al golpe | Bonus del atacante según la distancia recorrida hacia el objetivo, en su dirección, justo antes del golpe; con umbral y tope por arma | Carga de lanceros y de la futura caballería | M | M | M |
+| L1-12 (amp., hecho, §5.5) | Variación aleatoria del daño | Para la misma entrada el daño es siempre el mismo (`DamageFormula`) | Factor `1 ± f` por arma o habilidad, tirado con el RNG sembrado del golpe (L1-05) | Números menos mecánicos sin perder reproducibilidad | S | B | B |
+| L1-13 (amp., hecho, §7.5) | Robo de vida | No existe | Stat de la pila: fracción del daño hecho que cura al atacante, aplicada después de restar la vida | Perks y habilidades de sustento | S | B | B |
+| L1-14 (amp., hecho, §4.2) | Modificadores por terreno según el tipo de unidad | El terreno no afecta a los stats | El tipo de unidad declara modificadores por tipo de terreno (vida, daño, defensa, velocidad), aplicados con una fuente propia según el terreno del mapa | Identidad de cada unidad según el mapa | M | B | B |
 
 **L1-01.** Ref.: el poder se compone con una fórmula de ratios sumados + planos y un override; los efectos no conocen el
 atributo. Ver T1. **L1-03.** Ref.: la calculadora es una cadena de etapas con entradas explícitas y desglose de salida
@@ -351,14 +352,21 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
     escuadra restante.
   - H5: panel de perks del feudo.
   - H1 con L4-08: la IA usa habilidades de clase y de escuadra, y elige y mantiene un aliado al que apoyar.
-- **Pendiente del catálogo:** L1-02, L1-07, L1-08; L2-8; L3-05, L3-06; L4-03, L4-05, L4-06, L4-07;
+- **Pendiente del catálogo:** L2-8; L3-05, L3-06; L4-03, L4-05, L4-06, L4-07;
   L5-5, L5-6; l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
-  L2-9, L2-15 y L4-08.
+  L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).
   Sigue sin compactarse dentro de un tramo. Los slots no se comparten entre escuadras aliadas (F17, `8f3b45cf`).
+- **Hecho en combate (2026-11-03, `Docs/Mechanics/DamageMechanics.md` §4.2, §5.5, §5.6, §7.4 y §7.5):** L1-08 y L1-10
+  (rasgos del golpe en el perfil de daño: ignorar el escudo, desgaste del bloqueo y del aguante), L1-07 (suelo de vida como
+  stat y protección al reaparecer), L1-12 (variación sembrada), L1-13 (robo de vida), L1-02 (condicionados de atacante y
+  receptor con el conjunto completo de condiciones), L1-11 (carga: metros recorridos hacia el objetivo, por decisión del
+  usuario, con la estructura de umbral y tope de la referencia) y L1-14 (un terreno por mapa y modificadores por tipo de
+  escuadra). La mecánica está; los datos (valores por arma, terrenos de los mapas, condicionados) quedan en
+  `Docs/Por_Abordar/Combate.md` C1-C3. **L1-09 queda bloqueado** por las animaciones de reacción (C4).
 - **Abierto de lo ya implementado:** `Docs/Por_Abordar/` (H2-H14 habilidades y perks, P1-P6 pila, F4-F16 formaciones y
-  posturas, M1-M15 movimiento).
+  posturas, M1-M15 movimiento, C1-C8 combate).
 - **Orden recomendado** (prioridad del usuario: movimiento y formación): para los solapes de la melé (M2),
   el interruptor de colisión por escuadra (C16, F9). En habilidades, L4-10 (efectos sobre la IA de escuadra, ya con L2-9)
   y L2-10 (pilas), y H10 (habilidades de escuadra en el HUD).
