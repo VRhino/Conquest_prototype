@@ -42,6 +42,11 @@ public enum SkillEventType : byte
     /// <summary>Absorb shield of <see cref="SkillEvent.value"/> for <see cref="SkillEvent.duration"/> on the target (L1-06).</summary>
     AbsorbShield,
     Projectile,
+    /// <summary>
+    /// Timed conditional damage modifier (L1-02) on each target: ratio <see cref="SkillEvent.value"/> for
+    /// <see cref="SkillEvent.duration"/>, only on hits that meet <see cref="SkillEvent.condition"/>.
+    /// </summary>
+    ApplyConditional,
 }
 
 public enum SkillTarget : byte
@@ -85,6 +90,8 @@ public struct SkillEvent
     public StatId stat;
     public ModifierOp op;
     public SkillTarget target;
+    /// <summary>When an <see cref="SkillEventType.ApplyConditional"/> modifier counts (L1-02).</summary>
+    public HitCondition condition;
 }
 
 /// <summary>A skill as data, built from its <see cref="HeroAbility"/> (or the hero's weapon timings for the basic attack).</summary>

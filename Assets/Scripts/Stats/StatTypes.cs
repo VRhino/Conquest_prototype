@@ -47,7 +47,12 @@ public enum StatId : byte
 public enum ModifierOp : byte { Ratio, Flat, Override }
 
 /// <summary>Where a modifier comes from, so a source can remove exactly its own.</summary>
-public enum ModifierSource : byte { Level, Equipment, Perk, Effect }
+public enum ModifierSource : byte
+{
+    Level, Equipment, Perk, Effect,
+    /// <summary>Declared by the unit's squad type (squad data), e.g. its conditional modifiers (L1-02).</summary>
+    UnitType,
+}
 
 /// <summary>One modifier on one stat. Written by the system that owns its source; read only by StatResolveSystem.</summary>
 public struct StatModifier : IBufferElementData

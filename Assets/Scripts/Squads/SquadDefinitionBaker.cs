@@ -111,6 +111,7 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             AddComponent(entity, new SquadDefinitionComponent
             {
                 squadType        = d.type,
+                unitType         = d.unitType,
                 behaviorProfile  = d.behaviorProfile,
                 formationLibrary = formationLibrary,
                 unitCount        = d.unitCount,
@@ -120,6 +121,11 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
             });
 
             AddComponent(entity, new SquadDataIDComponent { id = new FixedString64Bytes(d.id) });
+
+            var conditional = AddBuffer<SquadConditionalDamageElement>(entity);
+            if (d.conditionalModifiers != null)
+                foreach (var modifier in d.conditionalModifiers)
+                    conditional.Add(new SquadConditionalDamageElement { value = modifier });
 
             var statsBuffer = AddBuffer<UnitStatsBufferElement>(entity);
             statsBuffer.Add(new UnitStatsBufferElement

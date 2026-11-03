@@ -10,6 +10,8 @@ using Unity.Mathematics;
 public struct SquadDefinitionComponent : IComponentData
 {
     public SquadType squadType;
+    /// <summary>Infantry, cavalry or ranged (<see cref="SquadData.unitType"/>), for conditions (L1-02).</summary>
+    public UnitType unitType;
     public BehaviorProfile behaviorProfile;
     public BlobAssetReference<FormationLibraryBlob> formationLibrary;
     public int unitCount;

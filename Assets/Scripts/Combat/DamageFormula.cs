@@ -52,6 +52,8 @@ public struct DamageInput
     public float heightDelta;
     /// <summary>Rolled damage variance (L1-12): the result is multiplied by 1 + this; 0 = none.</summary>
     public float varianceOffset;
+    /// <summary>Sum of the ratios of the conditional modifiers that hold for this hit (L1-02); 0 = none.</summary>
+    public float conditionalRatio;
 }
 
 /// <summary>Result with the breakdown of each stage, for tests and for showing it.</summary>
@@ -62,13 +64,15 @@ public struct DamageResult
     public float heightBonus;
     /// <summary>Random factor of the hit, 1 ± the weapon's variance (L1-12).</summary>
     public float varianceFactor;
+    /// <summary>1 + the conditional ratio of the hit, never negative (L1-02).</summary>
+    public float conditionalFactor;
     /// <summary>Final damage after the bonuses, never negative.</summary>
     public float effective;
 }
 
 /// <summary>
 /// Damage formula as a pure function (Aprendizajes_Referencia.md L1-03): flat reduction per type with a floor,
-/// then kinetic and height bonuses and the rolled variance (L1-12). Burst-friendly and testable without a world; shields and health are applied
+/// then kinetic and height bonuses, the rolled variance (L1-12) and the conditional modifiers' ratio (L1-02). Burst-friendly and testable without a world; shields and health are applied
 /// by <see cref="DamageCalculationSystem"/>.
 /// </summary>
 public static class DamageFormula
@@ -86,6 +90,7 @@ public static class DamageFormula
             kineticBonus = 1f,
             heightBonus = 1f,
             varianceFactor = math.max(0f, 1f + input.varianceOffset),
+            conditionalFactor = math.max(0f, 1f + input.conditionalRatio),
         };
         if (input.attackerSpeed > 0f && tuning.kineticReferenceSpeed > 0f)
         {
@@ -94,7 +99,8 @@ public static class DamageFormula
         }
         if (input.heightDelta > tuning.heightBonusThreshold)
             r.heightBonus = 1f + input.heightDelta * tuning.heightBonusPerMetre;
-        r.effective = math.max(0f, (r.blunt + r.slashing + r.piercing) * r.kineticBonus * r.heightBonus * r.varianceFactor);
+        r.effective = math.max(0f, (r.blunt + r.slashing + r.piercing) * r.kineticBonus * r.heightBonus * r.varianceFactor
+            * r.conditionalFactor);
         return r;
     }
 

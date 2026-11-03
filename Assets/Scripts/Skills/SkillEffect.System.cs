@@ -53,11 +53,13 @@ public partial class SkillEffectSystem : SystemBase
                     break;
                 case SkillEventType.ApplyModifier:
                 case SkillEventType.AbsorbShield:
+                case SkillEventType.ApplyConditional:
                     targets.Clear();
                     SelectTargets(r, bodies, positions, teams, targets);
                     foreach (var target in targets)
                     {
                         if (e.type == SkillEventType.ApplyModifier) ApplyModifier(target, r, now);
+                        else if (e.type == SkillEventType.ApplyConditional) ApplyConditional(target, r, now);
                         else ApplyShield(target, e, now);
                     }
                     break;
@@ -107,6 +109,8 @@ public partial class SkillEffectSystem : SystemBase
                 attackerPosition = r.origin,
                 hitType = HitType.Body,
                 varianceOffset = CombatRandom.RollVariance(tick, r.caster, bodies[i], profile.traits.damageVariance),
+                hitForm = HitForm.Ability,
+                skillId = r.skillId,
             });
         }
     }
@@ -150,6 +154,18 @@ public partial class SkillEffectSystem : SystemBase
         var e = r.effect;
         StatEffects.ApplyTimed(EntityManager.GetBuffer<StatModifier>(target), e.stat, e.op, e.value, now + e.duration, r.skillId);
         if (EntityManager.HasComponent<ModifiersDirty>(target)) EntityManager.SetComponentEnabled<ModifiersDirty>(target, true);
+    }
+
+    /// <summary>Timed conditional modifier (L1-02, source Effect, id = the skill); a recast refreshes it.</summary>
+    void ApplyConditional(Entity target, in SkillEffectRequestComponent r, double now)
+    {
+        if (!EntityManager.HasBuffer<ConditionalModifier>(target)) EntityManager.AddBuffer<ConditionalModifier>(target);
+        HitConditions.Replace(EntityManager.GetBuffer<ConditionalModifier>(target), ModifierSource.Effect, r.skillId,
+            new ConditionalModifier
+            {
+                condition = r.effect.condition, damageRatio = r.effect.value, source = ModifierSource.Effect,
+                sourceId = r.skillId, expiresAt = r.effect.duration > 0f ? now + r.effect.duration : 0,
+            }, now);
     }
 
     void ApplyShield(Entity target, in SkillEvent e, double now)

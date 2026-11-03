@@ -67,6 +67,12 @@ public struct AbilityByLevelElement : IBufferElementData
     public Entity Value;
 }
 
+/// <summary>A conditional damage modifier the squad type declares (L1-02); each unit gets it on spawn.</summary>
+public struct SquadConditionalDamageElement : IBufferElementData
+{
+    public ConditionalDamage value;
+}
+
 /// <summary>A baked squad ability (L2-9): its name, cooldown and the skill the squad launches, in its slot.</summary>
 public struct SquadAbilityDefinitionComponent : IComponentData
 {

@@ -59,6 +59,10 @@ public class SquadData : ScriptableObject
     /// <summary>Abilities unlocked as the squad levels up.</summary>
     public List<AbilityData> abilitiesByLevel;
 
+    [Header("Modificadores condicionados (L1-02)")]
+    [Tooltip("Daño extra (o reducido) que el tipo de escuadra hace o recibe solo cuando se cumple la condición del golpe.")]
+    public List<ConditionalDamage> conditionalModifiers = new List<ConditionalDamage>();
+
     // Base unit attributes
     /// <summary>Base health for each unit.</summary>
     public int baseHealth;

@@ -64,6 +64,34 @@ public static class UnitStatsUtility
     }
 
     /// <summary>
+    /// What the squad type declares for its units besides its stats: its conditional damage modifiers (L1-02), as
+    /// permanent entries of source <see cref="ModifierSource.UnitType"/> on each unit. Replaces its own, so it can run
+    /// again on level-up.
+    /// </summary>
+    public static void ApplySquadTypeModifiers(Entity squadEntity, EntityManager entityManager)
+    {
+        if (!entityManager.HasBuffer<SquadUnitElement>(squadEntity)) return;
+        using var declared = entityManager.HasBuffer<SquadConditionalDamageElement>(squadEntity)
+            ? entityManager.GetBuffer<SquadConditionalDamageElement>(squadEntity, true).ToNativeArray(Allocator.Temp)
+            : new NativeArray<SquadConditionalDamageElement>(0, Allocator.Temp);
+        using var units = entityManager.GetBuffer<SquadUnitElement>(squadEntity, true).ToNativeArray(Allocator.Temp);
+        foreach (var unit in units)
+        {
+            if (!entityManager.Exists(unit.Value)) continue;
+            if (declared.Length == 0 && !entityManager.HasBuffer<ConditionalModifier>(unit.Value)) continue;
+            if (!entityManager.HasBuffer<ConditionalModifier>(unit.Value)) entityManager.AddBuffer<ConditionalModifier>(unit.Value);
+            var modifiers = entityManager.GetBuffer<ConditionalModifier>(unit.Value);
+            for (int i = modifiers.Length - 1; i >= 0; i--)
+                if (modifiers[i].source == ModifierSource.UnitType) modifiers.RemoveAt(i);
+            foreach (var d in declared)
+                modifiers.Add(new ConditionalModifier
+                {
+                    condition = d.value.condition, damageRatio = d.value.damageRatio, source = ModifierSource.UnitType,
+                });
+        }
+    }
+
+    /// <summary>
     /// Applies scaled stats to an individual unit.
     /// </summary>
     public static void ApplyStatsToUnit(

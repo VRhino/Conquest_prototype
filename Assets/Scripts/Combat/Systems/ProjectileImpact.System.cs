@@ -53,6 +53,7 @@ public partial class ProjectileImpactSystem : SystemBase
                 // Rolled when the hit is built, like the reference (L1-12).
                 varianceOffset   = CombatRandom.RollVariance(tick, data.shooter, data.target,
                                        data.damageProfileSnapshot.traits.damageVariance),
+                hitForm          = HitForm.Ranged,
             });
         }
     }

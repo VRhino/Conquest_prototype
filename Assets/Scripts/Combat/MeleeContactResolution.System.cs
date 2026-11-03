@@ -136,6 +136,8 @@ public partial class MeleeContactResolutionSystem : SystemBase
                 attackerPosition = contact.attackerPosition,
                 hitType = contact.hitType,
                 varianceOffset = CombatRandom.RollVariance(tick, contact.attacker, contact.target, profile.traits.damageVariance),
+                hitForm = HitForm.Melee,
+                skillId = RunningSkillId(em, contact.attacker),
             });
 
             if (isHero)
@@ -153,5 +155,15 @@ public partial class MeleeContactResolutionSystem : SystemBase
 
             HitImpactEffectManager.Instance?.Spawn(contact.contactPoint);
         }
+    }
+
+    /// <summary>Id of the skill whose swing this is (a hero's basic attack or skill), or 0, for conditions (L1-02).</summary>
+    static int RunningSkillId(EntityManager em, Entity attacker)
+    {
+        if (!em.HasComponent<SkillInstanceComponent>(attacker) || !em.HasBuffer<HeroSkillElement>(attacker)) return 0;
+        var instance = em.GetComponentData<SkillInstanceComponent>(attacker);
+        var skills = em.GetBuffer<HeroSkillElement>(attacker, true);
+        return instance.active && instance.skillIndex >= 0 && instance.skillIndex < skills.Length
+            ? skills[instance.skillIndex].skillId : 0;
     }
 }

@@ -93,6 +93,7 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddComponent(squad, new SquadDefinitionComponent
             {
                 squadType        = def.squadType,
+                unitType         = def.unitType,
                 behaviorProfile  = def.behaviorProfile,
                 formationLibrary = def.formationLibrary,
                 unitCount        = def.unitCount,
@@ -106,6 +107,13 @@ public partial class SquadSpawningSystem : SystemBase
                 var abilitySource = SystemAPI.GetBuffer<AbilityByLevelElement>(selection.ValueRO.squadDataEntity);
                 var abilityTarget = ecb.AddBuffer<AbilityByLevelElement>(squad);
                 foreach (var ability in abilitySource) abilityTarget.Add(ability);
+            }
+            if (SystemAPI.HasBuffer<SquadConditionalDamageElement>(selection.ValueRO.squadDataEntity))
+            {
+                // Conditional modifiers of the squad type (L1-02); UnitStatScalingSystem gives them to each unit.
+                var conditionalSource = SystemAPI.GetBuffer<SquadConditionalDamageElement>(selection.ValueRO.squadDataEntity);
+                var conditionalTarget = ecb.AddBuffer<SquadConditionalDamageElement>(squad);
+                foreach (var modifier in conditionalSource) conditionalTarget.Add(modifier);
             }
             // The squad launches its own abilities (L2-9); UnitStatScalingSystem adds each one as it unlocks.
             ecb.AddComponent<SkillRequestComponent>(squad);

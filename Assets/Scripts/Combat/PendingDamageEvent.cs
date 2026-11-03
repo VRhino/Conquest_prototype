@@ -48,4 +48,9 @@ public struct PendingDamageEvent : IComponentData
     /// is multiplied by 1 + this. 0 = no variance.
     /// </summary>
     public float varianceOffset;
+
+    /// <summary>How the hit was delivered, for conditional modifiers (L1-02). Melee by default.</summary>
+    public HitForm hitForm;
+    /// <summary>Skill the hit comes from (0 = none), for conditional modifiers (L1-02).</summary>
+    public int skillId;
 }

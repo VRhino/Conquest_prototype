@@ -95,6 +95,7 @@ public partial class DamageCalculationSystem : SystemBase
                 profile = profile, multiplier = p.multiplier, defense = def, penetration = pen,
                 attackerSpeed = p.attackerSpeed, kineticMultiplier = kinetic, heightDelta = heightDelta,
                 varianceOffset = p.varianceOffset,
+                conditionalRatio = ConditionalRatio(p, now),
             }, combatTuning).effective;
 
             // --- Shield block check (absorbs the hit when the shield collider was hit, L1-08/L1-10) ---
@@ -223,6 +224,87 @@ public partial class DamageCalculationSystem : SystemBase
         ecb.Playback(EntityManager);
         ecb.Dispose();
     }
+    /// <summary>
+    /// Sum of the ratios of the conditional modifiers that hold for this hit (L1-02): the attacker's on the attacker side
+    /// and the target's on the defender side, evaluated only here, at impact.
+    /// </summary>
+    float ConditionalRatio(in PendingDamageEvent p, double now)
+    {
+        bool attackerHas = SystemAPI.Exists(p.damageSource) && SystemAPI.HasBuffer<ConditionalModifier>(p.damageSource)
+            && SystemAPI.GetBuffer<ConditionalModifier>(p.damageSource).Length > 0;
+        bool targetHas = SystemAPI.HasBuffer<ConditionalModifier>(p.target)
+            && SystemAPI.GetBuffer<ConditionalModifier>(p.target).Length > 0;
+        if (!attackerHas && !targetHas) return 0f;
+        var facts = new HitFacts { form = p.hitForm, skillId = p.skillId, critical = p.category == DamageCategory.Critical };
+        var attacker = Party(p.damageSource);
+        var target = Party(p.target);
+        uint tick = CombatRandom.Tick(now);
+        float ratio = 0f;
+        if (attackerHas) ratio += SumConditional(p.damageSource, HitSide.Attacker, attacker, p.target, target, facts, now, tick);
+        if (targetHas) ratio += SumConditional(p.target, HitSide.Defender, target, p.damageSource, attacker, facts, now, tick);
+        return ratio;
+    }
+
+    float SumConditional(Entity owner, HitSide side, in HitParty self, Entity otherEntity, in HitParty other,
+        in HitFacts facts, double now, uint tick)
+    {
+        var modifiers = SystemAPI.GetBuffer<ConditionalModifier>(owner);
+        float sum = 0f;
+        for (int i = 0; i < modifiers.Length; i++)
+        {
+            var m = modifiers[i];
+            if (m.condition.side != side || HitConditions.IsExpired(m, now)) continue;
+            bool selfEffect = m.condition.selfHasEffect != PerkTristate.Any && HasEffect(owner, m.condition.effectStat, now);
+            bool otherEffect = m.condition.otherHasEffect != PerkTristate.Any && HasEffect(otherEntity, m.condition.effectStat, now);
+            // Seeded by (tick, owner, modifier, other): reproducible, and apart for each target of an area hit (L1-05).
+            float roll = m.condition.chance > 0f && m.condition.chance < 1f
+                ? CombatRandom.ForHit(tick, owner, CombatRandom.ConditionSalt
+                    ^ math.hash(new uint3((uint)i, (uint)otherEntity.Index, (uint)otherEntity.Version))).NextFloat()
+                : 0f;
+            if (HitConditions.Matches(m.condition, self, other, facts, selfEffect, otherEffect, roll)) sum += m.damageRatio;
+        }
+        return sum;
+    }
+
+    bool HasEffect(Entity entity, StatId stat, double now)
+        => SystemAPI.Exists(entity) && SystemAPI.HasBuffer<StatModifier>(entity)
+           && PerkConditions.HasActiveEffect(SystemAPI.GetBuffer<StatModifier>(entity), stat, now);
+
+    /// <summary>One party of the hit as the conditions see it, before the hit's damage.</summary>
+    HitParty Party(Entity entity)
+    {
+        var party = new HitParty { healthFraction = 1f };
+        if (!SystemAPI.Exists(entity)) return party;
+        party.isHero = SystemAPI.HasComponent<HeroLifeComponent>(entity);
+        if (SystemAPI.HasComponent<UnitOwnerComponent>(entity))
+        {
+            party.isSoldier = true;
+            var squad = SystemAPI.GetComponent<UnitOwnerComponent>(entity).squad;
+            if (SystemAPI.Exists(squad) && SystemAPI.HasComponent<SquadDefinitionComponent>(squad))
+            {
+                var definition = SystemAPI.GetComponent<SquadDefinitionComponent>(squad);
+                party.squadType = definition.squadType;
+                party.unitType = definition.unitType;
+            }
+        }
+        if (SystemAPI.HasComponent<DefenseComponent>(entity))
+        {
+            var d = SystemAPI.GetComponent<DefenseComponent>(entity);
+            party.totalArmor = d.bluntDefense + d.slashDefense + d.pierceDefense;
+        }
+        if (SystemAPI.HasComponent<HealthComponent>(entity))
+        {
+            var h = SystemAPI.GetComponent<HealthComponent>(entity);
+            party.healthFraction = h.maxHealth > 0f ? h.currentHealth / h.maxHealth : 0f;
+        }
+        else if (SystemAPI.HasComponent<HeroHealthComponent>(entity))
+        {
+            var h = SystemAPI.GetComponent<HeroHealthComponent>(entity);
+            party.healthFraction = h.maxHealth > 0f ? h.currentHealth / h.maxHealth : 0f;
+        }
+        return party;
+    }
+
     void StealLife(Entity attacker, float healthTaken, float ratio)
     {
         if (ratio <= 0f) return;

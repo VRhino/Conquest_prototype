@@ -34,6 +34,7 @@ public partial class UnitStatScalingSystem : SystemBase
                 ? EntityManager.GetComponentData<SquadDefinitionComponent>(source).leadershipCost : 0;
             int level = EntityManager.GetComponentData<SquadProgressComponent>(squad).level;
             UnitStatsUtility.ApplyStatsToSquad(squad, data, leadership, level, EntityManager, GetBufferLookup<SquadUnitElement>(true));
+            UnitStatsUtility.ApplySquadTypeModifiers(squad, EntityManager);
             UpdateUnlocks(squad, source, data.curves, level);
             if (!EntityManager.HasComponent<SquadStatsInitialized>(squad))
                 EntityManager.AddComponent<SquadStatsInitialized>(squad);
