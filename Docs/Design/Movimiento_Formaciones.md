@@ -1086,3 +1086,30 @@ Lectura:
   Esa corrida confirma también que el A/B de S6 cambiaba de verdad el valor horneado.
 - El error en marcha sube 0,12 m con la compactación: el soldado que va a cubrir el hueco cuenta como fuera de su ranura
   mientras llega. No hay más solapes ni picos de aceleración que sin ella.
+
+## 25. Aguante por marcha y radio de cuerpo por tipo de unidad (L5-7, L5-5, 2026-11-03)
+
+**L5-7 (`cc064477`).** Un depósito de aguante por escuadra (`SquadStaminaComponent`, decisión del usuario): cada soldado en
+la marcha de carrera gasta `staminaRunCostPerSoldier` por segundo y, mientras nadie corre, la escuadra recupera
+`staminaRecoveryPerSecond`. Agotada, `UnitFollowFormationSystem` no deja correr a sus soldados (tampoco con prisa ni en
+combate) hasta recuperar `staminaRecoverFraction` del máximo. Datos en `SquadData`; un máximo de 0 es neutro y ningún
+asset lo rellena aún (`Docs/Por_Abordar/Movimiento.md` M18).
+
+**L5-5.** `SquadData.bodyRadius` (0 = el de `MovementTuningConfig`, 0,5 m) llega a cada soldado como
+`UnitBodyRadiusComponent`. Las parejas usan la suma de sus dos cuerpos en el contacto enemigo (`EnemyContact`), la
+evitación ORCA (`AllyAvoidance`), el empuje de contacto único (`UnitBodyblock`, con la celda de la rejilla ajustada a la
+pareja mayor), el retroceso del golpe, el anillo de contacto y las distancias de parada y alcance (`MeleeReach` con el
+radio del atacante y el del objetivo). Los héroes usan el radio global.
+
+| Con todos a 0,5 m (una corrida) | Error en marcha | Atascos | Contacto enemigo medio / mínimo | Solapes enemigos sostenidos |
+|---|---|---|---|---|
+| S1 | 0,51 m | 0 | — | 0 |
+| S6 | 0,78 m | 12 | 1,79 / 1,00 m | 0 |
+| S7 | 0,57 m | 23 | 1,47 / 1,00 m | 0 |
+| S9 | 1,54 m | 53 | 1,51 / 1,00 m | 0 |
+
+El contacto mínimo sigue en 1,00 m (dos cuerpos de 0,5 m), como antes, y el resto queda dentro de la variación de la melé
+(M10; S6 dio 0,57-0,84 m en las corridas del §24). Hasta que haya unidades de otro tamaño no hay nada que medir en juego;
+la regla con cuerpos distintos está probada en EditMode (`BodyRadiusTests`).
+
+**L5-6 y L5-8** (monturas) quedan bloqueados sin caballería (`Docs/Por_Abordar/Movimiento.md` M17).

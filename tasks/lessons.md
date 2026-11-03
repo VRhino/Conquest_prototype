@@ -589,3 +589,10 @@
 - `using var` sobre un `NativeArray` impide escribir en él (CS1654): para arrays que se rellenan, liberar con `try/finally`.
 - Los rayos de física funcionan en EditMode con `GameObject.CreatePrimitive` y `Physics.SyncTransforms()`: se puede probar la línea de visión con un muro real.
 - Un stat que pertenece a la escuadra pero lo aplican efectos dirigidos a soldados se redirige a su escuadra en el escritor del efecto; el refresco por fuente e id deja uno solo aunque lo alcancen treinta soldados.
+
+## Movimiento: aguante y radio por pareja (2026-11-03)
+
+- Para pasar de un radio global a uno por unidad sin romper a quien construye agentes a mano (tests incluidos), el agente lleva radio 0 = "la mitad de la distancia de pareja por defecto": los llamantes antiguos dan el mismo resultado.
+- Una métrica que debe quedar idéntica tras un cambio neutro (contacto mínimo 1,00 m) es la mejor prueba de que la refactorización no movió nada, más que el resto de cifras ruidosas de la melé.
+- `sed` con `
+` en un fichero LF está bien, pero comprobar los finales de línea antes: en uno CRLF dejaría finales mezclados.

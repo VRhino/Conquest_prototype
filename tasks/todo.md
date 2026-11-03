@@ -1,6 +1,6 @@
 # Plan: movimiento del catálogo (L5-7, L5-5; L5-6 y L5-8 bloqueados)
 
-Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.5.
+Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.5.
 
 ## Decisiones del usuario (2026-11-03)
 - **L5-7:** aguante por escuadra. Correr gasta por segundo según los soldados que corren; andar y parar recuperan. Sin
@@ -11,8 +11,8 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 
 ## Pasos (un commit por punto)
 - [x] 1. L5-7: `SquadStaminaComponent`, `SquadStaminaSystem` y marcha limitada en `UnitFollowFormationSystem`; tests; EditMode, S1/S4/S6.
-- [ ] 2. L5-5: `UnitBodyRadiusComponent` y radios por pareja; tests; EditMode, S1/S5/S6/S7/S9.
-- [ ] 3. Docs: catálogo §5, `Movimiento_Formaciones.md`, `Por_Abordar` (L5-6, L5-8), lecciones.
+- [x] 2. L5-5: `UnitBodyRadiusComponent` y radios por pareja; tests; EditMode, S1/S5/S6/S7/S9.
+- [x] 3. Docs: catálogo §5, `Movimiento_Formaciones.md`, `Por_Abordar` (L5-6, L5-8), lecciones.
 
 ---
 

@@ -23,6 +23,8 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M14 | Aceleración en S7 multitud con C13 | Media | **Hecho** (medido: dentro de M10; 1,4 % con L4-04) |
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | Pendiente (comprobar en vídeo) |
+| M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Bloqueado (sin caballería) |
+| M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | Pendiente (balance) |
 
 ---
 
@@ -255,6 +257,24 @@ marcha dentro del pasillo; en campo abierto, unas 15. El sistema cuesta 0,15 ms 
   (cohesión como consulta: frenar el ancla mientras haya rezagados).
 - Coste: subir `slotResolveRevalidateDistance`, guardar entre validaciones las celdas ya comprobadas, o pasar la sonda a
   `NavMeshQuery` en un job. Medir con S8 (M3) antes de optimizar.
+
+## M17. Monturas (L5-6, L5-8)
+**Bloqueado:** no hay escuadras de caballería, ni modelos, animaciones o datos de monturas (`UnitType.Cavalry` existe pero
+ninguna escuadra lo usa). Lo que proponía el catálogo, para cuando las haya:
+- L5-6: `MountBinding` (jinete → montura) y `MotorMode`; el jinete reenvía su entrada al motor de la montura, como en la
+  referencia.
+- L5-8: un arco de giro respecto a la montura fuera del cual el jinete no ataca, y un aguante de montura aparte del del
+  jinete.
+
+Lo que ya está preparado: el radio de cuerpo por tipo de escuadra (L5-5, `SquadData.bodyRadius`), la carga por distancia
+hacia el objetivo (L1-11), el tipo de unidad en las condiciones de daño (L1-02) y el aguante por marcha (L5-7).
+
+## M18. Datos del aguante de escuadra (L5-7)
+**Qué es.** El aguante de escuadra funciona y está probado, pero ningún `SquadData` tiene `staminaMax`, así que hoy nadie
+se cansa. Además, el catálogo pedía que el coste escale con la pila de modificadores; aquí el coste es un dato fijo.
+**Cómo abordarlo.** Fijar máximo, coste por soldado y recuperación por tipo de escuadra (los soldados corren solos para
+alcanzar su ranura, así que el coste debe dejar margen para eso), y medir con S1, S4 y S6 cuándo se agotan. Para la
+escala, un stat de la pila de la escuadra (como los de L4-10) que multiplique el coste.
 
 ## M16. Más unidades quietas lejos de su slot en la melé tras L4-04
 **Qué es.** Desde L4-04 + L4-09 el resumen cuenta más "paradas" (unidad a menos de 0,3 m/s y a más de 1 m de su slot durante
