@@ -191,6 +191,10 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.AddComponent<SquadAIComponent>(squad);
             ecb.AddBuffer<DetectedEnemy>(squad);
             ecb.AddBuffer<SquadTargetEntity>(squad);
+            // Line of sight (L4-03): enemies in range and what the squad sees of each.
+            ecb.AddBuffer<SquadInRangeEnemy>(squad);
+            ecb.AddBuffer<SquadVisibilityElement>(squad);
+            ecb.AddComponent<SquadVisibilityCursor>(squad);
 
             // [Sprint3] Anchor moving tag — starts disabled (hero is stationary at spawn)
             ecb.AddComponent<SquadAnchorMovingTag>(squad);

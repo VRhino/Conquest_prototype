@@ -9,7 +9,8 @@ using Unity.Transforms;
 
 /// <summary>
 /// Detects enemy squads within detection range and populates the three combat
-/// detection buffers every frame. Candidate discovery uses an exact-distance
+/// detection buffers every frame. Everything in range goes to <see cref="SquadInRangeEnemy"/>; only what the squad
+/// sees (<see cref="LineOfSightSystem"/>, L4-03) goes to <see cref="DetectedEnemy"/> and <see cref="SquadTargetEntity"/>. Candidate discovery uses an exact-distance
 /// check after an XZ spatial broadphase; output order follows the original ECS
 /// query and dynamic-buffer order.
 /// </summary>
@@ -273,20 +274,36 @@ public partial class EnemyDetectionSystem : SystemBase
 
     private void PublishResults()
     {
+        var lineOfSight = SystemAPI.TryGetSingleton<SquadSpawnConfigComponent>(out var config)
+            ? config.lineOfSight : LineOfSightTuning.Default;
         for (int observerIndex = 0; observerIndex < _observers.Length; observerIndex++)
         {
             var observer = _observers[observerIndex];
             var segment = _observerResultSegments[observerIndex];
             var detectedEnemies = EntityManager.GetBuffer<DetectedEnemy>(observer.Entity);
             var squadTargets = EntityManager.GetBuffer<SquadTargetEntity>(observer.Entity);
+            bool hasSight = lineOfSight.enabled && EntityManager.HasBuffer<SquadInRangeEnemy>(observer.Entity)
+                && EntityManager.HasBuffer<SquadVisibilityElement>(observer.Entity);
+            var inRange = hasSight ? EntityManager.GetBuffer<SquadInRangeEnemy>(observer.Entity) : default;
+            var visibility = hasSight ? EntityManager.GetBuffer<SquadVisibilityElement>(observer.Entity, true) : default;
+            if (hasSight) inRange.Clear();
             Entity lastSquad = Entity.Null;
             bool hasLastSquad = false;
+            Entity lastOwner = Entity.Null;
 
             for (int resultIndex = segment.x; resultIndex < segment.y; resultIndex++)
             {
                 var candidate = _candidates[_resultCandidateIndices[resultIndex]];
                 if (candidate.Team == observer.Team)
                     continue;
+                if (hasSight)
+                {
+                    // In range is not seen: the pair's rays decide (a new enemy starts visible).
+                    Entity owner = candidate.IsHero ? candidate.Entity : candidate.Squad;
+                    if (owner != lastOwner && !Contains(inRange, owner)) inRange.Add(new SquadInRangeEnemy { Value = owner });
+                    lastOwner = owner;
+                    if (!LineOfSight.Sees(visibility, owner, lineOfSight.memory)) continue;
+                }
 
                 if (candidate.IsHero)
                 {
@@ -303,6 +320,12 @@ public partial class EnemyDetectionSystem : SystemBase
                 DebugPublishedTargets++;
             }
         }
+    }
+
+    private static bool Contains(DynamicBuffer<SquadInRangeEnemy> buffer, Entity enemy)
+    {
+        for (int i = 0; i < buffer.Length; i++) if (buffer[i].Value == enemy) return true;
+        return false;
     }
 
     private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

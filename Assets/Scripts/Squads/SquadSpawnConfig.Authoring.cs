@@ -38,6 +38,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     [Min(0f)] public float heroAIUnderAttackCloseTime = 1f;
     [Tooltip("Cuándo usa la IA sus habilidades y a qué aliado apoya (H1, L4-08).")]
     public HeroAISkillTuning heroAISkills = HeroAISkillTuning.Default;
+    [Tooltip("Línea de visión de las escuadras (L4-03).")]
+    public LineOfSightTuning lineOfSight = LineOfSightTuning.Default;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -65,6 +67,7 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 followForwardOffset = authoring.followForwardOffset,
                 unitLeashDistance   = authoring.unitLeashDistance,
                 minCombatDuration   = authoring.minCombatDuration,
+                lineOfSight         = authoring.lineOfSight,
                 ownerDeathRetreatDuration = authoring.ownerDeathRetreatDuration,
                 retreatArrivalThreshold = authoring.retreatArrivalThreshold,
                 anchorMovingSpeedThreshold = authoring.anchorMovingSpeedThreshold,
