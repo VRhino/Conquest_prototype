@@ -10,6 +10,8 @@ using Unity.Transforms;
 /// when the number of soldiers alive calls for another template, and when a spacing request arrives.
 /// A new layout (formation or template change) deals each unit the nearest free slot (greedy by distance, only on
 /// the event), so units do not cross the whole formation; otherwise every unit keeps its slot.
+/// Within one template, the gaps casualties leave are closed <c>formationCompactDelay</c> seconds after the first of them
+/// (<see cref="FormationLayout.CompactSlots"/>, L3-02): only the soldiers past the alive count move.
 /// Only squads with <see cref="FormationChangePending"/> enabled are visited (L3-06); the tag is turned off here once
 /// nothing is pending. The formation-change cooldown is an absolute time (<see cref="SquadStateComponent.formationChangeReadyAt"/>).
 /// </summary>
@@ -26,9 +28,9 @@ public partial class FormationSystem : SystemBase
     protected override void OnUpdate()
     {
         double now = SystemAPI.Time.ElapsedTime;
-        float formationChangeCooldown = SystemAPI.HasSingleton<MovementTuningComponent>()
-            ? SystemAPI.GetSingleton<MovementTuningComponent>().formationChangeCooldown
-            : MovementTuningComponent.Default.formationChangeCooldown;
+        var tuning = SystemAPI.HasSingleton<MovementTuningComponent>()
+            ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
+        float formationChangeCooldown = tuning.formationChangeCooldown;
         var ecb = new EntityCommandBuffer(Allocator.Temp);
 
         // A spacing request is a pending change too.
@@ -95,8 +97,15 @@ public partial class FormationSystem : SystemBase
             int templateIndex = FormationLayout.SelectTemplate(ref formation, units.Length);
             bool templateChanged = templateIndex != current.templateIndex || units.Length != current.layoutUnitCount
                 && formation.layout == FormationLayoutKind.Scatter;
-            if (!formationRequested && !spacingRequested && !templateChanged)
+            // Gaps inside the same template (L3-02): wait, so casualties close together are closed together.
+            bool gaps = !formationRequested && !templateChanged && formation.layout != FormationLayoutKind.Scatter
+                && units.Length != current.layoutUnitCount;
+            double compactAt = gaps ? (current.compactAt > 0 ? current.compactAt : now + tuning.formationCompactDelay) : 0;
+            bool compactNow = gaps && now >= compactAt;
+            if (gaps && !compactNow) settled.RemoveAt(settled.Length - 1); // Still pending: come back when it is due.
+            if (!formationRequested && !spacingRequested && !templateChanged && !compactNow)
             {
+                formationComp.ValueRW.compactAt = compactAt;
                 state.ValueRW = s;
                 continue;
             }
@@ -111,9 +120,13 @@ public partial class FormationSystem : SystemBase
             if (redeal)
                 AssignNearestSlots(ref formation, templateIndex, spacing, seed, units, s, holdComponent, anchor, slotOf);
             else
+            {
                 for (int i = 0; i < units.Length; i++)
                     slotOf[i] = SystemAPI.HasComponent<UnitGridSlotComponent>(units[i].Value)
                         ? SystemAPI.GetComponent<UnitGridSlotComponent>(units[i].Value).slotIndex : i;
+                if (compactNow)
+                    CompactGaps(ref formation, templateIndex, spacing, seed, units, s, holdComponent, anchor, slotOf);
+            }
 
             for (int i = 0; i < units.Length; i++)
             {
@@ -142,7 +155,9 @@ public partial class FormationSystem : SystemBase
                 supportsBrace = formation.supportsBrace,
                 braceHalfAngleRadians = formation.braceHalfAngleRadians,
                 templateIndex = templateIndex,
-                layoutUnitCount = units.Length,
+                // A spacing change alone leaves the gaps (and their wait) as they were.
+                layoutUnitCount = redeal || compactNow ? units.Length : current.layoutUnitCount,
+                compactAt = redeal || compactNow ? 0 : compactAt,
                 spacing = spacing,
                 scale = scale,
                 layoutSeed = seed
@@ -163,6 +178,33 @@ public partial class FormationSystem : SystemBase
         settled.Dispose();
         ecb.Playback(EntityManager);
         ecb.Dispose();
+    }
+
+    /// <summary>
+    /// Moves the soldiers past the alive count into the gaps among the first slots (<see cref="FormationLayout.CompactSlots"/>),
+    /// with positions in the formation's local frame.
+    /// </summary>
+    void CompactGaps(ref FormationDataBlob formation, int templateIndex, float spacing, uint seed,
+        DynamicBuffer<SquadUnitElement> units, in SquadStateComponent state, SquadHoldPositionComponent? hold,
+        in SquadFormationAnchorComponent anchor, NativeArray<int> slotOf)
+    {
+        int n = units.Length;
+        float3 center = FormationPositionCalculator.GetSquadCenter(state, hold, anchor.position);
+        quaternion inverse = math.lengthsq(anchor.rotation.value) > 1e-6f
+            ? math.inverse(math.normalize(anchor.rotation)) : quaternion.identity;
+        var positions = new NativeArray<float2>(n, Allocator.Temp);
+        var slotPositions = new NativeArray<float2>(n, Allocator.Temp);
+        for (int u = 0; u < n; u++)
+        {
+            Entity unit = units[u].Value;
+            if (SystemAPI.Exists(unit) && SystemAPI.HasComponent<LocalTransform>(unit))
+                positions[u] = math.mul(inverse, SystemAPI.GetComponent<LocalTransform>(unit).Position - center).xz;
+            if (FormationPositionCalculator.TryBuildSlot(ref formation, templateIndex, u, spacing, seed, out var slot))
+                slotPositions[u] = slot.localOffset.xz;
+        }
+        FormationLayout.CompactSlots(positions, slotPositions, slotOf);
+        positions.Dispose();
+        slotPositions.Dispose();
     }
 
     readonly List<(float distSq, int unit, int slot)> _pairs = new();

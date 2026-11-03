@@ -73,6 +73,54 @@ public static class FormationLayout
         }
     }
 
+    /// <summary>
+    /// Closes the gaps casualties leave inside one template (L3-02): the n soldiers alive hold the template's first n
+    /// slots, its fill order. A soldier on a slot past n, without a slot or on a slot another already holds moves to a
+    /// free one among the first n, nearest first, without crossing the others that move; everyone else keeps its slot.
+    /// <paramref name="slots"/> are the positions of slots 0..n−1. Returns how many soldiers moved.
+    /// </summary>
+    public static int CompactSlots(NativeArray<float2> units, NativeArray<float2> slots, NativeArray<int> slotOf)
+    {
+        int n = units.Length;
+        var taken = new NativeArray<bool>(n, Allocator.Temp);
+        var moving = new NativeArray<int>(n, Allocator.Temp);
+        int movers = 0;
+        for (int u = 0; u < n; u++)
+        {
+            int slot = slotOf[u];
+            if (slot >= 0 && slot < n && !taken[slot]) { taken[slot] = true; moving[u] = -1; }
+            else { moving[u] = 0; movers++; slotOf[u] = -1; }
+        }
+        // Greedy nearest: each round the closest mover/free-slot pair is matched (n ≤ ~30, on the event only).
+        for (int round = 0; round < movers; round++)
+        {
+            int bestUnit = -1, bestSlot = -1;
+            float best = float.MaxValue;
+            for (int u = 0; u < n; u++)
+            {
+                if (moving[u] < 0 || slotOf[u] >= 0) continue;
+                for (int k = 0; k < n; k++)
+                {
+                    if (taken[k]) continue;
+                    float d = math.distancesq(units[u], slots[k]);
+                    if (d < best) { best = d; bestUnit = u; bestSlot = k; }
+                }
+            }
+            if (bestUnit < 0) break;
+            slotOf[bestUnit] = bestSlot;
+            taken[bestSlot] = true;
+        }
+        // Uncross only the movers: the others keep their slots.
+        var moverSlots = new NativeArray<int>(n, Allocator.Temp);
+        for (int u = 0; u < n; u++) moverSlots[u] = moving[u] < 0 ? -1 : slotOf[u];
+        UncrossPaths(units, slots, moverSlots);
+        for (int u = 0; u < n; u++) if (moving[u] >= 0) slotOf[u] = moverSlots[u];
+        taken.Dispose();
+        moving.Dispose();
+        moverSlots.Dispose();
+        return movers;
+    }
+
     /// <summary>Slot <paramref name="slotIndex"/> of the chosen layout. False when there is none.</summary>
     public static bool TryGetSlot(ref FormationDataBlob formation, int templateIndex, int slotIndex, uint seed,
         out FormationSlotBlob slot)

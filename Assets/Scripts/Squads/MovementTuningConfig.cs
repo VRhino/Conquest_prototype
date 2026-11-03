@@ -36,6 +36,8 @@ public class MovementTuningConfig : ScriptableObject
     [Min(0f)] public float formedRotationSpeed = 5f;
     [Min(1f), UnityEngine.Serialization.FormerlySerializedAs("hurrySpeedMultiplier")] public float runSpeedMultiplier = 2f;
     [Min(0f)] public float formationChangeCooldown = 1f;
+    [Tooltip("Segundos tras una baja antes de rellenar los huecos de la formación (L3-02); las bajas de ese intervalo se rellenan juntas.")]
+    [Min(0f)] public float formationCompactDelay = 1.5f;
 
     [Header("Hit knock-back")]
     [Tooltip("A hit that reaches a unit's body pushes it this far away from the attacker (the reference's hit_curve pattern). 0 = no knock-back.")]
@@ -179,6 +181,7 @@ public class MovementTuningConfig : ScriptableObject
         formedRotationSpeed = formedRotationSpeed,
         runSpeedMultiplier = runSpeedMultiplier,
         formationChangeCooldown = formationChangeCooldown,
+        formationCompactDelay = formationCompactDelay,
         hitKnockbackDistance = hitKnockbackDistance,
         hitKnockbackDuration = hitKnockbackDuration,
         walkCatchUpRatio = walkCatchUpRatio,

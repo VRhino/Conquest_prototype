@@ -127,6 +127,10 @@ public partial class MovementMetricsRecorderSystem : SystemBase
             int templateIndex = SystemAPI.HasComponent<FormationComponent>(squad)
                 ? SystemAPI.GetComponent<FormationComponent>(squad).templateIndex : 0;
             int alliedShared = CountAlliedSharedCells(squad);
+            int gapSlots = 0;
+            for (int i = 0; i < units.Length; i++)
+                if (SystemAPI.HasComponent<UnitGridSlotComponent>(units[i].Value)
+                    && SystemAPI.GetComponent<UnitGridSlotComponent>(units[i].Value).slotIndex >= units.Length) gapSlots++;
             FrameSamples.Add(new MovementFrameSample
             {
                 frame = frame, time = time, deltaTime = dt, squad = squad.Index,
@@ -139,7 +143,7 @@ public partial class MovementMetricsRecorderSystem : SystemBase
                 persistentEnemyOverlaps = persistentEnemyOverlaps, persistentEnemyOverlapsEngaged = persistentEngaged,
                 stackedDestinations = stacked, detourDestinations = detours,
                 relocatedSlots = relocated, unresolvedSlots = unresolved, slotResolveQueries = slotQueries,
-                templateIndex = templateIndex, alliedSharedCells = alliedShared
+                templateIndex = templateIndex, alliedSharedCells = alliedShared, gapSlots = gapSlots
             });
 
             for (int i = 0; i < units.Length; i++)

@@ -56,6 +56,7 @@ public struct MovementFrameSample
     public int slotResolveQueries;      // NavMesh queries of the slot validation this frame (all squads).
     public int templateIndex;           // Template in use (F1); a change is a new layout for fewer soldiers.
     public int alliedSharedCells;       // Pairs of destinations of this squad and an allied squad sharing a cell (S5, F17).
+    public int gapSlots;                // Soldiers outside the first n slots of the template, n = soldiers alive (gaps, L3-02).
 }
 
 /// <summary>Aggregated baseline metrics. Negative values mean "not observed".</summary>
@@ -132,6 +133,10 @@ public sealed class MovementMetricsSummary
     public float meanAlliedSharedCells;
     public int maxAlliedSharedCells;
     public float alliedSharedCellFrameRatio;
+    /// <summary>Soldiers outside the first n slots (one per gap left by casualties inside a template, L3-02).</summary>
+    public float meanGapSlots;
+    public int maxGapSlots;
+    public float gapFrameRatio;
 
     public override string ToString()
     {
@@ -159,6 +164,7 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  slot validation (C13): relocated max={maxRelocatedSlots} unresolved max={maxUnresolvedSlots} queries marching per unit per second={slotQueriesMarchingPerUnitPerSecond.ToString("F2", c)}");
         s.AppendLine($"  template changes: {templateChanges}; travel per soldier mean={meanTemplateChangeTravel.ToString("F2", c)}m max={maxTemplateChangeTravel.ToString("F2", c)}m; crossings mean={meanTemplateChangeCrossings.ToString("F2", c)} max={maxTemplateChangeCrossings}; reformed mean={meanTemplateChangeReform.ToString("F2", c)}s max={maxTemplateChangeReform.ToString("F2", c)}s");
         s.AppendLine($"  destinations sharing a cell with an allied squad: mean={meanAlliedSharedCells.ToString("F2", c)} max={maxAlliedSharedCells} in {(alliedSharedCellFrameRatio * 100f).ToString("F1", c)} % of frames");
+        s.AppendLine($"  gaps (soldiers past the alive count): mean={meanGapSlots.ToString("F2", c)} max={maxGapSlots} in {(gapFrameRatio * 100f).ToString("F1", c)} % of frames");
         s.AppendLine($"  stalls (still beyond {MovementMetricsAnalyzer.StallDistance.ToString("F1", c)} m of the slot > {MovementMetricsAnalyzer.StallPersistence.ToString("F1", c)} s): {stalls}");
         s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)} FormationSlotResolve={meanSlotResolveMs.ToString("F3", c)}");
         return s.ToString();
@@ -233,6 +239,9 @@ public static class MovementMetricsAnalyzer
         summary.meanAlliedSharedCells = (float)frames.Average(f => f.alliedSharedCells);
         summary.maxAlliedSharedCells = frames.Max(f => f.alliedSharedCells);
         summary.alliedSharedCellFrameRatio = (float)frames.Count(f => f.alliedSharedCells > 0) / frames.Count;
+        summary.meanGapSlots = (float)frames.Average(f => f.gapSlots);
+        summary.maxGapSlots = frames.Max(f => f.gapSlots);
+        summary.gapFrameRatio = (float)frames.Count(f => f.gapSlots > 0) / frames.Count;
 
         var global = frames.GroupBy(f => f.frame).Select(g => g.First()).ToList();
         if (summary.units > 0 && summary.duration > 0f)

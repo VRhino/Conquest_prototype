@@ -13,8 +13,10 @@ public struct FormationComponent : IComponentData
     public float braceHalfAngleRadians;
     /// <summary>Template in use (Scatter: side of the cell square); -1 before the first layout.</summary>
     public int templateIndex;
-    /// <summary>Soldiers alive when the layout was built.</summary>
+    /// <summary>Soldiers alive when the layout was built or its gaps last closed.</summary>
     public int layoutUnitCount;
+    /// <summary>Simulation time at which the gaps left by casualties are closed (L3-02); 0 = none waiting.</summary>
+    public double compactAt;
     /// <summary>Spacing in effect, metres (formation spacing × squad scale, at least 0.3).</summary>
     public float spacing;
     /// <summary>Squad multiplier of the formation spacing (1 = as authored).</summary>
