@@ -97,6 +97,10 @@ public struct SkillEvent
     public SkillTarget target;
     /// <summary>When an <see cref="SkillEventType.ApplyConditional"/> modifier counts (L1-02).</summary>
     public HitCondition condition;
+    /// <summary>Most targets of an area event, nearest to its centre first (L2-13); 0 = all.</summary>
+    public int maxTargets;
+    /// <summary>The modifier lasts only while this skill runs: it goes when the skill ends or is interrupted (L2-14).</summary>
+    public bool boundToSkill;
 }
 
 /// <summary>A skill as data, built from its <see cref="HeroAbility"/> (or the hero's weapon timings for the basic attack).</summary>

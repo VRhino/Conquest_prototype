@@ -73,6 +73,9 @@ public struct StatModifier : IBufferElementData
     public int sourceId;
     /// <summary>Simulation time at which it stops applying; 0 or less = permanent.</summary>
     public double expiresAt;
+    /// <summary>Skill instance it is bound to (L2-14): removed when (<see cref="boundCaster"/>, <see cref="boundInstance"/>) stops running.</summary>
+    public Entity boundCaster;
+    public uint boundInstance;
 }
 
 /// <summary>

@@ -57,6 +57,7 @@ public partial class SkillEffectSystem : SystemBase
                 case SkillEventType.Taunt:
                     targets.Clear();
                     SelectTargets(r, bodies, positions, teams, targets);
+                    CapTargets(r, targets);
                     foreach (var target in targets)
                     {
                         if (e.type == SkillEventType.ApplyModifier) ApplyModifier(target, r, now);
@@ -92,15 +93,20 @@ public partial class SkillEffectSystem : SystemBase
     {
         if (!TryGetProfile(r.caster, out var profile)) return;
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
+        var hits = new NativeList<Entity>(16, Allocator.Temp);
         for (int i = 0; i < bodies.Length; i++)
         {
             if (teams[i].value == r.team || bodies[i] == r.caster) continue;
-            if (!SkillArea.Contains(centre, r.forward, r.effect.radius, r.effect.angle, positions[i].Position)) continue;
+            if (SkillArea.Contains(centre, r.forward, r.effect.radius, r.effect.angle, positions[i].Position)) hits.Add(bodies[i]);
+        }
+        CapTargets(r, hits);
+        foreach (var body in hits)
+        {
             var hit = EntityManager.CreateEntity(typeof(PendingDamageEvent));
             EntityManager.SetComponentData(hit, new PendingDamageEvent
             {
                 destroyEntityAfterProcessing = true,
-                target = bodies[i],
+                target = body,
                 damageSource = r.caster,
                 damageProfile = r.caster,
                 hasInlineDamageProfile = true,
@@ -110,11 +116,24 @@ public partial class SkillEffectSystem : SystemBase
                 multiplier = r.effect.value,
                 attackerPosition = r.origin,
                 hitType = HitType.Body,
-                varianceOffset = CombatRandom.RollVariance(tick, r.caster, bodies[i], profile.traits.damageVariance),
+                varianceOffset = CombatRandom.RollVariance(tick, r.caster, body, profile.traits.damageVariance),
                 hitForm = HitForm.Ability,
                 skillId = r.skillId,
             });
         }
+        hits.Dispose();
+    }
+
+    /// <summary>The event's most targets, nearest to its centre first (L2-13).</summary>
+    void CapTargets(in SkillEffectRequestComponent r, NativeList<Entity> targets)
+    {
+        if (r.effect.maxTargets <= 0 || targets.Length <= r.effect.maxTargets) return;
+        var positions = new NativeList<float3>(targets.Length, Allocator.Temp);
+        foreach (var target in targets)
+            positions.Add(EntityManager.HasComponent<LocalTransform>(target)
+                ? EntityManager.GetComponentData<LocalTransform>(target).Position : r.origin);
+        SkillEvents.KeepNearest(targets, positions, SkillArea.Centre(r.origin, r.forward, r.effect.distance), r.effect.maxTargets);
+        positions.Dispose();
     }
 
     void SelectTargets(in SkillEffectRequestComponent r, NativeArray<Entity> bodies, NativeArray<LocalTransform> positions,
@@ -159,7 +178,23 @@ public partial class SkillEffectSystem : SystemBase
             target = EntityManager.GetComponentData<UnitOwnerComponent>(target).squad;
         if (!EntityManager.Exists(target) || !EntityManager.HasBuffer<StatModifier>(target)) return;
         StatEffects.ApplyTimed(EntityManager.GetBuffer<StatModifier>(target), e.stat, e.op, e.value, now + e.duration, r.skillId);
+        if (e.boundToSkill) Bind(target, r);
         if (EntityManager.HasComponent<ModifiersDirty>(target)) EntityManager.SetComponentEnabled<ModifiersDirty>(target, true);
+    }
+
+    /// <summary>
+    /// Binds the modifier just added to the caster's running instance (L2-14); <see cref="SkillBindingSystem"/> removes it
+    /// when that instance stops.
+    /// </summary>
+    void Bind(Entity target, in SkillEffectRequestComponent r)
+    {
+        var modifiers = EntityManager.GetBuffer<StatModifier>(target);
+        var m = modifiers[modifiers.Length - 1];
+        m.boundCaster = r.caster;
+        m.boundInstance = r.instanceId;
+        modifiers[modifiers.Length - 1] = m;
+        if (!EntityManager.HasComponent<BoundModifiersTag>(target)) EntityManager.AddComponent<BoundModifiersTag>(target);
+        else EntityManager.SetComponentEnabled<BoundModifiersTag>(target, true);
     }
 
     /// <summary>Timed conditional modifier (L1-02, source Effect, id = the skill); a recast refreshes it.</summary>

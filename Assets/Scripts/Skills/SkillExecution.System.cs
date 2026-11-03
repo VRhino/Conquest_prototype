@@ -145,7 +145,7 @@ public partial class SkillExecutionSystem : SystemBase
                 ushort held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
                 if (!ended && (held & SkillRequestComponent.Bit(skills[inst.skillIndex].slot)) == 0)
                     ended = SkillTimeline.Release(ref running, ref inst, _fired);
-                QueueEffects(entity, origin, skills[inst.skillIndex].skillId);
+                QueueEffects(entity, origin, skills[inst.skillIndex].skillId, inst.instanceId);
                 if (ended) EndInstance(ref inst, skills, now);
             }
             else if (inst.active)
@@ -174,7 +174,7 @@ public partial class SkillExecutionSystem : SystemBase
             CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
             _fired.Clear();
             SkillTimeline.Start(ref skill, ref inst, index, _fired);
-            QueueEffects(entity, origin, skills[index].skillId);
+            QueueEffects(entity, origin, skills[index].skillId, inst.instanceId);
         }
     }
 
@@ -215,13 +215,14 @@ public partial class SkillExecutionSystem : SystemBase
     Team TeamOf(Entity entity) => SystemAPI.HasComponent<TeamComponent>(entity) ? SystemAPI.GetComponent<TeamComponent>(entity).value : Team.None;
 
     /// <summary>A squad only has effect events: animation and hitbox events belong to a hero's weapon.</summary>
-    void QueueEffects(Entity squad, in SquadOrigin origin, int skillId)
+    void QueueEffects(Entity squad, in SquadOrigin origin, int skillId, uint instanceId)
     {
         foreach (var e in _fired)
-            if (e.type == SkillEventType.AreaDamage || e.type == SkillEventType.ApplyModifier || e.type == SkillEventType.AbsorbShield)
+            if (SkillEvents.IsEffect(e.type, true))
                 _effects.Add(new SkillEffectRequestComponent
                 {
-                    caster = squad, skillId = skillId, effect = e, origin = origin.position, forward = origin.forward, team = origin.team,
+                    caster = squad, skillId = skillId, instanceId = instanceId, effect = e, origin = origin.position,
+                    forward = origin.forward, team = origin.team,
                 });
     }
 
@@ -319,17 +320,14 @@ public partial class SkillExecutionSystem : SystemBase
                 case SkillEventType.HitboxClose:
                     inst.hitboxOpen = false;
                     break;
-                case SkillEventType.AreaDamage:
-                case SkillEventType.ApplyModifier:
-                case SkillEventType.AbsorbShield:
-                case SkillEventType.Dash:
-                    _effects.Add(Effect(entity, skillId, e));
+                default:
+                    if (SkillEvents.IsEffect(e.type, false)) _effects.Add(Effect(entity, skillId, inst.instanceId, e));
                     break;
             }
         }
     }
 
-    SkillEffectRequestComponent Effect(Entity caster, int skillId, in SkillEvent e)
+    SkillEffectRequestComponent Effect(Entity caster, int skillId, uint instanceId, in SkillEvent e)
     {
         var pose = SystemAPI.HasComponent<LocalTransform>(caster) ? SystemAPI.GetComponent<LocalTransform>(caster) : LocalTransform.Identity;
         float3 forward = math.mul(pose.Rotation, new float3(0f, 0f, 1f));
@@ -338,6 +336,7 @@ public partial class SkillExecutionSystem : SystemBase
         {
             caster = caster,
             skillId = skillId,
+            instanceId = instanceId,
             effect = e,
             origin = pose.Position,
             forward = math.normalizesafe(forward, new float3(0f, 0f, 1f)),

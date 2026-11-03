@@ -9,6 +9,8 @@ public struct SkillEffectRequestComponent : IComponentData
 {
     public Entity caster;
     public int skillId;
+    /// <summary>Launch of the caster's skill that fired it, for effects bound to the skill (L2-14).</summary>
+    public uint instanceId;
     public SkillEvent effect;
     public float3 origin;
     /// <summary>Caster's facing on the ground plane (normalised).</summary>

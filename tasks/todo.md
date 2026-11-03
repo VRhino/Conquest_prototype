@@ -1,3 +1,32 @@
+# Plan: efectos de habilidad del catálogo (L2-13, L2-14, L2-10, L2-11, L2-12)
+
+Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.2.
+
+## Decisiones del usuario (2026-11-03)
+- **L2-12:** parámetro float `AttackSpeed` en el Animator del héroe (`AC_Polygon_Masculine`) como multiplicador de los
+  estados de ataque; la capa visual lo escribe desde ECS.
+- **Datos:** Flecha Llameante pasa de 3 pulsos directos a quemadura (daño en el tiempo, L2-11). El resto, sin datos.
+
+## Diseño
+- **L2-13:** `SkillEvent.maxTargets` (0 = todos): los objetivos de un área se toman de más cercano a más lejano.
+- **L2-14:** `SkillEvent.boundToSkill`: el modificador lleva la instancia que lo creó y se retira cuando la habilidad termina
+  o la interrumpen (evento de fin de instancia y limpieza).
+- **L2-10:** `StatModifier.stacks` (0 = 1, compatible); `SkillEvent.maxStacks` y modo al reaplicar (refrescar, apilar,
+  ignorar). Stats `EffectDurationOut` (lanzador) y `EffectDurationIn` (objetivo), multiplicadores de la duración.
+- **L2-11:** evento `DamageOverTime` (valor por tic, `period`, `duration`); buffer en el objetivo y sistema que emite un
+  `PendingDamageEvent` por tic (forma Habilidad), con el perfil del lanzador.
+- **L2-12:** stat `AttackSpeed` (base 1) en `CombatStatsComponent`; `SkillPhase.scalesWithAttackSpeed`; `SkillTimeline`
+  avanza esas fases a `dt × velocidad`; la capa visual pone `AttackSpeed` en el Animator.
+
+## Pasos (un commit por punto o pareja)
+- [x] 1. L2-13 + L2-14; tests; EditMode, S6.
+- [ ] 2. L2-10; tests; EditMode.
+- [ ] 3. L2-11 + Flecha Llameante; tests; EditMode.
+- [ ] 4. L2-12 + Animator; tests; EditMode y comprobación en Play.
+- [ ] 5. Docs: `SkillsAndPerks.md`, catálogo §5, `Por_Abordar`, lecciones.
+
+---
+
 # Plan: movimiento del catálogo (L5-7, L5-5; L5-6 y L5-8 bloqueados)
 
 Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.5.
