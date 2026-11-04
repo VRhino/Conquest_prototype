@@ -679,6 +679,51 @@ public partial class BattleSceneIntegrationTests
             "RemoteHeroAnimationDriver did not publish the released attack state.");
     }
 
+    /// <summary>
+    /// Attack speed (L2-12) seen in the Animator: with an effect doubling it, the local hero's basic attack and a squire's
+    /// attack play their states at twice the speed.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AnAttackSpeedEffectPlaysTheAttackAnimationsFaster()
+    {
+        const float Speed = 2f;
+        var unit = em.GetBuffer<SquadUnitElement>(squad)[0].Value;
+        yield return Until(() => em.HasComponent<NavMeshAgent>(unit) && UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
+            .Any(sync => sync.GetHeroEntity() == hero), 15f, "Hero and squad visuals did not bind.");
+        foreach (var entity in new[] { hero, unit })
+        {
+            StatStack.Add(em, entity, StatId.AttackSpeed, ModifierOp.Ratio, Speed - 1f, ModifierSource.Effect);
+            StatStack.MarkDirty(em, entity);
+        }
+        yield return Until(() => em.GetComponentData<CombatStatsComponent>(hero).attackSpeed == Speed
+            && em.GetComponentData<CombatStatsComponent>(unit).attackSpeed == Speed, 2f, "The attack speed was not resolved.");
+
+        var heroAnimator = UnityEngine.Object.FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None)
+            .Single(sync => sync.GetHeroEntity() == hero).GetComponentInChildren<Animator>(true);
+        heroAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        em.SetComponentData(hero, new SkillRequestComponent { slot = SkillSlot.Basic, requestedAt = em.World.Time.ElapsedTime });
+        em.SetComponentEnabled<SkillRequestComponent>(hero, true);
+        yield return Until(() => heroAnimator.GetCurrentAnimatorStateInfo(0).IsName("swordAttackIsolated"), 3f,
+            "The hero's basic attack did not reach its attack state.");
+        var heroState = heroAnimator.GetCurrentAnimatorStateInfo(0);
+        Assert.That(heroAnimator.GetFloat(AnimationHashes.AttackSpeed), Is.EqualTo(Speed));
+        Assert.That(heroState.speed * heroState.speedMultiplier, Is.EqualTo(Speed).Within(1e-3f), "The hero's swing plays at its attack speed.");
+
+        var unitAnimator = em.GetComponentObject<NavMeshAgent>(unit).GetComponent<Animator>();
+        unitAnimator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+        int combatLayer = unitAnimator.GetLayerIndex("Combat");
+        Assert.That(combatLayer, Is.GreaterThanOrEqualTo(0), "The squire controller has its Combat layer.");
+        var swing = em.GetComponentData<UnitCombatComponent>(unit);
+        swing.isAttacking = true;
+        swing.attackAnimationTimer = 0f;
+        em.SetComponentData(unit, swing);
+        yield return Until(() => unitAnimator.GetCurrentAnimatorStateInfo(combatLayer).IsName("Attack"), 3f,
+            "The squire did not reach its attack state.");
+        var unitState = unitAnimator.GetCurrentAnimatorStateInfo(combatLayer);
+        Assert.That(unitAnimator.GetFloat(AnimationHashes.AttackSpeed), Is.EqualTo(Speed));
+        Assert.That(unitState.speed * unitState.speedMultiplier, Is.EqualTo(Speed).Within(1e-3f), "The squire's swing plays at its attack speed.");
+    }
+
     static void AssertCombatParameterTypes(Animator animator, string visualName)
     {
         Assert.That(animator, Is.Not.Null, visualName + " Animator is missing.");

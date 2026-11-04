@@ -183,6 +183,8 @@ namespace ConquestTactics.Visual
 
             if (AnimatorHasParameter(AnimationHashes.IsAttacking))
                 _animator.SetBool(AnimationHashes.IsAttacking, _animationAdapter.IsAttacking);
+            if (AnimatorHasParameter(AnimationHashes.AttackSpeed))
+                _animator.SetFloat(AnimationHashes.AttackSpeed, _animationAdapter.AttackSpeed);
             if (_animationAdapter.JustShot && AnimatorHasParameter(AnimationHashes.TriggerShoot))
                 _animator.SetTrigger(AnimationHashes.TriggerShoot);
             if (AnimatorHasParameter(AnimationHashes.IsReloading))

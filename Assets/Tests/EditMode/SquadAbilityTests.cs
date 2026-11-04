@@ -181,4 +181,35 @@ public class SquadAbilityTests
         Step(squad, 0.0, SkillSlot.Squad1);
         Assert.That(_em.GetComponentData<SkillInstanceComponent>(squad).active, Is.False);
     }
+
+    [Test]
+    public void ASquadAbilityRunsAtTheMeanAttackSpeedOfItsLivingUnits()
+    {
+        var ability = ScriptableObject.CreateInstance<AbilityData>();
+        ability.abilityName = "Test Rush";
+        ability.cooldown = 10f;
+        ability.phases = new[]
+        {
+            new SkillPhase { duration = 1f, scalesWithAttackSpeed = true },
+            new SkillPhase { duration = 1f, final = true },
+        };
+        using var rush = SkillBlobBuilder.BuildSquadAbility(ability, SkillSlot.Squad1);
+        Object.DestroyImmediate(ability);
+        var squad = Squad(SquadProgressionCurves.DefaultUnlockLevel(0), 3);
+        _world.GetOrCreateSystemManaged<UnitStatScalingSystem>().Update();
+        var skills = _em.GetBuffer<HeroSkillElement>(squad);
+        skills[0] = new HeroSkillElement { slot = SkillSlot.Squad1, skillId = rush.Value.id, skill = rush };
+        var units = _em.GetBuffer<SquadUnitElement>(squad).ToNativeArray(Unity.Collections.Allocator.Temp);
+        float[] speeds = { 3f, 1f, 10f };
+        for (int i = 0; i < units.Length; i++)
+            _em.AddComponentData(units[i].Value, new CombatStatsComponent { attackSpeed = speeds[i] });
+        _em.AddComponent<IsDeadComponent>(units[2].Value); // The fallen one does not count.
+        units.Dispose();
+
+        Step(squad, 0.0, SkillSlot.Squad1);
+        float before = _em.GetComponentData<SkillInstanceComponent>(squad).phaseTime;
+        Step(squad, 0.1, null);
+        Assert.That(_em.GetComponentData<SkillInstanceComponent>(squad).phaseTime - before, Is.EqualTo(0.2f).Within(1e-5f),
+            "Mean of 3 and 1: twice as fast.");
+    }
 }

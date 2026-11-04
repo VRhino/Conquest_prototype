@@ -30,6 +30,8 @@ namespace ConquestTactics.Animation
 
         // Si la unidad está ejecutando un ataque (strike window activa)
         public bool IsAttacking { get; private set; } = false;
+        /// <summary>The unit's attack speed (L2-12), for the speed multiplier of its attack states.</summary>
+        public float AttackSpeed { get; private set; } = 1f;
 
         // Ranged: true durante exactamente un frame cuando se dispara un proyectil
         public bool JustShot { get; private set; } = false;
@@ -217,6 +219,9 @@ namespace ConquestTactics.Animation
                 {
                     IsAttacking = false;
                 }
+                AttackSpeed = _entityManager.HasComponent<CombatStatsComponent>(_unitEntity)
+                    ? CombatStatsComponent.AttackSpeedOf(true, _entityManager.GetComponentData<CombatStatsComponent>(_unitEntity))
+                    : 1f;
 
                 // Leer estado de disparo/recarga desde RangedAttackStateComponent
                 if (_entityManager.HasComponent<RangedAttackStateComponent>(_unitEntity))

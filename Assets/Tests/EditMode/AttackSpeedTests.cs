@@ -1,5 +1,8 @@
 using NUnit.Framework;
 using Unity.Collections;
+using Unity.Entities;
+using Unity.Mathematics;
+using Unity.Transforms;
 using UnityEngine;
 
 /// <summary>Attack speed shortens only the phases marked for it (Aprendizajes_Referencia.md L2-12).</summary>
@@ -42,6 +45,39 @@ public class AttackSpeedTests
         Assert.That(inst.phase, Is.EqualTo(1));
         Assert.That(inst.phaseTime, Is.EqualTo(0.2f).Within(1e-5f), "0.1 s for the fast phase, the other 0.2 s at 1×.");
         Assert.That(SkillTimeline.Advance(ref blob.Value, ref inst, 0.25f, fired, 4f), Is.True);
+    }
+
+    [Test]
+    public void ASoldierSwingsAndRecoversAtItsAttackSpeed()
+    {
+        using var world = new World("Unit attack speed");
+        var em = world.EntityManager;
+        var target = em.CreateEntity(typeof(LocalTransform));
+        em.SetComponentData(target, LocalTransform.FromPosition(new float3(0f, 0f, 1f)));
+        var swinging = Unit(em, target, 2f, new UnitCombatComponent { target = target, isAttacking = true });
+        var resting = Unit(em, target, 2f, new UnitCombatComponent { target = target, attackCooldown = 1f });
+        var plain = Unit(em, target, 0f, new UnitCombatComponent { target = target, isAttacking = true });
+        world.SetTime(new Unity.Core.TimeData(1d, 0.25f));
+        world.GetOrCreateSystemManaged<UnitAttackSystem>().Update();
+        Assert.That(em.GetComponentData<UnitCombatComponent>(swinging).attackAnimationTimer, Is.EqualTo(0.5f).Within(1e-5f),
+            "Twice as fast: half a second of swing in a quarter.");
+        Assert.That(em.GetComponentData<UnitCombatComponent>(resting).attackCooldown, Is.EqualTo(0.5f).Within(1e-5f),
+            "The pause between swings shortens too.");
+        Assert.That(em.GetComponentData<UnitCombatComponent>(plain).attackAnimationTimer, Is.EqualTo(0.25f).Within(1e-5f),
+            "Unresolved stats swing at 1.");
+    }
+
+    static Entity Unit(EntityManager em, Entity target, float attackSpeed, UnitCombatComponent combat)
+    {
+        var unit = em.CreateEntity(typeof(UnitWeaponComponent), typeof(LocalTransform), typeof(CombatStatsComponent));
+        em.SetComponentData(unit, new UnitWeaponComponent
+        {
+            attackRange = 2f, strikeWindowStart = 0.8f, strikeWindowDuration = 0.1f, attackAnimationDuration = 1f, attackInterval = 1f,
+        });
+        em.SetComponentData(unit, LocalTransform.Identity);
+        em.SetComponentData(unit, new CombatStatsComponent { attackSpeed = attackSpeed });
+        em.AddComponentData(unit, combat);
+        return unit;
     }
 
     [Test]

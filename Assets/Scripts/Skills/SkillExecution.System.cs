@@ -141,7 +141,7 @@ public partial class SkillExecutionSystem : SystemBase
             {
                 _fired.Clear();
                 ref var running = ref skills[inst.skillIndex].skill.Value;
-                bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired);
+                bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired, SquadAttackSpeed(units));
                 ushort held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
                 if (!ended && (held & SkillRequestComponent.Bit(skills[inst.skillIndex].slot)) == 0)
                     ended = SkillTimeline.Release(ref running, ref inst, _fired);
@@ -342,6 +342,24 @@ public partial class SkillExecutionSystem : SystemBase
             forward = math.normalizesafe(forward, new float3(0f, 0f, 1f)),
             team = SystemAPI.HasComponent<TeamComponent>(caster) ? SystemAPI.GetComponent<TeamComponent>(caster).value : Team.None,
         };
+    }
+
+    /// <summary>
+    /// A squad's attack speed (L2-12): it has no stats of its own for it, so its skills follow the mean attack speed of its
+    /// living units, the ones whose swings an effect on the squad speeds up.
+    /// </summary>
+    float SquadAttackSpeed(DynamicBuffer<SquadUnitElement> units)
+    {
+        float sum = 0f;
+        int count = 0;
+        foreach (var unit in units)
+        {
+            if (!SystemAPI.Exists(unit.Value) || SystemAPI.HasComponent<IsDeadComponent>(unit.Value)) continue;
+            bool has = SystemAPI.HasComponent<CombatStatsComponent>(unit.Value);
+            sum += CombatStatsComponent.AttackSpeedOf(has, has ? SystemAPI.GetComponent<CombatStatsComponent>(unit.Value) : default);
+            count++;
+        }
+        return count > 0 ? sum / count : 1f;
     }
 
     /// <summary>The hero's attack speed (L2-12), also published for the animation.</summary>

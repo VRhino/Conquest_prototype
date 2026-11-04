@@ -17,6 +17,9 @@ using Unity.Transforms;
 ///   Phase 3 — End of animation:
 ///     timer >= attackAnimationDuration
 ///     → isAttacking=false, apply attackInterval cooldown, reset for next swing
+///
+/// The unit's attack speed (L2-12, <see cref="CombatStatsComponent"/>) runs the whole rhythm faster: the swing's timer and
+/// the cooldown between swings both advance at dt × speed, so the windows keep their place within the swing.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitTargetingSystem))]
@@ -40,8 +43,11 @@ public partial class UnitAttackSystem : SystemBase
                           .WithEntityAccess())
         {
             ref var c = ref combat.ValueRW;
+            bool hasStats = SystemAPI.HasComponent<CombatStatsComponent>(entity);
+            float swingDt = dt * CombatStatsComponent.AttackSpeedOf(hasStats,
+                hasStats ? SystemAPI.GetComponent<CombatStatsComponent>(entity) : default);
             // Losing a target outside the brace arc must not freeze an existing cooldown.
-            if (battleActive) c.attackCooldown = math.max(0f, c.attackCooldown - dt);
+            if (battleActive) c.attackCooldown = math.max(0f, c.attackCooldown - swingDt);
             if (!battleActive || !SquadCombatModeComponent.AllowsTarget(EntityManager, entity, c.target))
             {
                 c.isAttacking = false;
@@ -54,7 +60,7 @@ public partial class UnitAttackSystem : SystemBase
             // ── Phase 2 & 3 — animation in progress ──────────────────────────
             if (c.isAttacking)
             {
-                c.attackAnimationTimer += dt;
+                c.attackAnimationTimer += swingDt;
 
                 bool inWindow = c.attackAnimationTimer >= weapon.ValueRO.strikeWindowStart
                              && c.attackAnimationTimer <  weapon.ValueRO.strikeWindowStart
