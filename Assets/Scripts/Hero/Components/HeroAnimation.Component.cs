@@ -9,6 +9,9 @@ public struct HeroAnimationComponent : IComponentData
     /// <summary>Set when a melee attack animation should play.</summary>
     public bool triggerAttack;
 
+    /// <summary>Attack speed for the attack states of the Animator (L2-12), written by <see cref="SkillExecutionSystem"/>.</summary>
+    public float attackSpeed;
+
     /// <summary>
     /// Head look X written by SamplePlayerAnimationController_ECS (local hero).
     /// Read by EntityVisualSync to drive upper body on remote heroes (BUG-002).

@@ -11,6 +11,10 @@ public struct CombatStatsComponent : IComponentData
     /// <summary>Multipliers of the duration of the effects it applies and receives (L2-10).</summary>
     public float effectDurationOut;
     public float effectDurationIn;
+    /// <summary>Attack speed (L2-12); 0 = not yet resolved, read as 1 (<see cref="AttackSpeedOf"/>).</summary>
+    public float attackSpeed;
+
+    public static float AttackSpeedOf(bool has, in CombatStatsComponent stats) => has && stats.attackSpeed > 0f ? stats.attackSpeed : 1f;
 
     /// <summary>Duration of an effect from <paramref name="caster"/> on <paramref name="target"/>: both sides scale it (L2-10).</summary>
     public static float EffectDuration(float duration, bool casterHas, in CombatStatsComponent caster, bool targetHas,

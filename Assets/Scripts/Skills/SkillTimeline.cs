@@ -19,24 +19,31 @@ public static class SkillTimeline
         Collect(ref skill, 0, 0f, 0f, true, fired);
     }
 
-    /// <summary>Moves <paramref name="dt"/> forward; returns true when the skill ended in this step.</summary>
-    public static bool Advance(ref SkillBlob skill, ref SkillInstanceComponent instance, float dt, NativeList<SkillEvent> fired)
+    /// <summary>
+    /// Moves <paramref name="dt"/> forward; returns true when the skill ended in this step. Phases marked
+    /// <see cref="SkillPhase.scalesWithAttackSpeed"/> run at <paramref name="attackSpeed"/> (L2-12): their time passes that
+    /// much faster, so they last duration / speed and their events come sooner; every other phase runs at 1.
+    /// </summary>
+    public static bool Advance(ref SkillBlob skill, ref SkillInstanceComponent instance, float dt, NativeList<SkillEvent> fired,
+        float attackSpeed = 1f)
     {
         if (!instance.active) return false;
         float from = instance.phaseTime;
-        float to = from + dt;
+        float left = dt; // Real time still to spend in this step.
         while (true)
         {
-            float duration = skill.phases[instance.phase].duration;
-            bool endless = duration < 0f;
-            if (endless || to < duration)
+            var phase = skill.phases[instance.phase];
+            float rate = phase.scalesWithAttackSpeed && attackSpeed > 0f ? attackSpeed : 1f;
+            float duration = phase.duration;
+            float to = from + left * rate;
+            if (duration < 0f || to < duration)
             {
                 Collect(ref skill, instance.phase, from, to, false, fired);
                 instance.phaseTime = to;
                 return false;
             }
             Collect(ref skill, instance.phase, from, duration, false, fired);
-            to -= duration;
+            left -= (duration - from) / rate;
             instance.phase++;
             if (instance.phase >= skill.phases.Length)
             {

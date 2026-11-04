@@ -20,6 +20,9 @@ namespace ConquestTactics.Visual
         private Entity _heroEntity = Entity.Null;
         private NavMeshAgent _navAgent;
         private Animator _animator;
+        // Whether the hero's controller has the attack speed parameter (L2-12), checked once per animator.
+        private Animator _attackSpeedAnimator;
+        private bool _hasAttackSpeed;
         private bool _wasMoving;
         private bool _isBound;
         private readonly Dictionary<int, float> _floatParameterCache = new();
@@ -156,6 +159,14 @@ namespace ConquestTactics.Visual
             if (entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
             {
                 var animation = entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
+                // Checked once per animator: parameters returns a fresh array on every call.
+                if (_attackSpeedAnimator != _animator)
+                {
+                    _attackSpeedAnimator = _animator;
+                    _hasAttackSpeed = AnimationHashes.HasParameter(_animator, AnimationHashes.AttackSpeed);
+                }
+                if (_hasAttackSpeed)
+                    _animator.SetFloat(AnimationHashes.AttackSpeed, animation.attackSpeed > 0f ? animation.attackSpeed : 1f);
                 if (animation.triggerAttack)
                 {
                     _animator.SetTrigger(AnimationHashes.TriggerAttack);

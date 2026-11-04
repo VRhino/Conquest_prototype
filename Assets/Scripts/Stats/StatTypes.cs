@@ -50,6 +50,8 @@ public enum StatId : byte
     EffectDurationOut,
     /// <summary>Multiplier of the duration of the effects this entity receives (L2-10; base 1).</summary>
     EffectDurationIn,
+    /// <summary>Attack speed (L2-12; base 1): the phases marked to scale with it last duration / this.</summary>
+    AttackSpeed,
     Count,
 }
 

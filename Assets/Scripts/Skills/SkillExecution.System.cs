@@ -76,7 +76,7 @@ public partial class SkillExecutionSystem : SystemBase
             {
                 _fired.Clear();
                 ref var running = ref skills[inst.skillIndex].skill.Value;
-                bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired);
+                bool ended = SkillTimeline.Advance(ref running, ref inst, dt, _fired, AttackSpeed(entity));
                 // Charge (L2-6): letting go of the key moves a waiting skill to its release phase.
                 ushort held = SystemAPI.GetComponent<SkillRequestComponent>(entity).heldSlots;
                 if (!ended && (held & SkillRequestComponent.Bit(skills[inst.skillIndex].slot)) == 0)
@@ -344,6 +344,16 @@ public partial class SkillExecutionSystem : SystemBase
         };
     }
 
+    /// <summary>The hero's attack speed (L2-12), also published for the animation.</summary>
+    float AttackSpeed(Entity entity)
+    {
+        bool has = SystemAPI.HasComponent<CombatStatsComponent>(entity);
+        float speed = CombatStatsComponent.AttackSpeedOf(has, has ? SystemAPI.GetComponent<CombatStatsComponent>(entity) : default);
+        if (SystemAPI.HasComponent<HeroAnimationComponent>(entity))
+            SystemAPI.GetComponentRW<HeroAnimationComponent>(entity).ValueRW.attackSpeed = speed;
+        return speed;
+    }
+
     bool Immobilised(Entity entity)
         => SystemAPI.HasComponent<MoveSpeedComponent>(entity) && SystemAPI.GetComponent<MoveSpeedComponent>(entity).value <= 0f;
 
@@ -366,7 +376,8 @@ public partial class SkillExecutionSystem : SystemBase
         if (!parked.ValueRO.active) return;
         if (!Valid(skills, parked.ValueRO.instance.skillIndex)) { parked.ValueRW.active = false; return; }
         _discarded.Clear();
-        if (SkillTimeline.Advance(ref skills[parked.ValueRO.instance.skillIndex].skill.Value, ref parked.ValueRW.instance, dt, _discarded))
+        if (SkillTimeline.Advance(ref skills[parked.ValueRO.instance.skillIndex].skill.Value, ref parked.ValueRW.instance, dt, _discarded,
+                AttackSpeed(entity)))
             parked.ValueRW.active = false; // It ended while set aside.
     }
 
@@ -407,6 +418,7 @@ public partial class SkillExecutionSystem : SystemBase
 
     void PublishState(Entity entity, in SkillInstanceComponent inst, ref HeroCombatComponent combat)
     {
+        AttackSpeed(entity); // Published every frame, so a swing starts already at its speed (L2-12).
         combat.isAttacking = inst.active;
         if (SystemAPI.HasComponent<WeaponHitboxActiveTag>(entity))
             SystemAPI.SetComponentEnabled<WeaponHitboxActiveTag>(entity, inst.active && inst.hitboxOpen && !combat.hitboxFired);

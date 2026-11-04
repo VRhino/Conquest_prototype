@@ -92,7 +92,7 @@ public partial class HeroInitializationSystem : SystemBase
             StatStack.SeedCritical(EntityManager, entity, combat.criticalChance, combat.criticalMultiplier);
         }
         if (!EntityManager.HasComponent<CombatStatsComponent>(entity)) EntityManager.AddComponent<CombatStatsComponent>(entity);
-        StatStack.SeedEffectDurations(EntityManager, entity);
+        StatStack.SeedCombatMultipliers(EntityManager, entity);
         StatStack.ClearSource(EntityManager, entity, ModifierSource.Equipment);
         AddEquipment(entity, StatId.Strength, equipment.strengthBonus);
         AddEquipment(entity, StatId.Dexterity, equipment.dexterityBonus);

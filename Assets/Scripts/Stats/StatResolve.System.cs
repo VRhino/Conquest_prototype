@@ -132,6 +132,7 @@ public partial class StatResolveSystem : SystemBase
                 lifeSteal = stats.Get(StatId.LifeSteal),
                 effectDurationOut = stats.Get(StatId.EffectDurationOut),
                 effectDurationIn = stats.Get(StatId.EffectDurationIn),
+                attackSpeed = stats.Get(StatId.AttackSpeed),
             });
         if (SystemAPI.HasComponent<CooldownScaleComponent>(entity))
             SystemAPI.SetComponent(entity, new CooldownScaleComponent { value = stats.Get(StatId.CooldownScale) });

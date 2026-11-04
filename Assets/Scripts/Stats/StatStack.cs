@@ -60,11 +60,15 @@ public static class StatStack
         if (!em.HasComponent<CritStatsComponent>(entity)) em.AddComponent<CritStatsComponent>(entity);
     }
 
-    /// <summary>Effect duration multipliers of 1 (L2-10), so effects last as authored until a modifier says otherwise.</summary>
-    public static void SeedEffectDurations(EntityManager em, Entity entity)
+    /// <summary>
+    /// Combat multipliers of 1 — effect durations (L2-10) and attack speed (L2-12) — so everything lasts as authored until
+    /// a modifier says otherwise.
+    /// </summary>
+    public static void SeedCombatMultipliers(EntityManager em, Entity entity)
     {
         SetBase(em, entity, StatId.EffectDurationOut, 1f);
         SetBase(em, entity, StatId.EffectDurationIn, 1f);
+        SetBase(em, entity, StatId.AttackSpeed, 1f);
     }
 
     public static void MarkDirty(EntityManager em, Entity entity) => em.SetComponentEnabled<ModifiersDirty>(entity, true);

@@ -46,6 +46,9 @@ namespace ConquestTactics.Visual
         private const float SYNC_INTERVAL = 0.016f;
         private NavMeshAgent _navAgent;
         private Animator _animator;
+        // Whether the hero's controller has the attack speed parameter (L2-12), checked once per animator.
+        private Animator _attackSpeedAnimator;
+        private bool _hasAttackSpeed;
         private readonly HeroDeathAnimationBridge _deathAnimation = new HeroDeathAnimationBridge();
 
         // Animation parameter hashes are centralized in AnimationHashes.cs
@@ -191,6 +194,14 @@ namespace ConquestTactics.Visual
                 && _entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
             {
                 var animData = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
+                // Checked once per animator: parameters returns a fresh array on every call.
+                if (_attackSpeedAnimator != _animator)
+                {
+                    _attackSpeedAnimator = _animator;
+                    _hasAttackSpeed = AnimationHashes.HasParameter(_animator, AnimationHashes.AttackSpeed);
+                }
+                if (_hasAttackSpeed)
+                    _animator.SetFloat(AnimationHashes.AttackSpeed, animData.attackSpeed > 0f ? animData.attackSpeed : 1f);
                 if (animData.triggerAttack)
                 {
                     _animator.SetTrigger(AnimationHashes.TriggerAttack);

@@ -6,6 +6,15 @@ using UnityEngine;
 /// </summary>
 public static class AnimationHashes
 {
+    /// <summary>Whether <paramref name="animator"/>'s controller declares the parameter, so optional ones can be set without warnings.</summary>
+    public static bool HasParameter(Animator animator, int hash)
+    {
+        if (animator == null || animator.runtimeAnimatorController == null) return false;
+        foreach (var parameter in animator.parameters)
+            if (parameter.nameHash == hash) return true;
+        return false;
+    }
+
     // Movement state
     public static readonly int MoveSpeed              = Animator.StringToHash("MoveSpeed");
     public static readonly int CurrentGait            = Animator.StringToHash("CurrentGait");
@@ -43,6 +52,8 @@ public static class AnimationHashes
     // Combat
     public static readonly int IsAttacking            = Animator.StringToHash("IsAttacking");
     public static readonly int TriggerAttack          = Animator.StringToHash("TriggerAttack");
+    /// <summary>Speed multiplier of the hero's attack states (L2-12).</summary>
+    public static readonly int AttackSpeed            = Animator.StringToHash("AttackSpeed");
     // Hero death (HeroDeathPresentationComponent): optional, only on hero controllers.
     public static readonly int TriggerDeath           = Animator.StringToHash("TriggerDeath");
     public static readonly int IsDead                 = Animator.StringToHash("IsDead");

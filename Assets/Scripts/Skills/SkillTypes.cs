@@ -80,6 +80,8 @@ public struct SkillPhase
     public bool interruptible;
     public bool final;
     public bool charge;
+    /// <summary>Lasts duration / attack speed (L2-12; ref.: only the marked phases scale, and the animation follows).</summary>
+    public bool scalesWithAttackSpeed;
 }
 
 /// <summary>Something a skill does at <see cref="time"/> seconds into phase <see cref="phase"/>.</summary>

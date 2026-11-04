@@ -72,9 +72,11 @@ public static class SkillBlobBuilder
         float strikeEnd = combat.strikeWindowStart + combat.strikeWindowDuration;
         var phases = new[]
         {
-            new SkillPhase { duration = combat.strikeWindowStart, interruptible = true },
-            new SkillPhase { duration = combat.strikeWindowDuration },
-            new SkillPhase { duration = combat.attackAnimationDuration - strikeEnd, interruptible = true, final = true },
+            // The basic attack is the weapon's swing: all of it follows the attack speed (L2-12).
+            new SkillPhase { duration = combat.strikeWindowStart, interruptible = true, scalesWithAttackSpeed = true },
+            new SkillPhase { duration = combat.strikeWindowDuration, scalesWithAttackSpeed = true },
+            new SkillPhase { duration = combat.attackAnimationDuration - strikeEnd, interruptible = true, final = true,
+                scalesWithAttackSpeed = true },
         };
         var events = new[]
         {
