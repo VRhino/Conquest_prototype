@@ -366,19 +366,21 @@ cola se suaviza con F12), M17 y M3 (bloqueados).
 
 # Plan: F12 (cohesión como consulta) y F16 (orientación del escudo)
 
-Estado: en curso (2026-11-04), rama `main` local, sin subir. Decisión del usuario: la consulta la lee el héroe de IA, que
+Estado: **hecho** (2026-11-04, `5979dd0a`), rama `main` local, sin subir. Decisión del usuario: la consulta la lee el héroe de IA, que
 no manda cargar hasta que su formación está lista (salvo que la escuadra ya esté en combate); los aislados solo se cuentan,
 sin teletransporte.
 
-- [ ] 1. `FormationLayout.IsFormationReady(rezagados, contados, q)`: lista si como mucho `ceil((1−q)·N)` no han llegado.
+- [x] 1. `FormationLayout.IsFormationReady(rezagados, contados, q)`: lista si como mucho `ceil((1−q)·N)` no han llegado.
       Los aislados (ranura `Unresolved` de C13) no cuentan en N: no pueden llegar.
-- [ ] 2. `SquadAISystem` (único escritor de `SquadAIComponent`) publica `formationReady`, `stragglers` e `isolated`
+- [x] 2. `SquadAISystem` (único escritor de `SquadAIComponent`) publica `formationReady`, `stragglers` e `isolated`
       (rezagado = a más de `stragglerDistance` de su ranura resuelta). Sustituye la dispersión con números fijos:
       `Regrouping` = no lista y sin enemigos detectados.
-- [ ] 3. Instantánea de héroe y pizarra: `squadFormationReady`. `HeroAISquadWait.Hold`: si la decisión es cargar
+- [x] 3. Instantánea de héroe y pizarra: `squadFormationReady`. `HeroAISquadWait.Hold`: si la decisión es cargar
       (`Attack`), la escuadra no está en combate ni lista y el enemigo no está encima, el héroe espera quieto con la
       escuadra en `FollowHero`, como mucho `heroMaxWait` por episodio. Balanced y Rusher.
-- [ ] 4. Ajustes en `SquadSpawnConfig` (`FormationReadinessTuning` con `Default`/`OrDefault`), sin números mágicos.
-- [ ] 5. F16: quitar `ShieldOrientation`, `UnitShieldComponent.orientation` y `ShieldHitboxBehaviour.orientation`.
-- [ ] 6. Tests EditMode (consulta, espera del héroe, sistema), EditMode completo, `BattleSceneIntegrationTests`, S1/S6.
-- [ ] 7. Docs (`Por_Abordar/Formaciones_y_Posturas.md`, README, `Movimiento_Formaciones.md`, IA) y commit.
+- [x] 4. Ajustes en `SquadSpawnConfig` (`FormationReadinessTuning` con `Default`/`OrDefault`), sin números mágicos.
+- [x] 5. F16: quitar `ShieldOrientation`, `UnitShieldComponent.orientation` y `ShieldHitboxBehaviour.orientation`.
+- [x] 6. Tests EditMode (consulta, espera del héroe, sistema), EditMode completo, `BattleSceneIntegrationTests`, S1/S6.
+- [x] 7. Docs (`Por_Abordar/Formaciones_y_Posturas.md`, README, `Movimiento_Formaciones.md`, IA) y commit.
+
+Resultado: EditMode 521/521, `BattleSceneIntegrationTests` 23/23, S1 y S6 (4/4) en verde.
