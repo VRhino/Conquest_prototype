@@ -21,6 +21,16 @@ public static class SkillEvents
     };
 
     /// <summary>
+    /// The event's most targets after the caster's <see cref="StatId.MaxTargets"/> modifiers (ref.: a skill's most hits can
+    /// be changed by effects): its own cap is the base, at least one target is kept, and 0 (no cap) stays 0.
+    /// </summary>
+    public static int Cap(int eventCap, NativeArray<StatModifier> casterModifiers, double now)
+    {
+        if (eventCap <= 0) return 0;
+        return math.max(1, (int)math.round(StatMath.Resolve(eventCap, casterModifiers, StatId.MaxTargets, now)));
+    }
+
+    /// <summary>
     /// Keeps the <paramref name="max"/> targets nearest to <paramref name="centre"/> (L2-13; ref.: each skill carries a most
     /// hits count). <paramref name="max"/> ≤ 0 keeps them all.
     /// </summary>

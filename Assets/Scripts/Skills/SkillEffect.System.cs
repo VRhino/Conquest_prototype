@@ -49,7 +49,7 @@ public partial class SkillEffectSystem : SystemBase
             switch (e.type)
             {
                 case SkillEventType.AreaDamage:
-                    DealAreaDamage(r, bodies, positions, teams, CombatRandom.Tick(now));
+                    DealAreaDamage(r, bodies, positions, teams, now);
                     break;
                 case SkillEventType.DamageOverTime:
                     ApplyDamageOverTime(r, bodies, positions, teams, now);
@@ -60,7 +60,7 @@ public partial class SkillEffectSystem : SystemBase
                 case SkillEventType.Taunt:
                     targets.Clear();
                     SelectTargets(r, bodies, positions, teams, targets);
-                    CapTargets(r, targets);
+                    CapTargets(r, targets, now);
                     foreach (var target in targets)
                     {
                         if (e.type == SkillEventType.ApplyModifier) ApplyModifier(target, r, now);
@@ -92,9 +92,10 @@ public partial class SkillEffectSystem : SystemBase
     }
 
     void DealAreaDamage(in SkillEffectRequestComponent r, NativeArray<Entity> bodies, NativeArray<LocalTransform> positions,
-        NativeArray<TeamComponent> teams, uint tick)
+        NativeArray<TeamComponent> teams, double now)
     {
         if (!TryGetProfile(r.caster, out var profile)) return;
+        uint tick = CombatRandom.Tick(now);
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
         var hits = new NativeList<Entity>(16, Allocator.Temp);
         for (int i = 0; i < bodies.Length; i++)
@@ -102,7 +103,7 @@ public partial class SkillEffectSystem : SystemBase
             if (teams[i].value == r.team || bodies[i] == r.caster) continue;
             if (SkillArea.Contains(centre, r.forward, r.effect.radius, r.effect.angle, positions[i].Position)) hits.Add(bodies[i]);
         }
-        CapTargets(r, hits);
+        CapTargets(r, hits, now);
         foreach (var body in hits)
         {
             var hit = EntityManager.CreateEntity(typeof(PendingDamageEvent));
@@ -139,7 +140,7 @@ public partial class SkillEffectSystem : SystemBase
             if (teams[i].value == r.team || bodies[i] == r.caster) continue;
             if (SkillArea.Contains(centre, r.forward, r.effect.radius, r.effect.angle, positions[i].Position)) hits.Add(bodies[i]);
         }
-        CapTargets(r, hits);
+        CapTargets(r, hits, now);
         foreach (var target in hits)
         {
             if (!EntityManager.HasBuffer<DamageOverTimeElement>(target)) EntityManager.AddBuffer<DamageOverTimeElement>(target);
@@ -152,15 +153,18 @@ public partial class SkillEffectSystem : SystemBase
         hits.Dispose();
     }
 
-    /// <summary>The event's most targets, nearest to its centre first (L2-13).</summary>
-    void CapTargets(in SkillEffectRequestComponent r, NativeList<Entity> targets)
+    /// <summary>The event's most targets, as the caster's modifiers leave it, nearest to its centre first (L2-13).</summary>
+    void CapTargets(in SkillEffectRequestComponent r, NativeList<Entity> targets, double now)
     {
-        if (r.effect.maxTargets <= 0 || targets.Length <= r.effect.maxTargets) return;
+        int cap = r.effect.maxTargets;
+        if (cap > 0 && EntityManager.HasBuffer<StatModifier>(r.caster))
+            cap = SkillEvents.Cap(cap, EntityManager.GetBuffer<StatModifier>(r.caster, true).AsNativeArray(), now);
+        if (cap <= 0 || targets.Length <= cap) return;
         var positions = new NativeList<float3>(targets.Length, Allocator.Temp);
         foreach (var target in targets)
             positions.Add(EntityManager.HasComponent<LocalTransform>(target)
                 ? EntityManager.GetComponentData<LocalTransform>(target).Position : r.origin);
-        SkillEvents.KeepNearest(targets, positions, SkillArea.Centre(r.origin, r.forward, r.effect.distance), r.effect.maxTargets);
+        SkillEvents.KeepNearest(targets, positions, SkillArea.Centre(r.origin, r.forward, r.effect.distance), cap);
         positions.Dispose();
     }
 

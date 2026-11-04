@@ -52,6 +52,11 @@ public enum StatId : byte
     EffectDurationIn,
     /// <summary>Attack speed (L2-12; base 1): the phases marked to scale with it last duration / this.</summary>
     AttackSpeed,
+    /// <summary>
+    /// Most targets of the caster's skill events (L2-13). Not a stored stat: each event's own cap is the base, so a ratio
+    /// scales every capped skill and a flat adds targets to it. Events without a cap stay uncapped. See <see cref="SkillEvents.Cap"/>.
+    /// </summary>
+    MaxTargets,
     Count,
 }
 

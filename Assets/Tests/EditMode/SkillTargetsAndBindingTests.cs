@@ -43,7 +43,26 @@ public class SkillTargetsAndBindingTests
     }
 
     [Test]
-    public void AnAreaWithACapHitsOnlyThatMany()
+    public void TheCasterModifiersChangeTheCapButNotAnUncappedEvent()
+    {
+        var mods = new NativeArray<StatModifier>(2, Allocator.Temp);
+        mods[0] = new StatModifier { stat = StatId.MaxTargets, op = ModifierOp.Ratio, value = 0.5f, source = ModifierSource.Perk };
+        mods[1] = new StatModifier { stat = StatId.MaxTargets, op = ModifierOp.Flat, value = 1f, source = ModifierSource.Effect };
+        Assert.That(SkillEvents.Cap(4, mods, 0), Is.EqualTo(7), "4 × 1.5 + 1.");
+        Assert.That(SkillEvents.Cap(0, mods, 0), Is.Zero, "No cap stays no cap.");
+        mods[0] = new StatModifier { stat = StatId.MaxTargets, op = ModifierOp.Ratio, value = -0.9f, source = ModifierSource.Effect };
+        mods[1] = default;
+        Assert.That(SkillEvents.Cap(4, mods, 0), Is.EqualTo(1), "A cap never drops below one target.");
+        mods.Dispose();
+    }
+
+    [Test]
+    public void AnAreaWithACapHitsOnlyThatMany() => CappedArea(0f, 2);
+
+    [Test]
+    public void AModifierOnTheCasterRaisesTheCap() => CappedArea(1f, 3);
+
+    static void CappedArea(float extraTargets, int expected)
     {
         using var world = new World("Cap");
         var em = world.EntityManager;
@@ -55,10 +74,13 @@ public class SkillTargetsAndBindingTests
             em.SetComponentData(hit[i], new TeamComponent { value = Team.TeamB });
             StatStack.Ensure(em, hit[i]);
         }
+        var caster = em.CreateEntity();
+        StatStack.Ensure(em, caster);
+        if (extraTargets != 0f) StatStack.Add(em, caster, StatId.MaxTargets, ModifierOp.Flat, extraTargets, ModifierSource.Perk);
         var request = em.CreateEntity();
         em.AddComponentData(request, new SkillEffectRequestComponent
         {
-            caster = em.CreateEntity(), skillId = 3, team = Team.TeamA, forward = new float3(0, 0, 1),
+            caster = caster, skillId = 3, team = Team.TeamA, forward = new float3(0, 0, 1),
             effect = new SkillEvent
             {
                 type = SkillEventType.ApplyModifier, target = SkillTarget.EnemiesInRadius, radius = 10f, maxTargets = 2,
@@ -66,9 +88,9 @@ public class SkillTargetsAndBindingTests
             },
         });
         world.GetOrCreateSystemManaged<SkillEffectSystem>().Update();
-        Assert.That(em.GetBuffer<StatModifier>(hit[0]).Length + em.GetBuffer<StatModifier>(hit[1]).Length, Is.EqualTo(2));
-        Assert.That(em.GetBuffer<StatModifier>(hit[2]).Length + em.GetBuffer<StatModifier>(hit[3]).Length, Is.Zero,
-            "The far ones are beyond the cap.");
+        for (int i = 0; i < hit.Length; i++)
+            Assert.That(em.GetBuffer<StatModifier>(hit[i]).Length, Is.EqualTo(i < expected ? 1 : 0),
+                i < expected ? "One of the nearest." : "Beyond the cap.");
     }
 
     [Test]
