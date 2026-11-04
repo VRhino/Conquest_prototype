@@ -20,7 +20,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H14 | Perks con las condiciones nuevas (L2-15) | Baja | Pendiente (datos) |
-| H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (datos y arqueros) |
+| H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (arqueros y Defensa Reforzada) |
 
 Bloque 3 (2026-10-27, `tasks/todo.md`): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
 L4-08. La mecánica está en `Docs/Mechanics/SkillsAndPerks.md` §3.6, §5 y §8.
@@ -141,9 +141,14 @@ la escuadra reaparece con los grupos vacíos. Si molesta en juego, guardar los g
 retirarla y restaurarlos al aparecer, junto con H7.
 
 ## H15. Lo que dejan abierto los efectos L2-10 a L2-14
-- **Datos.** Solo Flecha Llameante usa un efecto nuevo (quemadura, L2-11). Ninguna habilidad tiene aún tope de objetivos,
-  pilas, efectos ligados ni fases que escalen con la velocidad de ataque, y nada da los stats `AttackSpeed`,
-  `EffectDurationOut` o `EffectDurationIn`.
+- **Datos.** Hecho (2026-11-04, tabla aprobada por el usuario; `SkillsAndPerks.md` §4.1 y §5): topes en Corte
+  Giratorio, Lluvia de Flechas, Barrido Largo y Muro de Púas; la quemadura de Flecha Llameante apila hasta 2; Corte
+  Giratorio, Barrido Largo y Lluvia de Acero siguen la velocidad de ataque; Juicio de Acero da +15 % de velocidad de
+  ataque a la escuadra; Línea Inquebrantable y Flecha Marcadora dan `EffectDurationIn` y `EffectDurationOut`.
+  `SkillCatalogueDataTests` los vigila. Queda **Defensa Reforzada ligada a la habilidad**: para que su defensa dure
+  "mientras se sostiene el escudo" la habilidad tendría que durar 8 s, y hoy el héroe se quedaría todo ese tiempo en la
+  animación de ataque. Espera a su animación propia (H2). Con 60 s de enfriamiento y 2 s de quemadura, la pila de
+  Flecha Llameante solo se notará si algo alarga la quemadura.
 - **Velocidad de ataque.** Hecho (2026-11-04) para las habilidades de escuadra (media de sus soldados vivos), el ataque
   cuerpo a cuerpo de los soldados (golpe y pausa) y los estados de ataque de los controladores de soldados. Una prueba
   PlayMode comprueba en la escena de batalla que el héroe y un escudero animan su ataque al doble. Queda: el disparo y la

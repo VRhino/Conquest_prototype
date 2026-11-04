@@ -181,9 +181,12 @@ del arma del lanzador (L1-12).
 | Clase | Q | E | R | T |
 |---|---|---|---|---|
 | Espada y escudo | Empuje de Escudo: embestida 3 m + cono 90° | Defensa Reforzada: +30 % de defensa a aliados (5 m, 8 s) | Intercepción: embestida 4 m + círculo | Muro Imparable: +50 % de defensa a aliados (6 m, 10 s) |
-| Espada a dos manos | Corte Giratorio: círculo 3 m ×1,2 | Carga Brutal: embestida 6 m + cono 120° | Lluvia de Acero: 3 golpes en cono | Juicio de Acero: cono ×2 + escuadra +20 % de daño (8 s) |
-| Lanza | Barrido Largo: semicírculo + ralentiza a los enemigos | Estocada Precisa: cono estrecho 3,5 m ×1,5 | Despliegue Defensivo: +25 % de defensa a aliados | Muro de Púas: área por delante + ralentización |
-| Arco | Disparo Enfocado: tiro cargado (cono estrecho 25 m) | Lluvia de Flechas: 3 oleadas a 15 m | Flecha Silenciadora: ralentiza (aproximación) | Flecha Llameante: impacto ×0,34 y quemadura de 2 tics ×0,34 (1 s) a 15 m |
+| Espada a dos manos | Corte Giratorio: círculo 3 m ×1,2, como mucho 6 objetivos | Carga Brutal: embestida 6 m + cono 120° | Lluvia de Acero: 3 golpes en cono | Juicio de Acero: cono ×2 + escuadra +20 % de daño y +15 % de velocidad de ataque (8 s) |
+| Lanza | Barrido Largo: semicírculo (como mucho 5 golpeados) + ralentiza a todos los enemigos alcanzados | Estocada Precisa: cono estrecho 3,5 m ×1,5 | Despliegue Defensivo: +25 % de defensa a aliados | Muro de Púas: área por delante + ralentización, como mucho 10 objetivos |
+| Arco | Disparo Enfocado: tiro cargado (cono estrecho 25 m) | Lluvia de Flechas: 3 oleadas a 15 m, como mucho 8 objetivos por oleada | Flecha Silenciadora: ralentiza (aproximación) | Flecha Llameante: impacto ×0,34 y quemadura de 2 tics ×0,34 (1 s) a 15 m; la quemadura apila hasta 2 |
+
+Siguen la velocidad de ataque (L2-12) todas las fases de Corte Giratorio, Barrido Largo y Lluvia de Acero, porque son
+golpes del arma. Los datos de tope, pilas y velocidad salen de la tabla H15 aprobada el 2026-11-04.
 
 Aproximaciones:
 - Flecha Silenciadora ralentiza, porque no existe un efecto de "silencio".
@@ -225,12 +228,12 @@ Aproximaciones:
 
 | Perk | Tipo | Efecto implementado |
 |---|---|---|
-| Línea Inquebrantable | Pasivo | Héroe quieto 2 s → su escuadra +10 % de defensa |
+| Línea Inquebrantable | Pasivo | Héroe quieto 2 s → su escuadra +10 % de defensa, y los efectos que recibe el héroe duran un 30 % menos (`EffectDurationIn`) |
 | Cobertura de Hostigamiento | Pasivo | Héroe quieto 3 s → sus golpes ralentizan al objetivo un 15 % (2 s) |
 | Estocada Desestabilizadora | Pasivo | Tras moverse → el golpe ralentiza al objetivo un 30 % (1,5 s) |
 | Orden de Resistencia | Activo (30 s) | Aliados a 8 m +15 % de defensa (6 s) |
 | Carga Coordinada | Activo (25 s) | Héroe y escuadra +20 % de daño (3 s) |
-| Flecha Marcadora | Activo (20 s) | Enemigos a 12 m −10 % de defensa (6 s) |
+| Flecha Marcadora | Activo (20 s) | Enemigos a 12 m −10 % de defensa (6 s); durante 6 s los efectos que aplica el héroe duran un 20 % más (`EffectDurationOut`). La marca de este lanzamiento no se alarga: el stat se resuelve en el frame siguiente |
 | Muro de Púas, Zona de Exclusión | Pasivo | Sin datos: piden daño por contacto y zonas persistentes |
 
 ## 6. HUD
