@@ -15,7 +15,7 @@ public static class SkillEvents
     public static bool IsEffect(SkillEventType type, bool squadCaster) => type switch
     {
         SkillEventType.AreaDamage or SkillEventType.ApplyModifier or SkillEventType.AbsorbShield
-            or SkillEventType.ApplyConditional or SkillEventType.Taunt => true,
+            or SkillEventType.ApplyConditional or SkillEventType.Taunt or SkillEventType.DamageOverTime => true,
         SkillEventType.Dash => !squadCaster,
         _ => false,
     };

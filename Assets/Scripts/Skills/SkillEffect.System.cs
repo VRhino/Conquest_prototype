@@ -51,6 +51,9 @@ public partial class SkillEffectSystem : SystemBase
                 case SkillEventType.AreaDamage:
                     DealAreaDamage(r, bodies, positions, teams, CombatRandom.Tick(now));
                     break;
+                case SkillEventType.DamageOverTime:
+                    ApplyDamageOverTime(r, bodies, positions, teams, now);
+                    break;
                 case SkillEventType.ApplyModifier:
                 case SkillEventType.AbsorbShield:
                 case SkillEventType.ApplyConditional:
@@ -120,6 +123,31 @@ public partial class SkillEffectSystem : SystemBase
                 hitForm = HitForm.Ability,
                 skillId = r.skillId,
             });
+        }
+        hits.Dispose();
+    }
+
+    /// <summary>A burn (L2-11) on the enemies in the area, as the area damage picks them; a recast follows the event's reapply (L2-10).</summary>
+    void ApplyDamageOverTime(in SkillEffectRequestComponent r, NativeArray<Entity> bodies, NativeArray<LocalTransform> positions,
+        NativeArray<TeamComponent> teams, double now)
+    {
+        if (r.effect.period <= 0f || r.effect.duration <= 0f || !TryGetProfile(r.caster, out var profile)) return;
+        float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
+        var hits = new NativeList<Entity>(16, Allocator.Temp);
+        for (int i = 0; i < bodies.Length; i++)
+        {
+            if (teams[i].value == r.team || bodies[i] == r.caster) continue;
+            if (SkillArea.Contains(centre, r.forward, r.effect.radius, r.effect.angle, positions[i].Position)) hits.Add(bodies[i]);
+        }
+        CapTargets(r, hits);
+        foreach (var target in hits)
+        {
+            if (!EntityManager.HasBuffer<DamageOverTimeElement>(target)) EntityManager.AddBuffer<DamageOverTimeElement>(target);
+            DamageOverTime.Apply(EntityManager.GetBuffer<DamageOverTimeElement>(target), new DamageOverTimeElement
+            {
+                caster = r.caster, skillId = r.skillId, team = r.team, profile = profile, multiplier = r.effect.value,
+                period = r.effect.period, endsAt = now + Duration(r, target),
+            }, r.effect.maxStacks, r.effect.reapply, now);
         }
         hits.Dispose();
     }

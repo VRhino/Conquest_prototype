@@ -52,6 +52,11 @@ public enum SkillEventType : byte
     /// ability) by <see cref="SkillEvent.value"/> for <see cref="SkillEvent.duration"/>.
     /// </summary>
     Taunt,
+    /// <summary>
+    /// Damage over time (L2-11) on the enemies in the area (as <see cref="AreaDamage"/>): the caster's profile ×
+    /// <see cref="SkillEvent.value"/> every <see cref="SkillEvent.period"/> seconds for <see cref="SkillEvent.duration"/>.
+    /// </summary>
+    DamageOverTime,
 }
 
 public enum SkillTarget : byte
@@ -105,6 +110,8 @@ public struct SkillEvent
     public int maxStacks;
     /// <summary>What recasting does to a live modifier of this skill: refresh, add a stack or ignore (L2-10).</summary>
     public EffectReapply reapply;
+    /// <summary>Seconds between the ticks of a <see cref="SkillEventType.DamageOverTime"/> (L2-11).</summary>
+    public float period;
 }
 
 /// <summary>A skill as data, built from its <see cref="HeroAbility"/> (or the hero's weapon timings for the basic attack).</summary>
