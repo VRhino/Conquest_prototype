@@ -10,7 +10,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M1 | Error al slot en marcha por encima de 0,5 m | Alta | **Hecho** (S1 0,51 m con C10 y margen en Walk) |
 | M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Hecho** (2026-10-28, P0+P1: S6 de 9 a 0 y S7 de 12 a 0) |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
-| M4 | Animación del paso a carrera | Media | Pendiente |
+| M4 | Animación del paso a carrera | Media | Pendiente (comprobado 2026-11-04: va un paso por encima; decisión del usuario) |
 | M5 | Llegada del ancla (C10) | Media | **Hecho** |
 | M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; la saturación blanda de D6 ya está (L4-04) |
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
@@ -92,6 +92,25 @@ cambia de marcha (`animationRunningSpeedRatio` = 0,6).
 
 **Cómo abordarlo.** Grabar S1 con Unity Recorder y comprobar el cambio. Si no se ve, que la animación lea la marcha de
 `UnitMovementGearComponent` en lugar de deducirla de la velocidad.
+
+**Comprobado (2026-11-04).** `UnitAnimationAdapter` elige el paso por la velocidad medida frente a la velocidad base del
+soldado (`LocomotionAnimationSettings`: correr por encima de 0,6 × base, esprintar por encima de 1,1 × base si se pide más
+de 1,1 × base), no por la marcha. Pero la marcha Walk va hasta la velocidad base (× 1,05 para alcanzar el slot) y Run, a
+2 × base. Con las muestras de S1 (escuderos, base 3 m/s):
+
+| Marcha | Paso Walk | Paso Run | Paso Sprint |
+|---|---|---|---|
+| Walk | 13 % | 87 % | — |
+| Run | 12 % | 18 % | 69 % |
+
+La animación sí cambia con la marcha, pero un paso por encima. Andando en formación se ve la carrera, y corriendo, el
+sprint. La coordenada del blend tree (`MoveSpeed`) también sube: un escudero que anda a 3 m/s recibe 5 (la de correr) y uno
+que corre a 6 m/s, 12. Los prefabs de soldado no cambian estos umbrales.
+
+**Opciones.**
+1. Paso según la marcha: Walk → andar, Run → correr, y sin sprint para los soldados, con `MoveSpeed` según la velocidad
+   real.
+2. Dejarlo así si en vídeo se ve bien. A la vista del usuario.
 
 ## M5. Llegada del ancla (C10)
 **Qué es.** Que el ancla de la escuadra tenga velocidad y aceleración propias (llegada tipo *arrive*) en lugar de ser el héroe
