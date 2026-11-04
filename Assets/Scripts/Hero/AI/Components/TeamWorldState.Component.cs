@@ -68,6 +68,7 @@ public struct HeroSnapshot
     public SquadType      squadType;
     public bool           isRangedSquad;
     public bool           squadIsInCombat;
+    public bool           squadFormationReady; // F12
     public SquadOrderType squadCurrentOrder;
     public FormationType  squadFormation;
 

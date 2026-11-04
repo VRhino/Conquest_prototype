@@ -178,7 +178,6 @@ public partial class HeroVisualInstantiationSystem : SystemBase
                 currentBlock      = maxBlock,
                 maxBlock          = maxBlock,
                 regenRate         = regenRate,
-                orientation       = shieldBehaviour.orientation,
                 breakStunDuration = shieldCfg.defaultBreakStunDuration
             });
         }

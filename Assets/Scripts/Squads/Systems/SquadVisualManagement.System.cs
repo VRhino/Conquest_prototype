@@ -176,7 +176,6 @@ public partial class SquadVisualManagementSystem : SystemBase
                 currentBlock      = maxBlock,
                 maxBlock          = maxBlock,
                 regenRate         = regenRate,
-                orientation       = shieldBehaviour.orientation,
                 breakStunDuration = breakStunDuration
             });
         }

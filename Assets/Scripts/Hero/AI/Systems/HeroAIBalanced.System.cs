@@ -25,6 +25,8 @@ using Unity.Transforms;
 ///   6. Nearest owned zone → DefendZone (patrol)
 ///   7. → Idle
 ///
+/// A squad charge (Attack) waits until the formation is ready (F12, <see cref="HeroAISquadWait"/>).
+///
 /// Pipeline: HeroAIPerceptionSystem → THIS → HeroAIExecutionSystem
 /// </summary>
 [ServerAuthoritative] // Decides the match (L4-06)
@@ -42,6 +44,9 @@ public partial class HeroAIBalancedSystem : SystemBase
     {
         TeamWorldState ws = null;
         SystemAPI.ManagedAPI.TryGetSingleton<TeamWorldState>(out ws);
+        double now = SystemAPI.Time.ElapsedTime;
+        var readiness = SystemAPI.TryGetSingleton<SquadSpawnConfigComponent>(out var config)
+            ? config.formationReadiness.OrDefault() : FormationReadinessTuning.Default;
 
         foreach (var (transform, life, entity) in
                  SystemAPI.Query<RefRO<LocalTransform>,
@@ -62,6 +67,7 @@ public partial class HeroAIBalancedSystem : SystemBase
                     && match.currentState != MatchState.InBattle))
             {
                 dec.action = AIActionType.Idle;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
@@ -76,6 +82,7 @@ public partial class HeroAIBalancedSystem : SystemBase
                 dec.shouldAttack     = true;
                 dec.squadOrder       = SquadOrderType.Attack;
                 dec.hasNewSquadOrder = true;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
@@ -86,6 +93,7 @@ public partial class HeroAIBalancedSystem : SystemBase
             else
                 RunDefenderLogic(ref dec, selfPos, selfTeamInt, bb, ws, entity);
 
+            HeroAISquadWait.Hold(ref dec, bb, now, readiness);
             SystemAPI.SetComponent(entity, dec);
         }
     }

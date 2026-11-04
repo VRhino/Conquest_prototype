@@ -42,7 +42,7 @@ arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de im
 - Pendiente: clips específicos para las posturas genéricas de ShieldWall/Testudo (`ShieldFront`, `ShieldSide`,
   `ShieldUp`, `BracedShields`). Las nuevas poses exclusivas de Line no se asignan a esas formaciones.
   También faltan estocadas y transiciones coreografiadas para Line; actualmente usa mezcla entre poses.
-- `UnitShieldComponent.orientation` se rellena desde el prefab pero ningún sistema lo lee (dato muerto).
+- El bloqueo del escudo es su collider; el campo de orientación, que nadie leía, se eliminó (F16, 2026-11-04).
 
 ## Brace por formación (2026-10-31)
 

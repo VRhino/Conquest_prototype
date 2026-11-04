@@ -276,7 +276,8 @@ marcha dentro del pasillo; en campo abierto, unas 15. El sistema cuesta 0,15 ms 
 
 **A considerar.**
 - La cola es esperable. Se puede suavizar ordenando la entrada (reubicar primero a los más cercanos a la boca) o con F12
-  (cohesión como consulta: frenar el ancla mientras haya rezagados).
+  (cohesión como consulta: frenar el ancla mientras haya rezagados). La consulta ya existe (2026-11-04,
+  `SquadAIComponent.formationReady`); frenar el ancla con ella no está hecho porque cambiaría también al jugador.
 - Coste: subir `slotResolveRevalidateDistance`, guardar entre validaciones las celdas ya comprobadas, o pasar la sonda a
   `NavMeshQuery` en un job. Medir con S8 (M3) antes de optimizar.
 

@@ -10,8 +10,8 @@ using UnityEngine;
 /// to the ECS entity. Only units/heroes whose prefab has this component will
 /// gain shield blocking capability.
 ///
-/// The actual block logic lives in DamageCalculationSystem (dot-product check
-/// against UnitShieldComponent.orientation). BlockRegenSystem handles regen.
+/// The block is the collider itself: an attack that hits it before the hurtbox is
+/// blocked (DamageCalculationSystem). BlockRegenSystem handles regen.
 /// </summary>
 [RequireComponent(typeof(BoxCollider))]
 public class ShieldHitboxBehaviour : MonoBehaviour
@@ -20,9 +20,6 @@ public class ShieldHitboxBehaviour : MonoBehaviour
     [HideInInspector] public Entity ownerUnit;
 
     [Header("Shield Configuration")]
-    [Tooltip("Shield orientation relative to unit forward")]
-    public ShieldOrientation orientation = ShieldOrientation.Forward;
-
     [Tooltip("Override maxBlock. If 0, uses SquadData.block value")]
     public float maxBlockOverride;
 

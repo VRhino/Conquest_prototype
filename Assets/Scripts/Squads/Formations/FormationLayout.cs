@@ -14,6 +14,9 @@ public static class FormationLayout
     /// <summary>Metres a swap must save; a fixed gain per swap keeps <see cref="UncrossPaths"/> finite.</summary>
     const float MinSwapGain = 0.001f;
 
+    /// <summary>Rounding slack of the quorum count (F12): far below one soldier.</summary>
+    const float QuorumTolerance = 1e-4f;
+
     /// <summary>Index of the formation of the given type in the library, or -1.</summary>
     public static int Find(ref FormationLibraryBlob library, FormationType type)
     {
@@ -175,6 +178,18 @@ public static class FormationLayout
     {
         float s = formationSpacing * (squadScale > 0f ? squadScale : 1f);
         return math.isfinite(s) ? math.max(FormationDefinition.MinSpacing, s) : FormationDefinition.MinSpacing;
+    }
+
+    /// <summary>
+    /// F12 (ref.: the formation is "ready" when at most ceil((1−q)·N) soldiers have not arrived). <paramref name="counted"/>
+    /// leaves out the isolated soldiers, who cannot reach their slot; with none left the formation is ready.
+    /// </summary>
+    public static bool IsFormationReady(int stragglers, int counted, float quorum)
+    {
+        if (counted <= 0) return true;
+        // The tolerance keeps (1 − 0.8)·10 at 2 when float rounding lands it a hair above.
+        int allowed = (int)math.ceil((1f - math.saturate(quorum)) * counted - QuorumTolerance);
+        return stragglers <= math.max(0, allowed);
     }
 
     /// <summary>Layout seed of a squad, stable for its whole battle.</summary>

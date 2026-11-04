@@ -28,6 +28,12 @@ public class HeroAIBlackboard : IComponentData
     public SquadType      ownSquadType;
     public bool           ownSquadIsRanged;
     public bool           squadIsInCombat;
+    /// <summary>F12: the squad's formation is ready (true without a squad, so nothing waits for it).</summary>
+    public bool           squadFormationReady;
+    /// <summary>The hero is holding a charge until its formation is ready (<see cref="HeroAISquadWait"/>).</summary>
+    public bool           waitingForSquad;
+    /// <summary>When the current charge started waiting; the wait never exceeds the tuned maximum.</summary>
+    public double         waitForSquadSince;
     public bool           isUnderAttack;       // enemy within 20m OR own squad in combat, held 0.3 s to open / 1 s to close (L4-02)
     public DebouncedGate  underAttackGate;
     public int            squadUnitCount;

@@ -20,11 +20,11 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Parcial: interruptor de colisión enemiga hecho (P2); evitación fija. Sigue abierto tras F17 |
 | F10 | Ruido aleatorio por publicación frente a determinista | Baja | Decidido: determinista |
 | F11 | Disposición dinámica y "seguir al líder con retardo" | Baja | Pendiente |
-| F12 | Cohesión como consulta: quórum, aislados y terreno no apto | Media | Pendiente |
+| F12 | Cohesión como consulta: quórum, aislados y terreno no apto | Media | **Hecho** (2026-11-04: quórum y aislados; la IA espera antes de cargar; sin teletransporte) |
 | F13 | Postura al ir subido a escaleras, torres o máquinas | Baja | Pendiente (sin asedio) |
 | F14 | Media vuelta (invertir filas en giros grandes) | Baja | Descartado por D5 |
 | F15 | Radios de llegada por formación | Media | **Hecho** (`dcaf6dde`) |
-| F16 | `UnitShieldComponent.orientation` sin lectores | Baja | Pendiente |
+| F16 | `UnitShieldComponent.orientation` sin lectores | Baja | **Hecho** (2026-11-04: eliminado) |
 | F17 | Ocupación de celdas entre escuadras y plantilla por encaje | Media | **Hecho** la ocupación (`8f3b45cf`); el "¿cabe?" por plantilla se descarta |
 | F18 | Escenario de juego que ejercite el cierre de huecos | Media | **Hecho** (2026-11-03, S4GapsSpearmenLine) |
 
@@ -222,6 +222,15 @@ y con C13.
 **Cómo abordarlo.** Una consulta pura en `FormationLayout` (`IsFormationReady(q)`) leída por la IA; el teletransporte solo
 como último recurso tras C13.
 
+**Hecho (2026-11-04, `Movimiento_Formaciones.md` §27).** `FormationLayout.IsFormationReady`: lista si como mucho
+`ceil((1−q)·N)` soldados están a más de `stragglerDistance` de su ranura resuelta. Los aislados (ranura `Unresolved` de C13)
+no cuentan en N porque no pueden llegar. `SquadAISystem` lo publica en `SquadAIComponent` (`formationReady`, `stragglers`,
+`isolated`) y sustituye la dispersión con números fijos; `Regrouping` es ahora "no lista y sin enemigos a la vista". Decisión
+del usuario: lo lee el héroe de IA (Balanced y Rusher, `HeroAISquadWait`). Si va a mandar cargar y la formación no está
+lista, se queda quieto con la escuadra en `FollowHero`; no espera si la escuadra ya combate, si un héroe enemigo está a menos
+de `heroWaitEnemyDistance` ni más de `heroMaxWait` por carga. Ajustes en `SquadSpawnConfig.formationReadiness`.
+El jugador no cambia. Sin teletransporte: no hay ningún caso que lo pida.
+
 ## F13. Postura al ir subido a escaleras, torres o máquinas
 **Qué es.** La referencia elige la postura según el objeto al que va subido el soldado (lista valor → postura). **[dec]**
 
@@ -274,6 +283,9 @@ ejemplo, de 12 a 11 Escuderos), y que mida `gapSlots`, el recorrido de los que s
 **Qué es.** Se rellena desde `ShieldHitboxBehaviour.orientation` del prefab, pero ningún sistema lo lee (el bloqueo es el collider).
 
 **Cómo abordarlo.** Eliminarlo, o usarlo si se añade un bloqueo por ángulo para golpes sin física (habilidades de área).
+
+**Hecho (2026-11-04).** Eliminados `ShieldOrientation`, `UnitShieldComponent.orientation` y `ShieldHitboxBehaviour.orientation`.
+El bloqueo sigue siendo el collider del escudo. Un bloqueo por ángulo, si llega, se diseña entonces.
 
 ## F14. Media vuelta
 **Qué es.** Invertir el orden de filas en giros grandes en lugar de rotar la rejilla.

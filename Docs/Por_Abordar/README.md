@@ -15,11 +15,11 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | [IA.md](./IA.md) | LOD de IA (L4-07), datos de provocación y de parámetros de IA, visibilidad por soldado | `tasks/todo.md` (IA del catálogo), 2026-11-03 |
 | [Combate.md](./Combate.md) | Datos de los rasgos del golpe, terreno y condicionados; reacciones al golpe (L1-09) | `tasks/todo.md` (combate pendiente del catálogo), 2026-11-03 |
 
-## Estado general (2026-11-03, tras combate, formaciones, IA y movimiento del catálogo)
+## Estado general (2026-11-04, tras combate, formaciones, IA y movimiento del catálogo)
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
 |---|---|---|---|
-| Formaciones_y_Posturas.md | F4, F6, F8, F9, F11-F13, F16 (F3 parcial; F18 hecho) | F3 (clips de ShieldWall y Testudo) | F9 cuando haya caso de uso (falta quien apague la colisión y la evitación por escuadra) |
-| Movimiento.md | M4, M10, M12, M15, M16, M18 (escala por la pila; M2 hecho el 2026-10-28) | M3 (paquete de VFX), M17 (sin caballería) | P6 de `game-re/notes/battle-movement-combat.md` solo si vuelven los picos |
+| Formaciones_y_Posturas.md | F4, F6, F8, F9, F11, F13 (F3 parcial; F12, F16 y F18 hechos) | F3 (clips de ShieldWall y Testudo) | F9 cuando haya caso de uso (falta quien apague la colisión y la evitación por escuadra) |
+| Movimiento.md | M10, M12, M15 (M4, M16 y M18 hechos el 2026-11-04) | M3 (paquete de VFX), M17 (sin caballería) | P6 de `game-re/notes/battle-movement-combat.md` solo si vuelven los picos |
 | Habilidades_Perks.md | H3, H4, H12, H14 (H5: falta el árbol) | H2 (animaciones) | H14 (perks con las condiciones nuevas; son datos) |
 | Pila_Modificadores.md | P1, P3, P5 | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 | D1 (clip de muerte) | D1 en cuanto haya clip; D5 (medir el coste de recrear el visual) |

@@ -513,7 +513,7 @@ Lectura:
 - Scatter usa el espaciado como tamaño de celda y el ruido como desplazamiento, sin campos propios.
 - Los radios de llegada se validan contra el espaciado de referencia (1 m); la Testudo (0,8 m) aprieta a propósito.
 - El reparto por cercanía (C12) entró aquí: sin él, S4 se atascaba.
-- La defensa por postura no usa `ShieldOrientation`: ese campo no lo lee nadie y el bloqueo es el collider del escudo, que
+- La defensa por postura no usa la orientación del escudo (eliminada en F16): el bloqueo es el collider del escudo, que
   cuelga de la mano. La defensa saldrá de los clips de postura, que no hay en el proyecto (`Docs/Mechanics/FormationPostures.md`).
 
 ## 12. Frenado de llegada: picos en la melé y llegada al slot (M12, M13, 2026-10-21)
@@ -1130,3 +1130,25 @@ muestras) y correr, el sprint (69 %). Ahora, en `UnitAnimationAdapter`, un solda
 Walk y corre en Run, sin sprint. `MoveSpeed` llega a la coordenada de su clip en el blend tree (3 andando, 5 corriendo) a
 0,6 × base andando y a la base corriendo, y por debajo mezcla con el reposo. El héroe no cambia. Tests: `SoldierGaitTests`
 y, en Play, `SoldiersWalkAndRunAsTheirGearSaysAndNeverSprint`.
+
+## 27. Formación lista: quórum, aislados y la espera de la IA (F12, 2026-11-04)
+
+La referencia pregunta si la formación está lista (como mucho `ceil((1−q)·N)` soldados sin llegar) y qué soldados están
+aislados. Aquí, `SquadAISystem` cuenta como rezagado al soldado a más de `stragglerDistance` (1,5 m) de su ranura resuelta y
+como aislado al de ranura `Unresolved` (C13), que se deja fuera de N. Con `quorum` 0,8, una escuadra de 10 está lista con 2
+rezagados o menos (`FormationLayout.IsFormationReady`). El resultado va a `SquadAIComponent` y a la instantánea del héroe.
+
+Sustituye la dispersión anterior: una distancia al ancla de al menos 10 m que crecía con el cuadrado del número de soldados, y
+que solo alimentaba `Regrouping` en un resumen sin lectores. Ahora `Regrouping` es "no lista y sin enemigos a la vista": en
+combate estar fuera de la ranura es lo normal.
+
+El lector es el héroe de IA (`HeroAISquadWait`, Balanced y Rusher). Si su decisión es cargar (`Attack`) y la formación no está
+lista, se queda quieto y la escuadra forma sobre él (`FollowHero`); al estar lista, carga. No espera si la escuadra ya combate
+(la están atacando o ve enemigos), si un héroe enemigo está a menos de 8 m (`heroWaitEnemyDistance`) ni más de 3 s
+(`heroMaxWait`) en una misma carga; otra decisión cierra la carga y la siguiente vuelve a esperar. Hoy casi todas las cargas
+de la IA salen de "bajo ataque" (héroe enemigo a menos de 20 m), así que la espera cubre sobre todo el tramo entre 20 y 8 m
+antes de que la escuadra vea al enemigo. El jugador no cambia. Ajustes: `SquadSpawnConfig.formationReadiness`. Tests:
+`FormationReadinessTests`.
+
+No se hace: teletransportar a los que caen en terreno no apto (sin caso de uso) ni frenar el ancla mientras haya rezagados
+(M15), que también cambiaría al jugador.

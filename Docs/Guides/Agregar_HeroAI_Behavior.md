@@ -141,6 +141,11 @@ dec.squadOrderPosition = float3;   // solo para HoldPosition
 dec.hasNewSquadOrder = bool;
 ```
 
+Antes de cada `SystemAPI.SetComponent(entity, dec)`, pasa la decisión por
+`HeroAISquadWait.Hold(ref dec, bb, now, readiness)` (F12): una carga (`Attack`) con la formación sin formar se convierte en
+esperar quieto con la escuadra en `FollowHero`. `readiness` es `SquadSpawnConfigComponent.formationReadiness.OrDefault()`.
+Balanced y Rusher lo hacen así.
+
 ---
 
 ## Paso 3 — Registrar el tag en spawn
@@ -185,6 +190,7 @@ Sin structural changes, Burst-friendly, efectivo el próximo frame.
 - [ ] `{NombreBehavior}BehaviorActive.Component.cs` creado en `Hero/AI/Components/`
 - [ ] `HeroAI{NombreBehavior}.System.cs` creado en `Hero/AI/Systems/` con `WithAll<HeroAITag, {NombreBehavior}BehaviorActive>()`
 - [ ] 2 líneas añadidas en `BattleSceneController.cs` (AddComponent + SetComponentEnabled false)
+- [ ] Cada decisión pasa por `HeroAISquadWait.Hold` antes de publicarse (F12)
 - [ ] El system compila sin errores en Unity
 - [ ] En Entity Debugger: el tag aparece **disabled** en héroes sin este behavior asignado
 - [ ] Al habilitar el tag manualmente en Entity Debugger, el héroe cambia de comportamiento

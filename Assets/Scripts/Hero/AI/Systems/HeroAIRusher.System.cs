@@ -7,7 +7,7 @@ using Unity.Transforms;
 ///
 /// Philosophy: win by capturing objectives as fast as possible.
 /// Fights only when an enemy hero is blocking the path to the next objective.
-/// Always sprints when moving.
+/// Always sprints when moving. A squad charge (Attack) waits until the formation is ready (F12, <see cref="HeroAISquadWait"/>).
 ///
 /// Pipeline: HeroAIPerceptionSystem → THIS → HeroAIExecutionSystem
 /// </summary>
@@ -21,6 +21,9 @@ public partial class HeroAIRusherSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        double now = SystemAPI.Time.ElapsedTime;
+        var readiness = SystemAPI.TryGetSingleton<SquadSpawnConfigComponent>(out var config)
+            ? config.formationReadiness.OrDefault() : FormationReadinessTuning.Default;
         foreach (var (transform, life, entity) in
                  SystemAPI.Query<RefRO<LocalTransform>,
                                  RefRO<HeroLifeComponent>>()
@@ -40,6 +43,7 @@ public partial class HeroAIRusherSystem : SystemBase
                     && match.currentState != MatchState.InBattle))
             {
                 dec.action = AIActionType.Idle;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
@@ -54,6 +58,7 @@ public partial class HeroAIRusherSystem : SystemBase
                 dec.shouldAttack     = true;
                 dec.squadOrder       = SquadOrderType.Attack;
                 dec.hasNewSquadOrder = true;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
@@ -71,6 +76,7 @@ public partial class HeroAIRusherSystem : SystemBase
                 dec.squadOrder          = SquadOrderType.HoldPosition;
                 dec.squadOrderPosition  = self;
                 dec.hasNewSquadOrder    = true;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
@@ -85,6 +91,7 @@ public partial class HeroAIRusherSystem : SystemBase
                 dec.shouldAttack     = true;
                 dec.squadOrder       = SquadOrderType.Attack;
                 dec.hasNewSquadOrder = true;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
@@ -98,12 +105,14 @@ public partial class HeroAIRusherSystem : SystemBase
                 dec.shouldSprint     = true;
                 dec.squadOrder       = SquadOrderType.FollowHero;
                 dec.hasNewSquadOrder = true;
+                HeroAISquadWait.Hold(ref dec, bb, now, readiness);
                 SystemAPI.SetComponent(entity, dec);
                 continue;
             }
 
             // 6. No objectives left → idle
             dec.action = AIActionType.Idle;
+            HeroAISquadWait.Hold(ref dec, bb, now, readiness);
             SystemAPI.SetComponent(entity, dec);
         }
     }

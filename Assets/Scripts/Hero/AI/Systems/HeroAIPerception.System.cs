@@ -102,6 +102,7 @@ public partial class HeroAIPerceptionSystem : SystemBase
             // ── Own squad (from TeamWorldState hero snapshot) ──────────
             var myView = ws.For(selfTeam);
             bb.hasSquad = false;
+            bb.squadFormationReady = true;
             foreach (var hero in myView.allyHeroes)
             {
                 if (hero.entity != entity) continue;
@@ -110,6 +111,7 @@ public partial class HeroAIPerceptionSystem : SystemBase
                 bb.ownSquadType      = hero.squadType;
                 bb.ownSquadIsRanged  = hero.isRangedSquad;
                 bb.squadIsInCombat   = hero.squadIsInCombat;
+                bb.squadFormationReady = !hero.hasSquad || hero.squadFormationReady;
                 bb.squadCurrentOrder = hero.squadCurrentOrder;
                 break;
             }

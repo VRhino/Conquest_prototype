@@ -195,7 +195,10 @@ public partial class BattleWorldStateSystem : SystemBase
                     if (_squadDataLookup.HasComponent(sq))
                         snap.isRangedSquad = _squadDataLookup[sq].isRangedUnit;
                     if (_squadAILookup.HasComponent(sq))
-                        snap.squadIsInCombat = _squadAILookup[sq].isInCombat;
+                    {
+                        snap.squadIsInCombat     = _squadAILookup[sq].isInCombat;
+                        snap.squadFormationReady = _squadAILookup[sq].formationReady;
+                    }
                     if (_squadStateLookup.HasComponent(sq))
                     {
                         snap.squadCurrentOrder = _squadStateLookup[sq].currentOrder;
