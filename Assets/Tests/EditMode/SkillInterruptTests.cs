@@ -71,8 +71,11 @@ public class SkillInterruptTests
     {
         Step(0.0, SkillSlot.Q);
         Step(0.1);
+        uint longId = Current.instanceId;
         Step(0.2, SkillSlot.E); // Quick is "yield": Long goes aside.
         Assert.That(Current.skillIndex, Is.EqualTo(1));
+        uint quickId = Current.instanceId;
+        Assert.That(quickId, Is.Not.EqualTo(longId));
         Assert.That(Parked.active, Is.True);
         Assert.That(Parked.instance.skillIndex, Is.EqualTo(0));
 
@@ -81,6 +84,8 @@ public class SkillInterruptTests
         Assert.That(Current.active, Is.True);
         Assert.That(Current.phaseTime, Is.GreaterThan(0.6f), "Its clock kept running while parked.");
         Assert.That(Parked.active, Is.False);
+        Assert.That(Current.instanceId, Is.EqualTo(longId), "Back with its own id, so the effects bound to it (L2-14) stay.");
+        Assert.That(Current.launches, Is.EqualTo(quickId), "The launch count is not rolled back.");
     }
 
     [Test]

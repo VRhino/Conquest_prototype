@@ -25,8 +25,10 @@ public struct SkillInstanceComponent : IComponentData
     public int skillIndex;
     public int phase;
     public float phaseTime;
-    /// <summary>Counter of launches, so events and hits can name the instance.</summary>
+    /// <summary>Id of the running launch, so events, hits and bound effects (L2-14) can name it.</summary>
     public uint instanceId;
+    /// <summary>Launches so far: each new one takes the next id, so ids are never reused, even after a parked skill comes back.</summary>
+    public uint launches;
     /// <summary>The weapon hitbox is open (between the skill's HitboxOpen and HitboxClose events).</summary>
     public bool hitboxOpen;
     /// <summary>Id of the last skill that ended, and when, for chains (L2-3).</summary>

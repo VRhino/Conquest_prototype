@@ -386,11 +386,7 @@ public partial class SkillExecutionSystem : SystemBase
         if (!SystemAPI.HasComponent<ParkedSkillComponent>(entity)) return;
         var parked = SystemAPI.GetComponentRW<ParkedSkillComponent>(entity);
         if (!parked.ValueRO.active) return;
-        var restored = parked.ValueRO.instance;
-        restored.lastSkillId = inst.lastSkillId;
-        restored.lastEndedAt = inst.lastEndedAt;
-        restored.instanceId = inst.instanceId;
-        inst = restored;
+        inst = SkillTimeline.Restore(parked.ValueRO.instance, inst);
         parked.ValueRW.active = false;
     }
 

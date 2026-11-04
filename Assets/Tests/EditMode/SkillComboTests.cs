@@ -59,7 +59,7 @@ public class SkillComboTests
     }
 
     int CurrentHit => _em.GetComponentData<SkillInstanceComponent>(_hero).skillIndex;
-    string State { get { var i = _em.GetComponentData<SkillInstanceComponent>(_hero); return $"t={_t:F2} hit={i.skillIndex} phase={i.phase} time={i.phaseTime:F3} active={i.active} launches={i.instanceId}"; } }
+    string State { get { var i = _em.GetComponentData<SkillInstanceComponent>(_hero); return $"t={_t:F2} hit={i.skillIndex} phase={i.phase} time={i.phaseTime:F3} active={i.active} id={i.instanceId} launches={i.launches}"; } }
     bool Active => _em.GetComponentData<SkillInstanceComponent>(_hero).active;
 
     void TickUntil(double t) { while (_t < t - 1e-9) Tick(false); }

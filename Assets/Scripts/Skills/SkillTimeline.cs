@@ -14,7 +14,8 @@ public static class SkillTimeline
         instance.skillIndex = skillIndex;
         instance.phase = 0;
         instance.phaseTime = 0f;
-        instance.instanceId++;
+        instance.launches++;
+        instance.instanceId = instance.launches;
         instance.hitboxOpen = false;
         Collect(ref skill, 0, 0f, 0f, true, fired);
     }
@@ -72,6 +73,19 @@ public static class SkillTimeline
         }
         Collect(ref skill, instance.phase, 0f, 0f, true, fired);
         return false;
+    }
+
+    /// <summary>
+    /// A parked skill (L2-4) coming back once the one that set it aside ends: it keeps its own id, so the effects bound to
+    /// it (L2-14) stay, and takes over the chain memory and the launch count of the ending one.
+    /// </summary>
+    public static SkillInstanceComponent Restore(in SkillInstanceComponent parked, in SkillInstanceComponent ending)
+    {
+        var restored = parked;
+        restored.lastSkillId = ending.lastSkillId;
+        restored.lastEndedAt = ending.lastEndedAt;
+        restored.launches = ending.launches;
+        return restored;
     }
 
     /// <summary>Whether the current phase lets another skill in (§3.1); an idle hero is always free.</summary>
