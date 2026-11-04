@@ -368,7 +368,9 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 - **Hecho en efectos de habilidad (2026-11-03/04, `SkillsAndPerks.md` §3.2 y §4):** L2-13 (tope de objetivos, los más
   cercanos primero), L2-14 (modificadores ligados a la instancia de la habilidad), L2-10 (pilas con modo al reaplicar y
   duración escalada por quien aplica y quien recibe), L2-11 (daño en el tiempo; Flecha Llameante pasa a impacto más
-  quemadura) y L2-12 (velocidad de ataque en las fases marcadas y en el Animator del héroe).
+  quemadura) y L2-12 (velocidad de ataque en las fases marcadas y en el Animator del héroe). El 2026-11-04 (H15): el
+  tope de L2-13 se cambia con efectos (stat `MaxTargets`), L2-14 sobrevive a la habilidad aparcada, y L2-12 llega a las
+  habilidades de escuadra, al ataque de los soldados y a sus Animator.
 - **Pendiente del catálogo:** L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y

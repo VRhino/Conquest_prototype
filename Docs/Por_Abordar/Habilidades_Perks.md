@@ -20,7 +20,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H14 | Perks con las condiciones nuevas (L2-15) | Baja | Pendiente (datos) |
-| H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (datos y detalles) |
+| H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (datos y arqueros) |
 
 Bloque 3 (2026-10-27, `tasks/todo.md`): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
 L4-08. La mecánica está en `Docs/Mechanics/SkillsAndPerks.md` §3.6, §5 y §8.
@@ -144,13 +144,15 @@ retirarla y restaurarlos al aparecer, junto con H7.
 - **Datos.** Solo Flecha Llameante usa un efecto nuevo (quemadura, L2-11). Ninguna habilidad tiene aún tope de objetivos,
   pilas, efectos ligados ni fases que escalen con la velocidad de ataque, y nada da los stats `AttackSpeed`,
   `EffectDurationOut` o `EffectDurationIn`.
-- **Velocidad de ataque.** Solo el héroe la tiene: las habilidades de escuadra corren a 1, y el ataque de los soldados
-  (`UnitAttackSystem`) no es una habilidad. En el Animator solo escala `swordAttackIsolated`, el único estado de ataque de
-  `AC_Polygon_Masculine`; cuando cada habilidad tenga su animación (H2) habrá que marcar también sus estados. No se
-  ha visto a ojo en juego un ataque acelerado.
-- **Efectos ligados y aparcada.** Al restaurar una habilidad aparcada (`Yield`) toma el id de instancia de la que
-  termina, así que un modificador ligado a la aparcada se retira entonces.
-- **Tope por efectos.** El catálogo pide que el tope de objetivos se pueda cambiar con efectos; hoy es solo dato.
+- **Velocidad de ataque.** Hecho (2026-11-04) para las habilidades de escuadra (media de sus soldados vivos), el ataque
+  cuerpo a cuerpo de los soldados (golpe y pausa) y los estados de ataque de los controladores de soldados. Una prueba
+  PlayMode comprueba en la escena de batalla que el héroe y un escudero animan su ataque al doble. Queda: el disparo y la
+  recarga de los arqueros (`RangedAttackSystem`) no la usan, y cuando cada habilidad tenga su animación (H2) habrá que
+  marcar también sus estados.
+- **Efectos ligados y aparcada.** Hecho (2026-11-04): la aparcada vuelve con su id y los ids salen de un contador de
+  lanzamientos propio (`SkillInstanceComponent.launches`).
+- **Tope por efectos.** Hecho (2026-11-04): stat `MaxTargets` del lanzador sobre el tope de cada evento
+  (`SkillEvents.Cap`).
 
 ## H14. Perks con las condiciones nuevas (L2-15)
 Las condiciones ricas (probabilidad, tipo y clase del objetivo, efectos activos, escuadra restante) están implementadas y

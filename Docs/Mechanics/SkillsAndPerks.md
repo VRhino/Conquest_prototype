@@ -71,7 +71,14 @@ SkillEffectSystem ◄── SkillEffectRequestComponent (eventos de efecto con p
 - `final`. Es la fase de liberación, siempre la última.
 - `charge`. Marca la fase de carga.
 - `scalesWithAttackSpeed` (L2-12). La fase dura `duration / AttackSpeed` y sus eventos llegan antes. El ataque básico
-  escala entero; las habilidades, solo las fases que lo marquen.
+  escala entero; las habilidades, solo las fases que lo marquen. Una habilidad de escuadra usa la media de `AttackSpeed`
+  de sus soldados vivos, porque la escuadra no tiene ese stat propio y los efectos sobre ella caen en sus soldados.
+- El ataque de los soldados (`UnitAttackSystem`) no es una habilidad: su `AttackSpeed` acelera todo su ritmo, el golpe y
+  la pausa entre golpes (`attackInterval`). Las ventanas de golpe quedan en el mismo punto del golpe.
+- En el Animator, el parámetro `AttackSpeed` multiplica la velocidad de los estados de ataque. Lo tienen el ataque del
+  héroe (`swordAttackIsolated` de `AC_Polygon_Masculine`) y los de los soldados: `AC_Pikemen` (`swordAttackIsolated`,
+  `Thrust Front`, `Thrust Rear`), `AC_Spearmen` (`swordAttackIsolated`) y `AC_Unit_Combat` de escuderos
+  (`Combat/Attack`). `UnitAnimatorController` se lo pasa a cada soldado.
 
 Una habilidad sin fases recibe tres por defecto:
 - Preparación, 0,25 s, interrumpible.
@@ -86,6 +93,8 @@ Su `areaRadius` y su `damageMultiplier` se convierten en un golpe en área al em
 - `Yield`: si la actual no está en su fase final, se aparca y se restaura cuando la nueva termina.
 - Solo hay una aparcada. Su reloj sigue corriendo y sus eventos no se aplican mientras está aparcada.
 - Si la aparcada termina mientras está aparcada, no vuelve.
+- Al volver conserva su id de instancia, así que sus efectos ligados (L2-14) siguen. Cada lanzamiento toma un id nuevo
+  de `SkillInstanceComponent.launches`, que no retrocede al restaurar.
 - Los perks activos son `Yield`: no cortan el ataque en curso.
 
 ### 3.4 Combo del ataque básico
@@ -148,7 +157,9 @@ Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
 | `DamageOverTime` | Daño en el tiempo (L2-11): los enemigos del área (como `AreaDamage`) reciben cada `period` segundos, durante `duration`, un golpe del perfil del lanzador × `value`, forma `Ability`, por la misma fórmula, escudos y suelo. El primer tic llega un periodo después; al relanzar sigue `reapply` y conserva el ritmo |
 
 Comunes a los eventos de área y de efecto:
-- `maxTargets` (L2-13): como mucho esos objetivos, los más cercanos al centro primero; 0 = todos.
+- `maxTargets` (L2-13): como mucho esos objetivos, los más cercanos al centro primero; 0 = todos. Los efectos lo
+  cambian con el stat `MaxTargets` del lanzador, que toma el tope del evento como base: un ratio lo escala y un plano
+  suma objetivos (`SkillEvents.Cap`). Siempre queda al menos uno, y un evento sin tope sigue sin tope.
 - Duración (L2-10): la de cada efecto se multiplica por `EffectDurationOut` del lanzador y `EffectDurationIn` del objetivo
   (stats de la pila, base 1).
 - **Corrección (2026-11-03):** `SkillExecutionSystem` reenviaba solo área, modificador, escudo y embestida, así que
