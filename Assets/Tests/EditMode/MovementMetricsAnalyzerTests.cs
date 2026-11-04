@@ -151,7 +151,10 @@ public class MovementMetricsAnalyzerTests
             a.slotDistance = 2f; a.speed = t >= 0.5f && t < 1.5f ? 0f : 3f;
             var b = Unit(f, t, 1, UnitFormationState.Formed);
             b.slotDistance = 0.1f;
-            units.Add(a); units.Add(b);
+            // Unit 2 stands 3 m from its slot all along, fighting a target 1 m away: a stall, but not an idle one (M16).
+            var d = Unit(f, t, 2, UnitFormationState.Moving);
+            d.slotDistance = 3f; d.speed = 0f; d.target = 7; d.targetDistance = 1f;
+            units.Add(a); units.Add(b); units.Add(d);
         }
 
         var s = MovementMetricsAnalyzer.Analyze("S7", frames, units);
@@ -159,7 +162,8 @@ public class MovementMetricsAnalyzerTests
         Assert.That(s.maxStackedDestinations, Is.EqualTo(3));
         Assert.That(s.meanStackedDestinations, Is.EqualTo(15f / 21f).Within(1e-4f));
         Assert.That(s.maxDetourDestinations, Is.EqualTo(2));
-        Assert.That(s.stalls, Is.EqualTo(1));
+        Assert.That(s.stalls, Is.EqualTo(2));
+        Assert.That(s.idleStalls, Is.EqualTo(1), "Only the unit with nobody to fight is stuck.");
     }
 
     [Test]

@@ -838,6 +838,9 @@ Lectura:
   filtro de cota no actúa; lo cubren los tests de EditMode.
 - Las «paradas» del resumen (unidad quieta a más de 1 m de su slot) suben en la melé (S6 de 13 a 26). **[hip]** Son
   unidades quietas en su puesto de contacto, que con el reparto son más; fuera de la melé (S1, S4) no cambian.
+  **Confirmado (2026-11-04, M16):** el resumen cuenta aparte las paradas sin objetivo a menos de `ContactRange` (2,5 m),
+  `idleStalls`. En tres corridas, S6 da 24/40/43 paradas y 1/0/2 sin objetivo; S7, 20/41/36 y 4/4/4 (las colas del
+  pasillo, M15). Casi todas son soldados luchando en su puesto; las de unidades atascadas son `idleStalls`.
 - S1 ya no es reproducible en el tiempo hasta formar: con el mismo código da 0,17, 0,37 y 0,43 s. El error en marcha sí se
   repite exacto (0,50 m), así que es el dato de regresión de S1.
 

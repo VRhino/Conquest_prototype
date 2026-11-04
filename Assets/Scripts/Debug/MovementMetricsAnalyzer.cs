@@ -119,6 +119,11 @@ public sealed class MovementMetricsSummary
     public int maxDetourDestinations;
     /// <summary>Episodes of a unit standing still far from its slot for longer than <see cref="MovementMetricsAnalyzer.StallPersistence"/>.</summary>
     public int stalls;
+    /// <summary>
+    /// The <see cref="stalls"/> of units with no target within <see cref="MovementMetricsAnalyzer.ContactRange"/> (M16): stuck,
+    /// not fighting at their contact post. In a melee most stalls are attackers standing at their post, far from their slot.
+    /// </summary>
+    public int idleStalls;
     public int maxRelocatedSlots;
     public int maxUnresolvedSlots;
     public float slotQueriesMarchingPerUnitPerSecond;
@@ -171,7 +176,7 @@ public sealed class MovementMetricsSummary
         s.AppendLine($"  destinations sharing a cell with an allied squad: mean={meanAlliedSharedCells.ToString("F2", c)} max={maxAlliedSharedCells} in {(alliedSharedCellFrameRatio * 100f).ToString("F1", c)} % of frames");
         s.AppendLine($"  gaps (soldiers past the alive count): mean={meanGapSlots.ToString("F2", c)} max={maxGapSlots} in {(gapFrameRatio * 100f).ToString("F1", c)} % of frames");
         s.AppendLine($"  squad stamina: min={(minStaminaFraction * 100f).ToString("F0", c)} % exhausted in {(staminaExhaustedFrameRatio * 100f).ToString("F1", c)} % of frames");
-        s.AppendLine($"  stalls (still beyond {MovementMetricsAnalyzer.StallDistance.ToString("F1", c)} m of the slot > {MovementMetricsAnalyzer.StallPersistence.ToString("F1", c)} s): {stalls}");
+        s.AppendLine($"  stalls (still beyond {MovementMetricsAnalyzer.StallDistance.ToString("F1", c)} m of the slot > {MovementMetricsAnalyzer.StallPersistence.ToString("F1", c)} s): {stalls}, without a target in contact: {idleStalls}");
         s.Append($"  ms: UnitFormationState={meanFormationStateMs.ToString("F3", c)} UnitNavMesh={meanNavMeshMs.ToString("F3", c)} UnitFollowFormation={meanFollowFormationMs.ToString("F3", c)} UnitAvoidance={meanAvoidanceMs.ToString("F3", c)} FormationSlotResolve={meanSlotResolveMs.ToString("F3", c)}");
         return s.ToString();
     }
@@ -494,6 +499,8 @@ public static class MovementMetricsAnalyzer
             bool counted = false;
             float stillSince = -1f;
             bool stallCounted = false;
+            float idleSince = -1f;
+            bool idleCounted = false;
             for (int i = 0; i < series.Count; i++)
             {
                 var u = series[i];
@@ -503,6 +510,13 @@ public static class MovementMetricsAnalyzer
                 {
                     if (stillSince < 0f) stillSince = u.time;
                     if (!stallCounted && u.time - stillSince >= StallPersistence) { summary.stalls++; stallCounted = true; }
+                }
+                bool idle = still && !(u.target >= 0 && u.targetDistance >= 0f && u.targetDistance <= ContactRange);
+                if (!idle) { idleSince = -1f; idleCounted = false; }
+                else
+                {
+                    if (idleSince < 0f) idleSince = u.time;
+                    if (!idleCounted && u.time - idleSince >= StallPersistence) { summary.idleStalls++; idleCounted = true; }
                 }
                 bool beyond = u.reacting && u.slotDistance > limits.leashDistance;
                 if (!beyond) { beyondSince = -1f; counted = false; }

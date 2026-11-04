@@ -22,7 +22,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M13 | Llegada más lenta al frenar con aceleración limitada | Media | **Hecho** en S4; S3 con matiz (primera parada) |
 | M14 | Aceleración en S7 multitud con C13 | Media | **Hecho** (medido: dentro de M10; 1,4 % con L4-04) |
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
-| M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | Pendiente (comprobar en vídeo) |
+| M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | **Hecho** (2026-11-04: son soldados en contacto; métrica `idleStalls`) |
 | M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Bloqueado (sin caballería) |
 | M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** (datos 2026-11-03; escala por la pila 2026-11-04) |
 
@@ -303,3 +303,8 @@ distingue esa parada de una unidad atascada sin objetivo.
 
 **Cómo abordarlo.** Revisar el vídeo de S6 (`Recordings/MovementBaseline`) y, si hace falta, contar en el analizador solo las
 paradas sin objetivo o lejos del objetivo.
+
+**Hecho (2026-11-04).** El analizador cuenta aparte `idleStalls`: paradas sin objetivo a menos de `ContactRange` (2,5 m).
+Tres corridas: S6 da 24/40/43 paradas y solo 1/0/2 sin objetivo; S7, 20/41/36 y 4/4/4. La hipótesis se confirma: son
+atacantes en su puesto. Las 4 de S7 son las colas del pasillo (M15). A partir de ahora, la regresión de atascos es
+`idleStalls`, no `stalls`.
