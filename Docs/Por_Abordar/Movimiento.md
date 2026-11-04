@@ -24,7 +24,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | Pendiente (comprobar en vídeo) |
 | M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Bloqueado (sin caballería) |
-| M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** los datos (2026-11-03); falta la escala por la pila |
+| M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** (datos 2026-11-03; escala por la pila 2026-11-04) |
 
 ---
 
@@ -283,7 +283,8 @@ dura 10 / coste:
 | Arqueros | 120 | 0,5 | 20 s | 8 | 30 % |
 
 En S1, S3, S4, S6, S7 y S9 (y sus variantes) el aguante mínimo de la escuadra medida queda entre el 79 y el 93 % y nunca se
-agota: el movimiento normal no cansa; cansan las cargas largas encadenadas. Queda: la escala del coste por la pila. Sin barra
+agota: el movimiento normal no cansa; cansan las cargas largas encadenadas. **Escala hecha (2026-11-04):** stat de escuadra
+`StaminaCost` (`Movimiento_Formaciones.md` §25); ningún asset lo usa aún. Sin barra
 de aguante de escuadra en el HUD (decisión del usuario, 2026-11-03).
 
 **Qué es.** El aguante de escuadra funciona y está probado, pero ningún `SquadData` tiene `staminaMax`, así que hoy nadie

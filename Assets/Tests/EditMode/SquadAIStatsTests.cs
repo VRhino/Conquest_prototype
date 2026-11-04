@@ -18,16 +18,19 @@ public class SquadAIStatsTests
         Assert.That(neutral.detectionRangeScale, Is.EqualTo(1f));
         Assert.That(neutral.combatRadiusScale, Is.EqualTo(1f));
         Assert.That(neutral.heroBias, Is.EqualTo(0f));
+        Assert.That(neutral.staminaCostScale, Is.EqualTo(1f));
 
         StatStack.Add(em, squad, StatId.AIDetectionRange, ModifierOp.Ratio, 0.5f, ModifierSource.Effect);
         StatStack.Add(em, squad, StatId.AICombatRadius, ModifierOp.Ratio, -0.25f, ModifierSource.Effect);
         StatStack.Add(em, squad, StatId.AIHeroBias, ModifierOp.Flat, -0.3f, ModifierSource.Effect);
+        StatStack.Add(em, squad, StatId.StaminaCost, ModifierOp.Ratio, -0.4f, ModifierSource.Perk);
         StatStack.MarkDirty(em, squad);
         world.GetOrCreateSystemManaged<StatResolveSystem>().Update();
         var stats = em.GetComponentData<SquadAIStatsComponent>(squad);
         Assert.That(stats.detectionRangeScale, Is.EqualTo(1.5f).Within(1e-5f));
         Assert.That(stats.combatRadiusScale, Is.EqualTo(0.75f).Within(1e-5f));
         Assert.That(stats.heroBias, Is.EqualTo(-0.3f).Within(1e-5f), "A bias may be negative.");
+        Assert.That(stats.staminaCostScale, Is.EqualTo(0.6f).Within(1e-5f));
     }
 
     [Test]

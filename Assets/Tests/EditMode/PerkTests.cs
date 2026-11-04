@@ -108,6 +108,32 @@ public class PerkTests
     }
 
     [Test]
+    public void AnAuraWithASquadStatGoesOnTheSquadItself()
+    {
+        _world.SetTime(new Unity.Core.TimeData(1.0, 0.1f));
+        var hero = Body(float3.zero, Team.TeamA);
+        var unit = Body(new float3(2f, 0f, 0f), Team.TeamA);
+        var squad = _em.CreateEntity();
+        _em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = unit });
+        UnitStatsUtility.SeedSquadAI(squad, _em);
+        _em.AddComponentData(hero, new HeroSquadReference { squad = squad });
+        _em.AddComponent<HeroMotionComponent>(hero);
+        _em.AddBuffer<HeroPerkElement>(hero).Add(new HeroPerkElement
+        {
+            perkId = 3,
+            effect = new PerkEffect { trigger = PerkTrigger.Always, target = PerkTarget.OwnSquad,
+                stat = StatId.StaminaCost, op = ModifierOp.Ratio, value = -0.25f },
+        });
+        _world.GetOrCreateSystemManaged<PerkAuraSystem>().Update();
+        Assert.That(_em.GetBuffer<StatModifier>(unit).Length, Is.EqualTo(0), "Not on the soldiers.");
+        var mods = _em.GetBuffer<StatModifier>(squad);
+        Assert.That(mods.Length, Is.EqualTo(1));
+        Assert.That(mods[0].stat, Is.EqualTo(StatId.StaminaCost));
+        _world.GetOrCreateSystemManaged<StatResolveSystem>().Update();
+        Assert.That(_em.GetComponentData<SquadAIStatsComponent>(squad).staminaCostScale, Is.EqualTo(0.75f).Within(1e-5f));
+    }
+
+    [Test]
     public void OnHitEffectsSlowTheTargetWhenTheConditionHolds()
     {
         _world.SetTime(new Unity.Core.TimeData(10.0, 0.1f));

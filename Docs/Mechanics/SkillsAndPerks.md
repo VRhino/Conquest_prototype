@@ -166,8 +166,9 @@ Comunes a los eventos de área y de efecto:
   `ApplyConditional` y `Taunt` no llegaban desde una habilidad real; ahora todos los eventos de efecto pasan por
   `SkillEvents.IsEffect`, para héroes y escuadras.
 
-Un `ApplyModifier` sobre los stats de IA de escuadra (`AIDetectionRange`, `AICombatRadius`, `AIHeroBias`, L4-10) se
-aplica a la escuadra de cada soldado alcanzado, una vez. Los golpes de `AreaDamage` llevan la forma `Ability` y el id de la habilidad, para las condiciones, y tiran la variación
+Un `ApplyModifier` sobre los stats de escuadra (`AIDetectionRange`, `AICombatRadius`, `AIHeroBias`, L4-10, y
+`StaminaCost`, M18) se aplica a la escuadra de cada soldado alcanzado, una vez. Un perk de aura `OwnSquad` con uno de esos
+stats también va a la entidad de escuadra, no a sus soldados. Los golpes de `AreaDamage` llevan la forma `Ability` y el id de la habilidad, para las condiciones, y tiran la variación
 del arma del lanzador (L1-12).
 
 **Objetivos** (`SkillTarget`):

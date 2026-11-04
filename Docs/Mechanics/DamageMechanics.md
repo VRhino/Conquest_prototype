@@ -480,7 +480,7 @@ Patrón de la referencia, por pareja escuadra → enemigo (una escuadra o un hé
 
 - La entidad de escuadra tiene su propia pila con `AIDetectionRange` y `AICombatRadius` (multiplicadores, base 1) y
   `AIHeroBias` (base 0); `StatResolveSystem` los escribe en `SquadAIStatsComponent`. Un `ApplyModifier` de habilidad con
-  esos stats que alcanza a soldados va a su escuadra.
+  esos stats que alcanza a soldados va a su escuadra. La misma pila lleva `StaminaCost` (coste de correr, M18).
 - `AggroBiasElement` (en la escuadra) suma un sesgo hacia un enemigo, o su escuadra, a la puntuación de melé, después de
   la saturación, hasta que caduca. Lo pone el evento de habilidad `Taunt`. No afecta a los arqueros ni a los héroes.
 

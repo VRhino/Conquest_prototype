@@ -35,10 +35,16 @@ public struct SquadAIStatsComponent : IComponentData
     public float detectionRangeScale;
     public float combatRadiusScale;
     public float heroBias;
+    /// <summary>Multiplier of the stamina each running soldier spends (M18); read by <see cref="SquadStaminaSystem"/>.</summary>
+    public float staminaCostScale;
 
-    public static SquadAIStatsComponent Neutral => new SquadAIStatsComponent { detectionRangeScale = 1f, combatRadiusScale = 1f };
+    public static SquadAIStatsComponent Neutral => new SquadAIStatsComponent
+    {
+        detectionRangeScale = 1f, combatRadiusScale = 1f, staminaCostScale = 1f,
+    };
 
     /// <summary>Stats that belong to the squad, not to its soldiers: a skill aimed at a soldier sends them to its squad.</summary>
     public static bool IsSquadStat(StatId stat)
-        => stat == StatId.AIDetectionRange || stat == StatId.AICombatRadius || stat == StatId.AIHeroBias;
+        => stat == StatId.AIDetectionRange || stat == StatId.AICombatRadius || stat == StatId.AIHeroBias
+            || stat == StatId.StaminaCost;
 }

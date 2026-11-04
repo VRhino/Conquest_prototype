@@ -57,6 +57,8 @@ public enum StatId : byte
     /// scales every capped skill and a flat adds targets to it. Events without a cap stay uncapped. See <see cref="SkillEvents.Cap"/>.
     /// </summary>
     MaxTargets,
+    /// <summary>Multiplier of the squad's running stamina cost (M18; base 1). Lives on the squad entity.</summary>
+    StaminaCost,
     Count,
 }
 

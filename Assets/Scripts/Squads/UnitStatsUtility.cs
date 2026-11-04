@@ -94,8 +94,8 @@ public static class UnitStatsUtility
     }
 
     /// <summary>
-    /// The squad entity's own stack for its AI parameters (L4-10): bases 1, 1 and 0, so nothing changes until an effect
-    /// adds a modifier. Once per squad.
+    /// The squad entity's own stack for its AI parameters (L4-10) and its stamina cost (M18): bases 1, 1, 0 and 1, so
+    /// nothing changes until an effect adds a modifier. Once per squad.
     /// </summary>
     public static void SeedSquadAI(Entity squadEntity, EntityManager entityManager)
     {
@@ -103,6 +103,7 @@ public static class UnitStatsUtility
         StatStack.Ensure(entityManager, squadEntity);
         StatStack.SetBase(entityManager, squadEntity, StatId.AIDetectionRange, 1f);
         StatStack.SetBase(entityManager, squadEntity, StatId.AICombatRadius, 1f);
+        StatStack.SetBase(entityManager, squadEntity, StatId.StaminaCost, 1f);
         entityManager.AddComponentData(squadEntity, SquadAIStatsComponent.Neutral);
         StatStack.MarkDirty(entityManager, squadEntity);
     }

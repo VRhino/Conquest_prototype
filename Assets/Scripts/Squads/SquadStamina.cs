@@ -35,10 +35,12 @@ public static class SquadStamina
     public static bool IsRunning(MovementGear gear, float speed, float walkingSpeed, float factor)
         => gear == MovementGear.Run && speed > walkingSpeed * factor;
 
-    public static void Step(ref SquadStaminaComponent s, int runners, float deltaTime)
+    /// <param name="costScale">The squad's <see cref="StatId.StaminaCost"/> (M18): 1 = the squad type's cost, 0 = running is free.</param>
+    public static void Step(ref SquadStaminaComponent s, int runners, float deltaTime, float costScale = 1f)
     {
         if (s.max <= 0f) { s.exhausted = false; return; }
-        if (runners > 0 && s.runCostPerSoldier > 0f) s.current -= runners * s.runCostPerSoldier * deltaTime;
+        // Running never recovers, even when it costs nothing.
+        if (runners > 0) s.current -= runners * s.runCostPerSoldier * math.max(0f, costScale) * deltaTime;
         else s.current += s.recoveryPerSecond * deltaTime;
         s.current = math.clamp(s.current, 0f, s.max);
         if (s.current <= 0f) s.exhausted = true;
@@ -48,8 +50,8 @@ public static class SquadStamina
 
 /// <summary>
 /// Spends and recovers each squad's stamina from its soldiers that really run (L5-7, <see cref="SquadStamina.IsRunning"/>).
-/// Reads the gears <see cref="UnitFollowFormationSystem"/> chose this frame and the measured speeds; only writes
-/// <see cref="SquadStaminaComponent"/>.
+/// Reads the gears <see cref="UnitFollowFormationSystem"/> chose this frame, the measured speeds and the squad's resolved
+/// stamina cost (M18, <see cref="SquadAIStatsComponent.staminaCostScale"/>); only writes <see cref="SquadStaminaComponent"/>.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitFollowFormationSystem))]
@@ -64,7 +66,9 @@ public partial struct SquadStaminaSystem : ISystem
             ? tuning.staminaRunSpeedFactor : MovementTuningComponent.Default.staminaRunSpeedFactor;
         var gears = SystemAPI.GetComponentLookup<UnitMovementGearComponent>(true);
         var motion = SystemAPI.GetComponentLookup<UnitAnimationMovementComponent>(true);
-        foreach (var (stamina, units) in SystemAPI.Query<RefRW<SquadStaminaComponent>, DynamicBuffer<SquadUnitElement>>())
+        var squadStats = SystemAPI.GetComponentLookup<SquadAIStatsComponent>(true);
+        foreach (var (stamina, units, squad) in SystemAPI.Query<RefRW<SquadStaminaComponent>, DynamicBuffer<SquadUnitElement>>()
+                     .WithEntityAccess())
         {
             int runners = 0;
             for (int i = 0; i < units.Length; i++)
@@ -73,7 +77,8 @@ public partial struct SquadStaminaSystem : ISystem
                 if (gears.TryGetComponent(unit, out var gear) && motion.TryGetComponent(unit, out var m)
                     && SquadStamina.IsRunning(gear.gear, m.CurrentSpeed, m.MaxSpeed, factor)) runners++;
             }
-            SquadStamina.Step(ref stamina.ValueRW, runners, dt);
+            float costScale = squadStats.TryGetComponent(squad, out var stats) ? stats.staminaCostScale : 1f;
+            SquadStamina.Step(ref stamina.ValueRW, runners, dt, costScale);
         }
     }
 }

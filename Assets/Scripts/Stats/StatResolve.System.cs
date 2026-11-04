@@ -125,6 +125,7 @@ public partial class StatResolveSystem : SystemBase
                 combatRadiusScale = stats.Get(StatId.AICombatRadius),
                 // A bias may be negative (keep soldiers off heroes): read it unclamped.
                 heroBias = StatMath.Resolve(StatMath.Base(b, StatId.AIHeroBias), m, StatId.AIHeroBias, now),
+                staminaCostScale = stats.Get(StatId.StaminaCost),
             });
         if (SystemAPI.HasComponent<CombatStatsComponent>(entity))
             SystemAPI.SetComponent(entity, new CombatStatsComponent

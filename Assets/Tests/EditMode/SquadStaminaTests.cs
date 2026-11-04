@@ -47,12 +47,29 @@ public class SquadStaminaTests
     }
 
     [Test]
-    public void TheSystemCountsTheSoldiersThatReallyRun()
+    public void TheCostScalesWithTheSquadStack()
+    {
+        var s = Pool();
+        SquadStamina.Step(ref s, 4, 1f, 0.5f);
+        Assert.That(s.current, Is.EqualTo(8f), "Four runners at half the cost.");
+        SquadStamina.Step(ref s, 4, 1f, -1f);
+        Assert.That(s.current, Is.EqualTo(8f), "A negative scale is free running: no cost and no recovery.");
+    }
+
+    [TestCase(1f, 9f)]
+    [TestCase(0.5f, 9.5f)]
+    public void TheSystemCountsTheSoldiersThatReallyRun(float costScale, float expected)
     {
         using var world = new World("Squad stamina");
         var em = world.EntityManager;
         var squad = em.CreateEntity();
         em.AddComponentData(squad, Pool());
+        if (costScale != 1f)
+        {
+            var stats = SquadAIStatsComponent.Neutral;
+            stats.staminaCostScale = costScale;
+            em.AddComponentData(squad, stats);
+        }
         em.AddBuffer<SquadUnitElement>(squad);
         // Two run at 6 m/s, one fights standing in the Run gear, one walks.
         float[] speeds = { 6f, 6f, 0f, 3f };
@@ -66,7 +83,7 @@ public class SquadStaminaTests
         world.SetTime(new TimeData(1.0, 0.5f));
         var system = world.GetOrCreateSystem<SquadStaminaSystem>();
         system.Update(world.Unmanaged);
-        Assert.That(em.GetComponentData<SquadStaminaComponent>(squad).current, Is.EqualTo(9f).Within(1e-5f),
-            "Two runners, half a second.");
+        Assert.That(em.GetComponentData<SquadStaminaComponent>(squad).current, Is.EqualTo(expected).Within(1e-5f),
+            "Two runners, half a second, at the squad's cost scale.");
     }
 }

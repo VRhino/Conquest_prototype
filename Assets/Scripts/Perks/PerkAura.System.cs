@@ -67,6 +67,8 @@ public partial class PerkAuraSystem : SystemBase
                 if (!SystemAPI.HasComponent<HeroSquadReference>(hero)) break;
                 var squad = SystemAPI.GetComponent<HeroSquadReference>(hero).squad;
                 if (!SystemAPI.Exists(squad) || !SystemAPI.HasBuffer<SquadUnitElement>(squad)) break;
+                // A stat of the squad itself (its AI parameters, its stamina cost) goes on the squad once, as skills do.
+                if (SquadAIStatsComponent.IsSquadStat(effect.stat)) { targets.Add(squad); break; }
                 foreach (var unit in SystemAPI.GetBuffer<SquadUnitElement>(squad))
                     if (SystemAPI.Exists(unit.Value)) targets.Add(unit.Value);
                 break;
