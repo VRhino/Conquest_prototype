@@ -352,12 +352,12 @@ Notas:
 
 # Plan: movimiento abierto sin dependencias (M18, M16, M4)
 
-Estado: **hecho** (2026-11-04) salvo el arreglo de M4, rama `main` local, sin subir. Petición del usuario: "lo que puedas abordar en orden sin que
+Estado: **hecho** (2026-11-04), rama `main` local, sin subir. Petición del usuario: "lo que puedas abordar en orden sin que
 dependa de otro punto". Fuera: M10 (ajuste de proyecto, decisión del usuario), M15 (el coste se mide con S8, bloqueado; la
 cola se suaviza con F12), M17 y M3 (bloqueados).
 
 - [x] 1. M18: stat de escuadra `StaminaCost` que multiplica el coste de correr; los perks de aura `OwnSquad` con stats de
       escuadra van a la entidad de escuadra. Correr nunca recupera.
 - [x] 2. M16: el analizador cuenta aparte las paradas sin objetivo en contacto (`idleStalls`); medir S6 y S7.
-- [x] 3. M4: comprobado con las muestras de S1; la animación va un paso por encima. Arreglo pendiente de decisión.
+- [x] 3. M4: la animación de los soldados sigue su marcha (andar en Walk, correr en Run, sin sprint).
 - [ ] 4. Docs y commit por punto; EditMode y PlayMode S1/S6 en verde antes de cada commit.

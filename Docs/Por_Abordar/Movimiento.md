@@ -10,7 +10,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M1 | Error al slot en marcha por encima de 0,5 m | Alta | **Hecho** (S1 0,51 m con C10 y margen en Walk) |
 | M2 | Solapes enemigos persistentes en la melé (S6) | Alta | **Hecho** (2026-10-28, P0+P1: S6 de 9 a 0 y S7 de 12 a 0) |
 | M3 | Escena real con 900 agentes (S8) | Alta | Bloqueado (paquete de VFX) |
-| M4 | Animación del paso a carrera | Media | Pendiente (comprobado 2026-11-04: va un paso por encima; decisión del usuario) |
+| M4 | Animación del paso a carrera | Media | **Hecho** (2026-11-04: el paso sigue la marcha; falta verlo en vídeo) |
 | M5 | Llegada del ancla (C10) | Media | **Hecho** |
 | M6 | Anillo de contacto sin cupo duro (C11) | Media | **Hecho**; la saturación blanda de D6 ya está (L4-04) |
 | M7 | Reasignación de slots por distancia (C12) | Baja | **Hecho** (`e0aa54a1`) |
@@ -107,10 +107,13 @@ La animación sí cambia con la marcha, pero un paso por encima. Andando en form
 sprint. La coordenada del blend tree (`MoveSpeed`) también sube: un escudero que anda a 3 m/s recibe 5 (la de correr) y uno
 que corre a 6 m/s, 12. Los prefabs de soldado no cambian estos umbrales.
 
-**Opciones.**
-1. Paso según la marcha: Walk → andar, Run → correr, y sin sprint para los soldados, con `MoveSpeed` según la velocidad
-   real.
-2. Dejarlo así si en vídeo se ve bien. A la vista del usuario.
+**Hecho (2026-11-04, opción elegida por el usuario: el paso sigue la marcha).** Un soldado con `UnitMovementGearComponent`
+anda en Walk y corre en Run, sin sprint (`LocomotionAnimationSettings.GetGait(MovementGear, …)`). `MoveSpeed` llega a la
+coordenada de su clip (3 andando, 5 corriendo) a 0,6 × base andando y a la base corriendo. Por debajo mezcla con el reposo,
+como al arrancar o al parar. El héroe y los soldados sin marcha siguen con la regla anterior. Lo prueban `SoldierGaitTests`
+y, en Play, `SoldiersWalkAndRunAsTheirGearSaysAndNeverSprint` (marcha de 6 s: nunca esprinta y el paso coincide con la
+marcha). Queda verlo en vídeo; los clips no ajustan su ritmo a la velocidad, así que los Lanceros que andan a 5 m/s pueden
+deslizar los pies.
 
 ## M5. Llegada del ancla (C10)
 **Qué es.** Que el ancla de la escuadra tenga velocidad y aceleración propias (llegada tipo *arrive*) en lugar de ser el héroe

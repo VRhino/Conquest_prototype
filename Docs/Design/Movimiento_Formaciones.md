@@ -1121,3 +1121,12 @@ El contacto mínimo sigue en 1,00 m (dos cuerpos de 0,5 m), como antes, y el res
 la regla con cuerpos distintos está probada en EditMode (`BodyRadiusTests`).
 
 **L5-6 y L5-8** (monturas) quedan bloqueados sin caballería (`Docs/Por_Abordar/Movimiento.md` M17).
+
+## 26. La animación de los soldados sigue su marcha (M4, 2026-11-04)
+
+El paso de la animación se medía frente a la velocidad base: correr por encima de 0,6 × base y esprintar por encima de
+1,1 × base. Como la marcha Walk va hasta la base y Run al doble, en S1 andar en formación mostraba la carrera (87 % de las
+muestras) y correr, el sprint (69 %). Ahora, en `UnitAnimationAdapter`, un soldado con `UnitMovementGearComponent` anda en
+Walk y corre en Run, sin sprint. `MoveSpeed` llega a la coordenada de su clip en el blend tree (3 andando, 5 corriendo) a
+0,6 × base andando y a la base corriendo, y por debajo mezcla con el reposo. El héroe no cambia. Tests: `SoldierGaitTests`
+y, en Play, `SoldiersWalkAndRunAsTheirGearSaysAndNeverSprint`.

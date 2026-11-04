@@ -252,16 +252,26 @@ namespace ConquestTactics.Animation
                 Vector3 worldDirection = new Vector3(animData.MovementDirection.x, 0f, animData.MovementDirection.z);
                 Vector3 localDirection = transform.InverseTransformDirection(worldDirection);
                 MovementVector = new Vector2(localDirection.x, localDirection.z);
-                bool sprintAllowed = animData.MaxSpeed > 0f
-                    && animData.RequestedSpeed > animData.MaxSpeed * _locomotion.sprintSpeedRatio;
-                Gait = animData.IsMoving
-                    ? _locomotion.GetGait(Speed2D, animData.MaxSpeed, sprintAllowed)
-                    : LocomotionGait.Idle;
+                if (_entityManager.HasComponent<UnitMovementGearComponent>(_unitEntity))
+                {
+                    // A soldier walks or runs as its movement gear says (M4), never sprints.
+                    var gear = _entityManager.GetComponentData<UnitMovementGearComponent>(_unitEntity).gear;
+                    Gait = animData.IsMoving ? _locomotion.GetGait(gear, Speed2D) : LocomotionGait.Idle;
+                    AnimatorSpeed = Gait == LocomotionGait.Idle ? 0f : _locomotion.GetBlendSpeed(gear, Speed2D, animData.MaxSpeed);
+                }
+                else
+                {
+                    bool sprintAllowed = animData.MaxSpeed > 0f
+                        && animData.RequestedSpeed > animData.MaxSpeed * _locomotion.sprintSpeedRatio;
+                    Gait = animData.IsMoving
+                        ? _locomotion.GetGait(Speed2D, animData.MaxSpeed, sprintAllowed)
+                        : LocomotionGait.Idle;
+                    AnimatorSpeed = Gait == LocomotionGait.Idle ? 0f : _locomotion.GetBlendSpeed(
+                        Speed2D, animData.MaxSpeed, animData.RequestedSpeed, sprintAllowed);
+                }
                 IsStopped = Gait == LocomotionGait.Idle;
                 IsRunning = Gait == LocomotionGait.Run;
                 IsSprinting = Gait == LocomotionGait.Sprint;
-                AnimatorSpeed = IsStopped ? 0f : _locomotion.GetBlendSpeed(
-                    Speed2D, animData.MaxSpeed, animData.RequestedSpeed, sprintAllowed);
                 if (IsStopped) MovementVector = Vector2.zero;
 
                 if (_enableDebugLogs && Time.frameCount % 120 == 0) // Log cada ~2 segundos

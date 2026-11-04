@@ -23,6 +23,30 @@ namespace ConquestTactics.Animation
             return speed > baseSpeed * walkToRunRatio ? LocomotionGait.Run : LocomotionGait.Walk;
         }
 
+        /// <summary>
+        /// A soldier's gait follows its movement gear (M4): Walk walks, Run runs, and it never sprints. Measured against
+        /// the base speed, a soldier walking at its base speed would look like running and a running one like sprinting.
+        /// </summary>
+        public LocomotionGait GetGait(MovementGear gear, float speed)
+        {
+            if (speed <= stoppedSpeed) return LocomotionGait.Idle;
+            return gear == MovementGear.Run ? LocomotionGait.Run : LocomotionGait.Walk;
+        }
+
+        /// <summary>
+        /// Blend coordinate of a soldier (M4): the gear's clip (<see cref="walkBlendSpeed"/> or <see cref="runBlendSpeed"/>),
+        /// reached at <see cref="walkToRunRatio"/> × the base speed when walking and at the base speed when running (the Run
+        /// gear goes up to twice the base). Slower, it blends towards idle, as a unit setting off or stopping does.
+        /// </summary>
+        public float GetBlendSpeed(MovementGear gear, float speed, float baseSpeed)
+        {
+            if (speed <= stoppedSpeed || baseSpeed <= 0f) return 0f;
+            bool running = gear == MovementGear.Run;
+            float clip = running ? runBlendSpeed : walkBlendSpeed;
+            float full = running ? baseSpeed : baseSpeed * Mathf.Clamp01(walkToRunRatio);
+            return full > 0f ? clip * Mathf.Clamp01(speed / full) : clip;
+        }
+
         public float GetBlendSpeed(float speed, float baseSpeed, float sprintSpeed, bool sprintAllowed)
         {
             if (speed <= stoppedSpeed || baseSpeed <= 0f) return 0f;

@@ -724,6 +724,53 @@ public partial class BattleSceneIntegrationTests
         Assert.That(unitState.speed * unitState.speedMultiplier, Is.EqualTo(Speed).Within(1e-3f), "The squire's swing plays at its attack speed.");
     }
 
+    /// <summary>
+    /// M4 (Docs/Por_Abordar/Movimiento.md): marching behind the hero, a soldier walks in the Walk gear and runs in the Run
+    /// gear, and never sprints. Before, walking at its base speed showed the run and running showed the sprint.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator SoldiersWalkAndRunAsTheirGearSaysAndNeverSprint()
+    {
+        const float MarchSeconds = 6f;
+        const float MaxMismatch = 0.05f; // The gear may change between the ECS update and the adapter's within a frame.
+        var previousInput = UseUnfocusedEditorInput();
+        try
+        {
+            yield return PrepareBaseline();
+            var units = em.GetBuffer<SquadUnitElement>(squad).AsNativeArray().ToArray().Select(e => e.Value).ToArray();
+            var adapters = units.Select(u => em.GetComponentObject<NavMeshAgent>(u).GetComponentInChildren<UnitAnimationAdapter>(true)).ToArray();
+            var animators = units.Select(u => em.GetComponentObject<NavMeshAgent>(u).GetComponentInChildren<Animator>(true)).ToArray();
+            Assert.That(adapters.All(a => a != null), Is.True, "Every soldier has its animation adapter.");
+            var settings = new LocomotionAnimationSettings();
+            int walking = 0, running = 0, mismatches = 0;
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
+            for (float t = 0f; t < MarchSeconds; t += Time.deltaTime)
+            {
+                yield return null;
+                for (int i = 0; i < units.Length; i++)
+                {
+                    var a = adapters[i];
+                    Assert.That(a.Gait, Is.Not.EqualTo(LocomotionGait.Sprint), "A soldier never sprints.");
+                    Assert.That(animators[i].GetFloat(AnimationHashes.MoveSpeed), Is.LessThanOrEqualTo(settings.runBlendSpeed + 1e-3f),
+                        "The blend never reaches the sprint clip.");
+                    if (a.IsStopped) continue;
+                    var gear = em.GetComponentData<UnitMovementGearComponent>(units[i]).gear;
+                    if (gear == MovementGear.Run) running++; else walking++;
+                    if (a.Gait != (gear == MovementGear.Run ? LocomotionGait.Run : LocomotionGait.Walk)) mismatches++;
+                }
+            }
+            Assert.That(walking, Is.GreaterThan(0), "The march has walking soldiers.");
+            Assert.That(running, Is.GreaterThan(0), "The march has soldiers running to their slot.");
+            Assert.That(mismatches, Is.LessThanOrEqualTo(MaxMismatch * (walking + running)),
+                $"Gait and gear disagree in {mismatches} of {walking + running} samples.");
+        }
+        finally
+        {
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            RestoreInputSettings(previousInput);
+        }
+    }
+
     static void AssertCombatParameterTypes(Animator animator, string visualName)
     {
         Assert.That(animator, Is.Not.Null, visualName + " Animator is missing.");
