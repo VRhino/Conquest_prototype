@@ -20,6 +20,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H12 | Lo que queda de H1 y L4-08 | Baja | Pendiente |
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H14 | Perks con las condiciones nuevas (L2-15) | Baja | Pendiente (datos) |
+| H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (datos y detalles) |
 
 Bloque 3 (2026-10-27, `tasks/todo.md`): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
 L4-08. La mecánica está en `Docs/Mechanics/SkillsAndPerks.md` §3.6, §5 y §8.
@@ -138,6 +139,18 @@ escuadra, por cambio o por muerte del dueño, y `SquadSpawningSystem` los restau
 Los grupos de enfriamiento viven en la entidad de la escuadra. Al cambiarla en un punto de suministro y volver a sacarla,
 la escuadra reaparece con los grupos vacíos. Si molesta en juego, guardar los grupos en `InactiveSquadElement` al
 retirarla y restaurarlos al aparecer, junto con H7.
+
+## H15. Lo que dejan abierto los efectos L2-10 a L2-14
+- **Datos.** Solo Flecha Llameante usa un efecto nuevo (quemadura, L2-11). Ninguna habilidad tiene aún tope de objetivos,
+  pilas, efectos ligados ni fases que escalen con la velocidad de ataque, y nada da los stats `AttackSpeed`,
+  `EffectDurationOut` o `EffectDurationIn`.
+- **Velocidad de ataque.** Solo el héroe la tiene: las habilidades de escuadra corren a 1, y el ataque de los soldados
+  (`UnitAttackSystem`) no es una habilidad. En el Animator solo escala `swordAttackIsolated`, el único estado de ataque de
+  `AC_Polygon_Masculine`; cuando cada habilidad tenga su animación (H2) habrá que marcar también sus estados. No se
+  ha visto a ojo en juego un ataque acelerado.
+- **Efectos ligados y aparcada.** Al restaurar una habilidad aparcada (`Yield`) toma el id de instancia de la que
+  termina, así que un modificador ligado a la aparcada se retira entonces.
+- **Tope por efectos.** El catálogo pide que el tope de objetivos se pueda cambiar con efectos; hoy es solo dato.
 
 ## H14. Perks con las condiciones nuevas (L2-15)
 Las condiciones ricas (probabilidad, tipo y clase del objetivo, efectos activos, escuadra restante) están implementadas y

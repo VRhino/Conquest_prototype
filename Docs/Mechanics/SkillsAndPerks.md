@@ -70,6 +70,8 @@ SkillEffectSystem ◄── SkillEffectRequestComponent (eventos de efecto con p
 - `interruptible`. Solo una fase interrumpible deja entrar a otra habilidad.
 - `final`. Es la fase de liberación, siempre la última.
 - `charge`. Marca la fase de carga.
+- `scalesWithAttackSpeed` (L2-12). La fase dura `duration / AttackSpeed` y sus eventos llegan antes. El ataque básico
+  escala entero; las habilidades, solo las fases que lo marquen.
 
 Una habilidad sin fases recibe tres por defecto:
 - Preparación, 0,25 s, interrumpible.
@@ -138,12 +140,20 @@ Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
 | `Animation` | Dispara la animación de ataque (provisional hasta tener la propia de cada habilidad) |
 | `HitboxOpen` / `HitboxClose` | Abre o cierra el golpe del arma |
 | `AreaDamage` | Un `PendingDamageEvent` (categoría `Ability`, perfil del héroe × `value`) a cada enemigo vivo en el círculo o el cono (`radius`, `angle`). El centro va `distance` metros por delante del héroe |
-| `ApplyModifier` | Modificador temporal en la pila de cada objetivo (fuente `Effect`, id = la habilidad). Al relanzar se refresca, no se acumula |
+| `ApplyModifier` | Modificador temporal en la pila de cada objetivo (fuente `Effect`, id = la habilidad). Al relanzar sigue `reapply` (L2-10): refrescar (por defecto), apilar hasta `maxStacks` o ignorar. Con `boundToSkill` se retira cuando la habilidad termina o la interrumpen (L2-14) |
 | `AbsorbShield` | Escudo absorbente (`value`, `duration`). Si ya hay uno, se queda el mayor |
 | `Dash` | Embestida de `distance` metros en `duration` segundos. El héroe local la hace con su controlador y la IA con su `NavMeshAgent` |
 | `ApplyConditional` | Modificador condicionado temporal (L1-02, `DamageMechanics.md` §5.6) a cada objetivo: ratio de daño `value` durante `duration`, solo en los golpes que cumplen `condition`. Al relanzar se refresca. Ninguna habilidad lo usa aún |
-
 | `Taunt` | Provocación (L4-05): las escuadras de los enemigos alcanzados apuntan su melé al lanzador (a su escuadra, si es una habilidad de escuadra) con un sesgo `value` durante `duration`. Ninguna habilidad lo usa aún |
+| `DamageOverTime` | Daño en el tiempo (L2-11): los enemigos del área (como `AreaDamage`) reciben cada `period` segundos, durante `duration`, un golpe del perfil del lanzador × `value`, forma `Ability`, por la misma fórmula, escudos y suelo. El primer tic llega un periodo después; al relanzar sigue `reapply` y conserva el ritmo |
+
+Comunes a los eventos de área y de efecto:
+- `maxTargets` (L2-13): como mucho esos objetivos, los más cercanos al centro primero; 0 = todos.
+- Duración (L2-10): la de cada efecto se multiplica por `EffectDurationOut` del lanzador y `EffectDurationIn` del objetivo
+  (stats de la pila, base 1).
+- **Corrección (2026-11-03):** `SkillExecutionSystem` reenviaba solo área, modificador, escudo y embestida, así que
+  `ApplyConditional` y `Taunt` no llegaban desde una habilidad real; ahora todos los eventos de efecto pasan por
+  `SkillEvents.IsEffect`, para héroes y escuadras.
 
 Un `ApplyModifier` sobre los stats de IA de escuadra (`AIDetectionRange`, `AICombatRadius`, `AIHeroBias`, L4-10) se
 aplica a la escuadra de cada soldado alcanzado, una vez. Los golpes de `AreaDamage` llevan la forma `Ability` y el id de la habilidad, para las condiciones, y tiran la variación
@@ -162,7 +172,7 @@ del arma del lanzador (L1-12).
 | Espada y escudo | Empuje de Escudo: embestida 3 m + cono 90° | Defensa Reforzada: +30 % de defensa a aliados (5 m, 8 s) | Intercepción: embestida 4 m + círculo | Muro Imparable: +50 % de defensa a aliados (6 m, 10 s) |
 | Espada a dos manos | Corte Giratorio: círculo 3 m ×1,2 | Carga Brutal: embestida 6 m + cono 120° | Lluvia de Acero: 3 golpes en cono | Juicio de Acero: cono ×2 + escuadra +20 % de daño (8 s) |
 | Lanza | Barrido Largo: semicírculo + ralentiza a los enemigos | Estocada Precisa: cono estrecho 3,5 m ×1,5 | Despliegue Defensivo: +25 % de defensa a aliados | Muro de Púas: área por delante + ralentización |
-| Arco | Disparo Enfocado: tiro cargado (cono estrecho 25 m) | Lluvia de Flechas: 3 oleadas a 15 m | Flecha Silenciadora: ralentiza (aproximación) | Flecha Llameante: 3 pulsos de área a 15 m |
+| Arco | Disparo Enfocado: tiro cargado (cono estrecho 25 m) | Lluvia de Flechas: 3 oleadas a 15 m | Flecha Silenciadora: ralentiza (aproximación) | Flecha Llameante: impacto ×0,34 y quemadura de 2 tics ×0,34 (1 s) a 15 m |
 
 Aproximaciones:
 - Flecha Silenciadora ralentiza, porque no existe un efecto de "silencio".

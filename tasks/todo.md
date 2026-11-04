@@ -1,6 +1,6 @@
 # Plan: efectos de habilidad del catálogo (L2-13, L2-14, L2-10, L2-11, L2-12)
 
-Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.2.
+Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.2.
 
 ## Decisiones del usuario (2026-11-03)
 - **L2-12:** parámetro float `AttackSpeed` en el Animator del héroe (`AC_Polygon_Masculine`) como multiplicador de los
@@ -23,7 +23,7 @@ Estado: en curso (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/De
 - [x] 2. L2-10; tests; EditMode.
 - [x] 3. L2-11 + Flecha Llameante; tests; EditMode.
 - [x] 4. L2-12 + Animator; tests; EditMode y comprobación en Play.
-- [ ] 5. Docs: `SkillsAndPerks.md`, catálogo §5, `Por_Abordar`, lecciones.
+- [x] 5. Docs: `SkillsAndPerks.md`, catálogo §5, `Por_Abordar`, lecciones.
 
 ---
 

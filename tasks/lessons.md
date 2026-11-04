@@ -596,3 +596,10 @@
 - Una métrica que debe quedar idéntica tras un cambio neutro (contacto mínimo 1,00 m) es la mejor prueba de que la refactorización no movió nada, más que el resto de cifras ruidosas de la melé.
 - `sed` con `
 ` en un fichero LF está bien, pero comprobar los finales de línea antes: en uno CRLF dejaría finales mezclados.
+
+## Efectos de habilidad y el entorno (2026-11-04)
+
+- Un efecto nuevo probado creando la petición de efecto a mano no prueba que la habilidad lo emita: `SkillExecutionSystem` filtraba los tipos de evento y `ApplyConditional` y `Taunt` nunca llegaban. La lista de eventos que se reenvían debe ser una sola función (`SkillEvents.IsEffect`) con su test.
+- Si casi todos los tests de sistemas fallan con "No suitable code replacement generated", la causa puede ser el entorno: Smart App Control bloqueó la DLL del generador de Entities (`CS8785` en `Logs/Editor.log`, el log del proyecto). La compilación dice "completed" igualmente.
+- `Animator.parameters` devuelve una copia en cada llamada: comprobar un parámetro opcional una vez por Animator, no en cada frame.
+- En un `SystemAPI.Query`, la variable de `DynamicBuffer` del foreach no se puede escribir: tomar el buffer con `SystemAPI.GetBuffer` dentro del bucle.
