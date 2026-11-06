@@ -56,4 +56,7 @@ public struct PendingDamageEvent : IComponentData
 
     /// <summary>Metres the attacker came towards the target just before a melee hit (L1-11, <see cref="ChargeTrack"/>).</summary>
     public float chargeDistance;
+
+    /// <summary>A tick of an effect over time (L2-11): it comes from no direction, is never an ambush (L1-15).</summary>
+    public bool periodic;
 }

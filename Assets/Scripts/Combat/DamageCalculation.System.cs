@@ -16,6 +16,9 @@ using Unity.Transforms;
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
 ///   Height:  +10% per metre of vertical advantage (> 0.5 m threshold)
 ///
+/// Flank, back and ambush (L1-15): the hit's direction from the target's front and whether the target's squad could not
+/// see the attacker add one ratio (<see cref="HitDirectionRules"/>), and conditional modifiers can ask for them.
+///
 /// The arithmetic is <see cref="DamageFormula.Compute"/> (pure, L1-03); this system gathers its inputs, applies shield
 /// and health, and emits <see cref="DamageFeedbackEvent"/>s for the floating text instead of calling UI.
 ///
@@ -36,6 +39,9 @@ public partial class DamageCalculationSystem : SystemBase
     protected override void OnUpdate()
     {
         var combatTuning = CombatTuning.Default;
+        bool hasConfig = SystemAPI.TryGetSingleton<SquadSpawnConfigComponent>(out var config);
+        var directionTuning = hasConfig ? config.hitDirection.OrDefault() : HitDirectionTuning.Default;
+        var sight = hasConfig ? config.lineOfSight : LineOfSightTuning.Default;
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
         var shieldLookup      = GetComponentLookup<UnitShieldComponent>();
@@ -90,13 +96,23 @@ public partial class DamageCalculationSystem : SystemBase
                 ? SystemAPI.GetComponent<UnitWeaponComponent>(p.damageSource).kineticMultiplier : -1f;
             float heightDelta = transformLookup.HasComponent(p.target)
                 ? p.attackerPosition.y - transformLookup[p.target].Position.y : 0f;
+            var facts = new HitFacts
+            {
+                form = p.hitForm, skillId = p.skillId, critical = p.category == DamageCategory.Critical,
+                direction = !p.periodic && transformLookup.HasComponent(p.target)
+                    ? HitDirectionRules.Classify(transformLookup[p.target].Forward(), transformLookup[p.target].Position,
+                        p.attackerPosition, directionTuning)
+                    : HitDirection.Front,
+                ambush = !p.periodic && Ambushed(p, sight),
+            };
             float effectiveDmg = DamageFormula.Compute(new DamageInput
             {
                 profile = profile, multiplier = p.multiplier, defense = def, penetration = pen,
                 attackerSpeed = p.attackerSpeed, kineticMultiplier = kinetic, heightDelta = heightDelta,
                 varianceOffset = p.varianceOffset,
-                conditionalRatio = ConditionalRatio(p, now),
+                conditionalRatio = ConditionalRatio(p, facts, now),
                 chargeDistance = p.chargeDistance,
+                directionRatio = HitDirectionRules.DamageRatio(facts.direction, facts.ambush, directionTuning),
             }, combatTuning).effective;
 
             // --- Shield block check (absorbs the hit when the shield collider was hit, L1-08/L1-10) ---
@@ -229,14 +245,13 @@ public partial class DamageCalculationSystem : SystemBase
     /// Sum of the ratios of the conditional modifiers that hold for this hit (L1-02): the attacker's on the attacker side
     /// and the target's on the defender side, evaluated only here, at impact.
     /// </summary>
-    float ConditionalRatio(in PendingDamageEvent p, double now)
+    float ConditionalRatio(in PendingDamageEvent p, in HitFacts facts, double now)
     {
         bool attackerHas = SystemAPI.Exists(p.damageSource) && SystemAPI.HasBuffer<ConditionalModifier>(p.damageSource)
             && SystemAPI.GetBuffer<ConditionalModifier>(p.damageSource).Length > 0;
         bool targetHas = SystemAPI.HasBuffer<ConditionalModifier>(p.target)
             && SystemAPI.GetBuffer<ConditionalModifier>(p.target).Length > 0;
         if (!attackerHas && !targetHas) return 0f;
-        var facts = new HitFacts { form = p.hitForm, skillId = p.skillId, critical = p.category == DamageCategory.Critical };
         var attacker = Party(p.damageSource);
         var target = Party(p.target);
         uint tick = CombatRandom.Tick(now);
@@ -265,6 +280,22 @@ public partial class DamageCalculationSystem : SystemBase
             if (HitConditions.Matches(m.condition, self, other, facts, selfEffect, otherEffect, roll)) sum += m.damageRatio;
         }
         return sum;
+    }
+
+    /// <summary>
+    /// Ambush (L1-15): the target soldier's squad has the attacker in range and its rays find it blocked (L4-03). The
+    /// pairs are kept per enemy squad or hero, so a soldier attacker counts as its squad. Heroes have no pairs.
+    /// </summary>
+    bool Ambushed(in PendingDamageEvent p, in LineOfSightTuning sight)
+    {
+        if (!sight.enabled || !SystemAPI.Exists(p.damageSource) || !SystemAPI.HasComponent<UnitOwnerComponent>(p.target))
+            return false;
+        Entity squad = SystemAPI.GetComponent<UnitOwnerComponent>(p.target).squad;
+        if (!SystemAPI.Exists(squad) || !SystemAPI.HasBuffer<SquadVisibilityElement>(squad)) return false;
+        Entity enemy = SystemAPI.HasComponent<UnitOwnerComponent>(p.damageSource)
+            ? SystemAPI.GetComponent<UnitOwnerComponent>(p.damageSource).squad
+            : p.damageSource;
+        return LineOfSight.Hides(SystemAPI.GetBuffer<SquadVisibilityElement>(squad), enemy, sight.memory);
     }
 
     bool HasEffect(Entity entity, StatId stat, double now)

@@ -36,4 +36,5 @@ public struct SquadSpawnConfigComponent : IComponentData
     public float minCombatDuration;   // Segundos mínimos en InCombat tras perder enemigos de rango
     public LineOfSightTuning lineOfSight; // Rays that decide what a squad sees (L4-03)
     public FormationReadinessTuning formationReadiness; // When a formation is ready and how long the AI waits for it (F12)
+    public HitDirectionTuning hitDirection; // Flank, back and ambush hits (L1-15)
 }

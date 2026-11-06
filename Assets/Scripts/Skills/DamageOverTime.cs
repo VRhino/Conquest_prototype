@@ -104,6 +104,7 @@ public partial class DamageOverTimeSystem : SystemBase
                         multiplier = d.multiplier * (d.stacks > 1 ? d.stacks : 1),
                         hitType = HitType.Body,
                         hitForm = HitForm.Ability,
+                        periodic = true,
                         skillId = d.skillId,
                         varianceOffset = CombatRandom.RollVariance(tick, d.caster, target, d.profile.traits.damageVariance),
                     });

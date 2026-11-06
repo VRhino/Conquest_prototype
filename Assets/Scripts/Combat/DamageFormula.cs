@@ -59,6 +59,8 @@ public struct DamageInput
     public float conditionalRatio;
     /// <summary>Metres the attacker came towards the target just before the hit (L1-11); the profile's traits rate it.</summary>
     public float chargeDistance;
+    /// <summary>Ratio of the hit's direction and ambush (L1-15, <see cref="HitDirectionRules.DamageRatio"/>); 0 = frontal.</summary>
+    public float directionRatio;
 }
 
 /// <summary>Result with the breakdown of each stage, for tests and for showing it.</summary>
@@ -73,13 +75,16 @@ public struct DamageResult
     public float varianceFactor;
     /// <summary>1 + the conditional ratio of the hit, never negative (L1-02).</summary>
     public float conditionalFactor;
+    /// <summary>1 + the direction and ambush ratio of the hit, never negative (L1-15).</summary>
+    public float directionFactor;
     /// <summary>Final damage after the bonuses, never negative.</summary>
     public float effective;
 }
 
 /// <summary>
 /// Damage formula as a pure function (Aprendizajes_Referencia.md L1-03): flat reduction per type with a floor,
-/// then kinetic, height and charge (L1-11) bonuses, the rolled variance (L1-12) and the conditional modifiers' ratio (L1-02). Burst-friendly and testable without a world; shields and health are applied
+/// then kinetic, height and charge (L1-11) bonuses, the rolled variance (L1-12), the conditional modifiers' ratio (L1-02) and the
+/// direction and ambush bonus (L1-15). Burst-friendly and testable without a world; shields and health are applied
 /// by <see cref="DamageCalculationSystem"/>.
 /// </summary>
 public static class DamageFormula
@@ -98,6 +103,7 @@ public static class DamageFormula
             heightBonus = 1f,
             varianceFactor = math.max(0f, 1f + input.varianceOffset),
             conditionalFactor = math.max(0f, 1f + input.conditionalRatio),
+            directionFactor = math.max(0f, 1f + input.directionRatio),
             chargeBonus = ChargeTrack.Bonus(input.chargeDistance, input.profile.traits),
         };
         if (input.attackerSpeed > 0f && tuning.kineticReferenceSpeed > 0f)
@@ -108,7 +114,7 @@ public static class DamageFormula
         if (input.heightDelta > tuning.heightBonusThreshold)
             r.heightBonus = 1f + input.heightDelta * tuning.heightBonusPerMetre;
         r.effective = math.max(0f, (r.blunt + r.slashing + r.piercing) * r.kineticBonus * r.heightBonus * r.chargeBonus
-            * r.varianceFactor * r.conditionalFactor);
+            * r.varianceFactor * r.conditionalFactor * r.directionFactor);
         return r;
     }
 

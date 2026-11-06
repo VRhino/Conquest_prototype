@@ -1,3 +1,33 @@
+# Plan: flanco, emboscada y resiliencia (L1-15, L1-16)
+
+Estado: en curso (2026-11-06), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
+
+## Decisiones del usuario (2026-11-06)
+- **Emboscada:** el golpe llega de un atacante que la escuadra del soldado golpeado tiene en rango pero no ve (L4-03).
+- **Valores:** frente < 60°, sin bono; flanco 60°-120°, +15 %; espalda > 120°, +30 %; emboscada +25 %; los bonos de
+  dirección y emboscada se suman. Héroes y soldados por igual; condición de perk "por la espalda" disponible.
+- **Resiliencia vacía:** aturdido corto (~0,8 s): sin moverse, sin atacar y sin habilidades; la barra se rellena. El
+  retroceso de cada golpe sigue como hoy.
+
+## Diseño
+- **L1-15:** `HitDirection` (Frente, Flanco, Espalda) por el ángulo entre el frente del objetivo y la dirección hacia el
+  atacante; emboscada desde `SquadVisibilityElement` de la escuadra del objetivo (solo soldados). Ajustes en
+  `HitDirectionTuning` dentro de `SquadSpawnConfigComponent`. `DamageFormula` gana `directionRatio` y
+  `DamageResult.directionFactor`. `HitCondition` gana dirección y emboscada. Fuera `UnitCombatComponent.isFlanked`.
+- **L1-16:** stat `MaxResilience` (base en `SquadData` y `HeroClassDefinition`, 0 = sin resiliencia), escrito por
+  `StatResolveSystem` en `ResilienceComponent`; `HitTraits.resilienceDamage` por arma; recuperación perezosa (se calcula
+  al recibir el golpe, sin sistema por frame); al vaciarse, `StatEffects.Immobilize` + `stunnedUntil`, que
+  `UnitAttackSystem` y el disparo respetan; el héroe ya no lanza con la velocidad a 0. Golpes bloqueados no la gastan.
+- **Datos:** los valores por escuadra, clase y arma se proponen en una tabla aparte (como C1).
+
+## Pasos
+- [x] 1. L1-15; tests; EditMode (528/528), S1, S6 y BattleSceneIntegrationTests (23/23).
+- [ ] 2. L1-16 (mecánica neutra sin datos); tests; EditMode y PlayMode.
+- [ ] 3. Docs: `DamageMechanics.md`, catálogo §5, `Por_Abordar/Combate.md`.
+- [ ] 4. Tabla de datos de resiliencia para el usuario.
+
+---
+
 # Plan: efectos de habilidad del catálogo (L2-13, L2-14, L2-10, L2-11, L2-12)
 
 Estado: **hecho** (2026-11-03), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.2.

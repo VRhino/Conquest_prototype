@@ -42,6 +42,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public LineOfSightTuning lineOfSight = LineOfSightTuning.Default;
     [Tooltip("Cuándo está lista una formación y cuánto la espera un héroe de IA antes de cargar (F12).")]
     public FormationReadinessTuning formationReadiness = FormationReadinessTuning.Default;
+    [Tooltip("Golpes de flanco, por la espalda y emboscadas (L1-15).")]
+    public HitDirectionTuning hitDirection = HitDirectionTuning.Default;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -71,6 +73,7 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 minCombatDuration   = authoring.minCombatDuration,
                 lineOfSight         = authoring.lineOfSight,
                 formationReadiness  = authoring.formationReadiness.OrDefault(),
+                hitDirection        = authoring.hitDirection.OrDefault(),
                 ownerDeathRetreatDuration = authoring.ownerDeathRetreatDuration,
                 retreatArrivalThreshold = authoring.retreatArrivalThreshold,
                 anchorMovingSpeedThreshold = authoring.anchorMovingSpeedThreshold,

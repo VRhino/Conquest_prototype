@@ -75,6 +75,17 @@ public static class LineOfSight
     }
 
     /// <summary>
+    /// Hidden only when the squad has a pair for the enemy and its rays found it blocked; an enemy out of range has no
+    /// pair and is not hidden (ambush, L1-15).
+    /// </summary>
+    public static bool Hides(DynamicBuffer<SquadVisibilityElement> visibility, Entity enemy, int memory)
+    {
+        for (int i = 0; i < visibility.Length; i++)
+            if (visibility[i].enemy == enemy) return !IsVisible(visibility[i].clearMask, memory);
+        return false;
+    }
+
+    /// <summary>
     /// Shares <paramref name="budget"/> rays among squads by demand, as the reference does: everyone gets its demand if it
     /// fits, else <c>demand · budget / total</c>, and what rounding leaves goes to the first ones that still want more.
     /// </summary>

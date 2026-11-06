@@ -59,6 +59,10 @@ public struct HitCondition
     public int4 skillIds;
     [Tooltip("El golpe es (o no es) crítico.")]
     public PerkTristate critical;
+    [Tooltip("El golpe llega de alguna de estas direcciones respecto al frente del que lo recibe (L1-15); ninguna = cualquiera.")]
+    public HitDirections directions;
+    [Tooltip("El golpe es (o no es) una emboscada (L1-15).")]
+    public PerkTristate ambush;
     [Tooltip("El dueño tiene (o no) un efecto temporal activo en effectStat.")]
     public PerkTristate selfHasEffect;
     [Tooltip("El otro tiene (o no) un efecto temporal activo en effectStat.")]
@@ -91,6 +95,10 @@ public struct HitFacts
     public HitForm form;
     public int skillId;
     public bool critical;
+    /// <summary>Where the hit comes from, seen from the receiver's front (L1-15).</summary>
+    public HitDirection direction;
+    /// <summary>The receiver's squad had the attacker in range and could not see it (L1-15).</summary>
+    public bool ambush;
 }
 
 /// <summary>
@@ -138,6 +146,7 @@ public static class HitConditions
         // Empty entries (0) are unused, so a hit without skill never matches a list.
         if (math.any(c.skillIds != 0) && !math.any((c.skillIds == facts.skillId) & (c.skillIds != 0))) return false;
         if (!Tristate(c.critical, facts.critical)) return false;
+        if (!HitDirectionRules.Allows(c.directions, facts.direction) || !Tristate(c.ambush, facts.ambush)) return false;
         if (!Tristate(c.selfHasEffect, selfHasEffect) || !Tristate(c.otherHasEffect, otherHasEffect)) return false;
         float defenderHealth = c.side == HitSide.Defender ? self.healthFraction : other.healthFraction;
         if (defenderHealth < c.defenderHealthMin) return false;
