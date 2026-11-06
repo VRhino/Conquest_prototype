@@ -607,3 +607,7 @@
 - No llamar a `unity status` (ni a otro comando del CLI) mientras corre una tanda de PlayMode: el editor registra
   "No command named 'editor status'" como error y el test que esté corriendo falla por log inesperado (2026-11-06, una
   variante de S6). Para saber si sigue, mirar el proceso `node ut.js` con `Get-CimInstance`, sin tocar el editor.
+
+- Antes de apuntar una limitación como pendiente, leer el sistema que la tendría: C11 ("el aturdimiento no corta la
+  habilidad del héroe") ya estaba resuelto en `SkillExecutionSystem` (inmovilizado = fin de la habilidad, L2-4) y lo decía
+  su propio resumen. Se apuntó solo por mirar `SkillGate` (2026-11-06).

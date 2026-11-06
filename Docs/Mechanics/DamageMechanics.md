@@ -321,7 +321,8 @@ resiliencia; al vaciarse, el objetivo queda **aturdido** un momento, y la barra 
 - **Recuperación perezosa:** tras 3 s sin golpes recupera el 25 % del máximo por segundo. No hay sistema por frame:
   `Resilience.Current` la calcula al recibir el siguiente golpe.
 - **Rotura:** aturdido 0,8 s. La velocidad pasa a 0 con un override de la pila (`StatEffects.ResilienceBreakStun`, como la
-  rotura del escudo), así que el héroe tampoco lanza habilidades (`SkillGate`, `Immobilised`). Un soldado pierde el golpe
+  rotura del escudo), así que el héroe tampoco lanza habilidades (`SkillGate`, `Immobilised`), y la habilidad que tenía en
+  curso y la aparcada terminan (`SkillExecutionSystem`; test `AResilienceBreakEndsTheRunningSkill`). Un soldado pierde el golpe
   que tenía en curso y no ataca ni dispara hasta que acaba (`UnitAttackSystem`, `RangedAttackSystem`). Durante el
   aturdimiento los golpes no gastan resiliencia, así que no se encadenan aturdimientos. El retroceso de cada golpe sigue.
 - **Ajustes:** `SquadSpawnConfigAuthoring.resilience` (`ResilienceTuning`). Las animaciones de reacción son L1-09

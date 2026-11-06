@@ -149,4 +149,37 @@ public class SkillInterruptTests
         Step(10.1);
         Assert.That(Current.active, Is.False, "Control ends the skill.");
     }
+
+    /// <summary>C11: the whole chain, hit → resilience break (L1-16) → speed override resolved → the running skill ends.</summary>
+    [Test]
+    public void AResilienceBreakEndsTheRunningSkill()
+    {
+        _em.AddComponentData(_hero, new HeroHealthComponent { maxHealth = 1000f, currentHealth = 1000f });
+        _em.AddComponentData(_hero, Unity.Transforms.LocalTransform.FromPosition(Unity.Mathematics.float3.zero));
+        _em.AddComponentData(_hero, new MoveSpeedComponent { value = 5f });
+        _em.AddComponentData(_hero, new ResilienceComponent { max = 30f, current = 30f });
+        StatStack.Ensure(_em, _hero);
+        StatStack.SetBase(_em, _hero, StatId.MaxHealth, 1000f);
+        StatStack.SetBase(_em, _hero, StatId.MoveSpeed, 5f);
+        StatStack.SetBase(_em, _hero, StatId.MaxResilience, 30f);
+        var resolve = _world.GetOrCreateSystemManaged<StatResolveSystem>();
+        resolve.Update();
+
+        Step(0.0, SkillSlot.Q);
+        Step(0.1);
+        Assert.That(Current.active, Is.True);
+
+        var hit = _em.CreateEntity(typeof(PendingDamageEvent));
+        _em.SetComponentData(hit, new PendingDamageEvent
+        {
+            target = _hero, hasInlineDamageProfile = true, multiplier = 1f, destroyEntityAfterProcessing = true,
+            attackerPosition = new Unity.Mathematics.float3(0f, 0f, 2f),
+            inlineDamageProfile = new DamageProfileComponent { bluntDamage = 5f, traits = new HitTraits { resilienceDamage = 40f } },
+        });
+        _world.GetOrCreateSystemManaged<DamageCalculationSystem>().Update();
+        resolve.Update();
+        Assert.That(_em.GetComponentData<MoveSpeedComponent>(_hero).value, Is.EqualTo(0f), "Stunned.");
+        Step(0.2);
+        Assert.That(Current.active, Is.False, "The break ends the skill it was running.");
+    }
 }

@@ -17,7 +17,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C8 | Suelo de vida de soldados y de héroes remotos | Baja | Pendiente (sin caso de uso) |
 | C9 | Valores de resiliencia por escuadra, clase y arma (L1-16) | Alta | **Hecho** (2026-11-06, tabla aprobada) |
 | C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | **Hecho** (2026-11-06, texto flotante) |
-| C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | Pendiente |
+| C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | **No era así** (2026-11-06, ya la corta; test añadido) |
 
 ---
 
@@ -108,6 +108,10 @@ falta una tabla por escuadra, clase y arma, aprobada por el usuario, y medir con
 efecto. Una categoría más en `DamageCategory` necesita su entrada en el asset de `FCTCategoryConfig`.
 
 ## C11. Aturdimiento y habilidad en curso
-**Qué es.** Con la velocidad a 0, `SkillGate` no deja lanzar, pero la habilidad que el héroe ya estaba ejecutando sigue
+**Cerrado (2026-11-06): ya la cortaba.** `SkillExecutionSystem` termina la habilidad en curso y la aparcada cuando el
+héroe está inmovilizado (L2-4), y la rotura de resiliencia lo inmoviliza. El test `AResilienceBreakEndsTheRunningSkill`
+prueba la cadena entera (golpe, rotura, stat resuelto, habilidad terminada). La nota de abajo era un error de lectura.
+
+**Lo que se creía.** Con la velocidad a 0, `SkillGate` no deja lanzar, pero la habilidad que el héroe ya estaba ejecutando sigue
 hasta el final. Los soldados sí pierden el golpe en curso. Si se quiere que el aturdimiento interrumpa, la interrupción
 de habilidades (L2-4) ya existe; faltaría pedirla desde la rotura.
