@@ -278,6 +278,12 @@ public partial class SkillExecutionSystem : SystemBase
                 }
                 SkillTimeline.Start(ref skill, ref o.instance, 0, _fired);
             }
+            else if (Stunned(entity, now))
+            {
+                // A resilience break cuts the soldier's run, as it cuts the hero's skill (C11).
+                _soldiersDone.Add(entity);
+                continue;
+            }
             else ended = SkillTimeline.Advance(ref skill, ref o.instance, dt, _fired);
             float3 forward = transform.ValueRO.Forward();
             forward.y = 0f;
@@ -301,8 +307,11 @@ public partial class SkillExecutionSystem : SystemBase
 
     bool SoldierFree(Entity soldier, double now)
         => !(SystemAPI.HasComponent<UnitCombatComponent>(soldier) && SystemAPI.GetComponent<UnitCombatComponent>(soldier).isAttacking)
-           && !(SystemAPI.HasComponent<ResilienceComponent>(soldier)
-                && Resilience.IsStunned(SystemAPI.GetComponent<ResilienceComponent>(soldier), now));
+           && !Stunned(soldier, now);
+
+    bool Stunned(Entity soldier, double now)
+        => SystemAPI.HasComponent<ResilienceComponent>(soldier)
+           && Resilience.IsStunned(SystemAPI.GetComponent<ResilienceComponent>(soldier), now);
 
     /// <summary>Centre of the squad's living units; false when none is left.</summary>
     bool SquadCentre(DynamicBuffer<SquadUnitElement> units, out float3 centre)

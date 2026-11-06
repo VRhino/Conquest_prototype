@@ -90,6 +90,77 @@ public class SoldierSkillTests
             "The squad cools down.");
     }
 
+    [Test]
+    public void ASoldierFightsUntilItsStartThenHoldsItsAttacksUntilTheOrderEnds()
+    {
+        var order = new SoldierSkillComponent { startAt = 2.0 };
+        Assert.That(SoldierOrders.HoldsAttacks(order, 1.9), Is.False, "Before its stagger start it keeps fighting.");
+        Assert.That(SoldierOrders.HoldsAttacks(order, 2.0), Is.True);
+        order.instance.active = true;
+        Assert.That(SoldierOrders.HoldsAttacks(order, 1.0), Is.True, "Running.");
+    }
+
+    [Test]
+    public void ASoldierWithADueOrderStartsNoSwing()
+    {
+        using var world = new World("Soldier order holds swings");
+        var em = world.EntityManager;
+        var target = em.CreateEntity(typeof(LocalTransform));
+        em.SetComponentData(target, LocalTransform.FromPosition(new float3(0f, 0f, 1f)));
+        var ordered = Swordsman(em, target);
+        em.AddComponentData(ordered, new SoldierSkillComponent { startAt = 0.5 });
+        var waiting = Swordsman(em, target);
+        em.AddComponentData(waiting, new SoldierSkillComponent { startAt = 5.0 });
+        var finished = Swordsman(em, target);
+        em.AddComponentData(finished, new SoldierSkillComponent { startAt = 0.5 });
+        em.SetComponentEnabled<SoldierSkillComponent>(finished, false);
+
+        world.SetTime(new Unity.Core.TimeData(1d, 0.1f));
+        world.GetOrCreateSystemManaged<UnitAttackSystem>().Update();
+        Assert.That(em.GetComponentData<UnitCombatComponent>(ordered).isAttacking, Is.False, "Free for its bash.");
+        Assert.That(em.GetComponentData<UnitCombatComponent>(waiting).isAttacking, Is.True, "Its start has not come.");
+        Assert.That(em.GetComponentData<UnitCombatComponent>(finished).isAttacking, Is.True, "The order is over.");
+    }
+
+    [Test]
+    public void AResilienceBreakCutsASoldiersRun()
+    {
+        using var world = new World("Soldier stunned mid-bash");
+        var em = world.EntityManager;
+        em.SetComponentData(em.CreateEntity(typeof(MatchStateComponent)), new MatchStateComponent { currentState = MatchState.InBattle });
+        var ability = ScriptableObject.CreateInstance<AbilityData>();
+        ability.abilityName = "Test Bash";
+        ability.cooldown = 30f;
+        ability.perSoldier = true;
+        ability.events = new[] { new SkillEvent { type = SkillEventType.AreaDamage, radius = 1.8f, angle = 90f, maxTargets = 1, value = 1f } };
+        using var blob = SkillBlobBuilder.BuildSquadAbility(ability, SkillBlobBuilder.SquadSlot(0));
+        Object.DestroyImmediate(ability);
+
+        var squad = em.CreateEntity(typeof(TeamComponent));
+        var soldier = Body(em, float3.zero, Team.TeamA);
+        var order = new SoldierSkillComponent { skill = blob, skillId = blob.Value.id, squad = squad, startAt = 0.0, giveUpAt = 10.0 };
+        order.instance.active = true;
+        em.AddComponentData(soldier, order);
+        em.AddComponentData(soldier, new ResilienceComponent { max = 10f, current = 0f, stunnedUntil = 5.0 });
+
+        world.SetTime(new Unity.Core.TimeData(1d, 0.1f));
+        world.GetOrCreateSystemManaged<SkillExecutionSystem>().Update();
+        Assert.That(em.IsComponentEnabled<SoldierSkillComponent>(soldier), Is.False, "Its run is cut.");
+        Assert.That(em.GetComponentData<SoldierSkillComponent>(soldier).instance.active, Is.False);
+    }
+
+    static Entity Swordsman(EntityManager em, Entity target)
+    {
+        var unit = em.CreateEntity(typeof(UnitWeaponComponent), typeof(LocalTransform));
+        em.SetComponentData(unit, new UnitWeaponComponent
+        {
+            attackRange = 2f, strikeWindowStart = 0.8f, strikeWindowDuration = 0.1f, attackAnimationDuration = 1f, attackInterval = 1f,
+        });
+        em.SetComponentData(unit, LocalTransform.Identity);
+        em.AddComponentData(unit, new UnitCombatComponent { target = target });
+        return unit;
+    }
+
     static Entity Body(EntityManager em, float3 position, Team team)
     {
         var e = em.CreateEntity();

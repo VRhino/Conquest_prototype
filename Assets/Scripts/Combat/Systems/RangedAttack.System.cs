@@ -92,6 +92,9 @@ public partial class RangedAttackSystem : SystemBase
 
             // Shot cooldown still active
             if (state.shotTimer > 0f) continue;
+            // A squad ability run soldier by soldier is due or running (L2-17): no shot until it is over.
+            if (SystemAPI.HasComponent<SoldierSkillComponent>(entity) && SystemAPI.IsComponentEnabled<SoldierSkillComponent>(entity)
+                && SoldierOrders.HoldsAttacks(SystemAPI.GetComponent<SoldierSkillComponent>(entity), now)) continue;
 
             // Validate target
             Entity target = c.target;

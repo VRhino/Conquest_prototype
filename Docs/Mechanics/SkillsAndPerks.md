@@ -165,8 +165,11 @@ Cada soldado vivo recibe un `SoldierSkillComponent` (habilitable) y:
 
 Los ajustes están en `SquadSpawnConfigAuthoring.soldierOrders` (`SoldierOrderTuning`). El enfriamiento sigue siendo de la
 escuadra: la orden siempre la da ella (decisión del usuario). Solo las acciones van por soldado (Shield Bash); las
-mejoras de toda la escuadra siguen siendo un único efecto. Mientras ejecuta su parte, un soldado puede empezar un golpe
-normal: no hay animación propia todavía (H2).
+mejoras de toda la escuadra siguen siendo un único efecto. Desde su momento de empezar hasta el final de su parte, el
+soldado no empieza golpes ni disparos normales (`SoldierOrders.HoldsAttacks`): acaba el que lleva y ejecuta la orden;
+antes de su momento sigue luchando. Un aturdimiento por resiliencia corta su parte, como corta la habilidad del héroe
+(C11). No hay animación propia todavía (H2). Escena de comprobación: `MovementBaselineS9ShieldBash`
+(`Logs/MovementMetrics/shield_bash.txt`).
 
 ## 4. Efectos (`SkillEventType`)
 

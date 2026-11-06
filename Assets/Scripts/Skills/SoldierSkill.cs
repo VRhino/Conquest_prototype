@@ -54,4 +54,11 @@ public static class SoldierOrders
         if (free) return SoldierOrderStep.Start;
         return now >= giveUpAt ? SoldierOrderStep.GiveUp : SoldierOrderStep.Wait;
     }
+
+    /// <summary>
+    /// A soldier whose order is due or running starts no swing or shot of its own: it finishes the one under way, then
+    /// runs the order. Before its stagger start it keeps fighting.
+    /// </summary>
+    public static bool HoldsAttacks(in SoldierSkillComponent order, double now)
+        => order.instance.active || now >= order.startAt;
 }

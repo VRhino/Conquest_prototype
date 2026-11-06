@@ -21,6 +21,7 @@ using Unity.Transforms;
 /// The unit's attack speed (L2-12, <see cref="CombatStatsComponent"/>) runs the whole rhythm faster: the swing's timer and
 /// the cooldown between swings both advance at dt × speed, so the windows keep their place within the swing.
 /// A unit stunned by a resilience break (L1-16) loses its swing and does not start another until the stun ends.
+/// A soldier with a squad order due or running (L2-17) finishes its swing but starts no other until the order is over.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitTargetingSystem))]
@@ -119,17 +120,18 @@ public partial class UnitAttackSystem : SystemBase
                 SystemAPI.HasComponent<UnitBodyRadiusComponent>(target)
                     ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(target).radius, bodyRadius) : bodyRadius);
 
-            if (inRange && c.attackCooldown <= 0f)
+            if (inRange && c.attackCooldown <= 0f && !HeldByOrder(entity, now))
             {
                 c.isAttacking          = true;
                 c.attackAnimationTimer = 0f;
                 c.hitboxFired          = false;
 
             }
-            else
-            {
-
-            }
         }
     }
+
+    /// <summary>A squad ability run soldier by soldier is due or running on this unit (L2-17).</summary>
+    bool HeldByOrder(Entity unit, double now)
+        => SystemAPI.HasComponent<SoldierSkillComponent>(unit) && SystemAPI.IsComponentEnabled<SoldierSkillComponent>(unit)
+           && SoldierOrders.HoldsAttacks(SystemAPI.GetComponent<SoldierSkillComponent>(unit), now);
 }

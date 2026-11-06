@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
@@ -476,7 +477,16 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS9LineClashLegacy() => RunLineClash("S9Legacy", false);
 
-    IEnumerator RunLineClash(string label, bool m2)
+    /// <summary>
+    /// S9 with the Squires' Shield Bash (L2-17) launched mid-melee: each soldier runs it on its own. Writes how many got
+    /// the order, ran it and gave up, and the swings started while an order held them (none expected), to shield_bash.txt.
+    /// </summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS9ShieldBash() => RunLineClash("S9ShieldBash", true, true);
+
+    const float S9BashDelay = 3f; // From the first swing to the order, so the lines are locked in melee.
+
+    IEnumerator RunLineClash(string label, bool m2, bool shieldBash = false)
     {
         var previousInput = UseUnfocusedEditorInput();
         using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
@@ -566,11 +576,19 @@ public partial class BattleSceneIntegrationTests
                 // A squad with nothing left to fight goes back to its hero, which is no melee to measure.
                 float meleeEnd = Time.time + S9MeleeSeconds;
                 float lastSwing = Time.time;
+                float bashAt = Time.time + S9BashDelay;
+                var bash = shieldBash ? new BashWatch() : null;
                 while (Time.time < meleeEnd)
                 {
                     if (AnySquadUnitAttacking()) lastSwing = Time.time;
+                    if (bash != null)
+                    {
+                        if (!bash.requested && Time.time >= bashAt) RequestShieldBash(bash);
+                        WatchBash(bash);
+                    }
                     yield return null;
                 }
+                if (bash != null) ReportBash(bash);
                 Assert.That(meleeEnd - lastSwing, Is.LessThan(S9MeleeGrace), "The melee broke off before the end.");
                 Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(squad).source, Is.EqualTo(OrderSource.Player),
                     "A combat reaction took over the ordered attack and leashed the squad.");
@@ -718,6 +736,69 @@ public partial class BattleSceneIntegrationTests
         Vector3 offset = sum / count - point;
         offset.y = 0f;
         return offset.magnitude;
+    }
+
+    sealed class BashWatch
+    {
+        public bool requested;
+        public readonly HashSet<Unity.Entities.Entity> ordered = new(), ran = new();
+        public readonly Dictionary<Unity.Entities.Entity, bool> wasAttacking = new();
+        public int heldSwings;
+    }
+
+    /// <summary>Gives the squad its Shield Bash if its level has not unlocked it yet, and orders it.</summary>
+    void RequestShieldBash(BashWatch bash)
+    {
+        var slot = SkillBlobBuilder.SquadSlot(1);
+        bool present = false;
+        foreach (var s in em.GetBuffer<HeroSkillElement>(squad)) present |= s.slot == slot;
+        if (!present)
+        {
+            using var query = em.CreateEntityQuery(typeof(SquadAbilityDefinitionComponent));
+            using var definitions = query.ToComponentDataArray<SquadAbilityDefinitionComponent>(Unity.Collections.Allocator.Temp);
+            foreach (var d in definitions)
+                if (d.slot == slot && d.skill.IsCreated && d.skill.Value.perSoldier)
+                {
+                    em.GetBuffer<HeroSkillElement>(squad).Add(new HeroSkillElement { slot = slot, skillId = d.skill.Value.id, skill = d.skill });
+                    present = true;
+                    break;
+                }
+        }
+        Assert.That(present, Is.True, "No Shield Bash to give the squad.");
+        em.SetComponentData(squad, new SkillRequestComponent { slot = slot, requestedAt = em.World.Time.ElapsedTime });
+        em.SetComponentEnabled<SkillRequestComponent>(squad, true);
+        bash.requested = true;
+    }
+
+    void WatchBash(BashWatch bash)
+    {
+        double now = em.World.Time.ElapsedTime;
+        foreach (var element in em.GetBuffer<SquadUnitElement>(squad))
+        {
+            var unit = element.Value;
+            if (!em.Exists(unit) || !em.HasComponent<UnitCombatComponent>(unit)) continue;
+            bool attacking = em.GetComponentData<UnitCombatComponent>(unit).isAttacking;
+            bash.wasAttacking.TryGetValue(unit, out bool before);
+            bash.wasAttacking[unit] = attacking;
+            if (!em.HasComponent<SoldierSkillComponent>(unit) || !em.IsComponentEnabled<SoldierSkillComponent>(unit)) continue;
+            var order = em.GetComponentData<SoldierSkillComponent>(unit);
+            bash.ordered.Add(unit);
+            if (order.instance.active) bash.ran.Add(unit);
+            if (attacking && !before && SoldierOrders.HoldsAttacks(order, now)) bash.heldSwings++;
+        }
+    }
+
+    void ReportBash(BashWatch bash)
+    {
+        string line = $"{bash.ordered.Count} ordered, {bash.ran.Count} ran, {bash.ordered.Count - bash.ran.Count} gave up, " +
+                      $"{bash.heldSwings} swings started while held";
+        string directory = System.IO.Path.Combine(Application.dataPath, "..", "Logs", "MovementMetrics");
+        System.IO.Directory.CreateDirectory(directory);
+        System.IO.File.AppendAllText(System.IO.Path.Combine(directory, "shield_bash.txt"),
+            $"{System.DateTime.Now:yyyyMMdd_HHmmss} {line}\n");
+        Assert.That(bash.requested, Is.True, "The melee ended before the order.");
+        Assert.That(bash.ran.Count, Is.GreaterThan(0), "No soldier ran the Shield Bash: " + line);
+        Assert.That(bash.heldSwings, Is.Zero, "A soldier started a swing while its order held it: " + line);
     }
 
     bool AnySquadUnitAttacking()

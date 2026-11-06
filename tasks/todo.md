@@ -11,6 +11,9 @@ Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Mecánica: `Docs/M
 - [x] 1. `SoldierSkillComponent` habilitable, `SoldierOrderTuning` y reglas puras; la escuadra da la orden en
   `SkillExecutionSystem` y cada soldado la ejecuta desde su posición. Tests `SoldierSkillTests`.
 - [x] 2. Shield Bash por soldado (`SkillCatalogueDataTests`); EditMode 554/554; S1, S6, S9 y BattleSceneIntegrationTests 23/23.
+- [x] 3. Cierre: con la orden vencida o en marcha el soldado no empieza golpes ni disparos; el aturdimiento corta su
+  parte; escena `MovementBaselineS9ShieldBash` para verlo en partida (12 con orden, 12 la ejecutan, 0 golpes normales
+  durante ella). EditMode 557/557; S1, S6, S9 y BattleSceneIntegrationTests 23/23.
 
 ---
 
