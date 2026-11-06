@@ -1,6 +1,6 @@
 # Plan: flanco, emboscada y resiliencia (L1-15, L1-16)
 
-Estado: en curso (2026-11-06), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
+Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
 
 ## Decisiones del usuario (2026-11-06)
 - **Emboscada:** el golpe llega de un atacante que la escuadra del soldado golpeado tiene en rango pero no ve (L4-03).
@@ -24,7 +24,7 @@ Estado: en curso (2026-11-06), rama `main` local, sin subir. Catálogo: `Docs/De
 - [x] 1. L1-15; tests; EditMode (528/528), S1, S6 y BattleSceneIntegrationTests (23/23).
 - [x] 2. L1-16 (mecánica neutra sin datos); tests; EditMode (533/533), S1, S6 y BattleSceneIntegrationTests (23/23).
 - [x] 3. Docs: `DamageMechanics.md`, catálogo §5, `Por_Abordar/Combate.md`.
-- [ ] 4. Tabla de datos de resiliencia para el usuario.
+- [x] 4. Tabla de datos de resiliencia: aprobada y aplicada (2026-11-06).
 
 ---
 

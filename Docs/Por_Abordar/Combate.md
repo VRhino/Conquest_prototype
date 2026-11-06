@@ -15,7 +15,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C6 | Carga en habilidades y "golpe de pasada" | Baja | Pendiente (cuando haya caballería) |
 | C7 | Señal visual del robo de vida y de la protección al reaparecer | Baja | Pendiente |
 | C8 | Suelo de vida de soldados y de héroes remotos | Baja | Pendiente (sin caso de uso) |
-| C9 | Valores de resiliencia por escuadra, clase y arma (L1-16) | Alta | Pendiente (tabla para el usuario) |
+| C9 | Valores de resiliencia por escuadra, clase y arma (L1-16) | Alta | **Hecho** (2026-11-06, tabla aprobada) |
 | C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | Pendiente |
 | C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | Pendiente |
 
@@ -93,7 +93,10 @@ del arma si llega la caballería.
 de IA no reaparecen (no hay contrato de reaparición), así que no reciben la protección.
 
 ## C9. Valores de resiliencia (L1-16)
-**Qué es.** La mecánica está (`DamageMechanics.md` §5.8), pero `SquadData.baseResilience`,
+**Hecho (2026-11-06).** El usuario aprobó la tabla de `Docs/Mechanics/DamageMechanics.md` §5.8 y está en los assets
+(`Resources/Squads/*` y `Resources/Data/HeroClasses/*`).
+
+**Qué era.** La mecánica está (`DamageMechanics.md` §5.8), pero `SquadData.baseResilience`,
 `HeroClassDefinition.baseResilience` y `HitTraits.resilienceDamage` valen 0 en todos los assets: nadie se aturde. Hace
 falta una tabla por escuadra, clase y arma, aprobada por el usuario, y medir con S6 que el choque de líneas no se rompe.
 

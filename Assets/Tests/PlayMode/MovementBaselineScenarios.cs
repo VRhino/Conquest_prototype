@@ -802,9 +802,27 @@ public partial class BattleSceneIntegrationTests
         var summary = MovementMetricsRecorderSystem.End(out string directory);
         float moved = Unity.Mathematics.math.distance(heroStart.xz,
             em.GetComponentData<Unity.Transforms.LocalTransform>(hero).Position.xz);
-        Debug.Log($"Movement baseline written to {directory} (hero moved {moved:F1} m)\n{summary}");
+        string breaks = ResilienceBreaks();
+        Debug.Log($"Movement baseline written to {directory} (hero moved {moved:F1} m, {breaks} with resilience " +
+                  $"broken at least once)\n{summary}");
+        System.IO.File.AppendAllText(System.IO.Path.Combine(directory, "resilience_breaks.txt"),
+            $"{System.DateTime.Now:yyyyMMdd_HHmmss} {breaks}\n");
         Assert.That(summary.frames, Is.GreaterThan(0), "The recorder did not sample any frame.");
         Assert.That(moved, Is.GreaterThan(MinimumHeroDisplacement), "Scripted input did not move the hero.");
+    }
+
+    /// <summary>Soldiers and heroes whose resilience broke at least once (L1-16): out of "n with resilience".</summary>
+    string ResilienceBreaks()
+    {
+        using var query = em.CreateEntityQuery(typeof(ResilienceComponent));
+        using var all = query.ToComponentDataArray<ResilienceComponent>(Unity.Collections.Allocator.Temp);
+        int withResilience = 0, broken = 0;
+        foreach (var r in all)
+        {
+            if (r.max > 0f) withResilience++;
+            if (r.stunnedUntil > 0) broken++;
+        }
+        return $"{broken}/{withResilience}";
     }
 }
 #endif

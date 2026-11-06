@@ -326,7 +326,21 @@ resiliencia; al vaciarse, el objetivo queda **aturdido** un momento, y la barra 
   aturdimiento los golpes no gastan resiliencia, así que no se encadenan aturdimientos. El retroceso de cada golpe sigue.
 - **Ajustes:** `SquadSpawnConfigAuthoring.resilience` (`ResilienceTuning`). Las animaciones de reacción son L1-09
   (`Docs/Por_Abordar/Combate.md` C4).
-- **Datos:** sin valores aún en escuadras, clases y armas; pendientes de aprobación (`Docs/Por_Abordar/Combate.md` C9).
+- **Datos** (aprobados por el usuario el 2026-11-06, `Docs/Por_Abordar/Combate.md` C9):
+
+| Quién | Resiliencia máxima (`baseResilience`) | Resiliencia por golpe de su arma (`resilienceDamage`) |
+|---|---|---|
+| Escuderos | 120 | 25 |
+| Lanceros | 100 | 25 |
+| Piqueros | 100 | 35 |
+| Arqueros | 60 | 10 por flecha |
+| Héroe espada y escudo | 350 | 30 |
+| Héroe mandoble | 300 | 60 |
+| Héroe lanza | 300 | 40 |
+| Héroe arco | 250 | 15 |
+
+  Un soldado de 100 cae aturdido con 3-4 golpes de frente y uno o dos menos por la espalda; el mandoble lo hace en dos.
+  Un héroe rodeado por cinco soldados aguanta 12-14 golpes. Los informes de S6 y S9 dicen cuántos se aturdieron.
 
 ---
 
