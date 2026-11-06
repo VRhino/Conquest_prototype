@@ -23,9 +23,12 @@ public struct CombatTuning
     public int maxLiveProjectiles;
     /// <summary>How far back a charge is measured, s: the run-up counted is between half this and this (L1-11).</summary>
     public float chargeWindowSeconds;
+    /// <summary>Most percentage relief of one damage type, whatever the stack gives (L1-19).</summary>
+    public float maxRelief;
 
     public static CombatTuning Default => new CombatTuning
     {
+        maxRelief = 0.75f,
         minDamageFraction = 0.05f,
         kineticReferenceSpeed = 5f,
         defaultKineticMultiplier = 0.3f,
@@ -61,6 +64,8 @@ public struct DamageInput
     public float chargeDistance;
     /// <summary>Ratio of the hit's direction and ambush (L1-15, <see cref="HitDirectionRules.DamageRatio"/>); 0 = frontal.</summary>
     public float directionRatio;
+    /// <summary>Metres from the shot's origin to the target in a ranged hit (L1-17); 0 for any other hit = no falloff.</summary>
+    public float rangedDistance;
 }
 
 /// <summary>Result with the breakdown of each stage, for tests and for showing it.</summary>
@@ -77,6 +82,8 @@ public struct DamageResult
     public float conditionalFactor;
     /// <summary>1 + the direction and ambush ratio of the hit, never negative (L1-15).</summary>
     public float directionFactor;
+    /// <summary>What a ranged hit keeps over its distance (L1-17), 1 = all.</summary>
+    public float falloffFactor;
     /// <summary>Final damage after the bonuses, never negative.</summary>
     public float effective;
 }
@@ -84,7 +91,8 @@ public struct DamageResult
 /// <summary>
 /// Damage formula as a pure function (Aprendizajes_Referencia.md L1-03): flat reduction per type with a floor,
 /// then kinetic, height and charge (L1-11) bonuses, the rolled variance (L1-12), the conditional modifiers' ratio (L1-02) and the
-/// direction and ambush bonus (L1-15). Burst-friendly and testable without a world; shields and health are applied
+/// direction and ambush bonus (L1-15); each type keeps 1 − its percentage relief (L1-19) and a ranged hit loses damage
+/// with distance (L1-17). Burst-friendly and testable without a world; shields and health are applied
 /// by <see cref="DamageCalculationSystem"/>.
 /// </summary>
 public static class DamageFormula
@@ -94,16 +102,20 @@ public static class DamageFormula
         var r = new DamageResult
         {
             blunt = TypeContribution(input.profile.bluntDamage, input.multiplier, input.defense.bluntDefense,
-                input.profile.bluntPenetration + input.penetration.bluntPenetration, tuning.minDamageFraction),
+                input.profile.bluntPenetration + input.penetration.bluntPenetration, tuning.minDamageFraction)
+                * ReliefFactor(input.defense.bluntRelief, tuning.maxRelief),
             slashing = TypeContribution(input.profile.slashingDamage, input.multiplier, input.defense.slashDefense,
-                input.profile.slashingPenetration + input.penetration.slashPenetration, tuning.minDamageFraction),
+                input.profile.slashingPenetration + input.penetration.slashPenetration, tuning.minDamageFraction)
+                * ReliefFactor(input.defense.slashRelief, tuning.maxRelief),
             piercing = TypeContribution(input.profile.piercingDamage, input.multiplier, input.defense.pierceDefense,
-                input.profile.piercingPenetration + input.penetration.piercePenetration, tuning.minDamageFraction),
+                input.profile.piercingPenetration + input.penetration.piercePenetration, tuning.minDamageFraction)
+                * ReliefFactor(input.defense.pierceRelief, tuning.maxRelief),
             kineticBonus = 1f,
             heightBonus = 1f,
             varianceFactor = math.max(0f, 1f + input.varianceOffset),
             conditionalFactor = math.max(0f, 1f + input.conditionalRatio),
             directionFactor = math.max(0f, 1f + input.directionRatio),
+            falloffFactor = HitStages.Falloff(input.rangedDistance, input.profile.traits),
             chargeBonus = ChargeTrack.Bonus(input.chargeDistance, input.profile.traits),
         };
         if (input.attackerSpeed > 0f && tuning.kineticReferenceSpeed > 0f)
@@ -114,9 +126,15 @@ public static class DamageFormula
         if (input.heightDelta > tuning.heightBonusThreshold)
             r.heightBonus = 1f + input.heightDelta * tuning.heightBonusPerMetre;
         r.effective = math.max(0f, (r.blunt + r.slashing + r.piercing) * r.kineticBonus * r.heightBonus * r.chargeBonus
-            * r.varianceFactor * r.conditionalFactor * r.directionFactor);
+            * r.varianceFactor * r.conditionalFactor * r.directionFactor * r.falloffFactor);
         return r;
     }
+
+    /// <summary>
+    /// What a type keeps after its percentage relief (L1-19; ref.: the relief loop runs apart from the floor): 1 − relief,
+    /// with the relief between 0 and the cap.
+    /// </summary>
+    public static float ReliefFactor(float relief, float maxRelief) => 1f - math.clamp(relief, 0f, math.max(0f, maxRelief));
 
     /// <summary>One type: max(raw − net defense, raw × floor); a type with no damage contributes nothing.</summary>
     public static float TypeContribution(float damage, float multiplier, float defense, float penetration, float floor)

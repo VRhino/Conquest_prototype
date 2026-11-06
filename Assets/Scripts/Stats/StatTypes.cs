@@ -61,6 +61,10 @@ public enum StatId : byte
     StaminaCost,
     /// <summary>Most resilience of a soldier or hero (L1-16); 0 = it has none and is never stunned by hits.</summary>
     MaxResilience,
+    /// <summary>Fraction of blunt damage taken off after the flat defense (L1-19; base 0), capped by <see cref="CombatTuning.maxRelief"/>.</summary>
+    BluntRelief,
+    SlashRelief,
+    PierceRelief,
     Count,
 }
 

@@ -178,14 +178,15 @@ contribución = max(bruto − defensaNeta, bruto × 0.05)      // suelo del 5 % 
 ### 5.2 Daño efectivo final
 
 ```
-dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura × bonoCarga × (1 + variación) × (1 + Σ condicionados)
-               × (1 + dirección + emboscada)
+dañoEfectivo = Σ (contribución × (1 − alivio del tipo)) × bonoCinético × bonoAltura × bonoCarga × (1 + variación)
+               × (1 + Σ condicionados) × (1 + dirección + emboscada) × atenuación
                (nunca negativo; cada factor por separado tampoco)
 ```
 
 `DamageResult` devuelve cada factor por separado (`kineticBonus`, `heightBonus`, `chargeBonus`, `varianceFactor`,
-`conditionalFactor`, `directionFactor`), para los tests y para mostrarlo. Son seis etapas multiplicativas; las que faltan
-de la referencia y valen en NvN están en `Aprendizajes_Referencia.md` L1-17 a L1-19.
+`conditionalFactor`, `directionFactor`, `falloffFactor`), para los tests y para mostrarlo. Antes de todo, un golpe que
+perdona la clase del objetivo no hace nada (§5.9). Lo que queda de la referencia fuera está en
+`Aprendizajes_Referencia.md` §6.
 
 ### 5.3 Bonificaciones situacionales
 
@@ -342,6 +343,21 @@ resiliencia; al vaciarse, el objetivo queda **aturdido** un momento, y la barra 
 
   Un soldado de 100 cae aturdido con 3-4 golpes de frente y uno o dos menos por la espalda; el mandoble lo hace en dos.
   Un héroe rodeado por cinco soldados aguanta 12-14 golpes. Los informes de S6 y S9 dicen cuántos se aturdieron.
+
+### 5.9 Atenuación, inmunidades y alivio porcentual (L1-17, L1-18, L1-19, 2026-11-06)
+
+Tres etapas más de la cadena de la referencia, sin búsquedas nuevas por golpe:
+
+- **Atenuación por distancia (L1-17).** Solo golpes a distancia (`HitForm.Ranged`): `HitStages.Falloff` con la distancia
+  desde el punto de disparo (`attackerPosition` del proyectil) al objetivo. Daño completo hasta `falloffStart`, baja en
+  línea recta hasta `falloffMinFactor` en `falloffEnd` y no baja más. Son rasgos del arma (`HitTraits`), así que cada tropa
+  tiene los suyos en su `SquadRangedData` o en su clase de héroe. Arqueros y Héroe arco: 15 m, 40 m, 0,6 (2026-11-06).
+- **Inmunidades (L1-18).** `HitTraits.spares` (héroes, soldados): el golpe se descarta antes de calcular, sin vida,
+  resiliencia, retroceso ni texto. En habilidades lo decide el evento (`SkillEvent.spares`, para área y quemaduras), que
+  sustituye al del arma. Ningún dato lo usa aún. No hay estructuras: la referencia también tiene inmunidades de asedio.
+- **Alivio porcentual (L1-19).** Stats `BluntRelief`, `SlashRelief` y `PierceRelief` de la pila (base 0), escritos en
+  `DefenseComponent`. Cada tipo conserva `1 − alivio` después de la resta plana y de su suelo, con tope
+  `CombatTuning.maxRelief` (0,75). Ningún dato lo usa aún; perks y efectos pueden darlo.
 
 ---
 

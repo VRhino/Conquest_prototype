@@ -95,6 +95,7 @@ public partial class SkillEffectSystem : SystemBase
         NativeArray<TeamComponent> teams, double now)
     {
         if (!TryGetProfile(r.caster, out var profile)) return;
+        profile.traits.spares = r.effect.spares; // The skill's immunities, not the weapon's (L1-18).
         uint tick = CombatRandom.Tick(now);
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
         var hits = new NativeList<Entity>(16, Allocator.Temp);
@@ -133,6 +134,7 @@ public partial class SkillEffectSystem : SystemBase
         NativeArray<TeamComponent> teams, double now)
     {
         if (r.effect.period <= 0f || r.effect.duration <= 0f || !TryGetProfile(r.caster, out var profile)) return;
+        profile.traits.spares = r.effect.spares; // The skill's immunities, not the weapon's (L1-18).
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
         var hits = new NativeList<Entity>(16, Allocator.Temp);
         for (int i = 0; i < bodies.Length; i++)

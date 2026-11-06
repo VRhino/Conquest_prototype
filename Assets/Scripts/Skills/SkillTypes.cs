@@ -114,6 +114,11 @@ public struct SkillEvent
     public EffectReapply reapply;
     /// <summary>Seconds between the ticks of a <see cref="SkillEventType.DamageOverTime"/> (L2-11).</summary>
     public float period;
+    /// <summary>
+    /// Target classes the event's damage leaves alone (L1-18), for area damage and burns. It replaces the weapon's: a skill
+    /// decides its own immunities.
+    /// </summary>
+    public HitTargets spares;
 }
 
 /// <summary>A skill as data, built from its <see cref="HeroAbility"/> (or the hero's weapon timings for the basic attack).</summary>

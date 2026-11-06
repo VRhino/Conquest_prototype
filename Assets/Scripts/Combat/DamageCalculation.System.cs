@@ -16,6 +16,9 @@ using Unity.Transforms;
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
 ///   Height:  +10% per metre of vertical advantage (> 0.5 m threshold)
 ///
+/// A hit whose traits spare the target's class (hero or soldier) does nothing (L1-18). A ranged hit loses damage with the
+/// distance from where it was fired (L1-17), and each type keeps 1 − the target's percentage relief (L1-19).
+///
 /// Flank, back and ambush (L1-15): the hit's direction from the target's front and whether the target's squad could not
 /// see the attacker add one ratio (<see cref="HitDirectionRules"/>), and conditional modifiers can ask for them.
 ///
@@ -88,6 +91,14 @@ public partial class DamageCalculationSystem : SystemBase
                 ? p.inlineDamageProfile
                 : SystemAPI.GetComponent<DamageProfileComponent>(p.damageProfile);
 
+            // Immunity (L1-18; ref.: the first stage returns with no damage): the hit leaves this class of target alone.
+            if (profile.traits.spares != HitTargets.None
+                && HitStages.Spares(profile.traits.spares, SystemAPI.HasComponent<HeroLifeComponent>(p.target),
+                    SystemAPI.HasComponent<UnitOwnerComponent>(p.target)))
+            {
+                CompleteEvent(ref ecb, entity, p); continue;
+            }
+
             var def = defenseLookup.HasComponent(p.target)
                 ? defenseLookup[p.target]
                 : default;
@@ -118,6 +129,9 @@ public partial class DamageCalculationSystem : SystemBase
                 conditionalRatio = ConditionalRatio(p, facts, now),
                 chargeDistance = p.chargeDistance,
                 directionRatio = HitDirectionRules.DamageRatio(facts.direction, facts.ambush, directionTuning),
+                // From the shot's origin (attackerPosition of a projectile is where it was fired, L1-17).
+                rangedDistance = p.hitForm == HitForm.Ranged && transformLookup.HasComponent(p.target)
+                    ? math.distance(p.attackerPosition, transformLookup[p.target].Position) : 0f,
             }, combatTuning).effective;
 
             // --- Shield block check (absorbs the hit when the shield collider was hit, L1-08/L1-10) ---

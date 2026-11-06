@@ -94,6 +94,9 @@ public partial class StatResolveSystem : SystemBase
                 bluntDefense = stats.Get(StatId.BluntDefense),
                 slashDefense = stats.Get(StatId.SlashDefense),
                 pierceDefense = stats.Get(StatId.PierceDefense),
+                bluntRelief = stats.Get(StatId.BluntRelief),
+                slashRelief = stats.Get(StatId.SlashRelief),
+                pierceRelief = stats.Get(StatId.PierceRelief),
             });
         bool hasProfile = SystemAPI.HasComponent<DamageProfileComponent>(entity);
         if (hasProfile)

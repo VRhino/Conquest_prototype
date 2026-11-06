@@ -1,3 +1,19 @@
+# Plan: etapas de daño NvN (L1-17, L1-18, L1-19)
+
+Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/DamageMechanics.md` §5.9.
+
+## Decisiones del usuario (2026-11-06)
+- **L1-17:** la distancia de daño completo y lo que se pierde son parámetros de cada tropa (rasgos de su arma). Valores
+  de partida en Arqueros y Héroe arco: completo hasta 15 m, 60 % desde 40 m.
+- **L1-18 y L1-19:** solo la mecánica, sin datos.
+
+## Pasos
+- [x] 1. L1-19 alivio porcentual (stats de la pila, tope 0,75), L1-18 inmunidades (arma y evento de habilidad), L1-17
+  atenuación por distancia; tests (`DamageStageTests`); EditMode 541/541; S1, S6, S9 y BattleSceneIntegrationTests 23/23.
+- [x] 2. Datos de atenuación en Arqueros y Héroe arco; docs.
+
+---
+
 # Plan: flanco, emboscada y resiliencia (L1-15, L1-16)
 
 Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Catálogo: `Docs/Design/Aprendizajes_Referencia.md` §4.1.
