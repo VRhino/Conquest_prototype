@@ -125,7 +125,7 @@ public static class SkillBlobBuilder
         bool hasPhases = ability.phases != null && ability.phases.Length > 0;
         var phases = hasPhases ? ability.phases : new[] { new SkillPhase { duration = PerkCastDuration, interruptible = true, final = true } };
         return Create(IdOf(ability), 0f, ability.cooldown, ability.cooldownGroup != 0 ? ability.cooldownGroup : DefaultGroup(slot),
-            SkillRefresh.Interrupt, phases, ability.events ?? new SkillEvent[0]);
+            SkillRefresh.Interrupt, phases, ability.events ?? new SkillEvent[0], perSoldier: ability.perSoldier);
     }
 
     /// <summary>Id of a perk as a skill: its perk id in a range of its own.</summary>
@@ -163,10 +163,11 @@ public static class SkillBlobBuilder
 
     static BlobAssetReference<SkillBlob> Create(int id, float staminaCost, float cooldown, int group, SkillRefresh refresh,
         SkillPhase[] phases, SkillEvent[] events, int nextSkillId = 0, float chainWindow = 0f, float comboCost = 0f,
-        int killCost = 0)
+        int killCost = 0, bool perSoldier = false)
     {
         using var builder = new BlobBuilder(Allocator.Temp);
         ref var root = ref builder.ConstructRoot<SkillBlob>();
+        root.perSoldier = perSoldier;
         root.id = id;
         root.staminaCost = staminaCost;
         root.comboCost = comboCost;

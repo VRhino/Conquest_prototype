@@ -26,4 +26,8 @@ public class AbilityData : ScriptableObject
 
     [Tooltip("Grupo de enfriamiento de la escuadra; 0 = el de su hueco.")]
     public int cooldownGroup;
+
+    [Tooltip("Cada soldado la ejecuta por su cuenta (L2-17): la orden se escalona y cada uno lanza sus eventos desde su " +
+             "posición y hacia donde mira. Para acciones (golpes); las mejoras de toda la escuadra van sin marcar.")]
+    public bool perSoldier;
 }

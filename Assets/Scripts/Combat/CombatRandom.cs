@@ -13,6 +13,8 @@ public static class CombatRandom
     public const uint SpreadSalt = 0x85ebca6bu;
     public const uint VarianceSalt = 0xc2b2ae35u;
     public const uint ConditionSalt = 0x27d4eb2fu;
+    /// <summary>When each soldier starts its part of a squad order (L2-17).</summary>
+    public const uint SoldierOrderSalt = 0x165667b1u;
 
     /// <summary>Simulation tick in milliseconds of elapsed time (stable under a fixed step).</summary>
     public static uint Tick(double elapsedTime) => (uint)math.max(0.0, math.round(elapsedTime * 1000.0));

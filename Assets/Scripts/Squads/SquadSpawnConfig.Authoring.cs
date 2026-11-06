@@ -46,6 +46,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public HitDirectionTuning hitDirection = HitDirectionTuning.Default;
     [Tooltip("Desgaste, recuperación y aturdimiento de la resiliencia (L1-16).")]
     public ResilienceTuning resilience = ResilienceTuning.Default;
+    [Tooltip("Cómo se escalona entre sus soldados una habilidad de escuadra que cada uno ejecuta por su cuenta (L2-17).")]
+    public SoldierOrderTuning soldierOrders = SoldierOrderTuning.Default;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -77,6 +79,7 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 formationReadiness  = authoring.formationReadiness.OrDefault(),
                 hitDirection        = authoring.hitDirection.OrDefault(),
                 resilience          = authoring.resilience.OrDefault(),
+                soldierOrders       = authoring.soldierOrders.OrDefault(),
                 ownerDeathRetreatDuration = authoring.ownerDeathRetreatDuration,
                 retreatArrivalThreshold = authoring.retreatArrivalThreshold,
                 anchorMovingSpeedThreshold = authoring.anchorMovingSpeedThreshold,

@@ -131,7 +131,7 @@ Su `areaRadius` y su `damageMultiplier` se convierten en un golpe en área al em
 
 ### 3.6 Habilidades de escuadra (L2-9)
 
-Ref.: las escuadras lanzan con el mismo ciclo de vida que el héroe, y el enfriamiento es por escuadra, no por soldado.
+Ref.: las escuadras lanzan con el mismo ciclo de vida que el héroe. El enfriamiento es por escuadra; la ejecución puede ser por soldado (L2-17, abajo).
 
 - **Datos:** `AbilityData` (`Squads/Ability Data`) tiene fases, eventos y grupo como `HeroAbility`; sin fases, es una
   fase corta que dispara sus eventos al empezar. `SquadData.abilitiesByLevel` las ordena: la posición fija su hueco
@@ -150,11 +150,23 @@ Ref.: las escuadras lanzan con el mismo ciclo de vida que el héroe, y el enfria
 
 | Escuadra | Nivel 10 (tecla 1) | Nivel 20 (tecla 2) |
 |---|---|---|
-| Escuderos | Shield Brace: +30 % de defensa a la escuadra (10 s; 40 s) | Shield Bash: cono de 120°, 4 m, ×0,8, y −30 % de velocidad a los enemigos (3 s; 30 s) |
+| Escuderos | Shield Brace: +30 % de defensa a la escuadra (10 s; 40 s) | Shield Bash, por soldado: cada escudero golpea un cono de 90° y 1,8 m delante de él, a un enemigo, ×0,8, y le quita −30 % de velocidad (3 s; 30 s) |
 | Arqueros | Focused Volley: +25 % de daño perforante (8 s; 35 s) | Light Step: +25 % de velocidad (8 s; 40 s) |
 | Lanceros | Bristling Spears: +20 % de daño perforante y +15 % de defensa (8 s; 40 s) | Coordinated Charge: +20 % de velocidad y de daño perforante (5 s; 45 s) |
 
 Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
+
+**Por soldado (L2-17, 2026-11-06).** Ref.: los soldados lanzan sus propias habilidades por un camino propio. Una habilidad
+con `AbilityData.perSoldier` es una orden: la escuadra pasa la puerta y empieza su enfriamiento, pero no ejecuta nada.
+Cada soldado vivo recibe un `SoldierSkillComponent` (habilitable) y:
+- empieza en un momento propio entre 0 y 0,6 s tras la orden (tirada sembrada por tick y soldado);
+- si está a mitad de un golpe o aturdido, espera a quedar libre hasta 1,5 s y, si no, se salta la orden;
+- recorre sus fases y lanza los eventos desde su posición y hacia donde mira, como su escuadra (perfil, equipo, efectos).
+
+Los ajustes están en `SquadSpawnConfigAuthoring.soldierOrders` (`SoldierOrderTuning`). El enfriamiento sigue siendo de la
+escuadra: la orden siempre la da ella (decisión del usuario). Solo las acciones van por soldado (Shield Bash); las
+mejoras de toda la escuadra siguen siendo un único efecto. Mientras ejecuta su parte, un soldado puede empezar un golpe
+normal: no hay animación propia todavía (H2).
 
 ## 4. Efectos (`SkillEventType`)
 

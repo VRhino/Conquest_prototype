@@ -38,4 +38,5 @@ public struct SquadSpawnConfigComponent : IComponentData
     public FormationReadinessTuning formationReadiness; // When a formation is ready and how long the AI waits for it (F12)
     public HitDirectionTuning hitDirection; // Flank, back and ambush hits (L1-15)
     public ResilienceTuning resilience;     // Wear, recovery and stun of resilience (L1-16)
+    public SoldierOrderTuning soldierOrders; // How a squad ability run per soldier is spread (L2-17)
 }

@@ -162,7 +162,7 @@ Se dejan fuera las de valor bajo (§6).
 | L2-14 (amp., hecho, §4) | Efectos ligados a la habilidad | Los modificadores de una habilidad solo caducan por tiempo | Marcar el modificador con la instancia que lo creó y retirarlo cuando la habilidad termina o la interrumpen | Posturas y canalizaciones sin efectos residuales | S | B | B |
 | L2-15 (amp., hecho, `SkillsAndPerks.md` §5) | Condiciones de efecto más ricas | `PerkCondition` solo tiene `HeroStill` y `HeroMovedRecently` (`Perks/PerkTypes.cs:15-22`) | Probabilidad, tipo de objetivo (héroe, soldado, clase), objetivo o atacante con un efecto activo, soldados restantes de la escuadra en un rango; combinadas con Y y con triestados | Los perks del GDD que hoy no tienen datos | M | B | M |
 | L2-16 (NvN, hecho, `SkillsAndPerks.md` §3.1) | Recurso de combo y de bajas | Las habilidades solo piden aguante y enfriamiento (`SkillGate`); el combo del ataque básico es una cadena, no un recurso | Stat de la pila que suben los golpes y las bajas y bajan el tiempo y el gasto; condición nueva en `SkillGate` con su motivo de rechazo ("falta combo", "faltan bajas") | Remates que se ganan peleando; ritmo en batallas largas | S-M | B | M |
-| L2-17 (NvN) | Habilidades y enfriamientos por soldado | La escuadra lanza su habilidad como un bloque y enfría por escuadra (L2-9) | Buffer `CooldownGroupElement` por soldado y lanzamiento por soldado con `SkillGate`, escalonado dentro de la orden de escuadra; la escuadra sigue dando la orden | Una andanada que se deshace a su ritmo; soldados que actúan cuando pueden | M | M | M |
+| L2-17 (NvN, hecho, `SkillsAndPerks.md` §3.6) | Habilidades y enfriamientos por soldado | La escuadra lanza su habilidad como un bloque y enfría por escuadra (L2-9) | Buffer `CooldownGroupElement` por soldado y lanzamiento por soldado con `SkillGate`, escalonado dentro de la orden de escuadra; la escuadra sigue dando la orden | Una andanada que se deshace a su ritmo; soldados que actúan cuando pueden | M | M | M |
 
 **L2-1.** Ref.: toda habilidad pasa por una puerta con comprobaciones en orden fijo y código de motivo de rechazo; el
 estado de control prohíbe por defecto. La corrección frente al informe: el input existe; falta el consumidor. Solo hay 3
@@ -409,7 +409,9 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   clase de objetivo y alivio porcentual por tipo, estas dos sin datos por decisión del usuario.
 - **Hecho en habilidades NvN (2026-11-06, `SkillsAndPerks.md` §3.1):** L2-16, combo y bajas del héroe como dos recursos
   aparte; las definitivas cuestan 20 de combo. Falta enseñarlo en el HUD (`Por_Abordar/Habilidades_Perks.md` H16).
-- **Pendiente del catálogo:** L2-17 (NvN, 2026-11-06); L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-10; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
+  L2-17: una habilidad de escuadra marcada "por soldado" es una orden que cada soldado ejecuta a su ritmo (escalonado de
+  0-0,6 s, espera de hasta 1,5 s si está ocupado), con el enfriamiento en la escuadra; Shield Bash la usa.
+- **Pendiente del catálogo:** L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-10; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).

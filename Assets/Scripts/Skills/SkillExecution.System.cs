@@ -13,7 +13,8 @@ using Unity.Transforms;
 /// Keeps <see cref="HeroCombatComponent.isAttacking"/>, <see cref="HeroCombatComponent.hitboxFired"/>, the attack
 /// animation trigger and <see cref="WeaponHitboxActiveTag"/> up to date for stamina, visuals and melee contacts.
 /// Replaces HeroAttackSystem and its duplicated player/AI paths. Squads run their abilities here too, with the same gate
-/// and timeline and cooldown groups of their own (L2-9).
+/// and timeline and cooldown groups of their own (L2-9). A squad ability marked per soldier (L2-17) is an order instead: the
+/// squad cools down and every living soldier runs it on its own (<see cref="SoldierSkillComponent"/>), staggered, once free.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroSkillRequestSystem))]
@@ -25,6 +26,10 @@ public partial class SkillExecutionSystem : SystemBase
     NativeList<SkillEvent> _discarded;
     /// <summary>Effect events of this frame, created as requests for <see cref="SkillEffectSystem"/> after the loop.</summary>
     NativeList<SkillEffectRequestComponent> _effects;
+    /// <summary>Orders given to soldiers this frame (L2-17), written to them after the squad loop.</summary>
+    NativeList<SoldierSkillComponent> _orders;
+    NativeList<Entity> _orderedSoldiers;
+    NativeList<Entity> _soldiersDone;
 
     protected override void OnCreate()
     {
@@ -32,6 +37,9 @@ public partial class SkillExecutionSystem : SystemBase
         _fired = new NativeList<SkillEvent>(16, Allocator.Persistent);
         _discarded = new NativeList<SkillEvent>(16, Allocator.Persistent);
         _effects = new NativeList<SkillEffectRequestComponent>(16, Allocator.Persistent);
+        _orders = new NativeList<SoldierSkillComponent>(32, Allocator.Persistent);
+        _orderedSoldiers = new NativeList<Entity>(32, Allocator.Persistent);
+        _soldiersDone = new NativeList<Entity>(32, Allocator.Persistent);
     }
 
     protected override void OnDestroy()
@@ -39,6 +47,9 @@ public partial class SkillExecutionSystem : SystemBase
         _fired.Dispose();
         _discarded.Dispose();
         _effects.Dispose();
+        _orders.Dispose();
+        _orderedSoldiers.Dispose();
+        _soldiersDone.Dispose();
     }
 
     protected override void OnUpdate()
@@ -106,6 +117,8 @@ public partial class SkillExecutionSystem : SystemBase
         }
 
         UpdateSquads(battle, dt, now);
+        ApplySoldierOrders();
+        UpdateSoldiers(battle, dt, now);
 
         foreach (var request in _effects)
             EntityManager.SetComponentData(EntityManager.CreateEntity(typeof(SkillEffectRequestComponent)), request);
@@ -169,8 +182,16 @@ public partial class SkillExecutionSystem : SystemBase
             if (SkillGate.Evaluate(input) != SkillRejection.None) continue;
 
             ref var skill = ref skills[index].skill.Value;
-            if (busy) EndInstance(ref inst, skills, now);
             float scale = SystemAPI.HasComponent<CooldownScaleComponent>(entity) ? SystemAPI.GetComponent<CooldownScaleComponent>(entity).value : 1f;
+            if (skill.perSoldier)
+            {
+                // L2-17: the squad gives the order and cools down; each soldier runs it on its own (UpdateSoldiers).
+                CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
+                inst.launches++;
+                OrderSoldiers(entity, units, skills[index], inst.launches, now);
+                continue;
+            }
+            if (busy) EndInstance(ref inst, skills, now);
             CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
             _fired.Clear();
             SkillTimeline.Start(ref skill, ref inst, index, _fired);
@@ -184,6 +205,104 @@ public partial class SkillExecutionSystem : SystemBase
         public float3 forward;
         public Team team;
     }
+
+    /// <summary>
+    /// L2-17: every living soldier gets the order, each with its own start in the stagger window (seeded by the tick and
+    /// the soldier) and a give-up time after it.
+    /// </summary>
+    void OrderSoldiers(Entity squad, DynamicBuffer<SquadUnitElement> units, in HeroSkillElement skill, uint orderId, double now)
+    {
+        var tuning = SystemAPI.TryGetSingleton<SquadSpawnConfigComponent>(out var config)
+            ? config.soldierOrders.OrDefault() : SoldierOrderTuning.Default;
+        uint tick = CombatRandom.Tick(now);
+        foreach (var unit in units)
+        {
+            if (!SystemAPI.Exists(unit.Value) || SystemAPI.HasComponent<IsDeadComponent>(unit.Value)
+                || !SystemAPI.HasComponent<LocalTransform>(unit.Value)) continue;
+            double startAt = SoldierOrders.StartAt(now,
+                CombatRandom.ForHit(tick, unit.Value, CombatRandom.SoldierOrderSalt).NextFloat(), tuning);
+            _orderedSoldiers.Add(unit.Value);
+            _orders.Add(new SoldierSkillComponent
+            {
+                skill = skill.skill, skillId = skill.skillId, squad = squad, orderId = orderId,
+                startAt = startAt, giveUpAt = startAt + tuning.maxWait,
+            });
+        }
+    }
+
+    /// <summary>Writes this frame's orders on their soldiers (a structural change, so after the squad loop).</summary>
+    void ApplySoldierOrders()
+    {
+        for (int i = 0; i < _orders.Length; i++)
+        {
+            Entity soldier = _orderedSoldiers[i];
+            var order = _orders[i];
+            if (EntityManager.HasComponent<SoldierSkillComponent>(soldier))
+                order.instance.launches = EntityManager.GetComponentData<SoldierSkillComponent>(soldier).instance.launches;
+            else
+                EntityManager.AddComponent<SoldierSkillComponent>(soldier);
+            EntityManager.SetComponentData(soldier, order);
+            EntityManager.SetComponentEnabled<SoldierSkillComponent>(soldier, true);
+        }
+        _orders.Clear();
+        _orderedSoldiers.Clear();
+    }
+
+    /// <summary>
+    /// L2-17: each soldier with an order waits for its start, starts once free (not mid-swing, not stunned) or gives up,
+    /// then runs the phases; its effects come from where it stands and faces, as its squad's.
+    /// </summary>
+    void UpdateSoldiers(bool battle, float dt, double now)
+    {
+        _soldiersDone.Clear();
+        foreach (var (order, transform, entity) in SystemAPI.Query<RefRW<SoldierSkillComponent>, RefRO<LocalTransform>>()
+                     .WithEntityAccess())
+        {
+            ref var o = ref order.ValueRW;
+            if (!battle || !o.skill.IsCreated || !SystemAPI.Exists(o.squad) || SystemAPI.HasComponent<IsDeadComponent>(entity))
+            {
+                _soldiersDone.Add(entity);
+                continue;
+            }
+            ref var skill = ref o.skill.Value;
+            _fired.Clear();
+            bool ended = false;
+            if (!o.instance.active)
+            {
+                var step = SoldierOrders.Step(now, o.startAt, o.giveUpAt, SoldierFree(entity, now));
+                if (step == SoldierOrderStep.Wait) continue;
+                if (step == SoldierOrderStep.GiveUp)
+                {
+                    _soldiersDone.Add(entity);
+                    continue;
+                }
+                SkillTimeline.Start(ref skill, ref o.instance, 0, _fired);
+            }
+            else ended = SkillTimeline.Advance(ref skill, ref o.instance, dt, _fired);
+            float3 forward = transform.ValueRO.Forward();
+            forward.y = 0f;
+            var origin = new SquadOrigin
+            {
+                position = transform.ValueRO.Position,
+                forward = math.normalizesafe(forward, new float3(0f, 0f, 1f)),
+                team = TeamOf(o.squad),
+            };
+            QueueEffects(o.squad, origin, o.skillId, o.orderId);
+            if (ended) _soldiersDone.Add(entity);
+        }
+        foreach (var soldier in _soldiersDone)
+        {
+            var done = EntityManager.GetComponentData<SoldierSkillComponent>(soldier);
+            done.instance.active = false;
+            EntityManager.SetComponentData(soldier, done);
+            EntityManager.SetComponentEnabled<SoldierSkillComponent>(soldier, false);
+        }
+    }
+
+    bool SoldierFree(Entity soldier, double now)
+        => !(SystemAPI.HasComponent<UnitCombatComponent>(soldier) && SystemAPI.GetComponent<UnitCombatComponent>(soldier).isAttacking)
+           && !(SystemAPI.HasComponent<ResilienceComponent>(soldier)
+                && Resilience.IsStunned(SystemAPI.GetComponent<ResilienceComponent>(soldier), now));
 
     /// <summary>Centre of the squad's living units; false when none is left.</summary>
     bool SquadCentre(DynamicBuffer<SquadUnitElement> units, out float3 centre)

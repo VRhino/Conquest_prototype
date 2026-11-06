@@ -75,6 +75,22 @@ public class SkillCatalogueDataTests
         Assert.That(mark.value, Is.EqualTo(0.2f).Within(1e-5f));
     }
 
+    /// <summary>L2-17, approved 2026-11-06: Shield Bash runs per soldier, a 90° cone of 1.8 m in front of each, one enemy.</summary>
+    [Test]
+    public void ShieldBashRunsPerSoldierInASmallConeInFront()
+    {
+        var bash = AssetDatabase.LoadAssetAtPath<AbilityData>("Assets/ScriptableObjects/Squads/Abilities/Squires_ShieldBash.asset");
+        Assert.That(bash.perSoldier, Is.True);
+        Assert.That(bash.events, Is.Not.Empty);
+        foreach (var e in bash.events)
+        {
+            Assert.That(e.radius, Is.EqualTo(1.8f).Within(1e-5f));
+            Assert.That(e.angle, Is.EqualTo(90f));
+            Assert.That(e.distance, Is.EqualTo(0f));
+            Assert.That(e.maxTargets, Is.EqualTo(1));
+        }
+    }
+
     /// <summary>L2-16, approved 2026-11-06: the ultimates ask for and spend 20 combo; nothing costs kills yet.</summary>
     [TestCase("Bow4")]
     [TestCase("Spear4")]
