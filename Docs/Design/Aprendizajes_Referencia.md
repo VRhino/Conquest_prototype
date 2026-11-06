@@ -4,6 +4,8 @@ Estado: propuesta de diseño; las Fases 0, 1 y 2 y los puntos de combate (salvo 
 la verificación: 2026-10-19.
 Ampliación del 2026-10-26: 20 puntos más sacados de las notas de `game-re` que el catálogo no recogía, marcados
 "(amp.)" en las tablas de la sección 4. El estado de todo lo pendiente está al final de la sección 5.
+Revisión del 2026-11-06: el 3v3 es el prototipo y el objetivo es NvN. Lo que la sección 6 descartaba "por ser un 3v3" se
+ha vuelto a valorar; los puntos recuperados están marcados "(NvN)" en la sección 4.
 Las propuestas marcadas "(verificado)" tienen su afirmación "Hoy en el proyecto" comprobada leyendo el código citado.
 
 **Prioridad declarada (2026-10-19):** lo primero es la experiencia de las unidades en pantalla: marcha, formación, giro,
@@ -58,7 +60,7 @@ modificadores por entidad, una regla de combinación única y un único escritor
 - **Regla de combinación:** `(1 + Σ ratios) * base + Σ planos`; un override, si existe, gana. Los ratios se suman entre
   sí y se multiplican una sola vez (patrón estándar de RPG; evita la explosión multiplicativa).
 - **Canales:** Base, Ataque, Defensa, y los condicionados por etiqueta (tipo de daño, melee/rango, clase objetivo) que
-  solo evalúa el sistema de daño en el impacto. Para 3v3 bastan 3-4 canales.
+  solo evalúa el sistema de daño en el impacto. Se empezó con 3-4 canales; se añaden más cuando un efecto los pida.
 - **Un escritor:** `StatResolveSystem` recompone `DefenseComponent`, `PenetrationComponent`, `UnitStatsComponent`,
   velocidad y escala de cooldown desde una base inmutable, y solo cuando una marca `ModifiersDirty` (enableable) lo pide.
 - **Un enum `StatId` compartido** que sirve de clave de persistencia (L7-6) y de red. Esto sustituye a `Dictionary<string,float>`.
@@ -112,10 +114,15 @@ Leyenda: coste S/M/L; riesgo B/M/A (bajo/medio/alto); prioridad A/M/B. "Ref." es
 | L1-12 (amp., hecho, §5.5) | Variación aleatoria del daño | Para la misma entrada el daño es siempre el mismo (`DamageFormula`) | Factor `1 ± f` por arma o habilidad, tirado con el RNG sembrado del golpe (L1-05) | Números menos mecánicos sin perder reproducibilidad | S | B | B |
 | L1-13 (amp., hecho, §7.5) | Robo de vida | No existe | Stat de la pila: fracción del daño hecho que cura al atacante, aplicada después de restar la vida | Perks y habilidades de sustento | S | B | B |
 | L1-14 (amp., hecho, §4.2) | Modificadores por terreno según el tipo de unidad | El terreno no afecta a los stats | El tipo de unidad declara modificadores por tipo de terreno (vida, daño, defensa, velocidad), aplicados con una fuente propia según el terreno del mapa | Identidad de cada unidad según el mapa | M | B | B |
+| L1-15 (NvN) | Emboscada y flanco | El daño no depende de por dónde llega el golpe; `UnitCombatComponent.isFlanked` existe pero nadie lo escribe (`Combat/UnitCombat.Component.cs:15`) | Clase de golpe "por el flanco" o "por la espalda" según el ángulo entre la dirección del golpe y el frente del objetivo, y "emboscada" si el objetivo no veía al atacante (L4-03); multiplicador por clase como stat de la pila | Maniobrar con escuadras tiene premio; base de la caballería | M | M | A |
+| L1-16 (NvN) | Resiliencia (aguante al golpe) | Solo el escudo roto aturde (`Combat/DamageCalculation.System.cs`); el resto de golpes no tiene peso propio | Barra de resiliencia por soldado y héroe que cada golpe gasta según su peso y que se recupera; al vaciarse, el objetivo sufre la reacción del golpe (L1-09) | Golpes pesados que rompen líneas; separa daño de control | M | M | A |
+| L1-17 (NvN) | Atenuación del proyectil por distancia | Un proyectil hace el mismo daño a 5 m y a 60 m | Factor por distancia recorrida en el perfil del arma (sin pérdida hasta un umbral, luego lineal hasta un mínimo); etapa de `DamageFormula` | Los arqueros a quemarropa y a tope de alcance no valen igual | S | B | M |
+| L1-18 (NvN) | Inmunidades por tipo de objetivo | Todo golpe daña a todo; solo L1-09 propone permisos por clase de objetivo para la reacción | Máscara de clases de objetivo que el golpe no puede dañar (héroe, soldado, estructura), en el perfil del golpe; la etapa devuelve cero con motivo en el desglose | Habilidades contra soldados que no borran héroes y al revés | S | B | M |
+| L1-19 (NvN) | Alivio porcentual del daño | La defensa solo resta un plano por tipo con suelo (`Combat/DamageFormula.cs`) | Stat de la pila de reducción porcentual por tipo de daño, aplicado después de la resta plana; con tope | Fuego y veneno que no se anulan con armadura; resistencias de perk | S | B | M |
 
 **L1-01.** Ref.: el poder se compone con una fórmula de ratios sumados + planos y un override; los efectos no conocen el
 atributo. Ver T1. **L1-03.** Ref.: la calculadora es una cadena de etapas con entradas explícitas y desglose de salida
-por etapa; así se testea y se muestra. Aquí se adoptan 3-4 etapas, no 17. **L1-05.** Ref.: el contexto del golpe ya trae
+por etapa; así se testea y se muestra. Se empezó con pocas etapas; L1-15 a L1-19 añaden las que valen en NvN. **L1-05.** Ref.: el contexto del golpe ya trae
 el azar resuelto y la calculadora solo lo consume. **L1-02.** Ref.: los mismos stats se leen por canal y algunos efectos
 solo aplican si se cumple una condición del contexto. **L1-04.** Ref.: tasa `V/(P+V)`, asintótica; es la curva de
 rendimientos decrecientes habitual en RPG. **L1-06.** Ref.: el escudo de buff absorbe primero y el exceso pasa a la vida;
@@ -129,6 +136,11 @@ usa la distancia proyectada sobre la dirección del atacante, acotada, y solo cu
 **L1-12.** Ref.: cada habilidad declara una amplitud de dispersión y el factor se tira al construir el golpe. **L1-13.**
 Ref.: el robo de vida es un stat más de los efectos. **L1-14.** Ref.: los modificadores de terreno los declara el tipo de
 unidad, filtrados por el terreno del nivel, y se suman a los ratios antes de multiplicar (T1).
+**L1-15 a L1-19 (NvN).** Ref.: son etapas de su cadena de daño (`game-re/notes/damage-pipeline.md`): la clase de golpe
+(emboscada, cabeza, crítico) va al principio; la atenuación del proyectil y el alivio porcentual van tras la penetración;
+las inmunidades cortan antes de calcular; la resiliencia va al final y decide la reacción, no el daño. Coste a escala:
+cada etapa nueva debe leer datos que ya viajan en el golpe o en la entidad objetivo, sin búsquedas extra por impacto.
+Se dejan fuera las de valor bajo (§6).
 
 ### 4.2 Habilidades
 
@@ -149,6 +161,8 @@ unidad, filtrados por el terreno del nivel, y se suman a los ratios antes de mul
 | L2-13 (amp., hecho, §4) | Tope de objetivos por habilidad | El daño en área golpea a todos los que están dentro (`Skills/SkillEffect.System.cs`, `SkillArea.Contains`) | Máximo de objetivos en el evento de efecto, los más cercanos primero | Áreas que se pueden equilibrar contra escuadras de 30 | S | B | M |
 | L2-14 (amp., hecho, §4) | Efectos ligados a la habilidad | Los modificadores de una habilidad solo caducan por tiempo | Marcar el modificador con la instancia que lo creó y retirarlo cuando la habilidad termina o la interrumpen | Posturas y canalizaciones sin efectos residuales | S | B | B |
 | L2-15 (amp., hecho, `SkillsAndPerks.md` §5) | Condiciones de efecto más ricas | `PerkCondition` solo tiene `HeroStill` y `HeroMovedRecently` (`Perks/PerkTypes.cs:15-22`) | Probabilidad, tipo de objetivo (héroe, soldado, clase), objetivo o atacante con un efecto activo, soldados restantes de la escuadra en un rango; combinadas con Y y con triestados | Los perks del GDD que hoy no tienen datos | M | B | M |
+| L2-16 (NvN) | Recurso de combo y de bajas | Las habilidades solo piden aguante y enfriamiento (`SkillGate`); el combo del ataque básico es una cadena, no un recurso | Stat de la pila que suben los golpes y las bajas y bajan el tiempo y el gasto; condición nueva en `SkillGate` con su motivo de rechazo ("falta combo", "faltan bajas") | Remates que se ganan peleando; ritmo en batallas largas | S-M | B | M |
+| L2-17 (NvN) | Habilidades y enfriamientos por soldado | La escuadra lanza su habilidad como un bloque y enfría por escuadra (L2-9) | Buffer `CooldownGroupElement` por soldado y lanzamiento por soldado con `SkillGate`, escalonado dentro de la orden de escuadra; la escuadra sigue dando la orden | Una andanada que se deshace a su ritmo; soldados que actúan cuando pueden | M | M | M |
 
 **L2-1.** Ref.: toda habilidad pasa por una puerta con comprobaciones en orden fijo y código de motivo de rechazo; el
 estado de control prohíbe por defecto. La corrección frente al informe: el input existe; falta el consumidor. Solo hay 3
@@ -161,13 +175,16 @@ prerrequisito o ha pasado poco desde que acabó; el *input buffering* es prácti
 modo, cuenta y ángulo; dispersión creciente con el movimiento; tope duro de proyectiles vivos. **L2-6.** Ref.: la carga
 es una fase de duración infinita; soltar avanza a la final. **L2-8.** Ref.: el proyectil vive en un gestor con id con
 generación, no como GameObject. Rompe el principio "la física de GO no decide lógica" mientras no se migre; justificar.
-**L2-9 (amp.).** Ref.: las escuadras lanzan sus habilidades con el mismo ciclo de vida que el héroe, y el enfriamiento es
-por escuadra, no por soldado (ver §6). **L2-10.** Ref.: la duración y las pilas máximas son stats que modifican por
+**L2-9 (amp.).** Ref.: las escuadras lanzan sus habilidades con el mismo ciclo de vida que el héroe; la referencia además
+enfría por soldado (L2-17). **L2-10.** Ref.: la duración y las pilas máximas son stats que modifican por
 separado quien aplica el efecto y quien lo recibe. **L2-11.** Ref.: el daño en el tiempo es un efecto con periodo y
 duración propios. **L2-12.** Ref.: solo las fases marcadas escalan con la velocidad, y la animación se reproduce a la
 proporción correspondiente. **L2-13.** Ref.: cada habilidad lleva un número máximo de impactos, modificable por efectos.
 **L2-14.** Ref.: al terminar una habilidad se retiran los efectos enlazados a ella. **L2-15.** Ref.: las condiciones se
 combinan con Y, las listas son "cualquiera de" y los triestados distinguen "no importa", "debe" y "no debe".
+**L2-16 (NvN).** Ref.: el combo es una propiedad del actor y la puerta de lanzamiento rechaza con motivos propios por falta
+de combo o de bajas. **L2-17.** Ref.: cada actor, soldados incluidos, lleva su gestor de enfriamientos, y la legión tiene
+otro; los soldados lanzan por un camino propio. En ECS cuesta un buffer pequeño por soldado que solo se lee al lanzar.
 
 ### 4.3 Formaciones
 
@@ -178,7 +195,7 @@ combinan con Y, las listas son "cualquiera de" y los triestados distinguen "no i
 | L3-03 | Jitter determinista en Dispersa | `Dispersed` es una rejilla fija de `int2` | `posJitter`/`yawJitter` por hash (unidad, slot) | Aspecto natural | S | B | M |
 | L3-04 | Radio de snap por formación | Un `navMeshDestinationSampleRadius` global de 2 m (`UnitNavMesh.System.cs:89`) | `snapRadius` en `FormationDataBlob` | Formaciones cerradas no se rompen | S | B | M |
 | L3-05 (hecho, `Formations.md` §4) | Caducidad de órdenes | Temporizadores dispersos por IA | `expiresAt` en `SquadResolvedOrderComponent` | Menos temporizadores; contrato de red pequeño | S | B | B |
-| L3-06 (hecho, `Formations.md` §4) | Cambio de formación por tag | `FormationSystem` recorre todas las escuadras cada frame (`Formation.System.cs:25-41`) | `FormationChangePendingTag` enableable | Trabajo casi nulo en 3v3 | S | B | B |
+| L3-06 (hecho, `Formations.md` §4) | Cambio de formación por tag | `FormationSystem` recorre todas las escuadras cada frame (`Formation.System.cs:25-41`) | `FormationChangePendingTag` enableable | Trabajo casi nulo aunque haya muchas escuadras | S | B | B |
 
 **L3-02.** Ref.: la plantilla se elige por número de miembros (primera con `min <= N`), así que la formación se recompone
 al bajar N. Asignación voraz basta con N<=30. **L3-01.** Ref.: la formación se convierte en destinos sobre una rejilla
@@ -191,13 +208,13 @@ por llamada explícita, sin sondeo; aquí se toma solo la caducidad y el evento.
 
 | ID | Título | Problema actual | Propuesta | Beneficio | Coste | Riesgo | Prio. |
 |---|---|---|---|---|---|---|---|
-| L4-01 (verificado) | Reloj de pensamiento escalonado | `Time.frameCount % 5` (`Hero/AI/Systems/HeroAIPerception.System.cs:27`), igual frame para todos los bots; `SquadAISystem` recorre todo por frame (`Squads/Systems/SquadAI.System.cs:26-100`) | `AIThinkClock` + `AIThinkSchedulerSystem`, fase por hash del `Entity`, periodo en singleton `AIConfig`, tope por frame | Independiente de FPS, sin picos, escala a 15v15 | S | B | A |
+| L4-01 (verificado) | Reloj de pensamiento escalonado | `Time.frameCount % 5` (`Hero/AI/Systems/HeroAIPerception.System.cs:27`), igual frame para todos los bots; `SquadAISystem` recorre todo por frame (`Squads/Systems/SquadAI.System.cs:26-100`) | `AIThinkClock` + `AIThinkSchedulerSystem`, fase por hash del `Entity`, periodo en singleton `AIConfig`, tope por frame | Independiente de FPS, sin picos, escala a NvN | S | B | A |
 | L4-02 (verificado) | Puertas con histéresis | `isUnderAttack` se activa por proximidad a 20 m o combate de escuadra (`HeroAIPerception.System.cs:105-107`); sin temporizadores | `DebouncedGate` (T_apertura/T_cierre) en el `HeroAIBlackboard` + compromiso mínimo de rama | Bots sin parpadeo; menos órdenes redundantes | S | B | A |
 | L4-04 (hecho, `Movimiento_Formaciones.md` §21) | Puntuación de objetivo con saturación | Más cercano y dos pasadas de reparto (`Combat/UnitTargeting.System.cs:92-250`) | `Score` con 4 términos y candidatos K más cercanos | Menos retargets; O(K) por unidad | M | M | M |
 | L4-03 (hecho, `DamageMechanics.md` §9.1) | Línea de visión con presupuesto de rayos | Detección solo por distancia al centroide (`Combat/EnemyDetection.System.cs:139-176`) | `LineOfSightBudgetSystem` por par escuadra-enemigo con cursor | Cobertura real, coste acotado | M | M | M |
 | L4-06 (hecho: marca y test) | IA server-only | Todos los bots corren localmente | Agrupar `EnemyDetection`, `SquadAI`, perfil bot y `OrderResolution` en grupos de servidor | Evita rediseñar con Netcode | M | M | M |
 | L4-05 (hecho, §9.2) | Sesgo de aggro / provocación | No existe aggro, solo represalia | `AggroBias` con expiración | Roles de tanque | S | B | B |
-| L4-07 (aplazado, `Por_Abordar/IA.md` I1) | LOD de IA | Sin cotas; 15v15 sin medir | `AILodSystem` con tres niveles | Sostener 15v15 | M | M | B |
+| L4-07 (aplazado, `Por_Abordar/IA.md` I1) | LOD de IA | Sin cotas; NvN sin medir | `AILodSystem` con tres niveles | Sostener NvN | M | M | B |
 | L4-08 (amp., hecho con H1, `SkillsAndPerks.md` §8) | Elegir aliado al que apoyar | La IA no elige aliados ni lanza habilidades (`Docs/Por_Abordar/Habilidades_Perks.md` H1) | Puntuación de aliado por cercanía, vida perdida y si es héroe, dentro de un radio; el elegido se mantiene mientras siga siendo válido | IA de curación y de buffs coherente | S-M | B | M |
 | L4-09 (amp., hecho con L4-04) | Búsqueda de enemigo por estrategia de escuadra | `EnemyDetection` usa la distancia al centroide con radio fijo (`Combat/EnemyDetection.System.cs:139-176`) | Radio de combate que crece con la velocidad de la escuadra, entre un mínimo y un máximo; descarte por diferencia de altura y por pendiente; variantes (arquero con línea de tiro, atacar avanzando, atacar una zona). Complementa L4-04 | Escuadras que no se enganchan con enemigos en otra cota | M | M | M |
 | L4-10 (amp., hecho, §9.2) | Efectos que ajustan la IA de escuadra | Los parámetros de IA son constantes de configuración | Parámetros de IA (radio de combate, pesos) como stats de la pila de la escuadra, con fuente `Effect` | Órdenes y habilidades tácticas sin código nuevo | S | B | B |
@@ -249,6 +266,8 @@ jinete gira fuera del arco permitido respecto a la montura, pierde la capacidad 
 | l6-04 | Transporte con pipelines | `com.unity.transport 6.5.0` sin uso | Canales no fiable (snapshots) y fiable (comandos); KCP solo si hace falta | Sin ARQ propio | S | B | A |
 | l6-05 | Latido y reconexión | Nada | Ping 1 s, sospecha a 3 s, corte a 8 s, reenvío por secuencia, snapshot completo si hay hueco | Un corte corto no pierde partida | M | M | M |
 | l6-06 | Sesión de batalla separada | `PlayerSessionService` sin implementar | Ticket firmado de batalla; servidor dedicado por partida | Aislamiento de fallos | M | B | M |
+| l6-09 (NvN) | Relevancia por cliente | Sin red; l6-02 manda todos los héroes y escuadras a todos | Cada cliente recibe con detalle lo que tiene cerca o a la vista y con menos frecuencia lo lejano; prioridad por distancia y por si es su escuadra o su objetivo | Con NvN el límite es el ancho de banda de subida del servidor, no la CPU | M | M | A |
+| l6-10 (NvN) | Transporte de respaldo | Sin red | Si UDP no conecta (redes que lo bloquean), abrir la sesión por WebSocket/TCP con el mismo protocolo; solo cuando falla, no dos conexiones a la vez | Jugadores tras cortafuegos no se quedan fuera | S-M | B | B |
 
 **l6-01.** Ref.: el servidor decide lo que cambia el resultado; el cliente es dueño de su propio movimiento y la cola de
 estados predichos se reproduce sobre la corrección. Reconciliación sin rebobinado: error pequeño se ignora, medio se
@@ -259,6 +278,12 @@ del 3-5 %. **l6-05.** Ref.: latido, prueba tras silencio y reenvío por secuenci
 en lugar de cerrar. **l6-06/07/08.** Ref.: sesión de gateway distinta de la de sala; despachadores de red separados de la
 lógica. Recomendación del informe: protocolo propio sobre Unity Transport o NGO como cáscara; no adoptar Netcode for
 Entities mientras héroe y unidades se muevan con `CharacterController` y `NavMeshAgent`.
+**l6-06 (NvN).** La referencia separa un gateway maestro (sesión larga del jugador) de uno esclavo por sala. Aquí basta el
+ticket firmado; una red de gateways propia solo compensa si hay muchos servidores de partida a la vez.
+**l6-09 (NvN).** Ref.: no hay compresión de paquete; el ahorro viene de cuantizar y de no mandar todo. La relevancia por
+cliente no sale de las notas: es la técnica pública (*interest management*) que hace falta cuando N crece.
+**l6-10.** Ref.: abre una conexión de apoyo por el transporte contrario (TCP y KCP en paralelo); aquí se toma solo la idea
+del respaldo, abierto bajo demanda.
 
 ### 4.7 Progresión y modos
 
@@ -337,6 +362,12 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 - **Fase 4 (IA):** L4-09 con L4-04; L4-08 con H1 (la IA usa habilidades); L4-10 después de L2-9.
 - **Según alcance:** L5-8 solo con caballería (con L5-6); L7-8 cuando se haga la vista de `Tab`; L7-9 si el GDD la pide.
 
+**Revisión NvN (2026-11-06).** Dónde encajan los puntos "(NvN)":
+- **Combate:** L1-15 (flanco) y L1-16 (resiliencia) primero; L1-16 desbloquea la parte de datos de L1-09 aunque falten
+  animaciones. Después L1-19, L1-18 y L1-17, que son etapas sueltas de `DamageFormula`.
+- **Habilidades:** L2-16 (combo y bajas) con la pila y `SkillGate` ya hechas; L2-17 (por soldado) después, junto a L2-9.
+- **Red:** l6-09 (relevancia) entra en la Fase 6 junto a l6-02; l6-10 al final, con l6-04.
+
 ### Estado a 2026-10-27
 - **Hecho:** Fases 0, 1 y 2; lotes de movimiento C1-C15 de `Movimiento_Formaciones.md`, que cubren L3-02 (C12),
   L5-1 (C14), L5-2 (C9), L5-4 (C7, con la decisión D5) y L3-01 (C13, 2026-10-26, §20: slots validados por escuadra con
@@ -371,7 +402,7 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   quemadura) y L2-12 (velocidad de ataque en las fases marcadas y en el Animator del héroe). El 2026-11-04 (H15): el
   tope de L2-13 se cambia con efectos (stat `MaxTargets`), L2-14 sobrevive a la habilidad aparcada, y L2-12 llega a las
   habilidades de escuadra, al ataque de los soldados y a sus Animator.
-- **Pendiente del catálogo:** L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-08; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
+- **Pendiente del catálogo:** L1-15 a L1-19, L2-16 y L2-17 (NvN, 2026-11-06); L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-10; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).
@@ -392,26 +423,30 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
 
 ## 6. Lo que no conviene copiar
 
-- **Fórmula de ~17 etapas de daño** (clases de golpe, emboscada, cabeza, bonus por vida): un 3v3 masivo necesita
-  legibilidad; bastan 3-4 etapas bien medidas.
+Revisado el 2026-11-06 para NvN: el tamaño de partida no es motivo para descartar nada. Lo que se descartaba por "ser un
+3v3" ha pasado a la sección 4 (L1-15 a L1-19, L2-16, L2-17, l6-09, l6-10). Lo que queda aquí se descarta por otro motivo.
+
+- **Etapas de daño de valor bajo:** golpe en la cabeza (pide colisión por hueso en cientos de soldados), bonus por vida
+  restante o por diferencia de armadura (balance de MMO, poco legible) y daño a estructuras (no hay asedio). Se reservan.
 - **Depósito de ~200 propiedades de actor con notificación a observadores**: en ECS el equivalente son componentes
   tipados, `IEnableableComponent` y `ChangeFilter`; replicarlo añade indirección sin beneficio.
 - **Datos de diseño cifrados y rutas por hash FNV** (atributos, ids de mensaje, estados): un enum `StatId` y un enum de
   mensajes de 1 B son más pequeños y depurables. Además no se copian valores.
 - **Intérprete de árboles de comportamiento y acciones por scripting**: de él solo se toman cadencia (L4-01) e histéresis
-  (L4-02). Un segundo lenguaje de control no aporta en 3v3.
+  (L4-02). Un segundo lenguaje de control fuera de ECS no se puede compilar con Burst ni repartir en jobs.
 - **Plantillas de formación con herencia (vtable de 33 slots), rutas por corredor y rejilla por waypoint**: el blob de
   datos más un calculador cubre el caso; basta una validación al cambiar el ancla.
 - **Diccionario dinámico de atributos "pure" por soldado**: se perdería seguridad de tipos y Burst; solo se toma la caducidad.
-- **Cifrado propio por transporte (AES-ECB con token)**: ECB es mal modo; bastan ticket firmado y DTLS de Unity Transport.
-- **TCP+KCP en paralelo, red de gateways master/slave, compresión de paquete**: complejidad innecesaria con servidor
-  dedicado de 6 jugadores; la ganancia viene de cuantizar y agrupar.
+- **Cifrado propio por transporte (RC4 en TCP, AES-ECB con token en KCP)**: RC4 está roto y ECB es mal modo; bastan
+  ticket firmado y DTLS de Unity Transport. No depende del tamaño.
+- **Dos transportes abiertos a la vez y compresión de paquete**: del primero se toma el respaldo bajo demanda (l6-10); la
+  compresión no la usa ni la referencia, que ahorra cuantizando (l6-03) y mandando menos (l6-09). La red de gateways
+  queda condicionada a la escala de servidores (nota de l6-06).
 - **Rollback completo o simulación determinista tipo juego de lucha**: física no determinista y cientos de agentes.
 - **Quince canales de afijos, tecnología de legión, runas, asedio, nado y escalada, maestría decidida por servidor**:
   metajuego o mecánicas que el GDD no tiene.
 - **Matriz de alcanzabilidad por soldado y enemigo, tabla "no atacable" por actor, IA de curación por soldado**: sin caso
   de uso hoy; reservar el patrón.
-- **Puntos de combo y cola de cooldown por soldado**: el 3v3 usa cooldown por escuadra.
 
 ## 7. Dudas abiertas para el usuario
 
