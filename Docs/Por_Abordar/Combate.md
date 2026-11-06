@@ -16,7 +16,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C7 | Señal visual del robo de vida y de la protección al reaparecer | Baja | Pendiente |
 | C8 | Suelo de vida de soldados y de héroes remotos | Baja | Pendiente (sin caso de uso) |
 | C9 | Valores de resiliencia por escuadra, clase y arma (L1-16) | Alta | **Hecho** (2026-11-06, tabla aprobada) |
-| C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | Pendiente |
+| C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | **Hecho** (2026-11-06, texto flotante) |
 | C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | Pendiente |
 
 ---
@@ -101,7 +101,10 @@ de IA no reaparecen (no hay contrato de reaparición), así que no reciben la pr
 falta una tabla por escuadra, clase y arma, aprobada por el usuario, y medir con S6 que el choque de líneas no se rompe.
 
 ## C10. Señal visual
-**Qué es.** El aturdimiento por resiliencia y los golpes de flanco, espalda o emboscada no tienen texto flotante ni
+**Hecho (2026-11-06).** Cuatro categorías de texto flotante (`DamageMechanics.md` §12): "Flanco", "Espalda" y
+"Emboscada" con el número, y "Aturdido" al romperse la resiliencia. No hay efecto en el cuerpo ni animación (L1-09, C4).
+
+**Qué era.** El aturdimiento por resiliencia y los golpes de flanco, espalda o emboscada no tienen texto flotante ni
 efecto. Una categoría más en `DamageCategory` necesita su entrada en el asset de `FCTCategoryConfig`.
 
 ## C11. Aturdimiento y habilidad en curso

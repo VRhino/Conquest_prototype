@@ -230,10 +230,15 @@ public partial class DamageCalculationSystem : SystemBase
                 var resilience = SystemAPI.GetComponentRW<ResilienceComponent>(p.target);
                 float wear = Resilience.HitDamage(profile.traits.resilienceDamage, facts.critical, facts.direction, facts.ambush,
                     resilienceTuning);
-                if (Resilience.Hit(ref resilience.ValueRW, wear, now, resilienceTuning) && modifierLookup.HasBuffer(p.target))
+                if (Resilience.Hit(ref resilience.ValueRW, wear, now, resilienceTuning))
                 {
-                    StatEffects.Immobilize(modifierLookup[p.target], resilience.ValueRO.stunnedUntil, StatEffects.ResilienceBreakStun);
-                    if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
+                    if (modifierLookup.HasBuffer(p.target))
+                    {
+                        StatEffects.Immobilize(modifierLookup[p.target], resilience.ValueRO.stunnedUntil, StatEffects.ResilienceBreakStun);
+                        if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
+                    }
+                    if (transformLookup.HasComponent(p.target))
+                        Feedback(ref ecb, transformLookup[p.target].Position, DamageCategory.Stunned, 0f);
                 }
             }
 
@@ -247,9 +252,7 @@ public partial class DamageCalculationSystem : SystemBase
             if (transformLookup.HasComponent(p.target))
             {
                 float3 tp = transformLookup[p.target].Position;
-                DamageCategory cat = willKill          ? DamageCategory.Death
-                                   : p.multiplier > 1f ? DamageCategory.Critical
-                                   :                     p.category;
+                var cat = DamageFeedbackCategory.Of(willKill, p.multiplier > 1f, p.category, facts.direction, facts.ambush);
                 Feedback(ref ecb, tp, cat, effectiveDmg);
             }
 

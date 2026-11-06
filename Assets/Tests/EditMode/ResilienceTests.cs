@@ -89,6 +89,17 @@ public class ResilienceTests
         Assert.That(r.current, Is.EqualTo(30f));
         Assert.That(HasStun(em, target), Is.True, "Speed overridden to 0 until the stun ends.");
         Assert.That(em.IsComponentEnabled<ModifiersDirty>(target), Is.True);
+        Assert.That(StunnedTexts(em), Is.EqualTo(1), "One \"stunned\" text, only for the break.");
+    }
+
+    static int StunnedTexts(EntityManager em)
+    {
+        using var query = em.CreateEntityQuery(typeof(DamageFeedbackEvent));
+        using var events = query.ToComponentDataArray<DamageFeedbackEvent>(Unity.Collections.Allocator.Temp);
+        int count = 0;
+        foreach (var e in events)
+            if (e.category == DamageCategory.Stunned) count++;
+        return count;
     }
 
     static Entity Soldier(EntityManager em)

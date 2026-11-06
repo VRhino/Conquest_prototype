@@ -641,22 +641,37 @@ El tipo de popup se determina al final del cálculo de daño, una vez conocido e
 
 ### Categorías y su visual
 
+Valores de `Assets/ScriptableObjects/UI/Battle/FCTCategoryConfig.asset` (2026-11-06). Los valores nuevos del enum van al
+final: el asset los guarda como número.
+
 | Categoría | Color | Texto | Icono | Tamaño |
 |-----------|-------|-------|-------|--------|
-| `Normal` | Blanco | Valor numérico | — | 1× |
-| `Critical` | Dorado #FFD700 | "CRITICO {n}" | — | 1.4× |
-| `Blocked` | Gris #AAAAAA | "BLOQ" | Escudo amarillo | 1× |
-| `Death` | Rojo #FF3333 | Valor numérico | Calavera | 1.2× |
+| `Normal` | Blanco | Valor numérico | Sí | 1× |
+| `Critical` | Dorado | "Crit {n}" | — | 1.2× |
+| `Ability` | — | Oculto (tamaño 0) | — | — |
+| `Blocked` | Gris | Valor numérico | Escudo | 1× |
+| `Death` | Rojo | Valor numérico | Calavera | 1.2× |
+| `ShieldBreak` | Blanco | Solo icono | Escudo roto | 2× |
+| `Flank` (C10) | Naranja claro | "Flanco {n}" | — | 1.1× |
+| `Back` (C10) | Naranja | "Espalda {n}" | — | 1.15× |
+| `Ambush` (C10) | Violeta | "Emboscada {n}" | — | 1.2× |
+| `Stunned` (C10) | Celeste | "Aturdido", sin número | — | 1.3× |
 
 ### Lógica de categoría
 
+`DamageFeedbackCategory.Of` (pura):
+
 ```
-if HP_post_damage <= 0  → Death
-else if multiplier > 1  → Critical
-else                    → PendingDamageEvent.category  (Normal / Ability)
+si muere                        → Death
+si no, si es crítico            → Critical
+si no, si la categoría del golpe no es Normal → esa (Ability sigue oculta)
+si no, si es emboscada          → Ambush
+si no, por la espalda / flanco  → Back / Flank
+si no                           → Normal
 ```
 
-`Blocked` se emite en la rama de escudo de `DamageCalculationSystem`, antes de aplicar daño al HP.
+`Blocked` y `ShieldBreak` se emiten en la rama de escudo de `DamageCalculationSystem`, antes de aplicar daño al HP.
+`Stunned` es un texto aparte, además del número, cuando se rompe la resiliencia (§5.8).
 
 ### Infraestructura FCT
 

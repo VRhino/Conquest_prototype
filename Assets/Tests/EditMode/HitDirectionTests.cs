@@ -65,6 +65,33 @@ public class HitDirectionTests
     }
 
     [Test]
+    public void TheFloatingTextShowsDeathCriticalThenAmbushBackAndFlank()
+    {
+        Assert.That(DamageFeedbackCategory.Of(true, true, DamageCategory.Normal, HitDirection.Back, true), Is.EqualTo(DamageCategory.Death));
+        Assert.That(DamageFeedbackCategory.Of(false, true, DamageCategory.Normal, HitDirection.Back, true), Is.EqualTo(DamageCategory.Critical));
+        Assert.That(DamageFeedbackCategory.Of(false, false, DamageCategory.Normal, HitDirection.Back, true), Is.EqualTo(DamageCategory.Ambush));
+        Assert.That(DamageFeedbackCategory.Of(false, false, DamageCategory.Normal, HitDirection.Back, false), Is.EqualTo(DamageCategory.Back));
+        Assert.That(DamageFeedbackCategory.Of(false, false, DamageCategory.Normal, HitDirection.Flank, false), Is.EqualTo(DamageCategory.Flank));
+        Assert.That(DamageFeedbackCategory.Of(false, false, DamageCategory.Normal, HitDirection.Front, false), Is.EqualTo(DamageCategory.Normal));
+        Assert.That(DamageFeedbackCategory.Of(false, false, DamageCategory.Ability, HitDirection.Back, true), Is.EqualTo(DamageCategory.Ability),
+            "A skill's hidden text stays hidden.");
+    }
+
+    [Test]
+    public void ABackHitShowsItsOwnText()
+    {
+        using var world = new World("Back text");
+        var em = world.EntityManager;
+        var (target, attacker, _) = Setup(em, new float3(0f, 0f, -2f), LineOfSight.AllClear);
+        Hit(em, target, attacker, new float3(0f, 0f, -2f));
+        world.GetOrCreateSystemManaged<DamageCalculationSystem>().Update();
+        using var query = em.CreateEntityQuery(typeof(DamageFeedbackEvent));
+        using var events = query.ToComponentDataArray<DamageFeedbackEvent>(Unity.Collections.Allocator.Temp);
+        Assert.That(events.Length, Is.EqualTo(1));
+        Assert.That(events[0].category, Is.EqualTo(DamageCategory.Back));
+    }
+
+    [Test]
     public void ABackHitAndAnAmbushDoMoreDamage()
     {
         using var world = new World("Hit direction");
