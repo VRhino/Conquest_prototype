@@ -44,6 +44,8 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
     public FormationReadinessTuning formationReadiness = FormationReadinessTuning.Default;
     [Tooltip("Golpes de flanco, por la espalda y emboscadas (L1-15).")]
     public HitDirectionTuning hitDirection = HitDirectionTuning.Default;
+    [Tooltip("Desgaste, recuperación y aturdimiento de la resiliencia (L1-16).")]
+    public ResilienceTuning resilience = ResilienceTuning.Default;
     public float squadSpawnOffset = 5f;
     public float unitRotationSpeed = 5f;
     public float heroSlotSpacing        = 10f;
@@ -74,6 +76,7 @@ public class SquadSpawnConfigAuthoring : MonoBehaviour
                 lineOfSight         = authoring.lineOfSight,
                 formationReadiness  = authoring.formationReadiness.OrDefault(),
                 hitDirection        = authoring.hitDirection.OrDefault(),
+                resilience          = authoring.resilience.OrDefault(),
                 ownerDeathRetreatDuration = authoring.ownerDeathRetreatDuration,
                 retreatArrivalThreshold = authoring.retreatArrivalThreshold,
                 anchorMovingSpeedThreshold = authoring.anchorMovingSpeedThreshold,

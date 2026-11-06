@@ -33,6 +33,8 @@ public class HeroClassDefinition : ScriptableObject
     [Header("Constantes de Cálculo")]
     public float baseHealth = 100f;
     public float baseStamina = 100f;
+    [Tooltip("Resiliencia del héroe (L1-16): los golpes que llegan a la vida la gastan y al vaciarse queda aturdido un momento. 0 = sin resiliencia.")]
+    [Min(0f)] public float baseResilience;
     public float baseDamage = 5f;
     public float baseArmorValue = 0f;
 

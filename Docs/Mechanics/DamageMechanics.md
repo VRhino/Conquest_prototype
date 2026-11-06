@@ -179,12 +179,13 @@ contribución = max(bruto − defensaNeta, bruto × 0.05)      // suelo del 5 % 
 
 ```
 dañoEfectivo = Σ contribuciones × bonoCinético × bonoAltura × bonoCarga × (1 + variación) × (1 + Σ condicionados)
+               × (1 + dirección + emboscada)
                (nunca negativo; cada factor por separado tampoco)
 ```
 
 `DamageResult` devuelve cada factor por separado (`kineticBonus`, `heightBonus`, `chargeBonus`, `varianceFactor`,
-`conditionalFactor`), para los tests y para mostrarlo. Son cinco etapas multiplicativas, no las ~17 de la referencia
-(`Aprendizajes_Referencia.md` §6).
+`conditionalFactor`, `directionFactor`), para los tests y para mostrarlo. Son seis etapas multiplicativas; las que faltan
+de la referencia y valen en NvN están en `Aprendizajes_Referencia.md` L1-17 a L1-19.
 
 ### 5.3 Bonificaciones situacionales
 
@@ -275,6 +276,8 @@ valor por defecto significa "no importa". "El otro" es el objetivo si el dueño 
 | `forms` | el golpe es de alguna de esas formas (`PendingDamageEvent.hitForm`: melé, distancia o habilidad) |
 | `skillIds` | el golpe sale de alguna de esas habilidades (`PendingDamageEvent.skillId`; en la melé del héroe, la que está corriendo) |
 | `critical` | triestado sobre si el golpe es crítico |
+| `directions` | el golpe llega de alguna de esas direcciones respecto al frente del que lo recibe (frente, flanco, espalda; §5.7) |
+| `ambush` | triestado sobre si el golpe es una emboscada (§5.7) |
 | `selfHasEffect`, `otherHasEffect` | triestados sobre un efecto temporal activo en `effectStat` (como en los perks) |
 | `defenderHealthMin/Max` | la vida del que recibe, antes del golpe, como fracción (máximo 0 = sin límite) |
 | `otherArmorMin/Max` | la suma de las tres defensas del otro (0 = sin límite) |
@@ -285,6 +288,45 @@ Fuentes:
 - El evento de habilidad `ApplyConditional` (temporal, fuente `Effect`, id = la habilidad): ratio `value` durante
   `duration` a los objetivos del evento; relanzar lo refresca.
 - Ningún dato los usa aún; los perks pasivos no pueden darlos todavía (`Docs/Por_Abordar/Combate.md` C3).
+
+### 5.7 Flanco, espalda y emboscada (L1-15, 2026-11-06)
+
+Como la clase de golpe de la referencia, que se decide antes de la cadena de daño y suma sus bonos en un solo ratio.
+`DamageCalculationSystem` clasifica cada golpe con `HitDirectionRules.Classify`: el ángulo, en el plano del suelo, entre el
+frente del objetivo (`LocalTransform`) y la dirección hacia `attackerPosition` (en un proyectil, el punto de disparo).
+
+| Clase | Condición | Daño extra |
+|---|---|---|
+| Frente | ángulo ≤ 60° | — |
+| Flanco | 60° < ángulo ≤ 120° | +15 % |
+| Espalda | ángulo > 120° | +30 % |
+| Emboscada | la escuadra del soldado golpeado tiene al atacante (su escuadra, o el héroe) en rango y su línea de visión (L4-03) está tapada | +25 %, se suma a la dirección |
+
+Valores aprobados por el usuario (2026-11-06), en `SquadSpawnConfigAuthoring.hitDirection` (`HitDirectionTuning`). Un
+atacante fuera de rango no tiene pareja de visión y no embosca; con la línea de visión apagada no hay emboscadas. Los
+héroes no llevan parejas de visión, así que a un héroe no se le embosca. Los tics de daño en el tiempo
+(`PendingDamageEvent.periodic`) no tienen dirección ni emboscada. La dirección y la emboscada llegan también a las
+condiciones (§5.6) y a la resiliencia (§5.8).
+
+### 5.8 Resiliencia (L1-16, 2026-11-06)
+
+Como la resiliencia de la referencia (máxima y actual por actor): cada golpe que llega a la vida y no mata gasta
+resiliencia; al vaciarse, el objetivo queda **aturdido** un momento, y la barra se rellena.
+
+- **Máximo:** stat `MaxResilience` de la pila, con base en `SquadData.baseResilience` (cada soldado) y
+  `HeroClassDefinition.baseResilience`. `StatResolveSystem` lo escribe en `ResilienceComponent.max` conservando la fracción.
+  0 = sin resiliencia, no se aturde nunca.
+- **Desgaste por golpe:** `HitTraits.resilienceDamage` del arma × (1 + extras sumados): crítico +50 %, flanco +25 %,
+  espalda +50 %, emboscada +50 %. No la gastan los golpes bloqueados, los absorbidos del todo, los que matan ni los tics.
+- **Recuperación perezosa:** tras 3 s sin golpes recupera el 25 % del máximo por segundo. No hay sistema por frame:
+  `Resilience.Current` la calcula al recibir el siguiente golpe.
+- **Rotura:** aturdido 0,8 s. La velocidad pasa a 0 con un override de la pila (`StatEffects.ResilienceBreakStun`, como la
+  rotura del escudo), así que el héroe tampoco lanza habilidades (`SkillGate`, `Immobilised`). Un soldado pierde el golpe
+  que tenía en curso y no ataca ni dispara hasta que acaba (`UnitAttackSystem`, `RangedAttackSystem`). Durante el
+  aturdimiento los golpes no gastan resiliencia, así que no se encadenan aturdimientos. El retroceso de cada golpe sigue.
+- **Ajustes:** `SquadSpawnConfigAuthoring.resilience` (`ResilienceTuning`). Las animaciones de reacción son L1-09
+  (`Docs/Por_Abordar/Combate.md` C4).
+- **Datos:** sin valores aún en escuadras, clases y armas; pendientes de aprobación (`Docs/Por_Abordar/Combate.md` C9).
 
 ---
 

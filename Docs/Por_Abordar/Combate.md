@@ -15,6 +15,9 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C6 | Carga en habilidades y "golpe de pasada" | Baja | Pendiente (cuando haya caballería) |
 | C7 | Señal visual del robo de vida y de la protección al reaparecer | Baja | Pendiente |
 | C8 | Suelo de vida de soldados y de héroes remotos | Baja | Pendiente (sin caso de uso) |
+| C9 | Valores de resiliencia por escuadra, clase y arma (L1-16) | Alta | Pendiente (tabla para el usuario) |
+| C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | Pendiente |
+| C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | Pendiente |
 
 ---
 
@@ -68,6 +71,8 @@ modificadores normales.
 catálogo: un enum `HitReaction` por golpe, con permiso por clase de objetivo (soldado, héroe, grande) y un stat de
 resistencia al control que lo anula. Hoy solo hay retroceso del cuerpo (`HitKnockback`) y el aturdimiento al romperse el
 escudo. Encaja como un rasgo más de `HitTraits` y una etapa de `DamageCalculationSystem` que publique la reacción.
+Desde el 2026-11-06 la resiliencia (L1-16, `DamageMechanics.md` §5.8) decide cuándo un golpe provoca reacción: hoy es un
+aturdimiento sin animación propia; con las animaciones, la rotura podría elegir la reacción según el golpe.
 
 ## C5. Variación por habilidad
 **Qué es.** El catálogo pide la variación "por arma o habilidad". Hoy es del arma: un daño en área de una habilidad usa
@@ -86,3 +91,17 @@ del arma si llega la caballería.
 ## C8. Suelo de vida fuera del héroe local
 **Qué es.** `MinHealthRatio` solo se escribe en `HeroHealthComponent`. Los soldados no lo tienen, y los héroes remotos y
 de IA no reaparecen (no hay contrato de reaparición), así que no reciben la protección.
+
+## C9. Valores de resiliencia (L1-16)
+**Qué es.** La mecánica está (`DamageMechanics.md` §5.8), pero `SquadData.baseResilience`,
+`HeroClassDefinition.baseResilience` y `HitTraits.resilienceDamage` valen 0 en todos los assets: nadie se aturde. Hace
+falta una tabla por escuadra, clase y arma, aprobada por el usuario, y medir con S6 que el choque de líneas no se rompe.
+
+## C10. Señal visual
+**Qué es.** El aturdimiento por resiliencia y los golpes de flanco, espalda o emboscada no tienen texto flotante ni
+efecto. Una categoría más en `DamageCategory` necesita su entrada en el asset de `FCTCategoryConfig`.
+
+## C11. Aturdimiento y habilidad en curso
+**Qué es.** Con la velocidad a 0, `SkillGate` no deja lanzar, pero la habilidad que el héroe ya estaba ejecutando sigue
+hasta el final. Los soldados sí pierden el golpe en curso. Si se quiere que el aturdimiento interrumpa, la interrupción
+de habilidades (L2-4) ya existe; faltaría pedirla desde la rotura.

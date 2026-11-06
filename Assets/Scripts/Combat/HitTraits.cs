@@ -29,4 +29,8 @@ public struct HitTraits
     public float chargeFullDistance;
     [Tooltip("Bono máximo de daño de la carga, como ratio: 0,5 = ×1,5. 0 = el arma no carga.")]
     public float chargeMaxBonus;
+
+    [Tooltip("Resiliencia que quita cada golpe que llega a la vida (L1-16), antes de los extras por crítico, dirección y " +
+             "emboscada. 0 = el arma no aturde.")]
+    [Min(0f)] public float resilienceDamage;
 }

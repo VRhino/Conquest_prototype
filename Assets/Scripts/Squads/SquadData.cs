@@ -96,6 +96,9 @@ public class SquadData : ScriptableObject
     public int blockRegenRate;
     /// <summary>Stun duration in seconds when the shield is broken.</summary>
     public float shieldBreakStunDuration;
+    /// <summary>Resilience of each soldier (L1-16): hits that reach health wear it down; empty = a short stun. 0 = none.</summary>
+    [Tooltip("Resiliencia de cada soldado (L1-16): los golpes que llegan a la vida la gastan y al vaciarse queda aturdido un momento. 0 = sin resiliencia.")]
+    [Min(0f)] public float baseResilience;
 
     // Defenses
     /// <summary>Defense against slashing damage.</summary>

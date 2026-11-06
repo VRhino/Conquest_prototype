@@ -603,3 +603,7 @@
 - Si casi todos los tests de sistemas fallan con "No suitable code replacement generated", la causa puede ser el entorno: Smart App Control bloqueó la DLL del generador de Entities (`CS8785` en `Logs/Editor.log`, el log del proyecto). La compilación dice "completed" igualmente.
 - `Animator.parameters` devuelve una copia en cada llamada: comprobar un parámetro opcional una vez por Animator, no en cada frame.
 - En un `SystemAPI.Query`, la variable de `DynamicBuffer` del foreach no se puede escribir: tomar el buffer con `SystemAPI.GetBuffer` dentro del bucle.
+
+- No llamar a `unity status` (ni a otro comando del CLI) mientras corre una tanda de PlayMode: el editor registra
+  "No command named 'editor status'" como error y el test que esté corriendo falla por log inesperado (2026-11-06, una
+  variante de S6). Para saber si sigue, mirar el proceso `node ut.js` con `Get-CimInstance`, sin tocar el editor.

@@ -7,8 +7,8 @@ using Unity.Mathematics;
 /// and <see cref="StatModifier"/> with <see cref="StatMath.Resolve"/> when <see cref="ModifiersDirty"/> is enabled or a
 /// modifier expires, and writes every target component the entity has:
 /// <list type="bullet">
-/// <item><see cref="HealthComponent"/>, <see cref="HeroHealthComponent"/> and <see cref="StaminaComponent"/> maxima (the current
-/// value keeps its fraction), and the hero's health floor (L1-07). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
+/// <item><see cref="HealthComponent"/>, <see cref="HeroHealthComponent"/>, <see cref="StaminaComponent"/> and
+/// <see cref="ResilienceComponent"/> (L1-16) maxima (the current value keeps its fraction), and the hero's health floor (L1-07). A hero with <see cref="HeroStatFormulaComponent"/> derives them from its attributes.</item>
 /// <item><see cref="DefenseComponent"/>, <see cref="UnitStatsComponent"/> (health, speed, defense, damage; its weapon
 /// penetration and identity fields stay as the spawner wrote them), <see cref="MoveSpeedComponent"/> and
 /// <see cref="CooldownScaleComponent"/> of heroes, <see cref="CritStatsComponent"/>, <see cref="CombatStatsComponent"/> and the squad's <see cref="SquadAIStatsComponent"/>.</item>
@@ -78,6 +78,15 @@ public partial class StatResolveSystem : SystemBase
             float fraction = stamina.ValueRO.maxStamina > 0f ? math.saturate(stamina.ValueRO.currentStamina / stamina.ValueRO.maxStamina) : 1f;
             stamina.ValueRW.maxStamina = max;
             stamina.ValueRW.currentStamina = max * fraction;
+        }
+        if (SystemAPI.HasComponent<ResilienceComponent>(entity))
+        {
+            // Only the maximum; the current value keeps its fraction, as health does.
+            var resilience = SystemAPI.GetComponentRW<ResilienceComponent>(entity);
+            float max = stats.Get(StatId.MaxResilience);
+            float fraction = resilience.ValueRO.max > 0f ? math.saturate(resilience.ValueRO.current / resilience.ValueRO.max) : 1f;
+            resilience.ValueRW.max = max;
+            resilience.ValueRW.current = max * fraction;
         }
         if (SystemAPI.HasComponent<DefenseComponent>(entity))
             SystemAPI.SetComponent(entity, new DefenseComponent

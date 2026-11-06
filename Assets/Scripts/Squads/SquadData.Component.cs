@@ -14,6 +14,8 @@ public struct SquadDataComponent : IComponentData
     public float block;
     public float blockRegenRate;
     public float shieldBreakStunDuration;
+    /// <summary>Base of <see cref="StatId.MaxResilience"/> for each soldier (L1-16).</summary>
+    public float baseResilience;
 
     public float slashingDefense;
     public float piercingDefense;

@@ -14,6 +14,8 @@ public static class StatEffects
     public const int ShieldBreakStun = 1;
     /// <summary><see cref="StatModifier.sourceId"/> of the health floor given on respawn (L1-07, source <see cref="ModifierSource.Effect"/>).</summary>
     public const int RespawnProtection = 2;
+    /// <summary><see cref="StatModifier.sourceId"/> of the stun of a resilience break (L1-16, source <see cref="ModifierSource.Effect"/>).</summary>
+    public const int ResilienceBreakStun = 3;
 
     /// <summary>
     /// Speed overridden to 0 until <paramref name="until"/> (simulation time), replacing an earlier one of the same

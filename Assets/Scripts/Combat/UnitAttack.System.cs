@@ -20,6 +20,7 @@ using Unity.Transforms;
 ///
 /// The unit's attack speed (L2-12, <see cref="CombatStatsComponent"/>) runs the whole rhythm faster: the swing's timer and
 /// the cooldown between swings both advance at dt × speed, so the windows keep their place within the swing.
+/// A unit stunned by a resilience break (L1-16) loses its swing and does not start another until the stun ends.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitTargetingSystem))]
@@ -31,6 +32,7 @@ public partial class UnitAttackSystem : SystemBase
         bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
             || match.currentState == MatchState.InBattle;
         float dt = SystemAPI.Time.DeltaTime;
+        double now = SystemAPI.Time.ElapsedTime;
         float bodyRadius = (SystemAPI.HasSingleton<MovementTuningComponent>()
             ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default).bodyRadius;
 
@@ -48,7 +50,10 @@ public partial class UnitAttackSystem : SystemBase
                 hasStats ? SystemAPI.GetComponent<CombatStatsComponent>(entity) : default);
             // Losing a target outside the brace arc must not freeze an existing cooldown.
             if (battleActive) c.attackCooldown = math.max(0f, c.attackCooldown - swingDt);
-            if (!battleActive || !SquadCombatModeComponent.AllowsTarget(EntityManager, entity, c.target))
+            // Stunned by a resilience break (L1-16): the swing is lost, as when the target is not allowed.
+            bool stunned = SystemAPI.HasComponent<ResilienceComponent>(entity)
+                && Resilience.IsStunned(SystemAPI.GetComponent<ResilienceComponent>(entity), now);
+            if (!battleActive || stunned || !SquadCombatModeComponent.AllowsTarget(EntityManager, entity, c.target))
             {
                 c.isAttacking = false;
                 c.attackAnimationTimer = 0f;

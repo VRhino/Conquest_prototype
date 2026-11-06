@@ -80,6 +80,9 @@ public partial class HeroInitializationSystem : SystemBase
         StatStack.SetBase(EntityManager, entity, StatId.Dexterity, baseStats.baseDexterity);
         StatStack.SetBase(EntityManager, entity, StatId.Armor, baseStats.baseArmor);
         StatStack.SetBase(EntityManager, entity, StatId.Vitality, baseStats.baseVitality);
+        StatStack.SetBase(EntityManager, entity, StatId.MaxResilience, classData.baseResilience);
+        if (!EntityManager.HasComponent<ResilienceComponent>(entity))
+            EntityManager.AddComponentData(entity, new ResilienceComponent { max = classData.baseResilience, current = classData.baseResilience });
         if (EntityManager.HasComponent<HeroStatsComponent>(entity))
         {
             float baseSpeed = EntityManager.GetComponentData<HeroStatsComponent>(entity).baseSpeed;

@@ -29,7 +29,8 @@ public partial class RangedAttackSystem : SystemBase
         bool battleActive = !SystemAPI.TryGetSingleton<MatchStateComponent>(out var match)
             || match.currentState == MatchState.InBattle;
         float dt   = SystemAPI.Time.DeltaTime;
-        uint  tick = CombatRandom.Tick(SystemAPI.Time.ElapsedTime);
+        double now = SystemAPI.Time.ElapsedTime;
+        uint  tick = CombatRandom.Tick(now);
 
         var ecb              = _ecbSystem.CreateCommandBuffer();
         var transformLookup  = GetComponentLookup<LocalTransform>(true);
@@ -60,6 +61,9 @@ public partial class RangedAttackSystem : SystemBase
             // Clear one-frame firing signal from previous frame
             state.isFiring = false;
             if (!battleActive) continue;
+            // Stunned by a resilience break (L1-16): its timers wait too.
+            if (SystemAPI.HasComponent<ResilienceComponent>(entity)
+                && Resilience.IsStunned(SystemAPI.GetComponent<ResilienceComponent>(entity), now)) continue;
 
             // Tick timers
             state.shotTimer   = math.max(0f, state.shotTimer   - dt);

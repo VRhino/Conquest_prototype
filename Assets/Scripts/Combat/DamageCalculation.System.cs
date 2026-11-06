@@ -29,6 +29,10 @@ using Unity.Transforms;
 /// modifier stack (<see cref="StatEffects.Immobilize"/>). During stun the unit cannot move
 /// and receives damage normally.
 ///
+/// Resilience (L1-16): a hit that reaches health and does not kill wears down the target's
+/// <see cref="ResilienceComponent"/> by its weapon's resilience damage; emptying it stuns the target for a moment
+/// (<see cref="Resilience.Hit"/>, the same speed override as the shield break). Blocked hits and ticks do not wear it.
+///
 /// An <see cref="AbsorbShieldComponent"/> on the target then takes the damage first
 /// (<see cref="AbsorbShield.Absorb"/>); only the excess reaches health.
 /// </summary>
@@ -42,6 +46,7 @@ public partial class DamageCalculationSystem : SystemBase
         bool hasConfig = SystemAPI.TryGetSingleton<SquadSpawnConfigComponent>(out var config);
         var directionTuning = hasConfig ? config.hitDirection.OrDefault() : HitDirectionTuning.Default;
         var sight = hasConfig ? config.lineOfSight : LineOfSightTuning.Default;
+        var resilienceTuning = hasConfig ? config.resilience.OrDefault() : ResilienceTuning.Default;
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
         var shieldLookup      = GetComponentLookup<UnitShieldComponent>();
@@ -217,6 +222,19 @@ public partial class DamageCalculationSystem : SystemBase
                 healthTaken = prevHp - hp.ValueRO.currentHealth;
                 if (willKill && !SystemAPI.HasComponent<IsDeadComponent>(p.target))
                     ecb.AddComponent<IsDeadComponent>(p.target);
+            }
+
+            // --- Resilience (L1-16): a hit that reaches health wears it down; emptying it stuns (no move, attack or skill) ---
+            if (effectiveDmg > 0f && !willKill && !p.periodic && SystemAPI.HasComponent<ResilienceComponent>(p.target))
+            {
+                var resilience = SystemAPI.GetComponentRW<ResilienceComponent>(p.target);
+                float wear = Resilience.HitDamage(profile.traits.resilienceDamage, facts.critical, facts.direction, facts.ambush,
+                    resilienceTuning);
+                if (Resilience.Hit(ref resilience.ValueRW, wear, now, resilienceTuning) && modifierLookup.HasBuffer(p.target))
+                {
+                    StatEffects.Immobilize(modifierLookup[p.target], resilience.ValueRO.stunnedUntil, StatEffects.ResilienceBreakStun);
+                    if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
+                }
             }
 
             // --- Life steal (L1-13): the attacker heals a fraction of the health really taken, after it is taken ---

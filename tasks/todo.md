@@ -22,8 +22,8 @@ Estado: en curso (2026-11-06), rama `main` local, sin subir. Catálogo: `Docs/De
 
 ## Pasos
 - [x] 1. L1-15; tests; EditMode (528/528), S1, S6 y BattleSceneIntegrationTests (23/23).
-- [ ] 2. L1-16 (mecánica neutra sin datos); tests; EditMode y PlayMode.
-- [ ] 3. Docs: `DamageMechanics.md`, catálogo §5, `Por_Abordar/Combate.md`.
+- [x] 2. L1-16 (mecánica neutra sin datos); tests; EditMode (533/533), S1, S6 y BattleSceneIntegrationTests (23/23).
+- [x] 3. Docs: `DamageMechanics.md`, catálogo §5, `Por_Abordar/Combate.md`.
 - [ ] 4. Tabla de datos de resiliencia para el usuario.
 
 ---

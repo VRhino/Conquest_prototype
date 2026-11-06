@@ -75,6 +75,7 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 block = d.block,
                 blockRegenRate = d.blockRegenRate,
                 shieldBreakStunDuration = d.shieldBreakStunDuration,
+                baseResilience = d.baseResilience,
                 slashingDefense = d.slashingDefense,
                 piercingDefense = d.piercingDefense,
                 bluntDefense = d.bluntDefense,

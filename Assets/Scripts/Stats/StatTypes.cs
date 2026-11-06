@@ -59,6 +59,8 @@ public enum StatId : byte
     MaxTargets,
     /// <summary>Multiplier of the squad's running stamina cost (M18; base 1). Lives on the squad entity.</summary>
     StaminaCost,
+    /// <summary>Most resilience of a soldier or hero (L1-16); 0 = it has none and is never stunned by hits.</summary>
+    MaxResilience,
     Count,
 }
 
