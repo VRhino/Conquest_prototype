@@ -40,6 +40,10 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
     [Tooltip("Ese suelo, como fracción de la vida máxima.")]
     [Range(0f, 1f)] public float respawnProtectionHealthRatio = 0.3f;
 
+    [Header("Combo (L2-16)")]
+    [Tooltip("Cómo gana y pierde combo el héroe; las habilidades con coste de combo lo gastan.")]
+    public ComboTuning combo = ComboTuning.Default;
+
     class Baker : Baker<HeroGameplayConfigAuthoring>
     {
         public override void Bake(HeroGameplayConfigAuthoring authoring)
@@ -61,6 +65,7 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
                 deathVisualHideDelay        = authoring.deathVisualHideDelay,
                 respawnProtectionSeconds    = authoring.respawnProtectionSeconds,
                 respawnProtectionHealthRatio = authoring.respawnProtectionHealthRatio,
+                combo                       = authoring.combo.OrDefault(),
             });
         }
     }

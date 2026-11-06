@@ -23,6 +23,12 @@ public class HeroAbility : ScriptableObject
     /// <summary>Stamina required to activate the ability.</summary>
     public float staminaCost;
 
+    [Tooltip("Combo que pide y gasta al lanzarse (L2-16). 0 = ninguno.")]
+    [Min(0f)] public float comboCost;
+
+    [Tooltip("Soldados muertos que pide y gasta al lanzarse (L2-16). 0 = ninguno.")]
+    [Min(0)] public int killCost;
+
     /// <summary>Button slot this ability belongs to (Q, E, R or Ultimate).</summary>
     public HeroAbilityCategory category;
 

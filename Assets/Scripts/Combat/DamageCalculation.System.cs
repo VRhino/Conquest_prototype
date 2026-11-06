@@ -16,6 +16,8 @@ using Unity.Transforms;
 ///   Kinetic: +speed/maxSpeed * kineticMultiplier
 ///   Height:  +10% per metre of vertical advantage (> 0.5 m threshold)
 ///
+/// A hero whose hit reaches health gains combo, and a kill for each soldier it kills (L2-16, <see cref="HeroResources"/>).
+///
 /// A hit whose traits spare the target's class (hero or soldier) does nothing (L1-18). A ranged hit loses damage with the
 /// distance from where it was fired (L1-17), and each type keeps 1 − the target's percentage relief (L1-19).
 ///
@@ -50,6 +52,8 @@ public partial class DamageCalculationSystem : SystemBase
         var directionTuning = hasConfig ? config.hitDirection.OrDefault() : HitDirectionTuning.Default;
         var sight = hasConfig ? config.lineOfSight : LineOfSightTuning.Default;
         var resilienceTuning = hasConfig ? config.resilience.OrDefault() : ResilienceTuning.Default;
+        var comboTuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var heroConfig)
+            ? heroConfig.combo.OrDefault() : ComboTuning.Default;
         var defenseLookup     = GetComponentLookup<DefenseComponent>(true);
         var penetrationLookup = GetComponentLookup<PenetrationComponent>(true);
         var shieldLookup      = GetComponentLookup<UnitShieldComponent>();
@@ -254,6 +258,16 @@ public partial class DamageCalculationSystem : SystemBase
                     if (transformLookup.HasComponent(p.target))
                         Feedback(ref ecb, transformLookup[p.target].Position, DamageCategory.Stunned, 0f);
                 }
+            }
+
+            // --- Hero resources (L2-16): a hit of a hero that reaches health adds combo; a soldier it kills, a kill ---
+            if (effectiveDmg > 0f && !p.periodic && SystemAPI.Exists(p.damageSource)
+                && SystemAPI.HasComponent<HeroResourcesComponent>(p.damageSource))
+            {
+                var resources = SystemAPI.GetComponentRW<HeroResourcesComponent>(p.damageSource);
+                HeroResources.Landed(ref resources.ValueRW, now, comboTuning);
+                // healthTaken > 0: a second hit in the same frame on a body already at 0 is not another kill.
+                if (willKill && healthTaken > 0f && SystemAPI.HasComponent<UnitOwnerComponent>(p.target)) resources.ValueRW.kills++;
             }
 
             // --- Life steal (L1-13): the attacker heals a fraction of the health really taken, after it is taken ---

@@ -63,6 +63,20 @@ SkillEffectSystem ◄── SkillEffectRequestComponent (eventos de efecto con p
 7. `OnCooldown`
 8. `Exhausted`
 9. `NotEnoughStamina`
+10. `NotEnoughCombo`: la habilidad pide más combo del que tiene el héroe (L2-16, abajo).
+11. `NotEnoughKills`: la habilidad pide más soldados muertos de los que tiene el héroe (L2-16).
+
+**Combo y bajas (L2-16, 2026-11-06).** Dos recursos del héroe, como en la referencia (un punto de combo del actor y un
+contador de bajas de soldado, cada uno con su motivo de rechazo), en `HeroResourcesComponent`:
+- **Combo:** +1 por cada golpe del héroe que llega a la vida (melé, flecha o habilidad; no los tics de quemadura), tope 30.
+  Tras 6 s sin acertar se pierde a 5 por segundo. La pérdida se calcula al leerlo (`HeroResources.Combo`), sin sistema
+  por frame. Ajustes en `HeroGameplayConfigAuthoring.combo` (`ComboTuning`).
+- **Bajas:** +1 por cada soldado que mata el héroe; no se pierden con el tiempo.
+- **Coste:** `HeroAbility.comboCost` y `killCost` piden y gastan al empezar, como el aguante. Las cuatro definitivas
+  cuestan 20 de combo (aprobado por el usuario) y siguen con su enfriamiento de 60 s. Nada cuesta bajas todavía.
+- **Quién escribe:** `DamageCalculationSystem` suma al acertar y al matar; `SkillExecutionSystem` gasta al lanzar. La IA
+  no elige una habilidad que no puede pagar (`HeroAISkillSystem`).
+- **HUD:** no se muestra todavía (`Docs/Por_Abordar/Habilidades_Perks.md` H16).
 
 ### 3.2 Fases (`SkillPhase`)
 

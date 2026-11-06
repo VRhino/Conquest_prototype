@@ -126,6 +126,9 @@ public struct SkillBlob
 {
     public int id;
     public float staminaCost;
+    /// <summary>Combo and soldier kills it asks for and spends when it starts (L2-16); 0 = none.</summary>
+    public float comboCost;
+    public int killCost;
     public float cooldown;
     /// <summary>Cooldown group (L2-5); 0 = no cooldown.</summary>
     public int cooldownGroup;

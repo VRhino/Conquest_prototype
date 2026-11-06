@@ -161,7 +161,7 @@ Se dejan fuera las de valor bajo (§6).
 | L2-13 (amp., hecho, §4) | Tope de objetivos por habilidad | El daño en área golpea a todos los que están dentro (`Skills/SkillEffect.System.cs`, `SkillArea.Contains`) | Máximo de objetivos en el evento de efecto, los más cercanos primero | Áreas que se pueden equilibrar contra escuadras de 30 | S | B | M |
 | L2-14 (amp., hecho, §4) | Efectos ligados a la habilidad | Los modificadores de una habilidad solo caducan por tiempo | Marcar el modificador con la instancia que lo creó y retirarlo cuando la habilidad termina o la interrumpen | Posturas y canalizaciones sin efectos residuales | S | B | B |
 | L2-15 (amp., hecho, `SkillsAndPerks.md` §5) | Condiciones de efecto más ricas | `PerkCondition` solo tiene `HeroStill` y `HeroMovedRecently` (`Perks/PerkTypes.cs:15-22`) | Probabilidad, tipo de objetivo (héroe, soldado, clase), objetivo o atacante con un efecto activo, soldados restantes de la escuadra en un rango; combinadas con Y y con triestados | Los perks del GDD que hoy no tienen datos | M | B | M |
-| L2-16 (NvN) | Recurso de combo y de bajas | Las habilidades solo piden aguante y enfriamiento (`SkillGate`); el combo del ataque básico es una cadena, no un recurso | Stat de la pila que suben los golpes y las bajas y bajan el tiempo y el gasto; condición nueva en `SkillGate` con su motivo de rechazo ("falta combo", "faltan bajas") | Remates que se ganan peleando; ritmo en batallas largas | S-M | B | M |
+| L2-16 (NvN, hecho, `SkillsAndPerks.md` §3.1) | Recurso de combo y de bajas | Las habilidades solo piden aguante y enfriamiento (`SkillGate`); el combo del ataque básico es una cadena, no un recurso | Stat de la pila que suben los golpes y las bajas y bajan el tiempo y el gasto; condición nueva en `SkillGate` con su motivo de rechazo ("falta combo", "faltan bajas") | Remates que se ganan peleando; ritmo en batallas largas | S-M | B | M |
 | L2-17 (NvN) | Habilidades y enfriamientos por soldado | La escuadra lanza su habilidad como un bloque y enfría por escuadra (L2-9) | Buffer `CooldownGroupElement` por soldado y lanzamiento por soldado con `SkillGate`, escalonado dentro de la orden de escuadra; la escuadra sigue dando la orden | Una andanada que se deshace a su ritmo; soldados que actúan cuando pueden | M | M | M |
 
 **L2-1.** Ref.: toda habilidad pasa por una puerta con comprobaciones en orden fijo y código de motivo de rechazo; el
@@ -407,7 +407,9 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   de valores por escuadra, clase y arma aprobada; `Docs/Por_Abordar/Combate.md` C9).
   L1-17 a L1-19 (§5.9): atenuación de flechas por tropa (Arqueros y Héroe arco 15 m → 60 % a 40 m), inmunidades por
   clase de objetivo y alivio porcentual por tipo, estas dos sin datos por decisión del usuario.
-- **Pendiente del catálogo:** L2-16 y L2-17 (NvN, 2026-11-06); L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-10; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
+- **Hecho en habilidades NvN (2026-11-06, `SkillsAndPerks.md` §3.1):** L2-16, combo y bajas del héroe como dos recursos
+  aparte; las definitivas cuestan 20 de combo. Falta enseñarlo en el HUD (`Por_Abordar/Habilidades_Perks.md` H16).
+- **Pendiente del catálogo:** L2-17 (NvN, 2026-11-06); L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-10; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
   L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).

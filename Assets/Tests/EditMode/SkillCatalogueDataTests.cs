@@ -74,4 +74,17 @@ public class SkillCatalogueDataTests
         Assert.That(mark.target, Is.EqualTo(PerkTarget.Self));
         Assert.That(mark.value, Is.EqualTo(0.2f).Within(1e-5f));
     }
+
+    /// <summary>L2-16, approved 2026-11-06: the ultimates ask for and spend 20 combo; nothing costs kills yet.</summary>
+    [TestCase("Bow4")]
+    [TestCase("Spear4")]
+    [TestCase("SwordAndShield4")]
+    [TestCase("TwoHandedSword 3")]
+    public void UltimatesCostTwentyCombo(string asset)
+    {
+        var ability = Ability(asset);
+        Assert.That(ability.category, Is.EqualTo(HeroAbilityCategory.Ultimate));
+        Assert.That(ability.comboCost, Is.EqualTo(20f));
+        Assert.That(ability.killCost, Is.EqualTo(0));
+    }
 }

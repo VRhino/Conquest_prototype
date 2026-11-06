@@ -1,3 +1,20 @@
+# Plan: combo y bajas del héroe (L2-16)
+
+Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/SkillsAndPerks.md` §3.1.
+
+## Decisiones del usuario (2026-11-06)
+- Dos recursos aparte, como la referencia: combo por golpes y un contador de bajas de soldado.
+- Las cuatro definitivas piden y gastan 20 de combo, y conservan su enfriamiento de 60 s.
+- Sin HUD por ahora: queda en `Docs/Por_Abordar/Habilidades_Perks.md` H16, para la sesión del HUD.
+
+## Pasos
+- [x] 1. `HeroResourcesComponent` y `ComboTuning` (+1 por golpe, tope 30, pérdida tras 6 s a 5/s, perezosa); ganancia en
+  `DamageCalculationSystem`, gasto en `SkillExecutionSystem`, motivos `NotEnoughCombo` y `NotEnoughKills` en la puerta, y
+  la IA no elige lo que no puede pagar. Tests `HeroResourcesTests`.
+- [x] 2. Definitivas a 20 de combo (`SkillCatalogueDataTests`); EditMode 550/550; S1, S6, S9 y BattleSceneIntegrationTests 23/23.
+
+---
+
 # Plan: etapas de daño NvN (L1-17, L1-18, L1-19)
 
 Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/DamageMechanics.md` §5.9.

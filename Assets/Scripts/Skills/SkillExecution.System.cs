@@ -6,7 +6,7 @@ using Unity.Transforms;
 /// <summary>
 /// Runs every hero's skills (Aprendizajes_Referencia.md L2-1, L2-2), the player's and the AI's alike: advances the
 /// current instance through its phases and applies its events, then evaluates the pending request with
-/// <see cref="SkillGate"/> and launches it (stamina and cooldown are charged at the start, as in the reference). A new
+/// <see cref="SkillGate"/> and launches it (stamina, cooldown, combo and kills (L2-16) are charged at the start, as in the reference). A new
 /// skill replaces the current one when the current phase is interruptible (<see cref="SkillRefresh.Interrupt"/>), or
 /// parks it and restores it when it ends (<see cref="SkillRefresh.Yield"/>, L2-4). Death, the end of the battle, control
 /// (a stun) and an <see cref="EndSkillsRequestComponent"/> end the current and the parked skill.
@@ -247,7 +247,14 @@ public partial class SkillExecutionSystem : SystemBase
             ref var candidate = ref skills[index].skill.Value;
             input.cooldownReady = CooldownUtility.IsReady(groups, candidate.cooldownGroup, now);
             input.staminaCost = candidate.staminaCost;
+            input.comboCost = candidate.comboCost;
+            input.killCost = candidate.killCost;
         }
+        bool hasResources = SystemAPI.HasComponent<HeroResourcesComponent>(entity);
+        var resources = hasResources ? SystemAPI.GetComponent<HeroResourcesComponent>(entity) : default;
+        var comboTuning = ComboTuningNow();
+        input.combo = HeroResources.Combo(resources, now, comboTuning);
+        input.kills = resources.kills;
         var rejection = SkillGate.Evaluate(input);
         if (rejection != SkillRejection.None) return rejection;
 
@@ -260,6 +267,11 @@ public partial class SkillExecutionSystem : SystemBase
             else End(ref inst, ref combat, skills, now);
         }
         stamina.currentStamina -= skill.staminaCost;
+        if (hasResources && (skill.comboCost > 0f || skill.killCost > 0))
+        {
+            HeroResources.Pay(ref resources, now, comboTuning, skill.comboCost, skill.killCost);
+            SystemAPI.SetComponent(entity, resources);
+        }
         float scale = SystemAPI.HasComponent<CooldownScaleComponent>(entity) ? SystemAPI.GetComponent<CooldownScaleComponent>(entity).value : 1f;
         CooldownUtility.Start(groups, skill.cooldownGroup, skill.cooldown, scale, now);
         _fired.Clear();
@@ -267,6 +279,9 @@ public partial class SkillExecutionSystem : SystemBase
         Apply(entity, ref inst, ref combat, skills[index].skillId);
         return SkillRejection.None;
     }
+
+    ComboTuning ComboTuningNow() => SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config)
+        ? config.combo.OrDefault() : ComboTuning.Default;
 
     /// <summary>
     /// Which hit of the basic attack chain a press launches (L2-3; ref.: the next of a chain is accepted if the previous

@@ -95,6 +95,8 @@ public partial class HeroInitializationSystem : SystemBase
             StatStack.SeedCritical(EntityManager, entity, combat.criticalChance, combat.criticalMultiplier);
         }
         if (!EntityManager.HasComponent<CombatStatsComponent>(entity)) EntityManager.AddComponent<CombatStatsComponent>(entity);
+        // Combo and kills (L2-16): start empty, gained in battle.
+        if (!EntityManager.HasComponent<HeroResourcesComponent>(entity)) EntityManager.AddComponent<HeroResourcesComponent>(entity);
         StatStack.SeedCombatMultipliers(EntityManager, entity);
         StatStack.ClearSource(EntityManager, entity, ModifierSource.Equipment);
         AddEquipment(entity, StatId.Strength, equipment.strengthBonus);

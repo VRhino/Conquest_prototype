@@ -58,7 +58,8 @@ public static class SkillBlobBuilder
             ? ability.events
             : DefaultEvents(ability);
         return Create(IdOf(ability), ability.staminaCost, ability.cooldown,
-            ability.cooldownGroup != 0 ? ability.cooldownGroup : DefaultGroup(slot), ability.refresh, phases, events);
+            ability.cooldownGroup != 0 ? ability.cooldownGroup : DefaultGroup(slot), ability.refresh, phases, events,
+            comboCost: ability.comboCost, killCost: ability.killCost);
     }
 
     /// <summary>
@@ -161,12 +162,15 @@ public static class SkillBlobBuilder
     }
 
     static BlobAssetReference<SkillBlob> Create(int id, float staminaCost, float cooldown, int group, SkillRefresh refresh,
-        SkillPhase[] phases, SkillEvent[] events, int nextSkillId = 0, float chainWindow = 0f)
+        SkillPhase[] phases, SkillEvent[] events, int nextSkillId = 0, float chainWindow = 0f, float comboCost = 0f,
+        int killCost = 0)
     {
         using var builder = new BlobBuilder(Allocator.Temp);
         ref var root = ref builder.ConstructRoot<SkillBlob>();
         root.id = id;
         root.staminaCost = staminaCost;
+        root.comboCost = comboCost;
+        root.killCost = killCost;
         root.cooldown = cooldown;
         root.cooldownGroup = group;
         root.refresh = refresh;

@@ -33,6 +33,9 @@ public struct HeroGameplayConfigComponent : IComponentData
     /// <summary>That floor, as a fraction of max health.</summary>
     public float respawnProtectionHealthRatio;
 
+    /// <summary>How the hero's combo is gained and lost (L2-16).</summary>
+    public ComboTuning combo;
+
     /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.</summary>
     public const float DefaultDeathVisualHideDelay = 3f;
 }

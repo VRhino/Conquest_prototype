@@ -14,6 +14,10 @@ public enum SkillRejection : byte
     OnCooldown,
     Exhausted,
     NotEnoughStamina,
+    /// <summary>Not enough combo (L2-16; ref. not_enough_combo_point).</summary>
+    NotEnoughCombo,
+    /// <summary>Not enough soldier kills (L2-16; ref. not_enough_kill_soldier_count).</summary>
+    NotEnoughKills,
 }
 
 /// <summary>Everything the gate looks at, gathered by the caller (no entity lookups inside).</summary>
@@ -31,12 +35,17 @@ public struct SkillGateInput
     public bool exhausted;
     public float stamina;
     public float staminaCost;
+    /// <summary>The caster's combo now and the skill's cost (L2-16).</summary>
+    public float combo;
+    public float comboCost;
+    public int kills;
+    public int killCost;
 }
 
 /// <summary>
 /// The single launch gate (Aprendizajes_Referencia.md L2-1): every skill, from the player or the AI, passes the same
 /// checks in a fixed order, as in the reference: life and battle, control, the current skill's phase, chain, cooldown,
-/// stamina.
+/// stamina, combo and kills (L2-16).
 /// </summary>
 public static class SkillGate
 {
@@ -51,6 +60,8 @@ public static class SkillGate
         if (!i.cooldownReady) return SkillRejection.OnCooldown;
         if (i.exhausted) return SkillRejection.Exhausted;
         if (i.stamina < i.staminaCost) return SkillRejection.NotEnoughStamina;
+        if (i.combo < i.comboCost) return SkillRejection.NotEnoughCombo;
+        if (i.kills < i.killCost) return SkillRejection.NotEnoughKills;
         return SkillRejection.None;
     }
 }

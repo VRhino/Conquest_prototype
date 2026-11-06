@@ -125,13 +125,18 @@ public partial class HeroAISkillSystem : SystemBase
         var skills = EntityManager.GetBuffer<HeroSkillElement>(hero, true);
         var groups = EntityManager.GetBuffer<CooldownGroupElement>(hero, true);
         float stamina = EntityManager.HasComponent<StaminaComponent>(hero) ? EntityManager.GetComponentData<StaminaComponent>(hero).currentStamina : 0f;
+        var resources = EntityManager.HasComponent<HeroResourcesComponent>(hero)
+            ? EntityManager.GetComponentData<HeroResourcesComponent>(hero) : default;
+        var comboTuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var heroConfig)
+            ? heroConfig.combo.OrDefault() : ComboTuning.Default;
         foreach (var candidate in HeroSlots)
         {
             for (int i = 0; i < skills.Length; i++)
             {
                 if (skills[i].slot != candidate || !skills[i].skill.IsCreated) continue;
                 ref var skill = ref skills[i].skill.Value;
-                if (!CooldownUtility.IsReady(groups, skill.cooldownGroup, now) || stamina < skill.staminaCost) break;
+                if (!CooldownUtility.IsReady(groups, skill.cooldownGroup, now) || stamina < skill.staminaCost
+                    || !HeroResources.CanPay(resources, now, comboTuning, skill.comboCost, skill.killCost)) break;
                 var purpose = HeroAISkills.PurposeOf(ref skill, out float reach);
                 int heroesInReach = 0, unitsInReach = 0;
                 foreach (var e in enemies)
