@@ -107,6 +107,13 @@ public class SquadData : ScriptableObject
     public float piercingDefense;
     /// <summary>Defense against blunt damage.</summary>
     public float bluntDefense;
+    /// <summary>Base share of each damage type taken off after the flat defense (L1-19), capped by CombatTuning.maxRelief.</summary>
+    [Tooltip("Parte del daño contundente que se quita tras la defensa plana (0,2 = 20 %; tope 0,75). Base de la pila; perks y efectos suman.")]
+    [Min(0f)] public float bluntRelief;
+    [Tooltip("Parte del daño cortante que se quita tras la defensa plana (0,2 = 20 %; tope 0,75).")]
+    [Min(0f)] public float slashRelief;
+    [Tooltip("Parte del daño perforante que se quita tras la defensa plana (0,2 = 20 %; tope 0,75).")]
+    [Min(0f)] public float pierceRelief;
 
     // ── Detection (base — compartido por melee y ranged) ─────────────────────
     /// <summary>Radius in world units within which enemies are detected.</summary>

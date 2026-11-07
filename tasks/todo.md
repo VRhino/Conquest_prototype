@@ -1,3 +1,17 @@
+# Plan: datos de inmunidades y alivio (L1-18, L1-19)
+
+Estado: **hecho** (2026-11-07), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/DamageMechanics.md` §5.9.
+
+## Decisiones del usuario (2026-11-07)
+- Alivio por armadura: Squires 10 % cortante y 20 % perforante; Pikemen y Spearmen 10 % cortante; Levy Archers y héroes, nada.
+- Inmunidades: ninguna en los datos por ahora; la mecánica queda para asedio o habilidades futuras.
+
+## Pasos
+- [x] 1. Base de alivio por escuadra (`SquadData` → `SquadDataComponent` → pila, sin escalar con el nivel); datos en
+  los cuatro assets; tests en `DamageStageTests`. EditMode 565/565; S1, S6, S9 y BattleSceneIntegrationTests 23/23.
+
+---
+
 # Plan: textos flotantes a escala NvN (C12)
 
 Estado: **hecho** (2026-11-07), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/DamageMechanics.md` §12.

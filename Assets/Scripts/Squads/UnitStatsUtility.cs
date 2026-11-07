@@ -188,6 +188,9 @@ public static class UnitStatsUtility
         StatStack.SetBase(entityManager, unitEntity, StatId.SlashDamage, data.slashingDamage);
         StatStack.SetBase(entityManager, unitEntity, StatId.PierceDamage, data.piercingDamage);
         StatStack.SetBase(entityManager, unitEntity, StatId.MaxResilience, data.baseResilience);
+        StatStack.SetBase(entityManager, unitEntity, StatId.BluntRelief, data.bluntRelief);
+        StatStack.SetBase(entityManager, unitEntity, StatId.SlashRelief, data.slashRelief);
+        StatStack.SetBase(entityManager, unitEntity, StatId.PierceRelief, data.pierceRelief);
         if (!entityManager.HasComponent<ResilienceComponent>(unitEntity))
             entityManager.AddComponentData(unitEntity, new ResilienceComponent { max = data.baseResilience, current = data.baseResilience });
         // Weapon penetration lives on the squad profile; the unit's own is an additive bonus (0 by default).

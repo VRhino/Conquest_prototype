@@ -354,10 +354,14 @@ Tres etapas más de la cadena de la referencia, sin búsquedas nuevas por golpe:
   tiene los suyos en su `SquadRangedData` o en su clase de héroe. Arqueros y Héroe arco: 15 m, 40 m, 0,6 (2026-11-06).
 - **Inmunidades (L1-18).** `HitTraits.spares` (héroes, soldados): el golpe se descarta antes de calcular, sin vida,
   resiliencia, retroceso ni texto. En habilidades lo decide el evento (`SkillEvent.spares`, para área y quemaduras), que
-  sustituye al del arma. Ningún dato lo usa aún. No hay estructuras: la referencia también tiene inmunidades de asedio.
+  sustituye al del arma. Ningún dato lo usa: decisión del usuario (2026-11-07), queda lista para asedio o habilidades
+  futuras. No hay estructuras: la referencia también tiene inmunidades de asedio.
 - **Alivio porcentual (L1-19).** Stats `BluntRelief`, `SlashRelief` y `PierceRelief` de la pila (base 0), escritos en
   `DefenseComponent`. Cada tipo conserva `1 − alivio` después de la resta plana y de su suelo, con tope
-  `CombatTuning.maxRelief` (0,75). Ningún dato lo usa aún; perks y efectos pueden darlo.
+  `CombatTuning.maxRelief` (0,75). Cada escuadra trae su base (`SquadData.bluntRelief`, `slashRelief`, `pierceRelief`,
+  sin escalar con el nivel); perks y efectos suman. Valores por armadura (2026-11-07, aprobados): Squires 10 % cortante y
+  20 % perforante; Pikemen y Spearmen 10 % cortante; Levy Archers y héroes, nada de serie. Una flecha de 100 perforante
+  a un escudero: 100 − 50 de defensa = 50, × 0,8 = 40.
 
 ---
 

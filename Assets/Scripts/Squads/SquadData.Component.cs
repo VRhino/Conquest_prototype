@@ -20,6 +20,10 @@ public struct SquadDataComponent : IComponentData
     public float slashingDefense;
     public float piercingDefense;
     public float bluntDefense;
+    /// <summary>Bases of <see cref="StatId.BluntRelief"/>, <see cref="StatId.SlashRelief"/> and <see cref="StatId.PierceRelief"/> (L1-19).</summary>
+    public float bluntRelief;
+    public float slashRelief;
+    public float pierceRelief;
 
     public float slashingDamage;
     public float piercingDamage;

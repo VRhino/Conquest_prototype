@@ -52,6 +52,35 @@ public class DamageStageTests
         Assert.That(em.GetComponentData<DefenseComponent>(e).slashRelief, Is.EqualTo(0.3f).Within(1e-5f));
     }
 
+    /// <summary>L1-19 data, approved 2026-11-07: relief by armour; heroes have none of their own.</summary>
+    [TestCase("Squires/Squires", 0f, 0.1f, 0.2f)]
+    [TestCase("Pikemen/Pikemen", 0f, 0.1f, 0f)]
+    [TestCase("Spearmen/Spearmen", 0f, 0.1f, 0f)]
+    [TestCase("Levy_Archers/Levy Archers", 0f, 0f, 0f)]
+    public void EachSquadHasTheReliefOfItsArmour(string asset, float blunt, float slash, float pierce)
+    {
+        var data = UnityEditor.AssetDatabase.LoadAssetAtPath<SquadData>("Assets/Resources/Squads/" + asset + ".asset");
+        Assert.That(data, Is.Not.Null, asset);
+        Assert.That(data.bluntRelief, Is.EqualTo(blunt).Within(1e-5f));
+        Assert.That(data.slashRelief, Is.EqualTo(slash).Within(1e-5f));
+        Assert.That(data.pierceRelief, Is.EqualTo(pierce).Within(1e-5f));
+    }
+
+    [Test]
+    public void ASoldiersReliefComesFromItsSquadAndDoesNotScaleWithLevel()
+    {
+        using var world = new World("Squad relief");
+        var em = world.EntityManager;
+        var unit = em.CreateEntity(typeof(HealthComponent), typeof(DefenseComponent));
+        UnitStatsUtility.ApplyStatsToUnit(unit, new SquadDataComponent
+            { baseHealth = 100, baseSpeed = 5, slashRelief = 0.1f, pierceRelief = 0.2f }, 1, 1f, 1f, 3f, 1f, em);
+        world.GetOrCreateSystemManaged<StatResolveSystem>().Update();
+        var defense = em.GetComponentData<DefenseComponent>(unit);
+        Assert.That(defense.slashRelief, Is.EqualTo(0.1f).Within(1e-5f));
+        Assert.That(defense.pierceRelief, Is.EqualTo(0.2f).Within(1e-5f), "The defense multiplier is for the flat defense only.");
+        Assert.That(defense.bluntRelief, Is.Zero);
+    }
+
     [Test]
     public void FalloffCountsOnlyForRangedHitsFromWhereTheyWereFired()
     {
