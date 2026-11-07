@@ -34,7 +34,7 @@ public static class PikemenFormationSetup
         public float attackRange;
         public float transitionSeconds, attackBlendSeconds, sampleRate, clipSeconds, ikReachFraction, palmOffset, thumbCurl, shaftOriginOffset;
         public float tipHitboxLength, tipHitboxWidth, tipHitboxDepth, columnSpacing, rowSpacing, rearColumnOffset;
-        public float strikeStart, strikeDuration, attackDuration, attackInterval, thrustDistance;
+        public float strikeStart, strikeDuration, attackDuration, attackInterval, thrustDistance, braceHalfAngleDegrees;
         public int columns, previewColumns;
         public Vector3 previewOffset;
         public float[] fingerCurl;
@@ -321,6 +321,9 @@ public static class PikemenFormationSetup
         definition.spacing = s.columnSpacing;
         definition.noiseRadius = definition.noiseAngleDegrees = 0;
         definition.useNormalPostureInFreeCombat = true;
+        // Hold Position braces the pikes; the formed postures already hold them low and forward.
+        definition.supportsBrace = true;
+        definition.braceHalfAngleDegrees = s.braceHalfAngleDegrees;
         var slots = new List<FormationSlot>();
         for (int row = 0; row < RankCount; row++)
             for (int column = 0; column < s.columns; column++)
@@ -411,6 +414,7 @@ public static class PikemenFormationSetup
         for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++) mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, false);
         foreach (var b in new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.Head, AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm, AvatarMaskBodyPart.LeftFingers, AvatarMaskBodyPart.RightFingers }) mask.SetHumanoidBodyPartActive(b, true);
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(s.prefabPath);
+        mask.transformCount = 0; // AddTransformPath appends: a rebuild must not pile up the paths again.
         mask.AddTransformPath(prefab.transform, true);
         for (int i = 0; i < mask.transformCount; i++) mask.SetTransformActive(i, mask.GetTransformPath(i).Contains(s.carrierName));
         AnimatorStateMachine Layer(string name, AvatarMask m)

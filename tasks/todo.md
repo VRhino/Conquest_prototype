@@ -1,3 +1,33 @@
+# Plan: Brace de lanceros y piqueros (F3)
+
+Estado: **hecho** (2026-11-08), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/FormationPostures.md`.
+
+## Decisiones del usuario (2026-11-07)
+- Lanceros en Brace (mantener posición con X en Línea): lanza clavada. Fila delantera de rodillas con el escudo al
+  frente, el regatón en el suelo y la punta hacia delante a la altura del pecho; fila trasera de pie con la lanza baja
+  hacia delante por encima de la primera.
+- En Brace golpean con una estocada corta baja, sin levantar la lanza; la estocada por encima del hombro queda para
+  fuera del Brace.
+- Piqueros: Brace activado en su Línea con sus poses actuales y el mismo arco de 30° a cada lado.
+
+## Pasos
+- [x] 1. Lógica: `UnitStance.SpearBraceFront/Rear`; postura `braced` por papel en `FormationRolePosture` (Normal = la
+  de formado), blob y baker; `UnitPostureSystem` la elige con la escuadra en Brace. Tests en `UnitPostureTests`.
+- [x] 2. Datos: Línea de lanceros con su postura de Brace; Línea de piqueros con `supportsBrace` (también en
+  `PikemenFormationSetup`).
+- [x] 3. Poses de Brace con IK desde las de Línea (`SpearmenLineAnimationSetup`): la delantera con el regatón en el
+  suelo y la trasera con la lanza nivelada; forma en `unity_integration_settings.json`. Revisión con capturas: la lanza
+  trasera rozaba el casco de la primera fila y se subió la guardia.
+- [x] 4. Estocada corta por fila en la capa `Spear Thrust`, elegida por `Stance`; estados de pose en la capa de Línea.
+  Tests en `SpearmenLineAnimationTests`. Al medir en reposo apareció un fallo de `c204a019`: el reposo vacío sin Write
+  Defaults fijaba el brazo de la lanza en una pose por defecto en todas las posturas; ahora tiene Write Defaults y un test.
+- [x] 5. EditMode 583/583; S1, S6, S9 y S9 de lanceros en verde; BattleSceneIntegrationTests 23/24 con
+  `ProductionBattleSceneAttackAtEnemySpawnCausesDamage` agotando su plazo una vez (pasó 3/3 al repetirlo; ya falló una
+  vez el 2026-11-07, antes de este cambio). La batalla integrada comprueba que el Brace pone las dos poses.
+- [x] 6. Docs (F3, `FormationPostures.md`, `SystemResponsibilities.md`, guía de animaciones), página y commit.
+
+---
+
 # Plan: datos de inmunidades y alivio (L1-18, L1-19)
 
 Estado: **hecho** (2026-11-07), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/DamageMechanics.md` §5.9.

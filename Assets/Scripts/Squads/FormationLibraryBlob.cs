@@ -37,6 +37,8 @@ public struct FormationPostureBlob
     public FormationSlotRole role;
     public UnitStance formed;
     public UnitStance moving;
+    /// <summary>Posture while braced; Normal keeps <see cref="formed"/>.</summary>
+    public UnitStance braced;
 }
 
 /// <summary>Layout used while at least <see cref="minUnits"/> soldiers are alive.</summary>

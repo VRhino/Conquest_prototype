@@ -31,13 +31,15 @@ public struct FormationSlot
     public float headingDegrees;
 }
 
-/// <summary>Posture of the soldiers of one slot role, formed and while the formation moves.</summary>
+/// <summary>Posture of the soldiers of one slot role, formed, while the formation moves and while the squad braces.</summary>
 [Serializable]
 public struct FormationRolePosture
 {
     public FormationSlotRole role;
     public UnitStance formed;
     public UnitStance moving;
+    [Tooltip("Posture while the squad is braced (Hold Position with a formation that supports brace). Normal keeps the formed posture.")]
+    public UnitStance braced;
 }
 
 /// <summary>A layout used while at least <see cref="minUnits"/> soldiers are alive.</summary>

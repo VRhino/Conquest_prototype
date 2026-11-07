@@ -22,5 +22,23 @@
     "pullback": 0.1,
     "windup": 0.5,
     "ikReachFraction": 0.98
+  },
+  "brace": {
+    "front": {
+      "guardOffset": { "x": 0.1, "y": -0.35, "z": 0.05 },
+      "elbowPole": { "x": 0.4, "y": -0.1, "z": -0.35 },
+      "pitch": -26,
+      "reach": 0.3,
+      "pullback": 0.05,
+      "plantButt": true
+    },
+    "rear": {
+      "guardOffset": { "x": 0.05, "y": 0.15, "z": 0.2 },
+      "elbowPole": { "x": 0.4, "y": -0.2, "z": -0.2 },
+      "pitch": 5,
+      "reach": 0.3,
+      "pullback": 0.05,
+      "plantButt": false
+    }
   }
 }

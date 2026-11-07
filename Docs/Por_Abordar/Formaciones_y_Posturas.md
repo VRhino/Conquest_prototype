@@ -11,7 +11,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`) y formas aprobadas por el usuario |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
-| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros y piqueros (posturas y estocadas) y estocada de los lanceros hechas; faltan ShieldWall, Testudo, Brace y transiciones |
+| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros y piqueros (posturas y estocadas), estocada de los lanceros y Brace de lanceros y piqueros hechos; faltan ShieldWall, Testudo y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
@@ -122,12 +122,32 @@ lancero erguido, con la mano sobre el hombro y la punta hacia abajo por encima d
 golpea de rodillas, las de atrás de pie con el escudo arriba y un soldado fuera de formación desde su propia postura. Las
 poses de Línea ya no se abandonan al atacar. Los tiempos salen de `Spearmen_Melee` (máximo alcance durante toda la ventana
 de golpe, a la velocidad de ataque), y la forma de los ajustes (`thrust` en `unity_integration_settings.json`). La monta
-`SpearmenLineAnimationSetup` (menú *Rebuild Thrust Animation*, que no reimporta las poses). El IK de dos huesos es ahora
-común con los piqueros (`SolveTwoBone`).
+`SpearmenLineAnimationSetup` (menú *Rebuild Thrust And Brace Animations*, que no reimporta las poses). El IK de dos
+huesos es ahora común con los piqueros (`SolveTwoBone`).
+
+**Avance (2026-11-07, Brace).** El Brace (mantener posición con X en una formación que lo admite) no llegaba a la
+animación: lo decide `SquadCombatModeComponent`, y el `IsBraced` del adaptador era otra cosa (la postura
+`BracedShields` del muro de escudos). Ahora cada papel de la tabla de posturas tiene también su postura en Brace
+(`FormationRolePosture.braced`; Normal conserva la de formado) y `UnitPostureSystem` la elige con la escuadra en Brace y
+el soldado en su ranura. Decisiones del usuario:
+- Lanceros, lanza clavada: la fila delantera de rodillas con el escudo al frente, el regatón en el suelo detrás de ella y
+  la punta a 1,3 m, por delante del escudo (`SpearBraceFront`); la trasera de pie con el escudo arriba y la lanza nivelada,
+  un poco hacia abajo, por encima del casco de la primera (`SpearBraceRear`). Dos alturas de puntas.
+- En Brace golpean con una estocada corta a lo largo de la lanza (`SpearBraceJabFront` y `SpearBraceJabRear`), sin
+  levantarla; la estocada por encima del hombro queda para fuera del Brace. La capa `Spear Thrust` elige por `Stance`.
+- Piqueros: Brace activado en su Línea con sus poses de siempre (ya llevan la pica baja y al frente), mismo arco de 30°.
+
+Las poses salen por IK de las de Línea, como la estocada: la delantera baja la guardia hasta que el regatón toca el
+suelo (falla al generar si no llega). Forma en `brace` de `unity_integration_settings.json`.
+
+De paso se corrigió un fallo de la estocada (`c204a019`): el reposo de `Spear Thrust` era un estado vacío sin Write
+Defaults, y en una capa Humanoid con máscara eso no deja pasar el brazo de abajo, sino que lo fija en una pose por
+defecto. Fuera del ataque, los lanceros llevaban la lanza torcida en cualquier postura. Con Write Defaults el reposo
+suelta el brazo (test `AtRestTheStrikeLayerLeavesTheSpearArmToThePoseBelow`). La máscara ya no duplica sus rutas al
+reconstruirse.
 
 **Lo que falta (2026-11-07).** Muro de escudos y Testudo de los escuderos (la lógica pone `Stance` 2, 3 y 4, pero su
-controlador no tiene ese parámetro ni clips), la postura de clavar el arma (Brace) en lanceros y piqueros (`IsBraced` se
-calcula y no se envía al Animator) y las transiciones.
+controlador no tiene ese parámetro ni clips) y las transiciones coreografiadas (hoy se mezcla entre poses).
 
 ## F4. Cuerpo de impactos por postura
 **Qué es.** En la referencia, cambiar la postura reconstruye el cuerpo de impactos del actor ("dummy body"): levantar el

@@ -618,3 +618,11 @@
   o se pregunta; nunca se toma prestado el de otra arma.
 - Antes de decir que algo "no tiene animación", mirar el controlador que usa el prefab y quién mueve sus parámetros: los
   piqueros sí tenían estocadas y los lanceros solo posturas; la página de estado los metía en el mismo saco.
+
+- En una capa Humanoid con máscara, un estado vacío **sin** Write Defaults no deja pasar el cuerpo de abajo: fija las
+  partes de la máscara en una pose por defecto. La estocada de los lanceros (`c204a019`) dejó así el brazo de la lanza
+  torcido en todas las posturas fuera del ataque, y ningún test lo vio porque solo se midió durante el golpe y el
+  portador del arma. Una capa que debe ser invisible en reposo necesita su reposo **con** Write Defaults y un test que
+  compare la pose con la capa a peso 1 y a peso 0 (2026-11-07).
+- `AvatarMask.AddTransformPath` añade sin vaciar: al reconstruir una máscara existente, poner antes
+  `transformCount = 0` o duplica las rutas.

@@ -251,9 +251,19 @@ condiciones; el mapeo Front/Rear no constituye un importador universal.
 ## Alcance actual
 
 Dos poses sostenidas, mezcla de entrada/salida y retorno a locomoción. No incluye
-respiración, estocadas nuevas, desplazamiento manteniendo pose ni transiciones
-coreografiadas. El escudo mueve su collider, pero no añade bonificaciones de defensa
-ni garantiza por sí solo un muro sin huecos.
+respiración, desplazamiento manteniendo pose ni transiciones coreografiadas. El escudo
+mueve su collider, pero no añade bonificaciones de defensa ni garantiza por sí solo un
+muro sin huecos.
+
+Desde el 2026-11-07 hay además, generadas en Unity con IK de dos huesos (sin Blender):
+la estocada por encima del hombro (`SpearThrust`), las poses de Brace de cada fila
+(`SpearLine_BraceFront` y `SpearLine_BraceRear`, salidas de las de Línea) y su estocada
+corta (`SpearBraceJabFront` y `SpearBraceJabRear`). Su forma está en `thrust` y `brace`
+de `unity_integration_settings.json`; el menú *Conquest → Spearmen → Rebuild Thrust And
+Brace Animations* las regenera sin reimportar las poses de Línea. Las estocadas van en
+la capa `Spear Thrust` (solo el brazo de la lanza); su reposo es un estado vacío **con**
+Write Defaults: sin él, en una capa Humanoid con máscara, el brazo queda fijado en una
+pose por defecto en vez de mostrar la de abajo.
 
 Ver también [Posturas por ranura](../Mechanics/FormationPostures.md),
 [Añadir una unidad](AgregarNuevaUnidad_Guia.md) y

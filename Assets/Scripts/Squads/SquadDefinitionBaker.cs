@@ -195,7 +195,7 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 var postureArray = builder.Allocate(ref formation.postures, postures.Length);
                 for (int k = 0; k < postures.Length; k++)
                     postureArray[k] = new FormationPostureBlob
-                    { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving };
+                    { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving, braced = postures[k].braced };
 
                 var templates = definition.layout == FormationLayoutKind.Template && definition.templates != null
                     ? definition.templates : System.Array.Empty<FormationTemplate>();

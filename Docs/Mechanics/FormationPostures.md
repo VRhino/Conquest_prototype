@@ -6,8 +6,10 @@ de la plantilla da el **papel** y el **rumbo** del soldado; la **postura** es un
 ## Datos
 - `FormationDefinition.templates[].slots[]`: posición (en unidades de espaciado), `row` (0 = frente), `role`
   (`Front`, `Flank`, `Interior`, `Rear`) y `headingDegrees` (rumbo local, 0 = hacia delante, 90 = derecha).
-- `FormationDefinition.postures[]`: por papel, postura **formado** y **en marcha** (`UnitStance`: `Normal`,
-  `BracedShields`, `ShieldFront`, `ShieldSide`, `ShieldUp`, `SpearLineFront`, `SpearLineRear`). Un papel sin entrada usa `Normal`.
+- `FormationDefinition.postures[]`: por papel, postura **formado**, **en marcha** y **en Brace** (`braced`; `Normal`
+  conserva la de formado) (`UnitStance`: `Normal`, `BracedShields`, `ShieldFront`, `ShieldSide`, `ShieldUp`,
+  `SpearLineFront`, `SpearLineRear`, `PikeLineFront`, `PikeLineRear`, `SpearBraceFront`, `SpearBraceRear`). Un papel sin
+  entrada usa `Normal`.
 - Valores por defecto (`Tools/Formations/Apply Default Postures`): Testudo con el frente escudo al frente, los costados
   escudo al costado (y mirando hacia fuera por su rumbo) y el interior y la retaguardia escudo arriba; Shield Wall
   afianzada al formar y escudo al frente en marcha.
@@ -17,7 +19,7 @@ de la plantilla da el **papel** y el **rumbo** del soldado; la **postura** es un
 |---|---|
 | `FormationSystem` | Escribe papel, fila y rumbo de cada ranura en `UnitGridSlotComponent` al rehacer la disposición. |
 | `UnitFollowFormationSystem` | Orienta a la unidad formada con el rumbo de la formación × el rumbo de su ranura. |
-| `UnitPostureSystem` | Único escritor de `UnitFormationStanceComponent`: postura de la tabla según papel y estado. Si la formación activa `useNormalPostureInFreeCombat`, una orden Attack o una persecución fuera de HoldPosition usa Normal; en HoldPosition conserva la postura por fila. Propaga postura, fila y papel a la animación. |
+| `UnitPostureSystem` | Único escritor de `UnitFormationStanceComponent`: postura de la tabla según papel y estado. Si la formación activa `useNormalPostureInFreeCombat`, una orden Attack o una persecución fuera de HoldPosition usa Normal; en HoldPosition conserva la postura por fila. Con la escuadra en Brace (`SquadCombatModeComponent`), el soldado en su ranura toma la postura `braced` de su papel. Propaga postura, fila y papel a la animación. |
 | `UnitAnimatorController` | Escribe los parámetros `Stance` y `SlotRole` si el controller los declara. |
 
 ## Defensa
@@ -47,7 +49,8 @@ arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de im
 ## Brace por formación (2026-10-31)
 
 - `FormationDefinition.supportsBrace` habilita brace al mantener posición (X) con esa formación. `braceHalfAngleDegrees` limita el giro a cada lado del frente fijado al dar la orden; 30 significa un arco total de 60 grados. Cada escuadra referencia sus propios assets de formación: compartir un asset comparte también su política.
-- Configuración inicial: Spearmen Line habilitado con 30 grados por lado. El sistema admite cualquier tipo de unidad y formación; las demás conservan brace deshabilitado hasta configurarlo.
+- Configuración: Spearmen Line y, desde el 2026-11-07, Pikemen Line, con 30 grados por lado. El sistema admite cualquier tipo de unidad y formación; las demás conservan brace deshabilitado hasta configurarlo.
+- Postura en Brace (2026-11-07): cada papel puede tener la suya (`braced`). Lanceros: la fila delantera de rodillas con el regatón de la lanza en el suelo y la punta a la altura del pecho; la trasera de pie con la lanza nivelada por encima de la primera. Golpean con una estocada corta a lo largo de la lanza, sin levantarla. Los piqueros conservan sus poses de Línea. Las animaciones y su regeneración están en [Crear animaciones de formación](../Guides/Crear_Animaciones_De_Formacion.md).
 - `FormationSystem` y el spawn copian la política a `FormationComponent` junto al layout. `BraceWeaponActivationSystem` lee esa copia después de resolver órdenes y antes de targeting, sin consultar blobs durante la descarga de escenas. Un cambio de layout se refleja en brace en el siguiente ciclo de decisiones.
 - Brace mantiene los destinos de HoldPosition: los soldados ocupan sus ranuras sin perseguir. Targeting y ataques rechazan enemigos fuera del alcance del arma o del arco frontal; el resolver de contactos repite la comprobación para no aplicar impactos tras un cambio de posición. `UnitRotationResolutionSystem` limita la rotación final del GameObject al arco.
 - C cancela brace con una única orden, solicita Dispersed si está disponible en la escuadra y da prioridad temporal a seguir frente a la reacción de combate. La transición a dispersa no espera el cooldown de cambio de formación. V abandona brace para combatir libremente.

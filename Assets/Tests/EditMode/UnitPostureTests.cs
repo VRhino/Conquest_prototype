@@ -117,6 +117,55 @@ public class UnitPostureTests
         finally { lineBlob.Dispose(); wedgeBlob.Dispose(); }
     }
 
+    [TestCase("Assets/Resources/Squads/Spearmen/Formations/SpearmenLineFormation.asset",
+        UnitStance.SpearLineFront, UnitStance.SpearLineRear, UnitStance.SpearBraceFront, UnitStance.SpearBraceRear)]
+    [TestCase("Assets/Resources/Squads/Pikemen/Formations/Pikemen_Line.asset",
+        UnitStance.PikeLineFront, UnitStance.PikeLineRear, UnitStance.PikeLineFront, UnitStance.PikeLineRear)]
+    public void BracedLineTakesItsBracePostureInItsSlotAndReleasesItWithTheBrace(string path,
+        UnitStance front, UnitStance rear, UnitStance bracedFront, UnitStance bracedRear)
+    {
+        var line = AssetDatabase.LoadAssetAtPath<FormationDefinition>(path);
+        Assert.That(line.supportsBrace, Is.True, "Hold Position must brace this line.");
+        using var world = new World("Braced line posture");
+        var em = world.EntityManager;
+        em.CreateEntity(typeof(MatchStateComponent));
+        var blob = TestFormationLibrary.Build(line.formationType, line.layout, line.spacing, line.noiseRadius,
+            line.noiseAngleDegrees, line.templates, line.postures, line.useNormalPostureInFreeCombat);
+        try
+        {
+            var squad = em.CreateEntity(typeof(FormationComponent), typeof(SquadDefinitionComponent), typeof(SquadStateComponent));
+            em.SetComponentData(squad, new FormationComponent { currentFormation = FormationType.Line });
+            em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
+            em.SetComponentData(squad, new SquadStateComponent { currentOrder = SquadOrderType.HoldPosition });
+            em.AddComponentData(squad, new SquadCombatModeComponent { mode = SquadCombatMode.Brace });
+            var units = new Entity[2];
+            for (int i = 0; i < units.Length; i++)
+            {
+                units[i] = em.CreateEntity(typeof(UnitFormationStanceComponent), typeof(UnitAnimationMovementComponent));
+                em.AddComponentData(units[i], new UnitGridSlotComponent { row = i, role = i == 0 ? FormationSlotRole.Front : FormationSlotRole.Rear });
+                em.AddComponentData(units[i], new UnitFormationStateComponent { State = UnitFormationState.Formed });
+            }
+            var buffer = em.AddBuffer<SquadUnitElement>(squad);
+            foreach (var unit in units) buffer.Add(new SquadUnitElement { Value = unit });
+            var system = world.GetOrCreateSystem<UnitPostureSystem>();
+            void Expect(UnitStance first, UnitStance second, string when)
+            {
+                system.Update(world.Unmanaged);
+                Assert.That(em.GetComponentData<UnitAnimationMovementComponent>(units[0]).CurrentStance, Is.EqualTo(first), when);
+                Assert.That(em.GetComponentData<UnitAnimationMovementComponent>(units[1]).CurrentStance, Is.EqualTo(second), when);
+            }
+            Expect(bracedFront, bracedRear, "braced in its slot");
+            em.SetComponentData(units[0], new UnitFormationStateComponent { State = UnitFormationState.Moving });
+            em.SetComponentData(units[1], new UnitFormationStateComponent { State = UnitFormationState.Moving });
+            Expect(UnitStance.Normal, UnitStance.Normal, "braced but walking to its slot");
+            em.SetComponentData(units[0], new UnitFormationStateComponent { State = UnitFormationState.Formed });
+            em.SetComponentData(units[1], new UnitFormationStateComponent { State = UnitFormationState.Formed });
+            em.SetComponentData(squad, new SquadCombatModeComponent { mode = SquadCombatMode.Normal });
+            Expect(front, rear, "brace released");
+        }
+        finally { blob.Dispose(); }
+    }
+
     static readonly FormationRolePosture[] Testudo =
     {
         new() { role = FormationSlotRole.Front, formed = UnitStance.ShieldFront, moving = UnitStance.ShieldFront },

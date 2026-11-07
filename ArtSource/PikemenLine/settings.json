@@ -36,6 +36,7 @@
   "attackDuration": 1.0,
   "attackInterval": 1.5,
   "thrustDistance": 0.15,
+  "braceHalfAngleDegrees": 30,
   "front": {
     "hipDrop": 0.40, "hipBack": 0.06, "hipYaw": 25, "lean": 18, "twist": 10,
     "leftFoot": {"x": -0.17, "y": 0.057, "z": 0.34},

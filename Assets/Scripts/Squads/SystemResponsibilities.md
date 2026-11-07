@@ -263,7 +263,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Orden**: después de `NavMeshPositionSyncSystem` y `UnitRotationResolutionSystem`.
 
 ### UnitPostureSystem
-- **Responsabilidad**: Único escritor de `UnitFormationStanceComponent`: postura por papel de ranura según la tabla de la formación. Si `useNormalPostureInFreeCombat` está activo, Attack y la persecución fuera de HoldPosition usan Normal; mantener posición conserva la postura por fila. Propaga postura, fila y papel a `UnitAnimationMovementComponent`.
+- **Responsabilidad**: Único escritor de `UnitFormationStanceComponent`: postura por papel de ranura según la tabla de la formación. Si `useNormalPostureInFreeCombat` está activo, Attack y la persecución fuera de HoldPosition usan Normal; mantener posición conserva la postura por fila. Con la escuadra en Brace (lee `SquadCombatModeComponent`, sin orden respecto a `BraceWeaponActivationSystem`: un fotograma de retraso no se ve) toma la postura `braced` del papel. Propaga postura, fila y papel a `UnitAnimationMovementComponent`.
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]`
 - **NO hace**: no cambia estado de formación, no mueve unidades.
 - **Ref**: `Docs/Mechanics/FormationPostures.md`

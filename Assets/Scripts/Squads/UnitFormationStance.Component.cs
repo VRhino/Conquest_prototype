@@ -23,6 +23,10 @@ public enum UnitStance
     PikeLineFront = 7,
     /// <summary>Standing two-handed pike, supporting ranks.</summary>
     PikeLineRear = 8,
+    /// <summary>Braced spearmen first rank: kneeling, spear butt on the ground, tip forward at chest height.</summary>
+    SpearBraceFront = 9,
+    /// <summary>Braced spearmen rear rank: standing, spear levelled forward over the first rank.</summary>
+    SpearBraceRear = 10,
 }
 
 /// <summary>

@@ -4,7 +4,8 @@ using Unity.Entities;
 /// Single writer of <see cref="UnitFormationStanceComponent"/>: each unit takes the posture its formation gives to its
 /// slot role (shield in front, to the side, over the head, braced), formed or while moving
 /// (game-re/notes/formation-postures.md: the slot gives the role, the posture belongs to the soldier).
-/// Formation settings decide whether free combat releases the rank pose. Hold Position preserves it.
+/// Formation settings decide whether free combat releases the rank pose. Hold Position preserves it, and a braced squad
+/// takes the brace posture of each role when the formation has one.
 /// Propagates posture, row and role to the animation component.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -28,6 +29,9 @@ public partial struct UnitPostureSystem : ISystem
             ref var formation = ref library.formations[formationIndex];
             var order = SystemAPI.HasComponent<SquadStateComponent>(squad)
                 ? SystemAPI.GetComponent<SquadStateComponent>(squad).currentOrder : SquadOrderType.FollowHero;
+            // Brace is decided by BraceWeaponActivationSystem; a frame of delay is invisible, so no ordering is needed.
+            bool braced = SystemAPI.HasComponent<SquadCombatModeComponent>(squad)
+                && SystemAPI.GetComponent<SquadCombatModeComponent>(squad).mode == SquadCombatMode.Brace;
 
             for (int i = 0; i < units.Length; i++)
             {
@@ -44,7 +48,7 @@ public partial struct UnitPostureSystem : ISystem
                 // Attack releases the pose immediately, including pauses and approach before acquiring a target.
                 bool freeCombat = order == SquadOrderType.Attack || (engaging && order != SquadOrderType.HoldPosition);
                 UnitStance stance = formation.useNormalPostureInFreeCombat && freeCombat
-                    ? UnitStance.Normal : FormationLayout.Posture(ref formation, slot.role, moving);
+                    ? UnitStance.Normal : FormationLayout.Posture(ref formation, slot.role, moving, braced);
 
                 var stanceComp = SystemAPI.GetComponentRW<UnitFormationStanceComponent>(unit);
                 if (stanceComp.ValueRO.stance != stance) stanceComp.ValueRW.stance = stance;

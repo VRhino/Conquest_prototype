@@ -35,7 +35,8 @@ public static class TestFormationLibrary
         postures ??= System.Array.Empty<FormationRolePosture>();
         var postureArray = builder.Allocate(ref formations[0].postures, postures.Length);
         for (int k = 0; k < postures.Length; k++)
-            postureArray[k] = new FormationPostureBlob { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving };
+            postureArray[k] = new FormationPostureBlob
+                { role = postures[k].role, formed = postures[k].formed, moving = postures[k].moving, braced = postures[k].braced };
         templates ??= System.Array.Empty<FormationTemplate>();
         var templateArray = builder.Allocate(ref formations[0].templates, templates.Length);
         for (int t = 0; t < templates.Length; t++)

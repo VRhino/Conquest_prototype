@@ -312,10 +312,26 @@ public partial class BattleSceneIntegrationTests
             Assert.That(SquadCombatModeComponent.InsideArc(brace.forward, agent.transform.forward,
                 brace.halfAngleRadians + 0.001f), Is.True, "Braced unit turned outside the front arc.");
         }
+        yield return Until(() => SeenPose("BraceFront") && SeenPose("BraceRear"), 10f,
+            "Braced spearmen did not take the brace poses (kneeling front rank, standing rear rank).");
         yield return Press(Key.C);
         yield return Until(() => em.GetComponentData<SquadCombatModeComponent>(squad).mode == SquadCombatMode.Normal
             && em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Dispersed,
             5f, "Follow did not release brace and line formation.");
+    }
+
+    /// <summary>Whether some spearman's visual plays this state of the Line pose layer: the posture went from ECS through
+    /// the adapter to the Animator.</summary>
+    static bool SeenPose(string state)
+    {
+        const string layerName = "Spear Line Formation";
+        foreach (var unit in UnityEngine.Object.FindObjectsByType<UnitAnimatorController>(FindObjectsSortMode.None))
+        {
+            var animator = unit.GetComponent<Animator>();
+            int layer = animator ? animator.GetLayerIndex(layerName) : -1;
+            if (layer >= 0 && animator.GetCurrentAnimatorStateInfo(layer).IsName(layerName + "." + state)) return true;
+        }
+        return false;
     }
 
     [UnityTest]

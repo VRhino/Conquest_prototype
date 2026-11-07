@@ -164,12 +164,17 @@ public static class FormationLayout
         return new float3(p.x, 0f, p.y);
     }
 
-    /// <summary>Posture of a slot role in this formation (Normal when the role has none).</summary>
-    public static UnitStance Posture(ref FormationDataBlob formation, FormationSlotRole role, bool moving)
+    /// <summary>Posture of a slot role in this formation (Normal when the role has none). Braced and in its slot, the
+    /// role takes its brace posture, or keeps the formed one when it has none.</summary>
+    public static UnitStance Posture(ref FormationDataBlob formation, FormationSlotRole role, bool moving, bool braced = false)
     {
         for (int i = 0; i < formation.postures.Length; i++)
-            if (formation.postures[i].role == role)
-                return moving ? formation.postures[i].moving : formation.postures[i].formed;
+        {
+            ref var posture = ref formation.postures[i];
+            if (posture.role != role) continue;
+            if (moving) return posture.moving;
+            return braced && posture.braced != UnitStance.Normal ? posture.braced : posture.formed;
+        }
         return UnitStance.Normal;
     }
 

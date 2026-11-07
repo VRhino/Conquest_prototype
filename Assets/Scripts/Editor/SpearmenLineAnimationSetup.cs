@@ -28,6 +28,7 @@ public static class SpearmenLineAnimationSetup
         public string meleePath, thrustLayerName;
         public float attackBlendSeconds;
         public Thrust thrust;
+        public Brace brace;
     }
     /// <summary>Overhand thrust: the wrist above the shoulder, the tip down over the shield rim. Offsets are in the
     /// actor's space (+z forward), measured from the right upper arm of the upright spearman.</summary>
@@ -36,11 +37,34 @@ public static class SpearmenLineAnimationSetup
         public Vector3 guardOffset, elbowPole;
         public float pitch, reach, pullback, windup, ikReachFraction;
     }
+    /// <summary>Brace (Hold Position): each rank's Line pose with the spear arm moved, and a short jab along the spear
+    /// that never lifts it. Wind-up timing and IK reach are the thrust's.</summary>
+    [Serializable] public class Brace
+    {
+        public BraceRank front, rear;
+    }
+    /// <summary>Offsets in the actor's space (+z forward), from the right upper arm of the rank's Line pose. The pitch
+    /// tips the spear down when positive, as the thrust's.</summary>
+    [Serializable] public class BraceRank
+    {
+        public Vector3 guardOffset, elbowPole;
+        public float pitch, reach, pullback;
+        /// <summary>Lower the guard until the spear butt rests on the ground (guardOffset.y is then only the start).</summary>
+        public bool plantButt;
+    }
     const string AttackSpeedParameter = nameof(AnimationHashes.AttackSpeed);
     const string PosePrefix = "SpearLine_";
     const string ThrustClip = "SpearThrust";
     const string ThrustState = "Thrust";
     const string ThrustIdleState = "Idle";
+    const string BracePose = "Brace";
+    const string JabClip = "SpearBraceJab";
+    const string JabState = "BraceJab";
+    // Planting converges in a few passes: the spear is rigid in the hand, so only the IK's small roll moves the butt.
+    const int PlantIterations = 8;
+    const float PlantTolerance = 0.01f; // m: a planted butt this close to the ground rests on it.
+    static readonly (string rank, UnitStance stance)[] BraceRanks =
+        { ("Front", UnitStance.SpearBraceFront), ("Rear", UnitStance.SpearBraceRear) };
     [Serializable] class PoseSource { public Pose[] poses; }
     [Serializable] class Pose { public string name; public Delta[] bones, equipment; }
     [Serializable] class Delta { public string name, kind; public float[] delta; }
@@ -100,7 +124,7 @@ public static class SpearmenLineAnimationSetup
         }
         finally { EditorSceneManager.ClosePreviewScene(preview); }
 
-        BuildThrustClip(prefab, settings);
+        BuildCombatClips(prefab, settings);
         var controller = BuildController(settings);
         var contents = PrefabUtility.LoadPrefabContents(settings.prefabPath);
         try
@@ -111,18 +135,18 @@ public static class SpearmenLineAnimationSetup
         finally { PrefabUtility.UnloadPrefabContents(contents); }
         formation.postures = new[]
         {
-            Posture(FormationSlotRole.Front, UnitStance.SpearLineFront),
-            Posture(FormationSlotRole.Rear, UnitStance.SpearLineRear),
-            Posture(FormationSlotRole.Flank, UnitStance.SpearLineRear),
-            Posture(FormationSlotRole.Interior, UnitStance.SpearLineRear)
+            Posture(FormationSlotRole.Front, UnitStance.SpearLineFront, UnitStance.SpearBraceFront),
+            Posture(FormationSlotRole.Rear, UnitStance.SpearLineRear, UnitStance.SpearBraceRear),
+            Posture(FormationSlotRole.Flank, UnitStance.SpearLineRear, UnitStance.SpearBraceRear),
+            Posture(FormationSlotRole.Interior, UnitStance.SpearLineRear, UnitStance.SpearBraceRear)
         };
         EditorUtility.SetDirty(formation);
         AssetDatabase.SaveAssetIfDirty(formation);
         Debug.Log("Spearmen Line integrated: Front/Rear Humanoid clips, controller and role postures.");
     }
 
-    static FormationRolePosture Posture(FormationSlotRole role, UnitStance stance) =>
-        new FormationRolePosture { role = role, formed = stance, moving = UnitStance.Normal };
+    static FormationRolePosture Posture(FormationSlotRole role, UnitStance stance, UnitStance braced) =>
+        new FormationRolePosture { role = role, formed = stance, moving = UnitStance.Normal, braced = braced };
 
     static AnimatorController BuildController(Settings settings)
     {
@@ -160,33 +184,63 @@ public static class SpearmenLineAnimationSetup
         sm.defaultState = inactive;
         AddPoseState(sm, inactive, settings, "Front", UnitStance.SpearLineFront);
         AddPoseState(sm, inactive, settings, "Rear", UnitStance.SpearLineRear);
+        foreach (var (rank, stance) in BraceRanks) AddPoseState(sm, inactive, settings, BracePose + rank, stance);
         BuildThrustLayer(controller, settings);
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssetIfDirty(controller);
         return controller;
     }
 
-    /// <summary>Regenerates the thrust and rebuilds both layers, without re-importing the poses from Blender or touching
-    /// the prefab and the formation.</summary>
-    [MenuItem("Conquest/Spearmen/Rebuild Thrust Animation")]
-    public static void RebuildThrust()
+    /// <summary>Regenerates the thrust, the brace poses and their jabs, and rebuilds both layers, without re-importing
+    /// the Line poses from Blender or touching the prefab and the formation.</summary>
+    [MenuItem("Conquest/Spearmen/Rebuild Thrust And Brace Animations")]
+    public static void RebuildCombat()
     {
         if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play mode before rebuilding assets.");
         var settings = ReadSettings();
-        BuildThrustClip(AssetDatabase.LoadAssetAtPath<GameObject>(settings.prefabPath), settings);
+        BuildCombatClips(AssetDatabase.LoadAssetAtPath<GameObject>(settings.prefabPath), settings);
         BuildController(settings);
+    }
+
+    /// <summary>The overhand thrust on the upright spearman; per rank, the brace pose and its jab on that rank's Line pose.</summary>
+    static void BuildCombatClips(GameObject prefab, Settings settings)
+    {
+        var t = settings.thrust;
+        if (!prefab || t == null || settings.brace?.front == null || settings.brace.rear == null)
+            throw new InvalidDataException("Expected the spearman, thrust and brace settings.");
+        BuildStrikeClip(ThrustClip, t.reach, t.pullback, settings, (scene, shift) =>
+        {
+            var actor = PoseThrust(prefab, scene, shift, settings, out var carrier);
+            return (actor, new[] { carrier });
+        });
+        var preview = EditorSceneManager.NewPreviewScene();
+        try
+        {
+            foreach (var (rank, _) in BraceRanks)
+            {
+                var pose = rank == "Front" ? settings.brace.front : settings.brace.rear;
+                var actor = PoseBrace(prefab, preview, rank, 0f, settings, out var carriers);
+                SaveClip(CapturePoseClip(actor, PosePrefix + BracePose + rank, settings, carriers), settings.outputFolder);
+                UnityEngine.Object.DestroyImmediate(actor);
+                BuildStrikeClip(JabClip + rank, pose.reach, pose.pullback, settings, (scene, shift) =>
+                {
+                    var jab = PoseBrace(prefab, scene, rank, shift, settings, out var jabCarriers);
+                    return (jab, new[] { jabCarriers[0] });
+                });
+            }
+        }
+        finally { EditorSceneManager.ClosePreviewScene(preview); }
     }
 
     public static Settings ReadSettings() => JsonUtility.FromJson<Settings>(File.ReadAllText(SettingsPath));
 
     /// <summary>The thrust moves only the spear arm and the spear, on a layer above the Line poses: the front rank strikes
-    /// kneeling, the rear ones standing with the shield up, and a soldier out of formation from its own stance. The swing
-    /// lasts as long as the ECS swing and runs at the squad's attack speed.</summary>
+    /// kneeling, the rear ones standing with the shield up, and a soldier out of formation from its own stance. A braced
+    /// rank jabs from its brace pose instead. The swing lasts as long as the ECS swing and runs at the squad's attack speed.</summary>
     static void BuildThrustLayer(AnimatorController controller, Settings settings)
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(settings.prefabPath);
-        var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(settings.outputFolder + "/" + ThrustClip + ".anim");
-        if (!prefab || !clip) throw new InvalidDataException("Expected the spearman and its thrust clip.");
+        if (!prefab) throw new InvalidDataException("Expected the spearman.");
         string maskPath = settings.outputFolder + "/" + ThrustClip + ".mask";
         var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(maskPath);
         if (!mask) { mask = new AvatarMask { name = ThrustClip }; AssetDatabase.CreateAsset(mask, maskPath); }
@@ -194,6 +248,7 @@ public static class SpearmenLineAnimationSetup
             mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, i == (int)AvatarMaskBodyPart.RightArm || i == (int)AvatarMaskBodyPart.RightFingers);
         string carrier = AnimationUtility.CalculateTransformPath(
             prefab.GetComponentsInChildren<Transform>(true).Single(t => t.name == settings.spearObjectName).parent, prefab.transform);
+        mask.transformCount = 0; // AddTransformPath appends: a rebuild must not pile up the paths again.
         mask.AddTransformPath(prefab.transform, true);
         for (int i = 0; i < mask.transformCount; i++) mask.SetTransformActive(i, mask.GetTransformPath(i) == carrier);
         EditorUtility.SetDirty(mask);
@@ -220,43 +275,63 @@ public static class SpearmenLineAnimationSetup
             controller.AddLayer(new AnimatorControllerLayer { name = settings.thrustLayerName, stateMachine = sm,
                 avatarMask = mask, defaultWeight = 1, blendingMode = AnimatorLayerBlendingMode.Override });
         }
-        // Empty and without Write Defaults: at rest the layer leaves the arm and the spear to the layers below.
+        // Empty WITH Write Defaults: at rest the layer releases the arm to the layers below and puts the spear carrier
+        // back at its prefab offset (every pose keeps it there). Without Write Defaults the masked arm stays frozen in a
+        // default pose whenever the soldier is not striking.
         var idle = sm.AddState(ThrustIdleState);
         idle.motion = null;
-        idle.writeDefaultValues = false;
+        idle.writeDefaultValues = true;
         sm.defaultState = idle;
-        var thrust = sm.AddState(ThrustState);
-        thrust.motion = clip;
-        thrust.writeDefaultValues = false;
-        thrust.speedParameter = AttackSpeedParameter;
-        thrust.speedParameterActive = true;
-        var enter = sm.AddAnyStateTransition(thrust);
+        AddStrikeState(sm, idle, ThrustState, ThrustClip, settings, enter =>
+        {
+            foreach (var (_, stance) in BraceRanks) enter.AddCondition(AnimatorConditionMode.NotEqual, (int)stance, StanceParameter);
+        });
+        foreach (var (rank, stance) in BraceRanks)
+            AddStrikeState(sm, idle, JabState + rank, JabClip + rank, settings,
+                enter => enter.AddCondition(AnimatorConditionMode.Equals, (int)stance, StanceParameter));
+    }
+
+    /// <summary>A swing state entered whenever the soldier attacks (and <paramref name="when"/> holds), left when it stops.</summary>
+    static void AddStrikeState(AnimatorStateMachine sm, AnimatorState idle, string name, string clipName, Settings settings,
+        Action<AnimatorStateTransition> when)
+    {
+        var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(settings.outputFolder + "/" + clipName + ".anim");
+        if (!clip) throw new InvalidDataException("Missing strike clip " + clipName + ".");
+        var state = sm.AddState(name);
+        state.motion = clip;
+        state.writeDefaultValues = false;
+        state.speedParameter = AttackSpeedParameter;
+        state.speedParameterActive = true;
+        var enter = sm.AddAnyStateTransition(state);
         Transition(enter, settings.attackBlendSeconds);
         enter.AddCondition(AnimatorConditionMode.If, 0, AttackParameter);
-        var finish = thrust.AddTransition(idle);
+        when(enter);
+        var finish = state.AddTransition(idle);
         Transition(finish, settings.attackBlendSeconds);
         finish.AddCondition(AnimatorConditionMode.IfNot, 0, AttackParameter);
     }
 
-    /// <summary>The clip, keyed on the melee data: guard, wind-up, full reach when the hit window opens, held while it
-    /// lasts, back to guard when the swing ends.</summary>
-    static void BuildThrustClip(GameObject prefab, Settings settings)
+    /// <summary>A strike clip keyed on the melee data: guard, wind-up, full reach when the hit window opens, held while it
+    /// lasts, back to guard when the swing ends. <paramref name="pose"/> builds the actor at a shift along the strike and
+    /// names the carriers to bake.</summary>
+    static void BuildStrikeClip(string name, float reach, float pullback, Settings settings,
+        Func<Scene, float, (GameObject actor, Transform[] carriers)> pose)
     {
         var melee = AssetDatabase.LoadAssetAtPath<SquadMeleeData>(settings.meleePath);
         var t = settings.thrust;
-        if (!prefab || !melee || t == null) throw new InvalidDataException("Expected the spearman, its melee data and thrust settings.");
+        if (!melee) throw new InvalidDataException("Expected the spearmen melee data.");
         float strike = melee.strikeWindowStart, hold = strike + melee.strikeWindowDuration, end = melee.attackAnimationDuration;
-        if (strike <= 0 || hold > end || t.windup <= 0 || t.windup >= 1 || t.reach <= 0)
-            throw new InvalidDataException("The thrust keys must be ordered inside the swing.");
-        var keys = new[] { (0f, 0f), (strike * t.windup, -t.pullback), (strike, t.reach), (hold, t.reach), (end, 0f) };
+        if (strike <= 0 || hold > end || t.windup <= 0 || t.windup >= 1 || reach <= 0 || pullback < 0)
+            throw new InvalidDataException("The " + name + " keys must be ordered inside the swing.");
+        var keys = new[] { (0f, 0f), (strike * t.windup, -pullback), (strike, reach), (hold, reach), (end, 0f) };
         var curves = new Dictionary<EditorCurveBinding, AnimationCurve>();
         var preview = EditorSceneManager.NewPreviewScene();
         try
         {
             foreach (var (time, shift) in keys)
             {
-                var actor = PoseThrust(prefab, preview, shift, settings, out var carrier);
-                var sample = CapturePoseClip(actor, "sample", settings, carrier);
+                var (actor, carriers) = pose(preview, shift);
+                var sample = CapturePoseClip(actor, "sample", settings, carriers);
                 foreach (var binding in AnimationUtility.GetCurveBindings(sample))
                 {
                     if (!curves.TryGetValue(binding, out var curve)) curves[binding] = curve = new AnimationCurve();
@@ -267,7 +342,7 @@ public static class SpearmenLineAnimationSetup
             }
         }
         finally { EditorSceneManager.ClosePreviewScene(preview); }
-        var clip = new AnimationClip { name = ThrustClip, frameRate = settings.sampleRate };
+        var clip = new AnimationClip { name = name, frameRate = settings.sampleRate };
         foreach (var kv in curves)
         {
             // Clamped tangents: the held reach must not overshoot past the keys.
@@ -291,28 +366,76 @@ public static class SpearmenLineAnimationSetup
     /// Public so the thrust can be reviewed before it is baked.</summary>
     public static GameObject PoseThrust(GameObject prefab, Scene scene, float shift, Settings settings, out Transform carrier)
     {
+        var t = settings.thrust;
+        return PoseSpearArm(prefab, scene, null, t.guardOffset, t.elbowPole, t.pitch, false, shift, settings, out carrier);
+    }
+
+    /// <summary>A rank's brace: its Line pose with the spear arm at <paramref name="shift"/> metres along the jab
+    /// (negative: wound up). Carriers: the spear's, then the shield's (the Line pose's grip). Public for review.</summary>
+    public static GameObject PoseBrace(GameObject prefab, Scene scene, string rank, float shift, Settings settings, out Transform[] carriers)
+    {
+        var b = rank == "Front" ? settings.brace.front : settings.brace.rear;
+        var line = AssetDatabase.LoadAssetAtPath<AnimationClip>(settings.outputFolder + "/" + PosePrefix + rank + ".anim");
+        var actor = PoseSpearArm(prefab, scene, line, b.guardOffset, b.elbowPole, b.pitch, b.plantButt, shift, settings, out var carrier);
+        carriers = new[] { carrier, actor.GetComponentsInChildren<Transform>(true).Single(x => x.name == settings.shieldObjectName).parent };
+        return actor;
+    }
+
+    /// <summary>The spearman in <paramref name="basePose"/> (upright when null) with only the spear arm moved: the hand at
+    /// <paramref name="guard"/> from the right upper arm, then <paramref name="shift"/> metres along the spear, which points
+    /// along <paramref name="pitch"/>. With <paramref name="plantButt"/> the guard comes down until the butt rests on the
+    /// ground.</summary>
+    static GameObject PoseSpearArm(GameObject prefab, Scene scene, AnimationClip basePose, Vector3 guard, Vector3 elbowPole,
+        float pitch, bool plantButt, float shift, Settings settings, out Transform carrier)
+    {
         var actor = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
         actor.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         foreach (var behaviour in actor.GetComponentsInChildren<MonoBehaviour>(true)) behaviour.enabled = false;
         var animator = actor.GetComponent<Animator>();
         animator.enabled = false;
+        if (basePose) ApplyPoseClip(actor, basePose);
         var transforms = actor.GetComponentsInChildren<Transform>(true);
         Transform Named(string name) => transforms.Single(x => x.name == name);
         var spear = Named(settings.spearObjectName);
+        var hitbox = Named(settings.hitboxObjectName);
         carrier = spear.parent;
 
-        var t = settings.thrust;
         var upper = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+        var lower = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
         var hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
-        var direction = Quaternion.AngleAxis(t.pitch, Vector3.right) * Vector3.forward;
+        var direction = Quaternion.AngleAxis(pitch, Vector3.right) * Vector3.forward;
         var shoulder = upper.position;
-        SolveTwoBone(upper, animator.GetBoneTransform(HumanBodyBones.RightLowerArm), hand,
-            shoulder + t.guardOffset + direction * shift, shoulder + t.elbowPole, t.ikReachFraction);
-        // The spear is rigid in the hand: turn the hand until the tip (the end with the hitbox) points along the thrust.
-        var hitbox = Named(settings.hitboxObjectName);
-        var tip = Vector3.Dot(spear.up, hitbox.position - spear.position) >= 0 ? spear.up : -spear.up;
-        hand.rotation = Quaternion.FromToRotation(tip, direction) * hand.rotation;
+        var target = shoulder + guard;
+        void Place(Vector3 at)
+        {
+            SolveTwoBone(upper, lower, hand, at, shoulder + elbowPole, settings.thrust.ikReachFraction);
+            // The spear is rigid in the hand: turn the hand until the tip (the end with the hitbox) points along the spear line.
+            var tip = Vector3.Dot(spear.up, hitbox.position - spear.position) >= 0 ? spear.up : -spear.up;
+            hand.rotation = Quaternion.FromToRotation(tip, direction) * hand.rotation;
+        }
+        if (plantButt)
+        {
+            float ground = actor.transform.position.y;
+            for (int i = 0; i < PlantIterations; i++)
+            {
+                Place(target);
+                target.y -= SpearEnd(spear, hitbox, false).y - ground;
+            }
+            Place(target);
+            float gap = SpearEnd(spear, hitbox, false).y - ground;
+            if (Mathf.Abs(gap) > PlantTolerance)
+                throw new InvalidDataException($"The planted spear butt stays {gap:F3} m off the ground: the guard is out of reach.");
+        }
+        Place(target + direction * shift);
         return actor;
+    }
+
+    /// <summary>The spear's tip (the end with the hitbox) or butt, from the ends of its mesh along its length.</summary>
+    static Vector3 SpearEnd(Transform spear, Transform hitbox, bool tip)
+    {
+        var bounds = spear.GetComponent<MeshFilter>().sharedMesh.bounds;
+        float sign = Vector3.Dot(spear.up, hitbox.position - spear.position) >= 0 ? 1f : -1f;
+        return spear.TransformPoint(bounds.center + Vector3.up * (tip ? sign : -sign) * bounds.extents.y);
     }
 
     /// <summary>Puts the actor in the first frame of a clip made by <see cref="CapturePoseClip"/>: its inverse.</summary>
