@@ -42,11 +42,16 @@ public partial class UIBattleDataSystem : SystemBase
         // ── Skill bar: the hero's slots, then its active squad's ─────────────────
         double now = SystemAPI.Time.ElapsedTime;
         data.skills.Length = UIHeroBattleDataComponent.SkillSlotCount;
-        foreach (var (skills, groups) in
+        var comboTuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var heroConfig)
+            ? heroConfig.combo.OrDefault() : ComboTuning.Default;
+        foreach (var (skills, groups, hero) in
                  SystemAPI.Query<DynamicBuffer<HeroSkillElement>, DynamicBuffer<CooldownGroupElement>>()
-                          .WithAll<IsLocalPlayer>())
+                          .WithAll<IsLocalPlayer>().WithEntityAccess())
         {
             WriteSkills(ref data.skills, skills, groups, now, SkillSlot.Q, SkillSlot.ActivePerk2);
+            var resources = SystemAPI.HasComponent<HeroResourcesComponent>(hero)
+                ? SystemAPI.GetComponent<HeroResourcesComponent>(hero) : default;
+            WriteCosts(ref data, skills, resources, now, comboTuning);
             break;
         }
         foreach (var (skills, groups) in
@@ -90,6 +95,21 @@ public partial class UIBattleDataSystem : SystemBase
         }
 
         SystemAPI.SetComponent(_singletonEntity, data);
+    }
+
+    /// <summary>The hero's combo now and which of its skills it cannot pay for (H16): the same check as the gate.</summary>
+    static void WriteCosts(ref UIHeroBattleDataComponent data, DynamicBuffer<HeroSkillElement> skills,
+        in HeroResourcesComponent resources, double now, in ComboTuning tuning)
+    {
+        data.combo = HeroResources.Combo(resources, now, tuning);
+        foreach (var skill in skills)
+        {
+            if (skill.slot < SkillSlot.Q || skill.slot > SkillSlot.ActivePerk2 || !skill.skill.IsCreated) continue;
+            ref var blob = ref skill.skill.Value;
+            if (skill.slot == SkillSlot.Ultimate) data.ultimateComboCost = blob.comboCost;
+            if (!HeroResources.CanPay(resources, now, tuning, blob.comboCost, blob.killCost))
+                data.unaffordableSlots |= UIHeroBattleDataComponent.SlotBit(skill.slot);
+        }
     }
 
     /// <summary>Writes the skills in slots <paramref name="first"/>..<paramref name="last"/> with their cooldown.</summary>

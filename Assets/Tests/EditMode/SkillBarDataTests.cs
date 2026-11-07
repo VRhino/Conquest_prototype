@@ -90,4 +90,45 @@ public class SkillBarDataTests
             Object.DestroyImmediate(squad); Object.DestroyImmediate(icon);
         }
     }
+
+    [Test]
+    public void BarDataCarriesTheComboAndDimsTheUltimateWhileItIsShort()
+    {
+        var ultimate = ScriptableObject.CreateInstance<HeroAbility>();
+        ultimate.abilityName = "Bar Ultimate";
+        ultimate.category = HeroAbilityCategory.Ultimate;
+        ultimate.comboCost = 20f;
+        var skill = SkillBlobBuilder.Build(ultimate);
+        try
+        {
+            using var world = new World("Skill bar combo");
+            var em = world.EntityManager;
+            em.CreateEntity(typeof(MatchStateComponent));
+            var hero = em.CreateEntity(typeof(IsLocalPlayer));
+            em.AddBuffer<HeroSkillElement>(hero).Add(new HeroSkillElement { slot = SkillSlot.Ultimate, skillId = skill.Value.id, skill = skill });
+            em.AddBuffer<CooldownGroupElement>(hero);
+            // The clock starts at 0 and the last hit was then: no decay yet.
+            em.AddComponentData(hero, new HeroResourcesComponent { combo = 12f });
+            var system = world.GetOrCreateSystemManaged<UIBattleDataSystem>();
+            using var query = em.CreateEntityQuery(typeof(UIHeroBattleDataComponent));
+
+            system.Update();
+            var data = query.GetSingleton<UIHeroBattleDataComponent>();
+            Assert.That(data.combo, Is.EqualTo(12f).Within(1e-4f));
+            Assert.That(data.ultimateComboCost, Is.EqualTo(20f));
+            Assert.That(data.CanAfford(SkillSlot.Ultimate), Is.False, "12 of 20: the ultimate is dimmed.");
+            Assert.That(data.CanAfford(SkillSlot.Q), Is.True, "An empty slot costs nothing.");
+
+            em.SetComponentData(hero, new HeroResourcesComponent { combo = 25f });
+            system.Update();
+            data = query.GetSingleton<UIHeroBattleDataComponent>();
+            Assert.That(data.combo, Is.EqualTo(25f).Within(1e-4f));
+            Assert.That(data.CanAfford(SkillSlot.Ultimate), Is.True);
+        }
+        finally
+        {
+            skill.Dispose();
+            Object.DestroyImmediate(ultimate);
+        }
+    }
 }

@@ -94,6 +94,22 @@ public partial class BattleSceneIntegrationTests
         Assert.That(panel.gameObject.activeSelf, Is.False, "Releasing ALT closes the menu.");
     }
 
+    [UnityTest, Category("BattleCommands")]
+    public IEnumerator SkillBarShowsTheComboAndDimsTheUltimateWhileItIsShort()
+    {
+        var ultimate = Object.FindFirstObjectByType<SkillBarController>().transform.Find("Bar/Slot_Ultimate");
+        var counter = ultimate.Find("ComboBadge/Combo").GetComponent<TMPro.TMP_Text>();
+        var dimmed = ultimate.Find("CooldownFill").GetComponent<UnityEngine.UI.Image>();
+        double now = World.DefaultGameObjectInjectionWorld.Time.ElapsedTime;
+        em.SetComponentData(hero, new HeroResourcesComponent { combo = 0f, lastHitTime = now });
+        yield return Until(() => counter.isActiveAndEnabled && counter.text == "0/20", 5f, "The ultimate does not show the combo it lacks.");
+        Assert.That(dimmed.enabled, Is.True, "Without combo the ultimate is dimmed.");
+
+        now = World.DefaultGameObjectInjectionWorld.Time.ElapsedTime;
+        em.SetComponentData(hero, new HeroResourcesComponent { combo = 25f, lastHitTime = now });
+        yield return Until(() => counter.text == "25/20" && !dimmed.enabled, 5f, "With enough combo the ultimate lights up.");
+    }
+
     IEnumerator UnlockFirstSquadAbilityInBattle()
     {
         var progress = em.GetComponentData<SquadProgressComponent>(squad);

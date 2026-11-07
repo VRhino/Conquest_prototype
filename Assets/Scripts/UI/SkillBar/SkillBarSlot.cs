@@ -26,7 +26,8 @@ public class SkillBarSlot : MonoBehaviour, IPointerClickHandler
         if (eventData.button == PointerEventData.InputButton.Left) Clicked?.Invoke();
     }
 
-    public void Show(UISkillSlotData data, Sprite sprite)
+    /// <param name="affordable">False while the hero lacks the combo or kills the skill costs (H16): dimmed, no seconds.</param>
+    public void Show(UISkillSlotData data, Sprite sprite, bool affordable = true)
     {
         bool empty = data.skillId == 0;
         if (group != null) group.alpha = empty ? (hideWhenEmpty ? 0f : EmptyAlpha) : 1f;
@@ -36,10 +37,11 @@ public class SkillBarSlot : MonoBehaviour, IPointerClickHandler
             icon.enabled = !empty && sprite != null;
         }
         bool cooling = !empty && data.cooldown > 0f;
+        bool unpaid = !empty && !affordable;
         if (cooldownFill != null)
         {
-            cooldownFill.enabled = cooling;
-            cooldownFill.fillAmount = data.cooldown;
+            cooldownFill.enabled = cooling || unpaid;
+            cooldownFill.fillAmount = cooling ? data.cooldown : 1f;
         }
         if (cooldownText != null)
         {

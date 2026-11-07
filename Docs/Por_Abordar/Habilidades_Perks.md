@@ -21,7 +21,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H13 | El enfriamiento de la escuadra se pierde al cambiarla | Baja | **Hecho** (2026-10-27, bloque 4) |
 | H14 | Perks con las condiciones nuevas (L2-15) | Baja | Pendiente (datos) |
 | H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (arqueros y Defensa Reforzada) |
-| H16 | Combo y bajas del héroe en el HUD (L2-16) | Media | Pendiente (HUD; sesión hud-radial) |
+| H16 | Combo y bajas del héroe en el HUD (L2-16) | Media | **Hecho** (2026-11-07: contador en la definitiva, casilla apagada sin combo) |
 
 Bloque 3 (2026-10-27, `tasks/todo.md`): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
 L4-08. La mecánica está en `Docs/Mechanics/SkillsAndPerks.md` §3.6, §5 y §8.
@@ -166,6 +166,11 @@ probadas, pero ningún perk las usa todavía. Son datos: por ejemplo, "Carga San
 perk de "última resistencia" con `squadAliveMax`.
 
 ## H16. Combo y bajas en el HUD (L2-16)
+**Hecho (2026-11-07).** La casilla de la definitiva muestra «combo/coste» y se apaga mientras falte combo (o bajas),
+como con el enfriamiento pero sin segundos. `UIBattleDataSystem` lee `HeroResources.Combo` en cada refresco y marca con
+`HeroResources.CanPay` los huecos que no se pueden pagar. Las bajas no se muestran porque nada las cuesta todavía; si
+alguna habilidad llega a costarlas, añadir su contador. Ver `Docs/Mechanics/SkillsAndPerks.md` §6.
+
 El héroe gana combo y bajas y las definitivas cuestan 20 de combo (`Docs/Mechanics/SkillsAndPerks.md` §3.1), pero el HUD
 no lo enseña: el jugador no sabe cuánto lleva ni por qué la definitiva no sale. La puerta ya devuelve `NotEnoughCombo` y
 `NotEnoughKills`. Por decisión del usuario se deja para el HUD (sesión hud-radial), para no chocar con su trabajo:

@@ -43,6 +43,18 @@ public struct UIHeroBattleDataComponent : IComponentData
         return index >= 0 && index < skills.Length ? skills[index] : default;
     }
 
+    // ── Combo (L2-16, H16) ───────────────────────────────────────────────────
+    /// <summary>The local hero's combo now, with the decay since its last hit applied.</summary>
+    public float combo;
+    /// <summary>Combo the ultimate asks for; 0 = it costs none and the bar shows no counter.</summary>
+    public float ultimateComboCost;
+    /// <summary>Hero slots whose skill costs more combo or kills than the hero has (bit = slot − Q).</summary>
+    public ushort unaffordableSlots;
+
+    public readonly bool CanAfford(SkillSlot slot) => (unaffordableSlots & SlotBit(slot)) == 0;
+
+    public static ushort SlotBit(SkillSlot slot) => (ushort)(1 << (slot - SkillSlot.Q));
+
     // ── Capture zone ─────────────────────────────────────────────────────────
     public bool  isInCaptureZone;
     public float captureProgress;   // 0–100

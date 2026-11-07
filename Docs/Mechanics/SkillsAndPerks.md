@@ -76,7 +76,8 @@ contador de bajas de soldado, cada uno con su motivo de rechazo), en `HeroResour
   cuestan 20 de combo (aprobado por el usuario) y siguen con su enfriamiento de 60 s. Nada cuesta bajas todavía.
 - **Quién escribe:** `DamageCalculationSystem` suma al acertar y al matar; `SkillExecutionSystem` gasta al lanzar. La IA
   no elige una habilidad que no puede pagar (`HeroAISkillSystem`).
-- **HUD:** no se muestra todavía (`Docs/Por_Abordar/Habilidades_Perks.md` H16).
+- **HUD (H16):** la casilla de la definitiva lleva un contador «combo/coste» y se apaga mientras falte combo o bajas, como
+  con el enfriamiento pero sin segundos (§6). Las bajas no se muestran: nada las cuesta todavía.
 
 ### 3.2 Fases (`SkillPhase`)
 
@@ -276,6 +277,11 @@ activos 4 y 5 salen del héroe local; 1, 2 y 3, de su escuadra activa (`IsLocalS
 escena, abajo en el centro y por debajo de la barra de aguante: nueve huecos con icono, enfriamiento radial, segundos y tecla. Los huecos vacíos del héroe se atenúan y los de
 escuadra sin desbloquear se ocultan. Los iconos los busca `SkillIconCatalog` por el id del skill: habilidades y perks de la
 clase del héroe (`HeroClassManager`) y habilidades de todas las escuadras (`SquadDataService`).
+
+**Combo (H16).** `UIBattleDataSystem` lee también `HeroResources.Combo` en cada refresco (la pérdida se calcula al leer) y
+con `HeroResources.CanPay` marca en `unaffordableSlots` los huecos del héroe que no puede pagar; la puerta usa la misma
+comprobación. La barra apaga esos huecos y la definitiva muestra «combo/coste» (`ultimateComboCost`); si la definitiva no
+cuesta combo, el contador se oculta.
 
 ### 6.1 Clic y menú radial (H10)
 
