@@ -22,7 +22,13 @@ public static class SpearmenLineAnimationSetup
         public string prefabPath, formationPath, sourceControllerPath, outputFolder, poseSourcePath, layerName;
         public string spearObjectName, shieldObjectName;
         public float transitionSeconds, clipSeconds, sampleRate;
+        // The swing: the squires' shield-and-weapon slash on the upper body, at the squad's attack speed.
+        public string combatLayerName, combatMaskPath, attackClipPath, attackClipName;
+        public float attackTransitionSeconds;
     }
+    const string AttackSpeedParameter = nameof(AnimationHashes.AttackSpeed);
+    const string CombatIdleState = "Idle_Combat";
+    const string AttackState = "Attack";
     [Serializable] class PoseSource { public Pose[] poses; }
     [Serializable] class Pose { public string name; public Delta[] bones, equipment; }
     [Serializable] class Delta { public string name, kind; public float[] delta; }
@@ -141,9 +147,67 @@ public static class SpearmenLineAnimationSetup
         sm.defaultState = inactive;
         AddPoseState(sm, inactive, settings, "Front", UnitStance.SpearLineFront);
         AddPoseState(sm, inactive, settings, "Rear", UnitStance.SpearLineRear);
+        BuildCombatLayer(controller, settings);
         EditorUtility.SetDirty(controller);
         AssetDatabase.SaveAssetIfDirty(controller);
         return controller;
+    }
+
+    /// <summary>Adds only the swing to the shipped controller, without re-importing the poses.</summary>
+    [MenuItem("Conquest/Spearmen/Rebuild Attack Layer")]
+    public static void RebuildAttackLayer()
+    {
+        if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play mode before rebuilding assets.");
+        var settings = JsonUtility.FromJson<Settings>(File.ReadAllText(SettingsPath));
+        var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(settings.outputFolder + "/" + ControllerName);
+        if (!controller) throw new InvalidOperationException("Run Rebuild Line Formation Animations first.");
+        BuildCombatLayer(controller, settings);
+        EditorUtility.SetDirty(controller);
+        AssetDatabase.SaveAssetIfDirty(controller);
+    }
+
+    /// <summary>The swing, as the squires have it: an upper-body layer above the line poses, which already
+    /// release the body while <c>IsAttacking</c>. The attack runs as long as the ECS swing and at its speed.</summary>
+    static void BuildCombatLayer(AnimatorController controller, Settings settings)
+    {
+        var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(settings.combatMaskPath);
+        var clip = AssetDatabase.LoadAllAssetsAtPath(settings.attackClipPath).OfType<AnimationClip>()
+            .SingleOrDefault(c => c.name == settings.attackClipName);
+        if (!mask || !clip || settings.attackTransitionSeconds < 0)
+            throw new InvalidDataException("Expected the combat mask, one attack clip and a valid transition.");
+        Parameter(controller, AttackParameter, AnimatorControllerParameterType.Bool);
+        Parameter(controller, AttackSpeedParameter, AnimatorControllerParameterType.Float);
+        var layers = controller.layers;
+        int index = Array.FindIndex(layers, l => l.name == settings.combatLayerName);
+        AnimatorStateMachine sm;
+        if (index >= 0)
+        {
+            sm = layers[index].stateMachine;
+            foreach (var transition in sm.anyStateTransitions) sm.RemoveAnyStateTransition(transition);
+            foreach (var state in sm.states) sm.RemoveState(state.state);
+            layers[index].avatarMask = mask;
+            controller.layers = layers;
+        }
+        else
+        {
+            sm = new AnimatorStateMachine { name = settings.combatLayerName, hideFlags = HideFlags.HideInHierarchy };
+            AssetDatabase.AddObjectToAsset(sm, controller);
+            controller.AddLayer(new AnimatorControllerLayer { name = settings.combatLayerName, stateMachine = sm,
+                avatarMask = mask, defaultWeight = 1, blendingMode = AnimatorLayerBlendingMode.Override });
+        }
+        var idle = sm.AddState(CombatIdleState);
+        idle.motion = null;
+        sm.defaultState = idle;
+        var attack = sm.AddState(AttackState);
+        attack.motion = clip;
+        attack.speedParameter = AttackSpeedParameter;
+        attack.speedParameterActive = true;
+        var enter = sm.AddAnyStateTransition(attack);
+        Transition(enter, settings.attackTransitionSeconds);
+        enter.AddCondition(AnimatorConditionMode.If, 0, AttackParameter);
+        var leave = attack.AddTransition(idle);
+        Transition(leave, settings.attackTransitionSeconds);
+        leave.AddCondition(AnimatorConditionMode.IfNot, 0, AttackParameter);
     }
 
     static void AddPoseState(AnimatorStateMachine sm, AnimatorState inactive, Settings settings, string name, UnitStance stance)

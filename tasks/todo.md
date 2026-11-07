@@ -496,3 +496,18 @@ sin teletransporte.
 - [x] 7. Docs (`Por_Abordar/Formaciones_y_Posturas.md`, README, `Movimiento_Formaciones.md`, IA) y commit.
 
 Resultado: EditMode 521/521, `BattleSceneIntegrationTests` 23/23, S1 y S6 (4/4) en verde.
+
+# F3 (parcial): los lanceros golpean (2026-11-07)
+
+## Problema
+`AC_Spearmen` es una copia del controlador del héroe. Su único estado de ataque espera `TriggerAttack`, que el código solo
+envía a los héroes; la capa de la Línea se abandona con `IsAttacking`. Resultado: los lanceros nunca hacían un golpe, y su
+lanza (con la hitbox) no se movía al atacar.
+
+## Pasos
+- [x] 1. `SpearmenLineAnimationSetup.BuildCombatLayer`: capa `Combat` como la de los escuderos (máscara `CombatUpperBody`,
+      tajo de espada y escudo, velocidad `AttackSpeed`, entra y sale con `IsAttacking`). Ajustes en
+      `ArtSource/SpearmenLine/unity_integration_settings.json`; menú *Rebuild Attack Layer* para no reimportar las poses.
+- [x] 2. Test EditMode: el tajo suena en formación y suelto, a la velocidad de ataque, mueve la hitbox y se repite.
+- [x] 3. `MovementBaselineS9LineClashSpearmen`: falla si ningún lancero entra en el estado de ataque.
+- [x] 4. Docs (`Formaciones_y_Posturas.md` F3, README).

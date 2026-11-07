@@ -9,5 +9,10 @@
   "clipSeconds": 1.0,
   "sampleRate": 30,
   "spearObjectName": "SM_Wep_Spear_06",
-  "shieldObjectName": "SM_Wep_Shield_Long_14"
+  "shieldObjectName": "SM_Wep_Shield_Long_14",
+  "combatLayerName": "Combat",
+  "combatMaskPath": "Assets/Animations/CombatUpperBody.mask",
+  "attackClipPath": "Assets/Animations/Sword And Shield Slash.fbx",
+  "attackClipName": "mixamo.com",
+  "attackTransitionSeconds": 0.1
 }

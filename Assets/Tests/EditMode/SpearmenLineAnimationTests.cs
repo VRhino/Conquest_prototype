@@ -110,6 +110,37 @@ public class SpearmenLineAnimationTests
         Assert.That(_animator.GetCurrentAnimatorStateInfo(_animator.GetLayerIndex(Layer)).IsName(Layer + ".Locomotion"), Is.True);
     }
 
+    [TestCase(UnitStance.SpearLineFront)]
+    [TestCase(UnitStance.Normal)]
+    public void ASwingPlaysTheSlashOnTheUpperBodyAtTheSquadsAttackSpeed(UnitStance stance)
+    {
+        const string combat = "Combat";
+        if (stance == UnitStance.Normal) _animator.SetBool(AnimationHashes.IsStopped, false);
+        else Enter(stance);
+        int layer = _animator.GetLayerIndex(combat);
+        Assert.That(layer, Is.GreaterThan(_animator.GetLayerIndex(Layer)), "The swing must sit above the line poses.");
+        var spear = Named("WeaponHitbox");
+        var idle = _actor.transform.InverseTransformPoint(spear.position);
+
+        _animator.SetFloat(AnimationHashes.AttackSpeed, 1.5f);
+        _animator.SetBool(AnimationHashes.IsAttacking, true);
+        for (int i = 0; i < 12; i++) _animator.Update(1f / 30);
+        var swing = _animator.GetCurrentAnimatorStateInfo(layer);
+        Assert.That(swing.IsName(combat + ".Attack"), Is.True);
+        Assert.That(swing.speedMultiplier, Is.EqualTo(1.5f).Within(1e-4f));
+        Assert.That(UnityEditor.AssetDatabase.GetAssetPath(_animator.GetCurrentAnimatorClipInfo(layer).Single().clip),
+            Is.EqualTo("Assets/Animations/Sword And Shield Slash.fbx"), "The squires' slash.");
+        Assert.That(Vector3.Distance(_actor.transform.InverseTransformPoint(spear.position), idle), Is.GreaterThan(0.1f),
+            "The spear and its hitbox move with the swing.");
+
+        _animator.SetBool(AnimationHashes.IsAttacking, false);
+        Advance();
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(combat + ".Idle_Combat"), Is.True);
+        _animator.SetBool(AnimationHashes.IsAttacking, true);
+        Advance();
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(combat + ".Attack"), Is.True, "Every swing replays.");
+    }
+
     [Test]
     public void LocomotionClipsAndColliderAttachmentsArePreserved()
     {

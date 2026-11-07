@@ -484,9 +484,14 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS9ShieldBash() => RunLineClash("S9ShieldBash", true, true);
 
+    /// <summary>S9 with Spearmen on both sides: each soldier has to play the swing on its upper body (the shield-and-weapon
+    /// slash) every time it attacks. Fails if no soldier was ever seen in the attack state.</summary>
+    [UnityTest, Explicit, Category("MovementBaseline")]
+    public IEnumerator MovementBaselineS9LineClashSpearmen() => RunLineClash("S9Spearmen", true, watchSwings: true);
+
     const float S9BashDelay = 3f; // From the first swing to the order, so the lines are locked in melee.
 
-    IEnumerator RunLineClash(string label, bool m2, bool shieldBash = false)
+    IEnumerator RunLineClash(string label, bool m2, bool shieldBash = false, bool watchSwings = false)
     {
         var previousInput = UseUnfocusedEditorInput();
         using var tuningQuery = em.CreateEntityQuery(typeof(MovementTuningComponent));
@@ -578,9 +583,11 @@ public partial class BattleSceneIntegrationTests
                 float lastSwing = Time.time;
                 float bashAt = Time.time + S9BashDelay;
                 var bash = shieldBash ? new BashWatch() : null;
+                var swung = watchSwings ? new HashSet<Animator>() : null;
                 while (Time.time < meleeEnd)
                 {
                     if (AnySquadUnitAttacking()) lastSwing = Time.time;
+                    if (swung != null) WatchSwings(swung);
                     if (bash != null)
                     {
                         if (!bash.requested && Time.time >= bashAt) RequestShieldBash(bash);
@@ -589,6 +596,11 @@ public partial class BattleSceneIntegrationTests
                     yield return null;
                 }
                 if (bash != null) ReportBash(bash);
+                if (swung != null)
+                {
+                    Debug.Log($"S9Spearmen: {swung.Count} soldiers seen swinging.");
+                    Assert.That(swung.Count, Is.GreaterThan(0), "No Spearman ever played its attack.");
+                }
                 Assert.That(meleeEnd - lastSwing, Is.LessThan(S9MeleeGrace), "The melee broke off before the end.");
                 Assert.That(em.GetComponentData<SquadResolvedOrderComponent>(squad).source, Is.EqualTo(OrderSource.Player),
                     "A combat reaction took over the ordered attack and leashed the squad.");
@@ -736,6 +748,22 @@ public partial class BattleSceneIntegrationTests
         Vector3 offset = sum / count - point;
         offset.y = 0f;
         return offset.magnitude;
+    }
+
+    /// <summary>Every soldier visual whose upper-body layer is playing the attack right now.</summary>
+    const int SwingWatchFrames = 5; // A swing lasts well over 5 frames; looking every frame costs a full scene search.
+    const string SwingLayer = "Combat";
+
+    static void WatchSwings(HashSet<Animator> swung)
+    {
+        if (Time.frameCount % SwingWatchFrames != 0) return;
+        foreach (var unit in UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.UnitAnimatorController>(FindObjectsSortMode.None))
+        {
+            var animator = unit.GetComponent<Animator>();
+            int layer = animator.GetLayerIndex(SwingLayer);
+            if (layer >= 0 && animator.GetCurrentAnimatorStateInfo(layer).IsName(SwingLayer + ".Attack"))
+                swung.Add(animator);
+        }
     }
 
     sealed class BashWatch

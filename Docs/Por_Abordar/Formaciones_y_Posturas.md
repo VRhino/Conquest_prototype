@@ -11,7 +11,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`) y formas aprobadas por el usuario |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
-| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros hecha (`04608ca2`); faltan ShieldWall, Testudo, estocadas y transiciones |
+| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros y piqueros (posturas y estocadas) y tajo de los lanceros hechos; faltan ShieldWall, Testudo, Brace y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
@@ -109,6 +109,19 @@ estados del Animator que lo usen. Ver `Docs/Mechanics/FormationPostures.md`.
 al frente, trasera de pie con el escudo arriba) y una capa en `AC_Spearmen` que se abandona al moverse, atacar o cambiar de
 formación. El proceso está en `Docs/Guides/Crear_Animaciones_De_Formacion.md`. Faltan las posturas de Muro de escudos y
 Testudo, las estocadas y las transiciones.
+
+**Avance (2026-10-29, `043da4a9`).** Los piqueros tienen postura de primera fila y de filas traseras, una estocada por fila
+(a la velocidad de ataque) y la pica a dos manos en una capa propia. En combate libre usan la estocada trasera.
+
+**Avance (2026-11-07).** Los lanceros no hacían ningún golpe: su único estado de ataque, heredado del controlador del héroe,
+espera `TriggerAttack`, que el código solo envía a los héroes. Ahora `AC_Spearmen` tiene la capa `Combat` de los escuderos
+(tajo de espada y escudo en el torso, `CombatUpperBody`, a la velocidad de ataque, mientras `IsAttacking`). La monta
+`SpearmenLineAnimationSetup` (menú *Rebuild Attack Layer*); el tajo mueve la lanza y su hitbox. No hay clip de estocada de
+lanza a una mano: si llega, basta con cambiar `attackClipPath` en los ajustes.
+
+**Lo que falta (2026-11-07).** Muro de escudos y Testudo de los escuderos (la lógica pone `Stance` 2, 3 y 4, pero su
+controlador no tiene ese parámetro ni clips), la postura de clavar el arma (Brace) en lanceros y piqueros (`IsBraced` se
+calcula y no se envía al Animator) y las transiciones.
 
 ## F4. Cuerpo de impactos por postura
 **Qué es.** En la referencia, cambiar la postura reconstruye el cuerpo de impactos del actor ("dummy body"): levantar el
