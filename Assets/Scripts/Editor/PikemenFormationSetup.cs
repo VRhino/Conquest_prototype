@@ -392,20 +392,7 @@ public static class PikemenFormationSetup
     }
 
     static float Solve(Transform upper, Transform lower, Transform end, Vector3 target, Vector3 pole, Settings s)
-    {
-        var origin = upper.position;
-        float l1 = Vector3.Distance(origin, lower.position), l2 = Vector3.Distance(lower.position, end.position);
-        var delta = target - origin;
-        float distance = Mathf.Clamp(delta.magnitude, Mathf.Abs(l1 - l2) + Mathf.Epsilon, (l1 + l2) * s.ikReachFraction);
-        var axis = delta.normalized;
-        var bend = Vector3.ProjectOnPlane(pole - origin, axis).normalized;
-        float along = (l1 * l1 - l2 * l2 + distance * distance) / (2 * distance);
-        float height = Mathf.Sqrt(Mathf.Max(0, l1 * l1 - along * along));
-        var elbow = origin + axis * along + bend * height;
-        upper.rotation = Quaternion.FromToRotation(lower.position - origin, elbow - origin) * upper.rotation;
-        lower.rotation = Quaternion.FromToRotation(end.position - lower.position, origin + axis * distance - lower.position) * lower.rotation;
-        return Vector3.Distance(end.position, target);
-    }
+        => SpearmenLineAnimationSetup.SolveTwoBone(upper, lower, end, target, pole, s.ikReachFraction);
 
     static AnimatorController BuildController(Settings s)
     {

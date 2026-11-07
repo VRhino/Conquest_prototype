@@ -484,8 +484,8 @@ public partial class BattleSceneIntegrationTests
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS9ShieldBash() => RunLineClash("S9ShieldBash", true, true);
 
-    /// <summary>S9 with Spearmen on both sides: each soldier has to play the swing on its upper body (the shield-and-weapon
-    /// slash) every time it attacks. Fails if no soldier was ever seen in the attack state.</summary>
+    /// <summary>S9 with Spearmen on both sides: each soldier has to play the overhand spear thrust every time it attacks,
+    /// the front rank still kneeling. Fails if no soldier was ever seen in the thrust.</summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS9LineClashSpearmen() => RunLineClash("S9Spearmen", true, watchSwings: true);
 
@@ -750,9 +750,9 @@ public partial class BattleSceneIntegrationTests
         return offset.magnitude;
     }
 
-    /// <summary>Every soldier visual whose upper-body layer is playing the attack right now.</summary>
+    /// <summary>Every soldier visual whose spear arm is playing the thrust right now.</summary>
     const int SwingWatchFrames = 5; // A swing lasts well over 5 frames; looking every frame costs a full scene search.
-    const string SwingLayer = "Combat";
+    const string SwingLayer = "Spear Thrust";
 
     static void WatchSwings(HashSet<Animator> swung)
     {
@@ -761,7 +761,7 @@ public partial class BattleSceneIntegrationTests
         {
             var animator = unit.GetComponent<Animator>();
             int layer = animator.GetLayerIndex(SwingLayer);
-            if (layer >= 0 && animator.GetCurrentAnimatorStateInfo(layer).IsName(SwingLayer + ".Attack"))
+            if (layer >= 0 && animator.GetCurrentAnimatorStateInfo(layer).IsName(SwingLayer + ".Thrust"))
                 swung.Add(animator);
         }
     }

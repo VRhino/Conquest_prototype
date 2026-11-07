@@ -10,9 +10,17 @@
   "sampleRate": 30,
   "spearObjectName": "SM_Wep_Spear_06",
   "shieldObjectName": "SM_Wep_Shield_Long_14",
-  "combatLayerName": "Combat",
-  "combatMaskPath": "Assets/Animations/CombatUpperBody.mask",
-  "attackClipPath": "Assets/Animations/Sword And Shield Slash.fbx",
-  "attackClipName": "mixamo.com",
-  "attackTransitionSeconds": 0.1
+  "hitboxObjectName": "WeaponHitbox",
+  "meleePath": "Assets/Resources/Squads/Spearmen/Spearmen_Melee.asset",
+  "thrustLayerName": "Spear Thrust",
+  "attackBlendSeconds": 0.1,
+  "thrust": {
+    "guardOffset": { "x": 0.05, "y": 0.28, "z": -0.1 },
+    "elbowPole": { "x": 0.45, "y": 0.1, "z": -0.35 },
+    "pitch": 10,
+    "reach": 0.55,
+    "pullback": 0.1,
+    "windup": 0.5,
+    "ikReachFraction": 0.98
+  }
 }

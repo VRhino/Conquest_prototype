@@ -11,7 +11,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`) y formas aprobadas por el usuario |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
-| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros y piqueros (posturas y estocadas) y tajo de los lanceros hechos; faltan ShieldWall, Testudo, Brace y transiciones |
+| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros y piqueros (posturas y estocadas) y estocada de los lanceros hechas; faltan ShieldWall, Testudo, Brace y transiciones |
 | F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
@@ -114,10 +114,16 @@ Testudo, las estocadas y las transiciones.
 (a la velocidad de ataque) y la pica a dos manos en una capa propia. En combate libre usan la estocada trasera.
 
 **Avance (2026-11-07).** Los lanceros no hacían ningún golpe: su único estado de ataque, heredado del controlador del héroe,
-espera `TriggerAttack`, que el código solo envía a los héroes. Ahora `AC_Spearmen` tiene la capa `Combat` de los escuderos
-(tajo de espada y escudo en el torso, `CombatUpperBody`, a la velocidad de ataque, mientras `IsAttacking`). La monta
-`SpearmenLineAnimationSetup` (menú *Rebuild Attack Layer*); el tajo mueve la lanza y su hitbox. No hay clip de estocada de
-lanza a una mano: si llega, basta con cambiar `attackClipPath` en los ajustes.
+espera `TriggerAttack`, que el código solo envía a los héroes. Un primer arreglo les puso el tajo de espada y escudo de los
+escuderos (`e3af899c`); el usuario lo corrigió: llevan lanza, el golpe es una estocada. Ahora tienen una estocada por
+encima del hombro (`SpearThrust.anim`), hecha en Unity sin Blender, como la de los piqueros: IK de dos huesos sobre el
+lancero erguido, con la mano sobre el hombro y la punta hacia abajo por encima del borde del escudo. Va en su propia capa,
+`Spear Thrust`, con la máscara `SpearThrust` (solo brazo y dedos derechos y el portador de la lanza): la fila delantera
+golpea de rodillas, las de atrás de pie con el escudo arriba y un soldado fuera de formación desde su propia postura. Las
+poses de Línea ya no se abandonan al atacar. Los tiempos salen de `Spearmen_Melee` (máximo alcance durante toda la ventana
+de golpe, a la velocidad de ataque), y la forma de los ajustes (`thrust` en `unity_integration_settings.json`). La monta
+`SpearmenLineAnimationSetup` (menú *Rebuild Thrust Animation*, que no reimporta las poses). El IK de dos huesos es ahora
+común con los piqueros (`SolveTwoBone`).
 
 **Lo que falta (2026-11-07).** Muro de escudos y Testudo de los escuderos (la lógica pone `Stance` 2, 3 y 4, pero su
 controlador no tiene ese parámetro ni clips), la postura de clavar el arma (Brace) en lanceros y piqueros (`IsBraced` se

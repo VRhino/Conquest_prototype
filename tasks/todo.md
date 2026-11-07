@@ -497,17 +497,24 @@ sin teletransporte.
 
 Resultado: EditMode 521/521, `BattleSceneIntegrationTests` 23/23, S1 y S6 (4/4) en verde.
 
-# F3 (parcial): los lanceros golpean (2026-11-07)
+# F3 (parcial): los lanceros golpean con estocada (2026-11-07)
 
 ## Problema
 `AC_Spearmen` es una copia del controlador del héroe. Su único estado de ataque espera `TriggerAttack`, que el código solo
 envía a los héroes; la capa de la Línea se abandona con `IsAttacking`. Resultado: los lanceros nunca hacían un golpe, y su
 lanza (con la hitbox) no se movía al atacar.
 
+## Corrección del usuario
+El primer arreglo (`e3af899c`) les puso el tajo de espada y escudo de los escuderos. Llevan lanza: el golpe es una
+estocada. Decidido: por encima del hombro; la primera fila golpea sin levantarse.
+
 ## Pasos
-- [x] 1. `SpearmenLineAnimationSetup.BuildCombatLayer`: capa `Combat` como la de los escuderos (máscara `CombatUpperBody`,
-      tajo de espada y escudo, velocidad `AttackSpeed`, entra y sale con `IsAttacking`). Ajustes en
-      `ArtSource/SpearmenLine/unity_integration_settings.json`; menú *Rebuild Attack Layer* para no reimportar las poses.
-- [x] 2. Test EditMode: el tajo suena en formación y suelto, a la velocidad de ataque, mueve la hitbox y se repite.
-- [x] 3. `MovementBaselineS9LineClashSpearmen`: falla si ningún lancero entra en el estado de ataque.
-- [x] 4. Docs (`Formaciones_y_Posturas.md` F3, README).
+- [x] 1. `SpearmenLineAnimationSetup.BuildThrustClip`: estocada generada en Unity (sin Blender) con IK de dos huesos sobre
+      el lancero erguido, claves sacadas de `Spearmen_Melee` (guardia, carga, alcance al abrir la ventana, sostenido, vuelta).
+      Forma en `thrust` de `unity_integration_settings.json`. IK común con los piqueros (`SolveTwoBone`).
+- [x] 2. Capa `Spear Thrust` con máscara de brazo derecho y portador de la lanza: la postura de cada fila se mantiene.
+      Las poses de Línea ya no se abandonan al atacar. Se quita la capa `Combat` del tajo.
+- [x] 3. Revisión con capturas (lado, frente y tres cuartos) de las dos filas en guardia, carga y alcance.
+- [x] 4. Tests EditMode: estocada en las tres posturas sin perderlas, alcance durante toda la ventana a dos velocidades.
+- [x] 5. `MovementBaselineS9LineClashSpearmen`: falla si ningún lancero entra en la estocada.
+- [x] 6. Docs (`Formaciones_y_Posturas.md` F3, README).

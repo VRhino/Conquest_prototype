@@ -611,3 +611,10 @@
 - Antes de apuntar una limitación como pendiente, leer el sistema que la tendría: C11 ("el aturdimiento no corta la
   habilidad del héroe") ya estaba resuelto en `SkillExecutionSystem` (inmovilizado = fin de la habilidad, L2-4) y lo decía
   su propio resumen. Se apuntó solo por mirar `SkillGate` (2026-11-06).
+
+- Un golpe tiene que ser del arma que lleva el soldado: a los lanceros se les puso el tajo de espada y escudo de los
+  escuderos porque era el clip que había, y el usuario lo rechazó (2026-11-07). Si no hay clip del arma, se genera en Unity
+  con IK como las estocadas de piqueros y lanceros (`PikemenFormationSetup`, `SpearmenLineAnimationSetup`), sin Blender,
+  o se pregunta; nunca se toma prestado el de otra arma.
+- Antes de decir que algo "no tiene animación", mirar el controlador que usa el prefab y quién mueve sus parámetros: los
+  piqueros sí tenían estocadas y los lanceros solo posturas; la página de estado los metía en el mismo saco.

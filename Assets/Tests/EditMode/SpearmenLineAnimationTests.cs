@@ -64,8 +64,6 @@ public class SpearmenLineAnimationTests
 
     [TestCase(UnitStance.SpearLineFront, "moving")]
     [TestCase(UnitStance.SpearLineRear, "moving")]
-    [TestCase(UnitStance.SpearLineFront, "attack")]
-    [TestCase(UnitStance.SpearLineRear, "attack")]
     [TestCase(UnitStance.SpearLineFront, "formation")]
     [TestCase(UnitStance.SpearLineRear, "formation")]
     public void ExitReleasesHumanoidAndRestoresEquipment(UnitStance stance, string reason)
@@ -75,7 +73,6 @@ public class SpearmenLineAnimationTests
         var rotations = carriers.Select(t => t.localRotation).ToArray();
         Enter(stance);
         if (reason == "moving") _animator.SetBool(AnimationHashes.IsStopped, false);
-        else if (reason == "attack") _animator.SetBool(AnimationHashes.IsAttacking, true);
         else _animator.SetInteger(AnimationHashes.Stance, (int)UnitStance.Normal);
         Advance();
         Assert.That(_animator.GetCurrentAnimatorStateInfo(_animator.GetLayerIndex(Layer)).IsName(Layer + ".Locomotion"), Is.True);
@@ -110,35 +107,84 @@ public class SpearmenLineAnimationTests
         Assert.That(_animator.GetCurrentAnimatorStateInfo(_animator.GetLayerIndex(Layer)).IsName(Layer + ".Locomotion"), Is.True);
     }
 
-    [TestCase(UnitStance.SpearLineFront)]
-    [TestCase(UnitStance.Normal)]
-    public void ASwingPlaysTheSlashOnTheUpperBodyAtTheSquadsAttackSpeed(UnitStance stance)
+    const string ThrustLayer = "Spear Thrust";
+    const string MeleePath = "Assets/Resources/Squads/Spearmen/Spearmen_Melee.asset";
+    const float Frame = 1f / 60;
+    void Step(float seconds) { for (float t = 0; t < seconds - Frame * 0.5f; t += Frame) _animator.Update(Frame); }
+    Vector3 Local(Vector3 world) => _actor.transform.InverseTransformPoint(world);
+    void Stand(UnitStance stance)
     {
-        const string combat = "Combat";
-        if (stance == UnitStance.Normal) _animator.SetBool(AnimationHashes.IsStopped, false);
-        else Enter(stance);
-        int layer = _animator.GetLayerIndex(combat);
-        Assert.That(layer, Is.GreaterThan(_animator.GetLayerIndex(Layer)), "The swing must sit above the line poses.");
-        var spear = Named("WeaponHitbox");
-        var idle = _actor.transform.InverseTransformPoint(spear.position);
+        if (stance != UnitStance.Normal) { Enter(stance); return; }
+        _animator.SetInteger(AnimationHashes.Stance, (int)UnitStance.Normal);
+        Advance();
+    }
 
-        _animator.SetFloat(AnimationHashes.AttackSpeed, 1.5f);
+    /// <summary>The overhand thrust: only the spear arm moves, so the rank keeps its pose (the front one kneeling) and a
+    /// soldier out of formation its own stance; the hand starts above the shoulder and drives the tip forward and down.</summary>
+    [TestCase(UnitStance.SpearLineFront)]
+    [TestCase(UnitStance.SpearLineRear)]
+    [TestCase(UnitStance.Normal)]
+    public void AThrustDrivesTheSpearForwardAndDownWithoutLeavingTheStance(UnitStance stance)
+    {
+        Stand(stance);
+        int layer = _animator.GetLayerIndex(ThrustLayer);
+        Assert.That(layer, Is.GreaterThan(_animator.GetLayerIndex(Layer)), "The thrust sits above the line poses.");
+        var melee = AssetDatabase.LoadAssetAtPath<SquadMeleeData>(MeleePath);
+        var hitbox = Named("WeaponHitbox");
+        var carriers = new[] { Named("Weapon_Carrier"), Named("Off_Hand_Weapon_Carrier") };
+        var positions = carriers.Select(t => t.localPosition).ToArray();
+        float hips = Bone(HumanBodyBones.Hips).y;
+        string pose = _animator.GetCurrentAnimatorStateInfo(_animator.GetLayerIndex(Layer)).IsName(Layer + ".Locomotion")
+            ? "Locomotion" : stance == UnitStance.SpearLineFront ? "Front" : "Rear";
+
         _animator.SetBool(AnimationHashes.IsAttacking, true);
-        for (int i = 0; i < 12; i++) _animator.Update(1f / 30);
-        var swing = _animator.GetCurrentAnimatorStateInfo(layer);
-        Assert.That(swing.IsName(combat + ".Attack"), Is.True);
-        Assert.That(swing.speedMultiplier, Is.EqualTo(1.5f).Within(1e-4f));
-        Assert.That(UnityEditor.AssetDatabase.GetAssetPath(_animator.GetCurrentAnimatorClipInfo(layer).Single().clip),
-            Is.EqualTo("Assets/Animations/Sword And Shield Slash.fbx"), "The squires' slash.");
-        Assert.That(Vector3.Distance(_actor.transform.InverseTransformPoint(spear.position), idle), Is.GreaterThan(0.1f),
-            "The spear and its hitbox move with the swing.");
+        Step(melee.strikeWindowStart * 0.5f); // Wound up.
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(ThrustLayer + ".Thrust"), Is.True);
+        Assert.That(Bone(HumanBodyBones.RightHand).y, Is.GreaterThan(Bone(HumanBodyBones.RightUpperArm).y), "Overhand: the hand above the shoulder.");
+        var guard = Local(hitbox.position);
+        Step(melee.strikeWindowStart * 0.5f + melee.strikeWindowDuration * 0.5f); // Inside the hit window.
+        var reach = Local(hitbox.position);
+        Assert.That(reach.z - guard.z, Is.GreaterThan(0.4f), "The spear drives forward into the hit window.");
+        Assert.That(reach.y, Is.LessThan(Local(Bone(HumanBodyBones.RightHand)).y), "The tip points down from the hand.");
+        Assert.That(Bone(HumanBodyBones.Hips).y, Is.EqualTo(hips).Within(0.03f), "The body keeps its stance.");
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(_animator.GetLayerIndex(Layer)).IsName(Layer + "." + pose), Is.True);
 
         _animator.SetBool(AnimationHashes.IsAttacking, false);
         Advance();
-        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(combat + ".Idle_Combat"), Is.True);
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(ThrustLayer + ".Idle"), Is.True);
+        for (int i = 0; i < carriers.Length; i++)
+            Assert.That(Vector3.Distance(carriers[i].localPosition, positions[i]), Is.LessThan(0.0001f), "The stance's grip comes back.");
         _animator.SetBool(AnimationHashes.IsAttacking, true);
         Advance();
-        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(combat + ".Attack"), Is.True, "Every swing replays.");
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(layer).IsName(ThrustLayer + ".Thrust"), Is.True, "Every swing replays.");
+    }
+
+    /// <summary>The clip and ECS share the rhythm: the spear is at full reach for the whole hit window of the melee data
+    /// and well back while winding up, also at another attack speed.</summary>
+    [TestCase(1f)]
+    [TestCase(1.5f)]
+    public void TheSpearIsAtFullReachForTheWholeHitWindow(float attackSpeed)
+    {
+        const float held = 0.05f, drawn = 0.4f; // m: what "at full reach" and "well back" allow.
+        Stand(UnitStance.Normal);
+        var melee = AssetDatabase.LoadAssetAtPath<SquadMeleeData>(MeleePath);
+        var hitbox = Named("WeaponHitbox");
+        _animator.SetFloat(AnimationHashes.AttackSpeed, attackSpeed);
+        _animator.SetBool(AnimationHashes.IsAttacking, true);
+        float open = melee.strikeWindowStart / attackSpeed, close = (melee.strikeWindowStart + melee.strikeWindowDuration) / attackSpeed;
+        float best = float.MinValue, windowLow = float.MaxValue, windup = 0;
+        for (float t = Frame; t < melee.attackAnimationDuration / attackSpeed; t += Frame)
+        {
+            _animator.Update(Frame);
+            float z = Local(hitbox.position).z;
+            best = Mathf.Max(best, z);
+            if (t >= open && t <= close) windowLow = Mathf.Min(windowLow, z);
+            if (Mathf.Abs(t - open * 0.5f) < Frame * 0.5f) windup = z;
+        }
+        Assert.That(_animator.GetCurrentAnimatorStateInfo(_animator.GetLayerIndex(ThrustLayer)).speedMultiplier,
+            Is.EqualTo(attackSpeed).Within(1e-4f));
+        Assert.That(best - windowLow, Is.LessThan(held), "The reach holds through the hit window.");
+        Assert.That(best - windup, Is.GreaterThan(drawn), "Wound up, the spear is drawn back.");
     }
 
     [Test]
