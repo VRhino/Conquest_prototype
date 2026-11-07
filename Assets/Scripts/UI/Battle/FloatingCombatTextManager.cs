@@ -15,7 +15,11 @@ public class FloatingCombatTextManager : MonoBehaviour
 
     [SerializeField] private int poolSize = 20;
 
+    [Tooltip("Textos a la vez como máximo; los que llegan con el tope lleno no se pintan (C12).")]
+    [SerializeField, Min(1)] private int maxActive = 30;
+
     private readonly Queue<FCTEntry> _pool = new Queue<FCTEntry>();
+    private int _active;
 
     private void Awake()
     {
@@ -44,16 +48,25 @@ public class FloatingCombatTextManager : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    public void Spawn(Vector3 worldPos, DamageCategory type, float dmgValue)
+    /// <summary>Shows a hit's text if <see cref="FloatingTextRelevance.Shows"/> lets it: the local player is in the hit, or
+    /// its category is shown for others, and the cap is not full.</summary>
+    public void Spawn(Vector3 worldPos, DamageCategory type, float dmgValue, bool involvesLocal)
     {
+        if (prefab == null) return;
         FCTCategoryEntry entry = categoryConfig != null ? categoryConfig.GetEntry(type) : null;
+        if (!FloatingTextRelevance.Shows(involvesLocal, entry != null && entry.showForOthers, _active, maxActive)) return;
         FCTEntry fct = _pool.Count > 0 ? _pool.Dequeue() : CreateOverflow();
+        _active++;
         fct.Activate(worldPos, entry, dmgValue);
     }
+
+    /// <summary>Texts on screen now (C12).</summary>
+    public int ActiveCount => _active;
 
     private void ReturnToPool(FCTEntry entry)
     {
         entry.gameObject.SetActive(false);
+        _active = Mathf.Max(0, _active - 1);
         _pool.Enqueue(entry);
     }
 

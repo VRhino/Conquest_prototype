@@ -18,6 +18,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C9 | Valores de resiliencia por escuadra, clase y arma (L1-16) | Alta | **Hecho** (2026-11-06, tabla aprobada) |
 | C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | **Hecho** (2026-11-06, texto flotante) |
 | C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | **No era así** (2026-11-06, ya la corta; test añadido) |
+| C12 | Demasiados textos flotantes en batallas de muchas escuadras | Media | **Hecho** (2026-11-07, los del jugador y lo importante) |
 
 ---
 
@@ -115,3 +116,10 @@ prueba la cadena entera (golpe, rotura, stat resuelto, habilidad terminada). La 
 **Lo que se creía.** Con la velocidad a 0, `SkillGate` no deja lanzar, pero la habilidad que el héroe ya estaba ejecutando sigue
 hasta el final. Los soldados sí pierden el golpe en curso. Si se quiere que el aturdimiento interrumpa, la interrupción
 de habilidades (L2-4) ya existe; faltaría pedirla desde la rotura.
+
+## C12. Textos flotantes a escala NvN
+**Hecho (2026-11-07).** Se ven los golpes que da o recibe el jugador (héroe, escuadras y soldados); del resto, solo
+muerte, escudo roto y aturdido; uno por golpe con un tope de 30 a la vez (`DamageMechanics.md` §12, decisión del
+usuario). Test `FloatingTextRelevanceTests`.
+
+**Qué era.** Cada golpe de todo el campo creaba su texto: con 26 o más soldados por bando se amontonaban.

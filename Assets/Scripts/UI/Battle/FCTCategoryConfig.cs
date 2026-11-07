@@ -14,6 +14,8 @@ public class FCTCategoryEntry
     public float fontScale = 1f;
     [Tooltip("Mostrar el valor numérico junto al label.")]
     public bool showValue = true;
+    [Tooltip("Se ve también en golpes en los que no está el jugador (ni su héroe ni sus soldados): lo importante del resto de la batalla.")]
+    public bool showForOthers;
 }
 
 [CreateAssetMenu(fileName = "FCTCategoryConfig", menuName = "Conquest/FCT Category Config")]

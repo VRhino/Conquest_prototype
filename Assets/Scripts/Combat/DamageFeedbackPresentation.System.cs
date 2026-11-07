@@ -3,7 +3,8 @@ using Unity.Entities;
 
 /// <summary>
 /// Shows the floating combat text of <see cref="DamageFeedbackEvent"/>s and destroys them (L1-03): the visual side of
-/// damage, kept out of the logic so <see cref="DamageCalculationSystem"/> could run without UI (server).
+/// damage, kept out of the logic so <see cref="DamageCalculationSystem"/> could run without UI (server). Whether each one
+/// is shown is <see cref="FloatingTextRelevance"/> (C12): this side tells whether the local player is in the hit.
 /// </summary>
 [UpdateInGroup(typeof(PresentationSystemGroup))]
 public partial class DamageFeedbackPresentationSystem : SystemBase
@@ -20,7 +21,7 @@ public partial class DamageFeedbackPresentationSystem : SystemBase
             var e = evt.ValueRO;
             if (manager != null)
                 manager.Spawn(new UnityEngine.Vector3(e.position.x, e.position.y + TextHeightOffset, e.position.z),
-                    e.category, e.amount);
+                    e.category, e.amount, FloatingTextRelevance.InvolvesLocal(EntityManager, e));
             ecb.DestroyEntity(entity);
         }
         ecb.Playback(EntityManager);

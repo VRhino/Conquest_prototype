@@ -168,7 +168,7 @@ public partial class DamageCalculationSystem : SystemBase
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
-                            Feedback(ref ecb, bp, DamageCategory.ShieldBreak, 0f);
+                            Feedback(ref ecb, p, bp, DamageCategory.ShieldBreak, 0f);
                         }
                     }
                     else
@@ -177,7 +177,7 @@ public partial class DamageCalculationSystem : SystemBase
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
-                            Feedback(ref ecb, bp, DamageCategory.Blocked, blockDmg);
+                            Feedback(ref ecb, p, bp, DamageCategory.Blocked, blockDmg);
                         }
                     }
                     shieldLookup[p.target] = shield;
@@ -196,7 +196,7 @@ public partial class DamageCalculationSystem : SystemBase
                 if (toHealth <= 0f && effectiveDmg > 0f)
                 {
                     if (transformLookup.HasComponent(p.target))
-                        Feedback(ref ecb, transformLookup[p.target].Position, DamageCategory.Blocked, effectiveDmg);
+                        Feedback(ref ecb, p, transformLookup[p.target].Position, DamageCategory.Blocked, effectiveDmg);
                     CompleteEvent(ref ecb, entity, p);
                     continue;
                 }
@@ -256,7 +256,7 @@ public partial class DamageCalculationSystem : SystemBase
                         if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
                     }
                     if (transformLookup.HasComponent(p.target))
-                        Feedback(ref ecb, transformLookup[p.target].Position, DamageCategory.Stunned, 0f);
+                        Feedback(ref ecb, p, transformLookup[p.target].Position, DamageCategory.Stunned, 0f);
                 }
             }
 
@@ -281,7 +281,7 @@ public partial class DamageCalculationSystem : SystemBase
             {
                 float3 tp = transformLookup[p.target].Position;
                 var cat = DamageFeedbackCategory.Of(willKill, p.multiplier > 1f, p.category, facts.direction, facts.ambush);
-                Feedback(ref ecb, tp, cat, effectiveDmg);
+                Feedback(ref ecb, p, tp, cat, effectiveDmg);
             }
 
             CompleteEvent(ref ecb, entity, p);
@@ -402,10 +402,13 @@ public partial class DamageCalculationSystem : SystemBase
     }
 
     /// <summary>Floating text for the presentation layer (DamageFeedbackPresentationSystem).</summary>
-    static void Feedback(ref EntityCommandBuffer ecb, float3 position, DamageCategory category, float amount)
+    static void Feedback(ref EntityCommandBuffer ecb, in PendingDamageEvent hit, float3 position, DamageCategory category, float amount)
     {
         Entity evt = ecb.CreateEntity();
-        ecb.AddComponent(evt, new DamageFeedbackEvent { position = position, category = category, amount = amount });
+        ecb.AddComponent(evt, new DamageFeedbackEvent
+        {
+            position = position, category = category, amount = amount, source = hit.damageSource, target = hit.target,
+        });
     }
 
     static void CompleteEvent(ref EntityCommandBuffer ecb, Entity entity, PendingDamageEvent pending)

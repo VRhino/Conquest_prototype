@@ -1,3 +1,18 @@
+# Plan: textos flotantes a escala NvN (C12)
+
+Estado: **hecho** (2026-11-07), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/DamageMechanics.md` §12.
+
+## Decisiones del usuario (2026-11-07)
+- Se ven los golpes que da el jugador y los que reciben su héroe y sus soldados (para ver de dónde viene el daño).
+- Del resto, solo lo importante: muerte, escudo roto y aturdido (`showForOthers` en el asset).
+- Uno por golpe, con un tope de textos a la vez (30).
+
+## Pasos
+- [x] 1. Atacante y objetivo en `DamageFeedbackEvent`; `FloatingTextRelevance`; tope en `FloatingCombatTextManager`;
+  tests `FloatingTextRelevanceTests`. EditMode 560/560; S1, S6, S9 y BattleSceneIntegrationTests 23/23; textos vistos en el vídeo de S9.
+
+---
+
 # Plan: habilidades de escuadra por soldado (L2-17)
 
 Estado: **hecho** (2026-11-06), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/SkillsAndPerks.md` §3.6.

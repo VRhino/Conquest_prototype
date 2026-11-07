@@ -690,13 +690,23 @@ si no                           → Normal
 `Blocked` y `ShieldBreak` se emiten en la rama de escudo de `DamageCalculationSystem`, antes de aplicar daño al HP.
 `Stunned` es un texto aparte, además del número, cuando se rompe la resiliencia (§5.8).
 
+### Qué textos se ven (C12, 2026-11-07)
+
+En una batalla de muchas escuadras no se pinta cada golpe del campo. `FloatingTextRelevance`:
+
+- se ven los golpes que da o recibe el jugador local: su héroe (`IsLocalPlayer`), sus escuadras (`SquadOwnerComponent`) y
+  sus soldados (`UnitOwnerComponent`); los recibidos dicen de dónde viene el daño;
+- del resto de la batalla, solo las categorías con `showForOthers` en el asset: `Death`, `ShieldBreak` y `Stunned`;
+- uno por golpe, nunca más de `maxActive` (30) textos a la vez en `FloatingCombatTextManager`; los que llegan con el
+  tope lleno no se pintan.
+
 ### Infraestructura FCT
 
 | Archivo | Rol |
 |---------|-----|
-| `Assets/Scripts/Combat/DamageFeedbackEvent.cs` | Evento de presentación que crea `DamageCalculationSystem` (posición, categoría, cantidad); la lógica de daño no llama a la UI |
+| `Assets/Scripts/Combat/DamageFeedbackEvent.cs` | Evento de presentación que crea `DamageCalculationSystem` (posición, categoría, cantidad, atacante y objetivo); la lógica de daño no llama a la UI |
 | `Assets/Scripts/Combat/DamageFeedbackPresentation.System.cs` | Consume los eventos en `PresentationSystemGroup` y llama a `FloatingCombatTextManager.Spawn` (1,8 m sobre el objetivo) |
-| `Assets/Scripts/UI/Battle/FloatingCombatTextManager.cs` | Singleton + pool (20 entradas). `Spawn(pos, category, dmg)` |
+| `Assets/Scripts/UI/Battle/FloatingCombatTextManager.cs` | Singleton + pool (20 entradas), tope de 30 a la vez. `Spawn(pos, category, dmg, involvesLocal)` |
 | `Assets/Scripts/UI/Battle/FCTEntry.cs` | Canvas world-space por entrada. Billboard, animación float+fade, pool callback |
 | `Assets/Scripts/Combat/DamageCategory.cs` | Enum indexado por el manager para resolver sprite de icono |
 
