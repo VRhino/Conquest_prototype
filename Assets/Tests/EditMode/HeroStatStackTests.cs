@@ -48,7 +48,11 @@ public class HeroStatStackTests
         Assert.That(damage.bluntDamage, Is.EqualTo(expected.bluntDamage).Within(1e-3f));
         Assert.That(damage.slashingDamage, Is.EqualTo(expected.slashingDamage).Within(1e-3f));
         Assert.That(damage.piercingDamage, Is.EqualTo(expected.piercingDamage).Within(1e-3f));
-        Assert.That(damage.slashingPenetration, Is.EqualTo(0f), "Heroes have no penetration in battle yet.");
+        // P3: the penetration of strength and dexterity reaches the battle profile.
+        Assert.That(damage.bluntPenetration, Is.EqualTo(expected.bluntPenetration).Within(1e-3f));
+        Assert.That(damage.slashingPenetration, Is.EqualTo(expected.slashPenetration).Within(1e-3f));
+        Assert.That(damage.piercingPenetration, Is.EqualTo(expected.piercePenetration).Within(1e-3f));
+        Assert.That(damage.slashingPenetration, Is.GreaterThan(0f), "The class gives its heroes some penetration.");
     }
 
     [Test]
@@ -78,6 +82,9 @@ public class HeroStatStackTests
             new EquipmentBonuses { strengthBonus = 2 }, EquipmentBonuses.Empty, classData);
         Assert.That(em.GetComponentData<HeroHealthComponent>(hero).maxHealth, Is.EqualTo(expected.maxHealth).Within(1e-3f));
         Assert.That(em.GetComponentData<DamageProfileComponent>(hero).bluntDamage, Is.EqualTo(expected.bluntDamage).Within(1e-3f));
+        // Equipment strength raises the penetration it drives too.
+        Assert.That(em.GetComponentData<DamageProfileComponent>(hero).bluntPenetration,
+            Is.EqualTo(expected.bluntPenetration).Within(1e-3f));
     }
 
     [Test]

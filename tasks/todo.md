@@ -1,3 +1,19 @@
+# Plan: penetración de los héroes (P3) y decisión de red (l6)
+
+Estado: **hecho** (2026-11-08), rama `main` local, sin subir.
+
+## Decisiones del usuario (2026-11-08)
+- l6: la red será con Netcode for Entities. Anotado en `Docs/Design/Aprendizajes_Referencia.md` §7 (pregunta 3) y fase 6,
+  con lo que implica: lo predicho tiene que moverse en ECS.
+- P3: los héroes aplican la penetración que les dan fuerza y destreza ("para eso funciona").
+- F8: no se entendía; explicado, pendiente de su respuesta.
+
+## Pasos
+- [x] 1. `HeroStatFormula` deriva las tres penetraciones con los multiplicadores de la clase; `StatResolveSystem` ya las
+  escribía en el perfil. Tests en `HeroStatStackTests`; EditMode completo.
+
+---
+
 # Plan: Brace de lanceros y piqueros (F3)
 
 Estado: **hecho** (2026-11-08), rama `main` local, sin subir. Mecánica: `Docs/Mechanics/FormationPostures.md`.

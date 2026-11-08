@@ -353,6 +353,7 @@ de órdenes). Aquí se confirma el checklist T4.
 l6-03 (cuantización, puro y sin dependencias de red) y l6-08 (`NetTick`), luego l6-04 (transporte), l6-01 y l6-02
 (autoridad y réplica por equipo), l6-06 (ticket) y l6-05 (latido/reconexión). Decisión previa obligatoria: Netcode for
 Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo antes de escribir el protocolo propio.
+**Decidido el 2026-11-08: Netcode for Entities** (sección 7, pregunta 3, con lo que cambia en este orden).
 
 **Ampliación (2026-10-26).** Dónde encajan los puntos "(amp.)":
 - **Fase 2b — Habilidades de escuadra y efectos:** L2-9 primero (prioridad alta), después L2-15, L2-10, L2-11, L2-13,
@@ -467,6 +468,11 @@ Revisado el 2026-11-06 para NvN: el tamaño de partida no es motivo para descart
 3. **Red:** ¿servidor dedicado de Unity sin gráficos (conserva `NavMeshAgent`) o servidor ECS puro? ¿Netcode for
    Entities (reescribe el movimiento) o protocolo propio? Objetivo de RTT y pérdida tolerada. Tamaño máximo de escuadra
    y del mapa (fijan la cuantización). ¿Relevar con IA al jugador desconectado o pausar? ¿Ocultar enemigos no detectados?
+   **Decidido (2026-11-08): Netcode for Entities.** Va contra la recomendación de §4.6, que la desaconsejaba mientras el
+   movimiento viva en `CharacterController`/`NavMeshAgent`; la fase 6 debe partir de ahí: lo que se prediga (al menos el
+   héroe propio) tiene que moverse en ECS, y NfE ya trae tick, cuantización, transporte e interpolación (l6-03, l6-04,
+   l6-08), así que el trabajo pasa a decidir qué es ghost (héroes y escuadras; unidades recalculadas en cliente o ghosts con
+   relevancia, l6-02 y l6-09). El resto de esta pregunta sigue abierto.
 4. **Autoridad del daño:** ¿debe ser de servidor a medio plazo (OPEN-002)? Si sí, L1-03 y L1-05 suben a prioridad alta.
 5. **Visibilidad:** ¿oclusión y campo visual son regla de gameplay o solo IA? Si lo primero, L4-03 entra antes de la red.
 6. **Aliados:** ¿deben atravesarse (como ahora) o bloquearse? Define el diseño de L5-1. ¿Por qué sigue activo el

@@ -8,7 +8,7 @@ plan en `tasks/todo.md`). La regla y las fuentes están en `Docs/Mechanics/Damag
 |---|---|---|---|
 | P1 | Stats de objeto con `StatId` (L7-6) | Media | Pendiente (decisión del usuario: para después, documentado) |
 | P2 | Referencia rota de `HeroClassDefinition.prefab` | Media | **Hecho** (2026-10-27, bloque 4: ruta horneada quitada) |
-| P3 | Penetración de los héroes en batalla | Baja | Pendiente (decisión de balance) |
+| P3 | Penetración de los héroes en batalla | Baja | **Hecho** (2026-11-08: el usuario decidió aplicarla) |
 | P4 | Atributos revalidados cada frame (resto de L7-5) | Baja | **Hecho** (2026-10-27: el sistema se quitó con P2) |
 | P5 | Suelo del crítico con multiplicadores menores que 1,2 | Baja | Pendiente (sin datos afectados hoy) |
 | P6 | Prefab de VFX de impacto ausente: `BattleSceneIntegrationTests` falla en el SetUp | Media | Bloqueado (contenido) |
@@ -67,6 +67,12 @@ daño del héroe se creaba sin ella. `HeroStatFormula` la deja fuera a propósit
 
 **Cómo abordarlo.** Si se quiere, añadir los tres casos de penetración a `HeroStatFormula.Derived` y revisar el balance contra
 escuadras con defensa alta.
+
+**Hecho (2026-11-08).** El usuario decidió aplicarla: para eso están fuerza y destreza. `HeroStatFormula` copia los cuatro
+multiplicadores de penetración de la clase y `Derived` da la penetración contundente (fuerza), cortante (fuerza y destreza) y
+perforante (destreza), con los atributos ya resueltos en la pila, equipo incluido. `StatResolveSystem` la escribe en el perfil
+de daño del héroe como el resto. Con los datos de hoy (atributos de 0 a 5 y multiplicadores de 1) es de 0 a 8 puntos,
+la misma que ya mostraba la ficha del héroe. Test en `HeroStatStackTests`.
 
 ## P4. Atributos revalidados cada frame
 **Hecho (2026-10-27).** `HeroAttributeSystem` se quitó con P2: en batalla no validaba nada, porque ningún héroe tenía

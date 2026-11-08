@@ -20,12 +20,15 @@ public struct HeroStatFormulaComponent : IComponentData
     public float bluntDefensePerArmor;
     public float slashingDefensePerArmor;
     public float piercingDefensePerArmor;
+    public float bluntPenetrationPerStrength;
+    public float slashingPenetrationPerStrength;
+    public float slashingPenetrationPerDexterity;
+    public float piercingPenetrationPerDexterity;
 }
 
 /// <summary>
-/// The class formulas of <see cref="HeroCalculatedAttributes.Calculate"/> for the stats the battle uses (health,
-/// stamina, damage and defence). Penetration is left out on purpose: heroes have never had it in battle, and adding it
-/// would change the balance.
+/// The class formulas of <see cref="HeroCalculatedAttributes.Calculate"/> for the stats the battle uses: health,
+/// stamina, damage, defence and, since P3 (2026-11-08), the penetration that strength and dexterity give.
 /// </summary>
 public static class HeroStatFormula
 {
@@ -44,6 +47,10 @@ public static class HeroStatFormula
         bluntDefensePerArmor = c.bluntDefenseMultiplierByArmor,
         slashingDefensePerArmor = c.slashingDefenseMultiplierByArmor,
         piercingDefensePerArmor = c.piercingDefenseMultiplierByArmor,
+        bluntPenetrationPerStrength = c.bluntPenetrationMultiplierByStr,
+        slashingPenetrationPerStrength = c.slashingPenetrationMultiplierByStr,
+        slashingPenetrationPerDexterity = c.slashingPenetrationMultiplierByDex,
+        piercingPenetrationPerDexterity = c.piercingPenetrationMultiplierByDex,
     };
 
     /// <summary>Base that the attributes give to <paramref name="stat"/>; 0 for stats the formula does not cover.</summary>
@@ -61,6 +68,10 @@ public static class HeroStatFormula
             case StatId.BluntDefense: return f.baseArmorValue + armor * f.bluntDefensePerArmor;
             case StatId.SlashDefense: return f.baseArmorValue + armor * f.slashingDefensePerArmor;
             case StatId.PierceDefense: return f.baseArmorValue + armor * f.piercingDefensePerArmor;
+            case StatId.BluntPenetration: return strength * f.bluntPenetrationPerStrength;
+            case StatId.SlashPenetration:
+                return strength * f.slashingPenetrationPerStrength + dexterity * f.slashingPenetrationPerDexterity;
+            case StatId.PiercePenetration: return dexterity * f.piercingPenetrationPerDexterity;
             default: return 0f;
         }
     }
