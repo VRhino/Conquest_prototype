@@ -16,7 +16,7 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
 | F7 | Orden de llenado de ranuras (grupos de orden) | Media | **Hecho de facto** con F1: el orden del asset es la prioridad |
-| F8 | Cambiar el espaciado desde el juego (orden o habilidad) | Media | Parcial: API hecha, sin orden |
+| F8 | Cambiar el espaciado desde el juego (orden o habilidad) | Media | **Descartado** (2026-11-08): no hace falta |
 | F9 | Relaciones de evitación y colisión por escuadra (C16) | Media | Parcial: interruptor de colisión enemiga hecho (P2); evitación fija. Sigue abierto tras F17 |
 | F10 | Ruido aleatorio por publicación frente a determinista | Baja | Decidido: determinista |
 | F11 | Disposición dinámica y "seguir al líder con retardo" | Baja | Pendiente |
@@ -205,6 +205,9 @@ junto con F1 o F6.
 ## F8. Cambiar el espaciado desde el juego
 **Qué es.** La referencia permite cambiar el intervalo entre soldados en partida (`setCurrentFormationSoilderInterval`, con
 suelo de 0,3) y escalar la legión. **[dec]**
+
+**Decisión (2026-11-08): descartado.** El usuario no lo necesita: el GDD no lo pide y abrir la escuadra ya lo cubre la
+formación Dispersa. `SquadFormationSpacingRequest` y `FormationComponent.scale` se quedan como están (sin quien los use).
 
 **Por qué queda fuera.** El plan deja el componente y la API (`SquadFormationSpacingRequest`), pero sin tecla ni orden: hace
 falta decidir si es una orden del jugador ("apretar/abrir"), una habilidad o un efecto de estado.

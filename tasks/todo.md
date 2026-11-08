@@ -6,7 +6,7 @@ Estado: **hecho** (2026-11-08), rama `main` local, sin subir.
 - l6: la red será con Netcode for Entities. Anotado en `Docs/Design/Aprendizajes_Referencia.md` §7 (pregunta 3) y fase 6,
   con lo que implica: lo predicho tiene que moverse en ECS.
 - P3: los héroes aplican la penetración que les dan fuerza y destreza ("para eso funciona").
-- F8: no se entendía; explicado, pendiente de su respuesta.
+- F8: descartado ("esto no es necesario"). Anotado en `Docs/Por_Abordar/Formaciones_y_Posturas.md`.
 
 ## Pasos
 - [x] 1. `HeroStatFormula` deriva las tres penetraciones con los multiplicadores de la clase; `StatResolveSystem` ya las
