@@ -265,6 +265,29 @@ la capa `Spear Thrust` (solo el brazo de la lanza); su reposo es un estado vací
 Write Defaults: sin él, en una capa Humanoid con máscara, el brazo queda fijado en una
 pose por defecto en vez de mostrar la de abajo.
 
+## Escudos de los escuderos (2026-11-09)
+
+Muro de escudos y Testudo se hicieron sin Blender, todo en Unity, con `SquiresShieldAnimationSetup` (menú *Conquest →
+Squires → Rebuild Shield Formations*). Los ajustes están en `ArtSource/SquiresShield/settings.json`: una entrada por
+postura con la base (reposo de pie o agachado de la locomoción de Synty), el escudo pedido en espacio del actor (centro,
+`face` hacia donde mira la cara exterior, `up` hacia donde apunta el borde de arriba, y si se apoya en el suelo) y la
+empuñadura y la dirección de la hoja de la espada. La IK de dos huesos coloca cada mano; como el escudo cuelga rígido de
+la mano, el escudo pedido dice dónde va la mano.
+
+- El proceso aplica el clip guardado a un actor nuevo y falla si el escudo cae a más de `reachTolerance` de lo pedido:
+  los límites musculares del avatar pueden alejar el brazo de la solución de la IK.
+- La malla del escudo de heráldica tiene la cara exterior en +z y la punta en -y.
+- Las espadas miden 1,05 m desde la mano: en el Testudo van con la punta abajo y en el Muro en vertical, para no
+  atravesar al de delante (con la espada del reposo, la fila de atrás del Muro atravesaba a la de delante).
+- Tres capas en `AC_Unit_Combat`: `Shield Wall Body` (cuerpo entero, solo parado, para agacharse) y `Shield Sword Arm`
+  (brazo derecho) bajo `Combat`, de modo que el tajo se sigue viendo; `Shield Arm` (brazo izquierdo) encima, para que el
+  tajo no baje el escudo y para poder andar con él (habilidad Avanzar del Testudo). Las tres reposan en un estado vacío
+  con Write Defaults.
+- El mismo menú escribe las tablas de posturas del Muro y del Testudo.
+
+Pruebas: `Assets/Tests/EditMode/SquiresShieldAnimationTests.cs` y, en batalla,
+`BattleSceneSquiresTakeTheShieldWallAndTestudoPoses`.
+
 Ver también [Posturas por ranura](../Mechanics/FormationPostures.md),
 [Añadir una unidad](AgregarNuevaUnidad_Guia.md) y
 [fuentes de autoría](../../ArtSource/SpearmenLine/README.md).

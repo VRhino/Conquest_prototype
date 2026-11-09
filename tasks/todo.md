@@ -1,3 +1,40 @@
+# Plan: Muro de escudos y Testudo de los escuderos (F3), y habilidad Avanzar
+
+Estado: en curso (2026-11-09), rama `main` local, sin subir.
+
+## Decisiones del usuario (2026-11-09)
+- El Muro de escudos es para escudos redondos o cuadrados, no de gota. Lanceros (gota) no lo tienen; escuderos sí. El
+  escudo de heráldica de los escuderos (`SM_Wep_Shield_12`, 0,67 × 0,98 m) vale.
+- Los escuderos pierden la Línea: se quedan con Muro de escudos y Testudo. Se reutiliza el asset de su Línea
+  (`baseLineFormation`, mismo GUID y mismo orden: F1 = Muro, F2 = Testudo), que ya es de 2 filas × 6.
+- Muro: primera fila agachada con el escudo apoyado en el suelo y el hombro detrás; segunda de pie con el escudo por
+  encima de la primera.
+- Testudo parado como está: frente escudo delante, costados escudo al costado (mirando hacia fuera), interior y
+  retaguardia escudo encima.
+- Línea, Muro y Testudo rompen formación al moverse (postura Normal en marcha). Moverse en Testudo es la habilidad
+  **Avanzar**: solo con todos formados, línea recta, despacio, cada uno con el escudo como lo tiene parado. Va justo
+  después de las poses, en esta sesión.
+
+## Pasos
+- [x] 1. Datos: `UnitStance.ShieldWallRear`; el asset de la Línea pasa a `baseShieldWallFormation` (ShieldWall, 0,65 m,
+  posturas Front `BracedShields` y resto `ShieldWallRear`, en marcha Normal); Testudo en marcha Normal; el baker no avisa
+  del espaciado del Muro; GDD (tabla de formaciones).
+- [x] 2. `SquiresShieldAnimationSetup` (editor) con ajustes en `ArtSource/SquiresShield/settings.json`: base de pie
+  (`A_Idle_Standing_Masc`) o agachada (`A_Idle_Crouching_Masc`), IK de dos huesos del brazo izquierdo hasta el escudo
+  pedido (centro, cara y arriba en espacio del actor). Un clip por postura.
+- [x] 3. `AC_Unit_Combat`: parámetro `Stance`; capa de cuerpo entero bajo `Combat` solo para `BracedShields` parado;
+  capa del brazo del escudo encima de `Combat` (máscara brazo y dedos izquierdos) con las cinco posturas, sin exigir
+  parado (sirve para Avanzar). Reposo vacío con Write Defaults.
+- [x] 4. Tests EditMode (poses, entradas, reposo, ataque con escudo quieto) y PlayMode (se ven las poses en batalla);
+  revisar tests que daban por hecho la Línea de los escuderos.
+- [ ] 5. Habilidad Avanzar. Decisiones del usuario (2026-11-09): avanza hasta que la pares (la misma tecla, otra orden,
+  cambio de formación, contacto con enemigos u obstáculo) y se queda formada en Testudo donde para; muy despacio (40 % de
+  la marcha, ajustable); tecla 3, desde el principio y sin enfriamiento; al chocar con enemigos para y aguanta, como en
+  Mantener posición. Plan detallado cuando acaben las poses.
+- [ ] 6. Docs y commit.
+
+---
+
 # Plan: penetración de los héroes (P3) y decisión de red (l6)
 
 Estado: **hecho** (2026-11-08), rama `main` local, sin subir.

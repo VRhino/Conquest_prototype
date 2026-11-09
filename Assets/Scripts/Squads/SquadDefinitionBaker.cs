@@ -177,8 +177,9 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                     Debug.LogWarning($"[SquadDefinitionBaker] {squadName}: formation {definition.name}: {issue}");
                 if (definition.HasLegacyGrid)
                     Debug.LogWarning($"[SquadDefinitionBaker] {squadName}: formation {definition.name} still holds the legacy grid; run Tools/Formations/Migrate Legacy Grid Formations.");
+                // Testudo and shield wall pack the bodies on purpose: their shields have to touch.
                 if (definition.layout == FormationLayoutKind.Template && definition.EffectiveSpacing < bodyDiameter
-                    && definition.formationType != FormationType.Testudo)
+                    && definition.formationType != FormationType.Testudo && definition.formationType != FormationType.ShieldWall)
                     Debug.LogWarning($"[SquadDefinitionBaker] {squadName}: formation {definition.name} spacing {definition.EffectiveSpacing} m is below the body diameter ({bodyDiameter} m); bodies will overlap.");
 
                 ref var formation = ref formationArray[i];

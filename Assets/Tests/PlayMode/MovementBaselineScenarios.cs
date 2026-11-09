@@ -120,7 +120,7 @@ public partial class BattleSceneIntegrationTests
 
     /// <summary>S4 with casualties (F1): soldiers die by script down to each template, standing still and marching in turns.</summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
-    public IEnumerator MovementBaselineS4CasualtiesLine() => RunCasualties("S4CasualtiesLine", Key.F1, SquiresAliveSteps);
+    public IEnumerator MovementBaselineS4CasualtiesShieldWall() => RunCasualties("S4CasualtiesShieldWall", Key.F1, SquiresAliveSteps);
 
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS4CasualtiesTestudo() => RunCasualties("S4CasualtiesTestudo", Key.F2, SquiresAliveSteps);
@@ -235,7 +235,8 @@ public partial class BattleSceneIntegrationTests
 
     /// <summary>
     /// S5: the remote squad changes side and walks a straight corridor towards the local one, which walks it the other way.
-    /// Both follow their hero in Line, wider than the corridor. Counts destinations shared by the two squads (F17).
+    /// Both follow their hero in their first formation (the squires' shield wall), wider than the corridor. Counts
+    /// destinations shared by the two squads (F17).
     /// </summary>
     [UnityTest, Explicit, Category("MovementBaseline")]
     public IEnumerator MovementBaselineS5AlliedCrossing() => RunS5("S5", true);
@@ -464,8 +465,8 @@ public partial class BattleSceneIntegrationTests
     const float S9MeleeGrace = 3f;       // Longest pause without a swing at the end of the melee.
 
     /// <summary>
-    /// S9 (P7): two squads in Line clash head-on with their heroes out of the melee. The remote hero's AI is taken off;
-    /// both heroes walk to a stand-off behind the clash while their squads hold points ahead of them, then both squads
+    /// S9 (P7): two squads in their first formation (the squires' shield wall) clash head-on with their heroes out of the
+    /// melee. The remote hero's AI is taken off; both heroes walk to a stand-off behind the clash while their squads hold points ahead of them, then both squads
     /// are ordered to attack and the melee runs. Measures the front
     /// case S6/S7 do not isolate: persistent enemy overlaps with and without a target, rear ranks that step ahead of their
     /// own front line, and the time to the first swing.
@@ -517,7 +518,7 @@ public partial class BattleSceneIntegrationTests
                 yield return Until(() => query.CalculateEntityCount() == 1, 10f, "Remote hero agent missing.");
                 remote = query.GetSingletonEntity();
             }
-            // The test drives the remote hero; its squad follows it in its spawn formation (Line for sqd01).
+            // The test drives the remote hero; its squad follows it in its spawn formation (the shield wall for sqd01, the squires).
             em.RemoveComponent<HeroAITag>(remote);
             Unity.Entities.Entity remoteSquad = em.GetComponentData<HeroSquadReference>(remote).squad;
             var intent = em.GetComponentData<SquadAIOrderIntentComponent>(remoteSquad);
@@ -632,8 +633,8 @@ public partial class BattleSceneIntegrationTests
     const float S7TailSeconds = 6f;
 
     /// <summary>
-    /// S7 bottleneck: the hero walks a Line formation through a 2 m corridor with a right-angle turn. Formation slots
-    /// fall inside the walls or on their far side; the summary counts destinations that share a cell, destinations
+    /// S7 bottleneck: the hero walks its squad's first formation (the squires' shield wall) through a 2 m corridor with a
+    /// right-angle turn. Formation slots fall inside the walls or on their far side; the summary counts destinations that share a cell, destinations
     /// reached only by a detour and units stalled away from their slot (C13, L3-01).
     /// </summary>
     [UnityTest, Explicit, Category("MovementBaseline")]

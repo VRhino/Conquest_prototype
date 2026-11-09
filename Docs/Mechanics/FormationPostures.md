@@ -8,11 +8,14 @@ de la plantilla da el **papel** y el **rumbo** del soldado; la **postura** es un
   (`Front`, `Flank`, `Interior`, `Rear`) y `headingDegrees` (rumbo local, 0 = hacia delante, 90 = derecha).
 - `FormationDefinition.postures[]`: por papel, postura **formado**, **en marcha** y **en Brace** (`braced`; `Normal`
   conserva la de formado) (`UnitStance`: `Normal`, `BracedShields`, `ShieldFront`, `ShieldSide`, `ShieldUp`,
-  `SpearLineFront`, `SpearLineRear`, `PikeLineFront`, `PikeLineRear`, `SpearBraceFront`, `SpearBraceRear`). Un papel sin
-  entrada usa `Normal`.
+  `SpearLineFront`, `SpearLineRear`, `PikeLineFront`, `PikeLineRear`, `SpearBraceFront`, `SpearBraceRear`,
+  `ShieldWallRear`). Un papel sin entrada usa `Normal`.
 - Valores por defecto (`Tools/Formations/Apply Default Postures`): Testudo con el frente escudo al frente, los costados
   escudo al costado (y mirando hacia fuera por su rumbo) y el interior y la retaguardia escudo arriba; Shield Wall
   afianzada al formar y escudo al frente en marcha.
+- Escuderos (2026-11-09, los escribe `SquiresShieldAnimationSetup`): Muro con la primera fila `BracedShields` y el resto
+  `ShieldWallRear`; Testudo como los valores por defecto. En marcha, `Normal` en las dos (rompen la formación para
+  moverse) y `useNormalPostureInFreeCombat` activo.
 
 ## Sistemas
 | Sistema | Qué hace |
@@ -41,9 +44,12 @@ arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de im
   Desde el ajuste del 2026-10-26, Line usa 0,67 m entre columnas y 0,65 m entre filas, sin ruido,
   para coincidir con el estudio de Blender. Proceso, aprendizajes y regeneración en
   [Crear animaciones de formación](../Guides/Crear_Animaciones_De_Formacion.md).
-- Pendiente: clips específicos para las posturas genéricas de ShieldWall/Testudo (`ShieldFront`, `ShieldSide`,
-  `ShieldUp`, `BracedShields`). Las nuevas poses exclusivas de Line no se asignan a esas formaciones.
-  También faltan estocadas y transiciones coreografiadas para Line; actualmente usa mezcla entre poses.
+- Escuderos (2026-11-09): clips de Muro de escudos y Testudo (`BracedShields`, `ShieldWallRear`, `ShieldFront`,
+  `ShieldSide`, `ShieldUp`) generados en Unity por IK, en tres capas de `AC_Unit_Combat`: `Shield Wall Body` (cuerpo
+  agachado, solo parado) y `Shield Sword Arm` bajo `Combat`, `Shield Arm` encima (el tajo no baja el escudo y se puede
+  andar con él). Detalle en [Crear animaciones de formación](../Guides/Crear_Animaciones_De_Formacion.md). El Muro de
+  escudos es solo para escudos redondos o cuadrados: los lanceros (escudo de gota) no lo tienen.
+- Pendiente: transiciones coreografiadas entre poses (hoy se mezclan).
 - El bloqueo del escudo es su collider; el campo de orientación, que nadie leía, se eliminó (F16, 2026-11-04).
 
 ## Brace por formación (2026-10-31)

@@ -11,8 +11,8 @@ Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicaci
 |---|---|---|---|
 | F1 | Plantillas reducidas por número de soldados | Alta | **Hecho** (`1eb56b03`) y formas aprobadas por el usuario |
 | F2 | Elección de plantilla por encaje en la malla y reubicación (C13) | Alta | **Hecho** (`3000830d`; queda F17) |
-| F3 | Clips de animación de las posturas | Alta | Parcial: Línea de lanceros y piqueros (posturas y estocadas), estocada de los lanceros y Brace de lanceros y piqueros hechos; faltan ShieldWall, Testudo y transiciones |
-| F4 | Cuerpo de impactos por postura | Media | Depende de F3 |
+| F3 | Clips de animación de las posturas | Alta | **Hecho** (2026-11-09) para todas las formaciones con postura: Línea, estocadas y Brace de lanceros y piqueros; Muro de escudos y Testudo de los escuderos. Quedan las transiciones coreografiadas |
+| F4 | Cuerpo de impactos por postura | Media | **Hecho en lo esencial** con F3: el collider del escudo sigue al clip (escudo arriba en el Testudo). Zonas del cuerpo, fuera |
 | F5 | Valores reales de la referencia (posturas, ángulos, espaciados) | Media | Fuera de alcance del análisis |
 | F6 | Reparto por clase de soldado (escuadras mixtas) | Media | Pendiente |
 | F7 | Orden de llenado de ranuras (grupos de orden) | Media | **Hecho de facto** con F1: el orden del asset es la prioridad |
@@ -146,8 +146,23 @@ defecto. Fuera del ataque, los lanceros llevaban la lanza torcida en cualquier p
 suelta el brazo (test `AtRestTheStrikeLayerLeavesTheSpearArmToThePoseBelow`). La máscara ya no duplica sus rutas al
 reconstruirse.
 
-**Lo que falta (2026-11-07).** Muro de escudos y Testudo de los escuderos (la lógica pone `Stance` 2, 3 y 4, pero su
+**Lo que faltaba (2026-11-07).** Muro de escudos y Testudo de los escuderos (la lógica pone `Stance` 2, 3 y 4, pero su
 controlador no tiene ese parámetro ni clips) y las transiciones coreografiadas (hoy se mezcla entre poses).
+
+**Avance (2026-11-09, escuderos).** Decisiones del usuario: el Muro de escudos es para escudos redondos o cuadrados, no
+de gota, así que lo tienen los escuderos (su escudo de heráldica vale) y no los lanceros; los escuderos pierden la Línea.
+El asset de su Línea pasa a ser su Muro (`baseShieldWallFormation`, mismo GUID y mismo orden: F1 Muro, F2 Testudo) a
+0,65 m, sin ruido. Muro: primera fila agachada tras el escudo apoyado en el suelo (`BracedShields`), segunda de pie con el
+escudo por encima de la primera (`ShieldWallRear`, nueva). Testudo como estaba: frente al frente, costados al costado
+mirando hacia fuera, interior y retaguardia arriba. Las dos formaciones rompen al moverse y en combate libre (Normal);
+moverse en Testudo será la habilidad Avanzar.
+
+Las poses se generan en Unity (`SquiresShieldAnimationSetup`, menú *Conquest → Squires → Rebuild Shield Formations*,
+ajustes en `ArtSource/SquiresShield/settings.json`): la base es el reposo de pie o agachado de la locomoción, y la IK de
+dos huesos lleva el brazo izquierdo hasta el escudo pedido (centro, cara y borde de arriba) y el derecho a una espada
+que no atraviese a los vecinos (vertical en el Muro, punta abajo en el Testudo). Tres capas en `AC_Unit_Combat`: el
+cuerpo agachado (solo parado) y el brazo de la espada bajo `Combat`, para que el tajo se siga viendo; el brazo del
+escudo encima, para que el tajo no baje el escudo y el Testudo pueda andar con él.
 
 ## F4. Cuerpo de impactos por postura
 **Qué es.** En la referencia, cambiar la postura reconstruye el cuerpo de impactos del actor ("dummy body"): levantar el

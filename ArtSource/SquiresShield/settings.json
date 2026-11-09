@@ -1,0 +1,224 @@
+{
+  "prefabPath": "Assets/Resources/Squads/Squires/Squires_GO_Squeleton.prefab",
+  "controllerPath": "Assets/Resources/Squads/Squires/AC_Unit_Combat.controller",
+  "outputFolder": "Assets/Resources/Squads/Squires/Animations",
+  "standingClipPath": "Assets/Synty/AnimationBaseLocomotion/Animations/Polygon/Masculine/Idle/A_Idle_Standing_Masc.fbx",
+  "crouchingClipPath": "Assets/Synty/AnimationBaseLocomotion/Animations/Polygon/Masculine/Idle/A_Idle_Crouching_Masc.fbx",
+  "shieldObjectName": "SM_Wep_Shield_12",
+  "swordObjectName": "SM_Wep_Sword_01",
+  "swordHitboxName": "WeaponHitbox",
+  "shieldWallPath": "Assets/ScriptableObjects/Formations/baseShieldWallFormation.asset",
+  "testudoPath": "Assets/ScriptableObjects/Formations/baseTestudoFormation.asset",
+  "bodyLayerName": "Shield Wall Body",
+  "swordLayerName": "Shield Sword Arm",
+  "shieldLayerName": "Shield Arm",
+  "combatLayerName": "Combat",
+  "transitionSeconds": 0.25,
+  "clipSeconds": 1,
+  "sampleRate": 30,
+  "ikReachFraction": 0.98,
+  "reachTolerance": 0.04,
+  "shieldWallSpacing": 0.65,
+  "poses": [
+    {
+      "stance": "BracedShields",
+      "crouched": true,
+      "center": {
+        "x": 0,
+        "y": 0,
+        "z": 0.55
+      },
+      "face": {
+        "x": 0,
+        "y": 0.25,
+        "z": 1
+      },
+      "up": {
+        "x": 0,
+        "y": 1,
+        "z": -0.25
+      },
+      "elbowPole": {
+        "x": -0.45,
+        "y": -0.1,
+        "z": -0.2
+      },
+      "plantOnGround": true,
+      "swordGrip": {
+        "x": 0.22,
+        "y": 0.55,
+        "z": 0.3
+      },
+      "swordBlade": {
+        "x": 0,
+        "y": 1,
+        "z": 0.1
+      },
+      "swordElbowPole": {
+        "x": 0.45,
+        "y": -0.1,
+        "z": -0.2
+      }
+    },
+    {
+      "stance": "ShieldWallRear",
+      "crouched": false,
+      "center": {
+        "x": -0.02,
+        "y": 1.35,
+        "z": 0.42
+      },
+      "face": {
+        "x": 0,
+        "y": 0.4,
+        "z": 1
+      },
+      "up": {
+        "x": 0,
+        "y": 1,
+        "z": -0.4
+      },
+      "elbowPole": {
+        "x": -0.45,
+        "y": -0.2,
+        "z": -0.1
+      },
+      "plantOnGround": false,
+      "swordGrip": {
+        "x": 0.24,
+        "y": 0.95,
+        "z": 0.15
+      },
+      "swordBlade": {
+        "x": 0,
+        "y": 1,
+        "z": -0.1
+      },
+      "swordElbowPole": {
+        "x": 0.45,
+        "y": -0.2,
+        "z": -0.2
+      }
+    },
+    {
+      "stance": "ShieldFront",
+      "crouched": false,
+      "center": {
+        "x": -0.03,
+        "y": 0.95,
+        "z": 0.35
+      },
+      "face": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "up": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "elbowPole": {
+        "x": -0.45,
+        "y": -0.2,
+        "z": -0.1
+      },
+      "plantOnGround": false,
+      "swordGrip": {
+        "x": 0.25,
+        "y": 1.1,
+        "z": 0.12
+      },
+      "swordBlade": {
+        "x": 0,
+        "y": -1,
+        "z": 0.05
+      },
+      "swordElbowPole": {
+        "x": 0.45,
+        "y": -0.1,
+        "z": -0.25
+      }
+    },
+    {
+      "stance": "ShieldSide",
+      "crouched": false,
+      "center": {
+        "x": -0.03,
+        "y": 1.08,
+        "z": 0.35
+      },
+      "face": {
+        "x": 0,
+        "y": 0.35,
+        "z": 1
+      },
+      "up": {
+        "x": 0,
+        "y": 1,
+        "z": -0.35
+      },
+      "elbowPole": {
+        "x": -0.45,
+        "y": -0.2,
+        "z": -0.1
+      },
+      "plantOnGround": false,
+      "swordGrip": {
+        "x": 0.25,
+        "y": 1.1,
+        "z": 0.12
+      },
+      "swordBlade": {
+        "x": 0,
+        "y": -1,
+        "z": 0.05
+      },
+      "swordElbowPole": {
+        "x": 0.45,
+        "y": -0.1,
+        "z": -0.25
+      }
+    },
+    {
+      "stance": "ShieldUp",
+      "crouched": false,
+      "center": {
+        "x": -0.05,
+        "y": 1.68,
+        "z": 0.05
+      },
+      "face": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "up": {
+        "x": 0,
+        "y": 0,
+        "z": 1
+      },
+      "elbowPole": {
+        "x": -0.5,
+        "y": 0,
+        "z": -0.2
+      },
+      "plantOnGround": false,
+      "swordGrip": {
+        "x": 0.25,
+        "y": 1.1,
+        "z": 0.12
+      },
+      "swordBlade": {
+        "x": 0,
+        "y": -1,
+        "z": 0.05
+      },
+      "swordElbowPole": {
+        "x": 0.45,
+        "y": -0.1,
+        "z": -0.25
+      }
+    }
+  ]
+}

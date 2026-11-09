@@ -291,19 +291,20 @@ Las escuadras pueden entrar en formaciones específicas según su tipo. Las form
 
 | Escuadra    | Línea | Testudo | Dispersa | Cuña | Schiltron | Muro de Escudos |
 |-------------|:-----:|:-------:|:--------:|:----:|:---------:|:---------------:|
-| Escuderos   |   ✔   |   ✔     |          |      |           |       ✔         |
+| Escuderos   |       |   ✔     |          |      |           |       ✔         |
 | Arqueros    |   ✔   |         |    ✔     |      |           |                 |
 | Piqueros    |   ✔   |         |          |  ✔   |     ✔     |                 |
-| Spearmen    |   ✔   |         |          |  ✔   |           |       ✔         |
+| Spearmen    |   ✔   |         |          |  ✔   |           |                 |
 
 #### Formaciones globales y relación con escuadras
 
-- **Línea**: disponible para todas las escuadras.
+- **Línea**: todas las escuadras salvo los escuderos, que forman en Muro de Escudos.
 - **Testudo**: solo escuderos.
 - **Dispersa**: solo arqueros.
 - **Cuña**: piqueros y Spearmen.
 - **Schiltron**: solo piqueros.
-- **Muro de Escudos**: escuderos y Spearmen.
+- **Muro de Escudos**: solo escuderos. Exige escudos redondos o cuadrados (vale el de heráldica de los escuderos); los de gota, como los de los Spearmen, no pueden formarlo (decisión del 2026-11-09).
+- **Movimiento**: Línea, Muro de Escudos y Testudo rompen la formación para moverse. El Testudo avanza en formación solo con su habilidad **Avanzar** (todos formados, en línea recta y despacio, con los escudos como los tienen parados).
 
 - Las escuadras solo pueden usar las formaciones que aparecen marcadas en esta tabla. La ausencia de una formación implica incompatibilidad.
 
@@ -313,7 +314,6 @@ Las escuadras pueden entrar en formaciones específicas según su tipo. Las form
 
     Muro de Escudos: nivel 10
 
-    Línea: siempre disponible
 
 #### 🧱 Impacto de las Formaciones en Masa, Carga y Comportamiento
 
@@ -528,7 +528,6 @@ Unidad defensiva diseñada para sostener la línea de batalla. Su alta masa y es
 
 **Formaciones disponibles**
 
-- Línea
 - Muro de Escudos
 - Testudo
 
@@ -661,7 +660,6 @@ Unidad versátil con lanza y escudo, adaptables tanto en ataque como defensa. Bu
 **Formaciones disponibles**
 
 - Línea
-- Muro de Escudos
 - Cuña
 
 # 5. 🧝 Héroes y Personalización

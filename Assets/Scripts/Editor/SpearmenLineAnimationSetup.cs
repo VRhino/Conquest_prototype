@@ -530,7 +530,7 @@ public static class SpearmenLineAnimationSetup
         AnimationUtility.SetAnimationClipSettings(clip, options);
         return clip;
     }
-    static string MuscleProperty(string name)
+    public static string MuscleProperty(string name)
     {
         // Unity's serialized finger bindings differ from HumanTrait's display names.
         foreach (var side in new[] { "Left", "Right" })

@@ -17,14 +17,14 @@ public class FormationTemplateCoherenceTests
 
     const string SpearmenLine = "Assets/Resources/Squads/Spearmen/Formations/SpearmenLineFormation.asset";
     const string SpearmenWedge = "Assets/Resources/Squads/Spearmen/Formations/SpearmenWedgeFormation.asset";
-    const string SquiresLine = "Assets/ScriptableObjects/Formations/baseLineFormation.asset";
+    const string SquiresShieldWall = "Assets/ScriptableObjects/Formations/baseShieldWallFormation.asset";
     const string SquiresTestudo = "Assets/ScriptableObjects/Formations/baseTestudoFormation.asset";
 
     static FormationDefinition Load(string path) => AssetDatabase.LoadAssetAtPath<FormationDefinition>(path);
 
     [TestCase(SpearmenLine, 20, 15, 10, 5)]
     [TestCase(SpearmenWedge, 20, 15, 10, 5)]
-    [TestCase(SquiresLine, 12, 10, 5)]
+    [TestCase(SquiresShieldWall, 12, 10, 5)]
     [TestCase(SquiresTestudo, 12, 10, 5)]
     public void TemplateSizesAreTheThresholds(string path, params int[] sizes)
     {
@@ -35,7 +35,7 @@ public class FormationTemplateCoherenceTests
 
     [TestCase(SpearmenLine)]
     [TestCase(SpearmenWedge)]
-    [TestCase(SquiresLine)]
+    [TestCase(SquiresShieldWall)]
     [TestCase(SquiresTestudo)]
     public void EverySoldierCountUsesTheSmallestTemplateThatFits(string path)
     {
@@ -56,7 +56,7 @@ public class FormationTemplateCoherenceTests
 
     [TestCase(SpearmenLine)]
     [TestCase(SpearmenWedge)]
-    [TestCase(SquiresLine)]
+    [TestCase(SquiresShieldWall)]
     [TestCase(SquiresTestudo)]
     public void SlotsFillFromTheFrontAndTheCentre(string path)
     {
@@ -74,7 +74,7 @@ public class FormationTemplateCoherenceTests
 
     [TestCase(SpearmenLine)]
     [TestCase(SpearmenWedge)]
-    [TestCase(SquiresLine)]
+    [TestCase(SquiresShieldWall)]
     [TestCase(SquiresTestudo)]
     public void SmallerTemplatesStayNearTheLargerOne(string path)
     {
@@ -112,9 +112,9 @@ public class FormationTemplateCoherenceTests
     }
 
     [Test]
-    public void LinesKeepTheirTwoRanks()
+    public void LineAndShieldWallKeepTheirTwoRanks()
     {
-        foreach (string path in new[] { SpearmenLine, SquiresLine })
+        foreach (string path in new[] { SpearmenLine, SquiresShieldWall })
             foreach (var template in Load(path).templates)
                 Assert.That(template.slots.Select(s => s.row).Distinct().OrderBy(r => r), Is.EqualTo(new[] { 0, 1 }));
     }

@@ -27,6 +27,8 @@ public enum UnitStance
     SpearBraceFront = 9,
     /// <summary>Braced spearmen rear rank: standing, spear levelled forward over the first rank.</summary>
     SpearBraceRear = 10,
+    /// <summary>Shield wall second rank: standing, shield raised forward over the shields of the crouched first rank.</summary>
+    ShieldWallRear = 11,
 }
 
 /// <summary>

@@ -320,11 +320,39 @@ public partial class BattleSceneIntegrationTests
             5f, "Follow did not release brace and line formation.");
     }
 
-    /// <summary>Whether some spearman's visual plays this state of the Line pose layer: the posture went from ECS through
-    /// the adapter to the Animator.</summary>
-    static bool SeenPose(string state)
+    /// <summary>F3, squires: held in place, the shield wall crouches its first rank behind planted shields and raises the
+    /// second over it; the testudo holds its shields in front, to the sides and overhead.</summary>
+    [UnityTest]
+    public IEnumerator BattleSceneSquiresTakeTheShieldWallAndTestudoPoses()
     {
-        const string layerName = "Spear Line Formation";
+        foreach (var member in em.GetBuffer<SquadUnitElement>(squad))
+            Assert.That(em.GetComponentObject<NavMeshAgent>(member.Value).GetComponent<Animator>().runtimeAnimatorController.name,
+                Is.EqualTo("AC_Unit_Combat"));
+        Assert.That(em.GetComponentData<FormationComponent>(squad).currentFormation, Is.EqualTo(FormationType.ShieldWall),
+            "The squires start in their first formation, the shield wall.");
+        var intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
+        intent.orderType = SquadOrderType.HoldPosition;
+        intent.desiredFormation = FormationType.ShieldWall;
+        intent.holdPosition = em.GetComponentData<LocalTransform>(hero).Position;
+        em.SetComponentData(squad, intent);
+        yield return Until(() => SeenPose("BracedShields", ShieldArmLayer) && SeenPose("ShieldWallRear", ShieldArmLayer)
+            && SeenPose("BracedShields", ShieldWallBodyLayer), 15f,
+            "The shield wall did not take its poses (crouched first rank, raised second rank).");
+        intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
+        intent.desiredFormation = FormationType.Testudo;
+        em.SetComponentData(squad, intent);
+        yield return Until(() => SeenPose("ShieldFront", ShieldArmLayer) && SeenPose("ShieldSide", ShieldArmLayer)
+            && SeenPose("ShieldUp", ShieldArmLayer), 15f,
+            "The testudo did not take its poses (front, sides and roof).");
+    }
+
+    const string ShieldArmLayer = "Shield Arm";
+    const string ShieldWallBodyLayer = "Shield Wall Body";
+
+    /// <summary>Whether some soldier's visual plays this state of a pose layer (by default the spearmen's Line): the
+    /// posture went from ECS through the adapter to the Animator.</summary>
+    static bool SeenPose(string state, string layerName = "Spear Line Formation")
+    {
         foreach (var unit in UnityEngine.Object.FindObjectsByType<UnitAnimatorController>(FindObjectsSortMode.None))
         {
             var animator = unit.GetComponent<Animator>();
