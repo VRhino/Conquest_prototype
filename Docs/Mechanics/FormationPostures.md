@@ -49,6 +49,10 @@ arriba, el collider sube y cubre lo que llega desde arriba, como el cuerpo de im
   agachado, solo parado) y `Shield Sword Arm` bajo `Combat`, `Shield Arm` encima (el tajo no baja el escudo y se puede
   andar con él). Detalle en [Crear animaciones de formación](../Guides/Crear_Animaciones_De_Formacion.md). El Muro de
   escudos es solo para escudos redondos o cuadrados: los lanceros (escudo de gota) no lo tienen.
+- Avanzar (2026-11-09): el Testudo se mueve formado solo con esta habilidad de los escuderos (tecla 3). Mientras dura,
+  `UnitPostureSystem` da a cada soldado su postura de formado aunque vaya en marcha y `UnitFollowFormationSystem` lo
+  orienta como formado (los costados de lado, la retaguardia de espaldas); la capa del brazo del escudo no exige estar
+  parado. Ver `SquadAdvanceSystem` en `Assets/Scripts/Squads/SystemResponsibilities.md`.
 - Pendiente: transiciones coreografiadas entre poses (hoy se mezclan).
 - El bloqueo del escudo es su collider; el campo de orientación, que nadie leía, se eliminó (F16, 2026-11-04).
 

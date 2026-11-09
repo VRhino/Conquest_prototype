@@ -15,7 +15,7 @@ public static class FormationPositionCalculator
     {
         return (squadState.currentOrder == SquadOrderType.HoldPosition
                 && squadState.currentState != SquadFSMState.Retreating && holdComponent.HasValue)
-            ? holdComponent.Value.holdCenter
+            ? holdComponent.Value.Centre
             : heroPos;
     }
 

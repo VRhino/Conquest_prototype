@@ -69,6 +69,11 @@ public partial class SkillEffectSystem : SystemBase
                         else ApplyShield(target, r, now);
                     }
                     break;
+                case SkillEventType.ToggleAdvance:
+                    // The squad walks the advance itself; the effect only asks for it (or for it to stop).
+                    if (EntityManager.HasComponent<SquadAdvanceToggleRequest>(r.caster))
+                        EntityManager.SetComponentEnabled<SquadAdvanceToggleRequest>(r.caster, true);
+                    break;
                 case SkillEventType.Dash:
                     if (e.duration <= 0f) break;
                     var dash = new HeroDashComponent { direction = r.forward, speed = e.distance / e.duration, endTime = now + e.duration };

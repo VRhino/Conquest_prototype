@@ -41,6 +41,14 @@ public class MovementTuningConfig : ScriptableObject
     [Tooltip("Un soldado gasta aguante de escuadra solo en marcha de carrera y por encima de esto × su paso de marcha (L5-7): luchar quieto no cansa.")]
     [Min(1f)] public float staminaRunSpeedFactor = 1.1f;
 
+    [Header("Testudo Advance (squires' ability)")]
+    [Tooltip("Velocidad del avance en Testudo, como fracción de la velocidad base de sus soldados.")]
+    [Range(0.05f, 1f)] public float advanceSpeedRatio = 0.4f;
+    [Tooltip("El avance se para cuando un soldado queda a esta distancia de un enemigo (m): al tocarlo.")]
+    [Min(0f)] public float advanceContactDistance = 1.5f;
+    [Tooltip("El avance se para cuando el NavMesh se acaba a esta distancia por delante de la primera fila (m): un obstáculo.")]
+    [Min(0f)] public float advanceObstacleLookahead = 1f;
+
     [Header("Hit knock-back")]
     [Tooltip("A hit that reaches a unit's body pushes it this far away from the attacker (the reference's hit_curve pattern). 0 = no knock-back.")]
     [Min(0f)] public float hitKnockbackDistance = 0.3f;
@@ -192,6 +200,9 @@ public class MovementTuningConfig : ScriptableObject
         anchorSnapDistance = anchorSnapDistance,
         contactRingMaxArcDegrees = contactRingMaxArcDegrees,
         contactRingEnabled = contactRingEnabled,
+        advanceSpeedRatio = advanceSpeedRatio,
+        advanceContactDistance = advanceContactDistance,
+        advanceObstacleLookahead = advanceObstacleLookahead,
         contactRingMargin = contactRingMargin,
         arrivalDecelerationFraction = arrivalDecelerationFraction,
         brakingFactor = brakingFactor,

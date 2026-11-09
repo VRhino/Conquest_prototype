@@ -5,7 +5,8 @@ using Unity.Entities;
 /// slot role (shield in front, to the side, over the head, braced), formed or while moving
 /// (game-re/notes/formation-postures.md: the slot gives the role, the posture belongs to the soldier).
 /// Formation settings decide whether free combat releases the rank pose. Hold Position preserves it, and a braced squad
-/// takes the brace posture of each role when the formation has one.
+/// takes the brace posture of each role when the formation has one. A squad on the Testudo Advance keeps the formed
+/// posture while its soldiers walk.
 /// Propagates posture, row and role to the animation component.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -32,6 +33,8 @@ public partial struct UnitPostureSystem : ISystem
             // Brace is decided by BraceWeaponActivationSystem; a frame of delay is invisible, so no ordering is needed.
             bool braced = SystemAPI.HasComponent<SquadCombatModeComponent>(squad)
                 && SystemAPI.GetComponent<SquadCombatModeComponent>(squad).mode == SquadCombatMode.Brace;
+            // The Testudo Advance walks the formation with its shields as they are when still.
+            bool advancing = SystemAPI.HasComponent<SquadAdvanceComponent>(squad) && SystemAPI.IsComponentEnabled<SquadAdvanceComponent>(squad);
 
             for (int i = 0; i < units.Length; i++)
             {
@@ -43,7 +46,8 @@ public partial struct UnitPostureSystem : ISystem
 
                 var slot = SystemAPI.GetComponent<UnitGridSlotComponent>(unit);
                 bool engaging = SystemAPI.HasComponent<IsEngagingTag>(unit) && SystemAPI.IsComponentEnabled<IsEngagingTag>(unit);
-                bool moving = !engaging && SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State != UnitFormationState.Formed;
+                bool moving = !engaging && !advancing
+                    && SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State != UnitFormationState.Formed;
                 // Engagement alone does not mean the soldier is still fighting from its slot.
                 // Attack releases the pose immediately, including pauses and approach before acquiring a target.
                 bool freeCombat = order == SquadOrderType.Attack || (engaging && order != SquadOrderType.HoldPosition);

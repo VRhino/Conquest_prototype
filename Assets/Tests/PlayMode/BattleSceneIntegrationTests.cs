@@ -333,17 +333,160 @@ public partial class BattleSceneIntegrationTests
         var intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
         intent.orderType = SquadOrderType.HoldPosition;
         intent.desiredFormation = FormationType.ShieldWall;
-        intent.holdPosition = em.GetComponentData<LocalTransform>(hero).Position;
+        intent.holdPosition = AheadOfTheHero();
         em.SetComponentData(squad, intent);
         yield return Until(() => SeenPose("BracedShields", ShieldArmLayer) && SeenPose("ShieldWallRear", ShieldArmLayer)
             && SeenPose("BracedShields", ShieldWallBodyLayer), 15f,
             "The shield wall did not take its poses (crouched first rank, raised second rank).");
+        yield return Until(EverySoldierFormed, 10f, "The shield wall did not form entirely.", DumpSquad);
+        CaptureSquad("muro_de_escudos");
         intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
         intent.desiredFormation = FormationType.Testudo;
         em.SetComponentData(squad, intent);
         yield return Until(() => SeenPose("ShieldFront", ShieldArmLayer) && SeenPose("ShieldSide", ShieldArmLayer)
             && SeenPose("ShieldUp", ShieldArmLayer), 15f,
-            "The testudo did not take its poses (front, sides and roof).");
+            "The testudo did not take its poses (front, sides and roof).", DumpSquad);
+    }
+
+    /// <summary>The Testudo Advance in the battle scene. Held in Testudo and in position, the squad walks straight ahead
+    /// with the shields up and holds where it is told to stop; key 3 launches it once the battle starts (abilities only
+    /// launch in battle, so the walk itself is asked for directly, before the fighting).</summary>
+    [UnityTest]
+    public IEnumerator BattleSceneSquiresAdvanceInTestudoAndStopOnTheKey()
+    {
+        Assert.That(HasSquadSkill(SkillSlot.Squad3), Is.True, "The squires have the Advance from level 1.");
+        var intent = em.GetComponentData<SquadPlayerOrderIntentComponent>(squad);
+        intent.orderType = SquadOrderType.HoldPosition;
+        intent.desiredFormation = FormationType.Testudo;
+        intent.holdPosition = AheadOfTheHero();
+        em.SetComponentData(squad, intent);
+        yield return Until(() => em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Testudo, 10f,
+            "The squad did not take the testudo.");
+        yield return new WaitForSeconds(3f); // The soldiers walk to their new slots.
+        CaptureSquad("testudo_quieto");
+
+        float3 start = em.GetComponentData<SquadHoldPositionComponent>(squad).Centre;
+        // Refused while a soldier is still more than a slot away from its own: ask again, as a player would.
+        yield return Until(() =>
+        {
+            if (!em.IsComponentEnabled<SquadAdvanceComponent>(squad)) em.SetComponentEnabled<SquadAdvanceToggleRequest>(squad, true);
+            return em.IsComponentEnabled<SquadAdvanceComponent>(squad);
+        }, 8f, "The advance did not start.", DumpSquad);
+        var advance = em.GetComponentData<SquadAdvanceComponent>(squad);
+        float3 lastCentre = start;
+        float deadline = Time.time + 1.5f;
+        while (Time.time < deadline && em.IsComponentEnabled<SquadAdvanceComponent>(squad))
+        {
+            lastCentre = em.GetComponentData<SquadHoldPositionComponent>(squad).Centre;
+            foreach (var member in em.GetBuffer<SquadUnitElement>(squad))
+                Assert.That(em.GetComponentData<UnitFormationStanceComponent>(member.Value).stance, Is.Not.EqualTo(UnitStance.Normal),
+                    "A soldier dropped its shield posture on the advance.");
+            yield return null;
+        }
+        CaptureSquad("testudo_avanzando");
+        float3 walked = em.GetComponentData<SquadHoldPositionComponent>(squad).Centre - start;
+        Assert.That(math.dot(walked, advance.direction), Is.GreaterThan(0f), "The formation did not walk ahead.");
+        // The scene's ground may end ahead of the spawn: then the advance must have stopped at that edge.
+        if (!em.IsComponentEnabled<SquadAdvanceComponent>(squad))
+            Assert.That(NavMeshEndsAhead(advance.direction, 2f * MovementTuningComponent.Default.advanceObstacleLookahead), Is.True,
+                "The advance stopped on its own with open ground ahead.");
+        else
+            Assert.That(math.dot(walked, advance.direction), Is.GreaterThan(advance.speed * 0.5f), "The formation walked too slowly.");
+        Assert.That(math.length(walked - advance.direction * math.dot(walked, advance.direction)), Is.LessThan(0.01f),
+            "The advance left its straight line.");
+        Assert.That(SeenPose("ShieldUp", ShieldArmLayer) && SeenPose("ShieldSide", ShieldArmLayer), Is.True,
+            "The roof and the sides are not shown while walking.");
+        if (em.IsComponentEnabled<SquadAdvanceComponent>(squad)) em.SetComponentEnabled<SquadAdvanceToggleRequest>(squad, true);
+        yield return Until(() => !em.IsComponentEnabled<SquadAdvanceComponent>(squad), 3f, "The advance did not stop.");
+        float3 stopped = em.GetComponentData<SquadHoldPositionComponent>(squad).Centre;
+        yield return new WaitForSeconds(0.5f);
+        Assert.That(math.distance(em.GetComponentData<SquadHoldPositionComponent>(squad).Centre, stopped), Is.LessThan(1e-4f),
+            "The squad did not hold where the advance stopped.");
+
+        // Key 3 launches the ability (its toggle) as soon as the battle starts.
+        yield return Until(() => em.GetComponentData<MatchStateComponent>(GetMatchEntity()).currentState == MatchState.InBattle,
+            60f, "The battle did not start.");
+        uint launches = em.GetComponentData<SkillInstanceComponent>(squad).launches;
+        yield return Press(Key.Digit3);
+        yield return Until(() => em.GetComponentData<SkillInstanceComponent>(squad).launches > launches, 3f, "Key 3 did not launch the Advance.");
+    }
+
+    bool EverySoldierFormed()
+    {
+        foreach (var member in em.GetBuffer<SquadUnitElement>(squad))
+            if (em.GetComponentData<UnitFormationStateComponent>(member.Value).State != UnitFormationState.Formed) return false;
+        return true;
+    }
+
+    /// <summary>A hold point 4 m in front of the hero, as a click ahead of it: the formation forms clear of the hero's body
+    /// (holding on the hero leaves it in the middle of the testudo, where the inner soldiers cannot reach their slots).</summary>
+    float3 AheadOfTheHero()
+    {
+        var pose = em.GetComponentData<LocalTransform>(hero);
+        Vector3 ahead = pose.Position + math.forward(pose.Rotation) * 4f;
+        return NavMesh.SamplePosition(ahead, out var hit, 2f, NavMesh.AllAreas) ? (float3)hit.position : pose.Position;
+    }
+
+    /// <summary>Whether the NavMesh ends within <paramref name="distance"/> ahead of a front-rank soldier.</summary>
+    bool NavMeshEndsAhead(float3 direction, float distance)
+    {
+        foreach (var member in em.GetBuffer<SquadUnitElement>(squad))
+        {
+            if (em.GetComponentData<UnitGridSlotComponent>(member.Value).role != FormationSlotRole.Front) continue;
+            Vector3 from = em.GetComponentData<LocalTransform>(member.Value).Position;
+            if (NavMesh.SamplePosition(from, out var hit, 1f, NavMesh.AllAreas)
+                && NavMesh.Raycast(hit.position, hit.position + (Vector3)(direction * distance), out _, NavMesh.AllAreas))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>A picture of the squad from a camera above and in front of it, for review: Recordings/SquiresShields
+    /// (outside git).</summary>
+    void CaptureSquad(string label)
+    {
+        var anchor = em.GetComponentData<SquadFormationAnchorComponent>(squad);
+        Vector3 centre = anchor.position;
+        Vector3 forward = math.lengthsq(anchor.rotation.value) > 0.01f ? (Vector3)math.forward(anchor.rotation) : Vector3.forward;
+        var camera = new GameObject("SquadCapture").AddComponent<Camera>();
+        camera.fieldOfView = 40f;
+        camera.transform.position = centre + forward * 4.5f + Vector3.right * 2.5f + Vector3.up * 3f;
+        camera.transform.LookAt(centre + Vector3.up * 0.8f);
+        var target = new RenderTexture(1280, 720, 24);
+        camera.targetTexture = target;
+        camera.Render();
+        RenderTexture.active = target;
+        var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+        image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+        RenderTexture.active = null;
+        string directory = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Recordings", "SquiresShields");
+        System.IO.Directory.CreateDirectory(directory);
+        System.IO.File.WriteAllBytes(System.IO.Path.Combine(directory, label + ".png"), image.EncodeToPNG());
+        UnityEngine.Object.Destroy(image);
+        camera.targetTexture = null;
+        UnityEngine.Object.Destroy(target);
+        UnityEngine.Object.Destroy(camera.gameObject);
+    }
+
+    /// <summary>On a timeout: each soldier's role, state, posture, slot and agent, to tell a stuck soldier from a missing pose.</summary>
+    void DumpSquad()
+    {
+        var text = new System.Text.StringBuilder();
+        var s = em.GetComponentData<SquadStateComponent>(squad);
+        text.AppendLine($"formation={em.GetComponentData<FormationComponent>(squad).currentFormation} order={s.currentOrder} state={s.currentState} match={em.GetComponentData<MatchStateComponent>(GetMatchEntity()).currentState}");
+        foreach (var member in em.GetBuffer<SquadUnitElement>(squad))
+        {
+            if (!em.Exists(member.Value)) { text.AppendLine("missing unit"); continue; }
+            var slot = em.GetComponentData<UnitGridSlotComponent>(member.Value);
+            var animator = em.GetComponentObject<UnityEngine.AI.NavMeshAgent>(member.Value).GetComponent<Animator>();
+            int layer = animator.GetLayerIndex(ShieldArmLayer);
+            text.AppendLine($"role={slot.role} state={em.GetComponentData<UnitFormationStateComponent>(member.Value).State} stance={em.GetComponentData<UnitFormationStanceComponent>(member.Value).stance} animStance={animator.GetInteger(AnimationHashes.Stance)} layer={layer} engaging={(em.HasComponent<IsEngagingTag>(member.Value) && em.IsComponentEnabled<IsEngagingTag>(member.Value))} pos={em.GetComponentData<LocalTransform>(member.Value).Position}");
+            var agent = em.GetComponentObject<UnityEngine.AI.NavMeshAgent>(member.Value);
+            var resolved = em.HasComponent<UnitResolvedSlotComponent>(member.Value) ? em.GetComponentData<UnitResolvedSlotComponent>(member.Value) : default;
+            text.AppendLine($"   slot={resolved.position} status={resolved.status} dest={agent.destination} hasPath={agent.hasPath} path={agent.pathStatus} remaining={agent.remainingDistance} vel={agent.velocity} speed={agent.speed} stopped={agent.isStopped}");
+        }
+        TestContext.WriteLine(text.ToString());
+        UnityEngine.Debug.Log("[SquadDump] " + text);
     }
 
     const string ShieldArmLayer = "Shield Arm";

@@ -30,4 +30,7 @@ public class AbilityData : ScriptableObject
     [Tooltip("Cada soldado la ejecuta por su cuenta (L2-17): la orden se escalona y cada uno lanza sus eventos desde su " +
              "posición y hacia donde mira. Para acciones (golpes); las mejoras de toda la escuadra van sin marcar.")]
     public bool perSoldier;
+
+    [Tooltip("Solo la lanza el jugador: la IA de los héroes no la usa (por ejemplo, Avanzar del Testudo, que se enciende y se apaga).")]
+    public bool playerOnly;
 }

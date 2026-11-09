@@ -1,6 +1,6 @@
 # Plan: Muro de escudos y Testudo de los escuderos (F3), y habilidad Avanzar
 
-Estado: en curso (2026-11-09), rama `main` local, sin subir.
+Estado: **hecho** (2026-11-09), rama `main` local, sin subir. Poses `ef1faa1f`; Avanzar en el commit siguiente.
 
 ## Decisiones del usuario (2026-11-09)
 - El Muro de escudos es para escudos redondos o cuadrados, no de gota. Lanceros (gota) no lo tienen; escuderos sí. El
@@ -27,11 +27,22 @@ Estado: en curso (2026-11-09), rama `main` local, sin subir.
   parado (sirve para Avanzar). Reposo vacío con Write Defaults.
 - [x] 4. Tests EditMode (poses, entradas, reposo, ataque con escudo quieto) y PlayMode (se ven las poses en batalla);
   revisar tests que daban por hecho la Línea de los escuderos.
-- [ ] 5. Habilidad Avanzar. Decisiones del usuario (2026-11-09): avanza hasta que la pares (la misma tecla, otra orden,
+- [x] 5. Habilidad Avanzar. Decisiones del usuario (2026-11-09): avanza hasta que la pares (la misma tecla, otra orden,
   cambio de formación, contacto con enemigos u obstáculo) y se queda formada en Testudo donde para; muy despacio (40 % de
   la marcha, ajustable); tecla 3, desde el principio y sin enfriamiento; al chocar con enemigos para y aguanta, como en
-  Mantener posición. Plan detallado cuando acaben las poses.
-- [ ] 6. Docs y commit.
+  Mantener posición.
+  Hecho así: `SquadAdvanceSystem` (único escritor de `SquadAdvanceComponent` y de `SquadHoldPositionComponent.advanceOffset`)
+  arranca con `SquadAdvanceToggleRequest` (evento `ToggleAdvance` de la habilidad `Squires_Advance`) si la escuadra mantiene
+  posición en Testudo con todos formados; mueve el centro de la orden y para con otro toque, otra orden o formación, un
+  enemigo a `advanceContactDistance` o el final del NavMesh delante de la primera fila. Excepciones durante el avance en
+  `UnitPostureSystem` (postura de formado) y `UnitFollowFormationSystem` (velocidad de la ranura y rumbo de formado).
+  La habilidad: fase sin fin no interrumpible (mantener la tecla no la relanza), `playerOnly` para que la IA no la use.
+  Requisito añadido: hay que estar en Mantener posición (es lo que fija el sitio y el rumbo). "Todos en posición" =
+  formado o a menos de un espaciado de su ranura. Aprendizaje: mantener posición encima del héroe lo deja dentro de la
+  formación y los del centro no pueden entrar (parecía un atasco de movimiento); las pruebas mantienen 4 m por delante.
+- [x] 6. Docs y commit. EditMode 604/604; batalla integrada 25/26: falla a ratos (3 de 5) la prueba del héroe con W,
+  probablemente porque el Muro, ahora formación inicial y a 0,65 m, va 2 m por delante del héroe y le cierra el paso.
+  Queda como tarea aparte.
 
 ---
 

@@ -128,6 +128,11 @@ public partial class SquadSpawningSystem : SystemBase
             ecb.SetComponentEnabled<SkillRequestComponent>(squad, false);
             ecb.AddComponent<SkillInstanceComponent>(squad);
             ecb.AddBuffer<HeroSkillElement>(squad);
+            // The Testudo Advance (an ability effect asks, SquadAdvanceSystem walks it); off until asked.
+            ecb.AddComponent<SquadAdvanceToggleRequest>(squad);
+            ecb.SetComponentEnabled<SquadAdvanceToggleRequest>(squad, false);
+            ecb.AddComponent<SquadAdvanceComponent>(squad);
+            ecb.SetComponentEnabled<SquadAdvanceComponent>(squad, false);
             var squadCooldowns = ecb.AddBuffer<CooldownGroupElement>(squad);
             // Formation library is carried by SquadDataComponent and SquadDefinitionComponent.
             ecb.AddComponent(squad, new SquadProgressComponent

@@ -167,7 +167,8 @@ public partial class HeroAISkillSystem : SystemBase
         var groups = EntityManager.GetBuffer<CooldownGroupElement>(squad, true);
         for (int i = 0; i < skills.Length; i++)
         {
-            if (!skills[i].skill.IsCreated || !CooldownUtility.IsReady(groups, skills[i].skill.Value.cooldownGroup, now)) continue;
+            if (!skills[i].skill.IsCreated || skills[i].skill.Value.playerOnly
+                || !CooldownUtility.IsReady(groups, skills[i].skill.Value.cooldownGroup, now)) continue;
             slot = skills[i].slot;
             return true;
         }

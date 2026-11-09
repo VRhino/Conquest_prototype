@@ -38,6 +38,9 @@ public struct MovementTuningComponent : IComponentData
     public float anchorSnapDistance; // Beyond this distance to its target the anchor jumps (spawn, respawn), m
     public float contactRingMaxArcDegrees; // Attackers only reserve ring slots within this angle of the side they come from, degrees (C11)
     public bool contactRingEnabled; // Melee attackers reserve ring slots (C11); off = the old ±45° fan.
+    public float advanceSpeedRatio; // Testudo Advance: walking speed as a fraction of the soldiers' base speed
+    public float advanceContactDistance; // Testudo Advance stops when a soldier is this close to an enemy, m
+    public float advanceObstacleLookahead; // Testudo Advance stops when the NavMesh ends this far ahead of the front rank, m
     public float contactRingMargin; // Gap between neighbouring attackers on a contact ring, m (C11: s_arco = 2 rc + m)
     public float arrivalDecelerationFraction; // Planned arrival braking as a fraction of acceleration x brakingFactor
     public float brakingFactor; // Deceleration allowed as a multiple of the agent acceleration.
@@ -111,6 +114,9 @@ public struct MovementTuningComponent : IComponentData
         anchorSnapDistance = 10f,
         contactRingMaxArcDegrees = 60f,
         contactRingEnabled = true,
+        advanceSpeedRatio = 0.4f,
+        advanceContactDistance = 1.5f,
+        advanceObstacleLookahead = 1f,
         contactRingMargin = 0.2f,
         arrivalDecelerationFraction = 0.6f,
         brakingFactor = 2.5f,

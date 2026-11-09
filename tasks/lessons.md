@@ -626,3 +626,10 @@
   compare la pose con la capa a peso 1 y a peso 0 (2026-11-07).
 - `AvatarMask.AddTransformPath` añade sin vaciar: al reconstruir una máscara existente, poner antes
   `transformCount = 0` o duplica las rutas.
+
+## 2026-11-09 — Pruebas de formación en batalla
+- Mantener posición sobre el propio héroe lo deja dentro de la formación: en el Testudo ocupa el hueco del centro y los
+  soldados del interior rondan su ranura sin entrar. Parecía un atasco de movimiento en pendiente. En las pruebas, mantener
+  unos metros por delante del héroe (como un clic delante) y mirar una captura antes de diagnosticar.
+- `ut.js test` pasa el filtro por la shell: una `|` en el filtro se convierte en tubería y la prueba no arranca nunca.
+  Una clase o un fragmento común por ejecución.

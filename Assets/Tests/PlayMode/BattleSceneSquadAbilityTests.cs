@@ -12,15 +12,15 @@ public partial class BattleSceneIntegrationTests
     public IEnumerator BattleSceneSquadLaunchesItsAbilityAtItsUnlockLevel()
     {
         Assert.That(em.HasBuffer<HeroSkillElement>(squad), Is.True, "The spawned squad is a launcher.");
-        Assert.That(em.GetBuffer<HeroSkillElement>(squad).Length, Is.EqualTo(0), "Nothing is unlocked at level 1.");
+        Assert.That(HasSquadSkill(SkillSlot.Squad1), Is.False, "The first ability is still locked at level 1.");
         Assert.That(em.GetBuffer<AbilityByLevelElement>(squad).Length, Is.GreaterThan(0), "The squad's abilities were baked.");
 
         var progress = em.GetComponentData<SquadProgressComponent>(squad);
         progress.level = SquadProgressionCurves.UnlockLevel(em.GetComponentData<SquadDataComponent>(squad).curves, 0);
         em.SetComponentData(squad, progress);
         em.SetComponentData(em.CreateEntity(typeof(SquadLevelUpEvent)), new SquadLevelUpEvent { squad = squad });
-        yield return Until(() => em.GetBuffer<HeroSkillElement>(squad).Length == 1, 5f, "The first ability did not unlock at its level.");
-        var skill = em.GetBuffer<HeroSkillElement>(squad)[0];
+        yield return Until(() => HasSquadSkill(SkillSlot.Squad1), 5f, "The first ability did not unlock at its level.");
+        var skill = SquadSkill(SkillSlot.Squad1);
         Assert.That(skill.slot, Is.EqualTo(SkillSlot.Squad1));
 
         yield return Until(() => em.GetComponentData<MatchStateComponent>(GetMatchEntity()).currentState == MatchState.InBattle,
@@ -30,6 +30,17 @@ public partial class BattleSceneIntegrationTests
         Assert.That(CooldownUtility.IsReady(em.GetBuffer<CooldownGroupElement>(squad), skill.skill.Value.cooldownGroup,
             World.DefaultGameObjectInjectionWorld.Time.ElapsedTime), Is.False, "The squad cools down on its own.");
     }
+
+    /// <summary>The squad's unlocked ability in a slot: abilities unlock in level order, not in slot order (the squires'
+    /// Advance, slot 3, is there from level 1).</summary>
+    HeroSkillElement SquadSkill(SkillSlot slot)
+    {
+        foreach (var skill in em.GetBuffer<HeroSkillElement>(squad))
+            if (skill.slot == slot) return skill;
+        return default;
+    }
+
+    bool HasSquadSkill(SkillSlot slot) => SquadSkill(slot).skill.IsCreated;
 
     Entity GetMatchEntity()
     {

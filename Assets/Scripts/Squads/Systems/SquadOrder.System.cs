@@ -62,6 +62,7 @@ public partial class SquadOrderSystem : SystemBase
                     holdComponent.ValueRW.holdCenter        = resolved.ValueRO.holdPosition;
                     holdComponent.ValueRW.holdRotation      = heroRotation;
                     holdComponent.ValueRW.originalFormation = resolved.ValueRO.formation;
+                    holdComponent.ValueRW.advanceOffset     = float3.zero; // A new order starts where it is placed.
                 }
                 else
                 {

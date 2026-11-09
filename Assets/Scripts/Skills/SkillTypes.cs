@@ -57,6 +57,11 @@ public enum SkillEventType : byte
     /// <see cref="SkillEvent.value"/> every <see cref="SkillEvent.period"/> seconds for <see cref="SkillEvent.duration"/>.
     /// </summary>
     DamageOverTime,
+    /// <summary>
+    /// Squad only: turns the Testudo Advance on or off (<see cref="SquadAdvanceToggleRequest"/>); the squad walks it on
+    /// its own (<see cref="SquadAdvanceSystem"/>).
+    /// </summary>
+    ToggleAdvance,
 }
 
 public enum SkillTarget : byte
@@ -131,6 +136,8 @@ public struct SkillBlob
     public int killCost;
     /// <summary>A squad ability each soldier runs on its own (L2-17).</summary>
     public bool perSoldier;
+    /// <summary>Only the player launches it: the AI skips it (a toggle such as the Testudo Advance).</summary>
+    public bool playerOnly;
     public float cooldown;
     /// <summary>Cooldown group (L2-5); 0 = no cooldown.</summary>
     public int cooldownGroup;

@@ -65,6 +65,9 @@ public partial class UnitFollowFormationSystem : SystemBase
             // Determinar el comportamiento según el estado del escuadrón
             bool isHoldingPosition = squadState.currentOrder == SquadOrderType.HoldPosition
                 && squadState.currentState != SquadFSMState.Retreating;
+            // The Testudo Advance moves the held slots: soldiers keep their pace and face as formed while they walk.
+            bool advancing = SystemAPI.HasComponent<SquadAdvanceComponent>(entity) && SystemAPI.IsComponentEnabled<SquadAdvanceComponent>(entity);
+            bool slotsStill = isHoldingPosition && !advancing;
 
             // An exhausted squad walks until it recovers (L5-7).
             bool canRun = !SystemAPI.HasComponent<SquadStaminaComponent>(entity)
@@ -110,8 +113,8 @@ public partial class UnitFollowFormationSystem : SystemBase
                             && SystemAPI.Exists(SystemAPI.GetComponent<UnitCombatComponent>(unit).target);
 
                         float targetSpeed = FollowSpeed(unit, baseSpeed * speedMultiplier,
-                            hurryToComander || hasCombatTarget, isHoldingPosition, followSpeed, canRun);
-                        targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, isHoldingPosition,
+                            hurryToComander || hasCombatTarget, slotsStill, followSpeed, canRun, advancing);
+                        targetSpeed = math.min(targetSpeed, ArrivalSpeed(unit, slotsStill,
                             navAgent.acceleration * tuning.brakingFactor * tuning.arrivalDecelerationFraction));
                         navAgent.speed = FormationFollowSpeed.Approach(navAgent.speed, targetSpeed,
                             navAgent.acceleration * dt, navAgent.acceleration * tuning.brakingFactor * dt);
@@ -140,7 +143,7 @@ public partial class UnitFollowFormationSystem : SystemBase
                 // Skip si la unidad está en combate: UnitNavMeshSystem ya rotó hacia el target.
                 bool isEngaging = SystemAPI.HasComponent<IsEngagingTag>(unit)
                                && SystemAPI.IsComponentEnabled<IsEngagingTag>(unit);
-                if (stateComp.State == UnitFormationState.Formed && !isEngaging)
+                if ((stateComp.State == UnitFormationState.Formed || advancing) && !isEngaging)
                 {
                     float3 targetForward = float3.zero;
                     bool hasTargetOrientation = false;
@@ -211,13 +214,14 @@ public partial class UnitFollowFormationSystem : SystemBase
     }
 
     float FollowSpeed(Entity unit, float baseSpeed, bool forceRun, bool isHoldingPosition,
-        in FormationFollowSpeed.Settings settings, bool canRun)
+        in FormationFollowSpeed.Settings settings, bool canRun, bool advancing)
     {
         forceRun &= canRun;
         var previous = SystemAPI.HasComponent<UnitMovementGearComponent>(unit)
             ? SystemAPI.GetComponent<UnitMovementGearComponent>(unit).gear : MovementGear.Walk;
+        // On the Testudo Advance even a formed soldier keeps pace with its moving slot.
         bool following = SystemAPI.HasComponent<UnitFormationStateComponent>(unit)
-            && SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State == UnitFormationState.Moving
+            && (advancing || SystemAPI.GetComponent<UnitFormationStateComponent>(unit).State == UnitFormationState.Moving)
             && SystemAPI.HasComponent<UnitResolvedSlotComponent>(unit);
 
         MovementGear gear;

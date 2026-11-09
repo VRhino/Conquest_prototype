@@ -14,7 +14,7 @@ public partial class BattleSceneIntegrationTests
     public IEnumerator BarClickLaunchesTheSquadAbilityWithoutAttacking()
     {
         yield return UnlockFirstSquadAbilityInBattle();
-        var skill = em.GetBuffer<HeroSkillElement>(squad)[0];
+        var skill = SquadSkill(SkillSlot.Squad1);
         var slot = (RectTransform)Object.FindFirstObjectByType<SkillBarController>().transform.Find("Bar/Slot_Squad1");
 
         yield return Click(slot, reachesHero: true);
@@ -59,7 +59,7 @@ public partial class BattleSceneIntegrationTests
     public IEnumerator RadialMenuLaunchesOnReleaseChangesFormationOnClickAndCancelsInTheCentre()
     {
         yield return UnlockFirstSquadAbilityInBattle();
-        var skill = em.GetBuffer<HeroSkillElement>(squad)[0];
+        var skill = SquadSkill(SkillSlot.Squad1);
         var menu = Object.FindFirstObjectByType<BattleRadialMenu>();
         Assert.That(menu, Is.Not.Null, "The HUD did not create the radial menu.");
         var panel = (RectTransform)menu.transform.Find("Panel");
@@ -116,7 +116,7 @@ public partial class BattleSceneIntegrationTests
         progress.level = SquadProgressionCurves.UnlockLevel(em.GetComponentData<SquadDataComponent>(squad).curves, 0);
         em.SetComponentData(squad, progress);
         em.SetComponentData(em.CreateEntity(typeof(SquadLevelUpEvent)), new SquadLevelUpEvent { squad = squad });
-        yield return Until(() => em.GetBuffer<HeroSkillElement>(squad).Length == 1, 5f, "The first ability did not unlock at its level.");
+        yield return Until(() => HasSquadSkill(SkillSlot.Squad1), 5f, "The first ability did not unlock at its level.");
         yield return Until(() => em.GetComponentData<MatchStateComponent>(GetMatchEntity()).currentState == MatchState.InBattle,
             60f, "The battle did not start.");
     }

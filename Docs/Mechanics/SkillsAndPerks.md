@@ -157,6 +157,13 @@ Ref.: las escuadras lanzan con el mismo ciclo de vida que el héroe. El enfriami
 
 Datos en `Assets/ScriptableObjects/Squads/Abilities/`.
 
+**Avanzar del Testudo (escuderos, 2026-11-09).** Tecla 3, desde el nivel 1 (`abilityUnlockLevels` 10/20/1) y sin
+enfriamiento. Es un interruptor: una fase sin fin y no interrumpible que dura lo que se mantiene la tecla (así mantenerla
+no la relanza cada fotograma) y un evento `ToggleAdvance` al empezar. `SquadAdvanceSystem` arranca el avance si la
+escuadra mantiene posición en Testudo con todos en posición (formados o a menos de un espaciado de su ranura): avanza en línea recta, despacio (40 % de la velocidad base), con
+los escudos como parada. Para con la tecla, otra orden o formación, al tocar enemigos o ante el final del NavMesh, y se
+queda formada donde para. Marcada `playerOnly`: la IA de los héroes no la lanza (cogería siempre la primera lista).
+
 **Por soldado (L2-17, 2026-11-06).** Ref.: los soldados lanzan sus propias habilidades por un camino propio. Una habilidad
 con `AbilityData.perSoldier` es una orden: la escuadra pasa la puerta y empieza su enfriamiento, pero no ejecuta nada.
 Cada soldado vivo recibe un `SoldierSkillComponent` (habilitable) y:
@@ -184,6 +191,7 @@ antes de su momento sigue luchando. Un aturdimiento por resiliencia corta su par
 | `Dash` | Embestida de `distance` metros en `duration` segundos. El héroe local la hace con su controlador y la IA con su `NavMeshAgent` |
 | `ApplyConditional` | Modificador condicionado temporal (L1-02, `DamageMechanics.md` §5.6) a cada objetivo: ratio de daño `value` durante `duration`, solo en los golpes que cumplen `condition`. Al relanzar se refresca. Ninguna habilidad lo usa aún |
 | `Taunt` | Provocación (L4-05): las escuadras de los enemigos alcanzados apuntan su melé al lanzador (a su escuadra, si es una habilidad de escuadra) con un sesgo `value` durante `duration`. Ninguna habilidad lo usa aún |
+| `ToggleAdvance` | Solo escuadras: enciende o apaga el avance del Testudo (`SquadAdvanceToggleRequest`); lo camina `SquadAdvanceSystem` |
 | `DamageOverTime` | Daño en el tiempo (L2-11): los enemigos del área (como `AreaDamage`) reciben cada `period` segundos, durante `duration`, un golpe del perfil del lanzador × `value`, forma `Ability`, por la misma fórmula, escudos y suelo. El primer tic llega un periodo después; al relanzar sigue `reapply` y conserva el ritmo |
 
 Comunes a los eventos de área y de efecto:

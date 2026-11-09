@@ -17,6 +17,7 @@ public static class SkillEvents
         SkillEventType.AreaDamage or SkillEventType.ApplyModifier or SkillEventType.AbsorbShield
             or SkillEventType.ApplyConditional or SkillEventType.Taunt or SkillEventType.DamageOverTime => true,
         SkillEventType.Dash => !squadCaster,
+        SkillEventType.ToggleAdvance => squadCaster,
         _ => false,
     };
 

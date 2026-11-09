@@ -229,4 +229,33 @@ public class UnitPostureTests
         }
         finally { blob.Dispose(); }
     }
+
+    /// <summary>The Testudo Advance walks with the shields as they are when still: a walking soldier keeps the formed
+    /// posture of its role while its squad advances, and drops it when the advance stops.</summary>
+    [Test]
+    public void AnAdvancingTestudoKeepsTheShieldsOfItsWalkingSoldiers()
+    {
+        using var world = new World("Posture on the advance");
+        var em = world.EntityManager;
+        em.CreateEntity(typeof(MatchStateComponent));
+        var blob = TestudoLibrary();
+        try
+        {
+            var squad = em.CreateEntity(typeof(FormationComponent), typeof(SquadDefinitionComponent), typeof(SquadAdvanceComponent));
+            em.SetComponentData(squad, new FormationComponent { currentFormation = FormationType.Testudo });
+            em.SetComponentData(squad, new SquadDefinitionComponent { formationLibrary = blob });
+            var walking = em.CreateEntity(typeof(UnitFormationStanceComponent));
+            em.AddComponentData(walking, new UnitGridSlotComponent { role = FormationSlotRole.Interior, row = 1 });
+            em.AddComponentData(walking, new UnitFormationStateComponent { State = UnitFormationState.Moving });
+            em.AddBuffer<SquadUnitElement>(squad).Add(new SquadUnitElement { Value = walking });
+            var system = world.GetOrCreateSystem<UnitPostureSystem>();
+
+            system.Update(world.Unmanaged);
+            Assert.That(em.GetComponentData<UnitFormationStanceComponent>(walking).stance, Is.EqualTo(UnitStance.ShieldUp));
+            em.SetComponentEnabled<SquadAdvanceComponent>(squad, false);
+            system.Update(world.Unmanaged);
+            Assert.That(em.GetComponentData<UnitFormationStanceComponent>(walking).stance, Is.EqualTo(UnitStance.Normal));
+        }
+        finally { blob.Dispose(); }
+    }
 }

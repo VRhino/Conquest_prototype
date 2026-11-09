@@ -7,7 +7,7 @@ using Unity.Transforms;
 /// and writes it to SquadFormationAnchorComponent.
 ///
 /// Four cases in priority order:
-///   1. HoldingPosition → holdCenter + holdRotation
+///   1. HoldingPosition → hold centre (plus what the Advance ability walked) + holdRotation
 ///   2. Retreating      → retreatTarget + default rotation
 ///   3. InCombat ranged → stop at range * 0.85 from enemy centroid; freeze if already in range
 ///   4. Default (Follow)→ heroPos + forward * followForwardOffset + hero rotation
@@ -57,7 +57,7 @@ public partial class SquadAnchorSystem : SystemBase
                 && SystemAPI.HasComponent<SquadHoldPositionComponent>(squadEntity))
             {
                 var hold = SystemAPI.GetComponent<SquadHoldPositionComponent>(squadEntity);
-                position = hold.holdCenter;
+                position = hold.Centre;
                 rotation = hold.holdRotation;
             }
             else if (state.ValueRO.currentState == SquadFSMState.Retreating)

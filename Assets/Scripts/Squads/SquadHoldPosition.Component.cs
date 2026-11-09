@@ -25,4 +25,14 @@ public struct SquadHoldPositionComponent : IComponentData
     /// This prevents formation changes from affecting the held position.
     /// </summary>
     public FormationType originalFormation;
+
+    /// <summary>
+    /// How far the formation has advanced from <see cref="holdCenter"/> with the Advance ability. Only
+    /// <see cref="SquadAdvanceSystem"/> moves it; <see cref="SquadOrderSystem"/> starts it at zero with every new Hold
+    /// Position order.
+    /// </summary>
+    public float3 advanceOffset;
+
+    /// <summary>Where the squad holds now: the ordered centre plus what it has advanced.</summary>
+    public float3 Centre => holdCenter + advanceOffset;
 }

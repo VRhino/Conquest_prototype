@@ -164,6 +164,11 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - Sin punto aliado, conserva petición y ancla. No reinicia retiradas de intercambio ni permite duplicación al revivir el dueño.
 - RetreatLogic persiste efectivos y limpia la referencia solo si sigue apuntando a la escuadra retirada. Spawning excluye dueño muerto y reservas eliminadas.
 
+### SquadAdvanceSystem
+- **Responsabilidad**: Único escritor de `SquadAdvanceComponent` y de `SquadHoldPositionComponent.advanceOffset`: la habilidad Avanzar del Testudo de los escuderos (2026-11-09). Consume `SquadAdvanceToggleRequest` (lo enciende `SkillEffectSystem` con el evento `ToggleAdvance`). Arranca solo manteniendo posición en Testudo con todos los soldados en posición (formados o a menos de un espaciado de su ranura) y sin enemigos ni el final del NavMesh delante a `advanceContactDistance`; mientras dura, mueve el centro de la orden en línea recta (el rumbo de la formación) a `advanceSpeedRatio` × la velocidad base del soldado más lento. Para con otro toque, otra orden u otra formación, un enemigo a distancia de contacto o el NavMesh que se acaba a `advanceObstacleLookahead` por delante de la primera fila. Donde para, la escuadra sigue manteniendo posición (el desplazamiento pertenece a esa orden; `SquadOrderSystem` lo pone a cero con cada orden nueva).
+- **Orden**: `[UpdateAfter(SquadOrderSystem)]` `[UpdateBefore(FormationSystem)]`
+- **Lectores**: `FormationPositionCalculator.GetSquadCenter` y `SquadAnchorSystem` (`SquadHoldPositionComponent.Centre`); `UnitPostureSystem` y `UnitFollowFormationSystem` (`SquadAdvanceComponent` activo).
+
 ### SquadAnchorSystem
 - **Responsabilidad**: Único escritor de `SquadFormationAnchorComponent` (posición, rotación, velocidad) y de `SquadAnchorMovingTag`. Calcula el punto objetivo (mantener posición, retirada, distancia de tiro o héroe + desplazamiento) y lleva el ancla hasta él con `AnchorArrival` (C10: aceleración `anchorAcceleration`, frenado √(2·a·d), salto más allá de `anchorSnapDistance`); la rotación va directa (D5)
 - **Orden**: `[UpdateAfter(UnitTargetingSystem)]` `[UpdateBefore(FormationSystem)]`
@@ -211,6 +216,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Orden**: corre DESPUÉS de `UnitNavMeshSystem`. Su rotación Formed es una intención de prioridad `Formation` (5): la de `Combat` (10) la supera; `UnitRotationResolutionSystem` aplica la ganadora
 - **Regla**: Nunca cambia el estado de unidades — solo las mueve/orienta
 - La velocidad base es la resuelta por la pila; aturdida (0) frena con su deceleración, sin rama propia de aturdimiento.
+- En el avance del Testudo (`SquadAdvanceComponent` activo) las ranuras de la orden se mueven: todo soldado sigue la velocidad de su ranura y mira como formado (los costados hacia fuera), aunque vaya en marcha.
 
 ### HeroPositionCacheSystem
 - **Responsabilidad**: copia cada frame la posición y rotación del héroe dueño a la entidad de su escuadra, para que `SquadAnchorSystem` y `FormationAdaptationSystem` no hagan búsquedas cruzadas Escuadra→Héroe.
@@ -263,7 +269,7 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - **Orden**: después de `NavMeshPositionSyncSystem` y `UnitRotationResolutionSystem`.
 
 ### UnitPostureSystem
-- **Responsabilidad**: Único escritor de `UnitFormationStanceComponent`: postura por papel de ranura según la tabla de la formación. Si `useNormalPostureInFreeCombat` está activo, Attack y la persecución fuera de HoldPosition usan Normal; mantener posición conserva la postura por fila. Con la escuadra en Brace (lee `SquadCombatModeComponent`, sin orden respecto a `BraceWeaponActivationSystem`: un fotograma de retraso no se ve) toma la postura `braced` del papel. Propaga postura, fila y papel a `UnitAnimationMovementComponent`.
+- **Responsabilidad**: Único escritor de `UnitFormationStanceComponent`: postura por papel de ranura según la tabla de la formación. Si `useNormalPostureInFreeCombat` está activo, Attack y la persecución fuera de HoldPosition usan Normal; mantener posición conserva la postura por fila. Con la escuadra en Brace (lee `SquadCombatModeComponent`, sin orden respecto a `BraceWeaponActivationSystem`: un fotograma de retraso no se ve) toma la postura `braced` del papel. Con la escuadra en el avance del Testudo (`SquadAdvanceComponent` activo), el soldado en marcha conserva la postura de formado. Propaga postura, fila y papel a `UnitAnimationMovementComponent`.
 - **Orden**: `[UpdateAfter(UnitFormationStateSystem)]`
 - **NO hace**: no cambia estado de formación, no mueve unidades.
 - **Ref**: `Docs/Mechanics/FormationPostures.md`
