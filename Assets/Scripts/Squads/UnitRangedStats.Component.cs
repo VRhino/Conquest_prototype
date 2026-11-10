@@ -21,4 +21,6 @@ public struct UnitRangedStatsComponent : IComponentData
     /// <summary>Projectiles per shot (at least 1) and the total angle of their fan in degrees (L2-7).</summary>
     public int projectilesPerShot;
     public float fanAngleDegrees;
+    /// <summary>Height above the unit the projectile leaves from, m (1,2 on foot; more on horseback, M17).</summary>
+    public float launchHeight;
 }

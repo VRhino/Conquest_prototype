@@ -240,9 +240,9 @@ Ref.: los efectos pueden cambiar los parámetros de la estrategia de IA a la que
 | L5-3 (parcial) | Velocidad con capas | `UnitSpeedCalculator` ya centraliza la velocidad base (`Squads/UnitSpeedCalculator.cs`); el aturdimiento sigue duplicado en dos sistemas | `SpeedModifier` como caso de T1 + override a 0 | Un punto para buffs y stun | S-M | B | M |
 | L5-4 | Giro proporcional con tope | Asignación directa de rotación en `UnitRotationResolution` | `RotateTowards` con `turnRateMoving/Idle` | Sin giros de 180° en un frame | S | B | M |
 | L5-5 (hecho, `Movimiento_Formaciones.md` §25) | Radio escalable | `bodyblockRadius` único de 0,8 m | `UnitBodyRadius`, celda = máximo | Prepara unidades grandes | S | B | B |
-| L5-6 (bloqueado: sin caballería, `Por_Abordar/Movimiento.md` M17) | Vínculo jinete-montura | No hay monturas | `MountBinding` + `MotorMode` | Evita rediseño | L | M | B |
+| L5-6 (tropas: un solo cuerpo, hecho 2026-11-10; héroe pendiente, `Por_Abordar/Movimiento.md` M19) | Vínculo jinete-montura | No hay monturas | `MountBinding` + `MotorMode` | Evita rediseño | L | M | B |
 | L5-7 (amp., hecho, §25) | Aguante según la marcha | Solo el sprint del héroe gasta aguante (`Hero/Systems/HeroStamina.System.cs`); las escuadras corren sin coste | Coste por marcha (cantidad fija, % del máximo o por segundo) para escuadras, escalado por la pila; sin aguante, la marcha de carrera baja un nivel | Correr tiene un precio táctico | S-M | M | B |
-| L5-8 (amp., bloqueado: sin caballería, M17) | Montura: arco de ataque y aguante propio | No hay monturas | Arco de giro respecto a la montura fuera del cual el jinete no ataca; aguante de la montura aparte del del jinete | Evita rediseño si llega la caballería | S (tras L5-6) | B | B |
+| L5-8 (amp., hecho 2026-11-10 para las tropas, `Por_Abordar/Movimiento.md` M17) | Montura: arco de ataque y aguante propio | No hay monturas | Arco de giro respecto a la montura fuera del cual el jinete no ataca; aguante de la montura aparte del del jinete | Evita rediseño si llega la caballería | S (tras L5-6) | B | B |
 
 **L5-1.** Ref.: ORCA (van den Berg et al., "Reciprocal n-body collision avoidance", RVO2, Apache-2.0): un semiplano por
 vecino y un programa lineal para la velocidad más cercana a la deseada; el esfuerzo se reparte con responsabilidad 0,5

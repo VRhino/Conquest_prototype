@@ -120,7 +120,12 @@ public partial class UnitAttackSystem : SystemBase
                 SystemAPI.HasComponent<UnitBodyRadiusComponent>(target)
                     ? BodyRadius.Resolve(SystemAPI.GetComponent<UnitBodyRadiusComponent>(target).radius, bodyRadius) : bodyRadius);
 
-            if (inRange && c.attackCooldown <= 0f && !HeldByOrder(entity, now))
+            // On horseback the rider only strikes inside its arc around the horse's front (L5-8).
+            bool inArc = !SystemAPI.HasComponent<MountComponent>(entity)
+                || MountRules.InArc(transform.ValueRO.Forward(), transform.ValueRO.Position, targetPos,
+                    SystemAPI.GetComponent<MountComponent>(entity).attackArcCos);
+
+            if (inRange && inArc && c.attackCooldown <= 0f && !HeldByOrder(entity, now))
             {
                 c.isAttacking          = true;
                 c.attackAnimationTimer = 0f;

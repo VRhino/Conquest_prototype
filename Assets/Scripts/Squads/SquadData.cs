@@ -63,6 +63,12 @@ public class SquadData : ScriptableObject
     [Tooltip("Radio del cuerpo de cada soldado, m. 0 = el de MovementTuningConfig (0,5 m). Las unidades grandes (caballería) llevan más.")]
     [Min(0f)] public float bodyRadius;
 
+    [Header("Montura (L5-8; solo caballería)")]
+    [Tooltip("Arco total, en grados, respecto al frente del caballo en el que el jinete puede golpear o disparar. 0 = sin límite.")]
+    [Range(0f, 360f)] public float mountAttackArc;
+    [Tooltip("Giro del caballo en combate, °/s. 0 = el de MovementTuningConfig (combatTurnRate), que es el de un soldado a pie.")]
+    [Min(0f)] public float mountTurnRate;
+
     [Header("Aguante de escuadra (L5-7)")]
     [Tooltip("Aguante máximo de la escuadra. 0 = sin aguante: corre sin coste, como antes.")]
     [Min(0f)] public float staminaMax;

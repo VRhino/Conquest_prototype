@@ -1,3 +1,53 @@
+# Plan: Caballería (M17: L5-6 y L5-8)
+
+Estado: **hecho** (2026-11-10), rama `main`. Pendientes: `Docs/Por_Abordar/Movimiento.md` M19 (héroe a caballo), M20 (datos)
+y M21 (reacciones montadas, cuerda del arco).
+
+## Decisiones del usuario (2026-11-10)
+- Primero las escuadras de caballería. El héroe a caballo viene después, con las mismas piezas.
+- Tres escuadras: lanceros, caballería de espada y arqueros a caballo.
+- En las tropas, jinete y caballo son un solo cuerpo: comparten vida y posición, y la montura no muere aparte. En el
+  héroe, el caballo podrá morir y el héroe seguirá a pie (fuera de este plan).
+
+## Diseño
+- **Datos.**
+  - `SquadType` crece con `LanceCavalry`, `SwordCavalry` y `HorseArchers`, y `unitType` es `Cavalry`.
+  - `SquadData` añade `mountAttackArc` (grados, 0 = sin límite) y `mountTurnRate` (°/s en combate, 0 = el general).
+  - `SquadRangedData` añade `launchHeight` (1,2 por defecto; 2,3 en los arqueros a caballo).
+  - Valores provisionales hasta que el usuario apruebe la tabla.
+- **ECS (L5-8).** Un soldado montado recibe `MountComponent` al aparecer:
+  - Solo empieza un golpe o un disparo si el objetivo cae dentro del arco respecto al frente del caballo.
+  - En combate gira a su `turnRate` en vez de a `combatTurnRate`.
+  - El aguante de la montura es el de la escuadra (L5-7). En las tropas no hay otro, y el del héroe llegará con el héroe.
+- **L5-6.** Las tropas no necesitan `MountBinding` (son un solo cuerpo). El vínculo jinete-montura llegará con el héroe.
+- **Animación.**
+  - Visual = caballo en la raíz (Generic, `AC_Horse`, lo mueve `UnitAnimatorController`) y jinete colgado del hueso
+    `Saddle` (Humanoid, `AC_Rider_*`).
+  - El jinete lo mueve `RiderAnimatorMirror` con los mismos datos del `UnitAnimationAdapter`.
+  - Los dos árboles de andares (Idle, Walk, Trot, Gallop) usan `MountGaitBlend` (0-3, según la velocidad frente a la
+    marcha de la escuadra) y `MountGaitScale` (cadencia para que los cascos no patinen). Los clips del jinete duran lo
+    mismo que los del caballo, así que van a la par; si se desfasan, se resincronizan.
+  - Ataque: capa `Combat` del jinete, de cintura arriba, con `IsAttacking` y `AttackSpeed`.
+  - Los arqueros a caballo usan `TriggerShoot` y saltan al fotograma de suelta.
+- **Prefab.** Un constructor de editor arma cada visual:
+  - El caballo con `NavMeshAgent`, colisor y detector.
+  - El jinete con el aspecto de una tropa a pie: lanceros como `Spearmen`, espada como `Squires` y arqueros como
+    `LevyArchers`.
+  - El arma en la mano que usan los clips, con su `WeaponHitbox`.
+- **Reacciones al golpe.** Los jinetes no tienen capa `Hit Reaction`: el aturdimiento se aplica sin animación hasta que
+  haya clips montados (pendiente en `Por_Abordar`).
+
+## Pasos
+- [x] 1. Código: tipos, campos, `MountComponent`, arco y giro, altura de disparo, andares montados, `RiderAnimatorMirror`
+  y tests EditMode.
+- [x] 2. Lanceros a caballo de punta a punta: controladores, prefab, datos, registro y test PlayMode (aparece, galopa y
+  hace daño).
+- [x] 3. Caballería de espada.
+- [x] 4. Arqueros a caballo.
+- [x] 5. Documentación (`Movimiento.md` M17, `Aprendizajes_Referencia.md` L5-6 y L5-8) y tabla de datos para el usuario.
+
+---
+
 # Plan: Reacciones al golpe (C4, L1-09)
 
 Estado: **hecho** (2026-11-10), rama `main`. Lo pidió el usuario tras D1 ("vamos con lo siguiente"): orden D1 → C4 →

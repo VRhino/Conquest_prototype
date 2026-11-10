@@ -137,6 +137,9 @@ public class VisualPrefabRegistry : MonoBehaviour
             SquadType.Archers => "UnitArquero", 
             SquadType.Pikemen => "UnitPikemen",
             SquadType.Spearmen => "UnitSpearmen",
+            SquadType.LanceCavalry => "UnitLanceCavalry",
+            SquadType.SwordCavalry => "UnitSwordCavalry",
+            SquadType.HorseArchers => "UnitHorseArchers",
             _ => null
         };
     }

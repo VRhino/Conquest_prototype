@@ -23,8 +23,11 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M14 | Aceleración en S7 multitud con C13 | Media | **Hecho** (medido: dentro de M10; 1,4 % con L4-04) |
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | **Hecho** (2026-11-04: son soldados en contacto; métrica `idleStalls`) |
-| M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Pendiente (modelo y clips listos el 2026-11-10; falta el código) |
+| M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | **Hecho para las tropas** (2026-11-10: tres escuadras de caballería; el héroe a caballo es M19) |
 | M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** (datos 2026-11-03; escala por la pila 2026-11-04) |
+| M19 | Héroe a caballo: montar y desmontar, caballo con vida propia (L5-6) | Media | Pendiente (decisión del usuario: el caballo del héroe muere aparte) |
+| M20 | Datos de la caballería (velocidades, arcos, giro, vida, armas) | Media | Pendiente (provisionales, tabla para el usuario) |
+| M21 | Reacciones al golpe a caballo y cuerda del arco | Baja | Pendiente (sin clips montados) |
 
 ---
 
@@ -282,7 +285,29 @@ marcha dentro del pasillo; en campo abierto, unas 15. El sistema cuesta 0,15 ms 
   `NavMeshQuery` en un job. Medir con S8 (M3) antes de optimizar.
 
 ## M17. Monturas (L5-6, L5-8)
-**Bloqueado:** no hay escuadras de caballería, ni modelos, animaciones o datos de monturas (`UnitType.Cavalry` existe pero
+**Hecho para las tropas (2026-11-10).** Decisiones del usuario: primero las escuadras; las tres (lanceros, espada y
+arqueros a caballo); en las tropas jinete y caballo son un solo cuerpo. Plan en `tasks/todo.md`.
+- **Datos.** `SquadType` `LanceCavalry` (`lcv01`), `SwordCavalry` (`scv01`) y `HorseArchers` (`hac01`), con
+  `unitType` `Cavalry`.
+  - Nuevo en `SquadData`: `mountAttackArc` y `mountTurnRate`.
+  - Nuevo en `SquadRangedData`: `launchHeight` (2,3 m a caballo).
+  - Valores provisionales (M20).
+- **L5-8.** `MountComponent` al aparecer:
+  - `UnitAttackSystem` y `RangedAttackSystem` solo empiezan el golpe o el disparo dentro del arco respecto al frente
+    del caballo (lanza 90°, espada 220°, arco 300°).
+  - `UnitRotationResolutionSystem` gira al caballo en combate a su `turnRate` (120-140 °/s, frente a 450 a pie).
+  - El aguante de montura de las tropas es el de la escuadra (L5-7), con datos de caballería.
+- **L5-6.** Las tropas no necesitan vínculo porque son un solo cuerpo. El del héroe es M19.
+- **Visual.**
+  - El caballo (Generic, `AC_Horse`) va en la raíz, y el jinete (Humanoid, `AC_Rider_*`) cuelga del hueso `Saddle`.
+  - Los dos árboles de andares usan `MountGaitBlend` y `MountGaitScale` (`MountGait`). `RiderAnimatorMirror` los
+    mantiene a la par.
+  - El jinete toma el aspecto de una tropa a pie: lanceros, escuderos y arqueros, sin escudo y con el arco en la
+    izquierda.
+  - Todo lo construye `CavalrySetup`, menú *Conquest / Cavalry*.
+- **Tests:** `MountTests` (EditMode) y `*CavalryMarches*` (PlayMode).
+
+**Qué era.** Bloqueado: no había escuadras de caballería, ni modelos, animaciones o datos de monturas (`UnitType.Cavalry` existe pero
 ninguna escuadra lo usa). Lo que proponía el catálogo, para cuando las haya:
 - L5-6: `MountBinding` (jinete → montura) y `MotorMode`; el jinete reenvía su entrada al motor de la montura, como en la
   referencia.
@@ -348,3 +373,43 @@ paradas sin objetivo o lejos del objetivo.
 Tres corridas: S6 da 24/40/43 paradas y solo 1/0/2 sin objetivo; S7, 20/41/36 y 4/4/4. La hipótesis se confirma: son
 atacantes en su puesto. Las 4 de S7 son las colas del pasillo (M15). A partir de ahora, la regresión de atascos es
 `idleStalls`, no `stalls`.
+
+## M19. Héroe a caballo (L5-6)
+**Qué es.** Que el héroe monte y desmonte. Decisión del usuario (2026-11-10): el caballo del héroe es un cuerpo aparte,
+que puede morir, y el héroe sigue a pie. Hace falta lo siguiente:
+- `MountBinding` (jinete → montura) y un `MotorMode` del motor local: con el héroe montado, su entrada mueve al caballo.
+- Un aguante de montura aparte del del héroe (L5-8).
+- Una tecla o habilidad para llamar al caballo.
+- El visual montado (las piezas de M17: `AC_Horse`, `AC_Rider_*` y `RiderAnimatorMirror`).
+- Desmontar al morir el caballo o al recibir un derribo.
+
+## M20. Datos de la caballería
+**Qué es.** Los valores de las tres escuadras son provisionales (`CavalrySetup.Kinds`, solo la primera vez: después
+mandan los assets):
+
+| | Lanceros | Espada | Arqueros a caballo |
+|---|---|---|---|
+| Soldados | 12 | 12 | 12 |
+| Liderazgo | 200 | 200 | 160 |
+| Vida | 2000 | 2200 | 1400 |
+| Velocidad (marcha / carrera) | 5,5 / 11 m/s | 5,5 / 11 m/s | 6 / 12 m/s |
+| Radio de cuerpo | 1 m | 1 m | 1 m |
+| Arco de ataque | 90° | 220° | 300° |
+| Giro en combate | 120 °/s | 140 °/s | 140 °/s |
+| Resiliencia | 150 | 170 | 90 |
+| Aguante (máx., coste) | 150, 1/s | 150, 1/s | 150, 1/s |
+
+Armas:
+- **Lanza:** alcance 3,2 m, cada 2,2 s y carga ×2 a 14 m.
+- **Espada:** 2,6 m, cada 1,6 s y carga ×1,3.
+- **Arco:** el de los arqueros a pie, disparado a 2,3 m de altura.
+
+**Cómo abordarlo.** Que el usuario apruebe una tabla y medirla en los escenarios S6 y S9, como C9.
+
+## M21. Reacciones al golpe a caballo y cuerda del arco
+**Qué es.** Los controladores de los jinetes no tienen capa `Hit Reaction`: un jinete aturdido se queda quieto, sin
+animación propia. La cuerda del arco de los arqueros a caballo es estática, como la de los arqueros a pie.
+
+**Cómo abordarlo.**
+- Reacciones: clips montados, que pueden ser el caballo encabritándose para el derribo y el despedido.
+- Cuerda: animar su hueso hacia la mano que tensa (en Blender ya se hace con `Nock_Preview`).

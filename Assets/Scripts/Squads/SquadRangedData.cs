@@ -34,6 +34,8 @@ public class SquadRangedData : ScriptableObject
     [Min(1)] public int projectilesPerShot = 1;
     [Tooltip("Apertura total del abanico en grados.")]
     public float fanAngleDegrees = 0f;
+    [Tooltip("Altura sobre el suelo de la que sale el proyectil, m: 1,2 a pie, más a caballo (M17). 0 = 1,2.")]
+    [Min(0f)] public float launchHeight = 1.2f;
 
     [Header("Hit Traits (L1-08, L1-10, L1-11, L1-12)")]
     public HitTraits hitTraits;

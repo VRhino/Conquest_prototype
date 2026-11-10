@@ -100,6 +100,7 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 projectileTrajectory = ranged?.projectileTrajectory ?? default,
                 projectilesPerShot = ranged != null ? Unity.Mathematics.math.max(1, ranged.projectilesPerShot) : 1,
                 fanAngleDegrees = ranged?.fanAngleDegrees ?? 0f,
+                launchHeight = ranged != null && ranged.launchHeight > 0f ? ranged.launchHeight : MountRules.FootLaunchHeight,
                 curves = curves,
                 attackRange             = melee?.attackRange             ?? 2f,
                 attackInterval          = melee?.attackInterval          ?? 1.5f,
@@ -114,7 +115,10 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                 staminaMax               = d.staminaMax,
                 staminaRunCostPerSoldier = d.staminaRunCostPerSoldier,
                 staminaRecoveryPerSecond = d.staminaRecoveryPerSecond,
-                staminaRecoverFraction   = d.staminaRecoverFraction
+                staminaRecoverFraction   = d.staminaRecoverFraction,
+                mounted                  = d.unitType == UnitType.Cavalry,
+                mountAttackArc           = d.mountAttackArc,
+                mountTurnRate            = d.mountTurnRate
             });
 
             AddComponent(entity, new SquadDefinitionComponent

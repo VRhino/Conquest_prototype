@@ -126,14 +126,23 @@ public partial class RangedAttackSystem : SystemBase
                 continue;
             }
 
-            float3 myPos     = transform.ValueRO.Position + new float3(0f, 1.2f, 0f);
+            // The shot leaves from the archer's hands: higher on horseback (M17).
+            float launchHeight = rangedStats.ValueRO.launchHeight > 0f ? rangedStats.ValueRO.launchHeight : MountRules.FootLaunchHeight;
+            float3 myPos     = transform.ValueRO.Position + new float3(0f, launchHeight, 0f);
             float3 targetPos = transformLookup[target].Position + new float3(0f, 0.9f, 0f);
             float3 toTarget  = targetPos - myPos;
             float  dist2D    = math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z);
 
-            // Add a small tolerance (0.25f) to account for floating point errors and NavMesh agent stopping 
+            // Add a small tolerance (0.25f) to account for floating point errors and NavMesh agent stopping
             // infinitesimally outside the exact perfect range border due to radius/collision.
             if (dist2D > rangedStats.ValueRO.range + 0.5f)
+            {
+                continue;
+            }
+            // A horse archer only shoots inside its arc around the horse's front (L5-8).
+            if (SystemAPI.HasComponent<MountComponent>(entity)
+                && !MountRules.InArc(transform.ValueRO.Forward(), transform.ValueRO.Position, targetPos,
+                    SystemAPI.GetComponent<MountComponent>(entity).attackArcCos))
             {
                 continue;
             }

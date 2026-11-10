@@ -79,6 +79,9 @@ public enum PerkSquadTypes : byte
     Archers = 1 << (int)SquadType.Archers,
     Pikemen = 1 << (int)SquadType.Pikemen,
     Spearmen = 1 << (int)SquadType.Spearmen,
+    LanceCavalry = 1 << (int)SquadType.LanceCavalry,
+    SwordCavalry = 1 << (int)SquadType.SwordCavalry,
+    HorseArchers = 1 << (int)SquadType.HorseArchers,
 }
 
 /// <summary>What the hero side of a perk condition looks at, gathered by the system that applies it.</summary>

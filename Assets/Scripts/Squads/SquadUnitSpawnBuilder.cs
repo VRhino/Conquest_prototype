@@ -133,6 +133,8 @@ public static class SquadUnitSpawnBuilder
         ecb.AddComponent<UnitRotationIntentComponent>(unit);
         ecb.AddComponent<ChargeTrackComponent>(unit);
         ecb.AddComponent(unit, new UnitBodyRadiusComponent { radius = data.bodyRadius }); // L5-5
+        if (data.mounted) // M17, L5-8
+            ecb.AddComponent(unit, new MountComponent { attackArcCos = MountRules.ArcCos(data.mountAttackArc), turnRate = data.mountTurnRate });
         ecb.AddComponent<UnitMovementGearComponent>(unit);
         ecb.AddComponent<WeaponHitboxActiveTag>(unit);
         ecb.SetComponentEnabled<WeaponHitboxActiveTag>(unit, false);
@@ -149,7 +151,8 @@ public static class SquadUnitSpawnBuilder
                 projectilePoolKey = data.projectilePoolKey,
                 trajectory = data.projectileTrajectory,
                 projectilesPerShot = data.projectilesPerShot,
-                fanAngleDegrees = data.fanAngleDegrees
+                fanAngleDegrees = data.fanAngleDegrees,
+                launchHeight = data.launchHeight > 0f ? data.launchHeight : MountRules.FootLaunchHeight
             });
             ecb.AddComponent(unit, new RangedAttackStateComponent
             {
@@ -169,6 +172,9 @@ public static class SquadUnitSpawnBuilder
             SquadType.Archers => "UnitVisual_Arquero",
             SquadType.Pikemen => "UnitVisual_Pikemen",
             SquadType.Spearmen => "UnitVisual_Spearmen",
+            SquadType.LanceCavalry => "UnitVisual_LanceCavalry",
+            SquadType.SwordCavalry => "UnitVisual_SwordCavalry",
+            SquadType.HorseArchers => "UnitVisual_HorseArchers",
             _ => "UnitVisual_Default"
         };
     }

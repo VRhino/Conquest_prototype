@@ -43,8 +43,11 @@ public partial class UnitRotationResolutionSystem : SystemBase
                     // Combat facing turns at a capped rate (C7); formation intents already arrive smoothed.
                     quaternion target = intent.ValueRO.priority > 0 ? intent.ValueRO.targetRotation
                         : quaternion.LookRotationSafe(brace.forward, math.up());
+                    // A horse turns at its own rate in combat (L5-8).
+                    float turnRate = SystemAPI.HasComponent<MountComponent>(entity)
+                        ? MountRules.TurnRate(SystemAPI.GetComponent<MountComponent>(entity).turnRate, combatTurnRate) : combatTurnRate;
                     quaternion rotation = intent.ValueRO.source == RotationSource.Combat
-                        ? (UnityEngine.Quaternion)UnitTurn.Step(agent.transform.rotation, target, combatTurnRate, dt)
+                        ? (UnityEngine.Quaternion)UnitTurn.Step(agent.transform.rotation, target, turnRate, dt)
                         : (UnityEngine.Quaternion)target;
                     if (braced)
                     {

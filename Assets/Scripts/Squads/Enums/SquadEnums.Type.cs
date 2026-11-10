@@ -32,7 +32,11 @@ public enum SquadType
     Squires,
     Archers,
     Pikemen,
-    Spearmen
+    Spearmen,
+    /// <summary>Cavalry (M17): soldier and horse are one body.</summary>
+    LanceCavalry,
+    SwordCavalry,
+    HorseArchers
 }
 
 /// <summary>

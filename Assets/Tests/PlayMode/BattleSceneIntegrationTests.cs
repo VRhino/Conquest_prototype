@@ -86,7 +86,12 @@ public partial class BattleSceneIntegrationTests
         Assert.That(pool.Length, Is.GreaterThan(0), "Repository hero fixture is missing.");
         var local = pool[0];
         local.heroName = "IntegrationLocal";
-        string squadId = TestContext.CurrentContext.Test.Name.Contains("Spearmen") ? "spm01" : "sqd01";
+        string testName = TestContext.CurrentContext.Test.Name;
+        string squadId = testName.Contains("Spearmen") ? "spm01"
+            : testName.Contains("LanceCavalry") ? "lcv01"
+            : testName.Contains("SwordCavalry") ? "scv01"
+            : testName.Contains("HorseArchers") ? "hac01"
+            : "sqd01";
         var reserve = SquadDataService.CreateSquadInstance(squadId);
         Assert.That(reserve, Is.Not.Null, "Repository squad sqd01 is missing.");
         local.squadProgress.Clear();
@@ -512,6 +517,16 @@ public partial class BattleSceneIntegrationTests
     [UnityTest]
     public IEnumerator ProductionBattleSceneMeleeContactsCauseDamage()
         => VerifyProductionMeleeContacts(false);
+
+    /// <summary>M17: the lance and the sword from horseback reach soldiers on foot, and they reach the horse.</summary>
+    [UnityTest]
+    public IEnumerator LanceCavalryContactsCauseDamage() => VerifyProductionMeleeContacts(false);
+
+    [UnityTest]
+    public IEnumerator SwordCavalryContactsCauseDamage() => VerifyProductionMeleeContacts(false);
+
+    [UnityTest]
+    public IEnumerator HorseArchersContactsCauseDamage() => VerifyProductionMeleeContacts(false);
 
     IEnumerator VerifyProductionMeleeContacts(bool atEnemySpawn)
     {
@@ -991,6 +1006,59 @@ public partial class BattleSceneIntegrationTests
             Assert.That(running, Is.GreaterThan(0), "The march has soldiers running to their slot.");
             Assert.That(mismatches, Is.LessThanOrEqualTo(MaxMismatch * (walking + running)),
                 $"Gait and gear disagree in {mismatches} of {walking + running} samples.");
+        }
+        finally
+        {
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            RestoreInputSettings(previousInput);
+        }
+    }
+
+    /// <summary>M17: cavalry spawns mounted, follows the hero at a trot or a gallop, and each rider stays in step with its horse.</summary>
+    [UnityTest]
+    public IEnumerator LanceCavalryMarchesWithEachRiderInStepWithItsHorse() => CavalryMarches();
+
+    [UnityTest]
+    public IEnumerator SwordCavalryMarchesWithEachRiderInStepWithItsHorse() => CavalryMarches();
+
+    [UnityTest]
+    public IEnumerator HorseArchersMarchWithEachRiderInStepWithItsHorse() => CavalryMarches();
+
+    IEnumerator CavalryMarches()
+    {
+        const float MarchSeconds = 6f;
+        var previousInput = UseUnfocusedEditorInput();
+        try
+        {
+            yield return PrepareBaseline();
+            var units = em.GetBuffer<SquadUnitElement>(squad).AsNativeArray().ToArray().Select(e => e.Value).ToArray();
+            Assert.That(units.Length, Is.GreaterThan(0));
+            Assert.That(units.All(u => em.HasComponent<MountComponent>(u)), Is.True, "Cavalry soldiers are mounted (L5-8).");
+            var mirrors = units.Select(u => em.GetComponentObject<NavMeshAgent>(u).GetComponentInChildren<RiderAnimatorMirror>(true)).ToArray();
+            Assert.That(mirrors.All(m => m != null && m.Horse != null && m.Rider != null), Is.True, "Every soldier has its horse and rider.");
+            Assert.That(mirrors.All(m => m.Rider.transform.parent.name == "Saddle"), Is.True, "The rider hangs from the saddle.");
+            float maxBlend = 0f;
+            int samples = 0, outOfStep = 0;
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
+            for (float t = 0f; t < MarchSeconds; t += Time.deltaTime)
+            {
+                yield return null;
+                foreach (var m in mirrors)
+                {
+                    if (m.Horse.IsInTransition(0) || m.Rider.IsInTransition(0)) continue;
+                    float blend = m.Horse.GetFloat(AnimationHashes.MountGaitBlend);
+                    maxBlend = Mathf.Max(maxBlend, blend);
+                    Assert.That(m.Rider.GetFloat(AnimationHashes.MountGaitBlend), Is.EqualTo(blend).Within(1e-4f), "Rider and horse get the same gait.");
+                    float horse = Mathf.Repeat(m.Horse.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
+                    float rider = Mathf.Repeat(m.Rider.GetCurrentAnimatorStateInfo(0).normalizedTime, 1f);
+                    float drift = Mathf.Abs(horse - rider);
+                    samples++;
+                    if (Mathf.Min(drift, 1f - drift) > 0.05f) outOfStep++;
+                }
+            }
+            Assert.That(maxBlend, Is.GreaterThan(1.5f), "The horses trot or gallop to follow the hero.");
+            Assert.That(outOfStep, Is.LessThanOrEqualTo(Mathf.CeilToInt(samples * 0.02f)),
+                $"Rider out of step with its horse in {outOfStep} of {samples} samples.");
         }
         finally
         {

@@ -61,6 +61,9 @@ public static class AnimationHashes
     public static readonly int TriggerHitReaction     = Animator.StringToHash("TriggerHitReaction");
     /// <summary>The <see cref="HitReaction"/> to play, as an int.</summary>
     public static readonly int HitReactionType        = Animator.StringToHash("HitReactionType");
+    // Mounts (M17, MountGait): the gait tree of the horse and its rider, 0 idle .. 3 gallop, and its playback speed.
+    public static readonly int MountGaitBlend         = Animator.StringToHash("MountGaitBlend");
+    public static readonly int MountGaitScale         = Animator.StringToHash("MountGaitScale");
 
     // Ranged combat
     public static readonly int TriggerShoot           = Animator.StringToHash("TriggerShoot");

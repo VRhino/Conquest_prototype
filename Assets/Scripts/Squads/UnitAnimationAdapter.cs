@@ -46,6 +46,11 @@ namespace ConquestTactics.Animation
         public uint ReactionRevision { get; private set; }
         public bool IsDead { get; private set; }
 
+        /// <summary>Mounted soldier (M17): the gait tree value of its horse and rider (0 idle .. 3 gallop) and its playback speed.</summary>
+        public bool IsMounted { get; private set; }
+        public float MountGaitBlend { get; private set; }
+        public float MountGaitScale { get; private set; } = 1f;
+
         // Velocidad 2D real (sin normalizar, en unidades por segundo)
         public float Speed2D { get; private set; }
         public float AnimatorSpeed { get; private set; }
@@ -251,6 +256,17 @@ namespace ConquestTactics.Animation
                     ReactionRevision = resilience.reactionRevision;
                 }
                 IsDead = _entityManager.HasComponent<IsDeadComponent>(_unitEntity);
+
+                // Montado (M17): andar del caballo según su velocidad frente a la marcha (MaxSpeed) y la carrera de la escuadra.
+                IsMounted = _entityManager.HasComponent<MountComponent>(_unitEntity);
+                if (IsMounted)
+                {
+                    float walk = animData.MaxSpeed;
+                    float run = walk * MovementTuningComponent.Default.runSpeedMultiplier;
+                    float speed = animData.IsMoving ? animData.CurrentSpeed : 0f;
+                    MountGaitBlend = MountGait.Blend(speed, walk, run);
+                    MountGaitScale = MountGait.Scale(speed, MountGaitBlend);
+                }
 
                 // Actualizar propiedades
                 NormalizedSpeed = animData.MaxSpeed > 0

@@ -194,6 +194,11 @@ namespace ConquestTactics.Visual
                 _animator.SetInteger(AnimationHashes.Stance, _animationAdapter.Stance);
             if (AnimatorHasParameter(AnimationHashes.SlotRole))
                 _animator.SetInteger(AnimationHashes.SlotRole, _animationAdapter.SlotRole);
+            // Horse (M17): its gait tree. The rider's Animator gets the same values from RiderAnimatorMirror.
+            if (AnimatorHasParameter(AnimationHashes.MountGaitBlend))
+                _animator.SetFloat(AnimationHashes.MountGaitBlend, _animationAdapter.MountGaitBlend);
+            if (AnimatorHasParameter(AnimationHashes.MountGaitScale))
+                _animator.SetFloat(AnimationHashes.MountGaitScale, _animationAdapter.MountGaitScale);
             // Hit reaction (L1-09): once per new reaction of the unit.
             _hitReaction.Apply(_animationAdapter.UnitEntity, _animationAdapter.ReactionRevision, _animationAdapter.Reaction,
                 _animationAdapter.IsDead, _animator);

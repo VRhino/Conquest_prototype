@@ -17,7 +17,8 @@ vídeos de revisión. Para cambiar algo, se regenera allí y se copian aquí los
   `chestnut`, `pinto`, `black`, `grey` y `dun`.
 - `Materials/Horse_<Capa>.mat`: URP Lit, uno por capa. Todas comparten las UV. La manta es la celda `CLOTH` de la paleta.
 - `Animations/Horse/Horse_{Idle,Walk,Trot,Gallop}.fbx`: rig **Generic** con el avatar de `Horse_Mount`, en el sitio y en
-  bucle.
+  bucle. Cada FBX lleva junto al esqueleto un vacío, `ClipRoot`, para que las curvas vayan a `HorseRig/Root/...`, como en el
+  modelo. Sin él, Unity convertía el armature en la raíz del FBX y el clip no movía al caballo.
 
   | Clip | Velocidad de suelo |
   |---|---|
@@ -34,3 +35,15 @@ vídeos de revisión. Para cambiar algo, se regenera allí y se copian aquí los
     `CurrentGait`: 0 idle, 1 paso, 2 trote, 3 galope.
   - `*_Attack` no va en bucle: empieza y acaba en `*_Ready`.
   - `Archer_Attack` suelta la flecha en los fotogramas 19-20.
+
+## En juego (M17, `Docs/Por_Abordar/Movimiento.md`)
+- `Animations/AC_Horse.controller` (Generic): un estado `Gait` con el árbol Idle, Walk, Trot y Gallop sobre
+  `MountGaitBlend` (0-3), a la velocidad `MountGaitScale`.
+- `Animations/Riders/AC_Rider_{Lancer,Sword,Archer}.controller` (Humanoid):
+  - El mismo árbol con los clips del jinete, que van a la par del caballo.
+  - Una capa `Combat` de cintura arriba: `Attack` con `IsAttacking`, o `Shoot` con `TriggerShoot` para los arqueros.
+- Visuales de batalla `Assets/Prefabs/BattleVisuals/{LanceCavalry,SwordCavalry,HorseArchers}.prefab`:
+  - El caballo en la raíz, con agente, colisores y detector.
+  - El jinete de una tropa a pie colgado de `Saddle`.
+  - `RiderAnimatorMirror`, que mueve al jinete con los datos del caballo.
+- Todo lo reconstruye `CavalrySetup` (menú *Conquest / Cavalry*).

@@ -44,6 +44,8 @@ public struct SquadDataComponent : IComponentData
     /// <summary>Projectiles per shot and the fan they open into (L2-7).</summary>
     public int projectilesPerShot;
     public float fanAngleDegrees;
+    /// <summary>Height the projectile leaves from, m (M17: higher on horseback).</summary>
+    public float launchHeight;
 
     /// <summary>Progression curves sampled per level.</summary>
     public BlobAssetReference<SquadProgressionCurveBlob> curves;
@@ -72,6 +74,13 @@ public struct SquadDataComponent : IComponentData
     public float staminaRunCostPerSoldier;
     public float staminaRecoveryPerSecond;
     public float staminaRecoverFraction;
+
+    /// <summary>Cavalry (M17): each soldier is one body with its horse, and gets a <see cref="MountComponent"/>.</summary>
+    public bool mounted;
+    /// <summary>Full attack arc around the horse's front, degrees (L5-8); 0 = no limit.</summary>
+    public float mountAttackArc;
+    /// <summary>Combat turn rate of the horse, deg/s (L5-8); 0 = the tuning's.</summary>
+    public float mountTurnRate;
 }
 
 /// <summary>
