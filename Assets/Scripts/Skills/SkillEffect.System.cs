@@ -101,6 +101,12 @@ public partial class SkillEffectSystem : SystemBase
     {
         if (!TryGetProfile(r.caster, out var profile)) return;
         profile.traits.spares = r.effect.spares; // The skill's immunities, not the weapon's (L1-18).
+        if (r.effect.reaction != HitReaction.None)
+        {
+            // The skill's reaction, if it declares one (L1-09).
+            profile.traits.reaction = r.effect.reaction;
+            profile.traits.reactionLimitedOn = r.effect.reactionLimitedOn;
+        }
         uint tick = CombatRandom.Tick(now);
         float3 centre = SkillArea.Centre(r.origin, r.forward, r.effect.distance);
         var hits = new NativeList<Entity>(16, Allocator.Temp);

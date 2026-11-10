@@ -10,4 +10,7 @@ public struct UnitHitKnockbackComponent : IComponentData
     public bool active;
     /// <summary>While the push lasts the unit walks through enemy bodies (heavy reactions, P2); from the hit.</summary>
     public bool passesEnemies;
+    /// <summary>Length and duration of this push (the tuning's, or a heavy reaction's, L1-09).</summary>
+    public float distance;
+    public float duration;
 }

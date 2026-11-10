@@ -10,7 +10,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C1 | Valores de los rasgos del golpe en los datos de cada arma | Media | **Hecho** (2026-11-03, tabla aprobada) |
 | C2 | Terreno de los mapas y modificadores de cada tipo de escuadra | Media | **Hecho** (2026-11-03, tabla aprobada) |
 | C3 | Datos de modificadores condicionados y perks que los den | Media | Pendiente (datos) |
-| C4 | Reacciones al golpe por tipo y clase de objetivo (L1-09) | Media | Bloqueado (animaciones) |
+| C4 | Reacciones al golpe por tipo y clase de objetivo (L1-09) | Media | **Hecho** (2026-11-10, cuatro clips y capa `Hit Reaction`) |
 | C5 | Variación del daño por habilidad | Baja | Pendiente |
 | C6 | Carga en habilidades y "golpe de pasada" | Baja | Pendiente (cuando haya caballería) |
 | C7 | Señal visual del robo de vida y de la protección al reaparecer | Baja | Pendiente |
@@ -19,6 +19,9 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C10 | Señal visual del aturdimiento y de flanco o emboscada | Media | **Hecho** (2026-11-06, texto flotante) |
 | C11 | El aturdimiento no corta la habilidad del héroe que ya está en curso | Baja | **No era así** (2026-11-06, ya la corta; test añadido) |
 | C12 | Demasiados textos flotantes en batallas de muchas escuadras | Media | **Hecho** (2026-11-07, los del jugador y lo importante) |
+| C13 | El héroe derribado o despedido no se desplaza | Baja | Pendiente |
+| C14 | Qué armas y habilidades derriban o despiden | Media | Pendiente (datos, aprobar tabla) |
+| C15 | Reacción según la dirección del golpe (de espaldas cae de frente) | Baja | Pendiente |
 
 ---
 
@@ -68,7 +71,17 @@ modificadores normales.
 - Los perks podrían dar condicionados añadiendo un `ConditionalDamage` opcional a `PerkEffect`.
 
 ## C4. Reacciones al golpe (L1-09)
-**Bloqueado:** necesita animaciones de reacción (retroceso, derribo, despedido, rotura de guardia). Lo que propone el
+**Hecho (2026-11-10).** `DamageMechanics.md` §5.10:
+- Cuando la resiliencia se rompe, el golpe provoca su reacción (`HitTraits.reaction` o `SkillEvent.reaction`):
+  retroceso, derribo o despedido.
+- Un escudo roto provoca rotura de guardia.
+- Permiso por clase (`reactionLimitedOn`) y stat `ControlResistance`.
+- Hay cuatro clips Humanoid hechos en Blender (`Assets/Art/Animations/Humanoid/Hit_*`) y la capa `Hit Reaction` en los
+  cinco controladores.
+- El aturdimiento dura lo que su clip, y el derribo y el despedido empujan más al soldado.
+- Quedan C13 a C15.
+
+**Qué era.** Bloqueado: necesitaba animaciones de reacción (retroceso, derribo, despedido, rotura de guardia). Lo que propone el
 catálogo: un enum `HitReaction` por golpe, con permiso por clase de objetivo (soldado, héroe, grande) y un stat de
 resistencia al control que lo anula. Hoy solo hay retroceso del cuerpo (`HitKnockback`) y el aturdimiento al romperse el
 escudo. Encaja como un rasgo más de `HitTraits` y una etapa de `DamageCalculationSystem` que publique la reacción.
@@ -123,3 +136,30 @@ muerte, escudo roto y aturdido; uno por golpe con un tope de 30 a la vez (`Damag
 usuario). Test `FloatingTextRelevanceTests`.
 
 **Qué era.** Cada golpe de todo el campo creaba su texto: con 26 o más soldados por bando se amontonaban.
+
+## C13. El héroe derribado o despedido no se desplaza
+**Qué es.** Los clips de reacción van en el sitio. A un soldado lo desplaza el empujón de ECS (`UnitHitKnockbackSystem`),
+pero el héroe no tiene empujón: su cuerpo lo mueve `LocalHeroCharacterMotor`, y en los remotos el agente. Un héroe
+despedido sale volando y cae donde estaba.
+
+**Cómo abordarlo.** Una velocidad de empujón en el motor local, con la misma curva (`HitKnockback`) y la distancia de
+`HitReactions.Push`, y `agent.Move` en los remotos, como hacen los soldados.
+
+## C14. Qué armas y habilidades derriban o despiden
+**Qué es.** El mecanismo está, pero ningún dato lo usa: toda rotura de resiliencia es un retroceso. Hace falta una tabla
+aprobada por el usuario, como la de C9. Propuesta para empezar:
+- Mandoble del héroe: derribo.
+- Piqueros: derribo, que en héroes se queda en retroceso.
+- Habilidades de embestida o golpe de escudo: despedido o derribo.
+- Una habilidad definitiva con `ControlResistance` 3 mientras dura.
+
+**Cómo abordarlo.** Rellenar `reaction` y `reactionLimitedOn` en el `HitTraits` de cada arma
+(`Resources/Squads/*`, `Resources/Data/HeroClasses/*`) y en los eventos de las habilidades, y medir con S6 que el choque
+de líneas no se rompe.
+
+## C15. Reacción según la dirección del golpe
+**Qué es.** Los clips suponen un golpe de frente: el cuerpo cae o retrocede hacia atrás. Un golpe por la espalda empuja
+hacia delante (el empujón va en contra del atacante), pero el clip cae hacia atrás.
+
+**Cómo abordarlo.** Variantes "de espaldas" de los cuatro clips y un parámetro más (`HitDirection` ya está en el golpe,
+§5.7). También se pueden girar los estados, si la variante no compensa.

@@ -45,6 +45,11 @@ public struct HitTraits
 
     [Tooltip("Clases de objetivo a las que el golpe no daña (L1-18): ni vida, ni resiliencia, ni retroceso.")]
     public HitTargets spares;
+
+    [Tooltip("Reacción cuando este golpe vacía la resiliencia del objetivo (L1-09). Ninguna = retroceso, la de siempre.")]
+    public HitReaction reaction;
+    [Tooltip("Clases de objetivo con las que un derribo o un despedido de este golpe se quedan en retroceso (L1-09).")]
+    public HitTargets reactionLimitedOn;
 }
 
 /// <summary>Target classes as flags, for immunities (L1-18). None = it damages everyone.</summary>

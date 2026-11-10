@@ -22,3 +22,13 @@ revisión. Para cambiar un clip, se regenera allí y se copia aquí el FBX: los 
   apagado, así que el desplazamiento de la caída se ve igual.
 - El avatar de Synty asigna `RightToes` a `Toes_R`, la punta, y no a `Ball_R`. Por eso los dedos del pie derecho no se
   doblan en Unity, y en los clips el pie derecho se anima rígido.
+
+## Reacciones al golpe (L1-09, `Docs/Mechanics/DamageMechanics.md` §5.10)
+Van de idle a idle, en el sitio y sin bucle. Las reproduce la capa `Hit Reaction`, que está encima de todas en los
+controladores del héroe y de las cuatro tropas y que construye `HitReactionAnimatorSetup`.
+- `Hit_Stagger` (0,8 s): retroceso. El pecho se va atrás y da un paso atrás con el pie derecho.
+- `Hit_GuardBreak` (1,2 s): rotura de guardia. El brazo del escudo sale despedido.
+- `Hit_Knockdown` (2,2 s): derribo. Cae de culo y de espaldas, se incorpora y se levanta sobre los pies.
+- `Hit_Launch` (2,6 s): despedido. Sale por el aire de espaldas, cae con rebote y se levanta.
+
+El desplazamiento grande lo hace ECS moviendo la entidad, no el clip. Por eso la cadera acaba donde empezó.

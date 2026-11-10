@@ -57,6 +57,10 @@ public static class AnimationHashes
     // Hero death (HeroDeathPresentationComponent): optional, only on hero controllers.
     public static readonly int TriggerDeath           = Animator.StringToHash("TriggerDeath");
     public static readonly int IsDead                 = Animator.StringToHash("IsDead");
+    // Hit reactions (L1-09, ResilienceComponent.reaction): the "Hit Reaction" layer of hero and troop controllers.
+    public static readonly int TriggerHitReaction     = Animator.StringToHash("TriggerHitReaction");
+    /// <summary>The <see cref="HitReaction"/> to play, as an int.</summary>
+    public static readonly int HitReactionType        = Animator.StringToHash("HitReactionType");
 
     // Ranged combat
     public static readonly int TriggerShoot           = Animator.StringToHash("TriggerShoot");

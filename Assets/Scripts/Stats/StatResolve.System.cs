@@ -87,6 +87,7 @@ public partial class StatResolveSystem : SystemBase
             float fraction = resilience.ValueRO.max > 0f ? math.saturate(resilience.ValueRO.current / resilience.ValueRO.max) : 1f;
             resilience.ValueRW.max = max;
             resilience.ValueRW.current = max * fraction;
+            resilience.ValueRW.controlResistance = stats.Get(StatId.ControlResistance);
         }
         if (SystemAPI.HasComponent<DefenseComponent>(entity))
             SystemAPI.SetComponent(entity, new DefenseComponent

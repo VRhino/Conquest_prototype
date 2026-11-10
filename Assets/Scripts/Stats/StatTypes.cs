@@ -65,6 +65,12 @@ public enum StatId : byte
     BluntRelief,
     SlashRelief,
     PierceRelief,
+    /// <summary>
+    /// Whole levels a hit's reaction drops on this target (L1-09; base 0): 1 turns a launch into a knock-down, a knock-down
+    /// into a stagger and a stagger into nothing; 3 or more, no reaction and no stun ("super armour"). A broken shield still
+    /// breaks the guard.
+    /// </summary>
+    ControlResistance,
     Count,
 }
 

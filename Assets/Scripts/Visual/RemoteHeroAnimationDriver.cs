@@ -33,6 +33,7 @@ namespace ConquestTactics.Visual
         private bool _cachedAnimatorEnabled;
         private bool _hasParameterCacheState;
         private readonly HeroDeathAnimationBridge _deathAnimation = new HeroDeathAnimationBridge();
+        private readonly HitReactionAnimationBridge _hitReaction = new HitReactionAnimationBridge();
 
         public bool IsBound => IsValidBinding();
 
@@ -182,6 +183,7 @@ namespace ConquestTactics.Visual
             }
 
             _deathAnimation.Apply(entityManager, _heroEntity, _animator);
+            _hitReaction.Apply(entityManager, _heroEntity, _animator);
         }
 
         private void CacheComponents()

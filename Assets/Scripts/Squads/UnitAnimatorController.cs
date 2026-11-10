@@ -41,7 +41,8 @@ namespace ConquestTactics.Visual
         private bool _parametersCached;
         private readonly HashSet<int> _parameterHashes = new();
         private UnitAnimationAdapter _animationAdapter;
-        
+        private readonly HitReactionAnimationBridge _hitReaction = new HitReactionAnimationBridge();
+
         // Animation parameter hashes are centralized in AnimationHashes.cs
         
         // Variable para detectar cambios de estado
@@ -193,6 +194,9 @@ namespace ConquestTactics.Visual
                 _animator.SetInteger(AnimationHashes.Stance, _animationAdapter.Stance);
             if (AnimatorHasParameter(AnimationHashes.SlotRole))
                 _animator.SetInteger(AnimationHashes.SlotRole, _animationAdapter.SlotRole);
+            // Hit reaction (L1-09): once per new reaction of the unit.
+            _hitReaction.Apply(_animationAdapter.UnitEntity, _animationAdapter.ReactionRevision, _animationAdapter.Reaction,
+                _animationAdapter.IsDead, _animator);
             _wasMovingLastFrame = moving;
         }
 

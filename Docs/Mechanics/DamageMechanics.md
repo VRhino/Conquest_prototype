@@ -321,13 +321,13 @@ resiliencia; al vaciarse, el objetivo queda **aturdido** un momento, y la barra 
   espalda +50 %, emboscada +50 %. No la gastan los golpes bloqueados, los absorbidos del todo, los que matan ni los tics.
 - **Recuperación perezosa:** tras 3 s sin golpes recupera el 25 % del máximo por segundo. No hay sistema por frame:
   `Resilience.Current` la calcula al recibir el siguiente golpe.
-- **Rotura:** aturdido 0,8 s. La velocidad pasa a 0 con un override de la pila (`StatEffects.ResilienceBreakStun`, como la
+- **Rotura:** aturdido lo que dure su reacción (0,8 s el retroceso de siempre; §5.10). La velocidad pasa a 0 con un override de la pila (`StatEffects.ResilienceBreakStun`, como la
   rotura del escudo), así que el héroe tampoco lanza habilidades (`SkillGate`, `Immobilised`), y la habilidad que tenía en
   curso y la aparcada terminan (`SkillExecutionSystem`; test `AResilienceBreakEndsTheRunningSkill`). Un soldado pierde el golpe
   que tenía en curso y no ataca ni dispara hasta que acaba (`UnitAttackSystem`, `RangedAttackSystem`). Durante el
   aturdimiento los golpes no gastan resiliencia, así que no se encadenan aturdimientos. El retroceso de cada golpe sigue.
-- **Ajustes:** `SquadSpawnConfigAuthoring.resilience` (`ResilienceTuning`). Las animaciones de reacción son L1-09
-  (`Docs/Por_Abordar/Combate.md` C4).
+- **Ajustes:** `SquadSpawnConfigAuthoring.resilience` (`ResilienceTuning`). La reacción de cada rotura (retroceso, derribo,
+  despedido) y su animación están en §5.10 (L1-09).
 - **Datos** (aprobados por el usuario el 2026-11-06, `Docs/Por_Abordar/Combate.md` C9):
 
 | Quién | Resiliencia máxima (`baseResilience`) | Resiliencia por golpe de su arma (`resilienceDamage`) |
@@ -362,6 +362,45 @@ Tres etapas más de la cadena de la referencia, sin búsquedas nuevas por golpe:
   sin escalar con el nivel); perks y efectos suman. Valores por armadura (2026-11-07, aprobados): Squires 10 % cortante y
   20 % perforante; Pikemen y Spearmen 10 % cortante; Levy Archers y héroes, nada de serie. Una flecha de 100 perforante
   a un escudero: 100 − 50 de defensa = 50, × 0,8 = 40.
+
+### 5.10 Reacciones al golpe (L1-09, 2026-11-10)
+
+Qué hace el golpe con el cuerpo. La resiliencia (§5.8) decide cuándo: el golpe que la vacía provoca su reacción, y la
+rotura del escudo (§6) provoca la rotura de guardia. Los demás golpes solo llevan el retroceso de siempre.
+
+- **Reacciones** (`HitReaction`), de menos a más:
+  | Reacción | Nivel | Aturdimiento | Empujón (soldados) | Clip |
+  |---|---|---|---|---|
+  | Retroceso (`Stagger`) | 1 | `stunDuration`, 0,8 s | el de cada golpe | `Hit_Stagger`, 0,8 s |
+  | Derribo (`Knockdown`) | 2 | `knockdownDuration`, 2,2 s | 0,8 m en 0,45 s | `Hit_Knockdown`, 2,2 s |
+  | Despedido (`Launch`) | 3 | `launchDuration`, 2,6 s | 2,5 m en 0,6 s | `Hit_Launch`, 2,6 s |
+  | Rotura de guardia (`GuardBreak`) | — | `breakStunDuration` del escudo | el de cada golpe | `Hit_GuardBreak`, 1,2 s |
+- **Qué reacción.** `HitTraits.reaction` del arma, o la del evento de la habilidad
+  (`SkillEvent.reaction`, que la sustituye si no es Ninguna). Ninguna = retroceso.
+- **Permiso por clase.** `HitTraits.reactionLimitedOn` (héroes, soldados): en esas clases un derribo o un despedido se
+  queda en retroceso.
+- **Resistencia al control.** Stat `ControlResistance` de la pila, base 0, escrito en `ResilienceComponent`. Baja la
+  reacción un nivel por punto entero. A 0 no hay reacción ni aturdimiento, aunque la resiliencia se rellena (la
+  "superarmadura" de una habilidad). No afecta a la rotura de guardia.
+- **Empujón.** Los clips van en el sitio. El derribo y el despedido empujan al soldado más lejos
+  (`UnitHitImpactComponent.distance` y `duration`) y le dejan atravesar enemigos mientras dura (P2). El héroe no se
+  desplaza (`Por_Abordar/Combate.md` C13).
+- **Animación.** `DamageCalculationSystem` publica la reacción en `ResilienceComponent.reaction` y sube
+  `reactionRevision`. `HitReactionAnimationBridge` dispara `TriggerHitReaction` con `HitReactionType`, una vez por
+  revisión:
+  - En los soldados lo dispara `UnitAnimatorController`, con lo que lee `UnitAnimationAdapter`.
+  - En el héroe local, `EntityVisualSync`.
+  - En los remotos y la IA, `RemoteHeroAnimationDriver`.
+- **Animator.** La capa `Hit Reaction` va encima de todas en los cinco controladores (héroe y cuatro tropas):
+  - Cuerpo entero.
+  - Reposo vacío que deja pasar las capas de abajo.
+  - Un estado por reacción, que vuelve al reposo al acabar.
+  - En el héroe, `IsDead` la corta.
+  - La construye `HitReactionAnimatorSetup` (menú *Conquest / Animation / Rebuild Hit Reaction Layers*).
+- **Datos.** Ningún arma ni habilidad pide todavía derribo ni despedido: hoy toda rotura es un retroceso y todo escudo
+  roto, una rotura de guardia (`Por_Abordar/Combate.md` C14).
+- **Ajustes:** `SquadSpawnConfigAuthoring.resilience` (`ResilienceTuning`, grupo Reacciones).
+- **Tests:** `HitReactionTests` (EditMode) y `BattleSceneResilienceBreakPlaysTheHitReactionOnSoldierAndHero` (PlayMode).
 
 ---
 

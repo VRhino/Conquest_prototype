@@ -124,6 +124,13 @@ public struct SkillEvent
     /// decides its own immunities.
     /// </summary>
     public HitTargets spares;
+    /// <summary>
+    /// Reaction of the event's area damage when it breaks a target's resilience (L1-09). None = the weapon's; anything else
+    /// replaces it, together with <see cref="reactionLimitedOn"/>.
+    /// </summary>
+    public HitReaction reaction;
+    /// <summary>Target classes on which the event's knock-down or launch stays a stagger (L1-09).</summary>
+    public HitTargets reactionLimitedOn;
 }
 
 /// <summary>A skill as data, built from its <see cref="HeroAbility"/> (or the hero's weapon timings for the basic attack).</summary>

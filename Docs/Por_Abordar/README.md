@@ -24,7 +24,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | Pila_Modificadores.md | P1, P5 (P3 hecho el 2026-11-08) | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 (D1 hecho el 2026-11-10) | — | D5 (medir el coste de recrear el visual) |
 | IA.md | I1-I5 | — | I1 (medir el coste de la IA antes de un LOD) |
-| Combate.md | C3, C5-C8 (C1, C2, C9, C10 y C11 cerrados) | C4 (L1-09, animaciones de reacción) | C3 (datos de condicionados; el caso de libro espera a la caballería) |
+| Combate.md | C3, C5-C8, C13-C15 (C1, C2, C4, C9 a C12 cerrados) | — | C14 (datos de derribo y despedido, aprobar tabla) |
 
 Lo que el catálogo de la referencia aún no ha planificado (incluidos los 20 puntos añadidos el 2026-10-26, marcados
 "(amp.)") está en `Docs/Design/Aprendizajes_Referencia.md` §4, con su estado al final de §5. Cuando un plan los tome, lo

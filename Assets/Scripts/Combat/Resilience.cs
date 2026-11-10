@@ -5,8 +5,9 @@ using UnityEngine;
 
 /// <summary>
 /// Resilience of a soldier or hero (Aprendizajes_Referencia.md L1-16; ref.: a max and a current value per actor that
-/// each hit reaching health wears down). <see cref="max"/> is written only by <see cref="StatResolveSystem"/> from
-/// <see cref="StatId.MaxResilience"/>; the rest only by <see cref="DamageCalculationSystem"/>. Max 0 = no resilience.
+/// each hit reaching health wears down). <see cref="max"/> and <see cref="controlResistance"/> are written only by
+/// <see cref="StatResolveSystem"/> from <see cref="StatId.MaxResilience"/> and <see cref="StatId.ControlResistance"/>; the
+/// rest only by <see cref="DamageCalculationSystem"/>. Max 0 = no resilience.
 /// </summary>
 public struct ResilienceComponent : IComponentData
 {
@@ -17,6 +18,11 @@ public struct ResilienceComponent : IComponentData
     public double lastHitTime;
     /// <summary>Simulation time the stun of a break ends; until then hits do not wear it down.</summary>
     public double stunnedUntil;
+    /// <summary>Whole levels the target's reactions drop (L1-09, <see cref="StatId.ControlResistance"/>; written by StatResolveSystem).</summary>
+    public float controlResistance;
+    /// <summary>Last reaction (L1-09): a resilience break or a broken shield. The visuals play it when the revision changes.</summary>
+    public HitReaction reaction;
+    public uint reactionRevision;
 }
 
 /// <summary>How resilience wears down, recovers and breaks (L1-16), in <see cref="SquadSpawnConfigComponent"/>.</summary>
@@ -38,6 +44,20 @@ public struct ResilienceTuning
     [Tooltip("Resiliencia extra que quita una emboscada (L1-15), como ratio; se suma a la de la dirección.")]
     public float ambushRatio;
 
+    [Header("Reacciones (L1-09)")]
+    [Tooltip("Aturdimiento de un derribo, s: lo que tarda en caer y levantarse (clip Hit_Knockdown). El retroceso usa stunDuration.")]
+    [Min(0f)] public float knockdownDuration;
+    [Tooltip("Aturdimiento de un despedido, s (clip Hit_Launch).")]
+    [Min(0f)] public float launchDuration;
+    [Tooltip("Empujón de un soldado derribado, m. El clip va en el sitio: esto es lo que lo mueve.")]
+    [Min(0f)] public float knockdownPushDistance;
+    [Tooltip("Duración de ese empujón, s.")]
+    [Min(0f)] public float knockdownPushDuration;
+    [Tooltip("Empujón de un soldado despedido, m.")]
+    [Min(0f)] public float launchPushDistance;
+    [Tooltip("Duración de ese empujón, s.")]
+    [Min(0f)] public float launchPushDuration;
+
     public static ResilienceTuning Default => new()
     {
         stunDuration = 0.8f,
@@ -47,10 +67,25 @@ public struct ResilienceTuning
         flankRatio = 0.25f,
         backRatio = 0.5f,
         ambushRatio = 0.5f,
+        knockdownDuration = 2.2f,
+        launchDuration = 2.6f,
+        knockdownPushDistance = 0.8f,
+        knockdownPushDuration = 0.45f,
+        launchPushDistance = 2.5f,
+        launchPushDuration = 0.6f,
     };
 
-    /// <summary>Default values when the baked config predates these fields (all zero).</summary>
-    public ResilienceTuning OrDefault() => stunDuration > 0f ? this : Default;
+    /// <summary>Default values when the baked config predates these fields (all zero), field group by field group.</summary>
+    public ResilienceTuning OrDefault()
+    {
+        var t = stunDuration > 0f ? this : Default;
+        var d = Default;
+        if (t.knockdownDuration <= 0f) t.knockdownDuration = d.knockdownDuration;
+        if (t.launchDuration <= 0f) t.launchDuration = d.launchDuration;
+        if (t.knockdownPushDuration <= 0f) { t.knockdownPushDistance = d.knockdownPushDistance; t.knockdownPushDuration = d.knockdownPushDuration; }
+        if (t.launchPushDuration <= 0f) { t.launchPushDistance = d.launchPushDistance; t.launchPushDuration = d.launchPushDuration; }
+        return t;
+    }
 }
 
 /// <summary>
@@ -97,5 +132,22 @@ public static class Resilience
         r.current = r.max;
         r.stunnedUntil = now + tuning.stunDuration;
         return true;
+    }
+
+    /// <summary>
+    /// After a break (<see cref="Hit"/> returned true): the stun lasts what <paramref name="reaction"/> lasts and the
+    /// reaction is published for the visuals. None (resisted): no stun, nothing to play; the bar is refilled anyway.
+    /// </summary>
+    public static void Break(ref ResilienceComponent r, HitReaction reaction, double now, in ResilienceTuning tuning)
+    {
+        r.stunnedUntil = now + HitReactions.StunDuration(reaction, tuning);
+        if (reaction != HitReaction.None) Publish(ref r, reaction);
+    }
+
+    /// <summary>Publishes a reaction for the visuals (a broken shield publishes <see cref="HitReaction.GuardBreak"/>).</summary>
+    public static void Publish(ref ResilienceComponent r, HitReaction reaction)
+    {
+        r.reaction = reaction;
+        r.reactionRevision++;
     }
 }

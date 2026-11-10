@@ -165,6 +165,12 @@ public partial class DamageCalculationSystem : SystemBase
                                 StatEffects.ShieldBreakStun);
                             if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
                         }
+                        // The visuals play the guard break (L1-09); control resistance does not apply to it.
+                        if (SystemAPI.HasComponent<ResilienceComponent>(p.target))
+                        {
+                            var guard = SystemAPI.GetComponentRW<ResilienceComponent>(p.target);
+                            Resilience.Publish(ref guard.ValueRW, HitReaction.GuardBreak);
+                        }
                         if (transformLookup.HasComponent(p.target))
                         {
                             float3 bp = transformLookup[p.target].Position;
@@ -250,13 +256,33 @@ public partial class DamageCalculationSystem : SystemBase
                     resilienceTuning);
                 if (Resilience.Hit(ref resilience.ValueRW, wear, now, resilienceTuning))
                 {
-                    if (modifierLookup.HasBuffer(p.target))
+                    // The break's reaction (L1-09): the hit's, limited by the target's class and its control resistance.
+                    var reaction = HitReactions.OfBreak(profile.traits.reaction, profile.traits.reactionLimitedOn,
+                        SystemAPI.HasComponent<HeroLifeComponent>(p.target), SystemAPI.HasComponent<UnitOwnerComponent>(p.target),
+                        resilience.ValueRO.controlResistance);
+                    Resilience.Break(ref resilience.ValueRW, reaction, now, resilienceTuning);
+                    if (reaction != HitReaction.None)
                     {
-                        StatEffects.Immobilize(modifierLookup[p.target], resilience.ValueRO.stunnedUntil, StatEffects.ResilienceBreakStun);
-                        if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
+                        if (modifierLookup.HasBuffer(p.target))
+                        {
+                            StatEffects.Immobilize(modifierLookup[p.target], resilience.ValueRO.stunnedUntil, StatEffects.ResilienceBreakStun);
+                            if (dirtyLookup.HasComponent(p.target)) dirtyLookup.SetComponentEnabled(p.target, true);
+                        }
+                        if (transformLookup.HasComponent(p.target))
+                            Feedback(ref ecb, p, transformLookup[p.target].Position, DamageCategory.Stunned, 0f);
+                        // A knock-down or a launch pushes a soldier further, through enemies (P2): the clips play in place.
+                        float2 push = HitReactions.Push(reaction, resilienceTuning);
+                        if (push.x > 0f && push.y > 0f && SystemAPI.HasComponent<UnitHitImpactComponent>(p.target)
+                            && transformLookup.HasComponent(p.target))
+                        {
+                            float2 away = transformLookup[p.target].Position.xz - p.attackerPosition.xz;
+                            ecb.SetComponent(p.target, new UnitHitImpactComponent
+                            {
+                                direction = math.normalizesafe(away), passesEnemies = true, distance = push.x, duration = push.y,
+                            });
+                            ecb.SetComponentEnabled<UnitHitImpactComponent>(p.target, true);
+                        }
                     }
-                    if (transformLookup.HasComponent(p.target))
-                        Feedback(ref ecb, p, transformLookup[p.target].Position, DamageCategory.Stunned, 0f);
                 }
             }
 

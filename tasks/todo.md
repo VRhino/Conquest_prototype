@@ -1,3 +1,68 @@
+# Plan: Reacciones al golpe (C4, L1-09)
+
+Estado: **hecho** (2026-11-10), rama `main`. Lo pidió el usuario tras D1 ("vamos con lo siguiente"): orden D1 → C4 →
+M17 → H2.
+
+## Diseño
+- **Cuándo.** Sigue mandando la resiliencia (L1-16). Cuando un golpe la vacía, el objetivo sufre la reacción de ese
+  golpe. La rotura del escudo provoca la rotura de guardia. No hay reacción en los golpes que no rompen nada.
+- **Qué reacción.** `HitTraits.reaction` del golpe:
+  - `Stagger` (retroceso). Es el valor por defecto, 0, así que los datos de hoy no cambian.
+  - `Knockdown` (derribo).
+  - `Launch` (despedido).
+  - `GuardBreak` (rotura de guardia) solo sale del escudo roto.
+- **Permiso por clase.** `HitTraits.reactionLimited` es la máscara de clases de objetivo (héroes, soldados) en las que
+  un derribo o un despedido se queda en retroceso. 0 es neutro.
+- **Resistencia al control.** Stat `ControlResistance`, base 0. Baja la reacción tantos niveles como valga: despedido 3,
+  derribo 2, retroceso 1.
+  - Si llega a 0, no hay ni reacción ni aturdimiento, aunque la resiliencia se rellena igual (la "superarmadura" de las
+    habilidades).
+  - La rotura de guardia no se resiste.
+- **Duración.** El aturdimiento dura lo que su reacción:
+  - Retroceso: `stunDuration` (0,8 s).
+  - Derribo: `knockdownDuration` (2,2 s), nuevo en `ResilienceTuning`.
+  - Despedido: `launchDuration` (2,6 s), nuevo en `ResilienceTuning`.
+  - Rotura de guardia: `breakStunDuration` del escudo, como hoy.
+- **Desplazamiento.**
+  - Los clips van en el sitio en XZ.
+  - A los soldados los mueve el retroceso de ECS: `UnitHitImpactComponent` con la distancia y la duración de su
+    reacción (derribo 0,8 m y despedido 2,5 m, en el ajuste).
+  - El héroe no se desplaza. Queda pendiente: lo haría `LocalHeroCharacterMotor`.
+- **Publicación.**
+  - `ResilienceComponent.reaction` y `reactionRevision`. Solo los escribe `DamageCalculationSystem`.
+  - `HitReactionAnimationBridge` (como `HeroDeathAnimationBridge`, por revisión) dispara `TriggerHitReaction` con
+    `HitReactionType`.
+  - Lo usan `UnitAnimatorController` (soldados), `EntityVisualSync` (héroe local) y `RemoteHeroAnimationDriver`.
+- **Animator.**
+  - Capa superior `HitReaction` en los cinco controladores (héroe y cuatro tropas): cuerpo entero, override y peso 1.
+  - Reposo vacío, configurado como las capas que ya existen, y un estado por reacción que sale al terminar.
+  - En el héroe, `IsDead` corta la reacción.
+- **Datos.** Ningún asset asigna todavía derribo ni despedido: toda rotura da retroceso y todo escudo roto, rotura de
+  guardia. Al final se propone al usuario una tabla de armas y habilidades.
+
+## Pasos
+- [x] 1. Clips en Blender (`blender-tools/conquest-anims`), Humanoid, de idle a idle y en el sitio:
+  - `Hit_Stagger` (0,8 s).
+  - `Hit_Knockdown` (2,2 s): cae de espaldas y se levanta.
+  - `Hit_Launch` (2,6 s): sale por el aire, cae y se levanta.
+  - `Hit_GuardBreak` (1,2 s).
+- [x] 2. Unity:
+  - Importar con *Copy From Other* de `Hero_RigAvatar`.
+  - Capa `HitReaction` en los cinco controladores.
+  - Comprobar que el suelo y las articulaciones coinciden con Blender.
+- [x] 3. ECS: `HitReaction`, rasgos, stat, `Resilience.Hit` con duración por reacción, publicación y retroceso por
+  reacción.
+- [x] 4. Puentes visuales: soldados, héroe local y héroe remoto.
+- [x] 5. Tests: EditMode (reglas puras, sistema, puente y controladores) y PlayMode (una rotura en batalla anima la
+  reacción).
+- [x] 6. Documentación y commit:
+  - `DamageMechanics.md`.
+  - `Por_Abordar/Combate.md` C4.
+  - README.
+  - Propuesta de datos al usuario.
+
+---
+
 # Plan: Muro de escudos y Testudo de los escuderos (F3), y habilidad Avanzar
 
 Estado: **hecho** (2026-11-09), rama `main` local, sin subir. Poses `ef1faa1f`; Avanzar en el commit siguiente.

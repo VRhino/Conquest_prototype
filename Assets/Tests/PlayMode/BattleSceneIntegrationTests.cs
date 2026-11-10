@@ -780,6 +780,47 @@ public partial class BattleSceneIntegrationTests
             : HeroGameplayConfigComponent.DefaultDeathVisualHideDelay;
     }
 
+    /// <summary>L1-09 (Combate.md C4): a hit that breaks resilience plays its reaction on top of the soldier's and the hero's layers.</summary>
+    [UnityTest]
+    public IEnumerator BattleSceneResilienceBreakPlaysTheHitReactionOnSoldierAndHero()
+    {
+        const string Layer = "Hit Reaction";
+        var soldier = em.GetBuffer<SquadUnitElement>(squad)[0].Value;
+        var soldierAnimator = em.GetComponentObject<NavMeshAgent>(soldier).GetComponentInChildren<UnitAnimationAdapter>(true)
+            .GetComponent<Animator>();
+        Assert.That(soldierAnimator.GetLayerIndex(Layer), Is.GreaterThanOrEqualTo(0), "The soldier's controller has the layer.");
+        uint soldierRevision = em.GetComponentData<ResilienceComponent>(soldier).reactionRevision;
+        QueueResilienceBreak(soldier, HitReaction.Knockdown);
+        yield return Until(() => em.GetComponentData<ResilienceComponent>(soldier).reactionRevision > soldierRevision, 2f,
+            "The break did not publish a reaction.");
+        yield return Until(() => soldierAnimator.GetCurrentAnimatorStateInfo(soldierAnimator.GetLayerIndex(Layer))
+            .IsName(Layer + ".Knockdown"), 2f, "The soldier did not play the knock-down.");
+
+        var heroAnimator = LocalHeroVisual().GetComponentInChildren<Animator>(true);
+        QueueResilienceBreak(hero, HitReaction.Stagger);
+        yield return Until(() => heroAnimator.GetCurrentAnimatorStateInfo(heroAnimator.GetLayerIndex(Layer))
+            .IsName(Layer + ".Stagger"), 2f, "The local hero did not play the stagger.");
+    }
+
+    /// <summary>A light hit with an enormous resilience damage: it breaks the target's resilience with <paramref name="reaction"/>.</summary>
+    void QueueResilienceBreak(Entity target, HitReaction reaction)
+    {
+        var damage = em.CreateEntity();
+        em.AddComponentData(damage, new PendingDamageEvent
+        {
+            destroyEntityAfterProcessing = true, target = target,
+            hasInlineDamageProfile = true,
+            inlineDamageProfile = new DamageProfileComponent
+            {
+                bluntDamage = 1f, traits = new HitTraits { resilienceDamage = 100000f, reaction = reaction },
+            },
+            sourceTeam = em.HasComponent<TeamComponent>(target)
+                && em.GetComponentData<TeamComponent>(target).value == Team.TeamB ? Team.TeamA : Team.TeamB,
+            multiplier = 1f, hitType = HitType.Body,
+            attackerPosition = em.GetComponentData<LocalTransform>(target).Position + new float3(0f, 0f, 2f),
+        });
+    }
+
     void QueueLethalDamage(Entity target)
     {
         var damage = em.CreateEntity();

@@ -39,6 +39,13 @@ namespace ConquestTactics.Animation
         // Ranged: true mientras la unidad está recargando (sin munición)
         public bool IsReloadingRanged { get; private set; } = false;
 
+        /// <summary>Unit entity this adapter reads (Entity.Null until bound).</summary>
+        public Entity UnitEntity => _unitEntity;
+        /// <summary>Last hit reaction of the unit and its revision (L1-09, <see cref="ResilienceComponent"/>).</summary>
+        public HitReaction Reaction { get; private set; } = HitReaction.None;
+        public uint ReactionRevision { get; private set; }
+        public bool IsDead { get; private set; }
+
         // Velocidad 2D real (sin normalizar, en unidades por segundo)
         public float Speed2D { get; private set; }
         public float AnimatorSpeed { get; private set; }
@@ -235,6 +242,15 @@ namespace ConquestTactics.Animation
                     JustShot          = false;
                     IsReloadingRanged = false;
                 }
+
+                // Reacción al golpe (L1-09): la última y su revisión; UnitAnimatorController la dispara cuando cambia.
+                if (_entityManager.HasComponent<ResilienceComponent>(_unitEntity))
+                {
+                    var resilience = _entityManager.GetComponentData<ResilienceComponent>(_unitEntity);
+                    Reaction = resilience.reaction;
+                    ReactionRevision = resilience.reactionRevision;
+                }
+                IsDead = _entityManager.HasComponent<IsDeadComponent>(_unitEntity);
 
                 // Actualizar propiedades
                 NormalizedSpeed = animData.MaxSpeed > 0

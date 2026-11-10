@@ -50,6 +50,7 @@ namespace ConquestTactics.Visual
         private Animator _attackSpeedAnimator;
         private bool _hasAttackSpeed;
         private readonly HeroDeathAnimationBridge _deathAnimation = new HeroDeathAnimationBridge();
+        private readonly HitReactionAnimationBridge _hitReaction = new HitReactionAnimationBridge();
 
         // Animation parameter hashes are centralized in AnimationHashes.cs
         public bool DebugLogging { get => _enableDebugLogs; set => _enableDebugLogs = value; }
@@ -216,9 +217,12 @@ namespace ConquestTactics.Visual
                     _animator.SetBool(AnimationHashes.IsAttacking, attacking);
                 }
             }
-            // Remote heroes get their death animation from RemoteHeroAnimationDriver.
+            // Remote heroes get their death and hit reactions from RemoteHeroAnimationDriver.
             if (IsLocalHero)
+            {
                 _deathAnimation.Apply(_entityManager, _heroEntity, _animator);
+                _hitReaction.Apply(_entityManager, _heroEntity, _animator);
+            }
 
             _lastSyncTime = Time.time;
         }

@@ -8,7 +8,8 @@ using UnityEngine.AI;
 /// Hit knock-back (pattern of the reference's <c>hit_curve</c>): a hit that reaches a unit's body pushes it away from
 /// the attacker along <see cref="HitKnockback"/>'s curve, <c>hitKnockbackDistance</c> in <c>hitKnockbackDuration</c>.
 /// Starts from <see cref="UnitHitImpactComponent"/> (consumed here) and moves the agent with <c>agent.Move</c>, which keeps
-/// it on the NavMesh; a new hit restarts the push. Single writer of <see cref="UnitHitKnockbackComponent"/>.
+/// it on the NavMesh; a new hit restarts the push. A knock-down or a launch (L1-09) brings its own longer push, which an
+/// ordinary hit does not cut short. Single writer of <see cref="UnitHitKnockbackComponent"/>.
 /// With enemyContactEnabled the push slides along enemy bodies like any other movement (M2, P3): it never closes the gap to
 /// an enemy below the contact distance (<see cref="EnemyContact.ClipStep"/>), unless either of the two has the enemy collision
 /// off (<see cref="EnemyCollision.PassesEnemies"/>, P2; a heavy hit turns it off for the pushed unit while the push lasts).
@@ -36,7 +37,6 @@ public partial class UnitHitKnockbackSystem : SystemBase
             ? SystemAPI.GetSingleton<MovementTuningComponent>() : MovementTuningComponent.Default;
         float dt = SystemAPI.Time.DeltaTime;
         float distance = tuning.hitKnockbackDistance, duration = tuning.hitKnockbackDuration;
-        bool enabled = distance > 0f && duration > 0f && dt > 0f;
         _bodiesCollected = false;
 
         foreach (var (impact, knockback, entity) in SystemAPI
@@ -48,22 +48,28 @@ public partial class UnitHitKnockbackSystem : SystemBase
             if (SystemAPI.IsComponentEnabled<UnitHitImpactComponent>(entity))
             {
                 SystemAPI.SetComponentEnabled<UnitHitImpactComponent>(entity, false);
-                if (enabled && math.lengthsq(impact.ValueRO.direction) > 1e-6f)
+                // A heavy reaction brings its own push (L1-09); every other hit, the tuning's.
+                var impactData = impact.ValueRO;
+                bool own = impactData.distance > 0f && impactData.duration > 0f;
+                float pushDistance = own ? impactData.distance : distance, pushDuration = own ? impactData.duration : duration;
+                // An ordinary hit does not cut short the push of a knock-down or a launch still in progress.
+                bool heavyInProgress = knockback.ValueRO.active && knockback.ValueRO.passesEnemies && !impactData.passesEnemies;
+                if (!heavyInProgress && pushDistance > 0f && pushDuration > 0f && math.lengthsq(impactData.direction) > 1e-6f)
                     knockback.ValueRW = new UnitHitKnockbackComponent
                     {
-                        direction = math.normalize(impact.ValueRO.direction), elapsed = 0f, active = true,
-                        passesEnemies = impact.ValueRO.passesEnemies,
+                        direction = math.normalize(impactData.direction), elapsed = 0f, active = true,
+                        passesEnemies = impactData.passesEnemies, distance = pushDistance, duration = pushDuration,
                     };
             }
             if (!knockback.ValueRO.active) continue;
-            if (!enabled || SystemAPI.HasComponent<IsDeadComponent>(entity))
+            if (dt <= 0f || knockback.ValueRO.duration <= 0f || SystemAPI.HasComponent<IsDeadComponent>(entity))
             {
                 knockback.ValueRW.active = false;
                 continue;
             }
 
             var agent = SystemAPI.ManagedAPI.GetComponent<NavMeshAgent>(entity);
-            float step = HitKnockback.Step(knockback.ValueRO.elapsed, dt, duration, distance);
+            float step = HitKnockback.Step(knockback.ValueRO.elapsed, dt, knockback.ValueRO.duration, knockback.ValueRO.distance);
             if (agent != null && agent.enabled && agent.isOnNavMesh && step > 0f)
             {
                 float2 move = knockback.ValueRO.direction * step;
@@ -73,7 +79,7 @@ public partial class UnitHitKnockbackSystem : SystemBase
                 agent.Move(new UnityEngine.Vector3(move.x, 0f, move.y));
             }
             knockback.ValueRW.elapsed += dt;
-            if (knockback.ValueRO.elapsed >= duration) knockback.ValueRW.active = false;
+            if (knockback.ValueRO.elapsed >= knockback.ValueRO.duration) knockback.ValueRW.active = false;
         }
     }
 
