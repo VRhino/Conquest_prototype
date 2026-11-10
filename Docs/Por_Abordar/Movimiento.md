@@ -23,7 +23,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M14 | Aceleración en S7 multitud con C13 | Media | **Hecho** (medido: dentro de M10; 1,4 % con L4-04) |
 | M15 | Colas y coste de la validación en cuellos de botella (C13) | Media | Pendiente |
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | **Hecho** (2026-11-04: son soldados en contacto; métrica `idleStalls`) |
-| M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Bloqueado (sin caballería) |
+| M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | Pendiente (modelo y clips listos el 2026-11-10; falta el código) |
 | M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** (datos 2026-11-03; escala por la pila 2026-11-04) |
 
 ---
@@ -291,6 +291,23 @@ ninguna escuadra lo usa). Lo que proponía el catálogo, para cuando las haya:
 
 Lo que ya está preparado: el radio de cuerpo por tipo de escuadra (L5-5, `SquadData.bodyRadius`), la carga por distancia
 hacia el objetivo (L1-11), el tipo de unidad en las condiciones de daño (L1-02) y el aguante por marcha (L5-7).
+
+**Avance (2026-11-10): ya hay modelo y animaciones.** Están en `Assets/Art/Mounts/Horse/` (ver su `README.md`):
+- El caballo `Horse_Mount.fbx`:
+  - Rig Generic de 34 huesos.
+  - Socket `Saddle` para colgar la raíz del jinete.
+  - Arreos y dos variantes de riendas: al puño o sueltas.
+  - 6 capas de color.
+- Sus andares en el sitio: `Horse_Idle`, `Horse_Walk`, `Horse_Trot` y `Horse_Gallop`.
+- Seis clips Humanoid para cada uno de los tres jinetes, sobre el Modular Hero:
+  - `Lancer_*`: lancero.
+  - `Sword_*`: espada.
+  - `Archer_*`: arquero; tira con riendas sueltas.
+- Cada clip de jinete dura lo mismo que su andar.
+
+Los clips se generan con Blender desde `blender-tools/conquest-horse`, donde están los scripts y los vídeos de revisión.
+
+Falta el código (L5-6 y L5-8), las escuadras de caballería con sus datos y el Animator del caballo y del jinete.
 
 ## M18. Datos del aguante de escuadra (L5-7)
 **Hecho los datos (2026-11-03, tabla aprobada).** Solo gasta quien corre de verdad: en marcha de carrera y por encima de
