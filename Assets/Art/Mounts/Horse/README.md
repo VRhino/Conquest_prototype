@@ -26,8 +26,10 @@ vídeos de revisión. Para cambiar algo, se regenera allí y se copian aquí los
   | `Horse_Gallop` | ~6,3 m/s |
 
   Si la unidad va a otra velocidad, se escala la del estado para que los cascos no patinen.
-- `Animations/Riders/{Lancer,Sword,Archer}_{Idle,Walk,Trot,Gallop,Ready,Attack}.fbx`: rig **Humanoid**, con el mismo
-  mapeo de huesos que `ModularCharacters.fbx`. La raíz va integrada en la pose (rotación, altura con *Original* y XZ).
+- `Animations/Riders/{Lancer,Sword,Archer}_{Idle,Walk,Trot,Gallop,Ready,Attack}.fbx`: rig **Humanoid** con *Copy From
+  Other* del avatar `Hero_RigAvatar` (`Assets/Art/Animations/Humanoid/Hero_Rig.fbx`, el Modular Hero en T-pose). No se
+  crea el avatar desde el propio clip: Unity tomaría como T-pose el primer fotograma y descuadraría el retargeting. La
+  raíz va integrada en la pose (rotación, altura con *Original* y XZ).
   - Cada clip de jinete dura lo mismo que el andar del caballo que le corresponde. Se reproducen juntos según
     `CurrentGait`: 0 idle, 1 paso, 2 trote, 3 galope.
   - `*_Attack` no va en bucle: empieza y acaba en `*_Ready`.

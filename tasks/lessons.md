@@ -633,3 +633,20 @@
   unos metros por delante del héroe (como un clic delante) y mirar una captura antes de diagnosticar.
 - `ut.js test` pasa el filtro por la shell: una `|` en el filtro se convierte en tubería y la prueba no arranca nunca.
   Una clase o un fragmento común por ejecución.
+
+## Clips Humanoid hechos en Blender (2026-11-10)
+
+- Si el avatar Humanoid se crea desde un FBX animado sin malla (*Create From This Model*), Unity toma como T-pose la pose
+  estática del FBX, que es un fotograma del clip. El retargeting sale descuadrado en todo el cuerpo: hasta 15 cm en manos
+  y pies, también en poses de pie. Les pasó a los 18 clips de jinete del commit del caballo, y solo se vio al comparar
+  articulación a articulación con Blender.
+  - Arreglo: un FBX aparte con solo el esqueleto en T-pose (`Assets/Art/Animations/Humanoid/Hero_Rig.fbx`), que da
+    `Hero_RigAvatar`.
+  - Todos los clips usan *Copy From Other* de ese avatar.
+- Hay que verificar con números, no a ojo: se exportan desde Blender las posiciones de las articulaciones en unos
+  fotogramas y se comparan con el clip muestreado sobre `ModularCharacters` en Unity (`SampleAnimation` en una escena de
+  previsualización). También hay que medir el punto más bajo de las mallas horneadas con `BakeMesh`.
+- Los músculos Humanoid por encima de ±1 no se recortan al reproducir: el error venía del avatar, no de los límites.
+- El avatar de `ModularCharacters` asigna `RightToes` a `Toes_R` (la punta) y no a `Ball_R`, así que los dedos del pie
+  derecho no se doblan nunca en Unity. Si una pose los dobla en Blender, la punta del pie derecho atraviesa el suelo en
+  Unity. En los clips el pie derecho va rígido.

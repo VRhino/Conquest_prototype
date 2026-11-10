@@ -17,9 +17,8 @@ retirar el cuerpo tras un retardo y volver a crearlo al reaparecer.
 - `HeroDeathAnimationBridge` (lo usan `EntityVisualSync` para el local y `RemoteHeroAnimationDriver` para remotos e IA)
   dispara `TriggerDeath` una vez por muerte y mantiene `IsDead`. No escribe en ECS. Si el Animator no tiene esos
   parámetros, no hace nada.
-- `AC_Polygon_Masculine` tiene `TriggerDeath` (Trigger), `IsDead` (Bool) y un estado `Death` sin clip (Any State →
-  `Death` con `TriggerDeath`; `Death` → salida cuando `IsDead` es falso). Sin clip y sin escribir valores por defecto,
-  el cuerpo se queda congelado en la pose en que murió hasta que se retira.
+- `AC_Polygon_Masculine` tiene `TriggerDeath` (Trigger), `IsDead` (Bool) y un estado `Death` con `Hero_Death` (Any State →
+  `Death` con `TriggerDeath`; `Death` → salida cuando `IsDead` es falso). Ver D1.
 - Tests: `HeroLifecycleRegressionTests.DeathPresentation*` (EditMode) y, en PlayMode,
   `BattleSceneIntegrationTests.BattleSceneAppliesDamageRemovesDeadUnitAndRespawnsHero` (local: morir → animar → fuera
   de la jerarquía → visual nuevo en la pose de spawn) y `BattleSceneRemoteHeroDeathAnimatesThenRemovesTheBody` (el
@@ -28,7 +27,7 @@ retirar el cuerpo tras un retardo y volver a crearlo al reaparecer.
 ## Resumen
 | # | Tema | Prioridad | Estado |
 |---|---|---|---|
-| D1 | Clip real de la animación de muerte | Media | Bloqueado (animación) |
+| D1 | Clip real de la animación de muerte | Media | **Hecho** (2026-11-10: `Hero_Death`, 1,8 s; retardo 3,5 s) |
 | D2 | El cuerpo oculto sigue teniendo colisión y agente de NavMesh | Media | **Hecho** (2026-10-27: el visual se retira de la jerarquía) |
 | D3 | Renderers que aparecen mientras el cuerpo está oculto | Baja | **Hecho** (2026-10-27: no hay visual que mostrar) |
 | D4 | Otros controladores de héroe sin los parámetros de muerte | Baja | Pendiente |
@@ -37,13 +36,19 @@ retirar el cuerpo tras un retardo y volver a crearlo al reaparecer.
 ---
 
 ## D1. Clip real de la animación de muerte
-**Qué es.** El estado `Death` de `AC_Polygon_Masculine` no tiene clip: el cuerpo se congela en su pose durante el retardo.
+**Hecho (2026-11-10).** `Death.motion` es `Assets/Art/Animations/Humanoid/Hero_Death.fbx`: golpe, cae de rodillas y se
+desploma de frente; dura 1,8 s, sin bucle y con todo el desplazamiento integrado en la pose. `DefaultDeathVisualHideDelay`
+pasa de 3 a 3,5 s: el cuerpo queda 1,7 s en el suelo antes de retirarse. Se hizo con Blender por línea de comandos
+(`blender-tools/conquest-anims`) sobre el mismo esqueleto del Modular Hero, y en Unity se comprobó que el clip
+reproducido sobre `ModularCharacters` no atraviesa el suelo más de 8 mm. `Write Defaults` sigue apagado: el clip anima todos
+los músculos.
 
-**Por qué no entra.** No hay clip de muerte en el proyecto.
+**Qué era.** El estado `Death` de `AC_Polygon_Masculine` no tenía clip: el cuerpo se congelaba en su pose durante el retardo.
 
-**Cómo abordarlo.** Asignar el clip a `Death.motion` (sin bucle), activar `Write Defaults` solo si el clip lo pide y
-ajustar `deathVisualHideDelay` en `HeroGameplayConfigAuthoring` a lo que dure el clip más la pausa que se quiera. No hay
-que tocar código. Si el clip tiene desplazamiento de raíz, revisar que `applyRootMotion` siga apagado en el visual.
+**Por qué no entraba.** No había clip de muerte en el proyecto.
+
+**Para cambiarlo.** Se regenera el clip en `blender-tools/conquest-anims` y se copia el FBX encima: el `.meta` guarda la
+importación. Si cambia su duración, hay que ajustar `DefaultDeathVisualHideDelay`.
 
 ## D2. El cuerpo oculto seguía teniendo colisión y agente de NavMesh
 **Hecho (2026-10-27).** La primera versión solo apagaba los `Renderer`. A petición del usuario, ahora el visual sale de

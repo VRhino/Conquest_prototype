@@ -296,7 +296,10 @@ public class SpearmenLineAnimationTests
     {
         var original = AssetDatabase.LoadAssetAtPath<AnimatorController>(SourceControllerPath);
         var integrated = (AnimatorController)_animator.runtimeAnimatorController;
-        foreach (var clip in original.animationClips) Assert.That(integrated.animationClips, Does.Contain(clip));
+        // The Death state and its clip belong to the hero (AC_Spearmen was copied before they existed).
+        var heroOnly = original.layers.SelectMany(l => l.stateMachine.states).Where(s => s.state.name == "Death")
+                               .Select(s => s.state.motion).OfType<AnimationClip>().ToArray();
+        foreach (var clip in original.animationClips.Except(heroOnly)) Assert.That(integrated.animationClips, Does.Contain(clip));
         Assert.That(integrated, Is.Not.SameAs(original));
         Assert.That(Named("WeaponHitbox").parent, Is.SameAs(Named("SM_Wep_Spear_06").parent));
         Assert.That(Named("SM_Wep_Shield_Long_14").GetComponent<Collider>(), Is.Not.Null);

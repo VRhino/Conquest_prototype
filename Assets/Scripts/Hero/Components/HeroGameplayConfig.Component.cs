@@ -36,6 +36,7 @@ public struct HeroGameplayConfigComponent : IComponentData
     /// <summary>How the hero's combo is gained and lost (L2-16).</summary>
     public ComboTuning combo;
 
-    /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.</summary>
-    public const float DefaultDeathVisualHideDelay = 3f;
+    /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.
+    /// Hero_Death lasts 1.8 s, so the body then lies on the ground for 1.7 s before it is removed.</summary>
+    public const float DefaultDeathVisualHideDelay = 3.5f;
 }
