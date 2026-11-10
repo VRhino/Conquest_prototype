@@ -1038,7 +1038,13 @@ public partial class BattleSceneIntegrationTests
             Assert.That(mirrors.All(m => m != null && m.Horse != null && m.Rider != null), Is.True, "Every soldier has its horse and rider.");
             Assert.That(mirrors.All(m => m.Rider.transform.parent.name == "Saddle"), Is.True, "The rider hangs from the saddle.");
             float maxBlend = 0f;
-            int samples = 0, outOfStep = 0;
+            int samples = 0, outOfStep = 0, missingParameters = 0;
+            // The horse's controller has no Synty locomotion parameters: nothing may try to set them.
+            void Count(string message, string stack, LogType type)
+            {
+                if (message.StartsWith("Parameter '") && message.Contains("does not exist")) missingParameters++;
+            }
+            Application.logMessageReceived += Count;
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
             for (float t = 0f; t < MarchSeconds; t += Time.deltaTime)
             {
@@ -1056,6 +1062,8 @@ public partial class BattleSceneIntegrationTests
                     if (Mathf.Min(drift, 1f - drift) > 0.05f) outOfStep++;
                 }
             }
+            Application.logMessageReceived -= Count;
+            Assert.That(missingParameters, Is.Zero, "An Animator parameter the horse or rider does not have was set.");
             Assert.That(maxBlend, Is.GreaterThan(1.5f), "The horses trot or gallop to follow the hero.");
             Assert.That(outOfStep, Is.LessThanOrEqualTo(Mathf.CeilToInt(samples * 0.02f)),
                 $"Rider out of step with its horse in {outOfStep} of {samples} samples.");

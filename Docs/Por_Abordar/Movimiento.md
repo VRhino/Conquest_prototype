@@ -306,6 +306,11 @@ arqueros a caballo); en las tropas jinete y caballo son un solo cuerpo. Plan en 
     izquierda.
   - Todo lo construye `CavalrySetup`, menú *Conquest / Cavalry*.
 - **Tests:** `MountTests` (EditMode) y `*CavalryMarches*` (PlayMode).
+- **Vídeo:** el escenario explícito `MovementBaselineLanceCavalryShowcase` graba a los lanceros en `Recordings/MovementBaseline`:
+  quietos, al trote, al galope y cargando contra el enemigo.
+  - Usa una cámara lateral que sigue a la escuadra.
+  - Al grabarlo apareció un fallo: `UnitAnimatorController` escribía parámetros de infantería en el Animator del caballo
+    (más de 300 000 avisos en 30 s). Ahora solo lo hace si el controlador los tiene.
 
 **Qué era.** Bloqueado: no había escuadras de caballería, ni modelos, animaciones o datos de monturas (`UnitType.Cavalry` existe pero
 ninguna escuadra lo usa). Lo que proponía el catálogo, para cuando las haya:

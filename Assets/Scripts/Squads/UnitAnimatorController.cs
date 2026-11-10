@@ -65,16 +65,19 @@ namespace ConquestTactics.Visual
                 return;
             }
             
-            // Inicializar los valores del Animator
-            _animator.SetBool(AnimationHashes.IsGrounded, true); // Siempre grounded para evitar problemas de Fall state
-            _animator.SetBool(AnimationHashes.IsStopped, true); // Iniciar detenido
-            _animator.SetFloat(AnimationHashes.MoveSpeed, 0f); // Velocidad inicial 0
-            _animator.SetInteger(AnimationHashes.CurrentGait, 0); // Gait inicial = Idle
-            _animator.SetBool(AnimationHashes.IsWalking, false); // No está caminando inicialmente
+            // Inicializar los valores del Animator (solo con la locomoción de Synty: un caballo no la tiene)
+            if (HasLocomotion)
+            {
+                _animator.SetBool(AnimationHashes.IsGrounded, true); // Siempre grounded para evitar problemas de Fall state
+                _animator.SetBool(AnimationHashes.IsStopped, true); // Iniciar detenido
+                _animator.SetFloat(AnimationHashes.MoveSpeed, 0f); // Velocidad inicial 0
+                _animator.SetInteger(AnimationHashes.CurrentGait, 0); // Gait inicial = Idle
+                _animator.SetBool(AnimationHashes.IsWalking, false); // No está caminando inicialmente
 
-            // Resetear direcciones de strafe
-            _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f); // Forward direction
+                // Resetear direcciones de strafe
+                _animator.SetFloat(AnimationHashes.StrafeDirectionX, 0f);
+                _animator.SetFloat(AnimationHashes.StrafeDirectionZ, 1f); // Forward direction
+            }
             
             // Forzar una transición al estado grounded
             //_animator.SetTrigger(_forceGroundedTransitionHash);
@@ -102,11 +105,14 @@ namespace ConquestTactics.Visual
             }
             
             // Activar los triggers directamente al inicio
-            _animator.SetBool(AnimationHashes.IsGrounded, true);
-            _animator.SetBool(AnimationHashes.IsStopped, true);
-            _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
-            _animator.SetInteger(AnimationHashes.CurrentGait, 0);
-            _animator.SetBool(AnimationHashes.IsWalking, false);
+            if (HasLocomotion)
+            {
+                _animator.SetBool(AnimationHashes.IsGrounded, true);
+                _animator.SetBool(AnimationHashes.IsStopped, true);
+                _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
+                _animator.SetInteger(AnimationHashes.CurrentGait, 0);
+                _animator.SetBool(AnimationHashes.IsWalking, false);
+            }
             //_animator.SetTrigger(_forceIdleHash);
             
             // Log del nombre exacto del AnimatorController para verificación
@@ -165,22 +171,26 @@ namespace ConquestTactics.Visual
             var gait = _animationAdapter.Gait;
             Vector2 direction = moving ? _animationAdapter.MovementVector : Vector2.up;
 
-            _animator.SetBool(AnimationHashes.IsGrounded, true);
-            _animator.SetBool(AnimationHashes.IsStopped, !moving);
-            _animator.SetBool(AnimationHashes.MovementInputTapped, started);
-            _animator.SetBool(AnimationHashes.MovementInputPressed, started);
-            _animator.SetBool(AnimationHashes.MovementInputHeld, moving && !started);
-            _animator.SetInteger(AnimationHashes.CurrentGait, (int)gait);
-            _animator.SetBool(AnimationHashes.IsWalking, gait == LocomotionGait.Walk);
-            if (moving)
-                _animator.SetFloat(AnimationHashes.MoveSpeed, _animationAdapter.AnimatorSpeed,
-                    _animationDampTime, Time.deltaTime);
-            else
-                _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
-            _animator.SetFloat(AnimationHashes.IsStrafing, moving ? 1f : 0f);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionX, direction.x);
-            _animator.SetFloat(AnimationHashes.StrafeDirectionZ, direction.y);
-            _animator.SetFloat(AnimationHashes.ForwardStrafe, direction.y >= 0f ? 1f : 0f);
+            // Synty locomotion; a horse (M17) has its own gait tree instead, set below.
+            if (HasLocomotion)
+            {
+                _animator.SetBool(AnimationHashes.IsGrounded, true);
+                _animator.SetBool(AnimationHashes.IsStopped, !moving);
+                _animator.SetBool(AnimationHashes.MovementInputTapped, started);
+                _animator.SetBool(AnimationHashes.MovementInputPressed, started);
+                _animator.SetBool(AnimationHashes.MovementInputHeld, moving && !started);
+                _animator.SetInteger(AnimationHashes.CurrentGait, (int)gait);
+                _animator.SetBool(AnimationHashes.IsWalking, gait == LocomotionGait.Walk);
+                if (moving)
+                    _animator.SetFloat(AnimationHashes.MoveSpeed, _animationAdapter.AnimatorSpeed,
+                        _animationDampTime, Time.deltaTime);
+                else
+                    _animator.SetFloat(AnimationHashes.MoveSpeed, 0f);
+                _animator.SetFloat(AnimationHashes.IsStrafing, moving ? 1f : 0f);
+                _animator.SetFloat(AnimationHashes.StrafeDirectionX, direction.x);
+                _animator.SetFloat(AnimationHashes.StrafeDirectionZ, direction.y);
+                _animator.SetFloat(AnimationHashes.ForwardStrafe, direction.y >= 0f ? 1f : 0f);
+            }
 
             if (AnimatorHasParameter(AnimationHashes.IsAttacking))
                 _animator.SetBool(AnimationHashes.IsAttacking, _animationAdapter.IsAttacking);
@@ -230,6 +240,9 @@ namespace ConquestTactics.Visual
             return $"Unknown State ({stateInfo.shortNameHash})";
         }
         
+        /// <summary>The controller has Synty's locomotion parameters (soldiers on foot); a horse's (M17) does not.</summary>
+        private bool HasLocomotion => AnimatorHasParameter(AnimationHashes.IsGrounded);
+
         /// <summary>
         /// Verifica si un parámetro existe en el Animator
         /// </summary>
