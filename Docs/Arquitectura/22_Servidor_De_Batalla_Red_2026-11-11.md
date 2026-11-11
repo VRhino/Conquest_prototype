@@ -121,7 +121,18 @@ su `main` en `e89f8d3`) con `--batalla <uuid> --lanzador 127.0.0.1:<p> --puerto 
 
 **Probado** con `Tools/LanzadorDePrueba` (C#, hace con el proceso lo mismo que el lanzador del motor, sin motor): solo
 IA, con un cliente con su token (lleva a `heroe-3`) y con un token falso (se le desconecta y juega la IA); en los tres
-casos llega inicio y resultado y el proceso sale con 0. **Sin probar todavía con el lanzador y el motor reales.**
+casos llega inicio y resultado y el proceso sale con 0.
+
+**Probado con el motor y el lanzador reales** (2026-11-11): dos pruebas en BronzeAge, `crates/lanzador/tests/lanzador.rs`
+(`con_conquest_*`), con el núcleo, su WebSocket, el acceso y el lanzador de verdad sobre una retícula, y este
+`PruebaRed.exe` como proceso. Sin cliente, la IA juega a Ana y el núcleo aplica el resultado (Ana pasa de 43 soldados a
+23). Con cliente, Ana entra en el motor como jugadora, recibe su `asignacion_propia` (host, puerto y token), su cliente de
+Conquest se conecta con ese token, el servidor le da `heroe-2` y el resultado se aplica igual. Solo corren con
+`CONQUEST_BATALLA=<ruta a PruebaRed.exe>`; sin ella se saltan:
+
+```
+CONQUEST_BATALLA=C:/Users/VRINO/Desarrollo/Conquest_prototype/Builds/PruebaRed/PruebaRed.exe cargo test -p lanzador --test lanzador con_conquest -- --test-threads=1
+```
 
 El contrato (`Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`) se compiló con los `.proto` de BronzeAge `e89f8d3`.
 `Tools/ContratoBronzeAge/actualizar.ps1` lee los de `../BronzeAgeFase0/proto`: ese checkout tiene que estar en un
@@ -136,8 +147,8 @@ El contrato (`Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`) se compiló con 
 2. **Formación elegida.** El ticket ya trae `formacion` y `formaciones_permitidas` (familias del motor, que casan una a
    una con `FormationType`: reposo = `Rest`, linea, columna, dispersa, muro_escudos, testudo, cuadro, cuna); el servidor
    de prueba aún no las usa.
-3. **La prueba de punta a punta** con el motor y el lanzador reales (§6), las incorporaciones a media batalla y las
-   salidas (`salida` cuando un jugador se va o cae).
+3. **Las incorporaciones a media batalla y las salidas** (`salida` cuando un jugador se va o cae), y una partida de
+   verdad desde el panel, con el cliente en pantalla (§6).
 4. **Servidor de verdad.** La prueba usa el reproductor normal en `-batchmode -nographics`: el módulo Dedicated Server
    de Unity no está instalado en este PC. Para Linux hace falta ese módulo.
 5. **Predicción medida.** El héroe se predice y se corrige, pero no se ha medido el error de predicción ni probado con
