@@ -64,3 +64,6 @@ AGENTS.md
 
 # Movement baseline videos (Unity Recorder)
 Recordings/
+
+# Contrato de BronzeAge: lo compilado se copia a Assets/Plugins/BronzeAge
+Tools/ContratoBronzeAge/bin/

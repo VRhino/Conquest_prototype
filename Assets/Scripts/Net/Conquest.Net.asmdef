@@ -1,0 +1,16 @@
+{
+  "name": "Conquest.Net",
+  "rootNamespace": "ConquestTactics.Net",
+  "references": [
+    "Unity.Entities",
+    "Unity.NetCode",
+    "Unity.Networking.Transport",
+    "Unity.Mathematics",
+    "Unity.Transforms",
+    "Unity.Collections",
+    "Unity.Burst",
+    "Unity.InputSystem"
+  ],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

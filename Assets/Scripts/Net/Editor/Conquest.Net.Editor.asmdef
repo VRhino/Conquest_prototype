@@ -1,0 +1,12 @@
+{
+  "name": "Conquest.Net.Editor",
+  "rootNamespace": "ConquestTactics.Net.Editor",
+  "references": [
+    "Conquest.Net",
+    "Unity.NetCode"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false
+}

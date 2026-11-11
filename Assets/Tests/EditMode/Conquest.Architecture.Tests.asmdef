@@ -1,6 +1,8 @@
 {
   "name": "Conquest.Architecture.Tests",
-  "references": ["Game.ECS", "Game.Editor", "Conquest.WorldMap", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Transforms"],
+  "references": ["Game.ECS", "Game.Editor", "Conquest.WorldMap", "Conquest.Net", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Transforms"],
   "includePlatforms": ["Editor"],
-  "optionalUnityReferences": ["TestAssemblies"]
+  "optionalUnityReferences": ["TestAssemblies"],
+  "overrideReferences": true,
+  "precompiledReferences": ["nunit.framework.dll", "BronzeAge.Contrato.dll", "Google.Protobuf.dll"]
 }

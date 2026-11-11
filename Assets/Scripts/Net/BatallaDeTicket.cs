@@ -1,0 +1,196 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using BronzeAge.Contract.V1;
+using Google.Protobuf;
+
+namespace ConquestTactics.Net
+{
+    public sealed class EscuadraEnJuego
+    {
+        public string Id;
+        public string TropaId;
+        public byte Bando;
+        public int Autorizados;
+        public int Muertos;
+        /// <summary>Índice en <see cref="BatallaDeTicket.Heroes"/>; -1 = escuadra sin héroe (bandidos, carreteros).</summary>
+        public int Heroe = -1;
+    }
+
+    public sealed class HeroeEnJuego
+    {
+        public string Id;
+        public byte Bando;
+        public bool EsBot;
+        /// <summary>NetworkId del jugador que lo lleva; 0 = lo lleva la IA.</summary>
+        public int Dueno;
+        public bool Caido;
+    }
+
+    /// <summary>
+    /// Una batalla jugada desde un ticket del motor: lee el ticket, lleva la cuenta de cada escuadra y cada héroe y
+    /// escribe el <see cref="BattleResult"/> que el motor valida (Batalla_Unity_Ciclo §8.5 y §9). No sabe nada de ECS.
+    /// </summary>
+    public sealed class BatallaDeTicket
+    {
+        public const byte Atacante = 0;
+        public const byte Defensor = 1;
+        public const string VersionServidor = "conquest-prueba-red-0.1";
+
+        /// <summary>ponytail: una batalla por proceso, que es lo que hará el lanzador (un servidor Unity por batalla).</summary>
+        public static BatallaDeTicket Actual;
+
+        public readonly BattleTicket Ticket;
+        public readonly List<EscuadraEnJuego> Escuadras = new List<EscuadraEnJuego>();
+        public readonly List<HeroeEnJuego> Heroes = new List<HeroeEnJuego>();
+        public readonly Queue<int> ConexionesSinHeroe = new Queue<int>();
+        public readonly float DuracionSegundos;
+        public long InicioMs;
+        public bool Empezada;
+        public bool Terminada;
+
+        public BatallaDeTicket(BattleTicket ticket, float topeSegundos = 0f)
+        {
+            Ticket = ticket;
+            DuracionSegundos = topeSegundos > 0f
+                ? Math.Min(topeSegundos, ticket.Reglas.DuracionMaximaSegundos)
+                : ticket.Reglas.DuracionMaximaSegundos;
+            Anadir(ticket.Atacante, Atacante);
+            Anadir(ticket.Defensor, Defensor);
+        }
+
+        void Anadir(BattleSide lado, byte bando)
+        {
+            if (lado == null)
+                return;
+            foreach (var participante in lado.Participantes)
+            {
+                Heroes.Add(new HeroeEnJuego { Id = participante.HeroeId, Bando = bando, EsBot = participante.EsBot });
+                foreach (var escuadra in participante.Escuadras)
+                    Escuadras.Add(Escuadra(escuadra, bando, Heroes.Count - 1));
+            }
+            foreach (var escuadra in lado.EscuadrasSinHeroe)
+                Escuadras.Add(Escuadra(escuadra, bando, -1));
+        }
+
+        static EscuadraEnJuego Escuadra(SquadSnapshot s, byte bando, int heroe) => new EscuadraEnJuego
+        {
+            Id = s.SquadId, TropaId = s.TropaId, Bando = bando, Autorizados = (int)s.EfectivosAutorizados, Heroe = heroe,
+        };
+
+        /// <summary>Lee un ticket: el <c>.bin</c> o el <c>.json</c> de un <see cref="MensajeDeServidor"/> (como los dorados) o un <see cref="BattleTicket"/> suelto.</summary>
+        public static BattleTicket Leer(string ruta)
+        {
+            if (ruta.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            {
+                string json = File.ReadAllText(ruta);
+                var mensaje = JsonParser.Default.Parse<MensajeDeServidor>(json);
+                return mensaje.Batalla?.Ticket ?? JsonParser.Default.Parse<BattleTicket>(json);
+            }
+            var bytes = File.ReadAllBytes(ruta);
+            var envuelto = MensajeDeServidor.Parser.ParseFrom(bytes);
+            return envuelto.Batalla?.Ticket ?? BattleTicket.Parser.ParseFrom(bytes);
+        }
+
+        /// <summary>
+        /// El resultado. La experiencia es provisional: 1 punto (el motor la guarda ×1000) a cada escuadra y héroe del
+        /// bando que gana y 0 al que pierde, lo mismo que da una victoria con números, hasta que se cierre la tabla.
+        /// Si el atacante gana un asalto de caravana, se pierden todos los carros en juego.
+        /// </summary>
+        public BattleResult Resultado(LadoId ganador, RazonVictoria razon, long finMs, string intento)
+        {
+            byte bandoGanador = ganador == LadoId.Atacante ? Atacante : Defensor;
+            var r = new BattleResult
+            {
+                SchemaVersion = 1,
+                BattleId = Ticket.BattleId,
+                ResultId = Guid.NewGuid().ToString(),
+                TicketRevision = Ticket.TicketRevision,
+                IntentoAsignacionId = intento,
+                InicioMs = InicioMs,
+                FinMs = finMs,
+                Ganador = ganador,
+                Razon = razon,
+                VersionServidor = VersionServidor,
+            };
+            foreach (var e in Escuadras)
+                r.PorEscuadra.Add(new ResultadoEscuadra
+                {
+                    SquadId = e.Id,
+                    Desplegados = (uint)e.Autorizados,
+                    SupervivientesAlCierre = (uint)(e.Autorizados - e.Muertos),
+                    Muertos = (uint)e.Muertos,
+                    XpGanada = e.Bando == bandoGanador ? 1 : 0,
+                });
+            foreach (var h in Heroes)
+                r.PorHeroe.Add(new ResultadoHeroe
+                {
+                    HeroeId = h.Id,
+                    Participo = true,
+                    SobrevivioAlCierre = !h.Caido,
+                    XpGanada = h.Bando == bandoGanador ? 1 : 0,
+                    Derrotado = h.Caido,
+                });
+
+            var caravana = Ticket.ContextoEstrategico?.Caravana;
+            if (caravana != null)
+            {
+                var objetivo = new ObjetivoResultado { ObjetivoId = "caravana" };
+                if (ganador == LadoId.Atacante)
+                {
+                    objetivo.CapturadoPor = LadoId.Atacante;
+                    r.CarrosPerdidos.AddRange(caravana.Caravanas.SelectMany(c => c.Carros).Select(c => c.CarroId));
+                }
+                r.Objetivos.Add(objetivo);
+            }
+            return r;
+        }
+
+        /// <summary>
+        /// Lo que el motor comprueba del resultado y Unity puede saber (combate::resultado::validar_resultado, puntos 2 a 6
+        /// y 8). Devuelve los fallos; vacío = el motor lo aceptaría si la asignación es la vigente.
+        /// </summary>
+        public static List<string> Comprobar(BattleTicket t, BattleResult r)
+        {
+            var fallos = new List<string>();
+            var escuadras = Lados(t).SelectMany(l => l.Participantes.SelectMany(p => p.Escuadras).Concat(l.EscuadrasSinHeroe)).ToList();
+            var heroes = Lados(t).SelectMany(l => l.Participantes.Select(p => p.HeroeId)).ToList();
+
+            if (r.PorEscuadra.Select(e => e.SquadId).Distinct().Count() != r.PorEscuadra.Count
+                || r.PorHeroe.Select(h => h.HeroeId).Distinct().Count() != r.PorHeroe.Count)
+                fallos.Add("ids repetidos");
+            if (!r.PorEscuadra.Select(e => e.SquadId).OrderBy(x => x).SequenceEqual(escuadras.Select(e => e.SquadId).OrderBy(x => x)))
+                fallos.Add("escuadras incompletas");
+            if (!r.PorHeroe.Select(h => h.HeroeId).OrderBy(x => x).SequenceEqual(heroes.OrderBy(x => x)))
+                fallos.Add("héroes incompletos");
+            foreach (var e in r.PorEscuadra)
+            {
+                uint autorizados = escuadras.FirstOrDefault(x => x.SquadId == e.SquadId)?.EfectivosAutorizados ?? 0;
+                if (e.SupervivientesAlCierre + e.Muertos != autorizados || e.Desplegados > autorizados)
+                    fallos.Add($"la escuadra {e.SquadId} no cierra");
+            }
+            if (r.Razon == RazonVictoria.TiempoAgotado && r.Ganador != LadoId.Defensor)
+                fallos.Add("tiempo agotado sin ganar el defensor");
+            if (r.FinMs <= r.InicioMs || r.FinMs - r.InicioMs > t.Reglas.DuracionMaximaSegundos * 1000L)
+                fallos.Add("duración fuera de plazo");
+            var carros = new HashSet<string>(t.ContextoEstrategico?.Caravana?.Caravanas.SelectMany(c => c.Carros).Select(c => c.CarroId)
+                                             ?? Enumerable.Empty<string>());
+            if (r.CarrosPerdidos.Any(c => !carros.Contains(c)) || r.CarrosPerdidos.Distinct().Count() != r.CarrosPerdidos.Count)
+                fallos.Add("carro inexistente o repetido");
+            return fallos;
+        }
+
+        static IEnumerable<BattleSide> Lados(BattleTicket t) => new[] { t.Atacante, t.Defensor }.Where(l => l != null);
+
+        /// <summary>Escribe el resultado como lo manda el servidor de batalla al motor: <c>.bin</c> y, al lado, el <c>.json</c>.</summary>
+        public static void Escribir(string ruta, BattleResult resultado)
+        {
+            var mensaje = new MensajeDeCliente { Batalla = new MensajeDeServidorDeBatalla { Resultado = resultado } };
+            var carpeta = Path.GetDirectoryName(Path.GetFullPath(ruta));
+            Directory.CreateDirectory(carpeta);
+            File.WriteAllBytes(ruta, mensaje.ToByteArray());
+            File.WriteAllText(Path.ChangeExtension(ruta, ".json"), JsonFormatter.Default.Format(mensaje));
+        }
+    }
+}

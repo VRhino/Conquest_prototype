@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Compila el contrato de BronzeAge (los .proto del motor) a BronzeAge.Contrato.dll para Unity.
+    Los .proto son del motor: se leen de su checkout, nunca se copian a mano. Regenerar:
+      dotnet build -c Release Tools/ContratoBronzeAge  (y copiar con Tools/ContratoBronzeAge/actualizar.ps1)
+    Otra ruta al motor: -p:BronzeAgeProto=C:\ruta\a\BronzeAge\proto
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>BronzeAge.Contrato</AssemblyName>
+    <Nullable>disable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <BronzeAgeProto Condition="'$(BronzeAgeProto)' == ''">$(MSBuildThisFileDirectory)..\..\..\BronzeAgeFase0\proto</BronzeAgeProto>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0" PrivateAssets="All" />
+    <Protobuf Include="$(BronzeAgeProto)\bronzeage\v1\*.proto" ProtoRoot="$(BronzeAgeProto)" GrpcServices="None" />
+  </ItemGroup>
+</Project>
