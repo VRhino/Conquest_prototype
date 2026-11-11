@@ -11,9 +11,11 @@ using UnityEngine;
 namespace ConquestTactics.Net
 {
     /// <summary>
-    /// Servidor: juega la batalla de <c>-ticket</c>. Reparte los héroes humanos entre las conexiones por orden de
-    /// llegada (ponytail: sin comprobar el token; eso llega con la asignación real), empieza cuando están todos o pasa
-    /// <c>-espera</c>, coloca a cada bando en su lado y cierra por aniquilación o por tiempo (gana el defensor).
+    /// Servidor: juega la batalla de un ticket del motor, que llega de un fichero (<c>-ticket</c>) o del lanzador
+    /// (<c>--lanzador</c>, Batalla_Unity_Ciclo §8.8). Con la asignación del lanzador, cada cliente se presenta con su token y
+    /// lleva el héroe de ese token; uno que no casa se desconecta. Con fichero, los héroes humanos se dan por orden de
+    /// llegada. Empieza cuando están todos o pasa <c>-espera</c> (los que falten, con la IA), coloca a cada bando en su lado,
+    /// cierra por aniquilación o por tiempo (gana el defensor) y manda o escribe el resultado.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -26,50 +28,57 @@ namespace ConquestTactics.Net
         const float VidaHeroe = 400f, DanoHeroe = 35f;
         const float VidaSoldado = 100f, DanoSoldado = 20f;
 
-        double _creada;
+        double _creada = -1;
         double _empezada;
 
         protected override void OnCreate()
         {
+            RequireForUpdate<PrefabsRed>();
+            if (!string.IsNullOrEmpty(OpcionesRed.Lanzador))
+            {
+                EnlaceLanzador.Actual = EnlaceLanzador.Conectar(OpcionesRed.Lanzador);
+                return;
+            }
             if (string.IsNullOrEmpty(OpcionesRed.Ticket))
             {
                 Enabled = false;
                 return;
             }
-            var ticket = BatallaDeTicket.Leer(OpcionesRed.Ticket);
-            // CQ-003: una tropa que Conquest no tiene rechaza la batalla entera, nunca se juega con una por defecto.
+            Preparar(BatallaDeTicket.Leer(OpcionesRed.Ticket));
+        }
+
+        /// <summary>CQ-003: una tropa que Conquest no tiene rechaza la batalla entera, nunca se juega con una por defecto.</summary>
+        void Preparar(BattleTicket ticket)
+        {
             var desconocidas = BatallaDeTicket.TropasDesconocidas(ticket, id => TropasRed.Buscar(id) != null);
             if (desconocidas.Count > 0)
             {
+                // Sin resultado, el motor vence la batalla por su plazo, sin castigo (§8.8).
                 Debug.LogError($"[Red] RECHAZADA {ticket.BattleId}: tropas que Conquest no tiene: {string.Join(", ", desconocidas)}");
                 Enabled = false;
-#if !UNITY_EDITOR
-                Application.Quit(3);
-#endif
+                Salir(3);
                 return;
             }
             BatallaDeTicket.Actual = new BatallaDeTicket(ticket, OpcionesRed.Duracion);
-            Debug.Log($"[Red] Ticket {ticket.BattleId}: {BatallaDeTicket.Actual.Heroes.Count} héroes, " +
-                      $"{BatallaDeTicket.Actual.Escuadras.Count} escuadras, {BatallaDeTicket.Actual.DuracionSegundos} s");
-            RequireForUpdate<PrefabsRed>();
             _creada = -1;
+            Debug.Log($"[Red] Ticket {ticket.BattleId} (revisión {ticket.TicketRevision}): {BatallaDeTicket.Actual.Heroes.Count} héroes, " +
+                      $"{BatallaDeTicket.Actual.Escuadras.Count} escuadras, {BatallaDeTicket.Actual.DuracionSegundos} s");
         }
 
         protected override void OnUpdate()
         {
-            var batalla = BatallaDeTicket.Actual;
             double ahora = SystemAPI.Time.ElapsedTime;
+            LeerLanzador();
+            var batalla = BatallaDeTicket.Actual;
+            if (batalla == null)
+                return;
             if (_creada < 0) _creada = ahora;
 
             if (!batalla.Empezada)
             {
-                while (batalla.ConexionesSinHeroe.Count > 0)
-                {
-                    int id = batalla.ConexionesSinHeroe.Dequeue();
-                    var libre = batalla.Heroes.Find(h => !h.EsBot && h.Dueno == 0);
-                    if (libre != null) libre.Dueno = id;
-                    Debug.Log(libre != null ? $"[Red] El jugador {id} lleva a {libre.Id}" : $"[Red] El jugador {id} mira: no quedan héroes");
-                }
+                if (EnlaceLanzador.Actual != null && batalla.Asignacion == null)
+                    return; // sin la asignación no hay tokens con los que recibir a nadie
+                RepartirHeroes(batalla);
                 bool todos = batalla.Heroes.TrueForAll(h => h.EsBot || h.Dueno != 0);
                 if (todos || ahora - _creada >= OpcionesRed.EsperaJugadores)
                     Empezar(batalla, ahora);
@@ -90,11 +99,96 @@ namespace ConquestTactics.Net
                 Terminar(batalla, LadoId.Defensor, RazonVictoria.TiempoAgotado);
         }
 
+        void LeerLanzador()
+        {
+            var enlace = EnlaceLanzador.Actual;
+            if (enlace == null)
+                return;
+            while (enlace.Recibidos.TryDequeue(out var m))
+            {
+                var batalla = BatallaDeTicket.Actual;
+                switch (m.CuerpoCase)
+                {
+                    case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Ticket:
+                        // Otro ticket antes de empezar = revisión subida: se empieza de nuevo con él (§8.8, punto 4).
+                        if (batalla == null || !batalla.Empezada) Preparar(m.Ticket);
+                        else Debug.LogWarning($"[Red] Ticket con revisión {m.Ticket.TicketRevision} con la batalla ya empezada: ignorado");
+                        break;
+                    case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Asignacion:
+                        if (batalla != null) batalla.Asignacion = m.Asignacion;
+                        Debug.Log($"[Red] Asignación {m.Asignacion.IntentoAsignacionId}: {m.Asignacion.TokensParticipante.Count} humanos con token");
+                        break;
+                    case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Tokens:
+                        batalla?.Asignacion?.TokensParticipante.AddRange(m.Tokens.TokensParticipante);
+                        break;
+                    case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Incorporacion:
+                        // ponytail: quien se une a media batalla aún no entra en ella; el resultado sale sin él.
+                        Debug.LogWarning($"[Red] Incorporación de {m.Incorporacion.Participante?.HeroeId}: aún no se juega");
+                        break;
+                    case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Acuse:
+                        var acuse = m.Acuse;
+                        Debug.Log($"[Red] Acuse del motor a «{acuse.Mensaje}»: {acuse.Resultado} {acuse.Rechazo?.Codigo}");
+                        if (acuse.Mensaje == "resultado")
+                            Salir(acuse.Resultado == Resultado.OrdenAceptada || acuse.Resultado == Resultado.OrdenSinCambios ? 0 : 2);
+                        break;
+                }
+            }
+            if (enlace.Cerrado)
+            {
+                Debug.LogError("[Red] El lanzador cerró el socket");
+                EnlaceLanzador.Actual = null;
+                Salir(4);
+            }
+        }
+
+        /// <summary>Da a cada cliente que espera el héroe de su token (con asignación) o el primero libre (con fichero).</summary>
+        void RepartirHeroes(BatallaDeTicket batalla)
+        {
+            long ahoraMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            while (BatallaDeTicket.ConexionesSinHeroe.Count > 0)
+            {
+                var (id, conexion, token) = BatallaDeTicket.ConexionesSinHeroe.Dequeue();
+                HeroeEnJuego heroe;
+                if (batalla.Asignacion != null)
+                {
+                    TokenParticipante valido = null;
+                    foreach (var t in batalla.Asignacion.TokensParticipante)
+                        if (t.Token == token && (t.ExpiraEnMs == 0 || ahoraMs <= t.ExpiraEnMs)) valido = t;
+                    heroe = valido == null ? null : batalla.Heroes.Find(h => h.Id == valido.HeroeId && h.Dueno == 0);
+                    if (heroe == null)
+                    {
+                        Debug.LogWarning($"[Red] El jugador {id} no trae un token válido: fuera");
+                        if (EntityManager.Exists(conexion)) EntityManager.AddComponent<NetworkStreamRequestDisconnect>(conexion);
+                        continue;
+                    }
+                }
+                else
+                    heroe = batalla.Heroes.Find(h => !h.EsBot && h.Dueno == 0);
+                if (heroe != null) heroe.Dueno = id;
+                Debug.Log(heroe != null ? $"[Red] El jugador {id} lleva a {heroe.Id}" : $"[Red] El jugador {id} mira: no quedan héroes");
+            }
+        }
+
+        static void Salir(int codigo)
+        {
+#if !UNITY_EDITOR
+            Application.Quit(codigo);
+#endif
+        }
+
         void Empezar(BatallaDeTicket batalla, double ahora)
         {
             batalla.Empezada = true;
             batalla.InicioMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _empezada = ahora;
+            EnlaceLanzador.Actual?.Enviar(new MensajeDeServidorDeBatalla
+            {
+                Inicio = new InicioBatalla
+                {
+                    SchemaVersion = 1, BattleId = batalla.Ticket.BattleId, TicketRevision = batalla.Ticket.TicketRevision,
+                    IntentoAsignacionId = batalla.Asignacion?.IntentoAsignacionId ?? OpcionesRed.Intento,
+                },
+            });
             var prefabs = SystemAPI.GetSingleton<PrefabsRed>();
             var em = EntityManager;
             var lider = new Entity[batalla.Heroes.Count];
@@ -169,7 +263,8 @@ namespace ConquestTactics.Net
         void Terminar(BatallaDeTicket batalla, LadoId ganador, RazonVictoria razon)
         {
             batalla.Terminada = true;
-            var resultado = batalla.Resultado(ganador, razon, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), OpcionesRed.Intento);
+            var resultado = batalla.Resultado(ganador, razon, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                batalla.Asignacion?.IntentoAsignacionId ?? OpcionesRed.Intento);
             var fallos = BatallaDeTicket.Comprobar(batalla.Ticket, resultado);
             Debug.Log($"[Red] RESULTADO {ganador} por {razon} en {(resultado.FinMs - resultado.InicioMs) / 1000f:F1} s; " +
                       (fallos.Count == 0 ? "el motor lo aceptaría" : "FALLOS: " + string.Join(", ", fallos)));
@@ -179,10 +274,11 @@ namespace ConquestTactics.Net
             {
                 BatallaDeTicket.Escribir(OpcionesRed.Resultado, resultado);
                 Debug.Log($"[Red] Resultado escrito en {OpcionesRed.Resultado}");
-#if !UNITY_EDITOR
-                Application.Quit(fallos.Count == 0 ? 0 : 2);
-#endif
             }
+            if (EnlaceLanzador.Actual != null)
+                EnlaceLanzador.Actual.Enviar(new MensajeDeServidorDeBatalla { Resultado = resultado }); // se sale con su acuse
+            else if (!string.IsNullOrEmpty(OpcionesRed.Resultado))
+                Salir(fallos.Count == 0 ? 0 : 2);
         }
     }
 

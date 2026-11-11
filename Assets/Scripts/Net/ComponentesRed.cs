@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
@@ -45,9 +46,10 @@ namespace ConquestTactics.Net
         public Entity Soldado;
     }
 
-    /// <summary>RPC del cliente: ya está listo para recibir la batalla.</summary>
+    /// <summary>RPC del cliente: ya está listo para recibir la batalla, con el token de su héroe si viene de una batalla del motor.</summary>
     public struct EntrarEnBatalla : IRpcCommand
     {
+        public FixedString128Bytes Token;
     }
 
     /// <summary>Servidor: a qué bando pertenece algo que combate o que guía a una escuadra (0 atacante, 1 defensor).</summary>

@@ -26,7 +26,7 @@ namespace ConquestTactics.Net
             {
                 ecb.AddComponent<NetworkStreamInGame>(conexion);
                 var peticion = ecb.CreateEntity();
-                ecb.AddComponent<EntrarEnBatalla>(peticion);
+                ecb.AddComponent(peticion, new EntrarEnBatalla { Token = OpcionesRed.Token ?? "" });
                 ecb.AddComponent(peticion, new SendRpcCommandRequest { TargetConnection = conexion });
             }
             ecb.Playback(state.EntityManager);
@@ -63,7 +63,8 @@ namespace ConquestTactics.Net
             if (OpcionesRed.Paquete > 0 && SystemAPI.TryGetSingletonRW<GhostSendSystemData>(out var envio))
                 envio.ValueRW.DefaultSnapshotPacketSize = OpcionesRed.Paquete;
 
-            bool deTicket = BatallaDeTicket.Actual != null;
+            // Con ticket (de un fichero o del lanzador, aunque aún no haya llegado) los héroes salen del ticket.
+            bool deTicket = !string.IsNullOrEmpty(OpcionesRed.Ticket) || !string.IsNullOrEmpty(OpcionesRed.Lanzador);
             if (!_extrasCreados && !deTicket)
             {
                 _extrasCreados = true;
@@ -74,8 +75,8 @@ namespace ConquestTactics.Net
                 }
             }
 
-            foreach (var (origen, peticion) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>>()
-                         .WithAll<EntrarEnBatalla>().WithEntityAccess())
+            foreach (var (origen, entrar, peticion) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>, RefRO<EntrarEnBatalla>>()
+                         .WithEntityAccess())
             {
                 var conexion = origen.ValueRO.SourceConnection;
                 int id = SystemAPI.GetComponent<NetworkId>(conexion).Value;
@@ -84,7 +85,7 @@ namespace ConquestTactics.Net
                 if (deTicket)
                 {
                     // Con ticket, los héroes y sus escuadras salen del ticket (BatallaDeTicketSystem).
-                    BatallaDeTicket.Actual.ConexionesSinHeroe.Enqueue(id);
+                    BatallaDeTicket.ConexionesSinHeroe.Enqueue((id, conexion, entrar.ValueRO.Token.ToString()));
                     continue;
                 }
                 CrearHeroe(ref ecb, prefabs, conexion, id, id);

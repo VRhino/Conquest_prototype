@@ -103,16 +103,41 @@ la base el prefab, las animaciones, las formaciones de F1-F4 y las habilidades. 
 juego no las ofrece aún. El dorado `MensajeDeServidor__batalla_ticket_de_caravana_con_dos.json` usa `bandidos`, que no
 es una tropa del catálogo del motor, y por eso se rechaza; con `granjeros` en su lugar se juega entero.
 
-## 6. Lo que falta
+## 6. El lanzador del motor
+
+El motor arranca un proceso de Conquest por batalla (BronzeAge `crates/lanzador`, Batalla_Unity_Ciclo §8.8, fusionado en
+su `main` en `e89f8d3`) con `--batalla <uuid> --lanzador 127.0.0.1:<p> --puerto <n>` detrás de sus argumentos fijos
+(`LANZADOR_ARGUMENTOS`, aquí `-batchmode -nographics -espera 60` o lo que se quiera). Con `--lanzador`:
+
+- `EnlaceLanzador` se conecta a ese socket TCP; los mensajes son Protobuf delimitados (`WriteDelimitedTo`/`ParseDelimitedFrom`).
+- Llegan el `ticket` y la `asignacion` (un token por humano). Un ticket nuevo antes de empezar (revisión subida) vuelve a
+  preparar la batalla. Los `tokens` posteriores se añaden; las `incorporacion` se registran pero aún no se juegan.
+- Cada cliente se presenta con `-token <t>` (va en la RPC `EntrarEnBatalla`). Si el token casa con un héroe libre del
+  ticket y no ha caducado, lleva a ese héroe; si no, se le desconecta. A los `-espera` segundos empieza con la IA en los
+  que falten.
+- Manda `inicio` al empezar y `resultado` al cerrar, con el `intento_asignacion_id` de la asignación, y sale con 0 al
+  llegar el acuse del resultado (2 si el motor lo rechaza). Una tropa desconocida (3) o el socket cerrado (4) salen sin
+  resultado: el motor vence la batalla por su plazo, sin castigo.
+
+**Probado** con `Tools/LanzadorDePrueba` (C#, hace con el proceso lo mismo que el lanzador del motor, sin motor): solo
+IA, con un cliente con su token (lleva a `heroe-3`) y con un token falso (se le desconecta y juega la IA); en los tres
+casos llega inicio y resultado y el proceso sale con 0. **Sin probar todavía con el lanzador y el motor reales.**
+
+El contrato (`Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`) se compiló con los `.proto` de BronzeAge `e89f8d3`.
+`Tools/ContratoBronzeAge/actualizar.ps1` lee los de `../BronzeAgeFase0/proto`: ese checkout tiene que estar en un
+`main` que incluya el PR #18, o el contrato pierde los mensajes del lanzador.
+
+## 7. Lo que falta
 
 1. **Meter el juego en red.** Los sistemas de `Game.ECS` corren hoy en un solo mundo. Para el servidor hay que decidir
    cuáles son de servidor (los `[ServerAuthoritative]` y todo lo que decide daño o muerte), cuáles de cliente (entrada,
    cámara, animación, `EntityVisualSync`) y cuáles predicen; y pasar el héroe a un controlador de personaje de Unity
    Physics, porque `CharacterController` no corre dentro de la predicción. Es el grueso del trabajo.
-2. **Tokens.** Hoy el servidor da los héroes por orden de llegada; con la asignación real, el cliente se presenta con su
-   token y el servidor lo compara con los de `TokensBatalla`.
-3. **El lanzador**: ya está en el motor (PR #18 de BronzeAge, Batalla_Unity_Ciclo §8.8). Falta que este proceso hable
-   su protocolo (TCP local, `MensajeParaProcesoDeBatalla` en lugar del `-ticket` en fichero).
+2. **Formación elegida.** El ticket ya trae `formacion` y `formaciones_permitidas` (familias del motor, que casan una a
+   una con `FormationType`: reposo = `Rest`, linea, columna, dispersa, muro_escudos, testudo, cuadro, cuna); el servidor
+   de prueba aún no las usa.
+3. **La prueba de punta a punta** con el motor y el lanzador reales (§6), las incorporaciones a media batalla y las
+   salidas (`salida` cuando un jugador se va o cae).
 4. **Servidor de verdad.** La prueba usa el reproductor normal en `-batchmode -nographics`: el módulo Dedicated Server
    de Unity no está instalado en este PC. Para Linux hace falta ese módulo.
 5. **Predicción medida.** El héroe se predice y se corrige, pero no se ha medido el error de predicción ni probado con

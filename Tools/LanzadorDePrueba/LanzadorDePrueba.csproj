@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Un lanzador de prueba que habla con el proceso de batalla de Conquest como el del motor (Batalla_Unity_Ciclo §8.8):
+    abre el socket local, arranca el proceso, le da el ticket y la asignación con un token por humano, acusa sus mensajes
+    y comprueba que el resultado llega. Sin motor. Uso:
+      dotnet run (proyecto Tools/LanzadorDePrueba), con los argumentos: PruebaRed.exe ticket.json [-cliente] [-token-malo]
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ContratoBronzeAge\ContratoBronzeAge.csproj" />
+  </ItemGroup>
+</Project>

@@ -44,7 +44,11 @@ namespace ConquestTactics.Net
         public readonly BattleTicket Ticket;
         public readonly List<EscuadraEnJuego> Escuadras = new List<EscuadraEnJuego>();
         public readonly List<HeroeEnJuego> Heroes = new List<HeroeEnJuego>();
-        public readonly Queue<int> ConexionesSinHeroe = new Queue<int>();
+        /// <summary>Clientes que han entrado y aún no tienen héroe: su id de red, su conexión y el token que presentan.</summary>
+        public static readonly Queue<(int id, Unity.Entities.Entity conexion, string token)> ConexionesSinHeroe =
+            new Queue<(int, Unity.Entities.Entity, string)>();
+        /// <summary>La asignación del lanzador: el intento y el token de cada héroe humano. Sin ella (ticket en fichero), los héroes se dan por orden de llegada.</summary>
+        public BattleServerAssignment Asignacion;
         public readonly float DuracionSegundos;
         public long InicioMs;
         public bool Empezada;

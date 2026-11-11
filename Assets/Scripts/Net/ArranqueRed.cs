@@ -11,7 +11,9 @@ namespace ConquestTactics.Net
     /// Opciones de la prueba de red, leídas de la línea de órdenes:
     /// <c>-red servidor|cliente|ambos -ip 127.0.0.1 -puerto 7979 -bot -heroesExtra 0 -soldados 20
     /// -tasaRed 60 -medir 30 -informe ruta.txt</c>; para jugar un ticket del motor,
-    /// <c>-ticket ticket.bin|.json -resultado resultado.bin -intento a1 -duracion 120 -espera 10</c>.
+    /// <c>-ticket ticket.bin|.json -resultado resultado.bin -intento a1 -duracion 120 -espera 10</c>. Lanzado por el lanzador del
+    /// motor (Batalla_Unity_Ciclo §8.8): <c>--batalla &lt;uuid&gt; --lanzador 127.0.0.1:&lt;p&gt; --puerto &lt;n&gt;</c>. Un cliente
+    /// que entra en una batalla del motor se presenta con <c>-token &lt;t&gt;</c>.
     /// </summary>
     public static class OpcionesRed
     {
@@ -41,6 +43,11 @@ namespace ConquestTactics.Net
         public static float Duracion;
         /// <summary>Segundos que se espera a los jugadores humanos antes de empezar con la IA en su lugar.</summary>
         public static float EsperaJugadores;
+        /// <summary>El socket del lanzador (<c>host:puerto</c>); con él, el ticket y la asignación llegan por ahí y no de un fichero.</summary>
+        public static string Lanzador;
+        public static string Batalla;
+        /// <summary>Cliente: el token de su héroe para esta batalla (<c>Batalla.asignacion_propia</c> del motor).</summary>
+        public static string Token;
 
         public static void Leer()
         {
@@ -73,6 +80,10 @@ namespace ConquestTactics.Net
                     case "-intento": Intento = siguiente; break;
                     case "-duracion": Duracion = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-espera": EsperaJugadores = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
+                    case "-token": Token = siguiente; break;
+                    case "--lanzador": Lanzador = siguiente; ModoPedido = Modo.Servidor; break;
+                    case "--batalla": Batalla = siguiente; break;
+                    case "--puerto": Puerto = ushort.Parse(siguiente); break;
                 }
             }
         }
