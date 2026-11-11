@@ -83,6 +83,29 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - Velocidad de `MoveSpeedComponent` (0 mientras está aturdido: no se mueve ni gira); sin pila, `HeroStatsComponent.baseSpeed`.
 - **Output**: `HeroMoveIntent`; lo limpia si el héroe está muerto, sin ubicación de spawn o sin cámara.
 - No modifica la pose: el movimiento físico pertenece a `LocalHeroCharacterMotor`.
+- A caballo (M19), la intención es la del caballo:
+  - Solo avanza, gira a su ritmo y acelera hacia el trote, o hacia el galope con Shift si el caballo tiene aguante.
+  - Mientras sube o baja, la intención es nula.
+
+### HeroMountSystem
+- **Responsabilidad** (M19): el héroe a caballo. Es el único escritor de `HeroMountComponent` y el dueño de la entidad del
+  caballo (`HeroHorseComponent`: vida, equipo y aguante propios).
+- Corre después de `HeroInputSystem` y antes de `HeroMovementSystem`.
+- **Entrada**: G (`HeroInputComponent.MountPressed`) o la petición de la IA (`HeroMountRequestComponent`).
+- **Transiciones**: sube y baja a tiempo de los clips, y termina el paseo si:
+  - el caballo muere;
+  - un derribo o un despedido tira al héroe;
+  - un golpe interrumpe la subida;
+  - el héroe muere.
+- Para mover el cuerpo publica `poseJumpPosition`. La aplican `LocalHeroCharacterMotor` y, con agente,
+  `HeroMountPresenter`.
+- El visual (`HeroMountPresenter`) solo lee.
+
+### HeroAIMountSystem
+- **Responsabilidad** (M19): decide si un héroe de IA quiere ir a caballo (`HeroMountRequestComponent`, del que es el único
+  escritor).
+- Va a caballo para recorrer más de 35 m sin enemigos cerca, y combate a pie, que es donde tiene sus habilidades.
+- La regla es pura: `HeroMountRules.AIWantsToRide`.
 
 ### HeroRespawnSystem
 - Lee `HeroHealthComponent`, después de daño y antes de spawn. Detecta muerte, cuenta el cooldown y solicita ubicación poniendo `hasSpawned = false` al revivir.
@@ -143,6 +166,8 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 - Controla el `NavMeshAgent` remoto y publica `SquadAIOrderIntentComponent` antes del resolvedor.
 - Proyecta objetivos, comprueba `SetDestination`/`pathStatus`, retiene fallos hasta que el objetivo cambie y limpia `HeroMoveIntent` si no puede navegar.
 - Conserva solicitudes de escuadra durante combate; no arbitra ni escribe entrada legacy.
+- A caballo (M19), el agente va al trote, o al galope si el héroe correría y el caballo tiene aguante. Subiendo o
+  bajando, no se mueve.
 
 ### HeroAISkillSystem
 - En cada pensamiento del héroe IA, después de Rusher/Balanced y antes de `HeroSkillRequestSystem`, añade a

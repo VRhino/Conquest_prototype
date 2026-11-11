@@ -33,6 +33,7 @@ public partial class HeroInputSystem : SystemBase
         bool ultimate = false;
         bool attack = false;
         bool interact = false;
+        bool mount = false;
         var uiSquadSkill = BattleCommandInput.ConsumeSquadSkill();
 
         if (keyboard != null && DialogueUIState.IsDialogueOpen == false)
@@ -52,6 +53,7 @@ public partial class HeroInputSystem : SystemBase
             squad2 = keyboard.digit2Key.isPressed;
             squad3 = keyboard.digit3Key.isPressed;
             interact = keyboard.fKey.wasPressedThisFrame; // The ultimate is on T so F stays for interacting.
+            mount = keyboard.gKey.wasPressedThisFrame;
         }
 
         if (mouse != null && DialogueUIState.IsDialogueOpen == false)
@@ -87,6 +89,7 @@ public partial class HeroInputSystem : SystemBase
             input.ValueRW.UseSquadAbility3 = squad3;
             input.ValueRW.UseUltimate = ultimate;
             input.ValueRW.IsAttackPressed = attack;
+            input.ValueRW.MountPressed = mount;
 
             if (SystemAPI.HasComponent<PlayerInteractionComponent>(entity))
             {

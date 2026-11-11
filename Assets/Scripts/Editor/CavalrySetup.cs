@@ -116,20 +116,44 @@ public static class CavalrySetup
         Parameter(horse, Scale, AnimatorControllerParameterType.Float, 1f);
         AddGaitState(horse, g => Clip($"{HorseFolder}/Animations/Horse/Horse_{g}.fbx"));
         EditorUtility.SetDirty(horse);
-        foreach (var kind in Kinds) BuildRider(kind);
+        foreach (var kind in Kinds)
+        {
+            BuildRider(kind, false);
+            BuildRider(kind, true);
+        }
         AssetDatabase.SaveAssets();
         Debug.Log("Cavalry: horse and rider Animators rebuilt.");
     }
 
-    static void BuildRider(Kind kind)
+    /// <summary>The hero's rider controller for a kind of rider (M19): Lancer, Sword or Archer.</summary>
+    public static string HeroRiderController(string rider) => $"{RiderFolder}/AC_HeroRider_{rider}.controller";
+
+    /// <summary>
+    /// A rider's Animator: the gait tree and, over it, the attack or shot from the waist up. The hero's (M19) also gets
+    /// on and off (Hero_Mount, Hero_Dismount, played by HeroMountPresenter), and attacks on IsAttacking even with a bow:
+    /// its shot is a skill, not a squad volley.
+    /// </summary>
+    static void BuildRider(Kind kind, bool hero)
     {
-        var ac = ResetController(kind.RiderController);
+        bool shot = kind.ranged && !hero;
+        var ac = ResetController(hero ? HeroRiderController(kind.rider) : kind.RiderController);
         Parameter(ac, Blend, AnimatorControllerParameterType.Float, 0f);
         Parameter(ac, Scale, AnimatorControllerParameterType.Float, 1f);
         Parameter(ac, nameof(AnimationHashes.IsAttacking), AnimatorControllerParameterType.Bool, 0f);
         Parameter(ac, nameof(AnimationHashes.AttackSpeed), AnimatorControllerParameterType.Float, 1f);
-        if (kind.ranged) Parameter(ac, nameof(AnimationHashes.TriggerShoot), AnimatorControllerParameterType.Trigger, 0f);
+        if (shot) Parameter(ac, nameof(AnimationHashes.TriggerShoot), AnimatorControllerParameterType.Trigger, 0f);
         AddGaitState(ac, g => Clip($"{RiderFolder}/{kind.rider}_{g}.fbx"));
+        if (hero)
+        {
+            var baseLayer = ac.layers[0].stateMachine;
+            var gait = baseLayer.defaultState;
+            var mount = baseLayer.AddState("Mount");
+            mount.motion = Clip($"{RiderFolder}/Hero_Mount.fbx");
+            var seated = mount.AddTransition(gait);
+            seated.hasExitTime = true; seated.exitTime = 0.9f; seated.hasFixedDuration = true; seated.duration = 0.12f;
+            // Getting off ends on foot: the presenter puts the on-foot controller back on its last frame.
+            baseLayer.AddState("Dismount").motion = Clip($"{RiderFolder}/Hero_Dismount.fbx");
+        }
 
         // Attack or shot, from the waist up over the gait (the legs stay in the stirrups).
         var sm = new AnimatorStateMachine { name = CombatLayer, hideFlags = HideFlags.HideInHierarchy };
@@ -142,12 +166,12 @@ public static class CavalrySetup
         var rest = sm.AddState("Idle_Combat");
         rest.writeDefaultValues = true;
         sm.defaultState = rest;
-        var strike = sm.AddState(kind.ranged ? "Shoot" : "Attack");
+        var strike = sm.AddState(shot ? "Shoot" : "Attack");
         strike.motion = Clip($"{RiderFolder}/{kind.rider}_Attack.fbx");
         strike.writeDefaultValues = false;
         strike.speedParameterActive = true;
         strike.speedParameter = nameof(AnimationHashes.AttackSpeed);
-        if (kind.ranged)
+        if (shot)
         {
             // The shot is already fired when TriggerShoot arrives: the clip starts just before its release frame.
             var shoot = sm.AddAnyStateTransition(strike);
@@ -214,11 +238,61 @@ public static class CavalrySetup
 
     // ------------------------------------------------------------------ 2. Battle visuals
 
+    public const string HeroHorsePrefab = "Assets/Resources/" + HeroHorseVisual.ResourcePath + ".prefab";
+
+    /// <summary>
+    /// The hero's horse (M19): only the horse, with its gait Animator and the hero's rider Animators. The hero's root
+    /// stays its body (motor, collider, camera): HeroMountPresenter hangs this under it and seats the rider.
+    /// </summary>
+    /// <summary>The hero's mount alone (M19): its rider Animators and its horse, without touching the squads' assets.</summary>
+    [MenuItem("Conquest/Cavalry/Build Hero Mount")]
+    public static void BuildHeroMount()
+    {
+        if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play mode before authoring.");
+        foreach (var kind in Kinds) BuildRider(kind, true);
+        AssetDatabase.SaveAssets();
+        BuildHeroHorse();
+        AssetDatabase.SaveAssets();
+        Debug.Log("Cavalry: hero rider Animators and hero horse rebuilt.");
+    }
+
+    public static void BuildHeroHorse()
+    {
+        if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play mode before authoring.");
+        var root = (GameObject)PrefabUtility.InstantiatePrefab(Load<GameObject>(HorseModel));
+        PrefabUtility.UnpackPrefabInstance(root, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        try
+        {
+            root.name = "HeroHorse";
+            root.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            root.transform.localScale = Vector3.one;
+            var horse = root.GetComponent<Animator>();
+            horse.runtimeAnimatorController = Load<RuntimeAnimatorController>(HorseController);
+            horse.applyRootMotion = false;
+            horse.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            var coat = Load<Material>($"{HorseFolder}/Materials/Horse_Grey.mat");
+            foreach (var renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true)) renderer.sharedMaterial = coat;
+            foreach (var collider in root.GetComponentsInChildren<Collider>(true)) UnityEngine.Object.DestroyImmediate(collider);
+            var visual = root.AddComponent<HeroHorseVisual>();
+            visual.Configure(horse, Child(root, "Saddle").transform, Child(root, "Horse_Reins_Hand"), Child(root, "Horse_Reins_Neck"),
+                Load<RuntimeAnimatorController>(HeroRiderController("Sword")), Load<RuntimeAnimatorController>(HeroRiderController("Lancer")),
+                Load<RuntimeAnimatorController>(HeroRiderController("Archer")));
+            Directory.CreateDirectory(Path.GetDirectoryName(HeroHorsePrefab));
+            AssetDatabase.Refresh();
+            PrefabUtility.SaveAsPrefabAsset(root, HeroHorsePrefab);
+        }
+        finally
+        {
+            UnityEngine.Object.DestroyImmediate(root);
+        }
+    }
+
     [MenuItem("Conquest/Cavalry/2 - Build Visual Prefabs")]
     public static void BuildPrefabs()
     {
         if (EditorApplication.isPlaying) throw new InvalidOperationException("Exit Play mode before authoring.");
         foreach (var kind in Kinds) BuildPrefab(kind);
+        BuildHeroHorse();
         AssetDatabase.SaveAssets();
         Debug.Log("Cavalry: battle visuals rebuilt.");
     }

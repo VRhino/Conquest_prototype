@@ -18,6 +18,18 @@ public enum SkillRejection : byte
     NotEnoughCombo,
     /// <summary>Not enough soldier kills (L2-16; ref. not_enough_kill_soldier_count).</summary>
     NotEnoughKills,
+    /// <summary>On horseback only the basic attack; getting on or off, nothing (M19).</summary>
+    Mounted,
+}
+
+/// <summary>What the hero's mount allows (M19).</summary>
+public enum SkillMountGate : byte
+{
+    OnFoot,
+    /// <summary>Riding: only the basic attack, with the rider's clip.</summary>
+    Riding,
+    /// <summary>Getting on or off.</summary>
+    Transition,
 }
 
 /// <summary>Everything the gate looks at, gathered by the caller (no entity lookups inside).</summary>
@@ -26,6 +38,9 @@ public struct SkillGateInput
     public bool inBattle;
     public bool alive;
     public bool immobilised;
+    public SkillMountGate mount;
+    /// <summary>The skill asked for is the basic attack.</summary>
+    public bool basic;
     public bool hasSkill;
     public bool busy;
     public bool currentInterruptible;
@@ -54,6 +69,7 @@ public static class SkillGate
         if (!i.inBattle) return SkillRejection.NotInBattle;
         if (!i.alive) return SkillRejection.Dead;
         if (i.immobilised) return SkillRejection.Immobilised;
+        if (i.mount == SkillMountGate.Transition || (i.mount == SkillMountGate.Riding && !i.basic)) return SkillRejection.Mounted;
         if (!i.hasSkill) return SkillRejection.NoSkill;
         if (i.busy && !i.currentInterruptible) return SkillRejection.CurrentNotInterruptible;
         if (i.requiresChain && !i.chainSatisfied) return SkillRejection.NotChained;

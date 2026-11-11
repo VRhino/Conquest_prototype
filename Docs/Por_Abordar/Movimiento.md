@@ -25,7 +25,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | **Hecho** (2026-11-04: son soldados en contacto; métrica `idleStalls`) |
 | M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | **Hecho para las tropas** (2026-11-10: tres escuadras de caballería; el héroe a caballo es M19) |
 | M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** (datos 2026-11-03; escala por la pila 2026-11-04) |
-| M19 | Héroe a caballo: montar y desmontar, caballo con vida propia (L5-6) | Media | Pendiente (decisión del usuario: el caballo del héroe muere aparte) |
+| M19 | Héroe a caballo: montar y desmontar, caballo con vida propia (L5-6) | Media | **Hecho** (2026-11-11; falta el test PlayMode y el vídeo con el editor abierto) |
 | M20 | Datos de la caballería (velocidades, arcos, giro, vida, armas) | Media | Pendiente (provisionales, tabla para el usuario) |
 | M21 | Reacciones al golpe a caballo y cuerda del arco | Baja | Pendiente (sin clips montados) |
 
@@ -381,12 +381,52 @@ atacantes en su puesto. Las 4 de S7 son las colas del pasillo (M15). A partir de
 
 ## M19. Héroe a caballo (L5-6)
 **Qué es.** Que el héroe monte y desmonte. Decisión del usuario (2026-11-10): el caballo del héroe es un cuerpo aparte,
-que puede morir, y el héroe sigue a pie. Hace falta lo siguiente:
-- `MountBinding` (jinete → montura) y un `MotorMode` del motor local: con el héroe montado, su entrada mueve al caballo.
-- Un aguante de montura aparte del del héroe (L5-8).
-- Una tecla o habilidad para llamar al caballo.
-- El visual montado (las piezas de M17: `AC_Horse`, `AC_Rider_*` y `RiderAnimatorMirror`).
-- Desmontar al morir el caballo o al recibir un derribo.
+que puede morir, y el héroe sigue a pie.
+
+**Hecho (2026-11-11).**
+- **Tecla G** (`HeroInputComponent.MountPressed`): llama al caballo y el héroe sube (`Hero_Mount`, 1,2 s); otra vez G y
+  baja (`Hero_Dismount`, 0,9 s).
+  - No se puede llamar muerto, aturdido ni atacando.
+  - Perder vida o cualquier reacción mientras sube lo interrumpe.
+  - Mientras sube o baja no se mueve ni lanza nada.
+- **ECS** (`HeroMountSystem`, único escritor de `HeroMountComponent`):
+  - El caballo es otra entidad (`HeroHorseComponent`), con su vida, su equipo y su aguante. Va donde va el héroe.
+  - Si el caballo muere, o un derribo o un despedido tira al héroe, este cae al suelo junto al caballo y sigue a pie.
+  - Un héroe muerto queda a pie, y reaparece a pie.
+  - Al subir y al bajar, el cuerpo del héroe salta entre el suelo junto al caballo y el centro del caballo
+    (`poseJumpPosition`, que aplica el motor). Los clips hacen el movimiento entre medias.
+- **Movimiento** (`HeroMovementSystem`):
+  - El caballo solo va hacia delante y gira hacia la entrada a su ritmo.
+  - Acelera hacia el trote, o hacia el galope con Shift si le queda aguante.
+  - Si gira más de 90°, va a la mitad.
+  - El galope gasta el aguante del caballo, no el del héroe (`HeroStaminaSystem`).
+- **Combate:**
+  - A caballo, solo el ataque básico (`SkillGate`: `SkillRejection.Mounted`).
+  - Los golpes y las flechas que tocan el cuerpo por debajo de la silla (1,45 m) van al caballo, y por encima al jinete
+    (`HeroMountRules.HitTarget`, en `MeleeContactResolutionSystem` y `ProjectileController`).
+- **Visual** (`HeroMountPresenter`, que solo lee ECS):
+  - La raíz del héroe sigue siendo su cuerpo (motor o agente, colisionador, punto de cámara).
+  - El caballo (`Resources/Mounts/HeroHorse.prefab`, `HeroHorseVisual`) cuelga de ella.
+  - El Animator del héroe pasa al `AC_HeroRider_*` de su arma: espada y escudo o mandoble → espada, lanza → lancero,
+    arco → arquero. Tiene los andares, el ataque y los estados `Mount` y `Dismount`.
+  - Los clips del jinete están en el espacio del asiento. Tras la animación (LateUpdate), la pelvis se lleva de la raíz
+    a la silla.
+  - A caballo se pausan los controladores a pie y se guarda el escudo. El colisionador cubre caballo y jinete, y el punto
+    de cámara sube 0,8 m.
+- **Volver a llamar al caballo:** 20 s después de que muera; 1,5 s después de bajar, caer o ser interrumpido.
+- **Héroes de IA** (`HeroAIMountSystem`):
+  - Montan para recorrer más de 35 m sin enemigos cerca y siguen a caballo hasta quedarse a 12 m.
+  - Bajan si los atacan o si hay un héroe enemigo a menos de 25 m, porque a pie tienen sus habilidades.
+  - Su agente va al trote o al galope y gira a 120 °/s.
+  - El presentador mueve el cuerpo al subir y al bajar (`NavMeshAgent.Warp`).
+- **Clips:** `blender-tools/conquest-horse/scripts/anim_mount.py`.
+- **Ajustes provisionales:** `HeroGameplayConfig.mount` (`MountTuning`):
+  - Vida 1200.
+  - Trote 6 m/s y galope 11 m/s.
+  - Giro 120 °/s.
+  - Aguante 100: el galope gasta 8/s y se recupera 10/s.
+- **Tests:** `HeroMountTests` (EditMode) y `HeroMountsGallopsDismountsAndFallsWhenItsHorseDies` (PlayMode).
+- **Vídeo:** escenario explícito `MovementBaselineHeroMount`.
 
 ## M20. Datos de la caballería
 **Qué es.** Los valores de las tres escuadras son provisionales (`CavalrySetup.Kinds`, solo la primera vez: después

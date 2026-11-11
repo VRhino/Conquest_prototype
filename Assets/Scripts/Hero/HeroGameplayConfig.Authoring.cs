@@ -44,6 +44,10 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
     [Tooltip("Cómo gana y pierde combo el héroe; las habilidades con coste de combo lo gastan.")]
     public ComboTuning combo = ComboTuning.Default;
 
+    [Header("Montura (M19)")]
+    [Tooltip("Caballo del héroe: vida, velocidades, giro, aguante y duración de subir y bajar. Valores provisionales.")]
+    public MountTuning mount = MountTuning.Default;
+
     class Baker : Baker<HeroGameplayConfigAuthoring>
     {
         public override void Bake(HeroGameplayConfigAuthoring authoring)
@@ -66,6 +70,7 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
                 respawnProtectionSeconds    = authoring.respawnProtectionSeconds,
                 respawnProtectionHealthRatio = authoring.respawnProtectionHealthRatio,
                 combo                       = authoring.combo.OrDefault(),
+                mount                       = authoring.mount.OrDefault(),
             });
         }
     }

@@ -1,3 +1,59 @@
+# Plan: Héroe a caballo (M19, L5-6)
+
+Estado: **hecho salvo el test PlayMode y el vídeo** (2026-11-11), rama `main`. Falta correrlos con el editor abierto: en batchmode no llega el teclado simulado. El usuario lo pidió antes de H2: montar y desmontar, moverse a caballo,
+caballo con cuerpo propio y visual (mensaje del 2026-11-11, "lo que mencionaste").
+
+## Decisiones
+- **Usuario (2026-11-10).** El caballo del héroe es un cuerpo aparte: si muere, el héroe cae y sigue a pie.
+- **Mías, para que el usuario las corrija:**
+  - Tecla **G**: llamar al caballo y montar, o desmontar. Sigue el patrón de F (`wasPressedThisFrame`).
+  - Montar: 1,2 s (clip `Hero_Mount`). El caballo aparece a la derecha del héroe y este sube por la izquierda. Si
+    recibe un golpe durante la subida, se cancela.
+  - Desmontar: 0,9 s (clip `Hero_Dismount`) y baja por la izquierda.
+  - Durante la subida y la bajada no se mueve.
+  - A caballo no hay habilidades de héroe (`SkillGate` rechaza `Mounted`). El ataque básico sí, con el clip de jinete
+    de su arma: espada y mandoble → `Sword`, lanza → `Lancer`, arco → `Archer`.
+  - Caballo (provisional, `HeroGameplayConfig.mount`):
+    - 1200 de vida.
+    - 6 m/s al trote y 11 m/s al galope (con Shift).
+    - Giro de 120 °/s.
+    - Aguante propio: 100, galopar cuesta 8/s, recupera 10/s.
+  - Si el caballo muere o el héroe recibe un derribo o un despedido, el héroe cae al suelo con la reacción de derribo y
+    el caballo desaparece. Al morir o reaparecer, el héroe está a pie.
+
+## Diseño
+- **ECS.**
+  - `HeroMountComponent` en el héroe: estado (`OnFoot`, `Mounting`, `Mounted`, `Dismounting`), temporizador, entidad
+    del caballo y revisión.
+  - El único que lo escribe es `HeroMountSystem`. Este sistema crea y destruye la entidad del caballo (con
+    `HealthComponent`, `TeamComponent` y `HeroHorseComponent` → jinete).
+  - Mientras dura la montura, la entidad del caballo sigue al héroe.
+- **Movimiento.**
+  - `HeroMovementSystem` usa las velocidades del caballo a caballo y no se mueve durante la subida o la bajada.
+  - `HeroStaminaSystem` cobra el galope al aguante del caballo, no al del héroe.
+- **Visual.** `HeroMountPresenter` (en el visual del héroe; solo lee ECS) reacciona a la revisión:
+  - La raíz del héroe sigue siendo su cuerpo (motor o agente, colisionador y cámara). El caballo
+    (`Resources/Mounts/HeroHorse.prefab`) cuelga de ella.
+  - Cambia el Animator del héroe al `AC_HeroRider_*` de su arma. En LateUpdate lleva la pelvis de la raíz a la silla,
+    porque los clips están en el espacio del asiento.
+  - Al desmontar, lo deshace.
+  - Golpes: el colisionador cubre caballo y jinete. Por debajo de la silla van al caballo y por encima al jinete
+    (`HeroMountRules.HitTarget`).
+  - Cambio respecto al primer plan: no se cuelga el héroe de `Saddle` ni se pasa el motor al caballo. Así el motor, la
+    cámara y el agente de los héroes de IA no cambian.
+- **Clips** en Blender (`blender-tools/conquest-horse`), en el espacio del jinete: `Hero_Mount` y `Hero_Dismount`.
+
+## Pasos
+- [x] 1. Clips `Hero_Mount` y `Hero_Dismount` en Blender, con vídeo de revisión.
+- [x] 2. ECS: componente, configuración, `HeroMountSystem`, entrada G, movimiento, aguante, `SkillGate`, caída por
+  derribo o muerte del caballo y tests EditMode.
+- [x] 3. Visual: `HeroHorse.prefab`, `HeroMountPresenter` y Animators de jinete para el héroe (`AC_HeroRider_*`).
+- [ ] 4. Tests PlayMode: montar, galopar, desmontar y caer al morir el caballo. Vídeo.
+- [x] 5. Héroes remotos y de IA: la IA monta para recorrer distancias largas, con el agente en el caballo.
+- [x] 6. Documentación (`Movimiento.md` M19) y commit.
+
+---
+
 # Plan: Caballería (M17: L5-6 y L5-8)
 
 Estado: **hecho** (2026-11-10), rama `main`. Pendientes: `Docs/Por_Abordar/Movimiento.md` M19 (héroe a caballo), M20 (datos)

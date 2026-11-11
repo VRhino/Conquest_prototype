@@ -2,7 +2,8 @@ using Unity.Entities;
 using Unity.Mathematics;
 
 /// <summary>
-/// Regenerates hero stamina and charges only continuous sprint movement.
+/// Regenerates hero stamina and charges only continuous sprint movement; on horseback (M19) the horse's gallop wears
+/// the horse's own stamina instead.
 /// One-shot actions charge stamina when their execution starts.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -33,7 +34,8 @@ public partial class HeroStaminaSystem : SystemBase
             var data = stamina.ValueRW;
 
             bool sprinting = false;
-            if (!data.isExhausted && SystemAPI.HasComponent<HeroMoveIntent>(entity))
+            bool riding = SystemAPI.HasComponent<HeroMountComponent>(entity) && SystemAPI.GetComponent<HeroMountComponent>(entity).Riding;
+            if (!data.isExhausted && !riding && SystemAPI.HasComponent<HeroMoveIntent>(entity))
             {
                 var movement = SystemAPI.GetComponent<HeroMoveIntent>(entity);
                 sprinting = math.lengthsq(movement.Direction) > 0f
@@ -58,6 +60,21 @@ public partial class HeroStaminaSystem : SystemBase
                 data.isExhausted = false;
             }
 
+            stamina.ValueRW = data;
+        }
+
+        // The hero's horse (M19): galloping (faster than the trot) wears its own stamina down; otherwise it recovers.
+        var mount = cfg.mount.OrDefault();
+        foreach (var (horse, stamina) in SystemAPI.Query<RefRO<HeroHorseComponent>, RefRW<StaminaComponent>>())
+        {
+            var data = stamina.ValueRW;
+            Entity rider = horse.ValueRO.rider;
+            bool galloping = SystemAPI.HasComponent<HeroMoveIntent>(rider)
+                && SystemAPI.GetComponent<HeroMoveIntent>(rider).Speed > mount.trotSpeed + 0.01f;
+            data.currentStamina = math.clamp(
+                data.currentStamina + (galloping ? -mount.gallopStaminaPerSecond : data.regenRate) * deltaTime, 0f, data.maxStamina);
+            if (data.currentStamina <= 0f) data.isExhausted = true;
+            else if (data.currentStamina > data.maxStamina * cfg.exhaustionRecoveryThreshold) data.isExhausted = false;
             stamina.ValueRW = data;
         }
     }

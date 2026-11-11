@@ -34,6 +34,9 @@ public struct HeroInputComponent : IComponentData
     public bool UseSquadAbility2;
     public bool UseSquadAbility3;
 
+    /// <summary>True on the frame G is pressed: call the horse and get on, or get off (M19).</summary>
+    public bool MountPressed;
+
     /// <summary>True when walk toggle key is pressed (for animation system).</summary>
     public bool IsWalkTogglePressed;
 }

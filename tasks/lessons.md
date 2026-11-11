@@ -650,3 +650,11 @@
 - El avatar de `ModularCharacters` asigna `RightToes` a `Toes_R` (la punta) y no a `Ball_R`, así que los dedos del pie
   derecho no se doblan nunca en Unity. Si una pose los dobla en Blender, la punta del pie derecho atraviesa el suelo en
   Unity. En los clips el pie derecho va rígido.
+
+## Tests PlayMode en batchmode (2026-11-11)
+- Con `Unity.exe -batchmode -runTests -testPlatform PlayMode`, el teclado simulado de `BattleSceneIntegrationTests`
+  (`Press(Key.C)`, `wasPressedThisFrame`) no llega a los sistemas. `PrepareBaseline` falla en *FollowHero did not reach
+  order resolution*, también en tests que pasan en el editor (`LanceCavalryMarches…`).
+  - Antes de buscar el fallo en el código nuevo, correr un test conocido en el mismo modo.
+  - Los tests de batalla con entrada y los vídeos se corren con el editor abierto (MCP).
+  - En batchmode solo EditMode es fiable.

@@ -28,6 +28,8 @@ public partial class MeleeContactResolutionSystem : SystemBase
         float criticalFloor = CombatTuning.Default.criticalExtraFloor;
         var contactsByAttacker = _contactsByAttacker;
         contactsByAttacker.Clear();
+        float riderHitHeight = (SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var heroConfig)
+            ? heroConfig.mount.OrDefault() : MountTuning.Default).riderHitHeight;
         for (int i = 0; i < pendingCount && MeleeContactQueue.Pending.TryDequeue(out var contact); i++)
         {
             if (contact.world != World)
@@ -36,6 +38,9 @@ public partial class MeleeContactResolutionSystem : SystemBase
                     MeleeContactQueue.Pending.Enqueue(contact);
                 continue;
             }
+            // A blow below the saddle of a riding hero lands on its horse (M19).
+            if (contact.hitType == HitType.Body)
+                contact.target = HeroMountRules.HitTarget(em, contact.target, contact.contactPoint, riderHitHeight);
 
             // Ignore non-candidates before choosing the first target for this swing.
             if (!em.Exists(contact.attacker) || !em.Exists(contact.target)

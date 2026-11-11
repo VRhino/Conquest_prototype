@@ -7,7 +7,8 @@ using UnityEngine;
 /// <summary>
 /// Handles deterministic movement and rotation of the local hero based on
 /// <see cref="HeroInputComponent"/> and <see cref="HeroStatsComponent"/> data.
-/// Applies sprint multiplier when sprinting and stamina is available.
+/// Applies sprint multiplier when sprinting and stamina is available. On horseback (M19) the horse's gaits, turning
+/// and stamina apply instead.
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(HeroInputSystem))]
@@ -59,6 +60,18 @@ public partial class HeroMovementSystem : SystemBase
             float currentSpeed = EntityManager.HasComponent<MoveSpeedComponent>(entity)
                 ? EntityManager.GetComponentData<MoveSpeedComponent>(entity).value
                 : stats.baseSpeed;
+
+            // On horseback (M19) the horse moves: its gaits, its turning and its stamina.
+            if (EntityManager.HasComponent<HeroMountComponent>(entity))
+            {
+                var mount = EntityManager.GetComponentData<HeroMountComponent>(entity);
+                if (mount.Riding)
+                {
+                    WriteIntent(entity, Mounted(entity, mount, direction, input.IsSprintPressed, currentSpeed <= 0f));
+                    continue;
+                }
+            }
+
             if (currentSpeed <= 0f)
             {
                 direction = float3.zero;
@@ -76,14 +89,39 @@ public partial class HeroMovementSystem : SystemBase
                 if (dash.Active(SystemAPI.Time.ElapsedTime)) { direction = dash.direction; currentSpeed = dash.speed; }
             }
 
-            if (EntityManager.HasComponent<HeroMoveIntent>(entity))
-            {
-                EntityManager.SetComponentData(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });
-            }
-            else
-            {
-                EntityManager.AddComponentData(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });
-            }
+            WriteIntent(entity, new HeroMoveIntent { Direction = direction, Speed = currentSpeed });
         }
+    }
+
+    void WriteIntent(Entity entity, HeroMoveIntent intent)
+    {
+        if (EntityManager.HasComponent<HeroMoveIntent>(entity))
+            EntityManager.SetComponentData(entity, intent);
+        else
+            EntityManager.AddComponentData(entity, intent);
+    }
+
+    /// <summary>
+    /// The horse's step (M19): it only goes forward, turning towards the input at its turn rate, and speeds up or
+    /// brakes towards the trot, or the gallop while Shift is held and it has stamina. Getting on or off, or stunned,
+    /// it stands still. The motor's measured speed is the current one, so a wall stops it.
+    /// </summary>
+    HeroMoveIntent Mounted(Entity hero, in HeroMountComponent mount, float3 desired, bool gallopHeld, bool immobilised)
+    {
+        if (mount.state != HeroMountState.Mounted || immobilised) return default;
+        var tuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default;
+        float dt = SystemAPI.Time.DeltaTime;
+        float3 forward = math.mul(EntityManager.GetComponentData<LocalTransform>(hero).Rotation, new float3(0f, 0f, 1f));
+        forward.y = 0f;
+        forward = math.normalizesafe(forward, new float3(0f, 0f, 1f));
+        float current = EntityManager.HasComponent<HeroMotorStateComponent>(hero)
+            ? math.length(EntityManager.GetComponentData<HeroMotorStateComponent>(hero).velocity.xz) : 0f;
+        bool hasInput = math.lengthsq(desired) > 0f;
+        bool gallop = gallopHeld && EntityManager.Exists(mount.horse) && EntityManager.HasComponent<StaminaComponent>(mount.horse)
+            && !EntityManager.GetComponentData<StaminaComponent>(mount.horse).isExhausted
+            && EntityManager.GetComponentData<StaminaComponent>(mount.horse).currentStamina > 0f;
+        float3 heading = hasInput ? HeroMountRules.Steer(forward, desired, tuning.turnRate, dt) : forward;
+        float speed = HeroMountRules.Approach(current, HeroMountRules.TargetSpeed(tuning, hasInput, gallop, forward, desired), tuning, dt);
+        return speed > 0.01f ? new HeroMoveIntent { Direction = heading, Speed = speed } : default;
     }
 }

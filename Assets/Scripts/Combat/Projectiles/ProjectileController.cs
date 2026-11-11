@@ -243,6 +243,10 @@ public class ProjectileController : MonoBehaviour
             actualTarget = sync.GetHeroEntity();
             if (actualTarget == Entity.Null) return;
             hitType = HitType.Body;
+            // An arrow below the saddle of a riding hero lands on its horse (M19).
+            var world = World.DefaultGameObjectInjectionWorld;
+            if (world != null && world.IsCreated)
+                actualTarget = HeroMountRules.HitTarget(world.EntityManager, actualTarget, other.ClosestPoint(transform.position));
         }
 
         // Never resolve impact against the shooter itself.

@@ -364,6 +364,8 @@ public partial class SkillExecutionSystem : SystemBase
             inBattle = true,
             alive = true,
             immobilised = Immobilised(entity),
+            mount = MountGate(entity),
+            basic = slot == SkillSlot.Basic,
             hasSkill = index >= 0,
             busy = busy,
             currentInterruptible = !busy || SkillTimeline.Interruptible(ref skills[inst.skillIndex].skill.Value, inst),
@@ -517,6 +519,18 @@ public partial class SkillExecutionSystem : SystemBase
 
     bool Immobilised(Entity entity)
         => SystemAPI.HasComponent<MoveSpeedComponent>(entity) && SystemAPI.GetComponent<MoveSpeedComponent>(entity).value <= 0f;
+
+    /// <summary>What the hero's mount allows (M19): on horseback only the basic attack, getting on or off nothing.</summary>
+    SkillMountGate MountGate(Entity entity)
+    {
+        if (!SystemAPI.HasComponent<HeroMountComponent>(entity)) return SkillMountGate.OnFoot;
+        return SystemAPI.GetComponent<HeroMountComponent>(entity).state switch
+        {
+            HeroMountState.OnFoot => SkillMountGate.OnFoot,
+            HeroMountState.Mounted => SkillMountGate.Riding,
+            _ => SkillMountGate.Transition,
+        };
+    }
 
     /// <summary>Sets the current skill aside, if the hero has no parked one yet (only one, as in the reference).</summary>
     bool TryPark(Entity entity, in SkillInstanceComponent inst)

@@ -19,7 +19,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
 |---|---|---|---|
 | Formaciones_y_Posturas.md | F6, F9, F11, F13 (F3, F4, F12, F16 y F18 hechos; F8 descartado) | — | F9 cuando haya caso de uso (falta quien apague la colisión y la evitación por escuadra) |
-| Movimiento.md | M10, M12, M15, M19-M21 (M4, M16, M18 hechos el 2026-11-04; M17, caballería, el 2026-11-10) | M3 (paquete de VFX) | M20 (aprobar los datos de la caballería); M19 (héroe a caballo) |
+| Movimiento.md | M10, M12, M15, M20-M21 (M4, M16, M18 hechos el 2026-11-04; M17, caballería, el 2026-11-10; M19, héroe a caballo, el 2026-11-11) | M3 (paquete de VFX) | M20 (aprobar los datos de la caballería); M19 (aprobar los ajustes provisionales del caballo) |
 | Habilidades_Perks.md | H3, H4, H12, H14 (H5: falta el árbol) | H2 (animaciones) | H14 (perks con las condiciones nuevas; son datos) |
 | Pila_Modificadores.md | P1, P5 (P3 hecho el 2026-11-08) | P6 (prefab de VFX) | P1 (stats de objeto con `StatId`, cuando toque) |
 | Muerte_Heroe.md | D4, D5 (D1 hecho el 2026-11-10) | — | D5 (medir el coste de recrear el visual) |

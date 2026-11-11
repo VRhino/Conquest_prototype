@@ -28,6 +28,7 @@ namespace ConquestTactics.Visual
         private CharacterController _controller;
         private float _verticalVelocity;
         private uint _appliedPositionRevision;
+        private uint _appliedMountJump;
         private bool _syncPosition = true;
         private bool _syncRotation = true;
         private bool _isBound;
@@ -66,6 +67,8 @@ namespace ConquestTactics.Visual
 
             _verticalVelocity = 0f;
             _appliedPositionRevision = 0;
+            _appliedMountJump = world.EntityManager.HasComponent<HeroMountComponent>(heroEntity)
+                ? world.EntityManager.GetComponentData<HeroMountComponent>(heroEntity).poseJumpRevision : 0;
             EnsureMotorState();
             InitializeFromEntityPose();
             _lastSupportedHeight = transform.position.y;
@@ -114,6 +117,7 @@ namespace ConquestTactics.Visual
 
             var entityManager = _world.EntityManager;
             bool teleported = ApplySpawnPose(entityManager);
+            teleported |= ApplyMountJump(entityManager);
             bool canMove = !entityManager.HasComponent<HeroLifeComponent>(_heroEntity)
                 || entityManager.GetComponentData<HeroLifeComponent>(_heroEntity).isAlive;
             if (entityManager.HasComponent<HeroSpawnComponent>(_heroEntity))
@@ -186,6 +190,23 @@ namespace ConquestTactics.Visual
             SafeSetPose(spawn.spawnPosition, spawn.spawnRotation);
             _verticalVelocity = 0f;
             _appliedPositionRevision = spawn.positionRevision;
+            return true;
+        }
+
+        /// <summary>
+        /// Getting on or off the horse (M19) moves the body between the ground beside it and its centre; the clips play
+        /// the move in between.
+        /// </summary>
+        private bool ApplyMountJump(EntityManager entityManager)
+        {
+            if (!entityManager.HasComponent<HeroMountComponent>(_heroEntity))
+                return false;
+            var mount = entityManager.GetComponentData<HeroMountComponent>(_heroEntity);
+            if (mount.poseJumpRevision == _appliedMountJump)
+                return false;
+            _appliedMountJump = mount.poseJumpRevision;
+            SafeSetPose(mount.poseJumpPosition, mount.poseJumpRotation);
+            _verticalVelocity = 0f;
             return true;
         }
 

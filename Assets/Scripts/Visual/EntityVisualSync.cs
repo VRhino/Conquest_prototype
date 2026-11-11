@@ -46,9 +46,10 @@ namespace ConquestTactics.Visual
         private const float SYNC_INTERVAL = 0.016f;
         private NavMeshAgent _navAgent;
         private Animator _animator;
-        // Whether the hero's controller has the attack speed parameter (L2-12), checked once per animator.
-        private Animator _attackSpeedAnimator;
-        private bool _hasAttackSpeed;
+        // Which attack parameters the hero's controller has (L2-12), checked once per controller: on horseback (M19) the
+        // rider controller has IsAttacking and AttackSpeed but no TriggerAttack.
+        private RuntimeAnimatorController _attackParametersController;
+        private bool _hasAttackSpeed, _hasTriggerAttack, _hasIsAttacking;
         private readonly HeroDeathAnimationBridge _deathAnimation = new HeroDeathAnimationBridge();
         private readonly HitReactionAnimationBridge _hitReaction = new HitReactionAnimationBridge();
 
@@ -195,23 +196,25 @@ namespace ConquestTactics.Visual
                 && _entityManager.HasComponent<HeroAnimationComponent>(_heroEntity))
             {
                 var animData = _entityManager.GetComponentData<HeroAnimationComponent>(_heroEntity);
-                // Checked once per animator: parameters returns a fresh array on every call.
-                if (_attackSpeedAnimator != _animator)
+                // Checked once per controller: parameters returns a fresh array on every call.
+                if (_attackParametersController != _animator.runtimeAnimatorController)
                 {
-                    _attackSpeedAnimator = _animator;
+                    _attackParametersController = _animator.runtimeAnimatorController;
                     _hasAttackSpeed = AnimationHashes.HasParameter(_animator, AnimationHashes.AttackSpeed);
+                    _hasTriggerAttack = AnimationHashes.HasParameter(_animator, AnimationHashes.TriggerAttack);
+                    _hasIsAttacking = AnimationHashes.HasParameter(_animator, AnimationHashes.IsAttacking);
                 }
                 if (_hasAttackSpeed)
                     _animator.SetFloat(AnimationHashes.AttackSpeed, animData.attackSpeed > 0f ? animData.attackSpeed : 1f);
                 if (animData.triggerAttack)
                 {
-                    _animator.SetTrigger(AnimationHashes.TriggerAttack);
+                    if (_hasTriggerAttack) _animator.SetTrigger(AnimationHashes.TriggerAttack);
                     animData.triggerAttack = false;
                     _entityManager.SetComponentData(_heroEntity, animData);
                 }
 
                 // Drive IsAttacking bool so the Animator Controller can exit the attack state
-                if (_entityManager.HasComponent<HeroCombatComponent>(_heroEntity))
+                if (_hasIsAttacking && _entityManager.HasComponent<HeroCombatComponent>(_heroEntity))
                 {
                     bool attacking = _entityManager.GetComponentData<HeroCombatComponent>(_heroEntity).isAttacking;
                     _animator.SetBool(AnimationHashes.IsAttacking, attacking);
@@ -365,6 +368,14 @@ namespace ConquestTactics.Visual
             {
                 equipmentVisual.enabled = liveEquipment;
                 equipmentVisual.Bind(this);
+            }
+
+            // Heroes can ride (M19): the presenter shows the horse and the rider from the mount state.
+            if (_entityManager.HasComponent<HeroLifeComponent>(_heroEntity))
+            {
+                var mountPresenter = GetComponent<HeroMountPresenter>();
+                if (mountPresenter == null) mountPresenter = gameObject.AddComponent<HeroMountPresenter>();
+                mountPresenter.Bind(_world, _heroEntity);
             }
 
             var motor = GetComponent<LocalHeroCharacterMotor>();

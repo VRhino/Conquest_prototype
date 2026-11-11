@@ -67,7 +67,10 @@ public partial class HeroAIExecutionSystem : SystemBase
             // ── Movement via NavMeshAgent ─────────────────────────────────────────
             float3 moveDir = float3.zero;
             float  speed   = stats.ValueRO.baseSpeed;
-            bool   shouldMove = battleActive && life.ValueRO.isAlive && dec.action != AIActionType.Idle;
+            // On horseback (M19) the horse's gaits; getting on or off, the hero stands still.
+            var mount = SystemAPI.HasComponent<HeroMountComponent>(entity) ? SystemAPI.GetComponent<HeroMountComponent>(entity) : default;
+            bool   shouldMove = battleActive && life.ValueRO.isAlive && dec.action != AIActionType.Idle
+                && (mount.state == HeroMountState.OnFoot || mount.state == HeroMountState.Mounted);
 
             // NavMeshAgent is added by HeroVisualInstantiationSystem when the visual prefab is ready.
             // Guard prevents ArgumentException during the frames between ECS spawn and visual instantiation.
@@ -131,9 +134,11 @@ public partial class HeroAIExecutionSystem : SystemBase
                                 float walkSpeed = SystemAPI.HasComponent<MoveSpeedComponent>(entity)
                                     ? SystemAPI.GetComponent<MoveSpeedComponent>(entity).value
                                     : stats.ValueRO.baseSpeed;
-                                float agentSpeed = dec.shouldSprint && hasSprintStamina
-                                    ? walkSpeed * stats.ValueRO.sprintMultiplier
-                                    : walkSpeed;
+                                float agentSpeed = mount.state == HeroMountState.Mounted
+                                    ? MountedSpeed(mount.horse, dec.shouldSprint, walkSpeed)
+                                    : dec.shouldSprint && hasSprintStamina
+                                        ? walkSpeed * stats.ValueRO.sprintMultiplier
+                                        : walkSpeed;
                                 agent.speed = agentSpeed;
                                 agent.isStopped = false;
                                 if (IsCurrentPathValid(navigation, resolved,
@@ -209,6 +214,19 @@ public partial class HeroAIExecutionSystem : SystemBase
             // Clear the one-shot squad order flag
             decision.ValueRW.hasNewSquadOrder = false;
         }
+    }
+
+    /// <summary>
+    /// The horse's pace for an AI rider (M19): the gallop when it would sprint and the horse has stamina, else the trot;
+    /// still while stunned.
+    /// </summary>
+    private float MountedSpeed(Entity horse, bool sprint, float walkSpeed)
+    {
+        if (walkSpeed <= 0f) return 0f;
+        var tuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default;
+        bool gallop = sprint && SystemAPI.Exists(horse) && SystemAPI.HasComponent<StaminaComponent>(horse)
+            && !SystemAPI.GetComponent<StaminaComponent>(horse).isExhausted && SystemAPI.GetComponent<StaminaComponent>(horse).currentStamina > 0f;
+        return gallop ? tuning.gallopSpeed : tuning.trotSpeed;
     }
 
     private static void RejectCommand(NavMeshAgent agent, float3 requested,

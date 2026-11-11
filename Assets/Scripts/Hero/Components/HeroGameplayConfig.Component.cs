@@ -2,7 +2,8 @@ using Unity.Entities;
 
 /// <summary>
 /// Singleton ECS component that holds hero gameplay tuning values.
-/// Baked from HeroGameplayConfigAuthoring. Read by HeroInitializationSystem (basic attack), SkillExecutionSystem and HeroStaminaSystem.
+/// Baked from HeroGameplayConfigAuthoring. Read by HeroInitializationSystem (basic attack), SkillExecutionSystem, HeroStaminaSystem
+/// and, for the mount (M19), HeroMountSystem and HeroMovementSystem.
 /// </summary>
 public struct HeroGameplayConfigComponent : IComponentData
 {
@@ -35,6 +36,9 @@ public struct HeroGameplayConfigComponent : IComponentData
 
     /// <summary>How the hero's combo is gained and lost (L2-16).</summary>
     public ComboTuning combo;
+
+    /// <summary>The hero's horse (M19).</summary>
+    public MountTuning mount;
 
     /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.
     /// Hero_Death lasts 1.8 s, so the body then lies on the ground for 1.7 s before it is removed.</summary>
