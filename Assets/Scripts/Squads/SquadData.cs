@@ -50,6 +50,12 @@ public class SquadData : ScriptableObject
     /// <summary>Formations the squad can adopt (F1, F2…).</summary>
     [UnityEngine.Serialization.FormerlySerializedAs("gridFormations")]
     public FormationDefinition[] formations;
+    /// <summary>
+    /// «En reposo»: the formation the squad takes while it follows the hero (type <see cref="FormationType.Rest"/>).
+    /// Always available; it is not one of the F1-F4 formations. Levies stand loose, drilled troops close together.
+    /// </summary>
+    [Tooltip("«En reposo»: formación al seguir al héroe. Siempre disponible; no entra en F1-F4 ni en el ciclo con X.")]
+    public FormationDefinition restFormation;
     /// <summary>Leadership cost to deploy the squad.</summary>
     public int leadershipCost;
     /// <summary>Default tactical behavior profile.</summary>

@@ -7,6 +7,7 @@ Revisado línea a línea contra el código el 2026-10-22.
 Las formaciones son configuraciones tácticas que los squads adoptan bajo instrucción directa del héroe. Son **datos** (`FormationDefinition`), no código: cada squad lleva su lista en `SquadData.formations`, que se hornea en un `FormationLibraryBlob`.
 
 - Siete tipos en `FormationType`: Line, Dispersed, Testudo, Wedge, Column, Square, ShieldWall. Cada squad dispone solo de las que tiene en su lista.
+- Un octavo, `Rest` («En reposo», 2026-11-11): la formación de reposo de cada tropa, la que toma al seguir al héroe. Ver §2.1.
 - El cambio de formación se hace con doble-tap `X` (ciclar por la lista del squad) o `F1`–`F4` (índice 0–3 de esa lista). `SquadPlayerCommandResolver.TryResolveFormation` ignora un índice que el squad no tiene.
 - Cooldown entre cambios: `MovementTuningComponent.formationChangeCooldown` (1 s por defecto en `MovementTuningComponent.Default`).
 
@@ -35,7 +36,25 @@ Las formaciones son configuraciones tácticas que los squads adoptan bajo instru
 | Dispersed | | Abierta: se puede atravesar entre huecos |
 | Column | | Abierta |
 
+| Rest | | «En reposo»: al seguir al héroe. Abierta |
+
 "Muro" es la clasificación de `UnitBodyblockSystem.IsWallFormation` (solo afecta al modo muelle heredado; ver `BodyblockSystem.md`). Los assets de ejemplo están en `Assets/ScriptableObjects/Formations/` (Line, Dispersed, Testudo, Wedge) y `Assets/Resources/Squads/Spearmen/Formations/` (Line, Dispersed, Wedge).
+
+### 2.1. Formación de reposo («En reposo»)
+
+Toda tropa tiene una (`SquadData.restFormation`, tipo `Rest`): es como se coloca cuando sigue al héroe. La disposición de
+cada soldado la deciden sus datos, como en las demás formaciones: una leva (granjeros, arqueros de leva) va dispersa y
+desordenada (`Scatter`, mucho espaciado y ruido); una tropa con instrucción (lanceros, piqueros) va junta y en orden
+(bloque de `Template`, espaciado corto y ruido casi nulo). `Tools/Formations/Create Rest Formations`
+(`RestFormationSetup`) crea la de cada tropa que no la tiene, con un perfil por `SquadData.id`; luego se ajusta a mano.
+
+- **Siempre disponible**: no la abre ningún nivel ni tecnología.
+- **No es de F1-F4 ni del ciclo con X**: el baker la pone la última de la biblioteca y `TryResolveFormation` no la cuenta.
+  Desde el reposo, X vuelve a la primera formación de la lista.
+- **La pide FollowHero** (`SquadPlayerCommandResolver.TryApply`): seguir al héroe pone la escuadra en reposo. Una
+  escuadra sin formación de reposo se abre en `Dispersed`, si la tiene (lo de antes).
+- La IA no cambia de formación (`OrderResolutionSystem`), así que sus escuadras siguen sin reposo. Pendiente de decidir.
+- El HUD no tiene icono para el reposo: con la escuadra en reposo no se ilumina ninguno de F1-F4.
 
 ### Diseño original no implementado
 

@@ -1,3 +1,4 @@
+using System.Linq;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -23,7 +24,13 @@ public abstract class SquadDefinitionBaker<T> : Baker<T> where T : MonoBehaviour
                                  $"{MinimumMeleeReach} m of reach beyond the body radius; units will fight while touching.");
 
             // Bake formation library
-            var formationLibrary = BakeFormationLibrary(d.formations, d.name);
+            // The rest formation goes last, after the F1-F4 list, so the list indices stay the library indices.
+            if (d.restFormation != null && d.restFormation.formationType != FormationType.Rest)
+                Debug.LogWarning($"[SquadDefinitionBaker] {d.name}: rest formation {d.restFormation.name} is not of type Rest.");
+            var formations = d.restFormation != null
+                ? (d.formations ?? System.Array.Empty<FormationDefinition>()).Append(d.restFormation).ToArray()
+                : d.formations;
+            var formationLibrary = BakeFormationLibrary(formations, d.name);
             AddBlobAsset(ref formationLibrary, out _);
             var curves = SquadProgressionCurves.Create(d.progressionData);
             AddBlobAsset(ref curves, out _);

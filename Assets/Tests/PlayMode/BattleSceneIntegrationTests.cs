@@ -321,8 +321,8 @@ public partial class BattleSceneIntegrationTests
             "Braced spearmen did not take the brace poses (kneeling front rank, standing rear rank).");
         yield return Press(Key.C);
         yield return Until(() => em.GetComponentData<SquadCombatModeComponent>(squad).mode == SquadCombatMode.Normal
-            && em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Dispersed,
-            5f, "Follow did not release brace and line formation.");
+            && em.GetComponentData<FormationComponent>(squad).currentFormation == FormationType.Rest,
+            5f, "Follow did not release brace and line formation into the rest formation.");
     }
 
     /// <summary>F3, squires: held in place, the shield wall crouches its first rank behind planted shields and raises the

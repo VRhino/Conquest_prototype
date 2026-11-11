@@ -57,12 +57,15 @@ public static class SquadPlayerCommandResolver
             intent.holdPosition = command.holdPosition;
             if (command.order == SquadOrderType.FollowHero)
             {
-                // A single follow command releases defensive combat and rank posture.
+                // A single follow command releases defensive combat and rank posture, and the squad stands at rest
+                // («En reposo»); a squad without a rest formation opens up into Dispersed if it has one.
                 intent.overrideEndsAt = now + CooldownDuration;
                 if (definition.formationLibrary.IsCreated)
                 {
                     ref var library = ref definition.formationLibrary.Value;
-                    if (FormationLayout.Find(ref library, FormationType.Dispersed) >= 0)
+                    if (FormationLayout.Find(ref library, FormationType.Rest) >= 0)
+                        intent.desiredFormation = FormationType.Rest;
+                    else if (FormationLayout.Find(ref library, FormationType.Dispersed) >= 0)
                         intent.desiredFormation = FormationType.Dispersed;
                 }
             }
@@ -74,6 +77,10 @@ public static class SquadPlayerCommandResolver
         return true;
     }
 
+    /// <summary>
+    /// F1-F4 (<paramref name="requestedIndex"/>) or the X cycle over the squad's formations. The rest formation is never
+    /// one of them: it is baked last and only FollowHero asks for it.
+    /// </summary>
     public static bool TryResolveFormation(SquadDefinitionComponent definition,
         FormationType current, int requestedIndex, bool cycle, out FormationType selected)
     {
@@ -82,22 +89,26 @@ public static class SquadPlayerCommandResolver
             return false;
 
         ref var formations = ref definition.formationLibrary.Value.formations;
-        if (formations.Length == 0)
+        int count = formations.Length;
+        if (count > 0 && formations[count - 1].formationType == FormationType.Rest)
+            count--;
+        if (count == 0)
             return false;
 
         int index = requestedIndex;
         if (cycle)
         {
+            // From rest (or an unknown formation) the cycle starts again at the first one.
             index = -1;
-            for (int i = 0; i < formations.Length; i++)
+            for (int i = 0; i < count; i++)
                 if (formations[i].formationType == current)
                 {
                     index = i;
                     break;
                 }
-            index = (index + 1) % formations.Length;
+            index = (index + 1) % count;
         }
-        if (index < 0 || index >= formations.Length)
+        if (index < 0 || index >= count)
             return false;
 
         selected = formations[index].formationType;

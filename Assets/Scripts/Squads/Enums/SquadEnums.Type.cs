@@ -22,6 +22,11 @@ public enum FormationType
     Column,
     Square,
     ShieldWall,
+    /// <summary>
+    /// «En reposo»: how the troop stands while it follows its hero. Every troop has one (<see cref="SquadData.restFormation"/>),
+    /// always available, never in the F1-F4 list nor in the X cycle.
+    /// </summary>
+    Rest,
 }
 
 /// <summary>
