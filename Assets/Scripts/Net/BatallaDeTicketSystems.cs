@@ -37,6 +37,17 @@ namespace ConquestTactics.Net
                 return;
             }
             var ticket = BatallaDeTicket.Leer(OpcionesRed.Ticket);
+            // CQ-003: una tropa que Conquest no tiene rechaza la batalla entera, nunca se juega con una por defecto.
+            var desconocidas = BatallaDeTicket.TropasDesconocidas(ticket, id => TropasRed.Buscar(id) != null);
+            if (desconocidas.Count > 0)
+            {
+                Debug.LogError($"[Red] RECHAZADA {ticket.BattleId}: tropas que Conquest no tiene: {string.Join(", ", desconocidas)}");
+                Enabled = false;
+#if !UNITY_EDITOR
+                Application.Quit(3);
+#endif
+                return;
+            }
             BatallaDeTicket.Actual = new BatallaDeTicket(ticket, OpcionesRed.Duracion);
             Debug.Log($"[Red] Ticket {ticket.BattleId}: {BatallaDeTicket.Actual.Heroes.Count} héroes, " +
                       $"{BatallaDeTicket.Actual.Escuadras.Count} escuadras, {BatallaDeTicket.Actual.DuracionSegundos} s");
@@ -100,17 +111,20 @@ namespace ConquestTactics.Net
                 lider[i] = heroe;
             }
 
-            var huecos = new int[batalla.Heroes.Count];
+            // Cada héroe lleva sus escuadras una detrás de otra, cada una en la formación de reposo de su tropa.
+            var fondo = new float[batalla.Heroes.Count];
+            var desfases = new System.Collections.Generic.List<float3>();
             for (int e = 0; e < batalla.Escuadras.Count; e++)
             {
                 var escuadra = batalla.Escuadras[e];
                 Entity guia;
-                int hueco = 0;
+                desfases.Clear();
+                var reposo = TropasRed.Buscar(escuadra.TropaId)?.restFormation;
+                uint semilla = (uint)escuadra.Id.GetHashCode();
                 if (escuadra.Heroe >= 0)
                 {
                     guia = lider[escuadra.Heroe];
-                    hueco = huecos[escuadra.Heroe];
-                    huecos[escuadra.Heroe] += escuadra.Autorizados;
+                    fondo[escuadra.Heroe] = FormacionDeReposo.Desfases(reposo, escuadra.Autorizados, semilla, fondo[escuadra.Heroe], desfases);
                 }
                 else
                 {
@@ -121,15 +135,16 @@ namespace ConquestTactics.Net
                     em.AddComponentData(guia, new HeroeSinJugador());
                     em.AddComponentData(guia, new BandoServidor { Bando = escuadra.Bando });
                     em.AddComponentData(guia, new ObjetivoCombate());
+                    FormacionDeReposo.Desfases(reposo, escuadra.Autorizados, semilla, 0f, desfases);
                 }
                 var poseGuia = em.GetComponentData<LocalTransform>(guia);
-                for (int s = 0; s < escuadra.Autorizados; s++, hueco++)
+                for (int s = 0; s < escuadra.Autorizados; s++)
                 {
                     var soldado = em.Instantiate(prefabs.Soldado);
                     em.SetComponentData(soldado, LocalTransform.FromPositionRotation(
-                        poseGuia.Position + FormacionBasica.Hueco(hueco, poseGuia.Rotation), poseGuia.Rotation));
+                        poseGuia.Position + math.mul(poseGuia.Rotation, desfases[s]), poseGuia.Rotation));
                     em.SetComponentData(soldado, new SoldadoRed { Bando = escuadra.Bando });
-                    em.AddComponentData(soldado, new SoldadoEnServidor { Heroe = guia, Hueco = hueco });
+                    em.AddComponentData(soldado, new SoldadoEnServidor { Heroe = guia, Desfase = desfases[s] });
                     Combatiente(em, soldado, escuadra.Bando, VidaSoldado, DanoSoldado, e, -1);
                 }
             }

@@ -60,4 +60,35 @@ public class BatallaDeTicketTests
 
         Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r), Has.Member("la escuadra esc-9 no cierra"));
     }
+
+    [Test]
+    public void UnaTropaQueConquestNoTieneRechazaLaBatalla()
+    {
+        var batalla = Batalla();
+        Assert.That(BatallaDeTicket.TropasDesconocidas(batalla.Ticket, id => TropasRed.Buscar(id) != null),
+            Is.EqualTo(new[] { "bandidos" }), "milicia_lanceros es de Conquest; «bandidos» no es una tropa del catálogo del motor.");
+    }
+
+    [Test]
+    public void LosSoldadosSiguenEnLaFormacionDeReposoDeSuTropa()
+    {
+        var granjeros = TropasRed.Buscar("granjeros");
+        var hoplitas = TropasRed.Buscar("hoplitas_ciudadanos");
+        Assert.That(granjeros, Is.Not.Null);
+        Assert.That(hoplitas, Is.Not.Null);
+        var sueltos = new System.Collections.Generic.List<Unity.Mathematics.float3>();
+        var juntos = new System.Collections.Generic.List<Unity.Mathematics.float3>();
+        FormacionDeReposo.Desfases(granjeros.restFormation, 18, 7, 0f, sueltos);
+        FormacionDeReposo.Desfases(hoplitas.restFormation, 18, 7, 0f, juntos);
+        Assert.That(sueltos.Count, Is.EqualTo(18));
+        Assert.That(sueltos.TrueForAll(p => p.z < 0f) && juntos.TrueForAll(p => p.z < 0f), Is.True, "Todos detrás del héroe.");
+        Assert.That(Extension(sueltos), Is.GreaterThan(Extension(juntos) * 1.5f), "Los granjeros ocupan más que los hoplitas.");
+    }
+
+    static float Extension(System.Collections.Generic.List<Unity.Mathematics.float3> puntos)
+    {
+        float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
+        foreach (var p in puntos) { minX = Mathf.Min(minX, p.x); maxX = Mathf.Max(maxX, p.x); minZ = Mathf.Min(minZ, p.z); maxZ = Mathf.Max(maxZ, p.z); }
+        return (maxX - minX) * (maxZ - minZ);
+    }
 }

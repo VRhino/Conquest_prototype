@@ -74,7 +74,7 @@ namespace ConquestTactics.Net
                 Escuadras.Add(Escuadra(escuadra, bando, -1));
         }
 
-        static EscuadraEnJuego Escuadra(SquadSnapshot s, byte bando, int heroe) => new EscuadraEnJuego
+        static EscuadraEnJuego Escuadra(BronzeAge.Contract.V1.SquadSnapshot s, byte bando, int heroe) => new EscuadraEnJuego
         {
             Id = s.SquadId, TropaId = s.TropaId, Bando = bando, Autorizados = (int)s.EfectivosAutorizados, Heroe = heroe,
         };
@@ -180,6 +180,11 @@ namespace ConquestTactics.Net
                 fallos.Add("carro inexistente o repetido");
             return fallos;
         }
+
+        /// <summary>Los <c>tropaId</c> del ticket que <paramref name="conocida"/> no reconoce, sin repetir.</summary>
+        public static List<string> TropasDesconocidas(BattleTicket t, Func<string, bool> conocida) =>
+            Lados(t).SelectMany(l => l.Participantes.SelectMany(p => p.Escuadras).Concat(l.EscuadrasSinHeroe))
+                .Select(e => e.TropaId).Distinct().Where(id => !conocida(id)).ToList();
 
         static IEnumerable<BattleSide> Lados(BattleTicket t) => new[] { t.Atacante, t.Defensor }.Where(l => l != null);
 

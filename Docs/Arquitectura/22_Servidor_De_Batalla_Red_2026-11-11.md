@@ -81,7 +81,29 @@ cierra sobre lo autorizado, tiempo agotado solo lo gana el defensor, duración e
 victoria con números, hasta que esté la tabla de niveles; si el atacante gana un asalto de caravana se pierden todos los
 carros; el combate es de prueba (todos contra el más cercano, sin formaciones ni las reglas de daño de Conquest).
 
-## 5. Lo que falta
+## 5. Tropas del motor (CQ-003)
+
+El servidor de batalla busca cada escuadra del ticket por su `tropaId` entre las `SquadData` de `Resources/Squads`
+(`TropasRed`). Si falta una, **rechaza la batalla entera** (sale con código 3, sin resultado): nunca juega con una tropa
+por defecto. Los soldados siguen a su héroe en la formación de reposo de su tropa (`FormacionDeReposo`), una escuadra
+detrás de otra.
+
+Las cuatro primeras, creadas con `Tools/BronzeAge/Crear tropas del motor` (`TropasBronzeAgeSetup`) en
+`Assets/Resources/Squads/BronzeAge/<tropaId>/`, con las unidades y el escalón del catálogo del motor:
+
+| `tropaId` | Soldados | Escalón | Base provisional | Reposo |
+|---|---:|---:|---|---|
+| `granjeros` | 30 | 1 | Spearmen | disperso (2,4 m, mucho ruido) |
+| `milicia_lanceros` | 25 | 2 | Spearmen | bloque de 5, suelto (1,25 m) |
+| `hoplitas_ciudadanos` | 18 | 3 | Spearmen | bloque de 6, apretado (1,05 m) |
+| `arqueros` | 18 | 3 | Levy Archers | bloque de 6 (1,4 m) |
+
+Cada una tiene su propio módulo cuerpo a cuerpo o a distancia (copia del de la base, libre de cambiar) y comparte con
+la base el prefab, las animaciones, las formaciones de F1-F4 y las habilidades. No están en la `SquadDatabase`: el
+juego no las ofrece aún. El dorado `MensajeDeServidor__batalla_ticket_de_caravana_con_dos.json` usa `bandidos`, que no
+es una tropa del catálogo del motor, y por eso se rechaza; con `granjeros` en su lugar se juega entero.
+
+## 6. Lo que falta
 
 1. **Meter el juego en red.** Los sistemas de `Game.ECS` corren hoy en un solo mundo. Para el servidor hay que decidir
    cuáles son de servidor (los `[ServerAuthoritative]` y todo lo que decide daño o muerte), cuáles de cliente (entrada,
@@ -89,7 +111,8 @@ carros; el combate es de prueba (todos contra el más cercano, sin formaciones n
    Physics, porque `CharacterController` no corre dentro de la predicción. Es el grueso del trabajo.
 2. **Tokens.** Hoy el servidor da los héroes por orden de llegada; con la asignación real, el cliente se presenta con su
    token y el servidor lo compara con los de `TokensBatalla`.
-3. **El lanzador**, en el motor: arranca un `PruebaRed.exe -red servidor -ticket ...` por batalla y lleva el resultado.
+3. **El lanzador**: ya está en el motor (PR #18 de BronzeAge, Batalla_Unity_Ciclo §8.8). Falta que este proceso hable
+   su protocolo (TCP local, `MensajeParaProcesoDeBatalla` en lugar del `-ticket` en fichero).
 4. **Servidor de verdad.** La prueba usa el reproductor normal en `-batchmode -nographics`: el módulo Dedicated Server
    de Unity no está instalado en este PC. Para Linux hace falta ese módulo.
 5. **Predicción medida.** El héroe se predice y se corrige, pero no se ha medido el error de predicción ni probado con

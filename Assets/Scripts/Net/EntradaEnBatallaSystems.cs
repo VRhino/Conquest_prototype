@@ -114,7 +114,7 @@ namespace ConquestTactics.Net
                 var soldado = ecb.Instantiate(prefabs.Soldado);
                 ecb.SetComponent(soldado, LocalTransform.FromPosition(posicion + FormacionBasica.Hueco(hueco, quaternion.identity)));
                 ecb.SetComponent(soldado, new SoldadoRed { Bando = bando });
-                ecb.AddComponent(soldado, new SoldadoEnServidor { Heroe = heroe, Hueco = hueco });
+                ecb.AddComponent(soldado, new SoldadoEnServidor { Heroe = heroe, Desfase = FormacionBasica.Hueco(hueco, quaternion.identity) });
                 if (conexion != Entity.Null)
                     ecb.AppendToBuffer(conexion, new LinkedEntityGroup { Value = soldado });
             }

@@ -11,17 +11,17 @@ using UnityEngine;
 /// </summary>
 public static class RestFormationSetup
 {
-    struct Profile
+    public struct Profile
     {
         public FormationLayoutKind layout;
         public int columns;
         public float spacing, noiseRadius, noiseAngle;
     }
 
-    static Profile Block(int columns, float spacing, float noise, float angle) => new Profile
+    public static Profile Block(int columns, float spacing, float noise, float angle) => new Profile
         { layout = FormationLayoutKind.Template, columns = columns, spacing = spacing, noiseRadius = noise, noiseAngle = angle };
 
-    static Profile Loose(float spacing, float noise, float angle) => new Profile
+    public static Profile Loose(float spacing, float noise, float angle) => new Profile
         { layout = FormationLayoutKind.Scatter, spacing = spacing, noiseRadius = noise, noiseAngle = angle };
 
     /// <summary>By <see cref="SquadData.id"/>: how much drill and cohesion the troop has.</summary>
@@ -59,7 +59,8 @@ public static class RestFormationSetup
         AssetDatabase.SaveAssets();
     }
 
-    static FormationDefinition Create(SquadData data, string squadPath, Profile profile)
+    /// <summary>Creates the rest formation of <paramref name="data"/> in the Formations folder next to its asset.</summary>
+    public static FormationDefinition Create(SquadData data, string squadPath, Profile profile)
     {
         var folder = Path.Combine(Path.GetDirectoryName(squadPath), "Formations").Replace('\\', '/');
         if (!AssetDatabase.IsValidFolder(folder))

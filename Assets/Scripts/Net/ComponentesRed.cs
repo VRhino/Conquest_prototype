@@ -28,11 +28,14 @@ namespace ConquestTactics.Net
         [GhostField] public byte Bando;
     }
 
-    /// <summary>Lo que solo sabe el servidor de cada soldado: a quién sigue y qué hueco ocupa.</summary>
+    /// <summary>
+    /// Lo que solo sabe el servidor de cada soldado: a quién sigue y dónde va respecto a él (en su marco: +z delante),
+    /// sacado de la formación de reposo de su tropa.
+    /// </summary>
     public struct SoldadoEnServidor : IComponentData
     {
         public Entity Heroe;
-        public int Hueco;
+        public float3 Desfase;
     }
 
     /// <summary>Prefabs fantasma creados por código, idénticos en servidor y cliente.</summary>

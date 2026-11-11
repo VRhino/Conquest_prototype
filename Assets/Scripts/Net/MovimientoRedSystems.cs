@@ -6,7 +6,7 @@ using Unity.Transforms;
 
 namespace ConquestTactics.Net
 {
-    /// <summary>Huecos detrás del héroe en una rejilla. Provisional hasta la formación de reposo de cada tropa.</summary>
+    /// <summary>Huecos detrás del héroe en una rejilla, para la medición sin ticket (sin tropa).</summary>
     public static class FormacionBasica
     {
         const int Columnas = 5;
@@ -132,7 +132,7 @@ namespace ConquestTactics.Net
                 }
                 if (!tieneHeroe)
                     continue;
-                float3 destino = heroe.Position + FormacionBasica.Hueco(soldado.ValueRO.Hueco, heroe.Rotation);
+                float3 destino = heroe.Position + math.mul(heroe.Rotation, soldado.ValueRO.Desfase);
                 float3 falta = destino - pose.ValueRO.Position;
                 float distancia = math.length(falta);
                 if (distancia < Llegada)
