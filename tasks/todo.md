@@ -1,6 +1,6 @@
 # Plan: Héroe a caballo (M19, L5-6)
 
-Estado: **hecho salvo el test PlayMode y el vídeo** (2026-11-11), rama `main`. Falta correrlos con el editor abierto: en batchmode no llega el teclado simulado. El usuario lo pidió antes de H2: montar y desmontar, moverse a caballo,
+Estado: **hecho** (2026-11-11), rama `main`. El usuario lo pidió antes de H2: montar y desmontar, moverse a caballo,
 caballo con cuerpo propio y visual (mensaje del 2026-11-11, "lo que mencionaste").
 
 ## Decisiones
@@ -48,7 +48,7 @@ caballo con cuerpo propio y visual (mensaje del 2026-11-11, "lo que mencionaste"
 - [x] 2. ECS: componente, configuración, `HeroMountSystem`, entrada G, movimiento, aguante, `SkillGate`, caída por
   derribo o muerte del caballo y tests EditMode.
 - [x] 3. Visual: `HeroHorse.prefab`, `HeroMountPresenter` y Animators de jinete para el héroe (`AC_HeroRider_*`).
-- [ ] 4. Tests PlayMode: montar, galopar, desmontar y caer al morir el caballo. Vídeo.
+- [x] 4. Tests PlayMode: montar, galopar, desmontar y caer al morir el caballo. Vídeo.
 - [x] 5. Héroes remotos y de IA: la IA monta para recorrer distancias largas, con el agente en el caballo.
 - [x] 6. Documentación (`Movimiento.md` M19) y commit.
 

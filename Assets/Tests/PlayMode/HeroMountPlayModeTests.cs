@@ -122,26 +122,43 @@ public partial class BattleSceneIntegrationTests
             yield return PrepareBaseline();
             var camera = cameraObject.AddComponent<ShowcaseCamera>();
             camera.Focus = () => em.GetComponentData<LocalTransform>(hero).Position;
-            camera.Distance = 9f;
-            camera.Direction = new Vector3(1f, 0.55f, -0.6f);
+            camera.Distance = 12f;
+            // From the hero's left and above, so the rider is seen getting on over the horse's left flank.
+            camera.Direction = new Vector3(-1f, 1.1f, 0.3f);
             camera.Snap();
             using (MovementVideoCapture.Start("HeroMount"))
             {
                 MovementMetricsRecorderSystem.Begin("HeroMount", squad);
                 var start = em.GetComponentData<LocalTransform>(hero).Position;
-                yield return new WaitForSeconds(1f);
+                float clock = 0f;
+                IEnumerator Hold(float seconds, string what)
+                {
+                    for (float t = 0f; t < seconds; t += 0.5f)
+                    {
+                        yield return new WaitForSeconds(0.5f);
+                        clock += 0.5f;
+                        var p = em.GetComponentData<LocalTransform>(hero).Position;
+                        Debug.Log($"[HeroMount] t={clock:0.0} {what} pos=({p.x:0.0},{p.z:0.0}) state={HeroMount.state} " +
+                                  $"speed={math.length(em.GetComponentData<HeroMotorStateComponent>(hero).velocity.xz):0.0}");
+                    }
+                }
+                yield return Hold(1f, "still");
                 yield return Press(Key.G);                                                  // call the horse, get on
-                yield return new WaitForSeconds(2f);
+                yield return Hold(2f, "mount");
+                // A U away from the enemy and back, in the open ground around the start.
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey));
-                yield return new WaitForSeconds(3f);                                       // trot
+                yield return Hold(2.5f, "trot");
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(MarchKey, Key.LeftShift));
-                yield return new WaitForSeconds(3f);                                       // gallop
-                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.A, Key.LeftShift));
-                yield return new WaitForSeconds(2.5f);                                     // wide turn at its turn rate
+                yield return Hold(0.5f, "gallop");
+                // Turning before the paved yard: further on, its wall stops the horse dead.
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.D, Key.LeftShift));
+                yield return Hold(2f, "turn");                                              // at its turn rate
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W, Key.LeftShift));
+                yield return Hold(2f, "back");
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
-                yield return new WaitForSeconds(2.5f);                                     // stop
+                yield return Hold(2.5f, "stop");
                 yield return Press(Key.G);                                                  // get off
-                yield return new WaitForSeconds(2f);
+                yield return Hold(2f, "dismount");
                 Debug.Log($"[HeroMount] last end {HeroMount.lastEnd}");
                 ReportBaseline(start);
             }

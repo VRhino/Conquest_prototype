@@ -25,7 +25,7 @@ aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 | M16 | Más unidades quietas lejos de su slot en la melé tras L4-04 | Baja | **Hecho** (2026-11-04: son soldados en contacto; métrica `idleStalls`) |
 | M17 | Monturas: vínculo jinete-montura (L5-6), arco de ataque y aguante de montura (L5-8) | Baja | **Hecho para las tropas** (2026-11-10: tres escuadras de caballería; el héroe a caballo es M19) |
 | M18 | Datos del aguante de escuadra (L5-7) y su escala por la pila | Media | **Hecho** (datos 2026-11-03; escala por la pila 2026-11-04) |
-| M19 | Héroe a caballo: montar y desmontar, caballo con vida propia (L5-6) | Media | **Hecho** (2026-11-11; falta el test PlayMode y el vídeo con el editor abierto) |
+| M19 | Héroe a caballo: montar y desmontar, caballo con vida propia (L5-6) | Media | **Hecho** (2026-11-11) |
 | M20 | Datos de la caballería (velocidades, arcos, giro, vida, armas) | Media | Pendiente (provisionales, tabla para el usuario) |
 | M21 | Reacciones al golpe a caballo y cuerda del arco | Baja | Pendiente (sin clips montados) |
 
@@ -426,7 +426,10 @@ que puede morir, y el héroe sigue a pie.
   - Giro 120 °/s.
   - Aguante 100: el galope gasta 8/s y se recupera 10/s.
 - **Tests:** `HeroMountTests` (EditMode) y `HeroMountsGallopsDismountsAndFallsWhenItsHorseDies` (PlayMode).
-- **Vídeo:** escenario explícito `MovementBaselineHeroMount`.
+- **Vídeo:** escenario explícito `MovementBaselineHeroMount` (`Recordings/MovementBaseline/HeroMount_*.mp4`):
+  - Sube, trota (6 m/s), galopa (11 m/s), gira en U, se para y baja junto a su escuadra.
+  - Si se galopa más hacia el sur, el muro del patio empedrado para al caballo en seco (el motor choca con él).
+- **PlayMode:** recorre 24,7 m en 3,5 s de galope y llega a 11 m/s; ningún parámetro del Animator falta.
 
 ## M20. Datos de la caballería
 **Qué es.** Los valores de las tres escuadras son provisionales (`CavalrySetup.Kinds`, solo la primera vez: después

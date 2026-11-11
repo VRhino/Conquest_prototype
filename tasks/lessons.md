@@ -658,3 +658,13 @@
   - Antes de buscar el fallo en el código nuevo, correr un test conocido en el mismo modo.
   - Los tests de batalla con entrada y los vídeos se corren con el editor abierto (MCP).
   - En batchmode solo EditMode es fiable.
+- Si las herramientas MCP de Unity no aparecen en la sesión aunque `unity-cli-status` diga que el editor está conectado, la
+  CLI llega igual:
+  - `unity cmd run_tests --mode PlayMode --filter <test> [--include_explicit true] --async_tests true`.
+  - `unity cmd test_status` para el resultado.
+  - `unity cmd console --tail N` para la consola.
+  - `unity recompile` tras tocar scripts.
+  - `unity cmd eval_file --file x.cs` para medir en el editor.
+  - El JSON lleva espacios: `"status": "running"`. Un bucle que busque `"status":"running"` sale al instante.
+- Para revisar un vídeo, recortar la zona del personaje a resolución completa (`blender-tools/conquest-horse/scripts/video_crop.py`). En la hoja reducida, el
+  héroe subiendo detrás del caballo parecía un salto de pose, y no lo era.
