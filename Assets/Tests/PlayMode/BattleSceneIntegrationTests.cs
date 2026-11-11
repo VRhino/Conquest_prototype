@@ -653,7 +653,7 @@ public partial class BattleSceneIntegrationTests
         InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.W));
         yield return Until(() => math.distance(start.xz,
             em.GetComponentData<LocalTransform>(hero).Position.xz) > 3f, 5f,
-            "W input did not move the local hero by 3m.");
+            "W input did not move the local hero by 3m.", () => LogHeroMovementDiagnostics(start));
         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
         yield return null;
         Assert.That(em.HasComponent<HeroMotorStateComponent>(hero), Is.True,
@@ -1728,6 +1728,55 @@ public partial class BattleSceneIntegrationTests
         yield return null;
         InputSystem.QueueStateEvent(keyboard, new KeyboardState());
         yield return null;
+    }
+
+    /// <summary>Why the local hero did not move: its input, intent, motor and controller, once, when a wait runs out.</summary>
+    void LogHeroMovementDiagnostics(float3 start)
+    {
+        var text = new System.Text.StringBuilder("[HeroMoveDiag] ");
+        var pose = em.GetComponentData<LocalTransform>(hero);
+        text.Append($"start={start} now={pose.Position} keyboardW={keyboard.wKey.isPressed} current={Keyboard.current == keyboard} ");
+        text.Append($"focus={Application.isFocused} inputBehavior={InputSystem.settings.editorInputBehaviorInPlayMode}/{InputSystem.settings.backgroundBehavior} ");
+        if (em.HasComponent<HeroInputComponent>(hero)) text.Append($"input={em.GetComponentData<HeroInputComponent>(hero).MoveInput} ");
+        if (em.HasComponent<HeroMoveIntent>(hero))
+        {
+            var intent = em.GetComponentData<HeroMoveIntent>(hero);
+            text.Append($"intent={intent.Direction}x{intent.Speed} ");
+        }
+        if (em.HasComponent<HeroMotorStateComponent>(hero))
+        {
+            var motor = em.GetComponentData<HeroMotorStateComponent>(hero);
+            text.Append($"motor v={motor.velocity} grounded={motor.isGrounded} sides={motor.hitSides} ");
+        }
+        if (em.HasComponent<MoveSpeedComponent>(hero)) text.Append($"moveSpeed={em.GetComponentData<MoveSpeedComponent>(hero).value} ");
+        if (em.HasComponent<HeroSpawnComponent>(hero)) text.Append($"spawned={em.GetComponentData<HeroSpawnComponent>(hero).hasSpawned} ");
+        if (em.HasComponent<HeroLifeComponent>(hero)) text.Append($"alive={em.GetComponentData<HeroLifeComponent>(hero).isAlive} ");
+        if (em.HasComponent<HeroHealthComponent>(hero))
+        {
+            var hp = em.GetComponentData<HeroHealthComponent>(hero);
+            text.Append($"hp={hp.currentHealth}/{hp.maxHealth} ");
+        }
+        using (var heroes = em.CreateEntityQuery(typeof(HeroAITag), typeof(LocalTransform), typeof(TeamComponent), typeof(HeroAIDecision)))
+        using (var list = heroes.ToEntityArray(Unity.Collections.Allocator.Temp))
+            foreach (var other in list)
+                text.Append($"ai[{em.GetComponentData<TeamComponent>(other).value}] d={math.distance(pose.Position, em.GetComponentData<LocalTransform>(other).Position):0.0} " +
+                            $"action={em.GetComponentData<HeroAIDecision>(other).action} ");
+        using (var squads = em.CreateEntityQuery(typeof(SquadUnitElement), typeof(TeamComponent)))
+        using (var list = squads.ToEntityArray(Unity.Collections.Allocator.Temp))
+            foreach (var s in list)
+                text.Append($"squad[{em.GetComponentData<TeamComponent>(s).value}] units={em.GetBuffer<SquadUnitElement>(s).Length} ");
+        using (var match = em.CreateEntityQuery(typeof(MatchStateComponent)))
+        using (var states = match.ToComponentDataArray<MatchStateComponent>(Unity.Collections.Allocator.Temp))
+            foreach (var s in states) text.Append($"match={s.currentState} ");
+        text.Append($"camera={(Camera.main != null ? Camera.main.name : "none")} ");
+        if (VisualSyncUtility.TryGetVisual(testWorld, hero, out var visual))
+        {
+            var controller = visual.GetComponent<CharacterController>();
+            var motorBehaviour = visual.GetComponent<ConquestTactics.Visual.LocalHeroCharacterMotor>();
+            text.Append($"visual={visual.transform.position} cc={(controller != null ? controller.enabled.ToString() : "none")} " +
+                        $"motor={(motorBehaviour != null ? motorBehaviour.enabled + "/" + motorBehaviour.IsBound : "none")}");
+        }
+        Debug.Log(text.ToString());
     }
 
     void WriteBattleContactDiagnostics(UnitBodyblockSystem bodyblock)

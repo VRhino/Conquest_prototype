@@ -22,6 +22,7 @@ L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`).
 | C13 | El héroe derribado o despedido no se desplaza | Baja | Pendiente |
 | C14 | Qué armas y habilidades derriban o despiden | Media | Pendiente (datos, aprobar tabla) |
 | C15 | Reacción según la dirección del golpe (de espaldas cae de frente) | Baja | Pendiente |
+| C16 | Escala de vida del héroe frente al daño | Alta | **Hecho** (2026-11-11: vida base ×10) |
 
 ---
 
@@ -163,3 +164,25 @@ hacia delante (el empujón va en contra del atacante), pero el clip cae hacia at
 
 **Cómo abordarlo.** Variantes "de espaldas" de los cuatro clips y un parámetro más (`HitDirection` ya está en el golpe,
 §5.7). También se pueden girar los estados, si la variante no compensa.
+
+## C16. Escala de vida del héroe
+**Qué era.** El test `BattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders` fallaba de forma intermitente: "W input did
+not move the local hero by 3m". La W funcionaba; el héroe estaba muerto.
+- **La causa.** Desde que la IA usa habilidades (H1), el héroe enemigo con arco lanza Focused Shot (`Bow1`), que es un cono
+  instantáneo de 25 m y ×1,8.
+  - Su perfil de daño suma 125, así que el disparo hace unos 225.
+  - El héroe local tenía 146 de vida (`baseHealth` 100, el valor por defecto de `HeroClassDefinition`). Moría de un
+    disparo a los 7 s de batalla en cuanto avanzaba hacia el enemigo.
+  - Un solo soldado tiene 1000-1600 de vida y un golpe de lancero hace 100: el héroe era unas diez veces más frágil que
+    un soldado.
+- **Hecho (2026-11-11, decisión del usuario: opción A).** En las cuatro clases (`Resources/Data/HeroClasses`):
+  - `baseHealth` pasa de 100 a 1000 y `healthPerVitality` se multiplica por 10. Arco 20, lanza 30, espada y escudo 100,
+    mandoble 70.
+  - Un héroe de arco de nivel 1 tiene unos 1460 de vida: Focused Shot le quita un 15 %, un golpe de lancero un 7 % y hacen
+    falta unos 12 ataques básicos de héroe para matarlo.
+  - Se mantienen las diferencias entre clases, así que espada y escudo es la más resistente (unos 3300 con la misma
+    vitalidad).
+  - El test vuelve a pasar sin cambiarlo. Si vence el plazo, ahora vuelca la entrada, la intención, el motor, la vida, los
+    héroes de IA y las escuadras.
+- **Queda abierto:** H3 (que Focused Shot sea una flecha real, que puede fallar) y equilibrar el daño de héroe contra
+  héroe con datos reales.

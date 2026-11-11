@@ -31,7 +31,8 @@ public class HeroClassDefinition : ScriptableObject
     public int maxVitality = int.MaxValue;
 
     [Header("Constantes de Cálculo")]
-    public float baseHealth = 100f;
+    [Tooltip("Vida base del héroe. Escala de 2026-11-11: un héroe de nivel 1 ronda 1500 de vida, frente a 1000-1600 de un soldado.")]
+    public float baseHealth = 1000f;
     public float baseStamina = 100f;
     [Tooltip("Resiliencia del héroe (L1-16): los golpes que llegan a la vida la gastan y al vaciarse queda aturdido un momento. 0 = sin resiliencia.")]
     [Min(0f)] public float baseResilience;
@@ -39,7 +40,7 @@ public class HeroClassDefinition : ScriptableObject
     public float baseArmorValue = 0f;
 
     [Header("Variables de cálculo Basico")]
-    public float healthPerVitality = 5f;
+    public float healthPerVitality = 50f;
     public float staminaPerDexterity = 1.5f;
 
     [Header("Variables de cálculo Avanzado(Damage)")]
