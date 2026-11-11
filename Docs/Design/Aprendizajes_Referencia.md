@@ -413,8 +413,17 @@ Entities frente a Unity Transport/NGO (sección 7); si fuera NfE, decidirlo ante
   aparte; las definitivas cuestan 20 de combo. Falta enseñarlo en el HUD (`Por_Abordar/Habilidades_Perks.md` H16).
   L2-17: una habilidad de escuadra marcada "por soldado" es una orden que cada soldado ejecuta a su ritmo (escalonado de
   0-0,6 s, espera de hasta 1,5 s si está ocupado), con el enfriamiento en la escuadra; Shield Bash la usa.
-- **Pendiente del catálogo:** L2-8; L5-6 y L5-8 (bloqueados); l6-01 a l6-10; L7-6 (para después, por decisión del usuario), L7-7; y los puntos "(amp.)" salvo L4-09,
-  L2-9, L2-15, L4-08 y los de combate (L1-10 a L1-14 hechos el 2026-11-03; L1-09 bloqueado).
+- **Hecho en animaciones y monturas (2026-11-10/11):**
+  - L1-09: reacciones al golpe con clips propios (C4, `93c097a3`).
+  - L5-6 y L5-8: tres escuadras de caballería (M17, `31200ebb`) y héroe a caballo con caballo de vida propia (M19,
+    `de5358df`).
+  - Los datos de caballería y caballo son provisionales (`Docs/Por_Abordar/Movimiento.md` M19 y M20).
+- **Pendiente del catálogo (2026-11-11):** 16 de 79 puntos.
+  - L2-8: proyectil en ECS.
+  - L4-07: LOD de IA; hay que medir antes.
+  - l6-01 a l6-10: red; decidido Netcode for Entities, sin empezar y sin el paquete instalado.
+  - L7-6: para después, por decisión del usuario.
+  - L7-7, L7-8 (amp.) y L7-9 (amp.).
 - **Hecho en formaciones (2026-11-02, `Movimiento_Formaciones.md` §23):** L3-02 se completa en la parte de plantillas: Spearmen y
   Squires tienen una plantilla por tramo de soldados vivos y la formación se recompone al caer soldados (F1, `1eb56b03`).
   La compactación dentro de un tramo llegó el 2026-11-03 (§24). Los slots no se comparten entre escuadras aliadas (F17, `8f3b45cf`).
