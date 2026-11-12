@@ -499,6 +499,9 @@ public class BattleSceneController : MonoBehaviour
         if (!em.HasComponent<HeroMoveIntent>(heroEntity))
             em.AddComponentData(heroEntity, new HeroMoveIntent());
 
+        // Which participant of the battle it is (the battle server reports and assigns heroes by this id).
+        em.AddComponentData(heroEntity, new BattleParticipantComponent { heroId = heroData.heroId ?? string.Empty });
+
         // Asignar team y rol atacante/defensor
         var team = teamID == 1 ? Team.TeamA : Team.TeamB;
         em.SetComponentData(heroEntity, new TeamComponent { value = team });

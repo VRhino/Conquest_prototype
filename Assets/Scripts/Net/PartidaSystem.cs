@@ -113,8 +113,8 @@ namespace ConquestTactics.Net
                     $"[BatallaReal] Fin de la batalla a los {ahora:F0} s: gana {ganador} (reloj {red.Reloj:F0} s, agotado {red.Agotado})"));
             }
 #if !UNITY_EDITOR
-            // ponytail: cuando la batalla salga de un ticket del motor, aquí se manda el resultado y se espera su acuse.
-            else if (ahora - _fin > EsperaAlAcabar)
+            // Con ticket, el proceso sale cuando el motor acusa su resultado (BatallaDeTicketSystem), no aquí.
+            else if (ahora - _fin > EsperaAlAcabar && BatallaDeTicket.Actual == null)
                 Application.Quit();
 #endif
         }

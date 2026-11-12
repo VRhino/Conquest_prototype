@@ -106,6 +106,12 @@ namespace ConquestTactics.Net
                     case "--puerto": Puerto = ushort.Parse(siguiente); break;
                 }
             }
+            // El lanzador del motor arranca el proceso con sus tres opciones y nada más: lo demás, por variables de entorno.
+            if (BatallaReal == 0 && Environment.GetEnvironmentVariable("CONQUEST_BATALLA_REAL") == "1")
+                BatallaReal = 1;
+            if (Duracion <= 0f && float.TryParse(Environment.GetEnvironmentVariable("CONQUEST_DURACION"),
+                    System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float duracion))
+                Duracion = duracion;
         }
     }
 

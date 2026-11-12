@@ -481,6 +481,40 @@ namespace ConquestTactics.Net
             }
         }
 
+        /// <summary>
+        /// Con un ticket del motor, cada jugador lleva el héroe que le dio su token (BatallaDeTicketSystem lo apunta en
+        /// <see cref="HeroeEnJuego.Dueno"/>): aquí se busca la entidad de ese héroe por su id del ticket. Quien no tiene
+        /// héroe en el ticket solo mira.
+        /// </summary>
+        void RepartirDelTicket()
+        {
+            var batalla = BatallaDeTicket.Actual;
+            if (batalla == null)
+                return;
+            var participantes = SystemAPI.QueryBuilder().WithAll<BattleParticipantComponent, HeroAITag, HeroAIDecision>().WithNone<HeroeDeJugador>().Build();
+            using var heroes = participantes.ToEntityArray(Allocator.Temp);
+            using var ids = participantes.ToComponentDataArray<BattleParticipantComponent>(Allocator.Temp);
+            foreach (var (mando, jugador) in _sinHeroe)
+            {
+                var suyo = batalla.Heroes.Find(h => h.Dueno == jugador);
+                if (suyo == null)
+                    continue;
+                for (int i = 0; i < heroes.Length; i++)
+                {
+                    if (ids[i].heroId.ToString() != suyo.Id)
+                        continue;
+                    EntityManager.AddComponentData(heroes[i], new HeroeDeJugador { Mando = mando, Jugador = jugador });
+                    EntityManager.AddComponent<HeroNetworkMotion>(heroes[i]);
+                    HeredarEscuadra(heroes[i]);
+                    EntityManager.AddComponent<MandoConHeroe>(mando);
+                    EntityManager.SetComponentEnabled<RusherBehaviorActive>(heroes[i], false);
+                    EntityManager.SetComponentEnabled<BalancedBehaviorActive>(heroes[i], false);
+                    Debug.Log($"[BatallaReal] El jugador {jugador} lleva a {suyo.Id}, el héroe de su token");
+                    break;
+                }
+            }
+        }
+
         void Repartir()
         {
             _sinHeroe.Clear();
@@ -496,6 +530,12 @@ namespace ConquestTactics.Net
             // Lo que puede tapar la cámara: todo menos los propios soldados y héroes.
             int tapa = ~LayerMask.GetMask("Units", "Units_A", "Units_B", "Heroes", "Heroes_A", "Heroes_B");
             var tomados = new NativeHashSet<Entity>(8, Allocator.Temp);
+            if (BatallaDeTicket.Actual != null || !string.IsNullOrEmpty(OpcionesRed.Ticket) || !string.IsNullOrEmpty(OpcionesRed.Lanzador))
+            {
+                RepartirDelTicket();
+                tomados.Dispose();
+                return;
+            }
             foreach (var (mando, jugador) in _sinHeroe)
             {
                 var quiere = jugador % 2 == 1 ? Team.TeamA : Team.TeamB;

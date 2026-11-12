@@ -31,7 +31,9 @@ namespace ConquestTactics.Net
             if (!_cargada)
             {
                 _cargada = true;
-                Cargar(OpcionesRed.BatallaReal);
+                // Con ticket (de un fichero o del lanzador) la batalla la monta BatallaDeTicketSystem cuando empieza.
+                if (string.IsNullOrEmpty(OpcionesRed.Ticket) && string.IsNullOrEmpty(OpcionesRed.Lanzador))
+                    Cargar(OpcionesRed.BatallaReal);
                 return;
             }
 
@@ -65,6 +67,19 @@ namespace ConquestTactics.Net
             string estado = SystemAPI.TryGetSingleton<MatchStateComponent>(out var partida) ? partida.currentState.ToString() : "sin partida";
             Debug.Log(FormattableString.Invariant(
                 $"[BatallaReal] t={ahora:F0} s, {estado}, soldados vivos A {a} B {b} de {SoldadosEsperados}, héroes {bandos.Length} por acción [{string.Join(",", acciones)}], bandos a {cerca:F0} m"));
+        }
+
+        /// <summary>La batalla de un ticket del motor, con sus héroes y sus escuadras (<see cref="BatallaRealDeTicket"/>).</summary>
+        public static void CargarDeTicket(BatallaDeTicket batalla)
+        {
+            var datos = BatallaRealDeTicket.Montar(batalla, out int soldados);
+            SoldadosEsperados = soldados;
+            ReservaDeProyectiles.Asegurar();
+            BattleBootstrapRequests.NoLocalHero = true;
+            BattleTransitionData.Instance.SetBattleData(datos);
+            SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Battle);
+            Debug.Log($"[BatallaReal] Batalla {batalla.Ticket.BattleId} del ticket: {datos.attackers.Count} héroes atacantes, " +
+                      $"{datos.defenders.Count} defensores, {soldados} soldados, {batalla.DuracionSegundos} s");
         }
 
         static void Cargar(int heroesPorBando)

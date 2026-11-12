@@ -558,3 +558,56 @@ del jugador («Lance Cavalry»). El tick del servidor sigue en 4,3-4,8 ms.
 Lo que falta, anotado: las flechas y los números no se han visto en una captura (se sabe que llegan y que se piden a la
 reserva, no cómo quedan en pantalla); el caballo del héroe tampoco se ha visto montado en una captura; las tropas del
 motor (`arqueros`, etc.) no están en la base de escuadras y su proyectil no entra en la reserva.
+
+### 9.5 La batalla de verdad desde un ticket del motor, y su resultado
+
+```
+python Tools/ticket_de_prueba.py Logs/red/real/ticket.json
+PruebaRed.exe -batchmode -nographics -red servidor -batallaReal 1 -ticket Logs/red/real/ticket.json -resultado Logs/red/real/resultado.bin -duracion 90 -espera 25
+CONQUEST_BATALLA_REAL=1 dotnet run --project Tools/LanzadorDePrueba -- Builds/PruebaRed/PruebaRed.exe Logs/red/real/ticket.json -cliente
+```
+
+Con `-batallaReal` (o la variable `CONQUEST_BATALLA_REAL=1`, porque el lanzador del motor arranca el proceso con sus tres
+opciones y nada más), un ticket ya no se juega con las cápsulas de prueba sino con la batalla de verdad. Sin ella sigue
+como estaba: las pruebas del motor contra Conquest (`con_conquest_*`) usan las cápsulas, que acaban en segundos.
+
+- **Montar la batalla** (`BatallaRealDeTicket.Montar`): cada participante del ticket es un héroe con su id, su nombre, su
+  nivel y sus escuadras; cada escuadra lleva el id del ticket, su tropa, su nivel y sus efectivos autorizados (sin pasar
+  de los que caben en la tropa de Conquest: los que no salen no pueden morir). Atacantes en los puntos de salida 1-3 y
+  defensores en los 4-6.
+- **A cada jugador, el héroe de su token.** `BatallaDeTicketSystem` sigue llevando el ticket, la asignación del lanzador
+  y los tokens; `MandoSystem` da al jugador la entidad de ese héroe. Cambio en el juego: el héroe de la batalla lleva su
+  id (`BattleParticipantComponent`, que pone `BattleSceneController` al crearlo). Con un fichero (sin tokens), por orden
+  de llegada. Quien no tiene héroe en el ticket solo mira.
+- **El plazo del ticket manda sobre el reloj del juego.** En Conquest cada captura alarga el reloj; el motor rechaza un
+  resultado que pase de `duracion_maxima_segundos`. El servidor no deja que al reloj le quede más de lo que falta para
+  el plazo (menos 5 s de margen), así que al agotarse gana el defensor, como pide el motor. El plazo cuenta desde que
+  arranca el reloj, no desde que se empieza a cargar el mapa.
+- **El resultado** (`BatallaRealDeTicket.ContarBajas`): al cerrar el juego la partida, los muertos de cada escuadra son
+  los soldados que le faltan a su entidad (los de una escuadra en reserva, los que tenía al guardarla) y un héroe está
+  derrotado si está caído en ese momento. El ganador es el del juego; la razón, tiempo agotado u objetivos capturados.
+  Se comprueba con las reglas del motor, se escribe o se manda al lanzador, y el proceso sale con su acuse.
+
+**Lo que es de paso** hasta que estén en Conquest los catálogos del motor (lo dice también el código):
+
+- La clase del héroe se traduce con una tabla de cuatro (`lanza_escudo_redondo`, `arco_lanza`, `hacha_dos_manos`; el
+  resto, espada y escudo); su aspecto sale de la reserva de héroes de prueba; el mapa es siempre el mismo.
+- Una **escuadra sin héroe** recibe un capitán de la IA (`capitan:<id de la escuadra>`) que no figura en el resultado.
+  Propuesta pendiente del autor.
+- Solo salen las tropas que están en la base de escuadras del juego. Las cuatro del motor que hay en Conquest están
+  fuera de ella: un ticket con ellas se rechaza. Propuesta pendiente del autor: meterlas en la base.
+- El héroe caído reaparece, como en el juego. Propuesta pendiente del autor: dejarlo así.
+
+**Comprobado** con un ticket de prueba (un héroe de la IA con escuderos y una escuadra sin héroe de lanceros contra un
+héroe humano con arqueros y otro de la IA con escuderos; 42 soldados):
+
+- Desde un fichero, 90 s: el cliente que entra lleva al héroe humano, la batalla acaba por tiempo a los 84,8 s, gana el
+  defensor y el resultado trae las bajas reales (2 muertos de 10 en una escuadra y 1 de 8 en otra). «El motor lo
+  aceptaría», según `BatallaDeTicket.Comprobar`.
+- Con el lanzador de prueba y un cliente con token, 120 s: llegan el ticket y la asignación, el cliente lleva «el héroe
+  de su token», salen el inicio y el resultado, el lanzador los acusa y el proceso sale con 0.
+- En la primera prueba una captura alargó el reloj de 62 a 352 s y la batalla no acabó en su plazo: de ahí el tope.
+
+Lo que falta: probarlo contra el motor de verdad (hoy sus pruebas usan las cápsulas); las incorporaciones a media
+batalla y las salidas; las formaciones permitidas del ticket; y todo lo de los catálogos (tropas, clases, objetos y
+sus cifras), que es el trabajo siguiente a la red.

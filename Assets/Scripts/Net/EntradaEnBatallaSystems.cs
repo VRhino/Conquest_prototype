@@ -88,6 +88,9 @@ namespace ConquestTactics.Net
                     var mando = ecb.Instantiate(prefabs.Mando);
                     ecb.SetComponent(mando, new GhostOwner { NetworkId = id });
                     ecb.AppendToBuffer(conexion, new LinkedEntityGroup { Value = mando });
+                    // Con ticket, qué héroe lleva lo dice su token (BatallaDeTicketSystem); MandoSystem le da ese.
+                    if (deTicket)
+                        BatallaDeTicket.ConexionesSinHeroe.Enqueue((id, conexion, entrar.ValueRO.Token.ToString()));
                     continue;
                 }
                 if (deTicket)

@@ -30,6 +30,13 @@ namespace ConquestTactics.Net
 
         double _creada = -1;
         double _empezada;
+        bool _relojEnMarcha;
+
+        /// <summary>
+        /// Con <c>-batallaReal</c> (o la variable CONQUEST_BATALLA_REAL=1) el ticket se juega con la batalla de verdad de
+        /// Conquest (<see cref="BatallaRealDeTicket"/>) en vez de con las cápsulas de prueba.
+        /// </summary>
+        static bool Real => OpcionesRed.BatallaReal > 0;
 
         protected override void OnCreate()
         {
@@ -50,7 +57,8 @@ namespace ConquestTactics.Net
         /// <summary>CQ-003: una tropa que Conquest no tiene rechaza la batalla entera, nunca se juega con una por defecto.</summary>
         void Preparar(BattleTicket ticket)
         {
-            var desconocidas = BatallaDeTicket.TropasDesconocidas(ticket, id => TropasRed.Buscar(id) != null);
+            var desconocidas = BatallaDeTicket.TropasDesconocidas(ticket,
+                id => Real ? BatallaRealDeTicket.TropaConocida(id) : TropasRed.Buscar(id) != null);
             if (desconocidas.Count > 0)
             {
                 // Sin resultado, el motor vence la batalla por su plazo, sin castigo (§8.8).
@@ -86,6 +94,34 @@ namespace ConquestTactics.Net
             }
             if (batalla.Terminada)
                 return;
+            if (Real)
+            {
+                // La batalla de verdad acaba cuando lo dice el juego: su ganador y, si fue por tiempo, la razón.
+                if (!SystemAPI.TryGetSingleton<MatchStateComponent>(out var partida))
+                    return;
+                // La batalla cuenta desde que arranca su reloj, no desde que se empezó a cargar el mapa.
+                if (!SystemAPI.HasSingleton<BattleClockComponent>())
+                    return;
+                long ahoraMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                if (!_relojEnMarcha)
+                {
+                    _relojEnMarcha = true;
+                    batalla.InicioMs = ahoraMs;
+                }
+                // El plazo del ticket manda sobre el reloj del juego, que cada captura alarga: nunca le queda más de lo
+                // que falta para el plazo (menos un margen), y al agotarse gana el defensor, como pide el motor.
+                float queda = math.max(0f, batalla.DuracionSegundos - BatallaRealDeTicket.MargenDelPlazo - (ahoraMs - batalla.InicioMs) / 1000f);
+                var relojDelJuego = SystemAPI.GetSingletonRW<BattleClockComponent>();
+                if (relojDelJuego.ValueRO.remainingSeconds > queda)
+                    relojDelJuego.ValueRW.remainingSeconds = queda;
+                if (partida.currentState != MatchState.EndMatch)
+                    return;
+                BatallaRealDeTicket.ContarBajas(EntityManager, batalla);
+                bool porTiempo = SystemAPI.TryGetSingleton<BattleClockComponent>(out var reloj) && reloj.expired;
+                Terminar(batalla, partida.winnerTeam == 1 ? LadoId.Atacante : LadoId.Defensor,
+                    porTiempo ? RazonVictoria.TiempoAgotado : RazonVictoria.ObjetivosCapturados);
+                return;
+            }
 
             int vivosAtacante = 0, vivosDefensor = 0;
             foreach (var (bando, vida) in SystemAPI.Query<RefRO<BandoServidor>, RefRO<VidaServidor>>())
@@ -189,6 +225,11 @@ namespace ConquestTactics.Net
                     IntentoAsignacionId = batalla.Asignacion?.IntentoAsignacionId ?? OpcionesRed.Intento,
                 },
             });
+            if (Real)
+            {
+                BatallaRealSystem.CargarDeTicket(batalla);
+                return;
+            }
             var prefabs = SystemAPI.GetSingleton<PrefabsRed>();
             var em = EntityManager;
             var lider = new Entity[batalla.Heroes.Count];

@@ -13,6 +13,8 @@ namespace ConquestTactics.Net
         public string TropaId;
         public byte Bando;
         public int Autorizados;
+        /// <summary>Los que salen al campo: los autorizados, o menos si en la tropa de Conquest no caben todos.</summary>
+        public int Desplegados;
         public int Muertos;
         /// <summary>Índice en <see cref="BatallaDeTicket.Heroes"/>; -1 = escuadra sin héroe (bandidos, carreteros).</summary>
         public int Heroe = -1;
@@ -80,7 +82,8 @@ namespace ConquestTactics.Net
 
         static EscuadraEnJuego Escuadra(BronzeAge.Contract.V1.SquadSnapshot s, byte bando, int heroe) => new EscuadraEnJuego
         {
-            Id = s.SquadId, TropaId = s.TropaId, Bando = bando, Autorizados = (int)s.EfectivosAutorizados, Heroe = heroe,
+            Id = s.SquadId, TropaId = s.TropaId, Bando = bando, Autorizados = (int)s.EfectivosAutorizados,
+            Desplegados = (int)s.EfectivosAutorizados, Heroe = heroe,
         };
 
         /// <summary>Lee un ticket: el <c>.bin</c> o el <c>.json</c> de un <see cref="MensajeDeServidor"/> (como los dorados) o un <see cref="BattleTicket"/> suelto.</summary>
@@ -120,7 +123,7 @@ namespace ConquestTactics.Net
                 r.PorEscuadra.Add(new ResultadoEscuadra
                 {
                     SquadId = e.Id,
-                    Desplegados = (uint)e.Autorizados,
+                    Desplegados = (uint)e.Desplegados,
                     SupervivientesAlCierre = (uint)(e.Autorizados - e.Muertos),
                     Muertos = (uint)e.Muertos,
                 });
