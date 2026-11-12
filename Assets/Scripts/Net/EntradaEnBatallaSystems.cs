@@ -82,6 +82,9 @@ namespace ConquestTactics.Net
                 int id = SystemAPI.GetComponent<NetworkId>(conexion).Value;
                 ecb.AddComponent<NetworkStreamInGame>(conexion);
                 ecb.DestroyEntity(peticion);
+                // En la batalla de verdad el que entra todavía solo mira: los héroes los lleva la IA.
+                if (OpcionesRed.BatallaReal > 0)
+                    continue;
                 if (deTicket)
                 {
                     // Con ticket, los héroes y sus escuadras salen del ticket (BatallaDeTicketSystem).

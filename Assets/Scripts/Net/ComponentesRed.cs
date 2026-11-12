@@ -26,7 +26,12 @@ namespace ConquestTactics.Net
     /// <summary>Soldado replicado. El cliente solo necesita su bando para pintarlo; su posición viaja en el LocalTransform.</summary>
     public struct SoldadoRed : IComponentData
     {
+        public const byte Soldado = 0;
+        public const byte Heroe = 1;
+
         [GhostField] public byte Bando;
+        /// <summary><see cref="Soldado"/> o, en la batalla de verdad, <see cref="Heroe"/> (un héroe de la IA, que aún no lleva nadie).</summary>
+        [GhostField] public byte Tipo;
     }
 
     /// <summary>

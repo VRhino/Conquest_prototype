@@ -50,6 +50,9 @@ namespace ConquestTactics.Net
         public static string Token;
         /// <summary>Héroes por bando de la batalla de verdad (los sistemas de Game.ECS en el mundo servidor, camino A); 0 = la prueba de cápsulas.</summary>
         public static int BatallaReal;
+        /// <summary>Cliente con pantalla: guarda una captura en esta ruta a los <see cref="CapturaA"/> segundos.</summary>
+        public static string Captura;
+        public static float CapturaA = 20f;
 
         public static void Leer()
         {
@@ -84,6 +87,8 @@ namespace ConquestTactics.Net
                     case "-espera": EsperaJugadores = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-token": Token = siguiente; break;
                     case "-batallaReal": BatallaReal = int.Parse(siguiente); break;
+                    case "-captura": Captura = siguiente; break;
+                    case "-capturaA": CapturaA = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "--lanzador": Lanzador = siguiente; ModoPedido = Modo.Servidor; break;
                     case "--batalla": Batalla = siguiente; break;
                     case "--puerto": Puerto = ushort.Parse(siguiente); break;

@@ -221,6 +221,34 @@ Lo que hubo que tocar en el juego, y nada más:
 - Al cerrar el proceso, `CapturePointZoneIndicator.OnDestroy` lanza una `NullReferenceException` (libera una consulta de
   un mundo ya destruido). No afecta a la batalla; queda anotado.
 
-Lo que **no** hace todavía: los clientes que se conecten no ven esta batalla (paso 2b-3: fantasmas espejo de soldados y
-héroes), no la juega un ticket del motor (hoy `-batallaReal` y `-ticket` son dos caminos distintos) y no escribe
-resultado.
+Lo que **no** hace todavía: no la juega un ticket del motor (hoy `-batallaReal` y `-ticket` son dos caminos distintos) y
+no escribe resultado.
+
+### 8.2 Los clientes ven la batalla: fantasmas espejo (paso 2b-3, primera parte)
+
+```
+Tools/ver_batalla_real.sh <nombre> <héroes por bando> [segundos del servidor] [segundo en que entran los clientes]
+```
+
+`EspejoSystem` (servidor) da a cada soldado y a cada héroe de la batalla de verdad un **fantasma espejo**: una entidad
+aparte, con el prefab fantasma de soldado, que copia su `LocalTransform` al final de cada tick. Solo los espejos viajan
+por la red. Los sistemas de `Game.ECS` y sus entidades no llevan ningún componente de Netcode, y lo que el cliente
+necesite saber de más (tropa, animación) se añadirá al espejo, no al juego. Cuando el de verdad muere, su espejo se borra
+(`Espejo` es un componente de limpieza). `SoldadoRed.Tipo` dice si el espejo es de soldado o de héroe.
+
+El cliente que entra solo mira (no recibe héroe) y pinta los espejos como cápsulas sobre el plano de la escena de prueba,
+con la cámara encima del centro de la batalla. `-captura ruta.png -capturaA 20` guarda una captura a los 20 s.
+
+**Medida** (10 contra 10; servidor sin pantalla y dos clientes en este PC, que entran en el segundo 60):
+
+| | |
+|---|---:|
+| Fantasmas al entrar los clientes | 248 (228 soldados vivos y 20 héroes) |
+| Bajada por cliente | 280-295 kbit/s |
+| Veces por segundo que llega cada soldado | 60 en el cliente sin pantalla; 47 de media en el de ventana (sin mirar aún por qué) |
+| Tick del servidor con dos clientes | 4,7 ms (peor 15,9) |
+
+- Son unos 1,2 kbit/s por fantasma, menos que en la prueba de cápsulas (2,6 a 60 Hz, §3): los que están quietos casi no
+  ocupan. Bajarlo más (menos envíos para los lejanos, relevancia) es el paso 4.
+- Falta la segunda parte: que el cliente cargue el terreno de la batalla y pinte cada espejo con su modelo y su
+  animación en vez de una cápsula.

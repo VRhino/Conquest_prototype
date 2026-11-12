@@ -57,6 +57,7 @@ namespace ConquestTactics.Net
         static readonly Color[] ColoresBando = { new Color(0.75f, 0.2f, 0.2f), new Color(0.2f, 0.35f, 0.8f) };
 
         Mesh _capsula;
+        bool _capturada;
         Material[] _materialesBando;
         Material _materialHeroe;
         Material _materialPropio;
@@ -92,8 +93,15 @@ namespace ConquestTactics.Net
             _heroes.Clear();
             _propio.Clear();
 
+            float3 suma = float3.zero;
+            int cuantos = 0;
             foreach (var (pose, soldado) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<SoldadoRed>>())
-                _soldados[soldado.ValueRO.Bando & 1].Add(Matrix4x4.TRS(pose.ValueRO.Position + new float3(0, 1, 0), pose.ValueRO.Rotation, Vector3.one * 0.8f));
+            {
+                float talla = soldado.ValueRO.Tipo == SoldadoRed.Heroe ? 1.3f : 0.8f;
+                _soldados[soldado.ValueRO.Bando & 1].Add(Matrix4x4.TRS(pose.ValueRO.Position + new float3(0, talla * 1.25f, 0), pose.ValueRO.Rotation, Vector3.one * talla));
+                suma += pose.ValueRO.Position;
+                cuantos++;
+            }
 
             float3? propio = null;
             foreach (var (pose, entidad) in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<HeroeRed>().WithEntityAccess())
@@ -119,6 +127,25 @@ namespace ConquestTactics.Net
                 Vector3 detras = objetivo + new Vector3(0, 9f, -12f);
                 camara.transform.position = Vector3.Lerp(camara.transform.position, detras, 1f - Mathf.Exp(-6f * SystemAPI.Time.DeltaTime));
                 camara.transform.LookAt(objetivo + Vector3.up);
+            }
+            else if (camara != null && cuantos > 0)
+            {
+                // Sin héroe propio (espectador de la batalla de verdad): la cámara mira al centro de la batalla desde arriba.
+                float3 centro = suma / cuantos;
+                float radio = 0f;
+                foreach (var pose in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<SoldadoRed>())
+                    radio = math.max(radio, math.distance(pose.ValueRO.Position, centro));
+                radio = math.clamp(radio * 0.6f, 25f, 140f);
+                camara.farClipPlane = 1000f;
+                camara.transform.position = centro + new float3(0, radio, -radio);
+                camara.transform.LookAt(centro);
+            }
+
+            if (!_capturada && !string.IsNullOrEmpty(OpcionesRed.Captura) && SystemAPI.Time.ElapsedTime >= OpcionesRed.CapturaA)
+            {
+                _capturada = true;
+                ScreenCapture.CaptureScreenshot(OpcionesRed.Captura);
+                Debug.Log($"[Red] Captura en {OpcionesRed.Captura} con {cuantos} soldados y héroes a la vista");
             }
         }
 
