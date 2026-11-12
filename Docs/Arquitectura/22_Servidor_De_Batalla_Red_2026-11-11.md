@@ -486,6 +486,35 @@ SERVIDOR="-duracion 80" Tools/ver_batalla_real.sh <nombre> 10 110 40 -bot      (
 al defensor (tiempo agotado) y el cliente del bando defensor enseña «Victory» con el reloj en 00:00; el panel de la
 escuadra enseña ya la tropa del jugador. Llegan las 7 zonas del mapa.
 
-Lo que falta, anotado: en 4 minutos de batalla la IA no llegó a capturar ninguna zona, así que **el cambio de dueño de
-una zona no se ha visto llegar al cliente**; el resultado no se manda a nadie (punto 5); el cliente no tiene pantalla de
-después de la batalla.
+El registro del servidor y el del cliente dicen cada 10 s cómo está cada zona (dueño, quién la captura, progreso y
+banderas): en una prueba de 130 s las dos líneas coinciden zona por zona, incluida una ya capturada al 100 % y cerrada.
+
+Lo que falta, anotado: en las pruebas la IA no llegó a capturar ninguna zona con los clientes ya dentro, así que **el
+momento en que una zona cambia de dueño no se ha visto llegar al cliente** (sí su estado, que coincide); el resultado no
+se manda a nadie (punto 5); el cliente no tiene pantalla de después de la batalla.
+
+### 9.3 Los controles que faltaban: formaciones, prisa, habilidades de escuadra, perks y montar
+
+- **La escuadra del jugador en red se manda como la del jugador local.** Antes sus órdenes iban por el hueco de la IA
+  (`SquadAIOrderIntentComponent`), que no sabe de formaciones. Ahora `MandoSystem` las aplica con
+  `SquadPlayerCommandResolver.TryApply`, lo mismo que hace `SquadControlSystem` con el teclado del jugador local: seguir,
+  mantener en un punto, atacar, la prisa, las formaciones y la insistencia (tres veces la misma orden pasa por encima de
+  la reacción al combate). Cambio en el juego: `OrderResolutionSystem` trata como escuadra del jugador también la de un
+  héroe con `HeroNetworkMotion` (el que lleva alguien por la red). Al tomar un héroe de la IA, su escuadra sigue con la
+  orden y la formación que tenía.
+- **Teclas del cliente**, las de `SquadControlSystem`: C seguir (doble C cambia la prisa), X mantener en el punto del
+  ratón (doble X pasa a la formación siguiente), V atacar, F1-F4 una formación, y el menú radial del juego.
+- **Habilidades**: además de Q/E/R/T, las de la escuadra en 1-3 (o pulsando en la barra) y los perks activos en 4-5. Las
+  de escuadra las lanza la escuadra (`useSquadSkill`), como con la IA.
+- **Montar** (G): el jugador dice si quiere ir a caballo (`HeroMountRequestComponent`) y `HeroMountSystem` hace el resto.
+  Cambio en el juego: `HeroAIMountSystem` no decide por un héroe llevado en red. A caballo, el mando predicho usa los
+  aires del caballo (trote y galope); subiendo o bajando no se mueve. Si lo derriban, no vuelve a montar solo.
+
+**Comprobado** con dos clientes que juegan solos (dan una orden cada 8 s, piden una formación cada 11 s y montan o
+desmontan cada 25 s): en el registro del servidor la orden de la escuadra «gana el jugador» y cambia como se pide
+(seguir, mantener, atacar), la formación pasa por muro de escudos, testudo y reposo, y el héroe pasa de a pie a montado
+(velocidad de 3 a 6 m/s) y vuelta.
+
+Lo que falta, anotado: **cambiar de escuadra en un punto de suministro** (y la tecla de interactuar) no está; hoy cada
+héroe trae una sola escuadra, llegará cuando el ticket del motor traiga varias. El caballo no se ve en el cliente
+(punto 4). Bloquear, el modo táctico y andar despacio no viajan. Nadie lo ha probado con el teclado.

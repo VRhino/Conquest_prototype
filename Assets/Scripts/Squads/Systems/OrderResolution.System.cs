@@ -26,6 +26,8 @@ public partial class OrderResolutionSystem : SystemBase
 {
     private ComponentLookup<IsLocalPlayer>      _localPlayerLookup;
     private ComponentLookup<SquadOwnerComponent> _ownerLookup;
+    // A hero driven by a player over the network (battle server): its squad obeys that player like a local one.
+    private ComponentLookup<HeroNetworkMotion>   _networkPlayerLookup;
 
     protected override void OnCreate()
     {
@@ -33,12 +35,14 @@ public partial class OrderResolutionSystem : SystemBase
         RequireForUpdate<MatchStateComponent>();
         _localPlayerLookup = GetComponentLookup<IsLocalPlayer>(true);
         _ownerLookup       = GetComponentLookup<SquadOwnerComponent>(true);
+        _networkPlayerLookup = GetComponentLookup<HeroNetworkMotion>(true);
     }
 
     protected override void OnUpdate()
     {
         _localPlayerLookup.Update(this);
         _ownerLookup.Update(this);
+        _networkPlayerLookup.Update(this);
         double now = SystemAPI.Time.ElapsedTime;
 
         foreach (var (playerIntent, aiIntent, combatReaction, input, formation, resolved, entity) in SystemAPI
@@ -51,7 +55,8 @@ public partial class OrderResolutionSystem : SystemBase
             .WithEntityAccess())
         {
             bool isLocal = _ownerLookup.HasComponent(entity)
-                && _localPlayerLookup.HasComponent(_ownerLookup[entity].hero);
+                && (_localPlayerLookup.HasComponent(_ownerLookup[entity].hero)
+                    || _networkPlayerLookup.HasComponent(_ownerLookup[entity].hero));
 
             if (isLocal)
             {

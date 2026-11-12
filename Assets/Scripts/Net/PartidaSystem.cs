@@ -25,6 +25,7 @@ namespace ConquestTactics.Net
         double _fin = -1d;
         NativeList<ZonaRed> _zonas;
         NativeList<byte> _duenos;
+        double _proximoResumen;
 
         protected override void OnCreate()
         {
@@ -95,6 +96,11 @@ namespace ConquestTactics.Net
             _duenos.Clear();
             foreach (var zona in _zonas)
                 _duenos.Add(zona.Dueno);
+            if (SystemAPI.Time.ElapsedTime >= _proximoResumen)
+            {
+                _proximoResumen = SystemAPI.Time.ElapsedTime + 10d;
+                Debug.Log(System.FormattableString.Invariant($"[BatallaReal] Zonas (reloj {red.Reloj:F0} s): ") + ZonaRed.Resumen(_zonas.AsArray()));
+            }
 
             if (estado.currentState != MatchState.EndMatch)
                 return;

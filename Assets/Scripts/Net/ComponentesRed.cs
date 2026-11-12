@@ -30,6 +30,14 @@ namespace ConquestTactics.Net
         public byte TipoDeOrden;
         /// <summary>Para «mantener posición»: el punto del terreno al que apunta el ratón, como en el juego; (0,0,0) = donde esté el héroe.</summary>
         public float3 PuntoDeOrden;
+        /// <summary>Cambia entre ir al paso y acudir deprisa junto al héroe (doble C en el juego).</summary>
+        public InputEvent Prisa;
+        /// <summary>Pide a su escuadra la formación <see cref="IndiceDeFormacion"/> (F1-F4 son 0-3; <see cref="SiguienteFormacion"/> = la siguiente, doble X).</summary>
+        public InputEvent Formacion;
+        public byte IndiceDeFormacion;
+        public const byte SiguienteFormacion = 255;
+        /// <summary>Montar o desmontar (G).</summary>
+        public InputEvent Montar;
     }
 
     /// <summary>
@@ -95,6 +103,19 @@ namespace ConquestTactics.Net
         [GhostField] public byte Equipo;
         [GhostField] public byte Banderas;
         [GhostField(Quantization = 10)] public float Progreso;
+
+        /// <summary>Para el registro: las zonas en una línea, ordenadas por su sitio, para comparar el servidor con un cliente.</summary>
+        public static string Resumen(NativeArray<ZonaRed> zonas)
+        {
+            var lista = new System.Collections.Generic.List<ZonaRed>(zonas.Length);
+            foreach (var z in zonas) lista.Add(z);
+            lista.Sort((a, b) => a.Posicion.x != b.Posicion.x ? a.Posicion.x.CompareTo(b.Posicion.x) : a.Posicion.z.CompareTo(b.Posicion.z));
+            var texto = new System.Text.StringBuilder();
+            foreach (var z in lista)
+                texto.Append(System.FormattableString.Invariant(
+                    $"[({z.Posicion.x:F0},{z.Posicion.z:F0}) dueño {z.Dueno} equipo {z.Equipo} {z.Progreso:F0}% banderas {z.Banderas}] "));
+            return texto.ToString();
+        }
     }
 
     /// <summary>Una casilla de la barra de habilidades del jugador (de Q a la tercera de escuadra), con su recarga.</summary>

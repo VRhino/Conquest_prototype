@@ -16,8 +16,12 @@ namespace ConquestTactics.Net
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     public partial class EntradaClienteSystem : SystemBase
     {
-        double _proximaOrdenDeBot, _proximaHabilidadDeBot;
-        int _ordenesDeBot;
+        /// <summary>Tiempo máximo entre dos toques para que cuenten como doble (el de SquadControlSystem).</summary>
+        const double DobleToque = 0.5d;
+
+        double _proximaOrdenDeBot, _proximaHabilidadDeBot, _proximaFormacionDeBot, _proximaMonturaDeBot = 12d;
+        double _ultimaC = -10d, _ultimaX = -10d;
+        int _ordenesDeBot, _formacionesDeBot;
 
         protected override void OnCreate() => RequireForUpdate<NetworkStreamInGame>();
 
@@ -54,14 +58,42 @@ namespace ConquestTactics.Net
                         e.Habilidad.Set();
                         e.Ranura = (byte)SkillSlot.Q;
                     }
+                    // Y cada 11 s pide la formación siguiente (F1-F4 por turno) y cada 25 s monta o desmonta.
+                    if (t >= _proximaFormacionDeBot)
+                    {
+                        _proximaFormacionDeBot = t + 11d;
+                        e.Formacion.Set();
+                        e.IndiceDeFormacion = (byte)(_formacionesDeBot++ % 4);
+                    }
+                    if (t >= _proximaMonturaDeBot)
+                    {
+                        _proximaMonturaDeBot = t + 25d;
+                        e.Montar.Set();
+                    }
                 }
                 else if (teclado != null)
                 {
                     e.Correr = (byte)(teclado.leftShiftKey.isPressed ? 1 : 0);
                     e.Atacar = (byte)(Mouse.current != null && Mouse.current.leftButton.isPressed ? 1 : 0);
-                    int orden = teclado.cKey.wasPressedThisFrame ? (int)SquadOrderType.FollowHero
-                        : teclado.xKey.wasPressedThisFrame ? (int)SquadOrderType.HoldPosition
-                        : teclado.vKey.wasPressedThisFrame ? (int)SquadOrderType.Attack : -1;
+                    // Las órdenes a la escuadra, con las mismas teclas y los mismos dobles toques que SquadControlSystem:
+                    // C seguir (doble C, además, cambia la prisa); X mantener en el punto del ratón (doble X, la formación
+                    // siguiente); V atacar; F1-F4 y el menú radial, una formación.
+                    double ahora = SystemAPI.Time.ElapsedTime;
+                    int orden = -1, formacion = -1;
+                    if (teclado.cKey.wasPressedThisFrame)
+                    {
+                        orden = (int)SquadOrderType.FollowHero;
+                        if (ahora - _ultimaC <= DobleToque) e.Prisa.Set();
+                        _ultimaC = ahora;
+                    }
+                    else if (teclado.xKey.wasPressedThisFrame)
+                    {
+                        if (ahora - _ultimaX <= DobleToque) formacion = EntradaJugador.SiguienteFormacion;
+                        else orden = (int)SquadOrderType.HoldPosition;
+                        _ultimaX = ahora;
+                    }
+                    else if (teclado.vKey.wasPressedThisFrame)
+                        orden = (int)SquadOrderType.Attack;
                     if (orden >= 0)
                     {
                         e.Orden.Set();
@@ -69,15 +101,36 @@ namespace ConquestTactics.Net
                         if (orden == (int)SquadOrderType.HoldPosition)
                             e.PuntoDeOrden = PuntoDelRaton();
                     }
+                    int delMenu = BattleCommandInput.ConsumeFormation();
+                    if (teclado.f1Key.wasPressedThisFrame) formacion = 0;
+                    else if (teclado.f2Key.wasPressedThisFrame) formacion = 1;
+                    else if (teclado.f3Key.wasPressedThisFrame) formacion = 2;
+                    else if (teclado.f4Key.wasPressedThisFrame) formacion = 3;
+                    else if (delMenu >= 0) formacion = delMenu;
+                    if (formacion >= 0)
+                    {
+                        e.Formacion.Set();
+                        e.IndiceDeFormacion = (byte)formacion;
+                    }
+                    // Habilidades: Q/E/R y T (definitiva) del héroe, 1-3 de la escuadra (o desde la barra), 4-5 perks.
+                    var deLaBarra = BattleCommandInput.ConsumeSquadSkill();
                     int ranura = teclado.qKey.wasPressedThisFrame ? (int)SkillSlot.Q
                         : teclado.eKey.wasPressedThisFrame ? (int)SkillSlot.E
                         : teclado.rKey.wasPressedThisFrame ? (int)SkillSlot.R
-                        : teclado.tKey.wasPressedThisFrame ? (int)SkillSlot.Ultimate : -1;
+                        : teclado.tKey.wasPressedThisFrame ? (int)SkillSlot.Ultimate
+                        : teclado.digit1Key.wasPressedThisFrame ? (int)SkillSlot.Squad1
+                        : teclado.digit2Key.wasPressedThisFrame ? (int)SkillSlot.Squad2
+                        : teclado.digit3Key.wasPressedThisFrame ? (int)SkillSlot.Squad3
+                        : teclado.digit4Key.wasPressedThisFrame ? (int)SkillSlot.ActivePerk1
+                        : teclado.digit5Key.wasPressedThisFrame ? (int)SkillSlot.ActivePerk2
+                        : deLaBarra.HasValue ? (int)deLaBarra.Value : -1;
                     if (ranura >= 0)
                     {
                         e.Habilidad.Set();
                         e.Ranura = (byte)ranura;
                     }
+                    if (teclado.gKey.wasPressedThisFrame)
+                        e.Montar.Set();
                 }
                 entrada.ValueRW = e;
             }

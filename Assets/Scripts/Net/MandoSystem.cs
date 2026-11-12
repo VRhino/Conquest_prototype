@@ -20,6 +20,10 @@ namespace ConquestTactics.Net
         /// <summary>Dónde lo puso el mando en el último tick: si amanece en otro sitio, lo ha movido el juego.</summary>
         public float3 Puesto;
         public bool Colocado;
+        /// <summary>Si el jugador quiere ir a caballo (G lo cambia), y si iba montado en el tick anterior.</summary>
+        public bool QuiereMontar;
+        public bool IbaMontado;
+        public int Formaciones;
     }
 
     /// <summary>Servidor: este mando ya tiene héroe.</summary>
@@ -118,18 +122,25 @@ namespace ConquestTactics.Net
                 var d = new HeroAIDecision { shouldAttack = entrada.Atacar != 0 };
                 if (entrada.Habilidad.IsSet)
                 {
-                    d.useSkill = true;
-                    d.skillSlot = (SkillSlot)entrada.Ranura;
+                    // Las de la escuadra las lanza la escuadra; las del héroe (y sus perks), el héroe.
+                    var ranura = (SkillSlot)entrada.Ranura;
+                    if (BattleCommandInput.IsSquadSlot(ranura))
+                    {
+                        d.useSquadSkill = true;
+                        d.squadSkillSlot = ranura;
+                    }
+                    else
+                    {
+                        d.useSkill = true;
+                        d.skillSlot = ranura;
+                    }
                     jugador.ValueRW.Habilidades++;
                 }
-                if (entrada.Orden.IsSet)
-                {
-                    d.squadOrder = (SquadOrderType)entrada.TipoDeOrden;
-                    d.squadOrderPosition = math.lengthsq(entrada.PuntoDeOrden) > 0f ? entrada.PuntoDeOrden : posicion;
-                    d.hasNewSquadOrder = true;
-                    jugador.ValueRW.Ordenes++;
-                }
                 decision.ValueRW = d;
+                if (entrada.Orden.IsSet) jugador.ValueRW.Ordenes++;
+                if (entrada.Formacion.IsSet) jugador.ValueRW.Formaciones++;
+                MandarEscuadra(heroe, entrada, posicion);
+                Montura(heroe, entrada, ref jugador.ValueRW);
                 Marcar(heroe, jugador.ValueRO.Jugador);
                 MarcarEscuadra(heroe, jugador.ValueRO.Jugador);
                 Interfaz(heroe, mando);
@@ -139,7 +150,7 @@ namespace ConquestTactics.Net
                         ? SystemAPI.GetComponent<AnimacionRed>(SystemAPI.GetComponent<Espejo>(heroe).Fantasma).Ataques : 0;
                     Debug.Log("[BatallaReal] " + Escuadra(heroe, posicion));
                     Debug.Log(System.FormattableString.Invariant(
-                        $"[BatallaReal] Héroe del jugador {jugador.ValueRO.Jugador} en ({posicion.x:F1}, {posicion.z:F1}), entrada ({mover.x:F2}, {mover.y:F2}), velocidad {math.length(velocidad):F1}, ataca {entrada.Atacar}, golpes lanzados {golpes} (cuenta de 0 a 255), órdenes recibidas {jugador.ValueRO.Ordenes}, habilidades {jugador.ValueRO.Habilidades}"));
+                        $"[BatallaReal] Héroe del jugador {jugador.ValueRO.Jugador} en ({posicion.x:F1}, {posicion.z:F1}), entrada ({mover.x:F2}, {mover.y:F2}), velocidad {math.length(velocidad):F1}, ataca {entrada.Atacar}, golpes lanzados {golpes} (cuenta de 0 a 255), órdenes recibidas {jugador.ValueRO.Ordenes}, habilidades {jugador.ValueRO.Habilidades}, formaciones {jugador.ValueRO.Formaciones}, montura {EstadoDeMontura(heroe)}"));
                 }
             }
 
@@ -163,6 +174,19 @@ namespace ConquestTactics.Net
             var estadisticas = SystemAPI.GetComponent<HeroStatsComponent>(heroe);
             float paso = SystemAPI.HasComponent<MoveSpeedComponent>(heroe) ? SystemAPI.GetComponent<MoveSpeedComponent>(heroe).value : estadisticas.baseSpeed;
             var movil = new MandoMovil { Activo = (byte)(vivo ? 1 : 0), Velocidad = paso, VelocidadAlCorrer = paso * math.max(1f, estadisticas.sprintMultiplier) };
+            // A caballo, los aires del caballo (trote y galope); subiendo o bajando, el héroe no se mueve.
+            if (SystemAPI.HasComponent<HeroMountComponent>(heroe))
+            {
+                var montura = SystemAPI.GetComponent<HeroMountComponent>(heroe);
+                if (montura.state == HeroMountState.Mounted)
+                {
+                    var aires = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default;
+                    movil.Velocidad = aires.trotSpeed;
+                    movil.VelocidadAlCorrer = aires.gallopSpeed;
+                }
+                else if (montura.state != HeroMountState.OnFoot)
+                    movil.Activo = 0;
+            }
             var agente = EntityManager.HasComponent<NavMeshAgent>(heroe) ? EntityManager.GetComponentObject<NavMeshAgent>(heroe) : null;
             if (agente == null || !agente.enabled || !agente.isOnNavMesh)
                 movil.Activo = 0;
@@ -280,6 +304,9 @@ namespace ConquestTactics.Net
             }
         }
 
+        string EstadoDeMontura(Entity heroe) =>
+            SystemAPI.HasComponent<HeroMountComponent>(heroe) ? SystemAPI.GetComponent<HeroMountComponent>(heroe).state.ToString() : "sin caballo";
+
         /// <summary>Para el registro: qué orden tiene la escuadra del héroe, de quién viene y a qué distancia está el centro de sus soldados.</summary>
         string Escuadra(Entity heroe, float3 posicion)
         {
@@ -296,8 +323,14 @@ namespace ConquestTactics.Net
                 var orden = SystemAPI.GetComponent<SquadResolvedOrderComponent>(escuadra);
                 resuelta = orden.order + " de " + orden.source;
             }
-            string pedida = SystemAPI.HasComponent<SquadAIOrderIntentComponent>(escuadra)
-                ? SystemAPI.GetComponent<SquadAIOrderIntentComponent>(escuadra).suggestedOrder.ToString() : "?";
+            string pedida = "?";
+            if (SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(escuadra))
+            {
+                var intencion = SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(escuadra);
+                pedida = intencion.orderType + " en " + intencion.desiredFormation;
+            }
+            if (SystemAPI.HasComponent<FormationComponent>(escuadra))
+                pedida += ", formada en " + SystemAPI.GetComponent<FormationComponent>(escuadra).currentFormation;
             float3 centro = float3.zero;
             int vivos = 0;
             if (SystemAPI.HasBuffer<SquadUnitElement>(escuadra))
@@ -310,6 +343,81 @@ namespace ConquestTactics.Net
             float lejos = vivos > 0 ? math.distance((centro / vivos).xz, posicion.xz) : 0f;
             return System.FormattableString.Invariant(
                 $"Escuadra: pedida {pedida}, resuelta {resuelta}, en curso {estado.currentOrder} ({estado.currentState}), {vivos} soldados a {lejos:F1} m del héroe");
+        }
+
+        /// <summary>
+        /// Las órdenes del jugador a su escuadra, por el mismo camino que las del jugador local del juego
+        /// (SquadPlayerCommandResolver): seguir, mantener en un punto, atacar, la prisa y las formaciones, con su
+        /// insistencia. OrderResolutionSystem trata esta escuadra como la del jugador porque su héroe lleva
+        /// HeroNetworkMotion.
+        /// </summary>
+        void MandarEscuadra(Entity heroe, in EntradaJugador entrada, float3 posicion)
+        {
+            if (!entrada.Orden.IsSet && !entrada.Formacion.IsSet && !entrada.Prisa.IsSet)
+                return;
+            if (!SystemAPI.HasComponent<HeroSquadReference>(heroe))
+                return;
+            var escuadra = SystemAPI.GetComponent<HeroSquadReference>(heroe).squad;
+            if (!SystemAPI.Exists(escuadra) || !SystemAPI.HasComponent<SquadInputComponent>(escuadra)
+                || !SystemAPI.HasComponent<SquadPlayerOrderIntentComponent>(escuadra))
+                return;
+            var comando = new SquadControlCommand
+            {
+                orderIssued = entrada.Orden.IsSet,
+                order = (SquadOrderType)entrada.TipoDeOrden,
+                holdPosition = math.lengthsq(entrada.PuntoDeOrden) > 0f ? entrada.PuntoDeOrden : posicion,
+                toggleHurry = entrada.Prisa.IsSet,
+                formationRequested = entrada.Formacion.IsSet,
+                formationIndex = entrada.IndiceDeFormacion == EntradaJugador.SiguienteFormacion ? -1 : entrada.IndiceDeFormacion,
+                cycleFormation = entrada.IndiceDeFormacion == EntradaJugador.SiguienteFormacion,
+            };
+            var mando = SystemAPI.GetComponent<SquadInputComponent>(escuadra);
+            var intencion = SystemAPI.GetComponent<SquadPlayerOrderIntentComponent>(escuadra);
+            var definicion = SystemAPI.HasComponent<SquadDefinitionComponent>(escuadra) ? SystemAPI.GetComponent<SquadDefinitionComponent>(escuadra) : default;
+            if (!SquadPlayerCommandResolver.TryApply(comando, definicion, ref mando, ref intencion, SystemAPI.Time.ElapsedTime))
+                return;
+            SystemAPI.SetComponent(escuadra, mando);
+            SystemAPI.SetComponent(escuadra, intencion);
+        }
+
+        /// <summary>
+        /// Al tomar el jugador un héroe de la IA, su escuadra sigue como estaba: la intención del jugador empieza con la
+        /// orden y la formación que la escuadra ya tenía, en vez de con las de por defecto.
+        /// </summary>
+        void HeredarEscuadra(Entity heroe)
+        {
+            if (!EntityManager.HasComponent<HeroSquadReference>(heroe))
+                return;
+            var escuadra = EntityManager.GetComponentData<HeroSquadReference>(heroe).squad;
+            if (!EntityManager.Exists(escuadra) || !EntityManager.HasComponent<SquadPlayerOrderIntentComponent>(escuadra))
+                return;
+            var intencion = EntityManager.GetComponentData<SquadPlayerOrderIntentComponent>(escuadra);
+            if (EntityManager.HasComponent<SquadStateComponent>(escuadra))
+                intencion.orderType = EntityManager.GetComponentData<SquadStateComponent>(escuadra).currentOrder;
+            if (EntityManager.HasComponent<FormationComponent>(escuadra))
+                intencion.desiredFormation = EntityManager.GetComponentData<FormationComponent>(escuadra).currentFormation;
+            if (EntityManager.HasComponent<SquadHoldPositionComponent>(escuadra))
+                intencion.holdPosition = EntityManager.GetComponentData<SquadHoldPositionComponent>(escuadra).holdCenter;
+            EntityManager.SetComponentData(escuadra, intencion);
+        }
+
+        /// <summary>
+        /// G monta o desmonta: el jugador dice si quiere ir a caballo y HeroMountSystem hace el resto, como con los héroes
+        /// de la IA (HeroAIMountSystem no decide por un héroe llevado en red). Si el juego lo baja del caballo (lo
+        /// derriban, muere el caballo), deja de querer montar: no vuelve a subir solo.
+        /// </summary>
+        void Montura(Entity heroe, in EntradaJugador entrada, ref HeroeDeJugador jugador)
+        {
+            if (!SystemAPI.HasComponent<HeroMountComponent>(heroe) || !SystemAPI.HasComponent<HeroMountRequestComponent>(heroe))
+                return;
+            var estado = SystemAPI.GetComponent<HeroMountComponent>(heroe).state;
+            bool montado = estado == HeroMountState.Mounted || estado == HeroMountState.Mounting;
+            if (entrada.Montar.IsSet)
+                jugador.QuiereMontar = estado == HeroMountState.OnFoot;
+            else if (jugador.IbaMontado && estado == HeroMountState.OnFoot)
+                jugador.QuiereMontar = false;
+            jugador.IbaMontado = montado;
+            SystemAPI.SetComponent(heroe, new HeroMountRequestComponent { ride = jugador.QuiereMontar });
         }
 
         /// <summary>El espejo del héroe dice quién lo lleva: así el cliente sabe cuál es el suyo.</summary>
@@ -410,6 +518,7 @@ namespace ConquestTactics.Net
                 tomados.Add(elegido);
                 EntityManager.AddComponentData(elegido, new HeroeDeJugador { Mando = mando, Jugador = jugador });
                 EntityManager.AddComponent<HeroNetworkMotion>(elegido);
+                HeredarEscuadra(elegido);
                 EntityManager.AddComponent<MandoConHeroe>(mando);
                 // Nadie más escribe su decisión: las dos conductas de la IA quedan apagadas.
                 EntityManager.SetComponentEnabled<RusherBehaviorActive>(elegido, false);

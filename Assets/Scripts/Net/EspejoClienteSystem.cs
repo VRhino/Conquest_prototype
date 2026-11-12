@@ -42,6 +42,7 @@ namespace ConquestTactics.Net
         int _marcadoresAntes;
         Entity _camara, _interfaz, _datos, _reloj, _estado;
         byte _estadoAntes = 255;
+        double _proximoResumen;
         /// <summary>Hay héroe propio y la cámara del juego lo sigue: DibujoRedSystem no toca la cámara.</summary>
         public static bool CamaraDelJuego { get; private set; }
         bool _fotoDeMarcadores;
@@ -343,6 +344,9 @@ namespace ConquestTactics.Net
                         $"[Red] Partida: {(MatchState)p.Estado}, reloj {p.Reloj:F0} s, gana {p.Ganador}, {zonas.Length} zonas, mi bando {BattleBootstrapRequests.NetworkTeam}"));
                 }
 
+                bool resumir = SystemAPI.Time.ElapsedTime >= _proximoResumen;
+                if (resumir) _proximoResumen = SystemAPI.Time.ElapsedTime + 10d;
+                var vistas = new Unity.Collections.NativeList<ZonaRed>(8, Unity.Collections.Allocator.Temp);
                 using var copia = zonas.ToNativeArray(Unity.Collections.Allocator.Temp);
                 var locales = SystemAPI.QueryBuilder().WithAll<ZoneTriggerComponent, LocalTransform>().Build();
                 using var entidades = locales.ToEntityArray(Unity.Collections.Allocator.Temp);
@@ -380,6 +384,36 @@ namespace ConquestTactics.Net
                         }
                         break;
                     }
+                // Al registro, lo que ha quedado escrito en las zonas de aquí (no lo que llegó): para compararlo con el servidor.
+                if (resumir)
+                {
+                    for (int i = 0; i < entidades.Length; i++)
+                    {
+                        var zona = EntityManager.GetComponentData<ZoneTriggerComponent>(entidades[i]);
+                        var v = new ZonaRed { Posicion = poses[i].Position, Dueno = (byte)zona.teamOwner };
+                        if (zona.isActive) v.Banderas |= ZonaRed.Activa;
+                        if (zona.isLocked) v.Banderas |= ZonaRed.Bloqueada;
+                        if (EntityManager.HasComponent<CapturePointProgressComponent>(entidades[i]))
+                        {
+                            var captura = EntityManager.GetComponentData<CapturePointProgressComponent>(entidades[i]);
+                            v.Progreso = captura.captureProgress;
+                            v.Equipo = (byte)captura.capturingTeam;
+                            if (captura.isContested) v.Banderas |= ZonaRed.Disputada;
+                            if (captura.isBeingCaptured) v.Banderas |= ZonaRed.Capturandose;
+                        }
+                        else if (EntityManager.HasComponent<SupplyPointComponent>(entidades[i]))
+                        {
+                            var suministro = EntityManager.GetComponentData<SupplyPointComponent>(entidades[i]);
+                            v.Progreso = suministro.captureProgress;
+                            v.Equipo = (byte)suministro.currentTeam;
+                            if (suministro.isContested) v.Banderas |= ZonaRed.Disputada;
+                            if (suministro.isCapturing) v.Banderas |= ZonaRed.Capturandose;
+                        }
+                        vistas.Add(v);
+                    }
+                    Debug.Log(System.FormattableString.Invariant($"[Red] Zonas (reloj {p.Reloj:F0} s): ") + ZonaRed.Resumen(vistas.AsArray()));
+                }
+                vistas.Dispose();
                 break;
             }
         }

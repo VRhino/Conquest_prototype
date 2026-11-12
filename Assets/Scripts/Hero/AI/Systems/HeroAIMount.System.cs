@@ -27,8 +27,9 @@ public partial class HeroAIMountSystem : SystemBase
         if (!_withoutRequest.IsEmptyIgnoreFilter) EntityManager.AddComponent<HeroMountRequestComponent>(_withoutRequest);
         foreach (var (decision, pose, request, entity) in SystemAPI
                      .Query<RefRO<HeroAIDecision>, RefRO<LocalTransform>, RefRW<HeroMountRequestComponent>>()
-                     .WithAll<HeroAITag>().WithEntityAccess())
+                     .WithAll<HeroAITag>().WithNone<HeroNetworkMotion>().WithEntityAccess())
         {
+            // A hero driven by a player over the network asks for its own horse.
             bool riding = SystemAPI.HasComponent<HeroMountComponent>(entity) && SystemAPI.GetComponent<HeroMountComponent>(entity).Riding;
             bool underAttack = false;
             float enemyDistance = float.MaxValue;
