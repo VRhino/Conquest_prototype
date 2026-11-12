@@ -518,3 +518,43 @@ desmontan cada 25 s): en el registro del servidor la orden de la escuadra «gana
 Lo que falta, anotado: **cambiar de escuadra en un punto de suministro** (y la tecla de interactuar) no está; hoy cada
 héroe trae una sola escuadra, llegará cuando el ticket del motor traiga varias. El caballo no se ve en el cliente
 (punto 4). Bloquear, el modo táctico y andar despacio no viajan. Nadie lo ha probado con el teclado.
+
+### 9.4 Lo que aún no se veía: proyectiles, golpes y caballos
+
+```
+SERVIDOR="-tropas arc01,lcv01,sqd01" Tools/ver_batalla_real.sh <nombre> 10 150 40 -bot     (arqueros, caballería y escuderos)
+```
+
+- **Proyectiles.** `ProyectilesSystem` (servidor) avisa a todos de cada disparo con un RPC (`ProyectilRed`: de qué
+  reserva sale, origen, destino, trayectoria y bando), justo antes de que `ProjectileSpawnSystem` se lleve la petición.
+  El cliente saca el proyectil de la reserva del juego y lo lanza con `ProjectileController`, sin perfil de daño: vuela
+  y se clava igual, pero no hiere a nadie (el daño lo decide el del servidor).
+- **Golpes.** `GolpesSystem` (servidor) recoge cada `DamageFeedbackEvent` y avisa con un RPC (`GolpeRed`) a los jugadores a
+  los que les toca: los golpes de su héroe o de sus soldados, y los que pasan a menos de 40 m. El cliente pinta el número
+  con `FloatingCombatTextManager` y la chispa con `HitImpactEffectManager`, los del juego.
+- **Caballos.** El espejo dice si el soldado va montado (el cliente le pone `MountComponent` y su modelo de caballería
+  hace el resto) y, del héroe, el estado de su montura con su revisión; el cliente le pone los componentes que lee
+  `HeroMountPresenter` (`HeroMountComponent`, la clase del héroe, la velocidad) y el presentador del juego saca y quita
+  el caballo. Los fantasmas llevan también su `TeamComponent`, para que un proyectil no se pare en los suyos.
+- `-tropas a,b,c` reparte esas tropas por turno entre los héroes de la batalla de verdad.
+- El juego no tiene sonido ni más efectos que la chispa del golpe: no hay nada más que llevar.
+
+**Dos fallos del juego que salieron aquí** (no son de la red, pero sin arreglarlos el servidor no aguanta):
+
+- **En `BattleScene` los arqueros no disparan.** La reserva de proyectiles (`ObjectPoolSystem`) y quien la llena
+  (`RangedCombatBootstrap`) solo están en `BattleTestScene`. Sin reserva, `ProjectileSpawnSystem` vuelve sin hacer nada y
+  las peticiones de disparo se acumulan para siempre. Para la batalla en red, `ReservaDeProyectiles.Asegurar` la crea si
+  falta, en el servidor y en el cliente. **La escena `BattleScene` sigue sin tenerla: en el juego de un jugador hay que
+  añadirle esos dos objetos.**
+- **Los avisos de golpe se quedaban para siempre en el servidor**: los consume `DamageFeedbackPresentationSystem`, que es
+  de presentación y en el servidor no corre. Ahora los consume `GolpesSystem`.
+
+**Comprobado** con arqueros, caballería de lanza y escuderos mezclados y dos clientes que juegan solos, 150 s: el
+servidor avisó de 401 proyectiles y al cliente sin pantalla le llegaron los 401 (al de ventana, que entró después de
+cargar el mapa, 368); de 233 avisos de golpe le llegaron 218 a uno y 16 al otro (cada uno recibe solo los suyos y los
+cercanos). En la captura del cliente se ve la caballería con sus caballos, el reloj corriendo y la interfaz con la tropa
+del jugador («Lance Cavalry»). El tick del servidor sigue en 4,3-4,8 ms.
+
+Lo que falta, anotado: las flechas y los números no se han visto en una captura (se sabe que llegan y que se piden a la
+reserva, no cómo quedan en pantalla); el caballo del héroe tampoco se ha visto montado en una captura; las tropas del
+motor (`arqueros`, etc.) no están en la base de escuadras y su proyectil no entra en la reserva.

@@ -168,6 +168,7 @@ namespace ConquestTactics.Net
     {
         /// <summary>El <c>visualPrefabName</c> del soldado; si el registro no lo conoce, vale el de su tipo de escuadra.</summary>
         [GhostField] public FixedString64Bytes Prefab;
+        /// <summary>Soldado: su <c>SquadType</c>. Héroe: su <c>HeroClass</c> (de ella salen las riendas y la postura a caballo).</summary>
         [GhostField] public byte TipoDeEscuadra;
     }
 
@@ -191,6 +192,13 @@ namespace ConquestTactics.Net
         /// <summary>Solo héroes: sube uno con cada golpe que lanza (el disparador de su animación de ataque).</summary>
         [GhostField] public byte Ataques;
         [GhostField] public uint RevisionDeMuerte;
+        /// <summary>
+        /// Soldado: 1 si va a caballo (caballería). Héroe: su <c>HeroMountState</c> (a pie, subiendo, montado, bajando), con
+        /// la revisión que cambia a cada paso y por qué acabó la última monta (un <c>HeroMountEnd</c>).
+        /// </summary>
+        [GhostField] public byte Montura;
+        [GhostField] public uint RevisionDeMontura;
+        [GhostField] public byte FinDeMontura;
     }
 
     /// <summary>

@@ -55,6 +55,7 @@ namespace ConquestTactics.Net
             {
                 _escenaPedida = true;
                 BattleBootstrapRequests.NoLocalHero = true;
+                ReservaDeProyectiles.Asegurar();
                 SceneManager.LoadScene(SceneTransitionService.SceneNames.Battle);
                 return;
             }
@@ -106,6 +107,10 @@ namespace ConquestTactics.Net
                     continue;
                 var visual = Instanciar(prefab, pose.ValueRO, soldado.ValueRO.Bando == 1 ? "Units_B" : "Units_A", entidad);
                 ecb.AddComponent<ConVisual>(entidad);
+                // El bando, para que un proyectil de aquí no se pare en los suyos; y si es de caballería, su caballo.
+                ecb.AddComponent(entidad, new TeamComponent { value = soldado.ValueRO.Bando == 1 ? Team.TeamB : Team.TeamA });
+                if (animacion.ValueRO.Montura != 0)
+                    ecb.AddComponent<MountComponent>(entidad);
                 ecb.AddComponent(entidad, new UnitAnimationMovementComponent { PreviousPosition = pose.ValueRO.Position });
                 ecb.AddComponent<UnitCombatComponent>(entidad);
                 ecb.AddComponent<RangedAttackStateComponent>(entidad);
@@ -156,6 +161,13 @@ namespace ConquestTactics.Net
                 ecb.AddComponent<HeroCombatComponent>(entidad);
                 ecb.AddComponent<HeroDeathPresentationComponent>(entidad);
                 ecb.AddComponent<ResilienceComponent>(entidad);
+                ecb.AddComponent(entidad, new TeamComponent { value = soldado.ValueRO.Bando == 1 ? Team.TeamB : Team.TeamA });
+                // Con HeroLifeComponent, EntityVisualSync le pone al modelo su HeroMountPresenter, que saca el caballo de
+                // HeroMountComponent, la clase del héroe y la velocidad de HeroMotorStateComponent.
+                ecb.AddComponent(entidad, new HeroLifeComponent { isAlive = true });
+                ecb.AddComponent<HeroMountComponent>(entidad);
+                ecb.AddComponent<HeroMotorStateComponent>(entidad);
+                ecb.AddComponent(entidad, new HeroClassComponent { heroClass = (HeroClass)modelo.ValueRO.TipoDeEscuadra });
                 _heroes[entidad] = visual;
                 // Los componentes llegan al reproducir el búfer, antes del Start del modelo, que es cuando los mira.
                 VisualSyncUtility.SetupVisualSync(visual).SetHeroEntity(entidad);
@@ -254,13 +266,8 @@ namespace ConquestTactics.Net
             CamaraDelJuego = propio != Entity.Null;
             if (propio != Entity.Null)
             {
-                if (!EntityManager.HasComponent<HeroLifeComponent>(propio))
-                {
-                    EntityManager.AddComponentData(propio, new HeroLifeComponent { isAlive = true });
-                    if (_heroes.TryGetValue(propio, out var visual) && visual != null)
-                        EntityManager.AddComponentData(propio, new HeroVisualInstance { visualInstanceId = visual.GetEntityId() });
-                }
-                EntityManager.SetComponentData(propio, new HeroLifeComponent { isAlive = vivo });
+                if (!EntityManager.HasComponent<HeroVisualInstance>(propio) && _heroes.TryGetValue(propio, out var visual) && visual != null)
+                    EntityManager.AddComponentData(propio, new HeroVisualInstance { visualInstanceId = visual.GetEntityId() });
                 if (_camara == Entity.Null || !EntityManager.Exists(_camara))
                 {
                     // Los mismos valores que CameraBootstrapSystem pone para el héroe local.
@@ -474,6 +481,14 @@ namespace ConquestTactics.Net
                 combate.ValueRW.isAttacking = (a.Banderas & AnimacionRed.Atacando) != 0;
                 muerte.ValueRW.isDead = (a.Banderas & AnimacionRed.Muerto) != 0;
                 muerte.ValueRW.deathRevision = a.RevisionDeMuerte;
+                SystemAPI.SetComponent(entidad, new HeroLifeComponent { isAlive = (a.Banderas & AnimacionRed.Muerto) == 0 });
+                // El caballo: HeroMountPresenter lo saca o lo quita cuando cambia la revisión.
+                var montura = SystemAPI.GetComponent<HeroMountComponent>(entidad);
+                montura.state = (HeroMountState)a.Montura;
+                montura.revision = a.RevisionDeMontura;
+                montura.lastEnd = (HeroMountEnd)a.FinDeMontura;
+                SystemAPI.SetComponent(entidad, montura);
+                SystemAPI.SetComponent(entidad, new HeroMotorStateComponent { velocity = marcha.ValueRO.velocity, isGrounded = true });
                 var estadisticas = SystemAPI.GetComponent<HeroStatsComponent>(entidad);
                 estadisticas.baseSpeed = a.VelocidadBase;
                 SystemAPI.SetComponent(entidad, estadisticas);

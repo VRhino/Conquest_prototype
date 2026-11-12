@@ -125,6 +125,10 @@ namespace ConquestTactics.Net
                 FinTickServidorSystem.Ticks = 0;
             }
 
+            // Batalla de verdad: los avisos de golpes y proyectiles que han salido (servidor) o llegado (cliente).
+            if (OpcionesRed.BatallaReal > 0 || EfectosClienteSystem.Golpes + EfectosClienteSystem.Proyectiles > 0)
+                heroe += EsServidor ? $" golpes={GolpesSystem.Enviados} proyectiles={ProyectilesSystem.Enviados}"
+                    : $" golpes={EfectosClienteSystem.Golpes} proyectiles={EfectosClienteSystem.Proyectiles}";
             if (((int)ahora) % 5 == 0)
                 Debug.Log($"[Red] {World.Name} t={ahora:F0}s conexiones={conexiones} fantasmas={fantasmas}{heroe} " +
                           $"rx={rxKbps:F0}kbit/s tx={txKbps:F0}kbit/s cpu={cpuPorciento:F0}% fps={fps:F0}" +

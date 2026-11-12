@@ -56,6 +56,8 @@ namespace ConquestTactics.Net
             {
                 // Como HeroVisualInstantiationSystem para un héroe que no es el local.
                 var modelo = new VisualRed { Prefab = aparicion.ValueRO.visualPrefabId.ToString() + "_Remote" };
+                if (SystemAPI.HasComponent<HeroClassComponent>(entidad))
+                    modelo.TipoDeEscuadra = (byte)SystemAPI.GetComponent<HeroClassComponent>(entidad).heroClass;
                 var fantasma = Crear(ref ecb, prefabs.EspejoHeroe, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Heroe, modelo);
                 ecb.SetComponent(fantasma, new AparienciaRed { Texto = AparienciaRed.De(em.GetComponentObject<HeroAppearanceComponent>(entidad)) });
             }
@@ -87,6 +89,7 @@ namespace ConquestTactics.Net
                     Postura = (byte)m.CurrentStance,
                     Fila = (byte)m.SlotRow,
                     Papel = (byte)m.SlotRole,
+                    Montura = (byte)(SystemAPI.HasComponent<MountComponent>(entidad) ? 1 : 0),
                 };
                 if (m.IsMoving) animacion.Banderas |= AnimacionRed.Moviendose;
                 if (combate.ValueRO.isAttacking) animacion.Banderas |= AnimacionRed.Atacando;
@@ -118,6 +121,13 @@ namespace ConquestTactics.Net
                 var animacion = em.GetComponentData<AnimacionRed>(espejo.ValueRO.Fantasma);
                 byte ataques = animacion.Ataques;
                 animacion = new AnimacionRed { VelocidadBase = estadisticas.ValueRO.baseSpeed, VelocidadDeAtaque = 1f, Ataques = ataques };
+                if (SystemAPI.HasComponent<HeroMountComponent>(entidad))
+                {
+                    var montura = SystemAPI.GetComponent<HeroMountComponent>(entidad);
+                    animacion.Montura = (byte)montura.state;
+                    animacion.RevisionDeMontura = montura.revision;
+                    animacion.FinDeMontura = (byte)montura.lastEnd;
+                }
                 var agente = em.HasComponent<NavMeshAgent>(entidad) ? em.GetComponentObject<NavMeshAgent>(entidad) : null;
                 if (SystemAPI.HasComponent<HeroNetworkMotion>(entidad))
                 {

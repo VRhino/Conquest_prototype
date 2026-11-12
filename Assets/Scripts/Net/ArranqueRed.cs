@@ -50,6 +50,8 @@ namespace ConquestTactics.Net
         public static string Token;
         /// <summary>Héroes por bando de la batalla de verdad (los sistemas de Game.ECS en el mundo servidor, camino A); 0 = la prueba de cápsulas.</summary>
         public static int BatallaReal;
+        /// <summary>Batalla de verdad: las tropas de las escuadras, separadas por comas; se reparten por turno entre los héroes. Sin ella, todos con escuderos (sqd01).</summary>
+        public static string Tropas;
         /// <summary>Batalla de verdad: veces por segundo, como mucho, que se manda cada soldado (los héroes van siempre a la tasa de red); 0 = sin tope. Igual en servidor y clientes: forma parte del prefab fantasma.</summary>
         public static int TasaSoldados;
         /// <summary>Batalla de verdad, servidor: metros alrededor de su héroe que recibe cada jugador (<see cref="AlcanceSystem"/>); 0 = todo.</summary>
@@ -93,6 +95,7 @@ namespace ConquestTactics.Net
                     case "-espera": EsperaJugadores = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-token": Token = siguiente; break;
                     case "-batallaReal": BatallaReal = int.Parse(siguiente); break;
+                    case "-tropas": Tropas = siguiente; break;
                     case "-tasaSoldados": TasaSoldados = int.Parse(siguiente); break;
                     case "-alcance": Alcance = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-captura": Captura = siguiente; break;

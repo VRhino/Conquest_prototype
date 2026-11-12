@@ -69,17 +69,26 @@ namespace ConquestTactics.Net
 
         static void Cargar(int heroesPorBando)
         {
-            var tropa = SquadDataService.GetSquadById(Tropa);
+            // Con -tropas a,b,c las escuadras van por turno (el primer héroe de cada bando con la primera, y así).
+            var tropas = (string.IsNullOrEmpty(OpcionesRed.Tropas) ? Tropa : OpcionesRed.Tropas).Split(',')
+                .Select(id => SquadDataService.GetSquadById(id.Trim())).Where(t => t != null).ToArray();
+            if (tropas.Length == 0)
+                tropas = new[] { SquadDataService.GetSquadById(Tropa) };
             var batalla = BattleDebugCreator.CreateTestBattle(heroesPorBando, heroesPorBando);
-            foreach (var heroe in batalla.attackers.Concat(batalla.defenders))
-            {
-                heroe.heroId = Guid.NewGuid().ToString();
-                var escuadra = SquadDataService.CreateSquadInstance(tropa.id);
-                escuadra.unitsInSquad = tropa.unitCount;
-                heroe.squadInstances.Clear();
-                heroe.squadInstances.Add(escuadra);
-            }
-            SoldadosEsperados = heroesPorBando * 2 * tropa.unitCount;
+            SoldadosEsperados = 0;
+            foreach (var bando in new[] { batalla.attackers, batalla.defenders })
+                for (int i = 0; i < bando.Count; i++)
+                {
+                    var heroe = bando[i];
+                    var tropa = tropas[i % tropas.Length];
+                    heroe.heroId = Guid.NewGuid().ToString();
+                    var escuadra = SquadDataService.CreateSquadInstance(tropa.id);
+                    escuadra.unitsInSquad = tropa.unitCount;
+                    heroe.squadInstances.Clear();
+                    heroe.squadInstances.Add(escuadra);
+                    SoldadosEsperados += tropa.unitCount;
+                }
+            ReservaDeProyectiles.Asegurar();
             BattleBootstrapRequests.NoLocalHero = true;
             // Con -duracion la batalla dura eso en vez de lo que diga el mapa (para ver el final sin esperar 15 minutos).
             if (OpcionesRed.Duracion > 0f)
