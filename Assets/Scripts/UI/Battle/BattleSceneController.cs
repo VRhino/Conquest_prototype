@@ -180,8 +180,10 @@ public class BattleSceneController : MonoBehaviour
     private void HandleMatchEnd()
     {
         // Transición a PostBattleScene tras el delay
-        if (BattleBootstrapRequests.NoLocalHero) return; // The battle server reports the result itself.
-        if (_matchEndHandled && _matchEndTime >= 0f && Time.time - _matchEndTime >= PostMatchDelay)
+        // The battle server reports the result itself; a network client shows the panel once it knows its side,
+        // and stays in the battle scene (the post-battle scene needs the single-player session).
+        if (BattleBootstrapRequests.NoLocalHero && BattleBootstrapRequests.NetworkTeam == 0) return;
+        if (_matchEndHandled && !BattleBootstrapRequests.NoLocalHero && _matchEndTime >= 0f && Time.time - _matchEndTime >= PostMatchDelay)
         {
             SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.PostBattle);
             return;
@@ -219,7 +221,7 @@ public class BattleSceneController : MonoBehaviour
         _matchEndTime = Time.time;
 
         // Determinar equipo del jugador local
-        int localTeam = 0;
+        int localTeam = BattleBootstrapRequests.NetworkTeam;
         var localQuery = em.CreateEntityQuery(typeof(IsLocalPlayer), typeof(TeamComponent));
         if (!localQuery.IsEmpty)
         {

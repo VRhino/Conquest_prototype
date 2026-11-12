@@ -11,10 +11,12 @@ public static class BattleBootstrapRequests
     internal static string LocalHeroId;
     /// <summary>Battle server: nobody plays on this machine, so every hero of the battle is spawned as a remote one.</summary>
     public static bool NoLocalHero;
+    /// <summary>Network client: the side of the hero this player drives (1 attackers, 2 defenders); 0 on the server or while unknown.</summary>
+    public static int NetworkTeam;
     internal static readonly List<(World world, Entity hero, SquadIdMapElement[] squads)> Remote = new();
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { Battle = null; LocalHeroName = null; LocalHeroId = null; NoLocalHero = false; Remote.Clear(); }
+    static void Reset() { Battle = null; LocalHeroName = null; LocalHeroId = null; NoLocalHero = false; NetworkTeam = 0; Remote.Clear(); }
 
     public static void SubmitLocal(BattleData battle, string heroName, string heroId = null)
     {

@@ -61,6 +61,40 @@ namespace ConquestTactics.Net
         [GhostField] public int Soldados;
         [GhostField] public int SoldadosTotales;
         [GhostField] public byte Formacion;
+        /// <summary>Su bando (1 atacante, 2 defensor) y la tropa de su escuadra: lo que la interfaz saca del DataContainer del juego.</summary>
+        [GhostField] public byte Bando;
+        [GhostField] public FixedString64Bytes Escuadra;
+        /// <summary>Si su héroe está dentro de una zona que se está capturando, y cuánto lleva (0-100).</summary>
+        [GhostField] public byte EnZona;
+        [GhostField(Quantization = 10)] public float Captura;
+    }
+
+    /// <summary>La partida de la batalla de verdad, una sola para todos: el reloj, el estado (un <c>MatchState</c>) y quién gana.</summary>
+    public struct PartidaRed : IComponentData
+    {
+        [GhostField(Quantization = 10)] public float Reloj;
+        [GhostField] public byte Estado;
+        /// <summary>0 nadie todavía, 1 el atacante, 2 el defensor.</summary>
+        [GhostField] public byte Ganador;
+        [GhostField] public byte Agotado;
+    }
+
+    /// <summary>
+    /// Una zona de captura o de suministro de la partida. El cliente la casa con la suya por la posición (las crea la
+    /// misma escena en los dos lados) y le copia el dueño y el progreso.
+    /// </summary>
+    [InternalBufferCapacity(8)]
+    public struct ZonaRed : IBufferElementData
+    {
+        public const byte Activa = 1, Bloqueada = 2, Disputada = 4, Capturandose = 8;
+
+        [GhostField(Quantization = 10)] public float3 Posicion;
+        /// <summary>Equipo dueño (0 nadie, 1 atacante, 2 defensor).</summary>
+        [GhostField] public byte Dueno;
+        /// <summary>Equipo que la está capturando (captura) o que la tiene ahora (suministro).</summary>
+        [GhostField] public byte Equipo;
+        [GhostField] public byte Banderas;
+        [GhostField(Quantization = 10)] public float Progreso;
     }
 
     /// <summary>Una casilla de la barra de habilidades del jugador (de Q a la tercera de escuadra), con su recarga.</summary>
@@ -202,6 +236,8 @@ namespace ConquestTactics.Net
         public Entity EspejoHeroe;
         /// <summary>La entidad de mando de un jugador de la batalla de verdad: su <see cref="EntradaJugador"/> y dónde está su héroe, predicho.</summary>
         public Entity Mando;
+        /// <summary>La partida de la batalla de verdad: <see cref="PartidaRed"/> y sus <see cref="ZonaRed"/>.</summary>
+        public Entity Partida;
     }
 
     /// <summary>RPC del cliente: ya está listo para recibir la batalla, con el token de su héroe si viene de una batalla del motor.</summary>

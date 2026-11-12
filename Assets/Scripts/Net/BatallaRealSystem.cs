@@ -81,6 +81,9 @@ namespace ConquestTactics.Net
             }
             SoldadosEsperados = heroesPorBando * 2 * tropa.unitCount;
             BattleBootstrapRequests.NoLocalHero = true;
+            // Con -duracion la batalla dura eso en vez de lo que diga el mapa (para ver el final sin esperar 15 minutos).
+            if (OpcionesRed.Duracion > 0f)
+                batalla.BattleTimer = (int)OpcionesRed.Duracion;
             BattleTransitionData.Instance.SetBattleData(batalla);
             SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Battle);
             Debug.Log($"[BatallaReal] Batalla de {heroesPorBando} héroes por bando ({SoldadosEsperados} soldados) en el mundo servidor");

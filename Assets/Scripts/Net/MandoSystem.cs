@@ -244,11 +244,40 @@ namespace ConquestTactics.Net
                         red.Formacion = (byte)SystemAPI.GetComponent<FormationComponent>(escuadra).currentFormation;
                 }
             }
+            red.Bando = (byte)(SystemAPI.GetComponent<TeamComponent>(heroe).value == Team.TeamB ? 2 : 1);
+            if (SystemAPI.HasBuffer<SquadIdMapElement>(heroe) && SystemAPI.GetBuffer<SquadIdMapElement>(heroe).Length > 0)
+                red.Escuadra = SystemAPI.GetBuffer<SquadIdMapElement>(heroe)[0].baseSquadID;
+            EnZona(SystemAPI.GetComponent<LocalTransform>(heroe).Position, ref red);
             SystemAPI.SetComponent(mando, red);
             var casillas = SystemAPI.GetBuffer<HabilidadRed>(mando);
             casillas.ResizeUninitialized(ui.skills.Length);
             for (int i = 0; i < ui.skills.Length; i++)
                 casillas[i] = new HabilidadRed { Id = ui.skills[i].skillId, Recarga = ui.skills[i].cooldown, Queda = ui.skills[i].remaining };
+        }
+
+        /// <summary>
+        /// Si el héroe está dentro de una zona activa de captura, o de una de suministro que se está capturando, y cuánto
+        /// lleva: lo mismo que LocalHeroCaptureTrackerSystem mira para el héroe local.
+        /// </summary>
+        void EnZona(float3 posicion, ref InterfazRed red)
+        {
+            foreach (var (zona, pose, entidad) in SystemAPI.Query<RefRO<ZoneTriggerComponent>, RefRO<LocalTransform>>().WithEntityAccess())
+            {
+                if (!zona.ValueRO.isActive || math.distancesq(posicion, pose.ValueRO.Position) > zona.ValueRO.radius * zona.ValueRO.radius)
+                    continue;
+                if (SystemAPI.HasComponent<CapturePointProgressComponent>(entidad))
+                {
+                    red.EnZona = 1;
+                    red.Captura = SystemAPI.GetComponent<CapturePointProgressComponent>(entidad).captureProgress;
+                    return;
+                }
+                if (SystemAPI.HasComponent<SupplyPointComponent>(entidad) && SystemAPI.GetComponent<SupplyPointComponent>(entidad).isCapturing)
+                {
+                    red.EnZona = 1;
+                    red.Captura = SystemAPI.GetComponent<SupplyPointComponent>(entidad).captureProgress;
+                    return;
+                }
+            }
         }
 
         /// <summary>Para el registro: qué orden tiene la escuadra del héroe, de quién viene y a qué distancia está el centro de sus soldados.</summary>

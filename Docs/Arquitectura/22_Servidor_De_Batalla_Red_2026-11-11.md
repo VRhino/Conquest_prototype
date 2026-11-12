@@ -458,5 +458,34 @@ ticket y el resultado de vuelta; (6) robustez: aviso y reconexión, latencia sim
 Comprobado con una captura de un cliente que juega solo: la cámara del juego detrás del héroe y la interfaz con sus
 cifras de verdad (vida 1540/1540, resistencia gastándose, barra de habilidades).
 
-Lo que falta, anotado: el panel de la escuadra (retrato y «40/40») no se actualiza, porque depende del aviso de cambio
-de escuadra del juego; el reloj y la zona de captura llegan con el punto 2; nadie lo ha probado aún con el ratón.
+Lo que falta, anotado: nadie lo ha probado aún con el ratón.
+
+### 9.2 La partida entera: reloj, zonas y final
+
+```
+SERVIDOR="-duracion 80" Tools/ver_batalla_real.sh <nombre> 10 110 40 -bot      (una batalla de 80 s, para ver el final)
+```
+
+- **Un fantasma para la partida** (`PrefabsRed.Partida`, lo crea `PartidaSystem` en el servidor): `PartidaRed` lleva el
+  reloj, el estado (`MatchState`) y el ganador, y su búfer `ZonaRed` lleva cada zona de captura o de suministro con su
+  posición, su dueño, quién la captura, el progreso y si está activa, bloqueada, disputada o capturándose. Son los datos
+  que el juego guarda en `BattleClockComponent`, `MatchStateComponent` y las entidades de zona.
+- **El cliente los vuelca donde su interfaz los busca** (`EspejoClienteSystem.Partida`): el reloj y el estado en sus
+  propias entidades sueltas, y cada zona en la entidad de zona que la escena creó en el cliente (se casan por la
+  posición, no por el id). El reloj de pantalla, los indicadores de zona y el panel de victoria o derrota son los del
+  juego, sin tocar.
+- **El bando y la tropa del jugador** viajan en su `InterfazRed` y el cliente crea con ellos el `DataContainerComponent`
+  que la interfaz consulta: los colores de aliado y enemigo de las zonas y el panel de la escuadra salen de ahí.
+  También viaja si su héroe está dentro de una zona que se captura, y cuánto lleva (la barra «Capturando»).
+- **El final.** Cambio en el juego: `BattleSceneController` enseña el panel también a un cliente de red, que sabe su
+  bando por `BattleBootstrapRequests.NetworkTeam`, y ese cliente se queda en la escena de batalla (la de después de la
+  batalla necesita la sesión de un jugador). El servidor apunta el final en el registro y cierra el proceso a los 30 s.
+- `-duracion N` hace que la batalla de verdad dure N segundos en vez de lo que diga el mapa.
+
+**Comprobado** con una batalla de 80 s y dos clientes que juegan solos: el reloj llega a cero, el servidor da por ganador
+al defensor (tiempo agotado) y el cliente del bando defensor enseña «Victory» con el reloj en 00:00; el panel de la
+escuadra enseña ya la tropa del jugador. Llegan las 7 zonas del mapa.
+
+Lo que falta, anotado: en 4 minutos de batalla la IA no llegó a capturar ninguna zona, así que **el cambio de dueño de
+una zona no se ha visto llegar al cliente**; el resultado no se manda a nadie (punto 5); el cliente no tiene pantalla de
+después de la batalla.

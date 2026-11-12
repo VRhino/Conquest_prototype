@@ -40,7 +40,8 @@ namespace ConquestTactics.Net
         readonly Dictionary<Entity, float3> _conDestino = new Dictionary<Entity, float3>();
         readonly List<Entity> _sobran = new List<Entity>();
         int _marcadoresAntes;
-        Entity _camara, _interfaz;
+        Entity _camara, _interfaz, _datos, _reloj, _estado;
+        byte _estadoAntes = 255;
         /// <summary>Hay héroe propio y la cámara del juego lo sigue: DibujoRedSystem no toca la cámara.</summary>
         public static bool CamaraDelJuego { get; private set; }
         bool _fotoDeMarcadores;
@@ -69,7 +70,9 @@ namespace ConquestTactics.Net
             AnimarSoldados();
             AnimarHeroes();
             MarcarDestinos();
+            Unicos();
             CamaraEInterfaz();
+            Partida();
         }
 
         /// <summary>El modelo, en la capa de su bando y sin autoridad: ni navega ni golpea. Los golpes los decide el servidor.</summary>
@@ -281,13 +284,102 @@ namespace ConquestTactics.Net
                     currentHealth = r.Vida, maxHealth = r.VidaMaxima, currentStamina = r.Resistencia, maxStamina = r.ResistenciaMaxima,
                     heroAlive = r.Vivo != 0, combo = r.Combo, ultimateComboCost = r.CosteDeDefinitiva, unaffordableSlots = r.SinPagar,
                     aliveUnits = r.Soldados, totalUnits = r.SoldadosTotales, currentFormation = (FormationType)r.Formacion,
+                    isInCaptureZone = r.EnZona != 0, captureProgress = r.Captura,
                 };
+                // Lo que la interfaz saca del DataContainer del juego: de qué bando es el jugador y qué tropa lleva.
+                BattleBootstrapRequests.NetworkTeam = r.Bando;
+                var datos = EntityManager.GetComponentData<DataContainerComponent>(_datos);
+                if (datos.teamID != r.Bando || datos.selectedSquadBaseID != r.Escuadra)
+                {
+                    datos.playerID = yo.Value;
+                    datos.teamID = r.Bando;
+                    datos.selectedSquadBaseID = r.Escuadra;
+                    datos.isReady = true;
+                    EntityManager.SetComponentData(_datos, datos);
+                }
                 ui.skills.Length = UIHeroBattleDataComponent.SkillSlotCount;
                 for (int i = 0; i < casillas.Length && i < ui.skills.Length; i++)
                     ui.skills[i] = new UISkillSlotData { skillId = casillas[i].Id, cooldown = casillas[i].Recarga, remaining = casillas[i].Queda };
-                if (_interfaz == Entity.Null || !EntityManager.Exists(_interfaz))
-                    _interfaz = EntityManager.CreateEntity(typeof(UIHeroBattleDataComponent));
                 EntityManager.SetComponentData(_interfaz, ui);
+                break;
+            }
+        }
+
+        /// <summary>
+        /// Las entidades sueltas donde la interfaz del juego busca sus datos (en el juego de un jugador las crean sistemas
+        /// de Game.ECS que aquí no corren). Se crean una vez, fuera de cualquier recorrido: crear una entidad en mitad de
+        /// uno lo invalida.
+        /// </summary>
+        void Unicos()
+        {
+            if (_interfaz != Entity.Null && EntityManager.Exists(_interfaz))
+                return;
+            _interfaz = EntityManager.CreateEntity(typeof(UIHeroBattleDataComponent));
+            _datos = EntityManager.CreateEntity(typeof(DataContainerComponent));
+            EntityManager.AddBuffer<SquadIdMapElement>(_datos);
+            _reloj = EntityManager.CreateEntity(typeof(BattleClockComponent));
+            _estado = EntityManager.CreateEntity(typeof(MatchStateComponent));
+        }
+
+        /// <summary>
+        /// La partida que manda el servidor, volcada donde la interfaz del juego la busca: el reloj en
+        /// BattleClockComponent, el estado y el ganador en MatchStateComponent, y cada zona en la entidad de zona que la
+        /// escena creó aquí (se casan por la posición). Los indicadores de zona, el reloj y el panel de victoria o derrota
+        /// del juego hacen el resto.
+        /// </summary>
+        void Partida()
+        {
+            foreach (var (partida, zonas) in SystemAPI.Query<RefRO<PartidaRed>, DynamicBuffer<ZonaRed>>())
+            {
+                var p = partida.ValueRO;
+                EntityManager.SetComponentData(_reloj, new BattleClockComponent { remainingSeconds = p.Reloj, expired = p.Agotado != 0 });
+                bool acabada = p.Estado == (byte)MatchState.EndMatch;
+                EntityManager.SetComponentData(_estado, new MatchStateComponent
+                    { currentState = (MatchState)p.Estado, winnerTeam = p.Ganador, victoryConditionMet = acabada });
+                if (p.Estado != _estadoAntes)
+                {
+                    _estadoAntes = p.Estado;
+                    Debug.Log(System.FormattableString.Invariant(
+                        $"[Red] Partida: {(MatchState)p.Estado}, reloj {p.Reloj:F0} s, gana {p.Ganador}, {zonas.Length} zonas, mi bando {BattleBootstrapRequests.NetworkTeam}"));
+                }
+
+                using var copia = zonas.ToNativeArray(Unity.Collections.Allocator.Temp);
+                var locales = SystemAPI.QueryBuilder().WithAll<ZoneTriggerComponent, LocalTransform>().Build();
+                using var entidades = locales.ToEntityArray(Unity.Collections.Allocator.Temp);
+                using var poses = locales.ToComponentDataArray<LocalTransform>(Unity.Collections.Allocator.Temp);
+                for (int i = 0; i < entidades.Length; i++)
+                    foreach (var z in copia)
+                    {
+                        if (math.distancesq(z.Posicion, poses[i].Position) > 4f)
+                            continue;
+                        var zona = EntityManager.GetComponentData<ZoneTriggerComponent>(entidades[i]);
+                        if (zona.teamOwner != z.Dueno)
+                            Debug.Log(System.FormattableString.Invariant(
+                                $"[Red] La zona de ({z.Posicion.x:F0}, {z.Posicion.z:F0}) pasa del equipo {zona.teamOwner} al {z.Dueno}"));
+                        zona.teamOwner = z.Dueno;
+                        zona.isActive = (z.Banderas & ZonaRed.Activa) != 0;
+                        zona.isLocked = (z.Banderas & ZonaRed.Bloqueada) != 0;
+                        EntityManager.SetComponentData(entidades[i], zona);
+                        if (EntityManager.HasComponent<CapturePointProgressComponent>(entidades[i]))
+                        {
+                            var captura = EntityManager.GetComponentData<CapturePointProgressComponent>(entidades[i]);
+                            captura.captureProgress = z.Progreso;
+                            captura.capturingTeam = z.Equipo;
+                            captura.isContested = (z.Banderas & ZonaRed.Disputada) != 0;
+                            captura.isBeingCaptured = (z.Banderas & ZonaRed.Capturandose) != 0;
+                            EntityManager.SetComponentData(entidades[i], captura);
+                        }
+                        else if (EntityManager.HasComponent<SupplyPointComponent>(entidades[i]))
+                        {
+                            var suministro = EntityManager.GetComponentData<SupplyPointComponent>(entidades[i]);
+                            suministro.captureProgress = z.Progreso;
+                            suministro.currentTeam = z.Equipo;
+                            suministro.isContested = (z.Banderas & ZonaRed.Disputada) != 0;
+                            suministro.isCapturing = (z.Banderas & ZonaRed.Capturandose) != 0;
+                            EntityManager.SetComponentData(entidades[i], suministro);
+                        }
+                        break;
+                    }
                 break;
             }
         }
