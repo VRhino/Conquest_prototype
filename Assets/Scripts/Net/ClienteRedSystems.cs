@@ -43,6 +43,10 @@ namespace ConquestTactics.Net
                         _proximaOrdenDeBot = t + 8d;
                         e.Orden.Set();
                         e.TipoDeOrden = (byte)(_ordenesDeBot++ % 3);
+                        // «Mantener» la manda a 12 m de su héroe, para que la escuadra tenga que ir hasta allí.
+                        if (e.TipoDeOrden == (byte)SquadOrderType.HoldPosition)
+                            foreach (var mando in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<MandoMovil, GhostOwnerIsLocal>())
+                                e.PuntoDeOrden = mando.ValueRO.Position + new float3(12f, 0f, 0f);
                     }
                     if (t >= _proximaHabilidadDeBot)
                     {
@@ -62,6 +66,8 @@ namespace ConquestTactics.Net
                     {
                         e.Orden.Set();
                         e.TipoDeOrden = (byte)orden;
+                        if (orden == (int)SquadOrderType.HoldPosition)
+                            e.PuntoDeOrden = PuntoDelRaton();
                     }
                     int ranura = teclado.qKey.wasPressedThisFrame ? (int)SkillSlot.Q
                         : teclado.eKey.wasPressedThisFrame ? (int)SkillSlot.E
@@ -75,6 +81,18 @@ namespace ConquestTactics.Net
                 }
                 entrada.ValueRW = e;
             }
+        }
+
+        /// <summary>El punto del terreno bajo el ratón (como SquadControlSystem en el juego); (0,0,0) si no hay cámara o no toca nada.</summary>
+        static float3 PuntoDelRaton()
+        {
+            var camara = Camera.main;
+            if (camara == null || Mouse.current == null)
+                return float3.zero;
+            var rayo = camara.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (Physics.Raycast(rayo, out var toque, Mathf.Infinity, ~0, QueryTriggerInteraction.Ignore))
+                return toque.point;
+            return new Plane(Vector3.up, Vector3.zero).Raycast(rayo, out float distancia) ? (float3)rayo.GetPoint(distancia) : float3.zero;
         }
 
         static float2 MovimientoDeBot(float t) => math.normalizesafe(new float2(math.cos(t * 0.5f), math.sin(t)));
@@ -157,7 +175,7 @@ namespace ConquestTactics.Net
                 suma += pose.ValueRO.Position;
                 cuantos++;
                 // El héroe de la batalla de verdad que lleva este jugador: la cámara va con él.
-                if (soldado.ValueRO.Dueno == yo)
+                if (soldado.ValueRO.Dueno == yo && soldado.ValueRO.Tipo == SoldadoRed.Heroe)
                     propio = pose.ValueRO.Position;
                 // Los que ya tienen su modelo (EspejoClienteSystem) no llevan cápsula.
                 if (EntityManager.HasComponent<ConVisual>(entidad))
@@ -193,7 +211,7 @@ namespace ConquestTactics.Net
                 Vector3 objetivo = propio.Value;
                 // ponytail: cámara fija detrás y arriba; en la batalla de verdad, más empinada para ver por encima de las
                 // murallas. La cámara del juego (órbita con el ratón) llegará cuando el cliente tenga su héroe de verdad.
-                Vector3 detras = objetivo + (OpcionesRed.BatallaReal > 0 ? new Vector3(0, 14f, -7f) : new Vector3(0, 9f, -12f));
+                Vector3 detras = objetivo + (OpcionesRed.BatallaReal > 0 ? MandoSystem.CamaraDelCliente : new Vector3(0, 9f, -12f));
                 camara.transform.position = Vector3.Lerp(camara.transform.position, detras, 1f - Mathf.Exp(-6f * SystemAPI.Time.DeltaTime));
                 camara.transform.LookAt(objetivo + Vector3.up);
             }

@@ -35,6 +35,12 @@ namespace ConquestTactics.Net
         VisualPrefabRegistry _registro;
         /// <summary>El modelo de cada héroe, para retirarlo mientras está caído y devolverlo al reaparecer.</summary>
         readonly Dictionary<Entity, GameObject> _heroes = new Dictionary<Entity, GameObject>();
+        /// <summary>El marcador de destino de cada soldado de la escuadra propia que lo tiene.</summary>
+        readonly Dictionary<Entity, Entity> _marcadores = new Dictionary<Entity, Entity>();
+        readonly Dictionary<Entity, float3> _conDestino = new Dictionary<Entity, float3>();
+        readonly List<Entity> _sobran = new List<Entity>();
+        int _marcadoresAntes;
+        bool _fotoDeMarcadores;
 
         protected override void OnCreate() => Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
 
@@ -59,6 +65,7 @@ namespace ConquestTactics.Net
             AdelantarAlPropio();
             AnimarSoldados();
             AnimarHeroes();
+            MarcarDestinos();
         }
 
         /// <summary>El modelo, en la capa de su bando y sin autoridad: ni navega ni golpea. Los golpes los decide el servidor.</summary>
@@ -163,8 +170,59 @@ namespace ConquestTactics.Net
             if (!mando.HasValue)
                 return;
             foreach (var (pose, soldado) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<SoldadoRed>>().WithAll<ConVisual>())
-                if (soldado.ValueRO.Dueno == yo.Value)
+                if (soldado.ValueRO.Dueno == yo.Value && soldado.ValueRO.Tipo == SoldadoRed.Heroe)
                     pose.ValueRW = mando.Value;
+        }
+
+        /// <summary>
+        /// Los marcadores de destino de la escuadra propia: donde va a formar cada soldado mientras cumple «mantener
+        /// posición». El punto lo calcula el servidor (<see cref="DestinoRed"/>); aquí se pinta con el mismo prefab que
+        /// usa el juego (DestinationMarkerSystem), que llega en la subescena de la batalla.
+        /// </summary>
+        void MarcarDestinos()
+        {
+            Entity prefab = Entity.Null;
+            foreach (var marcador in SystemAPI.Query<RefRO<DestinationMarkerPrefabComponent>>())
+            {
+                prefab = marcador.ValueRO.markerPrefab;
+                break;
+            }
+            if (prefab == Entity.Null || !SystemAPI.TryGetSingleton<Unity.NetCode.NetworkId>(out var yo))
+                return;
+
+            _conDestino.Clear();
+            foreach (var (destino, soldado, entidad) in SystemAPI.Query<RefRO<DestinoRed>, RefRO<SoldadoRed>>().WithEntityAccess())
+                if (destino.ValueRO.Activo != 0 && soldado.ValueRO.Dueno == yo.Value)
+                    _conDestino[entidad] = destino.ValueRO.Punto;
+
+            // Fuera los de quien ya llegó, murió o dejó de mantener; dentro o movidos los demás.
+            _sobran.Clear();
+            foreach (var par in _marcadores)
+                if (!_conDestino.ContainsKey(par.Key) || !EntityManager.Exists(par.Value))
+                    _sobran.Add(par.Key);
+            foreach (var soldado in _sobran)
+            {
+                if (EntityManager.Exists(_marcadores[soldado])) EntityManager.DestroyEntity(_marcadores[soldado]);
+                _marcadores.Remove(soldado);
+            }
+            foreach (var par in _conDestino)
+            {
+                if (!_marcadores.TryGetValue(par.Key, out var marca))
+                    _marcadores[par.Key] = marca = EntityManager.Instantiate(prefab);
+                EntityManager.SetComponentData(marca, LocalTransform.FromPosition(par.Value));
+            }
+            if (_marcadores.Count != _marcadoresAntes)
+            {
+                // Al registro solo cuando aparecen o se van todos; y, con -captura, una foto con ellos a la vista.
+                if (_marcadores.Count == 0 || _marcadoresAntes == 0)
+                    Debug.Log($"[Red] Marcadores de destino de la escuadra propia: {_marcadores.Count}");
+                _marcadoresAntes = _marcadores.Count;
+            }
+            if (!_fotoDeMarcadores && _marcadores.Count >= 6 && SystemAPI.Time.ElapsedTime > 12d && !string.IsNullOrEmpty(OpcionesRed.Captura))
+            {
+                _fotoDeMarcadores = true;
+                ScreenCapture.CaptureScreenshot(OpcionesRed.Captura.Replace(".png", "-marcadores.png"));
+            }
         }
 
         void AnimarSoldados()

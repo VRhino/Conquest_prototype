@@ -28,6 +28,8 @@ namespace ConquestTactics.Net
         /// <summary>Da a su escuadra la orden <see cref="TipoDeOrden"/> (un <c>SquadOrderType</c>).</summary>
         public InputEvent Orden;
         public byte TipoDeOrden;
+        /// <summary>Para «mantener posición»: el punto del terreno al que apunta el ratón, como en el juego; (0,0,0) = donde esté el héroe.</summary>
+        public float3 PuntoDeOrden;
     }
 
     /// <summary>
@@ -62,7 +64,7 @@ namespace ConquestTactics.Net
         [GhostField] public byte Bando;
         /// <summary><see cref="Soldado"/> o, en la batalla de verdad, <see cref="Heroe"/> (un héroe de la IA, que aún no lleva nadie).</summary>
         [GhostField] public byte Tipo;
-        /// <summary>Id de red del jugador que lleva a este héroe de la batalla de verdad; 0 = lo lleva la IA.</summary>
+        /// <summary>Id de red del jugador que lleva a este héroe de la batalla de verdad, o a la escuadra de este soldado; 0 = lo lleva la IA.</summary>
         [GhostField] public int Dueno;
     }
 
@@ -147,6 +149,16 @@ namespace ConquestTactics.Net
             var p = texto.Split(':');
             return p.Length == 2 ? new InventoryItem { itemId = p[0], itemType = (ItemType)int.Parse(p[1]) } : null;
         }
+    }
+
+    /// <summary>
+    /// Espejo de un soldado de la escuadra de un jugador: el punto donde va a formar mientras cumple «mantener posición»
+    /// y aún no ha llegado. El cliente de ese jugador pinta ahí el marcador de destino, como el juego.
+    /// </summary>
+    public struct DestinoRed : IComponentData
+    {
+        [GhostField] public byte Activo;
+        [GhostField(Quantization = 100)] public float3 Punto;
     }
 
     /// <summary>Prefabs fantasma creados por código, idénticos en servidor y cliente.</summary>

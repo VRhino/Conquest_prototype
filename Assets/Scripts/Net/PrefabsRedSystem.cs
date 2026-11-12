@@ -54,6 +54,7 @@ namespace ConquestTactics.Net
             em.AddComponent<SoldadoRed>(espejo);
             em.AddComponent<VisualRed>(espejo);
             em.AddComponent<AnimacionRed>(espejo);
+            em.AddComponent<DestinoRed>(espejo);
             GhostPrefabCreation.ConvertToGhostPrefab(em, espejo, new GhostPrefabCreation.Config
             {
                 Name = "ConquestEspejo",

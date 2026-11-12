@@ -79,6 +79,9 @@ namespace ConquestTactics.Net
     [UpdateBefore(typeof(HeroAIExecutionSystem))]
     public partial class MandoSystem : SystemBase
     {
+        /// <summary>Dónde pone el cliente su cámara respecto a su héroe (DibujoRedSystem).</summary>
+        public static readonly Vector3 CamaraDelCliente = new Vector3(0f, 14f, -7f);
+
         /// <summary>Más lejos que esto de donde lo dejó el mando, al héroe lo ha movido el juego.</summary>
         const float Desvio = 0.5f;
 
@@ -122,16 +125,18 @@ namespace ConquestTactics.Net
                 if (entrada.Orden.IsSet)
                 {
                     d.squadOrder = (SquadOrderType)entrada.TipoDeOrden;
-                    d.squadOrderPosition = posicion;
+                    d.squadOrderPosition = math.lengthsq(entrada.PuntoDeOrden) > 0f ? entrada.PuntoDeOrden : posicion;
                     d.hasNewSquadOrder = true;
                     jugador.ValueRW.Ordenes++;
                 }
                 decision.ValueRW = d;
                 Marcar(heroe, jugador.ValueRO.Jugador);
+                MarcarEscuadra(heroe, jugador.ValueRO.Jugador);
                 if (avisar)
                 {
                     int golpes = SystemAPI.HasComponent<Espejo>(heroe)
                         ? SystemAPI.GetComponent<AnimacionRed>(SystemAPI.GetComponent<Espejo>(heroe).Fantasma).Ataques : 0;
+                    Debug.Log("[BatallaReal] " + Escuadra(heroe, posicion));
                     Debug.Log(System.FormattableString.Invariant(
                         $"[BatallaReal] Héroe del jugador {jugador.ValueRO.Jugador} en ({posicion.x:F1}, {posicion.z:F1}), entrada ({mover.x:F2}, {mover.y:F2}), velocidad {math.length(velocidad):F1}, ataca {entrada.Atacar}, golpes lanzados {golpes} (cuenta de 0 a 255), órdenes recibidas {jugador.ValueRO.Ordenes}, habilidades {jugador.ValueRO.Habilidades}"));
                 }
@@ -141,6 +146,7 @@ namespace ConquestTactics.Net
             {
                 Debug.Log($"[BatallaReal] El jugador {EntityManager.GetComponentData<HeroeDeJugador>(heroe).Jugador} se fue: su héroe vuelve a la IA");
                 Marcar(heroe, 0);
+                MarcarEscuadra(heroe, 0);
                 EntityManager.SetComponentEnabled<BalancedBehaviorActive>(heroe, true);
                 EntityManager.RemoveComponent<HeroeDeJugador>(heroe);
                 EntityManager.RemoveComponent<HeroNetworkMotion>(heroe);
@@ -187,6 +193,38 @@ namespace ConquestTactics.Net
             return velocidad;
         }
 
+        /// <summary>Para el registro: qué orden tiene la escuadra del héroe, de quién viene y a qué distancia está el centro de sus soldados.</summary>
+        string Escuadra(Entity heroe, float3 posicion)
+        {
+            if (!SystemAPI.HasComponent<HeroSquadReference>(heroe))
+                return "sin escuadra";
+            var escuadra = SystemAPI.GetComponent<HeroSquadReference>(heroe).squad;
+            if (!SystemAPI.Exists(escuadra) || !SystemAPI.HasComponent<SquadStateComponent>(escuadra))
+                return "escuadra sin estado";
+            var estado = SystemAPI.GetComponent<SquadStateComponent>(escuadra);
+            // SystemAPI no puede ir dentro de una cadena interpolada: el generador de código no lo traduce.
+            string resuelta = "?";
+            if (SystemAPI.HasComponent<SquadResolvedOrderComponent>(escuadra))
+            {
+                var orden = SystemAPI.GetComponent<SquadResolvedOrderComponent>(escuadra);
+                resuelta = orden.order + " de " + orden.source;
+            }
+            string pedida = SystemAPI.HasComponent<SquadAIOrderIntentComponent>(escuadra)
+                ? SystemAPI.GetComponent<SquadAIOrderIntentComponent>(escuadra).suggestedOrder.ToString() : "?";
+            float3 centro = float3.zero;
+            int vivos = 0;
+            if (SystemAPI.HasBuffer<SquadUnitElement>(escuadra))
+                foreach (var soldado in SystemAPI.GetBuffer<SquadUnitElement>(escuadra))
+                    if (SystemAPI.Exists(soldado.Value) && SystemAPI.HasComponent<LocalTransform>(soldado.Value))
+                    {
+                        centro += SystemAPI.GetComponent<LocalTransform>(soldado.Value).Position;
+                        vivos++;
+                    }
+            float lejos = vivos > 0 ? math.distance((centro / vivos).xz, posicion.xz) : 0f;
+            return System.FormattableString.Invariant(
+                $"Escuadra: pedida {pedida}, resuelta {resuelta}, en curso {estado.currentOrder} ({estado.currentState}), {vivos} soldados a {lejos:F1} m del héroe");
+        }
+
         /// <summary>El espejo del héroe dice quién lo lleva: así el cliente sabe cuál es el suyo.</summary>
         void Marcar(Entity heroe, int jugador)
         {
@@ -200,6 +238,54 @@ namespace ConquestTactics.Net
             SystemAPI.SetComponent(fantasma, soldado);
         }
 
+        /// <summary>
+        /// Los soldados de la escuadra del jugador llevan también su id, y mientras cumplen «mantener posición» sin haber
+        /// llegado, el punto donde van a formar (lo mismo que calcula DestinationMarkerSystem para la escuadra local del
+        /// juego de un jugador): su cliente pinta ahí el marcador de destino.
+        /// </summary>
+        void MarcarEscuadra(Entity heroe, int jugador)
+        {
+            if (!SystemAPI.HasComponent<HeroSquadReference>(heroe))
+                return;
+            var escuadra = SystemAPI.GetComponent<HeroSquadReference>(heroe).squad;
+            if (!SystemAPI.Exists(escuadra) || !SystemAPI.HasBuffer<SquadUnitElement>(escuadra) || !SystemAPI.HasComponent<SquadStateComponent>(escuadra))
+                return;
+            var estado = SystemAPI.GetComponent<SquadStateComponent>(escuadra);
+            bool mantiene = jugador != 0 && estado.currentOrder == SquadOrderType.HoldPosition
+                && estado.currentState != SquadFSMState.Retreating && SystemAPI.HasComponent<SquadFormationAnchorComponent>(escuadra);
+            var ancla = mantiene ? SystemAPI.GetComponent<SquadFormationAnchorComponent>(escuadra) : default;
+            SquadHoldPositionComponent? parada = SystemAPI.HasComponent<SquadHoldPositionComponent>(escuadra)
+                ? SystemAPI.GetComponent<SquadHoldPositionComponent>(escuadra) : null;
+            using var soldados = SystemAPI.GetBuffer<SquadUnitElement>(escuadra).ToNativeArray(Allocator.Temp);
+            foreach (var soldado in soldados)
+            {
+                var unidad = soldado.Value;
+                if (!SystemAPI.Exists(unidad) || !SystemAPI.HasComponent<Espejo>(unidad))
+                    continue;
+                var fantasma = SystemAPI.GetComponent<Espejo>(unidad).Fantasma;
+                var red = SystemAPI.GetComponent<SoldadoRed>(fantasma);
+                if (red.Dueno != jugador)
+                {
+                    red.Dueno = jugador;
+                    SystemAPI.SetComponent(fantasma, red);
+                }
+                var destino = new DestinoRed();
+                if (mantiene && SystemAPI.HasComponent<UnitGridSlotComponent>(unidad) && SystemAPI.HasComponent<UnitFormationStateComponent>(unidad))
+                {
+                    var paso = SystemAPI.GetComponent<UnitFormationStateComponent>(unidad).State;
+                    if (paso == UnitFormationState.Moving || paso == UnitFormationState.Waiting)
+                    {
+                        destino.Activo = 1;
+                        destino.Punto = FormationPositionCalculator.DesiredPosition(SystemAPI.GetComponent<UnitGridSlotComponent>(unidad).localOffset,
+                            estado, parada, ancla.position, ancla.rotation, true);
+                    }
+                }
+                var antes = SystemAPI.GetComponent<DestinoRed>(fantasma);
+                if (antes.Activo != destino.Activo || math.any(antes.Punto != destino.Punto))
+                    SystemAPI.SetComponent(fantasma, destino);
+            }
+        }
+
         void Repartir()
         {
             _sinHeroe.Clear();
@@ -208,17 +294,29 @@ namespace ConquestTactics.Net
             if (_sinHeroe.Count == 0)
                 return;
 
-            var libres = SystemAPI.QueryBuilder().WithAll<HeroAITag, HeroAIDecision, TeamComponent, HeroLifeComponent>().WithNone<HeroeDeJugador>().Build();
+            var libres = SystemAPI.QueryBuilder().WithAll<HeroAITag, HeroAIDecision, TeamComponent, HeroLifeComponent, LocalTransform>().WithNone<HeroeDeJugador>().Build();
             using var heroes = libres.ToEntityArray(Allocator.Temp);
             using var bandos = libres.ToComponentDataArray<TeamComponent>(Allocator.Temp);
+            using var poses = libres.ToComponentDataArray<LocalTransform>(Allocator.Temp);
+            // Lo que puede tapar la cámara: todo menos los propios soldados y héroes.
+            int tapa = ~LayerMask.GetMask("Units", "Units_A", "Units_B", "Heroes", "Heroes_A", "Heroes_B");
             var tomados = new NativeHashSet<Entity>(8, Allocator.Temp);
             foreach (var (mando, jugador) in _sinHeroe)
             {
                 var quiere = jugador % 2 == 1 ? Team.TeamA : Team.TeamB;
-                Entity elegido = Entity.Null;
+                // De su bando, el primero al que la cámara del cliente ve sin una muralla o un tejado por medio (el punto de
+                // salida de algunos está pegado a la muralla); si ninguno, el primero libre.
+                Entity elegido = Entity.Null, cualquiera = Entity.Null;
                 for (int i = 0; i < heroes.Length && elegido == Entity.Null; i++)
-                    if (bandos[i].value == quiere && !tomados.Contains(heroes[i]))
+                {
+                    if (bandos[i].value != quiere || tomados.Contains(heroes[i]))
+                        continue;
+                    if (cualquiera == Entity.Null) cualquiera = heroes[i];
+                    Vector3 cabeza = (Vector3)poses[i].Position + Vector3.up * 1.5f;
+                    if (!Physics.Linecast(cabeza, (Vector3)poses[i].Position + CamaraDelCliente, tapa, QueryTriggerInteraction.Ignore))
                         elegido = heroes[i];
+                }
+                if (elegido == Entity.Null) elegido = cualquiera;
                 // Los héroes aún no han salido (la batalla está cargando): se vuelve a intentar en el tick siguiente.
                 if (elegido == Entity.Null)
                     continue;

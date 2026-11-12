@@ -332,7 +332,6 @@ Lo que falta, anotado:
 - La cámara es fija, detrás y arriba; la del juego (órbita con el ratón) y la interfaz (vida, habilidades, escuadra)
   siguen sin atarse al héroe del jugador: lo que se ve en pantalla es la interfaz vacía de un jugador.
 - Las formaciones (F1-F4), montar, bloquear y el modo táctico no viajan todavía.
-- Nadie ha jugado con el teclado: lo comprobado es con bots.
 
 ### 8.5 El héroe del jugador responde al instante: predicción sobre la malla de navegación (paso 3)
 
@@ -411,3 +410,25 @@ Lo que falta, anotado:
   centímetros y el giro sobre el eje vertical. Es el siguiente recorte si hace falta.
 - El cliente de ventana gasta 3,5-4 núcleos con 260 modelos; sigue sin mirarse.
 - Sin medir con latencia y pérdida simuladas.
+
+### 8.7 Primera prueba con teclado y ratón (2026-11-12)
+
+El autor jugó dos partidas contra el servidor local. Los controles funcionan (mover, correr, atacar, habilidades y las
+órdenes C/X/V, que la escuadra obedece). Lo que salió y cómo quedó:
+
+- **El cliente se quedaba «pegado».** La ventana se paraba al perder el foco (al cambiar a otra ventana), dejaba de
+  contestar y el servidor cortaba la conexión a los 30 s; al volver, nada se movía. Ahora el arranque de red pone
+  `Application.runInBackground`. Sigue faltando avisar en pantalla cuando se pierde la conexión y reconectar.
+- **X mandaba mantener donde estaba el héroe**, no donde apunta el ratón como en el juego. `EntradaJugador.PuntoDeOrden`
+  lleva ahora el punto del terreno bajo el ratón.
+- **No salían los marcadores de destino** al pulsar X. El servidor calcula, para la escuadra de cada jugador, el punto
+  donde va a formar cada soldado mientras cumple «mantener» y aún no ha llegado (lo mismo que `DestinationMarkerSystem`
+  hace para la escuadra local del juego) y lo manda en `DestinoRed`; el cliente pinta ahí el prefab de marcador del
+  juego. Los soldados de la escuadra llevan también `SoldadoRed.Dueno`. Confirmado en pantalla por el autor.
+- **La pantalla de carga tapaba los primeros 30 s** (esperaba a un héroe local que en red no existe). Con
+  `NoLocalHero` se quita a los 3 s.
+- **El héroe salía pegado a la muralla** y la cámara fija quedaba dentro de ella. `MandoSystem` da ahora, de su bando, el
+  primer héroe al que la cámara del cliente ve sin nada por medio. Es un apaño mientras la cámara sea fija: la del juego
+  es lo que lo arregla de verdad.
+- El registro del servidor dice cada 10 s, por jugador, qué orden pidió, cuál ganó (y si fue la reacción al combate) y
+  a qué distancia está su escuadra.

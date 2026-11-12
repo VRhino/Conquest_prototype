@@ -128,6 +128,14 @@ public class BattleSceneController : MonoBehaviour
 
         if (_loadingScreenDismissed || _loadingScreen == null) return;
 
+        // Battle server and its network clients: there is no local hero to wait for.
+        if (BattleBootstrapRequests.NoLocalHero && Time.time - _loadingStartTime >= LoadingScreenDelay)
+        {
+            _loadingScreen.SetActive(false);
+            _loadingScreenDismissed = true;
+            return;
+        }
+
         // Timeout de seguridad
         if (Time.time - _loadingStartTime >= MaxLoadingScreenTime)
         {

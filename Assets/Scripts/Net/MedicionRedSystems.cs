@@ -103,7 +103,7 @@ namespace ConquestTactics.Net
             {
                 foreach (var (mando, movil) in SystemAPI.Query<RefRO<Unity.Transforms.LocalTransform>, RefRO<MandoMovil>>().WithAll<GhostOwnerIsLocal>())
                     foreach (var (espejo, soldado) in SystemAPI.Query<RefRO<Unity.Transforms.LocalTransform>, RefRO<SoldadoRed>>())
-                        if (soldado.ValueRO.Dueno == yo.Value && movil.ValueRO.Activo != 0)
+                        if (soldado.ValueRO.Dueno == yo.Value && soldado.ValueRO.Tipo == SoldadoRed.Heroe && movil.ValueRO.Activo != 0)
                             heroe = System.FormattableString.Invariant(
                                 $" adelanto={Unity.Mathematics.math.distance(mando.ValueRO.Position.xz, espejo.ValueRO.Position.xz):F2}m");
             }

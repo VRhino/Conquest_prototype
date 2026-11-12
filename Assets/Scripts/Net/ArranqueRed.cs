@@ -134,6 +134,9 @@ namespace ConquestTactics.Net
             // Cifras con punto en registros e informes, sea cual sea el idioma del sistema.
             System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             System.Threading.Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+            // En red el juego no se para al perder el foco: un cliente parado deja de contestar y el servidor lo corta a
+            // los 30 s (pasó en la primera prueba con teclado, al cambiar de ventana).
+            Application.runInBackground = true;
             // Un cliente sin pantalla iría a miles de fotogramas por segundo; uno de verdad va a la tasa del monitor.
             if (modo == OpcionesRed.Modo.Cliente && Application.isBatchMode)
                 Application.targetFrameRate = 60;
