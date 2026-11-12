@@ -5,7 +5,7 @@ using Unity.Transforms;
 namespace ConquestTactics.Net
 {
     /// <summary>
-    /// Crea por código los dos prefabs fantasma (héroe y soldado), del mismo modo en servidor y cliente, que es lo
+    /// Crea por código los prefabs fantasma (héroe, soldado y espejo de la batalla de verdad), del mismo modo en servidor y cliente, que es lo
     /// que exige Netcode para que casen. Sin subescena: la prueba no depende de ningún asset.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
@@ -49,7 +49,21 @@ namespace ConquestTactics.Net
                 OptimizationMode = GhostOptimizationMode.Dynamic,
             });
 
-            em.CreateSingleton(new PrefabsRed { Heroe = heroe, Soldado = soldado });
+            var espejo = em.CreateEntity();
+            em.AddComponentData(espejo, LocalTransform.Identity);
+            em.AddComponent<SoldadoRed>(espejo);
+            em.AddComponent<VisualRed>(espejo);
+            em.AddComponent<AnimacionRed>(espejo);
+            GhostPrefabCreation.ConvertToGhostPrefab(em, espejo, new GhostPrefabCreation.Config
+            {
+                Name = "ConquestEspejo",
+                Importance = 1,
+                SupportedGhostModes = GhostModeMask.Interpolated,
+                DefaultGhostMode = GhostMode.Interpolated,
+                OptimizationMode = GhostOptimizationMode.Dynamic,
+            });
+
+            em.CreateSingleton(new PrefabsRed { Heroe = heroe, Soldado = soldado, Espejo = espejo });
             state.Enabled = false;
         }
     }

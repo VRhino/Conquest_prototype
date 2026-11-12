@@ -44,11 +44,38 @@ namespace ConquestTactics.Net
         public float3 Desfase;
     }
 
+    /// <summary>Espejo de la batalla de verdad: con qué modelo se pinta. No cambia, así que solo viaja al aparecer.</summary>
+    public struct VisualRed : IComponentData
+    {
+        /// <summary>El <c>visualPrefabName</c> del soldado; si el registro no lo conoce, vale el de su tipo de escuadra.</summary>
+        [GhostField] public FixedString64Bytes Prefab;
+        [GhostField] public byte TipoDeEscuadra;
+    }
+
+    /// <summary>Espejo de la batalla de verdad: lo que el Animator del cliente necesita (lo que UnitAnimationAdapter lee del soldado).</summary>
+    public struct AnimacionRed : IComponentData
+    {
+        public const byte Moviendose = 1, Atacando = 2, Disparando = 4, Recargando = 8, ConMarcha = 16, Corre = 32;
+
+        [GhostField(Quantization = 10)] public float Velocidad;
+        [GhostField(Quantization = 10)] public float VelocidadBase;
+        [GhostField(Quantization = 10)] public float VelocidadPedida;
+        [GhostField(Quantization = 10)] public float VelocidadDeAtaque;
+        [GhostField] public byte Banderas;
+        [GhostField] public byte Postura;
+        [GhostField] public byte Fila;
+        [GhostField] public byte Papel;
+        [GhostField] public byte Reaccion;
+        [GhostField] public uint RevisionDeReaccion;
+    }
+
     /// <summary>Prefabs fantasma creados por código, idénticos en servidor y cliente.</summary>
     public struct PrefabsRed : IComponentData
     {
         public Entity Heroe;
         public Entity Soldado;
+        /// <summary>Soldado o héroe de la batalla de verdad: un <see cref="SoldadoRed"/> con su modelo y su animación.</summary>
+        public Entity Espejo;
     }
 
     /// <summary>RPC del cliente: ya está listo para recibir la batalla, con el token de su héroe si viene de una batalla del motor.</summary>

@@ -250,5 +250,40 @@ con la cámara encima del centro de la batalla. `-captura ruta.png -capturaA 20`
 
 - Son unos 1,2 kbit/s por fantasma, menos que en la prueba de cápsulas (2,6 a 60 Hz, §3): los que están quietos casi no
   ocupan. Bajarlo más (menos envíos para los lejanos, relevancia) es el paso 4.
-- Falta la segunda parte: que el cliente cargue el terreno de la batalla y pinte cada espejo con su modelo y su
-  animación en vez de una cápsula.
+
+### 8.3 El cliente con el mapa y los modelos (paso 2b-3, segunda parte)
+
+```
+Tools/ver_batalla_real.sh <nombre> <héroes por bando> [segundos] [segundo de entrada] [-camaraCerca]
+PruebaRed.exe -red cliente -ip 127.0.0.1 -batallaReal 1 [-camaraCerca] [-captura ruta.png -capturaA 70]
+```
+
+Con `-batallaReal` también en el cliente, `EspejoClienteSystem` carga `BattleScene` (el mapa y el registro de modelos) y
+da a cada soldado espejo **el mismo modelo y los mismos Animators que el juego**, sin tocar el juego:
+
+- El espejo es ahora un tercer prefab fantasma (`PrefabsRed.Espejo`) que, además de posición y bando, lleva `VisualRed`
+  (el nombre del modelo y el tipo de escuadra; solo viaja al aparecer) y `AnimacionRed` (velocidad, postura, fila y
+  papel en la formación, si ataca, dispara o recarga, la reacción al golpe y su revisión). El servidor lo rellena cada
+  tick con lo mismo que `UnitAnimationAdapter` lee del soldado de verdad.
+- En el cliente, el fantasma recibe los componentes que leen `EntityVisualSync` y `UnitAnimationAdapter`
+  (`UnitAnimationMovementComponent`, `UnitCombatComponent`, `RangedAttackStateComponent`, `ResilienceComponent`,
+  `UnitMovementGearComponent`) y el sistema los rellena con lo que llega. El modelo se instancia desde
+  `VisualPrefabRegistry` como en `SquadVisualManagementSystem`, pero sin agente de navegación ni colliders de golpe: el
+  cliente no decide nada. La dirección de la marcha no viaja; sale del movimiento del fantasma ya interpolado.
+- Cuando el soldado muere en el servidor, su fantasma desaparece y `EntityVisualSync` destruye el modelo, como en el juego.
+
+**Comprobado** (10 contra 10, servidor sin pantalla, un cliente sin pantalla y otro con ventana): el de ventana pinta el
+mapa de la batalla y 214 soldados con su modelo, en formación y en postura de combate; dos capturas en
+`Logs/red/<nombre>/`. Con la animación, la bajada sube a 350-370 kbit/s por cliente (antes 280-295) y el tick del servidor
+queda en 4,5-4,9 ms.
+
+Lo que falta de este paso, anotado:
+
+- **Los héroes siguen siendo cápsulas.** Su modelo lee otros componentes (`RemoteHeroAnimationDriver`) y lleva la
+  apariencia de cada uno (avatar y equipo), que hay que mandar al aparecer.
+- La animación está comprobada en capturas (posturas correctas), no vista en movimiento por una persona.
+- El cliente de ventana gasta 3-5 núcleos con 214 modelos; no se ha mirado por qué (los Animators, las sombras o la
+  interfaz de un jugador, que sigue en pantalla aunque el espectador no tenga héroe).
+- El registro no conoce el modelo `UnitVisual_Escudero` que piden los escuderos y cae al modelo por tipo de escuadra
+  (pasa igual en el juego); los dos bandos se ven iguales.
+- Proyectiles, efectos y sonido de los golpes no viajan todavía.

@@ -53,6 +53,8 @@ namespace ConquestTactics.Net
         /// <summary>Cliente con pantalla: guarda una captura en esta ruta a los <see cref="CapturaA"/> segundos.</summary>
         public static string Captura;
         public static float CapturaA = 20f;
+        /// <summary>Espectador: la cámara se pone junto al choque en vez de mirar toda la batalla desde arriba.</summary>
+        public static bool CamaraCerca;
 
         public static void Leer()
         {
@@ -88,6 +90,7 @@ namespace ConquestTactics.Net
                     case "-token": Token = siguiente; break;
                     case "-batallaReal": BatallaReal = int.Parse(siguiente); break;
                     case "-captura": Captura = siguiente; break;
+                    case "-camaraCerca": CamaraCerca = true; break;
                     case "-capturaA": CapturaA = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "--lanzador": Lanzador = siguiente; ModoPedido = Modo.Servidor; break;
                     case "--batalla": Batalla = siguiente; break;
