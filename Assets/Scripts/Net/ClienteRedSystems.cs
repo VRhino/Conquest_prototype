@@ -16,6 +16,9 @@ namespace ConquestTactics.Net
     [UpdateInGroup(typeof(GhostInputSystemGroup))]
     public partial class EntradaClienteSystem : SystemBase
     {
+        double _proximaOrdenDeBot, _proximaHabilidadDeBot;
+        int _ordenesDeBot;
+
         protected override void OnCreate() => RequireForUpdate<NetworkStreamInGame>();
 
         protected override void OnUpdate()
@@ -23,6 +26,55 @@ namespace ConquestTactics.Net
             float2 mover = OpcionesRed.Bot ? MovimientoDeBot((float)SystemAPI.Time.ElapsedTime) : MovimientoDeTeclado();
             foreach (var entrada in SystemAPI.Query<RefRW<EntradaHeroe>>().WithAll<GhostOwnerIsLocal>())
                 entrada.ValueRW.Mover = mover;
+
+            // El héroe de la batalla de verdad: las mismas teclas que el juego (Mayús corre, clic ataca, Q/E/R/T
+            // habilidades, C/X/V seguir, mantener y atacar para la escuadra). El bot empuja y ataca sin parar.
+            foreach (var entrada in SystemAPI.Query<RefRW<EntradaJugador>>().WithAll<GhostOwnerIsLocal>())
+            {
+                var e = new EntradaJugador { Mover = mover };
+                var teclado = Keyboard.current;
+                if (OpcionesRed.Bot)
+                {
+                    // Además de empujar y atacar, cada 8 s da una orden a su escuadra (van rotando) y cada 5 s lanza la Q.
+                    e.Atacar = 1;
+                    double t = SystemAPI.Time.ElapsedTime;
+                    if (t >= _proximaOrdenDeBot)
+                    {
+                        _proximaOrdenDeBot = t + 8d;
+                        e.Orden.Set();
+                        e.TipoDeOrden = (byte)(_ordenesDeBot++ % 3);
+                    }
+                    if (t >= _proximaHabilidadDeBot)
+                    {
+                        _proximaHabilidadDeBot = t + 5d;
+                        e.Habilidad.Set();
+                        e.Ranura = (byte)SkillSlot.Q;
+                    }
+                }
+                else if (teclado != null)
+                {
+                    e.Correr = (byte)(teclado.leftShiftKey.isPressed ? 1 : 0);
+                    e.Atacar = (byte)(Mouse.current != null && Mouse.current.leftButton.isPressed ? 1 : 0);
+                    int orden = teclado.cKey.wasPressedThisFrame ? (int)SquadOrderType.FollowHero
+                        : teclado.xKey.wasPressedThisFrame ? (int)SquadOrderType.HoldPosition
+                        : teclado.vKey.wasPressedThisFrame ? (int)SquadOrderType.Attack : -1;
+                    if (orden >= 0)
+                    {
+                        e.Orden.Set();
+                        e.TipoDeOrden = (byte)orden;
+                    }
+                    int ranura = teclado.qKey.wasPressedThisFrame ? (int)SkillSlot.Q
+                        : teclado.eKey.wasPressedThisFrame ? (int)SkillSlot.E
+                        : teclado.rKey.wasPressedThisFrame ? (int)SkillSlot.R
+                        : teclado.tKey.wasPressedThisFrame ? (int)SkillSlot.Ultimate : -1;
+                    if (ranura >= 0)
+                    {
+                        e.Habilidad.Set();
+                        e.Ranura = (byte)ranura;
+                    }
+                }
+                entrada.ValueRW = e;
+            }
         }
 
         static float2 MovimientoDeBot(float t) => math.normalizesafe(new float2(math.cos(t * 0.5f), math.sin(t)));
@@ -98,10 +150,15 @@ namespace ConquestTactics.Net
 
             float3 suma = float3.zero;
             int cuantos = 0;
+            float3? propio = null;
+            int yo = SystemAPI.TryGetSingleton<NetworkId>(out var miId) ? miId.Value : -1;
             foreach (var (pose, soldado, entidad) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<SoldadoRed>>().WithEntityAccess())
             {
                 suma += pose.ValueRO.Position;
                 cuantos++;
+                // El héroe de la batalla de verdad que lleva este jugador: la cámara va con él.
+                if (soldado.ValueRO.Dueno == yo)
+                    propio = pose.ValueRO.Position;
                 // Los que ya tienen su modelo (EspejoClienteSystem) no llevan cápsula.
                 if (EntityManager.HasComponent<ConVisual>(entidad))
                     continue;
@@ -109,7 +166,6 @@ namespace ConquestTactics.Net
                 _soldados[soldado.ValueRO.Bando & 1].Add(Matrix4x4.TRS(pose.ValueRO.Position + new float3(0, talla * 1.25f, 0), pose.ValueRO.Rotation, Vector3.one * talla));
             }
 
-            float3? propio = null;
             foreach (var (pose, entidad) in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<HeroeRed>().WithEntityAccess())
             {
                 var matriz = Matrix4x4.TRS(pose.ValueRO.Position + new float3(0, 1.2f, 0), pose.ValueRO.Rotation, Vector3.one * 1.2f);
@@ -127,10 +183,17 @@ namespace ConquestTactics.Net
             Dibujar(_materialPropio, _propio);
 
             var camara = Camera.main;
+            // La cámara de la escena de batalla sigue al héroe local del juego de un jugador, que aquí no existe: la lleva este sistema.
+            if (OpcionesRed.BatallaReal > 0 && _controlDeCamara == null)
+                _controlDeCamara = Object.FindFirstObjectByType<HeroCameraController>();
+            if (_controlDeCamara != null)
+                _controlDeCamara.enabled = false;
             if (camara != null && propio.HasValue)
             {
                 Vector3 objetivo = propio.Value;
-                Vector3 detras = objetivo + new Vector3(0, 9f, -12f);
+                // ponytail: cámara fija detrás y arriba; en la batalla de verdad, más empinada para ver por encima de las
+                // murallas. La cámara del juego (órbita con el ratón) llegará cuando el cliente tenga su héroe de verdad.
+                Vector3 detras = objetivo + (OpcionesRed.BatallaReal > 0 ? new Vector3(0, 14f, -7f) : new Vector3(0, 9f, -12f));
                 camara.transform.position = Vector3.Lerp(camara.transform.position, detras, 1f - Mathf.Exp(-6f * SystemAPI.Time.DeltaTime));
                 camara.transform.LookAt(objetivo + Vector3.up);
             }
@@ -153,11 +216,6 @@ namespace ConquestTactics.Net
                     centro = _foco;
                     radio = 12f;
                 }
-                // La cámara de la escena de batalla sigue al héroe local, que aquí no existe: que no la mueva nadie más.
-                if (_controlDeCamara == null)
-                    _controlDeCamara = Object.FindFirstObjectByType<HeroCameraController>();
-                if (_controlDeCamara != null)
-                    _controlDeCamara.enabled = false;
                 camara.farClipPlane = 1000f;
                 camara.transform.position = centro + new float3(0, radio, -radio * 0.6f);
                 camara.transform.LookAt(centro + new float3(0, 1, 0));

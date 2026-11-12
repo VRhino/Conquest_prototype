@@ -11,6 +11,25 @@ namespace ConquestTactics.Net
         public float2 Mover;
     }
 
+    /// <summary>
+    /// Lo que manda el jugador que lleva un héroe en la batalla de verdad. Viaja en su entidad de mando
+    /// (<see cref="PrefabsRed.Mando"/>) y el servidor lo convierte en la decisión de ese héroe (<see cref="MandoSystem"/>).
+    /// </summary>
+    public struct EntradaJugador : IInputComponentData
+    {
+        /// <summary>Hacia dónde quiere ir, en el plano del mundo (largo ≤ 1).</summary>
+        public float2 Mover;
+        public byte Correr;
+        /// <summary>Mantiene el ataque básico.</summary>
+        public byte Atacar;
+        /// <summary>Lanza la habilidad de <see cref="Ranura"/> (un <c>SkillSlot</c>).</summary>
+        public InputEvent Habilidad;
+        public byte Ranura;
+        /// <summary>Da a su escuadra la orden <see cref="TipoDeOrden"/> (un <c>SquadOrderType</c>).</summary>
+        public InputEvent Orden;
+        public byte TipoDeOrden;
+    }
+
     /// <summary>Héroe en red. La velocidad viene del prefab, igual en servidor y cliente; no viaja.</summary>
     public struct HeroeRed : IComponentData
     {
@@ -32,6 +51,8 @@ namespace ConquestTactics.Net
         [GhostField] public byte Bando;
         /// <summary><see cref="Soldado"/> o, en la batalla de verdad, <see cref="Heroe"/> (un héroe de la IA, que aún no lleva nadie).</summary>
         [GhostField] public byte Tipo;
+        /// <summary>Id de red del jugador que lleva a este héroe de la batalla de verdad; 0 = lo lleva la IA.</summary>
+        [GhostField] public int Dueno;
     }
 
     /// <summary>
@@ -126,6 +147,8 @@ namespace ConquestTactics.Net
         public Entity Espejo;
         /// <summary>El espejo de un héroe: lo mismo más su aspecto (<see cref="AparienciaRed"/>).</summary>
         public Entity EspejoHeroe;
+        /// <summary>La entidad de mando de un jugador de la batalla de verdad: solo lleva su <see cref="EntradaJugador"/>.</summary>
+        public Entity Mando;
     }
 
     /// <summary>RPC del cliente: ya está listo para recibir la batalla, con el token de su héroe si viene de una batalla del motor.</summary>

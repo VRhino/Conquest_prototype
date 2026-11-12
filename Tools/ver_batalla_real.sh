@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# La batalla de verdad en el servidor (-batallaReal) y dos clientes que la miran en este PC, con Builds/PruebaRed:
-# uno sin pantalla que mide lo que llega por la red y otro con ventana que guarda una captura.
-# El de ventana carga la escena de batalla y pinta los soldados con sus modelos; con "-camaraCerca" de quinto
-# argumento se pone junto al choque.
+# La batalla de verdad en el servidor (-batallaReal) y dos clientes en este PC, con Builds/PruebaRed. Cada uno recibe
+# un héroe de la batalla: el primero, sin pantalla, lo lleva un bot y mide lo que llega por la red; el segundo, con
+# ventana, carga la escena de batalla, pinta soldados y héroes con sus modelos y guarda dos capturas.
+# Quinto argumento, opciones del cliente de ventana: "-bot" para que también juegue solo (si no, se juega con el
+# teclado), "-camaraCerca" para que un espectador sin héroe se ponga junto al choque.
 # Uso: Tools/ver_batalla_real.sh <nombre> <héroes por bando> [segundos del servidor] [segundo en que entran los clientes] [opciones del cliente de ventana]
 set -u
 cd "$(dirname "$0")/.."
@@ -13,7 +14,7 @@ resto=$((segundos - entrada - 5))
 $exe -batchmode -nographics -puerto 7979 -red servidor -batallaReal "$heroes" -medir "$segundos" \
   -informe "$dir/servidor.txt" -logFile "$dir/servidor.log" >/dev/null 2>&1 &
 sleep "$entrada"
-$exe -batchmode -nographics -puerto 7979 -red cliente -ip 127.0.0.1 -medir "$resto" \
+$exe -batchmode -nographics -puerto 7979 -red cliente -ip 127.0.0.1 -bot -medir "$resto" \
   -informe "$dir/cliente.txt" -logFile "$dir/cliente.log" >/dev/null 2>&1 &
 $exe -screen-fullscreen 0 -screen-width 1280 -screen-height 720 -puerto 7979 -red cliente -ip 127.0.0.1 -batallaReal 1 $ventana \
   -captura "$(pwd -W)/$dir/captura.png" -capturaA $((resto - 10)) -medir "$resto" \

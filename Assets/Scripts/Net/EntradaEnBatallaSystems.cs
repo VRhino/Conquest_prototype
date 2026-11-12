@@ -82,9 +82,14 @@ namespace ConquestTactics.Net
                 int id = SystemAPI.GetComponent<NetworkId>(conexion).Value;
                 ecb.AddComponent<NetworkStreamInGame>(conexion);
                 ecb.DestroyEntity(peticion);
-                // En la batalla de verdad el que entra todavía solo mira: los héroes los lleva la IA.
+                // En la batalla de verdad el que entra recibe su mando; MandoSystem le da uno de los héroes de la batalla.
                 if (OpcionesRed.BatallaReal > 0)
+                {
+                    var mando = ecb.Instantiate(prefabs.Mando);
+                    ecb.SetComponent(mando, new GhostOwner { NetworkId = id });
+                    ecb.AppendToBuffer(conexion, new LinkedEntityGroup { Value = mando });
                     continue;
+                }
                 if (deTicket)
                 {
                     // Con ticket, los héroes y sus escuadras salen del ticket (BatallaDeTicketSystem).

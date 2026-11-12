@@ -297,3 +297,40 @@ Lo que falta de este paso, anotado:
 - El registro no conoce el modelo `UnitVisual_Escudero` que piden los escuderos y cae al modelo por tipo de escuadra
   (pasa igual en el juego); los dos bandos se ven iguales.
 - Proyectiles, efectos y sonido de los golpes no viajan todavía.
+
+### 8.4 El jugador lleva un héroe (paso 2b-4)
+
+```
+Tools/ver_batalla_real.sh <nombre> <héroes por bando> [segundos] [segundo de entrada] [-bot]
+PruebaRed.exe -red cliente -ip 127.0.0.1 -batallaReal 1        (se juega con el teclado)
+```
+
+El que entra en la batalla de verdad ya no solo mira: recibe uno de los héroes de la batalla.
+
+- Al entrar, el servidor le crea una **entidad de mando** (`PrefabsRed.Mando`, un fantasma predicho por su dueño que
+  solo lleva `EntradaJugador`): mover (en el plano del mundo), correr, atacar, lanzar una habilidad y dar una orden a
+  la escuadra. Viaja como comando de Netcode, con sus eventos (`InputEvent`) para lo que pasa una sola vez.
+- `MandoSystem` (servidor) le da un héroe libre (por orden de llegada, alternando bando), le apaga las dos conductas de
+  la IA y, cada tick, escribe en su `HeroAIDecision` lo que pide el jugador: empujar en una dirección es «ve 4 m hacia
+  allí», y atacar, la habilidad y la orden van en los mismos campos que usa la IA. De ahí en adelante el juego no
+  distingue: mismo movimiento por la malla de navegación, mismos golpes por collider, mismas órdenes a la escuadra.
+  **No se ha tocado ningún sistema del juego.** Si el jugador se va, el héroe vuelve a la IA.
+- El espejo del héroe lleva `SoldadoRed.Dueno` (el id de red de quien lo lleva): el cliente sabe cuál es el suyo y pone
+  la cámara encima.
+- Teclas del cliente, las del juego: WASD, Mayús corre, clic ataca, Q/E/R/T habilidades, C/X/V seguir, mantener y
+  atacar para la escuadra.
+
+**Comprobado** con dos clientes que juegan solos (`-bot`: empujan en ocho, atacan, dan una orden cada 8 s y lanzan la Q
+cada 5 s), uno por bando: el servidor mueve cada héroe según su entrada, cuenta sus golpes (unos 5 cada 10 s) y recibe
+cada orden y cada habilidad una sola vez; en una de las pruebas los dos héroes se encontraron y uno mató al otro. Con dos
+jugadores: 262 fantasmas, 370-410 kbit/s de bajada y 60 kbit/s de subida por cliente, tick del servidor 5,2-5,6 ms.
+
+Lo que falta, anotado:
+
+- **Sin predicción**: el héroe responde con el retraso de la red (en local no se nota; por internet sí). Es el paso 3.
+- El héroe del jugador se mueve como los de la IA (agente de navegación), no con el control fino del juego de un
+  jugador (`LocalHeroCharacterMotor`): gira hacia donde camina y no apunta con la cámara.
+- La cámara es fija, detrás y arriba; la del juego (órbita con el ratón) y la interfaz (vida, habilidades, escuadra)
+  siguen sin atarse al héroe del jugador: lo que se ve en pantalla es la interfaz vacía de un jugador.
+- Las formaciones (F1-F4), montar, bloquear y el modo táctico no viajan todavía.
+- Nadie ha jugado con el teclado: lo comprobado es con bots.
