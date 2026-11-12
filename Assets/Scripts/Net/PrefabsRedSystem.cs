@@ -63,7 +63,22 @@ namespace ConquestTactics.Net
                 OptimizationMode = GhostOptimizationMode.Dynamic,
             });
 
-            em.CreateSingleton(new PrefabsRed { Heroe = heroe, Soldado = soldado, Espejo = espejo });
+            var espejoHeroe = em.CreateEntity();
+            em.AddComponentData(espejoHeroe, LocalTransform.Identity);
+            em.AddComponent<SoldadoRed>(espejoHeroe);
+            em.AddComponent<VisualRed>(espejoHeroe);
+            em.AddComponent<AnimacionRed>(espejoHeroe);
+            em.AddComponent<AparienciaRed>(espejoHeroe);
+            GhostPrefabCreation.ConvertToGhostPrefab(em, espejoHeroe, new GhostPrefabCreation.Config
+            {
+                Name = "ConquestEspejoHeroe",
+                Importance = 10,
+                SupportedGhostModes = GhostModeMask.Interpolated,
+                DefaultGhostMode = GhostMode.Interpolated,
+                OptimizationMode = GhostOptimizationMode.Dynamic,
+            });
+
+            em.CreateSingleton(new PrefabsRed { Heroe = heroe, Soldado = soldado, Espejo = espejo, EspejoHeroe = espejoHeroe });
             state.Enabled = false;
         }
     }

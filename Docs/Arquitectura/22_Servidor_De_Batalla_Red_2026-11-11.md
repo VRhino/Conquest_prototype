@@ -277,10 +277,20 @@ mapa de la batalla y 214 soldados con su modelo, en formación y en postura de c
 `Logs/red/<nombre>/`. Con la animación, la bajada sube a 350-370 kbit/s por cliente (antes 280-295) y el tick del servidor
 queda en 4,5-4,9 ms.
 
+**Los héroes** van igual, con un cuarto prefab fantasma (`PrefabsRed.EspejoHeroe`) que añade `AparienciaRed`: el género,
+las cuatro partes del avatar y las seis piezas del equipo en un texto corto (`id:tipo` separados por `|`, unos 100
+caracteres; el JSON entero del héroe son 2 KB), que solo viaja al aparecer. El cliente instancia `Player_Remote`, lo viste
+con `HeroVisualAppearanceSystem.ApplyHeroVisualCustomization` y le pone los componentes que lee
+`RemoteHeroAnimationDriver`. Su `AnimacionRed` lleva además la marcha (del agente de navegación del servidor), un
+contador de golpes (cada golpe nuevo dispara la animación de ataque en el cliente), la muerte con su revisión y si el
+cuerpo está retirado hasta reaparecer. Único cambio en el juego: `RemoteHeroAnimationDriver` saca la marcha de
+`HeroNetworkMotion` cuando el héroe no tiene agente (en el cliente nunca lo tiene). Comprobado: 245 de 245 fantasmas con
+su modelo, héroes incluidos, y ninguna excepción en servidor ni clientes.
+
 Lo que falta de este paso, anotado:
 
-- **Los héroes siguen siendo cápsulas.** Su modelo lee otros componentes (`RemoteHeroAnimationDriver`) y lleva la
-  apariencia de cada uno (avatar y equipo), que hay que mandar al aparecer.
+- Del héroe no viajan todavía la montura (`HeroMountPresenter`), las habilidades ni hacia dónde mira la cabeza.
+
 - La animación está comprobada en capturas (posturas correctas), no vista en movimiento por una persona.
 - El cliente de ventana gasta 3-5 núcleos con 214 modelos; no se ha mirado por qué (los Animators, las sombras o la
   interfaz de un jugador, que sigue en pantalla aunque el espectador no tenga héroe).

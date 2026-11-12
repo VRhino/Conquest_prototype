@@ -56,6 +56,8 @@ namespace ConquestTactics.Net
     public struct AnimacionRed : IComponentData
     {
         public const byte Moviendose = 1, Atacando = 2, Disparando = 4, Recargando = 8, ConMarcha = 16, Corre = 32;
+        /// <summary>Solo héroes: caído, y con el cuerpo ya retirado hasta que reaparezca.</summary>
+        public const byte Muerto = 64, Oculto = 128;
 
         [GhostField(Quantization = 10)] public float Velocidad;
         [GhostField(Quantization = 10)] public float VelocidadBase;
@@ -67,6 +69,52 @@ namespace ConquestTactics.Net
         [GhostField] public byte Papel;
         [GhostField] public byte Reaccion;
         [GhostField] public uint RevisionDeReaccion;
+        /// <summary>Solo héroes: sube uno con cada golpe que lanza (el disparador de su animación de ataque).</summary>
+        [GhostField] public byte Ataques;
+        [GhostField] public uint RevisionDeMuerte;
+    }
+
+    /// <summary>
+    /// Espejo de un héroe: su aspecto, que solo viaja al aparecer. Género, las cuatro partes del avatar y las seis piezas
+    /// del equipo (<c>id:tipo</c>), separadas por <c>|</c>; ver <see cref="AparienciaRed.De"/>.
+    /// </summary>
+    public struct AparienciaRed : IComponentData
+    {
+        [GhostField] public FixedString512Bytes Texto;
+
+        public static FixedString512Bytes De(HeroAppearanceComponent a)
+        {
+            var e = a.equipment ?? new Equipment();
+            var v = a.avatar ?? new AvatarParts();
+            return string.Join("|", a.gender, v.headId, v.hairId, v.beardId, v.eyebrowId,
+                Pieza(e.weapon), Pieza(e.helmet), Pieza(e.torso), Pieza(e.gloves), Pieza(e.pants), Pieza(e.boots));
+        }
+
+        public static HeroAppearanceComponent Leer(string texto)
+        {
+            var p = texto.Split('|');
+            if (p.Length != 11)
+                return null;
+            return new HeroAppearanceComponent
+            {
+                gender = p[0],
+                avatar = new AvatarParts { headId = p[1], hairId = p[2], beardId = p[3], eyebrowId = p[4] },
+                equipment = new Equipment
+                {
+                    weapon = Pieza(p[5]), helmet = Pieza(p[6]), torso = Pieza(p[7]),
+                    gloves = Pieza(p[8]), pants = Pieza(p[9]), boots = Pieza(p[10]),
+                },
+            };
+        }
+
+        static string Pieza(InventoryItem pieza) =>
+            pieza == null || string.IsNullOrEmpty(pieza.itemId) ? "" : pieza.itemId + ":" + (int)pieza.itemType;
+
+        static InventoryItem Pieza(string texto)
+        {
+            var p = texto.Split(':');
+            return p.Length == 2 ? new InventoryItem { itemId = p[0], itemType = (ItemType)int.Parse(p[1]) } : null;
+        }
     }
 
     /// <summary>Prefabs fantasma creados por código, idénticos en servidor y cliente.</summary>
@@ -76,6 +124,8 @@ namespace ConquestTactics.Net
         public Entity Soldado;
         /// <summary>Soldado o héroe de la batalla de verdad: un <see cref="SoldadoRed"/> con su modelo y su animación.</summary>
         public Entity Espejo;
+        /// <summary>El espejo de un héroe: lo mismo más su aspecto (<see cref="AparienciaRed"/>).</summary>
+        public Entity EspejoHeroe;
     }
 
     /// <summary>RPC del cliente: ya está listo para recibir la batalla, con el token de su héroe si viene de una batalla del motor.</summary>

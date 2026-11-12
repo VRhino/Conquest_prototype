@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ConquestTactics.Animation;
 using Unity.Entities;
 using Unity.Mathematics;
@@ -11,12 +12,19 @@ namespace ConquestTactics.Net
     /// <summary>Cliente: este espejo ya tiene su modelo en la escena.</summary>
     public struct ConVisual : IComponentData { }
 
+    /// <summary>Cliente: lo último visto del espejo de un héroe, para sacar de ahí su dirección y sus golpes nuevos.</summary>
+    public struct HeroeVisto : IComponentData
+    {
+        public float3 Posicion;
+        public byte Ataques;
+    }
+
     /// <summary>
     /// Cliente de la batalla de verdad (<c>-batallaReal</c> también en el cliente): carga la escena de batalla y pinta cada
-    /// soldado espejo con el mismo modelo y los mismos Animators que el juego. Para eso pone en el fantasma los
-    /// componentes que leen <c>EntityVisualSync</c> y <c>UnitAnimationAdapter</c> y los rellena con lo que llega por la
-    /// red; el modelo no lleva agente de navegación ni colliders de golpe: aquí no se decide nada.
-    /// ponytail: los héroes siguen siendo cápsulas (su modelo lee otros componentes y la apariencia de cada uno).
+    /// soldado y cada héroe espejo con el mismo modelo y los mismos Animators que el juego. Para eso pone en el fantasma
+    /// los componentes que leen <c>EntityVisualSync</c>, <c>UnitAnimationAdapter</c> y <c>RemoteHeroAnimationDriver</c> y
+    /// los rellena con lo que llega por la red; el modelo no lleva agente de navegación ni colliders de golpe: aquí no se
+    /// decide nada.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PresentationSystemGroup))]
@@ -25,6 +33,8 @@ namespace ConquestTactics.Net
     {
         bool _escenaPedida;
         VisualPrefabRegistry _registro;
+        /// <summary>El modelo de cada héroe, para retirarlo mientras está caído y devolverlo al reaparecer.</summary>
+        readonly Dictionary<Entity, GameObject> _heroes = new Dictionary<Entity, GameObject>();
 
         protected override void OnCreate() => Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
 
@@ -43,28 +53,42 @@ namespace ConquestTactics.Net
                 return;
 
             var ecb = new EntityCommandBuffer(Unity.Collections.Allocator.Temp);
+            CrearSoldados(ecb);
+            CrearHeroes(ecb);
+            ecb.Playback(EntityManager);
+            AnimarSoldados();
+            AnimarHeroes();
+        }
+
+        /// <summary>El modelo, en la capa de su bando y sin autoridad: ni navega ni golpea. Los golpes los decide el servidor.</summary>
+        GameObject Instanciar(GameObject prefab, in LocalTransform pose, string capa, Entity entidad)
+        {
+            var visual = Object.Instantiate(prefab, pose.Position, pose.Rotation);
+            visual.name = $"Espejo_{entidad.Index}";
+            int numero = LayerMask.NameToLayer(capa);
+            foreach (var hijo in visual.GetComponentsInChildren<Transform>(true))
+                hijo.gameObject.layer = math.max(0, numero);
+            foreach (var golpe in visual.GetComponentsInChildren<WeaponHitboxBehaviour>(true)) Object.Destroy(golpe);
+            foreach (var escudo in visual.GetComponentsInChildren<ShieldHitboxBehaviour>(true)) Object.Destroy(escudo);
+            var agente = visual.GetComponent<NavMeshAgent>();
+            if (agente != null) agente.enabled = false;
+            return visual;
+        }
+
+        void CrearSoldados(EntityCommandBuffer ecb)
+        {
             foreach (var (soldado, modelo, animacion, pose, entidad) in SystemAPI
                          .Query<RefRO<SoldadoRed>, RefRO<VisualRed>, RefRO<AnimacionRed>, RefRO<LocalTransform>>()
-                         .WithNone<ConVisual>().WithEntityAccess())
+                         .WithNone<ConVisual, AparienciaRed>().WithEntityAccess())
             {
                 // El modelo llega con el primer snapshot completo; hasta entonces el nombre está vacío.
-                if (soldado.ValueRO.Tipo != SoldadoRed.Soldado || modelo.ValueRO.Prefab.IsEmpty)
+                if (modelo.ValueRO.Prefab.IsEmpty)
                     continue;
                 var prefab = _registro.GetPrefab(modelo.ValueRO.Prefab.ToString(), true)
                              ?? _registro.GetDefaultUnitPrefab((SquadType)modelo.ValueRO.TipoDeEscuadra, true);
                 if (prefab == null)
                     continue;
-                var visual = Object.Instantiate(prefab, pose.ValueRO.Position, pose.ValueRO.Rotation);
-                visual.name = $"Espejo_{entidad.Index}";
-                int capa = LayerMask.NameToLayer(soldado.ValueRO.Bando == 1 ? "Units_B" : "Units_A");
-                foreach (var hijo in visual.GetComponentsInChildren<Transform>(true))
-                    hijo.gameObject.layer = math.max(0, capa);
-                // Sin autoridad: ni navega ni golpea. Los golpes los decide el servidor.
-                foreach (var golpe in visual.GetComponentsInChildren<WeaponHitboxBehaviour>(true)) Object.Destroy(golpe);
-                foreach (var escudo in visual.GetComponentsInChildren<ShieldHitboxBehaviour>(true)) Object.Destroy(escudo);
-                var agente = visual.GetComponent<NavMeshAgent>();
-                if (agente != null) agente.enabled = false;
-
+                var visual = Instanciar(prefab, pose.ValueRO, soldado.ValueRO.Bando == 1 ? "Units_B" : "Units_A", entidad);
                 ecb.AddComponent<ConVisual>(entidad);
                 ecb.AddComponent(entidad, new UnitAnimationMovementComponent { PreviousPosition = pose.ValueRO.Position });
                 ecb.AddComponent<UnitCombatComponent>(entidad);
@@ -74,15 +98,62 @@ namespace ConquestTactics.Net
                     ecb.AddComponent<UnitMovementGearComponent>(entidad);
                 VisualSyncUtility.SetupVisualSync(visual).SetHeroEntity(entidad);
             }
-            ecb.Playback(EntityManager);
+        }
 
+        void CrearHeroes(EntityCommandBuffer ecb)
+        {
+            foreach (var (soldado, modelo, aspecto, pose, entidad) in SystemAPI
+                         .Query<RefRO<SoldadoRed>, RefRO<VisualRed>, RefRO<AparienciaRed>, RefRO<LocalTransform>>()
+                         .WithNone<ConVisual>().WithEntityAccess())
+            {
+                if (modelo.ValueRO.Prefab.IsEmpty || aspecto.ValueRO.Texto.IsEmpty)
+                    continue;
+                var prefab = _registro.GetPrefab(modelo.ValueRO.Prefab.ToString(), true);
+                var apariencia = AparienciaRed.Leer(aspecto.ValueRO.Texto.ToString());
+                if (prefab == null || apariencia == null)
+                    continue;
+                var visual = Instanciar(prefab, pose.ValueRO, soldado.ValueRO.Bando == 1 ? "Heroes_B" : "Heroes_A", entidad);
+                bool vestido;
+                try
+                {
+                    vestido = HeroVisualAppearanceSystem.ApplyHeroVisualCustomization(visual, apariencia);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[Red] No se pudo vestir al héroe {entidad.Index}: {e.Message}");
+                    vestido = false;
+                }
+                if (!vestido)
+                {
+                    // Aún no están cargados los datos del avatar: se reintenta en el fotograma siguiente.
+                    visual.SetActive(false);
+                    Object.Destroy(visual);
+                    continue;
+                }
+                ecb.AddComponent<ConVisual>(entidad);
+                ecb.AddComponent(entidad, new HeroeVisto { Posicion = pose.ValueRO.Position });
+                // HeroMoveIntent es lo que le dice a EntityVisualSync que es un héroe remoto y le pone su RemoteHeroAnimationDriver.
+                ecb.AddComponent<HeroMoveIntent>(entidad);
+                ecb.AddComponent<HeroNetworkMotion>(entidad);
+                ecb.AddComponent<HeroStatsComponent>(entidad);
+                ecb.AddComponent<HeroAnimationComponent>(entidad);
+                ecb.AddComponent<HeroCombatComponent>(entidad);
+                ecb.AddComponent<HeroDeathPresentationComponent>(entidad);
+                ecb.AddComponent<ResilienceComponent>(entidad);
+                _heroes[entidad] = visual;
+                // Los componentes llegan al reproducir el búfer, antes del Start del modelo, que es cuando los mira.
+                VisualSyncUtility.SetupVisualSync(visual).SetHeroEntity(entidad);
+            }
+        }
+
+        void AnimarSoldados()
+        {
             foreach (var (animacion, pose, movimiento, combate, distancia, aguante, entidad) in SystemAPI
                          .Query<RefRO<AnimacionRed>, RefRO<LocalTransform>, RefRW<UnitAnimationMovementComponent>, RefRW<UnitCombatComponent>,
                              RefRW<RangedAttackStateComponent>, RefRW<ResilienceComponent>>()
                          .WithAll<ConVisual>().WithEntityAccess())
             {
                 var a = animacion.ValueRO;
-                bool seMueve = (a.Banderas & AnimacionRed.Moviendose) != 0;
                 // La dirección no viaja: sale de cómo se mueve el fantasma ya interpolado.
                 float3 paso = pose.ValueRO.Position - movimiento.ValueRO.PreviousPosition;
                 paso.y = 0f;
@@ -92,7 +163,7 @@ namespace ConquestTactics.Net
                 movimiento.ValueRW.CurrentSpeed = a.Velocidad;
                 movimiento.ValueRW.MaxSpeed = a.VelocidadBase;
                 movimiento.ValueRW.RequestedSpeed = a.VelocidadPedida;
-                movimiento.ValueRW.IsMoving = seMueve;
+                movimiento.ValueRW.IsMoving = (a.Banderas & AnimacionRed.Moviendose) != 0;
                 movimiento.ValueRW.CurrentStance = (UnitStance)a.Postura;
                 movimiento.ValueRW.SlotRow = a.Fila;
                 movimiento.ValueRW.SlotRole = a.Papel;
@@ -104,6 +175,46 @@ namespace ConquestTactics.Net
                 if (SystemAPI.HasComponent<UnitMovementGearComponent>(entidad))
                     SystemAPI.SetComponent(entidad, new UnitMovementGearComponent
                         { gear = (a.Banderas & AnimacionRed.Corre) != 0 ? MovementGear.Run : MovementGear.Walk });
+            }
+        }
+
+        void AnimarHeroes()
+        {
+            foreach (var (animacion, pose, visto, marcha, heroe, combate, muerte, entidad) in SystemAPI
+                         .Query<RefRO<AnimacionRed>, RefRO<LocalTransform>, RefRW<HeroeVisto>, RefRW<HeroNetworkMotion>,
+                             RefRW<HeroAnimationComponent>, RefRW<HeroCombatComponent>, RefRW<HeroDeathPresentationComponent>>()
+                         .WithAll<ConVisual>().WithEntityAccess())
+            {
+                var a = animacion.ValueRO;
+                float3 paso = pose.ValueRO.Position - visto.ValueRO.Posicion;
+                paso.y = 0f;
+                visto.ValueRW.Posicion = pose.ValueRO.Position;
+                float3 direccion = math.lengthsq(paso) > 1e-8f ? math.normalize(paso) : math.normalizesafe(marcha.ValueRO.velocity);
+                marcha.ValueRW.velocity = (a.Banderas & AnimacionRed.Moviendose) != 0 ? direccion * a.Velocidad : float3.zero;
+                marcha.ValueRW.requestedSpeed = a.VelocidadPedida;
+                heroe.ValueRW.attackSpeed = a.VelocidadDeAtaque;
+                // Cada golpe nuevo del servidor dispara aquí la animación; RemoteHeroAnimationDriver baja el disparador al usarlo.
+                if (a.Ataques != visto.ValueRO.Ataques)
+                {
+                    visto.ValueRW.Ataques = a.Ataques;
+                    heroe.ValueRW.triggerAttack = true;
+                }
+                combate.ValueRW.isAttacking = (a.Banderas & AnimacionRed.Atacando) != 0;
+                muerte.ValueRW.isDead = (a.Banderas & AnimacionRed.Muerto) != 0;
+                muerte.ValueRW.deathRevision = a.RevisionDeMuerte;
+                var estadisticas = SystemAPI.GetComponent<HeroStatsComponent>(entidad);
+                estadisticas.baseSpeed = a.VelocidadBase;
+                SystemAPI.SetComponent(entidad, estadisticas);
+                var aguante = SystemAPI.GetComponent<ResilienceComponent>(entidad);
+                aguante.reaction = (HitReaction)a.Reaccion;
+                aguante.reactionRevision = a.RevisionDeReaccion;
+                SystemAPI.SetComponent(entidad, aguante);
+                // Caído y con el cuerpo retirado en el servidor: aquí también, hasta que reaparezca.
+                if (_heroes.TryGetValue(entidad, out var visual) && visual != null)
+                {
+                    bool aLaVista = (a.Banderas & AnimacionRed.Oculto) == 0;
+                    if (visual.activeSelf != aLaVista) visual.SetActive(aLaVista);
+                }
             }
         }
     }

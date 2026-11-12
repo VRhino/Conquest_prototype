@@ -87,30 +87,35 @@ namespace ConquestTactics.Visual
             RefreshAnimatorParameterCache();
 
             if (_navAgent != null && _navAgent.enabled && _navAgent.isOnNavMesh)
-                DriveLocomotion();
+                DriveLocomotion(_navAgent.velocity, _navAgent.speed);
+            else if (_world.EntityManager.HasComponent<HeroNetworkMotion>(_heroEntity))
+            {
+                // A hero replicated from the battle server: no agent here, its motion comes over the network.
+                var motion = _world.EntityManager.GetComponentData<HeroNetworkMotion>(_heroEntity);
+                DriveLocomotion(motion.velocity, motion.requestedSpeed);
+            }
             else
                 DriveStoppedLocomotion();
 
             DriveCombatAnimation();
         }
 
-        private void DriveLocomotion()
+        private void DriveLocomotion(Vector3 velocity, float requestedSpeed)
         {
-            Vector3 velocity = _navAgent.velocity;
             velocity.y = 0f;
             float speed = velocity.magnitude;
             var entityManager = _world.EntityManager;
             float baseSpeed = entityManager.HasComponent<HeroStatsComponent>(_heroEntity)
                 ? entityManager.GetComponentData<HeroStatsComponent>(_heroEntity).baseSpeed
-                : _navAgent.speed;
-            bool sprinting = _navAgent.speed > baseSpeed * _locomotion.sprintSpeedRatio;
+                : requestedSpeed;
+            bool sprinting = requestedSpeed > baseSpeed * _locomotion.sprintSpeedRatio;
             var gait = _locomotion.GetGait(speed, baseSpeed, sprinting);
             bool isMoving = gait != LocomotionGait.Idle;
             Vector3 direction = isMoving ? transform.InverseTransformDirection(velocity.normalized) : Vector3.forward;
 
             bool justStartedMoving = isMoving && !_wasMoving;
             SetAnimatorFloat(AnimationHashes.MoveSpeed,
-                _locomotion.GetBlendSpeed(speed, baseSpeed, _navAgent.speed, sprinting));
+                _locomotion.GetBlendSpeed(speed, baseSpeed, requestedSpeed, sprinting));
             SetAnimatorInteger(AnimationHashes.CurrentGait, (int)gait);
             SetAnimatorBool(AnimationHashes.IsGrounded, true);
             SetAnimatorBool(AnimationHashes.IsStopped, !isMoving);

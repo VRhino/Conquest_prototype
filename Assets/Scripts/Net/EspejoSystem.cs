@@ -1,8 +1,10 @@
 using ConquestTactics.Animation;
 using Unity.Collections;
 using Unity.Entities;
+using Unity.Mathematics;
 using Unity.NetCode;
 using Unity.Transforms;
+using UnityEngine.AI;
 
 namespace ConquestTactics.Net
 {
@@ -34,7 +36,7 @@ namespace ConquestTactics.Net
         public void OnUpdate(ref SystemState state)
         {
             var em = state.EntityManager;
-            var prefab = SystemAPI.GetSingleton<PrefabsRed>().Espejo;
+            var prefabs = SystemAPI.GetSingleton<PrefabsRed>();
             var ecb = new EntityCommandBuffer(Allocator.Temp);
             foreach (var (pose, bando, visual, entidad) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<TeamComponent>, RefRO<UnitVisualReference>>()
                          .WithAll<UnitCombatComponent>().WithNone<Espejo>().WithEntityAccess())
@@ -46,11 +48,17 @@ namespace ConquestTactics.Net
                     if (SystemAPI.HasComponent<SquadDefinitionComponent>(escuadra))
                         modelo.TipoDeEscuadra = (byte)SystemAPI.GetComponent<SquadDefinitionComponent>(escuadra).squadType;
                 }
-                Crear(ref ecb, prefab, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Soldado, modelo);
+                Crear(ref ecb, prefabs.Espejo, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Soldado, modelo);
             }
-            foreach (var (pose, bando, entidad) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<TeamComponent>>()
-                         .WithAll<HeroSpawnComponent>().WithNone<Espejo>().WithEntityAccess())
-                Crear(ref ecb, prefab, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Heroe, default);
+            // El héroe espera a tener su aspecto (se lo pone quien lo crea), que viaja con el espejo al aparecer.
+            foreach (var (pose, bando, aparicion, entidad) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<TeamComponent>, RefRO<HeroSpawnComponent>>()
+                         .WithAll<HeroAppearanceComponent>().WithNone<Espejo>().WithEntityAccess())
+            {
+                // Como HeroVisualInstantiationSystem para un héroe que no es el local.
+                var modelo = new VisualRed { Prefab = aparicion.ValueRO.visualPrefabId.ToString() + "_Remote" };
+                var fantasma = Crear(ref ecb, prefabs.EspejoHeroe, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Heroe, modelo);
+                ecb.SetComponent(fantasma, new AparienciaRed { Texto = AparienciaRed.De(em.GetComponentObject<HeroAppearanceComponent>(entidad)) });
+            }
             // Al destruirse el de verdad solo le queda este componente: se va su fantasma y luego él.
             foreach (var (espejo, entidad) in SystemAPI.Query<RefRO<Espejo>>().WithNone<LocalTransform>().WithEntityAccess())
             {
@@ -102,15 +110,57 @@ namespace ConquestTactics.Net
                 }
                 em.SetComponentData(espejo.ValueRO.Fantasma, animacion);
             }
+
+            // Y lo que lee RemoteHeroAnimationDriver del héroe de verdad: su marcha sale de su agente de navegación.
+            foreach (var (espejo, estadisticas, entidad) in SystemAPI.Query<RefRO<Espejo>, RefRO<HeroStatsComponent>>()
+                         .WithAll<HeroSpawnComponent>().WithEntityAccess())
+            {
+                var animacion = em.GetComponentData<AnimacionRed>(espejo.ValueRO.Fantasma);
+                byte ataques = animacion.Ataques;
+                animacion = new AnimacionRed { VelocidadBase = estadisticas.ValueRO.baseSpeed, VelocidadDeAtaque = 1f, Ataques = ataques };
+                var agente = em.HasComponent<NavMeshAgent>(entidad) ? em.GetComponentObject<NavMeshAgent>(entidad) : null;
+                if (agente != null && agente.enabled && agente.isOnNavMesh)
+                {
+                    var velocidad = agente.velocity;
+                    velocidad.y = 0f;
+                    animacion.Velocidad = velocidad.magnitude;
+                    animacion.VelocidadPedida = agente.speed;
+                    if (animacion.Velocidad > 0.05f) animacion.Banderas |= AnimacionRed.Moviendose;
+                }
+                if (SystemAPI.HasComponent<HeroAnimationComponent>(entidad))
+                {
+                    var heroe = SystemAPI.GetComponent<HeroAnimationComponent>(entidad);
+                    if (heroe.attackSpeed > 0f) animacion.VelocidadDeAtaque = heroe.attackSpeed;
+                    // El disparador dura hasta que el Animator del servidor lo consume en el fotograma siguiente: se ve una vez.
+                    if (heroe.triggerAttack) animacion.Ataques++;
+                }
+                if (SystemAPI.HasComponent<HeroCombatComponent>(entidad) && SystemAPI.GetComponent<HeroCombatComponent>(entidad).isAttacking)
+                    animacion.Banderas |= AnimacionRed.Atacando;
+                if (SystemAPI.HasComponent<HeroDeathPresentationComponent>(entidad))
+                {
+                    var muerte = SystemAPI.GetComponent<HeroDeathPresentationComponent>(entidad);
+                    if (muerte.isDead) animacion.Banderas |= AnimacionRed.Muerto;
+                    if (muerte.visualHidden) animacion.Banderas |= AnimacionRed.Oculto;
+                    animacion.RevisionDeMuerte = muerte.deathRevision;
+                }
+                if (SystemAPI.HasComponent<ResilienceComponent>(entidad))
+                {
+                    var aguante = SystemAPI.GetComponent<ResilienceComponent>(entidad);
+                    animacion.Reaccion = (byte)aguante.reaction;
+                    animacion.RevisionDeReaccion = aguante.reactionRevision;
+                }
+                em.SetComponentData(espejo.ValueRO.Fantasma, animacion);
+            }
         }
 
-        static void Crear(ref EntityCommandBuffer ecb, Entity prefab, Entity deVerdad, in LocalTransform pose, Team bando, byte tipo, in VisualRed modelo)
+        static Entity Crear(ref EntityCommandBuffer ecb, Entity prefab, Entity deVerdad, in LocalTransform pose, Team bando, byte tipo, in VisualRed modelo)
         {
             var fantasma = ecb.Instantiate(prefab);
             ecb.SetComponent(fantasma, pose);
             ecb.SetComponent(fantasma, new SoldadoRed { Bando = (byte)(bando == Team.TeamB ? 1 : 0), Tipo = tipo });
             ecb.SetComponent(fantasma, modelo);
             ecb.AddComponent(deVerdad, new Espejo { Fantasma = fantasma });
+            return fantasma;
         }
     }
 }
