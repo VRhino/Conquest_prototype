@@ -205,8 +205,12 @@ namespace ConquestTactics.Net
             if (OpcionesRed.BatallaReal > 0 && _controlDeCamara == null)
                 _controlDeCamara = Object.FindFirstObjectByType<HeroCameraController>();
             if (_controlDeCamara != null)
-                _controlDeCamara.enabled = false;
-            if (camara != null && propio.HasValue)
+                _controlDeCamara.enabled = EspejoClienteSystem.CamaraDelJuego;
+            if (EspejoClienteSystem.CamaraDelJuego)
+            {
+                // La cámara del juego sigue al héroe propio (EspejoClienteSystem): aquí no se toca.
+            }
+            else if (camara != null && propio.HasValue)
             {
                 Vector3 objetivo = propio.Value;
                 // ponytail: cámara fija detrás y arriba; en la batalla de verdad, más empinada para ver por encima de las

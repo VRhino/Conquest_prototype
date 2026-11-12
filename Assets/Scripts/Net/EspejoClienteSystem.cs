@@ -40,6 +40,9 @@ namespace ConquestTactics.Net
         readonly Dictionary<Entity, float3> _conDestino = new Dictionary<Entity, float3>();
         readonly List<Entity> _sobran = new List<Entity>();
         int _marcadoresAntes;
+        Entity _camara, _interfaz;
+        /// <summary>Hay héroe propio y la cámara del juego lo sigue: DibujoRedSystem no toca la cámara.</summary>
+        public static bool CamaraDelJuego { get; private set; }
         bool _fotoDeMarcadores;
 
         protected override void OnCreate() => Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
@@ -66,6 +69,7 @@ namespace ConquestTactics.Net
             AnimarSoldados();
             AnimarHeroes();
             MarcarDestinos();
+            CamaraEInterfaz();
         }
 
         /// <summary>El modelo, en la capa de su bando y sin autoridad: ni navega ni golpea. Los golpes los decide el servidor.</summary>
@@ -222,6 +226,69 @@ namespace ConquestTactics.Net
             {
                 _fotoDeMarcadores = true;
                 ScreenCapture.CaptureScreenshot(OpcionesRed.Captura.Replace(".png", "-marcadores.png"));
+            }
+        }
+
+        /// <summary>
+        /// La cámara y la interfaz del juego, atadas al héroe que lleva este jugador. La cámara (HeroCameraController) sigue
+        /// a la entidad que diga CameraTargetComponent: aquí, el fantasma del héroe propio, con lo poco que esa cámara lee de
+        /// él. La interfaz (HUDController, SkillBarController) lee UIHeroBattleDataComponent: aquí se rellena con lo que el
+        /// servidor manda en el mando (<see cref="InterfazRed"/>), en vez de con UIBattleDataSystem.
+        /// </summary>
+        void CamaraEInterfaz()
+        {
+            if (!SystemAPI.TryGetSingleton<Unity.NetCode.NetworkId>(out var yo))
+                return;
+            Entity propio = Entity.Null;
+            bool vivo = true;
+            foreach (var (soldado, animacion, entidad) in SystemAPI.Query<RefRO<SoldadoRed>, RefRO<AnimacionRed>>().WithAll<ConVisual>().WithEntityAccess())
+                if (soldado.ValueRO.Dueno == yo.Value && soldado.ValueRO.Tipo == SoldadoRed.Heroe)
+                {
+                    propio = entidad;
+                    vivo = (animacion.ValueRO.Banderas & AnimacionRed.Muerto) == 0;
+                }
+            CamaraDelJuego = propio != Entity.Null;
+            if (propio != Entity.Null)
+            {
+                if (!EntityManager.HasComponent<HeroLifeComponent>(propio))
+                {
+                    EntityManager.AddComponentData(propio, new HeroLifeComponent { isAlive = true });
+                    if (_heroes.TryGetValue(propio, out var visual) && visual != null)
+                        EntityManager.AddComponentData(propio, new HeroVisualInstance { visualInstanceId = visual.GetEntityId() });
+                }
+                EntityManager.SetComponentData(propio, new HeroLifeComponent { isAlive = vivo });
+                if (_camara == Entity.Null || !EntityManager.Exists(_camara))
+                {
+                    // Los mismos valores que CameraBootstrapSystem pone para el héroe local.
+                    _camara = EntityManager.CreateEntity();
+                    EntityManager.AddComponentData(_camara, new CameraTargetComponent { followTarget = propio, zoomLevel = 2f, offset = new float3(0f, 1.8f, 1f) });
+                    EntityManager.AddComponentData(_camara, new CameraSettingsComponent { minZoom = 1f, maxZoom = 10f, zoomSpeed = 10f, rotationSensitivity = 35f });
+                    EntityManager.AddComponentData(_camara, new CameraStateComponent());
+                }
+                else if (EntityManager.GetComponentData<CameraTargetComponent>(_camara).followTarget != propio)
+                {
+                    var objetivo = EntityManager.GetComponentData<CameraTargetComponent>(_camara);
+                    objetivo.followTarget = propio;
+                    EntityManager.SetComponentData(_camara, objetivo);
+                }
+            }
+
+            foreach (var (red, casillas) in SystemAPI.Query<RefRO<InterfazRed>, DynamicBuffer<HabilidadRed>>().WithAll<Unity.NetCode.GhostOwnerIsLocal>())
+            {
+                var r = red.ValueRO;
+                var ui = new UIHeroBattleDataComponent
+                {
+                    currentHealth = r.Vida, maxHealth = r.VidaMaxima, currentStamina = r.Resistencia, maxStamina = r.ResistenciaMaxima,
+                    heroAlive = r.Vivo != 0, combo = r.Combo, ultimateComboCost = r.CosteDeDefinitiva, unaffordableSlots = r.SinPagar,
+                    aliveUnits = r.Soldados, totalUnits = r.SoldadosTotales, currentFormation = (FormationType)r.Formacion,
+                };
+                ui.skills.Length = UIHeroBattleDataComponent.SkillSlotCount;
+                for (int i = 0; i < casillas.Length && i < ui.skills.Length; i++)
+                    ui.skills[i] = new UISkillSlotData { skillId = casillas[i].Id, cooldown = casillas[i].Recarga, remaining = casillas[i].Queda };
+                if (_interfaz == Entity.Null || !EntityManager.Exists(_interfaz))
+                    _interfaz = EntityManager.CreateEntity(typeof(UIHeroBattleDataComponent));
+                EntityManager.SetComponentData(_interfaz, ui);
+                break;
             }
         }
 

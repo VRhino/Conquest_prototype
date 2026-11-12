@@ -432,3 +432,31 @@ El autor jugó dos partidas contra el servidor local. Los controles funcionan (m
   es lo que lo arregla de verdad.
 - El registro del servidor dice cada 10 s, por jugador, qué orden pidió, cuál ganó (y si fue la reacción al combate) y
   a qué distancia está su escuadra.
+
+## 9. Meter el resto del juego en la batalla en red
+
+Orden acordado con el autor el 2026-11-12, tras la primera prueba con teclado: (1) cámara e interfaz del juego atadas al
+héroe del jugador; (2) la partida entera: reloj, zonas de captura y suministro, final; (3) los controles que faltan:
+formaciones, montar, interactuar y cambiar de escuadra, habilidades de escuadra y perks; (4) lo que aún no se ve:
+proyectiles, caballos, efectos, números de daño, caída de los soldados; (5) unirlo al motor: héroes y escuadras del
+ticket y el resultado de vuelta; (6) robustez: aviso y reconexión, latencia simulada, CPU del cliente.
+
+### 9.1 Cámara e interfaz del juego atadas al héroe del jugador
+
+- **Cámara.** El cliente crea la entidad de cámara que `CameraBootstrapSystem` crea para el héroe local
+  (`CameraTargetComponent` y compañía, con los mismos valores) apuntando al fantasma del héroe propio, y le pone a ese
+  fantasma lo poco que `HeroCameraController` lee de él (`HeroLifeComponent`, `HeroVisualInstance`). La cámara del juego
+  hace el resto: órbita con el ratón, zoom y no atravesar paredes. Como la entrada del cliente ya era relativa a la
+  cámara, WASD sigue a la vista. Quien solo mira conserva la cámara fija de `DibujoRedSystem`.
+- **Interfaz.** El servidor calcula para el héroe de cada jugador lo que `UIBattleDataSystem` calcula para el héroe
+  local (vida, resistencia, si vive, las casillas de habilidades con su recarga, el combo y lo que no puede pagar, y los
+  soldados y la formación de su escuadra) y lo manda en su mando (`InterfazRed` y el búfer `HabilidadRed`), que solo le
+  llega a él (`SendToOwner`). El cliente lo vuelca en `UIHeroBattleDataComponent`, que es lo que leen `HUDController`,
+  `SkillBarController` y el menú radial. Único cambio en el juego: `UIBattleDataSystem.WriteSkills` y `WriteCosts` son
+  públicos.
+
+Comprobado con una captura de un cliente que juega solo: la cámara del juego detrás del héroe y la interfaz con sus
+cifras de verdad (vida 1540/1540, resistencia gastándose, barra de habilidades).
+
+Lo que falta, anotado: el panel de la escuadra (retrato y «40/40») no se actualiza, porque depende del aviso de cambio
+de escuadra del juego; el reloj y la zona de captura llegan con el punto 2; nadie lo ha probado aún con el ratón.

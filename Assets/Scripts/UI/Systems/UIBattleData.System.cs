@@ -98,7 +98,7 @@ public partial class UIBattleDataSystem : SystemBase
     }
 
     /// <summary>The hero's combo now and which of its skills it cannot pay for (H16): the same check as the gate.</summary>
-    static void WriteCosts(ref UIHeroBattleDataComponent data, DynamicBuffer<HeroSkillElement> skills,
+    public static void WriteCosts(ref UIHeroBattleDataComponent data, DynamicBuffer<HeroSkillElement> skills,
         in HeroResourcesComponent resources, double now, in ComboTuning tuning)
     {
         data.combo = HeroResources.Combo(resources, now, tuning);
@@ -113,7 +113,7 @@ public partial class UIBattleDataSystem : SystemBase
     }
 
     /// <summary>Writes the skills in slots <paramref name="first"/>..<paramref name="last"/> with their cooldown.</summary>
-    static void WriteSkills(ref Unity.Collections.FixedList128Bytes<UISkillSlotData> slots, DynamicBuffer<HeroSkillElement> skills,
+    public static void WriteSkills(ref Unity.Collections.FixedList128Bytes<UISkillSlotData> slots, DynamicBuffer<HeroSkillElement> skills,
         DynamicBuffer<CooldownGroupElement> groups, double now, SkillSlot first, SkillSlot last)
     {
         foreach (var skill in skills)

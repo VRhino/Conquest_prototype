@@ -43,6 +43,36 @@ namespace ConquestTactics.Net
         [GhostField(Quantization = 100)] public float VelocidadAlCorrer;
     }
 
+    /// <summary>
+    /// Lo que la interfaz del juego enseña del héroe y la escuadra de un jugador (lo que UIBattleDataSystem saca del héroe
+    /// local en el juego de un jugador). Va en su mando y solo le llega a él.
+    /// </summary>
+    [GhostComponent(OwnerSendType = SendToOwnerType.SendToOwner)]
+    public struct InterfazRed : IComponentData
+    {
+        [GhostField(Quantization = 10)] public float Vida;
+        [GhostField(Quantization = 10)] public float VidaMaxima;
+        [GhostField(Quantization = 10)] public float Resistencia;
+        [GhostField(Quantization = 10)] public float ResistenciaMaxima;
+        [GhostField] public byte Vivo;
+        [GhostField(Quantization = 100)] public float Combo;
+        [GhostField(Quantization = 100)] public float CosteDeDefinitiva;
+        [GhostField] public ushort SinPagar;
+        [GhostField] public int Soldados;
+        [GhostField] public int SoldadosTotales;
+        [GhostField] public byte Formacion;
+    }
+
+    /// <summary>Una casilla de la barra de habilidades del jugador (de Q a la tercera de escuadra), con su recarga.</summary>
+    [GhostComponent(OwnerSendType = SendToOwnerType.SendToOwner)]
+    [InternalBufferCapacity(UIHeroBattleDataComponent.SkillSlotCount)]
+    public struct HabilidadRed : IBufferElementData
+    {
+        [GhostField] public int Id;
+        [GhostField(Quantization = 1000)] public float Recarga;
+        [GhostField(Quantization = 10)] public float Queda;
+    }
+
     /// <summary>Héroe en red. La velocidad viene del prefab, igual en servidor y cliente; no viaja.</summary>
     public struct HeroeRed : IComponentData
     {

@@ -132,6 +132,7 @@ namespace ConquestTactics.Net
                 decision.ValueRW = d;
                 Marcar(heroe, jugador.ValueRO.Jugador);
                 MarcarEscuadra(heroe, jugador.ValueRO.Jugador);
+                Interfaz(heroe, mando);
                 if (avisar)
                 {
                     int golpes = SystemAPI.HasComponent<Espejo>(heroe)
@@ -191,6 +192,63 @@ namespace ConquestTactics.Net
             SystemAPI.SetComponent(heroe, new HeroNetworkMotion
                 { velocity = velocidad, requestedSpeed = entrada.Correr != 0 ? movil.VelocidadAlCorrer : movil.Velocidad });
             return velocidad;
+        }
+
+        /// <summary>
+        /// Lo que la interfaz del juego enseña de este héroe y su escuadra, con las mismas cuentas que UIBattleDataSystem
+        /// hace para el héroe local: va a su mando y solo le llega a su jugador.
+        /// ponytail: falta la zona de captura (LocalHeroCaptureStateComponent es del héroe local; llega con las zonas).
+        /// </summary>
+        void Interfaz(Entity heroe, Entity mando)
+        {
+            var ui = new UIHeroBattleDataComponent();
+            double ahora = SystemAPI.Time.ElapsedTime;
+            ui.skills.Length = UIHeroBattleDataComponent.SkillSlotCount;
+            if (SystemAPI.HasBuffer<HeroSkillElement>(heroe) && SystemAPI.HasBuffer<CooldownGroupElement>(heroe))
+            {
+                var habilidades = SystemAPI.GetBuffer<HeroSkillElement>(heroe);
+                UIBattleDataSystem.WriteSkills(ref ui.skills, habilidades, SystemAPI.GetBuffer<CooldownGroupElement>(heroe), ahora, SkillSlot.Q, SkillSlot.ActivePerk2);
+                var ajuste = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.combo.OrDefault() : ComboTuning.Default;
+                var recursos = SystemAPI.HasComponent<HeroResourcesComponent>(heroe) ? SystemAPI.GetComponent<HeroResourcesComponent>(heroe) : default;
+                UIBattleDataSystem.WriteCosts(ref ui, habilidades, recursos, ahora, ajuste);
+            }
+            var red = new InterfazRed { Combo = ui.combo, CosteDeDefinitiva = ui.ultimateComboCost, SinPagar = ui.unaffordableSlots };
+            if (SystemAPI.HasComponent<HeroHealthComponent>(heroe))
+            {
+                var vida = SystemAPI.GetComponent<HeroHealthComponent>(heroe);
+                red.Vida = vida.currentHealth;
+                red.VidaMaxima = vida.maxHealth;
+            }
+            if (SystemAPI.HasComponent<StaminaComponent>(heroe))
+            {
+                var resistencia = SystemAPI.GetComponent<StaminaComponent>(heroe);
+                red.Resistencia = resistencia.currentStamina;
+                red.ResistenciaMaxima = resistencia.maxStamina;
+            }
+            red.Vivo = (byte)(SystemAPI.GetComponent<HeroLifeComponent>(heroe).isAlive ? 1 : 0);
+            if (SystemAPI.HasComponent<HeroSquadReference>(heroe))
+            {
+                var escuadra = SystemAPI.GetComponent<HeroSquadReference>(heroe).squad;
+                if (SystemAPI.Exists(escuadra))
+                {
+                    if (SystemAPI.HasBuffer<HeroSkillElement>(escuadra) && SystemAPI.HasBuffer<CooldownGroupElement>(escuadra))
+                        UIBattleDataSystem.WriteSkills(ref ui.skills, SystemAPI.GetBuffer<HeroSkillElement>(escuadra),
+                            SystemAPI.GetBuffer<CooldownGroupElement>(escuadra), ahora, SkillSlot.Squad1, SkillSlot.Squad3);
+                    if (SystemAPI.HasComponent<SquadStatusComponent>(escuadra))
+                    {
+                        var estado = SystemAPI.GetComponent<SquadStatusComponent>(escuadra);
+                        red.Soldados = estado.aliveUnits;
+                        red.SoldadosTotales = estado.totalUnits;
+                    }
+                    if (SystemAPI.HasComponent<FormationComponent>(escuadra))
+                        red.Formacion = (byte)SystemAPI.GetComponent<FormationComponent>(escuadra).currentFormation;
+                }
+            }
+            SystemAPI.SetComponent(mando, red);
+            var casillas = SystemAPI.GetBuffer<HabilidadRed>(mando);
+            casillas.ResizeUninitialized(ui.skills.Length);
+            for (int i = 0; i < ui.skills.Length; i++)
+                casillas[i] = new HabilidadRed { Id = ui.skills[i].skillId, Recarga = ui.skills[i].cooldown, Queda = ui.skills[i].remaining };
         }
 
         /// <summary>Para el registro: qué orden tiene la escuadra del héroe, de quién viene y a qué distancia está el centro de sus soldados.</summary>

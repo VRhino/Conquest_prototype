@@ -83,6 +83,8 @@ namespace ConquestTactics.Net
             var mando = em.CreateEntity();
             em.AddComponentData(mando, LocalTransform.Identity);
             em.AddComponent<MandoMovil>(mando);
+            em.AddComponent<InterfazRed>(mando);
+            em.AddBuffer<HabilidadRed>(mando);
             em.AddComponent<GhostOwner>(mando);
             em.AddComponent<GhostOwnerIsLocal>(mando);
             em.AddComponent<EntradaJugador>(mando);
