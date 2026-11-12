@@ -30,6 +30,17 @@ namespace ConquestTactics.Net
         public byte TipoDeOrden;
     }
 
+    /// <summary>
+    /// Lo que el mando necesita para moverse igual en el cliente (predicción) y en el servidor: las velocidades de su
+    /// héroe y si ahora puede moverse (no mientras está caído o aún no tiene héroe). Lo pone el servidor.
+    /// </summary>
+    public struct MandoMovil : IComponentData
+    {
+        [GhostField] public byte Activo;
+        [GhostField(Quantization = 100)] public float Velocidad;
+        [GhostField(Quantization = 100)] public float VelocidadAlCorrer;
+    }
+
     /// <summary>Héroe en red. La velocidad viene del prefab, igual en servidor y cliente; no viaja.</summary>
     public struct HeroeRed : IComponentData
     {
@@ -147,7 +158,7 @@ namespace ConquestTactics.Net
         public Entity Espejo;
         /// <summary>El espejo de un héroe: lo mismo más su aspecto (<see cref="AparienciaRed"/>).</summary>
         public Entity EspejoHeroe;
-        /// <summary>La entidad de mando de un jugador de la batalla de verdad: solo lleva su <see cref="EntradaJugador"/>.</summary>
+        /// <summary>La entidad de mando de un jugador de la batalla de verdad: su <see cref="EntradaJugador"/> y dónde está su héroe, predicho.</summary>
         public Entity Mando;
     }
 

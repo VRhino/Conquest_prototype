@@ -97,6 +97,16 @@ namespace ConquestTactics.Net
                 if (dueno.ValueRO.NetworkId == 1)
                     heroe = $" heroe1=({pose.ValueRO.Position.x:F1},{pose.ValueRO.Position.z:F1}) entrada={entrada.ValueRO.Mover}";
             float rtt = SystemAPI.TryGetSingleton<NetworkSnapshotAck>(out var ack) ? ack.EstimatedRTT : 0f;
+            // Batalla de verdad, cliente sin pantalla: a cuánto va el mando predicho por delante del héroe que llega del
+            // servidor (su espejo, interpolado). Parado es 0; andando, lo que el héroe tardaría en responder sin predicción.
+            if (!EsServidor && SystemAPI.TryGetSingleton<NetworkId>(out var yo))
+            {
+                foreach (var (mando, movil) in SystemAPI.Query<RefRO<Unity.Transforms.LocalTransform>, RefRO<MandoMovil>>().WithAll<GhostOwnerIsLocal>())
+                    foreach (var (espejo, soldado) in SystemAPI.Query<RefRO<Unity.Transforms.LocalTransform>, RefRO<SoldadoRed>>())
+                        if (soldado.ValueRO.Dueno == yo.Value && movil.ValueRO.Activo != 0)
+                            heroe = System.FormattableString.Invariant(
+                                $" adelanto={Unity.Mathematics.math.distance(mando.ValueRO.Position.xz, espejo.ValueRO.Position.xz):F2}m");
+            }
 
             double hzSoldado = 0;
             if (!EsServidor && FrescuraSoldadosSystem.Soldados.Data > 0)

@@ -119,7 +119,15 @@ namespace ConquestTactics.Net
                 byte ataques = animacion.Ataques;
                 animacion = new AnimacionRed { VelocidadBase = estadisticas.ValueRO.baseSpeed, VelocidadDeAtaque = 1f, Ataques = ataques };
                 var agente = em.HasComponent<NavMeshAgent>(entidad) ? em.GetComponentObject<NavMeshAgent>(entidad) : null;
-                if (agente != null && agente.enabled && agente.isOnNavMesh)
+                if (SystemAPI.HasComponent<HeroNetworkMotion>(entidad))
+                {
+                    // Lo lleva un jugador: no camina con su agente, va donde va su mando (MandoSystem).
+                    var marcha = SystemAPI.GetComponent<HeroNetworkMotion>(entidad);
+                    animacion.Velocidad = math.length(marcha.velocity);
+                    animacion.VelocidadPedida = marcha.requestedSpeed;
+                    if (animacion.Velocidad > 0.05f) animacion.Banderas |= AnimacionRed.Moviendose;
+                }
+                else if (agente != null && agente.enabled && agente.isOnNavMesh)
                 {
                     var velocidad = agente.velocity;
                     velocidad.y = 0f;

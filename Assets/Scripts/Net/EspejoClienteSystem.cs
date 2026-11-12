@@ -56,6 +56,7 @@ namespace ConquestTactics.Net
             CrearSoldados(ecb);
             CrearHeroes(ecb);
             ecb.Playback(EntityManager);
+            AdelantarAlPropio();
             AnimarSoldados();
             AnimarHeroes();
         }
@@ -144,6 +145,26 @@ namespace ConquestTactics.Net
                 // Los componentes llegan al reproducir el búfer, antes del Start del modelo, que es cuando los mira.
                 VisualSyncUtility.SetupVisualSync(visual).SetHeroEntity(entidad);
             }
+        }
+
+        /// <summary>
+        /// El héroe que lleva este jugador no espera al servidor: su fantasma se pone donde está su mando, que el cliente
+        /// predice con la entrada de ahora mismo. Los modelos leen la posición del fantasma en el fotograma siguiente,
+        /// antes de que llegue otra vez la del servidor.
+        /// </summary>
+        void AdelantarAlPropio()
+        {
+            if (!SystemAPI.TryGetSingleton<Unity.NetCode.NetworkId>(out var yo))
+                return;
+            LocalTransform? mando = null;
+            foreach (var (pose, movil) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<MandoMovil>>().WithAll<Unity.NetCode.GhostOwnerIsLocal>())
+                if (movil.ValueRO.Activo != 0)
+                    mando = pose.ValueRO;
+            if (!mando.HasValue)
+                return;
+            foreach (var (pose, soldado) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<SoldadoRed>>().WithAll<ConVisual>())
+                if (soldado.ValueRO.Dueno == yo.Value)
+                    pose.ValueRW = mando.Value;
         }
 
         void AnimarSoldados()

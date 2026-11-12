@@ -311,10 +311,10 @@ El que entra en la batalla de verdad ya no solo mira: recibe uno de los héroes 
   solo lleva `EntradaJugador`): mover (en el plano del mundo), correr, atacar, lanzar una habilidad y dar una orden a
   la escuadra. Viaja como comando de Netcode, con sus eventos (`InputEvent`) para lo que pasa una sola vez.
 - `MandoSystem` (servidor) le da un héroe libre (por orden de llegada, alternando bando), le apaga las dos conductas de
-  la IA y, cada tick, escribe en su `HeroAIDecision` lo que pide el jugador: empujar en una dirección es «ve 4 m hacia
-  allí», y atacar, la habilidad y la orden van en los mismos campos que usa la IA. De ahí en adelante el juego no
-  distingue: mismo movimiento por la malla de navegación, mismos golpes por collider, mismas órdenes a la escuadra.
-  **No se ha tocado ningún sistema del juego.** Si el jugador se va, el héroe vuelve a la IA.
+  la IA y, cada tick, escribe en su `HeroAIDecision` lo que pide el jugador: atacar, la habilidad y la orden van en los
+  mismos campos que usa la IA. De ahí en adelante el juego no distingue: mismos golpes por collider, mismas órdenes a la
+  escuadra. **No se ha tocado ningún sistema del juego.** Si el jugador se va, el héroe vuelve a la IA. El movimiento va
+  aparte, predicho (§8.5).
 - El espejo del héroe lleva `SoldadoRed.Dueno` (el id de red de quien lo lleva): el cliente sabe cuál es el suyo y pone
   la cámara encima.
 - Teclas del cliente, las del juego: WASD, Mayús corre, clic ataca, Q/E/R/T habilidades, C/X/V seguir, mantener y
@@ -327,10 +327,39 @@ jugadores: 262 fantasmas, 370-410 kbit/s de bajada y 60 kbit/s de subida por cli
 
 Lo que falta, anotado:
 
-- **Sin predicción**: el héroe responde con el retraso de la red (en local no se nota; por internet sí). Es el paso 3.
-- El héroe del jugador se mueve como los de la IA (agente de navegación), no con el control fino del juego de un
-  jugador (`LocalHeroCharacterMotor`): gira hacia donde camina y no apunta con la cámara.
+- El héroe del jugador gira hacia donde camina y no apunta con la cámara, como los de la IA; no lleva el control fino
+  del juego de un jugador (`LocalHeroCharacterMotor`).
 - La cámara es fija, detrás y arriba; la del juego (órbita con el ratón) y la interfaz (vida, habilidades, escuadra)
   siguen sin atarse al héroe del jugador: lo que se ve en pantalla es la interfaz vacía de un jugador.
 - Las formaciones (F1-F4), montar, bloquear y el modo táctico no viajan todavía.
 - Nadie ha jugado con el teclado: lo comprobado es con bots.
+
+### 8.5 El héroe del jugador responde al instante: predicción sobre la malla de navegación (paso 3)
+
+El plan decía pasar el héroe a Unity Physics para poder predecirlo. Se ha hecho de otra forma (propuesta al autor el
+2026-11-12, pendiente de su visto bueno): el héroe del jugador se mueve **sobre la malla de navegación** de la escena de
+batalla, que es la misma en el servidor y en el cliente, dentro de la predicción de Netcode. No hay que rehacer los
+colliders del mapa en Unity Physics, y los soldados ya se mueven por esa malla.
+
+- La entidad de mando lleva también la posición del héroe (`LocalTransform`) y `MandoMovil` (sus velocidades de paso y
+  de carrera y si puede moverse). `MovimientoMandoSystem` corre en `PredictedSimulationSystemGroup` en los dos lados:
+  avanza según la entrada y deja el paso en el punto de la malla más cercano (`NavMesh.SamplePosition`), así que junto a
+  una muralla resbala por su borde en vez de atravesarla.
+- En el servidor, `MandoSystem` pone al héroe de verdad donde está su mando (`NavMeshAgent.Warp`) y le da su marcha para
+  la animación (`HeroNetworkMotion`). Si el juego mueve al héroe por su cuenta (un empujón, reaparecer tras caer), el
+  mando se va con él y el cliente recibe la corrección. Caído, el mando no se mueve.
+- En el cliente, el fantasma del héroe propio se pone cada fotograma donde está su mando predicho
+  (`EspejoClienteSystem.AdelantarAlPropio`), así que su modelo y la cámara van con la entrada de ahora mismo.
+
+**Medido** (cliente sin pantalla, bot andando a 3 m/s, en local): el mando predicho va 0,3-0,6 m por delante del héroe
+que llega del servidor, unos 130 ms que el jugador ya no espera (el retraso de la interpolación más la ida y vuelta). El
+servidor sigue a 5,4 ms por tick con dos jugadores.
+
+Lo que falta, anotado:
+
+- Sin probar con latencia y pérdida simuladas, ni cuánto se nota una corrección (hoy salta, sin suavizar).
+- El cliente no predice chocar con soldados ni con otros héroes: lo decide el servidor y llega como corrección.
+- Sin aceleración ni resistencia: correr no gasta. La animación del héroe propio arranca con el retraso de la red (la
+  marcha llega del servidor), aunque el cuerpo ya se mueve.
+- Los golpes no se predicen: el ataque sale cuando el servidor lo confirma.
+- Un cliente sin el mapa cargado (los bots sin pantalla) predice sin malla y el servidor lo corrige en las murallas.
