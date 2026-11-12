@@ -98,13 +98,11 @@ namespace ConquestTactics.Net
         }
 
         /// <summary>
-        /// El resultado. La experiencia es provisional: 1 punto (el motor la guarda ×1000) a cada escuadra y héroe del
-        /// bando que gana y 0 al que pierde, lo mismo que da una victoria con números, hasta que se cierre la tabla.
-        /// Si el atacante gana un asalto de caravana, se pierden todos los carros en juego.
+        /// El resultado: quién gana, por qué y qué le queda a cada escuadra y héroe. Ni experiencia ni botín: los pone el
+        /// motor (D7 del 2026-11-12). Si el atacante gana un asalto de caravana, se pierden todos los carros en juego.
         /// </summary>
         public BattleResult Resultado(LadoId ganador, RazonVictoria razon, long finMs, string intento)
         {
-            byte bandoGanador = ganador == LadoId.Atacante ? Atacante : Defensor;
             var r = new BattleResult
             {
                 SchemaVersion = 1,
@@ -125,7 +123,6 @@ namespace ConquestTactics.Net
                     Desplegados = (uint)e.Autorizados,
                     SupervivientesAlCierre = (uint)(e.Autorizados - e.Muertos),
                     Muertos = (uint)e.Muertos,
-                    XpGanada = e.Bando == bandoGanador ? 1 : 0,
                 });
             foreach (var h in Heroes)
                 r.PorHeroe.Add(new ResultadoHeroe
@@ -133,7 +130,6 @@ namespace ConquestTactics.Net
                     HeroeId = h.Id,
                     Participo = true,
                     SobrevivioAlCierre = !h.Caido,
-                    XpGanada = h.Bando == bandoGanador ? 1 : 0,
                     Derrotado = h.Caido,
                 });
 

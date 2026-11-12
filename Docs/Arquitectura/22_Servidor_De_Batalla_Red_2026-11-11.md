@@ -77,9 +77,11 @@ resultado pasa la comprobación. `BatallaDeTicket.Comprobar` repite lo que el mo
 cierra sobre lo autorizado, tiempo agotado solo lo gana el defensor, duración en plazo y carros que existen. Pruebas en
 `Assets/Tests/EditMode/BatallaDeTicketTests.cs`, contra el dorado del checkout del motor.
 
-**Provisional (a decidir con el motor):** la experiencia es 1 punto para quien gana y 0 para quien pierde, lo de una
-victoria con números, hasta que esté la tabla de niveles; si el atacante gana un asalto de caravana se pierden todos los
-carros; el combate es de prueba (todos contra el más cercano, sin formaciones ni las reglas de daño de Conquest).
+**Experiencia y botín:** no van en el resultado. Desde el 2026-11-12 los pone el motor (D7; `xp_ganada` y `botin` son
+`reserved` en el contrato).
+
+**Provisional:** si el atacante gana un asalto de caravana se pierden todos los carros; el combate es de prueba (todos
+contra el más cercano, sin formaciones ni las reglas de daño de Conquest).
 
 ## 5. Tropas del motor (CQ-003)
 
@@ -134,7 +136,7 @@ Conquest se conecta con ese token, el servidor le da `heroe-2` y el resultado se
 CONQUEST_BATALLA=C:/Users/VRINO/Desarrollo/Conquest_prototype/Builds/PruebaRed/PruebaRed.exe cargo test -p lanzador --test lanzador con_conquest -- --test-threads=1
 ```
 
-El contrato (`Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`) se compiló con los `.proto` de BronzeAge `e89f8d3`.
+El contrato (`Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`) se compiló con los `.proto` de BronzeAge `457c278` (2026-11-12).
 `Tools/ContratoBronzeAge/actualizar.ps1` lee los de `../BronzeAgeFase0/proto`: ese checkout tiene que estar en un
 `main` que incluya el PR #18, o el contrato pierde los mensajes del lanzador.
 
