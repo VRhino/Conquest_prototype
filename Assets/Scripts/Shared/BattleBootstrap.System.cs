@@ -9,10 +9,12 @@ public static class BattleBootstrapRequests
     internal static BattleData Battle;
     internal static string LocalHeroName;
     internal static string LocalHeroId;
+    /// <summary>Battle server: nobody plays on this machine, so every hero of the battle is spawned as a remote one.</summary>
+    public static bool NoLocalHero;
     internal static readonly List<(World world, Entity hero, SquadIdMapElement[] squads)> Remote = new();
 
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { Battle = null; LocalHeroName = null; LocalHeroId = null; Remote.Clear(); }
+    static void Reset() { Battle = null; LocalHeroName = null; LocalHeroId = null; NoLocalHero = false; Remote.Clear(); }
 
     public static void SubmitLocal(BattleData battle, string heroName, string heroId = null)
     {
@@ -131,24 +133,21 @@ public partial class BattleBootstrapSystem : SystemBase
                     if (EntityManager.HasComponent<HeroProgressComponent>(container))
                         EntityManager.SetComponentData(container, progress);
                     else EntityManager.AddComponentData(container, progress);
-                    if (data.isReady && SystemAPI.TryGetSingletonEntity<MatchStateComponent>(out var matchEntity))
-                    {
-                        var match = EntityManager.GetComponentData<MatchStateComponent>(matchEntity);
-                        match.currentState = MatchState.InBattle;
-                        match.stateTimer = 0f;
-                        match.victoryConditionMet = false;
-                        match.winnerTeam = 0;
-                        match.playersReady = 0;
-                        EntityManager.SetComponentData(matchEntity, match);
-                        var controller = World.GetExistingSystemManaged<MatchControllerSystem>();
-                        if (controller != null) controller.Enabled = true;
-                        StartBattleClock(battle);
-                        SetBattleTerrain(battle);
-                    }
+                    if (data.isReady) StartMatch(battle);
                 }
                 else
                     UnityEngine.Debug.LogError("Battle loadout exceeds DataContainer selectedSquads capacity.");
                 EntityManager.SetComponentData(container, data);
+            }
+            else if (BattleBootstrapRequests.NoLocalHero)
+            {
+                if (SystemAPI.TryGetSingletonEntity<GameStateComponent>(out var gameStateEntity))
+                {
+                    var gameState = EntityManager.GetComponentData<GameStateComponent>(gameStateEntity);
+                    gameState.currentPhase = GamePhase.Combate;
+                    EntityManager.SetComponentData(gameStateEntity, gameState);
+                }
+                StartMatch(battle);
             }
             else UnityEngine.Debug.LogError("Battle bootstrap: local hero is absent from the battle ticket.");
             BattleBootstrapRequests.Battle = null;
@@ -160,6 +159,22 @@ public partial class BattleBootstrapSystem : SystemBase
             if (EntityManager.Exists(request.hero)) SetMap(request.hero, request.squads);
             BattleBootstrapRequests.Remote.RemoveAt(i);
         }
+    }
+
+    void StartMatch(BattleData battle)
+    {
+        if (!SystemAPI.TryGetSingletonEntity<MatchStateComponent>(out var matchEntity)) return;
+        var match = EntityManager.GetComponentData<MatchStateComponent>(matchEntity);
+        match.currentState = MatchState.InBattle;
+        match.stateTimer = 0f;
+        match.victoryConditionMet = false;
+        match.winnerTeam = 0;
+        match.playersReady = 0;
+        EntityManager.SetComponentData(matchEntity, match);
+        var controller = World.GetExistingSystemManaged<MatchControllerSystem>();
+        if (controller != null) controller.Enabled = true;
+        StartBattleClock(battle);
+        SetBattleTerrain(battle);
     }
 
     void SetMap(Entity target, SquadIdMapElement[] values)

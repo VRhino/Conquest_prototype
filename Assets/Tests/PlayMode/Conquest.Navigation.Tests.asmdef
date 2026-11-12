@@ -2,6 +2,7 @@
   "name": "Conquest.Navigation.Tests",
   "references": [
     "Game.ECS",
+    "Conquest.Net",
     "Unity.Burst",
     "Unity.Entities",
     "Unity.Collections",

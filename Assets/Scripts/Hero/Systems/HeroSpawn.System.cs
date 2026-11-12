@@ -35,7 +35,7 @@ public partial class HeroSpawnSystem : SystemBase
             Debug.Log($"[HeroSpawnSystem] Hero exists check: {heroExists}, Hero count: {heroQuery.CalculateEntityCount()}");
         }
 
-        if (!heroExists && SystemAPI.TryGetSingleton<HeroPrefabComponent>(out var heroPrefab) && SystemAPI.TryGetSingleton<DataContainerComponent>(out var dataForInstantiate))
+        if (!heroExists && !BattleBootstrapRequests.NoLocalHero && SystemAPI.TryGetSingleton<HeroPrefabComponent>(out var heroPrefab) && SystemAPI.TryGetSingleton<DataContainerComponent>(out var dataForInstantiate))
         {
             SpawnNewHero(heroPrefab, dataForInstantiate);
         }

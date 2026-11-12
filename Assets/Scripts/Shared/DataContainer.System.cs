@@ -13,7 +13,7 @@ public partial class DataContainerSystem : SystemBase
     {
         base.OnCreate();
 
-        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var em = EntityManager;
         var q = em.CreateEntityQuery(ComponentType.ReadOnly<DataContainerComponent>());
         if (q.IsEmptyIgnoreFilter)
         {

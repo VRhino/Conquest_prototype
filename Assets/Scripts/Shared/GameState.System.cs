@@ -11,7 +11,7 @@ public partial class GameStateSystem : SystemBase
     {
         base.OnCreate();
 
-        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var em = EntityManager;
         var q = em.CreateEntityQuery(ComponentType.ReadOnly<GameStateComponent>());
         if (q.IsEmptyIgnoreFilter)
         {

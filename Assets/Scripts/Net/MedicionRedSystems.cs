@@ -23,11 +23,16 @@ namespace ConquestTactics.Net
         internal static double MsAcumulados;
         internal static double MsPeor;
         internal static int Ticks;
+        /// <summary>Desde el arranque, sin ponerse a cero: para medir un tramo por diferencia.</summary>
+        public static double MsTotales;
+        public static int TicksTotales;
 
         protected override void OnUpdate()
         {
             double ms = InicioTickServidorSystem.Reloj.Elapsed.TotalMilliseconds;
             MsAcumulados += ms;
+            MsTotales += ms;
+            TicksTotales++;
             if (ms > MsPeor) MsPeor = ms;
             Ticks++;
         }

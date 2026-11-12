@@ -37,7 +37,8 @@ namespace ConquestTactics.Net.Editor
                 CrearEscena();
             var informe = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { RutaEscena },
+                // La de batalla va detrás: el servidor de la batalla de verdad (-batallaReal) la carga por su nombre.
+                scenes = new[] { RutaEscena, "Assets/Scenes/GameScenes/BattleScene.unity" },
                 locationPathName = RutaEjecutable,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None,

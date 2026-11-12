@@ -16,7 +16,7 @@ public partial class MatchControllerSystem : SystemBase
     {
         base.OnCreate();
 
-        var em = World.DefaultGameObjectInjectionWorld.EntityManager;
+        var em = EntityManager;
         var q = em.CreateEntityQuery(ComponentType.ReadOnly<MatchStateComponent>());
         if (q.IsEmptyIgnoreFilter)
         {

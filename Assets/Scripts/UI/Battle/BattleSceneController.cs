@@ -172,6 +172,7 @@ public class BattleSceneController : MonoBehaviour
     private void HandleMatchEnd()
     {
         // Transición a PostBattleScene tras el delay
+        if (BattleBootstrapRequests.NoLocalHero) return; // The battle server reports the result itself.
         if (_matchEndHandled && _matchEndTime >= 0f && Time.time - _matchEndTime >= PostMatchDelay)
         {
             SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.PostBattle);
@@ -307,7 +308,8 @@ public class BattleSceneController : MonoBehaviour
         yield return new WaitForSeconds(1.5f);
 
         var localHeroName = PlayerSessionService.SelectedHero?.heroName;
-        if (string.IsNullOrEmpty(localHeroName)) yield break;
+        bool noLocal = BattleBootstrapRequests.NoLocalHero;
+        if (string.IsNullOrEmpty(localHeroName) && !noLocal) yield break;
 
         var world = World.DefaultGameObjectInjectionWorld;
         if (world == null || !world.IsCreated) yield break;
@@ -333,8 +335,8 @@ public class BattleSceneController : MonoBehaviour
         // Slot counter: clave = spawnID * 100 + teamID
         // Reservar slot 0 para el héroe local en su spawn point
         var slotCounter = new Dictionary<int, int>();
-        BattleHeroData localHero = _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
-        if (localHero == null)
+        BattleHeroData localHero = noLocal ? null : _currentBattleData.FindHero(PlayerSessionService.SelectedHero);
+        if (localHero == null && !noLocal)
         {
             spawnPoints.Dispose();
             Debug.LogError("[BattleSceneController] Local participant identity is missing or ambiguous.");

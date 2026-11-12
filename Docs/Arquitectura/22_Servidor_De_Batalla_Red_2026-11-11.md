@@ -183,3 +183,44 @@ editor con `-batchmode -nographics`, Burst encendido, 45 s desde el primer choqu
   con `ProfilerRecorder`).
 - Los Animators de las armas ya van en `AlwaysAnimate` (`EntityVisualSync.ProtectAnimatedGameplayHitboxes`), así que sin
   cámara sigue habiendo golpes: en la medida hubo 30-40 soldados heridos.
+
+### 8.1 La batalla de verdad en el mundo servidor (paso 2b-2)
+
+```
+Builds/PruebaRed/PruebaRed.exe -batchmode -nographics -red servidor -batallaReal 10 [-medir 150 -informe informe.txt]
+```
+
+Con `-batallaReal N` el mundo servidor de Netcode lleva, además de los sistemas de Unity y de `Conquest.Net`, todos los
+de `Game.ECS`, y `BatallaRealSystem` monta una batalla de N héroes por bando (todos de IA, cada uno con una escuadra
+`sqd01`) y carga `BattleScene`. La escena, sus subescenas y sus GameObjects (agentes, Animators, colliders de armas) viven
+en ese proceso; no hay jugador local. Cada 10 s el registro dice cuántos soldados quedan por bando, qué hacen los héroes
+y a qué distancia están los bandos.
+
+Lo que hubo que tocar en el juego, y nada más:
+
+- `BattleBootstrapRequests.NoLocalHero`: con él, `BattleBootstrapSystem` arranca la partida (fase, reloj, terreno) sin
+  buscar al héroe local, `HeroSpawnSystem` no crea ninguno, y `BattleSceneController` saca **todos** los héroes de la
+  batalla como remotos (IA) y no pasa a la escena de después de la batalla.
+- Cuatro sistemas (`DataContainer`, `GameState`, `MatchController`, `Chat`) creaban su singleton en
+  `World.DefaultGameObjectInjectionWorld`; ahora en su propio mundo, que en el juego de un jugador es el mismo.
+
+**Medida** (10 contra 10, 240 soldados y 20 héroes, este PC):
+
+| | Tick del servidor (`SimulationSystemGroup` entero) | Ticks por segundo |
+|---|---:|---:|
+| Editor, `-batchmode -nographics` (`BatallaRealServidorTests`, 45 s desde el choque) | 8,0-9,9 ms | 57-60 |
+| Ejecutable sin pantalla, 150 s | **4,1 ms** de media (peor 14,2) | 60 |
+
+- En el ejecutable los bandos chocan a los 35 s y a los 150 s quedan 84 y 98 soldados de 120: el combate por colliders y
+  la navegación funcionan en el proceso servidor tal como en el juego.
+- El ejecutable cuesta la mitad que el editor. Con 4 ms por 240 soldados, y si el coste creciera en proporción, 1.800
+  soldados serían unos 30 ms: a 30 Hz cabría justo, antes de optimizar nada. Falta medirlo de verdad con ese tamaño.
+- El proceso gasta 1,8 núcleos (hilos de trabajo, Animators y físicas incluidos).
+- La IA de los héroes va a capturar zonas y los bandos chocan cuando se encuentran: según los puntos de salida que toquen,
+  el primer choque llega entre los 35 y los 90 s, y en una de tres pruebas del editor no llegó en 2 minutos.
+- Al cerrar el proceso, `CapturePointZoneIndicator.OnDestroy` lanza una `NullReferenceException` (libera una consulta de
+  un mundo ya destruido). No afecta a la batalla; queda anotado.
+
+Lo que **no** hace todavía: los clientes que se conecten no ven esta batalla (paso 2b-3: fantasmas espejo de soldados y
+héroes), no la juega un ticket del motor (hoy `-batallaReal` y `-ticket` son dos caminos distintos) y no escribe
+resultado.

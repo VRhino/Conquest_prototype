@@ -48,6 +48,8 @@ namespace ConquestTactics.Net
         public static string Batalla;
         /// <summary>Cliente: el token de su héroe para esta batalla (<c>Batalla.asignacion_propia</c> del motor).</summary>
         public static string Token;
+        /// <summary>Héroes por bando de la batalla de verdad (los sistemas de Game.ECS en el mundo servidor, camino A); 0 = la prueba de cápsulas.</summary>
+        public static int BatallaReal;
 
         public static void Leer()
         {
@@ -81,6 +83,7 @@ namespace ConquestTactics.Net
                     case "-duracion": Duracion = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-espera": EsperaJugadores = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-token": Token = siguiente; break;
+                    case "-batallaReal": BatallaReal = int.Parse(siguiente); break;
                     case "--lanzador": Lanzador = siguiente; ModoPedido = Modo.Servidor; break;
                     case "--batalla": Batalla = siguiente; break;
                     case "--puerto": Puerto = ushort.Parse(siguiente); break;
@@ -92,7 +95,8 @@ namespace ConquestTactics.Net
     /// <summary>
     /// Arranque de mundos. Sin <c>-red</c> y fuera de la escena de prueba deja que Entities cree su mundo por defecto, así
     /// que el juego actual no cambia. Con red, los mundos de servidor y cliente llevan solo los sistemas de Unity y los de
-    /// este ensamblado: los de Game.ECS todavía no saben separar servidor y cliente.
+    /// este ensamblado: los de Game.ECS todavía no saben separar servidor y cliente. Con <c>-batallaReal</c> el servidor
+    /// lleva también los de Game.ECS y juega la batalla de verdad (<see cref="BatallaRealSystem"/>).
     /// </summary>
     [UnityEngine.Scripting.Preserve]
     public class ArranqueRed : ClientServerBootstrap
@@ -125,20 +129,21 @@ namespace ConquestTactics.Net
                       $"héroes extra {OpcionesRed.HeroesExtra}, tasa de red {OpcionesRed.TasaRed}, paquete {OpcionesRed.Paquete}");
 
             if (modo != OpcionesRed.Modo.Cliente)
-                CreateServerWorld("ServerWorld", Sistemas(WorldSystemFilterFlags.ServerSimulation));
+                CreateServerWorld("ServerWorld", Sistemas(WorldSystemFilterFlags.ServerSimulation, OpcionesRed.BatallaReal > 0));
             if (modo != OpcionesRed.Modo.Servidor)
                 CreateClientWorld("ClientWorld", Sistemas(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.Presentation));
             return true;
         }
 
-        static NativeList<SystemTypeIndex> Sistemas(WorldSystemFilterFlags flags)
+        static NativeList<SystemTypeIndex> Sistemas(WorldSystemFilterFlags flags, bool conJuego = false)
         {
             var propio = typeof(ArranqueRed).Assembly;
             var todos = DefaultWorldInitialization.GetAllSystems(flags);
             var elegidos = new NativeList<SystemTypeIndex>(todos.Count, Allocator.Temp);
             foreach (var tipo in todos)
             {
-                if (tipo.Assembly == propio || tipo.Assembly.GetName().Name.StartsWith("Unity.", StringComparison.Ordinal))
+                string ensamblado = tipo.Assembly.GetName().Name;
+                if (tipo.Assembly == propio || ensamblado.StartsWith("Unity.", StringComparison.Ordinal) || (conJuego && ensamblado == "Game.ECS"))
                     elegidos.Add(TypeManager.GetSystemTypeIndex(tipo));
             }
             return elegidos;
