@@ -363,3 +363,51 @@ Lo que falta, anotado:
   marcha llega del servidor), aunque el cuerpo ya se mueve.
 - Los golpes no se predicen: el ataque sale cuando el servidor lo confirma.
 - Un cliente sin el mapa cargado (los bots sin pantalla) predice sin malla y el servidor lo corrige en las murallas.
+
+### 8.6 Medida con 30 héroes y cómo baja el ancho de banda (paso 4)
+
+```
+VENTANA=no SERVIDOR="-alcance 80" TODOS="-tasaSoldados 20" Tools/ver_batalla_real.sh <nombre> 15 130 60
+```
+
+Batalla de 15 contra 15 (360 soldados y 30 héroes; cada héroe con una escuadra de 12, que es lo que da hoy Conquest),
+servidor sin pantalla y dos clientes sin pantalla que llevan un héroe cada uno, en este PC.
+
+**Servidor:** tick de 6,3-7,6 ms de media (peor 14-20), 60 ticks por segundo, 3,5 núcleos. Cabe a 60 Hz con más de la
+mitad del tick libre. De 240 a 360 soldados el tick crece casi en proporción (unos 20 µs por soldado): si siguiera así,
+unos 750 soldados llenarían el tick a 60 Hz y unos 1.500 a 30 Hz. No está medido con más de 360.
+
+**Bajada por cliente** (una prueba de 130 s por fila; cada batalla sale distinta, así que son cifras orientativas):
+
+| Opciones | kbit/s por cliente | Veces por segundo que llega cada soldado |
+|---|---:|---:|
+| Ninguna (60 envíos por segundo) | 440-455 | 53-56 |
+| `-tasaRed 30` | 254 | 29 |
+| `-tasaRed 20` | 220 | 17 (ya toca el tope de un paquete por envío) |
+| `-tasaSoldados 20` (los héroes siguen a 60) | 243 | 23 |
+| `-alcance 80` | 85 con 41 fantasmas cerca; 367 con 239 | 60 |
+| `-tasaSoldados 20 -alcance 80` | 212-217 (con 340 fantasmas cerca) | 23 |
+
+La subida de cada cliente (su entrada, 60 veces por segundo) son 63 kbit/s.
+
+- **`-tasaSoldados N`** (servidor y clientes: va en el prefab fantasma, `MaxSendRate`): cada soldado se manda como mucho
+  N veces por segundo y los héroes siguen a la tasa de red. Es la que más baja sin tocar lo que el jugador nota (su
+  héroe y los héroes enemigos): la mitad con 20. La interpolación del cliente rellena entre envíos.
+- **`-alcance M`** (servidor, `AlcanceSystem`): a cada jugador solo le llega lo que está a menos de M metros de su
+  héroe (el juego deja de pintar las unidades a 120 m). Usa la relevancia de Netcode; sale a M + 15 y entra a M para que
+  no parpadee en el borde. Baja mucho cuando la batalla está repartida por el mapa y nada cuando todos están juntos.
+- **`-tasaRed N`** baja todo por igual, también los héroes.
+- **No combinar `-tasaRed 30` con `-tasaSoldados`**: medido, con `-tasaRed 30 -tasaSoldados 15` los soldados siguen
+  llegando 29,6 veces por segundo (281 kbit/s). Netcode calcula el intervalo del tope contra la tasa de red y con 30 le
+  sale 2 ticks de simulación, que es lo mismo que no tener tope. Con la tasa de red a 60 el tope sí se cumple.
+
+Lo que falta, anotado:
+
+- Con `-alcance`, lo que vuelve a entrar en el radio se crea otra vez en el cliente, modelo incluido: no se ha medido el
+  tirón al cruzar el borde con muchas unidades a la vez, ni se ha visto en pantalla.
+- `AlcanceSystem` repasa todos los pares jugador-fantasma 4 veces por segundo; con 30 jugadores habrá que repartirlo por
+  celdas (`GhostDistancePartitioning`). Las claves de fantasmas ya destruidos se quedan en el conjunto.
+- Posición y giro viajan con la precisión por defecto (milímetros, cuaternión entero); un soldado en pie solo necesita
+  centímetros y el giro sobre el eje vertical. Es el siguiente recorte si hace falta.
+- El cliente de ventana gasta 3,5-4 núcleos con 260 modelos; sigue sin mirarse.
+- Sin medir con latencia y pérdida simuladas.

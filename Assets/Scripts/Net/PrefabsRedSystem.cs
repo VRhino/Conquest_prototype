@@ -58,6 +58,7 @@ namespace ConquestTactics.Net
             {
                 Name = "ConquestEspejo",
                 Importance = 1,
+                MaxSendRate = (byte)OpcionesRed.TasaSoldados,
                 SupportedGhostModes = GhostModeMask.Interpolated,
                 DefaultGhostMode = GhostMode.Interpolated,
                 OptimizationMode = GhostOptimizationMode.Dynamic,
