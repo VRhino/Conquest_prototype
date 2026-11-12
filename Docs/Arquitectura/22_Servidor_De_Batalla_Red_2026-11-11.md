@@ -155,3 +155,31 @@ El contrato (`Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`) se compiló con 
    de Unity no está instalado en este PC. Para Linux hace falta ese módulo.
 5. **Predicción medida.** El héroe se predice y se corrige, pero no se ha medido el error de predicción ni probado con
    latencia y pérdida simuladas.
+
+## 8. El combate real en el servidor: camino A (2026-11-12)
+
+El combate de Conquest no es solo ECS: los golpes cuerpo a cuerpo los detectan los colliders de las armas animadas
+(`WeaponHitboxBehaviour.OnTriggerStay` → `MeleeContactQueue` → `MeleeContactResolutionSystem`), los soldados se mueven con
+`NavMeshAgent` (`UnitNavMeshSystem`, `NavMeshPositionSync`) y el héroe con `CharacterController`. Decisión del autor
+(2026-11-12): **camino A**, el servidor de batalla corre también esa capa de GameObjects, sin pantalla, y los clientes
+reciben el resultado. Rehacerlo en ECS puro (camino B) perdería la navegación y el combate por colisión tal como son.
+
+**Lo que cuesta** (`BattleSceneServerCostTests`, batalla de 10 contra 10: 240 soldados y 20 héroes, IA contra IA, en el
+editor con `-batchmode -nographics`, Burst encendido, 45 s desde el primer choque):
+
+| | ms por fotograma (media) |
+|---|---:|
+| Fotograma entero | 16,0 |
+| Sistemas ECS (`SimulationSystemGroup`) | 8,9 |
+| MonoBehaviours (`Update`) | 1,7 |
+| Físicas (`FixedUpdate`) | 1,5 |
+| Animators | 1,4 |
+| NavMesh | 0,4 |
+
+- La capa de GameObjects que añade A (Animators, físicas, NavMesh, MonoBehaviours) son unos 5 ms; lo que más pesa son los
+  sistemas ECS del combate, que corren en el hilo principal. Eso no depende de A o B.
+- Con estas cifras, una batalla de 240 soldados cabe a 60 Hz. Una de 1.800 no: hay que bajar el tick del servidor (30 Hz),
+  medir en ejecutable y optimizar los sistemas ECS más caros (falta sacar cuáles; los marcadores por sistema no salen
+  con `ProfilerRecorder`).
+- Los Animators de las armas ya van en `AlwaysAnimate` (`EntityVisualSync.ProtectAnimatedGameplayHitboxes`), así que sin
+  cámara sigue habiendo golpes: en la medida hubo 30-40 soldados heridos.
