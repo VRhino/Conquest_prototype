@@ -24,6 +24,16 @@ namespace ConquestTactics.Net
         public bool QuiereMontar;
         public bool IbaMontado;
         public int Formaciones;
+        /// <summary>La marca de tiempo de lo último que llegó de su jugador, y cuándo cambió por última vez.</summary>
+        public uint UltimaMarca;
+        public double OidoEn;
+        public bool Callado;
+    }
+
+    /// <summary>Servidor: quién lleva este mando (su token; en la batalla de prueba, la identidad de su proceso), para devolverle su héroe si vuelve.</summary>
+    public struct IdentidadDeMando : IComponentData
+    {
+        public FixedString128Bytes Token;
     }
 
     /// <summary>Servidor: este mando ya tiene héroe.</summary>
@@ -32,7 +42,8 @@ namespace ConquestTactics.Net
     /// <summary>
     /// Mueve el mando de cada jugador con su entrada, dentro de la predicción de Netcode: el cliente lo adelanta y el
     /// servidor lo confirma con las mismas cuentas. El paso se pega a la malla de navegación de la escena de batalla, que
-    /// es la misma en los dos lados; así el héroe responde al instante y no atraviesa murallas. Un cliente sin el mapa
+    /// es la misma en los dos lados; así el héroe responde al instante y no atraviesa murallas. Un cliente que lleva medio
+    /// segundo sin oír al servidor deja de adelantarlo. Un cliente sin el mapa
     /// cargado (los bots sin pantalla) se mueve libre y el servidor lo corrige.
     /// ponytail: sin aceleración, sin gastar resistencia al correr y sin chocar con soldados (eso lo corrige el servidor).
     /// </summary>
@@ -44,6 +55,9 @@ namespace ConquestTactics.Net
 
         protected override void OnUpdate()
         {
+            // El cliente sin noticias del servidor no adelanta a su héroe: allí también está parado.
+            if (World.IsClient() && ReconexionClienteSystem.SinNoticias)
+                return;
             float dt = SystemAPI.Time.DeltaTime;
             foreach (var (pose, entrada, movil) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<EntradaJugador>, RefRO<MandoMovil>>().WithAll<Simulate>())
             {
@@ -72,8 +86,10 @@ namespace ConquestTactics.Net
     /// del jugador (<see cref="MovimientoMandoSystem"/>, predicho) y lo demás de su entrada (<see cref="EntradaJugador"/>)
     /// se pone donde la IA de ese héroe pondría su decisión (<c>HeroAIDecision</c>): los mismos golpes, habilidades y
     /// órdenes a la escuadra que un héroe de la IA. Si el juego mueve al héroe por su cuenta (un empujón, reaparecer), el
-    /// mando se va con él y el cliente recibe la corrección. Si el jugador se va, el héroe vuelve a la IA.
-    /// ponytail: el héroe se da por orden de llegada, alternando bando; con un ticket del motor lo dirá su token.
+    /// mando se va con él y el cliente recibe la corrección. Si de su jugador no llega nada (un corte de red), el héroe
+    /// se queda quieto: su última entrada no se repite. Si el jugador se va (o el corte pasa del plazo de la conexión),
+    /// el héroe vuelve a la IA; si vuelve, se le devuelve el mismo (por su token o su identidad).
+    /// ponytail: sin ticket, el héroe se da por orden de llegada, alternando bando.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -88,17 +104,33 @@ namespace ConquestTactics.Net
 
         /// <summary>Más lejos que esto de donde lo dejó el mando, al héroe lo ha movido el juego.</summary>
         const float Desvio = 0.5f;
+        /// <summary>Segundos sin que llegue nada de un jugador para dejar de repetir su última entrada.</summary>
+        const double Silencio = 0.5d;
 
         readonly List<(Entity mando, int jugador)> _sinHeroe = new List<(Entity, int)>();
         readonly List<Entity> _huerfanos = new List<Entity>();
+        /// <summary>De cada jugador conectado, la marca de tiempo de lo último que llegó de él.</summary>
+        readonly Dictionary<int, uint> _marcas = new Dictionary<int, uint>();
+        /// <summary>Batalla de prueba: el héroe que llevó cada identidad, por si vuelve.</summary>
+        readonly Dictionary<string, Entity> _heroeDe = new Dictionary<string, Entity>();
         double _proximoAviso;
 
         protected override void OnCreate() => Enabled = OpcionesRed.BatallaReal > 0;
 
         protected override void OnUpdate()
         {
+            _marcas.Clear();
+            foreach (var (id, acuse) in SystemAPI.Query<RefRO<NetworkId>, RefRO<NetworkSnapshotAck>>())
+                _marcas[id.ValueRO.Value] = acuse.ValueRO.LastReceiveTimestamp;
+            // Con ticket: el héroe de un jugador que ya no está conectado queda libre, y vuelve a ser suyo si entra otra
+            // vez con su token.
+            if (BatallaDeTicket.Actual != null)
+                foreach (var h in BatallaDeTicket.Actual.Heroes)
+                    if (h.Dueno != 0 && !_marcas.ContainsKey(h.Dueno))
+                        h.Dueno = 0;
             Repartir();
 
+            double ahora = SystemAPI.Time.ElapsedTime;
             bool avisar = SystemAPI.Time.ElapsedTime >= _proximoAviso;
             if (avisar) _proximoAviso = SystemAPI.Time.ElapsedTime + 10d;
             _huerfanos.Clear();
@@ -112,11 +144,26 @@ namespace ConquestTactics.Net
                     continue;
                 }
                 var entrada = SystemAPI.GetComponent<EntradaJugador>(mando);
+                // Netcode repite la última entrada mientras no llega otra: con el jugador callado, se da por vacía.
+                if (_marcas.TryGetValue(jugador.ValueRO.Jugador, out uint marca) && marca != jugador.ValueRO.UltimaMarca)
+                {
+                    jugador.ValueRW.UltimaMarca = marca;
+                    jugador.ValueRW.OidoEn = ahora;
+                }
+                bool callado = ahora - jugador.ValueRO.OidoEn > Silencio;
+                if (callado != jugador.ValueRO.Callado)
+                {
+                    jugador.ValueRW.Callado = callado;
+                    Debug.Log(callado ? $"[BatallaReal] Del jugador {jugador.ValueRO.Jugador} no llega nada: su héroe se queda quieto"
+                        : $"[BatallaReal] El jugador {jugador.ValueRO.Jugador} se vuelve a oír");
+                }
+                if (callado)
+                    entrada = default;
                 float3 posicion = SystemAPI.GetComponent<LocalTransform>(heroe).Position;
                 float2 mover = entrada.Mover;
                 if (math.lengthsq(mover) > 1f) mover = math.normalize(mover);
 
-                float3 velocidad = Llevar(heroe, mando, ref jugador.ValueRW, posicion, vida.ValueRO.isAlive, entrada, mover);
+                float3 velocidad = Llevar(heroe, mando, ref jugador.ValueRW, posicion, vida.ValueRO.isAlive && !callado, entrada, mover);
 
                 // El héroe no decide adónde ir (va con el mando); el resto es lo que la IA pondría en su decisión.
                 var d = new HeroAIDecision { shouldAttack = entrada.Atacar != 0 };
@@ -150,7 +197,7 @@ namespace ConquestTactics.Net
                         ? SystemAPI.GetComponent<AnimacionRed>(SystemAPI.GetComponent<Espejo>(heroe).Fantasma).Ataques : 0;
                     Debug.Log("[BatallaReal] " + Escuadra(heroe, posicion));
                     Debug.Log(System.FormattableString.Invariant(
-                        $"[BatallaReal] Héroe del jugador {jugador.ValueRO.Jugador} en ({posicion.x:F1}, {posicion.z:F1}), entrada ({mover.x:F2}, {mover.y:F2}), velocidad {math.length(velocidad):F1}, ataca {entrada.Atacar}, golpes lanzados {golpes} (cuenta de 0 a 255), órdenes recibidas {jugador.ValueRO.Ordenes}, habilidades {jugador.ValueRO.Habilidades}, formaciones {jugador.ValueRO.Formaciones}, montura {EstadoDeMontura(heroe)}"));
+                        $"[BatallaReal] Héroe del jugador {jugador.ValueRO.Jugador} en ({posicion.x:F1}, {posicion.z:F1}), entrada ({mover.x:F2}, {mover.y:F2}), velocidad {math.length(velocidad):F1}, ataca {entrada.Atacar}, golpes lanzados {golpes} (cuenta de 0 a 255), órdenes recibidas {jugador.ValueRO.Ordenes}, habilidades {jugador.ValueRO.Habilidades}, formaciones {jugador.ValueRO.Formaciones}, montura {EstadoDeMontura(heroe)}{(callado ? ", CALLADO" : "")}"));
                 }
             }
 
@@ -515,6 +562,16 @@ namespace ConquestTactics.Net
             }
         }
 
+        /// <summary>Cierra la conexión de ese jugador, si sigue abierta.</summary>
+        internal static void Cortar(EntityManager em, int jugador)
+        {
+            using var consulta = em.CreateEntityQuery(ComponentType.ReadOnly<NetworkId>());
+            using var conexiones = consulta.ToEntityArray(Allocator.Temp);
+            foreach (var conexion in conexiones)
+                if (em.GetComponentData<NetworkId>(conexion).Value == jugador && !em.HasComponent<NetworkStreamRequestDisconnect>(conexion))
+                    em.AddComponent<NetworkStreamRequestDisconnect>(conexion);
+        }
+
         void Repartir()
         {
             _sinHeroe.Clear();
@@ -539,9 +596,24 @@ namespace ConquestTactics.Net
             foreach (var (mando, jugador) in _sinHeroe)
             {
                 var quiere = jugador % 2 == 1 ? Team.TeamA : Team.TeamB;
-                // De su bando, el primero al que la cámara del cliente ve sin una muralla o un tejado por medio (el punto de
-                // salida de algunos está pegado a la muralla); si ninguno, el primero libre.
                 Entity elegido = Entity.Null, cualquiera = Entity.Null;
+                // El que vuelve recupera su héroe, si sigue libre.
+                string identidad = SystemAPI.HasComponent<IdentidadDeMando>(mando) ? SystemAPI.GetComponent<IdentidadDeMando>(mando).Token.ToString() : "";
+                if (identidad.Length > 0 && _heroeDe.TryGetValue(identidad, out var suyo) && EntityManager.Exists(suyo))
+                {
+                    // Si aún lo tiene su conexión anterior (su proceso cayó y el servidor no se ha enterado), se corta esa
+                    // y se espera a que el héroe quede libre.
+                    if (EntityManager.HasComponent<HeroeDeJugador>(suyo))
+                    {
+                        Cortar(EntityManager, EntityManager.GetComponentData<HeroeDeJugador>(suyo).Jugador);
+                        continue;
+                    }
+                    if (heroes.Contains(suyo) && !tomados.Contains(suyo))
+                        elegido = suyo;
+                }
+                bool vuelve = elegido != Entity.Null;
+                // Si no, de su bando, el primero al que la cámara del cliente ve sin una muralla o un tejado por medio (el
+                // punto de salida de algunos está pegado a la muralla); si ninguno, el primero libre.
                 for (int i = 0; i < heroes.Length && elegido == Entity.Null; i++)
                 {
                     if (bandos[i].value != quiere || tomados.Contains(heroes[i]))
@@ -556,6 +628,7 @@ namespace ConquestTactics.Net
                 if (elegido == Entity.Null)
                     continue;
                 tomados.Add(elegido);
+                if (identidad.Length > 0) _heroeDe[identidad] = elegido;
                 EntityManager.AddComponentData(elegido, new HeroeDeJugador { Mando = mando, Jugador = jugador });
                 EntityManager.AddComponent<HeroNetworkMotion>(elegido);
                 HeredarEscuadra(elegido);
@@ -563,7 +636,8 @@ namespace ConquestTactics.Net
                 // Nadie más escribe su decisión: las dos conductas de la IA quedan apagadas.
                 EntityManager.SetComponentEnabled<RusherBehaviorActive>(elegido, false);
                 EntityManager.SetComponentEnabled<BalancedBehaviorActive>(elegido, false);
-                Debug.Log($"[BatallaReal] El jugador {jugador} lleva un héroe del bando {(quiere == Team.TeamA ? "atacante" : "defensor")}");
+                Debug.Log(vuelve ? $"[BatallaReal] El jugador {jugador} vuelve y recupera su héroe"
+                    : $"[BatallaReal] El jugador {jugador} lleva un héroe del bando {(quiere == Team.TeamA ? "atacante" : "defensor")}");
             }
             tomados.Dispose();
         }

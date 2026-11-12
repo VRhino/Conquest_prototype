@@ -35,7 +35,8 @@ public class BatallaDeTicketTests
 
         Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r), Is.Empty);
         Assert.That(r.CarrosPerdidos, Is.EquivalentTo(new[] { "car-4:0", "car-6:0", "car-6:1" }));
-        Assert.That(r.PorHeroe[0].Derrotado, Is.True);
+        Assert.That(r.PorHeroe[0].SobrevivioAlCierre, Is.False);
+        Assert.That(r.PorHeroe[0].HasDerrotado, Is.False, "el héroe pierde o gana con su bando: los heridos los pone el motor");
     }
 
     [Test]
@@ -59,6 +60,31 @@ public class BatallaDeTicketTests
             if (e.SquadId == "esc-9") e.Muertos += 1;
 
         Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r), Has.Member("la escuadra esc-9 no cierra"));
+    }
+
+    [Test]
+    public void QuienSeUneDespuesDelTicketEntraEnElResultado()
+    {
+        var batalla = Batalla();
+        var unido = new BattleParticipantSnapshot { HeroeId = "heroe-9", EsBot = true };
+        unido.Escuadras.Add(new BronzeAge.Contract.V1.SquadSnapshot { SquadId = "esc-90", HeroeId = "heroe-9", TropaId = "milicia_lanceros", EfectivosAutorizados = 12 });
+        var incorporacion = new IncorporacionBatalla { Secuencia = 1, Lado = LadoId.Atacante, Participante = unido };
+
+        Assert.That(batalla.Incorporar(incorporacion), Is.True);
+        Assert.That(batalla.Incorporar(incorporacion), Is.False, "el motor puede repetirla: no entra dos veces");
+        var r = batalla.Resultado(LadoId.Defensor, RazonVictoria.TiempoAgotado, 61000, "a1");
+        Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r), Is.Not.Empty, "contra el ticket solo, sobran un héroe y una escuadra");
+        Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r, batalla.Incorporaciones), Is.Empty);
+
+        // Si no llega a salir al campo (una tropa que Conquest no tiene), no participa y su escuadra vuelve entera.
+        batalla.DejarFuera("heroe-9");
+        r = batalla.Resultado(LadoId.Defensor, RazonVictoria.TiempoAgotado, 61000, "a1");
+        Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r, batalla.Incorporaciones), Is.Empty);
+        foreach (var h in r.PorHeroe)
+            Assert.That(h.Participo, Is.EqualTo(h.HeroeId != "heroe-9"));
+        foreach (var e in r.PorEscuadra)
+            if (e.SquadId == "esc-90")
+                Assert.That((e.Desplegados, e.SupervivientesAlCierre, e.Muertos), Is.EqualTo((0u, 12u, 0u)));
     }
 
     [Test]

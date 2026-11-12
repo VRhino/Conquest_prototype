@@ -1,10 +1,10 @@
 """Hace un ticket de batalla de prueba para la batalla de verdad (-batallaReal con -ticket), a partir de un dorado
-del motor: mismos campos, pero con tropas que la base de escuadras de Conquest ya tiene.
+del motor: mismos campos, con cuatro tropas del motor que Conquest ya tiene en su base de escuadras.
 
     python Tools/ticket_de_prueba.py <salida.json> [dorado.json]
 
-Bando atacante: un héroe de la IA con escuderos (12) y una escuadra sin héroe de lanceros (10 de 12).
-Bando defensor: un héroe humano con arqueros (12) y otro de la IA con escuderos (8 de 12).
+Bando atacante: un héroe de la IA con hoplitas (18) y una escuadra sin héroe de granjeros (20 de 30).
+Bando defensor: un héroe humano con arqueros (18) y otro de la IA con milicia de lanceros (15 de 25).
 """
 import json
 import sys
@@ -32,15 +32,15 @@ def main():
     ticket = mensaje['batalla']['ticket']
     ticket['atacante'] = {
         'capacidadMaxima': 5,
-        'participantes': [participante('heroe-20', 'Bóreas', 'hacha_dos_manos', True, [escuadra('esc-40', 'sqd01', 12, 'heroe-20')])],
-        'escuadrasSinHeroe': [escuadra('esc-41', 'spm01', 10)],
+        'participantes': [participante('heroe-20', 'Bóreas', 'hacha_dos_manos', True, [escuadra('esc-40', 'hoplitas_ciudadanos', 18, 'heroe-20')])],
+        'escuadrasSinHeroe': [escuadra('esc-41', 'granjeros', 20)],
     }
     ticket['defensor'] = {
         'faccionId': 'f-1',
         'capacidadMaxima': 5,
         'participantes': [
-            participante('heroe-3', 'Aldric', 'arco_lanza', False, [escuadra('esc-9', 'arc01', 12, 'heroe-3')]),
-            participante('heroe-4', 'Cora', 'espada_escudo_mediano', True, [escuadra('esc-10', 'sqd01', 8, 'heroe-4')]),
+            participante('heroe-3', 'Aldric', 'arco_lanza', False, [escuadra('esc-9', 'arqueros', 18, 'heroe-3')]),
+            participante('heroe-4', 'Cora', 'espada_escudo_mediano', True, [escuadra('esc-10', 'milicia_lanceros', 15, 'heroe-4')]),
         ],
     }
     json.dump(mensaje, open(salida, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)

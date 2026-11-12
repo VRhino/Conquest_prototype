@@ -1,0 +1,13 @@
+{
+    "MaxPacketCount": 200,
+    "MaxPacketSize": 1400,
+    "RandomSeed": 0,
+    "Mode": 2,
+    "PacketDelayMs": 25,
+    "PacketJitterMs": 5,
+    "PacketDropInterval": 0,
+    "PacketDropPercentage": 0,
+    "PacketDuplicationPercentage": 0,
+    "FuzzFactor": 0,
+    "FuzzOffset": 0
+}

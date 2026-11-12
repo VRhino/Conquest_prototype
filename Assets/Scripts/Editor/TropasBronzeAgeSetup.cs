@@ -7,12 +7,14 @@ using UnityEngine;
 /// that id, in Resources/Squads/BronzeAge/&lt;tropaId&gt;. Each one starts from a Conquest base (prefab, animations,
 /// formations, abilities) with its own melee/ranged module copied from the base, the engine's soldiers per squad, a
 /// rarity from the engine tier and its own rest formation. A troop that already exists is left alone.
-/// They are not in the SquadDatabase: the game does not offer them yet; the battle server reads them by id.
+/// All of them are registered in the SquadDatabase (author's decision, 2026-11-12), so the real battle can field them;
+/// they stay out of recruitment (<c>availableForRecruitmentByDefault</c> off).
 /// Batch: <c>-executeMethod TropasBronzeAgeSetup.CrearTodas</c>.
 /// </summary>
 public static class TropasBronzeAgeSetup
 {
     const string Carpeta = "Assets/Resources/Squads/BronzeAge";
+    const string BaseDeEscuadras = "Assets/Resources/Squads/SquadDatabase.asset";
 
     struct Tropa
     {
@@ -48,12 +50,17 @@ public static class TropasBronzeAgeSetup
     public static void CrearTodas()
     {
         var bases = Resources.LoadAll<SquadData>("Squads");
+        var baseDeEscuadras = AssetDatabase.LoadAssetAtPath<SquadDatabase>(BaseDeEscuadras);
         foreach (var t in Tropas)
         {
             string carpeta = $"{Carpeta}/{t.id}";
             string ruta = $"{carpeta}/{t.id}.asset";
-            if (AssetDatabase.LoadAssetAtPath<SquadData>(ruta) != null)
+            var existente = AssetDatabase.LoadAssetAtPath<SquadData>(ruta);
+            if (existente != null)
+            {
+                Registrar(baseDeEscuadras, existente);
                 continue;
+            }
             var origen = System.Array.Find(bases, s => s.id == t.baseId);
             if (origen == null)
             {
@@ -77,9 +84,21 @@ public static class TropasBronzeAgeSetup
             if (origen.rangedData != null) tropa.rangedData = Copiar(origen.rangedData, $"{carpeta}/{t.id}_Ranged.asset");
             tropa.restFormation = RestFormationSetup.Create(tropa, ruta, t.reposo);
             EditorUtility.SetDirty(tropa);
+            Registrar(baseDeEscuadras, tropa);
             Debug.Log($"[TropasBronzeAge] {t.id}: {t.unidades} soldados, base {t.baseId}, reposo {t.reposo.layout}");
         }
         AssetDatabase.SaveAssets();
+    }
+
+    static void Registrar(SquadDatabase baseDeEscuadras, SquadData tropa)
+    {
+        if (baseDeEscuadras.allSquads.Contains(tropa))
+            return;
+        if (baseDeEscuadras.allSquads.Exists(d => d && d.id == tropa.id))
+            throw new System.InvalidOperationException("Duplicate squad ID: " + tropa.id);
+        baseDeEscuadras.allSquads.Add(tropa);
+        EditorUtility.SetDirty(baseDeEscuadras);
+        Debug.Log($"[TropasBronzeAge] {tropa.id}: en la base de escuadras");
     }
 
     static T Copiar<T>(T origen, string ruta) where T : ScriptableObject

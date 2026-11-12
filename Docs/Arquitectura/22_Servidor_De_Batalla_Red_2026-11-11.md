@@ -584,30 +584,209 @@ como estaba: las pruebas del motor contra Conquest (`con_conquest_*`) usan las c
   el plazo (menos 5 s de margen), así que al agotarse gana el defensor, como pide el motor. El plazo cuenta desde que
   arranca el reloj, no desde que se empieza a cargar el mapa.
 - **El resultado** (`BatallaRealDeTicket.ContarBajas`): al cerrar el juego la partida, los muertos de cada escuadra son
-  los soldados que le faltan a su entidad (los de una escuadra en reserva, los que tenía al guardarla) y un héroe está
-  derrotado si está caído en ese momento. El ganador es el del juego; la razón, tiempo agotado u objetivos capturados.
-  Se comprueba con las reglas del motor, se escribe o se manda al lanzador, y el proceso sale con su acuse.
+  los soldados que le faltan a su entidad (los de una escuadra en reserva, los que tenía al guardarla). De cada héroe
+  solo se dice si seguía en pie al cierre: no se manda `derrotado`, y el motor hiere a los héroes del bando perdedor.
+  El ganador es el del juego; la razón, tiempo agotado u objetivos capturados. Se comprueba con las reglas del motor,
+  se escribe o se manda al lanzador, y el proceso sale con su acuse.
 
-**Lo que es de paso** hasta que estén en Conquest los catálogos del motor (lo dice también el código):
+**Decidido por el autor (2026-11-12):**
 
-- La clase del héroe se traduce con una tabla de cuatro (`lanza_escudo_redondo`, `arco_lanza`, `hacha_dos_manos`; el
-  resto, espada y escudo); su aspecto sale de la reserva de héroes de prueba; el mapa es siempre el mismo.
 - Una **escuadra sin héroe** recibe un capitán de la IA (`capitan:<id de la escuadra>`) que no figura en el resultado.
-  Propuesta pendiente del autor.
-- Solo salen las tropas que están en la base de escuadras del juego. Las cuatro del motor que hay en Conquest están
-  fuera de ella: un ticket con ellas se rechaza. Propuesta pendiente del autor: meterlas en la base.
-- El héroe caído reaparece, como en el juego. Propuesta pendiente del autor: dejarlo así.
+- Las cuatro tropas del motor que hay en Conquest (`granjeros`, `milicia_lanceros`, `hoplitas_ciudadanos`, `arqueros`)
+  están en la base de escuadras del juego, fuera del reclutamiento; las registra `TropasBronzeAgeSetup.CrearTodas`. La
+  batalla de verdad solo saca tropas de esa base: un ticket con otra se rechaza.
+- **El héroe gana o pierde con su bando**, caiga o no en la batalla. Por eso el resultado no lleva `derrotado` por héroe:
+  sin ese dato el motor hiere a los del bando perdedor (Mechanics del motor, `Batalla_Unity_Ciclo.md` §9.1).
 
-**Comprobado** con un ticket de prueba (un héroe de la IA con escuderos y una escuadra sin héroe de lanceros contra un
-héroe humano con arqueros y otro de la IA con escuderos; 42 soldados):
+**Lo que es de paso** hasta que estén en Conquest los catálogos del motor (lo dice también el código): la clase del héroe
+se traduce con una tabla de cuatro (`lanza_escudo_redondo`, `arco_lanza`, `hacha_dos_manos`; el resto, espada y escudo);
+su aspecto sale de la reserva de héroes de prueba; el mapa es siempre el mismo.
 
-- Desde un fichero, 90 s: el cliente que entra lleva al héroe humano, la batalla acaba por tiempo a los 84,8 s, gana el
-  defensor y el resultado trae las bajas reales (2 muertos de 10 en una escuadra y 1 de 8 en otra). «El motor lo
-  aceptaría», según `BatallaDeTicket.Comprobar`.
+**Comprobado** con el ticket de `Tools/ticket_de_prueba.py`, que usa las cuatro tropas del motor (un héroe de la IA con
+hoplitas y una escuadra sin héroe de granjeros contra un héroe humano con arqueros y otro de la IA con milicia de
+lanceros; 71 soldados):
+
+- Desde un fichero, 90 s: el cliente que entra lleva al héroe humano, la batalla acaba por tiempo a los 85,0 s, gana el
+  defensor y «el motor lo aceptaría», según `BatallaDeTicket.Comprobar`. En esa corrida los bandos no llegaron a chocar
+  (0 muertos); con el ticket anterior, de tropas de Conquest, el resultado trajo 2 muertos de 10 y 1 de 8.
 - Con el lanzador de prueba y un cliente con token, 120 s: llegan el ticket y la asignación, el cliente lleva «el héroe
-  de su token», salen el inicio y el resultado, el lanzador los acusa y el proceso sale con 0.
+  de su token», salen el inicio y el resultado (5 muertos de 18 hoplitas y los 15 de la milicia), el lanzador los acusa
+  y el proceso sale con 0. El resultado no lleva `derrotado`.
 - En la primera prueba una captura alargó el reloj de 62 a 352 s y la batalla no acabó en su plazo: de ahí el tope.
 
 Lo que falta: probarlo contra el motor de verdad (hoy sus pruebas usan las cápsulas); las incorporaciones a media
 batalla y las salidas; las formaciones permitidas del ticket; y todo lo de los catálogos (tropas, clases, objetos y
 sus cifras), que es el trabajo siguiente a la red.
+
+### 9.6 Robustez: caídas, cortes de red y retardo
+
+```
+Unity.exe -batchmode -quit -projectPath . -executeMethod ConquestTactics.Net.Editor.PruebaRedEditor.ConstruirConSimulador
+EXE=Builds/PruebaRedSimulador/PruebaRed.exe VENTANA=no CLIENTES="--loadNetworkSimulatorJsonFile Tools/perfiles_de_red/mala.json" bash Tools/ver_batalla_real.sh latencia-mala 2 100 25
+EXE=Builds/PruebaRedSimulador/PruebaRed.exe VENTANA=no CLIENTES="--loadNetworkSimulatorJsonFile Tools/perfiles_de_red/sin_retardo.json -apagon 30,25" bash Tools/ver_batalla_real.sh apagon-largo 2 110 25
+```
+
+El simulador de red de Netcode (retardo, vaivén, pérdida) solo existe con `NETCODE_DEBUG`: `ConstruirConSimulador` hace el
+mismo ejecutable con ese símbolo en `Builds/PruebaRedSimulador/`. Las medidas de coste se siguen haciendo con el otro. Los
+perfiles están en `Tools/perfiles_de_red/` (retardo y vaivén son por sentido: la ida y vuelta es el doble). `-apagon
+inicio,duracion` corta del todo la red del cliente durante ese tramo, como un corte de verdad. Para probar a mano con
+retardo basta lanzar el cliente de ventana de ese ejecutable con `--loadNetworkSimulatorJsonFile`.
+
+**El aviso y la reconexión** (`ReconexionClienteSystem`, en el cliente). Tras 2 s sin snapshots avisa («Sin noticias del
+servidor…»). Si la conexión se cae sola (sin respuesta) o no llega a abrirse, la vuelve a pedir cada 2 s («Conexión perdida.
+Reconectando…», «Conectando con el servidor…»). No insiste si fue el servidor quien cerró (token no válido, otro cliente con
+su token, versión distinta) ni si la partida ya había acabado. El aviso en pantalla es una caja de OnGUI, de paso hasta que
+haya interfaz.
+
+**El mismo héroe al volver.** Con ticket, el héroe es de quien trae su token: si el jugador que lo llevaba ya no está
+conectado, queda libre; si su conexión anterior sigue abierta (su proceso murió y el servidor aún no se ha enterado), el
+servidor la corta y le da el héroe al que llega. Los clientes que entran con la batalla en marcha reciben héroe igual que
+los del principio (antes solo se repartía antes de empezar). Sin ticket (la batalla de prueba) hace lo mismo con una
+identidad que cada proceso cliente se inventa, o con su `-token`.
+
+**El jugador sin señal.** Netcode repite la última entrada mientras no llega otra: un jugador que perdía la red seguía
+corriendo y golpeando. Ahora, a los 0,5 s sin que llegue nada de él, el servidor da su entrada por vacía y su héroe se queda
+quieto (`MandoSystem`); y el cliente, a los 0,5 s sin snapshots, deja de adelantar a su héroe (`MovimientoMandoSystem`),
+para no andar solo por un mundo parado.
+
+**El plazo sin señal: 10 s en los dos lados** (`DriversDeBatalla.PlazoSinSenalMs`; el de Unity son 30). Pasado ese tiempo
+sin oírse, el servidor da al jugador por ido y el cliente pide la conexión otra vez. Es un valor de paso, pendiente del
+autor. Lo que pasa con el héroe de quien se va (hoy vuelve a la IA) cambia con las salidas (§9.9).
+
+**El servidor se quedaba sordo.** Al matar el proceso de un cliente en la misma máquina, el servidor dejaba de recibir de
+todos los demás a los 8 s y ya no admitía a nadie. La causa está en Unity Transport 6.5 sobre Windows: cada paquete mandado
+a un puerto que ya no existe vuelve como error de recepción, y ese error gasta para siempre un hueco de la cola de recepción
+(`UDPNetworkInterface`, el `continue` de las recepciones fallidas: el búfer no se devuelve). Con los 512 huecos de serie y
+60 paquetes por segundo, 8 s. Pasa cuando la máquina del cliente contesta «puerto cerrado»: la misma máquina, o una red
+local sin cortafuegos; a través de internet lo normal es que nadie conteste. **No está arreglado, tiene margen:**
+`DriversDeBatalla` pone la cola del servidor en 16.384 huecos, que con el plazo de 10 s son unas 27 caídas así por batalla.
+El arreglo de verdad es de Unity Transport, o correr el servidor en Linux, donde esos errores no llegan al socket.
+
+**Las correcciones no dan tirones.** Cuando el servidor corrige la posición del héroe propio (lo ha movido el juego, o el
+cliente adelantó algo que no pasó), el cliente no salta: reparte la corrección a 25 cm por snapshot
+(`DefaultSmoothingActionUserParams` en el fantasma de mando, entre 25 cm y 5 m; más de 5 m es un traslado y salta). 25 cm por
+snapshot son 15 m/s, más de lo que corre el héroe: con 5 cm el error crecía cuando el héroe empujaba contra algo que solo
+ve el servidor y acababa en saltos de 5 m.
+
+**Medido** con dos héroes por bando y dos clientes sin pantalla que llevan un héroe cada uno, 71 s por perfil. «Adelanto» es
+lo que va el héroe que ve el jugador por delante del que tiene el servidor. Estos clientes no cargan el mapa y atraviesan
+murallas, así que el servidor los corrige mucho más que a un cliente de verdad: las cifras son un techo.
+
+| Perfil (por sentido) | Ida y vuelta | Adelanto | Mayor salto sin suavizar | Mayor salto ahora | Snapshots por soldado |
+|---|---|---|---|---|---|
+| sin retardo | 17 ms | 0,5 m | 0,7 m | 0,3 m | 60 Hz |
+| buena: 25 ± 5 ms | 85 ms | 0,8 m | 0,9 m | sin medir | 60 Hz |
+| mala: 100 ± 20 ms, 2 % perdido | 218 ms | 1,3 m | 1,7 m | 0,4 m | 39 Hz |
+| pésima: 200 ± 50 ms, 5 % perdido | 385 ms | 2,2 m | 3,2 m | 0,4 m | 27 Hz |
+
+El héroe propio responde al instante en todos (se predice); lo que crece con el retardo es cuánto tarda el servidor en
+enterarse y cuánto tardan en verse los demás.
+
+**Comprobado:**
+
+- **Un cliente al que se le mata el proceso y vuelve** con el mismo token, con otro jugador conectado todo el rato. A los
+  3 s: el servidor corta la conexión vieja y «vuelve y recupera su héroe». A los 15 s: el servidor lo da por ido a los 10 s
+  (su héroe a la IA) y al volver lo recupera. En los dos casos el servidor sigue oyendo al otro (132 kbit/s de entrada) y
+  el otro sigue recibiendo a 60 Hz. Antes del margen de la cola, el segundo cliente ni llegaba a conectar.
+- **Corte de red de 7 s:** el cliente avisa «Sin noticias del servidor…», el servidor apunta «no llega nada: su héroe se
+  queda quieto», vuelve la red y sigue sin reconectar. Al volver, el héroe da un salto de 5 a 6 m (antes de parar la
+  predicción del cliente, 18 m).
+- **Corte de red de 25 s:** a los 10 s los dos lados dan la conexión por perdida, el cliente pasa a «Reconectando…» y,
+  al volver la red, entra otra vez y el servidor le devuelve su héroe.
+
+Lo que falta: el aviso con la interfaz del juego; qué plazo quiere el autor; probar el retardo con el cliente de ventana y
+alguien al teclado (los saltos medidos son de clientes sin mapa); un cliente de ventana que reconecta vuelve a crear sus
+250 modelos (un tirón, sin medir); y el arreglo de Unity Transport.
+
+### 9.7 Incorporaciones a media batalla
+
+```
+CONQUEST_BATALLA_REAL=1 dotnet run --project Tools/LanzadorDePrueba -- Builds/PruebaRed/PruebaRed.exe Logs/red/real/ticket.json -cliente -incorpora 30
+```
+
+Quien se une con el ticket ya cerrado llega del lanzador como `IncorporacionBatalla` (y, si es humano, su token en un
+`TokensBatalla`). El motor lo espera en el resultado, así que ignorarla lo invalidaba entero.
+
+- `BatallaDeTicket.Incorporar` mete a su héroe y sus escuadras en la cuenta de la batalla. Una repetida no entra dos veces.
+- **Antes de empezar**, sale con todos (`BatallaRealDeTicket.Montar` cuenta los del ticket y los unidos).
+- **Con la batalla en marcha**, `BattleSceneController.SpawnLateHero` (nuevo, en el juego) lo saca junto a los de su
+  bando, con sus escuadras. Su espejo, su token y su mando funcionan como los de cualquiera.
+- Si trae una tropa que Conquest no tiene, no sale: el resultado dice que no participó y sus escuadras vuelven enteras, sin
+  desplegar. Una incorporación no se puede rechazar, y el ticket ya está en juego.
+- En la batalla de cápsulas, quien se une después de empezar solo se cuenta.
+
+**Comprobado** con el lanzador de prueba (`-incorpora 30`): a los 30 s del inicio se unen un héroe de la IA al bando
+atacante (12 de milicia) y uno humano al defensor (10 arqueros) con su token y su cliente. Los dos salen al campo, el
+cliente «lleva a heroe-31, el héroe de su token» y ve los 87 fantasmas, el resultado los trae a los dos y a sus escuadras,
+y pasa las reglas del motor. Hay una prueba de la cuenta en `BatallaDeTicketTests`.
+
+Lo que falta: probarlo contra el motor de verdad (su prueba con Conquest no incorpora a nadie) y un ticket que vuelve con
+la revisión subida después de una incorporación (hoy se pierden las que ya habían llegado).
+
+### 9.8 Contra el motor y el lanzador de verdad
+
+```
+cd ../BronzeAgeFase0
+CONQUEST_BATALLA=<ruta>/Builds/PruebaRed/PruebaRed.exe CONQUEST_BATALLA_REAL=1 cargo test -p lanzador --test lanzador con_conquest -- --nocapture --test-threads=1
+```
+
+Las dos pruebas del motor con Conquest (`crates/lanzador/tests/lanzador.rs`) pasan también con la batalla de verdad: el
+motor abre la batalla, su lanzador la reclama y arranca el proceso, Ana recibe del motor su instancia y su token, su
+cliente entra y «lleva a heroe-2, el héroe de su token», y el motor acepta el inicio y el resultado y lo aplica. Sin la
+variable siguen jugándose con las cápsulas.
+
+Jugarlas sacó **dos cuentas de bajas que estaban mal**, las dos corregidas en `BatallaRealDeTicket.ContarBajas`, que ahora
+corre en cada tick:
+
+- **Soldados que el juego no llega a sacar.** El juego saca como mucho los que caben en la formación de la tropa
+  (`SquadSpawningSystem`), y las formaciones de las tropas del motor, copiadas de los lanceros de Conquest, tienen 20
+  huecos. Una milicia de 25 salía con 20 y el resultado decía «25 desplegados, 5 muertos» sin que nadie hubiera combatido:
+  el motor le quitó 5 soldados a Ana. Ahora los desplegados son los que dice el juego
+  (`SquadInstanceComponent.initialUnitCount`) y los que no salen vuelven enteros. Que una tropa de 25 o de 30 solo saque
+  20 es de sus formaciones, que llegan con el catálogo de tropas.
+- **La escuadra que se retira.** Al caer su héroe, la escuadra se retira al punto de salida y el juego la guarda en reserva
+  con los que le quedaban. La cuenta la buscaba solo en el campo y, al no encontrarla, la daba por intacta.
+
+La prueba del motor exigía que a Ana le cayera algún soldado; con la batalla de verdad los héroes de la IA van a por las
+zonas y en dos minutos pueden no encontrarse, así que con `CONQUEST_BATALLA_REAL=1` solo exige que no le salgan soldados
+de más.
+
+De paso se vio que **en la batalla en red ningún héroe reaparece**: el juego solo hace reaparecer al héroe local
+(`HeroRespawnSystem`), y en el servidor todos son remotos. Queda para las salidas (§9.9).
+
+### 9.9 Salidas y reaparición: decidido, sin hacer
+
+Decisiones del autor del 2026-11-12, sobre el canon del motor (Doc 5.15.1, «Salir»):
+
+1. **Quien se desconecta a media batalla:** la IA lleva a su héroe 60 s para que pueda volver; si no vuelve, héroe y
+   escuadras salen de la batalla con sus bajas hasta ese momento, y él herido (`SalidaBatalla`, `desconexion`).
+2. **Quien no llega a conectarse antes de empezar** sale sin castigo (`no_conectado`): el motor reabre la convocatoria sin
+   él, o la cancela si no queda ningún humano. Hoy, pasada la espera, lo juega la IA.
+3. **Abandonar:** una orden del jugador (con una tecla de paso hasta que haya menú). Sale con sus bajas y herido.
+4. **Que el héroe reaparezca al morir lo decide el tipo de batalla. No reaparece en campo abierto** (columna contra
+   columna): al morir sale de la batalla, herido y con sus bajas (`eliminado`). En asedio, caravana, campamento de
+   bandidos, saqueo de pueblo y avanzada, reaparece; hay que hacer que reaparezcan los héroes de la batalla en red,
+   igual los de los jugadores que los de la IA.
+
+### 9.10 De dónde sale la CPU del cliente con ventana
+
+```
+bash Tools/ver_batalla_real.sh cpu-todo 5 100 40 "-bot"
+bash Tools/ver_batalla_real.sh cpu-sin-animar 5 100 40 "-bot -sinAnimar"
+bash Tools/ver_batalla_real.sh cpu-capsulas 5 100 40 "-bot -batallaReal 0"
+```
+
+El cliente con ventana gastaba de 2 a 3 núcleos y no se sabía en qué. Medido con cinco héroes por bando (120 soldados, 133
+fantasmas), a 60 fotogramas por segundo, 55 s cada vez; 100 % es un núcleo:
+
+| Lo que pinta el cliente | CPU |
+|---|---|
+| Todo: mapa, modelos y animación | 180 % |
+| Mapa y modelos sin su Animator (`-sinAnimar`) | 97 % |
+| Cápsulas, sin mapa ni modelos (`-batallaReal 0`) | 13 % |
+
+La red y sus sistemas son 13 puntos. Los otros 167 son la capa visual del juego: la mitad la animación (unos 83 puntos
+para 130 Animators) y la otra mitad el mapa y los modelos con sus componentes (unos 84). Con 250 modelos, lo medido antes
+(200-340 %) sale de la misma cuenta: algo más de un punto por modelo. No es un problema de la red sino del coste de
+pintar y animar cada soldado como un GameObject, y se ataca donde toque hacer el arte: menos Animators (los lejanos sin
+animar o a menos fotogramas), o animación por GPU para los soldados.

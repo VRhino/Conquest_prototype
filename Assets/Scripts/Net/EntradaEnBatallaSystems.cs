@@ -26,7 +26,9 @@ namespace ConquestTactics.Net
             {
                 ecb.AddComponent<NetworkStreamInGame>(conexion);
                 var peticion = ecb.CreateEntity();
-                ecb.AddComponent(peticion, new EntrarEnBatalla { Token = OpcionesRed.Token ?? "" });
+                // Sin token (la batalla de prueba), una identidad de este proceso: si se cae y vuelve, recupera su héroe.
+                OpcionesRed.Token ??= System.Guid.NewGuid().ToString("N");
+                ecb.AddComponent(peticion, new EntrarEnBatalla { Token = OpcionesRed.Token });
                 ecb.AddComponent(peticion, new SendRpcCommandRequest { TargetConnection = conexion });
             }
             ecb.Playback(state.EntityManager);
@@ -87,6 +89,7 @@ namespace ConquestTactics.Net
                 {
                     var mando = ecb.Instantiate(prefabs.Mando);
                     ecb.SetComponent(mando, new GhostOwner { NetworkId = id });
+                    ecb.AddComponent(mando, new IdentidadDeMando { Token = entrar.ValueRO.Token });
                     ecb.AppendToBuffer(conexion, new LinkedEntityGroup { Value = mando });
                     // Con ticket, qué héroe lleva lo dice su token (BatallaDeTicketSystem); MandoSystem le da ese.
                     if (deTicket)

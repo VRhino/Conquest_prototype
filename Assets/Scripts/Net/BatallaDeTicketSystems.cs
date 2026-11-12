@@ -31,6 +31,8 @@ namespace ConquestTactics.Net
         double _creada = -1;
         double _empezada;
         bool _relojEnMarcha;
+        /// <summary>Batalla de verdad: los que se unieron con la batalla en marcha y aún no han salido al campo.</summary>
+        readonly System.Collections.Generic.List<IncorporacionBatalla> _porEntrar = new System.Collections.Generic.List<IncorporacionBatalla>();
 
         /// <summary>
         /// Con <c>-batallaReal</c> (o la variable CONQUEST_BATALLA_REAL=1) el ticket se juega con la batalla de verdad de
@@ -96,6 +98,9 @@ namespace ConquestTactics.Net
                 return;
             if (Real)
             {
+                // Quien entra con la batalla en marcha (el que vuelve tras caerse, el que se unió después) recibe su héroe.
+                RepartirHeroes(batalla);
+                _porEntrar.RemoveAll(i => BatallaRealDeTicket.Incorporar(batalla, i));
                 // La batalla de verdad acaba cuando lo dice el juego: su ganador y, si fue por tiempo, la razón.
                 if (!SystemAPI.TryGetSingleton<MatchStateComponent>(out var partida))
                     return;
@@ -114,9 +119,9 @@ namespace ConquestTactics.Net
                 var relojDelJuego = SystemAPI.GetSingletonRW<BattleClockComponent>();
                 if (relojDelJuego.ValueRO.remainingSeconds > queda)
                     relojDelJuego.ValueRW.remainingSeconds = queda;
+                BatallaRealDeTicket.ContarBajas(EntityManager, batalla);
                 if (partida.currentState != MatchState.EndMatch)
                     return;
-                BatallaRealDeTicket.ContarBajas(EntityManager, batalla);
                 bool porTiempo = SystemAPI.TryGetSingleton<BattleClockComponent>(out var reloj) && reloj.expired;
                 Terminar(batalla, partida.winnerTeam == 1 ? LadoId.Atacante : LadoId.Defensor,
                     porTiempo ? RazonVictoria.TiempoAgotado : RazonVictoria.ObjetivosCapturados);
@@ -158,8 +163,15 @@ namespace ConquestTactics.Net
                         batalla?.Asignacion?.TokensParticipante.AddRange(m.Tokens.TokensParticipante);
                         break;
                     case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Incorporacion:
-                        // ponytail: quien se une a media batalla aún no entra en ella; el resultado sale sin él.
-                        Debug.LogWarning($"[Red] Incorporación de {m.Incorporacion.Participante?.HeroeId}: aún no se juega");
+                        if (batalla == null || !batalla.Incorporar(m.Incorporacion))
+                            break;
+                        string unido = m.Incorporacion.Participante.HeroeId;
+                        Debug.Log($"[Red] Incorporación {m.Incorporacion.Secuencia}: {unido} se une al bando {m.Incorporacion.Lado}" +
+                                  (batalla.Empezada ? " con la batalla en marcha" : " antes de empezar"));
+                        // Antes de empezar entra con todos. Después, la batalla de verdad lo saca al campo; la de cápsulas
+                        // (ponytail) solo lo cuenta: sus escuadras vuelven enteras.
+                        if (batalla.Empezada && Real) _porEntrar.Add(m.Incorporacion);
+                        else if (batalla.Empezada) batalla.DejarFuera(unido);
                         break;
                     case MensajeParaProcesoDeBatalla.CuerpoOneofCase.Acuse:
                         var acuse = m.Acuse;
@@ -190,7 +202,9 @@ namespace ConquestTactics.Net
                     TokenParticipante valido = null;
                     foreach (var t in batalla.Asignacion.TokensParticipante)
                         if (t.Token == token && (t.ExpiraEnMs == 0 || ahoraMs <= t.ExpiraEnMs)) valido = t;
-                    heroe = valido == null ? null : batalla.Heroes.Find(h => h.Id == valido.HeroeId && h.Dueno == 0);
+                    // En la batalla de verdad, quien entra otra vez con su token releva a su conexión anterior (su proceso
+                    // cayó y el servidor aún no se ha enterado): el héroe es de quien trae el token.
+                    heroe = valido == null ? null : batalla.Heroes.Find(h => h.Id == valido.HeroeId && (h.Dueno == 0 || Real));
                     if (heroe == null)
                     {
                         Debug.LogWarning($"[Red] El jugador {id} no trae un token válido: fuera");
@@ -200,7 +214,15 @@ namespace ConquestTactics.Net
                 }
                 else
                     heroe = batalla.Heroes.Find(h => !h.EsBot && h.Dueno == 0);
-                if (heroe != null) heroe.Dueno = id;
+                if (heroe != null)
+                {
+                    if (heroe.Dueno != 0 && heroe.Dueno != id)
+                    {
+                        Debug.Log($"[Red] El jugador {id} entra otra vez con el token de {heroe.Id}: se corta su conexión anterior ({heroe.Dueno})");
+                        MandoSystem.Cortar(EntityManager, heroe.Dueno);
+                    }
+                    heroe.Dueno = id;
+                }
                 Debug.Log(heroe != null ? $"[Red] El jugador {id} lleva a {heroe.Id}" : $"[Red] El jugador {id} mira: no quedan héroes");
             }
         }
@@ -306,11 +328,11 @@ namespace ConquestTactics.Net
             batalla.Terminada = true;
             var resultado = batalla.Resultado(ganador, razon, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 batalla.Asignacion?.IntentoAsignacionId ?? OpcionesRed.Intento);
-            var fallos = BatallaDeTicket.Comprobar(batalla.Ticket, resultado);
+            var fallos = BatallaDeTicket.Comprobar(batalla.Ticket, resultado, batalla.Incorporaciones);
             Debug.Log($"[Red] RESULTADO {ganador} por {razon} en {(resultado.FinMs - resultado.InicioMs) / 1000f:F1} s; " +
                       (fallos.Count == 0 ? "el motor lo aceptaría" : "FALLOS: " + string.Join(", ", fallos)));
             foreach (var e in resultado.PorEscuadra)
-                Debug.Log($"[Red]   escuadra {e.SquadId}: {e.SupervivientesAlCierre} vivos, {e.Muertos} muertos");
+                Debug.Log($"[Red]   escuadra {e.SquadId}: {e.Desplegados} en el campo, {e.Muertos} muertos, vuelven {e.SupervivientesAlCierre}");
             if (!string.IsNullOrEmpty(OpcionesRed.Resultado))
             {
                 BatallaDeTicket.Escribir(OpcionesRed.Resultado, resultado);

@@ -9,14 +9,15 @@ namespace ConquestTactics.Net
     /// <summary>
     /// El puente entre un ticket del motor y la batalla de verdad de Conquest: monta su <see cref="BattleData"/> con los
     /// héroes y las escuadras del ticket (cada uno con su id) y, al acabar, cuenta las bajas de cada escuadra y qué héroes
-    /// quedaron caídos.
+    /// quedaron caídos. Una escuadra sin héroe recibe un capitán de la IA que no figura en el resultado (decisión del
+    /// autor, 2026-11-12).
     /// Lo que aún es de paso, a falta de los catálogos del motor en Conquest (Docs/Coordinacion/Trabajo_En_Conquest.md del
-    /// motor): la clase del héroe se traduce con una tabla corta, su aspecto sale de la reserva de héroes de prueba, el
-    /// mapa es el de siempre y una escuadra sin héroe recibe un capitán de la IA que no figura en el resultado.
+    /// motor): la clase del héroe se traduce con una tabla corta, su aspecto sale de la reserva de héroes de prueba y el
+    /// mapa es el de siempre.
     /// </summary>
     public static class BatallaRealDeTicket
     {
-        /// <summary>El id del capitán de paso de una escuadra sin héroe: este prefijo y el id de la escuadra.</summary>
+        /// <summary>El id del capitán de la IA de una escuadra sin héroe: este prefijo y el id de la escuadra.</summary>
         public const string PrefijoCapitan = "capitan:";
         public const int MargenDelPlazo = 5;
 
@@ -47,12 +48,17 @@ namespace ConquestTactics.Net
                 if (lado == null)
                     continue;
                 int enElLado = 0;
-                foreach (var participante in lado.Participantes)
+                // Los del ticket y, si alguien se unió antes de empezar, también él.
+                var participantes = new List<BattleParticipantSnapshot>(lado.Participantes);
+                foreach (var unido in batalla.Incorporaciones)
+                    if ((unido.Lado == LadoId.Defensor) == (primerPunto == 4))
+                        participantes.Add(unido.Participante);
+                foreach (var participante in participantes)
                 {
-                    var heroe = Heroe(participante.HeroeId, participante.Heroe?.DisplayName, Clase(participante.Heroe?.ClassDefinitionId),
-                        (int)(participante.Heroe?.Nivel ?? 1), primerPunto + enElLado++ % 3, aspectos, orden++);
-                    foreach (var escuadra in participante.Escuadras)
-                        soldados += Escuadra(batalla, heroe, escuadra);
+                    var heroe = HeroeDe(batalla, participante, primerPunto + enElLado++ % 3, aspectos, orden++, out int suyos);
+                    if (heroe == null)
+                        continue;
+                    soldados += suyos;
                     lista.Add(heroe);
                 }
                 foreach (var escuadra in lado.EscuadrasSinHeroe)
@@ -64,6 +70,47 @@ namespace ConquestTactics.Net
                 }
             }
             return datos;
+        }
+
+        /// <summary>
+        /// El héroe de un participante con sus escuadras. Nulo si trae una tropa que Conquest no tiene: ese héroe no sale
+        /// (en el ticket no pasa, porque se rechaza entero; en una incorporación no hay a quién rechazársela).
+        /// </summary>
+        static BattleHeroData HeroeDe(BatallaDeTicket batalla, BattleParticipantSnapshot participante, int punto, HeroData[] aspectos, int orden, out int soldados)
+        {
+            soldados = 0;
+            foreach (var escuadra in participante.Escuadras)
+                if (!TropaConocida(escuadra.TropaId))
+                {
+                    UnityEngine.Debug.LogError($"[BatallaReal] {participante.HeroeId} no sale: trae la tropa {escuadra.TropaId}, que Conquest no tiene");
+                    batalla.DejarFuera(participante.HeroeId);
+                    return null;
+                }
+            var heroe = Heroe(participante.HeroeId, participante.Heroe?.DisplayName, Clase(participante.Heroe?.ClassDefinitionId),
+                (int)(participante.Heroe?.Nivel ?? 1), punto, aspectos, orden);
+            foreach (var escuadra in participante.Escuadras)
+                soldados += Escuadra(batalla, heroe, escuadra);
+            return heroe;
+        }
+
+        /// <summary>
+        /// Quien se une con la batalla en marcha: su héroe y sus escuadras salen junto a los de su bando. Falso mientras la
+        /// escena no está lista para recibirlo (se reintenta).
+        /// </summary>
+        public static bool Incorporar(BatallaDeTicket batalla, IncorporacionBatalla incorporacion)
+        {
+            var controlador = UnityEngine.Object.FindFirstObjectByType<BattleSceneController>();
+            if (controlador == null)
+                return false;
+            bool defensor = incorporacion.Lado == LadoId.Defensor;
+            int enElLado = batalla.Heroes.FindAll(h => h.Bando == (defensor ? BatallaDeTicket.Defensor : BatallaDeTicket.Atacante)).Count;
+            var heroe = HeroeDe(batalla, incorporacion.Participante, (defensor ? 4 : 1) + enElLado % 3, TestHeroPool.Load(), batalla.Heroes.Count, out int soldados);
+            if (heroe == null)
+                return true;
+            if (!controlador.SpawnLateHero(heroe, defensor ? 2 : 1))
+                return false;
+            UnityEngine.Debug.Log($"[BatallaReal] {heroe.heroId} se une al bando {(defensor ? "defensor" : "atacante")} con {soldados} soldados");
+            return true;
         }
 
         static BattleHeroData Heroe(string id, string nombre, string clase, int nivel, int punto, HeroData[] aspectos, int orden)
@@ -83,8 +130,9 @@ namespace ConquestTactics.Net
         }
 
         /// <summary>
-        /// La escuadra del ticket como instancia de Conquest, con el id del ticket. Salen sus efectivos autorizados, sin
-        /// pasar de los que caben en la tropa; los que no salen no pueden morir. Devuelve los que salen.
+        /// La escuadra del ticket como instancia de Conquest, con el id del ticket. Se piden sus efectivos autorizados, sin
+        /// pasar de los de la tropa; devuelve los pedidos. Los que de verdad salen los dice el juego al crearla (menos, si
+        /// su formación no tiene sitio para todos) y los apunta <see cref="ContarBajas"/>: los que no salen no pueden morir.
         /// </summary>
         static int Escuadra(BatallaDeTicket batalla, BattleHeroData heroe, BronzeAge.Contract.V1.SquadSnapshot escuadra)
         {
@@ -94,13 +142,16 @@ namespace ConquestTactics.Net
             heroe.squadInstances.Add(instancia);
             var enJuego = batalla.Escuadras.Find(e => e.Id == escuadra.SquadId);
             if (enJuego != null)
-                enJuego.Desplegados = instancia.unitsInSquad;
+                enJuego.Desplegados = 0;
             return instancia.unitsInSquad;
         }
 
         /// <summary>
-        /// Al cierre: los muertos de cada escuadra del ticket y los héroes que quedaron caídos, leídos de las entidades del
-        /// juego. La escuadra en el campo cuenta los soldados que le quedan; una en reserva, los que tenía al guardarla.
+        /// Lo que lleva cada escuadra del ticket y qué héroes están caídos, leído de las entidades del juego; se llama en
+        /// cada tick, para tenerlo al día cuando acabe. De la escuadra que está en el campo: los soldados que el juego
+        /// sacó (<c>SquadInstanceComponent.initialUnitCount</c>) y los que le quedan. De una que ya no está en el campo (la
+        /// cambiaron por otra, o se retiró al caer su héroe): los que tenía al guardarla. La que no ha salido nunca no tiene
+        /// desplegados ni muertos. Si en un tick no se la encuentra en ningún sitio, se queda con la última cuenta.
         /// </summary>
         public static void ContarBajas(EntityManager em, BatallaDeTicket batalla)
         {
@@ -123,24 +174,32 @@ namespace ConquestTactics.Net
                     if (escuadra == null)
                         continue;
                     int vivos = escuadra.Desplegados;
+                    bool contada = false;
                     if (entrada.squadId == activa && em.HasComponent<HeroSquadReference>(heroe))
                     {
                         var entidad = em.GetComponentData<HeroSquadReference>(heroe).squad;
                         if (em.Exists(entidad) && em.HasBuffer<SquadUnitElement>(entidad))
                         {
+                            if (em.HasComponent<SquadInstanceComponent>(entidad))
+                                escuadra.Desplegados = Math.Max(escuadra.Desplegados, em.GetComponentData<SquadInstanceComponent>(entidad).initialUnitCount);
                             vivos = 0;
+                            contada = true;
                             foreach (var soldado in em.GetBuffer<SquadUnitElement>(entidad))
                                 if (em.Exists(soldado.Value) && !em.HasComponent<IsDeadComponent>(soldado.Value))
                                     vivos++;
                         }
                     }
-                    else if (em.HasBuffer<InactiveSquadElement>(heroe))
+                    if (!contada && em.HasBuffer<InactiveSquadElement>(heroe))
                     {
                         foreach (var reserva in em.GetBuffer<InactiveSquadElement>(heroe))
                             if (reserva.squadId == entrada.squadId)
-                                vivos = reserva.aliveUnits;
+                            {
+                                vivos = Math.Min(vivos, reserva.aliveUnits);
+                                contada = true;
+                            }
                     }
-                    escuadra.Muertos = Math.Clamp(escuadra.Desplegados - vivos, 0, escuadra.Autorizados);
+                    if (contada)
+                        escuadra.Muertos = Math.Clamp(escuadra.Desplegados - vivos, 0, escuadra.Autorizados);
                 }
                 mapa.Dispose();
             }

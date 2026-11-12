@@ -89,6 +89,8 @@ namespace ConquestTactics.Net
             foreach (var escudo in visual.GetComponentsInChildren<ShieldHitboxBehaviour>(true)) Object.Destroy(escudo);
             var agente = visual.GetComponent<NavMeshAgent>();
             if (agente != null) agente.enabled = false;
+            if (OpcionesRed.SinAnimar)
+                foreach (var animador in visual.GetComponentsInChildren<Animator>(true)) animador.enabled = false;
             return visual;
         }
 

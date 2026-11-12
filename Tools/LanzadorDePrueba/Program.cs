@@ -1,6 +1,7 @@
 // Lanzador de prueba: hace con el proceso de batalla de Conquest lo mismo que el lanzador del motor
 // (BronzeAge crates/lanzador, Batalla_Unity_Ciclo §8.8), sin motor. Sale con 0 si el proceso manda el inicio y un
-// resultado y acaba bien tras su acuse.
+// resultado y acaba bien tras su acuse. Con -incorpora <segundos>, pasado ese tiempo desde el inicio se unen dos héroes:
+// uno de la IA al bando atacante y uno humano al defensor (con su token y su cliente); el resultado tiene que traerlos.
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
@@ -10,7 +11,7 @@ using Google.Protobuf;
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("uso: LanzadorDePrueba <PruebaRed.exe> <ticket.json|.bin> [-cliente] [-token-malo] [-puerto 7790] [-espera 10]");
+    Console.Error.WriteLine("uso: LanzadorDePrueba <PruebaRed.exe> <ticket.json|.bin> [-cliente] [-token-malo] [-incorpora 30] [-puerto 7790] [-espera 10]");
     return 2;
 }
 string exe = Path.GetFullPath(args[0]);
@@ -19,6 +20,7 @@ bool conCliente = args.Contains("-cliente");
 bool tokenMalo = args.Contains("-token-malo");
 int puerto = Opcion("-puerto", 7790);
 int espera = Opcion("-espera", 10);
+int incorpora = Opcion("-incorpora", 0);
 int Opcion(string nombre, int porDefecto)
 {
     int i = Array.IndexOf(args, nombre);
@@ -63,7 +65,7 @@ if (await Task.WhenAny(aceptar, Task.Delay(TimeSpan.FromSeconds(120))) != acepta
 }
 using var tcp = aceptar.Result;
 var flujo = tcp.GetStream();
-void Mandar(MensajeParaProcesoDeBatalla m) { m.WriteDelimitedTo(flujo); flujo.Flush(); }
+void Mandar(MensajeParaProcesoDeBatalla m) { lock (flujo) { m.WriteDelimitedTo(flujo); flujo.Flush(); } }
 Mandar(new MensajeParaProcesoDeBatalla { Ticket = ticket });
 Mandar(new MensajeParaProcesoDeBatalla { Asignacion = asignacion });
 Console.WriteLine($"Ticket y asignación {asignacion.IntentoAsignacionId} con {asignacion.TokensParticipante.Count} tokens");
@@ -79,6 +81,30 @@ if (conCliente && asignacion.TokensParticipante.Count > 0)
 
 bool inicio = false;
 BattleResult resultado = null;
+Process unido = null;
+string[] unidos = { "heroe-30", "heroe-31" };
+// Los que se unen a media batalla, como los manda el lanzador del motor: la incorporación y, para el humano, su token.
+async Task Incorporar()
+{
+    await Task.Delay(TimeSpan.FromSeconds(incorpora));
+    BattleParticipantSnapshot Participante(string heroe, string nombre, bool bot, string escuadra, string tropa, uint efectivos)
+    {
+        var p = new BattleParticipantSnapshot { HeroeId = heroe, EsBot = bot, Heroe = new HeroSnapshot { DisplayName = nombre, ClassDefinitionId = "lanza_escudo_redondo", Nivel = 2 } };
+        p.Escuadras.Add(new SquadSnapshot { SquadId = escuadra, HeroeId = heroe, TropaId = tropa, EfectivosAutorizados = efectivos, Nivel = 1 });
+        return p;
+    }
+    Mandar(new MensajeParaProcesoDeBatalla { Incorporacion = new IncorporacionBatalla
+        { SchemaVersion = 1, BattleId = ticket.BattleId, Secuencia = 1, Lado = LadoId.Atacante, Participante = Participante(unidos[0], "Dimas", true, "esc-50", "milicia_lanceros", 12) } });
+    Mandar(new MensajeParaProcesoDeBatalla { Incorporacion = new IncorporacionBatalla
+        { SchemaVersion = 1, BattleId = ticket.BattleId, Secuencia = 2, Lado = LadoId.Defensor, Participante = Participante(unidos[1], "Eira", false, "esc-51", "arqueros", 10) } });
+    string token = Hex(32);
+    var tokens = new TokensBatalla { SchemaVersion = 1, BattleId = ticket.BattleId };
+    tokens.TokensParticipante.Add(new TokenParticipante { HeroeId = unidos[1], Token = token });
+    Mandar(new MensajeParaProcesoDeBatalla { Tokens = tokens });
+    unido = Process.Start(exe,
+        $"-batchmode -nographics -logFile \"{Path.Combine(registros, "cliente-unido.log")}\" -red cliente -ip 127.0.0.1 -puerto {puerto} -bot -token {token}");
+    Console.WriteLine($"→ incorporaciones de {unidos[0]} (IA) y {unidos[1]} (humano, cliente {unido.Id})");
+}
 try
 {
     while (resultado == null)
@@ -86,7 +112,11 @@ try
         var m = MensajeDeServidorDeBatalla.Parser.ParseDelimitedFrom(flujo);
         string nombre = m.CuerpoCase.ToString().ToLowerInvariant();
         Console.WriteLine($"← {nombre}");
-        if (m.CuerpoCase == MensajeDeServidorDeBatalla.CuerpoOneofCase.Inicio) inicio = true;
+        if (m.CuerpoCase == MensajeDeServidorDeBatalla.CuerpoOneofCase.Inicio)
+        {
+            inicio = true;
+            if (incorpora > 0) _ = Incorporar();
+        }
         if (m.CuerpoCase == MensajeDeServidorDeBatalla.CuerpoOneofCase.Resultado) resultado = m.Resultado;
         Mandar(new MensajeParaProcesoDeBatalla
         {
@@ -102,6 +132,10 @@ catch (Exception e) when (e is IOException || e is InvalidProtocolBufferExceptio
 bool acabo = servidor.WaitForExit(10_000);
 if (!acabo) servidor.Kill();
 if (cliente != null && !cliente.HasExited) cliente.Kill();
+if (unido != null && !unido.HasExited) unido.Kill();
+bool conLosUnidos = incorpora <= 0 || (resultado != null && unidos.All(h => resultado.PorHeroe.Any(x => x.HeroeId == h))
+    && new[] { "esc-50", "esc-51" }.All(e => resultado.PorEscuadra.Any(x => x.SquadId == e)));
+if (incorpora > 0) Console.WriteLine($"Los que se unieron {(conLosUnidos ? "están" : "NO están")} en el resultado");
 Console.WriteLine($"Inicio: {inicio}; resultado: {(resultado == null ? "no" : JsonFormatter.Default.Format(resultado))}");
 Console.WriteLine($"El proceso {(acabo ? $"salió con {servidor.ExitCode}" : "no salió en 10 s y se mató")}");
-return inicio && resultado != null && resultado.IntentoAsignacionId == asignacion.IntentoAsignacionId && acabo && servidor.ExitCode == 0 ? 0 : 1;
+return inicio && resultado != null && resultado.IntentoAsignacionId == asignacion.IntentoAsignacionId && acabo && servidor.ExitCode == 0 && conLosUnidos ? 0 : 1;

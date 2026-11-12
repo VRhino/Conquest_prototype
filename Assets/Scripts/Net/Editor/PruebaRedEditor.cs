@@ -14,6 +14,7 @@ namespace ConquestTactics.Net.Editor
     {
         public const string RutaEscena = "Assets/Scenes/NetTest/PruebaRed.unity";
         public const string RutaEjecutable = "Builds/PruebaRed/PruebaRed.exe";
+        public const string RutaConSimulador = "Builds/PruebaRedSimulador/PruebaRed.exe";
 
         [MenuItem("Conquest/Red/Crear escena de prueba")]
         public static void CrearEscena()
@@ -31,7 +32,17 @@ namespace ConquestTactics.Net.Editor
         }
 
         [MenuItem("Conquest/Red/Construir ejecutable de prueba")]
-        public static void Construir()
+        public static void Construir() => Construir(RutaEjecutable, null);
+
+        /// <summary>
+        /// El mismo ejecutable, en otra carpeta, con el simulador de red de Netcode (latencia, pérdida y cortes): solo
+        /// existe con NETCODE_DEBUG. En el cliente: <c>--loadNetworkSimulatorJsonFile perfil.json</c> y <c>-apagon</c>.
+        /// Las medidas de coste se hacen con el otro.
+        /// </summary>
+        [MenuItem("Conquest/Red/Construir ejecutable con simulador de red")]
+        public static void ConstruirConSimulador() => Construir(RutaConSimulador, new[] { "NETCODE_DEBUG" });
+
+        static void Construir(string ruta, string[] simbolos)
         {
             if (!File.Exists(RutaEscena))
                 CrearEscena();
@@ -39,9 +50,10 @@ namespace ConquestTactics.Net.Editor
             {
                 // La de batalla va detrás: el servidor de la batalla de verdad (-batallaReal) la carga por su nombre.
                 scenes = new[] { RutaEscena, "Assets/Scenes/GameScenes/BattleScene.unity" },
-                locationPathName = RutaEjecutable,
+                locationPathName = ruta,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None,
+                extraScriptingDefines = simbolos,
             });
             Debug.Log($"[Red] Construcción: {informe.summary.result}, {informe.summary.totalErrors} errores, " +
                       $"{informe.summary.totalTime.TotalSeconds:F0} s");

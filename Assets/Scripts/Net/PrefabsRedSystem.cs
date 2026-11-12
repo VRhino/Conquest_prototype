@@ -90,6 +90,10 @@ namespace ConquestTactics.Net
             em.AddComponent<EntradaJugador>(mando);
             em.AddComponent<InputBufferData<EntradaJugador>>(mando);
             em.AddComponentData(mando, new AutoCommandTarget { Enabled = true });
+            // En el cliente, una corrección del servidor de entre 25 cm y 5 m no se aplica de golpe sino a 25 cm por
+            // snapshot (15 m/s a 60 Hz): más deprisa de lo que corre el héroe, para que el error no crezca cuando empuja
+            // contra algo que solo ve el servidor, y sin el salto de metros que daba con retardo.
+            em.AddComponentData(mando, new DefaultSmoothingActionUserParams { maxDist = 5f, delta = 0.25f });
             GhostPrefabCreation.ConvertToGhostPrefab(em, mando, new GhostPrefabCreation.Config
             {
                 Name = "ConquestMando",
@@ -112,6 +116,9 @@ namespace ConquestTactics.Net
             });
 
             em.CreateSingleton(new PrefabsRed { Heroe = heroe, Soldado = soldado, Espejo = espejo, EspejoHeroe = espejoHeroe, Mando = mando, Partida = partida });
+            if (state.WorldUnmanaged.IsClient())
+                SystemAPI.GetSingletonRW<GhostPredictionSmoothing>().ValueRW
+                    .RegisterSmoothingAction<LocalTransform, DefaultSmoothingActionUserParams>(em, DefaultTranslationSmoothingAction.Action);
             state.Enabled = false;
         }
     }

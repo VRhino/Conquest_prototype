@@ -399,6 +399,26 @@ public class BattleSceneController : MonoBehaviour
         Debug.Log($"[BattleSceneController] Héroes remotos spawneados: {_spawnedRemoteCount}/{remoteHeroes.Count}");
     }
 
+    /// <summary>
+    /// Spawns a hero that joins a battle already running (the network battle server, on an engine incorporation), next to
+    /// the others of its side. False while the scene is not ready for it yet: try again later.
+    /// </summary>
+    public bool SpawnLateHero(BattleHeroData heroData, int teamID)
+    {
+        var world = World.DefaultGameObjectInjectionWorld;
+        if (_currentBattleData == null || _spawnedRemoteCount == 0 || world == null || !world.IsCreated) return false;
+        var em = world.EntityManager;
+        using var prefabQuery = em.CreateEntityQuery(typeof(HeroPrefabComponent));
+        if (prefabQuery.IsEmpty) return false;
+        using var spawnPointQuery = em.CreateEntityQuery(typeof(SpawnPointComponent));
+        using var spawnPoints = spawnPointQuery.ToComponentDataArray<SpawnPointComponent>(Allocator.Temp);
+        var side = teamID == 2 ? _currentBattleData.defenders : _currentBattleData.attackers;
+        if (!SpawnRemoteHero(em, prefabQuery.GetSingleton<HeroPrefabComponent>(), spawnPoints, heroData, teamID, side.Count)) return false;
+        side.Add(heroData);
+        _spawnedRemoteCount++;
+        return true;
+    }
+
     private bool SpawnRemoteHero(EntityManager em, HeroPrefabComponent heroPrefabComp,
         NativeArray<SpawnPointComponent> spawnPoints, BattleHeroData heroData, int teamID, int slotIndex = 0)
     {

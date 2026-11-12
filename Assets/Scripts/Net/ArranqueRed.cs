@@ -61,6 +61,10 @@ namespace ConquestTactics.Net
         public static float CapturaA = 20f;
         /// <summary>Espectador: la cámara se pone junto al choque en vez de mirar toda la batalla desde arriba.</summary>
         public static bool CamaraCerca;
+        /// <summary>Cliente, prueba con el simulador de red de Netcode: segundo en que empieza un corte total de red, y cuánto dura.</summary>
+        public static float ApagonA, ApagonDura;
+        /// <summary>Cliente con pantalla, prueba de coste: los modelos salen sin su Animator, para ver cuánta CPU es de la animación.</summary>
+        public static bool SinAnimar;
 
         public static void Leer()
         {
@@ -101,6 +105,12 @@ namespace ConquestTactics.Net
                     case "-captura": Captura = siguiente; break;
                     case "-camaraCerca": CamaraCerca = true; break;
                     case "-capturaA": CapturaA = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
+                    case "-sinAnimar": SinAnimar = true; break;
+                    case "-apagon":
+                        var tramo = siguiente.Split(',');
+                        ApagonA = float.Parse(tramo[0], System.Globalization.CultureInfo.InvariantCulture);
+                        ApagonDura = float.Parse(tramo[1], System.Globalization.CultureInfo.InvariantCulture);
+                        break;
                     case "--lanzador": Lanzador = siguiente; ModoPedido = Modo.Servidor; break;
                     case "--batalla": Batalla = siguiente; break;
                     case "--puerto": Puerto = ushort.Parse(siguiente); break;
@@ -112,6 +122,46 @@ namespace ConquestTactics.Net
             if (Duracion <= 0f && float.TryParse(Environment.GetEnvironmentVariable("CONQUEST_DURACION"),
                     System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float duracion))
                 Duracion = duracion;
+        }
+    }
+
+    /// <summary>
+    /// Los drivers de red de siempre, con dos ajustes para aguantar jugadores que se caen:
+    /// <list type="bullet">
+    /// <item>Plazo sin señal de 10 s (el de Unity son 30), igual en los dos lados: pasado ese tiempo sin oírse, el
+    /// servidor da al jugador por ido (su héroe vuelve a la IA) y el cliente pide la conexión otra vez.</item>
+    /// <item>Cola de recepción del servidor mucho mayor. En Windows, cada paquete mandado a un cliente cuyo proceso ha
+    /// muerto vuelve como error y gasta para siempre un hueco de esa cola (Unity Transport 6.5 no lo devuelve): con los
+    /// 512 de serie, un solo cliente caído en la misma máquina dejaba sordo al servidor en 8 s.
+    /// ponytail: es un margen, no un arreglo (16.384 huecos son unas 27 caídas así en una batalla); el arreglo de
+    /// verdad es de Unity Transport, o un servidor en Linux, donde esos errores no llegan al socket.</item>
+    /// </list>
+    /// </summary>
+    public class DriversDeBatalla : INetworkStreamDriverConstructor
+    {
+        public const int PlazoSinSenalMs = 10_000;
+        const int ColaDelServidor = 16_384;
+
+        public void CreateClientDriver(World world, ref NetworkDriverStore driverStore, NetDebug netDebug)
+        {
+            var ajustes = DefaultDriverBuilder.GetNetworkClientSettings();
+            Ajustar(ref ajustes, 0);
+            DefaultDriverBuilder.RegisterClientDriver(world, ref driverStore, netDebug, ajustes);
+        }
+
+        public void CreateServerDriver(World world, ref NetworkDriverStore driverStore, NetDebug netDebug)
+        {
+            var ajustes = DefaultDriverBuilder.GetNetworkServerSettings();
+            Ajustar(ref ajustes, ColaDelServidor);
+            DefaultDriverBuilder.RegisterServerDriver(world, ref driverStore, netDebug, ajustes);
+        }
+
+        static void Ajustar(ref NetworkSettings ajustes, int cola)
+        {
+            var red = ajustes.GetNetworkConfigParameters();
+            red.disconnectTimeoutMS = PlazoSinSenalMs;
+            if (cola > 0) red.receiveQueueCapacity = cola;
+            ajustes.AddRawParameterStruct(ref red);
         }
     }
 
@@ -149,6 +199,7 @@ namespace ConquestTactics.Net
             // Un cliente sin pantalla iría a miles de fotogramas por segundo; uno de verdad va a la tasa del monitor.
             if (modo == OpcionesRed.Modo.Cliente && Application.isBatchMode)
                 Application.targetFrameRate = 60;
+            NetworkStreamReceiveSystem.DriverConstructor = new DriversDeBatalla();
             AutoConnectPort = OpcionesRed.Puerto;
             DefaultConnectAddress = NetworkEndpoint.Parse(OpcionesRed.Ip, OpcionesRed.Puerto);
             Debug.Log($"[Red] Modo {modo}, {OpcionesRed.Ip}:{OpcionesRed.Puerto}, soldados {OpcionesRed.SoldadosPorHeroe}, " +

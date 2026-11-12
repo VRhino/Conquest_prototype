@@ -28,6 +28,8 @@ namespace ConquestTactics.Net
         /// <summary>NetworkId del jugador que lo lleva; 0 = lo lleva la IA.</summary>
         public int Dueno;
         public bool Caido;
+        /// <summary>Falso solo para quien se unió y no llegó a salir al campo (una tropa que Conquest no tiene).</summary>
+        public bool Participa = true;
     }
 
     /// <summary>
@@ -51,6 +53,8 @@ namespace ConquestTactics.Net
             new Queue<(int, Unity.Entities.Entity, string)>();
         /// <summary>La asignación del lanzador: el intento y el token de cada héroe humano. Sin ella (ticket en fichero), los héroes se dan por orden de llegada.</summary>
         public BattleServerAssignment Asignacion;
+        /// <summary>Los que se unieron después del ticket (incorporaciones del motor), por orden de llegada.</summary>
+        public readonly List<IncorporacionBatalla> Incorporaciones = new List<IncorporacionBatalla>();
         public readonly float DuracionSegundos;
         public long InicioMs;
         public bool Empezada;
@@ -64,6 +68,35 @@ namespace ConquestTactics.Net
                 : ticket.Reglas.DuracionMaximaSegundos;
             Anadir(ticket.Atacante, Atacante);
             Anadir(ticket.Defensor, Defensor);
+        }
+
+        /// <summary>
+        /// Quien se une con el ticket ya cerrado: su héroe y sus escuadras entran en la cuenta de la batalla, porque el
+        /// motor los espera en el resultado. Falso si ya estaba (el motor la repite) o viene vacía.
+        /// </summary>
+        public bool Incorporar(IncorporacionBatalla incorporacion)
+        {
+            var p = incorporacion.Participante;
+            if (p == null || Heroes.Exists(h => h.Id == p.HeroeId))
+                return false;
+            Incorporaciones.Add(incorporacion);
+            byte bando = incorporacion.Lado == LadoId.Defensor ? Defensor : Atacante;
+            Heroes.Add(new HeroeEnJuego { Id = p.HeroeId, Bando = bando, EsBot = p.EsBot });
+            foreach (var escuadra in p.Escuadras)
+                Escuadras.Add(Escuadra(escuadra, bando, Heroes.Count - 1));
+            return true;
+        }
+
+        /// <summary>Ese héroe no llega a salir al campo: no participa y sus escuadras vuelven enteras, sin desplegar.</summary>
+        public void DejarFuera(string heroeId)
+        {
+            int indice = Heroes.FindIndex(h => h.Id == heroeId);
+            if (indice < 0)
+                return;
+            Heroes[indice].Participa = false;
+            foreach (var escuadra in Escuadras)
+                if (escuadra.Heroe == indice)
+                    escuadra.Desplegados = 0;
         }
 
         void Anadir(BattleSide lado, byte bando)
@@ -131,9 +164,10 @@ namespace ConquestTactics.Net
                 r.PorHeroe.Add(new ResultadoHeroe
                 {
                     HeroeId = h.Id,
-                    Participo = true,
+                    Participo = h.Participa,
+                    // Sin `derrotado`: el héroe gana o pierde con su bando, haya caído o no en la batalla (decisión del
+                    // autor, 2026-11-12), y sin ese campo el motor hiere a los del bando perdedor.
                     SobrevivioAlCierre = !h.Caido,
-                    Derrotado = h.Caido,
                 });
 
             var caravana = Ticket.ContextoEstrategico?.Caravana;
@@ -154,11 +188,14 @@ namespace ConquestTactics.Net
         /// Lo que el motor comprueba del resultado y Unity puede saber (combate::resultado::validar_resultado, puntos 2 a 6
         /// y 8). Devuelve los fallos; vacío = el motor lo aceptaría si la asignación es la vigente.
         /// </summary>
-        public static List<string> Comprobar(BattleTicket t, BattleResult r)
+        public static List<string> Comprobar(BattleTicket t, BattleResult r, IEnumerable<IncorporacionBatalla> incorporaciones = null)
         {
             var fallos = new List<string>();
-            var escuadras = Lados(t).SelectMany(l => l.Participantes.SelectMany(p => p.Escuadras).Concat(l.EscuadrasSinHeroe)).ToList();
-            var heroes = Lados(t).SelectMany(l => l.Participantes.Select(p => p.HeroeId)).ToList();
+            // Cuentan los del ticket y los que se unieron después.
+            var unidos = (incorporaciones ?? Enumerable.Empty<IncorporacionBatalla>()).Select(i => i.Participante).ToList();
+            var escuadras = Lados(t).SelectMany(l => l.Participantes.SelectMany(p => p.Escuadras).Concat(l.EscuadrasSinHeroe))
+                .Concat(unidos.SelectMany(p => p.Escuadras)).ToList();
+            var heroes = Lados(t).SelectMany(l => l.Participantes.Select(p => p.HeroeId)).Concat(unidos.Select(p => p.HeroeId)).ToList();
 
             if (r.PorEscuadra.Select(e => e.SquadId).Distinct().Count() != r.PorEscuadra.Count
                 || r.PorHeroe.Select(h => h.HeroeId).Distinct().Count() != r.PorHeroe.Count)
