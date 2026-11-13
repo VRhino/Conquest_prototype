@@ -45,6 +45,14 @@ namespace ConquestTactics.Mundo
             return r;
         }
 
+        /// <summary>El tipo de armadura (ligera, media o pesada) de un objeto de `OBJETOS` por su id; null si no es una armadura o no está.</summary>
+        public static string TipoDeArmadura(DatosDeJuego datos, string objetoId)
+        {
+            if (string.IsNullOrEmpty(objetoId)) return null;
+            var o = datos.Bloque("Objetos_Del_Heroe", "OBJETOS")["objetos"].OfType<JObject>().FirstOrDefault(x => (string)x["id"] == objetoId);
+            return o != null && (string)o["tipo"] == "armadura" ? (string)o["tipoArmadura"] : null;
+        }
+
         /// <summary>«Armadura ligera y media; empieza con la ligera».</summary>
         public string TextoDeArmaduras => $"Armadura {string.Join(" y ", Armaduras)}; empieza con la {ArmaduraInicial}";
     }

@@ -25,12 +25,96 @@ public class HeroSelectionSceneController : MonoBehaviour
 
     void Start()
     {
+        // Desde el mundo de BronzeAge: el héroe de la cuenta en el motor, en vez de los de player_save.json.
+        if (ConquestTactics.Mundo.SelectorDePersonaje.Heroe != null)
+        {
+            ModoDelMotor(ConquestTactics.Mundo.SelectorDePersonaje.Heroe);
+            return;
+        }
         LoadHeroButtons();
         confirmButton.onClick.AddListener(OnConfirm);
         createHeroButton.onClick.AddListener(OnCreateHero);
         deleteHeroButton.onClick.AddListener(OnDeleteHero);
         exitButton.onClick.AddListener(OnExitPressed);
 
+    }
+
+    // ───────────── desde el mundo de BronzeAge ─────────────
+    // Un solo héroe (el motor tiene uno por cuenta y partida): sin crear ni borrar, «Entrar al mundo» y «Cerrar sesión», textos en español.
+
+    private void ModoDelMotor(ConquestTactics.Mundo.SelectorDePersonaje.HeroeParaVer heroe)
+    {
+        // Crear y borrar, fuera: el motor tiene un héroe por cuenta y no hay orden de borrarlo (pedido a futuro en el bloque 4 de la Hoja).
+        createHeroButton.gameObject.SetActive(false);
+        deleteHeroButton.gameObject.SetActive(false);
+        // El lienzo está hecho a 1920×1080 con píxeles fijos: a otro tamaño «Entrar» y la ficha se salían. Aquí escala con la ventana, como
+        // el creador.
+        var escalador = confirmButton.GetComponentInParent<CanvasScaler>();
+        if (escalador)
+        {
+            escalador.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            escalador.referenceResolution = new Vector2(1920, 1080);
+            escalador.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand; // los 1920×1080 caben siempre enteros
+        }
+        PonerTexto(confirmButton, "Entrar al mundo");
+        PonerTexto(exitButton, "Cerrar sesión");
+        var salir = exitButton.GetComponentInChildren<TMP_Text>();
+        if (salir) { salir.enableWordWrapping = false; salir.enableAutoSizing = true; salir.fontSizeMin = 8; salir.fontSizeMax = salir.fontSize; }
+        // «Cerrar sesión» no cabe en el botón de «Exit»: más ancho, creciendo hacia la derecha.
+        var cajaSalir = (RectTransform)exitButton.transform;
+        var ancho = Mathf.Max(cajaSalir.rect.width, 150);
+        cajaSalir.anchoredPosition += new Vector2((ancho - cajaSalir.rect.width) * cajaSalir.pivot.x, 0);
+        cajaSalir.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, ancho);
+        var titulo = heroButtonContainer.parent.Find("Title")?.GetComponentInChildren<TMP_Text>();
+        if (titulo) titulo.text = "Tu héroe";
+        confirmButton.onClick.AddListener(() => { confirmButton.interactable = false; exitButton.interactable = false; heroe.Entrar(); });
+        exitButton.onClick.AddListener(() => { confirmButton.interactable = false; exitButton.interactable = false; heroe.CerrarSesion(); });
+
+        foreach (Transform child in heroButtonContainer)
+            Destroy(child.gameObject);
+        var ficha = Instantiate(heroButtonPrefab, heroButtonContainer);
+        ficha.name = "Heroe del motor";
+        var icono = ficha.transform.Find("Icon");
+        if (icono) icono.gameObject.SetActive(false);
+        var nombre = ficha.transform.Find("Name")?.GetComponent<TMP_Text>();
+        if (nombre) nombre.text = heroe.Nombre;
+        var nivel = ficha.transform.Find("Level")?.GetComponent<TMP_Text>();
+        if (nivel)
+        {
+            nivel.text = $"Nivel {heroe.Nivel} · {heroe.Clase?.Nombre ?? "clase desconocida"} · {heroe.Faccion}";
+            nivel.enableAutoSizing = true;
+            nivel.fontSizeMin = 10;
+            nivel.fontSizeMax = nivel.fontSize;
+        }
+        VestirDelMotor(heroe);
+    }
+
+    private static void PonerTexto(Button boton, string texto)
+    {
+        var t = boton ? boton.GetComponentInChildren<TMP_Text>() : null;
+        if (t) t.text = texto;
+    }
+
+    /// <summary>El maniquí con el aspecto que guardó el motor (género, cabeza, pelo, barba, cejas) y la armadura que lleva (ligera, media o
+    /// pesada; las piezas de inicio de Conquest de ese tipo). El equipo puesto pieza a pieza espera a la armería (paso 6 del bloque 4).</summary>
+    private void VestirDelMotor(ConquestTactics.Mundo.SelectorDePersonaje.HeroeParaVer heroe)
+    {
+        if (dummyRoot == null || dummyRoot.childCount == 0) return;
+        dummyRoot.gameObject.SetActive(true);
+        var piezas = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
+        if (piezas == null) { Debug.LogError("No se pudo cargar AvatarPartDatabase."); return; }
+        var genero = heroe.Femenino ? Gender.Female : Gender.Male;
+        var aspecto = new List<string>();
+        foreach (var id in new[] { heroe.Cabeza, heroe.Pelo, heroe.Barba, heroe.Cejas })
+            if (!string.IsNullOrEmpty(id)) aspecto.Add(id);
+        Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(dummyRoot, piezas, aspecto, genero);
+        var sufijo = heroe.Armadura == "pesada" ? "H" : heroe.Armadura == "media" ? "M" : "L";
+        foreach (var itemId in new[] { $"Tor{sufijo}ADef", $"Glo{sufijo}ADef", $"Pan{sufijo}ADef", $"Boot{sufijo}ADef" })
+        {
+            var item = ItemService.GetItemById(itemId);
+            if (item != null && !string.IsNullOrEmpty(item.visualPartId))
+                Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(dummyRoot, piezas, item.visualPartId, genero);
+        }
     }
 
     void OnCreateHero()

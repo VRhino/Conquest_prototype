@@ -68,7 +68,7 @@ namespace ConquestTactics.Mundo.UI
 
         VisualElement Montar(string uxml)
         {
-            _ = cerrarCreador?.Invoke();
+            _ = cerrarEscenaEncima?.Invoke();
             QuitarMapa();
             pantalla.Clear();
             var v = Resources.Load<VisualTreeAsset>("MundoUI/" + uxml).Instantiate();
@@ -272,6 +272,8 @@ namespace ConquestTactics.Mundo.UI
                 return;
             }
             if (pantalla.Q("lista") != lista) return;
+            // Con héroe, el selector de personaje de Conquest en lugar de la tarjeta (salvo para enseñar un error).
+            if (error == null && c.HeroeId != null) { VerHeroe(); return; }
             lista.Clear();
             var tarjeta = Dialogo.Caja("partida partida--elegida");
             tarjeta.Add(Dialogo.Texto("Mundo", "partida-nombre"));
@@ -280,6 +282,58 @@ namespace ConquestTactics.Mundo.UI
             lista.Add(tarjeta);
             entrar.SetEnabled(true);
             entrar.clicked += () => _ = EntrarEnLaPartida();
+        }
+
+        /// <summary>La escena del selector de personaje de Conquest.</summary>
+        const string Selector = "CharacterselecctionScene";
+
+        /// <summary>El selector de personaje de Conquest, encima (como el creador): el héroe de la cuenta en 3D con su aspecto y su armadura, su
+        /// nombre, nivel, clase y Facción. «Entrar al mundo» sigue con la carga y el mapa; «Cerrar sesión», al acceso. Necesita las reglas
+        /// (la clase y el tipo de su armadura), que se leen aquí en vez de en la carga.</summary>
+        async void VerHeroe()
+        {
+            if (SelectorDePersonaje.Heroe != null) return;
+            DatosDeJuego datos;
+            try { datos = await c.CargarDatos(); }
+            catch (Exception e) { await Partidas("No se pudieron leer las reglas: " + e.Message); return; }
+            if (this == null || c.Sesion == null || c.HeroeId == null) return;
+            var s = c.Sesion;
+            var b = s.Bienvenida;
+            var h = s.Almacen.Buscar(TipoEntidad.Heroe, c.HeroeId)?.Heroe;
+            var clase = ClaseDeHeroe.Leer(datos).FirstOrDefault(k => k.Id == h?.ClassDefinitionId);
+            var faccionId = h != null && h.HasFaccionId ? h.FaccionId : b.HasFaccionId ? b.FaccionId : null;
+            var raiz = pantalla.parent;
+            var mundo = gameObject.scene;
+
+            async Task Cerrar()
+            {
+                if (SelectorDePersonaje.Heroe == null) return;
+                SelectorDePersonaje.Heroe = null;
+                cerrarEscenaEncima = null;
+                if (mundo.IsValid() && mundo.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(mundo);
+                var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(Selector);
+                while (descarga != null && !descarga.isDone) await Task.Yield();
+                if (this != null) raiz.style.display = DisplayStyle.Flex;
+            }
+
+            SelectorDePersonaje.Heroe = new SelectorDePersonaje.HeroeParaVer
+            {
+                Nombre = Textos.NombreDeHeroe(s.Almacen, c.HeroeId),
+                Nivel = h?.Nivel ?? 1,
+                Faccion = faccionId == null ? "Sin Facción" : NombreDeFaccion(s.Almacen, faccionId) ?? "Facción",
+                Clase = clase,
+                Armadura = ClaseDeHeroe.TipoDeArmadura(datos, h?.Equipamiento?.Torso?.ItemDefinitionId) ?? clase?.ArmaduraInicial,
+                Femenino = h?.Femenino ?? false,
+                Cabeza = h?.Avatar?.CabezaId, Pelo = h?.Avatar?.PeloId, Barba = h?.Avatar?.BarbaId, Cejas = h?.Avatar?.CejasId,
+                Entrar = async () => { await Cerrar(); if (this != null) _ = EntrarEnLaPartida(); },
+                CerrarSesion = async () => { await Cerrar(); if (this != null) _ = CerrarSesion(); },
+            };
+            cerrarEscenaEncima = Cerrar;
+            raiz.style.display = DisplayStyle.None;
+            var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Selector, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            while (!carga.isDone) await Task.Yield();
+            var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Selector);
+            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
         }
 
         /// <summary>El género y las piezas que guardó el motor al crear el héroe («mujer · cabeza head_02 · pelo hair_03 …»; vacía, la de por defecto).</summary>
@@ -479,7 +533,7 @@ namespace ConquestTactics.Mundo.UI
                 {
                     if (SelectorDePersonaje.Actual == null) return;
                     SelectorDePersonaje.Actual = null;
-                    cerrarCreador = null;
+                    cerrarEscenaEncima = null;
                     if (mundo.IsValid() && mundo.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(mundo);
                     var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(Creador);
                     while (descarga != null && !descarga.isDone) await Task.Yield();
@@ -516,7 +570,7 @@ namespace ConquestTactics.Mundo.UI
                 {
                     Nombre = v.Q<TextField>("nombre").value.Trim(), Lugar = campamento.Lugar, Clases = clases, Confirmar = Confirmar, Volver = () => _ = Cerrar(false),
                 };
-                cerrarCreador = () => Cerrar(false);
+                cerrarEscenaEncima = () => Cerrar(false);
                 var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Creador, UnityEngine.SceneManagement.LoadSceneMode.Additive);
                 while (!carga.isDone) await Task.Yield();
                 var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Creador);
@@ -534,8 +588,9 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>La escena del creador de personaje de Conquest.</summary>
         const string Creador = "AvatarCreator";
-        /// <summary>Cierra el creador si está abierto (al irse a otra pantalla con él delante: sesión perdida, reemplazada…).</summary>
-        Func<Task> cerrarCreador;
+        /// <summary>Cierra la escena de Conquest que esté encima (el creador o el selector de personaje) al irse a otra pantalla con ella delante:
+        /// sesión perdida, reemplazada…</summary>
+        Func<Task> cerrarEscenaEncima;
 
         static string Gente(int n) => n == 1 ? "1 persona" : $"{n} personas";
 

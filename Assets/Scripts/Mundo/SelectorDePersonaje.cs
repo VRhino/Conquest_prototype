@@ -29,5 +29,23 @@ namespace ConquestTactics.Mundo
 
         /// <summary>El encargo en curso; null fuera del flujo del motor.</summary>
         public static Encargo Actual;
+
+        /// <summary>El héroe de la cuenta para el selector de personaje de Conquest (`CharacterselecctionScene`), que con él sustituye a la pantalla de
+        /// partidas: se ve en 3D con su aspecto y la armadura que lleva, su nombre, nivel, clase y Facción, y se entra al mundo o se cierra sesión.</summary>
+        public sealed class HeroeParaVer
+        {
+            public string Nombre, Faccion;
+            public uint Nivel;
+            /// <summary>Su clase de `/v1/datos` (null si el motor trae una que no está).</summary>
+            public ClaseDeHeroe Clase;
+            /// <summary>El tipo de la armadura que lleva en el torso (ligera, media o pesada); sin ella, la inicial de su clase.</summary>
+            public string Armadura;
+            public bool Femenino;
+            public string Cabeza, Pelo, Barba, Cejas;
+            public Action Entrar, CerrarSesion;
+        }
+
+        /// <summary>El héroe que enseña el selector; null fuera del flujo del motor.</summary>
+        public static HeroeParaVer Heroe;
     }
 }

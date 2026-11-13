@@ -41,9 +41,13 @@ namespace ConquestTactics.Mundo.UI.Tests
         public IEnumerator CerrarElCreador()
         {
             SelectorDePersonaje.Actual = null;
-            if (!UnityEngine.SceneManagement.SceneManager.GetSceneByName("AvatarCreator").isLoaded) yield break;
-            var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("AvatarCreator");
-            while (descarga != null && !descarga.isDone) yield return null;
+            SelectorDePersonaje.Heroe = null;
+            foreach (var escena in new[] { "AvatarCreator", "CharacterselecctionScene" })
+            {
+                if (!UnityEngine.SceneManagement.SceneManager.GetSceneByName(escena).isLoaded) continue;
+                var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(escena);
+                while (descarga != null && !descarga.isDone) yield return null;
+            }
         }
 
         [UnityTest]
@@ -406,6 +410,145 @@ namespace ConquestTactics.Mundo.UI.Tests
             while (!descarga.isDone) yield return null;
         }
 
+        /// <summary>Con héroe, al entrar sale el selector de personaje de Conquest en lugar de la tarjeta de la partida: el héroe en 3D con el
+        /// aspecto que guardó el motor y su armadura, su nombre, nivel, clase y Facción, sin crear ni borrar; «Entrar al mundo» lleva al mapa.
+        /// Dos cuentas: una mujer con piezas que no son las de por defecto y un hombre de otra clase. Las dos, sin Facción.</summary>
+        [UnityTest]
+        public IEnumerator ConHeroeSaleElSelectorDePersonaje()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            var cuentas = new[]
+            {
+                (nombre: "Ana" + DateTime.UtcNow.Ticks % 1_000_000, clase: "arco_lanza", genero: "femenino",
+                    avatar: new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_01", PeloId = "hair_03", CejasId = "eyebrow_02" }),
+                (nombre: "Bru" + DateTime.UtcNow.Ticks % 1_000_000, clase: "espada_escudo_mediano", genero: "masculino",
+                    avatar: new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_02", PeloId = "hair_01", BarbaId = "facialhair_02", CejasId = "eyebrow_01" }),
+            };
+            for (int n = 0; n < cuentas.Length; n++)
+            {
+                var cuenta = cuentas[n];
+                string nick = null;
+                yield return OtroHeroe(url, cuenta.nombre, cuenta.clase, cuenta.genero, cuenta.avatar, x => nick = x);
+                foreach (var k in Preferencias) PlayerPrefs.DeleteKey(k);
+                go = new GameObject("Mundo");
+                go.SetActive(false);
+                var conexion = go.AddComponent<ConexionDeMundo>();
+                typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
+                go.AddComponent<PantallasDeMundo>();
+                go.SetActive(true);
+                yield return null;
+                var doc = go.GetComponentInChildren<UIDocument>();
+                rt = new RenderTexture(1600, 900, 24);
+                doc.panelSettings.targetTexture = rt;
+                doc.panelSettings.clearColor = true;
+                var raiz = doc.rootVisualElement;
+                yield return null;
+
+                // Entrar como el jugador: nick, clave, «Entrar».
+                raiz.Q<TextField>("nick").value = nick;
+                raiz.Q<TextField>("clave").value = "clave-de-prueba-1";
+                Pulsar(raiz.Q<Button>("enviar"));
+                HeroSelectionSceneController selector = null;
+                yield return Esperar(() => (selector = UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>()) != null, 30, "el selector de personaje");
+                yield return new WaitForSecondsRealtime(1f);
+                Assert.AreEqual(DisplayStyle.None, raiz.resolvedStyle.display, "la interfaz del mundo se aparta");
+                Assert.IsNull(raiz.Q(className: "partida-nombre"), "sin la tarjeta de la partida");
+                var botones = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude);
+                Assert.IsFalse(botones.Any(b => b.name.Contains("Create") || b.name.Contains("Delete")), "sin crear ni borrar héroe");
+                var ficha = GameObject.Find("Heroe del motor");
+                Assert.IsNotNull(ficha, "la ficha del héroe");
+                var textos = ficha.GetComponentsInChildren<TMPro.TMP_Text>().Select(t => t.text).ToList();
+                CollectionAssert.Contains(textos, cuenta.nombre, "su nombre");
+                var linea = textos.First(t => t.StartsWith("Nivel "));
+                StringAssert.Contains("Sin Facción", linea, "sin Facción");
+                var clases = ClaseDeHeroe.Leer(conexion.Datos);
+                StringAssert.Contains(clases.First(k => k.Id == cuenta.clase).Nombre, linea, "su clase");
+                // El maniquí, con el género y las piezas del motor.
+                var maniqui = (Transform)typeof(HeroSelectionSceneController).GetField("dummyRoot").GetValue(selector);
+                foreach (var id in new[] { cuenta.avatar.CabezaId, cuenta.avatar.PeloId, cuenta.avatar.CejasId, cuenta.avatar.BarbaId }.Where(x => !string.IsNullOrEmpty(x)))
+                    Assert.IsTrue(PiezaVisible(maniqui, id, cuenta.genero == "femenino"), $"la pieza {id} en el maniquí");
+                yield return CapturarEscena("CharacterselecctionScene", $"14_selector_{cuenta.clase}_{cuenta.genero}");
+                if (n == 0)
+                {
+                    foreach (var (ancho, alto) in Tamanos) yield return CapturarEscena("CharacterselecctionScene", $"14b_selector_{ancho}x{alto}", ancho, alto);
+                    // «Entrar al mundo» con el ratón: la carga y el mapa.
+                    var entrada = UnityEngine.InputSystem.InputSystem.settings;
+                    var fondoAntes = entrada.backgroundBehavior;
+                    var editorAntes = entrada.editorInputBehaviorInPlayMode;
+                    entrada.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+                    entrada.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                    var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
+                    try
+                    {
+                        raton.MakeCurrent();
+                        yield return ClicUGUI(raton, selector.confirmButton);
+                        yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
+                    }
+                    finally
+                    {
+                        UnityEngine.InputSystem.InputSystem.RemoveDevice(raton);
+                        entrada.backgroundBehavior = fondoAntes;
+                        entrada.editorInputBehaviorInPlayMode = editorAntes;
+                    }
+                    Assert.IsFalse(UnityEngine.SceneManagement.SceneManager.GetSceneByName("CharacterselecctionScene").isLoaded, "el selector, descargado");
+                    var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+                    yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto, 60, "el suelo");
+                    yield return Capturar("15_mapa_tras_el_selector");
+                    yield return CapturarMapa(mapa, "15b_mapa_tras_el_selector");
+                }
+                // Cerrar sesión desde el mapa (o desde el selector, el segundo): de vuelta al acceso.
+                if (n == 0)
+                {
+                    Pulsar(raiz.Q<Button>("cerrar-sesion"));
+                    yield return null;
+                    Pulsar(raiz.Q(className: "dialogo").Q<Button>(className: "boton-primario"));
+                }
+                else ((UnityEngine.UI.Button)typeof(HeroSelectionSceneController).GetField("exitButton", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(selector)).onClick.Invoke();
+                yield return Esperar(() => raiz.Q<Button>("pestana-registro") != null && raiz.resolvedStyle.display == DisplayStyle.Flex, 15, "volver al acceso");
+                Assert.IsFalse(UnityEngine.SceneManagement.SceneManager.GetSceneByName("CharacterselecctionScene").isLoaded);
+                UnityEngine.Object.Destroy(go);
+                go = null;
+                yield return null;
+            }
+        }
+
+        /// <summary>El selector de personaje sin el motor (el flujo viejo): los héroes de la sesión local con crear y borrar.</summary>
+        [UnityTest]
+        public IEnumerator ElSelectorDeConquestSigueConSusHeroes()
+        {
+            SelectorDePersonaje.Heroe = null;
+            var claseVieja = Resources.LoadAll<HeroClassDefinition>("Data/HeroClasses").First();
+            var jugador = new PlayerData();
+            jugador.heroes.Add(HeroDataService.CreateNewHero("Viejo", new AvatarParts { headId = "head_00", hairId = "hair_01", eyebrowId = "eyebrow_01", beardId = "" }, claseVieja.name, "Male", new Equipment()));
+            PlayerSessionService.SetPlayer(jugador);
+            try
+            {
+                var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("CharacterselecctionScene", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+                while (!carga.isDone) yield return null;
+                yield return null;
+                yield return null;
+                var botones = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude);
+                Assert.IsTrue(botones.Any(b => b.name.Contains("Create")) && botones.Any(b => b.name.Contains("Delete")), "con crear y borrar");
+                Assert.IsNull(GameObject.Find("Heroe del motor"));
+                // A 1920×1080, el tamaño para el que está hecho (con píxeles fijos; a otro tamaño se sale, como siempre: no se toca).
+                yield return CapturarEscena("CharacterselecctionScene", "0b_selector_de_conquest_sin_motor", 1920, 1080);
+                var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("CharacterselecctionScene");
+                while (!descarga.isDone) yield return null;
+            }
+            finally { PlayerSessionService.Clear(); }
+        }
+
+        /// <summary>¿Está a la vista en el maniquí la pieza `id` de AvatarPartDatabase, para ese género?</summary>
+        static bool PiezaVisible(Transform maniqui, string id, bool femenino)
+        {
+            var db = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
+            var def = new[] { db.faceParts, db.hairParts, db.eyebrowsParts, db.beardParts }.SelectMany(l => l).FirstOrDefault(d => d.id == id);
+            Assert.IsNotNull(def, "la pieza " + id + " en AvatarPartDatabase");
+            var visibles = maniqui.GetComponentsInChildren<Transform>(false).Select(t => t.name).ToHashSet();
+            return def.attachments.Any(a => visibles.Contains(femenino ? a.prefabPathFemale : a.prefabPathMale));
+        }
+
         static readonly (int ancho, int alto)[] Tamanos = { (1280, 720), (1600, 900), (1920, 1080), (1950, 1130) };
 
         /// <summary>La pantalla en cada tamaño de ventana: todo lo que se pulsa o se escribe queda dentro de la ventana y de su placa (lo de dentro de
@@ -492,14 +635,17 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>El creador de personaje (UGUI, en pantalla): su lienzo pasa un momento a la cámara de su escena, que pinta en una textura.</summary>
-        IEnumerator CapturarCreador(string nombre, int ancho = 1600, int alto = 900)
+        IEnumerator CapturarCreador(string nombre, int ancho = 1600, int alto = 900) => CapturarEscena("AvatarCreator", nombre, ancho, alto);
+
+        /// <summary>Una escena UGUI de Conquest (el creador o el selector), igual: su cámara, a una textura del tamaño pedido.</summary>
+        IEnumerator CapturarEscena(string escena, string nombre, int ancho = 1600, int alto = 900)
         {
             var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
             yield return null;
             if (string.IsNullOrEmpty(carpeta) || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) yield break;
-            var raices = UnityEngine.SceneManagement.SceneManager.GetSceneByName("AvatarCreator").GetRootGameObjects();
+            var raices = UnityEngine.SceneManagement.SceneManager.GetSceneByName(escena).GetRootGameObjects();
             var cam = raices.SelectMany(g => g.GetComponentsInChildren<Camera>()).FirstOrDefault(x => x.isActiveAndEnabled && x.targetTexture == null);
-            Assert.IsNotNull(cam, "la cámara del creador");
+            Assert.IsNotNull(cam, "la cámara de " + escena);
             var lienzos = raices.SelectMany(g => g.GetComponentsInChildren<Canvas>()).Where(x => x.isRootCanvas && x.renderMode == RenderMode.ScreenSpaceOverlay).ToList();
             var destino = new RenderTexture(ancho, alto, 24);
             foreach (var l in lienzos) { l.renderMode = RenderMode.ScreenSpaceCamera; l.worldCamera = cam; l.planeDistance = cam.nearClipPlane + 0.05f; }
@@ -508,13 +654,14 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return null;
             // Lo que se pulsa, dentro de la imagen a este tamaño.
             var esquinas = new Vector3[4];
+            var fuera = new System.Collections.Generic.List<string>();
             foreach (var s in raices.SelectMany(g => g.GetComponentsInChildren<UnityEngine.UI.Selectable>()))
             {
                 ((RectTransform)s.transform).GetWorldCorners(esquinas);
                 foreach (var e in esquinas)
                 {
                     var p = cam.WorldToScreenPoint(e);
-                    Assert.IsTrue(p.x >= -1 && p.y >= -1 && p.x <= ancho + 1 && p.y <= alto + 1, $"«{s.name}» dentro del creador a {ancho}x{alto} ({p})");
+                    if (!(p.x >= -1 && p.y >= -1 && p.x <= ancho + 1 && p.y <= alto + 1)) { fuera.Add($"«{s.name}» ({p})"); break; }
                 }
             }
             cam.targetTexture = null;
@@ -528,6 +675,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             File.WriteAllBytes(Path.Combine(carpeta, nombre + ".png"), t.EncodeToPNG());
             UnityEngine.Object.Destroy(t);
             destino.Release();
+            Assert.IsEmpty(fuera, $"lo que se pulsa, dentro de {escena} a {ancho}x{alto} (captura {nombre})");
             yield return null;
         }
 
@@ -551,11 +699,14 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
-        /// <summary>Otro héroe, con otra cuenta, para tener un nombre ya usado.</summary>
-        static IEnumerator OtroHeroe(string url, string nombre)
+        /// <summary>Otro héroe, con otra cuenta (para tener un nombre ya usado, o una cuenta con héroe): su clase, género y aspecto, y `nickDe`
+        /// recibe el nick de la cuenta (la clave es «clave-de-prueba-1»).</summary>
+        static IEnumerator OtroHeroe(string url, string nombre, string clase = "espada_escudo_mediano", string genero = "",
+            BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar avatar = null, Action<string> nickDe = null)
         {
             var acceso = new Acceso(url);
             var nick = "otro-" + DateTime.UtcNow.Ticks % 100_000_000;
+            nickDe?.Invoke(nick);
             var registro = acceso.Registrar(nick, "clave-de-prueba-1");
             yield return Esperar(() => registro.IsCompleted, 20, "la otra cuenta");
             var login = acceso.Entrar(nick, "clave-de-prueba-1");
@@ -564,8 +715,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var abrir = s.Abrir();
             var fin = Time.realtimeSinceStartup + 20;
             while (!abrir.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            var clase = "espada_escudo_mediano";
-            var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { CrearHeroe = new BronzeAge.Contract.V1.OrdenCrearHeroe { DisplayName = nombre, CampamentoId = abrir.Result.CampamentosParaElegir[0].CampamentoId, ClassDefinitionId = clase } });
+            var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { CrearHeroe = new BronzeAge.Contract.V1.OrdenCrearHeroe { DisplayName = nombre, CampamentoId = abrir.Result.CampamentosParaElegir[0].CampamentoId, ClassDefinitionId = clase, Genero = genero, Avatar = avatar ?? new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar() } });
             fin = Time.realtimeSinceStartup + 20;
             while (!orden.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
             Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.Codigo);

@@ -1,7 +1,7 @@
 # 25. Crear el héroe (2026-11-13)
 
 Paso 3 del bloque 4 de [`Hoja_De_Ruta.md`](../Hoja_De_Ruta.md) (inventario §3.3). Una cuenta sin héroe ya no se queda en la pantalla de la
-sesión viva. Al entrar en la partida pasa por dos pantallas:
+sesión viva. Al entrar en la partida pasa por dos pantallas (y una cuenta que ya tiene héroe, por el selector de personaje; ver más abajo):
 
 1. **«Nace tu héroe»** (`MundoScene`, UI Toolkit), sobre el mapa del paso 2. Aquí solo se elige el lugar y se escribe el nombre.
 2. **El creador de personaje de Conquest** (la escena `AvatarCreator`, UGUI). Se abre encima con «Nacer en <sitio>». Allí se elige la
@@ -14,10 +14,11 @@ sesión viva. Al entrar en la partida pasa por dos pantallas:
 |---|---|---|
 | `ClaseDeHeroe` | `Conquest.Mundo` | Las clases de `Objetos_Del_Heroe.CLASES_HEROE` con su equipo inicial de `OBJETOS`: el arma de tier 1 de su clase, las cuatro piezas de su armadura inicial (sin casco) y la montura de tiro. En BronzeAgeClient: `ui/clasesHeroe.ts` |
 | `AnalisisDeCampamento` | `Conquest.Mundo` | Lo que rodea a cada campamento, sacado del artefacto (el motor no lo manda). En BronzeAgeClient: `mundo/analisisCampamento.ts`. Ver el detalle debajo de la tabla |
-| `SelectorDePersonaje` | `Conquest.Mundo` | El puente entre las dos pantallas. `Actual` lleva el nombre, el lugar, las clases, `Confirmar` (manda `crearHeroe` y devuelve el rechazo o null) y `Volver`. En null, el creador hace lo de siempre |
+| `SelectorDePersonaje` | `Conquest.Mundo` | El puente entre las dos pantallas. `Actual` lleva el nombre, el lugar, las clases, `Confirmar` (manda `crearHeroe` y devuelve el rechazo o null) y `Volver`. En null, el creador hace lo de siempre. `Heroe` es lo mismo para el selector de personaje |
 | `PantallasDeMundo.CrearHeroe()` | `Conquest.Mundo.UI` | «Nace tu héroe». Abre y cierra el creador de forma aditiva y le pasa el encargo |
 | `MapaDeMundo` (modo sin héroe) | `Conquest.Mundo.Mapa` | El mismo mapa, mirando al campamento, con 150 u en pantalla. Muestra los campamentos y bandidos del artefacto y los aros de 150 y 250 u del elegido. Usa `Enfoque`, `RadioVisionFijo`, `Adicionales` y `RayasAdicionales` |
 | `AvatarCreatorUIController`, `HeroClassSelector` | `Game.ECS` (`Scripts/UI/avatarCreator`) | El creador. Con un encargo pasa al modo del motor; sin él, nada cambia |
+| `HeroSelectionSceneController` | `Game.ECS` (`Scripts/UI`) | El selector de personaje. Con `SelectorDePersonaje.Heroe` pasa al modo del motor; sin él, nada cambia |
 | `CrearHeroe.uxml` | `Assets/Resources/MundoUI` | «Nace tu héroe» |
 
 `AnalisisDeCampamento` calcula, para cada campamento:
@@ -83,8 +84,7 @@ sesión viva. Al entrar en la partida pasa por dos pantallas:
   - **Las referencias.** `Game.ECS` referencia ahora a `Conquest.Mundo` (C# puro), solo para el puente y `ClaseDeHeroe`. La sesión, el
     contrato y UI Toolkit no entran en `Game.ECS`.
 - **El flujo viejo de Conquest sigue igual.** Sin encargo, el creador enseña sus 4 clases de relleno, deja escribir el nombre y al
-  continuar guarda en `player_save.json` y va a `CharacterSelection`. La lista de héroes (`CharacterselecctionScene`) no se ha tocado: el
-  autor dirá dónde entra en el flujo.
+  continuar guarda en `player_save.json` y va a `CharacterSelection`.
 
 ## El aspecto, guardado en el motor
 
@@ -97,6 +97,38 @@ comentarios, así que la DLL del contrato de Conquest no se regenera: `Heroe.Fem
   frase en `Textos`. Los ids de `AvatarPartDatabase` (`head_01`, `hair_03`…) cumplen. Una mujer no tiene barba: va vacía.
 - **Dónde se ve.** El almacén guarda el `Heroe` tal cual llega. El diagnóstico (F2) lo enseña en la línea «Aspecto» («mujer · cabeza
   head_01 · pelo hair_03 · barba por defecto · cejas eyebrow_02»). Todavía no hay otra pantalla que lo muestre.
+
+## El selector de personaje
+
+Con una cuenta que ya tiene héroe, la pantalla de partidas de BronzeAgeClient (una tarjeta «Mundo» con el héroe; era un apaño hasta
+llegar a Unity) se sustituye por el selector de personaje de Conquest, la escena `CharacterselecctionScene` (UGUI). El motor tiene una
+partida por servidor y un héroe por cuenta, así que no hay que elegir entre varios.
+
+- **El camino.** Acceso → partidas (solo mientras se abre la sesión y llegan `HEROE` y `FACCION`, con la misma espera de antes) →
+  selector → «Entrar al mundo» → carga → mapa. Sin héroe, el camino no cambia: partidas, «Entrar» y «Nace tu héroe». Si la carga del
+  mundo falla, vuelve la tarjeta de partidas con el error y «Reintentar».
+- **Lo que se movió.** Las reglas (`/v1/datos`) se leen antes, al abrir el selector, porque hacen falta para la clase y para el tipo de
+  armadura (`ConexionDeMundo.CargarDatos`). La carga las vuelve a leer de la caché. Nada más cambió de orden.
+- **Cómo se abre.** Igual que el creador: de forma aditiva, encima de `MundoScene`, con la interfaz del mundo apartada y la sesión
+  viva. El puente es `SelectorDePersonaje.Heroe`: nombre, nivel, Facción, clase, tipo de armadura, género, las cuatro piezas, `Entrar` y
+  `CerrarSesion`. Si la sesión obliga a cambiar de pantalla con el selector abierto, se cierra solo.
+- **Lo que enseña** (`HeroSelectionSceneController`, modo «desde el motor»):
+  - El maniquí, con el género y las piezas que guardó el motor.
+  - La armadura que lleva puesta en el torso (ligera, media o pesada, buscada en `OBJETOS`) con las piezas de inicio de Conquest de ese
+    tipo. Si no lleva nada en el torso, la armadura inicial de su clase.
+  - Una ficha con su nombre y «Nivel N · clase · Facción».
+  - «Entrar al mundo» y «Cerrar sesión». El título dice «Tu héroe».
+- **Lo que no enseña.**
+  - **«Crear héroe» y «Borrar héroe».** Con héroe no se puede crear otro y el motor no tiene orden de borrar. Es un pedido a futuro, fuera
+    de esta migración, apuntado en el bloque 4. Cuando exista, estos botones vuelven en el modo «desde el motor».
+  - **El blasón.** La pantalla de partidas de Unity tampoco lo tenía: enseñaba el nombre de la Facción como texto, y así sigue. El sigilo
+    llega con el paso 8.
+  - **El equipo puesto pieza a pieza.** Casar los objetos del motor con las piezas visuales de Conquest aún no existe. Queda pendiente
+    para el paso 6 (equipo).
+- **El lienzo** de la escena está hecho a 1920×1080 con píxeles fijos: a otro tamaño, «Entrar» y la ficha se salían de la pantalla. En
+  el modo del motor escala con la ventana (1920×1080 de referencia, siempre entera). El flujo viejo sigue como estaba, y a otros tamaños
+  se sigue saliendo.
+- **El flujo viejo** (sin `SelectorDePersonaje.Heroe`) no cambia: los héroes de `player_save.json`, crear, borrar e ir a Feudo.
 
 ## Pruebas
 
@@ -119,3 +151,14 @@ comentarios, así que la DLL del contrato de Conquest no se regenera: `Heroe.Fem
      (cabeza, pelo y cejas no son las de por defecto; la barba, vacía), y F2 lo enseña. Desde ahí sigue la prueba del paso 2.
 - **`PantallasDeMundoTests.ElCreadorDeConquestSigueConSusClases`** (PlayMode): sin encargo, el creador sigue con sus 4 clases y el
   nombre editable.
+- **`PantallasDeMundoTests.ConHeroeSaleElSelectorDePersonaje`** (PlayMode, contra el motor). Dos cuentas creadas por la sesión, las dos
+  sin Facción: una mujer de «Arco compuesto y lanza» con cabeza, pelo y cejas que no son los de por defecto, y un hombre de «Espada
+  corta y escudo mediano» con barba. Para cada una:
+  1. Entra por el acceso y llega al selector, sin la tarjeta de partidas y sin crear ni borrar.
+  2. La ficha tiene su nombre, su clase y «Sin Facción».
+  3. Cada pieza del motor está a la vista en el maniquí, con su género.
+  4. La mujer se captura en los cuatro tamaños, con todo lo que se pulsa dentro, y entra con el ratón en «Entrar al mundo» hasta el
+     mapa.
+  5. Se cierra la sesión: la mujer desde el mapa, el hombre desde el selector.
+- **`PantallasDeMundoTests.ElSelectorDeConquestSigueConSusHeroes`** (PlayMode): sin el motor, el selector enseña el héroe de la sesión
+  local con crear y borrar.

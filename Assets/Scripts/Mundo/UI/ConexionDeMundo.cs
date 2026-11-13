@@ -97,13 +97,18 @@ namespace ConquestTactics.Mundo.UI
         {
             var mundo = Sesion.Bienvenida.Mundo;
             progreso(0.1f, "Leyendo las reglas");
-            Datos = await DatosDeJuego.Cargar(Acceso, mundo, new CacheDeUno(Path.Combine(carpeta, "datos")));
+            await CargarDatos();
             progreso(0.3f, "Desplegando el mapa del mundo");
             Artefacto = await MundoEnDisco.CargarArtefacto(Acceso, mundo, new CacheDeUno(Path.Combine(carpeta, "artefacto")));
             progreso(0.7f, "Alzando el relieve");
             Relieve = await MundoEnDisco.CargarRelieve(Acceso, mundo, new CacheDeUno(Path.Combine(carpeta, "relieve")));
             progreso(1f, "Listo");
         }
+
+        /// <summary>Las reglas de `/v1/datos` del mundo de la sesión (de la caché si no han cambiado). El selector de personaje las necesita
+        /// antes de cargar el resto del mundo.</summary>
+        public async Task<DatosDeJuego> CargarDatos() =>
+            Datos = await DatosDeJuego.Cargar(Acceso, Sesion.Bienvenida.Mundo, new CacheDeUno(Path.Combine(carpeta, "datos")));
 
         /// <summary>«Cerrar sesión»: saca al héroe del mundo (`cerrarSesion`; si no contesta en unos segundos, se cierra igual y el servidor lo
         /// trata como una caída), cierra el socket y anula el token.</summary>

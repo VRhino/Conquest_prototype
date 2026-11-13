@@ -72,10 +72,10 @@ servidor real. Entre paréntesis, la sección del inventario.
 |---|---|---|
 | 1 | **Conexión, acceso y avisos:** Conquest como cliente de la sesión del contrato 05 (WebSocket con Protobuf y zstd: `Hola`, ámbitos, foto y delta, órdenes, reloj, reconexión), el almacén de ámbitos, login y partidas, pantalla de carga, los datos de `/v1/datos`, el artefacto de mundo y el relieve, y el sistema de avisos. El contrato ya está compilado en C# (`Assets/Plugins/BronzeAge`); hoy solo lo usa el lanzador (§3.1, §3.2, §3.19) | ✅ conexión, acceso y partidas, carga y avisos en `MundoScene` ([`23_Conexion_Al_Motor`](Arquitectura/23_Conexion_Al_Motor_2026-11-13.md)) |
 | 2 | **Mapa de mundo con cuadros:** terreno del relieve, agua y niebla planos, la cámara y las medidas de BronzeAgeClient, tu columna, clic para marchar, lo ajeno como cuadros, la lista bajo el clic y la ficha con las acciones a la puerta. Después se rellena poco a poco con modelos propios (§3.4) | ✅ el mapa con cuadros en `MundoScene`: suelo, agua, niebla, tu columna, todo lo demás, la lista bajo el clic, la ficha con sus acciones y la salida de los sitios ([`24_Mapa_De_Mundo`](Arquitectura/24_Mapa_De_Mundo_2026-11-13.md)) |
-| 3 | **Crear el héroe:** la clase, el creador de avatar de Conquest y elegir campamento sobre el mapa del paso 2 (§3.3) | ✅ «Nace tu héroe» (el campamento sobre el mapa, con su región, el recomendado, «Elegir por mí» y comparar dos, y el nombre) y, al nacer, el creador de personaje de Conquest con las clases del motor, el género y el aspecto ([`25_Crear_El_Heroe`](Arquitectura/25_Crear_El_Heroe_2026-11-13.md)) |
+| 3 | **Crear el héroe:** la clase, el creador de avatar de Conquest y elegir campamento sobre el mapa del paso 2 (§3.3) | ✅ «Nace tu héroe» (el campamento sobre el mapa, con su región, el recomendado, «Elegir por mí» y comparar dos, y el nombre) y, al nacer, el creador de personaje de Conquest con las clases del motor, el género y el aspecto; con héroe, al entrar, el selector de personaje de Conquest con el héroe en 3D ([`25_Crear_El_Heroe`](Arquitectura/25_Crear_El_Heroe_2026-11-13.md)) |
 | 4 | **Campamento de mercenarios por dentro** sobre FeudoScene, con lo básico (residir, comprar, reclutar) y la ventana «Salir al mundo». El campamento se monta desde la planta que da el servidor; el `.proto` aún no la transmite (antes CQ-007) (§3.15, §3.8) | ⬜ |
 | 5 | **El paso del mundo a la batalla y vuelta:** atacar un campamento de bandidos desde el mapa, recibir en `Batalla.asignacion_propia` la instancia y el token, entrar en el servidor de batalla, volver al mundo al acabar o al salir, e informe de combate. Incluye `cancelarBatalla`. Aquí se cierra el ciclo con el motor (§3.8, §3.19) | ⬜ |
-| 6 | **Base personal y reclutamiento:** héroe, equipo, tropas, carro y el árbol de tropas (§3.9, §3.10) | ⬜ |
+| 6 | **Base personal y reclutamiento:** héroe, equipo, tropas, carro y el árbol de tropas (§3.9, §3.10) | ⬜ Pendiente de aquí: vestir al héroe del selector de personaje con el equipo que lleva puesto, pieza a pieza (hoy, las piezas de inicio del tipo de armadura de su torso); hace falta casar los objetos del motor con las piezas visuales de Conquest |
 | 7 | **Plaza por dentro** sobre FeudoScene, con su HUD, gobierno y defensa, y la armería (§3.6, §3.7, §3.9) | ⬜ |
 | 8 | **Facción, tecnología, sigilo y estandartes.** El sigilo, compuesto por ids, va también en la batalla (antes CQ-009) (§3.11, §3.12) | ⬜ |
 | 9 | **Mapa estratégico, pueblos, aldeas y avanzadas** (§3.5, §3.13) | ⬜ |
@@ -96,15 +96,16 @@ servidor real. Entre paréntesis, la sección del inventario.
   artefacto que ya baja la conexión, la niebla de la sesión encima y los iconos con UI Toolkit. Sin teselas ni modelos 3D.
 - **Lo que no se migra** (bancos de pruebas, adaptadores al REST viejo, repintado por sondeo, panel F3) está en el inventario,
   §5.
-- **Las pantallas de relleno de Conquest de fuera de la batalla** (login, selección de personaje, barracón, preparación,
+- **Las pantallas de relleno de Conquest de fuera de la batalla** (login, barracón, preparación,
   posbatalla, emparejamiento, tienda) se borran cuando llega la que las sustituye.
-- **La lista de héroes de Conquest** (`CharacterselecctionScene`) no se borra: el autor la quiere en el flujo y dirá dónde va
-  (2026-11-13). El creador de personaje (`AvatarCreator`) ya es el de crear el héroe en el motor (paso 3).
+- **El selector de personaje de Conquest** (`CharacterselecctionScene`) sustituye a la pantalla de partidas cuando la cuenta tiene
+  héroe (paso 3, 2026-11-13). El creador de personaje (`AvatarCreator`) es el de crear el héroe en el motor.
 
 **Pedidos al motor que salgan de la migración:**
 
 - **Salir del campamento con destino en una sola orden** (paso 2, 2026-11-13): `salirDelCampamento` con `objetivo` contesta `objetivo.no_soportado`, así que el clic en el mapa desde dentro de un campamento manda dos órdenes (salir y luego `marcharA`). Funciona así; con una sola orden sería atómico.
 - ~~**Guardar el género y el avatar del héroe**~~ (paso 3, 2026-11-13) ✅ resuelto en el motor 358af5ff (contrato 0.25.0, partida nueva): `crearHeroe` guarda el género (`""`, `masculino` o `femenino`) y las cuatro piezas (ids de hasta 32 caracteres; si no, `heroe.aspecto_invalido`) y los devuelve en `Heroe.femenino` y `Heroe.avatar`. Conquest los manda desde el creador de personaje y la prueba los lee de vuelta. El catálogo de piezas sigue en Conquest (`AvatarPartDatabase.asset`).
+- **A futuro, fuera de esta migración: borrar el héroe y crear otro** (paso 3, 2026-11-13, pedido del autor). Hoy el motor tiene un héroe por cuenta y partida y no hay orden de borrarlo. Cuando exista, el selector de personaje recupera en el modo «desde el motor» los botones «Crear héroe» y «Borrar héroe», que ahí quedan ocultos.
 
 ## 5. Arte (en paralelo)
 
