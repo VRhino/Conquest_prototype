@@ -4,5 +4,5 @@
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"],
   "overrideReferences": true,
-  "precompiledReferences": ["nunit.framework.dll", "BronzeAge.Contrato.dll", "Google.Protobuf.dll", "Newtonsoft.Json.dll"]
+  "precompiledReferences": ["nunit.framework.dll", "BronzeAge.Contrato.dll", "Google.Protobuf.dll", "Newtonsoft.Json.dll", "ZstdSharp.dll"]
 }

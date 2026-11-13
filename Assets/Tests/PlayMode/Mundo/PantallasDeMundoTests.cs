@@ -99,11 +99,30 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => raiz.Q<Label>(className: "partida-heroe")?.text.Contains("U" + nick.Substring(3)) == true, 20, "la partida con el héroe");
             yield return Capturar("8_partidas_con_heroe");
             Pulsar(raiz.Q<Button>("entrar"));
-            yield return Esperar(() => raiz.Q<Label>("reloj") != null && raiz.Q(className: "carga") == null, 60, "la sesión viva con héroe");
-            yield return Esperar(() => conexion.Sesion.Almacen.Ambitos.ContainsKey("VISTA:" + conexion.HeroeId) || conexion.Sesion.Almacen.Ambitos.Keys.Any(k => k.StartsWith("VISTA:")), 10, "la VISTA");
-            yield return new WaitForSecondsRealtime(1f);
-            Assert.Greater(raiz.Q<ScrollView>("ambitos").contentContainer.childCount, 2);
-            yield return Capturar("9_sesion_con_heroe");
+            // Con héroe, el mapa (paso 2): el suelo alrededor del campamento, la niebla de la VISTA y un clic para salir marchando.
+            yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
+            var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+            Assert.IsNotNull(mapa);
+            yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto && mapa.TeselasCargadas > 4, 60, "el suelo");
+            yield return Esperar(() => conexion.Sesion.Almacen.Ambitos.Keys.Any(k => k.StartsWith("VISTA:")), 10, "la VISTA");
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return CapturarMapa(mapa, "9_mapa_en_el_campamento");
+            var desde = mapa.Centro.Value;
+            var centro = new Vector2(Screen.width * 0.5f, Screen.height * 0.25f);
+            var clic = mapa.Clic(new Vector2(Screen.width * 0.5f, Screen.height * 0.25f));
+            yield return Esperar(() => clic.IsCompleted, 10, "la orden del clic");
+            yield return Esperar(() => mapa.Columna != null, 10, "la columna");
+            yield return new WaitForSecondsRealtime(2f);
+            var ahora = mapa.Centro.Value;
+            Assert.Greater(Math.Abs(ahora.x - desde.x) + Math.Abs(ahora.y - desde.y), 0.1, "la columna anda hacia donde se hizo clic");
+            yield return CapturarMapa(mapa, "10_mapa_marchando");
+            Pulsar(raiz.Q<Button>("marcha-forzada"));
+            yield return Esperar(() => mapa.Columna?.MarchaForzada == true, 10, "la marcha forzada");
+            mapa.Camara.PasoDeZoom(1);
+            mapa.Camara.Inclinar(30);
+            yield return new WaitForSecondsRealtime(2f);
+            yield return CapturarMapa(mapa, "11_mapa_alejado");
+            yield return MedirFotogramas(mapa);
 
             Pulsar(raiz.Q<Button>("cerrar-sesion"));
             yield return null;
@@ -132,6 +151,39 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (Time.realtimeSinceStartup > fin) Assert.Fail("no llegó " + que);
                 yield return null;
             }
+        }
+
+        /// <summary>Lo que ve la cámara del mapa (sin la interfaz, que va a otra textura).</summary>
+        IEnumerator CapturarMapa(ConquestTactics.Mundo.Mapa.MapaDeMundo mapa, string nombre)
+        {
+            var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+            yield return null;
+            if (string.IsNullOrEmpty(carpeta) || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) yield break;
+            var cam = mapa.Vista;
+            var destino = new RenderTexture(1600, 900, 24);
+            var antes = cam.targetTexture;
+            cam.targetTexture = destino;
+            yield return null;
+            yield return null;
+            cam.targetTexture = antes;
+            RenderTexture.active = destino;
+            var t = new Texture2D(destino.width, destino.height, TextureFormat.RGB24, false);
+            t.ReadPixels(new Rect(0, 0, destino.width, destino.height), 0, 0);
+            t.Apply();
+            RenderTexture.active = null;
+            Directory.CreateDirectory(carpeta);
+            File.WriteAllBytes(Path.Combine(carpeta, nombre + ".png"), t.EncodeToPNG());
+            UnityEngine.Object.Destroy(t);
+            destino.Release();
+        }
+
+        /// <summary>Cuánto tarda un fotograma con el mapa cargado, marchando (en el registro de la prueba).</summary>
+        static IEnumerator MedirFotogramas(ConquestTactics.Mundo.Mapa.MapaDeMundo mapa)
+        {
+            var tiempos = new System.Collections.Generic.List<float>();
+            for (int i = 0; i < 300; i++) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
+            tiempos.Sort();
+            Debug.Log($"[Mapa] {mapa.TeselasCargadas} teselas; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms");
         }
 
         IEnumerator Capturar(string nombre)

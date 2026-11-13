@@ -23,6 +23,8 @@ namespace ConquestTactics.Mundo.UI
         Dialogo dialogo;
         PanelAvisos panelAvisos;
         Sesion sesionVigilada;
+        ConquestTactics.Mundo.Mapa.MapaDeMundo mapa;
+        VisualElement diagnostico;
 
         void Awake()
         {
@@ -65,6 +67,7 @@ namespace ConquestTactics.Mundo.UI
 
         VisualElement Montar(string uxml)
         {
+            QuitarMapa();
             pantalla.Clear();
             var v = Resources.Load<VisualTreeAsset>("MundoUI/" + uxml).Instantiate();
             v.style.position = Position.Absolute;
@@ -321,24 +324,94 @@ namespace ConquestTactics.Mundo.UI
                 await Partidas("No se pudo cargar el mundo: " + e.Message);
                 return;
             }
-            SesionViva();
+            // Con héroe y relieve, el mapa; sin héroe (lo crea el paso 3), la pantalla de la sesión viva.
+            if (c.HeroeId != null && c.Relieve != null) Mapa();
+            else SesionViva(null);
             await carga.Cerrar();
         }
 
-        // ─────────────────────────── la sesión viva (provisional) ───────────────────────────
+        // ─────────────────────────── el mapa de mundo ───────────────────────────
 
-        /// <summary>Hasta que esté el mapa (paso 2): el reloj del mundo, el héroe, la conexión, los ámbitos suscritos y cuántas entidades hay de
-        /// cada tipo.</summary>
-        void SesionViva()
+        /// <summary>El mapa con su barra: marcha forzada, avisos, cambiar de partida y cerrar sesión. F2 enseña la sesión viva como diagnóstico.</summary>
+        void Mapa()
         {
-            var v = Montar("Sesion");
+            var v = Montar("Mapa");
+            mapa = new GameObject("Mapa").AddComponent<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+            mapa.Iniciar(c.Sesion, new Relieve(c.Relieve), c.Artefacto, c.Datos, () => c.HeroeId, SobreInterfaz, (t, peligro) => panelAvisos.Mostrar(t, peligro));
+            diagnostico = v.Q("diagnostico");
             var botonAvisos = v.Q<Button>("avisos");
+            var forzada = v.Q<Button>("marcha-forzada");
             botonAvisos.clicked += panelAvisos.Alternar;
+            forzada.clicked += () => _ = mapa.AlternarMarchaForzada();
+            Botones(v);
+            void Refrescar()
+            {
+                if (mapa == null) return;
+                botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos";
+                forzada.SetEnabled(mapa.Columna != null);
+                forzada.text = mapa.Columna?.MarchaForzada == true ? "Marcha forzada: sí" : "Marcha forzada: no";
+            }
+            Refrescar();
+            v.schedule.Execute(Refrescar).Every(250);
+        }
+
+        void Update()
+        {
+            var teclado = UnityEngine.InputSystem.Keyboard.current;
+            if (diagnostico == null || teclado == null || !teclado.f2Key.wasPressedThisFrame) return;
+            if (diagnostico.childCount == 0) SesionViva(diagnostico);
+            diagnostico.ToggleInClassList("oculto");
+        }
+
+        /// <summary>¿Está el puntero sobre algo de la interfaz? (entonces el clic no es del mapa)</summary>
+        bool SobreInterfaz(Vector2 enPantalla)
+        {
+            var panel = pantalla.panel;
+            if (panel == null) return false;
+            var p = RuntimePanelUtils.ScreenToPanel(panel, new Vector2(enPantalla.x, Screen.height - enPantalla.y));
+            return panel.Pick(p) != null;
+        }
+
+        void QuitarMapa()
+        {
+            if (mapa != null) Destroy(mapa.gameObject);
+            mapa = null;
+            diagnostico = null;
+        }
+
+        void Botones(VisualElement v)
+        {
             v.Q<Button>("cambiar-partida").clicked += async () => { await c.DejarPartida(); _ = Partidas(); };
             v.Q<Button>("cerrar-sesion").clicked += async () =>
             {
                 if (await dialogo.Abrir("Tu héroe sale del mundo y se cierra la sesión en este equipo.", "¿Cerrar sesión?", "Cerrar sesión")) _ = CerrarSesion();
             };
+        }
+
+        // ─────────────────────────── la sesión viva ───────────────────────────
+
+        /// <summary>El reloj del mundo, el héroe, la conexión, los ámbitos suscritos y cuántas entidades hay de cada tipo. A pantalla completa
+        /// sin héroe; con mapa, como panel de diagnóstico (F2) dentro de `dentro`.</summary>
+        void SesionViva(VisualElement dentro)
+        {
+            VisualElement v;
+            if (dentro == null)
+            {
+                v = Montar("Sesion");
+                var botonAvisos = v.Q<Button>("avisos");
+                botonAvisos.clicked += panelAvisos.Alternar;
+                Botones(v);
+                v.schedule.Execute(() => botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos").Every(500);
+            }
+            else
+            {
+                v = Resources.Load<VisualTreeAsset>("MundoUI/Sesion").Instantiate();
+                v.style.flexGrow = 1;
+                v.Q(className: "barra-arriba").RemoveFromHierarchy();
+                v.Q(className: "fondo").style.backgroundColor = new StyleColor(Color.clear);
+                v.Q(className: "diagnostico").style.top = 16;
+                dentro.Add(v);
+            }
             var reloj = v.Q<Label>("reloj");
             VisualElement fr = v.Q("fichas-reloj"), fh = v.Q("fichas-heroe"), fc = v.Q("fichas-conexion");
             var ambitos = v.Q<ScrollView>("ambitos");
@@ -347,25 +420,26 @@ namespace ConquestTactics.Mundo.UI
             void Refrescar()
             {
                 var s = c.Sesion;
-                if (s == null || pantalla.Q("ambitos") != ambitos) return;
+                if (s == null || ambitos.panel == null || (dentro != null && dentro.ClassListContains("oculto"))) return;
                 var b = s.Bienvenida;
                 reloj.text = Instante.AFecha(s.AhoraMundo).ToString("dd/MM/yyyy  HH:mm:ss");
                 Fichas(fr, ("Ritmo", s.RelojPausado ? "pausado" : $"×{s.FactorReloj:0.##}"));
-                Fichas(fh, b == null ? new (string, string)[0] : b.HasHeroeId
-                    ? new[] { ("Héroe", LineaDelHeroe(b, s.Almacen)), ("Id", b.HeroeId) }
+                Fichas(fh, b == null ? new (string, string)[0] : c.HeroeId != null
+                    ? new[] { ("Héroe", LineaDelHeroe(b, s.Almacen)), ("Id", c.HeroeId) }
                     : new[] { ("Héroe", "aún sin héroe"), ("Campamentos donde nacer", b.CampamentosParaElegir.Count.ToString()) });
-                Fichas(fc, ("Estado", s.Estado.ToString()), ("Servidor", c.Servidor), ("Ida y vuelta", double.IsInfinity(s.Rtt) ? "—" : $"{s.Rtt:0} ms"),
+                var conexion = new List<(string, string)>
+                {
+                    ("Estado", s.Estado.ToString()), ("Servidor", c.Servidor), ("Ida y vuelta", double.IsInfinity(s.Rtt) ? "—" : $"{s.Rtt:0} ms"),
                     ("Tramas", $"{s.TramasRecibidas} ({s.TramasZstd} en zstd)"), ("Mundo", b?.Mundo.Hash.Substring(0, 12) ?? "—"),
-                    ("Reglas", c.Datos?.Huella?.Substring(0, 12) ?? "—"), ("Relieve", c.Relieve != null ? $"{c.Relieve.Columnas}×{c.Relieve.Filas} muestras" : "sin relieve"));
+                    ("Reglas", c.Datos?.Huella?.Substring(0, 12) ?? "—"), ("Relieve", c.Relieve != null ? $"{c.Relieve.Columnas}×{c.Relieve.Filas} muestras" : "sin relieve"),
+                };
+                if (mapa != null) conexion.Add(("Mapa", $"{mapa.TeselasCargadas} teselas · {1f / Mathf.Max(Time.smoothDeltaTime, 1e-4f):0} fps"));
+                Fichas(fc, conexion.ToArray());
                 Fichas(ambitos, s.Almacen.Ambitos.OrderBy(x => x.Key).Select(x => (x.Key, $"v{x.Value.Version} · {x.Value.Entidades.Count} entidades{(x.Value.Niebla != null ? " · niebla" : "")}")).ToArray());
                 var porTipo = s.Almacen.Ambitos.Values.SelectMany(x => x.Entidades).GroupBy(x => x.Key).Select(g => g.First().Value.CuerpoCase)
                     .GroupBy(x => x).OrderByDescending(g => g.Count()).Select(g => (g.Key.ToString(), g.Count().ToString())).ToArray();
                 Fichas(entidades, porTipo.Length > 0 ? porTipo : new[] { ("—", "nada aún") });
-                botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos";
             }
-            // Con héroe, la VISTA del mundo entero, como BronzeAgeClient: el servidor ya la filtra por la niebla. La sesión la vuelve a pedir al reconectar.
-            if (c.HeroeId != null && c.Artefacto?.Manifiesto?.Tamano != null)
-                c.Sesion.CambiarVista(new Rectangulo { Min = new Punto(), Max = c.Artefacto.Manifiesto.Tamano.Clone() });
             Refrescar();
             v.schedule.Execute(Refrescar).Every(500);
         }

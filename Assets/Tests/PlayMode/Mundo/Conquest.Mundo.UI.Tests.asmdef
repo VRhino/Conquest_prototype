@@ -1,7 +1,18 @@
 {
   "name": "Conquest.Mundo.UI.Tests",
-  "references": ["Conquest.Mundo", "Conquest.Mundo.UI"],
-  "optionalUnityReferences": ["TestAssemblies"],
+  "references": [
+    "Conquest.Mundo",
+    "Conquest.Mundo.UI",
+    "Conquest.Mundo.Mapa"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
   "overrideReferences": true,
-  "precompiledReferences": ["nunit.framework.dll", "BronzeAge.Contrato.dll", "Google.Protobuf.dll", "Newtonsoft.Json.dll"]
+  "precompiledReferences": [
+    "nunit.framework.dll",
+    "BronzeAge.Contrato.dll",
+    "Google.Protobuf.dll",
+    "Newtonsoft.Json.dll"
+  ]
 }

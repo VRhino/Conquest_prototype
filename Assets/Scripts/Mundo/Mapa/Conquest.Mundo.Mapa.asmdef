@@ -1,0 +1,8 @@
+{
+  "name": "Conquest.Mundo.Mapa",
+  "rootNamespace": "ConquestTactics.Mundo.Mapa",
+  "references": ["Conquest.Mundo", "Unity.InputSystem"],
+  "overrideReferences": true,
+  "precompiledReferences": ["BronzeAge.Contrato.dll", "Google.Protobuf.dll", "Newtonsoft.Json.dll"],
+  "autoReferenced": false
+}

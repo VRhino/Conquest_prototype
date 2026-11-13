@@ -1,0 +1,15 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Lo que flota sobre el mapa de mundo (paso 2 del bloque 4). El fondo deja pasar el ratón al mapa. -->
+    <ui:VisualElement name="mapa" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+        <ui:VisualElement class="barra-arriba">
+            <ui:Label class="titulo" text="EL MUNDO" />
+            <ui:Button name="marcha-forzada" class="boton-secundario" text="Marcha forzada" />
+            <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
+            <ui:Button name="cambiar-partida" class="boton-secundario" text="Cambiar de partida" />
+            <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
+        </ui:VisualElement>
+        <ui:Label name="ayuda" class="pie" picking-mode="Ignore" style="position: absolute; left: 12px; bottom: 8px; -unity-text-align: middle-left;"
+                  text="Clic en el suelo: marchar · Arrastrar o WASD: girar e inclinar · Rueda: zoom · F2: diagnóstico" />
+        <ui:VisualElement name="diagnostico" class="oculto" style="position: absolute; left: 0; top: 52px; right: 0; bottom: 0; background-color: rgba(11, 8, 5, 0.88);" />
+    </ui:VisualElement>
+</ui:UXML>
