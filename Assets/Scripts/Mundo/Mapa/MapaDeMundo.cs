@@ -8,6 +8,7 @@ using BronzeAge.Contract.V1;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 namespace ConquestTactics.Mundo.Mapa
 {
@@ -33,6 +34,25 @@ namespace ConquestTactics.Mundo.Mapa
         Vector2 ultimoRaton;
         float ultimaRueda = -1;
         bool vistaPedida;
+        ArtefactoDeMundo artefacto;
+        CosasEnElMapa pintor;
+        TiempoDeMarcha tiempo;
+        bool sucio = true;
+        float proximasRayas;
+        (double x, double y) seleccionVista;
+        (string id, double x, double y, double coste)? tiempoGuardado;
+
+        /// <summary>Todo lo que hay en el mapa este fotograma (sin tu columna).</summary>
+        public List<CosaDelMapa> Cosas { get; private set; } = new List<CosaDelMapa>();
+        public CosaDelMapa Seleccionada { get; private set; }
+        /// <summary>Con dos o más cosas bajo el clic: la lista para elegir. Mientras está abierta, un clic en el mapa solo la cierra.</summary>
+        public event Action<List<CosaDelMapa>> AlElegir;
+        public event Action AlCerrarLista;
+        public event Action<CosaDelMapa> AlSeleccionar;
+        public bool ListaAbierta;
+        /// <summary>Capas: los nombres de los nodos de recursos y la fertilidad del suelo.</summary>
+        public bool NombresDeNodos = true;
+        public bool Fertilidad { get => terreno.ConFertilidad; set => terreno.ConFertilidad = value; }
 
         /// <summary>Donde está el héroe ahora (u) y si lo que se sigue es su columna.</summary>
         public (double x, double y)? Centro { get; private set; }
@@ -41,8 +61,9 @@ namespace ConquestTactics.Mundo.Mapa
         /// <summary>Monta el mapa. `sobreInterfaz`: si el puntero está sobre la interfaz (entonces el clic no es del mapa); `avisar`: un aviso
         /// flotante (texto, peligro).</summary>
         public void Iniciar(Sesion sesion, Relieve relieve, ArtefactoDeMundo artefacto, DatosDeJuego datos, Func<string> heroeId,
-            Func<Vector2, bool> sobreInterfaz, Action<string, bool> avisar)
+            Func<Vector2, bool> sobreInterfaz, Action<string, bool> avisar, VisualElement capaNombres)
         {
+            this.artefacto = artefacto;
             this.sesion = sesion;
             this.relieve = relieve;
             this.datos = datos;
@@ -57,7 +78,9 @@ namespace ConquestTactics.Mundo.Mapa
             materialPropio.SetFloat("_ConNiebla", 0);
 
             var nivelDelMar = (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION.umbralAgua") * Relieve.MetrosAltura);
-            terreno = new TerrenoDelMapa(relieve, new RasterDeMundo(artefacto.Terreno), nivelDelMar, materialSuelo, transform);
+            terreno = new TerrenoDelMapa(relieve, new RasterDeMundo(artefacto.Terreno), Raster(artefacto.DensidadBosque), Raster(artefacto.Fertilidad), nivelDelMar, materialSuelo, transform);
+            pintor = new CosasEnElMapa((x, y) => terreno.AlturaVisible(x, y), materialSuelo, materialPropio, transform, capaNombres);
+            if (artefacto.Navegacion != null && artefacto.Navegacion.Nodos.Count > 0) tiempo = new TiempoDeMarcha(artefacto.Navegacion);
             rios = RiosDelMapa.Construir(artefacto, relieve, materialSuelo, transform);
             niebla = new NieblaDelMapa();
             sesion.AlCambiar += AlCambiar;
@@ -93,6 +116,8 @@ namespace ConquestTactics.Mundo.Mapa
             ruta.shadowCastingMode = ShadowCastingMode.Off;
         }
 
+        static RasterDeMundo Raster(Raster r) => r != null && r.Encoding == EncodingRaster.EncodingU8 ? new RasterDeMundo(r) : null;
+
         GameObject Caja(string nombre, Color color, Vector3 tamanoU)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -112,6 +137,7 @@ namespace ConquestTactics.Mundo.Mapa
 
         void AlCambiar(string ambito)
         {
+            sucio = true;
             if (!ambito.StartsWith("VISTA:", StringComparison.Ordinal)) return;
             niebla.Poner(sesion.Almacen.Ambitos.TryGetValue(ambito, out var a) ? a.Niebla : null);
         }
@@ -120,6 +146,7 @@ namespace ConquestTactics.Mundo.Mapa
         {
             if (sesion != null) sesion.AlCambiar -= AlCambiar;
             terreno?.Destruir();
+            pintor?.Destruir();
             niebla?.Destruir();
             if (rios != null) Destroy(rios.GetComponent<MeshFilter>().sharedMesh);
             if (materialSuelo != null) Destroy(materialSuelo);
@@ -142,7 +169,124 @@ namespace ConquestTactics.Mundo.Mapa
             camara.nearClipPlane = (float)Math.Max(0.05, Camara.Distancia * 0.05) * e;
             camara.farClipPlane = (float)Math.Max(600, Camara.Distancia * 20) * e;
             terreno.Actualizar(cx, cy, (float)Camara.Distancia * 7);
+            PintarCosas(ahora, cx, cy);
         }
+
+        /// <summary>Lo que hay en el mapa: las cajas cada fotograma (lo que anda, en su sitio del instante), las rayas cuando cambia algo (como
+        /// mucho dos veces por segundo), los nombres a la distancia de la bruma de BronzeAgeClient y el aro de lo seleccionado.</summary>
+        void PintarCosas(double ahora, double cx, double cy)
+        {
+            var radioInicial = datos.Numero("reglas.territorio.radio_inicial") / 1000;
+            Cosas = CosasDelMapa.Reunir(sesion.Almacen, heroeId(), ahora, artefacto.Nodos, radioInicial);
+            var d = Camara.Distancia;
+            double lejosCarga = Math.Min(PinturaDelMapa.DistanciaCarga, d * 7), cerca = Math.Min(d * 2.2, lejosCarga * 0.4);
+            pintor.Pintar(Cosas, cx, cy, lejosCarga);
+            pintor.Nombres(Cosas, camara, cx, cy, (cerca + lejosCarga) / 2, NombresDeNodos, Camara.EnPantalla * 0.75);
+            if (sucio && Time.unscaledTime >= proximasRayas)
+            {
+                sucio = false;
+                proximasRayas = Time.unscaledTime + 0.5f;
+                pintor.Rayas(CosasDelMapa.Rayas(sesion.Almacen, heroeId(), datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion"), ahora));
+            }
+            if (Seleccionada == null) return;
+            var ahoraSel = Cosas.Find(c => c.Id == Seleccionada.Id && c.Clase == Seleccionada.Clase);
+            if (ahoraSel == null) { Seleccionar(null); return; }
+            Seleccionada = ahoraSel;
+            if (CosasDelMapa.Distancia(ahoraSel.X, ahoraSel.Y, seleccionVista.x, seleccionVista.y) > 0.05)
+            {
+                seleccionVista = (ahoraSel.X, ahoraSel.Y);
+                pintor.Seleccion(ahoraSel);
+            }
+        }
+
+        public void Seleccionar(CosaDelMapa c)
+        {
+            Seleccionada = c;
+            if (c != null) seleccionVista = (c.X, c.Y);
+            pintor.Seleccion(c);
+            AlSeleccionar?.Invoke(c);
+        }
+
+        /// <summary>Elegir una cosa (de un clic o de la lista): se selecciona y, si tiene dónde ir, se marcha hacia ella (como BronzeAgeClient).</summary>
+        public async Task Elegir(CosaDelMapa c)
+        {
+            ListaAbierta = false;
+            Seleccionar(c);
+            switch (c.Clase)
+            {
+                case ClaseDeCosa.Plaza: await MarcharAPlaza(c.Id); break;
+                case ClaseDeCosa.Batalla: case ClaseDeCosa.Ejercito: case ClaseDeCosa.Formacion: case ClaseDeCosa.Alijo:
+                case ClaseDeCosa.Mercenarios: case ClaseDeCosa.Bandidos: case ClaseDeCosa.Pueblo: case ClaseDeCosa.Aldea: case ClaseDeCosa.Avanzada:
+                    if (Columna != null) await MarcharA(c.X, c.Y);
+                    break;
+            }
+        }
+
+        public async Task<ResultadoOrden> MarcharAPlaza(string asentamientoId)
+        {
+            var id = heroeId();
+            if (Columna == null || id == null) return null;
+            return await Dar(new Orden { MarcharA = new OrdenMarcharA { HeroeId = id, Objetivo = new OrdenMarcharA.Types.Objetivo { AsentamientoId = asentamientoId } } });
+        }
+
+        /// <summary>Lo que hace falta saber del jugador para decidir sus acciones (radios de `/v1/datos`).</summary>
+        public CosasDelMapa.Contexto Contexto()
+        {
+            var id = heroeId();
+            var heroe = id == null ? null : sesion.Almacen.Buscar(TipoEntidad.Heroe, id)?.Heroe;
+            var j = new CosasDelMapa.Contexto
+            {
+                HeroeId = id, FaccionId = heroe != null && heroe.HasFaccionId ? heroe.FaccionId : null, ResidenciaId = heroe != null && heroe.HasResidenciaId ? heroe.ResidenciaId : null,
+                Columna = Columna, Herido = heroe != null && heroe.HasHeridoHastaMs && heroe.HeridoHastaMs > sesion.AhoraMundo,
+                RadioPuerta = datos.RadioPuerta, RadioEncuentro = datos.RadioEncuentro,
+                RadioInspeccion = datos.Numero("documentos.Movimiento_Ejercitos.MOVIMIENTO.radioInspeccion"),
+                RadioProteccion = datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion"),
+            };
+            if (Columna != null && Centro != null)
+            {
+                (j.X, j.Y) = Centro.Value;
+                j.ConSoldados = TropasDeLaColumna().Count > 0;
+                j.Lider = Columna.Participantes.Count <= 1 || Columna.LiderId == id;
+                j.Persiguiendo = Columna.Persiguiendo?.PresaId;
+            }
+            foreach (var c in Cosas) if (c.Clase == ClaseDeCosa.Mercenarios) j.CampamentosDeMercenarios.Add((c.X, c.Y));
+            return j;
+        }
+
+        List<string> TropasDeLaColumna()
+        {
+            var r = new List<string>();
+            if (Columna == null) return r;
+            foreach (var e in sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Escuadron))
+                if (e.Escuadron.Cantidad > 0 && e.Escuadron.Contenedor?.EjercitoId == Columna.Id) r.Add(e.Escuadron.TropaId);
+            return r;
+        }
+
+        /// <summary>Distancia (u) y tiempo de marcha («~X» en tiempo real) de tu columna hasta `c`; null sin columna. El coste se guarda mientras
+        /// tu columna no se mueva más de 2 u ni cambie el destino.</summary>
+        public (double distancia, string tiempo)? HastaAlli(CosaDelMapa c)
+        {
+            if (Columna == null || Centro == null) return null;
+            var (x, y) = Centro.Value;
+            var recto = CosasDelMapa.Distancia(x, y, c.X, c.Y);
+            double? coste = recto;
+            if (tiempo != null)
+            {
+                var g = tiempoGuardado;
+                if (g != null && g.Value.id == c.Id && CosasDelMapa.Distancia(g.Value.x, g.Value.y, x, y) < 2) coste = g.Value.coste;
+                else
+                {
+                    coste = tiempo.Coste(x, y, c.X, c.Y);
+                    tiempoGuardado = coste == null ? ((string, double, double, double)?)null : (c.Id, x, y, coste.Value);
+                }
+            }
+            if (coste == null) return (recto, "sin camino por tierra");
+            var v = TiempoDeMarcha.Velocidad(TropasDeLaColumna(), datos, Columna.MarchaForzada);
+            return (recto, TiempoDeMarcha.Texto(coste.Value, v, sesion.RelojPausado ? 1 : sesion.FactorReloj));
+        }
+
+        /// <summary>Da una orden de la ficha (con el aviso si la rechazan).</summary>
+        public Task<ResultadoOrden> Ordenar(Orden orden) => Dar(orden);
 
         /// <summary>Dónde está el héroe en `ahora`: su columna (con su plan al instante), o el campamento donde está dentro. Y su ruta y destino.</summary>
         void Situar(double ahora)
@@ -159,6 +303,11 @@ namespace ConquestTactics.Mundo.Mapa
                 var p = Instante.Posicion(Columna.Plan, Columna.Posicion, ahora);
                 Centro = (p.x / 1000, p.y / 1000);
                 Camara.RadioVision = RadioDeVision(Columna);
+            }
+            else if (DondeEsta(heroe.Ubicacion) is (double, double) dentro)
+            {
+                Centro = dentro;
+                Camara.RadioVision = datos.Numero("documentos.Movimiento_Ejercitos.VISION.jugadorSolo");
             }
             else if (heroe.Ubicacion.DondeCase == UbicacionHeroe.DondeOneofCase.CampamentoId)
             {
@@ -197,6 +346,19 @@ namespace ConquestTactics.Mundo.Mapa
             puntos.Add(EscalaDelMapa.AEscena(dx, dy, terreno.AlturaVisible(dx, dy) + 0.3f * e));
             ruta.positionCount = puntos.Count;
             ruta.SetPositions(puntos.ToArray());
+        }
+
+        /// <summary>Dónde está el lugar en el que está dentro el héroe (plaza, pueblo o avanzada), o null.</summary>
+        (double, double)? DondeEsta(UbicacionHeroe u)
+        {
+            Punto p = null;
+            switch (u.DondeCase)
+            {
+                case UbicacionHeroe.DondeOneofCase.AsentamientoId: p = sesion.Almacen.Buscar(TipoEntidad.Asentamiento, u.AsentamientoId)?.Asentamiento?.Posicion; break;
+                case UbicacionHeroe.DondeOneofCase.PuebloId: p = sesion.Almacen.Buscar(TipoEntidad.Pueblo, u.PuebloId)?.Pueblo?.Posicion; break;
+                case UbicacionHeroe.DondeOneofCase.AvanzadaId: p = sesion.Almacen.Buscar(TipoEntidad.Avanzada, u.AvanzadaId)?.Avanzada?.Posicion; break;
+            }
+            return p == null ? ((double, double)?)null : (p.X / 1000.0, p.Y / 1000.0);
         }
 
         void Mostrar(bool columna)
@@ -261,11 +423,30 @@ namespace ConquestTactics.Mundo.Mapa
         }
 
         /// <summary>Un clic en el suelo: la columna marcha allí; desde dentro de un campamento, se sale hacia allí.</summary>
+        /// <summary>Un clic en el mapa (BronzeAgeClient: `resolverClic`): con la lista abierta, solo la cierra; sin nada debajo, se quita la
+        /// selección y se marcha allí; con una cosa, se elige; con dos o más, la lista.</summary>
         public async Task Clic(Vector2 pantalla)
         {
+            if (ListaAbierta)
+            {
+                ListaAbierta = false;
+                AlCerrarLista?.Invoke();
+                return;
+            }
             var punto = PuntoBajo(pantalla);
             if (punto == null) return;
-            await MarcharA(punto.Value.x, punto.Value.y);
+            var bajo = CosasDelMapa.BajoElClic(Cosas, punto.Value.x, punto.Value.y, Camara.PxPorUnidad(Screen.height));
+            if (bajo.Count == 0)
+            {
+                Seleccionar(null);
+                await MarcharA(punto.Value.x, punto.Value.y);
+            }
+            else if (bajo.Count == 1) await Elegir(bajo[0]);
+            else
+            {
+                ListaAbierta = true;
+                AlElegir?.Invoke(bajo);
+            }
         }
 
         public async Task<ResultadoOrden> MarcharA(double x, double y)
@@ -310,5 +491,9 @@ namespace ConquestTactics.Mundo.Mapa
         public int TeselasCargadas => terreno?.Cargadas ?? 0;
         public bool SueloCompleto => terreno != null && terreno.Completo;
         public Camera Vista => camara;
+        /// <summary>Lo que se ve en (x, y) del mapa: la altura del suelo o de su agua, en metros.</summary>
+        public float AlturaVisible(double x, double y) => terreno.AlturaVisible(x, y);
+        /// <summary>Puntos de la ruta pintada (0 sin ruta).</summary>
+        public int PuntosDeRuta => ruta != null && ruta.enabled ? ruta.positionCount : 0;
     }
 }

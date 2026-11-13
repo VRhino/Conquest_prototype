@@ -33,7 +33,8 @@ namespace ConquestTactics.Mundo.Mapa
     {
         // Suelo por clase de terreno del artefacto (`ClaseTerreno`): costa, llano, colina, montaña y cima.
         public static readonly Color Costa = new Color(0.80f, 0.76f, 0.56f), Llano = new Color(0.72f, 0.69f, 0.47f),
-            Colina = new Color(0.58f, 0.57f, 0.38f), Montana = new Color(0.53f, 0.47f, 0.39f), Cima = new Color(0.76f, 0.74f, 0.70f);
+            Colina = new Color(0.58f, 0.57f, 0.38f), Montana = new Color(0.53f, 0.47f, 0.39f), Cima = new Color(0.76f, 0.74f, 0.70f),
+            Sotobosque = new Color(0.36f, 0.44f, 0.25f);
         // Agua: somera (lagos y orillas) y honda (mar adentro); ríos y vados.
         public static readonly Color AguaSomera = new Color32(0x5a, 0xae, 0xa6, 255), AguaHonda = new Color32(0x1d, 0x4d, 0x72, 255),
             Vado = new Color32(0xd9, 0xc7, 0x9a, 255);

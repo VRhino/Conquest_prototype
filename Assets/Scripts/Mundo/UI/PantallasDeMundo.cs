@@ -335,27 +335,143 @@ namespace ConquestTactics.Mundo.UI
 
         // ─────────────────────────── el mapa de mundo ───────────────────────────
 
-        /// <summary>El mapa con su barra: marcha forzada, avisos, cambiar de partida y cerrar sesión. F2 enseña la sesión viva como diagnóstico.</summary>
+        /// <summary>El mapa con su barra (capas, marcha forzada, avisos, cambiar de partida y cerrar sesión), la lista de lo que hay bajo el clic,
+        /// la ficha de lo seleccionado con sus acciones y, dentro de un sitio, dónde estás y la salida. F2 enseña la sesión viva como diagnóstico.</summary>
         void Mapa()
         {
             var v = Montar("Mapa");
             mapa = new GameObject("Mapa").AddComponent<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
-            mapa.Iniciar(c.Sesion, new Relieve(c.Relieve), c.Artefacto, c.Datos, () => c.HeroeId, SobreInterfaz, (t, peligro) => panelAvisos.Mostrar(t, peligro));
+            mapa.Iniciar(c.Sesion, new Relieve(c.Relieve), c.Artefacto, c.Datos, () => c.HeroeId, SobreInterfaz, (t, peligro) => panelAvisos.Mostrar(t, peligro), v.Q("nombres"));
+            mapa.NombresDeNodos = PlayerPrefs.GetInt("mundo.capa.nodos", 1) == 1;
+            mapa.Fertilidad = PlayerPrefs.GetInt("mundo.capa.fertilidad", 0) == 1;
             diagnostico = v.Q("diagnostico");
             var botonAvisos = v.Q<Button>("avisos");
             var forzada = v.Q<Button>("marcha-forzada");
+            var nodos = v.Q<Button>("capa-nodos");
+            var fertilidad = v.Q<Button>("capa-fertilidad");
             botonAvisos.clicked += panelAvisos.Alternar;
             forzada.clicked += () => _ = mapa.AlternarMarchaForzada();
+            nodos.clicked += () => { mapa.NombresDeNodos = !mapa.NombresDeNodos; PlayerPrefs.SetInt("mundo.capa.nodos", mapa.NombresDeNodos ? 1 : 0); };
+            fertilidad.clicked += () => { mapa.Fertilidad = !mapa.Fertilidad; PlayerPrefs.SetInt("mundo.capa.fertilidad", mapa.Fertilidad ? 1 : 0); };
             Botones(v);
+
+            // La lista de lo que hay bajo el clic.
+            var lista = v.Q("lista");
+            mapa.AlElegir += cosas =>
+            {
+                v.Q<Label>("lista-titulo").text = $"AQUÍ HAY {cosas.Count} COSAS";
+                var filas = v.Q("lista-filas");
+                filas.Clear();
+                foreach (var cosa in cosas)
+                {
+                    var elegida = cosa;
+                    var fila = new Button(() => { Ver(lista, false); _ = mapa.Elegir(elegida); });
+                    fila.AddToClassList("lista-fila");
+                    fila.Add(Dialogo.Texto(cosa.Nombre, "aviso-titulo"));
+                    if (!string.IsNullOrEmpty(cosa.Detalle)) fila.Add(Dialogo.Texto(cosa.Detalle, "aviso-cuando"));
+                    filas.Add(fila);
+                }
+                Ver(lista, true);
+            };
+            mapa.AlCerrarLista += () => Ver(lista, false);
+
+            // La ficha de lo seleccionado.
+            var ficha = v.Q("ficha");
+            v.Q<Button>("ficha-cerrar").clicked += () => mapa.Seleccionar(null);
+            mapa.AlSeleccionar += cosa => { Ver(ficha, cosa != null); accionesPintadas = null; };
+
+            // Dentro de un sitio: dónde y la salida.
+            var dentro = v.Q("dentro");
+            v.Q<Button>("salir").clicked += () => { var o = OrdenDeSalida(); if (o != null) _ = mapa.Ordenar(o); };
+
             void Refrescar()
             {
                 if (mapa == null) return;
                 botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos";
                 forzada.SetEnabled(mapa.Columna != null);
                 forzada.text = mapa.Columna?.MarchaForzada == true ? "Marcha forzada: sí" : "Marcha forzada: no";
+                nodos.text = mapa.NombresDeNodos ? "Nodos: sí" : "Nodos: no";
+                fertilidad.text = mapa.Fertilidad ? "Fertilidad: sí" : "Fertilidad: no";
+                var lugar = LugarDondeEsta();
+                Ver(dentro, lugar != null);
+                if (lugar != null) v.Q<Label>("dentro-texto").text = $"Estás dentro de {lugar}. Su interior llega con su paso; de momento, desde aquí sales al mundo.";
+                PintarFicha(v);
             }
             Refrescar();
             v.schedule.Execute(Refrescar).Every(250);
+        }
+
+        string accionesPintadas;
+
+        /// <summary>La ficha: nombre, qué es, distancia y tiempo de marcha, y los botones de lo que se puede hacer (Marchar aquí y las acciones
+        /// a la puerta). Los botones se rehacen solo si cambia lo que se puede hacer.</summary>
+        void PintarFicha(VisualElement v)
+        {
+            var cosa = mapa.Seleccionada;
+            if (cosa == null) return;
+            v.Q<Label>("ficha-nombre").text = cosa.Nombre;
+            v.Q<Label>("ficha-detalle").text = cosa.Detalle ?? "";
+            var hasta = mapa.HastaAlli(cosa);
+            Fichas(v.Q("ficha-datos"), hasta == null ? new[] { ("Distancia", "sin columna en el mapa") }
+                : new[] { ("Distancia", $"{hasta.Value.distancia:0.#} u"), ("Tiempo de marcha", hasta.Value.tiempo) });
+            var acciones = CosasDelMapa.Acciones(cosa, mapa.Contexto());
+            bool marchar = mapa.Columna != null;
+            var firma = cosa.Clase + cosa.Id + marchar + string.Join("|", acciones.Select(a => a.Texto));
+            if (firma == accionesPintadas) return;
+            accionesPintadas = firma;
+            var caja = v.Q("ficha-acciones");
+            caja.Clear();
+            if (marchar)
+                caja.Add(Dialogo.Boton("Marchar aquí", "boton-secundario", () =>
+                    _ = cosa.Clase == ClaseDeCosa.Plaza ? mapa.MarcharAPlaza(cosa.Id) : mapa.MarcharA(cosa.X, cosa.Y)));
+            foreach (var a in acciones)
+            {
+                var accion = a;
+                caja.Add(Dialogo.Boton(accion.Texto, "boton-secundario", () => _ = mapa.Ordenar(accion.Orden.Clone())));
+            }
+        }
+
+        /// <summary>El nombre del sitio donde está dentro el héroe (plaza, campamento, pueblo o avanzada), o null si está en el mapa.</summary>
+        string LugarDondeEsta()
+        {
+            var u = HeroeAhora()?.Ubicacion;
+            if (u == null) return null;
+            var a = c.Sesion.Almacen;
+            switch (u.DondeCase)
+            {
+                case UbicacionHeroe.DondeOneofCase.AsentamientoId:
+                    var p = a.Buscar(TipoEntidad.Asentamiento, u.AsentamientoId)?.Asentamiento;
+                    return p != null && p.HasNombre ? p.Nombre : "una plaza";
+                case UbicacionHeroe.DondeOneofCase.CampamentoId: return "un campamento de mercenarios";
+                case UbicacionHeroe.DondeOneofCase.PuebloId: return "un pueblo";
+                case UbicacionHeroe.DondeOneofCase.AvanzadaId: return "una avanzada";
+                default: return null;
+            }
+        }
+
+        Heroe HeroeAhora() => c.HeroeId == null ? null : c.Sesion?.Almacen.Buscar(TipoEntidad.Heroe, c.HeroeId)?.Heroe;
+
+        /// <summary>La orden para salir del sitio donde está el héroe (BronzeAgeClient: `ui/ventanaSalida.ts`), sin elegir tropa ni carga todavía.</summary>
+        Orden OrdenDeSalida()
+        {
+            var h = HeroeAhora();
+            var u = h?.Ubicacion;
+            if (u == null) return null;
+            switch (u.DondeCase)
+            {
+                case UbicacionHeroe.DondeOneofCase.AsentamientoId:
+                    // De tu residencia se sale al mundo con tu columna; de otra plaza, sin más.
+                    return h.HasResidenciaId && h.ResidenciaId == u.AsentamientoId
+                        ? new Orden { SalirAlMundo = new OrdenSalirAlMundo { AsentamientoId = u.AsentamientoId, HeroeId = h.Id } }
+                        : new Orden { SalirDeAsentamiento = new OrdenSalirDeAsentamiento { AsentamientoId = u.AsentamientoId, HeroeId = h.Id } };
+                case UbicacionHeroe.DondeOneofCase.CampamentoId:
+                    return new Orden { SalirDelCampamento = new OrdenSalirDelCampamento { CampamentoId = u.CampamentoId, HeroeId = h.Id } };
+                case UbicacionHeroe.DondeOneofCase.PuebloId:
+                    return new Orden { SalirDePueblo = new OrdenSalirDePueblo { PuebloId = u.PuebloId, HeroeId = h.Id } };
+                case UbicacionHeroe.DondeOneofCase.AvanzadaId:
+                    return new Orden { SalirDeAvanzada = new OrdenSalirDeAvanzada { AvanzadaId = u.AvanzadaId, HeroeId = h.Id } };
+                default: return null;
+            }
         }
 
         void Update()

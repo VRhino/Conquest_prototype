@@ -13,7 +13,8 @@ namespace ConquestTactics.Mundo.Mapa
         const int PorFotograma = 2;
 
         readonly Relieve relieve;
-        readonly RasterDeMundo clases;
+        readonly RasterDeMundo clases, bosque, fertilidad;
+        bool conFertilidad;
         readonly float nivelDelMar;
         readonly Material material;
         readonly Transform padre;
@@ -23,13 +24,28 @@ namespace ConquestTactics.Mundo.Mapa
         public int Cargadas => teselas.Count;
 
         /// <summary>`nivelDelMar`: metros a los que va la lámina del mar (el umbral de agua del generador).</summary>
-        public TerrenoDelMapa(Relieve relieve, RasterDeMundo clases, float nivelDelMar, Material material, Transform padre)
+        public TerrenoDelMapa(Relieve relieve, RasterDeMundo clases, RasterDeMundo bosque, RasterDeMundo fertilidad, float nivelDelMar, Material material, Transform padre)
         {
             this.relieve = relieve;
             this.clases = clases;
+            this.bosque = bosque;
+            this.fertilidad = fertilidad;
             this.nivelDelMar = nivelDelMar;
             this.material = material;
             this.padre = padre;
+        }
+
+        /// <summary>La capa de fertilidad (botón de capas): el suelo se pinta con la rampa de fertilidad en vez de por clase. Rehace las teselas.</summary>
+        public bool ConFertilidad
+        {
+            get => conFertilidad;
+            set
+            {
+                if (value == conFertilidad) return;
+                conFertilidad = value;
+                foreach (var t in teselas.Values) Soltar(t.go);
+                teselas.Clear();
+            }
         }
 
         /// <summary>Lo que se ve en (x, y): la altura del suelo o, si hay agua, la de su lámina (metros).</summary>
@@ -102,7 +118,7 @@ namespace ConquestTactics.Mundo.Mapa
                         c = lamina - h > PinturaDelMapa.MarHondo ? PinturaDelMapa.AguaHonda : PinturaDelMapa.AguaSomera;
                         h = lamina;
                     }
-                    else c = ColorDeClase(clases.En(x, y));
+                    else c = conFertilidad && fertilidad != null ? ColorDeFertilidad(fertilidad.En(x, y) / 255f) : ConBosque(ColorDeClase(clases.En(x, y)), bosque == null ? 0 : bosque.En(x, y) / 255f);
                     // Relativo a la esquina de la tesela: así los números de la malla son pequeños.
                     vertices[k] = new Vector3((float)(i * paso * e), h, (float)(-j * paso * e));
                     colores[k] = c.linear; // el proyecto va en espacio lineal: el color de vértice no se convierte solo
@@ -130,6 +146,21 @@ namespace ConquestTactics.Mundo.Mapa
             r.sharedMaterial = material;
             r.shadowCastingMode = ShadowCastingMode.Off;
             return go;
+        }
+
+        /// <summary>El bosque como relleno plano: sotobosque sobre el color del suelo según la densidad (BronzeAgeClient: `colorDelSuelo`).</summary>
+        public static Color ConBosque(Color suelo, float densidad) =>
+            Color.Lerp(suelo, PinturaDelMapa.Sotobosque, 0.55f * Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.15f, 0.6f, densidad)));
+
+        /// <summary>La rampa de la capa de fertilidad (BronzeAgeClient: `mundo/capasDelMapa.ts`): bajo el mínimo, de rojizo a ocre; desde él, de
+        /// amarillo a verde oscuro.</summary>
+        public static Color ColorDeFertilidad(float f)
+        {
+            const float minimo = 0.3f;
+            if (f < minimo) return Color.Lerp(new Color32(140, 66, 44, 255), new Color32(204, 132, 66, 255), f / minimo);
+            var t = (f - minimo) / (1 - minimo);
+            return t < 0.5f ? Color.Lerp(new Color32(232, 214, 104, 255), new Color32(118, 178, 66, 255), t * 2)
+                : Color.Lerp(new Color32(118, 178, 66, 255), new Color32(30, 110, 50, 255), (t - 0.5f) * 2);
         }
 
         public static Color ColorDeClase(byte clase)

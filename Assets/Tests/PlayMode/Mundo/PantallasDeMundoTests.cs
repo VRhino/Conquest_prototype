@@ -6,6 +6,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using ConquestTactics.Mundo;
 using ConquestTactics.Mundo.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -52,6 +53,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var doc = go.GetComponentInChildren<UIDocument>();
             rt = new RenderTexture(1600, 900, 24);
             doc.panelSettings.targetTexture = rt;
+            doc.panelSettings.clearColor = true; // a una textura, el panel no limpia solo lo de antes
             var raiz = doc.rootVisualElement;
             yield return null;
             yield return Capturar("1_acceso");
@@ -99,20 +101,26 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => raiz.Q<Label>(className: "partida-heroe")?.text.Contains("U" + nick.Substring(3)) == true, 20, "la partida con el héroe");
             yield return Capturar("8_partidas_con_heroe");
             Pulsar(raiz.Q<Button>("entrar"));
-            // Con héroe, el mapa (paso 2): el suelo alrededor del campamento, la niebla de la VISTA y un clic para salir marchando.
+            // Con héroe, el mapa (paso 2). Todo lo que hace el jugador va por el mismo camino que él: botones con eventos de UI Toolkit y el
+            // ratón con un dispositivo del Input System (en batch no hay foco: aquí el Input System no lo mira).
             yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
             var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
             Assert.IsNotNull(mapa);
             yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto && mapa.TeselasCargadas > 4, 60, "el suelo");
             yield return Esperar(() => conexion.Sesion.Almacen.Ambitos.Keys.Any(k => k.StartsWith("VISTA:")), 10, "la VISTA");
-            yield return new WaitForSecondsRealtime(0.5f);
-            yield return CapturarMapa(mapa, "9_mapa_en_el_campamento");
             var pantallas = go.GetComponent<PantallasDeMundo>();
             Assert.IsFalse(pantallas.SobreInterfaz(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)), "el centro del mapa es del mapa: ahí el ratón no lo coge la interfaz");
             Assert.IsTrue(pantallas.SobreInterfaz(new Vector2(Screen.width - 20, Screen.height - 20)), "la barra de arriba sí es interfaz");
-            var desde = mapa.Centro.Value;
-            // El ratón entra por el mismo camino que el del jugador: un ratón del Input System con eventos de verdad (rueda y clic).
-            // En batch la aplicación no tiene el foco, y sin él el Input System apaga el ratón: aquí no se mira el foco.
+
+            // Dentro del campamento: dónde estás y la salida.
+            yield return Esperar(() => !raiz.Q("dentro").ClassListContains("oculto"), 5, "el aviso de dentro");
+            StringAssert.Contains("campamento", raiz.Q<Label>("dentro-texto").text);
+            yield return CapturarMapa(mapa, "9_mapa_dentro_del_campamento");
+            yield return Capturar("9b_interfaz_dentro");
+            Pulsar(raiz.Q<Button>("salir"));
+            yield return Esperar(() => mapa.Columna != null, 10, "la columna al salir");
+            yield return Esperar(() => raiz.Q("dentro").ClassListContains("oculto"), 5, "que se vaya el aviso de dentro");
+
             var ajustes = UnityEngine.InputSystem.InputSystem.settings;
             var fondo = ajustes.backgroundBehavior;
             var editor = ajustes.editorInputBehaviorInPlayMode;
@@ -122,17 +130,42 @@ namespace ConquestTactics.Mundo.UI.Tests
             try
             {
                 raton.MakeCurrent();
-                var donde = new Vector2(Screen.width * 0.5f, Screen.height * 0.25f);
+                // La rueda cambia el zoom.
                 var zoomAntes = mapa.Camara.Zoom;
-                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde, scroll = new Vector2(0, 120) });
-                yield return null;
-                yield return null;
+                yield return Rueda(raton, new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
                 Assert.AreNotEqual(zoomAntes, mapa.Camara.Zoom, "la rueda cambia el zoom");
-                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde }.WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Left, true));
-                yield return null;
-                yield return null;
-                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde });
-                yield return null;
+
+                // Un clic sobre el campamento lo elige: su ficha, con «Entrar» porque la columna está a la puerta.
+                var campamento = mapa.Cosas.First(x => x.Clase == ClaseDeCosa.Mercenarios);
+                var sobreElCampamento = (Vector2)mapa.Vista.WorldToScreenPoint(ConquestTactics.Mundo.Mapa.EscalaDelMapa.AEscena(campamento.X, campamento.Y, mapa.AlturaVisible(campamento.X, campamento.Y)));
+                yield return Clic(raton, sobreElCampamento);
+                yield return Esperar(() => mapa.Seleccionada?.Clase == ClaseDeCosa.Mercenarios || mapa.ListaAbierta, 5, "el campamento elegido con el clic (o la lista)");
+                if (mapa.ListaAbierta)
+                {
+                    // Con varias cosas bajo el clic, la lista: se elige el campamento en ella.
+                    yield return Capturar("10a_lista_bajo_el_clic");
+                    Pulsar(raiz.Q("lista-filas").Query<Button>().ToList().First(b => b.Q<Label>().text == "Mercenarios"));
+                    yield return Esperar(() => mapa.Seleccionada?.Clase == ClaseDeCosa.Mercenarios, 5, "el campamento elegido en la lista");
+                }
+                yield return Esperar(() => !raiz.Q("ficha").ClassListContains("oculto"), 5, "la ficha");
+                yield return new WaitForSecondsRealtime(0.5f);
+                var botones = raiz.Q("ficha-acciones").Query<Button>().ToList().Select(b => b.text).ToList();
+                CollectionAssert.Contains(botones, "Marchar aquí");
+                yield return Capturar("10_ficha_del_campamento");
+                yield return CapturarMapa(mapa, "10b_campamento_elegido");
+
+                // Un clic en el suelo, lejos de todo: se quita la selección y la columna marcha.
+                var desde = mapa.Centro.Value;
+                // Un punto de suelo sin nada debajo (lo que hay cerca del campamento también se puede coger con el clic).
+                var suelo = new[] { 0.25f, 0.15f, 0.7f, 0.85f }.SelectMany(fy => new[] { 0.5f, 0.3f, 0.7f }.Select(fx => new Vector2(Screen.width * fx, Screen.height * fy)))
+                    .First(pp => mapa.PuntoBajo(pp) is (double, double) q && CosasDelMapa.BajoElClic(mapa.Cosas, q.Item1, q.Item2, mapa.Camara.PxPorUnidad(Screen.height)).Count == 0);
+                yield return Clic(raton, suelo);
+                yield return Esperar(() => mapa.Seleccionada == null, 5, "que el clic en el suelo quite la selección");
+                yield return new WaitForSecondsRealtime(2f);
+                var ahora = mapa.Centro.Value;
+                Assert.Greater(Math.Abs(ahora.x - desde.x) + Math.Abs(ahora.y - desde.y), 0.1, "la columna anda hacia donde se hizo clic");
+                Assert.Greater(mapa.PuntosDeRuta, 1, "con su ruta");
+                yield return CapturarMapa(mapa, "11_mapa_marchando");
             }
             finally
             {
@@ -140,18 +173,29 @@ namespace ConquestTactics.Mundo.UI.Tests
                 ajustes.backgroundBehavior = fondo;
                 ajustes.editorInputBehaviorInPlayMode = editor;
             }
-            yield return Esperar(() => mapa.Columna != null, 10, "la columna (el clic con el ratón)");
-            yield return new WaitForSecondsRealtime(2f);
-            var ahora = mapa.Centro.Value;
-            Assert.Greater(Math.Abs(ahora.x - desde.x) + Math.Abs(ahora.y - desde.y), 0.1, "la columna anda hacia donde se hizo clic");
-            yield return CapturarMapa(mapa, "10_mapa_marchando");
             Pulsar(raiz.Q<Button>("marcha-forzada"));
             yield return Esperar(() => mapa.Columna?.MarchaForzada == true, 10, "la marcha forzada");
+            yield return MedirFotogramas(mapa);
+            Pulsar(raiz.Q<Button>("capa-fertilidad"));
+            mapa.Camara.PasoDeZoom(1);
             mapa.Camara.PasoDeZoom(1);
             mapa.Camara.Inclinar(30);
             yield return new WaitForSecondsRealtime(2f);
-            yield return CapturarMapa(mapa, "11_mapa_alejado");
-            yield return MedirFotogramas(mapa);
+            yield return CapturarMapa(mapa, "12_capa_de_fertilidad");
+            Pulsar(raiz.Q<Button>("capa-fertilidad"));
+
+            // Entrar con la columna ya fuera y marchando (como al conectarse con la columna en marcha desde otro sitio): un mapa nuevo sobre la
+            // misma sesión enseña la ruta y el destino desde el primer momento. («Cambiar de partida» no vale: saca al héroe del mundo.)
+            var lejos = mapa.MarcharA(mapa.Centro.Value.x + 40, mapa.Centro.Value.y);
+            yield return Esperar(() => lejos.IsCompleted, 10, "la marcha larga");
+            UnityEngine.Object.Destroy(mapa.gameObject);
+            yield return null;
+            mapa = new GameObject("Mapa nuevo").AddComponent<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+            mapa.Iniciar(conexion.Sesion, new Relieve(conexion.Relieve), conexion.Artefacto, conexion.Datos, () => conexion.HeroeId, _ => false, (t, p) => { }, null);
+            yield return null;
+            Assert.IsNotNull(mapa.Columna, "la columna, en el primer fotograma");
+            Assert.Greater(mapa.PuntosDeRuta, 1, "su ruta, en el primer fotograma");
+            yield return CapturarMapa(mapa, "13_ruta_al_volver");
 
             Pulsar(raiz.Q<Button>("cerrar-sesion"));
             yield return null;
@@ -180,6 +224,25 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (Time.realtimeSinceStartup > fin) Assert.Fail("no llegó " + que);
                 yield return null;
             }
+        }
+
+        static IEnumerator Clic(UnityEngine.InputSystem.Mouse raton, Vector2 donde)
+        {
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde }.WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Left, true));
+            yield return null;
+            yield return null;
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde });
+            yield return null;
+            yield return null;
+        }
+
+        static IEnumerator Rueda(UnityEngine.InputSystem.Mouse raton, Vector2 donde)
+        {
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde, scroll = new Vector2(0, 120) });
+            yield return null;
+            yield return null;
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde });
+            yield return null;
         }
 
         /// <summary>Lo que ve la cámara del mapa (sin la interfaz, que va a otra textura).</summary>
