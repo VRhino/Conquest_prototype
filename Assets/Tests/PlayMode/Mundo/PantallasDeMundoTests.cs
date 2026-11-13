@@ -3,6 +3,7 @@
 // Si `MUNDO_CAPTURAS` dice una carpeta, guarda allí una captura de cada pantalla (para mirarlas; hace falta correr sin -nographics).
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -591,6 +592,10 @@ namespace ConquestTactics.Mundo.UI.Tests
             BronzeAge.Contract.V1.CampamentoMercenarios Camp() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.CampamentoMercenarios, campId).CampamentoMercenarios;
             foreach (var zona in new[] { "taberna", "mercado", "militar", "puerta" })
                 Assert.IsNotNull(GameObject.Find("Zona " + zona), "la zona de " + zona);
+            // Dentro, solo pinta la cámara de FeudoScene: la del mundo (y la del mapa) están apagadas.
+            var camaras = Camera.allCameras.Where(x => x.isActiveAndEnabled).Select(x => $"{x.name} ({x.gameObject.scene.name})").ToList();
+            Debug.Log("[Prueba] cámaras encendidas en el interior: " + string.Join(", ", camaras));
+            Assert.IsTrue(Camera.allCameras.Where(x => x.isActiveAndEnabled).All(x => x.gameObject.scene.name == "FeudoScene"), "solo la cámara del interior");
             // El héroe recién nacido no tiene oro: el servidor de prueba le da 300 (orden de administración) para poder comprar y reclutar.
             yield return DarAlmacen(url, conexion.HeroeId, "oro", 300_000);
             yield return Esperar(() => Milesimas(Yo().AlmacenPersonal, "oro") >= 300 || Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN") == null, 10, "el oro en el almacén");
@@ -615,12 +620,10 @@ namespace ConquestTactics.Mundo.UI.Tests
                 // Junto a una pieza: el héroe se coloca en el borde de su zona (andar entre las casas hasta ella no se prueba), el cartel y F.
                 IEnumerator AbrirZona(string zona, string panel)
                 {
-                    var caja = GameObject.Find("Zona " + zona).GetComponent<BoxCollider>().bounds;
-                    var cc = heroe.GetComponent<CharacterController>();
-                    cc.enabled = false;
-                    heroe.transform.position = new Vector3(caja.center.x, heroe.transform.position.y, caja.min.z + 0.8f);
-                    cc.enabled = true;
+                    // Andando de verdad desde donde está: el camino libre con el radio del héroe y el teclado (W/A/S/D) por él.
+                    yield return AndarHasta(teclado, heroe.transform, zona, () => interior.ZonaCercana == zona);
                     yield return Esperar(() => interior.ZonaCercana == zona && !raiz.Q<Label>("cartel").ClassListContains("oculto"), 5, "el cartel de " + zona);
+                    yield return CapturarEscena("FeudoScene", $"28_andando_hasta_{zona}");
                     yield return Capturar($"21_cartel_{zona}");
                     yield return Tecla(UnityEngine.InputSystem.Key.F);
                     yield return Esperar(() => raiz.Q(panel) != null, 5, "el panel de " + zona);
@@ -637,6 +640,24 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q("panel-taberna").Q<Button>("cerrar"));
                 yield return null;
                 Assert.IsFalse(interior.PanelAbierto || DialogueUIState.IsDialogueOpen, "al cerrar vuelve el control");
+                // Residir: el servidor de prueba le quita la residencia (`fijar_residencia` sin residencia) y en la taberna sale «Residir aquí».
+                var sinResidencia = new Google.Protobuf.WellKnownTypes.Struct();
+                sinResidencia.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(conexion.HeroeId);
+                yield return Administrar(url, "fijar_residencia", sinResidencia);
+                if (Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN") != null)
+                {
+                    yield return Esperar(() => !Camp().ResidentesIds.Contains(conexion.HeroeId), 10, "sin residencia");
+                    yield return Tecla(UnityEngine.InputSystem.Key.F);
+                    yield return Esperar(() => raiz.Q("panel-taberna")?.Q<Button>("residir") != null, 5, "«Residir aquí»");
+                    yield return Capturar("22b_taberna_sin_residir");
+                    Pulsar(raiz.Q("panel-taberna").Q<Button>("residir"));
+                    yield return Esperar(() => Camp().ResidentesIds.Contains(conexion.HeroeId), 10, "residir aceptado");
+                    yield return Esperar(() => raiz.Q("panel-taberna")?.Q<Button>("residir") == null, 5, "la taberna repintada");
+                    StringAssert.Contains("tu residencia", raiz.Q("panel-taberna").Q<Label>(className: "dialogo-texto").text);
+                    yield return Capturar("22c_taberna_residiendo");
+                    Pulsar(raiz.Q("panel-taberna").Q<Button>("cerrar"));
+                    yield return null;
+                }
 
                 // El mercado: comprar una unidad y verla en tu almacén.
                 yield return AbrirZona("mercado", "panel-mercado");
@@ -702,17 +723,9 @@ namespace ConquestTactics.Mundo.UI.Tests
                 }
 
                 // Salir andando por la puerta: S hasta salir del hueco, el cartel, F y la ventana con la tropa, la carga y los víveres.
-                var cc2 = heroe.GetComponent<CharacterController>();
-                var puerta = GameObject.Find("Zona puerta").GetComponent<BoxCollider>().bounds;
-                cc2.enabled = false;
-                heroe.transform.position = new Vector3(puerta.center.x, heroe.transform.position.y, puerta.max.z + 4f);
-                cc2.enabled = true;
+                yield return AndarHasta(teclado, heroe.transform, "puerta", () => interior.ZonaCercana == "puerta");
                 yield return new WaitForSecondsRealtime(0.3f);
-                // De cara a la puerta (al sur): la cámara mira al norte, así que es S.
-                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.S));
-                yield return Esperar(() => interior.ZonaCercana == "puerta", 10, "la zona de la puerta andando");
-                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
-                yield return new WaitForSecondsRealtime(0.3f);
+
                 yield return Capturar("25_cartel_puerta");
                 yield return Tecla(UnityEngine.InputSystem.Key.F);
                 yield return Esperar(() => raiz.Q("ventana-salida") != null, 5, "la ventana de salida");
@@ -875,6 +888,11 @@ namespace ConquestTactics.Mundo.UI.Tests
             foreach (var (ancho, alto) in Tamanos)
             {
                 rt = new RenderTexture(ancho, alto, 24);
+                // Una textura nueva trae lo que hubiera en esa memoria de la tarjeta: se limpia (el panel solo limpia lo que pinta).
+                var activa = RenderTexture.active;
+                RenderTexture.active = rt;
+                GL.Clear(true, true, Color.clear);
+                RenderTexture.active = activa;
                 usadas.Add(rt);
                 doc.panelSettings.targetTexture = rt;
                 yield return null;
@@ -1013,6 +1031,84 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
+        /// <summary>Lleva al héroe andando hasta una zona del interior con el teclado del Input System: busca un camino libre en una rejilla de
+        /// 0,5 m con el radio del héroe (más un margen) contra las colisiones del campamento (edificios, empalizada) y lo sigue pulsando W/A/S/D
+        /// según la cámara. Falla si no hay camino o si se queda encajado.</summary>
+        static IEnumerator AndarHasta(UnityEngine.InputSystem.Keyboard teclado, Transform heroe, string zona, Func<bool> llegado)
+        {
+            var campamento = GameObject.Find("Campamento del motor").transform;
+            var destino = GameObject.Find("Zona " + zona).GetComponent<BoxCollider>().bounds;
+            var radio = heroe.GetComponent<CharacterController>().radius + 0.15f;
+            var suelo = campamento.Find("Suelo").GetComponent<Collider>().bounds;
+            const float paso = 0.5f;
+            int nx = (int)(suelo.size.x / paso), nz = (int)(suelo.size.z / paso);
+            var y = heroe.position.y;
+            Vector3 Centro(int i, int k) => new Vector3(suelo.min.x + (i + 0.5f) * paso, y, suelo.min.z + (k + 0.5f) * paso);
+            var libre = new bool?[nx, nz];
+            bool Libre(int i, int k)
+            {
+                if (i < 0 || k < 0 || i >= nx || k >= nz) return false;
+                if (libre[i, k] == null)
+                {
+                    var p = Centro(i, k);
+                    libre[i, k] = !Physics.OverlapCapsule(p + Vector3.up * (radio + 0.25f), p + Vector3.up * 1.6f, radio, ~0, QueryTriggerInteraction.Ignore)
+                        .Any(c => c.transform.IsChildOf(campamento) && c.name != "Suelo");
+                }
+                return libre[i, k].Value;
+            }
+            (int, int) Celda(Vector3 p) => ((int)((p.x - suelo.min.x) / paso), (int)((p.z - suelo.min.z) / paso));
+            var inicio = Celda(heroe.position);
+            var previo = new Dictionary<(int, int), (int, int)> { [inicio] = inicio };
+            var cola = new Queue<(int, int)>();
+            cola.Enqueue(inicio);
+            (int, int)? meta = null;
+            while (cola.Count > 0 && meta == null)
+            {
+                var (i, k) = cola.Dequeue();
+                var c = Centro(i, k);
+                if (c.x > destino.min.x + 0.3f && c.x < destino.max.x - 0.3f && c.z > destino.min.z + 0.3f && c.z < destino.max.z - 0.3f && Libre(i, k)) { meta = (i, k); break; }
+                foreach (var (di, dk) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) })
+                {
+                    var n = (i + di, k + dk);
+                    if (previo.ContainsKey(n) || !Libre(n.Item1, n.Item2)) continue;
+                    if (di != 0 && dk != 0 && (!Libre(i + di, k) || !Libre(i, k + dk))) continue; // sin cortar esquinas
+                    previo[n] = (i, k);
+                    cola.Enqueue(n);
+                }
+            }
+            Assert.IsNotNull(meta, $"hay camino libre andando hasta la zona de {zona}");
+            var camino = new List<Vector3>();
+            for (var x = meta.Value; x != inicio; x = previo[x]) camino.Add(Centro(x.Item1, x.Item2));
+            camino.Reverse();
+            Debug.Log($"[Prueba] camino hasta {zona}: {camino.Count * paso:0} m aprox.");
+            var fin = Time.realtimeSinceStartup + 60;
+            int siguiente = 0;
+            var atasco = (pos: heroe.position, t: Time.realtimeSinceStartup);
+            while (!llegado())
+            {
+                Assert.Less(Time.realtimeSinceStartup, fin, $"llegar andando a {zona}");
+                while (siguiente < camino.Count - 1 && Vector2.Distance(new Vector2(heroe.position.x, heroe.position.z), new Vector2(camino[siguiente].x, camino[siguiente].z)) < 0.6f) siguiente++;
+                var d = camino[Math.Min(siguiente + 1, camino.Count - 1)] - heroe.position;
+                d.y = 0;
+                var cam = Camera.main.transform;
+                var f = cam.forward; f.y = 0; f.Normalize();
+                var r = cam.right; r.y = 0; r.Normalize();
+                float a = Vector3.Dot(d.normalized, f), b = Vector3.Dot(d.normalized, r);
+                var teclas = new List<UnityEngine.InputSystem.Key>();
+                if (a > 0.38f) teclas.Add(UnityEngine.InputSystem.Key.W);
+                if (a < -0.38f) teclas.Add(UnityEngine.InputSystem.Key.S);
+                if (b > 0.38f) teclas.Add(UnityEngine.InputSystem.Key.D);
+                if (b < -0.38f) teclas.Add(UnityEngine.InputSystem.Key.A);
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(teclas.ToArray()));
+                yield return null;
+                // Encajado: tres segundos sin moverse medio metro.
+                if (Vector3.Distance(heroe.position, atasco.pos) > 0.5f) atasco = (heroe.position, Time.realtimeSinceStartup);
+                Assert.Less(Time.realtimeSinceStartup - atasco.t, 3f, $"el héroe se queda encajado yendo a {zona} en {heroe.position}");
+            }
+            UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+            yield return null;
+        }
+
         static string tokenAdmin;
 
         /// <summary>Pone recursos en el almacén personal de un héroe con la orden de administración del motor (`dar_almacen_personal`), desde una
@@ -1022,8 +1118,18 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         static IEnumerator DarAlmacen(string url, string heroeId, string recurso, long milesimas)
         {
+            var p = new Google.Protobuf.WellKnownTypes.Struct();
+            p.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(heroeId);
+            p.Fields["recurso"] = Google.Protobuf.WellKnownTypes.Value.ForString(recurso);
+            p.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(milesimas);
+            yield return Administrar(url, "dar_almacen_personal", p);
+        }
+
+        /// <summary>Una orden de administración del motor (`OrdenDeAdministracion`), desde una sesión admin del servidor de prueba.</summary>
+        static IEnumerator Administrar(string url, string ordenAdmin, Google.Protobuf.WellKnownTypes.Struct parametros)
+        {
             var codigo = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN");
-            if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se da " + recurso); yield break; }
+            if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se manda " + ordenAdmin); yield break; }
             var acceso = new Acceso(url);
             if (tokenAdmin == null)
             {
@@ -1038,11 +1144,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var abrir = s.Abrir();
             var fin = Time.realtimeSinceStartup + 20;
             while (!abrir.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            var parametros = new Google.Protobuf.WellKnownTypes.Struct();
-            parametros.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(heroeId);
-            parametros.Fields["recurso"] = Google.Protobuf.WellKnownTypes.Value.ForString(recurso);
-            parametros.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(milesimas);
-            var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { Administracion = new BronzeAge.Contract.V1.OrdenDeAdministracion { Codigo = "dar_almacen_personal", Parametros = parametros } });
+            var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { Administracion = new BronzeAge.Contract.V1.OrdenDeAdministracion { Codigo = ordenAdmin, Parametros = parametros } });
             fin = Time.realtimeSinceStartup + 20;
             while (!orden.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
             Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.ToString());

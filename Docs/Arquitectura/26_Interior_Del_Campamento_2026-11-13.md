@@ -198,20 +198,24 @@ hay en FeudoScene que podría alojarlo y la recomendación. El autor la aprobó 
 - **`PantallasDeMundoTests.ElCampamentoPorDentro`** (PlayMode, contra el motor 358af5ff). El servidor de prueba da 300 de oro al héroe
   con la orden de administración `dar_almacen_personal`, desde una cuenta admin registrada con el código de un solo uso que imprime al
   arrancar (`BRONZEAGE_PRUEBA_ADMIN`; `Sesion.Tipo = ClienteAdminWeb`), porque el héroe recién nacido no tiene oro. La prueba recorre:
-  1. **Las cuatro zonas.** En la taberna, el mercado y el edificio militar se coloca al héroe en el borde de la zona (andar entre las
-     casas hasta ellas no se prueba). Sale el cartel y, con la tecla F, el panel.
+  1. **Las cuatro zonas, andando de verdad.** Desde la puerta hasta la taberna, el mercado, el edificio militar y la salida, con el
+     teclado del Input System. La prueba busca un camino libre en una rejilla de 0,5 m con el radio del héroe (más un margen) contra las
+     colisiones del campamento y lo sigue con W/A/S/D según la cámara (unos 9, 12, 12 y 27 m). Falla si no hay camino o si el héroe se
+     queda tres segundos sin avanzar. En cada zona salen el cartel y, con la tecla F, el panel.
   2. **El bloqueo.** Con un panel abierto el héroe no anda; al cerrar, vuelve el control.
-  3. **La taberna:** residente, sin «Residir aquí».
+  3. **La taberna:** residente, sin «Residir aquí». El servidor de prueba le quita la residencia (`fijar_residencia`); al volver a
+     pulsar F sale «Residir aquí» y, pulsado, el motor lo acepta y la taberna vuelve a «tu residencia».
   4. **El mercado:** se compra una unidad y aparece en el almacén, con la línea «Compraste…».
   5. **La tropa:** se pide prestada la milicia de lanceros y se ve como prestada. Si hay tropa ofrecida con oro bastante, se recluta;
      si no, sale su motivo.
-  6. **Un rechazo de cada orden**, con su frase en español: `residencia.ya_reside`, `mercenarios.cantidad_invalida`,
+  6. **Un rechazo de cada orden**, con su frase en español: `residencia.cooldown` (recién mudado), `mercenarios.cantidad_invalida`,
      `mercenarios.tropa_no_disponible` y `mercenarios.ya_prestada`.
-  7. **La salida.** Andando con S hasta la zona de la puerta, el cartel y F abren la ventana de salida, con la escuadra prestada y el
+  7. **La salida.** Andando hasta la zona de la puerta, el cartel y F abren la ventana de salida, con la escuadra prestada y el
      cobre comprado como carga. «Llenar víveres» lleva de 0 a 350. Al salir, la columna lleva esa escuadra y ese cobre en el carro.
   8. **Los cuatro tamaños** de ventana, con lo que se pulsa dentro de su placa, para la taberna, el mercado, la tropa y la ventana de
      salida.
 - **Sin verificar contra el motor:**
   - **Reclutar aceptado:** en una partida nueva el campamento no ofrece aún ninguna tropa; todas esperan a su tecnología.
-  - **Residir aceptado:** el héroe nace residente y el campamento de al lado está lejos.
-  - **Andar hasta la taberna, el mercado y el edificio militar** con el teclado entre las casas.
+- **Las capturas a otros tamaños** (`EnTamanos`) se hacen en texturas nuevas, que traen lo que hubiera en esa memoria de la tarjeta. De ahí
+  salía el mapa detrás del mercado a 1280×720. Ahora se limpian antes, y la prueba comprueba que dentro del campamento solo está encendida
+  la cámara de FeudoScene: en el juego no hay mapa detrás.
