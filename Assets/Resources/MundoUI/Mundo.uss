@@ -165,7 +165,7 @@ Button { margin: 0; }
 .lista-fila:hover { border-color: var(--bronce); }
 .ficha-mapa .boton-secundario { margin-bottom: 6px; height: 32px; }
 
-/* Crear el héroe: la lista de campamentos a la izquierda y la ficha con la clase y el nombre a la derecha, sobre el mapa. */
+/* Crear el héroe: la lista de campamentos a la izquierda y la ficha con el nombre a la derecha, sobre el mapa. */
 .panel-izquierda { position: absolute; left: 12px; top: 64px; bottom: 12px; width: 300px; }
 .panel-derecha { position: absolute; right: 12px; top: 64px; bottom: 12px; width: 420px; }
 .panel-relleno { flex-grow: 1; padding: 14px 16px; }
@@ -175,4 +175,14 @@ Button { margin: 0; }
 .campamento:hover { border-color: var(--bronce); }
 .campamento--elegido, .clase--elegida { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.16); }
 .clase--elegida { color: var(--oro-claro); }
+.campamento--comparado { border-left-color: var(--oro-claro); }
+/* La tarjeta es un botón sin aspecto de botón (para elegir) y debajo la casilla de comparar. */
+.campamento-boton { flex-direction: column; align-items: stretch; margin: 0; padding: 0; border-width: 0; background-color: rgba(0, 0, 0, 0); -unity-text-align: middle-left; }
+.campamento-recomendado { color: var(--oro); font-size: 12px; margin-left: 6px; -unity-text-align: middle-left; }
+.campamento-comparar { margin: 4px 0 0 0; font-size: 12px; color: var(--texto-2); }
+/* Comparar dos campamentos: una fila por dato, el mejor en oro. */
+.comparar-fila { flex-direction: row; align-items: center; justify-content: space-between; padding: 3px 0; border-bottom-width: 1px; border-color: rgba(107, 74, 41, 0.5); }
+.comparar-titulo { width: 30%; color: var(--texto-2); font-size: 12px; white-space: normal; }
+.comparar-valor { width: 35%; white-space: normal; font-size: 13px; }
+.comparar-gana { color: var(--oro-claro); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }
 .puntos { color: var(--oro); letter-spacing: 2px; }

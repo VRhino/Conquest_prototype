@@ -12,6 +12,7 @@
     "Unity.TextMeshPro",
     "Unity.InputSystem",
     "Unity.Collections",
-    "Unity.Entities.Hybrid"
+    "Unity.Entities.Hybrid",
+    "Conquest.Mundo"
   ]
 }

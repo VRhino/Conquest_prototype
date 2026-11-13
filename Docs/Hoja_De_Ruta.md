@@ -72,7 +72,7 @@ servidor real. Entre paréntesis, la sección del inventario.
 |---|---|---|
 | 1 | **Conexión, acceso y avisos:** Conquest como cliente de la sesión del contrato 05 (WebSocket con Protobuf y zstd: `Hola`, ámbitos, foto y delta, órdenes, reloj, reconexión), el almacén de ámbitos, login y partidas, pantalla de carga, los datos de `/v1/datos`, el artefacto de mundo y el relieve, y el sistema de avisos. El contrato ya está compilado en C# (`Assets/Plugins/BronzeAge`); hoy solo lo usa el lanzador (§3.1, §3.2, §3.19) | ✅ conexión, acceso y partidas, carga y avisos en `MundoScene` ([`23_Conexion_Al_Motor`](Arquitectura/23_Conexion_Al_Motor_2026-11-13.md)) |
 | 2 | **Mapa de mundo con cuadros:** terreno del relieve, agua y niebla planos, la cámara y las medidas de BronzeAgeClient, tu columna, clic para marchar, lo ajeno como cuadros, la lista bajo el clic y la ficha con las acciones a la puerta. Después se rellena poco a poco con modelos propios (§3.4) | ✅ el mapa con cuadros en `MundoScene`: suelo, agua, niebla, tu columna, todo lo demás, la lista bajo el clic, la ficha con sus acciones y la salida de los sitios ([`24_Mapa_De_Mundo`](Arquitectura/24_Mapa_De_Mundo_2026-11-13.md)) |
-| 3 | **Crear el héroe:** la clase, el creador de avatar de Conquest y elegir campamento sobre el mapa del paso 2 (§3.3) | 🔄 3A hecha (campamento sobre el mapa, clase y nombre; [`25_Crear_El_Heroe`](Arquitectura/25_Crear_El_Heroe_2026-11-13.md)); 3B, el creador de avatar |
+| 3 | **Crear el héroe:** la clase, el creador de avatar de Conquest y elegir campamento sobre el mapa del paso 2 (§3.3) | ✅ «Nace tu héroe» (el campamento sobre el mapa, con su región, el recomendado, «Elegir por mí» y comparar dos, y el nombre) y, al nacer, el creador de personaje de Conquest con las clases del motor, el género y el aspecto ([`25_Crear_El_Heroe`](Arquitectura/25_Crear_El_Heroe_2026-11-13.md)) |
 | 4 | **Campamento de mercenarios por dentro** sobre FeudoScene, con lo básico (residir, comprar, reclutar) y la ventana «Salir al mundo». El campamento se monta desde la planta que da el servidor; el `.proto` aún no la transmite (antes CQ-007) (§3.15, §3.8) | ⬜ |
 | 5 | **El paso del mundo a la batalla y vuelta:** atacar un campamento de bandidos desde el mapa, recibir en `Batalla.asignacion_propia` la instancia y el token, entrar en el servidor de batalla, volver al mundo al acabar o al salir, e informe de combate. Incluye `cancelarBatalla`. Aquí se cierra el ciclo con el motor (§3.8, §3.19) | ⬜ |
 | 6 | **Base personal y reclutamiento:** héroe, equipo, tropas, carro y el árbol de tropas (§3.9, §3.10) | ⬜ |
@@ -98,6 +98,8 @@ servidor real. Entre paréntesis, la sección del inventario.
   §5.
 - **Las pantallas de relleno de Conquest de fuera de la batalla** (login, selección de personaje, barracón, preparación,
   posbatalla, emparejamiento, tienda) se borran cuando llega la que las sustituye.
+- **La lista de héroes de Conquest** (`CharacterselecctionScene`) no se borra: el autor la quiere en el flujo y dirá dónde va
+  (2026-11-13). El creador de personaje (`AvatarCreator`) ya es el de crear el héroe en el motor (paso 3).
 
 **Pedidos al motor que salgan de la migración:**
 

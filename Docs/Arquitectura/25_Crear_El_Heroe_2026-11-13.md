@@ -1,50 +1,109 @@
 # 25. Crear el héroe (2026-11-13)
 
 Paso 3 del bloque 4 de [`Hoja_De_Ruta.md`](../Hoja_De_Ruta.md) (inventario §3.3). Una cuenta sin héroe ya no se queda en la pantalla de la
-sesión viva: al entrar en la partida, crea su héroe sobre el mapa del paso 2 y, al aceptarse `crearHeroe`, entra en el mapa dentro de su
-campamento. Se hace en dos tandas:
+sesión viva. Al entrar en la partida pasa por dos pantallas:
 
-- **3A** (esta): campamento sobre el mapa, clase y nombre, con un aspecto por defecto (como hace hoy BronzeAgeClient).
-- **3B**: el creador de avatar de Conquest (`AvatarCreator`).
-
-Se parte porque el creador es una escena UGUI con un personaje 3D modular de Synty (`ModularHeroVisual`), cámara orbital y su propia lógica
-de clase (`HeroClassSelector`, con las 4 clases de relleno), y al terminar guarda en `player_save.json` (`HeroDataService`,
-`PlayerSessionService`, `SaveSystem`). Sus piezas de aspecto sí sirven tal cual: `AvatarPartSelector.GetCurrentSelection()` da ids de texto
-estables de `Resources/Data/Avatar/AvatarPartDatabase.asset` (`head_00`, `hair_01`, `eyebrow_01`, `facialhair_01`…) que encajan con
-`cabeza_id`, `pelo_id`, `cejas_id` y `barba_id` del contrato.
+1. **«Nace tu héroe»** (`MundoScene`, UI Toolkit), sobre el mapa del paso 2. Aquí solo se elige el lugar y se escribe el nombre.
+2. **El creador de personaje de Conquest** (la escena `AvatarCreator`, UGUI). Se abre encima con «Nacer en <sitio>». Allí se elige la
+   clase entre las del motor, el género y el aspecto. Al confirmar sale `crearHeroe`. Si el motor lo acepta, vuelves al mapa con el
+   héroe dentro de su campamento.
 
 ## Dónde está
 
 | Pieza | Dónde | Qué |
 |---|---|---|
-| `ClaseDeHeroe` | `Conquest.Mundo` | Las clases de `Objetos_Del_Heroe.CLASES_HEROE` con su equipo inicial de `OBJETOS`: el arma de tier 1 de su clase, las cuatro piezas de su armadura inicial (sin casco) y la montura de tiro (BronzeAgeClient: `ui/clasesHeroe.ts`) |
-| `AnalisisDeCampamento` | `Conquest.Mundo` | Lo que rodea a cada campamento, sacado del artefacto (el motor no lo manda): suelo, fertilidad y bosque a 150 u; yacimientos a 150 y 250 u y el más cercano; río, agua, bandidos a 250 u y el campamento vecino (`mundo/analisisCampamento.ts`) |
-| `PantallasDeMundo.CrearHeroe()` | `Conquest.Mundo.UI` | La pantalla: la lista de campamentos, la ficha del elegido, la clase, el nombre y «Nacer» |
-| `MapaDeMundo` (modo sin héroe) | `Conquest.Mundo.Mapa` | `Enfoque`, `RadioVisionFijo`, `Adicionales` y `RayasAdicionales`: el mismo mapa, mirando al campamento, con 150 u en pantalla, los campamentos y bandidos del artefacto y los aros de 150 y 250 u del elegido |
-| `CrearHeroe.uxml` | `Assets/Resources/MundoUI` | La pantalla |
+| `ClaseDeHeroe` | `Conquest.Mundo` | Las clases de `Objetos_Del_Heroe.CLASES_HEROE` con su equipo inicial de `OBJETOS`: el arma de tier 1 de su clase, las cuatro piezas de su armadura inicial (sin casco) y la montura de tiro. En BronzeAgeClient: `ui/clasesHeroe.ts` |
+| `AnalisisDeCampamento` | `Conquest.Mundo` | Lo que rodea a cada campamento, sacado del artefacto (el motor no lo manda). En BronzeAgeClient: `mundo/analisisCampamento.ts`. Ver el detalle debajo de la tabla |
+| `SelectorDePersonaje` | `Conquest.Mundo` | El puente entre las dos pantallas. `Actual` lleva el nombre, el lugar, las clases, `Confirmar` (manda `crearHeroe` y devuelve el rechazo o null) y `Volver`. En null, el creador hace lo de siempre |
+| `PantallasDeMundo.CrearHeroe()` | `Conquest.Mundo.UI` | «Nace tu héroe». Abre y cierra el creador de forma aditiva y le pasa el encargo |
+| `MapaDeMundo` (modo sin héroe) | `Conquest.Mundo.Mapa` | El mismo mapa, mirando al campamento, con 150 u en pantalla. Muestra los campamentos y bandidos del artefacto y los aros de 150 y 250 u del elegido. Usa `Enfoque`, `RadioVisionFijo`, `Adicionales` y `RayasAdicionales` |
+| `AvatarCreatorUIController`, `HeroClassSelector` | `Game.ECS` (`Scripts/UI/avatarCreator`) | El creador. Con un encargo pasa al modo del motor; sin él, nada cambia |
+| `CrearHeroe.uxml` | `Assets/Resources/MundoUI` | «Nace tu héroe» |
+
+`AnalisisDeCampamento` calcula, para cada campamento:
+
+- suelo, fertilidad y bosque a 150 u;
+- yacimientos a 150 u, a 250 u y el más cercano;
+- río, agua, bandidos a 250 u y el campamento vecino;
+- el nombre de su región;
+- su nota para el «Recomendado».
 
 ## Decisiones
 
-- **El mismo mapa del paso 2**, no uno aparte: el clic sobre un campamento lo elige (y la lista bajo el clic, si hay varias cosas); un clic en
-  el suelo no quita la elección. Sin niebla: aún no hay héroe ni VISTA. A esta escala las cajas de los campamentos y de los bandidos van
-  más grandes, como marcas, y sin los nombres de los nodos (serían cientos).
-- **Ids:** la `Bienvenida` llama a los campamentos `camp-N` y el artefacto `campamento-N`; se cruzan por N, como en BronzeAgeClient.
-- **Nombre del campamento:** «Campamento N». BronzeAgeClient les pone el de su región del generador; queda para cuando haga falta.
-- **Solo lo que se puede hacer:** «Nacer en …» sale cuando hay campamento y clase; mientras, lo que falta. El nombre puede ir vacío (el
-  motor lo deja sin nombre: «Héroe N»). Los rechazos (`heroe.nombre_en_uso`, `heroe.nombre_invalido`…) se dicen junto al campo con su frase.
-- **El aspecto**, por defecto hasta la 3B: género masculino y avatar vacío, como BronzeAgeClient.
-- **Lo que no entra:** la valoración «Recomendado», el «Elegir por mí» y la comparación de dos campamentos de BronzeAgeClient. Se empieza
-  mirando al campamento con más gente, sin elegirlo.
+- **El mismo mapa del paso 2**, no uno aparte. Un clic sobre un campamento lo elige; si hay varias cosas bajo el clic, se elige en la lista.
+  Un clic en el suelo no quita la elección. No hay niebla, porque aún no hay héroe ni VISTA. A esta escala, las cajas de campamentos y
+  bandidos van más grandes, como marcas, y sin los nombres de los nodos (serían cientos).
+- **Ids.** La `Bienvenida` y el artefacto nombran los campamentos de forma distinta (`camp-N` y `campamento-N`). Se cruzan por N, como en
+  BronzeAgeClient.
+- **Nombre del campamento.** Cada campamento lleva el nombre de su región del generador, con las 16 áreas de BronzeAgeClient
+  (`regionDe`). Si dos caen en la misma región, se añade hacia dónde queda cada uno («Valle meridional (noroeste)»); si aún chocan, un
+  número romano. El artefacto no trae la semilla, así que cerca de una linde el nombre puede ser el de la región vecina. Sin tamaño de
+  mundo en el manifiesto, el nombre es «Campamento N».
+- **«Recomendado», «Elegir por mí» y comparar dos**, como BronzeAgeClient. Son ayudas del cliente: el motor no valora nada.
+  - La nota pondera cinco cosas, cada una comparada con los demás campamentos: poca gente (0,3), tierra fértil (0,25), yacimientos a
+    150 u (0,25), pocos bandidos a 150 u (0,1) y agua cerca (0,1).
+  - «Elegir por mí» sortea entre los tres mejores, con más peso cuanto mejor.
+  - Al marcar dos campamentos, la ficha se cambia por la tabla de comparación, con el mejor de cada fila en oro y un botón para elegir
+    cada uno.
+  - Falta, porque el paso 3 no lo tiene, la fila «Tropa» (el edificio militar del campamento y lo que recluta desde el día 1).
+- **Solo lo que se puede hacer.**
+  - «Nacer en …» aparece cuando hay campamento; mientras no lo hay, se dice lo que falta.
+  - El nombre puede ir vacío: el motor lo llama «Héroe N».
+  - Un rechazo del motor se ve en el creador, encima de los botones. Si el rechazo es por el nombre (`heroe.nombre_en_uso`,
+    `heroe.nombre_invalido`…), al «Volver» también aparece junto al campo, que es donde se cambia.
+- **El nombre y «Nacer» siempre a la vista.** El pie del panel no se encoge (`flex-shrink: 0`); si la ficha no cabe, se encoge ella y saca
+  su barra. La prueba lo comprueba en 1280×720, 1600×900, 1920×1080 y 1950×1130. Lo que se pulsa en acceso, partidas, la ficha del mapa y
+  la lista bajo el clic (cuando sale) también queda dentro de la ventana y de su placa en esos cuatro tamaños.
+
+## El creador de personaje
+
+- **Se carga de forma aditiva** sobre `MundoScene` y pasa a ser la escena activa, con su luz y su cielo. Mientras está abierto se apartan
+  la interfaz del mundo, el mapa y su cámara. El objeto `Mundo`, con la sesión, sigue encendido y bombeando, así que la sesión con el
+  motor sobrevive al cambio. Con «Volver» se descarga y queda «Nace tu héroe» como estaba: el mismo campamento y el mismo nombre. Si la
+  sesión obliga a cambiar de pantalla con el creador abierto (por ejemplo, una sesión reemplazada), el creador se cierra solo.
+- **Modo del motor** (cuando hay `SelectorDePersonaje.Actual`):
+  - Muestra las 5 clases de `/v1/datos`, empezando por la primera. La ficha de cada una enseña sus armaduras, atributos y equipo
+    inicial. El maniquí se viste con la armadura inicial de la clase (ligera, media o pesada) y se vuelve a vestir al cambiar de género.
+  - Las ventajas y habilidades de las clases de relleno no se enseñan.
+  - El nombre y el lugar aparecen como texto («Naces en …» y el campo del nombre sin poder editarse). Los botones son «Nacer» y
+    «Volver».
+- **El aspecto que se manda.** El género va como `masculino` o `femenino`. Las piezas salen de `AvatarPartSelector.GetCurrentSelection()`
+  con los ids de `AvatarPartDatabase.asset` (`head_00`, `hair_01`…) y van a `cabeza_id`, `pelo_id`, `barba_id` y `cejas_id`.
+- **Lo que se desacopló** para que el creador sirva a los dos flujos:
+  - **El guardado.** En el modo del motor, «Nacer» no llama a `HeroDataService.CreateNewHero`, `PlayerSessionService` ni
+    `SaveSystem.SavePlayer`: no se toca `player_save.json`.
+  - **La salida.** No se carga `CharacterSelection`; quien abrió el creador decide adónde se va.
+  - **Las clases.** Las del motor no son `HeroClassDefinition`. El selector las pinta aparte (`BotonesDelMotor`) y guarda la elegida en
+    `ClaseDelMotor`. `selectedClass` y `GetCurrentEquipment()` siguen siendo del flujo viejo.
+  - **El nombre.** En el modo del motor llega escrito y no se edita.
+  - **Las referencias.** `Game.ECS` referencia ahora a `Conquest.Mundo` (C# puro), solo para el puente y `ClaseDeHeroe`. La sesión, el
+    contrato y UI Toolkit no entran en `Game.ECS`.
+- **El flujo viejo de Conquest sigue igual.** Sin encargo, el creador enseña sus 4 clases de relleno, deja escribir el nombre y al
+  continuar guarda en `player_save.json` y va a `CharacterSelection`. La lista de héroes (`CharacterselecctionScene`) no se ha tocado: el
+  autor dirá dónde entra en el flujo.
 
 ## Pedido al motor
 
 El motor recibe el género y el avatar de `crearHeroe` y los ignora (`sesiones/ordenes.rs`: «se ignoran hasta que Conquest publique su
-catálogo»). Hasta que los guarde, el aspecto que se elija no llega a los demás jugadores ni a la batalla. El catálogo de piezas existe:
-`AvatarPartDatabase.asset`. Apuntado en «Pedidos al motor» del bloque 4.
+catálogo»). Hasta que los guarde, el aspecto elegido no llega a los demás jugadores ni a la batalla. El catálogo de piezas ya existe en
+`AvatarPartDatabase.asset`. Está apuntado en «Pedidos al motor» del bloque 4.
 
 ## Pruebas
 
-- `NacerDelHeroeTests` (EditMode): las clases con su equipo inicial.
-- `PantallasDeMundoTests` (PlayMode, con la interfaz pulsada como el jugador): una cuenta nueva entra en crear el héroe; «Nacer» no sale
-  sin campamento ni clase; las 5 clases con su equipo; el campamento 4 elegido en la lista con lo que lo rodea; un nombre que ya tiene otro
-  héroe se rechaza junto al campo; y al nacer, el mapa con el héroe dentro de su campamento (y de ahí sigue la prueba del paso 2).
+- **`NacerDelHeroeTests`** (EditMode):
+  - las clases con su equipo inicial;
+  - el nombre de región, y el rumbo cuando dos campamentos caen en la misma;
+  - el recomendado y sus razones, y «Elegir por mí».
+- **`PantallasDeMundoTests.CrearCuentaEntrarYCerrarSesion`** (PlayMode, contra un servidor del motor propio). La interfaz se pulsa como
+  el jugador; el mapa y el creador, con un ratón del Input System. La prueba recorre:
+  1. Una cuenta nueva entra en «Nace tu héroe», sin clases, con un solo «Recomendado» y los nombres de región.
+  2. Un clic con el ratón sobre el campamento del centro del mapa lo elige.
+  3. «Elegir por mí».
+  4. Marcar dos campamentos para compararlos y elegir uno desde la tabla.
+  5. Elegir el campamento 4 en la lista. Ahí se comprueban el pie en los cuatro tamaños y el resto de pantallas en esos tamaños.
+  6. Con un nombre ya usado, el creador se abre con las 5 clases (cada una pulsada con el ratón), «Nacer» da el rechazo allí, y «Volver»
+     regresa con el campamento, el nombre y el rechazo junto al campo.
+  7. Con otro nombre: otra clase, mujer y otro pelo, y «Nacer».
+  8. El héroe aparece en el mapa dentro de su campamento, con la clase elegida, y desde ahí sigue la prueba del paso 2.
+- **`PantallasDeMundoTests.ElCreadorDeConquestSigueConSusClases`** (PlayMode): sin encargo, el creador sigue con sus 4 clases y el
+  nombre editable.

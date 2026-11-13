@@ -4,7 +4,10 @@
     "Conquest.Mundo",
     "Conquest.Mundo.UI",
     "Conquest.Mundo.Mapa",
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "Game.ECS",
+    "UnityEngine.UI",
+    "Unity.TextMeshPro"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

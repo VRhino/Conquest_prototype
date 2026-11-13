@@ -72,6 +72,11 @@ namespace ConquestTactics.Mundo
         public List<(double distancia, uint nivel)> Bandidos = new List<(double, uint)>();
         public string Vecino;
         public double DistanciaAlVecino;
+        /// <summary>El nombre que se enseña: el de su región del generador (y hacia dónde queda si dos caen en la misma); sin región, «Campamento N».</summary>
+        public string Lugar;
+        /// <summary>0..1 comparada con los demás campamentos, y las razones a favor que más pesan (ayuda del cliente: el motor no valora nada).</summary>
+        public double Nota;
+        public List<string> Razones = new List<string>();
 
         static readonly string[] NombresDeSuelo = { "", "agua", "costa", "llano", "colina", "montaña", "cima" };
 
@@ -134,9 +139,110 @@ namespace ConquestTactics.Mundo
                     var d = CosasDelMapa.Distancia(otro.Posicion.X / 1000.0, otro.Posicion.Y / 1000.0, x.X, x.Y);
                     if (x.Vecino == null || d < x.DistanciaAlVecino) { x.Vecino = otro.CampamentoId; x.DistanciaAlVecino = d; }
                 }
+                x.Lugar = Nombre(x.Id);
                 r.Add(x);
             }
+            if (a.Manifiesto?.Tamano != null) PonerLugares(r, a.Manifiesto.Tamano.X / 1000.0, a.Manifiesto.Tamano.Y / 1000.0);
+            Valorar(r);
             return r;
+        }
+
+        /// <summary>Las áreas del relieve regional del generador (BronzeAgeClient `AREAS`): centro en fracción del mapa, radio para un mundo de 24.000
+        /// de lado corto, y nombre. La semilla las mueve un poco y el artefacto no la trae: cerca de una linde el nombre puede ser el del vecino.</summary>
+        static readonly (double x, double y, double radio, string nombre)[] Areas =
+        {
+            (0.12, 0.08, 2500, "Costa boscosa"), (0.55, 0.10, 3800, "Altiplano interior"), (0.84, 0.12, 4500, "Tierras altas secas"),
+            (0.755, 0.51, 2300, "Corredor levantino"), (0.53, 0.27, 2900, "Cuenca fértil"), (0.89, 0.46, 4400, "Gran llanura fluvial"),
+            (0.95, 0.28, 2100, "Piedemonte oriental"), (0.22, 0.25, 2100, "Colinas boscosas"), (0.25, 0.945, 3900, "Llanura costera meridional"),
+            (0.54, 0.94, 3000, "Valle meridional"), (0.91, 0.84, 4200, "Estepa abierta"), (0.22, 0.425, 1500, "Península de los golfos"),
+            (0.35, 0.105, 2100, "Tierras del estrecho"), (0.755, 0.78, 2500, "Meseta del istmo"), (0.54, 0.76, 1900, "Delta interior"),
+            (0.88, 0.65, 2500, "Valles orientales"),
+        };
+
+        /// <summary>La región donde cae (x, y): la de más peso, 1 / (0,03 + d⁶) con d la distancia relativa a su radio (`regionDe`).</summary>
+        public static (string nombre, double cx, double cy) Region(double x, double y, double ancho, double alto)
+        {
+            var escala = Math.Min(ancho, alto) / 24000;
+            var mejor = Areas[0];
+            double maximo = -1;
+            foreach (var a in Areas)
+            {
+                double ex = x - a.x * ancho, ey = y - a.y * alto, d2 = (ex * ex + ey * ey) / Math.Pow(a.radio * escala, 2);
+                var peso = 1 / (0.03 + d2 * d2 * d2);
+                if (peso > maximo) { maximo = peso; mejor = a; }
+            }
+            return (mejor.nombre, mejor.x * ancho, mejor.y * alto);
+        }
+
+        static readonly string[] Rumbos = { "este", "nordeste", "norte", "noroeste", "oeste", "suroeste", "sur", "sudeste" };
+
+        /// <summary>Un nombre por campamento (`nombresDeCampamentos`): el de su región y, si dos caen en la misma, hacia dónde queda cada uno dentro de
+        /// ella (y un número romano si aún chocan).</summary>
+        public static void PonerLugares(List<AnalisisDeCampamento> lista, double ancho, double alto)
+        {
+            var regiones = lista.Select(c => Region(c.X, c.Y, ancho, alto)).ToList();
+            var nombres = regiones.Select((r, i) =>
+            {
+                if (!regiones.Where((o, j) => j != i).Any(o => o.nombre == r.nombre)) return r.nombre;
+                var ang = Math.Atan2(r.cy - lista[i].Y, lista[i].X - r.cx); // la y crece hacia el sur
+                return $"{r.nombre} ({Rumbos[(((int)Math.Round(ang / (Math.PI / 4)) % 8) + 8) % 8]})";
+            }).ToList();
+            var vistos = new Dictionary<string, int>();
+            string[] romanos = { "I", "II", "III", "IV", "V" };
+            for (int i = 0; i < lista.Count; i++)
+            {
+                var n = nombres[i];
+                vistos.TryGetValue(n, out var k);
+                vistos[n] = ++k;
+                lista[i].Lugar = nombres.Count(x => x == n) > 1 ? $"{n} {(k <= 5 ? romanos[k - 1] : k.ToString())}" : n;
+            }
+        }
+
+        /// <summary>Peso de cada yacimiento al valorar un sitio: los metales del bronce y el oro más que la piedra y el ganado.</summary>
+        static readonly Dictionary<string, double> PesoDeNodo = new Dictionary<string, double> { ["cobre"] = 2, ["estano"] = 3, ["hierro"] = 1.5, ["oro"] = 2, ["piedra"] = 1, ["livestock"] = 1 };
+
+        /// <summary>La nota de cada campamento para «Recomendado» y «Elegir por mí» (`valorarCampamentos`): poca gente 0,3, tierra fértil 0,25,
+        /// yacimientos a 150 u 0,25, pocos bandidos a 150 u 0,1 y agua cerca 0,1; cada cosa comparada con los demás (0 el peor, 1 el mejor).</summary>
+        public static void Valorar(List<AnalisisDeCampamento> lista)
+        {
+            double[] pesos = { 0.3, 0.25, 0.25, 0.1, 0.1 };
+            string[] texto = { "Poca gente", "Tierra fértil", "Yacimientos cerca", "Pocos bandidos", "Agua cerca" };
+            var f = lista.Select(a => new[]
+            {
+                -a.Gente,
+                a.FertilidadMedia,
+                PesoDeNodo.Sum(kv => kv.Value * Math.Min(3, a.Nodos.TryGetValue(kv.Key, out var n) ? n.cerca : 0) / 3.0),
+                -a.Bandidos.Where(b => b.distancia <= RadioCercano).Sum(b => (double)b.nivel),
+                (a.Rio != null ? 1 - a.Rio.Value / RadioFrontera : 0) + (a.Agua != null ? 0.5 * (1 - a.Agua.Value / RadioFrontera) : 0),
+            }).ToList();
+            for (int i = 0; i < lista.Count; i++)
+            {
+                var n = new double[pesos.Length];
+                var con = new bool[pesos.Length];
+                var nota = 0.0;
+                for (int k = 0; k < pesos.Length; k++)
+                {
+                    double min = f.Min(x => x[k]), max = f.Max(x => x[k]);
+                    con[k] = max > min;
+                    n[k] = con[k] ? (f[i][k] - min) / (max - min) : 0.5;
+                    nota += n[k] * pesos[k];
+                }
+                lista[i].Nota = nota;
+                lista[i].Razones = Enumerable.Range(0, pesos.Length).Where(k => n[k] >= 0.6 && con[k])
+                    .OrderByDescending(k => n[k] * pesos[k]).Take(2).Select(k => texto[k]).ToList();
+            }
+        }
+
+        /// <summary>El recomendado: el de nota más alta.</summary>
+        public static AnalisisDeCampamento Recomendado(List<AnalisisDeCampamento> lista) => lista.OrderByDescending(a => a.Nota).FirstOrDefault();
+
+        /// <summary>«Elegir por mí»: al azar entre los tres mejor valorados, con más peso cuanto mejor (`r` en [0, 1)).</summary>
+        public static AnalisisDeCampamento ElegirPorMi(List<AnalisisDeCampamento> lista, double r)
+        {
+            var mejores = lista.OrderByDescending(a => a.Nota).Take(3).ToList();
+            var resto = r * mejores.Sum(m => m.Nota + 0.05);
+            foreach (var m in mejores) if ((resto -= m.Nota + 0.05) <= 0) return m;
+            return mejores.FirstOrDefault();
         }
 
         static double DistanciaASegmento(double px, double py, Punto a, Punto b)

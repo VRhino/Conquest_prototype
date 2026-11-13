@@ -1,6 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <!-- Crear el héroe (paso 3 del bloque 4; BronzeAgeClient: ui/eleccionCampamento.ts y ui/clasesHeroe.ts): el campamento donde nacer, sobre el
-         mapa del paso 2, la clase y el nombre. El fondo deja pasar el ratón al mapa. -->
+    <!-- «Nace tu héroe» (paso 3 del bloque 4; BronzeAgeClient: ui/eleccionCampamento.ts): el campamento donde nacer, sobre el mapa del paso 2, y el
+         nombre. La clase, el género y el aspecto se eligen después, en el creador de personaje (AvatarCreator). El fondo deja pasar el ratón al mapa. -->
     <ui:VisualElement name="crear" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
         <ui:VisualElement name="nombres" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;" />
         <ui:VisualElement class="barra-arriba">
@@ -11,25 +11,24 @@
         <ui:VisualElement class="placa panel-izquierda">
             <ui:VisualElement class="placa-filete panel-relleno">
                 <ui:Label class="kicker" text="DÓNDE NACER" style="margin-top: 0;" />
-                <ui:Label class="campo-ayuda" text="Los campamentos de mercenarios donde se puede nacer. Elige uno aquí o en el mapa." style="margin-bottom: 8px;" />
+                <ui:Label class="campo-ayuda" text="Los campamentos de mercenarios donde se puede nacer. Elige uno aquí o en el mapa; marca dos para compararlos." style="margin-bottom: 8px;" />
+                <ui:Button name="elegir-por-mi" class="boton-secundario" text="Elegir por mí" style="align-self: flex-start; margin-bottom: 8px;" />
                 <ui:ScrollView name="campamentos" style="flex-grow: 1;" />
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="placa panel-derecha">
             <ui:VisualElement class="placa-filete panel-relleno" style="padding: 0;">
-            <ui:ScrollView style="flex-grow: 1; flex-shrink: 1; min-height: 0; padding: 14px 16px 0 16px;">
-                <ui:Label name="campamento-nombre" class="dialogo-titulo" />
-                <ui:VisualElement name="campamento-datos" />
-                <ui:Label class="kicker" text="TU CLASE" />
-                <ui:VisualElement name="clases" class="fila-envuelta" />
-                <ui:Label name="clase-armaduras" class="ficha-valor oculto" style="-unity-text-align: middle-left; margin-top: 6px;" />
-                <ui:VisualElement name="clase-atributos" />
-                <ui:Label name="clase-equipo-titulo" class="campo-ayuda oculto" text="Nace con:" style="margin-top: 6px;" />
-                <ui:Label name="clase-equipo" class="aviso-texto oculto" />
+            <ui:ScrollView mode="Vertical" horizontal-scroller-visibility="Hidden" style="flex-grow: 1; flex-shrink: 1; min-height: 0; padding: 14px 16px 0 16px;">
+                <ui:VisualElement name="ficha-campamento">
+                    <ui:Label name="campamento-nombre" class="dialogo-titulo" />
+                    <ui:Label name="campamento-recomendado" class="campamento-recomendado oculto" />
+                    <ui:VisualElement name="campamento-datos" />
+                </ui:VisualElement>
+                <ui:VisualElement name="comparacion" class="oculto" />
             </ui:ScrollView>
             <!-- El nombre y «Nacer», siempre a la vista (y el rechazo junto al campo). -->
             <!-- flex-shrink 0: si la ficha crece, se encoge ella (con su barra), no el pie; si no, el campo del nombre se quedaba sin alto. -->
-            <ui:VisualElement style="flex-shrink: 0; padding: 8px 16px 14px 16px; border-top-width: 1px; border-color: rgb(107, 74, 41);">
+            <ui:VisualElement name="pie" style="flex-shrink: 0; padding: 8px 16px 14px 16px; border-top-width: 1px; border-color: rgb(107, 74, 41);">
                     <ui:Label class="kicker" text="TU NOMBRE" />
                     <ui:VisualElement name="campo-nombre" class="campo">
                         <ui:TextField name="nombre" class="entrada" max-length="24" />
@@ -39,6 +38,7 @@
                     <ui:Label name="error" class="error oculto" />
                     <ui:Label name="falta" class="campo-ayuda" />
                     <ui:Button name="nacer" class="boton-primario oculto" text="NACER AQUÍ" />
+                    <ui:Label class="campo-ayuda" text="Después eliges tu clase y tu aspecto." />
             </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>

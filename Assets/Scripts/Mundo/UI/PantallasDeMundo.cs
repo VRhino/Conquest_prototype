@@ -68,6 +68,7 @@ namespace ConquestTactics.Mundo.UI
 
         VisualElement Montar(string uxml)
         {
+            _ = cerrarCreador?.Invoke();
             QuitarMapa();
             pantalla.Clear();
             var v = Resources.Load<VisualTreeAsset>("MundoUI/" + uxml).Instantiate();
@@ -336,35 +337,36 @@ namespace ConquestTactics.Mundo.UI
 
         // ─────────────────────────── crear el héroe ───────────────────────────
 
-        /// <summary>Crear el héroe (paso 3): el campamento donde nacer, sobre el mapa del paso 2 y en la lista; la clase, de `/v1/datos` con su
-        /// equipo inicial; y el nombre. «Nacer aquí» sale cuando hay campamento y clase. Al aceptarse `crearHeroe`, el mapa con el héroe dentro de
-        /// su campamento. El aspecto (cabeza, pelo, barba, cejas) va por defecto hasta la tanda 3B.</summary>
+        /// <summary>«Nace tu héroe» (paso 3): solo el lugar y el nombre. El campamento se elige sobre el mapa del paso 2 o en la lista (con su
+        /// región, el «Recomendado», «Elegir por mí» y la comparación de dos, como BronzeAgeClient). «Nacer en …» abre el creador de personaje
+        /// de Conquest (la escena AvatarCreator, encima de esta): allí la clase, el género y el aspecto, y al confirmar sale `crearHeroe`. Si se
+        /// acepta, el mapa con el héroe dentro de su campamento; con «Volver», aquí otra vez con lo que había.</summary>
         void CrearHeroe()
         {
             var v = Montar("CrearHeroe");
             Botones(v);
             var b = c.Sesion.Bienvenida;
             var analisis = AnalisisDeCampamento.Analizar(b.CampamentosParaElegir, c.Artefacto, new Relieve(c.Relieve));
+            var recomendado = AnalisisDeCampamento.Recomendado(analisis);
             var clases = ClaseDeHeroe.Leer(c.Datos);
             AnalisisDeCampamento campamento = null;
-            ClaseDeHeroe clase = null;
-            var enviando = false;
-            var botonesDeClase = v.Q("clases");
+            var comparar = new List<AnalisisDeCampamento>();
+            var abierto = false;
+            string LugarDe(string id) => analisis.FirstOrDefault(x => x.Id == id)?.Lugar ?? AnalisisDeCampamento.Nombre(id);
 
             mapa = new GameObject("Mapa").AddComponent<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
             mapa.RadioVisionFijo = AnalisisDeCampamento.RadioCercano;
             mapa.NombresDeNodos = false; // con la visión amplia de elegir campamento serían cientos
             mapa.Iniciar(c.Sesion, new Relieve(c.Relieve), c.Artefacto, c.Datos, () => c.HeroeId, SobreInterfaz, (t, peligro) => panelAvisos.Mostrar(t, peligro), v.Q("nombres"));
-            // Lo que rodea a los campamentos: los bandidos del artefacto (el almacén aún está vacío). A esta escala (150 u en pantalla), las cajas
-            // de los campamentos y los bandidos van más grandes que en el mapa, como marcas.
+            // Lo que rodea a los campamentos: los bandidos del artefacto (el almacén aún está vacío).
             foreach (var bandidos in c.Artefacto.BandidosIniciales)
                 mapa.Adicionales.Add(new CosaDelMapa { Clase = ClaseDeCosa.Bandidos, Id = bandidos.Id, Nombre = "Bandidos", Detalle = $"Nivel {bandidos.Nivel}",
-                    X = bandidos.Posicion.X / 1000.0, Y = bandidos.Posicion.Y / 1000.0, Radio = 2, Alto = 1.5, RadioClic = 2.5, Color = CosasDelMapa.Bandidos });
+                    X = bandidos.Posicion.X / 1000.0, Y = bandidos.Posicion.Y / 1000.0, Radio = 0.768, Alto = 0.35, RadioClic = 0.888, Color = CosasDelMapa.Bandidos });
             var cajas = new Dictionary<string, CosaDelMapa>();
             foreach (var a in analisis)
             {
-                var caja = new CosaDelMapa { Clase = ClaseDeCosa.Mercenarios, Id = a.Id, Nombre = AnalisisDeCampamento.Nombre(a.Id), Detalle = Gente(a.Gente),
-                    X = a.X, Y = a.Y, Radio = 3, Alto = 3, RadioClic = 3.5, Color = CosasDelMapa.Mercenarios };
+                var caja = new CosaDelMapa { Clase = ClaseDeCosa.Mercenarios, Id = a.Id, Nombre = a.Lugar, Detalle = Gente(a.Gente),
+                    X = a.X, Y = a.Y, Radio = 1.008, Alto = 0.45, RadioClic = 1.128, Color = CosasDelMapa.Mercenarios };
                 cajas[a.Id] = caja;
                 mapa.Adicionales.Add(caja);
             }
@@ -376,18 +378,40 @@ namespace ConquestTactics.Mundo.UI
                 foreach (var a in analisis.OrderByDescending(x => x.Gente))
                 {
                     var este = a;
-                    var tarjeta = new Button(() => Elegir(este));
+                    var tarjeta = new VisualElement { name = "tarjeta-" + a.Id };
                     tarjeta.AddToClassList("campamento");
                     tarjeta.EnableInClassList("campamento--elegido", campamento?.Id == a.Id);
-                    tarjeta.Add(Dialogo.Texto(AnalisisDeCampamento.Nombre(a.Id), "aviso-titulo"));
-                    tarjeta.Add(Dialogo.Texto($"{Gente(a.Gente)} · {Tierra(a)}", "aviso-cuando"));
+                    tarjeta.EnableInClassList("campamento--comparado", comparar.Contains(a));
+                    var boton = new Button(() => Elegir(este)) { name = "elegir" };
+                    boton.AddToClassList("campamento-boton");
+                    var cabeza = new VisualElement();
+                    cabeza.AddToClassList("fila-envuelta");
+                    cabeza.Add(Dialogo.Texto(a.Lugar, "aviso-titulo"));
+                    if (a == recomendado) cabeza.Add(Dialogo.Texto("★ Recomendado", "campamento-recomendado"));
+                    boton.Add(cabeza);
+                    boton.Add(Dialogo.Texto($"{Gente(a.Gente)} · {Tierra(a)}", "aviso-cuando"));
+                    tarjeta.Add(boton);
+                    var marca = new Toggle("Comparar") { name = "comparar", value = comparar.Contains(a) };
+                    marca.AddToClassList("campamento-comparar");
+                    marca.RegisterValueChangedCallback(e => AlternarComparar(este, e.newValue));
+                    tarjeta.Add(marca);
                     lista.Add(tarjeta);
                 }
+            }
+
+            void AlternarComparar(AnalisisDeCampamento a, bool si)
+            {
+                comparar.Remove(a);
+                if (si) comparar.Add(a);
+                while (comparar.Count > 2) comparar.RemoveAt(0);
+                PintarLista();
+                PintarFicha();
             }
 
             void Elegir(AnalisisDeCampamento a)
             {
                 campamento = a;
+                comparar.Clear();
                 mapa.Enfoque = (a.X, a.Y);
                 mapa.RayasAdicionales.Clear();
                 mapa.RayasAdicionales.Add(CosasDelMapa.Circulo((a.X, a.Y), AnalisisDeCampamento.RadioCercano, 0.8, 0xd8b878, 96));
@@ -404,55 +428,92 @@ namespace ConquestTactics.Mundo.UI
                 else if (cosa == null && campamento != null) mapa.Seleccionar(cajas[campamento.Id]);
             };
             mapa.AlElegir += cosas => { mapa.ListaAbierta = false; var otro = cosas.FirstOrDefault(x => x.Clase == ClaseDeCosa.Mercenarios); if (otro != null) _ = mapa.Elegir(otro); };
-
-            foreach (var k in clases)
-            {
-                var esta = k;
-                botonesDeClase.Add(Dialogo.Boton(k.Nombre, "boton-secundario", () => { clase = esta; PintarFicha(); }));
-            }
+            v.Q<Button>("elegir-por-mi").clicked += () => { var a = AnalisisDeCampamento.ElegirPorMi(analisis, UnityEngine.Random.value); if (a != null) Elegir(a); };
 
             void PintarFicha()
             {
-                v.Q<Label>("campamento-nombre").text = campamento == null ? "Elige un campamento" : AnalisisDeCampamento.Nombre(campamento.Id);
-                Fichas(v.Q("campamento-datos"), campamento == null ? new (string, string)[0] : DatosDelCampamento(campamento));
-                for (int i = 0; i < clases.Count; i++) botonesDeClase[i].EnableInClassList("clase--elegida", clases[i] == clase);
-                Poner(v.Q<Label>("clase-armaduras"), clase?.TextoDeArmaduras);
-                Fichas(v.Q("clase-atributos"), clase == null ? new (string, string)[0] : clase.Atributos.Select(kv => (Mayuscula(kv.Key), Puntos(kv.Value, clases))).ToArray());
-                Ver(v.Q<Label>("clase-equipo-titulo"), clase != null);
-                Poner(v.Q<Label>("clase-equipo"), clase == null ? null : string.Join(" · ", clase.EquipoInicial));
-                // Solo lo que se puede hacer: «Nacer aquí» sale con campamento y clase; mientras, lo que falta.
-                var listo = campamento != null && clase != null;
-                Ver(v.Q<Button>("nacer"), listo);
-                v.Q<Button>("nacer").text = campamento == null ? "NACER AQUÍ" : $"NACER EN {AnalisisDeCampamento.Nombre(campamento.Id).ToUpperInvariant()}";
-                v.Q<Button>("nacer").SetEnabled(!enviando);
-                v.Q<Label>("falta").text = listo ? "" : campamento == null && clase == null ? "Elige campamento y clase." : campamento == null ? "Elige campamento." : "Elige tu clase.";
+                var comparando = comparar.Count == 2;
+                Ver(v.Q("ficha-campamento"), !comparando);
+                Ver(v.Q("comparacion"), comparando);
+                if (comparando) PintarComparacion(v.Q("comparacion"), comparar[0], comparar[1], recomendado, x => Elegir(x), () => { comparar.Clear(); PintarLista(); PintarFicha(); });
+                v.Q<Label>("campamento-nombre").text = campamento == null ? "Elige un campamento" : campamento.Lugar;
+                Poner(v.Q<Label>("campamento-recomendado"), campamento == null ? null
+                    : campamento == recomendado ? "★ Recomendado" + (campamento.Razones.Count > 0 ? ": " + string.Join(" · ", campamento.Razones).ToLowerInvariant() : "")
+                    : campamento.Razones.Count > 0 ? string.Join(" · ", campamento.Razones) : null);
+                Fichas(v.Q("campamento-datos"), campamento == null ? new (string, string)[0] : DatosDelCampamento(campamento, LugarDe));
+                // Solo lo que se puede hacer: «Nacer en …» sale con campamento; mientras, lo que falta.
+                Ver(v.Q<Button>("nacer"), campamento != null);
+                v.Q<Button>("nacer").text = campamento == null ? "NACER AQUÍ" : $"NACER EN {campamento.Lugar.ToUpperInvariant()}";
+                v.Q<Button>("nacer").SetEnabled(!abierto);
+                v.Q<Label>("falta").text = campamento != null ? "" : "Elige campamento.";
             }
 
-            async void Nacer()
+            // «Nacer en …»: el creador de personaje, encima. Lo de aquí (la interfaz, el mapa y su cámara) se aparta mientras; este objeto sigue
+            // encendido y con él la sesión con el motor.
+            async void AbrirCreador()
             {
-                if (enviando || campamento == null || clase == null) return;
-                enviando = true;
-                Poner(v.Q<Label>("error"), null);
+                if (abierto || campamento == null || mapa == null) return;
+                abierto = true;
+                PintarFicha();
                 Poner(v.Q<Label>("nombre-error"), null);
-                PintarFicha();
-                var orden = new Orden { CrearHeroe = new OrdenCrearHeroe
+                var raiz = pantalla.parent;
+                var mapaCrear = mapa;
+                var camara = mapaCrear.Vista;
+                var mundo = gameObject.scene;
+                string rechazoDeNombre = null;
+                raiz.style.display = DisplayStyle.None;
+                mapaCrear.gameObject.SetActive(false);
+                if (camara != null) camara.gameObject.SetActive(false);
+
+                async Task Cerrar(bool nacido)
                 {
-                    DisplayName = v.Q<TextField>("nombre").value.Trim(), CampamentoId = campamento.Id, ClassDefinitionId = clase.Id,
-                    // El aspecto, por defecto hasta la tanda 3B (el creador de avatar). El motor de hoy no lo guarda.
-                    Genero = "masculino", Avatar = new OrdenCrearHeroe.Types.Avatar(),
-                } };
-                ResultadoOrden r;
-                try { r = await c.Sesion.Ordenar(orden); }
-                catch (ErrorDeSesion e) { enviando = false; Poner(v.Q<Label>("error"), e.Message); PintarFicha(); return; }
-                enviando = false;
-                if (r.Resultado == Resultado.OrdenAceptada) { Mapa(); return; }
-                var texto = Textos.Explicar(r.Rechazo);
-                if (r.Rechazo != null && r.Rechazo.Codigo.StartsWith("heroe.nombre")) { Poner(v.Q<Label>("nombre-error"), texto); v.Q<TextField>("nombre").Focus(); }
-                else Poner(v.Q<Label>("error"), texto);
-                PintarFicha();
+                    if (SelectorDePersonaje.Actual == null) return;
+                    SelectorDePersonaje.Actual = null;
+                    cerrarCreador = null;
+                    if (mundo.IsValid() && mundo.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(mundo);
+                    var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(Creador);
+                    while (descarga != null && !descarga.isDone) await Task.Yield();
+                    if (this == null) return;
+                    raiz.style.display = DisplayStyle.Flex;
+                    if (camara != null) camara.gameObject.SetActive(true);
+                    abierto = false;
+                    if (nacido) { Mapa(); return; }
+                    if (mapaCrear == null) return; // ya se fue a otra pantalla
+                    mapaCrear.gameObject.SetActive(true);
+                    PintarFicha();
+                    // Un nombre rechazado allí se dice aquí, junto al campo, que es donde se cambia.
+                    if (rechazoDeNombre != null) { Poner(v.Q<Label>("nombre-error"), rechazoDeNombre); v.Q<TextField>("nombre").Focus(); }
+                }
+
+                async Task<string> Confirmar(SelectorDePersonaje.Eleccion e)
+                {
+                    var orden = new Orden { CrearHeroe = new OrdenCrearHeroe
+                    {
+                        DisplayName = v.Q<TextField>("nombre").value.Trim(), CampamentoId = campamento.Id, ClassDefinitionId = e.ClaseId, Genero = e.Genero,
+                        // El motor de hoy no guarda el género ni el avatar (pedido en «Pedidos al motor»).
+                        Avatar = new OrdenCrearHeroe.Types.Avatar { CabezaId = e.Cabeza ?? "", PeloId = e.Pelo ?? "", BarbaId = e.Barba ?? "", CejasId = e.Cejas ?? "" },
+                    } };
+                    ResultadoOrden r;
+                    try { r = await c.Sesion.Ordenar(orden); }
+                    catch (ErrorDeSesion x) { return x.Message; }
+                    if (r.Resultado == Resultado.OrdenAceptada) { await Cerrar(true); return null; }
+                    var texto = Textos.Explicar(r.Rechazo);
+                    rechazoDeNombre = r.Rechazo != null && r.Rechazo.Codigo.StartsWith("heroe.nombre") ? texto : null;
+                    return texto;
+                }
+
+                SelectorDePersonaje.Actual = new SelectorDePersonaje.Encargo
+                {
+                    Nombre = v.Q<TextField>("nombre").value.Trim(), Lugar = campamento.Lugar, Clases = clases, Confirmar = Confirmar, Volver = () => _ = Cerrar(false),
+                };
+                cerrarCreador = () => Cerrar(false);
+                var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Creador, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+                while (!carga.isDone) await Task.Yield();
+                var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Creador);
+                if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz y su cielo
             }
-            v.Q<Button>("nacer").clicked += Nacer;
-            v.Q<TextField>("nombre").RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) Nacer(); }, TrickleDown.TrickleDown);
+            v.Q<Button>("nacer").clicked += AbrirCreador;
+            v.Q<TextField>("nombre").RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) AbrirCreador(); }, TrickleDown.TrickleDown);
 
             PintarLista();
             // Empieza mirando al campamento con más gente (el más poblado), sin elegirlo por ti.
@@ -461,6 +522,11 @@ namespace ConquestTactics.Mundo.UI
             PintarFicha();
         }
 
+        /// <summary>La escena del creador de personaje de Conquest.</summary>
+        const string Creador = "AvatarCreator";
+        /// <summary>Cierra el creador si está abierto (al irse a otra pantalla con él delante: sesión perdida, reemplazada…).</summary>
+        Func<Task> cerrarCreador;
+
         static string Gente(int n) => n == 1 ? "1 persona" : $"{n} personas";
 
         static string Tierra(AnalisisDeCampamento a) =>
@@ -468,7 +534,7 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>Lo que rodea al campamento, como la ficha de BronzeAgeClient: gente, tierra, fertilidad y bosque a 150 u, yacimientos (a 150 u,
         /// hasta 250 y el más cerca), río, agua, bandidos y el vecino.</summary>
-        static (string, string)[] DatosDelCampamento(AnalisisDeCampamento a)
+        static (string, string)[] DatosDelCampamento(AnalisisDeCampamento a, Func<string, string> lugarDe)
         {
             var r = new List<(string, string)>
             {
@@ -481,15 +547,63 @@ namespace ConquestTactics.Mundo.UI
             r.Add(("Río", a.Rio == null ? "ninguno" : $"a {a.Rio:0} u{(a.RioNavegable ? ", navegable" : "")}"));
             r.Add(("Agua (mar o lago)", a.Agua == null ? "a más de 250 u" : $"a {a.Agua:0} u"));
             r.Add(("Bandidos a 250 u", a.Bandidos.Count == 0 ? "ninguno" : $"{a.Bandidos.Count}; el más cerca a {a.Bandidos[0].distancia:0} u (nivel {a.Bandidos[0].nivel})"));
-            if (a.Vecino != null) r.Add(("Campamento vecino", $"{AnalisisDeCampamento.Nombre(a.Vecino)}, a {a.DistanciaAlVecino:0} u"));
+            if (a.Vecino != null) r.Add(("Campamento vecino", $"{lugarDe(a.Vecino)}, a {a.DistanciaAlVecino:0} u"));
             return r.ToArray();
         }
 
-        /// <summary>Un atributo como puntos ●○, sobre el valor más alto de todas las clases (como BronzeAgeClient).</summary>
-        static string Puntos(int valor, List<ClaseDeHeroe> clases)
+        /// <summary>Dos campamentos lado a lado (BronzeAgeClient `pintarComparacion`), con el mejor de cada fila en oro, y un botón para elegir cada uno.</summary>
+        static void PintarComparacion(VisualElement donde, AnalisisDeCampamento a, AnalisisDeCampamento b, AnalisisDeCampamento recomendado,
+            Action<AnalisisDeCampamento> elegir, Action cerrar)
         {
-            var max = Math.Max(1, clases.SelectMany(k => k.Atributos.Values).DefaultIfEmpty(1).Max());
-            return new string('●', valor) + new string('○', Math.Max(0, max - valor));
+            donde.Clear();
+            var cabeza = new VisualElement();
+            cabeza.AddToClassList("comparar-fila");
+            cabeza.Add(Dialogo.Texto("COMPARAR", "kicker"));
+            var x = Dialogo.Boton("×", "boton-secundario", cerrar);
+            x.name = "cerrar-comparacion";
+            cabeza.Add(x);
+            donde.Add(cabeza);
+            void Fila(string titulo, string ta, string tb, int gana = 0)
+            {
+                var f = new VisualElement();
+                f.AddToClassList("comparar-fila");
+                f.Add(Dialogo.Texto(titulo, "comparar-titulo"));
+                var la = Dialogo.Texto(ta, "comparar-valor");
+                var lb = Dialogo.Texto(tb, "comparar-valor");
+                la.EnableInClassList("comparar-gana", gana == 1);
+                lb.EnableInClassList("comparar-gana", gana == 2);
+                f.Add(la);
+                f.Add(lb);
+                donde.Add(f);
+            }
+            // Gana el valor más alto (o el más bajo, con `alto` en false); sin dato o empatados, ninguno.
+            int Gana(double? va, double? vb, bool alto = true) => va == null || vb == null || va == vb ? 0 : (va > vb) == alto ? 1 : 2;
+            string Cerca(AnalisisDeCampamento k) => k.Nodos.Count(n => n.Value.cerca > 0) == 0 ? "—"
+                : string.Join(", ", k.Nodos.Where(n => n.Value.cerca > 0).Select(n => $"{CosasDelMapa.NombreDeRecurso(n.Key)} {n.Value.cerca}"));
+            int Bandidos(AnalisisDeCampamento k) => k.Bandidos.Count(z => z.distancia <= AnalisisDeCampamento.RadioCercano);
+            string Estrellas(AnalisisDeCampamento k) => new string('★', Math.Max(1, (int)Math.Round(k.Nota * 5))) + (k == recomendado ? " recomendado" : "");
+            Fila("", a.Lugar, b.Lugar);
+            Fila("Gente", Gente(a.Gente), Gente(b.Gente), Gana(a.Gente, b.Gente, false));
+            Fila("Terreno", Tierra(a), Tierra(b));
+            Fila("Fertilidad", $"{a.FertilidadMedia * 100:0}%", $"{b.FertilidadMedia * 100:0}%", Gana(a.FertilidadMedia, b.FertilidadMedia));
+            Fila("Bosque", $"{a.FraccionDeBosque * 100:0}%", $"{b.FraccionDeBosque * 100:0}%", Gana(a.FraccionDeBosque, b.FraccionDeBosque));
+            Fila("Yacimientos a 150 u", Cerca(a), Cerca(b), Gana(a.Nodos.Sum(n => n.Value.cerca), b.Nodos.Sum(n => n.Value.cerca)));
+            Fila("Río", a.Rio == null ? "lejos" : $"a {a.Rio:0} u", b.Rio == null ? "lejos" : $"a {b.Rio:0} u", Gana(-a.Rio, -b.Rio));
+            Fila("Costa o lago", a.Agua == null ? "lejos" : $"a {a.Agua:0} u", b.Agua == null ? "lejos" : $"a {b.Agua:0} u", Gana(-a.Agua, -b.Agua));
+            Fila("Bandidos a 150 u", Bandidos(a).ToString(), Bandidos(b).ToString(), Gana(Bandidos(a), Bandidos(b), false));
+            Fila("Vecino más cercano", a.Vecino == null ? "—" : $"a {a.DistanciaAlVecino:0} u", b.Vecino == null ? "—" : $"a {b.DistanciaAlVecino:0} u",
+                Gana(a.Vecino == null ? (double?)null : a.DistanciaAlVecino, b.Vecino == null ? (double?)null : b.DistanciaAlVecino));
+            Fila("Valoración", Estrellas(a), Estrellas(b), Gana(a.Nota, b.Nota));
+            var acciones = new VisualElement();
+            acciones.AddToClassList("fila-envuelta");
+            acciones.style.marginTop = 8;
+            var ea = Dialogo.Boton("Elegir " + a.Lugar, "boton-secundario", () => elegir(a));
+            ea.name = "elegir-a";
+            var eb = Dialogo.Boton("Elegir " + b.Lugar, "boton-secundario", () => elegir(b));
+            eb.name = "elegir-b";
+            acciones.Add(ea);
+            acciones.Add(eb);
+            donde.Add(acciones);
         }
 
         // ─────────────────────────── el mapa de mundo ───────────────────────────

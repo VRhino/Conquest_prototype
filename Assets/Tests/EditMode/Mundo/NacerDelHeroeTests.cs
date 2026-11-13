@@ -32,5 +32,35 @@ namespace ConquestTactics.Mundo.Tests
             Assert.AreEqual("Armadura ligera; empieza con la ligera", c.TextoDeArmaduras);
             Assert.AreEqual("Campamento 4", AnalisisDeCampamento.Nombre("campamento-4"));
         }
+
+        [Test]
+        public void LosCampamentosLlevanElNombreDeSuRegion()
+        {
+            // Un mundo de 24.000 × 16.000 u: la «Cuenca fértil» está en (0,53, 0,27).
+            Assert.AreEqual("Cuenca fértil", AnalisisDeCampamento.Region(0.53 * 24000, 0.27 * 16000, 24000, 16000).nombre);
+            var dos = new System.Collections.Generic.List<AnalisisDeCampamento>
+            {
+                new AnalisisDeCampamento { Id = "camp-1", X = 0.53 * 24000 + 400, Y = 0.27 * 16000 },
+                new AnalisisDeCampamento { Id = "camp-2", X = 0.53 * 24000 - 400, Y = 0.27 * 16000 },
+            };
+            AnalisisDeCampamento.PonerLugares(dos, 24000, 16000);
+            Assert.AreEqual("Cuenca fértil (este)", dos[0].Lugar, "dos en la misma región: hacia dónde queda cada uno");
+            Assert.AreEqual("Cuenca fértil (oeste)", dos[1].Lugar);
+        }
+
+        [Test]
+        public void ElRecomendadoEsElMejorValorado()
+        {
+            var bueno = new AnalisisDeCampamento { Id = "camp-1", Gente = 1, FertilidadMedia = 0.8, Rio = 10 };
+            bueno.Nodos["cobre"] = (3, 4, 20);
+            var malo = new AnalisisDeCampamento { Id = "camp-2", Gente = 9, FertilidadMedia = 0.2 };
+            malo.Bandidos.Add((50, 3));
+            var lista = new System.Collections.Generic.List<AnalisisDeCampamento> { malo, bueno };
+            AnalisisDeCampamento.Valorar(lista);
+            Assert.AreSame(bueno, AnalisisDeCampamento.Recomendado(lista));
+            Assert.AreEqual(1, bueno.Nota, 1e-9, "el mejor en todo: nota 1");
+            CollectionAssert.AreEqual(new[] { "Poca gente", "Tierra fértil" }, bueno.Razones, "las dos razones que más pesan");
+            Assert.AreSame(bueno, AnalisisDeCampamento.ElegirPorMi(lista, 0), "al azar entre los mejores, con más peso el mejor");
+        }
     }
 }
