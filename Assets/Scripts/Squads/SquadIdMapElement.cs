@@ -20,4 +20,9 @@ public struct SquadIdMapElement : IBufferElementData
     public int totalUnits;
     public int aliveUnits;
     public int formationIndex;
+    /// <summary>Allowed formation families, one bit per <see cref="FormationType"/>; 0 = all.</summary>
+    public uint allowedFormations;
+    /// <summary>The formation to start in, if <see cref="hasStartFormation"/>; otherwise <see cref="formationIndex"/>.</summary>
+    public bool hasStartFormation;
+    public FormationType startFormation;
 }

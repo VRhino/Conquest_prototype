@@ -593,7 +593,7 @@ como estaba: las pruebas del motor contra Conquest (`con_conquest_*`) usan las c
 
 - Una **escuadra sin héroe** recibe un capitán de la IA (`capitan:<id de la escuadra>`) que no figura en el resultado.
 - Las cuatro tropas del motor que hay en Conquest (`granjeros`, `milicia_lanceros`, `hoplitas_ciudadanos`, `arqueros`)
-  están en la base de escuadras del juego, fuera del reclutamiento; las registra `TropasBronzeAgeSetup.CrearTodas`. La
+  están en la base de escuadras del juego, fuera del reclutamiento; las registra `TropasDelMotor.Importar`. La
   batalla de verdad solo saca tropas de esa base: un ticket con otra se rechaza.
 - **El héroe gana o pierde con su bando**, caiga o no en la batalla. Por eso el resultado no lleva `derrotado` por héroe:
   sin ese dato el motor hiere a los del bando perdedor (Mechanics del motor, `Batalla_Unity_Ciclo.md` §9.1).

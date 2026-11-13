@@ -63,9 +63,20 @@ namespace ConquestTactics.Net
             Preparar(BatallaDeTicket.Leer(OpcionesRed.Ticket));
         }
 
-        /// <summary>CQ-003: una tropa que Conquest no tiene rechaza la batalla entera, nunca se juega con una por defecto.</summary>
+        /// <summary>
+        /// Una tropa que Conquest no tiene, o un ticket con otra versión del catálogo de tropas que la importada
+        /// (<c>TropasDelMotor</c>), rechaza la batalla entera: nunca se juega con cifras que no son las del motor.
+        /// </summary>
         void Preparar(BattleTicket ticket)
         {
+            uint version = BatallaDeTicket.VersionDeTropas();
+            if (ticket.Reglas.VersionCatalogoTropas != version)
+            {
+                Debug.LogError($"[Red] RECHAZADA {ticket.BattleId}: catálogo de tropas {ticket.Reglas.VersionCatalogoTropas}; Conquest tiene el {version}");
+                Enabled = false;
+                Salir(3);
+                return;
+            }
             var desconocidas = BatallaDeTicket.TropasDesconocidas(ticket,
                 id => Real ? BatallaRealDeTicket.TropaConocida(id) : TropasRed.Buscar(id) != null);
             if (desconocidas.Count > 0)

@@ -7,7 +7,7 @@ El dorado es un asalto a una caravana, donde el héroe que cae reaparece. Con --
 columna contra columna, donde el que cae sale de la batalla.
 
 Bando atacante: un héroe de la IA con hoplitas (18) y una escuadra sin héroe de granjeros (20 de 30).
-Bando defensor: un héroe humano con arqueros (18) y otro de la IA con milicia de lanceros (15 de 25).
+Bando defensor: un héroe humano con arqueros (18, en línea y sin poder dispersarse) y otro de la IA con milicia de lanceros (15 de 25).
 """
 import json
 import sys
@@ -15,8 +15,9 @@ import sys
 DORADO = '../BronzeAgeFase0/contratos/golden/MensajeDeServidor__batalla_ticket_de_caravana_con_dos.json'
 
 
-def escuadra(squad_id, tropa, efectivos, heroe=None):
-    e = {'squadId': squad_id, 'tropaId': tropa, 'efectivosAutorizados': efectivos, 'nivel': 1, 'formacionSeleccionada': 1}
+def escuadra(squad_id, tropa, efectivos, heroe=None, formacion='reposo', permitidas=('reposo', 'linea', 'dispersa', 'cuna', 'muro_escudos', 'testudo')):
+    e = {'squadId': squad_id, 'tropaId': tropa, 'efectivosAutorizados': efectivos, 'nivel': 1,
+         'formacion': formacion, 'formacionesPermitidas': list(permitidas)}
     if heroe:
         e['heroeId'] = heroe
     return e
@@ -34,6 +35,8 @@ def main():
     salida = rutas[0]
     mensaje = json.load(open(rutas[1] if len(rutas) > 1 else DORADO, encoding='utf-8'))
     ticket = mensaje['batalla']['ticket']
+    # La versión del catálogo de tropas que importó Conquest (Assets/Resources/Squads/BronzeAge/catalogo.json).
+    ticket['reglas']['versionCatalogoTropas'] = json.load(open('Assets/Resources/Squads/BronzeAge/catalogo.json', encoding='utf-8'))['version']
     if '--campo-abierto' in sys.argv:
         ticket['contextoEstrategico'] = {'campoAbierto': {'punto': {'x': '125000', 'y': '345000'}}}
     ticket['atacante'] = {
@@ -45,7 +48,7 @@ def main():
         'faccionId': 'f-1',
         'capacidadMaxima': 5,
         'participantes': [
-            participante('heroe-3', 'Aldric', 'arco_lanza', False, [escuadra('esc-9', 'arqueros', 18, 'heroe-3')]),
+            participante('heroe-3', 'Aldric', 'arco_lanza', False, [escuadra('esc-9', 'arqueros', 18, 'heroe-3', 'linea', ('reposo', 'linea'))]),
             participante('heroe-4', 'Cora', 'espada_escudo_mediano', True, [escuadra('esc-10', 'milicia_lanceros', 15, 'heroe-4')]),
         ],
     }

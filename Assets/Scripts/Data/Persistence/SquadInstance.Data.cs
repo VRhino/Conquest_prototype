@@ -37,6 +37,16 @@ public class SquadInstanceData
     /// <summary>Index of the currently selected formation.</summary>
     public int selectedFormationIndex = 0;
 
+    /// <summary>
+    /// Formation families the squad may use in battle (the engine ticket's <c>formaciones_permitidas</c>); empty = all of
+    /// its troop's. The rest formation is always allowed.
+    /// </summary>
+    public List<FormationType> allowedFormations = new();
+
+    /// <summary>The formation the squad starts the battle in (the ticket's <c>formacion</c>), if it has one.</summary>
+    public bool hasStartFormation;
+    public FormationType startFormation;
+
     /// <summary>Number of units injured in this squad.</summary>
     public int unitsInjured = 0;
 

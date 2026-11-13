@@ -30,7 +30,7 @@ public static class SquadPlayerCommandResolver
         FormationType selectedFormation = intent.desiredFormation;
         bool validFormationChange = command.formationRequested
             && TryResolveFormation(definition, intent.desiredFormation,
-                command.formationIndex, command.cycleFormation, out selectedFormation);
+                command.formationIndex, command.cycleFormation, out selectedFormation, intent.allowedFormations);
         if (!command.orderIssued && !validFormationChange && !command.toggleHurry)
             return false;
 
@@ -79,10 +79,11 @@ public static class SquadPlayerCommandResolver
 
     /// <summary>
     /// F1-F4 (<paramref name="requestedIndex"/>) or the X cycle over the squad's formations. The rest formation is never
-    /// one of them: it is baked last and only FollowHero asks for it.
+    /// one of them: it is baked last and only FollowHero asks for it. A formation outside <paramref name="allowed"/>
+    /// (one bit per <see cref="FormationType"/>; 0 = all) cannot be picked, and the cycle skips it.
     /// </summary>
     public static bool TryResolveFormation(SquadDefinitionComponent definition,
-        FormationType current, int requestedIndex, bool cycle, out FormationType selected)
+        FormationType current, int requestedIndex, bool cycle, out FormationType selected, uint allowed = 0)
     {
         selected = current;
         if (!definition.formationLibrary.IsCreated)
@@ -106,9 +107,14 @@ public static class SquadPlayerCommandResolver
                     index = i;
                     break;
                 }
-            index = (index + 1) % count;
+            for (int step = 0; step < count; step++)
+            {
+                index = (index + 1) % count;
+                if (FormationLayout.Allows(allowed, formations[index].formationType))
+                    break;
+            }
         }
-        if (index < 0 || index >= count)
+        if (index < 0 || index >= count || !FormationLayout.Allows(allowed, formations[index].formationType))
             return false;
 
         selected = formations[index].formationType;

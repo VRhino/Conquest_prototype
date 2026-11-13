@@ -123,6 +123,19 @@ public class BatallaDeTicketTests
     }
 
     [Test]
+    public void LasFormacionesDelTicketSonLasDeConquest()
+    {
+        Assert.That(BatallaRealDeTicket.Familia("cuna"), Is.EqualTo(FormationType.Wedge));
+        Assert.That(BatallaRealDeTicket.Familia("muro_escudos"), Is.EqualTo(FormationType.ShieldWall));
+        Assert.That(BatallaRealDeTicket.Familia("otra"), Is.Null);
+        uint linea = FormationLayout.Mask(new[] { FormationType.Line });
+        Assert.That(FormationLayout.Allows(linea, FormationType.Line), Is.True);
+        Assert.That(FormationLayout.Allows(linea, FormationType.Dispersed), Is.False);
+        Assert.That(FormationLayout.Allows(linea, FormationType.Rest), Is.True, "el reposo siempre");
+        Assert.That(FormationLayout.Allows(FormationLayout.Mask(null), FormationType.Testudo), Is.True, "sin lista, todas");
+    }
+
+    [Test]
     public void UnaTropaQueConquestNoTieneRechazaLaBatalla()
     {
         var batalla = Batalla();

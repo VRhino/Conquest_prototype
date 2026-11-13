@@ -26,6 +26,18 @@ public static class FormationLayout
     }
 
     /// <summary>Most soldiers the formation can place.</summary>
+    /// <summary>One bit per formation family; an empty list means every family (0).</summary>
+    public static uint Mask(System.Collections.Generic.IEnumerable<FormationType> families)
+    {
+        uint mask = 0;
+        if (families != null)
+            foreach (var family in families) mask |= 1u << (int)family;
+        return mask;
+    }
+
+    /// <summary>Whether <paramref name="mask"/> (from <see cref="Mask"/>) allows <paramref name="type"/>; rest always.</summary>
+    public static bool Allows(uint mask, FormationType type) => mask == 0 || type == FormationType.Rest || (mask & (1u << (int)type)) != 0;
+
     public static int Capacity(ref FormationDataBlob formation)
     {
         if (formation.layout == FormationLayoutKind.Scatter) return MaxScatterSide * MaxScatterSide - 1;

@@ -257,6 +257,15 @@ namespace ConquestTactics.Net
             return fallos;
         }
 
+        [Serializable] class CatalogoImportado { public uint version; }
+
+        /// <summary>La versión del catálogo de tropas del motor que tiene Conquest (la escribe <c>TropasDelMotor</c>); 0 si no hay.</summary>
+        public static uint VersionDeTropas()
+        {
+            var texto = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Squads/BronzeAge/catalogo");
+            return texto == null ? 0u : UnityEngine.JsonUtility.FromJson<CatalogoImportado>(texto.text).version;
+        }
+
         /// <summary>Los <c>tropaId</c> del ticket que <paramref name="conocida"/> no reconoce, sin repetir.</summary>
         public static List<string> TropasDesconocidas(BattleTicket t, Func<string, bool> conocida) =>
             Lados(t).SelectMany(l => l.Participantes.SelectMany(p => p.Escuadras).Concat(l.EscuadrasSinHeroe))

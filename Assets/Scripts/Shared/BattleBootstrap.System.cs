@@ -45,7 +45,10 @@ public static class BattleBootstrapRequests
                 currentXP = math.max(0, squad.experience),
                 totalUnits = math.max(0, squad.unitsInSquad),
                 aliveUnits = math.clamp(squad.unitsAlive, 0, math.max(0, squad.unitsInSquad)),
-                formationIndex = math.max(0, squad.selectedFormationIndex)
+                formationIndex = math.max(0, squad.selectedFormationIndex),
+                allowedFormations = FormationLayout.Mask(squad.allowedFormations),
+                hasStartFormation = squad.hasStartFormation,
+                startFormation = squad.startFormation
             };
         }
         return result;

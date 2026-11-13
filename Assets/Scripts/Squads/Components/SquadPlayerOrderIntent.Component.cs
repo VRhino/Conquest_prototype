@@ -14,6 +14,9 @@ public struct SquadPlayerOrderIntentComponent : IComponentData
     /// <summary>Desired formation change, if any.</summary>
     public FormationType desiredFormation;
 
+    /// <summary>Formation families this squad may take (one bit per <see cref="FormationType"/>; 0 = all). Rest is always allowed.</summary>
+    public uint allowedFormations;
+
     /// <summary>World position for Hold Position orders.</summary>
     public float3 holdPosition;
 

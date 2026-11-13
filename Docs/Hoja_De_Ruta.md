@@ -50,11 +50,11 @@ relleno, se borra. Las cifras y los ids salen de `Trabajo_En_Conquest.md` §2-§
 
 | | Estado |
 |---|---|
-| **Tropas:** las 37 del motor con su `tropaId`, formaciones, nivel 1-10, habilidades en 4/7/10 y soldados por escuadra. Hoy hay 4 en la base de escuadras, clonadas del relleno, y sus formaciones tienen 20 huecos (las de 25 y 30 sacan 20 al campo) | ⬜ siguiente |
+| **Tropas:** las 37 del motor con su `tropaId`, formaciones, nivel 1-10, habilidades en 4/7/10 y soldados por escuadra. Hoy hay 4 en la base de escuadras, clonadas del relleno, y sus formaciones tienen 20 huecos (las de 25 y 30 sacan 20 al campo). Detalle y propuesta por tropa: [`Tropas_Del_Motor.md`](Tropas_Del_Motor.md) | 🔄 importador, versión, formaciones del ticket, nivel y habilidades hechos |
 | **Clases del héroe:** de 4 a las 5 del motor; la clase sale del arma del ticket; el héroe se monta desde el `HeroSnapshot` (nivel, atributos, aspecto). Hoy una tabla de paso en `BatallaRealDeTicket.Clase` y el aspecto de héroes de prueba | ⬜ |
 | **Objetos y cifras de combate:** ids y cifras del catálogo `OBJETOS`, piezas forjadas del ticket, equipo y montura del ticket, todo como modificadores de la pila de stats | ⬜ |
 | **Rechazar** lo que Conquest no conozca: clase, objeto y versiones de catálogo (hoy solo tropas) | ⬜ con los tres anteriores |
-| **Borrar el relleno** según se sustituye: 7 escuadras (`Resources/Squads/*` menos `BronzeAge/`), 4 clases (`Resources/Data/HeroClasses`), 19 objetos (`Resources/Items`) y lo que solo usen ellos | ⬜ a medida |
+| **Borrar el relleno** según se sustituye: 7 escuadras (`Resources/Squads/*` menos `BronzeAge/`; son las bases de las que se copian las tropas del motor, así que se van cuando cada base tenga su arte), 4 clases (`Resources/Data/HeroClasses`), 19 objetos (`Resources/Items`) y lo que solo usen ellos | ⬜ a medida |
 | **El contenido de las Eras I-III** (tropas y edificios nuevos: caballería, carros, levas sin formación; antes CQ-006) | ⬜ con las tropas |
 
 ## 4. Fuera de la batalla: migrar BronzeAgeClient a Unity
@@ -105,6 +105,7 @@ servidor real. Entre paréntesis, la sección del inventario.
 
 | | Estado |
 |---|---|
+| **Tropas del motor a medias, a la espera de arte** (decisión del 2026-11-13; [`Tropas_Del_Motor.md`](Tropas_Del_Motor.md)): los **carros de guerra** no salen (un ticket con ellos se rechaza) hasta que haya carro; **honderos** y **escaramuzadores, peltastas y agrianos** disparan flechas hasta que haya honda y jabalina; los **inmortales** van solo como arqueros hasta que haya lanza y arco; los **espadachines y hacheros sin escudo** llevan el modelo de los escuderos; las **levas** (leñadores, granjeros, mineros) usan el de los lanceros | ⬜ |
 | **Inventario de Synty a sustituir**, por categoría (armaduras, armas, edificios, props). Hoy 58 de nuestros 126 prefabs dependen de `Assets/Synty` y no hay ningún modelo propio en `Assets/Art/Models` | ⬜ |
 | **Norma para los modelos propios:** mismo estilo y detalle que Synty, sobre su esqueleto, y detrás de los mismos ids para no tocar código | ⬜ |
 | **Terreno del ticket:** la batalla en el sitio del mundo (hash del artefacto, centro, paquete de relieve; `06_Contrato_de_Mundo.md` §4 y §8). Va después del mapa de mundo nuevo | ⬜ |

@@ -134,11 +134,32 @@ namespace ConquestTactics.Net
         /// pasar de los de la tropa; devuelve los pedidos. Los que de verdad salen los dice el juego al crearla (menos, si
         /// su formación no tiene sitio para todos) y los apunta <see cref="ContarBajas"/>: los que no salen no pueden morir.
         /// </summary>
+        /// <summary>La familia de formación del motor (`FORMACIONES`) como tipo de Conquest; nula si no la conoce.</summary>
+        public static FormationType? Familia(string id) => id switch
+        {
+            "reposo" => FormationType.Rest,
+            "linea" => FormationType.Line,
+            "columna" => FormationType.Column,
+            "dispersa" => FormationType.Dispersed,
+            "muro_escudos" => FormationType.ShieldWall,
+            "testudo" => FormationType.Testudo,
+            "cuadro" => FormationType.Square,
+            "cuna" => FormationType.Wedge,
+            _ => null,
+        };
+
         static int Escuadra(BatallaDeTicket batalla, BattleHeroData heroe, BronzeAge.Contract.V1.SquadSnapshot escuadra)
         {
             var instancia = SquadDataService.CreateSquadInstance(escuadra.TropaId, Math.Max(1, (int)escuadra.Nivel));
             instancia.id = escuadra.SquadId;
             instancia.unitsInSquad = Math.Min(instancia.unitsInSquad, (int)escuadra.EfectivosAutorizados);
+            // Las formaciones que permite el ticket y con la que empieza (Heroe_Y_Tropa §10.4 del motor).
+            foreach (var familia in escuadra.FormacionesPermitidas)
+                if (Familia(familia) is FormationType tipo)
+                    instancia.allowedFormations.Add(tipo);
+            instancia.allowedFormations.Add(FormationType.Rest);
+            instancia.hasStartFormation = true;
+            instancia.startFormation = Familia(escuadra.Formacion) ?? FormationType.Rest;
             heroe.squadInstances.Add(instancia);
             var enJuego = batalla.Escuadras.Find(e => e.Id == escuadra.SquadId);
             if (enJuego != null)

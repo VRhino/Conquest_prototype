@@ -154,6 +154,14 @@ public partial class SquadSpawningSystem : SystemBase
             var firstFormationType = def.formationLibrary.Value.formations.Length > 0
                 ? def.formationLibrary.Value.formations[formationIndex].formationType
                 : FormationType.Line; // Fallback en caso de que no haya formaciones (edge case)
+            // Battle from an engine ticket: its formation if the troop has it, else its rest formation (Heroe_Y_Tropa §10.4).
+            if (snapshot.hasStartFormation)
+            {
+                var start = FormationLayout.Find(ref def.formationLibrary.Value, snapshot.startFormation) >= 0
+                    ? snapshot.startFormation : FormationType.Rest;
+                if (FormationLayout.Find(ref def.formationLibrary.Value, start) >= 0)
+                    firstFormationType = start;
+            }
 
             // Todos los squads comienzan en HoldPosition para que el jugador se oriente antes de mover
             var initialOrder = SquadOrderType.HoldPosition;
@@ -210,7 +218,8 @@ public partial class SquadSpawningSystem : SystemBase
             {
                 orderType = initialOrder,
                 holdPosition = formationAnchor,
-                desiredFormation = firstFormationType
+                desiredFormation = firstFormationType,
+                allowedFormations = snapshot.allowedFormations
             });
             ecb.AddComponent(squad, new SquadAIOrderIntentComponent
             {
