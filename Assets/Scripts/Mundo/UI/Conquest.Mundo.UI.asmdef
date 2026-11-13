@@ -1,0 +1,8 @@
+{
+  "name": "Conquest.Mundo.UI",
+  "rootNamespace": "ConquestTactics.Mundo.UI",
+  "references": ["Conquest.Mundo"],
+  "overrideReferences": true,
+  "precompiledReferences": ["BronzeAge.Contrato.dll", "Google.Protobuf.dll", "Newtonsoft.Json.dll"],
+  "autoReferenced": false
+}

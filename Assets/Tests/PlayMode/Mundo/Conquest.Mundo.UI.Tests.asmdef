@@ -1,0 +1,7 @@
+{
+  "name": "Conquest.Mundo.UI.Tests",
+  "references": ["Conquest.Mundo", "Conquest.Mundo.UI"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "overrideReferences": true,
+  "precompiledReferences": ["nunit.framework.dll", "BronzeAge.Contrato.dll", "Google.Protobuf.dll", "Newtonsoft.Json.dll"]
+}

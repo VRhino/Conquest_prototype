@@ -1,0 +1,30 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Provisional hasta el mapa de mundo (paso 2 del bloque 4): enseña que la sesión está viva. -->
+    <ui:VisualElement class="fondo" style="align-items: stretch; justify-content: flex-start;">
+        <ui:VisualElement class="barra-arriba">
+            <ui:Label class="titulo" text="EL MUNDO" />
+            <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
+            <ui:Button name="cambiar-partida" class="boton-secundario" text="Cambiar de partida" />
+            <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
+        </ui:VisualElement>
+        <ui:VisualElement class="diagnostico">
+            <ui:VisualElement class="columna">
+                <ui:Label class="kicker" text="RELOJ DEL MUNDO" />
+                <ui:Label name="reloj" class="reloj" />
+                <ui:VisualElement name="fichas-reloj" />
+                <ui:Label class="kicker" text="TU HÉROE" />
+                <ui:VisualElement name="fichas-heroe" />
+                <ui:Label class="kicker" text="CONEXIÓN" />
+                <ui:VisualElement name="fichas-conexion" />
+            </ui:VisualElement>
+            <ui:VisualElement class="columna">
+                <ui:Label class="kicker" text="ÁMBITOS SUSCRITOS" />
+                <ui:ScrollView name="ambitos" />
+            </ui:VisualElement>
+            <ui:VisualElement class="columna">
+                <ui:Label class="kicker" text="ENTIDADES POR TIPO" />
+                <ui:ScrollView name="entidades" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

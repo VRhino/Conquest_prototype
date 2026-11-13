@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "imagenes": {
+    "mesa-ciudad": { "archivo": "img/mesa-ciudad.jpg", "descripcion": "Una ciudad amurallada en el llano, con sus pueblos alrededor (mesa de escalas 3D)" },
+    "mesa-columna": { "archivo": "img/mesa-columna.jpg", "descripcion": "Una columna en marcha llegando a una plaza junto a la costa (mesa de escalas 3D)" },
+    "mesa-llano": { "archivo": "img/mesa-llano.jpg", "descripcion": "Una columna cruzando el llano entre bosques y plazas lejanas (mesa de escalas 3D)" },
+    "mesa-plazas": { "archivo": "img/mesa-plazas.jpg", "descripcion": "Una plaza con los caminos a sus pueblos (mesa de escalas 3D)" },
+    "mesa-campamento": { "archivo": "img/mesa-campamento.jpg", "descripcion": "Una columna junto a un campamento de mercenarios (mesa de escalas 3D)" },
+    "mesa-cala": { "archivo": "img/mesa-cala.jpg", "descripcion": "Una cala de la costa con una plaza en lo alto (mesa de escalas 3D)" },
+    "plaza-ciudad": { "archivo": "img/plaza-ciudad.jpg", "descripcion": "Una ciudad de nivel 5 con su muralla de piedra (vista 3D de la plaza)" },
+    "plaza-muralla": { "archivo": "img/plaza-muralla.jpg", "descripcion": "La muralla de piedra de cerca (vista 3D de la plaza)" },
+    "plaza-centro": { "archivo": "img/plaza-centro.jpg", "descripcion": "El centro de una ciudad (vista 3D de la plaza)" },
+    "plaza-pueblo": { "archivo": "img/plaza-pueblo.jpg", "descripcion": "Un pueblo de nivel 3 con su empalizada (vista 3D de la plaza)" },
+    "plaza-campamento": { "archivo": "img/plaza-campamento.jpg", "descripcion": "Un campamento de mercenarios con su empalizada (vista 3D)" },
+    "plaza-aldea": { "archivo": "img/plaza-aldea.jpg", "descripcion": "Una plaza recién fundada, con sus campos (vista 3D de la plaza)" }
+  },
+  "consejos": [
+    { "id": "subir-nivel", "texto": "El medallón del blasón brilla cuando la plaza ya puede subir de nivel. Púlsalo para ver lo que pide.", "imagen": "plaza-ciudad", "vistas": ["asentamiento"], "activo": true },
+    { "id": "muralla-puertas", "texto": "Cada puerta es una abertura en la muralla: cuantas más tiene un anillo, menos multiplica la defensa de la plaza.", "imagen": "plaza-muralla", "vistas": ["asentamiento", "mundo"], "activo": true },
+    { "id": "granja-unica", "texto": "La ciudad solo tiene la Granja de la fundación, y esa se mejora. El trigo de más sale de las aldeas agrícolas.", "imagen": "plaza-aldea", "vistas": ["asentamiento"], "activo": true },
+    { "id": "nivel-2", "texto": "Para el nivel 2, la plaza pide la Granja a nivel 2 y un pueblo activo: una aldea agrícola o un extractor.", "imagen": "plaza-pueblo", "vistas": ["asentamiento"], "activo": true },
+    { "id": "extractores", "texto": "Los minerales y la Cantera solo se explotan con un pueblo extractor en su nodo.", "imagen": "mesa-plazas", "vistas": ["asentamiento", "mundo", "pueblo"], "activo": true },
+    { "id": "aldea-agricola", "texto": "Una aldea agrícola acarrea trigo y ganado a su plaza, y su rebaño crece solo.", "imagen": "mesa-plazas", "vistas": ["pueblo", "asentamiento"], "activo": true },
+    { "id": "caravana-animales", "texto": "En una caravana solo tiran los carros con animal, y va al paso del animal más lento.", "imagen": "mesa-cala", "vistas": ["asentamiento", "mundo"], "activo": true },
+    { "id": "caravana-nombre", "texto": "Ponle nombre a tus caravanas con el lápiz ✎ de Mercado › Caravanas: así las distingues de un vistazo.", "imagen": "mesa-cala", "vistas": ["asentamiento"], "activo": true },
+    { "id": "escolta", "texto": "Puedes ceder escuadras como escolta a una caravana parada en su origen: viajan con ella y vuelven al acabar el viaje.", "imagen": "mesa-columna", "vistas": ["asentamiento", "mundo"], "activo": true },
+    { "id": "marcha-forzada", "texto": "La marcha forzada va un 50 % más rápida, pero gasta el doble de víveres.", "imagen": "mesa-columna", "vistas": ["mundo"], "activo": true },
+    { "id": "viveres", "texto": "Si a tu columna le faltan víveres, pasa trigo del carro a víveres desde su panel.", "imagen": "mesa-llano", "vistas": ["mundo"], "activo": true },
+    { "id": "vision", "texto": "Una columna con soldados ve más lejos que un héroe solo. Lo que no ves se queda en la niebla.", "imagen": "mesa-llano", "vistas": ["mundo"], "activo": true },
+    { "id": "bandidos", "texto": "Cada plaza tiene hasta diez campamentos de bandidos cerca. Al destruir uno, a las dos horas llega una oleada que repone todos los que falten.", "imagen": "mesa-ciudad", "vistas": ["mundo", "asentamiento"], "activo": true },
+    { "id": "fundar", "texto": "Para fundar una plaza, lleva la Caravana de Fundación enganchada a tu columna y pulsa Fundar donde quieras levantarla.", "imagen": "mesa-columna", "vistas": ["mundo", "campamento"], "activo": true },
+    { "id": "campamento-pagar", "texto": "En el campamento donde resides, el Mercado te deja pagar con tu almacén personal o con el carro que llevas.", "imagen": "plaza-campamento", "vistas": ["campamento"], "activo": true },
+    { "id": "almacen-personal", "texto": "Tu almacén personal solo se usa dentro de tu residencia o con tu columna a su puerta.", "imagen": "mesa-campamento", "vistas": ["campamento", "mundo", "asentamiento"], "activo": true },
+    { "id": "liderazgo", "texto": "Cada escuadra gasta Liderazgo según su escalón, no según sus hombres.", "imagen": "plaza-campamento", "vistas": ["campamento", "mundo"], "activo": true },
+    { "id": "taberna", "texto": "En la Taberna puedes pagar una Mirada o un Informe para conocer los edificios, la guarnición y la muralla de otra plaza.", "imagen": "plaza-centro", "vistas": ["asentamiento", "campamento"], "activo": true },
+    { "id": "ventanas-plaza", "texto": "En la plaza, cada icono del riel abre su ventana. Esc la cierra, y el «?» de la barra explica cada cosa.", "imagen": "plaza-centro", "vistas": ["asentamiento"], "activo": true }
+  ]
+}

@@ -1,0 +1,145 @@
+/* «Bronce y arcilla» (BronzeAgeClient: docs/Diseno_Interfaz.md y src/style.css) en USS, para las pantallas de fuera de la batalla.
+   USS no tiene degradados ni sombras: la placa de bronce se hace con bordes (banda de bronce oscuro y filete de bronce). Usa los tokens, no
+   metas colores sueltos. Los titulares van en versales escritas como tales (USS no tiene text-transform). */
+:root {
+    --tinta: #0b0805;
+    --marco-bg: #191410;
+    --marco-bg-alt: #221a12;
+    --marco-panel: #14100c;
+    --bronce: #a9793f;
+    --bronce-osc: #6b4a29;
+    --oro: #d8b878;
+    --oro-claro: #f1dcae;
+    --terracota: #bf5233;
+    --pergamino: #ede0c4;
+    --texto-2: #b8ab92;
+    --texto-apagado: #8a7d66;
+    --verde: #8fc79f;
+    --rojo-claro: #f0a58f;
+    color: var(--pergamino);
+    font-size: 16px;
+}
+
+.fondo { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: var(--tinta); align-items: center; justify-content: center; }
+
+/* La placa de bronce: banda oscura, filete de bronce y fondo cálido. */
+.placa {
+    background-color: var(--marco-bg-alt);
+    border-width: 4px; border-color: var(--bronce-osc); border-radius: 3px;
+}
+.placa-filete { border-width: 1px; border-color: var(--bronce); border-radius: 1px; padding: 28px 30px; background-color: var(--marco-bg); }
+
+.tarjeta { width: 460px; }
+.tarjeta-ancha { width: 620px; }
+
+.titulo { font-size: 28px; -unity-font-style: bold; color: var(--oro-claro); letter-spacing: 6px; -unity-text-align: middle-center; }
+.subtitulo { font-size: 14px; color: var(--texto-2); -unity-text-align: middle-center; margin-top: 4px; margin-bottom: 18px; }
+.kicker { font-size: 12px; -unity-font-style: bold; color: var(--oro); letter-spacing: 5px; margin-top: 14px; margin-bottom: 6px; }
+.denticulo { height: 3px; margin-bottom: 14px; border-top-width: 1px; border-bottom-width: 1px; border-color: var(--bronce-osc); opacity: 0.7; }
+
+/* Botones: el primario es la placa de oro (uno por pantalla); el secundario, bronce oscuro. */
+Button { margin: 0; }
+.boton-primario {
+    background-color: var(--oro); color: #201509; -unity-font-style: bold; letter-spacing: 3px; font-size: 15px;
+    border-width: 1px; border-color: var(--oro-claro); border-bottom-color: #8f6a35; border-radius: 3px;
+    height: 44px; margin-top: 12px;
+    transition-property: translate, background-color; transition-duration: 0.12s;
+}
+.boton-primario:hover { background-color: var(--oro-claro); translate: 0 -1px; }
+.boton-primario:active { translate: 0 1px; }
+.boton-primario:disabled { opacity: 0.55; }
+.boton-secundario {
+    background-color: #1d1610; color: var(--pergamino); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    padding: 6px 14px; font-size: 14px;
+}
+.boton-secundario:hover { border-color: var(--bronce); color: var(--oro-claro); }
+.boton-peligro { background-color: var(--terracota); border-color: var(--terracota); color: var(--pergamino); }
+.enlace { background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--oro); font-size: 13px; padding: 4px 0; -unity-text-align: middle-left; }
+.enlace:hover { color: var(--oro-claro); }
+
+/* Pestañas Entrar / Crear cuenta */
+.pestanas { flex-direction: row; padding: 3px; margin-bottom: 18px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: var(--marco-panel); }
+.pestana { flex-grow: 1; flex-basis: 0; height: 34px; background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--texto-2); font-size: 14px; -unity-font-style: bold; }
+.pestana:hover { color: var(--pergamino); }
+.pestana--activa { background-color: #3a2c1a; color: var(--oro); border-width: 1px; border-color: var(--bronce); }
+
+/* Formularios */
+.campo { margin-bottom: 12px; }
+.etiqueta { font-size: 13px; color: var(--texto-2); margin-bottom: 4px; }
+.entrada { margin: 0; }
+.entrada > .unity-text-field__input, .entrada > .unity-base-text-field__input {
+    background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    color: var(--pergamino); font-size: 15px; padding: 8px 10px; height: 38px;
+}
+.entrada:focus > .unity-text-field__input, .entrada:focus > .unity-base-text-field__input { border-color: var(--oro); }
+.campo--error .unity-base-text-field__input { border-color: var(--terracota); }
+.campo-error { font-size: 12px; color: var(--rojo-claro); margin-top: 3px; white-space: normal; }
+.campo-ayuda { font-size: 12px; color: var(--texto-apagado); margin-top: 3px; white-space: normal; }
+.oculto { display: none; }
+
+.error { background-color: rgba(191, 82, 51, 0.18); border-width: 1px; border-color: var(--terracota); border-radius: 3px; color: var(--rojo-claro); padding: 8px 12px; margin-bottom: 12px; white-space: normal; font-size: 14px; }
+.aviso-ok { background-color: rgba(110, 200, 140, 0.12); border-width: 1px; border-color: rgba(110, 200, 140, 0.4); border-radius: 3px; color: var(--verde); padding: 8px 12px; margin-bottom: 12px; white-space: normal; font-size: 14px; }
+.pie { font-size: 11px; color: var(--texto-apagado); -unity-text-align: middle-center; margin-top: 16px; }
+
+/* Partidas */
+.partida { flex-direction: column; align-items: stretch; padding: 10px 12px; margin-bottom: 8px; background-color: rgba(34, 26, 18, 0.6); border-width: 1px; border-color: var(--bronce-osc); border-left-width: 3px; border-radius: 2px; }
+.partida:hover { border-color: var(--bronce); }
+.partida--elegida { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.12); }
+.partida-nombre { font-size: 17px; -unity-font-style: bold; color: var(--oro-claro); -unity-text-align: middle-left; }
+.partida-heroe { font-size: 14px; color: var(--pergamino); -unity-text-align: middle-left; margin-top: 4px; }
+.partida-detalle { font-size: 12px; color: var(--texto-2); -unity-text-align: middle-left; }
+.vacio { color: var(--texto-apagado); font-size: 14px; -unity-text-align: middle-center; padding: 16px; }
+
+/* Pantalla de carga */
+.carga { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: var(--tinta); transition-property: opacity; transition-duration: 0.45s; }
+.carga--saliendo { opacity: 0; }
+.carga-imagen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-background-scale-mode: scale-and-crop; opacity: 0; transition-property: opacity, scale; transition-duration: 0.6s, 16s; }
+.carga-imagen--cargada { opacity: 1; scale: 1.06 1.06; }
+.carga-consejo { position: absolute; left: 0; right: 0; bottom: 0; height: 25%; min-height: 170px; padding: 0 14% 62px 14%; align-items: center; justify-content: center; background-color: rgba(14, 10, 6, 0.78); }
+.carga-kicker { font-size: 12px; -unity-font-style: bold; letter-spacing: 6px; color: var(--oro); margin-bottom: 8px; }
+.carga-texto { font-size: 19px; color: var(--pergamino); -unity-text-align: middle-center; white-space: normal; max-width: 760px; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.carga-pie { position: absolute; left: 25%; right: 25%; bottom: 20px; align-items: center; }
+.carga-titulo { font-size: 13px; letter-spacing: 3px; color: var(--oro-claro); margin-bottom: 7px; }
+.carga-barra { width: 100%; height: 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 4px; background-color: rgba(0, 0, 0, 0.6); overflow: hidden; }
+.carga-barra-relleno { height: 100%; width: 0; background-color: var(--oro); transition-property: width; transition-duration: 0.25s; }
+
+/* Pantalla de la sesión viva (provisional hasta el mapa) */
+.barra-arriba { position: absolute; left: 0; top: 0; right: 0; height: 52px; flex-direction: row; align-items: center; padding: 0 14px; background-color: var(--marco-panel); border-bottom-width: 2px; border-color: var(--bronce-osc); }
+.barra-arriba .titulo { font-size: 17px; letter-spacing: 4px; -unity-text-align: middle-left; flex-grow: 1; }
+.barra-arriba Button { margin-left: 8px; }
+.diagnostico { position: absolute; left: 24px; top: 72px; right: 24px; bottom: 24px; flex-direction: row; }
+.columna { flex-grow: 1; flex-basis: 0; margin-left: 8px; margin-right: 8px; }
+.ficha { flex-direction: row; justify-content: space-between; padding: 6px 10px; margin-bottom: 4px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; }
+.ficha-etiqueta { color: var(--texto-apagado); font-size: 13px; }
+.ficha-valor { color: var(--oro-claro); font-size: 13px; -unity-text-align: middle-right; white-space: normal; flex-shrink: 1; }
+.reloj { font-size: 30px; color: var(--oro-claro); -unity-font-style: bold; letter-spacing: 2px; margin-bottom: 6px; }
+.insignia { background-color: var(--terracota); color: var(--pergamino); border-radius: 9px; padding: 0 6px; font-size: 12px; margin-left: 6px; -unity-font-style: bold; }
+
+/* Avisos: el aviso flotante arriba al centro, y el panel con su historial */
+.toast { position: absolute; top: 64px; left: 30%; right: 30%; padding: 10px 18px; background-color: var(--marco-bg-alt); border-width: 2px; border-color: var(--bronce); border-radius: 3px; color: var(--pergamino); -unity-text-align: middle-center; white-space: normal; font-size: 15px; transition-property: opacity; transition-duration: 0.3s; }
+.toast--peligro { border-color: var(--terracota); color: var(--rojo-claro); }
+.toast--oculto { opacity: 0; }
+.panel-avisos { position: absolute; top: 60px; right: 12px; bottom: 12px; width: 420px; }
+.panel-avisos .placa-filete { flex-grow: 1; padding: 14px 16px; }
+.avisos-cab { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 10px; margin-bottom: 4px; }
+.avisos-seccion-titulo { font-size: 14px; -unity-font-style: bold; color: var(--oro); background-color: rgba(0, 0, 0, 0); border-width: 0; padding: 0; -unity-text-align: middle-left; }
+.avisos-urgentes .avisos-seccion-titulo { color: var(--terracota); }
+.aviso { flex-direction: row; padding: 7px 10px; margin-bottom: 4px; background-color: rgba(34, 26, 18, 0.7); border-width: 1px; border-color: var(--bronce-osc); border-left-width: 3px; border-radius: 2px; }
+.aviso--nuevo { border-left-color: var(--oro); }
+.aviso--urgente { border-left-color: var(--terracota); }
+.aviso-cuerpo { flex-grow: 1; flex-shrink: 1; }
+.aviso-titulo { font-size: 13px; -unity-font-style: bold; color: var(--oro-claro); }
+.aviso-texto { font-size: 13px; color: var(--pergamino); white-space: normal; }
+.aviso-cuando { font-size: 11px; color: var(--texto-apagado); }
+.aviso-borrar { background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--texto-apagado); font-size: 16px; width: 22px; padding: 0; }
+.aviso-borrar:hover { color: var(--rojo-claro); }
+
+/* El cuadro de confirmación del juego */
+.dialogo-velo { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(10, 8, 5, 0.65); align-items: center; justify-content: center; }
+.dialogo { width: 460px; }
+.dialogo .placa-filete { padding: 18px 20px 16px 20px; }
+.dialogo-titulo { font-size: 17px; -unity-font-style: bold; color: var(--oro-claro); letter-spacing: 1px; margin-bottom: 8px; }
+.dialogo-texto { font-size: 15px; color: var(--pergamino); white-space: normal; margin-bottom: 16px; }
+.dialogo-botones { flex-direction: row; justify-content: flex-end; }
+.dialogo-botones Button { margin-left: 8px; }
+.dialogo-botones .boton-primario { margin-top: 0; height: 36px; padding: 0 18px; }

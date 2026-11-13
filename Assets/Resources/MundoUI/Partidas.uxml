@@ -1,0 +1,15 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Las partidas del servidor con tu héroe en cada una (BronzeAgeClient: ui/pantallaPartidas.ts). El motor tiene una por servidor. -->
+    <ui:VisualElement class="fondo">
+        <ui:VisualElement class="placa tarjeta">
+            <ui:VisualElement class="placa-filete">
+                <ui:Label class="titulo" text="PARTIDAS" />
+                <ui:Label name="subtitulo" class="subtitulo" />
+                <ui:ScrollView name="lista" style="max-height: 360px;" />
+                <ui:Label name="error" class="error oculto" />
+                <ui:Button name="entrar" class="boton-primario" text="ENTRAR" />
+                <ui:Button name="cerrar-sesion" class="enlace" text="Cerrar sesión" style="-unity-text-align: middle-center; margin-top: 8px;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

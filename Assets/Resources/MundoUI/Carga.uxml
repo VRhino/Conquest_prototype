@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Pantalla de carga (BronzeAgeClient: ui/pantallaCarga.ts): imagen a pantalla completa, un consejo en el cuarto inferior y la barra. -->
+    <ui:VisualElement name="carga" class="carga">
+        <ui:VisualElement name="imagen" class="carga-imagen" />
+        <ui:VisualElement name="consejo" class="carga-consejo oculto">
+            <ui:Label class="carga-kicker" text="— CONSEJO —" />
+            <ui:Label name="texto" class="carga-texto" />
+        </ui:VisualElement>
+        <ui:VisualElement class="carga-pie">
+            <ui:Label name="titulo" class="carga-titulo" />
+            <ui:VisualElement class="carga-barra">
+                <ui:VisualElement name="relleno" class="carga-barra-relleno" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

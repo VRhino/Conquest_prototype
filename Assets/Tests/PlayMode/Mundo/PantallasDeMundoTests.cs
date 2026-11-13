@@ -1,0 +1,153 @@
+// Las pantallas de fuera de la batalla de punta a punta contra un servidor del motor propio (`BRONZEAGE_PRUEBA_URL`; nunca el de juego):
+// crear cuenta, ver la partida, entrar con su pantalla de carga, la sesión viva, el panel de avisos y cerrar sesión con su confirmación.
+// Si `MUNDO_CAPTURAS` dice una carpeta, guarda allí una captura de cada pantalla (para mirarlas; hace falta correr sin -nographics).
+using System;
+using System.Collections;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using ConquestTactics.Mundo.UI;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UIElements;
+
+namespace ConquestTactics.Mundo.UI.Tests
+{
+    public class PantallasDeMundoTests
+    {
+        static readonly string[] Preferencias = { "mundo.token", "mundo.nick", "mundo.servidor" };
+        string[] guardadas;
+        GameObject go;
+        RenderTexture rt;
+
+        [SetUp]
+        public void Guardar() => guardadas = Array.ConvertAll(Preferencias, k => PlayerPrefs.GetString(k, null));
+
+        [TearDown]
+        public void Restaurar()
+        {
+            // Lo que tuviera guardado quien corre la prueba (su login de verdad) se queda como estaba.
+            for (int i = 0; i < Preferencias.Length; i++)
+                if (guardadas[i] == null) PlayerPrefs.DeleteKey(Preferencias[i]); else PlayerPrefs.SetString(Preferencias[i], guardadas[i]);
+            PlayerPrefs.Save();
+            if (go != null) UnityEngine.Object.Destroy(go);
+            if (rt != null) rt.Release();
+        }
+
+        [UnityTest]
+        public IEnumerator CrearCuentaEntrarYCerrarSesion()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            foreach (var k in Preferencias) PlayerPrefs.DeleteKey(k);
+
+            go = new GameObject("Mundo");
+            go.SetActive(false);
+            var conexion = go.AddComponent<ConexionDeMundo>();
+            typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
+            go.AddComponent<PantallasDeMundo>();
+            go.SetActive(true);
+            yield return null;
+            var doc = go.GetComponentInChildren<UIDocument>();
+            rt = new RenderTexture(1600, 900, 24);
+            doc.panelSettings.targetTexture = rt;
+            var raiz = doc.rootVisualElement;
+            yield return null;
+            yield return Capturar("1_acceso");
+
+            Pulsar(raiz.Q<Button>("pestana-registro"));
+            var nick = "ui-" + DateTime.UtcNow.Ticks % 100_000_000;
+            raiz.Q<TextField>("nick").value = nick;
+            raiz.Q<TextField>("clave").value = "clave-de-prueba-1";
+            raiz.Q<TextField>("repetir").value = "otra-distinta-1";
+            Pulsar(raiz.Q<Button>("enviar"));
+            yield return null;
+            Assert.IsFalse(raiz.Q<Label>("repetir-error").ClassListContains("oculto"), "la repetida no coincide: se dice junto al campo");
+            yield return Capturar("2_registro_con_error");
+            raiz.Q<TextField>("repetir").value = "clave-de-prueba-1";
+            Pulsar(raiz.Q<Button>("enviar"));
+
+            yield return Esperar(() => raiz.Q<Label>(className: "partida-nombre") != null, 20, "la lista de partidas");
+            StringAssert.Contains("sin héroe", raiz.Q<Label>(className: "partida-heroe").text);
+            yield return Capturar("3_partidas");
+
+            Pulsar(raiz.Q<Button>("entrar"));
+            yield return Esperar(() => raiz.Q(className: "carga") != null, 5, "la pantalla de carga");
+            yield return new WaitForSecondsRealtime(0.8f);
+            yield return Capturar("4_carga");
+            yield return Esperar(() => raiz.Q<Label>("reloj") != null && raiz.Q(className: "carga") == null, 60, "la sesión viva");
+            yield return new WaitForSecondsRealtime(1f);
+            Assert.IsNotEmpty(raiz.Q<Label>("reloj").text);
+            Assert.Greater(raiz.Q<ScrollView>("entidades").contentContainer.childCount, 0);
+            Assert.IsNotNull(conexion.Artefacto, "el artefacto de mundo, cargado");
+            yield return Capturar("5_sesion");
+
+            Pulsar(raiz.Q<Button>("avisos"));
+            yield return null;
+            Assert.IsNotNull(raiz.Q(className: "panel-avisos"));
+            yield return Capturar("6_avisos");
+            Pulsar(raiz.Q<Button>("avisos"));
+
+            // Nace un héroe (la pantalla de crearlo es el paso 3): al cambiar de partida y volver, la tarjeta lo enseña y la sesión pide la VISTA.
+            var clase = (string)conexion.Datos.Bloque("Objetos_Del_Heroe", "CLASES_HEROE")["clases"][0]["id"];
+            var camp = conexion.Sesion.Bienvenida.CampamentosParaElegir[0].CampamentoId;
+            var nace = conexion.Sesion.Ordenar(new BronzeAge.Contract.V1.Orden { CrearHeroe = new BronzeAge.Contract.V1.OrdenCrearHeroe { DisplayName = "U" + nick.Substring(3), CampamentoId = camp, ClassDefinitionId = clase, Genero = "femenino" } });
+            yield return Esperar(() => nace.IsCompleted, 10, "el héroe");
+            Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, nace.Result.Resultado, nace.Result.Rechazo?.Codigo);
+            Pulsar(raiz.Q<Button>("cambiar-partida"));
+            yield return Esperar(() => raiz.Q<Label>(className: "partida-heroe")?.text.Contains("U" + nick.Substring(3)) == true, 20, "la partida con el héroe");
+            yield return Capturar("8_partidas_con_heroe");
+            Pulsar(raiz.Q<Button>("entrar"));
+            yield return Esperar(() => raiz.Q<Label>("reloj") != null && raiz.Q(className: "carga") == null, 60, "la sesión viva con héroe");
+            yield return Esperar(() => conexion.Sesion.Almacen.Ambitos.ContainsKey("VISTA:" + conexion.HeroeId) || conexion.Sesion.Almacen.Ambitos.Keys.Any(k => k.StartsWith("VISTA:")), 10, "la VISTA");
+            yield return new WaitForSecondsRealtime(1f);
+            Assert.Greater(raiz.Q<ScrollView>("ambitos").contentContainer.childCount, 2);
+            yield return Capturar("9_sesion_con_heroe");
+
+            Pulsar(raiz.Q<Button>("cerrar-sesion"));
+            yield return null;
+            Assert.IsNotNull(raiz.Q(className: "dialogo"), "cerrar sesión pide confirmación");
+            yield return Capturar("7_confirmar");
+            Pulsar(raiz.Q(className: "dialogo").Q<Button>(className: "boton-primario"));
+            yield return Esperar(() => raiz.Q<Button>("pestana-registro") != null, 10, "volver al acceso");
+            Assert.IsFalse(conexion.HayToken, "el token se olvida");
+        }
+
+        static void Pulsar(Button b)
+        {
+            Assert.IsNotNull(b);
+            using (var e = NavigationSubmitEvent.GetPooled())
+            {
+                e.target = b;
+                b.SendEvent(e);
+            }
+        }
+
+        static IEnumerator Esperar(Func<bool> hasta, float segundos, string que)
+        {
+            var fin = Time.realtimeSinceStartup + segundos;
+            while (!hasta())
+            {
+                if (Time.realtimeSinceStartup > fin) Assert.Fail("no llegó " + que);
+                yield return null;
+            }
+        }
+
+        IEnumerator Capturar(string nombre)
+        {
+            var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+            yield return null; // en modo batch WaitForEndOfFrame no llega nunca
+            if (string.IsNullOrEmpty(carpeta) || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) yield break;
+            var antes = RenderTexture.active;
+            RenderTexture.active = rt;
+            var t = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            t.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            t.Apply();
+            RenderTexture.active = antes;
+            Directory.CreateDirectory(carpeta);
+            File.WriteAllBytes(Path.Combine(carpeta, nombre + ".png"), t.EncodeToPNG());
+            UnityEngine.Object.Destroy(t);
+        }
+    }
+}

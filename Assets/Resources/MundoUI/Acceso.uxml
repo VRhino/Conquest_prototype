@@ -1,0 +1,43 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Entrar y Crear cuenta (BronzeAgeClient: ui/pantallaAcceso.ts). Lo cablea PantallasDeMundo.Acceso. -->
+    <ui:VisualElement class="fondo">
+        <ui:VisualElement class="placa tarjeta">
+            <ui:VisualElement class="placa-filete">
+                <ui:Label class="titulo" text="BRONZE AGE COLLAPSE" />
+                <ui:Label name="subtitulo" class="subtitulo" text="Entra con tu cuenta" />
+                <ui:VisualElement class="pestanas">
+                    <ui:Button name="pestana-entrar" class="pestana" text="Entrar" />
+                    <ui:Button name="pestana-registro" class="pestana" text="Crear cuenta" />
+                </ui:VisualElement>
+                <ui:Label name="aviso" class="aviso-ok oculto" />
+                <ui:Label name="error" class="error oculto" />
+                <ui:VisualElement name="campo-nick" class="campo">
+                    <ui:Label class="etiqueta" text="Nick" />
+                    <ui:TextField name="nick" class="entrada" max-length="32" />
+                    <ui:Label name="nick-error" class="campo-error oculto" />
+                    <ui:Label name="nick-ayuda" class="campo-ayuda oculto" text="De 3 a 32 caracteres: letras, cifras, «_», «-» o «.». Es el nombre de tu cuenta, no el de tu héroe." />
+                </ui:VisualElement>
+                <ui:VisualElement name="campo-clave" class="campo">
+                    <ui:Label class="etiqueta" text="Contraseña" />
+                    <ui:TextField name="clave" class="entrada" password="true" max-length="128" />
+                    <ui:Label name="clave-error" class="campo-error oculto" />
+                    <ui:Label name="clave-ayuda" class="campo-ayuda oculto" text="Al menos 8 caracteres." />
+                </ui:VisualElement>
+                <ui:VisualElement name="campo-repetir" class="campo oculto">
+                    <ui:Label class="etiqueta" text="Repite la contraseña" />
+                    <ui:TextField name="repetir" class="entrada" password="true" max-length="128" />
+                    <ui:Label name="repetir-error" class="campo-error oculto" />
+                </ui:VisualElement>
+                <ui:VisualElement name="campo-codigo" class="campo oculto">
+                    <ui:Label class="etiqueta" text="Código de invitación" />
+                    <ui:TextField name="codigo" class="entrada" />
+                    <ui:Label name="codigo-error" class="campo-error oculto" />
+                    <ui:Label class="campo-ayuda" text="Te lo da quien lleva el servidor." />
+                </ui:VisualElement>
+                <ui:Button name="con-codigo" class="enlace oculto" text="Tengo un código de invitación" />
+                <ui:Button name="enviar" class="boton-primario" text="ENTRAR" />
+                <ui:Label name="servidor" class="pie" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
