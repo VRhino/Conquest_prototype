@@ -2,9 +2,10 @@
 
 Paso 4 del bloque 4 de [`Hoja_De_Ruta.md`](../Hoja_De_Ruta.md) (inventario §3.15 y §3.8). Va en dos tandas:
 
-- **4A** (esta): estar dentro y salir. Cuando el héroe está dentro de un campamento de mercenarios, se ve el interior en FeudoScene: el
+- **4A**: estar dentro y salir. Cuando el héroe está dentro de un campamento de mercenarios, se ve el interior en FeudoScene: el
   héroe del motor andando a pie en tercera persona por el campamento que manda el motor. Desde ahí se sale al mundo.
-- **4B**: las interfaces (residir, comprar, reclutar…), una por una, según decida el autor sobre la propuesta del final.
+- **4B**: las interfaces (residir, comprar, reclutar, repostar y salir por la puerta). El autor eligió «todo como se propone» en la tabla
+  del final (2026-11-13).
 
 ## El camino
 
@@ -101,10 +102,68 @@ formación, como BronzeAgeClient 0.195.1 («Entrar solo cuando se puede»). Es `
 En la prueba, con el héroe andando por el campamento (2,5 s, unos 3.000 fotogramas, en batch): mediana de 0,8 ms por fotograma, p95 de
 1,0 ms y el peor de 4–5 ms. El interior son unas 80 cajas.
 
-## Propuesta para la 4B: interfaz por interfaz
+## Las interfaces del campamento (4B)
+
+**Cómo se abren.** Con el mismo mecanismo que la puerta y el herrero del feudo (`DoorInteractable`, `NpcTriggerZone`):
+
+- Un collider disparador alrededor de la pieza de la planta (`ZonaDelInterior`) detecta al héroe local.
+- La tecla F llega por `PlayerInteractionComponent`.
+- Solo responde la zona donde está el héroe.
+- El cartel («F · Taberna», «F · Mercado», «F · Barracón: tropa», «F · Salir al mundo») lo pone la interfaz en español. El cartel del
+  herrero vive en el HUD de Conquest, que en este modo está apagado.
+- Con un panel abierto se usa el bloqueo de los diálogos de Conquest (`DialogueUIState.IsDialogueOpen`): el héroe no anda, la cámara no
+  gira y el ratón queda libre. Al cerrar (botón o Esc) vuelve el control.
+- La zona de la puerta está justo fuera de la empalizada: el héroe aparece en el hueco y tiene que salir para que se abra.
+- Qué pieza da a qué zona sale de la planta: `taberna`; `mercado` y sus `puestoMercado`; el edificio militar, que es el de
+  `MERCENARIOS.edificiosMilitares`.
+
+Los paneles (`PantallasDeMundo.Campamento.cs`, UI Toolkit, con la letra y el estilo de las demás pantallas) se portan de
+`ui/pantallaCampamento.ts`:
+
+- **Taberna** (la parte «Resumen» del prototipo):
+  - si resides o no, con la explicación del prototipo;
+  - los residentes;
+  - «Residir aquí» (`residirEnCampamento`) solo si no resides. Si tienes tropa prestada de otro campamento, avisa antes de que se
+    retira, como el prototipo;
+  - tu tropa (cuántos hombres, dónde está y si es prestada), tu almacén y los edificios del campamento.
+  - No hay «dejar de residir»: el motor no tiene esa orden.
+- **Mercado** (`mercado` y `cablearMercado`):
+  - lo que hay en venta (el residente, todo menos el oro; el visitante, solo trigo; pagando con el carro, sin trigo, que se reposta
+    gratis);
+  - del bien elegido: lo que hay, lo que tienes donde pagas, el cupo de hoy (`cupo_diario` menos `Heroe.cupo_campamento` del día de
+    mundo), tu oro y el precio por unidad (`precios_mercado`, en millonésimas);
+  - una cantidad hasta el máximo que se puede pagar, y lo que pagas, lo que te queda y lo que tendrás;
+  - «Comprar N por X de oro» (`comprarEnCampamento`). El residente con columna elige si paga con su almacén o con el carro.
+  - La sesión no trae lo servido en la respuesta (`ResultadoOrden.datos` va vacío). «Compraste N de X por Y de oro» sale de lo que
+    tenías antes y después, y avisa si no cabía o no alcanzaba para más.
+- **Tropa** (`tropa`, `lugarCampamento` y `accionesCampamento`), en una lista en lugar del árbol de carriles, solo para el residente:
+  - los reclutas del campamento (`poblacion`, un ritmo) y tu oro, con «Pagar con» si llevas columna;
+  - **lo que te prestan:** las tropas de leva comunal de `TROPAS_RECLUTABLES` (el motor dice «solo se presta la tropa de leva
+    comunal»; son cuatro, y el prototipo tenía tres escritas a mano). Cada una con «Pedir prestada» (`pedirPrestamo`) o lo que ya te
+    prestaron;
+  - **el edificio militar:** las tropas que ofrece (`reclutables`), con su precio por soldado o «el campamento aún no la ofrece». Para
+    las ofrecidas, «Reclutar N · X de oro» (`reclutarEnCampamento`, con `precio_escuadra`). Si faltan reclutas o no llega el oro, sale
+    desactivado con su motivo.
+  - Un héroe tiene una escuadra por tropa: la suya sale como «tu escuadra n/N».
+  - **Las barracas de Conquest no se tocan:** se adaptan cuando exista la correspondencia tropa del motor ↔ `SquadData` (apuntado en
+    el paso 6 de la hoja de ruta).
+- **«Salir al mundo»** (de la 4A), ahora también:
+  - con la carga, el total en el carro frente a `LOGISTICA.capacidadCarroPorJugador`;
+  - los víveres: los que tienes frente a `LOGISTICA.capacidadViveresPorHeroe`, y «Llenar víveres» (`repostarEnCampamento`) solo si no
+    están llenos. El prototipo repostaba solo al entrar en tu residencia y desde la ficha del mapa;
+  - se abre también andando hasta la puerta.
+- **Los rechazos:** todos los de residir, comprar, reclutar, préstamo y salir tienen su frase en `Textos`. El catálogo del motor no trae
+  frase y el prototipo enseñaba el texto del servidor tal cual.
+- **Los recursos:** su nombre en español (`CosasDelMapa.NombreDeRecurso`, de `RECURSO_NOMBRE` del prototipo): Estaño, Ganado…
+- **Fuera de esta tanda,** con su nota en la hoja de ruta:
+  - el fondo de refundación (paso 8);
+  - el tablón de mercenarios por contrato y la taberna (paso 12);
+  - lo que lleva el héroe en una ventana propia (paso 6).
+
+## La propuesta de la 4B, interfaz por interfaz (aprobada)
 
 Lo que hace BronzeAgeClient en el campamento (`ui/pantallaCampamento.ts`, `ui/arbolReclutamiento.ts`, `ui/ventanaSalida.ts`), qué
-hay en FeudoScene que podría alojarlo y la recomendación. **Lo decide el autor; nada de esto está hecho.**
+hay en FeudoScene que podría alojarlo y la recomendación. El autor la aprobó entera; lo hecho está en «Las interfaces del campamento».
 
 | Qué | Órdenes y datos del motor | Qué hay en Conquest | Recomendación y coste |
 |---|---|---|---|
@@ -136,3 +195,23 @@ hay en FeudoScene que podría alojarlo y la recomendación. **Lo decide el autor
   8. Salir y seguir con el resto del paso 2.
 - **`PantallasDeMundoTests.ConHeroeSaleElSelectorDePersonaje`:** el héroe nació en un campamento y sigue dentro, así que tras «Entrar al
   mundo» sale su interior, y de ahí al mapa.
+- **`PantallasDeMundoTests.ElCampamentoPorDentro`** (PlayMode, contra el motor 358af5ff). El servidor de prueba da 300 de oro al héroe
+  con la orden de administración `dar_almacen_personal`, desde una cuenta admin registrada con el código de un solo uso que imprime al
+  arrancar (`BRONZEAGE_PRUEBA_ADMIN`; `Sesion.Tipo = ClienteAdminWeb`), porque el héroe recién nacido no tiene oro. La prueba recorre:
+  1. **Las cuatro zonas.** En la taberna, el mercado y el edificio militar se coloca al héroe en el borde de la zona (andar entre las
+     casas hasta ellas no se prueba). Sale el cartel y, con la tecla F, el panel.
+  2. **El bloqueo.** Con un panel abierto el héroe no anda; al cerrar, vuelve el control.
+  3. **La taberna:** residente, sin «Residir aquí».
+  4. **El mercado:** se compra una unidad y aparece en el almacén, con la línea «Compraste…».
+  5. **La tropa:** se pide prestada la milicia de lanceros y se ve como prestada. Si hay tropa ofrecida con oro bastante, se recluta;
+     si no, sale su motivo.
+  6. **Un rechazo de cada orden**, con su frase en español: `residencia.ya_reside`, `mercenarios.cantidad_invalida`,
+     `mercenarios.tropa_no_disponible` y `mercenarios.ya_prestada`.
+  7. **La salida.** Andando con S hasta la zona de la puerta, el cartel y F abren la ventana de salida, con la escuadra prestada y el
+     cobre comprado como carga. «Llenar víveres» lleva de 0 a 350. Al salir, la columna lleva esa escuadra y ese cobre en el carro.
+  8. **Los cuatro tamaños** de ventana, con lo que se pulsa dentro de su placa, para la taberna, el mercado, la tropa y la ventana de
+     salida.
+- **Sin verificar contra el motor:**
+  - **Reclutar aceptado:** en una partida nueva el campamento no ofrece aún ninguna tropa; todas esperan a su tecnología.
+  - **Residir aceptado:** el héroe nace residente y el campamento de al lado está lejos.
+  - **Andar hasta la taberna, el mercado y el edificio militar** con el teclado entre las casas.

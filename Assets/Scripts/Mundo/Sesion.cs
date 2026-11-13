@@ -83,6 +83,10 @@ namespace ConquestTactics.Mundo
         double relojMundoMs, relojLocalMs, relojFactor = 1, relojRtt = double.PositiveInfinity;
         bool relojPausado = true;
 
+        /// <summary>Qué cliente se presenta en el `Hola`: Unity; las pruebas abren también sesiones de administración (`ClienteAdminWeb`, solo
+        /// con una cuenta admin del servidor de prueba) para preparar el mundo.</summary>
+        public TipoCliente Tipo = TipoCliente.ClienteUnity;
+
         public Sesion(string url, string token, string versionCliente, Almacen almacen = null)
         {
             Url = url;
@@ -180,7 +184,7 @@ namespace ConquestTactics.Mundo
             var c = new CancellationTokenSource();
             ws = socket;
             cancelar = c;
-            var hola = Almacen.Hola(Token, TipoCliente.ClienteUnity, VersionCliente, MundoHash, (long)AhoraLocal);
+            var hola = Almacen.Hola(Token, Tipo, VersionCliente, MundoHash, (long)AhoraLocal);
             _ = Task.Run(() => Escuchar(socket, n, new MensajeDeCliente { Hola = hola }.ToByteArray(), c.Token));
         }
 

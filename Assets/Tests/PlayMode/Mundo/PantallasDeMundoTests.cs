@@ -550,6 +550,210 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
+        /// <summary>El campamento por dentro (paso 4B): las zonas con su cartel y la tecla F, la taberna, el mercado (comprar y verlo en tu almacén),
+        /// la tropa (pedir prestada, reclutar o su motivo), los rechazos con su frase, y salir andando por la puerta con tropa, carga y víveres.</summary>
+        [UnityTest]
+        public IEnumerator ElCampamentoPorDentro()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            string nick = null;
+            yield return OtroHeroe(url, "Cam" + DateTime.UtcNow.Ticks % 1_000_000, "arco_lanza", "femenino",
+                new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_01", PeloId = "hair_03", CejasId = "eyebrow_02" }, x => nick = x);
+            foreach (var k in Preferencias) PlayerPrefs.DeleteKey(k);
+            go = new GameObject("Mundo");
+            go.SetActive(false);
+            var conexion = go.AddComponent<ConexionDeMundo>();
+            typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
+            go.AddComponent<PantallasDeMundo>();
+            go.SetActive(true);
+            yield return null;
+            var doc = go.GetComponentInChildren<UIDocument>();
+            rt = new RenderTexture(1600, 900, 24);
+            doc.panelSettings.targetTexture = rt;
+            doc.panelSettings.clearColor = true;
+            var raiz = doc.rootVisualElement;
+            yield return null;
+            raiz.Q<TextField>("nick").value = nick;
+            raiz.Q<TextField>("clave").value = "clave-de-prueba-1";
+            Pulsar(raiz.Q<Button>("enviar"));
+            HeroSelectionSceneController selector = null;
+            yield return Esperar(() => (selector = UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>()) != null, 30, "el selector");
+            LogAssert.ignoreFailingMessages = true; // el error de relleno del escuadrón vacío al nacer el héroe en FeudoScene
+            selector.confirmButton.onClick.Invoke();
+            yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior");
+            LogAssert.ignoreFailingMessages = false;
+            yield return new WaitForSecondsRealtime(1f);
+            var interior = SelectorDePersonaje.Interior;
+            var heroe = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).First(x => x.IsLocalHero);
+            var campId = conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe.Ubicacion.CampamentoId;
+            BronzeAge.Contract.V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
+            BronzeAge.Contract.V1.CampamentoMercenarios Camp() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.CampamentoMercenarios, campId).CampamentoMercenarios;
+            foreach (var zona in new[] { "taberna", "mercado", "militar", "puerta" })
+                Assert.IsNotNull(GameObject.Find("Zona " + zona), "la zona de " + zona);
+            // El héroe recién nacido no tiene oro: el servidor de prueba le da 300 (orden de administración) para poder comprar y reclutar.
+            yield return DarAlmacen(url, conexion.HeroeId, "oro", 300_000);
+            yield return Esperar(() => Milesimas(Yo().AlmacenPersonal, "oro") >= 300 || Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN") == null, 10, "el oro en el almacén");
+
+            var entrada = UnityEngine.InputSystem.InputSystem.settings;
+            var fondo = entrada.backgroundBehavior;
+            entrada.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+            var editorAntes = entrada.editorInputBehaviorInPlayMode;
+            entrada.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var teclado = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+            try
+            {
+                teclado.MakeCurrent();
+                IEnumerator Tecla(UnityEngine.InputSystem.Key k)
+                {
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(k));
+                    yield return null;
+                    yield return null;
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                    yield return null;
+                }
+                // Junto a una pieza: el héroe se coloca en el borde de su zona (andar entre las casas hasta ella no se prueba), el cartel y F.
+                IEnumerator AbrirZona(string zona, string panel)
+                {
+                    var caja = GameObject.Find("Zona " + zona).GetComponent<BoxCollider>().bounds;
+                    var cc = heroe.GetComponent<CharacterController>();
+                    cc.enabled = false;
+                    heroe.transform.position = new Vector3(caja.center.x, heroe.transform.position.y, caja.min.z + 0.8f);
+                    cc.enabled = true;
+                    yield return Esperar(() => interior.ZonaCercana == zona && !raiz.Q<Label>("cartel").ClassListContains("oculto"), 5, "el cartel de " + zona);
+                    yield return Capturar($"21_cartel_{zona}");
+                    yield return Tecla(UnityEngine.InputSystem.Key.F);
+                    yield return Esperar(() => raiz.Q(panel) != null, 5, "el panel de " + zona);
+                    Assert.IsTrue(interior.PanelAbierto && DialogueUIState.IsDialogueOpen, "con el panel abierto, el héroe no anda");
+                    yield return null;
+                }
+
+                // La taberna: residentes y que resides (el héroe nace residente: no hay «Residir aquí»).
+                yield return AbrirZona("taberna", "panel-taberna");
+                StringAssert.Contains("tu residencia", raiz.Q("panel-taberna").Q<Label>(className: "dialogo-texto").text);
+                Assert.IsNull(raiz.Q("panel-taberna").Q<Button>("residir"), "ya resides: no sale «Residir aquí»");
+                yield return Capturar("22_taberna");
+                yield return EnTamanos(raiz, "22_taberna", () => DentroDelMarco(raiz.Q("panel-taberna"), "la taberna"));
+                Pulsar(raiz.Q("panel-taberna").Q<Button>("cerrar"));
+                yield return null;
+                Assert.IsFalse(interior.PanelAbierto || DialogueUIState.IsDialogueOpen, "al cerrar vuelve el control");
+
+                // El mercado: comprar una unidad y verla en tu almacén.
+                yield return AbrirZona("mercado", "panel-mercado");
+                var mercado = raiz.Q("panel-mercado");
+                yield return Capturar("23_mercado");
+                yield return EnTamanos(raiz, "23_mercado", () => DentroDelMarco(mercado, "el mercado"));
+                var comprar = mercado.Q<Button>("comprar");
+                if (comprar != null)
+                {
+                    var bien = mercado.Query<Button>().ToList().First(b => b.name.StartsWith("bien-") && b.ClassListContains("clase--elegida")).name.Substring(5);
+                    var antes = Yo().AlmacenPersonal.PorId.TryGetValue(bien, out var a0) ? a0 : 0;
+                    mercado.Q<SliderInt>("cantidad").value = 1;
+                    Pulsar(comprar);
+                    yield return Esperar(() => (Yo().AlmacenPersonal.PorId.TryGetValue(bien, out var a1) ? a1 : 0) > antes, 10, "lo comprado en tu almacén");
+                    yield return Esperar(() => raiz.Q("panel-mercado").Q<Label>("ultima-compra") != null, 5, "la línea de la compra");
+                    Debug.Log($"[Prueba] compra: {raiz.Q("panel-mercado").Q<Label>("ultima-compra").text}");
+                    yield return Capturar("23b_mercado_comprado");
+                }
+                else Debug.Log("[Prueba] mercado sin «Comprar»: " + string.Join(" | ", mercado.Query<Label>().ToList().Select(l => l.text)));
+                Pulsar(raiz.Q("panel-mercado").Q<Button>("cerrar"));
+                yield return null;
+
+                // La tropa: pedir prestada una de leva comunal y verla; reclutar (o su motivo si no llega).
+                yield return AbrirZona("militar", "panel-tropa");
+                yield return Capturar("24_tropa");
+                yield return EnTamanos(raiz, "24_tropa", () => DentroDelMarco(raiz.Q("panel-tropa"), "la tropa"));
+                var pedir = raiz.Q("panel-tropa").Q<Button>("pedir-milicia_lanceros");
+                Assert.IsNotNull(pedir, "se puede pedir prestada la milicia de lanceros");
+                Pulsar(pedir);
+                yield return Esperar(() => Yo().EscuadronesIds.Count > 0, 10, "la escuadra prestada");
+                yield return Esperar(() => raiz.Q("panel-tropa")?.Q("tropa-milicia_lanceros")?.Q<Button>("pedir-milicia_lanceros") == null, 5, "la ficha repintada");
+                StringAssert.Contains("prestada", raiz.Q("panel-tropa").Q("tropa-milicia_lanceros").Q<Label>().text);
+                yield return Capturar("24b_tropa_prestada");
+                var reclutar = raiz.Q("panel-tropa").Query<Button>().ToList().FirstOrDefault(b => b.name.StartsWith("reclutar-") && b.enabledSelf);
+                if (reclutar != null)
+                {
+                    var n = Yo().EscuadronesIds.Count;
+                    Pulsar(reclutar);
+                    yield return Esperar(() => Yo().EscuadronesIds.Count > n, 10, "la escuadra reclutada");
+                    yield return new WaitForSecondsRealtime(0.6f);
+                    yield return Capturar("24c_tropa_reclutada");
+                }
+                else Debug.Log("[Prueba] reclutar: " + string.Join(" | ", raiz.Q("panel-tropa").Query<Label>().ToList().Where(l => l.name.StartsWith("motivo-")).Select(l => l.text)));
+                Pulsar(raiz.Q("panel-tropa").Q<Button>("cerrar"));
+                yield return null;
+
+                // Un rechazo de cada orden, con su frase (lo que la interfaz no deja pedir se manda tal cual).
+                foreach (var (orden, codigo) in new[]
+                {
+                    (new BronzeAge.Contract.V1.Orden { ResidirEnCampamento = new BronzeAge.Contract.V1.OrdenResidirEnCampamento { HeroeId = conexion.HeroeId, CampamentoId = campId } }, "residencia."),
+                    (new BronzeAge.Contract.V1.Orden { ComprarEnCampamento = new BronzeAge.Contract.V1.OrdenComprarEnCampamento { Recurso = "trigo", Cantidad = 0, CampamentoId = campId, PagarCon = "almacenPersonal" } }, "mercenarios."),
+                    (new BronzeAge.Contract.V1.Orden { ReclutarEnCampamento = new BronzeAge.Contract.V1.OrdenReclutarEnCampamento { TropaId = Camp().Reclutables.Count > 0 ? Camp().Reclutables[0].TropaId : "milicia_lanceros", PagarCon = "almacenPersonal" } }, "mercenarios."),
+                    (new BronzeAge.Contract.V1.Orden { PedirPrestamo = new BronzeAge.Contract.V1.OrdenPedirPrestamo { TropaIds = { "milicia_lanceros" } } }, "mercenarios."),
+                })
+                {
+                    var r = conexion.Sesion.Ordenar(orden);
+                    yield return Esperar(() => r.IsCompleted, 10, "la respuesta");
+                    Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenRechazada, r.Result.Resultado, orden.ToString());
+                    var frase = Textos.Explicar(r.Result.Rechazo);
+                    Debug.Log($"[Prueba] rechazo {r.Result.Rechazo.Codigo}: {frase}");
+                    StringAssert.StartsWith(codigo, r.Result.Rechazo.Codigo);
+                    Assert.AreNotEqual(r.Result.Rechazo.Codigo, frase, "con su frase en español");
+                }
+
+                // Salir andando por la puerta: S hasta salir del hueco, el cartel, F y la ventana con la tropa, la carga y los víveres.
+                var cc2 = heroe.GetComponent<CharacterController>();
+                var puerta = GameObject.Find("Zona puerta").GetComponent<BoxCollider>().bounds;
+                cc2.enabled = false;
+                heroe.transform.position = new Vector3(puerta.center.x, heroe.transform.position.y, puerta.max.z + 4f);
+                cc2.enabled = true;
+                yield return new WaitForSecondsRealtime(0.3f);
+                // De cara a la puerta (al sur): la cámara mira al norte, así que es S.
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.S));
+                yield return Esperar(() => interior.ZonaCercana == "puerta", 10, "la zona de la puerta andando");
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                yield return new WaitForSecondsRealtime(0.3f);
+                yield return Capturar("25_cartel_puerta");
+                yield return Tecla(UnityEngine.InputSystem.Key.F);
+                yield return Esperar(() => raiz.Q("ventana-salida") != null, 5, "la ventana de salida");
+                var ventana = raiz.Q("ventana-salida");
+                var marcas = ventana.Query<Toggle>().ToList();
+                Assert.Greater(marcas.Count, 0, "con tus escuadras para elegir");
+                var campos = ventana.Query<IntegerField>().ToList();
+                string cargado = null;
+                if (campos.Count > 0) { campos[0].value = 1; cargado = campos[0].name.Substring("carga-".Length); }
+                yield return null;
+                yield return Capturar("26_salir_con_tropa_y_carga");
+                yield return EnTamanos(raiz, "26_salir_con_tropa_y_carga", () => DentroDelMarco(ventana, "la ventana de salida"));
+                var repostar = ventana.Q<Button>("repostar");
+                Debug.Log($"[Prueba] víveres: {ventana.Q<Label>("viveres").text}; repostar {(repostar != null && Visible(repostar) ? "visible" : "oculto")}");
+                if (repostar != null && Visible(repostar))
+                {
+                    var antes = ventana.Q<Label>("viveres").text;
+                    Pulsar(repostar);
+                    yield return Esperar(() => ventana.Q<Label>("viveres").text != antes, 10, "los víveres repostados");
+                    Debug.Log($"[Prueba] víveres tras repostar: {ventana.Q<Label>("viveres").text}");
+                    yield return Capturar("26b_viveres_repostados");
+                }
+                var elegidas = marcas.Where(m => m.value).Count();
+                Pulsar(ventana.Q<Button>("salir"));
+                yield return Esperar(() => raiz.Q("mapa") != null && !UnityEngine.SceneManagement.SceneManager.GetSceneByName("FeudoScene").isLoaded, 30, "el mapa tras salir");
+                var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+                yield return Esperar(() => mapa.Columna != null, 10, "la columna fuera");
+                Assert.AreEqual(elegidas, mapa.Columna.EscuadronIds.Count, "la columna sale con las escuadras elegidas");
+                if (cargado != null) Assert.GreaterOrEqual(mapa.Columna.Suministro.PorId.TryGetValue(cargado, out var q) ? q : 0, 1000, "con la carga elegida en el carro");
+                Debug.Log($"[Prueba] salió con {mapa.Columna.EscuadronIds.Count} escuadras y carro {mapa.Columna.Suministro}");
+                yield return Esperar(() => mapa.SueloCompleto, 30, "el suelo");
+                yield return CapturarMapa(mapa, "27_fuera_con_tropa");
+            }
+            finally
+            {
+                UnityEngine.InputSystem.InputSystem.RemoveDevice(teclado);
+                entrada.backgroundBehavior = fondo;
+                entrada.editorInputBehaviorInPlayMode = editorAntes;
+            }
+        }
+
         /// <summary>El selector de personaje sin el motor (el flujo viejo): los héroes de la sesión local con crear y borrar.</summary>
         [UnityTest]
         public IEnumerator ElSelectorDeConquestSigueConSusHeroes()
@@ -807,6 +1011,42 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (Time.realtimeSinceStartup > fin) Assert.Fail("no llegó " + que);
                 yield return null;
             }
+        }
+
+        static string tokenAdmin;
+
+        /// <summary>Pone recursos en el almacén personal de un héroe con la orden de administración del motor (`dar_almacen_personal`), desde una
+        /// sesión de administración con una cuenta admin del servidor de prueba (se registra con el código de un solo uso que imprime al arrancar,
+        /// en `BRONZEAGE_PRUEBA_ADMIN`). Sin código, no hace nada y lo dice.</summary>
+        static double Milesimas(BronzeAge.Contract.V1.Cantidades q, string r) => q != null && q.PorId.TryGetValue(r, out var v) ? v / 1000.0 : 0;
+
+        static IEnumerator DarAlmacen(string url, string heroeId, string recurso, long milesimas)
+        {
+            var codigo = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN");
+            if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se da " + recurso); yield break; }
+            var acceso = new Acceso(url);
+            if (tokenAdmin == null)
+            {
+                var nick = "admin-" + DateTime.UtcNow.Ticks % 100_000_000;
+                var registro = acceso.Registrar(nick, "clave-de-prueba-1", codigo);
+                yield return Esperar(() => registro.IsCompleted, 20, "la cuenta admin");
+                var login = acceso.Entrar(nick, "clave-de-prueba-1");
+                yield return Esperar(() => login.IsCompleted, 20, "el login admin");
+                tokenAdmin = login.Result.Token;
+            }
+            var s = new Sesion(acceso.UrlSesion, tokenAdmin, "conquest-prueba") { Tipo = BronzeAge.Contract.V1.TipoCliente.ClienteAdminWeb };
+            var abrir = s.Abrir();
+            var fin = Time.realtimeSinceStartup + 20;
+            while (!abrir.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
+            var parametros = new Google.Protobuf.WellKnownTypes.Struct();
+            parametros.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(heroeId);
+            parametros.Fields["recurso"] = Google.Protobuf.WellKnownTypes.Value.ForString(recurso);
+            parametros.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(milesimas);
+            var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { Administracion = new BronzeAge.Contract.V1.OrdenDeAdministracion { Codigo = "dar_almacen_personal", Parametros = parametros } });
+            fin = Time.realtimeSinceStartup + 20;
+            while (!orden.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
+            Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.ToString());
+            s.Cerrar();
         }
 
         /// <summary>Otro héroe, con otra cuenta (para tener un nombre ya usado, o una cuenta con héroe): su clase, género y aspecto, y `nickDe`

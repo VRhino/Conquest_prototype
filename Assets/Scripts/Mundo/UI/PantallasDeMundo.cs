@@ -14,7 +14,7 @@ using UnityEngine.UIElements;
 namespace ConquestTactics.Mundo.UI
 {
     [RequireComponent(typeof(ConexionDeMundo))]
-    public sealed class PantallasDeMundo : MonoBehaviour
+    public sealed partial class PantallasDeMundo : MonoBehaviour
     {
         static readonly Regex Nick = new Regex(@"^[\p{L}\p{N}_.-]{3,32}$");
 
@@ -319,7 +319,7 @@ namespace ConquestTactics.Mundo.UI
             var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Selector, UnityEngine.SceneManagement.LoadSceneMode.Additive);
             while (!carga.isDone) await Task.Yield();
             var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Selector);
-            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
+            if (escena.IsValid() && escena.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
         }
 
         /// <summary>El héroe de la sesión para las escenas de Conquest (el selector y los interiores): nombre, nivel, Facción, clase, armadura y
@@ -361,7 +361,10 @@ namespace ConquestTactics.Mundo.UI
         string NombreDeCampamento(string id)
         {
             var b = c.Sesion.Bienvenida;
-            var lista = b.CampamentosParaElegir.Select(x => new AnalisisDeCampamento { Id = x.CampamentoId, X = x.Posicion.X / 1000.0, Y = x.Posicion.Y / 1000.0 }).ToList();
+            // Los de la Bienvenida (sin héroe) o, ya nacido, los del artefacto: `campamento-N` es el `camp-N` de la sesión.
+            var lista = b.CampamentosParaElegir.Count > 0
+                ? b.CampamentosParaElegir.Select(x => new AnalisisDeCampamento { Id = x.CampamentoId, X = x.Posicion.X / 1000.0, Y = x.Posicion.Y / 1000.0 }).ToList()
+                : (c.Artefacto?.Campamentos.Select(x => new AnalisisDeCampamento { Id = "camp-" + x.Id.Substring(x.Id.LastIndexOf('-') + 1), X = x.Posicion.X / 1000.0, Y = x.Posicion.Y / 1000.0 }) ?? Enumerable.Empty<AnalisisDeCampamento>()).ToList();
             foreach (var a in lista) a.Lugar = AnalisisDeCampamento.Nombre(a.Id);
             var tamano = c.Artefacto?.Manifiesto?.Tamano;
             if (tamano != null) AnalisisDeCampamento.PonerLugares(lista, tamano.X / 1000.0, tamano.Y / 1000.0);
@@ -380,22 +383,38 @@ namespace ConquestTactics.Mundo.UI
             if (SelectorDePersonaje.Interior != null) return;
             var v = Montar("Interior");
             var lugar = NombreDeCampamento(camp.Id);
-            var h = HeroeAhora();
-            bool resides = h != null && camp.ResidentesIds.Contains(h.Id);
             v.Q<Label>("lugar").text = lugar.ToUpperInvariant();
-            v.Q<Label>("lugar-detalle").text = $"Campamento de mercenarios · {camp.ResidentesIds.Count} residentes · {(resides ? "tu residencia" : "de paso")}";
             var botonAvisos = v.Q<Button>("avisos");
             botonAvisos.clicked += panelAvisos.Alternar;
-            v.schedule.Execute(() => botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos").Every(250);
+            var cartel = v.Q<Label>("cartel");
+            SelectorDePersonaje.InteriorParaVer interior = null;
+            // Lo que cambia mientras estás dentro: residentes y si resides, los avisos, y el cartel de la zona donde estás (la tecla y qué hay).
+            v.schedule.Execute(() =>
+            {
+                botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos";
+                var ahora = CampamentoActual(camp.Id) ?? camp;
+                var yo = HeroeAhora();
+                v.Q<Label>("lugar-detalle").text = $"Campamento de mercenarios · {ahora.ResidentesIds.Count} residentes · {(yo != null && ahora.ResidentesIds.Contains(yo.Id) ? "tu residencia" : "de paso")}";
+                var texto = interior != null && !interior.PanelAbierto && interior.ZonaCercana != null ? CartelDeZona(interior.ZonaCercana, ahora) : null;
+                Poner(cartel, texto);
+            }).Every(100);
             v.Q<Button>("cerrar-sesion").clicked += async () =>
             {
                 if (await dialogo.Abrir("Tu héroe sale del mundo y se cierra la sesión en este equipo.", "¿Cerrar sesión?", "Cerrar sesión")) _ = CerrarSesion();
             };
-            v.Q<Button>("salir-al-mundo").clicked += () => VentanaDeSalida(camp, lugar, resides);
+            v.Q<Button>("salir-al-mundo").clicked += () => VentanaDeSalida(camp.Id, lugar);
 
-            var interior = new SelectorDePersonaje.InteriorParaVer { Heroe = HeroeParaVer(c.Datos) };
+            interior = new SelectorDePersonaje.InteriorParaVer { Heroe = HeroeParaVer(c.Datos) };
             foreach (var e in camp.Planta)
-                interior.Edificios.Add(new SelectorDePersonaje.PiezaDePlanta { Tipo = e.Tipo, X = e.Posicion.X / 1000.0, Y = e.Posicion.Y / 1000.0, Ancho = e.Ancho, Alto = e.Alto });
+                interior.Edificios.Add(new SelectorDePersonaje.PiezaDePlanta { Tipo = e.Tipo, Zona = ZonaDePieza(e.Tipo), X = e.Posicion.X / 1000.0, Y = e.Posicion.Y / 1000.0, Ancho = e.Ancho, Alto = e.Alto });
+            // F en una zona: su panel (paso 4B).
+            interior.AlInteractuar = zona =>
+            {
+                if (zona == "taberna") PanelTaberna(camp.Id);
+                else if (zona == "mercado") PanelMercado(camp.Id);
+                else if (zona == "militar") PanelTropa(camp.Id);
+                else if (zona == "puerta") VentanaDeSalida(camp.Id, lugar);
+            };
             if (camp.Trazado != null) foreach (var r in camp.Trazado.Calles) interior.Calles.Add(Pieza(r, "calle"));
             foreach (var r in camp.Empalizada) interior.Empalizada.Add(Pieza(r, "empalizada"));
             foreach (var r in camp.EmpalizadaPuerta) interior.Puerta.Add(Pieza(r, "puerta"));
@@ -421,7 +440,7 @@ namespace ConquestTactics.Mundo.UI
             var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Feudo, UnityEngine.SceneManagement.LoadSceneMode.Additive);
             while (!carga.isDone) await Task.Yield();
             var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Feudo);
-            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz, y el héroe nace en ella
+            if (escena.IsValid() && escena.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz, y el héroe nace en ella
         }
 
         /// <summary>Cierra el interior abierto (lo usa «Salir al mundo» antes de volver al mapa).</summary>
@@ -431,11 +450,17 @@ namespace ConquestTactics.Mundo.UI
         /// carga sales, solo lo que se puede elegir de verdad. La tropa es la que tienes en el campamento si resides aquí; la carga, de tu
         /// almacén personal, también solo si resides. Sale `salirDelCampamento` y, aceptada, el mapa con la columna a la puerta. El modo
         /// «Ejército» (convocatorias) es del paso 11 y la velocidad de la columna llega con la tropa (paso 6).</summary>
-        void VentanaDeSalida(CampamentoMercenarios camp, string lugar, bool resides)
+        void VentanaDeSalida(string campId, string lugar)
         {
             var h = HeroeAhora();
-            if (h == null) return;
+            var camp = CampamentoActual(campId);
+            var interior = SelectorDePersonaje.Interior;
+            if (h == null || camp == null || interior == null || interior.PanelAbierto) return;
+            bool resides = camp.ResidentesIds.Contains(h.Id);
             var a = c.Sesion.Almacen;
+            interior.PanelAbierto = true;
+            var cartelDeZona = pantalla.Q<Label>("cartel");
+            if (cartelDeZona != null) Ver(cartelDeZona, false);
             var velo = Dialogo.Caja("dialogo-velo");
             velo.name = "ventana-salida";
             var placa = Dialogo.Caja("placa dialogo salida");
@@ -486,11 +511,65 @@ namespace ConquestTactics.Mundo.UI
                     campos.Add((campo, kv.Key));
                 }
 
+            // Lo que cabe en el carro (`LOGISTICA.capacidadCarroPorJugador`), en vivo.
+            var capacidad = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadCarroPorJugador");
+            if (campos.Count > 0)
+            {
+                var total = Dialogo.Texto("", "campo-ayuda");
+                total.name = "carga-total";
+                void Total() => total.text = $"En el carro: {campos.Sum(x => x.campo.value)} de {capacidad:0}";
+                foreach (var (campo, _) in campos) campo.RegisterValueChangedCallback(_ => Total());
+                Total();
+                carga.Add(total);
+            }
+
+            // Los víveres de la columna: repostar llena los víveres con el trigo del campamento, gratis (`repostarEnCampamento`).
             var error = Dialogo.Texto("", "error oculto");
+            var viveres = Dialogo.Caja("salida-seccion");
+            cuerpo.Add(viveres);
+            viveres.Add(Dialogo.Texto("VÍVERES", "kicker"));
+            var filaViveres = Dialogo.Caja("salida-fila");
+            viveres.Add(filaViveres);
+            var maximoViveres = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadViveresPorHeroe");
+            var textoViveres = Dialogo.Texto("", "aviso-texto");
+            textoViveres.name = "viveres";
+            filaViveres.Add(textoViveres);
+            Button repostar = null;
+            void PintarViveres()
+            {
+                var yo = HeroeAhora();
+                var tienes = Math.Ceiling(Instante.Valor(yo?.Viveres, c.Sesion.AhoraMundo) / 1000);
+                textoViveres.text = $"{tienes:0} de {maximoViveres:0} de trigo";
+                // Solo lo que se puede hacer: con los víveres llenos no hay nada que repostar.
+                Ver(repostar, tienes < maximoViveres - 0.5);
+            }
+            repostar = Dialogo.Boton("Llenar víveres", "boton-secundario", async () =>
+            {
+                repostar.SetEnabled(false);
+                Poner(error, null);
+                try
+                {
+                    var r = await c.Sesion.Ordenar(new Orden { RepostarEnCampamento = new OrdenRepostarEnCampamento { CampamentoId = campId } });
+                    if (r.Resultado != Resultado.OrdenAceptada) Poner(error, Textos.Explicar(r.Rechazo));
+                }
+                catch (ErrorDeSesion e) { Poner(error, e.Message); }
+                repostar.SetEnabled(true);
+                await Task.Delay(400);
+                PintarViveres();
+            });
+            repostar.name = "repostar";
+            repostar.style.marginTop = 0;
+            filaViveres.Add(repostar);
+            PintarViveres();
+
             filete.Add(error);
             var botones = Dialogo.Caja("dialogo-botones");
             filete.Add(botones);
-            botones.Add(Dialogo.Boton("Cancelar", "boton-secundario", () => velo.RemoveFromHierarchy()));
+            void Cerrar() { velo.RemoveFromHierarchy(); interior.PanelAbierto = false; }
+            var cancelar = Dialogo.Boton("Cancelar", "boton-secundario", Cerrar);
+            cancelar.name = "cancelar";
+            botones.Add(cancelar);
+            velo.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Escape) Cerrar(); }, TrickleDown.TrickleDown);
             Button salir = null;
             salir = Dialogo.Boton("Salir", "boton-primario", async () =>
             {
@@ -503,8 +582,9 @@ namespace ConquestTactics.Mundo.UI
                 try { r = await c.Sesion.Ordenar(new Orden { SalirDelCampamento = orden }); }
                 catch (ErrorDeSesion e) { Poner(error, e.Message); salir.SetEnabled(true); return; }
                 if (r.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(r.Rechazo)); salir.SetEnabled(true); return; }
-                velo.RemoveFromHierarchy();
+                Cerrar();
                 if (cerrarInterior != null) await cerrarInterior();
+
                 if (this != null) Mapa();
             });
             salir.name = "salir";
@@ -750,7 +830,7 @@ namespace ConquestTactics.Mundo.UI
                 var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Creador, UnityEngine.SceneManagement.LoadSceneMode.Additive);
                 while (!carga.isDone) await Task.Yield();
                 var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Creador);
-                if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz y su cielo
+                if (escena.IsValid() && escena.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz y su cielo
             }
             v.Q<Button>("nacer").clicked += AbrirCreador;
             v.Q<TextField>("nombre").RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) AbrirCreador(); }, TrickleDown.TrickleDown);

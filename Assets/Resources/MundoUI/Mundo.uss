@@ -193,3 +193,8 @@ Button { margin: 0; }
 .salida-fila { flex-direction: row; align-items: center; justify-content: space-between; padding: 3px 0; }
 .salida-fila IntegerField { width: 110px; margin: 0; }
 .salida-seccion { margin-bottom: 10px; }
+.cartel-interior { position: absolute; left: 35%; right: 35%; bottom: 18%; -unity-text-align: middle-center; font-size: 18px; color: var(--oro-claro); background-color: rgba(20, 15, 10, 0.8); border-width: 1px; border-color: var(--bronce-osc); padding: 8px 14px; border-radius: 2px; }
+.panel-campamento { width: 640px; max-height: 88%; }
+.panel-campamento .salida-fila Button { margin-left: 8px; }
+/* Los campos de número de las ventanas (cantidad, carga): legibles sobre la placa. */
+.dialogo .unity-base-text-field__input { color: var(--pergamino); background-color: rgba(10, 8, 5, 0.7); border-color: var(--bronce-osc); -unity-font: url("Fuentes/Inter-Regular.ttf"); -unity-font-definition: initial; }

@@ -214,7 +214,19 @@ namespace ConquestTactics.Mundo
         static string NombreDePlaza(Dictionary<string, Asentamiento> plazas, string id) =>
             plazas.TryGetValue(id ?? "", out var p) && p.HasNombre ? p.Nombre : "una plaza";
 
-        public static string NombreDeRecurso(string tipo) => string.IsNullOrEmpty(tipo) ? "Recurso" : char.ToUpper(tipo[0]) + tipo.Substring(1).Replace('_', ' ');
+        /// <summary>El nombre de un recurso (BronzeAgeClient: `RECURSO_NOMBRE` de `paletas.ts`; el motor no los manda); los demás, su id con mayúscula.</summary>
+        public static string NombreDeRecurso(string tipo) => string.IsNullOrEmpty(tipo) ? "Recurso"
+            : NombresDeRecurso.TryGetValue(tipo, out var n) ? n : char.ToUpper(tipo[0]) + tipo.Substring(1).Replace('_', ' ');
+
+        static readonly Dictionary<string, string> NombresDeRecurso = new Dictionary<string, string>
+        {
+            ["madera"] = "Madera", ["piedra"] = "Piedra", ["trigo"] = "Trigo", ["cobre"] = "Cobre", ["estano"] = "Estaño", ["oro"] = "Oro",
+            ["livestock"] = "Ganado", ["harina"] = "Harina", ["pan"] = "Pan", ["carne"] = "Carne", ["leche"] = "Leche", ["queso"] = "Queso",
+            ["uva"] = "Uva", ["vino"] = "Vino", ["aceituna"] = "Aceituna", ["aceite"] = "Aceite de oliva", ["cebada"] = "Cebada",
+            ["cerveza"] = "Cerveza", ["sesamo"] = "Sésamo", ["aceiteSesamo"] = "Aceite de sésamo", ["lingoteCobre"] = "Lingote de cobre",
+            ["lingoteEstano"] = "Lingote de estaño", ["lingoteBronce"] = "Lingote de bronce", ["cuero"] = "Cuero", ["cueroCurtido"] = "Cuero curtido",
+            ["hierro"] = "Hierro", ["lingoteHierro"] = "Lingote de hierro",
+        };
 
         static uint ColorDeRecurso(string tipo)
         {

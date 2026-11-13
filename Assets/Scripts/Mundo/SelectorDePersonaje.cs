@@ -52,6 +52,8 @@ namespace ConquestTactics.Mundo
         public struct PiezaDePlanta
         {
             public string Tipo;
+            /// <summary>La zona a la que da esta pieza (taberna, mercado o militar), o null.</summary>
+            public string Zona;
             public double X, Y, Ancho, Alto;
         }
 
@@ -64,6 +66,12 @@ namespace ConquestTactics.Mundo
                 Empalizada = new List<PiezaDePlanta>(), Puerta = new List<PiezaDePlanta>();
             /// <summary>Se rellena desde FeudoScene: cuándo hay héroe andando y cuánto tarda un fotograma (para el informe y las pruebas).</summary>
             public bool HeroeDentro;
+            /// <summary>La zona donde está el héroe (taberna, mercado, militar, puerta) o null; la pone FeudoScene, la enseña la interfaz.</summary>
+            public string ZonaCercana;
+            /// <summary>El héroe pulsó la tecla de interactuar en una zona (la abre la interfaz).</summary>
+            public Action<string> AlInteractuar;
+            /// <summary>Hay un panel abierto: el héroe no anda, la cámara no gira y el ratón queda libre (como un diálogo de Conquest).</summary>
+            public bool PanelAbierto;
         }
 
         /// <summary>El interior que se enseña; null fuera del flujo del motor (FeudoScene hace lo de siempre).</summary>

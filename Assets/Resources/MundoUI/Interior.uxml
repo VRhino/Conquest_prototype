@@ -11,6 +11,8 @@
             <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
             <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
         </ui:VisualElement>
+        <!-- El cartel de la zona donde está el héroe (como el «Presiona F» del herrero de Conquest). -->
+        <ui:Label name="cartel" class="cartel-interior oculto" picking-mode="Ignore" />
         <ui:Label name="ayuda" class="ayuda-interior" picking-mode="Ignore" text="WASD: andar · Ratón: mirar · Alt: soltar el ratón para pulsar la interfaz" />
     </ui:VisualElement>
 </ui:UXML>
