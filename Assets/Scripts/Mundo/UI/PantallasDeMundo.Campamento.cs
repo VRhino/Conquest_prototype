@@ -60,6 +60,16 @@ namespace ConquestTactics.Mundo.UI
 
         static double Milesimas(Cantidades q, string r) => q != null && q.PorId.TryGetValue(r, out var v) ? v / 1000.0 : 0;
 
+        /// <summary>Lo de un almacén en piezas (`htmlPlacaDeRecursos`): el emoji del recurso y la cifra; el nombre, al pasar el ratón.</summary>
+        static VisualElement PiezasDeAlmacen(IEnumerable<KeyValuePair<string, long>> almacen, string nombre)
+        {
+            var fila = Dialogo.Caja("fila-envuelta");
+            fila.name = nombre;
+            foreach (var kv in almacen.OrderBy(x => x.Key))
+                fila.Add(IconosDelMundo.ChipDeRecurso(kv.Key, Math.Floor(kv.Value / 1000.0).ToString(), CosasDelMapa.NombreDeRecurso(kv.Key)));
+            return fila;
+        }
+
         string NombreDeTropa(string id)
         {
             var t = c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == id);
@@ -79,7 +89,7 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>Un panel del campamento: título, cuerpo que se repinta con lo último del almacén, la línea de error y «Cerrar» (o Esc). Con
         /// él abierto, el héroe no anda.</summary>
-        void PanelDelCampamento(string nombre, string titulo, Action<VisualElement, Action<string>, Action> pintar)
+        void PanelDelCampamento(string nombre, string titulo, string edificio, Action<VisualElement, Action<string>, Action> pintar)
         {
             var interior = SelectorDePersonaje.Interior;
             if (interior == null || interior.PanelAbierto) return;
@@ -92,7 +102,10 @@ namespace ConquestTactics.Mundo.UI
             velo.Add(placa);
             var cabeza = Dialogo.Caja("comparar-fila");
             cabeza.style.borderBottomWidth = 0;
-            cabeza.Add(Dialogo.Texto(titulo, "dialogo-titulo"));
+            // El título con el icono de la parte (`htmlTituloDeParte`: `iconoDeParte` a 26 px).
+            var tituloConIcono = IconosDelMundo.ConIcono("edificio", edificio, Dialogo.Texto(titulo, "dialogo-titulo"), 26);
+            tituloConIcono.AddToClassList("titulo-con-icono");
+            cabeza.Add(tituloConIcono);
             filete.Add(cabeza);
             var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             cuerpo.style.flexShrink = 1;
@@ -149,7 +162,7 @@ namespace ConquestTactics.Mundo.UI
         /// edificios del campamento. Mudarse retira la tropa prestada por el campamento anterior: se avisa antes.</summary>
         void PanelTaberna(string campId)
         {
-            PanelDelCampamento("panel-taberna", "TABERNA", (v, error, repintar) =>
+            PanelDelCampamento("panel-taberna", "TABERNA", "taberna", (v, error, repintar) =>
             {
                 var camp = CampamentoActual(campId);
                 var h = HeroeDelCampamento();
@@ -180,7 +193,16 @@ namespace ConquestTactics.Mundo.UI
                 var escuadras = EscuadrasDelHeroe(h);
                 if (escuadras.Count == 0) v.Add(Dialogo.Texto("No tienes tropa. En el edificio militar te prestan una.", "campo-ayuda"));
                 foreach (var s in escuadras)
-                    v.Add(Dialogo.Texto($"{s.Nombre} · {s.Cantidad} hombres · {DondeEsta(s)}{(s.HasPrestadaPorCampamentoId ? " · prestada" : "")}", "aviso-texto"));
+                {
+                    // Como el resumen del prototipo: la caja con el dibujo de la tropa (`iconoEnFila`) y su línea.
+                    var fila = Dialogo.Caja("con-icono");
+                    fila.style.marginBottom = 4;
+                    fila.Add(IconosDelMundo.CajaDeTropa(s.TropaId));
+                    var texto = Dialogo.Texto($"{s.Nombre} · {s.Cantidad} hombres · {DondeEsta(s)}{(s.HasPrestadaPorCampamentoId ? " · prestada" : "")}", "aviso-texto");
+                    texto.style.flexShrink = 1;
+                    fila.Add(texto);
+                    v.Add(fila);
+                }
                 v.Add(Dialogo.Texto("TU ALMACÉN", "kicker"));
                 var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
                 if (almacen.Count == 0) v.Add(Dialogo.Texto("Nada.", "campo-ayuda"));
@@ -206,7 +228,7 @@ namespace ConquestTactics.Mundo.UI
         void PanelMercado(string campId)
         {
             ultimaCompra = null;
-            PanelDelCampamento("panel-mercado", "MERCADO", (v, error, repintar) =>
+            PanelDelCampamento("panel-mercado", "MERCADO", "mercado", (v, error, repintar) =>
             {
                 var camp = CampamentoActual(campId);
                 var h = HeroeDelCampamento();
@@ -249,9 +271,14 @@ namespace ConquestTactics.Mundo.UI
                 foreach (var kv in enVenta)
                 {
                     var r = kv.Key;
-                    var b = Dialogo.Boton($"{CosasDelMapa.NombreDeRecurso(r)} · {Math.Floor(kv.Value / 1000.0)} en venta{(Precio(r) is double p ? $" · {p:0.#} oro/u" : "")}",
-                        "boton-secundario", () => { bienElegido = r; ultimaCompra = null; repintar(); });
-                    b.name = "bien-" + r;
+                    // `.mercado-bien`: el emoji, el nombre y, debajo, cuánto hay y a cuánto.
+                    var b = new Button(() => { bienElegido = r; ultimaCompra = null; repintar(); }) { name = "bien-" + r };
+                    b.AddToClassList("mercado-bien");
+                    b.Add(IconosDelMundo.Icono("recurso", r, 22));
+                    var textos = new VisualElement();
+                    textos.Add(Dialogo.Texto(CosasDelMapa.NombreDeRecurso(r), "mercado-bien-nombre"));
+                    textos.Add(Dialogo.Texto($"{Math.Floor(kv.Value / 1000.0)} en venta{(Precio(r) is double p ? $" · {p:0.#} oro/u" : "")}", "mercado-bien-detalle"));
+                    b.Add(textos);
                     b.EnableInClassList("clase--elegida", r == bienElegido);
                     lista.Add(b);
                 }
@@ -273,7 +300,8 @@ namespace ConquestTactics.Mundo.UI
                     maximo = Math.Min(maximo, (int)Math.Floor(oro / pr));
                     while (maximo > 0 && Math.Ceiling(maximo * pr) > oro) maximo--;
                 }
-                v.Add(Dialogo.Texto(CosasDelMapa.NombreDeRecurso(bien).ToUpperInvariant(), "kicker"));
+                var cabezaBien = IconosDelMundo.ConIcono("recurso", bien, Dialogo.Texto(CosasDelMapa.NombreDeRecurso(bien).ToUpperInvariant(), "kicker"), 20);
+                v.Add(cabezaBien);
                 var datos = new VisualElement { name = "detalle" };
                 var filas = new List<(string, string)> { ("En venta", stock.ToString()), ($"Tienes en {donde}", Tienes(bien).ToString()) };
                 if (cupo != null) filas.Add(("Cupo de hoy", cupo.ToString()));
@@ -289,13 +317,28 @@ namespace ConquestTactics.Mundo.UI
                 {
                     var cantidad = new SliderInt("Cantidad", 1, maximo) { value = Math.Min(10, maximo), name = "cantidad", showInputField = true };
                     v.Add(cantidad);
-                    var total = Dialogo.Texto("", "aviso-texto");
+                    // `.mercado-total`: tres cajas, lo que pagas, lo que te queda y lo que tendrás.
+                    var total = Dialogo.Caja("mercado-total");
+                    total.name = "total";
+                    Label Caja(string titulo)
+                    {
+                        var caja = Dialogo.Caja("mercado-total-caja");
+                        caja.Add(Dialogo.Texto(titulo, "mercado-total-titulo"));
+                        var valor = Dialogo.Texto("", "mercado-total-valor");
+                        caja.Add(valor);
+                        total.Add(caja);
+                        return valor;
+                    }
+                    var pagas = precio != null ? Caja("Pagas") : null;
+                    var teQueda = precio != null ? Caja("Te queda") : null;
+                    var tendras = Caja("Tendrás");
                     v.Add(total);
                     Button comprar = null;
                     void Actualizar(int n)
                     {
                         var paga = precio is double p ? (int)Math.Ceiling(n * p) : 0;
-                        total.text = (precio != null ? $"Pagas {paga} de oro · te queda {oro - paga} · " : "") + $"tendrás {Tienes(bien) + n} de {CosasDelMapa.NombreDeRecurso(bien)}";
+                        if (pagas != null) { pagas.text = $"{paga} de oro"; teQueda.text = $"{oro - paga} de oro"; }
+                        tendras.text = $"{Tienes(bien) + n} de {CosasDelMapa.NombreDeRecurso(bien)}";
                         if (comprar != null) comprar.text = $"Comprar {n}" + (precio != null ? $" por {paga} de oro" : "");
                     }
                     comprar = Dialogo.Boton("Comprar", "boton-primario", async () =>
@@ -322,7 +365,7 @@ namespace ConquestTactics.Mundo.UI
                     Actualizar(cantidad.value);
                     v.Add(comprar);
                 }
-                if (ultimaCompra != null) { var hecho = Dialogo.Texto(ultimaCompra, "aviso-texto"); hecho.name = "ultima-compra"; v.Add(hecho); }
+                if (ultimaCompra != null) { var hecho = Dialogo.Texto(ultimaCompra, "aviso-texto mercado-hecho"); hecho.name = "ultima-compra"; v.Add(hecho); }
             });
         }
 
@@ -335,7 +378,7 @@ namespace ConquestTactics.Mundo.UI
         /// residente. «Reclutar» sale desactivado con su motivo si faltan reclutas o no llega el oro.</summary>
         void PanelTropa(string campId)
         {
-            PanelDelCampamento("panel-tropa", "TROPA", (v, error, repintar) =>
+            PanelDelCampamento("panel-tropa", "TROPA", "barracon", (v, error, repintar) =>
             {
                 var camp = CampamentoActual(campId);
                 var h = HeroeDelCampamento();
@@ -353,8 +396,15 @@ namespace ConquestTactics.Mundo.UI
                 var oroAlmacen = (int)Math.Floor(Milesimas(h.AlmacenPersonal, "oro"));
                 var oroCarro = (int)Math.Floor(Milesimas(columna?.Suministro, "oro"));
                 var oro = reclutarConCarro ? oroCarro : oroAlmacen;
-                var datos = new VisualElement();
-                Fichas(datos, ("Reclutas del campamento", $"{poblacion}/{tope}"), ("Tu oro", $"{oro} ({(reclutarConCarro ? "carro" : "almacén")})"));
+                // Los chips de la cabecera (`.obra-chip`): los reclutas del campamento y tu oro, con su emoji.
+                var datos = Dialogo.Caja("fila-envuelta");
+                datos.name = "chips";
+                var reclutas = Dialogo.Caja("chip");
+                reclutas.Add(Dialogo.Texto($"{poblacion}/{tope} reclutas", "chip-texto"));
+                datos.Add(reclutas);
+                var chipOro = IconosDelMundo.ConIcono("recurso", "oro", Dialogo.Texto($"{oro} de oro ({(reclutarConCarro ? "carro" : "almacén")})", "chip-texto"), 16);
+                chipOro.AddToClassList("chip");
+                datos.Add(chipOro);
                 v.Add(datos);
                 if (columna != null)
                 {
@@ -372,7 +422,14 @@ namespace ConquestTactics.Mundo.UI
                 var tropas = c.Datos.TropasReclutables?.OfType<JObject>().ToList() ?? new List<JObject>();
 
                 // El carril del campamento: lo que se presta gratis (la leva comunal; no gana experiencia y se retira si dejas de residir aquí).
-                v.Add(Dialogo.Texto("TE LA PRESTAN", "kicker"));
+                // Las cabeceras de carril (`arbolTablero`): el icono del lugar a 30 px y su nombre en oro.
+                VisualElement Carril(string familia, string id, string texto)
+                {
+                    var carril = IconosDelMundo.ConIcono(familia, id, Dialogo.Texto(texto, "carril-texto"), 30);
+                    carril.AddToClassList("carril");
+                    return carril;
+                }
+                v.Add(Carril("parte", "campamento", "CAMPAMENTO · TE LA PRESTAN"));
                 v.Add(Dialogo.Texto("Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia y se retira si dejas de residir en este campamento.", "campo-ayuda"));
                 foreach (var t in tropas.Where(x => (string)x["tecnologia"] == "leva_comunal"))
                 {
@@ -381,7 +438,11 @@ namespace ConquestTactics.Mundo.UI
                     var prestada = mias.FirstOrDefault(s => s.TropaId == id && s.HasPrestadaPorCampamentoId);
                     var fila = Dialogo.Caja("salida-fila");
                     fila.name = "tropa-" + id;
-                    fila.Add(Dialogo.Texto($"{(string)t["nombre"]} · {(prestada != null ? $"prestada: {prestada.Cantidad} hombres, {DondeEsta(prestada)}" : $"{unidades} hombres")}", "aviso-texto"));
+                    fila.Add(IconosDelMundo.CajaDeTropa(id, 30));
+                    var lineaPrestada = Dialogo.Texto($"{(string)t["nombre"]} · {(prestada != null ? $"prestada: {prestada.Cantidad} hombres, {DondeEsta(prestada)}" : $"{unidades} hombres")}", "aviso-texto");
+                    lineaPrestada.style.flexGrow = 1;
+                    lineaPrestada.style.flexShrink = 1;
+                    fila.Add(lineaPrestada);
                     if (prestada == null)
                     {
                         Button pedir = null;
@@ -399,7 +460,7 @@ namespace ConquestTactics.Mundo.UI
 
                 // El edificio militar del campamento: lo que ofrece, con su precio (con el recargo, la reputación y el descuento ya aplicados).
                 var militar = camp.Edificios.FirstOrDefault(e => ZonaDePieza(e) == "militar");
-                v.Add(Dialogo.Texto((militar != null ? Pieza(militar) : "Edificio militar").ToUpperInvariant(), "kicker"));
+                v.Add(Carril("edificio", militar ?? "barracon", (militar != null ? Pieza(militar) : "Edificio militar").ToUpperInvariant()));
                 if (camp.Reclutables.Count == 0) v.Add(Dialogo.Texto("El campamento aún no ofrece tropa aquí.", "campo-ayuda"));
                 foreach (var o in camp.Reclutables)
                 {
@@ -409,24 +470,38 @@ namespace ConquestTactics.Mundo.UI
                     var mia = mias.FirstOrDefault(s => s.TropaId == o.TropaId && !s.HasPrestadaPorCampamentoId);
                     var fila = Dialogo.Caja("salida-fila");
                     fila.name = "tropa-" + o.TropaId;
+                    fila.Add(IconosDelMundo.CajaDeTropa(o.TropaId, 30));
                     var porSoldado = o.PrecioPorSoldado / 1000.0;
                     var coste = (int)Math.Ceiling(o.PrecioEscuadra / 1000.0);
                     string estado = mia != null ? $"tu escuadra {mia.Cantidad}/{unidades}"
                         : !o.Desbloqueada ? "el campamento aún no la ofrece"
                         : $"{porSoldado:0.#} de oro por soldado";
-                    fila.Add(Dialogo.Texto($"{nombre} · {estado}", "aviso-texto"));
+                    var linea = Dialogo.Texto($"{nombre} · {estado}", "aviso-texto");
+                    linea.style.flexGrow = 1;
+                    linea.style.flexShrink = 1;
+                    fila.Add(linea);
                     if (mia == null && o.Desbloqueada)
                     {
                         var motivo = poblacion < unidades ? $"Faltan reclutas: hay {poblacion} y hacen falta {unidades}."
                             : coste > oro ? $"No te llega el oro: {coste} y tienes {oro} en {(reclutarConCarro ? "el carro" : "tu almacén")}." : null;
                         Button reclutar = null;
                         var id = o.TropaId;
-                        reclutar = Dialogo.Boton($"Reclutar {unidades} · {coste} de oro", "boton-primario", async () =>
+                        reclutar = Dialogo.Boton("", "boton-primario", async () =>
                         {
                             await OrdenDelPanel(new Orden { ReclutarEnCampamento = new OrdenReclutarEnCampamento { TropaId = id, PagarCon = reclutarConCarro ? "carro" : "almacenPersonal" } },
                                 error, repintar, reclutar);
                         });
                         reclutar.name = "reclutar-" + id;
+                        // «Reclutar N» y el chip del coste en oro (`.obra-coste` con 🪙; en rojo si no te llega).
+                        reclutar.style.flexDirection = FlexDirection.Row;
+                        reclutar.style.alignItems = Align.Center;
+                        reclutar.style.paddingLeft = reclutar.style.paddingRight = 10;
+                        reclutar.Add(Dialogo.Texto($"Reclutar {unidades}", "boton-texto"));
+                        var costeChip = IconosDelMundo.ChipDeRecurso("oro", coste.ToString(), $"{coste} de oro");
+                        costeChip.EnableInClassList("chip-recurso--falta", coste > oro);
+                        costeChip.style.marginLeft = 8;
+                        costeChip.style.marginBottom = 0;
+                        reclutar.Add(costeChip);
                         reclutar.style.marginTop = 0;
                         reclutar.SetEnabled(motivo == null);
                         if (motivo != null) { var m = Dialogo.Texto(motivo, "campo-ayuda"); m.name = "motivo-" + id; fila.Add(m); }

@@ -387,6 +387,13 @@ namespace ConquestTactics.Mundo.UI
             var botonAvisos = v.Q<Button>("avisos");
             botonAvisos.clicked += panelAvisos.Alternar;
             var cartel = v.Q<Label>("cartel");
+            // El icono del campamento junto al nombre (`htmlBlasonInterior`: la tienda en oro; 46 px allí, 40 aquí para caber en la barra de 52).
+            var cabeceraIcono = IconosDelMundo.Icono("parte", "campamento", 40);
+            cabeceraIcono.AddToClassList("cabecera-icono");
+            v.Q<Label>("lugar").parent.parent.Insert(0, cabeceraIcono);
+            // La placa «Tu almacén» del pie (`htmlPlacaDeRecursos`): el emoji y la cifra de cada recurso; se rehace solo si cambia.
+            var placaAlmacen = v.Q("placa-almacen");
+            string almacenPintado = null;
             SelectorDePersonaje.InteriorParaVer interior = null;
             // Lo que cambia mientras estás dentro: residentes y si resides, los avisos, y el cartel de la zona donde estás (la tecla y qué hay).
             v.schedule.Execute(() =>
@@ -395,6 +402,16 @@ namespace ConquestTactics.Mundo.UI
                 var ahora = CampamentoActual(camp.Id) ?? camp;
                 var yo = HeroeAhora();
                 v.Q<Label>("lugar-detalle").text = $"Campamento de mercenarios · {ahora.ResidentesIds.Count} residentes · {(yo != null && ahora.ResidentesIds.Contains(yo.Id) ? "tu residencia" : "de paso")}";
+                var almacen = yo?.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
+                var firma = string.Join("|", almacen.OrderBy(kv => kv.Key).Select(kv => kv.Key + (kv.Value / 1000)));
+                if (firma != almacenPintado)
+                {
+                    almacenPintado = firma;
+                    var piezas = placaAlmacen.Q("placa-almacen-piezas");
+                    piezas.Clear();
+                    piezas.Add(PiezasDeAlmacen(almacen, "almacen-pie"));
+                    Ver(placaAlmacen, almacen.Count > 0);
+                }
                 var texto = interior != null && !interior.PanelAbierto && interior.ZonaCercana != null ? CartelDeZona(interior.ZonaCercana, ahora) : null;
                 Poner(cartel, texto);
             }).Every(100);
@@ -485,8 +502,14 @@ namespace ConquestTactics.Mundo.UI
             else
                 foreach (var e in escuadras)
                 {
-                    var marca = new Toggle($"{(string.IsNullOrEmpty(e.Nombre) ? e.TropaId : e.Nombre)} · {e.Cantidad} hombres") { value = true };
-                    tropa.Add(marca);
+                    // El hueco de la tropa (`.salida-hueco`): su dibujo a 34 px y la marca de si sale.
+                    var hueco = Dialogo.Caja("con-icono");
+                    hueco.style.marginBottom = 4;
+                    hueco.Add(IconosDelMundo.CajaDeTropa(e.TropaId, 34));
+                    var marca = new Toggle($"{(string.IsNullOrEmpty(e.Nombre) ? e.TropaId : e.Nombre)} · {e.Cantidad} hombres") { value = true, name = "sale-" + e.Id };
+                    marca.style.flexShrink = 1;
+                    hueco.Add(marca);
+                    tropa.Add(hueco);
                     marcadas.Add((marca, e.Id));
                 }
 
@@ -503,7 +526,8 @@ namespace ConquestTactics.Mundo.UI
                 {
                     var fila = Dialogo.Caja("salida-fila");
                     var hay = (int)(kv.Value / 1000);
-                    fila.Add(Dialogo.Texto($"{CosasDelMapa.NombreDeRecurso(kv.Key)} (tienes {hay})", "aviso-texto"));
+                    // `.carro-fila`: el emoji del recurso, su nombre y lo que hay.
+                    fila.Add(IconosDelMundo.ConIcono("recurso", kv.Key, Dialogo.Texto($"{CosasDelMapa.NombreDeRecurso(kv.Key)} (tienes {hay})", "aviso-texto"), 20));
                     var campo = new IntegerField { value = 0, name = "carga-" + kv.Key };
                     campo.RegisterValueChangedCallback(ev => campo.SetValueWithoutNotify(Math.Max(0, Math.Min(hay, ev.newValue))));
                     fila.Add(campo);
@@ -517,7 +541,12 @@ namespace ConquestTactics.Mundo.UI
             {
                 var total = Dialogo.Texto("", "campo-ayuda");
                 total.name = "carga-total";
-                void Total() => total.text = $"En el carro: {campos.Sum(x => x.campo.value)} de {capacidad:0}";
+                void Total()
+                {
+                    var lleva = campos.Sum(x => x.campo.value);
+                    total.text = $"En el carro: {lleva} de {capacidad:0}";
+                    total.EnableInClassList("excedido", lleva > capacidad);
+                }
                 foreach (var (campo, _) in campos) campo.RegisterValueChangedCallback(_ => Total());
                 Total();
                 carga.Add(total);
@@ -760,7 +789,7 @@ namespace ConquestTactics.Mundo.UI
                 Poner(v.Q<Label>("campamento-recomendado"), campamento == null ? null
                     : campamento == recomendado ? "★ Recomendado" + (campamento.Razones.Count > 0 ? ": " + string.Join(" · ", campamento.Razones).ToLowerInvariant() : "")
                     : campamento.Razones.Count > 0 ? string.Join(" · ", campamento.Razones) : null);
-                Fichas(v.Q("campamento-datos"), campamento == null ? new (string, string)[0] : DatosDelCampamento(campamento, LugarDe));
+                Fichas(v.Q("campamento-datos"), campamento == null ? new (string, string, VisualElement)[0] : DatosDelCampamento(campamento, LugarDe));
                 // Solo lo que se puede hacer: «Nacer en …» sale con campamento; mientras, lo que falta.
                 Ver(v.Q<Button>("nacer"), campamento != null);
                 v.Q<Button>("nacer").text = campamento == null ? "NACER AQUÍ" : $"NACER EN {campamento.Lugar.ToUpperInvariant()}";
@@ -855,21 +884,36 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>Lo que rodea al campamento, como la ficha de BronzeAgeClient: gente, tierra, fertilidad y bosque a 150 u, yacimientos (a 150 u,
         /// hasta 250 y el más cerca), río, agua, bandidos y el vecino.</summary>
-        static (string, string)[] DatosDelCampamento(AnalisisDeCampamento a, Func<string, string> lugarDe)
+        static (string, string, VisualElement)[] DatosDelCampamento(AnalisisDeCampamento a, Func<string, string> lugarDe)
         {
-            var r = new List<(string, string)>
+            var r = new List<(string, string, VisualElement)>
             {
-                ("Gente", Gente(a.Gente)),
-                ("Tierra a 150 u", Tierra(a)),
-                ("Fertilidad, bosque", $"{a.FertilidadMedia * 100:0}% · {a.FraccionDeBosque * 100:0}% de bosque"),
+                ("Gente", Gente(a.Gente), null),
+                ("Tierra a 150 u", Tierra(a), null),
+                ("Fertilidad, bosque", $"{a.FertilidadMedia * 100:0}% · {a.FraccionDeBosque * 100:0}% de bosque", null),
             };
+            // Los yacimientos con su icono del mapa en su color (`htmlNodos`: `svgIcono(ICONO_DE_NODO, colorNodo)` a 18 px).
             foreach (var kv in a.Nodos.OrderBy(x => x.Value.masCerca))
-                r.Add(($"Yacimiento: {CosasDelMapa.NombreDeRecurso(kv.Key)}", $"{kv.Value.cerca} a 150 u · {kv.Value.frontera} a 250 u · el más cerca a {kv.Value.masCerca:0} u"));
-            r.Add(("Río", a.Rio == null ? "ninguno" : $"a {a.Rio:0} u{(a.RioNavegable ? ", navegable" : "")}"));
-            r.Add(("Agua (mar o lago)", a.Agua == null ? "a más de 250 u" : $"a {a.Agua:0} u"));
-            r.Add(("Bandidos a 250 u", a.Bandidos.Count == 0 ? "ninguno" : $"{a.Bandidos.Count}; el más cerca a {a.Bandidos[0].distancia:0} u (nivel {a.Bandidos[0].nivel})"));
-            if (a.Vecino != null) r.Add(("Campamento vecino", $"{lugarDe(a.Vecino)}, a {a.DistanciaAlVecino:0} u"));
+                r.Add(($"Yacimiento: {CosasDelMapa.NombreDeRecurso(kv.Key)}", $"{kv.Value.cerca} a 150 u · {kv.Value.frontera} a 250 u · el más cerca a {kv.Value.masCerca:0} u",
+                    IconosDelMundo.Icono("mapa", IconosDelMundo.DeNodo(kv.Key), 18, IconosDelMundo.ColorDeNodo(kv.Key))));
+            r.Add(("Río", a.Rio == null ? "ninguno" : $"a {a.Rio:0} u{(a.RioNavegable ? ", navegable" : "")}", null));
+            r.Add(("Agua (mar o lago)", a.Agua == null ? "a más de 250 u" : $"a {a.Agua:0} u", null));
+            r.Add(("Bandidos a 250 u", a.Bandidos.Count == 0 ? "ninguno" : $"{a.Bandidos.Count}; el más cerca a {a.Bandidos[0].distancia:0} u (nivel {a.Bandidos[0].nivel})",
+                IconosDelMundo.Icono("mapa", "bandidos", 18, RojoBandidos)));
+            if (a.Vecino != null) r.Add(("Campamento vecino", $"{lugarDe(a.Vecino)}, a {a.DistanciaAlVecino:0} u", null));
             return r.ToArray();
+        }
+
+        /// <summary>El rojo de los bandidos en «Nace tu héroe» (`#d9534f`).</summary>
+        static readonly Color RojoBandidos = new Color32(0xd9, 0x53, 0x4f, 0xff);
+
+        /// <summary>Un icono delante de un texto, en fila.</summary>
+        static VisualElement IconoDelante(VisualElement icono, VisualElement texto)
+        {
+            var fila = Dialogo.Caja("con-icono");
+            fila.Add(icono);
+            fila.Add(texto);
+            return fila;
         }
 
         /// <summary>Dos campamentos lado a lado (BronzeAgeClient `pintarComparacion`), con el mejor de cada fila en oro, y un botón para elegir cada uno.</summary>
@@ -884,18 +928,32 @@ namespace ConquestTactics.Mundo.UI
             x.name = "cerrar-comparacion";
             cabeza.Add(x);
             donde.Add(cabeza);
-            void Fila(string titulo, string ta, string tb, int gana = 0)
+            void Fila(string titulo, string ta, string tb, int gana = 0, VisualElement va = null, VisualElement vb = null)
             {
                 var f = new VisualElement();
                 f.AddToClassList("comparar-fila");
                 f.Add(Dialogo.Texto(titulo, "comparar-titulo"));
-                var la = Dialogo.Texto(ta, "comparar-valor");
-                var lb = Dialogo.Texto(tb, "comparar-valor");
+                var la = va ?? Dialogo.Texto(ta, "comparar-valor");
+                var lb = vb ?? Dialogo.Texto(tb, "comparar-valor");
                 la.EnableInClassList("comparar-gana", gana == 1);
                 lb.EnableInClassList("comparar-gana", gana == 2);
                 f.Add(la);
                 f.Add(lb);
                 donde.Add(f);
+            }
+            // Los yacimientos cerca con su icono a 14 px y la cifra (`iconosCerca`), o «—».
+            VisualElement IconosCerca(AnalisisDeCampamento k)
+            {
+                var caja = Dialogo.Caja("comparar-valor fila-envuelta");
+                foreach (var n in k.Nodos.Where(n => n.Value.cerca > 0))
+                {
+                    var t = IconoDelante(IconosDelMundo.Icono("mapa", IconosDelMundo.DeNodo(n.Key), 14, IconosDelMundo.ColorDeNodo(n.Key)) ?? new VisualElement(),
+                        Dialogo.Texto(n.Value.cerca > 20 ? "20+" : n.Value.cerca.ToString(), "comparar-nodo"));
+                    t.tooltip = CosasDelMapa.NombreDeRecurso(n.Key);
+                    caja.Add(t);
+                }
+                if (caja.childCount == 0) caja.Add(Dialogo.Texto("—", "comparar-nodo"));
+                return caja;
             }
             // Gana el valor más alto (o el más bajo, con `alto` en false); sin dato o empatados, ninguno.
             int Gana(double? va, double? vb, bool alto = true) => va == null || vb == null || va == vb ? 0 : (va > vb) == alto ? 1 : 2;
@@ -908,7 +966,7 @@ namespace ConquestTactics.Mundo.UI
             Fila("Terreno", Tierra(a), Tierra(b));
             Fila("Fertilidad", $"{a.FertilidadMedia * 100:0}%", $"{b.FertilidadMedia * 100:0}%", Gana(a.FertilidadMedia, b.FertilidadMedia));
             Fila("Bosque", $"{a.FraccionDeBosque * 100:0}%", $"{b.FraccionDeBosque * 100:0}%", Gana(a.FraccionDeBosque, b.FraccionDeBosque));
-            Fila("Yacimientos a 150 u", Cerca(a), Cerca(b), Gana(a.Nodos.Sum(n => n.Value.cerca), b.Nodos.Sum(n => n.Value.cerca)));
+            Fila("Yacimientos a 150 u", Cerca(a), Cerca(b), Gana(a.Nodos.Sum(n => n.Value.cerca), b.Nodos.Sum(n => n.Value.cerca)), IconosCerca(a), IconosCerca(b));
             Fila("Río", a.Rio == null ? "lejos" : $"a {a.Rio:0} u", b.Rio == null ? "lejos" : $"a {b.Rio:0} u", Gana(-a.Rio, -b.Rio));
             Fila("Costa o lago", a.Agua == null ? "lejos" : $"a {a.Agua:0} u", b.Agua == null ? "lejos" : $"a {b.Agua:0} u", Gana(-a.Agua, -b.Agua));
             Fila("Bandidos a 150 u", Bandidos(a).ToString(), Bandidos(b).ToString(), Gana(Bandidos(a), Bandidos(b), false));
@@ -961,8 +1019,17 @@ namespace ConquestTactics.Mundo.UI
                     var elegida = cosa;
                     var fila = new Button(() => { Ver(lista, false); _ = mapa.Elegir(elegida); });
                     fila.AddToClassList("lista-fila");
-                    fila.Add(Dialogo.Texto(cosa.Nombre, "aviso-titulo"));
-                    if (!string.IsNullOrEmpty(cosa.Detalle)) fila.Add(Dialogo.Texto(cosa.Detalle, "aviso-cuando"));
+                    // Cada fila con su señal redonda (`.eleccion-clic-icono`); aquí, el icono del mapa de esa cosa, si lo tiene.
+                    var cab = Dialogo.Caja("lista-fila-cab");
+                    var redondo = Dialogo.Caja("lista-fila-icono");
+                    var deCosa = IconosDelMundo.DeCosa(cosa);
+                    if (deCosa != null && IconosDelMundo.Icono("mapa", deCosa.Value.id, 16, deCosa.Value.color) is VisualElement icono) redondo.Add(icono);
+                    cab.Add(redondo);
+                    var textos = Dialogo.Caja("lista-fila-texto");
+                    textos.Add(Dialogo.Texto(cosa.Nombre, "aviso-titulo"));
+                    if (!string.IsNullOrEmpty(cosa.Detalle)) textos.Add(Dialogo.Texto(cosa.Detalle, "aviso-cuando"));
+                    cab.Add(textos);
+                    fila.Add(cab);
                     filas.Add(fila);
                 }
                 Ver(lista, true);
@@ -1008,6 +1075,16 @@ namespace ConquestTactics.Mundo.UI
             if (cosa == null) return;
             v.Q<Label>("ficha-nombre").text = cosa.Nombre;
             v.Q<Label>("ficha-detalle").text = cosa.Detalle ?? "";
+            var nivel = v.Q("ficha-nivel");
+            var deBandidos = cosa.Clase == ClaseDeCosa.Bandidos && int.TryParse(cosa.Detalle?.Replace("Nivel ", ""), out var n) ? n : 0;
+            Ver(nivel, deBandidos > 0);
+            if (deBandidos > 0 && !Equals(nivel.userData, deBandidos))
+            {
+                nivel.userData = deBandidos;
+                nivel.Clear();
+                for (int i = 1; i <= 3; i++) nivel.Add(Dialogo.Caja(i <= deBandidos ? "bandidos-nivel-punto bandidos-nivel-punto--on" : "bandidos-nivel-punto"));
+                nivel.Add(Dialogo.Texto($"Nivel {deBandidos} de 3", "campo-ayuda"));
+            }
             var hasta = mapa.HastaAlli(cosa);
             Fichas(v.Q("ficha-datos"), hasta == null ? new[] { ("Distancia", "sin columna en el mapa") }
                 : new[] { ("Distancia", $"{hasta.Value.distancia:0.#} u"), ("Tiempo de marcha", hasta.Value.tiempo) });
@@ -1160,13 +1237,18 @@ namespace ConquestTactics.Mundo.UI
             v.schedule.Execute(Refrescar).Every(500);
         }
 
-        static void Fichas(VisualElement donde, params (string etiqueta, string valor)[] fichas)
+        static void Fichas(VisualElement donde, params (string etiqueta, string valor)[] fichas) =>
+            Fichas(donde, fichas.Select(x => (x.etiqueta, x.valor, (VisualElement)null)).ToArray());
+
+        /// <summary>Fichas con un icono delante de la etiqueta (las filas del prototipo que lo llevan: yacimientos, bandidos…).</summary>
+        static void Fichas(VisualElement donde, (string etiqueta, string valor, VisualElement icono)[] fichas)
         {
             donde.Clear();
-            foreach (var (e, valor) in fichas)
+            foreach (var (e, valor, icono) in fichas)
             {
                 var f = Dialogo.Caja("ficha");
-                f.Add(Dialogo.Texto(e, "ficha-etiqueta"));
+                var etiqueta = Dialogo.Texto(e, "ficha-etiqueta");
+                f.Add(icono == null ? etiqueta : IconoDelante(icono, etiqueta));
                 f.Add(Dialogo.Texto(valor, "ficha-valor"));
                 donde.Add(f);
             }

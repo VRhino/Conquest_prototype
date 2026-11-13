@@ -25,7 +25,8 @@ namespace ConquestTactics.Mundo.Mapa
         readonly Vector4[] tandaColores = new Vector4[PorLlamada];
         GameObject rayasBajo, rayasEncima, aro;
         readonly VisualElement capaNombres;
-        readonly List<Label> nombres = new List<Label>();
+        /// <summary>Cada nombre: una caja (la etiqueta oscura con el borde del color) con el icono y el texto; un Label con hijos no se mide por su texto.</summary>
+        readonly List<VisualElement> nombres = new List<VisualElement>();
 
         public CosasEnElMapa(Func<double, double, float> alturaVisible, Material bajoNiebla, Material encima, Transform padre, VisualElement capaNombres)
         {
@@ -172,14 +173,28 @@ namespace ConquestTactics.Mundo.Mapa
                 var enPanel = new Vector2(pantalla.x / camara.pixelWidth * capaNombres.layout.width, (1 - pantalla.y / camara.pixelHeight) * capaNombres.layout.height);
                 if (usados == nombres.Count)
                 {
-                    var l = new Label { pickingMode = PickingMode.Ignore };
+                    var l = new VisualElement { pickingMode = PickingMode.Ignore };
                     l.AddToClassList("nombre-mapa");
+                    // El icono de la cosa (el del mapa 2D del prototipo), delante del nombre.
+                    var icono = new VisualElement { pickingMode = PickingMode.Ignore, name = "icono" };
+                    icono.AddToClassList("nombre-mapa-icono");
+                    l.Add(icono);
+                    l.Add(new Label { pickingMode = PickingMode.Ignore, name = "texto" });
                     capaNombres.Add(l);
                     nombres.Add(l);
                 }
                 var label = nombres[usados++];
-                label.text = c.Clase == ClaseDeCosa.Plaza ? $"{c.Nombre} · {c.Detalle}" : c.Clase == ClaseDeCosa.Bandidos ? $"Bandidos · {c.Detalle.ToLowerInvariant()}" : nodo ? c.Nombre
+                label.Q<Label>("texto").text = c.Clase == ClaseDeCosa.Plaza ? $"{c.Nombre} · {c.Detalle}" : c.Clase == ClaseDeCosa.Bandidos ? $"Bandidos · {c.Detalle.ToLowerInvariant()}" : nodo ? c.Nombre
                     : c.Clase == ClaseDeCosa.Mercenarios ? c.Nombre : c.Detalle;
+                var deCosa = IconosDelMundo.DeCosa(c);
+                var dibujo = label.Q("icono");
+                var imagen = deCosa == null ? null : IconosDelMundo.Imagen("mapa", deCosa.Value.id);
+                dibujo.style.display = imagen != null ? DisplayStyle.Flex : DisplayStyle.None;
+                if (imagen != null)
+                {
+                    dibujo.style.backgroundImage = new StyleBackground(imagen);
+                    dibujo.style.unityBackgroundImageTintColor = deCosa.Value.color;
+                }
                 label.EnableInClassList("nombre-mapa--nodo", nodo);
                 label.EnableInClassList("nombre-mapa--tenue", c.BajoNiebla && !nodo);
                 label.style.borderLeftColor = new StyleColor(new Color32((byte)(c.Color >> 16), (byte)(c.Color >> 8), (byte)c.Color, 255));

@@ -33,6 +33,8 @@
                     <ui:Button name="ficha-cerrar" class="aviso-borrar" text="×" />
                 </ui:VisualElement>
                 <ui:Label name="ficha-detalle" class="ficha-valor" style="-unity-text-align: middle-left; margin-bottom: 8px;" />
+                <!-- El nivel de un campamento de bandidos en tres círculos (`.bandidos-nivel`). -->
+                <ui:VisualElement name="ficha-nivel" class="bandidos-nivel oculto" />
                 <ui:VisualElement name="ficha-datos" />
                 <ui:VisualElement name="ficha-acciones" style="margin-top: 8px;" />
             </ui:VisualElement>

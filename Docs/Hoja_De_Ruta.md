@@ -68,6 +68,11 @@ el 2026-11-13.
 marchar, pelear contra bandidos en Conquest y volver), y después el resto por lo que más se usa. Cada paso se prueba con el
 servidor real. Entre paréntesis, la sección del inventario.
 
+**Regla (Víctor, 2026-11-13).** Cada pantalla migrada trae del prototipo sus iconos y piezas visuales (barras, chips, colores,
+medallones), no solo sus datos. Los iconos salen del registro único `IconosDelMundo`, sacado de BronzeAgeClient por script
+(`Tools/IconosDelPrototipo/generar.mjs`); no se dibujan a mano ni se inventan los que el prototipo no tiene. Los emoji son de un juego
+libre (Twemoji, CC BY 4.0), no los del sistema. Ver [`Arquitectura/27_Iconos_Del_Mundo`](Arquitectura/27_Iconos_Del_Mundo_2026-11-13.md).
+
 | | Paso | Estado |
 |---|---|---|
 | 1 | **Conexión, acceso y avisos:** Conquest como cliente de la sesión del contrato 05 (WebSocket con Protobuf y zstd: `Hola`, ámbitos, foto y delta, órdenes, reloj, reconexión), el almacén de ámbitos, login y partidas, pantalla de carga, los datos de `/v1/datos`, el artefacto de mundo y el relieve, y el sistema de avisos. El contrato ya está compilado en C# (`Assets/Plugins/BronzeAge`); hoy solo lo usa el lanzador (§3.1, §3.2, §3.19) | ✅ conexión, acceso y partidas, carga y avisos en `MundoScene` ([`23_Conexion_Al_Motor`](Arquitectura/23_Conexion_Al_Motor_2026-11-13.md)) |

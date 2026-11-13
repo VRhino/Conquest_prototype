@@ -155,8 +155,9 @@ Button { margin: 0; }
 
 /* El mapa de mundo: nombres sobre el mapa, la ficha de lo seleccionado, la lista bajo el clic y el aviso de dentro (BronzeAgeClient:
    `mundo3d.css`, `.mapa-seleccion`, `.eleccion-clic`). */
-.nombre-mapa { position: absolute; translate: -50% -100%; padding: 2px 7px; font-size: 12px; color: rgb(255, 255, 255); background-color: rgba(10, 14, 23, 0.78); border-left-width: 3px; border-radius: 2px; }
-.nombre-mapa--nodo { font-size: 11px; color: rgb(220, 214, 200); }
+.nombre-mapa { position: absolute; translate: -50% -100%; flex-direction: row; align-items: center; padding: 2px 7px; background-color: rgba(10, 14, 23, 0.78); border-left-width: 3px; border-radius: 2px; }
+.nombre-mapa > Label { font-size: 12px; color: rgb(255, 255, 255); padding: 0; margin: 0; }
+.nombre-mapa--nodo > Label { font-size: 11px; color: rgb(220, 214, 200); }
 .nombre-mapa--tenue { opacity: 0.6; }
 .panel-mapa-arriba { position: absolute; top: 120px; left: 30%; right: 30%; }
 .fila-mapa { flex-direction: row; align-items: center; }
@@ -184,7 +185,7 @@ Button { margin: 0; }
 .comparar-fila { flex-direction: row; align-items: center; justify-content: space-between; padding: 3px 0; border-bottom-width: 1px; border-color: rgba(107, 74, 41, 0.5); }
 .comparar-titulo { width: 30%; color: var(--texto-2); font-size: 12px; white-space: normal; }
 .comparar-valor { width: 35%; white-space: normal; font-size: 13px; }
-.comparar-gana { color: var(--oro-claro); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }
+.comparar-gana { color: #9fe0a0; background-color: rgba(39, 174, 96, 0.12); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }
 .puntos { color: var(--oro); letter-spacing: 2px; }
 
 /* El interior de un campamento (paso 4): la cabecera y la ayuda de abajo; la ventana «Salir al mundo». */
@@ -198,3 +199,70 @@ Button { margin: 0; }
 .panel-campamento .salida-fila Button { margin-left: 8px; }
 /* Los campos de número de las ventanas (cantidad, carga): legibles sobre la placa. */
 .dialogo .unity-base-text-field__input { color: var(--pergamino); background-color: rgba(10, 8, 5, 0.7); border-color: var(--bronce-osc); -unity-font: url("Fuentes/Inter-Regular.ttf"); -unity-font-definition: initial; }
+
+/* Los iconos del prototipo (`IconosDelMundo`; BronzeAgeClient: style.css). */
+.con-icono { flex-direction: row; align-items: center; }
+.con-icono > .icono { margin-right: 6px; }
+/* La caja de una tropa (`.tropa-icono`). */
+.tropa-icono {
+    align-items: center; justify-content: center; flex-shrink: 0; margin-right: 8px;
+    border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgb(45, 33, 20);
+}
+/* La pieza de un recurso (`.asent-recurso`): su emoji y la cifra. */
+.chip-recurso {
+    flex-direction: row; align-items: center; padding: 2px 6px; margin: 0 4px 4px 0;
+    border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.28);
+}
+.chip-recurso > .icono { margin-right: 4px; }
+.chip-recurso-cifra { color: var(--oro-claro); font-size: 13px; }
+.chip-recurso--falta .chip-recurso-cifra { color: #e2675a; }
+/* Un chip de dato (`.obra-chip`): píldora oscura. */
+.chip { flex-direction: row; align-items: center; padding: 2px 9px; margin: 0 6px 4px 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 9px; background-color: rgba(0, 0, 0, 0.35); }
+.chip > .icono { margin-right: 4px; }
+/* El título de una ventana con su icono (`htmlTituloDeParte`). */
+.titulo-con-icono { flex-direction: row; align-items: center; }
+.titulo-con-icono > .icono { margin-right: 10px; }
+/* La cabecera de un carril (`.ta-carril`): el icono del edificio y su nombre en oro. */
+.carril { flex-direction: row; align-items: center; margin-top: 14px; margin-bottom: 6px; }
+.carril > .icono { margin-right: 8px; }
+/* El mercado del campamento (`.mercado-bien`, `.mercado-total`). */
+.mercado-bien { flex-direction: row; align-items: center; min-width: 150px; padding: 5px 9px; margin: 0 6px 6px 0; background-color: #1d1610; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; }
+.mercado-bien:hover { border-color: var(--bronce); }
+.mercado-bien.clase--elegida { border-color: var(--oro); background-color: rgb(58, 44, 26); }
+.mercado-bien > .icono { margin-right: 8px; }
+.mercado-bien-nombre { color: var(--pergamino); font-size: 14px; -unity-text-align: middle-left; }
+.mercado-bien-detalle { color: var(--texto-apagado); font-size: 11px; -unity-text-align: middle-left; }
+.mercado-total { flex-direction: row; margin-top: 8px; }
+.mercado-total-caja { flex-grow: 1; flex-basis: 0; padding: 5px 8px; margin-right: 6px; border-width: 1px; border-color: var(--bronce-osc); background-color: rgba(0, 0, 0, 0.25); }
+.mercado-total-titulo { font-size: 11px; color: var(--texto-apagado); }
+.mercado-total-valor { font-size: 17px; color: var(--oro-claro); }
+.mercado-hecho { color: #9ad07a; }
+/* La cifra de la carga del carro, en rojo si no cabe (`[data-carga-total].excedido`). */
+.excedido { color: #e8806f; }
+/* La placa «Tu almacén» del interior (`.asent-pie-grupo`). */
+.placa-almacen { position: absolute; left: 12px; bottom: 34px; max-width: 60%; padding: 6px 8px 2px 8px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-top-color: var(--oro); border-radius: 3px; }
+.placa-almacen-titulo { font-size: 10px; color: var(--oro); letter-spacing: 3px; margin-bottom: 4px; }
+.cabecera-icono { margin-right: 12px; }
+/* Las filas de nodos del mapa con su icono. */
+.nombre-mapa-icono { width: 16px; height: 16px; margin-right: 5px; flex-shrink: 0; }
+.lista-fila-cab { flex-direction: row; align-items: center; }
+.lista-fila-icono { width: 26px; height: 26px; border-radius: 13px; margin-right: 8px; align-items: center; justify-content: center; background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); }
+.lista-fila-texto { flex-shrink: 1; flex-grow: 1; }
+/* «Nace tu héroe»: el edificio militar, las tropas del primer día y los yacimientos (`.elegir-*`). */
+.elegir-edificio { width: 44px; height: 44px; align-items: center; justify-content: center; border-width: 1px; border-color: #4a3722; border-radius: 6px; margin-right: 8px; }
+.elegir-tropa { flex-direction: row; align-items: center; padding: 2px 9px 2px 3px; margin: 0 6px 6px 0; border-radius: 14px; background-color: #241b12; border-width: 1px; border-color: var(--bronce-osc); }
+.elegir-tropa > .icono { margin-right: 5px; }
+.elegir-tropa > Label { font-size: 12px; color: var(--pergamino); }
+.elegir-tropa--despues { opacity: 0.45; }
+.chip-texto { color: var(--oro-claro); font-size: 12px; }
+.carril-texto { color: var(--oro); font-size: 12px; -unity-font-style: bold; letter-spacing: 5px; }
+.boton-texto { color: #201509; -unity-font-style: bold; letter-spacing: 2px; font-size: 14px; }
+.boton-primario .chip-recurso { background-color: rgba(20, 14, 8, 0.78); }
+.bandidos-nivel { flex-direction: row; align-items: center; margin-bottom: 8px; }
+.bandidos-nivel-punto { width: 14px; height: 14px; margin-right: 5px; border-width: 1px; border-color: var(--terracota); border-radius: 7px; }
+.bandidos-nivel-punto--on { background-color: var(--terracota); }
+.bandidos-nivel .campo-ayuda { margin: 0 0 0 6px; }
+.ficha .con-icono { flex-shrink: 0; margin-right: 10px; }
+.ficha .con-icono > .icono { margin-right: 6px; }
+.comparar-nodo { font-size: 13px; margin-right: 8px; }
+.comparar-gana .comparar-nodo { color: #9fe0a0; } /* `td.gana` del prototipo */

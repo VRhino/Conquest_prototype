@@ -16,6 +16,8 @@ namespace ConquestTactics.Mundo
     {
         public ClaseDeCosa Clase;
         public string Id, Nombre, Detalle, FaccionId;
+        /// <summary>El recurso de un yacimiento (para su icono).</summary>
+        public string Recurso;
         /// <summary>Centro, en unidades del mapa.</summary>
         public double X, Y;
         /// <summary>Lo que ocupa en el suelo (radio, u) y su alto (u): la caja que la pinta.</summary>
@@ -204,7 +206,7 @@ namespace ConquestTactics.Mundo
                 foreach (var n in nodos)
                 {
                     var (x, y) = P(n.Posicion);
-                    r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Nodo, Id = n.Id, Nombre = NombreDeRecurso(n.Tipo), X = x, Y = y, Radio = 0.5 * 0.5, Alto = 0.25, Color = ColorDeRecurso(n.Tipo), BajoNiebla = true });
+                    r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Nodo, Id = n.Id, Recurso = n.Tipo, Nombre = NombreDeRecurso(n.Tipo), X = x, Y = y, Radio = 0.5 * 0.5, Alto = 0.25, Color = ColorDeRecurso(n.Tipo), BajoNiebla = true });
                 }
             return r;
         }

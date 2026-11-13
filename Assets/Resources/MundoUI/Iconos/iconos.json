@@ -1,0 +1,356 @@
+{
+ "edificio": [
+  "centroUrbano",
+  "vivienda",
+  "granja",
+  "cantera",
+  "lenera",
+  "almacen",
+  "granero",
+  "mina",
+  "minaCobre",
+  "minaEstano",
+  "minaHierro",
+  "corral",
+  "fundicion",
+  "granFundicion",
+  "curtiduria",
+  "armeria",
+  "carpinteria",
+  "tallerCarpinteria",
+  "barracon",
+  "galeriaDeTiro",
+  "caballerizas",
+  "salaConsejo",
+  "taberna",
+  "palacio",
+  "mercado",
+  "albergueCaravanas",
+  "puestoMercado",
+  "maravilla",
+  "muralla",
+  "plaza",
+  "plazaDeArmas",
+  "patioDeGremios",
+  "pozo",
+  "parque",
+  "molino",
+  "horno",
+  "quesera",
+  "bodega",
+  "prensa",
+  "estatua",
+  "_otro"
+ ],
+ "tropa": [
+  "milicia_lanceros",
+  "lenadores",
+  "granjeros",
+  "mineros",
+  "lanceros_mimbre",
+  "espadachines_cobre",
+  "hacheros_ligeros",
+  "espadachines_bronce",
+  "lanceros_pesados",
+  "hacheros_armados",
+  "guerreros_filisteos",
+  "shardana",
+  "hequetai",
+  "hoplitas_ciudadanos",
+  "espartiatas",
+  "epilektoi",
+  "inmortales",
+  "falangitas",
+  "hipaspistas",
+  "peltastas_ificrates",
+  "agrianos",
+  "caballeria_tesalia",
+  "caballeria_noble_persa",
+  "prodromos",
+  "companeros",
+  "honderos",
+  "escaramuzadores_jabalina",
+  "arqueros",
+  "arqueros_compuesto",
+  "honderos_rodios",
+  "peltastas",
+  "arqueros_escitas",
+  "exploradores_caballo",
+  "carros_guerra",
+  "jinetes_asirios",
+  "jinetes_escitas",
+  "caballeria_asiria",
+  "_otro"
+ ],
+ "parte": [
+  "resumen",
+  "mercenarios",
+  "fondo",
+  "campamento",
+  "guarnicion",
+  "acarreo",
+  "carga"
+ ],
+ "mapa": {
+  "bandidos": {
+   "autor": "lorc",
+   "icono": "hood"
+  },
+  "mercenarios": {
+   "autor": "delapouite",
+   "icono": "barracks-tent"
+  },
+  "heroe": {
+   "autor": "lorc",
+   "icono": "crested-helmet"
+  },
+  "mena": {
+   "autor": "faithtoken",
+   "icono": "ore"
+  },
+  "ganado": {
+   "autor": "delapouite",
+   "icono": "cow"
+  },
+  "piedra": {
+   "autor": "delapouite",
+   "icono": "stone-pile"
+  },
+  "alijo": {
+   "autor": "skoll",
+   "icono": "open-treasure-chest"
+  },
+  "pueblo": {
+   "autor": "delapouite",
+   "icono": "hut"
+  },
+  "avanzada": {
+   "autor": "delapouite",
+   "icono": "watchtower"
+  },
+  "caravanaFundacion": {
+   "autor": "delapouite",
+   "icono": "caravan"
+  },
+  "aldea": {
+   "autor": "delapouite",
+   "icono": "barn"
+  },
+  "obra": {
+   "autor": "lorc",
+   "icono": "hammer-nails"
+  }
+ },
+ "recurso": {
+  "madera": {
+   "emoji": "🪵",
+   "codigo": "1fab5",
+   "color": "#6b4226"
+  },
+  "piedra": {
+   "emoji": "🪨",
+   "codigo": "1faa8",
+   "color": "#8d8d8d"
+  },
+  "trigo": {
+   "emoji": "🌾",
+   "codigo": "1f33e",
+   "color": "#c9a227"
+  },
+  "cobre": {
+   "emoji": "🟠",
+   "codigo": "1f7e0",
+   "color": "#b5651d"
+  },
+  "estano": {
+   "emoji": "⚙️",
+   "codigo": "2699",
+   "color": "#2f6fd1"
+  },
+  "oro": {
+   "emoji": "🪙",
+   "codigo": "1fa99",
+   "color": "#ffd700"
+  },
+  "livestock": {
+   "emoji": "🐄",
+   "codigo": "1f404",
+   "color": "#b5658a"
+  },
+  "harina": {
+   "emoji": "🥣",
+   "codigo": "1f963",
+   "color": "#e2d6b8"
+  },
+  "pan": {
+   "emoji": "🍞",
+   "codigo": "1f35e",
+   "color": "#c8913f"
+  },
+  "carne": {
+   "emoji": "🥩",
+   "codigo": "1f969",
+   "color": "#a8443a"
+  },
+  "leche": {
+   "emoji": "🥛",
+   "codigo": "1f95b",
+   "color": "#ece9dc"
+  },
+  "queso": {
+   "emoji": "🧀",
+   "codigo": "1f9c0",
+   "color": "#e3bf45"
+  },
+  "uva": {
+   "emoji": "🍇",
+   "codigo": "1f347",
+   "color": "#6b3a7a"
+  },
+  "vino": {
+   "emoji": "🍷",
+   "codigo": "1f377",
+   "color": "#7a1f3a"
+  },
+  "cebada": {
+   "emoji": "🍃",
+   "codigo": "1f343",
+   "color": "#d6b45c"
+  },
+  "cerveza": {
+   "emoji": "🍺",
+   "codigo": "1f37a",
+   "color": "#b07a26"
+  },
+  "aceituna": {
+   "emoji": "🌿",
+   "codigo": "1f33f",
+   "color": "#7a8a3a"
+  },
+  "sesamo": {
+   "emoji": "🌼",
+   "codigo": "1f33c",
+   "color": "#e6d2a0"
+  },
+  "aceite": {
+   "emoji": "🏺",
+   "codigo": "1f3fa",
+   "color": "#c9b23a"
+  },
+  "aceiteSesamo": {
+   "emoji": "🫙",
+   "codigo": "1fad9",
+   "color": "#b8863a"
+  },
+  "lingoteCobre": {
+   "emoji": "🔶",
+   "codigo": "1f536",
+   "color": "#d98a4a"
+  },
+  "lingoteEstano": {
+   "emoji": "🔩",
+   "codigo": "1f529",
+   "color": "#5a8fd9"
+  },
+  "lingoteBronce": {
+   "emoji": "🟫",
+   "codigo": "1f7eb",
+   "color": "#a97142"
+  },
+  "cuero": {
+   "emoji": "🟤",
+   "codigo": "1f7e4",
+   "color": "#8a5a3c"
+  },
+  "cueroCurtido": {
+   "emoji": "🧵",
+   "codigo": "1f9f5",
+   "color": "#6b4226"
+  },
+  "cueroCalidad": {
+   "emoji": "✨",
+   "codigo": "2728",
+   "color": "#4a2e18"
+  },
+  "armaMadera": {
+   "emoji": "🏹",
+   "codigo": "1f3f9",
+   "color": "#7a5c3a"
+  },
+  "armaCobre": {
+   "emoji": "🗡️",
+   "codigo": "1f5e1",
+   "color": "#c98a4a"
+  },
+  "armaBronce": {
+   "emoji": "⚔️",
+   "codigo": "2694",
+   "color": "#a97142"
+  },
+  "armaBronceCalidad": {
+   "emoji": "🛡️",
+   "codigo": "1f6e1",
+   "color": "#8a5a2e"
+  },
+  "armaduraBasica": {
+   "emoji": "🥋",
+   "codigo": "1f94b",
+   "color": "#a9a9a9"
+  },
+  "armaduraIntermedia": {
+   "emoji": "🛡️",
+   "codigo": "1f6e1",
+   "color": "#8d8d8d"
+  },
+  "armaduraBronce": {
+   "emoji": "🛡️",
+   "codigo": "1f6e1",
+   "color": "#6b6b6b"
+  },
+  "armaduraBronceCalidad": {
+   "emoji": "🛡️",
+   "codigo": "1f6e1",
+   "color": "#5a4a3a"
+  },
+  "hierro": {
+   "emoji": "⛓️",
+   "codigo": "26d3",
+   "color": "#9aa3ad"
+  },
+  "lingoteHierro": {
+   "emoji": "🔳",
+   "codigo": "1f533",
+   "color": "#b4bcc6"
+  },
+  "armaHierro": {
+   "emoji": "🗡️",
+   "codigo": "1f5e1",
+   "color": "#7d8790"
+  },
+  "armaHierroCalidad": {
+   "emoji": "⚔️",
+   "codigo": "2694",
+   "color": "#5f6a74"
+  },
+  "carroGuerra": {
+   "emoji": "🛞",
+   "codigo": "1f6de",
+   "color": "#8a6a3c"
+  },
+  "chatarraCobre": {
+   "emoji": "🔩",
+   "codigo": "1f529",
+   "color": "#8a5a3c"
+  },
+  "chatarraBronce": {
+   "emoji": "🔩",
+   "codigo": "1f529",
+   "color": "#7a5c3a"
+  },
+  "chatarraHierro": {
+   "emoji": "🔩",
+   "codigo": "1f529",
+   "color": "#6b6f74"
+  }
+ }
+}

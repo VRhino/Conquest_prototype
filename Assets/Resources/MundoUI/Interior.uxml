@@ -13,6 +13,11 @@
         </ui:VisualElement>
         <!-- El cartel de la zona donde está el héroe (como el «Presiona F» del herrero de Conquest). -->
         <ui:Label name="cartel" class="cartel-interior oculto" picking-mode="Ignore" />
+        <!-- «Tu almacén» (BronzeAgeClient: la placa del pie del interior), con el emoji de cada recurso. -->
+        <ui:VisualElement name="placa-almacen" class="placa-almacen oculto" picking-mode="Ignore">
+            <ui:Label class="placa-almacen-titulo" text="TU ALMACÉN" />
+            <ui:VisualElement name="placa-almacen-piezas" />
+        </ui:VisualElement>
         <ui:Label name="ayuda" class="ayuda-interior" picking-mode="Ignore" text="WASD: andar · Ratón: mirar · Alt: soltar el ratón para pulsar la interfaz" />
     </ui:VisualElement>
 </ui:UXML>
