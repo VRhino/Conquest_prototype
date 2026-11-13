@@ -17,7 +17,7 @@
         </ui:VisualElement>
         <ui:VisualElement class="placa panel-derecha">
             <ui:VisualElement class="placa-filete panel-relleno" style="padding: 0;">
-            <ui:ScrollView style="flex-grow: 1; padding: 14px 16px 0 16px;">
+            <ui:ScrollView style="flex-grow: 1; flex-shrink: 1; min-height: 0; padding: 14px 16px 0 16px;">
                 <ui:Label name="campamento-nombre" class="dialogo-titulo" />
                 <ui:VisualElement name="campamento-datos" />
                 <ui:Label class="kicker" text="TU CLASE" />
@@ -28,7 +28,8 @@
                 <ui:Label name="clase-equipo" class="aviso-texto oculto" />
             </ui:ScrollView>
             <!-- El nombre y «Nacer», siempre a la vista (y el rechazo junto al campo). -->
-            <ui:VisualElement style="padding: 8px 16px 14px 16px; border-top-width: 1px; border-color: rgb(107, 74, 41);">
+            <!-- flex-shrink 0: si la ficha crece, se encoge ella (con su barra), no el pie; si no, el campo del nombre se quedaba sin alto. -->
+            <ui:VisualElement style="flex-shrink: 0; padding: 8px 16px 14px 16px; border-top-width: 1px; border-color: rgb(107, 74, 41);">
                     <ui:Label class="kicker" text="TU NOMBRE" />
                     <ui:VisualElement name="campo-nombre" class="campo">
                         <ui:TextField name="nombre" class="entrada" max-length="24" />
