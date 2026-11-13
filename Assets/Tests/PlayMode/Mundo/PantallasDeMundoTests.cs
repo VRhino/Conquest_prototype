@@ -93,7 +93,8 @@ namespace ConquestTactics.Mundo.UI.Tests
 
             // Nace un héroe (la pantalla de crearlo es el paso 3): al cambiar de partida y volver, la tarjeta lo enseña y la sesión pide la VISTA.
             var clase = (string)conexion.Datos.Bloque("Objetos_Del_Heroe", "CLASES_HEROE")["clases"][0]["id"];
-            var camp = conexion.Sesion.Bienvenida.CampamentosParaElegir[0].CampamentoId;
+            // El campamento 4 del mundo de prueba tiene un río a 15 u y el agua (mar o lago) a 2 u: así se ve el agua.
+            var camp = (conexion.Sesion.Bienvenida.CampamentosParaElegir.FirstOrDefault(x => x.CampamentoId == "campamento-4") ?? conexion.Sesion.Bienvenida.CampamentosParaElegir[0]).CampamentoId;
             var nace = conexion.Sesion.Ordenar(new BronzeAge.Contract.V1.Orden { CrearHeroe = new BronzeAge.Contract.V1.OrdenCrearHeroe { DisplayName = "U" + nick.Substring(3), CampamentoId = camp, ClassDefinitionId = clase, Genero = "femenino" } });
             yield return Esperar(() => nace.IsCompleted, 10, "el héroe");
             Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, nace.Result.Resultado, nace.Result.Rechazo?.Codigo);
@@ -111,6 +112,28 @@ namespace ConquestTactics.Mundo.UI.Tests
             var pantallas = go.GetComponent<PantallasDeMundo>();
             Assert.IsFalse(pantallas.SobreInterfaz(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)), "el centro del mapa es del mapa: ahí el ratón no lo coge la interfaz");
             Assert.IsTrue(pantallas.SobreInterfaz(new Vector2(Screen.width - 20, Screen.height - 20)), "la barra de arriba sí es interfaz");
+
+            // Los ríos se ven: cerca del campamento, toda la cinta del río queda por encima del suelo pintado (el cauce está excavado en el relieve
+            // y antes la cinta quedaba enterrada bajo las orillas).
+            var centroCamp = mapa.Centro.Value;
+            int cerca = 0;
+            foreach (var vertice in mapa.MallaDeRios.vertices)
+            {
+                var (rx, _, ry) = ConquestTactics.Mundo.Mapa.EscalaDelMapa.AlMapa(vertice);
+                if (CosasDelMapa.Distancia(rx, ry, centroCamp.x, centroCamp.y) > 30) continue;
+                var malla = mapa.AlturaDeMalla(rx, ry);
+                if (malla == null) continue;
+                cerca++;
+                Assert.Greater(vertice.y, malla.Value, $"el río en ({rx:0.0}, {ry:0.0}) queda por encima del suelo");
+            }
+            Assert.Greater(cerca, 0, "hay río cerca del campamento");
+            mapa.Camara.PasoDeZoom(1);
+            mapa.Camara.Inclinar(25);
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Esperar(() => mapa.SueloCompleto, 20, "el suelo alejado");
+            yield return CapturarMapa(mapa, "9c_rio_y_agua");
+            mapa.Camara.PasoDeZoom(-1);
+            mapa.Camara.Inclinar(-25);
 
             // Dentro del campamento: dónde estás y la salida.
             yield return Esperar(() => !raiz.Q("dentro").ClassListContains("oculto"), 5, "el aviso de dentro");

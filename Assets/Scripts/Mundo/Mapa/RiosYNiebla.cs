@@ -1,4 +1,5 @@
 // Los ríos y sus vados (del artefacto) y la niebla de guerra (de la sesión), en el mapa de mundo.
+using System;
 using System.Collections.Generic;
 using BronzeAge.Contract.V1;
 using UnityEngine;
@@ -11,7 +12,8 @@ namespace ConquestTactics.Mundo.Mapa
     /// se acaba. Se hacen una vez, todos: son pocos.</summary>
     public static class RiosDelMapa
     {
-        const float Sobre = 0.3f, PasoMuestra = 1f, AnchoVado = 0.8f;
+        /// <summary>Lo que va el agua sobre lo más bajo del cauce (0,04 u, como BronzeAgeClient: `asiento: 'bajo'`) y el paso de muestreo (u).</summary>
+        const float Sobre = 0.04f, PasoMuestra = 0.5f, AnchoVado = 0.8f;
 
         public static GameObject Construir(ArtefactoDeMundo a, Relieve relieve, Material material, Transform padre)
         {
@@ -26,14 +28,17 @@ namespace ConquestTactics.Mundo.Mapa
                     var p = puntos[i];
                     var dir = (puntos[Mathf.Min(i + 1, puntos.Count - 1)] - puntos[Mathf.Max(i - 1, 0)]).normalized;
                     var normal = new Vector2(-dir.y, dir.x) * (ancho / 2);
-                    var h = (float)relieve.AlturaEn(p.x, p.y) + Sobre;
                     if (i > 0)
                     {
                         int b = v.Count - 2;
-                        t.AddRange(new[] { b, b + 2, b + 1, b + 1, b + 2, b + 3 });
+                        // Con z = −y el mapa se da la vuelta: este orden es el que mira hacia arriba (hacia la cámara).
+                        t.AddRange(new[] { b, b + 1, b + 2, b + 1, b + 3, b + 2 });
                     }
-                    v.Add(EscalaDelMapa.AEscena(p.x + normal.x, p.y + normal.y, h));
-                    v.Add(EscalaDelMapa.AEscena(p.x - normal.x, p.y - normal.y, h));
+                    // El agua, plana de orilla a orilla en lo más bajo del cauce (el suelo de alrededor lo baja `CaucesDelMapa` hasta él).
+                    float x1 = p.x + normal.x, y1 = p.y + normal.y, x2 = p.x - normal.x, y2 = p.y - normal.y;
+                    var h = (float)Math.Min(relieve.AlturaEn(p.x, p.y), Math.Min(relieve.AlturaEn(x1, y1), relieve.AlturaEn(x2, y2))) + Sobre * EscalaDelMapa.MetrosPorUnidad;
+                    v.Add(EscalaDelMapa.AEscena(x1, y1, h));
+                    v.Add(EscalaDelMapa.AEscena(x2, y2, h));
                     c.Add(color.linear);
                     c.Add(color.linear);
                 }
@@ -95,6 +100,53 @@ namespace ConquestTactics.Mundo.Mapa
         }
     }
 
+    /// <summary>Los cauces de los ríos del artefacto, para bajar el suelo hasta ellos: el relieve excava el cauce, pero la malla del suelo (paso
+    /// de 0,5 a 2 u) es más gruesa que él y, al interpolar, lo rellena; el agua quedaba enterrada bajo las orillas. Cada vértice del suelo a menos
+    /// de medio ancho del río más el paso de su tesela baja hasta lo más bajo del cauce ahí (y un poco más, para que el agua quede encima).</summary>
+    public sealed class CaucesDelMapa
+    {
+        const double Celda = 2, Paso = 0.5, Hondo = 0.3;
+        readonly Dictionary<(int, int), List<(double x, double y, float fondo, float medio)>> celdas = new Dictionary<(int, int), List<(double, double, float, float)>>();
+
+        public CaucesDelMapa(ArtefactoDeMundo a, Relieve relieve)
+        {
+            foreach (var rio in a.Rios)
+            {
+                float medio = (rio.Navegable ? PinturaDelMapa.RioNavegable : PinturaDelMapa.Rio) / 2;
+                for (int i = 0; i + 1 < rio.Puntos.Count; i++)
+                {
+                    double ax = rio.Puntos[i].X / 1000.0, ay = rio.Puntos[i].Y / 1000.0, bx = rio.Puntos[i + 1].X / 1000.0, by = rio.Puntos[i + 1].Y / 1000.0;
+                    int pasos = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) / Paso));
+                    for (int k = 0; k < pasos; k++)
+                    {
+                        double x = ax + (bx - ax) * k / pasos, y = ay + (by - ay) * k / pasos;
+                        if (relieve.AguaEn(x, y)) continue;
+                        var key = ((int)Math.Floor(x / Celda), (int)Math.Floor(y / Celda));
+                        if (!celdas.TryGetValue(key, out var l)) celdas[key] = l = new List<(double, double, float, float)>();
+                        l.Add((x, y, (float)relieve.AlturaEn(x, y), medio));
+                    }
+                }
+            }
+        }
+
+        /// <summary>A qué altura (metros) tiene que bajar el suelo en (x, y) para dejar ver el río, o null si no hay río a menos de su medio ancho
+        /// más `margen` u.</summary>
+        public float? Fondo(double x, double y, float margen)
+        {
+            int ci = (int)Math.Floor(x / Celda), cj = (int)Math.Floor(y / Celda), r = (int)Math.Ceiling((PinturaDelMapa.RioNavegable / 2 + margen) / Celda);
+            float? fondo = null;
+            for (int dj = -r; dj <= r; dj++)
+                for (int di = -r; di <= r; di++)
+                    if (celdas.TryGetValue((ci + di, cj + dj), out var l))
+                        foreach (var p in l)
+                        {
+                            var d = Math.Sqrt((p.x - x) * (p.x - x) + (p.y - y) * (p.y - y));
+                            if (d <= p.medio + margen) fondo = Math.Min(fondo ?? float.MaxValue, p.fondo);
+                        }
+            return fondo == null ? (float?)null : fondo.Value - (float)Hondo;
+        }
+    }
+
     /// <summary>La niebla de guerra (la `NieblaProyectada` de la VISTA, celdas de 5 u): una textura de la rejilla (R = explorado, G = a la vista)
     /// que el sombreado mezcla con su color en tres estados. Se rehace solo cuando cambia la VISTA.</summary>
     public sealed class NieblaDelMapa
@@ -118,7 +170,7 @@ namespace ConquestTactics.Mundo.Mapa
             int columnas = (int)n.Columnas, filas = (int)n.Filas;
             if (textura == null || textura.width != columnas || textura.height != filas)
             {
-                if (textura != null) Object.Destroy(textura);
+                if (textura != null) UnityEngine.Object.Destroy(textura);
                 textura = new Texture2D(columnas, filas, TextureFormat.RG16, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                 pixeles = new byte[columnas * filas * 2];
             }
@@ -140,7 +192,7 @@ namespace ConquestTactics.Mundo.Mapa
 
         public void Destruir()
         {
-            if (textura != null) Object.Destroy(textura);
+            if (textura != null) UnityEngine.Object.Destroy(textura);
             Shader.SetGlobalVector(Rejilla, Vector4.zero);
         }
     }

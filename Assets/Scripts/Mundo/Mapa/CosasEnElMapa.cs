@@ -116,7 +116,8 @@ namespace ConquestTactics.Mundo.Mapa
                     c.Add(color);
                     if (i == 0) continue;
                     int q = inicio + (i - 1) * 2;
-                    t.AddRange(new[] { q, q + 2, q + 1, q + 1, q + 2, q + 3 });
+                    // Con z = −y el mapa se da la vuelta: este orden es el que mira hacia arriba (hacia la cámara).
+                    t.AddRange(new[] { q, q + 1, q + 2, q + 1, q + 3, q + 2 });
                 }
             }
             var malla = new Mesh { name = nombre, indexFormat = IndexFormat.UInt32 };
@@ -166,8 +167,8 @@ namespace ConquestTactics.Mundo.Mapa
                 if (d > (nodo ? cercaNodos : lejos)) continue;
                 var mundo = EscalaDelMapa.AEscena(c.X, c.Y, alturaVisible(c.X, c.Y) + (float)(c.Alto + 0.25) * e);
                 var pantalla = camara.WorldToScreenPoint(mundo);
-                if (pantalla.z <= 0 || pantalla.x < 0 || pantalla.y < 0 || pantalla.x > Screen.width || pantalla.y > Screen.height) continue;
-                var enPanel = RuntimePanelUtils.ScreenToPanel(capaNombres.panel, new Vector2(pantalla.x, Screen.height - pantalla.y));
+                if (pantalla.z <= 0 || pantalla.x < 0 || pantalla.y < 0 || pantalla.x > camara.pixelWidth || pantalla.y > camara.pixelHeight) continue;
+                var enPanel = RuntimePanelUtils.ScreenToPanel(capaNombres.panel, new Vector2(pantalla.x, camara.pixelHeight - pantalla.y));
                 if (usados == nombres.Count)
                 {
                     var l = new Label { pickingMode = PickingMode.Ignore };

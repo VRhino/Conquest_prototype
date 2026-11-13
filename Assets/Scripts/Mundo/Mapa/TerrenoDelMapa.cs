@@ -15,6 +15,8 @@ namespace ConquestTactics.Mundo.Mapa
         readonly Relieve relieve;
         readonly RasterDeMundo clases, bosque, fertilidad;
         bool conFertilidad;
+        /// <summary>Los cauces de los ríos: el suelo baja hasta ellos (si no, el agua del río queda enterrada).</summary>
+        public CaucesDelMapa Cauces;
         readonly float nivelDelMar;
         readonly Material material;
         readonly Transform padre;
@@ -88,6 +90,19 @@ namespace ConquestTactics.Mundo.Mapa
             }
         }
 
+        /// <summary>Lo más alto de la malla de suelo ya pintada alrededor de (x, y): las cuatro esquinas de la celda de la tesela (metros); null si esa
+        /// tesela aún no está. Para comprobar que lo que va encima del suelo (ríos, rayas) no queda enterrado.</summary>
+        public float? AlturaDeMalla(double x, double y)
+        {
+            float lado = (float)relieve.LadoEnUnidades;
+            int tx = (int)(x / lado), ty = (int)(y / lado);
+            if (!teselas.TryGetValue((tx, ty), out var t) || t.go == null) return null;
+            var vertices = t.go.GetComponent<MeshFilter>().sharedMesh.vertices;
+            int n = Mathf.RoundToInt(lado / t.paso) + 1;
+            int i = Mathf.Clamp((int)((x - tx * lado) / t.paso), 0, n - 2), j = Mathf.Clamp((int)((y - ty * lado) / t.paso), 0, n - 2);
+            return Mathf.Max(Mathf.Max(vertices[j * n + i].y, vertices[j * n + i + 1].y), Mathf.Max(vertices[(j + 1) * n + i].y, vertices[(j + 1) * n + i + 1].y));
+        }
+
         /// <summary>¿Quedan teselas por hacer en lo que se ve?</summary>
         public bool Completo => pendientes.Count <= PorFotograma;
 
@@ -118,7 +133,11 @@ namespace ConquestTactics.Mundo.Mapa
                         c = lamina - h > PinturaDelMapa.MarHondo ? PinturaDelMapa.AguaHonda : PinturaDelMapa.AguaSomera;
                         h = lamina;
                     }
-                    else c = conFertilidad && fertilidad != null ? ColorDeFertilidad(fertilidad.En(x, y) / 255f) : ConBosque(ColorDeClase(clases.En(x, y)), bosque == null ? 0 : bosque.En(x, y) / 255f);
+                    else
+                    {
+                        if (Cauces?.Fondo(x, y, paso) is float fondo) h = Mathf.Min(h, fondo);
+                        c = conFertilidad && fertilidad != null ? ColorDeFertilidad(fertilidad.En(x, y) / 255f) : ConBosque(ColorDeClase(clases.En(x, y)), bosque == null ? 0 : bosque.En(x, y) / 255f);
+                    }
                     // Relativo a la esquina de la tesela: así los números de la malla son pequeños.
                     vertices[k] = new Vector3((float)(i * paso * e), h, (float)(-j * paso * e));
                     colores[k] = c.linear; // el proyecto va en espacio lineal: el color de vértice no se convierte solo

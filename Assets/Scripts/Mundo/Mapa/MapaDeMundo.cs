@@ -81,6 +81,7 @@ namespace ConquestTactics.Mundo.Mapa
             terreno = new TerrenoDelMapa(relieve, new RasterDeMundo(artefacto.Terreno), Raster(artefacto.DensidadBosque), Raster(artefacto.Fertilidad), nivelDelMar, materialSuelo, transform);
             pintor = new CosasEnElMapa((x, y) => terreno.AlturaVisible(x, y), materialSuelo, materialPropio, transform, capaNombres);
             if (artefacto.Navegacion != null && artefacto.Navegacion.Nodos.Count > 0) tiempo = new TiempoDeMarcha(artefacto.Navegacion);
+            terreno.Cauces = new CaucesDelMapa(artefacto, relieve);
             rios = RiosDelMapa.Construir(artefacto, relieve, materialSuelo, transform);
             niebla = new NieblaDelMapa();
             sesion.AlCambiar += AlCambiar;
@@ -494,6 +495,9 @@ namespace ConquestTactics.Mundo.Mapa
         /// <summary>Lo que se ve en (x, y) del mapa: la altura del suelo o de su agua, en metros.</summary>
         public float AlturaVisible(double x, double y) => terreno.AlturaVisible(x, y);
         /// <summary>Puntos de la ruta pintada (0 sin ruta).</summary>
+        public float? AlturaDeMalla(double x, double y) => terreno.AlturaDeMalla(x, y);
+        /// <summary>Los ríos y vados pintados (una malla).</summary>
+        public Mesh MallaDeRios => rios != null ? rios.GetComponent<MeshFilter>().sharedMesh : null;
         public int PuntosDeRuta => ruta != null && ruta.enabled ? ruta.positionCount : 0;
     }
 }

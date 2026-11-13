@@ -101,3 +101,22 @@ columna ya en marcha para comprobar que la ruta sale desde el primer fotograma. 
 - El pasto por fertilidad y la mezcla de colores por altura del suelo (BronzeAgeClient: `colorDelSuelo`), que dan variedad al llano.
 - Las maquetas de cada cosa en vez de cajas; las figuras de columnas y caravanas.
 - El marco de bronce de la interfaz en 9-slice (bloque 5 de la hoja de ruta).
+
+## Ríos y cintas (arreglo del 2026-11-13)
+
+Tras la 2B no se veía ningún río, ni caminos, fronteras, zonas, anillos ni Miradas. Dos causas:
+
+- **El orden de los vértices de las cintas.** Con z = −y el mapa se da la vuelta, y las cintas quedaban mirando hacia abajo: el sombreado
+  (que pinta una cara) no las dibujaba desde la cámara. Se corrigió el orden donde se construyen (`RiosDelMapa`, `CosasEnElMapa.Cintas`); el
+  suelo y las cajas ya estaban bien.
+- **El cauce excavado.** El relieve excava el cauce de cada río, pero la malla del suelo (paso de 0,5 a 2 u) es más gruesa que él y, al
+  interpolar, lo rellena: a 1,5 u del cauce el suelo está de 0,9 a 15 m más alto, y la cinta del agua quedaba enterrada. Ahora el suelo baja
+  hasta el cauce en la franja del río más el paso de su tesela (`CaucesDelMapa`), y el agua va plana de orilla a orilla en lo más bajo del
+  cauce más 0,04 u, como el `asiento: 'bajo'` de BronzeAgeClient. El agua queda dentro del cauce, sin flotar ni hacer escalones. Con teselas de
+  paso 2 (lejos) el cauce bajado mide hasta 5,5 u de ancho; con modelos y texturas de verdad (fase de arte) habría que bajar el suelo con el
+  perfil del cauce y no solo hasta su fondo.
+
+Pruebas: `MapaConTodoTests` (PlayMode) monta el mapa real con una cosa de cada tipo junto al campamento 4 (que tiene un lago a 1 u y un río a
+15 u), comprueba que todas las cintas miran hacia arriba y que el píxel del río, el del mar (junto al campamento 7) y el del vado (junto al
+campamento 2) tienen su color, y guarda capturas con los nombres encima. La de `PantallasDeMundoTests` comprueba que la cinta del río
+cercana queda por encima de la malla del suelo pintada.
