@@ -169,12 +169,12 @@ namespace ConquestTactics.Mundo.UI
             foreach (var s in lado.EscuadrasSinHeroe) donde.Add(FilaDeTropa(s));
         }
 
-        VisualElement FilaDeTropa(SquadSnapshot s)
+        VisualElement FilaDeTropa(BronzeAge.Contract.V1.SquadSnapshot s)
         {
             var fila = Dialogo.Caja("con-icono");
             fila.name = "batalla-tropa-" + s.SquadId;
             fila.style.marginBottom = 4;
-            fila.Add(IconosDelMundo.CajaDeTropa(s.TropaId));
+            if (PiezasDeTropa.Miniatura(s.TropaId) is VisualElement mini) fila.Add(mini);
             fila.Add(Dialogo.Texto($"{NombreDeTropa(s.TropaId)} · {s.EfectivosAutorizados} hombres", "aviso-texto"));
             return fila;
         }

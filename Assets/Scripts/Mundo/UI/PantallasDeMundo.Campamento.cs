@@ -70,6 +70,26 @@ namespace ConquestTactics.Mundo.UI
             return fila;
         }
 
+        /// <summary>El coste de Liderazgo de una tropa en el motor: `LIDERAZGO.costePorEscalon` de su escalón; null si no se sabe.</summary>
+        int? LiderazgoDe(string tropaId)
+        {
+            var t = c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == tropaId);
+            var escalon = (string)t?["escalon"];
+            if (escalon == null) return null;
+            try { return (int?)c.Datos.En("documentos.Heroe_Y_Tropa.LIDERAZGO.costePorEscalon")[escalon]; }
+            catch (FaltaDato) { return null; }
+        }
+
+        /// <summary>Una tropa con lo que se hace con ella debajo: su tarjeta, una línea y, si toca, el botón.</summary>
+        static VisualElement TropaConAccion(string nombre, VisualElement tarjeta, string linea)
+        {
+            var caja = Dialogo.Caja("tropa-con-accion");
+            caja.name = nombre;
+            if (tarjeta != null) caja.Add(tarjeta);
+            caja.Add(Dialogo.Texto(linea, "aviso-texto"));
+            return caja;
+        }
+
         string NombreDeTropa(string id)
         {
             var t = c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == id);
@@ -194,10 +214,10 @@ namespace ConquestTactics.Mundo.UI
                 if (escuadras.Count == 0) v.Add(Dialogo.Texto("No tienes tropa. En el edificio militar te prestan una.", "campo-ayuda"));
                 foreach (var s in escuadras)
                 {
-                    // Como el resumen del prototipo: la caja con el dibujo de la tropa (`iconoEnFila`) y su línea.
+                    // La miniatura de la tropa (la de Conquest, `Squad_Icon`) y su línea.
                     var fila = Dialogo.Caja("con-icono");
                     fila.style.marginBottom = 4;
-                    fila.Add(IconosDelMundo.CajaDeTropa(s.TropaId));
+                    if (PiezasDeTropa.Miniatura(s.TropaId) is VisualElement mini) fila.Add(mini);
                     var texto = Dialogo.Texto($"{s.Nombre} · {s.Cantidad} hombres · {DondeEsta(s)}{(s.HasPrestadaPorCampamentoId ? " · prestada" : "")}", "aviso-texto");
                     texto.style.flexShrink = 1;
                     fila.Add(texto);
@@ -431,18 +451,17 @@ namespace ConquestTactics.Mundo.UI
                 }
                 v.Add(Carril("parte", "campamento", "CAMPAMENTO · TE LA PRESTAN"));
                 v.Add(Dialogo.Texto("Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia y se retira si dejas de residir en este campamento.", "campo-ayuda"));
+                var prestan = Dialogo.Caja("fila-envuelta");
                 foreach (var t in tropas.Where(x => (string)x["tecnologia"] == "leva_comunal"))
                 {
                     var id = (string)t["id"];
                     var unidades = (int?)t["unidadesPorDefecto"] ?? 0;
                     var prestada = mias.FirstOrDefault(s => s.TropaId == id && s.HasPrestadaPorCampamentoId);
-                    var fila = Dialogo.Caja("salida-fila");
-                    fila.name = "tropa-" + id;
-                    fila.Add(IconosDelMundo.CajaDeTropa(id, 30));
-                    var lineaPrestada = Dialogo.Texto($"{(string)t["nombre"]} · {(prestada != null ? $"prestada: {prestada.Cantidad} hombres, {DondeEsta(prestada)}" : $"{unidades} hombres")}", "aviso-texto");
-                    lineaPrestada.style.flexGrow = 1;
-                    lineaPrestada.style.flexShrink = 1;
-                    fila.Add(lineaPrestada);
+                    // La tarjeta de Conquest: nivel y hombres de la escuadra si ya te la prestaron; si no, los hombres que trae.
+                    var tarjeta = PiezasDeTropa.Tarjeta(id, prestada != null ? (int?)prestada.Nivel : null, LiderazgoDe(id),
+                        prestada != null ? (int)prestada.Cantidad : unidades, unidades);
+                    var caja = TropaConAccion("tropa-" + id, tarjeta,
+                        $"{(string)t["nombre"]} · {(prestada != null ? $"prestada, {DondeEsta(prestada)}" : $"{unidades} hombres")}");
                     if (prestada == null)
                     {
                         Button pedir = null;
@@ -453,34 +472,32 @@ namespace ConquestTactics.Mundo.UI
                             await OrdenDelPanel(new Orden { PedirPrestamo = o }, error, repintar, pedir);
                         });
                         pedir.name = "pedir-" + id;
-                        fila.Add(pedir);
+                        caja.Add(pedir);
                     }
-                    v.Add(fila);
+                    prestan.Add(caja);
                 }
+                v.Add(prestan);
 
                 // El edificio militar del campamento: lo que ofrece, con su precio (con el recargo, la reputación y el descuento ya aplicados).
                 var militar = camp.Edificios.FirstOrDefault(e => ZonaDePieza(e) == "militar");
                 v.Add(Carril("edificio", militar ?? "barracon", (militar != null ? Pieza(militar) : "Edificio militar").ToUpperInvariant()));
                 if (camp.Reclutables.Count == 0) v.Add(Dialogo.Texto("El campamento aún no ofrece tropa aquí.", "campo-ayuda"));
+                // Lo que ofrece (o ya es tuyo), en tarjetas; lo que aún no ofrece, en miniaturas: se ve qué vendrá, sin botón.
+                var ofrece = Dialogo.Caja("fila-envuelta");
+                var luego = new List<string>();
                 foreach (var o in camp.Reclutables)
                 {
                     var t = tropas.FirstOrDefault(x => (string)x["id"] == o.TropaId);
                     var nombre = t != null ? (string)t["nombre"] : o.TropaId;
                     var unidades = (int)o.Unidades;
                     var mia = mias.FirstOrDefault(s => s.TropaId == o.TropaId && !s.HasPrestadaPorCampamentoId);
-                    var fila = Dialogo.Caja("salida-fila");
-                    fila.name = "tropa-" + o.TropaId;
-                    fila.Add(IconosDelMundo.CajaDeTropa(o.TropaId, 30));
+                    if (mia == null && !o.Desbloqueada) { luego.Add(o.TropaId); continue; }
                     var porSoldado = o.PrecioPorSoldado / 1000.0;
                     var coste = (int)Math.Ceiling(o.PrecioEscuadra / 1000.0);
-                    string estado = mia != null ? $"tu escuadra {mia.Cantidad}/{unidades}"
-                        : !o.Desbloqueada ? "el campamento aún no la ofrece"
-                        : $"{porSoldado:0.#} de oro por soldado";
-                    var linea = Dialogo.Texto($"{nombre} · {estado}", "aviso-texto");
-                    linea.style.flexGrow = 1;
-                    linea.style.flexShrink = 1;
-                    fila.Add(linea);
-                    if (mia == null && o.Desbloqueada)
+                    var tarjeta = PiezasDeTropa.Tarjeta(o.TropaId, mia != null ? (int?)mia.Nivel : null, LiderazgoDe(o.TropaId),
+                        mia != null ? (int)mia.Cantidad : unidades, unidades);
+                    var caja = TropaConAccion("tropa-" + o.TropaId, tarjeta, mia != null ? $"{nombre} · tu escuadra" : $"{nombre} · {porSoldado:0.#} de oro por soldado");
+                    if (mia == null)
                     {
                         var motivo = poblacion < unidades ? $"Faltan reclutas: hay {poblacion} y hacen falta {unidades}."
                             : coste > oro ? $"No te llega el oro: {coste} y tienes {oro} en {(reclutarConCarro ? "el carro" : "tu almacén")}." : null;
@@ -495,19 +512,29 @@ namespace ConquestTactics.Mundo.UI
                         // «Reclutar N» y el chip del coste en oro (`.obra-coste` con 🪙; en rojo si no te llega).
                         reclutar.style.flexDirection = FlexDirection.Row;
                         reclutar.style.alignItems = Align.Center;
-                        reclutar.style.paddingLeft = reclutar.style.paddingRight = 10;
+                        reclutar.style.paddingLeft = reclutar.style.paddingRight = 8;
+                        reclutar.style.height = 36;
                         reclutar.Add(Dialogo.Texto($"Reclutar {unidades}", "boton-texto"));
                         var costeChip = IconosDelMundo.ChipDeRecurso("oro", coste.ToString(), $"{coste} de oro");
                         costeChip.EnableInClassList("chip-recurso--falta", coste > oro);
-                        costeChip.style.marginLeft = 8;
+                        costeChip.style.marginLeft = 6;
                         costeChip.style.marginBottom = 0;
                         reclutar.Add(costeChip);
-                        reclutar.style.marginTop = 0;
                         reclutar.SetEnabled(motivo == null);
-                        if (motivo != null) { var m = Dialogo.Texto(motivo, "campo-ayuda"); m.name = "motivo-" + id; fila.Add(m); }
-                        fila.Add(reclutar);
+                        if (motivo != null) { var m = Dialogo.Texto(motivo, "campo-ayuda"); m.name = "motivo-" + id; caja.Add(m); }
+                        caja.Add(reclutar);
                     }
-                    v.Add(fila);
+                    ofrece.Add(caja);
+                }
+                v.Add(ofrece);
+                if (luego.Count > 0)
+                {
+                    v.Add(Dialogo.Texto("Aún no las ofrece:", "campo-ayuda"));
+                    var minis = Dialogo.Caja("fila-envuelta");
+                    minis.name = "aun-no";
+                    foreach (var id in luego)
+                        if (PiezasDeTropa.Miniatura(id, 40, NombreDeTropa(id)) is VisualElement mini) { mini.style.marginBottom = 6; minis.Add(mini); }
+                    v.Add(minis);
                 }
             });
         }

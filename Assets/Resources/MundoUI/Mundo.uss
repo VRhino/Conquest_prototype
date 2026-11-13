@@ -203,11 +203,6 @@ Button { margin: 0; }
 /* Los iconos del prototipo (`IconosDelMundo`; BronzeAgeClient: style.css). */
 .con-icono { flex-direction: row; align-items: center; }
 .con-icono > .icono { margin-right: 6px; }
-/* La caja de una tropa (`.tropa-icono`). */
-.tropa-icono {
-    align-items: center; justify-content: center; flex-shrink: 0; margin-right: 8px;
-    border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgb(45, 33, 20);
-}
 /* La pieza de un recurso (`.asent-recurso`): su emoji y la cifra. */
 .chip-recurso {
     flex-direction: row; align-items: center; padding: 2px 6px; margin: 0 4px 4px 0;
@@ -275,3 +270,27 @@ Button { margin: 0; }
 .error-fila { flex-direction: row; align-items: flex-start; background-color: rgba(191, 82, 51, 0.18); border-width: 1px; border-color: var(--terracota); border-radius: 3px; padding: 8px 12px; margin-bottom: 12px; }
 .error-texto { color: var(--rojo-claro); white-space: normal; font-size: 14px; flex-shrink: 1; padding: 0; margin: 0; }
 .icono-aviso { width: 16px; height: 16px; margin: 1px 8px 0 0; flex-shrink: 0; background-image: resource("MundoUI/Iconos/glifo/aviso"); }
+/* Las piezas de tropa de Conquest (`PiezasDeTropa`; gemelas de Squad_Icon, Squad_option y las estrellas de SquadDetailPanel). */
+.tropa-mini { flex-shrink: 0; margin-right: 8px; }
+.tropa-mini-fondo, .tropa-mini-icono { position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-background-scale-mode: stretch-to-fill; }
+.tropa-mini-linea { position: absolute; left: 0; right: 0; bottom: 0; }
+.tropa-tarjeta { flex-shrink: 0; margin: 0 8px 8px 0; }
+.tropa-tarjeta-capa { position: absolute; left: 0; top: 0; right: 0; bottom: 0; -unity-background-scale-mode: stretch-to-fill; }
+.tropa-tarjeta-franja { position: absolute; left: 0; right: 0; bottom: 0; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 6px 3px 6px; background-color: rgba(56, 56, 56, 0.6); }
+.tropa-tarjeta-linea { position: absolute; left: 0; right: 0; bottom: 0; }
+.tropa-tarjeta-marca { position: absolute; left: -1px; top: -1px; right: -1px; bottom: -1px; background-color: rgba(255, 255, 255, 0.11); display: none; }
+.tropa-tarjeta--elegida > .tropa-tarjeta-marca { display: flex; }
+.tropa-tarjeta-liderazgo-icono { margin-left: 2px; background-image: url("/Assets/Art/UI/units/leadership.png"); -unity-background-scale-mode: scale-to-fit; }
+.tropa-tarjeta-datos { flex-direction: row; align-items: center; }
+.tropa-tarjeta-liderazgo { flex-direction: row; align-items: center; margin-left: 6px; }
+.tropa-tarjeta-nivel, .tropa-tarjeta-cifra, .tropa-tarjeta-hombres { color: rgb(255, 255, 255); font-size: 16px; -unity-font-style: bold; padding: 0; margin: 0; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.tropa-estrellas { flex-direction: row; }
+.tropa-estrella { padding: 0; margin: 0; -unity-text-align: middle-left; }
+/* Una tropa con lo que se hace con ella debajo (las del campamento y la salida). */
+.tropa-con-accion { width: 150px; margin: 0 10px 12px 0; }
+.tropa-con-accion > .tropa-tarjeta { margin: 0 0 6px 0; }
+.tropa-con-accion > Label { white-space: normal; }
+.tropa-con-accion > Button { margin: 4px 0 0 0; }
+/* La casilla «Sale» bajo la tarjeta: sin el ancho mínimo de la etiqueta de los campos (empujaba la casilla fuera de la columna). */
+.tropa-con-accion > Toggle { margin: 2px 0 0 0; }
+.tropa-con-accion .unity-base-field__label { min-width: 0; margin-right: 8px; }

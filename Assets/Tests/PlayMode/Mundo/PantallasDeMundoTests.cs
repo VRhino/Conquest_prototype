@@ -692,7 +692,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(pedir);
                 yield return Esperar(() => Yo().EscuadronesIds.Count > 0, 10, "la escuadra prestada");
                 yield return Esperar(() => raiz.Q("panel-tropa")?.Q("tropa-milicia_lanceros")?.Q<Button>("pedir-milicia_lanceros") == null, 5, "la ficha repintada");
-                StringAssert.Contains("prestada", raiz.Q("panel-tropa").Q("tropa-milicia_lanceros").Q<Label>().text);
+                Assert.IsTrue(raiz.Q("panel-tropa").Q("tropa-milicia_lanceros").Query<Label>().ToList().Any(l => l.text.Contains("prestada")), "la milicia, prestada");
                 yield return Capturar("24b_tropa_prestada");
                 var reclutar = raiz.Q("panel-tropa").Query<Button>().ToList().FirstOrDefault(b => b.name.StartsWith("reclutar-") && b.enabledSelf);
                 if (reclutar != null)
@@ -705,6 +705,15 @@ namespace ConquestTactics.Mundo.UI.Tests
                 }
                 else Debug.Log("[Prueba] reclutar: " + string.Join(" | ", raiz.Q("panel-tropa").Query<Label>().ToList().Where(l => l.name.StartsWith("motivo-")).Select(l => l.text)));
                 Pulsar(raiz.Q("panel-tropa").Q<Button>("cerrar"));
+                yield return null;
+
+                // Otra vez en la taberna, ya con la milicia: «tu tropa» con su miniatura de Conquest. Andar hasta ella ya se probó arriba;
+                // aquí se abre por la misma puerta que la tecla F (la de la zona), para la captura.
+                interior.AlInteractuar("taberna");
+                yield return Esperar(() => raiz.Q("panel-taberna") != null, 5, "el panel de la taberna");
+                yield return Esperar(() => raiz.Q("panel-taberna").Q("mini-milicia_lanceros") != null, 5, "la miniatura de la milicia en la taberna");
+                yield return EnTamanos(raiz, "22d_taberna_con_tropa");
+                Pulsar(raiz.Q("panel-taberna").Q<Button>("cerrar"));
                 yield return null;
 
                 // Un rechazo de cada orden, con su frase (lo que la interfaz no deja pedir se manda tal cual).
@@ -935,6 +944,22 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (placa != null) Assert.IsTrue(Contiene(placa.worldBound, e.worldBound), $"{que}: dentro de su placa ({e.worldBound} en {placa.worldBound})");
             }
             Assert.Greater(vistos, 0, "algo que pulsar en " + donde);
+
+            // Las piezas de tropa ni se pisan entre sí ni se cortan por los lados (en su lista con barra, se ven enteras de ancho).
+            var piezas = raiz.Query<VisualElement>().Where(x => (x.ClassListContains("tropa-con-accion") || x.ClassListContains("tropa-mini")) && Visible(x)).ToList();
+            for (int i = 0; i < piezas.Count; i++)
+            {
+                var a = piezas[i].worldBound;
+                var marco = piezas[i].GetFirstAncestorOfType<ScrollView>()?.contentViewport.worldBound ?? ventana;
+                Assert.IsTrue(a.xMin >= marco.xMin - 1 && a.xMax <= marco.xMax + 1, $"«{piezas[i].name}» en {donde}: entera de ancho ({a} en {marco})");
+                for (int j = i + 1; j < piezas.Count; j++)
+                {
+                    var b = piezas[j].worldBound;
+                    if (piezas[i].Contains(piezas[j]) || piezas[j].Contains(piezas[i])) continue;
+                    bool pisa = a.xMin < b.xMax - 1 && b.xMin < a.xMax - 1 && a.yMin < b.yMax - 1 && b.yMin < a.yMax - 1;
+                    Assert.IsFalse(pisa, $"«{piezas[i].name}» y «{piezas[j].name}» se pisan en {donde} ({a} y {b})");
+                }
+            }
         }
 
         /// <summary>El pie de «Nace tu héroe»: el campo del nombre y «Nacer» dentro del panel, con alto, y sin pisarse.</summary>

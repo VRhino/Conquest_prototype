@@ -488,7 +488,7 @@ namespace ConquestTactics.Mundo.UI
             velo.Add(placa);
             filete.Add(Dialogo.Texto("SALIR AL MUNDO", "dialogo-titulo"));
             filete.Add(Dialogo.Texto($"Sales por la puerta de {lugar} con tu columna.", "dialogo-texto"));
-            var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical };
+            var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             cuerpo.style.flexShrink = 1;
             filete.Add(cuerpo);
 
@@ -502,18 +502,26 @@ namespace ConquestTactics.Mundo.UI
             if (!resides) tropa.Add(Dialogo.Texto("No resides aquí: sales con tu columna tal como está.", "campo-ayuda"));
             else if (escuadras.Count == 0) tropa.Add(Dialogo.Texto("No tienes escuadras en el campamento: sales solo con tu héroe.", "campo-ayuda"));
             else
+            {
+                // Cada escuadra en su tarjeta de Conquest (nivel, Liderazgo y hombres), elegida si sale: pulsar la tarjeta o la casilla.
+                var tarjetas = Dialogo.Caja("fila-envuelta");
                 foreach (var e in escuadras)
                 {
-                    // El hueco de la tropa (`.salida-hueco`): su dibujo a 34 px y la marca de si sale.
-                    var hueco = Dialogo.Caja("con-icono");
-                    hueco.style.marginBottom = 4;
-                    hueco.Add(IconosDelMundo.CajaDeTropa(e.TropaId, 34));
-                    var marca = new Toggle($"{(string.IsNullOrEmpty(e.Nombre) ? e.TropaId : e.Nombre)} · {e.Cantidad} hombres") { value = true, name = "sale-" + e.Id };
-                    marca.style.flexShrink = 1;
-                    hueco.Add(marca);
-                    tropa.Add(hueco);
+                    var total = (int?)c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == e.TropaId)?["unidadesPorDefecto"];
+                    var tarjeta = PiezasDeTropa.Tarjeta(e.TropaId, (int)e.Nivel, LiderazgoDe(e.TropaId), (int)e.Cantidad, total, true);
+                    var caja = TropaConAccion("salida-" + e.Id, tarjeta, string.IsNullOrEmpty(e.Nombre) ? NombreDeTropa(e.TropaId) : e.Nombre);
+                    var marca = new Toggle("Sale") { value = true, name = "sale-" + e.Id };
+                    if (tarjeta != null)
+                    {
+                        marca.RegisterValueChangedCallback(ev => PiezasDeTropa.Elegir(tarjeta, ev.newValue));
+                        tarjeta.RegisterCallback<ClickEvent>(_ => marca.value = !marca.value);
+                    }
+                    caja.Add(marca);
+                    tarjetas.Add(caja);
                     marcadas.Add((marca, e.Id));
                 }
+                tropa.Add(tarjetas);
+            }
 
             // La carga: lo de tu almacén personal (solo si resides aquí).
             var carga = Dialogo.Caja("salida-seccion");

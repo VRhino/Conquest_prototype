@@ -71,7 +71,8 @@ servidor real. Entre paréntesis, la sección del inventario.
 **Regla (Víctor, 2026-11-13).** Cada pantalla migrada trae del prototipo sus iconos y piezas visuales (barras, chips, colores,
 medallones), no solo sus datos. Los iconos salen del registro único `IconosDelMundo`, sacado de BronzeAgeClient por script
 (`Tools/IconosDelPrototipo/generar.mjs`); no se dibujan a mano ni se inventan los que el prototipo no tiene. Los emoji son de un juego
-libre (Twemoji, CC BY 4.0), no los del sistema. Ver [`Arquitectura/27_Iconos_Del_Mundo`](Arquitectura/27_Iconos_Del_Mundo_2026-11-13.md).
+libre (Twemoji, CC BY 4.0), no los del sistema. **Excepción (Víctor, 2026-11-13):** toda interfaz que muestre tropas usa las piezas de tropa de Conquest (la miniatura y la
+tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver [`Arquitectura/27_Iconos_Del_Mundo`](Arquitectura/27_Iconos_Del_Mundo_2026-11-13.md).
 
 | | Paso | Estado |
 |---|---|---|

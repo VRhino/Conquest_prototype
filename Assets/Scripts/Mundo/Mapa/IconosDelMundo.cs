@@ -71,16 +71,6 @@ namespace ConquestTactics.Mundo
             return fila;
         }
 
-        /// <summary>La caja de una tropa (`.tropa-icono` del prototipo: 34 px con el dibujo de 26 en oro claro).</summary>
-        public static VisualElement CajaDeTropa(string tropaId, float lado = 26)
-        {
-            var caja = new VisualElement { pickingMode = PickingMode.Ignore };
-            caja.AddToClassList("tropa-icono");
-            caja.style.width = caja.style.height = lado + 8;
-            caja.Add(Icono("tropa", tropaId, lado, OroClaro));
-            return caja;
-        }
-
         /// <summary>Una pieza de recurso (`.asent-recurso` del prototipo): su emoji y la cifra.</summary>
         public static VisualElement ChipDeRecurso(string recurso, string cifra, string titulo = null)
         {

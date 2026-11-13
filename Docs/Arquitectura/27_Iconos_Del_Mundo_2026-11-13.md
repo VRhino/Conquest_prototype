@@ -41,12 +41,11 @@ Va en el ensamblado del mapa (`Conquest.Mundo.Mapa`) porque lo usan el mapa y la
 | `Icono(familia, id, lado, tinte)` | un icono de `lado` px, teñido (bronce por defecto); sin dibujo propio, el genérico |
 | `Imagen(familia, id)` | el `VectorImage` propio, o null (lo usa la prueba de cobertura, sin genérico) |
 | `ConIcono(…, texto)` | icono y texto en fila |
-| `CajaDeTropa(tropa, lado)` | `.tropa-icono`: caja de bronce con el dibujo de la tropa en oro claro |
 | `ChipDeRecurso(recurso, cifra)` | `.asent-recurso`: el emoji y la cifra (en rojo con `chip-recurso--falta`, como `.obra-coste.falta`) |
 | `ColorDeRecurso`, `ColorDeNodo` | `RECURSO_COLOR` y `colorNodo` (la piedra, gris) |
 | `DeCosa(cosa)`, `DeNodo(recurso)` | el icono del mapa de cada cosa y su color, como el mapa 2D (`render.ts`, `ui/pueblos.ts`); los yacimientos con `ICONO_DE_NODO` |
 
-Las clases USS van al final de `Mundo.uss`: `.con-icono`, `.tropa-icono`, `.chip-recurso`, `.chip`, `.carril`, `.mercado-*`,
+Las clases USS van al final de `Mundo.uss`: `.con-icono`, `.chip-recurso`, `.chip`, `.carril`, `.mercado-*`,
 `.excedido`, `.placa-almacen`, `.lista-fila-icono`, `.bandidos-nivel*` y `.elegir-*`.
 
 ## Qué pantalla usa qué
@@ -56,10 +55,10 @@ Las clases USS van al final de `Mundo.uss`: `.con-icono`, `.tropa-icono`, `.chip
 | Interior: cabecera | la tienda (`parte/campamento`, 40 px en oro; `htmlBlasonInterior` la pone a 46) junto al nombre del campamento |
 | Interior: pie | la placa «Tu almacén» con el emoji y la cifra de cada recurso (`htmlPlacaDeRecursos`); se oculta si está vacío |
 | Paneles del campamento | el título con su icono a 26 px (`htmlTituloDeParte`): taberna, mercado, barracón |
-| Taberna (resumen) | cada escuadra con la caja de su tropa (`iconoEnFila`, 26 en caja de 34). El almacén y los edificios siguen en texto, como allí |
+| Taberna (resumen) | cada escuadra con su miniatura de Conquest (`PiezasDeTropa.Miniatura`, la de `Squad_Icon`). El almacén y los edificios siguen en texto, como allí |
 | Mercado | cada bien con su emoji, nombre y «N en venta · p oro/u» (`.mercado-bien`); la cabecera del bien con su emoji; «Pagas / Te queda / Tendrás» en tres cajas (`.mercado-total`); la compra hecha en verde (`.mercado-hecho`) |
-| Tropa | los chips de reclutas (🧑) y oro (`.obra-chip`); los carriles con su icono a 30 (el del campamento para lo que se presta, el del edificio militar para lo que se recluta; `arbolTablero`); cada tropa en su caja a 30; «Reclutar N» con el chip de oro, rojo si no llega (`.obra-coste`) |
-| Salir al mundo | cada escuadra con la caja de su tropa a 34 (`.salida-hueco`); cada fila de carga con su emoji (`.carro-fila`); «🌾 Llenar víveres»; la cifra del carro en rojo si no cabe (`.excedido`). Los víveres, en texto como allí |
+| Tropa | los chips de reclutas (🧑) y oro (`.obra-chip`); los carriles con su icono a 30 (el del campamento para lo que se presta, el del edificio militar para lo que se recluta; `arbolTablero`); cada tropa que se presta o se ofrece en su tarjeta de Conquest (`PiezasDeTropa.Tarjeta`: nivel si ya es tuya, Liderazgo y hombres) con su línea y su botón debajo, y «Reclutar N» con el chip de oro (rojo si no llega); lo que aún no ofrece, en miniaturas |
+| Salir al mundo | cada escuadra en su tarjeta de Conquest, elegida si sale (pulsar la tarjeta o «Sale»); cada fila de carga con su emoji (`.carro-fila`); «🌾 Llenar víveres»; la cifra del carro en rojo si no cabe (`.excedido`). Los víveres, en texto como allí |
 | Mapa: nombres | delante del nombre, el icono del mapa 2D del prototipo en su color: columnas y ejércitos (`heroe`, color de facción), campamentos de mercenarios (#6fa3d6), bandidos (#d9534f) y yacimientos (`mena`, `ganado`, `piedra`, en su color). Plazas: su sigilo, que llega con el paso 8 |
 | Mapa: lista bajo el clic | cada fila con su señal redonda de 26 px (`.eleccion-clic-icono`) y el símbolo del prototipo de cada cosa: ⚔ ⛺ ☠ 📜 ⚒ de Twemoji; ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ dibujados por el script |
 | Mapa: ficha | el nivel de los bandidos en tres círculos terracota (`.bandidos-nivel`); cada acción con su glifo (`.puerta-boton-icono`): 🚪 Entrar, ⚔ Atacar, 👁 Inspeccionar, 🎁 Abrir. y ➜ «Marchar aquí» (dibujado por el script) |
@@ -94,3 +93,49 @@ Las clases USS van al final de `Mundo.uss`: `.con-icono`, `.tropa-icono`, `.chip
 - **`CadaCosaDeLasReglasTieneIcono`:** contra `/v1/datos` del servidor de prueba. Cada tropa de `TROPAS_RECLUTABLES` tiene su dibujo, y si
   no, falla. Además dice qué edificios (el `EDIFICIO_CATALOGO`, los militares y las piezas del campamento) y qué recursos de las reglas no
   tienen dibujo propio en el prototipo y llevan el genérico.
+
+## Las piezas de tropa de Conquest (`PiezasDeTropa`)
+
+**Decisión de Víctor (2026-11-13).** En las tropas, la imagen de Conquest sustituye al icono dibujado del prototipo. Es la excepción a la
+regla de los iconos del prototipo, y solo para tropas: edificios, recursos, mapa y lo demás siguen con los del prototipo.
+
+`Assets/Scripts/Mundo/UI/PiezasDeTropa.cs` (UI Toolkit) hace gemelas de las piezas UGUI del juego, sin tocarlas:
+
+| Pieza | Gemela de | Qué lleva |
+|---|---|---|
+| `Miniatura(tropa, lado = 40)` | `Squad_Icon` (`SquadIconController`) | el fondo, el icono y una línea al pie del color de la rareza (1 px a 40 px) |
+| `Tarjeta(tropa, nivel, liderazgo, vivos, total, elegida, ancho = 150)` | `Squad_option` (`SquadOptionUI`) | 150×236,75: el fondo y la imagen de la tropa a todo el alto; abajo, la franja oscura (28,6 px) con la línea de la rareza (4 px); a la izquierda «Nv N» y «♛ N» (Liderazgo); a la derecha «vivos/total»; el borde tenue y, si está elegida, el borde de oro |
+| `Estrellas(tropa, lado = 16)` | las de `SquadDetailPanel` | las enteras y la parcial recortada, como el `fillAmount` de Conquest, en el color de la rareza |
+
+**De dónde salen los datos:**
+- **Las imágenes y la rareza:** del `SquadData` de cada tropa del motor (`Resources/Squads/BronzeAge/<tropaId>`). Lo crea `TropasDelMotor`:
+  el aspecto se copia de su base de Conquest y el escalón del motor da la rareza.
+- **El color y las estrellas:** de `SquadUtils.RarityInfo`, una sola tabla.
+- **Los textos, en español y del motor:**
+  - el nivel, del `Escuadron` (solo si ya es tuya; si no, ese hueco no sale);
+  - el Liderazgo, de `LIDERAZGO.costePorEscalon` según el escalón de la tropa;
+  - los hombres, `cantidad` sobre `unidadesPorDefecto`.
+- **Cómo llega `Conquest.Mundo.UI` a ese código:** referencia a `Game.ECS`, donde están `SquadData` y `SquadUtils`. No hay ciclo,
+  porque `Game.ECS` solo depende de `Conquest.Mundo`.
+
+**Dónde va cada pieza:**
+- **La miniatura:**
+  - la taberna («tu tropa»);
+  - la ficha de la batalla (atacan y defienden);
+  - en el panel de Tropa, lo que el campamento aún no ofrece.
+- **La tarjeta:** el panel de Tropa (préstamo y reclutar) y «Salir al mundo».
+- **Lo que no se ha tocado:**
+  - La ficha del mapa y la lista «AQUÍ HAY» no muestran tropas hoy, así que no se cambian.
+  - «Nace tu héroe» aún no enseña la tropa del campamento: entra con el paso 6.
+  - Los iconos de tropa dibujados del prototipo siguen en el registro (familia `tropa`, por la prueba de cobertura), pero ninguna
+    pantalla los usa.
+- **Las estrellas:** no hay hoy una ficha de detalle de tropa en lo migrado. La pieza está hecha y probada, y entra con el paso 6 (la
+  ficha de la tropa en el barracón y en la base personal).
+
+**Pruebas** (`Assets/Tests/PlayMode/Mundo/PiezasDeTropaTests.cs`):
+- **`CadaTropaDelMotorTieneSusImagenes`:** cada SquadData del motor tiene sus tres imágenes y se encuentra por su id.
+- **`CadaTropaDeLasReglasTieneSuPieza`:** cada tropa de `/v1/datos` tiene su miniatura y su tarjeta. Si falta, falla y la nombra; no
+  hay reserva.
+- **`LasPiezasComoLasDeConquest`:** pinta una tropa de cada rareza con los prefabs originales y con las piezas, para compararlas
+  (`31_piezas_de_conquest_ugui` y `32_piezas_del_mundo`), y cuenta las estrellas de cada rareza.
+- **Además,** en las pantallas a los cuatro tamaños, ninguna pieza de tropa pisa a otra ni se corta de ancho (`DentroDelMarco`).
