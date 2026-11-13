@@ -8,7 +8,7 @@
             <ui:Button name="cambiar-partida" class="boton-secundario" text="Cambiar de partida" />
             <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
         </ui:VisualElement>
-        <ui:Label name="ayuda" class="pie" picking-mode="Ignore" style="position: absolute; left: 12px; bottom: 8px; -unity-text-align: middle-left;"
+        <ui:Label name="ayuda" picking-mode="Ignore" style="position: absolute; left: 12px; bottom: 10px; padding: 4px 10px; font-size: 13px; color: rgb(237, 224, 196); background-color: rgba(11, 8, 5, 0.72); border-radius: 3px; -unity-text-align: middle-left;"
                   text="Clic en el suelo: marchar · Arrastrar o WASD: girar e inclinar · Rueda: zoom · F2: diagnóstico" />
         <ui:VisualElement name="diagnostico" class="oculto" style="position: absolute; left: 0; top: 52px; right: 0; bottom: 0; background-color: rgba(11, 8, 5, 0.88);" />
     </ui:VisualElement>

@@ -42,6 +42,7 @@ namespace ConquestTactics.Mundo.UI
             doc.panelSettings = ajustes;
             hijo.SetActive(true);
             var raiz = doc.rootVisualElement;
+            raiz.pickingMode = PickingMode.Ignore;
             raiz.styleSheets.Add(Resources.Load<StyleSheet>("MundoUI/Mundo"));
             pantalla = Capa(raiz);
             capaCarga = Capa(raiz);
@@ -70,6 +71,8 @@ namespace ConquestTactics.Mundo.UI
             QuitarMapa();
             pantalla.Clear();
             var v = Resources.Load<VisualTreeAsset>("MundoUI/" + uxml).Instantiate();
+            // El contenedor que crea Instantiate llena la pantalla: no puede quedarse con el ratón (en el mapa, el clic es del mapa).
+            v.pickingMode = PickingMode.Ignore;
             v.style.position = Position.Absolute;
             v.style.left = v.style.top = v.style.right = v.style.bottom = 0;
             pantalla.Add(v);
@@ -364,7 +367,7 @@ namespace ConquestTactics.Mundo.UI
         }
 
         /// <summary>¿Está el puntero sobre algo de la interfaz? (entonces el clic no es del mapa)</summary>
-        bool SobreInterfaz(Vector2 enPantalla)
+        public bool SobreInterfaz(Vector2 enPantalla)
         {
             var panel = pantalla.panel;
             if (panel == null) return false;

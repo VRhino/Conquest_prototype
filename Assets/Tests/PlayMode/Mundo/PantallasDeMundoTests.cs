@@ -107,11 +107,40 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => conexion.Sesion.Almacen.Ambitos.Keys.Any(k => k.StartsWith("VISTA:")), 10, "la VISTA");
             yield return new WaitForSecondsRealtime(0.5f);
             yield return CapturarMapa(mapa, "9_mapa_en_el_campamento");
+            var pantallas = go.GetComponent<PantallasDeMundo>();
+            Assert.IsFalse(pantallas.SobreInterfaz(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)), "el centro del mapa es del mapa: ahí el ratón no lo coge la interfaz");
+            Assert.IsTrue(pantallas.SobreInterfaz(new Vector2(Screen.width - 20, Screen.height - 20)), "la barra de arriba sí es interfaz");
             var desde = mapa.Centro.Value;
-            var centro = new Vector2(Screen.width * 0.5f, Screen.height * 0.25f);
-            var clic = mapa.Clic(new Vector2(Screen.width * 0.5f, Screen.height * 0.25f));
-            yield return Esperar(() => clic.IsCompleted, 10, "la orden del clic");
-            yield return Esperar(() => mapa.Columna != null, 10, "la columna");
+            // El ratón entra por el mismo camino que el del jugador: un ratón del Input System con eventos de verdad (rueda y clic).
+            // En batch la aplicación no tiene el foco, y sin él el Input System apaga el ratón: aquí no se mira el foco.
+            var ajustes = UnityEngine.InputSystem.InputSystem.settings;
+            var fondo = ajustes.backgroundBehavior;
+            var editor = ajustes.editorInputBehaviorInPlayMode;
+            ajustes.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+            ajustes.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
+            try
+            {
+                raton.MakeCurrent();
+                var donde = new Vector2(Screen.width * 0.5f, Screen.height * 0.25f);
+                var zoomAntes = mapa.Camara.Zoom;
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde, scroll = new Vector2(0, 120) });
+                yield return null;
+                yield return null;
+                Assert.AreNotEqual(zoomAntes, mapa.Camara.Zoom, "la rueda cambia el zoom");
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde }.WithButton(UnityEngine.InputSystem.LowLevel.MouseButton.Left, true));
+                yield return null;
+                yield return null;
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde });
+                yield return null;
+            }
+            finally
+            {
+                UnityEngine.InputSystem.InputSystem.RemoveDevice(raton);
+                ajustes.backgroundBehavior = fondo;
+                ajustes.editorInputBehaviorInPlayMode = editor;
+            }
+            yield return Esperar(() => mapa.Columna != null, 10, "la columna (el clic con el ratón)");
             yield return new WaitForSecondsRealtime(2f);
             var ahora = mapa.Centro.Value;
             Assert.Greater(Math.Abs(ahora.x - desde.x) + Math.Abs(ahora.y - desde.y), 0.1, "la columna anda hacia donde se hizo clic");

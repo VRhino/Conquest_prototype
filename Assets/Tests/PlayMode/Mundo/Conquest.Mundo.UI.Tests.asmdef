@@ -3,7 +3,8 @@
   "references": [
     "Conquest.Mundo",
     "Conquest.Mundo.UI",
-    "Conquest.Mundo.Mapa"
+    "Conquest.Mundo.Mapa",
+    "Unity.InputSystem"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"
