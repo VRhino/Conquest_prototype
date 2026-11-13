@@ -38,7 +38,7 @@ Actualizado: 2026-10-22. Inventario por **presencia de código** en `Assets/Scri
 
 ### 🎨 Interfaz y escenas
 - ✅ HUD de batalla, minimapa (`MinimapController`), chat (`Chat.System`), preparación de batalla, panel de héroe e inventario.
-- ✅ Escenas: Login, CharacterSelection, AvatarCreator, Feudo, Barracón, BattlePrep, Battle, PostBattle, Settlement, WorldMapCampaign.
+- ✅ Escenas: Login, CharacterSelection, AvatarCreator, Feudo, Barracón, BattlePrep, Battle, PostBattle.
 
 ---
 

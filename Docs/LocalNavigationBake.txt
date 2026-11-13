@@ -1,1 +1,0 @@
-1024x768, 488957/786432 walkable cells, 186480 water triangles. A=True, B=True

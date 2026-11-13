@@ -145,7 +145,6 @@ namespace Conquest.Editor.Optimization
             int activeSkinnedCount = 0;
             int terrainCount = 0;
             int terrainTreeInstances = 0;
-            int manualPathComponents = 0;
 
             foreach (Renderer renderer in Resources.FindObjectsOfTypeAll<Renderer>())
             {
@@ -243,30 +242,6 @@ namespace Conquest.Editor.Optimization
                     terrainTreeInstances += terrain.terrainData.treeInstanceCount;
             }
 
-            foreach (MonoBehaviour component in Resources.FindObjectsOfTypeAll<MonoBehaviour>())
-            {
-                if (component == null || !component.gameObject.scene.IsValid() || !component.gameObject.scene.isLoaded)
-                    continue;
-                string typeName = component.GetType().Name;
-                if (typeName.Contains("WorldMapSyntyRenderer", StringComparison.Ordinal) ||
-                    typeName.Contains("WorldMapForestOverview", StringComparison.Ordinal))
-                {
-                    manualPathComponents++;
-                    if (!component.enabled || !component.gameObject.activeInHierarchy
-                        || rows.Count >= MaxDetailedRendererRows)
-                        continue;
-                    rows.Add(new RendererRow
-                    {
-                        kind = "manual-instancing component",
-                        scene = component.gameObject.scene.path,
-                        hierarchy = GetHierarchyPath(component.transform),
-                        active = component.gameObject.activeInHierarchy,
-                        enabled = component.enabled,
-                        residentDrawerHeuristic = "custom draw path; not counted as MeshRenderer candidate"
-                    });
-                }
-            }
-
             var report = new CensusReport
             {
                 pipeline = GraphicsSettings.currentRenderPipeline == null ? "<null>" : GraphicsSettings.currentRenderPipeline.name,
@@ -282,14 +257,13 @@ namespace Conquest.Editor.Optimization
                 detailsAreSample = true,
                 terrains = terrainCount,
                 terrainTreeInstances = terrainTreeInstances,
-                knownManualInstancingComponents = manualPathComponents,
                 residentDrawerInitialized = GetResidentDrawerInitialization(),
                 gpuOcclusionEnabled = GPUResidentDrawer.IsInstanceOcclusionCullingEnabled(),
                 notes = "Totals cover all loaded scene renderers; active totals require enabled and activeInHierarchy. Details are a bounded sample of active renderers, not a full inventory. Candidate is only a conservative shader/MPB/proxy-volume heuristic; confirm runtime eligibility in Frame Debugger/Profiler. Terrain trees and manual draw calls are not MeshRenderer candidates.",
                 renderers = rows.ToArray()
             };
             string json = JsonUtility.ToJson(report, true);
-            Debug.Log($"[RenderOptimizationExperiments] Census: MeshRenderer={meshCount}, candidatos heurísticos={candidateCount}, SkinnedMeshRenderer={skinnedCount}, Terrain={terrainCount}, árboles={terrainTreeInstances}, componentes de instancing manual conocidos={manualPathComponents}. JSON detallado devuelto por Census().");
+            Debug.Log($"[RenderOptimizationExperiments] Census: MeshRenderer={meshCount}, candidatos heurísticos={candidateCount}, SkinnedMeshRenderer={skinnedCount}, Terrain={terrainCount}, árboles={terrainTreeInstances}. JSON detallado devuelto por Census().");
             return json;
         }
 

@@ -1,6 +1,6 @@
 {
   "name": "Conquest.Architecture.Tests",
-  "references": ["Game.ECS", "Game.Editor", "Conquest.WorldMap", "Conquest.Net", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Transforms"],
+  "references": ["Game.ECS", "Game.Editor", "Conquest.Net", "Unity.Entities", "Unity.Collections", "Unity.Mathematics", "Unity.Transforms"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"],
   "overrideReferences": true,

@@ -1,9 +1,0 @@
-{
-    "terrains": 48,
-    "heightSamples": 798768,
-    "resources": 1354,
-    "heightsUnchanged": true,
-    "independentTerrainData": true,
-    "vegetationSpawnerImported": true,
-    "address": "worldmap/lab"
-}

@@ -130,9 +130,6 @@ Este archivo documenta las responsabilidades específicas de cada sistema ECS y 
 ### HeroMotionSystem
 - **Responsabilidad**: mide cuánto lleva quieto y cuánto desde que se movió cada héroe con perks (`HeroMotionComponent`), desde su posición, igual para local e IA. Lo consumen las condiciones de perks; no mueve ni anima. Corre `[UpdateAfter(HeroMovementSystem)]`.
 
-### SettlementHeroLifecycleSystem / SettlementWalkInputFilterSystem
-- Solo para la vista previa de asentamiento (`Assets/Scripts/SettlementPreview/`). El primero crea y destruye el héroe de paseo antes de `CameraBootstrapSystem`; el segundo corre entre `HeroInputSystem` y `HeroMovementSystem`/`HeroSkillRequestSystem`/`HeroStaminaSystem` y descarta ataque e interacción conservando la locomoción.
-
 ### CameraBootstrapSystem
 - **Responsabilidad**: crea la entidad de cámara y asigna como objetivo al héroe local (`IsLocalPlayer`). Corre en `InitializationSystemGroup`.
 

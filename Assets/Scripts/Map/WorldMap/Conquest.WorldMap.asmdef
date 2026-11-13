@@ -1,9 +1,0 @@
-{
-  "name": "Conquest.WorldMap",
-  "references": [
-    "Unity.Addressables",
-    "Unity.ResourceManager",
-    "Unity.InputSystem"
-  ],
-  "autoReferenced": true
-}

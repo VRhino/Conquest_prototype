@@ -7,9 +7,6 @@ public static class SceneTransitionService
 {
     public static class SceneNames
     {
-        public const string WorldMap = "WorldMapCampaign";
-        public const string SettlementPreview = "SettlementPreview";
-        public const string Settlement = "SettlementScene";
         public const string Login = "LoginScene";
         public const string HeroSelection = "HeroSelectionScene";
         public const string AvatarCreator = "AvatarCreator";
@@ -22,9 +19,6 @@ public static class SceneTransitionService
 
     private static readonly Dictionary<string, GamePhase> SceneToPhaseMap = new(System.StringComparer.OrdinalIgnoreCase)
     {
-        { SceneNames.WorldMap, GamePhase.WorldMap },
-        { SceneNames.SettlementPreview, GamePhase.Feudo },
-        { SceneNames.Settlement, GamePhase.Feudo },
         { SceneNames.Login, GamePhase.Login },
         { SceneNames.HeroSelection, GamePhase.CharacterSelection },
         { SceneNames.CharacterSelection, GamePhase.CharacterSelection },
@@ -43,7 +37,7 @@ public static class SceneTransitionService
             if (!SceneToPhaseMap.TryGetValue(SceneManager.GetActiveScene().name, out var phase)) return false;
             return phase == GamePhase.Login || phase == GamePhase.CharacterSelection
                 || phase == GamePhase.AvatarCreation || phase == GamePhase.BattlePreparation
-                || phase == GamePhase.PostPartida || phase == GamePhase.WorldMap;
+                || phase == GamePhase.PostPartida;
         }
     }
 

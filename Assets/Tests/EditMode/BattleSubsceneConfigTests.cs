@@ -3,8 +3,8 @@ using NUnit.Framework;
 using UnityEditor;
 
 /// <summary>
-/// The battle subscenes must bake every config singleton their systems require. HeroGameplayConfigAuthoring was only
-/// in SettlementHeroWorld, so in battle HeroAttackSystem and HeroStaminaSystem never ran (RequireForUpdate).
+/// The battle subscenes must bake every config singleton their systems require. HeroGameplayConfigAuthoring was once
+/// only in a non-battle scene, so in battle HeroAttackSystem and HeroStaminaSystem never ran (RequireForUpdate).
 /// </summary>
 public class BattleSubsceneConfigTests
 {
