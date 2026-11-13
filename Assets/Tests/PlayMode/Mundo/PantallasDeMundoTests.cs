@@ -78,33 +78,56 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => raiz.Q(className: "carga") != null, 5, "la pantalla de carga");
             yield return new WaitForSecondsRealtime(0.8f);
             yield return Capturar("4_carga");
-            yield return Esperar(() => raiz.Q<Label>("reloj") != null && raiz.Q(className: "carga") == null, 60, "la sesión viva");
-            yield return new WaitForSecondsRealtime(1f);
-            Assert.IsNotEmpty(raiz.Q<Label>("reloj").text);
-            Assert.Greater(raiz.Q<ScrollView>("entidades").contentContainer.childCount, 0);
+            // Sin héroe: crear el héroe (paso 3) sobre el mapa de los campamentos.
+            yield return Esperar(() => raiz.Q("crear") != null && raiz.Q(className: "carga") == null, 60, "crear el héroe");
             Assert.IsNotNull(conexion.Artefacto, "el artefacto de mundo, cargado");
-            yield return Capturar("5_sesion");
+            var mapaCrear = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+            yield return Esperar(() => mapaCrear.Centro != null && mapaCrear.SueloCompleto, 60, "el suelo de los campamentos");
+            yield return new WaitForSecondsRealtime(1f);
+            Assert.IsTrue(raiz.Q<Button>("nacer").ClassListContains("oculto"), "sin campamento ni clase, «Nacer» no sale");
+            StringAssert.Contains("Elige campamento y clase", raiz.Q<Label>("falta").text);
+            yield return Capturar("5_crear_heroe");
+            yield return CapturarMapa(mapaCrear, "5b_mapa_de_campamentos");
 
-            Pulsar(raiz.Q<Button>("avisos"));
-            yield return null;
-            Assert.IsNotNull(raiz.Q(className: "panel-avisos"));
-            yield return Capturar("6_avisos");
-            Pulsar(raiz.Q<Button>("avisos"));
+            // Las 5 clases del motor, cada una con su equipo inicial.
+            var botonesClase = raiz.Q("clases").Query<Button>().ToList();
+            Assert.AreEqual(5, botonesClase.Count, "las 5 clases de /v1/datos");
+            for (int i = 0; i < botonesClase.Count; i++)
+            {
+                Pulsar(botonesClase[i]);
+                yield return null;
+                Assert.IsTrue(botonesClase[i].ClassListContains("clase--elegida"));
+                StringAssert.Contains("Caballo de tiro", raiz.Q<Label>("clase-equipo").text, "con su equipo inicial");
+                yield return Capturar($"6_clase_{i + 1}");
+            }
 
-            // Nace un héroe (la pantalla de crearlo es el paso 3): al cambiar de partida y volver, la tarjeta lo enseña y la sesión pide la VISTA.
-            var clase = (string)conexion.Datos.Bloque("Objetos_Del_Heroe", "CLASES_HEROE")["clases"][0]["id"];
-            // El campamento 4 del mundo de prueba tiene un río a 15 u y el agua (mar o lago) a 2 u: así se ve el agua.
-            var camp = (conexion.Sesion.Bienvenida.CampamentosParaElegir.FirstOrDefault(x => x.CampamentoId == "campamento-4") ?? conexion.Sesion.Bienvenida.CampamentosParaElegir[0]).CampamentoId;
-            var nace = conexion.Sesion.Ordenar(new BronzeAge.Contract.V1.Orden { CrearHeroe = new BronzeAge.Contract.V1.OrdenCrearHeroe { DisplayName = "U" + nick.Substring(3), CampamentoId = camp, ClassDefinitionId = clase, Genero = "femenino" } });
-            yield return Esperar(() => nace.IsCompleted, 10, "el héroe");
-            Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, nace.Result.Resultado, nace.Result.Rechazo?.Codigo);
-            Pulsar(raiz.Q<Button>("cambiar-partida"));
-            yield return Esperar(() => raiz.Q<Label>(className: "partida-heroe")?.text.Contains("U" + nick.Substring(3)) == true, 20, "la partida con el héroe");
-            yield return Capturar("8_partidas_con_heroe");
-            Pulsar(raiz.Q<Button>("entrar"));
+            // El campamento 4 (`camp-4` en la Bienvenida; en el artefacto, `campamento-4`: un río a 15 u y un lago a 1 u), desde la lista: su ficha con lo que lo rodea, y ya se puede nacer.
+            var tarjeta = raiz.Q<ScrollView>("campamentos").Query<Button>().ToList().First(t => t.Q<Label>().text == "Campamento 4");
+            Pulsar(tarjeta);
+            yield return Esperar(() => mapaCrear.Seleccionada?.Id == "camp-4", 5, "el campamento elegido");
+            Assert.Greater(raiz.Q("campamento-datos").childCount, 5, "lo que rodea al campamento");
+            Assert.IsFalse(raiz.Q<Button>("nacer").ClassListContains("oculto"), "con campamento y clase, «Nacer» sale");
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Capturar("7_campamento_elegido");
+            yield return CapturarMapa(mapaCrear, "7b_campamento_elegido_en_el_mapa");
+
+            // Un nombre que ya tiene otro héroe: el rechazo, junto al campo.
+            var ocupado = "Ocu" + nick.Substring(3);
+            yield return OtroHeroe(url, ocupado);
+            raiz.Q<TextField>("nombre").value = ocupado;
+            Pulsar(raiz.Q<Button>("nacer"));
+            yield return Esperar(() => !raiz.Q<Label>("nombre-error").ClassListContains("oculto"), 10, "el rechazo del nombre");
+            StringAssert.Contains("nombre", raiz.Q<Label>("nombre-error").text);
+            yield return Capturar("8_nombre_en_uso");
+
+            // Nace: al aceptarse, el mapa con el héroe dentro de su campamento.
+            raiz.Q<TextField>("nombre").value = "U" + nick.Substring(3);
+            Pulsar(raiz.Q<Button>("nacer"));
             // Con héroe, el mapa (paso 2). Todo lo que hace el jugador va por el mismo camino que él: botones con eventos de UI Toolkit y el
             // ratón con un dispositivo del Input System (en batch no hay foco: aquí el Input System no lo mira).
             yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
+            // El mapa nuevo (el de crear el héroe se está destruyendo).
+            yield return Esperar(() => mapaCrear == null, 5, "que se vaya el mapa de crear el héroe");
             var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
             Assert.IsNotNull(mapa);
             yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto && mapa.TeselasCargadas > 4, 60, "el suelo");
@@ -112,6 +135,11 @@ namespace ConquestTactics.Mundo.UI.Tests
             var pantallas = go.GetComponent<PantallasDeMundo>();
             Assert.IsFalse(pantallas.SobreInterfaz(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f)), "el centro del mapa es del mapa: ahí el ratón no lo coge la interfaz");
             Assert.IsTrue(pantallas.SobreInterfaz(new Vector2(Screen.width - 20, Screen.height - 20)), "la barra de arriba sí es interfaz");
+            Pulsar(raiz.Q<Button>("avisos"));
+            yield return null;
+            Assert.IsNotNull(raiz.Q(className: "panel-avisos"));
+            yield return Capturar("9a_avisos");
+            Pulsar(raiz.Q<Button>("avisos"));
 
             // Los ríos se ven: cerca del campamento, toda la cinta del río queda por encima del suelo pintado (el cauce está excavado en el relieve
             // y antes la cinta quedaba enterrada bajo las orillas).
@@ -120,7 +148,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             foreach (var vertice in mapa.MallaDeRios.vertices)
             {
                 var (rx, _, ry) = ConquestTactics.Mundo.Mapa.EscalaDelMapa.AlMapa(vertice);
-                if (CosasDelMapa.Distancia(rx, ry, centroCamp.x, centroCamp.y) > 30) continue;
+                if (CosasDelMapa.Distancia(rx, ry, centroCamp.x, centroCamp.y) > 60) continue;
                 var malla = mapa.AlturaDeMalla(rx, ry);
                 if (malla == null) continue;
                 cerca++;
@@ -247,6 +275,27 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (Time.realtimeSinceStartup > fin) Assert.Fail("no llegó " + que);
                 yield return null;
             }
+        }
+
+        /// <summary>Otro héroe, con otra cuenta, para tener un nombre ya usado.</summary>
+        static IEnumerator OtroHeroe(string url, string nombre)
+        {
+            var acceso = new Acceso(url);
+            var nick = "otro-" + DateTime.UtcNow.Ticks % 100_000_000;
+            var registro = acceso.Registrar(nick, "clave-de-prueba-1");
+            yield return Esperar(() => registro.IsCompleted, 20, "la otra cuenta");
+            var login = acceso.Entrar(nick, "clave-de-prueba-1");
+            yield return Esperar(() => login.IsCompleted, 20, "el otro login");
+            var s = new Sesion(acceso.UrlSesion, login.Result.Token, "conquest-prueba");
+            var abrir = s.Abrir();
+            var fin = Time.realtimeSinceStartup + 20;
+            while (!abrir.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
+            var clase = "espada_escudo_mediano";
+            var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { CrearHeroe = new BronzeAge.Contract.V1.OrdenCrearHeroe { DisplayName = nombre, CampamentoId = abrir.Result.CampamentosParaElegir[0].CampamentoId, ClassDefinitionId = clase } });
+            fin = Time.realtimeSinceStartup + 20;
+            while (!orden.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
+            Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.Codigo);
+            s.Cerrar();
         }
 
         static IEnumerator Clic(UnityEngine.InputSystem.Mouse raton, Vector2 donde)

@@ -52,6 +52,13 @@ namespace ConquestTactics.Mundo.Mapa
         public bool ListaAbierta;
         /// <summary>Capas: los nombres de los nodos de recursos y la fertilidad del suelo.</summary>
         public bool NombresDeNodos = true;
+        /// <summary>Sin héroe (al crearlo): dónde mira el mapa, con qué visión, y lo que se pinta además de lo del almacén (los campamentos
+        /// donde nacer, los bandidos del artefacto, los aros de alrededor). Tras cambiar las rayas, `RehacerRayas`.</summary>
+        public (double x, double y)? Enfoque;
+        public double? RadioVisionFijo;
+        public readonly List<CosaDelMapa> Adicionales = new List<CosaDelMapa>();
+        public readonly List<RayaDelMapa> RayasAdicionales = new List<RayaDelMapa>();
+        public void RehacerRayas() => sucio = true;
         public bool Fertilidad { get => terreno.ConFertilidad; set => terreno.ConFertilidad = value; }
 
         /// <summary>Donde está el héroe ahora (u) y si lo que se sigue es su columna.</summary>
@@ -179,6 +186,7 @@ namespace ConquestTactics.Mundo.Mapa
         {
             var radioInicial = datos.Numero("reglas.territorio.radio_inicial") / 1000;
             Cosas = CosasDelMapa.Reunir(sesion.Almacen, heroeId(), ahora, artefacto.Nodos, radioInicial);
+            Cosas.AddRange(Adicionales);
             var d = Camara.Distancia;
             double lejosCarga = Math.Min(PinturaDelMapa.DistanciaCarga, d * 7), cerca = Math.Min(d * 2.2, lejosCarga * 0.4);
             pintor.Pintar(Cosas, cx, cy, lejosCarga);
@@ -187,7 +195,9 @@ namespace ConquestTactics.Mundo.Mapa
             {
                 sucio = false;
                 proximasRayas = Time.unscaledTime + 0.5f;
-                pintor.Rayas(CosasDelMapa.Rayas(sesion.Almacen, heroeId(), datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion"), ahora));
+                var rayas = CosasDelMapa.Rayas(sesion.Almacen, heroeId(), datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion"), ahora);
+                rayas.AddRange(RayasAdicionales);
+                pintor.Rayas(rayas);
             }
             if (Seleccionada == null) return;
             var ahoraSel = Cosas.Find(c => c.Id == Seleccionada.Id && c.Clase == Seleccionada.Clase);
@@ -296,7 +306,16 @@ namespace ConquestTactics.Mundo.Mapa
             var heroe = id == null ? null : sesion.Almacen.Buscar(TipoEntidad.Heroe, id)?.Heroe;
             Columna = null;
             Centro = null;
-            if (heroe?.Ubicacion == null) { Mostrar(false); return; }
+            if (heroe?.Ubicacion == null)
+            {
+                if (Enfoque != null)
+                {
+                    Centro = Enfoque;
+                    Camara.RadioVision = RadioVisionFijo ?? datos.Numero("documentos.Movimiento_Ejercitos.VISION.jugadorSolo");
+                }
+                Mostrar(false);
+                return;
+            }
             if (heroe.Ubicacion.DondeCase == UbicacionHeroe.DondeOneofCase.EjercitoId)
                 Columna = sesion.Almacen.Buscar(TipoEntidad.Ejercito, heroe.Ubicacion.EjercitoId)?.Ejercito;
             if (Columna != null)

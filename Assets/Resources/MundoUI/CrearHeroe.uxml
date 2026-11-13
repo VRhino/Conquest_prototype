@@ -1,0 +1,45 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Crear el héroe (paso 3 del bloque 4; BronzeAgeClient: ui/eleccionCampamento.ts y ui/clasesHeroe.ts): el campamento donde nacer, sobre el
+         mapa del paso 2, la clase y el nombre. El fondo deja pasar el ratón al mapa. -->
+    <ui:VisualElement name="crear" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+        <ui:VisualElement name="nombres" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;" />
+        <ui:VisualElement class="barra-arriba">
+            <ui:Label class="titulo" text="NACE TU HÉROE" />
+            <ui:Button name="cambiar-partida" class="boton-secundario" text="Cambiar de partida" />
+            <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
+        </ui:VisualElement>
+        <ui:VisualElement class="placa panel-izquierda">
+            <ui:VisualElement class="placa-filete panel-relleno">
+                <ui:Label class="kicker" text="DÓNDE NACER" style="margin-top: 0;" />
+                <ui:Label class="campo-ayuda" text="Los campamentos de mercenarios donde se puede nacer. Elige uno aquí o en el mapa." style="margin-bottom: 8px;" />
+                <ui:ScrollView name="campamentos" style="flex-grow: 1;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="placa panel-derecha">
+            <ui:VisualElement class="placa-filete panel-relleno" style="padding: 0;">
+            <ui:ScrollView style="flex-grow: 1; padding: 14px 16px 0 16px;">
+                <ui:Label name="campamento-nombre" class="dialogo-titulo" />
+                <ui:VisualElement name="campamento-datos" />
+                <ui:Label class="kicker" text="TU CLASE" />
+                <ui:VisualElement name="clases" class="fila-envuelta" />
+                <ui:Label name="clase-armaduras" class="ficha-valor oculto" style="-unity-text-align: middle-left; margin-top: 6px;" />
+                <ui:VisualElement name="clase-atributos" />
+                <ui:Label name="clase-equipo-titulo" class="campo-ayuda oculto" text="Nace con:" style="margin-top: 6px;" />
+                <ui:Label name="clase-equipo" class="aviso-texto oculto" />
+            </ui:ScrollView>
+            <!-- El nombre y «Nacer», siempre a la vista (y el rechazo junto al campo). -->
+            <ui:VisualElement style="padding: 8px 16px 14px 16px; border-top-width: 1px; border-color: rgb(107, 74, 41);">
+                    <ui:Label class="kicker" text="TU NOMBRE" />
+                    <ui:VisualElement name="campo-nombre" class="campo">
+                        <ui:TextField name="nombre" class="entrada" max-length="24" />
+                        <ui:Label name="nombre-error" class="campo-error oculto" />
+                        <ui:Label class="campo-ayuda" text="De 1 a 24 caracteres. Vacío, tu héroe se llamará «Héroe N»." />
+                    </ui:VisualElement>
+                    <ui:Label name="error" class="error oculto" />
+                    <ui:Label name="falta" class="campo-ayuda" />
+                    <ui:Button name="nacer" class="boton-primario oculto" text="NACER AQUÍ" />
+            </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -164,3 +164,15 @@ Button { margin: 0; }
 .lista-fila { flex-direction: column; align-items: stretch; padding: 7px 10px; margin-bottom: 4px; background-color: rgba(34, 26, 18, 0.7); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; }
 .lista-fila:hover { border-color: var(--bronce); }
 .ficha-mapa .boton-secundario { margin-bottom: 6px; height: 32px; }
+
+/* Crear el héroe: la lista de campamentos a la izquierda y la ficha con la clase y el nombre a la derecha, sobre el mapa. */
+.panel-izquierda { position: absolute; left: 12px; top: 64px; bottom: 12px; width: 300px; }
+.panel-derecha { position: absolute; right: 12px; top: 64px; bottom: 12px; width: 420px; }
+.panel-relleno { flex-grow: 1; padding: 14px 16px; }
+.fila-envuelta { flex-direction: row; flex-wrap: wrap; }
+.fila-envuelta > Button { margin: 0 6px 6px 0; }
+.campamento { flex-direction: column; align-items: stretch; padding: 8px 10px; margin-bottom: 6px; background-color: rgba(34, 26, 18, 0.7); border-width: 1px; border-color: var(--bronce-osc); border-left-width: 3px; border-radius: 2px; }
+.campamento:hover { border-color: var(--bronce); }
+.campamento--elegido, .clase--elegida { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.16); }
+.clase--elegida { color: var(--oro-claro); }
+.puntos { color: var(--oro); letter-spacing: 2px; }
