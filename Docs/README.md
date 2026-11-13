@@ -62,8 +62,8 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 - [Arquitectura/1_Arquitectura_Actual.md](./Arquitectura/1_Arquitectura_Actual.md):
   Referencia versionada y verificada de la arquitectura de datos actual: persistencia, catálogos,
   `BattleData`, puente entre escenas, entidades ECS, relaciones e inexistencia del contrato de red.
-- [Coordinacion/README.md](./Coordinacion/README.md):
-  Punto de intercambio con BronzeAge y acceso a la arquitectura objetivo y al modelo compartido propuesto.
+- [Hoja_De_Ruta.md](./Hoja_De_Ruta.md):
+  Qué falta para que Conquest sea el juego, en qué orden y qué hay decidido. Documento vivo.
 
 ### Mecánicas
 

@@ -8,10 +8,8 @@
 | **Motor** | Unity 6000.5.8f1 |
 | **Runtime de datos** | Entities 6.5.0, arquitectura híbrida ECS/GameObject |
 
-> Este documento describe el código que existe actualmente. No define la arquitectura objetivo ni el
-> contrato futuro con BronzeAge. Las propuestas compartidas viven en
-> [`../Coordinacion/`](../Coordinacion/README.md), especialmente en
-> [`03_Modelo_compartido_entidades_v0.md`](../Coordinacion/03_Modelo_compartido_entidades_v0.md).
+> Este documento describe el código que existe actualmente. No define la arquitectura objetivo: lo que falta y en qué
+> orden está en [`../Hoja_De_Ruta.md`](../Hoja_De_Ruta.md); el contrato con BronzeAge, en su `proto/bronzeage/v1/`.
 
 ## Historial
 

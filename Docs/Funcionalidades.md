@@ -45,7 +45,7 @@ Actualizado: 2026-10-22. Inventario por **presencia de código** en `Assets/Scri
 ## 2. Parcial o sin validar de punta a punta
 
 - 🔄 Matchmaking: simulado, genera batallas locales de prueba.
-- 🔄 Multijugador: no hay contrato de red ni Netcode en el proyecto; la autoridad remota actual es IA local. Ver `Arquitectura/1_Arquitectura_Actual.md` §13 y `Coordinacion/`.
+- ✅ Multijugador: servidor de batalla dedicado con Netcode for Entities, arrancado por el lanzador del motor. Ver `Arquitectura/22_Servidor_De_Batalla_Red_2026-11-11.md`.
 - 🔄 Entrega autenticada de resultados de batalla (los eventos de XP son locales).
 - 🔄 Flujo de partida completo con todos los sistemas visuales y de UI (sin validación automatizada; ver `Mechanics/HeroDeath.md`, «Límites actuales»).
 - 🔄 Cámara espectador y HUD de enfriamiento de respawn.
