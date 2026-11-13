@@ -198,19 +198,49 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var claseElegida = clasesDelMotor.ClaseDelMotor.Id;
                 yield return ClicUGUI(ratonCrear, creador.femaleButton);
                 Assert.AreEqual(Gender.Female, creador.sliderController.avatarPartSelector.currentGender, "mujer, con el ratón");
+                // Piezas que no son las de por defecto: pelo 2, cabeza 1 y cejas 1.
                 creador.sliderController.hairSlider.value = 2;
+                creador.sliderController.headSlider.value = 1;
+                creador.sliderController.eyebrowSlider.value = 1;
                 yield return null;
                 var aspecto = creador.sliderController.avatarPartSelector.GetCurrentSelection();
                 Assert.IsNotEmpty(aspecto.hairId, "el pelo, con su id de AvatarPartDatabase");
                 StringAssert.Contains(raiz.Q<TextField>("nombre").value, creador.heroNameInput.text, "el nombre, como texto");
                 Assert.IsFalse(creador.heroNameInput.interactable, "que no se edita allí");
                 yield return CapturarCreador("8d_creador_listo");
+                foreach (var (ancho, alto) in Tamanos) yield return CapturarCreador($"8e_creador_{ancho}x{alto}", ancho, alto);
                 yield return ClicUGUI(ratonCrear, Boton(creador, "continueButton"));
                 yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
                 Assert.IsNull(UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>(), "el creador, descargado");
-                var heroe = conexion.Sesion.Almacen.Todas(BronzeAge.Contract.V1.Entidad.CuerpoOneofCase.Heroe).Select(e => e.Heroe).FirstOrDefault(h => h.Id == conexion.HeroeId);
-                if (heroe != null) Assert.AreEqual(claseElegida, heroe.ClassDefinitionId, "el héroe nace con la clase elegida en el creador");
-                else Debug.Log("[Prueba] el héroe aún no está en el almacén: la clase no se comprueba");
+                // El motor guarda lo elegido y lo devuelve en el Heroe propio: la clase, mujer y las mismas piezas.
+                BronzeAge.Contract.V1.Heroe heroe = null;
+                yield return Esperar(() => (heroe = conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId)?.Heroe) != null, 10, "el héroe en el almacén");
+                Assert.AreEqual(claseElegida, heroe.ClassDefinitionId, "el héroe nace con la clase elegida en el creador");
+                Assert.IsTrue(heroe.Femenino, "mujer, guardado por el motor");
+                Assert.IsNotNull(heroe.Avatar, "con su avatar");
+                Assert.AreNotEqual("head_00", aspecto.headId, "una cabeza que no es la de por defecto");
+                Assert.AreEqual(aspecto.headId, heroe.Avatar.CabezaId, "la cabeza, de vuelta igual");
+                Assert.AreEqual(aspecto.hairId, heroe.Avatar.PeloId, "el pelo");
+                Assert.AreEqual(aspecto.eyebrowId, heroe.Avatar.CejasId, "las cejas");
+                Assert.AreEqual(aspecto.beardId ?? "", heroe.Avatar.BarbaId, "sin barba");
+                // Y se ve en el diagnóstico (F2, con un teclado del Input System).
+                var teclado = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+                try
+                {
+                    teclado.MakeCurrent();
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
+                    yield return null;
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                    yield return Esperar(() => raiz.Query<Label>().ToList().Any(l => l.text.StartsWith("mujer · cabeza") && Visible(l)), 5, "el aspecto en el diagnóstico (F2)");
+                    Assert.IsFalse(raiz.Query<Label>().ToList().Any(l => l.text == "Eres miembro, aún sin héroe." && Visible(l)), "recién nacido, el diagnóstico ya tiene héroe");
+                    yield return Capturar("9d_diagnostico_con_el_aspecto");
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
+                    yield return null;
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                    yield return null;
+                }
+                finally { UnityEngine.InputSystem.InputSystem.RemoveDevice(teclado); }
+                Debug.Log($"[Prueba] aspecto elegido {aspecto.headId}/{aspecto.hairId}/{aspecto.eyebrowId}; guardado {heroe.Avatar}, femenino {heroe.Femenino}");
             }
             finally
             {
@@ -462,7 +492,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>El creador de personaje (UGUI, en pantalla): su lienzo pasa un momento a la cámara de su escena, que pinta en una textura.</summary>
-        IEnumerator CapturarCreador(string nombre)
+        IEnumerator CapturarCreador(string nombre, int ancho = 1600, int alto = 900)
         {
             var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
             yield return null;
@@ -471,11 +501,22 @@ namespace ConquestTactics.Mundo.UI.Tests
             var cam = raices.SelectMany(g => g.GetComponentsInChildren<Camera>()).FirstOrDefault(x => x.isActiveAndEnabled && x.targetTexture == null);
             Assert.IsNotNull(cam, "la cámara del creador");
             var lienzos = raices.SelectMany(g => g.GetComponentsInChildren<Canvas>()).Where(x => x.isRootCanvas && x.renderMode == RenderMode.ScreenSpaceOverlay).ToList();
-            var destino = new RenderTexture(1600, 900, 24);
+            var destino = new RenderTexture(ancho, alto, 24);
             foreach (var l in lienzos) { l.renderMode = RenderMode.ScreenSpaceCamera; l.worldCamera = cam; l.planeDistance = cam.nearClipPlane + 0.05f; }
             cam.targetTexture = destino;
             yield return null;
             yield return null;
+            // Lo que se pulsa, dentro de la imagen a este tamaño.
+            var esquinas = new Vector3[4];
+            foreach (var s in raices.SelectMany(g => g.GetComponentsInChildren<UnityEngine.UI.Selectable>()))
+            {
+                ((RectTransform)s.transform).GetWorldCorners(esquinas);
+                foreach (var e in esquinas)
+                {
+                    var p = cam.WorldToScreenPoint(e);
+                    Assert.IsTrue(p.x >= -1 && p.y >= -1 && p.x <= ancho + 1 && p.y <= alto + 1, $"«{s.name}» dentro del creador a {ancho}x{alto} ({p})");
+                }
+            }
             cam.targetTexture = null;
             foreach (var l in lienzos) l.renderMode = RenderMode.ScreenSpaceOverlay;
             RenderTexture.active = destino;

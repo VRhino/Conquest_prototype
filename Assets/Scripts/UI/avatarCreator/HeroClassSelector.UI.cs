@@ -119,7 +119,7 @@ public class HeroClassSelector : MonoBehaviour
                 label.rectTransform.offsetMin = new Vector2(2, 0);
                 label.rectTransform.offsetMax = new Vector2(-2, 0);
                 label.fontSizeMin = 10;
-                label.fontSizeMax = label.fontSize;
+                label.fontSizeMax = Mathf.Min(label.fontSize, 17); // los nombres del motor son largos («Lanza y escudo grande redondo»): en dos líneas
                 etiquetasDelMotor[clase] = label;
             }
             buttonGO.GetComponent<Button>()?.onClick.AddListener(() => ElegirDelMotor(esta));

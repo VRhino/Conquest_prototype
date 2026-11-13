@@ -104,7 +104,7 @@ servidor real. Entre paréntesis, la sección del inventario.
 **Pedidos al motor que salgan de la migración:**
 
 - **Salir del campamento con destino en una sola orden** (paso 2, 2026-11-13): `salirDelCampamento` con `objetivo` contesta `objetivo.no_soportado`, así que el clic en el mapa desde dentro de un campamento manda dos órdenes (salir y luego `marcharA`). Funciona así; con una sola orden sería atómico.
-- **Guardar el género y el avatar del héroe** (paso 3, 2026-11-13): `crearHeroe` los recibe y hoy los ignora (`sesiones/ordenes.rs`: «se ignoran hasta que Conquest publique su catálogo»). El catálogo está en Conquest: `Assets/Resources/Data/Avatar/AvatarPartDatabase.asset` (ids `head_00`, `hair_01`, `eyebrow_01`, `facialhair_01`…). Sin esto, el aspecto elegido no llega a los demás ni a la batalla.
+- ~~**Guardar el género y el avatar del héroe**~~ (paso 3, 2026-11-13) ✅ resuelto en el motor 358af5ff (contrato 0.25.0, partida nueva): `crearHeroe` guarda el género (`""`, `masculino` o `femenino`) y las cuatro piezas (ids de hasta 32 caracteres; si no, `heroe.aspecto_invalido`) y los devuelve en `Heroe.femenino` y `Heroe.avatar`. Conquest los manda desde el creador de personaje y la prueba los lee de vuelta. El catálogo de piezas sigue en Conquest (`AvatarPartDatabase.asset`).
 
 ## 5. Arte (en paralelo)
 

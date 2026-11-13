@@ -35,6 +35,8 @@ sesión viva. Al entrar en la partida pasa por dos pantallas:
   bandidos van más grandes, como marcas, y sin los nombres de los nodos (serían cientos).
 - **Ids.** La `Bienvenida` y el artefacto nombran los campamentos de forma distinta (`camp-N` y `campamento-N`). Se cruzan por N, como en
   BronzeAgeClient.
+- **Los rótulos del mapa** se colocan en fracción de la vista de la cámara sobre su capa. Antes salían desplazados en las capturas de
+  la prueba, en las que la interfaz pinta en una textura de otro tamaño; en el juego ya coincidían.
 - **Nombre del campamento.** Cada campamento lleva el nombre de su región del generador, con las 16 áreas de BronzeAgeClient
   (`regionDe`). Si dos caen en la misma región, se añade hacia dónde queda cada uno («Valle meridional (noroeste)»); si aún chocan, un
   número romano. El artefacto no trae la semilla, así que cerca de una linde el nombre puede ser el de la región vecina. Sin tamaño de
@@ -65,7 +67,9 @@ sesión viva. Al entrar en la partida pasa por dos pantallas:
   - Muestra las 5 clases de `/v1/datos`, empezando por la primera. La ficha de cada una enseña sus armaduras, atributos y equipo
     inicial. El maniquí se viste con la armadura inicial de la clase (ligera, media o pesada) y se vuelve a vestir al cambiar de género.
   - Las ventajas y habilidades de las clases de relleno no se enseñan.
-  - El nombre y el lugar aparecen como texto («Naces en …» y el campo del nombre sin poder editarse). Los botones son «Nacer» y
+  - El nombre y el lugar aparecen como texto («Naces en …» y el campo del nombre sin poder editarse). Las etiquetas pasan al
+    español (Género, Hombre, Mujer, Cabeza, Pelo, Cejas, Barba —sin barba ni su título para una mujer—, Tu clase). Los nombres de
+    clase, largos, ocupan dos o tres líneas en su parte de la fila. Los botones son «Nacer» y
     «Volver».
 - **El aspecto que se manda.** El género va como `masculino` o `femenino`. Las piezas salen de `AvatarPartSelector.GetCurrentSelection()`
   con los ids de `AvatarPartDatabase.asset` (`head_00`, `hair_01`…) y van a `cabeza_id`, `pelo_id`, `barba_id` y `cejas_id`.
@@ -82,11 +86,17 @@ sesión viva. Al entrar en la partida pasa por dos pantallas:
   continuar guarda en `player_save.json` y va a `CharacterSelection`. La lista de héroes (`CharacterselecctionScene`) no se ha tocado: el
   autor dirá dónde entra en el flujo.
 
-## Pedido al motor
+## El aspecto, guardado en el motor
 
-El motor recibe el género y el avatar de `crearHeroe` y los ignora (`sesiones/ordenes.rs`: «se ignoran hasta que Conquest publique su
-catálogo»). Hasta que los guarde, el aspecto elegido no llega a los demás jugadores ni a la batalla. El catálogo de piezas ya existe en
-`AvatarPartDatabase.asset`. Está apuntado en «Pedidos al motor» del bloque 4.
+Desde el motor 358af5ff (contrato 0.25.0; hace falta partida nueva), `crearHeroe` guarda el género y las cuatro piezas. Los devuelve en
+`Heroe.femenino` y `Heroe.avatar`, tanto en el héroe propio como en el público, y en el ticket de batalla. El proto solo cambió en
+comentarios, así que la DLL del contrato de Conquest no se regenera: `Heroe.Femenino` y `Heroe.Avatar` ya estaban.
+
+- **Lo que acepta.** El género vale `""` (masculino), `masculino` o `femenino`; cualquier otro valor da `orden.forma_invalida`. Cada pieza
+  va vacía (la de por defecto) o es un id de hasta 32 letras ASCII, cifras, `_` o `-`; si no, da `heroe.aspecto_invalido`, que tiene su
+  frase en `Textos`. Los ids de `AvatarPartDatabase` (`head_01`, `hair_03`…) cumplen. Una mujer no tiene barba: va vacía.
+- **Dónde se ve.** El almacén guarda el `Heroe` tal cual llega. El diagnóstico (F2) lo enseña en la línea «Aspecto» («mujer · cabeza
+  head_01 · pelo hair_03 · barba por defecto · cejas eyebrow_02»). Todavía no hay otra pantalla que lo muestre.
 
 ## Pruebas
 
@@ -104,6 +114,8 @@ catálogo»). Hasta que los guarde, el aspecto elegido no llega a los demás jug
   6. Con un nombre ya usado, el creador se abre con las 5 clases (cada una pulsada con el ratón), «Nacer» da el rechazo allí, y «Volver»
      regresa con el campamento, el nombre y el rechazo junto al campo.
   7. Con otro nombre: otra clase, mujer y otro pelo, y «Nacer».
-  8. El héroe aparece en el mapa dentro de su campamento, con la clase elegida, y desde ahí sigue la prueba del paso 2.
+  8. El creador, capturado en los cuatro tamaños, con todo lo que se pulsa dentro de la imagen.
+  9. El héroe aparece en el mapa dentro de su campamento. El `Heroe` propio vuelve con la clase elegida, mujer y las mismas tres piezas
+     (cabeza, pelo y cejas no son las de por defecto; la barba, vacía), y F2 lo enseña. Desde ahí sigue la prueba del paso 2.
 - **`PantallasDeMundoTests.ElCreadorDeConquestSigueConSusClases`** (PlayMode): sin encargo, el creador sigue con sus 4 clases y el
   nombre editable.

@@ -73,6 +73,7 @@ namespace ConquestTactics.Mundo
             ["heroe.nombre_vacio"] = "Tu héroe necesita un nombre.",
             ["heroe.nombre_en_uso"] = "Ya hay un héroe con ese nombre: elige otro.",
             ["heroe.nombre_invalido"] = "El nombre del héroe debe tener de 1 a 24 caracteres, sin espacios al principio ni al final.",
+            ["heroe.aspecto_invalido"] = "Alguna pieza del aspecto no es válida: vuelve a elegir cabeza, pelo, barba o cejas.",
             // Misiones
             ["mision.desconocida"] = "Esa misión no existe.",
             ["mision.no_cumplida"] = "Esa misión aún no está cumplida.",

@@ -168,7 +168,8 @@ namespace ConquestTactics.Mundo.Mapa
                 var mundo = EscalaDelMapa.AEscena(c.X, c.Y, alturaVisible(c.X, c.Y) + (float)(c.Alto + 0.25) * e);
                 var pantalla = camara.WorldToScreenPoint(mundo);
                 if (pantalla.z <= 0 || pantalla.x < 0 || pantalla.y < 0 || pantalla.x > camara.pixelWidth || pantalla.y > camara.pixelHeight) continue;
-                var enPanel = RuntimePanelUtils.ScreenToPanel(capaNombres.panel, new Vector2(pantalla.x, camara.pixelHeight - pantalla.y));
+                // En fracción de la vista de la cámara sobre la capa (que cubre la pantalla): vale también si el panel pinta en una textura de otro tamaño.
+                var enPanel = new Vector2(pantalla.x / camara.pixelWidth * capaNombres.layout.width, (1 - pantalla.y / camara.pixelHeight) * capaNombres.layout.height);
                 if (usados == nombres.Count)
                 {
                     var l = new Label { pickingMode = PickingMode.Ignore };

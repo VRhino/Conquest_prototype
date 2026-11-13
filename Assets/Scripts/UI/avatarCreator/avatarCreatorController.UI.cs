@@ -24,8 +24,8 @@ public class AvatarCreatorUIController : MonoBehaviour
 
     void Start()
     {
-        maleButton.onClick.AddListener(() => { sliderController.avatarPartSelector.SetGender(Gender.Male); sliderController.SetupSliders(); if (SelectorDePersonaje.Actual != null) classSelector.VestirClaseDelMotor(); });
-        femaleButton.onClick.AddListener(() => { sliderController.avatarPartSelector.SetGender(Gender.Female); sliderController.SetupSliders(); if (SelectorDePersonaje.Actual != null) classSelector.VestirClaseDelMotor(); });
+        maleButton.onClick.AddListener(() => { sliderController.avatarPartSelector.SetGender(Gender.Male); sliderController.SetupSliders(); if (SelectorDePersonaje.Actual != null) { classSelector.VestirClaseDelMotor(); TituloDeBarba(); } });
+        femaleButton.onClick.AddListener(() => { sliderController.avatarPartSelector.SetGender(Gender.Female); sliderController.SetupSliders(); if (SelectorDePersonaje.Actual != null) { classSelector.VestirClaseDelMotor(); TituloDeBarba(); } });
         continueButton.onClick.AddListener(OnContinuePressed);
         cancelButton.onClick.AddListener(OnCancelPressed);
 
@@ -91,6 +91,20 @@ public class AvatarCreatorUIController : MonoBehaviour
         if (titulo) { titulo.text = $"Naces en {encargo.Lugar}"; titulo.enableWordWrapping = false; titulo.enableAutoSizing = true; titulo.fontSizeMin = 14; titulo.fontSizeMax = titulo.fontSize; }
         var tituloNombre = heroNameInput.transform.parent.Find("NameTitle")?.GetComponentInChildren<TMPro.TMP_Text>();
         if (tituloNombre) tituloNombre.text = "Tu nombre";
+        // Las etiquetas del creador, en español (en el flujo viejo siguen como están en el prefab).
+        void Poner(Component junto, string hijo, string texto)
+        {
+            var t = junto ? junto.transform.parent.Find(hijo)?.GetComponentInChildren<TMPro.TMP_Text>() : null;
+            if (t) t.text = texto;
+        }
+        Poner(maleButton, "Gender", "Género");
+        maleButton.GetComponentInChildren<TMPro.TMP_Text>().text = "Hombre";
+        femaleButton.GetComponentInChildren<TMPro.TMP_Text>().text = "Mujer";
+        Poner(sliderController.headSlider, "HeadTitle", "Cabeza");
+        Poner(sliderController.hairSlider, "HairTitle", "Pelo");
+        Poner(sliderController.eyebrowSlider, "EyebrowTitle", "Cejas");
+        Poner(sliderController.facialHairSlider, "FacialHairTitle", "Barba");
+        TituloDeBarba();
         continueButton.GetComponentInChildren<TMPro.TMP_Text>().text = "Nacer";
         cancelButton.GetComponentInChildren<TMPro.TMP_Text>().text = "Volver";
 
@@ -137,6 +151,14 @@ public class AvatarCreatorUIController : MonoBehaviour
         if (this == null) return; // aceptado: la escena ya se ha descargado
         continueButton.interactable = true;
         MostrarError(rechazo);
+    }
+
+    /// <summary>Sin barba (mujer), ni su barra ni su título.</summary>
+    private void TituloDeBarba()
+    {
+        var barra = sliderController.facialHairSlider;
+        var titulo = barra ? barra.transform.parent.Find("FacialHairTitle") : null;
+        if (titulo) titulo.gameObject.SetActive(sliderController.avatarPartSelector.currentGender == Gender.Male);
     }
 
     private void MostrarError(string texto)

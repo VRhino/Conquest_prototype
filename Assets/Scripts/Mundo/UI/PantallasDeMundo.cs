@@ -275,20 +275,30 @@ namespace ConquestTactics.Mundo.UI
             lista.Clear();
             var tarjeta = Dialogo.Caja("partida partida--elegida");
             tarjeta.Add(Dialogo.Texto("Mundo", "partida-nombre"));
-            tarjeta.Add(Dialogo.Texto(LineaDelHeroe(b, c.Sesion.Almacen), "partida-heroe"));
+            tarjeta.Add(Dialogo.Texto(LineaDelHeroe(b, c.Sesion.Almacen, b.HasHeroeId ? b.HeroeId : null), "partida-heroe"));
             tarjeta.Add(Dialogo.Texto($"{c.Servidor} · mundo {b.Mundo.Hash.Substring(0, Math.Min(8, b.Mundo.Hash.Length))}", "partida-detalle"));
             lista.Add(tarjeta);
             entrar.SetEnabled(true);
             entrar.clicked += () => _ = EntrarEnLaPartida();
         }
 
-        static string LineaDelHeroe(Bienvenida b, Almacen a)
+        /// <summary>El género y las piezas que guardó el motor al crear el héroe («mujer · cabeza head_02 · pelo hair_03 …»; vacía, la de por defecto).</summary>
+        static string Aspecto(Heroe h)
         {
-            if (!b.HasHeroeId) return "Eres miembro, aún sin héroe.";
-            var h = a.Buscar(TipoEntidad.Heroe, b.HeroeId)?.Heroe;
+            if (h == null) return "—";
+            string P(string n, string id) => $"{n} {(string.IsNullOrEmpty(id) ? "por defecto" : id)}";
+            var a = h.Avatar ?? new BronzeAge.Contract.V1.Avatar();
+            return $"{(h.Femenino ? "mujer" : "hombre")} · {P("cabeza", a.CabezaId)} · {P("pelo", a.PeloId)} · {P("barba", a.BarbaId)} · {P("cejas", a.CejasId)}";
+        }
+
+        /// <summary>`heroeId`: el de la Bienvenida o, si nació después (en esta sesión), el del ámbito HEROE.</summary>
+        static string LineaDelHeroe(Bienvenida b, Almacen a, string heroeId)
+        {
+            if (heroeId == null) return "Eres miembro, aún sin héroe.";
+            var h = a.Buscar(TipoEntidad.Heroe, heroeId)?.Heroe;
             var faccionId = h != null && h.HasFaccionId ? h.FaccionId : b.HasFaccionId ? b.FaccionId : null;
             var faccion = faccionId == null ? "Sin Facción" : NombreDeFaccion(a, faccionId) ?? "Facción";
-            return $"{Textos.NombreDeHeroe(a, b.HeroeId)} — {faccion} · Nivel {h?.Nivel ?? 1}";
+            return $"{Textos.NombreDeHeroe(a, heroeId)} — {faccion} · Nivel {h?.Nivel ?? 1}";
         }
 
         static string NombreDeFaccion(Almacen a, string id)
@@ -817,7 +827,7 @@ namespace ConquestTactics.Mundo.UI
                 reloj.text = Instante.AFecha(s.AhoraMundo).ToString("dd/MM/yyyy  HH:mm:ss");
                 Fichas(fr, ("Ritmo", s.RelojPausado ? "pausado" : $"×{s.FactorReloj:0.##}"));
                 Fichas(fh, b == null ? new (string, string)[0] : c.HeroeId != null
-                    ? new[] { ("Héroe", LineaDelHeroe(b, s.Almacen)), ("Id", c.HeroeId) }
+                    ? new[] { ("Héroe", LineaDelHeroe(b, s.Almacen, c.HeroeId)), ("Id", c.HeroeId), ("Aspecto", Aspecto(s.Almacen.Buscar(TipoEntidad.Heroe, c.HeroeId)?.Heroe)) }
                     : new[] { ("Héroe", "aún sin héroe"), ("Campamentos donde nacer", b.CampamentosParaElegir.Count.ToString()) });
                 var conexion = new List<(string, string)>
                 {
