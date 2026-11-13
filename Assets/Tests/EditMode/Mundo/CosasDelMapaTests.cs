@@ -43,6 +43,12 @@ namespace ConquestTactics.Mundo.Tests
             var ajena = Cosa(ClaseDeCosa.Plaza, "as-2", 0, 0, 1, "f-2");
             CollectionAssert.AreEqual(new[] { "Entrar" }, CosasDelMapa.Acciones(propia, Jugador(1.5, 0)).Select(a => a.Texto));
             Assert.IsEmpty(CosasDelMapa.Acciones(propia, Jugador(5, 0)), "lejos de la puerta no se entra");
+            var marchando = Jugador(1.5, 0);
+            marchando.EnMarcha = true;
+            Assert.IsEmpty(CosasDelMapa.Acciones(propia, marchando), "con la columna aún en marcha, nada a la puerta");
+            var campamento = Cosa(ClaseDeCosa.Mercenarios, "camp-1", 0, 0, 1, null);
+            CollectionAssert.Contains(CosasDelMapa.Acciones(campamento, Jugador(1.5, 0)).Select(a => a.Texto), "Entrar", "a la puerta de un campamento, parada, se entra");
+            Assert.IsFalse(CosasDelMapa.Acciones(campamento, marchando).Any(a => a.Texto == "Entrar"), "llegando, aún no");
             CollectionAssert.AreEqual(new[] { "Atacar", "Inspeccionar" }, CosasDelMapa.Acciones(ajena, Jugador(0.5, 0)).Select(a => a.Texto));
             CollectionAssert.AreEqual(new[] { "Inspeccionar" }, CosasDelMapa.Acciones(ajena, Jugador(0.5, 0, tipo: TipoColumna.ColumnaPersonal)).Select(a => a.Texto),
                 "un asedio solo lo abre un ejército");

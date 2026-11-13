@@ -83,6 +83,11 @@ public partial class HeroVisualAppearanceSystem : SystemBase
             equipment = remoteAppearance.equipment;
             gender    = remoteAppearance.gender;
         }
+        else if (ConquestTactics.Mundo.SelectorDePersonaje.Interior != null)
+        {
+            // El héroe del motor, en el interior de un campamento.
+            return VestidoDelMotor.Vestir(visualInstance.transform, ConquestTactics.Mundo.SelectorDePersonaje.Interior.Heroe);
+        }
         else
         {
             var heroData = PlayerSessionService.SelectedHero;

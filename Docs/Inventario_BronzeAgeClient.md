@@ -218,8 +218,9 @@ Las líneas cuentan los ficheros de cada bloque; las órdenes, las distintas que
 - **Órdenes:** `residirEnCampamento`, `comprarEnCampamento`, `reclutarEnCampamento`, `pedirPrestamo`, `repostarEnCampamento`,
   `aportarARefundacion`, `retirarDeRefundacion`, `comprarCaravanaDeRefundacion`, `contratarMercenario`, `prorrogarContrato`,
   `ordenarMercenario`, `mudarMercenario`, `despedirMercenario`, `valorarMercenario`, `reclamarPremioDeRango`.
-- **Depende de:** conexión y FeudoScene. Es el primer interior que pisa un héroe nuevo. La planta del campamento aún no viaja
-  en el `.proto` (antes CQ-007).
+- **Depende de:** conexión y FeudoScene. Es el primer interior que pisa un héroe nuevo. La planta del campamento ya viaja
+  en el `.proto` (`CampamentoMercenarios.planta`, `trazado`, `empalizada`, `empalizada_puerta`; motor del 2026-10-27). Este inventario decía
+  que no (antes CQ-007): corregido el 2026-11-13.
 
 ### 3.16 Taberna, intel y rumores (710 líneas)
 

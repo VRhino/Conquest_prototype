@@ -186,3 +186,10 @@ Button { margin: 0; }
 .comparar-valor { width: 35%; white-space: normal; font-size: 13px; }
 .comparar-gana { color: var(--oro-claro); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }
 .puntos { color: var(--oro); letter-spacing: 2px; }
+
+/* El interior de un campamento (paso 4): la cabecera y la ayuda de abajo; la ventana «Salir al mundo». */
+.ayuda-interior { position: absolute; left: 14px; bottom: 10px; font-size: 12px; color: var(--pergamino); background-color: rgba(20, 15, 10, 0.6); padding: 4px 8px; border-radius: 2px; }
+.salida { width: 520px; max-height: 90%; }
+.salida-fila { flex-direction: row; align-items: center; justify-content: space-between; padding: 3px 0; }
+.salida-fila IntegerField { width: 110px; margin: 0; }
+.salida-seccion { margin-bottom: 10px; }

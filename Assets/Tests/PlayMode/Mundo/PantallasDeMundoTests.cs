@@ -42,7 +42,8 @@ namespace ConquestTactics.Mundo.UI.Tests
         {
             SelectorDePersonaje.Actual = null;
             SelectorDePersonaje.Heroe = null;
-            foreach (var escena in new[] { "AvatarCreator", "CharacterselecctionScene" })
+            SelectorDePersonaje.Interior = null;
+            foreach (var escena in new[] { "AvatarCreator", "CharacterselecctionScene", "FeudoScene" })
             {
                 if (!UnityEngine.SceneManagement.SceneManager.GetSceneByName(escena).isLoaded) continue;
                 var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(escena);
@@ -214,7 +215,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return CapturarCreador("8d_creador_listo");
                 foreach (var (ancho, alto) in Tamanos) yield return CapturarCreador($"8e_creador_{ancho}x{alto}", ancho, alto);
                 yield return ClicUGUI(ratonCrear, Boton(creador, "continueButton"));
-                yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
+                yield return Esperar(() => (raiz.Q("mapa") != null || raiz.Q("interior") != null) && raiz.Q(className: "carga") == null, 60, "el mapa o el interior");
                 Assert.IsNull(UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>(), "el creador, descargado");
                 // El motor guarda lo elegido y lo devuelve en el Heroe propio: la clase, mujer y las mismas piezas.
                 BronzeAge.Contract.V1.Heroe heroe = null;
@@ -227,23 +228,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.AreEqual(aspecto.hairId, heroe.Avatar.PeloId, "el pelo");
                 Assert.AreEqual(aspecto.eyebrowId, heroe.Avatar.CejasId, "las cejas");
                 Assert.AreEqual(aspecto.beardId ?? "", heroe.Avatar.BarbaId, "sin barba");
-                // Y se ve en el diagnóstico (F2, con un teclado del Input System).
-                var teclado = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
-                try
-                {
-                    teclado.MakeCurrent();
-                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
-                    yield return null;
-                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
-                    yield return Esperar(() => raiz.Query<Label>().ToList().Any(l => l.text.StartsWith("mujer · cabeza") && Visible(l)), 5, "el aspecto en el diagnóstico (F2)");
-                    Assert.IsFalse(raiz.Query<Label>().ToList().Any(l => l.text == "Eres miembro, aún sin héroe." && Visible(l)), "recién nacido, el diagnóstico ya tiene héroe");
-                    yield return Capturar("9d_diagnostico_con_el_aspecto");
-                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
-                    yield return null;
-                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
-                    yield return null;
-                }
-                finally { UnityEngine.InputSystem.InputSystem.RemoveDevice(teclado); }
+                // Al nacer, dentro de su campamento: su interior en FeudoScene, andando.
+                yield return EnElInterior(raiz, "16_interior", true);
                 Debug.Log($"[Prueba] aspecto elegido {aspecto.headId}/{aspecto.hairId}/{aspecto.eyebrowId}; guardado {heroe.Avatar}, femenino {heroe.Femenino}");
             }
             finally
@@ -292,14 +278,38 @@ namespace ConquestTactics.Mundo.UI.Tests
             mapa.Camara.PasoDeZoom(-1);
             mapa.Camara.Inclinar(-25);
 
-            // Dentro del campamento: dónde estás y la salida.
-            yield return Esperar(() => !raiz.Q("dentro").ClassListContains("oculto"), 5, "el aviso de dentro");
-            StringAssert.Contains("campamento", raiz.Q<Label>("dentro-texto").text);
-            yield return CapturarMapa(mapa, "9_mapa_dentro_del_campamento");
-            yield return Capturar("9b_interfaz_dentro");
-            Pulsar(raiz.Q<Button>("salir"));
-            yield return Esperar(() => mapa.Columna != null, 10, "la columna al salir");
-            yield return Esperar(() => raiz.Q("dentro").ClassListContains("oculto"), 5, "que se vaya el aviso de dentro");
+            // Fuera del campamento por «Salir al mundo»: la columna a la puerta (ya no hay aviso de «dentro»).
+            yield return Esperar(() => mapa.Columna != null, 10, "la columna fuera");
+            Assert.IsTrue(raiz.Q("dentro").ClassListContains("oculto"), "fuera, sin el aviso de dentro");
+            yield return CapturarMapa(mapa, "9_mapa_tras_salir_al_mundo");
+            // El aspecto que guardó el motor, en el diagnóstico (F2, con un teclado del Input System).
+            var fondoF2 = UnityEngine.InputSystem.InputSystem.settings.backgroundBehavior;
+            var editorF2 = UnityEngine.InputSystem.InputSystem.settings.editorInputBehaviorInPlayMode;
+            UnityEngine.InputSystem.InputSystem.settings.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+            UnityEngine.InputSystem.InputSystem.settings.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            // El teclado, después de ignorar el foco (si no, sin foco en batch nace apagado).
+            var teclado = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+            try
+            {
+                teclado.MakeCurrent();
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
+                yield return null;
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Esperar(() => raiz.Query<Label>().ToList().Any(l => l.text.StartsWith("mujer · cabeza") && Visible(l)), 5, "el aspecto en el diagnóstico (F2)");
+                Assert.IsFalse(raiz.Query<Label>().ToList().Any(l => l.text == "Eres miembro, aún sin héroe." && Visible(l)), "recién nacido, el diagnóstico ya tiene héroe");
+                yield return Capturar("9d_diagnostico_con_el_aspecto");
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
+                yield return null;
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                yield return null;
+            }
+            finally
+            {
+                UnityEngine.InputSystem.InputSystem.RemoveDevice(teclado);
+                UnityEngine.InputSystem.InputSystem.settings.backgroundBehavior = fondoF2;
+                UnityEngine.InputSystem.InputSystem.settings.editorInputBehaviorInPlayMode = editorF2;
+            }
 
             var ajustes = UnityEngine.InputSystem.InputSystem.settings;
             var fondo = ajustes.backgroundBehavior;
@@ -348,6 +358,30 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.Greater(Math.Abs(ahora.x - desde.x) + Math.Abs(ahora.y - desde.y), 0.1, "la columna anda hacia donde se hizo clic");
                 Assert.Greater(mapa.PuntosDeRuta, 1, "con su ruta");
                 yield return CapturarMapa(mapa, "11_mapa_marchando");
+
+                // Volver a entrar: otra vez hasta el campamento («Marchar aquí» en su ficha) y, a la puerta, «Entrar»: de nuevo el interior.
+                mapa.Seleccionar(campamento);
+                yield return Esperar(() => !raiz.Q("ficha").ClassListContains("oculto"), 5, "la ficha del campamento");
+                yield return null;
+                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => b.text == "Marchar aquí"));
+                // Solo lo que se puede hacer: mientras la columna llega, «Entrar» no está; al parar a la puerta, sí.
+                yield return Esperar(() => mapa.Columna?.Estado == BronzeAge.Contract.V1.EstadoColumna.ColumnaMarchando, 10, "la columna en marcha hacia el campamento");
+                yield return new WaitForSecondsRealtime(0.5f);
+                Assert.IsFalse(raiz.Q("ficha-acciones").Query<Button>().ToList().Any(b => b.text == "Entrar"), "con la columna en marcha no se puede entrar");
+                yield return Capturar("17a_llegando_sin_entrar");
+                yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => b.text == "Entrar") == true, 90, "«Entrar» con la columna parada a la puerta");
+                Assert.AreEqual(BronzeAge.Contract.V1.EstadoColumna.ColumnaEstacionada, mapa.Columna.Estado, "«Entrar» sale con la columna parada");
+                yield return Capturar("17_entrar_a_la_puerta");
+                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => b.text == "Entrar"));
+                yield return EnElInterior(raiz, "17_de_vuelta", false);
+                mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+                yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto, 60, "el suelo otra vez");
+                // Y a marchar otra vez, con un clic en el suelo.
+                yield return new WaitForSecondsRealtime(0.5f);
+                var sueloOtraVez = new[] { 0.25f, 0.15f, 0.7f, 0.85f }.SelectMany(fy => new[] { 0.5f, 0.3f, 0.7f }.Select(fx => new Vector2(Screen.width * fx, Screen.height * fy)))
+                    .First(pp => mapa.PuntoBajo(pp) is (double, double) q && CosasDelMapa.BajoElClic(mapa.Cosas, q.Item1, q.Item2, mapa.Camara.PxPorUnidad(Screen.height)).Count == 0);
+                yield return Clic(raton, sueloOtraVez);
+                yield return Esperar(() => mapa.PuntosDeRuta > 1, 10, "la columna en marcha otra vez");
             }
             finally
             {
@@ -482,8 +516,9 @@ namespace ConquestTactics.Mundo.UI.Tests
                     try
                     {
                         raton.MakeCurrent();
+                        LogAssert.ignoreFailingMessages = true; // el interior: el error de relleno del escuadrón vacío al nacer el héroe (ver EnElInterior)
                         yield return ClicUGUI(raton, selector.confirmButton);
-                        yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
+                        yield return Esperar(() => (raiz.Q("mapa") != null || raiz.Q("interior") != null) && raiz.Q(className: "carga") == null, 60, "el mapa o el interior");
                     }
                     finally
                     {
@@ -491,6 +526,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                         entrada.backgroundBehavior = fondoAntes;
                         entrada.editorInputBehaviorInPlayMode = editorAntes;
                     }
+                    // Nació en un campamento y sigue dentro: el interior; de ahí, «Salir al mundo» al mapa.
+                    if (raiz.Q("interior") != null) yield return EnElInterior(raiz, "15a_interior_tras_el_selector", false);
                     Assert.IsFalse(UnityEngine.SceneManagement.SceneManager.GetSceneByName("CharacterselecctionScene").isLoaded, "el selector, descargado");
                     var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
                     yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto, 60, "el suelo");
@@ -537,6 +574,79 @@ namespace ConquestTactics.Mundo.UI.Tests
                 while (!descarga.isDone) yield return null;
             }
             finally { PlayerSessionService.Clear(); }
+        }
+
+        /// <summary>Dentro de un campamento de mercenarios: su interior en FeudoScene con el héroe del motor andando (W, con un teclado del Input
+        /// System), la cabecera, y «Salir al mundo» con su ventana hasta el mapa con la columna fuera. `completo`: también a los cuatro tamaños,
+        /// andando, con el rendimiento.</summary>
+        IEnumerator EnElInterior(VisualElement raiz, string prefijo, bool completo)
+        {
+            // FeudoScene trae errores de relleno que no son de aquí: el escuadrón vacío del héroe al nacer.
+            LogAssert.ignoreFailingMessages = true;
+            var conexion = UnityEngine.Object.FindAnyObjectByType<ConexionDeMundo>();
+            for (var fin = Time.realtimeSinceStartup + 30; raiz.Q("interior") == null && Time.realtimeSinceStartup < fin;) yield return null;
+            if (raiz.Q("interior") == null)
+            {
+                var h = conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId)?.Heroe;
+                Debug.Log($"[Prueba] sin interior: ubicación {h?.Ubicacion}; ámbitos {string.Join(", ", conexion.Sesion.Almacen.Ambitos.Keys)}");
+                yield return Capturar(prefijo + "_sin_interior");
+            }
+            yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior con el héroe dentro");
+            LogAssert.ignoreFailingMessages = false;
+            Assert.IsNull(raiz.Q("mapa"), "sin el mapa");
+            Assert.IsFalse(string.IsNullOrEmpty(raiz.Q<Label>("lugar").text), "dónde estás");
+            StringAssert.Contains("Campamento de mercenarios", raiz.Q<Label>("lugar-detalle").text);
+            var feudo = UnityEngine.SceneManagement.SceneManager.GetSceneByName("FeudoScene");
+            Assert.IsTrue(feudo.isLoaded, "FeudoScene, cargada encima");
+            foreach (var apagado in new[] { "UICanvas", "MinimapCanvas", "NPCs", "Matchmaking", "TestEnv" })
+                Assert.IsFalse(feudo.GetRootGameObjects().Where(g => g.name == apagado).Any(g => g.activeSelf), apagado + ", apagado");
+            Assert.IsNull(PlayerSessionService.SelectedHero, "sin héroe de player_save.json");
+            var campamento = GameObject.Find("Campamento del motor");
+            Assert.IsNotNull(campamento, "el campamento montado desde la planta");
+            Assert.Greater(campamento.transform.childCount, 15, "con sus edificios, calles y empalizada");
+            var heroe = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).First(x => x.IsLocalHero).transform;
+            yield return new WaitForSecondsRealtime(1f);
+            yield return CapturarEscena("FeudoScene", prefijo);
+            yield return Capturar(prefijo + "_cabecera");
+            if (completo)
+            {
+                yield return EnTamanos(raiz, prefijo + "_cabecera");
+                foreach (var (ancho, alto) in Tamanos) yield return CapturarEscena("FeudoScene", $"{prefijo}_{ancho}x{alto}", ancho, alto);
+                // Andar: W un rato, con un teclado del Input System.
+                var fondo = UnityEngine.InputSystem.InputSystem.settings.backgroundBehavior;
+                UnityEngine.InputSystem.InputSystem.settings.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+                var teclado = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+                try
+                {
+                    teclado.MakeCurrent();
+                    var antes = heroe.position;
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.W));
+                    var tiempos = new System.Collections.Generic.List<float>();
+                    for (var fin = Time.realtimeSinceStartup + 2.5f; Time.realtimeSinceStartup < fin;) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    var andado = Vector3.Distance(new Vector3(antes.x, 0, antes.z), new Vector3(heroe.position.x, 0, heroe.position.z));
+                    Assert.Greater(andado, 1f, "el héroe anda con W");
+                    tiempos.Sort();
+                    Debug.Log($"[Interior] andado {andado:0.0} m; fotograma mediana {tiempos[tiempos.Count / 2]:0.0} ms, p95 {tiempos[(int)(tiempos.Count * 0.95)]:0.0} ms, peor {tiempos[tiempos.Count - 1]:0.0} ms ({tiempos.Count} fotogramas)");
+                    yield return CapturarEscena("FeudoScene", prefijo + "_andando");
+                }
+                finally
+                {
+                    UnityEngine.InputSystem.InputSystem.RemoveDevice(teclado);
+                    UnityEngine.InputSystem.InputSystem.settings.backgroundBehavior = fondo;
+                }
+            }
+            // «Salir al mundo»: su ventana y, al aceptarse, el mapa con la columna fuera.
+            Pulsar(raiz.Q<Button>("salir-al-mundo"));
+            yield return null;
+            Assert.IsNotNull(raiz.Q("ventana-salida"), "la ventana de salida");
+            yield return Capturar(prefijo + "_salir_al_mundo");
+            if (completo) yield return EnTamanos(raiz, prefijo + "_salir_al_mundo");
+            Pulsar(raiz.Q("ventana-salida").Q<Button>("salir"));
+            yield return Esperar(() => raiz.Q("mapa") != null && !UnityEngine.SceneManagement.SceneManager.GetSceneByName("FeudoScene").isLoaded, 30, "el mapa tras salir");
+            Assert.IsNull(SelectorDePersonaje.Interior, "sin interior");
+            Assert.IsFalse(UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).Any(x => x.IsLocalHero), "sin el héroe del interior");
         }
 
         /// <summary>¿Está a la vista en el maniquí la pieza `id` de AvatarPartDatabase, para ese género?</summary>
@@ -655,7 +765,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             // Lo que se pulsa, dentro de la imagen a este tamaño.
             var esquinas = new Vector3[4];
             var fuera = new System.Collections.Generic.List<string>();
-            foreach (var s in raices.SelectMany(g => g.GetComponentsInChildren<UnityEngine.UI.Selectable>()))
+            foreach (var s in raices.SelectMany(g => g.GetComponentsInChildren<UnityEngine.UI.Selectable>()).Where(x => x.isActiveAndEnabled))
             {
                 ((RectTransform)s.transform).GetWorldCorners(esquinas);
                 foreach (var e in esquinas)

@@ -95,26 +95,12 @@ public class HeroSelectionSceneController : MonoBehaviour
         if (t) t.text = texto;
     }
 
-    /// <summary>El maniquí con el aspecto que guardó el motor (género, cabeza, pelo, barba, cejas) y la armadura que lleva (ligera, media o
-    /// pesada; las piezas de inicio de Conquest de ese tipo). El equipo puesto pieza a pieza espera a la armería (paso 6 del bloque 4).</summary>
+    /// <summary>El maniquí vestido con el héroe del motor (`VestidoDelMotor`).</summary>
     private void VestirDelMotor(ConquestTactics.Mundo.SelectorDePersonaje.HeroeParaVer heroe)
     {
         if (dummyRoot == null || dummyRoot.childCount == 0) return;
         dummyRoot.gameObject.SetActive(true);
-        var piezas = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
-        if (piezas == null) { Debug.LogError("No se pudo cargar AvatarPartDatabase."); return; }
-        var genero = heroe.Femenino ? Gender.Female : Gender.Male;
-        var aspecto = new List<string>();
-        foreach (var id in new[] { heroe.Cabeza, heroe.Pelo, heroe.Barba, heroe.Cejas })
-            if (!string.IsNullOrEmpty(id)) aspecto.Add(id);
-        Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(dummyRoot, piezas, aspecto, genero);
-        var sufijo = heroe.Armadura == "pesada" ? "H" : heroe.Armadura == "media" ? "M" : "L";
-        foreach (var itemId in new[] { $"Tor{sufijo}ADef", $"Glo{sufijo}ADef", $"Pan{sufijo}ADef", $"Boot{sufijo}ADef" })
-        {
-            var item = ItemService.GetItemById(itemId);
-            if (item != null && !string.IsNullOrEmpty(item.visualPartId))
-                Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(dummyRoot, piezas, item.visualPartId, genero);
-        }
+        VestidoDelMotor.Vestir(dummyRoot, heroe);
     }
 
     void OnCreateHero()

@@ -47,5 +47,26 @@ namespace ConquestTactics.Mundo
 
         /// <summary>El héroe que enseña el selector; null fuera del flujo del motor.</summary>
         public static HeroeParaVer Heroe;
+
+        /// <summary>Un rectángulo de la planta, en unidades locales del campamento (x hacia el este, y hacia el sur), por su centro.</summary>
+        public struct PiezaDePlanta
+        {
+            public string Tipo;
+            public double X, Y, Ancho, Alto;
+        }
+
+        /// <summary>El interior de un campamento de mercenarios en FeudoScene (paso 4 del bloque 4): el héroe que anda y la planta que manda el
+        /// motor (`CampamentoMercenarios.planta`, `trazado`, `empalizada`, `empalizada_puerta`).</summary>
+        public sealed class InteriorParaVer
+        {
+            public HeroeParaVer Heroe;
+            public List<PiezaDePlanta> Edificios = new List<PiezaDePlanta>(), Calles = new List<PiezaDePlanta>(),
+                Empalizada = new List<PiezaDePlanta>(), Puerta = new List<PiezaDePlanta>();
+            /// <summary>Se rellena desde FeudoScene: cuándo hay héroe andando y cuánto tarda un fotograma (para el informe y las pruebas).</summary>
+            public bool HeroeDentro;
+        }
+
+        /// <summary>El interior que se enseña; null fuera del flujo del motor (FeudoScene hace lo de siempre).</summary>
+        public static InteriorParaVer Interior;
     }
 }

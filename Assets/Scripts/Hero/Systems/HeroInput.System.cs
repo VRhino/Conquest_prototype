@@ -112,6 +112,8 @@ public partial class HeroInputSystem : SystemBase
         bool isFeudoPhase = gameState.currentPhase == GamePhase.Feudo;
 
         if (!isFeudoPhase || keyboardInput == null) return;
+        // En el interior de un campamento del motor, los paneles de Conquest (inventario, barracas…) están apagados: viven de datos de relleno.
+        if (ConquestTactics.Mundo.SelectorDePersonaje.Interior != null) return;
 
         // Verificar si el FullscreenPanelManager está disponible
         if (FullscreenPanelManager.Instance == null)

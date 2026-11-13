@@ -297,11 +297,6 @@ namespace ConquestTactics.Mundo.UI
             try { datos = await c.CargarDatos(); }
             catch (Exception e) { await Partidas("No se pudieron leer las reglas: " + e.Message); return; }
             if (this == null || c.Sesion == null || c.HeroeId == null) return;
-            var s = c.Sesion;
-            var b = s.Bienvenida;
-            var h = s.Almacen.Buscar(TipoEntidad.Heroe, c.HeroeId)?.Heroe;
-            var clase = ClaseDeHeroe.Leer(datos).FirstOrDefault(k => k.Id == h?.ClassDefinitionId);
-            var faccionId = h != null && h.HasFaccionId ? h.FaccionId : b.HasFaccionId ? b.FaccionId : null;
             var raiz = pantalla.parent;
             var mundo = gameObject.scene;
 
@@ -316,7 +311,27 @@ namespace ConquestTactics.Mundo.UI
                 if (this != null) raiz.style.display = DisplayStyle.Flex;
             }
 
-            SelectorDePersonaje.Heroe = new SelectorDePersonaje.HeroeParaVer
+            SelectorDePersonaje.Heroe = HeroeParaVer(datos);
+            SelectorDePersonaje.Heroe.Entrar = async () => { await Cerrar(); if (this != null) _ = EntrarEnLaPartida(); };
+            SelectorDePersonaje.Heroe.CerrarSesion = async () => { await Cerrar(); if (this != null) _ = CerrarSesion(); };
+            cerrarEscenaEncima = Cerrar;
+            raiz.style.display = DisplayStyle.None;
+            var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Selector, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            while (!carga.isDone) await Task.Yield();
+            var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Selector);
+            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
+        }
+
+        /// <summary>El héroe de la sesión para las escenas de Conquest (el selector y los interiores): nombre, nivel, Facción, clase, armadura y
+        /// aspecto.</summary>
+        SelectorDePersonaje.HeroeParaVer HeroeParaVer(DatosDeJuego datos)
+        {
+            var s = c.Sesion;
+            var b = s.Bienvenida;
+            var h = s.Almacen.Buscar(TipoEntidad.Heroe, c.HeroeId)?.Heroe;
+            var clase = ClaseDeHeroe.Leer(datos).FirstOrDefault(k => k.Id == h?.ClassDefinitionId);
+            var faccionId = h != null && h.HasFaccionId ? h.FaccionId : b.HasFaccionId ? b.FaccionId : null;
+            return new SelectorDePersonaje.HeroeParaVer
             {
                 Nombre = Textos.NombreDeHeroe(s.Almacen, c.HeroeId),
                 Nivel = h?.Nivel ?? 1,
@@ -325,15 +340,176 @@ namespace ConquestTactics.Mundo.UI
                 Armadura = ClaseDeHeroe.TipoDeArmadura(datos, h?.Equipamiento?.Torso?.ItemDefinitionId) ?? clase?.ArmaduraInicial,
                 Femenino = h?.Femenino ?? false,
                 Cabeza = h?.Avatar?.CabezaId, Pelo = h?.Avatar?.PeloId, Barba = h?.Avatar?.BarbaId, Cejas = h?.Avatar?.CejasId,
-                Entrar = async () => { await Cerrar(); if (this != null) _ = EntrarEnLaPartida(); },
-                CerrarSesion = async () => { await Cerrar(); if (this != null) _ = CerrarSesion(); },
             };
+        }
+
+        // ─────────────────────────── el interior de un campamento ───────────────────────────
+
+        /// <summary>La escena base de los interiores de Conquest.</summary>
+        const string Feudo = "FeudoScene";
+
+        /// <summary>El campamento de mercenarios donde está dentro el héroe, con su planta ya llegada (ámbito CAMPAMENTO); si no, null.</summary>
+        CampamentoMercenarios CampamentoDondeEsta()
+        {
+            var u = HeroeAhora()?.Ubicacion;
+            if (u == null || u.DondeCase != UbicacionHeroe.DondeOneofCase.CampamentoId) return null;
+            var camp = c.Sesion.Almacen.Buscar(TipoEntidad.CampamentoMercenarios, u.CampamentoId)?.CampamentoMercenarios;
+            return camp != null && camp.Planta.Count > 0 ? camp : null;
+        }
+
+        /// <summary>El nombre que se enseña de un campamento: el de su región, como en «Nace tu héroe».</summary>
+        string NombreDeCampamento(string id)
+        {
+            var b = c.Sesion.Bienvenida;
+            var lista = b.CampamentosParaElegir.Select(x => new AnalisisDeCampamento { Id = x.CampamentoId, X = x.Posicion.X / 1000.0, Y = x.Posicion.Y / 1000.0 }).ToList();
+            foreach (var a in lista) a.Lugar = AnalisisDeCampamento.Nombre(a.Id);
+            var tamano = c.Artefacto?.Manifiesto?.Tamano;
+            if (tamano != null) AnalisisDeCampamento.PonerLugares(lista, tamano.X / 1000.0, tamano.Y / 1000.0);
+            return lista.FirstOrDefault(x => x.Id == id)?.Lugar ?? AnalisisDeCampamento.Nombre(id);
+        }
+
+        /// <summary>Un rectángulo de la planta (esquina, ancho y alto en unidades locales) por su centro.</summary>
+        static SelectorDePersonaje.PiezaDePlanta Pieza(RectLocal r, string tipo) =>
+            new SelectorDePersonaje.PiezaDePlanta { Tipo = tipo, X = r.X + r.Ancho / 2.0, Y = r.Y + r.Alto / 2.0, Ancho = r.Ancho, Alto = r.Alto };
+
+        /// <summary>El interior del campamento donde está el héroe (paso 4 del bloque 4): FeudoScene encima de esta escena, en modo «desde el
+        /// motor», con el campamento montado desde la planta del motor y el héroe andando; aquí, la cabecera (dónde estás, avisos, «Salir al
+        /// mundo», cerrar sesión). La sesión sigue viva en este objeto. Al salir al mundo, el mapa con la columna fuera.</summary>
+        async void Interior(CampamentoMercenarios camp)
+        {
+            if (SelectorDePersonaje.Interior != null) return;
+            var v = Montar("Interior");
+            var lugar = NombreDeCampamento(camp.Id);
+            var h = HeroeAhora();
+            bool resides = h != null && camp.ResidentesIds.Contains(h.Id);
+            v.Q<Label>("lugar").text = lugar.ToUpperInvariant();
+            v.Q<Label>("lugar-detalle").text = $"Campamento de mercenarios · {camp.ResidentesIds.Count} residentes · {(resides ? "tu residencia" : "de paso")}";
+            var botonAvisos = v.Q<Button>("avisos");
+            botonAvisos.clicked += panelAvisos.Alternar;
+            v.schedule.Execute(() => botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos").Every(250);
+            v.Q<Button>("cerrar-sesion").clicked += async () =>
+            {
+                if (await dialogo.Abrir("Tu héroe sale del mundo y se cierra la sesión en este equipo.", "¿Cerrar sesión?", "Cerrar sesión")) _ = CerrarSesion();
+            };
+            v.Q<Button>("salir-al-mundo").clicked += () => VentanaDeSalida(camp, lugar, resides);
+
+            var interior = new SelectorDePersonaje.InteriorParaVer { Heroe = HeroeParaVer(c.Datos) };
+            foreach (var e in camp.Planta)
+                interior.Edificios.Add(new SelectorDePersonaje.PiezaDePlanta { Tipo = e.Tipo, X = e.Posicion.X / 1000.0, Y = e.Posicion.Y / 1000.0, Ancho = e.Ancho, Alto = e.Alto });
+            if (camp.Trazado != null) foreach (var r in camp.Trazado.Calles) interior.Calles.Add(Pieza(r, "calle"));
+            foreach (var r in camp.Empalizada) interior.Empalizada.Add(Pieza(r, "empalizada"));
+            foreach (var r in camp.EmpalizadaPuerta) interior.Puerta.Add(Pieza(r, "puerta"));
+
+            // La cámara del mundo se aparta (FeudoScene trae la suya, que sigue al héroe).
+            var camaraDelMundo = Camera.main;
+            if (camaraDelMundo != null) camaraDelMundo.gameObject.SetActive(false);
+            var mundo = gameObject.scene;
+            async Task Cerrar()
+            {
+                if (SelectorDePersonaje.Interior == null) return;
+                cerrarEscenaEncima = null;
+                cerrarInterior = null;
+                if (mundo.IsValid() && mundo.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(mundo);
+                var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(Feudo);
+                while (descarga != null && !descarga.isDone) await Task.Yield();
+                SelectorDePersonaje.Interior = null;
+                if (camaraDelMundo != null) camaraDelMundo.gameObject.SetActive(true);
+            }
+            SelectorDePersonaje.Interior = interior;
             cerrarEscenaEncima = Cerrar;
-            raiz.style.display = DisplayStyle.None;
-            var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Selector, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            cerrarInterior = Cerrar;
+            var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Feudo, UnityEngine.SceneManagement.LoadSceneMode.Additive);
             while (!carga.isDone) await Task.Yield();
-            var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Selector);
-            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
+            var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Feudo);
+            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz, y el héroe nace en ella
+        }
+
+        /// <summary>Cierra el interior abierto (lo usa «Salir al mundo» antes de volver al mapa).</summary>
+        Func<Task> cerrarInterior;
+
+        /// <summary>«Salir al mundo» desde un campamento (BronzeAgeClient: `ui/ventanaSalida.ts`, `ui/cargaDeSalida.ts`): con qué tropa y qué
+        /// carga sales, solo lo que se puede elegir de verdad. La tropa es la que tienes en el campamento si resides aquí; la carga, de tu
+        /// almacén personal, también solo si resides. Sale `salirDelCampamento` y, aceptada, el mapa con la columna a la puerta. El modo
+        /// «Ejército» (convocatorias) es del paso 11 y la velocidad de la columna llega con la tropa (paso 6).</summary>
+        void VentanaDeSalida(CampamentoMercenarios camp, string lugar, bool resides)
+        {
+            var h = HeroeAhora();
+            if (h == null) return;
+            var a = c.Sesion.Almacen;
+            var velo = Dialogo.Caja("dialogo-velo");
+            velo.name = "ventana-salida";
+            var placa = Dialogo.Caja("placa dialogo salida");
+            var filete = Dialogo.Caja("placa-filete");
+            placa.Add(filete);
+            velo.Add(placa);
+            filete.Add(Dialogo.Texto("SALIR AL MUNDO", "dialogo-titulo"));
+            filete.Add(Dialogo.Texto($"Sales por la puerta de {lugar} con tu columna.", "dialogo-texto"));
+            var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical };
+            cuerpo.style.flexShrink = 1;
+            filete.Add(cuerpo);
+
+            // La tropa: tus escuadras que esperan en el campamento (solo si resides aquí).
+            var tropa = Dialogo.Caja("salida-seccion");
+            cuerpo.Add(tropa);
+            tropa.Add(Dialogo.Texto("TU TROPA", "kicker"));
+            var escuadras = h.EscuadronesIds.Select(id => a.Buscar(TipoEntidad.Escuadron, id)?.Escuadron)
+                .Where(e => e != null && e.Contenedor != null && e.Contenedor.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento).ToList();
+            var marcadas = new List<(Toggle marca, string id)>();
+            if (!resides) tropa.Add(Dialogo.Texto("No resides aquí: sales con tu columna tal como está.", "campo-ayuda"));
+            else if (escuadras.Count == 0) tropa.Add(Dialogo.Texto("No tienes escuadras en el campamento: sales solo con tu héroe.", "campo-ayuda"));
+            else
+                foreach (var e in escuadras)
+                {
+                    var marca = new Toggle($"{(string.IsNullOrEmpty(e.Nombre) ? e.TropaId : e.Nombre)} · {e.Cantidad} hombres") { value = true };
+                    tropa.Add(marca);
+                    marcadas.Add((marca, e.Id));
+                }
+
+            // La carga: lo de tu almacén personal (solo si resides aquí).
+            var carga = Dialogo.Caja("salida-seccion");
+            cuerpo.Add(carga);
+            carga.Add(Dialogo.Texto("LO QUE LLEVAS", "kicker"));
+            var campos = new List<(IntegerField campo, string recurso)>();
+            var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
+            if (!resides) carga.Add(Dialogo.Texto("Tu almacén personal está en tu residencia: sales sin cargar nada de aquí.", "campo-ayuda"));
+            else if (almacen.Count == 0) carga.Add(Dialogo.Texto("Tu almacén personal está vacío.", "campo-ayuda"));
+            else
+                foreach (var kv in almacen.OrderBy(x => x.Key))
+                {
+                    var fila = Dialogo.Caja("salida-fila");
+                    var hay = (int)(kv.Value / 1000);
+                    fila.Add(Dialogo.Texto($"{CosasDelMapa.NombreDeRecurso(kv.Key)} (tienes {hay})", "aviso-texto"));
+                    var campo = new IntegerField { value = 0, name = "carga-" + kv.Key };
+                    campo.RegisterValueChangedCallback(ev => campo.SetValueWithoutNotify(Math.Max(0, Math.Min(hay, ev.newValue))));
+                    fila.Add(campo);
+                    carga.Add(fila);
+                    campos.Add((campo, kv.Key));
+                }
+
+            var error = Dialogo.Texto("", "error oculto");
+            filete.Add(error);
+            var botones = Dialogo.Caja("dialogo-botones");
+            filete.Add(botones);
+            botones.Add(Dialogo.Boton("Cancelar", "boton-secundario", () => velo.RemoveFromHierarchy()));
+            Button salir = null;
+            salir = Dialogo.Boton("Salir", "boton-primario", async () =>
+            {
+                salir.SetEnabled(false);
+                Poner(error, null);
+                var orden = new OrdenSalirDelCampamento { CampamentoId = camp.Id, HeroeId = h.Id, Carga = new Cantidades() };
+                orden.EscuadronIds.AddRange(marcadas.Where(m => m.marca.value).Select(m => m.id));
+                foreach (var (campo, recurso) in campos) if (campo.value > 0) orden.Carga.PorId[recurso] = campo.value * 1000L;
+                ResultadoOrden r;
+                try { r = await c.Sesion.Ordenar(new Orden { SalirDelCampamento = orden }); }
+                catch (ErrorDeSesion e) { Poner(error, e.Message); salir.SetEnabled(true); return; }
+                if (r.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(r.Rechazo)); salir.SetEnabled(true); return; }
+                velo.RemoveFromHierarchy();
+                if (cerrarInterior != null) await cerrarInterior();
+                if (this != null) Mapa();
+            });
+            salir.name = "salir";
+            botones.Add(salir);
+            capaEncima.Add(velo);
         }
 
         /// <summary>El género y las piezas que guardó el motor al crear el héroe («mujer · cabeza head_02 · pelo hair_03 …»; vacía, la de por defecto).</summary>
@@ -730,6 +906,9 @@ namespace ConquestTactics.Mundo.UI
                 forzada.text = mapa.Columna?.MarchaForzada == true ? "Marcha forzada: sí" : "Marcha forzada: no";
                 nodos.text = mapa.NombresDeNodos ? "Nodos: sí" : "Nodos: no";
                 fertilidad.text = mapa.Fertilidad ? "Fertilidad: sí" : "Fertilidad: no";
+                // Dentro de un campamento de mercenarios (con su planta ya llegada): su interior. Los demás sitios, el aviso hasta su paso.
+                var campamento = CampamentoDondeEsta();
+                if (campamento != null) { Interior(campamento); return; }
                 var lugar = LugarDondeEsta();
                 Ver(dentro, lugar != null);
                 if (lugar != null) v.Q<Label>("dentro-texto").text = $"Estás dentro de {lugar}. Su interior llega con su paso; de momento, desde aquí sales al mundo.";

@@ -1,0 +1,16 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- El interior de un campamento de mercenarios (paso 4 del bloque 4), sobre FeudoScene: solo la cabecera (dónde estás, avisos, salir al
+         mundo y cerrar sesión) y cómo se anda. Lo demás lo decide el autor interfaz por interfaz (tanda 4B). El fondo deja pasar todo al juego. -->
+    <ui:VisualElement name="interior" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+        <ui:VisualElement class="barra-arriba">
+            <ui:VisualElement style="flex-grow: 1; flex-shrink: 1; min-width: 0;">
+                <ui:Label name="lugar" class="titulo" />
+                <ui:Label name="lugar-detalle" class="campo-ayuda" style="margin: 0;" />
+            </ui:VisualElement>
+            <ui:Button name="salir-al-mundo" class="boton-secundario" text="Salir al mundo" />
+            <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
+            <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
+        </ui:VisualElement>
+        <ui:Label name="ayuda" class="ayuda-interior" picking-mode="Ignore" text="WASD: andar · Ratón: mirar · Alt: soltar el ratón para pulsar la interfaz" />
+    </ui:VisualElement>
+</ui:UXML>

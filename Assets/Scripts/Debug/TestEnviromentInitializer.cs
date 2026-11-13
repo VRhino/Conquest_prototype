@@ -13,6 +13,8 @@ public class TestEnvironmentInitializer : MonoBehaviour
 
     public void SetupTestEnvironment()
     {
+        // Desde el mundo de BronzeAge (el interior de un campamento) el héroe es el del motor: nada de player_save.json.
+        if (ConquestTactics.Mundo.SelectorDePersonaje.Interior != null) return;
         // Solo inicializar con datos de test si no hay datos de transición
         if (!BattleTransitionData.Instance.HasBattleData() && !PlayerSessionService.IsSessionActive)
         {
