@@ -3,6 +3,7 @@
 Sacados de BronzeAgeClient por `Tools/IconosDelPrototipo/generar.mjs`; no se tocan a mano.
 
 - `edificio/`, `tropa/` y `parte/`: dibujos propios del prototipo (`src/ui/iconosEdificio.ts`, `iconosTropa.ts`, `hudInterior.ts`).
+- `simbolo/`: los símbolos del prototipo que no son emoji (➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛), dibujados en este script (no están en Twemoji ni en las letras).
 - `mapa/`: iconos de [game-icons.net](https://game-icons.net) (repositorio https://github.com/game-icons/icons), con licencia
   [Creative Commons BY 3.0](https://creativecommons.org/licenses/by/3.0/). Autores:
   - **lorc**: hood (bandidos), crested-helmet (heroe), hammer-nails (obra)

@@ -61,8 +61,8 @@ Las clases USS van al final de `Mundo.uss`: `.con-icono`, `.tropa-icono`, `.chip
 | Tropa | los chips de reclutas (🧑) y oro (`.obra-chip`); los carriles con su icono a 30 (el del campamento para lo que se presta, el del edificio militar para lo que se recluta; `arbolTablero`); cada tropa en su caja a 30; «Reclutar N» con el chip de oro, rojo si no llega (`.obra-coste`) |
 | Salir al mundo | cada escuadra con la caja de su tropa a 34 (`.salida-hueco`); cada fila de carga con su emoji (`.carro-fila`); «🌾 Llenar víveres»; la cifra del carro en rojo si no cabe (`.excedido`). Los víveres, en texto como allí |
 | Mapa: nombres | delante del nombre, el icono del mapa 2D del prototipo en su color: columnas y ejércitos (`heroe`, color de facción), campamentos de mercenarios (#6fa3d6), bandidos (#d9534f) y yacimientos (`mena`, `ganado`, `piedra`, en su color). Plazas: su sigilo, que llega con el paso 8 |
-| Mapa: lista bajo el clic | cada fila con su señal redonda de 26 px (`.eleccion-clic-icono`): el glifo del prototipo si Twemoji lo tiene (⚔ batalla, ⛺, ☠, 📜 aeda, ⚒ obra); si no (⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ no son emoji), el icono del mapa de esa cosa |
-| Mapa: ficha | el nivel de los bandidos en tres círculos terracota (`.bandidos-nivel`); cada acción con su glifo (`.puerta-boton-icono`): 🚪 Entrar, ⚔ Atacar, 👁 Inspeccionar, 🎁 Abrir. «Marchar aquí» lleva ➜ en el prototipo, que no es emoji |
+| Mapa: lista bajo el clic | cada fila con su señal redonda de 26 px (`.eleccion-clic-icono`) y el símbolo del prototipo de cada cosa: ⚔ ⛺ ☠ 📜 ⚒ de Twemoji; ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ dibujados por el script |
+| Mapa: ficha | el nivel de los bandidos en tres círculos terracota (`.bandidos-nivel`); cada acción con su glifo (`.puerta-boton-icono`): 🚪 Entrar, ⚔ Atacar, 👁 Inspeccionar, 🎁 Abrir. y ➜ «Marchar aquí» (dibujado por el script) |
 | Nace tu héroe: ficha | «🌾 Fertilidad», «🌲 Bosque», «〰️ Río» y «🌊 Costa o lago» (`htmlFicha`); los yacimientos con su icono del mapa en su color, a 18 px (`htmlNodos`); los bandidos con el suyo en rojo. En la lista, «👥» delante de la gente |
 | Nace tu héroe: comparar | «Yacimientos a 150 u» con icono a 14 y cifra (`iconosCerca`); lo mejor de cada fila en verde sobre verde (`td.gana`) |
 | Nace tu héroe: mapa | los nombres de campamentos y bandidos llevan su icono (los del mapa) |
@@ -71,9 +71,10 @@ Las clases USS van al final de `Mundo.uss`: `.con-icono`, `.tropa-icono`, `.chip
 
 ## Lo que no se ha traído, y en qué paso entra
 
-- **Los glifos que no son emoji.** ➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ • no están en Twemoji (son símbolos de texto, que el prototipo pintaba con la letra del
-  sistema). En la lista bajo el clic los sustituye el icono del mapa de esa cosa; «Marchar aquí» va sin glifo. Si se quieren, hace falta
-  otra fuente con licencia libre (decisión del autor).
+- **Los glifos que no son emoji** (➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛) no están en Twemoji ni en Inter o Cinzel, así que saldrían como cuadros. Desde el paso 5A
+  los dibuja el propio script (familia `simbolo`, teñible, en 32×32). Van donde los pone el prototipo: ➜ en «Marchar aquí» y, en la
+  lista bajo el clic, el de cada cosa (⧗ formación, ⚑ columnas, ⛟ caravanas, ⌂ pueblos, ♜ avanzadas, ✦ alijos, ♛ plazas). • y × están en
+  las letras; ★ está en Inter.
 - **Las etiquetas 3D del mapa** del prototipo llevan ⛺ y ☠ en el texto. Aquí llevan el icono del mapa 2D (la misma cosa, del mismo
   prototipo), que ya estaba.
 - **La tropa del campamento en «Nace tu héroe»** (el edificio a 34 y los chips de tropa a 24): el prototipo adivina el edificio militar en el

@@ -7,7 +7,8 @@
     "Unity.InputSystem",
     "Game.ECS",
     "UnityEngine.UI",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "Conquest.Net"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

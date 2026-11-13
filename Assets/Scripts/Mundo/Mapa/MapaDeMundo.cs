@@ -259,7 +259,9 @@ namespace ConquestTactics.Mundo.Mapa
                 j.ConSoldados = TropasDeLaColumna().Count > 0;
                 j.Lider = Columna.Participantes.Count <= 1 || Columna.LiderId == id;
                 j.Persiguiendo = Columna.Persiguiendo?.PresaId;
-                j.EnMarcha = Columna.Estado != EstadoColumna.ColumnaEstacionada || (Columna.HasFormacionExpiraEnMs && Columna.FormacionExpiraEnMs > sesion.AhoraMundo);
+                j.EnFormacion = Columna.HasFormacionExpiraEnMs && Columna.FormacionExpiraEnMs > sesion.AhoraMundo;
+                j.EnMarcha = Columna.Estado != EstadoColumna.ColumnaEstacionada || j.EnFormacion;
+                j.EnBatalla = Columna.EnBatalla;
             }
             foreach (var c in Cosas) if (c.Clase == ClaseDeCosa.Mercenarios) j.CampamentosDeMercenarios.Add((c.X, c.Y));
             return j;

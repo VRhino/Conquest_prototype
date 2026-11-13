@@ -4,7 +4,10 @@
   "references": [
     "Conquest.Mundo",
     "Conquest.Mundo.Mapa",
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "Conquest.Net",
+    "Unity.Entities",
+    "Unity.Collections"
   ],
   "overrideReferences": true,
   "precompiledReferences": [

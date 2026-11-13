@@ -3,7 +3,8 @@
 //   edificio  los edificios dibujados a mano (`ui/iconosEdificio.ts`)        tropa   las tropas (`ui/iconosTropa.ts`)
 //   parte     las partes del interior que no son edificio (`ui/hudInterior.ts`)    mapa    los del mapa (game-icons.net, `mundo/iconosMapa.json`)
 //   recurso   el emoji de cada recurso (`paletas.ts`, RECURSO_ICONO), dibujado por Twemoji
-//   glifo     los glifos sueltos de las pantallas (⚔ ⛺ ☠ 👁 🚪 …), dibujados por Twemoji; los que no son emoji (➜ ⧗ ⚑ ♛ …) no los tiene
+//   glifo     los glifos sueltos de las pantallas (⚔ ⛺ ☠ 👁 🚪 …), dibujados por Twemoji
+//   simbolo   los símbolos que no son emoji (➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛), dibujados por el script (teñibles)
 // Los dibujos a mano y los del mapa van en blanco y se tiñen (como el `currentColor` del prototipo); los emoji llevan su color. Lo que no
 // tiene dibujo propio lleva el genérico del prototipo (`_otro`). Va en el ensamblado del mapa porque lo usan el mapa y las pantallas.
 using System.Collections.Generic;
@@ -113,38 +114,47 @@ namespace ConquestTactics.Mundo
             }
         }
 
-        /// <summary>El glifo de una cosa en la lista bajo el clic (`ui/eleccionClic.ts`), si es de los que tiene Twemoji: ⚔ batalla, ⛺, ☠, 📜 aeda,
-        /// ⚒ obra. Los demás del prototipo (⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛) no son emoji: null.</summary>
-        public static string GlifoDeCosa(ClaseDeCosa clase) => clase switch
+        /// <summary>El símbolo de una cosa en la lista bajo el clic (`ui/eleccionClic.ts`): ⚔ batalla, ⧗ formación, ⚑ columnas y ejércitos,
+        /// ⛟ caravana, ⌂ pueblo, ♜ avanzada, ⚒ obra, 📜 aeda, ✦ alijo, ⛺ mercenarios, ☠ bandidos, ♛ plaza. Los emoji, de Twemoji
+        /// (`glifo`); los que no lo son, dibujados aquí (`simbolo`).</summary>
+        public static (string familia, string id)? DeLista(ClaseDeCosa clase) => clase switch
         {
-            ClaseDeCosa.Batalla => "atacar",
-            ClaseDeCosa.Mercenarios => "mercenarios",
-            ClaseDeCosa.Bandidos => "bandidos",
-            ClaseDeCosa.Aeda => "aeda",
-            ClaseDeCosa.Obra => "obra",
+            ClaseDeCosa.Batalla => ("glifo", "atacar"),
+            ClaseDeCosa.Formacion => ("simbolo", "reloj"),
+            ClaseDeCosa.Ejercito or ClaseDeCosa.EjercitoAjeno => ("simbolo", "bandera"),
+            ClaseDeCosa.Caravana or ClaseDeCosa.CaravanaAjena => ("simbolo", "carro"),
+            ClaseDeCosa.Pueblo or ClaseDeCosa.Aldea => ("simbolo", "casa"),
+            ClaseDeCosa.Avanzada => ("simbolo", "torre"),
+            ClaseDeCosa.Obra => ("glifo", "obra"),
+            ClaseDeCosa.Aeda => ("glifo", "aeda"),
+            ClaseDeCosa.Alijo => ("simbolo", "estrella"),
+            ClaseDeCosa.Mercenarios => ("glifo", "mercenarios"),
+            ClaseDeCosa.Bandidos => ("glifo", "bandidos"),
+            ClaseDeCosa.Plaza => ("simbolo", "corona"),
             _ => null,
         };
 
-        /// <summary>El glifo de una acción de la ficha (`AccionPuerta.icono` de main.ts): 🚪 entrar, ⚔ atacar, 👁 inspeccionar, 🎁 abrir, 🌾 víveres.
-        /// «Marchar aquí» lleva ➜, que no es emoji; perseguir, interceptar y reclamar no llevan.</summary>
-        public static string GlifoDeAccion(string texto) => texto switch
+        /// <summary>El símbolo de una acción de la ficha (`AccionPuerta.icono` de main.ts): ➜ marchar, 🚪 entrar, ⚔ atacar, 👁 inspeccionar,
+        /// 🎁 abrir, 🌾 víveres. Perseguir, interceptar y reclamar no llevan.</summary>
+        public static (string familia, string id)? DeAccion(string texto) => texto switch
         {
-            "Entrar" or "Entrar con el ejército" => "entrar",
-            "Atacar" => "atacar",
-            "Inspeccionar" => "inspeccionar",
-            "Abrir" => "abrir",
-            "Llenar víveres" => "viveres",
+            "Marchar aquí" => ("simbolo", "flecha"),
+            "Entrar" or "Entrar con el ejército" => ("glifo", "entrar"),
+            "Atacar" => ("glifo", "atacar"),
+            "Inspeccionar" => ("glifo", "inspeccionar"),
+            "Abrir" => ("glifo", "abrir"),
+            "Llenar víveres" => ("glifo", "viveres"),
             _ => null,
         };
 
         /// <summary>Un botón con su glifo delante del texto, como `.puerta-boton` del prototipo.</summary>
-        public static Button BotonConGlifo(string texto, string glifo, string clases, System.Action alPulsar)
+        public static Button BotonConGlifo(string texto, (string familia, string id)? icono, string clases, System.Action alPulsar)
         {
             var b = new Button(alPulsar);
             foreach (var c in clases.Split(' ')) b.AddToClassList(c);
             b.AddToClassList("boton-con-glifo");
-            var icono = glifo == null ? null : Icono("glifo", glifo, 16);
-            if (icono != null) b.Add(icono);
+            var dibujo = icono == null ? null : Icono(icono.Value.familia, icono.Value.id, 16, OroClaro);
+            if (dibujo != null) b.Add(dibujo);
             var l = new Label(texto);
             l.AddToClassList("boton-con-glifo-texto");
             b.Add(l);

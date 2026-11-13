@@ -315,6 +315,9 @@ namespace ConquestTactics.Mundo
             /// <summary>La columna marcha o se está formando: entonces no hay acciones a la puerta (el motor mide la puerta con la columna
             /// donde él la tiene; solo sale lo que se puede hacer, como BronzeAgeClient 0.195.1).</summary>
             public bool EnMarcha;
+            /// <summary>La columna está apartada en una batalla de Unity (`en_batalla`) o se está formando: entonces no ataca (`columna.en_batalla`,
+            /// `columna.en_formacion`).</summary>
+            public bool EnBatalla, EnFormacion;
             public string Persiguiendo;
             /// <summary>Radios de `/v1/datos` (u): puerta, encuentro (ataque), inspección y protección de los mercenarios.</summary>
             public double RadioPuerta, RadioEncuentro, RadioInspeccion, RadioProteccion;
@@ -325,12 +328,13 @@ namespace ConquestTactics.Mundo
         public static List<AccionDelMapa> Acciones(CosaDelMapa c, Contexto j)
         {
             var r = new List<AccionDelMapa>();
-            if (j.Columna == null || c.Clase == ClaseDeCosa.Nodo) return r;
+            // En una batalla la columna no recibe órdenes (`batalla.bloqueado`): nada que hacer hasta que acabe.
+            if (j.Columna == null || j.EnBatalla || c.Clase == ClaseDeCosa.Nodo) return r;
             var d = Distancia(j.X, j.Y, c.X, c.Y);
             bool propia = c.FaccionId != null && c.FaccionId == j.FaccionId;
             bool aLaPuerta = d <= j.RadioPuerta && !j.EnMarcha, lider = j.Lider;
             bool protegido = j.CampamentosDeMercenarios.Any(m => Distancia(m.x, m.y, j.X, j.Y) <= j.RadioProteccion || Distancia(m.x, m.y, c.X, c.Y) <= j.RadioProteccion);
-            bool puedeAtacar = !j.Herido && d <= j.RadioEncuentro && !protegido;
+            bool puedeAtacar = !j.Herido && !j.EnBatalla && !j.EnFormacion && d <= j.RadioEncuentro && !protegido;
             Orden Atacar(OrdenAtacar.Types.Objetivo o) => new Orden { Atacar = new OrdenAtacar { HeroeId = j.HeroeId, Objetivo = o } };
             switch (c.Clase)
             {

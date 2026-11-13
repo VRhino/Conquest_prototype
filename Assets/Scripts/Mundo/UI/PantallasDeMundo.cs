@@ -574,7 +574,7 @@ namespace ConquestTactics.Mundo.UI
                 // Solo lo que se puede hacer: con los víveres llenos no hay nada que repostar.
                 Ver(repostar, tienes < maximoViveres - 0.5);
             }
-            repostar = IconosDelMundo.BotonConGlifo("Llenar víveres", "viveres", "boton-secundario", async () =>
+            repostar = IconosDelMundo.BotonConGlifo("Llenar víveres", ("glifo", "viveres"), "boton-secundario", async () =>
             {
                 repostar.SetEnabled(false);
                 Poner(error, null);
@@ -1027,11 +1027,9 @@ namespace ConquestTactics.Mundo.UI
                     // Cada fila con su señal redonda (`.eleccion-clic-icono`); aquí, el icono del mapa de esa cosa, si lo tiene.
                     var cab = Dialogo.Caja("lista-fila-cab");
                     var redondo = Dialogo.Caja("lista-fila-icono");
-                    // El glifo del prototipo si Twemoji lo tiene (⚔ ⛺ ☠ 📜 ⚒); si no (⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ no son emoji), el icono del mapa de esa cosa.
-                    var glifo = IconosDelMundo.GlifoDeCosa(cosa.Clase);
-                    var deCosa = IconosDelMundo.DeCosa(cosa);
-                    var icono = glifo != null ? IconosDelMundo.Icono("glifo", glifo, 16)
-                        : deCosa != null ? IconosDelMundo.Icono("mapa", deCosa.Value.id, 16, deCosa.Value.color) : null;
+                    // El símbolo del prototipo para cada cosa (los emoji de Twemoji; los demás, dibujados aquí), en oro.
+                    var deLista = IconosDelMundo.DeLista(cosa.Clase);
+                    var icono = deLista == null ? null : IconosDelMundo.Icono(deLista.Value.familia, deLista.Value.id, 16);
                     if (icono != null) redondo.Add(icono);
                     cab.Add(redondo);
                     var textos = Dialogo.Caja("lista-fila-texto");
@@ -1069,6 +1067,7 @@ namespace ConquestTactics.Mundo.UI
                 Ver(dentro, lugar != null);
                 if (lugar != null) v.Q<Label>("dentro-texto").text = $"Estás dentro de {lugar}. Su interior llega con su paso; de momento, desde aquí sales al mundo.";
                 PintarFicha(v);
+                VigilarBatalla();
             }
             Refrescar();
             v.schedule.Execute(Refrescar).Every(250);
@@ -1098,20 +1097,20 @@ namespace ConquestTactics.Mundo.UI
             Fichas(v.Q("ficha-datos"), hasta == null ? new[] { ("Distancia", "sin columna en el mapa") }
                 : new[] { ("Distancia", $"{hasta.Value.distancia:0.#} u"), ("Tiempo de marcha", hasta.Value.tiempo) });
             var acciones = CosasDelMapa.Acciones(cosa, mapa.Contexto());
-            bool marchar = mapa.Columna != null;
+            bool marchar = mapa.Columna != null && !mapa.Columna.EnBatalla;
             var firma = cosa.Clase + cosa.Id + marchar + string.Join("|", acciones.Select(a => a.Texto));
             if (firma == accionesPintadas) return;
             accionesPintadas = firma;
             var caja = v.Q("ficha-acciones");
             caja.Clear();
             if (marchar)
-                caja.Add(Dialogo.Boton("Marchar aquí", "boton-secundario", () =>
+                caja.Add(IconosDelMundo.BotonConGlifo("Marchar aquí", IconosDelMundo.DeAccion("Marchar aquí"), "boton-secundario", () =>
                     _ = cosa.Clase == ClaseDeCosa.Plaza ? mapa.MarcharAPlaza(cosa.Id) : mapa.MarcharA(cosa.X, cosa.Y)));
             foreach (var a in acciones)
             {
                 var accion = a;
                 // Con su glifo delante, como `.puerta-boton-icono` (🚪 entrar, ⚔ atacar, 👁 inspeccionar, 🎁 abrir).
-                caja.Add(IconosDelMundo.BotonConGlifo(accion.Texto, IconosDelMundo.GlifoDeAccion(accion.Texto), "boton-secundario", () => _ = mapa.Ordenar(accion.Orden.Clone())));
+                caja.Add(IconosDelMundo.BotonConGlifo(accion.Texto, IconosDelMundo.DeAccion(accion.Texto), "boton-secundario", () => _ = mapa.Ordenar(accion.Orden.Clone())));
             }
         }
 

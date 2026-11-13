@@ -414,5 +414,15 @@
    "glifo": "⚠",
    "codigo": "26a0"
   }
+ },
+ "simbolo": {
+  "flecha": "➜",
+  "reloj": "⧗",
+  "bandera": "⚑",
+  "carro": "⛟",
+  "casa": "⌂",
+  "torre": "♜",
+  "estrella": "✦",
+  "corona": "♛"
  }
 }

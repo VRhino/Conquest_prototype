@@ -27,7 +27,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             if (rt != null) rt.Release();
         }
 
-        static readonly string[] Familias = { "edificio", "parte", "tropa", "mapa", "recurso" };
+        static readonly string[] Familias = { "edificio", "parte", "tropa", "mapa", "recurso", "glifo", "simbolo" };
 
         static IEnumerable<string> Ids(string familia)
         {
