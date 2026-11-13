@@ -1,6 +1,7 @@
 /* «Bronce y arcilla» (BronzeAgeClient: docs/Diseno_Interfaz.md y src/style.css) en USS, para las pantallas de fuera de la batalla.
    USS no tiene degradados ni sombras: la placa de bronce se hace con bordes (banda de bronce oscuro y filete de bronce). Usa los tokens, no
-   metas colores sueltos. Los titulares van en versales escritas como tales (USS no tiene text-transform). */
+   metas colores sueltos. Los titulares van en versales escritas como tales (USS no tiene text-transform). Letras del prototipo (SIL OFL,
+   en Fuentes/): Inter para el texto y Cinzel para titulares, nombres y la acción principal. */
 :root {
     --tinta: #0b0805;
     --marco-bg: #191410;
@@ -18,6 +19,8 @@
     --rojo-claro: #f0a58f;
     color: var(--pergamino);
     font-size: 16px;
+    -unity-font: url("Fuentes/Inter-Regular.ttf");
+    -unity-font-definition: initial;
 }
 
 .fondo { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: var(--tinta); align-items: center; justify-content: center; }
@@ -143,3 +146,9 @@ Button { margin: 0; }
 .dialogo-botones { flex-direction: row; justify-content: flex-end; }
 .dialogo-botones Button { margin-left: 8px; }
 .dialogo-botones .boton-primario { margin-top: 0; height: 36px; padding: 0 18px; }
+
+/* Las letras: Cinzel para lo que en la guía va con --fuente-titulo; Inter seminegrita para el resto de lo destacado. */
+.titulo, .kicker, .boton-primario, .carga-kicker, .carga-titulo, .dialogo-titulo, .partida-nombre, .reloj {
+    -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal;
+}
+.pestana, .aviso-titulo, .insignia, .avisos-seccion-titulo { -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; -unity-font-style: normal; }

@@ -111,6 +111,7 @@ servidor real. Entre paréntesis, la sección del inventario.
 | **Terreno del ticket:** la batalla en el sitio del mundo (hash del artefacto, centro, paquete de relieve; `06_Contrato_de_Mundo.md` §4 y §8). Va después del mapa de mundo nuevo | ⬜ |
 | **CPU del cliente:** con 130 modelos, la red son 13 puntos de 180 y el resto es animar (~83) y pintar (~84). Menos Animators para los lejanos o animación por GPU | ⬜ |
 | **Interfaz del juego** para el aviso de conexión y el botón de abandonar (hoy una caja provisional y F10 dos veces) | ⬜ |
+| **Marco de bronce de la interfaz de fuera de la batalla** (UI Toolkit, `Assets/Resources/MundoUI/Mundo.uss`): USS no tiene degradados ni sombras, así que hoy la placa va solo con bordes y sin dentículos. Arte en 9-slice para la placa, el botón de oro y la moldura de dentículo, como la guía «bronce y arcilla» (decisión del 2026-11-13) | ⬜ |
 
 ## 6. Decisiones pendientes del autor ❓
 

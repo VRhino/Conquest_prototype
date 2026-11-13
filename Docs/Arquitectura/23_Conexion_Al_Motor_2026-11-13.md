@@ -87,8 +87,8 @@ flujo de la batalla ni en Build Settings.
 | `Avisos` (en `Conquest.Mundo`) | El mecanismo: urgentes aparte, el resto agrupado por clave, leídos, guardado y sin repetir lo ya avisado al reanudar |
 | `Assets/Resources/MundoUI` | Los UXML de cada pantalla, `Mundo.uss` (los tokens y componentes), el tema y las 12 imágenes de carga con `consejos.json` (el mismo archivo que BronzeAgeClient) |
 
-USS no tiene degradados ni sombras: la placa de bronce se hace con bordes, sin dentículos. La letra es la de serie del tema de Unity;
-la Cinzel de los titulares está por traer.
+USS no tiene degradados ni sombras: la placa de bronce se hace con bordes, sin dentículos (el arte en 9-slice está apuntado
+en el bloque 5 de la hoja de ruta). Las letras son las del prototipo, Inter y Cinzel (SIL OFL, en `MundoUI/Fuentes` con sus licencias).
 
 Avisos que ya se cuentan: te observaron o pidieron tu plano, columna con hambre, te echan de un lugar, misión cumplida y bandidos
 vencidos. Los demás entran con su pantalla (inventario §3.19). El informe de combate va con el paso 5.
