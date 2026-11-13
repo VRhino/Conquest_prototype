@@ -88,6 +88,41 @@ public class BatallaDeTicketTests
     }
 
     [Test]
+    public void QuienSaleAMediaBatallaCierraLoSuyoYNoVaEnElResultado()
+    {
+        var batalla = Batalla();
+        batalla.Escuadras.Find(e => e.Id == "esc-9").Muertos = 4;
+
+        var salida = batalla.Salida("heroe-3", MotivoSalida.SalidaAbandono, "a1");
+        Assert.That(salida.Derrotado, Is.True, "quien sale a media batalla queda herido");
+        Assert.That(salida.Escuadras.Count, Is.EqualTo(1));
+        Assert.That((salida.Escuadras[0].SquadId, salida.Escuadras[0].Supervivientes, salida.Escuadras[0].Muertos), Is.EqualTo(("esc-9", 21u, 4u)));
+
+        var r = batalla.Resultado(LadoId.Atacante, RazonVictoria.Aniquilacion, 61000, "a1");
+        Assert.That(r.PorHeroe, Is.Empty);
+        Assert.That(r.PorEscuadra.Count, Is.EqualTo(1), "solo queda la de los bandidos");
+        Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r, null, batalla.Salidos()), Is.Empty);
+        Assert.That(BatallaDeTicket.Comprobar(batalla.Ticket, r), Is.Not.Empty, "sin saber que salió, faltarían él y su escuadra");
+
+        // Quien no llegó a conectarse sale sin castigo: ni herido ni con bajas.
+        var otra = Batalla();
+        otra.Escuadras.Find(e => e.Id == "esc-9").Muertos = 4;
+        var sinCastigo = otra.Salida("heroe-3", MotivoSalida.SalidaNoConectado, "a1");
+        Assert.That(sinCastigo.Derrotado, Is.False);
+        Assert.That((sinCastigo.Escuadras[0].Supervivientes, sinCastigo.Escuadras[0].Muertos), Is.EqualTo((25u, 0u)));
+    }
+
+    [Test]
+    public void SoloEnCampoAbiertoNoSeReaparece()
+    {
+        var ticket = Batalla().Ticket;
+        Assert.That(ReglasDeBatalla.Reaparece(ticket), Is.True, "el dorado es un asalto a una caravana");
+        ticket.ContextoEstrategico = new ContextoEstrategico { CampoAbierto = new ContextoCampoAbierto() };
+        Assert.That(ReglasDeBatalla.Reaparece(ticket), Is.False);
+        Assert.That(ReglasDeBatalla.Reaparece(null), Is.True, "la batalla de prueba, sin ticket");
+    }
+
+    [Test]
     public void UnaTropaQueConquestNoTieneRechazaLaBatalla()
     {
         var batalla = Batalla();

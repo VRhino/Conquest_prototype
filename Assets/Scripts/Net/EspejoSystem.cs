@@ -161,6 +161,9 @@ namespace ConquestTactics.Net
                     if (muerte.visualHidden) animacion.Banderas |= AnimacionRed.Oculto;
                     animacion.RevisionDeMuerte = muerte.deathRevision;
                 }
+                // Quien salió de la batalla ya no está: ni en pie ni caído.
+                if (SystemAPI.HasComponent<FueraDeBatalla>(entidad))
+                    animacion.Banderas |= AnimacionRed.Muerto | AnimacionRed.Oculto;
                 if (SystemAPI.HasComponent<ResilienceComponent>(entidad))
                 {
                     var aguante = SystemAPI.GetComponent<ResilienceComponent>(entidad);

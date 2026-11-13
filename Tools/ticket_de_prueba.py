@@ -1,7 +1,10 @@
 """Hace un ticket de batalla de prueba para la batalla de verdad (-batallaReal con -ticket), a partir de un dorado
 del motor: mismos campos, con cuatro tropas del motor que Conquest ya tiene en su base de escuadras.
 
-    python Tools/ticket_de_prueba.py <salida.json> [dorado.json]
+    python Tools/ticket_de_prueba.py <salida.json> [dorado.json] [--campo-abierto]
+
+El dorado es un asalto a una caravana, donde el héroe que cae reaparece. Con --campo-abierto la batalla pasa a ser de
+columna contra columna, donde el que cae sale de la batalla.
 
 Bando atacante: un héroe de la IA con hoplitas (18) y una escuadra sin héroe de granjeros (20 de 30).
 Bando defensor: un héroe humano con arqueros (18) y otro de la IA con milicia de lanceros (15 de 25).
@@ -27,9 +30,12 @@ def participante(heroe_id, nombre, clase, es_bot, escuadras):
 
 
 def main():
-    salida = sys.argv[1]
-    mensaje = json.load(open(sys.argv[2] if len(sys.argv) > 2 else DORADO, encoding='utf-8'))
+    rutas = [a for a in sys.argv[1:] if not a.startswith('--')]
+    salida = rutas[0]
+    mensaje = json.load(open(rutas[1] if len(rutas) > 1 else DORADO, encoding='utf-8'))
     ticket = mensaje['batalla']['ticket']
+    if '--campo-abierto' in sys.argv:
+        ticket['contextoEstrategico'] = {'campoAbierto': {'punto': {'x': '125000', 'y': '345000'}}}
     ticket['atacante'] = {
         'capacidadMaxima': 5,
         'participantes': [participante('heroe-20', 'Bóreas', 'hacha_dos_manos', True, [escuadra('esc-40', 'hoplitas_ciudadanos', 18, 'heroe-20')])],

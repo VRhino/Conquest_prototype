@@ -65,6 +65,10 @@ namespace ConquestTactics.Net
         public static float ApagonA, ApagonDura;
         /// <summary>Cliente con pantalla, prueba de coste: los modelos salen sin su Animator, para ver cuánta CPU es de la animación.</summary>
         public static bool SinAnimar;
+        /// <summary>Servidor, prueba: a los tantos segundos de batalla cae el primer héroe humano del ticket (para probar la reaparición y la salida por muerte).</summary>
+        public static float CaeA;
+        /// <summary>Cliente bot, prueba: a los tantos segundos de entrar abandona la batalla.</summary>
+        public static float AbandonarA;
 
         public static void Leer()
         {
@@ -106,6 +110,8 @@ namespace ConquestTactics.Net
                     case "-camaraCerca": CamaraCerca = true; break;
                     case "-capturaA": CapturaA = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-sinAnimar": SinAnimar = true; break;
+                    case "-caeA": CaeA = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
+                    case "-abandonarA": AbandonarA = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-apagon":
                         var tramo = siguiente.Split(',');
                         ApagonA = float.Parse(tramo[0], System.Globalization.CultureInfo.InvariantCulture);

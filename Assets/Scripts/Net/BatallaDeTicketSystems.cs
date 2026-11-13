@@ -31,6 +31,13 @@ namespace ConquestTactics.Net
         double _creada = -1;
         double _empezada;
         bool _relojEnMarcha;
+        /// <summary>
+        /// Batalla de verdad con lanzador: cuándo se mandó la salida de los que no llegaron a conectarse. Desde ahí se espera
+        /// el ticket con la revisión subida; si no llega, el motor canceló la batalla. Negativo si no se espera nada.
+        /// </summary>
+        double _esperandoRevision = -1d;
+        /// <summary>Lo que se espera a los jugadores cuando el lanzador no dice cuánto (ponytail: pendiente del autor), y al ticket revisado.</summary>
+        const float EsperaPorDefecto = 60f, EsperaDeRevision = 60f;
         /// <summary>Batalla de verdad: los que se unieron con la batalla en marcha y aún no han salido al campo.</summary>
         readonly System.Collections.Generic.List<IncorporacionBatalla> _porEntrar = new System.Collections.Generic.List<IncorporacionBatalla>();
 
@@ -69,7 +76,13 @@ namespace ConquestTactics.Net
                 Salir(3);
                 return;
             }
+            // Un ticket con la revisión subida (alguien no llegó a conectarse): los que ya estaban dentro siguen con su héroe.
+            var anterior = BatallaDeTicket.Actual;
             BatallaDeTicket.Actual = new BatallaDeTicket(ticket, OpcionesRed.Duracion);
+            if (anterior != null)
+                foreach (var h in BatallaDeTicket.Actual.Heroes)
+                    h.Dueno = anterior.Heroes.Find(v => v.Id == h.Id)?.Dueno ?? 0;
+            _esperandoRevision = -1d;
             _creada = -1;
             Debug.Log($"[Red] Ticket {ticket.BattleId} (revisión {ticket.TicketRevision}): {BatallaDeTicket.Actual.Heroes.Count} héroes, " +
                       $"{BatallaDeTicket.Actual.Escuadras.Count} escuadras, {BatallaDeTicket.Actual.DuracionSegundos} s");
@@ -88,10 +101,28 @@ namespace ConquestTactics.Net
             {
                 if (EnlaceLanzador.Actual != null && batalla.Asignacion == null)
                     return; // sin la asignación no hay tokens con los que recibir a nadie
+                if (_esperandoRevision >= 0d)
+                {
+                    if (ahora - _esperandoRevision > EsperaDeRevision)
+                    {
+                        Debug.Log("[Red] No llega un ticket nuevo: el motor canceló la batalla");
+                        Enabled = false;
+                        Salir(0);
+                    }
+                    return;
+                }
                 RepartirHeroes(batalla);
-                bool todos = batalla.Heroes.TrueForAll(h => h.EsBot || h.Dueno != 0);
-                if (todos || ahora - _creada >= OpcionesRed.EsperaJugadores)
+                bool conLanzador = EnlaceLanzador.Actual != null;
+                float espera = OpcionesRed.EsperaJugadores > 0f || !conLanzador ? OpcionesRed.EsperaJugadores : EsperaPorDefecto;
+                if (batalla.Heroes.TrueForAll(h => h.EsBot || h.Dueno != 0))
                     Empezar(batalla, ahora);
+                else if (ahora - _creada >= espera)
+                {
+                    // Quien no llega a conectarse sale sin castigo y el motor reabre la convocatoria sin él (Doc 5.15.1).
+                    // Sin motor que la reabra (un fichero), y en la batalla de cápsulas, a su héroe lo juega la IA.
+                    if (Real && conLanzador) SacarALosNoConectados(batalla, ahora);
+                    else Empezar(batalla, ahora);
+                }
                 return;
             }
             if (batalla.Terminada)
@@ -189,6 +220,19 @@ namespace ConquestTactics.Net
             }
         }
 
+        void SacarALosNoConectados(BatallaDeTicket batalla, double ahora)
+        {
+            foreach (var h in batalla.Heroes.FindAll(h => !h.EsBot && h.Dueno == 0 && !h.Salio))
+            {
+                Debug.Log($"[Red] {h.Id} no se ha conectado: sale sin castigo");
+                EnlaceLanzador.Actual.Enviar(new MensajeDeServidorDeBatalla
+                {
+                    Salida = batalla.Salida(h.Id, MotivoSalida.SalidaNoConectado, batalla.Asignacion?.IntentoAsignacionId ?? OpcionesRed.Intento),
+                });
+            }
+            _esperandoRevision = ahora;
+        }
+
         /// <summary>Da a cada cliente que espera el héroe de su token (con asignación) o el primero libre (con fichero).</summary>
         void RepartirHeroes(BatallaDeTicket batalla)
         {
@@ -204,7 +248,7 @@ namespace ConquestTactics.Net
                         if (t.Token == token && (t.ExpiraEnMs == 0 || ahoraMs <= t.ExpiraEnMs)) valido = t;
                     // En la batalla de verdad, quien entra otra vez con su token releva a su conexión anterior (su proceso
                     // cayó y el servidor aún no se ha enterado): el héroe es de quien trae el token.
-                    heroe = valido == null ? null : batalla.Heroes.Find(h => h.Id == valido.HeroeId && (h.Dueno == 0 || Real));
+                    heroe = valido == null ? null : batalla.Heroes.Find(h => h.Id == valido.HeroeId && !h.Salio && (h.Dueno == 0 || Real));
                     if (heroe == null)
                     {
                         Debug.LogWarning($"[Red] El jugador {id} no trae un token válido: fuera");
@@ -213,7 +257,7 @@ namespace ConquestTactics.Net
                     }
                 }
                 else
-                    heroe = batalla.Heroes.Find(h => !h.EsBot && h.Dueno == 0);
+                    heroe = batalla.Heroes.Find(h => !h.EsBot && h.Dueno == 0 && !h.Salio);
                 if (heroe != null)
                 {
                     if (heroe.Dueno != 0 && heroe.Dueno != id)
@@ -328,7 +372,7 @@ namespace ConquestTactics.Net
             batalla.Terminada = true;
             var resultado = batalla.Resultado(ganador, razon, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                 batalla.Asignacion?.IntentoAsignacionId ?? OpcionesRed.Intento);
-            var fallos = BatallaDeTicket.Comprobar(batalla.Ticket, resultado, batalla.Incorporaciones);
+            var fallos = BatallaDeTicket.Comprobar(batalla.Ticket, resultado, batalla.Incorporaciones, batalla.Salidos());
             Debug.Log($"[Red] RESULTADO {ganador} por {razon} en {(resultado.FinMs - resultado.InicioMs) / 1000f:F1} s; " +
                       (fallos.Count == 0 ? "el motor lo aceptaría" : "FALLOS: " + string.Join(", ", fallos)));
             foreach (var e in resultado.PorEscuadra)

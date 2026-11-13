@@ -29,6 +29,31 @@ namespace ConquestTactics.Net
         /// </summary>
         public static bool SinNoticias { get; private set; }
 
+        /// <summary>El jugador ha pedido abandonar la batalla: el servidor cierra y no se vuelve a entrar.</summary>
+        public static bool Abandonada { get; private set; }
+        static string _recado = "";
+        static double _recadoHasta;
+
+        /// <summary>Un recado de unos segundos en el sitio del aviso de conexión.</summary>
+        public static void Decir(string texto, double segundos)
+        {
+            _recado = texto;
+            _recadoHasta = UnityEngine.Time.realtimeSinceStartupAsDouble + segundos;
+        }
+
+        /// <summary>
+        /// Pide al servidor abandonar la batalla: el héroe sale con sus bajas y queda herido.
+        /// ponytail: se llama con F10 dos veces seguidas (EntradaClienteSystem); el botón llega con el menú del juego.
+        /// </summary>
+        public static void Abandonar(EntityManager em)
+        {
+            if (Abandonada)
+                return;
+            Abandonada = true;
+            em.AddComponent<SendRpcCommandRequest>(em.CreateEntity(typeof(AbandonarBatalla)));
+            Debug.Log("[Red] El jugador abandona la batalla");
+        }
+
         double _proximoIntento, _ultimaNoticia;
         NetworkTick _ultimoSnapshot;
         bool _estuvoDentro, _dentro, _noInsistir, _acabada, _apagado;
@@ -48,7 +73,7 @@ namespace ConquestTactics.Net
                     continue;
                 var razon = evento.DisconnectReason;
                 // Se insiste si se cayó sola (sin respuesta) o la cerró este lado; no si la cerró el servidor.
-                _noInsistir = _acabada || !(razon is NetworkStreamDisconnectReason.Timeout
+                _noInsistir = _acabada || Abandonada || !(razon is NetworkStreamDisconnectReason.Timeout
                     or NetworkStreamDisconnectReason.MaxConnectionAttempts or NetworkStreamDisconnectReason.ConnectionClose);
                 _dentro = false;
                 Debug.Log($"[Red] Conexión perdida ({razon})" + (_noInsistir ? "" : ": se vuelve a pedir"));
@@ -76,7 +101,7 @@ namespace ConquestTactics.Net
             else if (hayConexion)
                 Aviso = _dentro ? "Sin noticias del servidor…" : esperando;
             else if (_noInsistir)
-                Aviso = _acabada ? "" : "El servidor cerró la conexión.";
+                Aviso = _acabada ? "" : Abandonada ? "Has abandonado la batalla." : "El servidor cerró la conexión.";
             else
             {
                 Aviso = esperando;
@@ -87,6 +112,8 @@ namespace ConquestTactics.Net
                 }
             }
 
+            if (Aviso.Length == 0 && ahora < _recadoHasta)
+                Aviso = _recado;
             if (Aviso != antes)
             {
                 Debug.Log($"[Red] Aviso al jugador: «{Aviso}»");

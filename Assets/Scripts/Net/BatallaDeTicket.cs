@@ -30,6 +30,10 @@ namespace ConquestTactics.Net
         public bool Caido;
         /// <summary>Falso solo para quien se unió y no llegó a salir al campo (una tropa que Conquest no tiene).</summary>
         public bool Participa = true;
+        /// <summary>Ya salió de la batalla (su salida se mandó al motor): el resultado no lo nombra, ni a sus escuadras.</summary>
+        public bool Salio;
+        /// <summary>Servidor: desde cuándo está sin jugador el héroe de un humano (segundos de mundo); negativo si lo tiene.</summary>
+        public double SinJugadorDesde = -1d;
     }
 
     /// <summary>
@@ -86,6 +90,35 @@ namespace ConquestTactics.Net
                 Escuadras.Add(Escuadra(escuadra, bando, Heroes.Count - 1));
             return true;
         }
+
+        /// <summary>
+        /// La salida de un héroe (§8.4 del ciclo del motor), con todas sus escuadras: las bajas hasta ahora si sale a media
+        /// batalla, o intactas si no llegó a conectarse. Quien sale a media batalla queda herido (Doc 5.16.4); quien no llegó
+        /// a conectarse, no. Desde aquí el resultado ya no lo nombra.
+        /// </summary>
+        public SalidaBatalla Salida(string heroeId, MotivoSalida motivo, string intento)
+        {
+            int indice = Heroes.FindIndex(h => h.Id == heroeId);
+            bool aMedias = motivo != MotivoSalida.SalidaNoConectado;
+            var salida = new SalidaBatalla
+            {
+                SchemaVersion = 1, BattleId = Ticket.BattleId, TicketRevision = Ticket.TicketRevision,
+                IntentoAsignacionId = intento, HeroeId = heroeId, Motivo = motivo, Derrotado = aMedias,
+            };
+            if (indice < 0)
+                return salida;
+            Heroes[indice].Salio = true;
+            foreach (var e in Escuadras)
+                if (e.Heroe == indice)
+                {
+                    int muertos = aMedias ? e.Muertos : 0;
+                    salida.Escuadras.Add(new ResultadoEscuadraSalida { SquadId = e.Id, Supervivientes = (uint)(e.Autorizados - muertos), Muertos = (uint)muertos });
+                }
+            return salida;
+        }
+
+        /// <summary>Los ids de los héroes que ya salieron.</summary>
+        public List<string> Salidos() => Heroes.Where(h => h.Salio).Select(h => h.Id).ToList();
 
         /// <summary>Ese héroe no llega a salir al campo: no participa y sus escuadras vuelven enteras, sin desplegar.</summary>
         public void DejarFuera(string heroeId)
@@ -152,7 +185,8 @@ namespace ConquestTactics.Net
                 Razon = razon,
                 VersionServidor = VersionServidor,
             };
-            foreach (var e in Escuadras)
+            // Quien salió a media batalla ya cerró lo suyo con su salida: ni él ni sus escuadras van en el resultado.
+            foreach (var e in Escuadras.Where(e => e.Heroe < 0 || !Heroes[e.Heroe].Salio))
                 r.PorEscuadra.Add(new ResultadoEscuadra
                 {
                     SquadId = e.Id,
@@ -160,7 +194,7 @@ namespace ConquestTactics.Net
                     SupervivientesAlCierre = (uint)(e.Autorizados - e.Muertos),
                     Muertos = (uint)e.Muertos,
                 });
-            foreach (var h in Heroes)
+            foreach (var h in Heroes.Where(h => !h.Salio))
                 r.PorHeroe.Add(new ResultadoHeroe
                 {
                     HeroeId = h.Id,
@@ -188,14 +222,16 @@ namespace ConquestTactics.Net
         /// Lo que el motor comprueba del resultado y Unity puede saber (combate::resultado::validar_resultado, puntos 2 a 6
         /// y 8). Devuelve los fallos; vacío = el motor lo aceptaría si la asignación es la vigente.
         /// </summary>
-        public static List<string> Comprobar(BattleTicket t, BattleResult r, IEnumerable<IncorporacionBatalla> incorporaciones = null)
+        public static List<string> Comprobar(BattleTicket t, BattleResult r, IEnumerable<IncorporacionBatalla> incorporaciones = null,
+            ICollection<string> salidos = null)
         {
             var fallos = new List<string>();
-            // Cuentan los del ticket y los que se unieron después.
-            var unidos = (incorporaciones ?? Enumerable.Empty<IncorporacionBatalla>()).Select(i => i.Participante).ToList();
-            var escuadras = Lados(t).SelectMany(l => l.Participantes.SelectMany(p => p.Escuadras).Concat(l.EscuadrasSinHeroe))
-                .Concat(unidos.SelectMany(p => p.Escuadras)).ToList();
-            var heroes = Lados(t).SelectMany(l => l.Participantes.Select(p => p.HeroeId)).Concat(unidos.Select(p => p.HeroeId)).ToList();
+            // Cuentan los del ticket y los que se unieron después, menos los que ya salieron.
+            var presentes = Lados(t).SelectMany(l => l.Participantes)
+                .Concat((incorporaciones ?? Enumerable.Empty<IncorporacionBatalla>()).Select(i => i.Participante))
+                .Where(p => salidos == null || !salidos.Contains(p.HeroeId)).ToList();
+            var escuadras = presentes.SelectMany(p => p.Escuadras).Concat(Lados(t).SelectMany(l => l.EscuadrasSinHeroe)).ToList();
+            var heroes = presentes.Select(p => p.HeroeId).ToList();
 
             if (r.PorEscuadra.Select(e => e.SquadId).Distinct().Count() != r.PorEscuadra.Count
                 || r.PorHeroe.Select(h => h.HeroeId).Distinct().Count() != r.PorHeroe.Count)

@@ -754,7 +754,7 @@ de más.
 De paso se vio que **en la batalla en red ningún héroe reaparece**: el juego solo hace reaparecer al héroe local
 (`HeroRespawnSystem`), y en el servidor todos son remotos. Queda para las salidas (§9.9).
 
-### 9.9 Salidas y reaparición: decidido, sin hacer
+### 9.9 Salidas y reaparición: las decisiones
 
 Decisiones del autor del 2026-11-12, sobre el canon del motor (Doc 5.15.1, «Salir»):
 
@@ -790,3 +790,46 @@ para 130 Animators) y la otra mitad el mapa y los modelos con sus componentes (u
 (200-340 %) sale de la misma cuenta: algo más de un punto por modelo. No es un problema de la red sino del coste de
 pintar y animar cada soldado como un GameObject, y se ataca donde toque hacer el arte: menos Animators (los lejanos sin
 animar o a menos fotogramas), o animación por GPU para los soldados.
+
+### 9.11 Salidas y reaparición: hecho
+
+```
+CONQUEST_BATALLA_REAL=1 dotnet run --project Tools/LanzadorDePrueba -- Builds/PruebaRed/PruebaRed.exe Logs/red/real/ticket.json -espera 5
+... ticket.json -cliente -abandona 20 -duracion 80        ... ticket.json -cliente -desconecta 10
+... ticket-campo.json -cliente -cae 20 -duracion 80        ... ticket.json -cliente -cae 20 -duracion 80
+python Tools/ticket_de_prueba.py Logs/red/real/ticket-campo.json --campo-abierto
+```
+
+Las cuatro decisiones de §9.9, en `SalidasSystem.cs` (servidor, batalla de verdad con ticket):
+
+- **Salir** es, para el juego, caer sin volver: el héroe queda caído y oculto (`FueraDeBatalla`), el juego manda retirarse
+  a su escuadra y aquí se le quita la espera, de modo que queda guardada en el acto con los que le quedaban. Con eso se
+  manda la `SalidaBatalla` (todas sus escuadras, con sus bajas; `derrotado` salvo en «no conectado»). El resultado final
+  ya no nombra ni al héroe ni a sus escuadras (`BatallaDeTicket.Salida`, `Salidos`).
+- **Desconexión:** el héroe de un humano que lleva 60 s sin jugador (`ReglasDeBatalla.GraciaDeDesconexion`); mientras, lo
+  lleva la IA y, si vuelve con su token, lo recupera.
+- **Abandono:** el cliente lo pide con F10 dos veces en 3 s (la primera avisa; de paso, hasta que haya menú) y el servidor
+  cierra su conexión. Un token de quien ya salió no vuelve a entrar.
+- **Eliminado:** en campo abierto, el héroe que cae, sea de un jugador o de la IA. Al jugador no se le echa del
+  servidor: se queda mirando (devolverlo al mundo es del cliente del juego).
+- **No conectado** (`BatallaDeTicketSystem`): pasada la espera, a quien no ha entrado se le manda su salida sin castigo y
+  no se empieza: se espera el ticket con la revisión subida (los que ya estaban dentro conservan su héroe) y, si en 60 s
+  no llega, es que el motor canceló la batalla y el proceso sale con 0. Sin lanzador (un fichero) y en la batalla de
+  cápsulas no hay quien reabra la convocatoria: lo sigue jugando la IA. Si el lanzador no dice cuánto esperar, 60 s (de
+  paso, pendiente del autor).
+- **Reaparición** (`ReaparicionSystem`): en los tipos con reaparición, y en la batalla de prueba sin ticket, el héroe
+  caído vuelve a su punto de salida con la cuenta atrás y la protección del juego, igual el de un jugador que el de la IA;
+  su escuadra vuelve a salir con los que le quedaban. `ReglasDeBatalla.Reaparece` es la tabla: todos menos campo abierto.
+
+**Comprobado** con el lanzador de prueba, que ahora hace de motor ante las salidas (revisa el ticket o cancela):
+
+- Nadie entra: salida «no conectado» con la escuadra intacta, batalla cancelada, el proceso sale con 0.
+- Abandono a los 20 s, desconexión (se mata al cliente: 10 s de plazo y 60 de gracia) y caída en campo abierto: en los
+  tres sale la `SalidaBatalla` con su motivo y el resultado, sin ese héroe ni su escuadra, pasa las reglas del motor.
+- Caída en un asalto a caravana: «heroe-3 reaparece en su punto de salida», su jugador lo sigue llevando y su escuadra
+  de 18 sigue con él.
+- Las dos pruebas del motor con Conquest pasan en los dos modos. Con la batalla de verdad, la de «sin jugadores» comprueba
+  ahora la regla: Ana no entra, sale sin castigo y el motor cancela la batalla con sus soldados intactos.
+
+Lo que falta: ver una salida y una reaparición en el cliente de ventana (solo se han mirado los registros); la salida a
+media batalla contra el motor de verdad (su parte tiene pruebas propias); y el botón de abandonar.

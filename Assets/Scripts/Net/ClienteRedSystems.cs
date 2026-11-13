@@ -20,13 +20,36 @@ namespace ConquestTactics.Net
         const double DobleToque = 0.5d;
 
         double _proximaOrdenDeBot, _proximaHabilidadDeBot, _proximaFormacionDeBot, _proximaMonturaDeBot = 12d;
-        double _ultimaC = -10d, _ultimaX = -10d;
+        double _ultimaC = -10d, _ultimaX = -10d, _ultimaF10 = -10d, _dentroDesde = -1d;
         int _ordenesDeBot, _formacionesDeBot;
 
         protected override void OnCreate() => RequireForUpdate<NetworkStreamInGame>();
 
+        /// <summary>
+        /// Abandonar la batalla: F10 dos veces en menos de 3 s (la primera avisa). El bot de prueba, con <c>-abandonarA</c>.
+        /// </summary>
+        void Abandono()
+        {
+            double ahora = SystemAPI.Time.ElapsedTime;
+            if (_dentroDesde < 0d) _dentroDesde = ahora;
+            if (OpcionesRed.Bot)
+            {
+                if (OpcionesRed.AbandonarA > 0f && ahora - _dentroDesde >= OpcionesRed.AbandonarA)
+                    ReconexionClienteSystem.Abandonar(EntityManager);
+                return;
+            }
+            if (Keyboard.current == null || !Keyboard.current.f10Key.wasPressedThisFrame)
+                return;
+            if (ahora - _ultimaF10 <= 3d)
+                ReconexionClienteSystem.Abandonar(EntityManager);
+            else
+                ReconexionClienteSystem.Decir("Pulsa F10 otra vez para abandonar la batalla", 3d);
+            _ultimaF10 = ahora;
+        }
+
         protected override void OnUpdate()
         {
+            Abandono();
             float2 mover = OpcionesRed.Bot ? MovimientoDeBot((float)SystemAPI.Time.ElapsedTime) : MovimientoDeTeclado();
             foreach (var entrada in SystemAPI.Query<RefRW<EntradaHeroe>>().WithAll<GhostOwnerIsLocal>())
                 entrada.ValueRW.Mover = mover;
