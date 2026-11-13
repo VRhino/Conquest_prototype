@@ -86,6 +86,8 @@ namespace ConquestTactics.Mundo.UI
         {
             l.text = texto ?? "";
             Ver(l, !string.IsNullOrEmpty(texto));
+            // El error de acceso y partidas va en su fila, con el ⚠️ delante: se ve con él.
+            if (l.parent != null && l.parent.ClassListContains("error-fila")) Ver(l.parent, !string.IsNullOrEmpty(texto));
         }
 
         // ─────────────────────────── acceso ───────────────────────────
@@ -572,7 +574,7 @@ namespace ConquestTactics.Mundo.UI
                 // Solo lo que se puede hacer: con los víveres llenos no hay nada que repostar.
                 Ver(repostar, tienes < maximoViveres - 0.5);
             }
-            repostar = Dialogo.Boton("Llenar víveres", "boton-secundario", async () =>
+            repostar = IconosDelMundo.BotonConGlifo("Llenar víveres", "viveres", "boton-secundario", async () =>
             {
                 repostar.SetEnabled(false);
                 Poner(error, null);
@@ -738,7 +740,8 @@ namespace ConquestTactics.Mundo.UI
                     cabeza.Add(Dialogo.Texto(a.Lugar, "aviso-titulo"));
                     if (a == recomendado) cabeza.Add(Dialogo.Texto("★ Recomendado", "campamento-recomendado"));
                     boton.Add(cabeza);
-                    boton.Add(Dialogo.Texto($"{Gente(a.Gente)} · {Tierra(a)}", "aviso-cuando"));
+                    // `.elegir-tarjeta-linea`: «👥 gente» y la tierra.
+                    boton.Add(IconosDelMundo.ConIcono("glifo", "gente", Dialogo.Texto($"{Gente(a.Gente)} · {Tierra(a)}", "aviso-cuando"), 14));
                     tarjeta.Add(boton);
                     var marca = new Toggle("Comparar") { name = "comparar", value = comparar.Contains(a) };
                     marca.AddToClassList("campamento-comparar");
@@ -890,14 +893,16 @@ namespace ConquestTactics.Mundo.UI
             {
                 ("Gente", Gente(a.Gente), null),
                 ("Tierra a 150 u", Tierra(a), null),
-                ("Fertilidad, bosque", $"{a.FertilidadMedia * 100:0}% · {a.FraccionDeBosque * 100:0}% de bosque", null),
+                // Como `htmlFicha`: «🌾 Fertilidad», «🌲 Bosque», «〰️ Río», «🌊 Costa o lago».
+                ("Fertilidad", $"{a.FertilidadMedia * 100:0}%", IconosDelMundo.Icono("glifo", "viveres", 18)),
+                ("Bosque", $"{a.FraccionDeBosque * 100:0}%", IconosDelMundo.Icono("glifo", "bosque", 18)),
             };
             // Los yacimientos con su icono del mapa en su color (`htmlNodos`: `svgIcono(ICONO_DE_NODO, colorNodo)` a 18 px).
             foreach (var kv in a.Nodos.OrderBy(x => x.Value.masCerca))
                 r.Add(($"Yacimiento: {CosasDelMapa.NombreDeRecurso(kv.Key)}", $"{kv.Value.cerca} a 150 u · {kv.Value.frontera} a 250 u · el más cerca a {kv.Value.masCerca:0} u",
                     IconosDelMundo.Icono("mapa", IconosDelMundo.DeNodo(kv.Key), 18, IconosDelMundo.ColorDeNodo(kv.Key))));
-            r.Add(("Río", a.Rio == null ? "ninguno" : $"a {a.Rio:0} u{(a.RioNavegable ? ", navegable" : "")}", null));
-            r.Add(("Agua (mar o lago)", a.Agua == null ? "a más de 250 u" : $"a {a.Agua:0} u", null));
+            r.Add(("Río", a.Rio == null ? "ninguno" : $"a {a.Rio:0} u{(a.RioNavegable ? ", navegable" : "")}", IconosDelMundo.Icono("glifo", "rio", 18)));
+            r.Add(("Costa o lago", a.Agua == null ? "a más de 250 u" : $"a {a.Agua:0} u", IconosDelMundo.Icono("glifo", "costa", 18)));
             r.Add(("Bandidos a 250 u", a.Bandidos.Count == 0 ? "ninguno" : $"{a.Bandidos.Count}; el más cerca a {a.Bandidos[0].distancia:0} u (nivel {a.Bandidos[0].nivel})",
                 IconosDelMundo.Icono("mapa", "bandidos", 18, RojoBandidos)));
             if (a.Vecino != null) r.Add(("Campamento vecino", $"{lugarDe(a.Vecino)}, a {a.DistanciaAlVecino:0} u", null));
@@ -1022,8 +1027,12 @@ namespace ConquestTactics.Mundo.UI
                     // Cada fila con su señal redonda (`.eleccion-clic-icono`); aquí, el icono del mapa de esa cosa, si lo tiene.
                     var cab = Dialogo.Caja("lista-fila-cab");
                     var redondo = Dialogo.Caja("lista-fila-icono");
+                    // El glifo del prototipo si Twemoji lo tiene (⚔ ⛺ ☠ 📜 ⚒); si no (⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ no son emoji), el icono del mapa de esa cosa.
+                    var glifo = IconosDelMundo.GlifoDeCosa(cosa.Clase);
                     var deCosa = IconosDelMundo.DeCosa(cosa);
-                    if (deCosa != null && IconosDelMundo.Icono("mapa", deCosa.Value.id, 16, deCosa.Value.color) is VisualElement icono) redondo.Add(icono);
+                    var icono = glifo != null ? IconosDelMundo.Icono("glifo", glifo, 16)
+                        : deCosa != null ? IconosDelMundo.Icono("mapa", deCosa.Value.id, 16, deCosa.Value.color) : null;
+                    if (icono != null) redondo.Add(icono);
                     cab.Add(redondo);
                     var textos = Dialogo.Caja("lista-fila-texto");
                     textos.Add(Dialogo.Texto(cosa.Nombre, "aviso-titulo"));
@@ -1101,7 +1110,8 @@ namespace ConquestTactics.Mundo.UI
             foreach (var a in acciones)
             {
                 var accion = a;
-                caja.Add(Dialogo.Boton(accion.Texto, "boton-secundario", () => _ = mapa.Ordenar(accion.Orden.Clone())));
+                // Con su glifo delante, como `.puerta-boton-icono` (🚪 entrar, ⚔ atacar, 👁 inspeccionar, 🎁 abrir).
+                caja.Add(IconosDelMundo.BotonConGlifo(accion.Texto, IconosDelMundo.GlifoDeAccion(accion.Texto), "boton-secundario", () => _ = mapa.Ordenar(accion.Orden.Clone())));
             }
         }
 

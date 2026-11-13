@@ -3,6 +3,7 @@
 //   edificio  los edificios dibujados a mano (`ui/iconosEdificio.ts`)        tropa   las tropas (`ui/iconosTropa.ts`)
 //   parte     las partes del interior que no son edificio (`ui/hudInterior.ts`)    mapa    los del mapa (game-icons.net, `mundo/iconosMapa.json`)
 //   recurso   el emoji de cada recurso (`paletas.ts`, RECURSO_ICONO), dibujado por Twemoji
+//   glifo     los glifos sueltos de las pantallas (⚔ ⛺ ☠ 👁 🚪 …), dibujados por Twemoji; los que no son emoji (➜ ⧗ ⚑ ♛ …) no los tiene
 // Los dibujos a mano y los del mapa van en blanco y se tiñen (como el `currentColor` del prototipo); los emoji llevan su color. Lo que no
 // tiene dibujo propio lleva el genérico del prototipo (`_otro`). Va en el ensamblado del mapa porque lo usan el mapa y las pantallas.
 using System.Collections.Generic;
@@ -47,7 +48,7 @@ namespace ConquestTactics.Mundo
             v.style.height = lado;
             v.style.flexShrink = 0;
             v.style.backgroundImage = new StyleBackground(imagen);
-            if (familia != "recurso") v.style.unityBackgroundImageTintColor = tinte ?? Bronce;
+            if (familia != "recurso" && familia != "glifo") v.style.unityBackgroundImageTintColor = tinte ?? Bronce;
             return v;
         }
 
@@ -110,6 +111,44 @@ namespace ConquestTactics.Mundo
                 case ClaseDeCosa.Nodo: return DeNodo(c.Recurso) is string n ? (n, ColorDeNodo(c.Recurso)) : ((string, Color)?)null;
                 default: return null;
             }
+        }
+
+        /// <summary>El glifo de una cosa en la lista bajo el clic (`ui/eleccionClic.ts`), si es de los que tiene Twemoji: ⚔ batalla, ⛺, ☠, 📜 aeda,
+        /// ⚒ obra. Los demás del prototipo (⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛) no son emoji: null.</summary>
+        public static string GlifoDeCosa(ClaseDeCosa clase) => clase switch
+        {
+            ClaseDeCosa.Batalla => "atacar",
+            ClaseDeCosa.Mercenarios => "mercenarios",
+            ClaseDeCosa.Bandidos => "bandidos",
+            ClaseDeCosa.Aeda => "aeda",
+            ClaseDeCosa.Obra => "obra",
+            _ => null,
+        };
+
+        /// <summary>El glifo de una acción de la ficha (`AccionPuerta.icono` de main.ts): 🚪 entrar, ⚔ atacar, 👁 inspeccionar, 🎁 abrir, 🌾 víveres.
+        /// «Marchar aquí» lleva ➜, que no es emoji; perseguir, interceptar y reclamar no llevan.</summary>
+        public static string GlifoDeAccion(string texto) => texto switch
+        {
+            "Entrar" or "Entrar con el ejército" => "entrar",
+            "Atacar" => "atacar",
+            "Inspeccionar" => "inspeccionar",
+            "Abrir" => "abrir",
+            "Llenar víveres" => "viveres",
+            _ => null,
+        };
+
+        /// <summary>Un botón con su glifo delante del texto, como `.puerta-boton` del prototipo.</summary>
+        public static Button BotonConGlifo(string texto, string glifo, string clases, System.Action alPulsar)
+        {
+            var b = new Button(alPulsar);
+            foreach (var c in clases.Split(' ')) b.AddToClassList(c);
+            b.AddToClassList("boton-con-glifo");
+            var icono = glifo == null ? null : Icono("glifo", glifo, 16);
+            if (icono != null) b.Add(icono);
+            var l = new Label(texto);
+            l.AddToClassList("boton-con-glifo-texto");
+            b.Add(l);
+            return b;
         }
 
         /// <summary>El icono de un yacimiento (`ICONO_DE_NODO`): mena para los metales, ganado, piedra; null para los demás.</summary>

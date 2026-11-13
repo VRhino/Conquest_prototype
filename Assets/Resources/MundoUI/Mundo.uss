@@ -266,3 +266,12 @@ Button { margin: 0; }
 .ficha .con-icono > .icono { margin-right: 6px; }
 .comparar-nodo { font-size: 13px; margin-right: 8px; }
 .comparar-gana .comparar-nodo { color: #9fe0a0; } /* `td.gana` del prototipo */
+/* Un botón con su glifo (`.puerta-boton-icono`). */
+.boton-con-glifo { flex-direction: row; align-items: center; justify-content: center; }
+.boton-con-glifo > .icono { margin-right: 8px; }
+.boton-con-glifo-texto { padding: 0; margin: 0; color: var(--pergamino); font-size: 14px; }
+.boton-con-glifo:hover > .boton-con-glifo-texto { color: var(--oro-claro); }
+/* El error de acceso y partidas con su ⚠️ (`.error-banner`). */
+.error-fila { flex-direction: row; align-items: flex-start; background-color: rgba(191, 82, 51, 0.18); border-width: 1px; border-color: var(--terracota); border-radius: 3px; padding: 8px 12px; margin-bottom: 12px; }
+.error-texto { color: var(--rojo-claro); white-space: normal; font-size: 14px; flex-shrink: 1; padding: 0; margin: 0; }
+.icono-aviso { width: 16px; height: 16px; margin: 1px 8px 0 0; flex-shrink: 0; background-image: resource("MundoUI/Iconos/glifo/aviso"); }

@@ -65,6 +65,25 @@ for (const [id, emoji] of Object.entries(datos.recurso)) {
   if (!r.ok) { console.error(`sin emoji de Twemoji para ${id} (${emoji}, ${codigo}): ${r.status}`); continue; }
   escribir('recurso', id, await r.text());
 }
+// Los glifos sueltos que el prototipo pone en las pantallas ya migradas (no son recursos), con el mismo punto de código y de Twemoji.
+// Los que no son emoji (➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ •) no están en Twemoji y no se traen. Dónde va cada uno: Docs/Arquitectura/27.
+const GLIFOS = {
+  atacar: '⚔', entrar: '🚪', inspeccionar: '👁', abrir: '🎁', viveres: '🌾', // los botones de la ficha (main.ts, `AccionPuerta.icono`)
+  mercenarios: '⛺', bandidos: '☠', aeda: '📜', obra: '⚒', // la lista bajo el clic (ui/eleccionClic.ts) y las etiquetas del mapa
+  gente: '👥', bosque: '🌲', rio: '〰', costa: '🌊', // «Nace tu héroe» (ui/eleccionCampamento.ts); la fertilidad lleva 🌾
+  reclutas: '🧑', // el chip de reclutas de la tropa del campamento (ui/pantallaCampamento.ts)
+  aviso: '⚠', // los errores de acceso y partidas (`.error-banner`)
+};
+const glifos = {};
+for (const [id, glifo] of Object.entries(GLIFOS)) {
+  const codigo = [...glifo].map((c) => c.codePointAt(0).toString(16)).filter((c) => c !== 'fe0f').join('-');
+  glifos[id] = { glifo, codigo };
+  if (!conEmoji || existsSync(join(destino, 'glifo', `${id}.svg`))) continue;
+  const r = await fetch(`https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${codigo}.svg`);
+  if (!r.ok) { console.error(`sin glifo de Twemoji para ${id} (${glifo}, ${codigo}): ${r.status}`); continue; }
+  escribir('glifo', id, await r.text());
+}
+
 // Y el de los recursos sin emoji propio (el prototipo pone `?? '📦'`).
 if (conEmoji && !existsSync(join(destino, 'recurso', '_otro.svg'))) {
   const r = await fetch('https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/1f4e6.svg');
@@ -77,7 +96,7 @@ if (conEmoji && !existsSync(join(destino, 'recurso', 'LICENSE-GRAPHICS.txt'))) {
 
 const autores = Object.fromEntries(Object.entries(datos.mapa).map(([id, i]) => [id, { autor: i.autor, icono: i.icono }]));
 writeFileSync(join(destino, 'iconos.json'), JSON.stringify({
-  edificio: Object.keys(datos.edificio), tropa: Object.keys(datos.tropa), parte: Object.keys(datos.parte), mapa: autores, recurso: recursos,
+  edificio: Object.keys(datos.edificio), tropa: Object.keys(datos.tropa), parte: Object.keys(datos.parte), mapa: autores, recurso: recursos, glifo: glifos,
 }, null, 1));
 // Los créditos, junto a los iconos (las licencias obligan a citar a los autores).
 const porAutor = {};
@@ -90,9 +109,9 @@ Sacados de BronzeAgeClient por \`Tools/IconosDelPrototipo/generar.mjs\`; no se t
 - \`mapa/\`: iconos de [game-icons.net](https://game-icons.net) (repositorio https://github.com/game-icons/icons), con licencia
   [Creative Commons BY 3.0](https://creativecommons.org/licenses/by/3.0/). Autores:
 ${Object.entries(porAutor).map(([a, l]) => `  - **${a}**: ${l.join(', ')}`).join('\n')}
-- \`recurso/\`: emoji de [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, © Twitter, Inc. y otros colaboradores, con licencia
+- \`recurso/\` y \`glifo/\`: emoji de [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, © Twitter, Inc. y otros colaboradores, con licencia
   [Creative Commons BY 4.0](https://creativecommons.org/licenses/by/4.0/) (texto en \`recurso/LICENSE-GRAPHICS.txt\`). Mismo punto de código que
-  \`RECURSO_ICONO\` del prototipo.
+  \`RECURSO_ICONO\` y que los glifos sueltos del prototipo.
 `);
 
-console.log(`edificios ${Object.keys(datos.edificio).length}, partes ${Object.keys(datos.parte).length}, tropas ${Object.keys(datos.tropa).length}, mapa ${Object.keys(datos.mapa).length}, recursos ${Object.keys(recursos).length}${conEmoji ? ' (con emoji)' : ''}`);
+console.log(`edificios ${Object.keys(datos.edificio).length}, partes ${Object.keys(datos.parte).length}, tropas ${Object.keys(datos.tropa).length}, mapa ${Object.keys(datos.mapa).length}, recursos ${Object.keys(recursos).length}, glifos ${Object.keys(glifos).length}${conEmoji ? ' (con emoji)' : ''}`);

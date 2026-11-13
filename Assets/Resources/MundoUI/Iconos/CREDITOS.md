@@ -9,6 +9,6 @@ Sacados de BronzeAgeClient por `Tools/IconosDelPrototipo/generar.mjs`; no se toc
   - **delapouite**: barracks-tent (mercenarios), cow (ganado), stone-pile (piedra), hut (pueblo), watchtower (avanzada), caravan (caravanaFundacion), barn (aldea)
   - **faithtoken**: ore (mena)
   - **skoll**: open-treasure-chest (alijo)
-- `recurso/`: emoji de [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, © Twitter, Inc. y otros colaboradores, con licencia
+- `recurso/` y `glifo/`: emoji de [Twemoji](https://github.com/jdecked/twemoji) 15.1.0, © Twitter, Inc. y otros colaboradores, con licencia
   [Creative Commons BY 4.0](https://creativecommons.org/licenses/by/4.0/) (texto en `recurso/LICENSE-GRAPHICS.txt`). Mismo punto de código que
-  `RECURSO_ICONO` del prototipo.
+  `RECURSO_ICONO` y que los glifos sueltos del prototipo.

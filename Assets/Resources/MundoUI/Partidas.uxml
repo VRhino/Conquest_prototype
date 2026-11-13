@@ -6,7 +6,11 @@
                 <ui:Label class="titulo" text="PARTIDAS" />
                 <ui:Label name="subtitulo" class="subtitulo" />
                 <ui:ScrollView name="lista" style="max-height: 360px;" />
-                <ui:Label name="error" class="error oculto" />
+                <!-- El error con su ⚠️ delante (`.error-banner` del prototipo). -->
+                <ui:VisualElement class="error-fila oculto">
+                    <ui:VisualElement class="icono-aviso" />
+                    <ui:Label name="error" class="error-texto oculto" />
+                </ui:VisualElement>
                 <ui:Button name="entrar" class="boton-primario" text="ENTRAR" />
                 <ui:Button name="cerrar-sesion" class="enlace" text="Cerrar sesión" style="-unity-text-align: middle-center; margin-top: 8px;" />
             </ui:VisualElement>

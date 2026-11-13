@@ -10,7 +10,11 @@
                     <ui:Button name="pestana-registro" class="pestana" text="Crear cuenta" />
                 </ui:VisualElement>
                 <ui:Label name="aviso" class="aviso-ok oculto" />
-                <ui:Label name="error" class="error oculto" />
+                <!-- El error con su ⚠️ delante (`.error-banner` del prototipo). -->
+                <ui:VisualElement class="error-fila oculto">
+                    <ui:VisualElement class="icono-aviso" />
+                    <ui:Label name="error" class="error-texto oculto" />
+                </ui:VisualElement>
                 <ui:VisualElement name="campo-nick" class="campo">
                     <ui:Label class="etiqueta" text="Nick" />
                     <ui:TextField name="nick" class="entrada" max-length="32" />

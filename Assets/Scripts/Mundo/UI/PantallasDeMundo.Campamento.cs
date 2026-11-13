@@ -399,8 +399,8 @@ namespace ConquestTactics.Mundo.UI
                 // Los chips de la cabecera (`.obra-chip`): los reclutas del campamento y tu oro, con su emoji.
                 var datos = Dialogo.Caja("fila-envuelta");
                 datos.name = "chips";
-                var reclutas = Dialogo.Caja("chip");
-                reclutas.Add(Dialogo.Texto($"{poblacion}/{tope} reclutas", "chip-texto"));
+                var reclutas = IconosDelMundo.ConIcono("glifo", "reclutas", Dialogo.Texto($"{poblacion}/{tope} reclutas", "chip-texto"), 16);
+                reclutas.AddToClassList("chip");
                 datos.Add(reclutas);
                 var chipOro = IconosDelMundo.ConIcono("recurso", "oro", Dialogo.Texto($"{oro} de oro ({(reclutarConCarro ? "carro" : "almacén")})", "chip-texto"), 16);
                 chipOro.AddToClassList("chip");

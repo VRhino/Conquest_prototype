@@ -99,7 +99,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             // Sin héroe: «Nace tu héroe» (paso 3), solo el lugar y el nombre, sobre el mapa de los campamentos.
             yield return Esperar(() => raiz.Q("crear") != null && raiz.Q(className: "carga") == null, 60, "crear el héroe");
             Assert.IsNotNull(conexion.Artefacto, "el artefacto de mundo, cargado");
-            var mapaCrear = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+            var mapaCrear = ElMapa();
             yield return Esperar(() => mapaCrear.Centro != null && mapaCrear.SueloCompleto, 60, "el suelo de los campamentos");
             yield return new WaitForSecondsRealtime(1f);
             Assert.IsNull(raiz.Q("clases"), "la clase ya no se elige aquí");
@@ -244,7 +244,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => raiz.Q("mapa") != null && raiz.Q(className: "carga") == null, 60, "el mapa");
             // El mapa nuevo (el de crear el héroe se está destruyendo).
             yield return Esperar(() => mapaCrear == null, 5, "que se vaya el mapa de crear el héroe");
-            var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+            var mapa = ElMapa();
             Assert.IsNotNull(mapa);
             yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto && mapa.TeselasCargadas > 4, 60, "el suelo");
             yield return Esperar(() => conexion.Sesion.Almacen.Ambitos.Keys.Any(k => k.StartsWith("VISTA:")), 10, "la VISTA");
@@ -341,7 +341,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 }
                 yield return Esperar(() => !raiz.Q("ficha").ClassListContains("oculto"), 5, "la ficha");
                 yield return new WaitForSecondsRealtime(0.5f);
-                var botones = raiz.Q("ficha-acciones").Query<Button>().ToList().Select(b => b.text).ToList();
+                var botones = raiz.Q("ficha-acciones").Query<Button>().ToList().Select(TextoDe).ToList();
                 CollectionAssert.Contains(botones, "Marchar aquí");
                 yield return Capturar("10_ficha_del_campamento");
                 yield return EnTamanos(raiz, "10d_ficha");
@@ -364,18 +364,18 @@ namespace ConquestTactics.Mundo.UI.Tests
                 mapa.Seleccionar(campamento);
                 yield return Esperar(() => !raiz.Q("ficha").ClassListContains("oculto"), 5, "la ficha del campamento");
                 yield return null;
-                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => b.text == "Marchar aquí"));
+                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Marchar aquí"));
                 // Solo lo que se puede hacer: mientras la columna llega, «Entrar» no está; al parar a la puerta, sí.
                 yield return Esperar(() => mapa.Columna?.Estado == BronzeAge.Contract.V1.EstadoColumna.ColumnaMarchando, 10, "la columna en marcha hacia el campamento");
                 yield return new WaitForSecondsRealtime(0.5f);
-                Assert.IsFalse(raiz.Q("ficha-acciones").Query<Button>().ToList().Any(b => b.text == "Entrar"), "con la columna en marcha no se puede entrar");
+                Assert.IsFalse(raiz.Q("ficha-acciones").Query<Button>().ToList().Any(b => TextoDe(b) == "Entrar"), "con la columna en marcha no se puede entrar");
                 yield return Capturar("17a_llegando_sin_entrar");
-                yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => b.text == "Entrar") == true, 90, "«Entrar» con la columna parada a la puerta");
+                yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => TextoDe(b) == "Entrar") == true, 90, "«Entrar» con la columna parada a la puerta");
                 Assert.AreEqual(BronzeAge.Contract.V1.EstadoColumna.ColumnaEstacionada, mapa.Columna.Estado, "«Entrar» sale con la columna parada");
                 yield return Capturar("17_entrar_a_la_puerta");
-                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => b.text == "Entrar"));
+                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Entrar"));
                 yield return EnElInterior(raiz, "17_de_vuelta", false);
-                mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+                mapa = ElMapa();
                 yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto, 60, "el suelo otra vez");
                 // Y a marchar otra vez, con un clic en el suelo.
                 yield return new WaitForSecondsRealtime(0.5f);
@@ -413,6 +413,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             Assert.IsNotNull(mapa.Columna, "la columna, en el primer fotograma");
             Assert.Greater(mapa.PuntosDeRuta, 1, "su ruta, en el primer fotograma");
             yield return CapturarMapa(mapa, "13_ruta_al_volver");
+            // Este mapa es de la prueba, no del juego: si se queda, las pruebas siguientes encuentran dos y a veces miran el que no es.
+            UnityEngine.Object.Destroy(mapa.gameObject);
+            yield return null;
 
             Pulsar(raiz.Q<Button>("cerrar-sesion"));
             yield return null;
@@ -530,7 +533,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                     // Nació en un campamento y sigue dentro: el interior; de ahí, «Salir al mundo» al mapa.
                     if (raiz.Q("interior") != null) yield return EnElInterior(raiz, "15a_interior_tras_el_selector", false);
                     Assert.IsFalse(UnityEngine.SceneManagement.SceneManager.GetSceneByName("CharacterselecctionScene").isLoaded, "el selector, descargado");
-                    var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+                    var mapa = ElMapa();
                     yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto, 60, "el suelo");
                     yield return Capturar("15_mapa_tras_el_selector");
                     yield return CapturarMapa(mapa, "15b_mapa_tras_el_selector");
@@ -751,7 +754,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var elegidas = marcas.Where(m => m.value).Count();
                 Pulsar(ventana.Q<Button>("salir"));
                 yield return Esperar(() => raiz.Q("mapa") != null && !UnityEngine.SceneManagement.SceneManager.GetSceneByName("FeudoScene").isLoaded, 30, "el mapa tras salir");
-                var mapa = UnityEngine.Object.FindAnyObjectByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
+                var mapa = ElMapa();
                 yield return Esperar(() => mapa.Columna != null, 10, "la columna fuera");
                 Assert.AreEqual(elegidas, mapa.Columna.EscuadronIds.Count, "la columna sale con las escuadras elegidas");
                 if (cargado != null) Assert.GreaterOrEqual(mapa.Columna.Suministro.PorId.TryGetValue(cargado, out var q) ? q : 0, 1000, "con la carga elegida en el carro");
@@ -1019,6 +1022,17 @@ namespace ConquestTactics.Mundo.UI.Tests
                 e.target = b;
                 b.SendEvent(e);
             }
+        }
+
+        /// <summary>El texto que se ve en un botón: el suyo o, si lleva glifo, el de su etiqueta.</summary>
+        static string TextoDe(Button b) => string.IsNullOrEmpty(b.text) ? b.Q<Label>()?.text : b.text;
+
+        /// <summary>El mapa en pantalla. Tiene que haber uno solo: con dos (uno olvidado por otra prueba), mirar «cualquiera» falla a veces.</summary>
+        static ConquestTactics.Mundo.Mapa.MapaDeMundo ElMapa()
+        {
+            var mapas = UnityEngine.Object.FindObjectsByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>(FindObjectsInactive.Include);
+            Assert.AreEqual(1, mapas.Length, "un solo mapa en la escena: " + string.Join(", ", mapas.Select(m => m.name)));
+            return mapas[0];
         }
 
         static IEnumerator Esperar(Func<bool> hasta, float segundos, string que)

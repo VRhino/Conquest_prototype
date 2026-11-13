@@ -352,5 +352,67 @@
    "codigo": "1f529",
    "color": "#6b6f74"
   }
+ },
+ "glifo": {
+  "atacar": {
+   "glifo": "⚔",
+   "codigo": "2694"
+  },
+  "entrar": {
+   "glifo": "🚪",
+   "codigo": "1f6aa"
+  },
+  "inspeccionar": {
+   "glifo": "👁",
+   "codigo": "1f441"
+  },
+  "abrir": {
+   "glifo": "🎁",
+   "codigo": "1f381"
+  },
+  "viveres": {
+   "glifo": "🌾",
+   "codigo": "1f33e"
+  },
+  "mercenarios": {
+   "glifo": "⛺",
+   "codigo": "26fa"
+  },
+  "bandidos": {
+   "glifo": "☠",
+   "codigo": "2620"
+  },
+  "aeda": {
+   "glifo": "📜",
+   "codigo": "1f4dc"
+  },
+  "obra": {
+   "glifo": "⚒",
+   "codigo": "2692"
+  },
+  "gente": {
+   "glifo": "👥",
+   "codigo": "1f465"
+  },
+  "bosque": {
+   "glifo": "🌲",
+   "codigo": "1f332"
+  },
+  "rio": {
+   "glifo": "〰",
+   "codigo": "3030"
+  },
+  "costa": {
+   "glifo": "🌊",
+   "codigo": "1f30a"
+  },
+  "reclutas": {
+   "glifo": "🧑",
+   "codigo": "1f9d1"
+  },
+  "aviso": {
+   "glifo": "⚠",
+   "codigo": "26a0"
+  }
  }
 }
