@@ -59,25 +59,47 @@ relleno, se borra. Las cifras y los ids salen de `Trabajo_En_Conquest.md` §2-§
 
 ## 4. Fuera de la batalla: migrar BronzeAgeClient a Unity
 
-Todo lo de BronzeAgeClient pasa a Conquest. Antes de empezar, **hacer el inventario** de pantallas y vistas (ver la lista de
-partida abajo) y decidir el orden con el autor.
+Todo lo de BronzeAgeClient pasa a Conquest. El inventario, pantalla por pantalla (qué muestra, qué órdenes y datos del motor
+usa, de qué depende y cuánto código es), está en [`Inventario_BronzeAgeClient.md`](Inventario_BronzeAgeClient.md): unas 43.000
+líneas de TypeScript en 19 bloques, que mandan 180 de las 191 órdenes del contrato. El autor aprobó el inventario y este orden
+el 2026-11-13.
 
-| | Estado |
-|---|---|
-| **Conexión al motor:** Conquest como cliente de la sesión del contrato 05 (WebSocket con Protobuf: login, ámbitos, foto y delta, órdenes). Hoy Conquest solo habla con el motor a través del lanzador, en la batalla | ⬜ base de todo lo demás |
-| **Mapa de mundo:** se migra tal como está en BronzeAgeClient (`src/mundo`, `src/mundo3d`), con cuadros y relleno, con sus medidas y velocidades; después se rellena poco a poco con modelos propios | ⬜ |
-| **Mapas de plaza, pueblo, aldea, avanzada y campamento de mercenarios** sobre FeudoScene (en BronzeAgeClient, `src/ciudad3d`). El campamento se monta desde la planta que da el servidor; el `.proto` aún no la transmite (antes CQ-007) | ⬜ |
-| **Pantallas y paneles** (acceso, partidas, carga, héroe, columna, ejército, mercado, tecnología, diplomacia, crónica, taberna, misiones…), con la guía visual `Docs/Diseno_Interfaz.md` de BronzeAgeClient («bronce y arcilla») | ⬜ |
-| **Aedas, tecnologías, épicas y crónica** en el mundo y la interfaz (antes CQ-008) | ⬜ |
-| **Sigilo de Facción y estandartes**, compuestos por ids, también en la batalla (antes CQ-009) | ⬜ |
-| **El paso del mundo a la batalla y vuelta:** el cliente recibe en `Batalla.asignacion_propia` su instancia y su token, entra en el servidor de batalla y vuelve al mundo al acabar o al salir | ⬜ |
+**Orden.** Primero una tajada que se juega de punta a punta contra el motor de verdad (pasos 1 a 5: entrar, nacer, salir,
+marchar, pelear contra bandidos en Conquest y volver), y después el resto por lo que más se usa. Cada paso se prueba con el
+servidor real. Entre paréntesis, la sección del inventario.
 
-Lista de partida para el inventario (BronzeAgeClient, `src/ui`): acceso y partidas, pantalla de carga, mapa (capas, vista
-guardada, elección de campamento), plaza (HUD, interior, puerta, obras, muralla, guarnición, residencia, mercado, trueques,
-tesorería, cargos, admisión, protección, fundación), pueblos y avanzadas, columna y ejército (convocatoria, liderazgo, salida,
-carro, velocidad), caravanas, héroe y base personal, reclutamiento y árbol de tropas, tecnología, Facción (diplomacia,
-aliados, anexión, fusión), mercenarios, taberna, intel y rumores, misiones y tablón, aedas y crónica, informes de combate,
-avisos y ayuda.
+| | Paso | Estado |
+|---|---|---|
+| 1 | **Conexión, acceso y avisos:** Conquest como cliente de la sesión del contrato 05 (WebSocket con Protobuf y zstd: `Hola`, ámbitos, foto y delta, órdenes, reloj, reconexión), el almacén de ámbitos, login y partidas, pantalla de carga, los datos de `/v1/datos`, el artefacto de mundo y el relieve, y el sistema de avisos. El contrato ya está compilado en C# (`Assets/Plugins/BronzeAge`); hoy solo lo usa el lanzador (§3.1, §3.2, §3.19) | ⬜ siguiente, base de todo lo demás |
+| 2 | **Mapa de mundo con cuadros:** terreno del relieve, agua y niebla planos, la cámara y las medidas de BronzeAgeClient, tu columna, clic para marchar, lo ajeno como cuadros, la lista bajo el clic y la ficha con las acciones a la puerta. Después se rellena poco a poco con modelos propios (§3.4) | ⬜ |
+| 3 | **Crear el héroe:** la clase, el creador de avatar de Conquest y elegir campamento sobre el mapa del paso 2 (§3.3) | ⬜ |
+| 4 | **Campamento de mercenarios por dentro** sobre FeudoScene, con lo básico (residir, comprar, reclutar) y la ventana «Salir al mundo». El campamento se monta desde la planta que da el servidor; el `.proto` aún no la transmite (antes CQ-007) (§3.15, §3.8) | ⬜ |
+| 5 | **El paso del mundo a la batalla y vuelta:** atacar un campamento de bandidos desde el mapa, recibir en `Batalla.asignacion_propia` la instancia y el token, entrar en el servidor de batalla, volver al mundo al acabar o al salir, e informe de combate. Incluye `cancelarBatalla`. Aquí se cierra el ciclo con el motor (§3.8, §3.19) | ⬜ |
+| 6 | **Base personal y reclutamiento:** héroe, equipo, tropas, carro y el árbol de tropas (§3.9, §3.10) | ⬜ |
+| 7 | **Plaza por dentro** sobre FeudoScene, con su HUD, gobierno y defensa, y la armería (§3.6, §3.7, §3.9) | ⬜ |
+| 8 | **Facción, tecnología, sigilo y estandartes.** El sigilo, compuesto por ids, va también en la batalla (antes CQ-009) (§3.11, §3.12) | ⬜ |
+| 9 | **Mapa estratégico, pueblos, aldeas y avanzadas** (§3.5, §3.13) | ⬜ |
+| 10 | **Mercado y caravanas**, con `cancelarOrdenMercado`, `aparcarCaravana` y `reclamarCaravana`, que BronzeAgeClient no tiene (§3.14) | ⬜ |
+| 11 | **Ejércitos:** convocatorias, unirse, perseguir y batallas en curso (§3.8) | ⬜ |
+| 12 | **Mercenarios por contrato, taberna y misiones** (§3.15, §3.16, §3.17) | ⬜ |
+| 13 | **Aedas, épicas y crónica** en el mundo y la interfaz (antes CQ-008) (§3.18) | ⬜ |
+
+**Decidido** (2026-11-13):
+
+- **Dentro de una plaza se empieza con la vista de Conquest:** andar con el héroe por FeudoScene. Una vez dentro se ve,
+  interfaz por interfaz, cuál de BronzeAgeClient se migra tal cual y cuál se adapta.
+- **La interfaz de fuera de la batalla se hace con UI Toolkit** (UXML y USS), con la guía visual «bronce y arcilla» de
+  BronzeAgeClient (`docs/Diseno_Interfaz.md`). La de la batalla sigue en UGUI.
+- **El creador de avatar de Conquest se queda** para crear el héroe (`OrdenCrearHeroe` ya pide cabeza, pelo, barba y cejas por
+  id). Lo que le falte al motor para el aspecto se apunta aquí y se le pide después.
+- **El mapa estratégico** se hace de la forma más barata y que más reutilice: una textura del mundo entero con los rasters del
+  artefacto que ya baja la conexión, la niebla de la sesión encima y los iconos con UI Toolkit. Sin teselas ni modelos 3D.
+- **Lo que no se migra** (bancos de pruebas, adaptadores al REST viejo, repintado por sondeo, panel F3) está en el inventario,
+  §5.
+- **Las pantallas de relleno de Conquest de fuera de la batalla** (login, selección de personaje, barracón, preparación,
+  posbatalla, emparejamiento, tienda) se borran cuando llega la que las sustituye.
+
+**Pedidos al motor que salgan de la migración:** ninguno todavía.
 
 ## 5. Arte (en paralelo)
 
@@ -93,7 +115,6 @@ avisos y ayuda.
 
 - Predecir al héroe del jugador sobre la malla de navegación, como está, en lugar de con Unity Physics (doc 22 §8).
 - Dos plazos de paso: 10 s sin señal para dar a un jugador por caído y 60 s de espera a que entren antes de empezar.
-- El orden de la migración de BronzeAgeClient (tras el inventario del bloque 4).
 
 ## 7. Sueltos
 
@@ -111,3 +132,5 @@ avisos y ayuda.
 
 - 2026-11-13: creado al cerrar la red. Absorbe lo vivo del modelo de cooperación (las propuestas CQ-001 a CQ-011: lo hecho
   está en el bloque 1; CQ-006 a CQ-009 están en los bloques 3 y 4) y las decisiones del autor de ese día.
+- 2026-11-13: inventario de BronzeAgeClient ([`Inventario_BronzeAgeClient.md`](Inventario_BronzeAgeClient.md)) y orden de la
+  migración aprobados por el autor: el bloque 4 pasa a ser la lista ordenada de 13 pasos.
