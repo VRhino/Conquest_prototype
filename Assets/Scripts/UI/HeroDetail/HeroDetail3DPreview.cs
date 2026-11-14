@@ -123,15 +123,12 @@ public class HeroDetail3DPreview : MonoBehaviour, IPointerDownHandler, IPointerU
         {
             previewCamera.targetTexture = renderTexture;
             
-            // Usar el layer "Heroes" que es el que asigna HeroVisualInstantiationSystem
-            int heroLayer = LayerMask.NameToLayer("Heroes");
-            if (heroLayer == -1)
-            {
-                Debug.LogWarning("[HeroDetail3DPreview] Layer 'Heroes' not found, using Default layer");
-                heroLayer = 0; // Default layer
-            }
-            
-            previewCamera.cullingMask = 1 << heroLayer;
+            // Solo el héroe, sobre negro. Sus capas son las que pone HeroVisualInstantiationSystem (Heroes_A o Heroes_B, por bando); la
+            // buena se fija en FindHeroInScene con la del héroe encontrado. Antes se pedía una capa «Heroes» que no existe y la cámara caía
+            // a Default: pintaba el escenario detrás del héroe.
+            previewCamera.cullingMask = LayerMask.GetMask("Heroes_A", "Heroes_B");
+            previewCamera.clearFlags = CameraClearFlags.SolidColor;
+            previewCamera.backgroundColor = Color.black;
             previewCamera.enabled = false; // Inicialmente deshabilitada
         }
         
@@ -166,6 +163,8 @@ public class HeroDetail3DPreview : MonoBehaviour, IPointerDownHandler, IPointerU
         if (heroObject != null)
         {
             heroTransform = heroObject.transform;
+            // La capa del héroe (con todo lo que lleva: piezas y caballo), y nada más.
+            if (previewCamera != null) previewCamera.cullingMask = 1 << heroObject.layer;
             UpdateCameraTarget();
             
             Debug.Log($"[HeroDetail3DPreview] Hero found at: {heroTransform.position}");
