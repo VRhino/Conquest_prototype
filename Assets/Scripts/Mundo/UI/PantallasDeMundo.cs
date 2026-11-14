@@ -302,6 +302,7 @@ namespace ConquestTactics.Mundo.UI
             var raiz = pantalla.parent;
             var mundo = gameObject.scene;
 
+            Action volverCamaras = null;
             async Task Cerrar()
             {
                 if (SelectorDePersonaje.Heroe == null) return;
@@ -310,6 +311,7 @@ namespace ConquestTactics.Mundo.UI
                 if (mundo.IsValid() && mundo.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(mundo);
                 var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(Selector);
                 while (descarga != null && !descarga.isDone) await Task.Yield();
+                volverCamaras?.Invoke();
                 if (this != null) raiz.style.display = DisplayStyle.Flex;
             }
 
@@ -318,10 +320,30 @@ namespace ConquestTactics.Mundo.UI
             SelectorDePersonaje.Heroe.CerrarSesion = async () => { await Cerrar(); if (this != null) _ = CerrarSesion(); };
             cerrarEscenaEncima = Cerrar;
             raiz.style.display = DisplayStyle.None;
+            volverCamaras = ApartarCamarasDelMundo();
             var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(Selector, UnityEngine.SceneManagement.LoadSceneMode.Additive);
             while (!carga.isDone) await Task.Yield();
             var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(Selector);
             if (escena.IsValid() && escena.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
+        }
+
+        /// <summary>Apaga las cámaras (y los oídos) de la escena del mundo mientras otra escena de Conquest va encima, y devuelve cómo volver a
+        /// encenderlas. Hacen falta todas: la de MundoScene («Camara», profundidad 0 y fondo liso) y la del mapa pintan por encima de las de
+        /// AvatarCreator y el selector (profundidad −1) y las tapan de negro. Se apagan los componentes, no los objetos.</summary>
+        Action ApartarCamarasDelMundo()
+        {
+            var camaras = new List<Camera>();
+            var oidos = new List<AudioListener>();
+            foreach (var raiz in gameObject.scene.GetRootGameObjects())
+            {
+                foreach (var cam in raiz.GetComponentsInChildren<Camera>()) if (cam.enabled) { cam.enabled = false; camaras.Add(cam); }
+                foreach (var oido in raiz.GetComponentsInChildren<AudioListener>()) if (oido.enabled) { oido.enabled = false; oidos.Add(oido); }
+            }
+            return () =>
+            {
+                foreach (var cam in camaras) if (cam != null) cam.enabled = true;
+                foreach (var oido in oidos) if (oido != null) oido.enabled = true;
+            };
         }
 
         /// <summary>El héroe de la sesión para las escenas de Conquest (el selector y los interiores): nombre, nivel, Facción, clase, armadura y
@@ -439,8 +461,7 @@ namespace ConquestTactics.Mundo.UI
             foreach (var r in camp.EmpalizadaPuerta) interior.Puerta.Add(Pieza(r, "puerta"));
 
             // La cámara del mundo se aparta (FeudoScene trae la suya, que sigue al héroe).
-            var camaraDelMundo = Camera.main;
-            if (camaraDelMundo != null) camaraDelMundo.gameObject.SetActive(false);
+            var volverCamaras = ApartarCamarasDelMundo();
             var mundo = gameObject.scene;
             async Task Cerrar()
             {
@@ -451,7 +472,7 @@ namespace ConquestTactics.Mundo.UI
                 var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(Feudo);
                 while (descarga != null && !descarga.isDone) await Task.Yield();
                 SelectorDePersonaje.Interior = null;
-                if (camaraDelMundo != null) camaraDelMundo.gameObject.SetActive(true);
+                volverCamaras();
             }
             SelectorDePersonaje.Interior = interior;
             cerrarEscenaEncima = Cerrar;
@@ -824,6 +845,8 @@ namespace ConquestTactics.Mundo.UI
                 raiz.style.display = DisplayStyle.None;
                 mapaCrear.gameObject.SetActive(false);
                 if (camara != null) camara.gameObject.SetActive(false);
+                // Y la de MundoScene, que si no tapa de negro la del creador.
+                var volverCamaras = ApartarCamarasDelMundo();
 
                 async Task Cerrar(bool nacido)
                 {
@@ -836,6 +859,7 @@ namespace ConquestTactics.Mundo.UI
                     if (this == null) return;
                     raiz.style.display = DisplayStyle.Flex;
                     if (camara != null) camara.gameObject.SetActive(true);
+                    volverCamaras();
                     abierto = false;
                     if (nacido) { Mapa(); return; }
                     if (mapaCrear == null) return; // ya se fue a otra pantalla

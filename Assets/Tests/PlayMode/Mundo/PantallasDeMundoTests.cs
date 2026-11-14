@@ -64,6 +64,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var conexion = go.AddComponent<ConexionDeMundo>();
             typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
             go.AddComponent<PantallasDeMundo>();
+            CamaraComoLaDeMundoScene(go);
             go.SetActive(true);
             yield return null;
             var doc = go.GetComponentInChildren<UIDocument>();
@@ -169,6 +170,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 AvatarCreatorUIController creador = null;
                 yield return Esperar(() => (creador = UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>()) != null, 20, "el creador de personaje");
                 yield return new WaitForSecondsRealtime(1f);
+                SoloPintaLaEscena("AvatarCreator", "el creador");
                 Assert.AreEqual(DisplayStyle.None, raiz.resolvedStyle.display, "la interfaz del mundo se aparta");
                 Assert.IsFalse(mapaCrear.gameObject.activeSelf, "y el mapa");
                 var clasesDelMotor = UnityEngine.Object.FindAnyObjectByType<HeroClassSelector>();
@@ -198,6 +200,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 raiz.Q<TextField>("nombre").value = "U" + nick.Substring(3);
                 Pulsar(raiz.Q<Button>("nacer"));
                 yield return Esperar(() => (creador = UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>()) != null, 20, "el creador otra vez");
+                yield return null;
+                SoloPintaLaEscena("AvatarCreator", "el creador otra vez");
                 yield return new WaitForSecondsRealtime(1f);
                 clasesDelMotor = UnityEngine.Object.FindAnyObjectByType<HeroClassSelector>();
                 yield return ClicUGUI(ratonCrear, UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude).First(x => x.name.StartsWith("Clase ") && x.name != "Clase " + clasesDelMotor.ClaseDelMotor.Id));
@@ -474,6 +478,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var conexion = go.AddComponent<ConexionDeMundo>();
                 typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
                 go.AddComponent<PantallasDeMundo>();
+                CamaraComoLaDeMundoScene(go);
                 go.SetActive(true);
                 yield return null;
                 var doc = go.GetComponentInChildren<UIDocument>();
@@ -490,6 +495,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 HeroSelectionSceneController selector = null;
                 yield return Esperar(() => (selector = UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>()) != null, 30, "el selector de personaje");
                 yield return new WaitForSecondsRealtime(1f);
+                SoloPintaLaEscena(selector.gameObject.scene.name, "el selector");
                 Assert.AreEqual(DisplayStyle.None, raiz.resolvedStyle.display, "la interfaz del mundo se aparta");
                 Assert.IsNull(raiz.Q(className: "partida-nombre"), "sin la tarjeta de la partida");
                 var botones = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude);
@@ -570,6 +576,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var conexion = go.AddComponent<ConexionDeMundo>();
             typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
             go.AddComponent<PantallasDeMundo>();
+            CamaraComoLaDeMundoScene(go);
             go.SetActive(true);
             yield return null;
             var doc = go.GetComponentInChildren<UIDocument>();
@@ -1047,6 +1054,25 @@ namespace ConquestTactics.Mundo.UI.Tests
                 e.target = b;
                 b.SendEvent(e);
             }
+        }
+
+        /// <summary>Una cámara como la de MundoScene («Camara»: profundidad 0, fondo liso #0b0805) en el mundo de la prueba. Sin ella, la prueba no
+        /// veía que esa cámara tapaba de negro el creador de personaje (el fallo que vio Víctor el 2026-11-13).</summary>
+        static void CamaraComoLaDeMundoScene(GameObject mundo)
+        {
+            var cam = new GameObject("Camara").AddComponent<Camera>();
+            cam.transform.SetParent(mundo.transform, false);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color32(0x0b, 0x08, 0x05, 0xff);
+            cam.depth = 0;
+        }
+
+        /// <summary>Con una escena de Conquest encima (el creador, el selector), solo pintan sus cámaras: las del mundo están apagadas.</summary>
+        static void SoloPintaLaEscena(string escena, string que)
+        {
+            var otras = Camera.allCameras.Where(x => x.isActiveAndEnabled && x.gameObject.scene.name != escena).Select(x => $"{x.name} ({x.gameObject.scene.name}, profundidad {x.depth})").ToList();
+            Assert.IsEmpty(otras, $"con {que} abierto solo pintan sus cámaras");
+            Assert.IsTrue(Camera.allCameras.Any(x => x.isActiveAndEnabled && x.gameObject.scene.name == escena), $"{que} tiene su cámara");
         }
 
         /// <summary>El texto que se ve en un botón: el suyo o, si lleva glifo, el de su etiqueta.</summary>
