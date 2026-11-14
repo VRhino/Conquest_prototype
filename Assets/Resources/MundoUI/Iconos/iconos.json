@@ -413,6 +413,26 @@
   "aviso": {
    "glifo": "⚠",
    "codigo": "26a0"
+  },
+  "monedas": {
+   "glifo": "💰",
+   "codigo": "1f4b0"
+  },
+  "escudo": {
+   "glifo": "🛡",
+   "codigo": "1f6e1"
+  },
+  "sitio": {
+   "glifo": "📍",
+   "codigo": "1f4cd"
+  },
+  "campamento": {
+   "glifo": "🏕",
+   "codigo": "1f3d5"
+  },
+  "casa": {
+   "glifo": "🏠",
+   "codigo": "1f3e0"
   }
  },
  "simbolo": {
@@ -423,7 +443,18 @@
   "casa": "⌂",
   "torre": "♜",
   "estrella": "✦",
+  "formacion": "⛨",
   "corona": "♛",
   "hueco": "┄"
- }
+ },
+ "barra": [
+  "base",
+  "faccion",
+  "misiones",
+  "avisos",
+  "cronica",
+  "mapa",
+  "asentamiento",
+  "menu"
+ ]
 }

@@ -946,6 +946,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             foreach (var (ancho, alto) in Tamanos)
             {
                 rt = new RenderTexture(ancho, alto, 24);
+                rt.Create();
                 // Una textura nueva trae lo que hubiera en esa memoria de la tarjeta: se limpia (el panel solo limpia lo que pinta).
                 var activa = RenderTexture.active;
                 RenderTexture.active = rt;
@@ -953,6 +954,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 RenderTexture.active = activa;
                 usadas.Add(rt);
                 doc.panelSettings.targetTexture = rt;
+                yield return null;
                 yield return null;
                 yield return null;
                 DentroDelMarco(raiz, $"{nombre} a {ancho}x{alto}");

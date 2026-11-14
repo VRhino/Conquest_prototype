@@ -445,3 +445,268 @@ Button { margin: 0; }
 /* Encima de BattleScene: «Abandonar la batalla», arriba a la derecha. */
 .batalla-capa { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .batalla-abandonar { position: absolute; right: 16px; top: 14px; padding: 6px 12px; font-size: 13px; background-color: rgba(20, 15, 10, 0.75); }
+
+/* La barra del jugador (BronzeAgeClient: ui/barraJugador.ts, .jugador-boton): iconos redondos en oro; los demás botones, en un menú. */
+.barra-icono { width: 40px; height: 40px; margin-left: 8px; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 20px; background-color: rgba(20, 16, 11, 0.88); align-items: center; justify-content: center; }
+.barra-icono:hover { border-color: var(--bronce); background-color: rgba(169, 121, 63, 0.2); }
+.barra-icono.activo { border-color: var(--oro); background-color: rgba(212, 168, 75, 0.22); }
+.barra-cuenta { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background-color: var(--terracota); color: var(--pergamino); font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.menu-barra { position: absolute; top: 56px; right: 14px; min-width: 220px; padding: 6px; background-color: var(--marco-bg); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.menu-barra-opcion { margin: 0; padding: 8px 12px; background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 2px; color: var(--pergamino); font-size: 14px; -unity-text-align: middle-left; }
+.menu-barra-opcion:hover { background-color: rgba(169, 121, 63, 0.2); color: var(--oro-claro); }
+/* Con la Base abierta, la barra solo enseña la Base y los Avisos. */
+.barra--base #menu, .barra--base #salir-al-mundo { display: none; }
+
+/* La Base personal (ui/basePersonal.ts, con el marco de la Facción: .faccion-cabecera, .faccion-marco, .faccion-lateral, .base-*). */
+.base-ventana { position: absolute; left: 12px; top: 56px; right: 12px; bottom: 12px; padding: 18px 22px 20px 22px; background-color: var(--marco-bg); border-width: 3px; border-color: var(--bronce-osc); border-radius: 3px; }
+.base-cabecera { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.base-titulo { font-size: 18px; letter-spacing: 2px; color: var(--oro); margin: 0; }
+.base-cerrar { -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-marco { flex-grow: 1; flex-shrink: 1; min-height: 0; flex-direction: row; }
+.base-lateral { width: 25%; min-width: 220px; flex-shrink: 0; margin-right: 18px; padding: 14px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.2); }
+.base-principal { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.base-pestanas { flex-direction: row; flex-wrap: wrap; border-bottom-width: 1px; border-color: var(--bronce); margin-bottom: 12px; }
+.base-pestana { flex-direction: row; align-items: center; margin: 0 4px -1px 0; padding: 6px 14px; background-color: rgba(0, 0, 0, 0); border-width: 1px 1px 0 1px; border-color: rgba(0, 0, 0, 0); border-radius: 3px 3px 0 0; color: var(--texto-2); font-size: 16px; }
+.base-pestana-texto { margin: 0; padding: 0; font-size: 16px; color: var(--texto-2); }
+.base-pestana:hover > .base-pestana-texto { color: var(--pergamino); }
+.base-pestana.activo > .base-pestana-texto { color: var(--pergamino); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-esc-prestada { margin-right: 14px; }
+.base-pestana.activo { color: var(--pergamino); border-color: var(--bronce); background-color: var(--marco-bg-alt); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-pestana-aviso { margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background-color: var(--terracota); color: var(--pergamino); font-size: 11px; -unity-text-align: middle-center; }
+.base-cuerpo { flex-grow: 1; flex-shrink: 1; }
+
+/* El lateral. */
+.base-retrato { align-self: stretch; height: 300px; flex-shrink: 0; margin-bottom: 6px; border-width: 1px; border-color: var(--bronce); border-radius: 3px; background-color: rgb(0, 0, 0); align-items: center; justify-content: center; -unity-background-scale-mode: scale-and-crop; }
+.base-nivel { position: absolute; right: 8px; bottom: 8px; min-width: 30px; height: 30px; padding: 0 6px; border-width: 1px; border-color: var(--bronce); border-radius: 15px; background-color: var(--marco-bg); color: var(--oro); font-size: 15px; -unity-text-align: middle-center; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-nombre { margin: 4px 0 0 0; font-size: 21px; color: var(--oro-claro); white-space: normal; -unity-text-align: middle-center; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-donde { margin: 4px 0 0 0; font-size: 14px; color: var(--texto-2); white-space: normal; -unity-text-align: middle-center; }
+.base-clase { color: var(--oro); -unity-font-style: italic; }
+.base-herido { margin: 6px 0 0 0; font-size: 14px; color: var(--rojo-claro); -unity-text-align: middle-center; }
+.base-lateral-pie { margin-top: 14px; padding-top: 14px; border-top-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
+.base-dato { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.base-dato-etiqueta { font-size: 14px; color: var(--texto-2); margin: 0; }
+.base-dato-valor { font-size: 19px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-experiencia { margin-bottom: 10px; }
+.base-experiencia > .base-dato { margin-bottom: 3px; }
+.base-barra-fondo { height: 7px; border-radius: 4px; background-color: rgba(0, 0, 0, 0.55); border-width: 1px; border-color: rgba(107, 74, 41, 0.8); overflow: hidden; flex-shrink: 0; }
+.base-barra-relleno { height: 100%; background-color: rgb(216, 168, 82); }
+.base-barra { height: 6px; }
+.base-puntos { margin-bottom: 10px; padding: 6px 10px; border-width: 1px; border-color: var(--oro); border-radius: 3px; background-color: rgba(240, 192, 98, 0.12); color: var(--oro-claro); font-size: 14px; }
+.base-monedas { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 6px 8px; border-width: 1px; border-color: rgba(169, 121, 63, 0.35); border-radius: 3px; }
+.base-monedas-etiqueta { font-size: 15px; margin: 0; }
+.base-monedas-cifra { font-size: 15px; margin: 0; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-dura { margin: -8px 0 10px 0; font-size: 12px; color: var(--texto-2); -unity-text-align: middle-right; }
+.base-residencia { padding-top: 8px; border-top-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
+.base-lateral-titulo { font-size: 12px; color: var(--texto-2); letter-spacing: 1px; margin: 0; }
+.base-residencia-nombre { margin: 4px 0; white-space: normal; font-size: 16px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-residencia .con-icono > Label { flex-shrink: 1; }
+.base-boton-chico { align-self: flex-start; padding: 3px 8px; font-size: 12px; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+
+/* Tropas. */
+.base-titulo-fila { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 2px 0 10px 0; }
+.base-kicker-raya { width: 14px; height: 1px; background-color: var(--oro); margin-right: 8px; }
+.base-kicker { font-size: 11px; letter-spacing: 3px; color: var(--oro); margin: 0 8px 0 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-chip { flex-direction: row; align-items: center; margin-left: 6px; padding: 1px 7px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 9px; background-color: rgba(0, 0, 0, 0.35); }
+.base-chip > .icono { margin-right: 3px; }
+.base-chip-texto { font-size: 12px; color: var(--oro-claro); margin: 0; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-chip-liderazgo > .tropa-tarjeta-liderazgo-icono { width: 12px; height: 12px; margin: 0 3px 0 0; }
+.base-pagar-con { flex-direction: row; align-items: center; margin: 0 0 0 10px; }
+.base-pagar-con > Label { min-width: 0; font-size: 13px; color: var(--texto-2); margin-right: 6px; }
+.base-reponer-prestadas { align-self: flex-start; height: 34px; padding: 0 14px; margin: 0 0 10px 0; font-size: 13px; letter-spacing: 1px; }
+.base-riel { flex-shrink: 0; margin-bottom: 12px; }
+.base-riel > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { flex-direction: row; }
+.base-hueco { width: 110px; height: 174px; margin: 0 8px 0 0; padding: 0; flex-shrink: 0; border-width: 0; border-radius: 3px; background-color: rgba(0, 0, 0, 0); }
+.base-hueco .tropa-tarjeta { margin: 0; }
+.base-ficha { flex-direction: row; align-items: center; padding: 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.22); }
+.base-ficha--mermada { border-color: rgba(226, 150, 90, 0.6); }
+.base-ficha-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.base-ficha-titulo { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+.base-ficha-nombre { font-size: 16px; margin: 0 8px 0 0; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-ficha-titulo > .tropa-estrellas { margin-right: 6px; }
+.base-marca { margin: 0 0 0 6px; font-size: 15px; color: var(--oro); -unity-font-style: italic; }
+.base-hombres { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.base-hombres-barra { width: 90px; margin-right: 8px; }
+.base-ficha--mermada .base-hombres-barra > .base-barra-relleno { background-color: rgb(226, 150, 90); }
+.base-hombres-cifra { margin: 0 6px 0 0; font-size: 14px; color: var(--pergamino); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-hombres-texto { margin: 0; font-size: 14px; color: var(--texto-2); }
+.base-esc-progreso { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+.base-esc-nivel { flex-direction: row; align-items: center; margin-right: 14px; }
+.base-esc-texto { margin: 0 6px 0 0; font-size: 13px; color: var(--texto-2); }
+.base-esc-xp { width: 70px; height: 5px; margin-right: 6px; }
+.base-esc-xp > .base-barra-relleno { background-color: rgb(141, 172, 210); }
+.base-formacion { margin: 0; min-width: 150px; }
+.base-formacion > .unity-base-popup-field__input, .base-pagar-con > .unity-base-popup-field__input { background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 13px; padding: 2px 6px; }
+.base-formacion-texto { margin: 0; font-size: 13px; color: var(--pergamino); }
+.base-sitio { margin: 0; font-size: 13px; color: var(--texto-2); }
+.base-ficha-acciones { align-items: flex-end; margin-left: 12px; }
+.base-reponer { flex-direction: row; align-items: center; height: 34px; padding: 0 10px; margin: 0; font-size: 13px; letter-spacing: 1px; }
+.base-reponer > .chip-recurso { margin: 0 0 0 6px; }
+.base-vacio { margin: 4px 0; font-size: 13px; color: var(--texto-apagado); }
+
+/* Bienes (htmlCarro). */
+.base-bienes { flex-direction: row; align-items: flex-start; }
+.base-bienes-carga { flex-grow: 1.3; flex-basis: 0; min-width: 0; margin-right: 18px; }
+.base-bienes-resto { flex-grow: 1; flex-basis: 0; }
+.base-sub { margin: 4px 0; font-size: 13px; color: var(--pergamino); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-ocupacion { flex-direction: row; justify-content: space-between; align-items: center; margin-top: 6px; }
+.base-ocupacion-cifra { margin: 0; font-size: 12px; color: var(--texto-2); }
+.base-carro-barra { height: 6px; border-radius: 3px; border-width: 0; background-color: rgba(255, 255, 255, 0.08); margin: 2px 0 8px 0; }
+.base-carro-barra--ok > .base-barra-relleno { background-color: rgb(111, 196, 106); }
+.base-carro-barra--casi > .base-barra-relleno { background-color: rgb(224, 176, 74); }
+.base-carro-barra--llena > .base-barra-relleno { background-color: rgb(224, 112, 90); }
+.base-carro-fila { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.base-carro-recurso { flex-grow: 1; }
+.base-carro-nombre { margin: 0; font-size: 14px; color: var(--texto-2); }
+.base-carro-cifra { margin: 0 8px; font-size: 14px; color: var(--pergamino); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.base-cantidad { width: 84px; margin: 0 8px 0 0; }
+.base-cantidad > .unity-base-text-field__input { background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 13px; padding: 4px 6px; }
+.base-boton-fila { padding: 4px 10px; font-size: 13px; }
+.base-boton-alineado { align-self: flex-start; margin: 4px 0 8px 0; }
+.base-viveres { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 10px; padding: 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
+.base-viveres > .con-icono { flex-grow: 1; }
+.base-nota { margin: 6px 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.base-cuerpo .error { margin-top: 10px; }
+
+/* «Salir al mundo»: ◀ ▶ para el orden de combate, sobre el pie de cada tarjeta. */
+.salida-hueco-orden { position: absolute; left: 2px; right: 2px; bottom: 32px; flex-direction: row; justify-content: space-between; }
+.salida-hueco-flecha { width: 24px; height: 22px; padding: 0; margin: 0; background-color: rgba(10, 8, 5, 0.72); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--oro-claro); font-size: 11px; -unity-text-align: middle-center; }
+.salida-hueco-flecha:hover { border-color: var(--oro); }
+.salida-hueco-flecha:disabled { opacity: 0.25; }
+
+/* La Base (2026-11-14, segunda forma): pestañas centradas arriba del todo; Héroe (calco de UIHero_Detail), Tropas (rejilla, modelo y datos como
+   UISquadDetail) y Bienes. */
+.base-ventana { flex-direction: column; }
+.base-cabecera { flex-direction: row; justify-content: center; align-items: flex-end; margin-bottom: 12px; min-height: 40px; }
+.base-cabecera > .base-cerrar { position: absolute; right: 0; top: 0; }
+.base-pestanas { flex-direction: row; border-bottom-width: 0; margin: 0; }
+.base-pestana { margin: 0 18px; padding: 4px 6px 6px 6px; border-width: 0 0 3px 0; border-color: rgba(0, 0, 0, 0); border-radius: 0; background-color: rgba(0, 0, 0, 0); }
+.base-pestana > .base-pestana-texto { font-size: 20px; }
+.base-pestana.activo { border-color: var(--oro); background-color: rgba(0, 0, 0, 0); }
+.base-cuerpo { flex-grow: 1; flex-shrink: 1; min-height: 0; flex-direction: row; }
+.base-bienes-scroll { flex-grow: 1; }
+.base-modelo { flex-grow: 1; flex-shrink: 1; min-width: 0; align-self: stretch; -unity-background-scale-mode: scale-to-fit; }
+
+/* Héroe. */
+.heroe-col { flex-shrink: 0; padding: 4px 6px; }
+.heroe-col--izquierda { width: 26%; min-width: 280px; }
+.heroe-col--derecha { width: 22%; min-width: 230px; }
+.heroe-estado { margin-bottom: 12px; }
+.heroe-estado > .base-nombre { -unity-text-align: middle-left; font-size: 24px; margin: 0; }
+.heroe-estado > .base-clase { -unity-text-align: middle-left; margin: 2px 0 8px 0; }
+.heroe-atributos { padding: 8px 0; border-top-width: 1px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.3); margin-bottom: 10px; }
+.heroe-atributo { flex-direction: row; align-items: center; height: 40px; }
+.heroe-atributo-icono { width: 30px; height: 30px; margin-right: 10px; -unity-background-scale-mode: scale-to-fit; flex-shrink: 0; }
+.heroe-atributo-nombre { flex-grow: 1; margin: 0; font-size: 16px; color: var(--pergamino); }
+.heroe-atributo-valor { margin: 0; font-size: 20px; color: var(--oro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.heroe-puntos { margin: 6px 0 0 0; padding: 6px 10px; border-width: 1px; border-color: var(--oro); border-radius: 3px; background-color: rgba(240, 192, 98, 0.12); color: var(--oro-claro); font-size: 14px; }
+.heroe-donde { -unity-text-align: middle-left; margin: 0 0 8px 0; }
+.heroe-icono-liderazgo { background-image: url("/Assets/Art/UI/units/leadership.png"); }
+.heroe-icono-fuerza { background-image: url("/Assets/Art/UI/strength.png"); }
+.heroe-icono-destreza { background-image: url("/Assets/Art/UI/agility.png"); }
+.heroe-icono-armadura { background-image: url("/Assets/Art/UI/armor.png"); }
+.heroe-icono-dureza { background-image: url("/Assets/Art/UI/thougness.png"); }
+.heroe-icono-vida { background-image: url("/Assets/Art/UI/units/hearts.png"); }
+.heroe-icono-hombres { background-image: url("/Assets/Art/UI/units/unit-count.png"); }
+.heroe-icono-velocidad { background-image: url("/Assets/Art/UI/units/wingfoot.png"); }
+.heroe-icono-alcance { background-image: url("/Assets/Art/UI/energy-arrow.png"); }
+.heroe-icono-municion { background-image: url("/Assets/Art/UI/units/ammo.png"); }
+.heroe-icono-perforante { background-image: url("/Assets/Art/UI/units/piercing.png"); }
+.heroe-icono-cortante { background-image: url("/Assets/Art/UI/units/slashing.png"); }
+.heroe-icono-contundente { background-image: url("/Assets/Art/UI/units/blunt.png"); }
+.heroe-icono-bloqueo { background-image: url("/Assets/Art/UI/shield.png"); }
+.heroe-icono-regeneracion { background-image: url("/Assets/Art/UI/units/block_regen.png"); }
+.heroe-icono-moral { background-image: url("/Assets/Art/UI/electric.png"); }
+.heroe-icono-nivel { background-image: url("/Assets/Art/UI/units/chevron.png"); }
+.heroe-equipo-titulo { -unity-text-align: middle-center; margin: 4px 0 10px 0; }
+.heroe-equipo { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+.equipo-casilla { width: 48%; align-items: center; margin-bottom: 12px; }
+.equipo-cuadro { width: 84px; height: 84px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); -unity-background-scale-mode: stretch-to-fill; }
+.equipo-cuadro--vacio { border-color: rgba(169, 121, 63, 0.35); }
+.equipo-rareza-1 { background-image: url("/Assets/Art/UI/common_background_square.png"); }
+.equipo-rareza-2 { background-image: url("/Assets/Art/UI/uncommon_background_square (2).png"); }
+.equipo-rareza-3 { background-image: url("/Assets/Art/UI/rare_background_square.png"); }
+.equipo-rareza-4 { background-image: url("/Assets/Art/UI/epic_background_square.png"); }
+.equipo-rareza-5 { background-image: url("/Assets/Art/UI/legendary_background_square.png"); }
+.equipo-linea { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; }
+.equipo-vacio { margin: 0; font-size: 12px; color: var(--texto-apagado); -unity-text-align: middle-center; }
+.equipo-nombre { margin: 4px 0 0 0; font-size: 12px; color: var(--texto-2); white-space: normal; -unity-text-align: upper-center; max-width: 110px; }
+
+/* Tropas. */
+.tropas-filtros { width: 52px; flex-shrink: 0; align-items: center; margin-right: 10px; }
+.tropas-filtro { width: 44px; height: 44px; margin: 0 0 8px 0; padding: 0; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); }
+.tropas-filtro.activo { border-color: var(--oro); background-color: rgba(212, 168, 75, 0.2); }
+.tropas-filtros-hueco { flex-grow: 1; }
+.tropas-rareza { width: 30px; height: 30px; margin: 0 0 8px 0; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.3); }
+.tropas-rareza.activo { border-color: var(--oro-claro); border-width: 2px; }
+.tropas-panel { width: 440px; flex-shrink: 0; }
+.tropas-buscar { margin: 0 0 10px 0; }
+.tropas-rejilla { flex-grow: 1; flex-shrink: 1; }
+.tropas-rejilla > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { flex-direction: row; flex-wrap: wrap; }
+.tropas-hueco { width: 96px; height: 152px; margin: 0 8px 8px 0; padding: 0; border-width: 0; border-radius: 3px; background-color: rgba(0, 0, 0, 0); }
+.tropas-hueco .tropa-tarjeta { margin: 0; }
+.tropas-hueco--vacio { background-image: resource("MundoUI/Iconos/simbolo/hueco"); -unity-background-image-tint-color: rgba(169, 121, 63, 0.35); background-color: rgba(20, 16, 11, 0.35); }
+.tropas-pie { flex-direction: row; align-items: center; margin-top: 8px; }
+.tropas-orden { flex-grow: 1; margin: 0 8px 0 0; }
+.tropas-orden > .unity-base-popup-field__input { background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 13px; }
+.tropas-reponer-prestadas { font-size: 13px; padding: 6px 10px; }
+.tropas-datos { width: 23%; min-width: 260px; flex-shrink: 0; }
+.tropas-subpestanas { flex-direction: row; justify-content: center; align-items: center; margin-bottom: 10px; }
+.tropas-subpestana { margin: 0 8px; padding: 2px 4px 4px 4px; border-width: 0 0 2px 0; border-color: rgba(0, 0, 0, 0); border-radius: 0; background-color: rgba(0, 0, 0, 0); color: var(--texto-2); font-size: 17px; }
+.tropas-subpestana.activo { color: var(--pergamino); border-color: var(--oro); }
+.tropas-subpestana-raya { margin: 0; color: var(--texto-apagado); font-size: 17px; }
+.tropas-contenido { flex-grow: 1; flex-shrink: 1; }
+.tropas-cabeza-fila { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+.tropas-cabeza { flex-shrink: 1; }
+.tropas-nombre { margin: 0; font-size: 22px; color: var(--pergamino); white-space: normal; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.tropas-tipo { margin: 2px 0 6px 0; font-size: 14px; color: var(--texto-2); }
+.tropas-estrellas-fila { flex-direction: row; align-items: center; margin-bottom: 10px; }
+.tropas-cifras { flex-direction: row; justify-content: space-between; margin: 6px 0 12px 0; }
+.tropas-cifra { align-items: center; width: 24%; }
+.tropas-cifra-icono { width: 30px; height: 30px; -unity-background-scale-mode: scale-to-fit; margin-bottom: 4px; }
+.tropas-cifra-valor { margin: 0; font-size: 16px; color: var(--pergamino); -unity-text-align: middle-center; }
+.tropas-cifra > .base-esc-nivel { margin: 4px 0 0 0; flex-direction: column; }
+.tropas-cifra .base-esc-xp { width: 64px; margin: 0; }
+.tropas-cifra .base-esc-texto { font-size: 11px; margin: 0; -unity-text-align: middle-center; }
+.tropas-seccion { margin: 12px 0 8px 0; align-items: center; }
+.tropas-seccion-titulo { margin: 0 0 4px 0; font-size: 15px; color: var(--pergamino); -unity-text-align: middle-center; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.tropas-seccion-raya { height: 1px; align-self: stretch; background-color: rgba(169, 121, 63, 0.4); }
+.tropas-botones { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.tropas-boton { width: 56px; height: 56px; margin: 0 6px 6px 0; padding: 4px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-image: url("/Assets/Art/UI/units/common_background_square.png"); -unity-background-scale-mode: stretch-to-fill; }
+.tropas-boton.activo { border-color: var(--oro); border-width: 2px; }
+.tropas-boton-icono { width: 40px; height: 40px; -unity-background-scale-mode: scale-to-fit; }
+.tropas-boton-letra { margin: 0; font-size: 20px; color: var(--oro-claro); }
+.tropas-elegida { margin: 0 0 4px 0; font-size: 13px; color: var(--texto-2); -unity-text-align: middle-center; }
+.tropas-acciones { align-items: flex-start; margin-top: 12px; }
+.tropas-atributo { flex-direction: row; align-items: center; height: 26px; }
+.tropas-atributo-icono { width: 20px; height: 20px; margin-right: 8px; }
+.tropas-atributo-nombre { flex-grow: 1; margin: 0; font-size: 14px; color: var(--texto-2); }
+.tropas-atributo-valor { margin: 0; font-size: 14px; color: var(--pergamino); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+
+/* Bienes (segunda forma): almacén personal (Objetos | Recursos) a la izquierda, más ancho; Mochila | Carro a la derecha. */
+.bienes-panel { flex-shrink: 1; min-width: 0; padding: 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.2); }
+.bienes-panel--ancho { flex-grow: 1.6; flex-basis: 0; margin-right: 16px; }
+.bienes-panel--estrecho { flex-grow: 1; flex-basis: 0; }
+.bienes-cuenta { margin: 0 0 8px 0; font-size: 12px; color: var(--texto-2); -unity-text-align: middle-right; }
+.bienes-rejilla { flex-direction: row; flex-wrap: wrap; align-self: center; }
+.bienes-casilla { width: 56px; height: 56px; margin: 0 4px 4px 0; padding: 0; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); -unity-background-scale-mode: stretch-to-fill; }
+.bienes-casilla--vacia { border-color: rgba(169, 121, 63, 0.22); background-color: rgba(0, 0, 0, 0.18); }
+.bienes-casilla.activo { border-color: var(--oro-claro); border-width: 2px; }
+.bienes-casilla-cantidad { position: absolute; right: 3px; top: 1px; margin: 0; font-size: 11px; color: var(--pergamino); -unity-font-style: bold; }
+.bienes-elegido { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
+.bienes-elegido-nombre { flex-grow: 1; margin: 0 8px 0 0; font-size: 14px; color: var(--pergamino); }
+.tropas-contenido .con-icono > Label { flex-shrink: 1; white-space: normal; }
+
+/* Las barras de desplazamiento (Víctor, 2026-11-14): sin barra si cabe; si no, finas (6 px), sin flechas, con el riel casi invisible y el asidero
+   del bronce del marco, redondeadas. Para todas las pantallas del mundo (más específicas que el tema de Unity). */
+.unity-scroll-view .unity-scroller--vertical { width: 6px; min-width: 6px; max-width: 6px; margin-left: 4px; border-width: 0; background-color: rgba(0, 0, 0, 0); }
+.unity-scroll-view .unity-scroller--horizontal { height: 6px; min-height: 6px; max-height: 6px; margin-top: 4px; border-width: 0; background-color: rgba(0, 0, 0, 0); }
+.unity-scroll-view .unity-scroller__low-button, .unity-scroll-view .unity-scroller__high-button { display: none; }
+.unity-scroll-view .unity-scroller .unity-base-slider__input, .unity-scroll-view .unity-scroller .unity-base-slider__drag-container { margin: 0; padding: 0; }
+.unity-scroll-view .unity-scroller .unity-base-slider__tracker { background-color: rgba(169, 121, 63, 0.10); border-width: 0; border-radius: 3px; left: 0; right: 0; top: 0; bottom: 0; margin: 0; }
+.unity-scroll-view .unity-scroller--vertical .unity-base-slider__dragger { width: 6px; left: 0; margin: 0; background-color: rgba(169, 121, 63, 0.75); border-width: 0; border-radius: 3px; }
+.unity-scroll-view .unity-scroller--horizontal .unity-base-slider__dragger { height: 6px; top: 0; margin: 0; background-color: rgba(169, 121, 63, 0.75); border-width: 0; border-radius: 3px; }
+.unity-scroll-view .unity-scroller .unity-base-slider__dragger:hover { background-color: var(--bronce); }
+.unity-scroll-view .unity-base-slider__dragger-border { display: none; }
+.unity-scroll-view .unity-scroll-view__vertical-scroller { width: 6px; min-width: 6px; max-width: 6px; }
+.unity-scroll-view .unity-scroll-view__horizontal-scroller { height: 6px; min-height: 6px; max-height: 6px; }
+.unity-scroll-view .unity-scroller .unity-base-slider__drag-container { width: 6px; }

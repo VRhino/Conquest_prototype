@@ -32,6 +32,8 @@ namespace ConquestTactics.Mundo.UI
         /// </summary>
         public static PantallasDeMundo Viva { get; private set; }
         bool sobrante;
+        /// <summary>Los ajustes del panel, creados aquí: se van con las pantallas (si no, su panel sigue vivo y se queda con el ratón).</summary>
+        PanelSettings ajustes;
 
         void Awake()
         {
@@ -45,7 +47,7 @@ namespace ConquestTactics.Mundo.UI
             }
             Viva = this;
             c = GetComponent<ConexionDeMundo>();
-            var ajustes = ScriptableObject.CreateInstance<PanelSettings>();
+            ajustes = ScriptableObject.CreateInstance<PanelSettings>();
             ajustes.themeStyleSheet = Resources.Load<ThemeStyleSheet>("MundoUI/TemaMundo");
             ajustes.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             ajustes.referenceResolution = new Vector2Int(1600, 900);
@@ -82,6 +84,10 @@ namespace ConquestTactics.Mundo.UI
 
         void OnDestroy()
         {
+            // El mapa va en su propio objeto (con su cámara): se va con las pantallas, no se queda huérfano en la escena.
+            QuitarMapa();
+            CerrarBase();
+            if (ajustes != null) Destroy(ajustes);
             if (Viva == this) Viva = null;
         }
 
@@ -103,6 +109,7 @@ namespace ConquestTactics.Mundo.UI
 
         VisualElement Montar(string uxml)
         {
+            CerrarBase();
             _ = cerrarEscenaEncima?.Invoke();
             QuitarMapa();
             pantalla.Clear();
@@ -457,7 +464,7 @@ namespace ConquestTactics.Mundo.UI
             // Lo que cambia mientras estás dentro: residentes y si resides, los avisos, y el cartel de la zona donde estás (la tecla y qué hay).
             v.schedule.Execute(() =>
             {
-                botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos";
+                PintarAvisos(botonAvisos);
                 var ahora = CampamentoActual(camp.Id) ?? camp;
                 var yo = HeroeAhora();
                 v.Q<Label>("lugar-detalle").text = $"Campamento de mercenarios · {ahora.ResidentesIds.Count} residentes · {(yo != null && ahora.ResidentesIds.Contains(yo.Id) ? "tu residencia" : "de paso")}";
@@ -479,6 +486,7 @@ namespace ConquestTactics.Mundo.UI
                 if (await dialogo.Abrir("Tu héroe sale del mundo y se cierra la sesión en este equipo.", "¿Cerrar sesión?", "Cerrar sesión")) _ = CerrarSesion();
             };
             v.Q<Button>("salir-al-mundo").clicked += () => VentanaDeSalida(camp.Id, lugar);
+            BarraDelJugador(v);
 
             interior = new SelectorDePersonaje.InteriorParaVer { Heroe = HeroeParaVer(c.Datos) };
             foreach (var e in camp.Planta)
@@ -767,6 +775,20 @@ namespace ConquestTactics.Mundo.UI
                             quitar.name = "quitar-" + id;
                             quitar.tooltip = "Quitar de esta salida";
                             hueco.Add(quitar);
+                            // ◀ ▶: el orden de combate (la primera entra primero). Se guarda en el héroe al salir (`ordenarEscuadras`).
+                            var flechas = Dialogo.Caja("salida-hueco-orden");
+                            var pos = i;
+                            var antes = Dialogo.Boton("◀", "salida-hueco-flecha", () => { (elegidas[pos - 1], elegidas[pos]) = (elegidas[pos], elegidas[pos - 1]); PintarTropa(); });
+                            antes.name = "antes-" + id;
+                            antes.tooltip = "Antes en el combate";
+                            antes.SetEnabled(i > 0);
+                            var despues = Dialogo.Boton("▶", "salida-hueco-flecha", () => { (elegidas[pos + 1], elegidas[pos]) = (elegidas[pos], elegidas[pos + 1]); PintarTropa(); });
+                            despues.name = "despues-" + id;
+                            despues.tooltip = "Después en el combate";
+                            despues.SetEnabled(i < lista.Count - 1);
+                            flechas.Add(antes);
+                            flechas.Add(despues);
+                            hueco.Add(flechas);
                         }
                         riel.Add(hueco);
                     }
@@ -814,6 +836,18 @@ namespace ConquestTactics.Mundo.UI
                 Poner(error, null);
                 var orden = new OrdenSalirDelCampamento { CampamentoId = camp.Id, HeroeId = h.Id, Carga = new Cantidades() };
                 if (resides) orden.EscuadronIds.AddRange(elegidas);
+                // El orden del riel es el de combate: si el héroe no las tiene así a la cabeza, se le guarda antes de salir (las que salen primero, en
+                // el orden del riel, y el resto detrás).
+                var yo = HeroeAhora();
+                if (resides && yo != null && elegidas.Count > 0 && !yo.EscuadronesIds.Take(elegidas.Count).SequenceEqual(elegidas))
+                {
+                    var ordenar = new OrdenOrdenarEscuadras();
+                    ordenar.EscuadronIds.AddRange(elegidas);
+                    ResultadoOrden ro;
+                    try { ro = await c.Sesion.Ordenar(new Orden { OrdenarEscuadras = ordenar }); }
+                    catch (ErrorDeSesion e) { Poner(error, e.Message); salir.SetEnabled(true); return; }
+                    if (ro.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(ro.Rechazo)); salir.SetEnabled(true); return; }
+                }
                 foreach (var (campo, recurso) in campos) if (campo.value > 0) orden.Carga.PorId[recurso] = campo.value * 1000L;
                 ResultadoOrden r;
                 try { r = await c.Sesion.Ordenar(new Orden { SalirDelCampamento = orden }); }
@@ -1269,6 +1303,7 @@ namespace ConquestTactics.Mundo.UI
             nodos.clicked += () => { mapa.NombresDeNodos = !mapa.NombresDeNodos; PlayerPrefs.SetInt("mundo.capa.nodos", mapa.NombresDeNodos ? 1 : 0); };
             fertilidad.clicked += () => { mapa.Fertilidad = !mapa.Fertilidad; PlayerPrefs.SetInt("mundo.capa.fertilidad", mapa.Fertilidad ? 1 : 0); };
             Botones(v);
+            BarraDelJugador(v);
 
             // La lista de lo que hay bajo el clic.
             var lista = v.Q("lista");
@@ -1313,7 +1348,7 @@ namespace ConquestTactics.Mundo.UI
             void Refrescar()
             {
                 if (mapa == null) return;
-                botonAvisos.text = c.Avisos.NoLeidos > 0 ? $"Avisos ({c.Avisos.NoLeidos})" : "Avisos";
+                PintarAvisos(botonAvisos);
                 forzada.SetEnabled(mapa.Columna != null);
                 forzada.text = mapa.Columna?.MarchaForzada == true ? "Marcha forzada: sí" : "Marcha forzada: no";
                 nodos.text = mapa.NombresDeNodos ? "Nodos: sí" : "Nodos: no";
@@ -1419,6 +1454,7 @@ namespace ConquestTactics.Mundo.UI
         void Update()
         {
             VigilarFinDeBatalla();
+            TeclaDeLaBase();
             var teclado = UnityEngine.InputSystem.Keyboard.current;
             if (diagnostico == null || teclado == null || !teclado.f2Key.wasPressedThisFrame) return;
             if (diagnostico.childCount == 0) SesionViva(diagnostico);

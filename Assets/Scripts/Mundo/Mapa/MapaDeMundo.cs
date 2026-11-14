@@ -50,6 +50,8 @@ namespace ConquestTactics.Mundo.Mapa
         public event Action AlCerrarLista;
         public event Action<CosaDelMapa> AlSeleccionar;
         public bool ListaAbierta;
+        /// <summary>Con una ventana a pantalla completa encima (la Base): ni ratón ni teclado mueven la cámara.</summary>
+        public bool EntradaApagada;
         /// <summary>Capas: los nombres de los nodos de recursos y la fertilidad del suelo.</summary>
         public bool NombresDeNodos = true;
         /// <summary>Sin héroe (al crearlo): dónde mira el mapa, con qué visión, y lo que se pinta además de lo del almacén (los campamentos
@@ -168,7 +170,7 @@ namespace ConquestTactics.Mundo.Mapa
             Situar(ahora);
             if (Centro == null) return;
             var (cx, cy) = Centro.Value;
-            Entrada();
+            if (!EntradaApagada) Entrada();
             var objetivo = (cx, terreno.AlturaVisible(cx, cy) / EscalaDelMapa.MetrosPorUnidad, cy);
             var pos = Camara.Colocar(objetivo, camara.aspect, (x, y) => terreno.AlturaVisible(x, y) / EscalaDelMapa.MetrosPorUnidad, Time.deltaTime);
             var e = EscalaDelMapa.MetrosPorUnidad;

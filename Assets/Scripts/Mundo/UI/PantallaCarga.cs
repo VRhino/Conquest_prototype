@@ -51,6 +51,8 @@ namespace ConquestTactics.Mundo.UI
             var falta = MinimoSegundos - (Time.realtimeSinceStartup - desde);
             if (falta > 0) await Task.Delay(TimeSpan.FromSeconds(falta));
             raiz.Q("carga").AddToClassList("carga--saliendo");
+            // Mientras se desvanece ya no tapa: el ratón es de lo que hay debajo (si no, un clic en ese medio segundo se perdía).
+            foreach (var e in raiz.Query<VisualElement>().ToList()) e.pickingMode = PickingMode.Ignore;
             await Task.Delay(SalidaMs);
             raiz.RemoveFromHierarchy();
         }

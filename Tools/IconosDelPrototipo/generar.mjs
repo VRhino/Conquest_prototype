@@ -73,6 +73,7 @@ const GLIFOS = {
   gente: '👥', bosque: '🌲', rio: '〰', costa: '🌊', // «Nace tu héroe» (ui/eleccionCampamento.ts); la fertilidad lleva 🌾
   reclutas: '🧑', // el chip de reclutas de la tropa del campamento (ui/pantallaCampamento.ts)
   aviso: '⚠', // los errores de acceso y partidas (`.error-banner`)
+  monedas: '💰', escudo: '🛡', sitio: '📍', campamento: '🏕', casa: '🏠', // la Base personal (ui/basePersonal.ts)
 };
 // Los símbolos del prototipo que no son emoji: no están en Twemoji ni en Inter o Cinzel (saldrían como cuadros), así que se dibujan aquí,
 // en 32×32 y en blanco para teñirlos como los dibujos a mano (el prototipo los pinta en el color del texto, \`--oro\` en la lista).
@@ -84,7 +85,8 @@ const SIMBOLOS = {
   casa: ['⌂', '<path d="M5.5 27V14.5L16 5.5l10.5 9V27Z" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"/>'],
   torre: ['♜', '<path d="M9 5h3.2v3h2.2V5h3.2v3h2.2V5H23v7.5H9Z" fill="#ffffff"/><path d="M11.5 13h9l1 10.5h-11Z" fill="#ffffff"/><path d="M7.5 24.5h17V28h-17Z" fill="#ffffff"/>'],
   estrella: ['✦', '<path d="M16 3c1.2 7.6 5.4 11.8 13 13-7.6 1.2-11.8 5.4-13 13-1.2-7.6-5.4-11.8-13-13 7.6-1.2 11.8-5.4 13-13Z" fill="#ffffff"/>'],
-  corona: ['♛', '<path d="M4.5 10.5 9 22h14l4.5-11.5-6.2 5.6L16 7.5l-5.3 8.6Z" fill="#ffffff"/><path d="M8.5 23.8h15V27h-15Z" fill="#ffffff"/><circle cx="4.5" cy="9" r="2" fill="#ffffff"/><circle cx="16" cy="6" r="2" fill="#ffffff"/><circle cx="27.5" cy="9" r="2" fill="#ffffff"/>'],
+  formacion: ['⛨', '<path d="M16 3.5 26.5 7v8.5c0 6.2-4.4 10.6-10.5 13-6.1-2.4-10.5-6.8-10.5-13V7Z" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"/><path d="M16 9.5v13M10.5 14h11" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>'],
+  corona: ['♛','<path d="M4.5 10.5 9 22h14l4.5-11.5-6.2 5.6L16 7.5l-5.3 8.6Z" fill="#ffffff"/><path d="M8.5 23.8h15V27h-15Z" fill="#ffffff"/><circle cx="4.5" cy="9" r="2" fill="#ffffff"/><circle cx="16" cy="6" r="2" fill="#ffffff"/><circle cx="27.5" cy="9" r="2" fill="#ffffff"/>'],
 };
 const simbolos = {};
 for (const [id, [simbolo, dibujo]] of Object.entries(SIMBOLOS)) {
@@ -96,14 +98,26 @@ for (const [id, [simbolo, dibujo]] of Object.entries(SIMBOLOS)) {
 escribir('simbolo', 'hueco', '<svg xmlns="http://www.w3.org/2000/svg" width="110" height="174" viewBox="0 0 110 174"><rect x="1" y="1" width="108" height="172" rx="3" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="6 4"/></svg>');
 simbolos.hueco = '┄';
 
+// Los iconos de la barra del jugador (`ui/barraJugador.ts`, tabla `ICONO`: el yelmo de la Base, la campana de Avisos…), leídos del fuente
+// como los edificios, en el mismo trazo (24×24, 1,7) y en blanco para teñirlos. `menu` no es del prototipo: el menú de la barra de Conquest.
+const fuenteBarra = readFileSync(join(prototipo, 'src/ui/barraJugador.ts'), 'utf8');
+const inicioBarra = fuenteBarra.indexOf('const ICONO');
+const tablaBarra = fuenteBarra.slice(inicioBarra, fuenteBarra.indexOf('};', inicioBarra));
+const barra = Object.fromEntries([...tablaBarra.matchAll(/^\s{2}([a-zA-Z]+): '([^']*)'/gm)].map((m) => [m[1], m[2]]));
+barra.menu = '<path d="M4 7h16M4 12h16M4 17h16"/>';
+for (const [id, trazo] of Object.entries(barra))
+  escribir('barra', id, `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${trazo}</svg>`);
+
 const glifos = {};
 for (const [id, glifo] of Object.entries(GLIFOS)) {
   const codigo = [...glifo].map((c) => c.codePointAt(0).toString(16)).filter((c) => c !== 'fe0f').join('-');
-  glifos[id] = { glifo, codigo };
-  if (!conEmoji || existsSync(join(destino, 'glifo', `${id}.svg`))) continue;
-  const r = await fetch(`https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${codigo}.svg`);
-  if (!r.ok) { console.error(`sin glifo de Twemoji para ${id} (${glifo}, ${codigo}): ${r.status}`); continue; }
-  escribir('glifo', id, await r.text());
+  if (conEmoji && !existsSync(join(destino, 'glifo', `${id}.svg`))) {
+    const r = await fetch(`https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${codigo}.svg`);
+    if (r.ok) escribir('glifo', id, await r.text());
+    else console.error(`sin glifo de Twemoji para ${id} (${glifo}, ${codigo}): ${r.status}`);
+  }
+  // En la lista solo los que ya están (sin --emoji no se bajan; la interfaz los deja sin icono).
+  if (existsSync(join(destino, 'glifo', `${id}.svg`))) glifos[id] = { glifo, codigo };
 }
 
 // Y el de los recursos sin emoji propio (el prototipo pone `?? '📦'`).
@@ -118,7 +132,7 @@ if (conEmoji && !existsSync(join(destino, 'recurso', 'LICENSE-GRAPHICS.txt'))) {
 
 const autores = Object.fromEntries(Object.entries(datos.mapa).map(([id, i]) => [id, { autor: i.autor, icono: i.icono }]));
 writeFileSync(join(destino, 'iconos.json'), JSON.stringify({
-  edificio: Object.keys(datos.edificio), tropa: Object.keys(datos.tropa), parte: Object.keys(datos.parte), mapa: autores, recurso: recursos, glifo: glifos, simbolo: simbolos,
+  edificio: Object.keys(datos.edificio), tropa: Object.keys(datos.tropa), parte: Object.keys(datos.parte), mapa: autores, recurso: recursos, glifo: glifos, simbolo: simbolos, barra: Object.keys(barra),
 }, null, 1));
 // Los créditos, junto a los iconos (las licencias obligan a citar a los autores).
 const porAutor = {};
@@ -128,7 +142,7 @@ writeFileSync(join(destino, 'CREDITOS.md'), `# Créditos de los iconos provision
 Sacados de BronzeAgeClient por \`Tools/IconosDelPrototipo/generar.mjs\`; no se tocan a mano.
 
 - \`edificio/\`, \`tropa/\` y \`parte/\`: dibujos propios del prototipo (\`src/ui/iconosEdificio.ts\`, \`iconosTropa.ts\`, \`hudInterior.ts\`).
-- \`simbolo/\`: los símbolos del prototipo que no son emoji (➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛), dibujados en este script (no están en Twemoji ni en las letras).
+- \`simbolo/\`: los símbolos del prototipo que no son emoji (➜ ⧗ ⚑ ⛟ ⌂ ♜ ✦ ♛ ⛨), dibujados en este script (no están en Twemoji ni en las letras).
 - \`mapa/\`: iconos de [game-icons.net](https://game-icons.net) (repositorio https://github.com/game-icons/icons), con licencia
   [Creative Commons BY 3.0](https://creativecommons.org/licenses/by/3.0/). Autores:
 ${Object.entries(porAutor).map(([a, l]) => `  - **${a}**: ${l.join(', ')}`).join('\n')}
