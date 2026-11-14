@@ -47,108 +47,99 @@ namespace ConquestTactics.Mundo.UI
             return todas.Where(x => x.HasLadoPropio && (Activa(x) || x.Id == batallaVista)).OrderByDescending(x => x.Version).FirstOrDefault();
         }
 
-        /// <summary>Cada vez que se refresca el mapa: la ficha de la batalla del héroe y, con su asignación, la entrada.</summary>
+        /// <summary>
+        /// Desde el mapa (cada vez que se refresca) y, ya en la preparación, desde ella misma: la batalla del héroe. Una batalla activa lleva a la
+        /// escena de preparación (que sustituye a la ficha de espera de la 5A); con su asignación se conecta con el servidor de batalla, y
+        /// cuando él da la salida, a BattleScene. Si se cancela o se anula antes, la preparación lo dice y «Volver al mapa» vuelve a
+        /// MundoScene con la sesión viva.
+        /// </summary>
         void VigilarBatalla()
         {
-            if (entrando || c.Sesion == null) return;
+            if (c.Sesion == null || volviendo) return;
             var b = MiBatalla();
-            if (b == null || !Activa(b) && b.Id != batallaVista) { CerrarFichaDeBatalla(); return; }
+            if (b == null || !Activa(b) && b.Id != batallaVista)
+            {
+                if (enPreparacion) _ = VolverAlMundo();
+                else CerrarFichaDeBatalla();
+                return;
+            }
+            if (!enPreparacion)
+            {
+                if (!Activa(b)) return;
+                _ = IrALaPreparacion(b);
+                return;
+            }
+            if (b.Id != batallaVista) EmpezarPreparacion(b);
             batallaVista = b.Id;
             var token = b.AsignacionPropia != null && !string.IsNullOrEmpty(b.AsignacionPropia.Token);
-            var firma = $"{b.Id}|{b.Version}|{b.Estado}|{token}";
+            if (entrando && PreparacionRed.Empezada) { AlEmpezar(); return; }
+            if (entrando && !Activa(b)) SalirSinBatalla();
+            var firma = $"{b.Id}|{b.Version}|{b.Estado}|{token}|{entrando}|{FirmaDelServidor()}";
             if (firma != firmaBatalla)
             {
                 firmaBatalla = firma;
-                PintarFichaDeBatalla(b);
+                PintarPreparacion(b);
             }
             PonerPlazo(b);
-            if (token && (b.Estado == EstadoBatalla.BatallaAsignada || b.Estado == EstadoBatalla.BatallaEnCurso)) EntrarEnBatalla(b);
+            if (!entrando && token && (b.Estado == EstadoBatalla.BatallaAsignada || b.Estado == EstadoBatalla.BatallaEnCurso)) EntrarEnBatalla(b);
+        }
+
+        /// <summary>En la escena de preparación (o yendo a ella), y volviendo de ella al mundo.</summary>
+        bool enPreparacion, volviendo;
+
+        public const string EscenaPreparacion = "PreparacionScene";
+
+        /// <summary>
+        /// A la escena de preparación: este objeto (las pantallas y la sesión, que se sigue bombeando) pasa a DontDestroyOnLoad, el mapa se
+        /// quita y la pantalla del mundo se aparta. La preparación se pinta encima y se vigila sola.
+        /// </summary>
+        async System.Threading.Tasks.Task IrALaPreparacion(Batalla b)
+        {
+            enPreparacion = true;
+            Debug.Log($"[Batalla] {b.Id}: a la preparación");
+            _ = cerrarEscenaEncima?.Invoke();
+            DontDestroyOnLoad(transform.root.gameObject);
+            QuitarMapa();
+            pantalla.Clear();
+            var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(EscenaPreparacion);
+            while (carga != null && !carga.isDone) await System.Threading.Tasks.Task.Yield();
+            if (this == null) return;
+            panelBatalla?.RemoveFromHierarchy();
+            panelBatalla = null;
+            firmaBatalla = null;
+            VigilarBatalla();
+        }
+
+        /// <summary>
+        /// De la preparación (o de la batalla, en la tanda 2) a MundoScene: si había conexión con el servidor de batalla, se deja; la escena
+        /// trae su propio objeto «Mundo», que se aparta (<see cref="Viva"/>), y estas pantallas montan el mapa con la sesión viva, en tu columna.
+        /// </summary>
+        public async System.Threading.Tasks.Task VolverAlMundo()
+        {
+            if (volviendo) return;
+            volviendo = true;
+            Debug.Log("[Batalla] de vuelta al mundo");
+            if (entrando) SalirSinBatalla();
+            CerrarFichaDeBatalla();
+            var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(EscenaMundo);
+            while (carga != null && !carga.isDone) await System.Threading.Tasks.Task.Yield();
+            if (this == null) return;
+            var escena = UnityEngine.SceneManagement.SceneManager.GetSceneByName(EscenaMundo);
+            if (escena.IsValid()) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena);
+            enPreparacion = false;
+            volviendo = false;
+            pantalla.parent.style.display = DisplayStyle.Flex;
+            Mapa();
         }
 
         void CerrarFichaDeBatalla()
         {
+            mapaDeLaBatalla?.Quitar();
+            mapaDeLaBatalla = null;
             panelBatalla?.RemoveFromHierarchy();
             panelBatalla = null;
             batallaVista = null;
             firmaBatalla = null;
-        }
-
-        /// <summary>La ficha de la batalla (`panelBatalla.ts`): «Evento: campamento de bandidos · estado», «Contra bandidos», quién ataca y quién
-        /// defiende con su tropa, qué pasa ahora con su plazo y, si la iniciaste y aún no ha empezado, «Cancelar la batalla».</summary>
-        void PintarFichaDeBatalla(Batalla b)
-        {
-            if (panelBatalla == null)
-            {
-                panelBatalla = Dialogo.Caja("dialogo-velo");
-                panelBatalla.name = "panel-batalla";
-                capaEncima.Add(panelBatalla);
-            }
-            panelBatalla.Clear();
-            var placa = Dialogo.Caja("placa dialogo panel-batalla");
-            var filete = Dialogo.Caja("placa-filete");
-            placa.Add(filete);
-            panelBatalla.Add(placa);
-
-            var bandidos = BandidosDe(b);
-            var estado = EstadoDeBatalla.TryGetValue(b.Estado, out var e) ? e : b.Estado.ToString();
-            var kicker = Dialogo.Texto($"{(bandidos != null ? "EVENTO: CAMPAMENTO DE BANDIDOS" : "BATALLA")} · {estado.ToUpperInvariant()}", "kicker");
-            kicker.name = "batalla-estado";
-            filete.Add(kicker);
-            var titulo = IconosDelMundo.ConIcono("glifo", "atacar",
-                Dialogo.Texto(bandidos != null ? $"Contra bandidos{(bandidos.Nivel > 0 ? $" · nivel {bandidos.Nivel}" : "")}" : "Batalla", "dialogo-titulo"), 26);
-            titulo.AddToClassList("titulo-con-icono");
-            filete.Add(titulo);
-
-            var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
-            cuerpo.style.flexShrink = 1;
-            filete.Add(cuerpo);
-            var t = b.Ticket;
-            Bando(cuerpo, "ATACAN", t?.Atacante, b.LadoPropio == LadoId.Atacante);
-            Bando(cuerpo, "DEFIENDEN", t?.Defensor, b.LadoPropio == LadoId.Defensor);
-            if (t == null) cuerpo.Add(Dialogo.Texto("Aún no ha llegado quién combate.", "campo-ayuda"));
-
-            var ahora = Dialogo.Texto(QuePasa(b), "aviso-texto batalla-ahora");
-            ahora.name = "batalla-ahora";
-            filete.Add(ahora);
-            var plazo = Dialogo.Texto("", "campo-ayuda");
-            plazo.name = "batalla-plazo";
-            filete.Add(plazo);
-            var error = Dialogo.Texto("", "error oculto");
-            error.name = "error";
-            filete.Add(error);
-
-            var botones = Dialogo.Caja("dialogo-botones");
-            filete.Add(botones);
-            if (Activa(b))
-            {
-                // Solo quien la inició, y antes de que empiece (`batalla.no_puede_cancelar`).
-                var h = HeroeAhora();
-                if (h != null && b.IniciadaPor == h.Id && (b.Estado == EstadoBatalla.BatallaConvocando || b.Estado == EstadoBatalla.BatallaAsignada))
-                {
-                    Button cancelar = null;
-                    cancelar = Dialogo.Boton("Cancelar la batalla", "boton-secundario", async () =>
-                    {
-                        cancelar.SetEnabled(false);
-                        Poner(error, null);
-                        try
-                        {
-                            var r = await c.Sesion.Ordenar(new Orden { CancelarBatalla = new OrdenCancelarBatalla { BattleId = b.Id } });
-                            if (r.Resultado != Resultado.OrdenAceptada) Poner(error, Textos.Explicar(r.Rechazo));
-                        }
-                        catch (ErrorDeSesion x) { Poner(error, x.Message); }
-                        if (cancelar.panel != null) cancelar.SetEnabled(true);
-                    });
-                    cancelar.name = "batalla-cancelar";
-                    botones.Add(cancelar);
-                }
-            }
-            else
-            {
-                var cerrar = Dialogo.Boton("Cerrar", "boton-secundario", CerrarFichaDeBatalla);
-                cerrar.name = "batalla-cerrar";
-                botones.Add(cerrar);
-            }
-            PonerPlazo(b);
         }
 
         /// <summary>Un bando: «Atacan» o «Defienden», de quién (la Facción, «Bandidos» sin ella) con los héroes y el tope, y su tropa con el
@@ -163,7 +154,12 @@ namespace ConquestTactics.Mundo.UI
             foreach (var p in lado.Participantes)
             {
                 var nombre = c.Sesion.Almacen.NombresHeroes.TryGetValue(p.HeroeId, out var n) ? n : p.Heroe?.DisplayName ?? p.HeroeId;
-                donde.Add(Dialogo.Texto(p.HeroeId == c.HeroeId ? $"{nombre} (tú)" : nombre, "aviso-titulo"));
+                // Con servidor de batalla, cómo está cada uno en la preparación.
+                var enPrep = PreparacionRed.Heroes.FirstOrDefault(x => x.heroe == p.HeroeId);
+                var como = !PreparacionRed.Conectado || enPrep.heroe == null ? "" : enPrep.estado == PreparacionRed.ConListo ? " · listo" : enPrep.estado == PreparacionRed.ConectadoSinListo ? " · preparándose" : " · sin conectar";
+                var fila = Dialogo.Texto((p.HeroeId == c.HeroeId ? $"{nombre} (tú)" : nombre) + como, "aviso-titulo");
+                fila.name = "heroe-" + p.HeroeId;
+                donde.Add(fila);
                 foreach (var s in p.Escuadras) donde.Add(FilaDeTropa(s));
             }
             foreach (var s in lado.EscuadrasSinHeroe) donde.Add(FilaDeTropa(s));
@@ -198,9 +194,11 @@ namespace ConquestTactics.Mundo.UI
                 case EstadoBatalla.BatallaConvocando:
                     return "Esperando un servidor de batalla. Si no llega ninguno a tiempo, la batalla se anula sin castigo y tu columna queda libre.";
                 case EstadoBatalla.BatallaAsignada:
-                    return token ? "Entrando en la batalla…" : "Hay servidor de batalla: preparando tu entrada. Si no empieza a tiempo, se anula sin castigo.";
                 case EstadoBatalla.BatallaEnCurso:
-                    return token ? "Entrando en la batalla…" : "La batalla está en curso.";
+                    if (!token) return b.Estado == EstadoBatalla.BatallaEnCurso ? "La batalla está en curso." : "Hay servidor de batalla: preparando tu entrada. Si no empieza a tiempo, se anula sin castigo.";
+                    if (!PreparacionRed.Conectado) return "Conectando con el servidor de batalla…";
+                    return PreparacionRed.Listo ? "Listo: la batalla empieza en cuanto lo estén todos o se acabe la preparación."
+                        : "Elige el orden y la formación y pulsa «Listo». Si se acaba la preparación, entras con lo elegido.";
                 case EstadoBatalla.BatallaCancelada:
                     return "Batalla cancelada: tu columna queda libre.";
                 case EstadoBatalla.BatallaFallida:
@@ -221,10 +219,15 @@ namespace ConquestTactics.Mundo.UI
             var ms = Math.Max(0, b.ExpiraEnMs - c.Sesion.AhoraMundo);
             var que = b.Estado == EstadoBatalla.BatallaConvocando ? "para que llegue un servidor" : b.Estado == EstadoBatalla.BatallaAsignada ? "para que empiece" : "de batalla";
             plazo.text = $"Quedan {(int)(ms / 60000)}:{(int)(ms / 1000) % 60:00} {que} (tiempo del mundo).";
+            // La preparación del servidor de batalla: lo que le queda (empieza antes si todos están listos).
+            var queda = panelBatalla.Q<Label>("prep-queda");
+            if (queda != null) queda.text = entrando && PreparacionRed.Queda >= 0 ? $"{Mathf.CeilToInt(PreparacionRed.Queda) / 60:00}:{Mathf.CeilToInt(PreparacionRed.Queda) % 60:00}" : "";
         }
 
-        /// <summary>Entra en el servidor de batalla con la asignación del motor. La sesión sigue viva (DontDestroyOnLoad); la interfaz y el mapa
-        /// se apartan, y la red de Conquest monta su mundo de cliente y carga BattleScene.</summary>
+        /// <summary>
+        /// Conecta con el servidor de batalla con la asignación del motor, desde la escena de preparación. La sesión sigue viva
+        /// (DontDestroyOnLoad). Lo elegido ya va al servidor (<see cref="PreparacionRed"/>); la batalla empieza cuando él lo dice.
+        /// </summary>
         void EntrarEnBatalla(Batalla b)
         {
             var a = b.AsignacionPropia;
@@ -236,13 +239,30 @@ namespace ConquestTactics.Mundo.UI
                 return;
             }
             entrando = true;
-            BatallaEnCurso = b.Id;
-            Debug.Log($"[Batalla] entrando en {b.Id}: {a.Instancia.Host}:{a.Instancia.Puerto} ({a.Instancia.Protocolo})");
+            Debug.Log($"[Batalla] conectando con {b.Id}: {a.Instancia.Host}:{a.Instancia.Puerto} ({a.Instancia.Protocolo})");
             DontDestroyOnLoad(transform.root.gameObject);
+            EntradaEnBatalla.Entrar(a.Instancia.Host, (ushort)a.Instancia.Puerto, a.Token);
+            LoElegidoAlServidor();
+        }
+
+        /// <summary>El servidor da la salida: se aparta la interfaz y el mapa, y la red carga BattleScene (EspejoClienteSystem).</summary>
+        void AlEmpezar()
+        {
+            BatallaEnCurso = batallaVista;
+            Debug.Log($"[Batalla] empieza {batallaVista}: a BattleScene");
             pantalla.parent.style.display = DisplayStyle.None;
             CerrarFichaDeBatalla();
-            QuitarMapa();
-            EntradaEnBatalla.Entrar(a.Instancia.Host, (ushort)a.Instancia.Puerto, a.Token);
+            entrando = false;
+            enPreparacion = false;
+        }
+
+        /// <summary>La batalla se anuló o se canceló estando ya conectado: se deja el servidor de batalla y se vuelve al mundo de siempre.</summary>
+        void SalirSinBatalla()
+        {
+            Debug.Log($"[Batalla] {batallaVista} no empezó: se deja el servidor de batalla");
+            entrando = false;
+            EntradaEnBatalla.Salir();
+            firmaBatalla = null;
         }
     }
 
@@ -251,7 +271,42 @@ namespace ConquestTactics.Mundo.UI
     /// se crea el de cliente (como `BatallaRealServidorTests`); `EspejoClienteSystem` carga BattleScene.</summary>
     public static class EntradaEnBatalla
     {
+        /// <summary>Conecta con un servidor de batalla. Lo estático de la batalla anterior se pone como al arrancar.</summary>
         public static void Entrar(string ip, ushort puerto, string token)
+        {
+            QuitarMundos();
+            Reiniciar();
+            PreparacionRed.ConPantalla = true;
+            OpcionesRed.ModoPedido = OpcionesRed.Modo.Cliente;
+            OpcionesRed.Ip = ip;
+            OpcionesRed.Puerto = puerto;
+            OpcionesRed.Token = token;
+            OpcionesRed.BatallaReal = 1;
+            DefaultWorldInitialization.Initialize("Batalla");
+        }
+
+        /// <summary>Deja el servidor de batalla sin haber jugado: se quita el mundo de cliente y vuelve el mundo ECS de siempre.</summary>
+        public static void Salir()
+        {
+            QuitarMundos();
+            Reiniciar();
+            OpcionesRed.ModoPedido = OpcionesRed.Modo.Ninguno;
+            OpcionesRed.Token = null;
+            OpcionesRed.BatallaReal = 0;
+            DefaultWorldInitialization.Initialize("Default World");
+        }
+
+        /// <summary>Lo estático que deja una batalla (Docs/Arquitectura/28, «Lo estático entre batallas»).</summary>
+        static void Reiniciar()
+        {
+            PreparacionRed.Reiniciar();
+            ReconexionClienteSystem.Reiniciar();
+            BattleBootstrapRequests.NoLocalHero = false;
+            BattleBootstrapRequests.NetworkTeam = 0;
+            BattleTransitionData.Instance.GetAndClearBattleData();
+        }
+
+        static void QuitarMundos()
         {
             // World.All no se deja enumerar con LINQ (para no copiar); se copia a mano antes de quitar.
             var mundos = new List<World>();
@@ -263,12 +318,6 @@ namespace ConquestTactics.Mundo.UI
                 w.Dispose();
             }
             World.DefaultGameObjectInjectionWorld = null;
-            OpcionesRed.ModoPedido = OpcionesRed.Modo.Cliente;
-            OpcionesRed.Ip = ip;
-            OpcionesRed.Puerto = puerto;
-            OpcionesRed.Token = token;
-            OpcionesRed.BatallaReal = 1;
-            DefaultWorldInitialization.Initialize("Batalla");
         }
     }
 }

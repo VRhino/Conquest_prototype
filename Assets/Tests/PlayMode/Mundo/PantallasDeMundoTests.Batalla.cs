@@ -1,11 +1,13 @@
-// Del mapa a la batalla (paso 5A del bloque 4), de punta a punta y con la batalla de verdad:
+// Del mapa a la batalla (paso 5 del bloque 4: la 5A y la tanda 1, la preparación), de punta a punta y con la batalla de verdad:
 //   - el motor con las batallas de Unity encendidas (BRONZEAGE_BATALLAS_EN_UNITY=1);
 //   - el lanzador del motor (BRONZEAGE_PRUEBA_LANZADOR, con su entorno) y el servidor de batalla de Conquest sin pantalla (PruebaRed.exe);
 //   - este editor como cliente.
-// Un héroe nuevo con la milicia prestada sale del campamento; en el mapa marcha hasta unos bandidos, ataca (sin lanzador la batalla espera
-// servidor) y cancela. Arranca el lanzador, vuelve a atacar, llega la asignación con su token y entra en BattleScene con su héroe y su
-// tropa, con la sesión del mundo viva. Va aparte ([Explicit]): necesita el lanzador y el editor sin -batchmode (la red no carga BattleScene
-// en batchmode). La corre `Tools/BatallaDesdeElMundo/correr.sh`.
+// Un héroe nuevo (pelo hair_02, sin barba) con dos escuadras prestadas sale del campamento; en el mapa marcha hasta unos bandidos y ataca:
+// a la escena de preparación, que conecta con el servidor de batalla en cuanto hay asignación. La cancela (asignada, ya conectado) y vuelve
+// a MundoScene con la sesión viva. Ataca otra vez: en la preparación cambia el orden (entra con la segunda), dice «Listo» y entra en
+// BattleScene con esa escuadra y su aspecto de verdad. Así entra dos veces en el mismo proceso (lo estático, reiniciado). Va aparte
+// ([Explicit]): necesita el lanzador y el editor sin -batchmode (la red no carga BattleScene en batchmode). La corre
+// `Tools/BatallaDesdeElMundo/correr.sh`.
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -13,8 +15,11 @@ using System.Linq;
 using System.Reflection;
 using BronzeAge.Contract.V1;
 using ConquestTactics.Mundo.Mapa;
+using ConquestTactics.Net;
 using NUnit.Framework;
+using Unity.Entities;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Debug = UnityEngine.Debug;
@@ -30,15 +35,25 @@ namespace ConquestTactics.Mundo.UI.Tests
             var lanzadorExe = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_LANZADOR");
             if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(lanzadorExe)) Assert.Ignore("sin servidor de prueba o sin lanzador");
             Process lanzador = null;
+            var errores = new System.Collections.Generic.List<string>();
+            // Con la preparación, BattleScene se carga ya conectado: mientras carga (el editor baja a unos fotogramas por segundo) NetCode ve
+            // saltar el tick del servidor, lo dice como error y lo corrige solo. Se admite ese, y solo ese.
+            void Registro(string m, string pila, LogType t)
+            {
+                if ((t == LogType.Error || t == LogType.Exception) && !m.StartsWith("Large serverTick prediction error encountered!")) errores.Add(m);
+            }
             try
             {
-                // El héroe: nace, le prestan la milicia y sale del campamento con ella (lo de 4B, aquí por órdenes).
+                // El héroe: nace con su aspecto, le prestan dos escuadras y sale del campamento con ellas (lo de 4B, aquí por órdenes).
+                var aspecto = new OrdenCrearHeroe.Types.Avatar { CabezaId = "head_03", PeloId = "hair_02", BarbaId = "", CejasId = "eyebrow_01" };
                 string nick = null;
-                yield return OtroHeroe(url, "Bat" + DateTime.UtcNow.Ticks % 1_000_000, "espada_escudo_mediano", "", null, x => nick = x);
+                yield return OtroHeroe(url, "Bat" + DateTime.UtcNow.Ticks % 1_000_000, "espada_escudo_mediano", "masculino", aspecto, x => nick = x);
                 yield return ConSesionDe(url, nick, s =>
                 {
                     var o = new OrdenPedirPrestamo();
-                    o.TropaIds.Add("milicia_lanceros");
+                    // Dos levas (escalón 1: 7 + 7 de Liderazgo, lo que tiene un héroe nuevo).
+                    o.TropaIds.Add("lenadores");
+                    o.TropaIds.Add("granjeros");
                     return new Orden { PedirPrestamo = o };
                 });
                 yield return ConSesionDe(url, nick, s =>
@@ -55,7 +70,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 go.SetActive(false);
                 var conexion = go.AddComponent<ConexionDeMundo>();
                 typeof(ConexionDeMundo).GetField("servidor", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(conexion, url);
-                go.AddComponent<PantallasDeMundo>();
+                var pantallas = go.AddComponent<PantallasDeMundo>();
                 go.SetActive(true);
                 yield return null;
                 var doc = go.GetComponentInChildren<UIDocument>();
@@ -74,7 +89,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var mapa = ElMapa();
                 yield return Esperar(() => mapa.Columna != null && mapa.Centro != null, 20, "la columna fuera");
                 Heroe Yo() => conexion.Sesion.Almacen.Buscar(TipoEntidad.Heroe, conexion.HeroeId).Heroe;
-                Assert.Greater(mapa.Columna.EscuadronIds.Count, 0, "sale con la milicia prestada");
+                Assert.AreEqual(2, mapa.Columna.EscuadronIds.Count, "sale con las dos escuadras prestadas");
 
                 // Los bandidos más cercanos que no estén junto a un campamento de mercenarios.
                 var radioProteccion = conexion.Datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion");
@@ -96,67 +111,144 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Marchar aquí"));
                 yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => TextoDe(b) == "Atacar") == true, 120, "«Atacar» al llegar");
                 yield return Reloj(url, 1_000);
-                // Que la pantalla de carga haya acabado de irse antes de la captura.
                 yield return Esperar(() => raiz.Q("carga") == null, 20, "el fin de la pantalla de carga");
                 yield return new WaitForSecondsRealtime(1f);
                 yield return Capturar("40_ficha_de_bandidos_con_atacar");
 
-                // Primer ataque, sin lanzador: la batalla espera servidor. Su ficha, y cancelar.
-                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Atacar"));
-                yield return Esperar(() => raiz.Q("panel-batalla") != null, 15, "la ficha de la batalla");
-                yield return Esperar(() => raiz.Q<Label>("batalla-estado")?.text.Contains("CONVOCÁNDOSE") == true || raiz.Q<Label>("batalla-estado")?.text.Contains("A PUNTO") == true, 10, "la batalla esperando servidor");
-                Assert.IsNotNull(raiz.Q<Button>("batalla-cancelar"), "quien la inició puede cancelarla antes de que empiece");
-                Assert.IsFalse(raiz.Q("ficha-acciones").Query<Button>().ToList().Any(b => TextoDe(b) == "Atacar"), "con la columna en la batalla no se ataca otra vez");
-                Debug.Log($"[Prueba] esperando: {raiz.Q<Label>("batalla-ahora").text} · {raiz.Q<Label>("batalla-plazo").text}");
-                yield return EnTamanos(raiz, "41_batalla_esperando_servidor");
-                Pulsar(raiz.Q<Button>("batalla-cancelar"));
-                yield return Esperar(() => raiz.Q<Label>("batalla-estado")?.text.Contains("CANCELADA") == true, 10, "la batalla cancelada");
-                Assert.IsNull(raiz.Q<Button>("batalla-cancelar"), "cancelada, ya no se ofrece cancelar");
-                Debug.Log($"[Prueba] cancelada: {raiz.Q<Label>("batalla-ahora").text}");
-                yield return Capturar("42_batalla_cancelada");
-                Pulsar(raiz.Q<Button>("batalla-cerrar"));
-                yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => TextoDe(b) == "Atacar") == true, 15, "«Atacar» otra vez con la columna libre");
-
-                // El lanzador de verdad, y el ataque de verdad: asignación, token y a BattleScene.
                 lanzador = ArrancarLanzador(lanzadorExe);
                 yield return new WaitForSecondsRealtime(3f);
-                // El cliente en red de BattleScene no trae BattleData y su controlador lo dice con un error (es así también con
-                // `-red cliente` desde la línea de órdenes; es del hilo de tropas): se admite ese y solo ese, desde antes de atacar (la escena se carga en el mismo fotograma de la entrada).
-                const string SinBattleData = "[BattleSceneController] No hay BattleData disponible y no hay TestEnvironmentInitializer";
-                var errores = new System.Collections.Generic.List<string>();
-                void Registro(string m, string pila, LogType t) { if ((t == LogType.Error || t == LogType.Exception) && m != SinBattleData) errores.Add(m); }
                 Application.logMessageReceived += Registro;
                 LogAssert.ignoreFailingMessages = true;
+
+                // Primer ataque: a la escena de preparación, que conecta en cuanto hay servidor. Se cancela ya conectado.
                 Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Atacar"));
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaPreparacion && raiz.Q("panel-batalla") != null, 30, "la escena de preparación");
+                Assert.IsNull(ElMapaSiHay(), "en la preparación no hay mapa");
+                yield return Esperar(() => PreparacionRed.Conectado && raiz.Q<Button>("prep-listo")?.enabledSelf == true, 150, "conectado con el servidor de batalla");
+                Debug.Log($"[Prueba] preparación 1: {raiz.Q<Label>("batalla-estado").text} · {raiz.Q<Label>("batalla-ahora").text} · {raiz.Q<Label>("prep-queda")?.text} · {raiz.Q<Label>("prep-punto")?.text}");
+                Assert.IsNotNull(raiz.Q<Button>("batalla-cancelar"), "asignada, quien la inició aún puede cancelarla");
+                yield return EnTamanos(raiz, "41_preparacion", () => Assert.AreEqual(2, raiz.Query(className: "prep-escuadra").ToList().Count, "las dos escuadras en el riel"));
+                Pulsar(raiz.Q<Button>("batalla-cancelar"));
+                yield return Esperar(() => raiz.Q<Label>("batalla-estado")?.text.ToUpperInvariant().Contains("CANCELADA") == true, 15, "la batalla cancelada");
+                Assert.IsFalse(PreparacionRed.Conectado, "cancelada, se deja el servidor de batalla");
+                Assert.IsFalse(MundoDe("ClientWorld") != null, "sin mundo de cliente");
+                yield return Capturar("42_preparacion_cancelada");
+                Pulsar(raiz.Q<Button>("batalla-cerrar"));
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaMundo && raiz.Q("mapa") != null && ElMapaSiHay() != null, 30, "de vuelta en MundoScene con el mapa");
+                Assert.AreEqual(1, UnityEngine.Object.FindObjectsByType<PantallasDeMundo>(FindObjectsSortMode.None).Length, "una sola interfaz del mundo (la de la escena se aparta)");
+                Assert.AreSame(pantallas, PantallasDeMundo.Viva, "la viva es la de antes, con su sesión");
+                Assert.IsTrue(conexion.Sesion != null && conexion.Sesion.Estado == EstadoSesion.Abierta, "la sesión del mundo, abierta todo el rato");
+                mapa = ElMapa();
+                yield return Esperar(() => mapa.Columna != null && mapa.Centro != null, 20, "la columna en el mapa");
+                yield return Esperar(() => raiz.Q("carga") == null, 20, "el fin de la pantalla de carga");
+                mapa.Seleccionar(mapa.Cosas.First(x => x.Id == bandidos.Id));
+                yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => TextoDe(b) == "Atacar") == true, 20, "«Atacar» otra vez con la columna libre");
+                yield return Capturar("43_de_vuelta_en_el_mapa");
+
+                // Segundo ataque: en la preparación se cambia el orden (entra con la segunda) y «Listo».
+                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Atacar"));
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaPreparacion && raiz.Q("panel-batalla") != null, 30, "la preparación otra vez");
+                yield return Esperar(() => PreparacionRed.Conectado && raiz.Q<Button>("prep-listo")?.enabledSelf == true, 150, "conectado otra vez");
+                var orden = raiz.Query(className: "prep-escuadra").ToList().Select(e => e.name.Substring("prep-escuadra-".Length)).ToList();
+                Assert.AreEqual(2, orden.Count);
+                Pulsar(raiz.Q<Button>("despues-" + orden[0]));
+                yield return null;
+                var ahora = raiz.Query(className: "prep-escuadra").ToList().Select(e => e.name.Substring("prep-escuadra-".Length)).ToList();
+                CollectionAssert.AreEqual(new[] { orden[1], orden[0] }, ahora, "▶ pasa la primera detrás");
+                var b2 = conexion.Sesion.Almacen.Buscar(TipoEntidad.Batalla, MiBatallaId(conexion)).Batalla;
+                var elegida = b2.Ticket.Atacante.Participantes.SelectMany(p => p.Escuadras).First(x => x.SquadId == orden[1]);
+                Debug.Log($"[Prueba] entra con {elegida.SquadId} ({elegida.TropaId}) en vez de {orden[0]}");
+                yield return EnTamanos(raiz, "44_preparacion_orden_cambiado");
+                Pulsar(raiz.Q<Button>("prep-listo"));
                 var batallaId = (string)null;
-                yield return Esperar(() => (batallaId = PantallasDeMundo.BatallaEnCurso) != null, 150, "la asignación con el token (y la entrada)");
-                Debug.Log($"[Prueba] entrando en la batalla {batallaId}");
-                yield return Esperar(() => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "BattleScene", 60, "BattleScene");
-                yield return Esperar(() => ConquestTactics.Net.EspejoClienteSystem.CamaraDelJuego, 120, "mi héroe en la batalla (la cámara del juego lo sigue)");
+                yield return Esperar(() => (batallaId = PantallasDeMundo.BatallaEnCurso) != null, 90, "la salida del servidor (todos listos)");
+                yield return Esperar(() => SceneManager.GetActiveScene().name == "BattleScene", 60, "BattleScene");
+                yield return Esperar(() => EspejoClienteSystem.CamaraDelJuego, 120, "mi héroe en la batalla (la cámara del juego lo sigue)");
                 yield return new WaitForSecondsRealtime(3f);
+
+                // Entra con la escuadra elegida: la que el juego le da como activa (DataContainer, de InterfazRed).
+                var cliente = MundoDe("ClientWorld");
+                var em = cliente.EntityManager;
+                var datos = em.CreateEntityQuery(typeof(DataContainerComponent)).GetSingleton<DataContainerComponent>();
+                Assert.AreEqual(elegida.TropaId, datos.selectedSquadBaseID.ToString(), "entra con la escuadra que se puso primera en la preparación");
+
+                // Con su aspecto de verdad: el pelo elegido y sin barba.
+                var yo = em.CreateEntityQuery(typeof(Unity.NetCode.NetworkId)).GetSingleton<Unity.NetCode.NetworkId>().Value;
+                var heroes = em.CreateEntityQuery(typeof(SoldadoRed), typeof(ConVisual)).ToEntityArray(Unity.Collections.Allocator.Temp);
+                var mio = heroes.ToArray().First(e => em.GetComponentData<SoldadoRed>(e).Tipo == SoldadoRed.Heroe && em.GetComponentData<SoldadoRed>(e).Dueno == yo);
+                Assert.IsTrue(VisualSyncUtility.TryGetVisual(cliente, mio, out var figura), "la figura de mi héroe");
+                SoloLoElegido(figura.transform, aspecto, false, "en la batalla");
+                // Los caballos de los héroes (los capitanes de la IA montan): uno que se desplaza montado tiene que llevar el paso en su Animator.
+                yield return CaballosAlPaso(cliente, 45);
+
                 var visuales = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None);
-                // Mi héroe: la cámara del juego lo sigue (EspejoClienteSystem solo la engancha con héroe propio; el espejo de red no marca
-                // IsLocalHero en las figuras). Mi tropa y los bandidos: las figuras de la escena (la milicia prestada son 25).
-                Debug.Log($"[Prueba] en la batalla: {visuales.Length} figuras, cámara del juego en mi héroe {ConquestTactics.Net.EspejoClienteSystem.CamaraDelJuego}");
-                Assert.Greater(visuales.Length, 1 + 25, "mi héroe, mi tropa y los bandidos");
+                Debug.Log($"[Prueba] en la batalla: {visuales.Length} figuras");
                 Application.logMessageReceived -= Registro;
                 LogAssert.ignoreFailingMessages = false;
-                Assert.IsEmpty(errores, "al entrar en la batalla, ningún error más que el de BattleData");
+                Assert.IsEmpty(errores, "ningún error en la preparación ni al entrar (tampoco el de BattleData; solo el salto de tick de NetCode al cargar)");
 
                 // La sesión del mundo sigue viva: el estado de la batalla llega aquí también.
                 Assert.IsTrue(go != null && conexion.Sesion != null && conexion.Sesion.Estado == EstadoSesion.Abierta, "la sesión del mundo sigue abierta");
                 var b = conexion.Sesion.Almacen.Buscar(TipoEntidad.Batalla, batallaId)?.Batalla;
                 yield return Esperar(() => (b = conexion.Sesion.Almacen.Buscar(TipoEntidad.Batalla, batallaId)?.Batalla)?.Estado == EstadoBatalla.BatallaEnCurso, 60, "la batalla en curso, vista desde la sesión");
                 Debug.Log($"[Prueba] desde la sesión: {b.Estado}, columna en batalla {Yo().Ubicacion}");
-                // Ya en curso, no se cancela (y con su frase).
                 yield return Rechazo(conexion, new Orden { CancelarBatalla = new OrdenCancelarBatalla { BattleId = batallaId } }, "batalla.no_puede_cancelar");
-                yield return CapturarPantalla("43_en_la_batalla");
+                yield return CapturarPantalla("45_en_la_batalla");
             }
             finally
             {
+                Application.logMessageReceived -= Registro;
+                LogAssert.ignoreFailingMessages = false;
                 if (lanzador != null && !lanzador.HasExited) { try { lanzador.StandardInput.WriteLine("parar"); lanzador.WaitForExit(5000); } catch { } if (!lanzador.HasExited) lanzador.Kill(); }
             }
         }
+
+        /// <summary>
+        /// Durante `segundos`, cada héroe montado que se desplaza (su espejo avanza) tiene que tener el paso del caballo en su Animator
+        /// (`MountGaitBlend` > 0): si no, el caballo se desliza tieso. Contra bandidos puede no montar nadie: entonces solo lo dice.
+        /// </summary>
+        static IEnumerator CaballosAlPaso(World cliente, float segundos)
+        {
+            var em = cliente.EntityManager;
+            var antes = new System.Collections.Generic.Dictionary<Entity, Vector3>();
+            int vistos = 0, tiesos = 0;
+            string ejemplo = null;
+            var fin = Time.realtimeSinceStartup + segundos;
+            while (Time.realtimeSinceStartup < fin && vistos < 60)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+                using var heroes = em.CreateEntityQuery(typeof(SoldadoRed), typeof(ConVisual), typeof(HeroMountComponent)).ToEntityArray(Unity.Collections.Allocator.Temp);
+                foreach (var e in heroes)
+                {
+                    if (!em.Exists(e) || em.GetComponentData<HeroMountComponent>(e).state != HeroMountState.Mounted) { antes.Remove(e); continue; }
+                    Vector3 donde = em.GetComponentData<Unity.Transforms.LocalTransform>(e).Position;
+                    if (antes.TryGetValue(e, out var previo) && (donde - previo).magnitude > 0.25f && VisualSyncUtility.TryGetVisual(cliente, e, out var figura))
+                    {
+                        var caballo = figura.GetComponentInChildren<ConquestTactics.Visual.HeroHorseVisual>();
+                        float paso = caballo != null && caballo.Animator != null ? caballo.Animator.GetFloat(AnimationHashes.MountGaitBlend) : -1f;
+                        vistos++;
+                        if (paso <= 0.01f) { tiesos++; ejemplo ??= $"{figura.name}: se movió {(donde - previo).magnitude:0.00} m en 0,25 s con paso {paso:0.00} (caballo {(caballo != null ? "sí" : "no")})"; }
+                    }
+                    antes[e] = donde;
+                }
+            }
+            Debug.Log($"[Prueba] caballos: {vistos} muestras de héroes montados andando, {tiesos} sin paso. {ejemplo}");
+            Assert.AreEqual(0, tiesos, "un caballo que anda lleva el paso en su Animator: " + ejemplo);
+        }
+
+        static MapaDeMundo ElMapaSiHay() => UnityEngine.Object.FindAnyObjectByType<MapaDeMundo>();
+
+        static World MundoDe(string nombre)
+        {
+            foreach (var w in World.All) if (w.IsCreated && w.Name == nombre) return w;
+            return null;
+        }
+
+        /// <summary>La batalla activa del héroe en el almacén de la sesión.</summary>
+        static string MiBatallaId(ConexionDeMundo conexion) =>
+            conexion.Sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Batalla).Select(e => e.Batalla)
+                .Where(x => x.HasLadoPropio && (x.Estado == EstadoBatalla.BatallaConvocando || x.Estado == EstadoBatalla.BatallaAsignada || x.Estado == EstadoBatalla.BatallaEnCurso))
+                .OrderByDescending(x => x.Version).First().Id;
 
         /// <summary>El lanzador del motor (su entorno ya puesto por `Tools/BatallaDesdeElMundo/correr.sh`), con su registro en Logs/mundo.</summary>
         static Process ArrancarLanzador(string exe)

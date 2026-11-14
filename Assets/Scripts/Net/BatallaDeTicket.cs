@@ -34,6 +34,11 @@ namespace ConquestTactics.Net
         public bool Salio;
         /// <summary>Servidor: desde cuándo está sin jugador el héroe de un humano (segundos de mundo); negativo si lo tiene.</summary>
         public double SinJugadorDesde = -1d;
+        /// <summary>Preparación: el orden de sus escuadras que eligió su jugador (ids del ticket; con la primera entra) y la formación de cada una.</summary>
+        public List<string> Orden = new List<string>();
+        public Dictionary<string, string> Formaciones = new Dictionary<string, string>();
+        /// <summary>Preparación: su jugador ha dicho «Listo».</summary>
+        public bool Listo;
     }
 
     /// <summary>

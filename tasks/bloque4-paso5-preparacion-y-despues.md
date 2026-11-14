@@ -343,3 +343,78 @@ Cada una dice qué hay hoy, por qué es una duda, las opciones y la que recomien
   - las estadísticas por escuadra y héroe al cliente (38);
   - `IsLocalHero` (41);
   - el botón para abandonar (43).
+
+## Respuestas de Víctor (2026-11-14) y lo que implican
+
+Lo que no contestó lo da por bueno tal como se propuso.
+
+- **1. Bandidos:** atacas en mundo abierto, así que solo cuenta la tropa que llevas. La preparación enseña lo que cargas y deja **cambiar el
+  orden**: con la primera entras y el resto se cambia en los puntos de suministro. El motor ya tiene `ordenarEscuadras` (comando 57). Falta
+  comprobar que el ticket conserva ese orden y que el servidor de batalla empieza con la primera.
+- **4.** Todos los ataques pasan por la preparación; se van abordando según lleguen.
+- **5.** Bandidos: (C). Defender tu residencia: eliges de entre todas tus tropas lo que quepa en el Liderazgo. Encaja con el motor, que
+  mete en la defensa el **loadout activo** de quien se une: la preparación guarda ese loadout (`guardarLoadout`) y después se une. Va con
+  su paso, el de los asedios.
+- **6.** Liderazgo, del motor.
+- **10. «Punto de entrada»** = punto de aparición en el mapa de la batalla. Hay que explicárselo.
+- **13. Los tiempos** = plazos del motor (Batalla_Unity_Ciclo: 5 min hasta asignar, 5 min hasta empezar) y la espera del servidor
+  (`-espera`, 60 s). Hay que explicárselo.
+- **15. Por qué toca el código del hilo de tropas:** la fase «listo» vive en el servidor de batalla (`Conquest.Net`). El mensaje de Víctor
+  quedó cortado («Pero si como dices»): hay que preguntarle.
+- **17.** Con varios héroes en la convocatoria, uno puede bajarse sin cancelar, y si se baja el último se cancela. El motor no tiene una
+  orden para bajarse antes de empezar: **pedido al motor**.
+- **27.** El informe también desde el mundo, pero **guardado fuera del motor, en una base de datos aparte**, que se pueda consultar, y
+  ver qué más se puede llevar allí. Es una decisión de arquitectura: hay que preguntar dónde va y quién escribe en ella.
+- **29.** La batalla, como miniatura en el mapa, en sus coordenadas y con la que se puede interactuar:
+  - con bandidos, se unen aliados mientras quepan;
+  - en una batalla campal, nadie entra de fuera;
+  - en un asedio, la plaza cambia de miniatura y sigue sus reglas;
+  - al acabar, los héroes vuelven a sus coordenadas.
+
+  El motor ya da `Batalla.punto` y `lado_para_unirse`. Esto entra con el paso de unirse a batallas (11).
+- **42.** El aspecto **real** también en la batalla. El ticket ya lo trae (`HeroSnapshot.avatar` y `femenino`), y el servidor de batalla
+  tendría que vestir con él en vez de usar `TestHeroPool`: es código del hilo de tropas.
+- **44.** Pregunta si se pueden migrar a la interfaz nueva. Sí: UI Toolkit va en cualquier escena.
+
+## Preguntas nuevas (numeración que ve Víctor) y lo propuesto
+
+- **54.** ¿El orden cambiado se guarda en el héroe o vale solo para esa batalla? Propuesta: se guarda (`ordenarEscuadras`).
+- **55.** ¿La preparación cabe en los 5 min del motor o se alarga? Propuesta: cabe.
+- **56.** ¿Quien se baja sin cancelar vuelve a su columna tal cual? Propuesta: sí.
+- **57.** La defensa de la residencia por loadout, ¿va en el paso de asedios? Propuesta: sí.
+- **Fuera de este paso:**
+  - la base de datos de informes, que se analiza en un hilo aparte del motor;
+  - unirse desde fuera a la batalla de la miniatura, que va en su paso.
+- **En este paso (propuesto):**
+  - la miniatura de la batalla en el mapa, solo para verla;
+  - la vuelta de los héroes a las coordenadas de la batalla;
+  - el aspecto real del héroe en la batalla, que lo hago yo aquí.
+- **15/36:** propuesto hacerlo aquí (el «listo» en el servidor de batalla). Falta su respuesta y el final de la frase que se cortó.
+- **Decidido, salvo que diga otra cosa:** la preparación y el después de la batalla, en UI Toolkit con las piezas de tropa.
+- Nada de código hasta que conteste.
+
+## Respuestas de Víctor (2026-11-14 17:13)
+
+- **54:** sí, con `ordenarEscuadras` del motor.
+- **55:** cabe. La preparación va sin el temporizador de 60 s, dentro del plazo del motor.
+- **56:** sí.
+- **57:** sí.
+- **El resto, como se propuso:**
+  - 15/36: el «listo» en el servidor de batalla, aquí;
+  - el aspecto real en la batalla, aquí;
+  - la miniatura en el mapa, solo para verla, y la vuelta a las coordenadas;
+  - UI Toolkit.
+
+**Desbloqueado: se empieza por la tanda 1.**
+
+## Tanda 1: lo hecho (2026-11-14)
+
+Los cambios sobre lo acordado, decididos por Víctor el 14-11:
+
+- **No se guarda nada en el motor.** El orden y la formación los aplica solo el servidor de batalla en esa batalla. Sustituye a la 54.
+- **La preparación va en escena aparte (`PreparacionScene`).** Cancelar o anular vuelve a MundoScene con la sesión viva
+  (`VolverAlMundo`), y esa vuelta la reutiliza la tanda 2.
+- **`IsLocalHero` no se marca en el espejo**: le pondría el motor físico local.
+- **La prueba del reinicio:** atacar, conectar, cancelar, volver al mapa, atacar otra vez, cambiar el orden, «Listo» y entrar en la batalla.
+
+Todo lo demás está en Docs/Arquitectura/28, en «Tanda 1 del paso 5».

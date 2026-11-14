@@ -354,3 +354,52 @@ Button { margin: 0; }
 .salida-loadout > Label { -unity-text-align: middle-left; padding-top: 0; }
 .salida-loadout .unity-base-popup-field__input { min-width: 150px; padding: 3px 6px; }
 .salida-loadout .unity-base-popup-field__text { -unity-text-align: middle-left; padding: 0; margin: 0; }
+
+/* La preparación de la batalla (PantallasDeMundo.Preparacion): la BattlePrepScene de Conquest calcada, con sus colores, su letra
+   (LiberationSans, la de sus TMP) y sus sprites (Assets/Art/UI). Las medidas, en el código (las de la original a 1950x1130). */
+.prep-fondo { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: #383838; overflow: hidden; }
+.prep-lienzo { position: absolute; width: 1950px; height: 1130px; transform-origin: left top;
+    -unity-font: url("/Assets/TextMesh Pro/Fonts/LiberationSans.ttf"); -unity-font-definition: initial; color: #ffffff; }
+.prep-lienzo Label { margin: 0; padding: 0; }
+.prep-mapa-nombre { font-size: 25px; -unity-text-align: middle-left; height: 100%; }
+.prep-raya { background-color: #ffffff; }
+.prep-temporizador { font-size: 40px; color: #ff0000; -unity-font-style: bold; -unity-text-align: middle-center; height: 100%; }
+.prep-estado-caja { align-items: flex-end; justify-content: center; }
+.prep-estado { font-size: 20px; -unity-text-align: middle-right; }
+.prep-plazo { font-size: 15px; color: #cfcfcf; -unity-text-align: middle-right; }
+.prep-heroe { background-image: url("/Assets/Art/UI/gradient.png"); -unity-background-scale-mode: stretch-to-fill; }
+.prep-circulo { background-image: url("/Assets/Art/UI/plain-circle.png"); -unity-background-scale-mode: stretch-to-fill; }
+.prep-circulo--negro { -unity-background-image-tint-color: #000000; }
+.prep-circulo--clase { -unity-background-image-tint-color: #597093; }
+.prep-circulo--nivel { -unity-background-image-tint-color: #a77044; align-items: center; justify-content: center; }
+.prep-anillo { background-image: url("/Assets/Art/UI/circle.png"); -unity-background-image-tint-color: #5983cb; -unity-background-scale-mode: stretch-to-fill; }
+.prep-heroe-nombre { font-size: 18px; -unity-text-align: middle-left; height: 100%; overflow: hidden; }
+.prep-heroe-nivel { font-size: 18px; -unity-text-align: middle-center; }
+.prep-heroe-estado { font-size: 15px; color: #cfcfcf; -unity-text-align: middle-right; height: 100%; }
+.prep-heroe-estado--listo { color: #8fc79f; -unity-font-style: bold; }
+.prep-liderazgo-icono { background-image: url("/Assets/Art/UI/units/leadership.png"); -unity-background-scale-mode: scale-to-fit; }
+.prep-liderazgo { font-size: 36px; -unity-font-style: bold; -unity-text-align: middle-center; height: 100%; }
+.prep-boton-negro { margin: 0; padding: 0; background-color: #1f1f1f; border-width: 0; border-radius: 3px; color: #ffffff; font-size: 19px; -unity-text-align: middle-center; }
+.prep-boton-negro:hover { background-color: #333333; }
+.prep-error { font-size: 16px; color: #ff8a7a; -unity-text-align: middle-center; height: 100%; background-color: rgba(0, 0, 0, 0.6); }
+.prep-aviso { font-size: 20px; -unity-text-align: middle-center; height: 100%; }
+.prep-escuadra { }
+.prep-hueco { background-color: #292929; }
+.prep-hueco-mas { background-image: url("/Assets/Art/UI/plus-square.png"); -unity-background-scale-mode: stretch-to-fill; opacity: 0.3; }
+.prep-franja { position: absolute; left: 0; top: 0; right: 0; height: 26px; flex-direction: row; align-items: center; background-color: rgba(20, 20, 20, 0.72); }
+.prep-flecha { width: 24px; height: 24px; margin: 1px; padding: 0; border-width: 0; border-radius: 2px; background-color: rgba(255, 255, 255, 0.12); color: #ffffff; font-size: 12px; -unity-text-align: middle-center; }
+.prep-flecha:hover { background-color: rgba(255, 255, 255, 0.28); }
+.prep-flecha:disabled { opacity: 0.3; }
+.prep-formacion { flex-grow: 1; flex-shrink: 1; margin: 0 2px; }
+.prep-formacion .unity-base-popup-field__input { color: #ffffff; background-color: rgba(0, 0, 0, 0.55); border-width: 0; font-size: 12px; padding: 1px 4px; min-width: 0; height: 22px; }
+.prep-formacion .unity-base-popup-field__text { -unity-text-align: middle-left; padding: 0; margin: 0; }
+.prep-casilla { background-color: #1f1f1f; justify-content: center; align-items: center; }
+.prep-casilla--llena { background-image: url("/Assets/Art/UI/common_background_square.png"); -unity-background-scale-mode: stretch-to-fill; }
+.prep-casilla-texto { font-size: 12px; white-space: normal; -unity-text-align: middle-center; padding: 4px; color: #e6e6e6; }
+.prep-equipo-aviso-caja { justify-content: center; padding: 0 8px; background-color: rgba(0, 0, 0, 0.55); border-radius: 3px; }
+.prep-equipo-aviso { font-size: 14px; white-space: normal; color: #ffffff; }
+.prep-ahora-caja { justify-content: center; padding: 0 10px; background-color: rgba(0, 0, 0, 0.55); border-radius: 3px; }
+.prep-ahora { font-size: 15px; white-space: normal; color: #ffffff; }
+.prep-start { margin: 0; padding: 0; background-color: #e3cc7f; border-width: 0; border-radius: 4px; color: #000000; font-size: 30px; -unity-text-align: middle-center; }
+.prep-start:hover { background-color: #efdb98; }
+.prep-start:disabled { opacity: 0.55; }

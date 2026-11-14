@@ -19,9 +19,7 @@ public static class VestidoDelMotor
         // Lo que se eligió vacío (sin barba, por ejemplo) se quita: el maniquí de Synty trae una pieza puesta en cada hueco (coleta y barba) y
         // ResetModularDummyToBase solo toca los huecos de las piezas que recibe, así que un hueco vacío se quedaba con la del maniquí.
         // Con un motor que no guarda el aspecto (anterior a 358af5ff) llegan todos vacíos: se queda sin pelo, barba ni cejas, no con unos inventados.
-        if (string.IsNullOrEmpty(heroe.Pelo)) Quitar(personaje, piezas.hairParts, genero);
-        if (string.IsNullOrEmpty(heroe.Barba)) Quitar(personaje, piezas.beardParts, genero);
-        if (string.IsNullOrEmpty(heroe.Cejas)) Quitar(personaje, piezas.eyebrowsParts, genero);
+        QuitarHuecosVacios(personaje, piezas, heroe.Pelo, heroe.Barba, heroe.Cejas, genero);
         var sufijo = heroe.Armadura == "pesada" ? "H" : heroe.Armadura == "media" ? "M" : "L";
         foreach (var itemId in new[] { $"Tor{sufijo}ADef", $"Glo{sufijo}ADef", $"Pan{sufijo}ADef", $"Boot{sufijo}ADef" })
         {
@@ -30,6 +28,15 @@ public static class VestidoDelMotor
                 Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(personaje, piezas, item.visualPartId, genero);
         }
         return true;
+    }
+
+    /// <summary>Los huecos del aspecto que se eligieron vacíos (pelo, barba, cejas) se apagan: el maniquí de Synty trae una pieza puesta en cada uno.
+    /// Lo usan el campamento y el héroe de la batalla en red (`HeroVisualAppearanceSystem`, con el aspecto que llega del servidor).</summary>
+    public static void QuitarHuecosVacios(Transform personaje, Data.Avatar.AvatarPartDatabase piezas, string pelo, string barba, string cejas, Gender genero)
+    {
+        if (string.IsNullOrEmpty(pelo)) Quitar(personaje, piezas.hairParts, genero);
+        if (string.IsNullOrEmpty(barba)) Quitar(personaje, piezas.beardParts, genero);
+        if (string.IsNullOrEmpty(cejas)) Quitar(personaje, piezas.eyebrowsParts, genero);
     }
 
     /// <summary>Apaga lo que cuelga de los huesos de un hueco (pelo, barba, cejas): las piezas de esa lista para ese género.</summary>

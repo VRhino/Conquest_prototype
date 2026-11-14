@@ -8,7 +8,12 @@
     "Game.ECS",
     "UnityEngine.UI",
     "Unity.TextMeshPro",
-    "Conquest.Net"
+    "Conquest.Net",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.NetCode",
+    "Unity.Transforms",
+    "Unity.Mathematics"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

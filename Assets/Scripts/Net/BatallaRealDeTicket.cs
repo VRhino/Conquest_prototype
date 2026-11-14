@@ -25,7 +25,7 @@ namespace ConquestTactics.Net
         public static bool TropaConocida(string tropaId) => SquadDataService.GetSquadById(tropaId) != null;
 
         /// <summary>ponytail: las clases del motor que tienen pariente en Conquest; las demás, espada y escudo. Lo de verdad es el punto 3 del plan de Conquest.</summary>
-        static string Clase(string claseDelMotor) => claseDelMotor switch
+        public static string Clase(string claseDelMotor) => claseDelMotor switch
         {
             "lanza_escudo_redondo" => nameof(HeroClass.Spear),
             "arco_lanza" => nameof(HeroClass.Bow),
@@ -87,10 +87,33 @@ namespace ConquestTactics.Net
                     return null;
                 }
             var heroe = Heroe(participante.HeroeId, participante.Heroe?.DisplayName, Clase(participante.Heroe?.ClassDefinitionId),
-                (int)(participante.Heroe?.Nivel ?? 1), punto, aspectos, orden);
+                (int)(participante.Heroe?.Nivel ?? 1), punto, aspectos, orden, participante.Heroe);
             foreach (var escuadra in participante.Escuadras)
                 soldados += Escuadra(batalla, heroe, escuadra);
+            Preparado(batalla.Heroes.Find(h => h.Id == participante.HeroeId), heroe);
             return heroe;
+        }
+
+        /// <summary>
+        /// Lo que eligió su jugador en la preparación: la escuadra con la que entra va primera (Conquest saca la primera y deja las demás para
+        /// los puntos de suministro) y cada una empieza en la formación elegida, si su tropa la tiene. El ticket no cambia: el resultado sigue
+        /// trayendo todas sus escuadras.
+        /// </summary>
+        static void Preparado(HeroeEnJuego elegido, BattleHeroData heroe)
+        {
+            if (elegido == null)
+                return;
+            if (elegido.Orden.Count > 0)
+            {
+                int Puesto(SquadInstanceData s) { int i = elegido.Orden.IndexOf(s.id); return i < 0 ? int.MaxValue : i; }
+                var ordenadas = new List<SquadInstanceData>(heroe.squadInstances);
+                ordenadas.Sort((a, b) => Puesto(a) != Puesto(b) ? Puesto(a).CompareTo(Puesto(b)) : heroe.squadInstances.IndexOf(a).CompareTo(heroe.squadInstances.IndexOf(b)));
+                heroe.squadInstances.Clear();
+                heroe.squadInstances.AddRange(ordenadas);
+            }
+            foreach (var s in heroe.squadInstances)
+                if (elegido.Formaciones.TryGetValue(s.id, out var familia) && Familia(familia) is FormationType tipo && s.allowedFormations.Contains(tipo))
+                    s.startFormation = tipo;
         }
 
         /// <summary>
@@ -113,10 +136,16 @@ namespace ConquestTactics.Net
             return true;
         }
 
-        static BattleHeroData Heroe(string id, string nombre, string clase, int nivel, int punto, HeroData[] aspectos, int orden)
+        /// <summary>
+        /// Un héroe de la batalla. El de un jugador lleva el aspecto que guardó el motor (`HeroSnapshot`: cabeza, pelo, barba, cejas y género;
+        /// un hueco vacío se queda vacío) y la armadura de inicio de Conquest del tipo de la que lleva (ligera, media o pesada), como en el
+        /// campamento (`VestidoDelMotor`). El capitán de una escuadra sin héroe, que el motor no tiene, sale de la reserva de héroes de prueba.
+        /// ponytail: el arma (y las cifras de las piezas) siguen siendo las de la reserva hasta el equipo pieza a pieza (paso 6 del bloque 4).
+        /// </summary>
+        static BattleHeroData Heroe(string id, string nombre, string clase, int nivel, int punto, HeroData[] aspectos, int orden, BronzeAge.Contract.V1.HeroSnapshot delMotor = null)
         {
             var aspecto = aspectos.Length > 0 ? aspectos[orden % aspectos.Length] : null;
-            return new BattleHeroData
+            var datos = new BattleHeroData
             {
                 heroId = id,
                 heroName = string.IsNullOrEmpty(nombre) ? id : nombre,
@@ -127,6 +156,34 @@ namespace ConquestTactics.Net
                 equipment = aspecto?.equipment ?? new Equipment(),
                 gender = aspecto?.gender ?? "Male",
             };
+            if (delMotor == null)
+                return datos;
+            var a = delMotor.Avatar;
+            datos.avatar = new AvatarParts { headId = a?.CabezaId ?? "", hairId = a?.PeloId ?? "", beardId = a?.BarbaId ?? "", eyebrowId = a?.CejasId ?? "" };
+            datos.gender = delMotor.Femenino ? "Female" : "Male";
+            var arma = datos.equipment?.weapon;
+            datos.equipment = new Equipment { weapon = arma };
+            var tipo = TipoDeArmadura(delMotor.Equipamiento?.Torso?.ItemDefinitionId);
+            if (tipo != null)
+            {
+                datos.equipment.torso = ItemInstanceService.CreateItem($"Tor{tipo}ADef");
+                datos.equipment.gloves = ItemInstanceService.CreateItem($"Glo{tipo}ADef");
+                datos.equipment.pants = ItemInstanceService.CreateItem($"Pan{tipo}ADef");
+                datos.equipment.boots = ItemInstanceService.CreateItem($"Boot{tipo}ADef");
+            }
+            return datos;
+        }
+
+        /// <summary>
+        /// La letra de Conquest (L, M, H) del tipo de la armadura del motor, por el id de su pieza (`torso_ligera_bronce`: tipo, después del
+        /// hueco). Nula sin pieza o con un tipo que no conoce.
+        /// ponytail: el id lleva el tipo por convención del catálogo `OBJETOS`; el `tipoArmadura` de verdad no viaja en el ticket. Con el
+        /// catálogo de objetos en Conquest (paso 6), de ahí.
+        /// </summary>
+        public static string TipoDeArmadura(string piezaDelMotor)
+        {
+            var partes = (piezaDelMotor ?? "").Split('_');
+            return partes.Length < 2 ? null : partes[1] switch { "ligera" => "L", "media" => "M", "pesada" => "H", _ => null };
         }
 
         /// <summary>

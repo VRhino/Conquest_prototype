@@ -34,6 +34,17 @@ namespace ConquestTactics.Net
         static string _recado = "";
         static double _recadoHasta;
 
+        /// <summary>Lo estático como al arrancar el proceso, para entrar en otra batalla sin salir de él (desde el mundo).</summary>
+        public static void Reiniciar()
+        {
+            Aviso = "";
+            Reconexiones = 0;
+            SinNoticias = false;
+            Abandonada = false;
+            _recado = "";
+            _recadoHasta = 0d;
+        }
+
         /// <summary>Un recado de unos segundos en el sitio del aviso de conexión.</summary>
         public static void Decir(string texto, double segundos)
         {

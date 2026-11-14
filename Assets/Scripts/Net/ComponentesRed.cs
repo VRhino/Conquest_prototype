@@ -275,6 +275,30 @@ namespace ConquestTactics.Net
         public FixedString128Bytes Token;
     }
 
+    /// <summary>
+    /// RPC del cliente durante la preparación, antes de que empiece la batalla (<see cref="PreparacionRed"/>): el orden de sus escuadras (ids del
+    /// ticket separados por comas; con la primera entra su héroe), la formación de cada una (<c>id=familia</c>, separadas por comas) y si
+    /// está listo. Se repite cada segundo hasta que empieza: el servidor se queda con el último.
+    /// </summary>
+    public struct PreparacionDelJugador : IRpcCommand
+    {
+        public FixedString512Bytes Orden;
+        public FixedString512Bytes Formaciones;
+        public byte Listo;
+    }
+
+    /// <summary>
+    /// RPC del servidor a todos sus clientes, cada medio segundo: lo que le queda a la preparación (segundos; negativo si aún no corre), si la
+    /// batalla ya empezó y cada héroe humano del ticket como <c>id:estado:punto</c> separados por comas (estado 0 sin conectar, 1 conectado,
+    /// 2 listo; punto, el de aparición que le toca).
+    /// </summary>
+    public struct EstadoDePreparacion : IRpcCommand
+    {
+        public float Queda;
+        public byte Empezada;
+        public FixedString512Bytes Heroes;
+    }
+
     /// <summary>Servidor: a qué bando pertenece algo que combate o que guía a una escuadra (0 atacante, 1 defensor).</summary>
     public struct BandoServidor : IComponentData
     {

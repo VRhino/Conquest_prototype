@@ -70,8 +70,9 @@ public class BattleSceneController : MonoBehaviour
                 Debug.Log($"[BattleSceneController] BattleData de test generado - battleID: {_currentBattleData.battleID}");
                 InitializeBattle();
             }
-            else
+            else if (!BattleBootstrapRequests.NoLocalHero)
             {
+                // El cliente de la batalla en red (NoLocalHero) no la necesita: lo que se ve lo monta EspejoClienteSystem con lo que manda el servidor.
                 Debug.LogError("[BattleSceneController] No hay BattleData disponible y no hay TestEnvironmentInitializer");
             }
         }

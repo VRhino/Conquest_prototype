@@ -104,3 +104,107 @@ El recorrido:
   - reiniciar los estáticos al empezar una batalla de cliente;
   - la señal de vuelta. Con la sesión viva, el fin de la batalla llega del motor. Lo que queda en el cliente es «salgo por mi cuenta»
     y «me han eliminado en campo abierto».
+
+## Tanda 1 del paso 5: la preparación de la batalla (2026-11-14)
+
+Las decisiones son las respuestas de Víctor a las dudas del paso 5, que están en `tasks/bloque4-paso5-preparacion-y-despues.md`.
+
+### Qué hace
+
+- **Atacar lleva a la preparación.** «Atacar» a unos bandidos abre la escena `PreparacionScene`, que solo tiene una cámara. Las pantallas
+  del mundo pasan a DontDestroyOnLoad con la sesión viva, que se sigue bombeando, y el mapa se quita. Sustituye a la ficha de espera de la
+  5A: arriba van el estado y el plazo del motor, y lo que le queda a la preparación.
+- **Solo se cambia el orden.** Contra bandidos se combate con lo que lleva la columna. La pantalla enseña sus escuadras con las piezas de
+  tropa de Conquest y el Liderazgo del motor.
+  - Solo deja **cambiar el orden** (◀ ▶): con la primera entra el héroe y las demás esperan para cambiarlas en los puntos de suministro.
+  - También deja cambiar la **formación** de cada una: las que permite el ticket y tiene su tropa en Conquest.
+- **No se guarda nada.** El orden y la formación los aplica **solo el servidor de batalla** al montar esa batalla. El motor no guarda
+  nada (Víctor, 2026-11-14). Cada preparación empieza con el orden y la formación que el héroe tiene en el motor, es decir, los del
+  ticket. Esto sustituye a la respuesta 54: además, `ordenarEscuadras` y `elegirFormacion` tienen candado de batalla y el motor los
+  rechaza desde el ataque con `batalla.bloqueado`.
+- **La interfaz es la BattlePrepScene de Conquest portada a UI Toolkit** (Víctor, 2026-11-14: portar, no rediseñar).
+  - Calca la disposición de la original a 1950x1130: cabecera con el nombre del mapa, el temporizador rojo y la raya; el minimapa; la
+    tira de héroes; el pie con el Liderazgo y las tarjetas; el equipo y el botón amarillo.
+  - Las medidas, colores, letra (LiberationSans) y sprites (`Assets/Art/UI`) son los de su inventario (`PreparacionDeConquestTests`,
+    que también saca las capturas de referencia).
+  - El lienzo se escala entero para caber en la ventana. La original no escala: en las ventanas pequeñas se sale.
+  - El minimapa es el mismo prefab UGUI de la original (`MapDataSO.preparationMap`), pintado en una textura con su propia cámara y sin
+    EventSystem, con tu punto de aparición marcado con su selección.
+  - Lo nuestro va en el sitio de lo más parecido: el orden y la formación, sobre cada tarjeta; «Listo» o «Volver al mapa», en «Start»;
+    «Cancelar la batalla», en «Warband Builds»; el estado y el plazo del motor, a la derecha de la cabecera; quién está listo, al final de
+    su fila.
+  - Se ocultan sin mover nada «Save Build», elegir el punto y el inventario. Los huecos «+» del riel se ven, apagados (Víctor: que el riel no se vea vacío).
+- **Lo que se enseña sin cambiarlo:**
+  - el equipo, con «se cambia dentro de una plaza, un pueblo o un campamento»;
+  - el campo de batalla, que es el minimapa del mapa `default`, con los puntos de aparición, suministro y captura, y el tuyo marcado: el
+    que reparte el servidor;
+  - quién combate, y si cada uno está listo.
+  - Los perks no salen, porque no hay nada que elegir.
+- **El servidor de batalla.** Con `asignacion_propia`, la preparación se conecta con el servidor de batalla. «Listo» se puede pulsar en
+  cuanto hay conexión.
+  - Empieza cuando todos los humanos están dentro y listos, o cuando pasan los 60 s de espera; quien no ha dicho «Listo» entra con lo que
+    eligió.
+  - Al dar la salida, la red carga BattleScene.
+- **Cancelada o anulada.** Si la batalla se cancela o se anula antes de empezar, la preparación lo dice. «Volver al mapa» deja el
+  servidor de batalla (el mundo de cliente se quita y vuelve el mundo ECS de siempre) y carga MundoScene.
+  - El objeto «Mundo» que trae la escena se aparta (`PantallasDeMundo.Viva`), y las pantallas vivas montan el mapa con la sesión de
+    siempre.
+  - `VolverAlMundo()` es la misma vuelta que usará la tanda 2 al acabar la batalla.
+- **Las escenas, en el build.** MundoScene y PreparacionScene están ahora en la lista de escenas del build (`EditorBuildSettings`); para
+  cargarlas por nombre hace falta.
+
+### El mensaje entre el cliente y el servidor de batalla
+
+- `PreparacionDelJugador` (cliente → servidor, cada segundo hasta empezar): el orden, las formaciones y «Listo».
+- `EstadoDePreparacion` (servidor → todos, cada medio segundo): lo que queda, si ya empezó y cada héroe humano con su estado
+  (sin conectar, preparándose, listo) y su punto de aparición.
+
+Lo lleva `PreparacionRed`, en `Conquest.Net`, entre la pantalla y la red. Un cliente sin pantalla de preparación (`-red cliente`, como
+PruebaRed) se da por listo al entrar y carga BattleScene enseguida, como antes.
+
+### Lo estático entre batallas
+
+`EntradaEnBatalla.Entrar` y `EntradaEnBatalla.Salir` ponen como al arrancar:
+- `PreparacionRed`;
+- `ReconexionClienteSystem` (aviso, reconexiones, «abandonada»);
+- `BattleBootstrapRequests.NoLocalHero` y `NetworkTeam`;
+- `BattleTransitionData`.
+
+`EspejoClienteSystem.CamaraDelJuego` se pone a falso al crear el mundo de cliente. Así se entra en otra batalla sin salir del proceso.
+
+### Lo que esta tanda toca del código de batalla (para el hilo de tropas)
+
+- **`BatallaDeTicketSystem`:**
+  - recibe `PreparacionDelJugador` y manda `EstadoDePreparacion`;
+  - empieza con todos dentro **y listos**, o al acabarse la espera;
+  - un ticket con la revisión subida conserva lo elegido.
+- **`BatallaRealDeTicket`:**
+  - `Preparado()` pone primera la escuadra elegida y la formación de cada una, si su tropa la tiene;
+  - `Heroe()` viste al héroe de un jugador con su aspecto del motor (`HeroSnapshot`: cabeza, pelo, barba, cejas y género; un hueco vacío
+    se queda vacío) y con la armadura de inicio de Conquest del tipo de la suya.
+  - `TipoDeArmadura` saca el tipo del id de la pieza (`torso_ligera_…`), por convención, hasta que el catálogo de objetos llegue a Conquest
+    (paso 6).
+  - El arma y el capitán de una escuadra sin héroe siguen saliendo de `TestHeroPool`.
+- **`HeroeEnJuego`:** `Orden`, `Formaciones` y `Listo`.
+- **`EspejoClienteSystem`:** desde el mundo, no carga BattleScene hasta la salida (`PreparacionRed.ConPantalla`).
+- **`ReconexionClienteSystem`:** `Reiniciar()`.
+- **`BattleSceneController.Awake`:** ya no registra «No hay BattleData…» en el cliente en red (`NoLocalHero`), porque allí no hace falta.
+- **No se marca `IsLocalHero` en el espejo.** `EntityVisualSync` lo usa para darle al modelo el motor físico local, que escribe la posición;
+  en red la posición es del servidor y se pelearían. El héroe propio se sigue reconociendo con `EspejoClienteSystem.CamaraDelJuego`.
+
+### Pendiente: monturas que se deslizan sin animar
+
+Víctor vio, mirando las pruebas en su pantalla, «las monturas de los héroes se están moviendo sin la animación, tiesas». No está
+reproducido: en la batalla contra bandidos de la prueba de punta a punta no monta nadie. Falta saber si eran héroes o caballería (las tropas
+a caballo).
+
+La prueba ya lo vigila: `CaballosAlPaso` falla si un héroe montado se desplaza sin el paso (`MountGaitBlend`) en el Animator de su
+caballo. Lo dejamos para después (Víctor, 2026-11-14).
+
+### Pedidos al motor (de las dudas del paso 5)
+
+- **Elegir las escuadras** al entrar en batallas que no son de columna. La defensa por loadout ya vale para el paso de los asedios
+  (respuesta 57).
+- **Bajarse de una batalla sin cancelarla**, y que se cancele si se baja el último (respuesta 17). Quien se baja vuelve a su columna tal
+  cual (respuesta 56).
+- **Un hecho de cierre** con el botín, lo perdido del carro, la herida y la experiencia (duda 25).

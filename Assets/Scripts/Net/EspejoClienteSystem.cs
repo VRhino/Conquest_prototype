@@ -47,12 +47,19 @@ namespace ConquestTactics.Net
         public static bool CamaraDelJuego { get; private set; }
         bool _fotoDeMarcadores;
 
-        protected override void OnCreate() => Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
+        protected override void OnCreate()
+        {
+            CamaraDelJuego = false;
+            Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
+        }
 
         protected override void OnUpdate()
         {
             if (!_escenaPedida)
             {
+                // Desde el mundo, la preparación (PreparacionRed) sigue en pantalla hasta que el servidor da la salida.
+                if (PreparacionRed.ConPantalla && !PreparacionRed.Empezada)
+                    return;
                 _escenaPedida = true;
                 BattleBootstrapRequests.NoLocalHero = true;
                 ReservaDeProyectiles.Asegurar();

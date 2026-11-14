@@ -26,8 +26,24 @@ namespace ConquestTactics.Mundo.UI
         ConquestTactics.Mundo.Mapa.MapaDeMundo mapa;
         VisualElement diagnostico;
 
+        /// <summary>
+        /// Las pantallas con la sesión viva. Al volver a MundoScene desde la preparación o la batalla, la escena trae otro objeto «Mundo»: ese
+        /// se quita y esta retoma la escena (<see cref="VolverAlMundo"/>).
+        /// </summary>
+        public static PantallasDeMundo Viva { get; private set; }
+        bool sobrante;
+
         void Awake()
         {
+            // Solo se aparta ante una viva que salió de su escena (DontDestroyOnLoad, camino de una batalla).
+            if (Viva != null && Viva != this && Viva.gameObject.scene.name == "DontDestroyOnLoad")
+            {
+                sobrante = true;
+                foreach (var componente in GetComponents<MonoBehaviour>()) componente.enabled = false;
+                Destroy(gameObject);
+                return;
+            }
+            Viva = this;
             c = GetComponent<ConexionDeMundo>();
             var ajustes = ScriptableObject.CreateInstance<PanelSettings>();
             ajustes.themeStyleSheet = Resources.Load<ThemeStyleSheet>("MundoUI/TemaMundo");
@@ -60,8 +76,23 @@ namespace ConquestTactics.Mundo.UI
             return v;
         }
 
+        void OnDestroy()
+        {
+            if (Viva == this) Viva = null;
+        }
+
+        /// <summary>MundoScene, si está cargada; si no (la prueba monta las pantallas en su escena), la de este objeto.</summary>
+        UnityEngine.SceneManagement.Scene EscenaDelMundo()
+        {
+            var s = UnityEngine.SceneManagement.SceneManager.GetSceneByName(EscenaMundo);
+            return s.IsValid() && s.isLoaded ? s : gameObject.scene;
+        }
+
+        public const string EscenaMundo = "MundoScene";
+
         void Start()
         {
+            if (sobrante) return;
             if (c.HayToken) _ = Partidas();
             else Acceso();
         }
@@ -300,7 +331,7 @@ namespace ConquestTactics.Mundo.UI
             catch (Exception e) { await Partidas("No se pudieron leer las reglas: " + e.Message); return; }
             if (this == null || c.Sesion == null || c.HeroeId == null) return;
             var raiz = pantalla.parent;
-            var mundo = gameObject.scene;
+            var mundo = EscenaDelMundo();
 
             Action volverCamaras = null;
             async Task Cerrar()
@@ -334,7 +365,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var camaras = new List<Camera>();
             var oidos = new List<AudioListener>();
-            foreach (var raiz in gameObject.scene.GetRootGameObjects())
+            foreach (var raiz in EscenaDelMundo().GetRootGameObjects())
             {
                 foreach (var cam in raiz.GetComponentsInChildren<Camera>()) if (cam.enabled) { cam.enabled = false; camaras.Add(cam); }
                 foreach (var oido in raiz.GetComponentsInChildren<AudioListener>()) if (oido.enabled) { oido.enabled = false; oidos.Add(oido); }
@@ -462,7 +493,7 @@ namespace ConquestTactics.Mundo.UI
 
             // La cámara del mundo se aparta (FeudoScene trae la suya, que sigue al héroe).
             var volverCamaras = ApartarCamarasDelMundo();
-            var mundo = gameObject.scene;
+            var mundo = EscenaDelMundo();
             async Task Cerrar()
             {
                 if (SelectorDePersonaje.Interior == null) return;
@@ -1031,7 +1062,7 @@ namespace ConquestTactics.Mundo.UI
                 var raiz = pantalla.parent;
                 var mapaCrear = mapa;
                 var camara = mapaCrear.Vista;
-                var mundo = gameObject.scene;
+                var mundo = EscenaDelMundo();
                 string rechazoDeNombre = null;
                 raiz.style.display = DisplayStyle.None;
                 mapaCrear.gameObject.SetActive(false);

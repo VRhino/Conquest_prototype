@@ -117,6 +117,9 @@ public partial class HeroVisualAppearanceSystem : SystemBase
 
         Data.Avatar.AvatarVisualUtils.ResetModularDummyToBase(
             visualInstance.transform, avatarPartDatabase, baseVisualPartIds, genderEnum);
+        // El aspecto que llega del servidor de batalla (el del motor) puede traer huecos vacíos (sin barba): se quitan las piezas del maniquí.
+        if (remoteAppearance != null)
+            VestidoDelMotor.QuitarHuecosVacios(visualInstance.transform, avatarPartDatabase, avatar.hairId, avatar.beardId, avatar.eyebrowId, genderEnum);
 
         if (equipment != null)
         {

@@ -92,7 +92,14 @@ namespace ConquestTactics.Net
             BatallaDeTicket.Actual = new BatallaDeTicket(ticket, OpcionesRed.Duracion);
             if (anterior != null)
                 foreach (var h in BatallaDeTicket.Actual.Heroes)
-                    h.Dueno = anterior.Heroes.Find(v => v.Id == h.Id)?.Dueno ?? 0;
+                {
+                    var antes = anterior.Heroes.Find(v => v.Id == h.Id);
+                    if (antes == null) continue;
+                    h.Dueno = antes.Dueno;
+                    h.Orden = antes.Orden;
+                    h.Formaciones = antes.Formaciones;
+                    h.Listo = antes.Listo;
+                }
             _esperandoRevision = -1d;
             _creada = -1;
             Debug.Log($"[Red] Ticket {ticket.BattleId} (revisión {ticket.TicketRevision}): {BatallaDeTicket.Actual.Heroes.Count} héroes, " +
@@ -107,6 +114,10 @@ namespace ConquestTactics.Net
             if (batalla == null)
                 return;
             if (_creada < 0) _creada = ahora;
+            bool conLanzador = EnlaceLanzador.Actual != null;
+            float espera = OpcionesRed.EsperaJugadores > 0f || !conLanzador ? OpcionesRed.EsperaJugadores : EsperaPorDefecto;
+            RecibirPreparacion(batalla);
+            ContarPreparacion(batalla, ahora, espera);
 
             if (!batalla.Empezada)
             {
@@ -123,12 +134,13 @@ namespace ConquestTactics.Net
                     return;
                 }
                 RepartirHeroes(batalla);
-                bool conLanzador = EnlaceLanzador.Actual != null;
-                float espera = OpcionesRed.EsperaJugadores > 0f || !conLanzador ? OpcionesRed.EsperaJugadores : EsperaPorDefecto;
-                if (batalla.Heroes.TrueForAll(h => h.EsBot || h.Dueno != 0))
+                // La preparación (Docs/Arquitectura/28): empieza cuando todos los humanos están dentro y han dicho «Listo», o al acabarse
+                // la espera. Un cliente sin pantalla de preparación se da por listo al entrar (PreparacionRed).
+                if (batalla.Heroes.TrueForAll(h => h.EsBot || h.Dueno != 0 && h.Listo))
                     Empezar(batalla, ahora);
                 else if (ahora - _creada >= espera)
                 {
+                    // Los que están dentro sin haber dicho «Listo» entran con lo que eligieron.
                     // Quien no llega a conectarse sale sin castigo y el motor reabre la convocatoria sin él (Doc 5.15.1).
                     // Sin motor que la reabra (un fichero), y en la batalla de cápsulas, a su héroe lo juega la IA.
                     if (Real && conLanzador) SacarALosNoConectados(batalla, ahora);
@@ -229,6 +241,73 @@ namespace ConquestTactics.Net
                 EnlaceLanzador.Actual = null;
                 Salir(4);
             }
+        }
+
+        /// <summary>
+        /// Lo que manda cada jugador en la preparación: el orden de sus escuadras, su formación y «Listo». Antes de empezar se queda el último
+        /// (lo usa <see cref="BatallaRealDeTicket.Montar"/>); después ya no cambia nada. Uno de quien aún no se sabe el héroe se descarta: el
+        /// cliente lo repite cada segundo.
+        /// </summary>
+        void RecibirPreparacion(BatallaDeTicket batalla)
+        {
+            var ecb = new EntityCommandBuffer(Allocator.Temp);
+            foreach (var (origen, preparacion, peticion) in SystemAPI.Query<RefRO<ReceiveRpcCommandRequest>, RefRO<PreparacionDelJugador>>().WithEntityAccess())
+            {
+                ecb.DestroyEntity(peticion);
+                if (batalla.Empezada || !SystemAPI.HasComponent<NetworkId>(origen.ValueRO.SourceConnection))
+                    continue;
+                int id = SystemAPI.GetComponent<NetworkId>(origen.ValueRO.SourceConnection).Value;
+                var heroe = batalla.Heroes.Find(h => h.Dueno == id && !h.Salio);
+                if (heroe == null)
+                    continue;
+                var p = preparacion.ValueRO;
+                heroe.Orden = new System.Collections.Generic.List<string>(p.Orden.ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                heroe.Formaciones.Clear();
+                foreach (var par in p.Formaciones.ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    int igual = par.IndexOf('=');
+                    if (igual > 0) heroe.Formaciones[par.Substring(0, igual)] = par.Substring(igual + 1);
+                }
+                bool listo = p.Listo != 0;
+                if (listo && !heroe.Listo)
+                    Debug.Log($"[Red] {heroe.Id} está listo: entra con {(heroe.Orden.Count > 0 ? heroe.Orden[0] : "su primera escuadra")}");
+                heroe.Listo = listo;
+            }
+            ecb.Playback(EntityManager);
+        }
+
+        const double CadaEstado = 0.5d;
+        double _ultimoEstado = -1d;
+
+        /// <summary>
+        /// A todos los clientes, cada medio segundo: lo que le queda a la preparación, si la batalla ya empezó (entonces cargan BattleScene) y
+        /// cómo está cada héroe humano del ticket, con su punto de aparición (<see cref="EstadoDePreparacion"/>).
+        /// </summary>
+        void ContarPreparacion(BatallaDeTicket batalla, double ahora, float espera)
+        {
+            if (ahora - _ultimoEstado < CadaEstado)
+                return;
+            _ultimoEstado = ahora;
+            var heroes = new System.Collections.Generic.List<string>();
+            var enElBando = new int[2];
+            foreach (var h in batalla.Heroes)
+            {
+                int punto = (h.Bando == BatallaDeTicket.Defensor ? 4 : 1) + enElBando[h.Bando]++ % 3;
+                if (h.EsBot || h.Salio)
+                    continue;
+                int estado = h.Dueno == 0 ? PreparacionRed.SinConectar : h.Listo ? PreparacionRed.ConListo : PreparacionRed.ConectadoSinListo;
+                heroes.Add($"{h.Id}:{estado}:{punto}");
+            }
+            bool corre = EnlaceLanzador.Actual == null || batalla.Asignacion != null;
+            var estadoRed = new EstadoDePreparacion
+            {
+                Queda = batalla.Empezada ? 0f : corre ? (float)math.max(0d, espera - (ahora - _creada)) : -1f,
+                Empezada = (byte)(batalla.Empezada ? 1 : 0),
+                Heroes = string.Join(",", heroes),
+            };
+            var mensaje = EntityManager.CreateEntity();
+            EntityManager.AddComponentData(mensaje, estadoRed);
+            EntityManager.AddComponentData(mensaje, new SendRpcCommandRequest());
         }
 
         void SacarALosNoConectados(BatallaDeTicket batalla, double ahora)
