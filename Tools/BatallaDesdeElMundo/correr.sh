@@ -22,7 +22,7 @@ export BRONZEAGE_PRUEBA_LANZADOR="$(cygpath -w $MOTOR/bronzeage-lanzador.exe)"
 export LANZADOR_MOTOR=127.0.0.1:7891 LANZADOR_NICK=lanzador-prueba LANZADOR_CLAVE=clave-lanzador-1 CODIGO_REGISTRO_SERVIDORES=$SERV
 export LANZADOR_HOST=127.0.0.1 LANZADOR_PUERTOS=7801-7805 LANZADOR_PROCESO="$(cygpath -w $CQ/Builds/PruebaRed/PruebaRed.exe)"
 export LANZADOR_ARGUMENTOS="-batchmode -nographics -logFile $(cygpath -w $CQ/Logs/mundo/batalla_servidor.log) -espera 60"
-export CONQUEST_BATALLA_REAL=1
+export CONQUEST_BATALLA_REAL=1 CONQUEST_DURACION=${CONQUEST_DURACION:-60}
 rm -f Logs/mundo/batalla.xml
 "/c/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Unity.exe" -projectPath . -runTests -testPlatform PlayMode -testFilter "$FILTRO" -testResults Logs/mundo/batalla.xml -logFile Logs/mundo/batalla.log
 echo "exit $?"

@@ -121,6 +121,10 @@ namespace ConquestTactics.Mundo.UI
             Debug.Log("[Batalla] de vuelta al mundo");
             if (entrando) SalirSinBatalla();
             CerrarFichaDeBatalla();
+            CerrarInforme();
+            capaDeBatalla?.RemoveFromHierarchy();
+            capaDeBatalla = null;
+            BatallaEnCurso = null;
             var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(EscenaMundo);
             while (carga != null && !carga.isDone) await System.Threading.Tasks.Task.Yield();
             if (this == null) return;
@@ -129,6 +133,7 @@ namespace ConquestTactics.Mundo.UI
             enPreparacion = false;
             volviendo = false;
             pantalla.parent.style.display = DisplayStyle.Flex;
+            pantalla.style.display = DisplayStyle.Flex;
             Mapa();
         }
 
@@ -250,7 +255,9 @@ namespace ConquestTactics.Mundo.UI
         {
             BatallaEnCurso = batallaVista;
             Debug.Log($"[Batalla] empieza {batallaVista}: a BattleScene");
-            pantalla.parent.style.display = DisplayStyle.None;
+            // Encima de BattleScene solo queda la capa de arriba, con «Abandonar la batalla».
+            pantalla.style.display = DisplayStyle.None;
+            AlEntrarEnLaBatalla(batallaVista);
             CerrarFichaDeBatalla();
             entrando = false;
             enPreparacion = false;

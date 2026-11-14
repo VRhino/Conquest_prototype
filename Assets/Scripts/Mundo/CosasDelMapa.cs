@@ -69,6 +69,23 @@ namespace ConquestTactics.Mundo
 
         /// <summary>Todo lo que hay en el almacén para pintar, salvo tu propia columna (la pinta el mapa con su ruta). `radioZonaInicial` (u):
         /// `reglas.territorio.radio_inicial` de `/v1/datos`.</summary>
+        /// <summary>«Batalla contra bandidos» o «Batalla».</summary>
+        public static string NombreDeBatalla(Batalla b) =>
+            b.Ticket?.ContextoEstrategico?.CampamentoBandidos != null || b.HasBloqueoCampamentoId ? "Batalla contra bandidos" : "Batalla";
+
+        /// <summary>Su estado y quién combate: «En curso · Bat123 y Ana contra los bandidos».</summary>
+        public static string DetalleDeBatalla(Almacen a, Batalla b)
+        {
+            var estado = b.Estado == EstadoBatalla.BatallaConvocando ? "Convocándose" : b.Estado == EstadoBatalla.BatallaAsignada ? "A punto de empezar" : "En curso";
+            string Lado(BattleSide l, string sinHeroes)
+            {
+                if (l == null) return sinHeroes;
+                var nombres = l.Participantes.Select(p => a.NombresHeroes.TryGetValue(p.HeroeId, out var n) ? n : p.Heroe?.DisplayName ?? p.HeroeId).ToList();
+                return nombres.Count == 0 ? sinHeroes : nombres.Count == 1 ? nombres[0] : string.Join(", ", nombres.Take(nombres.Count - 1)) + " y " + nombres.Last();
+            }
+            return b.Ticket == null ? estado : $"{estado} · {Lado(b.Ticket.Atacante, "atacantes")} contra {Lado(b.Ticket.Defensor, "los bandidos")}";
+        }
+
         public static List<CosaDelMapa> Reunir(Almacen a, string heroeId, double ahora, IEnumerable<NodoRecurso> nodos, double radioZonaInicial)
         {
             var r = new List<CosaDelMapa>();
@@ -161,10 +178,13 @@ namespace ConquestTactics.Mundo
                 r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Alijo, Id = e.Alijo.Id, Nombre = "Alijo", Detalle = "Recursos sueltos en el suelo",
                     X = x, Y = y, Radio = huella, Alto = 0.2, RadioClic = huella + Holgura, Color = Oro, Entidad = e });
             }
+            // Las batallas mientras duran (el motor guarda también las cerradas, una hora): en su punto, para todos los que la ven.
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Batalla))
             {
-                var (x, y) = P(e.Batalla.Punto);
-                r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Batalla, Id = e.Batalla.Id, Nombre = "Batalla", Detalle = "En curso",
+                var bt = e.Batalla;
+                if (bt.Estado != EstadoBatalla.BatallaConvocando && bt.Estado != EstadoBatalla.BatallaAsignada && bt.Estado != EstadoBatalla.BatallaEnCurso) continue;
+                var (x, y) = P(bt.Punto);
+                r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Batalla, Id = bt.Id, Nombre = NombreDeBatalla(bt), Detalle = DetalleDeBatalla(a, bt),
                     X = x, Y = y, Radio = 0.65, Alto = 0.55, RadioClic = 0.65 + Holgura, Color = BatallaColor, Entidad = e });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Ejercito))

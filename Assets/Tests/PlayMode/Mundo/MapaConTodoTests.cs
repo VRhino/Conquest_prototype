@@ -90,7 +90,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             vista.Entidades.Add(new Entidad { CampamentoMercenarios = new CampamentoMercenarios { Id = camp.Id, Posicion = camp.Posicion } });
             vista.Entidades.Add(new Entidad { CampamentoBandidos = new CampamentoBandidos { Id = "bandidos-1", Nivel = 2, Posicion = Pu(cx - 9, cy + 6) } });
             vista.Entidades.Add(new Entidad { Alijo = new Alijo { Id = "al-1", Recurso = "madera", Posicion = Pu(cx + 2, cy - 3) } });
-            vista.Entidades.Add(new Entidad { Batalla = new Batalla { Id = "bat-1", Punto = Pu(cx - 5, cy - 2) } });
+            vista.Entidades.Add(new Entidad { Batalla = new Batalla { Id = "bat-1", Estado = EstadoBatalla.BatallaEnCurso, Punto = Pu(cx - 5, cy - 2) } });
             var ajena = new Ejercito { Id = "ej-2", FaccionId = "f-2", Tipo = TipoColumna.ColumnaPersonal, Posicion = Pu(cx - 3, cy + 3) };
             ajena.Participantes.Add(new Participante { HeroeId = "heroe-9" });
             vista.Entidades.Add(new Entidad { Ejercito = ajena });

@@ -208,3 +208,59 @@ caballo. Lo dejamos para después (Víctor, 2026-11-14).
 - **Bajarse de una batalla sin cancelarla**, y que se cancele si se baja el último (respuesta 17). Quien se baja vuelve a su columna tal
   cual (respuesta 56).
 - **Un hecho de cierre** con el botín, lo perdido del carro, la herida y la experiencia (duda 25).
+
+## Tanda 2 del paso 5: después de la batalla y la vuelta (2026-11-14)
+
+### Qué hace
+
+- **El final de la partida.** Al acabar, el cartel de victoria o derrota de Conquest se queda 5 s y luego se pasa al informe de combate,
+  en su escena (`InformeScene`), con la sesión viva.
+  - Primero se carga la escena, que quita BattleScene y sus figuras, y después se deja el servidor de batalla
+    (`EntradaEnBatalla.Salir`). Las figuras leen el EntityManager del mundo de cliente: en el otro orden se rompe.
+  - No hace falta tocar `HandleMatchEnd`: lo vigila el mundo (`ReconexionClienteSystem.Acabada`).
+- **El informe** calca el de BronzeAgeClient (`informeCombate.ts`, `htmlInforme`, `.briefing`):
+  - «Informe de combate» con la fecha del mundo, y «Victoria» o «Derrota» con lo que pasó, y por qué (la razón del resultado);
+  - los dos bandos, con sus héroes y sus bajas;
+  - «Tus escuadras» y «Escuadras rivales», con la pieza de tropa, el dueño, los que entraron (la escuadra en reserva que no salió, 0), los
+    que vuelven y las bajas;
+  - los héroes, con si cayeron;
+  - lo que ganas o pierdes, comparando el héroe y su columna de antes (al empezar la batalla) y de después: el carro, las monedas, los
+    objetos nuevos, el nivel o la experiencia, y la herida (`herido_hasta_ms`).
+  - Mientras el motor no aplica el resultado, «Calculando el resultado…».
+  - No hay estadísticas de daño ni de bajas causadas: no existen. Tampoco el poder de cada bando, que daba el prototipo y el motor ya no.
+- **«Salir»** vuelve a MundoScene con la vuelta de la tanda 1. La columna está donde la deja el motor (`reponer_columna`): en el sitio de
+  la batalla.
+- **El mismo informe desde el mundo.** El final de una batalla propia deja un aviso con «Ver informe», que abre la misma vista encima del
+  mapa mientras el motor guarda la batalla (una hora). No se guarda en ningún otro sitio.
+- **«Abandonar la batalla»**, arriba a la derecha de BattleScene, pide confirmación y lleva al informe.
+  - Quien abandona deja de combatir (`heroes_que_combaten`), y el motor ya no le enseña la batalla ni su resultado.
+  - Por eso el informe del abandono dice solo lo suyo: que abandonó, la herida y lo que cambia en su carro, cuando su columna queda
+    libre. Es un pedido al motor.
+- **Conexión perdida.** Si la conexión con la batalla se pierde y no vuelve (el servidor la cierra, o 60 s sin ella), se pasa al informe
+  con «Perdiste la conexión con la batalla». El héroe sigue en la batalla con la IA y el resultado llega como siempre.
+- **La batalla en el mapa** sale en su punto mientras dura (convocándose, a punto de empezar o en curso), para todos los que la ven, con su
+  ficha: el nombre, el estado y quién combate contra quién. Las ya cerradas, que el motor guarda una hora, no salen. Unirse desde fuera es
+  del paso de unirse a batallas.
+
+### Lo que toca del código de batalla
+
+- `ReconexionClienteSystem`: `Acabada` y `Perdida`, estáticos, con su reinicio.
+- No toca `HandleMatchEnd` ni BattleSceneController.
+
+### Pedidos al motor
+
+- **Que quien abandona una batalla vea cómo acabó.** Hoy, al salir, deja de combatir y la proyección le quita la batalla, con el ticket y
+  el resultado.
+
+### Pruebas
+
+- **`DelMapaALaBatalla`**, con `CONQUEST_DURACION=60` (el servidor de batalla acorta la batalla). Pasa:
+  - la batalla acaba por tiempo y aparece el cartel;
+  - el informe, con el resultado del motor, las filas de cada escuadra de los dos bandos, los héroes y la herida, a los cuatro tamaños;
+  - «Salir» vuelve al mapa con la columna en el sitio de la batalla, y la batalla ya no sale en el mapa;
+  - «Ver informe» desde el aviso abre el informe;
+  - el reloj del mundo deprisa hasta que se cura la herida;
+  - una segunda batalla en la misma sesión que se abandona, con su informe;
+  - la vuelta otra vez, con la misma interfaz y la misma sesión.
+- **Sin verificar:** la conexión perdida que no vuelve; una victoria con botín (contra los bandidos de la prueba, por tiempo, siempre se
+  pierde); varios jugadores.

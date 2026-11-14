@@ -403,3 +403,39 @@ Button { margin: 0; }
 .prep-start { margin: 0; padding: 0; background-color: #e3cc7f; border-width: 0; border-radius: 4px; color: #000000; font-size: 30px; -unity-text-align: middle-center; }
 .prep-start:hover { background-color: #efdb98; }
 .prep-start:disabled { opacity: 0.55; }
+
+/* El informe de combate (PantallasDeMundo.Informe), calcado de `.briefing` del prototipo (style.css 2877-2932). */
+.informe-velo { background-color: rgba(0, 0, 0, 0.55); align-items: center; justify-content: center; }
+.informe { width: 560px; max-width: 94%; max-height: 92%; padding: 22px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.informe-cuerpo { flex-shrink: 1; }
+.informe-cuerpo > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container > * { margin-bottom: 10px; }
+.informe-motivo { font-size: 14px; color: var(--rojo-claro); white-space: normal; }
+.informe-titulo { font-size: 18px; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; color: var(--pergamino); white-space: normal; margin: 0; }
+.informe-titulo--victoria { color: #9ad07a; }
+.informe-titulo--derrota { color: #e08a6f; }
+.informe-bandos { flex-direction: row; }
+.informe-bando { flex-grow: 1; flex-basis: 0; margin: 0 4px; padding: 8px 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.25); }
+.informe-bando-titulo { font-size: 11px; letter-spacing: 1px; color: var(--texto-apagado); margin: 0; }
+.informe-bando-fuerte { font-size: 15px; color: var(--oro-claro); -unity-font-style: bold; margin: 2px 0; }
+.informe-bando-pie { font-size: 12px; color: var(--texto-2); white-space: normal; margin: 0; }
+.informe-sub { font-size: 14px; color: var(--oro-claro); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; margin: 4px 0 0 0; }
+.informe-tabla { }
+.informe-fila { flex-direction: row; align-items: center; padding: 4px 6px; border-bottom-width: 1px; border-color: rgba(107, 74, 41, 0.4); }
+.informe-fila--cab Label { color: var(--texto-apagado); font-size: 12px; }
+.informe-fila Label { margin: 0; padding: 0; font-size: 13px; }
+.informe-col-nombre { flex-grow: 1; flex-basis: 0; }
+.informe-col-dueno { width: 110px; color: var(--texto-2); overflow: hidden; }
+.informe-col-num { width: 62px; -unity-text-align: middle-right; }
+.informe-tropa { flex-direction: row; align-items: center; }
+.informe-tropa-nombre { margin-left: 6px; }
+.informe-baja { color: #e08a6f; -unity-font-style: bold; }
+.informe-heroes { }
+.informe-heroe { flex-direction: row; justify-content: space-between; padding: 3px 6px; border-bottom-width: 1px; border-color: rgba(107, 74, 41, 0.4); }
+.informe-recuadro { padding: 8px 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.25); }
+.informe-recuadro-fuerte { font-size: 14px; -unity-font-style: bold; white-space: normal; margin: 2px 0; }
+.informe-recuadro--bueno .informe-recuadro-fuerte { color: #e8c76a; }
+.informe-recuadro--malo .informe-recuadro-fuerte { color: #e08a6f; }
+.informe-botones { justify-content: flex-end; margin-top: 12px; flex-shrink: 0; }
+/* Encima de BattleScene: «Abandonar la batalla», arriba a la derecha. */
+.batalla-capa { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.batalla-abandonar { position: absolute; right: 16px; top: 14px; padding: 6px 12px; font-size: 13px; background-color: rgba(20, 15, 10, 0.75); }

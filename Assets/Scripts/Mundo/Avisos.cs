@@ -34,6 +34,8 @@ namespace ConquestTactics.Mundo
         public string Clave;
         /// <summary>Primera y última llegada, en hora real (ms de época Unix).</summary>
         public long Desde, Hasta;
+        /// <summary>El aviso del final de una batalla propia: su id, para abrir su informe mientras el motor la guarde.</summary>
+        public string BatallaId;
     }
 
     public sealed class Avisos

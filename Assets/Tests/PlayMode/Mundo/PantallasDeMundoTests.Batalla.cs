@@ -5,7 +5,8 @@
 // Un héroe nuevo (pelo hair_02, sin barba) con dos escuadras prestadas sale del campamento; en el mapa marcha hasta unos bandidos y ataca:
 // a la escena de preparación, que conecta con el servidor de batalla en cuanto hay asignación. La cancela (asignada, ya conectado) y vuelve
 // a MundoScene con la sesión viva. Ataca otra vez: en la preparación cambia el orden (entra con la segunda), dice «Listo» y entra en
-// BattleScene con esa escuadra y su aspecto de verdad. Así entra dos veces en el mismo proceso (lo estático, reiniciado). Va aparte
+// BattleScene con esa escuadra y su aspecto de verdad. La batalla acaba (por tiempo): el informe, «Salir» al mapa en el sitio de la
+// batalla, el informe otra vez desde el aviso, y una segunda batalla que abandona, con su informe. Va aparte
 // ([Explicit]): necesita el lanzador y el editor sin -batchmode (la red no carga BattleScene en batchmode). La corre
 // `Tools/BatallaDesdeElMundo/correr.sh`.
 using System;
@@ -28,7 +29,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
-        [UnityTest, Explicit("Con el lanzador del motor y el servidor de batalla de verdad: la corre Tools/BatallaDesdeElMundo/correr.sh")]
+        [UnityTest, Timeout(900_000), Explicit("Con el lanzador del motor y el servidor de batalla de verdad: la corre Tools/BatallaDesdeElMundo/correr.sh")]
         public IEnumerator DelMapaALaBatalla()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -179,7 +180,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.IsTrue(VisualSyncUtility.TryGetVisual(cliente, mio, out var figura), "la figura de mi héroe");
                 SoloLoElegido(figura.transform, aspecto, false, "en la batalla");
                 // Los caballos de los héroes (los capitanes de la IA montan): uno que se desplaza montado tiene que llevar el paso en su Animator.
-                yield return CaballosAlPaso(cliente, 45);
+                yield return CaballosAlPaso(cliente, 15);
 
                 var visuales = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None);
                 Debug.Log($"[Prueba] en la batalla: {visuales.Length} figuras");
@@ -194,6 +195,79 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Debug.Log($"[Prueba] desde la sesión: {b.Estado}, columna en batalla {Yo().Ubicacion}");
                 yield return Rechazo(conexion, new Orden { CancelarBatalla = new OrdenCancelarBatalla { BattleId = batallaId } }, "batalla.no_puede_cancelar");
                 yield return CapturarPantalla("45_en_la_batalla");
+
+                errores.Clear();
+                Application.logMessageReceived += Registro;
+                LogAssert.ignoreFailingMessages = true;
+                // Tanda 2: la batalla acaba (CONQUEST_DURACION la acorta; por tiempo gana quien defiende). El cartel de Conquest y, a los
+                // segundos, el informe en su escena, con «calculando…» hasta que el motor aplica el resultado.
+                yield return Esperar(() => ReconexionClienteSystem.Acabada, 120, "el fin de la batalla");
+                Debug.Log("[Prueba] fin de la partida: el cartel de Conquest");
+                yield return CapturarPantalla("46_fin_de_la_batalla");
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaInforme && raiz.Q("panel-informe") != null, 30, "la escena del informe");
+                Assert.IsNull(MundoDe("ClientWorld"), "sin mundo de cliente tras la batalla");
+                yield return Esperar(() => raiz.Q<Label>("informe-titulo") != null, 60, "el resultado aplicado por el motor");
+                var aplicada = conexion.Sesion.Almacen.Buscar(TipoEntidad.Batalla, batallaId).Batalla;
+                Debug.Log($"[Prueba] informe: {raiz.Q<Label>("informe-titulo").text}; gana {aplicada.Resultado.Ganador} por {aplicada.Resultado.Razon}");
+                foreach (var s in aplicada.Ticket.Atacante.Participantes.SelectMany(p => p.Escuadras))
+                    Assert.IsNotNull(raiz.Q("informe-propias").Q("fila-" + s.SquadId), $"la fila de {s.SquadId} en «Tus escuadras»");
+                foreach (var s in aplicada.Ticket.Defensor.EscuadrasSinHeroe)
+                    Assert.IsNotNull(raiz.Q("informe-rivales").Q("fila-" + s.SquadId), $"la fila de {s.SquadId} en «Escuadras rivales»");
+                Assert.IsNotNull(raiz.Q("informe-heroes"), "los héroes, con si cayeron");
+                if (aplicada.Resultado.Ganador != LadoId.Atacante) Assert.IsNotNull(raiz.Q("informe-herido"), "perdiste: quedas herido");
+                yield return EnTamanos(raiz, "47_informe");
+
+                // «Salir»: a MundoScene con la sesión viva, con la columna en el sitio de la batalla.
+                Pulsar(raiz.Q<Button>("informe-salir"));
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaMundo && ElMapaSiHay() != null, 30, "de vuelta en el mapa tras el informe");
+                mapa = ElMapa();
+                yield return Esperar(() => mapa.Columna != null && mapa.Centro != null, 20, "la columna en el mapa");
+                var (bx, by) = (aplicada.Punto.X / 1000.0, aplicada.Punto.Y / 1000.0);
+                var (mx, my) = mapa.Centro.Value;
+                Debug.Log($"[Prueba] columna en ({mx:0.0}, {my:0.0}); la batalla fue en ({bx:0.0}, {by:0.0})");
+                Assert.Less(CosasDelMapa.Distancia(mx, my, bx, by), 3.0, "la columna queda donde fue la batalla");
+                Assert.IsFalse(mapa.Cosas.Any(x => x.Clase == ClaseDeCosa.Batalla && x.Id == batallaId), "la batalla acabada ya no está en el mapa");
+                yield return Esperar(() => raiz.Q("carga") == null, 20, "el fin de la pantalla de carga");
+
+                // El mismo informe desde el aviso del mundo («Ver informe»).
+                Pulsar(raiz.Q<Button>("avisos"));
+                yield return Esperar(() => raiz.Q<Button>("ver-informe-" + batallaId) != null, 10, "«Ver informe» en los avisos");
+                Pulsar(raiz.Q<Button>("ver-informe-" + batallaId));
+                yield return Esperar(() => raiz.Q<Label>("informe-titulo") != null, 10, "el informe desde el mundo");
+                yield return Capturar("48_informe_desde_el_mundo");
+                Pulsar(raiz.Q<Button>("informe-salir"));
+                yield return Esperar(() => raiz.Q("panel-informe") == null, 5, "cerrar el informe");
+
+                // Segunda batalla terminada en la misma sesión, esta vez abandonando. Antes, que pase la herida (el reloj del mundo deprisa).
+                yield return Reloj(url, 60_000);
+                yield return Esperar(() => !Yo().HasHeridoHastaMs || Yo().HeridoHastaMs <= conexion.Sesion.AhoraMundo, 60, "que se cure la herida");
+                yield return Reloj(url, 1_000);
+                mapa.Seleccionar(mapa.Cosas.First(x => x.Id == bandidos.Id));
+                yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => TextoDe(b) == "Atacar") == true, 20, "«Atacar» para la segunda");
+                Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Atacar"));
+                yield return Esperar(() => PreparacionRed.Conectado && raiz.Q<Button>("prep-listo")?.enabledSelf == true, 150, "la preparación de la segunda");
+                Pulsar(raiz.Q<Button>("prep-listo"));
+                string segunda = null;
+                yield return Esperar(() => (segunda = PantallasDeMundo.BatallaEnCurso) != null && segunda != batallaId, 90, "la segunda batalla");
+                yield return Esperar(() => EspejoClienteSystem.CamaraDelJuego, 120, "mi héroe en la segunda batalla");
+                yield return Esperar(() => raiz.Q<Button>("batalla-abandonar") != null, 10, "«Abandonar la batalla»");
+                yield return CapturarPantalla("49_abandonar_en_la_batalla");
+                Pulsar(raiz.Q<Button>("batalla-abandonar"));
+                yield return Esperar(() => raiz.Query<Button>().ToList().Any(b => b.text == "Abandonar" && b.ClassListContains("boton-peligro")), 5, "la confirmación");
+                Pulsar(raiz.Query<Button>().ToList().First(b => b.text == "Abandonar" && b.ClassListContains("boton-peligro")));
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaInforme && raiz.Q("panel-informe") != null, 30, "el informe tras abandonar");
+                Assert.IsTrue(raiz.Q("panel-informe").Query<Label>().ToList().Any(l => l.text.Contains("Abandonaste la batalla")), "dice que abandonaste");
+                // Quien abandona deja de combatir: el motor ya no le enseña la batalla (ni su resultado). El informe dice lo suyo.
+                yield return Esperar(() => raiz.Q<Label>("informe-titulo") != null && raiz.Q("informe-herido") != null, 90, "el informe del abandono, con la herida");
+                Debug.Log($"[Prueba] segunda: {raiz.Q<Label>("informe-titulo").text}");
+                yield return Capturar("49b_informe_tras_abandonar");
+                Pulsar(raiz.Q<Button>("informe-salir"));
+                yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaMundo && ElMapaSiHay() != null, 30, "de vuelta tras la segunda");
+                Assert.AreSame(pantallas, PantallasDeMundo.Viva, "la misma interfaz viva tras dos batallas");
+                Assert.IsTrue(conexion.Sesion.Estado == EstadoSesion.Abierta, "la sesión, abierta tras dos batallas");
+                Application.logMessageReceived -= Registro;
+                LogAssert.ignoreFailingMessages = false;
+                Assert.IsEmpty(errores, "ningún error del fin de la batalla a la vuelta (dos veces)");
             }
             finally
             {

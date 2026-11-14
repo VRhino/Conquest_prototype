@@ -64,7 +64,11 @@ namespace ConquestTactics.Mundo.UI
             capaCarga = Capa(raiz);
             capaEncima = Capa(raiz);
             dialogo = new Dialogo(capaEncima);
-            panelAvisos = new PanelAvisos(c.Avisos, capaEncima);
+            panelAvisos = new PanelAvisos(c.Avisos, capaEncima)
+            {
+                VerInforme = id => AbrirInforme(id, null, false),
+                HayInforme = id => c.Sesion?.Almacen.Buscar(TipoEntidad.Batalla, id) != null,
+            };
         }
 
         static VisualElement Capa(VisualElement raiz)
@@ -1322,6 +1326,7 @@ namespace ConquestTactics.Mundo.UI
                 if (lugar != null) v.Q<Label>("dentro-texto").text = $"Estás dentro de {lugar}. Su interior llega con su paso; de momento, desde aquí sales al mundo.";
                 PintarFicha(v);
                 VigilarBatalla();
+                AnotarInformesDelMapa();
             }
             Refrescar();
             v.schedule.Execute(Refrescar).Every(250);
@@ -1413,6 +1418,7 @@ namespace ConquestTactics.Mundo.UI
 
         void Update()
         {
+            VigilarFinDeBatalla();
             var teclado = UnityEngine.InputSystem.Keyboard.current;
             if (diagnostico == null || teclado == null || !teclado.f2Key.wasPressedThisFrame) return;
             if (diagnostico.childCount == 0) SesionViva(diagnostico);

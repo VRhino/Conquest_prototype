@@ -25,6 +25,9 @@ namespace ConquestTactics.Mundo.UI
         int toastExtra;
 
         public bool Abierto => panel != null;
+        /// <summary>«Ver informe» en el aviso del final de una batalla: abre su informe (`HayInforme`: el motor aún la guarda).</summary>
+        public Action<string> VerInforme;
+        public Func<string, bool> HayInforme;
 
         public PanelAvisos(Avisos avisos, VisualElement capa)
         {
@@ -128,6 +131,12 @@ namespace ConquestTactics.Mundo.UI
             cuerpo.Add(Dialogo.Texto((a.Titulo ?? "Aviso") + (a.Veces > 1 ? $" ×{a.Veces}" : "") + (a.Leido ? "" : " •"), "aviso-titulo"));
             cuerpo.Add(Dialogo.Texto(a.Texto, "aviso-texto"));
             cuerpo.Add(Dialogo.Texto(Cuando(a), "aviso-cuando"));
+            if (a.BatallaId != null && VerInforme != null && HayInforme?.Invoke(a.BatallaId) == true)
+            {
+                var ver = Dialogo.Boton("Ver informe", "enlace", () => { Alternar(); VerInforme(a.BatallaId); });
+                ver.name = "ver-informe-" + a.BatallaId;
+                cuerpo.Add(ver);
+            }
             fila.Add(cuerpo);
             if (conBorrar) fila.Add(Dialogo.Boton("×", "aviso-borrar", () => avisos.Borrar(a)));
             return fila;

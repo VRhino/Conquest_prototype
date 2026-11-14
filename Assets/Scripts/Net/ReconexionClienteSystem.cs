@@ -34,9 +34,22 @@ namespace ConquestTactics.Net
         static string _recado = "";
         static double _recadoHasta;
 
+        /// <summary>La partida ya acabó (el servidor mandó su fin): lo que venga después no es una caída.</summary>
+        public static bool Acabada { get; private set; }
+        /// <summary>
+        /// Se perdió la conexión con la batalla y no vuelve: el servidor la cerró, o lleva <see cref="SinVuelta"/> segundos sin conexión desde
+        /// que estuvo dentro. No cuenta si la partida acabó ni si el jugador la abandonó.
+        /// </summary>
+        public static bool Perdida { get; private set; }
+        /// <summary>Lo que se espera a que vuelva la conexión antes de darla por perdida (lo que el servidor guarda el héroe a la IA, Doc 5.15.1).</summary>
+        public const double SinVuelta = 60d;
+        double _fueraDesde = -1d;
+
         /// <summary>Lo estático como al arrancar el proceso, para entrar en otra batalla sin salir de él (desde el mundo).</summary>
         public static void Reiniciar()
         {
+            Acabada = false;
+            Perdida = false;
             Aviso = "";
             Reconexiones = 0;
             SinNoticias = false;
@@ -91,6 +104,7 @@ namespace ConquestTactics.Net
             }
             foreach (var partida in SystemAPI.Query<RefRO<PartidaRed>>())
                 _acabada |= partida.ValueRO.Estado == (byte)MatchState.EndMatch;
+            Acabada = _acabada;
 
             if (SystemAPI.TryGetSingleton<NetworkSnapshotAck>(out var ack) && ack.LastReceivedSnapshotByLocal != _ultimoSnapshot)
             {
@@ -122,6 +136,14 @@ namespace ConquestTactics.Net
                     driver.Connect(EntityManager, ClientServerBootstrap.DefaultConnectAddress);
                 }
             }
+
+            // Perdida: estuvo dentro, ya no lo está, y ni acabó ni la abandonó; o el servidor la cerró, o no vuelve en SinVuelta segundos.
+            if (_estuvoDentro && !_dentro && !_acabada && !Abandonada)
+            {
+                if (_fueraDesde < 0d) _fueraDesde = ahora;
+                Perdida = (_noInsistir && !hayConexion) || ahora - _fueraDesde > SinVuelta;
+            }
+            else _fueraDesde = -1d;
 
             if (Aviso.Length == 0 && ahora < _recadoHasta)
                 Aviso = _recado;
