@@ -64,7 +64,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             while (!bajada.IsCompleted && Time.realtimeSinceStartup < fin) yield return null;
             var datos = DatosDeJuego.Leer(bajada.Result);
             var tropas = datos.TropasReclutables.Select(x => (string)x["id"]).ToList();
-            var sinPieza = tropas.Where(id => PiezasDeTropa.Datos(id) == null || PiezasDeTropa.Miniatura(id) == null || PiezasDeTropa.Tarjeta(id, null, null, null, null) == null).ToList();
+            var sinPieza = tropas.Where(id => PiezasDeTropa.Datos(id) == null || PiezasDeTropa.Miniatura(id) == null || PiezasDeTropa.Tarjeta(id, null, null, null) == null).ToList();
             Debug.Log($"[Tropas] {tropas.Count} tropas en /v1/datos; sin pieza de Conquest: [{string.Join(", ", sinPieza)}]");
             // Las que faltan a sabiendas, cada una con su porqué (no se rellenan con nada: en las pantallas salen sin pieza).
             foreach (var (id, porque) in SinPiezaASabiendas)
@@ -165,7 +165,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var d = tropas[i];
                 var columna = new VisualElement { style = { width = 200 } };
                 var mini = PiezasDeTropa.Miniatura(d.id);
-                var tarjeta = PiezasDeTropa.Tarjeta(d.id, 3, 14, 25, 30, i == 0);
+                var tarjeta = PiezasDeTropa.Tarjeta(d.id, 14, 25, 30, i == 0);
                 var estrellas = PiezasDeTropa.Estrellas(d.id);
                 Assert.IsNotNull(mini, d.id);
                 Assert.IsNotNull(tarjeta, d.id);

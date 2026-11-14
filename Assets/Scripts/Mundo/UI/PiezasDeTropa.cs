@@ -62,9 +62,9 @@ namespace ConquestTactics.Mundo.UI
         }
 
         /// <summary>La tarjeta (`Squad_option`, 150×236,75 en Conquest): la imagen de la tropa a todo el alto y, abajo, la franja oscura con la
-        /// línea de la rareza, el nivel («Nv 3»), el coste de Liderazgo («14» y su icono) y los hombres («25/30»). Lo que no se sabe no sale: sin nivel
-        /// (una tropa que aún no tienes), sin hueco. `elegida`: con la marca de elegida; null, sin marca. Sin SquadData, null.</summary>
-        public static VisualElement Tarjeta(string tropaId, int? nivel, int? liderazgo, int? vivos, int? total, bool? elegida = null, float ancho = 150)
+        /// línea de la rareza, el coste de Liderazgo («14» y su icono) a la izquierda y los hombres («25/30») a la derecha, como la original: sin el
+        /// nivel (con los tres datos juntos no se sabía cuál era cuál; Víctor, 2026-11-13). Lo que no se sabe no sale. `elegida`: con la marca de elegida; null, sin marca. Sin SquadData, null.</summary>
+        public static VisualElement Tarjeta(string tropaId, int? liderazgo, int? vivos, int? total, bool? elegida = null, float ancho = 150)
         {
             var d = Datos(tropaId);
             if (d == null) return null;
@@ -86,7 +86,6 @@ namespace ConquestTactics.Mundo.UI
             var franja = Capa("tropa-tarjeta-franja");
             franja.style.height = 28.566f * escala;
             var izquierda = Capa("tropa-tarjeta-datos");
-            if (nivel != null) izquierda.Add(Texto($"Nv {nivel}", "tropa-tarjeta-nivel"));
             if (liderazgo != null)
             {
                 // Como en Squad_option: la cifra y, detrás, el icono de Liderazgo de Conquest (Art/UI/units/leadership, por la hoja de estilo).

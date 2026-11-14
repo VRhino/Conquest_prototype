@@ -104,7 +104,7 @@ regla de los iconos del prototipo, y solo para tropas: edificios, recursos, mapa
 | Pieza | Gemela de | Qué lleva |
 |---|---|---|
 | `Miniatura(tropa, lado = 40)` | `Squad_Icon` (`SquadIconController`) | el fondo, el icono y una línea al pie del color de la rareza (1 px a 40 px) |
-| `Tarjeta(tropa, nivel, liderazgo, vivos, total, elegida, ancho = 150)` | `Squad_option` (`SquadOptionUI`) | 150×236,75: el fondo y la imagen de la tropa a todo el alto; abajo, la franja oscura (28,6 px) con la línea de la rareza (4 px); a la izquierda «Nv N» y «♛ N» (Liderazgo); a la derecha «vivos/total»; el borde tenue y, si está elegida, el borde de oro |
+| `Tarjeta(tropa, nivel, liderazgo, vivos, total, elegida, ancho = 150)` | `Squad_option` (`SquadOptionUI`) | 150×236,75: el fondo y la imagen de la tropa a todo el alto; abajo, la franja oscura (28,6 px) con la línea de la rareza (4 px); a la izquierda el Liderazgo («14» y el icono de Conquest); a la derecha «vivos/total». Sin el nivel, como la original: con los tres datos juntos no se sabía cuál era cuál (Víctor, 2026-11-14); el borde tenue y, si está elegida, el borde de oro |
 | `Estrellas(tropa, lado = 16)` | las de `SquadDetailPanel` | las enteras y la parcial recortada, como el `fillAmount` de Conquest, en el color de la rareza |
 
 **De dónde salen los datos:**
@@ -112,7 +112,6 @@ regla de los iconos del prototipo, y solo para tropas: edificios, recursos, mapa
   el aspecto se copia de su base de Conquest y el escalón del motor da la rareza.
 - **El color y las estrellas:** de `SquadUtils.RarityInfo`, una sola tabla.
 - **Los textos, en español y del motor:**
-  - el nivel, del `Escuadron` (solo si ya es tuya; si no, ese hueco no sale);
   - el Liderazgo, de `LIDERAZGO.costePorEscalon` según el escalón de la tropa;
   - los hombres, `cantidad` sobre `unidadesPorDefecto`.
 - **Cómo llega `Conquest.Mundo.UI` a ese código:** referencia a `Game.ECS`, donde están `SquadData` y `SquadUtils`. No hay ciclo,

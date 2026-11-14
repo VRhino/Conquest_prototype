@@ -486,10 +486,11 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>Cierra el interior abierto (lo usa «Salir al mundo» antes de volver al mapa).</summary>
         Func<Task> cerrarInterior;
 
-        /// <summary>«Salir al mundo» desde un campamento (BronzeAgeClient: `ui/ventanaSalida.ts`, `ui/cargaDeSalida.ts`): con qué tropa y qué
-        /// carga sales, solo lo que se puede elegir de verdad. La tropa es la que tienes en el campamento si resides aquí; la carga, de tu
-        /// almacén personal, también solo si resides. Sale `salirDelCampamento` y, aceptada, el mapa con la columna a la puerta. El modo
-        /// «Ejército» (convocatorias) es del paso 11 y la velocidad de la columna llega con la tropa (paso 6).</summary>
+        /// <summary>«Salir al mundo» desde un campamento, calcada de la del prototipo (BronzeAgeClient: `ui/ventanaSalida.ts`, `cargaDeSalida.ts`,
+        /// `velocidadColumna.ts`): ventana ancha con título y aspa; arriba, a la izquierda cómo sales (y los víveres) y a la derecha la carga del carro;
+        /// abajo, la velocidad de la columna, la tropa con su Liderazgo y su loadout, y el riel con las tarjetas de tropa de Conquest, el «+» y los huecos.
+        /// Si resides, sale cargado el loadout activo (o todo, si no tiene escuadras) y se quita con ✕ o se añade con «+»; «Guardar loadout» lo deja en
+        /// el loadout elegido. Si no resides, sales con la columna con la que entraste, tal cual. El modo «Ejército» es del paso 11: aquí no sale.</summary>
         void VentanaDeSalida(string campId, string lugar)
         {
             var h = HeroeAhora();
@@ -503,95 +504,40 @@ namespace ConquestTactics.Mundo.UI
             if (cartelDeZona != null) Ver(cartelDeZona, false);
             var velo = Dialogo.Caja("dialogo-velo");
             velo.name = "ventana-salida";
-            var placa = Dialogo.Caja("placa dialogo salida");
-            var filete = Dialogo.Caja("placa-filete");
-            placa.Add(filete);
+            var placa = Dialogo.Caja("placa salida-ventana");
             velo.Add(placa);
-            filete.Add(Dialogo.Texto("SALIR AL MUNDO", "dialogo-titulo"));
-            filete.Add(Dialogo.Texto($"Sales por la puerta de {lugar} con tu columna.", "dialogo-texto"));
-            var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
-            cuerpo.style.flexShrink = 1;
-            filete.Add(cuerpo);
+            void Cerrar() { velo.RemoveFromHierarchy(); interior.PanelAbierto = false; }
+            velo.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Escape) Cerrar(); }, TrickleDown.TrickleDown);
 
-            // La tropa: tus escuadras que esperan en el campamento (solo si resides aquí).
-            var tropa = Dialogo.Caja("salida-seccion");
-            cuerpo.Add(tropa);
-            tropa.Add(Dialogo.Texto("TU TROPA", "kicker"));
-            var escuadras = h.EscuadronesIds.Select(id => a.Buscar(TipoEntidad.Escuadron, id)?.Escuadron)
-                .Where(e => e != null && e.Contenedor != null && e.Contenedor.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento).ToList();
-            var marcadas = new List<(Toggle marca, string id)>();
-            if (!resides) tropa.Add(Dialogo.Texto("No resides aquí: sales con tu columna tal como está.", "campo-ayuda"));
-            else if (escuadras.Count == 0) tropa.Add(Dialogo.Texto("No tienes escuadras en el campamento: sales solo con tu héroe.", "campo-ayuda"));
-            else
+            // La cabecera: el título y el aspa.
+            var cabeza = Dialogo.Caja("salida-cab");
+            cabeza.Add(Dialogo.Texto($"SALIR DE {lugar.ToUpperInvariant()}", "dialogo-titulo salida-titulo"));
+            var aspa = Dialogo.Boton("×", "boton-secundario salida-cerrar", Cerrar);
+            aspa.name = "cancelar";
+            cabeza.Add(aspa);
+            placa.Add(cabeza);
+
+            // Arriba, dos columnas.
+            var cuerpo = Dialogo.Caja("salida-cuerpo");
+            placa.Add(cuerpo);
+            ScrollView Columna(string clases)
             {
-                // Cada escuadra en su tarjeta de Conquest (nivel, Liderazgo y hombres), elegida si sale: pulsar la tarjeta o la casilla.
-                var tarjetas = Dialogo.Caja("fila-envuelta");
-                foreach (var e in escuadras)
-                {
-                    var total = (int?)c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == e.TropaId)?["unidadesPorDefecto"];
-                    var tarjeta = PiezasDeTropa.Tarjeta(e.TropaId, (int)e.Nivel, LiderazgoDe(e.TropaId), (int)e.Cantidad, total, true);
-                    var caja = TropaConAccion("salida-" + e.Id, tarjeta, string.IsNullOrEmpty(e.Nombre) ? NombreDeTropa(e.TropaId) : e.Nombre);
-                    var marca = new Toggle("Sale") { value = true, name = "sale-" + e.Id };
-                    if (tarjeta != null)
-                    {
-                        marca.RegisterValueChangedCallback(ev => PiezasDeTropa.Elegir(tarjeta, ev.newValue));
-                        tarjeta.RegisterCallback<ClickEvent>(_ => marca.value = !marca.value);
-                    }
-                    caja.Add(marca);
-                    tarjetas.Add(caja);
-                    marcadas.Add((marca, e.Id));
-                }
-                tropa.Add(tarjetas);
+                var col = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+                foreach (var cl in clases.Split(' ')) col.AddToClassList(cl);
+                cuerpo.Add(col);
+                return col;
             }
+            var izquierda = Columna("salida-col");
+            var derecha = Columna("salida-col salida-col--derecha");
 
-            // La carga: lo de tu almacén personal (solo si resides aquí).
-            var carga = Dialogo.Caja("salida-seccion");
-            cuerpo.Add(carga);
-            carga.Add(Dialogo.Texto("LO QUE LLEVAS", "kicker"));
-            var campos = new List<(IntegerField campo, string recurso)>();
-            var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
-            if (!resides) carga.Add(Dialogo.Texto("Tu almacén personal está en tu residencia: sales sin cargar nada de aquí.", "campo-ayuda"));
-            else if (almacen.Count == 0) carga.Add(Dialogo.Texto("Tu almacén personal está vacío.", "campo-ayuda"));
-            else
-                foreach (var kv in almacen.OrderBy(x => x.Key))
-                {
-                    var fila = Dialogo.Caja("salida-fila");
-                    var hay = (int)(kv.Value / 1000);
-                    // `.carro-fila`: el emoji del recurso, su nombre y lo que hay.
-                    fila.Add(IconosDelMundo.ConIcono("recurso", kv.Key, Dialogo.Texto($"{CosasDelMapa.NombreDeRecurso(kv.Key)} (tienes {hay})", "aviso-texto"), 20));
-                    var campo = new IntegerField { value = 0, name = "carga-" + kv.Key };
-                    campo.RegisterValueChangedCallback(ev => campo.SetValueWithoutNotify(Math.Max(0, Math.Min(hay, ev.newValue))));
-                    fila.Add(campo);
-                    carga.Add(fila);
-                    campos.Add((campo, kv.Key));
-                }
-
-            // Lo que cabe en el carro (`LOGISTICA.capacidadCarroPorJugador`), en vivo.
-            var capacidad = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadCarroPorJugador");
-            if (campos.Count > 0)
-            {
-                var total = Dialogo.Texto("", "campo-ayuda");
-                total.name = "carga-total";
-                void Total()
-                {
-                    var lleva = campos.Sum(x => x.campo.value);
-                    total.text = $"En el carro: {lleva} de {capacidad:0}";
-                    total.EnableInClassList("excedido", lleva > capacidad);
-                }
-                foreach (var (campo, _) in campos) campo.RegisterValueChangedCallback(_ => Total());
-                Total();
-                carga.Add(total);
-            }
-
-            // Los víveres de la columna: repostar llena los víveres con el trigo del campamento, gratis (`repostarEnCampamento`).
+            // Izquierda: cómo sales, los víveres (con «Llenar víveres»: el prototipo lo tiene en la ficha de la puerta, aquí se queda a mano) y
+            // el recuadro «Cómo sales» con la columna personal (el ejército, en el paso 11).
+            izquierda.Add(Dialogo.Texto(resides ? "Sales al mapa por la puerta. Tus víveres van siempre contigo." : "No resides aquí: sales con la columna con la que entraste.", "dialogo-texto"));
             var error = Dialogo.Texto("", "error oculto");
-            var viveres = Dialogo.Caja("salida-seccion");
-            cuerpo.Add(viveres);
-            viveres.Add(Dialogo.Texto("VÍVERES", "kicker"));
             var filaViveres = Dialogo.Caja("salida-fila");
-            viveres.Add(filaViveres);
+            izquierda.Add(filaViveres);
             var maximoViveres = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadViveresPorHeroe");
-            var textoViveres = Dialogo.Texto("", "aviso-texto");
+            var textoViveres = Dialogo.Texto("", "campo-ayuda");
             textoViveres.name = "viveres";
             filaViveres.Add(textoViveres);
             Button repostar = null;
@@ -599,8 +545,7 @@ namespace ConquestTactics.Mundo.UI
             {
                 var yo = HeroeAhora();
                 var tienes = Math.Ceiling(Instante.Valor(yo?.Viveres, c.Sesion.AhoraMundo) / 1000);
-                textoViveres.text = $"{tienes:0} de {maximoViveres:0} de trigo";
-                // Solo lo que se puede hacer: con los víveres llenos no hay nada que repostar.
+                textoViveres.text = $"Víveres: {tienes:0} de {maximoViveres:0} de trigo.";
                 Ver(repostar, tienes < maximoViveres - 0.5);
             }
             repostar = IconosDelMundo.BotonConGlifo("Llenar víveres", ("glifo", "viveres"), "boton-secundario", async () =>
@@ -618,25 +563,222 @@ namespace ConquestTactics.Mundo.UI
                 PintarViveres();
             });
             repostar.name = "repostar";
-            repostar.style.marginTop = 0;
             filaViveres.Add(repostar);
             PintarViveres();
+            var recuadro = Dialogo.Caja("salida-recuadro");
+            recuadro.Add(ConAyuda(Dialogo.Texto("Cómo sales", "salida-recuadro-titulo"),
+                "Con tu columna personal: tú y la tropa que elijas abajo. Salir como ejército, con otros héroes, llega más adelante."));
+            var columnaPersonal = new RadioButton("Columna personal") { value = true, name = "columna-personal" };
+            recuadro.Add(columnaPersonal);
+            izquierda.Add(recuadro);
 
-            filete.Add(error);
-            var botones = Dialogo.Caja("dialogo-botones");
-            filete.Add(botones);
-            void Cerrar() { velo.RemoveFromHierarchy(); interior.PanelAbierto = false; }
-            var cancelar = Dialogo.Boton("Cancelar", "boton-secundario", Cerrar);
-            cancelar.name = "cancelar";
-            botones.Add(cancelar);
-            velo.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Escape) Cerrar(); }, TrickleDown.TrickleDown);
+            // Derecha: la carga del carro (de tu almacén personal si resides; si no, lo que ya lleva el carro de tu columna).
+            var campos = new List<(IntegerField campo, string recurso)>();
+            var capacidad = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadCarroPorJugador");
+            var columna = ColumnaDelHeroe(h);
+            if (resides)
+            {
+                var total = Dialogo.Texto("", "salida-carga-total");
+                total.name = "carga-total";
+                derecha.Add(ConAyuda(IconoDelante(Dialogo.Texto("Carga del carro", "salida-recuadro-titulo"), total),
+                    "Lo que metas en el carro sale contigo, de tu almacén personal. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad)."));
+                var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).OrderBy(kv => kv.Key).ToList() ?? new List<KeyValuePair<string, long>>();
+                if (almacen.Count == 0) derecha.Add(Dialogo.Texto("No hay nada que cargar en tu almacén personal.", "campo-ayuda"));
+                void Total()
+                {
+                    var lleva = campos.Sum(x => x.campo.value);
+                    total.text = $"{lleva} / {capacidad:0}";
+                    total.EnableInClassList("excedido", lleva > capacidad);
+                }
+                foreach (var kv in almacen)
+                {
+                    var hay = (int)(kv.Value / 1000);
+                    var fila = Dialogo.Caja("salida-fila carro-fila");
+                    var nombre = IconosDelMundo.ConIcono("recurso", kv.Key, Dialogo.Texto(CosasDelMapa.NombreDeRecurso(kv.Key), "aviso-texto"), 20);
+                    nombre.style.flexGrow = 1;
+                    fila.Add(nombre);
+                    fila.Add(Dialogo.Texto($"hay {hay}", "campo-ayuda carro-hay"));
+                    var campo = new IntegerField { value = 0, name = "carga-" + kv.Key };
+                    campo.RegisterValueChangedCallback(ev => { campo.SetValueWithoutNotify(Math.Max(0, Math.Min(hay, ev.newValue))); Total(); });
+                    fila.Add(campo);
+                    var recurso = kv.Key;
+                    var todo = Dialogo.Boton("Todo", "boton-secundario", () =>
+                    {
+                        var otros = campos.Where(x => x.recurso != recurso).Sum(x => x.campo.value);
+                        campo.value = Math.Max(0, Math.Min(hay, (int)capacidad - otros));
+                    });
+                    todo.name = "todo-" + kv.Key;
+                    fila.Add(todo);
+                    derecha.Add(fila);
+                    campos.Add((campo, kv.Key));
+                }
+                Total();
+            }
+            else
+            {
+                var carga = columna?.Suministro?.PorId.Where(kv => kv.Value >= 1000).OrderBy(kv => kv.Key).ToList() ?? new List<KeyValuePair<string, long>>();
+                derecha.Add(Dialogo.Texto($"Carro de tu columna · {carga.Sum(kv => kv.Value / 1000)} / {capacidad:0}", "salida-recuadro-titulo"));
+                if (carga.Count == 0) derecha.Add(Dialogo.Texto("Vacío.", "campo-ayuda"));
+                foreach (var kv in carga)
+                {
+                    var fila = Dialogo.Caja("salida-fila carro-fila");
+                    fila.Add(IconosDelMundo.ConIcono("recurso", kv.Key, Dialogo.Texto(CosasDelMapa.NombreDeRecurso(kv.Key), "aviso-texto"), 20));
+                    fila.Add(Dialogo.Texto((kv.Value / 1000).ToString(), "aviso-titulo"));
+                    derecha.Add(fila);
+                }
+            }
+
+            // Abajo: la velocidad, la tropa y el riel, y SALIR.
+            var pie = Dialogo.Caja("salida-pie");
+            placa.Add(pie);
+            var tropaCaja = new VisualElement();
+            pie.Add(tropaCaja);
+            var acciones = Dialogo.Caja("salida-acciones");
+            acciones.Add(error);
+            pie.Add(acciones);
+
+            // La tropa: la del campamento si resides (sale el loadout activo, o todo); si no, la de tu columna, sin elegir.
+            var disponibles = h.EscuadronesIds.Select(id => a.Buscar(TipoEntidad.Escuadron, id)?.Escuadron).Where(e => e != null && e.Cantidad > 0 &&
+                (resides ? e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento
+                         : e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.EjercitoId && columna != null && e.Contenedor.EjercitoId == columna.Id)).ToList();
+            List<string> DelLoadout(Loadout l) => l == null || l.SquadIds.Count == 0 ? disponibles.Select(s => s.Id).ToList()
+                : disponibles.Where(s => l.SquadIds.Contains(s.Id)).Select(s => s.Id).ToList();
+            var loadout = h.Loadouts.FirstOrDefault(x => x.Activo) ?? h.Loadouts.FirstOrDefault();
+            var elegidas = resides ? DelLoadout(loadout) : disponibles.Select(s => s.Id).ToList();
+            bool eligiendo = false;
+            int Coste(Escuadron s) => LiderazgoDe(s.TropaId) ?? 0;
             Button salir = null;
-            salir = Dialogo.Boton("Salir", "boton-primario", async () =>
+
+            void PintarTropa()
+            {
+                tropaCaja.Clear();
+                var lista = elegidas.Select(id => disponibles.FirstOrDefault(s => s.Id == id)).Where(s => s != null).ToList();
+                var usado = lista.Sum(Coste);
+                var tope = (int)h.LiderazgoBase;
+                var libre = tope - usado;
+                var candidatas = resides ? disponibles.Where(s => !elegidas.Contains(s.Id)).ToList() : new List<Escuadron>();
+                var caben = candidatas.Where(s => Coste(s) <= libre).ToList();
+
+                tropaCaja.Add(LineaDeVelocidad(lista.Select(s => s.TropaId).ToList()));
+
+                var cab = Dialogo.Caja("salida-tropa-cab");
+                cab.Add(ConAyuda(Dialogo.Texto("TROPA", "salida-recuadro-titulo"), resides
+                    ? "Sale cargado tu loadout activo. Quita escuadras con ✕ o añade con «+»: vale solo para esta salida, salvo que pulses «Guardar loadout», que lo guarda en el loadout elegido."
+                    : "Sales con la columna con la que entraste: no se cambia nada."));
+                var lid = Dialogo.Texto($"Liderazgo {usado} / {tope}", "salida-liderazgo");
+                lid.name = "liderazgo";
+                lid.EnableInClassList("excedido", libre < 0);
+                cab.Add(lid);
+                if (resides && h.Loadouts.Count > 0)
+                {
+                    var opciones = h.Loadouts.Select(x => x.DisplayName + (x.Activo ? " (activo)" : "")).ToList();
+                    var elegido = new DropdownField("Loadout", opciones, Math.Max(0, h.Loadouts.IndexOf(loadout))) { name = "loadout" };
+                    elegido.AddToClassList("salida-loadout");
+                    elegido.RegisterValueChangedCallback(_ =>
+                    {
+                        loadout = h.Loadouts[elegido.index];
+                        elegidas = DelLoadout(loadout);
+                        eligiendo = false;
+                        PintarTropa();
+                    });
+                    cab.Add(elegido);
+                    var delLoadout = DelLoadout(loadout).OrderBy(x => x).ToList();
+                    bool cambiado = !delLoadout.SequenceEqual(elegidas.OrderBy(x => x));
+                    Button guardar = null;
+                    guardar = Dialogo.Boton("Guardar loadout", "boton-secundario salida-guardar", async () =>
+                    {
+                        // Las escuadras del loadout que no están aquí (en guarnición, escoltando…) se quedan en él si siguen siendo tuyas, como el prototipo.
+                        var aqui = new HashSet<string>(disponibles.Select(s => s.Id));
+                        var o = new OrdenGuardarLoadout { LoadoutId = loadout.Id, DisplayName = loadout.DisplayName };
+                        o.SquadIds.AddRange(loadout.SquadIds.Where(id => !aqui.Contains(id) && h.EscuadronesIds.Contains(id)));
+                        o.SquadIds.AddRange(elegidas);
+                        guardar.SetEnabled(false);
+                        Poner(error, null);
+                        try
+                        {
+                            var r = await c.Sesion.Ordenar(new Orden { GuardarLoadout = o });
+                            if (r.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(r.Rechazo)); guardar.SetEnabled(true); }
+                            else panelAvisos.Mostrar($"Loadout «{loadout.DisplayName}» guardado.", false);
+                        }
+                        catch (ErrorDeSesion x) { Poner(error, x.Message); guardar.SetEnabled(true); }
+                    });
+                    guardar.name = "guardar-loadout";
+                    guardar.SetEnabled(cambiado && libre >= 0);
+                    cab.Add(guardar);
+                }
+                tropaCaja.Add(cab);
+
+                // El riel: las tarjetas (con su ✕), el «+» si hay algo que quepa, y los huecos vacíos hasta completar (como ESPACIOS del prototipo,
+                // que con las tarjetas verticales son más).
+                var riel = new ScrollView(ScrollViewMode.Horizontal) { verticalScrollerVisibility = ScrollerVisibility.Hidden, name = "riel" };
+                riel.AddToClassList("salida-riel");
+                var mas = resides && caben.Count > 0;
+                var espacios = Math.Max(EspaciosDeTropa, lista.Count + (mas ? 1 : 0));
+                for (int i = 0; i < espacios; i++)
+                {
+                    if (i < lista.Count)
+                    {
+                        var s = lista[i];
+                        var hueco = Dialogo.Caja("salida-hueco salida-hueco-tropa");
+                        hueco.name = "hueco-" + s.Id;
+                        hueco.tooltip = $"{(string.IsNullOrEmpty(s.Nombre) ? NombreDeTropa(s.TropaId) : s.Nombre)} · {s.Cantidad} hombres";
+                        var total = (int?)c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == s.TropaId)?["unidadesPorDefecto"];
+                        var tarjeta = PiezasDeTropa.Tarjeta(s.TropaId, Coste(s), (int)s.Cantidad, total, null, AnchoDeHueco);
+                        if (tarjeta != null) { tarjeta.style.marginRight = 0; tarjeta.style.marginBottom = 0; hueco.Add(tarjeta); }
+                        if (resides)
+                        {
+                            var id = s.Id;
+                            var quitar = Dialogo.Boton("✕", "salida-hueco-quitar", () => { elegidas.Remove(id); PintarTropa(); });
+                            quitar.name = "quitar-" + id;
+                            quitar.tooltip = "Quitar de esta salida";
+                            hueco.Add(quitar);
+                        }
+                        riel.Add(hueco);
+                    }
+                    else if (mas && i == lista.Count)
+                    {
+                        var boton = Dialogo.Boton("+", "salida-hueco salida-hueco-mas", () => { eligiendo = !eligiendo; PintarTropa(); });
+                        boton.name = "salida-mas";
+                        boton.tooltip = "Añadir una escuadra";
+                        boton.EnableInClassList("activo", eligiendo);
+                        riel.Add(boton);
+                    }
+                    else riel.Add(Dialogo.Caja("salida-hueco salida-hueco-vacio"));
+                }
+                tropaCaja.Add(riel);
+
+                // Lo que se puede añadir, al pulsar «+» (solo lo que cabe: lo demás no se ofrece).
+                if (eligiendo && mas)
+                {
+                    var elegir = Dialogo.Caja("salida-elegir fila-envuelta");
+                    elegir.name = "elegir";
+                    foreach (var s in caben)
+                    {
+                        var id = s.Id;
+                        var candidata = new Button(() => { elegidas.Add(id); eligiendo = disponibles.Any(x => !elegidas.Contains(x.Id)); PintarTropa(); }) { name = "anadir-" + id };
+                        candidata.AddToClassList("salida-candidata");
+                        if (PiezasDeTropa.Miniatura(s.TropaId, 32) is VisualElement mini) candidata.Add(mini);
+                        var textos = new VisualElement();
+                        textos.Add(Dialogo.Texto(string.IsNullOrEmpty(s.Nombre) ? NombreDeTropa(s.TropaId) : s.Nombre, "aviso-titulo"));
+                        textos.Add(Dialogo.Texto($"{s.Cantidad} hombres · {Coste(s)} de Liderazgo", "campo-ayuda"));
+                        candidata.Add(textos);
+                        elegir.Add(candidata);
+                    }
+                    tropaCaja.Add(elegir);
+                }
+                if (resides && disponibles.Count == 0) tropaCaja.Add(Dialogo.Texto("No tienes tropa en el campamento. Puedes salir solo.", "campo-ayuda"));
+                if (!resides) tropaCaja.Add(Dialogo.Texto(lista.Count > 0 ? "Sales con la columna con la que entraste, tal cual." : "Tu columna no lleva escuadras.", "campo-ayuda"));
+                if (libre < 0) Poner(error, $"Te pasas de Liderazgo ({usado} / {tope}): quita escuadras para poder salir.");
+                else if (error.text.StartsWith("Te pasas de Liderazgo")) Poner(error, null);
+                salir?.SetEnabled(libre >= 0);
+            }
+
+            salir = Dialogo.Boton("SALIR", "boton-primario salida-salir", async () =>
             {
                 salir.SetEnabled(false);
                 Poner(error, null);
                 var orden = new OrdenSalirDelCampamento { CampamentoId = camp.Id, HeroeId = h.Id, Carga = new Cantidades() };
-                orden.EscuadronIds.AddRange(marcadas.Where(m => m.marca.value).Select(m => m.id));
+                if (resides) orden.EscuadronIds.AddRange(elegidas);
                 foreach (var (campo, recurso) in campos) if (campo.value > 0) orden.Carga.PorId[recurso] = campo.value * 1000L;
                 ResultadoOrden r;
                 try { r = await c.Sesion.Ordenar(new Orden { SalirDelCampamento = orden }); }
@@ -644,12 +786,61 @@ namespace ConquestTactics.Mundo.UI
                 if (r.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(r.Rechazo)); salir.SetEnabled(true); return; }
                 Cerrar();
                 if (cerrarInterior != null) await cerrarInterior();
-
                 if (this != null) Mapa();
             });
             salir.name = "salir";
-            botones.Add(salir);
+            acciones.Add(salir);
+            PintarTropa();
             capaEncima.Add(velo);
+        }
+
+        /// <summary>Huecos del riel de tropa a la vista (ESPACIOS del prototipo eran 5 en horizontal; las tarjetas verticales caben más) y su ancho.</summary>
+        const int EspaciosDeTropa = 7;
+        const float AnchoDeHueco = 110;
+
+        /// <summary>Un título con su ⓘ: al pulsarlo, se abre o se cierra su explicación debajo (la `ayuda` del prototipo).</summary>
+        static VisualElement ConAyuda(VisualElement titulo, string texto)
+        {
+            var fila = Dialogo.Caja("con-ayuda");
+            fila.Add(titulo);
+            var explicacion = Dialogo.Texto(texto, "ayuda-texto oculto");
+            var boton = Dialogo.Boton("i", "ayuda-boton", () => explicacion.ToggleInClassList("oculto"));
+            boton.tooltip = "Qué es esto";
+            fila.Add(boton);
+            var caja = new VisualElement();
+            caja.Add(fila);
+            caja.Add(explicacion);
+            return caja;
+        }
+
+        /// <summary>La línea «Velocidad de la columna» (`htmlLineaVelocidad` del prototipo), con las mismas reglas que el motor (`velocidad_de_columna`):
+        /// la escuadra más lenta con soldados (`TROPAS_RECLUTABLES.velocidad`); sin tropa, la del héroe solo (`MOVIMIENTO.velocidadJugador`). El color
+        /// compara con la infantería ligera (la velocidad más repetida del catálogo): rojo más lenta, blanco igual, azul más rápida.</summary>
+        VisualElement LineaDeVelocidad(List<string> tropaIds)
+        {
+            var catalogo = c.Datos.TropasReclutables?.OfType<Newtonsoft.Json.Linq.JObject>().ToList() ?? new List<Newtonsoft.Json.Linq.JObject>();
+            double? Vel(Newtonsoft.Json.Linq.JObject t) => (double?)t?["velocidad"];
+            var piezas = tropaIds.Select(id => catalogo.FirstOrDefault(t => (string)t["id"] == id)).Where(t => Vel(t) > 0).ToList();
+            var lenta = piezas.OrderBy(t => Vel(t)).FirstOrDefault();
+            var valor = lenta != null ? Vel(lenta).Value : c.Datos.Numero("documentos.Movimiento_Ejercitos.MOVIMIENTO.velocidadJugador");
+            var velocidades = catalogo.Select(Vel).Where(v => v > 0).Select(v => v.Value).ToList();
+            double? ligera = velocidades.Count == 0 ? (double?)null : velocidades.GroupBy(v => v).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).First().Key;
+            string ritmo = ligera == null ? "ligera" : Math.Abs(valor - ligera.Value) < 1e-6 ? "ligera" : valor < ligera ? "lenta" : "rapida";
+            // Las flechas encendidas: por debajo de la ligera 1 (lo más lento) o 2 (la tropa media), la ligera 3, por encima 4.
+            int flechas = ritmo == "ligera" ? 3 : ritmo == "rapida" ? 4
+                : velocidades.Where(v => v < ligera).Distinct().OrderByDescending(v => v).FirstOrDefault() is double media && valor >= media ? 2 : 1;
+            var texto = ritmo == "lenta" ? "más lenta que la infantería ligera" : ritmo == "rapida" ? "más rápida que la infantería ligera" : "al paso de la infantería ligera";
+            var linea = Dialogo.Caja("salida-velocidad ritmo-" + ritmo);
+            linea.name = "velocidad";
+            linea.Add(ConAyuda(Dialogo.Texto("VELOCIDAD DE LA COLUMNA", "salida-velocidad-etq"),
+                "La columna va al paso de lo más lento que lleva: la escuadra más lenta (con soldados); sin tropa, al del héroe solo. La marcha forzada la acelera. El terreno y los caminos cambian luego el tiempo de cada tramo. Rojo: más lenta que la infantería ligera. Blanco: igual. Azul: más rápida."));
+            var iconos = Dialogo.Caja("salida-velocidad-flechas");
+            for (int i = 0; i < 4; i++) { var f = Dialogo.Texto("›", "salida-velocidad-flecha"); f.style.opacity = i < flechas ? 1 : 0.22f; iconos.Add(f); }
+            linea.Add(iconos);
+            linea.Add(Dialogo.Texto($"{valor:0.#}", "salida-velocidad-cifra"));
+            linea.Add(Dialogo.Texto("u/min", "salida-velocidad-unidad"));
+            linea.Add(Dialogo.Texto($"{texto}{(lenta != null ? $" · marca el paso {(string)lenta["nombre"]}" : " · vas solo")}", "salida-velocidad-texto"));
+            return linea;
         }
 
         /// <summary>El género y las piezas que guardó el motor al crear el héroe («mujer · cabeza head_02 · pelo hair_03 …»; vacía, la de por defecto).</summary>

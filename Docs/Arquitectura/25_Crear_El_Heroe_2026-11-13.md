@@ -162,3 +162,18 @@ partida por servidor y un héroe por cuenta, así que no hay que elegir entre va
   5. Se cierra la sesión: la mujer desde el mapa, el hombre desde el selector.
 - **`PantallasDeMundoTests.ElSelectorDeConquestSigueConSusHeroes`** (PlayMode): sin el motor, el selector enseña el héroe de la sesión
   local con crear y borrar.
+
+## Un hueco vacío del aspecto no se rellena (2026-11-14)
+
+**El síntoma.** Víctor eligió un pelo que no era la coleta y sin barba, y en el campamento el héroe salió con coleta y con barba. Eran dos
+causas a la vez:
+
+1. **Su motor local (4a16dab7) no tiene 358af5ff.** Es el commit que guarda el aspecto al crear el héroe, así que el héroe llega sin
+   piezas. Con 358af5ff el pelo elegido sí se guarda y se ve.
+2. **En el cliente,** `VestidoDelMotor` solo tocaba los huecos de las piezas que recibía. Un hueco vacío («sin barba») se quedaba con la
+   pieza que trae el maniquí de Synty, que lleva coleta y barba. Ahora apaga lo que cuelga de los huecos vacíos de pelo, barba y cejas.
+   Con un motor que no guarda el aspecto, el héroe sale sin pelo, barba ni cejas, no con unos inventados.
+
+**Por qué la prueba no lo cazó:** creaba una mujer con todos los huecos llenos y solo miraba que lo elegido se viera. Ahora `SoloLoElegido`
+comprueba que en cada hueco se ve lo elegido y nada más, en el selector (tres cuentas, una con el caso de Víctor) y con el héroe dentro del
+campamento. Sin el arreglo, falla con «barba: se ve facialhair_01».

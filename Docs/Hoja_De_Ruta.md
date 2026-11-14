@@ -86,7 +86,7 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 | 8 | **Facción, tecnología, sigilo y estandartes.** El sigilo, compuesto por ids, va también en la batalla (antes CQ-009) (§3.11, §3.12) | ⬜ Pendiente del paso 4: el fondo de refundación del campamento y su caravana (solo con Facción y sin plaza) |
 | 9 | **Mapa estratégico, pueblos, aldeas y avanzadas** (§3.5, §3.13) | ⬜ |
 | 10 | **Mercado y caravanas**, con `cancelarOrdenMercado`, `aparcarCaravana` y `reclamarCaravana`, que BronzeAgeClient no tiene (§3.14) | ⬜ |
-| 11 | **Ejércitos:** convocatorias, unirse, perseguir y batallas en curso (§3.8) | ⬜ |
+| 11 | **Ejércitos:** convocatorias, unirse, perseguir y batallas en curso (§3.8) | ⬜ Pendiente del paso 4: en «Salir al mundo», «Cómo sales» solo ofrece «Columna personal»; el modo «Ejército» del prototipo (`salidaComoEjercito.ts`, con su preparación) entra aquí |
 | 12 | **Mercenarios por contrato, taberna y misiones** (§3.15, §3.16, §3.17) | ⬜ Pendiente del paso 4: el tablón de mercenarios por contrato y la taberna del campamento (la pieza `taberna` de la planta es su sitio natural) |
 | 13 | **Aedas, épicas y crónica** en el mundo y la interfaz (antes CQ-008) (§3.18) | ⬜ |
 

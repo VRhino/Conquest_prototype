@@ -91,6 +91,10 @@ for (const [id, [simbolo, dibujo]] of Object.entries(SIMBOLOS)) {
   simbolos[id] = simbolo;
   escribir('simbolo', id, `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${dibujo}</svg>`);
 }
+// El borde de línea discontinua de los huecos de tropa vacíos («Salir al mundo», `.salida-hueco.vacio` del prototipo): UI Toolkit no pinta
+// bordes discontinuos, así que va de fondo, a la medida del hueco (110 × 174) y en blanco para teñirlo.
+escribir('simbolo', 'hueco', '<svg xmlns="http://www.w3.org/2000/svg" width="110" height="174" viewBox="0 0 110 174"><rect x="1" y="1" width="108" height="172" rx="3" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="6 4"/></svg>');
+simbolos.hueco = '┄';
 
 const glifos = {};
 for (const [id, glifo] of Object.entries(GLIFOS)) {

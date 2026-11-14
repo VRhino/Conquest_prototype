@@ -457,8 +457,8 @@ namespace ConquestTactics.Mundo.UI
                     var id = (string)t["id"];
                     var unidades = (int?)t["unidadesPorDefecto"] ?? 0;
                     var prestada = mias.FirstOrDefault(s => s.TropaId == id && s.HasPrestadaPorCampamentoId);
-                    // La tarjeta de Conquest: nivel y hombres de la escuadra si ya te la prestaron; si no, los hombres que trae.
-                    var tarjeta = PiezasDeTropa.Tarjeta(id, prestada != null ? (int?)prestada.Nivel : null, LiderazgoDe(id),
+                    // La tarjeta de Conquest: los hombres de la escuadra si ya te la prestaron; si no, los que trae.
+                    var tarjeta = PiezasDeTropa.Tarjeta(id, LiderazgoDe(id),
                         prestada != null ? (int)prestada.Cantidad : unidades, unidades);
                     var caja = TropaConAccion("tropa-" + id, tarjeta,
                         $"{(string)t["nombre"]} · {(prestada != null ? $"prestada, {DondeEsta(prestada)}" : $"{unidades} hombres")}");
@@ -494,7 +494,7 @@ namespace ConquestTactics.Mundo.UI
                     if (mia == null && !o.Desbloqueada) { luego.Add(o.TropaId); continue; }
                     var porSoldado = o.PrecioPorSoldado / 1000.0;
                     var coste = (int)Math.Ceiling(o.PrecioEscuadra / 1000.0);
-                    var tarjeta = PiezasDeTropa.Tarjeta(o.TropaId, mia != null ? (int?)mia.Nivel : null, LiderazgoDe(o.TropaId),
+                    var tarjeta = PiezasDeTropa.Tarjeta(o.TropaId, LiderazgoDe(o.TropaId),
                         mia != null ? (int)mia.Cantidad : unidades, unidades);
                     var caja = TropaConAccion("tropa-" + o.TropaId, tarjeta, mia != null ? $"{nombre} · tu escuadra" : $"{nombre} · {porSoldado:0.#} de oro por soldado");
                     if (mia == null)

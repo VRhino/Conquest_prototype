@@ -423,6 +423,7 @@
   "casa": "⌂",
   "torre": "♜",
   "estrella": "✦",
-  "corona": "♛"
+  "corona": "♛",
+  "hueco": "┄"
  }
 }

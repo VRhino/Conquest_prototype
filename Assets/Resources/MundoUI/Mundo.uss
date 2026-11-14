@@ -294,3 +294,63 @@ Button { margin: 0; }
 /* La casilla «Sale» bajo la tarjeta: sin el ancho mínimo de la etiqueta de los campos (empujaba la casilla fuera de la columna). */
 .tropa-con-accion > Toggle { margin: 2px 0 0 0; }
 .tropa-con-accion .unity-base-field__label { min-width: 0; margin-right: 8px; }
+
+/* «Salir al mundo», calcada de la del prototipo (style.css: .salida-ventana, .salida-cuerpo, .salida-col, .salida-pie, .salida-velocidad,
+   .salida-tropa-cab, .salida-huecos, .salida-hueco…). */
+.salida-ventana { width: 980px; max-width: 96%; height: 680px; max-height: 94%; flex-direction: column; padding: 0; background-color: var(--marco-bg); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.salida-cab { flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom-width: 1px; border-color: var(--bronce-osc); flex-shrink: 0; }
+.salida-titulo { margin: 0; font-size: 18px; letter-spacing: 2px; }
+.salida-cerrar { width: 30px; height: 30px; padding: 0; font-size: 18px; -unity-text-align: middle-center; }
+.salida-cuerpo { flex-grow: 1; flex-shrink: 1; min-height: 0; flex-direction: row; }
+.salida-col { flex-grow: 1; flex-basis: 0; padding: 16px 20px; background-color: var(--marco-bg-alt); }
+.salida-col--derecha { border-left-width: 1px; border-color: var(--bronce-osc); background-color: var(--marco-panel); }
+.salida-recuadro { margin-top: 10px; padding: 8px 10px; border-width: 1px; border-color: #4a4538; border-radius: 6px; }
+.salida-recuadro-titulo { font-size: 14px; color: var(--oro-claro); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; margin: 0; }
+.salida-carga-total { font-size: 14px; color: var(--oro-claro); margin: 0 0 0 6px; }
+.salida-carga-total.excedido { color: #e8806f; }
+.con-ayuda { flex-direction: row; align-items: center; }
+.ayuda-boton { width: 20px; height: 20px; padding: 0; margin: 0 0 0 6px; border-width: 1px; border-color: var(--bronce); border-radius: 10px; background-color: rgba(0, 0, 0, 0); color: var(--pergamino); font-size: 12px; -unity-text-align: middle-center; opacity: 0.75; }
+.ayuda-boton:hover { opacity: 1; background-color: rgba(212, 168, 75, 0.15); }
+.ayuda-texto { margin: 6px 0 4px 0; padding: 6px 10px; border-left-width: 2px; border-color: var(--bronce); font-size: 12px; color: var(--texto-2); white-space: normal; }
+.carro-fila { margin-top: 6px; }
+.carro-fila IntegerField { width: 84px; margin: 0 6px 0 6px; }
+.carro-fila Button { padding: 4px 10px; }
+.carro-hay { margin: 0 0 0 6px; }
+.salida-pie { flex-shrink: 0; padding: 10px 16px 12px 16px; border-top-width: 1px; border-color: var(--bronce-osc); background-color: rgba(169, 121, 63, 0.08); }
+.salida-velocidad { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 5px 10px; border-width: 1px; border-left-width: 4px; border-radius: 3px; background-color: rgba(20, 16, 11, 0.55); margin-bottom: 8px; }
+.salida-velocidad.ritmo-lenta { border-color: #e2675a; color: #e2675a; }
+.salida-velocidad.ritmo-ligera { border-color: #f4efe4; color: #f4efe4; }
+.salida-velocidad.ritmo-rapida { border-color: #6fb6ff; color: #6fb6ff; }
+.salida-velocidad-etq { font-size: 12px; color: var(--oro); letter-spacing: 2px; margin: 0 6px 0 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.salida-velocidad-flechas { flex-direction: row; margin: 0 6px 0 4px; }
+.salida-velocidad-flecha { font-size: 22px; -unity-font-style: bold; margin: -4px 0 0 0; padding: 0; }
+.salida-velocidad-cifra { font-size: 17px; -unity-font-style: bold; margin: 0 4px 0 0; padding: 0; }
+.salida-velocidad-unidad { font-size: 11px; opacity: 0.85; margin: 0 8px 0 0; padding: 0; }
+.salida-velocidad-texto { font-size: 12px; color: var(--texto-2); padding: 0; margin: 0; }
+.salida-tropa-cab { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.salida-liderazgo { font-size: 13px; color: var(--texto-2); margin: 0 0 0 14px; }
+.salida-liderazgo.excedido { color: #d9534f; }
+.salida-loadout { margin: 0 8px 0 auto; }
+.salida-loadout > Label { min-width: 0; margin-right: 6px; font-size: 13px; color: var(--texto-2); }
+.salida-guardar { padding: 3px 10px; font-size: 12px; }
+.salida-riel { flex-shrink: 0; height: 190px; }
+.salida-riel .unity-scroll-view__content-container { flex-direction: row; }
+.salida-hueco { width: 110px; height: 174px; margin-right: 8px; flex-shrink: 0; border-radius: 3px; }
+.salida-hueco-tropa { }
+.salida-hueco-quitar { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; background-color: rgba(10, 8, 5, 0.65); border-width: 0; border-radius: 10px; color: var(--texto-2); font-size: 11px; -unity-text-align: middle-center; }
+.salida-hueco-quitar:hover { color: #d9534f; }
+.salida-hueco-vacio { background-image: resource("MundoUI/Iconos/simbolo/hueco"); -unity-background-image-tint-color: rgba(169, 121, 63, 0.35); background-color: rgba(20, 16, 11, 0.35); }
+.salida-hueco-mas { background-image: resource("MundoUI/Iconos/simbolo/hueco"); -unity-background-image-tint-color: rgba(169, 121, 63, 0.8); background-color: rgba(20, 16, 11, 0.45); border-width: 0; color: var(--oro); font-size: 30px; -unity-text-align: middle-center; padding: 0; }
+.salida-hueco-mas:hover, .salida-hueco-mas.activo { -unity-background-image-tint-color: var(--oro); color: var(--oro-claro); background-color: rgba(169, 121, 63, 0.16); }
+.salida-elegir { padding: 8px; margin-top: 6px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.25); }
+.salida-candidata { flex-direction: row; align-items: center; padding: 4px 10px 4px 6px; margin: 0 6px 6px 0; border-width: 1px; border-color: var(--bronce); border-radius: 3px; background-color: rgb(40, 30, 18); }
+.salida-candidata:hover { border-color: var(--oro); }
+.salida-acciones { flex-direction: row; align-items: center; justify-content: flex-end; margin-top: 8px; }
+.salida-acciones > .error { flex-grow: 1; flex-shrink: 1; margin: 0 12px 0 0; }
+.salida-salir { width: 130px; margin-top: 0; }
+/* Los campos de la ventana de salida, oscuros como los de los demás diálogos (el desplegable del loadout también). */
+.salida-ventana .unity-base-text-field__input, .salida-loadout .unity-base-popup-field__input { color: var(--pergamino); background-color: rgba(10, 8, 5, 0.7); border-color: var(--bronce-osc); -unity-font: url("Fuentes/Inter-Regular.ttf"); -unity-font-definition: initial; font-size: 13px; }
+.salida-loadout { flex-direction: row; align-items: center; }
+.salida-loadout > Label { -unity-text-align: middle-left; padding-top: 0; }
+.salida-loadout .unity-base-popup-field__input { min-width: 150px; padding: 3px 6px; }
+.salida-loadout .unity-base-popup-field__text { -unity-text-align: middle-left; padding: 0; margin: 0; }

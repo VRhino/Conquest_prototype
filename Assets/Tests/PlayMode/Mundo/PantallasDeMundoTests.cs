@@ -466,6 +466,10 @@ namespace ConquestTactics.Mundo.UI.Tests
                     avatar: new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_01", PeloId = "hair_03", CejasId = "eyebrow_02" }),
                 (nombre: "Bru" + DateTime.UtcNow.Ticks % 1_000_000, clase: "espada_escudo_mediano", genero: "masculino",
                     avatar: new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_02", PeloId = "hair_01", BarbaId = "facialhair_02", CejasId = "eyebrow_01" }),
+                // El caso de Víctor (2026-11-13): un hombre con un pelo que no es el primero y SIN barba. El maniquí trae coleta y barba puestas:
+                // un hueco vacío no puede quedarse con la del maniquí.
+                (nombre: "Len" + DateTime.UtcNow.Ticks % 1_000_000, clase: "lanza_escudo_redondo", genero: "masculino",
+                    avatar: new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_03", PeloId = "hair_02", BarbaId = "", CejasId = "eyebrow_01" }),
             };
             for (int n = 0; n < cuentas.Length; n++)
             {
@@ -512,6 +516,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var maniqui = (Transform)typeof(HeroSelectionSceneController).GetField("dummyRoot").GetValue(selector);
                 foreach (var id in new[] { cuenta.avatar.CabezaId, cuenta.avatar.PeloId, cuenta.avatar.CejasId, cuenta.avatar.BarbaId }.Where(x => !string.IsNullOrEmpty(x)))
                     Assert.IsTrue(PiezaVisible(maniqui, id, cuenta.genero == "femenino"), $"la pieza {id} en el maniquí");
+                // Y nada más que lo elegido en cada hueco: un hueco vacío (sin barba) se queda vacío, no con la pieza del maniquí.
+                SoloLoElegido(maniqui, cuenta.avatar, cuenta.genero == "femenino", "en el selector");
                 yield return CapturarEscena("CharacterselecctionScene", $"14_selector_{cuenta.clase}_{cuenta.genero}");
                 if (n == 0)
                 {
@@ -568,8 +574,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
             if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
             string nick = null;
-            yield return OtroHeroe(url, "Cam" + DateTime.UtcNow.Ticks % 1_000_000, "arco_lanza", "femenino",
-                new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_01", PeloId = "hair_03", CejasId = "eyebrow_02" }, x => nick = x);
+            // El caso de Víctor (2026-11-13): un hombre con un pelo que no es el primero y sin barba; en el campamento tiene que salir igual.
+            var aspecto = new BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar { CabezaId = "head_03", PeloId = "hair_02", BarbaId = "", CejasId = "eyebrow_01" };
+            yield return OtroHeroe(url, "Cam" + DateTime.UtcNow.Ticks % 1_000_000, "lanza_escudo_redondo", "masculino", aspecto, x => nick = x);
             foreach (var k in Preferencias) PlayerPrefs.DeleteKey(k);
             go = new GameObject("Mundo");
             go.SetActive(false);
@@ -597,6 +604,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return new WaitForSecondsRealtime(1f);
             var interior = SelectorDePersonaje.Interior;
             var heroe = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).First(x => x.IsLocalHero);
+            // El héroe del campamento, con el aspecto que se eligió y nada más (ni la coleta ni la barba del maniquí).
+            SoloLoElegido(heroe.transform, aspecto, false, "en el campamento");
             var campId = conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe.Ubicacion.CampamentoId;
             BronzeAge.Contract.V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             BronzeAge.Contract.V1.CampamentoMercenarios Camp() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.CampamentoMercenarios, campId).CampamentoMercenarios;
@@ -749,8 +758,23 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Tecla(UnityEngine.InputSystem.Key.F);
                 yield return Esperar(() => raiz.Q("ventana-salida") != null, 5, "la ventana de salida");
                 var ventana = raiz.Q("ventana-salida");
-                var marcas = ventana.Query<Toggle>().ToList();
-                Assert.Greater(marcas.Count, 0, "con tus escuadras para elegir");
+                // El riel de tropa, como el del prototipo: la escuadra en su tarjeta con su ✕; quitarla deja el «+», y con él se vuelve a poner.
+                List<VisualElement> Huecos() => ventana.Query(className: "salida-hueco-tropa").ToList();
+                Assert.Greater(Huecos().Count, 0, "con tus escuadras para elegir");
+                Assert.IsNotNull(ventana.Q("velocidad"), "la velocidad de la columna");
+                Debug.Log($"[Prueba] salida: {ventana.Q<Label>("liderazgo").text}; velocidad {string.Join(" ", ventana.Q("velocidad").Query<Label>().ToList().Select(l => l.text))}");
+                var primera = Huecos()[0].name.Substring("hueco-".Length);
+                Pulsar(ventana.Q<Button>("quitar-" + primera));
+                yield return null;
+                Assert.AreEqual(0, Huecos().Count(x => x.name == "hueco-" + primera), "quitada con su ✕");
+                Assert.IsNotNull(ventana.Q<Button>("salida-mas"), "y sale el «+» para volver a ponerla");
+                yield return Capturar("26c_salida_quitada");
+                Pulsar(ventana.Q<Button>("salida-mas"));
+                yield return null;
+                yield return Capturar("26d_salida_elegir");
+                Pulsar(ventana.Q<Button>("anadir-" + primera));
+                yield return null;
+                Assert.AreEqual(1, Huecos().Count(x => x.name == "hueco-" + primera), "puesta otra vez con el «+»");
                 var campos = ventana.Query<IntegerField>().ToList();
                 string cargado = null;
                 if (campos.Count > 0) { campos[0].value = 1; cargado = campos[0].name.Substring("carga-".Length); }
@@ -767,7 +791,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                     Debug.Log($"[Prueba] víveres tras repostar: {ventana.Q<Label>("viveres").text}");
                     yield return Capturar("26b_viveres_repostados");
                 }
-                var elegidas = marcas.Where(m => m.value).Count();
+                var elegidas = Huecos().Count;
                 Pulsar(ventana.Q<Button>("salir"));
                 yield return Esperar(() => raiz.Q("mapa") != null && !UnityEngine.SceneManagement.SceneManager.GetSceneByName("FeudoScene").isLoaded, 30, "el mapa tras salir");
                 var mapa = ElMapa();
@@ -886,6 +910,21 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>¿Está a la vista en el maniquí la pieza `id` de AvatarPartDatabase, para ese género?</summary>
+        /// <summary>En cada hueco del aspecto (cara, pelo, cejas, barba) se ve la pieza elegida y ninguna otra; si se eligió vacío, ninguna.</summary>
+        static void SoloLoElegido(Transform maniqui, BronzeAge.Contract.V1.OrdenCrearHeroe.Types.Avatar avatar, bool femenino, string donde)
+        {
+            var db = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
+            var visibles = maniqui.GetComponentsInChildren<Transform>(false).Select(t => t.name).ToHashSet();
+            foreach (var (lista, elegida, hueco) in new[] { (db.faceParts, avatar.CabezaId, "cabeza"), (db.hairParts, avatar.PeloId, "pelo"),
+                         (db.eyebrowsParts, avatar.CejasId, "cejas"), (db.beardParts, avatar.BarbaId, "barba") })
+            {
+                if (hueco == "barba" && femenino) continue;
+                var vistas = lista.Where(d => d.attachments.Any(a => visibles.Contains(femenino ? a.prefabPathFemale : a.prefabPathMale))).Select(d => d.id).ToList();
+                var esperadas = string.IsNullOrEmpty(elegida) ? new List<string>() : new List<string> { elegida };
+                CollectionAssert.AreEquivalent(esperadas, vistas, $"{hueco} {donde}: solo lo elegido ({(string.IsNullOrEmpty(elegida) ? "nada" : elegida)})");
+            }
+        }
+
         static bool PiezaVisible(Transform maniqui, string id, bool femenino)
         {
             var db = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");

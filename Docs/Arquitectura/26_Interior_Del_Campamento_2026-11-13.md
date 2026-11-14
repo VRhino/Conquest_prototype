@@ -219,3 +219,42 @@ hay en FeudoScene que podría alojarlo y la recomendación. El autor la aprobó 
 - **Las capturas a otros tamaños** (`EnTamanos`) se hacen en texturas nuevas, que traen lo que hubiera en esa memoria de la tarjeta. De ahí
   salía el mapa detrás del mercado a 1280×720. Ahora se limpian antes, y la prueba comprueba que dentro del campamento solo está encendida
   la cámara de FeudoScene: en el juego no hay mapa detrás.
+
+## «Salir al mundo», como la del prototipo (2026-11-14)
+
+Víctor pidió que se pareciera a la del prototipo (`ui/ventanaSalida.ts`, `cargaDeSalida.ts` y `velocidadColumna.ts`). Ahora es la misma,
+en UI Toolkit (`PantallasDeMundo.VentanaDeSalida`):
+
+- **Una ventana ancha** con el título («Salir de …») y el aspa.
+- **Arriba, dos columnas:**
+  - A la izquierda, cómo sales. Con residencia: «Sales al mapa por la puerta. Tus víveres van siempre contigo.»; sin ella: «No resides
+    aquí: sales con la columna con la que entraste.». Debajo, los víveres con «Llenar víveres» y el recuadro «Cómo sales» con ⓘ.
+  - A la derecha, «Carga del carro N / 500» con ⓘ: cada recurso de tu almacén personal con su emoji, «hay N», la cantidad y «Todo».
+    Si no hay nada: «No hay nada que cargar en tu almacén personal.». Sin residencia, lo que lleva el carro de tu columna.
+- **«Llenar víveres»** sigue junto a los víveres. El prototipo no lo tiene en esta ventana (lo pone en la ficha de la puerta del
+  campamento, en el mapa), pero aquí se queda para no perderlo al salir.
+- **«Cómo sales»** solo ofrece «Columna personal». El modo «Ejército» del prototipo entra con el paso 11 (anotado en la Hoja).
+- **La velocidad de la columna**, de lado a lado, con las mismas reglas que el motor (`velocidad_de_columna`):
+  - va al paso de la escuadra más lenta con soldados (`TROPAS_RECLUTABLES.velocidad`); sin tropa, al del héroe solo
+    (`MOVIMIENTO.velocidadJugador`);
+  - las cuatro flechas y el color comparan con la infantería ligera (la velocidad más repetida del catálogo): rojo más lenta, blanco
+    igual y azul más rápida;
+  - el texto sigue a la cifra: «al paso de … · marca el paso …» (o «vas solo»).
+- **La tropa**, con ⓘ:
+  - **Liderazgo:** «usado / tope». El tope es `Heroe.liderazgo_base`; el coste de cada escuadra, `LIDERAZGO.costePorEscalon` según su
+    escalón. Si te pasas, sale en rojo, con el aviso, y «SALIR» no se puede pulsar.
+  - **Loadout:** el desplegable con los loadouts del héroe (`Heroe.loadouts`; el activo marcado) y «Guardar loadout» (`guardarLoadout`,
+    como el prototipo: guarda la tropa elegida y conserva las escuadras de ese loadout que no están aquí).
+  - **Lo que sale por defecto:** el loadout activo, o todo si no tiene escuadras.
+- **El riel horizontal**, con las tarjetas de tropa de Conquest (`PiezasDeTropa.Tarjeta` a 110 px):
+  - cada una con su ✕ para quitarla;
+  - el hueco «+» solo si hay algo que añadir que quepa en el Liderazgo; al pulsarlo, salen las escuadras que caben, cada una con su
+    miniatura;
+  - los huecos vacíos, con su borde discontinuo, hasta completar 7. El prototipo pone 5 horizontales; las tarjetas verticales caben
+    más, y la regla es la misma: `max(huecos, elegidas + «+»)`.
+  - UI Toolkit no pinta bordes discontinuos: el borde es un VectorImage del script de iconos (`simbolo/hueco`), a la medida del hueco y
+    teñido.
+- **Abajo a la derecha, «SALIR».** Manda `salirDelCampamento` con las escuadras del riel y la carga.
+
+**Lo que el motor no deja hacer como el prototipo:** nada. Todo sale de lo que manda: el Liderazgo, los loadouts, las velocidades y la
+capacidad del carro.
