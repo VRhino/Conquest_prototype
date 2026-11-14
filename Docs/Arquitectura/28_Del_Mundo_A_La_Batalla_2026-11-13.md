@@ -242,9 +242,20 @@ caballo. Lo dejamos para después (Víctor, 2026-11-14).
   ficha: el nombre, el estado y quién combate contra quién. Las ya cerradas, que el motor guarda una hora, no salen. Unirse desde fuera es
   del paso de unirse a batallas.
 
+- **A pantalla completa** (Víctor, 2026-11-14). El informe del prototipo era una ventana flotante. Aquí es una escena entera y ocupa toda la
+  ventana: arriba Victoria o Derrota con el motivo; tu bando a la izquierda y el rival a la derecha, cada uno con su recuadro, sus escuadras
+  y sus héroes; debajo, en una fila, lo que ganas o pierdes; «Salir», abajo a la derecha. El contenido, el orden y el aspecto son los del
+  prototipo.
+- **El ratón.** BattleScene lo deja bloqueado y oculto, y la política de cursor de Conquest (`SceneTransitionService.RequiresFreeCursor`)
+  solo lo soltaba en sus escenas de interfaz. Ahora también en las del mundo (MundoScene, PreparacionScene e InformeScene). Con eso se
+  arregla que en el informe no se pudiera pulsar «Salir» (Víctor, 2026-11-14). La prueba pulsa «Salir» con un ratón de verdad del
+  Input System y comprueba que el cursor está libre y a la vista.
+- **Las escenas nuevas** están en `Assets/Scenes/BronzeAge`; `GameScenes` es lo de Conquest de antes.
+
 ### Lo que toca del código de batalla
 
 - `ReconexionClienteSystem`: `Acabada` y `Perdida`, estáticos, con su reinicio.
+- `SceneTransitionService.RequiresFreeCursor`: las escenas del mundo también son de interfaz.
 - No toca `HandleMatchEnd` ni BattleSceneController.
 
 ### Pedidos al motor

@@ -215,11 +215,15 @@ namespace ConquestTactics.Mundo.UI.Tests
                     Assert.IsNotNull(raiz.Q("informe-rivales").Q("fila-" + s.SquadId), $"la fila de {s.SquadId} en «Escuadras rivales»");
                 Assert.IsNotNull(raiz.Q("informe-heroes"), "los héroes, con si cayeron");
                 if (aplicada.Resultado.Ganador != LadoId.Atacante) Assert.IsNotNull(raiz.Q("informe-herido"), "perdiste: quedas herido");
-                yield return EnTamanos(raiz, "47_informe");
+                yield return EnTamanos(raiz, "47_informe", () => SinPisarse(raiz.Q("informe")));
 
+                // El ratón, libre al salir de la batalla (BattleScene lo bloquea), y «Salir» pulsado con el ratón de verdad (Input System).
+                Assert.AreEqual(CursorLockMode.None, UnityEngine.Cursor.lockState, "el cursor, sin bloquear en el informe");
+                Assert.IsTrue(UnityEngine.Cursor.visible, "el cursor, a la vista en el informe");
                 // «Salir»: a MundoScene con la sesión viva, con la columna en el sitio de la batalla.
-                Pulsar(raiz.Q<Button>("informe-salir"));
+                yield return ClicUITK(raiz, raiz.Q<Button>("informe-salir"));
                 yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaMundo && ElMapaSiHay() != null, 30, "de vuelta en el mapa tras el informe");
+                Assert.IsTrue(UnityEngine.Cursor.lockState == CursorLockMode.None && UnityEngine.Cursor.visible, "el cursor, libre en el mapa al volver");
                 mapa = ElMapa();
                 yield return Esperar(() => mapa.Columna != null && mapa.Centro != null, 20, "la columna en el mapa");
                 var (bx, by) = (aplicada.Punto.X / 1000.0, aplicada.Punto.Y / 1000.0);
@@ -308,6 +312,69 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
             Debug.Log($"[Prueba] caballos: {vistos} muestras de héroes montados andando, {tiesos} sin paso. {ejemplo}");
             Assert.AreEqual(0, tiesos, "un caballo que anda lleva el paso en su Animator: " + ejemplo);
+        }
+
+        /// <summary>
+        /// Un clic con el ratón de verdad (un ratón del Input System) en un elemento de UI Toolkit: el panel pinta un momento en la pantalla
+        /// (la prueba lo tiene en una textura), el puntero va al centro del elemento y hace clic. Así se caza un ratón bloqueado o un panel
+        /// que no recibe el puntero, que `Pulsar` (por dentro) no ve.
+        /// </summary>
+        IEnumerator ClicUITK(VisualElement raiz, VisualElement e)
+        {
+            Assert.IsNotNull(e, "el elemento del clic");
+            var doc = go.GetComponentInChildren<UIDocument>();
+            var textura = doc.panelSettings.targetTexture;
+            var entrada = UnityEngine.InputSystem.InputSystem.settings;
+            var fondoAntes = entrada.backgroundBehavior;
+            var editorAntes = entrada.editorInputBehaviorInPlayMode;
+            entrada.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+            entrada.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
+            try
+            {
+                raton.MakeCurrent();
+                doc.panelSettings.targetTexture = null;
+                yield return null;
+                yield return null;
+                var panel = raiz.worldBound;
+                var centro = e.worldBound.center;
+                var donde = new Vector2(centro.x * Screen.width / panel.width, Screen.height - centro.y * Screen.height / panel.height);
+                Assert.IsTrue(new Rect(0, 0, Screen.width, Screen.height).Contains(donde), $"«{e.name}» dentro de la pantalla ({donde} en {Screen.width}x{Screen.height})");
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde });
+                yield return null;
+                yield return null;
+                yield return Clic(raton, donde);
+            }
+            finally
+            {
+                UnityEngine.InputSystem.InputSystem.RemoveDevice(raton);
+                entrada.backgroundBehavior = fondoAntes;
+                entrada.editorInputBehaviorInPlayMode = editorAntes;
+                if (doc != null) doc.panelSettings.targetTexture = textura;
+            }
+        }
+
+        /// <summary>Los bloques de cada columna del informe (y los recuadros de abajo), uno debajo de otro sin pisarse y con su alto.</summary>
+        static void SinPisarse(VisualElement informe)
+        {
+            foreach (var grupo in informe.Query(className: "informe-columna").ToList().Concat(informe.Query(className: "informe-recuadros").ToList()))
+            {
+                var hijos = grupo.Children().Where(h => h.resolvedStyle.display != DisplayStyle.None).ToList();
+                foreach (var h in hijos)
+                {
+                    Assert.Greater(h.worldBound.height, 4f, $"«{h.name ?? h.GetType().Name}» del informe, con su alto");
+                    // Y lo de dentro, dentro: un recuadro aplastado deja sus textos fuera, encima de lo siguiente.
+                    foreach (var l in h.Query<Label>().ToList().Where(l => l.resolvedStyle.display != DisplayStyle.None && l.worldBound.height > 0))
+                        Assert.IsTrue(Contiene(h.worldBound, l.worldBound), $"«{l.text}» dentro de su bloque del informe ({l.worldBound} en {h.worldBound})");
+                }
+                for (int i = 0; i < hijos.Count; i++)
+                    for (int j = i + 1; j < hijos.Count; j++)
+                    {
+                        var a = hijos[i].worldBound; var b = hijos[j].worldBound;
+                        var dentro = new Rect(a.x + 0.5f, a.y + 0.5f, a.width - 1f, a.height - 1f);
+                        Assert.IsFalse(dentro.Overlaps(b), $"en el informe, «{hijos[i].name ?? hijos[i].GetType().Name}» y «{hijos[j].name ?? hijos[j].GetType().Name}» se pisan ({a} y {b})");
+                    }
+            }
         }
 
         static MapaDeMundo ElMapaSiHay() => UnityEngine.Object.FindAnyObjectByType<MapaDeMundo>();

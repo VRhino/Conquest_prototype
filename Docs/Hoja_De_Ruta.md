@@ -102,6 +102,7 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   artefacto que ya baja la conexión, la niebla de la sesión encima y los iconos con UI Toolkit. Sin teselas ni modelos 3D.
 - **Lo que no se migra** (bancos de pruebas, adaptadores al REST viejo, repintado por sondeo, panel F3) está en el inventario,
   §5.
+- **Las escenas nuevas del juego van en `Assets/Scenes/BronzeAge`** (Víctor, 2026-11-14): MundoScene, PreparacionScene e InformeScene. `GameScenes` es lo de Conquest de antes (BattleScene, FeudoScene, AvatarCreator, CharacterselecctionScene, BattlePrepScene, PostBattleScene…).
 - **Las pantallas de relleno de Conquest de fuera de la batalla** (login, barracón, preparación,
   posbatalla, emparejamiento, tienda) se borran cuando llega la que las sustituye.
 - **El selector de personaje de Conquest** (`CharacterselecctionScene`) sustituye a la pantalla de partidas cuando la cuenta tiene

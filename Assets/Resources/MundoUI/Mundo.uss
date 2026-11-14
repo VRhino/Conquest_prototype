@@ -405,12 +405,18 @@ Button { margin: 0; }
 .prep-start:disabled { opacity: 0.55; }
 
 /* El informe de combate (PantallasDeMundo.Informe), calcado de `.briefing` del prototipo (style.css 2877-2932). */
-.informe-velo { background-color: rgba(0, 0, 0, 0.55); align-items: center; justify-content: center; }
-.informe { width: 560px; max-width: 94%; max-height: 92%; padding: 22px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
-.informe-cuerpo { flex-shrink: 1; }
+.informe-velo { background-color: var(--tinta); align-items: stretch; justify-content: flex-start; }
+.informe { flex-grow: 1; margin: 20px; padding: 26px 34px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.informe-cuerpo { flex-grow: 1; flex-shrink: 1; }
+.informe-columnas { flex-direction: row; align-items: flex-start; margin: 0 -12px; flex-shrink: 0; }
+.informe-columna { flex-grow: 1; flex-basis: 0; margin: 0 12px; }
+.informe-columna > * { margin-bottom: 10px; flex-shrink: 0; }
+.informe-columna > .informe-bando { flex-grow: 0; flex-basis: auto; margin: 0 0 10px 0; }
+.informe-recuadros { flex-direction: row; flex-wrap: wrap; margin: 4px -6px 0 -6px; flex-shrink: 0; }
+.informe-recuadros > .informe-recuadro { flex-grow: 1; flex-basis: 260px; margin: 0 6px 10px 6px; }
 .informe-cuerpo > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container > * { margin-bottom: 10px; }
 .informe-motivo { font-size: 14px; color: var(--rojo-claro); white-space: normal; }
-.informe-titulo { font-size: 18px; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; color: var(--pergamino); white-space: normal; margin: 0; }
+.informe-titulo { font-size: 26px; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; color: var(--pergamino); white-space: normal; margin: 0; }
 .informe-titulo--victoria { color: #9ad07a; }
 .informe-titulo--derrota { color: #e08a6f; }
 .informe-bandos { flex-direction: row; }

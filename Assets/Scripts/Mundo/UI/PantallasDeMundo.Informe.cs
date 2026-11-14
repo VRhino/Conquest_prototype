@@ -190,7 +190,9 @@ namespace ConquestTactics.Mundo.UI
                 tituloAbandono.name = "informe-titulo";
                 cuerpo.Add(tituloAbandono);
                 cuerpo.Add(Dialogo.Texto("Al salir antes de que acabe, el motor ya no te cuenta cómo terminó: solo lo que te pasa a ti.", "campo-ayuda"));
-                if (yo != null && columna != null && !columna.HasBatallaId && antesDeLaBatalla.TryGetValue(batallaId, out var antesA)) LoQueCambia(cuerpo, yo, antesA, false);
+                var filaAbandono = Dialogo.Caja("informe-recuadros");
+                cuerpo.Add(filaAbandono);
+                if (yo != null && columna != null && !columna.HasBatallaId && antesDeLaBatalla.TryGetValue(batallaId, out var antesA)) LoQueCambia(filaAbandono, yo, antesA, false);
                 else cuerpo.Add(Dialogo.Texto("Esperando a que tu columna quede libre…", "campo-ayuda"));
                 Botonera(caja, enSuEscena);
                 return;
@@ -218,46 +220,60 @@ namespace ConquestTactics.Mundo.UI
             if (Razones.TryGetValue(r.Razon, out var razon))
                 cuerpo.Add(Dialogo.Texto($"{(r.Ganador == LadoId.Atacante ? "Gana quien ataca" : "Gana quien defiende")}, {razon}.", "campo-ayuda"));
 
-            // Los dos bandos (`briefing-bandos`): quién iba y cuántas bajas.
+            // A pantalla completa: tu bando a la izquierda y el rival a la derecha, cada uno con su recuadro (`briefing-bandos`: quién iba y
+            // cuántas bajas), sus escuadras y sus héroes; debajo, en una fila, lo que ganas o pierdes.
             var propio = propioAtaca ? b.Ticket.Atacante : b.Ticket.Defensor;
             var otro = propioAtaca ? b.Ticket.Defensor : b.Ticket.Atacante;
             var escuadras = r.PorEscuadra.ToDictionary(e => e.SquadId);
             int Bajas(BattleSide l) => Escuadras(b, l).Sum(s => escuadras.TryGetValue(s.SquadId, out var e) ? (int)e.Muertos : 0);
-            var bandos = Dialogo.Caja("informe-bandos");
-            bandos.Add(Bando("Tu bando", $"{Bajas(propio)} bajas", Heroes(propio, "sin héroes")));
-            bandos.Add(Bando(rival, $"{Bajas(otro)} bajas", otro.Participantes.Count > 0 ? Heroes(otro, "") : bandidos != null ? "los defiende el campamento" : "sin héroes"));
-            cuerpo.Add(bandos);
+            var columnas = Dialogo.Caja("informe-columnas");
+            cuerpo.Add(columnas);
+            var izquierda = Dialogo.Caja("informe-columna");
+            var derecha = Dialogo.Caja("informe-columna");
+            columnas.Add(izquierda);
+            columnas.Add(derecha);
+            izquierda.Add(Bando("Tu bando", $"{Bajas(propio)} bajas", Heroes(propio, "sin héroes")));
+            derecha.Add(Bando(rival, $"{Bajas(otro)} bajas", otro.Participantes.Count > 0 ? Heroes(otro, "") : bandidos != null ? "los defiende el campamento" : "sin héroes"));
+            izquierda.Add(Dialogo.Texto("Tus escuadras", "informe-sub"));
+            izquierda.Add(TablaDeBajas(Escuadras(b, propio), escuadras, "informe-propias"));
+            derecha.Add(Dialogo.Texto("Escuadras rivales", "informe-sub"));
+            derecha.Add(TablaDeBajas(Escuadras(b, otro), escuadras, "informe-rivales"));
 
-            cuerpo.Add(Dialogo.Texto("Tus escuadras", "informe-sub"));
-            cuerpo.Add(TablaDeBajas(Escuadras(b, propio), escuadras, "informe-propias"));
-            cuerpo.Add(Dialogo.Texto("Escuadras rivales", "informe-sub"));
-            cuerpo.Add(TablaDeBajas(Escuadras(b, otro), escuadras, "informe-rivales"));
-
-            // Los héroes de los dos bandos, con si cayeron.
-            var heroes = b.Ticket.Atacante.Participantes.Concat(b.Ticket.Defensor.Participantes).Concat(b.Incorporaciones.Select(i => i.Participante)).ToList();
-            if (heroes.Count > 0)
-            {
-                cuerpo.Add(Dialogo.Texto("Héroes", "informe-sub"));
-                var lista = Dialogo.Caja("informe-heroes");
-                lista.name = "informe-heroes";
-                foreach (var p in heroes)
-                {
-                    var rh = r.PorHeroe.FirstOrDefault(x => x.HeroeId == p.HeroeId);
-                    var estado = rh == null || !rh.Participo ? "no llegó a entrar" : rh.SobrevivioAlCierre ? "en pie al acabar" : "cayó";
-                    var fila = Dialogo.Caja("informe-heroe");
-                    fila.Add(Dialogo.Texto(NombreDe(p) + (p.HeroeId == c.HeroeId ? " (tú)" : ""), "aviso-titulo"));
-                    fila.Add(Dialogo.Texto(estado, rh != null && rh.Participo && !rh.SobrevivioAlCierre ? "informe-baja" : "campo-ayuda"));
-                    lista.Add(fila);
-                }
-                cuerpo.Add(lista);
-            }
+            // Los héroes de cada bando (los que se unieron, en el suyo), con si cayeron.
+            var ladoPropio = b.LadoPropio;
+            var otroLado = ladoPropio == LadoId.Atacante ? LadoId.Defensor : LadoId.Atacante;
+            List<BattleParticipantSnapshot> HeroesDe(BattleSide l, LadoId lado) =>
+                l.Participantes.Concat(b.Incorporaciones.Where(i => i.Lado == lado).Select(i => i.Participante)).ToList();
+            ListaDeHeroes(izquierda, HeroesDe(propio, ladoPropio), r, "informe-heroes");
+            ListaDeHeroes(derecha, HeroesDe(otro, otroLado), r, "informe-heroes-rivales");
 
             // Lo que ganas o pierdes, comparado con lo de antes de la batalla (solo si se tiene).
+            var recuadros = Dialogo.Caja("informe-recuadros");
+            recuadros.name = "informe-recuadros";
+            cuerpo.Add(recuadros);
             var h = HeroeAhora();
-            if (h != null && antesDeLaBatalla.TryGetValue(batallaId, out var antes)) LoQueCambia(cuerpo, h, antes, victoria);
+            if (h != null && antesDeLaBatalla.TryGetValue(batallaId, out var antes)) LoQueCambia(recuadros, h, antes, victoria);
             else if (h != null && h.HasHeridoHastaMs && h.HeridoHastaMs > c.Sesion.AhoraMundo)
-                cuerpo.Add(Recuadro("Quedas herido", $"Hasta las {Instante.AFecha(h.HeridoHastaMs):HH:mm} (tiempo del mundo)", "Un herido no ataca ni persigue durante un rato.", false));
+                recuadros.Add(Recuadro("Quedas herido", $"Hasta las {Instante.AFecha(h.HeridoHastaMs):HH:mm} (tiempo del mundo)", "Un herido no ataca ni persigue durante un rato.", false, "informe-herido"));
             Botonera(caja, enSuEscena);
+        }
+
+        void ListaDeHeroes(VisualElement donde, List<BattleParticipantSnapshot> heroes, BattleResult r, string nombre)
+        {
+            if (heroes.Count == 0) return;
+            donde.Add(Dialogo.Texto("Héroes", "informe-sub"));
+            var lista = Dialogo.Caja("informe-heroes");
+            lista.name = nombre;
+            foreach (var p in heroes)
+            {
+                var rh = r.PorHeroe.FirstOrDefault(x => x.HeroeId == p.HeroeId);
+                var estado = rh == null || !rh.Participo ? "no llegó a entrar" : rh.SobrevivioAlCierre ? "en pie al acabar" : "cayó";
+                var fila = Dialogo.Caja("informe-heroe");
+                fila.Add(Dialogo.Texto(NombreDe(p) + (p.HeroeId == c.HeroeId ? " (tú)" : ""), "aviso-titulo"));
+                fila.Add(Dialogo.Texto(estado, rh != null && rh.Participo && !rh.SobrevivioAlCierre ? "informe-baja" : "campo-ayuda"));
+                lista.Add(fila);
+            }
+            donde.Add(lista);
         }
 
         void Botonera(VisualElement caja, bool enSuEscena)

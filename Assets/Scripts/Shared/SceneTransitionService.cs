@@ -29,11 +29,18 @@ public static class SceneTransitionService
         { SceneNames.PostBattle, GamePhase.PostPartida }
     };
 
+    /// <summary>
+    /// Las escenas del mundo del motor (Conquest.Mundo.UI): el mapa, la preparación de la batalla y el informe de después. Son de interfaz y
+    /// sueltan el ratón al cargarse, también al volver de BattleScene, que lo deja bloqueado.
+    /// </summary>
+    static readonly HashSet<string> WorldInterfaceScenes = new(System.StringComparer.OrdinalIgnoreCase) { "MundoScene", "PreparacionScene", "InformeScene" };
+
     /// <summary>Interface scenes always own a free pointer, even when a nested panel closes.</summary>
     public static bool RequiresFreeCursor
     {
         get
         {
+            if (WorldInterfaceScenes.Contains(SceneManager.GetActiveScene().name)) return true;
             if (!SceneToPhaseMap.TryGetValue(SceneManager.GetActiveScene().name, out var phase)) return false;
             return phase == GamePhase.Login || phase == GamePhase.CharacterSelection
                 || phase == GamePhase.AvatarCreation || phase == GamePhase.BattlePreparation

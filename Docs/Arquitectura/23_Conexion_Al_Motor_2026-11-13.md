@@ -75,7 +75,7 @@ Al acabar, se para el servidor y se borra su carpeta de datos.
 ## Las pantallas (UI Toolkit)
 
 La interfaz de fuera de la batalla va en UI Toolkit con la guía «bronce y arcilla» de BronzeAgeClient (`docs/Diseno_Interfaz.md`); la de
-la batalla sigue en UGUI. Escena: `Assets/Scenes/GameScenes/MundoScene.unity` (una cámara y un objeto `Mundo` con `ConexionDeMundo` y
+la batalla sigue en UGUI. Escena: `Assets/Scenes/BronzeAge/MundoScene.unity` (una cámara y un objeto `Mundo` con `ConexionDeMundo` y
 `PantallasDeMundo`). LoginScene, CharacterSelection y las demás pantallas de relleno siguen como estaban, y la escena nueva no está en el
 flujo de la batalla ni en Build Settings.
 
