@@ -187,7 +187,7 @@ namespace ConquestTactics.Mundo.UI
         static readonly (string id, string titulo, string familia, string icono)[] RielDePlaza =
         {
             ("construccion", "Construcción", "riel", "construccion"), ("gobierno", "Gobierno", "riel", "gobierno"), ("defensa", "Defensa", "edificio", "muralla"),
-            ("reclutamiento", "Reclutamiento", "edificio", "barracon"), ("armeria", "Armería", "edificio", "armeria"),
+            ("territorio", "Territorio", "riel", "territorio"), ("reclutamiento", "Reclutamiento", "edificio", "barracon"), ("armeria", "Armería", "edificio", "armeria"),
         };
 
         /// <summary>¿Se puede abrir ahora esa ventana? Construcción, con cargo de Gobernador o Maestro de Obras; el Almacén, con almacén; la Armería, activa.
@@ -195,6 +195,8 @@ namespace ConquestTactics.Mundo.UI
         bool VentanaDisponible(string ventana, Asentamiento a, Heroe yo) => ventana switch
         {
             "armeria" => ArmeriaActiva(a),
+            // Territorio, también de visita (solo para mirar sus pueblos).
+            "territorio" => true,
             _ when !Propia(a, yo) => false,
             "ascenso" => true,
             "gobierno" => true,
@@ -211,7 +213,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var cargo = CargoConstructor(a, yo.Id);
             var enMarcha = Internos(a).Count(e => e.Mejora != null || e.Estado == EstadoEdificio.EdificioEnConstruccion);
-            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}";
+            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}";
             if (ventanaPlaza != "construccion") return firma;
             var cat = Catalogo;
             var caros = string.Concat((cat?.Properties() ?? Enumerable.Empty<JProperty>())
@@ -247,6 +249,7 @@ namespace ConquestTactics.Mundo.UI
                 b.Add(IconosDelMundo.Icono(familia, icono, 28, ventanaPlaza == id ? IconosDelMundo.OroClaro : IconosDelMundo.Bronce));
                 if (id == "construccion" && FaltaVivienda(a)) b.Add(Dialogo.Texto("!", "plaza-atencion"));
                 else if (id == "construccion" && enMarcha > 0) b.Add(Dialogo.Texto(enMarcha.ToString(), "plaza-riel-insignia"));
+                else if (id == "territorio" && FundacionLista(a, yo)) b.Add(Dialogo.Texto("!", "plaza-atencion"));
                 b.Add(Dialogo.Texto(titulo, "plaza-riel-etiqueta"));
                 riel.Add(b);
             }
@@ -497,7 +500,7 @@ namespace ConquestTactics.Mundo.UI
             var desplazado = antes != null && (string)antes.userData == clave0 ? antes.scrollOffset : Vector2.zero;
             ventana.Clear();
             Ver(ventana, true);
-            var completa = ventanaPlaza == "almacen" || ventanaPlaza == "armeria";
+            var completa = ventanaPlaza == "almacen" || ventanaPlaza == "armeria" || ventanaPlaza == "territorio";
             ventana.EnableInClassList("plaza-ventana-completa", completa);
             ventana.name = "plaza-ventana";
             var cab = Dialogo.Caja("plaza-ventana-cab");
@@ -505,6 +508,7 @@ namespace ConquestTactics.Mundo.UI
             var (familia, icono, nombreVentana) = ventanaPlaza switch
             {
                 "almacen" => ("edificio", "almacen", "Almacén"), "defensa" => ("edificio", "muralla", "Defensa"), "armeria" => ("edificio", "armeria", "Armería"),
+                "territorio" => ("riel", "territorio", "Territorio"),
                 _ => ("riel", "gobierno", "Gobierno"),
             };
             titulo.Add(IconosDelMundo.Icono(familia, icono, 28, IconosDelMundo.Bronce));
@@ -520,6 +524,7 @@ namespace ConquestTactics.Mundo.UI
                 "almacen" => new[] { ("almacen", "Almacén"), ("carga", "Tu carga") },
                 "defensa" => SubsDeDefensa(a).ToArray(),
                 "armeria" => PestanasDeArmeria(a, yo).ToArray(),
+                "territorio" => Propia(a, yo) ? new[] { ("pueblos", "Pueblos y aldeas"), ("fundacion", "Fundación") } : new[] { ("pueblos", "Pueblos y aldeas") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
             var clave = ventanaPlaza;
@@ -536,6 +541,7 @@ namespace ConquestTactics.Mundo.UI
                 var elegida = id;
                 var b = Dialogo.Boton(nombre, "plaza-subtab" + (id == sub ? " activo" : ""), () => { subDePlaza[clave] = elegida; rehacer(); });
                 b.name = "sub-" + id;
+                if (id == "fundacion" && FundacionLista(a, yo)) b.Add(Dialogo.Texto("!", "plaza-atencion"));
                 tabs.Add(b);
             }
             if (subs.Length > 1) cuerpo.Add(tabs);
@@ -549,6 +555,8 @@ namespace ConquestTactics.Mundo.UI
                 case "politicas": Politicas(cuerpo, a, yo); break;
                 case "almacen": VentanaAlmacen(cuerpo, a, yo, rehacer); break;
                 case "carga": TuCarga(cuerpo, a, yo); break;
+                case "pueblos": Territorio(cuerpo, a, yo, rehacer); break;
+                case "fundacion": Fundacion(cuerpo, a, yo, rehacer); break;
             }
         }
 
@@ -566,9 +574,10 @@ namespace ConquestTactics.Mundo.UI
 
         static Label Chip(string texto, string clases = "") => Dialogo.Texto(texto, "plaza-obra-chip " + clases);
 
-        static VisualElement ChipConIcono(VisualElement icono, string texto, string clases = "")
+        static VisualElement ChipConIcono(VisualElement icono, string texto, string clases = "", string titulo = null)
         {
             var chip = Dialogo.Caja("plaza-obra-chip plaza-obra-chip-icono " + clases);
+            chip.tooltip = titulo;
             if (icono != null) chip.Add(icono);
             chip.Add(Dialogo.Texto(texto, "plaza-obra-chip-texto"));
             return chip;

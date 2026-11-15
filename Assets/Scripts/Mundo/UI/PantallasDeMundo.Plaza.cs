@@ -506,7 +506,7 @@ namespace ConquestTactics.Mundo.UI
                 PintarBlason(v.Q("blason"), a, yo, rehacer);
                 PintarPopBlason(v.Q("blason-pop"), a, yo, rehacer);
             }
-            if (Cambia("obras", $"{FirmaDePlanta(a)}|{string.Join(",", a.Edificios.Select(e => e.Prioridad))}|{a.Ascenso?.CompletaEnMs}|{cargo}"))
+            if (Cambia("obras", $"{FirmaDePlanta(a)}|{string.Join(",", a.Edificios.Select(e => e.Prioridad))}|{a.Ascenso?.CompletaEnMs}|{cargo}|{FirmaDeObrasDeMapa(a)}"))
             {
                 // De visita en una plaza ajena, sus obras no se ven.
                 if (Propia(a, yo)) { PintarAscensoHud(v.Q("ascenso-hud"), a); PintarObrasHud(v.Q("obras-hud"), a, cargo); }
@@ -538,7 +538,7 @@ namespace ConquestTactics.Mundo.UI
             if (Cambia("riel", FirmaDelRiel(a, yo))) { PintarRiel(v, a, yo, rehacer); otra = true; }
             var sub = ventanaPlaza != null && subDePlaza.TryGetValue(ventanaPlaza, out var s) ? s : "";
             // Gobierno no enseña nada del paso de minuto (sus cuentas atrás van con el reloj); el Almacén, sí (las cifras).
-            if (Cambia("ventana", $"{ventanaPlaza}|{sub}|{a.Version}|{(ventanaPlaza == "almacen" ? interiores : 0)}|{yo.Version}|{faccion?.Version}")) { PintarVentanaDePlaza(v.Q("plaza-ventana"), a, yo, rehacer); otra = true; }
+            if (Cambia("ventana", $"{ventanaPlaza}|{sub}|{a.Version}|{(ventanaPlaza == "almacen" ? interiores : 0)}|{yo.Version}|{faccion?.Version}|{(ventanaPlaza == "territorio" ? FirmaDeTerritorio(a) : "")}")) { PintarVentanaDePlaza(v.Q("plaza-ventana"), a, yo, rehacer); otra = true; }
             if (otra) AjustarPlaza(v);
         }
 
@@ -769,10 +769,14 @@ namespace ConquestTactics.Mundo.UI
             hud.Clear();
             var enMarcha = Internos(a).Select(e => (e, fin: FinDeObra(e))).Where(x => x.fin != null).OrderBy(x => x.fin).ToList();
             var esperan = Internos(a).Where(e => e.Estado == EstadoEdificio.EdificioEnCola).OrderByDescending(e => e.HasPrioridad ? e.Prioridad : 0).ToList();
-            Ver(hud, enMarcha.Count + esperan.Count > 0);
-            if (enMarcha.Count + esperan.Count == 0) return;
-            if (enMarcha.Count > 0) hud.Add(Dialogo.Texto($"OBRAS · {enMarcha.Count} EN MARCHA", "plaza-obras-cab"));
-            else hud.Add(Dialogo.Texto("OBRAS", "plaza-obras-cab"));
+            var (deMapa, deAvanzada) = ObrasDeMapaDelHud(a);
+            Ver(hud, enMarcha.Count + esperan.Count + deMapa.Count + deAvanzada.Count > 0);
+            if (enMarcha.Count + esperan.Count + deMapa.Count + deAvanzada.Count == 0) return;
+            if (enMarcha.Count + esperan.Count > 0)
+            {
+                if (enMarcha.Count > 0) hud.Add(Dialogo.Texto($"OBRAS · {enMarcha.Count} EN MARCHA", "plaza-obras-cab"));
+                else hud.Add(Dialogo.Texto("OBRAS", "plaza-obras-cab"));
+            }
             foreach (var (e, fin) in enMarcha.Take(4))
             {
                 var fila = Dialogo.Caja("plaza-obras-fila");
@@ -806,7 +810,14 @@ namespace ConquestTactics.Mundo.UI
                 relojesDePlaza.Add(("obras", () => { falta.text = CuentaAtras(fin.Value); if (AvanceDeObra(ed) is float x) Avance(barra, x); }));
             }
             if (enMarcha.Count > 4) hud.Add(Dialogo.Texto($"{enMarcha.Count - 4} más en marcha", "plaza-obras-mas"));
-            if (esperan.Count == 0) return;
+            // Las obras de mapa de la plaza, debajo: pueblos y aldeas, y avanzadas (`filaObraMapa`).
+            void DeMapa(string cab, List<ObraDeMapa> lista)
+            {
+                if (lista.Count == 0) return;
+                hud.Add(Dialogo.Texto($"{cab} · {lista.Count}", "plaza-obras-cab plaza-obras-cab-cola"));
+                foreach (var o in lista) hud.Add(FilaObraDeMapa(o));
+            }
+            if (esperan.Count == 0) { DeMapa("PUEBLOS Y ALDEAS", deMapa); DeMapa("AVANZADAS", deAvanzada); return; }
             hud.Add(Dialogo.Texto($"EN COLA · {esperan.Count}", "plaza-obras-cab plaza-obras-cab-cola"));
             var cola = Dialogo.Caja("plaza-obras-cola");
             cola.name = "cola";
@@ -843,6 +854,50 @@ namespace ConquestTactics.Mundo.UI
                 cola.Add(casilla);
             }
             hud.Add(cola);
+            DeMapa("PUEBLOS Y ALDEAS", deMapa);
+            DeMapa("AVANZADAS", deAvanzada);
+        }
+
+        /// <summary>Las obras de mapa de la plaza para el HUD: las de pueblo y aldea, y las de avanzada, de la que antes acaba a la última.</summary>
+        (List<ObraDeMapa> deMapa, List<ObraDeMapa> deAvanzada) ObrasDeMapaDelHud(Asentamiento a)
+        {
+            var todas = c.Sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Obra).Select(e => e.Obra).Where(o => o.AsentamientoMadreId == a.Id)
+                .OrderBy(o => o.HasTerminaEnMs ? o.TerminaEnMs : long.MaxValue).ToList();
+            return (todas.Where(o => o.Tipo == TipoObra.ObraPueblo || o.Tipo == TipoObra.ObraAldea || o.Tipo == TipoObra.ObraMejoraAldea).ToList(),
+                todas.Where(o => o.Tipo == TipoObra.ObraAvanzada || o.Tipo == TipoObra.ObraMejoraAvanzada || o.Tipo == TipoObra.ObraReparacion).ToList());
+        }
+
+        string FirmaDeObrasDeMapa(Asentamiento a)
+        {
+            var (m, v) = ObrasDeMapaDelHud(a);
+            return string.Join(",", m.Concat(v).Select(o => o.Id + ":" + o.Version));
+        }
+
+        /// <summary>Una obra de mapa en el HUD (`filaObraMapa`): su nombre, el % entregado o, levantándose, lo que le queda, y su barra.</summary>
+        VisualElement FilaObraDeMapa(ObraDeMapa o)
+        {
+            var fila = Dialogo.Caja("plaza-obras-fila");
+            fila.name = "obra-mapa-" + o.Id;
+            fila.Add(IconoDeObra(o, 22));
+            var texto = Dialogo.Caja("plaza-obras-texto");
+            var linea = Dialogo.Caja("plaza-obras-linea");
+            var nombre = o.Tipo switch
+            {
+                TipoObra.ObraPueblo => "Pueblo", TipoObra.ObraAldea => "Aldea agrícola", TipoObra.ObraMejoraAldea => "Mejora de aldea",
+                TipoObra.ObraAvanzada => "Atalaya", TipoObra.ObraMejoraAvanzada => "Mejora de avanzada", TipoObra.ObraReparacion => "Reparación de avanzada", _ => "Obra",
+            };
+            linea.Add(Dialogo.Texto(nombre, "plaza-obras-nombre"));
+            double pedido = o.Requerido.PorId.Values.Sum(), hecho = o.Requerido.PorId.Sum(kv => Math.Min(kv.Value, o.Entregado != null && o.Entregado.PorId.TryGetValue(kv.Key, out var e) ? e : 0));
+            var avance = pedido > 0 ? hecho / pedido : 1;
+            var levantando = o.HasTerminaEnMs;
+            var falta = Dialogo.Texto(levantando ? CuentaAtras(o.TerminaEnMs) : $"{Math.Floor(avance * 100)} %", "plaza-obras-falta");
+            linea.Add(falta);
+            texto.Add(linea);
+            texto.Add(Dialogo.Texto(levantando ? "Levantándose en el mapa" : "Esperando materiales en el mapa", "plaza-obras-que"));
+            texto.Add(BarraAvance(levantando ? (float?)null : (float)avance));
+            fila.Add(texto);
+            if (levantando) relojesDePlaza.Add(("obras", () => falta.text = CuentaAtras(o.TerminaEnMs)));
+            return fila;
         }
 
         /// <summary>La confirmación de cancelar una obra o una mejora en curso: no se devuelve nada (`confirmarCancelarObra`).</summary>

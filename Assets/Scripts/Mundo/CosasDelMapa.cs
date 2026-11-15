@@ -33,12 +33,19 @@ namespace ConquestTactics.Mundo
     }
 
     /// <summary>Una raya del mapa (camino, frontera, anillo): sus puntos (u), su ancho (u), su color y si va bajo la niebla.</summary>
+    public enum ClaseDeRaya { Anillo, Camino, ZonaDeFaccion, ZonaDePlaza }
+
     public sealed class RayaDelMapa
     {
+        public ClaseDeRaya Clase;
+        /// <summary>La Facción de una zona (para saber si es la tuya en el mapa 2D).</summary>
+        public string FaccionId;
         public List<(double x, double y)> Puntos = new List<(double, double)>();
         public double Ancho;
         public uint Color;
         public bool BajoNiebla, Cerrada;
+        /// <summary>De un camino: 0 sendero, 1 camino, 2 calzada.</summary>
+        public int Escalon;
     }
 
     public sealed class AccionDelMapa
@@ -70,6 +77,13 @@ namespace ConquestTactics.Mundo
 
         /// <summary>Todo lo que hay en el almacén para pintar, salvo tu propia columna (la pinta el mapa con su ruta). `radioZonaInicial` (u):
         /// `reglas.territorio.radio_inicial` de `/v1/datos`.</summary>
+        /// <summary>El nombre de una obra de mapa por su tipo (`NOMBRE_OBRA` del prototipo).</summary>
+        public static string NombreDeObra(TipoObra t) => t switch
+        {
+            TipoObra.ObraPueblo => "Obra de pueblo", TipoObra.ObraAldea => "Obra de aldea agrícola", TipoObra.ObraMejoraAldea => "Mejora de aldea",
+            TipoObra.ObraAvanzada => "Obra de avanzada", TipoObra.ObraMejoraAvanzada => "Mejora de avanzada", TipoObra.ObraReparacion => "Reparación de avanzada", _ => "Obra",
+        };
+
         /// <summary>«Batalla contra bandidos» o «Batalla».</summary>
         public static string NombreDeBatalla(Batalla b) =>
             b.Ticket?.ContextoEstrategico?.CampamentoBandidos != null || b.HasBloqueoCampamentoId ? "Batalla contra bandidos" : "Batalla";
@@ -153,7 +167,7 @@ namespace ConquestTactics.Mundo
                 var (x, y) = P(o.Posicion);
                 r.Add(new CosaDelMapa
                 {
-                    Clase = ClaseDeCosa.Obra, Id = o.Id, Nombre = "Obra", Detalle = "De " + NombreDePlaza(plazas, o.AsentamientoMadreId),
+                    Clase = ClaseDeCosa.Obra, Id = o.Id, Nombre = NombreDeObra(o.Tipo), Detalle = "De " + NombreDePlaza(plazas, o.AsentamientoMadreId),
                     X = x, Y = y, Radio = 0.4 * Maqueta, Alto = 0.3, RadioClic = 0.4 * Maqueta + Holgura, Color = ColorDeMadre(o.AsentamientoMadreId), Entidad = e,
                 });
             }
@@ -278,14 +292,14 @@ namespace ConquestTactics.Mundo
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.RedCaminos))
                 foreach (var t in e.RedCaminos.Tramos)
                 {
-                    var raya = new RayaDelMapa { Ancho = t.Escalon == 0 ? 0.4 : 0.65, Color = Camino, BajoNiebla = true };
+                    var raya = new RayaDelMapa { Clase = ClaseDeRaya.Camino, Escalon = (int)t.Escalon, Ancho = t.Escalon == 0 ? 0.4 : 0.65, Color = Camino, BajoNiebla = true };
                     foreach (var p in t.Puntos) raya.Puntos.Add(P(p));
                     if (raya.Puntos.Count > 1) r.Add(raya);
                 }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.ZonaFaccion))
                 foreach (var c in e.ZonaFaccion.Contornos)
                 {
-                    var raya = new RayaDelMapa { Ancho = 0.18, Color = ColorDeFaccion(a, e.ZonaFaccion.FaccionId), BajoNiebla = e.ZonaFaccion.FaccionId != miFaccion, Cerrada = true };
+                    var raya = new RayaDelMapa { Clase = ClaseDeRaya.ZonaDeFaccion, FaccionId = e.ZonaFaccion.FaccionId, Ancho = 0.18, Color = ColorDeFaccion(a, e.ZonaFaccion.FaccionId), BajoNiebla = e.ZonaFaccion.FaccionId != miFaccion, Cerrada = true };
                     foreach (var p in c.Puntos) raya.Puntos.Add(P(p));
                     if (raya.Puntos.Count > 2) r.Add(raya);
                 }
@@ -293,7 +307,7 @@ namespace ConquestTactics.Mundo
             {
                 var p = e.Asentamiento;
                 if (p.Zona.Count < 3) continue;
-                var raya = new RayaDelMapa { Ancho = 0.12, Color = ColorDeFaccion(a, p.FaccionId), BajoNiebla = true, Cerrada = true };
+                var raya = new RayaDelMapa { Clase = ClaseDeRaya.ZonaDePlaza, FaccionId = p.FaccionId, Ancho = 0.12, Color = ColorDeFaccion(a, p.FaccionId), BajoNiebla = true, Cerrada = true };
                 foreach (var z in p.Zona) raya.Puntos.Add(P(z));
                 r.Add(raya);
             }
@@ -344,6 +358,8 @@ namespace ConquestTactics.Mundo
             /// `columna.en_formacion`).</summary>
             public bool EnBatalla, EnFormacion;
             public string Persiguiendo;
+            /// <summary>El instante del mundo (ms), para lo que corre con el reloj (el trigo del almacén de una avanzada).</summary>
+            public double Ahora;
             /// <summary>Radios de `/v1/datos` (u): puerta, encuentro (ataque), inspección y protección de los mercenarios.</summary>
             public double RadioPuerta, RadioEncuentro, RadioInspeccion, RadioProteccion;
             public List<(double x, double y)> CampamentosDeMercenarios = new List<(double, double)>();
@@ -390,6 +406,9 @@ namespace ConquestTactics.Mundo
                 case ClaseDeCosa.Avanzada:
                     var ruinas = c.Entidad?.Avanzada?.Estado == EstadoAvanzada.AvanzadaEnRuinas;
                     if (!ruinas && aLaPuerta && lider && propia) r.Add(new AccionDelMapa("Entrar", new Orden { EntrarEnAvanzada = new OrdenEntrarEnAvanzada { AvanzadaId = c.Id, HeroeId = j.HeroeId } }));
+                    // Llenar los víveres de tu columna con el trigo de su almacén (el Líder, a la puerta; fuerte y ciudadela).
+                    var trigo = c.Entidad?.Avanzada?.AlmacenPorRecurso.TryGetValue("trigo", out var t) == true ? Instante.Valor(t.Cantidad, j.Ahora) / 1000.0 : 0;
+                    if (!ruinas && aLaPuerta && lider && propia && trigo >= 1) r.Add(new AccionDelMapa("Llenar víveres", new Orden { Repostar = new OrdenRepostar { HeroeId = j.HeroeId, LugarId = c.Id } }));
                     if (!propia && puedeAtacar && j.ConSoldados) r.Add(new AccionDelMapa("Atacar", Atacar(new OrdenAtacar.Types.Objetivo { AvanzadaId = c.Id })));
                     break;
                 case ClaseDeCosa.EjercitoAjeno:

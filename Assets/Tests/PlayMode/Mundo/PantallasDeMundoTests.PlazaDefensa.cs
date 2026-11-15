@@ -380,7 +380,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             Assert.IsTrue(plaza.Q("obras-hud").ClassListContains("oculto"), "sin sus obras");
             var botones = plaza.Q("riel").Query<Button>(className: "plaza-riel-boton").ToList().Select(b => b.name).ToList();
             Debug.Log($"[Prueba] riel de visita: {string.Join(", ", botones)}");
-            CollectionAssert.AreEqual(Plaza().ArmeriaActiva ? new[] { "riel-armeria" } : new string[0], botones.ToArray(), "de visita, solo la Armería");
+            // De visita quedan Territorio (solo para mirar sus pueblos, paso 9) y la Armería si la hay.
+            CollectionAssert.AreEqual(Plaza().ArmeriaActiva ? new[] { "riel-territorio", "riel-armeria" } : new[] { "riel-territorio" }, botones.ToArray(), "de visita, Territorio y la Armería");
             yield return EnTamanos(raiz, "92_plaza_ajena");
             var entrada = UnityEngine.InputSystem.InputSystem.settings;
             var fondo = entrada.backgroundBehavior;

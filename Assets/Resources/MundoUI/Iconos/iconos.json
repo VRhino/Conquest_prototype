@@ -473,6 +473,22 @@
   "bots": {
    "glifo": "🤖",
    "codigo": "1f916"
+  },
+  "pico": {
+   "glifo": "⛏",
+   "codigo": "26cf"
+  },
+  "carrito": {
+   "glifo": "🛒",
+   "codigo": "1f6d2"
+  },
+  "mapa": {
+   "glifo": "🗺",
+   "codigo": "1f5fa"
+  },
+  "pueblos": {
+   "glifo": "🏘",
+   "codigo": "1f3d8"
   }
  },
  "simbolo": {
@@ -488,6 +504,7 @@
   "hueco": "┄",
   "residencia": "⌂",
   "capital": "♛",
+  "capas": "≋",
   "candado": "🔒"
  },
  "barra": [

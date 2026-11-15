@@ -51,6 +51,7 @@ namespace ConquestTactics.Mundo.UI
             IconoDeBarra(yelmo, "base");
             barra.Insert(barra.IndexOf(avisos), yelmo);
             BotonDeFaccion(barra, yelmo);
+            BotonDeMapa(barra, avisos);
             avisos.text = "";
             avisos.tooltip = "Avisos";
             IconoDeBarra(avisos, "avisos");

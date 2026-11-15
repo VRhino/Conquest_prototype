@@ -11,7 +11,7 @@ MOTOR=${MOTOR:-$(cd "$CQ/.." && pwd)/BronzeAgeMotorPruebas}
 DATOS=$CQ/Temp/pruebas-mundo
 bash "$CQ/tasks/pruebas/parar.sh"
 rm -rf "$DATOS" && mkdir -p "$DATOS/datos"
-(BRONZEAGE_DIRECCION=127.0.0.1:7891 BRONZEAGE_MUNDO=$(cd "$CQ/.." && pwd)/BronzeAgeFase0/generador/salida/mundo BRONZEAGE_DATOS=$DATOS/datos \
+(BRONZEAGE_DIRECCION=127.0.0.1:7891 BRONZEAGE_MUNDO=$MOTOR/mundo-pruebas BRONZEAGE_DATOS=$DATOS/datos \
   nohup "$MOTOR/target/release/bronzeage-servidor.exe" > "$DATOS/servidor.log" 2>&1 &)
 for i in $(seq 1 15); do grep -q escuchando "$DATOS/servidor.log" 2>/dev/null && break; sleep 1; done
 CODIGO=$(grep -o "regístrate con él): [A-Z0-9-]*" "$DATOS/servidor.log" | awk '{print $NF}')

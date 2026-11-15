@@ -40,6 +40,9 @@
 - **Servidor**: uno de prueba propio en el puerto **7891**, con el motor de **main** compilado en un clon aparte (`../BronzeAgeMotorPruebas`,
   `tasks/pruebas/preparar_motor.sh`).
   - Nunca el servidor de Víctor (7878), ni su cuenta, ni su checkout del motor (`../BronzeAgeFase0`, solo lectura).
+  - El mundo del servidor de prueba es una copia en `../BronzeAgeMotorPruebas/mundo-pruebas/` (el `mundo-*.bin` y su `relieve-*.bin`, fuera
+    de git por `.git/info/exclude`), no la carpeta de Víctor (`BronzeAgeFase0/generador/salida/mundo`), que él regenera cuando quiere.
+    `correr.sh` y `correr_batalla.sh` lo leen de ahí. Para cambiar de mundo, copia los dos ficheros nuevos a esa carpeta.
   - La administración, solo con la cuenta admin de tu servidor.
   - Apágalo al acabar (`tasks/pruebas/parar.sh`).
 - **Vía Rápida** en toda prueba con plaza: `FundarPlaza` llama a `ConViaRapida`, y `ConViaRapidaHasta` la reactiva en las esperas largas.
@@ -57,7 +60,9 @@
   - Vite contra tu servidor: en `../BronzeAgeClient`, `VITE_API_BASE=http://127.0.0.1:7891 npx vite --port 5199 --strictPort`.
   - Chrome sin pantalla por CDP: los ejemplos están en `tasks/pruebas/cdp/`.
   - Las cuentas de las pruebas usan la clave `clave-de-prueba-1`, y sus nicks están en `Temp/pruebas-mundo/datos/acceso/cuentas.jsonl`.
-- **Al acabar cada tanda**: para, avisa con la página de capturas y espera a Víctor.
+- **El análisis de cada paso** (`tasks/bloque4-pasoN-plan.md`) va solo en texto: el plan, «Lo que voy a hacer» y las dudas reales. Sin
+  capturas del «antes» ni página (Víctor, 2026-11-15: ya ve el antes y el después al acabar cada tanda).
+- **Al acabar cada tanda**: para, avisa con la página de capturas junto al prototipo y espera a Víctor.
 - **Commits**:
   - Solo cuando Víctor lo diga: en main local, sin push, sin stash, reset, amend ni force.
   - Nunca incluyas sus ficheros sin commit: los prefabs de caballería y `HorseArchers.prefab`, `CLAUDE.md`, `ProjectSettings/*`,

@@ -50,6 +50,8 @@ namespace ConquestTactics.Mundo.UI
         string modoFaccion = "inicio";
         /// <summary>El sigilo con el que arranca el selector: al azar una vez (`sigiloPropuesto`), y lo que se va eligiendo.</summary>
         Sigilo sigiloPropuesto;
+        /// <summary>Si ya se ha tocado el formulario de «Crear facción»: los motivos se enseñan desde entonces, también tras un repintado de la ventana.</summary>
+        bool crearTocado;
         string nombrePropuesto = "", buscarFaccion = "";
         bool ocultarBots = true;
         string firmaFaccion;
@@ -227,12 +229,11 @@ namespace ConquestTactics.Mundo.UI
             var motivos = Dialogo.Caja("faccion-error");
             motivos.name = "error-faccion";
             Button crear = null;
-            var tocado = false;
             void Validar()
             {
                 var lista = MotivosParaCrearFaccion(nombre.value, sigiloPropuesto);
                 motivos.Clear();
-                if (tocado) foreach (var m in lista) motivos.Add(Dialogo.Texto("• " + m, "faccion-motivo"));
+                if (crearTocado) foreach (var m in lista) motivos.Add(Dialogo.Texto("• " + m, "faccion-motivo"));
                 crear?.SetEnabled(lista.Count == 0);
             }
             var colores = Sigilos.Colores.Select(x => x.Id).ToList();
@@ -246,7 +247,7 @@ namespace ConquestTactics.Mundo.UI
                 {
                     poner(sigiloPropuesto, e.newValue);
                     PonerSigilo(previa, sigiloPropuesto, 88);
-                    tocado = true;
+                    crearTocado = true;
                     Validar();
                 });
                 marco.Add(campo);
@@ -267,7 +268,7 @@ namespace ConquestTactics.Mundo.UI
             error.name = "error-crear-faccion";
             crear = Dialogo.Boton("Crear facción", "boton-primario faccion-crear-boton", async () =>
             {
-                tocado = true;
+                crearTocado = true;
                 if (MotivosParaCrearFaccion(nombre.value, sigiloPropuesto).Count > 0) { Validar(); return; }
                 crear.text = "Creando...";
                 var s = sigiloPropuesto;
@@ -280,6 +281,7 @@ namespace ConquestTactics.Mundo.UI
                 if (r?.Resultado == Resultado.OrdenAceptada)
                 {
                     sigiloPropuesto = null;
+                    crearTocado = false;
                     nombrePropuesto = "";
                     modoFaccion = "inicio";
                     pestanaFaccion = "miembros";
@@ -288,7 +290,7 @@ namespace ConquestTactics.Mundo.UI
                 else if (crear != null) crear.text = "Crear facción";
             });
             crear.name = "btn-submit-crear-faccion";
-            nombre.RegisterValueChangedCallback(e => { nombrePropuesto = e.newValue; tocado = true; Validar(); });
+            nombre.RegisterValueChangedCallback(e => { nombrePropuesto = e.newValue; crearTocado = true; Validar(); });
             vista.Add(error);
             vista.Add(crear);
             Validar();

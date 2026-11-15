@@ -236,6 +236,10 @@ namespace ConquestTactics.Mundo
             // (`ASENTAMIENTO:as-N`, `CAMPAMENTO:camp-N`), que es la completa (trazado, recintos, cargos...). Si está, manda esa.
             var interior = tipo == TipoEntidad.Asentamiento ? "ASENTAMIENTO:" + id : tipo == TipoEntidad.CampamentoMercenarios ? "CAMPAMENTO:" + id : null;
             if (interior != null && Ambitos.TryGetValue(interior, out var dentro) && dentro.Entidades.TryGetValue((tipo, id), out var completa)) return completa;
+            // Un pueblo con su planta: solo la trae la `VISTA` de quien está dentro (las demás copias van sin ella).
+            if (tipo == TipoEntidad.Pueblo)
+                foreach (var a in Ambitos.Values)
+                    if (a.Entidades.TryGetValue((tipo, id), out var p) && p.Pueblo?.Planta.Count > 0) return p;
             foreach (var a in Ambitos.Values)
                 if (a.Entidades.TryGetValue((tipo, id), out var e)) return e;
             return null;

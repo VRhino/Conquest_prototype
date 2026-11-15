@@ -77,6 +77,7 @@ const GLIFOS = {
   nobleza: '👑', mantenimiento: '🛠', espera: '⏳', // el HUD de la plaza (ui/hudPlaza.ts, ui/panelCentro.ts)
   prestigio: '🏆', reputacion: '⚖', alianza: '🤝', templo: '🏛', estatua: '🗿', // el lateral de tu Facción (ui/pestanaFaccion.ts)
   fusion: '🔗', bots: '🤖', // la Diplomacia: la fusión de «Nueva propuesta» y «Ocultar las de bots» (ui/panelDiplomacia.ts, ui/pestanaFaccion.ts)
+  pico: '⛏', carrito: '🛒', mapa: '🗺', pueblos: '🏘', // Territorio y el mapa 2D (paso 9): el extractor y «Marcar», «Reponer carro», «Elegir el sitio» y el cupo
 };
 // Los símbolos del prototipo que no son emoji: no están en Twemoji ni en Inter o Cinzel (saldrían como cuadros), así que se dibujan aquí,
 // en 32×32 y en blanco para teñirlos como los dibujos a mano (el prototipo los pinta en el color del texto, \`--oro\` en la lista).
@@ -116,6 +117,9 @@ const riel = Object.fromEntries([...tablaRiel.matchAll(/^\s{2}([a-zA-Z]+): `([^`
 for (const [id, svg] of Object.entries(riel)) escribir('riel', id, tenible(svg));
 // El candado de lo bloqueado (🔒 en las recetas y la reserva del prototipo): no es de Twemoji bajado, se dibuja aquí.
 {
+  // El botón de capas del mapa (`ui/capasMapa.ts`, ICONO), en trazo blanco para teñirlo.
+  escribir('simbolo', 'capas', '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3 2.5 8 12 13l9.5-5z"/><path d="m2.5 12 9.5 5 9.5-5"/><path d="m2.5 16 9.5 5 9.5-5"/></g></svg>');
+  simbolos.capas = '≋';
   escribir('simbolo', 'candado', '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M10 14v-4a6 6 0 0 1 12 0v4" fill="none" stroke="#ffffff" stroke-width="2.8"/><path d="M7 14h18v14H7Z" fill="#ffffff"/></svg>');
   simbolos.candado = '🔒';
 }

@@ -671,3 +671,5 @@
 - Recursos en pantalla: donde el prototipo pone `RI`/`.ta-rec`/`obra-coste` (icono y cifra), van iconos (`ChipDeTec`, `ChipsDeCoste`,
   `IconosDelMundo.ChipDeRecurso`), nunca `NombreDeRecurso` en una frase. Un id nuevo de recurso necesita su nombre en `CosasDelMapa.NombresDeRecurso`
   (si falta, sale el id con mayúscula: «ArmaMadera»). En un botón dorado, cada coste en su píldora oscura, o la cifra clara no se lee.
+- El análisis de un paso nuevo va solo en texto (plan, «Lo que voy a hacer», dudas reales), sin capturas del «antes» ni página: Víctor ya ve
+  el antes y el después en la página de cada tanda terminada (2026-11-15).

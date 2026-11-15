@@ -232,6 +232,13 @@ namespace ConquestTactics.Mundo.Mapa
                 case ClaseDeCosa.Mercenarios: case ClaseDeCosa.Bandidos: case ClaseDeCosa.Pueblo: case ClaseDeCosa.Aldea: case ClaseDeCosa.Avanzada:
                     if (Columna != null) await MarcharA(c.X, c.Y);
                     break;
+                // Una obra de tu Facción sin terminar: a su puerta, para entregarle los materiales (`pueblosYObrasBajoElClic`).
+                case ClaseDeCosa.Obra:
+                    var o = c.Entidad?.Obra;
+                    var madre = o == null ? null : sesion.Almacen.Buscar(TipoEntidad.Asentamiento, o.AsentamientoMadreId)?.Asentamiento;
+                    var yo = heroeId() is string id ? sesion.Almacen.Buscar(TipoEntidad.Heroe, id)?.Heroe : null;
+                    if (Columna != null && o != null && !o.HasTerminaEnMs && madre != null && yo != null && yo.HasFaccionId && madre.FaccionId == yo.FaccionId) await MarcharA(c.X, c.Y);
+                    break;
             }
         }
 
@@ -251,7 +258,7 @@ namespace ConquestTactics.Mundo.Mapa
             {
                 HeroeId = id, FaccionId = heroe != null && heroe.HasFaccionId ? heroe.FaccionId : null, ResidenciaId = heroe != null && heroe.HasResidenciaId ? heroe.ResidenciaId : null,
                 Columna = Columna, Herido = heroe != null && heroe.HasHeridoHastaMs && heroe.HeridoHastaMs > sesion.AhoraMundo,
-                RadioPuerta = datos.RadioPuerta, RadioEncuentro = datos.RadioEncuentro,
+                RadioPuerta = datos.RadioPuerta, RadioEncuentro = datos.RadioEncuentro, Ahora = sesion.AhoraMundo,
                 RadioInspeccion = datos.Numero("documentos.Movimiento_Ejercitos.MOVIMIENTO.radioInspeccion"),
                 RadioProteccion = datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion"),
             };
@@ -455,8 +462,7 @@ namespace ConquestTactics.Mundo.Mapa
         {
             if (ListaAbierta)
             {
-                ListaAbierta = false;
-                AlCerrarLista?.Invoke();
+                CerrarLista();
                 return;
             }
             var punto = PuntoBajo(pantalla);
@@ -468,11 +474,20 @@ namespace ConquestTactics.Mundo.Mapa
                 await MarcharA(punto.Value.x, punto.Value.y);
             }
             else if (bajo.Count == 1) await Elegir(bajo[0]);
-            else
-            {
-                ListaAbierta = true;
-                AlElegir?.Invoke(bajo);
-            }
+            else AbrirLista(bajo);
+        }
+
+        /// <summary>Con dos o más cosas bajo un clic (también el del mapa 2D): la lista para elegir.</summary>
+        public void AbrirLista(List<CosaDelMapa> cosas)
+        {
+            ListaAbierta = true;
+            AlElegir?.Invoke(cosas);
+        }
+
+        public void CerrarLista()
+        {
+            ListaAbierta = false;
+            AlCerrarLista?.Invoke();
         }
 
         public async Task<ResultadoOrden> MarcharA(double x, double y)

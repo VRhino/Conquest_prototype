@@ -1418,6 +1418,9 @@ namespace ConquestTactics.Mundo.UI
                 // Dentro de tu plaza (paso 7): su interior.
                 var plaza = PlazaDondeEsta();
                 if (plaza != null) { InteriorDePlaza(plaza); return; }
+                // Dentro de un pueblo, una aldea o una avanzada (paso 9): su interior.
+                if (PuebloDondeEsta() is Pueblo pueblo) { InteriorDePueblo(pueblo); return; }
+                if (AvanzadaDondeEsta() is Avanzada avanzada) { InteriorDeAvanzada(avanzada); return; }
                 var lugar = LugarDondeEsta();
                 Ver(dentro, lugar != null);
                 if (lugar != null) v.Q<Label>("dentro-texto").text = $"Estás dentro de {lugar}. Su interior llega con su paso; de momento, desde aquí sales al mundo.";
@@ -1436,6 +1439,7 @@ namespace ConquestTactics.Mundo.UI
         void PintarFicha(VisualElement v)
         {
             var cosa = mapa.Seleccionada;
+            PintarPuerta(v, cosa);
             if (cosa == null) return;
             v.Q<Label>("ficha-nombre").text = cosa.Nombre;
             v.Q<Label>("ficha-detalle").text = cosa.Detalle ?? "";
@@ -1454,7 +1458,8 @@ namespace ConquestTactics.Mundo.UI
                 : new[] { ("Distancia", $"{hasta.Value.distancia:0.#} u"), ("Tiempo de marcha", hasta.Value.tiempo) });
             var acciones = CosasDelMapa.Acciones(cosa, mapa.Contexto());
             bool marchar = mapa.Columna != null && !mapa.Columna.EnBatalla;
-            var firma = cosa.Clase + cosa.Id + marchar + string.Join("|", acciones.Select(a => a.Texto));
+            var ventanas = VentanasDePuerta(cosa);
+            var firma = cosa.Clase + cosa.Id + marchar + string.Join("|", acciones.Select(a => a.Texto)) + "|" + string.Join("|", ventanas.Select(x => x.id));
             if (firma == accionesPintadas) return;
             accionesPintadas = firma;
             var caja = v.Q("ficha-acciones");
@@ -1468,6 +1473,8 @@ namespace ConquestTactics.Mundo.UI
                 // Con su glifo delante, como `.puerta-boton-icono` (🚪 entrar, ⚔ atacar, 👁 inspeccionar, 🎁 abrir).
                 caja.Add(IconosDelMundo.BotonConGlifo(accion.Texto, IconosDelMundo.DeAccion(accion.Texto), "boton-secundario", () => _ = mapa.Ordenar(accion.Orden.Clone())));
             }
+            // Las ventanas de la puerta (obra, guarnición, carga), detrás de las acciones.
+            foreach (var x in ventanas) caja.Add(BotonDeVentana(v, cosa, x));
         }
 
         /// <summary>El nombre del sitio donde está dentro el héroe (plaza, campamento, pueblo o avanzada), o null si está en el mapa.</summary>
@@ -1518,6 +1525,8 @@ namespace ConquestTactics.Mundo.UI
             VigilarFinDeBatalla();
             // Las Opciones, encima de todo, se cierran con Esc antes que lo de debajo.
             if (OpcionesAbiertas) { if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) CerrarOpciones(); return; }
+            // El mapa 2D, encima de la pantalla, se cierra con Esc antes que lo de debajo.
+            if (Mapa2DAbierto && UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) { CerrarMapa2D(); return; }
             TeclaDeLaBase();
             TeclaDeFaccion();
             var teclado = UnityEngine.InputSystem.Keyboard.current;

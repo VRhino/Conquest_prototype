@@ -80,14 +80,14 @@ namespace ConquestTactics.Mundo.UI.Tests
             IEnumerator Bombear(float seg) { var f = Time.realtimeSinceStartup + seg; while (Time.realtimeSinceStartup < f) { s.Bombear(); yield return null; } }
             var camp = abrir.Result.CampamentosParaElegir[0].CampamentoId;
             // Los nombres no se repiten en el mundo: si otra prueba ya los usó en este servidor, el siguiente.
-            foreach (var nombre in new[] { "Fundador", "Atreo", "Tiestes", "Pélope" })
+            foreach (var nombre in new[] { "Fundador", "Atreo", "Tiestes", "Pélope", "Agamenón", "Menelao", "Egeo", "Teseo", "Cadmo", "Néstor" })
             {
                 yield return Ordenar(new V1.Orden { CrearHeroe = new V1.OrdenCrearHeroe { DisplayName = nombre, CampamentoId = camp, ClassDefinitionId = "espada_escudo_mediano", Genero = "masculino", Avatar = new V1.OrdenCrearHeroe.Types.Avatar() } });
                 if (ultimo.Resultado == V1.Resultado.OrdenAceptada) break;
             }
             var heroe = ultimo.Creadas.First(c => c.Entidad == V1.TipoEntidad.Heroe).Id;
             yield return Bombear(1);
-            foreach (var nombre in new[] { "Micenas", "Argos", "Tebas", "Pilos" })
+            foreach (var nombre in new[] { "Micenas", "Argos", "Tebas", "Pilos", "Corinto", "Esparta", "Atenas", "Creta", "Ítaca", "Tirinto" })
             {
                 yield return Ordenar(new V1.Orden { CrearFaccion = new V1.OrdenCrearFaccion { Nombre = nombre } });
                 if (ultimo.Resultado == V1.Resultado.OrdenAceptada) break;
@@ -262,7 +262,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             // El riel, con lo que se puede abrir, en el orden del prototipo: Construcción (eres Gobernador), Gobierno, Defensa, Reclutamiento y la
             // Armería (en pie).
             Assert.IsFalse(plaza.Q("riel").ClassListContains("oculto"), "el riel");
-            var riel = new[] { "riel-construccion", "riel-gobierno", "riel-defensa", "riel-reclutamiento" }
+            var riel = new[] { "riel-construccion", "riel-gobierno", "riel-defensa", "riel-territorio", "riel-reclutamiento" }
                 .Concat(Plaza().Edificios.Any(e => e.Tipo == "armeria" && e.Estado == V1.EstadoEdificio.EdificioActivo) ? new[] { "riel-armeria" } : new string[0]).ToArray();
             CollectionAssert.AreEqual(riel, plaza.Q("riel").Query<Button>(className: "plaza-riel-boton").ToList().Select(b => b.name).ToArray(), "el riel de la plaza");
             yield return EnTamanos(raiz, "70_plaza");

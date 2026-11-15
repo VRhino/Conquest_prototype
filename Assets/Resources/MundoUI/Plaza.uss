@@ -808,3 +808,131 @@
 .plaza-arm-campo { margin: 0; min-width: 150px; }
 .plaza-arm-campo > Label { min-width: 0; margin-right: 6px; font-size: 12px; color: var(--texto-2); }
 .plaza-arm-campo > .unity-base-popup-field__input { height: 28px; background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 12.5px; }
+
+/* ─────────── Territorio (paso 9): `ui/pueblos.ts` y `panelFundacionDePlaza.ts` del prototipo ─────────── */
+.territorio-cols { flex-direction: row; align-items: flex-start; }
+.territorio-col { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.territorio-zona { flex-direction: row; flex-wrap: wrap; margin-bottom: 4px; }
+.territorio-zona-ficha {
+    width: 104px; align-items: center; margin: 0 5px 5px 0; padding: 6px 4px; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px;
+    background-color: rgb(36, 28, 17);
+}
+.territorio-zona-ficha.agotada { opacity: 0.6; }
+.territorio-zona-nombre { margin: 2px 0 0 0; padding: 0; font-size: 10.5px; letter-spacing: 1px; color: var(--texto-2); }
+.territorio-zona-libres { flex-direction: row; align-items: flex-end; }
+.territorio-zona-n { margin: 0 3px 0 0; padding: 0; font-size: 19px; color: #9fd49a; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.territorio-zona-ficha.agotada .territorio-zona-n { color: var(--texto-apagado); }
+.territorio-zona-de { margin: 0 0 3px 0; padding: 0; font-size: 10.2px; color: var(--texto-apagado); }
+.territorio-zona-casillas { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.territorio-zona-casillas > VisualElement { width: 7px; height: 7px; margin: 1px; border-width: 1px; border-color: rgba(0, 0, 0, 0.6); border-radius: 1px; background-color: #4a3a26; }
+.territorio-zona-casillas > .libre { background-color: var(--obra-verde); }
+.territorio-zona-ficha > .plaza-barra-avance { width: 100%; }
+.territorio-zona-ficha .plaza-barra-avance-i { background-color: var(--obra-verde); }
+.territorio-cupo-casillas { flex-direction: row; margin-left: 4px; }
+.territorio-cupo-casillas > VisualElement { width: 6px; height: 9px; margin-right: 2px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 1px; background-color: rgba(0, 0, 0, 0.4); }
+.territorio-cupo-casillas > .usada { border-color: var(--oro); background-color: var(--oro); }
+.plaza-obra-chip.lleno { border-color: var(--obra-ambar); }
+.plaza-obra-chip.lleno .territorio-cupo-casillas > .usada { border-color: var(--obra-ambar); background-color: var(--obra-ambar); }
+.plaza-obra-chip.baja { border-color: var(--obra-rojo); color: #ffb3a8; }
+.territorio-iconos { flex-direction: row; flex-wrap: wrap; margin-bottom: 6px; }
+.territorio-icono-boton {
+    width: 50px; height: 50px; margin: 0 6px 6px 0; padding: 0; align-items: center; justify-content: center; border-width: 1px; border-bottom-width: 3px;
+    border-color: rgba(107, 74, 41, 0.8); border-bottom-color: var(--obra-verde); border-radius: 4px; background-color: rgb(38, 29, 18); color: var(--oro-claro);
+}
+.territorio-icono-boton:hover { border-color: var(--oro); border-bottom-color: var(--obra-verde); }
+.territorio-icono-boton.abierto { border-color: var(--oro-claro); border-bottom-color: var(--obra-verde); background-color: rgb(58, 44, 24); }
+.territorio-icono-boton.atacado { border-bottom-color: var(--obra-rojo); }
+.territorio-icono-boton.obra.pendiente { border-bottom-color: var(--obra-ambar); }
+.territorio-icono-boton.obra.levantando { border-bottom-color: #6fb6ff; }
+.territorio-marcar { border-color: var(--bronce); border-bottom-color: var(--oro); font-size: 26px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.territorio-icono-nivel { position: absolute; top: 1px; right: 3px; margin: 0; padding: 0; font-size: 10px; color: var(--oro); -unity-font-style: bold; }
+.territorio-detalle { margin-bottom: 8px; }
+.territorio-emblema {
+    width: 34px; height: 34px; flex-shrink: 0; align-items: center; justify-content: center; border-width: 1px; border-color: var(--obra-verde); border-radius: 17px;
+    background-color: rgb(52, 38, 22);
+}
+.plaza-anillo.atacado { border-left-color: var(--obra-rojo); }
+.territorio-tarjeta { border-left-color: var(--obra-verde); }
+.territorio-medida { flex-direction: row; align-items: center; }
+.territorio-medida > .con-icono { width: 86px; flex-shrink: 0; }
+.territorio-medida > .plaza-barra-avance { flex-grow: 1; margin: 0 6px; }
+.territorio-medida-nombre { margin: 0 0 0 4px; padding: 0; font-size: 12px; color: var(--texto-2); }
+.territorio-medida-cifra { margin: 0; padding: 0; font-size: 11.5px; color: var(--pergamino); }
+.territorio-medida.lleno .plaza-barra-avance-i { background-color: var(--obra-ambar); }
+.territorio-medida.lleno .territorio-medida-cifra { color: #ffd590; }
+.territorio-medida.rebano .plaza-barra-avance-i { background-color: #8fbf52; }
+.territorio-carro {
+    flex-direction: row; flex-wrap: wrap; align-items: center; padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+.territorio-carro.sin { border-color: var(--obra-ambar); }
+.territorio-carro > VisualElement { margin-right: 8px; }
+.territorio-carro-texto { flex-grow: 1; flex-shrink: 1; min-width: 140px; }
+.territorio-carro-titulo { margin: 0; padding: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; }
+.territorio-carro.sin .territorio-carro-titulo { color: #ffd590; }
+.territorio-carro-small { margin: 0; padding: 0; font-size: 11.2px; color: var(--texto-2); white-space: normal; }
+.territorio-boton {
+    flex-direction: row; align-items: center; margin: 0 0 0 6px; padding: 5px 12px; height: auto; border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+    background-color: rgb(46, 34, 20); color: var(--pergamino); font-size: 12.5px; -unity-font-style: bold;
+}
+.territorio-boton > VisualElement { margin-right: 4px; }
+.territorio-boton.principal { border-color: var(--oro); background-color: rgb(80, 58, 29); color: var(--oro-claro); }
+.territorio-boton:disabled { opacity: 0.45; }
+.territorio-boton-texto { margin: 0; padding: 0; font-size: 12.5px; color: var(--oro-claro); -unity-font-style: bold; }
+.plaza-anillo-mejorar { flex-direction: row; align-items: center; }
+.plaza-anillo-mejorar > .plaza-chips { margin-left: 6px; }
+.plaza-anillo-mejorar .plaza-coste { margin: 0 4px 0 0; }
+.territorio-opciones { flex-direction: row; flex-wrap: wrap; }
+.territorio-opcion {
+    flex-grow: 1; flex-basis: 220px; align-items: center; margin: 0 6px 6px 0; padding: 10px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.8);
+    border-radius: 3px; background-color: rgb(38, 29, 17);
+}
+.territorio-opcion > * { margin-bottom: 4px; }
+.territorio-opcion.bloqueada { opacity: 0.55; }
+.territorio-opcion-titulo { margin: 0; padding: 0; font-size: 14.4px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.territorio-opcion-uso { margin: 0; padding: 0; font-size: 11.2px; color: var(--texto-2); white-space: normal; -unity-text-align: upper-center; }
+.territorio-opcion > .plaza-chips { justify-content: center; }
+.territorio-opcion > .territorio-boton { margin: 4px 0 0 0; }
+.territorio-gate { margin: 0; padding: 0; font-size: 11.2px; white-space: normal; }
+.territorio-gate.ok { color: #9fd49a; }
+.territorio-gate.falta { color: #e8a08f; }
+.territorio-cultivos, .territorio-nodos { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.territorio-nodo {
+    flex-direction: row; align-items: center; margin: 0 4px 4px 0; padding: 3px 8px; height: auto; border-width: 1px; border-color: rgba(107, 74, 41, 0.8);
+    border-radius: 3px; background-color: rgba(0, 0, 0, 0.35);
+}
+.territorio-nodo:hover { border-color: var(--oro); }
+.territorio-nodo.elegido { border-color: #ffd24a; background-color: rgb(75, 56, 20); }
+.territorio-nodo-nombre { margin: 0 0 0 4px; padding: 0; font-size: 12px; color: var(--pergamino); -unity-font-style: bold; }
+.territorio-nodo-d { margin: 0 0 0 4px; padding: 0; font-size: 10.6px; color: var(--texto-apagado); }
+.territorio-lineas { flex-direction: row; flex-wrap: wrap; }
+.territorio-linea {
+    margin: 0 4px 4px 0; padding: 2px 6px 0 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgba(0, 0, 0, 0.45);
+}
+.territorio-linea.entregada { border-color: var(--obra-verde); }
+.territorio-linea.falta { border-color: var(--obra-rojo); }
+.territorio-linea-fila { flex-direction: row; align-items: center; }
+.territorio-linea-hay { margin: 0 0 0 3px; padding: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; }
+.territorio-linea-de { margin: 0; padding: 0; font-size: 11px; color: var(--texto-apagado); }
+.territorio-linea > .plaza-barra-avance { height: 4px; margin: 2px -6px 0 -6px; border-width: 0; border-radius: 0; }
+.territorio-linea .plaza-barra-avance-i { background-color: var(--obra-verde); }
+.territorio-linea.falta .plaza-barra-avance-i { background-color: var(--obra-rojo); }
+.territorio-reqs { margin-top: 2px; }
+.territorio-reqs > .plaza-req { flex-direction: row; align-items: center; margin-top: 0; margin-bottom: 3px; }
+.territorio-reqs > .plaza-req > VisualElement { margin-right: 5px; }
+.territorio-req-nombre { margin: 0; padding: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-req.falta .territorio-req-nombre { color: #e8c4b8; }
+
+/* ─────────── Paso 9, tanda 2: avanzadas en Territorio ─────────── */
+.territorio-cols > .territorio-col { margin-right: 14px; }
+.territorio-cols > #avanzadas { margin-right: 0; flex-basis: 40%; flex-grow: 0; }
+.territorio-avanzada-coste { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 6px 0; }
+.territorio-avanzada-coste > * { margin-right: 6px; }
+.territorio-elegir-atalaya { align-self: flex-start; margin: 4px 0 4px 0; }
+.plaza-anillo.ruinas { border-left-color: var(--texto-apagado); }
+.territorio-tropa { margin-top: 2px; }
+.territorio-tropa-fila { flex-direction: row; align-items: center; margin-top: 3px; }
+.territorio-tropa-fila > * { margin-right: 6px; }
+
+/* El blasón de un pueblo o una avanzada por dentro (paso 9, tanda 3): su emblema redondo delante del nombre. */
+.sitio-emblema { width: 46px; height: 46px; border-radius: 23px; margin-right: 10px; }

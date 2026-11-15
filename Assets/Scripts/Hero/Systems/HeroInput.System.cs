@@ -115,12 +115,8 @@ public partial class HeroInputSystem : SystemBase
         // En el interior de un campamento del motor, los paneles de Conquest (inventario, barracas…) están apagados: viven de datos de relleno.
         if (ConquestTactics.Mundo.SelectorDePersonaje.Interior != null) return;
 
-        // Verificar si el FullscreenPanelManager está disponible
-        if (FullscreenPanelManager.Instance == null)
-        {
-            UnityEngine.Debug.LogWarning("[HeroInputSystem] FullscreenPanelManager no está disponible");
-            return;
-        }
+        // Sin FullscreenPanelManager (las escenas del mundo del motor no lo traen) no hay paneles que abrir: es lo normal, sin aviso.
+        if (FullscreenPanelManager.Instance == null) return;
 
         // Manejo del inventario con tecla 'I'
         if (keyboardInput.iKey.wasPressedThisFrame) FullscreenPanelManager.Instance.HandleInventoryKeyPress();
