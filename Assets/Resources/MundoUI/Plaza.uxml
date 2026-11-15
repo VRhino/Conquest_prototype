@@ -1,0 +1,27 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <!-- Tu plaza por dentro (paso 7 del bloque 4), sobre FeudoScene: el HUD de la plaza del prototipo (`main.ts`: `montarAsentamiento`). Arriba a la
+         izquierda el blasón, lo que cuelga de él, la subida en curso y las obras; arriba al centro, Población, Almacén y Estado; arriba a la derecha,
+         la barra del jugador; al borde derecho, la ficha del edificio; abajo, «Salir al mundo» y el riel. El hueco del minimapa queda vacío. -->
+    <ui:Style src="Plaza.uss" />
+    <ui:VisualElement name="plaza" class="plaza" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
+        <ui:VisualElement name="carteles-obra" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;" />
+        <ui:Label name="cartel" class="cartel-interior oculto" picking-mode="Ignore" />
+        <ui:Label name="ayuda" class="ayuda-interior plaza-ayuda" picking-mode="Ignore" text="WASD: andar · Ratón: mirar · Alt: soltar el ratón para pulsar la interfaz" />
+        <ui:VisualElement name="plaza-izq" class="plaza-izq" picking-mode="Ignore">
+            <ui:VisualElement name="blason" class="plaza-blason" />
+            <ui:VisualElement name="blason-pop" class="plaza-blason-pop oculto" />
+            <ui:VisualElement name="ascenso-hud" class="plaza-ascenso-hud oculto" />
+            <ui:VisualElement name="obras-hud" class="plaza-obras oculto" />
+        </ui:VisualElement>
+        <ui:VisualElement name="plaza-pie" class="plaza-pie" picking-mode="Ignore" />
+        <ui:VisualElement class="barra-arriba plaza-barra" picking-mode="Ignore">
+            <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
+            <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
+        </ui:VisualElement>
+        <ui:VisualElement name="plaza-der" class="plaza-der" picking-mode="Ignore" />
+        <ui:VisualElement name="riel" class="plaza-riel oculto" />
+        <ui:Button name="salir-al-mundo" class="boton-primario plaza-salir" text="SALIR AL MUNDO" />
+        <ui:VisualElement name="plaza-ventana" class="plaza-ventana oculto" />
+        <ui:Label name="letrero" class="plaza-letrero oculto" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

@@ -58,6 +58,8 @@ public struct HeroMountComponent : IComponentData
     public uint poseJumpRevision;
     /// <summary>Simulation time from which the horse can be called again (longer after it died).</summary>
     public double nextMountTime;
+    /// <summary>The horse's coat (<see cref="ConquestTactics.Visual.HeroHorseVisual.SetCoat"/>): 0 keeps the prefab's.</summary>
+    public byte coat;
 
     public bool Riding => state != HeroMountState.OnFoot;
 }

@@ -174,7 +174,7 @@ namespace ConquestTactics.Net
                 // Con HeroLifeComponent, EntityVisualSync le pone al modelo su HeroMountPresenter, que saca el caballo de
                 // HeroMountComponent, la clase del héroe y la velocidad de HeroMotorStateComponent.
                 ecb.AddComponent(entidad, new HeroLifeComponent { isAlive = true });
-                ecb.AddComponent<HeroMountComponent>(entidad);
+                ecb.AddComponent(entidad, new HeroMountComponent { coat = VestidoDelMotor.PelajeDe(apariencia.equipment?.mount?.itemId) });
                 ecb.AddComponent<HeroMotorStateComponent>(entidad);
                 ecb.AddComponent(entidad, new HeroClassComponent { heroClass = (HeroClass)modelo.ValueRO.TipoDeEscuadra });
                 _heroes[entidad] = visual;

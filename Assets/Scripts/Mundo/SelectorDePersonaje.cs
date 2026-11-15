@@ -42,6 +42,9 @@ namespace ConquestTactics.Mundo
             public string Armadura;
             public bool Femenino;
             public string Cabeza, Pelo, Barba, Cejas;
+            /// <summary>Lo que lleva puesto, por hueco del motor (torso, guantes, pantalones, botas, casco, arma, montura) y el id de su pieza en `OBJETOS`;
+            /// null si no se sabe (entonces se viste con las piezas de inicio de su tipo de armadura).</summary>
+            public System.Collections.Generic.Dictionary<string, string> Piezas;
             public Action Entrar, CerrarSesion;
         }
 
@@ -55,6 +58,11 @@ namespace ConquestTactics.Mundo
             /// <summary>La zona a la que da esta pieza (taberna, mercado o militar), o null.</summary>
             public string Zona;
             public double X, Y, Ancho, Alto;
+            /// <summary>En una plaza (paso 7): el id del edificio (`ed-N`) y si está en cola u en obra («cola», «obra»); null, en pie. En la
+            /// muralla, «plan» para la celda comprometida que aún no se ha levantado.</summary>
+            public string Id, Estado;
+            /// <summary>El nivel de la celda de muralla (1 empalizada, 2 adobe, 3 ciclópea) o el del edificio.</summary>
+            public int Nivel;
         }
 
         /// <summary>El interior de un campamento de mercenarios en FeudoScene (paso 4 del bloque 4): el héroe que anda y la planta que manda el
@@ -64,6 +72,15 @@ namespace ConquestTactics.Mundo
             public HeroeParaVer Heroe;
             public List<PiezaDePlanta> Edificios = new List<PiezaDePlanta>(), Calles = new List<PiezaDePlanta>(),
                 Empalizada = new List<PiezaDePlanta>(), Puerta = new List<PiezaDePlanta>();
+            /// <summary>La muralla de una plaza, celda a celda (`Recinto.celdas`: Tipo «muro», «torre» o «puerta»).</summary>
+            public List<PiezaDePlanta> Muralla = new List<PiezaDePlanta>();
+            /// <summary>Sube cuando cambia la planta (una obra que acaba, un edificio nuevo en la cola): FeudoScene la vuelve a montar.</summary>
+            public int Version;
+            /// <summary>Lo pone FeudoScene: dónde cae en pantalla (de 0 a 1, desde arriba a la izquierda) lo alto de una pieza por su id; null si no
+            /// se ve. Con él la interfaz pone el cartel de cada obra encima de su edificio.</summary>
+            public Func<string, (float x, float y)?> EnPantalla;
+            /// <summary>El edificio elegido (su ficha abierta): FeudoScene lo resalta, como el contorno dorado del prototipo.</summary>
+            public string Elegido;
             /// <summary>Se rellena desde FeudoScene: cuándo hay héroe andando y cuánto tarda un fotograma (para el informe y las pruebas).</summary>
             public bool HeroeDentro;
             /// <summary>La zona donde está el héroe (taberna, mercado, militar, puerta) o null; la pone FeudoScene, la enseña la interfaz.</summary>

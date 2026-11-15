@@ -13,4 +13,6 @@ public class Equipment
     public InventoryItem gloves = null;
     public InventoryItem pants = null;
     public InventoryItem boots = null;
+    /// <summary>The mount (BronzeAge): only its id, for the horse's coat.</summary>
+    public InventoryItem mount = null;
 }

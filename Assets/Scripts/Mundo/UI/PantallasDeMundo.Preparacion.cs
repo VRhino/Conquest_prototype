@@ -128,7 +128,7 @@ namespace ConquestTactics.Mundo.UI
                 panelBatalla.name = "panel-batalla";
                 capaEncima.Add(panelBatalla);
                 // En la escena de preparación no hay mapa que la refresque: se vigila sola.
-                panelBatalla.schedule.Execute(VigilarBatalla).Every(250);
+                RepintarCada(panelBatalla, 250, VigilarBatalla);
                 // El lienzo de 1950x1130, escalado entero para caber, centrado.
                 panelBatalla.RegisterCallback<GeometryChangedEvent>(_ => Encajar());
             }

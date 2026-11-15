@@ -619,6 +619,11 @@ Button { margin: 0; }
 .heroe-icono-nivel { background-image: url("/Assets/Art/UI/units/chevron.png"); }
 .heroe-equipo-titulo { -unity-text-align: middle-center; margin: 4px 0 10px 0; }
 .heroe-equipo { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+.heroe-perks { flex-direction: row; flex-wrap: wrap; justify-content: center; margin-bottom: 8px; }
+.heroe-perk { width: 92px; align-items: center; margin: 0 4px 6px 4px; }
+.heroe-perk-icono { width: 40px; height: 40px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); -unity-background-scale-mode: scale-to-fit; }
+.heroe-perk-nombre { font-size: 11px; -unity-text-align: upper-center; white-space: normal; margin-top: 2px; color: var(--pergamino); }
+.heroe-perk--cerrado { opacity: 0.45; }
 .equipo-casilla { width: 48%; align-items: center; margin-bottom: 12px; }
 .equipo-cuadro { width: 84px; height: 84px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); -unity-background-scale-mode: stretch-to-fill; }
 .equipo-cuadro--vacio { border-color: rgba(169, 121, 63, 0.35); }
@@ -710,3 +715,132 @@ Button { margin: 0; }
 .unity-scroll-view .unity-scroll-view__vertical-scroller { width: 6px; min-width: 6px; max-width: 6px; }
 .unity-scroll-view .unity-scroll-view__horizontal-scroller { height: 6px; min-height: 6px; max-height: 6px; }
 .unity-scroll-view .unity-scroller .unity-base-slider__drag-container { width: 6px; }
+
+/* Tanda 2: la ficha del objeto (aspecto de las fichas de BronzeAge con los valores de Conquest y la comparación), elegir equipo y repartir puntos. */
+Button.equipo-cuadro { padding: 0; margin: 0; }
+Button.equipo-cuadro:hover { border-color: var(--oro); }
+.objeto-ficha { position: absolute; width: 300px; padding: 12px 14px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.objeto-ficha-cab { flex-direction: row; align-items: center; margin-bottom: 8px; }
+.objeto-ficha-cuadro { width: 56px; height: 56px; margin-right: 10px; flex-shrink: 0; }
+.objeto-ficha-textos { flex-shrink: 1; }
+.objeto-ficha-nombre { margin: 0; font-size: 15px; color: var(--pergamino); white-space: normal; -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.objeto-ficha-rareza { margin: 2px 0 0 0; font-size: 12px; }
+.objeto-ficha-tipo { margin: 2px 0 0 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.objeto-ficha-seccion { margin-top: 6px; padding-top: 6px; border-top-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
+.objeto-ficha-seccion-titulo { margin: 0 0 4px 0; font-size: 12px; color: var(--oro); letter-spacing: 1px; }
+.objeto-ficha-fila { flex-direction: row; align-items: center; height: 20px; }
+.objeto-ficha-icono { width: 16px; height: 16px; margin-right: 6px; }
+.objeto-ficha-etiqueta { flex-grow: 1; margin: 0; font-size: 12px; color: var(--texto-2); }
+.objeto-ficha-valor { margin: 0; font-size: 12px; color: var(--pergamino); }
+.objeto-ficha-dif { margin: 0 0 0 6px; min-width: 34px; font-size: 12px; -unity-text-align: middle-right; color: var(--texto-2); }
+.objeto-ficha-dif--mejor { color: var(--verde); }
+.objeto-ficha-dif--peor { color: var(--rojo-claro); }
+.objeto-ficha-texto { margin: 2px 0 0 0; font-size: 12px; color: var(--pergamino); white-space: normal; }
+.objeto-ficha-pie { flex-direction: row; justify-content: space-between; margin-top: 6px; }
+.objeto-ficha-compara { margin: 6px 0 0 0; font-size: 11px; color: var(--texto-apagado); -unity-font-style: italic; white-space: normal; }
+.elegir-equipo-velo { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.elegir-equipo { position: absolute; width: 260px; padding: 10px 12px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.elegir-equipo-titulo { margin: 0 0 8px 0; }
+.elegir-equipo-rejilla { flex-direction: row; flex-wrap: wrap; }
+.elegir-equipo-quitar { align-self: flex-start; margin-top: 6px; }
+.heroe-reparto { width: 24px; height: 24px; margin: 0 0 0 6px; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); color: var(--oro-claro); font-size: 15px; -unity-text-align: middle-center; }
+.heroe-reparto:hover { border-color: var(--oro); }
+.heroe-reparto:disabled { opacity: 0.25; }
+.heroe-atributo-valor--nuevo { color: var(--verde); }
+.heroe-reparto-botones { flex-direction: row; align-items: center; margin-top: 8px; }
+.heroe-reparto-botones > .boton-primario { margin: 0 8px 0 0; }
+
+/* Loadouts (tanda 2): la lista a la izquierda y el elegido a la derecha, con el riel de tarjetas grandes. */
+.loadouts-lista { flex-grow: 0; width: 26%; min-width: 260px; margin-right: 16px; }
+.loadouts-editor { flex-grow: 1; flex-basis: 0; }
+.loadouts-titulo { margin: 0 0 10px 0; }
+.loadouts-fila { margin: 0 0 6px 0; padding: 8px 10px; align-items: flex-start; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.25); }
+.loadouts-fila:hover { border-color: var(--bronce); }
+.loadouts-fila.activo { border-color: var(--oro); background-color: rgba(212, 168, 75, 0.12); }
+.loadouts-nombre { margin: 0; font-size: 15px; color: var(--pergamino); -unity-font: url("Fuentes/Inter-SemiBold.ttf"); -unity-font-definition: initial; }
+.loadouts-datos { flex-direction: row; align-items: center; margin-top: 2px; }
+.loadouts-detalle { margin: 0; font-size: 12px; color: var(--texto-2); }
+.loadouts-nuevo { align-self: flex-start; margin-top: 4px; }
+.loadouts-cab { flex-direction: row; align-items: center; margin-bottom: 12px; }
+.loadouts-campo { width: 260px; margin: 0 14px 0 0; }
+.loadouts-riel { flex-direction: row; flex-wrap: wrap; margin-bottom: 10px; }
+.loadouts-hueco { width: 132px; height: 209px; margin: 0 10px 10px 0; flex-shrink: 0; border-radius: 3px; }
+.loadouts-hueco .tropa-tarjeta { margin: 0; }
+.loadouts-mas { width: 132px; height: 209px; margin: 0 10px 10px 0; }
+.loadouts-botones { flex-direction: row; align-items: center; margin: 6px 0 8px 0; }
+.loadouts-botones > .boton-primario { margin: 0 8px 0 0; }
+.loadouts-botones > .boton-secundario { margin-right: 8px; }
+
+/* La tropa del campamento (paso 6, tanda 3): el árbol de reclutamiento del prototipo (`arbolTablero`, `.ta-*`) con la tarjeta de Conquest en cada
+   nudo, y la ficha de la tropa (el panel derecho de Tropas de la Base). */
+.recl-velo { align-items: stretch; justify-content: flex-start; }
+.recl-ventana { top: 12px; }
+.recl-cabecera { flex-direction: row; align-items: center; margin-bottom: 8px; min-height: 40px; }
+.recl-chips { margin-left: 16px; }
+.recl-hueco { flex-grow: 1; }
+.recl-mandos { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.recl-boton-todas { flex-direction: row; align-items: center; margin: 0 16px 0 0; padding: 6px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgb(29, 22, 16); }
+.recl-boton-todas:hover { border-color: var(--bronce); }
+.recl-boton-todas.activo { border-color: var(--oro); }
+.recl-boton-todas.activo > .recl-boton-texto { color: var(--oro-claro); }
+.recl-caja { width: 12px; height: 12px; margin: 0 8px 0 0; padding: 0; border-width: 1px; border-color: var(--pergamino); border-radius: 2px; font-size: 10px; -unity-text-align: middle-center; color: var(--oro-claro); }
+.recl-boton-texto { margin: 0; font-size: 13px; color: var(--pergamino); }
+.recl-ayuda { margin: 0; font-size: 12px; color: var(--texto-apagado); flex-shrink: 1; white-space: normal; }
+.recl-leyenda { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+.recl-leyenda-item { flex-direction: row; align-items: center; margin-right: 18px; }
+.recl-leyenda-item > VisualElement { margin-right: 7px; }
+.recl-leyenda-texto { margin: 0 18px 0 0; font-size: 12px; color: var(--texto-2); }
+.recl-leyenda-item > .recl-leyenda-texto { margin-right: 0; }
+.recl-muestra { width: 22px; height: 14px; border-width: 1px; border-radius: 2px; border-color: var(--bronce-osc); background-color: rgba(70, 52, 30, 0.97); }
+.recl-muestra.lista, .recl-muestra.tuya { border-color: var(--oro); background-color: rgba(110, 82, 42, 0.97); }
+.recl-muestra.edificio, .recl-muestra.bloqueada, .recl-muestra.futura { border-color: rgba(107, 74, 41, 0.55); background-color: rgba(20, 16, 11, 0.78); }
+.recl-cuerpo { flex-grow: 1; flex-shrink: 1; min-height: 0; flex-direction: row; }
+.recl-marco { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-right: 16px; border-width: 1px; border-color: var(--bronce); border-radius: 3px; background-color: var(--marco-panel); }
+.recl-era-fondo.par { background-color: rgba(169, 121, 63, 0.04); }
+.recl-era-fondo.raya { border-left-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
+.recl-era-fondo.futura { background-color: rgba(0, 0, 0, 0.22); }
+.recl-carril-fondo { border-top-width: 1px; border-bottom-width: 1px; border-color: rgba(107, 74, 41, 0.45); background-color: rgba(241, 220, 174, 0.022); }
+.recl-carril-fondo.par { background-color: rgba(241, 220, 174, 0.045); }
+.recl-esquina, .recl-carril-nombre { background-color: var(--marco-bg-alt); border-right-width: 1px; border-color: var(--bronce-osc); }
+.recl-esquina { border-bottom-width: 1px; border-bottom-color: var(--bronce); justify-content: flex-end; padding: 0 12px 12px 12px; background-color: var(--marco-bg); }
+.recl-esquina-texto { margin: 0; font-size: 10.5px; letter-spacing: 1.6px; color: var(--texto-apagado); white-space: normal; }
+.recl-carril-nombre { justify-content: center; padding: 10px 12px; }
+.recl-carril-texto { margin: 6px 0 0 0; font-size: 12.5px; letter-spacing: 0.8px; color: var(--oro-claro); white-space: normal; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.recl-carril-sub { margin: 4px 0 0 0; font-size: 11px; color: var(--texto-apagado); }
+.recl-era-cab { flex-direction: row; align-items: center; padding: 8px 2px 8px 2px; border-bottom-width: 1px; border-color: var(--bronce); background-color: var(--marco-panel); }
+.recl-era-num { width: 46px; height: 46px; flex-shrink: 0; margin: 0 12px 0 0; padding: 0; border-radius: 23px; border-width: 2px; border-color: var(--bronce-osc); background-color: var(--oro); color: rgb(32, 21, 9); font-size: 18px; -unity-text-align: middle-center; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.recl-era-textos { flex-shrink: 1; }
+.recl-era-nombre { margin: 0; font-size: 15px; color: var(--oro-claro); white-space: normal; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.recl-era-sub { margin: 3px 0 0 0; font-size: 11.5px; color: var(--texto-2); white-space: normal; }
+.recl-era-marca { align-self: flex-start; margin: 4px 0 0 0; padding: 1px 6px; border-radius: 2px; font-size: 9.5px; letter-spacing: 1.3px; }
+.recl-era-marca.actual { color: rgb(16, 32, 12); background-color: var(--verde); }
+.recl-era-marca.futura { color: var(--texto-2); border-width: 1px; border-color: var(--bronce-osc); }
+.recl-carta { margin: 0; padding: 4px; align-items: center; justify-content: flex-start; border-width: 1px; border-radius: 3px; border-color: var(--bronce-osc); background-color: rgba(70, 52, 30, 0.97); }
+.recl-carta .tropa-tarjeta { margin: 0; }
+.recl-carta.lista, .recl-carta.tuya { border-color: var(--oro); background-color: rgba(110, 82, 42, 0.97); }
+.recl-carta.edificio, .recl-carta.bloqueada, .recl-carta.futura { border-color: rgba(107, 74, 41, 0.55); background-color: rgba(20, 16, 11, 0.78); }
+.recl-carta.futura { opacity: 0.72; }
+.recl-carta.edificio .tropa-tarjeta, .recl-carta.bloqueada .tropa-tarjeta, .recl-carta.futura .tropa-tarjeta { opacity: 0.6; }
+.recl-carta:hover, .recl-carta.foco { border-color: var(--oro); }
+.recl-carta.elegida { border-width: 2px; border-color: var(--oro-claro); }
+.recl-tablero.activo .recl-carta { opacity: 0.3; }
+.recl-tablero.activo .recl-carta.baja { opacity: 0.7; }
+.recl-tablero.activo .recl-carta.luz { opacity: 1; }
+.recl-medalla { position: absolute; top: 1px; right: 1px; width: 18px; height: 18px; margin: 0; padding: 0; border-radius: 9px; align-items: center; justify-content: center; background-color: var(--oro); color: rgb(32, 21, 9); font-size: 11px; -unity-text-align: middle-center; -unity-font-style: bold; }
+.recl-carta-estado { margin: 3px 0 0 0; padding: 0; width: 100%; height: 30px; font-size: 10.5px; color: var(--texto-2); white-space: normal; -unity-text-align: upper-center; overflow: hidden; }
+.recl-carta.lista .recl-carta-estado, .recl-carta.tuya .recl-carta-estado { color: var(--oro-claro); }
+.recl-carta-nombre { margin: 0; font-size: 12px; color: var(--oro-claro); white-space: normal; }
+.recl-ficha { min-width: 300px; }
+.recl-ficha-estado { margin: 0 0 6px 0; padding: 7px 9px; border-width: 1px; border-radius: 2px; border-color: var(--bronce-osc); background-color: rgba(0, 0, 0, 0.25); font-size: 13px; color: var(--pergamino); white-space: normal; }
+.recl-ficha-estado.lista, .recl-ficha-estado.tuya { border-color: var(--oro); }
+.recl-tip { position: absolute; width: 380px; padding: 12px 14px; border-width: 1px; border-radius: 2px; border-color: var(--bronce); background-color: var(--marco-bg-alt); }
+.recl-tip-cab { flex-direction: row; align-items: center; margin-bottom: 6px; }
+.recl-tip-cab > .tropa-mini { margin-right: 10px; flex-shrink: 0; }
+.recl-tip-textos { flex-shrink: 1; }
+.recl-tip-nombre { margin: 0; font-size: 16px; color: var(--oro-claro); white-space: normal; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.recl-tip-meta { margin: 0; font-size: 12px; color: var(--texto-apagado); white-space: normal; }
+.recl-tip-estado { margin: 8px 0 2px 0; padding: 7px 9px; border-width: 1px; border-radius: 2px; border-color: var(--bronce-osc); background-color: rgba(0, 0, 0, 0.25); }
+.recl-tip-estado.lista, .recl-tip-estado.tuya { border-color: var(--oro); }
+.recl-tip-texto { margin: 2px 0 0 0; font-size: 12.5px; color: var(--pergamino); white-space: normal; }
+.recl-tip-seccion { margin: 11px 0 4px 0; font-size: 10.5px; letter-spacing: 1.6px; color: var(--oro); }
+.recl-carta .tropa-tarjeta-cifra, .recl-carta .tropa-tarjeta-hombres { font-size: 12px; }

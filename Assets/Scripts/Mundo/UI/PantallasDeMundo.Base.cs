@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BronzeAge.Contract.V1;
+using ConquestTactics.Net;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -23,7 +24,7 @@ namespace ConquestTactics.Mundo.UI
         /// modelos 3D de la Base. Sin él, los recuadros quedan vacíos.</summary>
         public VisualPrefabConfiguration PrefabsVisuales;
 
-        static readonly (string id, string nombre)[] PestanasDeBase = { ("heroe", "Héroe"), ("tropas", "Tropas"), ("bienes", "Bienes") };
+        static readonly (string id, string nombre)[] PestanasDeBase = { ("heroe", "Héroe"), ("tropas", "Tropas"), ("loadouts", "Loadouts"), ("bienes", "Bienes") };
 
         VisualElement baseVentana;
         string pestanaBase = "heroe";
@@ -143,7 +144,7 @@ namespace ConquestTactics.Mundo.UI
 
             firmaBase = null;
             PintarBase();
-            baseVentana.schedule.Execute(() => { if (!RatonPulsado() && FirmaDeLaBase() != firmaBase) PintarBase(); }).Every(250);
+            RepintarCada(baseVentana, 250, () => { if (FirmaDeLaBase() != firmaBase) PintarBase(); });
         }
 
         void CerrarBase()
@@ -187,8 +188,6 @@ namespace ConquestTactics.Mundo.UI
             if (BaseAbierta && FirmaDeLaBase() != firmaBase) PintarBase();
         }
 
-        /// <summary>Con el botón del ratón pulsado no se repinta solo: el clic a medias caería en un botón que ya no está.</summary>
-        static bool RatonPulsado() => UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed == true;
 
         void PintarBase()
         {
@@ -224,8 +223,9 @@ namespace ConquestTactics.Mundo.UI
             error.name = "error-base";
             void Error(string t) => Poner(error, t);
             if (pestanaBase == "bienes") PintarBienes(cuerpo, h, Error, error);
+            else if (pestanaBase == "loadouts") PintarLoadouts(cuerpo, h, Error, error);
             else if (pestanaBase == "tropas") PintarTropas(cuerpo, h, Error, foto, error);
-            else PintarHeroe(cuerpo, h, foto);
+            else PintarHeroe(cuerpo, h, foto, Error, error);
         }
 
         // ─────────────── Héroe ───────────────
@@ -235,7 +235,7 @@ namespace ConquestTactics.Mundo.UI
         /// héroe en 3D sobre el fondo de la ventana, girable; a la derecha las casillas del equipo puesto. Lo del lateral del prototipo (clase, dónde
         /// está, herido, monedas, víveres y residencia) va bajo los atributos. Sin «Guardar», «Cancelar», «More», «Free Reset» ni «Repair»: repartir
         /// puntos y el detalle del equipo son de la tanda 2.</summary>
-        void PintarHeroe(VisualElement v, Heroe h, VisualElement foto)
+        void PintarHeroe(VisualElement v, Heroe h, VisualElement foto, Action<string> error, Label lineaError)
         {
             var izquierda = Dialogo.Caja("heroe-col heroe-col--izquierda");
             izquierda.name = "heroe-izquierda";
@@ -243,6 +243,13 @@ namespace ConquestTactics.Mundo.UI
             foto ??= ModeloEn("heroe-modelo", () => PrefabsVisuales?.GetDefaultHeroPrefab(), "hero_preview",
                 instancia => VestidoDelMotor.Vestir(instancia, HeroeParaVer(c.Datos)), m => modeloHeroe = m, () => modeloHeroe);
             v.Add(foto);
+            // Si cambió lo que lleva puesto, el héroe en 3D se vuelve a vestir (pieza a pieza).
+            var puesto = string.Join("|", (PiezasPuestas(h) ?? new Dictionary<string, string>()).OrderBy(kv => kv.Key).Select(kv => kv.Key + "=" + kv.Value));
+            if (modeloHeroe != null && modeloHeroe.VestidoCon != puesto)
+            {
+                if (modeloHeroe.VestidoCon != null && modeloHeroe.Modelo != null) VestidoDelMotor.Vestir(modeloHeroe.Modelo, HeroeParaVer(c.Datos));
+                modeloHeroe.VestidoCon = puesto;
+            }
             var derecha = Dialogo.Caja("heroe-col heroe-col--derecha");
             derecha.name = "heroe-derecha";
             v.Add(derecha);
@@ -270,13 +277,14 @@ namespace ConquestTactics.Mundo.UI
             var atributos = Dialogo.Caja("heroe-atributos");
             atributos.name = "heroe-atributos";
             var a = h.AtributosBase ?? new Atributos();
-            foreach (var (icono, nombre, valor, ayuda) in new[]
+            if (puntosARepartir.Values.Sum() > h.PuntosDeAtributoSinGastar) puntosARepartir.Clear(); // el motor ya los gastó
+            foreach (var (icono, nombre, valor, ayuda, delMotor) in new[]
             {
-                ("liderazgo", "Liderazgo", h.LiderazgoBase, "Lo que suman las escuadras que puede llevar"),
-                ("fuerza", "Fuerza", a.Fuerza, null),
-                ("destreza", "Destreza", a.Destreza, null),
-                ("armadura", "Armadura", a.Armadura, null),
-                ("dureza", "Dureza", a.Vitalidad, "La vitalidad del motor"),
+                ("liderazgo", "Liderazgo", h.LiderazgoBase, "Lo que suman las escuadras que puede llevar", (string)null),
+                ("fuerza", "Fuerza", a.Fuerza, null, "fuerza"),
+                ("destreza", "Destreza", a.Destreza, null, "destreza"),
+                ("armadura", "Armadura", a.Armadura, null, "armadura"),
+                ("dureza", "Dureza", a.Vitalidad, "La vitalidad del motor", "vitalidad"),
             })
             {
                 var fila = Dialogo.Caja("heroe-atributo");
@@ -284,11 +292,17 @@ namespace ConquestTactics.Mundo.UI
                 if (ayuda != null) fila.tooltip = ayuda;
                 fila.Add(Dialogo.Caja("heroe-atributo-icono heroe-icono-" + icono));
                 fila.Add(Dialogo.Texto(nombre, "heroe-atributo-nombre"));
-                fila.Add(Dialogo.Texto(valor.ToString(), "heroe-atributo-valor"));
+                var extra = delMotor != null && puntosARepartir.TryGetValue(delMotor, out var p) ? p : 0;
+                var cifra = Dialogo.Texto((valor + extra).ToString(), "heroe-atributo-valor");
+                cifra.EnableInClassList("heroe-atributo-valor--nuevo", extra > 0);
+                fila.Add(cifra);
+                // Repartir puntos (`repartirPuntos`), como los + y − de Conquest: el Liderazgo no se reparte.
+                if (delMotor != null && (h.PuntosDeAtributoSinGastar > 0)) BotonesDeReparto(fila, delMotor, h);
                 atributos.Add(fila);
             }
             if (h.PuntosDeAtributoSinGastar > 0)
-                atributos.Add(Dialogo.Texto($"Puntos disponibles: {h.PuntosDeAtributoSinGastar}", "heroe-puntos"));
+                atributos.Add(Dialogo.Texto($"Puntos disponibles: {h.PuntosDeAtributoSinGastar - puntosARepartir.Values.Sum()}", "heroe-puntos"));
+            BotonesDeGuardarReparto(atributos, h, error);
             izquierda.Add(atributos);
 
             // Lo del lateral del prototipo, debajo.
@@ -333,40 +347,65 @@ namespace ConquestTactics.Mundo.UI
                 ("arma", "Arma", e.Arma), ("casco", "Casco", e.Casco), ("torso", "Torso", e.Torso), ("guantes", "Guantes", e.Guantes),
                 ("pantalones", "Pantalones", e.Pantalones), ("botas", "Botas", e.Botas), ("montura", "Montura", e.Montura),
             })
-                equipo.Add(CasillaDeEquipo(hueco, nombre, pieza));
+                equipo.Add(CasillaDeEquipo(hueco, nombre, pieza, h));
             derecha.Add(equipo);
+
+            // Los perks de su clase (los de Conquest), solo para ver: se abren solos con el nivel (D15 del motor) y se usan en la batalla.
+            var perks = HeroClassManager.GetClassDefinition(BatallaRealDeTicket.Clase(h.ClassDefinitionId))?.validClassPerks?.Where(x => x != null).OrderBy(x => x.unlockLevel).ToList();
+            if (perks?.Count > 0)
+            {
+                derecha.Add(Dialogo.Texto("PERKS", "base-kicker heroe-equipo-titulo"));
+                var fila = Dialogo.Caja("heroe-perks");
+                fila.name = "heroe-perks";
+                foreach (var perk in perks)
+                {
+                    var abierto = perk.isUnlockedByDefault || h.Nivel >= perk.unlockLevel;
+                    var chip = Dialogo.Caja("heroe-perk" + (abierto ? "" : " heroe-perk--cerrado"));
+                    chip.tooltip = $"{perk.perkName} ({(perk.isPassive ? "pasivo" : "activo")}): {perk.description}" + (abierto ? "" : $". Se abre en el nivel {perk.unlockLevel}");
+                    var icono = Dialogo.Caja("heroe-perk-icono");
+                    if (perk.icon != null) icono.style.backgroundImage = new StyleBackground(perk.icon);
+                    chip.Add(icono);
+                    chip.Add(Dialogo.Texto(abierto ? perk.perkName : $"Nv. {perk.unlockLevel}", "heroe-perk-nombre"));
+                    fila.Add(chip);
+                }
+                derecha.Add(fila);
+            }
+            derecha.Add(lineaError);
         }
 
         /// <summary>Una casilla del equipo (`Inventory_Item_Cell`): el fondo de su rareza y la línea de su color al pie, con una imagen provisional
         /// del objeto (la de su tipo en el prototipo) y su nombre; vacía, el nombre del hueco. La rareza sale del `tier` del objeto en el motor
         /// (1 común … 5 legendario): el motor no tiene rareza propia.</summary>
-        VisualElement CasillaDeEquipo(string hueco, string nombreHueco, ItemInstancia pieza)
+        VisualElement CasillaDeEquipo(string hueco, string nombreHueco, ItemInstancia pieza, Heroe h)
         {
             var caja = Dialogo.Caja("equipo-casilla");
             caja.name = "equipo-" + hueco;
-            var cuadro = Dialogo.Caja("equipo-cuadro");
+            // Donde el motor deja cambiar el equipo, la casilla se pulsa (como en Conquest): la lista para ponerse algo y «Quitar».
+            VisualElement cuadro;
+            if (EquipoAMano(h))
+            {
+                Button b = null;
+                b = new Button(() => ElegirParaHueco(hueco, nombreHueco, b, HeroeAhora())) { name = "casilla-" + hueco };
+                cuadro = b;
+            }
+            else cuadro = new VisualElement();
+            cuadro.AddToClassList("equipo-cuadro");
             caja.Add(cuadro);
             if (pieza == null)
             {
                 cuadro.AddToClassList("equipo-cuadro--vacio");
-                cuadro.Add(Dialogo.Texto(nombreHueco, "equipo-vacio"));
                 caja.tooltip = $"{nombreHueco}: nada puesto";
+                cuadro.Add(Dialogo.Texto(nombreHueco, "equipo-vacio"));
                 return caja;
             }
-            var ficha = (c.Datos.Bloque("Objetos_Del_Heroe", "OBJETOS")?["objetos"] as JArray)?.OfType<JObject>().FirstOrDefault(x => (string)x["id"] == pieza.ItemDefinitionId);
-            var tier = Mathf.Clamp((int?)ficha?["tier"] ?? 1, 1, 5);
-            var rareza = new[] { ItemRarity.Common, ItemRarity.Uncommon, ItemRarity.Rare, ItemRarity.Epic, ItemRarity.Legendary }[tier - 1];
+            var (nombre, tier, rareza) = FichaDeObjeto(pieza);
             cuadro.AddToClassList("equipo-rareza-" + tier);
-            var recurso = hueco == "arma" ? "armaBronce" : hueco == "montura" ? "livestock" : "armaduraBronce";
-            var imagen = IconosDelMundo.Icono("recurso", recurso, 44);
-            if (imagen != null) cuadro.Add(imagen);
+            if (ImagenDe(pieza, 52) is VisualElement imagen) cuadro.Add(imagen);
             var linea = Dialogo.Caja("equipo-linea");
             linea.style.backgroundColor = InventoryUtils.GetRarityColor(rareza);
             cuadro.Add(linea);
-            var nombre = (string)ficha?["nombre"] ?? pieza.ItemDefinitionId;
             caja.Add(Dialogo.Texto(nombre, "equipo-nombre"));
-            var stats = string.Join(", ", pieza.Estadisticas.Select(x => $"{x.Nombre} {x.Valor}"));
-            caja.tooltip = $"{nombreHueco}: {nombre} · {rareza} (tier {tier}){(stats.Length > 0 ? " · " + stats : "")}";
+            ConFicha(cuadro, () => pieza);
             return caja;
         }
 
@@ -707,7 +746,7 @@ namespace ConquestTactics.Mundo.UI
             var contenido = new ScrollView(ScrollViewMode.Vertical) { name = "tropas-contenido", horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             contenido.AddToClassList("tropas-contenido");
             datos.Add(contenido);
-            if (subpestanaTropa == "atributos") AtributosDeTropa(contenido, elegida, datosTropa);
+            if (subpestanaTropa == "atributos") AtributosDeTropa(contenido, elegida.TropaId, $"{elegida.Cantidad}/{TopeDe(elegida)}", datosTropa);
             else CaracteristicasDeTropa(contenido, elegida, datosTropa, h, reponer[elegida.Id], CampamentoAMano(h), error);
             contenido.Add(lineaError);
         }
@@ -796,23 +835,7 @@ namespace ConquestTactics.Mundo.UI
             v.Add(forma);
             v.Add(Dialogo.Texto(NombreDeFormacion(actual), "tropas-elegida"));
 
-            // Órdenes (habilidades de Conquest).
-            var habilidades = d?.abilitiesByLevel?.Where(x => x != null).ToList() ?? new List<AbilityData>();
-            if (habilidades.Count > 0)
-            {
-                v.Add(Seccion("Órdenes"));
-                var ordenes = Dialogo.Caja("tropas-botones");
-                ordenes.name = "ordenes";
-                foreach (var hab in habilidades)
-                {
-                    var b = Dialogo.Caja("tropas-boton tropas-boton--quieto");
-                    b.tooltip = string.IsNullOrEmpty(hab.description) ? hab.abilityName : $"{hab.abilityName}: {hab.description}";
-                    if (hab.icon != null) { var ic = Dialogo.Caja("tropas-boton-icono"); ic.style.backgroundImage = new StyleBackground(hab.icon); b.Add(ic); }
-                    else b.Add(Dialogo.Texto(hab.abilityName.Substring(0, 1), "tropas-boton-letra"));
-                    ordenes.Add(b);
-                }
-                v.Add(ordenes);
-            }
+            OrdenesDeTropa(v, d);
 
             v.Add(Seccion("Dónde está"));
             v.Add(IconosDelMundo.ConIcono("glifo", "sitio", Dialogo.Texto(DondeEstaLaEscuadra(s, h), "base-sitio"), 14));
@@ -849,6 +872,27 @@ namespace ConquestTactics.Mundo.UI
             }
         }
 
+        /// <summary>Las órdenes de su tropa (habilidades de Conquest), solo para ver: se usan en la batalla.</summary>
+        static void OrdenesDeTropa(VisualElement v, SquadData d)
+        {
+            var habilidades = d?.abilitiesByLevel?.Where(x => x != null).ToList() ?? new List<AbilityData>();
+            if (habilidades.Count > 0)
+            {
+                v.Add(Seccion("Órdenes"));
+                var ordenes = Dialogo.Caja("tropas-botones");
+                ordenes.name = "ordenes";
+                foreach (var hab in habilidades)
+                {
+                    var b = Dialogo.Caja("tropas-boton tropas-boton--quieto");
+                    b.tooltip = string.IsNullOrEmpty(hab.description) ? hab.abilityName : $"{hab.abilityName}: {hab.description}";
+                    if (hab.icon != null) { var ic = Dialogo.Caja("tropas-boton-icono"); ic.style.backgroundImage = new StyleBackground(hab.icon); b.Add(ic); }
+                    else b.Add(Dialogo.Texto(hab.abilityName.Substring(0, 1), "tropas-boton-letra"));
+                    ordenes.Add(b);
+                }
+                v.Add(ordenes);
+            }
+        }
+
         /// <summary>La familia del motor como formación de Conquest (la misma tabla que `BatallaRealDeTicket`).</summary>
         static FormationType? FamiliaDeFormacion(string id) => id switch
         {
@@ -865,7 +909,7 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>Atributos (`SquadDetailPanel`, «Stats_panel»): básicos, ataque y defensa, con las cifras de su tropa en Conquest (las que usa la
         /// batalla) y los hombres del motor. Lo que no aplica, «-».</summary>
-        void AtributosDeTropa(VisualElement v, Escuadron s, SquadData d)
+        void AtributosDeTropa(VisualElement v, string tropaId, string hombres, SquadData d)
         {
             if (d == null) { v.Add(Dialogo.Texto("Esta tropa no tiene ficha en Conquest.", "base-vacio")); return; }
             VisualElement Fila(string icono, string nombre, string valor)
@@ -881,9 +925,9 @@ namespace ConquestTactics.Mundo.UI
             float Valor(Func<SquadMeleeData, float> m, Func<SquadRangedData, float> a) => d.meleeData != null ? m(d.meleeData) : r != null ? a(r) : 0;
             v.Add(Seccion("Básicos"));
             v.Add(Fila("vida", "Vida", d.baseHealth.ToString()));
-            v.Add(Fila("hombres", "Hombres", $"{s.Cantidad}/{TopeDe(s)}"));
+            v.Add(Fila("hombres", "Hombres", hombres));
             v.Add(Fila("velocidad", "Velocidad", N(d.baseSpeed)));
-            v.Add(Fila("liderazgo", "Liderazgo", (LiderazgoDe(s.TropaId) ?? d.leadershipCost).ToString()));
+            v.Add(Fila("liderazgo", "Liderazgo", (LiderazgoDe(tropaId) ?? d.leadershipCost).ToString()));
             v.Add(Fila("alcance", "Alcance", r != null ? N(r.range) : "-"));
             v.Add(Fila("municion", "Munición", r != null ? r.ammo.ToString() : "-"));
             v.Add(Seccion("Ataque"));
@@ -1024,14 +1068,15 @@ namespace ConquestTactics.Mundo.UI
                 b.EnableInClassList("activo", elegida == i);
                 var (nombre, tier, rareza) = FichaDeObjeto(pieza);
                 b.AddToClassList("equipo-rareza-" + tier);
-                var imagen = IconosDelMundo.Icono("recurso", ImagenDeObjeto(pieza), 34);
+                var imagen = ImagenDe(pieza, 34);
                 if (imagen != null) b.Add(imagen);
                 var linea = Dialogo.Caja("equipo-linea");
                 linea.style.backgroundColor = InventoryUtils.GetRarityColor(rareza);
                 b.Add(linea);
                 if (pieza.Cantidad > 1) b.Add(Dialogo.Texto(pieza.Cantidad.ToString(), "bienes-casilla-cantidad"));
                 var stats = string.Join(", ", pieza.Estadisticas.Select(x => $"{x.Nombre} {x.Valor}"));
-                b.tooltip = $"{nombre}{(pieza.Cantidad > 1 ? $" ×{pieza.Cantidad}" : "")} · {rareza} (tier {tier}){(stats.Length > 0 ? " · " + stats : "")}";
+                var estaPieza = pieza;
+                ConFicha(b, () => estaPieza);
                 rejilla.Add(b);
             }
             if (elegida >= 0 && porCasilla.TryGetValue(elegida, out var sel))
@@ -1039,6 +1084,20 @@ namespace ConquestTactics.Mundo.UI
                 var barra = Dialogo.Caja("bienes-elegido");
                 barra.name = "elegido-" + clave;
                 barra.Add(Dialogo.Texto($"{FichaDeObjeto(sel).nombre}{(sel.Cantidad > 1 ? $" ×{sel.Cantidad}" : "")}", "bienes-elegido-nombre"));
+                // Desde la mochila: ponérselo (si va en un hueco y aquí se puede) y usarlo (consumibles y medallas).
+                var huecoDeLaPieza = (string)FichaDelMotor(sel.ItemDefinitionId)?["hueco"];
+                if (clave == "mochila" && huecoDeLaPieza != null && EquipoAMano(h))
+                {
+                    Button equipar = null;
+                    equipar = Dialogo.Boton("Equipar", "boton-secundario base-boton-fila", async () =>
+                    {
+                        objetoElegido = "";
+                        await OrdenDelPanel(new Orden { EquiparObjeto = new OrdenEquiparObjeto { Casilla = (uint)elegida } }, error, RepintarSiCambia, equipar);
+                    });
+                    equipar.name = "equipar-elegido";
+                    barra.Add(equipar);
+                }
+                if (clave == "mochila") BotonesDeUso(barra, sel, h, error);
                 if (DentroDeSuResidencia(h))
                 {
                     Button mover = null;
@@ -1243,6 +1302,9 @@ namespace ConquestTactics.Mundo.UI
         Transform modelo;
         Animator animador;
         public RenderTexture Imagen { get; private set; }
+        public Transform Modelo => modelo;
+        /// <summary>Con qué se vistió (para volver a vestirlo si cambia lo que lleva puesto).</summary>
+        public string VestidoCon;
 
         public static ModeloDeLaBase Crear(GameObject prefab, string nombreDeCapa, Action<Transform> preparar, float distancia)
         {

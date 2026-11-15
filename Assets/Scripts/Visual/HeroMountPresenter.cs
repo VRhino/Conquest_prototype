@@ -165,6 +165,7 @@ namespace ConquestTactics.Visual
             _horse.transform.localPosition = Vector3.zero;
             _horse.transform.localRotation = Quaternion.identity;
             _horse.SetReins(heroClass);
+            _horse.SetCoat(em.GetComponentData<HeroMountComponent>(_hero).coat);
             // Upright and facing the horse's front with the horse at rest (its bones have not been animated yet).
             _seatCorrection = _horse.Saddle != null ? Quaternion.Inverse(_horse.Saddle.rotation) * _horse.transform.rotation : Quaternion.identity;
 

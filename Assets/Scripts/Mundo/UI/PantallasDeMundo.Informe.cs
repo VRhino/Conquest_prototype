@@ -130,7 +130,7 @@ namespace ConquestTactics.Mundo.UI
                 if (b != null && b.Estado == EstadoBatalla.BatallaAplicada) AnotarInforme(b);
             }
             Refrescar();
-            panelInforme.schedule.Execute(Refrescar).Every(500);
+            RepintarCada(panelInforme, 500, Refrescar);
         }
 
         void CerrarInforme()

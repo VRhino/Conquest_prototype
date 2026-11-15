@@ -277,6 +277,7 @@ public static class CavalrySetup
             visual.Configure(horse, Child(root, "Saddle").transform, Child(root, "Horse_Reins_Hand"), Child(root, "Horse_Reins_Neck"),
                 Load<RuntimeAnimatorController>(HeroRiderController("Sword")), Load<RuntimeAnimatorController>(HeroRiderController("Lancer")),
                 Load<RuntimeAnimatorController>(HeroRiderController("Archer")));
+            visual.SetCoats(new[] { "Bay", "Black", "Chestnut", "Dun", "Pinto" }.Select(c => Load<Material>($"{HorseFolder}/Materials/Horse_{c}.mat")).ToArray());
             Directory.CreateDirectory(Path.GetDirectoryName(HeroHorsePrefab));
             AssetDatabase.Refresh();
             PrefabUtility.SaveAsPrefabAsset(root, HeroHorsePrefab);

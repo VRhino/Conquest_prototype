@@ -25,13 +25,7 @@ namespace ConquestTactics.Net
         public static bool TropaConocida(string tropaId) => SquadDataService.GetSquadById(tropaId) != null;
 
         /// <summary>ponytail: las clases del motor que tienen pariente en Conquest; las demás, espada y escudo. Lo de verdad es el punto 3 del plan de Conquest.</summary>
-        public static string Clase(string claseDelMotor) => claseDelMotor switch
-        {
-            "lanza_escudo_redondo" => nameof(HeroClass.Spear),
-            "arco_lanza" => nameof(HeroClass.Bow),
-            "hacha_dos_manos" => nameof(HeroClass.TwoHandedSword),
-            _ => nameof(HeroClass.SwordAndShield),
-        };
+        public static string Clase(string claseDelMotor) => VestidoDelMotor.ClaseDeConquest(claseDelMotor);
 
         public static BattleData Montar(BatallaDeTicket batalla, out int soldados)
         {
@@ -161,17 +155,23 @@ namespace ConquestTactics.Net
             var a = delMotor.Avatar;
             datos.avatar = new AvatarParts { headId = a?.CabezaId ?? "", hairId = a?.PeloId ?? "", beardId = a?.BarbaId ?? "", eyebrowId = a?.CejasId ?? "" };
             datos.gender = delMotor.Femenino ? "Female" : "Male";
-            var arma = datos.equipment?.weapon;
-            datos.equipment = new Equipment { weapon = arma };
-            var tipo = TipoDeArmadura(delMotor.Equipamiento?.Torso?.ItemDefinitionId);
-            if (tipo != null)
+            // Lo que lleva puesto, pieza a pieza (paso 6, tanda 2): cada armadura, la pieza de Conquest de su hueco y su peso; el arma, la de su clase
+            // (ya no la de la reserva de prueba). Un hueco vacío, vacío. Solo el aspecto: las cifras de combate son del hilo de tropas.
+            var e = delMotor.Equipamiento;
+            datos.equipment = new Equipment
             {
-                datos.equipment.torso = ItemInstanceService.CreateItem($"Tor{tipo}ADef");
-                datos.equipment.gloves = ItemInstanceService.CreateItem($"Glo{tipo}ADef");
-                datos.equipment.pants = ItemInstanceService.CreateItem($"Pan{tipo}ADef");
-                datos.equipment.boots = ItemInstanceService.CreateItem($"Boot{tipo}ADef");
-            }
+                weapon = ItemInstanceService.CreateItem(VestidoDelMotor.ArmaDelMotor(delMotor.ClassDefinitionId)),
+                helmet = PiezaDeBatalla(e?.Casco),
+                torso = PiezaDeBatalla(e?.Torso), gloves = PiezaDeBatalla(e?.Guantes), pants = PiezaDeBatalla(e?.Pantalones), boots = PiezaDeBatalla(e?.Botas),
+                mount = string.IsNullOrEmpty(e?.Montura?.ItemDefinitionId) ? null : new InventoryItem { itemId = e.Montura.ItemDefinitionId },
+            };
             return datos;
+        }
+
+        static InventoryItem PiezaDeBatalla(BronzeAge.Contract.V1.ItemInstancia p)
+        {
+            var id = VestidoDelMotor.PiezaDeConquest(p?.ItemDefinitionId);
+            return id == null ? null : ItemInstanceService.CreateItem(id);
         }
 
         /// <summary>

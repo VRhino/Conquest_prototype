@@ -37,9 +37,24 @@ public sealed class InteriorDelMotor : MonoBehaviour
     const string Suelo = "#93c26b", Calle = "#b39b72", Empalizada = "#6b4a29";
     const float AltoEmpalizada = 3f;
 
+    /// <summary>La muralla de una plaza por nivel (`ciudad3d/murallas.ts`): empalizada de madera, adobe y ciclópea; lo comprometido sin levantar, la zanja.</summary>
+    static readonly string[] ColorMuralla = { "#6b4a29", "#6b4a29", "#c4a57a", "#9a958c" };
+    const string Zanja = "#5a4630", EnCola = "#8f8a80", EnObra = "#b5b0a5";
+    const float AltoMuro = 4f, AltoTorre = 6f;
+
     Scene escena;
-    GameObject recinto;
+    GameObject recinto, raiz;
     bool montado, panelAbierto;
+    int versionMontada;
+    /// <summary>Dónde quedó la puerta en el primer montaje: el héroe y la planta en unidades locales. Al volver a montar (cambió la planta) no se mueve.</summary>
+    Vector3 origen;
+    double puertaX, puertaY;
+    /// <summary>Lo alto de cada edificio por su id, para los carteles de obra.</summary>
+    readonly Dictionary<string, Vector3> altoDe = new Dictionary<string, Vector3>();
+    /// <summary>La pieza de cada edificio por su id, y la resaltada ahora (la de la ficha abierta).</summary>
+    readonly Dictionary<string, Renderer> piezaDe = new Dictionary<string, Renderer>();
+    string resaltado;
+    static readonly Color Oro = new Color32(0xff, 0xd2, 0x4a, 0xff);
 
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -82,12 +97,43 @@ public sealed class InteriorDelMotor : MonoBehaviour
             DialogueUIState.IsDialogueOpen = panelAbierto;
             SceneTransitionService.ApplyCursorState(panelAbierto || BattleCommandInput.PointerMode);
         }
-        if (montado) return;
+        if (montado)
+        {
+            // La planta cambió (una obra acaba, otro edificio entra en la cola): se vuelve a montar en el mismo sitio.
+            if (interior.Version != versionMontada) { versionMontada = interior.Version; Montar(interior); resaltado = null; }
+            if (interior.Elegido != resaltado) Resaltar(interior.Elegido);
+            return;
+        }
         var heroe = FindObjectsByType<EntityVisualSync>(FindObjectsSortMode.None).FirstOrDefault(v => v.IsLocalHero);
         if (heroe == null) return;
-        Montar(interior, heroe.transform.position);
+        origen = heroe.transform.position;
+        versionMontada = interior.Version;
+        Montar(interior);
+        interior.EnPantalla = EnPantalla;
         montado = true;
         interior.HeroeDentro = true;
+    }
+
+    /// <summary>Lo alto de un edificio en la pantalla (de 0 a 1, desde arriba a la izquierda), si está delante de la cámara.</summary>
+    (float x, float y)? EnPantalla(string id)
+    {
+        var cam = Camera.main;
+        if (cam == null || id == null || !altoDe.TryGetValue(id, out var p)) return null;
+        var s = cam.WorldToScreenPoint(p);
+        if (s.z <= 0) return null;
+        return (s.x / cam.pixelWidth, 1 - s.y / cam.pixelHeight);
+    }
+
+    /// <summary>El edificio elegido, en oro (el prototipo lo rodea con su contorno dorado): en su copia, con un bloque de propiedades; el material
+    /// compartido no se toca.</summary>
+    void Resaltar(string id)
+    {
+        if (resaltado != null && piezaDe.TryGetValue(resaltado, out var antes) && antes != null) antes.SetPropertyBlock(null);
+        resaltado = id;
+        if (id == null || !piezaDe.TryGetValue(id, out var r) || r == null) return;
+        var bloque = new MaterialPropertyBlock();
+        bloque.SetColor("_BaseColor", Color.Lerp(r.sharedMaterial.GetColor("_BaseColor"), Oro, 0.55f));
+        r.SetPropertyBlock(bloque);
     }
 
     void OnDestroy()
@@ -103,52 +149,87 @@ public sealed class InteriorDelMotor : MonoBehaviour
         mundo.EntityManager.DestroyEntity(heroes);
     }
 
-    /// <summary>El campamento con cuadros desde la planta: el suelo, las calles, cada edificio con su huella y su color (los del plano de
-    /// BronzeAgeClient) y la empalizada con su hueco en la puerta. Todo con colisión salvo lo plano. La puerta queda donde está el héroe.</summary>
-    void Montar(SelectorDePersonaje.InteriorParaVer interior, Vector3 heroe)
+    /// <summary>El interior con cuadros desde la planta: el suelo, las calles, cada edificio con su huella y su color (los del plano de
+    /// BronzeAgeClient), la empalizada del campamento o la muralla de la plaza celda a celda, y el hueco de la puerta. Todo con colisión salvo lo
+    /// plano. La puerta queda donde estaba el héroe al entrar. En una plaza (paso 7), lo que está en cola es una losa gris y lo que está en obra, una
+    /// caja gris más baja; las torres, más altas que el muro; lo comprometido sin levantar, la zanja. Al cambiar la planta se rehace igual.</summary>
+    void Montar(SelectorDePersonaje.InteriorParaVer interior)
     {
-        var raiz = new GameObject("Campamento del motor");
+        if (raiz != null) Destroy(raiz);
+        altoDe.Clear();
+        piezaDe.Clear();
+        raiz = new GameObject(interior.Edificios.Any(e => e.Id != null) ? "Plaza del motor" : "Campamento del motor");
         SceneManager.MoveGameObjectToScene(raiz, escena);
-        var todo = interior.Edificios.Concat(interior.Calles).Concat(interior.Empalizada).Concat(interior.Puerta).ToList();
-        if (todo.Count == 0) { Debug.LogWarning("[Interior] el campamento no trae planta: queda el suelo del feudo."); return; }
-        double puertaX = interior.Puerta.Count > 0 ? interior.Puerta.Average(r => r.X) : 0;
-        double puertaY = interior.Puerta.Count > 0 ? interior.Puerta.Average(r => r.Y) : todo.Max(r => r.Y + r.Alto / 2);
-        Vector3 A(double x, double y, float alto) =>
-            heroe + new Vector3((float)(x - puertaX) * MetrosPorUnidadLocal, alto, -(float)(y - puertaY) * MetrosPorUnidadLocal);
-
+        var todo = interior.Edificios.Concat(interior.Calles).Concat(interior.Empalizada).Concat(interior.Puerta).Concat(interior.Muralla).ToList();
+        if (todo.Count == 0) { Debug.LogWarning("[Interior] el sitio no trae planta: queda el suelo del feudo."); return; }
         double minX = todo.Min(r => r.X - r.Ancho / 2), maxX = todo.Max(r => r.X + r.Ancho / 2);
         double minY = todo.Min(r => r.Y - r.Alto / 2), maxY = todo.Max(r => r.Y + r.Alto / 2);
+        if (!montado)
+        {
+            puertaX = interior.Puerta.Count > 0 ? interior.Puerta.Average(r => r.X) : 0;
+            puertaY = interior.Puerta.Count > 0 ? interior.Puerta.Average(r => r.Y) : maxY;
+        }
+        Vector3 A(double x, double y, float alto) =>
+            origen + new Vector3((float)(x - puertaX) * MetrosPorUnidadLocal, alto, -(float)(y - puertaY) * MetrosPorUnidadLocal);
+
         const double margen = 30;
         Caja(raiz, "Suelo", A((minX + maxX) / 2, (minY + maxY) / 2, -0.25f),
             new Vector3((float)(maxX - minX + 2 * margen), 0.5f, (float)(maxY - minY + 2 * margen)) * MetrosPorUnidadLocal, Suelo, true);
         foreach (var c in interior.Calles) Plano(raiz, "Calle", c, A, 0.02f, Calle);
         foreach (var e in interior.Edificios)
         {
-            var (color, alto) = Piezas.TryGetValue(e.Tipo, out var p) ? p : ("#a89a80", 3f);
-            if (alto <= 0) Plano(raiz, e.Tipo, e, A, 0.04f, color);
-            else Caja(raiz, e.Tipo, A(e.X, e.Y, alto / 2), new Vector3((float)e.Ancho * MetrosPorUnidadLocal, alto, (float)e.Alto * MetrosPorUnidadLocal), color, true);
+            var (color, alto) = Piezas.TryGetValue(e.Tipo, out var p) ? p : (Edificios.Color(e.Tipo), Edificios.Alto(e.Tipo));
+            GameObject pieza;
+            if (e.Estado == "cola") { pieza = Plano(raiz, e.Tipo + " (en cola)", e, A, 0.08f, EnCola); alto = 0.08f; }
+            else if (e.Estado == "obra" && alto > 0) { alto *= 0.45f; pieza = Caja(raiz, e.Tipo + " (en obra)", A(e.X, e.Y, alto / 2), Tamano(e, alto), EnObra, true); }
+            else if (alto <= 0) pieza = Plano(raiz, e.Tipo, e, A, 0.04f, e.Estado == "obra" ? EnObra : color);
+            else pieza = Caja(raiz, e.Tipo, A(e.X, e.Y, alto / 2), Tamano(e, alto), color, true);
+            if (e.Id == null) continue;
+            altoDe[e.Id] = A(e.X, e.Y, Mathf.Max(alto, 0.5f) + 1f);
+            piezaDe[e.Id] = pieza.GetComponent<Renderer>();
         }
         foreach (var r in interior.Empalizada)
-            Caja(raiz, "Empalizada", A(r.X, r.Y, AltoEmpalizada / 2), new Vector3((float)r.Ancho * MetrosPorUnidadLocal, AltoEmpalizada, (float)r.Alto * MetrosPorUnidadLocal), Empalizada, true);
+            Caja(raiz, "Empalizada", A(r.X, r.Y, AltoEmpalizada / 2), Tamano(r, AltoEmpalizada), Empalizada, true);
+        foreach (var r in interior.Muralla)
+        {
+            var color = ColorMuralla[Mathf.Clamp(r.Nivel, 0, ColorMuralla.Length - 1)];
+            if (r.Estado == "plan") Plano(raiz, "Muralla (sin levantar)", r, A, 0.05f, Zanja);
+            else if (r.Tipo == "puerta") Plano(raiz, "Puerta de la muralla", r, A, 0.03f, Calle);
+            else if (r.Tipo == "torre")
+                Caja(raiz, "Torre", A(r.X, r.Y, AltoTorre / 2), new Vector3((float)r.Ancho * 1.2f, AltoTorre, (float)r.Alto * 1.2f) * MetrosPorUnidadLocal, color, true);
+            else Caja(raiz, "Muralla", A(r.X, r.Y, AltoMuro / 2), Tamano(r, AltoMuro), color, true);
+        }
         // La puerta, sin colisión: por ahí se sale (la salida de verdad es la ventana «Salir al mundo»).
         foreach (var r in interior.Puerta) Plano(raiz, "Puerta", r, A, 0.03f, Calle);
         // Las zonas donde se interactúa, como el herrero de Conquest: un collider disparador alrededor de la pieza, la tecla F y un cartel.
         foreach (var e in interior.Edificios.Where(x => x.Zona != null))
-            Zona(raiz, e.Zona, A(e.X, e.Y, 1.5f), new Vector3((float)e.Ancho + 5, 3, (float)e.Alto + 5) * MetrosPorUnidadLocal);
-        // La de la puerta, justo fuera de la empalizada (el héroe aparece en el hueco: hay que salir para que se abra).
+            Zona(raiz, e.Zona, A(e.X, e.Y, 1.5f), new Vector3((float)e.Ancho + 5, 3, (float)e.Alto + 5) * MetrosPorUnidadLocal, new Vector3((float)e.Ancho, 3, (float)e.Alto) * MetrosPorUnidadLocal);
+        // La de la puerta, justo fuera (el héroe aparece en el hueco: hay que salir para que se abra). Fuera es hacia donde cae la puerta desde
+        // el centro de todo, por el lado que más pesa.
+        double dx = puertaX - (minX + maxX) / 2, dy = puertaY - (minY + maxY) / 2;
+        var (fx, fy) = System.Math.Abs(dx) > System.Math.Abs(dy) ? (System.Math.Sign(dx), 0) : (0, dy == 0 ? 1 : System.Math.Sign(dy));
         foreach (var r in interior.Puerta)
-            Zona(raiz, "puerta", A(r.X, r.Y + r.Alto / 2 + 3, 1.5f), new Vector3((float)r.Ancho + 2, 3, 4) * MetrosPorUnidadLocal);
+        {
+            var fuera = (fx != 0 ? r.Ancho : r.Alto) / 2 + 3;
+            var ancho = (fx != 0 ? r.Alto : r.Ancho) + 2;
+            Zona(raiz, "puerta", A(r.X + fx * fuera, r.Y + fy * fuera, 1.5f), (fx != 0 ? new Vector3(4, 3, (float)ancho) : new Vector3((float)ancho, 3, 4)) * MetrosPorUnidadLocal);
+        }
         if (recinto != null && !ConRecintoDelFeudo) recinto.SetActive(false);
-        Debug.Log($"[Interior] campamento montado: {interior.Edificios.Count} piezas, {interior.Calles.Count} calles, {interior.Empalizada.Count} tramos de empalizada; puerta en ({puertaX:0.#}, {puertaY:0.#}) u.l.");
+        Debug.Log($"[Interior] montado: {interior.Edificios.Count} piezas, {interior.Calles.Count} calles, {interior.Empalizada.Count} tramos de empalizada, {interior.Muralla.Count} celdas de muralla; puerta en ({puertaX:0.#}, {puertaY:0.#}) u.l.");
     }
 
-    static void Plano(GameObject raiz, string nombre, SelectorDePersonaje.PiezaDePlanta r, System.Func<double, double, float, Vector3> A, float alto, string color)
+    static Vector3 Tamano(SelectorDePersonaje.PiezaDePlanta r, float alto) => new Vector3((float)r.Ancho, alto, (float)r.Alto) * MetrosPorUnidadLocal;
+
+    static GameObject Plano(GameObject raiz, string nombre, SelectorDePersonaje.PiezaDePlanta r, System.Func<double, double, float, Vector3> A, float alto, string color)
     {
         var go = Caja(raiz, nombre, A(r.X, r.Y, alto / 2), new Vector3((float)r.Ancho * MetrosPorUnidadLocal, alto, (float)r.Alto * MetrosPorUnidadLocal), color, false);
         go.GetComponent<Renderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        return go;
     }
 
-    static void Zona(GameObject raiz, string id, Vector3 centro, Vector3 tamano)
+    /// <summary>Una zona: el disparador (`tamano`) y la huella de lo que la da (`huella`; sin ella, la propia zona), que decide cuál manda si
+    /// el héroe está en varias.</summary>
+    static void Zona(GameObject raiz, string id, Vector3 centro, Vector3 tamano, Vector3? huella = null)
     {
         var go = new GameObject("Zona " + id);
         go.transform.SetParent(raiz.transform, false);
@@ -156,7 +237,9 @@ public sealed class InteriorDelMotor : MonoBehaviour
         var caja = go.AddComponent<BoxCollider>();
         caja.isTrigger = true;
         caja.size = tamano;
-        go.AddComponent<ZonaDelInterior>().Id = id;
+        var zona = go.AddComponent<ZonaDelInterior>();
+        zona.Id = id;
+        zona.Huella = new Bounds(centro, huella ?? tamano);
     }
 
     static readonly Dictionary<string, Material> materiales = new Dictionary<string, Material>();
@@ -189,6 +272,8 @@ public sealed class InteriorDelMotor : MonoBehaviour
 public sealed class ZonaDelInterior : MonoBehaviour
 {
     public string Id;
+    /// <summary>La huella de lo que da la zona (el edificio): manda la zona de la huella más cercana al héroe.</summary>
+    public Bounds Huella;
     EntityVisualSync heroe;
 
     static EntityVisualSync HeroeLocal(Collider otro)
@@ -197,25 +282,41 @@ public sealed class ZonaDelInterior : MonoBehaviour
         return vs != null && vs.IsLocalHero ? vs : null;
     }
 
+    /// <summary>Las zonas donde está ahora el héroe. En una plaza los edificios están juntos y sus zonas se pisan: manda la más cercana.</summary>
+    static readonly List<ZonaDelInterior> conHeroe = new List<ZonaDelInterior>();
+
     void OnTriggerEnter(Collider otro)
     {
         var vs = HeroeLocal(otro);
         if (vs == null || SelectorDePersonaje.Interior == null) return;
         heroe = vs;
-        SelectorDePersonaje.Interior.ZonaCercana = Id;
+        if (!conHeroe.Contains(this)) conHeroe.Add(this);
     }
 
     void OnTriggerExit(Collider otro)
     {
         if (HeroeLocal(otro) == null) return;
+        Salir();
+    }
+
+    // Al rehacer la planta las zonas se destruyen sin avisar de la salida.
+    void OnDestroy() => Salir();
+
+    void Salir()
+    {
         heroe = null;
+        conHeroe.Remove(this);
         if (SelectorDePersonaje.Interior != null && SelectorDePersonaje.Interior.ZonaCercana == Id) SelectorDePersonaje.Interior.ZonaCercana = null;
     }
 
     void Update()
     {
         var interior = SelectorDePersonaje.Interior;
-        if (heroe == null || interior == null || interior.PanelAbierto || interior.ZonaCercana != Id) return;
+        if (heroe == null || interior == null) return;
+        var donde = heroe.transform.position;
+        var cercana = conHeroe.Where(z => z != null).OrderBy(z => z.Huella.SqrDistance(donde)).ThenBy(z => (z.transform.position - donde).sqrMagnitude).FirstOrDefault();
+        if (cercana == this) interior.ZonaCercana = Id;
+        if (interior.PanelAbierto || interior.ZonaCercana != Id) return;
         var mundo = World.DefaultGameObjectInjectionWorld;
         if (mundo == null || !mundo.IsCreated) return;
         var entidad = heroe.GetHeroEntity();

@@ -74,6 +74,7 @@ const GLIFOS = {
   reclutas: '🧑', // el chip de reclutas de la tropa del campamento (ui/pantallaCampamento.ts)
   aviso: '⚠', // los errores de acceso y partidas (`.error-banner`)
   monedas: '💰', escudo: '🛡', sitio: '📍', campamento: '🏕', casa: '🏠', // la Base personal (ui/basePersonal.ts)
+  nobleza: '👑', mantenimiento: '🛠', espera: '⏳', // el HUD de la plaza (ui/hudPlaza.ts, ui/panelCentro.ts)
 };
 // Los símbolos del prototipo que no son emoji: no están en Twemoji ni en Inter o Cinzel (saldrían como cuadros), así que se dibujan aquí,
 // en 32×32 y en blanco para teñirlos como los dibujos a mano (el prototipo los pinta en el color del texto, \`--oro\` en la lista).
@@ -97,6 +98,25 @@ for (const [id, [simbolo, dibujo]] of Object.entries(SIMBOLOS)) {
 // bordes discontinuos, así que va de fondo, a la medida del hueco (110 × 174) y en blanco para teñirlo.
 escribir('simbolo', 'hueco', '<svg xmlns="http://www.w3.org/2000/svg" width="110" height="174" viewBox="0 0 110 174"><rect x="1" y="1" width="108" height="172" rx="3" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="6 4"/></svg>');
 simbolos.hueco = '┄';
+// La casa (resides aquí o no) y la corona (capital) del blasón de la plaza (`ui/hudPlaza.ts`, `CASA` y `CORONA`), leídas del fuente, en blanco.
+const fuenteHud = readFileSync(join(prototipo, 'src/ui/hudPlaza.ts'), 'utf8');
+for (const [id, constante] of [['residencia', 'CASA'], ['capital', 'CORONA']]) {
+  const svg = fuenteHud.match(new RegExp(`const ${constante} = '([^']*)'`))[1];
+  escribir('simbolo', id, svg.replace(/currentColor/g, '#ffffff').replace(/ aria-hidden="true"/g, '').replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+  simbolos[id] = constante === 'CASA' ? '⌂' : '♛';
+}
+// Los botones del riel de la plaza (`ui/hudPlaza.ts`, tabla `ICONO_RIEL`: Construcción, Gobierno…), leídos del fuente con su trazo (`T`) y su
+// relleno (`R`), teñibles como los edificios.
+const inicioRiel = fuenteHud.indexOf('export const ICONO_RIEL');
+const tablaRiel = fuenteHud.slice(inicioRiel, fuenteHud.indexOf('} as const', inicioRiel));
+const trazoT = fuenteHud.match(/const T = '([^']*)'/)[1], rellenoR = fuenteHud.match(/const R = '([^']*)'/)[1];
+const riel = Object.fromEntries([...tablaRiel.matchAll(/^\s{2}([a-zA-Z]+): `([^`]*)`/gm)].map((m) => [m[1], m[2].replace(/\$\{T\}/g, trazoT).replace(/\$\{R\}/g, rellenoR)]));
+for (const [id, svg] of Object.entries(riel)) escribir('riel', id, tenible(svg));
+// El candado de lo bloqueado (🔒 en las recetas y la reserva del prototipo): no es de Twemoji bajado, se dibuja aquí.
+{
+  escribir('simbolo', 'candado', '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M10 14v-4a6 6 0 0 1 12 0v4" fill="none" stroke="#ffffff" stroke-width="2.8"/><path d="M7 14h18v14H7Z" fill="#ffffff"/></svg>');
+  simbolos.candado = '🔒';
+}
 
 // Los iconos de la barra del jugador (`ui/barraJugador.ts`, tabla `ICONO`: el yelmo de la Base, la campana de Avisos…), leídos del fuente
 // como los edificios, en el mismo trazo (24×24, 1,7) y en blanco para teñirlos. `menu` no es del prototipo: el menú de la barra de Conquest.
@@ -132,7 +152,7 @@ if (conEmoji && !existsSync(join(destino, 'recurso', 'LICENSE-GRAPHICS.txt'))) {
 
 const autores = Object.fromEntries(Object.entries(datos.mapa).map(([id, i]) => [id, { autor: i.autor, icono: i.icono }]));
 writeFileSync(join(destino, 'iconos.json'), JSON.stringify({
-  edificio: Object.keys(datos.edificio), tropa: Object.keys(datos.tropa), parte: Object.keys(datos.parte), mapa: autores, recurso: recursos, glifo: glifos, simbolo: simbolos, barra: Object.keys(barra),
+  edificio: Object.keys(datos.edificio), tropa: Object.keys(datos.tropa), parte: Object.keys(datos.parte), mapa: autores, recurso: recursos, glifo: glifos, simbolo: simbolos, barra: Object.keys(barra), riel: Object.keys(riel),
 }, null, 1));
 // Los créditos, junto a los iconos (las licencias obligan a citar a los autores).
 const porAutor = {};

@@ -291,6 +291,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var antes = new System.Collections.Generic.Dictionary<Entity, Vector3>();
             int vistos = 0, tiesos = 0;
             string ejemplo = null;
+            var pelajes = new System.Collections.Generic.HashSet<string>();
             var fin = Time.realtimeSinceStartup + segundos;
             while (Time.realtimeSinceStartup < fin && vistos < 60)
             {
@@ -305,12 +306,17 @@ namespace ConquestTactics.Mundo.UI.Tests
                         var caballo = figura.GetComponentInChildren<ConquestTactics.Visual.HeroHorseVisual>();
                         float paso = caballo != null && caballo.Animator != null ? caballo.Animator.GetFloat(AnimationHashes.MountGaitBlend) : -1f;
                         vistos++;
+                        // El pelaje de su montura del motor (paso 6, tanda 2): con montura, el caballo ya no lleva el gris del prefab.
+                        var pelaje = em.GetComponentData<HeroMountComponent>(e).coat;
+                        var piel = caballo != null ? caballo.GetComponentInChildren<SkinnedMeshRenderer>()?.sharedMaterial?.name : null;
+                        pelajes.Add($"{figura.name}: pelaje {pelaje} ({piel})");
+                        if (pelaje != 0) Assert.AreNotEqual("Horse_Grey", piel, figura.name + ": el pelaje de su montura");
                         if (paso <= 0.01f) { tiesos++; ejemplo ??= $"{figura.name}: se movió {(donde - previo).magnitude:0.00} m en 0,25 s con paso {paso:0.00} (caballo {(caballo != null ? "sí" : "no")})"; }
                     }
                     antes[e] = donde;
                 }
             }
-            Debug.Log($"[Prueba] caballos: {vistos} muestras de héroes montados andando, {tiesos} sin paso. {ejemplo}");
+            Debug.Log($"[Prueba] caballos: {vistos} muestras de héroes montados andando, {tiesos} sin paso. {ejemplo} Pelajes: {string.Join("; ", pelajes)}");
             Assert.AreEqual(0, tiesos, "un caballo que anda lleva el paso en su Animator: " + ejemplo);
         }
 
@@ -319,6 +325,10 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// (la prueba lo tiene en una textura), el puntero va al centro del elemento y hace clic. Así se caza un ratón bloqueado o un panel
         /// que no recibe el puntero, que `Pulsar` (por dentro) no ve.
         /// </summary>
+        /// <summary>La ventana del editor, al frente: sin el foco, el ratón de la prueba no llega al panel (la batalla corre sin -batchmode, en el
+        /// escritorio de quien use el PC).</summary>
+        [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
+
         IEnumerator ClicUITK(VisualElement raiz, VisualElement e)
         {
             Assert.IsNotNull(e, "el elemento del clic");
@@ -332,6 +342,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
             try
             {
+                if (Application.platform == RuntimePlatform.WindowsEditor) SetForegroundWindow(System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle);
                 raton.MakeCurrent();
                 doc.panelSettings.targetTexture = null;
                 yield return null;

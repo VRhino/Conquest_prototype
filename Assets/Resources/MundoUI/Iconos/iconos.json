@@ -433,6 +433,18 @@
   "casa": {
    "glifo": "🏠",
    "codigo": "1f3e0"
+  },
+  "nobleza": {
+   "glifo": "👑",
+   "codigo": "1f451"
+  },
+  "mantenimiento": {
+   "glifo": "🛠",
+   "codigo": "1f6e0"
+  },
+  "espera": {
+   "glifo": "⏳",
+   "codigo": "23f3"
   }
  },
  "simbolo": {
@@ -445,7 +457,10 @@
   "estrella": "✦",
   "formacion": "⛨",
   "corona": "♛",
-  "hueco": "┄"
+  "hueco": "┄",
+  "residencia": "⌂",
+  "capital": "♛",
+  "candado": "🔒"
  },
  "barra": [
   "base",
@@ -456,5 +471,12 @@
   "mapa",
   "asentamiento",
   "menu"
+ ],
+ "riel": [
+  "construccion",
+  "territorio",
+  "gobierno",
+  "ejercito",
+  "aedas"
  ]
 }

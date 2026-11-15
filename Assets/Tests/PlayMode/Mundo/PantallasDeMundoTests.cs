@@ -699,29 +699,79 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q("panel-mercado").Q<Button>("cerrar"));
                 yield return null;
 
-                // La tropa: pedir prestada una de leva comunal y verla; reclutar (o su motivo si no llega).
+                // La tropa (tanda 3 del paso 6): el árbol de reclutamiento entero, con el ratón de verdad. Pasar el ratón por una carta ilumina su
+                // camino y saca su ficha corta; un clic abre su ficha a la derecha; «Pedir prestada» y «Reclutar» desde ella.
                 yield return AbrirZona("militar", "panel-tropa");
-                yield return Capturar("24_tropa");
-                yield return EnTamanos(raiz, "24_tropa", () => DentroDelMarco(raiz.Q("panel-tropa"), "la tropa"));
-                var pedir = raiz.Q("panel-tropa").Q<Button>("pedir-milicia_lanceros");
-                Assert.IsNotNull(pedir, "se puede pedir prestada la milicia de lanceros");
-                Pulsar(pedir);
-                yield return Esperar(() => Yo().EscuadronesIds.Count > 0, 10, "la escuadra prestada");
-                yield return Esperar(() => raiz.Q("panel-tropa")?.Q("tropa-milicia_lanceros")?.Q<Button>("pedir-milicia_lanceros") == null, 5, "la ficha repintada");
-                Assert.IsTrue(raiz.Q("panel-tropa").Q("tropa-milicia_lanceros").Query<Label>().ToList().Any(l => l.text.Contains("prestada")), "la milicia, prestada");
-                yield return Capturar("24b_tropa_prestada");
-                var reclutar = raiz.Q("panel-tropa").Query<Button>().ToList().FirstOrDefault(b => b.name.StartsWith("reclutar-") && b.enabledSelf);
-                if (reclutar != null)
+                var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
+                raton.MakeCurrent();
+                try
                 {
-                    var n = Yo().EscuadronesIds.Count;
-                    Pulsar(reclutar);
-                    yield return Esperar(() => Yo().EscuadronesIds.Count > n, 10, "la escuadra reclutada");
-                    yield return new WaitForSecondsRealtime(0.6f);
-                    yield return Capturar("24c_tropa_reclutada");
+                    VisualElement Tropa() => raiz.Q("panel-tropa");
+                    yield return Esperar(() => Tropa()?.Q("recl-tablero") != null, 5, "el árbol");
+                    var arbol = Tropa().Q("recl-tablero");
+                    var cartas = arbol.Query<Button>().ToList().Where(x => x.name.StartsWith("nodo-")).ToList();
+                    Debug.Log($"[Prueba] árbol: {cartas.Count} tropas; " + string.Join(", ", cartas.Select(x => x.name.Substring(5) + "=" + new[] { "lista", "tuya", "edificio", "bloqueada", "futura" }.First(x.ClassListContains))));
+                    Assert.GreaterOrEqual(cartas.Count, 30, "el árbol entero");
+                    foreach (var carril in new[] { "centroUrbano", "barracon", "galeriaDeTiro", "caballerizas" }) Assert.IsNotNull(arbol.Q("carril-" + carril), "el carril " + carril);
+                    Assert.IsNotNull(arbol.Q("nodo-milicia_lanceros"), "la milicia en el carril del campamento");
+                    yield return EnTamanos(raiz, "24_tropa", () => DentroDelMarco(Tropa(), "la tropa"));
+                    // Pasar el ratón: la ficha corta y el camino iluminado.
+                    // Una carta a la vista, con camino (la de los espadachines de bronce, o la primera del Barracón que se vea).
+                    var vista = Tropa().Q("recl-marco").worldBound;
+                    var otra = new[] { "nodo-espadachines_bronce", "nodo-espadachines_cobre" }.Select(n => arbol.Q<Button>(n)).FirstOrDefault(x => x != null && vista.Contains(x.worldBound.center))
+                        ?? cartas.First(x => vista.Contains(x.worldBound.center));
+                    yield return MoverRaton(raton, raiz, otra, () => Tropa().Q("recl-tip").resolvedStyle.display == DisplayStyle.Flex && arbol.ClassListContains("activo"));
+                    yield return Capturar("24a_tropa_al_pasar");
+                    // «Ver todas las conexiones».
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("ver-todas"));
+                    yield return Esperar(() => Tropa().Q<Button>("ver-todas").ClassListContains("activo"), 5, "todas las conexiones");
+                    yield return Capturar("24b_tropa_todas");
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("ver-todas"));
+                    // Arrastrar el tablero con el ratón (desde el nombre de un carril, que se queda a la vista) y volver.
+                    float Desplazado() => Tropa().Q<ScrollView>("recl-marco").scrollOffset.x;
+                    var antesX = Desplazado();
+                    yield return ArrastrarUITK(raton, raiz, Tropa().Q("carril-centroUrbano"), -300);
+                    yield return Esperar(() => Desplazado() > antesX + 100, 3, "el tablero arrastrado");
+                    yield return Capturar("24b2_tropa_arrastrada");
+                    yield return ArrastrarUITK(raton, raiz, Tropa().Q("carril-centroUrbano"), 600);
+                    yield return Esperar(() => Desplazado() < 1, 3, "el tablero de vuelta");
+                    // La milicia: su ficha y «Pedir prestada».
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("nodo-milicia_lanceros"));
+                    yield return Esperar(() => Tropa().Q<Button>("pedir-milicia_lanceros") != null, 5, "«Pedir prestada» en la ficha");
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("pedir-milicia_lanceros"));
+                    yield return Esperar(() => Yo().EscuadronesIds.Count > 0, 10, "la escuadra prestada");
+                    yield return Esperar(() => Tropa()?.Q<Label>("estado-milicia_lanceros")?.text.StartsWith("Prestada") == true, 5, "la carta, prestada");
+                    Assert.IsNull(Tropa().Q<Button>("pedir-milicia_lanceros"), "ya no se pide otra vez");
+                    yield return EnTamanos(raiz, "24c_tropa_prestada", () => DentroDelMarco(Tropa(), "la tropa con la prestada"));
+                    // Reclutar lo que ofrece el campamento (o su motivo si no llega).
+                    var lista = Tropa().Query<Button>().ToList().FirstOrDefault(x => x.name.StartsWith("nodo-") && x.Q<Label>("estado-" + x.name.Substring(5))?.text.StartsWith("Lista") == true);
+                    if (lista != null)
+                    {
+                        var id = lista.name.Substring(5);
+                        yield return ClicFijo(raton, raiz, lista);
+                        yield return Esperar(() => Tropa().Q<Button>("reclutar-" + id) != null, 5, "«Reclutar» en la ficha");
+                        yield return Capturar("24d_tropa_ficha_reclutar");
+                        var reclutar = Tropa().Q<Button>("reclutar-" + id);
+                        if (reclutar.enabledSelf)
+                        {
+                            var n = Yo().EscuadronesIds.Count;
+                            yield return ClicFijo(raton, raiz, reclutar);
+                            yield return Esperar(() => Yo().EscuadronesIds.Count > n, 10, "la escuadra reclutada");
+                            yield return Esperar(() => Tropa()?.Q<Label>("estado-" + id)?.text.StartsWith("Tu escuadra") == true, 5, "la carta, tuya");
+                            yield return Capturar("24e_tropa_reclutada");
+                        }
+                        else Debug.Log("[Prueba] reclutar: " + Tropa().Q<Label>("motivo-" + id)?.text);
+                    }
+                    else Debug.Log("[Prueba] el campamento aún no ofrece tropa que reclutar");
+                    // Atributos de la tropa elegida.
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("subpestana-atributos"));
+                    yield return Esperar(() => Tropa().Q<Button>("subpestana-atributos").ClassListContains("activo"), 5, "Atributos");
+                    yield return EnTamanos(raiz, "24f_tropa_atributos");
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("subpestana-caracteristicas"));
+                    yield return ClicFijo(raton, raiz, Tropa().Q<Button>("cerrar"));
+                    yield return Esperar(() => Tropa() == null && !interior.PanelAbierto, 5, "la tropa cerrada");
                 }
-                else Debug.Log("[Prueba] reclutar: " + string.Join(" | ", raiz.Q("panel-tropa").Query<Label>().ToList().Where(l => l.name.StartsWith("motivo-")).Select(l => l.text)));
-                Pulsar(raiz.Q("panel-tropa").Q<Button>("cerrar"));
-                yield return null;
+                finally { UnityEngine.InputSystem.InputSystem.RemoveDevice(raton); }
 
                 // Otra vez en la taberna, ya con la milicia: «tu tropa» con su miniatura de Conquest. Andar hasta ella ya se probó arriba;
                 // aquí se abre por la misma puerta que la tecla F (la de la zona), para la captura.
@@ -1253,7 +1303,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { Administracion = new BronzeAge.Contract.V1.OrdenDeAdministracion { Codigo = ordenAdmin, Parametros = parametros } });
             fin = Time.realtimeSinceStartup + 20;
             while (!orden.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.ToString());
+            // «Sin cambios» (dar recursos a un almacén lleno, …) no es un fallo: ya está como se pedía.
+            if (orden.Result.Resultado != BronzeAge.Contract.V1.Resultado.OrdenSinCambios)
+                Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.ToString());
             s.Cerrar();
         }
 

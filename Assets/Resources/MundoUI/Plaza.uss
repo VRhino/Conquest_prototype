@@ -1,0 +1,808 @@
+/* Tu plaza por dentro (paso 7): el HUD de la plaza del prototipo (`style.css`, «PLAZA EN 3D A PANTALLA COMPLETA», `hudPlaza.ts`, `vistaCiudad.ts`,
+   `panelCentro.ts`, `panelResidencia.ts`). 1rem = 16 px. Lo que allí va con clamp() y medidas de la ventana (la columna izquierda, la barra de arriba,
+   la ventana) lo coloca `PantallasDeMundo.Plaza` al cambiar de tamaño. Los colores que no están en Mundo.uss: los de las obras del prototipo. */
+.plaza {
+    --obra-verde: #7fcf6a;
+    --obra-rojo: #e2675a;
+    --obra-ambar: #e0a53a;
+    --texto-sec: #9ca3af;
+}
+
+/* ── arriba a la izquierda: blasón, tarjeta, subida en curso y obras ── */
+.plaza-izq { position: absolute; top: 8px; left: 16px; width: 300px; }
+.plaza-izq > * { margin-bottom: 10px; flex-shrink: 0; }
+.plaza-blason {
+    flex-direction: row; align-items: center; padding: 8px 10px 8px 10px;
+    background-color: rgba(30, 22, 14, 0.94); border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+}
+.plaza-blason-escudo { margin-right: 8px; }
+.plaza-blason-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-blason-nombre { flex-direction: row; align-items: flex-end; min-width: 0; }
+.plaza-nombre { margin: 0; font-size: 18px; color: var(--oro-claro); white-space: normal; flex-shrink: 1; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-blason-lapiz { margin: 0 0 1px 4px; padding: 0 4px; font-size: 13px; color: var(--oro); background-color: rgba(0, 0, 0, 0); border-width: 1px; border-color: rgba(0, 0, 0, 0); border-radius: 2px; opacity: 0.6; }
+.plaza-blason-lapiz:hover { opacity: 1; border-color: var(--bronce-osc); }
+.plaza-blason-small { margin: 2px 0 0 0; font-size: 12px; color: var(--pergamino); white-space: normal; }
+.plaza-blason-opera { font-size: 11px; color: var(--obra-ambar); }
+.plaza-blason-renombrar { flex-direction: row; align-items: center; }
+.plaza-blason-renombrar TextField { flex-grow: 1; flex-shrink: 1; min-width: 0; margin: 0 4px 0 0; }
+.plaza-blason-renombrar TextField > TextInput { padding: 3px 6px; font-size: 14px; background-color: rgba(10, 8, 5, 0.9); border-color: var(--bronce-osc); color: var(--pergamino); }
+.plaza-blason-ok, .plaza-blason-no { width: 24px; height: 24px; margin: 0 0 0 4px; padding: 0; background-color: rgba(20, 15, 10, 0.9); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; color: var(--pergamino); font-size: 13px; }
+.plaza-blason-ok { border-color: var(--obra-verde); color: #c8f5b8; }
+.plaza-blason-medallon { position: absolute; left: 50px; bottom: 4px; width: 28px; height: 32px; margin: 0; padding: 0; background-color: rgba(0, 0, 0, 0); border-width: 0; }
+.plaza-blason-medallon:hover > .plaza-medallon { scale: 1.08 1.08; }
+.plaza-blason-atencion {
+    position: absolute; right: -10px; top: -9px; width: 18px; height: 18px; margin: 0; padding: 0; border-radius: 9px; border-width: 1px; border-color: #fff2c4;
+    background-color: #ffb020; color: #2a1606; font-size: 12px; -unity-font-style: bold; -unity-text-align: middle-center;
+}
+.plaza-medallon-cifra { margin: -3px 0 0 0; padding: 0; color: var(--oro-claro); font-size: 18px; -unity-font-style: bold; -unity-text-align: middle-center; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-blason-medallon .plaza-medallon-cifra { font-size: 13px; margin-top: -2px; }
+.plaza-medallon.apagado .plaza-medallon-cifra { color: rgba(241, 220, 174, 0.45); }
+.plaza-blason-iconos { align-self: flex-start; flex-shrink: 0; margin-left: 6px; }
+.plaza-blason-icono {
+    width: 28px; height: 28px; margin: 0 0 6px 0; padding: 0; align-items: center; justify-content: center;
+    background-color: rgba(14, 10, 7, 0.86); border-width: 1px; border-color: rgba(169, 121, 63, 0.55); border-radius: 14px;
+}
+.plaza-blason-icono:hover { border-color: var(--oro); }
+.plaza-blason-icono.dentro { border-color: var(--oro); background-color: rgb(92, 67, 33); }
+.plaza-blason-icono.fuera { border-color: rgba(169, 121, 63, 0.4); }
+.plaza-blason-icono.abierto { border-color: #ffd24a; }
+
+/* lo que cuelga de la casa o de la corona: su tarjeta, pegada al blasón */
+.plaza-blason-pop { margin-top: -8px; padding: 8px; background-color: rgba(30, 22, 14, 0.96); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.plaza-tarjeta {
+    padding: 7px 10px; border-width: 1px; border-left-width: 3px; border-color: rgba(107, 74, 41, 0.7); border-left-color: var(--bronce); border-radius: 3px;
+    background-color: rgba(36, 27, 16, 0.9);
+}
+.plaza-tarjeta.dentro { border-left-color: var(--obra-verde); }
+.plaza-tarjeta.capital { border-left-color: #ffd24a; background-color: rgba(60, 45, 22, 0.9); }
+.plaza-tarjeta.apagada { opacity: 0.75; border-left-color: #7a7266; }
+.plaza-tarjeta-cab { flex-direction: row; align-items: center; }
+.plaza-tarjeta-icono { margin-right: 10px; flex-shrink: 0; }
+.plaza-tarjeta-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-tarjeta-titulo { margin: 0; font-size: 13.5px; color: var(--oro-claro); -unity-font-style: bold; white-space: normal; }
+.plaza-tarjeta-linea { margin: 1px 0 0 0; font-size: 11.5px; color: var(--texto-sec); white-space: normal; }
+.plaza-tarjeta-boton {
+    align-self: flex-end; margin: 6px 0 0 0; padding: 5px 10px; border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+    background-color: rgb(66, 48, 25); color: var(--oro-claro); font-size: 12px; -unity-font-style: bold;
+}
+.plaza-tarjeta-boton:hover { border-color: var(--oro); }
+.plaza-tarjeta-boton:disabled { opacity: 0.45; }
+.plaza-tarjeta-boton.peligro { border-color: rgba(226, 103, 90, 0.7); background-color: rgba(70, 22, 16, 0.85); color: #ffc4b8; }
+
+/* la subida en curso */
+.plaza-ascenso-hud { padding: 7px 9px 8px; background-color: rgba(30, 22, 14, 0.92); border-width: 1px; border-color: rgba(224, 165, 58, 0.6); border-radius: 3px; }
+.plaza-ascenso-hud-cab { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.plaza-ascenso-hud-texto { margin: 0; flex-grow: 1; font-size: 12.5px; color: var(--pergamino); }
+.plaza-ascenso-hud-pct { margin: 0; font-size: 12px; color: var(--obra-ambar); -unity-font-style: bold; }
+.plaza-ascenso-hud-falta { margin: 4px 0 0 0; font-size: 11px; color: var(--texto-sec); }
+
+/* las obras: las que van en marcha y la cola */
+.plaza-obras { padding: 7px 9px 8px; background-color: rgba(30, 22, 14, 0.92); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.plaza-obras-cab { margin: 0 0 5px 0; font-size: 10.5px; letter-spacing: 1.3px; color: var(--oro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-obras-cab-cola { margin-top: 3px; color: var(--texto-sec); }
+.plaza-obras-fila { flex-direction: row; align-items: center; margin-bottom: 5px; }
+.plaza-obras-fila > VisualElement:first-child { margin-right: 8px; flex-shrink: 0; }
+.plaza-obras-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-obras-linea { flex-direction: row; align-items: center; }
+.plaza-obras-nombre { margin: 0; flex-grow: 1; flex-shrink: 1; font-size: 12.8px; color: var(--pergamino); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-obras-falta { margin: 0 0 0 6px; font-size: 11.8px; color: var(--obra-ambar); -unity-font-style: bold; }
+.plaza-obras-cancelar { margin: 0 0 0 2px; padding: 0 4px; font-size: 10.5px; color: var(--texto-apagado); background-color: rgba(0, 0, 0, 0); border-width: 1px; border-color: rgba(0, 0, 0, 0); border-radius: 2px; opacity: 0; }
+.plaza-obras-fila:hover .plaza-obras-cancelar { opacity: 1; }
+.plaza-obras-cancelar:hover { border-color: var(--obra-rojo); color: var(--obra-rojo); }
+.plaza-obras-que { margin: 1px 0 2px 0; font-size: 10.9px; color: var(--texto-sec); }
+.plaza-obras-mas { margin: 0 0 4px 0; font-size: 10.9px; color: var(--texto-sec); }
+.plaza-obras-cola { flex-direction: row; flex-wrap: wrap; padding-top: 5px; }
+.plaza-obras-casilla {
+    width: 36px; height: 36px; margin: 0 4px 6px 0; align-items: center; justify-content: center;
+    border-width: 1px; border-color: rgba(169, 121, 63, 0.6); border-radius: 3px; background-color: rgba(10, 8, 5, 0.55);
+}
+.plaza-obras-casilla.danado { border-color: rgba(226, 103, 90, 0.6); }
+.plaza-obras-n {
+    position: absolute; top: -5px; left: -5px; min-width: 14px; height: 14px; margin: 0; padding: 0 3px; border-radius: 7px;
+    background-color: var(--oro); color: #1b1308; font-size: 9.6px; -unity-font-style: bold; -unity-text-align: middle-center;
+}
+.plaza-obras-ctl { position: absolute; left: 50%; bottom: -12px; translate: -50% 0; flex-direction: row; display: none; }
+.plaza-obras-ctl.visible { display: flex; }
+.plaza-obras-ctl-boton { margin: 0 0 0 1px; padding: 0 3px; height: 15px; font-size: 9.6px; color: var(--oro); background-color: rgba(0, 0, 0, 0.85); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; }
+.plaza-obras-ctl-boton:hover { border-color: var(--oro); color: var(--oro-claro); }
+.plaza-obras-ctl-boton:disabled { opacity: 0.3; }
+
+/* las barras de avance */
+.plaza-barra-avance { height: 7px; margin-top: 2px; border-radius: 4px; background-color: rgba(0, 0, 0, 0.55); border-width: 1px; border-color: rgba(107, 74, 41, 0.8); overflow: hidden; }
+.plaza-barra-avance-i { height: 100%; background-color: #e0a548; }
+.plaza-barra-avance.indefinida > .plaza-barra-avance-i { background-color: rgba(240, 192, 98, 0.35); }
+
+/* ── arriba al centro: Población, Almacén y Estado ── */
+.plaza-pie { position: absolute; top: 8px; left: 328px; right: 400px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: stretch; }
+.plaza-placa {
+    --acento: var(--oro);
+    flex-shrink: 0; margin: 0 4px 16px 4px; padding: 5px 5px 11px 5px; justify-content: center;
+    background-color: var(--marco-bg-alt); border-width: 1px; border-bottom-width: 2px; border-color: var(--bronce); border-bottom-color: var(--acento); border-radius: 3px;
+}
+.plaza-placa-poblacion { --acento: #9fb7c9; border-bottom-color: #9fb7c9; }
+.plaza-placa-estado { border-bottom-color: #7fcf6a; }
+.plaza-placa-almacen { border-bottom-color: #d8b878; }
+.plaza.estrecha .plaza-placa-almacen > .plaza-placa-piezas { flex-wrap: wrap; }
+/* muy estrecha: el Almacén pasa detrás de Estado (lo hace `OrdenarPlacas`: UI Toolkit no tiene `order`) */
+.plaza-placa-piezas { flex-direction: row; flex-wrap: nowrap; justify-content: center; align-items: stretch; }
+.plaza-placa-titulo {
+    position: absolute; bottom: -9px; left: 10px; margin: 0; padding: 1px 8px; font-size: 10px; letter-spacing: 1.4px;
+    color: var(--oro); background-color: var(--marco-bg); border-width: 1px; border-color: var(--bronce); border-radius: 2px;
+    -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial;
+}
+.plaza-placa-poblacion > .plaza-placa-titulo { color: #9fb7c9; }
+.plaza-placa-estado > .plaza-placa-titulo { color: #7fcf6a; }
+.plaza-placa-raya { width: 1px; margin: 2px 1px; background-color: rgba(169, 121, 63, 0.45); }
+.plaza-placa-vacio { margin: 0; padding: 6px 10px; font-size: 12.5px; color: var(--texto-sec); }
+.plaza-recurso {
+    flex-direction: row; align-items: center; justify-content: center; margin: 0 3px 3px 0; padding: 3px 5px 7px 5px;
+    border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.28);
+}
+.plaza-recurso-icono { margin-right: 3px; flex-shrink: 0; }
+.plaza-recurso-cifra { margin: 0; padding: 0; font-size: 12px; -unity-font-style: bold; color: var(--oro-claro); }
+.plaza-recurso-barra { position: absolute; left: 1px; right: 1px; bottom: 1px; height: 3px; background-color: rgba(0, 0, 0, 0.45); }
+.plaza-recurso-barra-i { position: absolute; left: 0; top: 0; bottom: 0; background-color: var(--oro); }
+.plaza-recurso.lleno { border-color: var(--terracota); }
+.plaza-recurso.lleno > .plaza-recurso-cifra { color: #e9b8a4; }
+.plaza-recurso.lleno .plaza-recurso-barra-i { background-color: var(--terracota); }
+.plaza-recurso.tono-bien > .plaza-recurso-cifra { color: #7fcf6a; }
+.plaza-recurso.tono-bien .plaza-recurso-barra-i { background-color: #7fcf6a; }
+.plaza-recurso.tono-medio > .plaza-recurso-cifra { color: #e0a53a; }
+.plaza-recurso.tono-medio .plaza-recurso-barra-i { background-color: #e0a53a; }
+.plaza-recurso.tono-mal { border-color: #e2675a; }
+.plaza-recurso.tono-mal > .plaza-recurso-cifra { color: #e2675a; }
+.plaza-recurso.tono-mal .plaza-recurso-barra-i { background-color: #e2675a; }
+/* Población: la raya de lo que cabe, el rombo de la meta, el tramo rojo de lo que falta, lo cerrado y la Vivienda con su «+» */
+.plaza-pob-pieza { padding-bottom: 10px; }
+.plaza-pob-barra { height: 4px; overflow: visible; }
+.plaza-pob-barra > .plaza-recurso-barra-i { background-color: #9fb7c9; }
+.plaza-recurso.lleno .plaza-pob-barra > .plaza-recurso-barra-i { background-color: var(--terracota); }
+.plaza-pob-sitio { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background-color: #f3ead2; }
+.plaza-pob-meta { position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background-color: var(--oro); border-width: 1px; border-color: #2a1606; rotate: 45deg; }
+.plaza-pob-falta { position: absolute; top: 0; bottom: 0; background-color: rgba(226, 103, 90, 0.7); }
+.plaza-pob-cerrado { position: absolute; top: 0; bottom: 0; background-color: rgba(60, 50, 35, 0.75); }
+.plaza-pob-flecha { margin: 0 0 0 1px; padding: 0; font-size: 10px; }
+.plaza-pob-flecha.sube { color: #7fc46a; }
+.plaza-pob-flecha.baja { color: #e2675a; }
+.plaza-pob-flecha.parada { width: 7px; height: 9px; margin: 0 1px; border-left-width: 2px; border-right-width: 2px; border-color: #b8ad96; }
+.plaza-pob-vivienda { flex-direction: row; align-items: center; margin-left: 2px; padding: 0 2px; border-width: 1px; border-color: var(--terracota); border-radius: 3px; background-color: rgba(226, 103, 90, 0.18); }
+.plaza-pob-vivienda-mas {
+    position: absolute; right: -5px; top: -6px; width: 11px; height: 11px; margin: 0; padding: 0; border-radius: 6px;
+    background-color: #ffb020; color: #2a1606; font-size: 9.6px; -unity-font-style: bold; -unity-text-align: middle-center;
+}
+/* el letrero de cada pieza, hacia abajo */
+.plaza-letrero {
+    position: absolute; margin: 0; padding: 5px 9px; font-size: 11.5px; -unity-text-align: middle-center; white-space: normal; color: var(--oro-claro);
+    background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 2px; max-width: 360px;
+}
+
+/* ── arriba a la derecha: la barra del jugador, transparente sobre la escena ── */
+.plaza-barra { left: auto; height: 54px; padding: 0 16px 0 0; background-color: rgba(0, 0, 0, 0); border-bottom-width: 0; }
+
+/* ── al borde derecho: la ficha del edificio ── */
+.plaza-der { position: absolute; top: 60px; right: 16px; width: 300px; }
+.plaza-ficha {
+    padding: 14px 16px; max-height: 600px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+}
+.plaza-ficha-cab { flex-direction: row; align-items: center; padding-bottom: 10px; margin-bottom: 8px; border-bottom-width: 1px; border-color: var(--bronce-osc); }
+.plaza-ficha-cab > VisualElement:first-child { margin-right: 8px; flex-shrink: 0; }
+.plaza-ficha-titulo { flex-grow: 1; flex-shrink: 1; margin: 0; }
+.plaza-ficha-cerrar { margin: 0; padding: 0 4px; font-size: 14px; color: var(--pergamino); background-color: rgba(0, 0, 0, 0); border-width: 0; }
+.plaza-ficha-cerrar:hover { color: var(--oro-claro); }
+.plaza-ficha-cuerpo { flex-shrink: 1; }
+.plaza-ficha-cuerpo > * { margin-bottom: 8px; }
+.plaza-ficha-grid { flex-direction: row; }
+.plaza-ficha-dato { flex-grow: 1; flex-basis: 0; margin-right: 6px; padding: 7px 9px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.25); }
+.plaza-ficha-dato:last-child { margin-right: 0; }
+.plaza-ficha-etiqueta { margin: 0; font-size: 10.9px; letter-spacing: 1.3px; color: var(--texto-apagado); }
+.plaza-ficha-valor { margin: 0; font-size: 15px; color: var(--oro-claro); -unity-font-style: bold; }
+.plaza-nota { margin: 0; font-size: 11.8px; color: var(--texto-apagado); white-space: normal; }
+.plaza-nota.falta { color: #e8a08f; }
+.plaza-kicker { flex-direction: row; align-items: center; margin: 4px 0 2px 0; }
+.plaza-kicker-raya { width: 14px; height: 2px; margin-right: 8px; background-color: var(--bronce); flex-shrink: 0; }
+.plaza-kicker-texto { margin: 0; font-size: 10.9px; letter-spacing: 2.4px; color: var(--oro); white-space: normal; flex-shrink: 1; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-ficha-obra { padding: 6px 8px; border-width: 1px; border-color: rgba(224, 165, 58, 0.5); border-radius: 3px; background-color: rgba(40, 28, 12, 0.6); }
+.plaza-ficha-obra-linea { flex-direction: row; align-items: center; }
+.plaza-ficha-obra-que { margin: 0; flex-grow: 1; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-ficha-obra-queda { margin: 0; font-size: 13px; color: var(--obra-ambar); -unity-font-style: bold; }
+.plaza-ficha-receta { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 0 0 2px 0; }
+.plaza-ficha-receta > VisualElement { margin-right: 3px; }
+.plaza-ficha-receta-nombre { margin: 0 4px 0 0; font-size: 13px; color: var(--pergamino); }
+.plaza-ficha-receta-texto { margin: 0 4px 0 0; font-size: 13px; color: var(--texto-2); }
+.plaza-ficha-mejora { padding-top: 6px; border-top-width: 1px; border-color: var(--bronce-osc); }
+.plaza-ficha-mejora-coste { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 2px 0 6px 0; }
+.plaza-ficha-mejora-tiempo { flex-direction: row; align-items: center; margin-left: auto; }
+.plaza-ficha-mejora-tiempo > VisualElement { margin-right: 3px; }
+.plaza-ficha-boton { align-self: flex-start; margin-top: 4px; height: 34px; padding: 0 14px; font-size: 13px; letter-spacing: 1px; }
+.plaza-ficha-mejora.caro .plaza-ficha-boton { opacity: 0.8; }
+.plaza-ficha-cancelar:hover { border-color: var(--obra-rojo); color: var(--obra-rojo); }
+.plaza-chips { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.plaza-chips > Button { margin: 0 6px 4px 0; }
+.plaza-coste { flex-direction: row; align-items: center; margin: 0 8px 3px 0; }
+.plaza-coste > VisualElement { margin-right: 2px; }
+.plaza-coste-cifra { margin: 0; padding: 0; font-size: 12px; color: var(--pergamino); }
+.plaza-coste.falta > .plaza-coste-cifra { color: var(--obra-rojo); }
+
+/* ── abajo: «Salir al mundo» y el riel ── */
+.plaza-salir {
+    position: absolute; left: 16px; bottom: 12px; height: auto; margin: 0; padding: 12px 32px; font-size: 26px; letter-spacing: 2px;
+    -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial;
+}
+.plaza-riel { position: absolute; bottom: 12px; flex-direction: row; padding: 4px 6px; background-color: rgba(18, 13, 9, 0.8); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
+.plaza-ayuda { left: 16px; bottom: 82px; }
+
+/* los carteles de obra encima de cada edificio */
+.plaza-cartel-obra {
+    position: absolute; margin: 0; padding: 2px 6px; translate: -50% -100%; font-size: 11.5px; -unity-font-style: bold; color: var(--pergamino);
+    background-color: rgba(18, 13, 9, 0.88); border-width: 1px; border-color: var(--oro); border-radius: 2px; white-space: nowrap;
+}
+
+/* ── la ventana «Subir de nivel», junto a la columna izquierda ── */
+.plaza-ventana {
+    position: absolute; top: 120px; left: 328px; width: 460px; max-height: 600px;
+    background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+}
+.plaza-ventana-cab { flex-direction: row; align-items: center; flex-shrink: 0; padding: 14px 12px 10px 16px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
+.plaza-ventana-titulo { flex-direction: row; align-items: center; flex-grow: 1; }
+.plaza-ventana-titulo > VisualElement { margin-right: 10px; }
+.plaza-ventana-nombre { margin: 0; font-size: 18.4px; letter-spacing: 1px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-ventana-cerrar { width: 30px; height: 30px; margin: 0; padding: 0; background-color: rgba(20, 15, 10, 0.9); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--oro); font-size: 14px; }
+.plaza-ventana-cerrar:hover { border-color: var(--oro); color: var(--oro-claro); }
+.plaza-ventana-cuerpo { flex-shrink: 1; padding: 12px 16px 16px 16px; }
+.plaza-ascenso-tarjeta {
+    flex-direction: row; align-items: center; padding: 8px 10px; border-width: 1px; border-color: rgba(169, 121, 63, 0.6); border-radius: 3px;
+    background-color: rgba(30, 23, 15, 0.95);
+}
+.plaza-ascenso-tarjeta.lista { border-color: rgba(127, 207, 106, 0.6); }
+.plaza-ascenso-tarjeta.en-obra { border-color: rgba(224, 165, 58, 0.6); }
+.plaza-ascenso-niveles { flex-direction: row; align-items: center; margin-right: 10px; }
+.plaza-ascenso-niveles > VisualElement { margin-right: 4px; }
+.plaza-ascenso-info { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-ascenso-titulo { margin: 0; font-size: 13.8px; letter-spacing: 0.4px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-ascenso-pilotos { flex-direction: row; align-items: center; margin-top: 4px; }
+.plaza-piloto { width: 9px; height: 9px; margin-right: 4px; border-radius: 5px; border-width: 1px; border-color: rgba(0, 0, 0, 0.6); }
+.plaza-piloto.ok { background-color: var(--obra-verde); }
+.plaza-piloto.falta { background-color: var(--obra-rojo); }
+.plaza-piloto.servidor { background-color: #7a7266; }
+.plaza-ascenso-obra-fila { flex-direction: row; align-items: center; margin-top: 4px; }
+.plaza-ascenso-obra-fila > VisualElement { margin-right: 3px; }
+.plaza-ascenso-obra { color: #ffd590; }
+.plaza-ascenso-boton {
+    width: 44px; height: 44px; margin: 0 0 0 10px; padding: 0; flex-shrink: 0; border-width: 1px; border-color: var(--obra-verde); border-radius: 4px;
+    background-color: rgb(60, 115, 47); color: #eaffdf; font-size: 21px; -unity-font-style: bold; -unity-text-align: middle-center;
+}
+.plaza-ascenso-boton:hover { background-color: rgb(75, 140, 58); }
+.plaza-ascenso-boton:disabled { border-color: rgba(107, 74, 41, 0.6); background-color: rgba(20, 16, 11, 0.8); color: rgba(160, 140, 110, 0.45); opacity: 1; }
+.plaza-ascenso-aviso { flex-direction: row; align-items: flex-start; margin: 8px 0; padding: 8px 12px; border-width: 1px; border-color: rgba(217, 164, 65, 0.6); border-radius: 3px; background-color: rgba(90, 64, 20, 0.35); }
+.plaza-ascenso-aviso-titulo { margin: 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.plaza-ascenso-insolvencia { flex-direction: row; align-items: center; margin-top: 2px; }
+.plaza-ascenso-insolvencia > VisualElement { margin-right: 6px; }
+.plaza-ascenso-insolvencia-nombre { margin: 0 6px 0 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-plegable { margin-top: 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.18); }
+.plaza-plegable > Toggle { margin: 0; padding: 6px 10px; }
+.plaza-plegable > Toggle Label { font-size: 13px; color: var(--pergamino); }
+.plaza-plegable > #unity-content { margin: 0; padding: 2px 12px 10px 12px; }
+.plaza-req { flex-direction: row; align-items: flex-start; margin-top: 6px; }
+.plaza-req-marca { width: 16px; margin: 0 6px 0 0; padding: 0; font-size: 13px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.plaza-req.ok > .plaza-req-marca { color: var(--obra-verde); }
+.plaza-req.falta > .plaza-req-marca { color: var(--obra-rojo); }
+.plaza-req.servidor > .plaza-req-marca { color: #9a927f; }
+.plaza-req-icono { width: 24px; height: 22px; margin-right: 6px; align-items: center; justify-content: center; flex-shrink: 0; }
+.plaza-req-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-req-texto { margin: 3px 0 0 0; font-size: 12.8px; color: var(--pergamino); white-space: normal; }
+.plaza-req.servidor .plaza-req-texto { color: var(--texto-sec); }
+.plaza-req-medida { flex-direction: row; align-items: center; margin-top: 3px; }
+.plaza-req-barra { flex-grow: 1; height: 6px; margin-right: 6px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.55); border-width: 1px; border-color: rgba(107, 74, 41, 0.8); overflow: hidden; }
+.plaza-req-barra-i { height: 100%; background-color: var(--obra-rojo); }
+.plaza-req.ok .plaza-req-barra-i { background-color: var(--obra-verde); }
+.plaza-req-edificios { flex-direction: row; flex-wrap: wrap; margin-top: 3px; }
+.plaza-req-edificio { width: 30px; height: 30px; margin: 0 4px 4px 0; align-items: center; justify-content: center; border-width: 1px; border-color: rgba(169, 121, 63, 0.5); border-radius: 3px; background-color: rgba(10, 8, 5, 0.6); }
+.plaza-req-edificio.hecho { border-color: var(--obra-verde); background-color: rgba(40, 70, 30, 0.45); }
+.plaza-req-cuerpo .plaza-chips { margin-top: 3px; }
+.plaza-ascenso-aviso-icono { margin: 1px 10px 0 0; flex-shrink: 0; }
+.plaza-ascenso-aviso-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-plegable > Toggle > VisualElement { flex-grow: 1; }
+.plaza-plegable-meta { margin: 0 0 0 auto; font-size: 12px; color: #9fd49a; }
+.plaza-plegable-meta.falta { color: #e8a08f; }
+
+/* ═══════════ tanda 2: el riel, el cajón de Construcción, Gobierno y el Almacén ═══════════ */
+.plaza-vacio { margin: 0; font-size: 12.8px; color: var(--texto-apagado); white-space: normal; }
+.plaza-error { margin: 8px 0 0 0; font-size: 13px; color: var(--rojo-claro); white-space: normal; }
+.plaza-sub { margin: 2px 0; font-size: 12.5px; color: var(--texto-2); }
+.plaza-rejilla { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+.plaza-cols { align-items: flex-start; }
+.plaza-col { min-width: 0; flex-shrink: 1; }
+.plaza-atencion {
+    position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; margin: 0; padding: 0; border-width: 1px; border-color: #fff2c4; border-radius: 9px;
+    background-color: #ffb020; color: #2a1606; font-size: 12.5px; -unity-font-style: bold; -unity-text-align: middle-center;
+}
+
+/* el riel: un botón por ventana, con su nombre encima al pasar */
+.plaza-riel-boton {
+    width: 46px; height: 46px; margin: 0 3px; padding: 0; align-items: center; justify-content: center;
+    background-color: rgba(28, 21, 13, 0.94); border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+}
+.plaza-riel-boton:hover { border-color: var(--oro); }
+.plaza-riel-boton.activo { border-color: var(--oro); background-color: rgb(85, 62, 30); border-bottom-width: 3px; }
+.plaza-riel-etiqueta {
+    position: absolute; bottom: 54px; left: 50%; translate: -50% 0; margin: 0; padding: 4px 10px; white-space: nowrap; font-size: 12.5px; letter-spacing: 0.8px;
+    color: var(--oro-claro); background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 2px; display: none;
+    -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial;
+}
+.plaza-riel-boton:hover > .plaza-riel-etiqueta { display: flex; }
+.plaza-riel-insignia {
+    position: absolute; top: -5px; right: -6px; min-width: 16px; height: 16px; margin: 0; padding: 0 4px; font-size: 10.5px; color: #1b1308;
+    background-color: var(--obra-ambar); border-radius: 8px; -unity-text-align: middle-center;
+}
+
+/* el cajón de Construcción, en el sitio del riel */
+.plaza-riel.plaza-riel-cajon { padding: 0; border-color: var(--bronce); background-color: rgba(26, 19, 12, 0.96); }
+.plaza-cajon { flex-grow: 1; min-width: 0; }
+.plaza-cajon-cab { flex-direction: row; align-items: center; flex-shrink: 0; padding: 6px 10px; border-bottom-width: 1px; border-color: var(--bronce-osc); }
+.plaza-cajon-cab > * { margin-right: 12px; }
+.plaza-cajon-volver {
+    margin: 0; padding: 4px 10px; height: auto; font-size: 12.8px; color: var(--oro); background-color: rgba(18, 13, 8, 0.9);
+    border-width: 1px; border-color: var(--bronce); border-radius: 3px; flex-direction: row; align-items: center;
+}
+.plaza-cajon-volver:hover { color: var(--oro-claro); border-color: var(--oro); }
+.plaza-cajon-construidos > * { margin-right: 6px; }
+.plaza-cajon-construidos.activo { color: var(--oro-claro); border-color: var(--oro); background-color: rgb(85, 62, 30); }
+.plaza-cajon-construidos-texto { margin: 0; font-size: 12.8px; color: var(--oro); }
+.plaza-cajon-construidos-n { margin: 0; font-size: 11.5px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-cajon-titulo { flex-direction: row; align-items: center; }
+.plaza-cajon-titulo > VisualElement { margin-right: 6px; }
+.plaza-cajon-titulo-texto { margin: 0; font-size: 15.2px; letter-spacing: 1px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-cajon-auto { margin: 0 0 0 auto; }
+.plaza-cajon-cuerpo { flex-grow: 1; flex-shrink: 1; min-height: 0; padding: 2px 10px 4px 10px; }
+.plaza-cajon-lista { flex-grow: 1; flex-shrink: 1; min-height: 0; }
+.plaza-obra-grupos { flex-direction: row; flex-shrink: 0; margin-bottom: 4px; padding: 6px 3px 4px 0; border-bottom-width: 1px; border-color: var(--bronce-osc); }
+.plaza-obra-grupo {
+    width: 92px; flex-shrink: 1; min-width: 0; margin: 0 4px 0 0; padding: 3px 4px 2px; height: auto; align-items: center;
+    border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px 3px 0 0; background-color: rgba(18, 14, 9, 0.8);
+}
+.plaza-obra-grupo:hover { border-color: var(--bronce); }
+.plaza-obra-grupo.activo { border-color: var(--oro); background-color: rgb(80, 58, 30); border-bottom-width: 2px; border-bottom-color: var(--oro); }
+.plaza-obra-grupo.destaca { border-color: #ffb020; }
+.plaza-obra-grupo-nombre { margin: 1px 0 0 0; padding: 0; font-size: 9.9px; color: rgba(241, 220, 174, 0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-obra-grupo.activo > .plaza-obra-grupo-nombre, .plaza-obra-grupo:hover > .plaza-obra-grupo-nombre { color: var(--oro-claro); }
+.plaza-obra-grupo-n {
+    position: absolute; top: -5px; right: -3px; min-width: 15px; height: 15px; margin: 0; padding: 0 3px; border-radius: 8px; background-color: var(--obra-verde);
+    color: #10200a; font-size: 9.6px; -unity-font-style: bold; -unity-text-align: middle-center;
+}
+.plaza-construir {
+    height: auto; margin: 0; padding: 5px 3px 3px; align-items: center; border-width: 1px; border-color: var(--bronce); border-radius: 3px;
+    background-color: rgb(50, 37, 22);
+}
+.plaza-construir:hover { border-color: var(--oro); background-color: rgb(66, 49, 28); }
+.plaza-construir.caro { border-color: rgba(226, 103, 90, 0.55); }
+.plaza-construir.destaca { border-color: #ffb020; }
+.plaza-construir-nombre { margin: 2px 0 1px 0; padding: 0; font-size: 10.6px; color: var(--pergamino); white-space: normal; -unity-text-align: upper-center; }
+.plaza-construir-coste { justify-content: center; min-height: 14px; }
+.plaza-construir-coste > .plaza-coste { margin: 0 2px 0 2px; }
+.plaza-construir-coste .plaza-coste-cifra { font-size: 11px; }
+
+/* la ventana «Construidos», encima del cajón con su ancho */
+.plaza-construidos {
+    position: absolute; left: -1px; right: -1px; bottom: 100%; margin-bottom: 8px; max-height: 420px;
+    border-width: 1px; border-color: var(--bronce); border-radius: 4px; background-color: rgba(26, 19, 12, 0.97);
+}
+.plaza-construidos-cab { flex-direction: row; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 6px 10px; border-bottom-width: 1px; border-color: var(--bronce-osc); }
+.plaza-construidos-titulo { flex-direction: row; align-items: flex-end; }
+.plaza-construidos-nombre { margin: 0; font-size: 15.2px; letter-spacing: 1px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-construidos-n { margin: 0 0 1px 6px; font-size: 12px; color: var(--texto-apagado); }
+.plaza-construidos-cerrar { width: 26px; height: 26px; margin: 0; padding: 0; color: var(--oro); background-color: rgba(18, 13, 8, 0.9); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.plaza-construidos-cuerpo { flex-shrink: 1; padding: 6px 10px 10px 10px; }
+.plaza-construidos-grupo { margin-bottom: 10px; }
+.plaza-construidos-grupo-cab { flex-direction: row; align-items: center; margin-bottom: 5px; }
+.plaza-construidos-grupo-cab > VisualElement { margin-right: 6px; }
+.plaza-construidos-grupo-nombre { margin: 0 6px 0 0; font-size: 11.5px; letter-spacing: 1px; color: var(--oro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-construidos-grupo-n { margin: 0; font-size: 11.5px; color: var(--texto-apagado); }
+.plaza-construidos-fila { flex-direction: row; flex-wrap: wrap; }
+.plaza-construido {
+    width: 88px; height: auto; margin: 0 4px 4px 0; padding: 5px 3px 4px; align-items: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    background-color: rgb(40, 30, 18);
+}
+.plaza-construido:hover { border-color: var(--oro); }
+.plaza-construido.mejorando { border-color: var(--obra-ambar); }
+.plaza-construido.danado { border-color: var(--terracota); }
+.plaza-construido-nombre { margin: 2px 0 0 0; font-size: 10.2px; color: var(--pergamino); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.plaza-construido-n { position: absolute; top: 2px; left: 3px; margin: 0; font-size: 9.3px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-construido-nivel { position: absolute; top: 2px; right: 3px; margin: 0; font-size: 9.6px; color: var(--oro); -unity-font-style: bold; }
+
+/* el interruptor (casilla con aspecto de palanca) */
+.plaza-interruptor { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.plaza-interruptor > * { margin-right: 8px; }
+.plaza-interruptor-pista { width: 36px; height: 20px; flex-shrink: 0; border-width: 1px; border-color: #7a7266; border-radius: 10px; background-color: rgba(0, 0, 0, 0.55); }
+.plaza-interruptor-bola { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 7px; background-color: #9a927f; }
+.plaza-interruptor.encendido > .plaza-interruptor-pista { border-color: var(--obra-verde); background-color: rgba(40, 70, 30, 0.85); }
+.plaza-interruptor.encendido .plaza-interruptor-bola { left: 18px; background-color: #c8f5b8; }
+.plaza-interruptor-texto { margin: 0; font-size: 13px; color: var(--pergamino); }
+.plaza-interruptor-estado { margin: 0 0 0 auto; font-size: 11.5px; color: var(--texto-apagado); }
+.plaza-interruptor.encendido > .plaza-interruptor-estado { color: var(--obra-verde); }
+.plaza-consumo-pausa.encendido > .plaza-interruptor-pista { border-color: #d9a441; background-color: rgba(90, 64, 20, 0.85); }
+.plaza-consumo-pausa.encendido .plaza-interruptor-bola { background-color: #f1d394; }
+.plaza-consumo-pausa.encendido > .plaza-interruptor-estado { color: #e5b36f; }
+
+/* las ventanas: subpestañas, títulos de sección y chips */
+.plaza-ventana.plaza-ventana-completa { max-height: none; }
+.plaza-subtabs { flex-direction: row; flex-wrap: wrap; margin-bottom: 8px; }
+.plaza-subtab {
+    flex-grow: 1; flex-basis: 0; margin: 0 4px 0 0; padding: 6px 4px; height: auto; font-size: 12.2px; color: var(--texto-2);
+    border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgb(30, 23, 16);
+}
+.plaza-subtab.activo { border-color: var(--oro); color: var(--oro-claro); background-color: rgb(66, 48, 27); }
+.plaza-obra-titulo { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 10px 0 6px 0; }
+.plaza-obra-titulo > * { margin-right: 8px; }
+.plaza-obra-titulo-caja .plaza-obra-titulo { margin-right: 0; }
+.plaza-obra-titulo .plaza-kicker { margin: 0 8px 0 0; }
+.plaza-obra-titulo-small { margin: 0; font-size: 11.5px; color: var(--texto-apagado); }
+.plaza-obra-chip {
+    margin: 0 0 0 6px; padding: 0 7px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 9px; background-color: rgba(0, 0, 0, 0.35);
+    color: var(--oro-claro); font-size: 11.5px; -unity-font-style: bold; white-space: nowrap;
+}
+.plaza-obra-chip.activa { border-color: var(--obra-ambar); color: #ffd590; }
+.plaza-obra-chip-icono { flex-direction: row; align-items: center; padding: 1px 7px; }
+.plaza-obra-chip-icono > VisualElement { margin-right: 3px; }
+.plaza-obra-chip-texto { margin: 0; padding: 0; font-size: 11.5px; color: var(--oro-claro); -unity-font-style: bold; }
+.plaza-obra-insignia { margin: 0 0 0 4px; padding: 0 4px; border-width: 1px; border-radius: 3px; font-size: 10.5px; -unity-font-style: bold; background-color: rgba(0, 0, 0, 0.6); }
+.plaza-obra-insignia.parado { color: var(--obra-ambar); border-color: var(--obra-ambar); }
+.plaza-obra-insignia.danado { color: var(--obra-rojo); border-color: var(--obra-rojo); }
+
+/* Gobierno: Cargos */
+.plaza-cargos { margin-bottom: 6px; }
+.plaza-cargo-silla {
+    flex-direction: row; align-items: center; padding: 7px 8px; border-width: 1px; border-color: rgba(169, 121, 63, 0.6); border-radius: 3px; background-color: rgb(30, 23, 15);
+}
+.plaza-cargo-silla.vacante { border-color: rgba(169, 121, 63, 0.45); background-color: rgba(10, 8, 5, 0.6); }
+.plaza-cargo-silla.vacante > .plaza-cargo-emblema { opacity: 0.45; }
+.plaza-cargo-silla.yo { border-color: #ffd24a; }
+.plaza-cargo-silla.editando { border-color: var(--oro); }
+.plaza-cargo-emblema {
+    width: 34px; height: 34px; flex-shrink: 0; margin-right: 8px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce);
+    border-radius: 17px; background-color: rgb(52, 38, 22);
+}
+.plaza-cargo-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-cargo-nombre { margin: 0; font-size: 10.2px; letter-spacing: 0.6px; color: var(--texto-apagado); }
+.plaza-cargo-titular { margin: 0; font-size: 13.8px; color: var(--pergamino); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-cargo-titular.vacante { color: var(--texto-apagado); -unity-font-style: italic; }
+.plaza-cargo-silla.yo .plaza-cargo-titular { color: #ffe08a; }
+.plaza-cargo-combo { margin: 0; }
+.plaza-cargo-combo > .unity-base-popup-field__input { height: 26px; padding: 0 4px; border-color: var(--bronce-osc); background-color: #12100b; color: var(--pergamino); font-size: 12.8px; }
+.plaza-cargo-botones { flex-direction: row; flex-shrink: 0; margin-left: 8px; }
+.plaza-cargo-boton {
+    width: 26px; height: 26px; margin: 0 0 0 3px; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.4);
+    color: var(--oro); font-size: 12.8px;
+}
+.plaza-cargo-boton:hover { border-color: var(--oro); color: var(--oro-claro); }
+.plaza-cargo-boton.ok { border-color: var(--obra-verde); background-color: rgba(40, 70, 30, 0.85); color: #c8f5b8; }
+.plaza-participacion { margin-top: 6px; }
+.plaza-ranking { margin-bottom: 6px; }
+.plaza-ranking-fila {
+    flex-direction: row; align-items: center; margin-bottom: 3px; padding: 4px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.5); border-radius: 3px;
+    background-color: rgba(18, 14, 9, 0.75);
+}
+.plaza-ranking-fila.yo { border-color: rgba(255, 210, 74, 0.6); background-color: rgba(90, 66, 24, 0.55); }
+.plaza-ranking-fila.visita { opacity: 0.75; }
+.plaza-ranking-puesto { width: 26px; height: 20px; flex-shrink: 0; margin-right: 8px; align-items: center; justify-content: center; }
+.plaza-ranking-puesto-n { margin: 0; font-size: 12.8px; color: var(--texto-2); -unity-font-style: bold; }
+.plaza-ranking-puesto.medalla { width: 20px; height: 20px; margin: 0 14px 0 3px; border-radius: 10px; border-width: 1px; }
+.plaza-ranking-puesto.medalla > .plaza-ranking-puesto-n { color: #1b1308; font-size: 11.5px; }
+.plaza-ranking-puesto.medalla-1 { background-color: #e8b923; border-color: #fff0a8; }
+.plaza-ranking-puesto.medalla-2 { background-color: #c0c4cc; border-color: #f2f4f7; }
+.plaza-ranking-puesto.medalla-3 { background-color: #cd7f43; border-color: #f3c49c; }
+.plaza-ranking-nombre { flex-direction: row; align-items: center; width: 144px; flex-shrink: 1; min-width: 0; margin-right: 8px; }
+.plaza-ranking-nombre > VisualElement { margin-left: 2px; }
+.plaza-ranking-nombre-texto { margin: 0; font-size: 13px; color: var(--pergamino); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 1; }
+.plaza-ranking-fila.yo .plaza-ranking-nombre-texto { color: #ffe08a; }
+.plaza-ranking-barra { flex-grow: 1; height: 6px; margin-right: 8px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.5); overflow: hidden; }
+.plaza-ranking-barra-i { height: 100%; background-color: var(--oro); }
+.plaza-ranking-fila.visita .plaza-ranking-barra-i { background-color: #7a7266; }
+.plaza-ranking-puntos { width: 42px; margin: 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; -unity-text-align: middle-right; }
+
+/* Gobierno: Políticas */
+.plaza-consejo-cargo { margin-bottom: 6px; padding: 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgb(28, 21, 14); }
+.plaza-consejo-cargo.mio { border-color: var(--oro); }
+.plaza-consejo-cargo.vacante { opacity: 0.6; }
+.plaza-consejo-cab { flex-direction: row; align-items: center; margin-bottom: 6px; }
+.plaza-consejo-titulo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-consejo-nombre { margin: 0; font-size: 13.4px; color: var(--oro-claro); -unity-font-style: bold; }
+.plaza-consejo-titular { margin: 0; font-size: 11.2px; color: var(--texto-2); white-space: normal; }
+.plaza-consejo-slots { flex-direction: row; }
+.plaza-consejo-slot { width: 10px; height: 14px; margin-left: 3px; border-width: 1px; border-color: rgba(107, 74, 41, 0.9); border-radius: 2px; background-color: rgba(0, 0, 0, 0.5); }
+.plaza-consejo-slot.usado { border-color: #6fb6ff; background-color: #5f9fe0; }
+.plaza-politica-carta {
+    padding: 6px 8px; min-width: 0; border-width: 1px; border-top-width: 2px; border-color: rgba(107, 74, 41, 0.7); border-top-color: var(--bronce); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+.plaza-politica-carta.activa { border-top-color: #6fb6ff; background-color: rgba(30, 50, 80, 0.45); }
+.plaza-politica-carta.activa .plaza-barra-avance-i { background-color: #6fb6ff; }
+.plaza-politica-nombre { flex-direction: row; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+.plaza-politica-nombre-texto { margin: 0; flex-shrink: 1; font-size: 12.2px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.plaza-politica-queda { margin: 0 0 0 4px; font-size: 10.6px; color: var(--texto-2); white-space: nowrap; }
+.plaza-politica-efectos { flex-direction: row; flex-wrap: wrap; margin-bottom: 4px; }
+.plaza-efecto { flex-direction: row; align-items: center; margin: 0 3px 3px 0; padding: 0 5px; border-width: 1px; border-radius: 8px; }
+.plaza-efecto > VisualElement { margin-right: 2px; }
+.plaza-efecto-texto { margin: 0; padding: 0; font-size: 10.9px; -unity-font-style: bold; white-space: nowrap; }
+.plaza-efecto.bueno { border-color: rgba(127, 207, 106, 0.6); background-color: rgba(40, 70, 30, 0.5); }
+.plaza-efecto.bueno > .plaza-efecto-texto { color: #c8f5b8; }
+.plaza-efecto.malo { border-color: rgba(226, 103, 90, 0.6); background-color: rgba(80, 20, 15, 0.5); }
+.plaza-efecto.malo > .plaza-efecto-texto { color: #ffb3a8; }
+.plaza-efecto.neutro { border-color: rgba(169, 121, 63, 0.6); background-color: rgba(0, 0, 0, 0.4); }
+.plaza-efecto.neutro > .plaza-efecto-texto { color: var(--oro-claro); }
+.plaza-politica-activar {
+    align-self: flex-end; margin: 2px 0 0 0; padding: 3px 10px; height: auto; border-width: 1px; border-color: #6fb6ff; border-radius: 3px;
+    background-color: rgb(28, 63, 106); color: #d8ecff; font-size: 11.8px; -unity-font-style: bold;
+}
+.plaza-politica-activar:disabled { opacity: 0.4; }
+
+/* el Almacén */
+.plaza-eleccion > .plaza-nota { margin-bottom: 6px; }
+.plaza-barra-sola, .plaza-barra-todos { margin: 0 0 0 auto; padding: 3px 10px; height: auto; font-size: 12.2px; }
+.plaza-barra-eleccion {
+    flex-direction: row; align-items: center; height: auto; margin: 0; padding: 5px 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+.plaza-barra-eleccion > VisualElement { margin-right: 6px; }
+.plaza-barra-eleccion:hover { border-color: var(--bronce); }
+.plaza-barra-eleccion.elegido { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.14); }
+.plaza-barra-eleccion.sin-sitio { opacity: 0.55; }
+.plaza-barra-eleccion-nombre { margin: 0; flex-grow: 1; flex-shrink: 1; font-size: 12.8px; color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; -unity-text-align: middle-left; }
+.plaza-barra-eleccion.elegido > .plaza-barra-eleccion-nombre { color: var(--oro-claro); }
+.plaza-barra-eleccion-n { margin: 0; font-size: 12px; color: var(--texto-apagado); }
+.plaza-prod-ficha {
+    padding: 6px 7px; min-width: 0; overflow: hidden; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgb(27, 21, 13);
+}
+.plaza-prod-ficha.sube { border-color: rgba(127, 207, 106, 0.4); }
+.plaza-prod-ficha.baja { border-color: rgba(226, 103, 90, 0.55); }
+.plaza-prod-ficha.lleno { border-color: rgba(224, 165, 58, 0.75); }
+.plaza-prod-ficha-arriba { flex-direction: row; align-items: center; }
+.plaza-prod-ficha-arriba > VisualElement { margin-right: 6px; }
+.plaza-prod-ficha-datos { flex-grow: 1; min-width: 0; }
+.plaza-prod-ficha-neto { margin: 0; font-size: 13px; -unity-font-style: bold; white-space: nowrap; }
+.plaza-prod-ficha-neto.pos { color: #9fd49a; }
+.plaza-prod-ficha-neto.neg { color: #f0a58f; }
+.plaza-prod-ficha-neto.cero { color: var(--texto-apagado); }
+.plaza-prod-ficha-cifra { flex-direction: row; align-items: center; }
+.plaza-prod-ficha-cantidad { margin: 0; font-size: 11.5px; color: var(--pergamino); }
+.plaza-prod-ficha-cap { margin: 0; font-size: 11.5px; color: var(--texto-apagado); }
+.plaza-prod-ficha-aviso { margin: 0 0 0 auto; padding: 0 4px; border-radius: 2px; font-size: 9.3px; -unity-font-style: bold; overflow: hidden; }
+.plaza-prod-ficha-aviso.lleno { background-color: var(--obra-ambar); color: #1a1208; }
+.plaza-prod-ficha-aviso.baja { background-color: rgba(226, 103, 90, 0.9); color: #ffffff; }
+.plaza-prod-stock { height: 5px; margin-top: 4px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.55); overflow: hidden; }
+.plaza-prod-stock-i { height: 100%; background-color: var(--oro); }
+.plaza-prod-ficha.lleno .plaza-prod-stock-i { background-color: var(--obra-ambar); }
+.plaza-prod-flujo { flex-direction: row; height: 3px; margin-top: 2px; border-radius: 2px; overflow: hidden; background-color: rgba(255, 255, 255, 0.06); }
+.plaza-prod-flujo.quieto { opacity: 0.4; }
+.plaza-prod-flujo-entra { height: 100%; background-color: var(--obra-verde); }
+.plaza-prod-flujo-sale { flex-grow: 1; height: 100%; background-color: var(--obra-rojo); }
+.plaza-prod-obra { flex-direction: row; align-items: center; margin-left: auto; }
+.plaza-prod-obra > * { margin-right: 6px; }
+.plaza-prod-obra-barra { width: 70px; height: 7px; border-radius: 4px; background-color: rgba(0, 0, 0, 0.55); border-width: 1px; border-color: rgba(107, 74, 41, 0.8); overflow: hidden; }
+.plaza-prod-obra-barra-i { height: 100%; background-color: var(--obra-verde); }
+.plaza-prod-obra.falta .plaza-prod-obra-barra-i { background-color: var(--obra-ambar); }
+.plaza-prod-obra-cifra { margin: 0; font-size: 12.2px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-prod-obra-pct { margin: 0; font-size: 11.5px; color: var(--obra-verde); }
+.plaza-prod-obra.falta > .plaza-prod-obra-pct { color: var(--obra-ambar); }
+.plaza-prod-extractores { flex-direction: row; flex-wrap: wrap; }
+.plaza-prod-extractor {
+    flex-direction: row; align-items: center; margin: 0 6px 6px 0; padding: 4px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px;
+    background-color: rgba(18, 14, 9, 0.8);
+}
+.plaza-prod-extractor.parado { border-color: rgba(224, 165, 58, 0.7); }
+.plaza-prod-taller-n { margin: 0 2px 0 0; font-size: 10.2px; color: var(--oro); -unity-font-style: bold; }
+.plaza-prod-flecha { margin: 0 4px; font-size: 12.8px; color: var(--bronce); }
+.plaza-prod-producto {
+    width: 28px; height: 28px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce); border-radius: 14px; background-color: rgb(46, 34, 20);
+}
+.plaza-prod-ritmo { margin: 0 0 0 6px; font-size: 11.2px; color: var(--texto-2); }
+.plaza-prod-receta {
+    flex-direction: row; align-items: center; margin-bottom: 5px; padding: 5px 8px; border-width: 1px; border-left-width: 3px; border-color: rgba(107, 74, 41, 0.7);
+    border-left-color: var(--obra-verde); border-radius: 3px; background-color: rgb(24, 26, 15);
+}
+.plaza-prod-receta.parada { border-left-color: #7a7266; background-color: rgba(18, 14, 9, 0.85); }
+.plaza-prod-receta.parada > .plaza-prod-cadena, .plaza-prod-receta.parada .plaza-prod-receta-nombre { opacity: 0.5; }
+.plaza-prod-receta.bloqueada { border-left-color: var(--obra-rojo); background-color: rgba(18, 14, 9, 0.85); }
+.plaza-prod-receta.bloqueada > .plaza-prod-cadena { opacity: 0.45; }
+.plaza-prod-cadena { flex-direction: row; align-items: center; margin-right: 8px; }
+.plaza-prod-insumo { flex-direction: row; align-items: flex-end; margin-right: 4px; }
+.plaza-prod-insumo-n { margin: 0 0 0 1px; font-size: 9.6px; color: var(--pergamino); }
+.plaza-prod-insumo-vacio { margin: 0; color: var(--texto-apagado); }
+.plaza-prod-receta-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-prod-receta-nombre { margin: 0; font-size: 12.8px; color: var(--pergamino); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-prod-receta-pie { flex-direction: row; align-items: center; margin-top: 2px; }
+.plaza-prod-receta-pie > * { margin-right: 4px; }
+.plaza-prod-receta-small { margin: 0; font-size: 10.9px; color: var(--texto-2); }
+.plaza-prod-receta-small.falta { color: var(--obra-rojo); }
+.plaza-prod-interruptor {
+    width: 30px; height: 30px; margin: 0; padding: 0; border-width: 1px; border-color: #7a7266; border-radius: 15px; background-color: rgba(0, 0, 0, 0.5);
+    color: #c9c1b2; font-size: 13px; -unity-text-align: middle-center;
+}
+.plaza-prod-interruptor.encendido { border-color: var(--obra-verde); color: #c8f5b8; background-color: rgba(40, 70, 30, 0.8); font-size: 10px; }
+.plaza-prod-estado { margin: 0; font-size: 13.6px; color: var(--texto-2); }
+.plaza-almacen-reserva, .plaza-almacen-consumo { margin-top: 12px; padding-top: 10px; border-top-width: 1px; border-color: rgba(169, 121, 63, 0.25); }
+.plaza-reserva-ficha {
+    flex-direction: row; align-items: center; padding: 5px 8px; min-width: 0; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgba(18, 14, 9, 0.85);
+}
+.plaza-reserva-ficha > * { margin-right: 8px; }
+.plaza-reserva-ficha.con { border-left-width: 3px; border-left-color: var(--obra-rojo); }
+.plaza-reserva-ficha.cambiada { border-color: #ffd24a; }
+.plaza-reserva-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-reserva-nombre { margin: 0; font-size: 12.2px; color: var(--pergamino); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-reserva-small { margin: 0 0 2px 0; font-size: 10.6px; color: var(--texto-2); }
+.plaza-reserva-barra { height: 6px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.55); border-width: 1px; border-color: rgba(107, 74, 41, 0.8); overflow: visible; }
+.plaza-reserva-barra-i { height: 100%; border-radius: 3px; background-color: var(--oro); }
+.plaza-reserva-ficha.bajo .plaza-reserva-barra-i { background-color: var(--obra-ambar); }
+.plaza-reserva-raya { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background-color: var(--obra-rojo); }
+.plaza-reserva-campo { width: 58px; flex-shrink: 0; margin: 0; }
+.plaza-reserva-campo > .unity-base-text-field__input { height: 28px; padding: 0 5px; background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 12.8px; -unity-text-align: middle-right; }
+.plaza-reserva-campo.cambiada > .unity-base-text-field__input { border-color: #ffd24a; }
+.plaza-reserva-valor { flex-direction: row; align-items: center; flex-shrink: 0; }
+.plaza-reserva-valor-texto { margin: 0 0 0 2px; font-size: 12.5px; color: #ffb3a8; -unity-font-style: bold; }
+.plaza-reserva-pie { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-end; margin-top: 8px; }
+.plaza-reserva-anadir { flex-grow: 1; max-width: 220px; margin: 0; }
+.plaza-reserva-anadir > .unity-base-popup-field__input { height: 32px; padding: 0 8px; background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 12.8px; }
+.plaza-reserva-descartar { margin: 0 0 0 6px; padding: 5px 12px; height: auto; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgba(0, 0, 0, 0.4); color: var(--texto-2); font-size: 12.5px; }
+.plaza-reserva-guardar {
+    flex-direction: row; align-items: center; margin: 0 0 0 6px; padding: 7px 16px; height: auto; border-width: 1px; border-color: var(--obra-verde); border-radius: 3px;
+    background-color: rgb(60, 115, 47);
+}
+.plaza-reserva-guardar > VisualElement { margin-right: 6px; }
+.plaza-reserva-guardar-texto { margin: 0; font-size: 13.4px; color: #eaffdf; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-reserva-guardar:disabled { border-color: rgba(107, 74, 41, 0.6); background-color: rgba(20, 16, 11, 0.8); opacity: 1; }
+.plaza-reserva-guardar:disabled > .plaza-reserva-guardar-texto { color: rgba(160, 140, 110, 0.5); }
+.plaza-consumo-pausa { margin: 0; }
+
+/* «Tu carga» */
+.plaza-almacen-carga { max-width: 1200px; width: 100%; align-self: center; }
+.plaza-carga-columnas { align-items: flex-start; }
+.plaza-carga-mia, .plaza-carga-plaza { min-width: 0; }
+.plaza-carro-fila { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.plaza-carro-recurso { flex-grow: 1; }
+.plaza-carro-nombre { margin: 0; font-size: 13.6px; color: var(--texto-2); }
+.plaza-carro-cifra { margin: 0 8px; font-size: 13.6px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-carro-cantidad { width: 84px; margin: 0 8px 0 0; }
+.plaza-carro-cantidad > .unity-base-text-field__input { background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 13px; padding: 4px 6px; }
+.plaza-carro-boton { margin: 0 6px 0 0; padding: 4px 10px; height: auto; font-size: 12.8px; }
+.plaza-carro-todo { align-self: flex-start; margin: 4px 0 8px 0; }
+.plaza-carga-cierre { margin-top: 8px; }
+.plaza-carga-cierre Label { font-size: 13px; color: var(--pergamino); }
+
+/* la Vivienda que se pulsa (abre Construcción) */
+.plaza-pob-vivienda.pulsable:hover { border-color: #ffb020; }
+
+/* ═══════════ tanda 3: Defensa, la ficha con su ventana y la Armería ═══════════ */
+.plaza-ficha-ventana { margin: 8px 0 4px 0; align-self: stretch; }
+
+/* Defensa: la guarnición */
+.plaza-guarnicion-cab { flex-direction: row; align-items: center; justify-content: space-between; }
+.plaza-guarnicion-titulo { margin: 0; -unity-font-style: bold; }
+.plaza-guarnicion-cupo { margin: 0; font-size: 12.5px; color: var(--oro-claro); }
+.plaza-guarnicion-cupo.excedido { color: var(--obra-rojo); }
+.plaza-guarnicion-barra { height: 10px; margin: 6px 0 4px 0; background-color: #3a362b; border-radius: 5px; overflow: hidden; }
+.plaza-guarnicion-barra-i { height: 100%; background-color: #d9b44a; }
+.plaza-guarnicion-barra.llena > .plaza-guarnicion-barra-i { background-color: #c0392b; }
+.plaza-guarnicion-huecos { margin: 8px 0; }
+.plaza-guarnicion-ajena { opacity: 0.85; }
+.plaza-guarnicion-dueno { position: absolute; left: 0; right: 0; bottom: -16px; margin: 0; font-size: 10.5px; color: var(--oro); -unity-text-align: middle-center; }
+
+/* Defensa: la muralla */
+.plaza-muralla-vista {
+    flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; padding: 10px; margin-bottom: 8px;
+    border-width: 1px; border-color: rgba(169, 121, 63, 0.55); border-radius: 3px; background-color: rgb(26, 23, 14);
+}
+.plaza-muralla-plano { margin-right: 14px; }
+.plaza-muralla-leyenda-item { flex-direction: row; align-items: center; margin-bottom: 3px; }
+.plaza-muralla-muestra { width: 10px; height: 10px; margin-right: 5px; border-width: 1px; border-color: rgba(0, 0, 0, 0.6); border-radius: 1px; }
+.plaza-muralla-muestra.pie { background-color: #9a6a35; }
+.plaza-muralla-muestra.curso { background-color: var(--obra-ambar); }
+.plaza-muralla-muestra.falta { background-color: rgba(0, 0, 0, 0.35); border-color: rgba(169, 121, 63, 0.8); }
+.plaza-muralla-muestra.puerta { background-color: #6fb6ff; }
+.plaza-muralla-muestra.torre { background-color: #9a9384; border-color: var(--oro-claro); }
+.plaza-anillo {
+    margin-bottom: 6px; padding: 8px 10px; border-width: 1px; border-left-width: 3px; border-color: rgba(107, 74, 41, 0.8); border-left-color: var(--obra-ambar);
+    border-radius: 3px; background-color: rgb(28, 21, 14);
+}
+.plaza-anillo.cerrado { border-left-color: var(--obra-verde); }
+.plaza-anillo.mejora { border-left-color: #6fb6ff; }
+.plaza-anillo > * { margin-bottom: 6px; }
+.plaza-anillo-cab { flex-direction: row; align-items: center; }
+.plaza-anillo-cab > VisualElement { margin-right: 8px; }
+.plaza-anillo-titulo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-anillo-nombre { margin: 0; font-size: 14.4px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-anillo-estado { margin: 0; padding: 1px 8px; border-width: 1px; border-color: var(--obra-ambar); border-radius: 9px; background-color: rgba(0, 0, 0, 0.4); font-size: 11.2px; color: var(--obra-ambar); -unity-font-style: bold; }
+.plaza-anillo.cerrado .plaza-anillo-estado { border-color: var(--obra-verde); color: var(--obra-verde); }
+.plaza-anillo.mejora .plaza-anillo-estado { border-color: #6fb6ff; color: #6fb6ff; }
+.plaza-anillo-chips { flex-direction: row; flex-wrap: wrap; }
+.plaza-anillo-chips > * { margin: 0 4px 0 0; }
+.plaza-anillo-avance, .plaza-anillo-celda { flex-direction: row; align-items: center; }
+.plaza-anillo-avance > .plaza-barra-avance, .plaza-anillo-celda > .plaza-barra-avance { flex-grow: 1; margin: 0 6px; }
+.plaza-anillo.cerrado .plaza-barra-avance-i { background-color: var(--obra-verde); }
+.plaza-anillo-parada { color: #ffd590; }
+.plaza-anillo-tarifa { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.plaza-anillo-tarifa > Label { margin-right: 8px; }
+.plaza-anillo-acciones { flex-direction: row; justify-content: flex-end; }
+.plaza-anillo-mejorar, .plaza-anillo-abandonar { margin: 0 0 0 6px; padding: 5px 12px; height: auto; border-width: 1px; border-radius: 3px; font-size: 12.5px; -unity-font-style: bold; }
+.plaza-anillo-mejorar { border-color: var(--oro); background-color: rgb(80, 58, 29); color: var(--oro-claro); }
+.plaza-anillo-abandonar { border-color: var(--obra-rojo); background-color: rgba(80, 20, 15, 0.6); color: #ffb3a8; }
+.plaza-anillo-opcion {
+    height: auto; margin: 0; padding: 8px 4px; align-items: center; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgb(35, 27, 16);
+}
+.plaza-anillo-opcion:hover { border-color: var(--oro); }
+.plaza-anillo-opcion.elegida { border-color: #ffd24a; background-color: rgb(75, 56, 20); }
+.plaza-anillo-opcion.bloqueada { opacity: 0.55; }
+.plaza-anillo-opcion > .plaza-chips { justify-content: center; }
+.plaza-anillo-opcion-nombre { margin: 0 0 2px 0; font-size: 12.2px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-anillo-opcion-pide { margin: 2px 0 0 0; font-size: 10.6px; color: #ffb3a8; -unity-font-style: bold; }
+.plaza-muralla-trazar {
+    margin: 0 0 0 6px; padding: 7px 16px; height: auto; border-width: 1px; border-color: var(--obra-verde); border-radius: 3px; background-color: rgb(60, 115, 47);
+    color: #eaffdf; font-size: 13.4px; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial;
+}
+.plaza-muralla-trazar:disabled { border-color: rgba(107, 74, 41, 0.6); background-color: rgba(20, 16, 11, 0.8); color: rgba(160, 140, 110, 0.5); opacity: 1; }
+
+/* Defensa: la puerta y los aliados */
+.plaza-puerta-cab {
+    flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6px; padding: 8px 10px; border-width: 1px; border-left-width: 3px;
+    border-color: rgba(169, 121, 63, 0.55); border-left-color: var(--obra-verde); border-radius: 3px; background-color: rgb(32, 24, 15);
+}
+.plaza-puerta-cab.entornada { border-left-color: var(--obra-ambar); }
+.plaza-puerta-cab.cerrada { border-left-color: var(--obra-rojo); }
+.plaza-puerta-cab > * { margin-right: 10px; }
+.plaza-puerta-cab-cuerpo { flex-grow: 1; min-width: 128px; }
+.plaza-puerta-cab-nombre { margin: 0; font-size: 14.4px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.plaza-puerta-grupo {
+    height: auto; margin: 0; padding: 8px 4px 6px; align-items: center; border-width: 1px; border-color: rgba(127, 207, 106, 0.55); border-radius: 3px; background-color: rgb(32, 40, 22);
+}
+.plaza-puerta-grupo:disabled { opacity: 1; }
+.plaza-puerta-grupo.cerrada { border-color: rgba(226, 103, 90, 0.7); background-color: rgb(52, 24, 17); }
+.plaza-puerta-grupo.cambiada { border-color: #ffd24a; }
+.plaza-puerta-grupo-nombre { margin: 2px 0; font-size: 11.8px; color: var(--pergamino); -unity-font-style: bold; }
+.plaza-puerta-grupo-estado { flex-direction: row; align-items: center; }
+.plaza-puerta-grupo-estado > VisualElement { margin-right: 3px; }
+.plaza-puerta-grupo .plaza-nota { color: var(--obra-verde); font-size: 10px; letter-spacing: 0.6px; }
+.plaza-puerta-grupo.cerrada .plaza-nota { color: var(--obra-rojo); }
+.plaza-puerta-vetados { flex-direction: row; flex-wrap: wrap; }
+.plaza-puerta-vetado {
+    flex-direction: row; align-items: center; margin: 0 4px 4px 0; padding: 2px 4px 2px 8px; border-width: 1px; border-color: rgba(226, 103, 90, 0.6); border-radius: 12px;
+    background-color: rgba(80, 20, 15, 0.45);
+}
+.plaza-puerta-vetado-nombre { margin: 0 4px 0 0; font-size: 12.5px; color: var(--pergamino); }
+.plaza-puerta-vetado-quitar { width: 18px; height: 18px; margin: 0; padding: 0; border-width: 0; border-radius: 9px; background-color: rgba(0, 0, 0, 0.45); color: #ffb3a8; font-size: 11px; }
+.plaza-puerta-vetar { border-color: var(--obra-rojo); background-color: rgb(110, 38, 30); color: #ffd9d2; -unity-font-style: bold; }
+.plaza-aliados { flex-direction: row; align-items: center; padding: 8px 10px; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgba(18, 14, 9, 0.85); }
+.plaza-aliados > * { margin-right: 10px; }
+.plaza-aliados.abierto { border-color: rgba(127, 207, 106, 0.6); background-color: rgb(28, 40, 20); }
+.plaza-aliados-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-aliados-interruptor { margin: 0; }
+
+/* la Armería */
+.plaza-arm-mochila .bienes-rejilla { flex-direction: row; flex-wrap: wrap; }
+.plaza-arm-casilla { width: 44px; height: 44px; }
+.plaza-arm-saldo { flex-direction: row; align-items: center; margin-left: 8px; }
+.plaza-arm-saldo > VisualElement { margin-right: 5px; }
+.plaza-arm-saldo-texto { margin: 0; font-size: 14px; color: var(--oro-claro); -unity-font-style: bold; }
+.plaza-arm-filtros { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+.plaza-arm-chip {
+    margin: 0 6px 0 0; padding: 2px 10px; height: auto; border-width: 1px; border-color: var(--bronce-osc); border-radius: 9px; background-color: rgba(0, 0, 0, 0.35);
+    color: var(--oro-claro); font-size: 12.5px; -unity-font-style: bold;
+}
+.plaza-arm-chip.activo { border-color: var(--oro); background-color: rgba(201, 162, 39, 0.16); color: #ffe7a6; }
+.plaza-arm-lista { margin-top: 4px; }
+.plaza-arm-fila {
+    flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 6px; padding: 7px 10px; border-width: 1px; border-color: rgba(169, 121, 63, 0.35); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.22);
+}
+.plaza-arm-fila > * { margin-right: 10px; }
+.plaza-arm-pieza { flex-direction: row; align-items: center; flex-grow: 1; flex-shrink: 1; min-width: 200px; }
+.plaza-arm-pieza-icono { width: 36px; height: 36px; margin-right: 10px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.4); }
+.plaza-arm-pieza-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.plaza-arm-pieza-nombre { margin: 0; font-size: 13.4px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.plaza-arm-precio { flex-direction: row; align-items: center; }
+.plaza-arm-precio > VisualElement { margin-right: 4px; }
+.plaza-arm-precio-texto { margin: 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; }
+.plaza-arm-precio.caro .plaza-arm-precio-texto { color: var(--obra-rojo); }
+.plaza-arm-falta { margin: 0; font-size: 11.8px; color: #ffb3a8; white-space: normal; flex-shrink: 1; }
+.plaza-arm-boton { margin: 0; padding: 4px 12px; height: auto; font-size: 12.5px; }
+.plaza-arm-costes { flex-direction: row; flex-wrap: wrap; }
+.plaza-arm-campo { margin: 0; min-width: 150px; }
+.plaza-arm-campo > Label { min-width: 0; margin-right: 6px; font-size: 12px; color: var(--texto-2); }
+.plaza-arm-campo > .unity-base-popup-field__input { height: 28px; background-color: var(--tinta); border-color: var(--bronce-osc); color: var(--pergamino); font-size: 12.5px; }

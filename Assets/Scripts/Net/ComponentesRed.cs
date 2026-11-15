@@ -203,7 +203,7 @@ namespace ConquestTactics.Net
 
     /// <summary>
     /// Espejo de un héroe: su aspecto, que solo viaja al aparecer. Género, las cuatro partes del avatar y las seis piezas
-    /// del equipo (<c>id:tipo</c>), separadas por <c>|</c>; ver <see cref="AparienciaRed.De"/>.
+    /// del equipo (<c>id:tipo</c>) y la montura, separadas por <c>|</c>; ver <see cref="AparienciaRed.De"/>.
     /// </summary>
     public struct AparienciaRed : IComponentData
     {
@@ -214,13 +214,13 @@ namespace ConquestTactics.Net
             var e = a.equipment ?? new Equipment();
             var v = a.avatar ?? new AvatarParts();
             return string.Join("|", a.gender, v.headId, v.hairId, v.beardId, v.eyebrowId,
-                Pieza(e.weapon), Pieza(e.helmet), Pieza(e.torso), Pieza(e.gloves), Pieza(e.pants), Pieza(e.boots));
+                Pieza(e.weapon), Pieza(e.helmet), Pieza(e.torso), Pieza(e.gloves), Pieza(e.pants), Pieza(e.boots), Pieza(e.mount));
         }
 
         public static HeroAppearanceComponent Leer(string texto)
         {
             var p = texto.Split('|');
-            if (p.Length != 11)
+            if (p.Length != 12)
                 return null;
             return new HeroAppearanceComponent
             {
@@ -229,7 +229,7 @@ namespace ConquestTactics.Net
                 equipment = new Equipment
                 {
                     weapon = Pieza(p[5]), helmet = Pieza(p[6]), torso = Pieza(p[7]),
-                    gloves = Pieza(p[8]), pants = Pieza(p[9]), boots = Pieza(p[10]),
+                    gloves = Pieza(p[8]), pants = Pieza(p[9]), boots = Pieza(p[10]), mount = Pieza(p[11]),
                 },
             };
         }

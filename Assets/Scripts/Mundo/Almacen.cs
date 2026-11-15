@@ -232,6 +232,10 @@ namespace ConquestTactics.Mundo
         /// <summary>Una entidad por su clase e id, de cualquier ámbito; null si no se tiene.</summary>
         public Entidad Buscar(TipoEntidad tipo, string id)
         {
+            // Una plaza o un campamento viaja en varios ámbitos: la ficha de la Facción o la vista desde fuera, y su interior
+            // (`ASENTAMIENTO:as-N`, `CAMPAMENTO:camp-N`), que es la completa (trazado, recintos, cargos...). Si está, manda esa.
+            var interior = tipo == TipoEntidad.Asentamiento ? "ASENTAMIENTO:" + id : tipo == TipoEntidad.CampamentoMercenarios ? "CAMPAMENTO:" + id : null;
+            if (interior != null && Ambitos.TryGetValue(interior, out var dentro) && dentro.Entidades.TryGetValue((tipo, id), out var completa)) return completa;
             foreach (var a in Ambitos.Values)
                 if (a.Entidades.TryGetValue((tipo, id), out var e)) return e;
             return null;

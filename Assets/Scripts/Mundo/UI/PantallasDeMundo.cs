@@ -406,6 +406,7 @@ namespace ConquestTactics.Mundo.UI
                 Armadura = ClaseDeHeroe.TipoDeArmadura(datos, h?.Equipamiento?.Torso?.ItemDefinitionId) ?? clase?.ArmaduraInicial,
                 Femenino = h?.Femenino ?? false,
                 Cabeza = h?.Avatar?.CabezaId, Pelo = h?.Avatar?.PeloId, Barba = h?.Avatar?.BarbaId, Cejas = h?.Avatar?.CejasId,
+                Piezas = PiezasPuestas(h),
             };
         }
 
@@ -437,6 +438,15 @@ namespace ConquestTactics.Mundo.UI
             return lista.FirstOrDefault(x => x.Id == id)?.Lugar ?? AnalisisDeCampamento.Nombre(id);
         }
 
+        /// <summary>Con el botón del ratón pulsado no se repinta nada solo: rehecho entre pulsar y soltar, el clic se perdería (el botón pulsado ya
+        /// no está). Pasó en el HUD de la plaza, en la Base y en el informe.</summary>
+        static bool RatonPulsado() => UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed == true;
+
+        /// <summary>Lo que una pantalla rehace sola cada `ms` (por firma, versión o reloj), con la guarda de `RatonPulsado`. Toda pantalla que se
+        /// repinte por temporizador va por aquí.</summary>
+        static IVisualElementScheduledItem RepintarCada(VisualElement v, long ms, Action repintar) =>
+            v.schedule.Execute(() => { if (!RatonPulsado()) repintar(); }).Every(ms);
+
         /// <summary>Un rectángulo de la planta (esquina, ancho y alto en unidades locales) por su centro.</summary>
         static SelectorDePersonaje.PiezaDePlanta Pieza(RectLocal r, string tipo) =>
             new SelectorDePersonaje.PiezaDePlanta { Tipo = tipo, X = r.X + r.Ancho / 2.0, Y = r.Y + r.Alto / 2.0, Ancho = r.Ancho, Alto = r.Alto };
@@ -459,10 +469,10 @@ namespace ConquestTactics.Mundo.UI
             v.Q<Label>("lugar").parent.parent.Insert(0, cabeceraIcono);
             // La placa «Tu almacén» del pie (`htmlPlacaDeRecursos`): el emoji y la cifra de cada recurso; se rehace solo si cambia.
             var placaAlmacen = v.Q("placa-almacen");
-            string almacenPintado = null;
+            string almacenPintado = null, vestidoCon = null;
             SelectorDePersonaje.InteriorParaVer interior = null;
             // Lo que cambia mientras estás dentro: residentes y si resides, los avisos, y el cartel de la zona donde estás (la tecla y qué hay).
-            v.schedule.Execute(() =>
+            RepintarCada(v, 100, () =>
             {
                 PintarAvisos(botonAvisos);
                 var ahora = CampamentoActual(camp.Id) ?? camp;
@@ -478,9 +488,18 @@ namespace ConquestTactics.Mundo.UI
                     piezas.Add(PiezasDeAlmacen(almacen, "almacen-pie"));
                     Ver(placaAlmacen, almacen.Count > 0);
                 }
+                // Si cambia lo que lleva puesto (equipar en la Base), el héroe del interior se vuelve a vestir.
+                var puesto = string.Join("|", (PiezasPuestas(yo) ?? new Dictionary<string, string>()).OrderBy(kv => kv.Key).Select(kv => kv.Key + "=" + kv.Value));
+                if (interior != null && puesto != vestidoCon)
+                {
+                    vestidoCon = puesto;
+                    interior.Heroe = HeroeParaVer(c.Datos);
+                    var local = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).FirstOrDefault(x => x.IsLocalHero);
+                    if (local != null) VestidoDelMotor.Vestir(local.transform, interior.Heroe);
+                }
                 var texto = interior != null && !interior.PanelAbierto && interior.ZonaCercana != null ? CartelDeZona(interior.ZonaCercana, ahora) : null;
                 Poner(cartel, texto);
-            }).Every(100);
+            });
             v.Q<Button>("cerrar-sesion").clicked += async () =>
             {
                 if (await dialogo.Abrir("Tu héroe sale del mundo y se cierra la sesión en este equipo.", "¿Cerrar sesión?", "Cerrar sesión")) _ = CerrarSesion();
@@ -526,6 +545,17 @@ namespace ConquestTactics.Mundo.UI
             if (escena.IsValid() && escena.isLoaded) UnityEngine.SceneManagement.SceneManager.SetActiveScene(escena); // su luz, y el héroe nace en ella
         }
 
+        /// <summary>Lo que lleva puesto el héroe, por hueco, con el id de su pieza en `OBJETOS` (para vestirlo pieza a pieza); null sin héroe.</summary>
+        static Dictionary<string, string> PiezasPuestas(Heroe h)
+        {
+            if (h == null) return null;
+            var e = h.Equipamiento ?? new Equipamiento();
+            var piezas = new Dictionary<string, string>();
+            foreach (var (hueco, pieza) in new[] { ("arma", e.Arma), ("casco", e.Casco), ("torso", e.Torso), ("guantes", e.Guantes), ("pantalones", e.Pantalones), ("botas", e.Botas), ("montura", e.Montura) })
+                if (pieza != null) piezas[hueco] = pieza.ItemDefinitionId;
+            return piezas;
+        }
+
         /// <summary>Cierra el interior abierto (lo usa «Salir al mundo» antes de volver al mapa).</summary>
         Func<Task> cerrarInterior;
 
@@ -533,14 +563,17 @@ namespace ConquestTactics.Mundo.UI
         /// `velocidadColumna.ts`): ventana ancha con título y aspa; arriba, a la izquierda cómo sales (y los víveres) y a la derecha la carga del carro;
         /// abajo, la velocidad de la columna, la tropa con su Liderazgo y su loadout, y el riel con las tarjetas de tropa de Conquest, el «+» y los huecos.
         /// Si resides, sale cargado el loadout activo (o todo, si no tiene escuadras) y se quita con ✕ o se añade con «+»; «Guardar loadout» lo deja en
-        /// el loadout elegido. Si no resides, sales con la columna con la que entraste, tal cual. El modo «Ejército» es del paso 11: aquí no sale.</summary>
-        void VentanaDeSalida(string campId, string lugar)
+        /// el loadout elegido. Si no resides, sales con la columna con la que entraste, tal cual. El modo «Ejército» es del paso 11: aquí no sale.
+        /// Desde una plaza (`plazaId`, paso 7): de tu residencia sales con la tropa de tu campamento y la carga del almacén de la plaza
+        /// (`salirAlMundo`); de otra, retomas tu columna aparcada a la puerta (`salirDeAsentamiento`). Los víveres, solo la línea, como el prototipo.</summary>
+        void VentanaDeSalida(string campId, string lugar, string plazaId = null)
         {
             var h = HeroeAhora();
-            var camp = CampamentoActual(campId);
+            var camp = plazaId == null ? CampamentoActual(campId) : null;
+            var plaza = plazaId == null ? null : c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, plazaId)?.Asentamiento;
             var interior = SelectorDePersonaje.Interior;
-            if (h == null || camp == null || interior == null || interior.PanelAbierto) return;
-            bool resides = camp.ResidentesIds.Contains(h.Id);
+            if (h == null || (camp == null && plaza == null) || interior == null || interior.PanelAbierto) return;
+            bool resides = plaza != null ? h.HasResidenciaId && h.ResidenciaId == plazaId : camp.ResidentesIds.Contains(h.Id);
             var a = c.Sesion.Almacen;
             interior.PanelAbierto = true;
             var cartelDeZona = pantalla.Q<Label>("cartel");
@@ -575,7 +608,9 @@ namespace ConquestTactics.Mundo.UI
 
             // Izquierda: cómo sales, los víveres (con «Llenar víveres»: el prototipo lo tiene en la ficha de la puerta, aquí se queda a mano) y
             // el recuadro «Cómo sales» con la columna personal (el ejército, en el paso 11).
-            izquierda.Add(Dialogo.Texto(resides ? "Sales al mapa por la puerta. Tus víveres van siempre contigo." : "No resides aquí: sales con la columna con la que entraste.", "dialogo-texto"));
+            izquierda.Add(Dialogo.Texto(resides ? "Sales al mapa por la puerta. Tus víveres van siempre contigo."
+                : plaza != null ? "No resides aquí: retomas tu columna, aparcada a la puerta, con su tropa y su carro."
+                : "No resides aquí: sales con la columna con la que entraste.", "dialogo-texto"));
             var error = Dialogo.Texto("", "error oculto");
             var filaViveres = Dialogo.Caja("salida-fila");
             izquierda.Add(filaViveres);
@@ -588,8 +623,8 @@ namespace ConquestTactics.Mundo.UI
             {
                 var yo = HeroeAhora();
                 var tienes = Math.Ceiling(Instante.Valor(yo?.Viveres, c.Sesion.AhoraMundo) / 1000);
-                textoViveres.text = $"Víveres: {tienes:0} de {maximoViveres:0} de trigo.";
-                Ver(repostar, tienes < maximoViveres - 0.5);
+                textoViveres.text = plaza != null ? $"Víveres: {tienes:0} de trigo." : $"Víveres: {tienes:0} de {maximoViveres:0} de trigo.";
+                Ver(repostar, plaza == null && tienes < maximoViveres - 0.5);
             }
             repostar = IconosDelMundo.BotonConGlifo("Llenar víveres", ("glifo", "viveres"), "boton-secundario", async () =>
             {
@@ -613,7 +648,7 @@ namespace ConquestTactics.Mundo.UI
                 "Con tu columna personal: tú y la tropa que elijas abajo. Salir como ejército, con otros héroes, llega más adelante."));
             var columnaPersonal = new RadioButton("Columna personal") { value = true, name = "columna-personal" };
             recuadro.Add(columnaPersonal);
-            izquierda.Add(recuadro);
+            if (plaza == null || resides) izquierda.Add(recuadro);
 
             // Derecha: la carga del carro (de tu almacén personal si resides; si no, lo que ya lleva el carro de tu columna).
             var campos = new List<(IntegerField campo, string recurso)>();
@@ -623,10 +658,14 @@ namespace ConquestTactics.Mundo.UI
             {
                 var total = Dialogo.Texto("", "salida-carga-total");
                 total.name = "carga-total";
+                var de = plaza != null ? "el almacén de la plaza" : "tu almacén personal";
                 derecha.Add(ConAyuda(IconoDelante(Dialogo.Texto("Carga del carro", "salida-recuadro-titulo"), total),
-                    "Lo que metas en el carro sale contigo, de tu almacén personal. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad)."));
-                var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).OrderBy(kv => kv.Key).ToList() ?? new List<KeyValuePair<string, long>>();
-                if (almacen.Count == 0) derecha.Add(Dialogo.Texto("No hay nada que cargar en tu almacén personal.", "campo-ayuda"));
+                    $"Lo que metas en el carro sale contigo, de {de}. Es lo que llevas para comer o gastar fuera, y lo que se arriesga si pierdes un combate (se pierde la mitad)."));
+                var almacen = (plaza != null
+                    ? plaza.Almacen.Select(kv => new KeyValuePair<string, long>(kv.Key, (long)Instante.Valor(kv.Value.Cantidad, c.Sesion.AhoraMundo)))
+                    : h.AlmacenPersonal?.PorId.AsEnumerable() ?? Enumerable.Empty<KeyValuePair<string, long>>())
+                    .Where(kv => kv.Value >= 1000).OrderBy(kv => kv.Key).ToList();
+                if (almacen.Count == 0) derecha.Add(Dialogo.Texto($"No hay nada que cargar en {de}.", "campo-ayuda"));
                 void Total()
                 {
                     var lleva = campos.Sum(x => x.campo.value);
@@ -682,7 +721,7 @@ namespace ConquestTactics.Mundo.UI
 
             // La tropa: la del campamento si resides (sale el loadout activo, o todo); si no, la de tu columna, sin elegir.
             var disponibles = h.EscuadronesIds.Select(id => a.Buscar(TipoEntidad.Escuadron, id)?.Escuadron).Where(e => e != null && e.Cantidad > 0 &&
-                (resides ? e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento
+                (resides ? e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento && !e.EnGuarnicion   // lo de la guarnición se queda (`ventanaSalida.ts`)
                          : e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.EjercitoId && columna != null && e.Contenedor.EjercitoId == columna.Id)).ToList();
             List<string> DelLoadout(Loadout l) => l == null || l.SquadIds.Count == 0 ? disponibles.Select(s => s.Id).ToList()
                 : disponibles.Where(s => l.SquadIds.Contains(s.Id)).Select(s => s.Id).ToList();
@@ -823,19 +862,18 @@ namespace ConquestTactics.Mundo.UI
                     }
                     tropaCaja.Add(elegir);
                 }
-                if (resides && disponibles.Count == 0) tropaCaja.Add(Dialogo.Texto("No tienes tropa en el campamento. Puedes salir solo.", "campo-ayuda"));
+                if (resides && disponibles.Count == 0) tropaCaja.Add(Dialogo.Texto(plaza != null ? "No tienes tropa libre en la plaza (la de guarnición no sale). Puedes salir solo." : "No tienes tropa en el campamento. Puedes salir solo.", "campo-ayuda"));
                 if (!resides) tropaCaja.Add(Dialogo.Texto(lista.Count > 0 ? "Sales con la columna con la que entraste, tal cual." : "Tu columna no lleva escuadras.", "campo-ayuda"));
                 if (libre < 0) Poner(error, $"Te pasas de Liderazgo ({usado} / {tope}): quita escuadras para poder salir.");
                 else if (error.text.StartsWith("Te pasas de Liderazgo")) Poner(error, null);
                 salir?.SetEnabled(libre >= 0);
             }
 
-            salir = Dialogo.Boton("SALIR", "boton-primario salida-salir", async () =>
+            salir = Dialogo.Boton(plaza != null && !resides ? "SALIR Y RETOMAR MI COLUMNA" : "SALIR", "boton-primario salida-salir", async () =>
             {
                 salir.SetEnabled(false);
                 Poner(error, null);
-                var orden = new OrdenSalirDelCampamento { CampamentoId = camp.Id, HeroeId = h.Id, Carga = new Cantidades() };
-                if (resides) orden.EscuadronIds.AddRange(elegidas);
+                var carga = new Cantidades();
                 // El orden del riel es el de combate: si el héroe no las tiene así a la cabeza, se le guarda antes de salir (las que salen primero, en
                 // el orden del riel, y el resto detrás).
                 var yo = HeroeAhora();
@@ -848,9 +886,23 @@ namespace ConquestTactics.Mundo.UI
                     catch (ErrorDeSesion e) { Poner(error, e.Message); salir.SetEnabled(true); return; }
                     if (ro.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(ro.Rechazo)); salir.SetEnabled(true); return; }
                 }
-                foreach (var (campo, recurso) in campos) if (campo.value > 0) orden.Carga.PorId[recurso] = campo.value * 1000L;
+                foreach (var (campo, recurso) in campos) if (campo.value > 0) carga.PorId[recurso] = campo.value * 1000L;
+                Orden orden;
+                if (plaza == null)
+                {
+                    var o = new OrdenSalirDelCampamento { CampamentoId = camp.Id, HeroeId = h.Id, Carga = carga };
+                    if (resides) o.EscuadronIds.AddRange(elegidas);
+                    orden = new Orden { SalirDelCampamento = o };
+                }
+                else if (resides)
+                {
+                    var o = new OrdenSalirAlMundo { AsentamientoId = plaza.Id, HeroeId = h.Id, Carga = carga };
+                    o.EscuadronIds.AddRange(elegidas);
+                    orden = new Orden { SalirAlMundo = o };
+                }
+                else orden = new Orden { SalirDeAsentamiento = new OrdenSalirDeAsentamiento { AsentamientoId = plaza.Id, HeroeId = h.Id } };
                 ResultadoOrden r;
-                try { r = await c.Sesion.Ordenar(new Orden { SalirDelCampamento = orden }); }
+                try { r = await c.Sesion.Ordenar(orden); }
                 catch (ErrorDeSesion e) { Poner(error, e.Message); salir.SetEnabled(true); return; }
                 if (r.Resultado != Resultado.OrdenAceptada) { Poner(error, Textos.Explicar(r.Rechazo)); salir.SetEnabled(true); return; }
                 Cerrar();
@@ -1356,6 +1408,9 @@ namespace ConquestTactics.Mundo.UI
                 // Dentro de un campamento de mercenarios (con su planta ya llegada): su interior. Los demás sitios, el aviso hasta su paso.
                 var campamento = CampamentoDondeEsta();
                 if (campamento != null) { Interior(campamento); return; }
+                // Dentro de tu plaza (paso 7): su interior.
+                var plaza = PlazaDondeEsta();
+                if (plaza != null) { InteriorDePlaza(plaza); return; }
                 var lugar = LugarDondeEsta();
                 Ver(dentro, lugar != null);
                 if (lugar != null) v.Q<Label>("dentro-texto").text = $"Estás dentro de {lugar}. Su interior llega con su paso; de momento, desde aquí sales al mundo.";
@@ -1364,7 +1419,7 @@ namespace ConquestTactics.Mundo.UI
                 AnotarInformesDelMapa();
             }
             Refrescar();
-            v.schedule.Execute(Refrescar).Every(250);
+            RepintarCada(v, 250, Refrescar);
         }
 
         string accionesPintadas;
@@ -1539,7 +1594,7 @@ namespace ConquestTactics.Mundo.UI
                 Fichas(entidades, porTipo.Length > 0 ? porTipo : new[] { ("—", "nada aún") });
             }
             Refrescar();
-            v.schedule.Execute(Refrescar).Every(500);
+            RepintarCada(v, 500, Refrescar);
         }
 
         static void Fichas(VisualElement donde, params (string etiqueta, string valor)[] fichas) =>

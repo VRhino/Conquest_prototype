@@ -340,7 +340,8 @@ namespace ConquestTactics.Mundo.Mapa
                 if (c != null) Centro = (c.Posicion.X / 1000.0, c.Posicion.Y / 1000.0);
                 Camara.RadioVision = datos.Numero("documentos.Movimiento_Ejercitos.VISION.jugadorSolo");
             }
-            if (!vistaPedida && Centro != null)
+            // (sin esperar a saber dónde está: dentro de una plaza ajena, su sitio llega precisamente por la VISTA)
+            if (!vistaPedida)
             {
                 // La VISTA del mundo entero, como BronzeAgeClient: el servidor ya la filtra por la niebla. La sesión la vuelve a pedir al reconectar.
                 vistaPedida = true;

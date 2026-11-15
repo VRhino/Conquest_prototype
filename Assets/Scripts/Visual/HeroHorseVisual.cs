@@ -20,6 +20,8 @@ namespace ConquestTactics.Visual
         [SerializeField] private RuntimeAnimatorController _swordRider;
         [SerializeField] private RuntimeAnimatorController _lancerRider;
         [SerializeField] private RuntimeAnimatorController _archerRider;
+        [Tooltip("Pelajes (coat 1..n): bayo, negro, castaño, bayo claro, pío.")]
+        [SerializeField] private Material[] _coats;
 
         public Animator Animator => _animator;
         public Transform Saddle => _saddle;
@@ -29,6 +31,15 @@ namespace ConquestTactics.Visual
         {
             _animator = animator; _saddle = saddle; _reinsHand = reinsHand; _reinsNeck = reinsNeck;
             _swordRider = sword; _lancerRider = lancer; _archerRider = archer;
+        }
+
+        public void SetCoats(Material[] coats) => _coats = coats;
+
+        /// <summary>Puts coat <paramref name="coat"/> (1..n) on this copy's horse; 0 or unknown keeps the prefab's.</summary>
+        public void SetCoat(byte coat)
+        {
+            if (coat == 0 || _coats == null || coat > _coats.Length || _coats[coat - 1] == null) return;
+            foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true)) r.sharedMaterial = _coats[coat - 1];
         }
 
         /// <summary>The rider's clips for the hero's weapon: sword and shield or greatsword, spear, or bow.</summary>

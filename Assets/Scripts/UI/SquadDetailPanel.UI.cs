@@ -277,17 +277,19 @@ public class SquadDetailPanel : MonoBehaviour
                 var visualPrefab = registry.GetPrefab(data.visualPrefabName);
                 if (visualPrefab != null)
                 {
-                    // Deshabilitar EntityVisualSync en el prefab antes de instanciar
-                    var visualSync = visualPrefab.GetComponent<EntityVisualSync>();
+                    // La copia nace bajo un padre apagado (sin Awake ni OnEnable); ahí se le apaga EntityVisualSync y se le pone la capa
+                    // squad_preview, y luego pasa al contenedor. El prefab compartido no se toca: antes se le cambiaban la capa y el componente.
+                    var cuna = new GameObject("cuna");
+                    cuna.SetActive(false);
+                    _currentVisualInstance = Instantiate(visualPrefab, cuna.transform);
+                    var visualSync = _currentVisualInstance.GetComponent<EntityVisualSync>();
                     if (visualSync != null)
                         visualSync.enabled = false;
-
-                    // Cambiar layer recursivamente a squad_preview
                     int previewLayer = LayerMask.NameToLayer("squad_preview");
                     if (previewLayer >= 0)
-                        SetLayerRecursively(visualPrefab, previewLayer);
-
-                    _currentVisualInstance = Instantiate(visualPrefab, modelContainer);
+                        SetLayerRecursively(_currentVisualInstance, previewLayer);
+                    _currentVisualInstance.transform.SetParent(modelContainer, false);
+                    Destroy(cuna);
                     _currentVisualInstance.transform.localPosition = Vector3.zero;
                     _currentVisualInstance.transform.localRotation = Quaternion.identity;
                     _currentVisualInstance.transform.localScale = Vector3.one;

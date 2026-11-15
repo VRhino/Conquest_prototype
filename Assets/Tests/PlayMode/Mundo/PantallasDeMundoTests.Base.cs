@@ -121,7 +121,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var enLaBarra = barra.Query<Button>().ToList().Where(Visible).Select(b => b.name).ToList();
                 CollectionAssert.AreEquivalent(new[] { "base", "avisos" }, enLaBarra, "la barra con la Base abierta: " + string.Join(", ", enLaBarra));
                 var basePersonal = raiz.Q("base-personal");
-                CollectionAssert.AreEqual(new[] { "pestana-heroe", "pestana-tropas", "pestana-bienes" }, basePersonal.Query<Button>(className: "base-pestana").ToList().Select(p => p.name).ToArray(), "tres pestañas");
+                CollectionAssert.AreEqual(new[] { "pestana-heroe", "pestana-tropas", "pestana-loadouts", "pestana-bienes" }, basePersonal.Query<Button>(className: "base-pestana").ToList().Select(p => p.name).ToArray(), "cuatro pestañas");
 
                 // Héroe (calco del detalle del héroe de Conquest): atributos, el héroe en 3D de frente y con su pelo, y las siete casillas del equipo.
                 yield return Esperar(() => raiz.Q("heroe-atributos") != null, 5, "la pestaña Héroe");
@@ -382,8 +382,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             try
             {
                 doc.panelSettings.targetTexture = null;
-                yield return null;
-                yield return null;
+                // Unos fotogramas: al cambiar de tamaño se vuelven a colocar las rejillas y las listas flotantes, y el elemento se mueve.
+                for (int i = 0; i < 8; i++) yield return null;
                 var panel = raiz.worldBound;
                 var centro = e.worldBound.center;
                 var donde = new Vector2(centro.x * Screen.width / panel.width, Screen.height - centro.y * Screen.height / panel.height);

@@ -1,5 +1,5 @@
 // Los paneles del campamento de mercenarios por dentro (paso 4B del bloque 4; BronzeAgeClient: `ui/pantallaCampamento.ts`): la taberna (residir),
-// el mercado (comprar) y el edificio militar (reclutar y pedir prestada). Se abren al acercarse a la pieza de la planta y pulsar F; con uno
+// el mercado (comprar) y el edificio militar (reclutar y pedir prestada, con el árbol de tropas: `PantallasDeMundo.Reclutamiento`). Se abren al acercarse a la pieza de la planta y pulsar F; con uno
 // abierto el héroe no anda y el ratón queda libre. Las cifras salen del ámbito CAMPAMENTO y de `/v1/datos`; los rechazos, con su frase.
 using System;
 using System.Collections.Generic;
@@ -78,16 +78,6 @@ namespace ConquestTactics.Mundo.UI
             if (escalon == null) return null;
             try { return (int?)c.Datos.En("documentos.Heroe_Y_Tropa.LIDERAZGO.costePorEscalon")[escalon]; }
             catch (FaltaDato) { return null; }
-        }
-
-        /// <summary>Una tropa con lo que se hace con ella debajo: su tarjeta, una línea y, si toca, el botón.</summary>
-        static VisualElement TropaConAccion(string nombre, VisualElement tarjeta, string linea)
-        {
-            var caja = Dialogo.Caja("tropa-con-accion");
-            caja.name = nombre;
-            if (tarjeta != null) caja.Add(tarjeta);
-            caja.Add(Dialogo.Texto(linea, "aviso-texto"));
-            return caja;
         }
 
         string NombreDeTropa(string id)
@@ -386,156 +376,6 @@ namespace ConquestTactics.Mundo.UI
                     v.Add(comprar);
                 }
                 if (ultimaCompra != null) { var hecho = Dialogo.Texto(ultimaCompra, "aviso-texto mercado-hecho"); hecho.name = "ultima-compra"; v.Add(hecho); }
-            });
-        }
-
-        // ─────────────── el edificio militar: reclutar y pedir prestada ───────────────
-
-        bool reclutarConCarro;
-
-        /// <summary>La tropa (BronzeAgeClient: `tropa`, `lugarCampamento` y `accionesCampamento`), en lista: los reclutas del campamento, de dónde sale
-        /// el oro, las tropas que se prestan gratis (la leva comunal, como dice el motor) y las que ofrece este campamento con su precio. Solo el
-        /// residente. «Reclutar» sale desactivado con su motivo si faltan reclutas o no llega el oro.</summary>
-        void PanelTropa(string campId)
-        {
-            PanelDelCampamento("panel-tropa", "TROPA", "barracon", (v, error, repintar) =>
-            {
-                var camp = CampamentoActual(campId);
-                var h = HeroeDelCampamento();
-                if (camp == null || h == null) return;
-                if (!camp.ResidentesIds.Contains(h.Id))
-                {
-                    v.Add(Dialogo.Texto("Solo se presta o se recluta tropa en el campamento donde resides: puedes residir aquí en la taberna.", "dialogo-texto"));
-                    return;
-                }
-                var ahora = c.Sesion.AhoraMundo;
-                var poblacion = Math.Floor(Instante.Valor(camp.Poblacion, ahora) / 1000);
-                var tope = camp.Poblacion != null && camp.Poblacion.HasMaximo ? Math.Floor(camp.Poblacion.Maximo / 1000.0) : 0;
-                var columna = ColumnaDelHeroe(h);
-                if (reclutarConCarro && columna == null) reclutarConCarro = false;
-                var oroAlmacen = (int)Math.Floor(Milesimas(h.AlmacenPersonal, "oro"));
-                var oroCarro = (int)Math.Floor(Milesimas(columna?.Suministro, "oro"));
-                var oro = reclutarConCarro ? oroCarro : oroAlmacen;
-                // Los chips de la cabecera (`.obra-chip`): los reclutas del campamento y tu oro, con su emoji.
-                var datos = Dialogo.Caja("fila-envuelta");
-                datos.name = "chips";
-                var reclutas = IconosDelMundo.ConIcono("glifo", "reclutas", Dialogo.Texto($"{poblacion}/{tope} reclutas", "chip-texto"), 16);
-                reclutas.AddToClassList("chip");
-                datos.Add(reclutas);
-                var chipOro = IconosDelMundo.ConIcono("recurso", "oro", Dialogo.Texto($"{oro} de oro ({(reclutarConCarro ? "carro" : "almacén")})", "chip-texto"), 16);
-                chipOro.AddToClassList("chip");
-                datos.Add(chipOro);
-                v.Add(datos);
-                if (columna != null)
-                {
-                    var fila = Dialogo.Caja("fila-envuelta");
-                    fila.Add(Dialogo.Texto("Pagar con", "aviso-texto"));
-                    var a = Dialogo.Boton($"Mi almacén ({oroAlmacen} de oro)", "boton-secundario", () => { reclutarConCarro = false; repintar(); });
-                    var b = Dialogo.Boton($"El carro ({oroCarro} de oro; a la puerta)", "boton-secundario", () => { reclutarConCarro = true; repintar(); });
-                    a.EnableInClassList("clase--elegida", !reclutarConCarro);
-                    b.EnableInClassList("clase--elegida", reclutarConCarro);
-                    fila.Add(a);
-                    fila.Add(b);
-                    v.Add(fila);
-                }
-                var mias = EscuadrasDelHeroe(h);
-                var tropas = c.Datos.TropasReclutables?.OfType<JObject>().ToList() ?? new List<JObject>();
-
-                // El carril del campamento: lo que se presta gratis (la leva comunal; no gana experiencia y se retira si dejas de residir aquí).
-                // Las cabeceras de carril (`arbolTablero`): el icono del lugar a 30 px y su nombre en oro.
-                VisualElement Carril(string familia, string id, string texto)
-                {
-                    var carril = IconosDelMundo.ConIcono(familia, id, Dialogo.Texto(texto, "carril-texto"), 30);
-                    carril.AddToClassList("carril");
-                    return carril;
-                }
-                v.Add(Carril("parte", "campamento", "CAMPAMENTO · TE LA PRESTAN"));
-                v.Add(Dialogo.Texto("Gratis, para aprender a usar tropa antes de tener la tuya. No gana experiencia y se retira si dejas de residir en este campamento.", "campo-ayuda"));
-                var prestan = Dialogo.Caja("fila-envuelta");
-                foreach (var t in tropas.Where(x => (string)x["tecnologia"] == "leva_comunal"))
-                {
-                    var id = (string)t["id"];
-                    var unidades = (int?)t["unidadesPorDefecto"] ?? 0;
-                    var prestada = mias.FirstOrDefault(s => s.TropaId == id && s.HasPrestadaPorCampamentoId);
-                    // La tarjeta de Conquest: los hombres de la escuadra si ya te la prestaron; si no, los que trae.
-                    var tarjeta = PiezasDeTropa.Tarjeta(id, LiderazgoDe(id),
-                        prestada != null ? (int)prestada.Cantidad : unidades, unidades);
-                    var caja = TropaConAccion("tropa-" + id, tarjeta,
-                        $"{(string)t["nombre"]} · {(prestada != null ? $"prestada, {DondeEsta(prestada)}" : $"{unidades} hombres")}");
-                    if (prestada == null)
-                    {
-                        Button pedir = null;
-                        pedir = Dialogo.Boton("Pedir prestada", "boton-secundario", async () =>
-                        {
-                            var o = new OrdenPedirPrestamo();
-                            o.TropaIds.Add(id);
-                            await OrdenDelPanel(new Orden { PedirPrestamo = o }, error, repintar, pedir);
-                        });
-                        pedir.name = "pedir-" + id;
-                        caja.Add(pedir);
-                    }
-                    prestan.Add(caja);
-                }
-                v.Add(prestan);
-
-                // El edificio militar del campamento: lo que ofrece, con su precio (con el recargo, la reputación y el descuento ya aplicados).
-                var militar = camp.Edificios.FirstOrDefault(e => ZonaDePieza(e) == "militar");
-                v.Add(Carril("edificio", militar ?? "barracon", (militar != null ? Pieza(militar) : "Edificio militar").ToUpperInvariant()));
-                if (camp.Reclutables.Count == 0) v.Add(Dialogo.Texto("El campamento aún no ofrece tropa aquí.", "campo-ayuda"));
-                // Lo que ofrece (o ya es tuyo), en tarjetas; lo que aún no ofrece, en miniaturas: se ve qué vendrá, sin botón.
-                var ofrece = Dialogo.Caja("fila-envuelta");
-                var luego = new List<string>();
-                foreach (var o in camp.Reclutables)
-                {
-                    var t = tropas.FirstOrDefault(x => (string)x["id"] == o.TropaId);
-                    var nombre = t != null ? (string)t["nombre"] : o.TropaId;
-                    var unidades = (int)o.Unidades;
-                    var mia = mias.FirstOrDefault(s => s.TropaId == o.TropaId && !s.HasPrestadaPorCampamentoId);
-                    if (mia == null && !o.Desbloqueada) { luego.Add(o.TropaId); continue; }
-                    var porSoldado = o.PrecioPorSoldado / 1000.0;
-                    var coste = (int)Math.Ceiling(o.PrecioEscuadra / 1000.0);
-                    var tarjeta = PiezasDeTropa.Tarjeta(o.TropaId, LiderazgoDe(o.TropaId),
-                        mia != null ? (int)mia.Cantidad : unidades, unidades);
-                    var caja = TropaConAccion("tropa-" + o.TropaId, tarjeta, mia != null ? $"{nombre} · tu escuadra" : $"{nombre} · {porSoldado:0.#} de oro por soldado");
-                    if (mia == null)
-                    {
-                        var motivo = poblacion < unidades ? $"Faltan reclutas: hay {poblacion} y hacen falta {unidades}."
-                            : coste > oro ? $"No te llega el oro: {coste} y tienes {oro} en {(reclutarConCarro ? "el carro" : "tu almacén")}." : null;
-                        Button reclutar = null;
-                        var id = o.TropaId;
-                        reclutar = Dialogo.Boton("", "boton-primario", async () =>
-                        {
-                            await OrdenDelPanel(new Orden { ReclutarEnCampamento = new OrdenReclutarEnCampamento { TropaId = id, PagarCon = reclutarConCarro ? "carro" : "almacenPersonal" } },
-                                error, repintar, reclutar);
-                        });
-                        reclutar.name = "reclutar-" + id;
-                        // «Reclutar N» y el chip del coste en oro (`.obra-coste` con 🪙; en rojo si no te llega).
-                        reclutar.style.flexDirection = FlexDirection.Row;
-                        reclutar.style.alignItems = Align.Center;
-                        reclutar.style.paddingLeft = reclutar.style.paddingRight = 8;
-                        reclutar.style.height = 36;
-                        reclutar.Add(Dialogo.Texto($"Reclutar {unidades}", "boton-texto"));
-                        var costeChip = IconosDelMundo.ChipDeRecurso("oro", coste.ToString(), $"{coste} de oro");
-                        costeChip.EnableInClassList("chip-recurso--falta", coste > oro);
-                        costeChip.style.marginLeft = 6;
-                        costeChip.style.marginBottom = 0;
-                        reclutar.Add(costeChip);
-                        reclutar.SetEnabled(motivo == null);
-                        if (motivo != null) { var m = Dialogo.Texto(motivo, "campo-ayuda"); m.name = "motivo-" + id; caja.Add(m); }
-                        caja.Add(reclutar);
-                    }
-                    ofrece.Add(caja);
-                }
-                v.Add(ofrece);
-                if (luego.Count > 0)
-                {
-                    v.Add(Dialogo.Texto("Aún no las ofrece:", "campo-ayuda"));
-                    var minis = Dialogo.Caja("fila-envuelta");
-                    minis.name = "aun-no";
-                    foreach (var id in luego)
-                        if (PiezasDeTropa.Miniatura(id, 40, NombreDeTropa(id)) is VisualElement mini) { mini.style.marginBottom = 6; minis.Add(mini); }
-                    v.Add(minis);
-                }
             });
         }
     }
