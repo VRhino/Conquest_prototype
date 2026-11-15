@@ -47,6 +47,10 @@ namespace ConquestTactics.Mundo.UI
             }
             Viva = this;
             c = GetComponent<ConexionDeMundo>();
+            // El sigilo de las Facciones en los carteles del mapa (paso 8): el catálogo y la textura, desde aquí, que tiene la sesión.
+            TexturaDeSigilo.Asegurar();
+            ConquestTactics.Mundo.Mapa.CosasEnElMapa.SigiloDe = (faccionId, ancho) =>
+                Sigilos.DeFaccion(c?.Sesion?.Almacen, faccionId) is Sigilo s ? TexturaDeSigilo.De(s, ancho * 2) : null;
             ajustes = ScriptableObject.CreateInstance<PanelSettings>();
             ajustes.themeStyleSheet = Resources.Load<ThemeStyleSheet>("MundoUI/TemaMundo");
             ajustes.scaleMode = PanelScaleMode.ScaleWithScreenSize;
@@ -62,6 +66,7 @@ namespace ConquestTactics.Mundo.UI
             var raiz = doc.rootVisualElement;
             raiz.pickingMode = PickingMode.Ignore;
             raiz.styleSheets.Add(Resources.Load<StyleSheet>("MundoUI/Mundo"));
+            raiz.styleSheets.Add(Resources.Load<StyleSheet>("MundoUI/Faccion"));
             pantalla = Capa(raiz);
             capaCarga = Capa(raiz);
             capaEncima = Capa(raiz);
@@ -402,6 +407,7 @@ namespace ConquestTactics.Mundo.UI
                 Nombre = Textos.NombreDeHeroe(s.Almacen, c.HeroeId),
                 Nivel = h?.Nivel ?? 1,
                 Faccion = faccionId == null ? "Sin Facción" : NombreDeFaccion(s.Almacen, faccionId) ?? "Facción",
+                Sigilo = faccionId == null ? null : Sigilos.DeFaccion(s.Almacen, faccionId),
                 Clase = clase,
                 Armadura = ClaseDeHeroe.TipoDeArmadura(datos, h?.Equipamiento?.Torso?.ItemDefinitionId) ?? clase?.ArmaduraInicial,
                 Femenino = h?.Femenino ?? false,
@@ -1354,6 +1360,7 @@ namespace ConquestTactics.Mundo.UI
             forzada.clicked += () => _ = mapa.AlternarMarchaForzada();
             nodos.clicked += () => { mapa.NombresDeNodos = !mapa.NombresDeNodos; PlayerPrefs.SetInt("mundo.capa.nodos", mapa.NombresDeNodos ? 1 : 0); };
             fertilidad.clicked += () => { mapa.Fertilidad = !mapa.Fertilidad; PlayerPrefs.SetInt("mundo.capa.fertilidad", mapa.Fertilidad ? 1 : 0); };
+            v.Q<Button>("opciones").clicked += AbrirOpciones;
             Botones(v);
             BarraDelJugador(v);
 
@@ -1509,7 +1516,10 @@ namespace ConquestTactics.Mundo.UI
         void Update()
         {
             VigilarFinDeBatalla();
+            // Las Opciones, encima de todo, se cierran con Esc antes que lo de debajo.
+            if (OpcionesAbiertas) { if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) CerrarOpciones(); return; }
             TeclaDeLaBase();
+            TeclaDeFaccion();
             var teclado = UnityEngine.InputSystem.Keyboard.current;
             if (diagnostico == null || teclado == null || !teclado.f2Key.wasPressedThisFrame) return;
             if (diagnostico.childCount == 0) SesionViva(diagnostico);

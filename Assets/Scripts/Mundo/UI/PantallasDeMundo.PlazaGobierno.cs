@@ -1307,14 +1307,20 @@ namespace ConquestTactics.Mundo.UI
         {
             var pausados = new HashSet<string>(a.ConsumoPausado);
             var pausa = Reside(a, yo) && Presente(a, yo) && (TitularDe(a, "gobernador") == yo.Id || TitularDe(a, "tesorero") == yo.Id);
-            string Lista() { var l = a.ConsumoPausado.Select(CosasDelMapa.NombreDeRecurso).ToList(); return l.Count <= 1 ? string.Join("", l) : $"{string.Join(", ", l.Take(l.Count - 1))} y {l.Last()}"; }
             var seccion = Dialogo.Caja("plaza-almacen-consumo");
             seccion.name = "pausar-consumo";
             if (!pausa)
             {
                 if (pausados.Count == 0) return;
                 seccion.Add(TituloDeSeccion("Consumo pausado", null));
-                seccion.Add(Dialogo.Texto($"{Lista()}: la población no lo come y el trigo pone lo que cubría. Lo deciden el Gobernador y el Tesorero.", "plaza-nota"));
+                // Lo pausado con su icono delante («🥩 Carne y 🍞 Pan», `textoPausados`).
+                var l = a.ConsumoPausado.ToList();
+                var nota = Renglon("plaza-nota", l.SelectMany((r, i) => new object[]
+                {
+                    IconosDelMundo.Icono("recurso", r, 14),
+                    CosasDelMapa.NombreDeRecurso(r) + (i == l.Count - 1 ? ": la población no lo come y el trigo pone lo que cubría. Lo deciden el Gobernador y el Tesorero." : i == l.Count - 2 ? " y" : ","),
+                }).ToArray());
+                seccion.Add(nota);
                 col.Add(seccion);
                 return;
             }

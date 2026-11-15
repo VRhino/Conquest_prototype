@@ -85,6 +85,9 @@ namespace ConquestTactics.Net
         /// <summary>0 nadie todavía, 1 el atacante, 2 el defensor.</summary>
         [GhostField] public byte Ganador;
         [GhostField] public byte Agotado;
+        /// <summary>Los sigilos de los dos bandos (paso 8, tanda 4), para las banderas de las zonas.</summary>
+        [GhostField] public FixedString128Bytes SigiloAtacante;
+        [GhostField] public FixedString128Bytes SigiloDefensor;
     }
 
     /// <summary>
@@ -170,6 +173,10 @@ namespace ConquestTactics.Net
         [GhostField] public FixedString64Bytes Prefab;
         /// <summary>Soldado: su <c>SquadType</c>. Héroe: su <c>HeroClass</c> (de ella salen las riendas y la postura a caballo).</summary>
         [GhostField] public byte TipoDeEscuadra;
+        /// <summary>Su estandarte (paso 8, tanda 4): el sigilo (<c>Sigilos.Clave</c>) y el tipo de <c>EstandarteComponent</c> (el del héroe; el de la
+        /// escuadra solo en su abanderado, que cambia si cae). Vacío, ninguno.</summary>
+        [GhostField] public FixedString128Bytes Sigilo;
+        [GhostField] public byte Estandarte;
     }
 
     /// <summary>Espejo de la batalla de verdad: lo que el Animator del cliente necesita (lo que UnitAnimationAdapter lee del soldado).</summary>

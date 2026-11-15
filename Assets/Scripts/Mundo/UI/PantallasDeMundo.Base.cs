@@ -50,6 +50,7 @@ namespace ConquestTactics.Mundo.UI
             var yelmo = new Button(AlternarBase) { name = "base", tooltip = "Base personal (B)" };
             IconoDeBarra(yelmo, "base");
             barra.Insert(barra.IndexOf(avisos), yelmo);
+            BotonDeFaccion(barra, yelmo);
             avisos.text = "";
             avisos.tooltip = "Avisos";
             IconoDeBarra(avisos, "avisos");
@@ -59,7 +60,7 @@ namespace ConquestTactics.Mundo.UI
 
             var lista = Dialogo.Caja("menu-barra oculto");
             lista.name = "menu-barra";
-            foreach (var n in new[] { "capa-nodos", "capa-fertilidad", "marcha-forzada", "cambiar-partida", "cerrar-sesion" })
+            foreach (var n in new[] { "opciones", "capa-nodos", "capa-fertilidad", "marcha-forzada", "cambiar-partida", "cerrar-sesion" })
             {
                 var b = barra.Q<Button>(n);
                 if (b == null) continue;
@@ -257,6 +258,8 @@ namespace ConquestTactics.Mundo.UI
             // El estado: nombre y nivel con su barra (`Hero_Status_Panel` y `Experience_Bar`).
             var estado = Dialogo.Caja("heroe-estado");
             estado.Add(Dialogo.Texto(Textos.NombreDeHeroe(c.Sesion.Almacen, h.Id), "base-nombre"));
+            // Bajo el nombre, su Facción (el sigilo pequeño) y sus cargos, solo si los tiene (paso 8).
+            if (CargosDeFaccionEnLaBase(h) is VisualElement cargosDeFaccion) estado.Add(cargosDeFaccion);
             var clase = ClaseDeHeroe.Leer(c.Datos).FirstOrDefault(k => k.Id == h.ClassDefinitionId);
             var textoClase = Dialogo.Texto(clase?.Nombre ?? h.ClassDefinitionId.Replace('_', ' '), "base-donde base-clase");
             textoClase.tooltip = "La clase es la del arma que lleva puesta";

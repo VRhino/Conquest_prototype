@@ -87,6 +87,13 @@ public class CapturePointSetup : MonoBehaviour
         _indicator = GetComponentInChildren<CapturePointZoneIndicator>(true);
 
         if (_indicator != null) _indicator.Initialize(ZoneId, ZoneEntity, _isLocked);
+
+        // La bandera de la zona, con el sigilo del bando que la tiene (paso 8 del bloque 4, tanda 4). Sin gráficos (el servidor), no hace falta.
+        if (EstandartesDeBatalla.HayGraficos)
+        {
+            var bandera = transform.Find("SM_Prop_Flag_13")?.GetComponent<Renderer>();
+            if (bandera != null) gameObject.AddComponent<BanderaDeZona>().Bind(ZoneEntity, bandera);
+        }
     }
 
     void Update()

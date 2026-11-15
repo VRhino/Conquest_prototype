@@ -44,9 +44,13 @@ namespace ConquestTactics.Net
                 var modelo = new VisualRed { Prefab = visual.ValueRO.visualPrefabName };
                 if (SystemAPI.HasComponent<UnitOwnerComponent>(entidad))
                 {
-                    var escuadra = SystemAPI.GetComponent<UnitOwnerComponent>(entidad).squad;
+                    var duenos = SystemAPI.GetComponent<UnitOwnerComponent>(entidad);
+                    var escuadra = duenos.squad;
                     if (SystemAPI.HasComponent<SquadDefinitionComponent>(escuadra))
                         modelo.TipoDeEscuadra = (byte)SystemAPI.GetComponent<SquadDefinitionComponent>(escuadra).squadType;
+                    // El sigilo de su héroe: el estandarte de la escuadra lo lleva su abanderado (lo pone `Abanderados`).
+                    if (SystemAPI.HasComponent<EstandarteComponent>(duenos.hero))
+                        modelo.Sigilo = SystemAPI.GetComponent<EstandarteComponent>(duenos.hero).Clave;
                 }
                 Crear(ref ecb, prefabs.Espejo, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Soldado, modelo);
             }
@@ -58,6 +62,11 @@ namespace ConquestTactics.Net
                 var modelo = new VisualRed { Prefab = aparicion.ValueRO.visualPrefabId.ToString() + "_Remote" };
                 if (SystemAPI.HasComponent<HeroClassComponent>(entidad))
                     modelo.TipoDeEscuadra = (byte)SystemAPI.GetComponent<HeroClassComponent>(entidad).heroClass;
+                if (SystemAPI.HasComponent<EstandarteComponent>(entidad))
+                {
+                    modelo.Sigilo = SystemAPI.GetComponent<EstandarteComponent>(entidad).Clave;
+                    modelo.Estandarte = EstandarteComponent.DeHeroe;
+                }
                 var fantasma = Crear(ref ecb, prefabs.EspejoHeroe, entidad, pose.ValueRO, bando.ValueRO.value, SoldadoRed.Heroe, modelo);
                 ecb.SetComponent(fantasma, new AparienciaRed { Texto = AparienciaRed.De(em.GetComponentObject<HeroAppearanceComponent>(entidad)) });
             }
@@ -73,6 +82,7 @@ namespace ConquestTactics.Net
             using var poses = _conEspejo.ToComponentDataArray<LocalTransform>(Allocator.Temp);
             for (int i = 0; i < espejos.Length; i++)
                 em.SetComponentData(espejos[i].Fantasma, poses[i]);
+            Abanderados(ref state);
 
             // Lo que lee UnitAnimationAdapter del soldado de verdad, resumido para el Animator del cliente.
             foreach (var (espejo, movimiento, combate, entidad) in SystemAPI.Query<RefRO<Espejo>, RefRO<UnitAnimationMovementComponent>, RefRO<UnitCombatComponent>>()
@@ -171,6 +181,30 @@ namespace ConquestTactics.Net
                     animacion.RevisionDeReaccion = aguante.reactionRevision;
                 }
                 em.SetComponentData(espejo.ValueRO.Fantasma, animacion);
+            }
+        }
+
+        /// <summary>El abanderado de cada escuadra (paso 8, tanda 4): su primer soldado vivo lleva el estandarte; si cae, el siguiente. Solo cambia
+        /// el espejo cuando cambia.</summary>
+        void Abanderados(ref SystemState state)
+        {
+            var em = state.EntityManager;
+            foreach (var (unidades, escuadra) in SystemAPI.Query<DynamicBuffer<SquadUnitElement>>().WithEntityAccess())
+            {
+                var abanderado = Entity.Null;
+                foreach (var u in unidades)
+                    if (em.Exists(u.Value) && !em.HasComponent<IsDeadComponent>(u.Value)) { abanderado = u.Value; break; }
+                foreach (var u in unidades)
+                {
+                    if (!em.Exists(u.Value) || !em.HasComponent<Espejo>(u.Value)) continue;
+                    var fantasma = em.GetComponentData<Espejo>(u.Value).Fantasma;
+                    if (!em.Exists(fantasma) || !em.HasComponent<VisualRed>(fantasma)) continue;
+                    var modelo = em.GetComponentData<VisualRed>(fantasma);
+                    var tipo = u.Value == abanderado && !modelo.Sigilo.IsEmpty ? EstandarteComponent.DeEscuadra : EstandarteComponent.Ninguno;
+                    if (modelo.Estandarte == tipo) continue;
+                    modelo.Estandarte = tipo;
+                    em.SetComponentData(fantasma, modelo);
+                }
             }
         }
 

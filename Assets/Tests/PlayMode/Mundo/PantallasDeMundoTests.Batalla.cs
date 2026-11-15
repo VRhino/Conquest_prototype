@@ -184,6 +184,62 @@ namespace ConquestTactics.Mundo.UI.Tests
 
                 var visuales = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None);
                 Debug.Log($"[Prueba] en la batalla: {visuales.Length} figuras");
+                // Los estandartes (paso 8, tanda 4): el de mi héroe con su sigilo (el del ticket), uno por escuadra y las banderas de las zonas.
+                Assert.IsTrue(em.HasComponent<EstandarteComponent>(mio) && em.GetComponentData<EstandarteComponent>(mio).Tipo == EstandarteComponent.DeHeroe
+                    && !em.GetComponentData<EstandarteComponent>(mio).Clave.IsEmpty, "el estandarte de mi héroe, con su sigilo");
+                yield return Esperar(() => figura.GetComponentsInChildren<Transform>(true).Length > 0 && GameObject.FindObjectsByType<EstandarteVisual>(FindObjectsSortMode.None).Length > 0
+                    && UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(t => t.name == "Estandarte") >= 2, 10, "los estandartes en la batalla");
+                var conEstandarte = em.CreateEntityQuery(typeof(EstandarteComponent)).ToComponentDataArray<EstandarteComponent>(Unity.Collections.Allocator.Temp).ToArray();
+                Assert.Greater(conEstandarte.Count(x => x.Tipo == EstandarteComponent.DeEscuadra), 0, "un abanderado por escuadra");
+                var banderas = UnityEngine.Object.FindObjectsByType<BanderaDeZona>(FindObjectsSortMode.None);
+                Debug.Log($"[Prueba] estandartes: {UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Count(t => t.name == "Estandarte")} a la vista; "
+                    + $"héroe {em.GetComponentData<EstandarteComponent>(mio).Clave}; escuadras {conEstandarte.Count(x => x.Tipo == EstandarteComponent.DeEscuadra)}; "
+                    + $"zonas {banderas.Length}; atacante «{EstandartesDeBatalla.Atacante}», defensor «{EstandartesDeBatalla.Defensor}»");
+                // Fotos de cerca (para revisarlas): el estandarte de mi héroe y la bandera de una zona, con sus sigilos.
+                var carpetaFotos = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+                void Foto(Vector3 centro, Vector3 desde, string nombre)
+                {
+                    if (string.IsNullOrEmpty(carpetaFotos)) return;
+                    var camFoto = new GameObject("foto").AddComponent<Camera>();
+                    camFoto.transform.position = desde;
+                    camFoto.transform.LookAt(centro);
+                    var rtFoto = new RenderTexture(900, 900, 24);
+                    camFoto.targetTexture = rtFoto;
+                    camFoto.Render();
+                    var antesFoto = RenderTexture.active;
+                    RenderTexture.active = rtFoto;
+                    var texFoto = new Texture2D(900, 900, TextureFormat.RGB24, false);
+                    texFoto.ReadPixels(new Rect(0, 0, 900, 900), 0, 0);
+                    RenderTexture.active = antesFoto;
+                    System.IO.File.WriteAllBytes(System.IO.Path.Combine(carpetaFotos, nombre + ".png"), texFoto.EncodeToPNG());
+                    UnityEngine.Object.Destroy(camFoto.gameObject);
+                }
+                var mioEstandarte = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(t => t.name == "Estandarte")
+                    .OrderBy(t => Vector3.Distance(t.position, figura.transform.position)).FirstOrDefault();
+                if (mioEstandarte != null)
+                {
+                    var centro = mioEstandarte.position + Vector3.up * 1.6f;
+                    Foto(centro, centro - figura.transform.forward * 3.2f + figura.transform.right * 1.2f + Vector3.up * 0.4f, "45c_estandarte_de_cerca");
+                }
+                if (banderas.Length > 0 && banderas[0].transform.Find("SM_Prop_Flag_13")?.GetComponent<Renderer>() is Renderer telaZona)
+                {
+                    var c0 = telaZona.bounds.center;
+                    var d0 = Mathf.Max(3f, telaZona.bounds.extents.magnitude * 3f);
+                    Foto(c0, c0 + new Vector3(0.35f, 0.15f, -1f).normalized * d0, "45d_bandera_de_zona");
+                    Foto(c0, c0 + new Vector3(-0.35f, 0.15f, 1f).normalized * d0, "45e_bandera_de_zona_detras");
+                }
+                // La opción «Estandarte de las tropas» apagada quita los de las escuadras, no el del héroe ni las banderas de las zonas.
+                int Con(byte tipo) => UnityEngine.Object.FindObjectsByType<EstandarteVisual>(FindObjectsSortMode.None).Count(x => x.Mostrado == tipo);
+                yield return Esperar(() => Con(EstandarteComponent.DeEscuadra) > 0 && Con(EstandarteComponent.DeHeroe) > 0, 10, "estandartes de héroe y de escuadra");
+                var deHeroe = Con(EstandarteComponent.DeHeroe);
+                OpcionesDelJuego.Poner(OpcionesDelJuego.EstandarteDeTropas, false);
+                yield return Esperar(() => Con(EstandarteComponent.DeEscuadra) == 0, 5, "sin estandartes de escuadra con la opción apagada");
+                Assert.AreEqual(deHeroe, Con(EstandarteComponent.DeHeroe), "los de los héroes siguen");
+                Assert.AreEqual(banderas.Length, UnityEngine.Object.FindObjectsByType<BanderaDeZona>(FindObjectsSortMode.None).Length, "las banderas de las zonas siguen");
+                yield return CapturarPantalla("45b_sin_estandartes_de_tropa");
+                OpcionesDelJuego.Poner(OpcionesDelJuego.EstandarteDeTropas, true);
+                yield return Esperar(() => Con(EstandarteComponent.DeEscuadra) > 0, 5, "los de las escuadras, otra vez");
+                Debug.Log($"[Prueba] opción del estandarte: {deHeroe} de héroe siguen con ella apagada; las de escuadra vuelven al encenderla");
                 Application.logMessageReceived -= Registro;
                 LogAssert.ignoreFailingMessages = false;
                 Assert.IsEmpty(errores, "ningún error en la preparación ni al entrar (tampoco el de BattleData; solo el salto de tick de NetCode al cargar)");

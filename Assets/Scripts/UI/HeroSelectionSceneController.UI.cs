@@ -74,8 +74,19 @@ public class HeroSelectionSceneController : MonoBehaviour
             Destroy(child.gameObject);
         var ficha = Instantiate(heroButtonPrefab, heroButtonContainer);
         ficha.name = "Heroe del motor";
+        // El escudo de su Facción (30 px, como la pantalla de partidas del prototipo); sin Facción, nada.
         var icono = ficha.transform.Find("Icon");
-        if (icono) icono.gameObject.SetActive(false);
+        if (icono)
+        {
+            var imagen = icono.GetComponent<Image>();
+            icono.gameObject.SetActive(heroe.Sigilo != null && imagen != null);
+            if (heroe.Sigilo != null && imagen != null)
+            {
+                imagen.sprite = TexturaDeSigilo.SpriteDe(heroe.Sigilo, 60);
+                imagen.color = Color.white;
+                imagen.preserveAspect = true;
+            }
+        }
         var nombre = ficha.transform.Find("Name")?.GetComponent<TMP_Text>();
         if (nombre) nombre.text = heroe.Nombre;
         var nivel = ficha.transform.Find("Level")?.GetComponent<TMP_Text>();

@@ -57,10 +57,11 @@ namespace ConquestTactics.Mundo
         public const uint Ajeno = 0x9a927f, Mercenarios = 0x6fa3d6, Bandidos = 0xc0392b, Oro = 0xe0b422, BatallaColor = 0x8a3b12,
             Camino = 0x8b5a2b, AnilloMercenarios = 0x2e5e8c, Mirada = 0x7cc4ea, Piedra = 0x8d8d8d;
 
-        /// <summary>El color de una Facción (`f-N`). El sigilo, con sus colores, entra con el paso 8; hasta entonces, la paleta de reserva por N.</summary>
-        public static uint ColorDeFaccion(string faccionId)
+        /// <summary>El color de una Facción (`faccionColor`): el primario de su sigilo; si no se conoce, la paleta de reserva por N de `f-N`.</summary>
+        public static uint ColorDeFaccion(Almacen a, string faccionId)
         {
             if (string.IsNullOrEmpty(faccionId)) return Ajeno;
+            if (Sigilos.Primario(Sigilos.DeFaccion(a, faccionId)) is uint primario) return primario;
             var guion = faccionId.LastIndexOf('-');
             return guion >= 0 && int.TryParse(faccionId.Substring(guion + 1), out var n) ? ColoresDeFaccion[Math.Abs(n) % ColoresDeFaccion.Length] : Ajeno;
         }
@@ -94,7 +95,7 @@ namespace ConquestTactics.Mundo
             var miColumna = heroe?.Ubicacion?.EjercitoId;
             var plazas = new Dictionary<string, Asentamiento>();
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Asentamiento)) plazas[e.Asentamiento.Id] = e.Asentamiento;
-            uint ColorDeMadre(string madreId) => plazas.TryGetValue(madreId ?? "", out var m) ? ColorDeFaccion(m.FaccionId) : Ajeno;
+            uint ColorDeMadre(string madreId) => plazas.TryGetValue(madreId ?? "", out var m) ? ColorDeFaccion(a, m.FaccionId) : Ajeno;
 
             foreach (var p in plazas.Values)
             {
@@ -105,7 +106,7 @@ namespace ConquestTactics.Mundo
                 r.Add(new CosaDelMapa
                 {
                     Clase = ClaseDeCosa.Plaza, Id = p.Id, Nombre = p.HasNombre ? p.Nombre : p.Id, Detalle = $"Nivel {p.Nivel}", FaccionId = p.FaccionId,
-                    X = x, Y = y, Radio = huella, Alto = Math.Max(0.4, huella * 0.9), RadioClic = huella + Holgura, Color = ColorDeFaccion(p.FaccionId), Entidad = a.Buscar(TipoEntidad.Asentamiento, p.Id),
+                    X = x, Y = y, Radio = huella, Alto = Math.Max(0.4, huella * 0.9), RadioClic = huella + Holgura, Color = ColorDeFaccion(a, p.FaccionId), Entidad = a.Buscar(TipoEntidad.Asentamiento, p.Id),
                 });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.FichaConocida))
@@ -117,7 +118,7 @@ namespace ConquestTactics.Mundo
                 r.Add(new CosaDelMapa
                 {
                     Clase = ClaseDeCosa.Plaza, Id = f.AsentamientoId, Nombre = f.HasNombre ? f.Nombre : f.AsentamientoId, Detalle = $"Nivel {f.Nivel} · recordada", FaccionId = f.FaccionId,
-                    X = x, Y = y, Radio = huella, Alto = Math.Max(0.4, huella * 0.9), RadioClic = huella + Holgura, Color = ColorDeFaccion(f.FaccionId), BajoNiebla = true, Entidad = e,
+                    X = x, Y = y, Radio = huella, Alto = Math.Max(0.4, huella * 0.9), RadioClic = huella + Holgura, Color = ColorDeFaccion(a, f.FaccionId), BajoNiebla = true, Entidad = e,
                 });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Pueblo))
@@ -198,7 +199,7 @@ namespace ConquestTactics.Mundo
                     Clase = mia ? (formacion ? ClaseDeCosa.Formacion : ClaseDeCosa.Ejercito) : ClaseDeCosa.EjercitoAjeno, Id = c.Id,
                     Nombre = (ejercito ? "Ejército" : "Columna") + (mia ? " de tu Facción" : " ajena"),
                     Detalle = c.Participantes.Count == 1 ? Textos.NombreDeHeroe(a, c.Participantes[0].HeroeId) : $"{c.Participantes.Count} héroes", FaccionId = c.FaccionId,
-                    X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.5, RadioClic = 0.8, Color = c.HasFaccionId() ? ColorDeFaccion(c.FaccionId) : 0xc0392b, Entidad = e,
+                    X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.5, RadioClic = 0.8, Color = c.HasFaccionId() ? ColorDeFaccion(a, c.FaccionId) : 0xc0392b, Entidad = e,
                 });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Caravana))
@@ -211,7 +212,7 @@ namespace ConquestTactics.Mundo
                 {
                     Clase = mia ? ClaseDeCosa.Caravana : ClaseDeCosa.CaravanaAjena, Id = c.Id, Nombre = mia ? "Caravana de tu Facción" : "Caravana ajena",
                     Detalle = c.Escoltada ? "Escoltada" : "", FaccionId = c.HasFaccionId ? c.FaccionId : null,
-                    X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.35, RadioClic = 0.7, Color = c.HasFaccionId ? ColorDeFaccion(c.FaccionId) : Ajeno, Entidad = e,
+                    X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.35, RadioClic = 0.7, Color = c.HasFaccionId ? ColorDeFaccion(a, c.FaccionId) : Ajeno, Entidad = e,
                 });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.AedaItinerante))
@@ -247,7 +248,11 @@ namespace ConquestTactics.Mundo
             ["uva"] = "Uva", ["vino"] = "Vino", ["aceituna"] = "Aceituna", ["aceite"] = "Aceite de oliva", ["cebada"] = "Cebada",
             ["cerveza"] = "Cerveza", ["sesamo"] = "Sésamo", ["aceiteSesamo"] = "Aceite de sésamo", ["lingoteCobre"] = "Lingote de cobre",
             ["lingoteEstano"] = "Lingote de estaño", ["lingoteBronce"] = "Lingote de bronce", ["cuero"] = "Cuero", ["cueroCurtido"] = "Cuero curtido",
-            ["hierro"] = "Hierro", ["lingoteHierro"] = "Lingote de hierro",
+            ["hierro"] = "Hierro", ["lingoteHierro"] = "Lingote de hierro", ["cueroCalidad"] = "Cuero de calidad",
+            ["armaMadera"] = "Arma de madera", ["armaCobre"] = "Arma de cobre", ["armaBronce"] = "Arma de bronce", ["armaBronceCalidad"] = "Arma de bronce de calidad",
+            ["armaduraBasica"] = "Armadura básica", ["armaduraIntermedia"] = "Armadura intermedia", ["armaduraBronce"] = "Armadura de bronce",
+            ["armaduraBronceCalidad"] = "Armadura de bronce de calidad", ["armaHierro"] = "Arma de hierro", ["armaHierroCalidad"] = "Arma de hierro de calidad",
+            ["carroGuerra"] = "Carro de guerra", ["chatarraCobre"] = "Chatarra de cobre", ["chatarraBronce"] = "Chatarra de bronce", ["chatarraHierro"] = "Chatarra de hierro",
         };
 
         static uint ColorDeRecurso(string tipo)
@@ -280,7 +285,7 @@ namespace ConquestTactics.Mundo
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.ZonaFaccion))
                 foreach (var c in e.ZonaFaccion.Contornos)
                 {
-                    var raya = new RayaDelMapa { Ancho = 0.18, Color = ColorDeFaccion(e.ZonaFaccion.FaccionId), BajoNiebla = e.ZonaFaccion.FaccionId != miFaccion, Cerrada = true };
+                    var raya = new RayaDelMapa { Ancho = 0.18, Color = ColorDeFaccion(a, e.ZonaFaccion.FaccionId), BajoNiebla = e.ZonaFaccion.FaccionId != miFaccion, Cerrada = true };
                     foreach (var p in c.Puntos) raya.Puntos.Add(P(p));
                     if (raya.Puntos.Count > 2) r.Add(raya);
                 }
@@ -288,7 +293,7 @@ namespace ConquestTactics.Mundo
             {
                 var p = e.Asentamiento;
                 if (p.Zona.Count < 3) continue;
-                var raya = new RayaDelMapa { Ancho = 0.12, Color = ColorDeFaccion(p.FaccionId), BajoNiebla = true, Cerrada = true };
+                var raya = new RayaDelMapa { Ancho = 0.12, Color = ColorDeFaccion(a, p.FaccionId), BajoNiebla = true, Cerrada = true };
                 foreach (var z in p.Zona) raya.Puntos.Add(P(z));
                 r.Add(raya);
             }

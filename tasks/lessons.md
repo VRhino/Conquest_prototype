@@ -668,3 +668,6 @@
   - El JSON lleva espacios: `"status": "running"`. Un bucle que busque `"status":"running"` sale al instante.
 - Para revisar un vídeo, recortar la zona del personaje a resolución completa (`blender-tools/conquest-horse/scripts/video_crop.py`). En la hoja reducida, el
   héroe subiendo detrás del caballo parecía un salto de pose, y no lo era.
+- Recursos en pantalla: donde el prototipo pone `RI`/`.ta-rec`/`obra-coste` (icono y cifra), van iconos (`ChipDeTec`, `ChipsDeCoste`,
+  `IconosDelMundo.ChipDeRecurso`), nunca `NombreDeRecurso` en una frase. Un id nuevo de recurso necesita su nombre en `CosasDelMapa.NombresDeRecurso`
+  (si falta, sale el id con mayúscula: «ArmaMadera»). En un botón dorado, cada coste en su píldora oscura, o la cifra clara no se lee.

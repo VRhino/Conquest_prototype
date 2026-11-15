@@ -35,6 +35,8 @@ namespace ConquestTactics.Mundo
         public sealed class HeroeParaVer
         {
             public string Nombre, Faccion;
+            /// <summary>El sigilo de su Facción (null sin Facción o si no ha llegado).</summary>
+            public BronzeAge.Contract.V1.Sigilo Sigilo;
             public uint Nivel;
             /// <summary>Su clase de `/v1/datos` (null si el motor trae una que no está).</summary>
             public ClaseDeHeroe Clase;

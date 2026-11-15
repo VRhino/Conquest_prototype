@@ -222,6 +222,8 @@
 .plaza-coste > VisualElement { margin-right: 2px; }
 .plaza-coste-cifra { margin: 0; padding: 0; font-size: 12px; color: var(--pergamino); }
 .plaza-coste.falta > .plaza-coste-cifra { color: var(--obra-rojo); }
+/* En un botón dorado, cada coste en su píldora oscura (`.ta-ficha-boton .obra-coste` del prototipo): la cifra clara se lee. */
+.boton-primario .plaza-coste { padding: 0 5px; margin: 0 0 0 6px; border-radius: 2px; background-color: rgba(20, 14, 8, 0.78); }
 
 /* ── abajo: «Salir al mundo» y el riel ── */
 .plaza-salir {

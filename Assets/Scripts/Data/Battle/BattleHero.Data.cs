@@ -31,4 +31,7 @@ public class BattleHeroData
 
     /// <summary>Gender used to select correct avatar assets.</summary>
     public string gender = "Male";
+
+    /// <summary>The sigil it fights under, as a <c>Sigilos.Clave</c> (the 8 ids joined by «|»); empty: no banner.</summary>
+    public string sigilo = string.Empty;
 }

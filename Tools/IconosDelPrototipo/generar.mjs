@@ -75,6 +75,8 @@ const GLIFOS = {
   aviso: '⚠', // los errores de acceso y partidas (`.error-banner`)
   monedas: '💰', escudo: '🛡', sitio: '📍', campamento: '🏕', casa: '🏠', // la Base personal (ui/basePersonal.ts)
   nobleza: '👑', mantenimiento: '🛠', espera: '⏳', // el HUD de la plaza (ui/hudPlaza.ts, ui/panelCentro.ts)
+  prestigio: '🏆', reputacion: '⚖', alianza: '🤝', templo: '🏛', estatua: '🗿', // el lateral de tu Facción (ui/pestanaFaccion.ts)
+  fusion: '🔗', bots: '🤖', // la Diplomacia: la fusión de «Nueva propuesta» y «Ocultar las de bots» (ui/panelDiplomacia.ts, ui/pestanaFaccion.ts)
 };
 // Los símbolos del prototipo que no son emoji: no están en Twemoji ni en Inter o Cinzel (saldrían como cuadros), así que se dibujan aquí,
 // en 32×32 y en blanco para teñirlos como los dibujos a mano (el prototipo los pinta en el color del texto, \`--oro\` en la lista).

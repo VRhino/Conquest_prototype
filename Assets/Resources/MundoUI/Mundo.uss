@@ -844,3 +844,23 @@ Button.equipo-cuadro:hover { border-color: var(--oro); }
 .recl-tip-texto { margin: 2px 0 0 0; font-size: 12.5px; color: var(--pergamino); white-space: normal; }
 .recl-tip-seccion { margin: 11px 0 4px 0; font-size: 10.5px; letter-spacing: 1.6px; color: var(--oro); }
 .recl-carta .tropa-tarjeta-cifra, .recl-carta .tropa-tarjeta-hombres { font-size: 12px; }
+/* «Adoptable» en el árbol de tropas (paso 8, tanda 3): solo falta adoptar su tecnología; la etiqueta «Adoptar» abre la pestaña Tecnología. */
+.recl-carta.adoptable { border-color: #7fcf6a; }
+.recl-carta.adoptable .recl-medalla { background-color: #7fcf6a; color: rgb(16, 32, 12); }
+.recl-muestra.adoptable { border-color: #7fcf6a; background-color: rgba(20, 16, 11, 0.78); }
+.recl-carta-estado--adoptar { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; }
+.recl-carta-estado-texto { margin: 0 0 0 4px; padding: 0; font-size: 10.5px; color: var(--texto-2); white-space: normal; flex-shrink: 1; }
+.recl-boton-mini { margin: 0; padding: 0 7px; height: 16px; border-width: 1px; border-color: rgb(122, 86, 38); border-radius: 2px; background-color: var(--oro); color: rgb(32, 21, 9); font-size: 9.5px; letter-spacing: 0.8px; -unity-font-style: bold; -unity-text-align: middle-center; }
+Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
+.recl-tip-tec { flex-direction: row; align-items: flex-start; }
+.recl-tip-marca { width: 14px; margin: 2px 4px 0 0; padding: 0; font-size: 12.5px; -unity-font-style: bold; }
+.recl-tip-marca.ok { color: #7fcf6a; }
+.recl-tip-marca.ap { color: #e0a53a; }
+.recl-tip-marca.no { color: #e2675a; }
+.recl-tip-tec > .recl-tip-texto { flex-shrink: 1; }
+/* La ventana «Opciones» (Víctor, 2026-11-15): secciones y filas de `OpcionesDelJuego`. */
+.opciones-ventana { width: 560px; max-width: 92%; }
+.opciones-cabecera { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.opciones-cabecera > .dialogo-titulo { margin-bottom: 0; }
+.opciones-fila { margin: 6px 0 10px 0; padding: 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(255, 255, 255, 0.035); }
+.opciones-ayuda { margin: 6px 0 0 0; font-size: 13px; color: var(--texto-2); white-space: normal; }

@@ -41,6 +41,9 @@ namespace ConquestTactics.Net
             {
                 if (lado == null)
                     continue;
+                // El sigilo del bando (el de su Facción, `bandidos` o `neutro`, siempre en el ticket): sus zonas y quien no trae el suyo.
+                var sigiloDelLado = ConquestTactics.Mundo.Sigilos.ClaveDeBatalla(lado.Sigilo);
+                if (primerPunto == 4) EstandartesDeBatalla.Defensor = sigiloDelLado; else EstandartesDeBatalla.Atacante = sigiloDelLado;
                 int enElLado = 0;
                 // Los del ticket y, si alguien se unió antes de empezar, también él.
                 var participantes = new List<BattleParticipantSnapshot>(lado.Participantes);
@@ -52,6 +55,7 @@ namespace ConquestTactics.Net
                     var heroe = HeroeDe(batalla, participante, primerPunto + enElLado++ % 3, aspectos, orden++, out int suyos);
                     if (heroe == null)
                         continue;
+                    heroe.sigilo = participante.Sigilo != null && !string.IsNullOrEmpty(participante.Sigilo.FormaId) ? ConquestTactics.Mundo.Sigilos.Clave(participante.Sigilo) : sigiloDelLado;
                     soldados += suyos;
                     lista.Add(heroe);
                 }
@@ -59,6 +63,7 @@ namespace ConquestTactics.Net
                 {
                     var capitan = Heroe(PrefijoCapitan + escuadra.SquadId, "Capitán", nameof(HeroClass.SwordAndShield), 1,
                         primerPunto + enElLado++ % 3, aspectos, orden++);
+                    capitan.sigilo = sigiloDelLado;
                     soldados += Escuadra(batalla, capitan, escuadra);
                     lista.Add(capitan);
                 }
@@ -124,6 +129,7 @@ namespace ConquestTactics.Net
             var heroe = HeroeDe(batalla, incorporacion.Participante, (defensor ? 4 : 1) + enElLado % 3, TestHeroPool.Load(), batalla.Heroes.Count, out int soldados);
             if (heroe == null)
                 return true;
+            heroe.sigilo = ConquestTactics.Mundo.Sigilos.ClaveDeBatalla(incorporacion.Participante.Sigilo);
             if (!controlador.SpawnLateHero(heroe, defensor ? 2 : 1))
                 return false;
             UnityEngine.Debug.Log($"[BatallaReal] {heroe.heroId} se une al bando {(defensor ? "defensor" : "atacante")} con {soldados} soldados");

@@ -4,6 +4,7 @@
         <ui:VisualElement name="nombres" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;" />
         <ui:VisualElement class="barra-arriba">
             <ui:Label class="titulo" text="EL MUNDO" />
+            <ui:Button name="opciones" class="boton-secundario" text="Opciones" />
             <ui:Button name="capa-nodos" class="boton-secundario" text="Nodos" />
             <ui:Button name="capa-fertilidad" class="boton-secundario" text="Fertilidad" />
             <ui:Button name="marcha-forzada" class="boton-secundario" text="Marcha forzada" />

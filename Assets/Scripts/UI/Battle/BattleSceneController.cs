@@ -522,6 +522,9 @@ public class BattleSceneController : MonoBehaviour
 
         // Which participant of the battle it is (the battle server reports and assigns heroes by this id).
         em.AddComponentData(heroEntity, new BattleParticipantComponent { heroId = heroData.heroId ?? string.Empty });
+        // Its banner: the sigil it fights under (from the ticket; without one, no banner).
+        if (!string.IsNullOrEmpty(heroData.sigilo))
+            em.AddComponentData(heroEntity, new EstandarteComponent { Clave = new Unity.Collections.FixedString128Bytes(heroData.sigilo), Tipo = EstandarteComponent.DeHeroe });
 
         // Asignar team y rol atacante/defensor
         var team = teamID == 1 ? Team.TeamA : Team.TeamB;

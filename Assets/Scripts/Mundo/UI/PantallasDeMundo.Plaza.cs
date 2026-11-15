@@ -107,7 +107,7 @@ namespace ConquestTactics.Mundo.UI
 
         // ─────────────────────────── las piezas del prototipo ───────────────────────────
 
-        /// <summary>El escudo de bronce con la cifra (`medallonNivel`), o el de la Facción (el sigilo entra con el paso 8; hasta entonces, su color).</summary>
+        /// <summary>El escudo de bronce con la cifra (`medallonNivel`).</summary>
         sealed class Escudo : VisualElement
         {
             public Color Relleno = new Color32(0x5a, 0x3f, 0x22, 0xff), Trazo = new Color32(0xd8, 0xb8, 0x78, 0xff);
@@ -566,10 +566,9 @@ namespace ConquestTactics.Mundo.UI
             var reside = yo.HasResidenciaId && yo.ResidenciaId == a.Id;
             if (!reside) editandoNombre = false;
             var faccion = c.Sesion.Almacen.Buscar(TipoEntidad.Faccion, a.FaccionId)?.Faccion;
-            var color = CosasDelMapa.ColorDeFaccion(a.FaccionId);
-            var escudo = new Escudo(58, 66) { Relleno = new Color32((byte)(color >> 16), (byte)(color >> 8), (byte)color, 0xff) };
-            escudo.AddToClassList("plaza-blason-escudo");
-            blason.Add(escudo);
+            // El sigilo de la Facción dueña, de 64 px y con la corona si es la del Gran Rey (`svgSigilo(f.sigilo, 64, {granRey})`).
+            var (sigilo, granRey) = SigiloDeFaccion(a.FaccionId);
+            blason.Add(SigiloUI(sigilo, 64, granRey, "plaza-blason-escudo"));
 
             var texto = Dialogo.Caja("plaza-blason-texto");
             if (editandoNombre)
@@ -1260,15 +1259,17 @@ namespace ConquestTactics.Mundo.UI
                 ? "Cada bodega hace vino o cerveza, no las dos. Caben tres en una plaza y, en los niveles 3 y 4, todas hacen la misma bebida; en el 5 puede haber de las dos."
                 : "Cada prensa hace aceite de aceituna o de sésamo, no los dos. Caben tres en una plaza y todas sacan el aceite de la misma fuente.";
             bloque.Add(ConAyuda(Kicker("Receta"), regla));
-            string Receta(string insumo)
-            {
-                var r = RecetaDeInsumo.TryGetValue(insumo, out var x) ? x : (null, null, CosasDelMapa.NombreDeRecurso(insumo));
-                var n = (NivelDe(e.Tipo, NivelInterno(e))?["recetas"] as JArray)?.FirstOrDefault(y => y["consumePorUnidad"]?[insumo] != null)?["consumePorUnidad"]?[insumo];
-                return $"{r.nombre}{(n != null ? $", con {Cifra((double)n)} {CosasDelMapa.NombreDeRecurso(insumo).ToLowerInvariant()} por unidad" : "")}.";
-            }
+            // «🍷 Vino, con 2 🍇 uva por unidad.» (`receta` de vistaCiudad.ts): el icono del producto y el del insumo.
             var activa = Dialogo.Caja("plaza-ficha-receta");
-            if (RecetaDeInsumo.TryGetValue(activo, out var ra)) activa.Add(IconosDelMundo.Icono("recurso", ra.produce, 15));
-            activa.Add(Dialogo.Texto(Receta(activo), "plaza-ficha-receta-texto"));
+            var ra = RecetaDeInsumo.TryGetValue(activo, out var xa) ? xa : (null, null, CosasDelMapa.NombreDeRecurso(activo));
+            var porUnidad = (NivelDe(e.Tipo, NivelInterno(e))?["recetas"] as JArray)?.FirstOrDefault(y => y["consumePorUnidad"]?[activo] != null)?["consumePorUnidad"]?[activo];
+            if (ra.produce != null) activa.Add(IconosDelMundo.Icono("recurso", ra.produce, 15));
+            activa.Add(Dialogo.Texto(ra.nombre + (porUnidad != null ? $", con {Cifra((double)porUnidad)}" : "."), "plaza-ficha-receta-texto"));
+            if (porUnidad != null)
+            {
+                activa.Add(IconosDelMundo.Icono("recurso", activo, 15));
+                activa.Add(Dialogo.Texto($"{CosasDelMapa.NombreDeRecurso(activo).ToLowerInvariant()} por unidad.", "plaza-ficha-receta-texto"));
+            }
             bloque.Add(activa);
             var plural = e.Tipo == "bodega" ? "bodegas" : "prensas";
             if (e.RecetaParada)

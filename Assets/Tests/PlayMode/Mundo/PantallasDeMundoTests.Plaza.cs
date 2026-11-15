@@ -250,6 +250,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             // El HUD: el blasón con su nombre y su nivel, las placas, las obras y la cola, «Salir al mundo» y el riel; sin minimapa todavía.
             var plaza = raiz.Q("plaza");
             Assert.AreEqual(Plaza().Nombre, plaza.Q<Label>("plaza-nombre").text, "el nombre en el blasón");
+            // El escudo del blasón es el sigilo de su Facción (paso 8), pintado como textura.
+            var escudoBlason = plaza.Q(className: "plaza-blason-escudo");
+            Assert.IsTrue(escudoBlason != null && escudoBlason.ClassListContains("sigilo") && escudoBlason.resolvedStyle.backgroundImage.texture != null, "el sigilo en el blasón");
             Assert.AreEqual("3", plaza.Q<Button>("medallon").Q<Label>().text, "el nivel en el medallón");
             foreach (var n in new[] { "placa-poblacion", "placa-almacen", "placa-estado" }) Assert.IsNotNull(plaza.Q(n), n);
             yield return Esperar(() => plaza.Q("obras-hud").Q("cola") != null && !plaza.Q("obras-hud").ClassListContains("oculto"), 20, "las obras y la cola");
@@ -292,7 +295,10 @@ namespace ConquestTactics.Mundo.UI.Tests
                     Math.Max(Math.Abs(p.X - q.X) - (p.Ancho + q.Ancho) / 2, Math.Abs(p.Y - q.Y) - (p.Alto + q.Alto) / 2) >= 3.5;
                 // (uno al que haya que andar: no aquel en cuya zona ya está el héroe)
                 bool Aqui(SelectorDePersonaje.PiezaDePlanta p) => GameObject.Find("Zona edificio:" + p.Id) is GameObject z && z.GetComponent<BoxCollider>().bounds.SqrDistance(heroe.transform.position) < 36;
-                var aislado = interior.Edificios.First(p => p.Estado == null && !Aqui(p) && interior.Edificios.All(q => q.Id == p.Id || Lejos(p, q)));
+                // Si el trazado no deja ninguno a 3,5 m de todos, el que tiene más hueco alrededor (la F es del más cercano: sigue siendo el suyo al llegar).
+                double Hueco(SelectorDePersonaje.PiezaDePlanta p) => interior.Edificios.Where(q => q.Id != p.Id)
+                    .Select(q => Math.Max(Math.Abs(p.X - q.X) - (p.Ancho + q.Ancho) / 2, Math.Abs(p.Y - q.Y) - (p.Alto + q.Alto) / 2)).DefaultIfEmpty(99).Min();
+                var aislado = interior.Edificios.Where(p => p.Estado == null && !Aqui(p)).OrderByDescending(Hueco).First();
                 var zona = "edificio:" + aislado.Id;
                 var nombreAislado = Edificios.Nombre(aislado.Tipo);
                 Debug.Log($"[Prueba] andando hasta {nombreAislado} ({aislado.Id})");

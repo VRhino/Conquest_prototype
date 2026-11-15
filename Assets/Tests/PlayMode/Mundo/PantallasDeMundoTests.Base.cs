@@ -113,13 +113,14 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
             try
             {
-                // B: la Base sobre el interior. El héroe no anda, el ratón queda libre, y la barra solo tiene la Base y los Avisos.
+                // B: la Base sobre el interior. El héroe no anda, el ratón queda libre, y la barra solo tiene la Base, la Facción (sin ella: elegirla,
+                // paso 8) y los Avisos.
                 yield return Tecla(UnityEngine.InputSystem.Key.B);
                 yield return Esperar(() => raiz.Q("base-personal") != null, 5, "la Base con B");
                 Assert.IsTrue(interior.PanelAbierto, "con la Base abierta el héroe no anda");
                 var barra = raiz.Q(className: "barra-arriba");
                 var enLaBarra = barra.Query<Button>().ToList().Where(Visible).Select(b => b.name).ToList();
-                CollectionAssert.AreEquivalent(new[] { "base", "avisos" }, enLaBarra, "la barra con la Base abierta: " + string.Join(", ", enLaBarra));
+                CollectionAssert.AreEquivalent(new[] { "base", "faccion", "avisos" }, enLaBarra, "la barra con la Base abierta: " + string.Join(", ", enLaBarra));
                 var basePersonal = raiz.Q("base-personal");
                 CollectionAssert.AreEqual(new[] { "pestana-heroe", "pestana-tropas", "pestana-loadouts", "pestana-bienes" }, basePersonal.Query<Button>(className: "base-pestana").ToList().Select(p => p.name).ToArray(), "cuatro pestañas");
 
@@ -219,7 +220,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 raiz.Q<IntegerField>("cantidad-personal-trigo").value = 20;
                 yield return ClicFijo(raton, raiz, raiz.Q<Button>("personal-trigo-al-carro"));
                 yield return Esperar(() => Milesimas(Yo().FueraCarro, "trigo") >= 20, 10, "el trigo en el carro");
-                yield return ClicFijo(raton, raiz, raiz.Q<Button>("subpestana-carro"));
+                // (la orden repinta la Base 0,4 s después: el botón de antes puede quedar suelto a mitad del clic; ClicEnVentana busca el nuevo por su nombre)
+                yield return ClicEnVentana(raton, raiz, raiz.Q<Button>("subpestana-carro"));
                 yield return Esperar(() => raiz.Q<Button>("vaciar-carro") != null, 5, "«Todo al almacén personal»");
                 yield return Capturar("43_base_bienes_con_carro");
                 yield return EnTamanos(raiz, "43_base_bienes_con_carro", () => SinBarras(raiz, "Recursos y Carro"));
@@ -272,9 +274,32 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => raiz.Q("base-personal") == null, 5, "cerrada con «Cerrar»");
                 yield return ClicFijo(raton, raiz, raiz.Q<Button>("menu"));
                 Assert.IsTrue(Visible(raiz.Q("menu-barra")), "el menú abierto");
-                CollectionAssert.IsSubsetOf(new[] { "capa-nodos", "capa-fertilidad", "marcha-forzada", "cambiar-partida", "cerrar-sesion" },
+                CollectionAssert.IsSubsetOf(new[] { "opciones", "capa-nodos", "capa-fertilidad", "marcha-forzada", "cambiar-partida", "cerrar-sesion" },
                     raiz.Q("menu-barra").Query<Button>().ToList().Select(b => b.name).ToList());
+                Assert.AreEqual("opciones", raiz.Q("menu-barra").Query<Button>().First().name, "«Opciones», la primera del menú");
                 yield return Capturar("46_menu_de_la_barra");
+
+                // La ventana «Opciones»: «Estandarte de las tropas», encendida por defecto; se apaga con el ratón, se guarda y Esc la cierra.
+                PlayerPrefs.DeleteKey(OpcionesDelJuego.EstandarteDeTropas);
+                yield return ClicFijo(raton, raiz, raiz.Q<Button>("opciones"));
+                yield return Esperar(() => raiz.Q("ventana-opciones")?.Q("opcion-" + OpcionesDelJuego.EstandarteDeTropas) != null, 5, "la ventana «Opciones»");
+                var interruptor = raiz.Q("ventana-opciones").Q("opcion-" + OpcionesDelJuego.EstandarteDeTropas);
+                Assert.IsTrue(interruptor.ClassListContains("encendido"), "encendida por defecto");
+                yield return EnTamanos(raiz, "46b_opciones", () => DentroDelMarco(raiz.Q("ventana-opciones").Q(className: "placa"), "las Opciones"));
+                yield return ClicFijo(raton, raiz, raiz.Q("ventana-opciones").Q("opcion-" + OpcionesDelJuego.EstandarteDeTropas));
+                yield return Esperar(() => !OpcionesDelJuego.Valor(OpcionesDelJuego.EstandarteDeTropas), 5, "apagada y guardada");
+                Assert.AreEqual(0, PlayerPrefs.GetInt(OpcionesDelJuego.EstandarteDeTropas, 1), "en PlayerPrefs");
+                yield return Capturar("46c_opciones_apagada");
+                yield return Tecla(UnityEngine.InputSystem.Key.Escape);
+                yield return Esperar(() => raiz.Q("ventana-opciones") == null, 5, "Esc cierra las Opciones");
+                yield return ClicFijo(raton, raiz, raiz.Q<Button>("menu"));
+                yield return ClicFijo(raton, raiz, raiz.Q<Button>("opciones"));
+                yield return Esperar(() => raiz.Q("ventana-opciones")?.Q("opcion-" + OpcionesDelJuego.EstandarteDeTropas) != null, 5, "las Opciones otra vez");
+                Assert.IsFalse(raiz.Q("ventana-opciones").Q("opcion-" + OpcionesDelJuego.EstandarteDeTropas).ClassListContains("encendido"), "sigue apagada al volver");
+                yield return ClicFijo(raton, raiz, raiz.Q("ventana-opciones").Q("opcion-" + OpcionesDelJuego.EstandarteDeTropas));
+                yield return Esperar(() => OpcionesDelJuego.Valor(OpcionesDelJuego.EstandarteDeTropas), 5, "encendida otra vez");
+                yield return ClicFijo(raton, raiz, raiz.Q<Button>("opciones-cerrar"));
+                yield return Esperar(() => raiz.Q("ventana-opciones") == null, 5, "«Cerrar» cierra las Opciones");
                 UnityEngine.Object.Destroy(sistema);
             }
             finally

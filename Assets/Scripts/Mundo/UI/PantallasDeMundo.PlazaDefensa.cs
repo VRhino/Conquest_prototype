@@ -702,10 +702,45 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>«Por soldado» en la ficha corta de la plaza: el equipo y el oro de cada soldado y la gente de la que sale.</summary>
         void PorSoldadoEnPlaza(VisualElement tip, LugarCampamento L, string id)
         {
-            var (coste, origen, unidades) = CosteEnPlaza(id);
-            tip.Add(Dialogo.Texto("LA ESCUADRA", "recl-tip-seccion"));
-            tip.Add(Dialogo.Texto(coste.Count > 0 ? string.Join(", ", coste.Properties().Select(p => $"{Cifra((double)p.Value)} {CosasDelMapa.NombreDeRecurso(p.Name)}")) + " del almacén de la plaza" : "Sin coste", "recl-tip-texto"));
-            tip.Add(Dialogo.Texto($"{unidades} {origen} libres de la plaza", "recl-tip-texto"));
+            // Como el prototipo (`tipTropa`): cada pieza del equipo con su icono y su cifra y de dónde sale (`cadena`), el oro y la gente.
+            var t = c.Datos.TropasReclutables?.FirstOrDefault(x => (string)x["id"] == id) as JObject;
+            var (_, origen, _) = CosteEnPlaza(id);
+            tip.Add(Dialogo.Texto("POR SOLDADO", "recl-tip-seccion"));
+            var equipo = (t?["costoEquipo"] as JObject)?.Properties().ToList() ?? new List<JProperty>();
+            if (equipo.Count == 0) tip.Add(Renglon("", "Sin equipo"));
+            foreach (var p in equipo) tip.Add(CadenaDeRecurso(L.A, p.Name, ChipDeTec(p.Name, (double)p.Value)));
+            var porEscalon = DatoDeJuego("Heroe_Y_Tropa", "RECLUTAMIENTO_ORO_POR_ESCALON");
+            var porCaballo = (double?)DatoDeJuego("Heroe_Y_Tropa", "ORO_POR_CABALLO");
+            if (porEscalon != null && porCaballo != null)
+            {
+                var centro = (string)t?["edificio"] == "centroUrbano";
+                var caballos = (int?)t?["caballos"] ?? 0;
+                var oro = centro ? 0 : ((double?)porEscalon[((int?)t?["escalon"] ?? 1).ToString()] ?? 0) + caballos * porCaballo.Value;
+                tip.Add(Renglon("", ChipDeTec("oro", oro), centro ? "(la leva del Centro Urbano no paga oro)" : caballos > 0 ? $"(con {caballos} caballo{(caballos > 1 ? "s" : "")})" : ""));
+            }
+            var gente = Dialogo.Caja("tec-rec");
+            gente.tooltip = $"{origen} libres de la plaza";
+            if (Glifo(origen, 14) is VisualElement g) gente.Add(g);
+            gente.Add(Dialogo.Texto("1", "tec-rec-cifra"));
+            tip.Add(Renglon("", gente, $"{(origen == "pesants" ? "campesino" : origen == "artesanos" ? "artesano" : "noble")} libre de la plaza"));
+        }
+
+        /// <summary>Un recurso del equipo y de dónde sale (`cadena` del prototipo): su edificio y nivel, la tecnología y lo que consume; o, si es
+        /// materia prima, de dónde se saca.</summary>
+        VisualElement CadenaDeRecurso(ArbolDeTropas a, string r, VisualElement pre)
+        {
+            var rc = a.RecetaDe(r);
+            if (rc == null)
+            {
+                var b = ArbolDeTropas.Bruto(r);
+                if (b == null) return Renglon("", pre);
+                // La Leñera y la Granja, con su ficha de edificio (`PI` del prototipo); los pueblos, por su nombre.
+                var edificio = r == "madera" ? "lenera" : r == "trigo" ? "granja" : null;
+                return Renglon("", pre, "de", edificio != null ? ChipDeEdificio(edificio) : (object)b.Value.donde,
+                    b.Value.tec != null ? $"(pide <b>{NombreDeTecnologia(b.Value.tec)}</b>)" : "");
+            }
+            return Renglon("", pre, ChipDeEdificio(rc.Edificio, rc.Nivel.ToString()), rc.Tec != null ? $"con <b>{NombreDeTecnologia(rc.Tec)}</b>" : "", "· sale de",
+                rc.Cantidades.Select(kv => ChipDeTec(kv.Key, kv.Value)));
         }
 
         /// <summary>Quien recluta en la plaza (`permisoDeReclutar`): «todo» si reside; «ciudadano» si es de su Facción, no reside y no está vetado (su

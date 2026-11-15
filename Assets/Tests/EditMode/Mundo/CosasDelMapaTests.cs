@@ -86,6 +86,24 @@ namespace ConquestTactics.Mundo.Tests
         }
 
         [Test]
+        public void ElColorDeUnaFaccionEsElPrimarioDeSuSigilo()
+        {
+            var raiz = System.IO.Path.Combine(UnityEngine.Application.dataPath, "Resources/MundoUI/Sigilo");
+            string Leer(string n) => System.IO.File.ReadAllText(System.IO.Path.Combine(raiz, n));
+            ConquestTactics.Mundo.Sigilos.Cargar(Leer("catalogoSigilos.json"), Leer("emblemas.json"), Leer("insignias.json"));
+            var a = new Almacen();
+            var f = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 1 };
+            var dir = new DirectorioFacciones();
+            dir.Facciones.Add(new FaccionDelDirectorio { Id = "f-7", Nombre = "Argos", Sigilo = new Sigilo { FormaId = "aspis", CampoId = "liso", EmblemaId = "toro", ColorPrimarioId = "azul",
+                ColorSecundarioId = "oro", ColorEmblemaId = "blanco", OrlaId = "ninguna", ColorOrlaId = "oro" } });
+            f.Entidades.Add(new Entidad { DirectorioFacciones = dir });
+            a.Aplicar(new MensajeDeServidor { Foto = f });
+            Assert.AreEqual(0x1f4e9cu, CosasDelMapa.ColorDeFaccion(a, "f-7"), "el azul del catálogo");
+            Assert.AreNotEqual(0x1f4e9cu, CosasDelMapa.ColorDeFaccion(a, "f-8"), "sin sigilo, la paleta de reserva");
+            StringAssert.Contains("clip-path", ConquestTactics.Mundo.Sigilos.Svg(null, 48), "sin sigilo, el neutro");
+        }
+
+        [Test]
         public void SeReunenLasCosasDelAlmacen()
         {
             var a = new Almacen();
@@ -101,7 +119,7 @@ namespace ConquestTactics.Mundo.Tests
             var plaza = cosas.Single(c => c.Clase == ClaseDeCosa.Plaza);
             Assert.AreEqual("Micenas", plaza.Nombre);
             Assert.AreEqual(12 * 0.1 * 0.8 * 0.62, plaza.Radio, 1e-9, "sin zona, la inicial de las reglas; nivel 1 a 0,62");
-            Assert.AreEqual(CosasDelMapa.ColorDeFaccion("f-2"), plaza.Color);
+            Assert.AreEqual(CosasDelMapa.ColorDeFaccion(a, "f-2"), plaza.Color);
             Assert.AreEqual("Nivel 2", cosas.Single(c => c.Clase == ClaseDeCosa.Bandidos).Detalle);
             var columna = cosas.Single(c => c.Clase == ClaseDeCosa.EjercitoAjeno);
             Assert.AreEqual(5, columna.X, 1e-9, "la columna ajena, a mitad de su plan en el instante");

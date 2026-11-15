@@ -445,6 +445,34 @@
   "espera": {
    "glifo": "⏳",
    "codigo": "23f3"
+  },
+  "prestigio": {
+   "glifo": "🏆",
+   "codigo": "1f3c6"
+  },
+  "reputacion": {
+   "glifo": "⚖",
+   "codigo": "2696"
+  },
+  "alianza": {
+   "glifo": "🤝",
+   "codigo": "1f91d"
+  },
+  "templo": {
+   "glifo": "🏛",
+   "codigo": "1f3db"
+  },
+  "estatua": {
+   "glifo": "🗿",
+   "codigo": "1f5ff"
+  },
+  "fusion": {
+   "glifo": "🔗",
+   "codigo": "1f517"
+  },
+  "bots": {
+   "glifo": "🤖",
+   "codigo": "1f916"
   }
  },
  "simbolo": {

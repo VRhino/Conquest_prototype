@@ -10,7 +10,8 @@
     "Unity.Collections",
     "Unity.Burst",
     "Unity.InputSystem",
-    "Game.ECS"
+    "Game.ECS",
+    "Conquest.Mundo"
   ],
   "allowUnsafeCode": false,
   "autoReferenced": true

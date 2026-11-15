@@ -120,7 +120,10 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => Cajon() == null && Riel().Q<Button>("riel-defensa") != null, 5, "el riel de vuelta");
             yield return Reloj(url, 60_000);
             bool BarraconEnPie() => Plaza().Edificios.Any(e => e.Tipo == "barracon" && e.Estado == V1.EstadoEdificio.EdificioActivo);
-            bool MurallaEntera() => Plaza().Recintos.Count > 0 && Plaza().Recintos.All(r => r.Avance >= r.Celdas.Count);
+            // Sin recinto si el sitio no deja cerrar el anillo (`murallas.no_se_puede_cerrar` al fundar): entonces no hay muralla que esperar.
+            var conMuralla = Plaza().Recintos.Count > 0;
+            if (!conMuralla) Debug.Log("[Prueba] muralla: este sitio no deja cerrar el anillo; sin muralla en esta plaza");
+            bool MurallaEntera() => !conMuralla || Plaza().Recintos.All(r => r.Avance >= r.Celdas.Count);
             yield return ConViaRapidaHasta(conexion.Sesion, Plaza().Id, conexion.HeroeId, () => BarraconEnPie() && MurallaEntera(), 240, bombear: false);
             Assert.IsTrue(BarraconEnPie(), "el Barracón en pie");
             Assert.IsTrue(MurallaEntera(), $"la muralla entera ({string.Join(", ", Plaza().Recintos.Select(r => $"{r.Avance} de {r.Celdas.Count}"))})");
@@ -162,7 +165,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return ClicEn(Ventana().Q<Button>("sub-muralla"));
             yield return Esperar(() => Ventana().Q("muralla-plano") != null || Ventana().Q<Button>("muralla-trazar") != null, 5, "la Muralla");
             yield return EnTamanos(raiz, "88_defensa_muralla", () => DentroDelMarco(Ventana(), "Muralla"));
-            Assert.IsNotNull(Ventana().Q("muralla-plano"), "el plano de la muralla levantada");
+            if (conMuralla) Assert.IsNotNull(Ventana().Q("muralla-plano"), "el plano de la muralla levantada");
             if (Ventana().Q<Button>("abandonar-recinto") is Button abandonar)
             {
                 yield return ClicEn(abandonar);

@@ -82,6 +82,15 @@ namespace ConquestTactics.Net
             Unicos();
             CamaraEInterfaz();
             Partida();
+            Estandartes();
+        }
+
+        /// <summary>El estandarte de cada espejo, al día con lo que manda el servidor (el abanderado de una escuadra cambia si cae).</summary>
+        void Estandartes()
+        {
+            foreach (var (modelo, estandarte) in SystemAPI.Query<RefRO<VisualRed>, RefRW<EstandarteComponent>>())
+                if (estandarte.ValueRO.Tipo != modelo.ValueRO.Estandarte || estandarte.ValueRO.Clave != modelo.ValueRO.Sigilo)
+                    estandarte.ValueRW = new EstandarteComponent { Clave = modelo.ValueRO.Sigilo, Tipo = modelo.ValueRO.Estandarte };
         }
 
         /// <summary>El modelo, en la capa de su bando y sin autoridad: ni navega ni golpea. Los golpes los decide el servidor.</summary>
@@ -126,6 +135,8 @@ namespace ConquestTactics.Net
                 ecb.AddComponent<ResilienceComponent>(entidad);
                 if ((animacion.ValueRO.Banderas & AnimacionRed.ConMarcha) != 0)
                     ecb.AddComponent<UnitMovementGearComponent>(entidad);
+                // Su estandarte (paso 8, tanda 4): el sigilo y el tipo que manda el servidor; `Estandartes` lo mantiene al día.
+                ecb.AddComponent(entidad, new EstandarteComponent { Clave = modelo.ValueRO.Sigilo, Tipo = modelo.ValueRO.Estandarte });
                 VisualSyncUtility.SetupVisualSync(visual).SetHeroEntity(entidad);
             }
         }
@@ -179,6 +190,8 @@ namespace ConquestTactics.Net
                 ecb.AddComponent(entidad, new HeroClassComponent { heroClass = (HeroClass)modelo.ValueRO.TipoDeEscuadra });
                 _heroes[entidad] = visual;
                 // Los componentes llegan al reproducir el búfer, antes del Start del modelo, que es cuando los mira.
+                // Su estandarte (paso 8, tanda 4): el sigilo y el tipo que manda el servidor; `Estandartes` lo mantiene al día.
+                ecb.AddComponent(entidad, new EstandarteComponent { Clave = modelo.ValueRO.Sigilo, Tipo = modelo.ValueRO.Estandarte });
                 VisualSyncUtility.SetupVisualSync(visual).SetHeroEntity(entidad);
             }
         }
@@ -349,6 +362,8 @@ namespace ConquestTactics.Net
             foreach (var (partida, zonas) in SystemAPI.Query<RefRO<PartidaRed>, DynamicBuffer<ZonaRed>>())
             {
                 var p = partida.ValueRO;
+                EstandartesDeBatalla.Atacante = p.SigiloAtacante.ToString();
+                EstandartesDeBatalla.Defensor = p.SigiloDefensor.ToString();
                 EntityManager.SetComponentData(_reloj, new BattleClockComponent { remainingSeconds = p.Reloj, expired = p.Agotado != 0 });
                 bool acabada = p.Estado == (byte)MatchState.EndMatch;
                 EntityManager.SetComponentData(_estado, new MatchStateComponent

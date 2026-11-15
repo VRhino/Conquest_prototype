@@ -140,6 +140,9 @@ namespace ConquestTactics.Mundo
             return t.Task;
         }
 
+        /// <summary>Si ya se pidió la `VISTA`.</summary>
+        public bool TieneVista => vista != null;
+
         /// <summary>Fija el rectángulo de la `VISTA` (milésimas de unidad). Al reconectar se vuelve a pedir solo.</summary>
         public void CambiarVista(Rectangulo r)
         {

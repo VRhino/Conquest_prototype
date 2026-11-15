@@ -2,7 +2,8 @@
 // y `lugarCampamento` de `pantallaCampamento.ts`) calcado en UI Toolkit, con la tarjeta de tropa de Conquest en cada nudo. Sustituye a la lista del
 // edificio militar. Víctor (2026-11-15): el árbol se ve entero, cada tropa con su estado y lo que le falta; solo se recluta lo que ofrece el
 // campamento; al pulsar, la ficha de la tropa en el panel derecho de Tropas de la Base (Características | Atributos), con «Reclutar» o «Pedir
-// prestada». Sin Facción ni tecnologías (paso 8): las líneas salen del catálogo, no de lo adoptado.
+// prestada». Las líneas salen del catálogo; lo adoptado por tu Facción lo marca la ficha corta («Tecnologías de tu Facción», paso 8) y, en la
+// plaza, la carta «adoptable» con su etiqueta «Adoptar», que abre la pestaña Tecnología de tu Facción en esa tecnología.
 //   - Carriles: Campamento (las de leva comunal que presta), Barracón, Galería de tiro, Caballerizas. Columnas: las Eras.
 //   - Líneas: B va tras A cuando B necesita la tecnología que habilita a A (continua, a rayas o punteada). Las de otro carril, solo al pasar el
 //     ratón o con «Ver todas las conexiones». Al pasar el ratón se ilumina su camino y sale su ficha corta.
@@ -33,6 +34,8 @@ namespace ConquestTactics.Mundo.UI
         bool arbolTodas;
         string subpestanaRecluta = "caracteristicas";
         Vector2 scrollDelArbol;
+        /// <summary>Cierra la ventana de la tropa abierta (la etiqueta «Adoptar» la cierra para abrir la Facción).</summary>
+        Action cerrarPanelTropa;
 
         /// <summary>El árbol del balance (se hace una vez por huella de reglas).</summary>
         ArbolDeTropas ArbolDelBalance()
@@ -81,9 +84,12 @@ namespace ConquestTactics.Mundo.UI
         {
             var mias = EscuadrasDelHeroe(h);
             var eraMundo = c.Sesion.Almacen.Buscar(TipoEntidad.EstadoTecnologia, "tecnologia")?.EstadoTecnologia?.Era;
+            var tecs = h.HasFaccionId ? c.Sesion.Almacen.Buscar(TipoEntidad.TecnologiaFaccion, h.FaccionId)?.Tecnologias : null;
             return new LugarCampamento
             {
                 Camp = camp, A = a,
+                Adoptadas = tecs == null ? null : new HashSet<string>(tecs.Adoptadas),
+                Aparecidas = tecs == null ? null : new HashSet<string>(tecs.Aparecidas),
                 Prestadas = mias.Where(s => s.HasPrestadaPorCampamentoId).GroupBy(s => s.TropaId).ToDictionary(g => g.Key, g => g.First()),
                 Propias = mias.Where(s => !s.HasPrestadaPorCampamentoId).GroupBy(s => s.TropaId).ToDictionary(g => g.Key, g => g.First()),
                 Oferta = camp.Reclutables.GroupBy(o => o.TropaId).ToDictionary(g => g.Key, g => g.First()),
@@ -161,7 +167,9 @@ namespace ConquestTactics.Mundo.UI
             {
                 velo.RemoveFromHierarchy();
                 interior.PanelAbierto = false;
+                cerrarPanelTropa = null;
             }
+            cerrarPanelTropa = Cerrar;
             velo.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Escape) Cerrar(); }, TrickleDown.TrickleDown);
             string Firma()
             {
@@ -297,38 +305,60 @@ namespace ConquestTactics.Mundo.UI
 
         sealed class Linea { public string De, A, Tipo; public bool Cruce; public List<Vector2> P; }
 
-        VisualElement Tablero(ArbolDeTropas a, LugarCampamento L, ArbolDeTropas.Disposicion lay, List<string> visibles, Dictionary<string, string> estados,
-            VisualElement tip, Action repintar)
+        /// <summary>Lo que un árbol pone en el tablero común (`htmlTablero` y `montarTablero` de `arbolTablero.ts`): sus Eras, sus carriles y sus cartas,
+        /// ya hechas y con sus eventos. El tablero las coloca, traza las líneas, ilumina el camino (`Resaltar`), se arrastra y deja fijas las cabeceras.
+        /// Con `AltoCarta` o `Cabecera` en NaN, las mide (las cartas de alto variable de las tecnologías, como las filas `auto` del prototipo).</summary>
+        sealed class DibujoDeTablero
+        {
+            public string Esquina;
+            public int NCOL;
+            /// <summary>Por Era: su primera columna, cuántas ocupa, si aún no empieza en el mundo y su cabecera.</summary>
+            public readonly List<(int baseCol, int cols, bool futura, VisualElement cab)> Eras = new List<(int, int, bool, VisualElement)>();
+            /// <summary>Los carriles que se ven, en orden: su id, sus filas y su nombre (la columna fija de la izquierda).</summary>
+            public readonly List<(string id, int filas, VisualElement nombre)> Carriles = new List<(string, int, VisualElement)>();
+            /// <summary>Todos los carriles en orden (para saber si una línea entre carriles baja o sube).</summary>
+            public List<string> OrdenCarriles;
+            public Dictionary<string, List<HashSet<int>>> Ocupa;
+            /// <summary>Las cartas en el orden de sus líneas: dónde va cada una, de qué viene y la carta.</summary>
+            public readonly List<(string id, string carril, int col, int fila, List<(string de, string tipo)> preds, Button carta)> Cartas =
+                new List<(string, string, int, int, List<(string, string)>, Button)>();
+            public Func<string, HashSet<string>> Antes, Despues;
+            public float AnchoCarta, AltoCarta, Ancla, Cabecera = ArbolCabecera;
+            public bool Todas;
+            public Vector2 Scroll;
+            public Action<Vector2> AlDesplazar;
+            /// <summary>Una carta a la vista al abrir (se lleva el tablero hasta ella).</summary>
+            public string Enfocar;
+            /// <summary>Lo pone el tablero: ilumina el camino de una carta (null, nada).</summary>
+            public Action<string> Resaltar;
+            /// <summary>Lo llama el tablero cuando ha colocado las cartas (y cada vez que las recoloca).</summary>
+            public Action Colocado;
+        }
+
+        VisualElement TableroComun(DibujoDeTablero d)
         {
             // Una Era de una sola columna ocupa dos (`MIN_COLS` de arbolTablero.ts) y las de después se corren.
             var corrimiento = new Dictionary<int, int>();
-            var eras = new List<(ArbolDeTropas.Era e, int baseCol, int cols)>();
+            var eras = new List<(int baseCol, int cols, bool futura, VisualElement cab)>();
             var extra = 0;
-            foreach (var e in lay.ErasVis)
+            foreach (var (b, n0, futura, cab) in d.Eras)
             {
-                var b = lay.BaseEra[e.Orden];
-                var n0 = lay.ColsEra[e.Orden];
                 for (int k = b; k < b + n0; k++) corrimiento[k] = extra;
-                eras.Add((e, b + extra, Math.Max(2, n0)));
+                eras.Add((b + extra, Math.Max(2, n0), futura, cab));
                 extra += Math.Max(2, n0) - n0;
             }
-            var NCOL = lay.NCOL + extra;
+            var NCOL = d.NCOL + extra;
             int Col(int col) => col + (corrimiento.TryGetValue(col, out var x) ? x : extra);
             // La pista i (0, la de los carriles) y el canal a la derecha de la columna c.
-            float XPista(int i) => i == 0 ? 0 : ArbolCarril + ArbolHueco + (i - 1) * (ArbolNodo + ArbolHueco);
-            float XHueco(int col) => XPista(col + 1) + ArbolNodo + ArbolHueco / 2;
-            var ancho = XPista(NCOL) + ArbolNodo + ArbolHueco / 2;
-            var carriles = a.Carriles.Where(cr => cr.Tropas.Any(visibles.Contains)).ToList();
-            var bandas = new Dictionary<string, (float y, float h)>();
-            var y0 = ArbolCabecera;
-            foreach (var cr in carriles)
-            {
-                y0 += ArbolCanal;
-                var alto = Math.Max(1, lay.Filas[cr.Id]) * ArbolFila;
-                bandas[cr.Id] = (y0, alto);
-                y0 += alto;
-            }
-            var altoTotal = y0 + ArbolCanal;
+            float XPista(int i) => i == 0 ? 0 : ArbolCarril + ArbolHueco + (i - 1) * (d.AnchoCarta + ArbolHueco);
+            float XHueco(int col) => XPista(col + 1) + d.AnchoCarta + ArbolHueco / 2;
+            var ancho = XPista(NCOL) + d.AnchoCarta + ArbolHueco / 2;
+            var medirCartas = float.IsNaN(d.AltoCarta);
+            var medirCabecera = float.IsNaN(d.Cabecera);
+            // El alto de cada fila de cada carril (la carta más alta y su margen) y el de la cabecera.
+            var altos = new Dictionary<string, float>();
+            var altoCab = medirCabecera ? ArbolCabecera : d.Cabecera;
+            float AltoFila(string carril, int fila) => altos.TryGetValue(carril + "/" + fila, out var hh) ? hh : (medirCartas ? 120 : d.AltoCarta) + 2 * ArbolMargen;
 
             var marco = new ScrollView(ScrollViewMode.VerticalAndHorizontal) { name = "recl-marco" };
             marco.AddToClassList("recl-marco");
@@ -336,107 +366,44 @@ namespace ConquestTactics.Mundo.UI
             marco.verticalScrollerVisibility = ScrollerVisibility.Auto;
             var t = new VisualElement { name = "recl-tablero" };
             t.AddToClassList("recl-tablero");
+            t.EnableInClassList("todas", d.Todas);
             t.style.width = ancho;
-            t.style.height = altoTotal;
             marco.Add(t);
-            VisualElement Abs(string clases, float x, float y, float w, float hh)
+            VisualElement Abs(VisualElement e, float x, float w)
             {
-                var e = Dialogo.Caja(clases);
                 e.style.position = Position.Absolute;
-                e.style.left = x; e.style.top = y; e.style.width = w; e.style.height = hh;
+                e.style.left = x; e.style.width = w;
                 return e;
             }
 
             // Fondos de las Eras y de los carriles.
+            var fondosEra = new List<VisualElement>();
             for (int i = 0; i < eras.Count; i++)
             {
-                var (e, b, cols) = eras[i];
-                var f = Abs("recl-era-fondo" + (i % 2 == 1 ? " par" : "") + (i > 0 ? " raya" : "") + (L.EraMundo != null && e.Orden > L.EraMundo ? " futura" : ""),
-                    XPista(1 + b) - ArbolHueco / 2, 0, cols * (ArbolNodo + ArbolHueco), altoTotal);
+                var (b, cols, futura, _) = eras[i];
+                var f = Abs(Dialogo.Caja("recl-era-fondo" + (i % 2 == 1 ? " par" : "") + (i > 0 ? " raya" : "") + (futura ? " futura" : "")),
+                    XPista(1 + b) - ArbolHueco / 2, cols * (d.AnchoCarta + ArbolHueco));
                 f.pickingMode = PickingMode.Ignore;
+                f.style.top = 0;
+                fondosEra.Add(f);
                 t.Add(f);
             }
-            for (int i = 0; i < carriles.Count; i++)
+            var fondosCarril = new List<VisualElement>();
+            for (int i = 0; i < d.Carriles.Count; i++)
             {
-                var (y, hh) = bandas[carriles[i].Id];
-                var f = Abs("recl-carril-fondo" + (i % 2 == 1 ? " par" : ""), 0, y, ancho, hh);
+                var f = Abs(Dialogo.Caja("recl-carril-fondo" + (i % 2 == 1 ? " par" : "")), 0, ancho);
                 f.pickingMode = PickingMode.Ignore;
+                fondosCarril.Add(f);
                 t.Add(f);
             }
 
-            // Las cartas: la tarjeta de Conquest, la medalla y la franja de estado.
-            var cajas = new Dictionary<string, (float x, float y)>();
-            var cartas = new Dictionary<string, VisualElement>();
-            foreach (var id in visibles)
-            {
-                var n = a.Nodos[id];
-                var x = XPista(1 + Col(n.Col.Value));
-                var y = bandas[n.Carril].y + n.Fila.Value * ArbolFila + ArbolMargen;
-                cajas[id] = (x, y);
-            }
             // Las líneas (`trazar`): en ángulo recto, por los canales entre columnas y las franjas entre carriles.
             var lineas = new List<Linea>();
-            var canales = new Dictionary<int, List<string>>();
-            float Canal(int col, string clave)
-            {
-                if (!canales.TryGetValue(col, out var m)) canales[col] = m = new List<string>();
-                if (!m.Contains(clave)) m.Add(clave);
-                var k = m.IndexOf(clave);
-                return XHueco(col) + (k % 2 == 1 ? 1 : -1) * (float)Math.Ceiling(k / 2.0) * 7;
-            }
-            var usoCanal = new Dictionary<string, int>();
-            float YCanal(string carril, bool arriba)
-            {
-                var (by, bh) = bandas[carril];
-                var bas = arriba ? by - ArbolCanal / 2 - 1 : by + bh + ArbolCanal / 2 + 1;
-                var clave = carril + (arriba ? "↑" : "↓");
-                var k = usoCanal.TryGetValue(clave, out var u) ? u : 0;
-                usoCanal[clave] = k + 1;
-                return bas + (k % 2 == 1 ? 1 : -1) * (float)Math.Ceiling(k / 2.0) * 5;
-            }
-            bool LibreEnFila(string carril, int fila, int c0, int c1)
-            {
-                var occ = lay.Ocupa[carril];
-                for (int k = c0; k <= c1; k++) if (fila < occ.Count && occ[fila] != null && occ[fila].Contains(k)) return false;
-                return true;
-            }
-            var ordenCarriles = a.Carriles.Select(cr => cr.Id).ToList();
-            var ancla = 4 + ArbolAltoTarjeta / 2;
-            foreach (var id in a.OrdenNodos)
-            {
-                if (!cajas.ContainsKey(id)) continue;
-                var n = a.Nodos[id];
-                foreach (var p in n.Preds)
-                {
-                    if (!cajas.ContainsKey(p.De)) continue;
-                    var an = a.Nodos[p.De];
-                    var (ax, ay) = cajas[p.De];
-                    var (bx, by) = cajas[id];
-                    float x1 = ax + ArbolNodo, y1 = ay + ancla, x2 = bx - 1, y2 = by + ancla;
-                    var ac = Col(an.Col.Value);
-                    var nc = Col(n.Col.Value);
-                    var xa = Canal(ac, "S" + p.De);
-                    var mismo = an.Carril == n.Carril;
-                    var P = new List<Vector2> { new Vector2(x1, y1) };
-                    void H(float xx) => P.Add(new Vector2(xx, P[P.Count - 1].y));
-                    void V(float yy) => P.Add(new Vector2(P[P.Count - 1].x, yy));
-                    if (mismo && an.Fila == n.Fila && LibreEnFila(n.Carril, n.Fila.Value, an.Col.Value + 1, n.Col.Value - 1)) H(x2);
-                    else if (nc == ac + 1) { H(xa); V(y2); H(x2); }
-                    else if (mismo && LibreEnFila(n.Carril, n.Fila.Value, an.Col.Value + 1, n.Col.Value - 1)) { H(xa); V(y2); H(x2); }
-                    else if (mismo && LibreEnFila(n.Carril, an.Fila.Value, an.Col.Value + 1, n.Col.Value - 1)) { H(Canal(nc - 1, "T" + id)); V(y2); H(x2); }
-                    else
-                    {
-                        var yg = mismo ? YCanal(n.Carril, false) : YCanal(n.Carril, ordenCarriles.IndexOf(n.Carril) > ordenCarriles.IndexOf(an.Carril));
-                        H(xa); V(yg); H(Canal(nc - 1, "T" + id)); V(y2); H(x2);
-                    }
-                    lineas.Add(new Linea { De = p.De, A = id, Tipo = p.Tipo, Cruce = !mismo, P = P });
-                }
-            }
             string resaltado = null;
             HashSet<string> luz = new HashSet<string>(), baja = new HashSet<string>();
             var capaLineas = new VisualElement { name = "recl-lineas", pickingMode = PickingMode.Ignore };
             capaLineas.style.position = Position.Absolute;
-            capaLineas.style.left = 0; capaLineas.style.top = 0; capaLineas.style.width = ancho; capaLineas.style.height = altoTotal;
+            capaLineas.style.left = 0; capaLineas.style.top = 0; capaLineas.style.width = ancho;
             capaLineas.generateVisualContent += ctx =>
             {
                 foreach (var l in lineas)
@@ -449,18 +416,27 @@ namespace ConquestTactics.Mundo.UI
                         else if (baja.Contains(l.A) && (baja.Contains(l.De) || l.De == resaltado)) alfa = 0.5f;
                         else alfa = 0.1f;
                     }
-                    else alfa = l.Cruce ? (arbolTodas ? 0.5f : 0) : 0.85f;
+                    else alfa = l.Cruce ? (d.Todas ? 0.5f : 0) : 0.85f;
                     if (alfa > 0) Trazo(ctx.painter2D, l.P, l.Tipo, color, alfa, true);
                 }
             };
             t.Add(capaLineas);
 
-            void Resaltar(string id)
+            // Las cartas.
+            var cartas = new Dictionary<string, VisualElement>();
+            foreach (var k in d.Cartas)
+            {
+                Abs(k.carta, XPista(1 + Col(k.col)), d.AnchoCarta);
+                if (!medirCartas) k.carta.style.height = d.AltoCarta;
+                cartas[k.id] = k.carta;
+                t.Add(k.carta);
+            }
+            d.Resaltar = id =>
             {
                 resaltado = id;
-                luz = id == null ? new HashSet<string>() : a.Antes(id);
+                luz = id == null ? new HashSet<string>() : d.Antes(id);
                 if (id != null) luz.Add(id);
-                baja = id == null ? new HashSet<string>() : a.Despues(id);
+                baja = id == null ? new HashSet<string>() : d.Despues(id);
                 t.EnableInClassList("activo", id != null);
                 foreach (var (cid, carta) in cartas)
                 {
@@ -469,93 +445,167 @@ namespace ConquestTactics.Mundo.UI
                     carta.EnableInClassList("foco", cid == id);
                 }
                 capaLineas.MarkDirtyRepaint();
-            }
-
-            foreach (var id in visibles)
-            {
-                var n = a.Nodos[id];
-                var est = estados[id];
-                var (x, y) = cajas[id];
-                var carta = new Button { name = "nodo-" + id };
-                carta.AddToClassList("recl-carta");
-                carta.AddToClassList(est == "adoptable" ? "bloqueada" : est);
-                carta.EnableInClassList("elegida", id == tropaDelArbol);
-                carta.style.position = Position.Absolute;
-                carta.style.left = x; carta.style.top = y; carta.style.width = ArbolNodo; carta.style.height = ArbolAltoNodo;
-                var vivos = est == "tuya" ? (int?)(n.Carril == "centroUrbano" && L.Plaza == null ? L.Prestadas[id].Cantidad : L.Propias[id].Cantidad) : n.T.Unidades;
-                var tarjeta = PiezasDeTropa.Tarjeta(id, LiderazgoDe(id), vivos, n.T.Unidades, null, ArbolTarjeta);
-                if (tarjeta != null) { tarjeta.tooltip = null; tarjeta.pickingMode = PickingMode.Ignore; carta.Add(tarjeta); }
-                else carta.Add(Dialogo.Texto(n.T.Nombre, "recl-carta-nombre"));
-                // La medalla: ✓ si se recluta o se presta aquí; la bandera (⚑ en el prototipo) si ya la tienes.
-                if (est == "lista" || est == "tuya")
-                {
-                    var m = est == "lista" ? (VisualElement)Dialogo.Texto("✓", "recl-medalla") : Dialogo.Caja("recl-medalla");
-                    if (est == "tuya" && IconosDelMundo.Icono("simbolo", "bandera", 12, new Color32(0x20, 0x15, 0x09, 0xff)) is VisualElement bandera) m.Add(bandera);
-                    m.pickingMode = PickingMode.Ignore;
-                    carta.Add(m);
-                }
-                var franja = Dialogo.Texto(EstadoEnCarta(L, id, est), "recl-carta-estado");
-                franja.name = "estado-" + id;
-                franja.pickingMode = PickingMode.Ignore;
-                carta.Add(franja);
-                var tid = id;
-                carta.RegisterCallback<PointerEnterEvent>(e => { Resaltar(tid); MostrarTip(tip, a, L, tid, estados[tid], e.position); });
-                carta.RegisterCallback<PointerMoveEvent>(e => ColocarTip(tip, e.position));
-                carta.RegisterCallback<PointerLeaveEvent>(_ => { Resaltar(null); tip.style.display = DisplayStyle.None; });
-                carta.RegisterCallback<FocusInEvent>(_ => { Resaltar(tid); MostrarTip(tip, a, L, tid, estados[tid], carta.worldBound.max); });
-                carta.RegisterCallback<FocusOutEvent>(_ => { Resaltar(null); tip.style.display = DisplayStyle.None; });
-                carta.clicked += () => { tropaDelArbol = tid; repintar(); };
-                cartas[id] = carta;
-                t.Add(carta);
-            }
+            };
 
             // Las cabeceras de Era y de carril, y la esquina: se quedan a la vista al desplazar (`position: sticky` del prototipo).
             var fijasArriba = new List<VisualElement>();
             var fijasIzquierda = new List<VisualElement>();
-            var ultima = a.Eras.Count > 0 ? a.Eras.Max(e => e.Orden) : 1;
-            foreach (var (e, b, cols) in eras)
+            foreach (var (b, cols, _, cab) in eras)
             {
-                var cabEra = Abs("recl-era-cab", XPista(1 + b), 0, cols * ArbolNodo + (cols - 1) * ArbolHueco, ArbolCabecera);
-                cabEra.name = "era-" + e.Orden;
-                var num = Dialogo.Texto(Romano[Math.Min(e.Orden, Romano.Length - 1)], "recl-era-num");
-                cabEra.Add(num);
-                var textos = Dialogo.Caja("recl-era-textos");
-                textos.Add(Dialogo.Texto($"Era {Romano[Math.Min(e.Orden, Romano.Length - 1)]} · {e.Nombre}", "recl-era-nombre"));
-                var cuantas = visibles.Count(id => a.Nodos[id].Era == e.Orden);
-                var dura = e.Orden >= ultima ? "la última Era, sin plazo" : e.MinimoSemanas != null ? $"dura de {e.MinimoSemanas} a {e.PlazoSemanas} semanas" : $"dura hasta {e.PlazoSemanas} semanas";
-                textos.Add(Dialogo.Texto($"{cuantas} tropa{(cuantas == 1 ? "" : "s")} · {dura}", "recl-era-sub"));
-                if (L.EraMundo == e.Orden) textos.Add(Dialogo.Texto("ERA DEL MUNDO", "recl-era-marca actual"));
-                else if (L.EraMundo != null && e.Orden > L.EraMundo) textos.Add(Dialogo.Texto("BLOQUEADA", "recl-era-marca futura"));
-                cabEra.Add(textos);
-                fijasArriba.Add(cabEra);
-                t.Add(cabEra);
+                Abs(cab, XPista(1 + b), cols * d.AnchoCarta + (cols - 1) * ArbolHueco);
+                cab.style.top = 0;
+                if (!medirCabecera) cab.style.height = altoCab;
+                fijasArriba.Add(cab);
+                t.Add(cab);
             }
-            foreach (var cr in carriles)
+            foreach (var (_, _, nombre) in d.Carriles)
             {
-                var (y, hh) = bandas[cr.Id];
-                var nombre = Abs("recl-carril-nombre", 0, y, ArbolCarril, hh);
-                nombre.name = "carril-" + cr.Id;
-                var icono = cr.Id == "centroUrbano" && L.Plaza == null ? IconosDelMundo.Icono("parte", "campamento", 30, IconosDelMundo.Bronce) : IconosDelMundo.Icono("edificio", cr.Id, 30, IconosDelMundo.Bronce);
-                if (icono != null) nombre.Add(icono);
-                nombre.Add(Dialogo.Texto((L.Plaza != null && cr.Id == "centroUrbano" ? "Centro Urbano" : NombreDeCarril(cr.Id)).ToUpperInvariant(), "recl-carril-texto"));
-                var n = cr.Tropas.Count(visibles.Contains);
-                nombre.Add(Dialogo.Texto($"{n} tropa{(n == 1 ? "" : "s")}", "recl-carril-sub"));
+                Abs(nombre, 0, ArbolCarril);
                 fijasIzquierda.Add(nombre);
                 t.Add(nombre);
             }
-            var esquina = Abs("recl-esquina", 0, 0, ArbolCarril, ArbolCabecera);
-            esquina.Add(Dialogo.Texto("SE RECLUTA EN · ERA", "recl-esquina-texto"));
+            var esquina = Abs(Dialogo.Caja("recl-esquina"), 0, ArbolCarril);
+            esquina.style.top = 0;
+            esquina.Add(Dialogo.Texto(d.Esquina, "recl-esquina-texto"));
             t.Add(esquina);
+
+            // Coloca en vertical lo que depende del alto de las filas, y traza las líneas.
+            var bandas = new Dictionary<string, (float y, float h)>();
+            var cajas = new Dictionary<string, (float x, float y)>();
+            void Trazar()
+            {
+                lineas.Clear();
+                var canales = new Dictionary<int, List<string>>();
+                float Canal(int col, string clave)
+                {
+                    if (!canales.TryGetValue(col, out var m)) canales[col] = m = new List<string>();
+                    if (!m.Contains(clave)) m.Add(clave);
+                    var k = m.IndexOf(clave);
+                    return XHueco(col) + (k % 2 == 1 ? 1 : -1) * (float)Math.Ceiling(k / 2.0) * 7;
+                }
+                var usoCanal = new Dictionary<string, int>();
+                float YCanal(string carril, bool arriba)
+                {
+                    var (by, bh) = bandas[carril];
+                    var bas = arriba ? by - ArbolCanal / 2 - 1 : by + bh + ArbolCanal / 2 + 1;
+                    var clave = carril + (arriba ? "↑" : "↓");
+                    var k = usoCanal.TryGetValue(clave, out var u) ? u : 0;
+                    usoCanal[clave] = k + 1;
+                    return bas + (k % 2 == 1 ? 1 : -1) * (float)Math.Ceiling(k / 2.0) * 5;
+                }
+                bool LibreEnFila(string carril, int fila, int c0, int c1)
+                {
+                    var occ = d.Ocupa[carril];
+                    for (int k = c0; k <= c1; k++) if (fila < occ.Count && occ[fila] != null && occ[fila].Contains(k)) return false;
+                    return true;
+                }
+                var pos = d.Cartas.ToDictionary(k => k.id, k => (k.carril, k.col, k.fila));
+                foreach (var k in d.Cartas)
+                {
+                    foreach (var (de, tipo) in k.preds)
+                    {
+                        if (!cajas.ContainsKey(de)) continue;
+                        var (ac, acol, afila) = pos[de];
+                        var (ax, ay) = cajas[de];
+                        var (bx, by) = cajas[k.id];
+                        float x1 = ax + d.AnchoCarta, y1 = ay + d.Ancla, x2 = bx - 1, y2 = by + d.Ancla;
+                        var cA = Col(acol);
+                        var cN = Col(k.col);
+                        var xa = Canal(cA, "S" + de);
+                        var mismo = ac == k.carril;
+                        var P = new List<Vector2> { new Vector2(x1, y1) };
+                        void H(float xx) => P.Add(new Vector2(xx, P[P.Count - 1].y));
+                        void V(float yy) => P.Add(new Vector2(P[P.Count - 1].x, yy));
+                        if (mismo && afila == k.fila && LibreEnFila(k.carril, k.fila, acol + 1, k.col - 1)) H(x2);
+                        else if (cN == cA + 1) { H(xa); V(y2); H(x2); }
+                        else if (mismo && LibreEnFila(k.carril, k.fila, acol + 1, k.col - 1)) { H(xa); V(y2); H(x2); }
+                        else if (mismo && LibreEnFila(k.carril, afila, acol + 1, k.col - 1)) { H(Canal(cN - 1, "T" + k.id)); V(y2); H(x2); }
+                        else
+                        {
+                            var yg = mismo ? YCanal(k.carril, false) : YCanal(k.carril, d.OrdenCarriles.IndexOf(k.carril) > d.OrdenCarriles.IndexOf(ac));
+                            H(xa); V(yg); H(Canal(cN - 1, "T" + k.id)); V(y2); H(x2);
+                        }
+                        lineas.Add(new Linea { De = de, A = k.id, Tipo = tipo, Cruce = !mismo, P = P });
+                    }
+                }
+                capaLineas.MarkDirtyRepaint();
+            }
+            void Colocar()
+            {
+                bandas.Clear();
+                var filaY = new Dictionary<string, float>();
+                var y0 = altoCab;
+                foreach (var (id, filas, _) in d.Carriles)
+                {
+                    y0 += ArbolCanal;
+                    var inicio = y0;
+                    for (int f = 0; f < Math.Max(1, filas); f++) { filaY[id + "/" + f] = y0; y0 += AltoFila(id, f); }
+                    bandas[id] = (inicio, y0 - inicio);
+                }
+                var altoTotal = y0 + ArbolCanal;
+                t.style.height = altoTotal;
+                capaLineas.style.height = altoTotal;
+                foreach (var f in fondosEra) f.style.height = altoTotal;
+                for (int i = 0; i < d.Carriles.Count; i++)
+                {
+                    var (yy, hh) = bandas[d.Carriles[i].id];
+                    fondosCarril[i].style.top = yy; fondosCarril[i].style.height = hh;
+                    d.Carriles[i].nombre.style.top = yy; d.Carriles[i].nombre.style.height = hh;
+                }
+                esquina.style.height = altoCab;
+                cajas.Clear();
+                foreach (var k in d.Cartas)
+                {
+                    var y = filaY[k.carril + "/" + k.fila] + ArbolMargen;
+                    k.carta.style.top = y;
+                    cajas[k.id] = (XPista(1 + Col(k.col)), y);
+                }
+                Trazar();
+                d.Colocado?.Invoke();
+            }
+            Colocar();
+            // Las cartas y cabeceras de alto variable se miden en cuanto el tablero tiene su disposición, y se recoloca si algo cambió.
+            if (medirCartas || medirCabecera)
+                t.RegisterCallback<GeometryChangedEvent>(_ =>
+                {
+                    var nuevos = new Dictionary<string, float>();
+                    if (medirCartas)
+                        foreach (var k in d.Cartas)
+                        {
+                            var hh = k.carta.resolvedStyle.height;
+                            if (float.IsNaN(hh) || hh < 1) return;
+                            var clave = k.carril + "/" + k.fila;
+                            nuevos[clave] = Math.Max(nuevos.TryGetValue(clave, out var ya) ? ya : 0, hh + 2 * ArbolMargen);
+                        }
+                    var cab = altoCab;
+                    if (medirCabecera)
+                    {
+                        cab = 0;
+                        foreach (var e in fijasArriba) { var hh = e.resolvedStyle.height; if (float.IsNaN(hh) || hh < 1) return; cab = Math.Max(cab, hh); }
+                    }
+                    if (Math.Abs(cab - altoCab) < 0.5f && nuevos.Count == altos.Count && nuevos.All(p => altos.TryGetValue(p.Key, out var v) && Math.Abs(v - p.Value) < 0.5f)) return;
+                    if (medirCartas) { altos.Clear(); foreach (var p in nuevos) altos[p.Key] = p.Value; }
+                    altoCab = cab;
+                    Colocar();
+                });
+
             void Fijar(Vector2 o)
             {
                 foreach (var e in fijasArriba) e.style.translate = new Translate(0, o.y);
                 foreach (var e in fijasIzquierda) e.style.translate = new Translate(o.x, 0);
                 esquina.style.translate = new Translate(o.x, o.y);
             }
-            marco.horizontalScroller.valueChanged += _ => { Fijar(marco.scrollOffset); scrollDelArbol = marco.scrollOffset; tip.style.display = DisplayStyle.None; };
-            marco.verticalScroller.valueChanged += _ => { Fijar(marco.scrollOffset); scrollDelArbol = marco.scrollOffset; tip.style.display = DisplayStyle.None; };
-            var inicial = scrollDelArbol;
-            marco.schedule.Execute(() => { marco.scrollOffset = inicial; Fijar(marco.scrollOffset); });
+            marco.horizontalScroller.valueChanged += _ => { Fijar(marco.scrollOffset); d.AlDesplazar?.Invoke(marco.scrollOffset); };
+            marco.verticalScroller.valueChanged += _ => { Fijar(marco.scrollOffset); d.AlDesplazar?.Invoke(marco.scrollOffset); };
+            var inicial = d.Scroll;
+            marco.schedule.Execute(() =>
+            {
+                // La carta a la que se viene (la etiqueta «Adoptar» del árbol de tropas), a la vista.
+                if (d.Enfocar != null && cajas.TryGetValue(d.Enfocar, out var c0))
+                    inicial = new Vector2(Mathf.Max(0, c0.x + d.AnchoCarta / 2 - marco.contentViewport.layout.width / 2), Mathf.Max(0, c0.y - marco.contentViewport.layout.height / 3));
+                marco.scrollOffset = inicial;
+                Fijar(marco.scrollOffset);
+            }).ExecuteLater(1);
 
             // Arrastrar el tablero con el ratón, como el mapa de un juego.
             Vector2? desde = null;
@@ -574,6 +624,101 @@ namespace ConquestTactics.Mundo.UI
             t.RegisterCallback<PointerCaptureOutEvent>(_ => { desde = null; t.RemoveFromClassList("arrastrando"); });
             return marco;
         }
+
+        /// <summary>El árbol de tropas en el tablero común: la tarjeta de Conquest en cada carta, con su medalla y su franja de estado.</summary>
+        VisualElement Tablero(ArbolDeTropas a, LugarCampamento L, ArbolDeTropas.Disposicion lay, List<string> visibles, Dictionary<string, string> estados,
+            VisualElement tip, Action repintar)
+        {
+            var d = new DibujoDeTablero
+            {
+                Esquina = "SE RECLUTA EN · ERA", NCOL = lay.NCOL, OrdenCarriles = a.Carriles.Select(cr => cr.Id).ToList(), Ocupa = lay.Ocupa,
+                Antes = a.Antes, Despues = a.Despues, AnchoCarta = ArbolNodo, AltoCarta = ArbolAltoNodo, Ancla = 4 + ArbolAltoTarjeta / 2, Todas = arbolTodas,
+                Scroll = scrollDelArbol, AlDesplazar = o => { scrollDelArbol = o; tip.style.display = DisplayStyle.None; },
+            };
+            var ultima = a.Eras.Count > 0 ? a.Eras.Max(e => e.Orden) : 1;
+            foreach (var e in lay.ErasVis)
+            {
+                var cabEra = Dialogo.Caja("recl-era-cab");
+                cabEra.name = "era-" + e.Orden;
+                cabEra.Add(Dialogo.Texto(Romano[Math.Min(e.Orden, Romano.Length - 1)], "recl-era-num"));
+                var textos = Dialogo.Caja("recl-era-textos");
+                textos.Add(Dialogo.Texto($"Era {Romano[Math.Min(e.Orden, Romano.Length - 1)]} · {e.Nombre}", "recl-era-nombre"));
+                var cuantas = visibles.Count(id => a.Nodos[id].Era == e.Orden);
+                textos.Add(Dialogo.Texto($"{cuantas} tropa{(cuantas == 1 ? "" : "s")} · {DuracionDeEra(e, ultima)}", "recl-era-sub"));
+                if (L.EraMundo == e.Orden) textos.Add(Dialogo.Texto("ERA DEL MUNDO", "recl-era-marca actual"));
+                else if (L.EraMundo != null && e.Orden > L.EraMundo) textos.Add(Dialogo.Texto("BLOQUEADA", "recl-era-marca futura"));
+                cabEra.Add(textos);
+                d.Eras.Add((lay.BaseEra[e.Orden], lay.ColsEra[e.Orden], L.EraMundo != null && e.Orden > L.EraMundo, cabEra));
+            }
+            foreach (var cr in a.Carriles.Where(cr => cr.Tropas.Any(visibles.Contains)))
+            {
+                var nombre = Dialogo.Caja("recl-carril-nombre");
+                nombre.name = "carril-" + cr.Id;
+                var icono = cr.Id == "centroUrbano" && L.Plaza == null ? IconosDelMundo.Icono("parte", "campamento", 30, IconosDelMundo.Bronce) : IconosDelMundo.Icono("edificio", cr.Id, 30, IconosDelMundo.Bronce);
+                if (icono != null) nombre.Add(icono);
+                nombre.Add(Dialogo.Texto((L.Plaza != null && cr.Id == "centroUrbano" ? "Centro Urbano" : NombreDeCarril(cr.Id)).ToUpperInvariant(), "recl-carril-texto"));
+                var n = cr.Tropas.Count(visibles.Contains);
+                nombre.Add(Dialogo.Texto($"{n} tropa{(n == 1 ? "" : "s")}", "recl-carril-sub"));
+                d.Carriles.Add((cr.Id, Math.Max(1, lay.Filas[cr.Id]), nombre));
+            }
+            foreach (var id in a.OrdenNodos.Where(visibles.Contains))
+            {
+                var n = a.Nodos[id];
+                var est = estados[id];
+                var carta = new Button { name = "nodo-" + id };
+                carta.AddToClassList("recl-carta");
+                carta.AddToClassList(est);
+                carta.EnableInClassList("elegida", id == tropaDelArbol);
+                var vivos = est == "tuya" ? (int?)(n.Carril == "centroUrbano" && L.Plaza == null ? L.Prestadas[id].Cantidad : L.Propias[id].Cantidad) : n.T.Unidades;
+                var tarjeta = PiezasDeTropa.Tarjeta(id, LiderazgoDe(id), vivos, n.T.Unidades, null, ArbolTarjeta);
+                if (tarjeta != null) { tarjeta.tooltip = null; tarjeta.pickingMode = PickingMode.Ignore; carta.Add(tarjeta); }
+                else carta.Add(Dialogo.Texto(n.T.Nombre, "recl-carta-nombre"));
+                // La medalla: ✓ si se recluta o se presta aquí; la bandera (⚑ en el prototipo) si ya la tienes; ! si solo falta adoptar su tecnología.
+                if (est == "lista" || est == "tuya" || est == "adoptable")
+                {
+                    var m = est == "tuya" ? Dialogo.Caja("recl-medalla") : (VisualElement)Dialogo.Texto(est == "lista" ? "✓" : "!", "recl-medalla");
+                    if (est == "tuya" && IconosDelMundo.Icono("simbolo", "bandera", 12, new Color32(0x20, 0x15, 0x09, 0xff)) is VisualElement bandera) m.Add(bandera);
+                    m.pickingMode = PickingMode.Ignore;
+                    carta.Add(m);
+                }
+                carta.Add(FranjaDeTropa(L, id, est));
+                var tid = id;
+                carta.RegisterCallback<PointerEnterEvent>(e => { d.Resaltar(tid); MostrarTip(tip, a, L, tid, estados[tid], e.position); });
+                carta.RegisterCallback<PointerMoveEvent>(e => ColocarTip(tip, e.position));
+                carta.RegisterCallback<PointerLeaveEvent>(_ => { d.Resaltar(null); tip.style.display = DisplayStyle.None; });
+                carta.RegisterCallback<FocusInEvent>(_ => { d.Resaltar(tid); MostrarTip(tip, a, L, tid, estados[tid], carta.worldBound.max); });
+                carta.RegisterCallback<FocusOutEvent>(_ => { d.Resaltar(null); tip.style.display = DisplayStyle.None; });
+                carta.clicked += () => { tropaDelArbol = tid; repintar(); };
+                d.Cartas.Add((id, n.Carril, n.Col.Value, n.Fila.Value, n.Preds.Select(p => (p.De, p.Tipo)).ToList(), carta));
+            }
+            return TableroComun(d);
+        }
+
+        /// <summary>La franja de estado de la carta. La de «adoptable» lleva la etiqueta «Adoptar» del prototipo, que aquí abre la pestaña Tecnología
+        /// de tu Facción en esa tecnología (Víctor, duda 7 del paso 8).</summary>
+        VisualElement FranjaDeTropa(LugarCampamento L, string id, string est)
+        {
+            if (est == "adoptable")
+            {
+                var fila = Dialogo.Caja("recl-carta-estado recl-carta-estado--adoptar");
+                fila.name = "estado-" + id;
+                var tec = L.A.Nodos[id].T.Tecnologia;
+                var adoptar = Dialogo.Boton("ADOPTAR", "recl-boton-mini", () => AbrirTecnologiaEn(tec));
+                adoptar.name = "adoptar-" + id;
+                fila.Add(adoptar);
+                var nombre = Dialogo.Texto(NombreDeTecnologia(tec), "recl-carta-estado-texto");
+                nombre.pickingMode = PickingMode.Ignore;
+                fila.Add(nombre);
+                return fila;
+            }
+            var franja = Dialogo.Texto(EstadoEnCarta(L, id, est), "recl-carta-estado");
+            franja.name = "estado-" + id;
+            franja.pickingMode = PickingMode.Ignore;
+            return franja;
+        }
+
+        static string DuracionDeEra(ArbolDeTropas.Era e, int ultima) =>
+            e.Orden >= ultima ? "la última Era, sin plazo" : e.MinimoSemanas != null ? $"dura de {e.MinimoSemanas} a {e.PlazoSemanas} semanas" : $"dura hasta {e.PlazoSemanas} semanas";
 
         /// <summary>Una línea del árbol: continua (hito), a rayas (implícita) o punteada (logro), con su punta al final.</summary>
         static void Trazo(Painter2D p, List<Vector2> puntos, string tipo, Color color, float alfa, bool punta)
@@ -643,14 +788,36 @@ namespace ConquestTactics.Mundo.UI
             caja.Add(Dialogo.Texto(L.Plaza != null ? "En esta plaza" : "En este campamento", "recl-tip-meta"));
             caja.Add(Dialogo.Texto(EstadoEnCaja(L, id, est, null), "recl-tip-texto"));
             tip.Add(caja);
+            // Las tecnologías que pide, marcadas con lo de tu Facción (sin Facción, o sin nada adoptado, no hay qué marcar).
+            if (L.Adoptadas != null && L.Adoptadas.Count > 0 && ArbolDeTecnologiasDelBalance() is ArbolDeTecnologias T)
+            {
+                tip.Add(Dialogo.Texto("TECNOLOGÍAS DE TU FACCIÓN", "recl-tip-seccion"));
+                foreach (var x in n.Req.Orden.Where(T.Nodos.ContainsKey).OrderBy(x => a.EraDe(T.Nodos[x].EraId)))
+                {
+                    var k = T.Nodos[x];
+                    var por = n.Req.Por[x];
+                    // Por qué la pide, en iconos como el prototipo: «la habilita», «para» y los recursos y edificios que la piden.
+                    var motivos = por.Where(q => q.StartsWith("r:")).Select(q => ChipDeTec(q.Substring(2)))
+                        .Concat(por.Where(q => q.StartsWith("e:")).Select(q => { var p = q.Split(':'); return ChipDeEdificio(p[1], p.Length > 2 ? p[2] : null); })).ToList();
+                    var (marca, clase) = L.Adoptadas.Contains(x) ? ("✓", "ok") : L.Aparecidas != null && L.Aparecidas.Contains(x) ? ("!", "ap") : ("✗", "no");
+                    var habilita = por.Contains("la habilita");
+                    var era = $"<color=#8d7c63>(Era {Romano[Math.Min(a.EraDe(k.EraId), Romano.Length - 1)]}{(k.DeArranque ? ", de arranque" : "")}{(habilita || motivos.Count > 0 ? " ·" : ")")}</color>";
+                    var fila = Renglon("recl-tip-tec", Dialogo.Texto(marca, "recl-tip-marca " + clase), k.Nombre, era,
+                        habilita ? $"<color=#8d7c63>la habilita{(motivos.Count > 0 ? "," : ")")}</color>" : "",
+                        motivos.Count > 0 ? "<color=#8d7c63>para</color>" : "", motivos, motivos.Count > 0 ? "<color=#8d7c63>)</color>" : "");
+                    tip.Add(fila);
+                }
+            }
+            if (L.Plaza != null) EdificiosYPueblos(tip, a, id);
             if (L.Plaza != null) PorSoldadoEnPlaza(tip, L, id);
             else if (t.Edificio == "centroUrbano") { tip.Add(Dialogo.Texto("PRÉSTAMO", "recl-tip-seccion")); tip.Add(Dialogo.Texto("Gratis. La escuadra no gana experiencia.", "recl-tip-texto")); }
             else if (L.Oferta.TryGetValue(id, out var o))
             {
                 tip.Add(Dialogo.Texto("POR SOLDADO", "recl-tip-seccion"));
-                tip.Add(Dialogo.Texto($"{o.PrecioPorSoldado / 1000.0:0.#} de oro con el equipo dentro (recargo, reputación y descuento ya aplicados)", "recl-tip-texto"));
+                tip.Add(Renglon("", ChipDeTec("oro", Math.Round(o.PrecioPorSoldado / 1000.0, 1)), "con el equipo dentro (recargo, reputación y descuento ya aplicados)"));
                 tip.Add(Dialogo.Texto("1 recluta del campamento", "recl-tip-texto"));
             }
+            EnCampanaYCombate(tip, id);
             var tras = n.Todos.Select(x => a.Nodos[x.De].T).ToList();
             var lleva = n.HijosTodos.Where(x => a.Nodos[x].Col != null).Select(x => a.Nodos[x].T).ToList();
             if (tras.Count > 0 || lleva.Count > 0)
@@ -663,9 +830,20 @@ namespace ConquestTactics.Mundo.UI
             ColocarTip(tip, donde);
         }
 
+        /// <summary>Al cambiar de tamaño, la ficha corta se recoloca: junto al ratón (`Vector2`) o junto a su carta (`Rect`). Se engancha una vez.</summary>
+        static void VigilarTip(VisualElement tip)
+        {
+            if (tip.userData != null) return;
+            tip.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (tip.userData is Vector2 r) ColocarTip(tip, r);
+                else if (tip.userData is Rect b) ColocarTipJunto(tip, b);
+            });
+        }
+
         static void ColocarTip(VisualElement tip, Vector2 raton)
         {
-            if (tip.userData == null) tip.RegisterCallback<GeometryChangedEvent>(_ => { if (tip.userData is Vector2 r) ColocarTip(tip, r); });
+            VigilarTip(tip);
             tip.userData = raton;
             if (tip.style.display == DisplayStyle.None || tip.parent == null) return;
             var raiz = tip.parent.worldBound;

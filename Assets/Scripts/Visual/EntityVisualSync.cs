@@ -378,6 +378,14 @@ namespace ConquestTactics.Visual
                 mountPresenter.Bind(_world, _heroEntity);
             }
 
+            // El estandarte con el sigilo (paso 8, tanda 4): el del héroe y el del abanderado de cada escuadra. Solo con gráficos.
+            if (EstandartesDeBatalla.HayGraficos)
+            {
+                var estandarte = GetComponent<EstandarteVisual>();
+                if (estandarte == null) estandarte = gameObject.AddComponent<EstandarteVisual>();
+                estandarte.Bind(_world, _heroEntity);
+            }
+
             var motor = GetComponent<LocalHeroCharacterMotor>();
             var remoteAnimation = GetComponent<RemoteHeroAnimationDriver>();
             if (isLocal)

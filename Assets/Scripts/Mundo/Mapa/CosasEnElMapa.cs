@@ -153,6 +153,9 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Los nombres sobre el mapa, colocados en pantalla este fotograma: los de las cosas con nombre que quedan a menos de `lejos` u
         /// de (cx, cy) y delante de la cámara; los de los nodos, solo si `nodos` y a menos de `cercaNodos`.</summary>
+        /// <summary>El sigilo de una Facción (`faccionId`, ancho en px) como textura; lo pone la interfaz del mundo, que tiene la sesión. Null: sin sigilo.</summary>
+        public static Func<string, int, Texture2D> SigiloDe;
+
         public void Nombres(List<CosaDelMapa> cosas, Camera camara, double cx, double cy, double lejos, bool nodos, double cercaNodos)
         {
             if (capaNombres?.panel == null) return;
@@ -186,14 +189,32 @@ namespace ConquestTactics.Mundo.Mapa
                 var label = nombres[usados++];
                 label.Q<Label>("texto").text = c.Clase == ClaseDeCosa.Plaza ? $"{c.Nombre} · {c.Detalle}" : c.Clase == ClaseDeCosa.Bandidos ? $"Bandidos · {c.Detalle.ToLowerInvariant()}" : nodo ? c.Nombre
                     : c.Clase == ClaseDeCosa.Mercenarios ? c.Nombre : c.Detalle;
-                var deCosa = IconosDelMundo.DeCosa(c);
                 var dibujo = label.Q("icono");
-                var imagen = deCosa == null ? null : IconosDelMundo.Imagen("mapa", deCosa.Value.id);
-                dibujo.style.display = imagen != null ? DisplayStyle.Flex : DisplayStyle.None;
-                if (imagen != null)
+                // Las plazas y las columnas de una Facción llevan su sigilo, como los carteles del mapa 3D del prototipo (`mundo3d/estado.ts`: 40 px
+                // en las plazas, 26 en las columnas); lo demás, su icono del mapa 2D.
+                var ancho = c.Clase == ClaseDeCosa.Plaza ? 40 : 26;
+                var sigilo = !string.IsNullOrEmpty(c.FaccionId) && (c.Clase == ClaseDeCosa.Plaza || c.Clase == ClaseDeCosa.Ejercito || c.Clase == ClaseDeCosa.EjercitoAjeno
+                    || c.Clase == ClaseDeCosa.Formacion) ? SigiloDe?.Invoke(c.FaccionId, ancho) : null;
+                if (sigilo != null)
                 {
-                    dibujo.style.backgroundImage = new StyleBackground(imagen);
-                    dibujo.style.unityBackgroundImageTintColor = deCosa.Value.color;
+                    dibujo.style.display = DisplayStyle.Flex;
+                    dibujo.style.width = ancho;
+                    dibujo.style.height = ancho * 1.2f;
+                    dibujo.style.backgroundImage = new StyleBackground(sigilo);
+                    dibujo.style.unityBackgroundImageTintColor = Color.white;
+                }
+                else
+                {
+                    dibujo.style.width = StyleKeyword.Null;
+                    dibujo.style.height = StyleKeyword.Null;
+                    var deCosa = IconosDelMundo.DeCosa(c);
+                    var imagen = deCosa == null ? null : IconosDelMundo.Imagen("mapa", deCosa.Value.id);
+                    dibujo.style.display = imagen != null ? DisplayStyle.Flex : DisplayStyle.None;
+                    if (imagen != null)
+                    {
+                        dibujo.style.backgroundImage = new StyleBackground(imagen);
+                        dibujo.style.unityBackgroundImageTintColor = deCosa.Value.color;
+                    }
                 }
                 label.EnableInClassList("nombre-mapa--nodo", nodo);
                 label.EnableInClassList("nombre-mapa--tenue", c.BajoNiebla && !nodo);

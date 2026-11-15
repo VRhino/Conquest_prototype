@@ -56,6 +56,8 @@ namespace ConquestTactics.Net
                 red.Reloj = reloj.remainingSeconds;
                 red.Agotado = (byte)(reloj.expired ? 1 : 0);
             }
+            red.SigiloAtacante = new FixedString128Bytes(EstandartesDeBatalla.Atacante ?? "");
+            red.SigiloDefensor = new FixedString128Bytes(EstandartesDeBatalla.Defensor ?? "");
             SystemAPI.SetComponent(_partida, red);
 
             _zonas.Clear();

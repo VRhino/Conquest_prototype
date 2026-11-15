@@ -31,6 +31,8 @@ namespace ConquestTactics.Mundo
             public string Carril;
             /// <summary>Las tecnologías que pide (todas las de su cadena).</summary>
             public List<string> Tecs;
+            /// <summary>Todo lo que pide (`reqTropa`): sus tecnologías con el motivo, sus edificios y el nivel de plaza.</summary>
+            public Acc Req;
             public List<Arista> Cands = new List<Arista>(), Todos = new List<Arista>(), Preds = new List<Arista>();
             public List<string> Hijos = new List<string>(), HijosTodos = new List<string>();
             public int? Col, Fila;
@@ -50,7 +52,8 @@ namespace ConquestTactics.Mundo
 
         sealed class Tec { public string Era; public JArray Hito; public string Contador; }
         sealed class Edificio { public int Plaza; public string Tec; public Dictionary<int, (int plaza, string edificio, int edificioNivel, string tec)> Niveles = new Dictionary<int, (int, string, int, string)>(); }
-        sealed class Receta { public string Edificio, Tec; public int Nivel; public List<string> Consume; }
+        /// <summary>Cada producto, en el primer edificio y nivel que lo hace: con qué tecnología y lo que consume por unidad.</summary>
+        public sealed class Receta { public string Edificio, Tec; public int Nivel; public List<string> Consume; public Dictionary<string, double> Cantidades; }
 
         readonly Dictionary<string, Tec> tec = new Dictionary<string, Tec>();
         readonly List<string> ordenTec = new List<string>();
@@ -98,7 +101,8 @@ namespace ConquestTactics.Mundo
                         var produce = (string)r["produce"];
                         if (produce != null && !recetas.ContainsKey(produce))
                             recetas[produce] = new Receta { Edificio = p.Name, Nivel = int.Parse(n.Name), Tec = (string)r["requiereTecnologia"],
-                                Consume = (r["consumePorUnidad"] as JObject)?.Properties().Select(x => x.Name).ToList() ?? new List<string>() };
+                                Consume = (r["consumePorUnidad"] as JObject)?.Properties().Select(x => x.Name).ToList() ?? new List<string>(),
+                                Cantidades = (r["consumePorUnidad"] as JObject)?.Properties().ToDictionary(x => x.Name, x => (double)x.Value) ?? new Dictionary<string, double>() };
                     }
             }
             foreach (var t in tropas.OfType<JObject>())
@@ -113,8 +117,16 @@ namespace ConquestTactics.Mundo
 
         // ── requisitos (`requisitos` del prototipo) ──
 
-        /// <summary>Tecnología → motivos, en orden de llegada.</summary>
-        sealed class Acc { public readonly List<string> Orden = new List<string>(); public readonly Dictionary<string, HashSet<string>> Por = new Dictionary<string, HashSet<string>>(); public readonly Dictionary<string, int> Eds = new Dictionary<string, int>(); }
+        /// <summary>Lo que pide algo (`Acc`): tecnología → motivos en orden de llegada, edificio → nivel mínimo y el nivel de plaza.</summary>
+        public sealed class Acc
+        {
+            public readonly List<string> Orden = new List<string>();
+            public readonly Dictionary<string, HashSet<string>> Por = new Dictionary<string, HashSet<string>>();
+            public readonly Dictionary<string, int> Eds = new Dictionary<string, int>();
+            public int Plaza = 1;
+            /// <summary>Los pueblos y aldeas de los que sale alguna materia prima (`acc.pueblos`), por su `donde` de `Bruto`.</summary>
+            public readonly List<string> Pueblos = new List<string>();
+        }
 
         static void Anota(Acc a, string t, string por)
         {
@@ -129,10 +141,12 @@ namespace ConquestTactics.Mundo
             if ((a.Eds.TryGetValue(tipo, out var ya) ? ya : 0) >= nivel) return;
             a.Eds[tipo] = nivel;
             if (!edificios.TryGetValue(tipo, out var e)) return;
+            a.Plaza = Math.Max(a.Plaza, Math.Max(1, e.Plaza));
             Anota(a, e.Tec, "e:" + tipo);
             for (int n = 2; n <= nivel; n++)
             {
                 if (!e.Niveles.TryGetValue(n, out var l)) continue;
+                a.Plaza = Math.Max(a.Plaza, Math.Max(1, l.plaza));
                 Anota(a, l.tec, $"e:{tipo}:{n}");
                 if (l.edificio != null) ReqEdificio(a, l.edificio, l.edificioNivel > 0 ? l.edificioNivel : 1);
             }
@@ -148,7 +162,12 @@ namespace ConquestTactics.Mundo
                 ReqEdificio(a, rc.Edificio, rc.Nivel);
                 foreach (var x in rc.Consume) ReqRecurso(a, x, vistos);
             }
-            else if (Brutos.Contains(r) && TecDeBruto.TryGetValue(r, out var t)) Anota(a, t, "r:" + r);
+            else if (Brutos.Contains(r))
+            {
+                var donde = Bruto(r)?.donde;
+                if (donde != null && (donde.StartsWith("un pueblo") || donde.StartsWith("el rebaño")) && !a.Pueblos.Contains(donde)) a.Pueblos.Add(donde);
+                if (TecDeBruto.TryGetValue(r, out var t)) Anota(a, t, "r:" + r);
+            }
         }
 
         Acc ReqTropa(Tropa t)
@@ -188,7 +207,8 @@ namespace ConquestTactics.Mundo
                 else if (tipo == "edificio" && !HitoPueblo.Contains(edificio)) ReqEdificio(a, edificio, (int?)h["nivelInterno"] is int ni && ni > 0 ? ni : 1);
                 else if (tipo == "edificio" && edificio == "minaHierro") Anota(a, "forja_hierro_temprana", "pueblo de mina de hierro");
                 else if (tipo == "capitalEnNivel") ReqEdificio(a, (string)h["conEdificio"], 1);
-                else if (tipo == "edificioEnPlazaDeNivel") ReqEdificio(a, edificio, (int?)h["nivelInterno"] is int nj && nj > 0 ? nj : 1);
+                else if (tipo == "edificioEnPlazaDeNivel") { ReqEdificio(a, edificio, (int?)h["nivelInterno"] is int nj && nj > 0 ? nj : 1); a.Plaza = Math.Max(a.Plaza, (int?)h["nivelPlaza"] ?? 1); }
+                else if (tipo == "plazaEnNivel") a.Plaza = Math.Max(a.Plaza, (int?)h["nivel"] ?? 1);
             }
             foreach (var x in LogroDe(id)) Anota(a, x, "logro");
             Quitar(a, id);
@@ -224,7 +244,7 @@ namespace ConquestTactics.Mundo
                 var sinLogro = Cierre(directas, (a, x) => TipoTec(a, x) != "logro");
                 var n = new Nodo
                 {
-                    T = t, Carril = t.Edificio, Tecs = directas,
+                    T = t, Carril = t.Edificio, Tecs = directas, Req = accTropa[t.Id],
                     Era = Math.Max(1, directas.Select(x => EraDe(tec[x].Era)).DefaultIfEmpty(1).Max()),
                 };
                 foreach (var a in Tropas)
@@ -272,6 +292,28 @@ namespace ConquestTactics.Mundo
                 if (ts.Count > 0) Carriles.Add(new Carril { Id = cid, Tropas = ts });
             }
         }
+
+        // ── para el árbol de tecnologías (`ArbolDeTecnologias`) ──
+
+        public Acc RequisitosDeTecnologia(string id) => ReqTec(id);
+        /// <summary>Lo que el logro de una tecnología pide antes en alguna Facción del mundo (la dependencia oculta).</summary>
+        public List<string> LogroDeTecnologia(string id) => LogroDe(id);
+        public IEnumerable<string> EdificiosQueAbre(string tec) => edificios.Where(e => e.Value.Tec == tec).Select(e => e.Key);
+        public IEnumerable<(string tipo, int nivel)> NivelesQueAbre(string tec) =>
+            edificios.SelectMany(e => e.Value.Niveles.Where(l => l.Value.tec == tec).Select(l => (e.Key, l.Key)));
+        public IEnumerable<string> RecetasQueAbre(string tec) => recetas.Where(r => r.Value.Tec == tec).Select(r => r.Key);
+        /// <summary>La receta de un producto, o null si es materia prima.</summary>
+        public Receta RecetaDe(string recurso) => recetas.TryGetValue(recurso, out var r) ? r : null;
+        /// <summary>De dónde sale una materia prima fuera de las recetas (`BRUTO`) y la tecnología que pide; null si no es materia prima.</summary>
+        public static (string donde, string tec)? Bruto(string recurso) => recurso switch
+        {
+            "madera" => ("Leñera", null), "piedra" => ("un pueblo de cantera", null), "cobre" => ("un pueblo de mina de cobre", null),
+            "estano" => ("un pueblo de mina de estaño", null), "hierro" => ("un pueblo de mina de hierro", "forja_hierro_temprana"),
+            "livestock" => ("el rebaño de una aldea ganadera", null), "trigo" => ("Granja", null), "oro" => ("impuestos y pueblo de mina de oro", null),
+            _ => ((string, string)?)null,
+        };
+        /// <summary>La tecnología que pide construir un edificio, o null.</summary>
+        public string TecnologiaDeConstruir(string tipo) => edificios.TryGetValue(tipo, out var e) ? e.Tec : null;
 
         /// <summary>Lo que va antes (todas sus previas) y lo que lleva después, para el resaltado.</summary>
         public HashSet<string> Antes(string id) { var s = new HashSet<string>(); void V(string i) { foreach (var x in Nodos[i].Todos) if (s.Add(x.De)) V(x.De); } V(id); return s; }
