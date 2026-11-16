@@ -88,7 +88,7 @@ namespace ConquestTactics.Visual
             }
             if (!Riding) return;
 
-            var tuning = Tuning(em);
+            var tuning = Tuning(em).For(em, _hero);
             float3 velocity = em.HasComponent<HeroMotorStateComponent>(_hero) ? em.GetComponentData<HeroMotorStateComponent>(_hero).velocity
                 : _agent != null && _agent.enabled ? (float3)_agent.velocity : float3.zero;
             float speed = mount.state == HeroMountState.Mounted ? math.length(velocity.xz) : 0f;

@@ -191,7 +191,7 @@ public partial class StatResolveSystem : SystemBase
         public float Get(StatId stat)
         {
             float baseValue = StatMath.Base(bases, stat);
-            if (hero) baseValue += HeroStatFormula.Derived(formula, stat, strength, dexterity, armor, vitality);
+            if (hero) baseValue = HeroStatFormula.Apply(formula, stat, baseValue, strength, dexterity, armor, vitality);
             return math.max(0f, StatMath.Resolve(baseValue, modifiers, stat, now));
         }
     }

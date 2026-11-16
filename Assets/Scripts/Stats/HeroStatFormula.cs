@@ -24,6 +24,11 @@ public struct HeroStatFormulaComponent : IComponentData
     public float slashingPenetrationPerStrength;
     public float slashingPenetrationPerDexterity;
     public float piercingPenetrationPerDexterity;
+    /// <summary>Engine rules (<see cref="HeroEngineRules"/>): each type's damage is multiplied by 1 + these per point; 0 on asset classes.</summary>
+    public float damageScalePerStrength;
+    public float damageScalePerDexterity;
+    /// <summary>Engine rules: relief of every damage type per point of armor; 0 on asset classes.</summary>
+    public float reliefPerArmor;
 }
 
 /// <summary>
@@ -53,6 +58,37 @@ public static class HeroStatFormula
         piercingPenetrationPerDexterity = c.piercingPenetrationMultiplierByDex,
     };
 
+    /// <summary>
+    /// The formula of a ticket hero (<see cref="HeroEngineRules"/>): health from the rules' base and vitality, damage as the weapon's
+    /// (the stack base) times 1 + a share per point of the class's damage attribute, relief from armor; no flat defense or penetration
+    /// from the attributes. Stamina stays the class asset's.
+    /// </summary>
+    public static HeroStatFormulaComponent FromEngine(HeroClassDefinition c, in HeroEngineRules rules, in HeroEngineStatsComponent hero)
+    {
+        var f = new HeroStatFormulaComponent
+        {
+            baseHealth = rules.baseHealth,
+            healthPerVitality = rules.healthPerVitality,
+            damageScalePerStrength = hero.strengthDamageWeight * rules.damagePerAttribute,
+            damageScalePerDexterity = hero.dexterityDamageWeight * rules.damagePerAttribute,
+            reliefPerArmor = rules.reliefPerArmor,
+        };
+        if (c != null) (f.baseStamina, f.staminaPerDexterity) = (c.baseStamina, c.staminaPerDexterity);
+        return f;
+    }
+
+    /// <summary>
+    /// <paramref name="stat"/> of a hero before its modifiers: its stack base plus what the attributes give, and for damage, all of it
+    /// times the engine rules' attribute scale.
+    /// </summary>
+    public static float Apply(in HeroStatFormulaComponent f, StatId stat, float baseValue,
+        float strength, float dexterity, float armor, float vitality)
+    {
+        float value = baseValue + Derived(f, stat, strength, dexterity, armor, vitality);
+        bool damage = stat == StatId.BluntDamage || stat == StatId.SlashDamage || stat == StatId.PierceDamage;
+        return damage ? value * (1f + strength * f.damageScalePerStrength + dexterity * f.damageScalePerDexterity) : value;
+    }
+
     /// <summary>Base that the attributes give to <paramref name="stat"/>; 0 for stats the formula does not cover.</summary>
     public static float Derived(in HeroStatFormulaComponent f, StatId stat,
         float strength, float dexterity, float armor, float vitality)
@@ -72,6 +108,9 @@ public static class HeroStatFormula
             case StatId.SlashPenetration:
                 return strength * f.slashingPenetrationPerStrength + dexterity * f.slashingPenetrationPerDexterity;
             case StatId.PiercePenetration: return dexterity * f.piercingPenetrationPerDexterity;
+            case StatId.BluntRelief:
+            case StatId.SlashRelief:
+            case StatId.PierceRelief: return armor * f.reliefPerArmor;
             default: return 0f;
         }
     }

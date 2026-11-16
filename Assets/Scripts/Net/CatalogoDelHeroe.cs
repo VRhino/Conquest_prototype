@@ -19,7 +19,8 @@ namespace ConquestTactics.Net
             public Atributos atributos = new Atributos();
             public PorTipo dano = new PorTipo(), penetracion = new PorTipo(), defensa = new PorTipo();
             public int salud;
-            public int vida, trote, galope, aguante;
+            public int vida, aguante;
+            public float trote, galope;
         }
         [Serializable]
         public class Objeto

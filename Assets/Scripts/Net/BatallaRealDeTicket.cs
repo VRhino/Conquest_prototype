@@ -24,7 +24,13 @@ namespace ConquestTactics.Net
         /// <summary>La batalla de verdad solo saca tropas que estén en la base de escuadras del juego (las que hornea la subescena).</summary>
         public static bool TropaConocida(string tropaId) => SquadDataService.GetSquadById(tropaId) != null;
 
-        /// <summary>ponytail: las clases del motor que tienen pariente en Conquest; las demás, espada y escudo. Lo de verdad es el punto 3 del plan de Conquest.</summary>
+        /// <summary>
+        /// La clase de Conquest (habilidades, animaciones y aspecto del arma) de la clase del motor; las dagas, con la de espada y escudo hasta
+        /// que haya arte. Las cifras son las del motor (<see cref="CifrasDelHeroe"/>).
+        /// </summary>
+        /// <summary>La clase del motor del capitán de una escuadra sin héroe.</summary>
+        const string ClaseDelCapitan = "espada_escudo_mediano";
+
         public static string Clase(string claseDelMotor) => VestidoDelMotor.ClaseDeConquest(claseDelMotor);
 
         public static BattleData Montar(BatallaDeTicket batalla, out int soldados)
@@ -64,6 +70,9 @@ namespace ConquestTactics.Net
                     var capitan = Heroe(PrefijoCapitan + escuadra.SquadId, "Capitán", nameof(HeroClass.SwordAndShield), 1,
                         primerPunto + enElLado++ % 3, aspectos, orden++);
                     capitan.sigilo = sigiloDelLado;
+                    // Sus cifras, las de un héroe de espada y escudo recién nacido en el motor: en la escala de los héroes y las tropas del ticket.
+                    capitan.cifrasDelMotor = CifrasDelHeroe.De(CifrasDelHeroe.DeInicio(ClaseDelCapitan));
+                    capitan.capitan = true;
                     soldados += Escuadra(batalla, capitan, escuadra);
                     lista.Add(capitan);
                 }
@@ -148,7 +157,6 @@ namespace ConquestTactics.Net
         /// Un héroe de la batalla. El de un jugador lleva el aspecto que guardó el motor (`HeroSnapshot`: cabeza, pelo, barba, cejas y género;
         /// un hueco vacío se queda vacío) y la armadura de inicio de Conquest del tipo de la que lleva (ligera, media o pesada), como en el
         /// campamento (`VestidoDelMotor`). El capitán de una escuadra sin héroe, que el motor no tiene, sale de la reserva de héroes de prueba.
-        /// ponytail: el arma (y las cifras de las piezas) siguen siendo las de la reserva hasta el equipo pieza a pieza (paso 6 del bloque 4).
         /// </summary>
         static BattleHeroData Heroe(string id, string nombre, string clase, int nivel, int punto, HeroData[] aspectos, int orden, BronzeAge.Contract.V1.HeroSnapshot delMotor = null)
         {
@@ -166,6 +174,9 @@ namespace ConquestTactics.Net
             };
             if (delMotor == null)
                 return datos;
+            // Sus cifras de combate: los atributos y las piezas del ticket, con las reglas del héroe (HeroEngineRules); el caballo, el de su montura.
+            datos.cifrasDelMotor = CifrasDelHeroe.De(delMotor);
+            datos.montura = CifrasDelHeroe.Montura(delMotor.Equipamiento?.Montura?.ItemDefinitionId);
             var a = delMotor.Avatar;
             datos.avatar = new AvatarParts { headId = a?.CabezaId ?? "", hairId = a?.PeloId ?? "", beardId = a?.BarbaId ?? "", eyebrowId = a?.CejasId ?? "" };
             datos.gender = delMotor.Femenino ? "Female" : "Male";

@@ -241,7 +241,7 @@ namespace ConquestTactics.Net
                 var montura = SystemAPI.GetComponent<HeroMountComponent>(heroe);
                 if (montura.state == HeroMountState.Mounted)
                 {
-                    var aires = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default;
+                    var aires = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault().For(EntityManager, heroe) : MountTuning.Default.For(EntityManager, heroe);
                     movil.Velocidad = aires.trotSpeed;
                     movil.VelocidadAlCorrer = aires.gallopSpeed;
                 }

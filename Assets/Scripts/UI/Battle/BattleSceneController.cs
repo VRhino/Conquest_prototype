@@ -578,6 +578,11 @@ public class BattleSceneController : MonoBehaviour
         else
             Debug.LogWarning($"[BattleSceneController] Clase desconocida '{heroData.classID}' para el héroe remoto '{heroData.heroName}'");
 
+        // Its numbers and its horse from the engine ticket, which HeroInitializationSystem and the mount systems read in place of the class asset's.
+        if (heroData.cifrasDelMotor.fromEngine) em.AddComponentData(heroEntity, heroData.cifrasDelMotor);
+        if (heroData.montura.health > 0f) em.AddComponentData(heroEntity, heroData.montura);
+        else if (heroData.cifrasDelMotor.fromEngine && !heroData.capitan) em.AddComponent<HeroOnFootTag>(heroEntity);
+
         // Adjuntar datos visuales para que HeroVisualAppearanceSystem aplique partes al héroe remoto
         em.AddComponentObject(heroEntity, HeroAppearanceComponent.Capture(heroData.avatar, heroData.equipment,
             string.IsNullOrEmpty(heroData.gender) ? "Male" : heroData.gender));

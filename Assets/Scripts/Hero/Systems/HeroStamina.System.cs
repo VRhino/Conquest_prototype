@@ -70,7 +70,7 @@ public partial class HeroStaminaSystem : SystemBase
             var data = stamina.ValueRW;
             Entity rider = horse.ValueRO.rider;
             bool galloping = SystemAPI.HasComponent<HeroMoveIntent>(rider)
-                && SystemAPI.GetComponent<HeroMoveIntent>(rider).Speed > mount.trotSpeed + 0.01f;
+                && SystemAPI.GetComponent<HeroMoveIntent>(rider).Speed > mount.For(EntityManager, rider).trotSpeed + 0.01f;
             data.currentStamina = math.clamp(
                 data.currentStamina + (galloping ? -mount.gallopStaminaPerSecond : data.regenRate) * deltaTime, 0f, data.maxStamina);
             if (data.currentStamina <= 0f) data.isExhausted = true;

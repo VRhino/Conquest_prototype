@@ -135,7 +135,7 @@ public partial class HeroAIExecutionSystem : SystemBase
                                     ? SystemAPI.GetComponent<MoveSpeedComponent>(entity).value
                                     : stats.ValueRO.baseSpeed;
                                 float agentSpeed = mount.state == HeroMountState.Mounted
-                                    ? MountedSpeed(mount.horse, dec.shouldSprint, walkSpeed)
+                                    ? MountedSpeed(entity, mount.horse, dec.shouldSprint, walkSpeed)
                                     : dec.shouldSprint && hasSprintStamina
                                         ? walkSpeed * stats.ValueRO.sprintMultiplier
                                         : walkSpeed;
@@ -220,10 +220,11 @@ public partial class HeroAIExecutionSystem : SystemBase
     /// The horse's pace for an AI rider (M19): the gallop when it would sprint and the horse has stamina, else the trot;
     /// still while stunned.
     /// </summary>
-    private float MountedSpeed(Entity horse, bool sprint, float walkSpeed)
+    private float MountedSpeed(Entity hero, Entity horse, bool sprint, float walkSpeed)
     {
         if (walkSpeed <= 0f) return 0f;
         var tuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default;
+        tuning = tuning.For(EntityManager, hero);
         bool gallop = sprint && SystemAPI.Exists(horse) && SystemAPI.HasComponent<StaminaComponent>(horse)
             && !SystemAPI.GetComponent<StaminaComponent>(horse).isExhausted && SystemAPI.GetComponent<StaminaComponent>(horse).currentStamina > 0f;
         return gallop ? tuning.gallopSpeed : tuning.trotSpeed;

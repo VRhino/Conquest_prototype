@@ -109,7 +109,8 @@ public partial class HeroMovementSystem : SystemBase
     HeroMoveIntent Mounted(Entity hero, in HeroMountComponent mount, float3 desired, bool gallopHeld, bool immobilised)
     {
         if (mount.state != HeroMountState.Mounted || immobilised) return default;
-        var tuning = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default;
+        var tuning = (SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var config) ? config.mount.OrDefault() : MountTuning.Default)
+            .For(EntityManager, hero);
         float dt = SystemAPI.Time.DeltaTime;
         float3 forward = math.mul(EntityManager.GetComponentData<LocalTransform>(hero).Rotation, new float3(0f, 0f, 1f));
         forward.y = 0f;

@@ -100,3 +100,41 @@
 4. Se borran las clases y los objetos de relleno y las pantallas viejas de un jugador que solo viven de ellos, con sus pruebas. El creador y el
    vestido pasan al catálogo del motor. Va en la tanda 3, y antes de borrar se manda la lista exacta.
 5. Las dagas, con sus cifras y el aspecto de espada y escudo hasta que haya arte.
+
+## Tanda 2, hecha (2026-11-16): el héroe del ticket en la escala del motor
+
+- **Las cifras de cada héroe** (`Net/CifrasDelHeroe.cs`, `HeroEngineStatsComponent`):
+  - sus `atributos_efectivos`;
+  - lo que suman sus piezas: las cifras de `estadisticas` si es forjada, las de su ficha si no;
+  - el daño y la penetración del arma, y la defensa y la salud de la armadura.
+- **Las cuentas** son las reglas del héroe que el autor del motor propuso a Conquest (`Trabajo_En_Conquest.md` §3.5). Con ellas están
+  ajustadas las cifras de `OBJETOS`. Están en `HeroGameplayConfig` (`HeroEngineRules`):
+  - vida = 1000 + 30 por punto de vitalidad + la salud de la armadura;
+  - alivio de un tipo = 0,25 % por punto de defensa de ese tipo + 0,25 % por punto del atributo armadura, con el tope del 75 %. Sin
+    defensa plana;
+  - golpe de un tipo = el del arma × (1 + 1 % por punto del atributo de daño de la clase): la fuerza en la lanza y el hacha, la destreza en
+    el arco y las dagas, la media de las dos en la espada. La penetración, la del arma;
+  - el aguante, el de la clase de Conquest.
+- **Comprobado contra las referencias del autor** (tier I, armadura inicial, sin puntos; vida efectiva / golpe):
+  - lanza 2394/96 (2381/96);
+  - espada 2249/99 (2243/99);
+  - arco 1984/111 (1984/110);
+  - hacha 2269/102 (2269/101);
+  - dagas 1979/112 (1979/111).
+- **La montura** del ticket da la vida, el trote, el galope y el aguante del caballo de ese héroe (`HeroHorseStatsComponent`), en el servidor
+  y en el cliente.
+- **Sin montura en el ticket, a pie** (Víctor, 22a): el servidor no le deja llamar al caballo (`HeroOnFootTag`). El capitán conserva el
+  caballo de siempre.
+- **El capitán** de una escuadra sin héroe va con las cifras de un héroe de espada y escudo recién nacido en el motor.
+- Las habilidades, las animaciones y el aspecto siguen siendo los de la clase de Conquest pariente; las dagas, los de espada y escudo.
+
+## Tanda 3: lo que decidió Víctor (2026-11-17, 23a y 24a)
+
+- **23a:** se borra lo que solo vive de sí mismo (la preparación vieja, los sueltos sin uso y sus pruebas) y pasa al catálogo del motor lo
+  que sigue vivo:
+  - el aspecto y el icono de cada pieza, por su id;
+  - las clases;
+  - el creador, el selector y `VestidoDelMotor`.
+- Los paneles viejos del campamento (inventario, ficha, tienda y cuartel) quedan para cuando se rehaga el campamento.
+- **24a:** las clases de Conquest son 5 assets, uno por clase del motor y con su id, con sus habilidades, rasgos de golpe, resiliencia y
+  aguante. Las dagas y la lanza con escudo empiezan copiando a sus parientes.

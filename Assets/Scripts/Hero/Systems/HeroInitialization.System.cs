@@ -67,7 +67,25 @@ public partial class HeroInitializationSystem : SystemBase
             return;
         }
 
-        EntityManager.AddComponentData(entity, HeroStatFormula.From(classData));
+        // A ticket hero (HeroEngineStatsComponent): the engine's attributes and pieces, by the engine rules, in place of the asset's.
+        bool fromEngine = EntityManager.HasComponent<HeroEngineStatsComponent>(entity)
+            && EntityManager.GetComponentData<HeroEngineStatsComponent>(entity).fromEngine;
+        var engine = fromEngine ? EntityManager.GetComponentData<HeroEngineStatsComponent>(entity) : default;
+        if (fromEngine)
+        {
+            baseStats = new HeroBaseStats
+            {
+                baseStrength = (int)engine.strength, baseDexterity = (int)engine.dexterity,
+                baseArmor = (int)engine.armor, baseVitality = (int)engine.vitality,
+            };
+            equipment = new EquipmentBonuses
+            {
+                strengthBonus = (int)engine.equipmentStrength, dexterityBonus = (int)engine.equipmentDexterity,
+                armorBonus = (int)engine.equipmentArmor, vitalityBonus = (int)engine.equipmentVitality,
+            };
+        }
+        var rules = SystemAPI.TryGetSingleton<HeroGameplayConfigComponent>(out var gameplay) ? gameplay.engineRules.OrDefault() : HeroEngineRules.Default;
+        EntityManager.AddComponentData(entity, fromEngine ? HeroStatFormula.FromEngine(classData, rules, engine) : HeroStatFormula.From(classData));
         if (!EntityManager.HasComponent<DefenseComponent>(entity)) EntityManager.AddComponent<DefenseComponent>(entity);
         if (!EntityManager.HasComponent<DamageProfileComponent>(entity)) EntityManager.AddComponent<DamageProfileComponent>(entity);
         // The class weapon's hit traits; its damage and penetration come from the stack.
@@ -81,6 +99,7 @@ public partial class HeroInitializationSystem : SystemBase
         StatStack.SetBase(EntityManager, entity, StatId.Armor, baseStats.baseArmor);
         StatStack.SetBase(EntityManager, entity, StatId.Vitality, baseStats.baseVitality);
         StatStack.SetBase(EntityManager, entity, StatId.MaxResilience, classData.baseResilience);
+        if (fromEngine) SeedEngineBases(entity, engine, rules);
         if (!EntityManager.HasComponent<ResilienceComponent>(entity))
             EntityManager.AddComponentData(entity, new ResilienceComponent { max = classData.baseResilience, current = classData.baseResilience });
         if (EntityManager.HasComponent<HeroStatsComponent>(entity))
@@ -207,6 +226,24 @@ public partial class HeroInitializationSystem : SystemBase
             baseArmor = classData.baseArmor,
             baseVitality = classData.baseVitality
         };
+    }
+
+    /// <summary>
+    /// The pieces' numbers as stack bases (engine rules): the armour's health, the weapon's damage and penetration, and each type's
+    /// defence as relief. The attributes add to them through <see cref="HeroStatFormula.Apply"/>.
+    /// </summary>
+    void SeedEngineBases(Entity entity, in HeroEngineStatsComponent e, in HeroEngineRules rules)
+    {
+        StatStack.SetBase(EntityManager, entity, StatId.MaxHealth, e.armorHealth);
+        StatStack.SetBase(EntityManager, entity, StatId.PierceDamage, e.pierceDamage);
+        StatStack.SetBase(EntityManager, entity, StatId.SlashDamage, e.slashDamage);
+        StatStack.SetBase(EntityManager, entity, StatId.BluntDamage, e.bluntDamage);
+        StatStack.SetBase(EntityManager, entity, StatId.PiercePenetration, e.piercePenetration);
+        StatStack.SetBase(EntityManager, entity, StatId.SlashPenetration, e.slashPenetration);
+        StatStack.SetBase(EntityManager, entity, StatId.BluntPenetration, e.bluntPenetration);
+        StatStack.SetBase(EntityManager, entity, StatId.PierceRelief, e.pierceDefense * rules.reliefPerDefense);
+        StatStack.SetBase(EntityManager, entity, StatId.SlashRelief, e.slashDefense * rules.reliefPerDefense);
+        StatStack.SetBase(EntityManager, entity, StatId.BluntRelief, e.bluntDefense * rules.reliefPerDefense);
     }
 
     void AddEquipment(Entity entity, StatId attribute, int bonus)

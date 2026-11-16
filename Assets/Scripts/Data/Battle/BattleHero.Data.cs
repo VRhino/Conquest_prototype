@@ -34,4 +34,13 @@ public class BattleHeroData
 
     /// <summary>The sigil it fights under, as a <c>Sigilos.Clave</c> (the 8 ids joined by «|»); empty: no banner.</summary>
     public string sigilo = string.Empty;
+
+    /// <summary>Its combat numbers from the engine ticket (<c>fromEngine</c> false: from its class asset and equipment, as before).</summary>
+    public HeroEngineStatsComponent cifrasDelMotor;
+
+    /// <summary>The captain of a squad without a hero (no ticket hero: it keeps the tuning's horse).</summary>
+    public bool capitan;
+
+    /// <summary>Its horse from the engine (zero health: the tuning's horse, or none for a ticket hero, who then fights on foot).</summary>
+    public HeroHorseStatsComponent montura;
 }

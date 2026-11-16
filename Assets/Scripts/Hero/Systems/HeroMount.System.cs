@@ -53,6 +53,7 @@ public partial class HeroMountSystem : SystemBase
         {
             var m = EntityManager.GetComponentData<HeroMountComponent>(hero);
             var before = m;
+            var horseTuning = tuning.For(EntityManager, hero);
             bool alive = EntityManager.GetComponentData<HeroLifeComponent>(hero).isAlive;
             var pose = EntityManager.GetComponentData<LocalTransform>(hero);
             quaternion facing = Facing(pose.Rotation);
@@ -87,8 +88,8 @@ public partial class HeroMountSystem : SystemBase
             switch (m.state)
             {
                 case HeroMountState.OnFoot:
-                    if (pressed && _now >= m.nextMountTime && HeroMountRules.CanMount(alive, inBattle, Immobilised(hero), Busy(hero)))
-                        Begin(hero, ref m, pose.Position, facing, health, tuning);
+                    if (pressed && _now >= m.nextMountTime && HeroMountRules.CanMount(alive, inBattle, Immobilised(hero), Busy(hero), !EntityManager.HasComponent<HeroOnFootTag>(hero)))
+                        Begin(hero, ref m, pose.Position, facing, health, horseTuning);
                     break;
                 case HeroMountState.Mounting:
                     m.elapsed += dt;

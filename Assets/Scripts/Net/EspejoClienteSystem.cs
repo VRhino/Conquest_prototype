@@ -194,6 +194,9 @@ namespace ConquestTactics.Net
                 // HeroMountComponent, la clase del héroe y la velocidad de HeroMotorStateComponent.
                 ecb.AddComponent(entidad, new HeroLifeComponent { isAlive = true });
                 ecb.AddComponent(entidad, new HeroMountComponent { coat = VestidoDelMotor.PelajeDe(apariencia.equipment?.mount?.itemId) });
+                // Su caballo del motor: los aires con los que se mueve y anda su modelo (el servidor los usa igual).
+                var caballo = CifrasDelHeroe.Montura(apariencia.equipment?.mount?.itemId);
+                if (caballo.health > 0f) ecb.AddComponent(entidad, caballo);
                 ecb.AddComponent<HeroMotorStateComponent>(entidad);
                 ecb.AddComponent(entidad, new HeroClassComponent { heroClass = (HeroClass)modelo.ValueRO.TipoDeEscuadra });
                 _heroes[entidad] = visual;

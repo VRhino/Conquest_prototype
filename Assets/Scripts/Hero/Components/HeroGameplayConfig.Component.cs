@@ -40,6 +40,9 @@ public struct HeroGameplayConfigComponent : IComponentData
     /// <summary>The hero's horse (M19).</summary>
     public MountTuning mount;
 
+    /// <summary>How the engine's numbers become a ticket hero's stats.</summary>
+    public HeroEngineRules engineRules;
+
     /// <summary>Default for deathVisualHideDelay, shared by the authoring and by systems running without the singleton.
     /// Hero_Death lasts 1.8 s, so the body then lies on the ground for 1.7 s before it is removed.</summary>
     public const float DefaultDeathVisualHideDelay = 3.5f;

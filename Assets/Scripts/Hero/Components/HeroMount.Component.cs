@@ -117,6 +117,19 @@ public struct MountTuning
 
     /// <summary>Default values when the baked config predates these fields (all zero).</summary>
     public MountTuning OrDefault() => horseHealth > 0f && trotSpeed > 0f ? this : Default;
+
+    /// <summary>This tuning with <paramref name="hero"/>'s own horse, if it has one from the engine.</summary>
+    public MountTuning For(EntityManager em, Entity hero)
+        => em.Exists(hero) && em.HasComponent<HeroHorseStatsComponent>(hero) ? With(em.GetComponentData<HeroHorseStatsComponent>(hero)) : this;
+
+    /// <summary>This tuning with the hero's own horse from the engine (its health, gaits and stamina); unchanged without one.</summary>
+    public MountTuning With(in HeroHorseStatsComponent horse)
+    {
+        if (horse.health <= 0f) return this;
+        var t = this;
+        (t.horseHealth, t.trotSpeed, t.gallopSpeed, t.stamina) = (horse.health, horse.trotSpeed, horse.gallopSpeed, horse.stamina);
+        return t;
+    }
 }
 
 /// <summary>Pure rules of the hero's mount (M19).</summary>
@@ -134,8 +147,9 @@ public static class HeroMountRules
     /// <summary>The ground beside a horse, where its rider gets off.</summary>
     public static float3 GroundBeside(float3 horse, quaternion facing) => horse + math.mul(facing, GroundSpot);
 
-    /// <summary>Who can call the horse: alive, in battle, free to move and not attacking.</summary>
-    public static bool CanMount(bool alive, bool inBattle, bool immobilised, bool busy) => alive && inBattle && !immobilised && !busy;
+    /// <summary>Who can call the horse: alive, in battle, free to move, not attacking, and with a horse (a ticket hero without a mount fights on foot).</summary>
+    public static bool CanMount(bool alive, bool inBattle, bool immobilised, bool busy, bool hasHorse = true)
+        => alive && inBattle && !immobilised && !busy && hasHorse;
 
     /// <summary>The horse's heading after turning towards <paramref name="desired"/> at most <paramref name="turnRateDegrees"/>·dt.</summary>
     public static float3 Steer(float3 forward, float3 desired, float turnRateDegrees, float dt)

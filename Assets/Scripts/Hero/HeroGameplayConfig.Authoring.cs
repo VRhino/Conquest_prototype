@@ -48,6 +48,10 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
     [Tooltip("Caballo del héroe: vida, velocidades, giro, aguante y duración de subir y bajar. Valores provisionales.")]
     public MountTuning mount = MountTuning.Default;
 
+    [Header("Héroe del motor")]
+    [Tooltip("Cómo las cifras del motor (clase, atributos y piezas del ticket) se vuelven la vida, el alivio y el golpe del héroe.")]
+    public HeroEngineRules engineRules = HeroEngineRules.Default;
+
     class Baker : Baker<HeroGameplayConfigAuthoring>
     {
         public override void Bake(HeroGameplayConfigAuthoring authoring)
@@ -71,6 +75,7 @@ public class HeroGameplayConfigAuthoring : MonoBehaviour
                 respawnProtectionHealthRatio = authoring.respawnProtectionHealthRatio,
                 combo                       = authoring.combo.OrDefault(),
                 mount                       = authoring.mount.OrDefault(),
+                engineRules                 = authoring.engineRules.OrDefault(),
             });
         }
     }

@@ -188,7 +188,14 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   - **10 s sin señal** para dar a un jugador por caído: se quedan (`ArranqueRed.cs`, `DriversDeBatalla.PlazoSinSenalMs`);
   - **60 s de espera** a que entren antes de empezar: se quedan (`BatallaDeTicketSystems.EsperaPorDefecto`). Más adelante los mandará el motor
     en el ticket según el tipo de batalla, por ejemplo más para un asedio.
-- **Las clases y los objetos del motor en la batalla** (Víctor, 2026-11-16, la a en todas; `tasks/clases-objetos-motor-plan.md`):  - las cuentas del héroe van en la escala del motor: las piezas tal cual y los atributos recalibrados contra las tropas;  - los carros de guerra llevan el aspecto de la caballería hasta que haya arte;  - una clase o un objeto desconocidos, u otra versión de su catálogo, rechazan la batalla con su motivo, como las tropas;  - se borran las clases y los objetos de relleno y las pantallas viejas de un jugador que solo viven de ellos (con la lista exacta antes);  - las dagas, con sus cifras y el aspecto de espada y escudo hasta que haya arte.
+- **Las clases y los objetos del motor en la batalla** (Víctor, 2026-11-16, la a en todas; `tasks/clases-objetos-motor-plan.md`):
+  - las cuentas del héroe van en la escala del motor: las piezas tal cual y los atributos recalibrados contra las tropas;
+  - los carros de guerra llevan el aspecto de la caballería hasta que haya arte;
+  - una clase o un objeto desconocidos, u otra versión de su catálogo, rechazan la batalla con su motivo, como las tropas;
+  - se borran las clases y los objetos de relleno y las pantallas viejas de un jugador que solo viven de ellos (con la lista exacta antes);
+  - las dagas, con sus cifras y el aspecto de espada y escudo hasta que haya arte.
+  - hecho en la batalla (tanda 2): el héroe del ticket con sus atributos, sus piezas (forjadas o de ficha) y su montura, con las reglas del héroe que propuso el autor del motor (vida 1000 + 30 por vitalidad + la salud de la armadura; alivio del 0,25 % por punto de defensa y de armadura; golpe del arma por 1 + 1 % por punto del atributo de la clase).
+  - un héroe del ticket sin montura va a pie: no puede llamar al caballo (Víctor, 2026-11-16, 22a).
 - **Orden de trabajo, decidido** (Víctor, 2026-11-16):
   1. la tanda 3 del motor (elegir escuadras al defender desde tu base);
   2. la interfaz de Conquest del aviso de conexión y abandonar, junto con el panel de suministro;

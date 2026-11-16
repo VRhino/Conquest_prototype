@@ -142,7 +142,21 @@
   - abandonar, en las Opciones (Esc en la batalla, `EscEnLaBatalla`), con su confirmación; fuera F10 y el botón de la capa de batalla;
   - el panel de suministro con los huecos apagados y sin «+» (`TroopsViewerController.HuecosApagados`), «Aceptar» solo con una elegida y sin aviso de F si no hay qué
     sacar. `DelMapaALaBatalla` lo comprueba y abandona por las Opciones.
-- **Las clases y los objetos del motor, tanda 1 (hecha y sin commit; `tasks/clases-objetos-motor-plan.md`, Víctor: la a en todas):**  - los catálogos del héroe importados tal cual (`Editor/HeroeDelMotor.cs`, `Resources/Heroe/BronzeAge`) y leídos por `Net/CatalogoDelHeroe.cs`;  - otra versión de los catálogos de clases u objetos, o una clase u objeto desconocidos, rechazan la batalla con su motivo; quien se une    después con algo desconocido no sale al campo (`BatallaDeTicket.HeroeDesconocido`);  - los carros de guerra importados con el aspecto de la caballería de lanza (37 de 37 tropas);  - fuera `terrain-tools`;  - siguen la tanda 2 (el héroe del ticket en la escala del motor) y la 3 (borrar el relleno del héroe, con la lista antes).
+- **Las clases y los objetos del motor** (`tasks/clases-objetos-motor-plan.md`, Víctor: la a en todas):
+  - **tanda 1, en commit `8ee2e39f`:**
+    - los catálogos del héroe, importados tal cual (`Editor/HeroeDelMotor.cs`, `Resources/Heroe/BronzeAge`) y leídos por
+      `Net/CatalogoDelHeroe.cs`;
+    - otra versión de los catálogos, o una clase u objeto desconocidos, rechazan la batalla con su motivo. Quien se une después con algo
+      desconocido no sale al campo;
+    - los carros de guerra, con el aspecto de la caballería de lanza (37 de 37 tropas);
+    - fuera `terrain-tools`;
+  - **tanda 2, en su commit (`Clases y objetos del motor, tanda 2`):**
+    - el héroe del ticket, con sus cifras del motor (`Net/CifrasDelHeroe.cs`, `HeroEngineStatsComponent`);
+    - las reglas del héroe del autor del motor, en `HeroEngineRules` dentro de `HeroGameplayConfig`;
+    - su montura como caballo (`HeroHorseStatsComponent`);
+    - el capitán, con las cifras de un héroe de espada y escudo de inicio;
+    - un héroe del ticket sin montura va a pie (22a, `HeroOnFootTag`);
+  - sigue la tanda 3 (23a y 24a): ver el final de `tasks/clases-objetos-motor-plan.md`.
 - **Sigue, por el orden de Víctor:** las clases y los objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la
   predicción con choque contra los soldados (6c). Sin capturas en esta serie (Víctor, 2026-11-16).
 
