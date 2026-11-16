@@ -974,3 +974,27 @@ Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
 .mapa-capas-fila > .unity-base-field__label { display: none; }
 .mapa-capas-fila > .unity-base-field__input { flex-grow: 0; }
 .mapa-capas-fila > .con-icono { margin-left: 6px; }
+
+/* paso 11, tanda 1: salir como ejército */
+.salida-modos { margin: 0; padding: 0; }
+.salida-modos RadioButton { margin: 2px 0; }
+.salida-modos .unity-radio-button__checkmark-background { border-width: 1px; border-color: var(--bronce); background-color: var(--tinta); }
+.salida-modos .unity-radio-button__checkmark { background-color: var(--oro); }
+.salida-ejercito { margin-top: 6px; padding-top: 6px; border-top-width: 1px; border-top-color: rgba(107, 74, 41, 0.6); }
+.salida-ejercito > * { margin-bottom: 4px; }
+.salida-recuadro-sub { margin: 6px 0 2px 0; font-size: 12px; letter-spacing: 1px; color: var(--texto-2); -unity-font-style: bold; }
+.ejercito-fila { flex-direction: row; align-items: center; padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9); margin-bottom: 4px; }
+.ejercito-fila-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-right: 8px; }
+.ejercito-fila > Button { margin-left: 6px; }
+.conv-integrantes > .conv-integrante { margin-bottom: 6px; }
+.conv-integrante { padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.6); border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); }
+.conv-integrante-cab { flex-direction: row; align-items: center; }
+.conv-integrante-cab > * { margin-right: 8px; }
+.conv-papel { margin: 0; padding: 1px 6px; border-radius: 8px; background-color: rgba(98, 74, 31, 0.9); font-size: 11px; color: var(--oro-claro); }
+.conv-integrante-tropas { flex-direction: row; flex-wrap: wrap; margin-top: 4px; }
+.conv-integrante-tropas > * { margin-right: 4px; }
+.conv-caravanas { flex-direction: row; flex-wrap: wrap; }
+.conv-caravana { flex-direction: row; align-items: center; width: 220px; margin: 0 6px 6px 0; padding: 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9); -unity-text-align: upper-left; }
+.conv-caravana.elegida { border-color: var(--oro); background-color: rgba(52, 37, 19, 0.95); }
+.conv-caravana > VisualElement { margin-right: 8px; }
+.salida-salir.salida-ejercito-boton { width: auto; padding: 0 18px; margin-left: 8px; }

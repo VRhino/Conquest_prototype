@@ -579,6 +579,8 @@ namespace ConquestTactics.Mundo.UI
             var plaza = plazaId == null ? null : c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, plazaId)?.Asentamiento;
             var interior = SelectorDePersonaje.Interior;
             if (h == null || (camp == null && plaza == null) || interior == null || interior.PanelAbierto) return;
+            // En una convocatoria: su preparación (paso 11).
+            if (MiConvocatoria(h) is Convocatoria cv) { VentanaDePreparacion(cv, campId, lugar, plazaId); return; }
             bool resides = plaza != null ? h.HasResidenciaId && h.ResidenciaId == plazaId : camp.ResidentesIds.Contains(h.Id);
             var a = c.Sesion.Almacen;
             interior.PanelAbierto = true;
@@ -651,9 +653,24 @@ namespace ConquestTactics.Mundo.UI
             PintarViveres();
             var recuadro = Dialogo.Caja("salida-recuadro");
             recuadro.Add(ConAyuda(Dialogo.Texto("Cómo sales", "salida-recuadro-titulo"),
-                "Con tu columna personal: tú y la tropa que elijas abajo. Salir como ejército, con otros héroes, llega más adelante."));
-            var columnaPersonal = new RadioButton("Columna personal") { value = true, name = "columna-personal" };
-            recuadro.Add(columnaPersonal);
+                "Columna personal: por tu cuenta, con el rumbo libre. Ejército: salís juntos varios héroes de tu Facción; lo dirige su Líder con clics en el mapa. Para unirte a uno que se prepara, pulsa «Unirme»: sales con la tropa y la carga que marques. Para convocar el tuyo, elige quién puede unirse y pulsa «Convocar ejército». Un ejército espera dentro, sin límite de tiempo, hasta que su Líder pulse «Salir con el ejército» o cancele. Necesita al menos una escuadra."));
+            // El ejército, desde tu plaza de residencia o desde un campamento (`admiteEjercito`).
+            var admiteEjercito = plaza == null || resides;
+            // Cada grupo de opciones, en su GroupBox: si no, todos los RadioButton del panel serían un solo grupo.
+            var modos = new GroupBox();
+            modos.AddToClassList("salida-modos");
+            recuadro.Add(modos);
+            var columnaPersonal = new RadioButton("Columna personal") { value = !(admiteEjercito && salirComoEjercito), name = "columna-personal" };
+            modos.Add(columnaPersonal);
+            var bloqueEjercito = Dialogo.Caja("salida-ejercito");
+            bloqueEjercito.name = "bloque-ejercito";
+            RadioButton comoEjercito = null;
+            if (admiteEjercito)
+            {
+                comoEjercito = new RadioButton("Ejército") { value = salirComoEjercito, name = "ejercito" };
+                modos.Add(comoEjercito);
+                recuadro.Add(bloqueEjercito);
+            }
             if (plaza == null || resides) izquierda.Add(recuadro);
 
             // Derecha: la carga del carro (de tu almacén personal si resides; si no, lo que ya lleva el carro de tu columna).
@@ -917,6 +934,40 @@ namespace ConquestTactics.Mundo.UI
             });
             salir.name = "salir";
             acciones.Add(salir);
+            // En modo ejército, SALIR convoca (`convocarEjercito`) y la ventana pasa a su preparación.
+            (List<string>, Cantidades) Seleccion()
+            {
+                var carga = new Cantidades();
+                foreach (var (campo, recurso) in campos) if (campo.value > 0) carga.PorId[recurso] = campo.value * 1000L;
+                return (new List<string>(elegidas), carga);
+            }
+            void Reabrir() { Cerrar(); VentanaDeSalida(campId, lugar, plazaId); }
+            Button convocar = null;
+            convocar = Dialogo.Boton("CONVOCAR EJÉRCITO", "boton-primario salida-salir salida-ejercito-boton", async () =>
+            {
+                var (ids, carga) = Seleccion();
+                var o = new OrdenConvocarEjercito { HeroeId = h.Id, PoliticaDeUnion = politicaDeSalida, Carga = carga };
+                o.EscuadronIds.AddRange(ids);
+                convocar.SetEnabled(false);
+                if (await OrdenConError(new Orden { ConvocarEjercito = o }, m => Poner(error, m))) Reabrir();
+                else convocar.SetEnabled(true);
+            });
+            convocar.name = "convocar";
+            acciones.Add(convocar);
+            void ModoDeSalida()
+            {
+                var ejercito = comoEjercito?.value == true;
+                Ver(bloqueEjercito, ejercito);
+                Ver(salir, !ejercito);
+                Ver(convocar, ejercito);
+                if (ejercito) BloqueDeEjercito(bloqueEjercito, plaza?.Id ?? camp.Id, h, Seleccion, m => Poner(error, m), Reabrir);
+            }
+            if (comoEjercito != null)
+            {
+                comoEjercito.RegisterValueChangedCallback(ev => { salirComoEjercito = ev.newValue; ModoDeSalida(); });
+                columnaPersonal.RegisterValueChangedCallback(ev => { if (ev.newValue) { salirComoEjercito = false; ModoDeSalida(); } });
+            }
+            ModoDeSalida();
             PintarTropa();
             capaEncima.Add(velo);
         }
