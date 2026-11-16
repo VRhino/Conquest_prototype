@@ -71,6 +71,8 @@ namespace ConquestTactics.Mundo.UI
                 case ClaseDeCosa.Mercenarios:
                     // Su taberna, con Facción y la columna quieta a su puerta (paso 12, Víctor 3a).
                     if (h.HasFaccionId && ALaPuerta(cosa.X, cosa.Y)) r.Add(("taberna", "Taberna", ("edificio", "taberna")));
+                    // Y su tablón de mercenarios, si alguien se ofrece (paso 12, tanda 2): el motor lo manda con la columna parada a la puerta.
+                    if (h.HasFaccionId && ALaPuerta(cosa.X, cosa.Y) && CampamentoActual(cosa.Id)?.Tablon.Count > 0) r.Add(("mercenarios", "Mercenarios", ("parte", "mercenarios")));
                     break;
                 case ClaseDeCosa.Avanzada:
                 {
@@ -145,17 +147,17 @@ namespace ConquestTactics.Mundo.UI
             if (ventanaDePuerta == null) { placa?.RemoveFromHierarchy(); firmaDePuerta = null; return; }
             var firmaVentana = $"{ventanaDePuerta}|{cosaDePuerta}|{HeroeAhora()?.Version}|{MiColumna()?.Version}|{string.Join(",", EscuadrasDelHeroe(HeroeAhora()).Select(s => s.Version))}"
                 + $"|{(ventanaDePuerta == "mercado" && c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, cosa.Id)?.Asentamiento is Asentamiento am ? FirmaDeMercado(am) + am.Version : "")}"
-                + $"|{(ventanaDePuerta == "taberna" ? FirmaDeIntel(HeroeAhora()) : "")}|{c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada?.Version}|{c.Sesion.Almacen.Buscar(TipoEntidad.Pueblo, cosa.Id)?.Pueblo?.Version}|{ObraSobre(cosa.Id)?.Version}";
+                + $"|{(ventanaDePuerta == "taberna" ? FirmaDeIntel(HeroeAhora()) : "")}|{(ventanaDePuerta == "mercenarios" ? CampamentoActual(cosa.Id)?.Version : 0)}|{eleccionMerc.Count}|{c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada?.Version}|{c.Sesion.Almacen.Buscar(TipoEntidad.Pueblo, cosa.Id)?.Pueblo?.Version}|{ObraSobre(cosa.Id)?.Version}";
             if (placa != null && firmaVentana == firmaDePuerta) return;
             firmaDePuerta = firmaVentana;
             placa?.RemoveFromHierarchy();
             placa = Dialogo.Caja("placa ventana-puerta");
             placa.name = "ventana-puerta";
-            placa.EnableInClassList("ancha", ventanaDePuerta == "mercado" || ventanaDePuerta == "taberna");
+            placa.EnableInClassList("ancha", ventanaDePuerta == "mercado" || ventanaDePuerta == "taberna" || ventanaDePuerta == "mercenarios");
             if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hojaPlaza) placa.styleSheets.Add(hojaPlaza);
             var filete = Dialogo.Caja("placa-filete ventana-puerta-filete");
             var cab = Dialogo.Caja("ventana-puerta-cab");
-            var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : ventanaDePuerta == "mercado" ? "Mercado" : ventanaDePuerta == "taberna" ? "Taberna"
+            var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : ventanaDePuerta == "mercado" ? "Mercado" : ventanaDePuerta == "taberna" ? "Taberna" : ventanaDePuerta == "mercenarios" ? "Mercenarios"
                 : cosa.Clase == ClaseDeCosa.Avanzada ? "Tu guarnición" : "Guarnición";
             cab.Add(Dialogo.Texto(titulo, "dialogo-titulo"));
             var cerrar = Dialogo.Boton("×", "aviso-borrar", () => { ventanaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); });
@@ -183,6 +185,15 @@ namespace ConquestTactics.Mundo.UI
                 {
                     var camp = c.Sesion.Almacen.Buscar(TipoEntidad.CampamentoMercenarios, cosa.Id)?.CampamentoMercenarios ?? cosa.Entidad?.CampamentoMercenarios;
                     if (camp != null) PanelDeIntel(cuerpo, TabernaDeCampamento(camp, HeroeAhora()), HeroeAhora(), null, () => { firmaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); });
+                    break;
+                }
+                case "mercenarios":
+                {
+                    var camp = CampamentoActual(cosa.Id) ?? cosa.Entidad?.CampamentoMercenarios;
+                    var error = Dialogo.Texto("", "error oculto");
+                    error.name = "merc-error";
+                    if (camp != null) TablonDeMercenarios(cuerpo, camp.Tablon, HeroeAhora(), FuentesDeContrato(HeroeAhora(), camp), null, t => Poner(error, t), () => { firmaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); });
+                    cuerpo.Add(error);
                     break;
                 }
                 case "carga": CargaAlAlmacen(cuerpo, c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada ?? cosa.Entidad.Avanzada); break;

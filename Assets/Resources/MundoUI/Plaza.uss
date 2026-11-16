@@ -1277,3 +1277,112 @@
 .intel-recinto { flex-direction: row; align-items: center; margin-bottom: 4px; }
 .intel-recinto > * { margin-right: 8px; }
 .intel-recinto > .base-barra-fondo { flex-grow: 1; }
+
+/* Los mercenarios por contrato (paso 12, tanda 2; los .merc-* de BronzeAgeClient): el tablón, las ofertas y Facción › Mercenarios. */
+.recl-pestanas { flex-direction: row; width: 260px; margin-left: 16px; }
+.merc-cuerpo { flex-grow: 1; flex-shrink: 1; }
+.merc-tablon-cab { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.merc-titulo { font-size: 17px; }
+.merc-bolsa { flex-direction: row; align-items: center; padding: 2px 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 11px; background-color: rgba(0, 0, 0, 0.35); color: var(--oro-claro); -unity-font-style: bold; font-size: 13px; }
+.merc-bolsa-sin { color: var(--texto-2); }
+.merc-bolsa-texto, .merc-pagar-texto { margin: 0 0 0 4px; font-size: 12.5px; color: var(--oro-claro); }
+.merc-pagar { padding: 2px 4px 2px 10px; }
+.merc-desplegable { margin: 0; min-width: 120px; }
+.merc-desplegable > .unity-base-popup-field__input { background-color: rgb(30, 23, 16); border-color: var(--bronce-osc); color: var(--oro-claro); font-size: 12.5px; }
+.merc-orden-tablon { flex-direction: row; align-items: center; margin: 2px 0 8px 0; }
+.merc-orden-texto { margin: 0 6px 0 0; font-size: 12.5px; color: var(--texto-2); }
+.merc-chip { margin: 0 4px 0 0; padding: 2px 10px; height: auto; border-width: 1px; border-color: var(--bronce-osc); border-radius: 11px; background-color: rgba(0, 0, 0, 0.3); color: var(--texto-2); font-size: 12px; }
+.merc-chip.activo, .merc-chip:hover:enabled { color: var(--tinta); background-color: var(--oro); border-color: var(--oro); }
+.merc-chip:disabled { opacity: 0.4; }
+.merc-ofertas { flex-direction: row; flex-wrap: wrap; }
+.merc-oferta { width: 32%; min-width: 260px; max-width: 520px; flex-grow: 0; margin: 0 1% 10px 0; padding: 10px 11px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 6px; background-color: var(--marco-bg-alt); }
+.merc-oferta > * { margin-bottom: 6px; }
+.merc-oferta.herido { opacity: 0.7; }
+.merc-oferta-cab { flex-direction: row; align-items: center; }
+.merc-insignia { flex-shrink: 0; margin-right: 8px; }
+.merc-nombre { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.merc-nombre-texto { margin: 0; font-size: 15px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; overflow: hidden; text-overflow: ellipsis; }
+.merc-sub { margin: 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.merc-herido, .merc-aviso { color: var(--terracota); }
+.merc-ficha > * { margin-bottom: 4px; }
+.merc-renombre-texto { margin: 0; font-size: 12px; color: var(--texto-2); }
+.merc-barra { height: 5px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.45); overflow: hidden; }
+.merc-barra-i { height: 100%; background-color: var(--oro); }
+.merc-barra.pronto > .merc-barra-i { background-color: var(--terracota); }
+.merc-medallas { flex-direction: row; flex-wrap: wrap; }
+.merc-medalla { margin: 0 4px 4px 0; padding: 1px 7px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 9px; background-color: rgba(0, 0, 0, 0.35); font-size: 11.5px; color: var(--pergamino); }
+.merc-grado-1 { border-color: #a9793f; color: #e3b886; }
+.merc-grado-2 { border-color: #c7ccd4; color: #e4e7ec; }
+.merc-grado-3 { border-color: #e9c46a; color: #f6dc98; }
+.merc-grado-0 { opacity: 0.6; }
+.merc-historial { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.merc-historial > * { margin: 0 10px 0 0; }
+.merc-historial-texto { margin: 0; font-size: 11.5px; color: var(--texto-2); }
+.merc-fiable { color: var(--oro-claro); }
+.merc-tropa { flex-direction: row; flex-wrap: wrap; }
+.merc-tropa-pieza { flex-direction: row; align-items: center; margin: 0 6px 4px 0; padding: 1px 6px 1px 2px; border-radius: 4px; background-color: rgba(0, 0, 0, 0.3); }
+.merc-tropa-texto { margin: 0 0 0 4px; font-size: 12.5px; color: var(--pergamino); }
+.merc-seccion { margin: 2px 0 4px 0; font-size: 10.5px; letter-spacing: 2px; color: var(--bronce); -unity-font-style: bold; }
+.merc-tarifas, .merc-trabajos, .merc-ordenes { flex-direction: row; }
+.merc-tarifa, .merc-trabajo { flex-grow: 1; flex-basis: 0; min-width: 0; margin: 0 4px 0 0; padding: 4px 2px; height: auto; align-items: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 5px; background-color: rgba(0, 0, 0, 0.35); }
+.merc-tarifa:hover:enabled, .merc-trabajo:hover:enabled { border-color: var(--bronce); }
+.merc-tarifa.activo, .merc-trabajo.activo { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.18); }
+.merc-trabajo:disabled { opacity: 0.32; }
+.merc-tarifa-plazo { margin: 0; font-size: 11.5px; color: var(--texto-2); }
+.merc-tarifa.activo .merc-tarifa-plazo { color: var(--oro-claro); }
+.merc-tarifa.caro .merc-cifra-texto { color: var(--terracota); }
+.merc-cifra { flex-direction: row; align-items: center; }
+.merc-cifra-texto { margin: 0 0 0 3px; font-size: 12.5px; color: var(--oro-claro); -unity-font-style: bold; }
+.merc-trabajo-texto { margin: 2px 0 0 0; font-size: 11.5px; color: var(--texto-2); }
+.merc-trabajo.activo .merc-trabajo-texto { color: var(--oro-claro); }
+.merc-etiqueta { margin: 0; font-size: 11.5px; color: var(--texto-2); }
+.merc-oferta-pie { flex-direction: row; align-items: center; justify-content: space-between; }
+.merc-firma { margin: 0; flex-shrink: 1; font-size: 11.5px; color: var(--texto-2); white-space: normal; }
+.merc-contratar { flex-direction: row; align-items: center; margin: 0 0 0 8px; height: 34px; padding: 0 12px; }
+.merc-contratar-texto { margin: 0 6px 0 0; color: var(--tinta); }
+.merc-contratar .merc-cifra-texto { color: var(--tinta); }
+.merc-contratar:disabled { opacity: 0.45; }
+.merc-motivo { margin: 0; font-size: 11.5px; color: var(--terracota); white-space: normal; }
+.merc-resumen { flex-direction: row; margin-bottom: 8px; }
+.merc-resumen > .ficha { flex-grow: 1; flex-basis: 0; margin-right: 6px; }
+.merc-barra-ordenes { padding: 8px 10px; margin-bottom: 10px; border-width: 1px; border-color: var(--bronce); border-radius: 6px; background-color: rgba(14, 10, 7, 0.94); }
+.merc-barra-ordenes > * { margin-bottom: 6px; }
+.merc-barra-ordenes.vacia { border-color: var(--bronce-osc); }
+.merc-barra-cab { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.merc-barra-titulo { margin: 0; font-size: 13.5px; color: var(--oro-claro); }
+.merc-barra-chips { flex-direction: row; }
+.merc-ordenar-fila { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.merc-ordenar-fila > * { margin: 0 6px 4px 0; }
+.merc-ordenar-fila > .merc-desplegable { flex-grow: 1; }
+.merc-num { width: 110px; }
+.merc-num > Label { min-width: 0; margin-right: 4px; color: var(--texto-2); }
+.merc-num > .unity-base-text-field__input { background-color: rgb(30, 23, 16); border-color: var(--bronce-osc); color: var(--oro-claro); }
+.merc-dar { margin: 0 0 4px 0; height: 32px; padding: 0 12px; }
+.merc-contrato.marcado { border-color: var(--oro); }
+.merc-contrato.pronto { border-color: var(--terracota); }
+.merc-contrato.acabado { opacity: 0.6; }
+.merc-marcar { margin: 0 6px 0 0; }
+.merc-linea { flex-direction: row; align-items: center; min-width: 0; }
+.merc-linea-icono { width: 26px; height: 26px; flex-shrink: 0; margin-right: 7px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 13px; background-color: rgba(0, 0, 0, 0.4); }
+.merc-linea-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.merc-linea-arriba { flex-direction: row; flex-wrap: wrap; }
+.merc-linea-fuerte { margin: 0 5px 0 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; }
+.merc-linea-texto { margin: 0; font-size: 13px; color: var(--pergamino); white-space: normal; flex-shrink: 1; }
+.merc-orden-actual { padding: 4px 6px; border-radius: 5px; background-color: rgba(0, 0, 0, 0.22); }
+.merc-tiempo > * { margin-bottom: 3px; }
+.merc-acciones { padding-top: 6px; border-top-width: 1px; border-color: rgba(169, 121, 63, 0.25); }
+.merc-acciones > * { margin-bottom: 4px; }
+.merc-acciones-botones { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.merc-acciones-botones > * { margin: 0 4px 4px 0; }
+.merc-mini { height: 28px; padding: 0 9px; margin-top: 0; font-size: 12.5px; }
+.merc-desplegable.merc-mini { min-width: 104px; height: auto; padding: 0; }
+.merc-peligro:hover:enabled { border-color: var(--terracota); color: var(--terracota); }
+.merc-valorar { padding: 8px 10px; margin-bottom: 10px; border-width: 1px; border-color: var(--oro); border-radius: 6px; background-color: rgba(216, 184, 120, 0.06); }
+.merc-valorar-titulo { margin: 0 0 6px 0; font-size: 13.5px; color: var(--oro-claro); -unity-font-style: bold; }
+.merc-valorar-fila { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.merc-valorar-fila > .merc-mini { margin-left: 6px; }
+.merc-medalla { flex-direction: row; align-items: center; }
+.merc-medalla-texto { margin: 0 0 0 2px; font-size: 10.5px; color: var(--texto-2); }
+.merc-con-icono { flex-direction: row; align-items: center; }
+.merc-con-icono > VisualElement { margin-right: 4px; }
+.merc-boton-texto { margin: 0; font-size: 12.5px; color: var(--pergamino); }

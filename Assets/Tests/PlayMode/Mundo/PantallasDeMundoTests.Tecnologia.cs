@@ -126,7 +126,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
                 // La pestaña Tecnología, con la ficha fija de los Escudos ligeros.
                 yield return Esperar(() => raiz.Q("panel-tropa") == null && Ventana()?.Q("tec-panel") != null, 10, "la pestaña Tecnología");
-                CollectionAssert.AreEqual(new[] { "pestana-faccion-miembros", "pestana-faccion-plazas", "pestana-faccion-tecnologia", "pestana-faccion-diplomacia", "pestana-faccion-ajustes" },
+                CollectionAssert.AreEqual(new[] { "pestana-faccion-miembros", "pestana-faccion-plazas", "pestana-faccion-tecnologia", "pestana-faccion-mercenarios", "pestana-faccion-diplomacia", "pestana-faccion-ajustes" },
                     Ventana().Q("faccion-pestanas").Query<Button>().ToList().Select(b => b.name).ToArray(), "las pestañas que ya hay");
                 Assert.IsTrue(Ventana().Q<Button>("pestana-faccion-tecnologia").ClassListContains("activo"), "Tecnología, la elegida");
                 yield return Esperar(() => TipVisible() && Tip().ClassListContains("fijo") && Tip().Q<Button>("adoptar-" + tec) != null, 10, "la ficha fija con «Adoptar»");

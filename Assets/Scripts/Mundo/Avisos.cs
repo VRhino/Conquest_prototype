@@ -188,6 +188,13 @@ namespace ConquestTactics.Mundo
                     Clase = ClaseAviso.Mirada, Categoria = CategoriaAviso.Economia, Urgente = true,
                 };
             }
+            if (e.Codigo != null && e.Codigo.StartsWith("mercenarios.") && TextoDeMercenario(e.Codigo, Texto, Numero, almacen) is string merc)
+                return new EntradaAviso
+                {
+                    Titulo = "Mercenarios", Texto = merc, Clase = ClaseAviso.Mirada,
+                    Categoria = e.Codigo.StartsWith("mercenarios.orden") ? CategoriaAviso.Movimientos : CategoriaAviso.Economia,
+                    Clave = e.Codigo + "|" + Texto("mercenario"),
+                };
             if (e.Codigo == "bandidos.campamento_vencido")
             {
                 var nivel = (int)Numero("nivel");
@@ -198,6 +205,41 @@ namespace ConquestTactics.Mundo
                 };
             }
             return null;
+        }
+
+        static readonly string[] OrdenesDeMercenario = { "Guardar", "Ir a", "Atacar", "Unirse" };
+        static readonly Dictionary<string, string> FinDeContrato = new Dictionary<string, string>
+        {
+            ["plazo"] = "se cumplió el plazo", ["despido"] = "despedido", ["plaza_perdida"] = "se perdió la plaza que lo firmó",
+            ["sin_ciudadanos"] = "no quedan ciudadanos sin marca", ["faccion_perdida"] = "dejó de ser ciudadano",
+        };
+
+        /// <summary>El texto de un hecho `mercenarios.*` (`textoDeHechoMercenario`; los ids de héroe llegan como números). Los del héroe bot (ofrecerse,
+        /// rango, medallas, premio) no le tocan a un jugador: null.</summary>
+        static string TextoDeMercenario(string codigo, Func<string, string> texto, Func<string, double> numero, Almacen almacen)
+        {
+            var quien = texto("mercenario") is string m ? Textos.NombreDeHeroe(almacen, "heroe-" + m) : "Un mercenario";
+            var monedas = numero("monedas");
+            var oro = numero("oro") / 1000;
+            var pagado = monedas > 0 ? $" por {monedas:N0} monedas" : oro > 0 ? $" por {Math.Round(oro, 1)} de oro" : "";
+            var t = (int)numero("tipo");
+            var orden = texto("tipo") != null && t >= 0 && t < OrdenesDeMercenario.Length ? $"«{OrdenesDeMercenario[t]}»" : "";
+            switch (codigo)
+            {
+                case "mercenarios.contratado": return $"{quien} entra a sueldo de tu Facción{pagado}.";
+                case "mercenarios.prorrogado": return $"Se prorroga el contrato de {quien}{pagado}.";
+                case "mercenarios.terminado":
+                    var motivo = texto("motivo") ?? "";
+                    return $"Acaba el contrato de {quien}: {(FinDeContrato.TryGetValue(motivo, out var fin) ? fin : motivo)}. Puedes valorarlo en Facción › Mercenarios.";
+                case "mercenarios.valorado": return $"{quien} recibe su valoración.";
+                case "mercenarios.ordenado": return $"{quien} recibe la orden {orden}.";
+                case "mercenarios.orden_cumplida": return $"{quien} cumple la orden {orden}.";
+                case "mercenarios.orden_caducada":
+                    var porque = texto("motivo") switch { "plazo" => "venció el plazo", "objetivo" => "el objetivo ya no vale", "paz" => "llegó la paz", "salida" => "salió de lo que acompañaba", var x => x ?? "" };
+                    return $"Caduca la orden {orden} de {quien}: {porque}. Sin orden, solo se defiende.";
+                case "mercenarios.mudado": return $"{quien} se muda a otra plaza.";
+                default: return null;
+            }
         }
 
         /// <summary>El título de una misión de `Misiones_Textos.TEXTOS_MISIONES`; sin él, su id.</summary>

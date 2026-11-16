@@ -200,8 +200,9 @@ namespace ConquestTactics.Mundo.UI
             "armeria" => ArmeriaActiva(a),
             // El Mercado, con el edificio activo; también de visita (sus órdenes, para tomarlas).
             "mercado" => MercadoActivo(a),
-            // La Taberna, por ahora con el informe de la región: a quien lo compra (el resto de la taberna, en su paso).
-            "taberna" => CompraInforme(a, yo),
+            // La Taberna, con la taberna activa (Víctor, 1a): la intel a quien la compra (Rey, Embajador o Gobernador) y los mercenarios de la región a
+            // quien firma algún trabajo; cada uno ve solo lo suyo.
+            "taberna" => CompraInforme(a, yo) || ContrataDesdePlaza(a, yo),
             // Territorio, también de visita (solo para mirar sus pueblos).
             "territorio" => true,
             _ when !Propia(a, yo) => false,
@@ -221,7 +222,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var cargo = CargoConstructor(a, yo.Id);
             var enMarcha = Internos(a).Count(e => e.Mejora != null || e.Estado == EstadoEdificio.EdificioEnConstruccion);
-            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}|{FirmaDeUnirse(a, yo)}";
+            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}|{ContrataDesdePlaza(a, yo)}|{FirmaDeUnirse(a, yo)}";
             if (ventanaPlaza != "construccion") return firma;
             var cat = Catalogo;
             var caros = string.Concat((cat?.Properties() ?? Enumerable.Empty<JProperty>())
@@ -542,7 +543,8 @@ namespace ConquestTactics.Mundo.UI
                     ? new[] { ("ordenes", "Órdenes"), ("caravanas", "Caravanas"), ("rutas", "Rutas"), ("trueques", "Trueques") }
                         .Concat(InformesDeOrdenesVigentes(yo).Count > 0 ? new[] { ("region", "Región") } : new (string, string)[0]).ToArray()
                     : new[] { ("deplaza", "Mercado") },
-                "taberna" => new[] { ("intel", "Intel") },
+                "taberna" => (CompraInforme(a, yo) ? new[] { ("intel", "Intel") } : new (string, string)[0])
+                    .Concat(ContrataDesdePlaza(a, yo) ? new[] { ("mercenarios", "Mercenarios de la región") } : new (string, string)[0]).ToArray(),
                 "unirse" => new[] { ("unirse", "Unirse a un ejército") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
@@ -583,6 +585,12 @@ namespace ConquestTactics.Mundo.UI
                 case "trueques": Trueques(cuerpo, a, yo, rehacer); break;
                 case "region": OrdenesDeLaRegion(cuerpo, a, yo, rehacer); break;
                 case "intel": PanelDeIntel(cuerpo, TabernaDePlaza(a), yo, a, rehacer); break;
+                case "mercenarios":
+                    var errorMerc = Dialogo.Texto("", "error oculto");
+                    errorMerc.name = "merc-error";
+                    TablonDeMercenarios(cuerpo, a.MercenariosRegion, yo, FuentesDeRegion(yo, a), a, t => Poner(errorMerc, t), rehacer);
+                    cuerpo.Add(errorMerc);
+                    break;
                 case "unirse": UnirseDesdePlaza(cuerpo, a, yo, rehacer); break;
             }
         }

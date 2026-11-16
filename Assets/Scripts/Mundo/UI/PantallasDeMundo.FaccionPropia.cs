@@ -18,7 +18,7 @@ namespace ConquestTactics.Mundo.UI
     public partial class PantallasDeMundo
     {
         /// <summary>Las pestañas de tu Facción que ya hay (las de `PESTANAS_FACCION`, en su orden).</summary>
-        static readonly (string id, string nombre)[] PestanasDeFaccion = { ("miembros", "Miembros"), ("plazas", "Plazas"), ("tecnologia", "Tecnología"), ("diplomacia", "Diplomacia"), ("ajustes", "Ajustes del Rey") };
+        static readonly (string id, string nombre)[] PestanasDeFaccion = { ("miembros", "Miembros"), ("plazas", "Plazas"), ("tecnologia", "Tecnología"), ("mercenarios", "Mercenarios"), ("diplomacia", "Diplomacia"), ("ajustes", "Ajustes del Rey") };
         string pestanaFaccion = "miembros";
         /// <summary>Las plazas desplegadas en la pestaña Plazas (todas plegadas al abrir).</summary>
         readonly HashSet<string> plazasAbiertas = new HashSet<string>();
@@ -77,6 +77,8 @@ namespace ConquestTactics.Mundo.UI
                 b.Add(Dialogo.Texto(nombre, "base-pestana-texto"));
                 // Las solicitudes pendientes, en Miembros (solo las ve el Rey).
                 if (id == "miembros" && esRey && faccion.SolicitudesIds.Count > 0) b.Add(Dialogo.Texto(faccion.SolicitudesIds.Count.ToString(), "faccion-pestana-aviso"));
+                // Lo que pide atención en Mercenarios: contratos a punto de vencer y valoraciones pendientes.
+                if (id == "mercenarios" && MercenariosQuePidenAtencion(h, faccion) is int atencion && atencion > 0) b.Add(Dialogo.Texto(atencion.ToString(), "faccion-pestana-aviso"));
                 nav.Add(b);
             }
             principal.Add(nav);
@@ -90,6 +92,7 @@ namespace ConquestTactics.Mundo.UI
             else if (pestanaFaccion == "tecnologia") PestanaTecnologia(cuerpo, h, faccion);
             else if (pestanaFaccion == "diplomacia") PestanaDiplomacia(cuerpo, h, faccion);
             else if (pestanaFaccion == "ajustes") PestanaAjustes(cuerpo, h, faccion);
+            else if (pestanaFaccion == "mercenarios") PestanaMercenarios(cuerpo, h, faccion);
             else PestanaMiembros(cuerpo, h, faccion);
             principal.Add(cuerpo);
             marco.Add(principal);
@@ -105,6 +108,7 @@ namespace ConquestTactics.Mundo.UI
             var plazas = string.Join(",", a.Todas(Entidad.CuerpoOneofCase.Asentamiento).Where(e => e.Asentamiento.FaccionId == h.FaccionId).Select(e => e.Asentamiento.Version));
             var titulos = string.Join(",", a.Todas(Entidad.CuerpoOneofCase.Titulo).Select(e => $"{e.Titulo.TituloId}:{e.Titulo.PoseedorId}"));
             var tecnologia = pestanaFaccion == "tecnologia" && f != null ? FirmaDeTecnologia(h, f) : pestanaFaccion == "diplomacia" ? FirmaDeDiplomacia() : "";
+            if (f != null) tecnologia += $"|{MercenariosQuePidenAtencion(h, f)}" + (pestanaFaccion == "mercenarios" ? FirmaDeMercenarios(h, f) : "");
             return $"propia|{f?.Version}|{pestanaFaccion}|{plazas}|{titulos}|{string.Join(",", plazasAbiertas)}|{tecnologia}";
         }
 

@@ -200,6 +200,9 @@ namespace ConquestTactics.Mundo.UI
             velo.Focus();
         }
 
+        /// <summary>La pestaña de la pieza Militar del campamento: «tropa» (reclutar) o «mercenarios» (el tablón).</summary>
+        string pestanaMilitar = "tropa";
+
         void PintarTropaDelCampamento(VisualElement v, VisualElement tip, string campId, Action cerrar, Action repintar)
         {
             var camp = CampamentoActual(campId);
@@ -218,12 +221,35 @@ namespace ConquestTactics.Mundo.UI
             var chips = Dialogo.Caja("fila-envuelta recl-chips");
             chips.name = "chips";
             cab.Add(chips);
+            // Con Facción y alguien en el tablón, junto a reclutar, el tablón de mercenarios del campamento (paso 12, tanda 2; Víctor, 2b).
+            if (h != null && h.HasFaccionId && camp != null && camp.Tablon.Count > 0)
+            {
+                if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hojaPlaza && !v.styleSheets.Contains(hojaPlaza)) v.styleSheets.Add(hojaPlaza);
+                var pestanas = Dialogo.Caja("recl-pestanas");
+                foreach (var (id, nombre) in new[] { ("tropa", "Tropa"), ("mercenarios", "Mercenarios") })
+                {
+                    var b = Dialogo.Boton(nombre, "plaza-subtab" + (id == pestanaMilitar ? " activo" : ""), () => { pestanaMilitar = id; repintar(); });
+                    b.name = "militar-" + id;
+                    pestanas.Add(b);
+                }
+                cab.Add(pestanas);
+            }
+            else pestanaMilitar = "tropa";
             cab.Add(Dialogo.Caja("recl-hueco"));
             var cerrarBoton = Dialogo.Boton("Cerrar", "boton-secundario", cerrar);
             cerrarBoton.name = "cerrar";
             cab.Add(cerrarBoton);
             v.Add(cab);
             if (camp == null || h == null || a == null) { v.Add(error); return; }
+            if (pestanaMilitar == "mercenarios")
+            {
+                var cuerpo = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden, name = "merc-cuerpo" };
+                cuerpo.AddToClassList("merc-cuerpo");
+                TablonDeMercenarios(cuerpo, camp.Tablon, h, FuentesDeContrato(h, camp), null, Error, repintar);
+                v.Add(cuerpo);
+                v.Add(error);
+                return;
+            }
             if (!camp.ResidentesIds.Contains(h.Id))
             {
                 v.Add(Dialogo.Texto("Solo se presta o se recluta tropa en el campamento donde resides: puedes residir aquí en la taberna.", "dialogo-texto"));

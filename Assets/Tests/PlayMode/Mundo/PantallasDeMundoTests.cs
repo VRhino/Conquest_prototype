@@ -24,11 +24,12 @@ namespace ConquestTactics.Mundo.UI.Tests
         RenderTexture rt;
 
         /// <summary>Las pruebas del lote 2 cuando la suite va en dos a la vez (`tasks/pruebas/correr_en_paralelo.sh`, `MUNDO_LOTE`); las demás, en el 1.
-        /// Repartidas para que los dos lotes tarden lo mismo (unos 250 s cada uno, por los tiempos de la suite del 2026-11-16).</summary>
+        /// Repartidas para que los dos lotes tarden lo mismo: con los tiempos de las pruebas del 2026-11-16 (paso 12, tanda 1), unos 450 s de pruebas
+        /// el 1 y unos 420 el 2.</summary>
         static readonly HashSet<string> Lote2 = new HashSet<string>
         {
-            "TuPlazaPorDentro", "TuTecnologiaDelRey", "TuAvanzadaYSuObra", "TuMercado", "ElCampamentoPorDentro", "TuDiplomaciaDelRey",
-            "TuComercioADistancia", "TuEjercitoEnPreparacion", "TuEjercitoEnElMapa", "TuEjercitoConCaravanas", "TuTaberna",
+            "TuPlazaPorDentro", "TuAvanzadaYSuObra", "ElCampamentoPorDentro", "TuDiplomaciaDelRey",
+            "TuComercioADistancia", "TuEjercitoEnElMapa", "TuEjercitoConCaravanas", "TuTaberna", "TuTablonDeMercenarios",
         };
 
         [SetUp]

@@ -489,6 +489,42 @@
   "pueblos": {
    "glifo": "🏘",
    "codigo": "1f3d8"
+  },
+  "buey": {
+   "glifo": "🐂",
+   "codigo": "1f402"
+  },
+  "palabra": {
+   "glifo": "✋",
+   "codigo": "270b"
+  },
+  "arco": {
+   "glifo": "🏹",
+   "codigo": "1f3f9"
+  },
+  "ladrillos": {
+   "glifo": "🧱",
+   "codigo": "1f9f1"
+  },
+  "fuego": {
+   "glifo": "🔥",
+   "codigo": "1f525"
+  },
+  "ancla": {
+   "glifo": "⚓",
+   "codigo": "2693"
+  },
+  "buena": {
+   "glifo": "👍",
+   "codigo": "1f44d"
+  },
+  "mala": {
+   "glifo": "👎",
+   "codigo": "1f44e"
+  },
+  "firma": {
+   "glifo": "✍",
+   "codigo": "270d"
   }
  },
  "simbolo": {

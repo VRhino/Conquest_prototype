@@ -466,6 +466,10 @@ namespace ConquestTactics.Mundo.UI
             var v = Montar("Interior");
             var lugar = NombreDeCampamento(camp.Id);
             v.Q<Label>("lugar").text = lugar.ToUpperInvariant();
+            // Lo que el tablón de mercenarios deja atacar (bandidos, plazas en guerra) llega por la `VISTA`, como en la plaza: dentro sin haber pasado
+            // por el mapa aún no se ha pedido; se pide la del mundo entero, como el mapa.
+            if (c.Sesion != null && !c.Sesion.TieneVista && c.Relieve != null)
+                c.Sesion.CambiarVista(new Rectangulo { Min = new Punto(), Max = new Punto { X = c.Relieve.Columnas * (long)(c.Relieve.Paso * 1000), Y = c.Relieve.Filas * (long)(c.Relieve.Paso * 1000) } });
             var botonAvisos = v.Q<Button>("avisos");
             botonAvisos.clicked += panelAvisos.Alternar;
             var cartel = v.Q<Label>("cartel");

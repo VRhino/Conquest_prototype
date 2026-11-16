@@ -172,3 +172,9 @@ La hoja de ruta (bloque 4, paso 12) y el inventario (§3.15, §3.16 y §3.17):
 6. **El rastreador de misiones fuera de la plaza.**
    - a) También en el mapa, arriba a la derecha como el prototipo, y a la izquierda en el campamento. **(propuesta)**
    - b) Solo en la plaza; en el mapa, el botón «Misiones».
+
+## Hecho
+
+- **Tanda 1 (la Taberna)**: en commit `eced9885`.
+- **Tanda 2 (los contratos), 2026-11-16, a revisar**: doc 35. La prueba contrata para «Atacar» unos bandidos vistos con una Mirada (la Facción
+  sin plaza no tiene ojos), no para «Acompañar» (organizar un ejército pide columna). Los 9 Twemoji nuevos, con permiso de Víctor (8a).

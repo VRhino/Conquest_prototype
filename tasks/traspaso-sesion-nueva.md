@@ -60,9 +60,12 @@
   - Con la tanda 3 se cerró el paso 11.
 - **Paso 12 (mercenarios por contrato, taberna y misiones)**: el plan, con las respuestas de Víctor (1a 2b 3a 4a 5b 6 y 7a), está en
   `tasks/bloque4-paso12-plan.md`; el doc es el 35.
-  - **Tanda 1 (la Taberna): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Taberna.cs`; la prueba es `TuTaberna` (con
+  - **Tanda 1 (la Taberna): en commit `eced9885`.** Está en `PantallasDeMundo.Taberna.cs`; la prueba es `TuTaberna` (con
     `MUNDO_PROTO=taberna`, la escena para `tasks/pruebas/cdp/taberna.mjs`).
-  - Faltan la tanda 2 (los contratos, con «Mercenarios de la región») y la 3 (las misiones).
+  - **Tanda 2 (los contratos): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Mercenarios.cs` (el tablón, Facción › Mercenarios y
+    `ContratosPorValorar`) y en `Avisos`; la prueba es `TuTablonDeMercenarios` (con `MUNDO_PROTO=mercenarios`, la escena para
+    `tasks/pruebas/cdp/mercenarios.mjs`). Los 9 Twemoji nuevos, con permiso de Víctor.
+  - Falta la tanda 3 (las misiones).
   - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
     icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,
     junto a la de fundación, solo si hay alguna libre en la plaza (tanda 3; ver el plan).

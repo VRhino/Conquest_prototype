@@ -96,7 +96,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.IsNotNull(lateral.Q(className: "faccion-nivel"), "con su nivel");
                 Assert.IsNotNull(lateral.Q("dejar-faccion"), "«Dejar la Facción»");
                 Assert.IsNotNull(lateral.Q("franja-miembros"), "la franja");
-                CollectionAssert.AreEqual(new[] { "pestana-faccion-miembros", "pestana-faccion-plazas", "pestana-faccion-tecnologia", "pestana-faccion-diplomacia", "pestana-faccion-ajustes" },
+                CollectionAssert.AreEqual(new[] { "pestana-faccion-miembros", "pestana-faccion-plazas", "pestana-faccion-tecnologia", "pestana-faccion-mercenarios", "pestana-faccion-diplomacia", "pestana-faccion-ajustes" },
                     Ventana().Q("faccion-pestanas").Query<Button>().ToList().Select(b => b.name).ToArray(), "las pestañas que ya hay");
                 yield return Esperar(() => Ventana().Q<Button>("aceptar-" + aspirante) != null, 10, "la solicitud en Miembros");
                 yield return EnTamanos(raiz, "97_tu_faccion", () => DentroDelMarco(Ventana(), "tu Facción"));

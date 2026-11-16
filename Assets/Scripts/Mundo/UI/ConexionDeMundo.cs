@@ -82,7 +82,7 @@ namespace ConquestTactics.Mundo.UI
             Sesion?.Cerrar();
             var s = new Sesion(Acceso.UrlSesion, token, VersionCliente) { MundoHash = new CacheDeUno(Path.Combine(carpeta, "artefacto")).Guardada() };
             s.AlBienvenida += b => CargarAvisos(b.HasHeroeId ? b.HeroeId : null);
-            s.AlEvento += (_, e) => { if (HeroeId != null) Avisos.Procesar(e, HeroeId, s.Almacen, Datos); };
+            s.AlEvento += (_, e) => { if (HeroeId == null) return; Avisos.Procesar(e, HeroeId, s.Almacen, Datos); ContratosPorValorar.Anotar(e, HeroeId, s.Almacen); };
             Sesion = s;
             try { return await s.Abrir(); }
             catch (ErrorDeSesion e) when (e.Codigo == "token_invalido")

@@ -78,6 +78,8 @@ const GLIFOS = {
   prestigio: '🏆', reputacion: '⚖', alianza: '🤝', templo: '🏛', estatua: '🗿', // el lateral de tu Facción (ui/pestanaFaccion.ts)
   fusion: '🔗', bots: '🤖', // la Diplomacia: la fusión de «Nueva propuesta» y «Ocultar las de bots» (ui/panelDiplomacia.ts, ui/pestanaFaccion.ts)
   pico: '⛏', carrito: '🛒', mapa: '🗺', pueblos: '🏘', // Territorio y el mapa 2D (paso 9): el extractor y «Marcar», «Reponer carro», «Elegir el sitio» y el cupo
+  // Los mercenarios (paso 12, tanda 2; ui/mercenarios.ts, con permiso de Víctor del 2026-11-16): escoltar, las medallas, valorar y quién firmó.
+  buey: '🐂', palabra: '✋', arco: '🏹', ladrillos: '🧱', fuego: '🔥', ancla: '⚓', buena: '👍', mala: '👎', firma: '✍',
 };
 // Los símbolos del prototipo que no son emoji: no están en Twemoji ni en Inter o Cinzel (saldrían como cuadros), así que se dibujan aquí,
 // en 32×32 y en blanco para teñirlos como los dibujos a mano (el prototipo los pinta en el color del texto, \`--oro\` en la lista).
