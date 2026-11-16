@@ -3,7 +3,7 @@
 2026-11-16. Lo que BronzeAgeClient hace con los Aedas itinerantes y residentes, las épicas y la crónica del mundo (§3.18 del inventario; el
 antiguo CQ-008), en Conquest. El plan, las respuestas de Víctor (1a 2a 3a) y las dudas están en `tasks/bloque4-paso13-plan.md`.
 
-## Tanda 1: los Aedas (2026-11-16, a revisar)
+## Tanda 1: los Aedas (2026-11-16, en commit `615e23d4`)
 
 Todo en `PantallasDeMundo.Aedas.cs`, calcado de `ui/aedas.ts`, `ui/ventanaAedas.ts` y `mundo/aedas.ts`.
 
@@ -42,3 +42,35 @@ Todo en `PantallasDeMundo.Aedas.cs`, calcado de `ui/aedas.ts`, `ui/ventanaAedas.
     - los residentes y las épicas: piden Palacio y nobleza, y el servidor de pruebas no tiene cómo ponerlos;
     - la ficha del mapa.
   - Con `MUNDO_PROTO=aedas`, solo la escena para `tasks/pruebas/cdp/aedas.mjs`.
+
+## Tanda 2: la crónica (2026-11-16, a revisar)
+
+Todo en `PantallasDeMundo.Cronica.cs`, calcado de `ui/cronica.ts`.
+
+- **El botón «Crónica»** de la barra (el libro), tras la campana de Avisos (Víctor, 1a). Abre su panel lateral, el mismo marco que el de
+  Avisos; abrir uno cierra el otro.
+- **El panel:**
+  - lo mismo para todos, de lo más nuevo a lo más viejo;
+  - cada entrada con su icono, su frase y la fecha del mundo;
+  - lo de tu Facción, marcado con el filete de oro.
+- **Los datos:**
+  - la primera página (200) se pide al abrirlo (`Sesion.PedirCronica`);
+  - «Más antiguas» pide la anterior a la más vieja;
+  - lo nuevo llega en vivo, del hecho `cronica.entrada` de las `Delta`, en cuanto la crónica ya se pidió;
+  - una sesión nueva empieza de cero.
+- **Las frases**, las del prototipo, con sus dos variantes por tipo. La variante sale del mismo hash y la misma clave (`versión|tipo|JSON de
+  sus datos`), así que es la misma que en el prototipo. Cubren:
+  - conquista, ruinas y fundación;
+  - guerra, vasallajes, anexión y fusión;
+  - títulos, logros del mundo y Eras;
+  - descubrimientos cantados y épicas cumplidas;
+  - la primera plaza en un nivel.
+- **Los iconos**, de los que ya había: ⚔ conquista, 🔥 ruinas, ⌂ fundación, ⚑ diplomacia, ✦ títulos, ⚒ logros, ☀️ Eras, 📜 Aedas, ♛ niveles.
+- **Arreglado de paso, en las pruebas:** el servidor de pruebas guardaba sus datos en `Temp/`, y Unity vacía esa carpeta al arrancar. El motor
+  perdía el diario de la crónica y contestaba vacío. Ahora los guarda en `Logs/pruebas-mundo` y `Logs/pruebas-batalla`.
+- **La prueba** es `LaCronica`:
+  - el Rey y Gobernador funda su plaza y abre la crónica desde el libro, tras la campana;
+  - la fundación sale marcada como suya, con su icono y su fecha;
+  - la campana cierra la crónica y abre los Avisos.
+  - **Sin prueba:** «Más antiguas», porque una partida nueva no llega a 200 entradas, y la entrada en vivo.
+  - Con `MUNDO_PROTO=cronica`, solo la escena para `tasks/pruebas/cdp/cronica.mjs`.

@@ -69,9 +69,12 @@
     tablones y Facción › Misiones); la prueba es `TusMisiones` (con `MUNDO_PROTO=misiones`, la escena para `tasks/pruebas/cdp/misiones.mjs`).
     Los 5 Twemoji nuevos, con permiso de Víctor. Con ella se cierra el paso 12.
 - **Paso 13 (Aedas, épicas y crónica)**: el plan, con las respuestas de Víctor (1a 2a 3a), está en `tasks/bloque4-paso13-plan.md`; el doc es el 36.
-  - **Tanda 1 (los Aedas): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Aedas.cs`, `CosasDelMapa` (el nombre y el parado junto a
+  - **Tanda 1 (los Aedas): en commit `615e23d4`.** Está en `PantallasDeMundo.Aedas.cs`, `CosasDelMapa` (el nombre y el parado junto a
     su plaza) y `Avisos`; la prueba es `TusAedas` (con `MUNDO_PROTO=aedas`, la escena para `tasks/pruebas/cdp/aedas.mjs`).
-  - Falta la tanda 2 (la crónica).
+  - **Tanda 2 (la crónica): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Cronica.cs`; la prueba es `LaCronica` (con
+    `MUNDO_PROTO=cronica`, la escena para `tasks/pruebas/cdp/cronica.mjs`). Con ella se cierra el paso 13 y el bloque 4; lo que queda fuera de los
+    pasos y lo que no tiene prueba está en la Hoja, al final de la tabla del bloque 4.
+  - Los servidores de prueba guardan ya sus datos en `Logs/pruebas-mundo` y `Logs/pruebas-batalla`, no en `Temp/` (Unity la vacía).
   - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
     icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,
     junto a la de fundación, solo si hay alguna libre en la plaza (tanda 3; ver el plan).

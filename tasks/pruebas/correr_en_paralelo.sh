@@ -12,7 +12,7 @@ CLON=$(bash "$CQ/tasks/pruebas/clon_lote2.sh")
 # El mundo del lote 2, una copia del de pruebas (el servidor no lo escribe, pero así cada uno tiene el suyo).
 mkdir -p "$MOTOR/mundo-pruebas-2" && cp -u "$MOTOR"/mundo-pruebas/*.bin "$MOTOR/mundo-pruebas-2/"
 servidor() { # puerto, carpeta del proyecto, mundo
-  local datos=$2/Temp/pruebas-mundo
+  local datos=$2/Logs/pruebas-mundo
   rm -rf "$datos" && mkdir -p "$datos/datos"
   (BRONZEAGE_DIRECCION=127.0.0.1:$1 BRONZEAGE_MUNDO=$3 BRONZEAGE_DATOS=$datos/datos nohup "$MOTOR/target/release/bronzeage-servidor.exe" > "$datos/servidor.log" 2>&1 &)
   for i in $(seq 1 15); do grep -q escuchando "$datos/servidor.log" 2>/dev/null && break; sleep 1; done

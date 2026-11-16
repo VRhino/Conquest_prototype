@@ -1721,6 +1721,7 @@ namespace ConquestTactics.Mundo.UI
         {
             await c.CerrarSesion();
             if (panelAvisos.Abierto) panelAvisos.Alternar();
+            CerrarCronica();
             Acceso(c.Nick);
         }
     }

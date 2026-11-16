@@ -141,5 +141,7 @@ La hoja de ruta (bloque 4, paso 13; el antiguo CQ-008) y el inventario (§3.18):
 
 ## Hecho
 
-- **Tanda 1 (los Aedas), 2026-11-16, a revisar**: doc 36. Sin prueba la compra (nada revelado en una partida nueva), los residentes y las épicas
+- **Tanda 1 (los Aedas), en commit `615e23d4`**: doc 36. Sin prueba la compra (nada revelado en una partida nueva), los residentes y las épicas
   (piden Palacio y nobleza) y la ficha del mapa.
+- **Tanda 2 (la crónica), 2026-11-16, a revisar**: doc 36. Los datos del servidor de prueba salen de `Temp/` (Unity la vaciaba y el motor perdía
+  la crónica). Sin prueba: «Más antiguas» y la entrada en vivo.

@@ -1023,3 +1023,13 @@ Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
 .ejercito-cantidad { width: 70px; margin: 0 6px 0 0; }
 .ejercito-cargar > Button { height: 30px; padding: 0 10px; margin: 0; }
 .ejercito-cantidad > .unity-base-text-field__input { height: 30px; padding: 0 6px; background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--pergamino); font-size: 14px; -unity-text-align: middle-right; }
+
+/* La crónica del mundo (paso 13, tanda 2; los .cronica-* de BronzeAgeClient), en el panel lateral de los Avisos. */
+.cronica-entrada { flex-direction: row; align-items: flex-start; margin-bottom: 6px; padding: 6px 8px; border-left-width: 2px; border-color: rgba(0, 0, 0, 0); border-radius: 2px; background-color: rgba(0, 0, 0, 0.2); }
+.cronica-entrada.es-propia { border-left-color: var(--oro); background-color: rgba(216, 184, 120, 0.1); }
+.cronica-icono { width: 26px; height: 26px; flex-shrink: 0; margin-right: 8px; align-items: center; justify-content: center; border-width: 1px; border-color: var(--bronce-osc); border-radius: 13px; background-color: rgba(0, 0, 0, 0.35); }
+.cronica-punto { margin: 0; color: var(--bronce); }
+.cronica-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.cronica-frase { margin: 0; font-size: 13.5px; color: var(--pergamino); white-space: normal; }
+.cronica-fecha { margin: 2px 0 0 0; font-size: 11.5px; color: var(--texto-apagado); }
+.cronica-mas { margin-top: 8px; height: 32px; }

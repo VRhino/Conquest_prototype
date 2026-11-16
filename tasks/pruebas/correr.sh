@@ -8,7 +8,8 @@
 FILTRO="$1"; CAPS="$2"
 CQ=$(cd "$(dirname "$0")/../.." && pwd)
 MOTOR=${MOTOR:-$(cd "$CQ/.." && pwd)/BronzeAgeMotorPruebas}
-DATOS=$CQ/Temp/pruebas-mundo
+# Fuera de Temp: Unity la vacía al arrancar y al salir, y el motor perdería su crónica (el diario de `datos/cronica`) a media prueba.
+DATOS=$CQ/Logs/pruebas-mundo
 bash "$CQ/tasks/pruebas/parar.sh"
 rm -rf "$DATOS" && mkdir -p "$DATOS/datos"
 (BRONZEAGE_DIRECCION=127.0.0.1:7891 BRONZEAGE_MUNDO=$MOTOR/mundo-pruebas BRONZEAGE_DATOS=$DATOS/datos \

@@ -5,7 +5,7 @@
 FILTRO="$1"; CAPS="$2"
 CQ=$(cd "$(dirname "$0")/../.." && pwd)
 MOTOR=${MOTOR:-$(cd "$CQ/.." && pwd)/BronzeAgeMotorPruebas}
-DATOS=$CQ/Temp/pruebas-batalla
+DATOS=$CQ/Logs/pruebas-batalla
 bash "$CQ/tasks/pruebas/parar.sh"
 rm -rf "$DATOS" && mkdir -p "$DATOS/datos"
 SERV=servidores-$RANDOM$RANDOM

@@ -53,6 +53,7 @@ namespace ConquestTactics.Mundo.UI
             BotonDeFaccion(barra, yelmo);
             BotonDeMisiones(barra);
             BotonDeMapa(barra, avisos);
+            BotonDeCronica(barra, avisos);
             avisos.text = "";
             avisos.tooltip = "Avisos";
             IconoDeBarra(avisos, "avisos");
