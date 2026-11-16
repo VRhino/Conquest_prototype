@@ -104,7 +104,7 @@
 - **Desde dentro de un sitio**, el clic en el mapa no hace nada (`MapaDeMundo.MarcharA`).
 - Capturas en `tasks/sueltos-batalla/capturas/`.
 
-## El motor ecfb23d (2026-11-16, tanda 1 hecha y sin commit)
+## El motor ecfb23d (2026-11-16): tanda 1 en commit `e82a40a3`, tanda 2 hecha y sin commit
 
 - El análisis, las tandas y las respuestas de Víctor están en `tasks/motor-ecfb23d-plan.md`.
 - El motor de pruebas (`../BronzeAgeMotorPruebas`) está en `ecfb23d`, y el contrato regenerado en `Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`
@@ -119,9 +119,16 @@
   - **el informe ya no rehace «Salir» al repintar:** perdía el clic (el fallo de la prueba que salía a veces);
   - **los mercenarios de la región** en `TuTaberna` (`dar_fondo_monedas` y `dar_monedas`) y **los Aedas** en `TusAedas` (`colocar_aeda`,
     itinerante y residente). La compra al Aeda sigue sin prueba (Víctor, 3a).
-- **Siguen:** la tanda 2 (el informe con `heroe.cierre_batalla`) y la tanda 3 (elegir escuadras al defender desde tu base, con el aviso
-  «Asedio a tu plaza · Defender»). La tanda 3 espera la orden pedida al motor para que el residente que entró solo cambie sus elegidas
-  mientras se convoca (Víctor, 12a). Al final de todo, la predicción con choque contra los soldados (Víctor, 6c).
+- **Tanda 2 (hecha y sin commit): el informe con el hecho de cierre.**
+  - `PantallasDeMundo.Informe.cs`: `CierreDe` lee `heroe.cierre_batalla` de `Almacen.Hechos`, y `LoDelCierre` pinta los recuadros (botín, experiencia,
+    carro perdido, lo que no cupo y la herida).
+  - «Exp.» por escuadra en «Tus escuadras». Fuera la comparación de antes y después (`Antes`), así que funciona igual desde el aviso.
+  - Quien sale antes del final no tiene hecho de cierre: sus escuadras salen del ticket y de la escuadra de ahora, y la herida del héroe. Está
+    apuntado en la Hoja para pedirlo al motor.
+  - `DelMapaALaBatalla` también elige el punto de «mantener» lejos de por donde vuelve el héroe: antes fallaba a veces.
+  - El motor de pruebas está en `c94a960`, con el contrato regenerado.
+- **Sigue:** la tanda 3 (elegir escuadras al defender desde tu base, con el aviso «Asedio a tu plaza · Defender» y la orden
+  `OrdenElegirEscuadrasDeBatalla` del motor `c94a960`). Al final de todo, la predicción con choque contra los soldados (Víctor, 6c).
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)
 

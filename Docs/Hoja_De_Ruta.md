@@ -54,8 +54,7 @@ relleno, se borra. Las cifras y los ids salen de `Trabajo_En_Conquest.md` §2-§
 | **Clases del héroe:** de 4 a las 5 del motor; la clase sale del arma del ticket; el héroe se monta desde el `HeroSnapshot` (nivel, atributos, aspecto). Hoy una tabla de paso en `BatallaRealDeTicket.Clase` y el aspecto de héroes de prueba | ⬜ |
 | **Objetos y cifras de combate:** ids y cifras del catálogo `OBJETOS`, piezas forjadas del ticket, equipo y montura del ticket, todo como modificadores de la pila de stats | ⬜ |
 | **Rechazar** lo que Conquest no conozca: clase, objeto y versiones de catálogo (hoy solo tropas) | ⬜ con los tres anteriores |
-| **Borrar el relleno** según se sustituye: 7 escuadras (`Resources/Squads/*` menos `BronzeAge/`; son las bases de las que se copian las tropas del motor, así que se van cuando cada base tenga su arte), 4 clases (`Resources/Data/HeroClasses`), 19 objetos (`Resources/Items`) y lo que solo usen ellos | ⬜ a medida |
-| **El contenido de las Eras I-III** (tropas y edificios nuevos: caballería, carros, levas sin formación; antes CQ-006) | ⬜ con las tropas |
+| **Borrar el relleno del héroe** según se sustituye: 4 clases (`Resources/Data/HeroClasses`), 19 objetos (`Resources/Items`) y lo que solo usen ellos. El de las escuadras va con el arte (§5) | ⬜ con las clases y los objetos |
 
 ## 4. Fuera de la batalla: migrar BronzeAgeClient a Unity
 
@@ -143,7 +142,9 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   - en Conquest va en la tanda 3.
 - ✅ **Bajarse de una batalla sin cancelarla** (`OrdenBajarseDeBatalla`), en Conquest desde la tanda 1.
 - ✅ **Que quien abandona vea cómo acabó** (`Batalla.salida_propia`), en Conquest desde la tanda 1.
-- ✅ **El hecho de cierre** (`heroe.cierre_batalla`), en Conquest en la tanda 2.
+- ✅ **El hecho de cierre** (`heroe.cierre_batalla`), en Conquest desde la tanda 2: el informe saca de él lo que ganas y pierdes y la
+  experiencia por escuadra. Quien sale antes del final (abandono, caída, desconexión) no lo recibe: Conquest pone sus
+  cifras con el ticket y la escuadra de ahora, sin experiencia, y **se queda así** (Víctor, 2026-11-16: no se pide al motor).
 - ✅ **El id de la tropa en `EscuadraQueLleva`.**
 - ✅ **Órdenes de administración para las pruebas:** `dar_monedas`, `dar_fondo_monedas` y `colocar_aeda`.
 
@@ -171,11 +172,13 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 | | Estado |
 |---|---|
 | **Tropas del motor a medias, a la espera de arte** (decisión del 2026-11-13; [`Tropas_Del_Motor.md`](Tropas_Del_Motor.md)): los **carros de guerra** no salen (un ticket con ellos se rechaza) hasta que haya carro; **honderos** y **escaramuzadores, peltastas y agrianos** disparan flechas hasta que haya honda y jabalina; los **inmortales** van solo como arqueros hasta que haya lanza y arco; los **espadachines y hacheros sin escudo** llevan el modelo de los escuderos; las **levas** (leñadores, granjeros, mineros) usan el de los lanceros | ⬜ |
+| **Borrar el relleno de las escuadras** (pasado a Arte, Víctor, 2026-11-16, a): las 7 escuadras de `Resources/Squads` menos `BronzeAge/` son las bases visuales (modelo y animación) de las que se copian las tropas del motor; cada una se va cuando su tropa tenga modelo y texturas propios. Los datos de 36 de las 37 tropas del motor ya están en Conquest | ⬜ a medida |
+| **El contenido de las Eras I-III** (pasado a Arte, Víctor, 2026-11-16, a): las tropas ya están con sus datos; falta su aspecto propio (caballería, carros, hondas, jabalinas, levas sin formación) y los edificios nuevos | ⬜ con el arte |
 | **Inventario de Synty a sustituir**, por categoría (armaduras, armas, edificios, props). Hoy 58 de nuestros 126 prefabs dependen de `Assets/Synty` y no hay ningún modelo propio en `Assets/Art/Models` | ⬜ |
 | **Norma para los modelos propios:** mismo estilo y detalle que Synty, sobre su esqueleto, y detrás de los mismos ids para no tocar código | ⬜ |
 | **Terreno del ticket:** la batalla en el sitio del mundo (hash del artefacto, centro, paquete de relieve; `06_Contrato_de_Mundo.md` §4 y §8). Va después del mapa de mundo nuevo | ⬜ |
 | **CPU del cliente:** con 130 modelos, la red son 13 puntos de 180 y el resto es animar (~83) y pintar (~84). Menos Animators para los lejanos o animación por GPU | ⬜ |
-| **Interfaz del juego** para el aviso de conexión y el botón de abandonar (hoy una caja provisional y F10 dos veces) | ⬜ |
+| **Interfaz de Conquest** para el aviso de conexión y el botón de abandonar (hoy una caja provisional y F10 dos veces), junto con el panel de suministro (§7): no hay interfaz de batalla en el prototipo que calcar (Víctor, 2026-11-16) | ⬜ |
 | **Marco de bronce de la interfaz de fuera de la batalla** (UI Toolkit, `Assets/Resources/MundoUI/Mundo.uss`): USS no tiene degradados ni sombras, así que hoy la placa va solo con bordes y sin dentículos. Arte en 9-slice para la placa, el botón de oro y la moldura de dentículo, como la guía «bronce y arcilla» (decisión del 2026-11-13) | ⬜ |
 
 ## 6. Decisiones pendientes del autor ❓
@@ -186,6 +189,15 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   - **10 s sin señal** para dar a un jugador por caído: se quedan (`ArranqueRed.cs`, `DriversDeBatalla.PlazoSinSenalMs`);
   - **60 s de espera** a que entren antes de empezar: se quedan (`BatallaDeTicketSystems.EsperaPorDefecto`). Más adelante los mandará el motor
     en el ticket según el tipo de batalla, por ejemplo más para un asedio.
+- **Orden de trabajo, decidido** (Víctor, 2026-11-16):
+  1. la tanda 3 del motor (elegir escuadras al defender desde tu base);
+  2. la interfaz de Conquest del aviso de conexión y abandonar, junto con el panel de suministro;
+  3. (Víctor, 2026-11-16, a) las 5 clases del héroe con sus atributos desde el `HeroSnapshot`; los objetos del catálogo del motor y las piezas
+     forjadas, con sus cifras; los carros de guerra, al menos su dato, para que un ticket con carros no rechace la batalla; rechazar o avisar
+     de la clase o el objeto desconocidos (hoy entran sin aviso como espada y escudo, o con el hueco vacío); borrar el relleno del héroe; y
+     quitar `terrain-tools` si la batalla no lo usa. El relleno de las escuadras y las Eras I-III van con el arte (§5);
+  4. al final, la predicción con choque contra los soldados (c).
+- El motor en local es solo para las pruebas: irá en la nube.
 
 ## 7. Sueltos
 
@@ -194,8 +206,9 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 - ~~En la batalla en red faltan cambiar de escuadra e interactuar, y el héroe apunta con el movimiento~~ ✅ 2026-11-16: F abre el panel de
   suministro en un punto propio, el cambio va al servidor y el héroe encara la cámara también quieto (prueba en `DelMapaALaBatalla`, con un
   ticket de dos escuadras elegidas).
-- **El panel de suministro de la batalla** es el de Conquest de antes: diez casillas «+» vacías y «Aceptar» apagado hasta elegir. Va con la
-  interfaz de la batalla, que no se ha copiado del prototipo.
+- **El panel de suministro de la batalla** es el de Conquest de antes: diez casillas «+» vacías y «Aceptar» apagado hasta elegir. El prototipo
+  no tiene interfaz de batalla (Víctor, 2026-11-16): se arregla sobre la de Conquest, con sus reglas (solo lo que se puede hacer, sin casillas
+  vacías ni botones apagados), junto con el aviso de conexión y abandonar.
 - ~~**En red, las órdenes, las habilidades y las formaciones** podían llegar con el tipo, la ranura o la formación a 0~~ ✅ 2026-11-16 (Víctor):
   el aviso del comando llega en su tick, pero el dato era el del último fotograma de ese tick. El cliente manda ahora en cada comando el
   último dato de cada aviso. Probado en red: la Q, «mantener» y «seguir». Las levas tienen una sola formación: F1-F4 van por el mismo camino.

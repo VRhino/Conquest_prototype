@@ -274,6 +274,10 @@ namespace ConquestTactics.Mundo.UI.Tests
                 foreach (var s in aplicada.Ticket.Defensor.EscuadrasSinHeroe)
                     Assert.IsNotNull(raiz.Q("informe-rivales").Q("fila-" + s.SquadId), $"la fila de {s.SquadId} en «Escuadras rivales»");
                 Assert.IsNotNull(raiz.Q("informe-heroes"), "los héroes, con si cayeron");
+                // Lo tuyo sale del hecho de cierre (`heroe.cierre_batalla`, motor ecfb23d): la columna «Exp.» de tus escuadras y los recuadros.
+                yield return Esperar(() => raiz.Q("informe-propias")?.Query<Label>().ToList().Any(l => l.text == "Exp.") == true, 20, "el hecho de cierre en el informe");
+                var cierre = conexion.Sesion.Almacen.Hechos.Select(x => x.evento).Last(x => x.Codigo == "heroe.cierre_batalla");
+                Debug.Log($"[Prueba] cierre: {cierre.Payload}");
                 if (aplicada.Resultado.Ganador != LadoId.Atacante) Assert.IsNotNull(raiz.Q("informe-herido"), "perdiste: quedas herido");
                 yield return EnTamanos(raiz, "47_informe", () => SinPisarse(raiz.Q("informe")));
 
@@ -298,6 +302,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => raiz.Q<Button>("ver-informe-" + batallaId) != null, 10, "«Ver informe» en los avisos");
                 Pulsar(raiz.Q<Button>("ver-informe-" + batallaId));
                 yield return Esperar(() => raiz.Q<Label>("informe-titulo") != null, 10, "el informe desde el mundo");
+                Assert.IsTrue(raiz.Q("informe-propias").Query<Label>().ToList().Any(l => l.text == "Exp."), "desde el aviso, también con el hecho de cierre");
                 yield return Capturar("48_informe_desde_el_mundo");
                 Pulsar(raiz.Q<Button>("informe-salir"));
                 yield return Esperar(() => raiz.Q("panel-informe") == null, 5, "cerrar el informe");
@@ -330,6 +335,12 @@ namespace ConquestTactics.Mundo.UI.Tests
                 StringAssert.StartsWith("Derrota · tu bando", raiz.Q<Label>("informe-titulo").text, "la derrota es tuya, con lo de tu bando");
                 Assert.IsTrue(raiz.Q("panel-informe").Query<Label>().ToList().Any(l => l.text == "Abandonaste la batalla"), "cómo saliste, del motor");
                 Assert.IsTrue(raiz.Q("informe-heroes").Query<Label>().ToList().Any(l => l.text == "abandonaste la batalla"), "tu fila en «Héroes»: abandonaste, no «no llegó a entrar»");
+                // Tus escuadras, con sus cifras aunque salieras antes del final: no vienen en el resultado ni hay hecho de cierre para quien sale;
+                // salen del ticket (con cuántos entraron) y de la escuadra ahora.
+                var tusFilas = raiz.Q("informe-propias").Query(className: "informe-fila").ToList().Where(x => x.name != null && x.name.StartsWith("fila-")).ToList();
+                Assert.IsNotEmpty(tusFilas, "tus escuadras en el informe tras abandonar");
+                foreach (var fila in tusFilas)
+                    Assert.AreNotEqual("—", fila.Query<Label>(className: "informe-col-num").First().text, $"{fila.name}: las que entraron, del hecho de cierre");
                 Debug.Log($"[Prueba] segunda: {raiz.Q<Label>("informe-titulo").text}");
                 yield return Capturar("49b_informe_tras_abandonar");
                 Pulsar(raiz.Q<Button>("informe-salir"));
@@ -485,9 +496,19 @@ namespace ConquestTactics.Mundo.UI.Tests
                     var centro = mios.Aggregate(Vector3.zero, (a, b) => a + b) / mios.Count;
                     return Vector3.ProjectOnPlane(centro - Pos(), Vector3.up).magnitude;
                 }
-                // X: «mantener» en el punto del ratón, puesto sobre el héroe (en el punto de suministro). El héroe vuelve por donde vino (campo abierto); la
-                // escuadra se queda.
-                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = (Vector2)Camera.main.WorldToScreenPoint(Pos()) });
+                // X: «mantener» en el punto del ratón. De unos puntos de la pantalla, el del suelo más lejos de por donde vuelve el héroe (y a menos de 15 m
+                // de él): así el héroe se aparta de la escuadra, que se queda. El héroe vuelve por donde vino (campo abierto).
+                Vector2 donde = new Vector2(Screen.width / 2f, Screen.height * 0.3f);
+                float lejos = -1f;
+                foreach (var fx in new[] { 0.2f, 0.35f, 0.5f, 0.65f, 0.8f })
+                    foreach (var fy in new[] { 0.15f, 0.3f, 0.45f })
+                    {
+                        var p = new Vector2(Screen.width * fx, Screen.height * fy);
+                        if (!Physics.Raycast(Camera.main.ScreenPointToRay(p), out var toque, Mathf.Infinity, ~0, QueryTriggerInteraction.Ignore)) continue;
+                        var d = Vector3.ProjectOnPlane(toque.point - inicio, Vector3.up).magnitude;
+                        if (Vector3.ProjectOnPlane(toque.point - Pos(), Vector3.up).magnitude < 15f && d > lejos) { lejos = d; donde = p; }
+                    }
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = donde });
                 yield return null;
                 yield return Tecla(UnityEngine.InputSystem.Key.X);
                 yield return Andar(inicio, Vector3.Distance(inicio, meta) - 18f, "el héroe no se apartó del punto de suministro");

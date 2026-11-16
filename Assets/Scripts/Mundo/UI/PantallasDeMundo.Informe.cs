@@ -5,8 +5,9 @@
 // tropa de Conquest), los héroes, y lo que ganas o pierdes. Solo lo que se sabe con certeza:
 //   - del resultado del motor (`Batalla.resultado`, por la sesión viva): ganador y razón, por escuadra los desplegados, los que vuelven y los
 //     muertos, y por héroe si participó y si cayó. Hasta que el motor lo aplica, «calculando…»;
-//   - comparando el héroe y su columna de antes y de después: las monedas, el carro, los objetos nuevos, el nivel y la experiencia, y la
-//     herida (`herido_hasta_ms`). Si no hay «antes» (el informe abierto desde el mundo en otra partida del cliente), eso no sale.
+//   - del hecho privado de cierre (`heroe.cierre_batalla`, motor ecfb23d): lo que ganas (carro, monedas, objetos, experiencia) y pierdes (carro,
+//     objetos que no cupieron), la herida, y por escuadra tuya los supervivientes, los muertos y la experiencia. También las de quien salió
+//     antes del final, que no vienen en el resultado. Como llega con los hechos de la sesión, sirve igual desde el aviso.
 // «Salir» vuelve a MundoScene (la vuelta de la tanda 1), con la columna donde la deja el motor: en el sitio de la batalla. El mismo informe
 // se abre desde el aviso del final de la batalla («Ver informe») mientras el motor la guarde (una hora). Docs/Arquitectura/28.
 using System;
@@ -28,34 +29,50 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>Lo que se deja el cartel de victoria o derrota de Conquest antes del informe.</summary>
         const float SegundosDelCartel = 5f;
 
-        /// <summary>El héroe y su columna al empezar la batalla, para comparar con lo de después.</summary>
-        sealed class Antes
+        /// <summary>
+        /// Lo que le cambió al héroe al aplicarse la batalla: el hecho privado `heroe.cierre_batalla` (motor ecfb23d), medido en la misma mutación.
+        /// Las cantidades del carro y la experiencia vienen en milésimas; las monedas y los objetos, enteros.
+        /// </summary>
+        sealed class Cierre
         {
-            public ulong Monedas;
-            public uint Nivel;
-            public ulong HaciaSiguiente;
-            public Dictionary<string, long> Carro = new Dictionary<string, long>();
-            public HashSet<string> Objetos = new HashSet<string>();
+            public long Monedas, Experiencia;
+            public bool Herido;
+            public readonly List<(string recurso, long milesimas)> Botin = new List<(string, long)>(), Perdido = new List<(string, long)>();
+            public readonly List<(string objeto, long cantidad)> Objetos = new List<(string, long)>(), NoCupieron = new List<(string, long)>();
+            /// <summary>Por escuadra (su id del contrato): supervivientes, muertos y la experiencia ganada (milésimas).</summary>
+            public readonly Dictionary<string, (long supervivientes, long muertos, long experiencia)> Escuadras = new Dictionary<string, (long, long, long)>();
         }
 
-        readonly Dictionary<string, Antes> antesDeLaBatalla = new Dictionary<string, Antes>();
+        /// <summary>El hecho de cierre de esta batalla para el héroe de la sesión, si ya llegó (con los demás hechos, `Almacen.Hechos`).</summary>
+        Cierre CierreDe(string batallaId)
+        {
+            var e = c.Sesion?.Almacen.Hechos.Select(x => x.evento).LastOrDefault(x => x.Codigo == "heroe.cierre_batalla" && x.Payload != null
+                && Campo(x.Payload, "battleId")?.StringValue == batallaId && (Campo(x.Payload, "heroeId")?.StringValue ?? c.HeroeId) == c.HeroeId);
+            if (e == null) return null;
+            var p = e.Payload;
+            long Numero(string k) => (long)(Campo(p, k)?.NumberValue ?? 0);
+            IEnumerable<Google.Protobuf.Collections.RepeatedField<Google.Protobuf.WellKnownTypes.Value>> Filas(string k) =>
+                Campo(p, k)?.ListValue?.Values.Where(v => v.ListValue != null).Select(v => v.ListValue.Values) ?? Enumerable.Empty<Google.Protobuf.Collections.RepeatedField<Google.Protobuf.WellKnownTypes.Value>>();
+            string Texto(Google.Protobuf.WellKnownTypes.Value v) => v.HasStringValue ? v.StringValue : v.NumberValue.ToString();
+            var r = new Cierre { Monedas = Numero("monedas"), Experiencia = Numero("experiencia"), Herido = Numero("herido") != 0 };
+            foreach (var f in Filas("botin").Where(f => f.Count >= 2)) r.Botin.Add((Texto(f[0]), (long)f[1].NumberValue));
+            foreach (var f in Filas("perdidoDelCarro").Where(f => f.Count >= 2)) r.Perdido.Add((Texto(f[0]), (long)f[1].NumberValue));
+            foreach (var f in Filas("objetos").Where(f => f.Count >= 1)) r.Objetos.Add((Texto(f[0]), f.Count > 1 ? (long)f[1].NumberValue : 1));
+            foreach (var f in Filas("objetosPerdidos").Where(f => f.Count >= 1)) r.NoCupieron.Add((Texto(f[0]), f.Count > 1 ? (long)f[1].NumberValue : 1));
+            foreach (var f in Filas("escuadras").Where(f => f.Count >= 4)) r.Escuadras[Texto(f[0])] = ((long)f[1].NumberValue, (long)f[2].NumberValue, (long)f[3].NumberValue);
+            return r;
+        }
+
+        static Google.Protobuf.WellKnownTypes.Value Campo(Google.Protobuf.WellKnownTypes.Struct s, string k) => s.Fields.TryGetValue(k, out var v) ? v : null;
+
         readonly HashSet<string> informesAnotados = new HashSet<string>();
         VisualElement panelInforme, capaDeBatalla;
         float finVistoEn = -1f;
         bool yendoAlInforme;
 
-        /// <summary>Al empezar la batalla: lo de antes, y el botón «Abandonar la batalla» encima de BattleScene.</summary>
+        /// <summary>Al empezar la batalla: el botón «Abandonar la batalla» encima de BattleScene.</summary>
         void AlEntrarEnLaBatalla(string batallaId)
         {
-            var h = HeroeAhora();
-            if (h != null)
-            {
-                var antes = new Antes { Monedas = h.Monedas, Nivel = h.Nivel, HaciaSiguiente = h.ExperienciaHaciaSiguienteNivel };
-                foreach (var o in h.Inventario) if (!string.IsNullOrEmpty(o.ItemInstanceId)) antes.Objetos.Add(o.ItemInstanceId);
-                var col = h.Ubicacion?.EjercitoId == null ? null : c.Sesion.Almacen.Buscar(TipoEntidad.Ejercito, h.Ubicacion.EjercitoId)?.Ejercito;
-                if (col?.Suministro != null) foreach (var kv in col.Suministro.PorId) antes.Carro[kv.Key] = kv.Value;
-                antesDeLaBatalla[batallaId] = antes;
-            }
             finVistoEn = -1f;
             yendoAlInforme = false;
             capaDeBatalla?.RemoveFromHierarchy();
@@ -235,6 +252,19 @@ namespace ConquestTactics.Mundo.UI
             var propio = propioAtaca ? b.Ticket.Atacante : b.Ticket.Defensor;
             var otro = propioAtaca ? b.Ticket.Defensor : b.Ticket.Atacante;
             var escuadras = r.PorEscuadra.ToDictionary(e => e.SquadId);
+            // Las de quien salió antes del final no vienen en el resultado: las da su hecho de cierre (supervivientes y muertos).
+            var cierre = CierreDe(b.Id);
+            if (cierre != null)
+                foreach (var kv in cierre.Escuadras.Where(kv => !escuadras.ContainsKey(kv.Key)))
+                    escuadras[kv.Key] = new ResultadoEscuadra { SquadId = kv.Key, SupervivientesAlCierre = (uint)kv.Value.supervivientes, Muertos = (uint)kv.Value.muertos,
+                        Desplegados = (uint)(kv.Value.supervivientes + kv.Value.muertos) };
+            // Quien salió antes del final no tiene hecho de cierre (el motor lo da solo a los del resultado): sus escuadras, con los hombres con que
+            // entraron (el ticket) y los que tiene ahora. ponytail: hasta que el motor cuente también la salida (pedido apuntado en la Hoja).
+            if (salida != null)
+                foreach (var s in Escuadras(b, propioAtaca ? b.Ticket.Atacante : b.Ticket.Defensor).Where(s => s.HeroeId == c.HeroeId && !escuadras.ContainsKey(s.SquadId)))
+                    if (c.Sesion.Almacen.Buscar(TipoEntidad.Escuadron, s.SquadId)?.Escuadron is Escuadron ahora)
+                        escuadras[s.SquadId] = new ResultadoEscuadra { SquadId = s.SquadId, Desplegados = s.EfectivosAutorizados, SupervivientesAlCierre = (uint)Math.Min(ahora.Cantidad, s.EfectivosAutorizados),
+                            Muertos = s.EfectivosAutorizados > ahora.Cantidad ? (uint)(s.EfectivosAutorizados - ahora.Cantidad) : 0 };
             int Bajas(BattleSide l) => Escuadras(b, l).Sum(s => escuadras.TryGetValue(s.SquadId, out var e) ? (int)e.Muertos : 0);
             var columnas = Dialogo.Caja("informe-columnas");
             cuerpo.Add(columnas);
@@ -245,7 +275,7 @@ namespace ConquestTactics.Mundo.UI
             izquierda.Add(Bando("Tu bando", $"{Bajas(propio)} bajas", Heroes(propio, "sin héroes")));
             derecha.Add(Bando(rival, $"{Bajas(otro)} bajas", otro.Participantes.Count > 0 ? Heroes(otro, "") : bandidos != null ? "los defiende el campamento" : "sin héroes"));
             izquierda.Add(Dialogo.Texto("Tus escuadras", "informe-sub"));
-            izquierda.Add(TablaDeBajas(Escuadras(b, propio), escuadras, "informe-propias"));
+            izquierda.Add(TablaDeBajas(Escuadras(b, propio), escuadras, "informe-propias", cierre));
             derecha.Add(Dialogo.Texto("Escuadras rivales", "informe-sub"));
             derecha.Add(TablaDeBajas(Escuadras(b, otro), escuadras, "informe-rivales"));
 
@@ -257,14 +287,16 @@ namespace ConquestTactics.Mundo.UI
             ListaDeHeroes(izquierda, HeroesDe(propio, ladoPropio), r, "informe-heroes", comoSalio);
             ListaDeHeroes(derecha, HeroesDe(otro, otroLado), r, "informe-heroes-rivales");
 
-            // Lo que ganas o pierdes, comparado con lo de antes de la batalla (solo si se tiene).
+            // Lo que ganas o pierdes: del hecho de cierre (también desde el aviso). Hasta que llega, lo dice.
             var recuadros = Dialogo.Caja("informe-recuadros");
             recuadros.name = "informe-recuadros";
             cuerpo.Add(recuadros);
-            var h = HeroeAhora();
-            if (h != null && antesDeLaBatalla.TryGetValue(batallaId, out var antes)) LoQueCambia(recuadros, h, antes, victoria && !derrotado);
-            else if (h != null && h.HasHeridoHastaMs && h.HeridoHastaMs > c.Sesion.AhoraMundo)
-                recuadros.Add(Recuadro("Quedas herido", $"Hasta las {Instante.AFecha(h.HeridoHastaMs):HH:mm} (tiempo del mundo)", "Un herido no ataca ni persigue durante un rato.", false, "informe-herido"));
+            var yo = HeroeAhora();
+            if (cierre != null) LoDelCierre(recuadros, cierre, yo, victoria && !derrotado);
+            // Quien salió antes del final no tiene hecho de cierre (el motor lo da a los del resultado): no se espera.
+            else if (salida == null) cuerpo.Add(Dialogo.Texto("Calculando lo que ganas o pierdes…", "campo-ayuda"));
+            // Quien abandona queda herido al salir, no al cerrarse la batalla (el hecho de cierre no lo cuenta): la herida, del héroe de ahora.
+            if (recuadros.Q("informe-herido") == null && yo != null && yo.HasHeridoHastaMs && yo.HeridoHastaMs > c.Sesion.AhoraMundo) Herida(recuadros, yo);
         }
 
         void ListaDeHeroes(VisualElement donde, List<BattleParticipantSnapshot> heroes, BattleResult r, string nombre, string comoSaliste = null)
@@ -325,13 +357,16 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>La tabla de bajas (`briefing-bajas`): la pieza de tropa con su nombre, su dueño, los que entraron al campo (la escuadra en reserva
         /// que no llegó a salir, 0), los que vuelven y las bajas.</summary>
-        VisualElement TablaDeBajas(List<BronzeAge.Contract.V1.SquadSnapshot> lista, Dictionary<string, ResultadoEscuadra> resultado, string nombre)
+        /// <summary>Las escuadras con sus bajas; con el hecho de cierre (las tuyas), también la experiencia que ganó cada una.</summary>
+        VisualElement TablaDeBajas(List<BronzeAge.Contract.V1.SquadSnapshot> lista, Dictionary<string, ResultadoEscuadra> resultado, string nombre, Cierre cierre = null)
         {
             var tabla = Dialogo.Caja("informe-tabla");
             tabla.name = nombre;
             if (lista.Count == 0) { tabla.Add(Dialogo.Texto("Sin escuadras.", "campo-ayuda")); return tabla; }
             var cab = Dialogo.Caja("informe-fila informe-fila--cab");
-            foreach (var (t, cl) in new[] { ("Escuadra", "informe-col-nombre"), ("Dueño", "informe-col-dueno"), ("Entraron", "informe-col-num"), ("Vuelven", "informe-col-num"), ("Bajas", "informe-col-num") })
+            var columnas = new List<(string, string)> { ("Escuadra", "informe-col-nombre"), ("Dueño", "informe-col-dueno"), ("Entraron", "informe-col-num"), ("Vuelven", "informe-col-num"), ("Bajas", "informe-col-num") };
+            if (cierre != null) columnas.Add(("Exp.", "informe-col-num"));
+            foreach (var (t, cl) in columnas)
                 cab.Add(Dialogo.Texto(t, cl));
             tabla.Add(cab);
             foreach (var s in lista)
@@ -350,6 +385,8 @@ namespace ConquestTactics.Mundo.UI
                 fila.Add(Dialogo.Texto(e == null ? "—" : antes.ToString(), "informe-col-num"));
                 fila.Add(Dialogo.Texto(e == null ? "—" : despues.ToString(), "informe-col-num"));
                 fila.Add(Dialogo.Texto(e == null ? "—" : muertos > 0 ? $"−{muertos}" : "0", "informe-col-num" + (muertos > 0 ? " informe-baja" : "")));
+                if (cierre != null)
+                    fila.Add(Dialogo.Texto(cierre.Escuadras.TryGetValue(s.SquadId, out var de) && de.experiencia > 0 ? $"+{de.experiencia / 1000.0:0.#}" : "—", "informe-col-num informe-exp"));
                 tabla.Add(fila);
             }
             return tabla;
@@ -362,37 +399,37 @@ namespace ConquestTactics.Mundo.UI
             return c.Sesion.Almacen.NombresHeroes.TryGetValue(s.HeroeId, out var n) ? n : s.HeroeId;
         }
 
-        /// <summary>Lo que entra y sale (`briefing-botin`): el carro, las monedas, los objetos nuevos, la experiencia y la herida.</summary>
-        void LoQueCambia(VisualElement donde, Heroe h, Antes antes, bool victoria)
+        /// <summary>
+        /// Lo que entra y sale (`briefing-botin` del prototipo), del hecho de cierre: el botín (al carro, las monedas y los objetos), la experiencia,
+        /// lo que pierdes del carro, los objetos que no cupieron y la herida.
+        /// </summary>
+        void LoDelCierre(VisualElement donde, Cierre k, Heroe h, bool victoria)
         {
-            var col = h.Ubicacion?.EjercitoId == null ? null : c.Sesion.Almacen.Buscar(TipoEntidad.Ejercito, h.Ubicacion.EjercitoId)?.Ejercito;
-            var ahora = col?.Suministro?.PorId ?? new Google.Protobuf.Collections.MapField<string, long>();
-            var gana = new List<string>();
-            var pierde = new List<string>();
-            foreach (var r in antes.Carro.Keys.Union(ahora.Keys).OrderBy(x => x))
-            {
-                long d = (ahora.TryGetValue(r, out var n) ? n : 0) - (antes.Carro.TryGetValue(r, out var m) ? m : 0);
-                if (d >= 1000) gana.Add($"{d / 1000} de {CosasDelMapa.NombreDeRecurso(r).ToLowerInvariant()}");
-                else if (d <= -1000) pierde.Add($"{-d / 1000} {CosasDelMapa.NombreDeRecurso(r).ToLowerInvariant()}");
-            }
-            long monedas = (long)h.Monedas - (long)antes.Monedas;
-            if (monedas > 0) gana.Add($"{monedas} monedas");
             List<JObject> objetos;
             try { objetos = c.Datos.Bloque("Objetos_Del_Heroe", "OBJETOS")["objetos"].OfType<JObject>().ToList(); }
             catch (FaltaDato) { objetos = new List<JObject>(); }
-            foreach (var o in h.Inventario.Where(o => !string.IsNullOrEmpty(o.ItemInstanceId) && !antes.Objetos.Contains(o.ItemInstanceId)))
-                gana.Add((string)objetos.FirstOrDefault(x => (string)x["id"] == o.ItemDefinitionId)?["nombre"] ?? o.ItemDefinitionId);
+            string Objeto((string objeto, long cantidad) o)
+            {
+                var nombre = (string)objetos.FirstOrDefault(x => (string)x["id"] == o.objeto)?["nombre"] ?? o.objeto;
+                return o.cantidad > 1 ? $"{o.cantidad} × {nombre}" : nombre;
+            }
+            string Recurso((string recurso, long milesimas) r) => $"{r.milesimas / 1000} de {CosasDelMapa.NombreDeRecurso(r.recurso).ToLowerInvariant()}";
+
+            var gana = k.Botin.Where(r => r.milesimas >= 1000).Select(Recurso).ToList();
+            if (k.Monedas > 0) gana.Add($"{k.Monedas} monedas");
+            gana.AddRange(k.Objetos.Select(Objeto));
             if (gana.Count > 0) donde.Add(Recuadro("Botín", "+" + Enumerar(gana), null, true, "informe-botin"));
             else if (victoria) donde.Add(Recuadro("Botín", "Sin botín", null, true, "informe-botin"));
-            if (pierde.Count > 0) donde.Add(Recuadro("Pierdes del carro", Enumerar(pierde), "La mitad de lo que llevabas.", false, "informe-carro"));
-
-            if (h.Nivel > antes.Nivel) donde.Add(Recuadro("Experiencia", $"Subes al nivel {h.Nivel}", null, true, "informe-experiencia"));
-            else if (h.Nivel == antes.Nivel && antes.HaciaSiguiente > h.ExperienciaHaciaSiguienteNivel)
-                donde.Add(Recuadro("Experiencia", $"+{(antes.HaciaSiguiente - h.ExperienciaHaciaSiguienteNivel) / 1000.0:0.#} de experiencia", null, true, "informe-experiencia"));
-
-            if (h.HasHeridoHastaMs && h.HeridoHastaMs > c.Sesion.AhoraMundo)
-                donde.Add(Recuadro("Quedas herido", $"Hasta las {Instante.AFecha(h.HeridoHastaMs):HH:mm} (tiempo del mundo)", "Un herido no ataca ni persigue durante un rato.", false, "informe-herido"));
+            if (k.Experiencia > 0) donde.Add(Recuadro("Experiencia", $"+{k.Experiencia / 1000.0:0.#} de experiencia", null, true, "informe-experiencia"));
+            var pierde = k.Perdido.Where(r => r.milesimas >= 1000).Select(Recurso).ToList();
+            if (pierde.Count > 0) donde.Add(Recuadro("Pierdes del carro", Enumerar(pierde), "La mitad de lo que llevabas, para el ganador.", false, "informe-carro"));
+            if (k.NoCupieron.Count > 0) donde.Add(Recuadro("No cupieron", Enumerar(k.NoCupieron.Select(Objeto).ToList()), "No había sitio en la mochila ni en el almacén.", false, "informe-no-cupieron"));
+            if (k.Herido) Herida(donde, h);
         }
+
+        void Herida(VisualElement donde, Heroe h) =>
+            donde.Add(Recuadro("Quedas herido", h != null && h.HasHeridoHastaMs ? $"Hasta las {Instante.AFecha(h.HeridoHastaMs):HH:mm} (tiempo del mundo)" : "Un rato",
+                "Un herido no ataca ni persigue durante un rato.", false, "informe-herido"));
 
         static string Enumerar(List<string> xs) => xs.Count <= 1 ? string.Join("", xs) : string.Join(", ", xs.Take(xs.Count - 1)) + " y " + xs.Last();
 
