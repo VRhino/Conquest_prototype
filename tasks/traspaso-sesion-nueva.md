@@ -142,6 +142,7 @@
   - abandonar, en las Opciones (Esc en la batalla, `EscEnLaBatalla`), con su confirmación; fuera F10 y el botón de la capa de batalla;
   - el panel de suministro con los huecos apagados y sin «+» (`TroopsViewerController.HuecosApagados`), «Aceptar» solo con una elegida y sin aviso de F si no hay qué
     sacar. `DelMapaALaBatalla` lo comprueba y abandona por las Opciones.
+- **Las clases y los objetos del motor, tanda 1 (hecha y sin commit; `tasks/clases-objetos-motor-plan.md`, Víctor: la a en todas):**  - los catálogos del héroe importados tal cual (`Editor/HeroeDelMotor.cs`, `Resources/Heroe/BronzeAge`) y leídos por `Net/CatalogoDelHeroe.cs`;  - otra versión de los catálogos de clases u objetos, o una clase u objeto desconocidos, rechazan la batalla con su motivo; quien se une    después con algo desconocido no sale al campo (`BatallaDeTicket.HeroeDesconocido`);  - los carros de guerra importados con el aspecto de la caballería de lanza (37 de 37 tropas);  - fuera `terrain-tools`;  - siguen la tanda 2 (el héroe del ticket en la escala del motor) y la 3 (borrar el relleno del héroe, con la lista antes).
 - **Sigue, por el orden de Víctor:** las clases y los objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la
   predicción con choque contra los soldados (6c). Sin capturas en esta serie (Víctor, 2026-11-16).
 

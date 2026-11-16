@@ -75,7 +75,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// <summary>Tropas del motor que Conquest aún no tiene, documentadas (no es una reserva: se dicen en cada pasada).</summary>
         static readonly (string id, string porque)[] SinPiezaASabiendas =
         {
-            ("carros_guerra", "Conquest aún no tiene carros de guerra; un ticket con carros se rechaza (Docs/Tropas_Del_Motor.md, TropasDelMotor.Bases)"),
+            // Ninguna: los carros de guerra ya entran, con el aspecto de la caballería hasta que haya carro (Víctor, 2026-11-16).
         };
 
         [Test]

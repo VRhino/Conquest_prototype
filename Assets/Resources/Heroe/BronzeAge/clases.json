@@ -1,0 +1,10 @@
+{
+  "version": "bronzeage-clases-1",
+  "clases": [
+    {"id": "lanza_escudo_redondo", "nombre": "Lanza y escudo grande redondo", "armaduras": ["pesada"], "armaduraInicial": "pesada", "atributosBase": {"fuerza": 3, "destreza": 1, "armadura": 3, "vitalidad": 3}},
+    {"id": "espada_escudo_mediano", "nombre": "Espada corta y escudo mediano", "armaduras": ["pesada", "media"], "armaduraInicial": "media", "atributosBase": {"fuerza": 3, "destreza": 3, "armadura": 2, "vitalidad": 2}},
+    {"id": "arco_lanza", "nombre": "Arco compuesto y lanza", "armaduras": ["ligera", "media"], "armaduraInicial": "ligera", "atributosBase": {"fuerza": 2, "destreza": 5, "armadura": 1, "vitalidad": 2}},
+    {"id": "hacha_dos_manos", "nombre": "Hacha a dos manos", "armaduras": ["media"], "armaduraInicial": "media", "atributosBase": {"fuerza": 5, "destreza": 1, "armadura": 1, "vitalidad": 3}},
+    {"id": "dagas", "nombre": "Dagas", "armaduras": ["ligera"], "armaduraInicial": "ligera", "atributosBase": {"fuerza": 3, "destreza": 5, "armadura": 0, "vitalidad": 2}}
+  ]
+}

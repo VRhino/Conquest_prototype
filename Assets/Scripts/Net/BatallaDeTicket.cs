@@ -278,6 +278,27 @@ namespace ConquestTactics.Net
 
         static IEnumerable<BattleSide> Lados(BattleTicket t) => new[] { t.Atacante, t.Defensor }.Where(l => l != null);
 
+        /// <summary>
+        /// Lo que trae el héroe de un participante y Conquest no tiene en los catálogos del motor (<c>CatalogoDelHeroe</c>): su clase y cada pieza
+        /// de su equipo. Vacío si lo conoce todo (un participante sin héroe, o un hueco vacío, no cuentan).
+        /// </summary>
+        public static List<string> HeroeDesconocido(BattleParticipantSnapshot p, Func<string, bool> clase, Func<string, bool> objeto)
+        {
+            var r = new List<string>();
+            var h = p?.Heroe;
+            if (h == null) return r;
+            if (!string.IsNullOrEmpty(h.ClassDefinitionId) && !clase(h.ClassDefinitionId)) r.Add($"la clase {h.ClassDefinitionId}");
+            var e = h.Equipamiento;
+            if (e != null)
+                foreach (var pieza in new[] { e.Arma, e.Casco, e.Torso, e.Guantes, e.Pantalones, e.Botas, e.Montura })
+                    if (pieza != null && !string.IsNullOrEmpty(pieza.ItemDefinitionId) && !objeto(pieza.ItemDefinitionId)) r.Add($"el objeto {pieza.ItemDefinitionId}");
+            return r;
+        }
+
+        /// <summary>Lo desconocido de todos los héroes del ticket (<see cref="HeroeDesconocido"/>), con quién lo trae, sin repetir.</summary>
+        public static List<string> ClasesYObjetosDesconocidos(BattleTicket t, Func<string, bool> clase, Func<string, bool> objeto) =>
+            Lados(t).SelectMany(l => l.Participantes).SelectMany(p => HeroeDesconocido(p, clase, objeto).Select(x => $"{x} ({p.HeroeId})")).Distinct().ToList();
+
         /// <summary>Escribe el resultado como lo manda el servidor de batalla al motor: <c>.bin</c> y, al lado, el <c>.json</c>.</summary>
         public static void Escribir(string ruta, BattleResult resultado)
         {

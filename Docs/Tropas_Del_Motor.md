@@ -36,7 +36,7 @@ Escribe `catalogo.json` con la versión importada, y un ticket con otra versión
 - **Nivel y habilidades:** todas las tropas del motor comparten `Progresion_Del_Motor.asset`. El nivel del ticket, del 1
   al 10, suma un 1,5 % de vida y un 1,5 % de daño por nivel por encima del primero (decisión del autor del 2026-11-13); la
   defensa y la velocidad no cambian. Las habilidades se abren en los niveles 4, 7 y 10 (D8).
-- **Carros de guerra:** no se importan (no hay carros en Conquest); un ticket con ellos se rechaza por tropa desconocida.
+- **Carros de guerra:** con sus cifras del motor y el aspecto de la caballería de lanza hasta que haya carro (Víctor, 2026-11-16); un ticket con ellos ya no se rechaza.
 
 Las siete escuadras de relleno (`Resources/Squads/*` fuera de `BronzeAge/`) son las bases de las que se copian las tropas
 del motor: no se pueden borrar hasta que cada base tenga su arte propio.
@@ -67,7 +67,7 @@ Conquest aún no tiene formaciones de **columna** ni de **cuadro**: ninguna trop
 | `arqueros` | Arqueros | 3 | 20 | Arqueros | dispersa, línea |  |
 | `arqueros_compuesto` | Arqueros con arco compuesto | 4 | 20 | Arqueros | dispersa, línea |  |
 | `exploradores_caballo` | Exploradores a caballo | 2 | 20 | Caballería de lanza | línea, cuña, dispersa |  |
-| `carros_guerra` | Carros de guerra | 4 | 15 | ninguna (carro) | — | No sale hasta que haya carros en Conquest: un ticket con carros se rechaza. |
+| `carros_guerra` | Carros de guerra | 4 | 15 | línea, cuña, dispersa | Caballería de lanza | Con sus cifras y el aspecto de la caballería de lanza (lcv01) hasta que haya carro (2026-11-16). |
 | `jinetes_asirios` | Jinetes asirios | 3 | 20 | Caballería de lanza | línea, cuña, dispersa |  |
 | `guerreros_filisteos` | Guerreros filisteos (Peleset) | 3 | 18 | Escuderos | muro de escudos, testudo, línea, dispersa |  |
 | `shardana` | Shardana | 4 | 15 | Escuderos | muro de escudos, testudo, línea, dispersa |  |

@@ -91,3 +91,12 @@
 5. **`dagas`**, la quinta clase. Conquest no tiene arma ni animaciones de dagas.
    - a) Con las cifras de dagas y el aspecto y las animaciones de espada y escudo, hasta que haya arte. **(propuesta)**
    - b) Rechazar una batalla con un héroe de dagas hasta que haya arte.
+
+## Respuestas de Víctor (2026-11-16): la a en todas
+
+1. Las cuentas del héroe, en la escala del motor: las piezas tal cual y los atributos recalibrados contra las tropas.
+2. Los carros de guerra, con el aspecto de la caballería hasta que haya arte.
+3. Una clase o un objeto desconocidos, u otra versión de su catálogo: se rechaza la batalla con su motivo, como con las tropas.
+4. Se borran las clases y los objetos de relleno y las pantallas viejas de un jugador que solo viven de ellos, con sus pruebas. El creador y el
+   vestido pasan al catálogo del motor. Va en la tanda 3, y antes de borrar se manda la lista exacta.
+5. Las dagas, con sus cifras y el aspecto de espada y escudo hasta que haya arte.

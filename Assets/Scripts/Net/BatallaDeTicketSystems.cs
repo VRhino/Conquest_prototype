@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using BronzeAge.Contract.V1;
 using Unity.Burst;
 using Unity.Collections;
@@ -86,6 +88,25 @@ namespace ConquestTactics.Net
                 Enabled = false;
                 Salir(3);
                 return;
+            }
+            // Lo mismo con el héroe (Víctor, 2026-11-16): otra versión del catálogo de clases o de objetos, o una clase o un objeto que Conquest no
+            // tiene (CatalogoDelHeroe), rechazan la batalla entera.
+            if (Real)
+            {
+                var motivos = new List<string>();
+                if (ticket.Reglas.VersionCatalogoHeroe != CatalogoDelHeroe.VersionDeClases)
+                    motivos.Add($"catálogo de clases {ticket.Reglas.VersionCatalogoHeroe}; Conquest tiene el {CatalogoDelHeroe.VersionDeClases}");
+                if (ticket.Reglas.VersionCatalogoObjetos != CatalogoDelHeroe.VersionDeObjetos)
+                    motivos.Add($"catálogo de objetos {ticket.Reglas.VersionCatalogoObjetos}; Conquest tiene el {CatalogoDelHeroe.VersionDeObjetos}");
+                motivos.AddRange(BatallaDeTicket.ClasesYObjetosDesconocidos(ticket, id => CatalogoDelHeroe.ClaseDe(id) != null, id => CatalogoDelHeroe.ObjetoDe(id) != null)
+                    .Select(x => "Conquest no tiene " + x));
+                if (motivos.Count > 0)
+                {
+                    Debug.LogError($"[Red] RECHAZADA {ticket.BattleId}: {string.Join("; ", motivos)}");
+                    Enabled = false;
+                    Salir(3);
+                    return;
+                }
             }
             // Un ticket con la revisión subida (alguien no llegó a conectarse): los que ya estaban dentro siguen con su héroe.
             var anterior = BatallaDeTicket.Actual;

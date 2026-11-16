@@ -85,6 +85,14 @@ namespace ConquestTactics.Net
                     batalla.DejarFuera(participante.HeroeId);
                     return null;
                 }
+            // Quien se une después con una clase o un objeto que Conquest no tiene no sale al campo, como con una tropa (al empezar, rechaza la batalla).
+            var desconocido = BatallaDeTicket.HeroeDesconocido(participante, id => CatalogoDelHeroe.ClaseDe(id) != null, id => CatalogoDelHeroe.ObjetoDe(id) != null);
+            if (desconocido.Count > 0)
+            {
+                UnityEngine.Debug.LogError($"[BatallaReal] {participante.HeroeId} no sale: trae {string.Join(", ", desconocido)}, que Conquest no tiene");
+                batalla.DejarFuera(participante.HeroeId);
+                return null;
+            }
             var heroe = Heroe(participante.HeroeId, participante.Heroe?.DisplayName, Clase(participante.Heroe?.ClassDefinitionId),
                 (int)(participante.Heroe?.Nivel ?? 1), punto, aspectos, orden, participante.Heroe);
             foreach (var escuadra in participante.Escuadras)

@@ -60,7 +60,8 @@ public static class TropasDelMotor
         { "arqueros", (Base.Arqueros, new[] { D, L }) },
         { "arqueros_compuesto", (Base.Arqueros, new[] { D, L }) },
         { "exploradores_caballo", (Base.CaballeriaDeLanza, new[] { L, C, D }) },
-        // carros_guerra: no chariots in Conquest yet; a ticket that brings them is rejected.
+        // carros_guerra: no chariots in Conquest yet; the engine numbers with the cavalry look until there is art (Víctor, 2026-11-16).
+        { "carros_guerra", (Base.CaballeriaDeLanza, new[] { L, C, D }) },
         { "jinetes_asirios", (Base.CaballeriaDeLanza, new[] { L, C, D }) },
         { "guerreros_filisteos", (Base.Escuderos, new[] { M, T, L, D }) },
         { "shardana", (Base.Escuderos, new[] { M, T, L, D }) },
