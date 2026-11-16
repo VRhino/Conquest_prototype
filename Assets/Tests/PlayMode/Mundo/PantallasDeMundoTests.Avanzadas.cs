@@ -52,7 +52,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("plaza") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior de la plaza");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             var plazaId = Yo().Ubicacion.AsentamientoId;
             var plaza = conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plazaId).Asentamiento;
@@ -98,7 +98,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 StringAssert.StartsWith("0 / ", Ventana().Q("cupo-avanzadas").Q<Label>().text);
                 yield return Clic(Ventana().Q<Button>("elegir-avanzada"));
                 yield return Esperar(() => pantallas.Mapa2D?.Eleccion != null && pantallas.Mapa2D.Cosas.Count > 0, 10, "el mapa 2D eligiendo el sitio de la atalaya");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 yield return Capturar("120_elegir_sitio_de_atalaya");
                 // Dentro de la zona y fuera de la ciudad: se prueba a unas unidades de la plaza en cada rumbo hasta que el motor lo acepte.
                 var (px, py) = (plaza.Posicion.X / 1000.0, plaza.Posicion.Y / 1000.0);
@@ -128,7 +128,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 escuadra.Fields["tropa_id"] = Google.Protobuf.WellKnownTypes.Value.ForString("lenadores");
                 escuadra.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(30);
                 yield return Administrar(url, "dar_escuadra", escuadra);
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 yield return Clic(raiz.Q<Button>("salir-al-mundo"));
                 yield return Esperar(() => raiz.Q("ventana-salida") != null, 5, "la ventana de salida");
                 yield return Clic(raiz.Q("ventana-salida").Q<Button>("salir"));
@@ -148,14 +148,14 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => pantallas.Mapa2D != null && pantallas.Mapa2D.Cosas.Any(c => c.Id == obra.Id), 10, "la obra en el mapa 2D");
                 yield return ClicEnElMapa(obra.Posicion.X / 1000.0, obra.Posicion.Y / 1000.0);
                 yield return Esperar(() => ElMapa().Seleccionada?.Id == obra.Id, 5, "la obra elegida");
-                yield return Esperar(() => raiz.Q("ficha")?.Q<Button>("entregar-" + obra.Id)?.enabledSelf == true, 60, "la columna a la puerta de la obra");
+                yield return EsperarConReloj(url, conexion.Sesion, () => raiz.Q("ficha")?.Q<Button>("entregar-" + obra.Id)?.enabledSelf == true, 60, "la columna a la puerta de la obra", 20_000);
                 Assert.IsTrue(raiz.Q("ficha").Query(className: "obra-entrega-fila").ToList().Count > 0, "lo que pide, material a material");
                 yield return Capturar("122_ficha_de_la_obra");
                 yield return EnTamanos(raiz, "122_ficha_de_la_obra");
                 yield return Clic(raiz.Q("ficha").Q<Button>("entregar-" + obra.Id));
                 yield return Esperar(() => Obras().FirstOrDefault(o => o.Id == obra.Id)?.HasTerminaEnMs != false, 10, "todo entregado: se levanta");
                 yield return Capturar("122b_obra_levantandose");
-                yield return Esperar(() => Avanzadas().Count > 0, 300, "la atalaya levantada");
+                yield return EsperarConReloj(url, conexion.Sesion, () => Avanzadas().Count > 0, 300, "la atalaya levantada", 600_000);
                 var atalaya = Avanzadas()[0];
 
                 // Su ficha a la puerta: «Entrar» y «Guarnición», que abre su ventana.
@@ -185,7 +185,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => pantallas.Mapa2D.Q<Toggle>("capa-parcelas") != null, 5, "las capas");
                 yield return Clic(pantallas.Mapa2D.Q<Toggle>("capa-parcelas"));
                 yield return Esperar(() => pantallas.Mapa2D.Parcelas, 5, "la capa de parcelas puesta");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 yield return Capturar("124_capa_de_parcelas");
                 yield return EnTamanos(raiz, "124_capa_de_parcelas");
             }

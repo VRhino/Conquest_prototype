@@ -52,7 +52,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>().confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             var al = conexion.Sesion.Almacen;
             V1.RelacionPolitica Relacion() => al.Todas(V1.Entidad.CuerpoOneofCase.Relacion).Select(e => e.Relacion)
                 .FirstOrDefault(r => r.Estado == V1.EstadoRelacion.RelacionActiva && (r.FaccionAId == mia && r.FaccionBId == otra || r.FaccionAId == otra && r.FaccionBId == mia));
@@ -110,7 +110,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Clic(Ventana().Q<Button>("retirar-" + pid));
                 yield return Esperar(() => Propuesta() == null, 10, "la propuesta retirada");
                 yield return Esperar(() => Ventana()?.Q<Button>("retirar-" + pid) == null && Ventana()?.Q<Button>("opcion-alianza") != null, 5, "la ficha sin la propuesta");
-                yield return new WaitForSecondsRealtime(0.6f);
+                yield return Quieto(0.6f);
 
                 // La guerra: se declara con su confirmación y se ofrece la paz; la otra la ofrece también y se acaba.
                 yield return Esperar(() => Ventana()?.Q<Button>("opcion-guerra") != null, 5, "la opción de la guerra");

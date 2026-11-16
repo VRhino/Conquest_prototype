@@ -673,3 +673,15 @@
   (si falta, sale el id con mayúscula: «ArmaMadera»). En un botón dorado, cada coste en su píldora oscura, o la cifra clara no se lee.
 - El análisis de un paso nuevo va solo en texto (plan, «Lo que voy a hacer», dudas reales), sin capturas del «antes» ni página: Víctor ya ve
   el antes y el después en la página de cada tanda terminada (2026-11-15).
+
+## 2026-11-16: los commits de la migración van en la rama `migracion`
+- Todo el trabajo de la migración, hasta el paso 13, va en la rama local `migracion`, creada desde main `b37be317`. Main no se toca hasta
+  que Víctor la junte, y el push lo hace él.
+- Cada commit es una orden suelta `git commit -F tasks/<mensaje>.txt`, sin `cd`, `-C`, heredoc ni tuberías delante.
+- El modo automático bloquea el commit y la rama si la orden llega solo por el coordinador: hace falta que Víctor lo escriba directamente
+  en el hilo. Si se bloquea, se le da la orden exacta y el mensaje del bloqueo, sin buscar otra vía.
+
+## 2026-11-16: en las pruebas, adelantar el reloj del motor en vez de esperarlo
+- Las marchas y las obras se esperan con `EsperarConReloj` o `AvanzarReloj` (la orden de admin `avanzar_hasta`).
+- Con saltos de una hora, el mundo corre días y se pierden plazas. En la muralla, los saltos son de 10 minutos.
+- La sesión va por detrás del salto hasta su siguiente ping: se cuenta desde el último salto.

@@ -56,7 +56,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior");
             // La pantalla de carga, del todo fuera (con todo ya cargado de otra prueba, se llega al interior mientras aún se desvanece).
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             var interior = SelectorDePersonaje.Interior;
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             V1.Escuadron Escuadra(string id) => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Escuadron, id)?.Escuadron;

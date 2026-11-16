@@ -50,7 +50,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("plaza") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior de la plaza");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             var plazaId = Yo().Ubicacion.AsentamientoId;
             System.Collections.Generic.List<V1.ObraDeMapa> Obras() => conexion.Sesion.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Obra).Select(e => e.Obra).Where(o => o.AsentamientoMadreId == plazaId).ToList();
@@ -113,7 +113,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var eleccion = pantallas.Mapa2D.Eleccion;
                 Assert.IsTrue(eleccion.Zona.Count > 2, "la zona de la plaza");
                 Assert.IsFalse(raiz.Q("mapa-eleccion").ClassListContains("oculto"), "la franja con el texto");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 yield return Capturar("117_elegir_sitio_de_aldea");
                 yield return EnTamanos(raiz, "117_elegir_sitio_de_aldea");
                 Assume.That(eleccion.SitiosValidos?.Count ?? 0, Is.GreaterThan(0), "tierra buena para el trigo en el anillo");

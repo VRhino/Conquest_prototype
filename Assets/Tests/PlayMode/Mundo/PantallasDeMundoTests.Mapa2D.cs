@@ -51,7 +51,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("plaza") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior de la plaza");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             var plazaId = Yo().Ubicacion.AsentamientoId;
             var plaza = conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plazaId).Asentamiento;
@@ -112,7 +112,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 // Desde la plaza: el botón «Mapa» de la barra lo abre, centrado en la plaza, a un cuarto de la escala de visión.
                 yield return Clic(raiz.Q<Button>("mapa-2d"));
                 yield return Esperar(() => Mapa2D() != null && Mapa2D().Cosas.Count > 0, 10, "el mapa 2D abierto");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 var c0 = Mapa2D().Camara;
                 Assert.AreEqual(plaza.Posicion.X / 1000.0, c0.Cx, 1.0, "centrado en la plaza");
                 Assert.IsNotNull(Mapa2D().Q("mapa-plaza-" + plazaId), "tu plaza con su sigilo");
@@ -143,7 +143,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Clic(raiz.Q<Button>("mapa-2d"));
                 yield return Esperar(() => Mapa2D() != null && Mapa2D().Cosas.Count > 0, 10, "el mapa 2D otra vez");
                 for (int i = 0; i < 8; i++) yield return Clic(Mapa2D().Q<Button>("zoom-mas"));
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 yield return Capturar("112_mapa_2d_cerca");
 
                 // Desde dentro de la plaza, solo para mirar: un clic en el suelo no mueve a nadie. Esc cierra.
@@ -163,7 +163,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Clic(raiz.Q<Button>("mapa-2d"));
                 yield return Esperar(() => Mapa2D() != null && Mapa2D().Cosas.Count > 0, 10, "el mapa 2D en el mundo");
                 Assert.IsTrue(ElMapa().EntradaApagada, "con el mapa 2D, el 3D no se mueve");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
 
                 // Un clic en el suelo, a 12 u al este: la columna marcha y la ruta sale en el mapa 2D, que sigue abierto.
                 var (hx, hy) = Mapa2D().PosicionDelHeroe().Value;

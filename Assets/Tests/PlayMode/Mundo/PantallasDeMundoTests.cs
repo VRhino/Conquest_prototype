@@ -23,14 +23,29 @@ namespace ConquestTactics.Mundo.UI.Tests
         GameObject go;
         RenderTexture rt;
 
+        /// <summary>Las pruebas del lote 2 cuando la suite va en dos a la vez (`tasks/pruebas/correr_en_paralelo.sh`, `MUNDO_LOTE`); las demás, en el 1.
+        /// Repartidas para que los dos lotes tarden lo mismo (unos 250 s cada uno, por los tiempos de la suite del 2026-11-16).</summary>
+        static readonly HashSet<string> Lote2 = new HashSet<string>
+        {
+            "TuPlazaPorDentro", "TuTecnologiaDelRey", "TuAvanzadaYSuObra", "TuMercado", "ElCampamentoPorDentro", "TuDiplomaciaDelRey",
+        };
+
         [SetUp]
-        public void Guardar() => guardadas = Array.ConvertAll(Preferencias, k => PlayerPrefs.GetString(k, null));
+        public void Guardar()
+        {
+            guardadas = null;
+            var lote = Environment.GetEnvironmentVariable("MUNDO_LOTE");
+            var esDel2 = Lote2.Contains(TestContext.CurrentContext.Test.MethodName);
+            if ((lote == "1" && esDel2) || (lote == "2" && !esDel2)) Assert.Ignore($"en el otro lote (MUNDO_LOTE={lote})");
+            guardadas = Array.ConvertAll(Preferencias, k => PlayerPrefs.GetString(k, null));
+        }
 
         [TearDown]
         public void Restaurar()
         {
             // Lo que tuviera guardado quien corre la prueba (su login de verdad) se queda como estaba.
-            for (int i = 0; i < Preferencias.Length; i++)
+            // (sin `guardadas`, la prueba era del otro lote y no llegó a empezar)
+            for (int i = 0; guardadas != null && i < Preferencias.Length; i++)
                 if (guardadas[i] == null) PlayerPrefs.DeleteKey(Preferencias[i]); else PlayerPrefs.SetString(Preferencias[i], guardadas[i]);
             PlayerPrefs.Save();
             if (go != null) UnityEngine.Object.Destroy(go);
@@ -95,14 +110,14 @@ namespace ConquestTactics.Mundo.UI.Tests
 
             Pulsar(raiz.Q<Button>("entrar"));
             yield return Esperar(() => raiz.Q(className: "carga") != null, 5, "la pantalla de carga");
-            yield return new WaitForSecondsRealtime(0.8f);
+            yield return Quieto(0.8f);
             yield return Capturar("4_carga");
             // Sin héroe: «Nace tu héroe» (paso 3), solo el lugar y el nombre, sobre el mapa de los campamentos.
             yield return Esperar(() => raiz.Q("crear") != null && raiz.Q(className: "carga") == null, 60, "crear el héroe");
             Assert.IsNotNull(conexion.Artefacto, "el artefacto de mundo, cargado");
             var mapaCrear = ElMapa();
             yield return Esperar(() => mapaCrear.Centro != null && mapaCrear.SueloCompleto, 60, "el suelo de los campamentos");
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             Assert.IsNull(raiz.Q("clases"), "la clase ya no se elige aquí");
             Assert.IsTrue(raiz.Q<Button>("nacer").ClassListContains("oculto"), "sin campamento, «Nacer» no sale");
             StringAssert.Contains("Elige campamento", raiz.Q<Label>("falta").text);
@@ -129,7 +144,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => mapaCrear.Seleccionada?.Id == mirado.Id, 5, "el campamento elegido con el clic en el mapa");
                 Assert.IsFalse(raiz.Q<Button>("nacer").ClassListContains("oculto"), "con campamento, «Nacer» sale");
                 StringAssert.Contains(mirado.Nombre.ToUpperInvariant(), raiz.Q<Button>("nacer").text);
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 yield return Capturar("5c_elegido_con_el_raton");
                 yield return CapturarMapa(mapaCrear, "5d_elegido_con_el_raton_en_el_mapa");
 
@@ -156,7 +171,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q("tarjeta-camp-4").Q<Button>("elegir"));
                 yield return Esperar(() => mapaCrear.Seleccionada?.Id == "camp-4", 5, "el campamento elegido");
                 Assert.Greater(raiz.Q("campamento-datos").childCount, 5, "lo que rodea al campamento");
-                yield return new WaitForSecondsRealtime(1.5f);
+                yield return Quieto(1.5f);
                 yield return Capturar("7_campamento_elegido");
                 yield return CapturarMapa(mapaCrear, "7b_campamento_elegido_en_el_mapa");
                 // El nombre y «Nacer» caben siempre en el panel, en cada tamaño de ventana.
@@ -169,7 +184,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q<Button>("nacer"));
                 AvatarCreatorUIController creador = null;
                 yield return Esperar(() => (creador = UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>()) != null, 20, "el creador de personaje");
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 SoloPintaLaEscena("AvatarCreator", "el creador");
                 Assert.AreEqual(DisplayStyle.None, raiz.resolvedStyle.display, "la interfaz del mundo se aparta");
                 Assert.IsFalse(mapaCrear.gameObject.activeSelf, "y el mapa");
@@ -202,7 +217,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => (creador = UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>()) != null, 20, "el creador otra vez");
                 yield return null;
                 SoloPintaLaEscena("AvatarCreator", "el creador otra vez");
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 clasesDelMotor = UnityEngine.Object.FindAnyObjectByType<HeroClassSelector>();
                 yield return ClicUGUI(ratonCrear, UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude).First(x => x.name.StartsWith("Clase ") && x.name != "Clase " + clasesDelMotor.ClaseDelMotor.Id));
                 var claseElegida = clasesDelMotor.ClaseDelMotor.Id;
@@ -277,7 +292,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             Assert.Greater(cerca, 0, "hay río cerca del campamento");
             mapa.Camara.PasoDeZoom(1);
             mapa.Camara.Inclinar(25);
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             yield return Esperar(() => mapa.SueloCompleto, 20, "el suelo alejado");
             yield return CapturarMapa(mapa, "9c_rio_y_agua");
             mapa.Camara.PasoDeZoom(-1);
@@ -300,7 +315,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.F2));
                 yield return null;
                 UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 yield return Esperar(() => raiz.Query<Label>().ToList().Any(l => l.text.StartsWith("mujer · cabeza") && Visible(l)), 5, "el aspecto en el diagnóstico (F2)");
                 Assert.IsFalse(raiz.Query<Label>().ToList().Any(l => l.text == "Eres miembro, aún sin héroe." && Visible(l)), "recién nacido, el diagnóstico ya tiene héroe");
                 yield return Capturar("9d_diagnostico_con_el_aspecto");
@@ -344,7 +359,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                     yield return Esperar(() => mapa.Seleccionada?.Clase == ClaseDeCosa.Mercenarios, 5, "el campamento elegido en la lista");
                 }
                 yield return Esperar(() => !raiz.Q("ficha").ClassListContains("oculto"), 5, "la ficha");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 var botones = raiz.Q("ficha-acciones").Query<Button>().ToList().Select(TextoDe).ToList();
                 CollectionAssert.Contains(botones, "Marchar aquí");
                 yield return Capturar("10_ficha_del_campamento");
@@ -358,7 +373,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                     .First(pp => mapa.PuntoBajo(pp) is (double, double) q && CosasDelMapa.BajoElClic(mapa.Cosas, q.Item1, q.Item2, mapa.Camara.PxPorUnidad(Screen.height)).Count == 0);
                 yield return Clic(raton, suelo);
                 yield return Esperar(() => mapa.Seleccionada == null, 5, "que el clic en el suelo quite la selección");
-                yield return new WaitForSecondsRealtime(2f);
+                yield return Quieto(2f);
                 var ahora = mapa.Centro.Value;
                 Assert.Greater(Math.Abs(ahora.x - desde.x) + Math.Abs(ahora.y - desde.y), 0.1, "la columna anda hacia donde se hizo clic");
                 Assert.Greater(mapa.PuntosDeRuta, 1, "con su ruta");
@@ -371,8 +386,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q("ficha-acciones").Query<Button>().ToList().First(b => TextoDe(b) == "Marchar aquí"));
                 // Solo lo que se puede hacer: mientras la columna llega, «Entrar» no está; al parar a la puerta, sí.
                 yield return Esperar(() => mapa.Columna?.Estado == BronzeAge.Contract.V1.EstadoColumna.ColumnaMarchando, 10, "la columna en marcha hacia el campamento");
-                yield return new WaitForSecondsRealtime(0.5f);
-                Assert.IsFalse(raiz.Q("ficha-acciones").Query<Button>().ToList().Any(b => TextoDe(b) == "Entrar"), "con la columna en marcha no se puede entrar");
+                // La ficha se repinta en su paso siguiente: se espera a que quite «Entrar» (antes, una espera fija de 0,5 s).
+                yield return Esperar(() => !raiz.Q("ficha-acciones").Query<Button>().ToList().Any(b => TextoDe(b) == "Entrar"), 2, "con la columna en marcha, sin «Entrar»");
                 yield return Capturar("17a_llegando_sin_entrar");
                 yield return Esperar(() => raiz.Q("ficha-acciones")?.Query<Button>().ToList().Any(b => TextoDe(b) == "Entrar") == true, 90, "«Entrar» con la columna parada a la puerta");
                 Assert.AreEqual(BronzeAge.Contract.V1.EstadoColumna.ColumnaEstacionada, mapa.Columna.Estado, "«Entrar» sale con la columna parada");
@@ -382,7 +397,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 mapa = ElMapa();
                 yield return Esperar(() => mapa.Centro != null && mapa.SueloCompleto, 60, "el suelo otra vez");
                 // Y a marchar otra vez, con un clic en el suelo.
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
                 var sueloOtraVez = new[] { 0.25f, 0.15f, 0.7f, 0.85f }.SelectMany(fy => new[] { 0.5f, 0.3f, 0.7f }.Select(fx => new Vector2(Screen.width * fx, Screen.height * fy)))
                     .First(pp => mapa.PuntoBajo(pp) is (double, double) q && CosasDelMapa.BajoElClic(mapa.Cosas, q.Item1, q.Item2, mapa.Camara.PxPorUnidad(Screen.height)).Count == 0);
                 yield return Clic(raton, sueloOtraVez);
@@ -401,7 +416,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             mapa.Camara.PasoDeZoom(1);
             mapa.Camara.PasoDeZoom(1);
             mapa.Camara.Inclinar(30);
-            yield return new WaitForSecondsRealtime(2f);
+            yield return Quieto(2f);
             yield return CapturarMapa(mapa, "12_capa_de_fertilidad");
             Pulsar(raiz.Q<Button>("capa-fertilidad"));
 
@@ -498,7 +513,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q<Button>("enviar"));
                 HeroSelectionSceneController selector = null;
                 yield return Esperar(() => (selector = UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>()) != null, 30, "el selector de personaje");
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 SoloPintaLaEscena(selector.gameObject.scene.name, "el selector");
                 Assert.AreEqual(DisplayStyle.None, raiz.resolvedStyle.display, "la interfaz del mundo se aparta");
                 Assert.IsNull(raiz.Q(className: "partida-nombre"), "sin la tarjeta de la partida");
@@ -601,7 +616,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior");
             LogAssert.ignoreFailingMessages = false;
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             var interior = SelectorDePersonaje.Interior;
             var heroe = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).First(x => x.IsLocalHero);
             // El héroe del campamento, con el aspecto que se eligió y nada más (ni la coleta ni la barba del maniquí).
@@ -802,7 +817,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
                 // Salir andando por la puerta: S hasta salir del hueco, el cartel, F y la ventana con la tropa, la carga y los víveres.
                 yield return AndarHasta(teclado, heroe.transform, "puerta", () => interior.ZonaCercana == "puerta");
-                yield return new WaitForSecondsRealtime(0.3f);
+                yield return Quieto(0.3f);
 
                 yield return Capturar("25_cartel_puerta");
                 yield return Tecla(UnityEngine.InputSystem.Key.F);
@@ -915,7 +930,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             Assert.IsNotNull(campamento, "el campamento montado desde la planta");
             Assert.Greater(campamento.transform.childCount, 15, "con sus edificios, calles y empalizada");
             var heroe = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).First(x => x.IsLocalHero).transform;
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             yield return CapturarEscena("FeudoScene", prefijo);
             yield return Capturar(prefijo + "_cabecera");
             if (completo)
@@ -934,7 +949,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                     var tiempos = new System.Collections.Generic.List<float>();
                     for (var fin = Time.realtimeSinceStartup + 2.5f; Time.realtimeSinceStartup < fin;) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
                     UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
-                    yield return new WaitForSecondsRealtime(0.5f);
+                    yield return Quieto(0.5f);
                     var andado = Vector3.Distance(new Vector3(antes.x, 0, antes.z), new Vector3(heroe.position.x, 0, heroe.position.z));
                     Assert.Greater(andado, 1f, "el héroe anda con W");
                     tiempos.Sort();
@@ -984,7 +999,11 @@ namespace ConquestTactics.Mundo.UI.Tests
             return def.attachments.Any(a => visibles.Contains(femenino ? a.prefabPathFemale : a.prefabPathMale));
         }
 
-        static readonly (int ancho, int alto)[] Tamanos = { (1280, 720), (1600, 900), (1920, 1080), (1950, 1130) };
+        /// <summary>Con capturas (`MUNDO_CAPTURAS`, las pruebas nuevas de una tanda), los cuatro tamaños; sin ellas (la suite de regresión), solo el
+        /// más estrecho, donde antes se sale algo de su sitio.</summary>
+        static readonly (int ancho, int alto)[] Tamanos = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MUNDO_CAPTURAS"))
+            ? new[] { (1280, 720) }
+            : new[] { (1280, 720), (1600, 900), (1920, 1080), (1950, 1130) };
 
         /// <summary>La pantalla en cada tamaño de ventana: todo lo que se pulsa o se escribe queda dentro de la ventana y de su placa (lo de dentro de
         /// una lista con barra no cuenta: se ve al bajar), y `comprobar` para lo propio de cada pantalla. Una captura por tamaño.</summary>
@@ -1175,6 +1194,38 @@ namespace ConquestTactics.Mundo.UI.Tests
             var mapas = UnityEngine.Object.FindObjectsByType<ConquestTactics.Mundo.Mapa.MapaDeMundo>(FindObjectsInactive.Include);
             Assert.AreEqual(1, mapas.Length, "un solo mapa en la escena: " + string.Join(", ", mapas.Select(m => m.name)));
             return mapas[0];
+        }
+
+        /// <summary>Como `Esperar`, para lo que es tiempo del motor (una marcha, una obra): mientras espera, el reloj del mundo corre `pasoMs` por cada
+        /// 0,3 s (el factor del reloj, no saltos: un salto cuenta desde el reloj de la sesión, que va por detrás hasta su siguiente ping). Al acabar,
+        /// el reloj vuelve a su paso de antes.</summary>
+        static IEnumerator EsperarConReloj(string url, Sesion s, Func<bool> hasta, float segundos, string que, long pasoMs = 60_000)
+        {
+            if (hasta()) yield break;
+            var antes = (long)Math.Round(s.FactorReloj * 1000);
+            yield return Reloj(url, (long)(pasoMs / 0.3));
+            var fin = Time.realtimeSinceStartup + segundos;
+            while (!hasta() && Time.realtimeSinceStartup <= fin) yield return null;
+            yield return Reloj(url, Math.Max(1_000, antes));
+            if (!hasta()) Assert.Fail("no llegó " + que);
+        }
+
+        /// <summary>Lo que antes era una espera fija de `max` segundos para que la pantalla se asiente (tras un clic, al entrar): espera a que la
+        /// interfaz deje de cambiar (cuántos elementos tiene y qué textos enseña, igual durante 0,25 s), sin pasar de `max`.</summary>
+        static IEnumerator Quieto(float max)
+        {
+            var raiz = UnityEngine.Object.FindAnyObjectByType<UIDocument>()?.rootVisualElement;
+            var fin = Time.realtimeSinceStartup + max;
+            string antes = null;
+            var desde = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup < fin)
+            {
+                yield return null;
+                var lista = raiz?.Query<VisualElement>().ToList();
+                var firma = lista == null ? "" : lista.Count + ":" + lista.OfType<TextElement>().Sum(t => t.text?.Length ?? 0);
+                if (firma != antes) { antes = firma; desde = Time.realtimeSinceStartup; }
+                else if (Time.realtimeSinceStartup - desde >= 0.25f) yield break;
+            }
         }
 
         static IEnumerator Esperar(Func<bool> hasta, float segundos, string que)

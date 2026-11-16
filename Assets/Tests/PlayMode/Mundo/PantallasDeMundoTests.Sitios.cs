@@ -49,7 +49,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("plaza") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior de la plaza");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             var s = conexion.Sesion;
             V1.Heroe Yo() => s.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             var plazaId = Yo().Ubicacion.AsentamientoId;
@@ -86,7 +86,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             escuadra.Fields["tropa_id"] = Google.Protobuf.WellKnownTypes.Value.ForString("lenadores");
             escuadra.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(30);
             yield return Administrar(url, "dar_escuadra", escuadra);
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
 
             var entrada = UnityEngine.InputSystem.InputSystem.settings;
             var fondo = entrada.backgroundBehavior;
@@ -113,13 +113,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             IEnumerator AlaPuerta(V1.Punto p)
             {
                 yield return ElMapa().MarcharA(p.X / 1000.0, p.Y / 1000.0).AsIEnumerator();
-                for (var f = Time.realtimeSinceStartup + 90; Time.realtimeSinceStartup < f;)
-                {
-                    var c = ElMapa().Columna;
-                    if (c != null && c.Estado == V1.EstadoColumna.ColumnaEstacionada && Math.Abs(c.Posicion.X - p.X) < 2500 && Math.Abs(c.Posicion.Y - p.Y) < 2500) break;
-                    yield return null;
-                }
-                yield return new WaitForSecondsRealtime(0.5f);
+                bool Llegada() { var c = ElMapa().Columna; return c != null && c.Estado == V1.EstadoColumna.ColumnaEstacionada && Math.Abs(c.Posicion.X - p.X) < 2500 && Math.Abs(c.Posicion.Y - p.Y) < 2500; }
+                yield return EsperarConReloj(url, s, Llegada, 90, "la columna a la puerta", 20_000);
+                yield return Quieto(0.5f);
             }
             // Elige la cosa del mapa y pulsa la acción de su ficha.
             IEnumerator AccionDeFicha(string id, string texto)
@@ -162,7 +158,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 }
                 V1.Pueblo Cantera() => s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Pueblo).Select(e => e.Pueblo).FirstOrDefault(x => x.AsentamientoMadreId == plazaId);
                 V1.Avanzada Atalaya() => s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Avanzada).Select(e => e.Avanzada).FirstOrDefault(x => x.AsentamientoMadreId == plazaId);
-                yield return Esperar(() => Cantera() != null && Atalaya() != null, 400, "la cantera y la atalaya levantadas");
+                yield return EsperarConReloj(url, s, () => Cantera() != null && Atalaya() != null, 400, "la cantera y la atalaya levantadas", 600_000);
 
                 // Dentro de la cantera.
                 yield return AlaPuerta(Cantera().Posicion);
@@ -173,7 +169,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => raiz.Q("riel")?.Query<Button>().ToList().Count >= 3, 10, "el riel del pueblo");
                 CollectionAssert.IsSubsetOf(new[] { "riel-resumen", "riel-guarnicion", "riel-acarreo" }, raiz.Q("riel").Query<Button>().ToList().Select(b => b.name).ToList());
                 Assert.IsNotNull(raiz.Q<Label>("nombre-sitio"), "el blasón del pueblo");
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 yield return Capturar("125_dentro_de_la_cantera");
                 yield return CapturarEscena("FeudoScene", "125c_cantera_escena");
                 // Soltar el ratón con Alt, para el HUD (como en la plaza y el campamento).
@@ -213,7 +209,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => raiz.Q("plaza") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior de la atalaya");
                 yield return Esperar(() => SelectorDePersonaje.Interior.Muralla.Count > 0, 10, "la empalizada de la atalaya");
                 CollectionAssert.IsSubsetOf(new[] { "riel-resumen", "riel-guarnicion", "riel-tropa" }, raiz.Q("riel").Query<Button>().ToList().Select(b => b.name).ToList());
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Quieto(1f);
                 yield return Capturar("129_dentro_de_la_atalaya");
                 yield return CapturarEscena("FeudoScene", "129c_atalaya_escena");
                 yield return Tecla(UnityEngine.InputSystem.Key.LeftAlt);

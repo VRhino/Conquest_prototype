@@ -329,12 +329,11 @@ namespace ConquestTactics.Mundo.UI.Tests
             var col = ultimo.Creadas.First(c => c.Entidad == V1.TipoEntidad.Ejercito).Id;
             yield return Reloj(url, 60_000);
             yield return Ordenar(new V1.Orden { MarcharA = new V1.OrdenMarcharA { HeroeId = heroe, Objetivo = new V1.OrdenMarcharA.Types.Objetivo { Punto = donde } } });
-            for (var f = Time.realtimeSinceStartup + 120; Time.realtimeSinceStartup < f;)
+            bool Llegada() { var c = s.Almacen.Buscar(V1.TipoEntidad.Ejercito, col)?.Ejercito; return c != null && Math.Abs(c.Posicion.X - donde.X) < 3000 && Math.Abs(c.Posicion.Y - donde.Y) < 3000; }
+            for (var f = Time.realtimeSinceStartup + 120; Time.realtimeSinceStartup < f && !Llegada();)
             {
-                s.Bombear();
-                var c = s.Almacen.Buscar(V1.TipoEntidad.Ejercito, col)?.Ejercito;
-                if (c != null && Math.Abs(c.Posicion.X - donde.X) < 3000 && Math.Abs(c.Posicion.Y - donde.Y) < 3000) break;
-                yield return null;
+                yield return AvanzarReloj(url, s, 60_000);
+                for (var g = Time.realtimeSinceStartup + 0.3f; Time.realtimeSinceStartup < g && !Llegada();) { s.Bombear(); yield return null; }
             }
             yield return Ordenar(new V1.Orden { EntrarEnAsentamiento = new V1.OrdenEntrarEnAsentamiento { AsentamientoId = plazaId, HeroeId = heroe } });
             yield return Reloj(url, 1_000);
@@ -370,7 +369,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.Fail($"no llegó el interior de la plaza ajena: el héroe en {yo?.Ubicacion}; la plaza {(a == null ? "no llegó" : $"llegó con trazado {(a.Trazado != null)}, {a.Edificios.Count} edificios")}; «{raiz.Q<Label>("dentro-texto")?.text}»");
             }
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             var plaza = raiz.Q("plaza");
             V1.Asentamiento Plaza() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plazaId).Asentamiento;
             Debug.Log($"[Prueba] de visita en {Plaza().Nombre}: {Plaza().Edificios.Count} edificios, armería activa {Plaza().ArmeriaActiva}");

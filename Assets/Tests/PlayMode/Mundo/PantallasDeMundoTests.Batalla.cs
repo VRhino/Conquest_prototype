@@ -512,7 +512,17 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return OrdenAdmin(url, new Orden { ControlarReloj = new OrdenControlarReloj { Accion = "fijar_factor", FactorMilesimas = factorMilesimas } });
         }
 
-        static IEnumerator OrdenAdmin(string url, Orden orden)
+        /// <summary>Adelanta el reloj del mundo `ms` de golpe (lo que tocaba en ese rato pasa al momento), desde la sesión de administración.</summary>
+        /// La sesión se entera del salto en su siguiente ping: hasta entonces su reloj va por detrás, así que se cuenta desde el último salto si va
+        /// más adelante. Si aun así el mundo ya pasó de ahí, el motor contesta «sin cambios», y vale.
+        static IEnumerator AvanzarReloj(string url, Sesion s, long ms)
+        {
+            ultimoSalto = Math.Max(ultimoSalto, (long)s.AhoraMundo) + ms;
+            yield return OrdenAdmin(url, new Orden { ControlarReloj = new OrdenControlarReloj { Accion = "avanzar_hasta", HastaMs = ultimoSalto } }, sinCambiosVale: true);
+        }
+        static long ultimoSalto;
+
+        static IEnumerator OrdenAdmin(string url, Orden orden, bool sinCambiosVale = false)
         {
             var codigo = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN");
             if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se manda " + orden.CuerpoCase); yield break; }
@@ -533,7 +543,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             var r = s.Ordenar(orden);
             fin = Time.realtimeSinceStartup + 20;
             while (!r.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            Assert.AreEqual(Resultado.OrdenAceptada, r.Result.Resultado, r.Result.Rechazo?.ToString());
+            if (!(sinCambiosVale && r.Result.Resultado == Resultado.OrdenSinCambios))
+                Assert.AreEqual(Resultado.OrdenAceptada, r.Result.Resultado, r.Result.Rechazo?.ToString());
             s.Cerrar();
         }
 

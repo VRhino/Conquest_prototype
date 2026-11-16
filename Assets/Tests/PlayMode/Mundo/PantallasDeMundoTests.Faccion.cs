@@ -94,7 +94,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>().confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             V1.Faccion Faccion(string id) => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Faccion, id)?.Faccion;
 

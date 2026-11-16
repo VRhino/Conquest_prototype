@@ -52,7 +52,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Quieto(1f);
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             // Una escuadra propia para el loadout (prestada no: esas no van en loadouts de otros campamentos).
             var campId = Yo().Ubicacion.CampamentoId;
@@ -84,7 +84,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return null;
                 UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState());
                 yield return Esperar(() => raiz.Q("heroe-equipo") != null, 5, "la Base en Héroe");
-                yield return new WaitForSecondsRealtime(0.5f);
+                yield return Quieto(0.5f);
 
                 // Las botas puestas: su pieza de Conquest (por hueco y peso) visible en el héroe en 3D.
                 var partes = Resources.Load<Data.Avatar.AvatarPartDatabase>("Data/Avatar/AvatarPartDatabase");
