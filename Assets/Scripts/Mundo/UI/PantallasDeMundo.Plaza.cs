@@ -531,6 +531,7 @@ namespace ConquestTactics.Mundo.UI
                     });
             }
             if (Cambia("ficha", $"{fichaId}|{a.Version}|{interiores}|{cargo}")) PintarFicha(v.Q("plaza-der"), a, yo, cargo, rehacer);
+            if (Cambia("ejercitos", FirmaDeEjercitosDePlaza(a, yo))) PintarEjercitosDePlaza(v.Q("plaza-der"), a, yo, rehacer);
             // La ventana abierta deja de estarlo si ya no se puede (sin cargo, sin almacén).
             if (ventanaPlaza != null && !VentanaDisponible(ventanaPlaza, a, yo)) ventanaPlaza = null;
             var faccion = c.Sesion.Almacen.Buscar(TipoEntidad.Faccion, a.FaccionId)?.Faccion;
@@ -1131,7 +1132,8 @@ namespace ConquestTactics.Mundo.UI
         /// nivel, la receta de la bodega o la prensa, el buey del molino y, con cargo, mejorar, quitar de la cola o cancelar la obra.</summary>
         void PintarFicha(VisualElement der, Asentamiento a, Heroe yo, string cargo, Action rehacer)
         {
-            der.Clear();
+            // Solo la ficha: encima, en el mismo lateral, van las tarjetas de los ejércitos (`PintarEjercitosDePlaza`).
+            der.Q("ficha-edificio")?.RemoveFromHierarchy();
             var e = fichaId == null ? null : a.Edificios.FirstOrDefault(x => x.Id == fichaId);
             if (e == null) { fichaId = null; return; }
             var ficha = Dialogo.Caja("plaza-ficha");

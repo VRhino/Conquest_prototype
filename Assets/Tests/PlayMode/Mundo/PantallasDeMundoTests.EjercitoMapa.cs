@@ -57,11 +57,17 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var convocar = new V1.OrdenConvocarEjercito { HeroeId = otro, PoliticaDeUnion = "aceptar", Carga = new V1.Cantidades() };
                 convocar.EscuadronIds.AddRange(suyas);
                 yield return DelOtro(() => new V1.Orden { ConvocarEjercito = convocar });
+            }
+            var suConvocatoria = so.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Convocatoria).Select(e => e.Convocatoria).First(x => x.LiderId == otro).Id;
+            string suEjercito = null;
+            // El otro sale con su ejército, solo, y se queda a la puerta.
+            IEnumerator Parte()
+            {
                 yield return DelOtro(() => new V1.Orden { PartirConvocatoria = new V1.OrdenPartirConvocatoria { HeroeId = otro } });
                 yield return Esperar(() => { so.Bombear(); return ColumnaDelOtro() != null; }, 10, "el ejército del otro, fuera");
+                suEjercito = ColumnaDelOtro().Id;
+                Assert.AreEqual(V1.TipoColumna.ColumnaEjercito, ColumnaDelOtro().Tipo, "sale como ejército");
             }
-            var suEjercito = ColumnaDelOtro().Id;
-            Assert.AreEqual(V1.TipoColumna.ColumnaEjercito, ColumnaDelOtro().Tipo, "sale como ejército");
 
             foreach (var k0 in Preferencias) PlayerPrefs.DeleteKey(k0);
             go = new GameObject("Mundo");
@@ -98,6 +104,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             // Solo la escena, para las capturas del prototipo (`tasks/pruebas/cdp/ejercito-mapa.mjs`): el servidor sigue arriba con ella.
             if (Environment.GetEnvironmentVariable("MUNDO_PROTO") == "ejercito")
             {
+                yield return Parte();
                 Debug.Log($"[Prueba] escena del prototipo: yo={nick} otro={nickOtro} ejercito={suEjercito} plaza={plazaId} x={so.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plazaId)?.Asentamiento?.Posicion.X / 1000.0:0.###} y={so.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plazaId)?.Asentamiento?.Posicion.Y / 1000.0:0.###}");
                 so.Cerrar();
                 LogAssert.ignoreFailingMessages = false;
@@ -125,9 +132,31 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
             try
             {
-                // Dentro de la plaza: «Unirse a un ejército» en el riel, con el del otro a la puerta.
-                yield return Esperar(() => raiz.Q("plaza")?.Q<Button>("riel-unirse") != null, 15, "«Unirse a un ejército» en el riel");
-                yield return Clic(raiz.Q("plaza").Q<Button>("riel-unirse"));
+                // El lateral de la plaza: la tarjeta del ejército que el otro prepara dentro, con sus integrantes plegables y «Unirse», que abre
+                // «Salir al mundo» con «Ejército» y su convocatoria.
+                VisualElement Tarjeta(string id) => raiz.Q("plaza")?.Q("tarjeta-" + id);
+                yield return Esperar(() => Tarjeta(suConvocatoria) != null, 15, "la tarjeta del ejército preparándose");
+                Assert.IsTrue(Tarjeta(suConvocatoria).Q<Foldout>().value, "los integrantes, desplegados");
+                Assert.IsNotNull(Tarjeta(suConvocatoria).Q("mini-lenadores"), "su tropa, en miniatura");
+                yield return Capturar("168_tarjeta_preparandose");
+                yield return EnTamanos(raiz, "168_tarjeta_preparandose", () => Assert.IsTrue(Contiene(raiz.worldBound, Tarjeta(suConvocatoria).worldBound), "la tarjeta, entera en pantalla"));
+                yield return Clic(Tarjeta(suConvocatoria).Q<Foldout>().Q<Toggle>());
+                yield return Esperar(() => Tarjeta(suConvocatoria)?.Q<Foldout>().value == false && PlayerPrefs.GetInt("mundo.plaza.integrantes", 1) == 0, 5, "los integrantes plegados, y recordado");
+                yield return Clic(Tarjeta(suConvocatoria).Q<Foldout>().Q<Toggle>());
+                yield return Esperar(() => PlayerPrefs.GetInt("mundo.plaza.integrantes", 1) == 1, 5, "desplegados otra vez");
+                yield return Clic(Tarjeta(suConvocatoria).Q<Button>("tarjeta-unirse-" + suConvocatoria));
+                yield return Esperar(() => raiz.Q("ventana-salida")?.Q<Button>("unirse-" + suConvocatoria) != null, 5, "«Salir al mundo» con su convocatoria");
+                Assert.IsTrue(raiz.Q("ventana-salida").Q<RadioButton>("ejercito").value, "con «Ejército» ya elegido");
+                yield return Clic(raiz.Q("ventana-salida").Q<Button>("cancelar"));
+                yield return Esperar(() => raiz.Q("ventana-salida") == null, 5, "la ventana cerrada");
+
+                // Sale con su ejército: la tarjeta pasa a «a la puerta», y su «Unirse» abre la ventana del riel, que sigue ahí.
+                yield return Parte();
+                yield return Esperar(() => Tarjeta(suEjercito) != null && Tarjeta(suConvocatoria) == null, 15, "la tarjeta del ejército a la puerta");
+                yield return Capturar("169_tarjeta_puerta");
+                yield return EnTamanos(raiz, "169_tarjeta_puerta", () => Assert.IsTrue(Contiene(raiz.worldBound, Tarjeta(suEjercito).worldBound), "la tarjeta, entera en pantalla"));
+                Assert.IsNotNull(raiz.Q("plaza").Q<Button>("riel-unirse"), "«Unirse a un ejército» sigue en el riel");
+                yield return Clic(Tarjeta(suEjercito).Q<Button>("tarjeta-unirse-" + suEjercito));
                 yield return Esperar(() => raiz.Q("plaza-ventana")?.Q<Button>("unirse-" + suEjercito) != null, 5, "el ejército del otro en la ventana");
                 Assert.IsTrue(raiz.Q("plaza-ventana").Query<Toggle>().ToList().Any(t => t.name.StartsWith("aporta-") && t.value), "tu tropa, marcada");
                 yield return Capturar("170_unirse_desde_plaza");

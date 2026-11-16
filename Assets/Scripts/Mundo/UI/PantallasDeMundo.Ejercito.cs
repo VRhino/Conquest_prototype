@@ -238,6 +238,79 @@ namespace ConquestTactics.Mundo.UI
 
         string FirmaDeUnirse(Asentamiento a, Heroe yo) => string.Join(",", EjercitosParaUnirse(a, yo).Select(e => e.Id + ":" + e.Version));
 
+        // ─────────────────────────── las tarjetas del lateral de la plaza ───────────────────────────
+
+        /// <summary>Si los integrantes de las tarjetas van desplegados (se recuerda entre plazas y sesiones).</summary>
+        const string PrefIntegrantes = "mundo.plaza.integrantes";
+
+        /// <summary>Las convocatorias de tu Facción que se preparan dentro de esta plaza y a las que puedes unirte desde «Salir al mundo» (resides).</summary>
+        List<Convocatoria> ConvocatoriasDePlaza(Asentamiento a, Heroe yo) =>
+            yo == null || !yo.HasResidenciaId || yo.ResidenciaId != a.Id || MiConvocatoria(yo) != null ? new List<Convocatoria>() : ConvocatoriasDe(a.Id, yo);
+
+        string FirmaDeEjercitosDePlaza(Asentamiento a, Heroe yo)
+        {
+            var heroes = EjercitosParaUnirse(a, yo).SelectMany(e => e.Participantes.Select(x => x.HeroeId))
+                .Select(id => c.Sesion.Almacen.Buscar(TipoEntidad.Heroe, id)?.Heroe?.Version);
+            return $"{FirmaDeUnirse(a, yo)}|{string.Join(",", heroes)}|{string.Join(",", ConvocatoriasDePlaza(a, yo).Select(x => x.Id + ":" + x.Version))}";
+        }
+
+        /// <summary>Las tarjetas del lateral derecho de la plaza, en el hueco de las misiones (Víctor, 2026-11-16): una por ejército al que te puedes
+        /// unir. Los de tu Facción a la puerta («Unirse» abre la ventana «Unirse a un ejército» del riel) y los que se preparan dentro («Unirse» abre
+        /// «Salir al mundo» con «Ejército»). Con sus integrantes y su tropa, plegables. Solo salen si hay a qué unirse.</summary>
+        void PintarEjercitosDePlaza(VisualElement der, Asentamiento a, Heroe yo, Action rehacer)
+        {
+            der.Q("ejercitos-plaza")?.RemoveFromHierarchy();
+            var puerta = EjercitosParaUnirse(a, yo);
+            var dentro = ConvocatoriasDePlaza(a, yo);
+            if (puerta.Count + dentro.Count == 0) return;
+            var caja = new ScrollView(ScrollViewMode.Vertical) { name = "ejercitos-plaza", horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+            caja.AddToClassList("ejercitos-plaza");
+            var abiertos = PlayerPrefs.GetInt(PrefIntegrantes, 1) == 1;
+            var almacen = c.Sesion.Almacen;
+            void Tarjeta(string id, string titulo, string detalle, IEnumerable<(string heroeId, string papel, List<string> tropa)> integrantes, Action unirse)
+            {
+                var t = Dialogo.Caja("ejercito-tarjeta");
+                t.name = "tarjeta-" + id;
+                var cab = Dialogo.Caja("ejercito-tarjeta-cab");
+                cab.Add(IconosDelMundo.Icono("simbolo", "bandera", 18, IconosDelMundo.Bronce));
+                var textos = Dialogo.Caja("ejercito-fila-texto");
+                textos.Add(Dialogo.Texto(titulo, "aviso-titulo"));
+                textos.Add(Dialogo.Texto(detalle, "campo-ayuda"));
+                cab.Add(textos);
+                t.Add(cab);
+                var plegable = new Foldout { text = "Integrantes", value = abiertos, name = "integrantes-" + id };
+                plegable.AddToClassList("ejercito-tarjeta-integrantes");
+                plegable.RegisterValueChangedCallback(ev => { if (ev.target == plegable) PlayerPrefs.SetInt(PrefIntegrantes, ev.newValue ? 1 : 0); });
+                foreach (var (heroeId, papel, tropa) in integrantes)
+                {
+                    var fila = Dialogo.Caja("conv-integrante");
+                    var fc = Dialogo.Caja("conv-integrante-cab");
+                    fc.Add(Dialogo.Texto(Textos.NombreDeHeroe(almacen, heroeId), "aviso-titulo"));
+                    if (papel != null) fc.Add(Dialogo.Texto(papel, "conv-papel"));
+                    fila.Add(fc);
+                    var tropas = Dialogo.Caja("conv-integrante-tropas");
+                    foreach (var tid in tropa) if (PiezasDeTropa.Miniatura(tid, 26, NombreDeTropa(tid)) is VisualElement mini) tropas.Add(mini);
+                    if (tropa.Count == 0) tropas.Add(Dialogo.Texto("Sin tropa.", "campo-ayuda"));
+                    fila.Add(tropas);
+                    plegable.Add(fila);
+                }
+                t.Add(plegable);
+                var b = Dialogo.Boton("Unirse", "boton-primario ejercito-tarjeta-unirse", unirse);
+                b.name = "tarjeta-unirse-" + id;
+                t.Add(b);
+                caja.Add(t);
+            }
+            foreach (var e in puerta)
+                Tarjeta(e.Id, $"Ejército de {Textos.NombreDeHeroe(almacen, e.LiderId)} a la puerta", $"{e.Participantes.Count} héroe(s) · {NombreDePolitica[Politica(e.PoliticaDeUnion)].ToLowerInvariant()}",
+                    e.Participantes.OrderByDescending(x => x.HeroeId == e.LiderId).Select(x => (x.HeroeId, x.HeroeId == e.LiderId ? "Líder" : null, TropaDe(e, x.HeroeId, yo).Select(t => t.tropaId).ToList())),
+                    () => { ventanaPlaza = "unirse"; rehacer(); });
+            foreach (var cv in dentro)
+                Tarjeta(cv.Id, $"Ejército de {Textos.NombreDeHeroe(almacen, cv.LiderId)} preparándose", $"{cv.Integrantes.Count} héroe(s) · {NombreDePolitica[Politica(cv.PoliticaDeUnion)].ToLowerInvariant()}",
+                    cv.Integrantes.OrderByDescending(x => x.HeroeId == cv.LiderId).Select(x => (x.HeroeId, x.HeroeId == cv.LiderId ? "Líder" : null, x.Seleccion?.TropaIds.Select(IdDeTropa).ToList() ?? new List<string>())),
+                    () => { salirComoEjercito = true; VentanaDeSalida(null, a.HasNombre ? a.Nombre : a.Id, a.Id); });
+            der.Insert(0, caja);
+        }
+
         /// <summary>«Unirse a un ejército» (`htmlUnirseDesdePlaza`): la tropa que aportas, marcada, y los ejércitos a la puerta, cada uno con «Unirme con
         /// esta tropa».</summary>
         void UnirseDesdePlaza(VisualElement cuerpo, Asentamiento a, Heroe yo, Action rehacer)

@@ -18,7 +18,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
-        static readonly string[] Preferencias = { "mundo.token", "mundo.nick", "mundo.servidor" };
+        static readonly string[] Preferencias = { "mundo.token", "mundo.nick", "mundo.servidor", "mundo.plaza.integrantes" };
         string[] guardadas;
         GameObject go;
         RenderTexture rt;

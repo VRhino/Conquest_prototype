@@ -46,10 +46,13 @@
 - **Paso 11 (los ejércitos)**: el plan está en `tasks/bloque4-paso11-plan.md`.
   - **Tanda 1 (salir como ejército): en commit `8a2bd3ea`.** Está en el doc 34 y en `PantallasDeMundo.Convocatoria.cs`; la prueba es
     `TuEjercitoEnPreparacion`.
-  - **Tanda 2 (el ejército en el mapa, unirse y la batalla): hecha y a revisar, sin commit.** Está en el doc 34, en
+  - **Tanda 2 (el ejército en el mapa, unirse y la batalla): en commit `9b7ee80b`.** Está en el doc 34, en
     `PantallasDeMundo.Ejercito.cs` (la ventana ⚑ y «Unirse a un ejército» del riel de la plaza) y en `CosasDelMapa.Acciones` («Unirme» y
     «Unirse» en las fichas). Las pruebas son `TuEjercitoEnElMapa` y `TuUnionALaBatalla` (esta, en la vuelta de la batalla); con `MUNDO_PROTO=ejercito` solo deja la escena para
     `tasks/pruebas/cdp/ejercito-mapa.mjs`.
+  - **Tanda 2: en commit `9b7ee80b`.**
+  - **Añadido (las tarjetas del ejército en el lateral de la plaza): hecho y a revisar, sin commit.** Está en el doc 34 y en
+    `PantallasDeMundo.Ejercito.cs` (`PintarEjercitosDePlaza`); la prueba es `TuEjercitoEnElMapa`.
   - Falta la tanda 3 (las caravanas del ejército con el carro 3D detrás): no se empieza hasta que Víctor lo diga.
   - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
     icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,

@@ -1229,3 +1229,14 @@
 .intel-vigente { color: #9fd49a; }
 .region-plaza { margin-bottom: 8px; }
 .region-plaza > .mercado-orden { margin-bottom: 4px; }
+
+/* Paso 11: las tarjetas de los ejércitos a los que te puedes unir, arriba en el lateral derecho (el hueco de las misiones), encima de la ficha. */
+.ejercitos-plaza { flex-shrink: 1; margin-bottom: 10px; }
+.ejercito-tarjeta { padding: 12px 14px; margin-bottom: 8px; background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce); border-radius: 3px; }
+.ejercito-tarjeta-cab { flex-direction: row; align-items: center; margin-bottom: 6px; }
+.ejercito-tarjeta-cab > VisualElement:first-child { margin-right: 8px; flex-shrink: 0; }
+.ejercito-tarjeta-integrantes { margin: 0 0 8px 0; }
+.ejercito-tarjeta-integrantes .unity-foldout__text { font-size: 12.5px; color: var(--pergamino); }
+.ejercito-tarjeta-integrantes .unity-foldout__content { margin-left: 0; }
+.ejercito-tarjeta-integrantes .conv-integrante { margin-bottom: 4px; }
+.ejercito-tarjeta-unirse { margin: 0; height: 34px; }
