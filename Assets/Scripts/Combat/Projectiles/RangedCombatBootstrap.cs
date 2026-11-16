@@ -34,3 +34,31 @@ public class RangedCombatBootstrap : MonoBehaviour
         }
     }
 }
+
+/// <summary>
+/// La reserva de proyectiles (ObjectPoolSystem) y los proyectiles de cada tropa de tiro, si la escena no los trae. Solo BattleTestScene
+/// los tiene (con RangedCombatBootstrap): en BattleScene, sin reserva, ProjectileSpawnSystem no dispararía nada. La crea
+/// ProjectileSpawnSystem con el primer disparo (en un jugador) y la batalla en red al montarse (en el servidor y en el cliente).
+/// </summary>
+public static class ReservaDeProyectiles
+{
+    const int PorTropa = 20;
+
+    public static void Asegurar()
+    {
+        if (ObjectPoolSystem.Instance == null)
+            new GameObject("ObjectPoolSystem").AddComponent<ObjectPoolSystem>();
+        int tropas = 0;
+        foreach (var tropa in SquadDataService.GetAllSquads())
+        {
+            if (tropa == null || !tropa.IsRanged)
+                continue;
+            var tiro = tropa.rangedData;
+            if (string.IsNullOrEmpty(tiro.projectilePoolKey) || tiro.projectilePrefab == null)
+                continue;
+            ObjectPoolSystem.Instance.WarmUpPool(tiro.projectilePoolKey, tiro.projectilePrefab, PorTropa);
+            tropas++;
+        }
+        Debug.Log($"[Proyectiles] Reserva de proyectiles lista para {tropas} tropas de tiro");
+    }
+}

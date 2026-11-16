@@ -75,26 +75,6 @@ public class ArchitectureRegressionTests
         Assert.That(ammo.shotTimer, Is.EqualTo(1));
     }
 
-    [Test]
-    public void XPRequiresAnEventAndConsumesItOnce()
-    {
-        var squad = em.CreateEntity(typeof(SquadProgressComponent));
-        em.SetComponentData(squad, new SquadProgressComponent { level = 1, xpToNextLevel = 100 });
-        var phase = em.CreateEntity(typeof(GameStateComponent));
-        em.SetComponentData(phase, new GameStateComponent { currentPhase = GamePhase.PostPartida });
-        var system = world.GetOrCreateSystemManaged<SquadProgressionSystem>();
-        for (int i = 0; i < 120; i++) system.Update();
-        Assert.That(em.GetComponentData<SquadProgressComponent>(squad).currentXP, Is.Zero);
-        var evt = em.CreateEntity(typeof(SquadXPEvent));
-        em.SetComponentData(evt, new SquadXPEvent { squad = squad, amount = 150 });
-        system.Update();
-        Assert.That(em.Exists(evt), Is.False);
-        var result = em.GetComponentData<SquadProgressComponent>(squad);
-        Assert.That(result.level, Is.EqualTo(2));
-        Assert.That(result.currentXP, Is.EqualTo(50));
-        system.Update();
-        Assert.That(em.GetComponentData<SquadProgressComponent>(squad).currentXP, Is.EqualTo(50));
-    }
 
     [Test]
     public void ALevelEventDoesNotRescaleAnotherSquad()

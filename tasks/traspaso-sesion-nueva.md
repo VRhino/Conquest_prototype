@@ -82,6 +82,28 @@
   entregar y aparcar caravanas.
 - El plan del paso 10 no entra en el commit del paso 9.
 
+## Sueltos de la batalla 12, 13 y 16 (2026-11-16, hechos y sin commit, en `main`)
+
+- El análisis y las respuestas de Víctor están en `tasks/batalla-sueltos-plan.md`. El 14 (el Transport de Unity en Windows) va en otra sesión, con
+  el encargo en `tasks/brief-transport-windows.md`; el 15 (probarla con alguien al teclado) lo hace Víctor.
+- **12, los arqueros:** `ReservaDeProyectiles` pasó a `Combat/Projectiles/RangedCombatBootstrap.cs` y `ProjectileSpawnSystem` la crea con el
+  primer disparo. Pruebas: `ProyectilesSinReservaTests` y `BattleSceneIntegrationTests.ProductionBattleSceneFootArchersShootProjectiles`.
+- **13, cambiar de escuadra en red y apuntar con la cámara:**
+  - el comando lleva `CambiarEscuadra`, `EscuadraPedida` y `Mirar`. El dato de cada `InputEvent` (la escuadra, la orden y su punto, la
+    ranura, la formación) va siempre con su último valor: el aviso llega en su tick, pero los demás campos son los del último comando de ese
+    tick (antes la Q llegaba como golpe básico y «mantener» como «seguir»);
+  - el servidor (`MandoSystem`) pone `SquadSwapRequest` si el héroe está en un punto de suministro, y manda al dueño la activa, la
+    canalización, la espera y la reserva (`ReservaRed`);
+  - el cliente (`EspejoClienteSystem.HeroeDelPanel`) da al panel de suministro de siempre una entidad suya
+    (`SupplyPointUIController.NetworkHero`), y avisa al HUD del cambio;
+  - **el servidor de batalla es un ejecutable:** tras tocar código del servidor hay que reconstruirlo con
+    `-executeMethod ConquestTactics.Net.Editor.PruebaRedEditor.Construir`.
+  - La prueba es `DelMapaALaBatalla`: con el ticket de dos escuadras elegidas, anda con WASD al punto de suministro, gira la cámara, F, elige
+    con el ratón y cambia; luego la Q, «mantener» (X) y «seguir» (C) en red.
+- **16:** borrados `HeroLevelSystem`, `SquadProgressionSystem`, `XPEventComponent`, `XPSource` y sus pruebas.
+- **Desde dentro de un sitio**, el clic en el mapa no hace nada (`MapaDeMundo.MarcharA`).
+- Capturas en `tasks/sueltos-batalla/capturas/`.
+
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)
 
 | | Antes | Después |

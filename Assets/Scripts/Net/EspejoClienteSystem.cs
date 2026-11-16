@@ -40,7 +40,8 @@ namespace ConquestTactics.Net
         readonly Dictionary<Entity, float3> _conDestino = new Dictionary<Entity, float3>();
         readonly List<Entity> _sobran = new List<Entity>();
         int _marcadoresAntes;
-        Entity _camara, _interfaz, _datos, _reloj, _estado;
+        int _activaAntes = int.MinValue;
+        Entity _camara, _interfaz, _datos, _reloj, _estado, _panel;
         byte _estadoAntes = 255;
         double _proximoResumen;
         /// <summary>Hay héroe propio y la cámara del juego lo sigue: DibujoRedSystem no toca la cámara.</summary>
@@ -51,6 +52,12 @@ namespace ConquestTactics.Net
         {
             CamaraDelJuego = false;
             Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
+        }
+
+        // El panel de suministro no debe leer una entidad de un mundo de cliente que ya no existe.
+        protected override void OnDestroy()
+        {
+            if (SupplyPointUIController.NetworkHero == _panel) SupplyPointUIController.NetworkHero = Entity.Null;
         }
 
         protected override void OnUpdate()
@@ -81,6 +88,7 @@ namespace ConquestTactics.Net
             MarcarDestinos();
             Unicos();
             CamaraEInterfaz();
+            HeroeDelPanel();
             Partida();
             Estandartes();
         }
@@ -316,6 +324,13 @@ namespace ConquestTactics.Net
                     aliveUnits = r.Soldados, totalUnits = r.SoldadosTotales, currentFormation = (FormationType)r.Formacion,
                     isInCaptureZone = r.EnZona != 0, captureProgress = r.Captura,
                 };
+                // El cambio de escuadra, como el SquadChangeEvent del juego: el HUD cambia el nombre y el icono de la escuadra.
+                if (_activaAntes != int.MinValue && r.EscuadraActiva != _activaAntes)
+                {
+                    ui.squadChangedThisFrame = true;
+                    ui.newSquadId = r.EscuadraActiva;
+                }
+                _activaAntes = r.EscuadraActiva;
                 // Lo que la interfaz saca del DataContainer del juego: de qué bando es el jugador y qué tropa lleva.
                 BattleBootstrapRequests.NetworkTeam = r.Bando;
                 var datos = EntityManager.GetComponentData<DataContainerComponent>(_datos);
@@ -336,6 +351,60 @@ namespace ConquestTactics.Net
         }
 
         /// <summary>
+        /// El cambio de escuadra en el panel de suministro del juego: el héroe del panel va donde el fantasma del héroe propio, con la
+        /// escuadra activa, la reserva (las del ticket que no son la activa), la canalización y la espera que manda el servidor en el mando
+        /// (<see cref="InterfazRed"/>, <see cref="ReservaRed"/>); la lista y los nombres del panel salen del DataContainer.
+        /// </summary>
+        void HeroeDelPanel()
+        {
+            if (_panel == Entity.Null || !EntityManager.Exists(_panel) || !SystemAPI.TryGetSingleton<Unity.NetCode.NetworkId>(out var yo))
+                return;
+            foreach (var (soldado, pose, animacion) in SystemAPI.Query<RefRO<SoldadoRed>, RefRO<LocalTransform>, RefRO<AnimacionRed>>().WithAll<ConVisual>())
+                if (soldado.ValueRO.Dueno == yo.Value && soldado.ValueRO.Tipo == SoldadoRed.Heroe)
+                {
+                    EntityManager.SetComponentData(_panel, pose.ValueRO);
+                    EntityManager.SetComponentData(_panel, new HeroLifeComponent { isAlive = (animacion.ValueRO.Banderas & AnimacionRed.Muerto) == 0 });
+                }
+            InterfazRed red = default;
+            bool hay = false;
+            var ids = new Unity.Collections.FixedList32Bytes<int>();
+            var mapa = EntityManager.GetBuffer<SquadIdMapElement>(_datos);
+            var inactivas = EntityManager.GetBuffer<InactiveSquadElement>(_panel);
+            foreach (var (interfaz, reserva) in SystemAPI.Query<RefRO<InterfazRed>, DynamicBuffer<ReservaRed>>().WithAll<Unity.NetCode.GhostOwnerIsLocal>())
+            {
+                red = interfaz.ValueRO;
+                hay = true;
+                mapa.Clear();
+                inactivas.Clear();
+                foreach (var e in reserva)
+                {
+                    if (ids.Length < ids.Capacity) ids.Add(e.Id);
+                    mapa.Add(new SquadIdMapElement { squadId = e.Id, baseSquadID = e.Tropa });
+                    if (e.Id != red.EscuadraActiva)
+                        inactivas.Add(new InactiveSquadElement { squadId = e.Id, baseSquadID = e.Tropa, aliveUnits = e.Vivos, isEliminated = e.Eliminada != 0 });
+                }
+                break;
+            }
+            if (!hay)
+                return;
+            var datos = EntityManager.GetComponentData<DataContainerComponent>(_datos);
+            datos.selectedSquads = ids;
+            EntityManager.SetComponentData(_datos, datos);
+            EntityManager.SetComponentData(_panel, new HeroSquadSelectionComponent { instanceId = red.EscuadraActiva });
+            var espera = EntityManager.GetBuffer<CooldownGroupElement>(_panel);
+            espera.Clear();
+            if (red.EsperaDeCambio > 0f)
+                espera.Add(new CooldownGroupElement { groupId = SquadSwapCooldown.Group, endTime = SystemAPI.Time.ElapsedTime + red.EsperaDeCambio, duration = SquadSwapCooldown.Duration });
+            bool canaliza = red.Canalizando > 0f;
+            if (canaliza && !EntityManager.HasComponent<SquadSwapChannelingComponent>(_panel))
+                EntityManager.AddComponent<SquadSwapChannelingComponent>(_panel);
+            else if (!canaliza && EntityManager.HasComponent<SquadSwapChannelingComponent>(_panel))
+                EntityManager.RemoveComponent<SquadSwapChannelingComponent>(_panel);
+            if (canaliza)
+                EntityManager.SetComponentData(_panel, new SquadSwapChannelingComponent { timer = red.Canalizando, duration = 1f });
+        }
+
+        /// <summary>
         /// Las entidades sueltas donde la interfaz del juego busca sus datos (en el juego de un jugador las crean sistemas
         /// de Game.ECS que aquí no corren). Se crean una vez, fuera de cualquier recorrido: crear una entidad en mitad de
         /// uno lo invalida.
@@ -347,6 +416,12 @@ namespace ConquestTactics.Net
             _interfaz = EntityManager.CreateEntity(typeof(UIHeroBattleDataComponent));
             _datos = EntityManager.CreateEntity(typeof(DataContainerComponent));
             EntityManager.AddBuffer<SquadIdMapElement>(_datos);
+            // El héroe que lee el panel de suministro (SupplyPointUIController.NetworkHero): no es el fantasma (los sistemas de Game.ECS no
+            // corren aquí y una etiqueta IsLocalPlayer en el fantasma despertaría lo del héroe local), sino una entidad con lo que el panel mira.
+            _panel = EntityManager.CreateEntity(typeof(LocalTransform), typeof(HeroLifeComponent), typeof(HeroSquadSelectionComponent), typeof(PlayerInteractionComponent));
+            EntityManager.AddBuffer<InactiveSquadElement>(_panel);
+            EntityManager.AddBuffer<CooldownGroupElement>(_panel);
+            SupplyPointUIController.NetworkHero = _panel;
             _reloj = EntityManager.CreateEntity(typeof(BattleClockComponent));
             _estado = EntityManager.CreateEntity(typeof(MatchStateComponent));
         }

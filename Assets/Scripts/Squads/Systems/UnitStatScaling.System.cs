@@ -4,7 +4,7 @@ using Unity.Entities;
 /// <summary>Initializes each squad once and updates only squads named by level-up events.</summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(SquadSpawningSystem))]
-[UpdateAfter(typeof(SquadProgressionSystem))]
+[UpdateAfter(typeof(BattleBootstrapSystem))]
 public partial class UnitStatScalingSystem : SystemBase
 {
     protected override void OnUpdate()

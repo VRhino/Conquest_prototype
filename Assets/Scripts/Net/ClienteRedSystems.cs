@@ -21,6 +21,12 @@ namespace ConquestTactics.Net
 
         double _proximaOrdenDeBot, _proximaHabilidadDeBot, _proximaFormacionDeBot, _proximaMonturaDeBot = 12d;
         double _ultimaC = -10d, _ultimaX = -10d, _ultimaF10 = -10d, _dentroDesde = -1d;
+        // Los datos de cada InputEvent (la escuadra pedida, la orden y su punto, la ranura, la formación) van en todas las entradas con su último
+        // valor: el aviso llega al servidor en el tick que toca, pero los demás campos son los del último fotograma de ese tick, y uno sin ellos
+        // los mandaría a 0.
+        int _ultimaPedida;
+        byte _ultimoTipoDeOrden, _ultimaRanura, _ultimaFormacion;
+        float3 _ultimoPuntoDeOrden;
         int _ordenesDeBot, _formacionesDeBot;
 
         protected override void OnCreate() => RequireForUpdate<NetworkStreamInGame>();
@@ -56,9 +62,25 @@ namespace ConquestTactics.Net
 
             // El héroe de la batalla de verdad: las mismas teclas que el juego (Mayús corre, clic ataca, Q/E/R/T
             // habilidades, C/X/V seguir, mantener y atacar para la escuadra). El bot empuja y ataca sin parar.
+            // El panel de suministro del juego (F lo abre) pide el cambio de escuadra en el héroe de red que le da el espejo
+            // (EspejoClienteSystem.HeroeDelPanel): se recoge aquí, fuera del recorrido, y viaja en la entrada.
+            int pedida = -1;
+            var delPanel = SupplyPointUIController.NetworkHero;
+            if (delPanel != Entity.Null && EntityManager.Exists(delPanel))
+            {
+                if (EntityManager.HasComponent<SquadSwapRequest>(delPanel))
+                {
+                    pedida = EntityManager.GetComponentData<SquadSwapRequest>(delPanel).newSquadId;
+                    EntityManager.RemoveComponent<SquadSwapRequest>(delPanel);
+                }
+                EntityManager.SetComponentData(delPanel, new PlayerInteractionComponent { interactPressed = Keyboard.current != null && Keyboard.current.fKey.wasPressedThisFrame });
+            }
             foreach (var entrada in SystemAPI.Query<RefRW<EntradaJugador>>().WithAll<GhostOwnerIsLocal>())
             {
-                var e = new EntradaJugador { Mover = mover };
+                if (pedida >= 0) _ultimaPedida = pedida;
+                var e = new EntradaJugador { Mover = mover, EscuadraPedida = _ultimaPedida };
+                if (pedida >= 0)
+                    e.CambiarEscuadra.Set();
                 var teclado = Keyboard.current;
                 if (OpcionesRed.Bot)
                 {
@@ -154,7 +176,12 @@ namespace ConquestTactics.Net
                     }
                     if (teclado.gKey.wasPressedThisFrame)
                         e.Montar.Set();
+                    e.Mirar = MiradaDeLaCamara();
                 }
+                if (e.Orden.IsSet) { _ultimoTipoDeOrden = e.TipoDeOrden; _ultimoPuntoDeOrden = e.PuntoDeOrden; }
+                else { e.TipoDeOrden = _ultimoTipoDeOrden; e.PuntoDeOrden = _ultimoPuntoDeOrden; }
+                if (e.Habilidad.IsSet) _ultimaRanura = e.Ranura; else e.Ranura = _ultimaRanura;
+                if (e.Formacion.IsSet) _ultimaFormacion = e.IndiceDeFormacion; else e.IndiceDeFormacion = _ultimaFormacion;
                 entrada.ValueRW = e;
             }
         }
@@ -169,6 +196,16 @@ namespace ConquestTactics.Net
             if (Physics.Raycast(rayo, out var toque, Mathf.Infinity, ~0, QueryTriggerInteraction.Ignore))
                 return toque.point;
             return new Plane(Vector3.up, Vector3.zero).Raycast(rayo, out float distancia) ? (float3)rayo.GetPoint(distancia) : float3.zero;
+        }
+
+        /// <summary>Hacia dónde mira la cámara, en el plano del mundo: el héroe la encara también quieto. (0,0) sin cámara.</summary>
+        static float2 MiradaDeLaCamara()
+        {
+            var camara = Camera.main;
+            if (camara == null)
+                return float2.zero;
+            Vector3 adelante = Vector3.ProjectOnPlane(camara.transform.forward, Vector3.up);
+            return adelante.sqrMagnitude < 1e-6f ? float2.zero : math.normalizesafe(new float2(adelante.x, adelante.z));
         }
 
         static float2 MovimientoDeBot(float t) => math.normalizesafe(new float2(math.cos(t * 0.5f), math.sin(t)));

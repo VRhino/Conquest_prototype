@@ -2,7 +2,7 @@ using Unity.Entities;
 
 /// <summary>
 /// Base attributes for an individual unit inside a squad.
-/// Values scale with squad level in <see cref="SquadProgressionSystem"/>.
+/// Values scale with squad level in <see cref="UnitStatScalingSystem"/> (the level comes from the engine).
 /// </summary>
 public struct UnitStatsComponent : IComponentData
 {

@@ -62,6 +62,10 @@ namespace ConquestTactics.Net
             foreach (var (pose, entrada, movil) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<EntradaJugador>, RefRO<MandoMovil>>().WithAll<Simulate>())
             {
                 float2 mover = entrada.ValueRO.Mover;
+                float2 mirar = entrada.ValueRO.Mirar;
+                // Mira a donde mira la cámara, también quieto (como el héroe del juego de un jugador, que siempre encara la cámara).
+                if (movil.ValueRO.Activo != 0 && math.lengthsq(mirar) > 1e-4f)
+                    pose.ValueRW.Rotation = quaternion.LookRotationSafe(new float3(mirar.x, 0f, mirar.y), math.up());
                 if (movil.ValueRO.Activo == 0 || math.lengthsq(mover) < 1e-4f)
                     continue;
                 if (math.lengthsq(mover) > 1f) mover = math.normalize(mover);
@@ -76,7 +80,8 @@ namespace ConquestTactics.Net
                     destino = toque.position;
                 }
                 pose.ValueRW.Position = destino;
-                pose.ValueRW.Rotation = quaternion.LookRotationSafe(direccion, math.up());
+                if (math.lengthsq(mirar) <= 1e-4f)
+                    pose.ValueRW.Rotation = quaternion.LookRotationSafe(direccion, math.up());
             }
         }
     }
@@ -188,6 +193,7 @@ namespace ConquestTactics.Net
                 if (entrada.Formacion.IsSet) jugador.ValueRW.Formaciones++;
                 MandarEscuadra(heroe, entrada, posicion);
                 Montura(heroe, entrada, ref jugador.ValueRW);
+                CambiarEscuadra(heroe, entrada);
                 Marcar(heroe, jugador.ValueRO.Jugador);
                 MarcarEscuadra(heroe, jugador.ValueRO.Jugador);
                 Interfaz(heroe, mando);
@@ -200,6 +206,14 @@ namespace ConquestTactics.Net
                         $"[BatallaReal] Héroe del jugador {jugador.ValueRO.Jugador} en ({posicion.x:F1}, {posicion.z:F1}), entrada ({mover.x:F2}, {mover.y:F2}), velocidad {math.length(velocidad):F1}, ataca {entrada.Atacar}, golpes lanzados {golpes} (cuenta de 0 a 255), órdenes recibidas {jugador.ValueRO.Ordenes}, habilidades {jugador.ValueRO.Habilidades}, formaciones {jugador.ValueRO.Formaciones}, montura {EstadoDeMontura(heroe)}{(callado ? ", CALLADO" : "")}"));
                 }
             }
+
+            // Fuera del recorrido: añadir un componente en mitad de uno lo invalida.
+            foreach (var (heroe, peticion) in _cambios)
+            {
+                if (EntityManager.HasComponent<SquadSwapRequest>(heroe)) EntityManager.SetComponentData(heroe, peticion);
+                else EntityManager.AddComponentData(heroe, peticion);
+            }
+            _cambios.Clear();
 
             foreach (var heroe in _huerfanos)
             {
@@ -253,9 +267,10 @@ namespace ConquestTactics.Net
             {
                 if (math.distancesq(poseMando.Position.xz, posicion.xz) > 1e-6f)
                     agente.Warp(poseMando.Position);
+                if (math.lengthsq(mover) > 1e-4f || math.lengthsq(entrada.Mirar) > 1e-4f)
+                    agente.transform.rotation = poseMando.Rotation;
                 if (math.lengthsq(mover) > 1e-4f)
                 {
-                    agente.transform.rotation = poseMando.Rotation;
                     velocidad = new float3(mover.x, 0f, mover.y) * (entrada.Correr != 0 ? movil.VelocidadAlCorrer : movil.Velocidad);
                 }
             }
@@ -316,8 +331,7 @@ namespace ConquestTactics.Net
                 }
             }
             red.Bando = (byte)(SystemAPI.GetComponent<TeamComponent>(heroe).value == Team.TeamB ? 2 : 1);
-            if (SystemAPI.HasBuffer<SquadIdMapElement>(heroe) && SystemAPI.GetBuffer<SquadIdMapElement>(heroe).Length > 0)
-                red.Escuadra = SystemAPI.GetBuffer<SquadIdMapElement>(heroe)[0].baseSquadID;
+            Reserva(heroe, mando, ref red, ahora);
             EnZona(SystemAPI.GetComponent<LocalTransform>(heroe).Position, ref red);
             SystemAPI.SetComponent(mando, red);
             var casillas = SystemAPI.GetBuffer<HabilidadRed>(mando);
@@ -349,6 +363,66 @@ namespace ConquestTactics.Net
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// El cambio de escuadra del jugador: con el héroe en un punto de suministro, se pide como lo pide el panel del juego de un jugador
+        /// (<see cref="SquadSwapRequest"/>); <c>SquadSwapSystem</c> valida lo demás (vivo, sin espera, la escuadra fuera de combate, la zona
+        /// propia y sin disputar) y <c>SquadSwapExecutionSystem</c> lo hace.
+        /// </summary>
+        readonly System.Collections.Generic.List<(Entity heroe, SquadSwapRequest peticion)> _cambios = new System.Collections.Generic.List<(Entity, SquadSwapRequest)>();
+
+        void CambiarEscuadra(Entity heroe, in EntradaJugador entrada)
+        {
+            if (!entrada.CambiarEscuadra.IsSet)
+                return;
+            float3 posicion = SystemAPI.GetComponent<LocalTransform>(heroe).Position;
+            foreach (var (zona, pose) in SystemAPI.Query<RefRO<ZoneTriggerComponent>, RefRO<LocalTransform>>().WithAll<SupplyPointComponent>())
+            {
+                if (math.distancesq(posicion, pose.ValueRO.Position) > zona.ValueRO.radius * zona.ValueRO.radius)
+                    continue;
+                _cambios.Add((heroe, new SquadSwapRequest { newSquadId = entrada.EscuadraPedida, zoneId = zona.ValueRO.zoneId }));
+                Debug.Log($"[BatallaReal] El héroe {heroe} pide cambiar a la escuadra {entrada.EscuadraPedida} en la zona {zona.ValueRO.zoneId}");
+                return;
+            }
+        }
+
+        /// <summary>
+        /// La escuadra activa (la de <see cref="HeroSquadSelectionComponent"/>, no la primera del ticket), el cambio en curso y su espera, y
+        /// la reserva (las del ticket con sus soldados y si cayeron): lo que el panel de suministro lee del héroe local.
+        /// </summary>
+        void Reserva(Entity heroe, Entity mando, ref InterfazRed red, double ahora)
+        {
+            int activa = SystemAPI.HasComponent<HeroSquadSelectionComponent>(heroe) ? SystemAPI.GetComponent<HeroSquadSelectionComponent>(heroe).instanceId : -1;
+            red.EscuadraActiva = activa;
+            if (SystemAPI.HasComponent<SquadSwapChannelingComponent>(heroe))
+            {
+                var c = SystemAPI.GetComponent<SquadSwapChannelingComponent>(heroe);
+                red.Canalizando = c.duration > 0f ? math.max(0.01f, c.timer / c.duration) : 0.01f;
+            }
+            red.EsperaDeCambio = SquadSwapCooldown.Remaining(EntityManager, heroe, ahora);
+            var reserva = SystemAPI.GetBuffer<ReservaRed>(mando);
+            reserva.Clear();
+            if (!SystemAPI.HasBuffer<SquadIdMapElement>(heroe))
+                return;
+            var mapa = SystemAPI.GetBuffer<SquadIdMapElement>(heroe);
+            var inactivas = SystemAPI.HasBuffer<InactiveSquadElement>(heroe) ? SystemAPI.GetBuffer<InactiveSquadElement>(heroe) : default;
+            for (int i = 0; i < mapa.Length; i++)
+            {
+                var e = new ReservaRed { Id = mapa[i].squadId, Tropa = mapa[i].baseSquadID, Vivos = red.Soldados };
+                if (mapa[i].squadId == activa)
+                    red.Escuadra = mapa[i].baseSquadID;
+                if (inactivas.IsCreated)
+                    for (int k = 0; k < inactivas.Length; k++)
+                        if (inactivas[k].squadId == mapa[i].squadId)
+                        {
+                            e.Vivos = inactivas[k].aliveUnits;
+                            e.Eliminada = (byte)(inactivas[k].isEliminated ? 1 : 0);
+                        }
+                reserva.Add(e);
+            }
+            if (red.Escuadra.Length == 0 && mapa.Length > 0)
+                red.Escuadra = mapa[0].baseSquadID;
         }
 
         string EstadoDeMontura(Entity heroe) =>

@@ -43,6 +43,22 @@ public class SupplyPointUIController : MonoBehaviour
     bool _wasChanneling = false;
     HUDController _hud;
 
+    /// <summary>
+    /// En la batalla en red no hay héroe con <see cref="IsLocalPlayer"/> (los sistemas del juego no corren en el cliente): el
+    /// cliente (Conquest.Net) pone aquí una entidad suya con lo que este panel lee del héroe propio (posición, vida, escuadra
+    /// activa, reserva, canalización y espera) y recoge de ella el <see cref="SquadSwapRequest"/> para mandarlo al servidor.
+    /// </summary>
+    public static Entity NetworkHero = Entity.Null;
+
+    /// <summary>El héroe del jugador: el de red si lo hay; si no, el que tiene <see cref="IsLocalPlayer"/>.</summary>
+    Entity LocalHero()
+    {
+        if (NetworkHero != Entity.Null && _em.Exists(NetworkHero))
+            return NetworkHero;
+        var q = _em.CreateEntityQuery(ComponentType.ReadOnly<IsLocalPlayer>(), ComponentType.ReadOnly<HeroLifeComponent>());
+        return q.CalculateEntityCount() == 1 ? q.GetSingletonEntity() : Entity.Null;
+    }
+
     void Start()
     {
         _em = World.DefaultGameObjectInjectionWorld.EntityManager;
@@ -121,24 +137,16 @@ public class SupplyPointUIController : MonoBehaviour
 
         // Get the active squad ID
         int activeSquadId = -1;
-        var heroQuery = _em.CreateEntityQuery(
-            ComponentType.ReadOnly<IsLocalPlayer>(),
-            ComponentType.ReadOnly<HeroSquadSelectionComponent>());
-        if (!heroQuery.IsEmptyIgnoreFilter)
-        {
-            var selection = heroQuery.GetSingleton<HeroSquadSelectionComponent>();
-            activeSquadId = selection.instanceId;
-        }
+        var heroSel = LocalHero();
+        if (heroSel != Entity.Null && _em.HasComponent<HeroSquadSelectionComponent>(heroSel))
+            activeSquadId = _em.GetComponentData<HeroSquadSelectionComponent>(heroSel).instanceId;
 
         // Get eliminated squad IDs
         HashSet<int> eliminatedIds = new();
         Entity heroEntity = Entity.Null;
-        var heroLifeQuery = _em.CreateEntityQuery(
-            ComponentType.ReadOnly<IsLocalPlayer>(),
-            ComponentType.ReadOnly<HeroLifeComponent>());
-        if (!heroLifeQuery.IsEmptyIgnoreFilter)
+        if (LocalHero() != Entity.Null)
         {
-            heroEntity = heroLifeQuery.GetSingletonEntity();
+            heroEntity = LocalHero();
             if (_em.HasBuffer<InactiveSquadElement>(heroEntity))
             {
                 var inactiveBuffer = _em.GetBuffer<InactiveSquadElement>(heroEntity);
@@ -259,11 +267,8 @@ public class SupplyPointUIController : MonoBehaviour
             GetPlayerTeam();
 
         // 1. Find local hero entity and position
-        var heroQuery = _em.CreateEntityQuery(
-            ComponentType.ReadOnly<IsLocalPlayer>(),
-            ComponentType.ReadOnly<LocalTransform>(),
-            ComponentType.ReadOnly<HeroLifeComponent>());
-        if (heroQuery.IsEmptyIgnoreFilter)
+        Entity heroEnt = LocalHero();
+        if (heroEnt == Entity.Null || !_em.HasComponent<LocalTransform>(heroEnt))
         {
             if (_interactPrompt != null) _interactPrompt.SetActive(false);
             ClosePanel();
@@ -271,7 +276,6 @@ public class SupplyPointUIController : MonoBehaviour
             return;
         }
 
-        Entity heroEnt = heroQuery.GetSingletonEntity();
         float3 heroPos = _em.GetComponentData<LocalTransform>(heroEnt).Position;
 
         // 2. Find which supply zone (if any) contains the hero
@@ -381,12 +385,9 @@ public class SupplyPointUIController : MonoBehaviour
         }
 
         // 10. Refresh squad list when active squad changes (after a swap)
-        var selQuery = _em.CreateEntityQuery(
-            ComponentType.ReadOnly<IsLocalPlayer>(),
-            ComponentType.ReadOnly<HeroSquadSelectionComponent>());
-        if (!selQuery.IsEmptyIgnoreFilter)
+        if (_em.HasComponent<HeroSquadSelectionComponent>(heroEnt))
         {
-            int currentActive = selQuery.GetSingleton<HeroSquadSelectionComponent>().instanceId;
+            int currentActive = _em.GetComponentData<HeroSquadSelectionComponent>(heroEnt).instanceId;
             if (currentActive != _lastActiveSquadId)
             {
                 _lastActiveSquadId = currentActive;
@@ -488,14 +489,9 @@ public class SupplyPointUIController : MonoBehaviour
         var data = q.GetSingleton<DataContainerComponent>();
 
         int activeSquadId = -1;
-        var heroQuery = _em.CreateEntityQuery(
-            ComponentType.ReadOnly<IsLocalPlayer>(),
-            ComponentType.ReadOnly<HeroSquadSelectionComponent>());
-        if (!heroQuery.IsEmptyIgnoreFilter)
-        {
-            var selection = heroQuery.GetSingleton<HeroSquadSelectionComponent>();
-            activeSquadId = selection.instanceId;
-        }
+        var heroSel = LocalHero();
+        if (heroSel != Entity.Null && _em.HasComponent<HeroSquadSelectionComponent>(heroSel))
+            activeSquadId = _em.GetComponentData<HeroSquadSelectionComponent>(heroSel).instanceId;
 
         int total = 0;
         foreach (int squadId in data.selectedSquads)
@@ -509,12 +505,9 @@ public class SupplyPointUIController : MonoBehaviour
     /// <summary>Requests a squad swap to the specified squad.</summary>
     private void RequestSwap(int squadId)
     {
-        var heroQuery = _em.CreateEntityQuery(
-            ComponentType.ReadOnly<IsLocalPlayer>(),
-            ComponentType.ReadOnly<HeroLifeComponent>());
-        if (heroQuery.IsEmptyIgnoreFilter)
+        Entity hero = LocalHero();
+        if (hero == Entity.Null)
             return;
-        Entity hero = heroQuery.GetSingletonEntity();
 
         // Block if on cooldown or already channeling
         if (SquadSwapCooldown.IsActive(_em, hero, _em.World.Time.ElapsedTime) ||

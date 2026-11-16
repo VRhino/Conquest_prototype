@@ -88,6 +88,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             {
                 // El rastreador: arriba, al principio de la columna derecha de la plaza, con las misiones del héroe seguidas solas.
                 yield return Esperar(() => raiz.Q("plaza-der")?.Q("rastreador") != null, 10, "el rastreador en la columna derecha");
+                // Lo seguido se guarda con la clave del jugador (servidor, cuenta y héroe).
+                Assert.IsTrue(PlayerPrefs.HasKey("mundo.misiones." + conexion.ClaveDeJugador(conexion.HeroeId)), "lo seguido, con la clave del jugador");
                 Assert.AreEqual(0, raiz.Q("plaza-der").IndexOf(raiz.Q("rastreador")), "encima de lo demás de la columna");
                 yield return Capturar("210_rastreador_plaza");
                 yield return EnTamanos(raiz, "210_rastreador_plaza", () => DentroDelMarco(raiz.Q("rastreador"), "el rastreador"));
@@ -112,21 +114,24 @@ namespace ConquestTactics.Mundo.UI.Tests
                 }
                 else Debug.Log("[Prueba] misiones: ninguna de Facción cumplida que reclamar");
 
-                // Seguir: con el rastreador lleno (3) no sale «Seguir» (solo lo que se puede hacer); se deja de seguir una tuya y se sigue la primera
-                // de la plaza, que entra en el rastreador.
+                // Seguir la primera de la plaza. Con el rastreador lleno (3) no sale «Seguir» (solo lo que se puede hacer): se deja de seguir una tuya
+                // y sale. (Lo seguido se guarda en el equipo por héroe; en la suite, con otro servidor, puede venir de antes: se mira lo que hay.)
                 var dePlaza = Plaza().Misiones.FirstOrDefault(m => m.Estado == V1.EstadoMision.MisionActiva);
-                var seguidaMia = Yo().Misiones.First(m => m.Estado != V1.EstadoMision.MisionReclamada);
-                yield return Clic(Diario().Q<Button>($"diario-item-heroe-{seguidaMia.Id}"));
-                yield return Esperar(() => Diario()?.Q<Button>("mision-seguir")?.text == "Dejar de seguir", 5, "«Dejar de seguir»");
                 if (dePlaza != null)
                 {
                     yield return Clic(Diario().Q<Button>($"diario-item-plaza-{dePlaza.Id}"));
-                    yield return Esperar(() => Diario()?.Q("diario-detalle") != null && Diario().Q<Button>("mision-seguir") == null, 5, "sin «Seguir» con el rastreador lleno");
-                    yield return Clic(Diario().Q<Button>($"diario-item-heroe-{seguidaMia.Id}"));
-                    yield return Clic(Diario().Q<Button>("mision-seguir"));
-                    yield return Clic(Diario().Q<Button>($"diario-item-plaza-{dePlaza.Id}"));
-                    yield return Esperar(() => Diario()?.Q<Button>("mision-seguir")?.text == "Seguir", 5, "«Seguir» con hueco");
-                    yield return Clic(Diario().Q<Button>("mision-seguir"));
+                    yield return Esperar(() => Diario()?.Q<Label>(className: "diario-titulo-texto") != null, 5, "la misión de la plaza abierta");
+                    if (Diario().Q<Button>("mision-seguir") == null)
+                    {
+                        Assert.AreEqual($"Sigues 3/3", Diario().Q<Label>(className: "diario-sigues").text, "sin «Seguir», el rastreador está lleno");
+                        var itemSeguido = Diario().Query<Button>(className: "diario-item").ToList().First(x => x.Q<Label>(className: "diario-seguida") != null);
+                        yield return Clic(itemSeguido);
+                        yield return Esperar(() => Diario()?.Q<Button>("mision-seguir")?.text == "Dejar de seguir", 5, "«Dejar de seguir»");
+                        yield return Clic(Diario().Q<Button>("mision-seguir"));
+                        yield return Clic(Diario().Q<Button>($"diario-item-plaza-{dePlaza.Id}"));
+                    }
+                    yield return Esperar(() => Diario()?.Q<Button>("mision-seguir") != null, 5, "«Seguir» con hueco");
+                    if (Diario().Q<Button>("mision-seguir").text == "Seguir") yield return Clic(Diario().Q<Button>("mision-seguir"));
                     yield return Esperar(() => Diario()?.Q<Button>("mision-seguir")?.text == "Dejar de seguir", 5, "seguida");
                     yield return Esperar(() => raiz.Q("rastreador")?.Q<Button>($"rastreador-plaza-{dePlaza.Id}") != null, 5, "en el rastreador");
                 }

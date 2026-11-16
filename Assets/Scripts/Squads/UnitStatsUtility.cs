@@ -4,7 +4,7 @@ using Unity.Mathematics;
 
 /// <summary>
 /// Centralized utility for applying scaled stats to squad units.
-/// Avoids logic duplication between SquadProgressionSystem and UnitStatScalingSystem.
+/// Stat scaling shared by the squad systems (UnitStatScalingSystem).
 /// </summary>
 public static class UnitStatsUtility
 {

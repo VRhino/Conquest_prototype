@@ -88,7 +88,7 @@ namespace ConquestTactics.Mundo.UI
 
         Seguimiento SeguimientoDe(Heroe h)
         {
-            var clave = "mundo.misiones." + h.Id;
+            var clave = "mundo.misiones." + c.ClaveDeJugador(h.Id);
             if (clave == claveSeguimiento) return seguimiento;
             claveSeguimiento = clave;
             try { seguimiento = JsonConvert.DeserializeObject<Seguimiento>(PlayerPrefs.GetString(clave, "")); }

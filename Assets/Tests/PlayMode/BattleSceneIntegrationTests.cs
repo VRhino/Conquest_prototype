@@ -91,6 +91,7 @@ public partial class BattleSceneIntegrationTests
             : testName.Contains("LanceCavalry") ? "lcv01"
             : testName.Contains("SwordCavalry") ? "scv01"
             : testName.Contains("HorseArchers") ? "hac01"
+            : testName.Contains("FootArchers") ? "arqueros"
             : "sqd01";
         var reserve = SquadDataService.CreateSquadInstance(squadId);
         Assert.That(reserve, Is.Not.Null, "Repository squad sqd01 is missing.");
@@ -527,6 +528,44 @@ public partial class BattleSceneIntegrationTests
 
     [UnityTest]
     public IEnumerator HorseArchersContactsCauseDamage() => VerifyProductionMeleeContacts(false);
+
+    /// <summary>
+    /// Suelto 12 de la batalla: en BattleScene (sin reserva de proyectiles en la escena) los arqueros disparan. El enemigo, a 20 m;
+    /// «atacar» (V) y sale un proyectil de verdad. Con MUNDO_CAPTURAS, una captura de los arqueros disparando.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator ProductionBattleSceneFootArchersShootProjectiles()
+    {
+        yield return new WaitForSeconds(4f);
+        using var enemies = em.CreateEntityQuery(typeof(HeroAITag), typeof(NavMeshAgent), typeof(HeroSquadReference));
+        yield return Until(() => enemies.CalculateEntityCount() > 0, 10f, "Remote hero did not spawn.");
+        Entity enemy = enemies.ToEntityArray(Unity.Collections.Allocator.Temp).ToArray().First(e => em.GetComponentData<TeamComponent>(e).value == Team.TeamB);
+        testWorld.GetExistingSystemManaged<HeroSkillRequestSystem>().Enabled = false;
+        var origin = em.GetComponentData<LocalTransform>(hero).Position;
+        var enemySquad = em.GetComponentData<HeroSquadReference>(enemy).squad;
+        var enemyAgent = em.GetComponentObject<NavMeshAgent>(enemy);
+        Assert.That(enemyAgent.Warp(origin + new float3(0, 0, 20)), Is.True);
+        em.SetComponentData(enemy, LocalTransform.FromPositionRotation(enemyAgent.transform.position, em.GetComponentData<LocalTransform>(enemy).Rotation));
+        foreach (var member in em.GetBuffer<SquadUnitElement>(enemySquad).ToNativeArray(Unity.Collections.Allocator.Temp))
+        {
+            var agent = em.GetComponentObject<NavMeshAgent>(member.Value);
+            Assert.That(agent.Warp(origin + new float3(0, 0, 21)), Is.True);
+            var unitPose = em.GetComponentData<LocalTransform>(member.Value);
+            unitPose.Position = agent.transform.position;
+            em.SetComponentData(member.Value, unitPose);
+        }
+        yield return Press(Key.V);
+        yield return Until(() => UnityEngine.Object.FindObjectsByType<ProjectileController>(FindObjectsSortMode.None).Any(p => p.gameObject.activeInHierarchy),
+            20f, "The archers never released a projectile in BattleScene.");
+        Assert.That(ObjectPoolSystem.Instance, Is.Not.Null, "The projectile pool, created with the first shot.");
+        var folder = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+        if (!string.IsNullOrEmpty(folder))
+        {
+            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForEndOfFrame();
+            System.IO.File.WriteAllBytes(System.IO.Path.Combine(folder, "50_arqueros_disparando_en_battlescene.png"), ScreenCapture.CaptureScreenshotAsTexture().EncodeToPNG());
+        }
+    }
 
     IEnumerator VerifyProductionMeleeContacts(bool atEnemySpawn)
     {

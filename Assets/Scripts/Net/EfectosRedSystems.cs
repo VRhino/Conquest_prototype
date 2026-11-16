@@ -31,35 +31,6 @@ namespace ConquestTactics.Net
     }
 
     /// <summary>
-    /// La reserva de proyectiles del juego (ObjectPoolSystem) y los proyectiles de cada tropa de tiro. En el juego las
-    /// pone la escena (ObjectPoolSystem y RangedCombatBootstrap), pero solo BattleTestScene las tiene: en BattleScene, sin
-    /// reserva, ProjectileSpawnSystem no dispara nada y las peticiones se quedan para siempre. Para la batalla en red se
-    /// crean aquí si faltan, en el servidor y en el cliente.
-    /// </summary>
-    public static class ReservaDeProyectiles
-    {
-        const int PorTropa = 20;
-
-        public static void Asegurar()
-        {
-            if (ObjectPoolSystem.Instance == null)
-                new GameObject("ObjectPoolSystem (red)").AddComponent<ObjectPoolSystem>();
-            int tropas = 0;
-            foreach (var tropa in SquadDataService.GetAllSquads())
-            {
-                if (tropa == null || !tropa.IsRanged)
-                    continue;
-                var tiro = tropa.rangedData;
-                if (string.IsNullOrEmpty(tiro.projectilePoolKey) || tiro.projectilePrefab == null)
-                    continue;
-                ObjectPoolSystem.Instance.WarmUpPool(tiro.projectilePoolKey, tiro.projectilePrefab, PorTropa);
-                tropas++;
-            }
-            Debug.Log($"[Red] Reserva de proyectiles lista para {tropas} tropas de tiro");
-        }
-    }
-
-    /// <summary>
     /// Servidor de la batalla de verdad: recoge los golpes que DamageCalculationSystem deja apuntados para la interfaz y
     /// avisa de cada uno a los jugadores a los que les toca (los suyos, y los que pasan a menos de 40 m de su héroe). En
     /// el juego de un jugador esos apuntes los consume DamageFeedbackPresentationSystem, que en el servidor no corre: sin

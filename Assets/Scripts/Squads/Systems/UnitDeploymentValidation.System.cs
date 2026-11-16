@@ -10,7 +10,7 @@ using Unity.Mathematics;
 /// </summary>
 [UpdateInGroup(typeof(SimulationSystemGroup))]
 [UpdateAfter(typeof(UnitDeathSystem))]
-[UpdateAfter(typeof(SquadProgressionSystem))]
+[UpdateAfter(typeof(BattleBootstrapSystem))]
 public partial class UnitDeploymentValidationSystem : SystemBase
 {
     LocalSaveSystem.PlayerProgressData _progress;

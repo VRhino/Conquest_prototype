@@ -833,3 +833,28 @@ Las cuatro decisiones de §9.9, en `SalidasSystem.cs` (servidor, batalla de verd
 
 Lo que falta: ver una salida y una reaparición en el cliente de ventana (solo se han mirado los registros); la salida a
 media batalla contra el motor de verdad (su parte tiene pruebas propias); y el botón de abandonar.
+
+## 10. Cambiar de escuadra y apuntar con la cámara (2026-11-16)
+
+- **El comando** (`EntradaJugador`) lleva:
+  - `CambiarEscuadra`, un `InputEvent`;
+  - `EscuadraPedida`, el `squadId`;
+  - `Mirar`, la dirección de la cámara en el plano.
+- **Los datos de un `InputEvent` van siempre en el comando.** Netcode entrega el aviso en el tick en que se pulsó, pero los demás campos son
+  los del último comando escrito en ese tick. Si la pantalla va más rápida que la red, el fotograma siguiente los pisa. Por eso el cliente
+  manda en todos los comandos el último dato de cada aviso: la escuadra pedida, el tipo y el punto de la orden, la ranura de la habilidad y
+  la formación.
+- **El servidor** (`MandoSystem`):
+  - con `CambiarEscuadra` y el héroe dentro de un punto de suministro, pone `SquadSwapRequest`, que valida `SquadSwapSystem` como en un
+    jugador (punto propio, sin disputa, sin espera, la escuadra fuera de combate);
+  - en `InterfazRed` manda al dueño la escuadra activa (de `HeroSquadSelectionComponent`, no la primera del ticket), la canalización y la
+    espera, y en el búfer `ReservaRed` las escuadras del ticket con sus vivos y si cayeron.
+- **El cliente** (`EspejoClienteSystem.HeroeDelPanel`):
+  - no hay héroe con `IsLocalPlayer`, así que crea una entidad suya con lo que el panel de suministro mira: la pose del fantasma propio, la
+    vida, la activa, las inactivas, la espera y la canalización;
+  - la pone en `SupplyPointUIController.NetworkHero`, y el panel de siempre funciona sin cambios;
+  - la petición del panel la recoge `EntradaClienteSystem` y viaja en el comando; F marca `interactPressed`;
+  - cuando cambia la activa, avisa al HUD (`squadChangedThisFrame`), como el `SquadChangeEvent` del juego.
+- **Apuntar.** `MovimientoMandoSystem` gira el mando hacia `Mirar` también quieto, y `MandoSystem.Llevar` copia esa rotación al héroe.
+- **La prueba** es `DelMapaALaBatalla`, con un ticket de verdad de dos escuadras elegidas: WASD hasta el punto de suministro, la cámara girada
+  90° (el héroe la encara), F, la otra escuadra con el ratón, «Aceptar», y la activa y el HUD cambian.

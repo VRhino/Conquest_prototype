@@ -26,6 +26,10 @@ namespace ConquestTactics.Mundo.UI
 
         public string Nick { get; private set; }
         public string Servidor => Acceso.Base;
+        /// <summary>Lo que se guarda en el equipo por jugador (lo seguido, los contratos por valorar, los avisos): el servidor, la cuenta y el héroe.
+        /// El id del héroe solo no basta: otro servidor u otra partida en el mismo puede dar el mismo `heroe-N` a otro jugador. El motor no da un
+        /// id de partida; la cuenta lo acota.</summary>
+        public string ClaveDeJugador(string heroeId) => heroeId == null ? null : System.Text.RegularExpressions.Regex.Replace($"{Acceso.Base}-{Nick}-{heroeId}", "[^A-Za-z0-9_-]", "_");
         public bool HayToken => !string.IsNullOrEmpty(token);
         /// <summary>El héroe de la cuenta: el de la `Bienvenida` o, si nació después, el de su ámbito `HEROE`.</summary>
         public string HeroeId
@@ -82,7 +86,7 @@ namespace ConquestTactics.Mundo.UI
             Sesion?.Cerrar();
             var s = new Sesion(Acceso.UrlSesion, token, VersionCliente) { MundoHash = new CacheDeUno(Path.Combine(carpeta, "artefacto")).Guardada() };
             s.AlBienvenida += b => CargarAvisos(b.HasHeroeId ? b.HeroeId : null);
-            s.AlEvento += (_, e) => { if (HeroeId == null) return; Avisos.Procesar(e, HeroeId, s.Almacen, Datos); ContratosPorValorar.Anotar(e, HeroeId, s.Almacen); };
+            s.AlEvento += (_, e) => { if (HeroeId == null) return; Avisos.Procesar(e, HeroeId, s.Almacen, Datos); ContratosPorValorar.Anotar(e, HeroeId, ClaveDeJugador(HeroeId), s.Almacen); };
             Sesion = s;
             try { return await s.Abrir(); }
             catch (ErrorDeSesion e) when (e.Codigo == "token_invalido")
@@ -146,7 +150,7 @@ namespace ConquestTactics.Mundo.UI
 
         void CargarAvisos(string heroeId)
         {
-            archivoAvisos = heroeId == null ? null : Path.Combine(carpeta, $"avisos-{System.Text.RegularExpressions.Regex.Replace(Acceso.Base, "[^A-Za-z0-9]", "_")}-{heroeId}.json");
+            archivoAvisos = heroeId == null ? null : Path.Combine(carpeta, $"avisos-{ClaveDeJugador(heroeId)}.json");
             var json = archivoAvisos != null && File.Exists(archivoAvisos) ? File.ReadAllText(archivoAvisos) : null;
             Avisos.DesdeJson(json);
         }

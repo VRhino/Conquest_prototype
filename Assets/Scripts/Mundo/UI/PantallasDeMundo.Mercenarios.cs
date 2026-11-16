@@ -673,7 +673,7 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>Los contratos acabados que el jugador puede valorar aún (el Rey, o quien lo firmó).</summary>
         List<ContratosPorValorar.Terminado> PorValorar(Heroe h, Faccion f) =>
-            ContratosPorValorar.De(h.Id).Where(t => !t.Valorado && AhoraMs - t.Momento < HorasDeValoracion * 3_600_000
+            ContratosPorValorar.De(c.ClaveDeJugador(h.Id)).Where(t => !t.Valorado && AhoraMs - t.Momento < HorasDeValoracion * 3_600_000
                 && ((f.HasReyId && f.ReyId == h.Id) || string.IsNullOrEmpty(t.FirmadoPorId) || t.FirmadoPorId == h.Id)).ToList();
 
         /// <summary>La cifra de la pestaña: contratos a punto de vencer y valoraciones pendientes (`mercenariosQuePidenAtencion`).</summary>
@@ -697,7 +697,7 @@ namespace ConquestTactics.Mundo.UI
         {
             if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja && !v.styleSheets.Contains(hoja)) v.styleSheets.Add(hoja);
             var a = c.Sesion.Almacen;
-            ContratosPorValorar.Ver(h.Id, f.Contratos);
+            ContratosPorValorar.Ver(f.Contratos);
             var yo = MisPuestos(h);
             string Residencia(string id) => f.Miembros.FirstOrDefault(m => m.HeroeId == id) is MiembroFaccion m && m.HasResidenciaId ? m.ResidenciaId : null;
             // Fuera de la selección quien ya no está o ya no recibe órdenes tuyas.
@@ -731,7 +731,7 @@ namespace ConquestTactics.Mundo.UI
                         b = Dialogo.Boton("", "boton-secundario merc-mini", async () =>
                         {
                             var r = await OrdenDelPanel(new Orden { ValorarMercenario = new OrdenValorarMercenario { MercenarioId = t0.Id, Buena = buena } }, Error, Repintar, b);
-                            if (r?.Resultado == Resultado.OrdenAceptada) { ContratosPorValorar.Valorado(h.Id, t0.Id); Repintar(); }
+                            if (r?.Resultado == Resultado.OrdenAceptada) { ContratosPorValorar.Valorado(c.ClaveDeJugador(h.Id), t0.Id); Repintar(); }
                         });
                         b.name = $"merc-valorar-{(buena ? "buena" : "mala")}-{t.Id}";
                         b.Add(IconosDelMundo.Icono("glifo", buena ? "buena" : "mala", 15));
@@ -1049,40 +1049,41 @@ namespace ConquestTactics.Mundo.UI
         static readonly Dictionary<string, Contrato> vistos = new Dictionary<string, Contrato>();
         static readonly string[] TrabajoPorNumero = { "defender", "escoltar", "atacar", "acompanar", "permanente" };
 
-        public static List<Terminado> De(string heroeId)
+        /// <summary>Los de un jugador: `clave` es `ConexionDeMundo.ClaveDeJugador` (servidor, cuenta y héroe).</summary>
+        public static List<Terminado> De(string clave)
         {
-            try { return JsonConvert.DeserializeObject<List<Terminado>>(PlayerPrefs.GetString(Prefijo + heroeId, "")) ?? new List<Terminado>(); }
+            try { return JsonConvert.DeserializeObject<List<Terminado>>(PlayerPrefs.GetString(Prefijo + clave, "")) ?? new List<Terminado>(); }
             catch (JsonException) { return new List<Terminado>(); }
         }
 
-        static void Guardar(string heroeId, List<Terminado> l, double ahora)
+        static void Guardar(string clave, List<Terminado> l, double ahora)
         {
             l.RemoveAll(t => ahora - t.Momento > Caduca);
-            PlayerPrefs.SetString(Prefijo + heroeId, JsonConvert.SerializeObject(l));
+            PlayerPrefs.SetString(Prefijo + clave, JsonConvert.SerializeObject(l));
             PlayerPrefs.Save();
         }
 
-        public static void Ver(string heroeId, IEnumerable<Contrato> contratos)
+        public static void Ver(IEnumerable<Contrato> contratos)
         {
             foreach (var k in contratos) vistos[k.MercenarioId] = k;
         }
 
-        public static void Valorado(string heroeId, string mercenarioId)
+        public static void Valorado(string clave, string mercenarioId)
         {
-            var l = De(heroeId);
+            var l = De(clave);
             foreach (var t in l.Where(x => x.Id == mercenarioId)) t.Valorado = true;
-            Guardar(heroeId, l, l.Count > 0 ? l.Max(x => x.Momento) : 0);
+            Guardar(clave, l, l.Count > 0 ? l.Max(x => x.Momento) : 0);
         }
 
         /// <summary>Lo llama la conexión con cada hecho: apunta los `mercenarios.terminado`, marca los `valorado` y olvida al recontratado.</summary>
-        public static void Anotar(EventoDominio e, string heroeId, Almacen almacen)
+        public static void Anotar(EventoDominio e, string heroeId, string clave, Almacen almacen)
         {
             if (e.Codigo == null || !e.Codigo.StartsWith("mercenarios.")) return;
             var h = almacen.Buscar(TipoEntidad.Heroe, heroeId)?.Heroe;
-            if (h != null && h.HasFaccionId && almacen.Buscar(TipoEntidad.Faccion, h.FaccionId)?.Faccion is Faccion f) Ver(heroeId, f.Contratos);
+            if (h != null && h.HasFaccionId && almacen.Buscar(TipoEntidad.Faccion, h.FaccionId)?.Faccion is Faccion f) Ver(f.Contratos);
             if (e.Payload == null || !e.Payload.Fields.TryGetValue("mercenario", out var m)) return;
             var id = "heroe-" + (m.HasNumberValue ? ((long)m.NumberValue).ToString() : m.StringValue);
-            var l = De(heroeId);
+            var l = De(clave);
             switch (e.Codigo)
             {
                 case "mercenarios.terminado":
@@ -1100,7 +1101,7 @@ namespace ConquestTactics.Mundo.UI
                 case "mercenarios.contratado": l.RemoveAll(x => x.Id == id); break;
                 default: return;
             }
-            Guardar(heroeId, l, e.EnMs);
+            Guardar(clave, l, e.EnMs);
         }
     }
 }

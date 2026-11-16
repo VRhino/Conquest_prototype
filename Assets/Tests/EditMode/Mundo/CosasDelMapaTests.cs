@@ -32,7 +32,7 @@ namespace ConquestTactics.Mundo.Tests
         static CosasDelMapa.Contexto Jugador(double x, double y, bool soldados = true, TipoColumna tipo = TipoColumna.ColumnaEjercito) => new CosasDelMapa.Contexto
         {
             HeroeId = "heroe-1", FaccionId = "f-1", X = x, Y = y, Lider = true, ConSoldados = soldados,
-            Columna = new Ejercito { Id = "ej-1", Tipo = tipo },
+            Columna = new Ejercito { Id = "ej-1", Tipo = tipo, LiderId = "heroe-1" },
             RadioPuerta = 2, RadioEncuentro = 1, RadioInspeccion = 8, RadioProteccion = 10,
         };
 
@@ -41,7 +41,9 @@ namespace ConquestTactics.Mundo.Tests
         {
             var propia = Cosa(ClaseDeCosa.Plaza, "as-1", 0, 0, 1, "f-1");
             var ajena = Cosa(ClaseDeCosa.Plaza, "as-2", 0, 0, 1, "f-2");
-            CollectionAssert.AreEqual(new[] { "Entrar" }, CosasDelMapa.Acciones(propia, Jugador(1.5, 0)).Select(a => a.Texto));
+            // Con la columna personal se entra; un ejército entra a guarnecerla (paso 11: `entrarEnAsentamiento` lo rechaza con `columna.es_un_ejercito`).
+            CollectionAssert.AreEqual(new[] { "Entrar" }, CosasDelMapa.Acciones(propia, Jugador(1.5, 0, tipo: TipoColumna.ColumnaPersonal)).Select(a => a.Texto));
+            CollectionAssert.AreEqual(new[] { "Entrar con el ejército" }, CosasDelMapa.Acciones(propia, Jugador(1.5, 0)).Select(a => a.Texto));
             Assert.IsEmpty(CosasDelMapa.Acciones(propia, Jugador(5, 0)), "lejos de la puerta no se entra");
             var marchando = Jugador(1.5, 0);
             marchando.EnMarcha = true;

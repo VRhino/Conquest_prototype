@@ -38,6 +38,13 @@ namespace ConquestTactics.Net
         public const byte SiguienteFormacion = 255;
         /// <summary>Montar o desmontar (G).</summary>
         public InputEvent Montar;
+        /// <summary>Cambia a la escuadra <see cref="EscuadraPedida"/> (el <c>squadId</c> de la reserva) en el punto de suministro donde está (el
+        /// panel de suministro del juego, con F): lo valida <c>SquadSwapSystem</c> en el servidor.</summary>
+        public InputEvent CambiarEscuadra;
+        public int EscuadraPedida;
+        /// <summary>Hacia dónde mira la cámara, en el plano del mundo: el héroe mira allí también quieto, como en el juego de un jugador.
+        /// (0,0) = hacia donde se mueve.</summary>
+        public float2 Mirar;
     }
 
     /// <summary>
@@ -75,6 +82,25 @@ namespace ConquestTactics.Net
         /// <summary>Si su héroe está dentro de una zona que se está capturando, y cuánto lleva (0-100).</summary>
         [GhostField] public byte EnZona;
         [GhostField(Quantization = 10)] public float Captura;
+        /// <summary>El cambio de escuadra: la activa (su <c>squadId</c>), cuánto lleva la canalización (0-1; 0 = no canaliza) y lo que falta para
+        /// poder cambiar otra vez (s). La reserva va en <see cref="ReservaRed"/>.</summary>
+        [GhostField] public int EscuadraActiva;
+        [GhostField(Quantization = 100)] public float Canalizando;
+        [GhostField(Quantization = 10)] public float EsperaDeCambio;
+    }
+
+    /// <summary>
+    /// Las escuadras que el héroe del jugador trae a la batalla (las elegidas en la preparación, del ticket), con sus soldados y si ya
+    /// cayeron: lo que el panel de suministro lee del héroe local en el juego de un jugador. Va en su mando y solo le llega a él.
+    /// </summary>
+    [GhostComponent(OwnerSendType = SendToOwnerType.SendToOwner)]
+    [InternalBufferCapacity(4)]
+    public struct ReservaRed : IBufferElementData
+    {
+        [GhostField] public int Id;
+        [GhostField] public FixedString64Bytes Tropa;
+        [GhostField] public int Vivos;
+        [GhostField] public byte Eliminada;
     }
 
     /// <summary>La partida de la batalla de verdad, una sola para todos: el reloj, el estado (un <c>MatchState</c>) y quién gana.</summary>

@@ -23,8 +23,13 @@ public partial class ProjectileSpawnSystem : SystemBase
 
     protected override void OnUpdate()
     {
+        // Sin reserva en la escena (BattleScene no la trae: solo BattleTestScene), se crea con el primer disparo.
         if (ObjectPoolSystem.Instance == null)
-            return;
+        {
+            if (SystemAPI.QueryBuilder().WithAll<ProjectileSpawnRequest>().Build().IsEmpty)
+                return;
+            ReservaDeProyectiles.Asegurar();
+        }
 
         var ecb = _ecbSystem.CreateCommandBuffer();
 

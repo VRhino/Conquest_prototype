@@ -85,6 +85,7 @@ namespace ConquestTactics.Net
             em.AddComponent<MandoMovil>(mando);
             em.AddComponent<InterfazRed>(mando);
             em.AddBuffer<HabilidadRed>(mando);
+            em.AddBuffer<ReservaRed>(mando);
             em.AddComponent<GhostOwner>(mando);
             em.AddComponent<GhostOwnerIsLocal>(mando);
             em.AddComponent<EntradaJugador>(mando);

@@ -498,13 +498,9 @@ namespace ConquestTactics.Mundo.Mapa
             var heroe = id == null ? null : sesion.Almacen.Buscar(TipoEntidad.Heroe, id)?.Heroe;
             if (heroe?.Ubicacion == null) return null;
             var p = new Punto { X = (long)Math.Round(x * 1000), Y = (long)Math.Round(y * 1000) };
-            // Desde dentro de un campamento se sale primero (el servidor aún no acepta salir con destino: `objetivo.no_soportado`) y luego se marcha.
-            if (heroe.Ubicacion.DondeCase == UbicacionHeroe.DondeOneofCase.CampamentoId)
-            {
-                var salida = await Dar(new Orden { SalirDelCampamento = new OrdenSalirDelCampamento { CampamentoId = heroe.Ubicacion.CampamentoId, HeroeId = id } });
-                if (salida?.Resultado != Resultado.OrdenAceptada) return salida;
-            }
-            else if (heroe.Ubicacion.DondeCase != UbicacionHeroe.DondeOneofCase.EjercitoId) return null;
+            // Solo con la columna fuera. Desde dentro de un sitio (campamento, plaza, pueblo o avanzada) el clic no hace nada: se sale con la salida de
+            // siempre (Víctor, 2026-11-16).
+            if (heroe.Ubicacion.DondeCase != UbicacionHeroe.DondeOneofCase.EjercitoId) return null;
             return await Dar(new Orden { MarcharA = new OrdenMarcharA { HeroeId = id, Objetivo = new OrdenMarcharA.Types.Objetivo { Punto = p } } });
         }
 

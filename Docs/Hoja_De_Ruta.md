@@ -130,15 +130,18 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   con el riel casi invisible y el asidero del bronce del marco: un estilo común de `Mundo.uss` que heredan todas las pantallas. Ver
   [`29_Base_Personal`](Arquitectura/29_Base_Personal_2026-11-14.md).
 
-**Pedidos al motor que salgan de la migración:**
+**Pedidos al motor que salgan de la migración** (pedidos al hilo del motor el 2026-11-16: elegir las escuadras en batallas que no son de columna, bajarse sin cancelar, ver cómo acabó al abandonar, el hecho de cierre de la batalla, la tropa del campamento en «Nace tu héroe» y borrar el héroe):
 
 - **Elegir las escuadras al entrar en batallas que no son de columna** (paso 5, 2026-11-14). La defensa por loadout ya vale para el paso de los asedios.
+  Ampliado el 2026-11-16 con la regla de Víctor: en la preparación, **disponibles** (todas las tropas si está en su base; si no, las que lleva) y
+  **elegidas** (lo que cabe en el Liderazgo). El héroe entra siempre con las elegidas y en la batalla solo cambia entre ellas. Hace falta un
+  campo con las escuadras elegidas (en `OrdenUnirseABatalla` o una orden propia) para que el ticket lleve solo esas.
 - **Bajarse de una batalla sin cancelarla** (paso 5, 2026-11-14), y que se cancele si se baja el último. Quien se baja vuelve a su columna tal cual.
 - **Que quien abandona una batalla vea cómo acabó** (paso 5, 2026-11-14): hoy, al salir, deja de combatir y la proyección le quita la batalla y su resultado.
 - **A futuro: la tropa del campamento en «Nace tu héroe»** (paso 6, 2026-11-14, duda 34 del plan, opción b): enseñar al elegir campamento qué tropa recluta cada uno. Hoy el motor no la da antes de nacer; no entra en esta migración.
 - **Un hecho de cierre de la batalla** (paso 5, 2026-11-14) con el botín, lo perdido del carro, la herida y la experiencia, para el informe sin comparar el estado de antes con el de después.
 
-- **Salir del campamento con destino en una sola orden** (paso 2, 2026-11-13): `salirDelCampamento` con `objetivo` contesta `objetivo.no_soportado`, así que el clic en el mapa desde dentro de un campamento manda dos órdenes (salir y luego `marcharA`). Funciona así; con una sola orden sería atómico.
+- ~~**Salir del campamento con destino en una sola orden**~~ (paso 2, 2026-11-13): **no se pide** (Víctor, 2026-11-16). Desde dentro de un sitio, el clic en el mapa no hace nada; se sale con la salida de siempre. Fuera, el clic traza la ruta y mueve.
 - ~~**Guardar el género y el avatar del héroe**~~ (paso 3, 2026-11-13) ✅ resuelto en el motor 358af5ff (contrato 0.25.0, partida nueva): `crearHeroe` guarda el género (`""`, `masculino` o `femenino`) y las cuatro piezas (ids de hasta 32 caracteres; si no, `heroe.aspecto_invalido`) y los devuelve en `Heroe.femenino` y `Heroe.avatar`. Conquest los manda desde el creador de personaje y la prueba los lee de vuelta. El catálogo de piezas sigue en Conquest (`AvatarPartDatabase.asset`).
 - **A futuro, fuera de esta migración: borrar el héroe y crear otro** (paso 3, 2026-11-13, pedido del autor). Hoy el motor tiene un héroe por cuenta y partida y no hay orden de borrarlo. Cuando exista, el selector de personaje recupera en el modo «desde el motor» los botones «Crear héroe» y «Borrar héroe», que ahí quedan ocultos.
 
@@ -161,15 +164,23 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 
 ## 7. Sueltos
 
-- En la escena de un jugador (BattleScene) los arqueros no disparan: falta la reserva de proyectiles (`ObjectPoolSystem`,
-  `RangedCombatBootstrap`); en red la suple `ReservaDeProyectiles.Asegurar()`.
-- En la batalla en red faltan cambiar de escuadra e interactuar, y el héroe apunta con el movimiento, no con la cámara.
+- ~~En la escena de un jugador (BattleScene) los arqueros no disparan~~ ✅ 2026-11-16: `ProjectileSpawnSystem` crea la reserva de
+  proyectiles con el primer disparo en cualquier escena (prueba en BattleScene).
+- ~~En la batalla en red faltan cambiar de escuadra e interactuar, y el héroe apunta con el movimiento~~ ✅ 2026-11-16: F abre el panel de
+  suministro en un punto propio, el cambio va al servidor y el héroe encara la cámara también quieto (prueba en `DelMapaALaBatalla`, con un
+  ticket de dos escuadras elegidas).
+- **El panel de suministro de la batalla** es el de Conquest de antes: diez casillas «+» vacías y «Aceptar» apagado hasta elegir. Va con la
+  interfaz de la batalla, que no se ha copiado del prototipo.
+- ~~**En red, las órdenes, las habilidades y las formaciones** podían llegar con el tipo, la ranura o la formación a 0~~ ✅ 2026-11-16 (Víctor):
+  el aviso del comando llega en su tick, pero el dato era el del último fotograma de ese tick. El cliente manda ahora en cada comando el
+  último dato de cada aviso. Probado en red: la Q, «mantener» y «seguir». Las levas tienen una sola formación: F1-F4 van por el mismo camino.
 - Unity Transport 6.5 en Windows deja sordo al servidor cuando muere el proceso de un cliente en una máquina que contesta
   «puerto cerrado»: tapado con margen (`DriversDeBatalla`), no arreglado. Arreglo de verdad: Unity, o servidor en Linux.
 - Probar con alguien al teclado, en el cliente con ventana, el retardo, las salidas y la reaparición (solo lo han probado
   bots).
 - Un ticket que vuelve con la revisión subida después de una incorporación pierde las incorporaciones que ya habían llegado.
-- La XP y el botín los pone el motor (D6, D7); en Conquest queda quitar el cálculo local cuando se juegue en modo conectado.
+- ~~La XP y el botín los pone el motor (D6, D7); en Conquest queda quitar el cálculo local~~ ✅ 2026-11-16: borrados los sistemas de
+  experiencia de un jugador y sus pruebas (no había botín local).
 
 ## Historial
 

@@ -179,6 +179,9 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var mio = heroes.ToArray().First(e => em.GetComponentData<SoldadoRed>(e).Tipo == SoldadoRed.Heroe && em.GetComponentData<SoldadoRed>(e).Dueno == yo);
                 Assert.IsTrue(VisualSyncUtility.TryGetVisual(cliente, mio, out var figura), "la figura de mi héroe");
                 SoloLoElegido(figura.transform, aspecto, false, "en la batalla");
+                // Suelto 13: entra con las dos elegidas; anda con WASD a un punto de suministro propio, la cámara gira y el héroe la encara
+                // quieto, F abre el panel, elige la otra con el ratón y cambia.
+                yield return CambiarDeEscuadra(cliente, mio, elegida.TropaId);
                 // Los caballos de los héroes (los capitanes de la IA montan): uno que se desplaza montado tiene que llevar el paso en su Animator.
                 yield return CaballosAlPaso(cliente, 15);
 
@@ -338,6 +341,166 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>
+        /// El cambio de escuadra en red (suelto 13), con el teclado y el ratón de verdad (Input System):
+        /// - la reserva que manda el servidor trae las dos elegidas, con la activa;
+        /// - el héroe anda con WASD hasta el punto de suministro propio más cercano;
+        /// - al girar la cámara, quieto, la encara;
+        /// - F abre el panel, se elige la otra escuadra y «Aceptar», y la activa pasa a ser esa.
+        /// </summary>
+        IEnumerator CambiarDeEscuadra(World cliente, Entity mio, string entraCon)
+        {
+            var em = cliente.EntityManager;
+            using var mandos = em.CreateEntityQuery(typeof(InterfazRed), typeof(ReservaRed), typeof(Unity.NetCode.GhostOwnerIsLocal));
+            // GhostOwnerIsLocal se activa y desactiva: sin GetSingleton, la entidad del recorrido.
+            Entity Mando() { using var e = mandos.ToEntityArray(Unity.Collections.Allocator.Temp); return e[0]; }
+            InterfazRed Red() => em.GetComponentData<InterfazRed>(Mando());
+            ReservaRed[] Reserva() => em.GetBuffer<ReservaRed>(Mando()).AsNativeArray().ToArray();
+            yield return Esperar(() => mandos.CalculateEntityCount() == 1 && Reserva().Length == 2, 10, "la reserva con las dos elegidas");
+            var activa = Reserva().First(r => r.Id == Red().EscuadraActiva);
+            var otra = Reserva().First(r => r.Id != Red().EscuadraActiva);
+            Assert.AreEqual(entraCon, activa.Tropa.ToString(), "la activa, la que entró primera");
+            Debug.Log($"[Prueba] reserva: {string.Join(", ", Reserva().Select(r => $"{r.Id} {r.Tropa} ({r.Vivos})"))}; activa {activa.Id}");
+
+            int bando = em.CreateEntityQuery(typeof(DataContainerComponent)).GetSingleton<DataContainerComponent>().teamID;
+            Vector3 Pos() => em.GetComponentData<Unity.Transforms.LocalTransform>(mio).Position;
+            using var zonas = em.CreateEntityQuery(typeof(ZoneTriggerComponent), typeof(SupplyPointComponent), typeof(Unity.Transforms.LocalTransform));
+            var puntos = zonas.ToComponentDataArray<ZoneTriggerComponent>(Unity.Collections.Allocator.Temp).ToArray()
+                .Zip(zonas.ToComponentDataArray<Unity.Transforms.LocalTransform>(Unity.Collections.Allocator.Temp).ToArray(), (z, t) => (z, p: (Vector3)t.Position))
+                .Where(x => x.z.teamOwner == bando).ToList();
+            Assert.IsNotEmpty(puntos, $"un punto de suministro del bando {bando}");
+            var meta = puntos.OrderBy(x => Vector3.Distance(x.p, Pos())).First().p;
+            Debug.Log($"[Prueba] al punto de suministro en {meta} desde {Pos()} ({Vector3.Distance(meta, Pos()):0.0} m)");
+
+            var entrada = UnityEngine.InputSystem.InputSystem.settings;
+            var fondo = entrada.backgroundBehavior;
+            var editorAntes = entrada.editorInputBehaviorInPlayMode;
+            entrada.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
+            entrada.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var teclado = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+            var otros = UnityEngine.InputSystem.InputSystem.devices.OfType<UnityEngine.InputSystem.Mouse>().Where(m => m.enabled).ToList();
+            foreach (var m in otros) UnityEngine.InputSystem.InputSystem.DisableDevice(m);
+            var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
+            void Teclas(params UnityEngine.InputSystem.Key[] k) =>
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(teclado, new UnityEngine.InputSystem.LowLevel.KeyboardState(k));
+            try
+            {
+                teclado.MakeCurrent();
+                raton.MakeCurrent();
+                // WASD respecto a la cámara, como el jugador: hasta 3,8 m del centro (el aviso de F sale a 4; el poste no deja llegar al centro).
+                var inicio = Pos();
+                IEnumerator Andar(Vector3 hacia, float hasta, string fallo)
+                {
+                    float fin = Time.realtimeSinceStartup + 40f;
+                    while (Vector3.ProjectOnPlane(hacia - Pos(), Vector3.up).magnitude > hasta)
+                    {
+                        Assert.Less(Time.realtimeSinceStartup, fin, fallo);
+                        var camara = Camera.main.transform;
+                        var falta = Vector3.ProjectOnPlane(hacia - Pos(), Vector3.up).normalized;
+                        float alante = Vector3.Dot(falta, Vector3.ProjectOnPlane(camara.forward, Vector3.up).normalized);
+                        float derecha = Vector3.Dot(falta, Vector3.ProjectOnPlane(camara.right, Vector3.up).normalized);
+                        var k = new System.Collections.Generic.List<UnityEngine.InputSystem.Key> { UnityEngine.InputSystem.Key.LeftShift };
+                        if (alante > 0.38f) k.Add(UnityEngine.InputSystem.Key.W);
+                        if (alante < -0.38f) k.Add(UnityEngine.InputSystem.Key.S);
+                        if (derecha > 0.38f) k.Add(UnityEngine.InputSystem.Key.D);
+                        if (derecha < -0.38f) k.Add(UnityEngine.InputSystem.Key.A);
+                        Teclas(k.ToArray());
+                        yield return null;
+                    }
+                    Teclas();
+                }
+                yield return Andar(meta, 3.8f, "el héroe no llegó al punto de suministro");
+                Debug.Log($"[Prueba] en el punto de suministro: {Vector3.Distance(meta, Pos()):0.0} m");
+
+                // Apuntar con la cámara: quieto, se gira la cámara 90° y el héroe acaba mirando hacia donde mira ella.
+                var giro = HeroCameraController.Instance;
+                Assert.IsNotNull(giro, "la cámara del héroe");
+                giro.SetOrbitHeading(Camera.main.transform.eulerAngles.y + 90f);
+                float Encara()
+                {
+                    var adelante = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;
+                    var heroe = em.GetComponentData<Unity.Transforms.LocalTransform>(mio).Forward();
+                    return Vector3.Dot(adelante, Vector3.ProjectOnPlane(heroe, Vector3.up).normalized);
+                }
+                yield return Esperar(() => Encara() > 0.95f, 5, "el héroe quieto, mirando hacia donde mira la cámara");
+                Debug.Log($"[Prueba] quieto, encara la cámara (coseno {Encara():0.000})");
+
+                // F abre el panel; el ratón elige la otra escuadra y acepta.
+                Teclas(UnityEngine.InputSystem.Key.F);
+                yield return null;
+                yield return null;
+                Teclas();
+                yield return Esperar(() => DialogueUIState.IsDialogueOpen, 5, "el panel de suministro con F");
+                var panel = UnityEngine.Object.FindAnyObjectByType<SupplyPointUIController>();
+                SquadOptionUI Opcion() => panel.GetComponentsInChildren<SquadOptionUI>().FirstOrDefault(o => o.gameObject.name == otra.Id.ToString());
+                yield return Esperar(() => Opcion() != null, 5, "la otra escuadra en el panel");
+                Assert.AreEqual(1, panel.GetComponentsInChildren<SquadOptionUI>().Length, "solo la otra elegida: la activa no sale");
+                yield return CapturarPantalla("45f_panel_de_suministro");
+                yield return ClicUGUI(raton, Opcion().GetComponentInChildren<UnityEngine.UI.Button>());
+                var aceptar = (UnityEngine.UI.Button)typeof(SupplyPointUIController).GetField("_acceptButton", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
+                yield return Esperar(() => aceptar.interactable, 5, "«Aceptar» con la escuadra elegida");
+                yield return ClicUGUI(raton, aceptar);
+                yield return Esperar(() => Red().EscuadraActiva == otra.Id && Red().Escuadra.ToString() == otra.Tropa.ToString(), 15, "la otra escuadra, activa");
+                Assert.IsFalse(DialogueUIState.IsDialogueOpen, "el panel, cerrado tras aceptar");
+                Assert.AreEqual(otra.Tropa.ToString(), em.CreateEntityQuery(typeof(DataContainerComponent)).GetSingleton<DataContainerComponent>().selectedSquadBaseID.ToString(), "la interfaz, con la nueva");
+                Debug.Log($"[Prueba] cambio de escuadra: {activa.Tropa} → {otra.Tropa}; espera {Red().EsperaDeCambio:0.0} s");
+                var nombre = (TMPro.TMP_Text)typeof(SquadSectionController).GetField("_squadNameText", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .GetValue(UnityEngine.Object.FindAnyObjectByType<SquadSectionController>());
+                var nueva = SquadDataService.GetSquadById(otra.Tropa.ToString()).squadName;
+                yield return Esperar(() => nombre.text == nueva, 5, $"«{nueva}» en el HUD");
+                yield return new WaitForSecondsRealtime(2f);
+                yield return CapturarPantalla("45g_tras_el_cambio_de_escuadra");
+
+                // El dato de cada aviso del comando llega entero aunque la pantalla vaya más rápida que la red (antes llegaba a 0: la Q era el
+                // golpe básico y «mantener» era «seguir»). Las levas tienen una sola formación: F1-F4 van por el mismo camino y no se ven aquí.
+                IEnumerator Tecla(UnityEngine.InputSystem.Key k)
+                {
+                    Teclas(k);
+                    yield return null;
+                    yield return null;
+                    Teclas();
+                    yield return null;
+                }
+                var q = 0; // HabilidadRed empieza en la Q (UIBattleDataSystem.WriteSkills: casilla = ranura - Q)
+                Assert.AreNotEqual(0, em.GetBuffer<HabilidadRed>(Mando())[q].Id, "una habilidad en la Q");
+                yield return Tecla(UnityEngine.InputSystem.Key.Q);
+                yield return Esperar(() => em.GetBuffer<HabilidadRed>(Mando())[q].Queda > 0f, 5, "la Q lanzada en el servidor (su recarga corre)");
+                Debug.Log($"[Prueba] la Q en red: recarga {em.GetBuffer<HabilidadRed>(Mando())[q].Queda:0.0} s");
+
+                int yo = em.CreateEntityQuery(typeof(Unity.NetCode.NetworkId)).GetSingleton<Unity.NetCode.NetworkId>().Value;
+                using var soldados = em.CreateEntityQuery(typeof(SoldadoRed), typeof(Unity.Transforms.LocalTransform));
+                float DeLaEscuadra()
+                {
+                    var s = soldados.ToComponentDataArray<SoldadoRed>(Unity.Collections.Allocator.Temp).ToArray();
+                    var p = soldados.ToComponentDataArray<Unity.Transforms.LocalTransform>(Unity.Collections.Allocator.Temp).ToArray();
+                    var mios = Enumerable.Range(0, s.Length).Where(i => s[i].Tipo == SoldadoRed.Soldado && s[i].Dueno == yo).Select(i => (Vector3)p[i].Position).ToList();
+                    if (mios.Count == 0) return 0f;
+                    var centro = mios.Aggregate(Vector3.zero, (a, b) => a + b) / mios.Count;
+                    return Vector3.ProjectOnPlane(centro - Pos(), Vector3.up).magnitude;
+                }
+                // X: «mantener» en el punto del ratón, puesto sobre el héroe (en el punto de suministro). El héroe vuelve por donde vino (campo abierto); la
+                // escuadra se queda.
+                UnityEngine.InputSystem.InputSystem.QueueStateEvent(raton, new UnityEngine.InputSystem.LowLevel.MouseState { position = (Vector2)Camera.main.WorldToScreenPoint(Pos()) });
+                yield return null;
+                yield return Tecla(UnityEngine.InputSystem.Key.X);
+                yield return Andar(inicio, Vector3.Distance(inicio, meta) - 18f, "el héroe no se apartó del punto de suministro");
+                yield return Esperar(() => DeLaEscuadra() > 12f, 6, "la escuadra mantiene la posición mientras el héroe se aparta");
+                Debug.Log($"[Prueba] «mantener» en red: la escuadra a {DeLaEscuadra():0.0} m del héroe");
+                // C: «seguir»; vuelve con el héroe.
+                yield return Tecla(UnityEngine.InputSystem.Key.C);
+                yield return Esperar(() => DeLaEscuadra() < 8f, 15, "la escuadra vuelve a seguir al héroe");
+                Debug.Log($"[Prueba] «seguir» en red: la escuadra a {DeLaEscuadra():0.0} m del héroe");
+            }
+            finally
+            {
+                UnityEngine.InputSystem.InputSystem.RemoveDevice(teclado);
+                UnityEngine.InputSystem.InputSystem.RemoveDevice(raton);
+                foreach (var m in otros) UnityEngine.InputSystem.InputSystem.EnableDevice(m);
+                entrada.backgroundBehavior = fondo;
+                entrada.editorInputBehaviorInPlayMode = editorAntes;
+            }
+        }
+
+        /// <summary>
         /// Durante `segundos`, cada héroe montado que se desplaza (su espejo avanza) tiene que tener el paso del caballo en su Animator
         /// (`MountGaitBlend` > 0): si no, el caballo se desliza tieso. Contra bandidos puede no montar nadie: entonces solo lo dice.
         /// </summary>
@@ -395,6 +558,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             var editorAntes = entrada.editorInputBehaviorInPlayMode;
             entrada.backgroundBehavior = UnityEngine.InputSystem.InputSettings.BackgroundBehavior.IgnoreFocus;
             entrada.editorInputBehaviorInPlayMode = UnityEngine.InputSystem.InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            // Los demás ratones, apagados durante el clic: con dos, el módulo de la interfaz sigue al otro (como en TuBasePorDentro).
+            var otros = UnityEngine.InputSystem.InputSystem.devices.OfType<UnityEngine.InputSystem.Mouse>().Where(m => m.enabled).ToList();
+            foreach (var m in otros) UnityEngine.InputSystem.InputSystem.DisableDevice(m);
             var raton = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Mouse>();
             try
             {
@@ -415,6 +581,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             finally
             {
                 UnityEngine.InputSystem.InputSystem.RemoveDevice(raton);
+                foreach (var m in otros) UnityEngine.InputSystem.InputSystem.EnableDevice(m);
                 entrada.backgroundBehavior = fondoAntes;
                 entrada.editorInputBehaviorInPlayMode = editorAntes;
                 if (doc != null) doc.panelSettings.targetTexture = textura;

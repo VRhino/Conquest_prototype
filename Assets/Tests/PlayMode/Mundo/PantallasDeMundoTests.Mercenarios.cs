@@ -183,7 +183,11 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return EnTamanos(raiz, "202_valorar", () => DentroDelMarco(Faccionv(), "valorar"));
                 yield return Clic(Faccionv().Q<Button>("merc-valorar-buena-" + botId));
                 yield return Esperar(() => Faccionv()?.Q<Button>("merc-valorar-buena-" + botId) == null, 10, "valorado");
-                Assert.IsTrue(ContratosPorValorar.De(conexion.HeroeId).Any(t => t.Id == botId && t.Valorado), "guardado como valorado en el equipo");
+                // Guardado en el equipo con la clave del jugador (servidor, cuenta y héroe), no solo con el id del héroe: otro servidor u otra
+                // partida pueden dar el mismo `heroe-N` a otro.
+                var clave = conexion.ClaveDeJugador(conexion.HeroeId);
+                StringAssert.Contains(conexion.Nick, clave, "la cuenta en la clave");
+                Assert.IsTrue(ContratosPorValorar.De(clave).Any(t => t.Id == botId && t.Valorado), "guardado como valorado en el equipo");
                 // Los avisos de `mercenarios.*` (llegan con su delta: se esperan).
                 for (var f = Time.realtimeSinceStartup + 10; !conexion.Avisos.Historial.Any(a => a.Titulo == "Mercenarios") && Time.realtimeSinceStartup < f;) yield return null;
                 Debug.Log("[Prueba] mercenarios: avisos " + string.Join(" / ", conexion.Avisos.Historial.Select(a => $"{a.Titulo}: {a.Texto}")));
