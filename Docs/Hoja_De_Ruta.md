@@ -177,7 +177,7 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 | **Norma para los modelos propios:** mismo estilo y detalle que Synty, sobre su esqueleto, y detrás de los mismos ids para no tocar código | ⬜ |
 | **Terreno del ticket:** la batalla en el sitio del mundo (hash del artefacto, centro, paquete de relieve; `06_Contrato_de_Mundo.md` §4 y §8). Va después del mapa de mundo nuevo | ⬜ |
 | **CPU del cliente:** con 130 modelos, la red son 13 puntos de 180 y el resto es animar (~83) y pintar (~84). Menos Animators para los lejanos o animación por GPU | ⬜ |
-| **Interfaz de Conquest** para el aviso de conexión y el botón de abandonar (hoy una caja provisional y F10 dos veces), junto con el panel de suministro (§7): no hay interfaz de batalla en el prototipo que calcar (Víctor, 2026-11-16) | ⬜ |
+| ~~**Interfaz de Conquest** para el aviso de conexión y el botón de abandonar~~ ✅ 2026-11-16: el aviso es una banda UGUI arriba con la cuenta atrás de la reconexión; se abandona desde las Opciones (Esc), con su confirmación; fuera F10 y el botón aparte (Víctor, 14) | ✅ |
 | **Marco de bronce de la interfaz de fuera de la batalla** (UI Toolkit, `Assets/Resources/MundoUI/Mundo.uss`): USS no tiene degradados ni sombras, así que hoy la placa va solo con bordes y sin dentículos. Arte en 9-slice para la placa, el botón de oro y la moldura de dentículo, como la guía «bronce y arcilla» (decisión del 2026-11-13) | ⬜ |
 
 ## 6. Decisiones pendientes del autor ❓
@@ -205,9 +205,8 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 - ~~En la batalla en red faltan cambiar de escuadra e interactuar, y el héroe apunta con el movimiento~~ ✅ 2026-11-16: F abre el panel de
   suministro en un punto propio, el cambio va al servidor y el héroe encara la cámara también quieto (prueba en `DelMapaALaBatalla`, con un
   ticket de dos escuadras elegidas).
-- **El panel de suministro de la batalla** es el de Conquest de antes: diez casillas «+» vacías y «Aceptar» apagado hasta elegir. El prototipo
-  no tiene interfaz de batalla (Víctor, 2026-11-16): se arregla sobre la de Conquest, con sus reglas (solo lo que se puede hacer, sin casillas
-  vacías ni botones apagados), junto con el aviso de conexión y abandonar.
+- ~~**El panel de suministro de la batalla**~~ ✅ 2026-11-16: solo se eligen las escuadras que se pueden sacar; los huecos vacíos se ven, apagados y sin «+» (la zona de tropa nunca queda vacía); «Aceptar» sale al elegir
+  una (Víctor, 15a), no apagado; sin escuadras que sacar, ni el aviso de F ni el panel.
 - ~~**En red, las órdenes, las habilidades y las formaciones** podían llegar con el tipo, la ranura o la formación a 0~~ ✅ 2026-11-16 (Víctor):
   el aviso del comando llega en su tick, pero el dato era el del último fotograma de ese tick. El cliente manda ahora en cada comando el
   último dato de cada aviso. Probado en red: la Q, «mantener» y «seguir». Las levas tienen una sola formación: F1-F4 van por el mismo camino.

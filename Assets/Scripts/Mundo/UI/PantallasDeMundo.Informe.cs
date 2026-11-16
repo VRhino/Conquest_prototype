@@ -70,23 +70,22 @@ namespace ConquestTactics.Mundo.UI
         float finVistoEn = -1f;
         bool yendoAlInforme;
 
-        /// <summary>Al empezar la batalla: el botón «Abandonar la batalla» encima de BattleScene.</summary>
+        /// <summary>Al empezar la batalla. Abandonarla va en las Opciones (Esc), con su confirmación (Víctor, 2026-11-16).</summary>
         void AlEntrarEnLaBatalla(string batallaId)
         {
             finVistoEn = -1f;
             yendoAlInforme = false;
             capaDeBatalla?.RemoveFromHierarchy();
-            capaDeBatalla = Dialogo.Caja("batalla-capa");
-            capaDeBatalla.pickingMode = PickingMode.Ignore;
-            var abandonar = Dialogo.Boton("Abandonar la batalla", "boton-secundario batalla-abandonar", async () =>
-            {
-                if (!await dialogo.Abrir("Tu héroe sale de la batalla con las bajas que lleve y queda herido un rato.", "¿Abandonar la batalla?", "Abandonar", "Seguir", true)) return;
-                var cliente = MundoDeRed("ClientWorld");
-                if (cliente != null) ReconexionClienteSystem.Abandonar(cliente.EntityManager);
-            });
-            abandonar.name = "batalla-abandonar";
-            capaDeBatalla.Add(abandonar);
-            capaEncima.Add(capaDeBatalla);
+            capaDeBatalla = null;
+        }
+
+        /// <summary>Abandonar la batalla en curso, con su confirmación: el héroe sale con sus bajas y queda herido.</summary>
+        async void AbandonarLaBatalla()
+        {
+            if (!await dialogo.Abrir("Tu héroe sale de la batalla con las bajas que lleve y queda herido un rato.", "¿Abandonar la batalla?", "Abandonar", "Seguir", true)) return;
+            CerrarOpciones();
+            var cliente = MundoDeRed("ClientWorld");
+            if (cliente != null) ReconexionClienteSystem.Abandonar(cliente.EntityManager);
         }
 
         static World MundoDeRed(string nombre)
@@ -112,6 +111,7 @@ namespace ConquestTactics.Mundo.UI
         async System.Threading.Tasks.Task IrAlInforme(string motivo)
         {
             yendoAlInforme = true;
+            CerrarOpciones();
             var id = BatallaEnCurso;
             Debug.Log($"[Batalla] {id}: al informe{(motivo != null ? $" ({motivo})" : "")}");
             capaDeBatalla?.RemoveFromHierarchy();

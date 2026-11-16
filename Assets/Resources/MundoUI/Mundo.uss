@@ -443,8 +443,6 @@ Button { margin: 0; }
 .informe-recuadro--malo .informe-recuadro-fuerte { color: #e08a6f; }
 .informe-botones { justify-content: flex-end; margin-top: 12px; flex-shrink: 0; }
 /* Encima de BattleScene: «Abandonar la batalla», arriba a la derecha. */
-.batalla-capa { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
-.batalla-abandonar { position: absolute; right: 16px; top: 14px; padding: 6px 12px; font-size: 13px; background-color: rgba(20, 15, 10, 0.75); }
 
 /* La barra del jugador (BronzeAgeClient: ui/barraJugador.ts, .jugador-boton): iconos redondos en oro; los demás botones, en un menú. */
 .barra-icono { width: 40px; height: 40px; margin-left: 8px; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 20px; background-color: rgba(20, 16, 11, 0.88); align-items: center; justify-content: center; }

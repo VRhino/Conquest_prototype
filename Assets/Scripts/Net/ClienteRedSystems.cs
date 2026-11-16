@@ -20,7 +20,7 @@ namespace ConquestTactics.Net
         const double DobleToque = 0.5d;
 
         double _proximaOrdenDeBot, _proximaHabilidadDeBot, _proximaFormacionDeBot, _proximaMonturaDeBot = 12d;
-        double _ultimaC = -10d, _ultimaX = -10d, _ultimaF10 = -10d, _dentroDesde = -1d;
+        double _ultimaC = -10d, _ultimaX = -10d, _dentroDesde = -1d;
         // Los datos de cada InputEvent (la escuadra pedida, la orden y su punto, la ranura, la formación) van en todas las entradas con su último
         // valor: el aviso llega al servidor en el tick que toca, pero los demás campos son los del último fotograma de ese tick, y uno sin ellos
         // los mandaría a 0.
@@ -32,7 +32,7 @@ namespace ConquestTactics.Net
         protected override void OnCreate() => RequireForUpdate<NetworkStreamInGame>();
 
         /// <summary>
-        /// Abandonar la batalla: F10 dos veces en menos de 3 s (la primera avisa). El bot de prueba, con <c>-abandonarA</c>.
+        /// El bot de prueba abandona con <c>-abandonarA</c>. El jugador, desde las Opciones de la batalla (Esc), con su confirmación.
         /// </summary>
         void Abandono()
         {
@@ -44,13 +44,6 @@ namespace ConquestTactics.Net
                     ReconexionClienteSystem.Abandonar(EntityManager);
                 return;
             }
-            if (Keyboard.current == null || !Keyboard.current.f10Key.wasPressedThisFrame)
-                return;
-            if (ahora - _ultimaF10 <= 3d)
-                ReconexionClienteSystem.Abandonar(EntityManager);
-            else
-                ReconexionClienteSystem.Decir("Pulsa F10 otra vez para abandonar la batalla", 3d);
-            _ultimaF10 = ahora;
         }
 
         protected override void OnUpdate()

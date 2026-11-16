@@ -99,6 +99,10 @@ public class TroopsViewerController : MonoBehaviour
 
     #region Initialization
 
+    /// <summary>Los huecos vacíos se ven (la zona de tropa nunca queda vacía), pero apagados: sin «+» ni clic. El panel de suministro de la batalla.
+    /// </summary>
+    public bool HuecosApagados { get; set; }
+
     public void initialize(int itemPerPage = 5)
     {
         itemsPerPage = itemPerPage;
@@ -211,6 +215,20 @@ public class TroopsViewerController : MonoBehaviour
 
         if (itemPrefabPlaceHolder != null && itemContainerPlaceholder != null)
         {
+            if (HuecosApagados)
+            {
+                // Los de la escena, o los del prefab si no hay ninguno (sin crecer en cada repintado); todos apagados: sin clic y sin lo de dentro
+                // (el «+»), el marco más tenue.
+                if (itemContainerPlaceholder.childCount == 0)
+                    for (int i = 0; i < itemsPerPage; i++) Instantiate(itemPrefabPlaceHolder, itemContainerPlaceholder);
+                foreach (Transform hueco in itemContainerPlaceholder)
+                {
+                    if (hueco.GetComponent<Button>() is Button b) b.enabled = false;
+                    foreach (Transform hijo in hueco) hijo.gameObject.SetActive(false);
+                    if (hueco.GetComponent<UnityEngine.UI.Graphic>() is UnityEngine.UI.Graphic marco && marco.color.a > 0.5f) { var c = marco.color; c.a *= 0.4f; marco.color = c; }
+                }
+                return;
+            }
             int existingPlaceholders = itemContainerPlaceholder.childCount;
             if (existingPlaceholders == itemsPerPage) return;
             //llenar el placeholder container

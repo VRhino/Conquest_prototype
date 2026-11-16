@@ -11,7 +11,9 @@
     "Unity.Burst",
     "Unity.InputSystem",
     "Game.ECS",
-    "Conquest.Mundo"
+    "Conquest.Mundo",
+    "UnityEngine.UI",
+    "Unity.TextMeshPro"
   ],
   "allowUnsafeCode": false,
   "autoReferenced": true

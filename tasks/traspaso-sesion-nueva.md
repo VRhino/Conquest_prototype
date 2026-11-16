@@ -137,9 +137,13 @@
   - El ticket con la revisión subida no pierde incorporaciones: el motor las reenvía todas con el ticket nuevo.
   - Prueba: `TuDefensaDeTuPlaza` (con lanzador), el ejemplo de Víctor: 14 de Liderazgo, granjeros y mineros dentro, la milicia fuera y sin salir
     en la batalla. La plaza recién fundada está protegida un día de mundo: la prueba adelanta el reloj hasta `protegida_hasta_ms`.
-- **Sigue, por el orden de Víctor:** la interfaz de Conquest del aviso de conexión y abandonar con el panel de suministro; las clases y los
-  objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la predicción con choque contra los soldados (6c). Sin capturas
-  en esta serie (Víctor, 2026-11-16).
+- **La interfaz de la batalla (hecha y sin commit; `tasks/interfaz-batalla-plan.md`):**
+  - el aviso de conexión, una banda UGUI (`AvisoDeRed`) con la cuenta atrás de la reconexión (`QuedaParaPerderla`); prueba `AvisoDeRedTests`;
+  - abandonar, en las Opciones (Esc en la batalla, `EscEnLaBatalla`), con su confirmación; fuera F10 y el botón de la capa de batalla;
+  - el panel de suministro con los huecos apagados y sin «+» (`TroopsViewerController.HuecosApagados`), «Aceptar» solo con una elegida y sin aviso de F si no hay qué
+    sacar. `DelMapaALaBatalla` lo comprueba y abandona por las Opciones.
+- **Sigue, por el orden de Víctor:** las clases y los objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la
+  predicción con choque contra los soldados (6c). Sin capturas en esta serie (Víctor, 2026-11-16).
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)
 
@@ -202,6 +206,10 @@
 - **Scroll**: ninguno si cabe; si no, la barra estrecha común.
 - **Iconos**: los del prototipo. Cada Twemoji nuevo necesita el permiso escrito de Víctor, directo en el hilo. Si falta alguno, pon el más
   parecido que haya y apúntalo.
+- **Cuándo pasar qué pruebas** (Víctor, 2026-11-16):
+  - en un cambio pequeño, solo las pruebas de lo que toca (por ejemplo, las batallas si se toca la batalla);
+  - la suite completa en dos lotes y las batallas, justo antes de cada commit. No hay ningún gancho de git que la lance: los ganchos de
+    `.git/hooks` son los de Git LFS y el de graphify.
 - **Pruebas**:
   - las nuevas de cada tanda, con ratón y teclado, a los cuatro tamaños y con capturas (`MUNDO_CAPTURAS` con una carpeta) junto al
     prototipo;

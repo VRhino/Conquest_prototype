@@ -44,12 +44,15 @@ namespace ConquestTactics.Net
         /// <summary>Lo que se espera a que vuelva la conexión antes de darla por perdida (lo que el servidor guarda el héroe a la IA, Doc 5.15.1).</summary>
         public const double SinVuelta = 60d;
         double _fueraDesde = -1d;
+        /// <summary>Segundos que quedan para dar la conexión por perdida mientras se reconecta; negativo si no se está reconectando.</summary>
+        public static double QuedaParaPerderla { get; private set; } = -1d;
 
         /// <summary>Lo estático como al arrancar el proceso, para entrar en otra batalla sin salir de él (desde el mundo).</summary>
         public static void Reiniciar()
         {
             Acabada = false;
             Perdida = false;
+            QuedaParaPerderla = -1d;
             Aviso = "";
             Reconexiones = 0;
             SinNoticias = false;
@@ -144,6 +147,7 @@ namespace ConquestTactics.Net
                 Perdida = (_noInsistir && !hayConexion) || ahora - _fueraDesde > SinVuelta;
             }
             else _fueraDesde = -1d;
+            QuedaParaPerderla = _fueraDesde >= 0d && !_noInsistir ? System.Math.Max(0d, SinVuelta - (ahora - _fueraDesde)) : -1d;
 
             if (Aviso.Length == 0 && ahora < _recadoHasta)
                 Aviso = _recado;
@@ -178,26 +182,63 @@ namespace ConquestTactics.Net
 
     /// <summary>
     /// El aviso de conexión en pantalla.
-    /// ponytail: una caja de OnGUI arriba y en el centro; el aviso de verdad llega con la interfaz del juego.
+    /// Una banda UGUI arriba en el centro, con el panel oscuro y el texto del HUD de la batalla (el prototipo no tiene interfaz de batalla:
+    /// Víctor, 2026-11-16). Mientras se reconecta, lleva la cuenta atrás hasta darla por perdida. Sin aviso, no se ve.
     /// </summary>
     public class AvisoDeRed : MonoBehaviour
     {
         public static AvisoDeRed Instancia { get; private set; }
-        GUIStyle _estilo;
+        GameObject _banda;
+        TMPro.TextMeshProUGUI _texto;
+
+        /// <summary>Lo que dice la banda ahora (vacío si no se ve).</summary>
+        public string Mostrado => _banda != null && _banda.activeSelf ? _texto.text : "";
 
         void Awake()
         {
             Instancia = this;
             DontDestroyOnLoad(gameObject);
+            var lienzo = gameObject.AddComponent<Canvas>();
+            lienzo.renderMode = RenderMode.ScreenSpaceOverlay;
+            lienzo.sortingOrder = 500;
+            var escala = gameObject.AddComponent<UnityEngine.UI.CanvasScaler>();
+            escala.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            escala.referenceResolution = new Vector2(1920, 1080);
+            escala.matchWidthOrHeight = 0.5f;
+
+            _banda = new GameObject("Banda", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            _banda.transform.SetParent(transform, false);
+            var r = (RectTransform)_banda.transform;
+            r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 1f);
+            r.anchoredPosition = new Vector2(0f, -96f);
+            r.sizeDelta = new Vector2(640f, 52f);
+            var fondo = _banda.GetComponent<UnityEngine.UI.Image>();
+            fondo.color = new Color(0.08f, 0.06f, 0.04f, 0.82f);
+            fondo.raycastTarget = false;
+
+            var t = new GameObject("Texto", typeof(RectTransform));
+            t.transform.SetParent(_banda.transform, false);
+            var rt = (RectTransform)t.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(16f, 0f);
+            rt.offsetMax = new Vector2(-16f, 0f);
+            _texto = t.AddComponent<TMPro.TextMeshProUGUI>();
+            _texto.fontSize = 26;
+            _texto.alignment = TMPro.TextAlignmentOptions.Center;
+            _texto.color = new Color(0.95f, 0.9f, 0.8f);
+            _texto.raycastTarget = false;
+            _banda.SetActive(false);
         }
 
-        void OnGUI()
+        void Update()
         {
             string aviso = ReconexionClienteSystem.Aviso;
-            if (string.IsNullOrEmpty(aviso))
-                return;
-            _estilo ??= new GUIStyle(GUI.skin.box) { fontSize = 22, alignment = TextAnchor.MiddleCenter, wordWrap = false };
-            GUI.Box(new Rect(Screen.width / 2f - 260f, 24f, 520f, 48f), aviso, _estilo);
+            double queda = ReconexionClienteSystem.QuedaParaPerderla;
+            if (!string.IsNullOrEmpty(aviso) && queda >= 0d)
+                aviso += $" {System.Math.Ceiling(queda):0} s";
+            _banda.SetActive(!string.IsNullOrEmpty(aviso));
+            if (_texto.text != aviso) _texto.text = aviso ?? "";
         }
     }
 }

@@ -319,9 +319,21 @@ namespace ConquestTactics.Mundo.UI.Tests
                 string segunda = null;
                 yield return Esperar(() => (segunda = PantallasDeMundo.BatallaEnCurso) != null && segunda != batallaId, 90, "la segunda batalla");
                 yield return Esperar(() => EspejoClienteSystem.CamaraDelJuego, 120, "mi héroe en la segunda batalla");
-                yield return Esperar(() => raiz.Q<Button>("batalla-abandonar") != null, 10, "«Abandonar la batalla»");
+                // Abandonar: Esc abre las Opciones y en ellas «Abandonar la batalla», con su confirmación (Víctor, 2026-11-16; sin F10 ni botón aparte).
+                Assert.IsNull(raiz.Q<Button>("batalla-abandonar"), "ya no hay botón aparte de abandonar");
+                var tecladoEsc = UnityEngine.InputSystem.InputSystem.AddDevice<UnityEngine.InputSystem.Keyboard>();
+                try
+                {
+                    tecladoEsc.MakeCurrent();
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(tecladoEsc, new UnityEngine.InputSystem.LowLevel.KeyboardState(UnityEngine.InputSystem.Key.Escape));
+                    yield return null;
+                    yield return null;
+                    UnityEngine.InputSystem.InputSystem.QueueStateEvent(tecladoEsc, new UnityEngine.InputSystem.LowLevel.KeyboardState());
+                    yield return Esperar(() => raiz.Q<Button>("opciones-abandonar") != null, 10, "las Opciones con «Abandonar la batalla» (Esc)");
+                }
+                finally { UnityEngine.InputSystem.InputSystem.RemoveDevice(tecladoEsc); }
                 yield return CapturarPantalla("49_abandonar_en_la_batalla");
-                Pulsar(raiz.Q<Button>("batalla-abandonar"));
+                Pulsar(raiz.Q<Button>("opciones-abandonar"));
                 yield return Esperar(() => raiz.Query<Button>().ToList().Any(b => b.text == "Abandonar" && b.ClassListContains("boton-peligro")), 5, "la confirmación");
                 Pulsar(raiz.Query<Button>().ToList().First(b => b.text == "Abandonar" && b.ClassListContains("boton-peligro")));
                 yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaInforme && raiz.Q("panel-informe") != null, 30, "el informe tras abandonar");
@@ -453,10 +465,20 @@ namespace ConquestTactics.Mundo.UI.Tests
                 SquadOptionUI Opcion() => panel.GetComponentsInChildren<SquadOptionUI>().FirstOrDefault(o => o.gameObject.name == otra.Id.ToString());
                 yield return Esperar(() => Opcion() != null, 5, "la otra escuadra en el panel");
                 Assert.AreEqual(1, panel.GetComponentsInChildren<SquadOptionUI>().Length, "solo la otra elegida: la activa no sale");
+                var visor = (UnityEngine.MonoBehaviour)typeof(SupplyPointUIController).GetField("_troopsViewer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
+                var huecos = (Transform)visor.GetType().GetField("itemContainerPlaceholder", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(visor);
+                Assert.IsTrue(huecos != null && huecos.gameObject.activeInHierarchy && huecos.childCount > 0, "los huecos de la tropa se ven (la zona nunca queda vacía)");
+                Debug.Log($"[Prueba] huecos: {huecos.childCount}; el primero «{huecos.GetChild(0).name}», hijos: {string.Join(", ", huecos.GetChild(0).Cast<Transform>().Select(x => x.name))}");
+                foreach (Transform hueco in huecos)
+                {
+                    Assert.IsFalse(hueco.GetComponent<UnityEngine.UI.Button>()?.enabled == true, "hueco apagado: sin clic");
+                    Assert.IsFalse(hueco.Cast<Transform>().Any(x => x.gameObject.activeSelf), "hueco apagado: sin «+»");
+                }
+                var aceptar = (UnityEngine.UI.Button)typeof(SupplyPointUIController).GetField("_acceptButton", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
+                Assert.IsFalse(aceptar.gameObject.activeInHierarchy, "«Aceptar» no sale hasta elegir (no apagado: no está)");
                 yield return CapturarPantalla("45f_panel_de_suministro");
                 yield return ClicUGUI(raton, Opcion().GetComponentInChildren<UnityEngine.UI.Button>());
-                var aceptar = (UnityEngine.UI.Button)typeof(SupplyPointUIController).GetField("_acceptButton", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
-                yield return Esperar(() => aceptar.interactable, 5, "«Aceptar» con la escuadra elegida");
+                yield return Esperar(() => aceptar.gameObject.activeInHierarchy, 5, "«Aceptar» al elegir la escuadra");
                 yield return ClicUGUI(raton, aceptar);
                 yield return Esperar(() => Red().EscuadraActiva == otra.Id && Red().Escuadra.ToString() == otra.Tropa.ToString(), 15, "la otra escuadra, activa");
                 Assert.IsFalse(DialogueUIState.IsDialogueOpen, "el panel, cerrado tras aceptar");

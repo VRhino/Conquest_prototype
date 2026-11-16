@@ -70,7 +70,7 @@ public class SupplyPointUIController : MonoBehaviour
         if (_acceptButton != null)
         {
             _acceptButton.onClick.AddListener(OnAcceptClicked);
-            _acceptButton.interactable = false;
+            _acceptButton.gameObject.SetActive(false); // sale solo con una escuadra elegida (Víctor, 2026-11-16), no apagado
         }
     }
 
@@ -120,6 +120,7 @@ public class SupplyPointUIController : MonoBehaviour
             onItemsRequested: OnCreateSquadOption,
             onPlaceholderClicked: null
         );
+        _troopsViewer.HuecosApagados = true;
         _troopsViewer.initialize(4);
     }
 
@@ -223,7 +224,7 @@ public class SupplyPointUIController : MonoBehaviour
             opt.SetSelected(opt.gameObject.name == squadIdStr);
 
         if (_acceptButton != null)
-            _acceptButton.interactable = true;
+            _acceptButton.gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -329,13 +330,15 @@ public class SupplyPointUIController : MonoBehaviour
         bool isChanneling = _em.HasComponent<SquadSwapChannelingComponent>(heroEnt);
         float cooldownLeft = SquadSwapCooldown.Remaining(_em, heroEnt, _em.World.Time.ElapsedTime);
         bool onCooldown = cooldownLeft > 0f;
+        // Solo si hay alguna escuadra que sacar (de las elegidas, ni la activa ni las eliminadas): si no, ni el aviso de F ni el panel.
+        bool hayQueSacar = QuedanParaSacar(heroEnt) > 0;
 
         // 4. Show "Press F" prompt when available and panel not open
         if (_interactPrompt != null)
-            _interactPrompt.SetActive(available && !_isPanelOpen && !onCooldown && !isChanneling);
+            _interactPrompt.SetActive(available && hayQueSacar && !_isPanelOpen && !onCooldown && !isChanneling);
 
         // 5. Detect F press to open panel
-        if (available && !_isPanelOpen && !onCooldown && !isChanneling)
+        if (available && hayQueSacar && !_isPanelOpen && !onCooldown && !isChanneling)
         {
             if (_em.HasComponent<PlayerInteractionComponent>(heroEnt))
             {
@@ -421,7 +424,7 @@ public class SupplyPointUIController : MonoBehaviour
     {
         _isPanelOpen = true;
         _selectedSquadId = -1;
-        if (_acceptButton != null) _acceptButton.interactable = false;
+        if (_acceptButton != null) _acceptButton.gameObject.SetActive(false); // sale solo con una escuadra elegida (Víctor, 2026-11-16), no apagado
         if (_panelGroup != null)
         {
             _panelGroup.alpha = 1f;
@@ -441,7 +444,7 @@ public class SupplyPointUIController : MonoBehaviour
         if (!_isPanelOpen) return;
         _isPanelOpen = false;
         _selectedSquadId = -1;
-        if (_acceptButton != null) _acceptButton.interactable = false;
+        if (_acceptButton != null) _acceptButton.gameObject.SetActive(false); // sale solo con una escuadra elegida (Víctor, 2026-11-16), no apagado
         DialogueUIState.IsDialogueOpen = false;
         SceneTransitionService.ApplyCursorState(false);
         if (HeroCameraController.Instance != null)
@@ -476,6 +479,16 @@ public class SupplyPointUIController : MonoBehaviour
             _panelGroup.interactable = false;
             _panelGroup.blocksRaycasts = false;
         }
+    }
+
+    /// <summary>Las escuadras elegidas que se pueden sacar ahora: ni la activa ni las eliminadas.</summary>
+    int QuedanParaSacar(Entity hero)
+    {
+        int eliminadas = 0;
+        if (_em.HasBuffer<InactiveSquadElement>(hero))
+            foreach (var e in _em.GetBuffer<InactiveSquadElement>(hero))
+                if (e.isEliminated) eliminadas++;
+        return CountAvailableSquads(eliminadas);
     }
 
     /// <summary>

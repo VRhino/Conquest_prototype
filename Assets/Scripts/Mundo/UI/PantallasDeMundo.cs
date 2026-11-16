@@ -1584,6 +1584,7 @@ namespace ConquestTactics.Mundo.UI
             VigilarFinDeBatalla();
             // Las Opciones, encima de todo, se cierran con Esc antes que lo de debajo.
             if (OpcionesAbiertas) { if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) CerrarOpciones(); return; }
+            EscEnLaBatalla();
             // El mapa 2D, encima de la pantalla, se cierra con Esc antes que lo de debajo.
             if (Mapa2DAbierto && UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) { CerrarMapa2D(); return; }
             TeclaDeLaBase();

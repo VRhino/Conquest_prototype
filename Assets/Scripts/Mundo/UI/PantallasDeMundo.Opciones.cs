@@ -41,6 +41,16 @@ namespace ConquestTactics.Mundo.UI
                     filete.Add(fila);
                 }
             }
+            // En una batalla: abandonarla, con su confirmación (Víctor, 2026-11-16: en las Opciones, que se abren con Esc; sin F10).
+            if (BatallaEnCurso != null && !yendoAlInforme)
+            {
+                filete.Add(Kicker("Batalla"));
+                var abandonar = Dialogo.Boton("Abandonar la batalla", "boton-peligro opciones-abandonar", AbandonarLaBatalla);
+                abandonar.name = "opciones-abandonar";
+                filete.Add(abandonar);
+                // En la batalla el ratón va con la cámara: se suelta mientras están abiertas.
+                SceneTransitionService.ApplyCursorState(true);
+            }
             velo.Add(placa);
             velo.RegisterCallback<PointerDownEvent>(e => { if (e.target == velo) CerrarOpciones(); });
             capaEncima.Add(velo);
@@ -50,8 +60,21 @@ namespace ConquestTactics.Mundo.UI
 
         void CerrarOpciones()
         {
-            ventanaOpciones?.RemoveFromHierarchy();
+            if (ventanaOpciones == null) return;
+            ventanaOpciones.RemoveFromHierarchy();
             ventanaOpciones = null;
+            if (BatallaEnCurso != null && !yendoAlInforme) SceneTransitionService.ApplyCursorState(false);
+        }
+
+        /// <summary>Esc en la batalla abre las Opciones (salvo con el panel de suministro abierto, que Esc cierra), un fotograma después de cerrarlo.</summary>
+        bool dialogoDeBatallaAntes;
+        void EscEnLaBatalla()
+        {
+            bool dialogo = DialogueUIState.IsDialogueOpen;
+            bool antes = dialogoDeBatallaAntes;
+            dialogoDeBatallaAntes = dialogo;
+            if (BatallaEnCurso == null || yendoAlInforme || OpcionesAbiertas || dialogo || antes) return;
+            if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) AbrirOpciones();
         }
     }
 }
