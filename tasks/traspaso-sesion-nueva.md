@@ -71,7 +71,7 @@
 - **Paso 13 (Aedas, épicas y crónica)**: el plan, con las respuestas de Víctor (1a 2a 3a), está en `tasks/bloque4-paso13-plan.md`; el doc es el 36.
   - **Tanda 1 (los Aedas): en commit `615e23d4`.** Está en `PantallasDeMundo.Aedas.cs`, `CosasDelMapa` (el nombre y el parado junto a
     su plaza) y `Avisos`; la prueba es `TusAedas` (con `MUNDO_PROTO=aedas`, la escena para `tasks/pruebas/cdp/aedas.mjs`).
-  - **Tanda 2 (la crónica): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Cronica.cs`; la prueba es `LaCronica` (con
+  - **Tanda 2 (la crónica): en commit `37eb571b`.** **El bloque 4 está cerrado y en `main`** (2026-11-16: `migracion` juntada con `main` por avance rápido, sin push; el push es de Víctor). Está en `PantallasDeMundo.Cronica.cs`; la prueba es `LaCronica` (con
     `MUNDO_PROTO=cronica`, la escena para `tasks/pruebas/cdp/cronica.mjs`). Con ella se cierra el paso 13 y el bloque 4; lo que queda fuera de los
     pasos y lo que no tiene prueba está en la Hoja, al final de la tabla del bloque 4.
   - Los servidores de prueba guardan ya sus datos en `Logs/pruebas-mundo` y `Logs/pruebas-batalla`, no en `Temp/` (Unity la vacía).
