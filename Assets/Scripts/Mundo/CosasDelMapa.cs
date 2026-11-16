@@ -256,10 +256,13 @@ namespace ConquestTactics.Mundo
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.AedaItinerante))
             {
                 var v = e.AedaItinerante;
-                if (v.HasEnAsentamientoId) continue; // el parado va en su plaza
-                var p = Instante.Posicion(v.Plan, v.Posicion, ahora);
-                r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Aeda, Id = v.Id, Nombre = "Aeda", Detalle = "De camino",
-                    X = p.x / 1000, Y = p.y / 1000, Radio = 0.2, Alto = 0.4, RadioClic = 0.5, Color = 0xe9dcc0, Entidad = e });
+                // El parado, un cuadro pequeño junto a su plaza (Víctor, paso 13: 2a; la lira pequeña del prototipo); el que va de camino, donde está.
+                var parado = v.HasEnAsentamientoId;
+                var p = parado && plazas.TryGetValue(v.EnAsentamientoId, out var en) && en.Posicion != null
+                    ? (x: en.Posicion.X + 1500.0, y: en.Posicion.Y - 1500.0, enMarcha: false) : Instante.Posicion(v.Plan, v.Posicion, ahora);
+                r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Aeda, Id = v.Id, Nombre = "Aeda " + NombreDeAeda(v.Id),
+                    Detalle = parado ? "Parado en " + NombreDePlaza(plazas, v.EnAsentamientoId) : "De camino a otra plaza",
+                    X = p.x / 1000, Y = p.y / 1000, Radio = parado ? 0.15 : 0.2, Alto = 0.4, RadioClic = 0.5, Color = 0xe9dcc0, Entidad = e });
             }
             if (nodos != null)
                 foreach (var n in nodos)
@@ -277,6 +280,17 @@ namespace ConquestTactics.Mundo
 
         /// <summary>El último rumbo (unitario) de cada columna en marcha: parada, sus carros se quedan detrás según por dónde llegó.</summary>
         static readonly Dictionary<string, (double x, double y)> Rumbos = new Dictionary<string, (double, double)>();
+
+        /// <summary>Los nombres de los Aedas itinerantes, por su N (el motor no los nombra; `mundo/aedas.ts`): bardos y cantores de la tradición griega.</summary>
+        static readonly string[] NombresDeAedas = { "Demódoco", "Femio", "Tamiris", "Lino", "Museo", "Arión", "Terpandro", "Eumolpo", "Anfión", "Olén", "Taletas", "Alcmán",
+            "Melampo", "Crisótemis", "Filamón", "Estesícoro", "Panfo", "Íbico", "Corina", "Telesila", "Praxila", "Lasos", "Polimnesto", "Sácadas" };
+
+        /// <summary>`aeda-3` → «Tamiris». Sin número, el id.</summary>
+        public static string NombreDeAeda(string id)
+        {
+            var i = id.LastIndexOf('-');
+            return i >= 0 && int.TryParse(id.Substring(i + 1), out var n) && n >= 1 ? NombresDeAedas[(n - 1) % NombresDeAedas.Length] : id;
+        }
 
         static string NombreDePlaza(Dictionary<string, Asentamiento> plazas, string id) =>
             plazas.TryGetValue(id ?? "", out var p) && p.HasNombre ? p.Nombre : "una plaza";

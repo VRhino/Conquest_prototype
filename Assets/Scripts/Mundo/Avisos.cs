@@ -195,6 +195,12 @@ namespace ConquestTactics.Mundo
                     Categoria = e.Codigo.StartsWith("mercenarios.orden") ? CategoriaAviso.Movimientos : CategoriaAviso.Economia,
                     Clave = e.Codigo + "|" + Texto("mercenario"),
                 };
+            if (e.Codigo != null && e.Codigo.StartsWith("aedas.") && TextoDeAeda(e, Texto, heroeId, almacen, datos) is { } deAeda)
+                return new EntradaAviso
+                {
+                    Titulo = deAeda.Item1, Texto = deAeda.Item2, Clase = ClaseAviso.Mirada, Categoria = CategoriaAviso.Aedas, Urgente = deAeda.Item3,
+                    Clave = deAeda.Item3 ? null : e.Codigo + "|" + e.Version,
+                };
             if (e.Codigo == "bandidos.campamento_vencido")
             {
                 var nivel = (int)Numero("nivel");
@@ -238,6 +244,50 @@ namespace ConquestTactics.Mundo
                     var porque = texto("motivo") switch { "plazo" => "venció el plazo", "objetivo" => "el objetivo ya no vale", "paz" => "llegó la paz", "salida" => "salió de lo que acompañaba", var x => x ?? "" };
                     return $"Caduca la orden {orden} de {quien}: {porque}. Sin orden, solo se defiende.";
                 case "mercenarios.mudado": return $"{quien} se muda a otra plaza.";
+                default: return null;
+            }
+        }
+
+        /// <summary>El texto de un hecho de los Aedas para tu Facción (`textoDeHechoAeda`), o null si no le toca. `importante`: sale en pantalla (una
+        /// tecnología comprada o cumplida, un residente que se va, una épica perdida por conquista).</summary>
+        static (string, string, bool)? TextoDeAeda(EventoDominio e, Func<string, string> texto, string heroeId, Almacen almacen, DatosDeJuego datos)
+        {
+            var faccion = almacen.Buscar(TipoEntidad.Heroe, heroeId)?.Heroe is Heroe h && h.HasFaccionId ? h.FaccionId : null;
+            if (faccion == null || "f-" + texto("faccion") != faccion) return null;
+            string NombreDeTecnologia(string id)
+            {
+                if (id == null) return null;
+                var tecs = (datos?.Raiz?["documentos"] as Newtonsoft.Json.Linq.JObject)?.Properties().Select(p => (p.Value as Newtonsoft.Json.Linq.JObject)?["TECNOLOGIAS"]).FirstOrDefault(x => x != null);
+                return (string)tecs?[id]?["nombre"] ?? id.Replace('_', ' ');
+            }
+            string Plaza(string id) => id == null ? "una plaza" : almacen.Buscar(TipoEntidad.Asentamiento, id)?.Asentamiento is Asentamiento a && a.HasNombre ? a.Nombre : "una plaza";
+            string Faccion(string n) => n == null ? "otra Facción" : "f-" + n == faccion ? "tu Facción" : almacen.Buscar(TipoEntidad.Faccion, "f-" + n)?.Faccion?.Nombre ?? "otra Facción";
+            var tec = texto("tecnologia") is string t ? $"«{NombreDeTecnologia(t)}»" : "una tecnología";
+            var plaza = Plaza(e.HasAsentamientoId ? e.AsentamientoId : texto("plaza") is string p ? "as-" + p : null);
+            var itinerante = texto("aeda") is string n0 ? CosasDelMapa.NombreDeAeda("aeda-" + n0) : null;
+            var residente = texto("aedaResidente") is string r ? almacen.Buscar(TipoEntidad.Aeda, "aeda-r" + r)?.AedaResidente?.Nombre ?? "Un Aeda" : "Un Aeda";
+            var capitulos = texto("capitulos");
+            switch (e.Codigo)
+            {
+                case "aedas.revela":
+                    return ("Aedas", $"{itinerante ?? "Un Aeda itinerante"} canta en {plaza} {tec}, que descubrió {Faccion(texto("descubridora"))}. Os falta su hito; mientras siga allí os la vende.", false);
+                case "aedas.venta":
+                    return ("Aedas", $"{plaza} le compra {tec} a {itinerante ?? "un Aeda"}{(texto("precio") is string pr ? $" por {pr} de oro" : "")}: ya es de tu Facción, falta adoptarla.", true);
+                case "aedas.residente_llega":
+                    return ("Aedas", $"{residente} se queda a vivir en {plaza}: un Aeda residente que puede cantar una épica.", false);
+                case "aedas.residente_se_va":
+                    return ("Aedas", $"Un Aeda residente se va de {plaza}: ya no hay sitio para él{(texto("cupo") is string cu ? $" (caben {cu})" : "")}.", true);
+                case "aedas.epica_empieza":
+                    return ("Épica", $"{residente} empieza en {plaza} la épica de {tec}{(capitulos != null ? $" ({capitulos} capítulos)" : "")}.", false);
+                case "aedas.epica_capitulo":
+                    return ("Épica", $"{residente} cierra en {plaza} el capítulo {texto("capitulo") ?? "?"}{(capitulos != null ? $" de {capitulos}" : "")} de la épica de {tec}.", false);
+                case "aedas.epica_tecnologia":
+                    return ("Épica cumplida", $"{residente} termina en {plaza} la épica de {tec}: la tecnología ya es de tu Facción, falta adoptarla.", true);
+                case "aedas.epica_abandonada":
+                    var motivo = texto("motivo");
+                    var por = motivo == "conquista" ? $"porque {plaza} cayó en otras manos" : motivo == "aparecida" ? "porque la tecnología os llegó por otra vía"
+                        : motivo == "unificada" ? "porque otro Aeda de tu Facción ya la canta" : "por orden de la plaza";
+                    return ("Épica", $"Se abandona la épica de {tec} {por}; lo avanzado se pierde.", motivo == "conquista");
                 default: return null;
             }
         }

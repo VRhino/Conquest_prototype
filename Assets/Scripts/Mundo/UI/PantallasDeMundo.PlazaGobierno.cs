@@ -191,6 +191,8 @@ namespace ConquestTactics.Mundo.UI
             ("mercado", "Mercado", "edificio", "mercado"),
             ("armeria", "Armería", "edificio", "armeria"),
             ("unirse", "Unirse a un ejército", "simbolo", "bandera"),
+            // Los Aedas de la plaza (paso 13): solo con un Aeda dentro, itinerante parado o residente.
+            ("aedas", "Aedas", "riel", "aedas"),
         };
 
         /// <summary>¿Se puede abrir ahora esa ventana? Construcción, con cargo de Gobernador o Maestro de Obras; el Almacén, con almacén; la Armería, activa.
@@ -213,6 +215,7 @@ namespace ConquestTactics.Mundo.UI
             "almacen" => a.Almacen.Count > 0,
             "construccion" => CargoConstructor(a, yo.Id) != null,
             "unirse" => EjercitosParaUnirse(a, yo).Count > 0,
+            "aedas" => HayAedasEnPlaza(a, yo),
             _ => false,
         };
 
@@ -222,7 +225,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var cargo = CargoConstructor(a, yo.Id);
             var enMarcha = Internos(a).Count(e => e.Mejora != null || e.Estado == EstadoEdificio.EdificioEnConstruccion);
-            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}|{ContrataDesdePlaza(a, yo)}|{FirmaDeUnirse(a, yo)}";
+            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}|{ContrataDesdePlaza(a, yo)}|{HayAedasEnPlaza(a, yo)}|{FirmaDeUnirse(a, yo)}";
             if (ventanaPlaza != "construccion") return firma;
             var cat = Catalogo;
             var caros = string.Concat((cat?.Properties() ?? Enumerable.Empty<JProperty>())
@@ -522,6 +525,7 @@ namespace ConquestTactics.Mundo.UI
                 "mercado" => ("edificio", "mercado", "Mercado"),
                 "taberna" => ("edificio", "taberna", "Taberna"),
                 "unirse" => ("simbolo", "bandera", "Unirse a un ejército"),
+                "aedas" => ("riel", "aedas", "Aedas"),
                 _ => ("riel", "gobierno", "Gobierno"),
             };
             titulo.Add(IconosDelMundo.Icono(familia, icono, 28, IconosDelMundo.Bronce));
@@ -546,6 +550,7 @@ namespace ConquestTactics.Mundo.UI
                 "taberna" => (CompraInforme(a, yo) ? new[] { ("intel", "Intel") } : new (string, string)[0])
                     .Concat(ContrataDesdePlaza(a, yo) ? new[] { ("mercenarios", "Mercenarios de la región") } : new (string, string)[0]).ToArray(),
                 "unirse" => new[] { ("unirse", "Unirse a un ejército") },
+                "aedas" => new[] { ("aedas", "Aedas") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
             var clave = ventanaPlaza;
@@ -592,6 +597,7 @@ namespace ConquestTactics.Mundo.UI
                     cuerpo.Add(errorMerc);
                     break;
                 case "unirse": UnirseDesdePlaza(cuerpo, a, yo, rehacer); break;
+                case "aedas": VentanaAedas(cuerpo, a, yo, rehacer); break;
             }
         }
 

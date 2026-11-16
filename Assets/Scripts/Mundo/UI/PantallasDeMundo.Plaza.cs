@@ -544,7 +544,7 @@ namespace ConquestTactics.Mundo.UI
             if (Cambia("riel", FirmaDelRiel(a, yo))) { PintarRiel(v, a, yo, rehacer); otra = true; }
             var sub = ventanaPlaza != null && subDePlaza.TryGetValue(ventanaPlaza, out var s) ? s : "";
             // Gobierno no enseña nada del paso de minuto (sus cuentas atrás van con el reloj); el Almacén, sí (las cifras).
-            if (Cambia("ventana", $"{ventanaPlaza}|{sub}|{a.Version}|{(ventanaPlaza == "almacen" ? interiores : 0)}|{yo.Version}|{faccion?.Version}|{(ventanaPlaza == "territorio" ? FirmaDeTerritorio(a) : "")}{(ventanaPlaza == "mercado" || ventanaPlaza == "taberna" ? FirmaDeMercado(a) + FirmaDeFlota(a) + FirmaDeComercio(a, yo) : "")}{(ventanaPlaza == "unirse" ? FirmaDeUnirse(a, yo) + string.Join(",", TropaLibre(yo).Select(t => t.Version)) : "")}{(ventanaPlaza == "taberna" ? FirmaDeIntel(yo) : "")}")) { PintarVentanaDePlaza(v.Q("plaza-ventana"), a, yo, rehacer); otra = true; }
+            if (Cambia("ventana", $"{ventanaPlaza}|{sub}|{a.Version}|{(ventanaPlaza == "almacen" ? interiores : 0)}|{yo.Version}|{faccion?.Version}|{(ventanaPlaza == "territorio" ? FirmaDeTerritorio(a) : "")}{(ventanaPlaza == "mercado" || ventanaPlaza == "taberna" ? FirmaDeMercado(a) + FirmaDeFlota(a) + FirmaDeComercio(a, yo) : "")}{(ventanaPlaza == "unirse" ? FirmaDeUnirse(a, yo) + string.Join(",", TropaLibre(yo).Select(t => t.Version)) : "")}{(ventanaPlaza == "taberna" ? FirmaDeIntel(yo) : "")}{(ventanaPlaza == "aedas" ? FirmaDeAedas(a, yo) : "")}")) { PintarVentanaDePlaza(v.Q("plaza-ventana"), a, yo, rehacer); otra = true; }
             if (otra) AjustarPlaza(v);
         }
 

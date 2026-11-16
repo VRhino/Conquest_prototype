@@ -65,9 +65,13 @@
   - **Tanda 2 (los contratos): en commit `051e82b5`.** Está en `PantallasDeMundo.Mercenarios.cs` (el tablón, Facción › Mercenarios y
     `ContratosPorValorar`) y en `Avisos`; la prueba es `TuTablonDeMercenarios` (con `MUNDO_PROTO=mercenarios`, la escena para
     `tasks/pruebas/cdp/mercenarios.mjs`). Los 9 Twemoji nuevos, con permiso de Víctor.
-  - **Tanda 3 (las misiones): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Misiones.cs` (el botón, el diario, el rastreador, los
+  - **Tanda 3 (las misiones): en commit `16c97fc4`.** Está en `PantallasDeMundo.Misiones.cs` (el botón, el diario, el rastreador, los
     tablones y Facción › Misiones); la prueba es `TusMisiones` (con `MUNDO_PROTO=misiones`, la escena para `tasks/pruebas/cdp/misiones.mjs`).
     Los 5 Twemoji nuevos, con permiso de Víctor. Con ella se cierra el paso 12.
+- **Paso 13 (Aedas, épicas y crónica)**: el plan, con las respuestas de Víctor (1a 2a 3a), está en `tasks/bloque4-paso13-plan.md`; el doc es el 36.
+  - **Tanda 1 (los Aedas): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Aedas.cs`, `CosasDelMapa` (el nombre y el parado junto a
+    su plaza) y `Avisos`; la prueba es `TusAedas` (con `MUNDO_PROTO=aedas`, la escena para `tasks/pruebas/cdp/aedas.mjs`).
+  - Falta la tanda 2 (la crónica).
   - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
     icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,
     junto a la de fundación, solo si hay alguna libre en la plaza (tanda 3; ver el plan).

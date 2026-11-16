@@ -1513,6 +1513,8 @@ namespace ConquestTactics.Mundo.UI
             var hasta = mapa.HastaAlli(cosa);
             Fichas(v.Q("ficha-datos"), hasta == null ? new[] { ("Distancia", "sin columna en el mapa") }
                 : new[] { ("Distancia", $"{hasta.Value.distancia:0.#} u"), ("Tiempo de marcha", hasta.Value.tiempo) });
+            // Un Aeda itinerante: qué hace y, parado en una plaza tuya, lo que os vende (paso 13).
+            if (cosa.Clase == ClaseDeCosa.Aeda) FichaDeAeda(v.Q("ficha-datos"), cosa);
             var acciones = CosasDelMapa.Acciones(cosa, mapa.Contexto());
             bool marchar = mapa.Columna != null && !mapa.Columna.EnBatalla;
             var ventanas = VentanasDePuerta(cosa);

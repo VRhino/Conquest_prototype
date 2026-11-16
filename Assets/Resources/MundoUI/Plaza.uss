@@ -1513,3 +1513,25 @@
 .tablon-opcion-sub { margin: 0; font-size: 11.5px; color: var(--texto-2); white-space: normal; }
 .tablon-guardar { margin-top: 8px; height: 34px; align-self: flex-start; padding: 0 14px; }
 .diario-item-texto, .rastreador-item-titulo { -unity-text-align: middle-left; }
+
+/* Los Aedas (paso 13, tanda 1; los .aedas-* de BronzeAgeClient): la ventana de la plaza y la ficha del mapa. */
+.aedas-seccion { margin-bottom: 14px; padding: 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 4px; background-color: rgba(0, 0, 0, 0.22); }
+.aedas-seccion > * { margin-bottom: 6px; }
+.aedas-titulo { flex-direction: row; align-items: center; }
+.aedas-titulo > * { margin-right: 8px; }
+.aedas-titulo-texto { margin: 0 8px 0 0; font-size: 17px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.aedas-titulo-sub { margin: 0; font-size: 12.5px; color: var(--texto-2); }
+.aedas-kicker { margin: 6px 0 2px 0; }
+.aedas-fila { flex-direction: row; align-items: center; padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.6); border-radius: 3px; background-color: rgba(0, 0, 0, 0.25); margin-bottom: 4px; }
+.aedas-fila > * { margin-right: 8px; }
+.aedas-fila-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.aedas-fila-nombre { margin: 0; flex-grow: 1; font-size: 14px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.aedas-fila-sub { margin: 0; font-size: 12.5px; color: var(--texto-2); white-space: normal; }
+.aedas-falta .chip-texto, .aedas-falta Label { color: var(--terracota); }
+.aedas-boton { margin: 0; height: 32px; padding: 0 14px; }
+.aedas-residente { margin-bottom: 8px; }
+.aedas-residente > * { margin-bottom: 4px; }
+.aedas-opcion { margin-left: 12px; }
+.aedas-barra { height: 6px; }
+.ficha-aeda-texto { margin: 6px 0 2px 0; white-space: normal; }
+.ficha-aeda-kicker { margin: 8px 0 4px 0; }

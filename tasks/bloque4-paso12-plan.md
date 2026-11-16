@@ -178,5 +178,5 @@ La hoja de ruta (bloque 4, paso 12) y el inventario (§3.15, §3.16 y §3.17):
 - **Tanda 1 (la Taberna)**: en commit `eced9885`.
 - **Tanda 2 (los contratos), en commit `051e82b5`**: doc 35. La prueba contrata para «Atacar» unos bandidos vistos con una Mirada (la Facción
   sin plaza no tiene ojos), no para «Acompañar» (organizar un ejército pide columna). Los 9 Twemoji nuevos, con permiso de Víctor (8a).
-- **Tanda 3 (las misiones), 2026-11-16, a revisar**: doc 35. El tablón de la plaza va en el diario, como el prototipo (no en una pestaña de la
+- **Tanda 3 (las misiones), en commit `16c97fc4`**: doc 35. El tablón de la plaza va en el diario, como el prototipo (no en una pestaña de la
   plaza). Los 5 Twemoji nuevos, con permiso de Víctor (9a).
