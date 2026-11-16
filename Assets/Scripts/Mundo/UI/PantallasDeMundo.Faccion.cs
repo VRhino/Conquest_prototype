@@ -74,6 +74,7 @@ namespace ConquestTactics.Mundo.UI
 
         void AbrirFaccion()
         {
+            if (MisionesAbiertas) CerrarMisiones();
             var interior = SelectorDePersonaje.Interior;
             if (FaccionAbierta || HeroeAhora() == null || (interior != null && interior.PanelAbierto && !BaseAbierta)) return;
             if (BaseAbierta) CerrarBase();

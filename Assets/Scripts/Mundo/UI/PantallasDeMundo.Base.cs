@@ -51,6 +51,7 @@ namespace ConquestTactics.Mundo.UI
             IconoDeBarra(yelmo, "base");
             barra.Insert(barra.IndexOf(avisos), yelmo);
             BotonDeFaccion(barra, yelmo);
+            BotonDeMisiones(barra);
             BotonDeMapa(barra, avisos);
             avisos.text = "";
             avisos.tooltip = "Avisos";
@@ -116,6 +117,7 @@ namespace ConquestTactics.Mundo.UI
 
         void AbrirBase()
         {
+            if (MisionesAbiertas) CerrarMisiones();
             var interior = SelectorDePersonaje.Interior;
             if (BaseAbierta || HeroeAhora() == null || (interior != null && interior.PanelAbierto)) return;
             var pantallaMontada = pantalla.childCount > 0 ? pantalla[0] : null;

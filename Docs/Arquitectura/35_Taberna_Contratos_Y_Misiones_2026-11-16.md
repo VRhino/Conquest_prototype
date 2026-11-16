@@ -35,7 +35,7 @@ inventario), en Conquest. El plan, las respuestas de Víctor y las dudas están 
   - el informe de plaza solo si conoce alguna ajena: en la prueba no la conoce hasta comprar el de región.
   - Con `MUNDO_PROTO=taberna` solo deja la escena para `tasks/pruebas/cdp/taberna.mjs`.
 
-## Tanda 2: los contratos (2026-11-16, a revisar)
+## Tanda 2: los contratos (2026-11-16, en commit `051e82b5`)
 
 Todo en `PantallasDeMundo.Mercenarios.cs`, calcado de `ui/mercenarios.ts`.
 
@@ -82,3 +82,52 @@ Todo en `PantallasDeMundo.Mercenarios.cs`, calcado de `ui/mercenarios.ts`.
   - en Facción › Mercenarios lo marca, le da «Ir a», prorroga, despide y lo valora «Buena».
   - Con `MUNDO_PROTO=mercenarios` solo deja la escena para `tasks/pruebas/cdp/mercenarios.mjs`.
   - «Mercenarios de la región» no tiene prueba propia: el servidor de pruebas no da monedas ni llena el fondo de la plaza.
+
+## Tanda 3: las misiones (2026-11-16, a revisar)
+
+Todo en `PantallasDeMundo.Misiones.cs`, calcado de `ui/misiones.ts`, `ui/tablon.ts` y `ui/recompensasMision.ts`.
+
+- **El botón «Misiones»** de la barra, tras la bandera de la Facción (M lo abre y lo cierra; Esc lo cierra), con la insignia de las cumplidas
+  que puedes reclamar.
+- **El diario**, una ventana centrada:
+  - a la izquierda, los nombres por grupo: Mías, Mi plaza (solo dentro de una plaza) y Mi Facción. Cada grupo se pliega, con las hechas plegadas
+    al final, y con sus marcas: ◆ seguida, «nueva», ✓ cumplida;
+  - a la derecha, la misión abierta: título y estado, de quién, el texto, los objetivos en barras, los detalles y las recompensas;
+  - abajo, «Seguir» o «Dejar de seguir» (3 como mucho) y 🎁 «Reclamar», si te toca: tuyas las de héroe; las de plaza, el Gobernador o, sin él,
+    un residente; las de Facción, el Rey;
+  - dentro de una plaza con tablón, arriba, «Misiones» y «Tablón de …».
+- **Las recompensas**, en etiquetas con su icono y adónde van al pasar el ratón:
+  - la fija de su tipo: 🏛 participación o ⭐ XP de Facción;
+  - la lista libre: oro, recursos, ⭐ XP y tropa. Oro, recursos y XP llegan en milésimas;
+  - en una diaria individual, además, los objetos de `BOTIN_OBJETOS.misionDiaria`, con su probabilidad.
+- **El rastreador** de las seguidas, con su barra fina; las cumplidas, en dorado y «¡Cumplida! Reclámala»:
+  - arriba a la derecha en todas partes (Víctor, 6): en la plaza, al principio de su columna derecha, encima de las tarjetas del ejército; en el
+    mapa y en el campamento, flotando bajo la barra;
+  - se pliega en una línea, y un clic en una misión abre el diario en ella.
+- **Lo seguido** se guarda en el equipo por héroe (PlayerPrefs), como el prototipo en su navegador:
+  - la primera vez se siguen solas las tuyas en marcha;
+  - lo que aparece después se avisa («Nueva misión: …»), se marca «nueva» y, si es tuya y hay hueco, entra en el rastreador;
+  - las reclamadas salen del rastreador.
+- **Los tablones de recurrentes**:
+  - el de la plaza va en el diario; el de la Facción, en Facción › Tablón;
+  - dos columnas, ☀️ Diarias y 📅 Semanales, con lo que falta para renovarse y su barra;
+  - cada tarjeta trae:
+    - 👤 individual o 👥 grupal, el estado, el texto y las etiquetas (el tope de la semana, el cargo, el periodo acabado);
+    - el avance, «Más» (la explicación y quién aporta) y la recompensa;
+    - ✋ «Aceptar» o 🎁 «Reclamar», solo a quien puede: sin botones apagados ni el porqué (regla de Víctor). Tampoco sale «Seguir» con el
+      rastreador lleno, ni quién reclama lo que no te toca;
+  - el Gobernador o el Rey, «📌 Elegir las de la semana que viene»: las del catálogo, hasta 7 de cada, y «Guardar la elección».
+- **Facción › Misiones**: la lista de las de la Facción, con su sello, sus objetivos, su recompensa, «Seguir» y «Reclamar»; las hechas,
+  plegadas. Lleva la cifra de las cumplidas.
+- **Las pestañas de la Facción**, como el prototipo: Miembros, Plazas, Tecnología, Tablón, Misiones, Mercenarios, Diplomacia y Ajustes del Rey,
+  en una fila.
+- **Arreglado de paso**: la experiencia de la Facción del lateral salía mil veces mayor. El motor la manda en milésimas, y hasta ahora nadie
+  la tenía.
+- **Los iconos**: cinco Twemoji nuevos con permiso de Víctor: 👤 ☀️ 📅 📌 ⭐.
+- **La prueba** es `TusMisiones`:
+  - el Rey y Gobernador funda su plaza y entra; el rastreador sale encima de la columna derecha;
+  - el botón abre el diario, reclama la misión de Facción cumplida y sigue una de la plaza;
+  - en el tablón de la plaza acepta una individual y elige las de la semana que viene;
+  - Esc cierra el diario; luego, Facción › Misiones y › Tablón;
+  - `TuTablonDeMercenarios` mira además el rastreador en el campamento. El del mapa no tiene prueba;
+  - con `MUNDO_PROTO=misiones`, solo la escena para `tasks/pruebas/cdp/misiones.mjs`.

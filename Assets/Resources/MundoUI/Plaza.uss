@@ -1386,3 +1386,130 @@
 .merc-con-icono { flex-direction: row; align-items: center; }
 .merc-con-icono > VisualElement { margin-right: 4px; }
 .merc-boton-texto { margin: 0; font-size: 12.5px; color: var(--pergamino); }
+
+/* Las misiones (paso 12, tanda 3; los .diario-*, .mision-*, .misiones-rastreador y .tablon-* de BronzeAgeClient). */
+.diario-velo { position: absolute; left: 0; top: 0; right: 0; bottom: 0; align-items: center; justify-content: center; background-color: rgba(10, 8, 5, 0.55); }
+.diario { width: 78%; max-width: 1080px; height: 76%; max-height: 760px; border-width: 1px; border-color: var(--bronce); border-radius: 4px; background-color: var(--marco-bg); overflow: hidden; }
+.diario-cab { flex-direction: row; align-items: center; padding: 10px 16px; border-bottom-width: 1px; border-color: var(--bronce-osc); background-color: rgba(169, 121, 63, 0.12); }
+.diario-cab > * { margin-right: 10px; }
+.diario-cab > .con-ayuda-caja, .diario-cab > VisualElement:first-child { margin-right: 14px; }
+.diario-vistas { flex-direction: row; width: 360px; }
+.diario-sigues { margin: 0 12px 0 0; font-size: 13px; color: var(--texto-2); }
+.diario-cuerpo { flex-grow: 1; flex-direction: row; min-height: 0; }
+.diario-indice { width: 32%; min-width: 220px; padding: 10px 8px; border-right-width: 1px; border-color: var(--bronce-osc); background-color: var(--marco-panel); }
+.diario-grupo { margin-bottom: 10px; }
+.diario-grupo-cab { flex-direction: row; align-items: center; margin: 0 0 4px 0; padding: 4px 8px; height: auto; border-width: 0; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.25); background-color: rgba(0, 0, 0, 0); }
+.diario-grupo-flecha { margin: 0 6px 0 0; font-size: 11px; color: var(--bronce); }
+.diario-grupo-nombre { flex-grow: 1; margin: 0; font-size: 14px; letter-spacing: 1px; color: var(--bronce); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.diario-grupo-cab:hover .diario-grupo-nombre { color: var(--oro-claro); }
+.diario-grupo-cuenta { margin: 0 0 0 6px; font-size: 12px; color: var(--texto-apagado); }
+.diario-item { flex-direction: row; align-items: center; margin: 0 0 1px 0; padding: 5px 10px; height: auto; border-width: 0; border-left-width: 2px; border-color: rgba(0, 0, 0, 0); border-radius: 2px; background-color: rgba(0, 0, 0, 0); }
+.diario-item:hover { background-color: rgba(169, 121, 63, 0.14); }
+.diario-item.activo { background-color: rgba(169, 121, 63, 0.24); border-left-color: var(--oro); }
+.diario-item-texto { flex-grow: 1; flex-shrink: 1; margin: 0; font-size: 14px; color: var(--texto-2); white-space: normal; }
+.diario-item.activo .diario-item-texto, .diario-item:hover .diario-item-texto { color: var(--oro-claro); }
+.diario-item--cumplida .diario-item-texto { color: var(--oro); }
+.diario-item--reclamada { opacity: 0.55; }
+.diario-item-nueva { border-left-color: var(--terracota); background-color: rgba(178, 84, 52, 0.14); }
+.diario-item-nueva .diario-item-texto { color: #f0b48a; -unity-font-style: bold; }
+.diario-seguida { margin: 0 0 0 4px; font-size: 12px; color: var(--oro); }
+.diario-nueva { margin: 0 0 0 4px; padding: 0 5px; border-radius: 8px; background-color: var(--terracota); color: var(--pergamino); font-size: 11px; }
+.diario-lista { margin: 0 0 0 4px; font-size: 13px; color: var(--oro); }
+.diario-vacio { margin: 0; padding: 4px 10px; font-size: 12.5px; color: var(--texto-apagado); white-space: normal; }
+.diario-hechas { margin: 4px 0 0 4px; }
+.diario-hechas > Toggle { margin: 0; }
+.diario-hechas > Toggle Label { font-size: 12.5px; color: var(--texto-2); }
+.diario-detalle { flex-grow: 1; flex-shrink: 1; min-width: 0; background-color: var(--marco-bg-alt); }
+.diario-pagina { flex-grow: 1; padding: 18px 24px; }
+.diario-pagina > * { margin-bottom: 8px; }
+.diario-titulo { flex-direction: row; align-items: flex-start; }
+.diario-titulo-texto { flex-grow: 1; flex-shrink: 1; margin: 0; font-size: 22px; color: var(--oro-claro); white-space: normal; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.diario-estado { margin: 4px 0 0 12px; padding: 2px 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 9px; font-size: 12px; color: var(--texto-2); }
+.diario-estado--cumplida { background-color: var(--oro); border-color: var(--oro); color: var(--tinta); }
+.diario-de { margin: 0; font-size: 12px; letter-spacing: 1px; color: var(--bronce); }
+.diario-texto { margin: 0; font-size: 15px; color: var(--pergamino); white-space: normal; }
+.diario-seccion { margin: 10px 0 4px 0; padding-bottom: 3px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.3); font-size: 13px; letter-spacing: 2px; color: var(--oro); -unity-font-style: bold; }
+.diario-premios { flex-direction: row; flex-wrap: wrap; flex-shrink: 1; }
+.diario-premio { flex-direction: row; align-items: center; margin: 0 6px 6px 0; padding: 4px 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.25); }
+.diario-premio > VisualElement { margin-right: 5px; }
+.diario-premio.fija { background-color: rgba(216, 184, 120, 0.08); }
+.diario-premio--oro { border-color: var(--oro); }
+.diario-premio--xp { border-color: #7aa0d8; }
+.diario-premio--participacion { border-color: #8fbf7a; }
+.diario-premio--tropa { border-color: #c9895a; }
+.diario-premio--objeto { border-color: #a58ad8; }
+.diario-premio-cifra { margin: 0 4px 0 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; }
+.diario-premio-nombre { margin: 0; font-size: 13px; color: var(--texto-2); }
+.diario-nota { margin: 4px 0 0 0; font-size: 13px; color: var(--texto-apagado); white-space: normal; }
+.diario-pie { flex-direction: row; align-items: center; padding: 10px 16px; border-top-width: 1px; border-color: var(--bronce-osc); background-color: var(--marco-panel); }
+.diario-pie > .boton-secundario, .diario-pie > .boton-primario { margin: 0; height: 34px; }
+.diario-reclamar { flex-direction: row; align-items: center; padding: 0 14px; }
+.diario-reclamar > VisualElement { margin-right: 6px; }
+.diario-reclamar-texto { margin: 0; color: var(--tinta); }
+.diario-tablon { flex-grow: 1; padding: 12px 16px 16px 16px; }
+
+/* el rastreador: arriba a la derecha (en la plaza, al principio de su columna derecha) */
+.rastreador { width: 100%; margin-bottom: 8px; padding: 4px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(20, 16, 12, 0.88); }
+.rastreador--flota { position: absolute; top: 66px; right: 16px; width: 260px; }
+.rastreador-cab, .rastreador-item { margin: 0; padding: 3px 6px; height: auto; border-width: 0; border-radius: 2px; background-color: rgba(0, 0, 0, 0); }
+.rastreador-cab { flex-direction: row; justify-content: space-between; }
+.rastreador-cab:hover, .rastreador-item:hover { background-color: rgba(169, 121, 63, 0.18); }
+.rastreador-cab-texto, .rastreador-cab-flecha { margin: 0; font-size: 13px; color: var(--oro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.rastreador-item { align-items: stretch; }
+.rastreador-item-titulo { margin: 0 0 2px 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; -unity-text-align: middle-left; }
+.rastreador-item.cumplida .rastreador-item-titulo, .rastreador-item-nota { color: var(--oro); }
+.rastreador-item-nota { margin: 0; font-size: 12px; -unity-text-align: middle-left; }
+
+/* las barras y las tarjetas */
+.mision-cond { margin-top: 4px; }
+.mision-barra { height: 6px; border-radius: 3px; background-color: #3a362b; overflow: hidden; }
+.mision-cond.fino .mision-barra { height: 3px; }
+.mision-barra-i { height: 100%; background-color: var(--bronce); }
+.mision-cond-texto { margin: 2px 0 0 0; font-size: 12px; color: var(--texto-2); }
+.misiones-cab { flex-direction: row; align-items: center; }
+.misiones-cab > * { margin-right: 8px; }
+.misiones-cartas, .tablon-columna { flex-shrink: 0; }
+.mision { margin-bottom: 8px; padding: 8px 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.25); }
+.mision > * { margin-bottom: 4px; }
+.mision--cumplida { border-color: var(--oro); }
+.mision--reclamada { opacity: 0.6; }
+.mision-cab { flex-direction: row; align-items: center; }
+.mision-cab > VisualElement { margin-right: 6px; }
+.mision-titulo { flex-grow: 1; flex-shrink: 1; margin: 0; font-size: 14.5px; color: var(--oro-claro); -unity-font-style: bold; white-space: normal; }
+.mision-texto { margin: 0; font-size: 13px; color: var(--texto-2); white-space: normal; }
+.mision-seguir { margin: 0 0 0 6px; padding: 2px 8px; height: auto; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); color: var(--texto-2); font-size: 12px; }
+.mision-seguir.activa { border-color: var(--oro); color: var(--oro); }
+.mision-pie { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.mision-quien { margin: 0; font-size: 12px; color: var(--texto-apagado); }
+.mision-hecha { margin: 2px 0; font-size: 12.5px; color: var(--texto-2); }
+.mision-mas > Toggle Label { font-size: 12.5px; color: var(--bronce); }
+.tablon-columnas { flex-direction: row; margin-top: 6px; }
+.tablon-columna { flex-grow: 1; flex-basis: 0; min-width: 0; margin-right: 10px; }
+.tablon-cab { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.tablon-cab > * { margin-right: 6px; }
+.tablon-cab-titulo { margin: 0; font-size: 15px; color: var(--oro-claro); -unity-font-style: bold; }
+.tablon-renueva { margin: 0; font-size: 12px; color: var(--texto-2); }
+.tablon-columna > .merc-barra { margin-bottom: 8px; }
+.tablon-estado { margin: 0 0 0 6px; padding: 1px 6px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.08); font-size: 11.5px; color: var(--texto-2); }
+.tablon-estado--recurrentecumplida { background-color: var(--oro); color: var(--tinta); }
+.tablon-estado--recurrenteencurso { background-color: rgba(169, 121, 63, 0.35); color: var(--oro-claro); }
+.tablon-etiquetas { flex-direction: row; flex-wrap: wrap; }
+.tablon-chip { margin: 0 4px 0 0; padding: 1px 6px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; font-size: 11.5px; color: var(--texto-2); }
+.tablon-aceptar { flex-direction: row; align-items: center; margin: 0; height: 30px; padding: 0 12px; }
+.tablon-aceptar > VisualElement { margin-right: 6px; }
+.tablon-aceptar-texto { margin: 0; color: var(--pergamino); }
+.tablon-nota { margin: 0; font-size: 12px; color: var(--texto-apagado); white-space: normal; }
+.tablon-elegir { margin-top: 10px; padding: 6px 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
+.tablon-elegir > Toggle Label { font-size: 14px; color: var(--oro-claro); -unity-font-style: bold; }
+.tablon-elegir-grupo { margin-top: 8px; }
+.tablon-elegir-cab { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.tablon-cuenta { margin: 0 0 0 8px; padding: 0 6px; border-radius: 8px; background-color: rgba(169, 121, 63, 0.35); font-size: 12px; color: var(--oro-claro); }
+.tablon-cuenta.llena { background-color: var(--oro); color: var(--tinta); }
+.tablon-opciones { flex-direction: row; flex-wrap: wrap; }
+.tablon-opcion { width: 49%; margin: 0 1% 4px 0; padding: 4px 6px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; align-items: flex-start; }
+.tablon-opcion.elegida { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.1); }
+.tablon-opcion-cuerpo { flex-shrink: 1; margin-left: 6px; }
+.tablon-opcion-titulo { margin: 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.tablon-opcion-sub { margin: 0; font-size: 11.5px; color: var(--texto-2); white-space: normal; }
+.tablon-guardar { margin-top: 8px; height: 34px; align-self: flex-start; padding: 0 14px; }
+.diario-item-texto, .rastreador-item-titulo { -unity-text-align: middle-left; }

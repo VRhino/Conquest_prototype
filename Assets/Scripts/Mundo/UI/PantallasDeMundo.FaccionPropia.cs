@@ -18,7 +18,7 @@ namespace ConquestTactics.Mundo.UI
     public partial class PantallasDeMundo
     {
         /// <summary>Las pestañas de tu Facción que ya hay (las de `PESTANAS_FACCION`, en su orden).</summary>
-        static readonly (string id, string nombre)[] PestanasDeFaccion = { ("miembros", "Miembros"), ("plazas", "Plazas"), ("tecnologia", "Tecnología"), ("mercenarios", "Mercenarios"), ("diplomacia", "Diplomacia"), ("ajustes", "Ajustes del Rey") };
+        static readonly (string id, string nombre)[] PestanasDeFaccion = { ("miembros", "Miembros"), ("plazas", "Plazas"), ("tecnologia", "Tecnología"), ("tablon", "Tablón"), ("misiones", "Misiones"), ("mercenarios", "Mercenarios"), ("diplomacia", "Diplomacia"), ("ajustes", "Ajustes del Rey") };
         string pestanaFaccion = "miembros";
         /// <summary>Las plazas desplegadas en la pestaña Plazas (todas plegadas al abrir).</summary>
         readonly HashSet<string> plazasAbiertas = new HashSet<string>();
@@ -78,6 +78,7 @@ namespace ConquestTactics.Mundo.UI
                 // Las solicitudes pendientes, en Miembros (solo las ve el Rey).
                 if (id == "miembros" && esRey && faccion.SolicitudesIds.Count > 0) b.Add(Dialogo.Texto(faccion.SolicitudesIds.Count.ToString(), "faccion-pestana-aviso"));
                 // Lo que pide atención en Mercenarios: contratos a punto de vencer y valoraciones pendientes.
+                if (id == "misiones" && faccion.Misiones.Count(m => m.Estado == EstadoMision.MisionCumplida) is int cumplidas && cumplidas > 0) b.Add(Dialogo.Texto(cumplidas.ToString(), "faccion-pestana-aviso"));
                 if (id == "mercenarios" && MercenariosQuePidenAtencion(h, faccion) is int atencion && atencion > 0) b.Add(Dialogo.Texto(atencion.ToString(), "faccion-pestana-aviso"));
                 nav.Add(b);
             }
@@ -93,6 +94,15 @@ namespace ConquestTactics.Mundo.UI
             else if (pestanaFaccion == "diplomacia") PestanaDiplomacia(cuerpo, h, faccion);
             else if (pestanaFaccion == "ajustes") PestanaAjustes(cuerpo, h, faccion);
             else if (pestanaFaccion == "mercenarios") PestanaMercenarios(cuerpo, h, faccion);
+            else if (pestanaFaccion == "misiones") PestanaMisionesDeFaccion(cuerpo, h, faccion);
+            else if (pestanaFaccion == "tablon")
+            {
+                var errorTablon = Dialogo.Texto("", "error oculto");
+                errorTablon.name = "tablon-error";
+                cuerpo.Add(errorTablon);
+                if (faccion.Tablon != null) TablonDeMisiones(cuerpo, h, "faccion", faccion.Id, faccion.Tablon, t => Poner(errorTablon, t), () => { firmaFaccion = null; PintarFaccion(); });
+                else cuerpo.Add(Dialogo.Texto("Tu Facción aún no tiene tablón de misiones.", "campo-ayuda"));
+            }
             else PestanaMiembros(cuerpo, h, faccion);
             principal.Add(cuerpo);
             marco.Add(principal);
@@ -108,7 +118,7 @@ namespace ConquestTactics.Mundo.UI
             var plazas = string.Join(",", a.Todas(Entidad.CuerpoOneofCase.Asentamiento).Where(e => e.Asentamiento.FaccionId == h.FaccionId).Select(e => e.Asentamiento.Version));
             var titulos = string.Join(",", a.Todas(Entidad.CuerpoOneofCase.Titulo).Select(e => $"{e.Titulo.TituloId}:{e.Titulo.PoseedorId}"));
             var tecnologia = pestanaFaccion == "tecnologia" && f != null ? FirmaDeTecnologia(h, f) : pestanaFaccion == "diplomacia" ? FirmaDeDiplomacia() : "";
-            if (f != null) tecnologia += $"|{MercenariosQuePidenAtencion(h, f)}" + (pestanaFaccion == "mercenarios" ? FirmaDeMercenarios(h, f) : "");
+            if (f != null) tecnologia += $"|{MercenariosQuePidenAtencion(h, f)}" + (pestanaFaccion == "mercenarios" ? FirmaDeMercenarios(h, f) : "") + (pestanaFaccion == "misiones" || pestanaFaccion == "tablon" ? FirmaDeMisiones() : "");
             return $"propia|{f?.Version}|{pestanaFaccion}|{plazas}|{titulos}|{string.Join(",", plazasAbiertas)}|{tecnologia}";
         }
 
@@ -140,7 +150,7 @@ namespace ConquestTactics.Mundo.UI
             if (umbrales != null && umbrales.Count > 0)
             {
                 var maximo = (int?)reglas["nivelMaximo"] ?? umbrales.Count + 1;
-                var xp = (double)f.Experiencia;
+                var xp = f.Experiencia / 1000.0; // en milésimas, como en el prototipo (`mil(f.experiencia)`)
                 var bloque = Dialogo.Caja("faccion-xp");
                 var cabXp = Dialogo.Caja("faccion-xp-cab");
                 cabXp.Add(Dialogo.Texto("Experiencia", "faccion-xp-etq"));

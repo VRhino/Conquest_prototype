@@ -525,6 +525,26 @@
   "firma": {
    "glifo": "✍",
    "codigo": "270d"
+  },
+  "individual": {
+   "glifo": "👤",
+   "codigo": "1f464"
+  },
+  "diaria": {
+   "glifo": "☀️",
+   "codigo": "2600"
+  },
+  "semanal": {
+   "glifo": "📅",
+   "codigo": "1f4c5"
+  },
+  "chincheta": {
+   "glifo": "📌",
+   "codigo": "1f4cc"
+  },
+  "xp": {
+   "glifo": "⭐",
+   "codigo": "2b50"
   }
  },
  "simbolo": {

@@ -120,7 +120,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.IsTrue(interior.PanelAbierto, "con la Base abierta el héroe no anda");
                 var barra = raiz.Q(className: "barra-arriba");
                 var enLaBarra = barra.Query<Button>().ToList().Where(Visible).Select(b => b.name).ToList();
-                CollectionAssert.AreEquivalent(new[] { "base", "faccion", "avisos", "mapa-2d" }, enLaBarra, "la barra con la Base abierta: " + string.Join(", ", enLaBarra));
+                CollectionAssert.AreEquivalent(new[] { "base", "faccion", "misiones", "avisos", "mapa-2d" }, enLaBarra, "la barra con la Base abierta: " + string.Join(", ", enLaBarra));
                 var basePersonal = raiz.Q("base-personal");
                 CollectionAssert.AreEqual(new[] { "pestana-heroe", "pestana-tropas", "pestana-loadouts", "pestana-bienes" }, basePersonal.Query<Button>(className: "base-pestana").ToList().Select(p => p.name).ToArray(), "cuatro pestañas");
 

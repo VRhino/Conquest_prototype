@@ -129,6 +129,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             VisualElement Faccionv() => raiz.Q("faccion-ventana");
             try
             {
+                // El rastreador de misiones (paso 12, tanda 3): también en el campamento, arriba a la derecha.
+                yield return Esperar(() => raiz.Q("rastreador")?.ClassListContains("rastreador--flota") == true, 10, "el rastreador en el campamento");
+                yield return Capturar("216_rastreador_campamento");
                 // La pieza Militar: andando hasta ella y F; la pestaña Mercenarios, junto a Tropa.
                 yield return AndarHasta(teclado, heroe.transform, "militar", () => interior.ZonaCercana == "militar");
                 yield return Tecla(UnityEngine.InputSystem.Key.F);

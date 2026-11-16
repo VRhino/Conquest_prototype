@@ -1586,6 +1586,8 @@ namespace ConquestTactics.Mundo.UI
             if (Mapa2DAbierto && UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true) { CerrarMapa2D(); return; }
             TeclaDeLaBase();
             TeclaDeFaccion();
+            TeclaDeMisiones();
+            PintarRastreador();
             var teclado = UnityEngine.InputSystem.Keyboard.current;
             if (diagnostico == null || teclado == null || !teclado.f2Key.wasPressedThisFrame) return;
             if (diagnostico.childCount == 0) SesionViva(diagnostico);
