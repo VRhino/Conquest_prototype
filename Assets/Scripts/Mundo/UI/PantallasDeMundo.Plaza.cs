@@ -298,6 +298,9 @@ namespace ConquestTactics.Mundo.UI
                 // Cada parte del HUD se rehace cuando cambia lo suyo; las cuentas atrás, en cada vuelta. Con el botón del ratón pulsado, se espera: si
                 // se rehiciera entre pulsar y soltar, el clic se perdería (el botón pulsado ya no estaría).
                 if (!RatonPulsado()) PintarHudDePlaza(v, a, yo, () => firmasDePlaza.Clear());
+                // Un asedio a tu plaza: el aviso para defenderla; ya unido a la batalla, a la preparación (como desde el mapa).
+                if (!RatonPulsado()) AvisoDeAsedio(v, a, yo);
+                if (!enPreparacion && MiBatalla() is Batalla mia && mia.HasLadoPropio && Activa(mia)) { _ = IrALaPreparacion(mia); return; }
                 foreach (var r in relojesDePlaza.ToList()) r.reloj();
                 BloqueoDePlaza();
                 interior.Elegido = fichaId;

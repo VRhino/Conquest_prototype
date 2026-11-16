@@ -139,7 +139,7 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   - en la preparación, **disponibles** (todas las tropas si está en su base; si no, las que lleva) y **elegidas** (lo que cabe en el Liderazgo);
   - el héroe entra siempre con las elegidas y en la batalla solo cambia entre ellas;
   - el motor solo deja elegir al defender desde dentro de tu base, y al unirte;
-  - en Conquest va en la tanda 3.
+  - ✅ en Conquest desde la tanda 3 (2026-11-16): «Asedio a tu plaza · Defender» y el panel de elegidas; prueba `TuDefensaDeTuPlaza`.
 - ✅ **Bajarse de una batalla sin cancelarla** (`OrdenBajarseDeBatalla`), en Conquest desde la tanda 1.
 - ✅ **Que quien abandona vea cómo acabó** (`Batalla.salida_propia`), en Conquest desde la tanda 1.
 - ✅ **El hecho de cierre** (`heroe.cierre_batalla`), en Conquest desde la tanda 2: el informe saca de él lo que ganas y pierdes y la
@@ -154,10 +154,9 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 - **Quien inició la batalla** tiene «Cancelar», que la acaba para todos, y «Bajarse», que se la pasa a otro atacante. Si es el único humano,
   solo «Cancelar».
 - **El Aeda de la prueba:** se prueba lo que haya. En una partida nueva el itinerante no vende nada, así que la compra se queda sin prueba.
-- **El residente que ya está dentro cuando se abre el asedio** entra solo con su loadout activo y no elige (`defensa_de_plaza`). **Se pide al
-  motor** (Víctor, 2026-11-16, a) una orden para cambiar las elegidas mientras la batalla se convoca, antes de empezar. Así la regla vale para
-  todos: en la preparación eliges entre las del campamento lo que cabe en tu Liderazgo. La tanda 3 usará el mismo panel antes de «Defender» y
-  en la preparación.
+- ✅ **Cambiar las elegidas ya dentro de la batalla** (`OrdenElegirEscuadrasDeBatalla`, motor c94a960; Víctor, 12a), antes de empezar: «Elegir
+  escuadras» en la preparación abre el mismo panel. Corregido al leer el motor: en las batallas de Unity **nadie entra de oficio**, tampoco el
+  residente que está dentro (`tests/batallas.rs:1450`); `defensa_de_plaza` es del asedio con números. El residente se une con «Defender».
 
 **Lo que queda de los pedidos de la migración:**
 
@@ -216,7 +215,9 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   «puerto cerrado»: tapado con margen (`DriversDeBatalla`), no arreglado. Arreglo de verdad: Unity, o servidor en Linux.
 - Probar con alguien al teclado, en el cliente con ventana, el retardo, las salidas y la reaparición (solo lo han probado
   bots).
-- Un ticket que vuelve con la revisión subida después de una incorporación pierde las incorporaciones que ya habían llegado.
+- ~~Un ticket que vuelve con la revisión subida después de una incorporación pierde las incorporaciones~~ ✅ 2026-11-16: no pasa. Con la
+  revisión subida el motor vuelve a mandar el ticket y **todas** las incorporaciones vigentes (`sesiones.rs`, `publicar_batallas`: desde 0), el
+  lanzador las reenvía tras el ticket nuevo y el servidor de Conquest las vuelve a incorporar. Probado el ticket revisado en `TuDefensaDeTuPlaza`.
 - ~~La XP y el botín los pone el motor (D6, D7); en Conquest queda quitar el cálculo local~~ ✅ 2026-11-16: borrados los sistemas de
   experiencia de un jugador y sus pruebas (no había botín local).
 

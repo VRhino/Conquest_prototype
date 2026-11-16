@@ -104,7 +104,7 @@
 - **Desde dentro de un sitio**, el clic en el mapa no hace nada (`MapaDeMundo.MarcharA`).
 - Capturas en `tasks/sueltos-batalla/capturas/`.
 
-## El motor ecfb23d (2026-11-16): tanda 1 en commit `e82a40a3`, tanda 2 hecha y sin commit
+## El motor ecfb23d y c94a960 (2026-11-16): tanda 1 en `e82a40a3`, tanda 2 en `92d29616`, tanda 3 hecha y sin commit
 
 - El análisis, las tandas y las respuestas de Víctor están en `tasks/motor-ecfb23d-plan.md`.
 - El motor de pruebas (`../BronzeAgeMotorPruebas`) está en `ecfb23d`, y el contrato regenerado en `Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`
@@ -127,8 +127,19 @@
     apuntado en la Hoja para pedirlo al motor.
   - `DelMapaALaBatalla` también elige el punto de «mantener» lejos de por donde vuelve el héroe: antes fallaba a veces.
   - El motor de pruebas está en `c94a960`, con el contrato regenerado.
-- **Sigue:** la tanda 3 (elegir escuadras al defender desde tu base, con el aviso «Asedio a tu plaza · Defender» y la orden
-  `OrdenElegirEscuadrasDeBatalla` del motor `c94a960`). Al final de todo, la predicción con choque contra los soldados (Víctor, 6c).
+- **Tanda 3 (hecha y sin commit): elegir escuadras al defender desde tu base.**
+  - `PantallasDeMundo.Defensa.cs`: el aviso «Asedio a tu plaza · Defender» (`AvisoDeAsedio`, encima de la vista de la plaza) y el panel
+    `VentanaDeDefensa`, con el riel de la salida: elegidas con ✕, el «+» solo si algo cabe, la milicia que no cabe en «Se quedan en el campamento»
+    y el Liderazgo con lo que ya llevas fuera. Unirse manda `escuadron_ids`; ya dentro, «Elegir escuadras» en la preparación manda
+    `OrdenElegirEscuadrasDeBatalla`.
+  - Desde la plaza, unido a la batalla, va a la preparación (antes solo lo hacía el mapa). El orden de la preparación sigue a las elegidas.
+  - En Unity nadie entra de oficio en un asedio, tampoco el residente: se une con «Defender».
+  - El ticket con la revisión subida no pierde incorporaciones: el motor las reenvía todas con el ticket nuevo.
+  - Prueba: `TuDefensaDeTuPlaza` (con lanzador), el ejemplo de Víctor: 14 de Liderazgo, granjeros y mineros dentro, la milicia fuera y sin salir
+    en la batalla. La plaza recién fundada está protegida un día de mundo: la prueba adelanta el reloj hasta `protegida_hasta_ms`.
+- **Sigue, por el orden de Víctor:** la interfaz de Conquest del aviso de conexión y abandonar con el panel de suministro; las clases y los
+  objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la predicción con choque contra los soldados (6c). Sin capturas
+  en esta serie (Víctor, 2026-11-16).
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)
 

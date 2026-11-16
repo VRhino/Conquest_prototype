@@ -1033,3 +1033,18 @@ Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
 .cronica-frase { margin: 0; font-size: 13.5px; color: var(--pergamino); white-space: normal; }
 .cronica-fecha { margin: 2px 0 0 0; font-size: 11.5px; color: var(--texto-apagado); }
 .cronica-mas { margin-top: 8px; height: 32px; }
+
+/* Defender tu plaza (tanda 3 del motor c94a960): el aviso arriba en la plaza y el panel de elegidas, con el riel de la salida. */
+.plaza-asedio { position: absolute; top: 140px; left: 50%; translate: -50% 0; flex-direction: row; align-items: center; padding: 6px 8px 6px 14px;
+    background-color: var(--marco-bg); border-width: 1px; border-color: var(--rojo-claro); border-radius: 3px; }
+.plaza-asedio-texto { color: var(--rojo-claro); font-size: 15px; -unity-font-style: bold; margin-right: 14px; }
+.plaza-asedio-boton { margin: 0; }
+.defensa-ventana { width: 860px; max-width: 94%; height: auto; padding-bottom: 14px; }
+.defensa-tropa { padding: 10px 4px; }
+.defensa-liderazgo { flex-direction: row; align-items: center; margin-left: auto; }
+.defensa-icono { width: 22px; height: 22px; margin-right: 6px; }
+.defensa-icono-chico { width: 14px; height: 14px; margin-right: 3px; }
+.defensa-riel { flex-wrap: wrap; margin-top: 10px; }
+.defensa-fuera { margin-top: 10px; }
+.defensa-acciones { flex-direction: row; align-items: center; justify-content: flex-end; }
+.defensa-boton { margin-left: 12px; }

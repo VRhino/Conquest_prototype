@@ -58,7 +58,9 @@ namespace ConquestTactics.Mundo.UI
         List<BronzeAge.Contract.V1.SquadSnapshot> EnOrden(Batalla b)
         {
             var mias = MisEscuadras(b);
-            if (ordenElegido.Count == 0) ordenElegido.AddRange(mias.Select(s => s.SquadId));
+            // Si cambian las elegidas (`elegirEscuadrasDeBatalla`), el orden las sigue: fuera las que ya no van, al final las nuevas.
+            ordenElegido.RemoveAll(id => mias.All(s => s.SquadId != id));
+            ordenElegido.AddRange(mias.Select(s => s.SquadId).Where(id => !ordenElegido.Contains(id)));
             foreach (var s in mias) if (!formacionElegida.ContainsKey(s.SquadId)) formacionElegida[s.SquadId] = string.IsNullOrEmpty(s.Formacion) ? "reposo" : s.Formacion;
             return mias.OrderBy(s => { int i = ordenElegido.IndexOf(s.SquadId); return i < 0 ? int.MaxValue : i; }).ToList();
         }
@@ -191,6 +193,14 @@ namespace ConquestTactics.Mundo.UI
                 BotonDePie("Cancelar la batalla", "batalla-cancelar", 582, new Orden { CancelarBatalla = new OrdenCancelarBatalla { BattleId = b.Id } });
             if (antesDeEmpezar && (!laInicie || otrosHumanos))
                 BotonDePie("Bajarse de la batalla", "batalla-bajarse", laInicie ? 393 : 582, new Orden { BajarseDeBatalla = new OrdenBajarseDeBatalla { BattleId = b.Id } });
+            // Defendiendo tu plaza (tu base), antes de empezar: cambiar las elegidas, en el panel de defender (`elegirEscuadrasDeBatalla`).
+            if (antesDeEmpezar && EnSuBase(b, h))
+            {
+                var elegir = new Button(() => VentanaDeDefensa(b.Id, false)) { text = "Elegir escuadras", name = "batalla-elegir" };
+                elegir.AddToClassList("prep-boton-negro");
+                Colocar(elegir, laInicie ? 204 : 393, 806, 179, 40);
+                lienzo.Add(elegir);
+            }
             // En el sitio de «Warband Builds» (y a su izquierda), negros.
             void BotonDePie(string texto, string nombre, float x, Orden orden)
             {
@@ -221,7 +231,7 @@ namespace ConquestTactics.Mundo.UI
                 var hueco = En(lienzo, 520 + 160 * i, 856, 150, 237, "prep-hueco", "prep-hueco-" + i);
                 En(hueco, 0, 0, 150, 237, "prep-hueco-mas");
                 hueco.pickingMode = PickingMode.Position;
-                hueco.tooltip = "Contra bandidos combates con lo que lleva tu columna: aquí no se añade tropa";
+                hueco.tooltip = EnSuBase(b, h) ? "Las escuadras se eligen con «Elegir escuadras»" : "Combates con lo que lleva tu columna: aquí no se añade tropa";
             }
             if (mias.Count == 0)
                 Texto(En(lienzo, 520, 940, 800, 40), b.Ticket == null ? "Aún no ha llegado quién combate." : "Entras sin escuadras: solo tu héroe.", "prep-aviso");
