@@ -20,6 +20,20 @@ namespace ConquestTactics.Mundo.UI
         string politicaDeSalida = "aceptar";
         /// <summary>La Caravana de Fundación que el Líder se lleva, por convocatoria ("" = ninguna).</summary>
         readonly Dictionary<string, string> caravanaDeLaConvocatoria = new Dictionary<string, string>();
+        /// <summary>Las caravanas comerciales de la plaza que el Líder se lleva, por convocatoria (Víctor, 2026-11-16): se enganchan al partir.</summary>
+        readonly Dictionary<string, HashSet<string>> comercialesDeLaConvocatoria = new Dictionary<string, HashSet<string>>();
+
+        /// <summary>Las caravanas comerciales de tu Facción libres en esta plaza: las suyas sin despachar y las aparcadas aquí. Se pueden enganchar al
+        /// ejército que sale (`adjuntarCaravana`).</summary>
+        List<Caravana> ComercialesLibresEn(string plazaId)
+        {
+            var plaza = c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, plazaId)?.Asentamiento;
+            if (plaza == null) return new List<Caravana>();
+            return c.Sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Caravana).Select(e => e.Caravana)
+                .Where(k => k.Tipo == TipoCaravana.CaravanaComercial && (k.Estado == EstadoCaravana.CaravanaDisponible && k.OrigenAsentamientoId == plazaId
+                    || k.Estado == EstadoCaravana.CaravanaAparcada && plaza.CaravanasAparcadasIds.Contains(k.Id)))
+                .OrderBy(k => k.Id).ToList();
+        }
 
         static readonly Dictionary<string, string> NombreDePolitica = new Dictionary<string, string>
         {
@@ -137,6 +151,8 @@ namespace ConquestTactics.Mundo.UI
                     return;
                 }
                 firma = FirmaExterna(cv, h);
+                // Al repintar (elegir una caravana, una petición nueva) cada columna se queda donde estaba.
+                var desplazados = placa.Query<ScrollView>(className: "salida-col").ToList().Select(x => x.scrollOffset).ToList();
                 placa.Clear();
                 var soyLider = cv.LiderId == h.Id;
                 var mio = cv.Integrantes.First(x => x.HeroeId == h.Id);
@@ -155,6 +171,13 @@ namespace ConquestTactics.Mundo.UI
                     var col = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
                     foreach (var cl in clases.Split(' ')) col.AddToClassList(cl);
                     cuerpo.Add(col);
+                    var i = cuerpo.childCount - 1;
+                    if (i < desplazados.Count && desplazados[i] != Vector2.zero)
+                    {
+                        var antes = desplazados[i];
+                        void Volver(GeometryChangedEvent _) { col.scrollOffset = antes; col.UnregisterCallback<GeometryChangedEvent>(Volver); }
+                        col.RegisterCallback<GeometryChangedEvent>(Volver);
+                    }
                     return col;
                 }
                 var izquierda = Columna("salida-col");
@@ -242,6 +265,35 @@ namespace ConquestTactics.Mundo.UI
                         Carta("", "Se queda aquí", "El ejército sale sin ella");
                         foreach (var k in esperan) Carta(k.Id, "Llevárnosla" + (esperan.Count > 1 ? " · " + k.Id : ""), CargaDe(k) > 0 ? $"Lleva {CargaDe(k)}" : "Vacía");
                         izquierda.Add(cartas);
+                    }
+                    // Las caravanas comerciales libres de la plaza, cada una con «Se queda aquí» o «Llevárnosla» (solo si hay alguna).
+                    var comerciales = cv.LugarEsCampamento ? new List<Caravana>() : ComercialesLibresEn(cv.LugarId);
+                    if (comerciales.Count > 0)
+                    {
+                        izquierda.Add(ConAyuda(Dialogo.Texto("Caravanas de la plaza", "salida-recuadro-sub"),
+                            "Las caravanas comerciales libres de la plaza. Las que os llevéis se enganchan al ejército al salir: van detrás, a su paso, y ya no las reparte el comercio automático. Se cargan, entregan y aparcan desde la ventana Ejército (⚑) del mapa."));
+                        if (!comercialesDeLaConvocatoria.TryGetValue(cv.Id, out var llevadas)) comercialesDeLaConvocatoria[cv.Id] = llevadas = new HashSet<string>();
+                        llevadas.IntersectWith(comerciales.Select(k => k.Id));
+                        foreach (var k in comerciales)
+                        {
+                            var fila = Dialogo.Caja("conv-caravanas");
+                            fila.name = "conv-comercial-" + k.Id;
+                            var id = k.Id;
+                            foreach (var llevar in new[] { false, true })
+                            {
+                                var si = llevar;
+                                var b = new Button(() => { if (si) llevadas.Add(id); else llevadas.Remove(id); Pintar(); }) { name = $"conv-comercial-{(si ? "llevar" : "queda")}-{id}" };
+                                b.AddToClassList("conv-caravana");
+                                b.EnableInClassList("elegida", llevadas.Contains(id) == si);
+                                b.Add(IconosDelMundo.Icono(si ? "simbolo" : "riel", si ? "carro" : "aedas", 26, IconosDelMundo.Bronce));
+                                var t = Dialogo.Caja("conv-caravana-cuerpo");
+                                t.Add(Dialogo.Texto(si ? "Llevárnosla" : "Se queda aquí", "aviso-titulo"));
+                                t.Add(Dialogo.Texto(si ? $"{NombreDeCaravana(k)} · {k.Carros.Count} carro(s) · {(CargaDe(k) > 0 ? $"lleva {CargaDe(k)}" : "vacía")}" : NombreDeCaravana(k), "campo-ayuda"));
+                                b.Add(t);
+                                fila.Add(b);
+                            }
+                            izquierda.Add(fila);
+                        }
                     }
                 }
 
@@ -416,7 +468,24 @@ namespace ConquestTactics.Mundo.UI
                         partir.SetEnabled(false);
                         var o = new OrdenPartirConvocatoria { HeroeId = h.Id };
                         if (caravanaDeLaConvocatoria.TryGetValue(cv.Id, out var k) && k != "") o.CaravanaFundacionId = k;
-                        if (!await OrdenConError(new Orden { PartirConvocatoria = o }, Error)) { partir.SetEnabled(true); return; }
+                        ResultadoOrden r;
+                        try { r = await c.Sesion.Ordenar(new Orden { PartirConvocatoria = o }); }
+                        catch (ErrorDeSesion e) { Error(e.Message); partir.SetEnabled(true); return; }
+                        if (r.Resultado != Resultado.OrdenAceptada) { Error(Textos.Explicar(r.Rechazo)); partir.SetEnabled(true); return; }
+                        // Las comerciales que os lleváis, enganchadas ya fuera, con el ejército a la puerta (`adjuntarCaravana`: el motor no las lleva al
+                        // partir). Si una no se engancha, su motivo sale en un aviso: el ejército ya ha salido.
+                        var ejercito = r.Creadas.FirstOrDefault(x => x.Entidad == TipoEntidad.Ejercito)?.Id;
+                        if (ejercito != null && comercialesDeLaConvocatoria.TryGetValue(cv.Id, out var llevar))
+                            foreach (var kid in llevar.ToList())
+                            {
+                                try
+                                {
+                                    var ra = await c.Sesion.Ordenar(new Orden { AdjuntarCaravana = new OrdenAdjuntarCaravana { EjercitoId = ejercito, CaravanaId = kid, HeroeId = h.Id } });
+                                    if (ra.Resultado == Resultado.OrdenRechazada) panelAvisos.Mostrar("No se enganchó la caravana: " + Textos.Explicar(ra.Rechazo), true);
+                                }
+                                catch (ErrorDeSesion e) { panelAvisos.Mostrar("No se enganchó la caravana: " + e.Message, true); }
+                            }
+                        comercialesDeLaConvocatoria.Remove(cv.Id);
                         Cerrar();
                         if (cerrarInterior != null) await cerrarInterior();
                         if (this != null) Mapa();

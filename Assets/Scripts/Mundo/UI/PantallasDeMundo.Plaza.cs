@@ -532,6 +532,7 @@ namespace ConquestTactics.Mundo.UI
             }
             if (Cambia("ficha", $"{fichaId}|{a.Version}|{interiores}|{cargo}")) PintarFicha(v.Q("plaza-der"), a, yo, cargo, rehacer);
             if (Cambia("ejercitos", FirmaDeEjercitosDePlaza(a, yo))) PintarEjercitosDePlaza(v.Q("plaza-der"), a, yo, rehacer);
+            if (Cambia("caravanas-ejercito", FirmaDeCaravanasDePlaza(yo))) PintarCaravanasDePlaza(v.Q("plaza-der"), a, yo, rehacer);
             // La ventana abierta deja de estarlo si ya no se puede (sin cargo, sin almacén).
             if (ventanaPlaza != null && !VentanaDisponible(ventanaPlaza, a, yo)) ventanaPlaza = null;
             var faccion = c.Sesion.Almacen.Buscar(TipoEntidad.Faccion, a.FaccionId)?.Faccion;

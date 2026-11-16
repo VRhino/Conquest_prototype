@@ -28,7 +28,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         static readonly HashSet<string> Lote2 = new HashSet<string>
         {
             "TuPlazaPorDentro", "TuTecnologiaDelRey", "TuAvanzadaYSuObra", "TuMercado", "ElCampamentoPorDentro", "TuDiplomaciaDelRey",
-            "TuComercioADistancia", "TuEjercitoEnPreparacion", "TuEjercitoEnElMapa",
+            "TuComercioADistancia", "TuEjercitoEnPreparacion", "TuEjercitoEnElMapa", "TuEjercitoConCaravanas",
         };
 
         [SetUp]

@@ -51,9 +51,13 @@
     «Unirse» en las fichas). Las pruebas son `TuEjercitoEnElMapa` y `TuUnionALaBatalla` (esta, en la vuelta de la batalla); con `MUNDO_PROTO=ejercito` solo deja la escena para
     `tasks/pruebas/cdp/ejercito-mapa.mjs`.
   - **Tanda 2: en commit `9b7ee80b`.**
-  - **Añadido (las tarjetas del ejército en el lateral de la plaza): hecho y a revisar, sin commit.** Está en el doc 34 y en
+  - **Añadido (las tarjetas del ejército en el lateral de la plaza): en commit `3e4ceba4`.** Está en el doc 34 y en
     `PantallasDeMundo.Ejercito.cs` (`PintarEjercitosDePlaza`); la prueba es `TuEjercitoEnElMapa`.
-  - Falta la tanda 3 (las caravanas del ejército con el carro 3D detrás): no se empieza hasta que Víctor lo diga.
+  - **Tanda 3 (las caravanas del ejército): hecha y a revisar, sin commit.** Está en el doc 34, en `PantallasDeMundo.Convocatoria.cs` (las
+    comerciales en la preparación), `PantallasDeMundo.Ejercito.cs` (cargar, entregar y aparcar) y `CosasDelMapa` (el carro detrás y «Entrar con
+    el ejército»). La prueba es `TuEjercitoConCaravanas`; con `MUNDO_PROTO=caravanas` deja la escena para
+    `tasks/pruebas/cdp/ejercito-caravanas.mjs`.
+  - Con la tanda 3 se cierra el paso 11. Sigue el paso 12 (mercenarios por contrato, taberna y misiones).
   - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
     icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,
     junto a la de fundación, solo si hay alguna libre en la plaza (tanda 3; ver el plan).

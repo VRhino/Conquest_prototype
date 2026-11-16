@@ -1017,3 +1017,9 @@ Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
 .ventana-ejercito .ejercito-fila > Button { height: 32px; padding: 0 12px; margin-left: 6px; }
 .ventana-ejercito .tropas-orden { flex-grow: 1; margin: 0; }
 .unirse-fila > .ejercito-fila-texto { flex-grow: 1; margin-left: 8px; }
+.ejercito-caravana { padding: 6px 8px; margin-bottom: 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.6); border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); }
+.ejercito-cargar { flex-direction: row; align-items: center; margin-top: 6px; }
+.ejercito-cargar > .tropas-orden { flex-grow: 1; flex-shrink: 1; margin: 0 6px 0 0; }
+.ejercito-cantidad { width: 70px; margin: 0 6px 0 0; }
+.ejercito-cargar > Button { height: 30px; padding: 0 10px; margin: 0; }
+.ejercito-cantidad > .unity-base-text-field__input { height: 30px; padding: 0 6px; background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--pergamino); font-size: 14px; -unity-text-align: middle-right; }

@@ -50,7 +50,7 @@ namespace ConquestTactics.Mundo.UI
             var placa = v.Q("ventana-ejercito");
             if (!ventanaDeEjercito || col == null || h == null) { placa?.RemoveFromHierarchy(); firmaDeEjercito = null; return; }
             var otros = col.Participantes.Where(x => x.HeroeId != h.Id).Select(x => c.Sesion.Almacen.Buscar(TipoEntidad.Heroe, x.HeroeId)?.Heroe?.Version.ToString()).ToList();
-            var firma = $"{col.Version}|{h.Version}|{string.Join(",", otros)}|{string.Join(",", EscuadrasDeLaColumna().Select(s => s.Version))}|{Math.Floor(AhoraMs / 1000)}";
+            var firma = $"{col.Version}|{h.Version}|{string.Join(",", otros)}|{string.Join(",", EscuadrasDeLaColumna().Select(s => s.Version))}|{Math.Floor(AhoraMs / 1000)}|{FirmaDeCaravanasDeColumna(col)}";
             if (placa != null && firma == firmaDeEjercito) return;
             firmaDeEjercito = firma;
             placa?.RemoveFromHierarchy();
@@ -194,9 +194,180 @@ namespace ConquestTactics.Mundo.UI
             }
             if (carga.Count == 0) recursos.Add(Dialogo.Texto("Nada.", "campo-ayuda"));
             derecha.Add(recursos);
+            CaravanasDeLaColumna(derecha, col, h, Error);
             derecha.Add(error);
             v.Add(placa);
         }
+
+        // ─────────────────────────── las caravanas de la columna ───────────────────────────
+
+        /// <summary>Las caravanas que lleva la columna: la de Fundación y las comerciales enganchadas, las que llegan en la sesión.</summary>
+        List<Caravana> CaravanasDe(Ejercito col)
+        {
+            var ids = col.CaravanasAdjuntasIds.ToList();
+            if (!string.IsNullOrEmpty(col.CaravanaFundacionId) && !ids.Contains(col.CaravanaFundacionId)) ids.Insert(0, col.CaravanaFundacionId);
+            return ids.Select(id => c.Sesion.Almacen.Buscar(TipoEntidad.Caravana, id)?.Caravana).Where(k => k != null).ToList();
+        }
+
+        /// <summary>Las plazas de tu Facción a cuya puerta está la columna (de donde se carga): la más cercana primero.</summary>
+        List<Asentamiento> PlazasALaPuerta(Ejercito col, Heroe h)
+        {
+            if (mapa?.Centro == null || !h.HasFaccionId) return new List<Asentamiento>();
+            var (x, y) = mapa.Centro.Value;
+            return c.Sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Asentamiento).Select(e => e.Asentamiento)
+                .Where(a => a.FaccionId == h.FaccionId && a.Posicion != null && CosasDelMapa.Distancia(a.Posicion.X / 1000.0, a.Posicion.Y / 1000.0, x, y) <= c.Datos.RadioPuerta)
+                .OrderBy(a => CosasDelMapa.Distancia(a.Posicion.X / 1000.0, a.Posicion.Y / 1000.0, x, y)).ToList();
+        }
+
+        /// <summary>Los trueques en vigor en que tu Facción debe algo (`ladoPendienteParaEjercito`): lo que falta y la plaza que lo recibe.</summary>
+        List<(AcuerdoTrueque acuerdo, List<(string recurso, long falta)> faltan, string destinoId)> TruequesPendientes(Heroe h)
+        {
+            string FaccionDe(string id) => c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, id)?.Asentamiento?.FaccionId;
+            List<(string recurso, long falta)> Faltan(IEnumerable<LineaTrueque> ls) => ls.Select(l => (l.Recurso, (l.CantidadTotal - l.CantidadEntregada) / 1000)).Where(l => l.Item2 > 0).ToList();
+            var r = new List<(AcuerdoTrueque, List<(string, long)>, string)>();
+            foreach (var x in c.Sesion.Almacen.Todas(Entidad.CuerpoOneofCase.AcuerdoTrueque).Select(e => e.AcuerdoTrueque).Where(x => x.Estado == EstadoTrueque.TruequeActivo))
+            {
+                var fa = Faltan(x.LineasA);
+                var fb = Faltan(x.LineasB);
+                if (FaccionDe(x.AsentamientoAId) == h.FaccionId && fa.Count > 0) r.Add((x, fa, x.AsentamientoBId));
+                else if (FaccionDe(x.AsentamientoBId) == h.FaccionId && fb.Count > 0) r.Add((x, fb, x.AsentamientoAId));
+            }
+            return r;
+        }
+
+        string FirmaDeCaravanasDeColumna(Ejercito col)
+        {
+            var h = HeroeAhora();
+            return h == null ? "" : $"{string.Join(",", CaravanasDe(col).Select(k => k.Id + ":" + k.Version))}|{string.Join(",", PlazasALaPuerta(col, h).Select(a => a.Id + ":" + a.Version))}"
+                + $"|{string.Join(",", TruequesPendientes(h).Select(t => t.acuerdo.Id + ":" + t.acuerdo.Version))}";
+        }
+
+        /// <summary>Las caravanas de la columna en la ventana Ejército (`htmlCaravanasDeLaColumna` y `caravanasAdjuntas.ts`): cada una con sus carros (el
+        /// animal de cada uno), su carga y, si se puede, «Cargar» de la plaza de tu Facción a cuya puerta estás (`cargarCaravana`) y «Entregar» a un
+        /// trueque en vigor, a la puerta de la plaza que recibe (`entregarDeCaravana`). Aparcar o soltar es dentro de una plaza: allí, en su lateral.</summary>
+        void CaravanasDeLaColumna(VisualElement donde, Ejercito col, Heroe h, Action<string> error)
+        {
+            var caravanas = CaravanasDe(col);
+            if (caravanas.Count == 0) return;
+            donde.Add(ConAyuda(Dialogo.Texto("Caravanas", "salida-recuadro-sub"),
+                "Van con la columna, a su paso. Cualquiera que vaya en ella las carga a la puerta de una plaza de tu Facción y entrega a la puerta de la que recibe un trueque. Se aparcan entrando con el ejército en una plaza de tu Facción."));
+            var plazas = PlazasALaPuerta(col, h);
+            var trueques = TruequesPendientes(h);
+            foreach (var k in caravanas)
+            {
+                var fundacion = k.Tipo == TipoCaravana.CaravanaDeFundacion;
+                var caja = Dialogo.Caja("ejercito-caravana");
+                caja.name = "ej-caravana-" + k.Id;
+                var cab = Dialogo.Caja("conv-integrante-cab");
+                cab.Add(Dialogo.Texto(fundacion ? "Caravana de Fundación" : NombreDeCaravana(k), "aviso-titulo"));
+                cab.Add(Dialogo.Texto($"lleva {CargaDe(k)}", "campo-ayuda"));
+                caja.Add(cab);
+                if (k.Carros.Count > 0)
+                    caja.Add(Dialogo.Texto($"{k.Carros.Count} carro(s): {string.Join(" ", k.Carros.Select(r => r.HasAnimal ? IconoDeAnimal(r.Animal) : "∅"))}", "campo-ayuda"));
+                var carga = Dialogo.Caja("ejercito-recursos");
+                carga.name = "ej-caravana-carga-" + k.Id;
+                foreach (var kv in k.Contenido?.PorId.Where(kv => kv.Value >= 1000).OrderByDescending(kv => kv.Value) ?? Enumerable.Empty<KeyValuePair<string, long>>())
+                    carga.Add(IconosDelMundo.ConIcono("recurso", kv.Key, Dialogo.Texto(Math.Floor(kv.Value / 1000.0).ToString(), "aviso-titulo"), 16));
+                if (carga.childCount > 0) caja.Add(carga);
+                if (!fundacion && plazas.Count > 0)
+                {
+                    // Cargar: de la plaza a cuya puerta está la columna, lo que tenga su almacén.
+                    var plaza = plazas[0];
+                    var hay = plaza.Almacen.Select(kv => (r: kv.Key, n: (int)(Instante.Valor(kv.Value.Cantidad, AhoraMs) / 1000))).Where(x => x.n >= 1).OrderBy(x => x.r).ToList();
+                    if (hay.Count > 0)
+                    {
+                        var fila = Dialogo.Caja("ejercito-cargar");
+                        var recurso = new DropdownField(hay.Select(x => CosasDelMapa.NombreDeRecurso(x.r)).ToList(), 0) { name = "ej-cargar-recurso-" + k.Id };
+                        recurso.AddToClassList("tropas-orden");
+                        var cantidad = new IntegerField { value = Math.Min(100, hay[0].n), name = "ej-cargar-cantidad-" + k.Id };
+                        cantidad.AddToClassList("ejercito-cantidad");
+                        recurso.RegisterValueChangedCallback(_ => cantidad.value = Math.Min(Math.Max(1, cantidad.value), hay[Math.Max(0, recurso.index)].n));
+                        cantidad.RegisterValueChangedCallback(ev => cantidad.SetValueWithoutNotify(Math.Max(1, Math.Min(ev.newValue, hay[Math.Max(0, recurso.index)].n))));
+                        fila.Add(recurso);
+                        fila.Add(cantidad);
+                        Button cargar = null;
+                        cargar = Dialogo.Boton($"Cargar de {(plaza.HasNombre ? plaza.Nombre : plaza.Id)}", "boton-secundario", async () =>
+                        {
+                            cargar.SetEnabled(false);
+                            if (await OrdenConError(new Orden { CargarCaravana = new OrdenCargarCaravana { EjercitoId = col.Id, CaravanaId = k.Id, AsentamientoId = plaza.Id, Recurso = hay[Math.Max(0, recurso.index)].r, Cantidad = cantidad.value * 1000L } }, error))
+                                firmaDeEjercito = null;
+                            cargar.SetEnabled(true);
+                        });
+                        cargar.name = "ej-cargar-" + k.Id;
+                        fila.Add(cargar);
+                        caja.Add(fila);
+                    }
+                }
+                // Entregar: a cada trueque en vigor en que debes algo, a la puerta de la plaza que recibe y con algo de lo que falta en la caravana.
+                foreach (var (acuerdo, faltan, destinoId) in trueques)
+                {
+                    var destino = c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, destinoId)?.Asentamiento;
+                    var lleva = faltan.Any(f => k.Contenido != null && k.Contenido.PorId.TryGetValue(f.recurso, out var n) && n >= 1000);
+                    if (destino?.Posicion == null || mapa?.Centro == null || !lleva) continue;
+                    if (CosasDelMapa.Distancia(destino.Posicion.X / 1000.0, destino.Posicion.Y / 1000.0, mapa.Centro.Value.x, mapa.Centro.Value.y) > c.Datos.RadioPuerta) continue;
+                    var fila = Dialogo.Caja("ejercito-fila");
+                    var t = Dialogo.Caja("ejercito-fila-texto");
+                    t.Add(Dialogo.Texto($"Trueque con {(destino.HasNombre ? destino.Nombre : destinoId)}", "aviso-titulo"));
+                    var falta = Dialogo.Caja("ejercito-recursos");
+                    foreach (var f in faltan) falta.Add(IconosDelMundo.ConIcono("recurso", f.recurso, Dialogo.Texto($"faltan {f.falta}", "campo-ayuda"), 14));
+                    t.Add(falta);
+                    fila.Add(t);
+                    var id = acuerdo.Id;
+                    Button entregar = null;
+                    entregar = Dialogo.Boton("Entregar", "boton-primario", async () =>
+                    {
+                        entregar.SetEnabled(false);
+                        if (await OrdenConError(new Orden { EntregarDeCaravana = new OrdenEntregarDeCaravana { EjercitoId = col.Id, CaravanaId = k.Id, AcuerdoId = id } }, error)) firmaDeEjercito = null;
+                        entregar.SetEnabled(true);
+                    });
+                    entregar.name = $"ej-entregar-{k.Id}-{id}";
+                    fila.Add(entregar);
+                    caja.Add(fila);
+                }
+                donde.Add(caja);
+            }
+        }
+
+        // ─────────────────────────── aparcar, dentro de una plaza ───────────────────────────
+
+        /// <summary>Dentro de una plaza de tu Facción con tu ejército: las caravanas que lleva, para dejarlas aparcadas aquí (`aparcarCaravana`, el
+        /// Líder). Una tarjeta más del lateral derecho, encima de las de los ejércitos.</summary>
+        void PintarCaravanasDePlaza(VisualElement der, Asentamiento a, Heroe yo, Action rehacer)
+        {
+            der.Q("caravanas-plaza")?.RemoveFromHierarchy();
+            var col = ColumnaDelHeroe(yo);
+            if (col == null || col.LiderId != yo.Id || a.FaccionId != yo.FaccionId) return;
+            var caravanas = CaravanasDe(col).Where(k => k.Tipo == TipoCaravana.CaravanaComercial).ToList();
+            if (caravanas.Count == 0) return;
+            var t = Dialogo.Caja("ejercito-tarjeta");
+            t.name = "caravanas-plaza";
+            var cab = Dialogo.Caja("ejercito-tarjeta-cab");
+            cab.Add(IconosDelMundo.Icono("simbolo", "carro", 18, IconosDelMundo.Bronce));
+            var textos = Dialogo.Caja("ejercito-fila-texto");
+            textos.Add(Dialogo.Texto("Caravanas de tu ejército", "aviso-titulo"));
+            textos.Add(Dialogo.Texto("Se pueden quedar aparcadas aquí", "campo-ayuda"));
+            cab.Add(textos);
+            t.Add(cab);
+            foreach (var k in caravanas)
+            {
+                var fila = Dialogo.Caja("ejercito-fila");
+                var tx = Dialogo.Caja("ejercito-fila-texto");
+                tx.Add(Dialogo.Texto(NombreDeCaravana(k), "aviso-titulo"));
+                tx.Add(Dialogo.Texto($"{k.Carros.Count} carro(s) · {(CargaDe(k) > 0 ? $"lleva {CargaDe(k)}" : "vacía")}", "campo-ayuda"));
+                fila.Add(tx);
+                Button b = null;
+                b = Dialogo.Boton("Aparcar aquí", "boton-secundario", async () =>
+                {
+                    if (await OrdenDePlaza(new Orden { AparcarCaravana = new OrdenAparcarCaravana { CaravanaId = k.Id, AsentamientoId = a.Id } }, b)) rehacer();
+                });
+                b.name = "aparcar-" + k.Id;
+                fila.Add(b);
+                t.Add(fila);
+            }
+            der.Insert(0, t);
+        }
+
+        string FirmaDeCaravanasDePlaza(Heroe yo) => ColumnaDelHeroe(yo) is Ejercito col ? $"{col.Version}|{col.LiderId}|{FirmaDeCaravanasDeColumna(col)}" : "";
 
         /// <summary>Lo que lleva cada integrante: lo tuyo, tus escuadras en la columna; lo de los demás, lo que el motor deja ver (`escuadras_que_lleva`).</summary>
         List<(string tropaId, uint cantidad, uint nivel)> TropaDe(Ejercito col, string heroeId, Heroe yo)

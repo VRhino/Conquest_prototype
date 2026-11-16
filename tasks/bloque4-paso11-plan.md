@@ -110,7 +110,7 @@ Los ficheros son `ventanaSalida.ts`, `salidaComoEjercito.ts`, `convocatoria.ts`,
   - **Añadido entre la tanda 2 y la 3** (Víctor, 2026-11-16): en el lateral derecho de la plaza, donde irán las misiones, una tarjeta por
     ejército al que te puedes unir: los de la puerta («Unirse» abre la ventana del riel) y los que se preparan dentro («Unirse» abre «Salir al
     mundo» con «Ejército»), con los integrantes y su tropa plegables, el pliegue recordado. El botón del riel se queda.
-  - **Tanda 3, las caravanas del ejército**:
+  - **Tanda 3, las caravanas del ejército** (hecha el 2026-11-16, ver el doc 34; soltar y aparcar son lo mismo y solo dentro de una plaza):
     - «Caravanas de tu columna» y su sitio en la ventana Ejército: soltar, cargar, entregar por trueque y aparcar (`aparcarCaravana`, que
       el prototipo no tiene);
     - el carro 3D detrás del ejército;

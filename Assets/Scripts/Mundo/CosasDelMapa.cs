@@ -216,11 +216,29 @@ namespace ConquestTactics.Mundo
                     X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.5, RadioClic = 0.8, Color = c.HasFaccionId() ? ColorDeFaccion(a, c.FaccionId) : 0xc0392b, Entidad = e,
                 });
             }
+            // Las caravanas enganchadas a una columna (las comerciales y la de Fundación) van detrás de ella, en fila y en su rumbo (paso 11): su carro
+            // 3D la sigue y la caja de donde se enganchó desaparece.
+            var detras = new Dictionary<string, (double x, double y)>();
+            foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Ejercito))
+            {
+                var c = e.Ejercito;
+                var ids = c.CaravanasAdjuntasIds.ToList();
+                if (!string.IsNullOrEmpty(c.CaravanaFundacionId) && !ids.Contains(c.CaravanaFundacionId)) ids.Insert(0, c.CaravanaFundacionId);
+                if (ids.Count == 0 || c.Plan == null && c.Posicion == null || c.HasDentroDe) continue;
+                var p = Instante.Posicion(c.Plan, c.Posicion, ahora);
+                var antes = Instante.Posicion(c.Plan, c.Posicion, ahora - 3000);
+                double dx = p.x - antes.x, dy = p.y - antes.y, n = Math.Sqrt(dx * dx + dy * dy);
+                if (n > 1) Rumbos[c.Id] = (dx / n, dy / n);
+                var (rx, ry) = Rumbos.TryGetValue(c.Id, out var rumbo) ? rumbo : (1.0, 0.0);
+                for (int k = 0; k < ids.Count; k++)
+                    detras[ids[k]] = ((p.x - rx * SeparacionCarro * (k + 1)) / 1000, (p.y - ry * SeparacionCarro * (k + 1)) / 1000);
+            }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Caravana))
             {
                 var c = e.Caravana;
-                if (c.Plan == null && c.Posicion == null) continue;
-                var p = Instante.Posicion(c.Plan, c.Posicion, ahora);
+                var enFila = detras.TryGetValue(c.Id, out var tras);
+                if (!enFila && c.Plan == null && c.Posicion == null) continue;
+                var p = enFila ? (x: tras.x * 1000, y: tras.y * 1000, enMarcha: false) : Instante.Posicion(c.Plan, c.Posicion, ahora);
                 bool mia = miFaccion != null && c.HasFaccionId && c.FaccionId == miFaccion || c.HasTitularId && c.TitularId == heroeId;
                 r.Add(new CosaDelMapa
                 {
@@ -253,6 +271,12 @@ namespace ConquestTactics.Mundo
         }
 
         static bool HasFaccionId(this Ejercito c) => !string.IsNullOrEmpty(c.FaccionId);
+
+        /// <summary>Lo que separa, en milésimas de u, cada carro enganchado del anterior (o de la columna): medio u, unos 6 m a la escala del mapa.</summary>
+        const double SeparacionCarro = 500;
+
+        /// <summary>El último rumbo (unitario) de cada columna en marcha: parada, sus carros se quedan detrás según por dónde llegó.</summary>
+        static readonly Dictionary<string, (double x, double y)> Rumbos = new Dictionary<string, (double, double)>();
 
         static string NombreDePlaza(Dictionary<string, Asentamiento> plazas, string id) =>
             plazas.TryGetValue(id ?? "", out var p) && p.HasNombre ? p.Nombre : "una plaza";
@@ -391,7 +415,12 @@ namespace ConquestTactics.Mundo
             {
                 case ClaseDeCosa.Plaza:
                     if (c.BajoNiebla) break; // recordada: solo se marcha
-                    if (aLaPuerta && lider && (propia || c.Id == j.ResidenciaId))
+                    // Un ejército entra entero y se desarma (`guarnecer`), solo en una plaza de su Facción y por su Líder; una columna personal, por la
+                    // puerta de siempre (BronzeAgeClient: `entraEjercito`).
+                    var entraEjercito = j.Columna.Tipo == TipoColumna.ColumnaEjercito || j.Columna.Participantes.Count > 1;
+                    if (aLaPuerta && entraEjercito && propia && j.Columna.LiderId == j.HeroeId)
+                        r.Add(new AccionDelMapa("Entrar con el ejército", new Orden { Guarnecer = new OrdenGuarnecer { AsentamientoId = c.Id, HeroeId = j.HeroeId } }));
+                    else if (aLaPuerta && !entraEjercito && lider && (propia || c.Id == j.ResidenciaId))
                         r.Add(new AccionDelMapa("Entrar", new Orden { EntrarEnAsentamiento = new OrdenEntrarEnAsentamiento { AsentamientoId = c.Id, HeroeId = j.HeroeId } }));
                     // Un asedio solo lo abre un ejército con soldados.
                     if (!propia && puedeAtacar && j.ConSoldados && j.Columna.Tipo == TipoColumna.ColumnaEjercito)
