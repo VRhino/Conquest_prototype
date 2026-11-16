@@ -364,6 +364,10 @@ namespace ConquestTactics.Mundo
             /// `columna.en_formacion`).</summary>
             public bool EnBatalla, EnFormacion;
             public string Persiguiendo;
+            /// <summary>Vas sola en tu columna personal, sin formarla: lo único que se une en campo a un ejército o a una persecución.</summary>
+            public bool Personal;
+            /// <summary>La batalla de ese id, si se ve (la de una plaza, un pueblo o una avanzada asediados).</summary>
+            public Func<string, Batalla> Batalla = _ => null;
             /// <summary>El instante del mundo (ms), para lo que corre con el reloj (el trigo del almacén de una avanzada).</summary>
             public double Ahora;
             /// <summary>Radios de `/v1/datos` (u): puerta, encuentro (ataque), inspección y protección de los mercenarios.</summary>
@@ -394,6 +398,7 @@ namespace ConquestTactics.Mundo
                         r.Add(new AccionDelMapa("Atacar", Atacar(new OrdenAtacar.Types.Objetivo { AsentamientoId = c.Id })));
                     if (!propia && d <= j.RadioInspeccion)
                         r.Add(new AccionDelMapa("Inspeccionar", new Orden { Inspeccionar = new OrdenInspeccionar { HeroeId = j.HeroeId, Objetivo = new OrdenInspeccionar.Types.Objetivo { AsentamientoId = c.Id } } }));
+                    if (c.Entidad?.Asentamiento is Asentamiento asediada && asediada.HasBatallaId) r.AddRange(Unirse(j.Batalla(asediada.BatallaId), j, "Unirse a la batalla"));
                     break;
                 case ClaseDeCosa.Mercenarios:
                     if (aLaPuerta && lider) r.Add(new AccionDelMapa("Entrar", new Orden { EntrarEnCampamento = new OrdenEntrarEnCampamento { CampamentoId = c.Id, HeroeId = j.HeroeId } }));
@@ -408,6 +413,7 @@ namespace ConquestTactics.Mundo
                 case ClaseDeCosa.Aldea:
                     if (aLaPuerta && lider && propia) r.Add(new AccionDelMapa("Entrar", new Orden { EntrarEnPueblo = new OrdenEntrarEnPueblo { PuebloId = c.Id, HeroeId = j.HeroeId } }));
                     if (!propia && puedeAtacar && j.ConSoldados) r.Add(new AccionDelMapa("Atacar", Atacar(new OrdenAtacar.Types.Objetivo { PuebloId = c.Id })));
+                    if (c.Entidad?.Pueblo is Pueblo saqueado && saqueado.HasBatallaId) r.AddRange(Unirse(j.Batalla(saqueado.BatallaId), j, "Unirse a la batalla"));
                     break;
                 case ClaseDeCosa.Avanzada:
                     var ruinas = c.Entidad?.Avanzada?.Estado == EstadoAvanzada.AvanzadaEnRuinas;
@@ -416,6 +422,7 @@ namespace ConquestTactics.Mundo
                     var trigo = c.Entidad?.Avanzada?.AlmacenPorRecurso.TryGetValue("trigo", out var t) == true ? Instante.Valor(t.Cantidad, j.Ahora) / 1000.0 : 0;
                     if (!ruinas && aLaPuerta && lider && propia && trigo >= 1) r.Add(new AccionDelMapa("Llenar víveres", new Orden { Repostar = new OrdenRepostar { HeroeId = j.HeroeId, LugarId = c.Id } }));
                     if (!propia && puedeAtacar && j.ConSoldados) r.Add(new AccionDelMapa("Atacar", Atacar(new OrdenAtacar.Types.Objetivo { AvanzadaId = c.Id })));
+                    if (c.Entidad?.Avanzada is Avanzada atacada && atacada.HasBatallaId) r.AddRange(Unirse(j.Batalla(atacada.BatallaId), j, "Unirse a la batalla"));
                     break;
                 case ClaseDeCosa.EjercitoAjeno:
                 case ClaseDeCosa.CaravanaAjena:
@@ -431,6 +438,18 @@ namespace ConquestTactics.Mundo
                     if (puedeAtacar)
                         r.Add(new AccionDelMapa(esColumna ? "Atacar" : "Interceptar", Atacar(esColumna ? new OrdenAtacar.Types.Objetivo { EjercitoId = c.Id } : new OrdenAtacar.Types.Objetivo { CaravanaId = c.Id })));
                     break;
+                case ClaseDeCosa.Ejercito:
+                case ClaseDeCosa.Formacion:
+                    // Unirse en campo (`unirseEnCampo`): tu columna personal sola, junto a él, si admite a alguien y no le has pedido ya.
+                    var ej = c.Entidad?.Ejercito;
+                    if (ej == null || !j.Personal || ej.PoliticaDeUnion == PoliticaUnion.UnionRechazar || d > j.RadioEncuentro) break;
+                    if (ej.PeticionesDeUnion.Any(x => x.HeroeId == j.HeroeId && x.ExpiraEnMs > j.Ahora)) break;
+                    r.Add(new AccionDelMapa(ej.PoliticaDeUnion == PoliticaUnion.UnionPreguntar ? "Pedir unirme" : "Unirme",
+                        new Orden { UnirseEnCampo = new OrdenUnirseEnCampo { EjercitoId = ej.Id, HeroeId = j.HeroeId } }));
+                    break;
+                case ClaseDeCosa.Batalla:
+                    r.AddRange(Unirse(c.Entidad?.Batalla, j));
+                    break;
                 case ClaseDeCosa.Caravana:
                     // La Caravana de Fundación que vuelve sola a su origen: se toma desde el mapa (BronzeAgeClient no lo tiene; inventario §4).
                     var k = c.Entidad?.Caravana;
@@ -439,6 +458,21 @@ namespace ConquestTactics.Mundo
                     break;
             }
             return r;
+        }
+
+        /// <summary>Unirse a una batalla (`unirseABatalla`), como la ficha de BronzeAgeClient (`panelBatalla.ts`): con el lado que el motor te da
+        /// (`lado_para_unirse`); en una persecución, que no lo da, eliges «Con quien persigue» o «Con el perseguido» si vas sola en tu columna
+        /// personal. Nada si ya combates en ella o es una batalla campal.</summary>
+        static IEnumerable<AccionDelMapa> Unirse(Batalla b, Contexto j, string texto = "Unirse")
+        {
+            if (b == null || b.HasLadoPropio || j.Herido) yield break;
+            Orden O(string lado) { var o = new OrdenUnirseABatalla { HeroeId = j.HeroeId, BattleId = b.Id }; if (lado != null) o.Lado = lado; return new Orden { UnirseABatalla = o }; }
+            if (b.HasLadoParaUnirse) { yield return new AccionDelMapa(texto, O(null)); yield break; }
+            if (b.Ticket?.ContextoEstrategico?.CampoAbierto?.Solitarios == true && j.Personal && !j.EnBatalla)
+            {
+                yield return new AccionDelMapa("Con quien persigue", O("atacante"));
+                yield return new AccionDelMapa("Con el perseguido", O("defensor"));
+            }
         }
     }
 }

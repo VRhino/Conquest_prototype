@@ -146,6 +146,15 @@ namespace ConquestTactics.Mundo
                         Texto = e.Codigo == "asentamiento.informe_pedido" ? "Alguien ha pedido el plano de tu plaza en una taberna." : $"Alguien ha mirado de cerca {que}.",
                         Clase = ClaseAviso.Mirada, Categoria = CategoriaAviso.Inteligencia, Clave = e.Codigo + "|" + (e.HasAsentamientoId ? e.AsentamientoId : ""),
                     };
+                // Alguien pide unirse a tu ejército (`avisos.ts`): solo al Líder, que contesta en la ventana Ejército (⚑).
+                case "columna.union_pedida":
+                    if (!almacen.Todas(Entidad.CuerpoOneofCase.Ejercito).Any(c => c.Ejercito.LiderId == heroeId && c.Ejercito.Tipo == TipoColumna.ColumnaEjercito)) return null;
+                    return new EntradaAviso
+                    {
+                        Titulo = "Piden unirse a tu ejército",
+                        Texto = "Un héroe de tu Facción pide unirse a tu ejército: contesta en la ventana Ejército (⚑) del mapa antes de que caduque.",
+                        Clase = ClaseAviso.Mirada, Categoria = CategoriaAviso.Movimientos, Urgente = true,
+                    };
             }
             switch (e.TipadoCase)
             {

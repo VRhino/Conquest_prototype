@@ -242,6 +242,10 @@ namespace ConquestTactics.Mundo.UI
             borradorReserva.Clear();
             reservaAnadidos.Clear();
             var nombre = plaza.HasNombre ? plaza.Nombre : plaza.Id;
+            // Los ejércitos a la puerta («Unirse a un ejército») llegan por la `VISTA`: dentro sin haber pasado por el mapa aún no se ha pedido; se
+            // pide la del mundo entero, como el mapa.
+            if (c.Sesion != null && !c.Sesion.TieneVista && c.Relieve != null)
+                c.Sesion.CambiarVista(new Rectangulo { Min = new Punto(), Max = new Punto { X = c.Relieve.Columnas * (long)(c.Relieve.Paso * 1000), Y = c.Relieve.Filas * (long)(c.Relieve.Paso * 1000) } });
             var botonAvisos = v.Q<Button>("avisos");
             botonAvisos.clicked += panelAvisos.Alternar;
             v.Q<Button>("cerrar-sesion").clicked += async () =>
@@ -538,7 +542,7 @@ namespace ConquestTactics.Mundo.UI
             if (Cambia("riel", FirmaDelRiel(a, yo))) { PintarRiel(v, a, yo, rehacer); otra = true; }
             var sub = ventanaPlaza != null && subDePlaza.TryGetValue(ventanaPlaza, out var s) ? s : "";
             // Gobierno no enseña nada del paso de minuto (sus cuentas atrás van con el reloj); el Almacén, sí (las cifras).
-            if (Cambia("ventana", $"{ventanaPlaza}|{sub}|{a.Version}|{(ventanaPlaza == "almacen" ? interiores : 0)}|{yo.Version}|{faccion?.Version}|{(ventanaPlaza == "territorio" ? FirmaDeTerritorio(a) : "")}{(ventanaPlaza == "mercado" || ventanaPlaza == "taberna" ? FirmaDeMercado(a) + FirmaDeFlota(a) + FirmaDeComercio(a, yo) : "")}")) { PintarVentanaDePlaza(v.Q("plaza-ventana"), a, yo, rehacer); otra = true; }
+            if (Cambia("ventana", $"{ventanaPlaza}|{sub}|{a.Version}|{(ventanaPlaza == "almacen" ? interiores : 0)}|{yo.Version}|{faccion?.Version}|{(ventanaPlaza == "territorio" ? FirmaDeTerritorio(a) : "")}{(ventanaPlaza == "mercado" || ventanaPlaza == "taberna" ? FirmaDeMercado(a) + FirmaDeFlota(a) + FirmaDeComercio(a, yo) : "")}{(ventanaPlaza == "unirse" ? FirmaDeUnirse(a, yo) + string.Join(",", TropaLibre(yo).Select(t => t.Version)) : "")}")) { PintarVentanaDePlaza(v.Q("plaza-ventana"), a, yo, rehacer); otra = true; }
             if (otra) AjustarPlaza(v);
         }
 

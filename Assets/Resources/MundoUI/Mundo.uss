@@ -998,3 +998,22 @@ Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
 .conv-caravana.elegida { border-color: var(--oro); background-color: rgba(52, 37, 19, 0.95); }
 .conv-caravana > VisualElement { margin-right: 8px; }
 .salida-salir.salida-ejercito-boton { width: auto; padding: 0 18px; margin-left: 8px; }
+
+/* Paso 11, tanda 2: el riel del mapa (⚑ Ejército), centrado abajo como `.mapa-abajo .mapa-riel`, y la ventana Ejército centrada
+   (`.mapa-panel-ventana`, hasta 960 px). */
+.mapa-riel { position: absolute; left: 50%; bottom: 40px; translate: -50% 0; flex-direction: row; border-width: 1px; border-color: rgb(169, 121, 63); border-radius: 3px; background-color: rgb(23, 17, 12); }
+.mapa-riel-boton { width: 44px; height: 44px; margin: 0; padding: 0; border-width: 0; border-radius: 0; align-items: center; justify-content: center; background-color: rgb(30, 23, 16); }
+.mapa-riel-boton:hover { background-color: rgb(50, 38, 24); }
+.mapa-riel-boton.activo { background-color: rgba(169, 121, 63, 0.32); }
+.ventana-ejercito { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 960px; max-width: 94%; max-height: 80%; }
+.ejercito-cab-textos { flex-grow: 1; }
+.ejercito-cuerpo { flex-direction: row; flex-shrink: 1; }
+.ejercito-col { flex-grow: 1; flex-basis: 0; flex-shrink: 1; margin-right: 18px; }
+.ejercito-col:last-child { margin-right: 0; }
+.ejercito-acciones { flex-direction: row; flex-wrap: wrap; margin: 6px 0; }
+.ejercito-acciones > Button { margin: 0 8px 6px 0; height: 32px; padding: 0 14px; }
+.ejercito-recursos { flex-direction: row; flex-wrap: wrap; }
+.ejercito-recursos > * { margin-right: 12px; }
+.ventana-ejercito .ejercito-fila > Button { height: 32px; padding: 0 12px; margin-left: 6px; }
+.ventana-ejercito .tropas-orden { flex-grow: 1; margin: 0; }
+.unirse-fila > .ejercito-fila-texto { flex-grow: 1; margin-left: 8px; }

@@ -1414,6 +1414,7 @@ namespace ConquestTactics.Mundo.UI
             v.Q<Button>("opciones").clicked += AbrirOpciones;
             Botones(v);
             BarraDelJugador(v);
+            RielDelMapa(v);
 
             // La lista de lo que hay bajo el clic.
             var lista = v.Q("lista");
@@ -1459,6 +1460,7 @@ namespace ConquestTactics.Mundo.UI
             {
                 if (mapa == null) return;
                 PintarAvisos(botonAvisos);
+                PintarVentanaDeEjercito(v);
                 forzada.SetEnabled(mapa.Columna != null);
                 forzada.text = mapa.Columna?.MarchaForzada == true ? "Marcha forzada: sí" : "Marcha forzada: no";
                 nodos.text = mapa.NombresDeNodos ? "Nodos: sí" : "Nodos: no";

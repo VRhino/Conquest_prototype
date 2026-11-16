@@ -42,12 +42,18 @@
   - Está en el doc 33 y en `PantallasDeMundo.Rutas.cs`.
   - La prueba es `TuComercioADistancia`.
   - La página de capturas: https://claude.ai/artifact/Szy4oGJLYBEnYdJMQnPK6F
-  - La Taberna sale en el riel solo con el informe de la región: el resto llega en su paso. Fue la opción a) propuesta a Víctor.
+  - La Taberna sale en el riel solo con el informe de la región: el resto llega en el paso 12. Víctor eligió la a) el 2026-11-16.
 - **Paso 11 (los ejércitos)**: el plan está en `tasks/bloque4-paso11-plan.md`.
-  - **Tanda 1 (salir como ejército): hecha y a revisar, sin commit.** Está en el doc 34 y en `PantallasDeMundo.Convocatoria.cs`; la prueba
-    es `TuEjercitoEnPreparacion`.
-  - Faltan la tanda 2 (el ejército en el mapa, unirse y la batalla) y la 3 (las caravanas del ejército con el carro 3D detrás).
-  - Hay tres dudas planteadas a Víctor: el animal del carro, la Taberna solo con el informe y dónde se engancha una caravana comercial.
+  - **Tanda 1 (salir como ejército): en commit `8a2bd3ea`.** Está en el doc 34 y en `PantallasDeMundo.Convocatoria.cs`; la prueba es
+    `TuEjercitoEnPreparacion`.
+  - **Tanda 2 (el ejército en el mapa, unirse y la batalla): hecha y a revisar, sin commit.** Está en el doc 34, en
+    `PantallasDeMundo.Ejercito.cs` (la ventana ⚑ y «Unirse a un ejército» del riel de la plaza) y en `CosasDelMapa.Acciones` («Unirme» y
+    «Unirse» en las fichas). Las pruebas son `TuEjercitoEnElMapa` y `TuUnionALaBatalla` (esta, en la vuelta de la batalla); con `MUNDO_PROTO=ejercito` solo deja la escena para
+    `tasks/pruebas/cdp/ejercito-mapa.mjs`.
+  - Falta la tanda 3 (las caravanas del ejército con el carro 3D detrás): no se empieza hasta que Víctor lo diga.
+  - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
+    icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,
+    junto a la de fundación, solo si hay alguna libre en la plaza (tanda 3; ver el plan).
 - Con la tanda 3 se cerró el paso 10. Sigue el paso 11: los ejércitos, con el carro 3D detrás del ejército y adjuntar, soltar, cargar,
   entregar y aparcar caravanas.
 - El plan del paso 10 no entra en el commit del paso 9.
@@ -118,7 +124,11 @@
     prototipo;
   - al acabar cada tanda, la suite entera sin capturas, en dos lotes a la vez (`bash tasks/pruebas/correr_en_paralelo.sh`) o en serie
     (`bash tasks/pruebas/correr.sh "ConquestTactics.Mundo.UI.Tests" ""`), y la batalla
-    (`bash tasks/pruebas/correr_batalla.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.DelMapaALaBatalla" ""`);
+    en dos vueltas de `correr_batalla.sh`, cada una con su servidor y su lanzador:
+    `bash tasks/pruebas/correr_batalla.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.DelMapaALaBatalla" ""` y
+    `bash tasks/pruebas/correr_batalla.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.TuUnionALaBatalla" ""`.
+    `TuUnionALaBatalla` necesita las batallas en Unity; juntas no, porque el lanzador que deja la primera asigna la batalla de la segunda y
+    deja de admitir a quien llega);
   - si el editor de Víctor está abierto, nada de compilar en lote y no lo cierres.
 - **Capturas del prototipo**:
   - Vite contra tu servidor: en `../BronzeAgeClient`, `VITE_API_BASE=http://127.0.0.1:7891 npx vite --port 5199 --strictPort`.

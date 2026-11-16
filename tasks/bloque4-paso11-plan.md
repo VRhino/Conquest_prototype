@@ -112,6 +112,15 @@ Los ficheros son `ventanaSalida.ts`, `salidaComoEjercito.ts`, `convocatoria.ts`,
       el prototipo no tiene);
     - el carro 3D detrás del ejército;
     - los textos de todos los rechazos.
+    - **Enganchar una caravana comercial** (Víctor, 2026-11-16, duda 1 opción b): en la preparación, junto a la Caravana de Fundación,
+      las caravanas comerciales libres de la plaza, cada una con «Se queda aquí» o «Llevárnosla». Si no hay ninguna libre, el bloque no
+      sale. La ventana «Caravanas de tu columna» de la puerta no lo lleva.
+      - En el motor, `partirConvocatoria` solo lleva la de fundación. Las comerciales se enganchan justo después de partir, con
+        `adjuntarCaravana` por cada una: el Líder, el ejército recién salido en la puerta de la plaza (`puerta_de`, dentro de
+        `radioPuerta`) y la caravana `disponible` con esa plaza de origen, o `aparcada` en ella. Encaja, pero no es de golpe: si un
+        enganche falla, el ejército ya ha salido y se enseña el rechazo.
+      - Solo desde una plaza: en un campamento no hay caravanas.
+    - El animal del carro: el caballo para todos hasta tener los modelos; el animal real va en el icono de la ventana (Víctor, 2026-11-16).
     - Prueba: un ejército engancha una caravana de su plaza, carga, sale con el carro 3D detrás y la aparca en otra plaza de la Facción.
 - **Pruebas** con ratón y teclado a los cuatro tamaños y capturas junto al prototipo. Al acabar cada tanda, la suite en dos lotes y la
   batalla.

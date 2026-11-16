@@ -91,7 +91,7 @@ Todo está en `PantallasDeMundo.Rutas.cs`.
   mercado».
   - Cada informe cuesta oro del almacén (`comprarInformeRegion`), con cuándo se puede volver a comprar y cuánto queda a la vista.
   - Sale con la Taberna activa, al Rey, al Embajador o al Gobernador. Su ficha de edificio tiene «Abrir la Taberna».
-  - El resto de la taberna (miradas, informes de plaza, rumores, mercenarios) llega en su paso. Fue la opción a) propuesta a Víctor.
+  - El resto de la taberna (miradas, informes de plaza, rumores, mercenarios) llega en el paso 12: Víctor eligió la opción a) el 2026-11-16.
 - **La pestaña Región del Mercado**: sale con un informe de órdenes vigente (`htmlOrdenesRegion`).
   - Enseña las órdenes activas de las plazas ajenas, con la cantidad y «Comprarle» o «Venderle», que manda la primera caravana libre
     (`tomarOrdenADistancia`).

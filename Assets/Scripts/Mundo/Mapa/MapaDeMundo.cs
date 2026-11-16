@@ -271,7 +271,9 @@ namespace ConquestTactics.Mundo.Mapa
                 j.EnFormacion = Columna.HasFormacionExpiraEnMs && Columna.FormacionExpiraEnMs > sesion.AhoraMundo;
                 j.EnMarcha = Columna.Estado != EstadoColumna.ColumnaEstacionada || j.EnFormacion;
                 j.EnBatalla = Columna.EnBatalla;
+                j.Personal = Columna.Tipo == TipoColumna.ColumnaPersonal && Columna.Participantes.Count == 1 && !j.EnFormacion;
             }
+            j.Batalla = bid => sesion.Almacen.Buscar(TipoEntidad.Batalla, bid)?.Batalla;
             foreach (var c in Cosas) if (c.Clase == ClaseDeCosa.Mercenarios) j.CampamentosDeMercenarios.Add((c.X, c.Y));
             return j;
         }

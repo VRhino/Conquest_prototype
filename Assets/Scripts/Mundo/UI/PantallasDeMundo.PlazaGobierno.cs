@@ -190,6 +190,7 @@ namespace ConquestTactics.Mundo.UI
             ("territorio", "Territorio", "riel", "territorio"), ("reclutamiento", "Reclutamiento", "edificio", "barracon"), ("taberna", "Taberna", "edificio", "taberna"),
             ("mercado", "Mercado", "edificio", "mercado"),
             ("armeria", "Armería", "edificio", "armeria"),
+            ("unirse", "Unirse a un ejército", "simbolo", "bandera"),
         };
 
         /// <summary>¿Se puede abrir ahora esa ventana? Construcción, con cargo de Gobernador o Maestro de Obras; el Almacén, con almacén; la Armería, activa.
@@ -210,6 +211,7 @@ namespace ConquestTactics.Mundo.UI
             "reclutamiento" => true,
             "almacen" => a.Almacen.Count > 0,
             "construccion" => CargoConstructor(a, yo.Id) != null,
+            "unirse" => EjercitosParaUnirse(a, yo).Count > 0,
             _ => false,
         };
 
@@ -219,7 +221,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var cargo = CargoConstructor(a, yo.Id);
             var enMarcha = Internos(a).Count(e => e.Mejora != null || e.Estado == EstadoEdificio.EdificioEnConstruccion);
-            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}";
+            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}|{FirmaDeUnirse(a, yo)}";
             if (ventanaPlaza != "construccion") return firma;
             var cat = Catalogo;
             var caros = string.Concat((cat?.Properties() ?? Enumerable.Empty<JProperty>())
@@ -508,6 +510,7 @@ namespace ConquestTactics.Mundo.UI
             Ver(ventana, true);
             var completa = ventanaPlaza == "almacen" || ventanaPlaza == "armeria" || ventanaPlaza == "territorio" || ventanaPlaza == "mercado" || ventanaPlaza == "taberna";
             ventana.EnableInClassList("plaza-ventana-completa", completa);
+            ventana.EnableInClassList("plaza-ventana-estrecha", ventanaPlaza == "unirse");
             ventana.name = "plaza-ventana";
             var cab = Dialogo.Caja("plaza-ventana-cab");
             var titulo = Dialogo.Caja("plaza-ventana-titulo");
@@ -517,6 +520,7 @@ namespace ConquestTactics.Mundo.UI
                 "territorio" => ("riel", "territorio", "Territorio"),
                 "mercado" => ("edificio", "mercado", "Mercado"),
                 "taberna" => ("edificio", "taberna", "Taberna"),
+                "unirse" => ("simbolo", "bandera", "Unirse a un ejército"),
                 _ => ("riel", "gobierno", "Gobierno"),
             };
             titulo.Add(IconosDelMundo.Icono(familia, icono, 28, IconosDelMundo.Bronce));
@@ -539,6 +543,7 @@ namespace ConquestTactics.Mundo.UI
                         .Concat(InformesDeOrdenesVigentes(yo).Count > 0 ? new[] { ("region", "Región") } : new (string, string)[0]).ToArray()
                     : new[] { ("deplaza", "Mercado") },
                 "taberna" => new[] { ("informe", "Informe de la región") },
+                "unirse" => new[] { ("unirse", "Unirse a un ejército") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
             var clave = ventanaPlaza;
@@ -578,6 +583,7 @@ namespace ConquestTactics.Mundo.UI
                 case "trueques": Trueques(cuerpo, a, yo, rehacer); break;
                 case "region": OrdenesDeLaRegion(cuerpo, a, yo, rehacer); break;
                 case "informe": InformeDeRegion(cuerpo, a, yo, rehacer); break;
+                case "unirse": UnirseDesdePlaza(cuerpo, a, yo, rehacer); break;
             }
         }
 

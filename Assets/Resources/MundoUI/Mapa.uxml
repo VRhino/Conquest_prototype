@@ -40,6 +40,8 @@
                 <ui:VisualElement name="ficha-acciones" style="margin-top: 8px;" />
             </ui:VisualElement>
         </ui:VisualElement>
+        <!-- El riel del mapa (BronzeAgeClient `.mapa-riel`): ⚑ Ejército, con tu columna fuera. -->
+        <ui:VisualElement name="mapa-riel" class="mapa-riel oculto" />
         <ui:Label name="ayuda" picking-mode="Ignore" style="position: absolute; left: 12px; bottom: 10px; padding: 4px 10px; font-size: 13px; color: rgb(237, 224, 196); background-color: rgba(11, 8, 5, 0.72); border-radius: 3px; -unity-text-align: middle-left;"
                   text="Clic en el suelo: marchar · Clic en algo: elegirlo · Arrastrar o WASD: girar e inclinar · Rueda: zoom · F2: diagnóstico" />
         <ui:VisualElement name="diagnostico" class="oculto" style="position: absolute; left: 0; top: 52px; right: 0; bottom: 0; background-color: rgba(11, 8, 5, 0.88);" />

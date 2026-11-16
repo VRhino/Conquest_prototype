@@ -28,7 +28,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         static readonly HashSet<string> Lote2 = new HashSet<string>
         {
             "TuPlazaPorDentro", "TuTecnologiaDelRey", "TuAvanzadaYSuObra", "TuMercado", "ElCampamentoPorDentro", "TuDiplomaciaDelRey",
-            "TuComercioADistancia", "TuEjercitoEnPreparacion",
+            "TuComercioADistancia", "TuEjercitoEnPreparacion", "TuEjercitoEnElMapa",
         };
 
         [SetUp]
@@ -1334,7 +1334,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>Una orden de administración del motor (`OrdenDeAdministracion`), desde una sesión admin del servidor de prueba.</summary>
-        static IEnumerator Administrar(string url, string ordenAdmin, Google.Protobuf.WellKnownTypes.Struct parametros)
+        static IEnumerator Administrar(string url, string ordenAdmin, Google.Protobuf.WellKnownTypes.Struct parametros, Action<BronzeAge.Contract.V1.ResultadoOrden> resultado = null)
         {
             var codigo = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN");
             if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se manda " + ordenAdmin); yield break; }
@@ -1355,8 +1355,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             var orden = s.Ordenar(new BronzeAge.Contract.V1.Orden { Administracion = new BronzeAge.Contract.V1.OrdenDeAdministracion { Codigo = ordenAdmin, Parametros = parametros } });
             fin = Time.realtimeSinceStartup + 20;
             while (!orden.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            // «Sin cambios» (dar recursos a un almacén lleno, …) no es un fallo: ya está como se pedía.
-            if (orden.Result.Resultado != BronzeAge.Contract.V1.Resultado.OrdenSinCambios)
+            // «Sin cambios» (dar recursos a un almacén lleno, …) no es un fallo: ya está como se pedía. Con `resultado`, lo mira quien llama.
+            if (resultado != null) resultado(orden.Result);
+            else if (orden.Result.Resultado != BronzeAge.Contract.V1.Resultado.OrdenSinCambios)
                 Assert.AreEqual(BronzeAge.Contract.V1.Resultado.OrdenAceptada, orden.Result.Resultado, orden.Result.Rechazo?.ToString());
             s.Cerrar();
         }
