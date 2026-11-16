@@ -49,13 +49,15 @@ namespace ConquestTactics.Mundo.UI.Tests
             for (var f = Time.realtimeSinceStartup + seg; Time.realtimeSinceStartup < f && !hecho();)
             {
                 yield return ConViaRapida(s, plaza, heroe, bombear);
-                for (var g = Time.realtimeSinceStartup + 5; Time.realtimeSinceStartup < g && !hecho();) { if (bombear) s.Bombear(); yield return null; }
+                // El reloj del mundo, a saltos de 10 minutos, en vez de esperarlo.
+                yield return AvanzarReloj(Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL"), s, 600_000);
+                for (var g = Time.realtimeSinceStartup + 1; Time.realtimeSinceStartup < g && !hecho();) { if (bombear) s.Bombear(); yield return null; }
             }
         }
 
         /// <summary>Funda una plaza con una cuenta nueva, como un jugador, la sube a nivel 3 con recursos y le pone obras en la cola. Devuelve el
         /// nick por `nickDe`.</summary>
-        static IEnumerator FundarPlaza(string url, Action<string> nickDe, Action<string> plazaDe = null, Action<V1.Punto> dondeDe = null, bool abrirANeutrales = false)
+        static IEnumerator FundarPlaza(string url, Action<string> nickDe, Action<string> plazaDe = null, Action<V1.Punto> dondeDe = null, bool abrirANeutrales = false, bool mercadoEnPie = false)
         {
             var nick = "plaza-" + DateTime.UtcNow.Ticks % 100_000_000;
             nickDe(nick);
@@ -112,13 +114,12 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Asentamiento).Any(e => Math.Abs(e.Asentamiento.Posicion.X - objetivo.X) < 80_000 && Math.Abs(e.Asentamiento.Posicion.Y - objetivo.Y) < 80_000)) continue;
                 yield return Ordenar(new V1.Orden { MarcharA = new V1.OrdenMarcharA { HeroeId = heroe, Objetivo = new V1.OrdenMarcharA.Types.Objetivo { Punto = objetivo } } });
                 if (ultimo.Resultado != V1.Resultado.OrdenAceptada) continue;
-                var f = Time.realtimeSinceStartup + 120;
-                while (Time.realtimeSinceStartup < f)
+                // La marcha, con el reloj del mundo a saltos de un minuto en vez de esperarla.
+                bool Llegada() { var c = Col(); return c != null && Math.Abs(c.Posicion.X - objetivo.X) < 1500 && Math.Abs(c.Posicion.Y - objetivo.Y) < 1500; }
+                for (var f = Time.realtimeSinceStartup + 120; Time.realtimeSinceStartup < f && !Llegada();)
                 {
-                    s.Bombear();
-                    var c = Col();
-                    if (c != null && Math.Abs(c.Posicion.X - objetivo.X) < 1500 && Math.Abs(c.Posicion.Y - objetivo.Y) < 1500) break;
-                    yield return null;
+                    yield return AvanzarReloj(url, s, 60_000);
+                    for (var g = Time.realtimeSinceStartup + 0.3f; Time.realtimeSinceStartup < g && !Llegada();) { s.Bombear(); yield return null; }
                 }
                 yield return Bombear(1);
                 // La caravana dada por la administración va con su columna mientras la columna exista y se pierde cuando se disuelve (p. ej., al
@@ -133,6 +134,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 if (ultimo.Resultado == V1.Resultado.OrdenAceptada) { plaza = ultimo.Creadas.First(c => c.Entidad == V1.TipoEntidad.Asentamiento).Id; break; }
             }
             Assert.IsNotNull(plaza, "la plaza fundada");
+            // Sin auto-construcción desde el principio: con el reloj deprisa, la plaza empezaría obras propias (y la cola, de tope cuatro, se llena).
+            yield return Ordenar(new V1.Orden { AlternarAutoConstruccion = new V1.OrdenAlternarAutoConstruccion { AsentamientoId = plaza, Pausada = true } });
             // Recursos de sobra; se repiten antes de cada tanda de obras (la muralla, deprisa con la Vía Rápida, también se los lleva).
             IEnumerator DarRecursos()
             {
@@ -154,28 +157,63 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return ConViaRapida(s, plaza, heroe);
             // Un recinto de muralla (empalizada): se levanta celda a celda con el reloj deprisa.
             yield return Ordenar(new V1.Orden { ComprometerRecinto = new V1.OrdenComprometerRecinto { AsentamientoId = plaza, Cargo = "gobernador", Nivel = "1" } });
-            // Sin auto-construcción y con la cola vacía, para poner las obras de la prueba.
-            yield return Ordenar(new V1.Orden { AlternarAutoConstruccion = new V1.OrdenAlternarAutoConstruccion { AsentamientoId = plaza, Pausada = true } });
-            yield return Bombear(1);
-            foreach (var e in s.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plaza).Asentamiento.Edificios.Where(x => x.Estado == V1.EstadoEdificio.EdificioEnCola).ToList())
-                yield return Ordenar(new V1.Orden { QuitarDeCola = new V1.OrdenQuitarDeCola { AsentamientoId = plaza, Cargo = "gobernador", EdificioId = e.Id } });
+            // La cola vacía, para poner las obras de la prueba (lo que la proyección aún no traía se quita en la vuelta siguiente).
+            for (var f = Time.realtimeSinceStartup + 5; Time.realtimeSinceStartup < f;)
+            {
+                var enCola = s.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plaza).Asentamiento.Edificios.Where(x => x.Estado == V1.EstadoEdificio.EdificioEnCola).ToList();
+                if (enCola.Count == 0) break;
+                foreach (var e in enCola)
+                    yield return Ordenar(new V1.Orden { QuitarDeCola = new V1.OrdenQuitarDeCola { AsentamientoId = plaza, Cargo = "gobernador", EdificioId = e.Id } });
+                yield return Bombear(0.5f);
+            }
             // Primero lo corto (armería, curtiduría, molino, bodega), que acaba enseguida con el reloj deprisa; luego lo largo (granero, mercado,
             // taberna, almacén...), ya con el reloj a su paso para que se quede en obra o en la cola mientras dura la prueba (con la Vía Rápida, una obra
-            // de horas son minutos; la cola tiene tope: lo que no cabe, el motor lo rechaza).
-            foreach (var tanda in new[] { new[] { "armeria", "curtiduria", "molino", "bodega" }, new[] { "granero", "mercado", "taberna", "almacen", "fundicion", "carpinteria" } })
+            // de horas son minutos; la cola tiene tope de cuatro: lo que no cabe, el motor lo rechaza; con `mercadoEnPie`, el Mercado va entre lo corto en lugar de la bodega).
+            foreach (var tanda in mercadoEnPie
+                ? new[] { new[] { "armeria", "curtiduria", "molino", "mercado" }, new[] { "granero", "bodega", "taberna", "almacen", "fundicion", "carpinteria" } }
+                : new[] { new[] { "armeria", "curtiduria", "molino", "bodega" }, new[] { "granero", "mercado", "taberna", "almacen", "fundicion", "carpinteria" } })
             {
+                V1.Asentamiento Ella() => s.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plaza)?.Asentamiento;
                 if (tanda[0] == "granero")
                 {
-                    // La muralla, entera antes de entrar (con la Vía Rápida cada celda va deprisa; a medio levantar, la planta se rehace a cada celda).
-                    V1.Asentamiento Ella() => s.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plaza)?.Asentamiento;
-                    yield return ConViaRapidaHasta(s, plaza, heroe, () => Ella()?.Recintos.Count > 0 && Ella().Recintos.All(r => r.Avance >= r.Celdas.Count), 90);
-                    Debug.Log($"[Prueba] fundar: muralla {string.Join(", ", Ella().Recintos.Select(r => $"{r.Avance} de {r.Celdas.Count}"))} celdas");
+                    // La muralla, entera antes de entrar (a medio levantar, la planta se rehace a cada celda): el reloj del mundo salta de 10 en 10
+                    // minutos, con la Vía Rápida renovada, en vez de esperarla.
+                    // Sin recinto si el sitio no deja cerrar el anillo: entonces no hay muralla que esperar.
+                    bool Hecha() => Ella() == null || Ella().Recintos.All(r => r.Avance >= r.Celdas.Count);
+                    int Avance() => Ella()?.Recintos.Sum(r => (int)r.Avance) ?? 0;
+                    // La muralla se paga celda a celda del almacén y el motor no levanta una que lo deje por debajo de su reserva: con la madera de
+                    // siempre se paraba en 17-22 celdas (madera 20). Antes de empezarla, la madera y la piedra que pide un anillo grande.
+                    foreach (var (r, n) in new[] { ("madera", 10_000_000L), ("piedra", 5_000_000L) })
+                    {
+                        var q = new Google.Protobuf.WellKnownTypes.Struct();
+                        q.Fields["asentamiento_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(plaza);
+                        q.Fields["recurso"] = Google.Protobuf.WellKnownTypes.Value.ForString(r);
+                        q.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(n);
+                        yield return Administrar(url, "dar_recursos", q);
+                    }
+                    for (var f = Time.realtimeSinceStartup + 90; Time.realtimeSinceStartup < f && !Hecha();)
+                    {
+                        yield return ConViaRapida(s, plaza, heroe);
+                        var antes = Avance();
+                        // A saltos de 10 minutos: con saltos de una hora la muralla acaba antes, pero el mundo corre días y la plaza se pierde.
+                        yield return AvanzarReloj(url, s, 600_000);
+                        for (var g = Time.realtimeSinceStartup + 1; Time.realtimeSinceStartup < g && Avance() == antes;) { s.Bombear(); yield return null; }
+                    }
+                    Debug.Log($"[Prueba] fundar: muralla {string.Join(", ", (Ella()?.Recintos ?? new Google.Protobuf.Collections.RepeatedField<V1.Recinto>()).Select(r => $"{r.Avance} de {r.Celdas.Count}"))} celdas");
                     yield return Reloj(url, 1_000);
                     yield return DarRecursos();
                 }
                 foreach (var tipo in tanda)
                     yield return Ordenar(new V1.Orden { AnadirEdificioManualmente = new V1.OrdenAnadirEdificioManualmente { AsentamientoId = plaza, Cargo = "gobernador", Tipo = tipo } });
-                yield return Bombear(15);
+                // Lo corto, hasta que esté en pie; lo largo, hasta que salga en la plaza (en obra o en la cola).
+                bool Listo(string tipo) => Ella()?.Edificios.Any(x => x.Tipo == tipo && (tanda[0] == "granero" || x.Estado == V1.EstadoEdificio.EdificioActivo)) == true;
+                for (var f = Time.realtimeSinceStartup + 15; Time.realtimeSinceStartup < f && !tanda.All(Listo);)
+                {
+                    // Lo corto, con el reloj a saltos de 10 minutos; lo largo no se adelanta, para que siga en obra durante la prueba.
+                    if (tanda[0] != "granero") yield return AvanzarReloj(url, s, 600_000);
+                    for (var g = Time.realtimeSinceStartup + 0.5f; Time.realtimeSinceStartup < g && !tanda.All(Listo);) { s.Bombear(); yield return null; }
+                }
+                yield return Bombear(0.5f);
             }
             // Otra vez de sobra (las obras se los llevan), también para reclutar una tropa de pago.
             yield return DarRecursos();
@@ -225,7 +263,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             selector.confirmButton.onClick.Invoke();
             yield return Esperar(() => raiz.Q("plaza") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior de la plaza");
             yield return Esperar(() => raiz.Q(className: "carga") == null, 10, "sin la pantalla de carga");
-            yield return new WaitForSecondsRealtime(1.5f);
+            yield return Quieto(1.5f);
             var interior = SelectorDePersonaje.Interior;
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             var plazaId = Yo().Ubicacion.AsentamientoId;
@@ -369,7 +407,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                         yield return Esperar(() => Plaza().Edificios.Where(e => e.Estado == V1.EstadoEdificio.EdificioEnCola).OrderByDescending(e => e.Prioridad).First().Id != primera.Id, 10, "la cola reordenada");
                     else
                     {
-                        yield return new WaitForSecondsRealtime(1f);
+                        yield return Quieto(1f);
                         Debug.Log($"[Prueba] ▶ con prioridades iguales ({cola[0].Prioridad}): la cola queda {string.Join(", ", Plaza().Edificios.Where(e => e.Estado == V1.EstadoEdificio.EdificioEnCola).Select(e => $"{e.Tipo} p{e.Prioridad}"))}");
                     }
                     var version = interior.Version;
@@ -399,7 +437,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 }
 
                 // La curtiduría (ya en pie): su ficha, por la misma puerta que la tecla F (la de su zona).
-                yield return Esperar(() => Plaza().Edificios.Any(e => e.Tipo == "curtiduria" && e.Estado == V1.EstadoEdificio.EdificioActivo), 60, "la curtiduría en pie");
+                yield return EsperarConReloj(url, conexion.Sesion, () => Plaza().Edificios.Any(e => e.Tipo == "curtiduria" && e.Estado == V1.EstadoEdificio.EdificioActivo), 60, "la curtiduría en pie", 60_000);
                 var curtiduria = Plaza().Edificios.First(e => e.Tipo == "curtiduria");
                 interior.AlInteractuar("edificio:" + curtiduria.Id);
                 yield return Esperar(() => Ficha() != null, 5, "la ficha de la curtiduría");

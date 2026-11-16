@@ -52,6 +52,14 @@ namespace ConquestTactics.Mundo.UI
             var propia = cosa.FaccionId != null && cosa.FaccionId == h.FaccionId;
             switch (cosa.Clase)
             {
+                case ClaseDeCosa.Plaza:
+                {
+                    // El Mercado, con la columna a la puerta: en tu plaza, sus Órdenes al Gobernador o al Tesorero; si no, sus órdenes abiertas.
+                    var a = c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, cosa.Id)?.Asentamiento ?? cosa.Entidad?.Asentamiento;
+                    if (a == null || !MercadoActivo(a) || !ALaPuerta(cosa.X, cosa.Y)) break;
+                    if ((propia && GestionaOrdenes(a, h)) || OrdenesDe(a.Id).Count > 0) r.Add(("mercado", "Mercado", ("edificio", "mercado")));
+                    break;
+                }
                 case ClaseDeCosa.Pueblo:
                 case ClaseDeCosa.Aldea:
                 {
@@ -132,16 +140,19 @@ namespace ConquestTactics.Mundo.UI
             var placa = v.Q("ventana-puerta");
             if (ventanaDePuerta == null) { placa?.RemoveFromHierarchy(); firmaDePuerta = null; return; }
             var firmaVentana = $"{ventanaDePuerta}|{cosaDePuerta}|{HeroeAhora()?.Version}|{MiColumna()?.Version}|{string.Join(",", EscuadrasDelHeroe(HeroeAhora()).Select(s => s.Version))}"
+                + $"|{(ventanaDePuerta == "mercado" && c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, cosa.Id)?.Asentamiento is Asentamiento am ? FirmaDeMercado(am) + am.Version : "")}"
                 + $"|{c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada?.Version}|{c.Sesion.Almacen.Buscar(TipoEntidad.Pueblo, cosa.Id)?.Pueblo?.Version}|{ObraSobre(cosa.Id)?.Version}";
             if (placa != null && firmaVentana == firmaDePuerta) return;
             firmaDePuerta = firmaVentana;
             placa?.RemoveFromHierarchy();
             placa = Dialogo.Caja("placa ventana-puerta");
             placa.name = "ventana-puerta";
+            placa.EnableInClassList("ancha", ventanaDePuerta == "mercado");
             if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hojaPlaza) placa.styleSheets.Add(hojaPlaza);
             var filete = Dialogo.Caja("placa-filete ventana-puerta-filete");
             var cab = Dialogo.Caja("ventana-puerta-cab");
-            var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : cosa.Clase == ClaseDeCosa.Avanzada ? "Tu guarnición" : "Guarnición";
+            var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : ventanaDePuerta == "mercado" ? "Mercado"
+                : cosa.Clase == ClaseDeCosa.Avanzada ? "Tu guarnición" : "Guarnición";
             cab.Add(Dialogo.Texto(titulo, "dialogo-titulo"));
             var cerrar = Dialogo.Boton("×", "aviso-borrar", () => { ventanaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); });
             cerrar.name = "ventana-puerta-cerrar";
@@ -156,6 +167,14 @@ namespace ConquestTactics.Mundo.UI
                     if (cosa.Clase == ClaseDeCosa.Avanzada) GuarnicionDeAvanzada(cuerpo, cosa.Entidad.Avanzada);
                     else GuarnicionDePueblo(cuerpo, c.Sesion.Almacen.Buscar(TipoEntidad.Pueblo, cosa.Id)?.Pueblo ?? cosa.Entidad.Pueblo);
                     break;
+                case "mercado":
+                {
+                    var a = c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, cosa.Id)?.Asentamiento ?? cosa.Entidad.Asentamiento;
+                    void Otra() { firmaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); }
+                    if (cosa.FaccionId != null && cosa.FaccionId == HeroeAhora()?.FaccionId && GestionaOrdenes(a, HeroeAhora())) OrdenesDeMercado(cuerpo, a, HeroeAhora(), Otra);
+                    else MercadoDePlaza(cuerpo, a.Id, Otra);
+                    break;
+                }
                 case "carga": CargaAlAlmacen(cuerpo, c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada ?? cosa.Entidad.Avanzada); break;
             }
             filete.Add(cuerpo);

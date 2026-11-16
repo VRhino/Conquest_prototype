@@ -946,6 +946,7 @@ Button.recl-boton-mini:hover { background-color: var(--oro-claro); }
 .obra-entrega-lleva.nada .obra-entrega-lleva-n { color: var(--texto-apagado); }
 .obra-entrega-acciones { flex-direction: row; justify-content: flex-end; margin-top: 8px; }
 .ventana-puerta { position: absolute; right: 360px; bottom: 16px; width: 360px; max-height: 70%; }
+.ventana-puerta.ancha { width: 900px; }
 .ventana-puerta-filete { padding: 14px 16px; }
 .ventana-puerta-cab { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .ventana-puerta-cuerpo { flex-shrink: 1; }

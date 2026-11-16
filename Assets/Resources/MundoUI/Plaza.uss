@@ -936,3 +936,96 @@
 
 /* El blasón de un pueblo o una avanzada por dentro (paso 9, tanda 3): su emblema redondo delante del nombre. */
 .sitio-emblema { width: 46px; height: 46px; border-radius: 23px; margin-right: 10px; }
+
+/* ═══════════ paso 10, tanda 1: el Mercado (Órdenes y el mercado de una plaza ajena), calcado de `style.css` («Mercado», 2026-11-02) ═══════════ */
+.plaza { --orden-venta: #e0b04a; --orden-compra: #6fb6ff; }
+.mercado-cols > .territorio-col { margin-right: 14px; }
+.orden-boleta {
+    padding: 10px; margin-bottom: 4px; border-width: 1px 1px 1px 1px; border-top-width: 3px; border-color: var(--bronce); border-top-color: var(--orden-venta);
+    border-radius: 3px; background-color: rgba(30, 22, 13, 0.95);
+}
+.orden-boleta.compra { border-top-color: var(--orden-compra); }
+.orden-boleta > * { margin-bottom: 8px; }
+.orden-boleta > .orden-pie { margin-bottom: 0; }
+.orden-tipos { flex-direction: row; }
+.orden-tipo {
+    flex-grow: 1; flex-basis: 0; margin: 0 2px; padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.45); color: var(--texto-sec); font-size: 13px; -unity-font-style: bold;
+}
+.orden-tipo.venta.elegido { border-color: var(--orden-venta); background-color: rgba(105, 76, 21, 0.9); color: #ffe7a8; }
+.orden-tipo.compra.elegido { border-color: var(--orden-compra); background-color: rgba(28, 63, 106, 0.9); color: #d8ecff; }
+.orden-inventario { flex-direction: row; flex-wrap: wrap; }
+.orden-recurso {
+    width: 44px; height: 44px; margin: 0 4px 4px 0; padding: 0; align-items: center; justify-content: center; border-width: 1px;
+    border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgba(52, 37, 19, 0.85);
+}
+.orden-recurso:hover { border-color: var(--oro); translate: 0 -1px; }
+.orden-recurso-cifra {
+    position: absolute; right: 2px; bottom: 1px; margin: 0; padding: 0 2px; border-radius: 2px; background-color: rgba(0, 0, 0, 0.7);
+    font-size: 9px; -unity-font-style: bold; color: var(--oro-claro);
+}
+.orden-recurso.vacio > VisualElement { opacity: 0.45; }
+.orden-recurso.vacio .orden-recurso-cifra { color: var(--texto-apagado); }
+.orden-boleta.venta .orden-recurso.elegido { border-color: var(--orden-venta); }
+.orden-boleta.compra .orden-recurso.elegido { border-color: var(--orden-compra); }
+.orden-elegido { flex-direction: row; align-items: center; padding: 4px 8px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); }
+.orden-elegido > VisualElement { margin-right: 8px; }
+.orden-elegido-nombre { margin: 0; font-size: 14.4px; color: var(--oro-claro); -unity-font-style: bold; }
+.orden-elegido-hay { margin: 0 0 0 auto; font-size: 11.8px; color: var(--texto-sec); }
+.orden-campos { flex-direction: row; }
+.orden-campos > * { flex-grow: 1; flex-basis: 0; min-width: 0; margin: 0 3px; flex-direction: column; align-items: stretch; }
+.orden-campos Label { min-width: 0; font-size: 10.9px; letter-spacing: 1px; color: var(--texto-sec); }
+.orden-pie { flex-direction: row; align-items: center; padding-top: 8px; border-top-width: 1px; border-top-color: rgba(107, 74, 41, 0.6); }
+.orden-total { flex-grow: 1; flex-shrink: 1; min-width: 0; margin: 0; font-size: 12.8px; color: var(--oro-claro); }
+.orden-colocar {
+    flex-shrink: 0; padding: 7px 16px; border-width: 1px; border-color: var(--orden-venta); border-radius: 3px; background-color: rgba(98, 74, 31, 0.95);
+    color: #fff3d0; font-size: 13px; -unity-font-style: bold;
+}
+.orden-boleta.compra .orden-colocar { border-color: var(--orden-compra); background-color: rgba(42, 75, 112, 0.95); }
+.orden-colocar:hover { translate: 0 -1px; }
+.orden-colocar:disabled { opacity: 0.5; }
+.orden-fichas { flex-direction: row; flex-wrap: wrap; }
+.orden-ficha {
+    flex-direction: row; align-items: center; width: 190px; margin: 0 6px 6px 0; padding: 6px 8px; border-width: 1px; border-left-width: 3px;
+    border-color: rgba(107, 74, 41, 0.7); border-left-color: var(--orden-venta); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9);
+}
+.orden-ficha.compra { border-left-color: var(--orden-compra); }
+.orden-ficha-icono {
+    width: 34px; height: 34px; flex-shrink: 0; margin-right: 8px; align-items: center; justify-content: center; border-width: 1px;
+    border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.45);
+}
+.orden-ficha-flecha {
+    position: absolute; right: -4px; top: -4px; width: 15px; height: 15px; margin: 0; padding: 0; border-radius: 8px; background-color: var(--orden-venta);
+    color: #1a120a; font-size: 8.8px; -unity-text-align: middle-center;
+}
+.orden-ficha.compra .orden-ficha-flecha { background-color: var(--orden-compra); }
+.orden-ficha-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.orden-ficha-titulo { margin: 0 0 3px 0; font-size: 12.8px; color: var(--pergamino); -unity-font-style: bold; }
+.orden-ficha-barra { height: 5px; margin-bottom: 3px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.55); overflow: hidden; }
+.orden-ficha-barra-i { height: 100%; background-color: var(--orden-venta); }
+.orden-ficha.compra .orden-ficha-barra-i { background-color: var(--orden-compra); }
+.orden-ficha-pie { margin: 0; font-size: 10.6px; color: var(--texto-sec); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orden-ficha-cancelar {
+    flex-shrink: 0; width: 22px; height: 22px; margin: 0 0 0 6px; padding: 0; border-width: 1px; border-color: rgba(107, 74, 41, 0.8); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.45); color: var(--texto-sec); font-size: 12px; -unity-text-align: middle-center;
+}
+.orden-ficha-cancelar:hover { border-color: var(--obra-rojo); color: #ffb3a8; }
+.mercado-lista > .mercado-orden { margin-bottom: 6px; }
+.mercado-orden {
+    flex-direction: row; align-items: center; padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px;
+    background-color: rgba(18, 14, 9, 0.9);
+}
+.mercado-orden-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-right: 8px; }
+.mercado-orden-nombre { margin: 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; }
+.mercado-orden > .puerta-carga-cantidad { margin-right: 6px; }
+.orden-campos .unity-base-text-field__input, .mercado-orden .unity-base-text-field__input {
+    height: 32px; padding: 0 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: var(--tinta);
+    color: var(--pergamino); font-size: 14.4px;
+}
+.orden-campos .unity-base-field__label { min-width: 0; margin: 0 0 2px 0; padding: 0; }
+.mercado-cols > #ordenes-en-pie { flex-grow: 0; flex-shrink: 0; width: 214px; }
+.plaza-ventana-completa .mercado-cols > #ordenes-en-pie { width: 38%; }
+/* En la ventana de la puerta (más estrecha que la de la plaza), la boleta arriba y las órdenes en pie debajo, como el prototipo. */
+.ventana-puerta .mercado-cols { flex-direction: column; }
+.ventana-puerta .mercado-cols > .territorio-col { margin-right: 0; }
+.ventana-puerta .mercado-cols > #ordenes-en-pie { width: auto; margin-top: 10px; }
