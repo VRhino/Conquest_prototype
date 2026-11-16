@@ -355,7 +355,7 @@ namespace ConquestTactics.Mundo.UI
                 {
                     var ic = Dialogo.Caja("intel-icono");
                     var n = g.Sum(x => (long)x.Cantidad);
-                    if (PiezasDeTropa.Miniatura(IdDeTropa(g.Key), 26, $"{NombreDeTropa(IdDeTropa(g.Key))}: {n}") is VisualElement mini) ic.Add(mini);
+                    if (PiezasDeTropa.Miniatura(g.Key, 26, $"{NombreDeTropa(g.Key)}: {n}") is VisualElement mini) ic.Add(mini);
                     ic.Add(Dialogo.Texto(n.ToString(), "pacto-plaza"));
                     tropas.Add(ic);
                 }

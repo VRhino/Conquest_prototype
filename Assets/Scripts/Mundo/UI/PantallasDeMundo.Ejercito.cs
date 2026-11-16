@@ -374,16 +374,7 @@ namespace ConquestTactics.Mundo.UI
         {
             if (heroeId == yo.Id) return EscuadrasDeLaColumna().Select(s => (s.TropaId, s.Cantidad, s.Nivel)).ToList();
             var otro = c.Sesion.Almacen.Buscar(TipoEntidad.Heroe, heroeId)?.Heroe;
-            return otro?.EscuadrasQueLleva.Select(t => (IdDeTropa(t.TropaId), t.Cantidad, t.Nivel)).ToList() ?? new List<(string, uint, uint)>();
-        }
-
-        /// <summary>El id del catálogo de una tropa. `EscuadraQueLleva.tropa_id` llega del motor con el nombre («Leñadores», `vista.rs`
-        /// `escuadra_que_lleva`), no con el id: se busca por nombre en `TROPAS_RECLUTABLES` si no es ya un id.</summary>
-        string IdDeTropa(string idONombre)
-        {
-            var t = c.Datos.TropasReclutables;
-            if (t == null || t.Any(x => (string)x["id"] == idONombre)) return idONombre;
-            return (string)t.FirstOrDefault(x => (string)x["nombre"] == idONombre)?["id"] ?? idONombre;
+            return otro?.EscuadrasQueLleva.Select(t => (t.TropaId, t.Cantidad, t.Nivel)).ToList() ?? new List<(string, uint, uint)>();
         }
 
         // ─────────────────────────── unirse desde la plaza ───────────────────────────
@@ -477,7 +468,7 @@ namespace ConquestTactics.Mundo.UI
                     () => { ventanaPlaza = "unirse"; rehacer(); });
             foreach (var cv in dentro)
                 Tarjeta(cv.Id, $"Ejército de {Textos.NombreDeHeroe(almacen, cv.LiderId)} preparándose", $"{cv.Integrantes.Count} héroe(s) · {NombreDePolitica[Politica(cv.PoliticaDeUnion)].ToLowerInvariant()}",
-                    cv.Integrantes.OrderByDescending(x => x.HeroeId == cv.LiderId).Select(x => (x.HeroeId, x.HeroeId == cv.LiderId ? "Líder" : null, x.Seleccion?.TropaIds.Select(IdDeTropa).ToList() ?? new List<string>())),
+                    cv.Integrantes.OrderByDescending(x => x.HeroeId == cv.LiderId).Select(x => (x.HeroeId, x.HeroeId == cv.LiderId ? "Líder" : null, x.Seleccion?.TropaIds.ToList() ?? new List<string>())),
                     () => { salirComoEjercito = true; VentanaDeSalida(null, a.HasNombre ? a.Nombre : a.Id, a.Id); });
             der.Insert(0, caja);
         }

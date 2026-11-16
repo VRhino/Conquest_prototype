@@ -142,6 +142,26 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Clic(EnFicha("Unirse"));
                 yield return Esperar(() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Batalla, batalla)?.Batalla?.HasLadoPropio == true, 15, "dentro de la batalla");
                 Assert.AreEqual(V1.LadoId.Atacante, conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Batalla, batalla).Batalla.LadoPropio, "con quien ataca");
+
+                // En la preparación, quien se unió (no la inició) se baja antes de que empiece (`bajarseDeBatalla`, motor ecfb23d): vuelve al mapa con
+                // su columna libre y la batalla sigue para el otro.
+                yield return Esperar(() => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaPreparacion
+                    && raiz.Q<Button>("batalla-bajarse") != null, 30, "«Bajarse de la batalla» en la preparación");
+                Assert.IsNull(raiz.Q<Button>("batalla-cancelar"), "quien se unió no la cancela");
+                yield return Esperar(() => raiz.Query(className: "prep-escuadra").ToList().Count == 2, 10, "sus dos escuadras en el riel (las de quien se une van en las incorporaciones)");
+                yield return Capturar("176_preparacion_bajarse");
+                yield return EnTamanos(raiz, "176_preparacion_bajarse");
+                yield return Clic(raiz.Q<Button>("batalla-bajarse"));
+                yield return Esperar(() => UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaMundo && ElMapaSiHay() != null,
+                    30, "de vuelta en el mapa tras bajarse");
+                var bajada = conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Batalla, batalla)?.Batalla;
+                Assert.IsTrue(bajada == null || !bajada.HasLadoPropio, "ya no combate en ella");
+                if (bajada != null) Assert.AreEqual(V1.MotivoSalida.SalidaBajada, bajada.SalidaPropia?.Motivo, "salió por bajarse");
+                mapa = ElMapa();
+                yield return Esperar(() => mapa.Columna != null && !mapa.Columna.HasBatallaId, 20, "su columna, libre en el mapa");
+                // Que la batalla sigue lo prueba el final: quien la inició la cancela, y solo se cancela una batalla viva.
+                Debug.Log($"[Prueba] bajarse: la batalla {batalla} sigue; columna libre");
+                yield return Capturar("177_mapa_tras_bajarse");
             }
             finally
             {

@@ -128,6 +128,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => PreparacionRed.Conectado && raiz.Q<Button>("prep-listo")?.enabledSelf == true, 150, "conectado con el servidor de batalla");
                 Debug.Log($"[Prueba] preparación 1: {raiz.Q<Label>("batalla-estado").text} · {raiz.Q<Label>("batalla-ahora").text} · {raiz.Q<Label>("prep-queda")?.text} · {raiz.Q<Label>("prep-punto")?.text}");
                 Assert.IsNotNull(raiz.Q<Button>("batalla-cancelar"), "asignada, quien la inició aún puede cancelarla");
+                Assert.IsNull(raiz.Q<Button>("batalla-bajarse"), "único humano: bajarse la cancelaría igual, así que solo «Cancelar»");
                 yield return EnTamanos(raiz, "41_preparacion", () => Assert.AreEqual(2, raiz.Query(className: "prep-escuadra").ToList().Count, "las dos escuadras en el riel"));
                 Pulsar(raiz.Q<Button>("batalla-cancelar"));
                 yield return Esperar(() => raiz.Q<Label>("batalla-estado")?.text.ToUpperInvariant().Contains("CANCELADA") == true, 15, "la batalla cancelada");
@@ -320,8 +321,15 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Query<Button>().ToList().First(b => b.text == "Abandonar" && b.ClassListContains("boton-peligro")));
                 yield return Esperar(() => SceneManager.GetActiveScene().name == PantallasDeMundo.EscenaInforme && raiz.Q("panel-informe") != null, 30, "el informe tras abandonar");
                 Assert.IsTrue(raiz.Q("panel-informe").Query<Label>().ToList().Any(l => l.text.Contains("Abandonaste la batalla")), "dice que abandonaste");
-                // Quien abandona deja de combatir: el motor ya no le enseña la batalla (ni su resultado). El informe dice lo suyo.
-                yield return Esperar(() => raiz.Q<Label>("informe-titulo") != null && raiz.Q("informe-herido") != null, 90, "el informe del abandono, con la herida");
+                // Quien abandona sigue viendo la batalla hasta su resultado (`salida_propia`, motor ecfb23d): el informe espera a que acabe, con la
+                // derrota suya y lo de su bando, y la herida.
+                yield return Esperar(() => raiz.Q<Label>("informe-titulo") != null && raiz.Q("informe-herido") != null, 180, "el informe del abandono, con su resultado y la herida");
+                var salidaPropia = conexion.Sesion.Almacen.Buscar(TipoEntidad.Batalla, segunda).Batalla.SalidaPropia;
+                Assert.IsNotNull(salidaPropia, "el motor dice cómo saliste");
+                Assert.AreEqual(MotivoSalida.SalidaAbandono, salidaPropia.Motivo, "abandonaste");
+                StringAssert.StartsWith("Derrota · tu bando", raiz.Q<Label>("informe-titulo").text, "la derrota es tuya, con lo de tu bando");
+                Assert.IsTrue(raiz.Q("panel-informe").Query<Label>().ToList().Any(l => l.text == "Abandonaste la batalla"), "cómo saliste, del motor");
+                Assert.IsTrue(raiz.Q("informe-heroes").Query<Label>().ToList().Any(l => l.text == "abandonaste la batalla"), "tu fila en «Héroes»: abandonaste, no «no llegó a entrar»");
                 Debug.Log($"[Prueba] segunda: {raiz.Q<Label>("informe-titulo").text}");
                 yield return Capturar("49b_informe_tras_abandonar");
                 Pulsar(raiz.Q<Button>("informe-salir"));

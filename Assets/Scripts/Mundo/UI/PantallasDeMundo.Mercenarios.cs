@@ -554,7 +554,7 @@ namespace ConquestTactics.Mundo.UI
                 var tropa = Dialogo.Caja("merc-tropa");
                 foreach (var s in o.Tropa)
                 {
-                    var tid = IdDeTropa(s.TropaId);
+                    var tid = s.TropaId;
                     var pieza = Dialogo.Caja("merc-tropa-pieza");
                     pieza.tooltip = $"{NombreDeTropa(tid)}, nivel {s.Nivel}";
                     if (PiezasDeTropa.Miniatura(tid, 26) is VisualElement mini) pieza.Add(mini);

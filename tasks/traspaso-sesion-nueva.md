@@ -82,7 +82,7 @@
   entregar y aparcar caravanas.
 - El plan del paso 10 no entra en el commit del paso 9.
 
-## Sueltos de la batalla 12, 13 y 16 (2026-11-16, hechos y sin commit, en `main`)
+## Sueltos de la batalla 12, 13 y 16 (2026-11-16, en commit `2c1046dc` en `main`)
 
 - El análisis y las respuestas de Víctor están en `tasks/batalla-sueltos-plan.md`. El 14 (el Transport de Unity en Windows) va en otra sesión, con
   el encargo en `tasks/brief-transport-windows.md`; el 15 (probarla con alguien al teclado) lo hace Víctor.
@@ -103,6 +103,25 @@
 - **16:** borrados `HeroLevelSystem`, `SquadProgressionSystem`, `XPEventComponent`, `XPSource` y sus pruebas.
 - **Desde dentro de un sitio**, el clic en el mapa no hace nada (`MapaDeMundo.MarcharA`).
 - Capturas en `tasks/sueltos-batalla/capturas/`.
+
+## El motor ecfb23d (2026-11-16, tanda 1 hecha y sin commit)
+
+- El análisis, las tandas y las respuestas de Víctor están en `tasks/motor-ecfb23d-plan.md`.
+- El motor de pruebas (`../BronzeAgeMotorPruebas`) está en `ecfb23d`, y el contrato regenerado en `Assets/Plugins/BronzeAge/BronzeAge.Contrato.dll`
+  con `Tools/ContratoBronzeAge/actualizar.ps1 -Proto ../BronzeAgeMotorPruebas/proto`.
+- **Tanda 1:**
+  - **el id de tropa:** fuera `IdDeTropa`, porque el motor ya manda ids en todas las proyecciones;
+  - **«Bajarse de la batalla» en la preparación:** para quien se unió, y para quien la inició si hay otro humano; el único humano solo
+    «Cancelar» (Víctor, 2a). Al aceptarse, la vigilancia vuelve al mapa sola. Prueba: `TuUnionALaBatalla`;
+  - **la preparación lee también las incorporaciones**, para las escuadras y la tira de héroes de quien se une;
+  - **la salida propia en el informe:** quien abandona espera el resultado, con «Derrota · tu bando ganó/perdió» y la línea de cómo salió.
+    Prueba: `DelMapaALaBatalla`;
+  - **el informe ya no rehace «Salir» al repintar:** perdía el clic (el fallo de la prueba que salía a veces);
+  - **los mercenarios de la región** en `TuTaberna` (`dar_fondo_monedas` y `dar_monedas`) y **los Aedas** en `TusAedas` (`colocar_aeda`,
+    itinerante y residente). La compra al Aeda sigue sin prueba (Víctor, 3a).
+- **Siguen:** la tanda 2 (el informe con `heroe.cierre_batalla`) y la tanda 3 (elegir escuadras al defender desde tu base, con el aviso
+  «Asedio a tu plaza · Defender»). La tanda 3 espera la orden pedida al motor para que el residente que entró solo cambie sus elegidas
+  mientras se convoca (Víctor, 12a). Al final de todo, la predicción con choque contra los soldados (Víctor, 6c).
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)
 

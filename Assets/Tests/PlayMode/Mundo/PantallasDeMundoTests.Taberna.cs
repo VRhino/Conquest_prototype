@@ -31,6 +31,20 @@ namespace ConquestTactics.Mundo.UI.Tests
             oro.Fields["recurso"] = Google.Protobuf.WellKnownTypes.Value.ForString("oro");
             oro.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(2_000_000);
             yield return Administrar(url, "dar_recursos", oro);
+            // Para «Mercenarios de la región»: un bot que se ofrece en el campamento de la región y monedas en el fondo de la plaza
+            // (`dar_fondo_monedas`, motor ecfb23d; al héroe, `dar_monedas` al entrar).
+            string nickBot = null, botId = null;
+            yield return OtroHeroe(url, "Mercenario " + DateTime.UtcNow.Ticks % 100_000, nickDe: x => nickBot = x);
+            yield return HeroeDeLaCuenta(url, nickBot, x => botId = x);
+            var bot = new Google.Protobuf.WellKnownTypes.Struct();
+            bot.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(botId);
+            bot.Fields["controlador"] = Google.Protobuf.WellKnownTypes.Value.ForString("bot");
+            yield return Administrar(url, "fijar_controlador", bot);
+            yield return ConSesionDe(url, nickBot, _ => new V1.Orden { OfrecerseComoMercenario = new V1.OrdenOfrecerseComoMercenario() });
+            var fondoPlaza = new Google.Protobuf.WellKnownTypes.Struct();
+            fondoPlaza.Fields["asentamiento_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(plazaId);
+            fondoPlaza.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(50_000);
+            yield return Administrar(url, "dar_fondo_monedas", fondoPlaza);
 
             foreach (var k0 in Preferencias) PlayerPrefs.DeleteKey(k0);
             go = new GameObject("Mundo");
@@ -115,6 +129,35 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => Ventana()?.Q<Button>("comprar-informe-plazas") == null, 10, "el informe de región comprado");
                 yield return Capturar("191_taberna_comprado");
                 yield return EnTamanos(raiz, "191_taberna_comprado", () => DentroDelMarco(Ventana(), "la Taberna con lo comprado"));
+
+                // Mercenarios de la región: el bot del campamento de la región, pagado con el fondo de monedas de la plaza (o con las del héroe).
+                var monedas = new Google.Protobuf.WellKnownTypes.Struct();
+                monedas.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(conexion.HeroeId);
+                monedas.Fields["cantidad"] = Google.Protobuf.WellKnownTypes.Value.ForNumber(5_000);
+                yield return Administrar(url, "dar_monedas", monedas);
+                V1.Heroe Yo() => s.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
+                V1.Contrato Contrato() => s.Almacen.Buscar(V1.TipoEntidad.Faccion, Yo().FaccionId)?.Faccion?.Contratos.FirstOrDefault(k => k.MercenarioId == botId);
+                yield return Esperar(() => Yo().Monedas >= 5_000 && (Plaza()?.Forja?.Fondo ?? 0) >= 50_000, 10, "las monedas del héroe y del fondo");
+                yield return Esperar(() => Plaza()?.MercenariosRegion.Any(o => o.HeroeId == botId) == true, 20, "el bot en los mercenarios de la región");
+                yield return Esperar(() => Ventana()?.Q<Button>("sub-mercenarios") != null, 5, "la pestaña «Mercenarios de la región»");
+                yield return Clic(Ventana().Q<Button>("sub-mercenarios"));
+                VisualElement Oferta() => Ventana()?.Q("merc-oferta-" + botId);
+                yield return Esperar(() => Oferta() != null, 10, "la oferta del bot en la Taberna");
+                Assert.IsNotNull(Ventana().Q("merc-pagar") ?? Ventana().Q("merc-bolsa"), "con qué se paga: el fondo de la plaza y tus monedas");
+                if (Oferta().Q<Button>("merc-tarifa-" + botId + "-1") is Button unDia)
+                {
+                    yield return Clic(unDia);
+                    yield return Esperar(() => Oferta()?.Q("merc-tarifa-" + botId + "-1")?.ClassListContains("activo") == true, 5, "1 día elegido");
+                }
+                yield return Capturar("192_mercenarios_de_la_region");
+                yield return EnTamanos(raiz, "192_mercenarios_de_la_region", () => DentroDelMarco(Ventana(), "los mercenarios de la región"));
+                var fondoAntes = Plaza().Forja?.Fondo ?? 0;
+                var contratar = Oferta().Q<Button>("merc-contratar-" + botId);
+                Assert.IsTrue(contratar != null && contratar.enabledSelf, "«Contratar», con el fondo de la plaza");
+                yield return Clic(contratar);
+                yield return Esperar(() => Contrato() != null, 10, "el contrato del mercenario de la región");
+                Debug.Log($"[Prueba] taberna: contratado {botId} ({Contrato().Trabajo}); fondo {fondoAntes} → {Plaza().Forja?.Fondo ?? 0}, monedas {Yo().Monedas}");
+                Assert.Less(Plaza().Forja?.Fondo ?? 0, fondoAntes, "pagado con el fondo de la plaza");
             }
             finally
             {

@@ -143,7 +143,7 @@ namespace ConquestTactics.Mundo.UI
         void AnotarInforme(Batalla b)
         {
             if (!informesAnotados.Add(b.Id) || b.Resultado == null || !b.HasLadoPropio) return;
-            bool victoria = b.Resultado.Ganador == b.LadoPropio;
+            bool victoria = b.Resultado.Ganador == b.LadoPropio && b.SalidaPropia?.Derrotado != true;
             c.Avisos.Anotar(new EntradaAviso
             {
                 Titulo = "Informe de combate", Texto = $"{(victoria ? "Victoria" : "Derrota")}: {CosasDelMapa.NombreDeBatalla(b).ToLowerInvariant()}.",
@@ -159,6 +159,14 @@ namespace ConquestTactics.Mundo.UI
                 if (e.Batalla.Estado == EstadoBatalla.BatallaAplicada && e.Batalla.HasLadoPropio) AnotarInforme(e.Batalla);
         }
 
+        /// <summary>Cómo salió el héroe antes de que acabara (`Batalla.salida_propia`). Bajarse antes de empezar no lleva informe.</summary>
+        static readonly Dictionary<MotivoSalida, string> SalidasPropias = new Dictionary<MotivoSalida, string>
+        {
+            [MotivoSalida.SalidaAbandono] = "Abandonaste la batalla",
+            [MotivoSalida.SalidaEliminado] = "Caíste y saliste de la batalla",
+            [MotivoSalida.SalidaDesconexion] = "Te desconectaste y saliste de la batalla",
+        };
+
         static readonly Dictionary<RazonVictoria, string> Razones = new Dictionary<RazonVictoria, string>
         {
             [RazonVictoria.ObjetivosCapturados] = "por los objetivos capturados",
@@ -169,41 +177,40 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>El informe (`htmlInforme` del prototipo), con lo que hay ahora de la batalla.</summary>
         void PintarInforme(string batallaId, Batalla b, string motivo, bool enSuEscena)
         {
-            panelInforme.Clear();
-            var caja = Dialogo.Caja("informe");
-            caja.name = "informe";
-            panelInforme.Add(caja);
-            var cuerpo = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
-            cuerpo.AddToClassList("informe-cuerpo");
-            caja.Add(cuerpo);
+            // El marco y «Salir» se hacen una vez; al repintar (cada vez que cambia algo) solo se rehace el cuerpo. Rehacer también el botón perdía
+            // el clic que llegara entre pulsar y soltar.
+            var caja = panelInforme.Q("informe");
+            ScrollView cuerpo;
+            if (caja == null)
+            {
+                caja = Dialogo.Caja("informe");
+                caja.name = "informe";
+                panelInforme.Add(caja);
+                cuerpo = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
+                cuerpo.AddToClassList("informe-cuerpo");
+                caja.Add(cuerpo);
+                Botonera(caja, enSuEscena);
+            }
+            else
+            {
+                cuerpo = caja.Q<ScrollView>(className: "informe-cuerpo");
+                cuerpo.Clear();
+            }
             var momento = b != null && b.HasAplicadaEnMs ? " · " + Instante.AFecha(b.AplicadaEnMs).ToString("dd/MM/yyyy HH:mm") : "";
             cuerpo.Add(Dialogo.Texto("INFORME DE COMBATE" + momento, "kicker"));
-            if (motivo != null && motivo != MotivoAbandono) cuerpo.Add(Dialogo.Texto(motivo, "informe-motivo"));
+            // Quien salió antes de que acabara (abandonó, cayó o se desconectó) sigue viendo la batalla hasta su resultado (`salida_propia`).
+            var salida = b?.SalidaPropia;
+            var comoSalio = salida != null && SalidasPropias.TryGetValue(salida.Motivo, out var deSalida) ? deSalida : null;
+            if (comoSalio != null) cuerpo.Add(Dialogo.Texto(comoSalio, "informe-motivo"));
+            else if (motivo != null) cuerpo.Add(Dialogo.Texto(motivo, "informe-motivo"));
 
             var r = b?.Resultado;
-            // Quien abandona deja de combatir en ella y el motor ya no le enseña la batalla ni su resultado: solo lo suyo, cuando su columna queda libre.
-            if (motivo == MotivoAbandono && (b == null || !b.HasLadoPropio))
-            {
-                var yo = HeroeAhora();
-                var columna = yo?.Ubicacion?.EjercitoId == null ? null : c.Sesion.Almacen.Buscar(TipoEntidad.Ejercito, yo.Ubicacion.EjercitoId)?.Ejercito;
-                var tituloAbandono = Dialogo.Texto("Derrota · Abandonaste la batalla", "informe-titulo informe-titulo--derrota");
-                tituloAbandono.name = "informe-titulo";
-                cuerpo.Add(tituloAbandono);
-                cuerpo.Add(Dialogo.Texto("Al salir antes de que acabe, el motor ya no te cuenta cómo terminó: solo lo que te pasa a ti.", "campo-ayuda"));
-                var filaAbandono = Dialogo.Caja("informe-recuadros");
-                cuerpo.Add(filaAbandono);
-                if (yo != null && columna != null && !columna.HasBatallaId && antesDeLaBatalla.TryGetValue(batallaId, out var antesA)) LoQueCambia(filaAbandono, yo, antesA, false);
-                else cuerpo.Add(Dialogo.Texto("Esperando a que tu columna quede libre…", "campo-ayuda"));
-                Botonera(caja, enSuEscena);
-                return;
-            }
             if (b == null || r == null || b.Estado != EstadoBatalla.BatallaAplicada)
             {
                 var calculando = Dialogo.Texto(b == null ? "El motor ya no guarda esta batalla." : "Calculando el resultado…", "informe-titulo");
                 calculando.name = "informe-calculando";
                 cuerpo.Add(calculando);
                 if (b != null) cuerpo.Add(Dialogo.Texto("El servidor de batalla manda el resultado y el motor lo aplica: tus bajas, la experiencia y lo que ganes o pierdas.", "campo-ayuda"));
-                Botonera(caja, enSuEscena);
                 return;
             }
 
@@ -214,7 +221,10 @@ namespace ConquestTactics.Mundo.UI
             string que = bandidos != null
                 ? (victoria ? "Campamento de bandidos destruido" : "Ataque fallido al campamento de bandidos")
                 : propioAtaca ? (victoria ? "Atacaste y ganaste" : "Atacaste y perdiste") : (victoria ? "Te atacaron y resististe" : "Te atacaron y perdiste");
-            var titulo = Dialogo.Texto($"{(victoria ? "Victoria" : "Derrota")} · {que}", "informe-titulo " + (victoria ? "informe-titulo--victoria" : "informe-titulo--derrota"));
+            // Saliste derrotado (abandonar o caer en campo abierto): la derrota es tuya, y lo de tu bando va debajo.
+            bool derrotado = salida != null && salida.Derrotado;
+            var titulo = Dialogo.Texto(derrotado ? $"Derrota · tu bando {(victoria ? "ganó" : "perdió")}" : $"{(victoria ? "Victoria" : "Derrota")} · {que}",
+                "informe-titulo " + (victoria && !derrotado ? "informe-titulo--victoria" : "informe-titulo--derrota"));
             titulo.name = "informe-titulo";
             cuerpo.Add(titulo);
             if (Razones.TryGetValue(r.Razon, out var razon))
@@ -244,7 +254,7 @@ namespace ConquestTactics.Mundo.UI
             var otroLado = ladoPropio == LadoId.Atacante ? LadoId.Defensor : LadoId.Atacante;
             List<BattleParticipantSnapshot> HeroesDe(BattleSide l, LadoId lado) =>
                 l.Participantes.Concat(b.Incorporaciones.Where(i => i.Lado == lado).Select(i => i.Participante)).ToList();
-            ListaDeHeroes(izquierda, HeroesDe(propio, ladoPropio), r, "informe-heroes");
+            ListaDeHeroes(izquierda, HeroesDe(propio, ladoPropio), r, "informe-heroes", comoSalio);
             ListaDeHeroes(derecha, HeroesDe(otro, otroLado), r, "informe-heroes-rivales");
 
             // Lo que ganas o pierdes, comparado con lo de antes de la batalla (solo si se tiene).
@@ -252,13 +262,12 @@ namespace ConquestTactics.Mundo.UI
             recuadros.name = "informe-recuadros";
             cuerpo.Add(recuadros);
             var h = HeroeAhora();
-            if (h != null && antesDeLaBatalla.TryGetValue(batallaId, out var antes)) LoQueCambia(recuadros, h, antes, victoria);
+            if (h != null && antesDeLaBatalla.TryGetValue(batallaId, out var antes)) LoQueCambia(recuadros, h, antes, victoria && !derrotado);
             else if (h != null && h.HasHeridoHastaMs && h.HeridoHastaMs > c.Sesion.AhoraMundo)
                 recuadros.Add(Recuadro("Quedas herido", $"Hasta las {Instante.AFecha(h.HeridoHastaMs):HH:mm} (tiempo del mundo)", "Un herido no ataca ni persigue durante un rato.", false, "informe-herido"));
-            Botonera(caja, enSuEscena);
         }
 
-        void ListaDeHeroes(VisualElement donde, List<BattleParticipantSnapshot> heroes, BattleResult r, string nombre)
+        void ListaDeHeroes(VisualElement donde, List<BattleParticipantSnapshot> heroes, BattleResult r, string nombre, string comoSaliste = null)
         {
             if (heroes.Count == 0) return;
             donde.Add(Dialogo.Texto("Héroes", "informe-sub"));
@@ -267,7 +276,8 @@ namespace ConquestTactics.Mundo.UI
             foreach (var p in heroes)
             {
                 var rh = r.PorHeroe.FirstOrDefault(x => x.HeroeId == p.HeroeId);
-                var estado = rh == null || !rh.Participo ? "no llegó a entrar" : rh.SobrevivioAlCierre ? "en pie al acabar" : "cayó";
+                // Quien salió antes del final no está en el resultado: lo dice su salida (`salida_propia`), no «no llegó a entrar».
+                var estado = p.HeroeId == c.HeroeId && comoSaliste != null ? char.ToLower(comoSaliste[0]) + comoSaliste.Substring(1) : rh == null || !rh.Participo ? "no llegó a entrar" : rh.SobrevivioAlCierre ? "en pie al acabar" : "cayó";
                 var fila = Dialogo.Caja("informe-heroe");
                 fila.Add(Dialogo.Texto(NombreDe(p) + (p.HeroeId == c.HeroeId ? " (tú)" : ""), "aviso-titulo"));
                 fila.Add(Dialogo.Texto(estado, rh != null && rh.Participo && !rh.SobrevivioAlCierre ? "informe-baja" : "campo-ayuda"));

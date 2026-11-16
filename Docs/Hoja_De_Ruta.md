@@ -98,11 +98,13 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   - **los pedidos al motor de abajo**, y una orden de administración para colocar Aedas, dar monedas y llenar el fondo de una plaza, que haría
     falta para probar lo de la lista siguiente.
 - **Sin prueba en el bloque 4:**
-  - **los mercenarios de la región** (paso 12): el servidor de pruebas no da monedas ni llena el fondo de la plaza;
+  - ~~**los mercenarios de la región**~~ ✅ 2026-11-16: `TuTaberna` contrata un bot de la región pagando con el fondo de la plaza
+    (`dar_fondo_monedas` y `dar_monedas`, motor `ecfb23d`);
   - **el rastreador de misiones en el mapa** (paso 12); en la plaza y en el campamento sí;
-  - **los Aedas** (paso 13):
-    - la compra a un itinerante, porque en una partida nueva nada está revelado;
-    - los residentes y sus épicas, porque piden Palacio y nobleza;
+  - **los Aedas** (paso 13). Desde el 2026-11-16, `TusAedas` pone un itinerante y un residente con `colocar_aeda` y ve los dos en la ventana. Siguen
+    sin prueba:
+    - la compra a un itinerante: en una partida nueva no vende nada (Víctor, 3a: se prueba lo que haya);
+    - las épicas del residente: salen de las tecnologías de la Facción, y una nueva no tiene;
     - la ficha del itinerante en el mapa;
   - **la crónica** (paso 13): «Más antiguas» y la entrada en vivo;
   - **«Entregar» de una caravana del ejército** (paso 11): haría falta un trueque en vigor con otra Facción;
@@ -132,14 +134,33 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 
 **Pedidos al motor que salgan de la migración** (pedidos al hilo del motor el 2026-11-16: elegir las escuadras en batallas que no son de columna, bajarse sin cancelar, ver cómo acabó al abandonar, el hecho de cierre de la batalla, la tropa del campamento en «Nace tu héroe» y borrar el héroe):
 
-- **Elegir las escuadras al entrar en batallas que no son de columna** (paso 5, 2026-11-14). La defensa por loadout ya vale para el paso de los asedios.
-  Ampliado el 2026-11-16 con la regla de Víctor: en la preparación, **disponibles** (todas las tropas si está en su base; si no, las que lleva) y
-  **elegidas** (lo que cabe en el Liderazgo). El héroe entra siempre con las elegidas y en la batalla solo cambia entre ellas. Hace falta un
-  campo con las escuadras elegidas (en `OrdenUnirseABatalla` o una orden propia) para que el ticket lleve solo esas.
-- **Bajarse de una batalla sin cancelarla** (paso 5, 2026-11-14), y que se cancele si se baja el último. Quien se baja vuelve a su columna tal cual.
-- **Que quien abandona una batalla vea cómo acabó** (paso 5, 2026-11-14): hoy, al salir, deja de combatir y la proyección le quita la batalla y su resultado.
+**Los pedidos 1-4, 6 y 7, en el motor** (`ecfb23d`, contrato 0.28.0, 2026-11-16; análisis y tandas en `tasks/motor-ecfb23d-plan.md`):
+
+- ✅ **Elegir las escuadras al entrar** (`OrdenUnirseABatalla.escuadron_ids`), con la regla de Víctor:
+  - en la preparación, **disponibles** (todas las tropas si está en su base; si no, las que lleva) y **elegidas** (lo que cabe en el Liderazgo);
+  - el héroe entra siempre con las elegidas y en la batalla solo cambia entre ellas;
+  - el motor solo deja elegir al defender desde dentro de tu base, y al unirte;
+  - en Conquest va en la tanda 3.
+- ✅ **Bajarse de una batalla sin cancelarla** (`OrdenBajarseDeBatalla`), en Conquest desde la tanda 1.
+- ✅ **Que quien abandona vea cómo acabó** (`Batalla.salida_propia`), en Conquest desde la tanda 1.
+- ✅ **El hecho de cierre** (`heroe.cierre_batalla`), en Conquest en la tanda 2.
+- ✅ **El id de la tropa en `EscuadraQueLleva`.**
+- ✅ **Órdenes de administración para las pruebas:** `dar_monedas`, `dar_fondo_monedas` y `colocar_aeda`.
+
+**Decidido el 2026-11-16 (Víctor), para el motor `ecfb23d`:**
+
+- **Defender desde dentro de tu plaza:** un aviso arriba en la plaza, «Asedio a tu plaza · Defender», que abre el panel de elegir (tanda 3).
+- **Quien inició la batalla** tiene «Cancelar», que la acaba para todos, y «Bajarse», que se la pasa a otro atacante. Si es el único humano,
+  solo «Cancelar».
+- **El Aeda de la prueba:** se prueba lo que haya. En una partida nueva el itinerante no vende nada, así que la compra se queda sin prueba.
+- **El residente que ya está dentro cuando se abre el asedio** entra solo con su loadout activo y no elige (`defensa_de_plaza`). **Se pide al
+  motor** (Víctor, 2026-11-16, a) una orden para cambiar las elegidas mientras la batalla se convoca, antes de empezar. Así la regla vale para
+  todos: en la preparación eliges entre las del campamento lo que cabe en tu Liderazgo. La tanda 3 usará el mismo panel antes de «Defender» y
+  en la preparación.
+
+**Lo que queda de los pedidos de la migración:**
+
 - **A futuro: la tropa del campamento en «Nace tu héroe»** (paso 6, 2026-11-14, duda 34 del plan, opción b): enseñar al elegir campamento qué tropa recluta cada uno. Hoy el motor no la da antes de nacer; no entra en esta migración.
-- **Un hecho de cierre de la batalla** (paso 5, 2026-11-14) con el botín, lo perdido del carro, la herida y la experiencia, para el informe sin comparar el estado de antes con el de después.
 
 - ~~**Salir del campamento con destino en una sola orden**~~ (paso 2, 2026-11-13): **no se pide** (Víctor, 2026-11-16). Desde dentro de un sitio, el clic en el mapa no hace nada; se sale con la salida de siempre. Fuera, el clic traza la ruta y mueve.
 - ~~**Guardar el género y el avatar del héroe**~~ (paso 3, 2026-11-13) ✅ resuelto en el motor 358af5ff (contrato 0.25.0, partida nueva): `crearHeroe` guarda el género (`""`, `masculino` o `femenino`) y las cuatro piezas (ids de hasta 32 caracteres; si no, `heroe.aspecto_invalido`) y los devuelve en `Heroe.femenino` y `Heroe.avatar`. Conquest los manda desde el creador de personaje y la prueba los lee de vuelta. El catálogo de piezas sigue en Conquest (`AvatarPartDatabase.asset`).
@@ -159,8 +180,12 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 
 ## 6. Decisiones pendientes del autor ❓
 
-- Predecir al héroe del jugador sobre la malla de navegación, como está, en lugar de con Unity Physics (doc 22 §8).
-- Dos plazos de paso: 10 s sin señal para dar a un jugador por caído y 60 s de espera a que entren antes de empezar.
+- ~~Predecir al héroe del jugador~~ ✅ decidido 2026-11-16 (Víctor, c): sobre la malla de navegación, como está, y además predecir el choque
+  con los soldados cercanos (2-3 días), para quitar el tirón al meterse en una escuadra. **Va lo último**, después de lo demás.
+- ~~Dos plazos de paso~~ ✅ decidido 2026-11-16 (Víctor):
+  - **10 s sin señal** para dar a un jugador por caído: se quedan (`ArranqueRed.cs`, `DriversDeBatalla.PlazoSinSenalMs`);
+  - **60 s de espera** a que entren antes de empezar: se quedan (`BatallaDeTicketSystems.EsperaPorDefecto`). Más adelante los mandará el motor
+    en el ticket según el tipo de batalla, por ejemplo más para un asedio.
 
 ## 7. Sueltos
 

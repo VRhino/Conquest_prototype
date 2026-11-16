@@ -45,6 +45,7 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>Las escuadras propias de la batalla, tal como entran en el ticket (el orden y la formación del héroe en el motor).</summary>
         List<BronzeAge.Contract.V1.SquadSnapshot> MisEscuadras(Batalla b) =>
             new[] { b.Ticket?.Atacante, b.Ticket?.Defensor }.Where(l => l != null).SelectMany(l => l.Participantes)
+                .Concat(b.Incorporaciones.Select(i => i.Participante))
                 .Where(p => p.HeroeId == c.HeroeId).SelectMany(p => p.Escuadras).ToList();
 
         void EmpezarPreparacion(Batalla b)
@@ -166,7 +167,9 @@ namespace ConquestTactics.Mundo.UI
             // La tira de héroes de tu bando (Hero_Slice_Container: 0,130; filas de 580x40 cada 45).
             var propio = b.LadoPropio == LadoId.Defensor ? b.Ticket?.Defensor : b.Ticket?.Atacante;
             int fila = 0;
-            foreach (var p in propio?.Participantes ?? Enumerable.Empty<BattleParticipantSnapshot>())
+            // Con los que se unieron a tu bando después del ticket (las incorporaciones).
+            var ladoPropio = b.LadoPropio;
+            foreach (var p in (propio?.Participantes ?? Enumerable.Empty<BattleParticipantSnapshot>()).Concat(b.Incorporaciones.Where(i => i.Lado == ladoPropio).Select(i => i.Participante)))
                 FilaDeHeroe(lienzo, p, 130 + 45 * fila++);
 
             // El pie (Footer): el Liderazgo, los botones y las tarjetas.
@@ -177,25 +180,36 @@ namespace ConquestTactics.Mundo.UI
             Texto(En(lienzo, 1135, 808, 162, 40), h != null ? $"{usado}/{h.LiderazgoBase}" : $"{usado}", "prep-liderazgo", "liderazgo");
 
             var error = Texto(En(lienzo, 481, 760, 870, 40), "", "prep-error oculto", "error");
-            if (activa && h != null && b.IniciadaPor == h.Id && (b.Estado == EstadoBatalla.BatallaConvocando || b.Estado == EstadoBatalla.BatallaAsignada))
+            // Antes de que empiece: quien la inició la cancela para todos (`batalla.no_puede_cancelar` si no); bajarse (`bajarseDeBatalla`) te saca y
+            // la batalla sigue para los demás (si la iniciaste, la hereda otro atacante). Quien la inició y es el único humano solo cancela: bajarse
+            // la cancelaría igual (Víctor, 2026-11-16, 2a). Al bajarse dejas de tener lado en ella y la vigilancia te devuelve al mapa.
+            bool antesDeEmpezar = activa && h != null && (b.Estado == EstadoBatalla.BatallaConvocando || b.Estado == EstadoBatalla.BatallaAsignada);
+            bool laInicie = h != null && b.IniciadaPor == h.Id;
+            bool otrosHumanos = new[] { b.Ticket?.Atacante, b.Ticket?.Defensor }.Where(l => l != null).SelectMany(l => l.Participantes)
+                .Concat(b.Incorporaciones.Select(i => i.Participante)).Any(p => p != null && !p.EsBot && p.HeroeId != h?.Id);
+            if (antesDeEmpezar && laInicie)
+                BotonDePie("Cancelar la batalla", "batalla-cancelar", 582, new Orden { CancelarBatalla = new OrdenCancelarBatalla { BattleId = b.Id } });
+            if (antesDeEmpezar && (!laInicie || otrosHumanos))
+                BotonDePie("Bajarse de la batalla", "batalla-bajarse", laInicie ? 393 : 582, new Orden { BajarseDeBatalla = new OrdenBajarseDeBatalla { BattleId = b.Id } });
+            // En el sitio de «Warband Builds» (y a su izquierda), negros.
+            void BotonDePie(string texto, string nombre, float x, Orden orden)
             {
-                // Solo quien la inició, y antes de que empiece (`batalla.no_puede_cancelar`). En el sitio de «Warband Builds».
-                Button cancelar = null;
-                cancelar = new Button(async () =>
+                Button delPie = null;
+                delPie = new Button(async () =>
                 {
-                    cancelar.SetEnabled(false);
+                    delPie.SetEnabled(false);
                     Poner(error, null);
                     try
                     {
-                        var r = await c.Sesion.Ordenar(new Orden { CancelarBatalla = new OrdenCancelarBatalla { BattleId = b.Id } });
+                        var r = await c.Sesion.Ordenar(orden);
                         if (r.Resultado != Resultado.OrdenAceptada) Poner(error, Textos.Explicar(r.Rechazo));
                     }
-                    catch (ErrorDeSesion x) { Poner(error, x.Message); }
-                    if (cancelar.panel != null) cancelar.SetEnabled(true);
-                }) { text = "Cancelar la batalla", name = "batalla-cancelar" };
-                cancelar.AddToClassList("prep-boton-negro");
-                Colocar(cancelar, 582, 806, 179, 40);
-                lienzo.Add(cancelar);
+                    catch (ErrorDeSesion e2) { Poner(error, e2.Message); }
+                    if (delPie.panel != null) delPie.SetEnabled(true);
+                }) { text = texto, name = nombre };
+                delPie.AddToClassList("prep-boton-negro");
+                Colocar(delPie, x, 806, 179, 40);
+                lienzo.Add(delPie);
             }
 
             var nombres = NombresDeFormacion();

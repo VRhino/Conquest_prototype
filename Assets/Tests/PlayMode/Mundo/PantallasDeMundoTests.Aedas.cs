@@ -1,7 +1,6 @@
 // Los Aedas (paso 13 del bloque 4, tanda 1), con el ratón de verdad contra el motor. El Rey y Gobernador funda su plaza y entra. En un servidor
-// recién abierto, los primeros Aedas itinerantes nacen parados en la primera plaza; si no, se adelanta el reloj hasta que uno pare en ella
-// (Víctor, 3a). Con uno dentro sale la lira en el riel: la ventana Aedas, con el itinerante y lo que os vende (y «Comprar» si hay algo y oro).
-// Si ninguno para en un tiempo razonable, la prueba lo dice y no falla.
+// la administración pone en ella un itinerante y un residente (`colocar_aeda`, motor ecfb23d). Sale la lira en el riel: la ventana Aedas, con el
+// itinerante, lo que os vende (y «Comprar» si hay algo y oro) y el residente. Si el itinerante no vende nada, la compra se queda sin prueba y lo dice.
 using System;
 using System.Collections;
 using System.Linq;
@@ -61,13 +60,20 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
             yield return Quieto(1f);
             V1.AedaItinerante Parado() => s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.AedaItinerante).Select(e => e.AedaItinerante).FirstOrDefault(x => x.HasEnAsentamientoId && x.EnAsentamientoId == plazaId);
-            for (int vuelta = 0; vuelta < 8 && Parado() == null; vuelta++)
-            {
-                for (var f = Time.realtimeSinceStartup + 5; Parado() == null && Time.realtimeSinceStartup < f;) yield return null;
-                if (Parado() == null) yield return AvanzarReloj(url, s, 6 * 3_600_000L);
-            }
+            // Un itinerante parado en la plaza y un residente, con la orden de administración `colocar_aeda` (motor ecfb23d): ya no se espera a que
+            // pare uno.
+            var aqui = new Google.Protobuf.WellKnownTypes.Struct();
+            aqui.Fields["asentamiento_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(plazaId);
+            yield return Administrar(url, "colocar_aeda", aqui);
+            var residente = new Google.Protobuf.WellKnownTypes.Struct();
+            residente.Fields["asentamiento_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(plazaId);
+            residente.Fields["residente"] = Google.Protobuf.WellKnownTypes.Value.ForBool(true);
+            yield return Administrar(url, "colocar_aeda", residente);
+            V1.AedaResidente Residente() => s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.AedaResidente).Select(e => e.AedaResidente).FirstOrDefault();
+            for (var f = Time.realtimeSinceStartup + 10; (Parado() == null || Residente() == null) && Time.realtimeSinceStartup < f;) yield return null;
             Debug.Log($"[Prueba] aedas: itinerantes {string.Join(",", s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.AedaItinerante).Select(e => $"{e.AedaItinerante.Id}@{(e.AedaItinerante.HasEnAsentamientoId ? e.AedaItinerante.EnAsentamientoId : "camino")}"))}; residentes {s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.AedaResidente).Count()}");
-            if (Parado() == null) { Debug.Log("[Prueba] aedas: ningún itinerante paró en la plaza; la ventana y la compra se quedan sin prueba"); LogAssert.ignoreFailingMessages = false; yield break; }
+            Assert.IsNotNull(Parado(), "el itinerante, parado en la plaza");
+            Assert.IsNotNull(Residente(), "un residente en la plaza");
 
             var entrada = UnityEngine.InputSystem.InputSystem.settings;
             var fondo = entrada.backgroundBehavior;
@@ -89,6 +95,10 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Assert.IsTrue(Ventana().Q("aedas-itinerante").Q<Label>(className: "aedas-titulo-texto").text.Length > 0, "con su nombre");
                 yield return Capturar("220_ventana_aedas");
                 yield return EnTamanos(raiz, "220_ventana_aedas", () => DentroDelMarco(Ventana(), "la ventana Aedas"));
+                // El residente, con sus épicas (las que haya: las de las tecnologías que la Facción tiene).
+                yield return Esperar(() => Ventana()?.Q("aedas-residente-" + Residente().Id) != null, 5, "el residente en la ventana Aedas");
+                var epicas = Ventana().Q("aedas-residente-" + Residente().Id).Query<VisualElement>().ToList().Count(x => x.name != null && x.name.StartsWith("aedas-epica-"));
+                Debug.Log($"[Prueba] aedas: residente {Residente().Id}, {epicas} épicas");
                 // Comprar, si os vende algo y el almacén tiene el oro (en una partida recién empezada no suele haber nada revelado).
                 var comprar = Ventana().Query<Button>(className: "aedas-boton").ToList().FirstOrDefault(b => b.name.StartsWith("aedas-comprar-"));
                 if (comprar != null)
