@@ -530,7 +530,7 @@ namespace ConquestTactics.Mundo.UI
                 "armeria" => PestanasDeArmeria(a, yo).ToArray(),
                 "territorio" => Propia(a, yo) ? new[] { ("pueblos", "Pueblos y aldeas"), ("fundacion", "Fundación") } : new[] { ("pueblos", "Pueblos y aldeas") },
                 // De visita, sus órdenes abiertas para tomarlas; en la tuya, sus pestañas (Caravanas y Rutas, en las tandas 2 y 3).
-                "mercado" => Propia(a, yo) ? new[] { ("ordenes", "Órdenes") } : new[] { ("deplaza", "Mercado") },
+                "mercado" => Propia(a, yo) ? new[] { ("ordenes", "Órdenes"), ("caravanas", "Caravanas") } : new[] { ("deplaza", "Mercado") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
             var clave = ventanaPlaza;
@@ -565,6 +565,7 @@ namespace ConquestTactics.Mundo.UI
                 case "fundacion": Fundacion(cuerpo, a, yo, rehacer); break;
                 case "ordenes": OrdenesDeMercado(cuerpo, a, yo, rehacer); break;
                 case "deplaza": MercadoDePlaza(cuerpo, a.Id, rehacer); break;
+                case "caravanas": Caravanas(cuerpo, a, yo, rehacer); break;
             }
         }
 

@@ -27,6 +27,9 @@ namespace ConquestTactics.Mundo.Mapa
         readonly VisualElement capaNombres;
         /// <summary>Cada nombre: una caja (la etiqueta oscura con el borde del color) con el icono y el texto; un Label con hijos no se mide por su texto.</summary>
         readonly List<VisualElement> nombres = new List<VisualElement>();
+        /// <summary>Las caravanas, con su carro 3D (`CarroDeCaravana`) en vez de caja, por id; y las que se han visto en este fotograma.</summary>
+        readonly Dictionary<string, CarroDeCaravana> carros = new Dictionary<string, CarroDeCaravana>();
+        readonly HashSet<string> carrosVistos = new HashSet<string>();
 
         public CosasEnElMapa(Func<double, double, float> alturaVisible, Material bajoNiebla, Material encima, Transform padre, VisualElement capaNombres)
         {
@@ -54,10 +57,21 @@ namespace ConquestTactics.Mundo.Mapa
                 if (CosasDelMapa.Distancia(c.X, c.Y, cx, cy) > alcance) continue;
                 int k = c.BajoNiebla ? 0 : 1;
                 var suelo = alturaVisible(c.X, c.Y);
+                if ((c.Clase == ClaseDeCosa.Caravana || c.Clase == ClaseDeCosa.CaravanaAjena) && CarroDeCaravana.Disponible)
+                {
+                    if (!carros.TryGetValue(c.Id, out var carro)) carros[c.Id] = carro = new CarroDeCaravana(padre, "Caravana " + c.Id);
+                    carro.Situar(EscalaDelMapa.AEscena(c.X, c.Y, suelo), Time.deltaTime);
+                    carrosVistos.Add(c.Id);
+                    continue;
+                }
                 var tamano = new Vector3((float)(c.Radio * 2), (float)c.Alto, (float)(c.Radio * 2)) * e;
                 matrices[k].Add(Matrix4x4.TRS(EscalaDelMapa.AEscena(c.X, c.Y, suelo + tamano.y / 2), Quaternion.identity, tamano));
                 colores[k].Add(Lineal(c.Color));
             }
+            // Las que ya no están (o quedan lejos), fuera.
+            foreach (var id in new List<string>(carros.Keys))
+                if (!carrosVistos.Contains(id)) { carros[id].Soltar(); carros.Remove(id); }
+            carrosVistos.Clear();
             for (int k = 0; k < 2; k++)
             {
                 var rp = new RenderParams(k == 0 ? bajoNiebla : encima) { shadowCastingMode = ShadowCastingMode.Off, matProps = propiedades };

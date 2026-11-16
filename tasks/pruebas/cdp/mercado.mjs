@@ -34,6 +34,9 @@ try {
   console.log('la plaza', await evalua(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').trim().startsWith('♛'));if(!b)return 'sin lista';b.click();return 'ok'})()`)); await espera(2000);
   console.log('mercado de la puerta', await accion('Mercado')); await espera(2000);
   for (const [w, h] of [[1280, 720], [1600, 900], [1920, 1080], [1950, 1130]]) { await tam(w, h); await espera(1500); await foto(`proto_mercado_puerta_${w}x${h}`); }
+  // La pestaña Caravanas (tanda 2).
+  console.log('caravanas', await evalua(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>(b.textContent||'').trim()==='Caravanas');if(!b)return 'sin Caravanas';b.click();return 'ok'})()`)); await espera(2000);
+  for (const [w, h] of [[1280, 720], [1600, 900], [1920, 1080], [1950, 1130]]) { await tam(w, h); await espera(1500); await foto(`proto_caravanas_${w}x${h}`); }
   await tam(1600, 900);
   console.log('botones', await evalua(`[...document.querySelectorAll('button')].map(b=>(b.title||b.textContent).trim().slice(0,30)).filter(Boolean).join(' | ')`));
   console.log('entrar', await evalua(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>/^Entrar/.test((b.textContent||'').trim())||/Entrar/.test(b.title||''));if(!b)return 'sin entrar';b.click();return 'ok'})()`)); await espera(12000);

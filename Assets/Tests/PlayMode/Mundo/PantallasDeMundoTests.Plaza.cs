@@ -57,7 +57,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>Funda una plaza con una cuenta nueva, como un jugador, la sube a nivel 3 con recursos y le pone obras en la cola. Devuelve el
         /// nick por `nickDe`.</summary>
-        static IEnumerator FundarPlaza(string url, Action<string> nickDe, Action<string> plazaDe = null, Action<V1.Punto> dondeDe = null, bool abrirANeutrales = false, bool mercadoEnPie = false)
+        static IEnumerator FundarPlaza(string url, Action<string> nickDe, Action<string> plazaDe = null, Action<V1.Punto> dondeDe = null, bool abrirANeutrales = false, bool mercadoEnPie = false, string enLaFaccion = null, Action<string> faccionDe = null)
         {
             var nick = "plaza-" + DateTime.UtcNow.Ticks % 100_000_000;
             nickDe(nick);
@@ -89,11 +89,20 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
             var heroe = ultimo.Creadas.First(c => c.Entidad == V1.TipoEntidad.Heroe).Id;
             yield return Bombear(1);
-            foreach (var nombre in new[] { "Micenas", "Argos", "Tebas", "Pilos", "Corinto", "Esparta", "Atenas", "Creta", "Ítaca", "Tirinto" })
+            // Con `enLaFaccion`, el héroe entra en esa Facción (la administración) y su plaza será de ella; si no, crea la suya.
+            if (enLaFaccion != null)
             {
-                yield return Ordenar(new V1.Orden { CrearFaccion = new V1.OrdenCrearFaccion { Nombre = nombre } });
-                if (ultimo.Resultado == V1.Resultado.OrdenAceptada) break;
+                var q = new Google.Protobuf.WellKnownTypes.Struct();
+                q.Fields["heroe_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(heroe);
+                q.Fields["faccion_id"] = Google.Protobuf.WellKnownTypes.Value.ForString(enLaFaccion);
+                yield return Administrar(url, "fijar_faccion_de_heroe", q);
             }
+            else
+                foreach (var nombre in new[] { "Micenas", "Argos", "Tebas", "Pilos", "Corinto", "Esparta", "Atenas", "Creta", "Ítaca", "Tirinto" })
+                {
+                    yield return Ordenar(new V1.Orden { CrearFaccion = new V1.OrdenCrearFaccion { Nombre = nombre } });
+                    if (ultimo.Resultado == V1.Resultado.OrdenAceptada) { faccionDe?.Invoke(ultimo.Creadas.FirstOrDefault(c => c.Entidad == V1.TipoEntidad.Faccion)?.Id); break; }
+                }
             yield return Bombear(1);
             yield return Ordenar(new V1.Orden { SalirDelCampamento = new V1.OrdenSalirDelCampamento { CampamentoId = camp, HeroeId = heroe } });
             var col = ultimo.Creadas.First(c => c.Entidad == V1.TipoEntidad.Ejercito).Id;

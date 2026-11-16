@@ -441,22 +441,25 @@ namespace ConquestTactics.Mundo.UI
             return (int)tabla[Math.Max(0, Math.Min(tabla.Count, Math.Max(1, mercado)) - 1)];
         }
 
-        void Escolta(VisualElement cuerpo, Caravana carro, string madreId, bool desdeColumna)
+        /// <summary>La escolta de una caravana (`escolta`): la del carro de acarreo de un pueblo y, con su `cupo`, su título y su nota, la de una
+        /// caravana comercial de la flota.</summary>
+        void Escolta(VisualElement cuerpo, Caravana carro, string madreId, bool desdeColumna, int? cupoFijo = null, string titulo = "Escolta del carro",
+            string notaParada = " Solo se cambia con el carro parado en el pueblo.")
         {
             var yo = HeroeAhora();
             if (yo == null) return;
             var parada = carro.Estado == EstadoCaravana.CaravanaDisponible;
             var cedidas = EscuadrasDelHeroe(yo).Where(s => s.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.CaravanaId && s.Contenedor.CaravanaId == carro.Id).ToList();
-            var cupo = CupoDeEscolta(madreId);
+            var cupo = cupoFijo ?? CupoDeEscolta(madreId);
             var usado = carro.Escolta.Sum(e => LiderazgoDe(e.TropaId) ?? 0);
             if (carro.Escolta.Count == 0) usado = cedidas.Sum(s => LiderazgoDe(s.TropaId) ?? 0);
             var libre = cupo - usado;
             var caja = Dialogo.Caja("territorio-escolta");
             caja.name = "escolta-" + carro.Id;
-            caja.Add(CupoEnBarra("Escolta del carro", usado, cupo));
+            caja.Add(CupoEnBarra(titulo, usado, cupo));
             var otros = Math.Max(0, carro.EscoltaIds.Count - cedidas.Count);
             caja.Add(Dialogo.Texto((cedidas.Count + otros > 0 ? $"{cedidas.Count + otros} escuadra(s) de escolta{(otros > 0 ? $", {otros} de otros héroes" : "")}." : "Sin escolta.")
-                + (parada ? "" : " Solo se cambia con el carro parado en el pueblo."), "plaza-nota"));
+                + (parada ? "" : notaParada), "plaza-nota"));
             foreach (var s in cedidas)
             {
                 var sid = s.Id;

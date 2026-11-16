@@ -1029,3 +1029,125 @@
 .ventana-puerta .mercado-cols { flex-direction: column; }
 .ventana-puerta .mercado-cols > .territorio-col { margin-right: 0; }
 .ventana-puerta .mercado-cols > #ordenes-en-pie { width: auto; margin-top: 10px; }
+
+/* ═══════════ paso 10, tanda 2: la flota (Caravanas del Mercado), calcada de `style.css` (flota-*, caravana-*, carro-*) ═══════════ */
+.flota-cab {
+    flex-direction: row; align-items: center; padding: 8px 10px; margin-bottom: 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    background-color: rgba(30, 22, 13, 0.92);
+}
+.flota-cab > VisualElement { margin-right: 10px; }
+.flota-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.flota-titulo { margin: 0 0 4px 0; font-size: 14px; color: var(--oro-claro); -unity-font-style: bold; }
+.flota-cupos { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.flota-cupo { flex-direction: row; align-items: center; margin-right: 12px; }
+.flota-cupo-nombre { margin: 0 6px 0 0; font-size: 11px; letter-spacing: 1px; color: var(--texto-sec); }
+.flota-pips { flex-direction: row; margin-right: 6px; }
+.flota-pip { width: 9px; height: 9px; margin-right: 2px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.45); }
+.flota-pip.usada { border-color: var(--oro); background-color: var(--oro); }
+.flota-cupo-n { margin: 0; font-size: 12px; color: var(--pergamino); -unity-font-style: bold; }
+.flota-crear {
+    flex-shrink: 0; padding: 7px 14px; border-width: 1px; border-color: var(--oro); border-radius: 3px; background-color: rgba(98, 74, 31, 0.95);
+    color: #fff3d0; font-size: 13px; -unity-font-style: bold;
+}
+.flota-espera { margin: 0; font-size: 12px; color: var(--texto-sec); }
+.flota-marco { flex-direction: row; align-items: flex-start; }
+.flota-lista { width: 26%; flex-shrink: 0; margin-right: 10px; }
+.flota-fila {
+    margin: 0 0 6px 0; padding: 6px 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9);
+    align-items: stretch; -unity-text-align: upper-left;
+}
+.flota-fila.activo { border-color: var(--oro); background-color: rgba(52, 37, 19, 0.95); }
+.flota-fila-cab { flex-direction: row; align-items: center; }
+.flota-fila-cab > VisualElement { margin-right: 6px; }
+.flota-fila-nombre { margin: 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; }
+.flota-reservada { margin: 0 0 0 auto; font-size: 11px; }
+.flota-fila-donde { margin: 2px 0; font-size: 11px; color: var(--texto-sec); white-space: normal; }
+.flota-fila-datos { flex-direction: row; align-items: center; }
+.flota-fila-datos > .plaza-barra-avance { flex-grow: 1; margin: 0 6px; }
+.flota-fila-carros, .flota-fila-carga { margin: 0; font-size: 11px; color: var(--oro-claro); }
+.flota-detalle {
+    flex-grow: 1; flex-shrink: 1; min-width: 0; padding: 10px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    background-color: rgba(30, 22, 13, 0.92);
+}
+.flota-detalle > * { margin-bottom: 8px; }
+.caravana-cab { flex-direction: row; align-items: center; }
+.caravana-cab > VisualElement { margin-right: 8px; }
+.caravana-titulo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.caravana-nombre-fila, .caravana-renombrar { flex-direction: row; align-items: center; }
+.caravana-nombre { margin: 0; font-size: 16px; color: var(--oro-claro); -unity-font-style: bold; }
+.caravana-lapiz, .caravana-ok, .caravana-cancelar {
+    width: 24px; height: 24px; margin: 0 0 0 6px; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.45); color: var(--oro-claro); -unity-text-align: middle-center;
+}
+.caravana-nombre-campo { flex-grow: 1; margin: 0; }
+.caravana-nombre-campo .unity-base-text-field__input, .carga-celda-campo .unity-base-text-field__input, .flota-detalle .puerta-carga-cantidad .unity-base-text-field__input {
+    height: 28px; padding: 0 6px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: var(--tinta); color: var(--pergamino);
+}
+.caravana-reservar { margin: 0; }
+.caravana-reservar Label { color: var(--pergamino); font-size: 12px; min-width: 0; }
+.caravana-chips { flex-direction: row; }
+.caravana-dato {
+    flex-grow: 1; flex-basis: 0; margin-right: 6px; padding: 6px; align-items: center; border-width: 1px; border-color: rgba(107, 74, 41, 0.6);
+    border-radius: 3px; background-color: rgba(0, 0, 0, 0.35);
+}
+.caravana-dato-icono { margin: 0; font-size: 16px; }
+.caravana-dato-valor { margin: 0; font-size: 16px; color: var(--oro-claro); -unity-font-style: bold; }
+.caravana-dato-nombre { margin: 0; font-size: 10.5px; letter-spacing: 1px; color: var(--texto-sec); }
+.flota-lleva { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 6px 8px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); }
+.flota-lleva > * { margin-right: 6px; }
+.flota-lleva-titulo { margin: 0 6px 0 0; font-size: 11px; letter-spacing: 1px; color: var(--texto-sec); }
+.flota-lleva-total { margin: 0 0 0 auto; font-size: 12px; color: var(--oro-claro); }
+.flota-descargar { flex-direction: row; flex-wrap: wrap; }
+.flota-descargar > Button { margin: 0 6px 6px 0; }
+.caravana-seccion { padding-top: 8px; border-top-width: 1px; border-top-color: rgba(107, 74, 41, 0.5); }
+.caravana-seccion > * { margin-bottom: 6px; }
+.caravana-seccion-cab { flex-direction: row; align-items: center; justify-content: space-between; }
+.carro-huecos { flex-direction: row; flex-wrap: wrap; }
+.carro-hueco {
+    width: 96px; height: 92px; margin: 0 6px 6px 0; padding: 4px; align-items: center; justify-content: center; border-width: 1px;
+    border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9);
+}
+.carro-hueco.activo { border-color: var(--oro); }
+.carro-hueco.sin-animal { opacity: 0.85; }
+.carro-hueco.mas { font-size: 26px; color: var(--oro-claro); }
+.carro-hueco-icono { margin: 0; font-size: 26px; }
+.carro-hueco-nombre { margin: 0; font-size: 12px; color: var(--pergamino); -unity-font-style: bold; }
+.carro-hueco-pie { margin: 0; font-size: 10.5px; color: var(--texto-sec); white-space: normal; -unity-text-align: middle-center; }
+.carro-ficha, .carro-nuevo { padding: 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.35); }
+.carro-ficha-cab { flex-direction: row; align-items: center; }
+.carro-ficha-icono { margin: 0 8px 0 0; font-size: 22px; }
+.carro-ficha-nombre { margin: 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; }
+.carro-acciones { flex-direction: row; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.carro-acciones > * { margin: 0 6px 4px 0; }
+.carro-nuevo-grupo { flex-direction: row; flex-wrap: wrap; align-items: stretch; margin-bottom: 6px; }
+.carro-nuevo-grupo > Label { width: 100%; }
+.carro-opcion {
+    flex-direction: row; align-items: center; width: 180px; margin: 0 6px 6px 0; padding: 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7);
+    border-radius: 3px; background-color: rgba(18, 14, 9, 0.9); -unity-text-align: upper-left;
+}
+.carro-opcion.elegido { border-color: var(--oro); background-color: rgba(52, 37, 19, 0.95); }
+.carro-opcion.caro { opacity: 0.55; }
+.carro-opcion-icono { margin: 0 8px 0 0; font-size: 20px; color: var(--oro-claro); -unity-font-style: bold; }
+.carro-opcion-texto { flex-shrink: 1; min-width: 0; }
+.carro-opcion-nombre { margin: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; }
+.carro-opcion-detalle { margin: 0; font-size: 10.5px; color: var(--texto-sec); white-space: normal; }
+.carro-nuevo-pie { flex-direction: row; align-items: center; padding-top: 6px; border-top-width: 1px; border-top-color: rgba(107, 74, 41, 0.5); }
+.carro-nuevo-pie > * { margin-right: 8px; }
+.carro-nuevo-pie > Button { margin: 0 0 0 auto; }
+.viaje-destino { flex-grow: 1; margin: 0 0 0 10px; max-width: 320px; }
+.viaje-destino Label { min-width: 0; margin-right: 8px; color: var(--texto-sec); }
+.carga-grid { flex-direction: row; flex-wrap: wrap; }
+.carga-celda {
+    flex-direction: row; align-items: center; width: 200px; margin: 0 6px 6px 0; padding: 4px 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.6);
+    border-radius: 3px; background-color: rgba(0, 0, 0, 0.3);
+}
+.carga-celda > .con-icono { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.carga-celda-nombre { margin: 0; font-size: 12px; color: var(--pergamino); }
+.carga-celda-campo { width: 60px; margin: 0 4px; }
+.carga-celda-hay { margin: 0; font-size: 11px; color: var(--texto-sec); }
+.viaje-destino .unity-base-popup-field__input, .viaje-destino .unity-popup-field__input {
+    height: 30px; padding: 0 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: var(--tinta); color: var(--pergamino);
+    font-size: 13px; -unity-text-align: middle-left;
+}
+.viaje-destino .unity-base-popup-field__text { margin: 0; padding: 0; -unity-text-align: middle-left; }
+.caravana-reservar .unity-toggle__checkmark { border-color: var(--bronce-osc); background-color: var(--tinta); -unity-background-image-tint-color: var(--oro-claro); }

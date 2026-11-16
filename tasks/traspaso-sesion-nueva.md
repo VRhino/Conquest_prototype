@@ -31,7 +31,13 @@
   - Lo hecho está en `Docs/Arquitectura/33_Mercado_Y_Caravanas_2026-11-16.md`, y el código en `PantallasDeMundo.Mercado.cs`.
   - La prueba es `TuMercado`.
   - La página de capturas: https://claude.ai/artifact/FYPj5TcivSFcuMqcxNummR
-  - Siguen las tandas 2 (caravanas, escolta y el carro 3D) y 3 (rutas, trueques y Región).
+  - En commit: `122eb377` en `migracion`, con la mejora de las pruebas en `30f8d971`.
+- **Tanda 2 (caravanas, escolta y carro 3D): hecha y a revisar, sin commit.**
+  - Está en el doc 33, `PantallasDeMundo.Flota.cs`, `Mapa/CarroDeCaravana.cs` y `Editor/CarroDeCaravanaSetup.cs`, que arma el prefab con
+    `-executeMethod CarroDeCaravanaSetup.Construir`.
+  - La prueba es `TuFlota`.
+  - El animal del carro es el caballo para todos: es duda planteada a Víctor.
+- Sigue la tanda 3: rutas, trueques y Región.
 - El plan del paso 10 no entra en el commit del paso 9.
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)

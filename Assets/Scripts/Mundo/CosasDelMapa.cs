@@ -224,8 +224,14 @@ namespace ConquestTactics.Mundo
                 bool mia = miFaccion != null && c.HasFaccionId && c.FaccionId == miFaccion || c.HasTitularId && c.TitularId == heroeId;
                 r.Add(new CosaDelMapa
                 {
-                    Clase = mia ? ClaseDeCosa.Caravana : ClaseDeCosa.CaravanaAjena, Id = c.Id, Nombre = mia ? "Caravana de tu Facción" : "Caravana ajena",
-                    Detalle = c.Escoltada ? "Escoltada" : "", FaccionId = c.HasFaccionId ? c.FaccionId : null,
+                    Clase = mia ? ClaseDeCosa.Caravana : ClaseDeCosa.CaravanaAjena, Id = c.Id,
+                    Nombre = mia ? (c.HasNombre && c.Nombre != "" ? c.Nombre : "Caravana de tu Facción") : "Caravana ajena",
+                    // La propia comercial: sus carros y lo que lleva (lo ajeno no se sabe).
+                    Detalle = string.Join(" · ", new[]
+                    {
+                        mia && c.Tipo == TipoCaravana.CaravanaComercial ? $"🛞 {c.Carros.Count} · 📦 {Math.Floor(c.Contenido?.PorId.Values.Sum(v => v / 1000.0) ?? 0)}" : null,
+                        c.Escoltada ? "Escoltada" : null,
+                    }.Where(x => x != null)), FaccionId = c.HasFaccionId ? c.FaccionId : null,
                     X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.35, RadioClic = 0.7, Color = c.HasFaccionId ? ColorDeFaccion(a, c.FaccionId) : Ajeno, Entidad = e,
                 });
             }
