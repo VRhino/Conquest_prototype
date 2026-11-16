@@ -64,3 +64,38 @@ Víctor están en `tasks/bloque4-paso10-plan.md`.
   y verla en el mundo con su carro 3D y su ficha.
   - La otra plaza la funda otra cuenta de la misma Facción: `FundarPlaza` con `enLaFaccion`, y la Facción subida a nivel 3, porque a nivel 1
     solo cabe una plaza.
+
+## Tanda 3: rutas, trueques y la región (2026-11-16, a revisar)
+
+Todo está en `PantallasDeMundo.Rutas.cs`.
+
+- **El Encargo de una caravana** (`encargoCaravana.ts`). Sin encargo y parada, la caravana tiene «Viaje» o «Encargo» para quien los da: el
+  Gobernador, el Tesorero o el Maestro de Caravanas, residente.
+  - **El formulario**:
+    - el modo (una ruta permanente entre plazas tuyas o un envío de ida y vuelta) y el destino;
+    - en un envío, «Salir dentro de N min»;
+    - las dos paradas, con botones de recurso: «Recoge», lo que hay en el almacén del origen; «Deja», solo lo que se recoge en la otra.
+      Cada línea lleva su cantidad, y su precio en una plaza ajena. También «Esperar a que haya todo» y «Tirar lo que no quepa»;
+    - «Dar encargo» (`encargarCaravana`) o «Guardar cambios» (`cambiarEncargo`).
+  - **Con encargo**: la ruta dibujada (origen y destino, la carreta en el camino, la fase, las vueltas y la barra de la carga o la descarga),
+    las paradas en fichas y «✎ Cambiar», «⏹ Detener ruta» (`detenerEncargo`) y «Cancelar encargo» (`cancelarEncargo`), estos dos con su
+    confirmación.
+- **La pestaña Rutas**: las caravanas de la plaza con encargo, cada una con su ruta, y el recuento de rutas y envíos.
+- **La pestaña Trueques** (`panelTrueques.ts`):
+  - los pactos en curso y los cerrados, con las dos plazas frente a frente, lo que da cada una (lo entregado, en vigor), el estado y el
+    plazo;
+  - «✓ Aceptar» y «✕ Rechazar» los recibidos;
+  - «Proponer un trueque»: la otra plaza y hasta tres líneas por lado, con la balanza en medio (`proponerTrueque`).
+  - Lo manejan el Gobernador o el Tesorero, como en el motor.
+- **La Taberna en el riel de la plaza**, por ahora solo con el informe de la región (`htmlServicioRegion`): «Sus plazas» y «Sus órdenes de
+  mercado».
+  - Cada informe cuesta oro del almacén (`comprarInformeRegion`), con cuándo se puede volver a comprar y cuánto queda a la vista.
+  - Sale con la Taberna activa, al Rey, al Embajador o al Gobernador. Su ficha de edificio tiene «Abrir la Taberna».
+  - El resto de la taberna (miradas, informes de plaza, rumores, mercenarios) llega en su paso. Fue la opción a) propuesta a Víctor.
+- **La pestaña Región del Mercado**: sale con un informe de órdenes vigente (`htmlOrdenesRegion`).
+  - Enseña las órdenes activas de las plazas ajenas, con la cantidad y «Comprarle» o «Venderle», que manda la primera caravana libre
+    (`tomarOrdenADistancia`).
+  - **Sin el nombre de la región**: el prototipo lo saca de las regiones del relieve, y Conquest aún no las lee.
+- **La prueba** es `TuComercioADistancia`: una ruta a otra plaza de la Facción con sus paradas, verla en Rutas y detenerla, proponer un
+  trueque, comprar el informe de órdenes en la Taberna y abrir Región.
+  - La plaza se funda con `mercadoEnPie`: ahora el Mercado y la Taberna van entre lo corto.

@@ -177,9 +177,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
             // Primero lo corto (armería, curtiduría, molino, bodega), que acaba enseguida con el reloj deprisa; luego lo largo (granero, mercado,
             // taberna, almacén...), ya con el reloj a su paso para que se quede en obra o en la cola mientras dura la prueba (con la Vía Rápida, una obra
-            // de horas son minutos; la cola tiene tope de cuatro: lo que no cabe, el motor lo rechaza; con `mercadoEnPie`, el Mercado va entre lo corto en lugar de la bodega).
+            // de horas son minutos; la cola tiene tope de cuatro: lo que no cabe, el motor lo rechaza; con `mercadoEnPie`, el Mercado y la Taberna van entre lo corto en lugar del molino y la bodega).
             foreach (var tanda in mercadoEnPie
-                ? new[] { new[] { "armeria", "curtiduria", "molino", "mercado" }, new[] { "granero", "bodega", "taberna", "almacen", "fundicion", "carpinteria" } }
+                ? new[] { new[] { "armeria", "curtiduria", "mercado", "taberna" }, new[] { "granero", "molino", "bodega", "almacen", "fundicion", "carpinteria" } }
                 : new[] { new[] { "armeria", "curtiduria", "molino", "bodega" }, new[] { "granero", "mercado", "taberna", "almacen", "fundicion", "carpinteria" } })
             {
                 V1.Asentamiento Ella() => s.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plaza)?.Asentamiento;

@@ -1,5 +1,5 @@
 // El Mercado de la plaza (paso 10 del bloque 4, tanda 1), con el ratón y el teclado de verdad contra el motor. El Gobernador funda su plaza (con la
-// Vía Rápida y el reloj adelantado hasta tener el Mercado en pie) y abre Mercado en el riel, entre Reclutamiento y la Armería:
+// Vía Rápida y el reloj adelantado hasta tener el Mercado en pie) y abre Mercado en el riel, entre Reclutamiento (y la Taberna) y la Armería:
 // - pone madera a la venta con precio y pide trigo a precio de mercado (la boleta: Vender / Comprar, el recurso del almacén, cantidad y precio);
 // - las dos órdenes salen en pie y cancela la de venta con su ✕ (`cancelarOrdenMercado`);
 // - sale al mundo y abre la ventana Mercado desde la ficha de su plaza, con la columna a la puerta.
@@ -79,7 +79,9 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var riel = raiz.Q("plaza").Q("riel");
                 yield return Esperar(() => riel.Q<Button>("riel-mercado") != null, 10, "Mercado en el riel");
                 var orden = riel.Query<Button>(className: "plaza-riel-boton").ToList().Select(b => b.name).ToList();
-                Assert.AreEqual(orden.IndexOf("riel-reclutamiento") + 1, orden.IndexOf("riel-mercado"), "Mercado, detrás de Reclutamiento: " + string.Join(",", orden));
+                // Como el prototipo: Reclutamiento, Taberna (si la hay) y Mercado.
+                var antesDelMercado = orden.Contains("riel-taberna") ? "riel-taberna" : "riel-reclutamiento";
+                Assert.AreEqual(orden.IndexOf(antesDelMercado) + 1, orden.IndexOf("riel-mercado"), "Mercado, detrás de Reclutamiento y la Taberna: " + string.Join(",", orden));
                 yield return Clic(riel.Q<Button>("riel-mercado"));
                 yield return Esperar(() => Ventana()?.Q("orden-boleta") != null, 5, "la ventana Mercado con la boleta");
                 Assert.IsTrue(Ventana().ClassListContains("plaza-ventana-completa"), "a ventana completa");

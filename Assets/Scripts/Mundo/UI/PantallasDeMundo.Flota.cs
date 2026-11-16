@@ -287,7 +287,8 @@ namespace ConquestTactics.Mundo.UI
                 }
                 caja.Add(sale);
             }
-            else if (editable && tiran.Count > 0 && k.Encargo == null) Viaje(caja, k, a, yo, capacidad, rehacer);
+            else if (k.Encargo != null) CajaDeEncargo(caja, k, a, yo, capacidad, rehacer);
+            else if (editable && tiran.Count > 0) ViajeOEncargo(caja, k, a, yo, capacidad, rehacer);
             return caja;
         }
 

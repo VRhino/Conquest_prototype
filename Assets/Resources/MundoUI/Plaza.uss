@@ -1151,3 +1151,81 @@
 }
 .viaje-destino .unity-base-popup-field__text { margin: 0; padding: 0; -unity-text-align: middle-left; }
 .caravana-reservar .unity-toggle__checkmark { border-color: var(--bronce-osc); background-color: var(--tinta); -unity-background-image-tint-color: var(--oro-claro); }
+
+/* ═══════════ paso 10, tanda 3: encargos, rutas, trueques y la región, calcados de `style.css` (ruta-*, encargo-*, pacto-*, trueque-*, intel-region-*) ═══════════ */
+.caravana-modos { margin-bottom: 6px; }
+.caravana-botones { flex-direction: row; }
+.caravana-botones > Button { margin-left: 6px; }
+.ruta-vis { padding: 8px; border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); }
+.ruta-vis > * { margin-bottom: 6px; }
+.ruta-linea { flex-direction: row; align-items: center; }
+.ruta-punta { width: 120px; flex-shrink: 0; align-items: center; padding: 4px; border-width: 1px; border-color: rgba(107, 74, 41, 0.6); border-radius: 3px; }
+.ruta-punta.aqui { border-color: var(--oro); background-color: rgba(52, 37, 19, 0.9); }
+.ruta-punta-icono { margin: 0; font-size: 20px; }
+.ruta-punta-nombre { margin: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; -unity-text-align: middle-center; }
+.ruta-pista { flex-grow: 1; height: 34px; margin: 0 8px; justify-content: center; }
+.ruta-camino { height: 4px; border-radius: 2px; background-color: rgba(169, 121, 63, 0.7); }
+.ruta-carreta { position: absolute; top: 2px; margin: 0 0 0 -10px; font-size: 18px; }
+.ruta-sentido { position: absolute; bottom: -4px; left: 46%; margin: 0; font-size: 11px; color: var(--texto-sec); }
+.ruta-estado { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.ruta-estado > * { margin: 0 6px 4px 0; }
+.ruta-fase { margin: 0; padding: 2px 8px; border-radius: 10px; background-color: rgba(52, 37, 19, 0.95); font-size: 12px; color: var(--oro-claro); }
+.ruta-fase.detenida { color: #ffb3a8; }
+.ruta-paradas { flex-direction: row; }
+.ruta-parada { flex-grow: 1; flex-basis: 0; margin-right: 6px; padding: 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.5); border-radius: 3px; }
+.ruta-parada-cab { margin: 0 0 4px 0; font-size: 12.5px; color: var(--oro-claro); -unity-font-style: bold; }
+.ruta-accion { flex-direction: row; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+.ruta-accion > * { margin: 0 6px 2px 0; }
+.ruta-verbo { margin: 0 6px 0 0; font-size: 11.5px; color: var(--texto-sec); }
+.ruta-nada { margin: 0; font-size: 11.5px; color: var(--texto-apagado); }
+.ruta-marca { margin: 0; font-size: 10.5px; color: var(--obra-ambar); }
+.encargo-form { padding: 8px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.3); }
+.encargo-form > * { margin-bottom: 6px; }
+.encargo-cab { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.encargo-cab > .viaje-destino { margin: 0 8px 4px 0; }
+.encargo-salida { flex-direction: row; align-items: center; }
+.encargo-salida Label { min-width: 0; margin-right: 8px; color: var(--texto-sec); font-size: 12px; }
+.encargo-salida .unity-base-text-field__input { width: 70px; height: 28px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: var(--tinta); color: var(--pergamino); }
+.encargo-paradas { flex-direction: row; align-items: flex-start; }
+.encargo-parada { flex-grow: 1; flex-basis: 0; min-width: 0; margin-right: 8px; padding: 6px; border-width: 1px; border-color: rgba(107, 74, 41, 0.5); border-radius: 3px; }
+.encargo-parada > * { margin-bottom: 4px; }
+.encargo-recursos { flex-direction: row; flex-wrap: wrap; }
+.encargo-recurso {
+    width: 36px; height: 36px; margin: 0 4px 4px 0; padding: 0; align-items: center; justify-content: center; border-width: 1px;
+    border-color: rgba(107, 74, 41, 0.8); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9);
+}
+.encargo-recurso.puesto { border-color: var(--oro); background-color: rgba(98, 74, 31, 0.95); }
+.encargo-fila { flex-direction: row; align-items: center; }
+.encargo-fila > .con-icono { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.encargo-fila-nombre { margin: 0; font-size: 12px; color: var(--pergamino); }
+.encargo-quitar { width: 22px; height: 22px; margin: 0 0 0 4px; padding: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.45); color: var(--texto-sec); }
+.pacto { margin-bottom: 8px; padding: 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgba(18, 14, 9, 0.9); }
+.pacto > * { margin-bottom: 4px; }
+.pacto-cab { flex-direction: row; justify-content: space-between; }
+.pacto-estado { margin: 0; font-size: 12px; color: var(--oro-claro); -unity-font-style: bold; }
+.pacto-plazo { margin: 0; font-size: 11.5px; color: var(--texto-sec); }
+.pacto-lados { flex-direction: row; align-items: center; }
+.pacto-lado { flex-grow: 1; flex-basis: 0; min-width: 0; }
+.pacto-plaza { margin: 0 0 4px 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; }
+.pacto-lineas { flex-direction: row; flex-wrap: wrap; }
+.pacto-lineas > * { margin: 0 4px 4px 0; }
+.pacto-sello { margin: 0 10px; font-size: 20px; color: var(--oro); }
+.pacto-acciones { flex-direction: row; }
+.pacto-acciones > Button { margin-right: 6px; }
+.trueque-balanza { flex-direction: row; align-items: center; margin: 6px 0; }
+.trueque-platillo { flex-grow: 1; flex-basis: 0; min-width: 0; padding: 6px; border-width: 1px; border-top-width: 3px; border-color: var(--bronce-osc); border-radius: 3px; }
+.trueque-platillo.da { border-top-color: var(--orden-venta); }
+.trueque-platillo.recibe { border-top-color: var(--orden-compra); }
+.trueque-platillo-titulo { margin: 0 0 4px 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; }
+.trueque-linea { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.trueque-linea > .viaje-destino { margin: 0 4px 0 0; flex-grow: 1; }
+.trueque-fiel { margin: 0 8px; font-size: 22px; color: var(--oro); }
+.intel-region-fila {
+    flex-direction: row; align-items: center; margin-bottom: 6px; padding: 8px; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px;
+    background-color: rgba(18, 14, 9, 0.9);
+}
+.intel-region-icono { margin: 0 10px 0 0; font-size: 22px; }
+.intel-region-texto { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.intel-vigente { color: #9fd49a; }
+.region-plaza { margin-bottom: 8px; }
+.region-plaza > .mercado-orden { margin-bottom: 4px; }

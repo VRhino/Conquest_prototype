@@ -30,7 +30,7 @@ namespace ConquestTactics.Mundo.UI
         static readonly Dictionary<string, string> VentanaDeEdificio = new Dictionary<string, string>
         {
             ["barracon"] = "reclutamiento", ["galeriaDeTiro"] = "reclutamiento", ["caballerizas"] = "reclutamiento", ["armeria"] = "armeria",
-            ["mercado"] = "mercado", ["albergueCaravanas"] = "mercado",
+            ["mercado"] = "mercado", ["albergueCaravanas"] = "mercado", ["taberna"] = "taberna",
         };
 
         /// <summary>¿Es la plaza de tu Facción? (de visita en una ajena solo se ve lo de fuera).</summary>
@@ -51,7 +51,7 @@ namespace ConquestTactics.Mundo.UI
         void BotonDeVentanaEnFicha(VisualElement cuerpo, Asentamiento a, Heroe yo, Edificio e, Action rehacer)
         {
             if (!Activo(e) || !VentanaDeEdificio.TryGetValue(e.Tipo, out var ventana) || !VentanaDisponible(ventana, a, yo)) return;
-            var b = Dialogo.Boton(ventana == "armeria" ? "Abrir la Armería" : ventana == "mercado" ? "Abrir el Mercado" : "Reclutar", "boton-primario plaza-ficha-ventana", () => { fichaId = null; AbrirVentanaDePlaza(ventana, a, rehacer); });
+            var b = Dialogo.Boton(ventana == "armeria" ? "Abrir la Armería" : ventana == "mercado" ? "Abrir el Mercado" : ventana == "taberna" ? "Abrir la Taberna" : "Reclutar", "boton-primario plaza-ficha-ventana", () => { fichaId = null; AbrirVentanaDePlaza(ventana, a, rehacer); });
             b.name = "ficha-abrir-" + ventana;
             cuerpo.Add(b);
         }

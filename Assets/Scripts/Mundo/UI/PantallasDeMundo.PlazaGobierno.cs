@@ -187,7 +187,8 @@ namespace ConquestTactics.Mundo.UI
         static readonly (string id, string titulo, string familia, string icono)[] RielDePlaza =
         {
             ("construccion", "Construcción", "riel", "construccion"), ("gobierno", "Gobierno", "riel", "gobierno"), ("defensa", "Defensa", "edificio", "muralla"),
-            ("territorio", "Territorio", "riel", "territorio"), ("reclutamiento", "Reclutamiento", "edificio", "barracon"), ("mercado", "Mercado", "edificio", "mercado"),
+            ("territorio", "Territorio", "riel", "territorio"), ("reclutamiento", "Reclutamiento", "edificio", "barracon"), ("taberna", "Taberna", "edificio", "taberna"),
+            ("mercado", "Mercado", "edificio", "mercado"),
             ("armeria", "Armería", "edificio", "armeria"),
         };
 
@@ -198,6 +199,8 @@ namespace ConquestTactics.Mundo.UI
             "armeria" => ArmeriaActiva(a),
             // El Mercado, con el edificio activo; también de visita (sus órdenes, para tomarlas).
             "mercado" => MercadoActivo(a),
+            // La Taberna, por ahora con el informe de la región: a quien lo compra (el resto de la taberna, en su paso).
+            "taberna" => CompraInforme(a, yo),
             // Territorio, también de visita (solo para mirar sus pueblos).
             "territorio" => true,
             _ when !Propia(a, yo) => false,
@@ -216,7 +219,7 @@ namespace ConquestTactics.Mundo.UI
         {
             var cargo = CargoConstructor(a, yo.Id);
             var enMarcha = Internos(a).Count(e => e.Mejora != null || e.Estado == EstadoEdificio.EdificioEnConstruccion);
-            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}";
+            var firma = $"{ventanaPlaza}|{cargo}|{FaltaVivienda(a)}|{enMarcha}|{VentanaDisponible("almacen", a, yo)}|{FundacionLista(a, yo)}|{MercadoActivo(a)}|{ArmeriaActiva(a)}|{CompraInforme(a, yo)}";
             if (ventanaPlaza != "construccion") return firma;
             var cat = Catalogo;
             var caros = string.Concat((cat?.Properties() ?? Enumerable.Empty<JProperty>())
@@ -503,7 +506,7 @@ namespace ConquestTactics.Mundo.UI
             var desplazado = antes != null && (string)antes.userData == clave0 ? antes.scrollOffset : Vector2.zero;
             ventana.Clear();
             Ver(ventana, true);
-            var completa = ventanaPlaza == "almacen" || ventanaPlaza == "armeria" || ventanaPlaza == "territorio" || ventanaPlaza == "mercado";
+            var completa = ventanaPlaza == "almacen" || ventanaPlaza == "armeria" || ventanaPlaza == "territorio" || ventanaPlaza == "mercado" || ventanaPlaza == "taberna";
             ventana.EnableInClassList("plaza-ventana-completa", completa);
             ventana.name = "plaza-ventana";
             var cab = Dialogo.Caja("plaza-ventana-cab");
@@ -513,6 +516,7 @@ namespace ConquestTactics.Mundo.UI
                 "almacen" => ("edificio", "almacen", "Almacén"), "defensa" => ("edificio", "muralla", "Defensa"), "armeria" => ("edificio", "armeria", "Armería"),
                 "territorio" => ("riel", "territorio", "Territorio"),
                 "mercado" => ("edificio", "mercado", "Mercado"),
+                "taberna" => ("edificio", "taberna", "Taberna"),
                 _ => ("riel", "gobierno", "Gobierno"),
             };
             titulo.Add(IconosDelMundo.Icono(familia, icono, 28, IconosDelMundo.Bronce));
@@ -530,7 +534,11 @@ namespace ConquestTactics.Mundo.UI
                 "armeria" => PestanasDeArmeria(a, yo).ToArray(),
                 "territorio" => Propia(a, yo) ? new[] { ("pueblos", "Pueblos y aldeas"), ("fundacion", "Fundación") } : new[] { ("pueblos", "Pueblos y aldeas") },
                 // De visita, sus órdenes abiertas para tomarlas; en la tuya, sus pestañas (Caravanas y Rutas, en las tandas 2 y 3).
-                "mercado" => Propia(a, yo) ? new[] { ("ordenes", "Órdenes"), ("caravanas", "Caravanas") } : new[] { ("deplaza", "Mercado") },
+                "mercado" => Propia(a, yo)
+                    ? new[] { ("ordenes", "Órdenes"), ("caravanas", "Caravanas"), ("rutas", "Rutas"), ("trueques", "Trueques") }
+                        .Concat(InformesDeOrdenesVigentes(yo).Count > 0 ? new[] { ("region", "Región") } : new (string, string)[0]).ToArray()
+                    : new[] { ("deplaza", "Mercado") },
+                "taberna" => new[] { ("informe", "Informe de la región") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
             var clave = ventanaPlaza;
@@ -566,6 +574,10 @@ namespace ConquestTactics.Mundo.UI
                 case "ordenes": OrdenesDeMercado(cuerpo, a, yo, rehacer); break;
                 case "deplaza": MercadoDePlaza(cuerpo, a.Id, rehacer); break;
                 case "caravanas": Caravanas(cuerpo, a, yo, rehacer); break;
+                case "rutas": Rutas(cuerpo, a, yo, rehacer); break;
+                case "trueques": Trueques(cuerpo, a, yo, rehacer); break;
+                case "region": OrdenesDeLaRegion(cuerpo, a, yo, rehacer); break;
+                case "informe": InformeDeRegion(cuerpo, a, yo, rehacer); break;
             }
         }
 

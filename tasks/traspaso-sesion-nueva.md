@@ -37,7 +37,14 @@
     `-executeMethod CarroDeCaravanaSetup.Construir`.
   - La prueba es `TuFlota`.
   - El animal del carro es el caballo para todos: es duda planteada a Víctor.
-- Sigue la tanda 3: rutas, trueques y Región.
+  - En commit: `a8832b0d`.
+- **Tanda 3 (rutas, trueques y Región): hecha y a revisar, sin commit.**
+  - Está en el doc 33 y en `PantallasDeMundo.Rutas.cs`.
+  - La prueba es `TuComercioADistancia`.
+  - La página de capturas: https://claude.ai/artifact/Szy4oGJLYBEnYdJMQnPK6F
+  - La Taberna sale en el riel solo con el informe de la región: el resto llega en su paso. Fue la opción a) propuesta a Víctor.
+- Con la tanda 3 se cierra el paso 10. Sigue el paso 11: los ejércitos, con el carro 3D detrás del ejército y adjuntar, soltar, cargar,
+  entregar y aparcar caravanas.
 - El plan del paso 10 no entra en el commit del paso 9.
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)
