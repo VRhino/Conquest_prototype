@@ -53,11 +53,16 @@
   - **Tanda 2: en commit `9b7ee80b`.**
   - **Añadido (las tarjetas del ejército en el lateral de la plaza): en commit `3e4ceba4`.** Está en el doc 34 y en
     `PantallasDeMundo.Ejercito.cs` (`PintarEjercitosDePlaza`); la prueba es `TuEjercitoEnElMapa`.
-  - **Tanda 3 (las caravanas del ejército): hecha y a revisar, sin commit.** Está en el doc 34, en `PantallasDeMundo.Convocatoria.cs` (las
+  - **Tanda 3 (las caravanas del ejército): en commit `0004b7f4`.** Está en el doc 34, en `PantallasDeMundo.Convocatoria.cs` (las
     comerciales en la preparación), `PantallasDeMundo.Ejercito.cs` (cargar, entregar y aparcar) y `CosasDelMapa` (el carro detrás y «Entrar con
     el ejército»). La prueba es `TuEjercitoConCaravanas`; con `MUNDO_PROTO=caravanas` deja la escena para
     `tasks/pruebas/cdp/ejercito-caravanas.mjs`.
-  - Con la tanda 3 se cierra el paso 11. Sigue el paso 12 (mercenarios por contrato, taberna y misiones).
+  - Con la tanda 3 se cerró el paso 11.
+- **Paso 12 (mercenarios por contrato, taberna y misiones)**: el plan, con las respuestas de Víctor (1a 2b 3a 4a 5b 6 y 7a), está en
+  `tasks/bloque4-paso12-plan.md`; el doc es el 35.
+  - **Tanda 1 (la Taberna): hecha y a revisar, sin commit.** Está en `PantallasDeMundo.Taberna.cs`; la prueba es `TuTaberna` (con
+    `MUNDO_PROTO=taberna`, la escena para `tasks/pruebas/cdp/taberna.mjs`).
+  - Faltan la tanda 2 (los contratos, con «Mercenarios de la región») y la 3 (las misiones).
   - Las tres dudas, contestadas por Víctor el 2026-11-16: el caballo para todos los carros hasta tener los modelos (el animal real, en el
     icono de la ventana); la Taberna solo con el informe (el resto, en el paso 12); las caravanas comerciales se enganchan en la preparación,
     junto a la de fundación, solo si hay alguna libre en la plaza (tanda 3; ver el plan).

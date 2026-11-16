@@ -604,8 +604,9 @@ namespace ConquestTactics.Mundo.UI
                 var cuerpoFila = Dialogo.Caja("intel-region-texto");
                 cuerpoFila.Add(Dialogo.Texto(titulo, "pacto-plaza"));
                 cuerpoFila.Add(Dialogo.Texto(texto, "plaza-sub"));
-                // El informe de este tipo de la región de la plaza: el último de ese tipo (la región la sabe el motor).
-                var previo = informes.Where(x => x.Tipo == tipo).OrderByDescending(x => x.CompradoEnMs).FirstOrDefault();
+                // El informe de este tipo de la región de la plaza (`regionEn`, con el raster `region` del artefacto): el último.
+                var region = RegionEn(a.Posicion.X / 1000.0, a.Posicion.Y / 1000.0);
+                var previo = informes.Where(x => x.Tipo == tipo && (region == null || x.Region == region)).OrderByDescending(x => x.CompradoEnMs).FirstOrDefault();
                 if (previo != null && previo.HasCaducaEnMs && previo.CaducaEnMs > AhoraMs) cuerpoFila.Add(Dialogo.Texto($"A la vista {FaltaPara(previo.CaducaEnMs)} más", "plaza-sub intel-vigente"));
                 fila.Add(cuerpoFila);
                 if (previo != null && previo.LibreEnMs > AhoraMs) fila.Add(Dialogo.Texto($"Otra vez en {FaltaPara(previo.LibreEnMs)}", "flota-espera"));
@@ -613,8 +614,9 @@ namespace ConquestTactics.Mundo.UI
                 {
                     var ti = tipo;
                     Button comprar = null;
-                    comprar = Dialogo.Boton("Comprar", "boton-primario", async () => { if (await OrdenDePlaza(new Orden { ComprarInformeRegion = new OrdenComprarInformeRegion { AsentamientoId = a.Id, Tipo = ti } }, comprar)) rehacer(); });
+                    comprar = Dialogo.Boton("", "boton-primario intel-comprar", async () => { if (await OrdenDePlaza(new Orden { ComprarInformeRegion = new OrdenComprarInformeRegion { AsentamientoId = a.Id, Tipo = ti } }, comprar)) rehacer(); });
                     comprar.name = "comprar-informe-" + tipo;
+                    comprar.Add(Dialogo.Texto("Comprar", "intel-comprar-texto"));
                     comprar.Add(IconosDelMundo.ChipDeRecurso("oro", oro.ToString(), "Oro del almacén de la plaza"));
                     fila.Add(comprar);
                 }

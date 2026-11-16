@@ -542,7 +542,7 @@ namespace ConquestTactics.Mundo.UI
                     ? new[] { ("ordenes", "Órdenes"), ("caravanas", "Caravanas"), ("rutas", "Rutas"), ("trueques", "Trueques") }
                         .Concat(InformesDeOrdenesVigentes(yo).Count > 0 ? new[] { ("region", "Región") } : new (string, string)[0]).ToArray()
                     : new[] { ("deplaza", "Mercado") },
-                "taberna" => new[] { ("informe", "Informe de la región") },
+                "taberna" => new[] { ("intel", "Intel") },
                 "unirse" => new[] { ("unirse", "Unirse a un ejército") },
                 _ => new[] { ("cargos", "Cargos"), ("politicas", "Políticas") },
             };
@@ -582,7 +582,7 @@ namespace ConquestTactics.Mundo.UI
                 case "rutas": Rutas(cuerpo, a, yo, rehacer); break;
                 case "trueques": Trueques(cuerpo, a, yo, rehacer); break;
                 case "region": OrdenesDeLaRegion(cuerpo, a, yo, rehacer); break;
-                case "informe": InformeDeRegion(cuerpo, a, yo, rehacer); break;
+                case "intel": PanelDeIntel(cuerpo, TabernaDePlaza(a), yo, a, rehacer); break;
                 case "unirse": UnirseDesdePlaza(cuerpo, a, yo, rehacer); break;
             }
         }

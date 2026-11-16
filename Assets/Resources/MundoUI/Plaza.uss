@@ -1240,3 +1240,40 @@
 .ejercito-tarjeta-integrantes .unity-foldout__content { margin-left: 0; }
 .ejercito-tarjeta-integrantes .conv-integrante { margin-bottom: 4px; }
 .ejercito-tarjeta-unirse { margin: 0; height: 34px; }
+
+/* ═══════════ paso 12, tanda 1: la Taberna (intel), calcada de `style.css` (intel-*) ═══════════ */
+.intel-cols { flex-direction: row; align-items: flex-start; }
+.intel-col { flex-grow: 1; flex-basis: 0; flex-shrink: 1; min-width: 0; margin-right: 16px; }
+.intel-col--der { margin-right: 0; }
+.intel-servicios { flex-direction: row; flex-wrap: wrap; }
+.intel-servicio.intel-servicio--ancho { width: 99%; }
+.intel-comprar-texto { margin: 0; -unity-font-style: bold; }
+.intel-region-fila > .intel-comprar { height: 32px; padding: 0 12px; }
+.intel-cab { width: 100%; flex-direction: row; align-items: center; padding: 8px 10px; margin-bottom: 6px; border-width: 1px; border-color: rgba(169, 121, 63, 0.55); border-radius: 3px; background-color: rgba(30, 22, 13, 0.95); }
+.intel-cab > VisualElement:first-child { margin-right: 10px; flex-shrink: 0; }
+.intel-cab-cuerpo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.intel-cab-chips { flex-direction: row; align-items: center; margin-top: 4px; }
+.intel-cab-chips > * { margin-right: 8px; }
+.intel-servicio { width: 49%; margin: 0 1% 6px 0; padding: 8px; border-width: 1px; border-top-width: 3px; border-color: rgba(107, 74, 41, 0.7); border-top-color: var(--bronce); border-radius: 3px; background-color: rgba(26, 20, 13, 0.95); }
+.intel-servicio > * { margin-bottom: 6px; }
+.intel-servicio-cab { flex-direction: row; align-items: center; }
+.intel-servicio-icono { width: 32px; height: 32px; margin-right: 8px; flex-shrink: 0; border-width: 1px; border-color: var(--bronce); border-radius: 16px; background-color: rgba(60, 42, 22, 0.8); font-size: 15px; -unity-text-align: middle-center; }
+.intel-servicio-titulo { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.intel-coords { flex-direction: row; align-items: center; }
+.intel-coords > IntegerField { flex-grow: 1; flex-basis: 0; margin: 0 0 0 4px; }
+.intel-comprar { margin: 0; height: 32px; flex-direction: row; justify-content: center; align-items: center; }
+.intel-comprar > * { margin-left: 6px; }
+.intel-miradas, .intel-informes { flex-direction: row; flex-wrap: wrap; margin-bottom: 6px; }
+.intel-mirada, .intel-informe-btn { width: 48%; margin: 0 2% 6px 0; padding: 6px 8px; flex-direction: row; align-items: center; border-width: 1px; border-color: rgba(107, 74, 41, 0.7); border-radius: 3px; background-color: rgba(18, 14, 9, 0.85); }
+.intel-informe-btn { flex-direction: column; align-items: flex-start; height: auto; }
+.intel-mirada.abierta { border-color: rgba(111, 182, 255, 0.6); background-color: rgba(30, 50, 80, 0.45); }
+.intel-informe-btn.abierto { border-color: var(--oro); }
+.intel-informe { padding: 8px; margin-bottom: 8px; border-width: 1px; border-color: rgba(169, 121, 63, 0.55); border-radius: 3px; background-color: rgba(26, 20, 13, 0.95); }
+.intel-informe-cab, .intel-informe-chips { flex-direction: row; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.intel-informe-cab > *, .intel-informe-chips > * { margin-right: 8px; }
+.intel-iconos { flex-direction: row; flex-wrap: wrap; margin-bottom: 6px; }
+.intel-icono { flex-direction: row; align-items: center; margin: 0 10px 4px 0; }
+.intel-icono > Label { margin-left: 3px; }
+.intel-recinto { flex-direction: row; align-items: center; margin-bottom: 4px; }
+.intel-recinto > * { margin-right: 8px; }
+.intel-recinto > .base-barra-fondo { flex-grow: 1; }

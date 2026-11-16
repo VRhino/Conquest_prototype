@@ -68,6 +68,10 @@ namespace ConquestTactics.Mundo.UI
                     if (propia && ALaPuerta(cosa.X, cosa.Y)) r.Add(("guarnicion", "Guarnición", ("glifo", "escudo")));
                     break;
                 }
+                case ClaseDeCosa.Mercenarios:
+                    // Su taberna, con Facción y la columna quieta a su puerta (paso 12, Víctor 3a).
+                    if (h.HasFaccionId && ALaPuerta(cosa.X, cosa.Y)) r.Add(("taberna", "Taberna", ("edificio", "taberna")));
+                    break;
                 case ClaseDeCosa.Avanzada:
                 {
                     var x = cosa.Entidad?.Avanzada;
@@ -141,17 +145,17 @@ namespace ConquestTactics.Mundo.UI
             if (ventanaDePuerta == null) { placa?.RemoveFromHierarchy(); firmaDePuerta = null; return; }
             var firmaVentana = $"{ventanaDePuerta}|{cosaDePuerta}|{HeroeAhora()?.Version}|{MiColumna()?.Version}|{string.Join(",", EscuadrasDelHeroe(HeroeAhora()).Select(s => s.Version))}"
                 + $"|{(ventanaDePuerta == "mercado" && c.Sesion.Almacen.Buscar(TipoEntidad.Asentamiento, cosa.Id)?.Asentamiento is Asentamiento am ? FirmaDeMercado(am) + am.Version : "")}"
-                + $"|{c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada?.Version}|{c.Sesion.Almacen.Buscar(TipoEntidad.Pueblo, cosa.Id)?.Pueblo?.Version}|{ObraSobre(cosa.Id)?.Version}";
+                + $"|{(ventanaDePuerta == "taberna" ? FirmaDeIntel(HeroeAhora()) : "")}|{c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada?.Version}|{c.Sesion.Almacen.Buscar(TipoEntidad.Pueblo, cosa.Id)?.Pueblo?.Version}|{ObraSobre(cosa.Id)?.Version}";
             if (placa != null && firmaVentana == firmaDePuerta) return;
             firmaDePuerta = firmaVentana;
             placa?.RemoveFromHierarchy();
             placa = Dialogo.Caja("placa ventana-puerta");
             placa.name = "ventana-puerta";
-            placa.EnableInClassList("ancha", ventanaDePuerta == "mercado");
+            placa.EnableInClassList("ancha", ventanaDePuerta == "mercado" || ventanaDePuerta == "taberna");
             if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hojaPlaza) placa.styleSheets.Add(hojaPlaza);
             var filete = Dialogo.Caja("placa-filete ventana-puerta-filete");
             var cab = Dialogo.Caja("ventana-puerta-cab");
-            var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : ventanaDePuerta == "mercado" ? "Mercado"
+            var titulo = ventanaDePuerta == "obra" ? NombreDeObra(ObraSobre(cosa.Id)) : ventanaDePuerta == "carga" ? "Al almacén" : ventanaDePuerta == "mercado" ? "Mercado" : ventanaDePuerta == "taberna" ? "Taberna"
                 : cosa.Clase == ClaseDeCosa.Avanzada ? "Tu guarnición" : "Guarnición";
             cab.Add(Dialogo.Texto(titulo, "dialogo-titulo"));
             var cerrar = Dialogo.Boton("×", "aviso-borrar", () => { ventanaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); });
@@ -173,6 +177,12 @@ namespace ConquestTactics.Mundo.UI
                     void Otra() { firmaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); }
                     if (cosa.FaccionId != null && cosa.FaccionId == HeroeAhora()?.FaccionId && GestionaOrdenes(a, HeroeAhora())) OrdenesDeMercado(cuerpo, a, HeroeAhora(), Otra);
                     else MercadoDePlaza(cuerpo, a.Id, Otra);
+                    break;
+                }
+                case "taberna":
+                {
+                    var camp = c.Sesion.Almacen.Buscar(TipoEntidad.CampamentoMercenarios, cosa.Id)?.CampamentoMercenarios ?? cosa.Entidad?.CampamentoMercenarios;
+                    if (camp != null) PanelDeIntel(cuerpo, TabernaDeCampamento(camp, HeroeAhora()), HeroeAhora(), null, () => { firmaDePuerta = null; PintarPuerta(v, mapa?.Seleccionada); });
                     break;
                 }
                 case "carga": CargaAlAlmacen(cuerpo, c.Sesion.Almacen.Buscar(TipoEntidad.Avanzada, cosa.Id)?.Avanzada ?? cosa.Entidad.Avanzada); break;

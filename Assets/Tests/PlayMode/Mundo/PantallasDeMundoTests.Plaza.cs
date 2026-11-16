@@ -82,7 +82,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             IEnumerator Bombear(float seg) { var f = Time.realtimeSinceStartup + seg; while (Time.realtimeSinceStartup < f) { s.Bombear(); yield return null; } }
             var camp = abrir.Result.CampamentosParaElegir[0].CampamentoId;
             // Los nombres no se repiten en el mundo: si otra prueba ya los usó en este servidor, el siguiente.
-            foreach (var nombre in new[] { "Fundador", "Atreo", "Tiestes", "Pélope", "Agamenón", "Menelao", "Egeo", "Teseo", "Cadmo", "Néstor" })
+            // Con muchas pruebas en un mismo servidor (un lote) se acaban: después, los numerados.
+            foreach (var nombre in new[] { "Fundador", "Atreo", "Tiestes", "Pélope", "Agamenón", "Menelao", "Egeo", "Teseo", "Cadmo", "Néstor" }
+                         .Concat(Enumerable.Range(2, 40).Select(n => $"Fundador {n}")))
             {
                 yield return Ordenar(new V1.Orden { CrearHeroe = new V1.OrdenCrearHeroe { DisplayName = nombre, CampamentoId = camp, ClassDefinitionId = "espada_escudo_mediano", Genero = "masculino", Avatar = new V1.OrdenCrearHeroe.Types.Avatar() } });
                 if (ultimo.Resultado == V1.Resultado.OrdenAceptada) break;
@@ -98,7 +100,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Administrar(url, "fijar_faccion_de_heroe", q);
             }
             else
-                foreach (var nombre in new[] { "Micenas", "Argos", "Tebas", "Pilos", "Corinto", "Esparta", "Atenas", "Creta", "Ítaca", "Tirinto" })
+                foreach (var nombre in new[] { "Micenas", "Argos", "Tebas", "Pilos", "Corinto", "Esparta", "Atenas", "Creta", "Ítaca", "Tirinto" }
+                             .Concat(Enumerable.Range(2, 40).Select(n => $"Micenas {n}")))
                 {
                     yield return Ordenar(new V1.Orden { CrearFaccion = new V1.OrdenCrearFaccion { Nombre = nombre } });
                     if (ultimo.Resultado == V1.Resultado.OrdenAceptada) { faccionDe?.Invoke(ultimo.Creadas.FirstOrDefault(c => c.Entidad == V1.TipoEntidad.Faccion)?.Id); break; }
@@ -116,7 +119,8 @@ namespace ConquestTactics.Mundo.UI.Tests
             var bx = cp?.X ?? Col().Posicion.X; var by = cp?.Y ?? Col().Posicion.Y;
             string plaza = null;
             // Un sitio donde se pueda fundar (el bosque denso no deja): se prueba a un lado y a otro del campamento.
-            foreach (var (dx, dy) in new[] { (45, 0), (0, 45), (-45, 0), (0, -45), (60, 40), (-60, 40), (60, -40), (-60, -40), (90, 0), (0, 90), (-90, 0), (0, -90), (120, 60), (-120, 60), (120, -60), (-120, -60) })
+            foreach (var (dx, dy) in new[] { (45, 0), (0, 45), (-45, 0), (0, -45), (60, 40), (-60, 40), (60, -40), (-60, -40), (90, 0), (0, 90), (-90, 0), (0, -90), (120, 60), (-120, 60), (120, -60), (-120, -60),
+                         (160, 0), (0, 160), (-160, 0), (0, -160), (160, 120), (-160, 120), (160, -120), (-160, -120), (220, 0), (0, 220), (-220, 0), (0, -220) })
             {
                 var objetivo = new V1.Punto { X = bx + dx * 1000, Y = by + dy * 1000 };
                 // Lejos de las plazas que ya hay (la de otra prueba en este servidor): al pasar por la zona de otra, la columna pierde su caravana.

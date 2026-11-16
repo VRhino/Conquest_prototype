@@ -178,7 +178,9 @@ namespace ConquestTactics.Mundo.UI
                 var h = HeroeDelCampamento();
                 if (camp == null || h == null) return;
                 // Resumen y, con Facción y sin plaza, el Fondo de refundación (paso 8).
-                if (SeccionesDelCampamento(v, h, repintar) == "fondo") { PintarFondo(v, camp, h, error, repintar); return; }
+                var seccion = SeccionesDelCampamento(v, h, repintar);
+                if (seccion == "fondo") { PintarFondo(v, camp, h, error, repintar); return; }
+                if (seccion == "intel") { PanelDeIntel(v, TabernaDeCampamento(camp, h), h, null, repintar); return; }
                 bool resides = camp.ResidentesIds.Contains(h.Id);
                 v.Add(Dialogo.Texto(resides
                     ? "Este campamento es tu residencia: aquí guardas tu almacén, te prestan tropa y compras en el mercado completo."

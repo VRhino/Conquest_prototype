@@ -25,9 +25,14 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>Las subpestañas del panel (`seccionesDeCampamento`): Resumen y, si toca, Fondo. Devuelve la elegida.</summary>
         string SeccionesDelCampamento(VisualElement v, Heroe h, Action repintar)
         {
-            if (!HayFondo(h)) { seccionCampamento = "resumen"; return "resumen"; }
+            // Resumen; con Facción, la intel de su taberna (paso 12); con Facción y sin plaza, el Fondo.
+            var secciones = new List<(string, string)> { ("resumen", "Resumen") };
+            if (h.HasFaccionId) secciones.Add(("intel", "Intel"));
+            if (HayFondo(h)) secciones.Add(("fondo", "Fondo"));
+            if (secciones.Count == 1 || !secciones.Any(x => x.Item1 == seccionCampamento)) seccionCampamento = "resumen";
+            if (secciones.Count == 1) return "resumen";
             var fila = Dialogo.Caja("pestanas campamento-secciones");
-            foreach (var (id, nombre) in new[] { ("resumen", "Resumen"), ("fondo", "Fondo") })
+            foreach (var (id, nombre) in secciones)
             {
                 var b = Dialogo.Boton(nombre, "pestana" + (id == seccionCampamento ? " pestana--activa" : ""), () => { seccionCampamento = id; repintar(); });
                 b.name = "seccion-" + id;
