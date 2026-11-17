@@ -162,7 +162,12 @@
     - el creador y el selector, solo con el motor;
     - fuera la preparación vieja.
     - `ProjectSettings/EditorBuildSettings.asset`, sin la escena borrada: entra en el commit con el permiso de Víctor.
-- **Sigue, por el orden de Víctor:** las clases y los objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la
+- **La predicción «c», en su commit (Víctor, 2026-11-17, a):** el héroe del jugador choca con los cuerpos enemigos dentro de la predicción
+  (`Net/ChoqueDelMando.cs`), con compensación de retardo en el servidor. Encendida por defecto; `-sinChoque` la apaga. El banco es
+  `Tools/banco_choque.sh` (`-conMapa`, `-lentos`, `-botAlChoque`) y las cifras están en el doc 22 §8.6.1. Sin hacer: extrapolar a los
+  soldados que se mueven, para lo que queda en plena lucha.
+- **Pendiente (28b):** el teclado de prueba de `BattleSceneIntegrationTests` (Hoja §6).
+- **Hecho, por el orden de Víctor:** las clases y los objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la
   predicción con choque contra los soldados (6c). Sin capturas en esta serie (Víctor, 2026-11-16).
 
 ## Las pruebas más rápidas (2026-11-16, hecho y sin commit)

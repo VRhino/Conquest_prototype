@@ -51,7 +51,7 @@ namespace ConquestTactics.Net
         protected override void OnCreate()
         {
             CamaraDelJuego = false;
-            Enabled = OpcionesRed.BatallaReal > 0 && !Application.isBatchMode;
+            Enabled = OpcionesRed.BatallaReal > 0 && (!Application.isBatchMode || OpcionesRed.ConMapa);
         }
 
         // El panel de suministro no debe leer una entidad de un mundo de cliente que ya no existe.
@@ -73,6 +73,9 @@ namespace ConquestTactics.Net
                 SceneManager.LoadScene(SceneTransitionService.SceneNames.Battle);
                 return;
             }
+            // Sin pantalla (-conMapa) solo hacía falta la escena, por su malla de navegación.
+            if (Application.isBatchMode)
+                return;
             if (_registro == null)
                 _registro = Object.FindFirstObjectByType<VisualPrefabRegistry>();
             if (_registro == null)

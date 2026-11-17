@@ -204,7 +204,16 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
      forjadas, con sus cifras; los carros de guerra, al menos su dato, para que un ticket con carros no rechace la batalla; rechazar o avisar
      de la clase o el objeto desconocidos (hoy entran sin aviso como espada y escudo, o con el hueco vacío); borrar el relleno del héroe; y
      quitar `terrain-tools` si la batalla no lo usa. El relleno de las escuadras y las Eras I-III van con el arte (§5);
-  4. al final, la predicción con choque contra los soldados (c).
+  4. al final, la predicción con choque contra los soldados (c). Hecha (Víctor, 2026-11-17, a): encendida por defecto, `-sinChoque` la apaga. Con soldados quietos o lentos, las correcciones al meterse en una escuadra bajan de 8-41 por segundo a menos de 1; en plena lucha a 200 ms quedan 1,3 por segundo (doc 22 §8.6.1).
+- **Pendiente (Víctor, 2026-11-17, 28b): el teclado de prueba en `BattleSceneIntegrationTests`.** En las pruebas de un jugador la tecla no
+  llega a la batalla, por lo menos desde el 2026-11-14 a las 19:39 (`Logs/mundo/nuestro4.xml`):
+  - «W input did not move the local hero», «Key 1 did not launch the squad's ability», «Key 3 did not launch the Advance» y la del ataque;
+  - hoy también `ProductionBattleSceneSpawnsAndAcceptsHeroMovementAndSquadOrders` y `PikemenRecruitmentPreparationAndProductionBattle`
+    (esta llega a la batalla con su escuadra y se para en la F2).
+  - No es `HeroInputSystem` ni lo que apaga al héroe local en red (`BattleBootstrapRequests.NoLocalHero`). Falta buscar la causa común.
+- **Fallo intermitente (2026-11-17): `DelMapaALaBatalla`.** Falló dos de tres vueltas seguidas, cada vez en un sitio: de la preparación cancelada
+  al mapa («de vuelta en MundoScene con el mapa») y del informe al mapa con «Salir» («de vuelta en el mapa tras el informe»; el clic, con el
+  ratón de verdad, no llega). La tercera pasó. Ninguno toca el movimiento del héroe; puede ser lo mismo que el teclado de prueba (28b).
 - El motor en local es solo para las pruebas: irá en la nube.
 
 ## 7. Sueltos

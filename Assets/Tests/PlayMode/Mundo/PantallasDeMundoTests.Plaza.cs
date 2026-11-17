@@ -281,6 +281,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             var plazaId = Yo().Ubicacion.AsentamientoId;
             V1.Asentamiento Plaza() => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Asentamiento, plazaId).Asentamiento;
+            bool HayAedaEn(string id) =>
+                conexion.Sesion.Almacen.Todas(V1.Entidad.CuerpoOneofCase.AedaItinerante).Any(e => e.AedaItinerante.HasEnAsentamientoId && e.AedaItinerante.EnAsentamientoId == id)
+                || conexion.Sesion.Almacen.Todas(V1.Entidad.CuerpoOneofCase.AedaResidente).Any(e => e.AedaResidente.AsentamientoId == id);
             var heroe = UnityEngine.Object.FindObjectsByType<ConquestTactics.Visual.EntityVisualSync>(FindObjectsSortMode.None).First(x => x.IsLocalHero);
             Debug.Log($"[Prueba] plaza {Plaza().Nombre} nivel {Plaza().Nivel}: " + string.Join(", ", Plaza().Edificios.Select(e => $"{e.Tipo}({e.Estado}{(e.HasNivelInterno ? " N" + e.NivelInterno : "")})")));
 
@@ -314,7 +317,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             // Armería (en pie).
             Assert.IsFalse(plaza.Q("riel").ClassListContains("oculto"), "el riel");
             var riel = new[] { "riel-construccion", "riel-gobierno", "riel-defensa", "riel-territorio", "riel-reclutamiento" }
-                .Concat(Plaza().Edificios.Any(e => e.Tipo == "armeria" && e.Estado == V1.EstadoEdificio.EdificioActivo) ? new[] { "riel-armeria" } : new string[0]).ToArray();
+                .Concat(Plaza().Edificios.Any(e => e.Tipo == "armeria" && e.Estado == V1.EstadoEdificio.EdificioActivo) ? new[] { "riel-armeria" } : new string[0])
+                // Un Aeda de paso por la plaza (el motor los mueve solos) trae la lira, la última del riel.
+                .Concat(HayAedaEn(plazaId) ? new[] { "riel-aedas" } : new string[0]).ToArray();
             CollectionAssert.AreEqual(riel, plaza.Q("riel").Query<Button>(className: "plaza-riel-boton").ToList().Select(b => b.name).ToArray(), "el riel de la plaza");
             yield return EnTamanos(raiz, "70_plaza");
             yield return CapturarEscena("FeudoScene", "70b_plaza_escena");

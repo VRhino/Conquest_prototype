@@ -357,11 +357,12 @@ servidor sigue a 5,4 ms por tick con dos jugadores.
 Lo que falta, anotado:
 
 - Sin probar con latencia y pérdida simuladas, ni cuánto se nota una corrección (hoy salta, sin suavizar).
-- El cliente no predice chocar con soldados ni con otros héroes: lo decide el servidor y llega como corrección.
+- ~~El cliente no predice chocar con soldados ni con otros héroes~~: hecho, la predicción «c» (§8.6.1).
 - Sin aceleración ni resistencia: correr no gasta. La animación del héroe propio arranca con el retraso de la red (la
   marcha llega del servidor), aunque el cuerpo ya se mueve.
 - Los golpes no se predicen: el ataque sale cuando el servidor lo confirma.
-- Un cliente sin el mapa cargado (los bots sin pantalla) predice sin malla y el servidor lo corrige en las murallas.
+- Un cliente sin el mapa cargado (los bots sin pantalla) predice sin malla y el servidor lo corrige en las murallas. Para
+  medir, `-conMapa` le carga la escena (§8.6.1).
 
 ### 8.6 Medida con 30 héroes y cómo baja el ancho de banda (paso 4)
 
@@ -409,7 +410,64 @@ Lo que falta, anotado:
 - Posición y giro viajan con la precisión por defecto (milímetros, cuaternión entero); un soldado en pie solo necesita
   centímetros y el giro sobre el eje vertical. Es el siguiente recorte si hace falta.
 - El cliente de ventana gasta 3,5-4 núcleos con 260 modelos; sigue sin mirarse.
-- Sin medir con latencia y pérdida simuladas.
+- Sin medir con latencia y pérdida simuladas (el choque del héroe, sí: §8.6.1).
+
+#### 8.6.1 La predicción «c»: el héroe choca con los cuerpos enemigos (2026-11-17)
+
+El paso del mando, después de la malla, se aparta de los cuerpos enemigos (soldados y héroes) hasta la distancia de contacto
+del juego (2·`bodyRadius`, el contacto único de `UnitBodyblockSystem`): `ChoqueDelMando.Apartar`, la misma cuenta en el
+cliente y en el servidor dentro de `MovimientoMandoSystem`.
+
+- **Los cuerpos de cada lado:**
+  - El cliente choca contra los cuerpos como los ve (interpolados) y guarda los de cada tick la primera vez que lo predice,
+    para que al volver a predecirlo choque contra lo mismo.
+  - El servidor guarda los de cada tick y choca contra los de hace el retraso de interpolación de ese cliente
+    (`CommandDataInterpolationDelay` en el mando: compensación de retardo).
+- **Encendida por defecto.** `-sinChoque` en el servidor la apaga y deja solo la malla (va en `MandoMovil.Choque`, que viaja
+  con el mando). Si el punto apartado se sale de la malla, vale el de la malla sola.
+- La corrección del servidor sigue de red de seguridad: si el juego mueve al héroe más de 0,5 m, el mando se va con él.
+
+**Cómo se mide** (la latencia la pone el simulador de red de Netcode, por eso el ejecutable con simulador):
+
+```
+EXE=Builds/PruebaRedSimulador/PruebaRed.exe VENTANA=no SERVIDOR="-lentos 0 -lentosDesde 45" TODOS="-sinChoque" \
+  CLIENTES="--loadNetworkSimulatorJsonFile Tools/perfiles_de_red/buena.json -botAlChoque -batallaReal 1 -conMapa" \
+  Tools/ver_batalla_real.sh <nombre> 2 130 25
+```
+
+- **Opciones del cliente:**
+  - `-botAlChoque`: el bot va por la malla hacia el cuerpo enemigo más cercano y se mete en su escuadra. No lanza
+    habilidades ni monta.
+  - `-conMapa` (con `-batallaReal 1`): el cliente sin pantalla carga la escena de batalla, solo por su malla.
+- **Opciones del servidor:**
+  - `-lentos v`: desde el segundo `-lentosDesde`, ningún soldado ni héroe de la IA pasa de v m/s (0 = quietos), con
+    `LentosSystem`.
+  - `TODOS="-sinChoque"`: el «antes».
+- **El informe del cliente** añade:
+  - `correcciones` / `correccionesEnEscuadra`: lo que el servidor le corrige a la predicción, con un enemigo a menos de 3 m,
+    sin el suavizado (`ErrorDePrediccionSystem`);
+  - `sinMalla`: las correcciones fuera de la malla, que son las de las murallas.
+- **El informe del servidor** añade `recolocaciones`: las veces que el juego movió al héroe más de 0,5 m.
+- **Perfiles** (`Tools/perfiles_de_red/`): `buena` 25 ms, `mala` 100 ms con 2 % de pérdida, `pesima` 200 ms con 5 %. La
+  latencia va a la ida y a la vuelta.
+
+**Medido** (`Tools/banco_choque.sh`, 2 vueltas por caso con 2 clientes, sumadas). Son correcciones por segundo dentro de una
+escuadra, y entre paréntesis la mayor (sin las de morir y reaparecer):
+
+| Soldados | 25 ms, sin → con | 100 ms, 2 % | 200 ms, 5 % |
+|---|---|---|---|
+| Quietos | 41/s (0,99 m) → 0,04/s (0,57 m) | 28/s (2,09 m) → 0,00/s (0,06 m) | 23/s (1,55 m) → 0,21/s (0,88 m) |
+| A 1 m/s | 18/s (0,90 m) → 0,25/s (0,51 m) | 8,5/s (1,21 m) → 0,31/s (0,19 m) | 7,9/s (1,01 m) → 0,84/s (1,05 m) |
+| En plena lucha | 3,8/s (0,62 m) → 0,15/s (0,57 m) | 0,54/s (0,85 m) → 0,54/s (0,22 m) | 5,6/s (0,59 m) → 1,3/s (0,64 m) |
+
+- **Con el mapa, las murallas no corrigen nada** (`sinMalla` = 0).
+  - La primera medida (clientes sin mapa) daba lo mismo con y sin «c»: el ruido de las murallas lo tapaba todo.
+- **Sin «c», casi toda la corrección es el servidor apartando al héroe.** Hay entre 40 y 780 `recolocaciones` por vuelta;
+  con «c», entre 1 y 12.
+- **Lo que queda con «c»** son los cuerpos que se mueven: el cliente los ve con su retraso de interpolación y crece con la
+  latencia y la velocidad.
+  - En plena lucha a 200 ms quedan 1,3 correcciones por segundo.
+  - Se podría recortar extrapolando a los soldados por su velocidad. No está hecho.
 
 ### 8.7 Primera prueba con teclado y ratón (2026-11-12)
 

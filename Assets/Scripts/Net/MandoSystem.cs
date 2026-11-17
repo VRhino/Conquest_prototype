@@ -45,13 +45,37 @@ namespace ConquestTactics.Net
     /// es la misma en los dos lados; así el héroe responde al instante y no atraviesa murallas. Un cliente que lleva medio
     /// segundo sin oír al servidor deja de adelantarlo. Un cliente sin el mapa
     /// cargado (los bots sin pantalla) se mueve libre y el servidor lo corrige.
-    /// ponytail: sin aceleración, sin gastar resistencia al correr y sin chocar con soldados (eso lo corrige el servidor).
+    /// Además choca con los cuerpos enemigos cercanos (<see cref="ChoqueDelMando"/>), tal como los ve su cliente (el servidor, con su retraso
+    /// de interpolación), para que el servidor no tenga que corregirlo al meterse
+    /// en una escuadra; con <c>-sinChoque</c> en el servidor, solo la malla.
+    /// ponytail: sin aceleración ni gastar resistencia al correr.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation | WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(PredictedSimulationSystemGroup))]
     public partial class MovimientoMandoSystem : SystemBase
     {
         const float Margen = 1f;
+        /// <summary>Ticks de cuerpos que se guardan (más que el mayor retraso de interpolación más la ida y vuelta, a 60 Hz).</summary>
+        const uint Guardados = 128;
+        EntityQuery _cuerpos;
+        /// <summary>
+        /// Los cuerpos (posición y bando) de cada tick. En el servidor, los de ese tick: con el retraso de interpolación de cada cliente
+        /// (<see cref="CommandDataInterpolationDelay"/>) choca contra los cuerpos tal como ese cliente los veía. En el cliente, los que vio al
+        /// predecir ese tick por primera vez, para que al volver a predecirlo choque contra lo mismo.
+        /// </summary>
+        readonly Dictionary<uint, (float3[] pos, byte[] bando)> _vistos = new();
+
+        protected override void OnCreate() => _cuerpos = GetEntityQuery(ComponentType.ReadOnly<SoldadoRed>(), ComponentType.ReadOnly<LocalTransform>());
+
+        (float3[] pos, byte[] bando) Ahora()
+        {
+            using var poses = _cuerpos.ToComponentDataArray<LocalTransform>(Allocator.Temp);
+            using var soldados = _cuerpos.ToComponentDataArray<SoldadoRed>(Allocator.Temp);
+            var pos = new float3[poses.Length];
+            var bando = new byte[poses.Length];
+            for (int i = 0; i < pos.Length; i++) { pos[i] = poses[i].Position; bando[i] = soldados[i].Bando; }
+            return (pos, bando);
+        }
 
         protected override void OnUpdate()
         {
@@ -59,7 +83,14 @@ namespace ConquestTactics.Net
             if (World.IsClient() && ReconexionClienteSystem.SinNoticias)
                 return;
             float dt = SystemAPI.Time.DeltaTime;
-            foreach (var (pose, entrada, movil) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<EntradaJugador>, RefRO<MandoMovil>>().WithAll<Simulate>())
+            // Los cuerpos de cada bando (soldados y héroes en red), por tick: los del servidor en ese tick, o los que vio el cliente al predecirlo.
+            var tiempo = SystemAPI.GetSingleton<NetworkTime>();
+            uint tick = tiempo.ServerTick.IsValid ? tiempo.ServerTick.TickIndexForValidTick : 0u;
+            bool servidor = World.IsServer();
+            if (servidor || !_vistos.ContainsKey(tick)) _vistos[tick] = Ahora();
+            _vistos.Remove(tick - Guardados);
+            using var enemigos = new NativeList<float3>(64, Allocator.Temp);
+            foreach (var (pose, entrada, movil, mando) in SystemAPI.Query<RefRW<LocalTransform>, RefRO<EntradaJugador>, RefRO<MandoMovil>>().WithAll<Simulate>().WithEntityAccess())
             {
                 float2 mover = entrada.ValueRO.Mover;
                 float2 mirar = entrada.ValueRO.Mirar;
@@ -73,11 +104,28 @@ namespace ConquestTactics.Net
                 float velocidad = entrada.ValueRO.Correr != 0 ? movil.ValueRO.VelocidadAlCorrer : movil.ValueRO.Velocidad;
                 float3 destino = pose.ValueRO.Position + direccion * velocidad * dt;
                 // Con mapa: el paso acaba en el punto de la malla más cercano (junto a una muralla, resbala por su borde).
-                if (NavMesh.SamplePosition(pose.ValueRO.Position, out _, 2f, NavMesh.AllAreas))
+                bool conMalla = NavMesh.SamplePosition(pose.ValueRO.Position, out _, 2f, NavMesh.AllAreas);
+                if (conMalla)
                 {
                     if (!NavMesh.SamplePosition(destino, out var toque, Margen, NavMesh.AllAreas))
                         continue;
                     destino = toque.position;
+                }
+                // El choque con los cuerpos enemigos (la predicción «c»). Si el punto apartado se sale de la malla, vale el de la malla sola.
+                if (movil.ValueRO.Choque > 0f)
+                {
+                    // En el servidor, los cuerpos como los veía este cliente: los de hace su retraso de interpolación (si aún se guardan).
+                    uint visto = tick;
+                    if (servidor && SystemAPI.HasComponent<CommandDataInterpolationDelay>(mando))
+                        visto = tick - SystemAPI.GetComponent<CommandDataInterpolationDelay>(mando).Delay;
+                    var cuerpos = _vistos.TryGetValue(visto, out var c) ? c : _vistos[tick];
+                    enemigos.Clear();
+                    for (int i = 0; i < cuerpos.pos.Length; i++)
+                        if (cuerpos.bando[i] != movil.ValueRO.Bando) enemigos.Add(cuerpos.pos[i]);
+                    var apartado = ChoqueDelMando.Apartar(pose.ValueRO.Position, destino, enemigos.AsArray(), movil.ValueRO.Choque);
+                    if (!math.all(math.isfinite(apartado))) apartado = destino;
+                    else if (conMalla) apartado = NavMesh.SamplePosition(apartado, out var enMalla, Margen, NavMesh.AllAreas) ? (float3)enMalla.position : destino;
+                    destino = apartado;
                 }
                 pose.ValueRW.Position = destino;
                 if (math.lengthsq(mirar) <= 1e-4f)
@@ -109,6 +157,9 @@ namespace ConquestTactics.Net
 
         /// <summary>Más lejos que esto de donde lo dejó el mando, al héroe lo ha movido el juego.</summary>
         const float Desvio = 0.5f;
+        /// <summary>Medición: veces que el juego movió a un héroe de jugador más que <see cref="Desvio"/> (el mando se fue con él: una corrección que no es del choque), y la mayor.</summary>
+        public static int Recolocaciones;
+        public static float MayorRecolocacion;
         /// <summary>Segundos sin que llegue nada de un jugador para dejar de repetir su última entrada.</summary>
         const double Silencio = 0.5d;
 
@@ -235,6 +286,9 @@ namespace ConquestTactics.Net
             var estadisticas = SystemAPI.GetComponent<HeroStatsComponent>(heroe);
             float paso = SystemAPI.HasComponent<MoveSpeedComponent>(heroe) ? SystemAPI.GetComponent<MoveSpeedComponent>(heroe).value : estadisticas.baseSpeed;
             var movil = new MandoMovil { Activo = (byte)(vivo ? 1 : 0), Velocidad = paso, VelocidadAlCorrer = paso * math.max(1f, estadisticas.sprintMultiplier) };
+            // El choque predicho con los cuerpos enemigos: el contacto único del juego, la suma de los dos radios de cuerpo.
+            movil.Bando = (byte)(SystemAPI.HasComponent<TeamComponent>(heroe) && SystemAPI.GetComponent<TeamComponent>(heroe).value == Team.TeamB ? 1 : 0);
+            movil.Choque = !OpcionesRed.SinChoque && SystemAPI.TryGetSingleton<MovementTuningComponent>(out var ajuste) ? 2f * ajuste.bodyRadius : 0f;
             // A caballo, los aires del caballo (trote y galope); subiendo o bajando, el héroe no se mueve.
             if (SystemAPI.HasComponent<HeroMountComponent>(heroe))
             {
@@ -256,6 +310,7 @@ namespace ConquestTactics.Net
             var poseMando = SystemAPI.GetComponent<LocalTransform>(mando);
             float3 velocidad = float3.zero;
             bool movidoPorElJuego = !jugador.Colocado || math.distance(posicion.xz, jugador.Puesto.xz) > Desvio;
+            if (jugador.Colocado && movidoPorElJuego && movil.Activo != 0) { Recolocaciones++; MayorRecolocacion = math.max(MayorRecolocacion, math.distance(posicion.xz, jugador.Puesto.xz)); }
             if (movil.Activo == 0 || movidoPorElJuego)
             {
                 poseMando.Position = posicion;

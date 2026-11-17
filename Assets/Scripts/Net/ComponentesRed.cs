@@ -56,6 +56,10 @@ namespace ConquestTactics.Net
         [GhostField] public byte Activo;
         [GhostField(Quantization = 100)] public float Velocidad;
         [GhostField(Quantization = 100)] public float VelocidadAlCorrer;
+        /// <summary>El bando de su héroe, como <see cref="SoldadoRed.Bando"/>: choca con los cuerpos del otro.</summary>
+        [GhostField] public byte Bando;
+        /// <summary>Distancia a la que no se acerca a un cuerpo enemigo (la suma de los dos radios); 0 = sin choque predicho (<c>-sinChoque</c>).</summary>
+        [GhostField(Quantization = 100)] public float Choque;
     }
 
     /// <summary>

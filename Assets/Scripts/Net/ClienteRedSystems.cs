@@ -49,7 +49,7 @@ namespace ConquestTactics.Net
         protected override void OnUpdate()
         {
             Abandono();
-            float2 mover = OpcionesRed.Bot ? MovimientoDeBot((float)SystemAPI.Time.ElapsedTime) : MovimientoDeTeclado();
+            float2 mover = OpcionesRed.BotAlChoque ? HaciaElEnemigo() : OpcionesRed.Bot ? MovimientoDeBot((float)SystemAPI.Time.ElapsedTime) : MovimientoDeTeclado();
             foreach (var entrada in SystemAPI.Query<RefRW<EntradaHeroe>>().WithAll<GhostOwnerIsLocal>())
                 entrada.ValueRW.Mover = mover;
 
@@ -90,7 +90,8 @@ namespace ConquestTactics.Net
                             foreach (var mando in SystemAPI.Query<RefRO<LocalTransform>>().WithAll<MandoMovil, GhostOwnerIsLocal>())
                                 e.PuntoDeOrden = mando.ValueRO.Position + new float3(12f, 0f, 0f);
                     }
-                    if (t >= _proximaHabilidadDeBot)
+                    // El bot del choque no lanza habilidades: algunas mueven al héroe, y esa corrección no es del choque.
+                    if (t >= _proximaHabilidadDeBot && !OpcionesRed.BotAlChoque)
                     {
                         _proximaHabilidadDeBot = t + 5d;
                         e.Habilidad.Set();
@@ -103,7 +104,7 @@ namespace ConquestTactics.Net
                         e.Formacion.Set();
                         e.IndiceDeFormacion = (byte)(_formacionesDeBot++ % 4);
                     }
-                    if (t >= _proximaMonturaDeBot)
+                    if (t >= _proximaMonturaDeBot && !OpcionesRed.BotAlChoque)
                     {
                         _proximaMonturaDeBot = t + 25d;
                         e.Montar.Set();
@@ -200,6 +201,60 @@ namespace ConquestTactics.Net
             Vector3 adelante = Vector3.ProjectOnPlane(camara.transform.forward, Vector3.up);
             return adelante.sqrMagnitude < 1e-6f ? float2.zero : math.normalizesafe(new float2(adelante.x, adelante.z));
         }
+
+        /// <summary>
+        /// Bot de la medición de la predicción «c» (<c>-botAlChoque</c>): va hacia el cuerpo enemigo más cercano, para meterse en su escuadra y
+        /// empujar contra ella. Sin mando o sin enemigos, el paseo de siempre.
+        /// </summary>
+        float2 HaciaElEnemigo()
+        {
+            foreach (var (pose, movil) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<MandoMovil>>().WithAll<GhostOwnerIsLocal>())
+            {
+                float3 yo = pose.ValueRO.Position;
+                float mejor = float.MaxValue;
+                float2 hacia = float2.zero;
+                foreach (var (cuerpo, soldado) in SystemAPI.Query<RefRO<LocalTransform>, RefRO<SoldadoRed>>())
+                {
+                    if (soldado.ValueRO.Bando == movil.ValueRO.Bando) continue;
+                    float2 d = cuerpo.ValueRO.Position.xz - yo.xz;
+                    float q = math.lengthsq(d);
+                    if (q < mejor) { mejor = q; hacia = d; }
+                }
+                if (mejor == float.MaxValue) break;
+                double t = SystemAPI.Time.ElapsedTime;
+                // Con el mapa (-conMapa), por el camino de la malla hasta él: va a la próxima esquina.
+                if (t >= _recalcularCamino)
+                {
+                    _recalcularCamino = t + 0.5d;
+                    _conCamino = UnityEngine.AI.NavMesh.SamplePosition(yo + new float3(hacia.x, 0f, hacia.y), out var destino, 3f, UnityEngine.AI.NavMesh.AllAreas)
+                                 && UnityEngine.AI.NavMesh.CalculatePath(yo, destino.position, UnityEngine.AI.NavMesh.AllAreas, _camino) && _camino.corners.Length > 1;
+                }
+                if (_conCamino)
+                {
+                    var esquinas = _camino.corners;
+                    int i = 1;
+                    while (i < esquinas.Length - 1 && math.distance(((float3)esquinas[i]).xz, yo.xz) < 0.5f) i++;
+                    var aEsquina = ((float3)esquinas[i]).xz - yo.xz;
+                    if (math.lengthsq(aEsquina) > 0.01f) return math.normalize(aEsquina);
+                }
+                // Sin camino (el bot sin pantalla no tiene malla): si en un segundo no ha avanzado medio metro, rodea 2 s de lado.
+                if (t >= _revisarAtasco)
+                {
+                    if (math.distance(yo.xz, _dondeEstaba.xz) < 0.5f && t >= _rodeoHasta) { _rodeoHasta = t + 2d; _rodeoALaDerecha = !_rodeoALaDerecha; }
+                    _dondeEstaba = yo;
+                    _revisarAtasco = t + 1d;
+                }
+                var dir = math.normalizesafe(hacia);
+                if (t < _rodeoHasta) dir = _rodeoALaDerecha ? new float2(dir.y, -dir.x) : new float2(-dir.y, dir.x);
+                return dir;
+            }
+            return MovimientoDeBot((float)SystemAPI.Time.ElapsedTime);
+        }
+
+        float3 _dondeEstaba;
+        double _revisarAtasco, _rodeoHasta, _recalcularCamino;
+        bool _rodeoALaDerecha, _conCamino;
+        readonly UnityEngine.AI.NavMeshPath _camino = new UnityEngine.AI.NavMeshPath();
 
         static float2 MovimientoDeBot(float t) => math.normalizesafe(new float2(math.cos(t * 0.5f), math.sin(t)));
 

@@ -24,6 +24,16 @@ namespace ConquestTactics.Net
         public static ushort Puerto = 7979;
         /// <summary>El cliente se mueve solo (para medir sin nadie al teclado).</summary>
         public static bool Bot;
+        /// <summary>Bot de la medición de la predicción «c»: va hacia el cuerpo enemigo más cercano, para meterse en las escuadras.</summary>
+        public static bool BotAlChoque;
+        /// <summary>Servidor: sin el choque predicho del héroe con los cuerpos enemigos (la predicción de antes, solo la malla).</summary>
+        public static bool SinChoque;
+        /// <summary>Cliente sin pantalla que carga la escena de batalla (su malla de navegación) para predecir como uno con pantalla, sin dibujar nada.</summary>
+        public static bool ConMapa;
+        /// <summary>Servidor, escenario de la medición de la predicción «c»: los soldados y héroes de la IA no pasan de estos m/s (0 = quietos); negativo = sin tope.</summary>
+        public static float Lentos = -1f;
+        /// <summary>Segundo del servidor desde el que vale <see cref="Lentos"/> (para que antes se junten los dos ejércitos).</summary>
+        public static float LentosDesde = 30f;
         /// <summary>Héroes sin jugador que el servidor mueve, para llenar la batalla.</summary>
         public static int HeroesExtra;
         public static int SoldadosPorHeroe = 20;
@@ -90,6 +100,11 @@ namespace ConquestTactics.Net
                     case "-ip": Ip = siguiente; break;
                     case "-puerto": Puerto = ushort.Parse(siguiente); break;
                     case "-bot": Bot = true; break;
+                    case "-botAlChoque": Bot = true; BotAlChoque = true; break;
+                    case "-sinChoque": SinChoque = true; break;
+                    case "-conMapa": ConMapa = true; break;
+                    case "-lentos": Lentos = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
+                    case "-lentosDesde": LentosDesde = float.Parse(siguiente, System.Globalization.CultureInfo.InvariantCulture); break;
                     case "-heroesExtra": HeroesExtra = int.Parse(siguiente); break;
                     case "-soldados": SoldadosPorHeroe = int.Parse(siguiente); break;
                     case "-tasaRed": TasaRed = int.Parse(siguiente); break;

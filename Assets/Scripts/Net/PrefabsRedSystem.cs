@@ -91,6 +91,8 @@ namespace ConquestTactics.Net
             em.AddComponent<EntradaJugador>(mando);
             em.AddComponent<InputBufferData<EntradaJugador>>(mando);
             em.AddComponentData(mando, new AutoCommandTarget { Enabled = true });
+            // El retraso de interpolación de su cliente, para que el servidor choque contra los cuerpos como él los ve (MovimientoMandoSystem).
+            em.AddComponent<CommandDataInterpolationDelay>(mando);
             // En el cliente, una corrección del servidor de entre 25 cm y 5 m no se aplica de golpe sino a 25 cm por
             // snapshot (15 m/s a 60 Hz): más deprisa de lo que corre el héroe, para que el error no crezca cuando empuja
             // contra algo que solo ve el servidor, y sin el salto de metros que daba con retardo.
