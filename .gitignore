@@ -68,3 +68,15 @@ Recordings/
 # Contrato de BronzeAge: lo compilado se copia a Assets/Plugins/BronzeAge
 Tools/ContratoBronzeAge/bin/
 Tools/LanzadorDePrueba/bin/
+
+# Ajustes personales del editor (cada usuario los suyos)
+UserSettings/
+
+# Restos de los hilos de trabajo: capturas y mensajes de commit sueltos
+tasks/**/capturas*/
+tasks/msg-*.txt
+tasks/commit-*.txt
+
+# Generados
+Tools/IconosDelPrototipo/.paquete.mjs
+Assets/SceneDependencyCache/
