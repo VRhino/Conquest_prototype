@@ -28,14 +28,10 @@ namespace ConquestTactics.Mundo.UI
         static bool EquipoAMano(Heroe h) => h.Ubicacion?.DondeCase is UbicacionHeroe.DondeOneofCase.AsentamientoId
             or UbicacionHeroe.DondeOneofCase.PuebloId or UbicacionHeroe.DondeOneofCase.CampamentoId or UbicacionHeroe.DondeOneofCase.AvanzadaId;
 
-        /// <summary>La imagen de un objeto: el icono de Conquest de su pieza (la armadura por hueco y peso, el arma por clase) o, si Conquest no la
-        /// tiene, la del prototipo para su tipo. Para un elemento de UI Toolkit.</summary>
+        /// <summary>La imagen de un objeto: el icono de su pieza (<see cref="AspectoDePiezas"/>) o, si no tiene, la del prototipo para su tipo. Para un elemento de UI Toolkit.</summary>
         VisualElement ImagenDe(ItemInstancia pieza, float lado)
         {
-            var ficha = FichaDelMotor(pieza.ItemDefinitionId);
-            var idConquest = VestidoDelMotor.PiezaDeConquest(pieza.ItemDefinitionId)
-                ?? (pieza.Tipo == "arma" ? VestidoDelMotor.ArmaDelMotor((string)ficha?["clase"]) : null);
-            var icono = idConquest == null ? null : ItemService.GetItemById(idConquest)?.icon;
+            var icono = AspectoDePiezas.DelMotor(pieza.ItemDefinitionId) ? AspectoDePiezas.Icono(pieza.ItemDefinitionId) : null;
             if (icono != null)
             {
                 var v = new VisualElement { pickingMode = PickingMode.Ignore };

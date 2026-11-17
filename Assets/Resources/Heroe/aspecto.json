@@ -1,0 +1,589 @@
+{
+ "piezas": [
+  {
+   "id": "lanza_escudo_redondo_inicio",
+   "parte": "SpearAndRoundShieldBasic",
+   "icono": "Heroe/Iconos/WeaSBasic"
+  },
+  {
+   "id": "lanza_escudo_redondo_cobre",
+   "parte": "SpearAndRoundShieldBasic",
+   "icono": "Heroe/Iconos/WeaSBasic"
+  },
+  {
+   "id": "lanza_escudo_redondo_hierro_temprano",
+   "parte": "SpearAndRoundShieldBasic",
+   "icono": "Heroe/Iconos/WeaSBasic"
+  },
+  {
+   "id": "lanza_escudo_redondo_bronce",
+   "parte": "SpearAndRoundShieldBasic",
+   "icono": "Heroe/Iconos/WeaSBasic"
+  },
+  {
+   "id": "lanza_escudo_redondo_hierro",
+   "parte": "SpearAndRoundShieldBasic",
+   "icono": "Heroe/Iconos/WeaSBasic"
+  },
+  {
+   "id": "lanza_escudo_redondo_acero",
+   "parte": "SpearAndRoundShieldBasic",
+   "icono": "Heroe/Iconos/WeaSBasic"
+  },
+  {
+   "id": "espada_escudo_mediano_inicio",
+   "parte": "SwordAndShieldBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "espada_escudo_mediano_cobre",
+   "parte": "SwordAndShieldBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "espada_escudo_mediano_hierro_temprano",
+   "parte": "SwordAndShieldBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "espada_escudo_mediano_bronce",
+   "parte": "SwordAndShieldBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "espada_escudo_mediano_hierro",
+   "parte": "SwordAndShieldBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "espada_escudo_mediano_acero",
+   "parte": "SwordAndShieldBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "arco_lanza_inicio",
+   "parte": "BowBasic",
+   "icono": "Heroe/Iconos/WeaBBasic"
+  },
+  {
+   "id": "arco_lanza_cobre",
+   "parte": "BowBasic",
+   "icono": "Heroe/Iconos/WeaBBasic"
+  },
+  {
+   "id": "arco_lanza_hierro_temprano",
+   "parte": "BowBasic",
+   "icono": "Heroe/Iconos/WeaBBasic"
+  },
+  {
+   "id": "arco_lanza_bronce",
+   "parte": "BowBasic",
+   "icono": "Heroe/Iconos/WeaBBasic"
+  },
+  {
+   "id": "arco_lanza_hierro",
+   "parte": "BowBasic",
+   "icono": "Heroe/Iconos/WeaBBasic"
+  },
+  {
+   "id": "arco_lanza_acero",
+   "parte": "BowBasic",
+   "icono": "Heroe/Iconos/WeaBBasic"
+  },
+  {
+   "id": "hacha_dos_manos_inicio",
+   "parte": "AxeBasic",
+   "icono": "Heroe/Iconos/WeaS2HBasic"
+  },
+  {
+   "id": "hacha_dos_manos_cobre",
+   "parte": "AxeBasic",
+   "icono": "Heroe/Iconos/WeaS2HBasic"
+  },
+  {
+   "id": "hacha_dos_manos_hierro_temprano",
+   "parte": "AxeBasic",
+   "icono": "Heroe/Iconos/WeaS2HBasic"
+  },
+  {
+   "id": "hacha_dos_manos_bronce",
+   "parte": "AxeBasic",
+   "icono": "Heroe/Iconos/WeaS2HBasic"
+  },
+  {
+   "id": "hacha_dos_manos_hierro",
+   "parte": "AxeBasic",
+   "icono": "Heroe/Iconos/WeaS2HBasic"
+  },
+  {
+   "id": "hacha_dos_manos_acero",
+   "parte": "AxeBasic",
+   "icono": "Heroe/Iconos/WeaS2HBasic"
+  },
+  {
+   "id": "dagas_inicio",
+   "parte": "DaggersBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "dagas_cobre",
+   "parte": "DaggersBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "dagas_hierro_temprano",
+   "parte": "DaggersBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "dagas_bronce",
+   "parte": "DaggersBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "dagas_hierro",
+   "parte": "DaggersBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "dagas_acero",
+   "parte": "DaggersBasic",
+   "icono": "Heroe/Iconos/WeaSSBasic"
+  },
+  {
+   "id": "torso_ligera_inicio",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "torso_ligera_cobre",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "torso_ligera_hierro_temprano",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "torso_ligera_hierro",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "torso_ligera_bronce",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "torso_ligera_bronce_laminado",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "casco_ligera_cobre",
+   "parte": "HelmetLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "casco_ligera_hierro_temprano",
+   "parte": "HelmetLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "casco_ligera_hierro",
+   "parte": "HelmetLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "casco_ligera_bronce",
+   "parte": "HelmetLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "casco_ligera_bronce_laminado",
+   "parte": "HelmetLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "pantalones_ligera_inicio",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "pantalones_ligera_cobre",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "pantalones_ligera_hierro_temprano",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "pantalones_ligera_hierro",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "pantalones_ligera_bronce",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "pantalones_ligera_bronce_laminado",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "guantes_ligera_inicio",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "guantes_ligera_cobre",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "guantes_ligera_hierro_temprano",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "guantes_ligera_hierro",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "guantes_ligera_bronce",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "guantes_ligera_bronce_laminado",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "botas_ligera_inicio",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "botas_ligera_cobre",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "botas_ligera_hierro_temprano",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "botas_ligera_hierro",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "botas_ligera_bronce",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "botas_ligera_bronce_laminado",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "torso_media_inicio",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "torso_media_cobre",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "torso_media_hierro_temprano",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "torso_media_hierro",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "torso_media_bronce",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "torso_media_bronce_laminado",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "casco_media_cobre",
+   "parte": "HelmetMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "casco_media_hierro_temprano",
+   "parte": "HelmetMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "casco_media_hierro",
+   "parte": "HelmetMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "casco_media_bronce",
+   "parte": "HelmetMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "casco_media_bronce_laminado",
+   "parte": "HelmetMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "pantalones_media_inicio",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "pantalones_media_cobre",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "pantalones_media_hierro_temprano",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "pantalones_media_hierro",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "pantalones_media_bronce",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "pantalones_media_bronce_laminado",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "guantes_media_inicio",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "guantes_media_cobre",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "guantes_media_hierro_temprano",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "guantes_media_hierro",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "guantes_media_bronce",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "guantes_media_bronce_laminado",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "botas_media_inicio",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "botas_media_cobre",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "botas_media_hierro_temprano",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "botas_media_hierro",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "botas_media_bronce",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "botas_media_bronce_laminado",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "torso_pesada_inicio",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "torso_pesada_cobre",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "torso_pesada_hierro_temprano",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "torso_pesada_hierro",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "torso_pesada_bronce",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "torso_pesada_bronce_laminado",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "casco_pesada_cobre",
+   "parte": "HelmetHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "casco_pesada_hierro_temprano",
+   "parte": "HelmetHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "casco_pesada_hierro",
+   "parte": "HelmetHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "casco_pesada_bronce",
+   "parte": "HelmetHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "casco_pesada_bronce_laminado",
+   "parte": "HelmetHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "pantalones_pesada_inicio",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "pantalones_pesada_cobre",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "pantalones_pesada_hierro_temprano",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "pantalones_pesada_hierro",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "pantalones_pesada_bronce",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "pantalones_pesada_bronce_laminado",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "guantes_pesada_inicio",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "guantes_pesada_cobre",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "guantes_pesada_hierro_temprano",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "guantes_pesada_hierro",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "guantes_pesada_bronce",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "guantes_pesada_bronce_laminado",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "botas_pesada_inicio",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
+  },
+  {
+   "id": "botas_pesada_cobre",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
+  },
+  {
+   "id": "botas_pesada_hierro_temprano",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
+  },
+  {
+   "id": "botas_pesada_hierro",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
+  },
+  {
+   "id": "botas_pesada_bronce",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
+  },
+  {
+   "id": "botas_pesada_bronce_laminado",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
+  }
+ ]
+}

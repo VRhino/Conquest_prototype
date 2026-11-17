@@ -210,9 +210,9 @@ public partial class HeroInitializationSystem : SystemBase
     /// </summary>
     string ClassIdOf(Entity entity)
     {
-        return EntityManager.HasComponent<HeroClassComponent>(entity)
-            ? EntityManager.GetComponentData<HeroClassComponent>(entity).heroClass.ToString()
-            : null;
+        if (!EntityManager.HasComponent<HeroClassComponent>(entity)) return null;
+        var c = EntityManager.GetComponentData<HeroClassComponent>(entity);
+        return c.classId.IsEmpty ? c.heroClass.ToString() : c.classId.ToString();
     }
 
     /// <summary>The base attributes of the hero's class (remote and AI heroes have no save to take them from).</summary>

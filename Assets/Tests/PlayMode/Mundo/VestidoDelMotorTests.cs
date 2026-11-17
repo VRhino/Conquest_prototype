@@ -18,7 +18,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             ("espada_escudo_mediano", null, new[] { "SM_Wep_Sword_01", "SM_Wep_Shield_02" }),
             ("lanza_escudo_redondo", "casco_ligera_bronce", new[] { "SM_Wep_Spear_10", "SM_Wep_Shield_05", "Chr_HeadCoverings_No_Hair_13" }),
             ("hacha_dos_manos", "casco_media_hierro", new[] { "SM_Wep_Axe_01", "Chr_HeadCoverings_No_Hair_02" }),
-            ("dagas", "casco_pesada_acero", new[] { "SM_Wep_Dagger_01", "Chr_HeadCoverings_No_Hair_04" }),
+            ("dagas", "casco_pesada_bronce_laminado", new[] { "SM_Wep_Dagger_01", "Chr_HeadCoverings_No_Hair_04" }),
             ("arco_lanza", null, new[] { "SM_Prop_Bow_02" }),
         };
 

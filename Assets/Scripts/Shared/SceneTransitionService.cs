@@ -12,7 +12,6 @@ public static class SceneTransitionService
         public const string AvatarCreator = "AvatarCreator";
         public const string CharacterSelection = "CharacterSelecctionScene";
         public const string Feudo = "FeudoScene";
-        public const string BattlePrep = "BattlePrepScene";
         public const string Battle = "BattleScene";
         public const string PostBattle = "PostBattleScene";
     }
@@ -24,7 +23,6 @@ public static class SceneTransitionService
         { SceneNames.CharacterSelection, GamePhase.CharacterSelection },
         { SceneNames.AvatarCreator, GamePhase.AvatarCreation },
         { SceneNames.Feudo, GamePhase.Feudo },
-        { SceneNames.BattlePrep, GamePhase.BattlePreparation },
         { SceneNames.Battle, GamePhase.Combate },
         { SceneNames.PostBattle, GamePhase.PostPartida }
     };

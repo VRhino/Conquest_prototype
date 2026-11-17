@@ -36,43 +36,15 @@ public class AvatarCreatorUIController : MonoBehaviour
         if (SelectorDePersonaje.Actual != null) PrepararParaElMotor(SelectorDePersonaje.Actual);
     }
 
+    // El creador solo existe en el flujo del motor: sin encargo no hace nada (player_save.json, fuera).
     private void OnContinuePressed()
     {
-        if (SelectorDePersonaje.Actual != null) { NacerEnElMotor(); return; }
-        string heroName = heroNameInput.text.Trim();
-        if (string.IsNullOrWhiteSpace(heroName))
-        {
-            Debug.LogWarning("Nombre del héroe vacío.");
-            return;
-        }
-        Equipment equipment = classSelector.GetCurrentEquipment();
-        AvatarParts avatar = sliderController.avatarPartSelector.GetCurrentSelection();
-        HeroData hero = HeroDataService.CreateNewHero(
-            heroName, 
-            avatar, 
-            classSelector.selectedClass.name, 
-            sliderController.avatarPartSelector.currentGender.ToString(), 
-            equipment
-        );
-
-        PlayerData player = PlayerSessionService.CurrentPlayer;
-
-        if (player == null)
-        {
-            Debug.LogError("No hay sesión de jugador activa.");
-            return;
-        }
-
-        player.heroes.Add(hero);
-        PlayerSessionService.SetSelectedHero(hero);
-        SaveSystem.SavePlayer(player);
-
-        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.CharacterSelection);
+        if (SelectorDePersonaje.Actual != null) NacerEnElMotor();
     }
+
     private void OnCancelPressed()
     {
-        if (SelectorDePersonaje.Actual != null) { SelectorDePersonaje.Actual.Volver(); return; }
-        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.CharacterSelection);
+        if (SelectorDePersonaje.Actual != null) SelectorDePersonaje.Actual.Volver();
     }
 
     // ───────────── desde el mundo de BronzeAge ─────────────

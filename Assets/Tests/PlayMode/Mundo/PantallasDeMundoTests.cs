@@ -447,10 +447,10 @@ namespace ConquestTactics.Mundo.UI.Tests
             Assert.IsFalse(conexion.HayToken, "el token se olvida");
         }
 
-        /// <summary>El creador de personaje de Conquest sin el motor (como se abre desde CharacterSelection): sus 4 clases de relleno y el nombre
-        /// editable, como antes. No se pulsa «Continuar»: escribiría `player_save.json` de verdad.</summary>
+        /// <summary>El creador de personaje sin el encargo del motor: ya no trae las clases de relleno (tanda 3 de las clases y los objetos, 24a).
+        /// No hay clases que elegir ni nada que crear: el creador solo vive en el flujo del motor.</summary>
         [UnityTest]
-        public IEnumerator ElCreadorDeConquestSigueConSusClases()
+        public IEnumerator ElCreadorSinElMotorNoTraeClasesDeRelleno()
         {
             SelectorDePersonaje.Actual = null;
             var carga = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("AvatarCreator", UnityEngine.SceneManagement.LoadSceneMode.Additive);
@@ -458,13 +458,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return null;
             yield return null;
             var selector = UnityEngine.Object.FindAnyObjectByType<HeroClassSelector>();
-            var creador = UnityEngine.Object.FindAnyObjectByType<AvatarCreatorUIController>();
-            Assert.AreEqual(4, selector.availableClasses.Count, "las 4 clases de relleno");
-            Assert.IsNotNull(selector.selectedClass, "con una elegida al empezar");
+            Assert.IsNotNull(selector);
             Assert.IsNull(selector.ClaseDelMotor);
-            Assert.IsFalse(UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude).Any(b => b.name.StartsWith("Clase ")), "sin las del motor");
-            Assert.IsTrue(creador.heroNameInput.interactable, "el nombre se escribe aquí");
-            yield return CapturarCreador("0_creador_de_conquest_sin_motor");
+            Assert.IsFalse(UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude).Any(b => b.name.StartsWith("Clase ")), "sin clases");
             var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("AvatarCreator");
             while (!descarga.isDone) yield return null;
         }
@@ -877,14 +873,14 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
-        /// <summary>El selector de personaje sin el motor (el flujo viejo): los héroes de la sesión local con crear y borrar.</summary>
+        /// <summary>El selector de personaje sin el héroe del motor: ya no lista los héroes de la sesión local (tanda 3 de las clases y los objetos,
+        /// 23a). Solo vive en el flujo del motor.</summary>
         [UnityTest]
-        public IEnumerator ElSelectorDeConquestSigueConSusHeroes()
+        public IEnumerator ElSelectorSinElMotorNoTraeLosHeroesViejos()
         {
             SelectorDePersonaje.Heroe = null;
-            var claseVieja = Resources.LoadAll<HeroClassDefinition>("Data/HeroClasses").First();
             var jugador = new PlayerData();
-            jugador.heroes.Add(HeroDataService.CreateNewHero("Viejo", new AvatarParts { headId = "head_00", hairId = "hair_01", eyebrowId = "eyebrow_01", beardId = "" }, claseVieja.name, "Male", new Equipment()));
+            jugador.heroes.Add(HeroDataService.CreateNewHero("Viejo", new AvatarParts { headId = "head_00", hairId = "hair_01", eyebrowId = "eyebrow_01", beardId = "" }, "espada_escudo_mediano", "Male", new Equipment()));
             PlayerSessionService.SetPlayer(jugador);
             try
             {
@@ -892,11 +888,9 @@ namespace ConquestTactics.Mundo.UI.Tests
                 while (!carga.isDone) yield return null;
                 yield return null;
                 yield return null;
-                var botones = UnityEngine.Object.FindObjectsByType<UnityEngine.UI.Button>(FindObjectsInactive.Exclude);
-                Assert.IsTrue(botones.Any(b => b.name.Contains("Create")) && botones.Any(b => b.name.Contains("Delete")), "con crear y borrar");
                 Assert.IsNull(GameObject.Find("Heroe del motor"));
-                // A 1920×1080, el tamaño para el que está hecho (con píxeles fijos; a otro tamaño se sale, como siempre: no se toca).
-                yield return CapturarEscena("CharacterselecctionScene", "0b_selector_de_conquest_sin_motor", 1920, 1080);
+                var selector = UnityEngine.Object.FindAnyObjectByType<HeroSelectionSceneController>();
+                Assert.IsFalse(selector.heroButtonContainer.GetComponentsInChildren<TMPro.TMP_Text>(true).Any(t => t.text == "Viejo"), "sin los héroes de player_save.json");
                 var descarga = UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync("CharacterselecctionScene");
                 while (!descarga.isDone) yield return null;
             }

@@ -254,9 +254,9 @@ public class MatchmakingUI : MonoBehaviour
 
     private void OnTransitionCountdownFinished(BattleData battleData)
     {
-        // Pasar datos a la siguiente escena y transicionar
+        // Pasar datos a la batalla y transicionar (la preparación vieja, BattlePrepScene, ya no está).
         BattleTransitionData.Instance.SetBattleData(battleData);
-        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.BattlePrep);
+        SceneTransitionService.LoadScene(SceneTransitionService.SceneNames.Battle);
     }
 
     #endregion

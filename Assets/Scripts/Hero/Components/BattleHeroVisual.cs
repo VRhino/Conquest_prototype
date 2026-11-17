@@ -48,9 +48,7 @@ public sealed class BattleHeroVisual : MonoBehaviour
             foreach (var itemId in new HeroData { equipment = equipment }.GetEquipment())
             {
                 if (string.IsNullOrEmpty(itemId)) continue;
-                var item = ItemService.GetItemById(itemId)
-                    ?? throw new InvalidOperationException("Unknown equipped item: " + itemId);
-                Select(item.visualPartId);
+                Select(AspectoDePiezas.Parte(itemId) ?? throw new InvalidOperationException("Unknown equipped item: " + itemId));
             }
         var mounted = new List<GameObject>();
         try

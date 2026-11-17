@@ -367,28 +367,27 @@ namespace ConquestTactics.Mundo.UI
             try { objetos = c.Datos.Bloque("Objetos_Del_Heroe", "OBJETOS")["objetos"].OfType<JObject>().ToList(); }
             catch (FaltaDato) { objetos = new List<JObject>(); }
             string Nombre(ItemInstancia o) => (string)objetos.FirstOrDefault(x => (string)x["id"] == o.ItemDefinitionId)?["nombre"] ?? o.ItemDefinitionId;
-            var tipo = BatallaRealDeTicket.TipoDeArmadura(eq?.Torso?.ItemDefinitionId);
-            void Casilla(float x, float y, string nombre, ItemInstancia pieza, string deConquest)
+            void Casilla(float x, float y, string nombre, ItemInstancia pieza, bool conIcono)
             {
                 var casilla = En(lienzo, x, y, 98, 98, "prep-casilla", "equipo-" + nombre);
                 casilla.pickingMode = PickingMode.Position;
                 if (pieza == null || string.IsNullOrEmpty(pieza.ItemDefinitionId)) return;
                 casilla.tooltip = $"{nombre}: {Nombre(pieza)}";
-                var item = deConquest == null ? null : ItemService.GetItemById(deConquest);
-                if (item?.icon != null)
+                var icono = conIcono ? AspectoDePiezas.Icono(pieza.ItemDefinitionId) : null;
+                if (icono != null)
                 {
                     casilla.AddToClassList("prep-casilla--llena");
-                    En(casilla, 0, 0, 98, 98).style.backgroundImage = new StyleBackground(item.icon);
+                    En(casilla, 0, 0, 98, 98).style.backgroundImage = new StyleBackground(icono);
                 }
                 else Texto(casilla, Nombre(pieza), "prep-casilla-texto");
             }
-            Casilla(1502, 674, "Arma", eq?.Arma, null);
-            Casilla(1620, 674, "Casco", eq?.Casco, null);
-            Casilla(1502, 791, "Torso", eq?.Torso, tipo == null ? null : $"Tor{tipo}ADef");
-            Casilla(1620, 791, "Guantes", eq?.Guantes, tipo == null ? null : $"Glo{tipo}ADef");
-            Casilla(1502, 909, "Pantalones", eq?.Pantalones, tipo == null ? null : $"Pan{tipo}ADef");
-            Casilla(1620, 909, "Botas", eq?.Botas, tipo == null ? null : $"Boot{tipo}ADef");
-            Casilla(1736, 909, "Montura", eq?.Montura, null);
+            Casilla(1502, 674, "Arma", eq?.Arma, false);
+            Casilla(1620, 674, "Casco", eq?.Casco, false);
+            Casilla(1502, 791, "Torso", eq?.Torso, true);
+            Casilla(1620, 791, "Guantes", eq?.Guantes, true);
+            Casilla(1502, 909, "Pantalones", eq?.Pantalones, true);
+            Casilla(1620, 909, "Botas", eq?.Botas, true);
+            Casilla(1736, 909, "Montura", eq?.Montura, false);
         }
     }
 

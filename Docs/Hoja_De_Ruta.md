@@ -196,6 +196,7 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
   - las dagas, con sus cifras y el aspecto de espada y escudo hasta que haya arte.
   - hecho en la batalla (tanda 2): el héroe del ticket con sus atributos, sus piezas (forjadas o de ficha) y su montura, con las reglas del héroe que propuso el autor del motor (vida 1000 + 30 por vitalidad + la salud de la armadura; alivio del 0,25 % por punto de defensa y de armadura; golpe del arma por 1 + 1 % por punto del atributo de la clase).
   - un héroe del ticket sin montura va a pie: no puede llamar al caballo (Víctor, 2026-11-16, 22a).
+  - tanda 3 (Víctor, 2026-11-17, 23a y 24a): las 5 clases de Conquest llevan el id del motor; el aspecto y el icono de cada pieza salen de `Resources/Heroe/aspecto.json`; el creador y el selector, solo con el motor; fuera la preparación vieja (`BattlePrepScene`). El inventario, la tienda y la ficha viejos del campamento, con sus 22 piezas de relleno, esperan a que se rehaga el campamento.
 - **Orden de trabajo, decidido** (Víctor, 2026-11-16):
   1. la tanda 3 del motor (elegir escuadras al defender desde tu base);
   2. la interfaz de Conquest del aviso de conexión y abandonar, junto con el panel de suministro;

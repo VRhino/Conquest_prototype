@@ -156,7 +156,12 @@
     - su montura como caballo (`HeroHorseStatsComponent`);
     - el capitán, con las cifras de un héroe de espada y escudo de inicio;
     - un héroe del ticket sin montura va a pie (22a, `HeroOnFootTag`);
-  - sigue la tanda 3 (23a y 24a): ver el final de `tasks/clases-objetos-motor-plan.md`.
+  - **tanda 3, en su commit** (23a y 24a): el detalle está al final de `tasks/clases-objetos-motor-plan.md`:
+    - las 5 clases con el id del motor;
+    - el aspecto de las piezas por id (`AspectoDePiezas`);
+    - el creador y el selector, solo con el motor;
+    - fuera la preparación vieja.
+    - `ProjectSettings/EditorBuildSettings.asset`, sin la escena borrada: entra en el commit con el permiso de Víctor.
 - **Sigue, por el orden de Víctor:** las clases y los objetos del motor, los carros de guerra y rechazar lo desconocido; al final, la
   predicción con choque contra los soldados (6c). Sin capturas en esta serie (Víctor, 2026-11-16).
 

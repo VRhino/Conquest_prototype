@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>Viste un personaje modular de Synty con el héroe del motor (BronzeAge): el género y las piezas que guardó al crearlo (cabeza, pelo,
-/// barba, cejas) y la armadura que lleva (ligera, media o pesada; las piezas de inicio de Conquest de ese tipo). Lo usan el selector de personaje
-/// y el interior de un campamento. El equipo puesto pieza a pieza espera al paso 6 del bloque 4.</summary>
+/// barba, cejas) y lo que lleva puesto, pieza a pieza, con el aspecto de cada pieza del catálogo del motor (<see cref="AspectoDePiezas"/>). Lo
+/// usan el selector de personaje y el interior de un campamento.</summary>
 public static class VestidoDelMotor
 {
     public static bool Vestir(Transform personaje, ConquestTactics.Mundo.SelectorDePersonaje.HeroeParaVer heroe)
@@ -22,25 +22,25 @@ public static class VestidoDelMotor
         QuitarHuecosVacios(personaje, piezas, heroe.Pelo, heroe.Barba, heroe.Cejas, genero);
         if (heroe.Piezas == null)
         {
-            // Sin lo que lleva puesto (el selector antes de leerlo): las piezas de inicio de su tipo de armadura.
-            var sufijo = heroe.Armadura == "pesada" ? "H" : heroe.Armadura == "media" ? "M" : "L";
-            foreach (var itemId in new[] { $"Tor{sufijo}ADef", $"Glo{sufijo}ADef", $"Pan{sufijo}ADef", $"Boot{sufijo}ADef" })
-                Poner(personaje, piezas, ItemService.GetItemById(itemId)?.visualPartId, genero, null);
+            // Sin lo que lleva puesto (el selector antes de leerlo): las piezas de inicio del motor de su tipo de armadura.
+            var peso = heroe.Armadura == "pesada" || heroe.Armadura == "media" ? heroe.Armadura : "ligera";
+            foreach (var hueco in new[] { "torso", "guantes", "pantalones", "botas" })
+                Poner(personaje, piezas, AspectoDePiezas.Parte($"{hueco}_{peso}_inicio"), genero, null);
             return true;
         }
-        // Pieza a pieza (paso 6, tanda 2): cada hueco con la pieza de Conquest de su hueco y su peso, teñida del color de su metal; un hueco
-        // vacío, la pieza desnuda de Conquest. El arma, la de su clase. El casco, el provisional de Synty de su peso (o ninguno).
+        // Pieza a pieza: cada hueco con el aspecto de su pieza del motor (AspectoDePiezas), teñida del color de su metal; un hueco vacío, la
+        // pieza desnuda de Conquest. El arma, la puesta (o la de inicio de su clase). El casco, el de su pieza (o ninguno).
         foreach (var (hueco, vacia) in new[] { ("torso", "TorsoDefault"), ("guantes", "GlovesDefault"), ("pantalones", "PantsDefault"), ("botas", "BootsDefault") })
         {
             heroe.Piezas.TryGetValue(hueco, out var delMotor);
-            var item = ItemService.GetItemById(PiezaDeConquest(delMotor) ?? "");
-            Poner(personaje, piezas, item?.visualPartId ?? vacia, genero, delMotor == null ? (Color?)null : TinteDeMetal(Metal(delMotor)));
+            Poner(personaje, piezas, AspectoDePiezas.Parte(delMotor) ?? vacia, genero, delMotor == null ? (Color?)null : TinteDeMetal(Metal(delMotor)));
         }
         heroe.Piezas.TryGetValue("casco", out var casco);
-        var parteCasco = ItemService.GetItemById(PiezaDeConquest(casco) ?? "")?.visualPartId;
+        var parteCasco = AspectoDePiezas.Parte(casco);
         if (parteCasco != null) { Poner(personaje, piezas, parteCasco, genero, TinteDeMetal(Metal(casco))); Quitar(personaje, piezas.hairParts, genero); }
         else Quitar(personaje, piezas.headParts, genero);
-        Poner(personaje, piezas, ItemService.GetItemById(ArmaDelMotor(heroe.Clase?.Id))?.visualPartId, genero, null);
+        heroe.Piezas.TryGetValue("arma", out var arma);
+        Poner(personaje, piezas, AspectoDePiezas.Parte(arma ?? $"{heroe.Clase?.Id}_inicio"), genero, null);
         return true;
     }
 
@@ -68,17 +68,6 @@ public static class VestidoDelMotor
         }
     }
 
-    /// <summary>La pieza de Conquest (`ItemDataSO`) de una armadura del motor, por su hueco y su peso (`torso_media_bronce` → `TorMADef`); null
-    /// si no es una armadura de esos cuatro huecos. El catálogo `OBJETOS` nombra así sus armaduras: `{hueco}_{peso}_{metal}`.</summary>
-    public static string PiezaDeConquest(string piezaDelMotor)
-    {
-        var p = (piezaDelMotor ?? "").Split('_');
-        if (p.Length < 2) return null;
-        var peso = p[1] switch { "ligera" => "L", "media" => "M", "pesada" => "H", _ => null };
-        if (peso == null) return null;
-        return p[0] switch { "casco" => $"Hel{peso}ADef", "torso" => $"Tor{peso}ADef", "guantes" => $"Glo{peso}ADef", "pantalones" => $"Pan{peso}ADef", "botas" => $"Boot{peso}ADef", _ => null };
-    }
-
     /// <summary>El metal de una pieza del motor (lo que sigue al hueco y al peso: `bronce_laminado`, `hierro_temprano`…).</summary>
     public static string Metal(string piezaDelMotor)
     {
@@ -98,40 +87,11 @@ public static class VestidoDelMotor
         _ => Color.white,
     };
 
-    /// <summary>La clase de Conquest de la clase del motor (la del arma): lanza, arco, espadón; las demás, espada y escudo.</summary>
-    public static string ClaseDeConquest(string claseDelMotor) => claseDelMotor switch
-    {
-        "lanza_escudo_redondo" => nameof(HeroClass.Spear),
-        "arco_lanza" => nameof(HeroClass.Bow),
-        "hacha_dos_manos" => nameof(HeroClass.TwoHandedSword),
-        _ => nameof(HeroClass.SwordAndShield),
-    };
-
     /// <summary>El pelaje del caballo de una montura del motor (`HeroHorseVisual.SetCoat`): bayo, negro, castaño, bayo claro o pío; 0, el
     /// del prefab. Provisional (Víctor, 2026-11-14): el mismo caballo con otro material.</summary>
     public static byte PelajeDe(string montura) => montura switch
     {
         "montura_tiro" => 1, "montura_tesalia" => 2, "montura_estepa" => 3, "montura_nisea" => 4, "montura_escita" => 5, _ => 0,
-    };
-
-    /// <summary>El arma de Conquest (`ItemDataSO`) de una clase del motor: las de Conquest y, provisionales de Synty (Víctor, 2026-11-14), el
-    /// hacha, el par de dagas y la lanza con escudo redondo.</summary>
-    public static string ArmaDelMotor(string claseDelMotor) => claseDelMotor switch
-    {
-        "lanza_escudo_redondo" => "WeaSRSBasic",
-        "arco_lanza" => "WeaBBasic",
-        "hacha_dos_manos" => "WeaAxeBasic",
-        "dagas" => "WeaDagBasic",
-        _ => "WeaS&SBasic",
-    };
-
-    /// <summary>El arma de Conquest (`ItemDataSO`) de una clase de Conquest.</summary>
-    public static string ArmaDeClase(string claseDeConquest) => claseDeConquest switch
-    {
-        nameof(HeroClass.Spear) => "WeaSBasic",
-        nameof(HeroClass.Bow) => "WeaBBasic",
-        nameof(HeroClass.TwoHandedSword) => "WeaS2HBasic",
-        _ => "WeaS&SBasic",
     };
 
     /// <summary>Los huecos del aspecto que se eligieron vacíos (pelo, barba, cejas) se apagan: el maniquí de Synty trae una pieza puesta en cada uno.

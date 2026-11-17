@@ -24,14 +24,14 @@ namespace ConquestTactics.Net
         /// <summary>La batalla de verdad solo saca tropas que estén en la base de escuadras del juego (las que hornea la subescena).</summary>
         public static bool TropaConocida(string tropaId) => SquadDataService.GetSquadById(tropaId) != null;
 
-        /// <summary>
-        /// La clase de Conquest (habilidades, animaciones y aspecto del arma) de la clase del motor; las dagas, con la de espada y escudo hasta
-        /// que haya arte. Las cifras son las del motor (<see cref="CifrasDelHeroe"/>).
-        /// </summary>
         /// <summary>La clase del motor del capitán de una escuadra sin héroe.</summary>
         const string ClaseDelCapitan = "espada_escudo_mediano";
 
-        public static string Clase(string claseDelMotor) => VestidoDelMotor.ClaseDeConquest(claseDelMotor);
+        /// <summary>
+        /// La clase de Conquest de la clase del motor: la de su mismo id (<c>Resources/Data/HeroClasses</c>, con sus habilidades, rasgos de golpe,
+        /// resiliencia y aguante); una que Conquest no tiene, la del capitán. Las cifras son las del motor (<see cref="CifrasDelHeroe"/>).
+        /// </summary>
+        public static string Clase(string claseDelMotor) => HeroClassManager.GetClassDefinition(claseDelMotor) != null ? claseDelMotor : ClaseDelCapitan;
 
         public static BattleData Montar(BatallaDeTicket batalla, out int soldados)
         {
@@ -67,7 +67,7 @@ namespace ConquestTactics.Net
                 }
                 foreach (var escuadra in lado.EscuadrasSinHeroe)
                 {
-                    var capitan = Heroe(PrefijoCapitan + escuadra.SquadId, "Capitán", nameof(HeroClass.SwordAndShield), 1,
+                    var capitan = Heroe(PrefijoCapitan + escuadra.SquadId, "Capitán", ClaseDelCapitan, 1,
                         primerPunto + enElLado++ % 3, aspectos, orden++);
                     capitan.sigilo = sigiloDelLado;
                     // Sus cifras, las de un héroe de espada y escudo recién nacido en el motor: en la escala de los héroes y las tropas del ticket.
@@ -180,12 +180,12 @@ namespace ConquestTactics.Net
             var a = delMotor.Avatar;
             datos.avatar = new AvatarParts { headId = a?.CabezaId ?? "", hairId = a?.PeloId ?? "", beardId = a?.BarbaId ?? "", eyebrowId = a?.CejasId ?? "" };
             datos.gender = delMotor.Femenino ? "Female" : "Male";
-            // Lo que lleva puesto, pieza a pieza (paso 6, tanda 2): cada armadura, la pieza de Conquest de su hueco y su peso; el arma, la de su clase
-            // (ya no la de la reserva de prueba). Un hueco vacío, vacío. Solo el aspecto: las cifras de combate son del hilo de tropas.
+            // Lo que lleva puesto, pieza a pieza, con el id del motor: su aspecto sale de AspectoDePiezas. Un hueco vacío, vacío. Solo el aspecto:
+            // las cifras de combate son las de cifrasDelMotor.
             var e = delMotor.Equipamiento;
             datos.equipment = new Equipment
             {
-                weapon = ItemInstanceService.CreateItem(VestidoDelMotor.ArmaDelMotor(delMotor.ClassDefinitionId)),
+                weapon = PiezaDeBatalla(e?.Arma) ?? PiezaDeBatalla(new BronzeAge.Contract.V1.ItemInstancia { ItemDefinitionId = delMotor.ClassDefinitionId + "_inicio" }),
                 helmet = PiezaDeBatalla(e?.Casco),
                 torso = PiezaDeBatalla(e?.Torso), gloves = PiezaDeBatalla(e?.Guantes), pants = PiezaDeBatalla(e?.Pantalones), boots = PiezaDeBatalla(e?.Botas),
                 mount = string.IsNullOrEmpty(e?.Montura?.ItemDefinitionId) ? null : new InventoryItem { itemId = e.Montura.ItemDefinitionId },
@@ -195,8 +195,8 @@ namespace ConquestTactics.Net
 
         static InventoryItem PiezaDeBatalla(BronzeAge.Contract.V1.ItemInstancia p)
         {
-            var id = VestidoDelMotor.PiezaDeConquest(p?.ItemDefinitionId);
-            return id == null ? null : ItemInstanceService.CreateItem(id);
+            var id = p?.ItemDefinitionId;
+            return AspectoDePiezas.DelMotor(id) ? new InventoryItem { itemId = id } : null;
         }
 
         /// <summary>

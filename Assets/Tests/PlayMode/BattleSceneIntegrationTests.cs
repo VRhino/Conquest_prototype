@@ -22,7 +22,6 @@ public partial class BattleSceneIntegrationTests
 {
     const string ScenePath = "Assets/Scenes/BattleTestScene.unity";
     const float ReadyTimeout = 60f;
-    const string PrepPath = "Assets/Scenes/GameScenes/BattlePrepScene.unity";
     const string FullBattlePath = "Assets/Scenes/GameScenes/BattleScene.unity";
     const int FullBattleHeroesPerSide = 10;
     bool fullBattleProfile, defenderProfile;
@@ -165,34 +164,15 @@ public partial class BattleSceneIntegrationTests
         World.DefaultGameObjectInjectionWorld = null;
         worldSwapped = true;
         testWorld = DefaultWorldInitialization.Initialize("Battle integration world");
+        // The old preparation scene (BattlePrepScene) is gone: the local hero enters with the reserve squad it chose there.
         if (fullBattleProfile || pikemenFlow)
         {
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(PrepPath,
-                new LoadSceneParameters(LoadSceneMode.Single));
-            SceneTransitionService.UpdateGamePhase(GamePhase.BattlePreparation);
-            yield return null; // Footer.Start binds the selected loadout and button.
-            var footer = UnityEngine.Object.FindAnyObjectByType<FooterController>();
-            Assert.That(footer, Is.Not.Null);
-            if (pikemenFlow)
-            {
-                Assert.That(footer.GetSelectedSquadInstanceIDs(), Is.Empty);
-                typeof(FooterController).GetMethod("OnPlaceholderClicked", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(footer, null);
-                var selector = UnityEngine.Object.FindAnyObjectByType<TroopsSelectorController>();
-                Assert.That(selector, Is.Not.Null);
-                typeof(TroopsSelectorController).GetMethod("OnSquadInstanceClicked", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .Invoke(selector, new object[] { reserve.id });
-            }
-            Assert.That(footer.GetSelectedSquadInstanceIDs(), Does.Contain(reserve.id));
-            var startButton = (UnityEngine.UI.Button)typeof(FooterController)
-                .GetField("startBattleButton", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(footer);
-            Assert.That(startButton, Is.Not.Null);
-            startButton.onClick.Invoke(); // Exercise the production preparation transition.
-            yield return Until(() => SceneManager.GetActiveScene().path == FullBattlePath,
-                ReadyTimeout, "Preparation did not load the production battle scene.");
+            var me = battle.attackers.Concat(battle.defenders).First(p => p.heroId == local.heroId);
+            me.squadInstances.Clear(); // the preparation sent only the squads selected there
+            me.squadInstances.Add(reserve);
         }
-        else
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode(loadedScenePath,
-                new LoadSceneParameters(LoadSceneMode.Single));
+        yield return EditorSceneManager.LoadSceneAsyncInPlayMode(loadedScenePath,
+            new LoadSceneParameters(LoadSceneMode.Single));
         yield return Until(() =>
         {
             var world = World.DefaultGameObjectInjectionWorld;
@@ -1725,7 +1705,6 @@ public partial class BattleSceneIntegrationTests
             ScriptBehaviourUpdateOrder.RemoveWorldFromCurrentPlayerLoop(testWorld);
         // Keep the memory provider installed until scene destruction has completed.
         var scene = SceneManager.GetSceneByPath(loadedScenePath);
-        if (!scene.IsValid() || !scene.isLoaded) scene = SceneManager.GetSceneByPath(PrepPath);
         if (scene.IsValid() && scene.isLoaded)
         {
             SceneManager.CreateScene("IntegrationCleanup");

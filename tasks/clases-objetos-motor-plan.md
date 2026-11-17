@@ -138,3 +138,30 @@
 - Los paneles viejos del campamento (inventario, ficha, tienda y cuartel) quedan para cuando se rehaga el campamento.
 - **24a:** las clases de Conquest son 5 assets, uno por clase del motor y con su id, con sus habilidades, rasgos de golpe, resiliencia y
   aguante. Las dagas y la lanza con escudo empiezan copiando a sus parientes.
+
+## Tanda 3, hecha (2026-11-17)
+
+- **Las 5 clases** (`Resources/Data/HeroClasses`): las 4 de antes se renombraron con el id de su clase del motor (conservan su GUID), y
+  `dagas` es una copia de espada y escudo. Llevan los atributos base del motor.
+  - `HeroClassManager` traduce los nombres de antes (guardados, pruebas y héroes de prueba) a su clase del motor.
+  - `HeroClassComponent` lleva el id de la clase además de la familia del arma (animaciones, caballo y aspecto).
+- **El aspecto y el icono de cada pieza**:
+  - por su id del motor, en `Resources/Heroe/aspecto.json`, leído por `AspectoDePiezas`. Es dato de Conquest;
+  - los iconos están en `Resources/Heroe/Iconos`.
+  - `VestidoDelMotor`, el héroe de la batalla (sus piezas viajan con el id del motor), el equipo del mundo y la preparación lo leen de ahí.
+- **El creador y el selector**: solo el camino del motor. Fuera la lista de clases de relleno, la armadura de `ItemService` y
+  `player_save.json`.
+- **Borrado** (la lista A, corregida al comprobarla):
+  - la escena `BattlePrepScene` y su entrada en la lista de build;
+  - `BattlePreparationController`, `FooterController`, `TroopsSelectorController`, `HeroSliceController` y `BattlePreparationEvents`;
+  - el prefab `HeroSlice`;
+  - `LoadoutSelectionUI`, `HeroDetailPreviewCamera`, `HeroDetail3DPreviewSetup`, `BasicBowGrant` y `SimplePricingConfig`;
+  - las pruebas `InventoryUiIntegrationTests` y `PreparacionDeConquestTests`.
+- **Se quedan, aunque estaban en la lista A**: el minimapa de la preparación del mundo (`DefaultMapMinimap`) los usa, y el panel de
+  suministro de la batalla (`SupplyPointUi`) usa `Troops_Viewver`.
+  - `PreparationMapController` y `SupplyPointController`;
+  - los prefabs `SpawnPointUIIcon`, `SupplyPointUIIcon` y `Troops_Viewver`.
+- **Movidos** de `UI/BattlePreparation` a `UI/Battle`: lo que usan la batalla y el mundo.
+- `MatchmakingUI`, el emparejamiento viejo del campamento, va ahora directo a la batalla.
+- **Quedan para cuando se rehaga el campamento**: las 22 piezas de relleno, `ItemSODatabase` y sus generadores. Los usan el inventario, la
+  tienda y la ficha viejos del campamento (B).

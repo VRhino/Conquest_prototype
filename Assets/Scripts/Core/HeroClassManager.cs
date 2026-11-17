@@ -18,6 +18,7 @@ public static class HeroClassManager
     {
         if (string.IsNullOrEmpty(classId))
             return null;
+        classId = DelMotor(classId);
 
         // Buscar en cache primero
         if (_classCache.TryGetValue(classId, out var cached))
@@ -34,6 +35,19 @@ public static class HeroClassManager
         Debug.LogWarning($"[HeroClassManager] No se encontró HeroClassDefinition para classId: {classId}");
         return null;
     }
+
+    /// <summary>
+    /// El id de la clase del motor de un nombre de clase de antes (guardados, pruebas y héroes de prueba): las 5 clases de Conquest llevan el id de
+    /// su clase del motor. Un id del motor, tal cual.
+    /// </summary>
+    public static string DelMotor(string classId) => classId switch
+    {
+        nameof(HeroClass.SwordAndShield) => "espada_escudo_mediano",
+        nameof(HeroClass.Spear) => "lanza_escudo_redondo",
+        nameof(HeroClass.Bow) => "arco_lanza",
+        nameof(HeroClass.TwoHandedSword) => "hacha_dos_manos",
+        _ => classId,
+    };
 
     /// <summary>
     /// Limpia el cache de definiciones de clase.

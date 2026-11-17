@@ -127,12 +127,9 @@ public partial class HeroVisualAppearanceSystem : SystemBase
             foreach (var itemId in tempHero.GetEquipment())
             {
                 if (string.IsNullOrEmpty(itemId)) continue;
-                var itemData = ItemService.GetItemById(itemId);
-                if (itemData != null && !string.IsNullOrEmpty(itemData.visualPartId))
-                {
-                    Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(
-                        visualInstance.transform, avatarPartDatabase, itemData.visualPartId, genderEnum);
-                }
+                var parte = AspectoDePiezas.Parte(itemId);
+                if (!string.IsNullOrEmpty(parte))
+                    Data.Avatar.AvatarVisualUtils.ToggleArmorVisibilityByAvatarPartId(visualInstance.transform, avatarPartDatabase, parte, genderEnum);
             }
         }
         return true;
