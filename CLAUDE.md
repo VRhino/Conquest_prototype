@@ -12,6 +12,12 @@
 **Conquest Tactics** — Unity 6 (6000.5) + DOTS/ECS (Entities 6.5). Squad-based 3v3 PvP tactical game.
 Docs: `Docs/ModeloHybrido.md` (architecture), `Docs/GDD.md`, `Docs/TDD.md`, `Assets/Scripts/Squads/SystemResponsibilities.md`.
 
+## CLI Tools (this machine)
+
+- **Unity 6000.5.8f1**: `C:\Program Files\Unity\Hub\Editor\6000.5.8f1\Editor\Unity.exe` — batch: `-batchmode -quit -projectPath . -executeMethod Class.Method -logFile <file>`. Fails if the project is already open in the Editor (folder lock).
+- **Unity Hub**: `C:\Program Files\Unity Hub\Unity Hub.exe -- --headless <cmd>` (e.g. `editors -i`).
+- **Blender 5.3**: `C:\Program Files\Blender Foundation\Blender 5.3\blender.exe` — background: `-b file.blend --python script.py` or `--python-expr "..."`. Each call is a new process; it cannot see an open Blender session.
+
 ## Architecture: Hybrid ECS-GameObject Model
 
 **Never mix responsibilities between layers.**
