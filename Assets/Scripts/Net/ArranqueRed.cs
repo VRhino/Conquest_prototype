@@ -147,41 +147,32 @@ namespace ConquestTactics.Net
     }
 
     /// <summary>
-    /// Los drivers de red de siempre, con dos ajustes para aguantar jugadores que se caen:
-    /// <list type="bullet">
-    /// <item>Plazo sin señal de 10 s (el de Unity son 30), igual en los dos lados: pasado ese tiempo sin oírse, el
-    /// servidor da al jugador por ido (su héroe vuelve a la IA) y el cliente pide la conexión otra vez.</item>
-    /// <item>Cola de recepción del servidor mucho mayor. En Windows, cada paquete mandado a un cliente cuyo proceso ha
-    /// muerto vuelve como error y gasta para siempre un hueco de esa cola (Unity Transport 6.5 no lo devuelve): con los
-    /// 512 de serie, un solo cliente caído en la misma máquina dejaba sordo al servidor en 8 s.
-    /// ponytail: es un margen, no un arreglo (16.384 huecos son unas 27 caídas así en una batalla); el arreglo de
-    /// verdad es de Unity Transport, o un servidor en Linux, donde esos errores no llegan al socket.</item>
-    /// </list>
+    /// Los drivers de red de siempre, con el plazo sin señal en 10 s (el de Unity son 30), igual en los dos lados: pasado ese
+    /// tiempo sin oírse, el servidor da al jugador por ido (su héroe vuelve a la IA) y el cliente pide la conexión otra vez.
+    /// (El servidor sordo cuando moría un cliente en Windows se arregla en el Transport embebido, Packages/com.unity.transport.)
     /// </summary>
     public class DriversDeBatalla : INetworkStreamDriverConstructor
     {
         public const int PlazoSinSenalMs = 10_000;
-        const int ColaDelServidor = 16_384;
 
         public void CreateClientDriver(World world, ref NetworkDriverStore driverStore, NetDebug netDebug)
         {
             var ajustes = DefaultDriverBuilder.GetNetworkClientSettings();
-            Ajustar(ref ajustes, 0);
+            Ajustar(ref ajustes);
             DefaultDriverBuilder.RegisterClientDriver(world, ref driverStore, netDebug, ajustes);
         }
 
         public void CreateServerDriver(World world, ref NetworkDriverStore driverStore, NetDebug netDebug)
         {
             var ajustes = DefaultDriverBuilder.GetNetworkServerSettings();
-            Ajustar(ref ajustes, ColaDelServidor);
+            Ajustar(ref ajustes);
             DefaultDriverBuilder.RegisterServerDriver(world, ref driverStore, netDebug, ajustes);
         }
 
-        static void Ajustar(ref NetworkSettings ajustes, int cola)
+        static void Ajustar(ref NetworkSettings ajustes)
         {
             var red = ajustes.GetNetworkConfigParameters();
             red.disconnectTimeoutMS = PlazoSinSenalMs;
-            if (cola > 0) red.receiveQueueCapacity = cola;
             ajustes.AddRawParameterStruct(ref red);
         }
     }

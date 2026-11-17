@@ -228,8 +228,10 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 - ~~**En red, las órdenes, las habilidades y las formaciones** podían llegar con el tipo, la ranura o la formación a 0~~ ✅ 2026-11-16 (Víctor):
   el aviso del comando llega en su tick, pero el dato era el del último fotograma de ese tick. El cliente manda ahora en cada comando el
   último dato de cada aviso. Probado en red: la Q, «mantener» y «seguir». Las levas tienen una sola formación: F1-F4 van por el mismo camino.
-- Unity Transport 6.5 en Windows deja sordo al servidor cuando muere el proceso de un cliente en una máquina que contesta
-  «puerto cerrado»: tapado con margen (`DriversDeBatalla`), no arreglado. Arreglo de verdad: Unity, o servidor en Linux.
+- ~~Unity Transport 6.5 en Windows deja sordo al servidor cuando muere el proceso de un cliente en una máquina que contesta
+  «puerto cerrado»~~ ✅ 2026-11-17: arreglado en el Transport embebido (`Packages/com.unity.transport`): la recepción fallida
+  (el ICMP vuelve como WSAECONNRESET, `SIO_UDP_CONNRESET`) devuelve su búfer a la cola. Quitado el margen de 16.384 de
+  `DriversDeBatalla`. Prueba `ClienteMuertoTransportTests` (roja sin el parche) y `Tools/cliente_muerto.sh`. Ver doc 22 §9.6.
 - Probar con alguien al teclado, en el cliente con ventana, el retardo, las salidas y la reaparición (solo lo han probado
   bots).
 - ~~Un ticket que vuelve con la revisión subida después de una incorporación pierde las incorporaciones~~ ✅ 2026-11-16: no pasa. Con la

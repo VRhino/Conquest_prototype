@@ -711,14 +711,32 @@ para no andar solo por un mundo parado.
 sin oírse, el servidor da al jugador por ido y el cliente pide la conexión otra vez. Es un valor de paso, pendiente del
 autor. Lo que pasa con el héroe de quien se va (hoy vuelve a la IA) cambia con las salidas (§9.9).
 
-**El servidor se quedaba sordo.** Al matar el proceso de un cliente en la misma máquina, el servidor dejaba de recibir de
-todos los demás a los 8 s y ya no admitía a nadie. La causa está en Unity Transport 6.5 sobre Windows: cada paquete mandado
-a un puerto que ya no existe vuelve como error de recepción, y ese error gasta para siempre un hueco de la cola de recepción
-(`UDPNetworkInterface`, el `continue` de las recepciones fallidas: el búfer no se devuelve). Con los 512 huecos de serie y
-60 paquetes por segundo, 8 s. Pasa cuando la máquina del cliente contesta «puerto cerrado»: la misma máquina, o una red
-local sin cortafuegos; a través de internet lo normal es que nadie conteste. **No está arreglado, tiene margen:**
-`DriversDeBatalla` pone la cola del servidor en 16.384 huecos, que con el plazo de 10 s son unas 27 caídas así por batalla.
-El arreglo de verdad es de Unity Transport, o correr el servidor en Linux, donde esos errores no llegan al socket.
+**El servidor se quedaba sordo** (arreglado el 2026-11-17). Al matar el proceso de un cliente en la misma máquina, el
+servidor dejaba de recibir de todos los demás a los 8 s y ya no admitía a nadie. Pasa cuando la máquina del cliente contesta
+«puerto cerrado» (la misma máquina, o una red local sin cortafuegos). La causa son dos cosas juntas:
+
+- **Windows:** con `SIO_UDP_CONNRESET` activo (lo es de serie), el ICMP «puerto inalcanzable» que provoca cada paquete mandado
+  al puerto muerto vuelve como un error WSAECONNRESET (10054) en la siguiente recepción del socket UDP. Comprobado con un
+  socket a mano: con la opción apagada, ese error no llega. Linux no lo pasa al socket UDP sin conectar.
+- **Unity Transport 6.5** (`UDPNetworkInterface`, `ReceiveJob`): una recepción que acaba en error se salta con `continue`
+  sin devolver su búfer. Cada error gasta para siempre un hueco de la cola de recepción; con los 512 de serie y 60 paquetes
+  por segundo al muerto, la cola se agota en 8 s y el servidor ya no programa más recepciones.
+
+**El arreglo:** el paquete `com.unity.transport` 6.5.0 va embebido en `Packages/com.unity.transport`, con el búfer devuelto
+(`ReceiveQueue.ReleaseBuffer`) en esa recepción fallida y en la de tamaño imposible (las dos líneas marcadas «Conquest»).
+No se puede desde fuera del paquete: Baselib no da el socket ni el código de error, y la cola es interna. El margen de 16.384
+huecos de `DriversDeBatalla` ya no hace falta y se quitó.
+
+**Al cambiar de versión de Unity** hay que volver a copiar el paquete de `Library/PackageCache` y reponer esas dos líneas, o
+quitar el embebido si Unity ya lo ha arreglado (pasar `ClienteMuertoTransportTests` sin él: si sale verde, ya no hace falta).
+Para Unity, el aviso: «UDPNetworkInterface.ReceiveJob no libera el búfer de una recepción con
+`Baselib_RegisteredNetwork_CompletionStatus.Failed`; en Windows, el ICMP de un par muerto agota la cola de recepción».
+
+**Las pruebas:**
+- `ClienteMuertoTransportTests` (EditMode, puerto 7895): un servidor con la cola de serie y dos clientes; se cierra uno de
+  golpe y se mandan 1.500 vueltas. Sin el parche falla (el servidor deja de oír al vivo); con él pasa.
+- `Tools/cliente_muerto.sh [puerto]`: el servidor de batalla de verdad y dos clientes bot de `Builds/PruebaRed`; a los 25 s
+  se mata uno. El servidor lo da por ido a los 10 s y sigue oyendo al otro hasta que sale.
 
 **Las correcciones no dan tirones.** Cuando el servidor corrige la posición del héroe propio (lo ha movido el juego, o el
 cliente adelantó algo que no pasó), el cliente no salta: reparte la corrección a 25 cm por snapshot
