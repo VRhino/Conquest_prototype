@@ -214,6 +214,9 @@ tarjeta con la rareza, `PiezasDeTropa`), no el icono dibujado del prototipo. Ver
 - **Fallo intermitente (2026-11-17): `DelMapaALaBatalla`.** Falló dos de tres vueltas seguidas, cada vez en un sitio: de la preparación cancelada
   al mapa («de vuelta en MundoScene con el mapa») y del informe al mapa con «Salir» («de vuelta en el mapa tras el informe»; el clic, con el
   ratón de verdad, no llega). La tercera pasó. Ninguno toca el movimiento del héroe; puede ser lo mismo que el teclado de prueba (28b).
+- **Fallo intermitente (2026-11-17): `TuPlazaPorDentro` a 640×480.** Con el PC cargado (los dos lotes a la vez), el interruptor «pausar-pan» del
+  panel de gobierno queda fuera de la pantalla (y = −260): el desplazamiento de la ventana a ese tamaño. Falló una de cada dos vueltas; no es el
+  reloj de prueba (`AvanzarReloj`, ya arreglado).
 - El motor en local es solo para las pruebas: irá en la nube.
 
 ## 7. Sueltos

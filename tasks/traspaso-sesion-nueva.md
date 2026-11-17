@@ -240,11 +240,9 @@
     prototipo;
   - al acabar cada tanda, la suite entera sin capturas, en dos lotes a la vez (`bash tasks/pruebas/correr_en_paralelo.sh`) o en serie
     (`bash tasks/pruebas/correr.sh "ConquestTactics.Mundo.UI.Tests" ""`), y la batalla
-    en dos vueltas de `correr_batalla.sh`, cada una con su servidor y su lanzador:
-    `bash tasks/pruebas/correr_batalla.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.DelMapaALaBatalla" ""` y
-    `bash tasks/pruebas/correr_batalla.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.TuUnionALaBatalla" ""`.
-    `TuUnionALaBatalla` necesita las batallas en Unity; juntas no, porque el lanzador que deja la primera asigna la batalla de la segunda y
-    deja de admitir a quien llega);
+    con las tres batallas en un solo arranque: `bash tasks/pruebas/correr_batalla.sh` (sin argumentos: `DelMapaALaBatalla`,
+    `TuDefensaDeTuPlaza` y `TuUnionALaBatalla`, por ese orden; cada una apaga su lanzador al acabar y `TuUnionALaBatalla`, que no lo usa,
+    va la última). Verde dos veces seguidas el 2026-11-17, unos 300 s;
   - si el editor de Víctor está abierto, nada de compilar en lote y no lo cierres.
 - **Capturas del prototipo**:
   - Vite contra tu servidor: en `../BronzeAgeClient`, `VITE_API_BASE=http://127.0.0.1:7891 npx vite --port 5199 --strictPort`.

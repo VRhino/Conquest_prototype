@@ -685,3 +685,5 @@
 - Las marchas y las obras se esperan con `EsperarConReloj` o `AvanzarReloj` (la orden de admin `avanzar_hasta`).
 - Con saltos de una hora, el mundo corre días y se pierden plazas. En la muralla, los saltos son de 10 minutos.
 - La sesión va por detrás del salto hasta su siguiente ping: se cuenta desde el último salto.
+
+- **Nunca matar procesos por nombre** (`pkill`, `taskkill /IM`, `killall`) ni por la línea de órdenes: en el PC corren otras sesiones (el hilo del Transport con su Unity y sus servidores). Parar solo los PID que lancé y apunté, o los de mis puertos (7891/7892). `tasks/pruebas/parar.sh` hace `taskkill /IM` del lanzador y de `PruebaRed`: no usarlo si otra sesión los está usando (2026-11-17).

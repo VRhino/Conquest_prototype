@@ -1,8 +1,11 @@
 #!/bin/bash
 # La batalla de punta a punta (DelMapaALaBatalla): el servidor de prueba propio (7891) con batallas de Unity, el lanzador de verdad (lo arranca la
 # prueba) y Builds/PruebaRed/PruebaRed.exe, y el editor SIN -batchmode (la red no carga BattleScene en batchmode). Al acabar, todo apagado.
-#   bash tasks/pruebas/correr_batalla.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.DelMapaALaBatalla" ""
-FILTRO="$1"; CAPS="$2"
+#   bash tasks/pruebas/correr_batalla.sh            las tres batallas en un solo arranque (DelMapaALaBatalla, TuDefensaDeTuPlaza y
+#                                                   TuUnionALaBatalla, por ese orden: cada una apaga su lanzador al acabar y la última no lo usa)
+#   bash tasks/pruebas/correr_batalla.sh "<filtro>" ""   otra prueba o filtro
+B=ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests
+FILTRO="${1:-$B.DelMapaALaBatalla;$B.TuDefensaDeTuPlaza;$B.TuUnionALaBatalla}"; CAPS="$2"
 CQ=$(cd "$(dirname "$0")/../.." && pwd)
 MOTOR=${MOTOR:-$(cd "$CQ/.." && pwd)/BronzeAgeMotorPruebas}
 DATOS=$CQ/Logs/pruebas-batalla

@@ -688,6 +688,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
             Debug.Log($"[Prueba] lanzador {p.Id}");
+            // Para que `tasks/pruebas/parar.sh` lo apague si la prueba se corta (por su PID y su arranque, nunca por nombre).
+            System.IO.File.AppendAllText(System.IO.Path.Combine(Application.dataPath, "..", "Logs", "pids-pruebas.txt"),
+                $"{p.Id} {p.StartTime.ToUniversalTime().Ticks}{Environment.NewLine}");
             return p;
         }
 
@@ -733,17 +736,27 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// <summary>Adelanta el reloj del mundo `ms` de golpe (lo que tocaba en ese rato pasa al momento), desde la sesión de administración.</summary>
         /// La sesión se entera del salto en su siguiente ping: hasta entonces su reloj va por detrás, así que se cuenta desde el último salto si va
         /// más adelante. Si aun así el mundo ya pasó de ahí, el motor contesta «sin cambios», y vale.
+        /// El reloj de la sesión de administración, recién abierta, es el del servidor en ese momento: con el PC cargado el de `s` puede ir tan
+        /// por detrás que el salto caería en el pasado («reloj.invalido»). Si aun así lo rechaza (otro salto entre medias), se pregunta otra vez.
         static IEnumerator AvanzarReloj(string url, Sesion s, long ms)
         {
-            ultimoSalto = Math.Max(ultimoSalto, (long)s.AhoraMundo) + ms;
-            yield return OrdenAdmin(url, new Orden { ControlarReloj = new OrdenControlarReloj { Accion = "avanzar_hasta", HastaMs = ultimoSalto } }, sinCambiosVale: true);
+            long hasta = 0;
+            yield return OrdenAdmin(url, admin =>
+            {
+                hasta = Math.Max(hasta == 0 ? Math.Max(ultimoSalto, (long)s.AhoraMundo) + ms : hasta, (long)admin.AhoraMundo + ms);
+                return new Orden { ControlarReloj = new OrdenControlarReloj { Accion = "avanzar_hasta", HastaMs = hasta } };
+            }, sinCambiosVale: true);
+            ultimoSalto = hasta;
         }
         static long ultimoSalto;
 
-        static IEnumerator OrdenAdmin(string url, Orden orden, bool sinCambiosVale = false)
+        static IEnumerator OrdenAdmin(string url, Orden orden, bool sinCambiosVale = false) => OrdenAdmin(url, _ => orden, sinCambiosVale);
+
+        /// <summary>La orden se hace con la sesión de administración ya abierta (para leer su reloj); un «reloj.invalido» se reintenta una vez con la sesión abierta de nuevo.</summary>
+        static IEnumerator OrdenAdmin(string url, Func<Sesion, Orden> hacer, bool sinCambiosVale = false)
         {
             var codigo = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_ADMIN");
-            if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se manda " + orden.CuerpoCase); yield break; }
+            if (string.IsNullOrEmpty(codigo)) { Debug.Log("[Prueba] sin BRONZEAGE_PRUEBA_ADMIN: no se manda la orden de administración"); yield break; }
             var acceso = new Acceso(url);
             if (tokenAdmin == null)
             {
@@ -754,16 +767,21 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => login.IsCompleted, 20, "el login admin");
                 tokenAdmin = login.Result.Token;
             }
-            var s = new Sesion(acceso.UrlSesion, tokenAdmin, "conquest-prueba") { Tipo = TipoCliente.ClienteAdminWeb };
-            var abrir = s.Abrir();
-            var fin = Time.realtimeSinceStartup + 20;
-            while (!abrir.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            var r = s.Ordenar(orden);
-            fin = Time.realtimeSinceStartup + 20;
-            while (!r.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
-            if (!(sinCambiosVale && r.Result.Resultado == Resultado.OrdenSinCambios))
-                Assert.AreEqual(Resultado.OrdenAceptada, r.Result.Resultado, r.Result.Rechazo?.ToString());
-            s.Cerrar();
+            for (int intento = 0; ; intento++)
+            {
+                var s = new Sesion(acceso.UrlSesion, tokenAdmin, "conquest-prueba") { Tipo = TipoCliente.ClienteAdminWeb };
+                var abrir = s.Abrir();
+                var fin = Time.realtimeSinceStartup + 20;
+                while (!abrir.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
+                var r = s.Ordenar(hacer(s));
+                fin = Time.realtimeSinceStartup + 20;
+                while (!r.IsCompleted && Time.realtimeSinceStartup < fin) { s.Bombear(); yield return null; }
+                s.Cerrar();
+                if (intento == 0 && r.Result.Rechazo?.Codigo == "reloj.invalido") continue;
+                if (!(sinCambiosVale && r.Result.Resultado == Resultado.OrdenSinCambios))
+                    Assert.AreEqual(Resultado.OrdenAceptada, r.Result.Resultado, r.Result.Rechazo?.ToString());
+                yield break;
+            }
         }
 
         /// <summary>Una captura de la pantalla entera (BattleScene, con su UGUI), a la carpeta de capturas.</summary>
