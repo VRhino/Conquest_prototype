@@ -39,8 +39,6 @@ namespace BronzeAge.Batalla
         const string CONFIG = "Assets/ScriptableObjects/VisualPrefabConfig.asset";
         const string DETECTOR = "Assets/Prefabs/Detector.prefab";
         public const string VISUAL_LANCEROS = "BronzeAge_Lancero";
-        // coordenadas de MoveSpeed del juego (LocomotionAnimationSettings: walkBlendSpeed 3, runBlendSpeed 5)
-        const float ANDAR = 3f, CORRER = 5f;
 
         /// <summary>Una figura: su modelo, su tono de piel, su tipo de arma y sus clips.</summary>
         public readonly struct Figura
@@ -252,17 +250,21 @@ namespace BronzeAge.Batalla
                 ("IsAttacking", AnimatorControllerParameterType.Bool), ("AttackSpeed", AnimatorControllerParameterType.Float),
                 ("TriggerHitReaction", AnimatorControllerParameterType.Trigger), ("HitReactionType", AnimatorControllerParameterType.Int),
                 ("TriggerDeath", AnimatorControllerParameterType.Trigger), ("IsDead", AnimatorControllerParameterType.Bool),
-                (AtaqueAlAzar.Parametro, AnimatorControllerParameterType.Int), ("Stance", AnimatorControllerParameterType.Int) })
+                (AtaqueAlAzar.Parametro, AnimatorControllerParameterType.Int), ("Stance", AnimatorControllerParameterType.Int),
+                (PasoReal.VELOCIDAD, AnimatorControllerParameterType.Float), (PasoReal.PASO, AnimatorControllerParameterType.Float) })
                 ac.AddParameter(n, t);
             var ps = ac.parameters;
-            foreach (var p in ps) if (p.name == "AttackSpeed") p.defaultFloat = 1f;
+            foreach (var p in ps) if (p.name == "AttackSpeed" || p.name == PasoReal.PASO) p.defaultFloat = 1f;
             ac.parameters = ps;
             var sm = ac.layers[0].stateMachine;
-            // locomoción
-            var arbol = new BlendTree { name = "Locomocion", blendType = BlendTreeType.Simple1D, blendParameter = "MoveSpeed", useAutomaticThresholds = false };
+            // locomoción por la velocidad REAL del soldado (PasoReal), con los clips en sus velocidades de autor y, fuera de
+            // ellas, el clip más deprisa o más despacio (Paso): los pies no patinan (Víctor, 18-11). MoveSpeed (la coordenada
+            // del árbol de Synty que escribe UnitAnimatorController) ya no se usa aquí.
+            var arbol = new BlendTree { name = "Locomocion", blendType = BlendTreeType.Simple1D, blendParameter = PasoReal.VELOCIDAD, useAutomaticThresholds = false };
             AssetDatabase.AddObjectToAsset(arbol, ac);
-            arbol.AddChild(Clip(reposo), 0f); arbol.AddChild(Clip(andar), ANDAR); arbol.AddChild(Clip(correr), CORRER);
+            arbol.AddChild(Clip(reposo), 0f); arbol.AddChild(Clip(andar), PasoReal.ANDAR); arbol.AddChild(Clip(correr), PasoReal.CORRER);
             var loco = sm.AddState("Locomocion"); loco.motion = arbol;
+            loco.speedParameterActive = true; loco.speedParameter = PasoReal.PASO;
             sm.defaultState = loco;
             // ataque: un estado vacío elige al azar y pasa a uno de los ataques
             var elegir = sm.AddState("Ataque (al azar)");
@@ -377,6 +379,7 @@ namespace BronzeAge.Batalla
                 go.AddComponent<UnitAnimationAdapter>();
                 go.AddComponent<UnitAnimatorController>();
                 go.AddComponent<EntityVisualSync>();
+                go.AddComponent<PasoReal>();
                 EditorUtility.CopySerialized(refGo.GetComponent<NavMeshAgent>(), go.AddComponent<NavMeshAgent>());
                 var capRef = refGo.GetComponent<CapsuleCollider>();
                 if (capRef != null) EditorUtility.CopySerialized(capRef, go.AddComponent<CapsuleCollider>());

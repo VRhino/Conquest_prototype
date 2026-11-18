@@ -113,6 +113,14 @@ public class HUDController : MonoBehaviour
         // UIBattleDataSystem consumed the SquadChangeEvent entity — we just read the result.
         if (!data.squadChangedThisFrame) return;
 
+        // The event names the new squad itself (18-11): the id map of the data container did not always have it, and the
+        // HUD kept the first squad's name, picture and formations.
+        if (!data.newSquadBaseID.IsEmpty)
+        {
+            var nueva = SquadDataService.GetSquadById(data.newSquadBaseID.ToString());
+            if (nueva != null && _squadSectionController != null) { _squadSectionController.Initialize(nueva); return; }
+        }
+
         if (_dataContainerQuery.IsEmptyIgnoreFilter) return;
         var dcEntity = _dataContainerQuery.GetSingletonEntity();
         if (_em.HasBuffer<SquadIdMapElement>(dcEntity))

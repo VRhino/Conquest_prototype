@@ -63,6 +63,7 @@ public struct UIHeroBattleDataComponent : IComponentData
     /// <summary>True only on the frame when a SquadChangeEvent was consumed.</summary>
     public bool squadChangedThisFrame;
     public int  newSquadId;
+    public Unity.Collections.FixedString64Bytes newSquadBaseID;
 
     // ── Squad status ─────────────────────────────────────────────────────────
     public int aliveUnits;

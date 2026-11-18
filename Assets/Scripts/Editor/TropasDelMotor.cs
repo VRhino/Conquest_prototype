@@ -118,9 +118,20 @@ public static class TropasDelMotor
         { "agrianos", (Base.Arqueros, new[] { D, L }) },
     };
 
+    /// <summary>(18-11, Víctor) el reposo de las tres levas de herramienta, igual de desordenado pero más junto: la separación
+    /// × <see cref="CompactarReposo"/> y el ruido el que deje a dos soldados vecinos a <see cref="ReposoSeparacionMinima"/> como
+    /// poco (separación − 2·ruido). Con 0,5 y 0,6 m: 1,2 m y 0,3 m (antes 2,4 y 0,8; vecino medio 2,18 → 1,12 m, 15 → 7,5 m de lado).</summary>
+    static readonly HashSet<string> ReposoCompacto = new() { "lenadores", "mineros", "granjeros" };
+    const float CompactarReposo = 0.5f, ReposoSeparacionMinima = 0.6f;
+    static RestFormationSetup.Profile ReposoDeLeva()
+    {
+        float separacion = 2.4f * CompactarReposo;
+        return RestFormationSetup.Loose(separacion, Mathf.Min(0.8f * CompactarReposo, (separacion - ReposoSeparacionMinima) / 2f), 35f);
+    }
+
     /// <summary>How each base stands at rest: levies loose, the rest in blocks.</summary>
     static RestFormationSetup.Profile Reposo(string tropaId, Base b) =>
-        tropaId is "lenadores" or "granjeros" or "mineros" ? RestFormationSetup.Loose(2.4f, 0.8f, 35f)
+        ReposoCompacto.Contains(tropaId) ? ReposoDeLeva()
         : b switch
         {
             Base.Escuderos => RestFormationSetup.Block(5, 1.2f, 0.15f, 8f),
@@ -155,6 +166,19 @@ public static class TropasDelMotor
         4 => SquadRarity.elite_tier,
         _ => SquadRarity.legendary_tier,
     };
+
+    /// <summary>El fondo de la tarjeta por el tier, del color de su línea (SquadUtils.RarityInfo): gris, verde, azul, morado
+    /// o dorado. La copia de la tropa base traía el de la base (el verde de los Spearmen) y todas salían verdes (Víctor,
+    /// 18-11). Si falta el sprite, se queda el que tenga.</summary>
+    static Sprite Fondo(SquadRarity rareza) => AssetDatabase.LoadAssetAtPath<Sprite>(rareza switch
+    {
+        SquadRarity.peasant_tier or SquadRarity.levy_tier or SquadRarity.conscript_tier => "Assets/Art/UI/units/common_background.png",
+        SquadRarity.trained_tier or SquadRarity.seasoned_tier => "Assets/Art/UI/units/uncommon_background.png",
+        SquadRarity.veteran_tier or SquadRarity.hardened_tier => "Assets/Art/UI/units/rare_background.png",
+        SquadRarity.elite_tier or SquadRarity.master_tier => "Assets/Art/UI/units/epic_background.png",
+        SquadRarity.legendary_tier => "Assets/Art/UI/units/legendary_background.png",
+        _ => "",
+    });
 
     [MenuItem("Tools/BronzeAge/Importar tropas del motor")]
     public static void Importar()
@@ -193,6 +217,7 @@ public static class TropasDelMotor
             tropa.squadName = t.nombre;
             tropa.unitCount = t.unidadesPorDefecto;
             tropa.rarity = Rareza(t.tier);
+            tropa.background = Fondo(tropa.rarity) ?? tropa.background;
             tropa.availableForRecruitmentByDefault = false;
             tropa.progressionData = progresion;
             AplicarCombate(tropa, t.combate);
@@ -214,6 +239,12 @@ public static class TropasDelMotor
                 tropa.restFormation = RestFormationSetup.Create(tropa, ruta, Reposo(t.id, plan.baseDeLaTropa));
             else
                 Ampliar(tropa.restFormation, tropa.unitCount);
+            if (ReposoCompacto.Contains(t.id))             // el reposo ya creado también se compacta en cada importación
+            {
+                var p = ReposoDeLeva();
+                tropa.restFormation.spacing = p.spacing; tropa.restFormation.noiseRadius = p.noiseRadius;
+                EditorUtility.SetDirty(tropa.restFormation);
+            }
             EditorUtility.SetDirty(tropa);
             Registrar(baseDeEscuadras, tropa);
             importadas.Add(t.id);

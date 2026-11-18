@@ -269,7 +269,7 @@ public partial class SquadSwapExecutionSystem : SystemBase
                     duration = SquadSwapCooldown.Duration
                 });
             Entity evt = ecb.CreateEntity();
-            ecb.AddComponent(evt, new SquadChangeEvent { newSquadId = newSquadId });
+            ecb.AddComponent(evt, new SquadChangeEvent { newSquadId = newSquadId, baseSquadID = newBaseSquadID });
 
             // Clean up
             ecb.RemoveComponent<SquadSwapExecuteTag>(entity);

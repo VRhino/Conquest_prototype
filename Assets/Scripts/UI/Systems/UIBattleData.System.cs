@@ -85,14 +85,19 @@ public partial class UIBattleDataSystem : SystemBase
         }
 
         // ── Squad change event (consume here — never from UI) ─────────────────
+        // (18-11) the event entity is destroyed AFTER the loop: destroying it inside threw «Structural changes are not
+        // allowed while iterating», the system stopped before writing the data, and the HUD never saw the squad change.
+        Entity consumido = Entity.Null;
         foreach (var (evt, entity) in
                  SystemAPI.Query<RefRO<SquadChangeEvent>>().WithEntityAccess())
         {
             data.squadChangedThisFrame = true;
             data.newSquadId            = evt.ValueRO.newSquadId;
-            EntityManager.DestroyEntity(entity);
+            data.newSquadBaseID        = evt.ValueRO.baseSquadID;
+            consumido = entity;
             break;
         }
+        if (consumido != Entity.Null) EntityManager.DestroyEntity(consumido);
 
         SystemAPI.SetComponent(_singletonEntity, data);
     }

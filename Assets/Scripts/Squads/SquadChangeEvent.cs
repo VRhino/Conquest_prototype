@@ -9,4 +9,6 @@ public struct SquadChangeEvent : IComponentData
 {
     /// <summary>ID of the new active squad.</summary>
     public int newSquadId;
+    /// <summary>Base squad id of the new active squad, so the HUD shows its name and formations (18-11).</summary>
+    public Unity.Collections.FixedString64Bytes baseSquadID;
 }

@@ -37,7 +37,7 @@ public partial class UnitDeathSystem : SystemBase
                     : null;
                 if (go == null)
                     go = FindGameObjectByInstanceId(visualInstance.visualInstanceId);
-                if (go != null) Object.Destroy(go);
+                if (go != null) CuerpoCaido.Retirar(go);   // tumbado unos segundos si su Animator tiene muerte; si no, fuera
                 if (squad == Entity.Null || !EntityManager.Exists(squad))
                     squad = visualInstance.parentSquad;
             }
