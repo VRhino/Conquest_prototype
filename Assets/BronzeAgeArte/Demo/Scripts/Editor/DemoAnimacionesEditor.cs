@@ -40,7 +40,8 @@ namespace BronzeAge.Demo
         {
             // primero los modelos (los clips de diagnóstico copian su avatar), luego los clips
             var todos = Directory.GetFiles(RAIZ, "*.fbx", SearchOption.AllDirectories).Select(r => r.Replace('\\', '/'))
-                .OrderBy(r => r.Contains("/Modelos/") || r.Contains("/Modelo/") ? 0 : 1).ToList();
+                .Concat(RutasBronzeAge.Modelos()).Concat(RutasBronzeAge.Clips())
+                .OrderBy(r => RutasBronzeAge.EsModelo(r) || r.Contains("/Modelo/") ? 0 : 1).ToList();
             foreach (var ruta in todos)
                 AssetDatabase.ImportAsset(ruta, ImportAssetOptions.ForceUpdate);
         }
@@ -109,7 +110,7 @@ namespace BronzeAge.Demo
         }
 
         // ------------------------------------------------------------------ materiales
-        static Material Mat(string nombre) => AssetDatabase.LoadAssetAtPath<Material>($"{RAIZ}/Materiales/{nombre}.mat");
+        static Material Mat(string nombre) => AssetDatabase.LoadAssetAtPath<Material>(RutasBronzeAge.Buscar(nombre, ".mat") ?? "");
 
         static void Materiales()
         {
@@ -117,7 +118,7 @@ namespace BronzeAge.Demo
             var lit = Shader.Find("Universal Render Pipeline/Lit");
             Material Crear(string nombre, Shader sh)
             {
-                var ruta = $"{RAIZ}/Materiales/{nombre}.mat";
+                var ruta = RutasBronzeAge.Buscar(nombre, ".mat") ?? $"{RAIZ}/Materiales/{nombre}.mat";
                 var m = AssetDatabase.LoadAssetAtPath<Material>(ruta);
                 if (m == null) { m = new Material(sh); AssetDatabase.CreateAsset(m, ruta); }
                 return m;
@@ -136,7 +137,7 @@ namespace BronzeAge.Demo
             // atlas de cada tropa: URP Lit, filtro Point, sin mipmaps (el polvo de los mineros va en degradados de 32 px), poco brillo
             foreach (var nombre in new[] { "Lenadores_Atlas", "Mineros_Atlas", "Granjeros_Atlas", "Lanceros_Atlas" })
             {
-                var rutaAtlas = $"{RAIZ}/Texturas/{nombre}.png";
+                var rutaAtlas = RutasBronzeAge.Buscar(nombre, ".png") ?? "";
                 var ti = (TextureImporter)AssetImporter.GetAtPath(rutaAtlas);
                 if (ti == null) continue;
                 if (ti.filterMode != FilterMode.Point || ti.mipmapEnabled)
@@ -154,7 +155,7 @@ namespace BronzeAge.Demo
             AssetDatabase.SaveAssets();
 
             // remapeo de los materiales de los modelos
-            foreach (var ruta in Directory.GetFiles($"{RAIZ}/Modelos", "*.fbx"))
+            foreach (var ruta in RutasBronzeAge.Modelos())
             {
                 var mi = (ModelImporter)AssetImporter.GetAtPath(ruta.Replace('\\', '/'));
                 bool cambio = false;
@@ -174,7 +175,7 @@ namespace BronzeAge.Demo
         // ------------------------------------------------------------------ comprobación en batchmode
         static void Informe()
         {
-            foreach (var ruta in Directory.GetFiles($"{RAIZ}/Animaciones", "*.fbx"))
+            foreach (var ruta in RutasBronzeAge.Clips())
             {
                 foreach (var c in AssetDatabase.LoadAllAssetsAtPath(ruta.Replace('\\', '/')).OfType<AnimationClip>())
                 {
@@ -184,7 +185,7 @@ namespace BronzeAge.Demo
                               $"{b.Length} curvas, Weapon_Carrier: {b.Any(x => x.path.EndsWith("Weapon_Carrier"))}");
                 }
             }
-            foreach (var ruta in Directory.GetFiles($"{RAIZ}/Modelos", "*.fbx"))
+            foreach (var ruta in RutasBronzeAge.Modelos())
             {
                 var go = AssetDatabase.LoadAssetAtPath<GameObject>(ruta.Replace('\\', '/'));
                 var av = go.GetComponent<Animator>()?.avatar;
@@ -297,9 +298,9 @@ namespace BronzeAge.Demo
 
         void OnPreprocessModel()
         {
-            if (!assetPath.StartsWith(RAIZ)) return;
+            if (!assetPath.StartsWith(RAIZ) && !RutasBronzeAge.EsModelo(assetPath) && !RutasBronzeAge.EsClip(assetPath)) return;
             var mi = (ModelImporter)assetImporter;
-            bool esModelo = assetPath.StartsWith(RAIZ + "Modelos/") || assetPath.StartsWith(DIAG + "Modelo/");
+            bool esModelo = RutasBronzeAge.EsModelo(assetPath) || assetPath.StartsWith(DIAG + "Modelo/");
             mi.importAnimation = !esModelo;
             mi.materialImportMode = esModelo ? ModelImporterMaterialImportMode.ImportStandard : ModelImporterMaterialImportMode.None;
             mi.importCameras = mi.importLights = false;
@@ -322,12 +323,14 @@ namespace BronzeAge.Demo
 
         void OnPreprocessAnimation()
         {
-            if (!assetPath.StartsWith(RAIZ) || assetPath.StartsWith(RAIZ + "Modelos/") || assetPath.StartsWith(DIAG + "Modelo/")) return;
+            if (!RutasBronzeAge.EsClip(assetPath) && !assetPath.StartsWith(DIAG)) return;
+            if (assetPath.StartsWith(DIAG + "Modelo/")) return;
             var mi = (ModelImporter)assetImporter;
             var clips = mi.clipAnimations.Length > 0 ? mi.clipAnimations : mi.defaultClipAnimations;
             foreach (var c in clips)
             {
-                c.loopTime = true;
+                // en bucle solo lo que se repite (reposo, andar, correr); los ataques, el golpe y la muerte, no (Animator de batalla)
+                c.loopTime = assetPath.Contains("Reposo") || assetPath.Contains("Andar") || assetPath.Contains("Correr") || (assetPath.Contains("Rodilla") && !assetPath.Contains("Estocada")) || assetPath.Contains("Fila_De_Pie");      // (Lancero_Estocada_Fila no: no lleva «Fila_De_Pie»)
                 c.lockRootRotation = true; c.keepOriginalOrientation = true;
                 c.lockRootHeightY = true; c.keepOriginalPositionY = true;
                 c.lockRootPositionXZ = true; c.keepOriginalPositionXZ = true;
@@ -343,19 +346,24 @@ namespace BronzeAge.Demo
         static DemoAnimacionesVigilante()
         {
             // al abrir una escena (o al volver de Play) la vista previa se monta en cuanto la escena está cargada
-            EditorSceneManager.sceneOpened += (escena, modo) => DemoAnimaciones.RefrescarVistasPrevias();
+            EditorSceneManager.sceneOpened += (escena, modo) => DemoAnimaciones.VistaPreviaAhoraOPedir();
             EditorApplication.playModeStateChanged += estado =>
             {
-                if (estado == PlayModeStateChange.EnteredEditMode) DemoAnimaciones.RefrescarVistasPrevias();
+                if (estado == PlayModeStateChange.EnteredEditMode) DemoAnimaciones.VistaPreviaAhoraOPedir();
             };
         }
 
         static void OnPostprocessAllAssets(string[] importados, string[] borrados, string[] movidos, string[] desde)
         {
             bool toca = importados.Concat(borrados).Concat(movidos)
-                .Any(r => r.StartsWith(DemoAnimaciones.RAIZ + "/") && (r.EndsWith(".json") || r.EndsWith(".fbx") || r.EndsWith(".mat")));
+                .Any(r => (r.StartsWith(DemoAnimaciones.RAIZ + "/") || RutasBronzeAge.EsModelo(r) || RutasBronzeAge.EsClip(r) || (r.StartsWith(RutasBronzeAge.ESCUADRAS + "/") && r.EndsWith(".mat")))
+                          && (r.EndsWith(".json") || r.EndsWith(".fbx") || r.EndsWith(".mat")));
+            // cualquier fichero de nuestras carpetas que entre, se mueva o se borre: el índice de RutasBronzeAge se rehace
+            if (importados.Concat(borrados).Concat(movidos).Concat(desde).Any(r => r.StartsWith(RutasBronzeAge.ESCUADRAS + "/")
+                    || r.StartsWith(RutasBronzeAge.COMUN + "/") || r.StartsWith(RutasBronzeAge.DEMO + "/")))
+                RutasBronzeAge.Olvidar();
             if (toca)
-                EditorApplication.delayCall += DemoAnimaciones.RefrescarVistasPrevias;
+                DemoAnimaciones.PedirVistaPrevia();         // una sola vez por tanda, al acabar de importar
         }
     }
 }

@@ -37,7 +37,7 @@ public static class SquadUnitSpawnBuilder
             Scale = 1f
         });
         ecb.AddComponent(unit, new UnitVisualReference
-        { visualPrefabName = GetUnitVisualPrefabName(context.squadType) });
+        { visualPrefabName = VisualName(data, context.squadType, context.instanceId, slot.slotIndex) });
         ecb.AddComponent(unit, new UnitEquipmentComponent
         {
             armorPercent = 100f,
@@ -162,6 +162,19 @@ public static class SquadUnitSpawnBuilder
                 shotTimer = 0f
             });
         }
+    }
+
+    /// <summary>
+    /// Clave del visual de un soldado. Con figuras (BronzeAge, <see cref="SquadDataComponent.visualVariants"/> &gt; 0):
+    /// «visualPrefabName_X», con X entre A y la N-ésima letra, al azar pero fija por escuadra y puesto (servidor y cliente
+    /// eligen la misma, y la clave viaja en <c>VisualRed</c>). Sin figuras, la del tipo de escuadra, como siempre.
+    /// </summary>
+    public static FixedString64Bytes VisualName(in SquadDataComponent data, SquadType squadType, int instanceId, int slotIndex)
+    {
+        if (data.visualVariants <= 0 || data.visualPrefabName.IsEmpty)
+            return GetUnitVisualPrefabName(squadType);
+        int k = (int)(math.hash(new int2(instanceId, slotIndex)) % (uint)data.visualVariants);
+        return new FixedString64Bytes($"{data.visualPrefabName}_{(char)('A' + k)}");
     }
 
     private static FixedString64Bytes GetUnitVisualPrefabName(SquadType squadType)

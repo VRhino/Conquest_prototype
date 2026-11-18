@@ -137,4 +137,8 @@ public class SquadData : ScriptableObject
     
     /// <summary> Prefab name for the visual representation of this unit type.</summary>
     public string visualPrefabName;
+
+    /// <summary>Figuras distintas del visual (BronzeAge). 0: un visual por tipo de escuadra, como siempre. N &gt; 0: cada soldado
+    /// usa «visualPrefabName_X», con X al azar (fijo por soldado) entre A y la N-ésima letra.</summary>
+    public int visualVariants;
 }

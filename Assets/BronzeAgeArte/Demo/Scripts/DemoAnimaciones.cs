@@ -1,7 +1,8 @@
 // Galería de animaciones de BronzeAge, guiada por datos: al darle a Play lee Assets/BronzeAgeArte/Demo/puestos.json y
 // monta un puesto por entrada (figura repitiendo su clip en bucle, peana y rótulo). Todos con el mismo reloj.
-// Añadir un puesto = dejar el FBX del clip en Demo/Animaciones (y el modelo en Demo/Modelos si es nuevo) y una entrada
-// en puestos.json. Un FBX de Animaciones que no esté en la lista sale igual, al final, «sin catalogar».
+// Añadir un puesto = dejar el FBX del clip en la carpeta Animations de su escuadra (y el modelo en su carpeta Models si
+// es nuevo; ver RutasBronzeAge) y una entrada en puestos.json. Un clip que no esté en la lista sale igual, al final,
+// «sin catalogar».
 // Una entrada con «secuencia» (clips separados por comas) reproduce esos clips encadenados, uno tras otro, en bucle.
 // Los puestos se acumulan: nunca se quitan; las versiones de una misma animación van una al lado de la otra.
 // Teclas: Espacio pausa/reanuda, 1/2/3 velocidad x1/x0,5/x0,25, R reinicia, coma/punto fotograma a fotograma (en pausa).
@@ -33,6 +34,12 @@ namespace BronzeAge.Demo
         public Animator figura;
         public AnimationClip clip;
         public List<AnimationClip> secuencia = new List<AnimationClip>();   // si hay varios, se reproducen uno tras otro
+        public float avance;            // m/s: si > 0, la figura anda por una calle de ida y vuelta a esa velocidad
+        public float calle;             // m de calle (0: CALLE)
+        public float pausa;             // s que se queda en el último fotograma de la secuencia antes de volver a empezar
+        public Vector3 inicio;          // posición local de la figura al empezar la calle
+        public Quaternion giro0;        // giro local de la figura en el puesto
+        public Vector3 frente0;         // hacia dónde mira la figura (espacio del puesto) con giro0
     }
 
     /// <summary>Una entrada de puestos.json.</summary>
@@ -46,6 +53,9 @@ namespace BronzeAge.Demo
         public string clip;       // FBX en Demo/Animaciones, sin extensión
         public int piel;          // tono de piel 1-4 (FantasyHero_TonoN); 0 = el material que traiga el modelo
         public string secuencia;  // opcional: clips separados por comas, en orden (p. ej. reposo,tajo,reposo,tajo)
+        public float avance;      // opcional, m/s: locomoción en el sitio; la figura avanza a esa velocidad por una calle de ida y vuelta
+        public float calle;       // opcional, m de calle (por defecto 3 m)
+        public float pausa;       // opcional, s: la secuencia se queda quieta en su último fotograma (p. ej. tendido tras la muerte)
     }
 
     [Serializable]
@@ -59,6 +69,18 @@ namespace BronzeAge.Demo
     {
         public const string RAIZ = "Assets/BronzeAgeArte/Demo";
         public const string LISTA = RAIZ + "/puestos.json";
+        /// <summary>Ruta de un modelo, clip o material de nuestras tropas por su nombre ("" si no está).</summary>
+        static string Ruta(string nombre, string extension) => RutasBronzeAge.Buscar(nombre, extension) ?? "";
+        /// <summary>El modelo de la figura de un clip por figura («Lenador_A_Andar_1m» -> «Lenador_A_1m», «Granjero_B_…» ->
+        /// «Granjero_B»), o null.</summary>
+        static string ModeloDe(string clip)
+        {
+            var p = clip.Split('_');
+            if (p.Length < 3 || p[1].Length != 1) return null;
+            foreach (var m in new[] { $"{p[0]}_{p[1]}_1m", $"{p[0]}_{p[1]}" })
+                if (RutasBronzeAge.Buscar(m, ".fbx") is string r && RutasBronzeAge.EsModelo(r)) return m;
+            return null;
+        }
 
         public List<PuestoDemo> puestos = new List<PuestoDemo>();
         public float fotogramasPorSegundo = 30f;
@@ -89,7 +111,7 @@ namespace BronzeAge.Demo
         {
 #if UNITY_EDITOR
             // (al abrir la escena, OnEnable llega antes de que esté cargada: se monta en cuanto lo esté)
-            if (!Application.isPlaying) UnityEditor.EditorApplication.delayCall += () => { if (this != null && isActiveAndEnabled) MontarVistaPrevia(); };
+            if (!Application.isPlaying) PedirVistaPrevia();
 #endif
         }
 
@@ -130,7 +152,36 @@ namespace BronzeAge.Demo
                     p.clip.SampleAnimation(p.figura.gameObject, 0f);
         }
 
-        /// <summary>Rehace la vista previa de todas las demos abiertas (lo llama el editor al cambiar la lista o un FBX).</summary>
+        static bool vistaPedida;
+
+        /// <summary>Pide rehacer la vista previa de las demos abiertas: las peticiones que lleguen mientras tanto se juntan en
+        /// una sola, y se monta cuando Unity ha terminado de importar y compilar.</summary>
+        public static void PedirVistaPrevia()
+        {
+            if (vistaPedida) return;
+            vistaPedida = true;
+            UnityEditor.EditorApplication.delayCall += Atender;
+        }
+
+        static void Atender()
+        {
+            if (UnityEditor.EditorApplication.isUpdating || UnityEditor.EditorApplication.isCompiling)
+            {
+                UnityEditor.EditorApplication.delayCall += Atender;       // aún importando: en la próxima vuelta del editor
+                return;
+            }
+            vistaPedida = false;
+            RefrescarVistasPrevias();
+        }
+
+        /// <summary>Al abrir la escena o volver de Play: ya, si Unity no está importando ni compilando; si no, al acabar.</summary>
+        public static void VistaPreviaAhoraOPedir()
+        {
+            if (UnityEditor.EditorApplication.isUpdating || UnityEditor.EditorApplication.isCompiling) PedirVistaPrevia();
+            else RefrescarVistasPrevias();
+        }
+
+        /// <summary>Rehace ya la vista previa de todas las demos abiertas.</summary>
         public static void RefrescarVistasPrevias()
         {
             if (Application.isPlaying) return;
@@ -165,13 +216,13 @@ namespace BronzeAge.Demo
                 Debug.LogError($"[DemoAnimaciones] No se puede leer {LISTA}: {e.Message}");
             }
             var entradas = lista.puestos.Where(e => e != null && (!string.IsNullOrEmpty(e.clip) || !string.IsNullOrEmpty(e.secuencia))).ToList();
-            // los FBX de Animaciones que no estén en la lista también salen
+            // los clips de las escuadras que no estén en la lista también salen, al final (solo en Play: en la vista previa
+            // fuera de Play no, para que sea ligera)
             var modeloPorDefecto = entradas.Select(e => e.modelo).FirstOrDefault(m => !string.IsNullOrEmpty(m)) ?? "Lenador_C_1m";
-            var dir = Path.Combine(Path.GetDirectoryName(Application.dataPath), RAIZ, "Animaciones");
-            if (Directory.Exists(dir))
-                foreach (var f in Directory.GetFiles(dir, "*.fbx").Select(Path.GetFileNameWithoutExtension).OrderBy(x => x))
-                    if (!entradas.Any(e => e.clip == f))
-                        entradas.Add(new EntradaPuesto { nombre = f, version = "", tropa = "(sin catalogar)", modelo = modeloPorDefecto, clip = f });
+            if (Application.isPlaying)
+            foreach (var f in RutasBronzeAge.Clips().Select(Path.GetFileNameWithoutExtension).OrderBy(x => x))
+                    if (!entradas.Any(e => e.clip == f || (e.secuencia ?? "").Split(',').Any(x => x.Trim() == f)))   // (los de una secuencia ya salen)
+                        entradas.Add(new EntradaPuesto { nombre = f, version = "", tropa = "(sin catalogar)", modelo = ModeloDe(f) ?? modeloPorDefecto, clip = f });
 
             // orden: tropa (por su primera aparición), animación (ídem), y versiones en el orden de la lista
             var ordenTropa = entradas.Select(e => e.tropa ?? "").Distinct().ToList();
@@ -208,9 +259,9 @@ namespace BronzeAge.Demo
 
         bool CrearPuesto(EntradaPuesto e, Vector3 pos, Material peanaMat, int n, Transform padre, List<PuestoDemo> destino)
         {
-            var modelo = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>($"{RAIZ}/Modelos/{e.modelo}.fbx");
+            var modelo = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(Ruta(e.modelo, ".fbx"));
             var nombreClip = !string.IsNullOrEmpty(e.clip) ? e.clip : (e.secuencia ?? "").Split(',')[0].Trim();
-            var clip = UnityEditor.AssetDatabase.LoadAllAssetsAtPath($"{RAIZ}/Animaciones/{nombreClip}.fbx")
+            var clip = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(Ruta(nombreClip, ".fbx"))
                 .OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__preview__"));
             if (modelo == null || clip == null)
             {
@@ -235,13 +286,13 @@ namespace BronzeAge.Demo
             fig.transform.localPosition = new Vector3(0, 0.04f, 0);
             fig.transform.localRotation = Quaternion.Euler(0, 90, 0);      // de lado al paseo: el tajo se ve entero
             // materiales de la demo: la piel de Synty con su tono y la ropa/herramienta con el atlas de la tropa
-            var tono = e.piel > 0 ? UnityEditor.AssetDatabase.LoadAssetAtPath<Material>($"{RAIZ}/Materiales/FantasyHero_Tono{e.piel}.mat") : null;
+            var tono = e.piel > 0 ? UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(Ruta($"FantasyHero_Tono{e.piel}", ".mat")) : null;
             // atlas de la tropa por el nombre del material del FBX («Lenadores_Atlas», «Mineros_Atlas»…); «madera», el de leñadores
             Material Atlas(string nom)
             {
                 int k = nom.IndexOf("_Atlas");
                 var n = k > 0 ? nom.Substring(0, k + 6) : nom.Contains("madera") ? "Lenadores_Atlas" : null;
-                return n != null ? UnityEditor.AssetDatabase.LoadAssetAtPath<Material>($"{RAIZ}/Materiales/{n}.mat") : null;
+                return n != null ? UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(Ruta(n, ".mat")) : null;
             }
             foreach (var r in fig.GetComponentsInChildren<Renderer>())
             {
@@ -273,11 +324,22 @@ namespace BronzeAge.Demo
             tmp.rectTransform.sizeDelta = new Vector2(2.9f, 1f);
             rot.AddComponent<RotuloHaciaCamara>();
 
-            var puesto = new PuestoDemo { nombre = titulo, tropa = e.tropa, figura = anim, clip = clip };
+            var puesto = new PuestoDemo { nombre = titulo, tropa = e.tropa, figura = anim, clip = clip, avance = e.avance, calle = e.calle, pausa = e.pausa,
+                                          inicio = fig.transform.localPosition, giro0 = fig.transform.localRotation };
+            if (e.avance > 0)
+            {
+                // hacia dónde mira: del tobillo a los dedos del pie, en la pose del primer fotograma
+                clip.SampleAnimation(fig, 0f);
+                Transform Buscar(Transform t, string n) { if (t.name == n) return t; foreach (Transform c in t) { var r = Buscar(c, n); if (r) return r; } return null; }
+                var tob = Buscar(fig.transform, "Ankle_R"); var dedos = Buscar(fig.transform, "Toes_R");
+                var d = tob != null && dedos != null ? raiz.transform.InverseTransformDirection(dedos.position - tob.position) : Vector3.forward;
+                d.y = 0;
+                puesto.frente0 = d.sqrMagnitude > 1e-6f ? d.normalized : Vector3.forward;
+            }
             if (!string.IsNullOrEmpty(e.secuencia))
                 foreach (var nom in e.secuencia.Split(','))
                 {
-                    var c = UnityEditor.AssetDatabase.LoadAllAssetsAtPath($"{RAIZ}/Animaciones/{nom.Trim()}.fbx")
+                    var c = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(Ruta(nom.Trim(), ".fbx"))
                         .OfType<AnimationClip>().FirstOrDefault(x => !x.name.StartsWith("__preview__"));
                     if (c != null) puesto.secuencia.Add(c);
                     else Debug.LogWarning($"[DemoAnimaciones] Secuencia de «{titulo}»: falta el clip {nom}");
@@ -357,10 +419,12 @@ namespace BronzeAge.Demo
                 if (secuencias.TryGetValue(i, out var sq))
                 {
                     var lista = puestos[i].secuencia;
-                    double total = lista.Sum(c => Math.Max(1e-3, c.length));
+                    double suma = lista.Sum(c => Math.Max(1e-3, c.length));
+                    double total = suma + Math.Max(0, puestos[i].pausa);
                     double t = tiempo % total;
                     int k = 0;
-                    while (k < lista.Count - 1 && t >= lista[k].length) { t -= lista[k].length; k++; }
+                    if (t >= suma) { k = lista.Count - 1; t = lista[k].length; }      // la pausa: quieto en el último fotograma
+                    else while (k < lista.Count - 1 && t >= lista[k].length) { t -= lista[k].length; k++; }
                     for (int j = 0; j < lista.Count; j++) sq.mezcla.SetInputWeight(j, j == k ? 1f : 0f);
                     sq.pasos[k].SetTime(t);
                     grafos[i].Evaluate(0f);
@@ -369,7 +433,31 @@ namespace BronzeAge.Demo
                 double largo = Math.Max(1e-3, puestos[i].clip.length);
                 clips[i].SetTime(tiempo % largo);
                 grafos[i].Evaluate(0f);
+                Andar(puestos[i], tiempo);
             }
+        }
+
+        public const float CALLE = 3f;     // m de calle de ida y vuelta para los puestos que andan (si no dicen otra)
+        public const float GIRO = 0.4f;    // s que tarda en dar la vuelta al final de la calle
+
+        /// <summary>Locomoción en el sitio: la figura recorre la calle (hacia -Z del puesto) a la velocidad del clip y, al
+        /// final, se da la vuelta en su sitio en GIRO segundos. Si el clip y la velocidad casan, el pie de apoyo no patina.</summary>
+        static void Andar(PuestoDemo p, double t)
+        {
+            if (p.avance <= 0 || p.figura == null) return;
+            float calle = p.calle > 0 ? p.calle : CALLE;
+            double ida = calle / p.avance, periodo = 2 * (ida + GIRO);
+            double u = t % periodo;
+            float x, ang;                                     // posición en la calle y giro respecto a ir de ida
+            if (u < ida) { x = (float)(p.avance * u); ang = 0; }
+            else if (u < ida + GIRO) { x = calle; ang = (float)(180 * (u - ida) / GIRO); }
+            else if (u < 2 * ida + GIRO) { x = calle - (float)(p.avance * (u - ida - GIRO)); ang = 180; }
+            else { x = 0; ang = 180 + (float)(180 * (u - 2 * ida - GIRO) / GIRO); }
+            var dir = Vector3.back;
+            var fig = p.figura.transform;
+            fig.localRotation = Quaternion.AngleAxis(ang, Vector3.up) *
+                                Quaternion.AngleAxis(Vector3.SignedAngle(p.frente0, dir, Vector3.up), Vector3.up) * p.giro0;
+            fig.localPosition = p.inicio + dir * x;
         }
 
         void OnDestroy()

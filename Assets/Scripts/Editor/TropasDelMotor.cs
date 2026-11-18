@@ -42,10 +42,43 @@ public static class TropasDelMotor
     const FormationType L = FormationType.Line, D = FormationType.Dispersed, C = FormationType.Wedge,
         M = FormationType.ShieldWall, T = FormationType.Testudo;
 
+    /// <summary>
+    /// BronzeAge (rama bronzeage/tropas-en-batalla): tropas con modelo y animaciones propias. El visual de cada soldado es
+    /// «visual_X», con X una de sus figuras (A, B, C…; los prefabs y su registro los monta BronzeAge &gt; Tropas), y la
+    /// ventana de golpe sale del contacto real de su clip de ataque (s). La formación de una familia puede venir de otra
+    /// base (la línea de los piqueros para la milicia), copiada y alargada a sus soldados.
+    /// </summary>
+    static readonly Dictionary<string, (string visual, int figuras, float golpeEmpieza, float golpeDura, float duracionAtaque)> Aspecto = new()
+    {
+        // estocada alta/baja de 40 fotogramas (1,30 s); la punta llega al contacto en el fotograma 15 (0,47 s)
+        { "milicia_lanceros", ("BronzeAge_Lancero", 4, 0.47f, 0.15f, 1.30f) },
+        // las levas: tajos (y estocadas de la horca) de 40 fotogramas con el primer contacto en el 15, como la milicia
+        { "lenadores", ("BronzeAge_Lenador", 4, 0.47f, 0.15f, 1.30f) },
+        { "mineros", ("BronzeAge_Minero", 4, 0.47f, 0.15f, 1.30f) },
+        { "granjeros", ("BronzeAge_Granjero", 4, 0.47f, 0.15f, 1.30f) },
+    };
+    /// <summary>
+    /// PROVISIONAL (Víctor, 18-11, «vamos con a para probar»): alcance de ataque forzado para las pruebas con la lanza de
+    /// 3 m de la milicia (el contacto de sus estocadas queda a unos 3,05 m). El dato definitivo es el «alcance» del motor:
+    /// cuando el motor lo mande, quitar esta entrada.
+    /// </summary>
+    static readonly Dictionary<string, float> AlcanceDePrueba = new() { { "milicia_lanceros", 3.0f } };
+    /// <summary>Troops whose borrowed formation keeps the base's ranks and widens them instead of adding ranks behind
+    /// (Víctor, 18-11: the militia's line like the pikemen's, a kneeling front rank and a standing rear rank).</summary>
+    static readonly HashSet<string> EnsancharFilas = new() { "milicia_lanceros" };
+    // (18-11) cuánto se corre la fila de detrás respecto a la de delante, en pasos. La milicia 0,35: con su lanza de pie a la
+    // cadera, a 0,5 pasaba rozando a los de rodillas; a 0,35 el asta queda a 17,7 cm de cualquier parte de los de delante,
+    // parados o atacando (PruebaTropasAnimator, malla real), y se conserva el tresbolillo
+    static readonly Dictionary<string, float> MedioPasoFilaTrasera = new() { { "milicia_lanceros", 0.35f } };
+    static readonly Dictionary<string, Dictionary<FormationType, Base>> FormacionDeOtraBase = new()
+    {
+        { "milicia_lanceros", new() { { FormationType.Line, Base.Piqueros } } },
+    };
+
     /// <summary>Base and formation families (besides rest) of each troop. A troop that is not here is not imported.</summary>
     static readonly Dictionary<string, (Base baseDeLaTropa, FormationType[] familias)> Bases = new()
     {
-        { "milicia_lanceros", (Base.Lanceros, new[] { L, D, C }) },
+        { "milicia_lanceros", (Base.Lanceros, new[] { L }) },          // (Víctor, 18-11: solo la línea de los piqueros)
         { "lenadores", (Base.Lanceros, new[] { D }) },
         { "granjeros", (Base.Lanceros, new[] { D }) },
         { "mineros", (Base.Lanceros, new[] { D }) },
@@ -163,6 +196,19 @@ public static class TropasDelMotor
             tropa.availableForRecruitmentByDefault = false;
             tropa.progressionData = progresion;
             AplicarCombate(tropa, t.combate);
+            if (Aspecto.TryGetValue(t.id, out var aspecto))
+            {
+                tropa.visualPrefabName = aspecto.visual;
+                tropa.visualVariants = aspecto.figuras;
+                if (tropa.meleeData != null)
+                {
+                    tropa.meleeData.strikeWindowStart = aspecto.golpeEmpieza;
+                    tropa.meleeData.strikeWindowDuration = aspecto.golpeDura;
+                    tropa.meleeData.attackAnimationDuration = aspecto.duracionAtaque;
+                    if (AlcanceDePrueba.TryGetValue(t.id, out var alcance)) tropa.meleeData.attackRange = alcance;
+                    EditorUtility.SetDirty(tropa.meleeData);
+                }
+            }
             tropa.formations = Formaciones(tropa, plan.familias, bases.Values, carpeta);
             if (tropa.restFormation == null)
                 tropa.restFormation = RestFormationSetup.Create(tropa, ruta, Reposo(t.id, plan.baseDeLaTropa));
@@ -251,14 +297,39 @@ public static class TropasDelMotor
         {
             var propia = (tropa.formations ?? Array.Empty<FormationDefinition>()).FirstOrDefault(f => f != null && f.formationType == familia);
             var formacion = propia ?? donantes.FirstOrDefault(f => f.formationType == familia);
+            string sufijo = familia.ToString();
+            if (FormacionDeOtraBase.TryGetValue(tropa.id, out var otras) && otras.TryGetValue(familia, out var otraBase))
+            {
+                // la de esa base (p. ej. la línea de los piqueros), en su propia copia alargada
+                var deLaBase = bases.FirstOrDefault(b => b.id == IdDeBase[otraBase]);
+                formacion = deLaBase?.formations?.FirstOrDefault(f => f != null && f.formationType == familia) ?? formacion;
+                sufijo = $"{familia}_{otraBase}";
+            }
             if (formacion == null)
             {
                 Debug.LogWarning($"[TropasDelMotor] {tropa.id}: Conquest no tiene formación {familia}.");
                 continue;
             }
+            if (EnsancharFilas.Contains(tropa.id) && FormacionDeOtraBase.TryGetValue(tropa.id, out var anchas) && anchas.ContainsKey(familia))
+            {
+                // its own copy, rebuilt from the base's every import: same ranks, each one wider. Named after the formation only
+                // (milicia_lanceros_Line), not its base (Víctor, 18-11: «el piqueros en el nombre no me dice nada»)
+                string ruta = $"{carpeta}/Formations/{tropa.id}_{familia}.asset";
+                var copia = AssetDatabase.LoadAssetAtPath<FormationDefinition>(ruta);
+                if (copia == null)
+                {
+                    Directory.CreateDirectory($"{carpeta}/Formations");
+                    AssetDatabase.Refresh();
+                    copia = UnityEngine.Object.Instantiate(formacion);
+                    AssetDatabase.CreateAsset(copia, ruta);
+                }
+                Ensanchar(formacion, copia, tropa.unitCount, MedioPasoFilaTrasera.TryGetValue(tropa.id, out var mp) ? mp : (float?)null);
+                resultado.Add(copia);
+                continue;
+            }
             if (formacion.Capacity < tropa.unitCount)
             {
-                string ruta = $"{carpeta}/Formations/{tropa.id}_{familia}.asset";
+                string ruta = $"{carpeta}/Formations/{tropa.id}_{sufijo}.asset";
                 var copia = AssetDatabase.LoadAssetAtPath<FormationDefinition>(ruta);
                 if (copia == null)
                 {
@@ -273,6 +344,46 @@ public static class TropasDelMotor
             resultado.Add(formacion);
         }
         return resultado.ToArray();
+    }
+
+    /// <summary>Rebuilds <paramref name="copia"/> from the largest template of <paramref name="origen"/> with the same ranks
+    /// (row, role, depth, the rear ranks' sideways offset) and <paramref name="soldados"/> spread over them, front ranks
+    /// first (25 in 2 ranks: 13 in front, 12 behind).</summary>
+    static void Ensanchar(FormationDefinition origen, FormationDefinition copia, int soldados, float? medioPaso = null)
+    {
+        if (origen.layout != FormationLayoutKind.Template || origen.templates == null || origen.templates.Length == 0) return;
+        var plantilla = origen.templates.OrderByDescending(t => t.slots.Length).First();
+        var filas = plantilla.slots.GroupBy(s => s.row).OrderBy(g => g.Key).Select(g => g.OrderBy(s => s.position.x).ToArray()).ToArray();
+        var primera = filas[0];
+        float paso = primera.Length > 1 ? (primera[primera.Length - 1].position.x - primera[0].position.x) / (primera.Length - 1) : 1f;
+        var slots = new List<FormationSlot>();
+        int enLaPrimera = soldados / filas.Length + (soldados % filas.Length > 0 ? 1 : 0);
+        for (int f = 0; f < filas.Length; f++)
+        {
+            int enEsta = soldados / filas.Length + (f < soldados % filas.Length ? 1 : 0);
+            // keeps each rank's sideways offset from the front one (the half column of the pikemen's rear rank). A rank with
+            // one soldier fewer or more is already shifted half a column by being centred: that half comes off, or 13 in front
+            // and 12 behind end up right behind each other (the rear lances through the front rank's heads, Víctor 18-11).
+            float desfase = filas[f].Average(s => s.position.x) - primera.Average(s => s.position.x);
+            if ((enLaPrimera - enEsta) % 2 != 0) desfase -= 0.5f * paso;
+            // el medio paso pedido es el desfase FINAL de la fila respecto a la de delante: si esta fila tiene un soldado más o
+            // menos, el centrado ya pone medio paso, que se descuenta (18-11: se ponía encima y quedaba a 0,85 = -0,15)
+            if (f > 0 && medioPaso.HasValue) desfase = medioPaso.Value * paso - ((enLaPrimera - enEsta) % 2 != 0 ? 0.5f * paso : 0f);
+            float centro = primera.Average(s => s.position.x) + desfase;
+            for (int i = 0; i < enEsta; i++)
+            {
+                var nuevo = filas[f][0];
+                nuevo.position = new Vector2(centro + (i - (enEsta - 1) * 0.5f) * paso, filas[f][0].position.y);
+                slots.Add(nuevo);
+            }
+        }
+        copia.layout = origen.layout;
+        copia.spacing = origen.spacing;
+        copia.postures = origen.postures;
+        copia.templates = new[] { new FormationTemplate { minUnits = 0, slots = slots.ToArray() } };
+        string problema = copia.Validate();
+        if (problema != null) Debug.LogWarning($"[TropasDelMotor] {copia.name}: {problema}");
+        EditorUtility.SetDirty(copia);
     }
 
     /// <summary>Deepens the largest template of a formation with rows like its last one until it fits <paramref name="soldados"/>.</summary>

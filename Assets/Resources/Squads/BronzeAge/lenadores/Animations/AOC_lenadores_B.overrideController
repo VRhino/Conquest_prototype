@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_lenadores_B
+  m_Controller: {fileID: 9100000, guid: 41418712c877ea84e8a1ad61509cfc4a, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 2f2f3a44f384b71478eb043443b41271,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 4a3991779277e57418985c3d7d0173f3,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: c72594a0ebb0bc540bd92641ff2bd263,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 1a97865e21b494f49927e0d5f5a27beb,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: af3ce0902acffc747ba05c53deaa9807,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 2ec9334cee6241b4ca65c7f4e732574b,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 225c4ee98b86d1e4f881ff4ece7f6861,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 1f9321c3fd6ec5842979635a8268b9e2,
+      type: 3}

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_mineros_C
+  m_Controller: {fileID: 9100000, guid: 50991c7714f14a745b2a431f550846ee, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 856897e7fdd7f074cbc7149d8c777a6a,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 8a0811b92a69d104c867aade8992e1dd,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: d88750f09a7645743854106f9fa007e4,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 590254acaf4bdd34e8cd9f7a7659b5f3,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: c6536525b28a24e4caf2653504a6b873,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: b6fea195ea622014d9a3ab3f41d674a1,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 27a59bbcf9e239840b2d29b8d9b9f84b,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: b08c180cb0e6c8c49b00f1e2b5cff128,
+      type: 3}

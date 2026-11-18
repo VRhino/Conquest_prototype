@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AOC_granjeros_D
+  m_Controller: {fileID: 9100000, guid: bc0db47fb682b8e4b957b8967b17d993, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: -623603649343465320, guid: c9b39940c83f0ca409c26aff0a431c13,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 1ac9eee0ed98f4145b06c5b40d7e4e20,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 67e04fd6fdc0da04da28f1d8b1e5010e,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: f05d6dbc5b45fa043babce65f49e26b5,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 4da55d8a2629e7e43ab2252d243126b8,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 476b75a0345d98540b025236297521ff,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: bd7cd6586c4681a4ba1d74537614397d,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 36093cea368498c49914e644491ef6aa,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 0f08fc5a32b628a40aff72751d8e946e,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: c11ebd9ec5dadf242820a76040531413,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 1b3b1d125eacaa6478428d6ac3143d68,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: 8202f2117ad511c4588dfb8773f4ece0,
+      type: 3}
+  - m_OriginalClip: {fileID: -623603649343465320, guid: 303cf2f39402c094dbd296d2b58e1cad,
+      type: 3}
+    m_OverrideClip: {fileID: -623603649343465320, guid: d4c4a474dbd986c4a8a6d0b98f5d7a2f,
+      type: 3}

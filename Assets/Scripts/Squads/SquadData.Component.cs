@@ -60,6 +60,10 @@ public struct SquadDataComponent : IComponentData
     public float strikeWindowDuration;
     public float attackAnimationDuration;
 
+    // Visual propio de la tropa con figuras A, B, C… (SquadData.visualVariants); sin figuras, el visual del tipo de escuadra
+    public FixedString64Bytes visualPrefabName;
+    public int visualVariants;
+
     // Kinetic
     public float kineticMultiplier;
 

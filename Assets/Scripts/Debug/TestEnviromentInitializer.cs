@@ -1,4 +1,5 @@
 // This class is responsible for initializing the test environment
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum EnemySquadMode { Random, Fixed }
@@ -10,6 +11,9 @@ public class TestEnvironmentInitializer : MonoBehaviour
     [SerializeField] private Team playerTeam = Team.TeamA;
     [SerializeField] private EnemySquadMode enemySquadMode = EnemySquadMode.Random;
     [SerializeField] private SquadData enemySquadOverride;
+    [Tooltip("Solo al abrir esta escena directamente (sin datos de batalla del juego ni del motor): si hay alguna, el jugador " +
+             "(su héroe del player_save) y cada bot llevan una escuadra completa de cada una, a nivel 1. Vacía: como siempre.")]
+    [SerializeField] private List<SquadData> tropasDePrueba = new List<SquadData>();
 
     public void SetupTestEnvironment()
     {
@@ -31,7 +35,10 @@ public class TestEnvironmentInitializer : MonoBehaviour
 
     public BattleData GenerateBattleData(HeroData localHero)
     {
-        return BattleDebugCreator.CreateBattleWithLocalHero(localHero, playerTeam, attackers, defenders, enemySquadMode, enemySquadOverride);
+        var battleData = BattleDebugCreator.CreateBattleWithLocalHero(localHero, playerTeam, attackers, defenders, enemySquadMode, enemySquadOverride);
+        if (battleData != null && tropasDePrueba != null && tropasDePrueba.Count > 0)
+            BattleDebugCreator.PonerTropasDePrueba(battleData, tropasDePrueba);
+        return battleData;
     }
 
 }

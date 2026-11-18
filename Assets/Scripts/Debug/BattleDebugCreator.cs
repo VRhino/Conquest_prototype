@@ -114,6 +114,27 @@ public static class BattleDebugCreator
         Debug.Log($"BattleDebugCreator: Created test battle with map '{battleData.mapData.name}'");
         return battleData;
     }
+    /// <summary>
+    /// Tropas de prueba (TestEnvironmentInitializer, escena abierta directamente): cada héroe de la batalla, el del jugador
+    /// incluido, lleva una escuadra de cada tropa de la lista, completa y a nivel 1, como las crea el juego para el motor.
+    /// </summary>
+    public static void PonerTropasDePrueba(BattleData battleData, List<SquadData> tropas)
+    {
+        void Poner(BattleHeroData heroe)
+        {
+            heroe.squadInstances = new List<SquadInstanceData>();
+            foreach (var tropa in tropas)
+            {
+                if (tropa == null) continue;
+                var escuadra = SquadDataService.CreateSquadInstance(tropa.id);
+                if (escuadra != null) heroe.squadInstances.Add(escuadra);
+            }
+        }
+        foreach (var heroe in battleData.attackers) Poner(heroe);
+        foreach (var heroe in battleData.defenders) Poner(heroe);
+        Debug.Log($"BattleDebugCreator: tropas de prueba para todos los héroes: {string.Join(", ", tropas.FindAll(t => t != null).ConvertAll(t => t.id))}");
+    }
+
     public static void GenerateRandomSquadInstances(List<string> validSquadIDs, out List<SquadInstanceData> randomSquads)
     {
         randomSquads = new List<SquadInstanceData>();
