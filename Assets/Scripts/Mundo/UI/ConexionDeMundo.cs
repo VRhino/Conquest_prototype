@@ -84,7 +84,7 @@ namespace ConquestTactics.Mundo.UI
         {
             if (Sesion != null && Sesion.Estado != EstadoSesion.Cerrada && Sesion.Bienvenida != null) return Sesion.Bienvenida;
             Sesion?.Cerrar();
-            var s = new Sesion(Acceso.UrlSesion, token, VersionCliente) { MundoHash = new CacheDeUno(Path.Combine(carpeta, "artefacto")).Guardada() };
+            var s = new Sesion(Acceso.UrlSesion, token, VersionCliente);
             s.AlBienvenida += b => CargarAvisos(b.HasHeroeId ? b.HeroeId : null);
             s.AlEvento += (_, e) => { if (HeroeId == null) return; Avisos.Procesar(e, HeroeId, s.Almacen, Datos); ContratosPorValorar.Anotar(e, HeroeId, ClaveDeJugador(HeroeId), s.Almacen); };
             Sesion = s;

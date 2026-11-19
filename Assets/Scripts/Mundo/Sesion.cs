@@ -33,8 +33,9 @@ namespace ConquestTactics.Mundo
         public readonly string Url;
         public readonly string Token;
         public readonly string VersionCliente;
-        /// <summary>El hash del artefacto de mundo que ya se tiene en disco (no hace falta bajarlo otra vez).</summary>
-        public string MundoHash;
+        /// <summary>El hash del mundo de la última `Bienvenida`, para el `Hola` de las reconexiones (como el cliente web). La primera conexión no
+        /// lo manda: si el mundo cambió, el servidor cortaría con `mundo_distinto` antes de la `Bienvenida` que trae el nuevo.</summary>
+        public string MundoHash { get; private set; }
         /// <summary>Reconectar solo al caerse la conexión (por defecto sí).</summary>
         public bool Reconectar = true;
 
@@ -279,6 +280,7 @@ namespace ConquestTactics.Mundo
         void AlLlegarBienvenida(Bienvenida b)
         {
             Bienvenida = b;
+            if (b.Mundo != null) MundoHash = b.Mundo.Hash;
             if (b.Reloj != null) AjustarReloj(b.Reloj, double.PositiveInfinity, true);
             // Lo que reanuda con foto o es nuevo llega en su mensaje; lo que ya no está suscrito se descarta. La VISTA no se reanuda: se vuelve a
             // pedir abajo y llega como foto; hasta entonces se queda la de antes, para que el mapa no se vacíe un momento.
