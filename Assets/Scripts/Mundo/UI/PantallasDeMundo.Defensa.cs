@@ -84,20 +84,29 @@ namespace ConquestTactics.Mundo.UI
             var pie = Dialogo.Caja("salida-acciones defensa-acciones");
 
             // Las disponibles: las de tu campamento con soldados, fuera de la guarnición y sin candado de otra batalla (las que ya llevan el de esta valen).
-            var mias = h.EscuadronesIds.Select(id => a.Buscar(TipoEntidad.Escuadron, id)?.Escuadron).Where(e => e != null).ToList();
-            var disponibles = mias.Where(e => e.Cantidad > 0 && e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento && !e.EnGuarnicion
-                && (e.ReservaBatalla == null || e.ReservaBatalla.BattleId == b.Id)).ToList();
             int Coste(Escuadron s) => LiderazgoDe(s.TropaId) ?? 0;
-            // Lo que ya llevas fuera (en una columna) cuenta para el Liderazgo.
-            var fuera = mias.Where(e => e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.EjercitoId).Sum(Coste);
-            var tope = (int)h.LiderazgoBase - fuera;
-            // Las de partida: al unirte, las de tu loadout activo que estén aquí, mientras quepan; ya dentro, las que llevas en esta batalla.
-            var enLaBatalla = MisEscuadras(b).Select(s => s.SquadId).ToList();
-            var loadout = h.Loadouts.FirstOrDefault(x => x.Activo);
-            var elegidas = new List<string>();
-            foreach (var s in unirse ? disponibles.Where(s => loadout?.SquadIds.Contains(s.Id) == true) : disponibles.Where(s => enLaBatalla.Contains(s.Id)))
-                if (elegidas.Sum(id => Coste(disponibles.First(x => x.Id == id))) + Coste(s) <= tope) elegidas.Add(s.Id);
+            List<Escuadron> disponibles = null;
+            List<string> elegidas = null;
+            int tope = 0;
+            void Calcular()
+            {
+                var mias = h.EscuadronesIds.Select(id => a.Buscar(TipoEntidad.Escuadron, id)?.Escuadron).Where(e => e != null).ToList();
+                disponibles = mias.Where(e => e.Cantidad > 0 && e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.Campamento && !e.EnGuarnicion
+                    && (e.ReservaBatalla == null || e.ReservaBatalla.BattleId == b.Id)).ToList();
+                // Lo que ya llevas fuera (en una columna) cuenta para el Liderazgo.
+                var fuera = mias.Where(e => e.Contenedor?.DondeCase == ContenedorEscuadron.DondeOneofCase.EjercitoId).Sum(Coste);
+                tope = (int)h.LiderazgoBase - fuera;
+                // Las de partida: al unirte, las de tu loadout activo que estén aquí, mientras quepan; ya dentro, las que llevas en esta batalla.
+                var enLaBatalla = MisEscuadras(b).Select(s => s.SquadId).ToList();
+                var loadout = h.Loadouts.FirstOrDefault(x => x.Activo);
+                elegidas = new List<string>();
+                foreach (var s in unirse ? disponibles.Where(s => loadout?.SquadIds.Contains(s.Id) == true) : disponibles.Where(s => enLaBatalla.Contains(s.Id)))
+                    if (elegidas.Sum(id => Coste(disponibles.First(x => x.Id == id))) + Coste(s) <= tope) elegidas.Add(s.Id);
+            }
+            Calcular();
             bool eligiendo = false;
+            // Hasta que tocas la lista, sigue a la batalla y al héroe: al abrirla justo al conectar, la batalla aún puede no traer tus escuadras.
+            bool tocada = false;
 
             void Pintar()
             {
@@ -136,7 +145,7 @@ namespace ConquestTactics.Mundo.UI
                     if (lista.Count > 1)
                     {
                         var id = s.Id;
-                        var quitar = Dialogo.Boton("✕", "salida-hueco-quitar", () => { elegidas.Remove(id); Pintar(); });
+                        var quitar = Dialogo.Boton("✕", "salida-hueco-quitar", () => { elegidas.Remove(id); tocada = true; Pintar(); });
                         quitar.name = "quitar-" + id;
                         quitar.tooltip = "Dejarla fuera de esta batalla";
                         hueco.Add(quitar);
@@ -161,7 +170,7 @@ namespace ConquestTactics.Mundo.UI
                     foreach (var s in caben)
                     {
                         var id = s.Id;
-                        var candidata = new Button(() => { elegidas.Add(id); eligiendo = false; Pintar(); }) { name = "anadir-" + id };
+                        var candidata = new Button(() => { elegidas.Add(id); eligiendo = false; tocada = true; Pintar(); }) { name = "anadir-" + id };
                         candidata.AddToClassList("salida-candidata");
                         if (PiezasDeTropa.Miniatura(s.TropaId, 32) is VisualElement mini) candidata.Add(mini);
                         var textos = new VisualElement();
@@ -223,6 +232,21 @@ namespace ConquestTactics.Mundo.UI
             Pintar();
             placa.Add(pie);
             capaEncima.Add(velo);
+            // Lo que cambia en la batalla o en tu héroe se repinta solo mientras no hayas tocado la lista (como la convocatoria).
+            string Firma() => $"{a.Buscar(TipoEntidad.Batalla, batallaId)?.Batalla?.Version}|{HeroeAhora()?.Version}";
+            var firma = Firma();
+            velo.schedule.Execute(() =>
+            {
+                if (tocada || Firma() == firma) return;
+                firma = Firma();
+                h = HeroeAhora() ?? h;
+                b = a.Buscar(TipoEntidad.Batalla, batallaId)?.Batalla ?? b;
+                Calcular();
+                Pintar();
+            }).Every(RepasoDeVentanaMs);
         }
+
+        /// <summary>Cada cuánto mira una ventana abierta si cambió lo que enseña (el de la convocatoria).</summary>
+        const long RepasoDeVentanaMs = 500;
     }
 }

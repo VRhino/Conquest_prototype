@@ -518,7 +518,7 @@ namespace ConquestTactics.Mundo.UI
                 var h = HeroeAhora();
                 var cv = MiConvocatoria(h);
                 if (cv == null || FirmaExterna(cv, h) != firma) Pintar();
-            }).Every(500);
+            }).Every(RepasoDeVentanaMs);
         }
     }
 }
