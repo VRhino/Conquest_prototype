@@ -9,6 +9,7 @@ using UnityEngine.TestTools;
 
 namespace ConquestTactics.Mundo.UI.Tests
 {
+    [Category("SinServidor")]
     public class AvisoDeRedTests
     {
         static void Poner(string propiedad, object valor) =>

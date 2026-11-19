@@ -17,6 +17,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
+        [Category("Base")]
         [UnityTest, Timeout(600_000)]
         public IEnumerator LaBasePersonal()
         {

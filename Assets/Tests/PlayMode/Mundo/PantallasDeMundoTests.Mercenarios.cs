@@ -28,6 +28,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             s.Cerrar();
         }
 
+        [Category("Campamento")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuTablonDeMercenarios()
         {

@@ -11,6 +11,7 @@ using UnityEngine.TestTools;
 
 namespace ConquestTactics.Mundo.UI.Tests
 {
+    [Category("SinServidor")]
     public class VestidoDelMotorTests
     {
         static readonly (string clase, string casco, string[] mallas)[] Casos =

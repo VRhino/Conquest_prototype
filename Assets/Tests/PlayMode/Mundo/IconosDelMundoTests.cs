@@ -15,6 +15,7 @@ using UnityEngine.UIElements;
 
 namespace ConquestTactics.Mundo.UI.Tests
 {
+    [Category("SinServidor")]
     public class IconosDelMundoTests
     {
         GameObject go;

@@ -308,6 +308,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>La plaza ajena de visita: un héroe sin Facción, colocado dentro de una plaza fundada por otro, ve su interior con lo de fuera.</summary>
+        [Category("Plaza")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuPlazaAjenaDeVisita()
         {

@@ -41,6 +41,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             nickDe(nick);
         }
 
+        [Category("Batalla")]
         [UnityTest, Timeout(900_000), Explicit("Con las batallas en Unity: la corre tasks/pruebas/correr_batalla.sh")]
         public IEnumerator TuUnionALaBatalla()
         {

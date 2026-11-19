@@ -18,6 +18,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
+        [Category("Mapa")]
         [UnityTest, Timeout(1_200_000)]
         public IEnumerator TuAvanzadaYSuObra()
         {

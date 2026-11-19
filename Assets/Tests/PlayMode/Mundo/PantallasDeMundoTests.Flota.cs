@@ -42,6 +42,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             destino.Release();
         }
 
+        [Category("Plaza")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuFlota()
         {

@@ -12,6 +12,7 @@ using UnityEngine.TestTools;
 
 namespace ConquestTactics.Mundo.UI.Tests
 {
+    [Category("SinServidor")]
     public class SigilosTests
     {
         [UnityTest]

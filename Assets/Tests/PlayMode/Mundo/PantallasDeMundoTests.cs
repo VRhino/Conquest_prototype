@@ -70,6 +70,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
+        [Category("Entrada")]
         [UnityTest]
         public IEnumerator CrearCuentaEntrarYCerrarSesion()
         {
@@ -450,6 +451,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>El creador de personaje sin el encargo del motor: ya no trae las clases de relleno (tanda 3 de las clases y los objetos, 24a).
         /// No hay clases que elegir ni nada que crear: el creador solo vive en el flujo del motor.</summary>
+        [Category("Entrada")]
         [UnityTest]
         public IEnumerator ElCreadorSinElMotorNoTraeClasesDeRelleno()
         {
@@ -469,6 +471,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// <summary>Con héroe, al entrar sale el selector de personaje de Conquest en lugar de la tarjeta de la partida: el héroe en 3D con el
         /// aspecto que guardó el motor y su armadura, su nombre, nivel, clase y Facción, sin crear ni borrar; «Entrar al mundo» lleva al mapa.
         /// Dos cuentas: una mujer con piezas que no son las de por defecto y un hombre de otra clase. Las dos, sin Facción.</summary>
+        [Category("Entrada")]
         [UnityTest]
         public IEnumerator ConHeroeSaleElSelectorDePersonaje()
         {
@@ -582,6 +585,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>El campamento por dentro (paso 4B): las zonas con su cartel y la tecla F, la taberna, el mercado (comprar y verlo en tu almacén),
         /// la tropa (pedir prestada, reclutar o su motivo), los rechazos con su frase, y salir andando por la puerta con tropa, carga y víveres.</summary>
+        [Category("Campamento")]
         [UnityTest]
         public IEnumerator ElCampamentoPorDentro()
         {
@@ -901,6 +905,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>El selector de personaje sin el héroe del motor: ya no lista los héroes de la sesión local (tanda 3 de las clases y los objetos,
         /// 23a). Solo vive en el flujo del motor.</summary>
+        [Category("Entrada")]
         [UnityTest]
         public IEnumerator ElSelectorSinElMotorNoTraeLosHeroesViejos()
         {

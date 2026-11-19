@@ -43,6 +43,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         static Punto Pu(double x, double y) => new Punto { X = (long)(x * 1000), Y = (long)(y * 1000) };
 
+        [Category("Mapa")]
         [UnityTest]
         public IEnumerator SeVeUnaCosaDeCadaTipo()
         {

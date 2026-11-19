@@ -53,6 +53,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             de(id, nick);
         }
 
+        [Category("Mapa")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuEjercitoEnPreparacion()
         {

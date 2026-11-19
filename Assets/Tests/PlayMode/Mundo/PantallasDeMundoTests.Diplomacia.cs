@@ -31,6 +31,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             s.Cerrar();
         }
 
+        [Category("Faccion")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuDiplomaciaDelRey()
         {

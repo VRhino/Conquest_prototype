@@ -4,8 +4,9 @@
 # se apaga con tasks/pruebas/parar.sh. Desde la carpeta de Conquest:
 #   bash tasks/pruebas/correr.sh "ConquestTactics.Mundo.UI.Tests" "<carpeta de capturas o vacío>"
 #   bash tasks/pruebas/correr.sh "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests.TuPlazaPorDentro;ConquestTactics.Mundo.UI.Tests.SigilosTests" ""
+#   bash tasks/pruebas/correr.sh "ConquestTactics.Mundo.UI.Tests" "" "Campamento;Plaza"   solo esas categorías ([Category] por pantalla)
 # Si el editor de Víctor tiene abierto el proyecto, no correr (el bloqueo de la carpeta lo impide).
-FILTRO="$1"; CAPS="$2"
+FILTRO="$1"; CAPS="$2"; CATEGORIAS="$3"
 CQ=$(cd "$(dirname "$0")/../.." && pwd)
 MOTOR=${MOTOR:-$(cd "$CQ/.." && pwd)/BronzeAgeMotorPruebas}
 # Fuera de Temp: Unity la vacía al arrancar y al salir, y el motor perdería su crónica (el diario de `datos/cronica`) a media prueba.
@@ -18,7 +19,7 @@ for i in $(seq 1 15); do grep -q escuchando "$DATOS/servidor.log" 2>/dev/null &&
 CODIGO=$(grep -o "regístrate con él): [A-Z0-9-]*" "$DATOS/servidor.log" | awk '{print $NF}')
 cd "$CQ"
 BRONZEAGE_PRUEBA_ADMIN=$CODIGO BRONZEAGE_PRUEBA_URL=http://127.0.0.1:7891 MUNDO_CAPTURAS="$CAPS" "/c/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Unity.exe" \
-  -batchmode -projectPath . -runTests -testPlatform PlayMode -testFilter "$FILTRO" -testResults Logs/mundo/play.xml -logFile Logs/mundo/play.log
+  -batchmode -projectPath . -runTests -testPlatform PlayMode -testFilter "$FILTRO" ${CATEGORIAS:+-testCategory "$CATEGORIAS"} -testResults Logs/mundo/play.xml -logFile Logs/mundo/play.log
 echo "exit $?"
 head -c 400 Logs/mundo/play.xml | grep -o 'result="[^"]*" total="[0-9]*" passed="[0-9]*" failed="[0-9]*"'
 grep -o 'methodname="[^"]*"[^>]*result="[^"]*"' Logs/mundo/play.xml | sed 's/classname.*result/result/' | grep -v Passed

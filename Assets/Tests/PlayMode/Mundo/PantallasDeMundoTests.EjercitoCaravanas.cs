@@ -18,6 +18,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
+        [Category("Mapa")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuEjercitoConCaravanas()
         {

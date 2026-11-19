@@ -74,6 +74,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             ColorOrlaId = "oro",
         };
 
+        [Category("Faccion")]
         [UnityTest, Timeout(600_000)]
         public IEnumerator TuFaccionSinFaccion()
         {
@@ -187,6 +188,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
+        [Category("Faccion")]
         [UnityTest, Timeout(300_000)]
         public IEnumerator ElSelectorConElSigilo()
         {

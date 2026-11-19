@@ -265,6 +265,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             s.Cerrar();
         }
 
+        [Category("Plaza")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuPlazaPorDentro()
         {

@@ -29,6 +29,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
+        [Category("Batalla")]
         [UnityTest, Timeout(900_000), Explicit("Con el lanzador del motor y el servidor de batalla de verdad: la corre Tools/BatallaDesdeElMundo/correr.sh")]
         public IEnumerator DelMapaALaBatalla()
         {

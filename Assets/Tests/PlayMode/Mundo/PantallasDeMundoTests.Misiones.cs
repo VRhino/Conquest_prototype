@@ -16,6 +16,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
+        [Category("Faccion")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TusMisiones()
         {

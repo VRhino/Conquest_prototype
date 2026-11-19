@@ -15,6 +15,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 {
     public partial class PantallasDeMundoTests
     {
+        [Category("Plaza")]
         [UnityTest, Timeout(900_000)]
         public IEnumerator TuComercioADistancia()
         {
