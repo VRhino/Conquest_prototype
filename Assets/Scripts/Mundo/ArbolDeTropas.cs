@@ -19,6 +19,8 @@ namespace ConquestTactics.Mundo
         {
             public string Id, Nombre, Tecnologia, Edificio;
             public int NivelRequerido, Escalon, Unidades;
+            /// <summary>El tier (1-5, `TROPAS_RECLUTABLES.tier`): el mismo orden que la rareza de su tarjeta en Conquest (rareza = 2·tier − 1).</summary>
+            public int Tier;
             public List<string> Equipo;
         }
 
@@ -110,6 +112,7 @@ namespace ConquestTactics.Mundo
                 {
                     Id = (string)t["id"], Nombre = (string)t["nombre"], Tecnologia = (string)t["tecnologia"], Edificio = (string)t["edificio"],
                     NivelRequerido = (int?)t["nivelRequerido"] ?? 1, Escalon = (int?)t["escalon"] ?? 0, Unidades = (int?)t["unidadesPorDefecto"] ?? 0,
+                    Tier = (int?)t["tier"] ?? 1,
                     Equipo = (t["costoEquipo"] as JObject)?.Properties().Select(x => x.Name).ToList() ?? new List<string>(),
                 });
             Construir();
@@ -330,13 +333,24 @@ namespace ConquestTactics.Mundo
             public Dictionary<string, int> Filas = new Dictionary<string, int>();
         }
 
-        public Disposicion Disponer(int eraVisible, ISet<string> plegados = null, ISet<string> ocultas = null)
+        /// <summary>Hasta cuántas columnas ocupa cada tier dentro de su Era (<see cref="Disponer"/> con <c>porTier</c>).</summary>
+        public const int ColumnasPorTier = 2;
+
+        /// <summary>
+        /// La disposición del prototipo (`disponerTropas`): por Era, las columnas por la profundidad de sus dependencias. Con <paramref name="porTier"/>
+        /// (Víctor, 2026-11-18; los árboles de reclutamiento de Conquest), dentro de cada Era las columnas van por tier, el más bajo a la izquierda:
+        /// cada tier ocupa hasta <see cref="ColumnasPorTier"/> columnas, las mismas en todos los carriles, y sus tropas las llenan bajando las filas
+        /// que hagan falta en su carril (en el orden de antes: nivel del edificio, escalón y su orden en el carril). Un tier sin tropas en la Era
+        /// no ocupa columna; con una sola tropa por carril, una.
+        /// </summary>
+        public Disposicion Disponer(int eraVisible, ISet<string> plegados = null, ISet<string> ocultas = null, bool porTier = false)
         {
             plegados ??= new HashSet<string>();
             ocultas ??= new HashSet<string>();
             var d = new Disposicion { ErasVis = Eras.Where(e => e.Orden <= eraVisible).ToList() };
             var vis = OrdenNodos.Select(id => Nodos[id]).Where(n => n.Era <= eraVisible && !plegados.Contains(n.Carril) && !ocultas.Contains(n.T.Id)).ToList();
             var enVis = new HashSet<string>(vis.Select(n => n.T.Id));
+            if (porTier) return DisponerPorTier(d, vis, enVis);
             var local = new Dictionary<string, int>();
             int ColDe(Nodo n)
             {
@@ -396,6 +410,41 @@ namespace ConquestTactics.Mundo
                 }
                 d.Filas[c.Id] = Math.Max(1, occ.Count);
             }
+            return d;
+        }
+
+        Disposicion DisponerPorTier(Disposicion d, List<Nodo> vis, HashSet<string> enVis)
+        {
+            foreach (var n in Nodos.Values) { n.Col = null; n.Fila = null; }
+            var orden = Carriles.ToDictionary(c => c.Id, c => c.Tropas);
+            // Las de un carril y un tier, en el orden de antes.
+            List<Nodo> Grupo(IEnumerable<Nodo> ns) => ns.OrderBy(n => n.T.NivelRequerido).ThenBy(n => n.T.Escalon)
+                .ThenBy(n => orden.TryGetValue(n.Carril, out var l) ? l.IndexOf(n.T.Id) : 0).ToList();
+            foreach (var c in Carriles) d.Ocupa[c.Id] = new List<HashSet<int>>();
+            foreach (var e in d.ErasVis)
+            {
+                d.BaseEra[e.Orden] = d.NCOL;
+                var deEra = vis.Where(n => n.Era == e.Orden).ToList();
+                var col = d.NCOL;
+                foreach (var tier in deEra.Select(n => n.T.Tier).Distinct().OrderBy(x => x))
+                {
+                    var porCarril = deEra.Where(n => n.T.Tier == tier).GroupBy(n => n.Carril).ToDictionary(g => g.Key, g => Grupo(g));
+                    var ancho = Math.Min(ColumnasPorTier, porCarril.Values.Max(l => l.Count));
+                    foreach (var (carril, l) in porCarril)
+                        for (int i = 0; i < l.Count; i++)
+                        {
+                            l[i].Col = col + i % ancho;
+                            l[i].Fila = i / ancho;
+                            var occ = d.Ocupa[carril];
+                            while (occ.Count <= l[i].Fila.Value) occ.Add(null);
+                            (occ[l[i].Fila.Value] ??= new HashSet<int>()).Add(l[i].Col.Value);
+                        }
+                    col += ancho;
+                }
+                d.ColsEra[e.Orden] = Math.Max(1, col - d.NCOL);
+                d.NCOL += d.ColsEra[e.Orden];
+            }
+            foreach (var c in Carriles) d.Filas[c.Id] = Math.Max(1, d.Ocupa[c.Id].Count);
             return d;
         }
     }

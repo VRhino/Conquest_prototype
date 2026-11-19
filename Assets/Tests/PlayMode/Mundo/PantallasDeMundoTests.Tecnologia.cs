@@ -100,32 +100,34 @@ namespace ConquestTactics.Mundo.UI.Tests
             bool TipVisible() => Tip() != null && Tip().resolvedStyle.display == DisplayStyle.Flex;
             try
             {
-                // El árbol de tropas de la plaza: los Lanceros de mimbre, «adoptables», con la etiqueta «Adoptar».
+                // El árbol de tropas de la plaza: solo lo que se recluta aquí (`SE_RECLUTA` del prototipo, 0.181.0): los Lanceros de mimbre, que solo
+                // piden adoptar su tecnología, no salen.
                 var plaza = raiz.Q("plaza");
                 yield return ClicFijo(raton, raiz, plaza.Q("riel").Q<Button>("riel-reclutamiento"));
                 yield return Esperar(() => raiz.Q("panel-tropa")?.Q("recl-tablero") != null, 10, "el árbol de la plaza");
-                var carta = raiz.Q("panel-tropa").Q<Button>("nodo-" + tropa);
-                Assert.IsTrue(carta.ClassListContains("adoptable"), "los Lanceros de mimbre, adoptables");
-                Assert.AreEqual("!", carta.Q<Label>(className: "recl-medalla")?.text, "la medalla «!»");
-                var etiqueta = carta.Q<Button>("adoptar-" + tropa);
-                Assert.IsNotNull(etiqueta, "la etiqueta «Adoptar»");
+                Assert.IsNull(raiz.Q("panel-tropa").Q<Button>("nodo-" + tropa), "los Lanceros de mimbre, adoptables, no salen en el árbol de la plaza");
+                var carta = raiz.Q("panel-tropa").Query<Button>().ToList().First(b => b.name.StartsWith("nodo-"));
                 yield return MoverRaton(raton, raiz, carta, () => raiz.Q("recl-tip")?.resolvedStyle.display == DisplayStyle.Flex);
-                Assert.IsTrue(raiz.Q("recl-tip").Query<Label>().ToList().Any(l => l.text.StartsWith("Solo falta adoptar")), "la frase del prototipo en la ficha corta");
-                Assert.IsTrue(raiz.Q("recl-tip").Query<Label>().ToList().Any(l => l.text == "TECNOLOGÍAS DE TU FACCIÓN"), "las tecnologías de tu Facción, marcadas");
-                // Lo que le faltaba a la ficha corta: «Edificios y pueblos», «Por soldado», «En campaña» y «Combate», con sus iconos.
+                // La ficha corta: «Edificios y pueblos», «Por soldado», «En campaña» y «Combate», con sus iconos.
                 var fichaCorta = raiz.Q("recl-tip");
                 var secciones = fichaCorta.Query<Label>(className: "recl-tip-seccion").ToList().Select(l => l.text).ToList();
-                foreach (var s in new[] { "EDIFICIOS Y PUEBLOS", "POR SOLDADO", "EN CAMPAÑA", "COMBATE" }) CollectionAssert.Contains(secciones, s, "la sección " + s);
-                Assert.IsNotNull(fichaCorta.Q("edificios-y-pueblos"), "las fichas de edificios");
+                foreach (var s in new[] { "POR SOLDADO", "EN CAMPAÑA", "COMBATE" }) CollectionAssert.Contains(secciones, s, "la sección " + s);
                 Assert.IsNotNull(fichaCorta.Q("en-campana"), "poder, velocidad y liderazgo");
                 Assert.IsNotNull(fichaCorta.Q("combate"), "vida, cadencia y alcance");
                 Assert.IsFalse(fichaCorta.Query<Label>().ToList().Any(l => l.text.Contains("ArmaMadera") || l.text.Contains("armaMadera")), "sin ids de recurso a la vista");
-                Debug.Log("[Prueba] ficha de tropa: " + string.Join(" | ", secciones) + "; tabla de combate: " + (fichaCorta.Q("tabla-combate") != null));
-                yield return EnTamanos(raiz, "102_tropa_adoptable");
-                yield return ClicEnVentana(raton, raiz, etiqueta);
+                Debug.Log($"[Prueba] ficha de tropa ({carta.name}): " + string.Join(" | ", secciones) + "; tabla de combate: " + (fichaCorta.Q("tabla-combate") != null));
+                yield return EnTamanos(raiz, "102_tropa_de_la_plaza");
+                yield return ClicFijo(raton, raiz, raiz.Q("panel-tropa").Q<Button>("cerrar"));
+                yield return Esperar(() => raiz.Q("panel-tropa") == null, 5, "el árbol cerrado");
+                // A la tecnología, desde la Facción: su pestaña y la carta de los Escudos ligeros.
+                yield return ClicFijo(raton, raiz, raiz.Q<Button>("faccion"));
+                yield return Esperar(() => Ventana()?.Q<Button>("pestana-faccion-tecnologia") != null, 10, "la ventana de la Facción");
+                yield return ClicEnVentana(raton, raiz, Ventana().Q<Button>("pestana-faccion-tecnologia"));
+                yield return Esperar(() => Ventana()?.Q<Button>("tec-" + tec) != null, 10, "el árbol de tecnologías");
+                yield return ClicEnVentana(raton, raiz, Ventana().Q<Button>("tec-" + tec));
 
                 // La pestaña Tecnología, con la ficha fija de los Escudos ligeros.
-                yield return Esperar(() => raiz.Q("panel-tropa") == null && Ventana()?.Q("tec-panel") != null, 10, "la pestaña Tecnología");
+                yield return Esperar(() => Ventana()?.Q("tec-panel") != null, 10, "la pestaña Tecnología");
                 CollectionAssert.AreEqual(new[] { "pestana-faccion-miembros", "pestana-faccion-plazas", "pestana-faccion-tecnologia", "pestana-faccion-tablon", "pestana-faccion-misiones", "pestana-faccion-mercenarios", "pestana-faccion-diplomacia", "pestana-faccion-ajustes" },
                     Ventana().Q("faccion-pestanas").Query<Button>().ToList().Select(b => b.name).ToArray(), "las pestañas que ya hay");
                 Assert.IsTrue(Ventana().Q<Button>("pestana-faccion-tecnologia").ClassListContains("activo"), "Tecnología, la elegida");
@@ -178,11 +180,14 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Tecla(UnityEngine.InputSystem.Key.Escape);
                 yield return Esperar(() => Ventana() == null, 5, "Esc cierra la ventana");
 
-                // En el árbol de tropas, los Lanceros de mimbre ya no son «adoptables».
+                // En el árbol de tropas, los Lanceros de mimbre ya no son «adoptables»: salen si ya se reclutan aquí; si aún les falta su edificio,
+                // siguen fuera (solo lo reclutable).
                 yield return ClicFijo(raton, raiz, raiz.Q("plaza").Q("riel").Q<Button>("riel-reclutamiento"));
-                yield return Esperar(() => raiz.Q("panel-tropa")?.Q<Button>("nodo-" + tropa) != null, 10, "el árbol de la plaza otra vez");
-                Assert.IsFalse(raiz.Q("panel-tropa").Q<Button>("nodo-" + tropa).ClassListContains("adoptable"), "ya no adoptables");
-                Debug.Log("[Prueba] tecnología: los Lanceros de mimbre, " + string.Join(" ", raiz.Q("panel-tropa").Q<Button>("nodo-" + tropa).GetClasses().Where(x => x != "recl-carta" && x != "unity-button" && x != "unity-text-element")));
+                yield return Esperar(() => raiz.Q("panel-tropa")?.Q("recl-tablero") != null, 10, "el árbol de la plaza otra vez");
+                var lanceros = raiz.Q("panel-tropa").Q<Button>("nodo-" + tropa);
+                Assert.IsFalse(lanceros?.ClassListContains("adoptable") == true, "ya no adoptables");
+                Debug.Log("[Prueba] tecnología: los Lanceros de mimbre, " + (lanceros == null ? "fuera del árbol (aún no se reclutan aquí)"
+                    : string.Join(" ", lanceros.GetClasses().Where(x => x != "recl-carta" && x != "unity-button" && x != "unity-text-element"))));
                 yield return Capturar("104b_tropa_tras_adoptar");
             }
             finally

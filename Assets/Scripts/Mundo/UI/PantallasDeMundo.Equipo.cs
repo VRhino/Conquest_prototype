@@ -61,23 +61,38 @@ namespace ConquestTactics.Mundo.UI
                 // La ficha no se queda con el ratón (ni ella ni lo de dentro).
                 foreach (var x in abierta.Query<VisualElement>().ToList()) x.pickingMode = PickingMode.Ignore;
                 capaEncima.Add(abierta);
-                var sitio = e.worldBound;
-                abierta.schedule.Execute(() =>
-                {
-                    if (abierta.panel == null) return;
-                    var raiz = capaEncima.worldBound;
-                    var ancho = abierta.resolvedStyle.width;
-                    var alto = abierta.resolvedStyle.height;
-                    var x = sitio.xMax + 8 + ancho > raiz.xMax ? sitio.xMin - ancho - 8 : sitio.xMax + 8;
-                    var y = Mathf.Clamp(sitio.yMin, raiz.yMin + 8, raiz.yMax - alto - 8);
-                    abierta.style.left = x - raiz.xMin;
-                    abierta.style.top = y - raiz.yMin;
-                    abierta.style.visibility = Visibility.Visible;
-                });
+                ColocarJunto(abierta, e);
             });
             // Se va al salir de verdad (la salida también llega al pasar por encima de un hijo: entonces el puntero sigue dentro).
             e.RegisterCallback<PointerLeaveEvent>(ev => { if (e.worldBound.Contains(ev.position)) return; abierta?.RemoveFromHierarchy(); abierta = null; });
             e.RegisterCallback<DetachFromPanelEvent>(_ => { abierta?.RemoveFromHierarchy(); abierta = null; });
+        }
+
+        /// <summary>Coloca `ficha` (ya en <see cref="capaEncima"/>) cuando tiene tamaño (al primer fotograma aún no lo tiene, y se salía por la
+        /// derecha): a la derecha de `junto` si cabe en la pantalla y si no a su izquierda, y siempre dentro de ella, también arriba y abajo
+        /// (Víctor, 2026-11-18).</summary>
+        void ColocarJunto(VisualElement ficha, VisualElement junto)
+        {
+            var sitio = junto.worldBound;
+        ficha.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (ficha.panel == null) return;
+                var ancho = ficha.resolvedStyle.width;
+                var alto = ficha.resolvedStyle.height;
+                if (float.IsNaN(ancho) || float.IsNaN(alto) || ancho < 1) return;
+                var raiz = capaEncima.worldBound;
+                var pantalla = ficha.panel.visualTree.worldBound;
+                var minX = Mathf.Max(raiz.xMin, pantalla.xMin) + 8;
+                var maxX = Mathf.Min(raiz.xMax, pantalla.xMax) - 8;
+                var minY = Mathf.Max(raiz.yMin, pantalla.yMin) + 8;
+                var maxY = Mathf.Min(raiz.yMax, pantalla.yMax) - 8;
+                var x = sitio.xMax + 8 + ancho <= maxX ? sitio.xMax + 8 : sitio.xMin - ancho - 8;
+                x = Mathf.Clamp(x, minX, Mathf.Max(minX, maxX - ancho));
+                var y = Mathf.Clamp(sitio.yMin, minY, Mathf.Max(minY, maxY - alto));
+                ficha.style.left = x - raiz.xMin;
+                ficha.style.top = y - raiz.yMin;
+                ficha.style.visibility = Visibility.Visible;
+            });
         }
 
         static bool EsPuesta(Heroe h, ItemInstancia p)

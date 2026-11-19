@@ -80,7 +80,7 @@ namespace ConquestTactics.Mundo.UI
             panel.Add(filete);
             var cab = Dialogo.Caja("avisos-cab");
             cab.Add(Dialogo.Texto("AVISOS", "kicker"));
-            cab.Add(Dialogo.Boton("Cerrar", "boton-secundario", Alternar));
+            cab.Add(Dialogo.Equis(Alternar));
             filete.Add(cab);
             var lista = new ScrollView();
             lista.style.flexGrow = 1;

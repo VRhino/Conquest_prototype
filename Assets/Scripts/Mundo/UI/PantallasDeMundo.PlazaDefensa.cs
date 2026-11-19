@@ -812,7 +812,7 @@ namespace ConquestTactics.Mundo.UI
             chips.name = "chips";
             cab.Add(chips);
             cab.Add(Dialogo.Caja("recl-hueco"));
-            var cerrarBoton = Dialogo.Boton("Cerrar", "boton-secundario", cerrar);
+            var cerrarBoton = Dialogo.Equis(cerrar);
             cerrarBoton.name = "cerrar";
             cab.Add(cerrarBoton);
             v.Add(cab);
@@ -881,8 +881,16 @@ namespace ConquestTactics.Mundo.UI
 
         int EraDelTier(int tier) => (int?)Objetos?["forja"]?["eraPorTier"]?[tier.ToString()] ?? 0;
 
-        static bool MetalAbierto(Asentamiento a, JObject f) =>
-            (string)f["tipo"] == "montura" || string.IsNullOrEmpty((string)f["metal"]) || (string)f["metal"] == "inicio" || a.MetalesArmeria.Contains((string)f["metal"]);
+        /// <summary>¿Abre esta Armería el metal de la pieza? Las monturas y los metales que no piden tecnología (`metales` a null en el catálogo:
+        /// `inicio` y, desde el motor 2026-11-19, `recluta`) siempre (`metalAbierto`).</summary>
+        bool MetalAbierto(Asentamiento a, JObject f)
+        {
+            var metal = (string)f["metal"];
+            if ((string)f["tipo"] == "montura" || string.IsNullOrEmpty(metal) || a.MetalesArmeria.Contains(metal)) return true;
+            var libres = (Objetos?["metales"] as JObject)?.Properties().Where(x => x.Value.Type == JTokenType.Null).Select(x => x.Name).ToList()
+                ?? new List<string> { "inicio", "recluta" };
+            return libres.Contains(metal);
+        }
 
         /// <summary>La clase del arma que lleva (o la suya) y los pesos de armadura que admite.</summary>
         (string clase, List<string> pesos) ClaseDeArma(Heroe h)
@@ -951,15 +959,19 @@ namespace ConquestTactics.Mundo.UI
             DosColumnas(cols, izq, der, 900, 22);
             cuerpo.Add(cols);
             cuerpo.Add(error);
-            MochilaDeArmeria(izq, a, yo, error, rehacer);
             var g = GrupoEnPlaza(a, yo);
-            if (sub == "forja") ForjaDeArmeria(der, a, yo, g, error, rehacer);
-            else if (sub == "abrir") AbrirLaForja(der, a, error, rehacer);
-            else
+            if (sub != "forja" && sub != "abrir")
             {
-                if (!AperturaPara(a, g).abierta) der.Add(Dialogo.Texto($"La forja de esta plaza está cerrada a los {g}: aquí solo se compra y se vende.", "plaza-nota"));
-                TiendaDeArmeria(der, a, yo, error, rehacer);
+                // La Tienda (`htmlTienda`): Comprar a la izquierda y Vender a la derecha, a todo el ancho; la mochila ya va en Vender.
+                cols.RemoveFromHierarchy();
+                error.RemoveFromHierarchy();
+                if (!AperturaPara(a, g).abierta) cuerpo.Add(Dialogo.Texto($"La forja de esta plaza está cerrada a los {g}: aquí solo se compra y se vende.", "plaza-nota"));
+                TiendaCompleta(cuerpo, a, yo, rehacer);
+                return;
             }
+            MochilaDeArmeria(izq, a, yo, error, rehacer);
+            if (sub == "forja") ForjaDeArmeria(der, a, yo, g, error, rehacer);
+            else AbrirLaForja(der, a, error, rehacer);
         }
 
         async Task<bool> OrdenDeArmeria(Orden o, Label error, VisualElement boton) => await OrdenDeCarga(o, error, boton);
@@ -1034,63 +1046,6 @@ namespace ConquestTactics.Mundo.UI
             solo.AddToClassList("plaza-carga-cierre");
             solo.RegisterValueChangedCallback(ev => { soloMiClase = ev.newValue; rehacer(); });
             col.Add(solo);
-        }
-
-        /// <summary>La Tienda (`htmlTienda`): armas, armaduras y monturas hasta `tiendaHastaTier`, con el metal que abre la Facción de la plaza; filtros por
-        /// tipo y «solo lo de tu clase»; cada una con su precio y «Comprar» (o lo que te falta).</summary>
-        void TiendaDeArmeria(VisualElement col, Asentamiento a, Heroe yo, Label error, Action rehacer)
-        {
-            var hasta = (int?)Objetos?["tiendaHastaTier"] ?? 2;
-            var casillas = (int?)Objetos?["casillasMochila"] ?? 72;
-            var libres = casillas - yo.Inventario.Count;
-            var todas = CatalogoDeObjetos.Where(f => ((string)f["tipo"] == "arma" || (string)f["tipo"] == "armadura" || (string)f["tipo"] == "montura")
-                && (int?)f["tier"] is int t && t <= hasta && MetalAbierto(a, f)).ToList();
-            var tipos = new[] { ("arma", "Armas"), ("armadura", "Armaduras"), ("montura", "Monturas") }.Where(x => todas.Any(f => (string)f["tipo"] == x.Item1)).ToList();
-            if (!tipos.Any(x => x.Item1 == tipoTienda)) tipoTienda = tipos.FirstOrDefault().Item1 ?? "armadura";
-            col.Add(TituloDeSeccion("Comprar", $"Al 100 %, con tus monedas, y a tu mochila. Vende armas, armaduras y monturas hasta el tier {hasta}, con los metales que abre la tecnología de la Facción de esta plaza. Lo mejor se forja."));
-            if (libres < 1) col.Add(Dialogo.Texto("La mochila está llena: vende algo o guárdalo en tu almacén de objetos antes de comprar.", "plaza-nota"));
-            var filtros = Dialogo.Caja("plaza-arm-filtros");
-            foreach (var (t, nombre) in tipos)
-            {
-                var tipo = t;
-                var b = Dialogo.Boton(nombre, "plaza-arm-chip" + (t == tipoTienda ? " activo" : ""), () => { tipoTienda = tipo; rehacer(); });
-                b.name = "tipo-" + t;
-                filtros.Add(b);
-            }
-            col.Add(filtros);
-            if (tipoTienda != "montura") SoloDeMiClase(col, yo, rehacer);
-            var lista = Dialogo.Caja("plaza-arm-lista");
-            lista.name = "tienda";
-            foreach (var f in Ordenar(todas.Where(f => (string)f["tipo"] == tipoTienda && (!soloMiClase || DeMiClase(yo, f)))))
-            {
-                var precio = (long?)f["precio"] ?? 0;
-                var falta = precio - (long)yo.Monedas;
-                var fila = Dialogo.Caja("plaza-arm-fila");
-                fila.name = "tienda-" + (string)f["id"];
-                fila.Add(PiezaDeArmeria(f));
-                var p = Dialogo.Caja("plaza-arm-precio" + (falta > 0 ? " caro" : ""));
-                p.Add(IconosDelMundo.Icono("glifo", "monedas", 14));
-                p.Add(Dialogo.Texto(Miles2(precio), "plaza-arm-precio-texto"));
-                fila.Add(p);
-                if (libres >= 1)
-                {
-                    if (falta > 0) fila.Add(Dialogo.Texto($"te faltan {Miles2(falta)}", "plaza-arm-falta"));
-                    else
-                    {
-                        var id = (string)f["id"];
-                        Button comprar = null;
-                        comprar = Dialogo.Boton("Comprar", "boton-primario plaza-arm-boton", async () =>
-                        {
-                            if (await OrdenDeArmeria(new Orden { ComprarObjeto = new OrdenComprarObjeto { Objeto = id } }, error, comprar)) rehacer();
-                        });
-                        comprar.name = "comprar";
-                        fila.Add(comprar);
-                    }
-                }
-                lista.Add(fila);
-            }
-            if (lista.childCount == 0) lista.Add(Dialogo.Texto("Nada de esto a la venta aquí.", "plaza-vacio"));
-            col.Add(lista);
         }
 
         /// <summary>Lo que hay de una pieza en la mochila (todas sus casillas).</summary>

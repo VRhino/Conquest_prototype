@@ -56,8 +56,8 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>Funda una plaza con una cuenta nueva, como un jugador, la sube a nivel 3 con recursos y le pone obras en la cola. Devuelve el
-        /// nick por `nickDe`.</summary>
-        static IEnumerator FundarPlaza(string url, Action<string> nickDe, Action<string> plazaDe = null, Action<V1.Punto> dondeDe = null, bool abrirANeutrales = false, bool mercadoEnPie = false, string enLaFaccion = null, Action<string> faccionDe = null)
+        /// nick por `nickDe`. Con `soloLaColumna`, para justo antes de fundar: el héroe fuera con la caravana, en el primer sitio al que llega.</summary>
+        static IEnumerator FundarPlaza(string url, Action<string> nickDe, Action<string> plazaDe = null, Action<V1.Punto> dondeDe = null, bool abrirANeutrales = false, bool mercadoEnPie = false, string enLaFaccion = null, Action<string> faccionDe = null, bool soloLaColumna = false)
         {
             var nick = "plaza-" + DateTime.UtcNow.Ticks % 100_000_000;
             nickDe(nick);
@@ -118,6 +118,17 @@ namespace ConquestTactics.Mundo.UI.Tests
             V1.Ejercito Col() => s.Almacen.Buscar(V1.TipoEntidad.Ejercito, col)?.Ejercito;
             var bx = cp?.X ?? Col().Posicion.X; var by = cp?.Y ?? Col().Posicion.Y;
             string plaza = null;
+            // Con `soloLaColumna` la prueba funda luego desde el panel, así que aquí no se puede probar fundando: los sitios de bosque cerrado se
+            // saltan con la densidad del artefacto, como el panel (`fundacion.bosque_denso`, densidad ≥ `densidadBosqueMaximaParaFundar`).
+            ConquestTactics.Mundo.RasterDeMundo bosque = null;
+            if (soloLaColumna && s.Bienvenida?.Mundo != null)
+            {
+                var carga = ConquestTactics.Mundo.MundoEnDisco.CargarArtefacto(acceso, s.Bienvenida.Mundo,
+                    new ConquestTactics.Mundo.CacheDeUno(System.IO.Path.Combine(Application.temporaryCachePath, "artefacto-pruebas")));
+                yield return Esperar(() => carga.IsCompleted, 60, "el artefacto del mundo");
+                if (carga.Result.DensidadBosque?.Encoding == V1.EncodingRaster.EncodingU8) bosque = new ConquestTactics.Mundo.RasterDeMundo(carga.Result.DensidadBosque);
+            }
+            const double densidadMaxima = 0.7; // el valor por defecto del motor, el mismo que usa el panel si los datos no lo traen
             // Un sitio donde se pueda fundar (el bosque denso no deja): se prueba a un lado y a otro del campamento.
             foreach (var (dx, dy) in new[] { (45, 0), (0, 45), (-45, 0), (0, -45), (60, 40), (-60, 40), (60, -40), (-60, -40), (90, 0), (0, 90), (-90, 0), (0, -90), (120, 60), (-120, 60), (120, -60), (-120, -60),
                          (160, 0), (0, 160), (-160, 0), (0, -160), (160, 120), (-160, 120), (160, -120), (-160, -120), (220, 0), (0, 220), (-220, 0), (0, -220) })
@@ -125,6 +136,14 @@ namespace ConquestTactics.Mundo.UI.Tests
                 var objetivo = new V1.Punto { X = bx + dx * 1000, Y = by + dy * 1000 };
                 // Lejos de las plazas que ya hay (la de otra prueba en este servidor): al pasar por la zona de otra, la columna pierde su caravana.
                 if (s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Asentamiento).Any(e => Math.Abs(e.Asentamiento.Posicion.X - objetivo.X) < 80_000 && Math.Abs(e.Asentamiento.Posicion.Y - objetivo.Y) < 80_000)) continue;
+                if (bosque != null && bosque.En(objetivo.X / 1000.0, objetivo.Y / 1000.0) / 255.0 >= densidadMaxima) continue;
+                // Ni dentro de la zona de otra plaza (`fundacion.dentro_de_zona`): su disco, del centro al punto más lejano de su zona, con margen.
+                if (soloLaColumna && s.Almacen.Todas(V1.Entidad.CuerpoOneofCase.Asentamiento).Select(e => e.Asentamiento).Any(a =>
+                {
+                    double D(V1.Punto q) => Math.Sqrt(Math.Pow(q.X - a.Posicion.X, 2) + Math.Pow(q.Y - a.Posicion.Y, 2));
+                    var radio = a.Zona.Count > 0 ? a.Zona.Max(D) : 80_000;
+                    return D(objetivo) <= radio + 10_000;
+                })) continue;
                 yield return Ordenar(new V1.Orden { MarcharA = new V1.OrdenMarcharA { HeroeId = heroe, Objetivo = new V1.OrdenMarcharA.Types.Objetivo { Punto = objetivo } } });
                 if (ultimo.Resultado != V1.Resultado.OrdenAceptada) continue;
                 // La marcha, con el reloj del mundo a saltos de un minuto en vez de esperarla.
@@ -135,6 +154,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                     for (var g = Time.realtimeSinceStartup + 0.3f; Time.realtimeSinceStartup < g && !Llegada();) { s.Bombear(); yield return null; }
                 }
                 yield return Bombear(1);
+                if (bosque != null && !Llegada()) continue;
                 // La caravana dada por la administración va con su columna mientras la columna exista y se pierde cuando se disuelve (p. ej., al
                 // entrar el héroe en un asentamiento; motor: nucleo/fundacion.rs). Si en el intento anterior se disolvió, esta ya no la lleva: se le da otra.
                 if (string.IsNullOrEmpty(Col()?.CaravanaFundacionId))
@@ -143,6 +163,8 @@ namespace ConquestTactics.Mundo.UI.Tests
                     yield return Administrar(url, "dar_caravana_fundacion", p);
                     yield return Bombear(1);
                 }
+                // Con `soloLaColumna`, hasta aquí: la columna fuera, con su caravana, donde funda la prueba desde el panel del mapa.
+                if (soloLaColumna) yield break;
                 yield return Ordenar(new V1.Orden { Fundar = new V1.OrdenFundar() });
                 if (ultimo.Resultado == V1.Resultado.OrdenAceptada) { plaza = ultimo.Creadas.First(c => c.Entidad == V1.TipoEntidad.Asentamiento).Id; break; }
             }

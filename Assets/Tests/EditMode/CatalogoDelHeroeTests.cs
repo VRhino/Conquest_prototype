@@ -25,9 +25,9 @@ public class CatalogoDelHeroeTests
     [Test]
     public void LosObjetosDelMotorConSusCifrasDeCombate()
     {
-        Assert.AreEqual("bronzeage-objetos-1", CatalogoDelHeroe.VersionDeObjetos);
+        Assert.AreEqual("bronzeage-objetos-2", CatalogoDelHeroe.VersionDeObjetos);
         var objetos = CatalogoDelHeroe.TodosLosObjetos;
-        Assert.AreEqual(136, objetos.Count, "las 136 piezas del catálogo");
+        Assert.AreEqual(151, objetos.Count, "las 151 piezas del catálogo (136 y las 15 del juego de recluta)");
         Assert.AreEqual(30, objetos.Count(o => o.tipo == "arma"), "6 armas por clase");
         foreach (var arma in objetos.Where(o => o.tipo == "arma"))
             Assert.Greater(arma.combate.dano.perforante + arma.combate.dano.cortante + arma.combate.dano.contundente, 0, $"{arma.id}: con daño");

@@ -602,6 +602,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         IEnumerator ClicUITK(VisualElement raiz, VisualElement e)
         {
             Assert.IsNotNull(e, "el elemento del clic");
+            yield return ConRatonSuelto(e);
             var doc = go.GetComponentInChildren<UIDocument>();
             var textura = doc.panelSettings.targetTexture;
             var entrada = UnityEngine.InputSystem.InputSystem.settings;
@@ -681,16 +682,18 @@ namespace ConquestTactics.Mundo.UI.Tests
         {
             var info = new ProcessStartInfo(exe) { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
             var p = Process.Start(info);
+            // Para que `tasks/pruebas/parar.sh` lo apague si la prueba se corta (por su PID y su arranque, nunca por nombre). Lo primero: si algo
+            // de abajo falla, el lanzador ya está vivo y, sin apuntar, seguiría registrando su cuenta contra el servidor de prueba siguiente.
+            System.IO.File.AppendAllText(System.IO.Path.Combine(Application.dataPath, "..", "Logs", "pids-pruebas.txt"),
+                $"{p.Id} {p.StartTime.ToUniversalTime().Ticks}{Environment.NewLine}");
             var registro = System.IO.Path.Combine(Application.dataPath, "..", "Logs", "mundo", "lanzador.log");
-            var escritor = new System.IO.StreamWriter(registro) { AutoFlush = true };
+            // Compartido: el registro del lanzador de la prueba anterior sigue abierto en este proceso (su escritor no se cierra).
+            var escritor = new System.IO.StreamWriter(new System.IO.FileStream(registro, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.ReadWrite)) { AutoFlush = true };
             p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (escritor) escritor.WriteLine(e.Data); };
             p.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (escritor) escritor.WriteLine(e.Data); };
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
             Debug.Log($"[Prueba] lanzador {p.Id}");
-            // Para que `tasks/pruebas/parar.sh` lo apague si la prueba se corta (por su PID y su arranque, nunca por nombre).
-            System.IO.File.AppendAllText(System.IO.Path.Combine(Application.dataPath, "..", "Logs", "pids-pruebas.txt"),
-                $"{p.Id} {p.StartTime.ToUniversalTime().Ticks}{Environment.NewLine}");
             return p;
         }
 
@@ -730,7 +733,8 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// <summary>El factor del reloj del mundo (en milésimas: 1000 = tiempo real), desde la sesión de administración.</summary>
         static IEnumerator Reloj(string url, long factorMilesimas)
         {
-            yield return OrdenAdmin(url, new Orden { ControlarReloj = new OrdenControlarReloj { Accion = "fijar_factor", FactorMilesimas = factorMilesimas } });
+            // Fijar el factor que ya tiene es «sin cambios» (p. ej., si la prueba anterior no llegó a devolverlo): vale igual.
+            yield return OrdenAdmin(url, new Orden { ControlarReloj = new OrdenControlarReloj { Accion = "fijar_factor", FactorMilesimas = factorMilesimas } }, sinCambiosVale: true);
         }
 
         /// <summary>Adelanta el reloj del mundo `ms` de golpe (lo que tocaba en ese rato pasa al momento), desde la sesión de administración.</summary>

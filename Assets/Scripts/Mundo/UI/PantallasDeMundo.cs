@@ -54,7 +54,7 @@ namespace ConquestTactics.Mundo.UI
             ajustes = ScriptableObject.CreateInstance<PanelSettings>();
             ajustes.themeStyleSheet = Resources.Load<ThemeStyleSheet>("MundoUI/TemaMundo");
             ajustes.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            ajustes.referenceResolution = new Vector2Int(1600, 900);
+            ajustes.referenceResolution = new Vector2Int(1920, 1080);
             ajustes.match = 0.5f;
             // El documento se monta en un hijo apagado para que tenga sus ajustes antes de encenderse.
             var hijo = new GameObject("Interfaz");
@@ -465,7 +465,9 @@ namespace ConquestTactics.Mundo.UI
             if (SelectorDePersonaje.Interior != null) return;
             var v = Montar("Interior");
             var lugar = NombreDeCampamento(camp.Id);
-            v.Q<Label>("lugar").text = lugar.ToUpperInvariant();
+            // El blasón (`htmlBlasonInterior`): «Campamento de mercenarios» y, debajo, lo que es para ti y cuántos residen.
+            v.Q<Label>("lugar").text = "CAMPAMENTO DE MERCENARIOS";
+            v.Q<Label>("lugar").tooltip = lugar;
             // Lo que el tablón de mercenarios deja atacar (bandidos, plazas en guerra) llega por la `VISTA`, como en la plaza: dentro sin haber pasado
             // por el mapa aún no se ha pedido; se pide la del mundo entero, como el mapa.
             if (c.Sesion != null && !c.Sesion.TieneVista && c.Relieve != null)
@@ -487,7 +489,13 @@ namespace ConquestTactics.Mundo.UI
                 PintarAvisos(botonAvisos);
                 var ahora = CampamentoActual(camp.Id) ?? camp;
                 var yo = HeroeAhora();
-                v.Q<Label>("lugar-detalle").text = $"Campamento de mercenarios · {ahora.ResidentesIds.Count} residentes · {(yo != null && ahora.ResidentesIds.Contains(yo.Id) ? "tu residencia" : "de paso")}";
+                var residentes = ahora.ResidentesIds.Count;
+                v.Q<Label>("lugar-residencia").text = yo != null && ahora.ResidentesIds.Contains(yo.Id) ? "Tu residencia" : "De paso";
+                v.Q<Label>("lugar-detalle").text = $"{residentes} {(residentes == 1 ? "residente" : "residentes")}";
+                // El riel y «Salir al mundo», solo con el ratón suelto (Alt) o una ventana abierta (Víctor, 2026-11-19): andando, no estorban.
+                var libre = BattleCommandInput.PointerMode || interior?.PanelAbierto == true;
+                Ver(v.Q("riel"), libre);
+                Ver(v.Q("salir-al-mundo"), libre);
                 var almacen = yo?.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
                 var firma = string.Join("|", almacen.OrderBy(kv => kv.Key).Select(kv => kv.Key + (kv.Value / 1000)));
                 if (firma != almacenPintado)
@@ -516,6 +524,8 @@ namespace ConquestTactics.Mundo.UI
             };
             v.Q<Button>("salir-al-mundo").clicked += () => VentanaDeSalida(camp.Id, lugar);
             BarraDelJugador(v);
+            RielDelCampamento(v.Q("riel"), camp);
+            MinimapaDelCampamento(v.Q("minimapa"), camp);
 
             interior = new SelectorDePersonaje.InteriorParaVer { Heroe = HeroeParaVer(c.Datos) };
             foreach (var e in camp.Planta)
@@ -525,6 +535,7 @@ namespace ConquestTactics.Mundo.UI
             {
                 if (zona == "taberna") PanelTaberna(camp.Id);
                 else if (zona == "mercado") PanelMercado(camp.Id);
+                else if (zona == "armeria") PanelArmeriaDelCampamento(camp.Id);
                 else if (zona == "militar") PanelTropa(camp.Id);
                 else if (zona == "puerta") VentanaDeSalida(camp.Id, lugar);
             };
@@ -1397,7 +1408,7 @@ namespace ConquestTactics.Mundo.UI
 
         // ─────────────────────────── el mapa de mundo ───────────────────────────
 
-        /// <summary>El mapa con su barra (capas, marcha forzada, avisos, cambiar de partida y cerrar sesión), la lista de lo que hay bajo el clic,
+        /// <summary>El mapa con su barra (capas, avisos, cambiar de partida y cerrar sesión; la marcha forzada va en la barra de víveres), la lista de lo que hay bajo el clic,
         /// la ficha de lo seleccionado con sus acciones y, dentro de un sitio, dónde estás y la salida. F2 enseña la sesión viva como diagnóstico.</summary>
         void Mapa()
         {
@@ -1408,17 +1419,17 @@ namespace ConquestTactics.Mundo.UI
             mapa.Fertilidad = PlayerPrefs.GetInt("mundo.capa.fertilidad", 0) == 1;
             diagnostico = v.Q("diagnostico");
             var botonAvisos = v.Q<Button>("avisos");
-            var forzada = v.Q<Button>("marcha-forzada");
             var nodos = v.Q<Button>("capa-nodos");
             var fertilidad = v.Q<Button>("capa-fertilidad");
             botonAvisos.clicked += panelAvisos.Alternar;
-            forzada.clicked += () => _ = mapa.AlternarMarchaForzada();
             nodos.clicked += () => { mapa.NombresDeNodos = !mapa.NombresDeNodos; PlayerPrefs.SetInt("mundo.capa.nodos", mapa.NombresDeNodos ? 1 : 0); };
             fertilidad.clicked += () => { mapa.Fertilidad = !mapa.Fertilidad; PlayerPrefs.SetInt("mundo.capa.fertilidad", mapa.Fertilidad ? 1 : 0); };
             v.Q<Button>("opciones").clicked += AbrirOpciones;
             Botones(v);
             BarraDelJugador(v);
             RielDelMapa(v);
+            RielDeFundar(v);
+            RielDeColumnaYCosas(v);
 
             // La lista de lo que hay bajo el clic.
             var lista = v.Q("lista");
@@ -1465,8 +1476,9 @@ namespace ConquestTactics.Mundo.UI
                 if (mapa == null) return;
                 PintarAvisos(botonAvisos);
                 PintarVentanaDeEjercito(v);
-                forzada.SetEnabled(mapa.Columna != null);
-                forzada.text = mapa.Columna?.MarchaForzada == true ? "Marcha forzada: sí" : "Marcha forzada: no";
+                PintarVentanaDeFundar(v);
+                PintarViveres(v);
+                PintarPanelDelRiel(v);
                 nodos.text = mapa.NombresDeNodos ? "Nodos: sí" : "Nodos: no";
                 fertilidad.text = mapa.Fertilidad ? "Fertilidad: sí" : "Fertilidad: no";
                 // Dentro de un campamento de mercenarios (con su planta ya llegada): su interior. Los demás sitios, el aviso hasta su paso.

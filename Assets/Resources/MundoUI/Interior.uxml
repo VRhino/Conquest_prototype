@@ -1,23 +1,33 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
-    <!-- El interior de un campamento de mercenarios (paso 4 del bloque 4), sobre FeudoScene: solo la cabecera (dónde estás, avisos, salir al
-         mundo y cerrar sesión) y cómo se anda. Lo demás lo decide el autor interfaz por interfaz (tanda 4B). El fondo deja pasar todo al juego. -->
+    <!-- El interior de un campamento de mercenarios (paso 4 del bloque 4), sobre FeudoScene, con el HUD del prototipo (`hudInterior.ts`, como la
+         plaza; Víctor, 2026-11-19): arriba a la derecha la barra del jugador; arriba a la izquierda el blasón del campamento; abajo a la derecha
+         el minimapa con su planta; abajo en el centro el riel y abajo a la izquierda «Salir al mundo». El riel y «Salir al mundo» solo con el
+         ratón suelto (Alt). El fondo deja pasar todo al juego. -->
+    <ui:Style src="Plaza.uss" />
     <ui:VisualElement name="interior" picking-mode="Ignore" style="position: absolute; left: 0; top: 0; right: 0; bottom: 0;">
-        <ui:VisualElement class="barra-arriba">
-            <ui:VisualElement style="flex-grow: 1; flex-shrink: 1; min-width: 0;">
-                <ui:Label name="lugar" class="titulo" />
-                <ui:Label name="lugar-detalle" class="campo-ayuda" style="margin: 0;" />
-            </ui:VisualElement>
-            <ui:Button name="salir-al-mundo" class="boton-secundario" text="Salir al mundo" />
+        <ui:VisualElement class="barra-arriba plaza-barra" picking-mode="Ignore">
             <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
             <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
+        </ui:VisualElement>
+        <ui:VisualElement name="interior-izq" class="plaza-izq" picking-mode="Ignore">
+            <ui:VisualElement name="blason" class="plaza-blason interior-blason">
+                <ui:VisualElement class="interior-blason-texto">
+                    <ui:Label name="lugar" class="interior-blason-nombre" />
+                    <ui:Label name="lugar-residencia" class="interior-blason-linea" />
+                    <ui:Label name="lugar-detalle" class="interior-blason-linea" />
+                </ui:VisualElement>
+            </ui:VisualElement>
         </ui:VisualElement>
         <!-- El cartel de la zona donde está el héroe (como el «Presiona F» del herrero de Conquest). -->
         <ui:Label name="cartel" class="cartel-interior oculto" picking-mode="Ignore" />
         <!-- «Tu almacén» (BronzeAgeClient: la placa del pie del interior), con el emoji de cada recurso. -->
-        <ui:VisualElement name="placa-almacen" class="placa-almacen oculto" picking-mode="Ignore">
+        <ui:VisualElement name="placa-almacen" class="placa-almacen interior-almacen oculto" picking-mode="Ignore">
             <ui:Label class="placa-almacen-titulo" text="TU ALMACÉN" />
             <ui:VisualElement name="placa-almacen-piezas" />
         </ui:VisualElement>
-        <ui:Label name="ayuda" class="ayuda-interior" picking-mode="Ignore" text="WASD: andar · Ratón: mirar · Alt: soltar el ratón para pulsar la interfaz" />
+        <ui:Label name="ayuda" class="ayuda-interior interior-ayuda" picking-mode="Ignore" text="WASD: andar · Ratón: mirar · Alt: soltar el ratón para pulsar la interfaz" />
+        <ui:VisualElement name="minimapa" class="interior-minimapa" picking-mode="Ignore" />
+        <ui:VisualElement name="riel" class="plaza-riel interior-riel oculto" />
+        <ui:Button name="salir-al-mundo" class="boton-primario plaza-salir oculto" text="SALIR AL MUNDO" />
     </ui:VisualElement>
 </ui:UXML>

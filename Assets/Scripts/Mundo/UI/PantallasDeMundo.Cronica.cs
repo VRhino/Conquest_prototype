@@ -198,7 +198,7 @@ namespace ConquestTactics.Mundo.UI
             panelCronica.Add(filete);
             var cab = Dialogo.Caja("avisos-cab");
             cab.Add(ConAyuda(Dialogo.Texto("CRÓNICA DEL MUNDO", "kicker"), "Lo que cantan los Aedas para todos: la misma crónica para todos los jugadores, desde el principio de la partida. Lo de tu Facción va marcado."));
-            var cerrar = Dialogo.Boton("Cerrar", "boton-secundario", CerrarCronica);
+            var cerrar = Dialogo.Equis(CerrarCronica);
             cerrar.name = "cronica-cerrar";
             cab.Add(cerrar);
             filete.Add(cab);

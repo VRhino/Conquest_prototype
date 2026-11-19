@@ -63,7 +63,7 @@ namespace ConquestTactics.Mundo.UI
 
             var lista = Dialogo.Caja("menu-barra oculto");
             lista.name = "menu-barra";
-            foreach (var n in new[] { "opciones", "capa-nodos", "capa-fertilidad", "marcha-forzada", "cambiar-partida", "cerrar-sesion" })
+            foreach (var n in new[] { "opciones", "capa-nodos", "capa-fertilidad", "cambiar-partida", "cerrar-sesion" })
             {
                 var b = barra.Q<Button>(n);
                 if (b == null) continue;
@@ -137,7 +137,7 @@ namespace ConquestTactics.Mundo.UI
             var nav = Dialogo.Caja("base-pestanas");
             nav.name = "base-pestanas";
             cab.Add(nav);
-            var cerrar = Dialogo.Boton("Cerrar", "boton-secundario base-cerrar", CerrarBase);
+            var cerrar = Dialogo.Equis(CerrarBase, "base-cerrar");
             cerrar.name = "base-cerrar";
             cab.Add(cerrar);
             baseVentana.Add(cab);
@@ -439,17 +439,17 @@ namespace ConquestTactics.Mundo.UI
         {
             var ahora = c.Sesion.AhoraMundo;
             var col = ColumnaDelHeroe(h);
-            var viveres = Math.Floor(Instante.Valor(h.Viveres, ahora) / 1000);
+            // Con la columna fuera, los de la columna (`ViveresDe`): el héroe no los lleva.
+            var (viveres, capacidad, ritmo) = ViveresDe(h, col);
             var etiqueta = IconosDelMundo.ConIcono("glifo", "viveres", Dialogo.Texto("Víveres", "base-dato-etiqueta"), 16);
             var fila = Dialogo.Caja("base-dato");
             fila.Add(etiqueta);
             pie.Add(fila);
             if (col == null) { fila.Add(Dialogo.Texto(viveres.ToString(), "base-dato-valor")); return; }
-            var capacidad = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadViveresPorHeroe") * Math.Max(1, col.Participantes.Count);
             fila.Add(Dialogo.Texto($"{viveres} / {capacidad:0}", "base-dato-valor"));
             // En un ejército los víveres son de todos: ahí no se estima. El ritmo lo da el motor (`por_minuto` de los víveres, en milésimas).
-            if (col.Participantes.Count != 1 || h.Viveres == null || h.Viveres.EnEscalones) return;
-            var porMinuto = -h.Viveres.PorMinuto / 1000.0;
+            if (col.Participantes.Count != 1 || ritmo == null || ritmo.EnEscalones) return;
+            var porMinuto = -ritmo.PorMinuto / 1000.0;
             if (porMinuto <= 0) return;
             var min = viveres / porMinuto;
             var dura = Dialogo.Texto($"aguantan {(min >= 120 ? $"{Math.Floor(min / 60)} h" : $"{Math.Floor(min)} min")}", "base-dura");
@@ -834,7 +834,7 @@ namespace ConquestTactics.Mundo.UI
                 b.AddToClassList("tropas-boton");
                 b.EnableInClassList("activo", fid == actual);
                 if (def?.formationIcon != null) { var ic = Dialogo.Caja("tropas-boton-icono"); ic.style.backgroundImage = new StyleBackground(def.formationIcon); b.Add(ic); }
-                else b.Add(Dialogo.Texto(fnombre.Substring(0, 1), "tropas-boton-letra"));
+                else b.Add(Dialogo.Texto(fnombre, "tropas-boton-letra tropas-boton-nombre"));
                 if (s.ReservaBatalla != null) { b.SetEnabled(false); b.tooltip = "La formación se congeló al empezar la batalla"; }
                 else if (fid != actual) b.clicked += async () => await OrdenDelPanel(new Orden { ElegirFormacion = new OrdenElegirFormacion { EscuadronId = s.Id, Formacion = familia } }, error, RepintarSiCambia, b);
                 forma.Add(b);
@@ -893,7 +893,7 @@ namespace ConquestTactics.Mundo.UI
                     var b = Dialogo.Caja("tropas-boton tropas-boton--quieto");
                     b.tooltip = string.IsNullOrEmpty(hab.description) ? hab.abilityName : $"{hab.abilityName}: {hab.description}";
                     if (hab.icon != null) { var ic = Dialogo.Caja("tropas-boton-icono"); ic.style.backgroundImage = new StyleBackground(hab.icon); b.Add(ic); }
-                    else b.Add(Dialogo.Texto(hab.abilityName.Substring(0, 1), "tropas-boton-letra"));
+                    else b.Add(Dialogo.Texto(hab.abilityName, "tropas-boton-letra tropas-boton-nombre"));
                     ordenes.Add(b);
                 }
                 v.Add(ordenes);
@@ -1277,8 +1277,7 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>Pasar trigo del carro a los víveres (`pasarAViveres`): solo el Líder de la columna y solo lo que cabe.</summary>
         void PasarAViveres(VisualElement v, Heroe h, Ejercito col, Action<string> error)
         {
-            var capacidad = c.Datos.Numero("documentos.Movimiento_Ejercitos.LOGISTICA.capacidadViveresPorHeroe") * Math.Max(1, col.Participantes.Count);
-            var viveres = Math.Floor(Instante.Valor(h.Viveres, c.Sesion.AhoraMundo) / 1000);
+            var (viveres, capacidad, _) = ViveresDe(h, col);
             var hueco = Math.Max(0, Math.Floor(capacidad - viveres));
             var trigo = Math.Floor(Milesimas(col.Suministro, "trigo"));
             var maximo = (int)Math.Min(hueco, trigo);
@@ -1304,7 +1303,9 @@ namespace ConquestTactics.Mundo.UI
     /// Animator, en reposo, y el `AvatarPartSelector` que usa el vestido. De frente; se gira arrastrando.</summary>
     sealed class ModeloDeLaBase
     {
-        static readonly Vector3 Lejos = new Vector3(50000, 50000, 50000);
+        // A 2.000 unidades, no a 50.000: allí un float solo distingue unos 4 mm y los vértices y la profundidad del modelo temblaban entre
+        // fotogramas (manchas que titilan y bordes de sierra; Víctor, 2026-11-18). Sigue aparte por su capa, su cámara y su luz.
+        static readonly Vector3 Lejos = new Vector3(0, 2000, 0);
         GameObject raiz;
         Transform modelo;
         Animator animador;
@@ -1334,7 +1335,7 @@ namespace ConquestTactics.Mundo.UI
             r.animador = instancia.GetComponentInChildren<Animator>();
 
             // Del alto y ancho del recuadro central (unos 2 de ancho por 3 de alto), con transparencia.
-            r.Imagen = new RenderTexture(640, 960, 24, RenderTextureFormat.ARGB32) { name = "Modelo de la Base" };
+            r.Imagen = new RenderTexture(640, 960, 24, RenderTextureFormat.ARGB32) { name = "Modelo de la Base", antiAliasing = 4 };
             r.Imagen.Create();
             var camara = new GameObject("Cámara del modelo").AddComponent<Camera>();
             camara.transform.SetParent(r.raiz.transform, false);

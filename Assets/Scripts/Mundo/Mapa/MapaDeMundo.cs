@@ -3,6 +3,7 @@
 // la batalla: no usa el ECS de la batalla ni `Conquest.Net`; lee el almacén de la sesión y da órdenes del contrato.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BronzeAge.Contract.V1;
 using UnityEngine;
@@ -127,6 +128,102 @@ namespace ConquestTactics.Mundo.Mapa
         }
 
         static RasterDeMundo Raster(Raster r) => r != null && r.Encoding == EncodingRaster.EncodingU8 ? new RasterDeMundo(r) : null;
+
+        // ── la vista previa de fundar (duda 38, tanda 2; `fundar` de `mundo3d/marcas.ts` del prototipo) ──
+
+        /// <summary>Lo que se pinta mientras el panel de fundar está abierto: la zona con que nacería la plaza (su aro y su centro), los sitios de aldea
+        /// (cuadros del paso de la rejilla con que se buscaron: verdes los válidos, grises los que quedan demasiado cerca) y las parcelas de bosque de
+        /// la zona (un aro de 2 u: verde libre, rojo ocupada o de otra plaza). En unidades del mapa.</summary>
+        public sealed class FundacionEnVista
+        {
+            public double X, Y, Radio, Paso;
+            public List<(double x, double y)> Validos = new List<(double, double)>(), Cerca = new List<(double, double)>();
+            public List<(double x, double y, bool libre)> Parcelas = new List<(double, double, bool)>();
+        }
+
+        static readonly Color ColorFundacion = new Color32(0xf1, 0xd3, 0x8b, 0xff), ColorValido = new Color32(0x46, 0xc8, 0x5a, 0xff),
+            ColorCerca = new Color32(0xa0, 0xa0, 0x96, 0xff), ColorLibre = new Color32(0x78, 0xdc, 0x6e, 0xff), ColorOcupada = new Color32(0xc8, 0x5a, 0x46, 0xff);
+        FundacionEnVista fundacion;
+        GameObject marcasDeFundar;
+
+        /// <summary>La vista previa de fundar; null la quita. Se rehace solo al cambiar el objeto (quien la da hace uno nuevo si cambia el sitio).</summary>
+        public FundacionEnVista Fundacion
+        {
+            get => fundacion;
+            set { if (ReferenceEquals(value, fundacion)) return; fundacion = value; PintarFundacion(); }
+        }
+
+        void PintarFundacion()
+        {
+            if (marcasDeFundar != null) Destroy(marcasDeFundar);
+            marcasDeFundar = null;
+            var f = fundacion;
+            if (f == null || terreno == null) return;
+            marcasDeFundar = new GameObject("Fundar: vista previa");
+            marcasDeFundar.transform.SetParent(transform, false);
+            AroEnElSuelo(f.X, f.Y, f.Radio, 0.12f, ColorFundacion);
+            AroEnElSuelo(f.X, f.Y, 0.25, 0.08f, ColorFundacion);
+            CuadrosEnElSuelo("Sitios de aldea", f.Validos, f.Paso * 0.85, ColorValido);
+            CuadrosEnElSuelo("Demasiado cerca", f.Cerca, f.Paso * 0.85, ColorCerca);
+            foreach (var (x, y, libre) in f.Parcelas) AroEnElSuelo(x, y, 2, 0.12f, libre ? ColorLibre : ColorOcupada);
+        }
+
+        /// <summary>Un aro sobre el terreno, de radio `r` y ancho `ancho` (u).</summary>
+        void AroEnElSuelo(double cx, double cy, double r, float ancho, Color color)
+        {
+            var e = EscalaDelMapa.MetrosPorUnidad;
+            var l = new GameObject("Aro").AddComponent<LineRenderer>();
+            l.transform.SetParent(marcasDeFundar.transform, false);
+            l.sharedMaterial = materialPropio;
+            l.startColor = l.endColor = color.linear;
+            l.widthMultiplier = ancho * e;
+            l.shadowCastingMode = ShadowCastingMode.Off;
+            l.loop = true;
+            l.useWorldSpace = false;
+            var n = Math.Max(24, (int)(r * 6));
+            var puntos = new Vector3[n];
+            for (int i = 0; i < n; i++)
+            {
+                double x = cx + r * Math.Cos(2 * Math.PI * i / n), y = cy + r * Math.Sin(2 * Math.PI * i / n);
+                puntos[i] = EscalaDelMapa.AEscena(x, y, terreno.AlturaVisible(x, y) + 0.15f * e);
+            }
+            l.positionCount = n;
+            l.SetPositions(puntos);
+        }
+
+        /// <summary>Cuadros planos de lado `lado` (u) sobre el terreno, en una sola malla.</summary>
+        void CuadrosEnElSuelo(string nombre, List<(double x, double y)> centros, double lado, Color color)
+        {
+            if (centros.Count == 0) return;
+            var e = EscalaDelMapa.MetrosPorUnidad;
+            var v = new List<Vector3>(centros.Count * 4);
+            var t = new List<int>(centros.Count * 12);
+            var cs = new List<Color>(centros.Count * 4);
+            var h = lado / 2;
+            foreach (var (x, y) in centros)
+            {
+                var alto = terreno.AlturaVisible(x, y) + 0.06f * e;
+                var k = v.Count;
+                v.Add(EscalaDelMapa.AEscena(x - h, y - h, alto));
+                v.Add(EscalaDelMapa.AEscena(x - h, y + h, alto));
+                v.Add(EscalaDelMapa.AEscena(x + h, y + h, alto));
+                v.Add(EscalaDelMapa.AEscena(x + h, y - h, alto));
+                // Por las dos caras (la y del mapa va invertida en la escena, z = −y, y el sombreado descarta las de detrás).
+                t.AddRange(new[] { k, k + 1, k + 2, k, k + 2, k + 3, k, k + 2, k + 1, k, k + 3, k + 2 });
+                for (int i = 0; i < 4; i++) cs.Add(color.linear);
+            }
+            var malla = new Mesh { name = nombre, indexFormat = v.Count > 65000 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16 };
+            malla.SetVertices(v);
+            malla.SetTriangles(t, 0);
+            malla.SetColors(cs);
+            malla.SetNormals(Enumerable.Repeat(Vector3.up, v.Count).ToList()); // hacia arriba: con las dos caras, recalcularlas las anularía
+            var go = new GameObject(nombre);
+            go.transform.SetParent(marcasDeFundar.transform, false);
+            go.AddComponent<MeshFilter>().sharedMesh = malla;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = materialPropio;
+            r.shadowCastingMode = ShadowCastingMode.Off;
+        }
 
         GameObject Caja(string nombre, Color color, Vector3 tamanoU)
         {

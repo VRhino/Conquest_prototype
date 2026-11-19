@@ -22,10 +22,6 @@ namespace ConquestTactics.Mundo.UI
             ["un pueblo de mina de estaño"] = ("minaEstano", "Pueblo de mina de estaño"), ["un pueblo de cantera"] = ("cantera", "Pueblo de cantera"),
             ["el rebaño de una aldea ganadera"] = ("corral", "Aldea ganadera"), ["impuestos y pueblo de mina de oro"] = ("mina", "Pueblo de mina de oro"),
         };
-        static readonly Dictionary<string, string> RarezaEnPantalla = new Dictionary<string, string>
-        {
-            ["comun"] = "común", ["pocoComun"] = "poco común", ["rara"] = "rara", ["epica"] = "épica", ["legendaria"] = "legendaria",
-        };
         static readonly (string id, string nombre)[] TiposDeDano = { ("perforante", "Perforante"), ("cortante", "Cortante"), ("contundente", "Contundente") };
         static readonly (string id, string nombre, string titulo, bool porcentaje)[] FilasDeCombate =
         {
@@ -85,14 +81,8 @@ namespace ConquestTactics.Mundo.UI
             tip.Add(campana);
 
             if (!(t["combate"] is JObject cb)) return;
-            var cab = Renglon("tec-combate-cab", Dialogo.Texto("COMBATE", "recl-tip-seccion"));
-            var tier = (int?)t["tier"];
-            if (tier != null)
-            {
-                var clave = (string)BloqueDeDatos("OBJETOS")?["rarezas"]?[tier.ToString()] ?? new[] { "comun", "pocoComun", "rara", "epica", "legendaria" }.ElementAtOrDefault(tier.Value - 1) ?? "comun";
-                cab.Add(Dialogo.Texto($"Tier {Romano[System.Math.Min(tier.Value, Romano.Length - 1)]}, {(RarezaEnPantalla.TryGetValue(clave, out var r) ? r : clave)}", "tec-rareza r-" + clave));
-            }
-            tip.Add(cab);
+            // Sin la etiqueta del tier: ya lo dice el color de fondo de la tarjeta de la tropa (Víctor, 2026-11-18).
+            tip.Add(Renglon("tec-combate-cab", Dialogo.Texto("COMBATE", "recl-tip-seccion")));
             string Num(JToken x) => x == null ? null : ((double)x).ToString("0.##", Es);
             var sueltas = new List<VisualElement> { ChipDeCifra(IconoDeAtributo("vida"), Num(cb["vida"]) ?? "?", "Vida por soldado") };
             if ((double?)cb["bloqueo"] is double b && b != 0) sueltas.Add(ChipDeCifra(IconoDeAtributo("bloqueo"), Num(cb["bloqueo"]), "Bloqueo del escudo"));

@@ -303,6 +303,8 @@ namespace ConquestTactics.Mundo.UI
                 if (!enPreparacion && MiBatalla() is Batalla mia && mia.HasLadoPropio && Activa(mia)) { _ = IrALaPreparacion(mia); return; }
                 foreach (var r in relojesDePlaza.ToList()) r.reloj();
                 BloqueoDePlaza();
+                // El riel y «Salir al mundo», solo con el ratón suelto (Alt) o con una ventana abierta (Víctor, 2026-11-19, como en el campamento).
+                v.Q("plaza").EnableInClassList("sin-raton", !(BattleCommandInput.PointerMode || interior.PanelAbierto));
                 interior.Elegido = fichaId;
                 var zona = interior.PanelAbierto ? null : interior.ZonaCercana;
                 Poner(cartel, zona == null ? null : zona == "puerta" ? "F · Salir al mundo"
@@ -414,7 +416,10 @@ namespace ConquestTactics.Mundo.UI
                 ventana.style.left = 16 + colIzq + 12;
                 ventana.style.right = StyleKeyword.Null;
                 ventana.style.bottom = StyleKeyword.Null;
-                ventana.style.width = Mathf.Min(ventana.ClassListContains("plaza-ventana-estrecha") ? 460 : 600, w - colIzq - 60);
+                // Ancho relativo a la pantalla, con mínimo y máximo (duda 42a): 600 era el 37,5 % de 1600; la estrecha, 460.
+                var estrecha = ventana.ClassListContains("plaza-ventana-estrecha");
+                var relativo = estrecha ? Mathf.Clamp(w * 0.28f, 460, 640) : Mathf.Clamp(w * 0.375f, 600, 900);
+                ventana.style.width = Mathf.Min(relativo, w - colIzq - 60);
                 ventana.style.maxHeight = h - finPie - pieAlto - 34;
             }
         }

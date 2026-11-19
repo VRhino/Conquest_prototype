@@ -320,10 +320,16 @@ namespace ConquestTactics.Mundo.UI
 
         void Botonera(VisualElement caja, bool enSuEscena)
         {
+            // En su escena, «Salir» vuelve al mundo; si no, el ✕ de arriba a la derecha.
+            if (!enSuEscena)
+            {
+                var equis = Dialogo.Equis(CerrarInforme, "ventana-x--esquina");
+                equis.name = "informe-salir";
+                caja.Add(equis);
+                return;
+            }
             var botones = Dialogo.Caja("dialogo-botones informe-botones");
-            var boton = enSuEscena
-                ? Dialogo.Boton("Salir", "boton-primario", () => { CerrarInforme(); _ = VolverAlMundo(); })
-                : Dialogo.Boton("Cerrar", "boton-secundario", CerrarInforme);
+            var boton = Dialogo.Boton("Salir", "boton-primario", () => { CerrarInforme(); _ = VolverAlMundo(); });
             boton.name = "informe-salir";
             botones.Add(boton);
             caja.Add(botones);

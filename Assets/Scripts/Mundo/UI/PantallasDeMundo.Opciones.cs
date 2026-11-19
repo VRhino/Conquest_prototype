@@ -24,7 +24,7 @@ namespace ConquestTactics.Mundo.UI
             placa.Add(filete);
             var cab = Dialogo.Caja("opciones-cabecera");
             cab.Add(Dialogo.Texto("OPCIONES", "dialogo-titulo"));
-            var cerrar = Dialogo.Boton("Cerrar", "boton-secundario", CerrarOpciones);
+            var cerrar = Dialogo.Equis(CerrarOpciones);
             cerrar.name = "opciones-cerrar";
             cab.Add(cerrar);
             filete.Add(cab);

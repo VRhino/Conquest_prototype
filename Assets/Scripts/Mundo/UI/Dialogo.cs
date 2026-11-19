@@ -66,6 +66,14 @@ namespace ConquestTactics.Mundo.UI
             return l;
         }
 
+        /// <summary>El ✕ de cerrar una ventana, arriba a la derecha en su cabecera (el de la Armería del prototipo; Víctor, 2026-11-19).</summary>
+        internal static Button Equis(Action alPulsar, string clases = "")
+        {
+            var b = Boton("✕", ("ventana-x " + clases).Trim(), alPulsar);
+            b.tooltip = "Cerrar";
+            return b;
+        }
+
         internal static Button Boton(string texto, string clases, Action alPulsar)
         {
             var b = new Button(alPulsar) { text = texto };

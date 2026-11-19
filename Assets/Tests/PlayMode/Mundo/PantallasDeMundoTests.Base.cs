@@ -274,7 +274,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 yield return Esperar(() => raiz.Q("base-personal") == null, 5, "cerrada con «Cerrar»");
                 yield return ClicFijo(raton, raiz, raiz.Q<Button>("menu"));
                 Assert.IsTrue(Visible(raiz.Q("menu-barra")), "el menú abierto");
-                CollectionAssert.IsSubsetOf(new[] { "opciones", "capa-nodos", "capa-fertilidad", "marcha-forzada", "cambiar-partida", "cerrar-sesion" },
+                CollectionAssert.IsSubsetOf(new[] { "opciones", "capa-nodos", "capa-fertilidad", "cambiar-partida", "cerrar-sesion" },
                     raiz.Q("menu-barra").Query<Button>().ToList().Select(b => b.name).ToList());
                 Assert.AreEqual("opciones", raiz.Q("menu-barra").Query<Button>().First().name, "«Opciones», la primera del menú");
                 yield return Capturar("46_menu_de_la_barra");
@@ -399,9 +399,21 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         /// <summary>Un clic con el ratón de la prueba en el centro del elemento (con la textura de la prueba quitada: el panel, a pantalla).</summary>
+        /// <summary>El riel y «Salir al mundo» del campamento y de la plaza solo salen con el ratón suelto (Alt; Víctor, 2026-11-19): antes de pulsar
+        /// uno escondido por eso, se suelta el ratón como haría el jugador y se espera a que aparezca.</summary>
+        static IEnumerator ConRatonSuelto(VisualElement e)
+        {
+            bool DelRielOSalir() { for (var x = e; x != null; x = x.parent) if (x.name == "riel" || x.name == "salir-al-mundo") return true; return false; }
+            bool Visible() { for (var x = e; x != null; x = x.parent) if (x.resolvedStyle.display == DisplayStyle.None) return false; return true; }
+            if (e == null || !DelRielOSalir() || Visible()) yield break;
+            BattleCommandInput.SetPointerMode(true);
+            for (var f = Time.realtimeSinceStartup + 2; Time.realtimeSinceStartup < f && !Visible();) yield return null;
+        }
+
         IEnumerator ClicFijo(UnityEngine.InputSystem.Mouse raton, VisualElement raiz, VisualElement e)
         {
             Assert.IsNotNull(e, "el elemento del clic");
+            yield return ConRatonSuelto(e);
             var doc = go.GetComponentInChildren<UIDocument>();
             var textura = doc.panelSettings.targetTexture;
             try

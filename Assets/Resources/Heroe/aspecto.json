@@ -584,6 +584,81 @@
    "id": "botas_pesada_bronce_laminado",
    "parte": "BootsHeavyArmorDefault",
    "icono": "Heroe/Iconos/BootHADef"
+  },
+  {
+   "id": "casco_ligera_recluta",
+   "parte": "HelmetLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "casco_media_recluta",
+   "parte": "HelmetMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "casco_pesada_recluta",
+   "parte": "HelmetHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "torso_ligera_recluta",
+   "parte": "TorsoLigthArmorDefault",
+   "icono": "Heroe/Iconos/TorLADef"
+  },
+  {
+   "id": "torso_media_recluta",
+   "parte": "TorsoMediumArmorDefault",
+   "icono": "Heroe/Iconos/TorMADef"
+  },
+  {
+   "id": "torso_pesada_recluta",
+   "parte": "TorsoHeavyArmorDefault",
+   "icono": "Heroe/Iconos/TorHADef"
+  },
+  {
+   "id": "guantes_ligera_recluta",
+   "parte": "GlovesLigthArmorDefault",
+   "icono": "Heroe/Iconos/GloLADef"
+  },
+  {
+   "id": "guantes_media_recluta",
+   "parte": "GlovesMediumArmorDefault",
+   "icono": "Heroe/Iconos/GloMADef"
+  },
+  {
+   "id": "guantes_pesada_recluta",
+   "parte": "GlovesHeavyArmorDefault",
+   "icono": "Heroe/Iconos/GloHADef"
+  },
+  {
+   "id": "pantalones_ligera_recluta",
+   "parte": "PantsLigthArmorDefault",
+   "icono": "Heroe/Iconos/PanLADef"
+  },
+  {
+   "id": "pantalones_media_recluta",
+   "parte": "PantsMediumArmorDefault",
+   "icono": "Heroe/Iconos/PanMADef"
+  },
+  {
+   "id": "pantalones_pesada_recluta",
+   "parte": "PantsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/PanHADef"
+  },
+  {
+   "id": "botas_ligera_recluta",
+   "parte": "BootsLigthArmorDefault",
+   "icono": "Heroe/Iconos/BootLADef"
+  },
+  {
+   "id": "botas_media_recluta",
+   "parte": "BootsMediumArmorDefault",
+   "icono": "Heroe/Iconos/BootMADef"
+  },
+  {
+   "id": "botas_pesada_recluta",
+   "parte": "BootsHeavyArmorDefault",
+   "icono": "Heroe/Iconos/BootHADef"
   }
  ]
 }

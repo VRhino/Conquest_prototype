@@ -80,6 +80,9 @@ namespace ConquestTactics.Mundo.Mapa
         public double FertilidadMinima = 0.3;
         /// <summary>La capa de parcelas de bosque y el estado de cada una («libre», «ocupada» o «ajena»), que da quien abre el mapa.</summary>
         public bool Parcelas;
+        /// <summary>La vista previa de fundar (la misma que la del mapa 3D), mientras su panel está abierto; null, nada.</summary>
+        public MapaDeMundo.FundacionEnVista Fundacion { get => fundacion; set { fundacion = value; encima?.MarkDirtyRepaint(); } }
+        MapaDeMundo.FundacionEnVista fundacion;
         public Func<ParcelaBosque, string> EstadoDeParcela = _ => "libre";
 
         /// <summary>Puntos de la ruta de tu columna que pinta el mapa (0 sin ruta).</summary>
@@ -769,6 +772,28 @@ namespace ConquestTactics.Mundo.Mapa
                 var borde = Math.Max(1, Math.Min(2.5f, lado * 0.25f));
                 Sitios(p2, el.SitiosCerca, lado, borde, new Color(176 / 255f, 172 / 255f, 160 / 255f, 0.7f), new Color(40 / 255f, 36 / 255f, 30 / 255f, 0.75f));
                 Sitios(p2, el.SitiosValidos, lado, borde, new Color(96 / 255f, 226 / 255f, 92 / 255f, 0.78f), new Color(10 / 255f, 46 / 255f, 16 / 255f, 0.9f));
+            }
+            // Fundando (duda 38, tanda 3; `pintarPrevisualizacionFundacion` de `render.ts`): la zona con que nacería la plaza, rayada como la de elegir
+            // sitio, los sitios de aldea y las parcelas de bosque de la zona (verdes las libres, rojas las ocupadas o de otra plaza).
+            var fu = Fundacion;
+            if (fu != null)
+            {
+                var z = Enumerable.Range(0, 64).Select(i => ALienzo(fu.X + fu.Radio * Math.Cos(i * Math.PI / 32), fu.Y + fu.Radio * Math.Sin(i * Math.PI / 32))).ToList();
+                Relleno(p2, z, new Color(241 / 255f, 211 / 255f, 139 / 255f, 0.10f));
+                Rayado(p2, z, new Color32(0xf1, 0xd3, 0x8b, 255), 2, 6, 4, true);
+                var lado = (float)Math.Max(1.5, fu.Paso * Camara.Escala);
+                var borde = Math.Max(1, Math.Min(2.5f, lado * 0.25f));
+                Sitios(p2, fu.Cerca, lado, borde, new Color(176 / 255f, 172 / 255f, 160 / 255f, 0.7f), new Color(40 / 255f, 36 / 255f, 30 / 255f, 0.75f));
+                Sitios(p2, fu.Validos, lado, borde, new Color(96 / 255f, 226 / 255f, 92 / 255f, 0.78f), new Color(10 / 255f, 46 / 255f, 16 / 255f, 0.9f));
+                var rp = (float)Math.Max(2, 2 * Camara.Escala);
+                foreach (var (x, y, libre) in fu.Parcelas)
+                {
+                    p2.strokeColor = libre ? new Color32(0x78, 0xdc, 0x6e, 0xff) : new Color32(0xc8, 0x5a, 0x46, 0xff);
+                    p2.lineWidth = 1.5f;
+                    p2.BeginPath();
+                    p2.Arc(ALienzo(x, y), rp, 0, 360);
+                    p2.Stroke();
+                }
             }
             // 19. Tú y tu destino.
             if (posColumna != null)

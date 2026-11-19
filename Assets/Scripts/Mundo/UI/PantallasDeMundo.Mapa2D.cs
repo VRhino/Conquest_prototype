@@ -43,6 +43,7 @@ namespace ConquestTactics.Mundo.UI
                 FertilidadMinima = DatoDeAldea("fertilidadMinima", 0.3),
                 Parcelas = PlayerPrefs.GetInt("mundo.mapa2d.parcelas", 0) == 1,
                 EstadoDeParcela = ClasificadorDeParcelas(),
+                Fundacion = mapa?.Fundacion,
             };
             var cultivo = PlayerPrefs.GetString("mundo.mapa2d.fertilidad", "");
             mapa2D.CultivoDeFertilidad = string.IsNullOrEmpty(cultivo) || !CultivosDesbloqueados().Contains(cultivo) ? null : cultivo;

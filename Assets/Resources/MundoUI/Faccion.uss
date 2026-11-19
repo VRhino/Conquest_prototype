@@ -3,7 +3,7 @@
 
 .faccion-ventana { flex-direction: column; }
 .faccion-cabecera { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-shrink: 0; }
-.faccion-titulo { font-size: 18px; letter-spacing: 2px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-titulo { font-size: 16px; letter-spacing: 2px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
 .faccion-cuerpo { flex-grow: 1; flex-shrink: 1; min-height: 0; align-items: center; }
 
 /* La columna de cada vista: centrada, como el formulario del prototipo. */
@@ -11,9 +11,9 @@
 .faccion-desplazable { flex-grow: 1; width: 100%; }
 .faccion-desplazable .faccion-vista { align-self: center; padding-bottom: 20px; }
 .faccion-vista-cab { flex-direction: row; align-items: center; }
-.faccion-volver { background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--texto-2); font-size: 26px; padding: 0 12px 4px 0; margin: 0; }
+.faccion-volver { background-color: rgba(0, 0, 0, 0); border-width: 0; color: var(--texto-2); font-size: 23px; padding: 0 12px 4px 0; margin: 0; }
 .faccion-volver:hover { color: var(--oro); }
-.faccion-h2 { font-size: 24px; color: var(--pergamino); margin: 6px 0; letter-spacing: 1px; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-h2 { font-size: 21px; color: var(--pergamino); margin: 6px 0; letter-spacing: 1px; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
 
 /* «Elige tu facción»: las dos tarjetas. */
 .faccion-eleccion { flex-direction: row; margin-top: 28px; flex-grow: 1; }
@@ -21,25 +21,25 @@
     background-color: var(--marco-bg-alt); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; transition-property: translate, border-color; transition-duration: 0.15s; }
 .faccion-opcion:last-child { margin: 0 0 0 6px; }
 .faccion-opcion:hover { border-color: var(--oro); translate: 0 -3px; }
-.faccion-opcion-icono { font-size: 32px; color: var(--oro); margin-bottom: 8px; }
-.faccion-opcion-titulo { font-size: 16px; color: var(--pergamino); -unity-font-style: bold; margin-bottom: 8px; }
-.faccion-opcion-texto { font-size: 14px; color: var(--texto-2); }
+.faccion-opcion-icono { font-size: 28px; color: var(--oro); margin-bottom: 8px; }
+.faccion-opcion-titulo { font-size: 14px; color: var(--pergamino); -unity-font-style: bold; margin-bottom: 8px; }
+.faccion-opcion-texto { font-size: 12.5px; color: var(--texto-2); }
 
 /* «Crear facción» */
 .faccion-formulario { padding-bottom: 8px; }
-.faccion-etiqueta { font-size: 13px; color: var(--texto-2); -unity-font-style: bold; margin: 28px 0 6px 0; }
+.faccion-etiqueta { font-size: 11.5px; color: var(--texto-2); -unity-font-style: bold; margin: 28px 0 6px 0; }
 .sigilo-selector { margin: 12px 0; padding: 18px 12px 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 6px; }
-.sigilo-leyenda { position: absolute; top: -9px; left: 10px; padding: 0 6px; font-size: 13px; color: var(--texto-2); background-color: var(--marco-bg); }
+.sigilo-leyenda { position: absolute; top: -9px; left: 10px; padding: 0 6px; font-size: 11.5px; color: var(--texto-2); background-color: var(--marco-bg); }
 .sigilo-previa { align-self: center; margin-bottom: 8px; }
 .sigilo-campo { flex-direction: column; margin: 0 0 8px 0; }
-.sigilo-campo > .unity-label { font-size: 13px; color: var(--texto-2); -unity-font-style: bold; min-width: 0; margin: 0 0 4px 0; padding: 0; }
+.sigilo-campo > .unity-label { font-size: 11.5px; color: var(--texto-2); -unity-font-style: bold; min-width: 0; margin: 0 0 4px 0; padding: 0; }
 .sigilo-campo > .unity-base-popup-field__input { background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--pergamino);
     height: 38px; padding: 0 12px; margin: 0; }
 .sigilo-campo > .unity-base-popup-field__input:hover { border-color: var(--bronce); }
-.sigilo-campo .unity-base-popup-field__text { color: var(--pergamino); font-size: 15px; }
-.sigilo-creditos { font-size: 11px; color: var(--texto-2); margin: 0; }
+.sigilo-campo .unity-base-popup-field__text { color: var(--pergamino); font-size: 13px; }
+.sigilo-creditos { font-size: 10px; color: var(--texto-2); margin: 0; }
 .faccion-error { margin: 4px 0; }
-.faccion-motivo { font-size: 13px; color: var(--rojo-claro); white-space: normal; margin: 2px 0; }
+.faccion-motivo { font-size: 11.5px; color: var(--rojo-claro); white-space: normal; margin: 2px 0; }
 .faccion-crear-boton { align-self: flex-start; padding: 0 22px; }
 
 /* «Pedir ingreso» */
@@ -47,33 +47,33 @@
 .faccion-buscar { flex-direction: row; align-items: center; margin: 10px 0 6px 0; }
 .faccion-buscar-campo { flex-grow: 1; margin-right: 12px; }
 .faccion-sin-bots { margin: 0; }
-.faccion-sin-bots > .unity-label { font-size: 13px; color: var(--texto-2); min-width: 0; margin-right: 6px; }
+.faccion-sin-bots > .unity-label { font-size: 11.5px; color: var(--texto-2); min-width: 0; margin-right: 6px; }
 .faccion-lista { flex-grow: 1; min-height: 0; }
 .faccion-grupo { margin-top: 10px; }
-.faccion-vacia { font-size: 14px; color: var(--texto-2); white-space: normal; margin: 8px 0; }
+.faccion-vacia { font-size: 12.5px; color: var(--texto-2); white-space: normal; margin: 8px 0; }
 .faccion-publica { flex-direction: row; align-items: center; padding: 8px 10px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.18); }
 .faccion-publica.derrotada { opacity: 0.55; }
 .faccion-publica-escudo { margin-right: 14px; }
 .faccion-publica-info { flex-grow: 1; flex-shrink: 1; min-width: 0; }
 .faccion-publica-nombre { flex-direction: row; align-items: center; }
-.faccion-publica-titulo { font-size: 15px; color: var(--pergamino); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
-.faccion-publica-relacion { margin-left: 6px; padding: 0 6px; border-radius: 8px; font-size: 11px; color: #ffffff; background-color: var(--bronce-osc); }
+.faccion-publica-titulo { font-size: 13px; color: var(--pergamino); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-publica-relacion { margin-left: 6px; padding: 0 6px; border-radius: 8px; font-size: 10px; color: #ffffff; background-color: var(--bronce-osc); }
 .faccion-publica-relacion.rel-derrota { background-color: var(--terracota); }
-.faccion-publica-datos { font-size: 13px; color: var(--texto-2); white-space: normal; margin-top: 3px; }
+.faccion-publica-datos { font-size: 11.5px; color: var(--texto-2); white-space: normal; margin-top: 3px; }
 .faccion-publica-cifras { flex-direction: row; flex-shrink: 0; margin: 0 14px; }
 .faccion-cifra { min-width: 58px; align-items: center; margin-left: 16px; }
-.faccion-cifra-n { font-size: 18px; color: var(--oro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; margin: 0; }
-.faccion-cifra-q { font-size: 11px; color: var(--texto-apagado); letter-spacing: 1px; margin: 0; }
+.faccion-cifra-n { font-size: 16px; color: var(--oro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; margin: 0; }
+.faccion-cifra-q { font-size: 10px; color: var(--texto-apagado); letter-spacing: 1px; margin: 0; }
 .faccion-lejana { flex-direction: row; align-items: center; justify-content: space-between; padding: 5px 10px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.12); }
 .faccion-lejana-escudo { margin-right: 10px; }
 .faccion-lejana-nombre { flex-grow: 1; flex-shrink: 1; min-width: 0; }
-.faccion-lejana-titulo { font-size: 14px; color: var(--texto-2); margin: 0; }
-.faccion-lejana-datos { font-size: 12px; color: var(--texto-apagado); margin: 0; }
+.faccion-lejana-titulo { font-size: 12.5px; color: var(--texto-2); margin: 0; }
+.faccion-lejana-datos { font-size: 10.5px; color: var(--texto-apagado); margin: 0; }
 .faccion-accion { flex-shrink: 0; align-items: flex-end; }
-.faccion-pedir { font-size: 13px; -unity-font-style: bold; color: var(--oro); padding: 7px 11px; background-color: #1d1610; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
+.faccion-pedir { font-size: 11.5px; -unity-font-style: bold; color: var(--oro); padding: 7px 11px; background-color: #1d1610; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
 .faccion-pedir:hover { border-color: var(--bronce); color: var(--oro-claro); }
-.faccion-pedido { font-size: 12px; color: var(--texto-apagado); flex-shrink: 0; }
-.faccion-error-texto { font-size: 12px; color: var(--rojo-claro); white-space: normal; max-width: 260px; }
+.faccion-pedido { font-size: 10.5px; color: var(--texto-apagado); flex-shrink: 0; }
+.faccion-error-texto { font-size: 10.5px; color: var(--rojo-claro); white-space: normal; max-width: 260px; }
 
 /* ── Tu Facción (tanda 2): el lateral y las pestañas (.faccion-marco, .faccion-lateral, .faccion-principal del prototipo) ── */
 .faccion-marco { flex-grow: 1; flex-shrink: 1; min-height: 0; flex-direction: row; width: 100%; }
@@ -82,82 +82,82 @@
 .faccion-lateral-escudo { padding: 8px 0 4px 0; align-items: center; }
 .faccion-escudo-con-nivel { width: 112px; height: 134px; }
 .faccion-nivel { position: absolute; right: -10px; bottom: -4px; }
-.faccion-lateral-nombre { margin: 4px 0 0 0; font-size: 21px; color: var(--oro-claro); -unity-text-align: middle-center; white-space: normal; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-lateral-nombre { margin: 4px 0 0 0; font-size: 18.5px; color: var(--oro-claro); -unity-text-align: middle-center; white-space: normal; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
 .faccion-lateral-kicker { margin-top: 4px; }
 .faccion-xp { width: 100%; margin-top: 10px; }
 .faccion-xp-cab { flex-direction: row; justify-content: space-between; align-items: flex-end; }
-.faccion-xp-etq { font-size: 13px; color: var(--texto-2); margin: 0; }
-.faccion-xp-cifra { font-size: 13px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-xp-etq { font-size: 11.5px; color: var(--texto-2); margin: 0; }
+.faccion-xp-cifra { font-size: 11.5px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
 .faccion-xp-barra { height: 8px; margin: 4px 0; border-radius: 4px; background-color: rgba(0, 0, 0, 0.35); border-width: 1px; border-color: var(--bronce-osc); overflow: hidden; }
 .faccion-xp-lleno { height: 100%; background-color: var(--oro); }
-.faccion-xp-falta { font-size: 11px; color: var(--texto-apagado); -unity-text-align: middle-right; margin: 0; }
+.faccion-xp-falta { font-size: 10px; color: var(--texto-apagado); -unity-text-align: middle-right; margin: 0; }
 .faccion-franja { flex-direction: row; justify-content: space-around; width: 100%; margin-top: 10px; padding: 8px 0; border-top-width: 1px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
 .faccion-franja-dato { flex-direction: row; align-items: center; }
 .faccion-franja-dato > VisualElement { margin-right: 6px; }
-.faccion-franja-cifra { font-size: 18px; color: var(--oro-claro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-franja-cifra { font-size: 16px; color: var(--oro-claro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
 .faccion-prestigio { width: 100%; align-items: center; margin-top: 8px; }
 .faccion-prestigio-usos { flex-direction: row; flex-wrap: wrap; justify-content: center; }
 .faccion-prestigio-uso { flex-direction: row; align-items: center; margin: 2px 3px; padding: 2px 7px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 10px; background-color: rgba(0, 0, 0, 0.25); }
 .faccion-prestigio-uso > VisualElement { margin-right: 4px; }
-.faccion-prestigio-uso-texto { font-size: 12px; color: var(--pergamino); margin: 0; }
-.faccion-prestigio-siguiente { font-size: 12px; color: var(--texto-2); margin-top: 4px; }
+.faccion-prestigio-uso-texto { font-size: 10.5px; color: var(--pergamino); margin: 0; }
+.faccion-prestigio-siguiente { font-size: 10.5px; color: var(--texto-2); margin-top: 4px; }
 .faccion-lateral-resumen { width: 100%; margin-top: 12px; }
 .faccion-cargos-fila { flex-direction: row; margin-bottom: 8px; }
 .faccion-cargo { flex-grow: 1; flex-basis: 0; }
 .faccion-cargo-cab { flex-direction: row; align-items: center; }
 .faccion-cargo-cab > VisualElement { margin-right: 4px; }
-.faccion-cargo-etq { font-size: 12px; color: var(--texto-2); margin: 0; }
-.faccion-cargo-nombre { font-size: 16px; color: var(--pergamino); -unity-font-style: bold; margin: 2px 0 0 0; white-space: normal; }
+.faccion-cargo-etq { font-size: 10.5px; color: var(--texto-2); margin: 0; }
+.faccion-cargo-nombre { font-size: 14px; color: var(--pergamino); -unity-font-style: bold; margin: 2px 0 0 0; white-space: normal; }
 .faccion-cargo.vacante .faccion-cargo-nombre { color: var(--texto-apagado); -unity-font-style: italic; }
-.faccion-nota { font-size: 14px; color: var(--texto-2); white-space: normal; margin: 4px 0; }
+.faccion-nota { font-size: 12.5px; color: var(--texto-2); white-space: normal; margin: 4px 0; }
 .liga-fila { flex-direction: row; align-items: center; }
 .liga-orla { flex-direction: row; padding: 5px; margin-right: 10px; border-width: 2px; border-color: #c9a227; border-radius: 8px; background-color: rgba(0, 0, 0, 0.2); }
 .liga-texto { flex-shrink: 1; }
-.liga-tipo { font-size: 14px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
+.liga-tipo { font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
 .faccion-lateral-pie { width: 100%; margin-top: 14px; padding-top: 14px; border-top-width: 1px; border-color: rgba(169, 121, 63, 0.3); }
 .faccion-cupos-fila { flex-direction: row; margin: 6px 0; }
 .faccion-cupo { flex-grow: 1; flex-basis: 0; align-items: center; margin: 0 2px; padding: 5px 2px 4px 2px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 4px; background-color: rgba(0, 0, 0, 0.3); }
 .faccion-cupo.lleno { border-color: var(--bronce); }
 .faccion-cupo.cerrado { opacity: 0.5; }
-.faccion-cupo-nivel { font-size: 15px; color: var(--oro); margin: 0; }
+.faccion-cupo-nivel { font-size: 13px; color: var(--oro); margin: 0; }
 .faccion-cupo-cifra { flex-direction: row; align-items: flex-end; }
-.faccion-cupo-usado { font-size: 17px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
-.faccion-cupo-tope { font-size: 12px; color: var(--texto-apagado); margin: 0 0 2px 0; }
+.faccion-cupo-usado { font-size: 15px; color: var(--oro); margin: 0; -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.faccion-cupo-tope { font-size: 10.5px; color: var(--texto-apagado); margin: 0 0 2px 0; }
 .faccion-cupo-barra { align-self: stretch; height: 3px; margin: 1px 3px 0 3px; border-radius: 2px; background-color: rgba(0, 0, 0, 0.45); overflow: hidden; }
 .faccion-cupo-barra-i { height: 100%; background-color: var(--oro); }
 .titulo-item { flex-direction: row; align-items: center; padding: 4px 0; }
 .titulo-texto { margin-left: 10px; flex-shrink: 1; }
-.titulo-nombre { font-size: 15px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
+.titulo-nombre { font-size: 13px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
 .titulo-propio .titulo-nombre { color: #e0b83a; }
 .titulo-quien { flex-direction: row; align-items: center; }
-.titulo-quien-texto { font-size: 13px; color: var(--texto-2); margin: 0 0 0 6px; }
+.titulo-quien-texto { font-size: 11.5px; color: var(--texto-2); margin: 0 0 0 6px; }
 .faccion-dejar { margin-top: 6px; align-self: stretch; }
 .faccion-principal { flex-grow: 1; flex-shrink: 1; min-width: 0; }
 .faccion-pestanas { flex-shrink: 0; }
-.faccion-pestana-aviso { margin: 0 0 0 6px; padding: 0 6px; border-radius: 8px; font-size: 12px; color: #201509; background-color: var(--oro); }
+.faccion-pestana-aviso { margin: 0 0 0 6px; padding: 0 6px; border-radius: 8px; font-size: 10.5px; color: #201509; background-color: var(--oro); }
 .faccion-pestana-cuerpo { flex-grow: 1; }
 .faccion-pestana-cuerpo > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding: 8px 4px 16px 4px; }
-.faccion-h3 { font-size: 19px; color: var(--pergamino); margin: 18px 0 6px 0; -unity-font-style: bold; }
+.faccion-h3 { font-size: 16.5px; color: var(--pergamino); margin: 18px 0 6px 0; -unity-font-style: bold; }
 .faccion-fila { flex-direction: row; align-items: center; padding: 10px 12px; margin: 4px 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(255, 255, 255, 0.035); }
 .faccion-fila > Button { margin-left: 8px; }
-.faccion-fila-nombre { flex-grow: 1; font-size: 15px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
+.faccion-fila-nombre { flex-grow: 1; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
 .faccion-combo { flex-grow: 1; margin: 0; }
 .participacion-lista { margin: 4px 0; }
 .participacion-fila { flex-direction: row; justify-content: space-between; padding: 4px 6px; border-bottom-width: 1px; border-color: rgba(107, 74, 41, 0.35); }
 .participacion-izq { flex-shrink: 1; }
 .participacion-linea { flex-direction: row; flex-wrap: wrap; align-items: center; }
-.participacion-nombre { font-size: 14px; color: var(--pergamino); margin: 0 6px 0 0; }
+.participacion-nombre { font-size: 12.5px; color: var(--pergamino); margin: 0 6px 0 0; }
 .participacion-yo .participacion-nombre { color: var(--oro-claro); }
-.participacion-cargos { font-size: 12px; color: var(--texto-2); margin: 0; }
-.participacion-donde { font-size: 12px; color: var(--texto-2); margin: 0; }
-.participacion-puntos { font-size: 14px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
+.participacion-cargos { font-size: 10.5px; color: var(--texto-2); margin: 0; }
+.participacion-donde { font-size: 10.5px; color: var(--texto-2); margin: 0; }
+.participacion-puntos { font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; margin: 0; }
 .faccion-plaza { padding: 8px 10px; border-bottom-width: 1px; border-color: rgba(169, 121, 63, 0.18); }
 .faccion-plaza.capital { background-color: rgba(169, 121, 63, 0.12); border-left-width: 3px; border-left-color: var(--oro); }
 .faccion-plaza.abierta { background-color: rgba(0, 0, 0, 0.18); }
 .faccion-plaza-fila { flex-direction: row; align-items: center; }
 .faccion-plaza-pulsable:hover { background-color: rgba(169, 121, 63, 0.08); }
 .faccion-plaza-info { flex-grow: 1; flex-shrink: 1; min-width: 0; }
-.faccion-plaza-flecha { font-size: 13px; color: var(--oro); margin: 0 6px 0 0; }
+.faccion-plaza-flecha { font-size: 11.5px; color: var(--oro); margin: 0 6px 0 0; }
 .fplaza-detalle { flex-direction: row; margin-top: 8px; }
 .fplaza-bloque { margin: 0 12px 10px 0; }
 .fplaza-almacen { flex-grow: 1; flex-basis: 0; }
@@ -165,35 +165,35 @@
 .fplaza-fichas { flex-direction: row; flex-wrap: wrap; }
 .fplaza-ficha { flex-direction: row; align-items: center; margin: 2px 6px 2px 0; padding: 2px 6px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; }
 .fplaza-ficha > VisualElement { margin-right: 4px; }
-.fplaza-ficha-cifra { font-size: 13px; color: var(--pergamino); margin: 0; }
+.fplaza-ficha-cifra { font-size: 11.5px; color: var(--pergamino); margin: 0; }
 .fplaza-poblacion { flex-direction: row; }
 .fplaza-clase { align-items: center; margin-right: 16px; }
-.fplaza-clase-cifra { font-size: 15px; color: var(--oro); margin: 0; -unity-font-style: bold; }
-.fplaza-clase-nombre { font-size: 11px; color: var(--texto-apagado); margin: 0; }
-.fplaza-obra { font-size: 13px; color: var(--pergamino); margin: 2px 0; white-space: normal; }
+.fplaza-clase-cifra { font-size: 13px; color: var(--oro); margin: 0; -unity-font-style: bold; }
+.fplaza-clase-nombre { font-size: 10px; color: var(--texto-apagado); margin: 0; }
+.fplaza-obra { font-size: 11.5px; color: var(--pergamino); margin: 2px 0; white-space: normal; }
 
 /* Los cargos de Facción en la Base (paso 8): bajo el nombre del héroe, el sigilo pequeño y sus cargos. */
 .base-cargos { flex-direction: row; align-items: center; justify-content: center; margin: 2px 0; }
-.base-cargos-texto { font-size: 13px; color: var(--oro); margin: 0 0 0 6px; white-space: normal; }
+.base-cargos-texto { font-size: 11.5px; color: var(--oro); margin: 0 0 0 6px; white-space: normal; }
 
 /* El fondo de refundación del campamento (paso 8, tanda 2; `.fondo-*` del prototipo). */
 .campamento-secciones { margin-bottom: 12px; }
-.fondo-titulo { font-size: 15px; color: var(--oro); -unity-font-style: bold; margin: 10px 0 4px 0; }
+.fondo-titulo { font-size: 13px; color: var(--oro); -unity-font-style: bold; margin: 10px 0 4px 0; }
 .fondo-fila { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 6px 0; }
-.fondo-recurso { font-size: 14px; color: var(--pergamino); margin: 0; }
+.fondo-recurso { font-size: 12.5px; color: var(--pergamino); margin: 0; }
 .fondo-fila > .fondo-barra { flex-grow: 1; margin: 0 8px; }
 .fondo-barra { height: 8px; background-color: #3a362b; border-radius: 4px; overflow: hidden; }
 .fondo-barra-i { height: 100%; background-color: #d9b44a; }
 .fondo-fila.listo .fondo-barra-i { background-color: #6fae6e; }
 .fondo-barra-total { height: 12px; margin: 6px 0 10px 0; }
-.fondo-cifra { font-size: 14px; color: var(--pergamino); margin: 0; min-width: 70px; -unity-text-align: middle-right; }
-.fondo-falta { width: 100%; font-size: 12px; color: var(--texto-2); margin: 2px 0 0 0; }
+.fondo-cifra { font-size: 12.5px; color: var(--pergamino); margin: 0; min-width: 70px; -unity-text-align: middle-right; }
+.fondo-falta { width: 100%; font-size: 10.5px; color: var(--texto-2); margin: 2px 0 0 0; }
 .fondo-fila.listo .fondo-falta { color: #8bc48a; }
 .fondo-aportar { flex-direction: row; align-items: center; }
 .fondo-combo { flex-grow: 1; flex-shrink: 1; min-width: 0; margin: 0 8px 0 0; }
 .fondo-combo > .unity-base-popup-field__input { background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; height: 34px; padding: 0 10px; margin: 0; }
 .fondo-combo > .unity-base-popup-field__input:hover { border-color: var(--bronce); }
-.fondo-combo .unity-base-popup-field__text { color: var(--pergamino); font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+.fondo-combo .unity-base-popup-field__text { color: var(--pergamino); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
 .fondo-aportar > Button { flex-shrink: 0; }
 .fondo-cantidad { width: 70px; flex-shrink: 0; margin: 0 8px 0 0; }
 .fondo-cantidad > .unity-base-text-field__input { background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--pergamino); height: 34px; padding: 0 8px; }
@@ -222,37 +222,37 @@
 .recl-tablero.activo .tec-carta.baja { opacity: 0.7; }
 .recl-tablero.activo .tec-carta.luz { opacity: 1; }
 .tec-carta-cab { flex-direction: row; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
-.tec-carta-nombre { flex-shrink: 1; margin: 0; padding: 0; font-size: 12.5px; color: var(--oro-claro); -unity-font-style: bold; white-space: normal; }
-.tec-medalla { flex-shrink: 0; width: 18px; height: 18px; margin: -1px -2px 0 6px; padding: 0; border-radius: 9px; font-size: 11px; -unity-text-align: middle-center; -unity-font-style: bold; }
+.tec-carta-nombre { flex-shrink: 1; margin: 0; padding: 0; font-size: 11px; color: var(--oro-claro); -unity-font-style: bold; white-space: normal; }
+.tec-medalla { flex-shrink: 0; width: 18px; height: 18px; margin: -1px -2px 0 6px; padding: 0; border-radius: 9px; font-size: 10px; -unity-text-align: middle-center; -unity-font-style: bold; }
 .tec-carta.adoptada .tec-medalla { background-color: var(--oro); color: rgb(32, 21, 9); }
 .tec-carta.adoptable .tec-medalla { background-color: #7fcf6a; color: rgb(16, 32, 12); }
 .tec-carta.revelada .tec-medalla { background-color: #6fb6ff; color: rgb(11, 26, 44); }
 .tec-carta.logro .tec-medalla { background-color: #e0a53a; color: rgb(42, 26, 4); }
 .tec-carta-abre { flex-direction: row; flex-wrap: wrap; align-items: center; min-height: 24px; margin-bottom: 6px; }
 .tec-abre-ico { flex-direction: row; align-items: center; margin: 0 5px 4px 0; }
-.tec-abre-nivel { position: absolute; right: -4px; bottom: -3px; margin: 0; padding: 0 2px; font-size: 9px; color: var(--oro); background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; }
-.tec-abre-por { margin: 0 0 0 2px; padding: 0; font-size: 11px; color: var(--oro); }
-.tec-abre-efecto { margin: 0 5px 4px 0; padding: 1px 5px; font-size: 11px; color: var(--pergamino); border-width: 1px; border-color: rgba(201, 162, 39, 0.55); border-radius: 2px; white-space: normal; }
-.tec-abre-canon { margin: 0 5px 4px 0; padding: 1px 5px; font-size: 11px; color: #e0a53a; border-width: 1px; border-color: rgba(224, 165, 58, 0.6); border-radius: 2px; }
+.tec-abre-nivel { position: absolute; right: -4px; bottom: -3px; margin: 0; padding: 0 2px; font-size: 10px; color: var(--oro); background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; }
+.tec-abre-por { margin: 0 0 0 2px; padding: 0; font-size: 10px; color: var(--oro); }
+.tec-abre-efecto { margin: 0 5px 4px 0; padding: 1px 5px; font-size: 10px; color: var(--pergamino); border-width: 1px; border-color: rgba(201, 162, 39, 0.55); border-radius: 2px; white-space: normal; }
+.tec-abre-canon { margin: 0 5px 4px 0; padding: 1px 5px; font-size: 10px; color: #e0a53a; border-width: 1px; border-color: rgba(224, 165, 58, 0.6); border-radius: 2px; }
 .tec-carta-pide { margin-bottom: 6px; }
 .tec-carta-pide > .recl-leyenda-item { margin: 0 0 3px 0; }
-.tec-carta-pide .recl-leyenda-texto { font-size: 11px; white-space: normal; flex-shrink: 1; }
+.tec-carta-pide .recl-leyenda-texto { font-size: 10px; white-space: normal; flex-shrink: 1; }
 .tec-arranque { margin: 0; padding: 0; font-size: 10px; letter-spacing: 1.4px; color: var(--oro); -unity-font-style: bold; }
 .tec-carta-estado { flex-direction: row; flex-wrap: wrap; align-items: center; padding-top: 6px; border-top-width: 1px; border-color: rgba(107, 74, 41, 0.6); }
-.tec-estado-texto { margin: 0 6px 0 0; padding: 0; font-size: 11px; color: var(--texto-2); white-space: normal; }
+.tec-estado-texto { margin: 0 6px 0 0; padding: 0; font-size: 10px; color: var(--texto-2); white-space: normal; }
 .tec-carta-estado > .recl-boton-mini { margin-right: 6px; }
 .tec-rec { flex-direction: row; align-items: center; margin: 0 4px 2px 0; padding: 0 4px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.28); }
-.tec-rec-cifra { margin: 0 0 0 2px; padding: 0; font-size: 11px; color: var(--pergamino); -unity-font-style: bold; }
+.tec-rec-cifra { margin: 0 0 0 2px; padding: 0; font-size: 10px; color: var(--pergamino); -unity-font-style: bold; }
 .tec-rec.falta { border-color: rgba(226, 103, 90, 0.6); }
 .tec-rec.falta .tec-rec-cifra { color: #e2675a; }
 .tec-edi { padding: 1px 5px; }
 .tec-barra { height: 20px; margin: 0; border-width: 1px; border-color: var(--bronce-osc); border-radius: 2px; background-color: rgba(0, 0, 0, 0.35); overflow: hidden; justify-content: center; }
 .tec-barra-lleno { position: absolute; left: 0; top: 0; bottom: 0; background-color: var(--bronce-osc); }
 .tec-barra.hecha .tec-barra-lleno { background-color: var(--bronce); }
-.tec-barra-texto { margin: 0; padding: 0; font-size: 12px; color: rgb(242, 230, 207); -unity-text-align: middle-center; -unity-font-style: bold; }
+.tec-barra-texto { margin: 0; padding: 0; font-size: 10.5px; color: rgb(242, 230, 207); -unity-text-align: middle-center; -unity-font-style: bold; }
 .tec-barra-carta { flex-grow: 1; width: 100%; height: 16px; margin-top: 1px; }
-.tec-barra-carta > .tec-barra-texto { font-size: 11px; }
-.tec-barra-pie { margin: 4px 0 0 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.tec-barra-carta > .tec-barra-texto { font-size: 10px; }
+.tec-barra-pie { margin: 4px 0 0 0; font-size: 10.5px; color: var(--texto-2); white-space: normal; }
 .tec-muestra { width: 22px; height: 14px; border-width: 1px; border-radius: 2px; background-color: rgba(70, 52, 30, 0.97); }
 .tec-muestra.adoptada { border-color: var(--oro); background-color: rgba(110, 82, 42, 0.97); }
 .tec-muestra.adoptable { border-color: #7fcf6a; }
@@ -261,9 +261,9 @@
 .tec-muestra.bloqueada, .tec-muestra.futura { border-color: rgba(107, 74, 41, 0.55); background-color: rgba(20, 16, 11, 0.78); }
 .tec-era-cab { align-items: center; padding: 16px 2px 14px 2px; }
 .tec-era-coste { margin-top: 3px; }
-.tec-era-coste > .tec-renglon-texto { font-size: 11.5px; color: var(--texto-2); }
+.tec-era-coste > .tec-renglon-texto { font-size: 10px; color: var(--texto-2); }
 .tec-era-sigue { margin-top: 6px; }
-.tec-era-sigue-texto { margin: 0 0 4px 0; padding: 0; font-size: 11.5px; color: var(--oro); white-space: normal; }
+.tec-era-sigue-texto { margin: 0 0 4px 0; padding: 0; font-size: 10px; color: var(--oro); white-space: normal; }
 .tec-era-barra { height: 5px; max-width: 220px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 1px; background-color: rgba(0, 0, 0, 0.35); }
 .tec-era-barra-lleno { height: 100%; background-color: var(--oro); }
 .tec-renglon { flex-direction: row; flex-wrap: wrap; align-items: center; margin: 2px 0 0 0; }
@@ -273,10 +273,10 @@
 .tec-fichas { margin-top: 2px; }
 .tec-fichas > .tec-rec { margin: 0 4px 4px 0; padding: 1px 5px; }
 .tec-rec > .tec-icono, .tec-rec > .icono { margin-right: 2px; }
-.tec-nota-fila > .tec-renglon-texto { font-size: 12px; color: var(--texto-2); }
+.tec-nota-fila > .tec-renglon-texto { font-size: 10.5px; color: var(--texto-2); }
 .tec-combate-cab { margin: 0; align-items: center; }
 .tec-combate-cab > .recl-tip-seccion { margin-right: 8px; }
-.tec-rareza { margin: 7px 0 0 0; padding: 0 6px; border-width: 1px; border-radius: 2px; font-size: 11px; -unity-font-style: bold; }
+.tec-rareza { margin: 7px 0 0 0; padding: 0 6px; border-width: 1px; border-radius: 2px; font-size: 10px; -unity-font-style: bold; }
 .tec-rareza.r-comun { color: #c9c2b0; border-color: #c9c2b0; }
 .tec-rareza.r-pocoComun { color: #7fc27a; border-color: #7fc27a; }
 .tec-rareza.r-rara { color: #6fa8e6; border-color: #6fa8e6; }
@@ -286,11 +286,11 @@
 .tec-combate-fila { flex-direction: row; align-items: center; padding: 2px 0; }
 .tec-combate-fila { border-top-width: 1px; border-color: rgba(255, 255, 255, 0.06); }
 .tec-combate-fila.primera { border-top-width: 0; }
-.tec-combate-nombre { width: 84px; flex-shrink: 0; margin: 0; padding: 0 6px; font-size: 11.5px; color: var(--texto-2); }
-.tec-combate-celda { flex-grow: 1; flex-basis: 0; margin: 0; padding: 0 6px; font-size: 11.5px; color: var(--pergamino); -unity-text-align: middle-right; }
+.tec-combate-nombre { width: 84px; flex-shrink: 0; margin: 0; padding: 0 6px; font-size: 10px; color: var(--texto-2); }
+.tec-combate-celda { flex-grow: 1; flex-basis: 0; margin: 0; padding: 0 6px; font-size: 10px; color: var(--pergamino); -unity-text-align: middle-right; }
 .tec-combate-tipo { flex-direction: row; align-items: center; justify-content: flex-end; }
-.tec-combate-tipo-texto { margin: 0 0 0 3px; padding: 0; font-size: 10.5px; color: var(--texto-2); }
-.tec-renglon-texto { margin: 0 4px 0 0; padding: 0; font-size: 12.5px; color: var(--pergamino); white-space: normal; flex-shrink: 1; }
+.tec-combate-tipo-texto { margin: 0 0 0 3px; padding: 0; font-size: 10px; color: var(--texto-2); }
+.tec-renglon-texto { margin: 0 4px 0 0; padding: 0; font-size: 11px; color: var(--pergamino); white-space: normal; flex-shrink: 1; }
 .tec-tip { max-height: 96%; }
 .tec-tip.fijo { border-color: var(--oro); }
 .tec-tip-icono { margin-right: 10px; }
@@ -298,16 +298,16 @@
 .tec-tip-estado.adoptable { border-color: #7fcf6a; }
 .tec-tip-estado.revelada { border-color: #6fb6ff; }
 .tec-tip-estado.logro { border-color: #e0a53a; }
-.tec-req { margin: 8px 0 4px 0; padding: 0; font-size: 11px; letter-spacing: 0.9px; color: var(--texto-2); -unity-font-style: bold; }
-.tec-nota { margin: 8px 0 0 0; padding: 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.tec-req { margin: 8px 0 4px 0; padding: 0; font-size: 10px; letter-spacing: 0.9px; color: var(--texto-2); -unity-font-style: bold; }
+.tec-nota { margin: 8px 0 0 0; padding: 0; font-size: 10.5px; color: var(--texto-2); white-space: normal; }
 .tec-ficha-acciones { margin-top: 12px; padding-top: 10px; border-top-width: 1px; border-color: var(--bronce-osc); }
-.tec-ficha-nota { margin: 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.tec-ficha-nota { margin: 0; font-size: 10.5px; color: var(--texto-2); white-space: normal; }
 .tec-ficha-boton { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; margin: 0; padding: 8px 10px; height: auto; }
 .tec-ficha-boton > .boton-texto { margin-right: 6px; }
 .boton-primario .tec-rec { background-color: rgba(20, 14, 8, 0.78); }
 .tec-extras { flex-shrink: 0; margin-top: 10px; }
 .tec-extra { padding: 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0.18); }
-.tec-extra-titulo { margin: 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; }
+.tec-extra-titulo { margin: 0; font-size: 11.5px; color: var(--oro-claro); -unity-font-style: bold; }
 /* La pestaña Diplomacia (paso 8, tanda 4; `.diplo-*` y `.propuesta-*` del prototipo). Sin selectores de hermano: USS no los tiene. */
 .diplo-cuerpo { flex-grow: 1; flex-shrink: 1; min-height: 0; padding: 8px 4px 8px 4px; }
 .diplo-marco { flex-grow: 1; flex-shrink: 1; min-height: 0; flex-direction: row; align-items: stretch; }
@@ -319,37 +319,37 @@
 .diplo-fila.activo { border-color: var(--bronce); background-color: rgba(169, 121, 63, 0.2); }
 .diplo-fila > .sigilo, .diplo-fila > VisualElement { flex-shrink: 0; }
 .diplo-fila-texto { flex-shrink: 1; min-width: 0; margin-left: 8px; }
-.diplo-fila-nombre { margin: 0; padding: 0; font-size: 13px; color: var(--pergamino); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.diplo-fila-sub { margin: 0; padding: 0; font-size: 11px; color: var(--texto-apagado); white-space: normal; }
+.diplo-fila-nombre { margin: 0; padding: 0; font-size: 11.5px; color: var(--pergamino); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diplo-fila-sub { margin: 0; padding: 0; font-size: 10px; color: var(--texto-apagado); white-space: normal; }
 .diplo-fila.guerra .diplo-fila-sub { color: #e0705a; }
 .diplo-bots { margin: 0 0 4px 0; }
 .diplo-bots.activo { border-color: var(--oro); color: var(--oro-claro); }
 .diplo-seccion-fila { flex-direction: row; align-items: center; margin-top: 6px; }
 .diplo-seccion { flex-direction: row; align-items: center; flex-grow: 1; margin: 0; padding: 2px 0; border-width: 0; background-color: rgba(0, 0, 0, 0); }
 .diplo-seccion > .plaza-kicker { margin: 0; }
-.diplo-seccion-flecha { margin: 0 6px 0 0; padding: 0; color: var(--oro); font-size: 12px; }
-.diplo-seccion-ocultas { margin: 0 0 0 8px; padding: 0; font-size: 11px; color: var(--texto-apagado); }
+.diplo-seccion-flecha { margin: 0 6px 0 0; padding: 0; color: var(--oro); font-size: 10.5px; }
+.diplo-seccion-ocultas { margin: 0 0 0 8px; padding: 0; font-size: 10px; color: var(--texto-apagado); }
 .diplo-ficha-cab { flex-direction: row; align-items: center; margin-bottom: 12px; }
 .diplo-ficha-textos { margin-left: 14px; flex-shrink: 1; }
-.diplo-ficha-nombre { margin: 2px 0; padding: 0; font-size: 20px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.diplo-ficha-nombre { margin: 2px 0; padding: 0; font-size: 17.5px; color: var(--oro-claro); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
 .diplo-insignias { flex-direction: row; flex-wrap: wrap; }
 .diplo-insignias > .faccion-publica-relacion { margin: 0 4px 4px 0; }
 .faccion-publica-relacion.rel-guerra { background-color: rgb(140, 45, 32); }
 .diplo-datos { flex-direction: row; flex-wrap: wrap; margin-bottom: 12px; }
 .diplo-dato { width: 150px; flex-grow: 1; margin: 0 6px 6px 0; padding: 6px 8px; border-width: 1px; border-color: rgba(169, 121, 63, 0.25); border-radius: 3px; }
-.diplo-dato-etiqueta { margin: 0; padding: 0; font-size: 12px; color: var(--texto-2); }
-.diplo-dato-valor { margin: 0; padding: 0; font-size: 14px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.diplo-dato-etiqueta { margin: 0; padding: 0; font-size: 10.5px; color: var(--texto-2); }
+.diplo-dato-valor { margin: 0; padding: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
 .diplo-seccion-caja { margin-bottom: 12px; }
-.diplo-subtitulo { margin: 8px 0 2px 0; padding: 0; font-size: 12px; letter-spacing: 1px; color: var(--oro); -unity-font-style: bold; }
+.diplo-subtitulo { margin: 8px 0 2px 0; padding: 0; font-size: 10.5px; letter-spacing: 1px; color: var(--oro); -unity-font-style: bold; }
 .diplo-relacion { padding: 8px 12px; }
 .diplo-relacion.guerra { border-color: rgba(224, 112, 90, 0.5); }
 .diplo-relacion-textos { flex-grow: 1; flex-shrink: 1; min-width: 0; }
-.diplo-relacion-titulo { margin: 0; padding: 0; font-size: 14px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
-.diplo-relacion-sub { margin: 2px 0 0 0; padding: 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.diplo-relacion-titulo { margin: 0; padding: 0; font-size: 12.5px; color: var(--pergamino); -unity-font-style: bold; white-space: normal; }
+.diplo-relacion-sub { margin: 2px 0 0 0; padding: 0; font-size: 10.5px; color: var(--texto-2); white-space: normal; }
 .diplo-campo-texto { flex-grow: 1; margin: 0 0 0 8px; }
 .diplo-fusion-form { flex-wrap: wrap; }
-.diplo-campo-texto > .unity-base-text-field__input, .diplo-campo > .unity-base-text-field__input { background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--pergamino); font-size: 15px; height: 34px; padding: 0 8px; }
-.diplo-campo > .unity-label { font-size: 13px; color: var(--texto-2); -unity-font-style: bold; min-width: 0; margin: 0 0 4px 0; padding: 0; }
+.diplo-campo-texto > .unity-base-text-field__input, .diplo-campo > .unity-base-text-field__input { background-color: var(--tinta); border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; color: var(--pergamino); font-size: 13px; height: 34px; padding: 0 8px; }
+.diplo-campo > .unity-label { font-size: 11.5px; color: var(--texto-2); -unity-font-style: bold; min-width: 0; margin: 0 0 4px 0; padding: 0; }
 .diplo-campo { flex-direction: column; }
 .propuesta { margin-top: 8px; padding: 10px 12px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 4px; background-color: rgba(0, 0, 0, 0.22); }
 .propuesta-barra { flex-direction: row; flex-wrap: wrap; margin: 6px 0 8px 0; padding: 6px; border-width: 1px; border-top-width: 2px; border-color: var(--bronce); border-top-color: var(--oro); border-radius: 3px; background-color: var(--marco-bg-alt); }
@@ -358,21 +358,21 @@
 .propuesta-opcion.puesta { border-color: var(--oro); background-color: rgba(216, 184, 120, 0.18); }
 .propuesta-opcion.guerra .propuesta-opcion-texto { color: rgb(255, 179, 168); }
 .propuesta-opcion.guerra.puesta { border-color: #e2675a; background-color: rgba(160, 40, 30, 0.25); }
-.propuesta-opcion-texto { margin: 0 0 0 6px; padding: 0; font-size: 13px; color: var(--oro-claro); -unity-font-style: bold; }
+.propuesta-opcion-texto { margin: 0 0 0 6px; padding: 0; font-size: 11.5px; color: var(--oro-claro); -unity-font-style: bold; }
 .propuesta-cuerpo { min-height: 40px; }
 .propuesta-clausula { padding: 8px 10px; border-width: 1px; border-left-width: 3px; border-color: var(--bronce); border-left-color: var(--oro); border-radius: 3px; background-color: rgba(255, 255, 255, 0.03); }
 .propuesta-clausula.guerra { border-left-color: #e2675a; }
 .propuesta-clausula-cab { flex-direction: row; align-items: center; }
-.propuesta-clausula-nombre { margin: 0 8px 0 6px; padding: 0; font-size: 14px; color: var(--pergamino); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
-.propuesta-clausula-ayuda { flex-grow: 1; flex-shrink: 1; margin: 0; padding: 0; font-size: 12px; color: var(--texto-2); white-space: normal; }
+.propuesta-clausula-nombre { margin: 0 8px 0 6px; padding: 0; font-size: 12.5px; color: var(--pergamino); -unity-font: url("Fuentes/Cinzel-SemiBold.ttf"); -unity-font-definition: initial; }
+.propuesta-clausula-ayuda { flex-grow: 1; flex-shrink: 1; margin: 0; padding: 0; font-size: 10.5px; color: var(--texto-2); white-space: normal; }
 .propuesta-quitar { margin: 0 0 0 8px; padding: 2px 7px; border-width: 1px; border-color: var(--bronce-osc); border-radius: 3px; background-color: rgba(0, 0, 0, 0); color: var(--texto-2); }
 .propuesta-quitar:hover { color: rgb(255, 179, 168); border-color: #e2675a; }
 .propuesta-terminos { flex-direction: row; flex-wrap: wrap; margin-top: 8px; }
 .diplo-campo { width: 180px; flex-grow: 1; margin: 0 8px 0 0; }
 .propuesta-pie { flex-direction: row; align-items: center; justify-content: flex-end; margin-top: 8px; }
 .propuesta-pie > Button { margin: 0 0 0 10px; height: 34px; padding: 0 16px; }
-.propuesta-falta { margin: 0; font-size: 12px; color: rgb(255, 179, 168); }
-.tec-logro { margin: 6px 0 0 0; font-size: 13px; color: var(--texto-2); white-space: normal; }
+.propuesta-falta { margin: 0; font-size: 10.5px; color: rgb(255, 179, 168); }
+.tec-logro { margin: 6px 0 0 0; font-size: 11.5px; color: var(--texto-2); white-space: normal; }
 /* Con Tablón, Misiones y Mercenarios (paso 12) son ocho pestañas: en una fila, más juntas, como el prototipo. */
 .faccion-pestanas > .base-pestana { margin: 0 10px; }
-.faccion-pestanas > .base-pestana > .base-pestana-texto { font-size: 17px; }
+.faccion-pestanas > .base-pestana > .base-pestana-texto { font-size: 15px; }

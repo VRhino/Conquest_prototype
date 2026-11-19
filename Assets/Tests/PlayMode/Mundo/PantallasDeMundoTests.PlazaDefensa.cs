@@ -31,6 +31,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         IEnumerator ClicEnVentana(UnityEngine.InputSystem.Mouse raton, VisualElement raiz, VisualElement e)
         {
             Assert.IsNotNull(e, "el elemento del clic");
+            yield return ConRatonSuelto(e);
             var doc = go.GetComponentInChildren<UIDocument>();
             var textura = doc.panelSettings.targetTexture;
             try
@@ -219,10 +220,18 @@ namespace ConquestTactics.Mundo.UI.Tests
             var panel = raiz.Q("panel-tropa");
             Debug.Log("[Prueba] reclutamiento: " + string.Join(", ", panel.Query<Button>(className: "recl-carta").ToList().Take(12).Select(b => $"{b.name.Substring(5)}({string.Join(" ", b.GetClasses().Where(x => x != "recl-carta" && x != "unity-button" && x != "unity-text-element"))})")));
             yield return EnTamanos(raiz, "90_reclutamiento", () => DentroDelMarco(panel.Q(className: "recl-ventana"), "el árbol"));
+            // Solo sale lo que se recluta aquí (0.181.0 del prototipo).
+            Assert.IsTrue(panel.Query<Button>(className: "recl-carta").ToList().All(b => b.ClassListContains("lista") || b.ClassListContains("tuya")), "en la plaza, solo las tropas listas o tuyas");
             // Una de pago: la milicia de lanceros, con la madera de su equipo del almacén de la plaza.
-            yield return ClicFijo(raton, raiz, panel.Q<Button>("nodo-milicia_lanceros"));
-            yield return Esperar(() => panel.Q<Button>("reclutar-milicia_lanceros") != null || panel.Q<Label>("motivo-milicia_lanceros") != null, 5, "la ficha de la milicia");
-            if (panel.Q<Button>("reclutar-milicia_lanceros") is Button pago && pago.enabledSelf)
+            var hayMilicia = panel.Q<Button>("nodo-milicia_lanceros") != null;
+            if (!hayMilicia) Debug.Log("[Prueba] reclutamiento: la milicia no se recluta en esta plaza (no sale)");
+            else
+            {
+                yield return ClicFijo(raton, raiz, panel.Q<Button>("nodo-milicia_lanceros"));
+                yield return Esperar(() => panel.Q<Button>("reclutar-milicia_lanceros") != null || panel.Q<Label>("motivo-milicia_lanceros") != null, 5, "la ficha de la milicia");
+            }
+            if (!hayMilicia) { }
+            else if (panel.Q<Button>("reclutar-milicia_lanceros") is Button pago && pago.enabledSelf)
             {
                 var madera = Plaza().Almacen.TryGetValue("madera", out var m) ? Math.Floor(m.Cantidad.ValorEnT0 / 1000.0) : 0;
                 yield return ClicFijo(raton, raiz, pago);
@@ -230,10 +239,15 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Debug.Log($"[Prueba] reclutamiento: milicia de lanceros reclutada (madera {madera} → {(Plaza().Almacen.TryGetValue("madera", out var m2) ? Math.Floor(m2.Cantidad.ValorEnT0 / 1000.0) : 0)})");
             }
             else Debug.Log($"[Prueba] reclutamiento: la milicia no se recluta: «{panel.Q<Label>("motivo-milicia_lanceros")?.text}»");
-            yield return ClicFijo(raton, raiz, panel.Q<Button>("nodo-granjeros"));
-            yield return Esperar(() => panel.Q("recl-ficha")?.Q<Label>("estado-ficha") != null, 5, "la ficha de los granjeros");
-            yield return Capturar("90b_ficha_granjeros");
-            if (panel.Q<Button>("reclutar-granjeros") is Button reclutar && reclutar.enabledSelf)
+            var hayGranjeros = panel.Q<Button>("nodo-granjeros") != null;
+            if (hayGranjeros)
+            {
+                yield return ClicFijo(raton, raiz, panel.Q<Button>("nodo-granjeros"));
+                yield return Esperar(() => panel.Q("recl-ficha")?.Q<Label>("estado-ficha") != null, 5, "la ficha de los granjeros");
+                yield return Capturar("90b_ficha_granjeros");
+            }
+            if (!hayGranjeros) Debug.Log("[Prueba] reclutamiento: los granjeros no se reclutan en esta plaza (no salen)");
+            else if (panel.Q<Button>("reclutar-granjeros") is Button reclutar && reclutar.enabledSelf)
             {
                 yield return ClicFijo(raton, raiz, reclutar);
                 yield return Esperar(() => Yo().EscuadronesIds.Any(id => conexion.Sesion.Almacen.Buscar(V1.TipoEntidad.Escuadron, id)?.Escuadron?.TropaId == "granjeros"), 10, "los granjeros reclutados");
@@ -252,20 +266,24 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return ClicFijo(raton, raiz, Ficha().Q<Button>("ficha-abrir-armeria"));
             yield return Esperar(() => Ventana().Q("tienda") != null && Ventana().ClassListContains("plaza-ventana-completa"), 5, "la Armería");
             yield return EnTamanos(raiz, "91b_armeria_tienda", () => DentroDelMarco(Ventana(), "la Armería"));
-            var comprar = Ventana().Q("tienda").Query<Button>("comprar").ToList().FirstOrDefault();
+            // Comprar: una casilla que se puede pagar saca su ficha flotante con «Comprar» (la de la pantalla completa del prototipo).
+            var comprable = Ventana().Q("tienda").Query<Button>(className: "comprable").ToList().FirstOrDefault();
             var antes = Yo().Inventario.Count;
-            if (comprar != null)
+            if (comprable != null)
             {
                 var monedas = Yo().Monedas;
-                yield return ClicEn(comprar);
+                yield return ClicEn(comprable);
+                yield return Esperar(() => raiz.Q("ficha-armeria")?.Q<Button>("comprar") != null, 5, "la ficha con «Comprar»");
+                yield return Capturar("91b2_ficha_comprar");
+                yield return ClicEn(raiz.Q("ficha-armeria").Q<Button>("comprar"));
                 yield return Esperar(() => Yo().Inventario.Count > antes && Yo().Monedas < monedas, 10, "la pieza comprada en la mochila");
                 var nueva = Yo().Inventario.OrderByDescending(x => x.CasillaInventario).First();
                 Debug.Log($"[Prueba] armería: comprado {nueva.ItemDefinitionId} por {monedas - Yo().Monedas} monedas");
-                yield return Esperar(() => Ventana().Q<Button>("mochila-" + nueva.CasillaInventario) != null, 5, "la pieza en la mochila de la Armería");
+                yield return Esperar(() => Ventana().Q<Button>("mochila-" + nueva.CasillaInventario) != null, 5, "la pieza en Vender");
                 yield return ClicEn(Ventana().Q<Button>("mochila-" + nueva.CasillaInventario));
-                yield return Esperar(() => Ventana().Q<Button>("vender") != null, 5, "«Vender»");
+                yield return Esperar(() => raiz.Q("ficha-armeria")?.Q<Button>("vender") != null, 5, "la ficha con «Vender»");
                 yield return Capturar("91c_vender");
-                yield return ClicEn(Ventana().Q<Button>("vender"));
+                yield return ClicEn(raiz.Q("ficha-armeria").Q<Button>("vender"));
                 yield return Esperar(() => Yo().Inventario.Count == antes, 10, "la pieza vendida");
             }
             else Debug.Log($"[Prueba] armería: nada que comprar con {Yo().Monedas} monedas");

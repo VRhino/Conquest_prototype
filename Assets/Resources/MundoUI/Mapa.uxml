@@ -7,7 +7,6 @@
             <ui:Button name="opciones" class="boton-secundario" text="Opciones" />
             <ui:Button name="capa-nodos" class="boton-secundario" text="Nodos" />
             <ui:Button name="capa-fertilidad" class="boton-secundario" text="Fertilidad" />
-            <ui:Button name="marcha-forzada" class="boton-secundario" text="Marcha forzada" />
             <ui:Button name="avisos" class="boton-secundario" text="Avisos" />
             <ui:Button name="cambiar-partida" class="boton-secundario" text="Cambiar de partida" />
             <ui:Button name="cerrar-sesion" class="boton-secundario" text="Cerrar sesión" />
@@ -40,10 +39,13 @@
                 <ui:VisualElement name="ficha-acciones" style="margin-top: 8px;" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <!-- El riel del mapa (BronzeAgeClient `.mapa-riel`): ⚑ Ejército, con tu columna fuera. -->
-        <ui:VisualElement name="mapa-riel" class="mapa-riel oculto" />
-        <ui:Label name="ayuda" picking-mode="Ignore" style="position: absolute; left: 12px; bottom: 10px; padding: 4px 10px; font-size: 13px; color: rgb(237, 224, 196); background-color: rgba(11, 8, 5, 0.72); border-radius: 3px; -unity-text-align: middle-left;"
-                  text="Clic en el suelo: marchar · Clic en algo: elegirlo · Arrastrar o WASD: girar e inclinar · Rueda: zoom · F2: diagnóstico" />
+        <!-- Abajo en el centro (BronzeAgeClient `.mapa-abajo`): el riel (⚑ Ejército, ⌂ Fundar) y debajo la barra de víveres (`.mapa-comida`:
+             marcha forzada, la velocidad, los víveres y «+ desde el carro»), con tu columna fuera. Sin la línea de ayuda de los controles (Víctor,
+             2026-11-18: estorbaba). -->
+        <ui:VisualElement name="mapa-abajo" class="mapa-abajo" picking-mode="Ignore">
+            <ui:VisualElement name="mapa-riel" class="mapa-riel oculto" />
+            <ui:VisualElement name="mapa-comida" class="mapa-comida oculto" />
+        </ui:VisualElement>
         <ui:VisualElement name="diagnostico" class="oculto" style="position: absolute; left: 0; top: 52px; right: 0; bottom: 0; background-color: rgba(11, 8, 5, 0.88);" />
     </ui:VisualElement>
 </ui:UXML>

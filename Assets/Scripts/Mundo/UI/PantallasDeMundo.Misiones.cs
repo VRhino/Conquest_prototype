@@ -337,7 +337,7 @@ namespace ConquestTactics.Mundo.UI
             }
             cab.Add(Dialogo.Caja("recl-hueco"));
             cab.Add(Dialogo.Texto($"Sigues {s?.Seguidas.Count ?? 0}/{MaxSeguidas}", "diario-sigues"));
-            var cerrar = Dialogo.Boton("Cerrar", "boton-secundario", CerrarMisiones);
+            var cerrar = Dialogo.Equis(CerrarMisiones);
             cerrar.name = "misiones-cerrar";
             cab.Add(cerrar);
             placa.Add(cab);

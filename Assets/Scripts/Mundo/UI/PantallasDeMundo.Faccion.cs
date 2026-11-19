@@ -150,7 +150,7 @@ namespace ConquestTactics.Mundo.UI
             faccionVentana.Clear();
             var cab = Dialogo.Caja("faccion-cabecera");
             cab.Add(Dialogo.Texto(h.DisplayName.ToUpperInvariant(), "faccion-titulo"));
-            var cerrar = Dialogo.Boton("Cerrar", "boton-secundario base-cerrar", CerrarFaccion);
+            var cerrar = Dialogo.Equis(CerrarFaccion, "base-cerrar");
             cerrar.name = "faccion-cerrar";
             cab.Add(cerrar);
             faccionVentana.Add(cab);

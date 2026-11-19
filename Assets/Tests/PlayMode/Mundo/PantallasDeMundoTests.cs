@@ -45,6 +45,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         [TearDown]
         public void Restaurar()
         {
+            BattleCommandInput.SetPointerMode(false); // el ratón suelto de una prueba (`ConRatonSuelto`) no pasa a la siguiente
             // Lo que tuviera guardado quien corre la prueba (su login de verdad) se queda como estaba.
             // (sin `guardadas`, la prueba era del otro lote y no llegó a empezar)
             for (int i = 0; guardadas != null && i < Preferencias.Length; i++)
@@ -411,7 +412,7 @@ namespace ConquestTactics.Mundo.UI.Tests
                 ajustes.backgroundBehavior = fondo;
                 ajustes.editorInputBehaviorInPlayMode = editor;
             }
-            Pulsar(raiz.Q<Button>("marcha-forzada"));
+            Pulsar(raiz.Q<Button>("viveres-forzada")); // en la barra de víveres (como el prototipo), no en la de arriba
             yield return Esperar(() => mapa.Columna?.MarchaForzada == true, 10, "la marcha forzada");
             yield return MedirFotogramas(mapa);
             Pulsar(raiz.Q<Button>("capa-fertilidad"));
@@ -622,7 +623,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             var campId = conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe.Ubicacion.CampamentoId;
             BronzeAge.Contract.V1.Heroe Yo() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.Heroe, conexion.HeroeId).Heroe;
             BronzeAge.Contract.V1.CampamentoMercenarios Camp() => conexion.Sesion.Almacen.Buscar(BronzeAge.Contract.V1.TipoEntidad.CampamentoMercenarios, campId).CampamentoMercenarios;
-            foreach (var zona in new[] { "taberna", "mercado", "militar", "puerta" })
+            foreach (var zona in new[] { "taberna", "mercado", "armeria", "militar", "puerta" })
                 Assert.IsNotNull(GameObject.Find("Zona " + zona), "la zona de " + zona);
             // Dentro, solo pinta la cámara de FeudoScene: la del mundo (y la del mapa) están apagadas.
             var camaras = Camera.allCameras.Where(x => x.isActiveAndEnabled).Select(x => $"{x.name} ({x.gameObject.scene.name})").ToList();
@@ -712,6 +713,16 @@ namespace ConquestTactics.Mundo.UI.Tests
                 Pulsar(raiz.Q("panel-mercado").Q<Button>("cerrar"));
                 yield return null;
 
+                // La armería (motor 915b6ac6): su pieza en la planta, su zona con F y su tienda de lo que no pide tecnología.
+                yield return AbrirZona("armeria", "panel-armeria");
+                var armeria = raiz.Q("panel-armeria");
+                yield return Esperar(() => armeria.Q("tienda") != null, 10, "la tienda de la armería");
+                Assert.IsNull(armeria.Q("tienda").Q<Label>(className: "plaza-vacio"), "la armería del campamento vende algo");
+                yield return Capturar("23c_armeria");
+                yield return EnTamanos(raiz, "23c_armeria", () => DentroDelMarco(armeria, "la armería"));
+                Pulsar(armeria.Q<Button>("cerrar"));
+                yield return null;
+
                 // La tropa (tanda 3 del paso 6): el árbol de reclutamiento entero, con el ratón de verdad. Pasar el ratón por una carta ilumina su
                 // camino y saca su ficha corta; un clic abre su ficha a la derecha; «Pedir prestada» y «Reclutar» desde ella.
                 yield return AbrirZona("militar", "panel-tropa");
@@ -724,9 +735,14 @@ namespace ConquestTactics.Mundo.UI.Tests
                     var arbol = Tropa().Q("recl-tablero");
                     var cartas = arbol.Query<Button>().ToList().Where(x => x.name.StartsWith("nodo-")).ToList();
                     Debug.Log($"[Prueba] árbol: {cartas.Count} tropas; " + string.Join(", ", cartas.Select(x => x.name.Substring(5) + "=" + new[] { "lista", "tuya", "edificio", "bloqueada", "futura" }.First(x.ClassListContains))));
-                    Assert.GreaterOrEqual(cartas.Count, 30, "el árbol entero");
-                    foreach (var carril in new[] { "centroUrbano", "barracon", "galeriaDeTiro", "caballerizas" }) Assert.IsNotNull(arbol.Q("carril-" + carril), "el carril " + carril);
+                    // Solo lo que se recluta o se presta aquí (0.181.0 del prototipo): ni carriles ni Eras vacíos, y la leyenda solo con lo que se ve.
+                    Assert.IsTrue(cartas.All(x => x.ClassListContains("lista") || x.ClassListContains("tuya")), "solo las tropas listas o tuyas");
+                    Assert.IsNotNull(arbol.Q("carril-centroUrbano"), "el carril del campamento");
                     Assert.IsNotNull(arbol.Q("nodo-milicia_lanceros"), "la milicia en el carril del campamento");
+                    foreach (var sub in Tropa().Query<Label>(className: "recl-era-sub").ToList().Concat(Tropa().Query<Label>(className: "recl-carril-sub").ToList()))
+                        Assert.IsFalse(sub.text.StartsWith("0 "), "ninguna Era ni carril vacío: " + sub.text);
+                    foreach (var est in new[] { "edificio", "bloqueada", "futura" })
+                        Assert.IsNull(Tropa().Q("leyenda").Q(className: est), "la leyenda, sin «" + est + "»");
                     yield return EnTamanos(raiz, "24_tropa", () => DentroDelMarco(Tropa(), "la tropa"));
                     // Pasar el ratón: la ficha corta y el camino iluminado.
                     // Una carta a la vista, con camino (la de los espadachines de bronce, o la primera del Barracón que se vea).
@@ -741,16 +757,26 @@ namespace ConquestTactics.Mundo.UI.Tests
                     yield return Capturar("24b_tropa_todas");
                     yield return ClicFijo(raton, raiz, Tropa().Q<Button>("ver-todas"));
                     // Arrastrar el tablero con el ratón (desde el nombre de un carril, que se queda a la vista) y volver.
+                    // (solo si el tablero no cabe: con pocas Eras a la vista, cabe entero)
                     float Desplazado() => Tropa().Q<ScrollView>("recl-marco").scrollOffset.x;
-                    var antesX = Desplazado();
-                    yield return ArrastrarUITK(raton, raiz, Tropa().Q("carril-centroUrbano"), -300);
-                    yield return Esperar(() => Desplazado() > antesX + 100, 3, "el tablero arrastrado");
-                    yield return Capturar("24b2_tropa_arrastrada");
-                    yield return ArrastrarUITK(raton, raiz, Tropa().Q("carril-centroUrbano"), 600);
-                    yield return Esperar(() => Desplazado() < 1, 3, "el tablero de vuelta");
+                    var marcoTropa = Tropa().Q<ScrollView>("recl-marco");
+                    if (marcoTropa.contentContainer.layout.width > marcoTropa.contentViewport.layout.width + 150)
+                    {
+                        var antesX = Desplazado();
+                        yield return ArrastrarUITK(raton, raiz, Tropa().Q("carril-centroUrbano"), -300);
+                        yield return Esperar(() => Desplazado() > antesX + 100, 3, "el tablero arrastrado");
+                        yield return Capturar("24b2_tropa_arrastrada");
+                        yield return ArrastrarUITK(raton, raiz, Tropa().Q("carril-centroUrbano"), 600);
+                        yield return Esperar(() => Desplazado() < 1, 3, "el tablero de vuelta");
+                    }
+                    else Debug.Log("[Prueba] el tablero cabe entero: sin arrastrar");
                     // La milicia: su ficha y «Pedir prestada».
                     yield return ClicFijo(raton, raiz, Tropa().Q<Button>("nodo-milicia_lanceros"));
                     yield return Esperar(() => Tropa().Q<Button>("pedir-milicia_lanceros") != null, 5, "«Pedir prestada» en la ficha");
+                    // Las formaciones y órdenes que de verdad tiene (duda 36): la milicia, la Línea (sin la de reposo) y ninguna orden.
+                    Assert.IsNotNull(Tropa().Q("recl-ficha").Q("formacion-linea"), "la milicia, con su formación de línea");
+                    Assert.IsNull(Tropa().Q("recl-ficha").Q("formacion-reposo"), "sin la de reposo, que la tienen todas");
+                    Assert.IsNull(Tropa().Q("recl-ficha").Q("ordenes"), "la milicia no tiene órdenes");
                     yield return ClicFijo(raton, raiz, Tropa().Q<Button>("pedir-milicia_lanceros"));
                     yield return Esperar(() => Yo().EscuadronesIds.Count > 0, 10, "la escuadra prestada");
                     yield return Esperar(() => Tropa()?.Q<Label>("estado-milicia_lanceros")?.text.StartsWith("Prestada") == true, 5, "la carta, prestada");
@@ -915,8 +941,9 @@ namespace ConquestTactics.Mundo.UI.Tests
             yield return Esperar(() => raiz.Q("interior") != null && SelectorDePersonaje.Interior?.HeroeDentro == true, 60, "el interior con el héroe dentro");
             LogAssert.ignoreFailingMessages = false;
             Assert.IsNull(raiz.Q("mapa"), "sin el mapa");
-            Assert.IsFalse(string.IsNullOrEmpty(raiz.Q<Label>("lugar").text), "dónde estás");
-            StringAssert.Contains("Campamento de mercenarios", raiz.Q<Label>("lugar-detalle").text);
+            // El cuadro de arriba a la izquierda del HUD del campamento: «CAMPAMENTO DE MERCENARIOS», tu residencia y sus residentes.
+            StringAssert.Contains("CAMPAMENTO DE MERCENARIOS", raiz.Q<Label>("lugar").text);
+            StringAssert.Contains("residente", raiz.Q<Label>("lugar-detalle").text);
             var feudo = UnityEngine.SceneManagement.SceneManager.GetSceneByName("FeudoScene");
             Assert.IsTrue(feudo.isLoaded, "FeudoScene, cargada encima");
             foreach (var apagado in new[] { "UICanvas", "MinimapCanvas", "NPCs", "Matchmaking", "TestEnv" })
@@ -1241,43 +1268,54 @@ namespace ConquestTactics.Mundo.UI.Tests
         {
             var campamento = GameObject.Find("Campamento del motor").transform;
             var destino = GameObject.Find("Zona " + zona).GetComponent<BoxCollider>().bounds;
-            var radio = heroe.GetComponent<CharacterController>().radius + 0.15f;
+            // Con holgura de sobra si se puede: el teclado lleva al héroe a pasos de 45° y, pegado a una esquina, se encaja (la planta del motor
+            // 915b6ac6, con la armería y 16 viviendas, deja pasos más justos). Si no hay camino así, con la holgura justa.
             var suelo = campamento.Find("Suelo").GetComponent<Collider>().bounds;
             const float paso = 0.5f;
             int nx = (int)(suelo.size.x / paso), nz = (int)(suelo.size.z / paso);
             var y = heroe.position.y;
             Vector3 Centro(int i, int k) => new Vector3(suelo.min.x + (i + 0.5f) * paso, y, suelo.min.z + (k + 0.5f) * paso);
-            var libre = new bool?[nx, nz];
-            bool Libre(int i, int k)
-            {
-                if (i < 0 || k < 0 || i >= nx || k >= nz) return false;
-                if (libre[i, k] == null)
-                {
-                    var p = Centro(i, k);
-                    libre[i, k] = !Physics.OverlapCapsule(p + Vector3.up * (radio + 0.25f), p + Vector3.up * 1.6f, radio, ~0, QueryTriggerInteraction.Ignore)
-                        .Any(c => c.transform.IsChildOf(campamento) && c.name != "Suelo");
-                }
-                return libre[i, k].Value;
-            }
             (int, int) Celda(Vector3 p) => ((int)((p.x - suelo.min.x) / paso), (int)((p.z - suelo.min.z) / paso));
             var inicio = Celda(heroe.position);
-            var previo = new Dictionary<(int, int), (int, int)> { [inicio] = inicio };
-            var cola = new Queue<(int, int)>();
-            cola.Enqueue(inicio);
+            // La meta, dentro de su zona y fuera de las demás: donde dos zonas se pisan manda la otra a veces (la taberna sobre el edificio militar).
+            var otras = campamento.GetComponentsInChildren<BoxCollider>().Where(b => b.isTrigger && b.name.StartsWith("Zona ") && b.name != "Zona " + zona).Select(b => b.bounds).ToList();
+            bool EnOtra(Vector3 c) => otras.Any(b => c.x > b.min.x - 0.3f && c.x < b.max.x + 0.3f && c.z > b.min.z - 0.3f && c.z < b.max.z + 0.3f);
+            Dictionary<(int, int), (int, int)> previo = null;
             (int, int)? meta = null;
-            while (cola.Count > 0 && meta == null)
+            foreach (var holgura in new[] { 0.5f, 0.15f })
             {
-                var (i, k) = cola.Dequeue();
-                var c = Centro(i, k);
-                if (c.x > destino.min.x + 0.3f && c.x < destino.max.x - 0.3f && c.z > destino.min.z + 0.3f && c.z < destino.max.z - 0.3f && Libre(i, k)) { meta = (i, k); break; }
-                foreach (var (di, dk) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) })
+                var radio = heroe.GetComponent<CharacterController>().radius + holgura;
+                var libre = new bool?[nx, nz];
+                bool Libre(int i, int k)
                 {
-                    var n = (i + di, k + dk);
-                    if (previo.ContainsKey(n) || !Libre(n.Item1, n.Item2)) continue;
-                    if (di != 0 && dk != 0 && (!Libre(i + di, k) || !Libre(i, k + dk))) continue; // sin cortar esquinas
-                    previo[n] = (i, k);
-                    cola.Enqueue(n);
+                    if (i < 0 || k < 0 || i >= nx || k >= nz) return false;
+                    if ((i, k) == inicio) return true;
+                    if (libre[i, k] == null)
+                    {
+                        var p = Centro(i, k);
+                        libre[i, k] = !Physics.OverlapCapsule(p + Vector3.up * (radio + 0.25f), p + Vector3.up * 1.6f, radio, ~0, QueryTriggerInteraction.Ignore)
+                            .Any(c => c.transform.IsChildOf(campamento) && c.name != "Suelo");
+                    }
+                    return libre[i, k].Value;
                 }
+                previo = new Dictionary<(int, int), (int, int)> { [inicio] = inicio };
+                var cola = new Queue<(int, int)>();
+                cola.Enqueue(inicio);
+                while (cola.Count > 0 && meta == null)
+                {
+                    var (i, k) = cola.Dequeue();
+                    var c = Centro(i, k);
+                    if (c.x > destino.min.x + 0.3f && c.x < destino.max.x - 0.3f && c.z > destino.min.z + 0.3f && c.z < destino.max.z - 0.3f && !EnOtra(c) && Libre(i, k)) { meta = (i, k); break; }
+                    foreach (var (di, dk) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) })
+                    {
+                        var n = (i + di, k + dk);
+                        if (previo.ContainsKey(n) || !Libre(n.Item1, n.Item2)) continue;
+                        if (di != 0 && dk != 0 && (!Libre(i + di, k) || !Libre(i, k + dk))) continue; // sin cortar esquinas
+                        previo[n] = (i, k);
+                        cola.Enqueue(n);
+                    }
+                }
+                if (meta != null) break;
             }
             Assert.IsNotNull(meta, $"hay camino libre andando hasta la zona de {zona}");
             var camino = new List<Vector3>();

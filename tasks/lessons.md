@@ -687,3 +687,6 @@
 - La sesión va por detrás del salto hasta su siguiente ping: se cuenta desde el último salto.
 
 - **Nunca matar procesos por nombre** (`pkill`, `taskkill /IM`, `killall`) ni por la línea de órdenes: en el PC corren otras sesiones (el hilo del Transport con su Unity y sus servidores). Parar solo los PID que lancé y apunté, o los de mis puertos (7891/7892). `tasks/pruebas/parar.sh` hace `taskkill /IM` del lanzador y de `PruebaRed`: no usarlo si otra sesión los está usando (2026-11-17).
+
+- **Nunca entregar un cambio sin compilarlo** (2026-11-18: un `desde` repetido rompió el editor de Víctor). Con su editor abierto (no hay batch), compilar con el csc de Unity y la respuesta de Bee, saliendo a una carpeta temporal:
+  `"<Editor>/Data/DotNetSdk/dotnet.exe" exec "<Editor>/Data/DotNetSdk/sdk/8.0.318/Roslyn/bincore/csc.dll" @copia.rsp`, con la copia de `Library/Bee/artifacts/1900b0aE.dag/<Ensamblado>.rsp` cambiando `-out:` y `-refout:` (y, para las pruebas, la referencia al `.ref.dll` recién hecho).

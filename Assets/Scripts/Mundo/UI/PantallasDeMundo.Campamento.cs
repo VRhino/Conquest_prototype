@@ -19,17 +19,18 @@ namespace ConquestTactics.Mundo.UI
         {
             ["taberna"] = "Taberna", ["vivienda"] = "Vivienda", ["mercado"] = "Mercado", ["puestoMercado"] = "Puesto de mercado",
             ["barracon"] = "Barracón", ["galeriaDeTiro"] = "Galería de tiro", ["caballerizas"] = "Caballerizas", ["plazaDeArmas"] = "Plaza de armas",
-            ["plaza"] = "Plaza", ["pozo"] = "Pozo", ["parque"] = "Parque",
+            ["plaza"] = "Plaza", ["pozo"] = "Pozo", ["parque"] = "Parque", ["armeria"] = "Armería",
         };
 
         static string Pieza(string tipo) => NombreDePieza.TryGetValue(tipo, out var n) ? n : tipo;
 
-        /// <summary>A qué zona da cada pieza: la taberna (residir), el mercado y sus puestos (comprar) y el edificio militar
+        /// <summary>A qué zona da cada pieza: la taberna (residir), el mercado y sus puestos (comprar), la armería (su tienda) y el edificio militar
         /// (`MERCENARIOS.edificiosMilitares`: reclutar).</summary>
         string ZonaDePieza(string tipo)
         {
             if (tipo == "taberna") return "taberna";
             if (tipo == "mercado" || tipo == "puestoMercado") return "mercado";
+            if (tipo == "armeria") return "armeria";
             var militares = c.Datos.En("documentos.Campamentos_Mercenarios.MERCENARIOS.edificiosMilitares")?.Select(x => (string)x) ?? Enumerable.Empty<string>();
             return militares.Contains(tipo) ? "militar" : null;
         }
@@ -39,6 +40,7 @@ namespace ConquestTactics.Mundo.UI
         {
             "taberna" => "F · Taberna",
             "mercado" => "F · Mercado",
+            "armeria" => "F · Armería",
             "militar" => $"F · {Pieza(camp.Edificios.FirstOrDefault(e => e == "barracon" || e == "galeriaDeTiro" || e == "caballerizas") ?? "barracon")}: tropa",
             "puerta" => "F · Salir al mundo",
             _ => null,
@@ -99,40 +101,40 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>Un panel del campamento: título, cuerpo que se repinta con lo último del almacén, la línea de error y «Cerrar» (o Esc). Con
         /// él abierto, el héroe no anda.</summary>
-        void PanelDelCampamento(string nombre, string titulo, string edificio, Action<VisualElement, Action<string>, Action> pintar)
+        void PanelDelCampamento(string nombre, string titulo, string edificio, Action<VisualElement, Action<string>, Action> pintar, bool completa = false)
         {
             var interior = SelectorDePersonaje.Interior;
             if (interior == null || interior.PanelAbierto) return;
             var velo = Dialogo.Caja("dialogo-velo");
             velo.name = nombre;
             velo.focusable = true;
-            var placa = Dialogo.Caja("placa dialogo panel-campamento");
+            var placa = Dialogo.Caja("placa dialogo panel-campamento" + (completa ? " panel-campamento--completo" : ""));
             var filete = Dialogo.Caja("placa-filete");
             placa.Add(filete);
             velo.Add(placa);
             var cabeza = Dialogo.Caja("comparar-fila");
             cabeza.style.borderBottomWidth = 0;
             // El título con el icono de la parte (`htmlTituloDeParte`: `iconoDeParte` a 26 px).
-            var tituloConIcono = IconosDelMundo.ConIcono("edificio", edificio, Dialogo.Texto(titulo, "dialogo-titulo"), 26);
+            var tituloConIcono = IconosDelMundo.ConIcono(FamiliaDeIcono(edificio), edificio, Dialogo.Texto(titulo, "dialogo-titulo"), 26);
             tituloConIcono.AddToClassList("titulo-con-icono");
             cabeza.Add(tituloConIcono);
             filete.Add(cabeza);
+            // La tienda de la Armería y sus fichas viven en Plaza.uss.
+            if (Resources.Load<StyleSheet>("MundoUI/Plaza") is StyleSheet hoja) velo.styleSheets.Add(hoja);
             var cuerpo = new ScrollView { mode = ScrollViewMode.Vertical, horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             cuerpo.style.flexShrink = 1;
             filete.Add(cuerpo);
             var error = Dialogo.Texto("", "error oculto");
             error.name = "error";
             filete.Add(error);
-            var botones = Dialogo.Caja("dialogo-botones");
-            filete.Add(botones);
             void Cerrar()
             {
                 velo.RemoveFromHierarchy();
                 interior.PanelAbierto = false;
             }
-            var cerrar = Dialogo.Boton("Cerrar", "boton-secundario", Cerrar);
+            var cerrar = Dialogo.Equis(Cerrar);
             cerrar.name = "cerrar";
-            botones.Add(cerrar);
+            cabeza.Add(cerrar);
             velo.RegisterCallback<KeyDownEvent>(e => { if (e.keyCode == KeyCode.Escape) Cerrar(); }, TrickleDown.TrickleDown);
             void Repintar()
             {
@@ -181,54 +183,61 @@ namespace ConquestTactics.Mundo.UI
                 var seccion = SeccionesDelCampamento(v, h, repintar);
                 if (seccion == "fondo") { PintarFondo(v, camp, h, error, repintar); return; }
                 if (seccion == "intel") { PanelDeIntel(v, TabernaDeCampamento(camp, h), h, null, repintar); return; }
-                bool resides = camp.ResidentesIds.Contains(h.Id);
-                v.Add(Dialogo.Texto(resides
-                    ? "Este campamento es tu residencia: aquí guardas tu almacén, te prestan tropa y compras en el mercado completo."
-                    : "No resides aquí: sales con la columna con la que entraste y solo te venden trigo. Si te mudas, la tropa prestada por tu campamento anterior se te retira.",
-                    "dialogo-texto"));
-                var datos = new VisualElement();
-                Fichas(datos, ("Residentes", camp.ResidentesIds.Count.ToString()), ("Resides aquí", resides ? "Sí" : "No"));
-                v.Add(datos);
-                if (!resides)
-                {
-                    Button residir = null;
-                    residir = Dialogo.Boton("Residir aquí", "boton-primario", async () =>
-                    {
-                        var prestadas = EscuadrasDelHeroe(h).Where(s => s.HasPrestadaPorCampamentoId).ToList();
-                        if (prestadas.Count > 0 && !await dialogo.Abrir(
-                                $"Si resides aquí, el campamento donde te prestaron tropa la retira ({string.Join(", ", prestadas.Select(s => $"{s.Nombre}: {s.Cantidad}"))}).",
-                                "¿Residir aquí?", "Residir aquí")) return;
-                        await OrdenDelPanel(new Orden { ResidirEnCampamento = new OrdenResidirEnCampamento { HeroeId = h.Id, CampamentoId = campId } }, error, repintar, residir);
-                    });
-                    residir.name = "residir";
-                    v.Add(residir);
-                }
-                v.Add(Dialogo.Texto("TU TROPA", "kicker"));
-                var escuadras = EscuadrasDelHeroe(h);
-                if (escuadras.Count == 0) v.Add(Dialogo.Texto("No tienes tropa. En el edificio militar te prestan una.", "campo-ayuda"));
-                foreach (var s in escuadras)
-                {
-                    // La miniatura de la tropa (la de Conquest, `Squad_Icon`) y su línea.
-                    var fila = Dialogo.Caja("con-icono");
-                    fila.style.marginBottom = 4;
-                    if (PiezasDeTropa.Miniatura(s.TropaId) is VisualElement mini) fila.Add(mini);
-                    var texto = Dialogo.Texto($"{s.Nombre} · {s.Cantidad} hombres · {DondeEsta(s)}{(s.HasPrestadaPorCampamentoId ? " · prestada" : "")}", "aviso-texto");
-                    texto.style.flexShrink = 1;
-                    fila.Add(texto);
-                    v.Add(fila);
-                }
-                v.Add(Dialogo.Texto("TU ALMACÉN", "kicker"));
-                var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
-                if (almacen.Count == 0) v.Add(Dialogo.Texto("Nada.", "campo-ayuda"));
-                else
-                {
-                    var fichas = new VisualElement { name = "almacen" };
-                    Fichas(fichas, almacen.Select(kv => (CosasDelMapa.NombreDeRecurso(kv.Key), Math.Floor(kv.Value / 1000.0).ToString())).ToArray());
-                    v.Add(fichas);
-                }
-                v.Add(Dialogo.Texto("EDIFICIOS DEL CAMPAMENTO", "kicker"));
-                v.Add(Dialogo.Texto(string.Join(" · ", camp.Edificios.Distinct().Select(Pieza)), "campo-ayuda"));
+                PintarResumen(v, camp, h, campId, error, repintar);
             });
+        }
+
+        /// <summary>El Resumen del campamento (BronzeAgeClient: `resumen`): residentes, si resides aquí, «Residir aquí» si no, tu tropa, tu almacén y
+        /// los edificios. Mudarse retira la tropa prestada por el campamento anterior: se avisa antes.</summary>
+        void PintarResumen(VisualElement v, CampamentoMercenarios camp, Heroe h, string campId, Action<string> error, Action repintar)
+        {
+            bool resides = camp.ResidentesIds.Contains(h.Id);
+            v.Add(Dialogo.Texto(resides
+                ? "Este campamento es tu residencia: aquí guardas tu almacén, te prestan tropa y compras en el mercado completo."
+                : "No resides aquí: sales con la columna con la que entraste y solo te venden trigo. Si te mudas, la tropa prestada por tu campamento anterior se te retira.",
+                "dialogo-texto"));
+            var datos = new VisualElement();
+            Fichas(datos, ("Residentes", camp.ResidentesIds.Count.ToString()), ("Resides aquí", resides ? "Sí" : "No"));
+            v.Add(datos);
+            if (!resides)
+            {
+                Button residir = null;
+                residir = Dialogo.Boton("Residir aquí", "boton-primario", async () =>
+                {
+                    var prestadas = EscuadrasDelHeroe(h).Where(s => s.HasPrestadaPorCampamentoId).ToList();
+                    if (prestadas.Count > 0 && !await dialogo.Abrir(
+                            $"Si resides aquí, el campamento donde te prestaron tropa la retira ({string.Join(", ", prestadas.Select(s => $"{s.Nombre}: {s.Cantidad}"))}).",
+                            "¿Residir aquí?", "Residir aquí")) return;
+                    await OrdenDelPanel(new Orden { ResidirEnCampamento = new OrdenResidirEnCampamento { HeroeId = h.Id, CampamentoId = campId } }, error, repintar, residir);
+                });
+                residir.name = "residir";
+                v.Add(residir);
+            }
+            v.Add(Dialogo.Texto("TU TROPA", "kicker"));
+            var escuadras = EscuadrasDelHeroe(h);
+            if (escuadras.Count == 0) v.Add(Dialogo.Texto("No tienes tropa. En el edificio militar te prestan una.", "campo-ayuda"));
+            foreach (var s in escuadras)
+            {
+                // La miniatura de la tropa (la de Conquest, `Squad_Icon`) y su línea.
+                var fila = Dialogo.Caja("con-icono");
+                fila.style.marginBottom = 4;
+                if (PiezasDeTropa.Miniatura(s.TropaId) is VisualElement mini) fila.Add(mini);
+                var texto = Dialogo.Texto($"{s.Nombre} · {s.Cantidad} hombres · {DondeEsta(s)}{(s.HasPrestadaPorCampamentoId ? " · prestada" : "")}", "aviso-texto");
+                texto.style.flexShrink = 1;
+                fila.Add(texto);
+                v.Add(fila);
+            }
+            v.Add(Dialogo.Texto("TU ALMACÉN", "kicker"));
+            var almacen = h.AlmacenPersonal?.PorId.Where(kv => kv.Value >= 1000).ToList() ?? new List<KeyValuePair<string, long>>();
+            if (almacen.Count == 0) v.Add(Dialogo.Texto("Nada.", "campo-ayuda"));
+            else
+            {
+                var fichas = new VisualElement { name = "almacen" };
+                Fichas(fichas, almacen.Select(kv => (CosasDelMapa.NombreDeRecurso(kv.Key), Math.Floor(kv.Value / 1000.0).ToString())).ToArray());
+                v.Add(fichas);
+            }
+            v.Add(Dialogo.Texto("EDIFICIOS DEL CAMPAMENTO", "kicker"));
+            v.Add(Dialogo.Texto(string.Join(" · ", camp.Edificios.Distinct().Select(Pieza)), "campo-ayuda"));
         }
 
         // ─────────────── el mercado: comprar ───────────────

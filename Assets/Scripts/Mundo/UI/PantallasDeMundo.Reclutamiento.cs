@@ -1,7 +1,7 @@
 // La tropa del campamento (paso 6 del bloque 4, tanda 3): el árbol de reclutamiento de BronzeAgeClient (`arbolReclutamiento.ts`, `arbolTablero.ts`
 // y `lugarCampamento` de `pantallaCampamento.ts`) calcado en UI Toolkit, con la tarjeta de tropa de Conquest en cada nudo. Sustituye a la lista del
-// edificio militar. Víctor (2026-11-15): el árbol se ve entero, cada tropa con su estado y lo que le falta; solo se recluta lo que ofrece el
-// campamento; al pulsar, la ficha de la tropa en el panel derecho de Tropas de la Base (Características | Atributos), con «Reclutar» o «Pedir
+// edificio militar. Víctor (2026-11-18, como el prototipo desde su 0.181.0): solo sale lo que se puede reclutar aquí, las tropas listas y las que
+// ya tienes, y las Eras aparecen a medida que tu Facción las desbloquea (`ArbolDelLugar`); solo se recluta lo que ofrece el campamento; al pulsar, la ficha de la tropa en el panel derecho de Tropas de la Base (Características | Atributos), con «Reclutar» o «Pedir
 // prestada». Las líneas salen del catálogo; lo adoptado por tu Facción lo marca la ficha corta («Tecnologías de tu Facción», paso 8) y, en la
 // plaza, la carta «adoptable» con su etiqueta «Adoptar», que abre la pestaña Tecnología de tu Facción en esa tecnología.
 //   - Carriles: Campamento (las de leva comunal que presta), Barracón, Galería de tiro, Caballerizas. Columnas: las Eras.
@@ -236,7 +236,7 @@ namespace ConquestTactics.Mundo.UI
             }
             else pestanaMilitar = "tropa";
             cab.Add(Dialogo.Caja("recl-hueco"));
-            var cerrarBoton = Dialogo.Boton("Cerrar", "boton-secundario", cerrar);
+            var cerrarBoton = Dialogo.Equis(cerrar);
             cerrarBoton.name = "cerrar";
             cab.Add(cerrarBoton);
             v.Add(cab);
@@ -268,10 +268,23 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>El árbol de un lugar con su ficha: los mandos, la leyenda, el tablero y la ficha de la tropa elegida.</summary>
         void ArbolDelLugar(VisualElement v, VisualElement tip, ArbolDeTropas a, LugarCampamento L, Heroe h, Label error, Action<string> Error, Action repintar)
         {
-            // En la plaza, el árbol entero; en el campamento, del Campamento solo las que presta.
-            var ocultas = L.Plaza != null ? new HashSet<string>() : new HashSet<string>(a.Nodos.Values.Where(n => n.Carril == "centroUrbano" && !L.Presta.Contains(n.T.Id)).Select(n => n.T.Id));
-            var eraVisible = a.Eras.Count > 0 ? a.Eras.Max(e => e.Orden) : 1;
-            var lay = a.Disponer(eraVisible, null, ocultas);
+            // Solo sale lo que se puede reclutar aquí (`htmlArbolDeLugar`; Víctor, 2026-11-07, 0.181.0 del prototipo): las tropas listas y las que ya
+            // tienes. Ni las que piden tecnología, edificio, nivel o una Era que aún no empieza, ni las de una Era que tu Facción aún no ve (el 30 %
+            // de `UltimaEraVisible`; en el campamento, también la Era de lo que ya ofrece o presta), ni sus carriles ni sus Eras si se quedan vacíos.
+            var eraLugar = EraVisibleDelLugar(a, L);
+            var ocultas = new HashSet<string>(a.Nodos.Values.Where(n => (L.Plaza == null && n.Carril == "centroUrbano" && !L.Presta.Contains(n.T.Id))
+                || n.Era > eraLugar || !SeRecluta(L.Estado(n.T.Id))).Select(n => n.T.Id));
+            var quedan = a.Nodos.Values.Where(n => !ocultas.Contains(n.T.Id)).ToList();
+            if (quedan.Count == 0)
+            {
+                var vacio = Dialogo.Texto($"Aún no puedes reclutar ninguna tropa en {(L.Plaza != null ? "esta plaza" : "este campamento")}.", "dialogo-texto");
+                vacio.name = "recl-vacio";
+                v.Add(vacio);
+                v.Add(error);
+                return;
+            }
+            var eraVisible = quedan.Max(n => n.Era);
+            var lay = a.Disponer(eraVisible, null, ocultas, porTier: true);
             var visibles = a.OrdenNodos.Where(id => a.Nodos[id].Col != null).ToList();
             if (tropaDelArbol == null || !visibles.Contains(tropaDelArbol)) tropaDelArbol = visibles.FirstOrDefault(id => a.Nodos[id].Carril == "centroUrbano") ?? visibles.FirstOrDefault();
 
@@ -311,6 +324,19 @@ namespace ConquestTactics.Mundo.UI
             cuerpo.Add(datos);
             if (tropaDelArbol != null) FichaDeRecluta(datos, a, L, tropaDelArbol, estados[tropaDelArbol], h, Error, repintar);
             datos.Add(error);
+        }
+
+        /// <summary>Lo que se enseña en el árbol: las listas y las tuyas (`SE_RECLUTA`).</summary>
+        static bool SeRecluta(string estado) => estado == "lista" || estado == "tuya";
+
+        /// <summary>La última Era que se ve aquí: la de tu Facción (`ultimaEraVisible`) y, en el campamento, también la de lo que ya ofrece desbloqueado
+        /// y la de lo que presta (`lugarCampamento`): lo que se puede hacer aquí no se esconde detrás de las Eras de tu Facción.</summary>
+        int EraVisibleDelLugar(ArbolDeTropas a, LugarCampamento L)
+        {
+            var era = ArbolDeTecnologiasDelBalance()?.UltimaEraVisible(L.Adoptadas ?? new HashSet<string>()) ?? 1;
+            if (L.Plaza != null) return era;
+            int EraDe(string id) => a.Nodos.TryGetValue(id, out var n) ? n.Era : 1;
+            return L.Oferta.Values.Where(o => o.Desbloqueada).Select(o => EraDe(o.TropaId)).Concat(L.Presta.Select(EraDe)).Append(era).Max();
         }
 
         static VisualElement MuestraDeLinea(string tipo, string texto)
@@ -478,7 +504,13 @@ namespace ConquestTactics.Mundo.UI
             var fijasIzquierda = new List<VisualElement>();
             foreach (var (b, cols, _, cab) in eras)
             {
-                Abs(cab, XPista(1 + b), cols * d.AnchoCarta + (cols - 1) * ArbolHueco);
+                // De canal a canal (como su fondo), la primera pegada a la esquina: la raya de abajo sigue la franja sin cortes (Víctor, 2026-11-18).
+                // El contenido se queda donde estaba, sobre sus cartas.
+                var izq = b == 0 ? ArbolCarril : XPista(1 + b) - ArbolHueco / 2;
+                var der = XPista(1 + b + cols) - ArbolHueco / 2;
+                Abs(cab, izq, der - izq);
+                cab.style.paddingLeft = XPista(1 + b) - izq + 2;
+                cab.style.paddingRight = ArbolHueco / 2 + 2;
                 cab.style.top = 0;
                 if (!medirCabecera) cab.style.height = altoCab;
                 fijasArriba.Add(cab);
@@ -574,9 +606,13 @@ namespace ConquestTactics.Mundo.UI
                 foreach (var f in fondosEra) f.style.height = altoTotal;
                 for (int i = 0; i < d.Carriles.Count; i++)
                 {
+                    // El carril cubre también el canal de encima (y el último, el de debajo): pegado a la franja de las Eras y al anterior, como
+                    // una tabla seguida (Víctor, 2026-11-18). Las líneas entre carriles siguen yendo por el canal; las cartas, con su margen.
                     var (yy, hh) = bandas[d.Carriles[i].id];
-                    fondosCarril[i].style.top = yy; fondosCarril[i].style.height = hh;
-                    d.Carriles[i].nombre.style.top = yy; d.Carriles[i].nombre.style.height = hh;
+                    var top = yy - ArbolCanal;
+                    var alto = hh + ArbolCanal + (i == d.Carriles.Count - 1 ? ArbolCanal : 0);
+                    fondosCarril[i].style.top = top; fondosCarril[i].style.height = alto;
+                    d.Carriles[i].nombre.style.top = top; d.Carriles[i].nombre.style.height = alto;
                 }
                 esquina.style.height = altoCab;
                 cajas.Clear();
@@ -662,6 +698,9 @@ namespace ConquestTactics.Mundo.UI
                 Scroll = scrollDelArbol, AlDesplazar = o => { scrollDelArbol = o; tip.style.display = DisplayStyle.None; },
             };
             var ultima = a.Eras.Count > 0 ? a.Eras.Max(e => e.Orden) : 1;
+            var T = ArbolDeTecnologiasDelBalance();
+            var adoptadas = L.Adoptadas ?? new HashSet<string>();
+            var eraVisible = lay.ErasVis.Count > 0 ? lay.ErasVis.Max(e => e.Orden) : 1;
             foreach (var e in lay.ErasVis)
             {
                 var cabEra = Dialogo.Caja("recl-era-cab");
@@ -671,6 +710,22 @@ namespace ConquestTactics.Mundo.UI
                 textos.Add(Dialogo.Texto($"Era {Romano[Math.Min(e.Orden, Romano.Length - 1)]} · {e.Nombre}", "recl-era-nombre"));
                 var cuantas = visibles.Count(id => a.Nodos[id].Era == e.Orden);
                 textos.Add(Dialogo.Texto($"{cuantas} tropa{(cuantas == 1 ? "" : "s")} · {DuracionDeEra(e, ultima)}", "recl-era-sub"));
+                // En la última Era que se ve, si es la de tu Facción, cuánto le falta a la siguiente para aparecer (`ta-era-sigue`).
+                if (T != null && adoptadas.Count > 0 && e.Orden == eraVisible && e.Orden < ultima && e.Orden == T.UltimaEraVisible(adoptadas))
+                {
+                    var llevas = T.AdoptadasEn(adoptadas, e.Orden);
+                    var cupo = T.CupoEra(e.Orden);
+                    var sigue = Dialogo.Caja("tec-era-sigue");
+                    sigue.name = "era-sigue";
+                    sigue.Add(Dialogo.Texto($"La Era {Romano[Math.Min(e.Orden + 1, Romano.Length - 1)]} aparece con {cupo} de las {T.TecsDeEra(e.Orden).Count} tecnologías de esta Era adoptadas: llevas <b>{llevas}</b>", "tec-era-sigue-texto"));
+                    var barra = Dialogo.Caja("tec-era-barra");
+                    var lleno = Dialogo.Caja("tec-era-barra-lleno");
+                    lleno.style.width = Length.Percent(100f * Mathf.Min(1, llevas / (float)Math.Max(1, cupo)));
+                    barra.Add(lleno);
+                    sigue.Add(barra);
+                    textos.Add(sigue);
+                    d.Cabecera = float.NaN;
+                }
                 if (L.EraMundo == e.Orden) textos.Add(Dialogo.Texto("ERA DEL MUNDO", "recl-era-marca actual"));
                 else if (L.EraMundo != null && e.Orden > L.EraMundo) textos.Add(Dialogo.Texto("BLOQUEADA", "recl-era-marca futura"));
                 cabEra.Add(textos);
@@ -925,24 +980,27 @@ namespace ConquestTactics.Mundo.UI
             estado.name = "estado-ficha";
             v.Add(estado);
 
-            // Formaciones y órdenes de su tropa en Conquest, solo para ver.
+            // Las formaciones y las órdenes que de verdad tiene su tropa (Víctor, 2026-11-18, duda 36): las de su SquadData que tu Facción permite, sin
+            // la de reposo (la tienen todas), con su icono y su nombre; una sección sin ninguna no sale.
             if (d != null)
             {
-                var permitidas = FormacionesPermitidas(h);
-                var deLaTropa = new[] { d.restFormation }.Concat(d.formations ?? new FormationDefinition[0]).Where(x => x != null).ToList();
+                var deLaTropa = (d.formations ?? new FormationDefinition[0]).Where(x => x != null && x.formationType != FormationType.Rest).ToList();
                 var forma = Dialogo.Caja("tropas-botones");
                 forma.name = "formaciones";
-                foreach (var (fid, fnombre) in permitidas)
+                var nombres = new List<string>();
+                foreach (var (fid, fnombre) in FormacionesPermitidas(h))
                 {
                     var def = deLaTropa.FirstOrDefault(x => x.formationType == FamiliaDeFormacion(fid));
                     if (def == null) continue;
                     var b = Dialogo.Caja("tropas-boton tropas-boton--quieto");
+                    b.name = "formacion-" + fid;
                     b.tooltip = fnombre;
                     if (def.formationIcon != null) { var ic = Dialogo.Caja("tropas-boton-icono"); ic.style.backgroundImage = new StyleBackground(def.formationIcon); b.Add(ic); }
-                    else b.Add(Dialogo.Texto(fnombre.Substring(0, 1), "tropas-boton-letra"));
+                    else b.Add(Dialogo.Texto(fnombre, "tropas-boton-letra tropas-boton-nombre"));
                     forma.Add(b);
+                    nombres.Add(fnombre);
                 }
-                if (forma.childCount > 0) { v.Add(Seccion("Formaciones")); v.Add(forma); }
+                if (forma.childCount > 0) { v.Add(Seccion("Formaciones")); v.Add(forma); v.Add(Dialogo.Texto(string.Join(" · ", nombres), "tropas-elegida")); }
                 OrdenesDeTropa(v, d);
             }
 
