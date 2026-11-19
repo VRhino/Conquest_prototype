@@ -40,6 +40,7 @@ public partial class SquadSwapChannelingSystem : SystemBase
 
             // Validate zone conditions
             bool zoneValid = false;
+            var motivo = SquadSwapRejectReason.Contested;
             foreach (var (zone, supply, zoneTransform) in SystemAPI
                          .Query<RefRO<ZoneTriggerComponent>,
                                 RefRO<SupplyPointComponent>,
@@ -60,7 +61,10 @@ public partial class SquadSwapChannelingSystem : SystemBase
                 float radiusSq = zone.ValueRO.radius * zone.ValueRO.radius;
                 float distSq = math.distancesq(heroTransform.ValueRO.Position, zoneTransform.ValueRO.Position);
                 if (distSq > radiusSq)
+                {
+                    motivo = SquadSwapRejectReason.LeftZone;
                     break;
+                }
 
                 zoneValid = true;
                 break;
@@ -69,6 +73,7 @@ public partial class SquadSwapChannelingSystem : SystemBase
             if (!zoneValid)
             {
                 // Cancel channeling — no cooldown
+                SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, motivo);
                 ecb.RemoveComponent<SquadSwapChannelingComponent>(entity);
                 continue;
             }

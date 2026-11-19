@@ -36,6 +36,7 @@ public partial class SquadSwapExecutionSystem : SystemBase
                     stillRetreating = true;
             if (stillRetreating)
             {
+                SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, SquadSwapRejectReason.StillRetreating);
                 ecb.RemoveComponent<SquadSwapExecuteTag>(entity);
                 continue;
             }
@@ -99,6 +100,8 @@ public partial class SquadSwapExecutionSystem : SystemBase
                 }
             }
 
+            if (!reserveAvailable)
+                SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, SquadSwapRejectReason.NoReserve);
             if (!reserveAvailable || newSquadId == oldSquadId || newSquadDataEntity == Entity.Null
                 || !SystemAPI.HasComponent<SquadDataComponent>(newSquadDataEntity)
                 || !SystemAPI.HasComponent<SquadDefinitionComponent>(newSquadDataEntity)
@@ -133,6 +136,8 @@ public partial class SquadSwapExecutionSystem : SystemBase
                         snapshotAllowsSpawn = !entry.hasSnapshot || entry.totalUnits > 0;
                         break;
                     }
+            if (!snapshotAllowsSpawn)
+                SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, SquadSwapRejectReason.NoReserve);
             if (!snapshotAllowsSpawn || FormationLayout.Capacity(ref definition.formationLibrary.Value.formations[formationIndex]) == 0)
             {
                 ecb.RemoveComponent<SquadSwapExecuteTag>(entity);
@@ -155,6 +160,7 @@ public partial class SquadSwapExecutionSystem : SystemBase
 
             if (!hasRetreatTarget)
             {
+                SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, SquadSwapRejectReason.NoSpawnPoint);
                 ecb.RemoveComponent<SquadSwapExecuteTag>(entity);
                 continue;
             }

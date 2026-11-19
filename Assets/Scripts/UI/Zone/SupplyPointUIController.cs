@@ -43,6 +43,18 @@ public class SupplyPointUIController : MonoBehaviour
     bool _wasChanneling = false;
     HUDController _hud;
 
+    // Avisos en el letrero de F (Víctor, 18-11): un cambio rechazado y la espera del enfriamiento.
+    const float SEGUNDOS_AVISO = 3f;
+    const float ALFA_APAGADO = 0.55f;
+    TMPro.TMP_Text _promptText;
+    CanvasGroup _promptGroup;
+    string _promptOriginal;
+    int _rechazosVistos = -1;     // -1: aún sin leer (lo que hubiera antes no se avisa)
+    string _aviso;
+    float _avisoHasta;
+    int _esperaMostrada = -1;
+    string _textoEspera;
+
     /// <summary>
     /// En la batalla en red no hay héroe con <see cref="IsLocalPlayer"/> (los sistemas del juego no corren en el cliente): el
     /// cliente (Conquest.Net) pone aquí una entidad suya con lo que este panel lee del héroe propio (posición, vida, escuadra
@@ -66,6 +78,14 @@ public class SupplyPointUIController : MonoBehaviour
         GetPlayerTeam();
         InitializeViewer();
         _hud = FindAnyObjectByType<HUDController>();
+
+        if (_interactPrompt != null)
+        {
+            _promptText = _interactPrompt.GetComponentInChildren<TMPro.TMP_Text>(true);
+            if (_promptText != null) _promptOriginal = _promptText.text;
+            _promptGroup = _interactPrompt.GetComponent<CanvasGroup>();
+            if (_promptGroup == null) _promptGroup = _interactPrompt.AddComponent<CanvasGroup>();
+        }
 
         if (_acceptButton != null)
         {
@@ -269,9 +289,10 @@ public class SupplyPointUIController : MonoBehaviour
 
         // 1. Find local hero entity and position
         Entity heroEnt = LocalHero();
+        LeerRechazo(heroEnt);
         if (heroEnt == Entity.Null || !_em.HasComponent<LocalTransform>(heroEnt))
         {
-            if (_interactPrompt != null) _interactPrompt.SetActive(false);
+            PintarLetrero(false, 0);
             ClosePanel();
             HidePanel();
             return;
@@ -304,7 +325,7 @@ public class SupplyPointUIController : MonoBehaviour
 
         if (zoneEntity == Entity.Null)
         {
-            if (_interactPrompt != null) _interactPrompt.SetActive(false);
+            PintarLetrero(false, 0);
             ClosePanel();
             HidePanel();
             return;
@@ -333,9 +354,9 @@ public class SupplyPointUIController : MonoBehaviour
         // Solo si hay alguna escuadra que sacar (de las elegidas, ni la activa ni las eliminadas): si no, ni el aviso de F ni el panel.
         bool hayQueSacar = QuedanParaSacar(heroEnt) > 0;
 
-        // 4. Show "Press F" prompt when available and panel not open
-        if (_interactPrompt != null)
-            _interactPrompt.SetActive(available && hayQueSacar && !_isPanelOpen && !onCooldown && !isChanneling);
+        // 4. Show "Press F" prompt when available and panel not open; during the cooldown, dimmed with the wait
+        bool letrero = available && hayQueSacar && !_isPanelOpen && !isChanneling;
+        PintarLetrero(letrero && !onCooldown, letrero && onCooldown ? Mathf.CeilToInt(cooldownLeft) : 0);
 
         // 5. Detect F press to open panel
         if (available && hayQueSacar && !_isPanelOpen && !onCooldown && !isChanneling)
@@ -418,6 +439,63 @@ public class SupplyPointUIController : MonoBehaviour
         // Keep panel hidden if not open (don't auto-show by proximity)
         if (!_isPanelOpen)
             HidePanel();
+    }
+
+    /// <summary>Si el ECS apuntó un rechazo nuevo (<see cref="SquadSwapRejectedComponent.count"/> subió), lo avisa.</summary>
+    void LeerRechazo(Entity hero)
+    {
+        if (hero == Entity.Null) return;
+        if (!_em.HasComponent<SquadSwapRejectedComponent>(hero))
+        {
+            _rechazosVistos = 0;
+            return;
+        }
+        var r = _em.GetComponentData<SquadSwapRejectedComponent>(hero);
+        if (r.count == _rechazosVistos) return;
+        bool primeraLectura = _rechazosVistos < 0;
+        _rechazosVistos = r.count;
+        string texto = TextoDeRechazo(r.reason);
+        if (primeraLectura || texto == null) return;
+        _aviso = texto;
+        _avisoHasta = Time.unscaledTime + SEGUNDOS_AVISO;
+    }
+
+    static string TextoDeRechazo(SquadSwapRejectReason motivo) => motivo switch
+    {
+        SquadSwapRejectReason.InCombat => "No puedes cambiar de tropa: la escuadra está en combate",
+        SquadSwapRejectReason.Contested => "No puedes cambiar de tropa: el punto está en disputa",
+        SquadSwapRejectReason.LeftZone => "Cambio de tropa cancelado: te has alejado del punto",
+        SquadSwapRejectReason.NoReserve => "No puedes cambiar de tropa: esa escuadra no tiene soldados",
+        SquadSwapRejectReason.StillRetreating => "No puedes cambiar de tropa: esa escuadra aún se está retirando",
+        SquadSwapRejectReason.NoSpawnPoint => "No puedes cambiar de tropa: no hay punto de aparición",
+        _ => null,
+    };
+
+    /// <summary>
+    /// El letrero de F: un aviso de rechazo (<see cref="SEGUNDOS_AVISO"/> s, también lejos del punto), la espera del
+    /// enfriamiento apagada, o el «presiona F» normal. El texto solo se reescribe cuando cambia.
+    /// </summary>
+    void PintarLetrero(bool pulsaF, int espera)
+    {
+        if (_interactPrompt == null) return;
+        string texto;
+        if (_aviso != null && Time.unscaledTime < _avisoHasta) texto = _aviso;
+        else if (espera > 0)
+        {
+            if (espera != _esperaMostrada)
+            {
+                _esperaMostrada = espera;
+                _textoEspera = $"Cambio de tropa disponible en {espera} s";
+            }
+            texto = _textoEspera;
+        }
+        else texto = pulsaF ? _promptOriginal : null;
+
+        bool mostrar = texto != null || pulsaF;
+        if (_interactPrompt.activeSelf != mostrar) _interactPrompt.SetActive(mostrar);
+        if (!mostrar) return;
+        if (_promptText != null && texto != null && _promptText.text != texto) _promptText.text = texto;
+        if (_promptGroup != null) _promptGroup.alpha = texto == _promptOriginal ? 1f : ALFA_APAGADO;
     }
 
     void ShowPanel()

@@ -48,6 +48,7 @@ public partial class SquadSwapSystem : SystemBase
                 if (SystemAPI.HasComponent<SquadAIComponent>(squadEntity) &&
                     SystemAPI.GetComponent<SquadAIComponent>(squadEntity).isInCombat)
                 {
+                    SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, SquadSwapRejectReason.InCombat);
                     ecb.RemoveComponent<SquadSwapRequest>(entity);
                     continue;
                 }
@@ -71,6 +72,7 @@ public partial class SquadSwapSystem : SystemBase
 
             if (!valid)
             {
+                SquadSwapRejectedComponent.Record(EntityManager, ecb, entity, SquadSwapRejectReason.Contested);
                 ecb.RemoveComponent<SquadSwapRequest>(entity);
                 continue;
             }
