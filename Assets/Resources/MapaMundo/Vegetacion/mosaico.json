@@ -1,0 +1,164 @@
+{
+ "Vecinos": [
+  [
+   "Cerrado",
+   "Cerrado"
+  ],
+  [
+   "Cerrado",
+   "Abierto"
+  ],
+  [
+   "Cerrado",
+   "Linde"
+  ],
+  [
+   "Cerrado",
+   "Ribera"
+  ],
+  [
+   "Abierto",
+   "Abierto"
+  ],
+  [
+   "Abierto",
+   "Linde"
+  ],
+  [
+   "Abierto",
+   "Claro"
+  ],
+  [
+   "Abierto",
+   "Matorral"
+  ],
+  [
+   "Abierto",
+   "Pradera"
+  ],
+  [
+   "Abierto",
+   "Pedregal"
+  ],
+  [
+   "Abierto",
+   "Ribera"
+  ],
+  [
+   "Linde",
+   "Linde"
+  ],
+  [
+   "Linde",
+   "Claro"
+  ],
+  [
+   "Linde",
+   "Matorral"
+  ],
+  [
+   "Linde",
+   "Pradera"
+  ],
+  [
+   "Linde",
+   "Pedregal"
+  ],
+  [
+   "Linde",
+   "Ribera"
+  ],
+  [
+   "Linde",
+   "Canaveral"
+  ],
+  [
+   "Claro",
+   "Claro"
+  ],
+  [
+   "Matorral",
+   "Matorral"
+  ],
+  [
+   "Matorral",
+   "Pradera"
+  ],
+  [
+   "Matorral",
+   "Pedregal"
+  ],
+  [
+   "Matorral",
+   "Ribera"
+  ],
+  [
+   "Matorral",
+   "Canaveral"
+  ],
+  [
+   "Pradera",
+   "Pradera"
+  ],
+  [
+   "Pradera",
+   "Pedregal"
+  ],
+  [
+   "Pradera",
+   "Ribera"
+  ],
+  [
+   "Pradera",
+   "Canaveral"
+  ],
+  [
+   "Pedregal",
+   "Pedregal"
+  ],
+  [
+   "Pedregal",
+   "Ribera"
+  ],
+  [
+   "Ribera",
+   "Ribera"
+  ],
+  [
+   "Ribera",
+   "Canaveral"
+  ],
+  [
+   "Canaveral",
+   "Canaveral"
+  ]
+ ],
+ "Arboles": {
+  "Cerrado": 3.6,
+  "Abierto": 1.0,
+  "Linde": 0.35,
+  "Claro": 0.0,
+  "Matorral": 0.0,
+  "Pradera": 0.0,
+  "Ribera": 0.8,
+  "Canaveral": 0.0,
+  "Pedregal": 0.0,
+  "Vacio": 0.0
+ },
+ "Matas": {
+  "Cerrado": 0.6,
+  "Abierto": 1.0,
+  "Linde": 2.0,
+  "Claro": 1.0,
+  "Matorral": 1.6,
+  "Pradera": 0.15,
+  "Ribera": 1.0,
+  "Canaveral": 0.3,
+  "Pedregal": 0.8,
+  "Vacio": 0.0
+ },
+ "PesoMixta": 0.35,
+ "RefuerzoVecina": 6,
+ "AfinidadPropia": 3.5,
+ "Reintentos": 6
+}

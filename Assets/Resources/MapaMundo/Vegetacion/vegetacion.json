@@ -1,0 +1,486 @@
+{
+ "encina_1_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "encina_1_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "encina_2_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "encina_2_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "encina_3_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "encina_3_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "encina_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "encina_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "encina_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "olivo_1_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "olivo_1_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "olivo_2_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "olivo_2_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "olivo_3_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "olivo_3_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "olivo_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "olivo_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "olivo_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "lentisco_1_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "lentisco_1_medio": [
+  "hojas",
+  "masa"
+ ],
+ "lentisco_2_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "lentisco_2_medio": [
+  "hojas",
+  "masa"
+ ],
+ "lentisco_1_lejos": [
+  "lejos"
+ ],
+ "lentisco_2_lejos": [
+  "lejos"
+ ],
+ "pino_1_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "pino_1_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "pino_2_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "pino_2_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "pino_3_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "pino_3_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "pino_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "pino_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "pino_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "alamo_1_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "alamo_1_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "alamo_2_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "alamo_2_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "alamo_3_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "alamo_3_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "alamo_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "alamo_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "alamo_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "cipres_1_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "cipres_1_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "cipres_2_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "cipres_2_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "cipres_3_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "cipres_3_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "cipres_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "cipres_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "cipres_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "abeto_1_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "abeto_1_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "abeto_2_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "abeto_2_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "abeto_3_cerca": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "abeto_3_medio": [
+  "corteza",
+  "hojas",
+  "masa"
+ ],
+ "abeto_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "abeto_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "abeto_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "palmera_1_cerca": [
+  "corteza",
+  "hojas"
+ ],
+ "palmera_1_medio": [
+  "corteza",
+  "hojas"
+ ],
+ "palmera_2_cerca": [
+  "corteza",
+  "hojas"
+ ],
+ "palmera_2_medio": [
+  "corteza",
+  "hojas"
+ ],
+ "palmera_3_cerca": [
+  "corteza",
+  "hojas"
+ ],
+ "palmera_3_medio": [
+  "corteza",
+  "hojas"
+ ],
+ "palmera_1_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "palmera_2_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "palmera_3_lejos": [
+  "corteza",
+  "lejos"
+ ],
+ "adelfa_1_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "adelfa_1_medio": [
+  "hojas",
+  "masa"
+ ],
+ "adelfa_2_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "adelfa_2_medio": [
+  "hojas",
+  "masa"
+ ],
+ "adelfa_3_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "adelfa_3_medio": [
+  "hojas",
+  "masa"
+ ],
+ "adelfa_1_lejos": [
+  "lejos"
+ ],
+ "adelfa_2_lejos": [
+  "lejos"
+ ],
+ "adelfa_3_lejos": [
+  "lejos"
+ ],
+ "retama_1_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "retama_1_medio": [
+  "hojas",
+  "masa"
+ ],
+ "retama_2_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "retama_2_medio": [
+  "hojas",
+  "masa"
+ ],
+ "retama_3_cerca": [
+  "hojas",
+  "masa"
+ ],
+ "retama_3_medio": [
+  "hojas",
+  "masa"
+ ],
+ "retama_1_lejos": [
+  "lejos"
+ ],
+ "retama_2_lejos": [
+  "lejos"
+ ],
+ "retama_3_lejos": [
+  "lejos"
+ ],
+ "canas_1_cerca": [
+  "hojas"
+ ],
+ "canas_1_medio": [
+  "hojas"
+ ],
+ "canas_2_cerca": [
+  "hojas"
+ ],
+ "canas_2_medio": [
+  "hojas"
+ ],
+ "canas_3_cerca": [
+  "hojas"
+ ],
+ "canas_3_medio": [
+  "hojas"
+ ],
+ "canas_1_lejos": [
+  "hojas"
+ ],
+ "canas_2_lejos": [
+  "hojas"
+ ],
+ "canas_3_lejos": [
+  "hojas"
+ ],
+ "hierba_1_cerca": [
+  "hojas"
+ ],
+ "hierba_1_medio": [
+  "hojas"
+ ],
+ "hierba_2_cerca": [
+  "hojas"
+ ],
+ "hierba_2_medio": [
+  "hojas"
+ ],
+ "hierba_3_cerca": [
+  "hojas"
+ ],
+ "hierba_3_medio": [
+  "hojas"
+ ],
+ "hierba_1_lejos": [
+  "hojas"
+ ],
+ "hierba_2_lejos": [
+  "hojas"
+ ],
+ "hierba_3_lejos": [
+  "hojas"
+ ],
+ "flor_1_cerca": [
+  "hojas"
+ ],
+ "flor_1_medio": [
+  "hojas"
+ ],
+ "flor_2_cerca": [
+  "hojas"
+ ],
+ "flor_2_medio": [
+  "hojas"
+ ],
+ "flor_3_cerca": [
+  "hojas"
+ ],
+ "flor_3_medio": [
+  "hojas"
+ ],
+ "flor_1_lejos": [
+  "hojas"
+ ],
+ "flor_2_lejos": [
+  "hojas"
+ ],
+ "flor_3_lejos": [
+  "hojas"
+ ],
+ "piedra_1_cerca": [
+  "corteza"
+ ],
+ "piedra_1_medio": [
+  "corteza"
+ ],
+ "piedra_2_cerca": [
+  "corteza"
+ ],
+ "piedra_2_medio": [
+  "corteza"
+ ],
+ "piedra_3_cerca": [
+  "corteza"
+ ],
+ "piedra_3_medio": [
+  "corteza"
+ ],
+ "piedra_1_lejos": [
+  "corteza"
+ ],
+ "piedra_2_lejos": [
+  "corteza"
+ ],
+ "piedra_3_lejos": [
+  "corteza"
+ ]
+}

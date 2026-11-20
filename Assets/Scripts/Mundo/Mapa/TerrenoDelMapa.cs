@@ -32,6 +32,8 @@ namespace ConquestTactics.Mundo.Mapa
         /// <summary>Teselas construidas desde el principio y el tiempo que ha llevado (ms), para medir.</summary>
         public int Construidas { get; private set; }
         public double MsConstruyendo => reloj.Elapsed.TotalMilliseconds;
+        /// <summary>La tesela que más ha tardado en construirse (ms).</summary>
+        public double PeorMsTesela { get; private set; }
 
         /// <summary>`nivelDelMar`: metros a los que va la lámina del mar (el umbral de agua del generador). `umbrales`: metros de la costa, la colina,
         /// la montaña y la cima (los del generador).</summary>
@@ -48,6 +50,11 @@ namespace ConquestTactics.Mundo.Mapa
             material.SetTexture("_SueloMascara", Resources.Load<Texture2DArray>("MapaMundo/Suelo/suelo_mascara"));
             material.SetTexture("_SueloRuido", Resources.Load<Texture2D>("MapaMundo/Suelo/suelo_ruido"));
             material.SetVector("_Umbrales", umbrales);
+            // La vegetación mira lo mismo que pinta el suelo (`MapaComun.hlsl`, `SueloBajo`): la hierba toma el tinte del suelo de debajo y la
+            // hondura del dosel sale del bosque.
+            Shader.SetGlobalTexture("_VegRuido", material.GetTexture("_SueloRuido"));
+            Shader.SetGlobalVector("_VegUmbrales", umbrales);
+            Shader.SetGlobalVector("_VegVerdor", material.GetVector("_Verdor"));
             var nieve = material.GetVector("_Nieve");
             nieve.x = umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w);
             material.SetVector("_Nieve", nieve);
@@ -70,6 +77,8 @@ namespace ConquestTactics.Mundo.Mapa
                 material.SetTexture("_SueloDatos", datos);
                 var e = EscalaDelMapa.MetrosPorUnidad;
                 material.SetVector("_DatosTamano", new Vector4((float)(r.Columnas * r.Celda * e), (float)(r.Filas * r.Celda * e), (float)(r.Celda * e), 0));
+                Shader.SetGlobalTexture("_VegDatos", datos);
+                Shader.SetGlobalVector("_VegDatosTamano", new Vector4((float)(r.Columnas * r.Celda * e), (float)(r.Filas * r.Celda * e), (float)(r.Celda * e), (float)e));
             }
         }
 
@@ -122,9 +131,11 @@ namespace ConquestTactics.Mundo.Mapa
                 var (tx, ty, d) = pendientes[i];
                 var paso = PinturaDelMapa.PasoSegunDistancia(d);
                 if (teselas.TryGetValue((tx, ty), out var vieja)) Soltar(vieja.go);
+                var antes = reloj.Elapsed.TotalMilliseconds;
                 reloj.Start();
                 teselas[(tx, ty)] = (Construir(tx, ty, paso, lado), paso);
                 reloj.Stop();
+                PeorMsTesela = System.Math.Max(PeorMsTesela, reloj.Elapsed.TotalMilliseconds - antes);
                 Construidas++;
             }
         }

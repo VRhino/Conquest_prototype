@@ -358,3 +358,189 @@ La base del cliente jugador se queda, y encima va más detalle en estilo Synty.
 - Desde arriba el río aún se lee bastante regular.
 - Si el coste de construir molesta, pasar la construcción de teselas a un hilo.
 
+## La vegetación (tema 3, 2026-11-20)
+
+Árboles, matas y capa baja del mapa. Las reglas de colocación son las del prototipo (BronzeAgeClient: `src/mundo3d/arboles.ts`, `matas.ts`),
+con un mosaico de «wave function collapse» encima. Los modelos son propios, horneados en Blender fuera del repo
+(`BronzeAgeArte/mapa/vegetacion`).
+
+### Dónde está
+
+| Pieza | Dónde | Qué |
+|---|---|---|
+| `ReglasDeVegetacion` | `Conquest.Mundo` (C# puro) | Las reglas del prototipo portadas tal cual (ver abajo) |
+| `MosaicoDeVegetacion` | `Conquest.Mundo` (C# puro) | El WFC: modelo de baldosas simple, rejilla de 4 vecinos, menor entropía, propagación, reintentos y caída al prototipo |
+| `VegetacionDelMapa` | `Conquest.Mundo.Mapa` | Reparto por tesela en un hilo, trozos de dibujo de 8 u, niveles de detalle y dibujo instanciado |
+| `MapaVegetacion.shader` | `Assets/Resources/MapaMundo` | Follaje mate: translucidez, viento, variación por instancia y por rodal, hondura del dosel, aclarado, tinte de hierba y color de flor |
+| `MapaSombraArbol.shader` | `Assets/Resources/MapaMundo` | La sombra falsa en el suelo |
+| `ImportarVegetacionDelMapa` | `Conquest.Mundo.Mapa.Editor` | La importación de los FBX y las texturas de `Resources/MapaMundo/Vegetacion` |
+| `Vegetacion/vegetacion.json` | `Assets/Resources/MapaMundo` | El manifiesto de submallas: corteza, hojas, masa y lejos |
+| `Vegetacion/mosaico.json` | `Assets/Resources/MapaMundo` | La tabla del mosaico |
+
+`ReglasDeVegetacion` contiene `Azar`, `Manchas`, `RasterEn`, `ZonaDe` y `EspecieDe` (pesos `ZONAS`/`MANDAN`, rodales de 22 u). También
+`Probabilidades` (los cinco tipos de mata), `DistanciaAlAgua` y las bandas por distancia al héroe.
+
+El reparto muestrea las alturas en el hilo principal, con 1,5 ms por fotograma.
+
+### Reglas del prototipo portadas
+
+- **Densidad:** 0,55 / copa² × bosque. No hay árboles por debajo de 0,2.
+- **Exclusiones:** nada con pendiente de más de 1,1, margen de 0,2 u a los cauces, y los claros de las maquetas.
+- **Tamaño:** de 0,75 a 1,25, y alto de 0,9 a 1,2.
+- **Matas:** una candidata cada 0,5 u con `probabilidades(h, p, f, b, d, m)`.
+- **Bandas por distancia al héroe:**
+  - Árboles: 48 / 80 / 128 / ∞ u con parte 1, ½, ¼ y ⅛. Las copas crecen 1/√parte.
+  - Matas: 20 / 34 / ∞ u con parte 1, ½ y ¼, y crecen 1, 1,2 y 1,4.
+- **Copa:** ×1,4 sobre la del prototipo (`VegetacionDelMapa.Copa = CopaGrande`, 1,06 u). La del prototipo sigue como `CopaDelPrototipo`.
+
+Las pruebas EditMode comparan con valores calculados del TypeScript.
+
+### El mosaico
+
+Encima de las reglas, el WFC decide:
+- la estructura, en celdas de 2 u;
+- el rodal (la especie que manda), en celdas de 8 u, con una celda mixta entre rodales distintos.
+
+El prototipo sigue poniendo cada árbol con sus mismos azares. Con `VegetacionDelMapa.Mosaico = false` sale exactamente su reparto.
+
+- **Estados:** bosque cerrado, abierto, linde, claro, matorral, pradera, ribera, cañaveral y pedregal.
+- **Lo que manda el motor** se pone antes de resolver y nunca se viola:
+  - densidad < 0,2: sin árboles; desde 0,7: cerrado;
+  - pendiente > 1,1: pedregal;
+  - ribera solo a menos de 2,5 u del agua y en lo bajo; cañaveral pegado al agua.
+- **Junta de 64 u:** el anillo de celdas del borde sale de una función pura y no se propaga, así que no se ve la junta entre teselas.
+- **Vecindades:**
+  - El cerrado no toca pradera, matorral ni pedregal sin pasar por linde o abierto.
+  - El claro solo va entre abierto, linde u otro claro.
+- **Pesos y refuerzos** (en `mosaico.json`):
+  - Árboles: cerrado ×3,6, abierto 1, linde 0,35, ribera 0,8.
+  - Matas, con su peso por estado.
+  - Afinidad propia 3,5, para que salgan manchas y no sal y pimienta.
+  - Manchas de 12 u para pradera, matorral y claro.
+  - 6 reintentos.
+- **Bordes y detalles:** bordes orgánicos (la posición se mueve ±0,9 u con un ruido de 3 u), árboles jóvenes en la linde, y el olivo no manda
+  en el cerrado.
+- **Depuración:** `VegetacionDelMapa.VerMosaico` pinta cada celda con el color de su estado.
+
+### Especies por zona
+
+Once modelos con tres niveles de detalle, medidos desde el centro del trozo:
+- cerca: hasta 160 m;
+- medio: hasta 300 m;
+- lejos: cúpula de 32 a 38 triángulos con la vista cenital horneada.
+
+**Árboles:**
+- encina, olivo y pino;
+- álamo en la ribera;
+- ciprés, de acento en la colina;
+- abeto en la montaña;
+- palmera en la costa.
+
+**Matas.** El prototipo solo tiene «mata» y «junco»; la especie la pone `VegetacionDelMapa`:
+- **Adelfa:** en la orilla de ríos y ramblas (por los cauces y sobre la línea de costa).
+- **Retama:** en el matorral (50 %; lentisco 35 %; el resto, hueco) y algo en la linde.
+- **Lentisco:** en lo demás.
+- **Cañas** (el junco): uno de cada dos, o todos en el cañaveral. Hay una caña alta de 3,5 m.
+- **Escala:** las matas van ×1,6; las cañas, ×1,2–1,8.
+- **Corros en el matorral:** una madre de cada 2,5, con 4 a 9 hijas.
+
+**Colores:** ningún verde se sale más de un 10–12 % en valor del rango de encina, pino y olivo. Las flores no se recolorean.
+
+### Capa baja
+
+Hierba, flores y piedras sueltas del prototipo, con `TAMANO` ×1,3. Solo se dibujan hasta 48 u del héroe (`VegetacionDelMapa.CapaHasta`),
+con las bandas de las matas.
+
+El mosaico modula la fórmula:
+
+| Estado | Cambio |
+|---|---|
+| Pradera | hierba ×1,3 |
+| Claro | flores ×1,5 |
+| Matorral | hierba ×0,6, piedra ×1,5 |
+| Bosque cerrado | hierba ×0,3 |
+| Pedregal | piedra ×4, con alguna grande (hasta 0,35 u) |
+
+**Hierba:**
+- Sale en corros con calvas: una mancha de 3 u multiplica la probabilidad entre ×0,3 y ×1,6.
+- En la arena de la costa, ×0,15.
+- Su color sale de la misma mezcla que pinta el suelo debajo. `TerrenoDelMapa` pone como globales los datos del motor y el ruido del suelo
+  (`_VegDatos`, `_VegRuido`, `_VegVerdor`, `_VegUmbrales`), y `SueloBajo` (en `MapaComun.hlsl`) los lee en el vértice.
+- Resultado: pajiza sobre el seco, verde sobre el verde, rica en lo más fértil y de duna en la arena.
+
+**Flores:** una mancha de un color por celda de 9 u (amapola, amarilla, margarita y malva, los colores del prototipo), elegido en el sombreado.
+
+**Piedras:**
+- Angulosas y facetadas, con la roca caliza del suelo.
+- Hundidas un 30 %, de ×0,5 a ×2,2.
+- Ninguna en roca viva: pendiente > 1 o la roca de la altura.
+- Se juntan al pie de las laderas (canchal).
+
+### Aclarado
+
+Las copas se aclaran con un tramado alrededor del héroe y en una cápsula hacia la cámara. El tramado usa la cobertura del MSAA con ruido por
+píxel.
+- Radio del héroe: 1,6 u de cerca, 2,2 u a zoom habitual y 3 u alejado. El núcleo queda limpio hasta el 60 % del radio.
+- Las otras columnas que se ven (ejércitos, caravanas, formaciones y batallas, hasta 8 en total): 1,4 u.
+- Los troncos y las sombras se quedan.
+
+### Interruptores
+
+| Interruptor | Dónde | Para qué |
+|---|---|---|
+| `Mosaico` | `VegetacionDelMapa` (estático) | Apagado: el reparto exacto del prototipo |
+| `VerMosaico` | `VegetacionDelMapa` (estático) | Depuración: cada celda con el color de su estado |
+| `Copa` | `VegetacionDelMapa` (estático) | `CopaGrande` (1,06 u) o `CopaDelPrototipo` (0,5 u) |
+| `CapaBaja` | `VegetacionDelMapa` (estático) | Hierba, flores y piedras |
+| `AclararCopas` | `MapaDeMundo` (estático) | El aclarado sobre las columnas (las capturas de especies lo apagan) |
+
+### Coste
+
+Medido con `SueloDelMapaTests.LaVegetacionEstadoFinal`: 300 fotogramas, Editor en batch, 1600 × 900 con MSAA ×4.
+
+| Zona | Zoom | Plantas | Triángulos | Llamadas | Mediana | p95 |
+|---|---|---|---|---|---|---|
+| Bosque denso | cerca | 2.361 | 986 k | 168 | 2,8 ms | 3,1 ms |
+| Bosque denso | habitual | 3.277 | 737 k | 170 | 3,0 ms | 3,4 ms |
+| Bosque denso | alejado | 4.523 | 462 k | 164 | 3,0 ms | 3,3 ms |
+| Pradera fértil | cerca | 2.600 | 106 k | 111 | 2,6 ms | 2,9 ms |
+| Pradera fértil | habitual | 4.024 | 85 k | 92 | 2,5 ms | 2,8 ms |
+| Pradera fértil | alejado | 5.012 | 124 k | 92 | 2,5 ms | 2,8 ms |
+| Costa | cerca | 2.194 | 448 k | 92 | 2,3 ms | 2,7 ms |
+| Costa | habitual | 3.111 | 399 k | 131 | 2,7 ms | 3,0 ms |
+| Costa | alejado | 4.068 | 232 k | 126 | 2,7 ms | 3,2 ms |
+| Montaña | cerca | 989 | 874 k | 72 | 2,2 ms | 2,5 ms |
+| Montaña | habitual | 1.694 | 326 k | 81 | 2,4 ms | 2,7 ms |
+| Montaña | alejado | 2.333 | 112 k | 68 | 2,4 ms | 2,9 ms |
+
+- **Dónde se va el tiempo:** la CPU de `Dibujar` es de 0,12 a 0,30 ms. En el bosque denso, lo demás es GPU: el follaje con alpha to coverage.
+- **Llamadas en la pradera:** la capa baja pasó de 199 a entre 92 y 126 llamadas. Antes había una tanda por cada tinte de hierba, cada color de
+  flor y cada hondura del dosel; ahora los tres salen del sombreado.
+- **Nivel de detalle:** se mide al centro del trozo. Con el punto más cercano de la caja, el nivel de cerca se colaba a zoom habitual (1,1
+  millones de triángulos en el bosque denso).
+- **En marcha** (de la pradera al bosque denso a 0,15 u por fotograma, 1.200 fotogramas): mediana 2,8 ms, p95 17,7 ms, p99 55,8 ms y peor 113 ms.
+  - Los picos vienen de construir las teselas de suelo (la peor, unos 64 ms, ya costaba eso antes) y del reparto.
+  - El peor fotograma quieto (unos 85 ms, cada ~300 fotogramas) es la recolección de basura de siempre.
+- **Pendiente:** el bosque denso queda en p95 3,3–3,4 ms, por encima del objetivo de 3,0. La siguiente palanca es la GPU del nivel medio: menos
+  tarjetas por copa o grumos de menos triángulos.
+
+### Pruebas y capturas
+
+- **EditMode:**
+  - `ReglasDeVegetacionTests`, contra el TypeScript.
+  - `MosaicoDeVegetacionTests`: determinismo, vecindades, lo que manda el motor, anillo del borde y caída al prototipo.
+- **PlayMode:** `SueloDelMapaTests.ElRepartoDeLaVegetacion` comprueba el determinismo y que no hay plantas en el agua, la cima, la nieve ni los
+  cauces.
+- **Explícitas, de capturas** (`MUNDO_CAPTURAS`):
+  - `LaVegetacionEnElMapa`;
+  - `ElMosaicoEnElMapa`;
+  - `LasEspeciesEnElMapa`;
+  - `LaCapaBajaEnElMapa`;
+  - `LaVegetacionEstadoFinal`, que además mide el coste de arriba.
+
+### Para otros temas
+
+- **Caminos:** sin vegetación sobre ellos. El prototipo los tiene en `matas.ts`; aquí aún no hay caminos en el mapa.
+- **Olivares** en hileras junto a los pueblos.
+- **Sombras de verdad** sobre el agua (tema 8).
+- **Juntar más tandas:** un atlas común de especies y variantes.

@@ -149,6 +149,574 @@ namespace ConquestTactics.Mundo.UI.Tests
             Debug.Log($"[Suelo] {mapa.TeselasCargadas} teselas, {tris} triángulos ({sinFaldon} sin faldones); {construidas} teselas construidas en {ms:0} ms ({ms / Math.Max(1, construidas):0.0} ms cada una)");
         }
 
+        DatosDeJuego pDatos;
+        ArtefactoDeMundo pArtefacto;
+        Relieve pRelieve;
+
+        /// <summary>El mundo de verdad del servidor de prueba (cuenta nueva solo para leer el mundo): deja datos, artefacto y relieve en pDatos,
+        /// pArtefacto y pRelieve.</summary>
+        IEnumerator Preparar(string url, string prefijo)
+        {
+            var acceso = new Acceso(url);
+            var nick = prefijo + DateTime.UtcNow.Ticks % 100_000_000;
+            Esperar(acceso.Registrar(nick, "clave-de-prueba-1"));
+            var login = Esperar(acceso.Entrar(nick, "clave-de-prueba-1"));
+            var s = new Sesion(acceso.UrlSesion, login.Token, "conquest-prueba");
+            var abrir = s.Abrir();
+            var hasta = Time.realtimeSinceStartup + 20;
+            while (!abrir.IsCompleted && Time.realtimeSinceStartup < hasta) { s.Bombear(); yield return null; }
+            var mundo = abrir.Result.Mundo;
+            s.Cerrar();
+            acceso.Anular(login.Token);
+            cache = Path.Combine(Path.GetTempPath(), "conquest-prueba-" + prefijo + Guid.NewGuid().ToString("N"));
+            pDatos = Esperar(DatosDeJuego.Cargar(acceso, mundo, new CacheDeUno(Path.Combine(cache, "datos"))));
+            pArtefacto = Esperar(MundoEnDisco.CargarArtefacto(acceso, mundo, new CacheDeUno(Path.Combine(cache, "mundo"))));
+            pRelieve = new Relieve(Esperar(MundoEnDisco.CargarRelieve(acceso, mundo, new CacheDeUno(Path.Combine(cache, "relieve")))));
+        }
+
+        /// <summary>Los sitios de la vegetación, buscados en el raster de bosque y el relieve: una dehesa, un encinar denso, una ladera con el
+        /// límite del arbolado y un bosque junto a la costa (y el borde de bosque de `BuscarSitios`).</summary>
+        static Dictionary<string, (double x, double y)> SitiosDeVegetacion(Relieve relieve, ArtefactoDeMundo artefacto, DatosDeJuego datos)
+        {
+            var bos = new RasterDeMundo(artefacto.DensidadBosque);
+            double U(string k) => datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + k) * Relieve.MetrosAltura;
+            double costa = U("umbralCosta"), colina = U("umbralColina"), montana = U("umbralMontana");
+            var mejor = new Dictionary<string, (double puntos, double x, double y)>();
+            void Probar(string k, double puntos, double x, double y)
+            {
+                if (!mejor.TryGetValue(k, out var m) || puntos > m.puntos) mejor[k] = (puntos, x, y);
+            }
+            for (double y = 150; y < relieve.Filas * relieve.Paso - 150; y += 4)
+                for (double x = 150; x < relieve.Columnas * relieve.Paso - 150; x += 4)
+                {
+                    double b = bos.En(x, y) / 255.0;
+                    if (b < 0.25 || relieve.AguaEn(x, y)) continue;
+                    double h = relieve.AlturaEn(x, y);
+                    double pend = Math.Max(Math.Abs(relieve.AlturaEn(x + 1, y) - relieve.AlturaEn(x - 1, y)), Math.Abs(relieve.AlturaEn(x, y + 1) - relieve.AlturaEn(x, y - 1)))
+                        / (2 * EscalaDelMapa.MetrosPorUnidad);
+                    double vMin = 1, vMax = 0;
+                    foreach (var (dx, dy) in new[] { (12, 0), (-12, 0), (0, 12), (0, -12), (8, 8), (-8, -8) })
+                    {
+                        double w = bos.En(x + dx, y + dy) / 255.0;
+                        vMin = Math.Min(vMin, w); vMax = Math.Max(vMax, w);
+                    }
+                    if (h > costa + 15 && h < colina + 40)
+                    {
+                        if (b < 0.55 && vMin > 0.1 && vMax < 0.75) Probar("dehesa", -Math.Abs(b - 0.4) - (vMax - vMin) * 0.3, x, y);
+                        if (b > 0.85) Probar("denso", vMin, x, y);
+                    }
+                    // La ladera: bosque en pendiente que se acaba subiendo (más arriba, roca o sin bosque).
+                    if (b > 0.6 && h > colina && h < montana + 40 && pend > 0.12)
+                    {
+                        double arriba = 0;
+                        foreach (var (dx, dy) in new[] { (10, 0), (-10, 0), (0, 10), (0, -10) })
+                            if (relieve.AlturaEn(x + dx, y + dy) > h + 25 && bos.En(x + dx, y + dy) < 40) arriba = 1;
+                        Probar("ladera", arriba + Math.Min(pend, 0.4), x, y);
+                    }
+                    // La costa: bosque a menos de 12 u del mar.
+                    if (b > 0.45 && h < colina)
+                    {
+                        bool mar = relieve.AguaEn(x + 12, y) || relieve.AguaEn(x - 12, y) || relieve.AguaEn(x, y + 12) || relieve.AguaEn(x, y - 12);
+                        if (mar) Probar("costa", b - Math.Abs(h - (costa + 25)) / 100, x, y);
+                    }
+                }
+            var r = mejor.ToDictionary(kv => kv.Key, kv => (kv.Value.x, kv.Value.y));
+            r["borde"] = BuscarSitios(relieve, artefacto, datos)["borde_bosque"];
+            return r;
+        }
+
+        /// <summary>El reparto de la vegetación (`VegetacionDelMapa`, con las reglas del prototipo): la misma tesela del mismo mundo da las mismas
+        /// plantas, y ninguna cae en el agua, en la cima, en la nieve ni en un cauce (la arena de la costa sí lleva árboles: el pinar de costa del
+        /// prototipo). Cuenta cuántas plantas caen de cada especie.</summary>
+        [Category("Mapa")]
+        [UnityTest, Timeout(600_000)]
+        public IEnumerator ElRepartoDeLaVegetacion()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "repart-");
+            var relieve = pRelieve;
+            float U(string k) => (float)(pDatos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + k) * Relieve.MetrosAltura);
+            var umbrales = new Vector4(U("umbralCosta"), U("umbralColina"), U("umbralMontana"), U("umbralCima"));
+            float nieve = umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w);
+            var cauces = new CaucesDelMapa(pArtefacto, relieve);
+            RasterDeMundo R(Raster r) => r != null && r.Encoding == EncodingRaster.EncodingU8 ? new RasterDeMundo(r) : null;
+            VegetacionDelMapa Nueva() => new VegetacionDelMapa(relieve, R(pArtefacto.Fertilidad), R(pArtefacto.Humedad), R(pArtefacto.DensidadBosque), umbrales, nieve) { Cauces = cauces };
+            var a = Nueva();
+            var b = Nueva();
+            var sitios = SitiosDeVegetacion(relieve, pArtefacto, pDatos);
+            double lado = relieve.LadoEnUnidades, e = EscalaDelMapa.MetrosPorUnidad;
+            int total = 0;
+            foreach (var kv in sitios)
+            {
+                int tx = (int)(kv.Value.x / lado), ty = (int)(kv.Value.y / lado);
+                var p1 = a.RepartirAhora(tx, ty);
+                var p2 = b.RepartirAhora(tx, ty);
+                var p3 = a.RepartirAhora(tx, ty);
+                Assert.AreEqual(p1.Count, p2.Count, $"{kv.Key}: el mismo número de plantas");
+                Assert.AreEqual(p1.Count, p3.Count, $"{kv.Key}: el mismo número de plantas, otra vez");
+                for (int i = 0; i < p1.Count; i++)
+                {
+                    Assert.AreEqual(p1[i].Pos, p2[i].Pos, $"{kv.Key}: la planta {i}, en el mismo sitio");
+                    Assert.AreEqual(p1[i].Esp, p2[i].Esp, $"{kv.Key}: la planta {i}, de la misma especie");
+                    Assert.AreEqual(p1[i].Escala, p2[i].Escala, $"{kv.Key}: la planta {i}, del mismo tamaño");
+                }
+                foreach (var p in p1)
+                {
+                    double x = p.Pos.x / e, y = -p.Pos.z / e, h = relieve.AlturaEn(x, y);
+                    Assert.IsFalse(relieve.AguaEn(x, y), $"{kv.Key}: ({x:0.0}, {y:0.0}) en el agua");
+                    Assert.LessOrEqual(h, umbrales.w + 1, $"{kv.Key}: ({x:0.0}, {y:0.0}) en la cima ({h:0} m)");
+                    Assert.Less(h, nieve - 38, $"{kv.Key}: ({x:0.0}, {y:0.0}) en la nieve ({h:0} m)");
+                    Assert.GreaterOrEqual(cauces.ACauce(x, y), p.Mata ? 0.1 : 0.2, $"{kv.Key}: ({x:0.0}, {y:0.0}) en un cauce");
+                }
+                total += p1.Count;
+                var porClase = p1.GroupBy(p => p.Clase).OrderBy(g => g.Key)
+                    .Select(g => $"{VegetacionDelMapa.NombreDeClase(g.Key)} {g.Count()}");
+                Debug.Log($"[Vegetacion] reparto de {kv.Key} (tesela {tx}, {ty}): {p1.Count} plantas, iguales las tres veces; " + string.Join(", ", porClase));
+                yield return null;
+            }
+            Assert.Greater(total, 100, "hay vegetación en los sitios de bosque");
+            a.Destruir();
+            b.Destruir();
+        }
+
+        /// <summary>La vegetación (`Conquest/MapaVegetacion`) en el mapa, para las capturas de revisión (no comprueba nada: `MUNDO_CAPTURAS`): una
+        /// dehesa, un encinar denso, el borde de un bosque, una ladera con el límite del arbolado y un bosque junto a la costa a los tres zooms
+        /// (con la visión de un héroe, 15 u); el denso de cerca con la cámara baja; una plaza y una aldea junto al bosque (el tamaño); y una encina y
+        /// un olivo sueltos a 35 m y 30°, para comparar con el render de Blender. Con MSAA 4× como el juego. Mide los fotogramas al cargar
+        /// el bosque denso (llegando de lejos) y ya cargado.</summary>
+        [Category("Mapa"), Explicit("capturas de revisión de la vegetación")]
+        [UnityTest, Timeout(1_200_000)]
+        public IEnumerator LaVegetacionEnElMapa()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "veget-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            // La copa (u) con que se reparte y se escala: `VEGETACION_COPA` (0,5 la del prototipo).
+            var copaAntes = VegetacionDelMapa.Copa;
+            if (double.TryParse(Environment.GetEnvironmentVariable("VEGETACION_COPA"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var copa))
+                VegetacionDelMapa.Copa = copa;
+            Debug.Log($"[Vegetacion] copa {VegetacionDelMapa.Copa:0.00} u, escala de los modelos {VegetacionDelMapa.Tamano:0.00}");
+            var sitios = SitiosDeVegetacion(relieve, artefacto, datos);
+            var bos = new RasterDeMundo(artefacto.DensidadBosque);
+            foreach (var kv in sitios) Debug.Log($"[Vegetacion] sitio {kv.Key}: ({kv.Value.x:0.0}, {kv.Value.y:0.0}), bosque {bos.En(kv.Value.x, kv.Value.y) / 255.0:0.00}, {relieve.AlturaEn(kv.Value.x, kv.Value.y):0} m");
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var (almacen, sesion) = Almacen(url, sitios["dehesa"], null);
+            var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+            mapa.RadioVisionFijo = 15; // la visión de un héroe: los zooms de 132, 221 y 324 m
+            foreach (var n in new[] { "dehesa", "denso", "borde", "ladera", "costa" })
+            {
+                if (!sitios.ContainsKey(n)) continue;
+                yield return Llegar(mapa, almacen, sitios[n]);
+                yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"veg_{n}_1_cerca");
+                yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"veg_{n}_2_habitual");
+                yield return Vista(mapa, ZoomDelMapa.Alejado, 30, $"veg_{n}_3_alejado");
+            }
+            // Una plaza y una aldea junto al borde del bosque: el tamaño de los árboles al lado (y los claros, que solo rehacen su tesela).
+            var borde = sitios["borde"];
+            mapa.Adicionales.Add(new CosaDelMapa { Clase = ClaseDeCosa.Plaza, Id = "plaza-prueba", Nombre = "Plaza de prueba", X = borde.x + 4, Y = borde.y + 2, Radio = 1.5, Alto = 1 });
+            mapa.Adicionales.Add(new CosaDelMapa { Clase = ClaseDeCosa.Aldea, Id = "aldea-prueba", Nombre = "Aldea de prueba", X = borde.x - 5, Y = borde.y - 3, Radio = 0.8, Alto = 0.6 });
+            mapa.RehacerRayas();
+            yield return Llegar(mapa, almacen, borde);
+            yield return Vista(mapa, ZoomDelMapa.Cerca, 30, "veg_plaza_1_cerca");
+            yield return Vista(mapa, ZoomDelMapa.Normal, 30, "veg_plaza_2_habitual");
+            mapa.Adicionales.Clear();
+
+            // Al cargar: desde la dehesa al denso, midiendo mientras se carga.
+            yield return Llegar(mapa, almacen, sitios.TryGetValue("costa", out var lejos) ? lejos : sitios["dehesa"]);
+            almacen.Buscar(TipoEntidad.Ejercito, "ej-1").Ejercito.Posicion = Pu(sitios["denso"].x, sitios["denso"].y);
+            mapa.Camara.Zoom = ZoomDelMapa.Normal;
+            yield return Medir(mapa, "llegando al bosque denso (cargando)");
+            yield return Llegar(mapa, almacen, sitios["denso"]);
+            yield return Vista(mapa, ZoomDelMapa.Cerca, 15, "veg_denso_4_cerca_baja");
+            yield return Vista(mapa, ZoomDelMapa.Normal, 30, "veg_denso_5_habitual_otra_vez");
+            yield return Medir(mapa, "en el bosque denso, zoom habitual (cargado)");
+            var v = mapa.Vegetacion;
+            Debug.Log($"[Vegetacion] {v.Plantas} plantas cargadas, {v.Dibujadas} dibujadas, {v.Triangulos} triángulos, {v.Llamadas} llamadas; "
+                + $"{v.Repartidas} teselas repartidas en {v.MsRepartiendo:0} ms de hilo (+{v.MsMuestreando:0} ms de muestreo en el principal, el peor fotograma {v.PeorMsMuestreando:0.0} ms); "
+                + $"peor Actualizar {v.PeorMsActualizar:0.0} ms, peor Dibujar {v.PeorMsDibujar:0.0} ms, peor tesela de suelo {mapa.PeorMsTeselaDeSuelo:0.0} ms");
+
+            // A/B con Blender: una encina y un olivo sueltos (variante 1, de cerca), a 35 m y 30°, con la luz del mapa; muy por debajo del suelo
+            // (la misma x, z: la niebla de guerra de alrededor de la columna) y con fondo del color del horizonte.
+            var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+            if (!string.IsNullOrEmpty(carpeta))
+            {
+                var centro = EscalaDelMapa.AEscena(sitios["denso"].x, sitios["denso"].y, -4000);
+                var ab = new RenderTexture(1200, 900, 24) { antiAliasing = 4 };
+                var cam = new GameObject("camara A/B").AddComponent<Camera>();
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = PinturaDelMapa.Horizonte;
+                cam.fieldOfView = 35;
+                cam.nearClipPlane = 1;
+                cam.farClipPlane = 300;
+                cam.targetTexture = ab;
+                cam.enabled = false;
+                foreach (var especie in new[] { "encina", "olivo" })
+                {
+                    var (malla, mats) = v.Pieza(especie, 0, 0);
+                    var go = new GameObject("A/B " + especie);
+                    go.transform.position = centro;
+                    go.AddComponent<MeshFilter>().sharedMesh = malla;
+                    go.AddComponent<MeshRenderer>().sharedMaterials = mats;
+                    var alto = malla.bounds.size.y;
+                    var mira = centro + Vector3.up * alto * 0.45f;
+                    cam.transform.position = mira + new Vector3(0, Mathf.Sin(30 * Mathf.Deg2Rad), -Mathf.Cos(30 * Mathf.Deg2Rad)) * 35;
+                    cam.transform.LookAt(mira);
+                    yield return null;
+                    cam.Render();
+                    var antes = RenderTexture.active;
+                    RenderTexture.active = ab;
+                    var t = new Texture2D(ab.width, ab.height, TextureFormat.RGB24, false);
+                    t.ReadPixels(new Rect(0, 0, ab.width, ab.height), 0, 0);
+                    t.Apply();
+                    RenderTexture.active = antes;
+                    File.WriteAllBytes(Path.Combine(carpeta, $"ab_{especie}_unity.png"), t.EncodeToPNG());
+                    UnityEngine.Object.Destroy(t);
+                    UnityEngine.Object.Destroy(go);
+                }
+                UnityEngine.Object.Destroy(cam.gameObject);
+                ab.Release();
+            }
+            VegetacionDelMapa.Copa = copaAntes;
+        }
+
+        /// <summary>Cada especie en su zona, para las capturas de revisión (`MUNDO_CAPTURAS`), a zoom habitual y de cerca: la ribera con álamos y
+        /// cañas, la costa con palmeras y pinos, la montaña con abetos, la colina con algún ciprés, el monte bajo con retama y una rambla con
+        /// adelfas. Los sitios los busca repartiendo una de cada dos teselas del mundo y contando cada especie en ventanas de 6 u.</summary>
+        [Category("Mapa"), Explicit("capturas de revisión de las especies")]
+        [UnityTest, Timeout(2_400_000)]
+        public IEnumerator LasEspeciesEnElMapa()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "especies-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            float U(string k) => (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + k) * Relieve.MetrosAltura);
+            var umbrales = new Vector4(U("umbralCosta"), U("umbralColina"), U("umbralMontana"), U("umbralCima"));
+            float nieve = umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w);
+            RasterDeMundo R(Raster r) => r != null && r.Encoding == EncodingRaster.EncodingU8 ? new RasterDeMundo(r) : null;
+            var cuenta = new Dictionary<(int, int), int[]>();
+            yield return ContarEspecies(relieve, artefacto, umbrales, nieve, cuenta);
+            int N(int[] c, EspecieDeArbol x) => c[(int)x];
+            int Arboles(int[] c) => c.Take(7).Sum();
+            var buscar = new (string nombre, Func<int[], double> nota)[]
+            {
+                ("ribera", c => N(c, EspecieDeArbol.Alamo) > 0 && c[VegetacionDelMapa.Canas] > 0 ? Math.Min(N(c, EspecieDeArbol.Alamo), 8) + Math.Min(c[VegetacionDelMapa.Canas], 12) : -1),
+                ("costa", c => N(c, EspecieDeArbol.Palmera) > 0 && N(c, EspecieDeArbol.Pino) > 0 ? Math.Min(N(c, EspecieDeArbol.Palmera), 6) * 2 + Math.Min(N(c, EspecieDeArbol.Pino), 8) : -1),
+                ("montana", c => N(c, EspecieDeArbol.Abeto) > 0 ? Math.Min(N(c, EspecieDeArbol.Abeto), 20) + 0.1 * Arboles(c) : -1),
+                ("colina", c => N(c, EspecieDeArbol.Cipres) > 0 ? Math.Min(N(c, EspecieDeArbol.Cipres), 3) * 3 + Math.Min(Arboles(c), 20) : -1),
+                ("matorral", c => c[VegetacionDelMapa.Retama] > 0 ? Math.Min(c[VegetacionDelMapa.Retama], 30) - 0.5 * Arboles(c) : -1),
+                ("rambla", c => c[VegetacionDelMapa.Adelfa] > 0 ? Math.Min(c[VegetacionDelMapa.Adelfa], 20) + 0.2 * Math.Min(Arboles(c), 10) : -1),
+            };
+            var sitios = MejoresSitios(cuenta, buscar);
+            Assert.IsNotEmpty(sitios, "algún sitio con las especies nuevas");
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var (almacen, sesion) = Almacen(url, (sitios[0].x, sitios[0].y), null);
+            var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+            mapa.RadioVisionFijo = 15;
+            MapaDeMundo.AclararCopas = false; // que el hueco del héroe no tape la especie
+            try
+            {
+                foreach (var (nombre, x, y) in sitios)
+                {
+                    yield return Llegar(mapa, almacen, (x, y));
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"esp_{nombre}_1_habitual");
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"esp_{nombre}_2_cerca");
+                }
+            }
+            finally { MapaDeMundo.AclararCopas = true; }
+        }
+
+        const double VentanaDeEspecies = 6;
+
+        /// <summary>Reparte una de cada dos teselas del mundo (con la capa baja) y cuenta cada clase de planta en ventanas de 6 u.</summary>
+        static IEnumerator ContarEspecies(Relieve relieve, ArtefactoDeMundo artefacto, Vector4 umbrales, float nieve, Dictionary<(int, int), int[]> cuenta)
+        {
+            RasterDeMundo R(Raster r) => r != null && r.Encoding == EncodingRaster.EncodingU8 ? new RasterDeMundo(r) : null;
+            var v = new VegetacionDelMapa(relieve, R(artefacto.Fertilidad), R(artefacto.Humedad), R(artefacto.DensidadBosque), umbrales, nieve)
+                { Cauces = new CaucesDelMapa(artefacto, relieve) };
+            double lado = relieve.LadoEnUnidades, e = EscalaDelMapa.MetrosPorUnidad;
+            var total = new int[Clases];
+            int nx = (int)(relieve.Columnas * relieve.Paso / lado), ny = (int)(relieve.Filas * relieve.Paso / lado);
+            var reloj = System.Diagnostics.Stopwatch.StartNew();
+            for (int ty = 1; ty < ny - 1; ty += 2)
+            {
+                for (int tx = 1 + (ty / 2) % 2; tx < nx - 1; tx += 2)
+                    foreach (var pl in v.RepartirAhora(tx, ty))
+                    {
+                        var k = ((int)(pl.Pos.x / e / VentanaDeEspecies), (int)(-pl.Pos.z / e / VentanaDeEspecies));
+                        if (!cuenta.TryGetValue(k, out var c)) cuenta[k] = c = new int[Clases];
+                        c[pl.Clase]++;
+                        total[pl.Clase]++;
+                    }
+                yield return null;
+            }
+            Debug.Log($"[Especies] {nx}×{ny} teselas, la mitad repartidas en {reloj.ElapsedMilliseconds} ms; "
+                + string.Join(", ", Enumerable.Range(0, Clases).Select(i => $"{VegetacionDelMapa.NombreDeClase((byte)i)} {total[i]}")));
+        }
+
+        const int Clases = VegetacionDelMapa.Piedra + 1;
+
+        /// <summary>Para cada búsqueda, la ventana de mejor nota (las de nota negativa no valen).</summary>
+        static List<(string nombre, double x, double y)> MejoresSitios(Dictionary<(int, int), int[]> cuenta, (string nombre, Func<int[], double> nota)[] buscar)
+        {
+            var sitios = new List<(string nombre, double x, double y)>();
+            foreach (var (nombre, nota) in buscar)
+            {
+                var mejor = cuenta.Where(kv => nota(kv.Value) >= 0).OrderByDescending(kv => nota(kv.Value)).ThenBy(kv => kv.Key.Item1).ThenBy(kv => kv.Key.Item2).FirstOrDefault();
+                if (mejor.Value == null) { Debug.Log($"[Especies] sin sitio para {nombre}"); continue; }
+                double x = (mejor.Key.Item1 + 0.5) * VentanaDeEspecies, y = (mejor.Key.Item2 + 0.5) * VentanaDeEspecies;
+                sitios.Add((nombre, x, y));
+                Debug.Log($"[Especies] {nombre}: ({x:0}, {y:0}): " + string.Join(", ", Enumerable.Range(0, Clases).Where(i => mejor.Value[i] > 0).Select(i => $"{VegetacionDelMapa.NombreDeClase((byte)i)} {mejor.Value[i]}")));
+            }
+            return sitios;
+        }
+
+        /// <summary>La capa baja (hierba, flores y piedras, `matas.ts` del prototipo) y las matas, para las capturas de revisión (`MUNDO_CAPTURAS`):
+        /// el monte bajo, una pradera fértil con flores, una ladera con piedras, una rambla con adelfas y una ribera con álamos, a zoom habitual y de
+        /// cerca; la pradera y la ladera también sin la capa baja. Mide el fotograma en la pradera con y sin ella.</summary>
+        [Category("Mapa"), Explicit("capturas de revisión de la capa baja")]
+        [UnityTest, Timeout(2_400_000)]
+        public IEnumerator LaCapaBajaEnElMapa()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "capa-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            float U(string k) => (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + k) * Relieve.MetrosAltura);
+            var umbrales = new Vector4(U("umbralCosta"), U("umbralColina"), U("umbralMontana"), U("umbralCima"));
+            float nieve = umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w);
+            var cuenta = new Dictionary<(int, int), int[]>();
+            yield return ContarEspecies(relieve, artefacto, umbrales, nieve, cuenta);
+            int N(int[] c, EspecieDeArbol x) => c[(int)x];
+            int Arboles(int[] c) => c.Take(7).Sum();
+            const int H = VegetacionDelMapa.Hierba, F = VegetacionDelMapa.Flor, P = VegetacionDelMapa.Piedra;
+            var sitios = MejoresSitios(cuenta, new (string, Func<int[], double>)[]
+            {
+                ("monte_bajo", c => c[VegetacionDelMapa.Retama] > 0 ? Math.Min(c[VegetacionDelMapa.Retama], 40) + Math.Min(c[VegetacionDelMapa.Lentisco], 30) - 0.5 * Arboles(c) : -1),
+                ("pradera", c => c[F] > 0 && c[H] > 0 ? Math.Min(c[H], 200) + 4 * Math.Min(c[F], 40) - 2 * Arboles(c) - c[P] : -1),
+                // una ladera con piedras y algo de hierba (no un cantil: la cámara se mete en la roca)
+                ("ladera", c => c[P] > 0 && c[H] > 10 ? Math.Min(c[P], 60) + 0.5 * Math.Min(c[H], 60) : -1),
+                ("rambla", c => c[VegetacionDelMapa.Adelfa] > 0 ? Math.Min(c[VegetacionDelMapa.Adelfa], 20) + 0.2 * Math.Min(Arboles(c), 10) : -1),
+                ("ribera", c => N(c, EspecieDeArbol.Alamo) > 0 && c[VegetacionDelMapa.Canas] > 0 ? Math.Min(N(c, EspecieDeArbol.Alamo), 8) + Math.Min(c[VegetacionDelMapa.Canas], 12) : -1),
+                ("costa", c => N(c, EspecieDeArbol.Palmera) > 0 && N(c, EspecieDeArbol.Pino) > 0 ? Math.Min(N(c, EspecieDeArbol.Palmera), 6) * 2 + Math.Min(N(c, EspecieDeArbol.Pino), 8) : -1),
+            });
+            Assert.IsNotEmpty(sitios, "algún sitio para la capa baja");
+            var pradera = sitios.FirstOrDefault(q => q.nombre == "pradera");
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            MapaDeMundo.AclararCopas = false; // que el hueco del héroe no tape lo que se mira
+            try
+            {
+                foreach (var con in new[] { false, true })
+                {
+                    VegetacionDelMapa.CapaBaja = con;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, (sitios[0].x, sitios[0].y), null);
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    foreach (var (nombre, x, y) in sitios)
+                    {
+                        if (!con && nombre != "pradera" && nombre != "ladera") continue;
+                        yield return Llegar(mapa, almacen, (x, y));
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"capa_{nombre}_{(con ? "1_habitual" : "0_sin_capa")}");
+                        if (con) yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"capa_{nombre}_2_cerca");
+                    }
+                    if (pradera.nombre == null) continue;
+                    yield return Llegar(mapa, almacen, (pradera.x, pradera.y));
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"capa_pradera_medir_{(con ? "con" : "sin")}");
+                    yield return Medir(mapa, $"en la pradera fértil, zoom habitual, {(con ? "con" : "sin")} la capa baja");
+                }
+            }
+            finally { MapaDeMundo.AclararCopas = true; VegetacionDelMapa.CapaBaja = true; }
+        }
+
+        /// <summary>La vegetación, estado final: el coste (plantas, triángulos, llamadas, mediana y p95) en el bosque denso, la pradera fértil, la
+        /// costa y la montaña a los tres zooms; los picos en marcha (el héroe cruzando de la pradera al bosque denso, fotograma a fotograma); y las
+        /// capturas finales (`MUNDO_CAPTURAS`): cada paisaje a zoom habitual, dos panorámicas alejadas, el héroe en el bosque con el aclarado y
+        /// el detalle de la hierba en la playa, las piedras de la ladera y la flor de la adelfa.</summary>
+        [Category("Mapa"), Explicit("medidas y capturas del estado final de la vegetación")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LaVegetacionEstadoFinal()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "final-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            float U(string k) => (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + k) * Relieve.MetrosAltura);
+            var umbrales = new Vector4(U("umbralCosta"), U("umbralColina"), U("umbralMontana"), U("umbralCima"));
+            float nieve = umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w);
+            var cuenta = new Dictionary<(int, int), int[]>();
+            yield return ContarEspecies(relieve, artefacto, umbrales, nieve, cuenta);
+            int N(int[] c, EspecieDeArbol x) => c[(int)x];
+            int Arboles(int[] c) => c.Take(7).Sum();
+            const int H = VegetacionDelMapa.Hierba, F = VegetacionDelMapa.Flor, P = VegetacionDelMapa.Piedra;
+            var lista = MejoresSitios(cuenta, new (string, Func<int[], double>)[]
+            {
+                ("ribera", c => N(c, EspecieDeArbol.Alamo) > 0 && c[VegetacionDelMapa.Canas] > 0 ? Math.Min(N(c, EspecieDeArbol.Alamo), 8) + Math.Min(c[VegetacionDelMapa.Canas], 12) : -1),
+                ("costa", c => N(c, EspecieDeArbol.Palmera) > 0 && N(c, EspecieDeArbol.Pino) > 0 ? Math.Min(N(c, EspecieDeArbol.Palmera), 6) * 2 + Math.Min(N(c, EspecieDeArbol.Pino), 8) : -1),
+                ("montana", c => N(c, EspecieDeArbol.Abeto) > 0 ? Math.Min(N(c, EspecieDeArbol.Abeto), 20) + 0.1 * Arboles(c) : -1),
+                ("monte_bajo", c => c[VegetacionDelMapa.Retama] > 0 ? Math.Min(c[VegetacionDelMapa.Retama], 40) + Math.Min(c[VegetacionDelMapa.Lentisco], 30) - 0.5 * Arboles(c) : -1),
+                ("pradera", c => c[F] > 0 && c[H] > 0 ? Math.Min(c[H], 200) + 4 * Math.Min(c[F], 40) - 2 * Arboles(c) - c[P] : -1),
+                ("rambla", c => c[VegetacionDelMapa.Adelfa] > 0 ? Math.Min(c[VegetacionDelMapa.Adelfa], 20) + 0.2 * Math.Min(Arboles(c), 10) : -1),
+                ("ladera", c => c[P] > 0 && c[H] > 10 ? Math.Min(c[P], 60) + 0.5 * Math.Min(c[H], 60) : -1),
+                ("playa", c => c[H] > 0 && N(c, EspecieDeArbol.Palmera) > 0 ? c[H] : -1),
+            });
+            var sitios = lista.ToDictionary(q => q.nombre, q => (q.x, q.y));
+            foreach (var kv in SitiosDeVegetacion(relieve, artefacto, datos)) sitios[kv.Key] = kv.Value; // denso y borde, de siempre
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+            var (almacen, sesion) = Almacen(url, sitios["denso"], null);
+            var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+            mapa.RadioVisionFijo = 15;
+
+            // 1. el coste, como se juega (con el aclarado)
+            foreach (var zona in new[] { "denso", "pradera", "costa", "montana" })
+            {
+                if (!sitios.ContainsKey(zona)) continue;
+                yield return Llegar(mapa, almacen, sitios[zona]);
+                foreach (var (zoom, nombre) in new[] { (ZoomDelMapa.Cerca, "cerca"), (ZoomDelMapa.Normal, "habitual"), (ZoomDelMapa.Alejado, "alejado") })
+                {
+                    yield return Vista(mapa, zoom, 30, $"final_coste_{zona}_{nombre}");
+                    yield return Medir(mapa, $"coste: {zona}, zoom {nombre}");
+                }
+            }
+
+            // 2. los picos en marcha: de la pradera al bosque denso a 0,15 u por fotograma, a zoom habitual
+            if (sitios.ContainsKey("pradera"))
+            {
+                mapa.Camara.Zoom = ZoomDelMapa.Normal;
+                yield return Llegar(mapa, almacen, sitios["pradera"]);
+                var (x0, y0) = sitios["pradera"];
+                var (x1, y1) = sitios["denso"];
+                double largo = Math.Sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+                int pasos = (int)Math.Min(1200, largo / 0.15);
+                var tiempos = new List<float>();
+                var ejercito = almacen.Buscar(TipoEntidad.Ejercito, "ej-1").Ejercito;
+                for (int k = 1; k <= pasos; k++)
+                {
+                    double t = (double)k / pasos;
+                    ejercito.Posicion = Pu(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t);
+                    yield return null;
+                    tiempos.Add(Time.unscaledDeltaTime * 1000);
+                }
+                var orden = tiempos.OrderBy(v => v).ToList();
+                Debug.Log($"[Final] en marcha ({pasos} fotogramas, {pasos * 0.15:0} u): mediana {orden[orden.Count / 2]:0.0} ms, p95 {orden[(int)(orden.Count * 0.95)]:0.0} ms, "
+                    + $"p99 {orden[(int)(orden.Count * 0.99)]:0.0} ms, peor {orden[^1]:0.0} ms; {tiempos.Count(v => v > 16.7f)} por encima de 16,7 ms y {tiempos.Count(v => v > 33.3f)} de 33,3 ms");
+            }
+
+            // 3. las capturas finales (sin el aclarado, salvo la del héroe)
+            MapaDeMundo.AclararCopas = false;
+            try
+            {
+                foreach (var zona in new[] { "denso", "borde", "ribera", "costa", "montana", "monte_bajo", "pradera", "rambla" })
+                {
+                    if (!sitios.ContainsKey(zona)) continue;
+                    yield return Llegar(mapa, almacen, sitios[zona]);
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"final_{zona}");
+                }
+                foreach (var zona in new[] { "borde", "costa" })
+                {
+                    yield return Llegar(mapa, almacen, sitios[zona]);
+                    yield return Vista(mapa, ZoomDelMapa.Alejado, 50, $"final_panoramica_{zona}");
+                }
+                foreach (var (zona, nombre) in new[] { ("playa", "hierba_playa"), ("ladera", "piedras_ladera"), ("rambla", "flor_adelfa") })
+                {
+                    if (!sitios.ContainsKey(zona)) continue;
+                    yield return Llegar(mapa, almacen, sitios[zona]);
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"final_detalle_{nombre}");
+                }
+                MapaDeMundo.AclararCopas = true;
+                yield return Llegar(mapa, almacen, sitios["denso"]);
+                yield return Vista(mapa, ZoomDelMapa.Normal, 30, "final_heroe_en_el_bosque");
+            }
+            finally { MapaDeMundo.AclararCopas = true; }
+        }
+
+        /// <summary>El mosaico de reglas (`MosaicoDeVegetacion`) en el mapa, para las capturas de revisión (`MUNDO_CAPTURAS`): la misma vista con
+        /// el mosaico apagado (el reparto del prototipo) y encendido en el borde de un bosque, el interior de un bosque denso, una ribera y el
+        /// monte bajo, a zoom habitual y desde más arriba; y la vista de depuración (cada celda con el color de su estado). Cuenta los árboles de
+        /// la tesela del bosque denso con y sin mosaico y mide el fotograma en él.</summary>
+        [Category("Mapa"), Explicit("capturas de revisión del mosaico")]
+        [UnityTest, Timeout(1_800_000)]
+        public IEnumerator ElMosaicoEnElMapa()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "mosaico-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var sitios = SitiosDeVegetacion(relieve, artefacto, datos);
+            // La ribera (bosque junto a un río) y el monte bajo (poco bosque y suelo pobre).
+            var bos = new RasterDeMundo(artefacto.DensidadBosque);
+            var fer = new RasterDeMundo(artefacto.Fertilidad);
+            var cauces = new CaucesDelMapa(artefacto, relieve);
+            (double p, double x, double y) ribera = (double.MinValue, 0, 0), monte = (double.MinValue, 0, 0);
+            for (double y = 150; y < relieve.Filas * relieve.Paso - 150; y += 6)
+                for (double x = 150; x < relieve.Columnas * relieve.Paso - 150; x += 6)
+                {
+                    if (relieve.AguaEn(x, y)) continue;
+                    double b = bos.En(x, y) / 255.0, f = fer.En(x, y) / 255.0;
+                    if (b > 0.4 && cauces.HayRioCerca(x - 3, y - 3, x + 3, y + 3) && cauces.ACauce(x, y) < 4) { var q = b - Math.Abs(cauces.ACauce(x, y) - 2) / 4; if (q > ribera.p) ribera = (q, x, y); }
+                    if (b > 0.08 && b < 0.3 && f < 0.35) { var q = -Math.Abs(b - 0.18) - f; if (q > monte.p) monte = (q, x, y); }
+                }
+            sitios["ribera"] = (ribera.x, ribera.y);
+            sitios["monte"] = (monte.x, monte.y);
+            foreach (var kv in sitios) Debug.Log($"[Mosaico] sitio {kv.Key}: ({kv.Value.x:0.0}, {kv.Value.y:0.0}), bosque {bos.En(kv.Value.x, kv.Value.y) / 255.0:0.00}");
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (VegetacionDelMapa.Mosaico, VegetacionDelMapa.VerMosaico);
+            try
+            {
+                foreach (var (mosaico, ver, nombre) in new[] { (false, false, "apagado"), (true, false, "encendido"), (true, true, "depuracion") })
+                {
+                    VegetacionDelMapa.Mosaico = mosaico;
+                    VegetacionDelMapa.VerMosaico = ver;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, sitios["borde"], null);
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    foreach (var n in new[] { "borde", "denso", "ribera", "monte" })
+                    {
+                        yield return Llegar(mapa, almacen, sitios[n]);
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"mos_{n}_{nombre}_1_habitual");
+                        yield return Vista(mapa, ZoomDelMapa.Alejado, 65, $"mos_{n}_{nombre}_2_arriba");
+                    }
+                    // Un cruce de cuatro teselas en el bosque, desde arriba: que no se vea el anillo de 64 u.
+                    double ladoT = relieve.LadoEnUnidades;
+                    var cruce = (Math.Round(sitios["denso"].x / ladoT) * ladoT, Math.Round(sitios["denso"].y / ladoT) * ladoT);
+                    yield return Llegar(mapa, almacen, cruce);
+                    yield return Vista(mapa, ZoomDelMapa.Alejado, 65, $"mos_cruce_{nombre}_arriba");
+                    if (ver) continue;
+                    // El héroe dentro del bosque cerrado: con el aclarado de las copas a su alrededor.
+                    yield return Llegar(mapa, almacen, sitios["denso"]);
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"mos_heroe_{nombre}_1_habitual");
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"mos_heroe_{nombre}_2_cerca");
+                    yield return Vista(mapa, ZoomDelMapa.Alejado, 30, $"mos_heroe_{nombre}_3_alejado");
+                    // Con una segunda columna cerca (ajena, a 3 u): su hueco, menor.
+                    var denso = sitios["denso"];
+                    mapa.Adicionales.Add(new CosaDelMapa { Clase = ClaseDeCosa.EjercitoAjeno, Id = "otra-columna", Nombre = "Otra columna", X = denso.x + 3, Y = denso.y + 1, Radio = 0.3, Alto = 0.35 });
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"mos_heroe_{nombre}_4_dos_columnas");
+                    mapa.Adicionales.Clear();
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"mos_denso_{nombre}_3_medir");
+                    yield return Medir(mapa, $"en el bosque denso, zoom habitual, mosaico {nombre}");
+                    var v = mapa.Vegetacion;
+                    double lado = relieve.LadoEnUnidades;
+                    var plantas = v.RepartirAhora((int)(sitios["denso"].x / lado), (int)(sitios["denso"].y / lado));
+                    int arboles = plantas.Count(p => !p.Mata), matas = plantas.Count(p => p.Mata);
+                    Debug.Log($"[Mosaico] {nombre}: tesela del denso con {arboles} árboles y {matas} matas; a la vista {v.Dibujadas} plantas, {v.Triangulos} triángulos, {v.Llamadas} llamadas; "
+                        + $"mosaico: {v.Mosaicos} teselas, {v.CaidasAlPrototipo} al prototipo, {v.IntentosDeMosaico} intentos, {v.MsMosaico / Math.Max(1, v.Mosaicos):0.0} ms por tesela (peor {v.PeorMsMosaico:0.0} ms)");
+                }
+            }
+            finally
+            {
+                (VegetacionDelMapa.Mosaico, VegetacionDelMapa.VerMosaico) = antes;
+            }
+        }
+
         /// <summary>El agua (`Conquest/MapaAgua`): la costa (el mismo sitio que la del suelo), el mar hondo, un lago, un río navegable y otro no,
         /// un vado, una desembocadura, el borde de la niebla sobre el agua y el horizonte sobre el mar. Comprueba que el agua es una lámina aparte,
         /// que el mar hondo es agua y sale más oscuro que el lago (somero en la orilla).</summary>
@@ -389,9 +957,13 @@ namespace ConquestTactics.Mundo.UI.Tests
         static IEnumerator Medir(MapaDeMundo mapa, string que)
         {
             var tiempos = new List<float>();
+            int gc0 = GC.CollectionCount(0), gc2 = GC.CollectionCount(2);
             for (int i = 0; i < 300; i++) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
+            Debug.Log($"[Suelo] {que}: recolecciones de basura {GC.CollectionCount(0) - gc0} (de generación 2, {GC.CollectionCount(2) - gc2})");
             tiempos.Sort();
-            Debug.Log($"[Suelo] {que}: {mapa.TeselasCargadas} teselas; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms");
+            var v = mapa.Vegetacion;
+            Debug.Log($"[Suelo] {que}: {mapa.TeselasCargadas} teselas; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms"
+                + (v == null ? "" : $"; vegetación: {v.Dibujadas} plantas, {v.Triangulos} triángulos, {v.Llamadas} llamadas, {v.MsDibujar:0.00} ms de CPU al dibujar"));
         }
 
         (int tris, int sinFaldon) Triangulos()

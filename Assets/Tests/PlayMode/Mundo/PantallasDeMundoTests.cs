@@ -1475,7 +1475,10 @@ namespace ConquestTactics.Mundo.UI.Tests
             var tris = mapa.GetComponentsInChildren<MeshFilter>().Where(f => f.name.StartsWith("tesela")).Sum(f => (long)f.sharedMesh.GetIndexCount(0) / 3);
             var (construidas, ms) = mapa.ConstruccionDelSuelo;
             Debug.Log($"[Mapa] {mapa.TeselasCargadas} teselas, {tris} triángulos de suelo; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms; "
-                + $"{construidas} teselas construidas en {ms:0} ms");
+                + $"{construidas} teselas construidas en {ms:0} ms"
+                + (mapa.Vegetacion is ConquestTactics.Mundo.Mapa.VegetacionDelMapa v
+                    ? $"; vegetación: {v.Plantas} plantas cargadas, {v.Dibujadas} dibujadas, {v.Triangulos} triángulos, {v.Llamadas} llamadas, {v.Repartidas} teselas repartidas en {v.MsRepartiendo:0} ms de hilo (+{v.MsMuestreando:0} ms de muestreo)"
+                    : ""));
         }
 
         IEnumerator Capturar(string nombre)

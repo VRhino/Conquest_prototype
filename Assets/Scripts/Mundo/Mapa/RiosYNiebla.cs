@@ -338,6 +338,20 @@ namespace ConquestTactics.Mundo.Mapa
         /// <summary>A qué altura (metros) tiene que bajar el suelo en (x, y) en una tesela de paso `paso` (u), o null si no hay río cerca.</summary>
         public float? Fondo(double x, double y, float paso) => Consultar(x, y, paso, out _);
 
+        /// <summary>Lo que queda (u) de (x, y) al borde del cauce más cercano, negativo dentro (`aCauce` de BronzeAgeClient, con el ancho de cada
+        /// tramo); infinito si no hay río a menos de `alcance` u.</summary>
+        public double ACauce(double x, double y, double alcance = 4)
+        {
+            int ci = (int)Math.Floor(x / Celda), cj = (int)Math.Floor(y / Celda), r = (int)Math.Ceiling((alcance + medioMaximo) / Celda);
+            double mejor = double.PositiveInfinity;
+            for (int dj = -r; dj <= r; dj++)
+                for (int di = -r; di <= r; di++)
+                    if (celdas.TryGetValue((ci + di, cj + dj), out var l))
+                        foreach (var p in l)
+                            mejor = Math.Min(mejor, Math.Sqrt((p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y)) - p.Medio);
+            return mejor;
+        }
+
         /// <summary>Como `Fondo`, y además cuánto es ribera en (x, y): 1 junto al agua, 0 a `RiberaPintada` u de la orilla.</summary>
         public float? Consultar(double x, double y, float paso, out float ribera)
         {

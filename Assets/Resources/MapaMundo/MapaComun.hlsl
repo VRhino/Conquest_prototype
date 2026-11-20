@@ -99,3 +99,23 @@ float3 PintarMapa(float3 colorLineal, float3 mundo, bool conNiebla)
 }
 
 #endif
+
+// ---- El suelo bajo una planta (para la vegetación): lo mismo que mira `MapaSuelo` para pintar seco o verde ----
+// Globales que pone `TerrenoDelMapa`: los datos del motor (R fertilidad, G humedad, B bosque), su tamaño en metros (w: metros por unidad),
+// el ruido del suelo, los umbrales de altura y el verdor. Sin datos, todo 0: hierba seca, sin hondura.
+TEXTURE2D(_VegDatos); SAMPLER(sampler_VegDatos);
+TEXTURE2D(_VegRuido); SAMPLER(sampler_VegRuido);
+float4 _VegDatosTamano, _VegUmbrales, _VegVerdor;
+
+// (verde, fertilidad, bosque, arena) en `origen` (mundo, metros), en el sombreador de vértices.
+float4 SueloBajo(float3 origen)
+{
+    if (_VegDatosTamano.x <= 0) return 0;
+    float4 r1 = SAMPLE_TEXTURE2D_LOD(_VegRuido, sampler_VegRuido, origen.xz / 900.0, 0);
+    float4 r2 = SAMPLE_TEXTURE2D_LOD(_VegRuido, sampler_VegRuido, origen.xz / 170.0 + 0.37, 0);
+    float2 uv = float2(origen.x, -origen.z) / _VegDatosTamano.xy + (r2.xy - 0.5) * 3 * _VegDatosTamano.z / _VegDatosTamano.xy;
+    float3 d = SAMPLE_TEXTURE2D_LOD(_VegDatos, sampler_VegDatos, uv, 0).rgb;
+    float humedo = 0.5 * d.y + 0.5 * d.x + (r2.w - 0.5) * 0.3 + (r1.x - 0.5) * 0.15;
+    float h = origen.y + (r2.z - 0.5) * 24 + (r1.w - 0.5) * 16;
+    return float4(smoothstep(_VegVerdor.x, _VegVerdor.y, humedo), d.x, d.z, 1 - smoothstep(_VegUmbrales.x - 12, _VegUmbrales.x + 8, h));
+}

@@ -27,6 +27,7 @@ namespace ConquestTactics.Mundo.Mapa
         public readonly CamaraDelMapa Camara = new CamaraDelMapa();
         Camera camara;
         TerrenoDelMapa terreno;
+        VegetacionDelMapa vegetacion;
         NieblaDelMapa niebla;
         GameObject rios, caja, destino;
         LineRenderer ruta;
@@ -93,6 +94,10 @@ namespace ConquestTactics.Mundo.Mapa
             pintor = new CosasEnElMapa((x, y) => terreno.AlturaVisible(x, y), materialSuelo, materialPropio, transform, capaNombres);
             if (artefacto.Navegacion != null && artefacto.Navegacion.Nodos.Count > 0) tiempo = new TiempoDeMarcha(artefacto.Navegacion);
             terreno.Cauces = new CaucesDelMapa(artefacto, relieve);
+            // La vegetación: donde el suelo pinta sotobosque, con los mismos umbrales (arena, cima, nieve) que el suelo.
+            var umbrales = new Vector4(Umbral("umbralCosta"), Umbral("umbralColina"), Umbral("umbralMontana"), Umbral("umbralCima"));
+            vegetacion = new VegetacionDelMapa(relieve, Raster(artefacto.Fertilidad), Raster(artefacto.Humedad), Raster(artefacto.DensidadBosque), umbrales,
+                umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w)) { Cauces = terreno.Cauces, NivelDelAgua = Umbral("umbralAgua") };
             // Los ríos, con la orilla mojada pegada al suelo ya excavado por su cauce.
             var cauces = terreno.Cauces;
             rios = RiosDelMapa.Construir(artefacto, relieve, (x, y) =>
@@ -272,6 +277,7 @@ namespace ConquestTactics.Mundo.Mapa
         {
             if (sesion != null) sesion.AlCambiar -= AlCambiar;
             terreno?.Destruir();
+            vegetacion?.Destruir();
             pintor?.Destruir();
             niebla?.Destruir();
             if (rios != null)
@@ -308,7 +314,11 @@ namespace ConquestTactics.Mundo.Mapa
             camara.nearClipPlane = (float)Math.Max(0.05, Camara.Distancia * 0.05) * e;
             camara.farClipPlane = (float)Math.Max(600, Camara.Distancia * 20) * e;
             terreno.Actualizar(cx, cy, (float)Camara.Distancia * 7);
+            vegetacion.Actualizar(cx, cy, Mathf.Min((float)Camara.Distancia * 7, 130));
             PintarCosas(ahora, cx, cy);
+            vegetacion.Claros(Claros());
+            vegetacion.Aclarado(AclararCopas ? Aclarados(cx, cy) : SinAclarar);
+            vegetacion.Dibujar(camara, cx, cy);
         }
 
         /// <summary>Lo que hay en el mapa: las cajas cada fotograma (lo que anda, en su sitio del instante), las rayas cuando cambia algo (como
@@ -343,6 +353,57 @@ namespace ConquestTactics.Mundo.Mapa
                 seleccionVista = (ahoraSel.X, ahoraSel.Y);
                 pintor.Seleccion(ahoraSel);
             }
+        }
+
+        /// <summary>Los sitios sin árboles alrededor (u): plazas, pueblos, aldeas, avanzadas, obras, campamentos y alijos (como el prototipo).</summary>
+        readonly List<(double x, double y, double r)> claros = new List<(double, double, double)>();
+        readonly List<Vector4> aclarados = new List<Vector4>();
+        readonly List<(double d, Vector4 p)> candidatos = new List<(double, Vector4)>();
+
+        /// <summary>Donde se aclaran las copas: el héroe (tu columna), con un radio que acompaña al zoom para que el hueco ocupe más o menos lo
+        /// mismo en pantalla (1,6 u de cerca, 2,2 u normal, 3 u alejado), y las columnas que se ven más cerca de él, hasta 8 en total, a 1,4 u.</summary>
+        /// <summary>Si las copas se aclaran alrededor del héroe y de las columnas (las capturas de revisión de las especies lo apagan).</summary>
+        public static bool AclararCopas = true;
+        static readonly List<Vector4> SinAclarar = new List<Vector4>();
+
+        List<Vector4> Aclarados(double cx, double cy)
+        {
+            var e = EscalaDelMapa.MetrosPorUnidad;
+            candidatos.Clear();
+            Vector4 En(double x, double y, double radio) { var p = EscalaDelMapa.AEscena(x, y, terreno.AlturaVisible(x, y) + 4); return new Vector4(p.x, p.y, p.z, (float)(radio * e)); }
+            double radioHeroe = Camara.Zoom == ZoomDelMapa.Cerca ? 1.6 : Camara.Zoom == ZoomDelMapa.Alejado ? 3 : 2.2;
+            candidatos.Add((-1, En(cx, cy, radioHeroe)));
+            foreach (var c in Cosas)
+                switch (c.Clase)
+                {
+                    case ClaseDeCosa.Ejercito: case ClaseDeCosa.EjercitoAjeno: case ClaseDeCosa.Caravana: case ClaseDeCosa.CaravanaAjena:
+                    case ClaseDeCosa.Formacion: case ClaseDeCosa.Batalla:
+                        double d = (c.X - cx) * (c.X - cx) + (c.Y - cy) * (c.Y - cy);
+                        if (d < Camara.EnPantalla * Camara.EnPantalla) candidatos.Add((d, En(c.X, c.Y, 1.4)));
+                        break;
+                }
+            candidatos.Sort((a, b) => a.d.CompareTo(b.d));
+            aclarados.Clear();
+            for (int i = 0; i < Math.Min(8, candidatos.Count); i++) aclarados.Add(candidatos[i].p);
+            return aclarados;
+        }
+
+        List<(double x, double y, double r)> Claros()
+        {
+            var r = claros;
+            r.Clear();
+            foreach (var c in Cosas)
+                switch (c.Clase)
+                {
+                    case ClaseDeCosa.Plaza: case ClaseDeCosa.Pueblo: case ClaseDeCosa.Aldea: case ClaseDeCosa.Avanzada: case ClaseDeCosa.Obra:
+                    case ClaseDeCosa.Mercenarios: case ClaseDeCosa.Bandidos: case ClaseDeCosa.Alijo:
+                        // Como el prototipo (su huella más 0,3 u; 0,25 las obras y los bandidos), pero `Radio` es medio lado de una caja cuadrada:
+                        // hasta la esquina, √2 veces; y la copa de un árbol que crece justo fuera no tiene que caer encima.
+                        r.Add((c.X, c.Y, Math.Max(c.Radio, 0.5) * 1.415 + (c.Clase == ClaseDeCosa.Obra || c.Clase == ClaseDeCosa.Bandidos ? 0.25 : 0.3)
+                            + VegetacionDelMapa.Copa * 0.5));
+                        break;
+                }
+            return r;
         }
 
         public void Seleccionar(CosaDelMapa c)
@@ -663,7 +724,9 @@ namespace ConquestTactics.Mundo.Mapa
         public int TeselasCargadas => terreno?.Cargadas ?? 0;
         /// <summary>Teselas de suelo construidas desde el principio y lo que han tardado (ms), para medir.</summary>
         public (int teselas, double ms) ConstruccionDelSuelo => terreno == null ? (0, 0) : (terreno.Construidas, terreno.MsConstruyendo);
-        public bool SueloCompleto => terreno != null && terreno.Completo;
+        public bool SueloCompleto => terreno != null && terreno.Completo && (vegetacion == null || vegetacion.Completo);
+        public VegetacionDelMapa Vegetacion => vegetacion;
+        public double PeorMsTeselaDeSuelo => terreno?.PeorMsTesela ?? 0;
         public Camera Vista => camara;
         /// <summary>Lo que se ve en (x, y) del mapa: la altura del suelo o de su agua, en metros.</summary>
         public float AlturaVisible(double x, double y) => terreno.AlturaVisible(x, y);
