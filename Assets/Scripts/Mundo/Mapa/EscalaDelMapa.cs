@@ -41,8 +41,17 @@ namespace ConquestTactics.Mundo.Mapa
         // Agua: somera (lagos y orillas) y honda (mar adentro); ríos y vados.
         public static readonly Color AguaSomera = new Color32(0x5a, 0xae, 0xa6, 255), AguaHonda = new Color32(0x1d, 0x4d, 0x72, 255),
             Vado = new Color32(0xd9, 0xc7, 0x9a, 255);
-        /// <summary>Lo que cubre el mar para pintarlo hondo (metros bajo la lámina).</summary>
+        /// <summary>Lo que cubre el mar para pintarlo hondo en la capa de fertilidad (metros bajo la lámina).</summary>
         public const float MarHondo = 30;
+        /// <summary>El agua de BronzeAgeClient (`agua.ts`, `AGUA`), en u: el ancho de la orilla en que el fondo baja hasta lo más hondo, lo más
+        /// hondo, la playa (cuánto baja la tierra hacia la lámina) y lo mínimo que queda la tierra sobre la lámina.</summary>
+        public const float AguaOrilla = 6, AguaMaxima = 2.6f, AguaPlaya = 0.8f, AguaSeco = 0.03f;
+        /// <summary>Espuma, brillo y orilla mojada de los ríos (sRGB; BronzeAgeClient: `agua.ts`, `paisaje.ts`). El reflejo va hacia `Horizonte`.</summary>
+        public static readonly Color Espuma = new Color32(0xe8, 0xf0, 0xea, 255), BrilloAgua = new Color32(0xd8, 0xe4, 0xe8, 255),
+            OrillaMojada = new Color32(0x6b, 0x5d, 0x40, 255);
+        /// <summary>El turquesa de lo muy somero (sRGB) y si el agua lleva todo el detalle (destellos y tercera capa de olas; false, más barato).</summary>
+        public static readonly Color AguaTurquesa = new Color32(0x6c, 0xcc, 0xbd, 255);
+        public static bool AguaConDetalle = true;
         /// <summary>Ancho de los ríos (u): navegables y los demás.</summary>
         public const float RioNavegable = 3, Rio = 1.5f;
 

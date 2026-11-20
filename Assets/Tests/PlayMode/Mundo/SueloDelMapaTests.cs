@@ -149,6 +149,136 @@ namespace ConquestTactics.Mundo.UI.Tests
             Debug.Log($"[Suelo] {mapa.TeselasCargadas} teselas, {tris} triángulos ({sinFaldon} sin faldones); {construidas} teselas construidas en {ms:0} ms ({ms / Math.Max(1, construidas):0.0} ms cada una)");
         }
 
+        /// <summary>El agua (`Conquest/MapaAgua`): la costa (el mismo sitio que la del suelo), el mar hondo, un lago, un río navegable y otro no,
+        /// un vado, una desembocadura, el borde de la niebla sobre el agua y el horizonte sobre el mar. Comprueba que el agua es una lámina aparte,
+        /// que el mar hondo es agua y sale más oscuro que el lago (somero en la orilla).</summary>
+        [Category("Mapa")]
+        [UnityTest, Timeout(600_000)]
+        public IEnumerator ElAguaEnCadaSitio()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            var acceso = new Acceso(url);
+            var nick = "agua-" + DateTime.UtcNow.Ticks % 100_000_000;
+            Esperar(acceso.Registrar(nick, "clave-de-prueba-1"));
+            var login = Esperar(acceso.Entrar(nick, "clave-de-prueba-1"));
+            var s = new Sesion(acceso.UrlSesion, login.Token, "conquest-prueba");
+            var abrir = s.Abrir();
+            var hasta = Time.realtimeSinceStartup + 20;
+            while (!abrir.IsCompleted && Time.realtimeSinceStartup < hasta) { s.Bombear(); yield return null; }
+            var mundo = abrir.Result.Mundo;
+            s.Cerrar();
+            acceso.Anular(login.Token);
+            cache = Path.Combine(Path.GetTempPath(), "conquest-prueba-agua-" + Guid.NewGuid().ToString("N"));
+            var datos = Esperar(DatosDeJuego.Cargar(acceso, mundo, new CacheDeUno(Path.Combine(cache, "datos"))));
+            var artefacto = Esperar(MundoEnDisco.CargarArtefacto(acceso, mundo, new CacheDeUno(Path.Combine(cache, "mundo"))));
+            var relieve = new Relieve(Esperar(MundoEnDisco.CargarRelieve(acceso, mundo, new CacheDeUno(Path.Combine(cache, "relieve")))));
+
+            // Un río navegable sintético (el mundo de prueba no tiene ninguno): el más largo de los que no acaban en un lago.
+            var largo = artefacto.Rios.Where(r => !r.TerminaEnLago).OrderByDescending(r => r.Puntos.Count).First();
+            largo.Navegable = true;
+            var sitios = BuscarSitios(relieve, artefacto, datos);
+            var agua = SitiosDeAgua(relieve, artefacto, datos);
+            agua["costa"] = sitios["costa"];
+            foreach (var kv in agua) Debug.Log($"[Agua] sitio {kv.Key}: ({kv.Value.x:0.0}, {kv.Value.y:0.0}), {relieve.AlturaEn(kv.Value.x, kv.Value.y):0} m");
+
+            var (almacen, sesion) = Almacen(url, agua["costa"], null);
+            var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+            yield return Llegar(mapa, almacen, agua["costa"]);
+            Assert.Greater(go.GetComponentsInChildren<MeshRenderer>().Count(r => r.name == "agua" && r.sharedMaterial.shader.name == "Conquest/MapaAgua"), 0, "la lámina de agua");
+            yield return Vista(mapa, ZoomDelMapa.Cerca, 15, "agua_costa_1_cerca");
+            yield return Vista(mapa, ZoomDelMapa.Normal, 35, "agua_costa_2_media");
+            yield return Vista(mapa, ZoomDelMapa.Alejado, 90, "agua_costa_3_arriba");
+            mapa.Camara.Giro = Math.PI;
+            yield return Vista(mapa, ZoomDelMapa.Alejado, 10, "agua_horizonte_mar");
+            mapa.Camara.Giro = 0;
+
+            // Tiras de cuatro fotogramas (0,4 s entre uno y otro) de la rompiente y de la corriente.
+            yield return Vista(mapa, ZoomDelMapa.Normal, 90, "agua_tira_orilla_0");
+            for (int f = 1; f < 4; f++) yield return Fotograma("agua_tira_orilla_" + f, 0.4f);
+
+            var colores = new Dictionary<string, Color>();
+            foreach (var k in new[] { "mar_hondo", "lago", "rio_navegable", "rio", "aguas_blancas", "vado", "desembocadura" })
+            {
+                if (!agua.ContainsKey(k)) { Debug.Log($"[Agua] sin sitio: {k}"); continue; }
+                // El vado, con la columna a un lado (si no, la caja lo tapa desde arriba).
+                var donde = k == "vado" ? (agua[k].x + 3, agua[k].y + 3) : agua[k];
+                yield return Llegar(mapa, almacen, donde);
+                yield return Vista(mapa, ZoomDelMapa.Normal, 35, $"agua_{k}_2_media");
+                colores[k] = Centro();
+                if (k == "rio_navegable")
+                    for (int f = 1; f < 4; f++) yield return Fotograma($"agua_tira_rio_{f}", 0.4f);
+                yield return Vista(mapa, ZoomDelMapa.Cerca, 15, $"agua_{k}_1_cerca");
+                yield return Vista(mapa, ZoomDelMapa.Alejado, 90, $"agua_{k}_3_arriba");
+            }
+            Debug.Log("[Agua] centro de la vista media: " + string.Join("; ", colores.Select(kv => $"{kv.Key} {kv.Value}")));
+            float Luz(Color c) => 0.3f * c.r + 0.59f * c.g + 0.11f * c.b;
+            Assert.Greater(colores["mar_hondo"].b, colores["mar_hondo"].r + 0.05f, $"el mar hondo es agua: {colores["mar_hondo"]}");
+            Assert.Less(Luz(colores["mar_hondo"]), Luz(colores["lago"]) + 0.05f, $"el mar hondo, más oscuro que el lago: {colores["mar_hondo"]} frente a {colores["lago"]}");
+
+            // El borde de la niebla de guerra sobre el agua: otro mapa con la VISTA llevando niebla, en la costa.
+            UnityEngine.Object.Destroy(go);
+            yield return null;
+            (almacen, sesion) = Almacen(url, agua["costa"], Niebla(relieve, agua["costa"], 25, 12));
+            mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+            yield return Llegar(mapa, almacen, agua["costa"]);
+            yield return Vista(mapa, ZoomDelMapa.Alejado, 50, "agua_niebla_borde");
+            var (construidas, ms) = mapa.ConstruccionDelSuelo;
+            var (tris, _) = Triangulos();
+            int trisAgua = go.GetComponentsInChildren<MeshFilter>().Where(f => f.name == "agua").Sum(f => (int)(f.sharedMesh.GetIndexCount(0) / 3));
+            Debug.Log($"[Agua] {mapa.TeselasCargadas} teselas, {tris} triángulos de suelo y {trisAgua} de agua; {construidas} teselas en {ms:0} ms ({ms / Math.Max(1, construidas):0.0} ms cada una)");
+        }
+
+        /// <summary>Los sitios del agua: el mar hondo (más de 40 m bajo el nivel del mar, con agua a 20 u alrededor), el lago más grande (agua por
+        /// encima del nivel del mar), un río navegable y otro no (a mitad de su tramo más largo), un vado y una desembocadura en el mar.</summary>
+        static Dictionary<string, (double x, double y)> SitiosDeAgua(Relieve relieve, ArtefactoDeMundo artefacto, DatosDeJuego datos)
+        {
+            double mar = datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION.umbralAgua") * Relieve.MetrosAltura;
+            var r = new Dictionary<string, (double x, double y)>();
+            double margen = 120, mejorLago = 0;
+            float mejorRapido = 0;
+            for (double y = margen; y < relieve.Filas * relieve.Paso - margen; y += 8)
+                for (double x = margen; x < relieve.Columnas * relieve.Paso - margen; x += 8)
+                {
+                    if (!relieve.AguaEn(x, y)) continue;
+                    double h = relieve.AlturaEn(x, y);
+                    if (!r.ContainsKey("mar_hondo") && h < mar - 40 && relieve.AguaEn(x + 20, y) && relieve.AguaEn(x - 20, y) && relieve.AguaEn(x, y + 20) && relieve.AguaEn(x, y - 20))
+                        r["mar_hondo"] = (x, y);
+                    if (h > mar + 2)
+                    {
+                        int cuantos = 0;
+                        for (int dj = -3; dj <= 3; dj++) for (int di = -3; di <= 3; di++) if (relieve.AguaEn(x + di * 2, y + dj * 2)) cuantos++;
+                        // Junto a la orilla del lago (para ver la orilla y lo somero): con tierra a menos de 6 u.
+                        if (cuantos > mejorLago && cuantos < 49) { mejorLago = cuantos; r["lago"] = (x, y); }
+                    }
+                }
+            foreach (var rio in artefacto.Rios)
+            {
+                var tramos = RiosDelMapa.Tramos(rio, relieve);
+                if (tramos.Count == 0) continue;
+                var largo = tramos.OrderByDescending(t => t.Puntos.Count).First();
+                var medio = largo.Puntos[largo.Puntos.Count / 2];
+                var clave = rio.Navegable ? "rio_navegable" : "rio";
+                if (!r.ContainsKey(clave) && medio.x > margen && medio.y > margen) r[clave] = (medio.x, medio.y);
+                var ultimo = tramos[tramos.Count - 1].Puntos;
+                var fin = ultimo[ultimo.Count - 1];
+                if (!r.ContainsKey("desembocadura") && relieve.AguaEn(fin.x, fin.y) && !rio.TerminaEnLago) r["desembocadura"] = (fin.x, fin.y);
+                foreach (var v in rio.Vados)
+                    if (!r.ContainsKey("vado") && !relieve.AguaEn(v.X / 1000.0, v.Y / 1000.0)) r["vado"] = (v.X / 1000.0, v.Y / 1000.0);
+                // Las aguas blancas: el punto del río donde la lámina baja más deprisa (sobre 2 u).
+                foreach (var t in tramos)
+                    for (int i = 4; i + 4 < t.Puntos.Count; i++)
+                    {
+                        Vector2 a = t.Puntos[i - 4], b = t.Puntos[i + 4];
+                        float caida = RiosDelMapa.NivelDelRio(relieve, a, Vector2.zero, 0) - RiosDelMapa.NivelDelRio(relieve, b, Vector2.zero, 0);
+                        float pendiente = caida / Mathf.Max(0.1f, Vector2.Distance(a, b) * EscalaDelMapa.MetrosPorUnidad);
+                        if (pendiente > mejorRapido && t.Puntos[i].x > margen && t.Puntos[i].y > margen) { mejorRapido = pendiente; r["aguas_blancas"] = (t.Puntos[i].x, t.Puntos[i].y); }
+                    }
+            }
+            Debug.Log($"[Agua] la mayor pendiente de un río: {mejorRapido * 100:0.0} %");
+            return r;
+        }
+
         (Almacen, Sesion) Almacen(string url, (double x, double y) donde, NieblaProyectada niebla)
         {
             var almacen = new Almacen();
@@ -228,6 +358,22 @@ namespace ConquestTactics.Mundo.UI.Tests
             UnityEngine.Object.Destroy(t);
             t0.rotation = giro;
             mapa.enabled = true;
+        }
+
+        /// <summary>Otro fotograma de la misma vista, `espera` s después (para ver cómo se mueve el agua).</summary>
+        IEnumerator Fotograma(string nombre, float espera)
+        {
+            yield return new WaitForSecondsRealtime(espera);
+            var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+            if (string.IsNullOrEmpty(carpeta)) yield break;
+            var antes = RenderTexture.active;
+            RenderTexture.active = rt;
+            var t = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            t.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            t.Apply();
+            RenderTexture.active = antes;
+            File.WriteAllBytes(Path.Combine(carpeta, nombre + ".png"), t.EncodeToPNG());
+            UnityEngine.Object.Destroy(t);
         }
 
         /// <summary>El color medio de un cuadro en el centro de la última captura, algo por debajo de la columna (que tapa el centro justo).</summary>

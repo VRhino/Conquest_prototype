@@ -4,7 +4,8 @@
 // borde roto por ruido para que no se vean los escalones de 48 m). Entre capas, mezcla por altura de textura (el borde sigue las matas y las
 // piedras). UV en espacio de mundo a dos escalas, detalle cerca y otra más grande lejos, con variación grande por ruido; la roca, triplanar.
 // Luz como `MapaColor` (sol más un poco de cielo) y, encima, las nubes, la niebla de guerra y la bruma de `MapaComun.hlsl`.
-// Lo que no lleva textura (el agua y la capa de fertilidad) llega con el alfa del color de vértice a 0 y se pinta con ese color, como antes.
+// Lo que no lleva textura (la capa de fertilidad) llega con el alfa del color de vértice a 0 y se pinta con ese color, como antes. Con textura,
+// el rojo del color de vértice dice lo hondo que queda el suelo bajo la lámina de agua (`MapaAgua`), y ahí se pinta el fondo.
 Shader "Conquest/MapaSuelo"
 {
     Properties
@@ -85,8 +86,11 @@ Shader "Conquest/MapaSuelo"
             }
 
             // Pesos del triplanar por la normal geométrica. En lo casi llano solo cuenta la proyección de arriba (y se ahorran dos muestras).
-            float3 PesosTriplanar(float3 N)
+            // Las capas que no son roca, solo desde arriba hasta unos 55°: la arena de la playa que baja al agua, proyectada de lado, salía a
+            // rayas perpendiculares a la orilla.
+            float3 PesosTriplanar(float3 N, int capa)
             {
+                if (capa != ROCA && abs(N.y) > 0.57) return float3(0, 1, 0);
                 float3 w = pow(abs(N), 8);
                 w /= w.x + w.y + w.z;
                 if (w.y > 0.98) w = float3(0, 1, 0);
@@ -100,7 +104,7 @@ Shader "Conquest/MapaSuelo"
             {
                 // La roca, a 2/3 de la escala: en las laderas se veía gigante.
                 float k = (capa == ROCA ? 1.5 : 1.0) / escala;
-                float3 w = PesosTriplanar(N);
+                float3 w = PesosTriplanar(N, capa);
                 color = 0; desvio = 0;
                 float2 uvs[3] = { p.zy * k, p.xz * k, p.xy * k };
                 float2 dxs[3] = { dpx.zy * k, dpx.xz * k, dpx.xy * k };
@@ -123,7 +127,7 @@ Shader "Conquest/MapaSuelo"
             float AltoCapa(int capa, float3 p, float3 dpx, float3 dpy, float3 N, float escala)
             {
                 float k = (capa == ROCA ? 1.5 : 1.0) / escala;
-                float3 w = PesosTriplanar(N);
+                float3 w = PesosTriplanar(N, capa);
                 float2 uvs[3] = { p.zy * k, p.xz * k, p.xy * k };
                 float2 dxs[3] = { dpx.zy * k, dpx.xz * k, dpx.xy * k };
                 float2 dys[3] = { dpy.zy * k, dpy.xz * k, dpy.xy * k };
@@ -188,13 +192,28 @@ Shader "Conquest/MapaSuelo"
                     float roca = max(smoothstep(_Umbrales.z + 20, _Umbrales.w + 10, h), rocaPendiente);
                     float nieve = smoothstep(_Nieve.x - _Nieve.y * 0.5, _Nieve.x + _Nieve.y * 0.5, h + (r2.x - 0.5) * _Nieve.y + (r1.y - 0.5) * _Nieve.y * 1.5 + (r3.z - 0.5) * _Nieve.y * 0.8)
                         * (1 - smoothstep(_Nieve.z - 0.15, _Nieve.z + 0.15, pendienteAncha + (r3.w - 0.5) * 0.2));
-                    float encima[5] = { bosque, grava, arena, roca, nieve };
-                    int capaDe[5] = { SOTOBOSQUE, GRAVA, ARENA, ROCA, NIEVE };
-                    [unroll] for (int e = 0; e < 5; e++)
+                    // Bajo la lámina de agua (lo hondo, en el rojo del color de vértice: 255 en seco, 0 a 2,6 u), el fondo: arena, que se
+                    // oscurece con lo hondo (BronzeAgeClient: `colorDelFondo`, de [0,74 0,69 0,5] a [0,3 0,33 0,29] hasta 2 u).
+                    float hondo = (1 - s.color.r) * 2.6;
+                    float fondo = smoothstep(0.0, 0.08, hondo);
+                    // El fondo, con manchas de guijarros y roca que se pierden con lo hondo.
+                    // (ruido de dos escalas mezclado: el de 25 m solo se repetía como un estampado)
+                    float fondoGrava = fondo * smoothstep(0.66, 0.8, r3.y * 0.45 + r2.y * 0.55) * (1 - smoothstep(0.3, 1.2, hondo)) * 0.7;
+                    // La arena mojada junto al agua (verde del color de vértice) y la ribera de los ríos (azul): arena y guijarros, a manchas.
+                    float mojado = 1 - s.color.g;
+                    float riberaRio = 1 - s.color.b;
+                    // El ancho de la ribera varía con ruido a dos escalas (que no sea una banda paralela al río).
+                    float ribera = smoothstep(0.25, 0.6, riberaRio + (r3.z - 0.5) * 0.55 + (r2.x - 0.5) * 0.45) * (1 - fondo);
+                    float riberaGrava = ribera * smoothstep(0.66, 0.8, r3.x * 0.5 + r2.z * 0.5) * 0.7;
+                    float encima[8] = { bosque, grava, arena, roca, nieve, ribera, riberaGrava, fondo };
+                    int capaDe[8] = { SOTOBOSQUE, GRAVA, ARENA, ROCA, NIEVE, ARENA, GRAVA, ARENA };
+                    [unroll] for (int e = 0; e < 8; e++)
                     {
                         [unroll] for (int i = 0; i < CAPAS; i++) w[i] *= 1 - encima[e];
                         w[capaDe[e]] += encima[e];
                     }
+                    [unroll] for (int i = 0; i < CAPAS; i++) w[i] *= 1 - fondoGrava;
+                    w[GRAVA] += fondoGrava;
 
                     // Mezcla por altura: cada capa sube con la altura de su textura; solo quedan las que asoman por encima de la más alta.
                     float a[CAPAS];
@@ -244,6 +263,17 @@ Shader "Conquest/MapaSuelo"
                     // La variación grande: manchas de luz y de tono a cientos de metros, para que desde lejos no se vea la repetición.
                     c *= lerp(0.86, 1.1, r1.z) * lerp(0.94, 1.05, r2.z);
                     c = lerp(c, c * float3(1.04, 1.0, 0.9), r1.y * 0.6);
+                    c *= lerp(float3(1, 1, 1), float3(0.41, 0.48, 0.58), smoothstep(0.0, 2.0, hondo));
+                    // Bajo el agua: manchas de alga oscura y cáusticas que se mueven, que se pierden con lo hondo.
+                    float alga = smoothstep(0.66, 0.8, r2.w * 0.6 + r1.z * 0.4) * smoothstep(0.15, 0.6, hondo) * (1 - smoothstep(1.2, 2.2, hondo));
+                    c = lerp(c, c * float3(0.62, 0.74, 0.55), alga * 0.4);
+                    float t = fmod(_Time.y, 3600.0);
+                    float2 pu = float2(p.x, -p.z) / max(_Bruma.w, 1);
+                    float k1 = RuidoNube(pu * 1.7 + float2(t * 0.11, t * 0.05)), k2 = RuidoNube(pu * 2.2 + 5.1 - float2(t * 0.07, -t * 0.09));
+                    float caustica = pow(saturate(1 - abs(k1 - k2) * 5), 5) * smoothstep(0.02, 0.15, hondo) * (1 - smoothstep(0.7, 1.8, hondo));
+                    c += caustica * 0.22 * float3(0.85, 1.0, 0.95) * (1 - smoothstep(20.0, 70.0, distancia / max(_Bruma.w, 1)));
+                    // La arena mojada y la ribera: más oscuras y algo más frías.
+                    c *= lerp(float3(1, 1, 1), float3(0.7, 0.72, 0.74), saturate(max(mojado, smoothstep(0.7, 0.95, riberaRio) * 0.7)) * (1 - fondo));
                     pesoNieve = w[NIEVE] / suma;
                     // En la nieve, la normal marca algo más (los ventisqueros).
                     Nluz = normalize(N + desvio * _FuerzaNormal * (1 + pesoNieve));

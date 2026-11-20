@@ -93,7 +93,13 @@ namespace ConquestTactics.Mundo.Mapa
             pintor = new CosasEnElMapa((x, y) => terreno.AlturaVisible(x, y), materialSuelo, materialPropio, transform, capaNombres);
             if (artefacto.Navegacion != null && artefacto.Navegacion.Nodos.Count > 0) tiempo = new TiempoDeMarcha(artefacto.Navegacion);
             terreno.Cauces = new CaucesDelMapa(artefacto, relieve);
-            rios = RiosDelMapa.Construir(artefacto, relieve, materialSuelo, transform);
+            // Los ríos, con la orilla mojada pegada al suelo ya excavado por su cauce.
+            var cauces = terreno.Cauces;
+            rios = RiosDelMapa.Construir(artefacto, relieve, (x, y) =>
+            {
+                var h = (float)relieve.AlturaEn(x, y);
+                return cauces.Fondo(x, y, 0.5f) is float f ? Mathf.Min(h, f) : h;
+            }, transform);
             niebla = new NieblaDelMapa();
             sesion.AlCambiar += AlCambiar;
             foreach (var k in sesion.Almacen.Ambitos.Keys) AlCambiar(k);
@@ -112,6 +118,11 @@ namespace ConquestTactics.Mundo.Mapa
             cielo.SetColor("_Horizonte", PinturaDelMapa.Horizonte);
             cielo.SetColor("_Suelo", PinturaDelMapa.BajoElHorizonte);
             cielo.SetVector("_Sol", PinturaDelMapa.Sol);
+            // El mismo cielo, para el reflejo del agua (MapaComun.hlsl).
+            Shader.SetGlobalVector("_CieloCenit", PinturaDelMapa.Cenit.linear);
+            Shader.SetGlobalVector("_CieloHorizonte", PinturaDelMapa.Horizonte.linear);
+            Shader.SetGlobalVector("_CieloSuelo", PinturaDelMapa.BajoElHorizonte.linear);
+            Shader.SetGlobalVector("_CieloSol", PinturaDelMapa.Sol);
             camara.clearFlags = CameraClearFlags.Skybox;
             camara.backgroundColor = PinturaDelMapa.Horizonte;
             RenderSettings.fog = false;
@@ -263,7 +274,12 @@ namespace ConquestTactics.Mundo.Mapa
             terreno?.Destruir();
             pintor?.Destruir();
             niebla?.Destruir();
-            if (rios != null) Destroy(rios.GetComponent<MeshFilter>().sharedMesh);
+            if (rios != null)
+                foreach (var r in rios.GetComponentsInChildren<MeshRenderer>())
+                {
+                    Destroy(r.GetComponent<MeshFilter>().sharedMesh);
+                    Destroy(r.sharedMaterial);
+                }
             if (materialSuelo != null) Destroy(materialSuelo);
             if (materialPropio != null) Destroy(materialPropio);
             if (cielo != null)

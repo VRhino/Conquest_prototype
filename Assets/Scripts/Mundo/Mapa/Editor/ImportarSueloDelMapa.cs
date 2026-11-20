@@ -8,10 +8,26 @@ namespace ConquestTactics.Mundo.Mapa.Editor
     sealed class ImportarSueloDelMapa : AssetPostprocessor
     {
         const string Carpeta = "Assets/Resources/MapaMundo/Suelo/";
+        const string CarpetaAgua = "Assets/Resources/MapaMundo/Agua/";
         const int Capas = 8;
 
         void OnPreprocessTexture()
         {
+            if (assetPath.StartsWith(CarpetaAgua))
+            {
+                // Las olas del agua (BronzeAgeArte/mapa/agua): normal en RGB y altura en A, en lineal, que se repiten.
+                var o = (TextureImporter)assetImporter;
+                o.textureType = TextureImporterType.Default;
+                o.textureShape = TextureImporterShape.Texture2D;
+                o.sRGBTexture = false;
+                o.alphaSource = TextureImporterAlphaSource.FromInput;
+                o.mipmapEnabled = true;
+                o.wrapMode = UnityEngine.TextureWrapMode.Repeat;
+                o.filterMode = UnityEngine.FilterMode.Trilinear;
+                o.anisoLevel = 4;
+                o.textureCompression = TextureImporterCompression.CompressedHQ;
+                return;
+            }
             if (!assetPath.StartsWith(Carpeta)) return;
             var t = (TextureImporter)assetImporter;
             if (assetPath.EndsWith("suelo_ruido.png"))

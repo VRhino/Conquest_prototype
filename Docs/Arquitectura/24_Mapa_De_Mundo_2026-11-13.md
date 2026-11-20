@@ -234,3 +234,127 @@ siendo la de `MapaColor`, con el sol en la dirección del cielo; las sombras van
 Capturas: `Logs/capturas-arte-suelo/ronda3/` (`niebla_*`, `cielo_*`) y las del banco 3D del prototipo, para comparar, en
 `Logs/capturas-arte-suelo/prototipo/`.
 
+## El agua (tema 2, 2026-11-20)
+
+Calcada del cliente jugador (BronzeAgeClient: `src/mundo3d/agua.ts`, `terreno.ts`, `paisaje.ts`, `lineas.ts`), con sus valores.
+
+**Lámina.** Mar y lagos son una lámina transparente aparte por tesela (`TerrenoDelMapa.Lamina`, hijo «agua» de la tesela, al mismo paso que
+el suelo) con el sombreado `Conquest/MapaAgua`:
+- Cubre toda celda con alguna esquina de agua.
+- Nivel: `max(375 m, h) − 1 m`. El mar queda a su nivel y cada lago a su altura plana. Mar y lagos usan el mismo material.
+- Las esquinas de tierra toman el nivel del agua más cercana y quedan bajo el suelo, que corta la lámina en la orilla.
+- Cada vértice lleva en UV0.x lo hondo que queda el fondo (u), sacado de las alturas al construir la tesela. No hace falta depth ni opaque
+  texture.
+- Color de somero #5aaea6 a hondo #1d4d72 con smoothstep(0, 2,4 u), y alfa de 0,45 a 0,9 con smoothstep(0, 1,4 u).
+- Seis ondas en la normal: frecuencias de 1,7 a 16,7 por u, velocidades de 1,2 a 5,2 y amplitudes de 0,045 a 0,009. Se atenúan ×0,45 en lo
+  somero y ×0,25 entre 15 y 90 u de la cámara.
+- Brillo de Phong #d8e4e8 con 70, y fresnel⁴ hacia el horizonte del cielo (#b7c6cf): 55 % del color y 50 % del alfa.
+- Espuma #e8f0ea entre 0,02 y 0,2 u de hondo, con su pulso `sin(x·2,3 + y·1,7 + t·1,7)`.
+- Encima, las nubes, la niebla de guerra y la bruma de `MapaComun.hlsl`.
+
+**Orilla** (`TerrenoDelMapa.Construir`). Cada tesela mira una ventana con 6 u de margen:
+- La máscara de agua emborronada (dos pasadas de caja de 3 × 3). La costa es la línea donde vale 0,5.
+- La distancia a tierra por chaflán.
+- En el agua, el fondo baja de 0 a 2,6 u en los primeros 6 u desde la orilla (si el relieve ya es más hondo, se respeta).
+- En tierra, el suelo baja hacia la lámina con 0,8 u de playa, sin quedar a menos de 0,03 u sobre ella.
+- El suelo bajo el agua lleva lo hondo en el rojo del color de vértice. `MapaSuelo` lo pinta de fondo: la textura de arena, que se oscurece
+  hasta 2 u.
+- Así desaparece la orilla en sierra: antes el agua era el propio suelo subido a la lámina, y la orilla seguía los triángulos.
+
+**Ríos** (`RiosDelMapa`, `CaucesDelMapa`):
+- El trazado se suaviza con Chaikin (dos pasadas). Se alarga hasta el agua si acaba a menos de 8 u y entra 0,5 u en la lámina. Lo comparten
+  la cinta y el cauce.
+- Cinta de 3 u (navegables) o 1,5 u, plana en lo más bajo del corte más 0,04 u. UV0: x de orilla a orilla, y los u andados.
+- El centro es más hondo (parábola de 1,5 u) y los bordes, someros con espuma. La corriente baja a 1,1 u/s.
+- Orilla mojada de 1,2 u a cada lado (#6b5d40, alfa de 0,8 a 0).
+- El cauce tiene ahora perfil:
+  - Cada vértice a menos del medio ancho efectivo (el del río más medio paso de la tesela) baja a una parábola por debajo de la lámina,
+    0,12 u más honda en el centro.
+  - Fuera, una ribera de 1 u que sube 0,8 u hasta el suelo.
+  - Ya no es una zanja plana de hasta 5,5 u.
+- Vados: agua clara y somera con guijarros de orilla a orilla, con los bordes difuminados.
+- Orden de pintado fijo, para que no parpadeen sobre el mar: lámina 3000, orilla mojada 3001 (desfase −1), río 3002 (−2), vado 3003 (−4).
+
+**Lo que no se calca:** las sombras sobre el agua (tema 8). El reflejo es un color de cielo plano, como en el prototipo: no hay
+reflexión ni refracción.
+
+**Rendimiento** (método de arriba, marchando, 23 teselas):
+
+| | Mediana | p95 | Peor | Construir 23 teselas |
+|---|---|---|---|---|
+| Antes | 1,6 ms | 1,9 ms | 18,8 ms | 129 ms |
+| Después | 1,6 ms | 1,8 ms | 18,1 ms | 208 ms |
+
+En la costa, con 57 teselas, hay 212.628 triángulos de agua frente a 580.608 de suelo.
+
+**Pruebas y capturas:** `SueloDelMapaTests.ElAguaEnCadaSitio` busca en el relieve y en el artefacto los sitios: costa, mar hondo, lago,
+ríos, vado y desembocadura. Comprueba que hay lámina aparte y que el mar hondo es agua y más oscuro que el lago, y guarda las capturas en
+`Logs/capturas-arte-agua/`. El mundo de pruebas no tiene ríos navegables.
+
+**Pendiente:**
+- Desde arriba el vado se lee poco.
+- La orilla mojada apenas se nota.
+- En teselas de paso 2 el cauce sigue siendo más ancho que el río, aunque ya en V suave.
+- Construir una tesela con agua cuesta más.
+
+### El agua, ronda 2: detalle (2026-11-20)
+
+La base del cliente jugador se queda, y encima va más detalle en estilo Synty.
+
+- **Olas.** Mapa de normales propio (`Resources/MapaMundo/Agua/agua_olas`, generado por FFT con espectro de Phillips en
+  `BronzeAgeArte/mapa/agua/generar_agua.py`; se repite sin costura y lleva la altura de la ola en A). Va a tres escalas y direcciones
+  (9; 3,7 y 1,3 u), cada una desplazándose, con una variación grande de amplitud por ruido. Sustituye a las seis ondas, que desde arriba
+  hacían bandas.
+- **Destellos:** en las crestas de las olas pequeñas, con especular estrecho (260).
+- **Reflejo:** el del cielo de verdad (`ColorDelCielo`, en `MapaComun.hlsl`, el mismo que pinta `CieloDelMapa`; MapaDeMundo pone
+  `_CieloCenit`, `_CieloHorizonte`, `_CieloSuelo` y `_CieloSol`).
+- **Color:** turquesa #6cccbd en lo muy somero, luego el somero y el hondo, con variación suave.
+- **Lagos** (la lámina por encima del mar, UV0.y = 1): olas al 45 % y a la mitad de velocidad, un punto más verdes y sin rompiente.
+- **Rompiente:** líneas de espuma que avanzan hacia la orilla siguiendo lo hondo (`sin(hondo·7 + t·0,35)`), rotas con ruido, más la franja
+  fina del borde.
+- **Suelo junto al agua** (`MapaSuelo`, con el color de vértice: verde = arena mojada, azul = ribera):
+  - Arena mojada más oscura en la orilla.
+  - Bajo el agua, manchas de guijarros y alga oscura, y cáusticas animadas que se pierden con lo hondo.
+  - Junto al agua, el relieve se suaviza (quitaba surcos que salían a rayas en la playa).
+  - Las capas que no son roca se proyectan solo desde arriba hasta unos 55°.
+- **Ríos:**
+  - El ancho varía con ruido (±25 %), crece río abajo (hasta +60 %) y se abre en abanico (×2,5) los últimos 3 u antes del agua; lo
+    comparten la cinta y el cauce.
+  - La ribera de arena y guijarros, de ancho irregular, la pinta el suelo a partir de la distancia al eje (hasta 1,6 u), con tierra mojada.
+  - La cinta se funde con el suelo en los bordes (sin filete) y, en la desembocadura, se aclara y se desvanece hacia el mar.
+  - Normales que fluyen río abajo, más deprisa en el centro, con vetas de espuma.
+  - Aguas blancas donde la lámina baja más del 3–12 %.
+- **Vados:** un tramo ancho (1,6 u a lo largo del río, el ancho del río más 1,2 u de largo) de guijarros claros, con piedras que asoman y
+  espumilla.
+- **Interruptor de calidad:** `PinturaDelMapa.AguaConDetalle` (sin destellos ni tercera capa de olas).
+- **Coste:** las teselas sin río no consultan el cauce (`CaucesDelMapa.HayRioCerca`). Construir una tesela de interior vuelve a unos 3 ms;
+  con agua o río, de 5 a 9 ms. Marchando: mediana 1,6 ms, p95 1,9 ms y peor 15,1 ms.
+
+**Pendiente:**
+- En los taludes de la costa quedan surcos del propio relieve, más arriba de donde se suaviza.
+- La ribera del río aún se lee como dos franjas a lo largo del cauce.
+- El abanico de la desembocadura es discreto.
+
+### El agua, ronda 3: pulido (2026-11-20)
+
+- **Púas en la playa: la causa.** El relieve era liso: lo comprobé muestra a muestra, es un acantilado de unos 30 m pegado al agua. La tierra
+  solo bajaba hacia la lámina donde la máscara emborronada era mayor que 0, unas 2 muestras. Esa frontera seguía la escalera de la malla y,
+  en la diagonal de la costa, el acantilado quedaba recortado en escalones alternos. Ahora la tierra baja bajo un techo continuo: 0,03 u
+  sobre la lámina, la playa de 0,8 u por la máscara y, más allá, 0,8 u por u de distancia al agua (`DistanciaAlAgua`: chaflán que lleva
+  también el nivel del agua más cercana). Lo mismo quitó el corte recto de la orilla de un lago.
+- **Orilla:** banda de espuma dibujada que entra y sale, y arena mojada por la distancia al agua (1,2 u).
+- **Fondo somero:** manchas de guijarros y alga menos frecuentes y más suaves. El ruido de 25 m solo se repetía en estampado; ahora se mezcla
+  con el de 170 m.
+- **Ríos:**
+  - Verde azulado de la familia de lo somero del mar, más oscuro en el centro; en los bordes se ve el lecho.
+  - Ondas alargadas río abajo (el mapa de olas estirado a lo largo; nada de líneas concéntricas) y pocas vetas de espuma.
+  - Alguna roca con espuma, y aguas blancas solo donde la lámina baja más de un 10–30 %.
+  - Borde del agua irregular; la fuente y la desembocadura se desvanecen.
+  - Ribera de ancho muy variable, más ancha en el interior de las curvas (las barras, por la curvatura del trazado).
+- **Coste:** construir las 23 teselas de la marcha cuesta 312 ms (208 en la base) por la distancia al agua y la búsqueda de la ribera.
+  Las de interior siguen en unos 3 ms. Marchando: mediana 1,5 ms, p95 1,7 ms y peor 15,1 ms.
+
+**Pendiente:**
+- Desde arriba el río aún se lee bastante regular.
+- Si el coste de construir molesta, pasar la construcción de teselas a un hilo.
+
