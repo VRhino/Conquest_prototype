@@ -9,6 +9,7 @@ using BronzeAge.Contract.V1;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 
 namespace ConquestTactics.Mundo.Mapa
@@ -135,11 +136,18 @@ namespace ConquestTactics.Mundo.Mapa
             if (FindAnyObjectByType<Light>() == null)
             {
                 // El sol, donde lo pinta el cielo: la luz del suelo viene de ahí.
-                var sol = new GameObject("Sol").AddComponent<Light>();
+                sol = new GameObject("Sol").AddComponent<Light>();
                 sol.type = LightType.Directional;
                 sol.transform.SetParent(transform, false);
                 sol.transform.rotation = Quaternion.LookRotation(-PinturaDelMapa.Sol);
+                sol.color = new Color32(0xff, 0xf0, 0xd8, 255);
+                sol.shadows = PinturaDelMapa.SombrasReales ? LightShadows.Soft : LightShadows.None;
             }
+            Shader.SetGlobalFloat(SombrasReales, PinturaDelMapa.SombrasReales && sol != null ? 1 : 0);
+            // Con el sol más bajo que el del prototipo, el llano recibe menos (N·L = seno de la elevación): la directa se compensa para que el
+            // llano a pleno sol quede con la luminancia de siempre.
+            Shader.SetGlobalFloat("_CompensaSol", PinturaDelMapa.SolDelPrototipo.y / PinturaDelMapa.Sol.y);
+            if (PinturaDelMapa.SombrasReales && sol != null) PonerPipelineDelMapa();
 
             caja = Caja("Tu columna", PinturaDelMapa.Columna, new Vector3(PinturaDelMapa.LadoColumna, PinturaDelMapa.AltoColumna, PinturaDelMapa.LadoColumna));
             destino = Caja("Destino", PinturaDelMapa.Destino, new Vector3(0.5f, 1.5f, 0.5f));
@@ -261,7 +269,7 @@ namespace ConquestTactics.Mundo.Mapa
             var p = new MaterialPropertyBlock();
             p.SetColor("_Color", color);
             r.SetPropertyBlock(p);
-            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.shadowCastingMode = nombre == "Tu columna" && PinturaDelMapa.SombrasReales ? ShadowCastingMode.On : ShadowCastingMode.Off;
             go.SetActive(false);
             return go;
         }
@@ -273,8 +281,50 @@ namespace ConquestTactics.Mundo.Mapa
             niebla.Poner(sesion.Almacen.Ambitos.TryGetValue(ambito, out var a) ? a.Niebla : null);
         }
 
+        Light sol;
+        // El asset de URP es de todo el proyecto (la batalla y el feudo lo comparten): el mapa trabaja con una copia en memoria con sus sombras
+        // (distancia según el zoom, 3 cascadas) y al irse devuelve el original. En disco no cambia nada.
+        RenderPipelineAsset pipelineOriginal;
+        UniversalRenderPipelineAsset pipelineDelMapa;
+        static readonly int SombrasReales = Shader.PropertyToID("_SombrasReales"), SombraHasta = Shader.PropertyToID("_SombraHasta");
+
+        void PonerPipelineDelMapa()
+        {
+            if (GraphicsSettings.currentRenderPipeline is not UniversalRenderPipelineAsset activo) return;
+            pipelineOriginal = QualitySettings.renderPipeline;
+            pipelineDelMapa = Instantiate(activo);
+            pipelineDelMapa.name = activo.name + " (mapa)";
+            pipelineDelMapa.shadowCascadeCount = 3;
+            // La cámara mira desde 1 vez su distancia: lo cercano de la pantalla empieza hacia el 60 % de la distancia de sombra (1,6 veces la de
+            // la cámara). La primera cascada llega hasta el héroe y algo más (nítida de cerca); la segunda, a la mitad de arriba; la tercera, al fondo.
+            pipelineDelMapa.cascade3Split = new Vector2(0.62f, 0.8f);
+            pipelineDelMapa.shadowDepthBias = 1;
+            pipelineDelMapa.shadowNormalBias = 1.5f; // contra el acné en las copas
+            QualitySettings.renderPipeline = pipelineDelMapa;
+        }
+
+        void QuitarPipelineDelMapa()
+        {
+            if (pipelineDelMapa == null) return;
+            if (QualitySettings.renderPipeline == pipelineDelMapa) QualitySettings.renderPipeline = pipelineOriginal;
+            Destroy(pipelineDelMapa);
+            pipelineDelMapa = null;
+        }
+
+        /// <summary>Para las pruebas: si el mapa trabaja con su copia del asset de URP.</summary>
+        public bool ConPipelineDelMapa => pipelineDelMapa != null && QualitySettings.renderPipeline == pipelineDelMapa;
+
+        void OnDisable() => QuitarPipelineDelMapa();
+
+        void OnEnable()
+        {
+            if (sol != null && PinturaDelMapa.SombrasReales && pipelineDelMapa == null) PonerPipelineDelMapa();
+        }
+
         void OnDestroy()
         {
+            QuitarPipelineDelMapa();
+            Shader.SetGlobalFloat(SombrasReales, 0);
             if (sesion != null) sesion.AlCambiar -= AlCambiar;
             terreno?.Destruir();
             vegetacion?.Destruir();
@@ -314,11 +364,19 @@ namespace ConquestTactics.Mundo.Mapa
             camara.nearClipPlane = (float)Math.Max(0.05, Camara.Distancia * 0.05) * e;
             camara.farClipPlane = (float)Math.Max(600, Camara.Distancia * 20) * e;
             terreno.Actualizar(cx, cy, (float)Camara.Distancia * 7);
+            terreno.HornearRelieve(1.0); // la sombra del relieve: 1 ms por fotograma como mucho
             vegetacion.Actualizar(cx, cy, Mathf.Min((float)Camara.Distancia * 7, 130));
             PintarCosas(ahora, cx, cy);
             vegetacion.Claros(Claros());
             vegetacion.Aclarado(AclararCopas ? Aclarados(cx, cy) : SinAclarar);
             vegetacion.Dibujar(camara, cx, cy);
+            if (pipelineDelMapa != null)
+            {
+                // La sombra llega a 1,6 veces la distancia de la cámara (el radio del prototipo), hasta 700 m.
+                float hasta = Mathf.Min((float)(Camara.Distancia * e * 1.6), 700);
+                pipelineDelMapa.shadowDistance = hasta;
+                Shader.SetGlobalFloat(SombraHasta, hasta);
+            }
         }
 
         /// <summary>Lo que hay en el mapa: las cajas cada fotograma (lo que anda, en su sitio del instante), las rayas cuando cambia algo (como
@@ -727,6 +785,10 @@ namespace ConquestTactics.Mundo.Mapa
         public bool SueloCompleto => terreno != null && terreno.Completo && (vegetacion == null || vegetacion.Completo);
         public VegetacionDelMapa Vegetacion => vegetacion;
         public double PeorMsTeselaDeSuelo => terreno?.PeorMsTesela ?? 0;
+        /// <summary>Lo más que ha tardado la sombra del relieve en un fotograma (ms).</summary>
+        public double PeorMsRelieve => terreno?.PeorMsRelieve ?? 0;
+        /// <summary>Teselas a la espera de su sombra del relieve.</summary>
+        public int HorneandoRelieve => terreno?.HorneandoRelieve ?? 0;
         public Camera Vista => camara;
         /// <summary>Lo que se ve en (x, y) del mapa: la altura del suelo o de su agua, en metros.</summary>
         public float AlturaVisible(double x, double y) => terreno.AlturaVisible(x, y);

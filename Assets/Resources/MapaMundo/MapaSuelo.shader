@@ -39,6 +39,9 @@ Shader "Conquest/MapaSuelo"
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            // La sombra del sol (URP, con cascadas y suave): `SombraDelSol` en MapaComun.hlsl.
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #define CAPAS 8
             #define PASTO_SECO 0
@@ -70,9 +73,9 @@ Shader "Conquest/MapaSuelo"
                 float _Mezcla;
             CBUFFER_END
 
-            struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float4 color : COLOR; float3 ancha : TEXCOORD0; };
+            struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float4 color : COLOR; float3 ancha : TEXCOORD0; float2 relieve : TEXCOORD1; };
             // `ancha`: la normal del relieve suavizado a unos 24 m (la calcula TerrenoDelMapa); decide la roca de pendiente y la nieve.
-            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float4 color : COLOR; float3 ancha : TEXCOORD2; };
+            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float4 color : COLOR; float3 ancha : TEXCOORD2; float relieve : TEXCOORD3; };
 
             Salida Vert(Entrada e)
             {
@@ -82,6 +85,7 @@ Shader "Conquest/MapaSuelo"
                 s.normal = TransformObjectToWorldNormal(e.normal);
                 s.color = e.color;
                 s.ancha = TransformObjectToWorldNormal(e.ancha);
+                s.relieve = e.relieve.x;
                 return s;
             }
 
@@ -283,7 +287,8 @@ Shader "Conquest/MapaSuelo"
                 // La nieve, con su propia sombra: luz envolvente y, en lo que no mira al sol, un azul claro (se lee el volumen sin manchas pintadas).
                 float envolvente = saturate((dot(Nluz, sol.direction) + 0.5) / 1.5);
                 float3 luzNieve = lerp(float3(0.72, 0.8, 0.93), float3(1.02, 1.01, 1.0), envolvente);
-                c *= lerp((0.6 + 0.45 * l).xxx, luzNieve, pesoNieve);
+                float sombra = ConRelieve(SombraDelSol(p), s.relieve);
+                c *= lerp(LuzDelMapa(Nluz.y, 0.6, 0.45 * l, sombra, 0.36), luzNieve * lerp(float3(0.5, 0.6, 0.75), 1, sombra), pesoNieve);
                 return half4(PintarMapa(c, p, true), 1);
             }
             ENDHLSL

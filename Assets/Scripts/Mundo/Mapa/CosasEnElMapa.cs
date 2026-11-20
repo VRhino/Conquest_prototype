@@ -74,7 +74,10 @@ namespace ConquestTactics.Mundo.Mapa
             carrosVistos.Clear();
             for (int k = 0; k < 2; k++)
             {
-                var rp = new RenderParams(k == 0 ? bajoNiebla : encima) { shadowCastingMode = ShadowCastingMode.Off, matProps = propiedades };
+                var rp = new RenderParams(k == 0 ? bajoNiebla : encima)
+                {
+                    shadowCastingMode = PinturaDelMapa.SombrasReales ? ShadowCastingMode.On : ShadowCastingMode.Off, matProps = propiedades,
+                };
                 for (int i = 0; i < matrices[k].Count; i += PorLlamada)
                 {
                     int n = Mathf.Min(PorLlamada, matrices[k].Count - i);

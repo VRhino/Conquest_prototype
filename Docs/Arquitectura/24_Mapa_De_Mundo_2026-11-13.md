@@ -544,3 +544,130 @@ Medido con `SueloDelMapaTests.LaVegetacionEstadoFinal`: 300 fotogramas, Editor e
 - **Olivares** en hileras junto a los pueblos.
 - **Sombras de verdad** sobre el agua (tema 8).
 - **Juntar más tandas:** un atlas común de especies y variantes.
+
+## La luz y las sombras (tema 8 adelantado, 2026-11-20)
+
+Sombras reales del sol en el mapa, como en el prototipo (BronzeAgeClient: `src/mundo3d/vista.ts`). Hay dos fuentes:
+
+- **Las sombras de URP**, con cascadas, para lo cercano: árboles, matas, cosas y columnas.
+- **La sombra del relieve**, horneada por tesela, para las montañas sobre los valles.
+
+### El sol
+
+- **Por defecto**: `PinturaDelMapa.Sol` tiene el acimut del prototipo y **40° de elevación**. Lo eligió Víctor el 2026-11-20: «me gusta la de 40 grados».
+- **El del prototipo**: (−60, 110, 45) con z = y del mapa, unos 56°. Queda como `PinturaDelMapa.SolDelPrototipo`.
+- **Otras elevaciones**: `SolConElevacion(grados)`.
+- **Quién lo usa**: el cielo (`_CieloSol`), la luz direccional que crea `MapaDeMundo` (#fff0d8, sombras suaves), la sombra del relieve y la mancha de relleno de los árboles. La mancha cae hacia el lado contrario al sol, con el largo que corresponde a la elevación.
+- Las nubes no dependen del sol.
+
+### Luz
+
+`MapaComun.hlsl` reúne `LuzDelMapa`, `SombraDelSol` y `ConRelieve`. Lo usan `MapaSuelo`, `MapaAgua`, `MapaColor` y `MapaVegetacion`.
+
+- **Sin sombras reales** (`PinturaDelMapa.SombrasReales = false`): la luz de antes, ambiente + directa, en gris.
+- **Con sombras reales**, la luz del prototipo:
+  - ambiente: el cielo como hemisferio, #dfe9f0 arriba y #6b5a40 abajo, según N.y;
+  - directa: el sol #fff0d8;
+  - las dos normalizadas a luminancia 1, así que a pleno sol la luminancia es la misma que antes (medido: 1,00).
+- **Sol más bajo**: con el sol más bajo que el del prototipo, la directa se multiplica por `_CompensaSol` (seno de su elevación entre el seno de la del sol actual). Así el llano a pleno sol sigue igual. Solo afecta al suelo, el agua y las cosas: las copas no se compensan.
+- **A la sombra** queda esta parte de la luz al sol, con un tinte de cielo frío y azulado, no negro:
+
+| Dónde | Lineal | En pantalla (sRGB) |
+|---|---|---|
+| Suelo y cosas | 0,36 | ~0,62 |
+| Copas | 0,45 | ~0,70 |
+| Agua | la mitad que en el suelo | — |
+
+- **Copas**: más suave para no matar la luz horneada en el color de vértice.
+- **Agua**: el tinte de la luz va solo al 40 %, para no calentar su color.
+- **Corteza**: tiene un suelo de luminancia, así que se lee marrón y nunca negra, también bajo la copa aclarada del héroe.
+
+### URP
+
+El asset de URP es de todo el proyecto (batalla y feudo) y en disco no se toca.
+
+- **Al montarse**, el mapa:
+  - clona el asset activo en memoria;
+  - le pone 3 cascadas (cortes 0,62 y 0,8) y sesgo normal 1,5, contra el acné en las copas;
+  - lo pone en `QualitySettings.renderPipeline`.
+- **Al irse** (al desactivarse, al destruirse o al salir de Play) devuelve el original y destruye la copia.
+- **Distancia de sombra**: sigue al zoom, 1,6 veces la distancia de la cámara (el radio del prototipo), como mucho 700 m.
+- **Primera cascada**: llega hasta el héroe y algo más. De cerca se reconoce la silueta de la copa.
+
+### Qué arroja y qué recibe
+
+- **Reciben**: suelo, agua, vegetación y `MapaColor`, con `multi_compile` de `_MAIN_LIGHT_SHADOWS(_CASCADE)` y `_SHADOWS_SOFT*`.
+- **Pasada `ShadowCaster`** en `MapaVegetacion`:
+  - el mismo viento;
+  - `clip` del alfa de las tarjetas, sin alpha to coverage;
+  - sin el aclarado: la copa aclarada sobre el héroe sigue dando sombra al suelo, y así se lee «bajo el bosque».
+- **Pasada `ShadowCaster`** en `MapaColor`: las cosas y tu columna.
+- **Arrojan**, por nivel (`VegetacionDelMapa.DibujarSinMedir`):
+  - árboles de cerca y a media distancia: siempre con la misma malla que se dibuja;
+  - árboles de lejos: nada, porque quedan más allá de la distancia de sombra;
+  - matas: solo de cerca;
+  - hierba, flores y piedras: nunca.
+- **Regla**: la malla que arroja no puede sobresalir de la que se dibuja. Una vuelta que arrojaba los árboles de media distancia con su cúpula de lejos dio sombra propia falsa y cuñas duras en las copas vecinas, y se deshizo.
+- **No arrojan**: el suelo, el agua ni los ríos.
+- **La mancha bajo los árboles** (`MapaSombraArbol`) se apaga entre el 75 % y el 100 % de la distancia de sombra (`_SombraHasta`). Más allá sigue sola.
+
+### La sombra del relieve
+
+`SombraDelRelieve` (en `Conquest.Mundo`, C# puro) recorre el relieve desde cada punto hacia el sol, hasta 64 u, con pasos que crecen con la distancia, y mira el horizonte. La visibilidad es `(elevación del sol − horizonte) / 6° + 0,5`: una penumbra de 6°.
+
+- **Rejilla**: se calcula en una de 2 u alineada al mundo. Las teselas vecinas dan lo mismo en el borde: no hay costura.
+- **Cuándo se hornea**: no al construir la tesela. `TerrenoDelMapa.HornearRelieve` la hace poco a poco, con un presupuesto de 1 ms por fotograma; el relieve no se puede leer desde otro hilo. La tesela la recibe al acabar.
+- **Dónde se guarda**: en la malla, como «lo que tapa»: UV1.x en el suelo y el faldón, UV0.z en el agua.
+- **Cómo se combina**: el sombreado toma el mínimo entre esta sombra y la de URP.
+- **Interruptor**: `PinturaDelMapa.SombraDelRelieve`.
+- **Cuánta hay** en el mundo de pruebas (rejilla de 6 u sobre la tierra): 0,76 % de la tierra a la sombra del relieve con el sol a 56° y **2,89 % con el de 40°**. Con la regla de dejarla encendida si pasa del 2 %, queda encendida.
+- **Dónde hay más**: teselas (22, 6), (26, 6) y (34, 21), con un 42 a 46 %.
+- **Al cruzar un borde de tesela**: peor fotograma 31,1 ms con ella y 30,2 ms sin ella. El relieve gasta como mucho 1,5 ms en un fotograma; lo demás es construir el suelo, que ya estaba.
+- **Pendientes conocidos**:
+  - El terreno no arroja en el mapa de sombras: lo que está dentro de la sombra horneada de una montaña (un árbol, una columna) no se oscurece.
+  - El horneado del relieve llega a 12–15 ms en un solo fotograma la primera vez que la marcha toca teselas de relieve aún sin descomprimir: la descompresión no tiene presupuesto. Al cruzar un borde de tesela ya cargada, como mucho 1,5 ms.
+
+### Coste
+
+Sol a 40°, zoom habitual, 300 fotogramas:
+
+| Zona | Antes: mediana / p95 | Con sombras: mediana / p95 | Llamadas de vegetación (las que arrojan) |
+|---|---|---|---|
+| Bosque denso | 2,9 / 3,3 ms | 3,9 / 4,5 ms | 170 (94) |
+| Pradera fértil | 2,5 / 2,8 ms | 2,8 / 3,1 ms | 92 (16) |
+| Costa | 2,7 / 3,0 ms | 3,5 / 4,0 ms | 131 (71) |
+| Montaña | 2,3 / 7,9 ms* | 2,9 / 3,4 ms | 81 (46) |
+
+*La montaña «antes» coincidió con teselas en construcción.
+
+La pasada de sombra repite en cada una de las 3 cascadas las llamadas que arrojan. Sin recortes, el bosque denso daba 5,0 ms de p95.
+
+**Las copas**, medidas contra la segunda pasada (antes de los recortes y de la compensación):
+- luminancia y tono iguales (montaña 56,8 / 89,9° → 56,8 / 89,8°);
+- borde, denso y costa a ±2 de luminancia y ±0,5° de tono.
+
+**El mar**:
+- en la costa, en conjunto, apenas cambia: azul − rojo de 0,205 a 0,200 a zoom habitual;
+- en el agua somera junto al campamento 7 sí baja: 0,040 con la luz antigua, 0,028 con la nueva y el sol a 56°, 0,016 con el de 40°;
+- no es el destello ni el tinte del agua: es el sol a 40° sobre lo somero;
+- Se acepta el cambio en lo somero, que en pantalla no se aprecia.
+- `MapaConTodoTests.SeVeUnaCosaDeCadaTipo` conserva su condición (azul > rojo + 0,03), pero ahora mira el agua más honda de la misma vista (a menos de 6 u del punto de mar), con la media de 9 × 9.
+
+### Pruebas
+
+- **EditMode** (`SombraDelRelieveTests`):
+  - un muro da una sombra de h / tan(elevación);
+  - el fondo de un pozo estrecho queda a la sombra y el de uno ancho no;
+  - el llano está siempre al sol;
+  - dos teselas vecinas dan lo mismo en su borde;
+  - la dirección del sol del prototipo.
+- **PlayMode**:
+  - `SueloDelMapaTests.ElSolDelMapaEstaA40Grados`: 40° y el acimut del prototipo.
+  - `MapaConTodoTests.SeVeUnaCosaDeCadaTipo`: mira el agua honda de la vista con la media de 9 × 9 y deja en el registro el píxel y la media (ver «El mar»).
+- **Explícitas, de capturas** (`MUNDO_CAPTURAS`):
+  - `LaLuzYLasSombras`:
+    - antes, con el sol a 56° y a 40°, y la montaña a 40° sin la sombra del relieve, en seis sitios a los tres zooms; además, un árbol suelto con los dos soles y el coste.
+    - Comprueba que el mapa trabaja con su copia del asset de URP y que al irse vuelve el original con sus valores.
+    - Comprueba que en el borde de un bosque, de cerca, las copas oscurecen más del 5 % de la imagen.
+    - Comprueba que con el sol a 40° hay valles a la sombra del relieve.
+  - `LaSombraDelRelieveEnElMundo`: el porcentaje en el mundo, las teselas con más sombra, sus capturas con y sin ella, y el peor fotograma al cruzar un borde de tesela.

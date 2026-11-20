@@ -59,7 +59,21 @@ namespace ConquestTactics.Mundo.Mapa
         // sRGB; y hacia dónde está el sol (allí, (−60, 110, 45) con z = y del mapa; aquí z = −y).
         public static readonly Color Cenit = new Color32(0x3d, 0x72, 0xb0, 255), Horizonte = new Color32(0xb7, 0xc6, 0xcf, 255),
             BajoElHorizonte = new Color32(0x8e, 0x9a, 0x98, 255);
-        public static readonly Vector3 Sol = new Vector3(-60, 110, -45).normalized;
+        // El sol: el acimut del prototipo con 40° de elevación (Víctor, 2026-11-20: «me gusta la de 40 grados»; el del prototipo era de unos 56°).
+        public static Vector3 Sol = SolConElevacion(40);
+        /// <summary>El sol del prototipo (`vista.ts`): (−60, 110, 45) con z = y del mapa, unos 56° de elevación.</summary>
+        public static readonly Vector3 SolDelPrototipo = new Vector3(-60, 110, -45).normalized;
+        /// <summary>El sol del prototipo (unos 56° sobre el horizonte) u otro con el mismo acimut y `grados` de elevación (para comparar).</summary>
+        public static Vector3 SolConElevacion(double grados)
+        {
+            var h = new Vector2(-60, -45).magnitude;
+            return new Vector3(-60, h * Mathf.Tan((float)grados * Mathf.Deg2Rad), -45).normalized;
+        }
+        /// <summary>Sombras reales del sol (URP, con cascadas) en el suelo, el agua, la vegetación y las cosas; apagadas, la luz de antes y solo
+        /// la mancha bajo los árboles.</summary>
+        public static bool SombrasReales = true;
+        /// <summary>Con sombras reales, la sombra del relieve horneada en las teselas (las montañas sobre los valles).</summary>
+        public static bool SombraDelRelieve = true;
 
         // La niebla de guerra: el color (el fondo del tema de BronzeAgeClient) y la opacidad de lo nunca visto, lo recordado y lo que se ve.
         public static readonly Color Niebla = new Color32(10, 14, 23, 255);

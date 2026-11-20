@@ -22,6 +22,9 @@ Shader "Conquest/MapaColor"
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            // La sombra del sol (URP, con cascadas y suave): `SombraDelSol` en MapaComun.hlsl.
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             // Las nubes, la niebla de guerra (global, la pone NieblaDelMapa) y la bruma, las mismas que en MapaSuelo.
             #include "MapaComun.hlsl"
@@ -56,12 +59,47 @@ Shader "Conquest/MapaColor"
                 if (_Luz > 0.5)
                 {
                     Light sol = GetMainLight();
-                    float l = saturate(dot(normalize(s.normal), sol.direction));
-                    c *= 0.6 + 0.45 * l;
+                    float3 n = normalize(s.normal);
+                    float l = saturate(dot(n, sol.direction));
+                    c *= LuzDelMapa(n.y, 0.6, 0.45 * l, SombraDelSol(s.mundo), 0.36);
                 }
                 // Lo propio (`_ConNiebla` 0) va sin nubes ni niebla de guerra, pero con la bruma lejana, como en BronzeAgeClient.
                 return half4(PintarMapa(c, s.mundo, _ConNiebla > 0.5), 1);
             }
+            ENDHLSL
+        }
+        // La sombra que arrojan las cosas y la columna (solo los que la tienen encendida en su renderer).
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            HLSLPROGRAM
+            #pragma vertex VertSombra
+            #pragma fragment FragSombra
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            CBUFFER_START(UnityPerMaterial)
+                float _ConNiebla;
+                float _Luz;
+            CBUFFER_END
+            float3 _LightDirection;
+            struct EntradaSombra { float4 pos : POSITION; float3 normal : NORMAL; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            float4 VertSombra(EntradaSombra e) : SV_POSITION
+            {
+                UNITY_SETUP_INSTANCE_ID(e);
+                float4 pos = TransformWorldToHClip(ApplyShadowBias(TransformObjectToWorld(e.pos.xyz), TransformObjectToWorldNormal(e.normal), _LightDirection));
+            #if UNITY_REVERSED_Z
+                pos.z = min(pos.z, UNITY_NEAR_CLIP_VALUE);
+            #else
+                pos.z = max(pos.z, UNITY_NEAR_CLIP_VALUE);
+            #endif
+                return pos;
+            }
+            half4 FragSombra() : SV_Target { return 0; }
             ENDHLSL
         }
     }

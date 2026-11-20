@@ -138,6 +138,8 @@ namespace ConquestTactics.Mundo.Mapa
         public int Dibujadas { get; private set; }
         public long Triangulos { get; private set; }
         public int Llamadas { get; private set; }
+        /// <summary>De las llamadas, las que arrojan sombra (la pasada de sombra de URP las repite en cada cascada).</summary>
+        public int LlamadasQueArrojan { get; private set; }
         /// <summary>El peor tiempo (ms) de `Actualizar` y de `Dibujar` en un fotograma.</summary>
         public double PeorMsActualizar { get; private set; }
         public double PeorMsDibujar { get; private set; }
@@ -850,6 +852,9 @@ namespace ConquestTactics.Mundo.Mapa
             int porLado = Mathf.CeilToInt(lado / Trozo), claves = especies.Length * 3;
             var trozos = new TrozoDeDibujo[porLado * porLado];
             var haciaFuera = new Vector3(-PinturaDelMapa.Sol.x, 0, -PinturaDelMapa.Sol.z).normalized;
+            // el largo de la mancha, con la elevación del sol (calibrada para el del prototipo, unos 56°)
+            float largoSol = (PinturaDelMapa.SolDelPrototipo.y / new Vector2(PinturaDelMapa.SolDelPrototipo.x, PinturaDelMapa.SolDelPrototipo.z).magnitude)
+                / (PinturaDelMapa.Sol.y / new Vector2(PinturaDelMapa.Sol.x, PinturaDelMapa.Sol.z).magnitude);
             float tamano = Tamano;
             List<Matrix4x4>[][] Bandas(int n)
             {
@@ -897,7 +902,7 @@ namespace ConquestTactics.Mundo.Mapa
                         // Sombra arrojada falsa: grande, blanda, alargada hacia el lado contrario del sol y tumbada sobre la pendiente; en el bosque
                         // cerrado, más grande, para que se fundan y el suelo entre troncos quede en sombra.
                         float funde = p.Hondura == 2 ? 1.35f : 1;
-                        tr.Sombras[b].Add(Sombra(p.Pos + p.Suelo * (Hundir + 0.5f), p.Suelo, haciaFuera, r * 0.8f, r * 2.5f * funde, r * 3.6f * funde));
+                        tr.Sombras[b].Add(Sombra(p.Pos + p.Suelo * (Hundir + 0.5f), p.Suelo, haciaFuera, r * 0.8f * largoSol, r * 2.5f * funde, r * 3.6f * funde * largoSol));
                     }
                 }
                 float alto = 12 * tamano * p.Escala * 3;
@@ -965,10 +970,16 @@ namespace ConquestTactics.Mundo.Mapa
             Dibujadas = 0;
             Triangulos = 0;
             Llamadas = 0;
+            LlamadasQueArrojan = 0;
             for (int esp = 0; esp < especies.Length; esp++)
             {
                 var s = especies[esp];
                 var mats = materialesPorMalla[s.Nombre];
+                // Quién arroja sombra: la capa baja (hierba, flores, piedras) nunca; las matas, solo de cerca (la primera cascada); los árboles,
+                // de cerca y a media distancia, siempre con la misma malla que se dibuja (una que sobresalga, como la cúpula de lejos, haría
+                // sombra propia falsa y cuñas angulosas en las copas vecinas); de lejos, que queda más allá de la distancia de sombra, nada.
+                bool capa = s.Nombre == "hierba" || s.Nombre == "flor" || s.Nombre == "piedra";
+                bool mata = s.Nombre == "lentisco" || s.Nombre == "retama" || s.Nombre == "adelfa" || s.Nombre == "canas";
                 for (int v = 0; v < s.Variantes; v++)
                     for (int n = 0; n < 3; n++)
                     {
@@ -976,14 +987,16 @@ namespace ConquestTactics.Mundo.Mapa
                         var malla = s.Mallas[v, n];
                         if (lista.Count == 0 || malla == null) continue;
                         Dibujadas += lista.Count;
+                        var arroja = PinturaDelMapa.SombrasReales && !capa && (n == 0 || (n == 1 && !mata)) ? ShadowCastingMode.On : ShadowCastingMode.Off;
                         var ms = mats[v, n];
                         for (int sub = 0; sub < Mathf.Min(malla.subMeshCount, ms.Length); sub++)
                         {
-                            var rp = new RenderParams(ms[sub]) { shadowCastingMode = ShadowCastingMode.Off, receiveShadows = false };
+                            var rp = new RenderParams(ms[sub]) { shadowCastingMode = arroja, receiveShadows = true };
                             for (int desde = 0; desde < lista.Count; desde += 1023)
                             {
                                 Graphics.RenderMeshInstanced(rp, malla, sub, lista, Mathf.Min(1023, lista.Count - desde), desde);
                                 Llamadas++;
+                                if (arroja == ShadowCastingMode.On) LlamadasQueArrojan++;
                             }
                             Triangulos += (long)malla.GetIndexCount(sub) / 3 * lista.Count;
                         }

@@ -41,6 +41,9 @@ Shader "Conquest/MapaAgua"
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            // La sombra del sol (URP, con cascadas y suave): `SombraDelSol` en MapaComun.hlsl.
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #include "MapaComun.hlsl"
 
             TEXTURE2D(_Olas); SAMPLER(sampler_Olas);
@@ -159,7 +162,12 @@ Shader "Conquest/MapaAgua"
                 }
 
                 float l = saturate(dot(N, sol.direction));
-                float3 c = base * (0.6 + 0.45 * l);
+                // la sombra en el agua, a media fuerza (y también en el destello del sol)
+                // (la sombra del relieve, en UV0.z)
+                float sombra = lerp(1, ConRelieve(SombraDelSol(p), s.uv.z), 0.5);
+                // (el tinte de la luz, solo un 40 % en el agua: su color ya es el de su diseño; la luminancia, la misma)
+                float3 luz = LuzDelMapa(N.y, 0.6, 0.45 * l, sombra, 0.36);
+                float3 c = base * lerp(dot(luz, float3(0.2126, 0.7152, 0.0722)).xxx, luz, 0.4);
                 // Reflejo del cielo de verdad (el degradado y las nubes del cielo) con fresnel.
                 float3 R = reflect(-V, N);
                 R.y = abs(R.y);
@@ -171,7 +179,7 @@ Shader "Conquest/MapaAgua"
                 float3 H = normalize(sol.direction + V);
                 float especular = pow(saturate(dot(N, H)), 260);
                 float chispa = _Detalle > 0.5 ? smoothstep(0.72, 0.8, o2.z * 0.5 + o3.z * 0.5) : 0.35;
-                c += float3(1.0, 0.97, 0.9) * especular * chispa * 1.8 * cerca;
+                c += float3(1.0, 0.97, 0.9) * especular * chispa * 1.8 * cerca * sombra;
 
                 float espuma = 0;
                 if (modo == 0)

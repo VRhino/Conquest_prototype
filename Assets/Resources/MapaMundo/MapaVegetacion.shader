@@ -24,16 +24,7 @@ Shader "Conquest/MapaVegetacion"
     SubShader
     {
         Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" "Queue" = "Geometry+10" }
-        Pass
-        {
-            Name "Forward"
-            Tags { "LightMode" = "UniversalForward" }
-            Cull [_Cull]
-            AlphaToMask On
-            HLSLPROGRAM
-            #pragma vertex Vert
-            #pragma fragment Frag
-            #pragma multi_compile_instancing
+        HLSLINCLUDE
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "MapaComun.hlsl"
@@ -45,6 +36,28 @@ Shader "Conquest/MapaVegetacion"
                 float4 _MainTex_ST;
                 float _Recorte, _Translucidez, _FuerzaNormal, _Viento, _Cull, _Variacion, _ConHondura, _Modo;
             CBUFFER_END
+
+            // El viento: dos ondas lentas desfasadas por árbol y por altura, empujando hacia el este-sudeste (lo mismo en la sombra).
+            float3 ConViento(float3 w, float azar, float peso)
+            {
+                float t = fmod(_Time.y, 3600.0), fase = azar * 6.2832;
+                float empuje = (sin(t * 1.1 + fase) * 0.6 + sin(t * 2.3 + fase * 1.7 + w.y * 0.25) * 0.4) * _Viento * peso;
+                return w + float3(0.93, 0, 0.37) * empuje;
+            }
+        ENDHLSL
+        Pass
+        {
+            Name "Forward"
+            Tags { "LightMode" = "UniversalForward" }
+            Cull [_Cull]
+            AlphaToMask On
+            HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment Frag
+            #pragma multi_compile_instancing
+            // La sombra del sol (URP, con cascadas y suave): `SombraDelSol` en MapaComun.hlsl.
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             // El aclarado (lo pone VegetacionDelMapa): el héroe y las columnas que se ven, en la escena, con el radio (m) en w.
             float4 _Aclarar[8];
             float _AclararCuantos;
@@ -66,11 +79,7 @@ Shader "Conquest/MapaVegetacion"
                 UNITY_SETUP_INSTANCE_ID(e);
                 float3 origen = TransformObjectToWorld(float3(0, 0, 0));
                 float azar = frac(sin(dot(origen.xz, float2(12.9898, 78.233))) * 43758.5453);
-                float3 w = TransformObjectToWorld(e.pos.xyz);
-                // El viento: dos ondas lentas desfasadas por árbol y por altura, empujando hacia el este-sudeste.
-                float t = fmod(_Time.y, 3600.0), fase = azar * 6.2832;
-                float empuje = (sin(t * 1.1 + fase) * 0.6 + sin(t * 2.3 + fase * 1.7 + w.y * 0.25) * 0.4) * _Viento * e.color.a;
-                w += float3(0.93, 0, 0.37) * empuje;
+                float3 w = ConViento(TransformObjectToWorld(e.pos.xyz), azar, e.color.a);
                 s.pos = TransformWorldToHClip(w);
                 s.mundo = w;
                 s.uv = TRANSFORM_TEX(e.uv, _MainTex);
@@ -166,8 +175,57 @@ Shader "Conquest/MapaVegetacion"
                 float envuelve = saturate((dot(N, sol.direction) + 0.3) / 1.3);
                 float3 V = GetWorldSpaceNormalizeViewDir(s.mundo);
                 float contraluz = pow(saturate(dot(-V, sol.direction)), 3) * m.g * _Translucidez;
-                float3 col = albedo * (0.3 + 0.8 * envuelve) + albedo * contraluz * 0.5;
+                // (la translucidez, también a la sombra: la lleva la directa)
+                // (sin la compensación del sol bajo, que es para el llano: las copas, como con el sol a 40° sin compensar)
+                float sinCompensar = _CompensaSol > 0 ? 1 / _CompensaSol : 1;
+                float3 col = albedo * LuzDelMapa(N.y, 0.3, (0.8 * envuelve + 0.5 * contraluz) * sinCompensar, SombraDelSol(s.mundo), 0.45);
+                // La corteza: a la sombra baja como la copa y nunca a negro (un suelo de luminancia, con su tono: se lee marrón).
+                if (_Variacion < 0.5)
+                {
+                    float lc = dot(col, float3(0.2126, 0.7152, 0.0722));
+                    col *= max(1, 0.035 / max(lc, 1e-4));
+                }
                 return half4(PintarMapa(col, s.mundo, true), alfa);
+            }
+            ENDHLSL
+        }
+        // La sombra que arroja: el mismo viento, el recorte por alfa de las tarjetas (sin alpha to coverage) y sin el aclarado (la copa
+        // aclarada sobre el héroe sigue dando sombra: se lee «bajo el bosque»). Sesgo por normal contra el acné en las copas.
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull [_Cull]
+            HLSLPROGRAM
+            #pragma vertex VertSombra
+            #pragma fragment FragSombra
+            #pragma multi_compile_instancing
+            float3 _LightDirection;
+            struct EntradaSombra { float4 pos : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; float4 color : COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct SalidaSombra { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
+            SalidaSombra VertSombra(EntradaSombra e)
+            {
+                SalidaSombra s;
+                UNITY_SETUP_INSTANCE_ID(e);
+                float3 origen = TransformObjectToWorld(float3(0, 0, 0));
+                float azar = frac(sin(dot(origen.xz, float2(12.9898, 78.233))) * 43758.5453);
+                float3 w = ConViento(TransformObjectToWorld(e.pos.xyz), azar, e.color.a);
+                s.pos = TransformWorldToHClip(ApplyShadowBias(w, TransformObjectToWorldNormal(e.normal), _LightDirection));
+            #if UNITY_REVERSED_Z
+                s.pos.z = min(s.pos.z, UNITY_NEAR_CLIP_VALUE);
+            #else
+                s.pos.z = max(s.pos.z, UNITY_NEAR_CLIP_VALUE);
+            #endif
+                s.uv = TRANSFORM_TEX(e.uv, _MainTex);
+                return s;
+            }
+            half4 FragSombra(SalidaSombra s) : SV_Target
+            {
+                if (_Recorte > 0.5) clip(SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, s.uv).a - 0.5);
+                return 0;
             }
             ENDHLSL
         }

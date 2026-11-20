@@ -98,6 +98,47 @@ float3 PintarMapa(float3 colorLineal, float3 mundo, bool conNiebla)
     return SRGBToLinear(c);
 }
 
+
+// ---- La luz del mapa con sombras reales (`PinturaDelMapa.SombrasReales`; la global `_SombrasReales` la pone MapaDeMundo) ----
+// Apagadas, exactamente la luz de antes (ambiente + directa, gris). Encendidas, la del prototipo (`vista.ts`): el cielo como hemisferio
+// (#dfe9f0 arriba y #6b5a40 abajo, por N.y) en el ambiente y el sol #fff0d8 en la directa, normalizados a luminancia 1 para que a pleno sol
+// quede la misma luminancia que antes. A la sombra queda `queda` (lineal) de la luz al sol, con un tinte de cielo frío y azulado, no negro:
+// en el suelo 0,36 (unos 0,62 en pantalla, sRGB) y en las copas 0,45 (unos 0,70), para no matar la luz horneada en su color de vértice.
+float _SombrasReales;
+// Hasta dónde (m desde la cámara) llega el mapa de sombras: más allá, la mancha bajo los árboles (MapaSombraArbol) sigue sola.
+float _SombraHasta;
+
+#ifdef UNIVERSAL_REALTIME_LIGHTS_INCLUDED
+// La sombra del sol en `mundo` (1 al sol, 0 a la sombra): el mapa de sombras de URP con sus cascadas y el desvanecido al final de la distancia.
+float SombraDelSol(float3 mundo)
+{
+#if defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE)
+    if (_SombrasReales < 0.5) return 1;
+    return GetMainLight(TransformWorldToShadowCoord(mundo), mundo, half4(1, 1, 1, 1)).shadowAttenuation;
+#else
+    return 1;
+#endif
+}
+#endif
+
+// (`_CompensaSol`: el seno de la elevación del sol del prototipo entre el del sol de ahora; el llano a pleno sol queda igual que siempre)
+float _CompensaSol;
+
+float3 LuzDelMapa(float ny, float ambiente, float directa, float sombra, float queda)
+{
+    directa *= _CompensaSol > 0 ? _CompensaSol : 1;
+    float total = ambiente + directa;
+    if (_SombrasReales < 0.5) return total.xxx;
+    float3 cielo = lerp(float3(1.362, 0.945, 0.475), float3(0.918, 1.016, 1.085), saturate(ny * 0.5 + 0.5));
+    float3 alSol = ambiente * cielo + directa * float3(1.13, 0.984, 0.775);
+    float3 aLaSombra = queda * total * float3(0.8, 1.0, 1.32); // (luminancia 1: el cielo frío que llena la sombra)
+    return lerp(aLaSombra, alSol, sombra);
+}
+
+// La sombra del relieve horneada en la tesela (`TerrenoDelMapa`, `SombraDelRelieve`): llega como lo que tapa (0 al sol), así una malla sin el
+// dato queda al sol.
+float ConRelieve(float sombra, float tapaElRelieve) { return min(sombra, 1 - tapaElRelieve * step(0.5, _SombrasReales)); }
+
 #endif
 
 // ---- El suelo bajo una planta (para la vegetación): lo mismo que mira `MapaSuelo` para pintar seco o verde ----

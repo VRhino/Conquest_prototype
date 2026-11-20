@@ -34,6 +34,74 @@ namespace ConquestTactics.Mundo.Mapa
         public double MsConstruyendo => reloj.Elapsed.TotalMilliseconds;
         /// <summary>La tesela que más ha tardado en construirse (ms).</summary>
         public double PeorMsTesela { get; private set; }
+        /// <summary>Lo más que ha tardado la sombra del relieve en un fotograma (ms; tiene presupuesto).</summary>
+        public double PeorMsRelieve { get; private set; }
+        /// <summary>Teselas a la espera de su sombra del relieve.</summary>
+        public int HorneandoRelieve => horneando.Count;
+
+        sealed class Horneado
+        {
+            public GameObject Go;
+            public double X0, Y0;
+            public int N, Nr, Hechos;
+            public float Paso;
+            public float[] Rejilla;
+            public List<Vector2Int> Agua;
+        }
+        readonly List<Horneado> horneando = new List<Horneado>();
+        readonly System.Diagnostics.Stopwatch relojRelieve = new System.Diagnostics.Stopwatch();
+
+        /// <summary>La sombra del relieve de las teselas pendientes, como mucho `presupuestoMs` por fotograma (el relieve no se lee desde otro hilo):
+        /// punto a punto de la rejilla de 2 u; al acabar una, sus vértices la reciben (UV1.x del suelo y del faldón, UV0.z del agua).</summary>
+        public void HornearRelieve(double presupuestoMs)
+        {
+            if (horneando.Count == 0) return;
+            relojRelieve.Restart();
+            var e = EscalaDelMapa.MetrosPorUnidad;
+            var (dx, dy, tan) = SombraDelRelieve.DelSol(PinturaDelMapa.Sol.x, PinturaDelMapa.Sol.y, PinturaDelMapa.Sol.z);
+            double Altura(double x, double y) => relieve.AlturaEn(x, y);
+            while (horneando.Count > 0 && relojRelieve.Elapsed.TotalMilliseconds < presupuestoMs)
+            {
+                var h = horneando[0];
+                if (h.Go == null) { horneando.RemoveAt(0); continue; } // ya se soltó
+                h.Rejilla ??= new float[h.Nr * h.Nr];
+                while (h.Hechos < h.Rejilla.Length && relojRelieve.Elapsed.TotalMilliseconds < presupuestoMs)
+                {
+                    int i = h.Hechos % h.Nr, j = h.Hechos / h.Nr;
+                    h.Rejilla[h.Hechos++] = SombraDelRelieve.Visibilidad(Altura, h.X0 + i * SombraDelRelieve.PasoRejilla, h.Y0 + j * SombraDelRelieve.PasoRejilla, dx, dy, tan, e);
+                }
+                if (h.Hechos < h.Rejilla.Length) break;
+                AplicarRelieve(h);
+                horneando.RemoveAt(0);
+            }
+            PeorMsRelieve = System.Math.Max(PeorMsRelieve, relojRelieve.Elapsed.TotalMilliseconds);
+        }
+
+        void AplicarRelieve(Horneado h)
+        {
+            float Tapa(int i, int j) => 1 - SombraDelRelieve.En(h.Rejilla, h.Nr, SombraDelRelieve.PasoRejilla, i * h.Paso, j * h.Paso);
+            int n = h.N, borde = 4 * n;
+            var tapas = new Vector2[n * n + borde];
+            for (int j = 0; j < n; j++)
+                for (int i = 0; i < n; i++)
+                    tapas[j * n + i] = new Vector2(Tapa(i, j), 0);
+            // el faldón, como el contorno (el mismo orden que en Construir)
+            for (int s = 0; s < n; s++)
+            {
+                tapas[n * n + s] = tapas[s];
+                tapas[n * n + n + s] = tapas[s * n + n - 1];
+                tapas[n * n + 2 * n + s] = tapas[(n - 1) * n + (n - 1 - s)];
+                tapas[n * n + 3 * n + s] = tapas[(n - 1 - s) * n];
+            }
+            h.Go.GetComponent<MeshFilter>().sharedMesh.SetUVs(1, tapas);
+            if (h.Agua == null) return;
+            var agua = h.Go.transform.Find("agua")?.GetComponent<MeshFilter>()?.sharedMesh;
+            if (agua == null) return;
+            var uvs = new List<Vector3>();
+            agua.GetUVs(0, uvs);
+            for (int k = 0; k < uvs.Count && k < h.Agua.Count; k++) uvs[k] = new Vector3(uvs[k].x, uvs[k].y, Tapa(h.Agua[k].x, h.Agua[k].y));
+            agua.SetUVs(0, uvs);
+        }
 
         /// <summary>`nivelDelMar`: metros a los que va la lámina del mar (el umbral de agua del generador). `umbrales`: metros de la costa, la colina,
         /// la montaña y la cima (los del generador).</summary>
@@ -321,19 +389,26 @@ namespace ConquestTactics.Mundo.Mapa
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = material;
             mr.shadowCastingMode = ShadowCastingMode.Off;
-            if (hayAgua) Lamina(go.transform, n, M, W, paso, agua, crudo, suelo, nivelCerca);
+            var verticesDelAgua = hayAgua ? Lamina(go.transform, n, M, W, paso, agua, crudo, suelo, nivelCerca) : null;
+            // La sombra del relieve (con sombras reales): se hornea poco a poco, con presupuesto por fotograma (`HornearRelieve`); la tesela sale
+            // sin ella y la recibe al acabar.
+            if (PinturaDelMapa.SombrasReales && PinturaDelMapa.SombraDelRelieve)
+                horneando.Add(new Horneado { Go = go, X0 = x0, Y0 = y0, N = n, Paso = paso, Agua = verticesDelAgua,
+                    Nr = Mathf.RoundToInt(lado / (float)SombraDelRelieve.PasoRejilla) + 1 });
             return go;
         }
 
         /// <summary>La lámina de agua de la tesela (BronzeAgeClient: `laminaDeAgua`): toda celda con alguna esquina de agua. Las esquinas de agua van a
         /// su nivel; las de tierra, al de la muestra de agua más cercana (quedan bajo el suelo, que corta la lámina en la orilla). Cada vértice lleva
         /// en UV0.x lo hondo que queda el fondo (u), para el color, la transparencia, las olas y la espuma del sombreado.</summary>
-        void Lamina(Transform tesela, int n, int M, int W, float paso, bool[] agua, float[] crudo, float[] suelo, float[] nivelCerca)
+        // (devuelve, de cada vértice de la lámina, su (i, j) en la tesela, para la sombra del relieve; null si no hay lámina)
+        List<Vector2Int> Lamina(Transform tesela, int n, int M, int W, float paso, bool[] agua, float[] crudo, float[] suelo, float[] nivelCerca)
         {
             var e = EscalaDelMapa.MetrosPorUnidad;
             var indice = new int[n * n];
             var vertices = new List<Vector3>();
-            var uvs = new List<Vector2>();
+            var uvs = new List<Vector3>();
+            var coordenadas = new List<Vector2Int>();
             var triangulos = new List<int>();
             for (int k = 0; k < indice.Length; k++) indice[k] = -1;
             int Vertice(int i, int j)
@@ -346,8 +421,9 @@ namespace ConquestTactics.Mundo.Mapa
                 if (float.IsNaN(nivel)) nivel = suelo[r];
                 indice[k] = vertices.Count;
                 vertices.Add(new Vector3((float)(i * paso * e), nivel, (float)(-j * paso * e)));
-                // UV0: x lo hondo (u); y, 1 si es un lago (la lámina por encima del mar), que el sombreado pinta más calmado.
-                uvs.Add(new Vector2(Mathf.Max(0, nivel - suelo[r]) / e, nivel > nivelDelMar - 0.5f ? 1 : 0));
+                // UV0: x lo hondo (u); y, 1 si es un lago (la lámina por encima del mar), que el sombreado pinta más calmado; z, la sombra del relieve.
+                uvs.Add(new Vector3(Mathf.Max(0, nivel - suelo[r]) / e, nivel > nivelDelMar - 0.5f ? 1 : 0, 0));
+                coordenadas.Add(new Vector2Int(i, j));
                 return indice[k];
             }
             for (int j = 0; j < n - 1; j++)
@@ -359,7 +435,7 @@ namespace ConquestTactics.Mundo.Mapa
                     triangulos.Add(a); triangulos.Add(b); triangulos.Add(c);
                     triangulos.Add(b); triangulos.Add(d); triangulos.Add(c);
                 }
-            if (triangulos.Count == 0) return;
+            if (triangulos.Count == 0) return null;
             var malla = new Mesh { name = "agua", indexFormat = vertices.Count > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
             malla.SetVertices(vertices);
             var arriba = new Vector3[vertices.Count];
@@ -374,6 +450,7 @@ namespace ConquestTactics.Mundo.Mapa
             var mr = go.AddComponent<MeshRenderer>();
             mr.sharedMaterial = materialAgua;
             mr.shadowCastingMode = ShadowCastingMode.Off;
+            return coordenadas;
         }
 
         /// <summary>El nivel de la lámina de la muestra de agua más cercana a (i, j) a menos de `radio` muestras (por anillos); NaN si no hay.</summary>

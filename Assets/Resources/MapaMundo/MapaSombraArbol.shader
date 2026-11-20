@@ -39,7 +39,10 @@ Shader "Conquest/MapaSombraArbol"
                 UNITY_SETUP_INSTANCE_ID(e);
                 s.pos = TransformObjectToHClip(e.pos.xyz);
                 s.uv = e.uv * 2 - 1;
-                s.oscuro = lerp(_Oscuro, 0.58, smoothstep(0.3, 0.85, SueloBajo(TransformObjectToWorld(float3(0, 0, 0))).z));
+                float3 origen = TransformObjectToWorld(float3(0, 0, 0));
+                s.oscuro = lerp(_Oscuro, 0.58, smoothstep(0.3, 0.85, SueloBajo(origen).z));
+                // con sombras reales, la mancha solo donde no llega el mapa de sombras
+                if (_SombrasReales > 0.5) s.oscuro *= smoothstep(_SombraHasta * 0.75, _SombraHasta, distance(origen, _WorldSpaceCameraPos));
                 return s;
             }
 

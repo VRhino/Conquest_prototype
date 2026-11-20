@@ -185,9 +185,19 @@ namespace ConquestTactics.Mundo.UI.Tests
                     if (relieve.AguaEn(x, y) && relieve.AlturaEn(x, y) < umbral && relieve.AguaEn(x + 3, y) && relieve.AguaEn(x - 3, y)) mar = (x, y);
                 }
             Assert.IsNotNull(mar, "hay mar cerca del campamento 7");
-            var mapaMar = yield_Pixel(mapa, almacen, mar.Value.x + 4, mar.Value.y, mar.Value.x, mar.Value.y);
+            // Se mira el agua más honda de la misma vista (a menos de 6 u del punto de mar), no la somera de la orilla: con el sol a 40° lo somero
+            // pierde algo de azul (aceptado, 2026-11-20) y la orilla queda justa; la condición de color es la de siempre, con la media de 9 × 9.
+            var hondo = mar.Value;
+            for (double dy = -6; dy <= 6; dy += 0.5)
+                for (double dx = -6; dx <= 6; dx += 0.5)
+                {
+                    double x = mar.Value.x + dx, y = mar.Value.y + dy;
+                    if (relieve.AguaEn(x, y) && relieve.AlturaEn(x, y) < relieve.AlturaEn(hondo.x, hondo.y)) hondo = (x, y);
+                }
+            var mapaMar = yield_Pixel(mapa, almacen, mar.Value.x + 4, mar.Value.y, hondo.x, hondo.y);
             while (mapaMar.MoveNext()) yield return mapaMar.Current;
-            Assert.Greater(ultimoPixel.b, ultimoPixel.r + 0.03f, $"el mar se ve con color de agua: {ultimoPixel}");
+            Debug.Log($"[Mar] sol a {Math.Atan2(PinturaDelMapa.Sol.y, new Vector2(PinturaDelMapa.Sol.x, PinturaDelMapa.Sol.z).magnitude) * 180 / Math.PI:0}°, agua honda ({hondo.x:0.0}, {hondo.y:0.0}) a {umbral - relieve.AlturaEn(hondo.x, hondo.y):0} m bajo el nivel: píxel {ultimoPixel}, media de 9 × 9 {ultimaMedia}");
+            Assert.Greater(ultimaMedia.b, ultimaMedia.r + 0.03f, $"el mar se ve con color de agua: {ultimaMedia}");
             Guardar("22_mar");
             var c2 = artefacto.Campamentos.First(c => c.Id == "campamento-2");
             var vado = artefacto.Rios.SelectMany(r => r.Vados).Select(p => (x: p.X / 1000.0, y: p.Y / 1000.0)).Where(p => !relieve.AguaEn(p.x, p.y))
@@ -224,7 +234,13 @@ namespace ConquestTactics.Mundo.UI.Tests
             var p = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(px, py, mapa.AlturaVisible(px, py)));
             Assert.Greater(p.z, 0);
             ultimoPixel = ultimaImagen.GetPixel((int)p.x, (int)p.y);
+            var suma = Color.clear;
+            for (int dj = -4; dj <= 4; dj++)
+                for (int di = -4; di <= 4; di++) suma += ultimaImagen.GetPixel((int)p.x + di, (int)p.y + dj);
+            ultimaMedia = suma / 81;
         }
+
+        Color ultimaMedia;
 
         void Guardar(string nombre)
         {

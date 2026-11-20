@@ -637,6 +637,236 @@ namespace ConquestTactics.Mundo.UI.Tests
             finally { MapaDeMundo.AclararCopas = true; }
         }
 
+        /// <summary>El sol del mapa, por defecto: el acimut del prototipo con 40° de elevación (Víctor, 2026-11-20).</summary>
+        [Test, Category("Mapa")]
+        public void ElSolDelMapaEstaA40Grados()
+        {
+            var s = PinturaDelMapa.Sol;
+            double elevacion = Math.Atan2(s.y, new Vector2(s.x, s.z).magnitude) * 180 / Math.PI;
+            Assert.AreEqual(40, elevacion, 0.01, "40° sobre el horizonte");
+            var p = PinturaDelMapa.SolDelPrototipo;
+            Assert.AreEqual(Math.Atan2(p.z, p.x), Math.Atan2(s.z, s.x), 1e-5, "el acimut del prototipo");
+            Assert.AreEqual(55.7, Math.Atan2(p.y, new Vector2(p.x, p.z).magnitude) * 180 / Math.PI, 0.5, "el del prototipo, unos 56°");
+        }
+
+        /// <summary>La sombra del relieve en el mundo entero: qué parte de la tierra queda a la sombra de las montañas con el sol a 56° y a 40° (en una
+        /// rejilla de 6 u), las tres teselas con más, y (`MUNDO_CAPTURAS`) la de más, a zoom alejado con el sol a 40°, con y sin ella. Mide también
+        /// el peor fotograma al cruzar un borde de tesela, con la sombra del relieve encendida y apagada.</summary>
+        [Category("Mapa"), Explicit("medida y capturas de la sombra del relieve")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LaSombraDelRelieveEnElMundo()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "relieve-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            double e = EscalaDelMapa.MetrosPorUnidad, lado = relieve.LadoEnUnidades, paso = 6;
+            double ancho = relieve.Columnas * relieve.Paso, alto = relieve.Filas * relieve.Paso;
+            double Altura(double x, double y) => relieve.AlturaEn(x, y);
+            var porTesela = new Dictionary<(int, int), int>();
+            foreach (var grados in new[] { 56.0, 40.0 })
+            {
+                var sol = PinturaDelMapa.SolConElevacion(grados);
+                var (dx, dy, tan) = SombraDelRelieve.DelSol(sol.x, sol.y, sol.z);
+                long tierra = 0, sombra = 0;
+                var reloj = System.Diagnostics.Stopwatch.StartNew();
+                for (double y = paso / 2; y < alto; y += paso)
+                {
+                    for (double x = paso / 2; x < ancho; x += paso)
+                    {
+                        if (relieve.AguaEn(x, y)) continue;
+                        tierra++;
+                        if (SombraDelRelieve.Visibilidad(Altura, x, y, dx, dy, tan, e) >= 0.5f) continue;
+                        sombra++;
+                        if (grados == 40)
+                        {
+                            var k = ((int)(x / lado), (int)(y / lado));
+                            porTesela[k] = porTesela.TryGetValue(k, out var c) ? c + 1 : 1;
+                        }
+                    }
+                    if (reloj.ElapsedMilliseconds > 200) { reloj.Restart(); yield return null; }
+                }
+                Debug.Log($"[Relieve] sol a {grados}°: {sombra * 100.0 / tierra:0.00} % de la tierra a la sombra del relieve ({sombra} de {tierra} celdas de {paso} u)");
+            }
+            var mejores = porTesela.OrderByDescending(kv => kv.Value).Take(3).ToList();
+            foreach (var kv in mejores)
+                Debug.Log($"[Relieve] tesela ({kv.Key.Item1}, {kv.Key.Item2}), centro ({(kv.Key.Item1 + 0.5) * lado:0}, {(kv.Key.Item2 + 0.5) * lado:0}) u: {kv.Value} celdas a la sombra ({kv.Value * 100.0 / ((lado / paso) * (lado / paso)):0} %)");
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (PinturaDelMapa.SombraDelRelieve, PinturaDelMapa.Sol);
+            try
+            {
+                PinturaDelMapa.Sol = PinturaDelMapa.SolConElevacion(40);
+                var sitio = mejores.Count > 0 ? ((mejores[0].Key.Item1 + 0.5) * lado, (mejores[0].Key.Item2 + 0.5) * lado) : SitiosDeVegetacion(relieve, artefacto, datos)["denso"];
+                foreach (var conRelieve in new[] { true, false })
+                {
+                    PinturaDelMapa.SombraDelRelieve = conRelieve;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, sitio, null);
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    yield return Llegar(mapa, almacen, sitio);
+                    var fin = Time.realtimeSinceStartup + 60;
+                    while (mapa.HorneandoRelieve > 0 && Time.realtimeSinceStartup < fin) yield return null;
+                    yield return Vista(mapa, ZoomDelMapa.Alejado, 30, $"relieve_{(conRelieve ? "con" : "sin")}");
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"relieve_{(conRelieve ? "con" : "sin")}_habitual");
+                    // Cruzar un borde de tesela: de 4 u antes a 12 u después, a 0,1 u por fotograma, a zoom habitual.
+                    var (sx, sy) = sitio;
+                    double bx = Math.Floor(sx / lado) * lado + lado;
+                    var ejercito = almacen.Buscar(TipoEntidad.Ejercito, "ej-1").Ejercito;
+                    ejercito.Posicion = Pu(bx - 4, sy);
+                    yield return new WaitForSecondsRealtime(2);
+                    fin = Time.realtimeSinceStartup + 60;
+                    while (mapa.HorneandoRelieve > 0 && Time.realtimeSinceStartup < fin) yield return null;
+                    var tiempos = new List<float>();
+                    for (int k = 1; k <= 160; k++)
+                    {
+                        ejercito.Posicion = Pu(bx - 4 + k * 0.1, sy);
+                        yield return null;
+                        tiempos.Add(Time.unscaledDeltaTime * 1000);
+                    }
+                    var orden = tiempos.OrderBy(v => v).ToList();
+                    Debug.Log($"[Relieve] cruzar un borde de tesela, sombra del relieve {(conRelieve ? "encendida" : "apagada")}: mediana {orden[80]:0.0} ms, peor {orden[^1]:0.0} ms, "
+                        + $"segundo peor {orden[^2]:0.0} ms; el relieve, como mucho {mapa.PeorMsRelieve:0.0} ms en un fotograma");
+                }
+            }
+            finally { (PinturaDelMapa.SombraDelRelieve, PinturaDelMapa.Sol) = antes; }
+        }
+
+        /// <summary>La luz y las sombras del mapa, para las capturas de revisión (`MUNDO_CAPTURAS`): antes (sin sombras reales, la luz de siempre y
+        /// la mancha) y con sombras reales con el sol del prototipo (56°) y con uno más bajo (40°, el mismo acimut), en el bosque denso, el borde de
+        /// un bosque, una ribera, la costa, un valle de montaña y el héroe dentro del bosque, a los tres zooms. Mide el fotograma con y sin sombras
+        /// en el bosque denso, la pradera, la costa y la montaña a zoom habitual. Comprueba que al irse el mapa el asset de URP vuelve a ser el
+        /// original y con sus valores.</summary>
+        [Category("Mapa"), Explicit("capturas de revisión de la luz y las sombras")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LaLuzYLasSombras()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "luz-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            float U(string k) => (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + k) * Relieve.MetrosAltura);
+            var umbrales = new Vector4(U("umbralCosta"), U("umbralColina"), U("umbralMontana"), U("umbralCima"));
+            float nieve = umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w);
+            var cuenta = new Dictionary<(int, int), int[]>();
+            yield return ContarEspecies(relieve, artefacto, umbrales, nieve, cuenta);
+            int N(int[] c, EspecieDeArbol x) => c[(int)x];
+            int Arboles(int[] c) => c.Take(7).Sum();
+            const int H = VegetacionDelMapa.Hierba, F = VegetacionDelMapa.Flor, P = VegetacionDelMapa.Piedra;
+            var sitios = MejoresSitios(cuenta, new (string, Func<int[], double>)[]
+            {
+                ("ribera", c => N(c, EspecieDeArbol.Alamo) > 0 && c[VegetacionDelMapa.Canas] > 0 ? Math.Min(N(c, EspecieDeArbol.Alamo), 8) + Math.Min(c[VegetacionDelMapa.Canas], 12) : -1),
+                ("costa", c => N(c, EspecieDeArbol.Palmera) > 0 && N(c, EspecieDeArbol.Pino) > 0 ? Math.Min(N(c, EspecieDeArbol.Palmera), 6) * 2 + Math.Min(N(c, EspecieDeArbol.Pino), 8) : -1),
+                ("montana", c => N(c, EspecieDeArbol.Abeto) > 0 ? Math.Min(N(c, EspecieDeArbol.Abeto), 20) + 0.1 * Arboles(c) : -1),
+                ("pradera", c => c[F] > 0 && c[H] > 0 ? Math.Min(c[H], 200) + 4 * Math.Min(c[F], 40) - 2 * Arboles(c) - c[P] : -1),
+                // un árbol suelto (de los grandes) en campo abierto: para comparar el largo de la sombra con los dos soles
+                ("suelto", c => Arboles(c) == 1 && N(c, EspecieDeArbol.Cipres) == 0 && N(c, EspecieDeArbol.Palmera) == 0 && c[VegetacionDelMapa.Lentisco] + c[VegetacionDelMapa.Retama] < 3 ? c[H] : -1),
+            }).ToDictionary(q => q.nombre, q => (q.x, q.y));
+            foreach (var kv in SitiosDeVegetacion(relieve, artefacto, datos)) sitios[kv.Key] = kv.Value;
+            var sinSombras = new Dictionary<string, Color32[]>();
+            int TexelesMasOscuros(Color32[] a, Color32[] b)
+            {
+                int n = 0;
+                for (int k = 0; k < a.Length; k++)
+                {
+                    float la = 0.2126f * a[k].r + 0.7152f * a[k].g + 0.0722f * a[k].b, lb = 0.2126f * b[k].r + 0.7152f * b[k].g + 0.0722f * b[k].b;
+                    if (la > 40 && lb < la * 0.75f) n++;
+                }
+                return n;
+            }
+
+            var original = QualitySettings.renderPipeline;
+            var valores = original is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset u0 ? (u0.shadowDistance, u0.shadowCascadeCount, u0.shadowNormalBias) : default;
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (PinturaDelMapa.SombrasReales, PinturaDelMapa.Sol, PinturaDelMapa.SombraDelRelieve);
+            try
+            {
+                foreach (var (nombre, sombras, grados) in new[] { ("antes", false, 56.0), ("sol56", true, 56.0), ("sol40", true, 40.0), ("sol40sinrelieve", true, 40.0) })
+                {
+                    // (la última vuelta, solo la montaña: el sol a 40° sin la sombra del relieve, para ver lo que pone)
+                    bool soloMontana = nombre == "sol40sinrelieve";
+                    PinturaDelMapa.SombraDelRelieve = !soloMontana;
+                    PinturaDelMapa.SombrasReales = sombras;
+                    PinturaDelMapa.Sol = PinturaDelMapa.SolConElevacion(grados);
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    Assert.AreSame(original, QualitySettings.renderPipeline, "sin mapa, el asset de URP es el original");
+                    var (almacen, sesion) = Almacen(url, sitios["denso"], null);
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    yield return null;
+                    Assert.AreEqual(sombras, mapa.ConPipelineDelMapa, "con sombras, el mapa trabaja con su copia del asset de URP");
+                    foreach (var zona in new[] { "denso", "borde", "ribera", "costa", "montana" })
+                    {
+                        if (!sitios.ContainsKey(zona) || (soloMontana && zona != "montana")) continue;
+                        yield return Llegar(mapa, almacen, sitios[zona]);
+                        foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                        {
+                            MapaDeMundo.AclararCopas = false;
+                            yield return Vista(mapa, zoom, 30, $"luz_{zona}_{nombre}_{z}");
+                            // Con sombras, en el borde del bosque de cerca hay suelo bajo las copas más oscuro que sin ellas (las copas arrojan).
+                            if (zona == "borde" && zoom == ZoomDelMapa.Cerca && !soloMontana)
+                            {
+                                if (!sombras) sinSombras[zona] = ultima.GetPixels32();
+                                else
+                                {
+                                    int oscuros = TexelesMasOscuros(sinSombras[zona], ultima.GetPixels32());
+                                    Debug.Log($"[Luz] borde de cerca, {nombre}: {oscuros * 100.0 / (1600 * 900):0.0} % de la imagen más oscura que sin sombras");
+                                    Assert.Greater(oscuros, 1600 * 900 / 20, "las copas dan sombra en el suelo (más del 5 % de la imagen)");
+                                }
+                            }
+                        }
+                        if (zona == "montana" && sombras && !soloMontana)
+                        {
+                            // El valle a la sombra de la cresta: la sombra horneada del relieve llega a las teselas (UV1.x, lo que tapa).
+                            float masTapado = 0;
+                            foreach (var f in go.GetComponentsInChildren<MeshFilter>().Where(f => f.name.StartsWith("tesela")))
+                            {
+                                var uv = new List<Vector2>();
+                                f.sharedMesh.GetUVs(1, uv);
+                                foreach (var t in uv) masTapado = Math.Max(masTapado, t.x);
+                            }
+                            Debug.Log($"[Luz] montaña, {nombre}: lo más tapado por el relieve, {masTapado:0.00}; la sombra del relieve cuesta como mucho {mapa.PeorMsRelieve:0.0} ms por tesela");
+                            if (grados == 40) Assert.Greater(masTapado, 0.9f, "con el sol a 40°, en la montaña hay valles a la sombra del relieve");
+                        }
+                        if (nombre == "sol56" || soloMontana) continue; // el coste: antes y con el sol de ahora (40°)
+                        if (zona == "denso" || zona == "costa" || zona == "montana")
+                        {
+                            yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"luz_medir_{zona}_{nombre}");
+                            yield return Medir(mapa, $"luz: {zona}, zoom habitual, {nombre}");
+                        }
+                    }
+                    if (soloMontana) continue;
+                    if (sitios.ContainsKey("suelto"))
+                    {
+                        yield return Llegar(mapa, almacen, sitios["suelto"]);
+                        yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"luz_suelto_{nombre}");
+                    }
+                    MapaDeMundo.AclararCopas = true;
+                    yield return Llegar(mapa, almacen, sitios["denso"]);
+                    foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                        yield return Vista(mapa, zoom, 30, $"luz_heroe_{nombre}_{z}");
+                    if (nombre != "sol56" && sitios.ContainsKey("pradera"))
+                    {
+                        yield return Llegar(mapa, almacen, sitios["pradera"]);
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"luz_medir_pradera_{nombre}");
+                        yield return Medir(mapa, $"luz: pradera, zoom habitual, {nombre}");
+                    }
+                }
+                UnityEngine.Object.Destroy(go);
+                go = null;
+                yield return null;
+                Assert.AreSame(original, QualitySettings.renderPipeline, "al irse el mapa, el asset de URP vuelve a ser el original");
+                if (original is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset u1)
+                    Assert.AreEqual(valores, (u1.shadowDistance, u1.shadowCascadeCount, u1.shadowNormalBias), "el original, con sus valores");
+            }
+            finally
+            {
+                (PinturaDelMapa.SombrasReales, PinturaDelMapa.Sol, PinturaDelMapa.SombraDelRelieve) = antes;
+                MapaDeMundo.AclararCopas = true;
+            }
+        }
+
         /// <summary>El mosaico de reglas (`MosaicoDeVegetacion`) en el mapa, para las capturas de revisión (`MUNDO_CAPTURAS`): la misma vista con
         /// el mosaico apagado (el reparto del prototipo) y encendido en el borde de un bosque, el interior de un bosque denso, una ribera y el
         /// monte bajo, a zoom habitual y desde más arriba; y la vista de depuración (cada celda con el color de su estado). Cuenta los árboles de
@@ -963,7 +1193,7 @@ namespace ConquestTactics.Mundo.UI.Tests
             tiempos.Sort();
             var v = mapa.Vegetacion;
             Debug.Log($"[Suelo] {que}: {mapa.TeselasCargadas} teselas; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms"
-                + (v == null ? "" : $"; vegetación: {v.Dibujadas} plantas, {v.Triangulos} triángulos, {v.Llamadas} llamadas, {v.MsDibujar:0.00} ms de CPU al dibujar"));
+                + (v == null ? "" : $"; vegetación: {v.Dibujadas} plantas, {v.Triangulos} triángulos, {v.Llamadas} llamadas ({v.LlamadasQueArrojan} arrojan sombra), {v.MsDibujar:0.00} ms de CPU al dibujar"));
         }
 
         (int tris, int sinFaldon) Triangulos()
