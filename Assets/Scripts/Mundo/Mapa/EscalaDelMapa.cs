@@ -31,10 +31,13 @@ namespace ConquestTactics.Mundo.Mapa
     /// <summary>Lo que pinta el mapa con cuadros y colores planos, hasta que haya modelos propios.</summary>
     public static class PinturaDelMapa
     {
-        // Suelo por clase de terreno del artefacto (`ClaseTerreno`): costa, llano, colina, montaña y cima.
-        public static readonly Color Costa = new Color(0.80f, 0.76f, 0.56f), Llano = new Color(0.72f, 0.69f, 0.47f),
-            Colina = new Color(0.58f, 0.57f, 0.38f), Montana = new Color(0.53f, 0.47f, 0.39f), Cima = new Color(0.76f, 0.74f, 0.70f),
-            Sotobosque = new Color(0.36f, 0.44f, 0.25f);
+        /// <summary>La nieve del suelo (`Conquest/MapaSuelo`): solo en los picos más altos, desde esta fracción del tramo entre el umbral de la cima
+        /// y la altura máxima del relieve. Con la cima a 685 m y el máximo a 1.000, unos 840 m: en el mundo de prueba, el 12 % más alto de la
+        /// clase cima (mirado en el histograma de alturas del artefacto, 2026-11-20).</summary>
+        public const float NieveSobreCima = 0.5f;
+        /// <summary>Radio (m) de la pendiente ancha del suelo: la roca de pendiente y la nieve la miran, así una arista más estrecha que esto no
+        /// sale en roca y los bordes no siguen los triángulos de la malla.</summary>
+        public const float RadioPendienteAncha = 24;
         // Agua: somera (lagos y orillas) y honda (mar adentro); ríos y vados.
         public static readonly Color AguaSomera = new Color32(0x5a, 0xae, 0xa6, 255), AguaHonda = new Color32(0x1d, 0x4d, 0x72, 255),
             Vado = new Color32(0xd9, 0xc7, 0x9a, 255);
@@ -42,6 +45,12 @@ namespace ConquestTactics.Mundo.Mapa
         public const float MarHondo = 30;
         /// <summary>Ancho de los ríos (u): navegables y los demás.</summary>
         public const float RioNavegable = 3, Rio = 1.5f;
+
+        // El cielo de BronzeAgeClient (`config.ts`, `cielo.ts`): cénit, horizonte (también el color de la bruma lejana) y bajo el horizonte, en
+        // sRGB; y hacia dónde está el sol (allí, (−60, 110, 45) con z = y del mapa; aquí z = −y).
+        public static readonly Color Cenit = new Color32(0x3d, 0x72, 0xb0, 255), Horizonte = new Color32(0xb7, 0xc6, 0xcf, 255),
+            BajoElHorizonte = new Color32(0x8e, 0x9a, 0x98, 255);
+        public static readonly Vector3 Sol = new Vector3(-60, 110, -45).normalized;
 
         // La niebla de guerra: el color (el fondo del tema de BronzeAgeClient) y la opacidad de lo nunca visto, lo recordado y lo que se ve.
         public static readonly Color Niebla = new Color32(10, 14, 23, 255);

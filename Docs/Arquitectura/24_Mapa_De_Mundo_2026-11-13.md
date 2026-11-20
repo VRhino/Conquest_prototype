@@ -23,7 +23,7 @@ ECS de la batalla, y tampoco dentro de `Conquest.Mundo`, que es C# puro y se pru
 
 Una unidad de Unity es un metro. Una unidad del mapa (u) son `factor_unity` metros (12, del manifiesto del artefacto; `EscalaDelMapa`), y la
 altura del relieve, que ya viene en metros, va tal cual, sin exagerar. Ejes: x = x del mapa, y = altura, z = −y del mapa (la fila 0 del mapa
-es el norte; con z = y saldría en espejo). El mapa entero mide 32 × 24 km: la precisión de `float` sigue por debajo del centímetro.
+es el norte; con z = y saldría en espejo). El mapa entero (el mundo de prueba de 2026-11) mide 5.334 × 4.000 u, 64 × 48 km: la precisión de `float` sigue por debajo del centímetro.
 
 ## Valores
 
@@ -98,7 +98,7 @@ columna ya en marcha para comprobar que la ruta sale desde el primer fotograma. 
 
 ## Para la fase de arte
 
-- El pasto por fertilidad y la mezcla de colores por altura del suelo (BronzeAgeClient: `colorDelSuelo`), que dan variedad al llano.
+- ~~El pasto por fertilidad y la mezcla de colores por altura del suelo~~: hecho con el suelo con texturas (sección «El suelo», 2026-11-20).
 - Las maquetas de cada cosa en vez de cajas; las figuras de columnas y caravanas.
 - El marco de bronce de la interfaz en 9-slice (bloque 5 de la hoja de ruta).
 
@@ -120,3 +120,117 @@ Pruebas: `MapaConTodoTests` (PlayMode) monta el mapa real con una cosa de cada t
 15 u), comprueba que todas las cintas miran hacia arriba y que el píxel del río, el del mar (junto al campamento 7) y el del vado (junto al
 campamento 2) tienen su color, y guarda capturas con los nombres encima. La de `PantallasDeMundoTests` comprueba que la cinta del río
 cercana queda por encima de la malla del suelo pintada.
+
+## El suelo (fase de arte, tema 1: suelo y relieve, 2026-11-20)
+
+Estilo de Synty (pintado, formas legibles) con más detalle, y la paleta la deciden los datos del motor: ocre y pasto amarillento donde es
+seco, verde donde hay humedad y fertilidad, roca clara en las cimas y nieve solo en los picos más altos.
+
+**Capas** (`Assets/Resources/MapaMundo/Suelo`, tres Texture2DArray de 8 cortes de 1024², más un ruido suave de 512²):
+
+| Corte | Capa | Dónde va |
+|---|---|---|
+| 0 | pasto seco | el llano y las colinas con poca humedad y fertilidad |
+| 1 | pasto verde | donde la media de humedad y fertilidad pasa de `_Verdor` (0,28 → 0,55) |
+| 2 | tierra apisonada | a manchas dentro de lo más seco (media por debajo de 0,12, con borde ancho) |
+| 3 | arena | por debajo del umbral de la costa (420 m), con borde de 20 m |
+| 4 | grava | a manchas en la subida de la colina a la montaña (570–600 m) y al pie de la roca de pendiente |
+| 5 | roca en facetas | desde la montaña hacia la cima (620–695 m) y en toda pendiente fuerte (1 − normal.y de la pendiente ancha, de 0,14 a 0,4, con ruido); triplanar, a 2/3 de la escala de las demás |
+| 6 | nieve | por encima de la cima más la mitad del tramo hasta el máximo del relieve (≈ 842 m), con un borde de 70 m roto por ruido de 25 a 900 m, menos en pendientes anchas fuertes |
+| 7 | sotobosque | según la densidad de bosque (0,08 → 0,85), como mucho al 80 %: el pasto asoma |
+
+`suelo_color` va en sRGB; `suelo_normal` (normal en RGB, +y de la textura hacia arriba) y `suelo_mascara` (R altura para la mezcla, G
+suavidad), en lineal. Los importa `ImportarSueloDelMapa` (Editor, `Conquest.Mundo.Mapa.Editor`): al regenerarlas y copiarlas se importan bien
+sin tocar nada.
+
+**Datos que usa** el sombreado `Conquest/MapaSuelo` (solo el suelo; ríos, cintas y lo propio siguen con `MapaColor`):
+- La altura del vértice (el relieve fino) y su pendiente.
+- Los umbrales del generador de `/v1/datos` (`ELEVACION.umbralCosta`, `umbralColina`, `umbralMontana`, `umbralCima`).
+- La fertilidad, la humedad y la densidad de bosque del artefacto, en una textura de una celda por texel (667 × 500, celdas de 48 m) leída con
+  filtro bilineal; la posición se mueve hasta celda y media con ruido, y no quedan escalones de 48 m.
+- La clase de terreno ya no se usa en el suelo: las zonas salen de la altura con umbrales suaves, como `colorDelSuelo` de BronzeAgeClient.
+
+**Laderas (ronda 5).** En las laderas todas las capas van triplanares (pesos con la normal geométrica, a la octava potencia;
+en lo casi llano, solo la proyección de arriba). También va así la altura de la máscara con que se mezclan. Esa era la causa del estirado
+de la ronda 4: la mezcla leía la máscara solo desde arriba, y en una ladera empinada esa proyección se estira por la pendiente, así que el
+borde entre nieve y roca salía en rayas verticales. La segunda escala de cerca va además girada 37°. La nieve lleva su propia luz: luz
+envolvente y, en lo que no mira al sol, azul claro.
+
+**Cómo pinta.** Pesos de partida por capas de pintura (el llano, encima el bosque, la grava, la arena, la roca y la nieve), y luego mezcla por
+altura de textura (el borde sigue las matas y las piedras). UV en espacio de mundo: cerca, cada capa son dos muestras a 48 m y a 83 m por
+repetición mezcladas por ruido (contra la repetición); lejos (de 220 a 900 m de la cámara), una a 200 m. Encima, variación de luz y de tono a
+unos 170 y 900 m. Luz como `MapaColor`, y la niebla de guerra igual. El agua y la capa de fertilidad van sin textura, con su color de vértice
+(alfa 0), como antes.
+
+**La pendiente ancha.** Cada vértice lleva también (UV0) la normal del relieve suavizado con una caja de ±24 m
+(`PinturaDelMapa.RadioPendienteAncha`). La roca de pendiente y la nieve la miran en vez de la de la malla: con la de la malla, el borde seguía
+las diagonales de los triángulos y salía en dientes de sierra cada 6 m, y una arista estrecha salía en dos cintas de roca. Donde la pendiente
+de la malla es fuerte pero la ancha no, va grava.
+
+**Teselas.** La normal sale de las alturas con el anillo del vecino (ya no de `RecalculateNormals` por tesela) y cada tesela lleva un faldón
+de un paso de alto que tapa la grieta con una vecina de otro paso. El faldón suma un 4 % de triángulos.
+
+**Rendimiento** (mismo método que arriba, `PantallasDeMundoTests.CrearCuentaEntrarYCerrarSesion`, marchando, 300 fotogramas, editor en
+batch):
+
+| | Teselas | Mediana | p95 | Peor |
+|---|---|---|---|---|
+| Antes | 23 | 1,6 ms | 1,9 ms | 15,9 ms |
+| Ronda 1 | 23 (425.984 triángulos con faldones) | 1,5 ms | 1,8 ms | 18,3 ms |
+| Ronda 2 | 23 | 1,6 ms | 1,7 ms | 15,7 ms |
+| Ronda 3, con niebla y cielo | 23 | 1,5 ms | 1,7 ms | 16,6 ms |
+| Final (ronda 5) | 23 | 1,6 ms | 1,9 ms | 18,8 ms |
+
+Construir una tesela lleva de 3 a 4 ms (48 teselas en 150–170 ms); con la pendiente ancha (ronda 3), de 4 a 6,5 ms (48 en 200 ms, 23 en 150); el peor fotograma sigue siendo el de construirlas.
+
+**Regenerar las texturas.** La roca y la grava se hornean en Blender desde geometría de verdad. `hornear.py` pone bloques y lajas
+low-poly, o cantos de tres tamaños, repetidos 3 × 3. Desde la ronda 5, la roca son masas de tamaños mezclados, sin hiladas: pocas
+grandes, bastantes medianas y cascajo. El estrato solo se insinúa con el buzamiento común de la mitad de las lajas. Hornea, del cuadro del centro, la normal, la oclusión y la altura a
+`horneado/*.npy`, y guarda `roca.blend` y `grava.blend`:
+`"C:\Program Files\Blender Foundation\Blender 5.3\blender.exe" -b --python hornear.py -- todo`, unos 40 s.
+Luego, desde `BronzeAgeArte/mapa/suelo`: `python generar.py --conquest <checkout de Conquest>` (numpy, Pillow y scipy; misma semilla, mismas
+texturas). La roca y la grava pintan su color a partir de lo horneado: un tono base, luz en las caras de arriba, sombra en las cavidades y
+aristas más claras. Saca cada capa por separado, la hoja `salida/hoja_3x3.png` (cada capa repetida 3 × 3, para ver que no se
+nota la junta) y las tiras que copia a `Assets/Resources/MapaMundo/Suelo`. Lo que se afina sin regenerar está en las propiedades del
+sombreado (`_Escalas`, `_Verdor`, `_Roca`, `_Nieve`, `_Mezcla`, `_FuerzaNormal`).
+
+**Pruebas y capturas.** `SueloDelMapaTests` (PlayMode, con `BRONZEAGE_PRUEBA_URL`) busca en los rasters una costa, un llano seco, uno fértil,
+el borde de un bosque, colinas, una montaña con roca en la pendiente y el pico más alto. Captura cada sitio de cerca, a media altura y desde
+arriba, más dos juntas de teselas, la capa de fertilidad y el borde de la niebla. Comprueba que la nieve es blanca, que el llano fértil es más
+verde que el seco y que cada tesela lleva su faldón. Capturas en `Logs/capturas-arte-suelo/`.
+
+**Pendiente de este tema** (tras la ronda 5, lo decide Víctor):
+- Vista desde arriba, la roca de las laderas muy empinadas sale en escorzo, con los bloques comprimidos en astillas cortas.
+- De cerca, la nieve es un blanco limpio.
+- En la textura de roca se reconocen los bloques grandes que se repiten; en el mapa lo rompe la segunda escala girada.
+**Visto de otros temas:** la orilla del agua sale en escalera (la máscara de agua a 0,5 u; tema 2) y en la costa la roca de
+pendiente llega hasta el agua; el sotobosque sin árboles encima se ve como manchas oscuras (tema 3).
+
+## Niebla de guerra, bruma y cielo (calcados de BronzeAgeClient, 2026-11-20)
+
+**Qué hace el prototipo** (`src/mundo3d/niebla.ts`, `cielo.ts` y `vista.ts`):
+- **Niebla de guerra.** Una textura de una celda por texel (R explorado, G a la vista) con filtro **bilineal**: el borde se funde en una
+  celda (5 u). Alfa = mezcla(nunca visto 206/255, mezcla(recordado 158/255, a la vista 0, G), R) sobre #0a0e17. Se mezcla en sRGB, después
+  de convertir el color.
+- **Sombras de nubes**, dentro del mismo parche. Un ruido de valor de 3 octavas a 0,065 por u (manchas de unas 15 u) oscurece un 20 % entre
+  0,5 y 0,75 y deriva a (0,04, 0,015) por segundo en unidades del ruido.
+- **Bruma lejana** (`THREE.Fog` lineal, después de la niebla de guerra) hacia el color del horizonte #b7c6cf. Empieza en
+  min(2,2·d, 0,4·alcance) y acaba en alcance = min(carga, 7·d), en u, con d la distancia de la cámara.
+- **Cielo**: una esfera con degradado del horizonte #b7c6cf al cénit #3d72b0 (1 − e^(−6·h)), bajo el horizonte hacia #8e9a98. Nubes de
+  fbm de 5 octavas proyectadas en un plano (d.xz / (h + 0,12) · 1,6, deriva 0,004 y 0,0015 por segundo, umbral 0,52–0,85, hasta 55 % de
+  blanco). El sol en (−60, 110, 45), con el disco pow(s, 600)·1,2 y el halo pow(s, 24)·0,22 en (1, 0,86, 0,62).
+
+**Qué cambia en Conquest** (`Resources/MapaMundo/MapaComun.hlsl`, que incluyen `MapaColor` y `MapaSuelo`):
+- **Antes** la niebla iba por celdas de 5 u sin fundir (un borde en escalera), se mezclaba en lineal (más oscura que en el prototipo) y no
+  había nubes ni bruma: el mapa cargado acababa en un corte contra un fondo liso.
+- **Ahora** todo lo de arriba, con los mismos valores. `NieblaDelMapa` pone la textura en bilineal y el color en sRGB. `MapaDeMundo` pone
+  la bruma cada fotograma (`_Bruma`: cerca y lejos en metros, metros por u) y el cielo (`CieloDelMapa.shader`, como `RenderSettings.skybox`).
+  El sol de la escena, si lo crea el mapa, sale de donde lo pinta el cielo.
+- Lo propio (`_ConNiebla` 0) va sin nubes ni niebla de guerra, pero con la bruma, como allí.
+
+**No calcado:** las luces del prototipo (hemisférica 1,4 y direccional 2,2 con sombras), el humo y los pájaros. La luz del suelo sigue
+siendo la de `MapaColor`, con el sol en la dirección del cielo; las sombras van con el tema de cielo y luz.
+
+Capturas: `Logs/capturas-arte-suelo/ronda3/` (`niebla_*`, `cielo_*`) y las del banco 3D del prototipo, para comparar, en
+`Logs/capturas-arte-suelo/prototipo/`.
+

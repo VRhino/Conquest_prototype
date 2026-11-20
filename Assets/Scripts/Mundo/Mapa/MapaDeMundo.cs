@@ -30,7 +30,7 @@ namespace ConquestTactics.Mundo.Mapa
         NieblaDelMapa niebla;
         GameObject rios, caja, destino;
         LineRenderer ruta;
-        Material materialSuelo, materialPropio;
+        Material materialSuelo, materialPropio, cielo;
         Vector2? pulsado;
         Vector2 ultimoRaton;
         float ultimaRueda = -1;
@@ -87,8 +87,9 @@ namespace ConquestTactics.Mundo.Mapa
             materialPropio = new Material(sombreado) { name = "lo propio" };
             materialPropio.SetFloat("_ConNiebla", 0);
 
-            var nivelDelMar = (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION.umbralAgua") * Relieve.MetrosAltura);
-            terreno = new TerrenoDelMapa(relieve, new RasterDeMundo(artefacto.Terreno), Raster(artefacto.DensidadBosque), Raster(artefacto.Fertilidad), nivelDelMar, materialSuelo, transform);
+            float Umbral(string nombre) => (float)(datos.Numero("documentos.Generacion_Del_Mundo.ELEVACION." + nombre) * Relieve.MetrosAltura);
+            terreno = new TerrenoDelMapa(relieve, Raster(artefacto.Fertilidad), Raster(artefacto.Humedad), Raster(artefacto.DensidadBosque), Umbral("umbralAgua"),
+                new Vector4(Umbral("umbralCosta"), Umbral("umbralColina"), Umbral("umbralMontana"), Umbral("umbralCima")), transform);
             pintor = new CosasEnElMapa((x, y) => terreno.AlturaVisible(x, y), materialSuelo, materialPropio, transform, capaNombres);
             if (artefacto.Navegacion != null && artefacto.Navegacion.Nodos.Count > 0) tiempo = new TiempoDeMarcha(artefacto.Navegacion);
             terreno.Cauces = new CaucesDelMapa(artefacto, relieve);
@@ -105,16 +106,23 @@ namespace ConquestTactics.Mundo.Mapa
                 camara.transform.SetParent(transform, false);
             }
             camara.fieldOfView = (float)CamaraDelMapa.Apertura;
-            camara.clearFlags = CameraClearFlags.SolidColor;
-            camara.backgroundColor = PinturaDelMapa.Niebla;
+            // El cielo de BronzeAgeClient (`cielo.ts`) de fondo; la bruma lejana de los sombreados del mapa acaba en su horizonte.
+            cielo = new Material(Resources.Load<Shader>("MapaMundo/CieloDelMapa")) { name = "cielo del mapa" };
+            cielo.SetColor("_Cenit", PinturaDelMapa.Cenit);
+            cielo.SetColor("_Horizonte", PinturaDelMapa.Horizonte);
+            cielo.SetColor("_Suelo", PinturaDelMapa.BajoElHorizonte);
+            cielo.SetVector("_Sol", PinturaDelMapa.Sol);
+            camara.clearFlags = CameraClearFlags.Skybox;
+            camara.backgroundColor = PinturaDelMapa.Horizonte;
             RenderSettings.fog = false;
-            RenderSettings.skybox = null;
+            RenderSettings.skybox = cielo;
             if (FindAnyObjectByType<Light>() == null)
             {
+                // El sol, donde lo pinta el cielo: la luz del suelo viene de ahí.
                 var sol = new GameObject("Sol").AddComponent<Light>();
                 sol.type = LightType.Directional;
                 sol.transform.SetParent(transform, false);
-                sol.transform.rotation = Quaternion.Euler(50, 30, 0);
+                sol.transform.rotation = Quaternion.LookRotation(-PinturaDelMapa.Sol);
             }
 
             caja = Caja("Tu columna", PinturaDelMapa.Columna, new Vector3(PinturaDelMapa.LadoColumna, PinturaDelMapa.AltoColumna, PinturaDelMapa.LadoColumna));
@@ -258,7 +266,15 @@ namespace ConquestTactics.Mundo.Mapa
             if (rios != null) Destroy(rios.GetComponent<MeshFilter>().sharedMesh);
             if (materialSuelo != null) Destroy(materialSuelo);
             if (materialPropio != null) Destroy(materialPropio);
+            if (cielo != null)
+            {
+                if (RenderSettings.skybox == cielo) RenderSettings.skybox = null;
+                Destroy(cielo);
+            }
+            Shader.SetGlobalVector(Bruma, Vector4.zero);
         }
+
+        static readonly int Bruma = Shader.PropertyToID("_Bruma"), ColorBruma = Shader.PropertyToID("_BrumaColor");
 
         void Update()
         {
@@ -288,6 +304,10 @@ namespace ConquestTactics.Mundo.Mapa
             Cosas.AddRange(Adicionales);
             var d = Camara.Distancia;
             double lejosCarga = Math.Min(PinturaDelMapa.DistanciaCarga, d * 7), cerca = Math.Min(d * 2.2, lejosCarga * 0.4);
+            // La bruma lejana (la `THREE.Fog` de BronzeAgeClient): del horizonte, empieza en `cerca` y acaba donde acaba lo cargado.
+            var e = EscalaDelMapa.MetrosPorUnidad;
+            Shader.SetGlobalVector(Bruma, new Vector4((float)(cerca * e), (float)(lejosCarga * e), 1, e));
+            Shader.SetGlobalColor(ColorBruma, PinturaDelMapa.Horizonte);
             pintor.Pintar(Cosas, cx, cy, lejosCarga);
             pintor.Nombres(Cosas, camara, cx, cy, (cerca + lejosCarga) / 2, NombresDeNodos, Camara.EnPantalla * 0.75);
             if (sucio && Time.unscaledTime >= proximasRayas)
@@ -625,6 +645,8 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Teselas de suelo hechas y si ya está todo lo que se ve (para las pruebas y el diagnóstico).</summary>
         public int TeselasCargadas => terreno?.Cargadas ?? 0;
+        /// <summary>Teselas de suelo construidas desde el principio y lo que han tardado (ms), para medir.</summary>
+        public (int teselas, double ms) ConstruccionDelSuelo => terreno == null ? (0, 0) : (terreno.Construidas, terreno.MsConstruyendo);
         public bool SueloCompleto => terreno != null && terreno.Completo;
         public Camera Vista => camara;
         /// <summary>Lo que se ve en (x, y) del mapa: la altura del suelo o de su agua, en metros.</summary>

@@ -1472,7 +1472,10 @@ namespace ConquestTactics.Mundo.UI.Tests
             var tiempos = new System.Collections.Generic.List<float>();
             for (int i = 0; i < 300; i++) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
             tiempos.Sort();
-            Debug.Log($"[Mapa] {mapa.TeselasCargadas} teselas; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms");
+            var tris = mapa.GetComponentsInChildren<MeshFilter>().Where(f => f.name.StartsWith("tesela")).Sum(f => (long)f.sharedMesh.GetIndexCount(0) / 3);
+            var (construidas, ms) = mapa.ConstruccionDelSuelo;
+            Debug.Log($"[Mapa] {mapa.TeselasCargadas} teselas, {tris} triángulos de suelo; fotograma mediana {tiempos[150]:0.0} ms, p95 {tiempos[285]:0.0} ms, peor {tiempos[299]:0.0} ms; "
+                + $"{construidas} teselas construidas en {ms:0} ms");
         }
 
         IEnumerator Capturar(string nombre)

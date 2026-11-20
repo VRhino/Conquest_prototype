@@ -1,0 +1,7 @@
+{
+  "name": "Conquest.Mundo.Mapa.Editor",
+  "rootNamespace": "ConquestTactics.Mundo.Mapa.Editor",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

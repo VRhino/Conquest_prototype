@@ -148,7 +148,7 @@ namespace ConquestTactics.Mundo.Mapa
     }
 
     /// <summary>La niebla de guerra (la `NieblaProyectada` de la VISTA, celdas de 5 u): una textura de la rejilla (R = explorado, G = a la vista)
-    /// que el sombreado mezcla con su color en tres estados. Se rehace solo cuando cambia la VISTA.</summary>
+    /// que el sombreado (MapaComun.hlsl) lee con filtro bilineal y mezcla con su color en tres estados. Se rehace solo cuando cambia la VISTA.</summary>
     public sealed class NieblaDelMapa
     {
         static readonly int Tex = Shader.PropertyToID("_NieblaTex"), Rejilla = Shader.PropertyToID("_NieblaRejilla"),
@@ -159,7 +159,8 @@ namespace ConquestTactics.Mundo.Mapa
 
         public NieblaDelMapa()
         {
-            Shader.SetGlobalVector(ColorNiebla, PinturaDelMapa.Niebla.linear);
+            // En sRGB: como en BronzeAgeClient, la niebla se mezcla después de pasar el color a sRGB (MapaComun.hlsl).
+            Shader.SetGlobalVector(ColorNiebla, PinturaDelMapa.Niebla);
             Shader.SetGlobalVector(Alfas, new Vector4(PinturaDelMapa.AlfaSinVer, PinturaDelMapa.AlfaRecordado, PinturaDelMapa.AlfaVisible, 0));
             Shader.SetGlobalVector(Rejilla, Vector4.zero); // sin niebla hasta que llegue la VISTA
         }
@@ -171,7 +172,8 @@ namespace ConquestTactics.Mundo.Mapa
             if (textura == null || textura.width != columnas || textura.height != filas)
             {
                 if (textura != null) UnityEngine.Object.Destroy(textura);
-                textura = new Texture2D(columnas, filas, TextureFormat.RG16, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                // Bilineal, como en BronzeAgeClient: el borde de la niebla se funde en una celda.
+                textura = new Texture2D(columnas, filas, TextureFormat.RG16, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
                 pixeles = new byte[columnas * filas * 2];
             }
             var celdas = n.Celdas.Span;

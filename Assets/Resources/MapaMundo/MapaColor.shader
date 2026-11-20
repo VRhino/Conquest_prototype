@@ -1,5 +1,5 @@
 // El color plano del mapa de mundo (URP): color de vértice por el color del material, luz del sol con un poco de cielo, y la niebla de guerra
-// encima con sus tres estados (nunca visto, recordado, a la vista), leída de la rejilla de la sesión. Lo propio (tu columna, la ruta y el
+// encima con sus tres estados (nunca visto, recordado, a la vista), leída de la rejilla de la sesión, con las nubes y la bruma de `MapaComun.hlsl`. Lo propio (tu columna, la ruta y el
 // destino) va con `_ConNiebla` = 0. Con instanciado: el color de cada caja va por instancia.
 Shader "Conquest/MapaColor"
 {
@@ -23,13 +23,8 @@ Shader "Conquest/MapaColor"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
-            // La niebla, global para todo el mapa (la pone NieblaDelMapa): R = explorado, G = a la vista. `_NieblaRejilla`: x, z del origen
-            // en el mundo, metros por celda, y si hay niebla (0: todo a la vista).
-            TEXTURE2D(_NieblaTex); SAMPLER(sampler_NieblaTex);
-            float4 _NieblaRejilla;
-            float4 _NieblaTamano; // columnas, filas
-            float4 _NieblaColor;  // rgb y, en a, nada
-            float4 _NieblaAlfas;  // nunca visto, recordado, a la vista
+            // Las nubes, la niebla de guerra (global, la pone NieblaDelMapa) y la bruma, las mismas que en MapaSuelo.
+            #include "MapaComun.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _ConNiebla;
@@ -64,17 +59,8 @@ Shader "Conquest/MapaColor"
                     float l = saturate(dot(normalize(s.normal), sol.direction));
                     c *= 0.6 + 0.45 * l;
                 }
-                if (_ConNiebla > 0.5 && _NieblaRejilla.w > 0.5)
-                {
-                    // El mapa va con z = −y: la fila crece hacia el sur, que es −z.
-                    float2 celda = float2(s.mundo.x - _NieblaRejilla.x, _NieblaRejilla.y - s.mundo.z) / _NieblaRejilla.z;
-                    float2 uv = (floor(celda) + 0.5) / _NieblaTamano.xy;
-                    float2 n = SAMPLE_TEXTURE2D(_NieblaTex, sampler_NieblaTex, uv).rg;
-                    float alfa = n.g > 0.5 ? _NieblaAlfas.z : (n.r > 0.5 ? _NieblaAlfas.y : _NieblaAlfas.x);
-                    if (any(uv < 0) || any(uv > 1)) alfa = _NieblaAlfas.x;
-                    c = lerp(c, _NieblaColor.rgb, alfa);
-                }
-                return half4(c, 1);
+                // Lo propio (`_ConNiebla` 0) va sin nubes ni niebla de guerra, pero con la bruma lejana, como en BronzeAgeClient.
+                return half4(PintarMapa(c, s.mundo, _ConNiebla > 0.5), 1);
             }
             ENDHLSL
         }
