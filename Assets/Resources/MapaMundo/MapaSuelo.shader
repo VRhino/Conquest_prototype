@@ -61,6 +61,15 @@ Shader "Conquest/MapaSuelo"
             TEXTURE2D_ARRAY(_SueloMascara);
             TEXTURE2D(_SueloRuido); SAMPLER(sampler_SueloRuido);
             TEXTURE2D(_SueloDatos); SAMPLER(sampler_SueloDatos);
+            // El territorio (`TerritorioDelMapa`, global): el lienzo de las zonas y su caja (x0, y0 y lado, en metros de la escena; lado 0 = sin él).
+            TEXTURE2D(_Territorio); SAMPLER(sampler_Territorio);
+            float4 _TerritorioCaja;
+            // Estilo «Mejorado» (`_TerritorioModo` 1): el color de la Facción cambia el tono y la saturación conservando la luminancia; y el reborde
+            // claro de las que contrastan poco (`_TerritorioBorde`, R).
+            TEXTURE2D(_TerritorioBorde);
+            float _TerritorioModo;
+            // (x hasta dónde llega el tinte suave del interior, y el pico del filo, z y w la saturación mínima y máxima del filo)
+            float4 _TerritorioFilo;
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _DatosTamano;
@@ -75,7 +84,8 @@ Shader "Conquest/MapaSuelo"
 
             struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float4 color : COLOR; float3 ancha : TEXCOORD0; float2 relieve : TEXCOORD1; };
             // `ancha`: la normal del relieve suavizado a unos 24 m (la calcula TerrenoDelMapa); decide la roca de pendiente y la nieve.
-            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float4 color : COLOR; float3 ancha : TEXCOORD2; float relieve : TEXCOORD3; };
+            // `relieve`: x la sombra del relieve, y lo somero de los trechos de vado (`CaucesDelMapa`: la playa de grava y el lecho de guijarros).
+            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float4 color : COLOR; float3 ancha : TEXCOORD2; float2 relieve : TEXCOORD3; };
 
             Salida Vert(Entrada e)
             {
@@ -85,7 +95,7 @@ Shader "Conquest/MapaSuelo"
                 s.normal = TransformObjectToWorldNormal(e.normal);
                 s.color = e.color;
                 s.ancha = TransformObjectToWorldNormal(e.ancha);
-                s.relieve = e.relieve.x;
+                s.relieve = e.relieve;
                 return s;
             }
 
@@ -152,6 +162,7 @@ Shader "Conquest/MapaSuelo"
                 float3 c;
                 float3 Nluz = N;
                 float pesoNieve = 0;
+                float3 media = 0; // el color medio de las capas de aquí (su mip más pequeño), para el filo del territorio
                 if (s.color.a < 0.5)
                 {
                     // Sin textura: el agua y la capa de fertilidad, con su color de vértice.
@@ -209,6 +220,9 @@ Shader "Conquest/MapaSuelo"
                     // El ancho de la ribera varía con ruido a dos escalas (que no sea una banda paralela al río).
                     float ribera = smoothstep(0.25, 0.6, riberaRio + (r3.z - 0.5) * 0.55 + (r2.x - 0.5) * 0.45) * (1 - fondo);
                     float riberaGrava = ribera * smoothstep(0.66, 0.8, r3.x * 0.5 + r2.z * 0.5) * 0.7;
+                    // En el trecho de vado, la ribera y el lecho son playa de guijarros casi seguida (con alguna mancha de arena).
+                    float somero = s.relieve.y;
+                    riberaGrava = lerp(riberaGrava, ribera * lerp(0.3, 0.7, smoothstep(0.3, 0.6, r3.y * 0.6 + r2.x * 0.4)), somero);
                     float encima[8] = { bosque, grava, arena, roca, nieve, ribera, riberaGrava, fondo };
                     int capaDe[8] = { SOTOBOSQUE, GRAVA, ARENA, ROCA, NIEVE, ARENA, GRAVA, ARENA };
                     [unroll] for (int e = 0; e < 8; e++)
@@ -234,6 +248,8 @@ Shader "Conquest/MapaSuelo"
                     }
                     float suma = 0;
                     [unroll] for (int i = 0; i < CAPAS; i++) { w[i] = max(a[i] - tope + _Mezcla, 0); suma += w[i]; }
+                    [unroll] for (int i = 0; i < CAPAS; i++)
+                        [branch] if (w[i] > 0) media += SAMPLE_TEXTURE2D_ARRAY_LOD(_SueloColor, sampler_SueloColor, float2(0.5, 0.5), i, 12).rgb * (w[i] / suma);
 
                     // Cerca, la escala de detalle; lejos, la grande; en medio, las dos.
                     float lejos = smoothstep(_Escalas.z, _Escalas.w, distancia);
@@ -266,6 +282,7 @@ Shader "Conquest/MapaSuelo"
                     }
                     // La variación grande: manchas de luz y de tono a cientos de metros, para que desde lejos no se vea la repetición.
                     c *= lerp(0.86, 1.1, r1.z) * lerp(0.94, 1.05, r2.z);
+                    media *= lerp(0.86, 1.1, r1.z) * lerp(0.94, 1.05, r2.z);
                     c = lerp(c, c * float3(1.04, 1.0, 0.9), r1.y * 0.6);
                     c *= lerp(float3(1, 1, 1), float3(0.41, 0.48, 0.58), smoothstep(0.0, 2.0, hondo));
                     // Bajo el agua: manchas de alga oscura y cáusticas que se mueven, que se pierden con lo hondo.
@@ -282,12 +299,65 @@ Shader "Conquest/MapaSuelo"
                     // En la nieve, la normal marca algo más (los ventisqueros).
                     Nluz = normalize(N + desvio * _FuerzaNormal * (1 + pesoNieve));
                 }
+                // El territorio, sobre el color y antes de la luz (como el prototipo: el tinte sigue las laderas y la sombra se sigue leyendo); solo
+                // con las texturas (la capa de fertilidad va por encima).
+                if (s.color.a >= 0.5 && _TerritorioCaja.z > 0)
+                {
+                    float2 uvTerr = (float2(p.x, -p.z) - _TerritorioCaja.xy) / _TerritorioCaja.z;
+                    if (all(uvTerr > 0) && all(uvTerr < 1))
+                    {
+                        float4 terr = SAMPLE_TEXTURE2D(_Territorio, sampler_Territorio, uvTerr);
+                        if (_TerritorioModo > 0.5)
+                        {
+                            const float3 L = float3(0.2126, 0.7152, 0.0722);
+                            float lum = dot(c, L);
+                            // dentro (alfa bajo): un tinte suave que conserva la luminancia
+                            float3 tinte = terr.rgb * (lum / max(dot(terr.rgb, L), 0.02));
+                            c = lerp(c, lerp(lum.xxx, tinte, 0.9), min(terr.a, _TerritorioFilo.x));
+                            // El filo junto a la frontera (por dentro: el lienzo solo pinta dentro): suelo teñido, no agua. El tono de la Facción y una
+                            // saturación de 0,30 a 0,45, con el contraste de brillo del suelo a la mitad alrededor del de sus capas (las piedras claras
+                            // no parecen espuma). Si el tono queda lejos (más de 90°), cambia de golpe a media fuerza, con la saturación baja solo ahí.
+                            // Las Facciones oscuras o sin color: el suelo ×0,7 en el pico, con su tono.
+                            float banda = saturate((terr.a - _TerritorioFilo.x) / max(_TerritorioFilo.y - _TerritorioFilo.x, 0.01));
+                            if (banda > 0.001)
+                            {
+                                float3 hsvS = RgbAHsv(pow(max(c, 1e-5), 1 / 2.2));
+                                float3 hsvF = RgbAHsv(pow(max(terr.rgb, 1e-5), 1 / 2.2));
+                                float vMedia = RgbAHsv(pow(max(media, 1e-5), 1 / 2.2)).z;
+                                float3 hsv = hsvS;
+                                hsv.z = lerp(hsvS.z, lerp(hsvS.z, vMedia, 0.5), banda);
+                                if (hsvF.z < 0.25 || hsvF.y < 0.15)
+                                    hsv.z *= lerp(1, 0.7, banda);
+                                else
+                                {
+                                    float satF = clamp(hsvF.y * 0.6, _TerritorioFilo.z, _TerritorioFilo.w);
+                                    float fuerza = smoothstep(0.0, 0.45, banda);
+                                    float dt = frac(hsvF.x - hsvS.x + 0.5) - 0.5;
+                                    if (abs(dt) > 0.25)
+                                    {
+                                        hsv.x = fuerza < 0.5 ? hsvS.x : hsvF.x;
+                                        hsv.y = fuerza < 0.5 ? lerp(hsvS.y, hsvS.y * 0.5, fuerza * 2) : lerp(hsvS.y * 0.5, satF, fuerza * 2 - 1);
+                                    }
+                                    else
+                                    {
+                                        hsv.x = frac(hsvS.x + dt * fuerza);
+                                        hsv.y = lerp(hsvS.y, satF, fuerza);
+                                    }
+                                }
+                                c = pow(HsvARgb(hsv), 2.2);
+                            }
+                            float reb = SAMPLE_TEXTURE2D(_TerritorioBorde, sampler_Territorio, uvTerr).r;
+                            c = lerp(c, lerp(terr.rgb, float3(1, 1, 1), 0.6) * max(lum * 1.5, 0.3), reb);
+                        }
+                        else c = lerp(c, terr.rgb, terr.a);
+                    }
+                }
                 Light sol = GetMainLight();
                 float l = saturate(dot(Nluz, sol.direction));
                 // La nieve, con su propia sombra: luz envolvente y, en lo que no mira al sol, un azul claro (se lee el volumen sin manchas pintadas).
                 float envolvente = saturate((dot(Nluz, sol.direction) + 0.5) / 1.5);
                 float3 luzNieve = lerp(float3(0.72, 0.8, 0.93), float3(1.02, 1.01, 1.0), envolvente);
-                float sombra = ConRelieve(SombraDelSol(p), s.relieve);
+                float sombra = ConRelieve(SombraDelSol(p), s.relieve.x);
                 c *= lerp(LuzDelMapa(Nluz.y, 0.6, 0.45 * l, sombra, 0.36), luzNieve * lerp(float3(0.5, 0.6, 0.75), 1, sombra), pesoNieve);
                 return half4(PintarMapa(c, p, true), 1);
             }

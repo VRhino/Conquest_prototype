@@ -16,7 +16,8 @@ namespace ConquestTactics.Mundo.Mapa
         const int PorFotograma = 2;
 
         readonly Relieve relieve;
-        readonly RasterDeMundo fertilidad;
+        readonly RasterDeMundo fertilidad, humedad;
+        readonly Vector4 umbrales;
         bool conFertilidad;
         /// <summary>Los cauces de los ríos: el suelo baja hasta ellos (si no, el agua del río queda enterrada).</summary>
         public CaucesDelMapa Cauces;
@@ -82,9 +83,12 @@ namespace ConquestTactics.Mundo.Mapa
             float Tapa(int i, int j) => 1 - SombraDelRelieve.En(h.Rejilla, h.Nr, SombraDelRelieve.PasoRejilla, i * h.Paso, j * h.Paso);
             int n = h.N, borde = 4 * n;
             var tapas = new Vector2[n * n + borde];
+            // (UV1.y, lo somero de los trechos de vado: se deja como estaba)
+            var antes = new List<Vector2>();
+            h.Go.GetComponent<MeshFilter>().sharedMesh.GetUVs(1, antes);
             for (int j = 0; j < n; j++)
                 for (int i = 0; i < n; i++)
-                    tapas[j * n + i] = new Vector2(Tapa(i, j), 0);
+                    tapas[j * n + i] = new Vector2(Tapa(i, j), antes.Count == tapas.Length ? antes[j * n + i].y : 0);
             // el faldón, como el contorno (el mismo orden que en Construir)
             for (int s = 0; s < n; s++)
             {
@@ -109,6 +113,8 @@ namespace ConquestTactics.Mundo.Mapa
         {
             this.relieve = relieve;
             this.fertilidad = fertilidad;
+            this.humedad = humedad;
+            this.umbrales = umbrales;
             this.nivelDelMar = nivelDelMar;
             this.padre = padre;
             material = new Material(Resources.Load<Shader>("MapaMundo/MapaSuelo")) { name = "suelo del mapa" };
@@ -163,6 +169,26 @@ namespace ConquestTactics.Mundo.Mapa
             }
         }
 
+        /// <summary>El material del suelo (sus texturas, para que el camino «Mejorado» sea la misma tierra).</summary>
+        public Material Material => material;
+
+        /// <summary>Qué suelo hay en (x, y), con las reglas de `MapaSuelo` sin su ruido: cuánto es arena (por la altura, junto a la costa), roca
+        /// (por la altura o por la pendiente ancha, la de ±2 u) y pradera verde (por la humedad y la fertilidad); de 0 a 1.</summary>
+        public (float arena, float roca, float verde) SueloEn(double x, double y)
+        {
+            float h = (float)relieve.AlturaEn(x, y);
+            float arena = 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(umbrales.x - 12, umbrales.x + 8, h));
+            var e = EscalaDelMapa.MetrosPorUnidad;
+            double gx = (relieve.AlturaEn(x + 2, y) - relieve.AlturaEn(x - 2, y)) / (4 * e), gy = (relieve.AlturaEn(x, y + 2) - relieve.AlturaEn(x, y - 2)) / (4 * e);
+            float pendiente = 1 - 1 / Mathf.Sqrt(1 + (float)(gx * gx + gy * gy));
+            var r = material.GetVector("_Roca");
+            float roca = Mathf.Max(Mathf.SmoothStep(0, 1, Mathf.InverseLerp(umbrales.z + 20, umbrales.w + 10, h)), Mathf.SmoothStep(0, 1, Mathf.InverseLerp(r.x, r.y, pendiente)));
+            var v = material.GetVector("_Verdor");
+            float hum = humedad == null ? 0.3f : humedad.En(x, y) / 255f, fer = fertilidad == null ? 0.3f : fertilidad.En(x, y) / 255f;
+            float verde = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(v.x, v.y, 0.5f * hum + 0.5f * fer));
+            return (arena, roca, verde);
+        }
+
         /// <summary>Lo que se ve en (x, y): la altura del suelo o, si hay agua, la de su lámina (metros).</summary>
         public float AlturaVisible(double x, double y)
         {
@@ -179,7 +205,7 @@ namespace ConquestTactics.Mundo.Mapa
             var fuera = new List<(int, int)>();
             foreach (var kv in teselas)
                 if (Distancia(kv.Key.Item1, kv.Key.Item2, x, y, lado) > alcance + lado) fuera.Add(kv.Key);
-            foreach (var k in fuera) { Soltar(teselas[k].go); teselas.Remove(k); }
+            foreach (var k in fuera) { Soltar(teselas[k].go); teselas.Remove(k); Version++; }
 
             pendientes.Clear();
             int t0x = Mathf.Max(0, (int)((x - alcance) / lado)), t1x = Mathf.Min(relieve.TeselasX - 1, (int)((x + alcance) / lado));
@@ -202,6 +228,7 @@ namespace ConquestTactics.Mundo.Mapa
                 var antes = reloj.Elapsed.TotalMilliseconds;
                 reloj.Start();
                 teselas[(tx, ty)] = (Construir(tx, ty, paso, lado), paso);
+                Version++;
                 reloj.Stop();
                 PeorMsTesela = System.Math.Max(PeorMsTesela, reloj.Elapsed.TotalMilliseconds - antes);
                 Construidas++;
@@ -210,6 +237,49 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Lo más alto de la malla de suelo ya pintada alrededor de (x, y): las cuatro esquinas de la celda de la tesela (metros); null si esa
         /// tesela aún no está. Para comprobar que lo que va encima del suelo (ríos, rayas) no queda enterrado.</summary>
+        /// <summary>Cambia cada vez que se hace o se suelta una tesela (lo que va pegado al suelo mira si se tiene que rehacer).</summary>
+        public int Version { get; private set; }
+
+        /// <summary>Lo que resume el suelo pintado bajo la caja [x0, x1] × [y0, y1] (u): qué teselas hay y con qué malla.</summary>
+        public int Firma(double x0, double y0, double x1, double y1)
+        {
+            float lado = (float)relieve.LadoEnUnidades;
+            int f = 17;
+            unchecked
+            {
+                for (int ty = (int)System.Math.Floor(y0 / lado); ty <= (int)System.Math.Floor(y1 / lado); ty++)
+                    for (int tx = (int)System.Math.Floor(x0 / lado); tx <= (int)System.Math.Floor(x1 / lado); tx++)
+                        f = f * 31 + (teselas.TryGetValue((tx, ty), out var t) && t.go != null ? t.go.GetEntityId().GetHashCode() : 0);
+            }
+            return f;
+        }
+
+        readonly Dictionary<(int, int), (GameObject go, float[] alturas, int n)> pintadas = new Dictionary<(int, int), (GameObject, float[], int)>();
+
+        /// <summary>La altura (m) de la malla de suelo ya pintada en (x, y), interpolada en su triángulo como la pinta la GPU (lo que va pegado al
+        /// suelo, como los caminos, no se hunde ni flota en las teselas de paso grande); sobre el agua, al menos su lámina; sin tesela, el relieve.</summary>
+        public float AlturaPintada(double x, double y)
+        {
+            float lado = (float)relieve.LadoEnUnidades;
+            int tx = (int)System.Math.Floor(x / lado), ty = (int)System.Math.Floor(y / lado);
+            if (!teselas.TryGetValue((tx, ty), out var t) || t.go == null) return AlturaVisible(x, y);
+            int n = Mathf.RoundToInt(lado / t.paso) + 1;
+            if (!pintadas.TryGetValue((tx, ty), out var p) || p.go != t.go)
+            {
+                var v = t.go.GetComponent<MeshFilter>().sharedMesh.vertices;
+                var h = new float[n * n];
+                for (int k = 0; k < h.Length; k++) h[k] = v[k].y;
+                pintadas[(tx, ty)] = p = (t.go, h, n);
+            }
+            double fx = (x - tx * lado) / t.paso, fy = (y - ty * lado) / t.paso;
+            int i = Mathf.Clamp((int)fx, 0, n - 2), j = Mathf.Clamp((int)fy, 0, n - 2);
+            double u = fx - i, w = fy - j;
+            float a = p.alturas[j * n + i], b = p.alturas[j * n + i + 1], c = p.alturas[(j + 1) * n + i], d = p.alturas[(j + 1) * n + i + 1];
+            // los triángulos de la tesela: (a, b, c) y (b, d, c)
+            double altura = u + w <= 1 ? a + (b - a) * u + (c - a) * w : d + (c - d) * (1 - u) + (b - d) * (1 - w);
+            return relieve.AguaEn(x, y) ? Mathf.Max((float)altura, nivelDelMar) : (float)altura;
+        }
+
         public float? AlturaDeMalla(double x, double y)
         {
             float lado = (float)relieve.LadoEnUnidades;
@@ -286,6 +356,7 @@ namespace ConquestTactics.Mundo.Mapa
             var suelo = new float[W * W];
             var nivelCerca = new float[W * W];
             var ribera = new float[W * W];
+            var somero = new float[W * W];
             for (int j = 0, k = 0; j < W; j++)
                 for (int i = 0; i < W; i++, k++)
                 {
@@ -314,7 +385,7 @@ namespace ConquestTactics.Mundo.Mapa
                             h = Mathf.Min(h, techo);
                         }
                     }
-                    if (cauces != null && cauces.Consultar(x, y, paso, out ribera[k]) is float fondo) h = Mathf.Min(h, fondo);
+                    if (cauces != null && cauces.Consultar(x, y, paso, out ribera[k], out somero[k]) is float fondo) h = Mathf.Min(h, fondo);
                     suelo[k] = h;
                 }
             // La pendiente ancha: la del relieve suavizado con una caja de ±`ancho` muestras. Va al sombreado (UV0) para decidir la roca de
@@ -326,6 +397,8 @@ namespace ConquestTactics.Mundo.Mapa
             var normales = new Vector3[n * n + borde];
             var colores = new Color32[n * n + borde];
             var anchas = new Vector3[n * n + borde];
+            // UV1: x la sombra del relieve (la pone `AplicarRelieve`), y lo somero de los trechos de vado (la playa de grava, en `MapaSuelo`)
+            var uv1 = new Vector2[n * n + borde];
             float dos = 2 * paso * e;
             for (int j = 0, k = 0; j < n; j++)
                 for (int i = 0; i < n; i++, k++)
@@ -338,6 +411,7 @@ namespace ConquestTactics.Mundo.Mapa
                     float mojado = hayAgua && !agua[r] && !float.IsNaN(nivelAlAgua[r]) ? 1 - Mathf.SmoothStep(0, 1, alAgua[r] * paso / 1.2f) : 0;
                     colores[k] = ColorEn(x0 + i * paso, y0 + j * paso, agua[r], agua[r] ? Mathf.Max(0, Nivel(crudo[r]) - suelo[r]) : 0, mojado, ribera[r]);
                     anchas[k] = new Vector3(-(suave[r + 1] - suave[r - 1]) / dos, 1, (suave[r + W] - suave[r - W]) / dos).normalized;
+                    uv1[k] = new Vector2(0, somero[r]);
                 }
             // El contorno, en cuatro lados de n vértices (las esquinas, repetidas).
             var contorno = new int[borde];
@@ -356,6 +430,7 @@ namespace ConquestTactics.Mundo.Mapa
                 normales[f] = normales[v];
                 colores[f] = colores[v];
                 anchas[f] = anchas[v];
+                uv1[f] = uv1[v];
             }
             var triangulos = new int[(n - 1) * (n - 1) * 6 + 4 * (n - 1) * 6];
             int t = 0;
@@ -380,6 +455,7 @@ namespace ConquestTactics.Mundo.Mapa
             malla.SetNormals(normales);
             malla.SetColors(colores);
             malla.SetUVs(0, anchas);
+            malla.SetUVs(1, uv1);
             malla.SetTriangles(triangulos, 0);
             malla.RecalculateBounds();
             var go = new GameObject(malla.name);

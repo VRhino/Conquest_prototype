@@ -1,3 +1,22 @@
+# Plan: caminos y territorio del mapa, etapa 2 «Mejorado» (tema 4)
+
+Estado: **en curso** (2026-11-20). La etapa 1 (port del prototipo) queda como estilo «Prototipo»; todo lo nuevo, conmutable
+(`TrazosEnElMapa.Estilo`, `TerritorioDelMapa.Estilo`). Sin commit.
+
+- [ ] A. Banco: camino que atraviesa ≥ 40 u de bosque cerrado; sitios de prueba sobre pradera, tierra seca, arena y roca (sendero y camino).
+- [ ] B1. Detalle horneado en Blender (`BronzeAgeArte/mapa/caminos/hornear.py` + `generar.py`): sendero y camino, dos variantes cada uno;
+      R alto, G hierba, B guijarros, A oclusión; normal aparte. Periodo largo, solo teselable a lo largo.
+- [ ] B2. Shader `MapaCaminoMejorado`: tierra del suelo (array de `MapaSuelo`) en espacio de mundo, detalle encima, borde con ruido a dos
+      escalas (±20 % y ensanches), franja gastada (malla ×1,8), según el suelo (arena, roca, pradera, por vértice desde la CPU), normal del
+      detalle con la luz, sombras, desvanecido junto al agua (por vértice), ancho mínimo en píxeles lejos, dos variantes por ruido.
+- [ ] B3. Parches redondos en cruces (≥ 3 ramas) y extremos.
+- [ ] B4. La capa baja ralea junto al camino (solo «Mejorado»).
+- [ ] Publicar caminos (página, sección «Etapa 2: mejoras»).
+- [ ] C. Territorio «Mejorado»: tono y saturación con la luminancia del suelo, interior suave (0,10 / 0,07), banda de 6 u con degradado
+      continuo (hasta 0,45), reborde claro si contrasta poco con el suelo, trazos con extremos redondos, perfil oscuro y ancho mínimo.
+- [ ] D. Datos de los vados: franja de aristas de vado por vado (media, mín., máx.), cuántos; si las columnas cruzan por toda la franja.
+- [ ] E. Página: prototipo y mejorado lado a lado, recortes por suelo, medidas, pruebas del mapa y batalla.
+
 # Plan: Héroe a caballo (M19, L5-6)
 
 Estado: **hecho** (2026-11-11), rama `main`. El usuario lo pidió antes de H2: montar y desmontar, moverse a caballo,

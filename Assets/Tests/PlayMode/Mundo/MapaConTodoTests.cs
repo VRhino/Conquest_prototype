@@ -149,16 +149,27 @@ namespace ConquestTactics.Mundo.UI.Tests
                 ClaseDeCosa.Bandidos, ClaseDeCosa.Alijo, ClaseDeCosa.Batalla, ClaseDeCosa.EjercitoAjeno, ClaseDeCosa.CaravanaAjena, ClaseDeCosa.Aeda, ClaseDeCosa.Nodo })
                 CollectionAssert.Contains(clases, k);
 
-            // Todas las cintas (ríos y vados, caminos, fronteras, zonas, anillos, Miradas, lo seleccionado) miran hacia arriba, a la cámara: con el
+            // Todas las cintas (ríos y vados, caminos, fronteras, zonas y anillos, que son «trazo», Miradas, lo seleccionado) miran hacia arriba, a la cámara: con el
             // orden de vértices del revés se pintaban de espaldas y no se veían.
             mapa.Seleccionar(mapa.Cosas.First(c => c.Clase == ClaseDeCosa.Plaza && c.Id == "as-1"));
             yield return null;
-            var cintas = go.GetComponentsInChildren<MeshFilter>().Where(m => m.name == "Rios" || m.name.StartsWith("Rayas") || m.name == "Lo seleccionado").ToList();
+            var cintas = go.GetComponentsInChildren<MeshFilter>().Where(m => m.name == "Rios" || m.name.StartsWith("Rayas") || m.name == "Lo seleccionado" || m.name == "trazo").ToList();
             Assert.GreaterOrEqual(cintas.Count, 4, string.Join(", ", cintas.Select(m => m.name)));
             foreach (var m in cintas)
             {
                 // Hacia arriba (las cuestas de un río que baja deprisa inclinan la normal, pero no la ponen bocabajo); las nulas son de tramos sin largo.
                 var normales = m.sharedMesh.normals.Where(n => n.sqrMagnitude > 1e-6f).ToList();
+                if (normales.Count == 0)
+                {
+                    // las cintas sin normales (las de `TrazosEnElMapa`): la de cada triángulo, por su orden de vértices
+                    var v = m.sharedMesh.vertices;
+                    var t = m.sharedMesh.triangles;
+                    for (int i = 0; i < t.Length; i += 3)
+                    {
+                        var n = Vector3.Cross(v[t[i + 1]] - v[t[i]], v[t[i + 2]] - v[t[i]]);
+                        if (n.sqrMagnitude > 1e-8f) normales.Add(n.normalized);
+                    }
+                }
                 var abajo = normales.Count(n => n.y <= 0);
                 Assert.AreEqual(0, abajo, $"{m.name}: {abajo} de {normales.Count} normales miran hacia abajo (la más baja, {normales.Min(n => n.y):0.00})");
             }

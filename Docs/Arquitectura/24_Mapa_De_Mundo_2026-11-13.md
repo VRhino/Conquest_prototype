@@ -358,6 +358,123 @@ La base del cliente jugador se queda, y encima va más detalle en estilo Synty.
 - Desde arriba el río aún se lee bastante regular.
 - Si el coste de construir molesta, pasar la construcción de teselas a un hilo.
 
+## Caminos y territorio (tema 4, 2026-11-20)
+
+Dos estilos, conmutables y lado a lado en las pruebas: «Prototipo» (etapa 1, el port tal cual de BronzeAgeClient) y «Mejorado» (etapa 2, por
+defecto). `TrazosEnElMapa.Estilo` decide los caminos; `TerritorioDelMapa.Estilo`, el relleno y las líneas del territorio.
+`PinturaDelMapa.CaminosYTerritorio` apagado vuelve a las rayas planas de antes.
+
+### Dónde está
+
+| Pieza | Qué hace |
+|---|---|
+| `TrazadoDelMapa` (C# puro) | Port exacto de `suavizarCamino`, `recorridos`, `tramosEnCaja`, `partirFronteras` y `zonasDeLoRecordado`; además `PorLosVados` |
+| `TexturaDeCamino` | El pintor de texturas del prototipo (sendero y camino, 128 × 512) |
+| `TrazosYTerritorio.Reunir` | Del almacén a trazos (caminos con sus anclas, fronteras, zonas, anillos) y rellenos por Facción |
+| `TrazosEnElMapa` | Las cintas, en trozos con presupuesto (2 ms por fotograma, los más cercanos primero) cuando cambia el suelo de debajo |
+| `TerritorioDelMapa` | El lienzo del territorio (2048 px sobre 1200 u, recentrado cada 128 u), pintado en otro hilo |
+| `MapaCamino`, `MapaCaminoMejorado`, `MapaRayaMejorada` | Los sombreados del camino del prototipo, del camino «Mejorado» y de las líneas «Mejorado» |
+| `BronzeAgeArte/mapa/caminos` | `hornear.py` (Blender, desde geometría) y `generar.py`: el detalle y la normal de sendero y camino, dos variantes |
+
+### Etapa 1: como el prototipo
+
+- **Caminos:** cinta con una muestra cada 0,5 u, cada borde sobre su suelo; anchos de 0,4 u el sendero y 0,65 u el camino, con textura
+  (u a lo ancho, v = lo andado / 4 × ancho).
+- **Fronteras partidas:** exterior de 0,12 u a trazos (1,2 / 0,7); entre provincias, 0,06 u con opacidad 0,45; la zona fusionada propia,
+  0,18 u a trazos por encima de la niebla; el anillo de los mercenarios, 0,1 u con opacidad 0,7.
+- **Relleno:** 0,18 lo propio y 0,13 lo ajeno, con borde interior de 6 capas.
+- **Vegetación:** fuera de los caminos (árboles a medio ancho + 0,2 u, matas y capa baja a + 0,1 u).
+- **Pruebas:** `TrazadoDelMapaTests` (EditMode, contra vectores de referencia generados por `tasks/referencias/trazado.mts` desde el código
+  del prototipo).
+
+### Etapa 2: «Mejorado»
+
+**Caminos** (congelados así el 2026-11-20 por el coordinador):
+- **El camino es suelo:**
+  - Su color sale del color medio del suelo de alrededor, en HSV.
+  - El tono se desplaza hasta 6° hacia el rojo (en pradera, 35°) y la saturación queda al 85 % de la del suelo (en pradera, 0,44).
+  - La luminancia sube un 8 % (pradera −3 %, arena +2 %, roca +5 %).
+  - De la textura de tierra solo toma la luminancia.
+- **Detalle horneado** en Blender desde geometría:
+  - Sendero: traza estrecha que serpentea, con hierba aplastada.
+  - Camino: rodadas blandas a trechos, lomo de matas, huellas y guijarros.
+  - Dos variantes que alternan por ruido. El sendero, además, serpentea con ruido en espacio de mundo.
+- **Rodadas y guijarros a media distancia**, también calculados en el sombreado, para que a zoom habitual se siga leyendo un camino de tierra.
+- **El lomo nunca se transparenta:** son matas a trechos (salía una línea clara recta).
+- **Bordes y franja:** bordes irregulares (±15 %) y malla 1,8 veces el camino con un halo de terreno pisado; la capa baja ralea junto al camino.
+- **Parches** de tierra apisonada en cruces y extremos.
+- **Despeje en el bosque:** crece con la copa (medio ancho + 0,2 u + 0,6 × el radio de la copa).
+- **Agua:** junto al agua el camino no se pinta encima. En un vado cruza por el punto como rodada mojada, pintada después del agua.
+- **Lejos:** ancho mínimo en píxeles (2,2 el sendero y 3 el camino).
+
+**Territorio** (el filo, opción 2; Víctor la eligió el 2026-11-21: «Vamos con el 2». Es el aspecto final y el valor por defecto,
+`EstiloDeTerritorio.Mejorado`. «Prototipo» y «Suave» quedan solo como parámetros; nada del proyecto las usa):
+- **Interior** muy suave: 0,05 lo propio y 0,035 lo ajeno, conservando la luminancia del suelo.
+- **Filo pintado** por dentro de la línea: pico de 0,55 que cae a la mitad cada 0,45 u, con un ancho visible de alrededor de 1 u.
+  - Ahí el suelo toma el tono de la Facción con una saturación de 0,30 a 0,45, en HSV y sin pasar por gris.
+  - El contraste de brillo se comprime a la mitad alrededor del color medio de las capas.
+  - Las Facciones oscuras o sin color solo oscurecen el suelo (×0,7 en el pico).
+- **Reborde claro** para las Facciones que contrastan poco con el suelo (oscuras, o de tono de pasto o de tierra): una línea fina pegada a los
+  trazos por dentro (centro a 0,35 u, σ 0,15 u o dos píxeles del lienzo, opacidad 0,5).
+- **Líneas** con las medidas del prototipo, extremos redondeados, perfil oscuro fino y ancho mínimo de 2 píxeles.
+- **Lo que no se tiñe:** la hierba baja dentro del territorio, como en el prototipo (solo el suelo).
+
+**Banco y pruebas:**
+- `BancoDeCaminos` inyecta sobre el mundo de pruebas una red trazada por el grafo de navegación y un territorio inventado:
+  - un pasillo de bosque cerrado, una ladera, un cruce, plaza y pueblo, el vado;
+  - un sitio por suelo (pradera, tierra seca, arena y roca, con caminos rectos por los nodos);
+  - tres zonas sobre pradera (azul, verde y negra).
+- `LosCaminosYElTerritorio` (etapa 1) y `LosCaminosMejorados` (etapa 2) son explícitas y guardan las capturas, el color del camino frente
+  al suelo y el color del territorio a 0,5, 1,5 y 3 u del borde.
+
+**Coste** (zoom habitual, mundo actual):
+- Quieto, igual con los dos estilos: mediana 3,1–3,2 ms y p95 3,6–3,7 ms.
+- Rehacer las cintas enteras: hasta 22,5 ms con «Mejorado» y 9 ms con el prototipo.
+- Rehacer un trozo por su suelo: hasta unos 5 ms en un fotograma.
+- El lienzo del territorio: en su hilo.
+
+### Vados: el punto del vado (2026-11-20)
+
+**La regla del motor** (main desde el PR #31 del 18-11; contrato 06 §2 y Movimiento_Ejercitos §4.3): el vado es un punto.
+- El cauce va cerrado entero. Cada vado es un nodo más del grafo, justo en su punto de `Rio.vados`. Sus ids van detrás de los de la retícula,
+  en el orden de los ríos y de sus vados.
+- Ese nodo se une por aristas `vado` a un máximo de 3 nodos de cada orilla, a 6 u o menos (10 u si un lado se queda sin ninguno).
+- Toda ruta que cruza un río pasa exactamente por ese punto y lo pisa a 0,75 u de él (`mundo::RADIO_VADO`).
+
+**El mundo de las pruebas.** Desde el 2026-11-20 el servidor de prueba (7891) carga el mundo actual:
+- Hash `a98e65c7…`, generador `regional-20-costas-2+estrategico-3+cauce-2`.
+- 201 602 nodos, 770 134 aristas, 349 de vado, 116 vados. Los últimos 116 nodos son los puntos de `Rio.vados`, en orden y al milésimo.
+- 18 nodos de vado no tienen ninguna arista de vado. El motor cuenta 23 vados sin alguna de sus dos orillas, casi todos en gargantas.
+- El mundo anterior (`c83ef5e2…`, `…+cauce-1`, 6 163 aristas de vado) abría una franja de unas 16 u por vado. De ahí salió el «trecho
+  cruzable» que se quitó.
+
+**Caminos.**
+- Los puntos de `Rio.vados` son anclas del suavizado (`TrazosYTerritorio.Reunir`, parámetro `vados`).
+- El camino cruza recto por el vado a 0,75 u a cada lado del punto, en la dirección de la ruta sin suavizar (`TrazadoDelMapa.PorLosVados`).
+- Sin vados, el suavizado es el del prototipo, idéntico a sus vectores de referencia.
+- Pruebas: `ElCaminoCruzaPorElPuntoDelVado` (EditMode) y `LosVadosPorElPunto` (PlayMode, sobre el banco). Todo camino que cruza un río pasa
+  a menos de 0,05 u del punto de su vado.
+
+**Arte del vado.** Se dibujan los 116 vados de `Rio.vados`. Víctor eligió la **B** el 2026-11-20 («me gusta mas el 2 vamos con ese»): es el aspecto final y el valor por defecto. La A y la C quedan solo como parámetros; nada del proyecto las usa.
+- **A.** `PinturaDelMapa.VadoComoTrecho` apagado: la franja de guijarros del tema del agua (1,6 u), con el camino pasando por encima como
+  traza mojada.
+- **B**, la elegida: un río poco hondo, corto y centrado en el punto.
+  - Núcleo de 2 × `VadoMedioLargo` = 1,5 u (lo que se pisa), con el lecho de guijarros a la vista y playas de grava.
+  - Transición de `VadoTransicion` = 2,5 u a cada lado; unas 6,5 u en total.
+  - En el núcleo, la barra de guijarros de orilla a orilla (`_Barra` de `MapaAgua`, solo con el núcleo corto): contorno irregular, piedras que
+    asoman y espuma donde el agua sale de ella. Se distingue de lejos como la A: contraste del núcleo frente al agua honda de 1,23 en el vado
+    del banco y de 1,62 en otro, frente a 1,20 y 1,71 de la A.
+  - El camino, encima, es una rodada mojada: guijarros oscuros y aplastados, el agua por encima a la mitad y los bordes deshechos. Se pinta
+    después del agua.
+- **C.** El trecho largo (`VadoMedioLargo` 10 y `VadoTransicion` 3), solo como referencia.
+
+**Cómo se pinta el somero.** Lo somero (0..1) va en UV1.x del río y de la orilla, y en UV1.y de las teselas del suelo.
+- Río: agua más clara y transparente sobre un lecho de guijarros, piedras que asoman, rizos y algo de espuma.
+- Orilla mojada: guijarros mojados.
+- Suelo: el cauce baja menos (×0,3) y la ribera es más ancha (×2,6), más tendida y con playa de grava.
+- Con lo somero a 0, todo hace exactamente lo de antes: fuera de los vados el agua no cambia.
+- El camino «Mejorado» sigue sobre el vado como traza mojada entre los guijarros. Fuera de un vado no se pinta sobre el agua.
+
 ## La vegetación (tema 3, 2026-11-20)
 
 Árboles, matas y capa baja del mapa. Las reglas de colocación son las del prototipo (BronzeAgeClient: `src/mundo3d/arboles.ts`, `matas.ts`),

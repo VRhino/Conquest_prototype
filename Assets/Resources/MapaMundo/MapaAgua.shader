@@ -9,6 +9,8 @@
 //    funde con el mar). Ondas alargadas en el sentido de la corriente, más deprisa en el centro, unas pocas vetas finas de espuma, alguna roca
 //    con espuma; el lecho se ve a través en los bordes y el agua es más oscura en el centro; el borde, irregular.
 //  * Orilla mojada (2), vado (3): una franja que se desvanece hacia fuera; agua somera sobre guijarros claros con piedras que asoman y espumilla.
+//  * El trecho de vado (UV1.x del río y de la orilla, 0..1, `CaucesDelMapa`): el río poco hondo, más claro y transparente, con el lecho de
+//    guijarros a la vista, piedras que asoman, rizos y espuma donde corre; la orilla, playa de grava mojada.
 // Luz como el suelo (sol del cielo y un poco de cielo) y, encima, nubes, niebla de guerra y bruma (`MapaComun.hlsl`).
 Shader "Conquest/MapaAgua"
 {
@@ -24,6 +26,7 @@ Shader "Conquest/MapaAgua"
         _OrillaMojada ("Orilla mojada", Color) = (0.420, 0.365, 0.251, 1)
         _Vado ("Guijarros del vado", Color) = (0.851, 0.780, 0.604, 1)
         _Detalle ("Detalle (0 barato: sin destellos ni tercera capa de olas)", Float) = 1
+        _Barra ("Barra de guijarros en el núcleo del vado", Float) = 0
     }
     SubShader
     {
@@ -48,12 +51,12 @@ Shader "Conquest/MapaAgua"
 
             TEXTURE2D(_Olas); SAMPLER(sampler_Olas);
             CBUFFER_START(UnityPerMaterial)
-                float _Modo, _Desfase, _Detalle;
+                float _Modo, _Desfase, _Detalle, _Barra;
                 float4 _Somero, _Turquesa, _Hondo, _Espuma, _OrillaMojada, _Vado;
             CBUFFER_END
 
-            struct Entrada { float4 pos : POSITION; float4 uv : TEXCOORD0; };
-            struct Salida { float4 pos : SV_POSITION; float4 uv : TEXCOORD0; float3 mundo : TEXCOORD1; };
+            struct Entrada { float4 pos : POSITION; float4 uv : TEXCOORD0; float2 uv1 : TEXCOORD1; };
+            struct Salida { float4 pos : SV_POSITION; float4 uv : TEXCOORD0; float3 mundo : TEXCOORD1; float somero : TEXCOORD2; };
 
             Salida Vert(Entrada e)
             {
@@ -61,6 +64,7 @@ Shader "Conquest/MapaAgua"
                 s.mundo = TransformObjectToWorld(e.pos.xyz);
                 s.pos = TransformWorldToHClip(s.mundo);
                 s.uv = e.uv;
+                s.somero = e.uv1.x;
                 return s;
             }
 
@@ -89,12 +93,14 @@ Shader "Conquest/MapaAgua"
                 {
                     // La orilla mojada: tierra oscura que se desvanece hacia fuera, rota con ruido.
                     float3 c = _OrillaMojada.rgb * (0.6 + 0.45 * saturate(sol.direction.y));
+                    // en el vado, guijarros mojados
+                    c = lerp(c, _Vado.rgb * lerp(0.55, 0.75, Nubes(pu * 6.0 + 1.3)) * (0.6 + 0.45 * saturate(sol.direction.y)), s.somero * 0.8);
                     float a = 0.8 * (1 - smoothstep(0.1, 1.0, s.uv.x)) * lerp(0.6, 1.0, Nubes(pu * 1.7));
                     return half4(PintarMapa(c, p, true), a);
                 }
 
                 bool lago = modo == 0 && s.uv.y > 0.5;
-                float prof, rapido = 0, boca = 0, centro = 0;
+                float prof, rapido = 0, boca = 0, centro = 0, barra = 0;
                 float3 o2 = float3(0, 0, 0.5), o3 = float3(0, 0, 0.5);
                 float2 g;
                 if (modo == 0)
@@ -111,7 +117,7 @@ Shader "Conquest/MapaAgua"
                 else
                 {
                     centro = 1 - pow(abs(s.uv.x * 2 - 1), 2);
-                    prof = modo == 3 ? 0.25 : 1.5 * centro;
+                    prof = modo == 3 ? 0.25 : 1.5 * centro * lerp(1, 0.2, s.somero);
                     rapido = s.uv.z;
                     boca = s.uv.w;
                     // El río: ondas alargadas en el sentido de la corriente (el mapa estirado a lo largo), río abajo, más deprisa en el centro.
@@ -146,6 +152,28 @@ Shader "Conquest/MapaAgua"
                     float borde = smoothstep(0.0, 0.1 + 0.16 * r1, s.uv.x) * smoothstep(1.0, 0.9 - 0.16 * r2, s.uv.x);
                     alfa *= borde * smoothstep(0.0, 1.5, s.uv.y) * (1 - smoothstep(0.55, 1.0, boca) * 0.95);
                     base = lerp(base, _Turquesa.rgb, boca * 0.5);
+                    if (s.somero > 0.001)
+                    {
+                        // El trecho de vado: lecho de guijarros a la vista bajo agua clara (el mismo aspecto que el vado), más transparente; el
+                        // tono, cálido y claro, se distingue del agua honda también de lejos.
+                        float g1 = Nubes(pu * 3.0), g2 = Nubes(pu * 7.0 + 2.3);
+                        float3 lecho = lerp(_Vado.rgb * lerp(0.8, 1.1, g2), _Somero.rgb, 0.3);
+                        base = lerp(base, lecho, s.somero * 0.6);
+                        alfa = lerp(alfa, 0.7 * borde * smoothstep(0.0, 1.5, s.uv.y), s.somero);
+                        if (_Barra > 0.5)
+                        {
+                            // En el núcleo (1,5 u): la barra de guijarros del vado, de orilla a orilla y de contorno irregular (el umbral de lo somero
+                            // movido por ruido), con piedras que asoman y su aro de espuma; se ve de lejos como la franja de antes.
+                            float contorno = Nubes(pu * 1.3 + 4.1) * 0.5 + Nubes(pu * 4.0 + 1.7) * 0.5;
+                            barra = smoothstep(0.86, 0.93, s.somero + (contorno - 0.5) * 0.3);
+                            float piedra = smoothstep(0.66, 0.7, g1), aro = smoothstep(0.58, 0.64, g1) * (1 - piedra);
+                            float3 grava = lerp(_Vado.rgb * lerp(0.9, 1.15, g2), _Somero.rgb, 0.08);
+                            grava = lerp(grava, _Vado.rgb * 1.2, piedra);
+                            grava = lerp(grava, _Espuma.rgb, aro * 0.7);
+                            base = lerp(base, grava, barra);
+                            alfa = lerp(alfa, 0.97 * borde, barra);
+                        }
+                    }
                 }
                 if (modo == 3)
                 {
@@ -201,8 +229,13 @@ Shader "Conquest/MapaAgua"
                     // Unas pocas vetas finas de espuma que siguen la corriente, aguas blancas donde baja deprisa y alguna roca con espuma.
                     float veta = smoothstep(0.8, 0.86, Nubes(float2(s.uv.x * 5.0, s.uv.y * 0.22 - t * 0.5)));
                     espuma = veta * 0.4 * centro + rapido * smoothstep(0.55, 0.72, Nubes(float2(s.uv.x * 9.0, s.uv.y * 1.6 - t * 1.6))) * 0.8;
-                    float r = Nubes(pu * 1.1 + 9.1) * smoothstep(0.35, 0.0, abs(s.uv.x - 0.5));
-                    float roca = smoothstep(0.8, 0.83, r), aro = smoothstep(0.73, 0.8, r) * (1 - roca);
+                    // en el trecho de vado: rizos y espuma donde corre sobre el lecho, y más piedras que asoman, de orilla a orilla
+                    espuma = max(espuma, s.somero * smoothstep(0.68, 0.78, Nubes(float2(s.uv.x * 7.0, s.uv.y * 0.9 - t * 1.1))) * 0.35);
+                    // espuma justo donde el agua sale de la barra (su borde), que corre río abajo
+                    espuma = max(espuma, barra * (1 - barra) * 4 * smoothstep(0.5, 0.7, Nubes(float2(s.uv.x * 9.0, s.uv.y * 2.0 - t * 1.4))) * 0.6);
+                    float r = Nubes(pu * lerp(1.1, 3.0, s.somero) + 9.1) * lerp(smoothstep(0.35, 0.0, abs(s.uv.x - 0.5)), 1, s.somero);
+                    float umbral = lerp(0.8, 0.74, s.somero);
+                    float roca = smoothstep(umbral, umbral + 0.03, r), aro = smoothstep(umbral - 0.07, umbral, r) * (1 - roca);
                     espuma = max(espuma, aro * 0.9);
                     c = lerp(c, float3(0.55, 0.52, 0.47) * (0.6 + 0.45 * l), roca);
                     alfa = max(alfa, roca);

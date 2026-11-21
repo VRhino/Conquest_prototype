@@ -263,6 +263,54 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Los sitios sin árboles alrededor (u). Si cambian, se rehacen solo las teselas que tocan los que cambiaron; las de antes se
         /// siguen dibujando hasta tener las nuevas.</summary>
+        /// <summary>Los caminos (sus segmentos con el medio ancho, como el prototipo los mete con los cauces): nada de árboles a menos de medio ancho
+        /// + 0,2 u ni de matas y capa baja a menos de medio ancho + 0,1 u. Es un filtro sobre lo colocado (el mosaico no cambia). Cuando cambian, se
+        /// rehacen solo las teselas que tocan los caminos que llegan o se van.</summary>
+        public void Caminos(IReadOnlyList<(IReadOnlyList<(double x, double y)> puntos, double ancho)> caminos)
+        {
+            var claves = new HashSet<string>();
+            var porClave = new Dictionary<string, (IReadOnlyList<(double x, double y)> puntos, double ancho)>();
+            foreach (var c in caminos)
+            {
+                if (c.puntos.Count < 2) continue;
+                var a = c.puntos[0];
+                var b = c.puntos[c.puntos.Count - 1];
+                var k = $"{c.ancho}:{c.puntos.Count}:{a.x:0.000},{a.y:0.000}:{b.x:0.000},{b.y:0.000}";
+                claves.Add(k);
+                porClave[k] = c;
+            }
+            if (claves.SetEquals(clavesCaminos)) return;
+            void MarcarCamino(IReadOnlyList<(double x, double y)> puntos, double ancho)
+            {
+                double x0 = double.PositiveInfinity, y0 = double.PositiveInfinity, x1 = double.NegativeInfinity, y1 = double.NegativeInfinity;
+                foreach (var q in puntos) { x0 = Math.Min(x0, q.x); y0 = Math.Min(y0, q.y); x1 = Math.Max(x1, q.x); y1 = Math.Max(y1, q.y); }
+                double m = ancho / 2 + 0.2;
+                MarcarCaja(x0 - m, y0 - m, x1 + m, y1 + m);
+            }
+            foreach (var k in claves) if (!clavesCaminos.Contains(k)) MarcarCamino(porClave[k].puntos, porClave[k].ancho);
+            foreach (var k in clavesCaminos) if (!claves.Contains(k)) MarcarCamino(caminosPorClave[k].puntos, caminosPorClave[k].ancho);
+            var franjas = new List<(double ax, double ay, double bx, double by, double medio)>();
+            foreach (var c in porClave.Values)
+                for (int i = 1; i < c.puntos.Count; i++) franjas.Add((c.puntos[i - 1].x, c.puntos[i - 1].y, c.puntos[i].x, c.puntos[i].y, c.ancho / 2));
+            clavesCaminos = claves;
+            caminosPorClave = porClave;
+            franjasDeCaminos = franjas;
+        }
+
+        HashSet<string> clavesCaminos = new HashSet<string>();
+        Dictionary<string, (IReadOnlyList<(double x, double y)> puntos, double ancho)> caminosPorClave = new Dictionary<string, (IReadOnlyList<(double x, double y)>, double)>();
+        // (se cambia la lista entera, no se toca: el reparto, en otro hilo, lee la que había)
+        List<(double ax, double ay, double bx, double by, double medio)> franjasDeCaminos = new List<(double, double, double, double, double)>();
+
+        void MarcarCaja(double x0, double y0, double x1, double y1)
+        {
+            if (relieve == null) return;
+            float lado = (float)relieve.LadoEnUnidades;
+            for (int ty = (int)Math.Floor(y0 / lado); ty <= (int)Math.Floor(y1 / lado); ty++)
+                for (int tx = (int)Math.Floor(x0 / lado); tx <= (int)Math.Floor(x1 / lado); tx++)
+                    if (teselas.ContainsKey((tx, ty)) || enCurso.Contains((tx, ty))) sucias.Add((tx, ty));
+        }
+
         public void Claros(List<(double x, double y, double r)> nuevos)
         {
             // Primero, sin crear nada (se llama cada fotograma): ¿han cambiado?
@@ -501,6 +549,22 @@ namespace ConquestTactics.Mundo.Mapa
                 foreach (var q in misClaros) if ((x - q.x) * (x - q.x) + (y - q.y) * (y - q.y) < q.r * q.r) return true;
                 return false;
             }
+            // Los caminos de la tesela (con 2 u de margen, como el prototipo) y lo que queda hasta su borde (la distancia al eje menos el medio ancho).
+            double tx0 = tx * lado - 2, ty0 = ty * lado - 2, tx1 = (tx + 1) * lado + 2, ty1 = (ty + 1) * lado + 2;
+            var misCaminos = franjasDeCaminos.FindAll(f => Math.Max(f.ax, f.bx) + f.medio >= tx0 && Math.Min(f.ax, f.bx) - f.medio <= tx1
+                                                          && Math.Max(f.ay, f.by) + f.medio >= ty0 && Math.Min(f.ay, f.by) - f.medio <= ty1);
+            double ACamino(double x, double y)
+            {
+                double d = double.PositiveInfinity;
+                foreach (var f in misCaminos)
+                {
+                    double dx = f.bx - f.ax, dy = f.by - f.ay, l = dx * dx + dy * dy;
+                    double t = l > 0 ? Math.Max(0, Math.Min(1, ((x - f.ax) * dx + (y - f.ay) * dy) / l)) : 0;
+                    double ex = x - f.ax - t * dx, ey = y - f.ay - t * dy;
+                    d = Math.Min(d, Math.Sqrt(ex * ex + ey * ey) - f.medio);
+                }
+                return d;
+            }
             double ACauce(double x, double y) => rioCerca ? Cauces.ACauce(x, y) : double.PositiveInfinity;
 
             // El mosaico (si va): la estructura de cada celda de 2 u y la especie que manda en cada rodal de 8 u.
@@ -537,7 +601,7 @@ namespace ConquestTactics.Mundo.Mapa
                         double x = i + ReglasDeVegetacion.Azar(i, j, 11 + k), y = j + ReglasDeVegetacion.Azar(i, j, 29 + k);
                         int c = Muestra(x, y, out var alt);
                         if (Agua(c)) continue;
-                        if (Pendiente(c) > ReglasDeVegetacion.PendienteMaxima || ACauce(x, y) < 0.2 || EnClaro(x, y)) continue;
+                        if (Pendiente(c) > ReglasDeVegetacion.PendienteMaxima || ACauce(x, y) < 0.2 || EnClaro(x, y) || ACamino(x, y) < 0.2) continue;
                         // Lo que el suelo del mapa no tiene en el prototipo: ni en la cima ni en la nieve.
                         if (alt > umbrales.w || alt > nieve - 40) continue;
                         double dAgua = Math.Min(aAgua[c] * PasoMuestras, ACauce(x, y));
@@ -560,6 +624,11 @@ namespace ConquestTactics.Mundo.Mapa
                         int mod = modelo[(int)esp];
                         if (mod < 0) continue;
                         var s = especies[mod];
+                        // en la linde, árboles jóvenes (0,6 a 0,8)
+                        float escala = estado == EstadoDeCelda.Linde && estructura != null ? (float)(0.6 + 0.2 * r) : (float)(0.75 + 0.5 * r);
+                        // (estilo «Mejorado») el despeje crece con la copa: fuera el árbol cuyo tronco quede a menos de medio ancho + 0,2 u + 0,6 × su radio
+                        if (TrazosEnElMapa.Estilo == TrazosEnElMapa.EstiloDeTrazos.Mejorado && misCaminos.Count > 0
+                            && ACamino(x, y) < 0.2 + 0.6 * s.RadioCopa * Tamano * escala / EscalaDelMapa.MetrosPorUnidad) continue;
                         double r2 = ReglasDeVegetacion.Azar((int)Math.Round(x * 64), (int)Math.Round(y * 64), 5);
                         plantas.Add(new Planta
                         {
@@ -569,8 +638,7 @@ namespace ConquestTactics.Mundo.Mapa
                             Pos = EscalaDelMapa.AEscena(x, y, alt - Hundir),
                             Suelo = Suelo(c),
                             Giro = (float)(r * 360),
-                            // en la linde, árboles jóvenes (0,6 a 0,8)
-                            Escala = estado == EstadoDeCelda.Linde && estructura != null ? (float)(0.6 + 0.2 * r) : (float)(0.75 + 0.5 * r),
+                            Escala = escala,
                             Hondura = hondura,
                             Alto = (float)(0.9 + 0.3 * r2),
                             Azar = (float)ReglasDeVegetacion.Azar(i, j, 53 + k),
@@ -592,7 +660,7 @@ namespace ConquestTactics.Mundo.Mapa
                         double x = tx * lado + (i + ReglasDeVegetacion.Azar(gi, gj, 5)) * ReglasDeVegetacion.PasoMatas;
                         double y = ty * lado + (j + ReglasDeVegetacion.Azar(gi, gj, 7)) * ReglasDeVegetacion.PasoMatas;
                         int c = Muestra(x, y, out var alt);
-                        if (Agua(c) || ACauce(x, y) < 0.1 || EnClaro(x, y)) continue;
+                        if (Agua(c) || ACauce(x, y) < 0.1 || EnClaro(x, y) || ACamino(x, y) < 0.1) continue;
                         if (alt > umbrales.w || alt > nieve - 40) continue; // ni en la cima ni en la nieve (el suelo del mapa las pinta de roca y nieve)
                         float pend = Pendiente(c);
                         double dAgua = Math.Min(aAgua[c] * PasoMuestras, ACauce(x, y));
@@ -654,6 +722,12 @@ namespace ConquestTactics.Mundo.Mapa
                         if (tipo == (int)TipoDeMata.Hierba || tipo == (int)TipoDeMata.Flor || tipo == (int)TipoDeMata.Piedra)
                         {
                             if (!CapaBaja) continue;
+                            // (estilo «Mejorado») junto al camino, la capa baja ralea: de nada a medio ancho + 0,1 u hasta toda a + 0,7 u
+                            if (TrazosEnElMapa.Estilo == TrazosEnElMapa.EstiloDeTrazos.Mejorado && misCaminos.Count > 0)
+                            {
+                                double dc = ACamino(x, y);
+                                if (dc < 0.7 && ReglasDeVegetacion.Azar(gi, gj, 47) > Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.1f, 0.7f, (float)dc))) continue;
+                            }
                             // (el tinte de la hierba, del suelo de debajo, y el color de la flor, de su mancha de 9 u: los pone el sombreado)
                             bool piedra = tipo == (int)TipoDeMata.Piedra;
                             int iCapa = tipo == (int)TipoDeMata.Hierba ? iHierba : tipo == (int)TipoDeMata.Flor ? iFlor : iPiedra;
@@ -719,7 +793,7 @@ namespace ConquestTactics.Mundo.Mapa
                             double a = ReglasDeVegetacion.Azar(gi, gj, 23 + 2 * h) * 6.2832, d = 0.15 + 0.45 * ReglasDeVegetacion.Azar(gi, gj, 24 + 2 * h);
                             double hx = x + Math.Cos(a) * d, hy = y + Math.Sin(a) * d;
                             int hc = Muestra(hx, hy, out var halt);
-                            if (Agua(hc) || EnClaro(hx, hy) || ACauce(hx, hy) < 0.1) continue;
+                            if (Agua(hc) || EnClaro(hx, hy) || ACauce(hx, hy) < 0.1 || ACamino(hx, hy) < 0.1) continue;
                             Mata(hx, hy, halt, hc, 0.6 + 1.0 * ReglasDeVegetacion.Azar(gi, gj, 60 + h), 40 + 2 * h);
                         }
                     }

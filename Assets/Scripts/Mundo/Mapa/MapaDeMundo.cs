@@ -105,8 +105,13 @@ namespace ConquestTactics.Mundo.Mapa
             {
                 var h = (float)relieve.AlturaEn(x, y);
                 return cauces.Fondo(x, y, 0.5f) is float f ? Mathf.Min(h, f) : h;
-            }, transform);
+            }, transform, cauces);
             niebla = new NieblaDelMapa();
+            if (PinturaDelMapa.CaminosYTerritorio)
+            {
+                trazos = new TrazosEnElMapa(transform, terreno, relieve);
+                territorio = new TerritorioDelMapa();
+            }
             sesion.AlCambiar += AlCambiar;
             foreach (var k in sesion.Almacen.Ambitos.Keys) AlCambiar(k);
 
@@ -328,6 +333,8 @@ namespace ConquestTactics.Mundo.Mapa
             if (sesion != null) sesion.AlCambiar -= AlCambiar;
             terreno?.Destruir();
             vegetacion?.Destruir();
+            trazos?.Destruir();
+            territorio?.Destruir();
             pintor?.Destruir();
             niebla?.Destruir();
             if (rios != null)
@@ -370,6 +377,13 @@ namespace ConquestTactics.Mundo.Mapa
             vegetacion.Claros(Claros());
             vegetacion.Aclarado(AclararCopas ? Aclarados(cx, cy) : SinAclarar);
             vegetacion.Dibujar(camara, cx, cy);
+            if (trazos != null)
+            {
+                // la caja de las rayas: lo que se carga, con el tope del prototipo (240 u con la distancia de carga de 320)
+                double alcance = Math.Min(PinturaDelMapa.DistanciaCarga, Camara.Distancia * 7);
+                trazos.Actualizar(cx, cy, Math.Min(alcance, 240.0 * PinturaDelMapa.DistanciaCarga / 320));
+                territorio.Actualizar(cx, cy);
+            }
             if (pipelineDelMapa != null)
             {
                 // La sombra llega a 1,6 veces la distancia de la cámara (el radio del prototipo), hasta 700 m.
@@ -398,8 +412,21 @@ namespace ConquestTactics.Mundo.Mapa
             {
                 sucio = false;
                 proximasRayas = Time.unscaledTime + 0.5f;
-                var rayas = CosasDelMapa.Rayas(sesion.Almacen, heroeId(), datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion"), ahora);
+                var radioProteccion = datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion");
+                var rayas = CosasDelMapa.Rayas(sesion.Almacen, heroeId(), radioProteccion, ahora);
                 rayas.AddRange(RayasAdicionales);
+                if (trazos != null)
+                {
+                    // caminos, fronteras, zonas y el anillo de los mercenarios, como el prototipo (`TrazosEnElMapa`, `TerritorioDelMapa`); aquí quedan
+                    // las demás rayas (las Miradas)
+                    rayas.RemoveAll(r => r.Clase == ClaseDeRaya.Camino || r.Clase == ClaseDeRaya.ZonaDeFaccion || r.Clase == ClaseDeRaya.ZonaDePlaza
+                                         || r.Color == CosasDelMapa.AnilloMercenarios);
+                    var (lista, rellenos) = TrazosYTerritorio.Reunir(sesion.Almacen, heroeId(), radioProteccion, terreno.Cauces?.Vados);
+                    trazos.Fijar(lista);
+                    territorio.Fijar(rellenos);
+                    vegetacion.Caminos(lista.Where(t => t.Tipo == TipoDeTrazo.Camino)
+                        .Select(t => ((IReadOnlyList<(double x, double y)>)t.Puntos, t.Ancho)).ToList());
+                }
                 pintor.Rayas(rayas);
             }
             if (Seleccionada == null) return;
@@ -785,6 +812,15 @@ namespace ConquestTactics.Mundo.Mapa
         public bool SueloCompleto => terreno != null && terreno.Completo && (vegetacion == null || vegetacion.Completo);
         public VegetacionDelMapa Vegetacion => vegetacion;
         public double PeorMsTeselaDeSuelo => terreno?.PeorMsTesela ?? 0;
+        TrazosEnElMapa trazos;
+        TerritorioDelMapa territorio;
+        /// <summary>Para las pruebas: el territorio (lo que tarda en pintarse y subir).</summary>
+        public TerritorioDelMapa Territorio => territorio;
+        /// <summary>Para las pruebas: los vértices de las cintas de caminos y fronteras puestas.</summary>
+        public int VerticesDeTrazos => trazos?.Vertices ?? 0;
+        public TrazosEnElMapa Trazos => trazos;
+        /// <summary>Para las pruebas: los cauces (y sus trechos de vado).</summary>
+        public CaucesDelMapa Cauces => terreno?.Cauces;
         /// <summary>Lo más que ha tardado la sombra del relieve en un fotograma (ms).</summary>
         public double PeorMsRelieve => terreno?.PeorMsRelieve ?? 0;
         /// <summary>Teselas a la espera de su sombra del relieve.</summary>

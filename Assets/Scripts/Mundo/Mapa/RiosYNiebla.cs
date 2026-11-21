@@ -1,6 +1,7 @@
 // Los ríos y sus vados (del artefacto) y la niebla de guerra (de la sesión), en el mapa de mundo.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BronzeAge.Contract.V1;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -37,6 +38,8 @@ namespace ConquestTactics.Mundo.Mapa
             m.SetColor("_OrillaMojada", PinturaDelMapa.OrillaMojada);
             m.SetColor("_Vado", PinturaDelMapa.Vado);
             m.SetFloat("_Detalle", PinturaDelMapa.AguaConDetalle ? 1 : 0);
+            // la barra de guijarros de orilla a orilla en el núcleo del vado, solo con el vado corto (la B; la C, el trecho largo, sin ella)
+            m.SetFloat("_Barra", PinturaDelMapa.VadoComoTrecho && PinturaDelMapa.VadoMedioLargo <= 1.5f ? 1 : 0);
             return m;
         }
 
@@ -150,14 +153,18 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Los ríos, sus orillas mojadas y sus vados, en tres hijos de un objeto «Rios» (el de las cintas de agua se llama así).
         /// `suelo(x, y)`: la altura del suelo ya excavado, para pegar la orilla mojada y el vado.</summary>
-        public static GameObject Construir(ArtefactoDeMundo a, Relieve relieve, Func<double, double, float> suelo, Transform padre)
+        /// `cauces`: los trechos de vado (lo somero, en UV1.x del río y de la orilla); sin él, o con `PinturaDelMapa.VadoComoTrecho` apagado, la
+        /// franja atravesada de antes en cada punto de `Rio.vados`.
+        public static GameObject Construir(ArtefactoDeMundo a, Relieve relieve, Func<double, double, float> suelo, Transform padre, CaucesDelMapa cauces = null)
         {
             var e = EscalaDelMapa.MetrosPorUnidad;
             var rios = new Cintas();
             var orillas = new Cintas();
             var vados = new Cintas();
-            foreach (var rio in a.Rios)
+            bool trechos = cauces != null && PinturaDelMapa.VadoComoTrecho;
+            for (int ir = 0; ir < a.Rios.Count; ir++)
             {
+                var rio = a.Rios[ir];
                 var todos = new List<(Vector2 p, float ancho)>();
                 float andado = 0;
                 foreach (var tramo in Tramos(rio, relieve))
@@ -180,7 +187,8 @@ namespace ConquestTactics.Mundo.Mapa
                         float largo = Mathf.Max(0.01f, (vs[i1] - vs[i0]) * e);
                         rapido.Add(Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.1f, 0.3f, (alturas[i0] - alturas[i1]) / largo)));
                     }
-                    rios.Agregar(pts, i => Normal(pts, i), i => 0, i => tramo.Anchos[i], i => (alturas[i], alturas[i]), i => new Vector2(rapido[i], tramo.Boca[i]), vs);
+                    Func<int, float> somero = trechos ? (i => cauces.SomeroDe(ir, vs[i])) : (Func<int, float>)null;
+                    rios.Agregar(pts, i => Normal(pts, i), i => 0, i => tramo.Anchos[i], i => (alturas[i], alturas[i]), i => new Vector2(rapido[i], tramo.Boca[i]), vs, somero);
                     // La orilla mojada, a cada lado, pegada al suelo ya excavado (0,03 u por encima); x = 0 junto al agua, 1 fuera.
                     foreach (var lado in new[] { 1f, -1f })
                     {
@@ -189,11 +197,12 @@ namespace ConquestTactics.Mundo.Mapa
                             var nn = Normal(pts, i) * lado;
                             Vector2 dentro = pts[i] + nn * (tramo.Anchos[i] / 2 - 0.2f), fuera = pts[i] + nn * (tramo.Anchos[i] / 2 + AnchoOrilla - 0.2f);
                             return (Mathf.Max(suelo(dentro.x, dentro.y), alturas[i]) + 0.03f * e, suelo(fuera.x, fuera.y) + 0.03f * e);
-                        }, i => Vector2.zero, vs);
+                        }, i => Vector2.zero, vs, somero);
                     }
                 }
                 foreach (var vado in rio.Vados)
                 {
+                    if (trechos) break; // el trecho somero sustituye a la franja
                     var p = Punto(vado);
                     if (relieve.AguaEn(p.x, p.y) || todos.Count < 2) continue;
                     // La dirección del río junto al vado y un tramo ancho y somero de orilla a orilla, algo por encima del agua del río.
@@ -225,12 +234,14 @@ namespace ConquestTactics.Mundo.Mapa
         {
             readonly List<Vector3> v = new List<Vector3>();
             readonly List<Vector4> uv = new List<Vector4>();
+            readonly List<Vector2> uv1 = new List<Vector2>();
             readonly List<int> t = new List<int>();
 
             /// <summary>`normal(i)`: hacia dónde va x = 1; `desplazar(i)`: cuánto se aparta el centro de la línea (u, por la normal); `ancho(i)` (u);
-            /// `alturas(i)`: la del borde x = 0 y la del x = 1 (metros); `zw(i)`: lo que va en UV0.zw.</summary>
+            /// `alturas(i)`: la del borde x = 0 y la del x = 1 (metros); `zw(i)`: lo que va en UV0.zw; `somero(i)`: lo que va en UV1.x (lo somero
+            /// del trecho de vado, 0..1).</summary>
             public void Agregar(List<Vector2> puntos, Func<int, Vector2> normal, Func<int, float> desplazar, Func<int, float> ancho,
-                Func<int, (float, float)> alturas, Func<int, Vector2> zw, List<float> andado)
+                Func<int, (float, float)> alturas, Func<int, Vector2> zw, List<float> andado, Func<int, float> somero = null)
             {
                 for (int i = 0; i < puntos.Count; i++)
                 {
@@ -248,6 +259,9 @@ namespace ConquestTactics.Mundo.Mapa
                     v.Add(EscalaDelMapa.AEscena(p1.x, p1.y, h1));
                     uv.Add(new Vector4(0, andado[i], z.x, z.y));
                     uv.Add(new Vector4(1, andado[i], z.x, z.y));
+                    float so = somero?.Invoke(i) ?? 0;
+                    uv1.Add(new Vector2(so, 0));
+                    uv1.Add(new Vector2(so, 0));
                 }
             }
 
@@ -256,6 +270,7 @@ namespace ConquestTactics.Mundo.Mapa
                 var malla = new Mesh { name = nombre, indexFormat = IndexFormat.UInt32 };
                 malla.SetVertices(v);
                 malla.SetUVs(0, uv);
+                malla.SetUVs(1, uv1);
                 // Cada triángulo, mirando hacia arriba (el sombreado no descarta caras, pero las normales cuentan para la luz).
                 for (int k = 0; k < t.Count; k += 3)
                 {
@@ -293,19 +308,33 @@ namespace ConquestTactics.Mundo.Mapa
         const float Centro = 0.12f, Ribera = 1, SubeRibera = 0.8f, RiberaPintada = 1.6f;
         readonly Dictionary<(int, int), List<Muestra>> celdas = new Dictionary<(int, int), List<Muestra>>();
 
-        /// <summary>Una muestra del eje: dónde, el nivel de la lámina (m), el medio ancho (u), hacia dónde va y cuánto gira (rad/u, + a la izquierda).</summary>
-        struct Muestra { public double X, Y; public float Nivel, Medio, DirX, DirY, Curva; }
+        /// <summary>Una muestra del eje: dónde, el nivel de la lámina (m), el medio ancho (u), hacia dónde va y cuánto gira (rad/u, + a la izquierda);
+        /// de qué río es (su índice en el artefacto) y lo andado desde su nacimiento (u, como lo cuenta la cinta del río).</summary>
+        struct Muestra { public double X, Y; public float Nivel, Medio, DirX, DirY, Curva, S; public int Rio; }
         float medioMaximo;
+
+        /// <summary>Un vado: su punto de `Rio.vados`, su río (índice en el artefacto) y dónde cae a lo largo de él (u andados por el cauce).</summary>
+        public struct Trecho { public int Rio; public float Centro; public double X, Y; }
+        /// <summary>Los vados de `Rio.vados` proyectados sobre su río (los que caen en un cauce de tierra; si no, no cuentan para lo somero).</summary>
+        public readonly List<Trecho> Trechos = new List<Trecho>();
+        readonly Dictionary<int, List<Trecho>> trechosPorRio = new Dictionary<int, List<Trecho>>();
+        /// <summary>Todos los puntos de `Rio.vados` (u), para la franja de antes.</summary>
+        public readonly List<(double x, double y)> Vados = new List<(double x, double y)>();
+        /// <summary>Lo somero: el centro del cauce baja una fracción de lo de siempre, la ribera es más ancha y sube menos.</summary>
+        const float CentroSomero = 0.3f, RiberaSomera = 2.6f, SubeSomera = 0.35f;
 
         public CaucesDelMapa(ArtefactoDeMundo a, Relieve relieve)
         {
-            foreach (var rio in a.Rios)
-                foreach (var tramo in RiosDelMapa.Tramos(rio, relieve))
+            for (int ir = 0; ir < a.Rios.Count; ir++)
+            {
+                float andado = 0;
+                foreach (var tramo in RiosDelMapa.Tramos(a.Rios[ir], relieve))
                 {
                     var pts = tramo.Puntos;
                     for (int i = 0; i < pts.Count; i++)
                     {
                         var p = pts[i];
+                        if (i > 0) andado += Vector2.Distance(pts[i - 1], p); // como en `RiosDelMapa.Construir`
                         if (relieve.AguaEn(p.x, p.y)) continue;
                         float medio = tramo.Anchos[i] / 2;
                         medioMaximo = Mathf.Max(medioMaximo, medio);
@@ -317,9 +346,81 @@ namespace ConquestTactics.Mundo.Mapa
                         var key = ((int)Math.Floor(p.x / Celda), (int)Math.Floor(p.y / Celda));
                         if (!celdas.TryGetValue(key, out var l)) celdas[key] = l = new List<Muestra>();
                         l.Add(new Muestra { X = p.x, Y = p.y, Nivel = RiosDelMapa.NivelDelRio(relieve, p, new Vector2(-dir.y, dir.x), medio), Medio = medio,
-                            DirX = dir.x, DirY = dir.y, Curva = giro / largo });
+                            DirX = dir.x, DirY = dir.y, Curva = giro / largo, S = andado, Rio = ir });
                     }
                 }
+            }
+            // Los vados: cada punto de `Rio.vados`, sobre la muestra más cercana de su propio río (a menos de 6 u).
+            for (int ir = 0; ir < a.Rios.Count; ir++)
+                foreach (var v in a.Rios[ir].Vados)
+                {
+                    double vx = v.X / 1000.0, vy = v.Y / 1000.0;
+                    Vados.Add((vx, vy));
+                    if (!(Cercana(vx, vy, 6, ir) is Muestra m)) continue;
+                    var t = new Trecho { Rio = ir, Centro = m.S, X = vx, Y = vy };
+                    Trechos.Add(t);
+                    if (!trechosPorRio.TryGetValue(ir, out var lt)) trechosPorRio[ir] = lt = new List<Trecho>();
+                    lt.Add(t);
+                }
+        }
+
+        /// <summary>Lo que queda (u) de (x, y) al punto de vado más cercano (infinito si no hay ninguno a menos de 10 u).</summary>
+        public double AUnVado(double x, double y)
+        {
+            double d = double.PositiveInfinity;
+            foreach (var v in Vados)
+                if (Math.Abs(v.x - x) < 10 && Math.Abs(v.y - y) < 10) d = Math.Min(d, Math.Sqrt((v.x - x) * (v.x - x) + (v.y - y) * (v.y - y)));
+            return d;
+        }
+
+        Muestra? Cercana(double x, double y, double alcance, int rio = -1)
+        {
+            int ci = (int)Math.Floor(x / Celda), cj = (int)Math.Floor(y / Celda), r = (int)Math.Ceiling(alcance / Celda);
+            double mejor = alcance * alcance;
+            Muestra? cerca = null;
+            for (int dj = -r; dj <= r; dj++)
+                for (int di = -r; di <= r; di++)
+                    if (celdas.TryGetValue((ci + di, cj + dj), out var l))
+                        foreach (var p in l)
+                        {
+                            if (rio >= 0 && p.Rio != rio) continue;
+                            var d = (p.X - x) * (p.X - x) + (p.Y - y) * (p.Y - y);
+                            if (d < mejor) { mejor = d; cerca = p; }
+                        }
+            return cerca;
+        }
+
+        /// <summary>Hacia dónde va el río más cercano a (x, y) (a menos de 6 u); si no hay, (1, 0).</summary>
+        public (double x, double y) DireccionEn(double x, double y) => Cercana(x, y, 6) is Muestra m ? (m.DirX, m.DirY) : (1, 0);
+
+        /// <summary>El punto del eje del río `rio` a `s` u andados de su nacimiento (la muestra más cercana), o null si no la hay.</summary>
+        public (double x, double y)? PuntoDe(int rio, float s)
+        {
+            (double x, double y)? r = null;
+            float mejor = float.MaxValue;
+            foreach (var l in celdas.Values)
+                foreach (var m in l)
+                    if (m.Rio == rio && Math.Abs(m.S - s) < mejor) { mejor = Math.Abs(m.S - s); r = (m.X, m.Y); }
+            return r;
+        }
+
+        /// <summary>Lo somero del río `rio` a `s` u andados de su nacimiento: 1 a menos de `PinturaDelMapa.VadoMedioLargo` u de un vado, bajando a 0
+        /// en `PinturaDelMapa.VadoTransicion` u más.</summary>
+        public float SomeroDe(int rio, float s)
+        {
+            if (!PinturaDelMapa.VadoComoTrecho || !trechosPorRio.TryGetValue(rio, out var l)) return 0;
+            float r = 0, medio = PinturaDelMapa.VadoMedioLargo, transicion = Mathf.Max(0.01f, PinturaDelMapa.VadoTransicion);
+            foreach (var t in l)
+                r = Mathf.Max(r, 1 - Mathf.SmoothStep(0, 1, Mathf.InverseLerp(medio, medio + transicion, Mathf.Abs(s - t.Centro))));
+            return r;
+        }
+
+        /// <summary>Lo somero en (x, y): el de la muestra de cauce más cercana, si (x, y) cae en su cauce o a menos de `alcance` u de él; si no, 0.</summary>
+        public float SomeroEn(double x, double y, double alcance = 1)
+        {
+            if (!(Cercana(x, y, medioMaximo + alcance) is Muestra m)) return 0;
+            double d = Math.Sqrt((m.X - x) * (m.X - x) + (m.Y - y) * (m.Y - y));
+            return d <= m.Medio + alcance ? SomeroDe(m.Rio, m.S) : 0;
         }
 
         /// <summary>¿Hay algún tramo de río a menos de lo que alcanza el cauce (con su ribera) del rectángulo (u)? Para no consultar muestra a
@@ -353,11 +454,16 @@ namespace ConquestTactics.Mundo.Mapa
         }
 
         /// <summary>Como `Fondo`, y además cuánto es ribera en (x, y): 1 junto al agua, 0 a `RiberaPintada` u de la orilla.</summary>
-        public float? Consultar(double x, double y, float paso, out float ribera)
+        public float? Consultar(double x, double y, float paso, out float ribera) => Consultar(x, y, paso, out ribera, out _);
+
+        /// <summary>Como el otro, y lo somero (el trecho de vado) de la muestra más cercana: ahí el cauce es menos hondo y la ribera, más ancha y
+        /// tendida (la playa de grava).</summary>
+        public float? Consultar(double x, double y, float paso, out float ribera, out float somero)
         {
             ribera = 0;
+            somero = 0;
             var e = EscalaDelMapa.MetrosPorUnidad;
-            double alcance = medioMaximo + paso / 2 + Math.Max(Ribera, RiberaPintada * 3.5);
+            double alcance = medioMaximo + paso / 2 + Math.Max(Ribera * RiberaSomera, RiberaPintada * 3.5);
             int ci = (int)Math.Floor(x / Celda), cj = (int)Math.Floor(y / Celda), r = (int)Math.Ceiling(alcance / Celda);
             double mejor = double.MaxValue;
             Muestra cerca = default;
@@ -371,12 +477,15 @@ namespace ConquestTactics.Mundo.Mapa
                         }
             if (mejor == double.MaxValue) return null;
             float dist = (float)Math.Sqrt(mejor), efectivo = cerca.Medio + paso / 2;
+            somero = SomeroDe(cerca.Rio, cerca.S);
             // La ribera es más ancha en el lado de dentro de las curvas (las barras de arena y guijarros): el lado hacia el que gira el río.
             float lado = (float)(cerca.DirX * (y - cerca.Y) - cerca.DirY * (x - cerca.X));
             float barra = Math.Sign(lado) == Math.Sign(cerca.Curva) ? Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.03f, 0.25f, Mathf.Abs(cerca.Curva))) : 0;
-            ribera = 1 - Mathf.SmoothStep(0, 1, Mathf.Clamp01((dist - cerca.Medio) / (RiberaPintada * (1 + 2.5f * barra))));
-            if (dist < efectivo) return cerca.Nivel - Centro * e * (1 - (dist / efectivo) * (dist / efectivo));
-            if (dist < efectivo + Ribera) return cerca.Nivel + 0.02f * e + SubeRibera * e * ((dist - efectivo) / Ribera) * ((dist - efectivo) / Ribera);
+            // en el vado, la playa de grava a los dos lados: ribera pintada más ancha
+            ribera = 1 - Mathf.SmoothStep(0, 1, Mathf.Clamp01((dist - cerca.Medio) / (RiberaPintada * (1 + 2.5f * barra) * (1 + 1.2f * somero))));
+            float centro = Centro * Mathf.Lerp(1, CentroSomero, somero), riberaU = Ribera * Mathf.Lerp(1, RiberaSomera, somero), sube = SubeRibera * Mathf.Lerp(1, SubeSomera, somero);
+            if (dist < efectivo) return cerca.Nivel - centro * e * (1 - (dist / efectivo) * (dist / efectivo));
+            if (dist < efectivo + riberaU) return cerca.Nivel + 0.02f * e + sube * e * ((dist - efectivo) / riberaU) * ((dist - efectivo) / riberaU);
             return null;
         }
     }

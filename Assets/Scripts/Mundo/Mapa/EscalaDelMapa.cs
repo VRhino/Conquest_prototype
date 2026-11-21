@@ -74,6 +74,15 @@ namespace ConquestTactics.Mundo.Mapa
         public static bool SombrasReales = true;
         /// <summary>Con sombras reales, la sombra del relieve horneada en las teselas (las montañas sobre los valles).</summary>
         public static bool SombraDelRelieve = true;
+        /// <summary>Los caminos y el territorio como el prototipo (cintas con textura, fronteras partidas, relleno del territorio y la vegetación
+        /// fuera de los caminos); apagado, las rayas planas de antes.</summary>
+        public static bool CaminosYTerritorio = true;
+        /// <summary>El vado como trecho somero del río centrado en su punto de `Rio.vados` (el vado es un punto: el motor cruza por un nodo en él y
+        /// lo pisa a 0,75 u, `mundo::RADIO_VADO`): un núcleo de 2 × `VadoMedioLargo` u con lecho de guijarros a la vista y playas de grava, y una
+        /// transición de `VadoTransicion` u a cada lado. Apagado, la franja atravesada del tema del agua (1,6 u). Por defecto, la variante B
+        /// (núcleo de 1,5 u y transición de 2,5 u, unas 6,5 u en total) mientras Víctor elige.</summary>
+        public static bool VadoComoTrecho = true;
+        public static float VadoMedioLargo = 0.75f, VadoTransicion = 2.5f;
 
         // La niebla de guerra: el color (el fondo del tema de BronzeAgeClient) y la opacidad de lo nunca visto, lo recordado y lo que se ve.
         public static readonly Color Niebla = new Color32(10, 14, 23, 255);

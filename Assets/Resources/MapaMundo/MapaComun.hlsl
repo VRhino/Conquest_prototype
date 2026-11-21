@@ -71,6 +71,21 @@ float3 ColorDelCielo(float3 d, float3 cenit, float3 horizonte, float3 suelo, flo
 }
 
 /// El color lineal ya iluminado de un punto del mapa (`mundo`, en metros) con las nubes y la niebla de guerra (si `conNiebla`) y la bruma.
+// HSV (todo de 0 a 1; el tono, una vuelta) y su vuelta.
+float3 RgbAHsv(float3 c)
+{
+    float4 K = float4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    float4 p = lerp(float4(c.bg, K.wz), float4(c.gb, K.xy), step(c.b, c.g));
+    float4 q = lerp(float4(p.xyw, c.r), float4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    return float3(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-6)), d / (q.x + 1e-6), q.x);
+}
+float3 HsvARgb(float3 c)
+{
+    float3 p = abs(frac(c.xxx + float3(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - 3.0);
+    return c.z * lerp(float3(1, 1, 1), saturate(p - 1.0), c.y);
+}
+
 float3 PintarMapa(float3 colorLineal, float3 mundo, bool conNiebla)
 {
     float3 c = LinearToSRGB(saturate(colorLineal));

@@ -637,6 +637,471 @@ namespace ConquestTactics.Mundo.UI.Tests
             finally { MapaDeMundo.AclararCopas = true; }
         }
 
+        /// <summary>El banco de caminos y territorio, sobre el mundo de pruebas y sin tocar datos reales: una red verosímil trazada como la manda el
+        /// motor (nodos cada 4 u, ocho direcciones, por A* sobre el relieve, sin agua ni cauces salvo en un vado real) con un sendero por pradera, un
+        /// camino por bosque denso, un cruce de tres ramas, un camino que pasa por una plaza y un pueblo, uno que sube una ladera y uno que cruza el
+        /// río por el vado; y el territorio: tu Facción con dos plazas cuyas zonas se tocan y su zona fusionada, una Facción ajena pegada, otra de
+        /// color oscuro (sigilo negro), una plaza sin Facción y una recordada (ficha con radio). Capturas (`MUNDO_CAPTURAS`) de cada sitio a los tres
+        /// zooms, antes (las rayas de siempre) y después (como el prototipo), y las medidas: el fotograma con y sin, el recentrado del territorio y
+        /// el rehacer la vegetación por un camino nuevo.</summary>
+        [Category("Mapa"), Explicit("banco y capturas de caminos y territorio")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LosCaminosYElTerritorio()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "caminos-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var banco = BancoDeCaminos.Hacer(relieve, artefacto);
+            foreach (var l in banco.Registro) Debug.Log("[Caminos] " + l);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (PinturaDelMapa.CaminosYTerritorio, MapaDeMundo.AclararCopas);
+            MapaDeMundo.AclararCopas = false;
+            try
+            {
+                foreach (var con in new[] { false, true })
+                {
+                    PinturaDelMapa.CaminosYTerritorio = con;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, banco.Sitios["vado"], null);
+                    almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista() });
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    foreach (var kv in banco.Sitios)
+                    {
+                        yield return Llegar(mapa, almacen, kv.Value);
+                        yield return new WaitForSecondsRealtime(1);
+                        foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                            yield return Vista(mapa, zoom, 30, $"caminos_{kv.Key}_{(con ? "despues" : "antes")}_{z}");
+                    }
+                    // el coste, a zoom habitual, en el cruce (caminos, fronteras y relleno a la vista)
+                    yield return Llegar(mapa, almacen, banco.Sitios["cruce"]);
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"caminos_medir_{(con ? "despues" : "antes")}");
+                    yield return Medir(mapa, $"caminos: {(con ? "como el prototipo" : "las rayas de antes")}, zoom habitual; {mapa.VerticesDeTrazos} vértices de cintas");
+                    // el recentrado del territorio: cruzar un borde de celda de 128 u a 0,15 u por fotograma (y, sin la capa, el mismo paseo)
+                    var (cx, cy) = banco.Sitios["cruce"];
+                    double borde = Math.Round(cx / 128) * 128 + 64;
+                    var ejercito = almacen.Buscar(TipoEntidad.Ejercito, "ej-1").Ejercito;
+                    var tiempos = new List<float>();
+                    for (int k = 0; k <= 200; k++)
+                    {
+                        ejercito.Posicion = Pu(borde - 15 + k * 0.15, cy);
+                        yield return null;
+                        tiempos.Add(Time.unscaledDeltaTime * 1000);
+                    }
+                    tiempos.Sort();
+                    if (!con) { Debug.Log($"[Caminos] el mismo paseo sin la capa: peor fotograma {tiempos[200]:0.0} ms, segundo {tiempos[199]:0.0}, p95 {tiempos[190]:0.0} (mediana {tiempos[100]:0.0})"); continue; }
+                    Debug.Log($"[Caminos] recentrar el territorio: peor fotograma {tiempos[200]:0.0} ms, segundo {tiempos[199]:0.0}, p95 {tiempos[190]:0.0} (mediana {tiempos[100]:0.0}); el lienzo, como mucho {mapa.Territorio.PeorMsPintar:0} ms en su hilo y {mapa.Territorio.PeorMsSubir:0.0} ms al subir; {mapa.Territorio.Pintadas} pintadas; las cintas, {mapa.Trazos.Hechas} veces enteras (como mucho {mapa.Trazos.PeorMsHacer:0.0} ms) y {mapa.Trazos.TrozosRehechos} trozos por su suelo (como mucho {mapa.Trazos.PeorMsTrozos:0.0} ms en un fotograma)");
+                    // un camino nuevo: la vegetación de sus teselas se rehace
+                    yield return Llegar(mapa, almacen, banco.Sitios["camino_bosque"]);
+                    tiempos.Clear();
+                    almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista(conCaminoNuevo: true) });
+                    for (int k = 0; k < 240; k++) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
+                    Debug.Log($"[Caminos] un camino nuevo por el bosque: peor fotograma {tiempos.Max():0.0} ms (mediana {tiempos.OrderBy(t => t).ElementAt(120):0.0})");
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, "caminos_camino_nuevo_despues_2_habitual");
+                }
+            }
+            finally { (PinturaDelMapa.CaminosYTerritorio, MapaDeMundo.AclararCopas) = antes; }
+        }
+
+        /// <summary>La etapa 2 de caminos (estilo «Mejorado», `TrazosEnElMapa.Estilo`) y el vado como trecho somero (`PinturaDelMapa.VadoComoTrecho`),
+        /// lado a lado con el prototipo (etapa 1, con la franja del vado de antes), sobre el banco de `LosCaminosYElTerritorio`: cada sitio de caminos
+        /// y el vado a los tres zooms, otro vado sin camino, los recortes de cada suelo de cerca, y un río sin vado y una costa (que deben salir
+        /// iguales: fuera de los vados el agua no cambia). Las medidas: el fotograma con cada estilo, el paseo y un camino nuevo.</summary>
+        [Category("Mapa"), Explicit("banco y capturas de la etapa 2 de caminos")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LosCaminosMejorados()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "caminos2-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var banco = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            foreach (var l in banco.Registro) Debug.Log("[Caminos] " + l);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            var caminos = new[] { "vado", "sendero", "camino_bosque", "cruce", "plaza_pueblo", "ladera",
+                "frontera_propia", "frontera_vecino", "provincias", "faccion_oscura", "sin_faccion", "recordada", "anillo_mercenarios", "territorio_pradera" };
+
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (TrazosEnElMapa.Estilo, TerritorioDelMapa.Estilo, PinturaDelMapa.VadoComoTrecho, MapaDeMundo.AclararCopas);
+            MapaDeMundo.AclararCopas = false;
+            try
+            {
+                foreach (var mejorado in new[] { false, true })
+                {
+                    string estilo = mejorado ? "mejorado" : "prototipo";
+                    TrazosEnElMapa.Estilo = mejorado ? TrazosEnElMapa.EstiloDeTrazos.Mejorado : TrazosEnElMapa.EstiloDeTrazos.Prototipo;
+                    TerritorioDelMapa.Estilo = mejorado ? TerritorioDelMapa.EstiloDeTerritorio.Mejorado : TerritorioDelMapa.EstiloDeTerritorio.Prototipo;
+                    PinturaDelMapa.VadoComoTrecho = mejorado;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, banco.Sitios["vado"], null);
+                    almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista() });
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    var zooms = new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") };
+                    foreach (var k in caminos)
+                    {
+                        if (!banco.Sitios.ContainsKey(k)) continue;
+                        yield return Llegar(mapa, almacen, banco.Sitios[k]);
+                        yield return new WaitForSecondsRealtime(1);
+                        foreach (var (zoom, z) in zooms) { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"e2_{k}_{estilo}_{z}"); }
+                    }
+                    // Una frontera azul (tu zona sobre la pradera) con un río de verdad en el mismo encuadre: que no se confundan.
+                    if (banco.Medidas.Any(m => m.nombre == "azul sobre pradera") && mapa.Cauces != null)
+                    {
+                        var (_, cAzul, rAzul, _) = banco.Medidas.First(m => m.nombre == "azul sobre pradera");
+                        (double x, double y) rio = cAzul;
+                        double dRio = double.MaxValue;
+                        for (double dy = -40; dy <= 40; dy += 2)
+                            for (double dx = -40; dx <= 40; dx += 2)
+                            {
+                                double d = mapa.Cauces.ACauce(cAzul.x + dx, cAzul.y + dy, 3);
+                                if (d < 0 && dx * dx + dy * dy < dRio) { dRio = dx * dx + dy * dy; rio = (cAzul.x + dx, cAzul.y + dy); }
+                            }
+                        if (dRio < double.MaxValue)
+                        {
+                            double l = Math.Sqrt(dRio);
+                            var bordeRio = (x: cAzul.x + (rio.x - cAzul.x) / l * rAzul, y: cAzul.y + (rio.y - cAzul.y) / l * rAzul);
+                            yield return Llegar(mapa, almacen, ((bordeRio.x + rio.x) / 2, (bordeRio.y + rio.y) / 2));
+                            yield return new WaitForSecondsRealtime(1);
+                            foreach (var (zoom, z) in new[] { (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                            { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"e2_frontera_y_rio_{estilo}_{z}"); }
+                        }
+                    }
+                    // El territorio, medido: el color (sRGB: tono, saturación y luminancia) a 0,5, 1,5 y 3 u dentro del borde y a 3 u fuera, a zoom
+                    // habitual (la media de 9 puntos a lo largo del borde, ±1 u).
+                    foreach (var (nombreM, centroM, radioM, fueraM) in banco.Medidas)
+                    {
+                        var bordeM = (x: centroM.x + fueraM.x * radioM, y: centroM.y + fueraM.y * radioM);
+                        yield return Llegar(mapa, almacen, bordeM);
+                        yield return new WaitForSecondsRealtime(1);
+                        EsconderLaColumna();
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"e2_medida_{nombreM.Replace(' ', '_')}_{estilo}");
+                        string Medir((double x, double y) p0, double ancho)
+                        {
+                            var c = Color.black;
+                            int n = 0;
+                            for (int i = -4; i <= 4; i++)
+                            {
+                                double x = p0.x - fueraM.y * i * ancho / 4, y = p0.y + fueraM.x * i * ancho / 4;
+                                var w = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(x, y, (float)relieve.AlturaEn(x, y)));
+                                int px = (int)(w.x * rt.width / mapa.Vista.pixelWidth), py = (int)(w.y * rt.height / mapa.Vista.pixelHeight);
+                                if (px < 1 || py < 1 || px > rt.width - 2 || py > rt.height - 2 || w.z <= 0) continue;
+                                c += ultima.GetPixel(px, py); n++;
+                            }
+                            if (n == 0) return "—";
+                            c /= n;
+                            Color.RGBToHSV(c, out var h, out var sa, out _);
+                            return $"tono {h * 360:0}°, sat {sa:0.00}, lum {0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b:0.00}";
+                        }
+                        string Dentro(double d) => Medir((bordeM.x - fueraM.x * d, bordeM.y - fueraM.y * d), 1);
+                        Debug.Log($"[Territorio] {nombreM} {estilo}: a 0,5 u {Dentro(0.5)}; a 1,5 u {Dentro(1.5)}; a 3 u {Dentro(3)}; fuera (3 u) {Medir((bordeM.x + fueraM.x * 3, bordeM.y + fueraM.y * 3), 1)}");
+                    }
+                    if (banco.SitiosDeAgua.TryGetValue("vado_rio", out var otroVado))
+                    {
+                        yield return Llegar(mapa, almacen, otroVado);
+                        yield return new WaitForSecondsRealtime(1);
+                        foreach (var (zoom, z) in zooms) yield return Vista(mapa, zoom, 30, $"e2_vado_rio_{estilo}_{z}");
+                    }
+                    // Los recortes de cerca de cada suelo: la columna en el camino y escondida; el recorte, centrado en él. Y el color
+                    // medio del camino (por su eje) y del suelo de al lado (a 1,2 anchos), en sRGB.
+                    foreach (var kv in banco.Recortes)
+                    {
+                        var (rx, ry) = kv.Value;
+                        // la columna escondida y corrida lo que la cámara mira por delante de ella: el centro de la pantalla cae en el camino
+                        yield return Llegar(mapa, almacen, (rx, ry));
+                        yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"e2_{kv.Key}_{estilo}_previa");
+                        var rayo = mapa.Vista.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+                        float hSuelo = (float)relieve.AlturaEn(rx, ry);
+                        var g = rayo.origin + rayo.direction * ((hSuelo - rayo.origin.y) / rayo.direction.y);
+                        double e2 = EscalaDelMapa.MetrosPorUnidad, ox = g.x / e2 - rx, oy = -g.z / e2 - ry;
+                        yield return Llegar(mapa, almacen, (rx - ox, ry - oy));
+                        yield return new WaitForSecondsRealtime(1);
+                        EsconderLaColumna();
+                        yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"e2_{kv.Key}_{estilo}_entero");
+                        double ancho = kv.Key.EndsWith("sendero") ? TrazosYTerritorio.AnchoSendero : TrazosYTerritorio.AnchoCamino;
+                        Vector2 Pantalla(double x, double y)
+                        {
+                            var w = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(x, y, (float)relieve.AlturaEn(x, y)));
+                            return new Vector2(w.x * rt.width / mapa.Vista.pixelWidth, w.y * rt.height / mapa.Vista.pixelHeight);
+                        }
+                        Color Media(IEnumerable<(double x, double y)> puntos)
+                        {
+                            var c = Color.black;
+                            int n = 0;
+                            foreach (var (x, y) in puntos)
+                            {
+                                var s2 = Pantalla(x, y);
+                                if (s2.x < 2 || s2.y < 2 || s2.x > rt.width - 3 || s2.y > rt.height - 3) continue;
+                                for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) { c += ultima.GetPixel((int)s2.x + dx, (int)s2.y + dy); n++; }
+                            }
+                            return n > 0 ? c / n : Color.black;
+                        }
+                        // el camino, por sus bandas pisadas (no por el eje, que en el camino es el lomo de matas): a ±0,3 anchos del eje; el sendero, por su eje
+                        double banda = kv.Key.EndsWith("sendero") ? 0 : ancho * 0.3;
+                        var eje = Enumerable.Range(0, 31).SelectMany(i => new[] { (rx - 1.5 + i * 0.1, ry + banda), (rx - 1.5 + i * 0.1, ry - banda) }).Distinct().ToList();
+                        var lado = eje.Select(q => (q.Item1, q.Item2 + ancho * 1.2)).Concat(eje.Select(q => (q.Item1, q.Item2 - ancho * 1.2))).ToList();
+                        Color cc = Media(eje), cs = Media(lado);
+                        Color.RGBToHSV(cc, out var hc, out var sc, out var vc);
+                        float Lum(Color c) => 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b;
+                        Debug.Log($"[Caminos] color {kv.Key} {estilo}: camino ({cc.r * 255:0}, {cc.g * 255:0}, {cc.b * 255:0}) tono {hc * 360:0}° sat {sc:0.00}; " +
+                                  $"suelo ({cs.r * 255:0}, {cs.g * 255:0}, {cs.b * 255:0}); camino/suelo en luminancia {Lum(cc) / Math.Max(1e-4f, Lum(cs)):0.00}");
+                        var centro = Pantalla(rx, ry);
+                        int x0 = Mathf.Clamp((int)centro.x - 500, 0, rt.width - 1000), y0 = Mathf.Clamp((int)centro.y - 281, 0, rt.height - 562);
+                        var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+                        if (!string.IsNullOrEmpty(carpeta))
+                        {
+                            var rec = new Texture2D(1000, 562, TextureFormat.RGB24, false);
+                            rec.SetPixels(ultima.GetPixels(x0, y0, 1000, 562));
+                            rec.Apply();
+                            File.WriteAllBytes(Path.Combine(carpeta, $"e2_recorte_{kv.Key}_{estilo}.png"), rec.EncodeToPNG());
+                            UnityEngine.Object.Destroy(rec);
+                        }
+                    }
+                    foreach (var k in new[] { "rio_sin_vado", "costa" })
+                    {
+                        if (!banco.SitiosDeAgua.TryGetValue(k, out var sitio)) continue;
+                        yield return Llegar(mapa, almacen, sitio);
+                        yield return new WaitForSecondsRealtime(1);
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"e2_{k}_{estilo}_2_habitual");
+                        if (!mejorado) continue;
+                        // Fuera de los vados el agua no cambia: el sombreado del río y del suelo, con lo somero a 0, hace lo mismo que antes; aquí, que
+                        // a menos de 40 u no haya ni un vértice de río, de orilla ni de suelo con algo de somero (las capturas no se pueden comparar
+                        // píxel a píxel: el agua y las nubes se mueven).
+                        int conSomero = 0, vistos = 0;
+                        foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+                        {
+                            if (!(mf.name == "Rios" || mf.name == "Orillas" || mf.name.StartsWith("tesela"))) continue;
+                            var malla = mf.sharedMesh;
+                            var vs = malla.vertices;
+                            var u1 = new List<Vector2>();
+                            malla.GetUVs(1, u1);
+                            if (u1.Count != vs.Length) continue;
+                            for (int i = 0; i < vs.Length; i++)
+                            {
+                                var w = mf.transform.TransformPoint(vs[i]);
+                                double ux = w.x / EscalaDelMapa.MetrosPorUnidad, uy = -w.z / EscalaDelMapa.MetrosPorUnidad;
+                                if ((ux - sitio.x) * (ux - sitio.x) + (uy - sitio.y) * (uy - sitio.y) > 40 * 40) continue;
+                                vistos++;
+                                float so = mf.name.StartsWith("tesela") ? u1[i].y : u1[i].x;
+                                if (so > 0) conSomero++;
+                            }
+                        }
+                        Debug.Log($"[Caminos] {k}: {vistos} vértices de agua y suelo a menos de 40 u, {conSomero} con algo de somero");
+                        Assert.AreEqual(0, conSomero, $"{k}: lejos de los vados no hay nada somero");
+                    }
+                    // el coste, en el cruce, a zoom habitual
+                    yield return Llegar(mapa, almacen, banco.Sitios["cruce"]);
+                    EsconderLaColumna();
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"e2_medir_{estilo}");
+                    yield return Medir(mapa, $"caminos {estilo}, zoom habitual; {mapa.VerticesDeTrazos} vértices de cintas");
+                    var (cx, cy) = banco.Sitios["cruce"];
+                    double borde = Math.Round(cx / 128) * 128 + 64;
+                    var ejercito = almacen.Buscar(TipoEntidad.Ejercito, "ej-1").Ejercito;
+                    var tiempos = new List<float>();
+                    for (int k = 0; k <= 200; k++)
+                    {
+                        ejercito.Posicion = Pu(borde - 15 + k * 0.15, cy);
+                        yield return null;
+                        tiempos.Add(Time.unscaledDeltaTime * 1000);
+                    }
+                    tiempos.Sort();
+                    Debug.Log($"[Caminos] el paseo, {estilo}: peor fotograma {tiempos[200]:0.0} ms, segundo {tiempos[199]:0.0}, p95 {tiempos[190]:0.0} (mediana {tiempos[100]:0.0}); " +
+                              $"las cintas, {mapa.Trazos.Hechas} veces enteras (como mucho {mapa.Trazos.PeorMsHacer:0.0} ms) y {mapa.Trazos.TrozosRehechos} trozos por su suelo (como mucho {mapa.Trazos.PeorMsTrozos:0.0} ms en un fotograma)");
+                    yield return Llegar(mapa, almacen, banco.Sitios["camino_bosque"]);
+                    tiempos.Clear();
+                    almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista(conCaminoNuevo: true) });
+                    for (int k = 0; k < 240; k++) { yield return null; tiempos.Add(Time.unscaledDeltaTime * 1000); }
+                    Debug.Log($"[Caminos] un camino nuevo por el bosque, {estilo}: peor fotograma {tiempos.Max():0.0} ms (mediana {tiempos.OrderBy(t => t).ElementAt(120):0.0})");
+                    EsconderLaColumna();
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"e2_camino_nuevo_{estilo}_2_habitual");
+                }
+            }
+            finally { (TrazosEnElMapa.Estilo, TerritorioDelMapa.Estilo, PinturaDelMapa.VadoComoTrecho, MapaDeMundo.AclararCopas) = antes; }
+        }
+
+        /// <summary>Esconde el cubo de tu columna (para que no tape lo que se mira).</summary>
+        void EsconderLaColumna()
+        {
+            foreach (var r in go.GetComponentsInChildren<Renderer>(true)) if (r.name == "Tu columna" || r.transform.parent?.name == "Tu columna") r.enabled = false;
+        }
+
+        /// <summary>El vado es un punto (el motor cruza por un nodo en él; `mundo::RADIO_VADO` 0,75 u): en el banco de caminos, todo camino que cruza
+        /// un río pasa a menos de 0,05 u del punto de su vado. Y las tres variantes del arte del vado sobre los mismos dos vados (el del banco, con el
+        /// camino cruzando, y otro sin camino), a los tres zooms y de cerca en el punto: A la franja del tema del agua (1,6 u), B el río poco hondo
+        /// corto y centrado en el punto (núcleo de 1,5 u y 2,5 u de transición) y C el trecho largo (20 u), como referencia.</summary>
+        [Category("Mapa"), Explicit("capturas de las variantes del vado")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LosVadosPorElPunto()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "vados-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var banco = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            foreach (var l in banco.Registro) Debug.Log("[Vados] " + l);
+            Debug.Log($"[Vados] el mundo: {artefacto.Manifiesto.Hash.Substring(0, 8)}…, {artefacto.Manifiesto.Generador}; {artefacto.Navegacion.Nodos.Count} nodos, {artefacto.Navegacion.Aristas.Count} aristas, " +
+                      $"{artefacto.Navegacion.Aristas.Count(a => a.Vado)} de vado; {artefacto.Rios.Sum(r => r.Vados.Count)} vados");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (TrazosEnElMapa.Estilo, TerritorioDelMapa.Estilo, PinturaDelMapa.VadoComoTrecho, PinturaDelMapa.VadoMedioLargo, PinturaDelMapa.VadoTransicion, MapaDeMundo.AclararCopas);
+            MapaDeMundo.AclararCopas = false;
+            TrazosEnElMapa.Estilo = TrazosEnElMapa.EstiloDeTrazos.Mejorado;
+            TerritorioDelMapa.Estilo = TerritorioDelMapa.EstiloDeTerritorio.Mejorado;
+            try
+            {
+                var variantes = new (string nombre, bool trecho, float medio, float transicion)[] { ("A", false, 0.75f, 2.5f), ("B", true, 0.75f, 2.5f), ("C", true, 10, 3) };
+                bool comprobado = false;
+                foreach (var (nombre, trecho, medio, transicion) in variantes)
+                {
+                    (PinturaDelMapa.VadoComoTrecho, PinturaDelMapa.VadoMedioLargo, PinturaDelMapa.VadoTransicion) = (trecho, medio, transicion);
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, banco.Sitios["vado"], null);
+                    almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista() });
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    yield return Llegar(mapa, almacen, banco.Sitios["vado"]);
+                    if (!comprobado)
+                    {
+                        // Todo camino que cruza un río (alguna muestra dentro de un cauce) pasa a menos de 0,05 u del punto de un vado.
+                        comprobado = true;
+                        var cauces = mapa.Cauces;
+                        var (trazos, _) = TrazosYTerritorio.Reunir(almacen, "heroe-1", 0, cauces.Vados);
+                        int cruzan = 0;
+                        foreach (var t in trazos.Where(t => t.Tipo == TipoDeTrazo.Camino))
+                        {
+                            bool cruza = false;
+                            for (int i = 1; i < t.Puntos.Count && !cruza; i++)
+                                for (double f = 0; f <= 1; f += 0.1)
+                                {
+                                    double x = t.Puntos[i - 1].x + (t.Puntos[i].x - t.Puntos[i - 1].x) * f, y = t.Puntos[i - 1].y + (t.Puntos[i].y - t.Puntos[i - 1].y) * f;
+                                    if (cauces.ACauce(x, y) < -0.05) { cruza = true; break; }
+                                }
+                            if (!cruza) continue;
+                            cruzan++;
+                            double alVado = double.MaxValue;
+                            foreach (var v in cauces.Vados)
+                                for (int i = 1; i < t.Puntos.Count; i++)
+                                {
+                                    var a = t.Puntos[i - 1];
+                                    var b = t.Puntos[i];
+                                    double dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy;
+                                    double u = l > 0 ? Math.Max(0, Math.Min(1, ((v.x - a.x) * dx + (v.y - a.y) * dy) / l)) : 0;
+                                    alVado = Math.Min(alVado, Math.Sqrt(Math.Pow(v.x - a.x - u * dx, 2) + Math.Pow(v.y - a.y - u * dy, 2)));
+                                }
+                            Debug.Log($"[Vados] un camino que cruza un río ({t.Puntos.Count} puntos) pasa a {alVado:0.000} u del punto del vado");
+                            Assert.Less(alVado, 0.05, "el camino cruza el río por el punto del vado");
+                        }
+                        Assert.Greater(cruzan, 0, "en el banco hay algún camino que cruza un río");
+                    }
+                    var zooms = new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") };
+                    var cauces2 = mapa.Cauces;
+                    // el otro vado: el punto de `Rio.vados` más cercano al grupo de aristas de vado que eligió el banco
+                    var otro = banco.SitiosDeAgua.TryGetValue("vado_rio", out var o) ? cauces2.Vados.OrderBy(v => Math.Pow(v.x - o.x, 2) + Math.Pow(v.y - o.y, 2)).First() : banco.Sitios["vado"];
+                    foreach (var (k, sitio) in new[] { ("vado", banco.Sitios["vado"]), ("vado_rio", otro) })
+                    {
+                        // la columna, en el vado (la cámara lo centra) y escondida, para que no tape el cruce
+                        yield return Llegar(mapa, almacen, sitio);
+                        yield return new WaitForSecondsRealtime(1);
+                        foreach (var (zoom, z) in zooms)
+                        {
+                            EsconderLaColumna();
+                            yield return Vista(mapa, zoom, 30, $"v_{k}_{nombre}_{z}");
+                            if (nombre == "C") continue;
+                            // la luminancia media del núcleo del vado (a menos de 0,6 u del punto) y la del agua honda de al lado (el eje del río a 6 u)
+                            var (dx, dy) = cauces2.DireccionEn(sitio.x, sitio.y);
+                            float Lum(Color c) => 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b;
+                            float MediaLum(IEnumerable<(double x, double y)> pts)
+                            {
+                                double suma = 0;
+                                int n = 0;
+                                foreach (var (x, y) in pts)
+                                {
+                                    var w2 = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(x, y, (float)relieve.AlturaEn(x, y)));
+                                    int px = (int)(w2.x * rt.width / mapa.Vista.pixelWidth), py = (int)(w2.y * rt.height / mapa.Vista.pixelHeight);
+                                    if (px < 1 || py < 1 || px > rt.width - 2 || py > rt.height - 2 || w2.z <= 0) continue;
+                                    suma += Lum(ultima.GetPixel(px, py)); n++;
+                                }
+                                return n > 0 ? (float)(suma / n) : float.NaN;
+                            }
+                            var nucleo = new List<(double, double)>();
+                            var honda = new List<(double, double)>();
+                            for (double t = -0.6; t <= 0.6; t += 0.15)
+                                for (double u = -0.6; u <= 0.6; u += 0.15)
+                                {
+                                    nucleo.Add((sitio.x + dx * t - dy * u, sitio.y + dy * t + dx * u));
+                                    foreach (var lejos in new[] { -6.0, 6.0 }) honda.Add((sitio.x + dx * (lejos + t) - dy * u * 0.4, sitio.y + dy * (lejos + t) + dx * u * 0.4));
+                                }
+                            float ln = MediaLum(nucleo), lh = MediaLum(honda);
+                            Debug.Log($"[Vados] luminancia {k} {nombre} {z}: núcleo del vado {ln:0.000}, agua honda de al lado {lh:0.000}, contraste {ln / Math.Max(1e-4f, lh):0.00}");
+                        }
+                    }
+                    // de cerca, el camino pasando por el punto: la columna 4 u al lado, el recorte centrado en el punto del vado
+                    var (vx, vy) = banco.Sitios["vado"];
+                    yield return Llegar(mapa, almacen, (vx + 4, vy + 1));
+                    yield return new WaitForSecondsRealtime(1);
+                    EsconderLaColumna();
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 35, $"v_punto_{nombre}_entero");
+                    var w = mapa.Vista.WorldToScreenPoint(EscalaDelMapa.AEscena(vx, vy, (float)relieve.AlturaEn(vx, vy)));
+                    int cx0 = Mathf.Clamp((int)(w.x * rt.width / mapa.Vista.pixelWidth) - 500, 0, rt.width - 1000), cy0 = Mathf.Clamp((int)(w.y * rt.height / mapa.Vista.pixelHeight) - 281, 0, rt.height - 562);
+                    var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
+                    if (!string.IsNullOrEmpty(carpeta))
+                    {
+                        var rec = new Texture2D(1000, 562, TextureFormat.RGB24, false);
+                        rec.SetPixels(ultima.GetPixels(cx0, cy0, 1000, 562));
+                        rec.Apply();
+                        File.WriteAllBytes(Path.Combine(carpeta, $"v_punto_{nombre}.png"), rec.EncodeToPNG());
+                        UnityEngine.Object.Destroy(rec);
+                    }
+                }
+            }
+            finally
+            {
+                (TrazosEnElMapa.Estilo, TerritorioDelMapa.Estilo, PinturaDelMapa.VadoComoTrecho, PinturaDelMapa.VadoMedioLargo, PinturaDelMapa.VadoTransicion, MapaDeMundo.AclararCopas) = antes;
+            }
+        }
+
+        /// <summary>Las tres opciones del territorio que se le ofrecen a Víctor, en los mismos sitios del banco, a zoom habitual y alejado: el
+        /// prototipo, el filo («Mejorado», ronda 4) y «Suave» (tinte suave en todo el territorio y un filo más fino y menos vivo). Los caminos,
+        /// «Mejorado».</summary>
+        [Category("Mapa"), Explicit("capturas de las tres opciones del territorio")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator LasTresOpcionesDelTerritorio()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "territorio-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var banco = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (TrazosEnElMapa.Estilo, TerritorioDelMapa.Estilo, MapaDeMundo.AclararCopas);
+            MapaDeMundo.AclararCopas = false;
+            TrazosEnElMapa.Estilo = TrazosEnElMapa.EstiloDeTrazos.Mejorado;
+            try
+            {
+                foreach (var (estilo, nombre) in new[] { (TerritorioDelMapa.EstiloDeTerritorio.Prototipo, "1_prototipo"), (TerritorioDelMapa.EstiloDeTerritorio.Mejorado, "2_filo"),
+                                                         (TerritorioDelMapa.EstiloDeTerritorio.Suave, "3_suave") })
+                {
+                    TerritorioDelMapa.Estilo = estilo;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, banco.Sitios["frontera_vecino"], null);
+                    almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista() });
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    foreach (var k in new[] { "frontera_vecino", "plaza_pueblo", "faccion_oscura" })
+                    {
+                        yield return Llegar(mapa, almacen, banco.Sitios[k]);
+                        yield return new WaitForSecondsRealtime(1);
+                        foreach (var (zoom, z) in new[] { (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                        { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"t_{k}_{nombre}_{z}"); }
+                    }
+                }
+            }
+            finally { (TrazosEnElMapa.Estilo, TerritorioDelMapa.Estilo, MapaDeMundo.AclararCopas) = antes; }
+        }
+
         /// <summary>El sol del mapa, por defecto: el acimut del prototipo con 40° de elevación (Víctor, 2026-11-20).</summary>
         [Test, Category("Mapa")]
         public void ElSolDelMapaEstaA40Grados()
