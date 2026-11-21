@@ -595,11 +595,11 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
   - niveles 1 y 2: 512 px;
   - nivel 3: 1024 px;
   - niveles 4 y 5: 2048 px de color y 1024 de máscara.
-- **Muralla:** va en un objeto aparte del mismo FBX y se dibuja solo si la plaza la tiene.
+- **Muralla:** va aparte de la villa y se dibuja solo si la plaza la tiene (ver «Murallas», abajo).
 - **Asiento:**
   - La miniatura se coloca a la altura media de su huella (25 puntos).
   - Se inclina la mitad de la pendiente, hasta 8,5°.
-  - El giro sale de la semilla.
+  - Se gira con la puerta hacia su camino (ver «Murallas»); sin camino, el giro sale de la semilla.
 - **Detalle de las casas (niveles 3 a 5):** se hornea desde una geometría rica sobre la ligera, así que no añade triángulos al mapa. Incluye puertas, ventanucos, cabezas de viga, el pretil, el zócalo manchado y enseres en las azoteas.
 - **Regla de tamaño** (la eligió Víctor: «1,5»): `CosasDelMapa.HuellaDePlaza` es el mayor de dos radios.
   - Uno es el `RadioDePlaza` del prototipo (la décima parte de la zona × 0,8 × 0,62, 0,8 o 1 según el nivel). El otro es 0,9 u, el mínimo.
@@ -620,6 +620,34 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
 - **Vegetación:** ni árboles ni matas hasta la huella y media (terreno pastado). Hasta un radio más, la capa baja queda rala (un tercio) y a media altura (`MaquetasDelMapa.Ralo`, junto al de los nodos).
 - **Coste:** con sombras y una plaza de cada nivel del 1 al 5 en pantalla, el hilo principal tarda 3,31 ms frente a 3,64 ms del prototipo a zoom habitual. Se hacen 10 llamadas y unos 40 000 triángulos. La GPU no se puede medir en las pruebas sin ventana.
 
+### Murallas (parte 3, 2026-11-21)
+
+- **Qué lleva cada nivel.** Se pinta según el nivel de la plaza, como el prototipo: el mapa solo recibe `tiene_muralla`, no la clase del recinto.
+  - En el motor (`Docs/Mechanics/Murallas.md` de BronzeAge), el recinto tiene su propio nivel: 1 empalizada (desde plaza de nivel 2), 2 muro de piedra (desde nivel 3) y 3 muralla con adarve (desde nivel 4). Las torres solo existen en los recintos 2 y 3.
+  - Nivel 1: nunca lleva muralla. Si llega con `tiene_muralla`, no se dibuja nada.
+  - Nivel 2: empalizada sobre terraplén y foso, toda de madera y tierra. La torre de la puerta y las garitas son de postes y tablas con techo de paja.
+  - Nivel 3: la muralla ciclópea, dentro de su FBX (`plaza3_<v>_muralla_*`).
+  - Nivel 4: zócalo de piedra gris y cuerpo de adobe almenado. Torres a 1,4 veces el lienzo, puerta mayor con rampa y un portillo.
+  - Nivel 5: zócalo más alto, enlucido ocre con banda roja, antemuro bajo almenado y puerta monumental.
+- **Ficheros.** Las de los niveles 2, 4 y 5 van en su propio FBX (`muralla<nivel>_<v>`, con su color y su máscara), uno por variante. Así no se tocan las villas aprobadas.
+  - Cada una trae un json con su radio, en huellas, y el ángulo de su puerta.
+  - Cada villa trae otro json (`plaza<nivel>_<v>.json`) con el ángulo de su puerta.
+  - En las de nivel 4 y 5 no se dibuja la muralla vieja que trae su FBX, porque la sustituye la suya aparte.
+- **Solo con `tiene_muralla`.** Las plazas recordadas van sin muralla.
+- **Huella.** La villa se dibuja con su huella de siempre, y la muralla queda por fuera. Con muralla, el aro, el clic y el claro llegan al radio de la muralla, con tope de 1,12 (`CosasDelMapa.HuellaConMuralla`, `MaquetasDelMapa.RadioMaximoDeMuralla`). El nivel 3 sigue en 1,00.
+- **En pendiente.** La villa se inclina la mitad de la pendiente, y la muralla sigue la pendiente entera del suelo bajo su anillo. Va sesgada, no inclinada (`Miniatura.MMuralla`), así que los muros quedan a plomo. El lienzo no se entierra cuesta arriba ni vuela cuesta abajo, y cuesta una matriz más por plaza.
+- **Al hornearlas**, la muralla se separa de la villa por una marca en las caras de la villa (`muralla_hornear.marcar_lo_viejo`), no contando caras, porque el bmesh reutiliza los huecos de las borradas. Cada muralla se revisa desde los cuatro lados (`ver_muralla.py`, y en el mapa la vuelta de `LasMurallasModeladas`).
+- **Puerta hacia el camino.** De los tramos de la red que empiezan o acaban dentro de la huella, se elige el de menor id (`tramo-N`, por su número). La villa se gira para que su puerta mire a su primer punto fuera (`MaquetasDelMapa.RumboDelCamino`). Sin camino, el giro sale de la semilla.
+- **Triángulos de la muralla** (cerca / medio / lejos):
+  - nivel 2: 1500 / 600 / 100 (de cerca también en cinta, de 150 dientes: los troncos sueltos pasan del tope y el diezmado se los come);
+  - nivel 4: 3000 / 1500 / 200;
+  - nivel 5: unos 5200 / 2000 / 250, sin diezmar de cerca (72 tramos, torres de cuatro merlones y la banda roja en tira): así no se pierden las almenas.
+- **Radios** (en huellas):
+  - nivel 2: 1,07 y 1,07;
+  - nivel 4: 1,11 y 1,06;
+  - nivel 5: 1,12 y 1,09.
+- **Variantes.** Los niveles 3, 4 y 5 tienen segunda variante (`plaza<nivel>_2`): palacio al noroeste y templo o zigurat al oeste.
+
 **Lo que sigue como en el prototipo:**
 - pueblos y aldeas;
 - avanzadas;
@@ -627,7 +655,7 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
 - campamentos de mercenarios y de bandidos;
 - el alijo;
 - las batallas;
-- las empalizadas de los niveles 1 y 2. Con miniatura no se dibujan, porque son de la parte 3, las murallas.
+- la muralla de las plazas sin miniatura (las de «Prototipo»).
 
 **En el editor:**
 - `Conquest/Mundo/Asentamientos: Mejorado`: la casilla del estilo. Se guarda en EditorPrefs, se aplica al entrar en Play y viene apagada.
@@ -639,11 +667,14 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
 
 **Pruebas:**
 - Sin capturas:
-  - `MaquetasDelMapaReglasTests`: variante por semilla, nivel de detalle y huella.
+  - `MaquetasDelMapaReglasTests`: variante por semilla, nivel de detalle, huella y rumbo del camino.
   - `LasMiniaturasQueSeDibujan`: muralla solo con muralla, color de Facción, variante, aro y clic con lo dibujado, y «Prototipo» como antes.
+  - `LasMurallasDeLasPlazas`: el nivel 1 sin muralla aunque la tenga; la del 3, la de su FBX; las del 2, 4 y 5, la suya aparte de su variante; el aro y el clic, al radio de la muralla; la puerta, hacia el camino de menor id.
   - `ElBancoDeAsentamientosSeMonta` (EditMode): monta el banco del menú y comprueba que hay una miniatura de cada nivel y ningún error.
 - Con capturas, explícitas:
   - `LasPlazasModeladas`: niveles 1 a 5 frente al prototipo y el suelo en lo seco.
+  - `LasMurallasModeladas`: las murallas frente a las del prototipo y las segundas variantes sin muralla.
+  - Con `MUNDO_PLAZAS_MURALLA=1`, la luminancia y el coste se miden con muralla.
   - `LaLuminanciaDeLasPlazas`: luminancia y ancho frente al prototipo.
   - `ElCosteDeLasPlazasModeladas`: coste por fotograma.
   - `LosAsentamientos` y `ElCosteDeLosAsentamientos`: los de la etapa 1.

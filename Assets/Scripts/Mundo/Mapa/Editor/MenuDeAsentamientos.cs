@@ -3,7 +3,8 @@
 //    se aplica al entrar en Play; apagada, «Prototipo» (el valor del código).
 //  * `Conquest/Mundo/Banco de asentamientos`: abre una escena vacía sin guardar, entra en Play y monta el mapa en local, sin servidor, con el
 //    mundo que ya hay en disco (el que bajó la última partida, en `persistentDataPath/mundo`) y un banco de plazas: de nivel 1 (zonas de 12 y
-//    20 u), 2 (25 u), 3 (35 u, con muralla y sin ella), 4 (45 u) y 5 (55 u), cada una en tierra firme, llana y despejada, separadas. La cámara
+//    20 u), 2 (25 u), 3 (35 u), 4 (45 u) y 5 (55 u), las del 2 al 5 abiertas y amuralladas, cada una en tierra firme, llana y despejada,
+//    separadas. La cámara
 //    es la del mapa (arrastrar gira, la rueda acerca); `Conquest/Mundo/Banco: siguiente plaza` lleva a la siguiente.
 using System;
 using System.Collections.Generic;
@@ -153,8 +154,9 @@ namespace ConquestTactics.Mundo.Mapa.Editor
             sitios.Clear();
             int id = 0;
             // (nivel, zona, muralla, Facción): el radio de búsqueda, la huella con su suelo y algo de margen
-            foreach (var (nivel, zona, muralla, faccion) in new[] { (1u, 12.0, false, "f-1"), (1u, 20.0, false, "f-2"), (2u, 25.0, false, "f-1"), (3u, 35.0, true, "f-2"),
-                                                                     (3u, 35.0, false, "f-1"), (4u, 45.0, false, "f-2"), (5u, 55.0, false, "f-1") })
+            foreach (var (nivel, zona, muralla, faccion) in new[] { (1u, 12.0, false, "f-1"), (1u, 20.0, false, "f-2"), (2u, 25.0, false, "f-1"), (2u, 25.0, true, "f-2"),
+                                                                     (3u, 35.0, false, "f-1"), (3u, 35.0, true, "f-2"), (4u, 45.0, false, "f-2"), (4u, 45.0, true, "f-1"),
+                                                                     (5u, 55.0, false, "f-1"), (5u, 55.0, true, "f-2") })
             {
                 double huella = Math.Max(0.9, zona * 0.1 * 0.8 * (nivel <= 1 ? 0.62 : nivel == 2 ? 0.8 : 1));
                 var sitio = Buscar(huella * 2.2 + 1);

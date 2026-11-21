@@ -76,11 +76,11 @@ namespace ConquestTactics.Mundo.Mapa
         /// color de su Facción; y su matriz, al asentarla.</summary>
         sealed class Miniatura
         {
-            public double X, Y, Rc, Semilla, Nivel, Huella;
+            public double X, Y, Rc, Semilla, Nivel, Huella, Rumbo;
             public bool Muralla, BajoNiebla;
             public Vector4 Faccion;
             public Modelo Modelo;
-            public Matrix4x4 M;
+            public Matrix4x4 M, MMuralla;
             public Mesh Parche;
         }
         /// <summary>Un modelo de Blender: sus tres niveles de detalle, la muralla aparte (si la tiene), sus materiales (encima y bajo la niebla) y
@@ -89,7 +89,16 @@ namespace ConquestTactics.Mundo.Mapa
         {
             public readonly Mesh[] Villa = new Mesh[3], Muralla = new Mesh[3];
             public Material Encima, Bajo, Parche, ParcheBajo;
+            /// <summary>La muralla en su propio FBX (`muralla<nivel>_<v>`, niveles 2, 4 y 5), con su material; si no, la de la villa (el 3).</summary>
+            public Material MurallaEncima, MurallaBajo;
+            /// <summary>El radio de su muralla (en huellas, con tope `RadioMaximoDeMuralla`) y el ángulo de su puerta (rad, en el marco de la villa:
+            /// x, y de Blender; NaN si no lo sabe).</summary>
+            public double RadioMuralla = 1, Puerta = double.NaN;
         }
+        /// <summary>El tope del radio de una muralla (en huellas): el aro, el clic y el claro no crecen más.</summary>
+        public const double RadioMaximoDeMuralla = 1.12;
+        /// <summary>Los tramos de la red de caminos (id y puntos, u), para girar cada plaza con su puerta hacia el suyo (`RumboDelCamino`).</summary>
+        public IReadOnlyList<(string id, IReadOnlyList<(double x, double y)> puntos)> Caminos = Array.Empty<(string, IReadOnlyList<(double x, double y)>)>();
         readonly List<Miniatura> miniaturas = new List<Miniatura>();
         /// <summary>«Mejorado»: los modelos por nivel de plaza (sus variantes).</summary>
         readonly Dictionary<int, List<Modelo>> modelos = new Dictionary<int, List<Modelo>>();
@@ -142,6 +151,22 @@ namespace ConquestTactics.Mundo.Mapa
                         if (m.Villa[n] == null) completo = false;
                     }
                     if (!completo) continue;
+                    m.Puerta = Json(Resources.Load<TextAsset>("MapaMundo/Asentamientos/" + nombre), "puerta", double.NaN);
+                    // la muralla aparte, si la hay (el nivel 1 nunca la tiene; la del 3 va dentro de su FBX)
+                    string nm = $"muralla{nivel}_{v}";
+                    var rm = nivel >= 2 ? Resources.Load<GameObject>("MapaMundo/Asentamientos/" + nm) : null;
+                    if (rm != null)
+                    {
+                        for (int n = 0; n < 3; n++) m.Muralla[n] = rm.transform.Find($"{nm}_{niveles[n]}")?.GetComponent<MeshFilter>()?.sharedMesh;
+                        m.MurallaEncima = new Material(sombreadoVilla) { name = nm + " (encima)" };
+                        m.MurallaEncima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nm}_color"));
+                        m.MurallaEncima.SetTexture("_Mascara", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nm}_mascara"));
+                        m.MurallaEncima.SetFloat("_Rodilla", nivel >= 3 ? 1 : 0);
+                        m.MurallaBajo = new Material(m.MurallaEncima) { name = nm + " (bajo la niebla)" };
+                        m.MurallaBajo.SetFloat("_ConNiebla", 1);
+                        m.RadioMuralla = Math.Min(RadioMaximoDeMuralla, Json(Resources.Load<TextAsset>("MapaMundo/Asentamientos/" + nm), "radio", 1));
+                    }
+                    if (nivel < 2) for (int n = 0; n < 3; n++) m.Muralla[n] = null;
                     m.Encima = new Material(sombreadoVilla) { name = nombre + " (encima)" };
                     m.Encima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_color"));
                     m.Encima.SetTexture("_Mascara", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_mascara"));
@@ -165,6 +190,33 @@ namespace ConquestTactics.Mundo.Mapa
                     if (!modelos.TryGetValue(nivel, out var lista)) modelos[nivel] = lista = new List<Modelo>();
                     lista.Add(m);
                 }
+            CosasDelMapa.FactorDeMuralla = (nivel, x, y) => nivel >= 2 && modelos.ContainsKey((int)nivel) ? ModeloDe(nivel, P.Semilla(x, y)).RadioMuralla : 1;
+        }
+
+        /// <summary>Un número de un json plano ({"radio": 1.1, "puerta": -1.4}); `siNo` si no está.</summary>
+        static double Json(TextAsset t, string clave, double siNo)
+        {
+            if (t == null) return siNo;
+            var m = System.Text.RegularExpressions.Regex.Match(t.text, "\"" + clave + "\"\\s*:\\s*(-?[0-9.eE+-]+)");
+            return m.Success ? double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : siNo;
+        }
+
+        /// <summary>El rumbo (rad, en el mapa: atan2(y, x)) del camino que sale de la plaza en (x, y) de huella `r`: de los tramos que empiezan o
+        /// acaban dentro de ella, el de menor id (`tramo-N`, por su número), hacia su primer punto fuera; NaN si no sale ninguno.</summary>
+        public static double RumboDelCamino(double x, double y, double r, IEnumerable<(string id, IReadOnlyList<(double x, double y)> puntos)> caminos)
+        {
+            bool Dentro((double x, double y) q) => (q.x - x) * (q.x - x) + (q.y - y) * (q.y - y) < r * r;
+            long Numero(string id) => long.TryParse(id?.Substring(id.LastIndexOf('-') + 1), out var n) ? n : long.MaxValue;
+            foreach (var (_, p) in caminos.Where(c => c.puntos.Count >= 2).OrderBy(c => Numero(c.id)).ThenBy(c => c.id, StringComparer.Ordinal))
+            {
+                var recorrido = Dentro(p[0]) ? p : Dentro(p[p.Count - 1]) ? p.Reverse().ToList() : null;
+                if (recorrido == null) continue;
+                var q = recorrido.FirstOrDefault(c => !Dentro(c));
+                if (Dentro(q)) q = recorrido[recorrido.Count - 1];
+                if (q.x == x && q.y == y) continue;
+                return Math.Atan2(q.y - y, q.x - x);
+            }
+            return double.NaN;
         }
 
         /// <summary>¿Se pinta esta plaza con la miniatura (y no con las cajas del prototipo)?</summary>
@@ -224,7 +276,7 @@ namespace ConquestTactics.Mundo.Mapa
                 var mat = mi.BajoNiebla ? mo.Bajo : mo.Encima;
                 l.Add(new Encargo { Malla = mo.Villa[nivel], Material = mat, M = mi.M, Faccion = mi.Faccion, Nivel = nivel });
                 if (mi.Muralla && mo.Muralla[nivel] != null)
-                    l.Add(new Encargo { Malla = mo.Muralla[nivel], Material = mat, M = mi.M, Faccion = mi.Faccion, EsMuralla = true, Nivel = nivel });
+                    l.Add(new Encargo { Malla = mo.Muralla[nivel], Material = (mi.BajoNiebla ? mo.MurallaBajo : mo.MurallaEncima) ?? mat, M = mi.MMuralla, Faccion = mi.Faccion, EsMuralla = true, Nivel = nivel });
                 if (mi.Parche != null)
                     l.Add(new Encargo { Malla = mi.Parche, Material = mi.BajoNiebla ? mo.ParcheBajo : mo.Parche, M = Matrix4x4.identity, Faccion = mi.Faccion, EsSuelo = true, Nivel = nivel });
             }
@@ -286,6 +338,7 @@ namespace ConquestTactics.Mundo.Mapa
             foreach (var c in cosas)
                 if (Pinta(c.Clase)) sb.Append(c.Clase).Append(c.Id).Append(':').Append(c.X.ToString("0.00")).Append(',').Append(c.Y.ToString("0.00")).Append(':')
                     .Append(c.Color).Append(c.BajoNiebla).Append(c.Detalle).Append(c.Entidad?.Asentamiento?.TieneMuralla).Append(c.Entidad?.Obra?.HasTerminaEnMs).Append('|');
+            foreach (var (id, p) in Caminos) sb.Append(id).Append(p.Count).Append(p.Count > 0 ? p[0].x + p[p.Count - 1].y : 0).Append(';');
             var nueva = Estilo + sb.ToString();
             if (nueva != clave)
             {
@@ -341,9 +394,14 @@ namespace ConquestTactics.Mundo.Mapa
                         if (ConMiniatura(nivel))
                         {
                             double huella = Huella(rc, nivel);
-                            miniaturas.Add(new Miniatura { X = x, Y = y, Rc = rc, Semilla = sem, Nivel = nivel, Huella = huella, Muralla = muralla != false, BajoNiebla = c.BajoNiebla, Faccion = Lineal(c.Color), Modelo = ModeloDe(nivel, sem) });
+                            var modelo = ModeloDe(nivel, sem);
+                            // la muralla, solo si se sabe que la tiene (las recordadas, sin ella) y desde el nivel 2; con ella, la huella llega a su radio
+                            bool conMuralla = muralla == true && nivel >= 2;
+                            double fuera = huella * (conMuralla ? modelo.RadioMuralla : 1);
+                            miniaturas.Add(new Miniatura { X = x, Y = y, Rc = rc, Semilla = sem, Nivel = nivel, Huella = huella, Muralla = conMuralla, BajoNiebla = c.BajoNiebla, Faccion = Lineal(c.Color), Modelo = modelo,
+                                Rumbo = double.IsNaN(modelo.Puerta) ? double.NaN : RumboDelCamino(x, y, fuera, Caminos) });
                             // sin árboles ni matas hasta la huella y media (el terreno pastado); la capa baja, rala hasta un radio más (`Ralo`)
-                            Claros.Add((x, y, huella * 1.5));
+                            Claros.Add((x, y, fuera * 1.5));
                         }
                         else
                         {
@@ -452,9 +510,21 @@ namespace ConquestTactics.Mundo.Mapa
                 float angulo = Mathf.Min(Vector3.Angle(Vector3.up, normal) * 0.5f, (float)InclinacionMaxima);
                 var eje = Vector3.Cross(Vector3.up, normal);
                 var inclina = eje.sqrMagnitude > 1e-8 ? Quaternion.AngleAxis(angulo, eje.normalized) : Quaternion.identity;
-                var giro = Quaternion.Euler(0, (float)(P.Azar(mi.Semilla, 3, 3) * 360), 0);
+                // girada con la puerta hacia su camino (en el mapa, el ángulo de la puerta más el giro, en el sentido de Unity), o por su semilla
+                double grados = double.IsNaN(mi.Rumbo) ? P.Azar(mi.Semilla, 3, 3) * 360 : (mi.Rumbo - mi.Modelo.Puerta) * 180 / Math.PI;
+                var giro = Quaternion.Euler(0, (float)grados, 0);
                 float escala = (float)(r * e);
-                mi.M = Matrix4x4.TRS(EscalaDelMapa.AEscena(mi.X, mi.Y, suma / n), inclina * giro, Vector3.one * escala);
+                var centro = EscalaDelMapa.AEscena(mi.X, mi.Y, suma / n);
+                mi.M = Matrix4x4.TRS(centro, inclina * giro, Vector3.one * escala);
+                // la muralla sigue la pendiente entera (la villa, la mitad): sesgada, no inclinada (los muros, a plomo), con la pendiente del
+                // suelo bajo su anillo; así el lienzo no se entierra cuesta arriba ni vuela cuesta abajo
+                double rm = r * mi.Modelo.RadioMuralla;
+                double mx = (terreno.AlturaPintada(mi.X + rm, mi.Y) - terreno.AlturaPintada(mi.X - rm, mi.Y)) / (2 * rm * e);
+                double my = (terreno.AlturaPintada(mi.X, mi.Y + rm) - terreno.AlturaPintada(mi.X, mi.Y - rm)) / (2 * rm * e);
+                var sesgo = Matrix4x4.identity;
+                sesgo.m10 = (float)mx;
+                sesgo.m12 = (float)-my; // (z de la escena = −y del mapa)
+                mi.MMuralla = Matrix4x4.Translate(centro) * sesgo * Matrix4x4.TRS(Vector3.zero, giro, Vector3.one * escala);
                 if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche);
                 mi.Parche = mi.Modelo.Parche != null ? Parche(mi.X, mi.Y, r * LadoDelSuelo * 1.42, mi.M.inverse) : null;
             }

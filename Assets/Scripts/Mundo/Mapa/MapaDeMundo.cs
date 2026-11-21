@@ -428,6 +428,8 @@ namespace ConquestTactics.Mundo.Mapa
                 var radioProteccion = datos.Numero("documentos.Campamentos_Mercenarios.MERCENARIOS.radioProteccion");
                 var rayas = CosasDelMapa.Rayas(sesion.Almacen, heroeId(), radioProteccion, ahora);
                 rayas.AddRange(RayasAdicionales);
+                // (las plazas giran con la puerta hacia su camino)
+                maquetas.Caminos = CosasDelMapa.TramosDeCamino(sesion.Almacen);
                 if (trazos != null)
                 {
                     // caminos, fronteras, zonas y el anillo de los mercenarios, como el prototipo (`TrazosEnElMapa`, `TerritorioDelMapa`); aquí quedan

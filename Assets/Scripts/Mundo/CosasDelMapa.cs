@@ -115,6 +115,19 @@ namespace ConquestTactics.Mundo
             return HuellaMejorada ? Math.Max(HuellaMinima, r) : r;
         }
 
+        /// <summary>«Mejorado»: cuánto crece la huella de una plaza con muralla, por su nivel y su sitio (x, y), que dan su modelo: el radio de su
+        /// muralla, con tope (lo pone `MaquetasDelMapa`; sin él, 1).</summary>
+        public static Func<double, double, double, double> FactorDeMuralla;
+
+        /// <summary>La huella de una plaza contando su muralla (u): la del aro, el clic y el claro. Solo en «Mejorado» y si la tiene.</summary>
+        public static double HuellaConMuralla(double huella, double nivel, double x, double y, bool muralla) =>
+            HuellaMejorada && muralla && FactorDeMuralla != null ? huella * FactorDeMuralla(nivel, x, y) : huella;
+
+        /// <summary>Los tramos de la red de caminos tal como llegan (su id y sus puntos, u).</summary>
+        public static List<(string id, IReadOnlyList<(double x, double y)> puntos)> TramosDeCamino(Almacen a) =>
+            a.Todas(Entidad.CuerpoOneofCase.RedCaminos).SelectMany(e => e.RedCaminos.Tramos)
+                .Select(t => (t.Id, (IReadOnlyList<(double x, double y)>)t.Puntos.Select(P).ToList())).ToList();
+
         public static List<CosaDelMapa> Reunir(Almacen a, string heroeId, double ahora, IEnumerable<NodoRecurso> nodos, double radioZonaInicial)
         {
             var r = new List<CosaDelMapa>();
@@ -130,11 +143,12 @@ namespace ConquestTactics.Mundo
                 var (x, y) = P(p.Posicion);
                 double radioZona = radioZonaInicial;
                 if (p.Zona.Count >= 3) radioZona = p.Zona.Max(z => Math.Sqrt(Math.Pow(z.X / 1000.0 - x, 2) + Math.Pow(z.Y / 1000.0 - y, 2)));
-                double rc = radioZona * 0.1, huella = HuellaDePlaza(rc, p.Nivel == 0 ? 1 : p.Nivel);
+                double rc = radioZona * 0.1, nivel = p.Nivel == 0 ? 1 : p.Nivel, huella = HuellaDePlaza(rc, nivel);
+                double conMuralla = HuellaConMuralla(huella, nivel, x, y, p.TieneMuralla);
                 r.Add(new CosaDelMapa
                 {
                     Clase = ClaseDeCosa.Plaza, Id = p.Id, Nombre = p.HasNombre ? p.Nombre : p.Id, Detalle = $"Nivel {p.Nivel}", FaccionId = p.FaccionId,
-                    X = x, Y = y, Radio = huella, Alto = Math.Max(0.4, huella * 0.9), RadioClic = huella + Holgura, Color = ColorDeFaccion(a, p.FaccionId), Entidad = a.Buscar(TipoEntidad.Asentamiento, p.Id),
+                    X = x, Y = y, Radio = conMuralla, Alto = Math.Max(0.4, huella * 0.9), RadioClic = conMuralla + Holgura, Color = ColorDeFaccion(a, p.FaccionId), Entidad = a.Buscar(TipoEntidad.Asentamiento, p.Id),
                 });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.FichaConocida))

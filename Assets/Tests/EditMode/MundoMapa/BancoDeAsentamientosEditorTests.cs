@@ -1,6 +1,6 @@
 // El banco de asentamientos del editor (`MenuDeAsentamientos`), sin ventana: con el mismo código del menú (el aviso de la sesión que lee al
 // entrar en Play), entra en Play, espera al banco y comprueba que hay una miniatura de cada nivel del 1 al 5 y que no sale ningún error en el
-// registro (el marco de pruebas falla con cualquier error). Necesita el mundo en disco de una partida (`persistentDataPath/mundo`).
+// registro (el marco de pruebas falla con cualquier error); y que hay una muralla de cada nivel del 2 al 5. Necesita el mundo en disco de una partida (`persistentDataPath/mundo`).
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -30,7 +30,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             {
                 GameObject go = null;
                 MapaDeMundo mapa = null;
-                int[] niveles = new int[0];
+                int[] niveles = new int[0], conMuralla = new int[0];
                 var hasta = Time.realtimeSinceStartup + 120;
                 while (Time.realtimeSinceStartup < hasta)
                 {
@@ -38,15 +38,20 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                     mapa = go != null ? go.GetComponent<MapaDeMundo>() : null;
                     if (mapa != null && mapa.Maquetas != null)
                     {
-                        niveles = mapa.Maquetas.Encargos(mapa.Vista).Where(e => !e.EsSuelo && !e.EsMuralla)
+                        var en = mapa.Maquetas.Encargos(mapa.Vista);
+                        niveles = en.Where(e => !e.EsSuelo && !e.EsMuralla)
                             .Select(e => e.Material.name).Where(n => n.StartsWith("plaza")).Select(n => n[5] - '0').Distinct().OrderBy(n => n).ToArray();
-                        if (niveles.Length == 5) break;
+                        // (la muralla del 3 va con el material de su plaza; las demás, con el suyo: muralla<nivel>_<v>)
+                        conMuralla = en.Where(e => e.EsMuralla).Select(e => e.Material.name)
+                            .Select(n => n.StartsWith("muralla") ? n[7] - '0' : n[5] - '0').Distinct().OrderBy(n => n).ToArray();
+                        if (niveles.Length == 5 && conMuralla.Length == 4) break;
                     }
                     yield return null;
                 }
                 Assert.That(go, Is.Not.Null, "se montó el banco");
                 Assert.That(MaquetasDelMapa.Estilo, Is.EqualTo(EstiloDeAsentamientos.Mejorado), "la casilla, aplicada al entrar en Play");
                 Assert.That(niveles, Is.EqualTo(new[] { 1, 2, 3, 4, 5 }), "una miniatura de cada nivel");
+                Assert.That(conMuralla, Is.EqualTo(new[] { 2, 3, 4, 5 }), "una muralla de cada nivel del 2 al 5");
             }
             finally { EditorPrefs.SetBool(ClaveMejorado, antes); }
             yield return new ExitPlayMode();

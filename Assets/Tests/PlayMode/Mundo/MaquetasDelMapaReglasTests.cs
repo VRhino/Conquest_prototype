@@ -31,6 +31,22 @@ namespace ConquestTactics.Mundo.UI.Tests
         }
 
         [Test]
+        public void ElRumboEsElDelCaminoDeMenorId()
+        {
+            IReadOnlyList<(double x, double y)> L(params (double, double)[] p) => p;
+            var caminos = new List<(string, IReadOnlyList<(double x, double y)>)>
+            {
+                ("tramo-10", L((10, 10), (10, 20))),          // sale al norte
+                ("tramo-2", L((0, 10), (9.5, 10.2), (10, 10))), // acaba en la plaza: sale al oeste (su primer punto fuera, recorrido al revés)
+                ("tramo-1", L((30, 30), (40, 40))),           // no pasa por ella
+            };
+            Assert.That(MaquetasDelMapa.RumboDelCamino(10, 10, 1, caminos), Is.EqualTo(Math.PI).Within(1e-9), "el tramo-2 (2 < 10), hacia el oeste");
+            caminos.RemoveAt(1);
+            Assert.That(MaquetasDelMapa.RumboDelCamino(10, 10, 1, caminos), Is.EqualTo(Math.PI / 2).Within(1e-9), "sin él, el tramo-10, al norte");
+            Assert.That(double.IsNaN(MaquetasDelMapa.RumboDelCamino(0, 0, 1, caminos)), Is.True, "sin camino, NaN (gira por su semilla)");
+        }
+
+        [Test]
         public void ElNivelDeDetalleCambiaEn80Y40Px()
         {
             var antes = (MaquetasDelMapa.AnchoCerca, MaquetasDelMapa.AnchoMedio);
