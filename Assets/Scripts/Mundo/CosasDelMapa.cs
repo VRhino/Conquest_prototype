@@ -101,6 +101,20 @@ namespace ConquestTactics.Mundo
             return b.Ticket == null ? estado : $"{estado} · {Lado(b.Ticket.Atacante, "atacantes")} contra {Lado(b.Ticket.Defensor, "los bandidos")}";
         }
 
+        /// <summary>¿Se pintan las plazas con las miniaturas («Mejorado» de `MaquetasDelMapa`, que lo pone)? Entonces su huella tiene un mínimo.</summary>
+        public static bool HuellaMejorada;
+        /// <summary>El radio mínimo de la huella de una plaza con las miniaturas (u): el caserío recién fundado, vez y media del prototipo.</summary>
+        public const double HuellaMinima = 0.9;
+
+        /// <summary>El radio de la huella de una plaza (u), con el de su ciudad `rc` (la décima parte del de su zona) y su nivel: la del prototipo
+        /// (`MaquetasDelPrototipo.RadioDePlaza`) y, con las miniaturas, nunca menos de `HuellaMinima` (así no encoge al subir de nivel). La
+        /// usan lo dibujado, su suelo, su claro, el aro y el clic.</summary>
+        public static double HuellaDePlaza(double rc, double nivel)
+        {
+            double r = MaquetasDelPrototipo.RadioDePlaza(rc, nivel);
+            return HuellaMejorada ? Math.Max(HuellaMinima, r) : r;
+        }
+
         public static List<CosaDelMapa> Reunir(Almacen a, string heroeId, double ahora, IEnumerable<NodoRecurso> nodos, double radioZonaInicial)
         {
             var r = new List<CosaDelMapa>();
@@ -116,7 +130,7 @@ namespace ConquestTactics.Mundo
                 var (x, y) = P(p.Posicion);
                 double radioZona = radioZonaInicial;
                 if (p.Zona.Count >= 3) radioZona = p.Zona.Max(z => Math.Sqrt(Math.Pow(z.X / 1000.0 - x, 2) + Math.Pow(z.Y / 1000.0 - y, 2)));
-                double rc = radioZona * 0.1, huella = rc * Maqueta * (p.Nivel <= 1 ? 0.62 : p.Nivel == 2 ? 0.8 : 1);
+                double rc = radioZona * 0.1, huella = HuellaDePlaza(rc, p.Nivel == 0 ? 1 : p.Nivel);
                 r.Add(new CosaDelMapa
                 {
                     Clase = ClaseDeCosa.Plaza, Id = p.Id, Nombre = p.HasNombre ? p.Nombre : p.Id, Detalle = $"Nivel {p.Nivel}", FaccionId = p.FaccionId,
@@ -128,7 +142,7 @@ namespace ConquestTactics.Mundo
                 var f = e.FichaConocida;
                 if (plazas.ContainsKey(f.AsentamientoId) || (f.Tipo != TipoEntidad.NoEspecificado && f.Tipo != TipoEntidad.Asentamiento)) continue;
                 var (x, y) = P(f.Posicion);
-                double rc = (f.HasRadioPotencial ? f.RadioPotencial / 1000.0 : radioZonaInicial) * 0.1, huella = rc * Maqueta * (f.Nivel <= 1 ? 0.62 : f.Nivel == 2 ? 0.8 : 1);
+                double rc = (f.HasRadioPotencial ? f.RadioPotencial / 1000.0 : radioZonaInicial) * 0.1, huella = HuellaDePlaza(rc, f.Nivel == 0 ? 1 : f.Nivel);
                 r.Add(new CosaDelMapa
                 {
                     Clase = ClaseDeCosa.Plaza, Id = f.AsentamientoId, Nombre = f.HasNombre ? f.Nombre : f.AsentamientoId, Detalle = $"Nivel {f.Nivel} · recordada", FaccionId = f.FaccionId,

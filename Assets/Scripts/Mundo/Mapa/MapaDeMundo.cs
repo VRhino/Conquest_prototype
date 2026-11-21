@@ -109,7 +109,10 @@ namespace ConquestTactics.Mundo.Mapa
             niebla = new NieblaDelMapa();
             // los nodos de recursos (tema 5): el agua, la del relieve y los cauces (el parche y los cascotes no van encima)
             nodos = new NodosDelMapa(terreno, artefacto.Nodos, (x, y) => relieve.AguaEn(x, y) || (cauces.ACauce(x, y, 2) < 0.15), terreno.Material);
-            vegetacion.Ralo = nodos.Ralo;
+            // las maquetas de los asentamientos (tema 6); la capa baja ralea junto a los nodos y junto a las miniaturas
+            maquetas = new MaquetasDelMapa(terreno);
+            var m_ = maquetas;
+            vegetacion.Ralo = (x, y) => Math.Min(nodos.Ralo(x, y), m_.Ralo(x, y));
             if (PinturaDelMapa.CaminosYTerritorio)
             {
                 trazos = new TrazosEnElMapa(transform, terreno, relieve);
@@ -338,6 +341,7 @@ namespace ConquestTactics.Mundo.Mapa
             vegetacion?.Destruir();
             trazos?.Destruir();
             nodos?.Destruir();
+            maquetas?.Destruir();
             territorio?.Destruir();
             pintor?.Destruir();
             niebla?.Destruir();
@@ -414,6 +418,8 @@ namespace ConquestTactics.Mundo.Mapa
             Shader.SetGlobalVector(Bruma, new Vector4((float)(cerca * e), (float)(lejosCarga * e), 1, e));
             Shader.SetGlobalColor(ColorBruma, PinturaDelMapa.Horizonte);
             pintor.Pintar(Cosas, cx, cy, lejosCarga);
+            maquetas.Actualizar(Cosas, heroeId(), radioInicial);
+            maquetas.Dibujar(camara);
             pintor.Nombres(Cosas, camara, cx, cy, (cerca + lejosCarga) / 2, NombresDeNodos, Camara.EnPantalla * 0.75);
             if (sucio && Time.unscaledTime >= proximasRayas)
             {
@@ -484,17 +490,20 @@ namespace ConquestTactics.Mundo.Mapa
         {
             var r = claros;
             r.Clear();
+            // las maquetas del prototipo (tema 6) dejan sus claros, los del prototipo; con las cajas de antes, los de abajo
+            if (maquetas != null && MaquetasDelMapa.Estilo != EstiloDeAsentamientos.Cajas) r.AddRange(maquetas.Claros);
             foreach (var c in Cosas)
                 switch (c.Clase)
                 {
-                    case ClaseDeCosa.Plaza: case ClaseDeCosa.Pueblo: case ClaseDeCosa.Aldea: case ClaseDeCosa.Avanzada: case ClaseDeCosa.Obra:
                     case ClaseDeCosa.Nodo:
                         // «Mejorado»: el parche del nodo, sin árboles ni matas (con la copa de los de fuera)
                         if (NodosDelMapa.Estilo == EstiloDeNodos.Mejorado && NodosDelMapa.ClaroEnLaVegetacion)
                             r.Add((c.X, c.Y, NodosDelMapa.Huella(c.Recurso) * NodosDelMapa.Parche + VegetacionDelMapa.Copa * 0.5));
                         break;
+                    case ClaseDeCosa.Plaza: case ClaseDeCosa.Pueblo: case ClaseDeCosa.Aldea: case ClaseDeCosa.Avanzada: case ClaseDeCosa.Obra:
                     case ClaseDeCosa.Mercenarios: case ClaseDeCosa.Bandidos: case ClaseDeCosa.Alijo:
-                        // Como el prototipo (su huella más 0,3 u; 0,25 las obras y los bandidos), pero `Radio` es medio lado de una caja cuadrada:
+                        if (MaquetasDelMapa.Pinta(c.Clase)) break;
+                        // (con las cajas de antes) Como el prototipo (su huella más 0,3 u; 0,25 las obras y los bandidos), pero `Radio` es medio lado de una caja cuadrada:
                         // hasta la esquina, √2 veces; y la copa de un árbol que crece justo fuera no tiene que caer encima.
                         r.Add((c.X, c.Y, Math.Max(c.Radio, 0.5) * 1.415 + (c.Clase == ClaseDeCosa.Obra || c.Clase == ClaseDeCosa.Bandidos ? 0.25 : 0.3)
                             + VegetacionDelMapa.Copa * 0.5));
@@ -826,6 +835,9 @@ namespace ConquestTactics.Mundo.Mapa
         public double PeorMsTeselaDeSuelo => terreno?.PeorMsTesela ?? 0;
         TrazosEnElMapa trazos;
         NodosDelMapa nodos;
+        MaquetasDelMapa maquetas;
+        /// <summary>Las maquetas de los asentamientos (para las pruebas: su coste).</summary>
+        public MaquetasDelMapa Maquetas => maquetas;
         /// <summary>Los nodos de recursos (para las pruebas: su coste y sus teselas).</summary>
         public NodosDelMapa Nodos => nodos;
         TerritorioDelMapa territorio;

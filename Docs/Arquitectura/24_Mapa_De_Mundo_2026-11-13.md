@@ -99,7 +99,7 @@ columna ya en marcha para comprobar que la ruta sale desde el primer fotograma. 
 ## Para la fase de arte
 
 - ~~El pasto por fertilidad y la mezcla de colores por altura del suelo~~: hecho con el suelo con texturas (sección «El suelo», 2026-11-20).
-- Las maquetas de cada cosa en vez de cajas; las figuras de columnas y caravanas.
+- Las maquetas de cada cosa en vez de cajas: hecho para las plazas (sección «Asentamientos vistos desde el mundo», 2026-11-21); faltan las murallas, pueblos y aldeas, avanzadas y lo demás, y las figuras de columnas y caravanas.
 - El marco de bronce de la interfaz en 9-slice (bloque 5 de la hoja de ruta).
 
 ## Ríos y cintas (arreglo del 2026-11-13)
@@ -550,6 +550,103 @@ Tres estilos, conmutables con `NodosDelMapa.Estilo`. Por defecto, «Mejorado»: 
 - `LasLaminasDeNodos`: los cinco tipos en fila sobre tres suelos, las variantes y los colores.
 - `ElCosteDeLosNodos`: el coste.
 - Las tres son explícitas.
+
+## Asentamientos vistos desde el mundo (tema 6, 2026-11-21)
+
+Las plazas, los pueblos y aldeas, las avanzadas, las obras, los campamentos, el alijo y las batallas: lo que BronzeAgeClient dibuja como
+maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`; por defecto, «Prototipo».
+- «Cajas» es lo de antes: la caja de `CosasEnElMapa`, que solo se pinta con ese estilo.
+- «Prototipo» (etapa 1) es el puerto de `maquetas.ts` y `huellas.ts`.
+- «Mejorado» (etapa 2) pinta las plazas con miniaturas de Blender. Lo demás sigue como «Prototipo».
+
+| Pieza | Qué hace |
+|---|---|
+| `MaquetasDelPrototipo` (C# puro) | El puerto de `maquetas.ts` y `huellas.ts`: las piezas de cada cosa (cajas, anillos, banderas, tiendas), sus radios y sus claros |
+| `MaquetasDelMapa` | Rehacer las maquetas cuando cambia lo que hay, asentarlas en el suelo pintado y dibujarlas (instanciadas en tandas de 1023); en «Mejorado», las miniaturas |
+| `CosasDelMapa.HuellaDePlaza` | El radio de la huella de una plaza: la miniatura, su suelo, su claro, el aro y el clic |
+| `MapaAsentamiento`, `MapaParcheAsentamiento` | El sombreado de las miniaturas y el del suelo pisado bajo ellas |
+| `ImportarAsentamientosDelMapa` | Cómo se importan los FBX y las PNG de `Resources/MapaMundo/Asentamientos` |
+| `MenuDeAsentamientos` (editor) | La casilla del estilo y el banco de asentamientos en el editor |
+| `BronzeAgeArte/mapa/asentamientos` | `villa1.py` (caserío), `villa2.py` (poblado), `villa3.py` (villa y, con `nivel`, los niveles 4 y 5), `plaza.py` (hornear y exportar), `lamina.py` y `componer1.py` (láminas de revisión); `visto_v14` guarda lo que se vio en la página versión 14 |
+
+**Etapa 1, «Prototipo»:**
+- Las piezas de `maquetas.ts`, tal cual, con el giro de three pasado al marco de Unity (z cambiada de signo; cuaternión (−x, −y, z, w)).
+- Cada pieza, a la altura del suelo pintado más su base.
+- Prueba: `MaquetasDelMapaTests` frente a `Datos/maquetas_referencia.json`, que sale del propio código del prototipo con `tasks/referencias/maquetas.mts`: 53 casos, 6120 piezas y 71 banderas iguales a 1e-9.
+
+**Etapa 2, «Mejorado»: las plazas.**
+- **Una miniatura por plaza**, de Blender, por nivel:
+  - nivel 1, caserío;
+  - nivel 2, poblado;
+  - nivel 3, villa;
+  - nivel 4, ciudad;
+  - nivel 5, capital.
+- Las variantes:
+  - Los niveles 1 y 2 tienen dos variantes cada uno, elegidas por la semilla de la plaza (`VarianteDe`).
+  - Los niveles 3, 4 y 5 tienen una variante cada uno.
+- Una sola malla con el color, la oclusión y la máscara de las banderas horneados.
+- **Tres niveles de detalle**, elegidos por el ancho en pantalla, no por la distancia: el cercano desde 80 px, el medio desde 40 px y el lejano por debajo (`AnchoCerca`, `AnchoMedio`).
+- Topes de triángulos por nivel de detalle (cerca, medio, lejos):
+  - nivel 1: 4000 / 1500 / 400;
+  - nivel 2: 6500 / 2000 / 500;
+  - nivel 3: 12 000 / 4000 / 800;
+  - niveles 4 y 5: 16 000 / 5000 / 800.
+- Texturas:
+  - niveles 1 y 2: 512 px;
+  - nivel 3: 1024 px;
+  - niveles 4 y 5: 2048 px de color y 1024 de máscara.
+- **Muralla:** va en un objeto aparte del mismo FBX y se dibuja solo si la plaza la tiene.
+- **Asiento:**
+  - La miniatura se coloca a la altura media de su huella (25 puntos).
+  - Se inclina la mitad de la pendiente, hasta 8,5°.
+  - El giro sale de la semilla.
+- **Detalle de las casas (niveles 3 a 5):** se hornea desde una geometría rica sobre la ligera, así que no añade triángulos al mapa. Incluye puertas, ventanucos, cabezas de viga, el pretil, el zócalo manchado y enseres en las azoteas.
+- **Regla de tamaño** (la eligió Víctor: «1,5»): `CosasDelMapa.HuellaDePlaza` es el mayor de dos radios.
+  - Uno es el `RadioDePlaza` del prototipo (la décima parte de la zona × 0,8 × 0,62, 0,8 o 1 según el nivel). El otro es 0,9 u, el mínimo.
+  - Con eso, el caserío recién fundado (zona de 12 u) pasa de 0,60 a 0,90 u, unos 140 px a zoom habitual. Lo demás queda igual y nunca encoge al subir de nivel.
+  - Solo se aplica en «Mejorado» (`MaquetasDelMapa.Estilo` avisa a `CosasDelMapa.HuellaMejorada`).
+  - «Prototipo» y «Cajas» siguen con la huella del prototipo, así que sus pruebas contra el prototipo valen.
+- **Luz propia:** las miniaturas llevan más luz de ambiente y una sombra menos honda que el suelo (`LuzDelMapa` con 0,9 y 0,6), para que lo construido se encuentre solo.
+  - Luminancia de lo construido frente al suelo, a zoom habitual:
+    - nivel 1: 2,09 en hierba y 1,23 en seco;
+    - nivel 2: 1,61;
+    - nivel 3: 2,42;
+    - nivel 4: 1,90;
+    - nivel 5: 1,81.
+  - En los niveles 3 a 5, las luces se comprimen por encima de 0,6 lineal (`_Rodilla`): lo más claro al sol queda en 228-235 y nada pasa de 240.
+- **Suelo pisado:** el patio, las calles y las sendas se pintan en el suelo, no en la malla. Es un disco pegado al suelo pintado (`MapaParcheAsentamiento`), guiado por la máscara horneada con cada modelo (R).
+  - Pinta la tierra desnuda del propio suelo, un 18 % más oscura, con grava a manchas en los patios.
+  - En los niveles 4 y 5, la máscara trae también los huertos (G) y las eras (B) del borde.
+- **Vegetación:** ni árboles ni matas hasta la huella y media (terreno pastado). Hasta un radio más, la capa baja queda rala (un tercio) y a media altura (`MaquetasDelMapa.Ralo`, junto al de los nodos).
+- **Coste:** con sombras y una plaza de cada nivel del 1 al 5 en pantalla, el hilo principal tarda 3,31 ms frente a 3,64 ms del prototipo a zoom habitual. Se hacen 10 llamadas y unos 40 000 triángulos. La GPU no se puede medir en las pruebas sin ventana.
+
+**Lo que sigue como en el prototipo:**
+- pueblos y aldeas;
+- avanzadas;
+- obras;
+- campamentos de mercenarios y de bandidos;
+- el alijo;
+- las batallas;
+- las empalizadas de los niveles 1 y 2. Con miniatura no se dibujan, porque son de la parte 3, las murallas.
+
+**En el editor:**
+- `Conquest/Mundo/Asentamientos: Mejorado`: la casilla del estilo. Se guarda en EditorPrefs, se aplica al entrar en Play y viene apagada.
+- `Conquest/Mundo/Banco de asentamientos`:
+  - Abre una escena vacía sin guardar y entra en Play.
+  - Monta el mapa en local, sin servidor, con el mundo que ya hay en disco (`persistentDataPath/mundo`, el de la última partida).
+  - Pone plazas de los niveles 1 a 5 con zonas reales, en tierra firme, llana y despejada, separadas.
+- `Conquest/Mundo/Banco: siguiente plaza`: pasa a la plaza siguiente del banco.
+
+**Pruebas:**
+- Sin capturas:
+  - `MaquetasDelMapaReglasTests`: variante por semilla, nivel de detalle y huella.
+  - `LasMiniaturasQueSeDibujan`: muralla solo con muralla, color de Facción, variante, aro y clic con lo dibujado, y «Prototipo» como antes.
+  - `ElBancoDeAsentamientosSeMonta` (EditMode): monta el banco del menú y comprueba que hay una miniatura de cada nivel y ningún error.
+- Con capturas, explícitas:
+  - `LasPlazasModeladas`: niveles 1 a 5 frente al prototipo y el suelo en lo seco.
+  - `LaLuminanciaDeLasPlazas`: luminancia y ancho frente al prototipo.
+  - `ElCosteDeLasPlazasModeladas`: coste por fotograma.
+  - `LosAsentamientos` y `ElCosteDeLosAsentamientos`: los de la etapa 1.
 
 ## La vegetación (tema 3, 2026-11-20)
 

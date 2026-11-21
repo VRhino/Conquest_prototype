@@ -1431,6 +1431,597 @@ namespace ConquestTactics.Mundo.UI.Tests
             foreach (var l in colores) Debug.Log("[Nodos] color;" + l);
         }
 
+        /// <summary>Los asentamientos vistos desde el mundo (tema 6), con el banco de asentamientos (`BancoDeAsentamientos`): cada cosa centrada,
+        /// a los tres zooms y sin la columna, y las láminas de cada fila (plazas con muralla y sin ella, aldeas, avanzadas, y obras, campamentos,
+        /// alijo y batallas) a zoom habitual y alejado. `MUNDO_ASENT_ESTILO` da el estilo y el nombre de la tanda: «antes» (las cajas) o
+        /// «prototipo» o «mejorado» (la miniatura de Blender donde la hay).</summary>
+        [Category("Mapa"), Explicit("capturas de los asentamientos")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LosAsentamientos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            var tanda = Environment.GetEnvironmentVariable("MUNDO_ASENT_ESTILO");
+            if (string.IsNullOrEmpty(tanda)) tanda = "antes";
+            yield return Preparar(url, "asentamientos-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            var banco = BancoDeAsentamientos.Hacer(caminos, relieve, artefacto);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo);
+            MapaDeMundo.AclararCopas = false;
+            MaquetasDelMapa.Estilo = tanda == "antes" ? EstiloDeAsentamientos.Cajas : tanda.StartsWith("mejorado") ? EstiloDeAsentamientos.Mejorado : EstiloDeAsentamientos.Prototipo;
+            try
+            {
+                var primero = banco.Sitios.Values.First();
+                var (almacen, sesion) = Almacen(url, primero, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista() });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                foreach (var kv in banco.Sitios)
+                {
+                    yield return Llegar(mapa, almacen, kv.Value);
+                    yield return new WaitForSecondsRealtime(1);
+                    foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                    { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"s_{kv.Key}_{tanda}_{z}"); }
+                }
+                foreach (var kv in banco.Filas)
+                {
+                    yield return Llegar(mapa, almacen, kv.Value);
+                    yield return new WaitForSecondsRealtime(1);
+                    foreach (var (zoom, z) in new[] { (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                    { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"f_{kv.Key}_{tanda}_{z}"); }
+                }
+                if (mapa.Maquetas != null) Debug.Log($"[Asentamientos] {tanda}: {mapa.Maquetas.PiezasPuestas} piezas, {mapa.Maquetas.Llamadas} llamadas, {mapa.Maquetas.Triangulos} triángulos; rehacer {mapa.Maquetas.MsRehacer:0.00} ms, asentar {mapa.Maquetas.MsAsentar:0.00} ms");
+            }
+            finally { (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo) = antes; }
+        }
+
+        /// <summary>Las plazas modeladas («Mejorado») frente al prototipo, en el mapa (capturas de revisión, `MUNDO_CAPTURAS`), con la huella
+        /// definitiva (`CosasDelMapa.HuellaDePlaza`: la del prototipo, nunca menos de 0,9 u):
+        /// * nivel 1, en la hierba, en lo seco y en una ladera; en cada sitio el caserío recién fundado (zona de 12 u, Facción f-1) y, a 5 u (más
+        ///   cerca de lo que deja el motor, 20 u, para que salgan los dos en el encuadre), el crecido (zona de 20 u, f-2): el prototipo y las dos
+        ///   variantes a las tres distancias;
+        /// * el adelanto del nivel 3 (zona de 35 u), con muralla y sin ella, a zoom habitual y de cerca;
+        /// * el suelo pisado en lo seco con tres oscurecidos (`MaquetasDelMapa.OscuroEnSeco`), aparte, para elegir.
+        /// Cada sitio, en tierra firme y al borde de lo despejado (con árboles cerca, para la proporción).</summary>
+        [Category("Mapa"), Explicit("capturas de las plazas modeladas")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LasPlazasModeladas()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "plazas-modeladas-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            var bosque = new RasterDeMundo(artefacto.DensidadBosque);
+            // el sitio de tierra firme más cercano sin agua ni bosque espeso a menos de `r`, pero con bosque a menos de `r` + 3
+            var puestos = new List<(double x, double y)>();
+            var caucesSitio = new CaucesDelMapa(artefacto, relieve);
+            (double x, double y) Sitio((double x, double y) p, double r)
+            {
+                bool Libre(double x, double y, double rr, bool exigirArboles)
+                {
+                    bool arboles = false;
+                    double hMin = double.MaxValue, hMax = double.MinValue;
+                    for (double dy = -rr - 3; dy <= rr + 3; dy += 0.5)
+                        for (double dx = -rr - 3; dx <= rr + 3; dx += 0.5)
+                        {
+                            double d = Math.Sqrt(dx * dx + dy * dy);
+                            if (d > rr + 3) continue;
+                            if (d <= rr && (relieve.AguaEn(x + dx, y + dy) || bosque.En(x + dx, y + dy) > 20)) return false;
+                            // (ni ríos: los cauces no son agua del relieve)
+                            if (d <= rr && dx % 2 == 0 && dy % 2 == 0 && caucesSitio.ACauce(x + dx, y + dy, 3) < 2) return false;
+                            if (d <= rr && dx % 2 == 0 && dy % 2 == 0)
+                            {
+                                double hh = relieve.AlturaEn(x + dx, y + dy);
+                                hMin = Math.Min(hMin, hh);
+                                hMax = Math.Max(hMax, hh);
+                                // (y llano: no más de 30 m de desnivel bajo la plaza)
+                                if (hMax - hMin > 30) return false;
+                            }
+                            if (d > rr && bosque.En(x + dx, y + dy) > 40) arboles = true;
+                        }
+                    return arboles || !exigirArboles;
+                }
+                // (y lejos de los sitios ya puestos: al menos 14 u, para que no salgan en el encuadre de otro)
+                bool Aparte(double x, double y) => puestos.All(q => Math.Sqrt((q.x - x) * (q.x - x) + (q.y - y) * (q.y - y)) > 14 + r);
+                foreach (var exigir in new[] { true, false })
+                    for (double d = 0; d <= 400; d += d < 60 ? 1.5 : 4)
+                        for (int k = 0; k < Math.Max(1, (int)(d * 2)); k++)
+                        {
+                            double a = k * Math.PI * 2 / Math.Max(1, (int)(d * 2)), x = p.x + d * Math.Cos(a), y = p.y + d * Math.Sin(a);
+                            if (Aparte(x, y) && Libre(x, y, r, exigir) && Libre(x + 5, y, r, false)) { puestos.Add((x, y)); return (x, y); }
+                        }
+                Debug.LogWarning($"[Asentamientos] sin sitio despejado de {r} u cerca de ({p.x:0}, {p.y:0})");
+                puestos.Add(p);
+                return p;
+            }
+            var sitios = new List<(string nombre, (double x, double y) donde, int nivel, bool muralla)>
+            {
+                ("hierba", Sitio(caminos.SitiosDeSuelo["suelo_pradera"], 2.5), 1, false),
+                ("seco", Sitio(caminos.SitiosDeSuelo["suelo_seco"], 2.5), 1, false),
+                ("ladera", caminos.Sitios["ladera"], 1, false),
+            };
+            puestos.Add(caminos.Sitios["ladera"]);
+            var n3 = Sitio((caminos.SitiosDeSuelo["suelo_pradera"].x + 30, caminos.SitiosDeSuelo["suelo_pradera"].y), 4.5);
+            var n3s = Sitio((n3.x, n3.y + 16), 4.5);
+            sitios.Add(("n3_muralla", n3, 3, true));
+            // el nivel 2 (zona de 25 u), en la pradera
+            sitios.Add(("n2", Sitio((caminos.SitiosDeSuelo["suelo_pradera"].x - 20, caminos.SitiosDeSuelo["suelo_pradera"].y + 10), 4), 2, false));
+            sitios.Add(("n3_sin", n3s, 3, false));
+            // los niveles 4 (zona de 45 u) y 5 (55 u), sin muralla (la muralla es de la parte 3)
+            // (sin agua ni bosque espeso dentro de la huella y de su suelo pisado: hasta unas 7 y 8,5 u)
+            // (lejos de los ríos de la pradera: junto a la ladera seca)
+            sitios.Add(("n4", Sitio((caminos.Sitios["ladera"].x + 40, caminos.Sitios["ladera"].y + 10), 7), 4, false));
+            sitios.Add(("n5", Sitio((caminos.Sitios["ladera"].x - 40, caminos.Sitios["ladera"].y + 10), 8.5), 5, false));
+            Punto Pu(double x, double y) => new Punto { X = (long)(x * 1000), Y = (long)(y * 1000) };
+            // la zona de la plaza: un círculo de 24 puntos de radio `rz` u
+            IEnumerable<Punto> Zona(double x, double y, double rz) =>
+                Enumerable.Range(0, 24).Select(i => Pu(x + rz * Math.Cos(i * Math.PI / 12), y + rz * Math.Sin(i * Math.PI / 12)));
+            var vista = new Foto { Ambito = new BronzeAge.Contract.V1.Ambito { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            int k_ = 0;
+            foreach (var (nombre, (x, y), nivel, muralla) in sitios)
+            {
+                var a = new Asentamiento { Id = $"as-{k_++}", Nombre = nombre, Nivel = (uint)nivel, FaccionId = "f-1", Posicion = Pu(x, y), TieneMuralla = muralla };
+                a.Zona.AddRange(Zona(x, y, nivel == 1 ? 12 : nivel == 2 ? 25 : nivel == 3 ? 35 : nivel == 4 ? 45 : 55));
+                vista.Entidades.Add(new Entidad { Asentamiento = a });
+                if (nivel == 1)
+                {
+                    var b = new Asentamiento { Id = $"as-{k_++}", Nombre = nombre + " 2", Nivel = 1, FaccionId = "f-2", Posicion = Pu(x + 5, y), TieneMuralla = false };
+                    b.Zona.AddRange(Zona(x + 5, y, 20));
+                    vista.Entidades.Add(new Entidad { Asentamiento = b });
+                }
+                Debug.Log($"[Asentamientos] sitio {nombre}: ({x:0.0}, {y:0.0}), altura {relieve.AlturaEn(x, y):0} m");
+            }
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, MaquetasDelMapa.VarianteForzada, MaquetasDelMapa.OscuroEnSeco);
+            MapaDeMundo.AclararCopas = false;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, sitios[0].donde, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = vista });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                IEnumerator Poner(EstiloDeAsentamientos estilo, int variante)
+                {
+                    (MaquetasDelMapa.Estilo, MaquetasDelMapa.VarianteForzada) = (estilo, variante);
+                    mapa.Maquetas?.Olvidar();
+                    yield return null;
+                    yield return null;
+                }
+                var zooms = new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") };
+                foreach (var (nombre, donde, nivel, _) in sitios)
+                {
+                    // el encuadre, en el medio de la pareja (nivel 1) o en la plaza (nivel 3)
+                    var centro = nivel == 1 ? (donde.x + 2.5, donde.y) : donde;
+                    yield return Llegar(mapa, almacen, centro);
+                    yield return new WaitForSecondsRealtime(1);
+                    var tandas = nivel <= 2
+                        ? new[] { (EstiloDeAsentamientos.Prototipo, 0, "prototipo"), (EstiloDeAsentamientos.Mejorado, 1, "mejorado_v1"), (EstiloDeAsentamientos.Mejorado, 2, "mejorado_v2") }
+                        : new[] { (EstiloDeAsentamientos.Prototipo, 0, "prototipo"), (EstiloDeAsentamientos.Mejorado, 0, "mejorado") };
+                    foreach (var (estilo, variante, t) in tandas)
+                    {
+                        yield return Poner(estilo, variante);
+                        foreach (var (zoom, z) in nivel != 3 ? zooms : zooms.Take(2).ToArray())
+                        { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"p_{nombre}_{t}_{z}"); }
+                    }
+                }
+                // el suelo pisado en lo seco con tres oscurecidos (capturas aparte, para elegir)
+                {
+                    var seco = sitios.First(t => t.nombre == "seco");
+                    yield return Llegar(mapa, almacen, (seco.donde.x + 2.5, seco.donde.y));
+                    yield return new WaitForSecondsRealtime(1);
+                    foreach (var o in new[] { 0.82f, 0.62f, 0.5f })
+                    {
+                        MaquetasDelMapa.OscuroEnSeco = o;
+                        yield return Poner(EstiloDeAsentamientos.Mejorado, 1);
+                        EsconderLaColumna();
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"o_seco_{Mathf.RoundToInt(o * 100)}_2_habitual");
+                    }
+                }
+            }
+            finally { (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, MaquetasDelMapa.VarianteForzada, MaquetasDelMapa.OscuroEnSeco) = antes; }
+        }
+
+        /// <summary>Para medir lo claro que se ve lo construido frente al suelo (capturas de revisión, `MUNDO_CAPTURAS`): en la hierba y en lo
+        /// seco, la pareja de caseríos de nivel 1 (zonas de 12 y 20 u) y, en la pradera, el nivel 3 (zona de 35 u, sin muralla), a zoom
+        /// habitual: sin las miniaturas («l_…_suelo»), con ellas sin su suelo pisado («l_…_casas») y lo mismo sin su sombra en el suelo («l_…_molde»,
+        /// para saber qué píxeles son lo construido). La cuenta se hace fuera, con las tres.</summary>
+        [Category("Mapa"), Explicit("luminancia de las plazas")]
+        [UnityTest, Timeout(1_800_000)]
+        public IEnumerator LaLuminanciaDeLasPlazas()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "plazas-luz-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var vista = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            var sitios = new List<(string nombre, (double x, double y) donde)>();
+            int k_ = 0;
+            void Plaza(uint nivel, string faccion, double x, double y, double zona, int n2 = 0)
+            {
+                var a = new Asentamiento { Id = $"as-{k_++}", Nombre = "p", Nivel = nivel, FaccionId = faccion, Posicion = Pu(x, y), TieneMuralla = false };
+                for (int i = 0; i < 24; i++) a.Zona.Add(Pu(x + zona * Math.Cos(i * Math.PI / 12), y + zona * Math.Sin(i * Math.PI / 12)));
+                vista.Entidades.Add(new Entidad { Asentamiento = a });
+            }
+            foreach (var (nombre, suelo) in new[] { ("hierba", "suelo_pradera"), ("seco", "suelo_seco") })
+            {
+                var (x, y) = caminos.SitiosDeSuelo[suelo];
+                Plaza(1, "f-1", x, y, 12);
+                Plaza(1, "f-2", x + 5, y, 20);
+                sitios.Add((nombre, (x + 2.5, y)));
+            }
+            {
+                var (x, y) = caminos.SitiosDeSuelo["suelo_pradera"];
+                Plaza(3, "f-1", x + 30, y, 35);
+                sitios.Add(("n3", (x + 30, y)));
+                // el nivel 2, en tierra firme cerca de la pradera (sin agua a menos de 4 u)
+                var (x2, y2) = (x, y + 25.0);
+                for (double d = 0; d < 80; d += 2)
+                {
+                    (x2, y2) = (x + d * Math.Cos(d), y + 25 + d * Math.Sin(d));
+                    bool seco = true;
+                    for (int i = 0; i < 16 && seco; i++) seco = !relieve.AguaEn(x2 + 4 * Math.Cos(i * Math.PI / 8), y2 + 4 * Math.Sin(i * Math.PI / 8));
+                    if (seco && !relieve.AguaEn(x2, y2)) break;
+                }
+                Plaza(2, "f-2", x2, y2, 25);
+                sitios.Add(("n2", (x2, y2)));
+                // los niveles 4 y 5, en tierra firme, lejos de lo demás
+                foreach (var (nivel, zona, nombre, oy) in new[] { (4u, 45.0, "n4", -35.0), (5u, 55.0, "n5", -70.0) })
+                {
+                    var (x4, y4) = (x, y + oy);
+                    for (double d = 0; d < 120; d += 2)
+                    {
+                        (x4, y4) = (x + d * Math.Cos(d), y + oy + d * Math.Sin(d));
+                        bool seco = true;
+                        for (int i = 0; i < 16 && seco; i++) seco = !relieve.AguaEn(x4 + 6 * Math.Cos(i * Math.PI / 8), y4 + 6 * Math.Sin(i * Math.PI / 8));
+                        if (seco && !relieve.AguaEn(x4, y4) && sitios.All(q => Math.Abs(q.donde.x - x4) + Math.Abs(q.donde.y - y4) > 25)) break;
+                    }
+                    Plaza(nivel, "f-1", x4, y4, zona);
+                    sitios.Add((nombre, (x4, y4)));
+                }
+            }
+            var antes = (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, MaquetasDelMapa.DibujarMiniaturas, MaquetasDelMapa.DibujarSuelo);
+            (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo) = (false, EstiloDeAsentamientos.Mejorado);
+            try
+            {
+                var (almacen, sesion) = Almacen(url, sitios[0].donde, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = vista });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                foreach (var (nombre, donde) in sitios)
+                {
+                    yield return Llegar(mapa, almacen, donde);
+                    yield return new WaitForSecondsRealtime(1);
+                    // (el tiempo parado: que el viento no mueva la hierba entre una captura y otra)
+                    Time.timeScale = 0;
+                    foreach (var (casas, sombra, t) in new[] { (false, true, "suelo"), (true, true, "casas"), (true, false, "molde") })
+                    {
+                        (MaquetasDelMapa.DibujarMiniaturas, MaquetasDelMapa.DibujarSuelo, MaquetasDelMapa.SombraDeMiniaturas) = (casas, false, sombra);
+                        EsconderLaColumna();
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"l_{nombre}_{t}");
+                    }
+                    MaquetasDelMapa.SombraDeMiniaturas = true;
+                    // el prototipo, con sus cajas y sin ellas (para medir lo que ocupa en pantalla)
+                    MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Prototipo;
+                    mapa.Maquetas?.Olvidar();
+                    yield return null;
+                    foreach (var (cajas, t) in new[] { (false, "proto_vacio"), (true, "proto") })
+                    {
+                        MaquetasDelMapa.DibujarCajas = cajas;
+                        EsconderLaColumna();
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"l_{nombre}_{t}");
+                    }
+                    MaquetasDelMapa.DibujarCajas = true;
+                    MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Mejorado;
+                    mapa.Maquetas?.Olvidar();
+                    yield return null;
+                }
+            }
+            finally { (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, MaquetasDelMapa.DibujarMiniaturas, MaquetasDelMapa.DibujarSuelo) = antes; Time.timeScale = 1; }
+        }
+
+        /// <summary>El banco de las plazas modeladas para las pruebas sin capturas: junto a la pradera, cuatro plazas de nivel 1 (dos de la
+        /// Facción f-1, con zona de 12 u; dos de la f-2, con 20 u) y dos de nivel 3 (zona de 35 u; f-1 con muralla, f-2 sin ella), todas a la
+        /// vista a zoom habitual.</summary>
+        static (Foto foto, (double x, double y) centro) BancoDePlazasModeladas(BancoDeCaminos caminos)
+        {
+            var (cx, cy) = caminos.SitiosDeSuelo["suelo_pradera"];
+            var foto = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            void Plaza(string id, uint nivel, string faccion, double x, double y, double zona, bool muralla)
+            {
+                var a = new Asentamiento { Id = id, Nombre = id, Nivel = nivel, FaccionId = faccion, Posicion = Pu(x, y), TieneMuralla = muralla };
+                for (int i = 0; i < 24; i++) a.Zona.Add(Pu(x + zona * Math.Cos(i * Math.PI / 12), y + zona * Math.Sin(i * Math.PI / 12)));
+                foto.Entidades.Add(new Entidad { Asentamiento = a });
+            }
+            Plaza("as-1a", 1, "f-1", cx - 5, cy - 3, 12, false);
+            Plaza("as-1b", 1, "f-1", cx - 5, cy + 3, 12, false);
+            Plaza("as-1c", 1, "f-2", cx + 5, cy - 3, 20, false);
+            Plaza("as-1d", 1, "f-2", cx + 5, cy + 3, 20, false);
+            Plaza("as-3m", 3, "f-1", cx - 1, cy - 9, 35, true);
+            Plaza("as-3s", 3, "f-2", cx + 1, cy + 9, 35, false);
+            return (foto, (cx, cy));
+        }
+
+        /// <summary>Lo que se manda a dibujar de las miniaturas («Mejorado»): una villa y un suelo por plaza; la muralla, solo en la que la tiene;
+        /// cada plaza con el color de su Facción (distinto entre f-1 y f-2, el mismo dentro de cada una, y no el blanco); la variante de cada
+        /// plaza de nivel 1, la de su semilla; el aro y el clic, con lo dibujado; la huella con su mínimo (0,60 → 0,90; 0,99 y 2,8, igual); y
+        /// con «Prototipo», la del prototipo.</summary>
+        [Category("Mapa")]
+        [UnityTest, Timeout(600_000)]
+        public IEnumerator LasMiniaturasQueSeDibujan()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "plazas-encargos-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var (foto, centro) = BancoDePlazasModeladas(BancoDeCaminos.Hacer(relieve, artefacto, datos));
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            var antes = (MaquetasDelMapa.Estilo, MaquetasDelMapa.VarianteForzada);
+            (MaquetasDelMapa.Estilo, MaquetasDelMapa.VarianteForzada) = (EstiloDeAsentamientos.Mejorado, 0);
+            try
+            {
+                var (almacen, sesion) = Almacen(url, centro, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = foto });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                yield return Llegar(mapa, almacen, centro);
+                for (int i = 0; i < 5; i++) yield return null;
+                Assert.That(mapa.Maquetas.HayModelos, Is.True, "los modelos de «Mejorado» están en Resources");
+                var en = mapa.Maquetas.Encargos(mapa.Vista);
+                var villas = en.Where(e => !e.EsMuralla && !e.EsSuelo).ToList();
+                Assert.That(villas.Count, Is.EqualTo(6), "una villa por plaza");
+                Assert.That(en.Count(e => e.EsSuelo), Is.EqualTo(6), "un suelo pisado por plaza");
+                Assert.That(en.Count(e => e.EsMuralla), Is.EqualTo(1), "la muralla, solo en la plaza de nivel 3 que la tiene");
+                // el color de la Facción: el mismo en las de cada una (por la posición: las de f-1, a la izquierda o abajo), distinto entre ellas
+                var f1 = villas.Where(v => v.M.GetColumn(3).x < centro.x * EscalaDelMapa.MetrosPorUnidad - 0.5 * EscalaDelMapa.MetrosPorUnidad).Select(v => v.Faccion).Distinct().ToList();
+                var f2 = villas.Where(v => v.M.GetColumn(3).x > centro.x * EscalaDelMapa.MetrosPorUnidad + 0.5 * EscalaDelMapa.MetrosPorUnidad).Select(v => v.Faccion).Distinct().ToList();
+                Assert.That(f1.Count, Is.EqualTo(1), "f-1, un solo color");
+                Assert.That(f2.Count, Is.EqualTo(1), "f-2, un solo color");
+                Assert.That(f1[0], Is.Not.EqualTo(f2[0]), "f-1 y f-2, de color distinto");
+                Assert.That(f1[0], Is.Not.EqualTo(Vector4.one), "no es el blanco de la máscara");
+                // la variante de cada plaza de nivel 1, la de su semilla (el material lleva el nombre del modelo)
+                foreach (var e in foto.Entidades.Select(x => x.Asentamiento).Where(a => a.Nivel == 1))
+                {
+                    double x = e.Posicion.X / 1000.0, y = e.Posicion.Y / 1000.0;
+                    var pos = EscalaDelMapa.AEscena(x, y, 0);
+                    var suya = villas.OrderBy(v => Vector2.Distance(new Vector2(v.M.GetColumn(3).x, v.M.GetColumn(3).z), new Vector2(pos.x, pos.z))).First();
+                    int v_ = MaquetasDelMapa.VarianteDe(MaquetasDelPrototipo.Semilla(x, y), 2);
+                    StringAssert.StartsWith($"plaza1_{v_ + 1} ", suya.Material.name, $"{e.Id}: su variante");
+                }
+                // el aro y el clic, con lo dibujado: el radio de cada plaza (`CosaDelMapa.Radio`, del que salen los dos) es la escala de su
+                // miniatura, y el clic, ese radio más la holgura
+                foreach (var c in mapa.Cosas.Where(c => c.Clase == ClaseDeCosa.Plaza))
+                {
+                    var pos = EscalaDelMapa.AEscena(c.X, c.Y, 0);
+                    var suya = villas.OrderBy(v => Vector2.Distance(new Vector2(v.M.GetColumn(3).x, v.M.GetColumn(3).z), new Vector2(pos.x, pos.z))).First();
+                    double dibujado = suya.M.lossyScale.x / EscalaDelMapa.MetrosPorUnidad;
+                    Assert.That(c.Radio, Is.EqualTo(dibujado).Within(1e-3), $"{c.Id}: el radio del aro, el de lo dibujado");
+                    Assert.That(c.RadioClic, Is.EqualTo(c.Radio + 0.12).Within(1e-9), $"{c.Id}: el clic");
+                }
+                // la de nivel 1 recién fundada (zona de 12 u): de 0,60 a 0,90 u; la crecida (20 u), sin cambio (0,99); la de nivel 3 (35 u), igual
+                double R(string id) => mapa.Cosas.First(c => c.Id == id).Radio;
+                Assert.That(R("as-1a"), Is.EqualTo(0.9).Within(1e-3));
+                Assert.That(R("as-1c"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(2.0, 1)).Within(1e-3));
+                Assert.That(R("as-3m"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(3.5, 3)).Within(1e-3));
+                // con «Prototipo», todo como el prototipo
+                MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Prototipo;
+                for (int i = 0; i < 70; i++) yield return null; // (las cosas se reúnen dos veces por segundo)
+                Assert.That(R("as-1a"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(1.2, 1)).Within(1e-3), "«Prototipo»: la huella del prototipo");
+                Assert.That(R("as-3m"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(3.5, 3)).Within(1e-3));
+            }
+            finally { (MaquetasDelMapa.Estilo, MaquetasDelMapa.VarianteForzada) = antes; }
+        }
+
+        /// <summary>El coste por fotograma de las plazas modeladas frente al prototipo, con sombras: una plaza de cada nivel del 1 al 5 (sin muralla,
+        /// con zonas de 12, 25, 35, 45 y 55 u) a zoom habitual y de cerca; por estilo, la mediana del hilo principal (CPU) y de la GPU (FrameTimingManager)
+        /// en 300 fotogramas, y lo que cuesta mandar a dibujar.</summary>
+        [Category("Mapa"), Explicit("coste de las plazas modeladas")]
+        [UnityTest, Timeout(1_800_000)]
+        public IEnumerator ElCosteDeLasPlazasModeladas()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "plazas-coste-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var (cx, cy) = BancoDeCaminos.Hacer(relieve, artefacto, datos).SitiosDeSuelo["suelo_pradera"];
+            var centro = (cx, cy);
+            // una plaza de cada nivel, del 1 al 5, con su zona verosímil, todas a la vista a zoom habitual
+            var foto = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            foreach (var (nivel, zona, dx, dy) in new[] { (1u, 12.0, -9.0, 4.0), (2u, 25.0, -4.0, -6.0), (3u, 35.0, 3.0, 5.0), (4u, 45.0, 10.0, -5.0), (5u, 55.0, 0.0, 14.0) })
+            {
+                var a = new Asentamiento { Id = $"as-n{nivel}", Nombre = $"n{nivel}", Nivel = nivel, FaccionId = nivel % 2 == 0 ? "f-2" : "f-1", Posicion = Pu(cx + dx, cy + dy), TieneMuralla = false };
+                for (int i = 0; i < 24; i++) a.Zona.Add(Pu(cx + dx + zona * Math.Cos(i * Math.PI / 12), cy + dy + zona * Math.Sin(i * Math.PI / 12)));
+                foto.Entidades.Add(new Entidad { Asentamiento = a });
+            }
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (MaquetasDelMapa.Estilo, PinturaDelMapa.SombrasReales);
+            PinturaDelMapa.SombrasReales = true;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, centro, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = foto });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                var tiempos = new FrameTiming[1];
+                bool hayGpu = FrameTimingManager.IsFeatureEnabled();
+                using var principal = Unity.Profiling.ProfilerRecorder.StartNew(Unity.Profiling.ProfilerCategory.Internal, "Main Thread", 1);
+                foreach (var zoom in new[] { ZoomDelMapa.Normal, ZoomDelMapa.Cerca })
+                    foreach (var estilo in new[] { EstiloDeAsentamientos.Prototipo, EstiloDeAsentamientos.Mejorado })
+                    {
+                        MaquetasDelMapa.Estilo = estilo;
+                        yield return Llegar(mapa, almacen, centro);
+                        yield return Vista(mapa, zoom, 30, $"coste_plazas_{estilo}_{zoom}");
+                        // a pantalla (a la textura) en cada fotograma, como se mide en los demás temas
+                        mapa.Vista.targetTexture = rt;
+                        for (int i = 0; i < 60; i++) yield return null;
+                        var cpu = new List<double>();
+                        var gpu = new List<double>();
+                        var dib = new List<double>();
+                        for (int i = 0; i < 300; i++)
+                        {
+                            if (hayGpu) FrameTimingManager.CaptureFrameTimings();
+                            yield return null;
+                            cpu.Add(principal.LastValue / 1e6);
+                            if (hayGpu && FrameTimingManager.GetLatestTimings(1, tiempos) > 0 && tiempos[0].gpuFrameTime > 0) gpu.Add(tiempos[0].gpuFrameTime);
+                            dib.Add(mapa.Maquetas.MsDibujar);
+                        }
+                        mapa.Vista.targetTexture = null;
+                        cpu.Sort(); dib.Sort(); gpu.Sort();
+                        string g = gpu.Count > 0 ? $"{gpu[gpu.Count / 2]:0.00} ms (p95 {gpu[gpu.Count * 95 / 100]:0.00})" : "sin medida";
+                        var en = estilo == EstiloDeAsentamientos.Mejorado ? mapa.Maquetas.Encargos(mapa.Vista) : null;
+                        string m = en == null ? $"{mapa.Maquetas.Llamadas} llamadas, {mapa.Maquetas.Triangulos} triángulos"
+                            : $"{en.Count} llamadas, {en.Sum(e => (long)e.Malla.GetIndexCount(0) / 3)} triángulos, niveles {string.Join(",", en.Where(e => !e.EsSuelo && !e.EsMuralla).Select(e => e.Nivel))}";
+                        Debug.Log($"[Asentamientos] coste {estilo} {zoom}: CPU (hilo principal) mediana {cpu[cpu.Count / 2]:0.00} ms (p95 {cpu[cpu.Count * 95 / 100]:0.00}); GPU {g}; " +
+                                  $"mandar a dibujar {dib[dib.Count / 2]:0.000} ms; {m}");
+                    }
+            }
+            finally { (MaquetasDelMapa.Estilo, PinturaDelMapa.SombrasReales) = antes; }
+        }
+
+        /// <summary>Las cuentas del banco de asentamientos con «Prototipo»: piezas, llamadas de dibujo y triángulos (sin capturas).</summary>
+        [Category("Mapa"), Explicit("cuentas del banco de asentamientos")]
+        [UnityTest, Timeout(1_200_000)]
+        public IEnumerator LasCuentasDelBancoDeAsentamientos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "asentamientos-cuentas-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var banco = BancoDeAsentamientos.Hacer(BancoDeCaminos.Hacer(relieve, artefacto, datos), relieve, artefacto);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            var antes = MaquetasDelMapa.Estilo;
+            MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Prototipo;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, banco.Sitios.Values.First(), null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = banco.Vista() });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                yield return Llegar(mapa, almacen, banco.Sitios.Values.First());
+                mapa.Maquetas.Olvidar();
+                yield return null;
+                yield return null;
+                Debug.Log($"[Asentamientos] banco: {banco.Sitios.Count} cosas, {mapa.Maquetas.PiezasPuestas} piezas, {mapa.Maquetas.Llamadas} llamadas, {mapa.Maquetas.Triangulos} triángulos; rehacer {mapa.Maquetas.MsRehacer:0.00} ms, asentar {mapa.Maquetas.MsAsentar:0.00} ms");
+            }
+            finally { MaquetasDelMapa.Estilo = antes; }
+        }
+
+        /// <summary>El desnivel bajo la huella de una plaza en el mundo de pruebas: en cada punto de tierra (una rejilla de 6 u, sin agua a
+        /// menos del radio) y en los campamentos de mercenarios, lo más alto menos lo más bajo del relieve en el centro y en dos anillos (medio
+        /// radio y radio) de 12 puntos, para la plaza de nivel 3 con la zona inicial (radio de ciudad 1,2 u: huella 0,96 u) y a 1,4 veces. La
+        /// mediana, el percentil 95 y el máximo, en m y en pendiente (desnivel / diámetro).</summary>
+        [Category("Mapa"), Explicit("desnivel bajo las plazas")]
+        [UnityTest, Timeout(1_200_000)]
+        public IEnumerator ElDesnivelBajoLasPlazas()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "asentamientos-laderas-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            double rc = datos.Numero("reglas.territorio.radio_inicial") / 1000 * 0.1;
+            foreach (var escala in new[] { 1.0, 1.4 })
+            {
+                double r = MaquetasDelPrototipo.RadioDePlaza(rc, 3) * escala;
+                double Desnivel(double x, double y)
+                {
+                    double mx = relieve.AlturaEn(x, y), mn = mx;
+                    foreach (var f in new[] { 0.5, 1.0 })
+                        for (int i = 0; i < 12; i++)
+                        {
+                            double a = i * Math.PI / 6, h = relieve.AlturaEn(x + Math.Cos(a) * r * f, y + Math.Sin(a) * r * f);
+                            mx = Math.Max(mx, h);
+                            mn = Math.Min(mn, h);
+                        }
+                    return mx - mn;
+                }
+                var tierra = new List<double>();
+                for (double y = 20; y < relieve.Filas * relieve.Paso - 20; y += 6)
+                    for (double x = 20; x < relieve.Columnas * relieve.Paso - 20; x += 6)
+                        if (!relieve.AguaEn(x, y) && !relieve.AguaEn(x + r, y) && !relieve.AguaEn(x - r, y) && !relieve.AguaEn(x, y + r) && !relieve.AguaEn(x, y - r))
+                            tierra.Add(Desnivel(x, y));
+                var camps = artefacto.Campamentos.Select(c => Desnivel(c.Posicion.X / 1000.0, c.Posicion.Y / 1000.0)).ToList();
+                string Cifras(List<double> l)
+                {
+                    l.Sort();
+                    double e = EscalaDelMapa.MetrosPorUnidad, d = 2 * r * e;
+                    double P(double q) => l[Math.Min(l.Count - 1, (int)(l.Count * q))];
+                    return $"{l.Count} sitios: mediana {P(0.5):0.0} m ({P(0.5) / d:0.00}), p95 {P(0.95):0.0} m ({P(0.95) / d:0.00}), máximo {l[l.Count - 1]:0.0} m ({l[l.Count - 1] / d:0.00})";
+                }
+                Debug.Log($"[Asentamientos] desnivel bajo una plaza de nivel 3 de huella {r:0.00} u ({r * EscalaDelMapa.MetrosPorUnidad:0.0} m, ×{escala}): tierra, {Cifras(tierra)}; campamentos, {Cifras(camps)}");
+                yield return null;
+            }
+        }
+
+        /// <summary>El coste de las maquetas en el peor caso: una plaza de nivel 5 grande (zona de 60 u: radio de ciudad 6 u) con 8 aldeas y 4
+        /// avanzadas alrededor, con sombras, con las cajas de antes y con «Prototipo»: el fotograma, lo que cuesta rehacer las maquetas y
+        /// asentarlas, y cuántas piezas son.</summary>
+        [Category("Mapa"), Explicit("coste de los asentamientos")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator ElCosteDeLosAsentamientos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "asentamientos-coste-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            var (cx, cy) = caminos.SitiosDeSuelo["suelo_pradera"];
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var foto = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            var plaza = new Asentamiento { Id = "as-g", Nombre = "Grande", Nivel = 5, FaccionId = "f-1", Posicion = Pu(cx, cy), TieneMuralla = true };
+            for (int i = 0; i < 24; i++) plaza.Zona.Add(Pu(cx + 60 * Math.Cos(i * Math.PI / 12), cy + 60 * Math.Sin(i * Math.PI / 12)));
+            foto.Entidades.Add(new Entidad { Asentamiento = plaza });
+            string[] cultivos = { "trigo", "vid", "oliva", "cebada", "sesamo", "ganado", "trigo", "vid" };
+            for (int i = 0; i < 8; i++)
+                foto.Entidades.Add(new Entidad { Pueblo = new Pueblo { Id = $"pu-{i}", AsentamientoMadreId = "as-g", TipoExtractor = "aldeaAgricola", Cultivo = cultivos[i],
+                    Posicion = Pu(cx + 12 * Math.Cos(i * Math.PI / 4), cy + 12 * Math.Sin(i * Math.PI / 4)) } });
+            for (int i = 0; i < 4; i++)
+                foto.Entidades.Add(new Entidad { Avanzada = new Avanzada { Id = $"av-{i}", AsentamientoMadreId = "as-g", Etapa = (uint)(i % 3 + 1), Estado = EstadoAvanzada.AvanzadaActiva,
+                    Posicion = Pu(cx + 18 * Math.Cos(i * Math.PI / 2 + 0.4), cy + 18 * Math.Sin(i * Math.PI / 2 + 0.4)) } });
+            var antes = MaquetasDelMapa.Estilo;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, (cx, cy), null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = foto });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                foreach (var (estilo, zoom) in new[] { (EstiloDeAsentamientos.Cajas, ZoomDelMapa.Normal), (EstiloDeAsentamientos.Prototipo, ZoomDelMapa.Normal),
+                                                       (EstiloDeAsentamientos.Cajas, ZoomDelMapa.Alejado), (EstiloDeAsentamientos.Prototipo, ZoomDelMapa.Alejado) })
+                {
+                    MaquetasDelMapa.Estilo = estilo;
+                    yield return Llegar(mapa, almacen, (cx, cy));
+                    yield return Vista(mapa, zoom, 30, $"coste_asent_{estilo}_{zoom}");
+                    var fot = new List<double>();
+                    var dib = new List<double>();
+                    for (int i = 0; i < 240; i++)
+                    {
+                        yield return null;
+                        fot.Add(Time.unscaledDeltaTime * 1000);
+                        dib.Add(mapa.Maquetas.MsDibujar);
+                    }
+                    fot.Sort();
+                    dib.Sort();
+                    string rehacer = "";
+                    if (estilo != EstiloDeAsentamientos.Cajas)
+                    {
+                        mapa.Maquetas.Olvidar();
+                        yield return null;
+                        rehacer = $"; {mapa.Maquetas.PiezasPuestas} piezas, {mapa.Maquetas.Llamadas} llamadas, {mapa.Maquetas.Triangulos} triángulos; rehacer {mapa.Maquetas.MsRehacer:0.00} ms, asentar {mapa.Maquetas.MsAsentar:0.00} ms";
+                    }
+                    Debug.Log($"[Asentamientos] {estilo} {zoom}: fotograma mediana {fot[fot.Count / 2]:0.00} ms, p95 {fot[fot.Count * 95 / 100]:0.00} ms; " +
+                              $"mandar a dibujar mediana {dib[dib.Count / 2]:0.000} ms{rehacer}");
+                }
+            }
+            finally { MaquetasDelMapa.Estilo = antes; }
+        }
+
         /// <summary>Las tres opciones del territorio que se le ofrecen a Víctor, en los mismos sitios del banco, a zoom habitual y alejado: el
         /// prototipo, el filo («Mejorado», ronda 4) y «Suave» (tinte suave en todo el territorio y un filo más fino y menos vivo). Los caminos,
         /// «Mejorado».</summary>

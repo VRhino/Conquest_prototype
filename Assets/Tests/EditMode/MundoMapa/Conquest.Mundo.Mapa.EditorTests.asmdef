@@ -1,0 +1,6 @@
+{
+  "name": "Conquest.Mundo.Mapa.EditorTests",
+  "references": ["Conquest.Mundo", "Conquest.Mundo.Mapa", "Conquest.Mundo.Mapa.Editor"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

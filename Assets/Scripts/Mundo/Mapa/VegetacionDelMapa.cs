@@ -732,7 +732,8 @@ namespace ConquestTactics.Mundo.Mapa
                                 double dc = ACamino(x, y);
                                 if (dc < 0.7 && ReglasDeVegetacion.Azar(gi, gj, 47) > Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.1f, 0.7f, (float)dc))) continue;
                             }
-                            if (Ralo != null && ReglasDeVegetacion.Azar(gi, gj, 49) > Ralo(x, y)) continue;
+                            double ralo = Ralo != null ? Ralo(x, y) : 1;
+                            if (ReglasDeVegetacion.Azar(gi, gj, 49) > ralo) continue;
                             // (el tinte de la hierba, del suelo de debajo, y el color de la flor, de su mancha de 9 u: los pone el sombreado)
                             bool piedra = tipo == (int)TipoDeMata.Piedra;
                             int iCapa = tipo == (int)TipoDeMata.Hierba ? iHierba : tipo == (int)TipoDeMata.Flor ? iFlor : iPiedra;
@@ -740,6 +741,8 @@ namespace ConquestTactics.Mundo.Mapa
                             double rr = ReglasDeVegetacion.Azar(gi, gj, 45);
                             // las piedras, de ×0,5 a ×2,2 (más pequeñas que grandes); en el pedregal, alguna grande (hasta 0,35 u)
                             double esc = TamanoDelPrototipo[tipo] * e * EscalaCapa * (piedra ? 0.5 + 1.7 * rr * rr : 0.7 + 0.6 * r);
+                            // donde ralea (junto a los nodos y los asentamientos), también más baja: pastada
+                            if (!piedra && ralo < 1) esc *= 0.5 + 0.5 * ralo;
                             if (piedra && estadoM == EstadoDeCelda.Pedregal && ReglasDeVegetacion.Azar(gi, gj, 37) < 0.12) esc = e * (0.18 + 0.17 * r);
                             if (iCapa < 0) continue;
                             var sc = especies[iCapa];

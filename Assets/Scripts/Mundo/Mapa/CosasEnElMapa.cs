@@ -57,6 +57,8 @@ namespace ConquestTactics.Mundo.Mapa
                 if (CosasDelMapa.Distancia(c.X, c.Y, cx, cy) > alcance) continue;
                 // los nodos de recursos los pinta `NodosDelMapa` salvo en el estilo de antes (las cajas)
                 if (c.Clase == ClaseDeCosa.Nodo && NodosDelMapa.Estilo != EstiloDeNodos.Cajas) continue;
+                // los asentamientos, campamentos, alijos y batallas los pinta `MaquetasDelMapa` salvo con las cajas de antes
+                if (MaquetasDelMapa.Pinta(c.Clase)) continue;
                 int k = c.BajoNiebla ? 0 : 1;
                 var suelo = alturaVisible(c.X, c.Y);
                 if ((c.Clase == ClaseDeCosa.Caravana || c.Clase == ClaseDeCosa.CaravanaAjena) && CarroDeCaravana.Disponible)
