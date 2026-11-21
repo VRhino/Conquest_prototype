@@ -521,9 +521,9 @@ Tres estilos, conmutables con `NodosDelMapa.Estilo`. Por defecto, «Mejorado»: 
   - Bajo polígono de caras planas, con el color y la oclusión horneados. Sin mapa de normales.
 - **Cada tipo:**
   - piedra: caliza en bancos con frente en escalones y bloques sueltos; es la referencia.
-  - cobre: de 3 a 4 lajas inclinadas unos 30°, de roca parda ocre, con cardenillo en las juntas y chorreando por los lados, y nódulos de cobre nativo.
+  - cobre (rehecho el 2026-11-21, el que eligió Víctor): roca parda rojiza con la mena dentro, malaquita y cobre nativo en las bolsadas. La mena atraviesa la roca porque la cámara del mapa gira libre: de frente, una banda diagonal; sigue por arriba y baja por la cara de atrás, con un filón fino a cada flanco.
   - estaño: bolos de granito gris frío partidos, con racimos de cristales cortos azul acero (saturación 0,55) en los cantos.
-  - oro: esquirlas de cuarzo que apuntan arriba, con oro mate en las juntas y en más de la mitad de las caras, pepitas y mancha de miel en el pie.
+  - oro (rehecho el 2026-11-21, el que eligió Víctor): roca parda con un filón de cuarzo y el oro viejo dentro, en hilos y pepitas, y grava dorada en todo el pie. El filón atraviesa la roca como el del cobre, porque la cámara del mapa gira libre.
   - hierro: columnas de capas finas de pizarra oscura en escalones, con una capa fina de óxido de cada tres y diaclasas rectas.
 - **Parche:** el pedregal del propio suelo (capas de grava y roca), `Parche` = 1,7 veces la huella.
   - Su valor es el del suelo o algo más oscuro (×0,85), nunca más claro.
