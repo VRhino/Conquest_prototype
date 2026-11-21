@@ -475,6 +475,82 @@ defecto). `TrazosEnElMapa.Estilo` decide los caminos; `TerritorioDelMapa.Estilo`
 - Con lo somero a 0, todo hace exactamente lo de antes: fuera de los vados el agua no cambia.
 - El camino «Mejorado» sigue sobre el vado como traza mojada entre los guijarros. Fuera de un vado no se pinta sobre el agua.
 
+## Nodos de recursos (tema 5, 2026-11-21)
+
+Tres estilos, conmutables con `NodosDelMapa.Estilo`. Por defecto, «Mejorado»: la segunda pasada de la etapa 2, que Víctor aprobó el
+2026-11-21. «Prototipo» queda como interruptor. «Cajas» es lo de antes: la caja de
+`CosasEnElMapa`, que solo se pinta con ese estilo. «Ninguno» solo sirve a las pruebas.
+
+| Pieza | Qué hace |
+|---|---|
+| `RocasDeNodos` (C# puro) | El bloque de nodos de `paisaje.ts`, tal cual: `azar` (32 bits de JavaScript), las rocas, el color y el dodecaedro aplastado |
+| `NodosDelMapa` | Las teselas de 64 u: armarlas en el hilo principal (con la altura de `AlturaPintada`), rehacerlas cuando cambia la firma del suelo, dibujarlas recortadas por la cámara |
+| `MapaColor` | Las rocas del prototipo y los cascotes |
+| `MapaNodo`, `MapaParcheNodo` | El afloramiento «Mejorado» y su parche de suelo |
+| `BronzeAgeArte/mapa/nodos` | `nodos.py` (Blender: alto polígono pintado por vértice, horneado a bajo; la piedra), `metales.py` (los cuatro metales) y `vista.py` y `laminas.py` (revisión: fichas y lámina en gris) |
+| `ImportarNodosDelMapa` | Cómo se importan los FBX y las PNG de `Resources/MapaMundo/Nodos` |
+
+**Mundo de pruebas (a98e65c7):** 4986 nodos.
+- Por tipo: piedra 2790, hierro 1265, cobre 843, estaño 64 y oro 24. Sin ganado.
+- Rareza: común la piedra, intermedio hierro y cobre, raro estaño y oro.
+- Dónde caen: 567 en bosque cerrado, 810 en montaña, 75 a menos de 3 u de un río y 73 junto a la costa.
+- Hay 10 distritos de vetas.
+- Lo cuenta `tasks/referencias/nodos.cjs`.
+
+**Datos que llegan:**
+- Del artefacto: id, tipo, rareza, posición, cantidad inicial y anillo.
+- No llega ni lo que queda ni si está agotado. La entidad `Nodo` del contrato (stock, regenera) no la emite el motor; solo llegan `Pueblo.nodo_id` y `ObraDeMapa.nodo_id`.
+
+**Etapa 1, «Prototipo»:**
+- Cada nodo, un montón de dodecaedros aplastados a 0,6: 5 rocas la piedra y 3 los metales.
+- Distancia hasta 0,5 u (0,3 u los metales); radio de 0,075 a 0,225 u (0,06 a 0,15 u los metales).
+- Giro Euler XYZ (0,2 sen 3a, a, 0,2 cos 5a).
+- Color: gris #8d8d8d con el 70 % de `RECURSO_COLOR`, mezclado en lineal. La paleta es la de `MundoUI/Iconos/iconos.json`.
+- Prueba: `NodosDelMapaTests` frente a `Datos/nodos_referencia.json`, que sale del propio código del prototipo con `tasks/referencias/nodos.mts`.
+- Los nombres de los nodos no se tocan en este tema.
+
+**Etapa 2, «Mejorado»:**
+- **Un afloramiento por nodo que llena la huella:** radio 0,65 u la piedra y 0,5 u los metales (`RadioPiedra`, `RadioMetal`); alto 0,46 u y 0,43 u. Es una diferencia declarada con el prototipo.
+- **Variantes y niveles:** tres variantes por tipo, por el hash del nodo; tres niveles de detalle (cerca hasta 160 m, medio hasta 400 m y lejos).
+- **Siempre vertical**, con giro libre solo alrededor del eje vertical. La base se apoya en lo más bajo de la huella y sube hacia el centro sin destapar la base enterrada del modelo.
+- **Modelos de Blender** (segunda pasada, 2026-11-21; la definitiva):
+  - Las semillas son estables: los metales, con números fijos; la piedra, con el crc32 de «tipo_v». Antes la piedra salía de `hash()` de un texto, que cambia en cada proceso. La piedra definitiva es la misma receta que la que vio Víctor con otra tirada: cambian el ancho de los bancos y dónde caen los bloques sueltos.
+  - Una tercera pasada (cobre, oro y hierro con trozos rotos) quedó aparte, en `BronzeAgeArte/mapa/nodos/pasada3`, sin entrar en el proyecto.
+  - Los metales se arman como la piedra: bloques y lajas angulosos de caras planas.
+  - El color se pinta en el marco de cada pieza con un criterio geométrico (la capa, la junta, la cara de fractura, la orientación de la cara), nunca con ruido en remolinos.
+  - Bajo polígono de caras planas, con el color y la oclusión horneados. Sin mapa de normales.
+- **Cada tipo:**
+  - piedra: caliza en bancos con frente en escalones y bloques sueltos; es la referencia.
+  - cobre: de 3 a 4 lajas inclinadas unos 30°, de roca parda ocre, con cardenillo en las juntas y chorreando por los lados, y nódulos de cobre nativo.
+  - estaño: bolos de granito gris frío partidos, con racimos de cristales cortos azul acero (saturación 0,55) en los cantos.
+  - oro: esquirlas de cuarzo que apuntan arriba, con oro mate en las juntas y en más de la mitad de las caras, pepitas y mancha de miel en el pie.
+  - hierro: columnas de capas finas de pizarra oscura en escalones, con una capa fina de óxido de cada tres y diaclasas rectas.
+- **Parche:** el pedregal del propio suelo (capas de grava y roca), `Parche` = 1,7 veces la huella.
+  - Su valor es el del suelo o algo más oscuro (×0,85), nunca más claro.
+  - Contorno en dos o tres lóbulos, con las fases por nodo en uv1. Se deshace en manchas y se alarga ladera abajo, hasta 1,8 veces.
+  - Tinte como mucho del 15 % y hacia oscuro: óxido el hierro, gris verdoso el cobre; ninguno la piedra, el oro y el estaño.
+  - Nunca sobre el agua: ni sobre el relieve con agua ni a menos de 0,15 u de un cauce.
+- **Cascotes:** de 7 a 12, fragmentos del mismo modelo, con su material, volcados y medio enterrados. Son mayores junto al afloramiento y siempre van con el nivel lejos.
+- **Vegetación:** sin árboles ni matas dentro del parche (`MapaDeMundo.Claros`, con media copa de margen); la hierba baja, a un tercio (`VegetacionDelMapa.Ralo`).
+
+**Medidas** (primera pasada; detalle en la página del tema):
+- Tamaño: se queda en 0,65 u la piedra y 0,5 u los metales (el coordinador retiró el objetivo de 5 veces los píxeles).
+- Color al zoom habitual (distancia RGB entre las medias):
+  - cobre frente a hierro: 60 en pradera, 95 en tierra seca y 94 en montaña;
+  - oro frente a piedra en pradera: 72.
+  - Siguen cerca: oro frente a cobre (de 27 a 45) y piedra frente a estaño en montaña (23).
+- Coste con sombras, en la vista con más nodos del mundo:
+  - Fotograma: unos +0,45 ms.
+  - Mandar a dibujar: 0,16 ms.
+  - Armar una tesela: hasta 2,5 ms. Se hace con un presupuesto de 2 ms por fotograma, las más cercanas primero.
+  - La etapa 1, sin coste apreciable: tesela de 0,08 ms.
+
+**Pruebas:**
+- `LosNodosDeRecursos`: capturas por estilo, píxeles, laderas y bosque con y sin claro.
+- `LasLaminasDeNodos`: los cinco tipos en fila sobre tres suelos, las variantes y los colores.
+- `ElCosteDeLosNodos`: el coste.
+- Las tres son explícitas.
+
 ## La vegetación (tema 3, 2026-11-20)
 
 Árboles, matas y capa baja del mapa. Las reglas de colocación son las del prototipo (BronzeAgeClient: `src/mundo3d/arboles.ts`, `matas.ts`),

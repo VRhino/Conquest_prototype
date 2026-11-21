@@ -107,6 +107,9 @@ namespace ConquestTactics.Mundo.Mapa
                 return cauces.Fondo(x, y, 0.5f) is float f ? Mathf.Min(h, f) : h;
             }, transform, cauces);
             niebla = new NieblaDelMapa();
+            // los nodos de recursos (tema 5): el agua, la del relieve y los cauces (el parche y los cascotes no van encima)
+            nodos = new NodosDelMapa(terreno, artefacto.Nodos, (x, y) => relieve.AguaEn(x, y) || (cauces.ACauce(x, y, 2) < 0.15), terreno.Material);
+            vegetacion.Ralo = nodos.Ralo;
             if (PinturaDelMapa.CaminosYTerritorio)
             {
                 trazos = new TrazosEnElMapa(transform, terreno, relieve);
@@ -334,6 +337,7 @@ namespace ConquestTactics.Mundo.Mapa
             terreno?.Destruir();
             vegetacion?.Destruir();
             trazos?.Destruir();
+            nodos?.Destruir();
             territorio?.Destruir();
             pintor?.Destruir();
             niebla?.Destruir();
@@ -374,6 +378,9 @@ namespace ConquestTactics.Mundo.Mapa
             terreno.HornearRelieve(1.0); // la sombra del relieve: 1 ms por fotograma como mucho
             vegetacion.Actualizar(cx, cy, Mathf.Min((float)Camara.Distancia * 7, 130));
             PintarCosas(ahora, cx, cy);
+            // los nodos de recursos (tema 5), hasta donde se carga, como las cajas
+            nodos.Actualizar(cx, cy, Math.Min(PinturaDelMapa.DistanciaCarga, Camara.Distancia * 7));
+            nodos.Dibujar(camara);
             vegetacion.Claros(Claros());
             vegetacion.Aclarado(AclararCopas ? Aclarados(cx, cy) : SinAclarar);
             vegetacion.Dibujar(camara, cx, cy);
@@ -481,6 +488,11 @@ namespace ConquestTactics.Mundo.Mapa
                 switch (c.Clase)
                 {
                     case ClaseDeCosa.Plaza: case ClaseDeCosa.Pueblo: case ClaseDeCosa.Aldea: case ClaseDeCosa.Avanzada: case ClaseDeCosa.Obra:
+                    case ClaseDeCosa.Nodo:
+                        // «Mejorado»: el parche del nodo, sin árboles ni matas (con la copa de los de fuera)
+                        if (NodosDelMapa.Estilo == EstiloDeNodos.Mejorado && NodosDelMapa.ClaroEnLaVegetacion)
+                            r.Add((c.X, c.Y, NodosDelMapa.Huella(c.Recurso) * NodosDelMapa.Parche + VegetacionDelMapa.Copa * 0.5));
+                        break;
                     case ClaseDeCosa.Mercenarios: case ClaseDeCosa.Bandidos: case ClaseDeCosa.Alijo:
                         // Como el prototipo (su huella más 0,3 u; 0,25 las obras y los bandidos), pero `Radio` es medio lado de una caja cuadrada:
                         // hasta la esquina, √2 veces; y la copa de un árbol que crece justo fuera no tiene que caer encima.
@@ -809,10 +821,13 @@ namespace ConquestTactics.Mundo.Mapa
         public int TeselasCargadas => terreno?.Cargadas ?? 0;
         /// <summary>Teselas de suelo construidas desde el principio y lo que han tardado (ms), para medir.</summary>
         public (int teselas, double ms) ConstruccionDelSuelo => terreno == null ? (0, 0) : (terreno.Construidas, terreno.MsConstruyendo);
-        public bool SueloCompleto => terreno != null && terreno.Completo && (vegetacion == null || vegetacion.Completo);
+        public bool SueloCompleto => terreno != null && terreno.Completo && (vegetacion == null || vegetacion.Completo) && (nodos == null || nodos.Completo);
         public VegetacionDelMapa Vegetacion => vegetacion;
         public double PeorMsTeselaDeSuelo => terreno?.PeorMsTesela ?? 0;
         TrazosEnElMapa trazos;
+        NodosDelMapa nodos;
+        /// <summary>Los nodos de recursos (para las pruebas: su coste y sus teselas).</summary>
+        public NodosDelMapa Nodos => nodos;
         TerritorioDelMapa territorio;
         /// <summary>Para las pruebas: el territorio (lo que tarda en pintarse y subir).</summary>
         public TerritorioDelMapa Territorio => territorio;
@@ -821,6 +836,8 @@ namespace ConquestTactics.Mundo.Mapa
         public TrazosEnElMapa Trazos => trazos;
         /// <summary>Para las pruebas: los cauces (y sus trechos de vado).</summary>
         public CaucesDelMapa Cauces => terreno?.Cauces;
+        /// <summary>El suelo del mapa (para las pruebas: la altura de la malla pintada).</summary>
+        public TerrenoDelMapa Terreno => terreno;
         /// <summary>Lo más que ha tardado la sombra del relieve en un fotograma (ms).</summary>
         public double PeorMsRelieve => terreno?.PeorMsRelieve ?? 0;
         /// <summary>Teselas a la espera de su sombra del relieve.</summary>

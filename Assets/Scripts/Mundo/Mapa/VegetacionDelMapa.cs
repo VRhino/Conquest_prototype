@@ -311,6 +311,10 @@ namespace ConquestTactics.Mundo.Mapa
                     if (teselas.ContainsKey((tx, ty)) || enCurso.Contains((tx, ty))) sucias.Add((tx, ty));
         }
 
+        /// <summary>Cuánta capa baja queda en (x, y), de 0 a 1 (los nodos de recursos «Mejorado» la ralean en su parche); desde el hilo del
+        /// reparto. Antes de repartir.</summary>
+        public Func<double, double, double> Ralo;
+
         public void Claros(List<(double x, double y, double r)> nuevos)
         {
             // Primero, sin crear nada (se llama cada fotograma): ¿han cambiado?
@@ -728,6 +732,7 @@ namespace ConquestTactics.Mundo.Mapa
                                 double dc = ACamino(x, y);
                                 if (dc < 0.7 && ReglasDeVegetacion.Azar(gi, gj, 47) > Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.1f, 0.7f, (float)dc))) continue;
                             }
+                            if (Ralo != null && ReglasDeVegetacion.Azar(gi, gj, 49) > Ralo(x, y)) continue;
                             // (el tinte de la hierba, del suelo de debajo, y el color de la flor, de su mancha de 9 u: los pone el sombreado)
                             bool piedra = tipo == (int)TipoDeMata.Piedra;
                             int iCapa = tipo == (int)TipoDeMata.Hierba ? iHierba : tipo == (int)TipoDeMata.Flor ? iFlor : iPiedra;

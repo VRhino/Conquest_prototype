@@ -1062,6 +1062,375 @@ namespace ConquestTactics.Mundo.UI.Tests
             }
         }
 
+        /// <summary>La roca de los nodos «Prototipo» en Unity: cada cara, hacia fuera (con el espejo de z, el sentido de las caras se invierte).</summary>
+        [Test, Category("Mapa")]
+        public void LaRocaDeLosNodosMiraHaciaFuera()
+        {
+            var m = NodosDelMapa.MallaDeRoca();
+            var v = m.vertices;
+            var n = m.normals;
+            var t = m.triangles;
+            Assert.AreEqual(108, t.Length);
+            for (int i = 0; i < t.Length; i += 3)
+            {
+                Vector3 a = v[t[i]], b = v[t[i + 1]], c = v[t[i + 2]], centro = (a + b + c) / 3;
+                Assert.Greater(Vector3.Dot(Vector3.Cross(b - a, c - a), centro), 0, $"cara {i / 3}");
+                Assert.Greater(Vector3.Dot(n[t[i]], centro), 0, $"normal {i / 3}");
+            }
+            UnityEngine.Object.DestroyImmediate(m);
+        }
+
+        /// <summary>El coste de los nodos en el peor caso del mundo: la vista alejada con más nodos alrededor (1536, 384: 687 nodos y 2.755 rocas
+        /// en 320 u) con sombras, con las cajas de antes y con «Prototipo»: el fotograma, lo que cuesta mandar a dibujar y armar todas las teselas
+        /// de golpe, y la tesela más cara.</summary>
+        [Category("Mapa"), Explicit("coste de los nodos")]
+        [UnityTest, Timeout(3_000_000)]
+        public IEnumerator ElCosteDeLosNodos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "nodos-coste-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = NodosDelMapa.Estilo;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, (1536, 384), null);
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                var llena = mapa.Nodos.TeselaMasLlena();
+                Debug.Log($"[Nodos] la tesela con más nodos: {llena.nodos} en ({llena.x}, {llena.y})");
+                foreach (var (estilo, zoom) in new[] { (EstiloDeNodos.Cajas, ZoomDelMapa.Alejado), (EstiloDeNodos.Prototipo, ZoomDelMapa.Alejado),
+                                                       (EstiloDeNodos.Mejorado, ZoomDelMapa.Alejado), (EstiloDeNodos.Cajas, ZoomDelMapa.Normal),
+                                                       (EstiloDeNodos.Prototipo, ZoomDelMapa.Normal), (EstiloDeNodos.Mejorado, ZoomDelMapa.Normal) })
+                {
+                    NodosDelMapa.Estilo = estilo;
+                    yield return Llegar(mapa, almacen, (1536, 384));
+                    yield return Vista(mapa, zoom, 30, $"coste_{estilo}_{zoom}");
+                    var fot = new List<double>();
+                    var dib = new List<double>();
+                    int rocas = 0;
+                    for (int i = 0; i < 240; i++)
+                    {
+                        yield return null;
+                        fot.Add(Time.unscaledDeltaTime * 1000);
+                        dib.Add(mapa.Nodos.MsDibujar);
+                        rocas = Math.Max(rocas, mapa.Nodos.RocasDibujadas + mapa.Nodos.ModelosDibujados);
+                    }
+                    fot.Sort();
+                    dib.Sort();
+                    double alcance = Math.Min(PinturaDelMapa.DistanciaCarga, mapa.Camara.Distancia * 7);
+                    string armar = "";
+                    if (estilo != EstiloDeNodos.Cajas)
+                    {
+                        armar = $"; modelos {mapa.Nodos.ModelosDibujados}, rocas o cascotes {mapa.Nodos.RocasDibujadas}";
+                        mapa.Nodos.Soltar();
+                        int antesT = mapa.Nodos.TeselasHechas;
+                        mapa.Nodos.MsTeselaMax = 0;
+                        var r = System.Diagnostics.Stopwatch.StartNew();
+                        var presupuesto = NodosDelMapa.Presupuesto;
+                        NodosDelMapa.Presupuesto = 1e9; // de golpe, para medir
+                        mapa.Nodos.Actualizar(1536, 384, alcance);
+                        NodosDelMapa.Presupuesto = presupuesto;
+                        armar += $"; armar {mapa.Nodos.TeselasHechas - antesT} teselas de golpe {r.Elapsed.TotalMilliseconds:0.00} ms, la más cara {mapa.Nodos.MsTeselaMax:0.000} ms";
+                    }
+                    Debug.Log($"[Nodos] {estilo} {zoom} (alcance {alcance:0} u): fotograma mediana {fot[fot.Count / 2]:0.00} ms, p95 {fot[fot.Count * 95 / 100]:0.00} ms; " +
+                              $"mandar a dibujar mediana {dib[dib.Count / 2]:0.000} ms, p95 {dib[dib.Count * 95 / 100]:0.000} ms; rocas dibujadas {rocas}{armar}");
+                }
+                // la tesela con más nodos, de cerca
+                foreach (var estilo in new[] { EstiloDeNodos.Prototipo, EstiloDeNodos.Mejorado })
+                {
+                    NodosDelMapa.Estilo = estilo;
+                    yield return Llegar(mapa, almacen, (llena.x, llena.y));
+                    mapa.Nodos.Soltar();
+                    mapa.Nodos.MsTeselaMax = 0;
+                    mapa.Nodos.Actualizar(llena.x, llena.y, 1);
+                    Debug.Log($"[Nodos] {estilo}: armar la tesela con más nodos ({llena.nodos}): {mapa.Nodos.MsTeselaMax:0.000} ms");
+                }
+            }
+            finally { NodosDelMapa.Estilo = antes; }
+        }
+
+        /// <summary>Los sitios de las capturas de los nodos de recursos (tema 5), del mundo a98e65c7 (`tasks/referencias/nodos.cjs`): uno de cada
+        /// tipo (el cobre, en montaña), tres de estaño de una veta juntos, uno de piedra en bosque cerrado (densidad 1) y tres junto
+        /// al agua.</summary>
+        static readonly (string nombre, double x, double y)[] SitiosDeNodos =
+        {
+            ("piedra", 2492.977, 768.842), ("cobre", 2395.008, 490.963), ("estano", 557.442, 187.906), ("oro", 2046.372, 1901.544),
+            ("hierro", 2329.106, 617.327), ("veta", 2552.421, 494.308), ("bosque", 1554.961, 468.823),
+            ("agua_cobre", 2316.501, 1571.321), ("agua_piedra", 1746.806, 1995.871), ("agua_hierro", 2171.743, 581.642),
+        };
+
+        /// <summary>Los dos nodos más empinados de cada tipo (lejos del borde del mundo).</summary>
+        static readonly (string nombre, double x, double y)[] LaderasDeNodos =
+        {
+            ("piedra_1", 1170.018, 1834.136), ("piedra_2", 2280.894, 594.874), ("cobre_1", 2270.137, 203.501), ("cobre_2", 1995.994, 278.639),
+            ("estano_1", 2181.599, 796.408), ("estano_2", 557.442, 187.906), ("oro_1", 2333.567, 1603.658), ("oro_2", 1147.906, 1837.479),
+            ("hierro_1", 2042.354, 1154.377), ("hierro_2", 556.216, 143.522),
+        };
+
+        /// <summary>Lo que cambia entre dos capturas iguales salvo por lo que se mide: los píxeles (máscara) donde el color cambia más de 18 (suma
+        /// de RGB), sin las sombras (el mismo color, solo más oscuro). Devuelve la máscara y su recuento.</summary>
+        static (bool[] mascara, int n) Diferencia(Color32[] con, Color32[] sin)
+        {
+            var m = new bool[con.Length];
+            int n = 0;
+            for (int i = 0; i < con.Length; i++)
+            {
+                var a = con[i];
+                var b = sin[i];
+                if (Math.Abs(a.r - b.r) + Math.Abs(a.g - b.g) + Math.Abs(a.b - b.b) <= 18) continue;
+                double ra = (a.r + 1.0) / (b.r + 1), ga = (a.g + 1.0) / (b.g + 1), ba = (a.b + 1.0) / (b.b + 1);
+                double mx = Math.Max(ra, Math.Max(ga, ba)), mn = Math.Min(ra, Math.Min(ga, ba));
+                if (mx < 1 && mx - mn < 0.1) continue; // sombra
+                m[i] = true;
+                n++;
+            }
+            return (m, n);
+        }
+
+        /// <summary>El color medio (sRGB) de los píxeles de la máscara cerca de (px, py) (radio r píxeles); y cuántos son.</summary>
+        static (Color32 c, int n) ColorMedio(Color32[] px, bool[] m, int ancho, int px0, int py0, int r)
+        {
+            long sr = 0, sg = 0, sb = 0;
+            int n = 0;
+            int alto = px.Length / ancho;
+            for (int y = Math.Max(0, py0 - r); y < Math.Min(alto, py0 + r); y++)
+                for (int x = Math.Max(0, px0 - r); x < Math.Min(ancho, px0 + r); x++)
+                {
+                    int i = y * ancho + x;
+                    if (!m[i] || (x - px0) * (x - px0) + (y - py0) * (y - py0) > r * r) continue;
+                    sr += px[i].r; sg += px[i].g; sb += px[i].b; n++;
+                }
+            return n == 0 ? (new Color32(0, 0, 0, 255), 0) : (new Color32((byte)(sr / n), (byte)(sg / n), (byte)(sb / n), 255), n);
+        }
+
+        Color32[] Pixeles() => ultima.GetPixels32();
+
+        /// <summary>Qué parte de los píxeles de la máscara cerca de (px, py) cumple `es` (el azul del estaño, el dorado del oro).</summary>
+        static double Fraccion(Color32[] px, bool[] m, int ancho, int px0, int py0, int r, Func<Color32, bool> es)
+        {
+            int n = 0, si = 0, alto = px.Length / ancho;
+            for (int y = Math.Max(0, py0 - r); y < Math.Min(alto, py0 + r); y++)
+                for (int x = Math.Max(0, px0 - r); x < Math.Min(ancho, px0 + r); x++)
+                {
+                    int i = y * ancho + x;
+                    if (!m[i] || (x - px0) * (x - px0) + (y - py0) * (y - py0) > r * r) continue;
+                    n++;
+                    if (es(px[i])) si++;
+                }
+            return n == 0 ? 0 : (double)si / n;
+        }
+
+        static bool EsAzul(Color32 c) => c.b > c.r + 25 && c.b > c.g + 8;
+        static bool EsDorado(Color32 c) => c.r > 120 && c.r - c.b > 70 && c.g - c.b > 45;
+
+        /// <summary>Los nodos de recursos en sus sitios, a los tres zooms y sin la columna, centrados en el nodo (la cámara mira a la columna, que va
+        /// sobre él): `MUNDO_NODOS_ESTILO` da el estilo y el nombre de la tanda: «antes» (las cajas), «prototipo» o «mejorado». A zoom habitual y
+        /// alejado, además, cuenta los píxeles del nodo (lo que cambia frente a la misma vista sin nodos; con «Mejorado», sin el modelo: solo el
+        /// modelo). Con «Mejorado», también: de cerca, las dos laderas más fuertes de cada tipo; y el nodo en bosque cerrado sin el claro.</summary>
+        [Category("Mapa"), Explicit("capturas de los nodos de recursos")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LosNodosDeRecursos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            var tanda = Environment.GetEnvironmentVariable("MUNDO_NODOS_ESTILO");
+            if (string.IsNullOrEmpty(tanda)) tanda = "antes";
+            yield return Preparar(url, "nodos-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var antes = (MapaDeMundo.AclararCopas, NodosDelMapa.Estilo, NodosDelMapa.DibujarModelos, NodosDelMapa.ClaroEnLaVegetacion);
+            MapaDeMundo.AclararCopas = false;
+            var estilo = tanda == "antes" ? EstiloDeNodos.Cajas : tanda == "mejorado" ? EstiloDeNodos.Mejorado : EstiloDeNodos.Prototipo;
+            NodosDelMapa.Estilo = estilo;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, (SitiosDeNodos[0].x, SitiosDeNodos[0].y), null);
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                // Los píxeles del nodo: la captura tal cual, y otra igual sin el nodo (o sin el modelo, con «Mejorado»).
+                IEnumerator Contar(string k, ZoomDelMapa zoom, string z)
+                {
+                    // con el tiempo parado (el viento, las nubes y el agua no se mueven entre las dos capturas)
+                    Time.timeScale = 0;
+                    yield return Vista(mapa, zoom, 30, $"x_{k}_{tanda}_{z}_con");
+                    var con = Pixeles();
+                    if (estilo == EstiloDeNodos.Mejorado) NodosDelMapa.DibujarModelos = false; else NodosDelMapa.Estilo = EstiloDeNodos.Ninguno;
+                    yield return Vista(mapa, zoom, 30, $"x_{k}_{tanda}_{z}_sin");
+                    var sin = Pixeles();
+                    NodosDelMapa.DibujarModelos = true;
+                    NodosDelMapa.Estilo = estilo;
+                    var (m, n) = Diferencia(con, sin);
+                    var (c, nc) = ColorMedio(con, m, rt.width, rt.width / 2, rt.height / 2, rt.height / 3);
+                    Time.timeScale = 1;
+                    Debug.Log($"[Nodos] píxeles {k} {tanda} {z}: {n} (color medio sRGB {c.r},{c.g},{c.b} en {nc})");
+                    yield return Vista(mapa, zoom, 30, $"n_{k}_{tanda}_{z}");
+                }
+                foreach (var (k, x, y) in SitiosDeNodos)
+                {
+                    // la columna, sobre el nodo (la cámara la sigue) y escondida en cada captura
+                    yield return Llegar(mapa, almacen, (x, y));
+                    yield return new WaitForSecondsRealtime(1);
+                    foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                    {
+                        EsconderLaColumna();
+                        yield return Vista(mapa, zoom, 30, $"n_{k}_{tanda}_{z}");
+                        if (zoom != ZoomDelMapa.Cerca) yield return Contar(k, zoom, z);
+                    }
+                    if (k == "bosque" && estilo == EstiloDeNodos.Mejorado)
+                    {
+                        // el mismo nodo sin el claro en la vegetación (con el modelo y el parche)
+                        NodosDelMapa.ClaroEnLaVegetacion = false;
+                        yield return Llegar(mapa, almacen, (x + 0.001, y));
+                        yield return new WaitForSecondsRealtime(3);
+                        foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                        {
+                            EsconderLaColumna();
+                            yield return Vista(mapa, zoom, 30, $"n_bosque_sinclaro_{z}");
+                            if (zoom != ZoomDelMapa.Cerca) yield return Contar("bosque_sinclaro", zoom, z);
+                        }
+                        NodosDelMapa.ClaroEnLaVegetacion = true;
+                    }
+                }
+                if (estilo == EstiloDeNodos.Mejorado)
+                    foreach (var (k, x, y) in LaderasDeNodos)
+                    {
+                        yield return Llegar(mapa, almacen, (x, y));
+                        yield return new WaitForSecondsRealtime(1);
+                        EsconderLaColumna();
+                        // más desde arriba (55°): de cerca, en la ladera, a 30° la cámara se metía en el monte
+                        yield return Vista(mapa, ZoomDelMapa.Cerca, 55, $"l_{k}_{tanda}");
+                        Debug.Log($"[Nodos] ladera {k}: pendiente media en la huella {Pendiente(mapa, x, y):0.00}");
+                    }
+            }
+            finally { (MapaDeMundo.AclararCopas, NodosDelMapa.Estilo, NodosDelMapa.DibujarModelos, NodosDelMapa.ClaroEnLaVegetacion) = antes; Time.timeScale = 1; }
+        }
+
+        /// <summary>La pendiente de la malla de suelo (alto / horizontal) entre lo más alto y lo más bajo de la huella de un nodo, a 0,5 u.</summary>
+        static double Pendiente(MapaDeMundo mapa, double x, double y)
+        {
+            double mx = double.MinValue, mn = double.MaxValue;
+            for (int i = 0; i < 8; i++)
+            {
+                double a = i * Math.PI / 4, h = mapa.Terreno.AlturaPintada(x + Math.Cos(a) * 0.5, y + Math.Sin(a) * 0.5);
+                mx = Math.Max(mx, h);
+                mn = Math.Min(mn, h);
+            }
+            return (mx - mn) / (EscalaDelMapa.MetrosPorUnidad * 1.0);
+        }
+
+        /// <summary>Las láminas de los nodos «Mejorado» (con las de «Prototipo» al lado): sobre la pradera, la tierra seca y la montaña del banco,
+        /// los cinco tipos en fila (a 3 u) puestos para la prueba (nodos de más en el artefacto); y en la pradera, las tres variantes de cada
+        /// tipo. Y el color medio de cada tipo en cada suelo a zoom habitual y alejado (los píxeles del modelo, sin sombras), con la distancia
+        /// entre pares.</summary>
+        [Category("Mapa"), Explicit("láminas de los nodos de recursos")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LasLaminasDeNodos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "nodos-laminas-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var banco = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            string[] tipos = { "piedra", "cobre", "estano", "oro", "hierro" };
+            var suelos = new[] { ("pradera", "suelo_pradera"), ("seco", "suelo_seco"), ("montana", "suelo_roca") }.Where(s => banco.SitiosDeSuelo.ContainsKey(s.Item2)).ToArray();
+            // los nodos de la prueba: en cada suelo, una fila de los cinco tipos 12 u al norte del sitio (lejos de sus caminos, que aquí no se ponen)
+            var puestos = new List<NodoRecurso>();
+            var filas = new Dictionary<string, (double x, double y)>();
+            foreach (var (s, k) in suelos)
+            {
+                var (cx, cy) = banco.SitiosDeSuelo[k];
+                filas[s] = (cx, cy + 12);
+                for (int t = 0; t < 5; t++)
+                    puestos.Add(new NodoRecurso { Id = $"prueba-{s}-{tipos[t]}", Tipo = tipos[t], Rareza = "comun", Posicion = Pu(cx + (t - 2) * 3, cy + 12) });
+            }
+            // las variantes, en la pradera: la fila de cada variante, 3 u más al norte; cada nodo, donde el hash le da esa variante
+            (double x, double y) variantes = default;
+            if (filas.TryGetValue("pradera", out var fp))
+            {
+                variantes = (fp.x, fp.y + 6);
+                for (int v = 0; v < 3; v++)
+                    for (int t = 0; t < 5; t++)
+                    {
+                        double x = fp.x + (t - 2) * 3, y = fp.y + 3 + v * 3;
+                        for (int i = 0; i < 400 && Math.Min(2, (int)(RocasDeNodos.Azar(x + y * 0.37, 91) * 3)) != v; i++) x += 0.0625;
+                        puestos.Add(new NodoRecurso { Id = $"prueba-v{v + 1}-{tipos[t]}", Tipo = tipos[t], Rareza = "comun", Posicion = Pu(x, y) });
+                    }
+            }
+            artefacto.Nodos.AddRange(puestos);
+            var antes = (MapaDeMundo.AclararCopas, NodosDelMapa.Estilo, NodosDelMapa.DibujarModelos);
+            MapaDeMundo.AclararCopas = false;
+            var colores = new List<string>();
+            try
+            {
+                foreach (var (estilo, tanda) in new[] { (EstiloDeNodos.Mejorado, "mejorado"), (EstiloDeNodos.Prototipo, "prototipo") })
+                {
+                    NodosDelMapa.Estilo = estilo;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, filas.Values.First(), null);
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    foreach (var (s, _) in suelos)
+                    {
+                        var (fx, fy) = filas[s];
+                        yield return Llegar(mapa, almacen, (fx, fy));
+                        yield return new WaitForSecondsRealtime(1);
+                        foreach (var (zoom, z) in new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") })
+                        {
+                            EsconderLaColumna();
+                            yield return Vista(mapa, zoom, 30, $"f_{s}_{tanda}_{z}");
+                            if (zoom == ZoomDelMapa.Cerca) continue;
+                            Time.timeScale = 0;
+                            yield return Vista(mapa, zoom, 30, $"x_f_{s}_{tanda}_{z}_con");
+                            var con = Pixeles();
+                            if (estilo == EstiloDeNodos.Mejorado) NodosDelMapa.DibujarModelos = false; else NodosDelMapa.Estilo = EstiloDeNodos.Ninguno;
+                            yield return Vista(mapa, zoom, 30, $"x_f_{s}_{tanda}_{z}_sin");
+                            var sin = Pixeles();
+                            NodosDelMapa.DibujarModelos = true;
+                            NodosDelMapa.Estilo = estilo;
+                            var (m, _) = Diferencia(con, sin);
+                            Time.timeScale = 1;
+                            // cada tipo: los píxeles de la máscara cerca de donde cae su nodo en la pantalla
+                            var cam = mapa.Vista;
+                            for (int t = 0; t < 5; t++)
+                            {
+                                double nx = fx + (t - 2) * 3;
+                                var w = cam.WorldToScreenPoint(EscalaDelMapa.AEscena(nx, fy, mapa.Terreno.AlturaPintada(nx, fy) + 2));
+                                // (la captura sale de abajo arriba, como la pantalla)
+                                int r = (int)Math.Max(6, rt.width * (zoom == ZoomDelMapa.Normal ? 0.03 : 0.015));
+                                var (c, n) = ColorMedio(con, m, rt.width, (int)w.x, (int)w.y, r);
+                                colores.Add($"{tanda};{s};{z};{tipos[t]};{c.r};{c.g};{c.b};{n}");
+                                if (tipos[t] == "estano" || tipos[t] == "oro")
+                                    Debug.Log($"[Nodos] fracción {tanda} {s} {z} {tipos[t]}: {(tipos[t] == "estano" ? "azul" : "dorado")} " +
+                                              $"{Fraccion(con, m, rt.width, (int)w.x, (int)w.y, r, tipos[t] == "estano" ? EsAzul : EsDorado):P0}");
+                            }
+                            yield return Vista(mapa, zoom, 30, $"f_{s}_{tanda}_{z}");
+                        }
+                    }
+                    if (variantes != default)
+                    {
+                        yield return Llegar(mapa, almacen, variantes);
+                        yield return new WaitForSecondsRealtime(1);
+                        EsconderLaColumna();
+                        yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"v_variantes_{tanda}_1_cerca");
+                        yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"v_variantes_{tanda}_2_habitual");
+                    }
+                }
+            }
+            finally
+            {
+                foreach (var n in puestos) artefacto.Nodos.Remove(n);
+                Time.timeScale = 1;
+                (MapaDeMundo.AclararCopas, NodosDelMapa.Estilo, NodosDelMapa.DibujarModelos) = antes;
+            }
+            foreach (var l in colores) Debug.Log("[Nodos] color;" + l);
+        }
+
         /// <summary>Las tres opciones del territorio que se le ofrecen a Víctor, en los mismos sitios del banco, a zoom habitual y alejado: el
         /// prototipo, el filo («Mejorado», ronda 4) y «Suave» (tinte suave en todo el territorio y un filo más fino y menos vivo). Los caminos,
         /// «Mejorado».</summary>
