@@ -30,6 +30,16 @@ namespace ConquestTactics.Mundo
         public bool BajoNiebla;
         public Entidad Entidad;
         public bool SeElige => Clase != ClaseDeCosa.Nodo;
+        /// <summary>Con `CosasDelMapa.ConFiguras`, las figuras de una columna, una caravana suelta o un Aeda (tema 7) y el camino de su cabeza
+        /// hacia atrás (u) por el que se ponen; null en lo demás.</summary>
+        public List<SitioDeFigura> Figuras;
+        public List<(double x, double y)> Camino;
+        /// <summary>Con figuras: a qué velocidad va su cabeza ahora (u/s; 0 parada), para el paso de las figuras.</summary>
+        public double Velocidad;
+        /// <summary>Una caravana enganchada a una columna: con figuras, sus carros van en la columna y ella no se pinta.</summary>
+        public bool EnColumna;
+        /// <summary>La columna de quien mira (su color de bando, el propio).</summary>
+        public bool Propia;
     }
 
     /// <summary>Una raya del mapa (camino, frontera, anillo): sus puntos (u), su ancho (u), su color y si va bajo la niebla.</summary>
@@ -163,6 +173,8 @@ namespace ConquestTactics.Mundo
             var heroe = heroeId == null ? null : a.Buscar(TipoEntidad.Heroe, heroeId)?.Heroe;
             var miFaccion = heroe != null && heroe.HasFaccionId ? heroe.FaccionId : null;
             var miColumna = heroe?.Ubicacion?.EjercitoId;
+            MsFiguras = 0;
+            var escuadrones = ConFiguras ? a.Todas(Entidad.CuerpoOneofCase.Escuadron).Select(x => x.Escuadron).ToList() : null;
             var plazas = new Dictionary<string, Asentamiento>();
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Asentamiento)) plazas[e.Asentamiento.Id] = e.Asentamiento;
             uint ColorDeMadre(string madreId) => plazas.TryGetValue(madreId ?? "", out var m) ? ColorDeFaccion(a, m.FaccionId) : Ajeno;
@@ -279,6 +291,7 @@ namespace ConquestTactics.Mundo
                     Detalle = c.Participantes.Count == 1 ? Textos.NombreDeHeroe(a, c.Participantes[0].HeroeId) : $"{c.Participantes.Count} héroes", FaccionId = c.FaccionId,
                     X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.5, RadioClic = 0.8, Color = c.HasFaccionId() ? ColorDeFaccion(a, c.FaccionId) : 0xc0392b, Entidad = e,
                 });
+                if (ConFiguras) ConSusFiguras(r[r.Count - 1], a, c, escuadrones, ahora);
             }
             // Las caravanas enganchadas a una columna (las comerciales y la de Fundación) van detrás de ella, en fila y en su rumbo (paso 11): su carro
             // 3D la sigue y la caja de donde se enganchó desaparece.
@@ -316,6 +329,12 @@ namespace ConquestTactics.Mundo
                     }.Where(x => x != null)), FaccionId = c.HasFaccionId ? c.FaccionId : null,
                     X = p.x / 1000, Y = p.y / 1000, Radio = 0.3, Alto = 0.35, RadioClic = 0.7, Color = c.HasFaccionId ? ColorDeFaccion(a, c.FaccionId) : Ajeno, Entidad = e,
                 });
+                if (ConFiguras && enFila) r[r.Count - 1].EnColumna = true;
+                else if (ConFiguras)
+                {
+                    var (tropa, carros) = ColumnasDelMapa.DeCaravana(c);
+                    Figuras(r[r.Count - 1], ColumnasDelMapa.Disposicion(0, tropa, carros, c.Id), c.Plan, c.Posicion, ahora);
+                }
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.AedaItinerante))
             {
@@ -327,6 +346,12 @@ namespace ConquestTactics.Mundo
                 r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Aeda, Id = v.Id, Nombre = "Aeda " + NombreDeAeda(v.Id),
                     Detalle = parado ? "Parado en " + NombreDePlaza(plazas, v.EnAsentamientoId) : "De camino a otra plaza",
                     X = p.x / 1000, Y = p.y / 1000, Radio = parado ? 0.15 : 0.2, Alto = 0.4, RadioClic = 0.5, Color = 0xe9dcc0, Entidad = e });
+                if (ConFiguras)
+                {
+                    var aeda = r[r.Count - 1];
+                    aeda.Figuras = ColumnasDelMapa.DeAeda();
+                    aeda.Camino = parado ? new List<(double, double)> { (aeda.X, aeda.Y) } : RastroDe(v.Id).Camino(v.Plan, v.Posicion, ahora, 1);
+                }
             }
             if (nodos != null)
                 foreach (var n in nodos)
@@ -338,6 +363,57 @@ namespace ConquestTactics.Mundo
         }
 
         static bool HasFaccionId(this Ejercito c) => !string.IsNullOrEmpty(c.FaccionId);
+
+        /// <summary>Con figuras (el estilo «Mejorado» de las maquetas, tema 7): las columnas, las caravanas sueltas y los Aedas llevan sus figuras
+        /// y el camino por el que se ponen, y las caravanas enganchadas van dentro de su columna. Lo pone el mapa.</summary>
+        public static bool ConFiguras;
+
+        /// <summary>El rastro de la cabeza de cada columna, caravana o Aeda, por id (lo que ha andado cuando su plan no llega).</summary>
+        // ponytail: no se vacía; son unas decenas de ids por sesión. Quitar los que no salen en `Reunir` si crece.
+        static readonly Dictionary<string, RastroDeColumna> Rastros = new Dictionary<string, RastroDeColumna>();
+
+        static RastroDeColumna RastroDe(string id)
+        {
+            if (!Rastros.TryGetValue(id, out var r)) Rastros[id] = r = new RastroDeColumna();
+            return r;
+        }
+
+        static void Figuras(CosaDelMapa cosa, List<SitioDeFigura> figuras, Plan plan, Punto posicion, double ahora)
+        {
+            cosa.Figuras = figuras;
+            var antes = Instante.Posicion(plan, posicion, ahora - 1000);
+            var ya = Instante.Posicion(plan, posicion, ahora);
+            cosa.Velocidad = Math.Sqrt((ya.x - antes.x) * (ya.x - antes.x) + (ya.y - antes.y) * (ya.y - antes.y)) / 1000;
+            cosa.Camino = RastroDe(cosa.Id).Camino(plan, posicion, ahora, ColumnasDelMapa.Largo(figuras) + 0.5);
+        }
+
+        /// <summary>Las figuras de cada columna, por id, con cuándo se sacaron (ms del mundo): lo que lleva cambia poco, así que se rehace como
+        /// mucho cada `RehacerFigurasMs` y no en cada fotograma.</summary>
+        static readonly Dictionary<string, (double cuando, List<SitioDeFigura> figuras)> FigurasDeColumnas = new Dictionary<string, (double, List<SitioDeFigura>)>();
+        const double RehacerFigurasMs = 2000;
+        /// <summary>Lo que tardó lo de las figuras en el último `Reunir` (ms).</summary>
+        public static double MsFiguras;
+        static readonly System.Diagnostics.Stopwatch reloj = new System.Diagnostics.Stopwatch();
+
+        static void ConSusFiguras(CosaDelMapa cosa, Almacen a, Ejercito c, List<Escuadron> escuadrones, double ahora)
+        {
+            reloj.Restart();
+            if (!FigurasDeColumnas.TryGetValue(c.Id, out var f) || Math.Abs(ahora - f.cuando) > RehacerFigurasMs)
+                FigurasDeColumnas[c.Id] = f = (ahora, ColumnasDelMapa.Disposicion(ColumnasDelMapa.Jinetes(c),
+                    ColumnasDelMapa.TropaDe(c, escuadrones, id => a.Buscar(TipoEntidad.Heroe, id)?.Heroe),
+                    ColumnasDelMapa.CarrosDe(c, id => a.Buscar(TipoEntidad.Caravana, id)?.Caravana), c.Id, c.Participantes.Select(p => p.HeroeId).ToList()));
+            Figuras(cosa, f.figuras, c.Plan, c.Posicion, ahora);
+            MsFiguras += reloj.Elapsed.TotalMilliseconds;
+        }
+
+        /// <summary>Tu columna con sus figuras (el mapa la pinta aparte, con su ruta; con figuras, en vez de su caja). Sin clic.</summary>
+        public static CosaDelMapa MiColumnaConFiguras(Almacen a, Ejercito c, uint color, double ahora)
+        {
+            var p = Instante.Posicion(c.Plan, c.Posicion, ahora);
+            var cosa = new CosaDelMapa { Clase = ClaseDeCosa.Ejercito, Id = c.Id, X = p.x / 1000, Y = p.y / 1000, Color = color, Entidad = null, Propia = true, FaccionId = c.HasFaccionId() ? c.FaccionId : null };
+            ConSusFiguras(cosa, a, c, a.Todas(Entidad.CuerpoOneofCase.Escuadron).Select(x => x.Escuadron).ToList(), ahora);
+            return cosa;
+        }
 
         /// <summary>Lo que separa, en milésimas de u, cada carro enganchado del anterior (o de la columna): medio u, unos 6 m a la escala del mapa.</summary>
         const double SeparacionCarro = 500;

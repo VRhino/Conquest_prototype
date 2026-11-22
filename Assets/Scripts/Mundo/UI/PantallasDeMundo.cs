@@ -395,16 +395,20 @@ namespace ConquestTactics.Mundo.UI
 
         /// <summary>El héroe de la sesión para las escenas de Conquest (el selector y los interiores): nombre, nivel, Facción, clase, armadura y
         /// aspecto.</summary>
-        SelectorDePersonaje.HeroeParaVer HeroeParaVer(DatosDeJuego datos)
+        SelectorDePersonaje.HeroeParaVer HeroeParaVer(DatosDeJuego datos) => HeroeParaVer(datos, c.HeroeId);
+
+        /// <summary>Lo mismo de cualquier héroe que se vea (el público de la VISTA trae su aspecto y lo que lleva puesto): para vestir su figura
+        /// en el mapa (tema 7).</summary>
+        SelectorDePersonaje.HeroeParaVer HeroeParaVer(DatosDeJuego datos, string heroeId)
         {
             var s = c.Sesion;
             var b = s.Bienvenida;
-            var h = s.Almacen.Buscar(TipoEntidad.Heroe, c.HeroeId)?.Heroe;
+            var h = s.Almacen.Buscar(TipoEntidad.Heroe, heroeId)?.Heroe;
             var clase = ClaseDeHeroe.Leer(datos).FirstOrDefault(k => k.Id == h?.ClassDefinitionId);
             var faccionId = h != null && h.HasFaccionId ? h.FaccionId : b.HasFaccionId ? b.FaccionId : null;
             return new SelectorDePersonaje.HeroeParaVer
             {
-                Nombre = Textos.NombreDeHeroe(s.Almacen, c.HeroeId),
+                Nombre = Textos.NombreDeHeroe(s.Almacen, heroeId),
                 Nivel = h?.Nivel ?? 1,
                 Faccion = faccionId == null ? "Sin Facción" : NombreDeFaccion(s.Almacen, faccionId) ?? "Facción",
                 Sigilo = faccionId == null ? null : Sigilos.DeFaccion(s.Almacen, faccionId),
@@ -1415,6 +1419,8 @@ namespace ConquestTactics.Mundo.UI
             var v = Montar("Mapa");
             mapa = new GameObject("Mapa").AddComponent<ConquestTactics.Mundo.Mapa.MapaDeMundo>();
             mapa.Iniciar(c.Sesion, new Relieve(c.Relieve), c.Artefacto, c.Datos, () => c.HeroeId, SobreInterfaz, (t, peligro) => panelAvisos.Mostrar(t, peligro), v.Q("nombres"));
+            // las figuras de las columnas con su modelo (tema 7): el horno de las tropas y de los héroes a caballo
+            mapa.gameObject.AddComponent<HornoDeFiguras>().Iniciar(PrefabsVisuales, id => HeroeParaVer(c.Datos, id));
             mapa.NombresDeNodos = PlayerPrefs.GetInt("mundo.capa.nodos", 1) == 1;
             mapa.Fertilidad = PlayerPrefs.GetInt("mundo.capa.fertilidad", 0) == 1;
             diagnostico = v.Q("diagnostico");

@@ -94,6 +94,13 @@ public static class VestidoDelMotor
         "montura_tiro" => 1, "montura_tesalia" => 2, "montura_estepa" => 3, "montura_nisea" => 4, "montura_escita" => 5, _ => 0,
     };
 
+    /// <summary>Al revés que `PelajeDe`: la montura de un pelaje (para que la batalla, que solo recibe el pelaje, vista el caballo de guerra
+    /// que le toca con `CaballosDeGuerra.Reparto`); null si no es de ninguna.</summary>
+    public static string MonturaDePelaje(byte pelaje) => pelaje switch
+    {
+        1 => "montura_tiro", 2 => "montura_tesalia", 3 => "montura_estepa", 4 => "montura_nisea", 5 => "montura_escita", _ => null,
+    };
+
     /// <summary>Los huecos del aspecto que se eligieron vacíos (pelo, barba, cejas) se apagan: el maniquí de Synty trae una pieza puesta en cada uno.
     /// Lo usan el campamento y el héroe de la batalla en red (`HeroVisualAppearanceSystem`, con el aspecto que llega del servidor).</summary>
     public static void QuitarHuecosVacios(Transform personaje, Data.Avatar.AvatarPartDatabase piezas, string pelo, string barba, string cejas, Gender genero)

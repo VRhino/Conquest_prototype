@@ -21,6 +21,7 @@ namespace ConquestTactics.Mundo.Mapa
         readonly List<Matrix4x4>[] matrices = { new List<Matrix4x4>(), new List<Matrix4x4>() };
         readonly List<Vector4>[] colores = { new List<Vector4>(), new List<Vector4>() };
         readonly MaterialPropertyBlock propiedades = new MaterialPropertyBlock();
+        readonly MaterialPropertyBlock propiedadesFiguras = new MaterialPropertyBlock();
         readonly Matrix4x4[] tanda = new Matrix4x4[PorLlamada];
         readonly Vector4[] tandaColores = new Vector4[PorLlamada];
         GameObject rayasBajo, rayasEncima, aro;
@@ -42,14 +43,20 @@ namespace ConquestTactics.Mundo.Mapa
             encima.enableInstancing = true;
             var cubo = GameObject.CreatePrimitive(PrimitiveType.Cube);
             caja = cubo.GetComponent<MeshFilter>().sharedMesh;
+            FigurasDelMapa.Cubo = caja;
             UnityEngine.Object.Destroy(cubo);
         }
 
         public static Vector4 Lineal(uint rgb) => (Vector4)new Color32((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, 255).ToColor().linear;
 
         /// <summary>Pinta las cajas de este fotograma: las que quedan a menos de `alcance` u de (cx, cy).</summary>
+        /// <summary>Lo que tardaron en el último fotograma las figuras (ponerlas) y los modelos (mandarlos a pintar), en ms.</summary>
+        public static double MsFiguras, MsModelos;
+        static readonly System.Diagnostics.Stopwatch reloj = new System.Diagnostics.Stopwatch();
+
         public void Pintar(List<CosaDelMapa> cosas, double cx, double cy, double alcance)
         {
+            MsFiguras = 0;
             var e = EscalaDelMapa.MetrosPorUnidad;
             for (int k = 0; k < 2; k++) { matrices[k].Clear(); colores[k].Clear(); }
             foreach (var c in cosas)
@@ -60,6 +67,15 @@ namespace ConquestTactics.Mundo.Mapa
                 // los asentamientos, campamentos, alijos y batallas los pinta `MaquetasDelMapa` salvo con las cajas de antes
                 if (MaquetasDelMapa.Pinta(c.Clase)) continue;
                 int k = c.BajoNiebla ? 0 : 1;
+                // con figuras (tema 7): columnas, caravanas sueltas y Aedas, por figuras; las caravanas enganchadas van en su columna
+                if (c.EnColumna) continue;
+                if (c.Figuras != null)
+                {
+                    reloj.Restart();
+                    FigurasDelMapa.Anadir(c, alturaVisible, matrices[k], colores[k]);
+                    MsFiguras += reloj.Elapsed.TotalMilliseconds;
+                    continue;
+                }
                 var suelo = alturaVisible(c.X, c.Y);
                 if ((c.Clase == ClaseDeCosa.Caravana || c.Clase == ClaseDeCosa.CaravanaAjena) && CarroDeCaravana.Disponible)
                 {
@@ -72,6 +88,12 @@ namespace ConquestTactics.Mundo.Mapa
                 matrices[k].Add(Matrix4x4.TRS(EscalaDelMapa.AEscena(c.X, c.Y, suelo + tamano.y / 2), Quaternion.identity, tamano));
                 colores[k].Add(Lineal(c.Color));
             }
+            reloj.Restart();
+            FigurasDelMapa.Pintar(encima, propiedadesFiguras, PinturaDelMapa.SombrasReales);
+            MsFiguras += reloj.Elapsed.TotalMilliseconds;
+            reloj.Restart();
+            ModelosDeFiguras.Pintar();
+            MsModelos = reloj.Elapsed.TotalMilliseconds;
             // Las que ya no están (o quedan lejos), fuera.
             foreach (var id in new List<string>(carros.Keys))
                 if (!carrosVistos.Contains(id)) { carros[id].Soltar(); carros.Remove(id); }

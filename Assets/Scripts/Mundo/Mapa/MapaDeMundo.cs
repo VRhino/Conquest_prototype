@@ -382,6 +382,12 @@ namespace ConquestTactics.Mundo.Mapa
             camara.transform.position = EscalaDelMapa.AEscena(pos.x, pos.y, pos.h * e);
             camara.transform.LookAt(EscalaDelMapa.AEscena(cx, cy, objetivo.Item2 * e));
             camara.nearClipPlane = (float)Math.Max(0.05, Camara.Distancia * 0.05) * e;
+            if (CamaraFija is var (desde, mira))
+            {
+                camara.transform.position = desde;
+                camara.transform.LookAt(mira);
+                camara.nearClipPlane = 0.05f;
+            }
             camara.farClipPlane = (float)Math.Max(600, Camara.Distancia * 20) * e;
             terreno.Actualizar(cx, cy, (float)Camara.Distancia * 7);
             terreno.HornearRelieve(1.0); // la sombra del relieve: 1 ms por fotograma como mucho
@@ -411,18 +417,29 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Lo que hay en el mapa: las cajas cada fotograma (lo que anda, en su sitio del instante), las rayas cuando cambia algo (como
         /// mucho dos veces por segundo), los nombres a la distancia de la bruma de BronzeAgeClient y el aro de lo seleccionado.</summary>
+        /// <summary>Con figuras, ¿se pinta tu columna? (las pruebas la apagan: su héroe de prueba no es el de la columna que se mira).</summary>
+        public static bool PintarMiColumna = true;
+        /// <summary>Para las capturas de las pruebas: la cámara puesta a mano (desde dónde y a qué mira, en la escena); null, la del mapa.</summary>
+        public static (Vector3 desde, Vector3 mira)? CamaraFija;
+
         void PintarCosas(double ahora, double cx, double cy)
         {
             var radioInicial = datos.Numero("reglas.territorio.radio_inicial") / 1000;
+            // las figuras de las columnas, con las maquetas «Mejorado» (tema 7); tu columna, con ellas en vez de su caja
+            CosasDelMapa.ConFiguras = MaquetasDelMapa.Estilo == EstiloDeAsentamientos.Mejorado;
+            ModelosDeFiguras.Camara = camara;
             Cosas = CosasDelMapa.Reunir(sesion.Almacen, heroeId(), ahora, artefacto.Nodos, radioInicial);
             Cosas.AddRange(Adicionales);
+            var aPintar = Cosas;
+            if (CosasDelMapa.ConFiguras && PintarMiColumna && Columna != null && !Columna.HasDentroDe)
+                aPintar = new List<CosaDelMapa>(Cosas) { CosasDelMapa.MiColumnaConFiguras(sesion.Almacen, Columna, CosasDelMapa.ColorDeFaccion(sesion.Almacen, Columna.FaccionId), ahora) };
             var d = Camara.Distancia;
             double lejosCarga = Math.Min(PinturaDelMapa.DistanciaCarga, d * 7), cerca = Math.Min(d * 2.2, lejosCarga * 0.4);
             // La bruma lejana (la `THREE.Fog` de BronzeAgeClient): del horizonte, empieza en `cerca` y acaba donde acaba lo cargado.
             var e = EscalaDelMapa.MetrosPorUnidad;
             Shader.SetGlobalVector(Bruma, new Vector4((float)(cerca * e), (float)(lejosCarga * e), 1, e));
             Shader.SetGlobalColor(ColorBruma, PinturaDelMapa.Horizonte);
-            pintor.Pintar(Cosas, cx, cy, lejosCarga);
+            pintor.Pintar(aPintar, cx, cy, lejosCarga);
             maquetas.Actualizar(Cosas, heroeId(), radioInicial);
             nodos.GirosDePueblo = maquetas.GirosDeNodos;
             nodos.VersionGiros = maquetas.VersionGiros;
@@ -707,7 +724,7 @@ namespace ConquestTactics.Mundo.Mapa
 
         void Mostrar(bool columna)
         {
-            caja.SetActive(columna);
+            caja.SetActive(columna && !CosasDelMapa.ConFiguras);
             if (!columna) { destino.SetActive(false); ruta.enabled = false; }
         }
 

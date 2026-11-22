@@ -35,9 +35,12 @@ namespace ConquestTactics.Visual
 
         public void SetCoats(Material[] coats) => _coats = coats;
 
-        /// <summary>Puts coat <paramref name="coat"/> (1..n) on this copy's horse; 0 or unknown keeps the prefab's.</summary>
-        public void SetCoat(byte coat)
+        /// <summary>Puts coat <paramref name="coat"/> (1..n) on this copy's horse; 0 or unknown keeps the prefab's. With the war horses
+        /// (<see cref="CaballosDeGuerra"/>), the coat's mount brings its own body and coat instead (only what is seen); its marks come from <paramref name="heroId"/>, as on the map.</summary>
+        public void SetCoat(byte coat, string heroId = null)
         {
+            var guerra = CaballosDeGuerra.Cargar();
+            if (guerra != null && guerra.Vestir(gameObject, VestidoDelMotor.MonturaDePelaje(coat), heroId)) return;
             if (coat == 0 || _coats == null || coat > _coats.Length || _coats[coat - 1] == null) return;
             foreach (var r in GetComponentsInChildren<SkinnedMeshRenderer>(true)) r.sharedMaterial = _coats[coat - 1];
         }
