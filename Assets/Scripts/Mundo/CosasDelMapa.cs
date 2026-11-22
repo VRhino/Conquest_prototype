@@ -123,6 +123,31 @@ namespace ConquestTactics.Mundo
         /// NaN si no hay modelo: la del prototipo).</summary>
         public static Func<string, uint, double> HuellaDePueblo;
 
+        /// <summary>«Mejorado»: la huella (u) de una avanzada por su etapa, la del mayor radio de los modelos de esa etapa en todos sus estados
+        /// (lo pone `MaquetasDelMapa`; NaN si no hay modelo: la del prototipo).</summary>
+        public static Func<uint, double> HuellaDeAvanzada;
+
+        /// <summary>«Mejorado»: la huella (u) de los modelos de los campamentos y los alijos (el mayor radio de sus variantes, a la escala del
+        /// mapa; lo pone `MaquetasDelMapa`; NaN si no hay modelo). La huella es la mayor entre la del prototipo y esta.</summary>
+        public static Func<ClaseDeCosa, double> HuellaDeMenudo;
+
+        /// <summary>La huella de lo menudo: la mayor entre la del prototipo y la de su modelo («Mejorado»).</summary>
+        static double ConModelo(ClaseDeCosa clase, double huella)
+        {
+            double h = HuellaMejorada && HuellaDeMenudo != null ? HuellaDeMenudo(clase) : double.NaN;
+            return double.IsNaN(h) ? huella : Math.Max(huella, h);
+        }
+
+        /// <summary>La huella (u) de una avanzada de esa etapa: «Mejorado», la de sus modelos (con su mejora en marcha, la de la etapa siguiente,
+        /// que es la que se dibuja); si no, la del prototipo.</summary>
+        public static double HuellaDeAvanzadaEn(uint etapa, bool mejoraEnMarcha)
+        {
+            uint e = Math.Max(1, Math.Min(3, etapa));
+            if (mejoraEnMarcha && e < 3) e++;
+            double h = HuellaMejorada && HuellaDeAvanzada != null ? HuellaDeAvanzada(e) : double.NaN;
+            return double.IsNaN(h) ? 0.5 * Pueblo : h;
+        }
+
         /// <summary>La huella de una plaza contando su muralla (u): la del aro, el clic y el claro. Solo en «Mejorado» y si la tiene.</summary>
         public static double HuellaConMuralla(double huella, double nivel, double x, double y, bool muralla) =>
             HuellaMejorada && muralla && FactorDeMuralla != null ? huella * FactorDeMuralla(nivel, x, y) : huella;
@@ -184,12 +209,15 @@ namespace ConquestTactics.Mundo
                     X = x, Y = y, Radio = !double.IsNaN(hp) ? hp : aldea ? 0.58 * Pueblo : huella, Alto = 0.35, RadioClic = !double.IsNaN(hp) ? (aldea ? 0.62 : hp * 1.1) : huella + Holgura, Color = ColorDeMadre(q.AsentamientoMadreId), Entidad = e,
                 });
             }
+            // (las avanzadas con su mejora en marcha: se dibujan, y se tocan, con la huella de la etapa siguiente)
+            var mejorandose = new HashSet<string>(a.Todas(Entidad.CuerpoOneofCase.Obra).Select(k => k.Obra)
+                .Where(o => o.Tipo == TipoObra.ObraMejoraAvanzada && o.HasTerminaEnMs && o.HasDestinoId).Select(o => o.DestinoId));
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Avanzada))
             {
                 var v = e.Avanzada;
                 var (x, y) = P(v.Posicion);
                 bool ruinas = v.Estado == EstadoAvanzada.AvanzadaEnRuinas;
-                double huella = 0.5 * Pueblo;
+                double huella = HuellaDeAvanzadaEn(v.Etapa, !ruinas && mejorandose.Contains(v.Id));
                 r.Add(new CosaDelMapa
                 {
                     Clase = ClaseDeCosa.Avanzada, Id = v.Id, Nombre = "Avanzada", Detalle = "De " + NombreDePlaza(plazas, v.AsentamientoMadreId) + (ruinas ? " · en ruinas" : ""),
@@ -210,7 +238,7 @@ namespace ConquestTactics.Mundo
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.CampamentoMercenarios))
             {
                 var (x, y) = P(e.CampamentoMercenarios.Posicion);
-                double huella = 0.63 * Maqueta * Campamentos;
+                double huella = ConModelo(ClaseDeCosa.Mercenarios, 0.63 * Maqueta * Campamentos);
                 r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Mercenarios, Id = e.CampamentoMercenarios.Id, Nombre = "Mercenarios", Detalle = "Campamento de mercenarios",
                     X = x, Y = y, Radio = huella, Alto = 0.45, RadioClic = huella + Holgura, Color = Mercenarios, Entidad = e });
             }
@@ -218,14 +246,14 @@ namespace ConquestTactics.Mundo
             {
                 var b = e.CampamentoBandidos;
                 var (x, y) = P(b.Posicion);
-                double huella = 0.48 * Maqueta * Campamentos;
+                double huella = ConModelo(ClaseDeCosa.Bandidos, 0.48 * Maqueta * Campamentos);
                 r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Bandidos, Id = b.Id, Nombre = "Bandidos", Detalle = $"Nivel {b.Nivel}",
                     X = x, Y = y, Radio = huella, Alto = 0.35, RadioClic = huella + Holgura, Color = Bandidos, Entidad = e });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Alijo))
             {
                 var (x, y) = P(e.Alijo.Posicion);
-                double huella = 0.14 * Maqueta * Campamentos;
+                double huella = ConModelo(ClaseDeCosa.Alijo, 0.14 * Maqueta * Campamentos);
                 r.Add(new CosaDelMapa { Clase = ClaseDeCosa.Alijo, Id = e.Alijo.Id, Nombre = "Alijo", Detalle = "Recursos sueltos en el suelo",
                     X = x, Y = y, Radio = huella, Alto = 0.2, RadioClic = huella + Holgura, Color = Oro, Entidad = e });
             }

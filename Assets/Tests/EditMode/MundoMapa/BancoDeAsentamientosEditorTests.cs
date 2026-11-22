@@ -34,6 +34,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                 int[] niveles = new int[0], conMuralla = new int[0];
                 string[] pueblos = new string[0], nucleos = new string[0];
                 int campos = 0;
+                string[] menudos = new string[0];
                 var hasta = Time.realtimeSinceStartup + 120;
                 while (Time.realtimeSinceStartup < hasta)
                 {
@@ -50,7 +51,10 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                         pueblos = en.Where(e => !e.EsSuelo && e.Material.name.StartsWith("pueblo_")).Select(e => e.Material.name.Split(' ')[0]).Distinct().OrderBy(n => n).ToArray();
                         nucleos = en.Where(e => !e.EsSuelo && e.Material.name.StartsWith("nucleo_")).Select(e => e.Material.name.Split(' ')[0]).Distinct().OrderBy(n => n).ToArray();
                         campos = en.Count(e => e.EsSuelo && e.Material.name.StartsWith("campos"));
-                        if (niveles.Length == 5 && conMuralla.Length == 4 && pueblos.Length == 6 && nucleos.Length == 4 && campos == 8) break;
+                        // (lo menudo: los modelos de la parte 5 que se dibujan, por el nombre de su material)
+                        menudos = en.Where(e => !e.EsSuelo).Select(e => e.Material.name.Split(' ')[0]).Where(n => MaquetasDelMapa.NombresMenudos.Contains(n)).Distinct().OrderBy(n => n).ToArray();
+                        if (niveles.Length == 5 && conMuralla.Length == 4 && pueblos.Length == 6 && nucleos.Length == 4 && campos == 8
+                            && menudos.Length == MaquetasDelMapa.NombresMenudos.Length) break;
                     }
                     yield return null;
                 }
@@ -62,6 +66,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                     "un pueblo de cantera y otro de mina de cada nivel");
                 Assert.That(nucleos, Is.EqualTo(new[] { "nucleo_ganado_2", "nucleo_labor_1", "nucleo_labor_2", "nucleo_labor_3" }), "los núcleos de las aldeas");
                 Assert.That(campos, Is.EqualTo(8), "los campos de las ocho aldeas");
+                Assert.That(menudos, Is.EquivalentTo(MaquetasDelMapa.NombresMenudos), "cada modelo de la parte 5 y lo menudo");
             }
             finally { EditorPrefs.SetBool(ClaveMejorado, antes); }
             yield return new ExitPlayMode();

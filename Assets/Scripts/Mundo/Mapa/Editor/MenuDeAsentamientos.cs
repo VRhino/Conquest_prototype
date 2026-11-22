@@ -5,7 +5,8 @@
 //    mundo que ya hay en disco (el que bajó la última partida, en `persistentDataPath/mundo`) y un banco de plazas: de nivel 1 (zonas de 12 y
 //    20 u), 2 (25 u), 3 (35 u), 4 (45 u) y 5 (55 u), las del 2 al 5 abiertas y amuralladas, cada una en tierra firme, llana y despejada,
 //    separadas; y los pueblos extractores («Mejorado»): canteras sobre piedra y minas sobre cobre, estaño, hierro y oro, de nivel 1 a 3, cada
-//    uno sobre su nodo; y las aldeas (cada cultivo, con sus campos). La cámara es la del mapa (arrastrar gira, la rueda acerca); `Conquest/Mundo/Banco: siguiente plaza` lleva a la siguiente.
+//    uno sobre su nodo; las aldeas (cada cultivo, con sus campos); y la parte 5 y lo menudo: avanzadas por etapa y estado (con su mejora y
+//    su reparación), obras, campamentos de mercenarios y de bandidos, alijos y una batalla. La cámara es la del mapa (arrastrar gira, la rueda acerca); `Conquest/Mundo/Banco: siguiente plaza` lleva a la siguiente.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -194,6 +195,95 @@ namespace ConquestTactics.Mundo.Mapa.Editor
                 if (cultivo == "ganado") { q.RebanoEspecie = "ovejas"; q.RebanoCabezas = 60; }
                 foto.Entidades.Add(new Entidad { Pueblo = q });
                 sitios.Add(($"aldea de {cultivo} · nivel {nivel}", x, y));
+            }
+
+            // la parte 5 y lo menudo («Mejorado»): las avanzadas por etapa y estado (las dos ciudadelas, en obras con su mejora en marcha, la
+            // mejora pendiente y la reparación de una ruina), las dos obras genéricas, los tres campamentos de mercenarios (cada tela con su
+            // edificio militar), los seis de bandidos, los ocho alijos y una batalla
+            string madreA = foto.Entidades[0].Asentamiento.Id;
+            (double x, double y)? Sitio(double r, Func<double, bool> vale = null)
+            {
+                for (int intento = 0; intento < 6; intento++)
+                {
+                    var s = Buscar(r);
+                    if (s == null) return null;
+                    if (vale == null) return s;
+                    for (int t = 0; t < 40; t++)
+                        if (vale(MaquetasDelPrototipo.Semilla(s.Value.Item1 + t * 0.071, s.Value.Item2))) return (s.Value.Item1 + t * 0.071, s.Value.Item2);
+                }
+                return null;
+            }
+            void Avanzada(string nombre, uint etapa, bool ruinas, TipoObra obra, bool enMarcha, int ciudadela = 0)
+            {
+                var s = Sitio(3, ciudadela == 0 ? null : (Func<double, bool>)(sem => MaquetasDelMapa.VarianteDeCiudadela(sem) == ciudadela));
+                if (s == null) { Debug.LogWarning($"[Banco de asentamientos] sin sitio para {nombre}"); return; }
+                var (x, y) = s.Value;
+                string av = $"banco-{id++}";
+                foto.Entidades.Add(new Entidad { Avanzada = new Avanzada { Id = av, AsentamientoMadreId = madreA, Etapa = etapa, Posicion = Pu(x, y),
+                    Estado = ruinas ? EstadoAvanzada.AvanzadaEnRuinas : EstadoAvanzada.AvanzadaActiva } });
+                if (obra != TipoObra.NoEspecificado)
+                {
+                    var o = new ObraDeMapa { Id = $"banco-{id++}", AsentamientoMadreId = madreA, Tipo = obra, Posicion = Pu(x, y), DestinoId = av };
+                    if (enMarcha) { o.IniciaEnMs = 1; o.TerminaEnMs = 9_999_999_999_999; }
+                    foto.Entidades.Add(new Entidad { Obra = o });
+                }
+                sitios.Add((nombre, x, y));
+            }
+            Avanzada("atalaya", 1, false, TipoObra.NoEspecificado, false);
+            Avanzada("fuerte", 2, false, TipoObra.NoEspecificado, false);
+            Avanzada("ciudadela 1", 3, false, TipoObra.NoEspecificado, false, 1);
+            Avanzada("ciudadela 2", 3, false, TipoObra.NoEspecificado, false, 2);
+            Avanzada("fuerte en obras (mejora de la atalaya)", 1, false, TipoObra.ObraMejoraAvanzada, true);
+            Avanzada("ciudadela 1 en obras", 2, false, TipoObra.ObraMejoraAvanzada, true, 1);
+            Avanzada("ciudadela 2 en obras", 2, false, TipoObra.ObraMejoraAvanzada, true, 2);
+            Avanzada("fuerte en ruina", 2, true, TipoObra.NoEspecificado, false);
+            Avanzada("ciudadela 1 en ruina", 3, true, TipoObra.NoEspecificado, false, 1);
+            Avanzada("ciudadela 2 en ruina", 3, true, TipoObra.NoEspecificado, false, 2);
+            Avanzada("fuerte con la mejora pendiente", 2, false, TipoObra.ObraMejoraAvanzada, false);
+            Avanzada("reparación del fuerte en ruina", 2, true, TipoObra.ObraReparacion, true);
+            foreach (var (nombre, tipo, enMarcha) in new[] { ("obra pendiente", TipoObra.ObraAvanzada, false), ("obra arrancada", TipoObra.ObraPueblo, true) })
+            {
+                var s = Sitio(2.5);
+                if (s == null) continue;
+                var o = new ObraDeMapa { Id = $"banco-{id++}", AsentamientoMadreId = madreA, Tipo = tipo, Posicion = Pu(s.Value.x, s.Value.y) };
+                if (enMarcha) { o.IniciaEnMs = 1; o.TerminaEnMs = 9_999_999_999_999; }
+                foto.Entidades.Add(new Entidad { Obra = o });
+                sitios.Add((nombre, s.Value.x, s.Value.y));
+            }
+            foreach (var (origen, militar) in new[] { (0u, "barracon"), (1u, "galeriaDeTiro"), (2u, "caballerizas") })
+            {
+                var s = Sitio(4);
+                if (s == null) continue;
+                var k = new CampamentoMercenarios { Id = $"banco-{id++}", Posicion = Pu(s.Value.x, s.Value.y), Origen = origen };
+                k.Edificios.AddRange(new[] { "taberna", "vivienda", "mercado", militar });
+                foto.Entidades.Add(new Entidad { CampamentoMercenarios = k });
+                sitios.Add(($"mercenarios (origen {origen}, {militar})", s.Value.x, s.Value.y));
+            }
+            foreach (var veta in new[] { false, true })
+                for (uint nv = 1; nv <= 3; nv++)
+                {
+                    var s = Sitio(3);
+                    if (s == null) continue;
+                    var b = new CampamentoBandidos { Id = $"banco-{id++}", Posicion = Pu(s.Value.x, s.Value.y), Nivel = nv, BosqueId = veta ? "" : "bosque-banco" };
+                    if (veta) b.VetaId = "veta-banco";
+                    foto.Entidades.Add(new Entidad { CampamentoBandidos = b });
+                    sitios.Add(($"bandidos {(veta ? "de peña" : "del claro")} · nivel {nv}", s.Value.x, s.Value.y));
+                }
+            foreach (var m in new[] { "alijo_1", "alijo_2" })
+                foreach (var rec in new[] { "trigo", "madera", "piedra", "oro" })
+                {
+                    var s = Sitio(1.5, sem => MaquetasDelMapa.ModeloDeAlijo(sem) == m);
+                    if (s == null) continue;
+                    foto.Entidades.Add(new Entidad { Alijo = new Alijo { Id = $"banco-{id++}", Posicion = Pu(s.Value.x, s.Value.y), Recurso = rec, Cantidad = 1000 } });
+                    sitios.Add(($"{m.Replace('_', ' ')} de {rec}", s.Value.x, s.Value.y));
+                }
+            {
+                var s = Sitio(3);
+                if (s != null)
+                {
+                    foto.Entidades.Add(new Entidad { Batalla = new Batalla { Id = $"banco-{id++}", Punto = Pu(s.Value.x, s.Value.y), Estado = EstadoBatalla.BatallaEnCurso } });
+                    sitios.Add(("batalla", s.Value.x, s.Value.y));
+                }
             }
 
             // el héroe del banco y su columna (la cámara la sigue), y el banco

@@ -99,7 +99,38 @@ namespace ConquestTactics.Mundo.Mapa
             public Modelo Modelo;
             public Matrix4x4 M, MMuralla;
             public Mesh Parche;
+            /// <summary>Lo menudo: una pieza suelta va pegada a su miniatura (`Padre`), en su sitio del modelo (x, y de Blender, en sus unidades)
+            /// y con su giro (rad, el de Blender); se asienta con ella.</summary>
+            public Miniatura Padre;
+            public double Lx, Ly, LGiro;
+            /// <summary>Lo menudo: la batalla lleva su humo y su llama.</summary>
+            public bool Humo;
+            /// <summary>Lo menudo: la huella (u) con que se elige su nivel de detalle (no menos de `HuellaDeDetalleMinima`: lo pequeño, como
+            /// la atalaya o el alijo, pasaba al medio ya de cerca); NaN, la suya.</summary>
+            public double HuellaDetalle = double.NaN;
         }
+
+        /// <summary>El eje x del modelo en Unity frente al de Blender (el FBX lo importa vuelto: x → −x; y de Blender → −z). Lo comprueba
+        /// `MenudoDelMapaTests.ElEjeDeLosModelos`.</summary>
+        public const float EjeX = -1;
+
+        /// <summary>Para las pruebas: la escala del mapa de lo menudo por el id de la cosa (la tira de comparación de las avanzadas).</summary>
+        public static readonly Dictionary<string, double> EscalaForzada = new Dictionary<string, double>();
+
+        /// <summary>Lo menudo: el claro sin árboles ni matas (u): la huella y su margen (`MargenDeClaro`: que las copas y las matas del borde no
+        /// pisen la cerca ni el muro), y el alijo, como poco `ClaroDeAlijo` (que se vea entre los árboles desde los cuatro lados).</summary>
+        public static double MargenDeClaro = 0.35, ClaroDeAlijo = 2.0; // (con 0,9 y 1,3 u, las copas que quedan entre la cámara y el alijo lo tapaban desde un lado: con la cámara a 30°, unas copas de 1,2 u tapan 2 u por delante)
+        public static double ClaroDeMenudo(ClaseDeCosa clase, double huella) => clase == ClaseDeCosa.Alijo ? Math.Max(ClaroDeAlijo, huella + MargenDeClaro) : huella + MargenDeClaro;
+
+        /// <summary>Lo menudo: lo menos que cuenta su huella para el nivel de detalle (u): el cambio al medio y al lejos, más lejos.</summary>
+        public static double HuellaDeDetalleMinima = 0.6;
+
+        /// <summary>Del marco de Blender (x, y en el suelo, z arriba, en unidades del modelo) al local de la malla importada en Unity.</summary>
+        public static Vector3 DeBlender(double x, double y, double z = 0) => new Vector3((float)(EjeX * x), (float)z, (float)-y);
+
+        /// <summary>La matriz local de una pieza en (x, y) de Blender, girada `giro` (rad, el sentido de Blender) sobre el eje vertical.</summary>
+        public static Matrix4x4 LocalDeBlender(double x, double y, double giro) =>
+            Matrix4x4.TRS(DeBlender(x, y), Quaternion.Euler(0, (float)(EjeX * giro * 180 / Math.PI), 0), Vector3.one);
         /// <summary>Un modelo de Blender: sus tres niveles de detalle, la muralla aparte (si la tiene), sus materiales (encima y bajo la niebla) y
         /// la máscara del suelo pisado (si la tiene, con el material de su parche).</summary>
         sealed class Modelo
@@ -116,7 +147,30 @@ namespace ConquestTactics.Mundo.Mapa
             public double LadoSuelo = LadoDelSuelo, RadioU = double.NaN;
             /// <summary>En los núcleos de aldea: lo construido [(x, y, r)], en unidades del modelo y en el marco de la máscara del suelo.</summary>
             public (double x, double y, double r)[] Ocupado;
+            /// <summary>Lo menudo (parte 5): lo que Conquest multiplica además su unidad en el mapa (`escala_mapa` del json: 2 los campamentos y
+            /// los alijos); sus sitios, en unidades del modelo (x, y de Blender): el solar del edificio militar (x, y, giro), el de la mercancía
+            /// del alijo, y dónde van el humo y la llama de la batalla (x, y, z).</summary>
+            public double EscalaMapa = 1;
+            public double[] SolarMilitar, SitioMercancia, HumoEn, LlamaEn;
         }
+        /// <summary>«Mejorado», parte 5 y lo menudo: los modelos por nombre (los de `hornear5.py`).</summary>
+        public static readonly string[] NombresMenudos =
+        {
+            "atalaya", "fuerte", "fuerte_ruina", "fuerte_obras", "ciudadela_1", "ciudadela_1_ruina", "ciudadela_1_obras", "ciudadela_2", "ciudadela_2_ruina",
+            "ciudadela_2_obras", "mercenarios", "bandidos_1_1", "bandidos_1_2", "bandidos_1_3", "bandidos_2_1", "bandidos_2_2", "bandidos_2_3", "obra_estacas",
+            "obra_mitad", "alijo_1", "alijo_2", "batalla",
+        };
+        /// <summary>Las piezas del kit de obra (`obra_kit`), para la reparación de una ruina y la mejora pendiente de materiales.</summary>
+        public static readonly string[] PiezasDelKit = { "andamio", "cabria", "adobes", "sillares", "sombrajo" };
+        readonly Dictionary<string, Modelo> menudos = new Dictionary<string, Modelo>();
+        /// <summary>Las piezas sueltas de lo menudo por «atlas/pieza» (el kit de obra, el edificio militar y la mercancía): cerca, medio y medio.</summary>
+        readonly Dictionary<string, Modelo> piezasMenudas = new Dictionary<string, Modelo>();
+        Material materialHumo, materialLlama, materialResplandor;
+        Mesh mallaHumo, mallaLlama, mallaResplandor;
+        /// <summary>Para las pruebas: cuántas columnas de humo (y llamas) de batalla se mandaron a dibujar.</summary>
+        public int Humaredas { get; private set; }
+        /// <summary>Para las pruebas: ¿están los modelos de lo menudo?</summary>
+        public bool HayMenudos => menudos.Count > 0;
         /// <summary>«Mejorado»: los núcleos de aldea por (labor o ganado, nivel 1 a 3).</summary>
         readonly Dictionary<(string, int), Modelo> nucleos = new Dictionary<(string, int), Modelo>();
         /// <summary>Las posiciones de los nodos de recursos (u), para no labrar sobre ellos.</summary>
@@ -151,7 +205,37 @@ namespace ConquestTactics.Mundo.Mapa
         readonly List<Miniatura> miniaturas = new List<Miniatura>();
         /// <summary>«Mejorado»: los modelos por nivel de plaza (sus variantes).</summary>
         readonly Dictionary<int, List<Modelo>> modelos = new Dictionary<int, List<Modelo>>();
-        readonly MaterialPropertyBlock propiedadesMiniatura = new MaterialPropertyBlock();
+        readonly MaterialPropertyBlock propiedadesMiniatura = new MaterialPropertyBlock(), propiedadesHumo = new MaterialPropertyBlock();
+
+        /// <summary>Las bocanadas del humo (o de la llama) de una batalla: `n` caras cuadradas, cada una con sus cuatro esquinas en el mismo
+        /// punto (el sombreado las abre de frente a la cámara): uv0 la esquina (−1 a 1), uv1 (su fase, su tamaño). Por eso los límites, a mano.</summary>
+        static Mesh Bocanadas(int n, string nombre)
+        {
+            var v = new List<Vector3>();
+            var uv = new List<Vector2>();
+            var uv1 = new List<Vector2>();
+            var t = new List<int>();
+            var rng = new System.Random(n * 31 + 7);
+            for (int i = 0; i < n; i++)
+            {
+                int b = v.Count;
+                float fase = (float)i / n, tam = (float)(0.8 + 0.4 * rng.NextDouble());
+                foreach (var (u, w) in new[] { (-1f, -1f), (1f, -1f), (1f, 1f), (-1f, 1f) })
+                {
+                    v.Add(Vector3.zero);
+                    uv.Add(new Vector2(u, w));
+                    uv1.Add(new Vector2(fase, tam));
+                }
+                t.AddRange(new[] { b, b + 2, b + 1, b, b + 3, b + 2 });
+            }
+            var m = new Mesh { name = nombre };
+            m.SetVertices(v);
+            m.SetUVs(0, uv);
+            m.SetUVs(1, uv1);
+            m.SetTriangles(t, 0);
+            m.bounds = new Bounds(new Vector3(0, 0.8f, 0), new Vector3(3.2f, 3.2f, 3.2f));
+            return m;
+        }
         /// <summary>Para las pruebas: la variante de cada nivel (1, 2…; 0 = la de la semilla).</summary>
         public static int VarianteForzada;
         /// <summary>El lado (en radios de la huella) que cubre la máscara del suelo pisado: [−1,25, 1,25] (como `SUELO` en `villa1.py`).</summary>
@@ -301,9 +385,47 @@ namespace ConquestTactics.Mundo.Mapa
                 materialPiezas.SetTexture("_Mascara", Resources.Load<Texture2D>("MapaMundo/Asentamientos/piezas_mascara"));
                 materialPiezas.SetColor("_Color", Color.white);
             }
+            // «Mejorado», parte 5 y lo menudo (`BronzeAgeArte/mapa/avanzadas/hornear5.py`): las avanzadas por etapa y estado, los campamentos,
+            // las obras, los alijos y la batalla, cada uno con su json (radio, lado del suelo, escala del mapa y sus sitios); y sus piezas sueltas
+            foreach (var nombre in NombresMenudos)
+            {
+                var m = CargarModelo(nombre, sombreadoVilla, sombreadoParche, suelo, niveles);
+                if (m == null) continue;
+                LeerJsonMenudo(m, nombre);
+                menudos[nombre] = m;
+            }
+            // (los mercenarios: la misma malla con las otras dos telas)
+            foreach (var tela in new[] { "rayado", "rubia" })
+            {
+                var m = CargarModelo("mercenarios", sombreadoVilla, sombreadoParche, suelo, niveles, tela);
+                if (m == null) continue;
+                LeerJsonMenudo(m, "mercenarios");
+                menudos["mercenarios_" + tela] = m;
+            }
+            CargarPiezas("obra_kit", PiezasDelKit, sombreadoVilla);
+            CargarPiezas("mercenarios_militar", new[] { "barracon", "tiro", "cuadras" }, sombreadoVilla);
+            CargarPiezas("alijo_mercancia", new[] { "trigo", "madera", "piedra", "oro" }, sombreadoVilla);
+            var sombreadoHumo = Resources.Load<Shader>("MapaMundo/MapaHumo");
+            if (sombreadoHumo != null)
+            {
+                materialHumo = new Material(sombreadoHumo) { name = "humo de las batallas" };
+                // (el humo, recortado y con profundidad, sin mezcla: las bocanadas se tapan bien entre sí; la llama y el resplandor, translúcidos)
+                materialHumo.SetFloat("_Origen", (float)BlendMode.One);
+                materialHumo.SetFloat("_Destino", (float)BlendMode.Zero);
+                materialHumo.SetFloat("_Profundidad", 1);
+                materialHumo.renderQueue = 2460;
+                materialLlama = new Material(sombreadoHumo) { name = "llama de las batallas" };
+                materialLlama.SetFloat("_Llama", 1);
+                materialResplandor = new Material(sombreadoHumo) { name = "resplandor de las batallas" };
+                materialResplandor.SetFloat("_Llama", 2);
+                // (el humo con cuerpo: 22 bocanadas; la llama, 7 lenguas; el resplandor, un disco)
+                mallaHumo = Bocanadas(22, "humo de una batalla");
+                mallaLlama = Bocanadas(7, "llama de una batalla");
+                mallaResplandor = Bocanadas(1, "resplandor de una batalla");
+            }
             // (los pueblos, los núcleos y las piezas, después de los suelos pisados y los campos (cola 2454-2455), que van 1 m por encima del
             // suelo pintado y sin escribir profundidad: así no les tapan lo bajo, las cercas, los corrales ni los animales; las plazas, como estaban)
-            foreach (var mm in pueblos.Values.Concat(nucleos.Values)) { mm.Encima.renderQueue = 2456; mm.Bajo.renderQueue = 2456; }
+            foreach (var mm in pueblos.Values.Concat(nucleos.Values).Concat(menudos.Values).Concat(piezasMenudas.Values)) { mm.Encima.renderQueue = 2456; mm.Bajo.renderQueue = 2456; }
             if (materialPiezas != null) materialPiezas.renderQueue = 2456;
             var sombreadoCampos = Resources.Load<Shader>("MapaMundo/MapaParcelas");
             if (sombreadoCampos != null && suelo != null)
@@ -323,6 +445,10 @@ namespace ConquestTactics.Mundo.Mapa
                 materialCamposBajo.SetVectorArray("_Paleta", hex.Select(h => { ColorUtility.TryParseHtmlString(h, out var c); return (Vector4)c.linear; }).ToList());
             }
             CosasDelMapa.HuellaDePueblo = (tipoExtractor, nivel) => ModeloDePueblo(tipoExtractor, nivel)?.RadioU ?? double.NaN;
+            CosasDelMapa.HuellaDeAvanzada = etapa => HuellaDe(ModelosDeEtapa((int)etapa));
+            CosasDelMapa.HuellaDeMenudo = clase => HuellaDe(clase == ClaseDeCosa.Mercenarios ? new[] { "mercenarios" }
+                : clase == ClaseDeCosa.Bandidos ? new[] { "bandidos_1_1", "bandidos_1_2", "bandidos_1_3", "bandidos_2_1", "bandidos_2_2", "bandidos_2_3" }
+                : clase == ClaseDeCosa.Alijo ? new[] { "alijo_1", "alijo_2" } : new string[0]);
             CosasDelMapa.FactorDeMuralla = (nivel, x, y) => nivel >= 2 && modelos.ContainsKey((int)nivel) ? ModeloDe(nivel, P.Semilla(x, y)).RadioMuralla : 1;
         }
 
@@ -335,8 +461,144 @@ namespace ConquestTactics.Mundo.Mapa
             return pueblos.TryGetValue((tipoExtractor == "cantera" ? "cantera" : "mina", n), out var m) ? m : null;
         }
 
-        /// <summary>Un modelo de pueblo o de núcleo: sus tres niveles de detalle, sus materiales (encima y bajo la niebla) y su suelo pisado.</summary>
-        static Modelo CargarModelo(string nombre, Shader sombreadoVilla, Shader sombreadoParche, Material suelo, string[] niveles)
+        /// <summary>Lo menudo: su json (el radio en u, el lado del suelo, la escala del mapa y sus sitios).</summary>
+        static void LeerJsonMenudo(Modelo m, string nombre)
+        {
+            var t = Resources.Load<TextAsset>("MapaMundo/Asentamientos/" + nombre);
+            m.RadioU = Json(t, "radio_u", 0.5);
+            m.LadoSuelo = Json(t, "lado_suelo", 1);
+            m.EscalaMapa = Json(t, "escala_mapa", 1);
+            m.Puerta = -Math.PI / 2; // (la puerta, a −y de Blender)
+            if (t == null) return;
+            var j = Newtonsoft.Json.Linq.JObject.Parse(t.text);
+            double[] Lista(string k) => j[k]?.Select(v => (double)v).ToArray();
+            m.SolarMilitar = Lista("solar_militar");
+            m.SitioMercancia = Lista("sitio_mercancia");
+            m.HumoEn = Lista("humo_en");
+            m.LlamaEn = Lista("llama_en");
+        }
+
+        /// <summary>Lo menudo: las piezas sueltas de un atlas (`<atlas>_<pieza>_cerca` y `_medio`), con su material (el del atlas).</summary>
+        void CargarPiezas(string atlas, string[] nombres, Shader sombreadoVilla)
+        {
+            var raiz = Resources.Load<GameObject>("MapaMundo/Asentamientos/" + atlas);
+            if (raiz == null) return;
+            var encima = new Material(sombreadoVilla) { name = atlas + " (encima)" };
+            encima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{atlas}_color"));
+            encima.SetTexture("_Mascara", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{atlas}_mascara"));
+            var bajo = new Material(encima) { name = atlas + " (bajo la niebla)" };
+            bajo.SetFloat("_ConNiebla", 1);
+            foreach (var n in nombres)
+            {
+                var cerca = raiz.transform.Find($"{atlas}_{n}_cerca")?.GetComponent<MeshFilter>()?.sharedMesh;
+                var medio = raiz.transform.Find($"{atlas}_{n}_medio")?.GetComponent<MeshFilter>()?.sharedMesh;
+                if (cerca == null) continue;
+                var m = new Modelo { Encima = encima, Bajo = bajo };
+                m.Villa[0] = cerca;
+                m.Villa[1] = m.Villa[2] = medio ?? cerca;
+                piezasMenudas[atlas + "/" + n] = m;
+            }
+        }
+
+        Modelo Menudo(string nombre) => nombre != null && Estilo == EstiloDeAsentamientos.Mejorado && menudos.TryGetValue(nombre, out var m) ? m : null;
+        Modelo PiezaMenuda(string atlas, string pieza) => piezasMenudas.TryGetValue(atlas + "/" + pieza, out var m) ? m : null;
+
+        /// <summary>La huella (u) que cubre a todos esos modelos: el mayor radio, por su escala del mapa (NaN si no hay ninguno).</summary>
+        double HuellaDe(IEnumerable<string> nombres)
+        {
+            double r = double.NaN;
+            foreach (var n in nombres)
+                if (menudos.TryGetValue(n, out var m)) r = double.IsNaN(r) ? m.RadioU * m.EscalaMapa : Math.Max(r, m.RadioU * m.EscalaMapa);
+            return r;
+        }
+
+        /// <summary>Los modelos de cada etapa de avanzada (todos sus estados: entera, en ruina y en obras, y las dos ciudadelas).</summary>
+        public static string[] ModelosDeEtapa(int etapa) => etapa <= 1 ? new[] { "atalaya" }
+            : etapa == 2 ? new[] { "fuerte", "fuerte_ruina", "fuerte_obras" }
+            : new[] { "ciudadela_1", "ciudadela_1_ruina", "ciudadela_1_obras", "ciudadela_2", "ciudadela_2_ruina", "ciudadela_2_obras" };
+
+        // ---------- las reglas de lo menudo (puras: las prueban `MenudoDelMapaTests`) ----------
+
+        /// <summary>La ciudadela de un sitio (1 o 2), por su semilla: la misma entera, en obras y en ruina.</summary>
+        public static int VarianteDeCiudadela(double semilla) => P.Azar(semilla, 6, 1) < 0.5 ? 1 : 2;
+
+        /// <summary>El modelo de una avanzada de esa etapa (1 atalaya, 2 fuerte, 3 ciudadela): en ruina, el de su ruina (la atalaya no tiene: null);
+        /// con su mejora en marcha, el de la etapa siguiente en obras (la ciudadela no tiene siguiente: la suya).</summary>
+        public static string ModeloDeAvanzada(uint etapa, bool ruinas, bool mejoraEnMarcha, double semilla)
+        {
+            int e = (int)Math.Max(1, Math.Min(3, etapa));
+            string ciudadela = "ciudadela_" + VarianteDeCiudadela(semilla);
+            if (ruinas) return e == 1 ? null : e == 2 ? "fuerte_ruina" : ciudadela + "_ruina";
+            if (mejoraEnMarcha && e < 3) return e == 1 ? "fuerte_obras" : ciudadela + "_obras";
+            return e == 1 ? "atalaya" : e == 2 ? "fuerte" : ciudadela;
+        }
+
+        /// <summary>La tela de un campamento de mercenarios por su Origen (0 crudo, 1 rayado, 2 rubia; los demás, en vuelta).</summary>
+        public static string ModeloDeMercenarios(uint origen) => (origen % 3) switch { 0 => "mercenarios", 1 => "mercenarios_rayado", _ => "mercenarios_rubia" };
+
+        /// <summary>El edificio militar de un campamento por sus Edificios (barracón, galería de tiro o caballerizas; si no se reconoce, barracón).</summary>
+        public static string PiezaMilitar(IEnumerable<string> edificios)
+        {
+            foreach (var e in edificios ?? Enumerable.Empty<string>())
+                switch (e)
+                {
+                    case "barracon": return "barracon";
+                    case "galeriaDeTiro": return "tiro";
+                    case "caballerizas": return "cuadras";
+                }
+            return "barracon";
+        }
+
+        /// <summary>El campamento de bandidos: el de la peña (7b) junto a una veta, el del claro (7a) en un bosque, y si no, por la semilla; de su
+        /// nivel (1 a 3).</summary>
+        public static string ModeloDeBandidos(string vetaId, string bosqueId, uint nivel, double semilla)
+        {
+            int v = !string.IsNullOrEmpty(vetaId) ? 2 : !string.IsNullOrEmpty(bosqueId) ? 1 : (P.Azar(semilla, 6, 2) < 0.5 ? 1 : 2);
+            return $"bandidos_{v}_{Math.Max(1, Math.Min(3, nivel))}";
+        }
+
+        /// <summary>El alijo (1 o 2) por su semilla, y la pieza de su mercancía por el recurso (trigo, madera, piedra u oro; si no, trigo).</summary>
+        public static string ModeloDeAlijo(double semilla) => P.Azar(semilla, 6, 3) < 0.5 ? "alijo_1" : "alijo_2";
+        public static string PiezaDeMercancia(string recurso) => recurso == "madera" || recurso == "piedra" || recurso == "oro" ? recurso : "trigo";
+
+        /// <summary>La obra genérica (avanzada nueva, pueblo o aldea): el solar marcado si está pendiente; a media altura si ya arrancó.</summary>
+        public static string ModeloDeObra(bool arrancada) => arrancada ? "obra_mitad" : "obra_estacas";
+
+        /// <summary>El radio (unidades del modelo) de la cara de fuera de los muros de cada avanzada: el kit de obra se pone por fuera.</summary>
+        public static double RadioDeMuro(string modelo) => modelo == null ? 0.3 : modelo.StartsWith("atalaya") ? 0.27 : modelo.StartsWith("fuerte") ? 0.38
+            : modelo.StartsWith("ciudadela_2") ? 0.66 : 0.57;
+
+        /// <summary>Dónde va el kit de obra alrededor de una avanzada (unidades del modelo, x, y de Blender, y el giro): en la reparación de una
+        /// ruina, todo (dos tramos de andamio contra el muro, la cabria, los montones de adobes y sillares y el sombrajo); en una mejora pendiente
+        /// de materiales, solo los dos montones al borde. Por la semilla, sin pisar los muros (todo por fuera de `radioMuro`) ni la puerta (−y).</summary>
+        public static List<(string pieza, double x, double y, double giro)> SitiosDelKit(double radioMuro, double semilla, bool completo)
+        {
+            var l = new List<(string, double, double, double)>();
+            double a0 = P.Azar(semilla, 7, 1) * Math.PI * 2;
+            const double Puerta = -Math.PI / 2, Hueco = 0.75;
+            double Fuera(double a)
+            {
+                // (fuera del cono de la puerta)
+                double d = Math.IEEERemainder(a - Puerta, Math.PI * 2);
+                return Math.Abs(d) < Hueco ? Puerta + Math.Sign(d == 0 ? 1 : d) * Hueco : a;
+            }
+            void Poner(string pieza, double a, double r, double giro) { a = Fuera(a); l.Add((pieza, r * Math.Cos(a), r * Math.Sin(a), giro + a)); }
+            if (completo)
+            {
+                // (el andamio: a lo largo de x, sus postes hacia +y; se pone con +y hacia fuera, contra la cara del muro)
+                Poner("andamio", a0, radioMuro + 0.005, -Math.PI / 2);
+                Poner("andamio", a0 + 0.42, radioMuro + 0.005, -Math.PI / 2);
+                Poner("cabria", a0 + 1.25, radioMuro + 0.17, 0);
+                Poner("sombrajo", a0 + 1.85, radioMuro + 0.19, 0.3);
+            }
+            Poner("adobes", a0 + 2.5, radioMuro + 0.14, 0.4);
+            Poner("sillares", a0 + 3.1, radioMuro + 0.14, 1.2);
+            return l;
+        }
+
+        /// <summary>Un modelo de pueblo o de núcleo: sus tres niveles de detalle, sus materiales (encima y bajo la niebla) y su suelo pisado.
+        /// `tela`: otra textura de color de la misma malla (`<nombre>_color_<tela>`, los mercenarios).</summary>
+        static Modelo CargarModelo(string nombre, Shader sombreadoVilla, Shader sombreadoParche, Material suelo, string[] niveles, string tela = null)
         {
             var raiz = Resources.Load<GameObject>("MapaMundo/Asentamientos/" + nombre);
             if (raiz == null) return null;
@@ -346,8 +608,8 @@ namespace ConquestTactics.Mundo.Mapa
                 m.Villa[n] = raiz.transform.Find($"{nombre}_{niveles[n]}")?.GetComponent<MeshFilter>()?.sharedMesh;
                 if (m.Villa[n] == null) return null;
             }
-            m.Encima = new Material(sombreadoVilla) { name = nombre + " (encima)" };
-            m.Encima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_color"));
+            m.Encima = new Material(sombreadoVilla) { name = nombre + (tela != null ? " " + tela : "") + " (encima)" };
+            m.Encima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_color" + (tela != null ? "_" + tela : "")));
             m.Encima.SetTexture("_Mascara", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_mascara"));
             m.Bajo = new Material(m.Encima) { name = nombre + " (bajo la niebla)" };
             m.Bajo.SetFloat("_ConNiebla", 1);
@@ -513,7 +775,10 @@ namespace ConquestTactics.Mundo.Mapa
             var sb = new StringBuilder();
             foreach (var c in cosas)
                 if (Pinta(c.Clase)) sb.Append(c.Clase).Append(c.Id).Append(':').Append(c.X.ToString("0.00")).Append(',').Append(c.Y.ToString("0.00")).Append(':')
-                    .Append(c.Color).Append(c.BajoNiebla).Append(c.Detalle).Append(c.Entidad?.Asentamiento?.TieneMuralla).Append(c.Entidad?.Obra?.HasTerminaEnMs).Append('|');
+                    .Append(c.Color).Append(c.BajoNiebla).Append(c.Detalle).Append(c.Entidad?.Asentamiento?.TieneMuralla).Append(c.Entidad?.Obra?.HasTerminaEnMs)
+                    // (lo menudo: la etapa y el estado de la avanzada, la tela y el edificio militar del campamento, y el recurso del alijo)
+                    .Append(c.Entidad?.Avanzada?.Etapa).Append(c.Entidad?.Avanzada?.Estado).Append(c.Entidad?.CampamentoMercenarios?.Origen)
+                    .Append(c.Entidad?.CampamentoMercenarios != null ? string.Join(",", c.Entidad.CampamentoMercenarios.Edificios) : null).Append(c.Entidad?.Alijo?.Recurso).Append('|');
             foreach (var (id, p) in Caminos) sb.Append(id).Append(p.Count).Append(p.Count > 0 ? p[0].x + p[p.Count - 1].y : 0).Append(';');
             var nueva = Estilo + sb.ToString();
             if (nueva != clave)
@@ -542,6 +807,39 @@ namespace ConquestTactics.Mundo.Mapa
             var aldeas = new List<(Miniatura mi, string id)>();
             foreach (var mi in miniaturas) { if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche); if (mi.MallaCampos != null) UnityEngine.Object.Destroy(mi.MallaCampos); }
             miniaturas.Clear();
+            // (lo menudo: la obra de cada avanzada que se ve, su mejora o su reparación, para pintarla con ella)
+            var avanzadasVistas = new HashSet<string>(cosas.Where(k => k.Clase == ClaseDeCosa.Avanzada).Select(k => k.Id));
+            var obrasPorAvanzada = new Dictionary<string, ObraDeMapa>();
+            foreach (var k in cosas)
+                if (k.Clase == ClaseDeCosa.Obra && k.Entidad?.Obra is ObraDeMapa ob && ob.HasDestinoId
+                    && (ob.Tipo == TipoObra.ObraMejoraAvanzada || ob.Tipo == TipoObra.ObraReparacion))
+                    obrasPorAvanzada[ob.DestinoId] = ob;
+            // una miniatura de lo menudo en (x, y), con la puerta hacia el camino que sale de ella (o girada por su semilla), y su claro
+            Miniatura PonerMenuda(CosaDelMapa c, Modelo mo, double x, double y, double sem, Vector4 faccion, bool conRumbo)
+            {
+                double escalaMapa = EscalaForzada.TryGetValue(c.Id, out var forzada) ? forzada : mo.EscalaMapa;
+                double huella = mo.RadioU * escalaMapa;
+                var mi = new Miniatura
+                {
+                    X = x, Y = y, Semilla = sem, Huella = huella, Escala = UnidadDePueblo * escalaMapa, BajoNiebla = c.BajoNiebla, Faccion = faccion,
+                    Modelo = mo, Recurso = Vector4.zero, Rumbo = conRumbo ? RumboDelCamino(x, y, huella, Caminos) : double.NaN,
+                    HuellaDetalle = Math.Max(huella, HuellaDeDetalleMinima),
+                };
+                miniaturas.Add(mi);
+                Claros.Add((x, y, ClaroDeMenudo(c.Clase, huella)));
+                return mi;
+            }
+            // una pieza suelta pegada a su miniatura (si está la pieza)
+            void PonerPieza(Miniatura padre, Modelo pieza, double lx, double ly, double giro)
+            {
+                if (pieza == null) return;
+                miniaturas.Add(new Miniatura
+                {
+                    Padre = padre, Lx = lx, Ly = ly, LGiro = giro, X = padre.X, Y = padre.Y, Semilla = padre.Semilla, Huella = padre.Huella, Escala = padre.Escala,
+                    BajoNiebla = padre.BajoNiebla, Faccion = padre.Faccion, Modelo = pieza, Recurso = Vector4.zero, Rumbo = double.NaN,
+                    HuellaDetalle = padre.HuellaDetalle,
+                });
+            }
             foreach (var c in cosas)
             {
                 if (!Pinta(c.Clase) || c.Entidad == null) continue;
@@ -639,6 +937,20 @@ namespace ConquestTactics.Mundo.Mapa
                     {
                         var v = e.Avanzada;
                         bool ruinas = v.Estado == EstadoAvanzada.AvanzadaEnRuinas;
+                        // «Mejorado»: por etapa y estado; su obra (mejora o reparación) se pinta con ella
+                        obrasPorAvanzada.TryGetValue(v.Id, out var obra);
+                        bool mejora = obra != null && obra.Tipo == TipoObra.ObraMejoraAvanzada, reparacion = obra != null && obra.Tipo == TipoObra.ObraReparacion;
+                        string nombre = ModeloDeAvanzada(v.Etapa, ruinas, mejora && obra.HasTerminaEnMs, sem);
+                        var mo = Menudo(nombre);
+                        if (mo != null)
+                        {
+                            var mi = PonerMenuda(c, mo, x, y, sem, ruinas ? Vector4.zero : Lineal(c.Color), true);
+                            // (la reparación de una ruina: el kit entero alrededor; la mejora pendiente de materiales: los montones al borde)
+                            if ((reparacion && ruinas) || (mejora && !obra.HasTerminaEnMs))
+                                foreach (var (pieza, px, py, pg) in SitiosDelKit(RadioDeMuro(nombre), sem, reparacion))
+                                    PonerPieza(mi, PiezaMenuda("obra_kit", pieza), px, py, pg);
+                            break;
+                        }
                         P.Avanzada(arriba, x, y, v.Etapa, ruinas, color);
                         Claros.Add((x, y, P.ClaroDeAvanzada(v.Etapa)));
                         break;
@@ -647,23 +959,56 @@ namespace ConquestTactics.Mundo.Mapa
                     {
                         var o = e.Obra;
                         if (o.Tipo == TipoObra.ObraMejoraAldea) break; // la mejora de una aldea no se pinta aparte: la aldea ya está
+                        // («Mejorado»: la mejora y la reparación de una avanzada que se ve van pintadas en ella)
+                        if ((o.Tipo == TipoObra.ObraMejoraAvanzada || o.Tipo == TipoObra.ObraReparacion) && o.HasDestinoId && avanzadasVistas.Contains(o.DestinoId)
+                            && Menudo("fuerte") != null) break;
+                        var mo = Menudo(ModeloDeObra(o.HasTerminaEnMs));
+                        if (mo != null) { PonerMenuda(c, mo, x, y, sem, Lineal(c.Color), false); break; }
                         P.Obra(arriba, x, y, o.HasTerminaEnMs, color);
                         Claros.Add((x, y, P.ClaroDeObra()));
                         break;
                     }
                     case ClaseDeCosa.Mercenarios:
+                    {
+                        var k = e.CampamentoMercenarios;
+                        var mo = Menudo(ModeloDeMercenarios(k.Origen));
+                        if (mo != null)
+                        {
+                            var mi = PonerMenuda(c, mo, x, y, sem, Vector4.zero, false);
+                            var s = mo.SolarMilitar;
+                            if (s != null && s.Length >= 3) PonerPieza(mi, PiezaMenuda("mercenarios_militar", PiezaMilitar(k.Edificios)), s[0], s[1], s[2]);
+                            break;
+                        }
                         P.CampamentoDeMercenarios(arriba, x, y, sem);
                         Claros.Add((x, y, P.ClaroDeCampamento()));
                         break;
+                    }
                     case ClaseDeCosa.Bandidos:
+                    {
+                        var b = e.CampamentoBandidos;
+                        var mo = Menudo(ModeloDeBandidos(b.HasVetaId ? b.VetaId : null, b.BosqueId, b.Nivel, sem));
+                        if (mo != null) { PonerMenuda(c, mo, x, y, sem, Vector4.zero, false); break; }
                         P.Bandidos(arriba, x, y, e.CampamentoBandidos.Nivel, sem);
                         Claros.Add((x, y, P.ClaroDeBandidos()));
                         break;
+                    }
                     case ClaseDeCosa.Alijo:
+                    {
+                        var mo = Menudo(ModeloDeAlijo(sem));
+                        if (mo != null)
+                        {
+                            var mi = PonerMenuda(c, mo, x, y, sem, Vector4.zero, false);
+                            var s = mo.SitioMercancia ?? new double[] { 0, 0 };
+                            PonerPieza(mi, PiezaMenuda("alijo_mercancia", PiezaDeMercancia(e.Alijo.Recurso)), s[0], s[1], 0);
+                            break;
+                        }
                         P.Alijo(arriba, x, y);
                         break;
+                    }
                     case ClaseDeCosa.Batalla:
                     {
+                        var mo = Menudo("batalla");
+                        if (mo != null) { PonerMenuda(c, mo, x, y, sem, Vector4.zero, false).Humo = true; break; }
                         var t = e.Batalla.Ticket;
                         bool propia = heroeId != null && t != null && (t.Atacante?.Participantes.Any(p => p.HeroeId == heroeId) == true || t.Defensor?.Participantes.Any(p => p.HeroeId == heroeId) == true);
                         P.Batalla(arriba, x, y, propia);
@@ -717,6 +1062,13 @@ namespace ConquestTactics.Mundo.Mapa
             // las miniaturas: a la altura media de su huella, inclinadas la mitad de la pendiente (hasta 8,5°), giradas por su semilla
             foreach (var mi in miniaturas)
             {
+                if (mi.Padre != null)
+                {
+                    // (una pieza suelta: en su sitio del modelo de su miniatura, que va antes en la lista y ya está asentada)
+                    mi.M = mi.Padre.M * LocalDeBlender(mi.Lx, mi.Ly, mi.LGiro);
+                    mi.MMuralla = mi.M;
+                    continue;
+                }
                 double r = mi.Huella, suma = terreno.AlturaPintada(mi.X, mi.Y);
                 int n = 1;
                 foreach (var f in new[] { 0.5, 1.0 })
@@ -1184,6 +1536,25 @@ namespace ConquestTactics.Mundo.Mapa
                 propiedadesMiniatura.SetVector("_Recurso", en.Recurso);
                 Graphics.RenderMesh(new RenderParams(en.Material) { shadowCastingMode = SombraDeMiniaturas ? sombras : ShadowCastingMode.Off, receiveShadows = true, matProps = propiedadesMiniatura }, en.Malla, 0, en.M);
             }
+            // el humo y la llama de las batallas (lo que hace visible la marca): una columna de bocanadas translúcidas y una llama pequeña que
+            // parpadea, en sus sitios del modelo; caras siempre de frente a la cámara (se ven igual desde cualquier lado)
+            Humaredas = 0;
+            if (materialHumo != null && DibujarMiniaturas)
+                foreach (var mi in miniaturas)
+                {
+                    if (!mi.Humo || mi.Modelo.HumoEn == null) continue;
+                    float escala = (float)(mi.Escala * EscalaDelMapa.MetrosPorUnidad);
+                    propiedadesHumo.SetFloat("_Fase", (float)(mi.Semilla % 1.0));
+                    foreach (var (sitio, malla, mat) in new[] { (mi.Modelo.LlamaEn, mallaResplandor, materialResplandor), (mi.Modelo.HumoEn, mallaHumo, materialHumo),
+                                                               (mi.Modelo.LlamaEn, mallaLlama, materialLlama) })
+                    {
+                        if (sitio == null || sitio.Length < 3) continue;
+                        var pos = mi.M.MultiplyPoint3x4(DeBlender(sitio[0], sitio[1], sitio[2]));
+                        Graphics.RenderMesh(new RenderParams(mat) { shadowCastingMode = ShadowCastingMode.Off, receiveShadows = false, matProps = propiedadesHumo,
+                            worldBounds = new Bounds(pos + Vector3.up * escala * 0.8f, Vector3.one * escala * 4) }, malla, 0, Matrix4x4.TRS(pos, Quaternion.identity, Vector3.one * escala));
+                    }
+                    Humaredas++;
+                }
             // las piezas sueltas de los campos, instanciadas por tipo
             PiezasDeCampos = 0;
             if (materialPiezas != null && DibujarMiniaturas)
@@ -1211,7 +1582,8 @@ namespace ConquestTactics.Mundo.Mapa
             float alto = cam.targetTexture != null ? cam.targetTexture.height : cam.pixelHeight;
             float pxPorM = alto / (2 * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad));
             float d = Mathf.Max(1, Vector3.Distance(cam.transform.position, mi.M.GetColumn(3)));
-            return (float)(2 * mi.Huella * EscalaDelMapa.MetrosPorUnidad) * pxPorM / d;
+            double huella = double.IsNaN(mi.HuellaDetalle) ? mi.Huella : mi.HuellaDetalle;
+            return (float)(2 * huella * EscalaDelMapa.MetrosPorUnidad) * pxPorM / d;
         }
 
         /// <summary>Para las pruebas: el ancho en pantalla de cada miniatura.</summary>

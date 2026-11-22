@@ -667,13 +667,8 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
 - Los pueblos, los núcleos y las piezas van en la cola 2456, después de los suelos pisados y los campos (que van 1 m por encima del suelo y sin escribir profundidad), para que no les tapen lo bajo. Las plazas, en la suya.
 - Coste, con 13 aldeas y 8 pueblos a la vista: rehacer, unos 54 ms, y asentar, 16 ms (solo cuando cambia algo); dibujar, 0,31 ms, con unas 2460 piezas.
 
-**Lo que sigue como en el prototipo:**
-- avanzadas;
-- obras;
-- campamentos de mercenarios y de bandidos;
-- el alijo;
-- las batallas;
-- la muralla de las plazas sin miniatura (las de «Prototipo»).
+**Lo que sigue como en el prototipo:** la muralla de las plazas sin miniatura (las de «Prototipo»). Las avanzadas, obras, campamentos, alijos y
+batallas pasan a «Mejorado» en la parte 5 (abajo); sin sus modelos en Resources, o en «Prototipo», siguen con las maquetas del prototipo.
 
 **En el editor:**
 - `Conquest/Mundo/Asentamientos: Mejorado`: la casilla del estilo. Se guarda en EditorPrefs, se aplica al entrar en Play y viene apagada.
@@ -699,6 +694,68 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
   - `ElCosteDeLasPlazasModeladas`: coste por fotograma.
   - `LosAsentamientos` y `ElCosteDeLosAsentamientos`: los de la etapa 1.
   - `LosPueblosExtractores`, `LaRevisionDePueblos` y `LasAldeas`: los pueblos y las aldeas de la parte 4.
+
+### Avanzadas, obras, campamentos, alijos y batallas (parte 5 y lo menudo, 2026-11-22)
+
+Los modelos salen de `BronzeAgeArte/mapa/avanzadas/hornear5.py` (formas en `avanzadas.py` y `menudo/menudo.py`), con el método de la parte 4: color
+horneado desde la geometría entera, mate; máscara R oclusión, G estandarte (color de la Facción), B libre; `_suelo` (R) con su lado en el json
+(`lado_suelo`, en unidades del modelo); tres niveles de detalle (el cerca, la malla entera: diezmarla deshacía los bloques sueltos, los palos y las
+ruinas en escalones; medio y lejos, 40 % y 10 %). Unidad del modelo 0,9 u, como los pueblos; además, por `escala_mapa` del json: los
+campamentos y los alijos ×2, y la atalaya y el fuerte (enteros, en obras, en ruina, y su kit) ×1,35 (si no, motas: atalaya 0,34 u de radio,
+fuerte 0,47, fuerte en obras 0,64; las ciudadelas, ×1, ya llenan los 0,65 u del motor). Todas las texturas `_color*` (también las otras telas,
+`_color_rayado` y `_color_rubia`) se importan en sRGB (`ImportarAsentamientosDelMapa`, versión 2: antes las telas entraban lineales y salían
+lavadas). Van en `Assets/Resources/MapaMundo/Asentamientos`, en la cola 2456 como los pueblos. Las reglas, puras, en
+`MaquetasDelMapa` (las prueba `MenudoDelMapaTests`):
+
+- **Avanzada** (`ModeloDeAvanzada`): etapa 1 `atalaya`, 2 `fuerte`, 3 `ciudadela_1` o `ciudadela_2` por la semilla del sitio (`VarianteDeCiudadela`,
+  la misma entera, en obras y en ruina). En ruinas: `fuerte_ruina` o `ciudadela_N_ruina`, sin estandarte (la atalaya no tiene ruina: si llegara,
+  la del prototipo). La puerta, hacia el camino que sale de ella (o por la semilla). Estandarte del color de la Facción de la madre.
+- **Mejora de avanzada** (`ObraMejoraAvanzada`, `destino_id` = la avanzada): en marcha (`termina_en_ms`), se dibuja el modelo en obras de la etapa
+  siguiente (`fuerte_obras`, `ciudadela_N_obras`), con estandarte y brasero, no la obra genérica; pendiente de materiales, el modelo actual con
+  los montones de adobes y sillares del `obra_kit` al borde.
+- **Reparación** (`ObraReparacion` sobre una ruina): la ruina con el `obra_kit` entero alrededor (dos tramos de andamio contra el muro, cabria,
+  montones y sombrajo), por la semilla, por fuera de los muros (`RadioDeMuro`) y lejos de la puerta (`SitiosDelKit`). La obra de una avanzada que
+  se ve no se dibuja aparte.
+- **Obra genérica** (avanzada nueva, pueblo, aldea): `obra_estacas` pendiente, `obra_mitad` arrancada (`ModeloDeObra`).
+- **Mercenarios**: una malla con tres texturas de color por `Origen` (0 crudo, 1 rayado, 2 rubia; los demás, en vuelta) y la pieza militar por
+  `Edificios` (barracón, galería de tiro o caballerizas; si no se reconoce, barracón) en `solar_militar` del json.
+- **Bandidos**: con `veta_id`, la peña (7b, `bandidos_2_N`); con `bosque_id`, el claro (7a); si no, por la semilla. Nivel 1 a 3.
+- **Alijo**: `alijo_1` o `alijo_2` por la semilla, y la pieza de mercancía por el recurso (trigo, madera, piedra u oro) en `sitio_mercancia`.
+- **Batalla**: `batalla` (el carro quemado), a ×1,5 en el mapa (radio 0,58 u, dentro de su huella de 0,65), y su efecto (`MapaHumo.shader`):
+  una columna de 22 bocanadas que sube 1,5 unidades del modelo, al estilo del mapa: cada bocanada, una unión de 4 a 6 bolas por su semilla,
+  cada una una elipse suave (ejes de 0,8 a 1, girada al azar) con el radio ondulado hasta un 7 % en 3 o 4 ondas que se mueven despacio
+  (dibujada a mano, no de compás); en cada punto manda la bola más alta; volumen en tres bandas: el claro, una media luna hacia el sol (su
+  dirección en pantalla, del sol del mundo) hasta tocar el borde, y la panza al lado contrario, siguiendo la elipse ondulada (nunca una diana
+  ni un corte recto); dentro, blando (el paso entre tonos, en un 12 % del radio) y fuera, la silueta recortada; la sombra, dos tercios del
+  claro; se deshace encogiendo las bolas a ritmos distintos (las pequeñas antes), recogiéndose hacia el centro (lo suelto no se aleja más de un
+  diámetro), con un tope de radio que baja al envejecer; lo que encoge pierde el contraste y se aclara (lo pequeño y suelto, plano y pálido); tamaños ±40 %, desvío lateral que crece con la altura, el
+  viento fijo en el mundo con vaivén y ritmos de subida distintos, a golpes; carbón abajo, gris medio y más claro arriba, sin blancos; la luz
+  naranja de la llama solo en lo que mira hacia abajo y en el primer 15 % de la altura. Recortada y con profundidad (cada bocanada a su distancia de la cámara: si no, rayas), en la cola 2460.
+  Una llama de 7 lenguas que parpadea, con un resplandor naranja suave en la base (translúcidos). En `humo_en` y `llama_en` del json; caras
+  siempre de frente a la cámara, sin sombra. Los hashes del sombreado, sin seno (con semillas grandes daba rayas en la GPU). No distingue la batalla propia (tema de marcadores).
+- Las piezas sueltas (kit, edificio militar, mercancía) van pegadas a su miniatura (`Miniatura.Padre`), en su sitio de Blender: x → −x y
+  y → −z en la malla importada (`DeBlender`, comprobado en `ElEjeDeLosModelos`).
+- **Huellas** (`CosasDelMapa`): la avanzada, por etapa, el mayor radio de los modelos de esa etapa en todos sus estados (`HuellaDeAvanzada`);
+  con la mejora en marcha, la de la etapa siguiente; el clic, la huella más la holgura. Mercenarios, bandidos y alijos: la mayor entre la del
+  prototipo y la del modelo (`HuellaDeMenudo`). Obra y batalla, como estaban.
+- **Claros** (`ClaroDeMenudo`): sin árboles ni matas hasta la huella más 0,35 u (`MargenDeClaro`: que las copas y las matas del borde no pisen
+  la cerca ni el muro); el alijo, 2 u como poco (con 0,9 y 1,3 u, las copas entre la cámara habitual y el alijo lo tapaban desde un lado) (`ClaroDeAlijo`: que se vea entre los árboles desde los cuatro lados). La capa baja ralea
+  hasta 1,5 huellas, como las demás miniaturas.
+- **Nivel de detalle**: las reglas de las plazas (`AnchoCerca` 80 px, `AnchoMedio` 40 px), pero lo menudo cuenta para ello una huella de
+  0,6 u como poco (`HuellaDeDetalleMinima`): la atalaya y los alijos pasaban al medio ya de cerca. Con ello, todo va en el cerca de cerca y a
+  zoom habitual; alejado, las avanzadas, las obras, la batalla y los alijos pasan al medio y los campamentos siguen en el cerca.
+- **Coste** (`ElCosteDeLoMenudo`, con 12 avanzadas de las tres etapas en ruina y en obras con sus 12 plazas madre, 3 campamentos de
+  mercenarios, 8 de bandidos, 16 alijos, 4 obras y 2 batallas en 30 u; 82 miniaturas): fotograma mediana 4,12 ms a zoom habitual (4,21 ms con
+  el prototipo) y 4,25 ms alejado (4,40); mandar a dibujar 0,13 ms (0,08 ms el prototipo); rehacer 0,4 ms y asentar unos 15 ms, solo cuando
+  cambia algo; unos 155.000 triángulos a zoom habitual y 139.000 alejado, a su nivel de detalle.
+- **Banco del editor** (`Conquest/Mundo/Banco de asentamientos`): también las avanzadas por etapa y estado (con su mejora y su reparación),
+  las dos obras, los tres campamentos de mercenarios, los seis de bandidos, los ocho alijos y una batalla; `ElBancoDeAsentamientosSeMonta`
+  comprueba que se dibuja cada modelo de la parte 5.
+- **Pruebas**: `MenudoDelMapaTests` (EditMode: las reglas, el kit, las huellas por etapa y el eje de los modelos); con capturas, explícitas,
+  `LoMenudoEnElMapa` («lm_…»: cada cosa de cerca, a zoom habitual y alejada con su nivel de detalle; la vuelta de la atalaya, el fuerte, las dos
+  ciudadelas, los mercenarios, los bandidos 7a‑3 y 7b‑3 y la batalla; y del mundo real, un campamento de mercenarios, uno de bandidos y un
+  alijo del artefacto; los de mercenarios, lejos del resto, para que su anillo de protección no cruce las demás), `LaEscalaDeLasAvanzadas` (la
+  tira de tamaños: pueblo y plaza de nivel 1, atalaya y fuerte a ×1 y ×1,35 y una ciudadela, con `EscalaForzada`) y `ElCosteDeLoMenudo`.
 
 ## La vegetación (tema 3, 2026-11-20)
 

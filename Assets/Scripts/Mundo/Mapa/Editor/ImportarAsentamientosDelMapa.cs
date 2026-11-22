@@ -9,8 +9,8 @@ namespace ConquestTactics.Mundo.Mapa.Editor
 {
     sealed class ImportarAsentamientosDelMapa : AssetPostprocessor
     {
-        // (la versión: subirla vuelve a importar lo de la carpeta; 1, los pueblos legibles)
-        public override uint GetVersion() => 1;
+        // (la versión: subirla vuelve a importar lo de la carpeta; 1, los pueblos legibles; 2, las otras telas en sRGB)
+        public override uint GetVersion() => 2;
 
         const string Carpeta = "Assets/Resources/MapaMundo/Asentamientos/";
 
@@ -40,7 +40,8 @@ namespace ConquestTactics.Mundo.Mapa.Editor
             var t = (TextureImporter)assetImporter;
             t.textureType = TextureImporterType.Default;
             t.textureShape = TextureImporterShape.Texture2D;
-            t.sRGBTexture = assetPath.EndsWith("_color.png");
+            // (el color en sRGB, también las otras telas de una malla: `<nombre>_color_<tela>.png`, las de los mercenarios)
+            t.sRGBTexture = System.IO.Path.GetFileNameWithoutExtension(assetPath).Contains("_color");
             t.alphaSource = TextureImporterAlphaSource.None;
             t.mipmapEnabled = true;
             t.wrapMode = UnityEngine.TextureWrapMode.Clamp;

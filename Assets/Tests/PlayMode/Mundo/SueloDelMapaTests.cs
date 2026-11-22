@@ -20,7 +20,7 @@ using AmbitoPb = BronzeAge.Contract.V1.Ambito;
 
 namespace ConquestTactics.Mundo.UI.Tests
 {
-    public class SueloDelMapaTests
+    public partial class SueloDelMapaTests
     {
         GameObject go;
         RenderTexture rt;
