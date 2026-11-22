@@ -77,8 +77,25 @@ namespace ConquestTactics.Mundo.Mapa
         sealed class Miniatura
         {
             public double X, Y, Rc, Semilla, Nivel, Huella, Rumbo;
-            public bool Muralla, BajoNiebla;
-            public Vector4 Faccion;
+            /// <summary>Lo que mide en u una unidad del modelo: en las plazas, su huella (NaN); en los pueblos, la del caserío de nivel 1 (0,9).</summary>
+            public double Escala = double.NaN;
+            public bool Muralla, BajoNiebla, Espejo;
+            /// <summary>En las aldeas: sus parcelas, su capa en `celdas`, su cultivo (índice de `Cultivos`) y la malla de sus campos.</summary>
+            public ParcelasDeAldea Campos;
+            public int Capa, Cultivo;
+            public Mesh MallaCampos;
+            /// <summary>En las aldeas: su plaza madre (la primera senda va hacia ella) y sus sendas (u, en el mapa).</summary>
+            public string Madre;
+            public List<List<(double x, double y)>> Sendas;
+            /// <summary>En las aldeas: las cabezas del rebaño y las piezas sueltas sobre los campos (tipo de `NombresDePiezas`, matriz).</summary>
+            public long Cabezas;
+            /// <summary>En las ganaderas: si el rebaño es vacuno (vacas) o de otra especie (ovejas); y las calvas de tierra pisada de las
+            /// entradas de sus cercados (u, en el mapa).</summary>
+            public bool Vacuno;
+            public List<(double x, double y)> Calvas;
+            public List<(int tipo, Matrix4x4 m)> Piezas;
+            /// <summary>El color del recurso de su nodo (los montones de mineral de las minas; alfa 0 si no tiene).</summary>
+            public Vector4 Faccion, Recurso;
             public Modelo Modelo;
             public Matrix4x4 M, MMuralla;
             public Mesh Parche;
@@ -94,7 +111,39 @@ namespace ConquestTactics.Mundo.Mapa
             /// <summary>El radio de su muralla (en huellas, con tope `RadioMaximoDeMuralla`) y el ángulo de su puerta (rad, en el marco de la villa:
             /// x, y de Blender; NaN si no lo sabe).</summary>
             public double RadioMuralla = 1, Puerta = double.NaN;
+            /// <summary>El lado (en unidades del modelo) que cubre la máscara del suelo pisado: [−LadoSuelo, LadoSuelo]; y, en los pueblos, su
+            /// radio en u (el del json: huella, aro y claro).</summary>
+            public double LadoSuelo = LadoDelSuelo, RadioU = double.NaN;
+            /// <summary>En los núcleos de aldea: lo construido [(x, y, r)], en unidades del modelo y en el marco de la máscara del suelo.</summary>
+            public (double x, double y, double r)[] Ocupado;
         }
+        /// <summary>«Mejorado»: los núcleos de aldea por (labor o ganado, nivel 1 a 3).</summary>
+        readonly Dictionary<(string, int), Modelo> nucleos = new Dictionary<(string, int), Modelo>();
+        /// <summary>Las posiciones de los nodos de recursos (u), para no labrar sobre ellos.</summary>
+        public IReadOnlyList<(double x, double y)> PosicionesDeNodos = Array.Empty<(double, double)>();
+        Material materialCampos, materialCamposBajo;
+        Texture2DArray celdas;
+        /// <summary>Los cultivos de los campos, en el orden de `_Paleta` (4 estados cada uno).</summary>
+        static readonly string[] Cultivos = { "trigo", "cebada", "vid", "oliva", "sesamo", "ganado" };
+        /// <summary>Las piezas sueltas de los campos (`piezas.fbx`, de `hornear.py piezas`): se dibujan instanciadas, todas las de la vista juntas.</summary>
+        static readonly string[] NombresDePiezas = { "olivo", "cepas", "gavillas", "hacina", "cerca", "res", "oveja", "abrevadero", "res_crema", "res_parda" };
+        readonly Mesh[] piezas = new Mesh[NombresDePiezas.Length];
+        Material materialPiezas;
+        readonly List<Matrix4x4>[] porPieza = Enumerable.Range(0, NombresDePiezas.Length).Select(_ => new List<Matrix4x4>()).ToArray();
+        /// <summary>Para las pruebas: cuántas piezas sueltas de los campos se mandaron a dibujar.</summary>
+        public int PiezasDeCampos { get; private set; }
+        /// <summary>«Mejorado»: los pueblos extractores por (cantera o mina, nivel 1 a 3).</summary>
+        readonly Dictionary<(string, int), Modelo> pueblos = new Dictionary<(string, int), Modelo>();
+        /// <summary>Lo que mide en u una unidad de los modelos de pueblo (la del caserío de nivel 1).</summary>
+        public const double UnidadDePueblo = 0.9;
+        /// <summary>Los nodos por su id (dónde y de qué tipo), para poner cada pueblo sobre el suyo y teñir su mineral.</summary>
+        public Func<string, (double x, double y, string tipo)?> NodoPorId;
+        /// <summary>El giro (grados, en Unity) de los nodos que tienen pueblo, por su id: `NodosDelMapa` los dibuja con su variante 1 y ese giro.
+        /// `VersionGiros` cambia cuando cambian.</summary>
+        public readonly Dictionary<string, float> GirosDeNodos = new Dictionary<string, float>();
+        public int VersionGiros;
+        /// <summary>El color de cada recurso para el mineral de las minas (el de `NodosDelMapa`).</summary>
+        public Func<string, Vector4> ColorDeRecurso;
         /// <summary>El tope del radio de una muralla (en huellas): el aro, el clic y el claro no crecen más.</summary>
         public const double RadioMaximoDeMuralla = 1.12;
         /// <summary>Los tramos de la red de caminos (id y puntos, u), para girar cada plaza con su puerta hacia el suyo (`RumboDelCamino`).</summary>
@@ -190,7 +239,130 @@ namespace ConquestTactics.Mundo.Mapa
                     if (!modelos.TryGetValue(nivel, out var lista)) modelos[nivel] = lista = new List<Modelo>();
                     lista.Add(m);
                 }
+            // «Mejorado»: los pueblos extractores (pueblo_<cantera|mina>_<nivel>, de `BronzeAgeArte/mapa/pueblos/hornear.py`)
+            foreach (var tipo in new[] { "cantera", "mina" })
+                for (int nivel = 1; nivel <= 3; nivel++)
+                {
+                    string nombre = $"pueblo_{tipo}_{nivel}";
+                    var raiz = Resources.Load<GameObject>("MapaMundo/Asentamientos/" + nombre);
+                    if (raiz == null) continue;
+                    var m = new Modelo();
+                    bool completo = true;
+                    for (int n = 0; n < 3; n++)
+                    {
+                        m.Villa[n] = raiz.transform.Find($"{nombre}_{niveles[n]}")?.GetComponent<MeshFilter>()?.sharedMesh;
+                        if (m.Villa[n] == null) completo = false;
+                    }
+                    if (!completo) continue;
+                    m.Encima = new Material(sombreadoVilla) { name = nombre + " (encima)" };
+                    m.Encima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_color"));
+                    m.Encima.SetTexture("_Mascara", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_mascara"));
+                    m.Bajo = new Material(m.Encima) { name = nombre + " (bajo la niebla)" };
+                    m.Bajo.SetFloat("_ConNiebla", 1);
+                    var mascaraSuelo = Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_suelo");
+                    if (mascaraSuelo != null && suelo != null)
+                    {
+                        m.Parche = new Material(sombreadoParche) { name = nombre + " (suelo)" };
+                        m.Parche.SetTexture("_SueloColor", suelo.GetTexture("_SueloColor"));
+                        m.Parche.SetTexture("_SueloRuido", suelo.GetTexture("_SueloRuido"));
+                        m.Parche.SetVector("_Escalas", suelo.GetVector("_Escalas"));
+                        m.Parche.SetTexture("_Suelo", mascaraSuelo);
+                        m.ParcheBajo = new Material(m.Parche) { name = nombre + " (suelo, bajo la niebla)" };
+                        m.ParcheBajo.SetFloat("_ConNiebla", 1);
+                    }
+                    // (el modelo: el frente de trabajo a −y de Blender; la máscara del suelo cubre [−2,15, 2,15] unidades)
+                    m.Puerta = -Math.PI / 2;
+                    m.LadoSuelo = 2.15;
+                    m.RadioU = Json(Resources.Load<TextAsset>("MapaMundo/Asentamientos/" + nombre), "radio_u", 1.0);
+                    pueblos[(tipo, nivel)] = m;
+                }
+            // «Mejorado»: los núcleos de aldea (nucleo_<labor|ganado>_<nivel>) y lo construido de cada uno (del json, en el marco de la máscara:
+            // x de Blender vuelta, como la máscara del suelo)
+            foreach (var clase in new[] { "labor", "ganado" })
+                for (int nivel = 1; nivel <= 3; nivel++)
+                {
+                    string nombre = $"nucleo_{clase}_{nivel}";
+                    var m = CargarModelo(nombre, sombreadoVilla, sombreadoParche, suelo, niveles);
+                    if (m == null) continue;
+                    m.LadoSuelo = 2.15;
+                    var json = Resources.Load<TextAsset>("MapaMundo/Asentamientos/" + nombre);
+                    m.RadioU = Json(json, "radio_u", 0.5);
+                    m.Ocupado = json == null ? new (double, double, double)[0] : Newtonsoft.Json.Linq.JObject.Parse(json.text)["ocupado"]
+                        .Select(o => (-(double)o[0], (double)o[1], (double)o[2])).ToArray();
+                    nucleos[(clase, nivel)] = m;
+                }
+            var raizPiezas = Resources.Load<GameObject>("MapaMundo/Asentamientos/piezas");
+            if (raizPiezas != null)
+            {
+                for (int k = 0; k < NombresDePiezas.Length; k++)
+                    piezas[k] = raizPiezas.transform.Find($"pieza_{NombresDePiezas[k]}_cerca")?.GetComponent<MeshFilter>()?.sharedMesh;
+                materialPiezas = new Material(sombreadoVilla) { name = "piezas de los campos", enableInstancing = true };
+                materialPiezas.SetTexture("_ColorTex", Resources.Load<Texture2D>("MapaMundo/Asentamientos/piezas_color"));
+                materialPiezas.SetTexture("_Mascara", Resources.Load<Texture2D>("MapaMundo/Asentamientos/piezas_mascara"));
+                materialPiezas.SetColor("_Color", Color.white);
+            }
+            // (los pueblos, los núcleos y las piezas, después de los suelos pisados y los campos (cola 2454-2455), que van 1 m por encima del
+            // suelo pintado y sin escribir profundidad: así no les tapan lo bajo, las cercas, los corrales ni los animales; las plazas, como estaban)
+            foreach (var mm in pueblos.Values.Concat(nucleos.Values)) { mm.Encima.renderQueue = 2456; mm.Bajo.renderQueue = 2456; }
+            if (materialPiezas != null) materialPiezas.renderQueue = 2456;
+            var sombreadoCampos = Resources.Load<Shader>("MapaMundo/MapaParcelas");
+            if (sombreadoCampos != null && suelo != null)
+            {
+                materialCampos = new Material(sombreadoCampos) { name = "campos de las aldeas" };
+                materialCampos.SetTexture("_SueloColor", suelo.GetTexture("_SueloColor"));
+                materialCampos.SetTexture("_SueloRuido", suelo.GetTexture("_SueloRuido"));
+                materialCampos.SetVector("_Escalas", suelo.GetVector("_Escalas"));
+                materialCampos.SetFloat("_Celda", (float)ParcelasDeAldea.Celda);
+                materialCampos.SetFloat("_Maximo", ParcelasDeAldea.Maximo);
+                // (maduro, rastrojo, verde joven, arado; `aldea.py`; el sésamo, solo verde o en barbecho: la arena de sus hileras)
+                var hex = new[] { "#cdad62", "#d6bf86", "#9fae58", "#8f7556", "#dccb86", "#cdb98a", "#a9bf6a", "#8f7556", "#b27a52", "#b98459", "#ad7a50", "#9a6e4c",
+                                  "#bba77c", "#c2ad82", "#a9a274", "#977b5a", "#d9c79a", "#d9c79a", "#d9c79a", "#8f7556", "#a9ad5f", "#b2b268", "#a0a85a", "#9fa05e" };
+                materialCampos.SetVectorArray("_Paleta", hex.Select(h => { ColorUtility.TryParseHtmlString(h, out var c); return (Vector4)c.linear; }).ToList());
+                materialCamposBajo = new Material(materialCampos) { name = "campos de las aldeas (bajo la niebla)" };
+                materialCamposBajo.SetFloat("_ConNiebla", 1);
+                materialCamposBajo.SetVectorArray("_Paleta", hex.Select(h => { ColorUtility.TryParseHtmlString(h, out var c); return (Vector4)c.linear; }).ToList());
+            }
+            CosasDelMapa.HuellaDePueblo = (tipoExtractor, nivel) => ModeloDePueblo(tipoExtractor, nivel)?.RadioU ?? double.NaN;
             CosasDelMapa.FactorDeMuralla = (nivel, x, y) => nivel >= 2 && modelos.ContainsKey((int)nivel) ? ModeloDe(nivel, P.Semilla(x, y)).RadioMuralla : 1;
+        }
+
+        /// <summary>El modelo de un pueblo extractor (cantera, o mina para los demás tipos) de su nivel (1 a 3), si lo hay.</summary>
+        Modelo ModeloDePueblo(string tipoExtractor, uint nivel, bool ganado = false)
+        {
+            if (Estilo != EstiloDeAsentamientos.Mejorado) return null;
+            int n = (int)Math.Max(1, Math.Min(3, nivel == 0 ? 1 : nivel));
+            if (tipoExtractor == "aldeaAgricola") return nucleos.TryGetValue((ganado ? "ganado" : "labor", n), out var a) ? a : null;
+            return pueblos.TryGetValue((tipoExtractor == "cantera" ? "cantera" : "mina", n), out var m) ? m : null;
+        }
+
+        /// <summary>Un modelo de pueblo o de núcleo: sus tres niveles de detalle, sus materiales (encima y bajo la niebla) y su suelo pisado.</summary>
+        static Modelo CargarModelo(string nombre, Shader sombreadoVilla, Shader sombreadoParche, Material suelo, string[] niveles)
+        {
+            var raiz = Resources.Load<GameObject>("MapaMundo/Asentamientos/" + nombre);
+            if (raiz == null) return null;
+            var m = new Modelo();
+            for (int n = 0; n < 3; n++)
+            {
+                m.Villa[n] = raiz.transform.Find($"{nombre}_{niveles[n]}")?.GetComponent<MeshFilter>()?.sharedMesh;
+                if (m.Villa[n] == null) return null;
+            }
+            m.Encima = new Material(sombreadoVilla) { name = nombre + " (encima)" };
+            m.Encima.SetTexture("_ColorTex", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_color"));
+            m.Encima.SetTexture("_Mascara", Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_mascara"));
+            m.Bajo = new Material(m.Encima) { name = nombre + " (bajo la niebla)" };
+            m.Bajo.SetFloat("_ConNiebla", 1);
+            var mascaraSuelo = Resources.Load<Texture2D>($"MapaMundo/Asentamientos/{nombre}_suelo");
+            if (mascaraSuelo != null && suelo != null)
+            {
+                m.Parche = new Material(sombreadoParche) { name = nombre + " (suelo)" };
+                m.Parche.SetTexture("_SueloColor", suelo.GetTexture("_SueloColor"));
+                m.Parche.SetTexture("_SueloRuido", suelo.GetTexture("_SueloRuido"));
+                m.Parche.SetVector("_Escalas", suelo.GetVector("_Escalas"));
+                m.Parche.SetTexture("_Suelo", mascaraSuelo);
+                m.ParcheBajo = new Material(m.Parche) { name = nombre + " (suelo, bajo la niebla)" };
+                m.ParcheBajo.SetFloat("_ConNiebla", 1);
+            }
+            return m;
         }
 
         /// <summary>Un número de un json plano ({"radio": 1.1, "puerta": -1.4}); `siNo` si no está.</summary>
@@ -259,7 +431,7 @@ namespace ConquestTactics.Mundo.Mapa
             public Mesh Malla;
             public Material Material;
             public Matrix4x4 M;
-            public Vector4 Faccion;
+            public Vector4 Faccion, Recurso;
             public bool EsMuralla, EsSuelo;
             public int Nivel;
         }
@@ -274,9 +446,13 @@ namespace ConquestTactics.Mundo.Mapa
                 int nivel = NivelDeDetalle(AnchoEnPantalla(mi, cam));
                 var mo = mi.Modelo;
                 var mat = mi.BajoNiebla ? mo.Bajo : mo.Encima;
-                l.Add(new Encargo { Malla = mo.Villa[nivel], Material = mat, M = mi.M, Faccion = mi.Faccion, Nivel = nivel });
+                // (en espejo: la copia espejada de la malla con la matriz sin espejo; `mi.M` lleva el espejo, para el suelo pisado)
+                l.Add(new Encargo { Malla = mi.Espejo ? Espejada(mo.Villa[nivel]) : mo.Villa[nivel], Material = mat, M = mi.Espejo ? mi.M * Matrix4x4.Scale(new Vector3(-1, 1, 1)) : mi.M,
+                    Faccion = mi.Faccion, Recurso = mi.Recurso, Nivel = nivel });
                 if (mi.Muralla && mo.Muralla[nivel] != null)
                     l.Add(new Encargo { Malla = mo.Muralla[nivel], Material = (mi.BajoNiebla ? mo.MurallaBajo : mo.MurallaEncima) ?? mat, M = mi.MMuralla, Faccion = mi.Faccion, EsMuralla = true, Nivel = nivel });
+                if (mi.MallaCampos != null && materialCampos != null)
+                    l.Add(new Encargo { Malla = mi.MallaCampos, Material = mi.BajoNiebla ? materialCamposBajo : materialCampos, M = Matrix4x4.identity, Faccion = mi.Faccion, EsSuelo = true, Nivel = nivel });
                 if (mi.Parche != null)
                     l.Add(new Encargo { Malla = mi.Parche, Material = mi.BajoNiebla ? mo.ParcheBajo : mo.Parche, M = Matrix4x4.identity, Faccion = mi.Faccion, EsSuelo = true, Nivel = nivel });
             }
@@ -362,7 +538,9 @@ namespace ConquestTactics.Mundo.Mapa
             var arriba = new P.Piezas();
             var abajo = new P.Piezas();
             Claros.Clear();
-            foreach (var mi in miniaturas) if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche);
+            var giros = new Dictionary<string, float>();
+            var aldeas = new List<(Miniatura mi, string id)>();
+            foreach (var mi in miniaturas) { if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche); if (mi.MallaCampos != null) UnityEngine.Object.Destroy(mi.MallaCampos); }
             miniaturas.Clear();
             foreach (var c in cosas)
             {
@@ -415,6 +593,44 @@ namespace ConquestTactics.Mundo.Mapa
                     {
                         var q = e.Pueblo;
                         bool aldea = c.Clase == ClaseDeCosa.Aldea;
+                        bool ganado = q != null && (q.Cultivo == "ganado" || (!q.HasCultivo && q.HasRebanoEspecie));
+                        var mn = aldea && q != null ? ModeloDePueblo(q.TipoExtractor, q.NivelAldea, ganado) : null;
+                        if (mn != null)
+                        {
+                            // «Mejorado»: el núcleo de la aldea, girado por su semilla (sin espejo: los campos van en su marco), y sus campos
+                            // (`ParcelasDeAldea`, después de ponerlo todo: no labran sobre lo de los demás)
+                            int nivelA = Math.Max(1, Math.Min(3, (int)q.NivelAldea));
+                            var mi = new Miniatura
+                            {
+                                X = x, Y = y, Semilla = sem, Nivel = nivelA, Huella = mn.RadioU, Escala = UnidadDePueblo, Rumbo = double.NaN,
+                                BajoNiebla = c.BajoNiebla, Faccion = Lineal(c.Color), Modelo = mn, Recurso = Vector4.zero,
+                                Cultivo = Math.Max(0, Array.IndexOf(Cultivos, ganado ? "ganado" : q.HasCultivo ? q.Cultivo : "trigo")), Madre = q.AsentamientoMadreId, Cabezas = q.HasRebanoCabezas ? q.RebanoCabezas / 1000 : 40, Vacuno = !q.HasRebanoEspecie || q.RebanoEspecie == "vacuno",
+                            };
+                            miniaturas.Add(mi);
+                            aldeas.Add((mi, q.Id));
+                            Claros.Add((x, y, mn.RadioU));
+                            break;
+                        }
+                        var mp = !aldea && q != null ? ModeloDePueblo(q.TipoExtractor, q.NivelAldea) : null;
+                        if (mp != null)
+                        {
+                            // «Mejorado»: el pueblo, sobre su nodo (en su centro), con la media luna hacia el camino que sale de él o, sin camino, hacia
+                            // su plaza madre; en espejo según la semilla. El nodo se dibuja con su variante 1 y el mismo giro (`GirosDeNodos`).
+                            var nodo = q.NodoId != "" ? NodoPorId?.Invoke(q.NodoId) : null;
+                            var madre = cosas.Find(k => k.Clase == ClaseDeCosa.Plaza && k.Id == q.AsentamientoMadreId);
+                            var (px, py, rumbo, espejo) = SitioDePueblo(x, y, nodo != null ? (nodo.Value.x, nodo.Value.y) : ((double, double)?)null,
+                                madre != null ? (madre.X, madre.Y) : ((double, double)?)null, mp.RadioU, Caminos);
+                            var mi = new Miniatura
+                            {
+                                X = px, Y = py, Semilla = P.Semilla(px, py), Nivel = Math.Max(1, (int)q.NivelAldea), Huella = mp.RadioU, Escala = UnidadDePueblo, Rumbo = rumbo,
+                                Espejo = espejo, BajoNiebla = c.BajoNiebla, Faccion = Lineal(c.Color), Modelo = mp,
+                                Recurso = nodo != null && ColorDeRecurso != null ? ColorDeRecurso(nodo.Value.tipo) : Vector4.zero,
+                            };
+                            miniaturas.Add(mi);
+                            if (nodo != null) giros[q.NodoId] = GradosDe(mi);
+                            Claros.Add((px, py, mp.RadioU));
+                            break;
+                        }
                         P.Pueblo(arriba, x, y, aldea, color, sem, q != null && q.HasCultivo ? q.Cultivo : null);
                         Claros.Add((x, y, P.ClaroDePueblo(aldea)));
                         break;
@@ -455,7 +671,14 @@ namespace ConquestTactics.Mundo.Mapa
                     }
                 }
             }
+            Campos(aldeas, cosas);
             ralos = miniaturas.Select(mi => (mi.X, mi.Y, mi.Huella)).ToArray();
+            if (giros.Count != GirosDeNodos.Count || giros.Any(kv => !GirosDeNodos.TryGetValue(kv.Key, out var g) || g != kv.Value))
+            {
+                GirosDeNodos.Clear();
+                foreach (var kv in giros) GirosDeNodos[kv.Key] = kv.Value;
+                VersionGiros++;
+            }
             lotes.Clear();
             PiezasPuestas = 0;
             void Poner(P.Piezas piezas, bool bajo)
@@ -510,12 +733,12 @@ namespace ConquestTactics.Mundo.Mapa
                 float angulo = Mathf.Min(Vector3.Angle(Vector3.up, normal) * 0.5f, (float)InclinacionMaxima);
                 var eje = Vector3.Cross(Vector3.up, normal);
                 var inclina = eje.sqrMagnitude > 1e-8 ? Quaternion.AngleAxis(angulo, eje.normalized) : Quaternion.identity;
-                // girada con la puerta hacia su camino (en el mapa, el ángulo de la puerta más el giro, en el sentido de Unity), o por su semilla
-                double grados = double.IsNaN(mi.Rumbo) ? P.Azar(mi.Semilla, 3, 3) * 360 : (mi.Rumbo - mi.Modelo.Puerta) * 180 / Math.PI;
-                var giro = Quaternion.Euler(0, (float)grados, 0);
-                float escala = (float)(r * e);
+                var giro = Quaternion.Euler(0, GradosDe(mi), 0);
+                // (las plazas, a su huella; los pueblos, a la unidad del caserío de nivel 1, y en espejo según la semilla)
+                double escalaU = double.IsNaN(mi.Escala) ? r : mi.Escala;
+                float escala = (float)(escalaU * e);
                 var centro = EscalaDelMapa.AEscena(mi.X, mi.Y, suma / n);
-                mi.M = Matrix4x4.TRS(centro, inclina * giro, Vector3.one * escala);
+                mi.M = Matrix4x4.TRS(centro, inclina * giro, Vector3.one * escala) * (mi.Espejo ? Matrix4x4.Scale(new Vector3(-1, 1, 1)) : Matrix4x4.identity);
                 // la muralla sigue la pendiente entera (la villa, la mitad): sesgada, no inclinada (los muros, a plomo), con la pendiente del
                 // suelo bajo su anillo; así el lienzo no se entierra cuesta arriba ni vuela cuesta abajo
                 double rm = r * mi.Modelo.RadioMuralla;
@@ -526,7 +749,67 @@ namespace ConquestTactics.Mundo.Mapa
                 sesgo.m12 = (float)-my; // (z de la escena = −y del mapa)
                 mi.MMuralla = Matrix4x4.Translate(centro) * sesgo * Matrix4x4.TRS(Vector3.zero, giro, Vector3.one * escala);
                 if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche);
-                mi.Parche = mi.Modelo.Parche != null ? Parche(mi.X, mi.Y, r * LadoDelSuelo * 1.42, mi.M.inverse) : null;
+                double alcance = double.IsNaN(mi.Escala) ? r * LadoDelSuelo * 1.42 : mi.Huella * 1.4;
+                mi.Parche = mi.Modelo.Parche != null ? Parche(mi.X, mi.Y, alcance, mi.M.inverse, mi.Modelo.LadoSuelo) : null;
+                if (mi.MallaCampos != null) UnityEngine.Object.Destroy(mi.MallaCampos);
+                mi.MallaCampos = null;
+                if (mi.Campos != null)
+                {
+                    // el disco de los campos: el del suelo pisado, hasta el borde de los campos; uv1 (capa, giro de la rejilla), uv2 (origen, cultivo)
+                    var mc = Parche(mi.X, mi.Y, (mi.Campos.Radio + ParcelasDeAldea.Celda * 2) * UnidadDePueblo, mi.M.inverse, mi.Modelo.LadoSuelo);
+                    int nv = mc.vertexCount;
+                    var cv = new List<Vector3>(mc.vertices);
+                    var cn = new List<Vector3>(mc.normals);
+                    var cu = new List<Vector2>(mc.uv);
+                    var u1 = Enumerable.Repeat(new Vector2(mi.Capa, (float)mi.Campos.Giro), nv).ToList();
+                    var u2 = Enumerable.Repeat(new Vector2((float)mi.Campos.O, mi.Cultivo), nv).ToList();
+                    var ct = new List<int>(mc.triangles);
+                    // las sendas: cintas de tierra de 0,055 u pegadas al suelo pintado (uv1.x = −1: el sombreado las pinta de tierra; uv0.x, de
+                    // un borde al otro)
+                    foreach (var senda in mi.Sendas)
+                        for (int i = 0; i + 1 < senda.Count; i++)
+                        {
+                            var (ax, ay) = senda[i];
+                            var (bx, by) = senda[i + 1];
+                            double tx = bx - ax, ty = by - ay, ll = Math.Sqrt(tx * tx + ty * ty);
+                            if (ll < 1e-6) continue;
+                            double nx = -ty / ll * 0.0275, ny = tx / ll * 0.0275;
+                            int b0 = cv.Count;
+                            foreach (var (px, py) in new[] { (ax + nx, ay + ny), (ax - nx, ay - ny), (bx + nx, by + ny), (bx - nx, by - ny) })
+                            {
+                                cv.Add(EscalaDelMapa.AEscena(px, py, terreno.AlturaPintada(px, py) + 1.2));
+                                cn.Add(Vector3.up);
+                                u1.Add(new Vector2(-1, 0));
+                                u2.Add(Vector2.zero);
+                            }
+                            cu.Add(new Vector2(0, 0)); cu.Add(new Vector2(1, 0)); cu.Add(new Vector2(0, 0)); cu.Add(new Vector2(1, 0));
+                            ct.AddRange(new[] { b0, b0 + 2, b0 + 1, b0 + 1, b0 + 2, b0 + 3 });
+                        }
+                    foreach (var (qx, qy) in mi.Calvas ?? new List<(double x, double y)>())
+                    {
+                        int b0 = cv.Count;
+                        cv.Add(EscalaDelMapa.AEscena(qx, qy, terreno.AlturaPintada(qx, qy) + 1.2));
+                        cu.Add(new Vector2(0.5f, 0));
+                        for (int k = 0; k < 10; k++)
+                        {
+                            double a = k * Math.PI / 5, rr = 0.11 * (0.85 + 0.3 * ((k * 7) % 5) / 5.0);
+                            double px = qx + Math.Cos(a) * rr, py = qy + Math.Sin(a) * rr;
+                            cv.Add(EscalaDelMapa.AEscena(px, py, terreno.AlturaPintada(px, py) + 1.2));
+                            cu.Add(new Vector2(0, 0));
+                        }
+                        for (int k = 0; k < 11; k++) { cn.Add(Vector3.up); u1.Add(new Vector2(-1, 0)); u2.Add(Vector2.zero); }
+                        for (int k = 0; k < 10; k++) ct.AddRange(new[] { b0, b0 + 1 + (k + 1) % 10, b0 + 1 + k });
+                    }
+                    mc.SetVertices(cv);
+                    mc.SetNormals(cn);
+                    mc.SetUVs(0, cu);
+                    mc.SetUVs(1, u1);
+                    mc.SetUVs(2, u2);
+                    mc.SetTriangles(ct, 0);
+                    mc.RecalculateBounds();
+                    mc.name = "campos de una aldea";
+                    mi.MallaCampos = mc;
+                }
             }
             foreach (var l in lotes)
             {
@@ -546,7 +829,280 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>El parche del suelo pisado de una miniatura: un disco (8 anillos de 32 puntos) de radio `r` (u) pegado a la malla de suelo
         /// pintada; su uv, la posición en las coordenadas locales del modelo (con `local`, la inversa de su matriz) llevada a la máscara.</summary>
-        Mesh Parche(double x, double y, double r, Matrix4x4 local)
+        /// <summary>Los campos de las aldeas: las parcelas de cada una (`ParcelasDeAldea`) sin labrar el agua, los ríos, la pendiente fuerte, los
+        /// caminos, los nodos, lo que pisan las demás cosas ni lo que está más cerca de otro asentamiento; y el mapa de casillas de todas, una capa
+        /// por aldea (R el id de la parcela, G su estado ×64 + 32 si va de este a oeste, B su tono, A si hay parcela).</summary>
+        void Campos(List<(Miniatura mi, string id)> aldeas, List<CosaDelMapa> cosas)
+        {
+            if (aldeas.Count == 0 || materialCampos == null) return;
+            var otros = cosas.Where(k => k.Clase == ClaseDeCosa.Plaza || k.Clase == ClaseDeCosa.Pueblo || k.Clase == ClaseDeCosa.Aldea || k.Clase == ClaseDeCosa.Avanzada)
+                .Select(k => (k.Id, k.X, k.Y)).ToList();
+            int lado = ParcelasDeAldea.Maximo;
+            var pixeles = new List<Color32[]>();
+            foreach (var (mi, id) in aldeas)
+            {
+                double th = GradosDe(mi) * Math.PI / 180, cs = Math.Cos(th), sn = Math.Sin(th), u = UnidadDePueblo;
+                // (del marco local del núcleo, en unidades del modelo, al mapa: el giro de Unity es el contrario al del mapa)
+                (double, double) AlMapa(double lx, double ly) => (mi.X + u * (lx * cs - ly * sn), mi.Y + u * (lx * sn + ly * cs));
+                (double, double) AlMarco(double mx, double my) { double dx = (mx - mi.X) / u, dy = (my - mi.Y) / u; return (dx * cs + dy * sn, -dx * sn + dy * cs); }
+                double alcance = (ParcelasDeAldea.Radios[3] + 1) * u;
+                var cerca = otros.Where(o => o.Id != id && Math.Abs(o.X - mi.X) < alcance * 2 && Math.Abs(o.Y - mi.Y) < alcance * 2).Select(o => AlMarco(o.X, o.Y)).ToList();
+                var nodos = PosicionesDeNodos.Where(n => Math.Abs(n.x - mi.X) < alcance && Math.Abs(n.y - mi.Y) < alcance).ToList();
+                var claros = Claros.Where(k => !(k.x == mi.X && k.y == mi.Y) && Math.Abs(k.x - mi.X) < alcance + k.r && Math.Abs(k.y - mi.Y) < alcance + k.r).ToList();
+                var caminos = Caminos.Where(k => k.puntos.Any(p => Math.Abs(p.x - mi.X) < alcance + 1 && Math.Abs(p.y - mi.Y) < alcance + 1)).ToList();
+                bool Vedado(double lx, double ly)
+                {
+                    var (x, y) = AlMapa(lx, ly);
+                    if (terreno.AguaEn(x, y) || (terreno.Cauces != null && terreno.Cauces.ACauce(x, y, 0.5) < 0.15)) return true;
+                    // (la pendiente fuerte: más de un 35 % en 0,2 u)
+                    double e = EscalaDelMapa.MetrosPorUnidad * 0.2;
+                    if (Math.Abs(terreno.AlturaPintada(x + 0.1, y) - terreno.AlturaPintada(x - 0.1, y)) > 0.35 * e ||
+                        Math.Abs(terreno.AlturaPintada(x, y + 0.1) - terreno.AlturaPintada(x, y - 0.1)) > 0.35 * e) return true;
+                    if (nodos.Any(n => (n.x - x) * (n.x - x) + (n.y - y) * (n.y - y) < 0.8 * 0.8)) return true;
+                    if (claros.Any(k => (k.x - x) * (k.x - x) + (k.y - y) * (k.y - y) < (k.r + 0.1) * (k.r + 0.1))) return true;
+                    foreach (var (_, pts) in caminos)
+                        for (int i = 1; i < pts.Count; i++)
+                        {
+                            var (ax, ay) = pts[i - 1];
+                            double bx = pts[i].x - ax, by = pts[i].y - ay, ll = Math.Max(bx * bx + by * by, 1e-9);
+                            double t = Math.Max(0, Math.Min(1, ((x - ax) * bx + (y - ay) * by) / ll)), dx = x - ax - t * bx, dy = y - ay - t * by;
+                            // (medio ancho del camino ancho, unos 0,25 u, y 0,15 u de margen)
+                            if (dx * dx + dy * dy < 0.4 * 0.4) return true;
+                        }
+                    return false;
+                }
+                bool ganado = mi.Cultivo == Array.IndexOf(Cultivos, "ganado");
+                var campos = ParcelasDeAldea.Hacer((int)mi.Nivel, ganado, (int)(mi.Semilla * 100000) % 100000, mi.Modelo.Ocupado, Vedado, cerca);
+                // (el sésamo, solo verde o en barbecho)
+                if (mi.Cultivo == Array.IndexOf(Cultivos, "sesamo"))
+                    for (int k = 0; k < campos.Estados.Length; k++) if (campos.Estados[k] != ParcelasDeAldea.Estado.Arado) campos.Estados[k] = ParcelasDeAldea.Estado.Verde;
+                mi.Campos = campos;
+                mi.Capa = pixeles.Count;
+                // las sendas: de 2 a 4 curvas suaves del núcleo hacia fuera; la primera, hacia la madre (`sendas_de` de `aldea.py`)
+                var madre = cosas.Find(k => k.Clase == ClaseDeCosa.Plaza && k.Id == mi.Madre);
+                double haciaMadre = madre != null ? Math.Atan2(AlMarco(madre.X, madre.Y).Item2, AlMarco(madre.X, madre.Y).Item1) : -2.4;
+                var rs = new System.Random((int)(mi.Semilla * 100000) % 100000 * 7 + 3);
+                int cuantas = rs.Next(2, 5);
+                mi.Sendas = new List<List<(double x, double y)>>();
+                for (int k = 0; k < cuantas; k++)
+                {
+                    double a = haciaMadre + k * 2 * Math.PI / cuantas + (k > 0 ? rs.NextDouble() * 0.6 - 0.3 : 0), aa = a, d = 0.2;
+                    var pts = new List<(double x, double y)> { (Math.Cos(a) * d, Math.Sin(a) * d) };
+                    while (d < campos.Radio * 1.05)
+                    {
+                        d += 0.12;
+                        aa = a + Math.Max(-0.12, Math.Min(0.12, aa - a + rs.NextDouble() * 0.12 - 0.06));
+                        pts.Add((Math.Cos(aa) * d, Math.Sin(aa) * d));
+                    }
+                    for (int vuelta = 0; vuelta < 2; vuelta++)
+                    {
+                        var nuevos = new List<(double x, double y)> { pts[0] };
+                        for (int i = 1; i < pts.Count; i++)
+                        {
+                            var (px0, py0) = pts[i - 1];
+                            var (px1, py1) = pts[i];
+                            nuevos.Add((px0 + (px1 - px0) * 0.25, py0 + (py1 - py0) * 0.25));
+                            nuevos.Add((px0 + (px1 - px0) * 0.75, py0 + (py1 - py0) * 0.75));
+                        }
+                        nuevos.Add(pts[pts.Count - 1]);
+                        pts = nuevos;
+                    }
+                    // (hasta el agua: la senda se corta en el primer punto mojado)
+                    bool Seco((double x, double y) q)
+                    {
+                        for (int k = 0; k < 5; k++)
+                        {
+                            double ax = q.x + (k == 0 ? 0 : Math.Cos(k * Math.PI / 2) * 0.25), ay = q.y + (k == 0 ? 0 : Math.Sin(k * Math.PI / 2) * 0.25);
+                            if (terreno.AguaEn(ax, ay)) return false;
+                        }
+                        return terreno.Cauces == null || terreno.Cauces.ACauce(q.x, q.y, 1) > 0.45;
+                    }
+                    var enMapa = pts.Select(p => AlMapa(p.x, p.y)).TakeWhile(Seco).ToList();
+                    if (enMapa.Count >= 2) mi.Sendas.Add(enMapa);
+                }
+                mi.Piezas = PiezasDe(mi, campos, AlMapa, th);
+                var px = new Color32[lado * lado];
+                for (int i = 0; i < campos.N; i++)
+                    for (int j = 0; j < campos.N; j++)
+                    {
+                        int p = campos.Parcela[i, j];
+                        if (p < 0) continue;
+                        px[j * lado + i] = new Color32((byte)(p & 255), (byte)((int)campos.Estados[p] * 64 + (campos.Horizontal[i, j] ? 32 : 0)),
+                            (byte)Mathf.Clamp((campos.Tonos[p].valor - 0.92f) / 0.16f * 255, 0, 255), 255);
+                    }
+                pixeles.Add(px);
+                Claros.Add((mi.X, mi.Y, campos.Radio * u));
+            }
+            if (celdas == null || celdas.depth != pixeles.Count)
+            {
+                if (celdas != null) UnityEngine.Object.Destroy(celdas);
+                celdas = new Texture2DArray(lado, lado, pixeles.Count, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "casillas de las aldeas" };
+            }
+            for (int k = 0; k < pixeles.Count; k++) celdas.SetPixels32(pixeles[k], k);
+            celdas.Apply(false);
+            materialCampos.SetTexture("_Celdas", celdas);
+            materialCamposBajo.SetTexture("_Celdas", celdas);
+        }
+
+        /// <summary>Lo que tiene volumen sobre los campos de una aldea (`cosas_de` de `aldea.py`): olivos al tresbolillo, dos hileras de cepas por
+        /// casilla, gavillas en los rastrojos del trigo, hacinas en la cebada, y en la ganadera cercas en una de cada cuatro lindes y el rebaño en
+        /// dos o tres hatos (una figura por cada 5 cabezas, de 8 a 24). `th`: el giro del núcleo (radianes, el del mapa).</summary>
+        List<(int, Matrix4x4)> PiezasDe(Miniatura mi, ParcelasDeAldea p, Func<double, double, (double, double)> alMapa, double th)
+        {
+            var l = new List<(int, Matrix4x4)>();
+            var rng = new System.Random((int)(mi.Semilla * 100000) % 100000 * 13 + 5);
+            double c = ParcelasDeAldea.Celda, g = p.Giro, e = EscalaDelMapa.MetrosPorUnidad;
+            float escala = (float)(UnidadDePueblo * e);
+            // (de la rejilla al marco del núcleo y al mapa; `rumbo`: el de la pieza en la rejilla, radianes)
+            void Poner(int tipo, double gx, double gy, double rumbo)
+            {
+                double lx = gx * Math.Cos(g) - gy * Math.Sin(g), ly = gx * Math.Sin(g) + gy * Math.Cos(g);
+                var (x, y) = alMapa(lx, ly);
+                // (en el suelo pintado: se dibujan después de los campos, cola 2456, y no los tapa el disco que va 1 m por encima)
+                var pos = EscalaDelMapa.AEscena(x, y, terreno.AlturaPintada(x, y));
+                l.Add((tipo, Matrix4x4.TRS(pos, Quaternion.Euler(0, (float)((th + g + rumbo) * 180 / Math.PI), 0), Vector3.one * escala)));
+            }
+            string cultivo = Cultivos[mi.Cultivo];
+            var porParcela = new Dictionary<int, List<(int i, int j)>>();
+            for (int i = 0; i < p.N; i++)
+                for (int j = 0; j < p.N; j++)
+                    if (p.Parcela[i, j] >= 0) { if (!porParcela.TryGetValue(p.Parcela[i, j], out var cs)) porParcela[p.Parcela[i, j]] = cs = new List<(int, int)>(); cs.Add((i, j)); }
+            foreach (var kv in porParcela.OrderBy(k => k.Key))
+            {
+                var estado = p.Estados[kv.Key];
+                var cs = kv.Value;
+                bool horiz = p.Horizontal[cs[0].i, cs[0].j];
+                double x0 = p.O + cs.Min(q => q.i) * c, x1 = p.O + (cs.Max(q => q.i) + 1) * c, y0 = p.O + cs.Min(q => q.j) * c, y1 = p.O + (cs.Max(q => q.j) + 1) * c;
+                double Entre(double a, double b) => a + 0.04 + rng.NextDouble() * Math.Max(0, b - a - 0.08);
+                if (cultivo == "oliva" && estado != ParcelasDeAldea.Estado.Arado)
+                {
+                    foreach (var (i, j) in cs)
+                        if (j % 2 == 0 && (i + j / 2) % 2 == 0) Poner(0, p.O + (i + 0.5) * c, p.O + (j + 0.5) * c, rng.NextDouble() * 6.28);
+                }
+                else if (cultivo == "vid" && estado != ParcelasDeAldea.Estado.Arado)
+                {
+                    foreach (var (i, j) in cs)
+                        foreach (var h in new[] { 0.25, 0.75 })
+                            if (horiz) Poner(1, p.O + (i + 0.5) * c, p.O + (j + h) * c, 0);
+                            else Poner(1, p.O + (i + h) * c, p.O + (j + 0.5) * c, Math.PI / 2);
+                }
+                else if (cultivo == "trigo" && estado == ParcelasDeAldea.Estado.Rastrojo)
+                {
+                    for (int k = 0; k < 2; k++) Poner(2, Entre(x0, x1), Entre(y0, y1), rng.NextDouble() * 6.28);
+                }
+                else if (cultivo == "cebada" && (estado == ParcelasDeAldea.Estado.Rastrojo || estado == ParcelasDeAldea.Estado.Maduro) && rng.NextDouble() < 0.6)
+                    Poner(3, Entre(x0, x1), Entre(y0, y1), horiz ? 0 : Math.PI / 2);
+            }
+            var cercadoEntero = new HashSet<int>();
+            void PonerRebano()
+            {
+                // el rebaño: dos o tres hatos, cada uno en un cercado distinto a 0,65 u o más del núcleo, con su abrevadero; una figura por
+                // cada dos cabezas (de 8 a 30), vacas o, si el rebaño es de otra especie, ovejas. Cada cercado con hato, cercado entero y con
+                // una calva de tierra pisada en la entrada (el lado que mira al núcleo)
+                double Gauss() => Math.Sqrt(-2 * Math.Log(1 - rng.NextDouble())) * Math.Cos(2 * Math.PI * rng.NextDouble());
+                (double x, double y) Centro(List<(int i, int j)> cs) => (cs.Average(q => p.O + (q.i + 0.5) * c), cs.Average(q => p.O + (q.j + 0.5) * c));
+                // (los cercados grandes, de 10 casillas o más, a 0,65 u o más del núcleo; los mayores antes)
+                var lejos = porParcela.Where(k => k.Value.Count >= 10).Select(k => (k.Key, Centro(k.Value)))
+                    .Where(k => Math.Sqrt(k.Item2.x * k.Item2.x + k.Item2.y * k.Item2.y) >= 0.65 / UnidadDePueblo)
+                    .OrderByDescending(k => porParcela[k.Key].Count).ThenBy(k => k.Key).ToList();
+                int hatos = Math.Min(lejos.Count, rng.Next(2, 4));
+                var elegidos = lejos.Take(hatos).ToList();
+                int figuras = (int)Math.Max(8, Math.Min(30, mi.Cabezas / 2));
+                mi.Calvas = new List<(double x, double y)>();
+                for (int h = 0; h < elegidos.Count; h++)
+                {
+                    var (id, (cx, cy)) = elegidos[h];
+                    // (cada figura en una casilla del cercado al azar, algo movida, sin solaparse: a 1,2 veces su largo de las demás como poco;
+                    // las vacas, de tres capas por la semilla)
+                    double largo = mi.Vacuno ? 0.09 : 0.06, minimo = largo * 1.2;
+                    var puestas = new List<(double x, double y)>();
+                    for (int t = h; t < figuras; t += elegidos.Count)
+                        for (int intento = 0; intento < 24; intento++)
+                        {
+                            var (fi, fj) = porParcela[id][rng.Next(porParcela[id].Count)];
+                            double fx = p.O + (fi + 0.5) * c + Gauss() * 0.03, fy = p.O + (fj + 0.5) * c + Gauss() * 0.03;
+                            if (puestas.Any(q => (q.x - fx) * (q.x - fx) + (q.y - fy) * (q.y - fy) < minimo * minimo)) continue;
+                            puestas.Add((fx, fy));
+                            Poner(mi.Vacuno ? new[] { 5, 8, 9 }[rng.Next(3)] : 6, fx, fy, rng.NextDouble() * 6.28);
+                            break;
+                        }
+                    Poner(7, cx + 0.07, cy - 0.05, rng.NextDouble() * 6.28);
+                    // la entrada: la casilla del cercado más cercana al núcleo, en su lado
+                    var (ei, ej) = porParcela[id].OrderBy(q => Math.Pow(p.O + (q.i + 0.5) * c, 2) + Math.Pow(p.O + (q.j + 0.5) * c, 2)).First();
+                    double ex = p.O + (ei + 0.5) * c, ey = p.O + (ej + 0.5) * c, el = Math.Max(1e-6, Math.Sqrt(ex * ex + ey * ey));
+                    ex -= ex / el * c * 0.5; ey -= ey / el * c * 0.5;
+                    double lx = ex * Math.Cos(g) - ey * Math.Sin(g), ly = ex * Math.Sin(g) + ey * Math.Cos(g);
+                    mi.Calvas.Add(alMapa(lx, ly));
+            }
+            cercadoEntero = new HashSet<int>(elegidos.Select(k => k.Key));
+            }
+
+            if (cultivo == "ganado")
+            {
+                PonerRebano();
+                // las cercas: en una de cada tres lindes (entre parcelas o hacia fuera) y en todas las de los cercados con hato
+                var rc = new System.Random((int)(mi.Semilla * 100000) % 100000 * 3 + 11);
+                var cercada = new Dictionary<(int, int), bool>();
+                for (int i = 0; i < p.N; i++)
+                    for (int j = 0; j < p.N; j++)
+                    {
+                        int a = p.Parcela[i, j];
+                        if (a < 0) continue;
+                        foreach (var (di, dj) in new[] { (0, 1), (1, 0), (0, -1), (-1, 0) })
+                        {
+                            int ii = i + di, jj = j + dj, b = ii >= 0 && jj >= 0 && ii < p.N && jj < p.N ? p.Parcela[ii, jj] : -1;
+                            if (b == a || (b > a)) continue;
+                            if (!cercada.TryGetValue((a, b), out var si)) cercada[(a, b)] = si = rc.NextDouble() < 0.33;
+                            if (si || cercadoEntero.Contains(a) || cercadoEntero.Contains(b)) Poner(4, p.O + (i + 0.5 + di * 0.5) * c, p.O + (j + 0.5 + dj * 0.5) * c, dj != 0 ? 0 : Math.PI / 2);
+                        }
+                    }
+
+            }
+            return l;
+        }
+
+        readonly Dictionary<Mesh, Mesh> espejadas = new Dictionary<Mesh, Mesh>();
+        /// <summary>La copia de una malla en espejo (x → −x), con el orden de sus triángulos y la x de sus normales vueltos: se dibuja con la matriz
+        /// sin espejo, porque una escala negativa da la vuelta a las caras y el sombreado (Cull Back) enseñaba las de dentro.</summary>
+        Mesh Espejada(Mesh m)
+        {
+            if (espejadas.TryGetValue(m, out var e)) return e;
+            e = UnityEngine.Object.Instantiate(m);
+            e.name = m.name + " (espejo)";
+            var v = e.vertices; for (int i = 0; i < v.Length; i++) v[i].x = -v[i].x;
+            var n = e.normals; for (int i = 0; i < n.Length; i++) n[i].x = -n[i].x;
+            e.vertices = v;
+            e.normals = n;
+            for (int k = 0; k < e.subMeshCount; k++)
+            {
+                var t = e.GetTriangles(k);
+                for (int i = 0; i < t.Length; i += 3) (t[i + 1], t[i + 2]) = (t[i + 2], t[i + 1]);
+                e.SetTriangles(t, k);
+            }
+            e.RecalculateBounds();
+            return espejadas[m] = e;
+        }
+
+        /// <summary>El giro (grados, en Unity) de una miniatura: con la puerta (o el frente del pueblo) hacia su rumbo, o por su semilla.</summary>
+        static float GradosDe(Miniatura mi) => GradosDe(mi.Rumbo, mi.Modelo.Puerta, mi.Semilla);
+
+        /// <summary>El giro (grados, en Unity) que pone la puerta (ángulo `puerta` del modelo, en el mapa) hacia `rumbo`; sin rumbo, por la semilla.</summary>
+        public static float GradosDe(double rumbo, double puerta, double semilla) =>
+            (float)(double.IsNaN(rumbo) ? P.Azar(semilla, 3, 3) * 360 : (rumbo - puerta) * 180 / Math.PI);
+
+        /// <summary>Dónde y cómo va un pueblo extractor: en el centro de su nodo (o en su posición, si no se conoce el nodo), con el frente hacia
+        /// el camino que sale de su huella (`RumboDelCamino`) o, sin camino, hacia su plaza madre (NaN si tampoco), y en espejo según la semilla
+        /// de su sitio.</summary>
+        public static (double x, double y, double rumbo, bool espejo) SitioDePueblo(double x, double y, (double x, double y)? nodo, (double x, double y)? madre,
+            double radio, IEnumerable<(string id, IReadOnlyList<(double x, double y)> puntos)> caminos)
+        {
+            double px = nodo?.x ?? x, py = nodo?.y ?? y;
+            double rumbo = RumboDelCamino(px, py, radio, caminos);
+            if (double.IsNaN(rumbo) && madre != null) rumbo = Math.Atan2(madre.Value.y - py, madre.Value.x - px);
+            return (px, py, rumbo, P.Azar(P.Semilla(px, py), 5, 1) < 0.5);
+        }
+
+        Mesh Parche(double x, double y, double r, Matrix4x4 local, double lado)
         {
             const int Anillos = 8, Puntos = 32;
             var v = new List<Vector3>();
@@ -561,7 +1117,7 @@ namespace ConquestTactics.Mundo.Mapa
                 // (r: cuánto es pradera verde ahí; en lo seco, el sombreado oscurece más la tierra para que se lea)
                 col.Add(new Color(terreno.SueloEn(px, py).verde, 0, 0, 1));
                 // (u, v: la x y la −z locales del modelo, como sale la máscara de `villa1.py`; comprobado volcando la planta del FBX)
-                uv.Add(new Vector2(l.x / LadoDelSuelo * 0.5f + 0.5f, -l.z / LadoDelSuelo * 0.5f + 0.5f));
+                uv.Add(new Vector2((float)(l.x / lado * 0.5 + 0.5), (float)(-l.z / lado * 0.5 + 0.5)));
             }
             Punto(x, y);
             for (int a = 1; a <= Anillos; a++)
@@ -625,7 +1181,25 @@ namespace ConquestTactics.Mundo.Mapa
                 }
                 propiedadesMiniatura.SetVector("_Color", Vector4.one);
                 propiedadesMiniatura.SetVector("_Faccion", en.Faccion);
+                propiedadesMiniatura.SetVector("_Recurso", en.Recurso);
                 Graphics.RenderMesh(new RenderParams(en.Material) { shadowCastingMode = SombraDeMiniaturas ? sombras : ShadowCastingMode.Off, receiveShadows = true, matProps = propiedadesMiniatura }, en.Malla, 0, en.M);
+            }
+            // las piezas sueltas de los campos, instanciadas por tipo
+            PiezasDeCampos = 0;
+            if (materialPiezas != null && DibujarMiniaturas)
+            {
+                foreach (var lp in porPieza) lp.Clear();
+                foreach (var mi in miniaturas)
+                    if (mi.Piezas != null && !mi.BajoNiebla)
+                        foreach (var (tipo, m) in mi.Piezas) porPieza[tipo].Add(m);
+                var rp = new RenderParams(materialPiezas) { shadowCastingMode = sombras, receiveShadows = true };
+                for (int k = 0; k < piezas.Length; k++)
+                {
+                    if (piezas[k] == null || porPieza[k].Count == 0) continue;
+                    for (int i = 0; i < porPieza[k].Count; i += PorLlamada)
+                        Graphics.RenderMeshInstanced(rp, piezas[k], 0, porPieza[k], Math.Min(PorLlamada, porPieza[k].Count - i), i);
+                    PiezasDeCampos += porPieza[k].Count;
+                }
             }
             MsDibujar = reloj.Elapsed.TotalMilliseconds;
         }
@@ -654,7 +1228,7 @@ namespace ConquestTactics.Mundo.Mapa
             UnityEngine.Object.Destroy(caja);
             UnityEngine.Object.Destroy(tienda);
             UnityEngine.Object.Destroy(bandera);
-            foreach (var mi in miniaturas) if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche);
+            foreach (var mi in miniaturas) { if (mi.Parche != null) UnityEngine.Object.Destroy(mi.Parche); if (mi.MallaCampos != null) UnityEngine.Object.Destroy(mi.MallaCampos); }
             foreach (var mo in modelos.Values.SelectMany(l => l))
                 foreach (var mat in new[] { mo.Encima, mo.Bajo, mo.Parche, mo.ParcheBajo })
                     if (mat != null) UnityEngine.Object.Destroy(mat);

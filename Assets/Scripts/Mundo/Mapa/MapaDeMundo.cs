@@ -111,6 +111,11 @@ namespace ConquestTactics.Mundo.Mapa
             nodos = new NodosDelMapa(terreno, artefacto.Nodos, (x, y) => relieve.AguaEn(x, y) || (cauces.ACauce(x, y, 2) < 0.15), terreno.Material);
             // las maquetas de los asentamientos (tema 6); la capa baja ralea junto a los nodos y junto a las miniaturas
             maquetas = new MaquetasDelMapa(terreno);
+            // (los pueblos, sobre su nodo: dónde está y de qué tipo, y el color de su recurso para el mineral de las minas)
+            var nodosPorId = artefacto.Nodos.Where(k => k.Posicion != null && !string.IsNullOrEmpty(k.Id)).GroupBy(k => k.Id).ToDictionary(g => g.Key, g => g.First());
+            maquetas.NodoPorId = id => nodosPorId.TryGetValue(id, out var k) ? (k.Posicion.X / 1000.0, k.Posicion.Y / 1000.0, k.Tipo) : ((double, double, string)?)null;
+            maquetas.ColorDeRecurso = tipo => nodos.ColorDe(tipo);
+            maquetas.PosicionesDeNodos = artefacto.Nodos.Where(k => k.Posicion != null).Select(k => (k.Posicion.X / 1000.0, k.Posicion.Y / 1000.0)).ToList();
             var m_ = maquetas;
             vegetacion.Ralo = (x, y) => Math.Min(nodos.Ralo(x, y), m_.Ralo(x, y));
             if (PinturaDelMapa.CaminosYTerritorio)
@@ -419,6 +424,8 @@ namespace ConquestTactics.Mundo.Mapa
             Shader.SetGlobalColor(ColorBruma, PinturaDelMapa.Horizonte);
             pintor.Pintar(Cosas, cx, cy, lejosCarga);
             maquetas.Actualizar(Cosas, heroeId(), radioInicial);
+            nodos.GirosDePueblo = maquetas.GirosDeNodos;
+            nodos.VersionGiros = maquetas.VersionGiros;
             maquetas.Dibujar(camara);
             pintor.Nombres(Cosas, camara, cx, cy, (cerca + lejosCarga) / 2, NombresDeNodos, Camara.EnPantalla * 0.75);
             if (sucio && Time.unscaledTime >= proximasRayas)

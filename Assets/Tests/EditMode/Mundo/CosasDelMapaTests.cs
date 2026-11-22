@@ -105,6 +105,31 @@ namespace ConquestTactics.Mundo.Tests
             StringAssert.Contains("clip-path", ConquestTactics.Mundo.Sigilos.Svg(null, 48), "sin sigilo, el neutro");
         }
 
+        /// <summary>«Mejorado»: un clic en los campos de una aldea no la elige (la columna marcha allí); en su núcleo, sí. El aro, 0,5 u; el clic,
+        /// 0,62 u.</summary>
+        [Test]
+        public void UnClicEnLosCamposDeUnaAldeaMarcha()
+        {
+            var antes = (CosasDelMapa.HuellaMejorada, CosasDelMapa.HuellaDePueblo);
+            try
+            {
+                CosasDelMapa.HuellaMejorada = true;
+                CosasDelMapa.HuellaDePueblo = (tipo, nivel) => 0.5;
+                var a = new Almacen();
+                var f = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 1 };
+                f.Entidades.Add(new Entidad { Pueblo = new Pueblo { Id = "al-1", AsentamientoMadreId = "as-1", TipoExtractor = "aldeaAgricola", NivelAldea = 3, Cultivo = "trigo",
+                    Posicion = new Punto { X = 50_000, Y = 50_000 } } });
+                a.Aplicar(new MensajeDeServidor { Foto = f });
+                var cosas = CosasDelMapa.Reunir(a, null, 0, new NodoRecurso[0], 12);
+                var aldea = cosas.Single(c => c.Clase == ClaseDeCosa.Aldea);
+                Assert.AreEqual(0.5, aldea.Radio, 1e-9, "el aro, solo el núcleo");
+                Assert.AreEqual(0.62, aldea.RadioClic, 1e-9);
+                Assert.AreEqual(new[] { aldea }, CosasDelMapa.BajoElClic(cosas, 50.3, 50, 60).ToArray(), "en el núcleo, la aldea");
+                Assert.IsEmpty(CosasDelMapa.BajoElClic(cosas, 51.2, 50, 60), "en los campos (1,2 u), nada: la columna marcha");
+            }
+            finally { (CosasDelMapa.HuellaMejorada, CosasDelMapa.HuellaDePueblo) = antes; }
+        }
+
         [Test]
         public void SeReunenLasCosasDelAlmacen()
         {

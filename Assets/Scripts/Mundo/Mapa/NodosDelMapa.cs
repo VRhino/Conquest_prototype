@@ -86,6 +86,12 @@ namespace ConquestTactics.Mundo.Mapa
         public int RocasDibujadas, ModelosDibujados, TeselasHechas;
         /// <summary>¿Están los modelos de «Mejorado» (si no, se pinta como el prototipo)?</summary>
         public bool HayModelos { get; }
+        /// <summary>«Mejorado»: los nodos que tienen pueblo encima (su id) y el giro de ese pueblo (grados, en Unity): se dibujan con su variante 1
+        /// (contra la que está hecho el pueblo) y ese giro. Lo pone `MapaDeMundo` desde `MaquetasDelMapa`; con otra `VersionGiros`, se rehacen
+        /// las teselas.</summary>
+        public IReadOnlyDictionary<string, float> GirosDePueblo = new Dictionary<string, float>();
+        public int VersionGiros;
+        int versionGirosHecha;
 
         public NodosDelMapa(TerrenoDelMapa terreno, IEnumerable<NodoRecurso> nodos, Func<double, double, bool> agua, Material suelo)
         {
@@ -183,7 +189,13 @@ namespace ConquestTactics.Mundo.Mapa
                 if (hechas[k].Parche != null) UnityEngine.Object.Destroy(hechas[k].Parche);
                 hechas.Remove(k);
             }
-            bool cambio = terreno.Version != version;
+            bool cambio = terreno.Version != version || VersionGiros != versionGirosHecha;
+            if (VersionGiros != versionGirosHecha)
+            {
+                foreach (var t in hechas.Values) if (t.Parche != null) UnityEngine.Object.Destroy(t.Parche);
+                hechas.Clear();
+            }
+            versionGirosHecha = VersionGiros;
             version = terreno.Version;
             int t0x = (int)Math.Floor((cx - alcance) / Lado), t1x = (int)Math.Floor((cx + alcance) / Lado);
             int t0y = (int)Math.Floor((cy - alcance) / Lado), t1y = (int)Math.Floor((cy + alcance) / Lado);
@@ -256,6 +268,11 @@ namespace ConquestTactics.Mundo.Mapa
                     double x = n.Posicion.X / 1000.0, y = n.Posicion.Y / 1000.0, h = Huella(n.Tipo), rp = h * Parche;
                     int v = Math.Min(2, (int)(RocasDeNodos.Azar(x + y * 0.37, 91) * 3));
                     float giro = (float)(RocasDeNodos.Azar(y, 92) * 360);
+                    // (con pueblo encima: su variante 1 y su giro, y el pedregal y los cascotes solo al pie del afloramiento; lo demás es la tierra
+                    // pisada del pueblo)
+                    float gp = 0;
+                    bool conPueblo = n.Id != null && GirosDePueblo.TryGetValue(n.Id, out gp);
+                    if (conPueblo) { v = 0; giro = gp; rp = h * 1.1; }
                     // La base: el suelo bajo la huella (el centro y ocho puntos a 0,85 de su radio). Se apoya en el más bajo; si la ladera es
                     // fuerte, sube hasta el centro sin dejar que el lado de abajo se quede sin la base enterrada del modelo.
                     double hc = terreno.AlturaPintada(x, y), hMin = hc;
@@ -274,7 +291,7 @@ namespace ConquestTactics.Mundo.Mapa
                     // los cascotes: fragmentos de la misma roca (el modelo, pequeño y volcado), medio enterrados, mayores junto al afloramiento
                     // y menores al alejarse; en el parche, nunca sobre el agua
                     var tinte = TinteDelParche[tipo];
-                    int cuantos = 7 + (int)(RocasDeNodos.Azar(x, 94) * 6);
+                    int cuantos = conPueblo ? 0 : 7 + (int)(RocasDeNodos.Azar(x, 94) * 6);
                     for (int i = 0; i < cuantos; i++)
                     {
                         double f = RocasDeNodos.Azar(y + i, 96), a = RocasDeNodos.Azar(x + i, 95) * Math.PI * 2, d = h * (0.9 + 0.75 * f);
@@ -363,7 +380,7 @@ namespace ConquestTactics.Mundo.Mapa
             }
         }
 
-        Vector4 ColorDe(string tipo)
+        public Vector4 ColorDe(string tipo)
         {
             if (colorDe.TryGetValue(tipo ?? "", out var v)) return v;
             // `RECURSO_COLOR` del prototipo, en la lista de iconos de la migración (la de las barras y chips de recursos)

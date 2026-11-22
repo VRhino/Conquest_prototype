@@ -1435,6 +1435,415 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// a los tres zooms y sin la columna, y las láminas de cada fila (plazas con muralla y sin ella, aldeas, avanzadas, y obras, campamentos,
         /// alijo y batallas) a zoom habitual y alejado. `MUNDO_ASENT_ESTILO` da el estilo y el nombre de la tanda: «antes» (las cajas) o
         /// «prototipo» o «mejorado» (la miniatura de Blender donde la hay).</summary>
+        /// <summary>Los pueblos extractores («Mejorado», parte 4, etapa A) frente al prototipo, en el mapa (capturas de revisión, `MUNDO_CAPTURAS`,
+        /// «pe_…»), cada uno sobre su nodo: en la hierba (mina 2 sobre cobre), en lo seco (cantera 2 sobre piedra) y en la ladera (mina 3 sobre oro),
+        /// cada uno con su plaza madre de nivel 1 al lado y un nodo sin pueblo, a los tres zooms; la fila de los seis modelos (cantera 1 a 3 y mina 1
+        /// a 3 sobre cobre, estaño y hierro) a zoom habitual y de cerca; y cuatro minas con la madre al norte, al este, al sur y al oeste (sin
+        /// camino: miran a la madre). Y el coste de las maquetas en la fila.</summary>
+        [Category("Mapa"), Explicit("capturas de los pueblos extractores")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LosPueblosExtractores()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "pueblos-extractores-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            var bosque = new RasterDeMundo(artefacto.DensidadBosque);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1600, 900, 24) { antiAliasing = 4 };
+            var cauces = new CaucesDelMapa(artefacto, relieve);
+            var puestos = new List<(double x, double y, double r)>();
+            // el sitio de tierra firme más cercano sin agua ni bosque espeso a menos de `r`, aparte de lo ya puesto
+            (double x, double y) Sitio((double x, double y) p, double r)
+            {
+                bool Libre(double x, double y)
+                {
+                    for (double dy = -r; dy <= r; dy += 0.5)
+                        for (double dx = -r; dx <= r; dx += 0.5)
+                            if (dx * dx + dy * dy <= r * r && (relieve.AguaEn(x + dx, y + dy) || bosque.En(x + dx, y + dy) > 25)) return false;
+                    // (ni ríos: los cauces no son agua del relieve)
+                    if (cauces.ACauce(x, y, r + 4) < r + 2) return false;
+                    return puestos.All(q => Math.Sqrt((q.x - x) * (q.x - x) + (q.y - y) * (q.y - y)) > q.r + r);
+                }
+                for (double d = 0; d <= 200; d += 1.5)
+                    for (int k = 0; k < Math.Max(1, (int)(d * 2)); k++)
+                    {
+                        double a = k * Math.PI * 2 / Math.Max(1, (int)(d * 2)), x = p.x + d * Math.Cos(a), y = p.y + d * Math.Sin(a);
+                        if (Libre(x, y)) { puestos.Add((x, y, r)); return (x, y); }
+                    }
+                Debug.LogWarning($"[Pueblos] sin sitio de {r} u cerca de ({p.x:0}, {p.y:0})");
+                puestos.Add((p.x, p.y, r));
+                return p;
+            }
+            var vista = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            var nodos = new List<NodoRecurso>();
+            int n = 0;
+            string Plaza(double x, double y, string faccion)
+            {
+                string id = $"pe-as{n++}";
+                var a = new Asentamiento { Id = id, Nombre = id, Nivel = 1, FaccionId = faccion, Posicion = Pu(x, y) };
+                // (sin zona: sus bandas de territorio taparían el encuadre)
+                vista.Entidades.Add(new Entidad { Asentamiento = a });
+                return id;
+            }
+            void Nodo(double x, double y, string tipo, string extractor, uint nivel, string madre)
+            {
+                string id = $"pe-nodo{n++}";
+                nodos.Add(new NodoRecurso { Id = id, Tipo = tipo, Rareza = "comun", Posicion = Pu(x, y) });
+                if (extractor != null)
+                    vista.Entidades.Add(new Entidad { Pueblo = new Pueblo { Id = $"pe-pu{n++}", AsentamientoMadreId = madre, TipoExtractor = extractor, NivelAldea = nivel, NodoId = id, Posicion = Pu(x, y) } });
+            }
+            var sitios = new List<(string nombre, (double x, double y) donde, bool tresZooms)>();
+            // en la hierba, en lo seco y en la ladera: el pueblo, su madre de nivel 1 a 5 u y un nodo sin pueblo a 3 u
+            foreach (var (nombre, cerca, tipo, extractor, nivel) in new[] { ("hierba", caminos.SitiosDeSuelo["suelo_pradera"], "cobre", "mina", 2u),
+                                                                            ("seco", caminos.SitiosDeSuelo["suelo_seco"], "piedra", "cantera", 2u),
+                                                                            ("ladera", caminos.Sitios["ladera"], "oro", "mina", 3u) })
+            {
+                var (x, y) = nombre == "ladera" ? cerca : Sitio(cerca, 6);
+                string madre = Plaza(x + 5, y + 1, "f-1");
+                Nodo(x, y, tipo, extractor, nivel, madre);
+                Nodo(x - 3, y - 1.5, "hierro", null, 0, null);
+                sitios.Add((nombre, (x, y), true));
+            }
+            // la fila de los seis modelos, a 3,5 u, con su madre detrás
+            {
+                var (x, y) = Sitio((caminos.SitiosDeSuelo["suelo_pradera"].x, caminos.SitiosDeSuelo["suelo_pradera"].y + 16), 11);
+                string madre = Plaza(x, y + 7, "f-2");
+                var fila = new[] { ("piedra", "cantera", 1u), ("piedra", "cantera", 2u), ("piedra", "cantera", 3u), ("cobre", "mina", 1u), ("estano", "mina", 2u), ("hierro", "mina", 3u) };
+                for (int i = 0; i < fila.Length; i++) Nodo(x + (i - 2.5) * 3.5, y, fila[i].Item1, fila[i].Item2, fila[i].Item3, madre);
+                sitios.Add(("fila", (x, y), false));
+            }
+            // los cuatro rumbos: la madre al norte, al este, al sur y al oeste, a 5 u
+            foreach (var (nombre, dx, dy) in new[] { ("norte", 0, 1), ("este", 1, 0), ("sur", 0, -1), ("oeste", -1, 0) })
+            {
+                var (x, y) = Sitio((caminos.SitiosDeSuelo["suelo_seco"].x, caminos.SitiosDeSuelo["suelo_seco"].y + 18), 7);
+                string madre = Plaza(x + dx * 5, y + dy * 5, "f-1");
+                Nodo(x, y, "cobre", "mina", 2, madre);
+                sitios.Add(("rumbo_" + nombre, (x, y), false));
+            }
+            artefacto.Nodos.AddRange(nodos);
+            var antes = (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, NodosDelMapa.Estilo);
+            MapaDeMundo.AclararCopas = false;
+            NodosDelMapa.Estilo = EstiloDeNodos.Mejorado;
+            try
+            {
+                foreach (var (estilo, tanda) in new[] { (EstiloDeAsentamientos.Mejorado, "mejorado"), (EstiloDeAsentamientos.Prototipo, "prototipo") })
+                {
+                    MaquetasDelMapa.Estilo = estilo;
+                    if (go != null) { UnityEngine.Object.Destroy(go); yield return null; }
+                    var (almacen, sesion) = Almacen(url, sitios[0].donde, null);
+                    almacen.Aplicar(new MensajeDeServidor { Foto = vista });
+                    var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                    mapa.RadioVisionFijo = 15;
+                    foreach (var (nombre, donde, tres) in sitios)
+                    {
+                        yield return Llegar(mapa, almacen, donde);
+                        yield return new WaitForSecondsRealtime(1);
+                        var zooms = tres ? new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual"), (ZoomDelMapa.Alejado, "3_alejado") }
+                                         : new[] { (ZoomDelMapa.Cerca, "1_cerca"), (ZoomDelMapa.Normal, "2_habitual") };
+                        foreach (var (zoom, z) in zooms) { EsconderLaColumna(); yield return Vista(mapa, zoom, 30, $"pe_{nombre}_{tanda}_{z}"); }
+                        if (nombre == "fila" && mapa.Maquetas != null)
+                            Debug.Log($"[Pueblos] {tanda}: {mapa.Maquetas.PiezasPuestas} piezas, {mapa.Maquetas.Llamadas} llamadas, {mapa.Maquetas.Triangulos} triángulos; " +
+                                      $"rehacer {mapa.Maquetas.MsRehacer:0.00} ms, asentar {mapa.Maquetas.MsAsentar:0.00} ms, dibujar {mapa.Maquetas.MsDibujar:0.00} ms");
+                    }
+                }
+            }
+            finally
+            {
+                foreach (var k in nodos) artefacto.Nodos.Remove(k);
+                (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, NodosDelMapa.Estilo) = antes;
+            }
+        }
+
+        /// <summary>La revisión de los pueblos extractores («Mejorado», `MUNDO_CAPTURAS`, «pr_…», a 1920×1080 para recortarlos al 100 %), cada uno
+        /// en el centro de la vista, con la madre al norte (el frente de cara a la cámara al empezar): los seis modelos (cantera 1 a 3 sobre piedra
+        /// y mina 1 a 3 sobre cobre) de cerca, a zoom habitual y de cerca por detrás (cámara girada 180°), con y sin las miniaturas (para la
+        /// luminancia); la mina 2 sobre estaño, hierro y oro; una cantera 2 y una mina 2 con un caserío de nivel 1 al lado; y una en la ladera.
+        /// Y el nivel de detalle de los pueblos a cada zoom.</summary>
+        [Category("Mapa"), Explicit("revisión de los pueblos extractores")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LaRevisionDePueblos()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "revision-pueblos-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            var bosque = new RasterDeMundo(artefacto.DensidadBosque);
+            var cauces = new CaucesDelMapa(artefacto, relieve);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1920, 1080, 24) { antiAliasing = 4 };
+            var puestos = new List<(double x, double y, double r)>();
+            (double x, double y) Sitio((double x, double y) p, double r)
+            {
+                bool Libre(double x, double y)
+                {
+                    for (double dy = -r; dy <= r; dy += 0.5)
+                        for (double dx = -r; dx <= r; dx += 0.5)
+                            if (dx * dx + dy * dy <= r * r && (relieve.AguaEn(x + dx, y + dy) || bosque.En(x + dx, y + dy) > 25)) return false;
+                    if (cauces.ACauce(x, y, r + 4) < r + 2) return false;
+                    // (ni otro nodo del mundo cerca: saldría junto al pueblo)
+                    if (artefacto.Nodos.Any(k => k.Posicion != null && Math.Abs(k.Posicion.X / 1000.0 - x) < r && Math.Abs(k.Posicion.Y / 1000.0 - y) < r)) return false;
+                    return puestos.All(q => Math.Sqrt((q.x - x) * (q.x - x) + (q.y - y) * (q.y - y)) > q.r + r);
+                }
+                for (double d = 0; d <= 200; d += 1.5)
+                    for (int k = 0; k < Math.Max(1, (int)(d * 2)); k++)
+                    {
+                        double a = k * Math.PI * 2 / Math.Max(1, (int)(d * 2)), x = p.x + d * Math.Cos(a), y = p.y + d * Math.Sin(a);
+                        if (Libre(x, y)) { puestos.Add((x, y, r)); return (x, y); }
+                    }
+                puestos.Add((p.x, p.y, r));
+                return p;
+            }
+            var vista = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            var nodos = new List<NodoRecurso>();
+            int n = 0;
+            string Plaza(double x, double y)
+            {
+                string id = $"pr-as{n++}";
+                vista.Entidades.Add(new Entidad { Asentamiento = new Asentamiento { Id = id, Nombre = id, Nivel = 1, FaccionId = "f-1", Posicion = Pu(x, y) } });
+                return id;
+            }
+            // (cada pueblo, con su madre 5 u al norte: el frente mira al norte, a la cámara al empezar)
+            var sitios = new List<(string nombre, (double x, double y) donde, bool vueltas)>();
+            void Pueblo(string nombre, (double x, double y) cerca, string tipo, string extractor, uint nivel, bool vueltas, bool caserio = false)
+            {
+                var (x, y) = cerca;
+                string madre = Plaza(x, y + 5);
+                if (caserio) Plaza(x + 2.4, y);
+                string id = $"pr-nodo{n++}";
+                nodos.Add(new NodoRecurso { Id = id, Tipo = tipo, Rareza = "comun", Posicion = Pu(x, y) });
+                vista.Entidades.Add(new Entidad { Pueblo = new Pueblo { Id = $"pr-pu{n++}", AsentamientoMadreId = madre, TipoExtractor = extractor, NivelAldea = nivel, NodoId = id, Posicion = Pu(x, y) } });
+                sitios.Add((nombre, (x, y), vueltas));
+            }
+            var pradera = caminos.SitiosDeSuelo["suelo_pradera"];
+            var seco = caminos.SitiosDeSuelo["suelo_seco"];
+            foreach (var (tipo, extractor, nivel) in new[] { ("piedra", "cantera", 1u), ("piedra", "cantera", 2u), ("piedra", "cantera", 3u), ("cobre", "mina", 1u), ("cobre", "mina", 2u), ("cobre", "mina", 3u) })
+                Pueblo($"{extractor}{nivel}", Sitio(pradera, 8), tipo, extractor, nivel, true);
+            foreach (var tipo in new[] { "estano", "hierro", "oro" }) Pueblo($"mina2_{tipo}", Sitio(pradera, 8), tipo, "mina", 2, false);
+            Pueblo("caserio_cantera2", Sitio(pradera, 8), "piedra", "cantera", 2, false, true);
+            Pueblo("caserio_mina2", Sitio(pradera, 8), "cobre", "mina", 2, false, true);
+            Pueblo("seco_cantera2", Sitio(seco, 8), "piedra", "cantera", 2, false);
+            Pueblo("ladera_mina2", caminos.Sitios["ladera"], "cobre", "mina", 2, false);
+            artefacto.Nodos.AddRange(nodos);
+            var antes = (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, NodosDelMapa.Estilo);
+            MapaDeMundo.AclararCopas = false;
+            NodosDelMapa.Estilo = EstiloDeNodos.Mejorado;
+            MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Mejorado;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, sitios[0].donde, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = vista });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                (double x, double y) aqui = default;
+                // (el del pueblo del centro: su nivel de detalle y su material)
+                string Niveles()
+                {
+                    var c = EscalaDelMapa.AEscena(aqui.x, aqui.y, 0);
+                    var e = mapa.Maquetas.Encargos(mapa.Vista).Where(k => !k.EsSuelo && k.Material.name.StartsWith("pueblo_"))
+                        .OrderBy(k => Vector2.Distance(new Vector2(k.M.m03, k.M.m23), new Vector2(c.x, c.z))).First();
+                    return $"{e.Nivel} ({e.Material.name})";
+                }
+                foreach (var (nombre, donde, vueltas) in sitios)
+                {
+                    aqui = donde;
+                    yield return Llegar(mapa, almacen, donde);
+                    yield return new WaitForSecondsRealtime(1);
+                    EsconderLaColumna();
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"pr_{nombre}_1_cerca");
+                    string lod = $"cerca {Niveles()}";
+                    if (!vueltas) { Debug.Log($"[Revision] {nombre}: nivel de detalle {lod}"); continue; }
+                    // (la luminancia: con y sin las miniaturas, las dos sin su suelo pisado)
+                    MaquetasDelMapa.DibujarSuelo = false;
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"pr_{nombre}_1_cerca_con");
+                    MaquetasDelMapa.DibujarMiniaturas = false;
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"pr_{nombre}_1_cerca_sin");
+                    MaquetasDelMapa.DibujarMiniaturas = MaquetasDelMapa.DibujarSuelo = true;
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"pr_{nombre}_2_habitual");
+                    lod += $"; habitual {Niveles()}";
+                    // (la luminancia: con y sin las miniaturas, las dos sin su suelo pisado)
+                    MaquetasDelMapa.DibujarSuelo = false;
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"pr_{nombre}_2_habitual_con");
+                    MaquetasDelMapa.DibujarMiniaturas = false;
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"pr_{nombre}_2_habitual_sin");
+                    MaquetasDelMapa.DibujarMiniaturas = MaquetasDelMapa.DibujarSuelo = true;
+                    yield return Vista(mapa, ZoomDelMapa.Alejado, 30, $"pr_{nombre}_3_alejado");
+                    lod += $"; alejado {Niveles()}";
+                    mapa.Camara.Giro = Math.PI;
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"pr_{nombre}_4_detras");
+                    mapa.Camara.Giro = 0;
+                    Debug.Log($"[Revision] {nombre}: nivel de detalle {lod}");
+                }
+            }
+            finally
+            {
+                MaquetasDelMapa.DibujarMiniaturas = MaquetasDelMapa.DibujarSuelo = true;
+                foreach (var k in nodos) artefacto.Nodos.Remove(k);
+                (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, NodosDelMapa.Estilo) = antes;
+            }
+        }
+
+        /// <summary>Las aldeas agrícolas («Mejorado», parte 4, etapa B; `MUNDO_CAPTURAS`, «al_…», a 1920×1080): el núcleo y sus campos de cada
+        /// cultivo (trigo, cebada, vid, oliva, sésamo y ganado) de nivel 2, y el trigo de nivel 1 y 3; una junto a un río, otra con un camino que
+        /// la cruza y dos vecinas a 3 u; de cerca y a zoom habitual. Y el coste de las maquetas con todas a la vista.</summary>
+        [Category("Mapa"), Explicit("capturas de las aldeas")]
+        [UnityTest, Timeout(6_000_000)]
+        public IEnumerator LasAldeas()
+        {
+            var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
+            if (string.IsNullOrEmpty(url)) Assert.Ignore("sin BRONZEAGE_PRUEBA_URL: no hay servidor de prueba");
+            yield return Preparar(url, "aldeas-");
+            var (relieve, artefacto, datos) = (pRelieve, pArtefacto, pDatos);
+            var caminos = BancoDeCaminos.Hacer(relieve, artefacto, datos);
+            var bosque = new RasterDeMundo(artefacto.DensidadBosque);
+            var cauces = new CaucesDelMapa(artefacto, relieve);
+            Sigilos.Cargar(Resources.Load<TextAsset>("MundoUI/Sigilo/catalogoSigilos").text, "{}", "{}");
+            rt = new RenderTexture(1920, 1080, 24) { antiAliasing = 4 };
+            var puestos = new List<(double x, double y, double r)>();
+            (double x, double y) Sitio((double x, double y) p, double r)
+            {
+                bool Libre(double x, double y)
+                {
+                    for (double dy = -r; dy <= r; dy += 0.5)
+                        for (double dx = -r; dx <= r; dx += 0.5)
+                            if (dx * dx + dy * dy <= r * r && (relieve.AguaEn(x + dx, y + dy) || bosque.En(x + dx, y + dy) > 25)) return false;
+                    if (cauces.ACauce(x, y, r + 4) < r + 2) return false;
+                    if (artefacto.Nodos.Any(k => k.Posicion != null && Math.Abs(k.Posicion.X / 1000.0 - x) < r && Math.Abs(k.Posicion.Y / 1000.0 - y) < r)) return false;
+                    return puestos.All(q => Math.Sqrt((q.x - x) * (q.x - x) + (q.y - y) * (q.y - y)) > q.r + r);
+                }
+                for (double d = 0; d <= 200; d += 1.5)
+                    for (int k = 0; k < Math.Max(1, (int)(d * 2)); k++)
+                    {
+                        double a = k * Math.PI * 2 / Math.Max(1, (int)(d * 2)), x = p.x + d * Math.Cos(a), y = p.y + d * Math.Sin(a);
+                        if (Libre(x, y)) { puestos.Add((x, y, r)); return (x, y); }
+                    }
+                puestos.Add((p.x, p.y, r));
+                return p;
+            }
+            var vista = new Foto { Ambito = new AmbitoPb { Tipo = AmbitoTipo.AmbitoVista, Id = "f-1" }, Version = 2 };
+            int n = 0;
+            string madre = null;
+            void Aldea((double x, double y) p, string cultivo, uint nivel, string especie = "vacuno")
+            {
+                if (madre == null)
+                {
+                    madre = "al-madre";
+                    vista.Entidades.Add(new Entidad { Asentamiento = new Asentamiento { Id = madre, Nombre = madre, Nivel = 2, FaccionId = "f-1", Posicion = Pu(p.x + 40, p.y + 40) } });
+                }
+                var q = new Pueblo { Id = $"al-{n++}", AsentamientoMadreId = madre, TipoExtractor = "aldeaAgricola", NivelAldea = nivel, Posicion = Pu(p.x, p.y) };
+                // (las cabezas, en milésimas, como las da el motor)
+                if (cultivo == "ganado") { q.RebanoEspecie = especie; q.RebanoCabezas = 40_000; }
+                q.Cultivo = cultivo;
+                vista.Entidades.Add(new Entidad { Pueblo = q });
+            }
+            var sitios = new List<(string nombre, (double x, double y) donde)>();
+            var seco = caminos.SitiosDeSuelo["suelo_seco"];
+            var pradera = caminos.SitiosDeSuelo["suelo_pradera"];
+            foreach (var cultivo in new[] { "trigo", "cebada", "vid", "oliva", "sesamo", "ganado" })
+            {
+                var p = Sitio(cultivo == "ganado" ? pradera : seco, 4);
+                Aldea(p, cultivo, 2);
+                sitios.Add(($"{cultivo}2", p));
+            }
+            foreach (uint nivel in new[] { 1u, 3u })
+            {
+                var p = Sitio(seco, 4);
+                Aldea(p, "trigo", nivel);
+                sitios.Add(($"trigo{nivel}", p));
+            }
+            // junto a un río: el sitio del vado del banco de caminos, 2 u al lado; con un camino que la cruza: el del sendero
+            // junto a un río, donde el motor la dejaría (`ORILLA_RIO`: a la media anchura del cauce, 0,75 u, más el radio de la aldea con sus
+            // campos, 1,8 u, del trazo): el punto más cercano al vado a 1,8 u o más del borde del cauce y sin agua
+            var (vx, vy) = caminos.Sitios["vado"];
+            (double x, double y) orilla = (vx + 3, vy);
+            for (double d = 2; d < 8; d += 0.1)
+            {
+                bool hecho = false;
+                for (int k = 0; k < 16 && !hecho; k++)
+                {
+                    double ox = vx + Math.Cos(k * Math.PI / 8) * d, oy = vy + Math.Sin(k * Math.PI / 8) * d;
+                    if (cauces.ACauce(ox, oy, 6) >= 1.8 && !relieve.AguaEn(ox, oy) && cauces.ACauce(ox, oy, 6) < 2.2) { orilla = (ox, oy); hecho = true; }
+                }
+                if (hecho) break;
+            }
+            Aldea(orilla, "cebada", 2);
+            sitios.Add(("rio", orilla));
+            // pegadas a un camino de verdad (los del banco de caminos, que se ponen en la vista): el sendero de la pradera, 0,6 u al lado, y el
+            // camino del bosque denso (el borde del bosque)
+            var sendero = caminos.Sitios["sendero"];
+            Aldea((sendero.x, sendero.y + 0.6), "trigo", 2);
+            sitios.Add(("camino", (sendero.x, sendero.y + 0.6)));
+            var bosqueCamino = caminos.Sitios["camino_bosque"];
+            Aldea(bosqueCamino, "cebada", 2);
+            sitios.Add(("bosque", bosqueCamino));
+            var gs = Sitio(seco, 4);
+            Aldea(gs, "ganado", 2, "ovino");
+            sitios.Add(("ganado_seco", gs));
+            // los núcleos de ganado de nivel 1 y 3 (el 2 es el de arriba), para el repaso de cerca
+            foreach (uint nivel in new[] { 1u, 3u })
+            {
+                var g = Sitio(pradera, 4);
+                Aldea(g, "ganado", nivel);
+                sitios.Add(($"ganado{nivel}", g));
+            }
+            vista.Entidades.AddRange(caminos.Vista().Entidades);
+            // dos vecinas a 3 u
+            var v = Sitio(seco, 6);
+            Aldea((v.x - 1.5, v.y), "vid", 2);
+            Aldea((v.x + 1.5, v.y), "oliva", 2);
+            sitios.Add(("vecinas", v));
+            // (para el coste: ocho pueblos extractores sobre sus nodos, cerca)
+            var nodosPuestos = new List<NodoRecurso>();
+            for (int k = 0; k < 8; k++)
+            {
+                var p = Sitio(seco, 3);
+                string tipo = new[] { "piedra", "cobre", "estano", "hierro", "oro" }[k % 5], nodo = $"al-nodo{k}";
+                nodosPuestos.Add(new NodoRecurso { Id = nodo, Tipo = tipo, Rareza = "comun", Posicion = Pu(p.x, p.y) });
+                vista.Entidades.Add(new Entidad { Pueblo = new Pueblo { Id = $"al-pu{k}", AsentamientoMadreId = madre, TipoExtractor = tipo == "piedra" ? "cantera" : "mina", NivelAldea = (uint)(1 + k % 3), NodoId = nodo, Posicion = Pu(p.x, p.y) } });
+            }
+            artefacto.Nodos.AddRange(nodosPuestos);
+            var antes = (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, NodosDelMapa.Estilo);
+            MapaDeMundo.AclararCopas = false;
+            NodosDelMapa.Estilo = EstiloDeNodos.Mejorado;
+            MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Mejorado;
+            try
+            {
+                var (almacen, sesion) = Almacen(url, sitios[0].donde, null);
+                almacen.Aplicar(new MensajeDeServidor { Foto = vista });
+                var mapa = Montar(almacen, sesion, relieve, artefacto, datos);
+                mapa.RadioVisionFijo = 15;
+                foreach (var (nombre, donde) in sitios)
+                {
+                    yield return Llegar(mapa, almacen, donde);
+                    yield return new WaitForSecondsRealtime(1);
+                    EsconderLaColumna();
+                    yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"al_{nombre}_1_cerca");
+                    yield return Vista(mapa, ZoomDelMapa.Normal, 30, $"al_{nombre}_2_habitual");
+                    if (nombre.StartsWith("ganado") && nombre != "ganado_seco")
+                    {
+                        mapa.Camara.Giro = Math.PI;
+                        yield return Vista(mapa, ZoomDelMapa.Cerca, 30, $"al_{nombre}_4_detras");
+                        mapa.Camara.Giro = 0;
+                    }
+                }
+                // (el coste con todo a la vista: alejado, en el centro de las aldeas de lo seco)
+                yield return Llegar(mapa, almacen, sitios[0].donde);
+                yield return Vista(mapa, ZoomDelMapa.Alejado, 30, "al_todo_3_alejado");
+                mapa.Maquetas.Olvidar();
+                yield return null;
+                yield return null;
+                Debug.Log($"[Aldeas] 13 aldeas y 8 pueblos: rehacer {mapa.Maquetas.MsRehacer:0.00} ms, asentar {mapa.Maquetas.MsAsentar:0.00} ms, dibujar {mapa.Maquetas.MsDibujar:0.00} ms, " +
+                          $"{mapa.Maquetas.PiezasDeCampos} piezas de los campos");
+            }
+            finally
+            {
+                foreach (var k in nodosPuestos) artefacto.Nodos.Remove(k);
+                (MapaDeMundo.AclararCopas, MaquetasDelMapa.Estilo, NodosDelMapa.Estilo) = antes;
+            }
+        }
+
         [Category("Mapa"), Explicit("capturas de los asentamientos")]
         [UnityTest, Timeout(6_000_000)]
         public IEnumerator LosAsentamientos()

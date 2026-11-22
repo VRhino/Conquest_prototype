@@ -174,6 +174,9 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Qué suelo hay en (x, y), con las reglas de `MapaSuelo` sin su ruido: cuánto es arena (por la altura, junto a la costa), roca
         /// (por la altura o por la pendiente ancha, la de ±2 u) y pradera verde (por la humedad y la fertilidad); de 0 a 1.</summary>
+        /// <summary>¿Hay agua del relieve (mar o lago) en (x, y)?</summary>
+        public bool AguaEn(double x, double y) => relieve.AguaEn(x, y);
+
         public (float arena, float roca, float verde) SueloEn(double x, double y)
         {
             float h = (float)relieve.AlturaEn(x, y);

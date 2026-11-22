@@ -4,8 +4,8 @@
 //  * `Conquest/Mundo/Banco de asentamientos`: abre una escena vacía sin guardar, entra en Play y monta el mapa en local, sin servidor, con el
 //    mundo que ya hay en disco (el que bajó la última partida, en `persistentDataPath/mundo`) y un banco de plazas: de nivel 1 (zonas de 12 y
 //    20 u), 2 (25 u), 3 (35 u), 4 (45 u) y 5 (55 u), las del 2 al 5 abiertas y amuralladas, cada una en tierra firme, llana y despejada,
-//    separadas. La cámara
-//    es la del mapa (arrastrar gira, la rueda acerca); `Conquest/Mundo/Banco: siguiente plaza` lleva a la siguiente.
+//    separadas; y los pueblos extractores («Mejorado»): canteras sobre piedra y minas sobre cobre, estaño, hierro y oro, de nivel 1 a 3, cada
+//    uno sobre su nodo; y las aldeas (cada cultivo, con sus campos). La cámara es la del mapa (arrastrar gira, la rueda acerca); `Conquest/Mundo/Banco: siguiente plaza` lleva a la siguiente.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -169,6 +169,32 @@ namespace ConquestTactics.Mundo.Mapa.Editor
                 sitios.Add((a.Nombre, x, y));
             }
             if (sitios.Count == 0) throw new InvalidOperationException("no se encontró ningún sitio despejado");
+            // los pueblos extractores, cada uno sobre su nodo (el nodo, añadido al artefacto que se dibuja), con la primera plaza de madre
+            string madre = foto.Entidades[0].Asentamiento.Id;
+            foreach (var tipo in new[] { "piedra", "cobre", "estano", "hierro", "oro" })
+                for (uint nivel = 1; nivel <= 3; nivel++)
+                {
+                    var sitio = Buscar(3.5);
+                    if (sitio == null) { Debug.LogWarning($"[Banco de asentamientos] sin sitio para el pueblo de {tipo} {nivel}"); continue; }
+                    var (x, y) = sitio.Value;
+                    string nodo = $"banco-nodo-{id}";
+                    artefacto.Nodos.Add(new NodoRecurso { Id = nodo, Tipo = tipo, Rareza = "comun", Posicion = Pu(x, y) });
+                    var q = new Pueblo { Id = $"banco-{id++}", AsentamientoMadreId = madre, TipoExtractor = tipo == "piedra" ? "cantera" : "mina", NivelAldea = nivel,
+                        NodoId = nodo, Posicion = Pu(x, y) };
+                    foto.Entidades.Add(new Entidad { Pueblo = q });
+                    sitios.Add(($"{q.TipoExtractor} de {tipo} · nivel {nivel}", x, y));
+                }
+            // las aldeas: cada cultivo de nivel 2, y el trigo de nivel 1 y 3 (con sus campos)
+            foreach (var (cultivo, nivel) in new[] { ("trigo", 1u), ("trigo", 2u), ("trigo", 3u), ("cebada", 2u), ("vid", 2u), ("oliva", 2u), ("sesamo", 2u), ("ganado", 2u) })
+            {
+                var sitio = Buscar(4.5);
+                if (sitio == null) { Debug.LogWarning($"[Banco de asentamientos] sin sitio para la aldea de {cultivo} {nivel}"); continue; }
+                var (x, y) = sitio.Value;
+                var q = new Pueblo { Id = $"banco-{id++}", AsentamientoMadreId = madre, TipoExtractor = "aldeaAgricola", NivelAldea = nivel, Cultivo = cultivo, Posicion = Pu(x, y) };
+                if (cultivo == "ganado") { q.RebanoEspecie = "ovejas"; q.RebanoCabezas = 60; }
+                foto.Entidades.Add(new Entidad { Pueblo = q });
+                sitios.Add(($"aldea de {cultivo} · nivel {nivel}", x, y));
+            }
 
             // el héroe del banco y su columna (la cámara la sigue), y el banco
             almacen = new Almacen();

@@ -119,6 +119,10 @@ namespace ConquestTactics.Mundo
         /// muralla, con tope (lo pone `MaquetasDelMapa`; sin él, 1).</summary>
         public static Func<double, double, double, double> FactorDeMuralla;
 
+        /// <summary>«Mejorado»: la huella (u) de un pueblo extractor por su tipo y su nivel, la del radio de su modelo (lo pone `MaquetasDelMapa`;
+        /// NaN si no hay modelo: la del prototipo).</summary>
+        public static Func<string, uint, double> HuellaDePueblo;
+
         /// <summary>La huella de una plaza contando su muralla (u): la del aro, el clic y el claro. Solo en «Mejorado» y si la tiene.</summary>
         public static double HuellaConMuralla(double huella, double nivel, double x, double y, bool muralla) =>
             HuellaMejorada && muralla && FactorDeMuralla != null ? huella * FactorDeMuralla(nivel, x, y) : huella;
@@ -169,11 +173,15 @@ namespace ConquestTactics.Mundo
                 var (x, y) = P(q.Posicion);
                 bool aldea = q.TipoExtractor == "aldeaAgricola";
                 double huella = (aldea ? 1.4 : 0.58) * Pueblo;
+                // («Mejorado»: el pueblo, la huella de su modelo; el clic, un 10 % más)
+                // (la aldea, solo su núcleo: el aro de 0,5 u y el clic de 0,62 u; un clic en sus campos manda la columna allí)
+                double hp = HuellaMejorada && HuellaDePueblo != null ? HuellaDePueblo(q.TipoExtractor, q.NivelAldea) : double.NaN;
+                if (aldea && !double.IsNaN(hp)) hp = 0.5;
                 r.Add(new CosaDelMapa
                 {
                     Clase = aldea ? ClaseDeCosa.Aldea : ClaseDeCosa.Pueblo, Id = q.Id, Nombre = aldea ? "Aldea" : "Pueblo", Detalle = "De " + NombreDePlaza(plazas, q.AsentamientoMadreId),
                     FaccionId = plazas.TryGetValue(q.AsentamientoMadreId, out var m) ? m.FaccionId : null,
-                    X = x, Y = y, Radio = aldea ? 0.58 * Pueblo : huella, Alto = 0.35, RadioClic = huella + Holgura, Color = ColorDeMadre(q.AsentamientoMadreId), Entidad = e,
+                    X = x, Y = y, Radio = !double.IsNaN(hp) ? hp : aldea ? 0.58 * Pueblo : huella, Alto = 0.35, RadioClic = !double.IsNaN(hp) ? (aldea ? 0.62 : hp * 1.1) : huella + Holgura, Color = ColorDeMadre(q.AsentamientoMadreId), Entidad = e,
                 });
             }
             foreach (var e in a.Todas(Entidad.CuerpoOneofCase.Avanzada))

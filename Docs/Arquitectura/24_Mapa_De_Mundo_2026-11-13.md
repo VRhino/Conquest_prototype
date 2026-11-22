@@ -648,8 +648,26 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
   - nivel 5: 1,12 y 1,09.
 - **Variantes.** Los niveles 3, 4 y 5 tienen segunda variante (`plaza<nivel>_2`): palacio al noroeste y templo o zigurat al oeste.
 
+### Pueblos y aldeas (parte 4, 2026-11-21)
+
+**Pueblos extractores** (canteras y minas de nivel 1 a 3, `pueblo_<cantera|mina>_<nivel>`):
+- Van en el centro de su nodo, que se dibuja con su variante 1 y el mismo giro que el pueblo; su pedregal se queda al pie del afloramiento y sin cascotes.
+- El frente mira al camino que sale de su huella; si no hay, a la plaza madre; si no hay ninguno de los dos, va por la semilla (`MaquetasDelMapa.SitioDePueblo`).
+- En espejo según la semilla del sitio. El espejo es una copia de la malla con la x y el orden de los triángulos vueltos, dibujada con la matriz sin espejo: una escala negativa enseñaría las caras de dentro. Por eso los `pueblo_*.fbx` se importan legibles.
+- Escala 0,9 (la unidad del caserío de nivel 1). La huella, el aro y el claro, del radio del json; el clic, un 10 % más.
+- Máscara: G el banderín (0,45 u, color de la madre); B los montones de mineral (color del recurso del nodo, `_Recurso`).
+
+**Aldeas agrícolas** (`nucleo_<labor|ganado>_<nivel>` y sus campos):
+- El núcleo, girado por la semilla y sin espejo. El aro y el clic, solo en el núcleo (0,5 y 0,62 u): un clic en los campos manda la columna allí.
+- Las parcelas, `ParcelasDeAldea` (el port de `aldea.py`): un mosaico por Wave Function Collapse sobre casillas de 0,108 u giradas por la semilla, en bandas y tramos. No se labra el agua, los ríos, la pendiente de más del 35 %, lo que queda a menos de 0,4 u del eje de un camino, los nodos, lo que pisan las demás cosas ni lo que está más cerca de otro asentamiento. El barbecho arado ocupa un 10-15 %. El sésamo solo está verde o en barbecho. Los campos abren en la vegetación un claro redondo de su radio.
+- El mapa de casillas de todas las aldeas va en una `Texture2DArray`, una capa por aldea. `MapaParcelas` pinta cada parcela con el color de su cultivo y su estado, mezclado con la tierra del suelo. Pinta también los surcos (fwidth), la linde de hierba entre parcelas y el borde fundido en un tercio de casilla.
+- Las sendas, de 2 a 4, son cintas de tierra de 0,055 u en la misma malla. La primera va hacia la madre, y se cortan en el agua.
+- Las piezas sueltas (`piezas.fbx`) van instanciadas: olivos al tresbolillo, cepas, gavillas y hacinas. En la ganadera, el rebaño va en dos o tres hatos, cada uno en su cercado a 0,65 u o más del núcleo, con su abrevadero y una calva en la entrada. Hay una figura por cada 2 cabezas (las del motor vienen en milésimas), de 8 a 30: vacas si es vacuno y ovejas si no. Llevan cercas en todos los cercados con hato y en una de cada tres lindes.
+- Las figuras: vacas de cuerpo, lomo, cuello, cabeza con cuernos y patas, en tres capas (pardo rojizo, crema y pardo oscuro), de 0,08 u; ovejas de lana crema, más bajas y de dos tercios del largo. Van sin solaparse (a 1,2 veces su largo).
+- Los pueblos, los núcleos y las piezas van en la cola 2456, después de los suelos pisados y los campos (que van 1 m por encima del suelo y sin escribir profundidad), para que no les tapen lo bajo. Las plazas, en la suya.
+- Coste, con 13 aldeas y 8 pueblos a la vista: rehacer, unos 54 ms, y asentar, 16 ms (solo cuando cambia algo); dibujar, 0,31 ms, con unas 2460 piezas.
+
 **Lo que sigue como en el prototipo:**
-- pueblos y aldeas;
 - avanzadas;
 - obras;
 - campamentos de mercenarios y de bandidos;
@@ -670,7 +688,9 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
   - `MaquetasDelMapaReglasTests`: variante por semilla, nivel de detalle, huella y rumbo del camino.
   - `LasMiniaturasQueSeDibujan`: muralla solo con muralla, color de Facción, variante, aro y clic con lo dibujado, y «Prototipo» como antes.
   - `LasMurallasDeLasPlazas`: el nivel 1 sin muralla aunque la tenga; la del 3, la de su FBX; las del 2, 4 y 5, la suya aparte de su variante; el aro y el clic, al radio de la muralla; la puerta, hacia el camino de menor id.
-  - `ElBancoDeAsentamientosSeMonta` (EditMode): monta el banco del menú y comprueba que hay una miniatura de cada nivel y ningún error.
+  - `ElBancoDeAsentamientosSeMonta` (EditMode): monta el banco del menú y comprueba que hay una miniatura de cada nivel, un pueblo de cantera y otro de mina de cada nivel, los núcleos y los campos de las ocho aldeas, y ningún error.
+  - `PueblosDelMapaTests` y `ParcelasDeAldeaTests` (EditMode): la regla del sitio, el giro y el espejo de los pueblos, y las parcelas.
+  - `UnClicEnLosCamposDeUnaAldeaMarcha` (EditMode, `CosasDelMapaTests`): un clic en los campos no elige la aldea; en el núcleo, sí.
 - Con capturas, explícitas:
   - `LasPlazasModeladas`: niveles 1 a 5 frente al prototipo y el suelo en lo seco.
   - `LasMurallasModeladas`: las murallas frente a las del prototipo y las segundas variantes sin muralla.
@@ -678,6 +698,7 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
   - `LaLuminanciaDeLasPlazas`: luminancia y ancho frente al prototipo.
   - `ElCosteDeLasPlazasModeladas`: coste por fotograma.
   - `LosAsentamientos` y `ElCosteDeLosAsentamientos`: los de la etapa 1.
+  - `LosPueblosExtractores`, `LaRevisionDePueblos` y `LasAldeas`: los pueblos y las aldeas de la parte 4.
 
 ## La vegetación (tema 3, 2026-11-20)
 

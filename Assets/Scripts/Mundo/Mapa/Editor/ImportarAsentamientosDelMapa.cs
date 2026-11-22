@@ -9,6 +9,9 @@ namespace ConquestTactics.Mundo.Mapa.Editor
 {
     sealed class ImportarAsentamientosDelMapa : AssetPostprocessor
     {
+        // (la versión: subirla vuelve a importar lo de la carpeta; 1, los pueblos legibles)
+        public override uint GetVersion() => 1;
+
         const string Carpeta = "Assets/Resources/MapaMundo/Asentamientos/";
 
         void OnPreprocessModel()
@@ -25,7 +28,8 @@ namespace ConquestTactics.Mundo.Mapa.Editor
             m.importCameras = false;
             m.importLights = false;
             m.importBlendShapes = false;
-            m.isReadable = false;
+            // (los pueblos, legibles: `MaquetasDelMapa` hace su copia en espejo)
+            m.isReadable = System.IO.Path.GetFileName(assetPath).StartsWith("pueblo_");
             m.meshCompression = ModelImporterMeshCompression.Off;
             m.addCollider = false;
         }

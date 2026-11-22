@@ -40,10 +40,11 @@ Shader "Conquest/MapaAsentamiento"
             UNITY_INSTANCING_BUFFER_START(Props)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Faccion)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _Recurso)
             UNITY_INSTANCING_BUFFER_END(Props)
 
             struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float2 uv : TEXCOORD2; float4 tono : COLOR; float4 faccion : TEXCOORD3; };
+            struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float2 uv : TEXCOORD2; float4 tono : COLOR; float4 faccion : TEXCOORD3; float4 recurso : TEXCOORD4; };
 
             Salida Vert(Entrada e)
             {
@@ -55,16 +56,19 @@ Shader "Conquest/MapaAsentamiento"
                 s.uv = e.uv;
                 s.tono = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
                 s.faccion = UNITY_ACCESS_INSTANCED_PROP(Props, _Faccion);
+                s.recurso = UNITY_ACCESS_INSTANCED_PROP(Props, _Recurso);
                 return s;
             }
 
             half4 Frag(Salida s) : SV_Target
             {
                 float3 c = SAMPLE_TEXTURE2D(_ColorTex, sampler_ColorTex, s.uv).rgb * s.tono.rgb;
-                float2 masc = SAMPLE_TEXTURE2D(_Mascara, sampler_Mascara, s.uv).rg;
+                float3 masc = SAMPLE_TEXTURE2D(_Mascara, sampler_Mascara, s.uv).rgb;
                 float ao = masc.r;
                 // las banderas: el color de la Facción (su paño es casi blanco en la textura: conserva su sombreado horneado)
                 c = lerp(c, s.faccion.rgb * saturate(c * 1.1), saturate(masc.g * 1.5));
+                // el mineral (B, los montones de las minas): el color del recurso del nodo, con el claroscuro horneado
+                c = lerp(c, s.recurso.rgb * saturate(dot(c, float3(0.3, 0.59, 0.11)) * 1.5), saturate(masc.b * 1.5) * s.recurso.a);
                 c *= lerp(1, ao, _Oclusion);
                 Light sol = GetMainLight();
                 float3 n = normalize(s.normal);
