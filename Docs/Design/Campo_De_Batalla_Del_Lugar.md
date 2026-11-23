@@ -1,6 +1,6 @@
 # Campo de batalla del lugar
 
-> **Estado: diseño acordado con el autor el 2026-11-22, sin implementar.** Es un sistema de Conquest. Lo que toca al motor (contrato del ticket y lanzador, §3) está apuntado en la entrada 78 de `Docs/Mecanicas a desarrollar.md` del motor (repositorio BronzeAge). Las cifras son placeholders por calibrar. Contrastado contra el código del motor (`BronzeAgeFase0`, commit `e5be5790`) y de Conquest (rama `main` del 2026-11-21), no contra los documentos. La implementación se prueba con el autor antes de subir a `main`.
+> **Estado: diseño acordado con el autor el 2026-11-22, sin implementar.** Es un sistema de Conquest. Lo que toca al motor (el recorte del lugar en el ticket, §3) está apuntado en la entrada 78 de `Docs/Mecanicas a desarrollar.md` del motor (repositorio BronzeAge). Las cifras son placeholders por calibrar. Contrastado contra el código del motor (`BronzeAgeFase0`, commit `e5be5790`) y de Conquest (rama `main` del 2026-11-21), no contra los documentos. La implementación se prueba con el autor antes de subir a `main`.
 
 ## 1. Qué es
 
@@ -14,7 +14,7 @@ La regla de fondo ya está escrita en el contrato del motor (`proto/bronzeage/v1
 
 | Pieza | Dónde | Qué aporta | Qué le falta |
 |---|---|---|---|
-| `BattleTicket.mapa_referencia` | `battle.proto:158-162, 207-210`; se rellena en `crates/nucleo/src/proyeccion/batalla.rs:179-181` | `mapa_id` (hash del artefacto) y `centro` (el `Batalla.punto`) en toda batalla que no es asedio | Caminos, de dónde viene cada bando, hash del relieve |
+| `BattleTicket.mapa_referencia` | `battle.proto:158-162, 207-210`; se rellena en `crates/nucleo/src/proyeccion/batalla.rs:179-181` | `mapa_id` (hash del artefacto) y `centro` (el `Batalla.punto`) en toda batalla que no es asedio | El recorte del lugar (§3): relieve, rejillas, ríos y caminos del campo, y de dónde viene cada bando |
 | `Batalla.punto` | `crates/combate/src/ciclo.rs:367-388` | En campo abierto es la posición del **defensor** en `t` (`batallas.rs:404`), no el punto medio | Nada |
 | `SettlementBattleSnapshot` | `battle.proto:181-187` | Edificios y celdas de muralla del asedio | El punto de la plaza: el asedio no lleva `centro` |
 | Artefacto de mundo | `world.proto:105-131`, `crates/mundo/src/lib.rs` | Rejillas de 4 u (48 m): `altura`, `terreno` (agua, costa, llano, colina, montaña, cima), `densidad_bosque`, `humedad`, `transitable`, `coste`; ríos con sus vados como punto (`RADIO_VADO` 0,75 u, `lib.rs:93`) | Nada para esto |
@@ -40,20 +40,23 @@ Escala: 1 u = 12 m (`factor_unity`). Un río dibujado mide unos 18 m de ancho y 
 | Red | `Net/EspejoClienteSystem.cs:63-74`, `Net/MandoSystem.cs:105-128` | Servidor autoritativo. Cada cliente carga BattleScene por su NavMesh y predice su héroe con él: **los seis jugadores necesitan la misma malla que el servidor** |
 | NavMesh en marcha | ninguna llamada a `BuildNavMesh`/`UpdateNavMesh` | El paquete `com.unity.ai.navigation` 2.0.14 está instalado; se puede hornear en marcha |
 
-Los clientes ya descargan el artefacto y el relieve enteros y los guardan en disco (`Mundo/MundoEnDisco.cs:45, 57`). El proceso servidor de batalla no: solo recibe el ticket del lanzador y no sabe la dirección del motor.
+Los clientes ya descargan el artefacto y el relieve enteros y los guardan en disco (`Mundo/MundoEnDisco.cs:45, 57`). El proceso servidor de batalla no: solo recibe el ticket del lanzador. Y no debe descargar el mundo entero para usar un trozo de 8 u (decisión del autor, 2026-11-23: menos tiempo de carga de batalla).
 
 ## 3. Quién aporta qué
 
-**El motor aporta solo lo que Conquest no puede deducir.** Todo lo que sale del artefacto (relieve, agua, ríos, vados, bosque, clase de terreno) lo lee Conquest por su cuenta, con el `mapa_id` y el `centro` que ya llegan.
+**El ticket lleva solo lo que la batalla necesita** (decisión del autor, 2026-11-23). El motor recorta del mundo el cuadrado del campo y lo manda dentro del ticket. Ni el servidor de batalla ni los clientes descargan ni leen el artefacto para la batalla, y la carga es más corta.
 
-Cambios en el motor (pequeños):
+Cambios en el motor:
 
-1. `BattleMapReference` gana:
-   - `relieve_id`: el hash del paquete de relieve (hoy solo va en `InfoMundo`).
-   - `caminos`: los tramos de la red de caminos que cruzan el círculo de radio `radio_lectura` alrededor del centro, con su escalón. Son pocos puntos.
+1. `BattleMapReference` gana un `RecorteDelLugar`, de `lado_recorte` (el lado del mundo del área jugable más el fondo, unas 13 u) centrado en `centro`:
+   - `alturas`: las muestras del relieve, cada 0,5 u, en u16 (unas 27×27, un par de KB), con su bit de agua (mar y lagos).
+   - `terreno`, `bosque` y `humedad`: las celdas de 4 u que toca el recorte (unas 4×4).
+   - `rios`: los trozos de polilínea que cruzan el recorte, con sus vados.
+   - `caminos`: los tramos de la red de caminos que cruzan el recorte, con su escalón.
    - `procedencia_atacante` y `procedencia_defensor`: un `Punto` por bando, a `distancia_procedencia` hacia atrás sobre su plan (o la plaza, el campamento o el pueblo de donde sale). Si un bando estaba quieto, su posición.
-2. El lanzador pasa al proceso de batalla la URL base del motor (`LANZADOR_ARGUMENTOS`, `crates/lanzador/src/main.rs`), y el proceso descarga y guarda el artefacto y el relieve por hash, como ya hace el cliente.
-3. Más adelante, para asedios: `SettlementBattleSnapshot` gana `centro`, para montar el terreno alrededor de la plaza (§9).
+   - El motor ya tiene todo eso: `Mundo::altura_en`, `densidad_bosque_en`, `terreno_en`, los ríos del artefacto, el paquete de relieve y la red de caminos.
+2. `mapa_id` se queda, como comprobación de que el recorte sale del mundo vigente.
+3. Más adelante, para asedios: `SettlementBattleSnapshot` gana `centro` y el mismo recorte, para montar el terreno alrededor de la plaza (§9).
 
 Conquest aporta todo lo demás: la lectura del lugar, la generación del campo, su montaje en Unity y sus efectos en el combate.
 
@@ -61,7 +64,7 @@ Conquest aporta todo lo demás: la lectura del lugar, la generación del campo, 
 
 Siguen el modelo híbrido: la generación es datos puros; Unity solo monta lo que sale; la lógica de combate lee una rejilla ECS.
 
-1. **Lectura del lugar** (C# puro, junto a `Relieve.cs`). Con el artefacto, el relieve y el ticket, muestrea un cuadrado de `lado_lectura` centrado en `centro`: altura, bit de agua, clase de terreno, bosque, humedad, ríos y vados recortados, caminos del ticket y procedencias. No hay rotación: el norte del campo es el norte del mundo, y el minimapa de preparación casa con el mapa de mundo.
+1. **Lectura del lugar** (C# puro, junto a `Relieve.cs`). Lee el `RecorteDelLugar` del ticket: alturas, bit de agua, clase de terreno, bosque, humedad, ríos y vados, caminos y procedencias. No toca el artefacto. No hay rotación: el norte del campo es el norte del mundo, y el minimapa de preparación casa con el mapa de mundo.
 2. **Generación del campo** (C# puro, aritmética entera). Saca:
    - la rejilla de alturas (u16, paso `paso_alturas`);
    - la rejilla de zonas (u8 por celda: llano, colina, bosque claro, bosque cerrado, arena, agua somera, agua honda, camino, acantilado);
@@ -175,7 +178,7 @@ La IA (escuadras y héroes de la IA) recibe de la generación los sitios clave d
 
 La batalla es de servidor autoritativo, no de pasos sincronizados. Aun así, los seis clientes predicen su héroe sobre su NavMesh, y tienen que ver el mismo campo que el servidor.
 
-- **Cada parte genera el campo por su cuenta** desde las mismas entradas (artefacto, relieve, ticket). Los combatientes ya reciben el ticket, y el artefacto y el relieve ya los tienen en disco. No se manda el campo por la red.
+- **Cada parte genera el campo por su cuenta** desde la misma entrada: el recorte del ticket, que reciben todos los combatientes. No depende de cachés en disco (ni de un mundo viejo en caché), y no se manda el campo generado por la red.
 - **La generación es aritmética entera:** alturas en u16, posiciones cuantizadas, azar de `trazado::azar` portado a C# o SplitMix64. Nada de `Mathf.PerlinNoise` ni de `float` en lo que decide la forma. El ruido es entero, sobre una rejilla.
 - **La semilla es del lugar, no de la batalla:** hash de `mapa_id` y del centro cuantizado a la celda. El mismo vado da siempre el mismo campo, y los jugadores pueden aprenderlo. Es una duda (§11, 1).
 - **Huella:** cada cliente calcula la huella del campo y la manda al conectar; el servidor la compara con la suya. Si no casa, se registra y la batalla sigue. El servidor manda igualmente; lo peor es que ese cliente vea correcciones de predicción.
@@ -196,7 +199,7 @@ La batalla es de servidor autoritativo, no de pasos sincronizados. Aun así, los
 | Objetos | Árboles como instancias del Terrain (instanciado por GPU) | Hasta `max_arboles` (6000); colliders solo en troncos del área jugable, hasta `max_colliders` (1500) |
 | NavMesh | Solo el área jugable, 600×600 m; vóxel de 0,25 (hoy 0,167) | Horneado asíncrono por teselas durante la preparación; objetivo, menos de 5 s. Es el paso con más riesgo: hay que medirlo antes de cerrar nada |
 | Agua | Planos sin física, la orilla somera con material propio | Despreciable |
-| Memoria | Artefacto y relieve en disco; el relieve se abre por teselas con LRU (`Relieve.cs`) | Unas pocas teselas de unos 50 KB |
+| Ticket | El recorte: unos 27×27 u16 de alturas, 4×4 celdas por rejilla y unas pocas polilíneas | Unos pocos KB por ticket; nada que descargar |
 
 Todo cabe en la fase de preparación, que ya existe: el cliente genera y hornea mientras el jugador ve la pantalla de preparación, y el minimapa de esa pantalla (`PantallasDeMundo.Preparacion.cs:408`, hoy siempre `DefaultMap`) se pinta de la misma rejilla de alturas y zonas.
 
@@ -229,7 +232,7 @@ No queda ninguna abierta.
 | `anillo_fondo` | 200 m | Terreno no jugable alrededor |
 | `lado_mundo` | 8 u | Lado del cuadrado del mundo que se estira al área jugable (el fondo lee un poco más) |
 | `escala_interna` | 75 m/u | `lado_jugable / lado_mundo`; el mapa de mundo va a 12 m/u |
-| `radio_lectura` | 1000 m | Radio de los caminos que manda el motor |
+| `lado_recorte` | 13 u | Lado del mundo que el motor recorta para el ticket (jugable más fondo) |
 | `distancia_procedencia` | 2 u | Cuánto se retrocede sobre el plan para la procedencia |
 | `exageracion_vertical` | ×1 a ×6 | Por calibrar: ×6 conserva las pendientes del mundo |
 | `relieve_minimo` | 8 m | Diferencia mínima de altura en el área jugable |
