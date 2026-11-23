@@ -8,7 +8,7 @@ Hasta cerrar el diseño no se pasa a código de gameplay. Evolucionar documentac
 
 ## Entregables
 
-- [x] Contrastar handoff con el árbol de trabajo: `Docs/Arquitectura/20_Contraste_Handoff_IA_Tactica_2026-10-14.md`.
+- [x] Contrastar handoff con el árbol de trabajo: `Docs/Arquitectura/20_Contraste_Handoff_IA_Tactica_2026-10-14.md` (retirado el 2026-11-23; en git).
 - [x] Crear HTML de diseño vivo v0.2: `Docs/Design/ia-tactica/diseno-ia-tactica.html`.
 - [x] Evolucionar a v0.3: cerebro independiente de capacidades; humano y bot convergen en control, validación y capacidades comunes (D13 acordado).
 - [x] Incorporar acuerdos: contactos compartidos con memoria/incertidumbre, alcance completo por fases y MVP escudos/arqueros.

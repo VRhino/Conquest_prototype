@@ -128,4 +128,4 @@ Los valores efectivos dependen de los authorings/prefabs de la escena. Una durac
 - `Assets/Scripts/Squads/Systems/RetreatLogic.System.cs`
 - `Assets/Scripts/Squads/Systems/SquadSpawning.System.cs`
 
-Véase también [ciclo de vida del héroe](../Arquitectura/4_Ciclo_Vida_Heroe_2026-09-14.md), [retirada por muerte](../Arquitectura/6_Retirada_Muerte_Dueno_2026-09-14.md) y [motor local](../Arquitectura/14_Motor_Local_Heroe_2026-09-15.md).
+Véase también la [arquitectura actual](../Arquitectura/1_Arquitectura_Actual.md).

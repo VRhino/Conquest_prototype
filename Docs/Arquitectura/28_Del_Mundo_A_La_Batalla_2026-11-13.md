@@ -107,7 +107,7 @@ El recorrido:
 
 ## Tanda 1 del paso 5: la preparación de la batalla (2026-11-14)
 
-Las decisiones son las respuestas de Víctor a las dudas del paso 5, que están en `tasks/bloque4-paso5-preparacion-y-despues.md`.
+Las decisiones son las respuestas de Víctor a las dudas del paso 5, que están en el plan del paso 5 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ### Qué hace
 

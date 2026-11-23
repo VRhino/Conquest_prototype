@@ -1,7 +1,7 @@
 # 33. El Mercado y las caravanas (paso 10 del bloque 4)
 
 2026-11-16. Lo que BronzeAgeClient hace con el comercio de la plaza (§3.14 del inventario), en Conquest. El plan, las dudas y las respuestas de
-Víctor están en `tasks/bloque4-paso10-plan.md`.
+Víctor están en el plan del paso 10 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ## Tanda 1: las órdenes del Mercado (2026-11-16, a revisar)
 

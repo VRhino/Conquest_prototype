@@ -205,14 +205,8 @@ Los hashes están centralizados en `AnimationHashes`. El pulso `HeroAnimationCom
 - 30/30 pruebas PlayMode (2026-10-14); fixture de 900 agentes y perfil renderizado explícito también pasan.
 - 69 assemblies de Player Windows compiladas (2026-10-14).
 - Pruebas específicas cubren motor local, teleport revisionado, autoridad/animación, fases y reinicio de batalla, muerte/targeting, colisiones de proyectiles, identidad persistente, commit de inventario, cancelación de rutas y repulsión de 900 agentes.
-- Resultados y límites de rendimiento: [Revisión de sistemas](Arquitectura/19_Revision_Sistemas_Optimizacion_2026-10-13.md).
 
 ## Referencias
 
 - [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md)
 - [Pipeline de movimiento](TroopMovementPipeline.md)
-- [Control de squads](Arquitectura/3_Control_Escuadras_2026-09-14.md)
-- [Retirada por muerte](Arquitectura/6_Retirada_Muerte_Dueno_2026-09-14.md)
-- [Destinos NavMesh](Arquitectura/9_Destinos_NavMesh_Fallos_Path_2026-09-14.md)
-- [Motor local](Arquitectura/14_Motor_Local_Heroe_2026-09-15.md)
-- [Animación remota](Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md)

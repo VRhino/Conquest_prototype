@@ -3,17 +3,18 @@
 Trabajo que se ha dejado fuera a propósito de un plan, con el porqué y lo necesario para retomarlo. Cada punto dice qué es,
 por qué no entra ahora, qué hay que tener en cuenta y por dónde empezar.
 
-Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia del commit o del documento, y no se borra.
+Los planes de los que sale cada documento se retiraron de `tasks/` el 2026-11-23 y siguen en git. Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia del commit o del documento, y no se borra.
 
 | Documento | Ámbito | Plan del que sale |
 |---|---|---|
-| [Formaciones_y_Posturas.md](./Formaciones_y_Posturas.md) | Datos de formación, plantillas, reparto, posturas, animación y defensa | `tasks/todo.md` (formaciones por datos), 2026-10-20 |
-| [Movimiento.md](./Movimiento.md) | Objetivos abiertos del lote 2, lote 3, escala y coste | `tasks/movement-batch2-plan.md` y `Docs/Design/Movimiento_Formaciones.md` §10 |
-| [Habilidades_Perks.md](./Habilidades_Perks.md) | Lo que deja abierto el lanzador de habilidades y los perks | `tasks/todo.md` (Fase 2 de `Aprendizajes_Referencia.md`), 2026-10-22 |
-| [Pila_Modificadores.md](./Pila_Modificadores.md) | Stats de objeto con `StatId` (L7-6) y lo que dejó abierto la pila de modificadores | `tasks/todo.md` (Fase 1 de `Aprendizajes_Referencia.md`), 2026-10-21 |
-| [Muerte_Heroe.md](./Muerte_Heroe.md) | Animación de muerte, retirar el cuerpo y reaparecer | `tasks/todo.md` (presentación de la muerte del héroe), 2026-10-27 |
-| [IA.md](./IA.md) | LOD de IA (L4-07), datos de provocación y de parámetros de IA, visibilidad por soldado | `tasks/todo.md` (IA del catálogo), 2026-11-03 |
-| [Combate.md](./Combate.md) | Datos de los rasgos del golpe, terreno y condicionados; reacciones al golpe (L1-09) | `tasks/todo.md` (combate pendiente del catálogo), 2026-11-03 |
+| [Formaciones_y_Posturas.md](./Formaciones_y_Posturas.md) | Datos de formación, plantillas, reparto, posturas, animación y defensa | Plan retirado de `tasks/todo.md` (formaciones por datos), 2026-10-20 |
+| [Movimiento.md](./Movimiento.md) | Objetivos abiertos del lote 2, lote 3, escala y coste | Plan del lote 2 (retirado) y `Docs/Design/Movimiento_Formaciones.md` §10 |
+| [Habilidades_Perks.md](./Habilidades_Perks.md) | Lo que deja abierto el lanzador de habilidades y los perks | Plan retirado de `tasks/todo.md` (Fase 2 de `Aprendizajes_Referencia.md`), 2026-10-22 |
+| [Pila_Modificadores.md](./Pila_Modificadores.md) | Stats de objeto con `StatId` (L7-6) y lo que dejó abierto la pila de modificadores | Plan retirado de `tasks/todo.md` (Fase 1 de `Aprendizajes_Referencia.md`), 2026-10-21 |
+| [Muerte_Heroe.md](./Muerte_Heroe.md) | Animación de muerte, retirar el cuerpo y reaparecer | Plan retirado de `tasks/todo.md` (presentación de la muerte del héroe), 2026-10-27 |
+| [IA.md](./IA.md) | LOD de IA (L4-07), datos de provocación y de parámetros de IA, visibilidad por soldado | Plan retirado de `tasks/todo.md` (IA del catálogo), 2026-11-03 |
+| [Combate.md](./Combate.md) | Datos de los rasgos del golpe, terreno y condicionados; reacciones al golpe (L1-09) | Plan retirado de `tasks/todo.md` (combate pendiente del catálogo), 2026-11-03 |
+| [Visuales_Ligeros_Batalla.md](./Visuales_Ligeros_Batalla.md) | Medidas, build, regeneración y variantes de los visuales ligeros de batalla | Plan de visuales ligeros (2026-10-29), cerrado a medias el 2026-10-30 |
 
 ## Estado general (2026-11-04, tras combate, formaciones, IA y movimiento del catálogo)
 | Documento | Abiertos | Bloqueados | Lo más prioritario |
@@ -25,6 +26,7 @@ Cuando un plan cierre un punto, se marca aquí como **Hecho** con la referencia 
 | Muerte_Heroe.md | D4, D5 (D1 hecho el 2026-11-10) | — | D5 (medir el coste de recrear el visual) |
 | IA.md | I1-I5 | — | I1 (medir el coste de la IA antes de un LOD) |
 | Combate.md | C3, C5-C8, C13-C15 (C1, C2, C4, C9 a C12 cerrados) | — | C14 (datos de derribo y despedido, aprobar tabla) |
+| Visuales_Ligeros_Batalla.md | V1-V8 | — | V1 y V2 (medir en Player antes de nada) |
 
 Lo que el catálogo de la referencia aún no ha planificado (incluidos los 20 puntos añadidos el 2026-10-26, marcados
 "(amp.)") está en `Docs/Design/Aprendizajes_Referencia.md` §4, con su estado al final de §5. Cuando un plan los tome, lo

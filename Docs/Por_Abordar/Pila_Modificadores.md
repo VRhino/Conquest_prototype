@@ -1,7 +1,7 @@
 # Pila de modificadores: lo que queda fuera
 
 Fecha: 2026-10-21. Sale del cierre de la Fase 1 de `Docs/Design/Aprendizajes_Referencia.md` (pila de modificadores, T1;
-plan en `tasks/todo.md`). La regla y las fuentes están en `Docs/Mechanics/DamageMechanics.md` §4.1.
+plan en el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). La regla y las fuentes están en `Docs/Mechanics/DamageMechanics.md` §4.1.
 
 ## Resumen
 | # | Tema | Prioridad | Estado |

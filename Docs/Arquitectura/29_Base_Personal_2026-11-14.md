@@ -1,7 +1,7 @@
 # 29. La base personal (bloque 4, paso 6, tanda 1)
 
 2026-11-14. Calco de la «Base personal» de BronzeAgeClient (`ui/basePersonal.ts`, `ui/panelCarro.ts`) en UI Toolkit, encima del mapa o del
-interior del campamento. Las dudas y lo que contestó Víctor están en `tasks/bloque4-paso6-plan.md`.
+interior del campamento. Las dudas y lo que contestó Víctor están en el plan del paso 6 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ## Qué hay
 

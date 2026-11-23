@@ -1,6 +1,6 @@
 # 32. El mapa estratégico 2D y Territorio (paso 9 del bloque 4)
 
-2026-11-15. El plan, las tandas y las respuestas de Víctor: `tasks/bloque4-paso9-plan.md`.
+2026-11-15. El plan, las tandas y las respuestas de Víctor: el plan del paso 9 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ## Tanda 1: el mapa 2D, elegir un punto, Territorio y Fundación (a revisar)
 

@@ -1,7 +1,7 @@
 # 35. La Taberna, los contratos y las misiones (paso 12 del bloque 4)
 
 2026-11-16. Lo que BronzeAgeClient hace con la intel de la taberna, los mercenarios por contrato y las misiones (§3.15, §3.16 y §3.17 del
-inventario), en Conquest. El plan, las respuestas de Víctor y las dudas están en `tasks/bloque4-paso12-plan.md`.
+inventario), en Conquest. El plan, las respuestas de Víctor y las dudas están en el plan del paso 12 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ## Tanda 1: la Taberna (2026-11-16, en commit `eced9885`)
 

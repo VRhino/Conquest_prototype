@@ -13,51 +13,7 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ### Arquitectura
 
-> Los documentos numerados del 2 al 21 son registros fechados de cada intervención; describen el estado de su época y no se reescriben. El estado actual está en `1_Arquitectura_Actual.md`.
-
-- Más registros fechados: [16 Animación de locomoción](./Arquitectura/16_Animacion_Locomocion_2026-10-08.md), [17 Inventario y UI](./Arquitectura/17_Inventario_Control_UI_2026-10-08.md), [18 Limpieza](./Arquitectura/18_Inventario_Limpieza_2026-10-09.md), [19 Revisión de sistemas](./Arquitectura/19_Revision_Sistemas_Optimizacion_2026-10-13.md), [20 Contraste con la IA táctica](./Arquitectura/20_Contraste_Handoff_IA_Tactica_2026-10-14.md), [21 Estructura de assets](./Arquitectura/21_Revision_Estructura_Assets_2026-10-15.md).
-
-- [Animación remota separada](./Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md):
-  Responsabilidad exclusiva del Animator remoto, separada del puente de pose y del motor local.
-
-- [Motor local del héroe](./Arquitectura/14_Motor_Local_Heroe_2026-09-15.md):
-  Frontera explícita entre intención ECS, CharacterController y resultado físico confirmado.
-
-- [Limpieza de estado muerto en movimiento](./Arquitectura/13_Limpieza_Estado_Movimiento_2026-09-15.md):
-  Componentes sin lectores retirados y referencia del pipeline actual corregida.
-
-- [Detección y targeting a escala](./Arquitectura/12_Deteccion_Targeting_Escala_2026-09-15.md):
-  Candidatos compartidos por squad, eliminación de copias por unidad y medición con 900 unidades.
-
-- [Escala de bodyblock con 900 agentes](./Arquitectura/11_Escala_Bodyblock_900_Agentes_2026-09-14.md):
-  Pool de buckets, frame caliente sin GC y medición reproducible.
-
-- [Movimiento del héroe y autoridad física](./Arquitectura/10_Movimiento_Heroe_Autoridad_Fisica_2026-09-14.md):
-  Autoridad local/remota, destinos IA y contrato de colisiones por equipo.
-
-- [Destinos NavMesh y fallos de path](./Arquitectura/9_Destinos_NavMesh_Fallos_Path_2026-09-14.md):
-  Proyección navegable, destino efectivo, fallback y reintento controlado.
-
-- [Bodyblock y orden físico](./Arquitectura/8_Bodyblock_Orden_Fisico_2026-09-14.md):
-  Fuerza independiente de FPS, solapamiento exacto y sincronización posterior a la corrección.
-
-- [Formación, geometría y estabilidad temporal](./Arquitectura/7_Formacion_Geometria_FPS_2026-09-14.md):
-  Centro fraccional, slots persistentes, estado por unidad y comportamiento independiente de FPS.
-
-- [Retirada por muerte del dueño](./Arquitectura/6_Retirada_Muerte_Dueno_2026-09-14.md):
-  Decisión persistente, espera de destino, supervivientes y redespliegue sin duplicar instancias.
-
-- [Intercambio y retirada por reemplazo](./Arquitectura/5_Intercambio_Retirada_2026-09-14.md):
-  Validación previa, reservas, marcador activo y llegada de todos los supervivientes.
-
-- [Ciclo de vida del héroe local](./Arquitectura/4_Ciclo_Vida_Heroe_2026-09-14.md):
-  Salud, intención de movimiento inhibida, respawn y revisión de posicionamiento.
-
-- [Control de escuadras: reparación por fases](./Arquitectura/3_Control_Escuadras_2026-09-14.md):
-  Órdenes de IA, formación, mantener posición, validación y pendientes del movimiento.
-
-- [Reparaciones y validación — 2026-09-14](./Arquitectura/2_Reparaciones_Arquitectura_2026-09-14.md):
-  Correcciones aplicadas, pruebas reproducibles y trabajo pendiente.
+> Los registros fechados del 2 al 21 (septiembre y octubre) se retiraron el 2026-11-23 y siguen en git. El estado actual está en `1_Arquitectura_Actual.md`; los documentos del 22 al 36 cuentan la red y la migración de BronzeAgeClient.
 
 - [Arquitectura/1_Arquitectura_Actual.md](./Arquitectura/1_Arquitectura_Actual.md):
   Referencia versionada y verificada de la arquitectura de datos actual: persistencia, catálogos,
@@ -89,14 +45,10 @@ La documentación está organizada por temas clave, cubriendo desde la estructur
 
 ### Referencias técnicas
 
-- [buggedFunctionalities.md](./buggedFunctionalities.md):
-  Registro vigente de problemas abiertos, reparaciones cerradas y límites de validación.
 - [ConfiguracionPrefabs_ECS_Visual.md](./ConfiguracionPrefabs_ECS_Visual.md):
   Guía para configurar prefabs visuales y su integración con ECS.
 - [Existing_Databases.md](./Existing_Databases.md):
   Documentación sobre las bases de datos existentes en el proyecto.
-- [Funcionalidades.md](./Funcionalidades.md):
-  Resumen de las funcionalidades principales implementadas en el juego.
 - [GDD.md](./GDD.md):
   Diseño de producto y comportamiento objetivo; no es inventario de implementación.
 - [Hero_detail_prefab_structure.md](./Hero_detail_prefab_structure.md):

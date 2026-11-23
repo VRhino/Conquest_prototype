@@ -1,7 +1,7 @@
 # 30. Tu plaza por dentro (2026-11-15)
 
 Paso 7 del bloque 4 de [`Hoja_De_Ruta.md`](../Hoja_De_Ruta.md) (inventario §3.6, §3.7 y la armería de §3.9). Va en tres tandas con
-parada; el análisis y las dudas, en `tasks/bloque4-paso7-plan.md`. Víctor contestó «Continua» (2026-11-15): las 13 dudas van como se
+parada; el análisis y las dudas, en el plan del paso 7 (retirado de `tasks/` el 2026-11-23; sigue en git). Víctor contestó «Continua» (2026-11-15): las 13 dudas van como se
 propusieron. El minimapa queda para más adelante: su hueco del HUD se deja vacío.
 
 ## Tanda 1: entrar en tu plaza y su HUD

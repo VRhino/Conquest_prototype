@@ -259,7 +259,7 @@ jinete gira fuera del arco permitido respecto a la montura, pierde la capacidad 
 | ID | Título | Problema actual | Propuesta | Beneficio | Coste | Riesgo | Prio. |
 |---|---|---|---|---|---|---|---|
 | l6-01 | Reparto de autoridad | Sin reparto; `IsLocalPlayer` decide quién mueve (`EntityVisualSync.ConfigureMovementAuthority`); `Docs/ModeloHybrido.md` lo admite | Servidor simula todo; cliente predice solo su héroe; reconciliación por mezcla de offset | Anti-trampas básico | L | M | A |
-| l6-02 | Replicar héroe y escuadra, no unidades | 900 agentes locales (`Docs/Arquitectura/11_*`) | 6 héroes + 6 escuadras; formación recalculada en cliente | ~15x menos ancho de banda (~30 kbps vs ~0,5 Mbps) | M | M | A |
+| l6-02 | Replicar héroe y escuadra, no unidades | 900 agentes locales (registro 11 de Arquitectura, retirado; en git) | 6 héroes + 6 escuadras; formación recalculada en cliente | ~15x menos ancho de banda (~30 kbps vs ~0,5 Mbps) | M | M | A |
 | l6-03 | Cuantización e ids cortos | NGO serializa `Vector3` de 12 B | u16 por eje sobre límites del mapa; ids de 1 B; enum de mensajes | 2-3x menos bytes | S | B | A |
 | l6-07 | Ensamblados y puente ECS-red | `Game.ECS.asmdef` monolito | `Net.Shared/Server/Client`; buffers de entrada/salida; test de arquitectura | Servidor probable sin Netcode | M | B | A |
 | l6-08 | Reloj de red a 30 Hz | Simulación sin tick de red | `NetTick` solo para lo autoritativo; interpolar remotos ~100 ms atrás | Interpolación estable | S | B | A |
@@ -317,21 +317,21 @@ C1-C4 (datos y umbrales), luego C5-C9 (contacto, giro, separación y seguimiento
 lotes absorben la antigua Fase 3 y los retoques L3-03/L3-04 de la Fase 0. Después siguen las fases de abajo en su orden.
 
 **Fase 0 — Higiene y bajo riesgo (sin dependencias).**
-> **Hecha (2026-10-21, rama `feat/reference-phase0`):** D1, L4-01, L4-02, L7-1, L7-2, L1-03 y L1-05, un commit cada una (`tasks/todo.md`). L3-03 y L3-04 ya entraron con las formaciones por datos.
+> **Hecha (2026-10-21, rama `feat/reference-phase0`):** D1, L4-01, L4-02, L7-1, L7-2, L1-03 y L1-05, un commit cada una (el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). L3-03 y L3-04 ya entraron con las formaciones por datos.
 D1 y sincronización de docs (sección 8); L4-01 y L4-02 (reloj y histéresis); L7-1 y L7-2 (reloj y resultado en ECS);
 L1-03 (daño puro) y L1-05 (RNG sembrado); L3-03/L3-04 como retoques. Estas piezas son prerrequisito de red (T4) y no
 dependen de nada.
 
 **Fase 1 — Pila de modificadores (T1).**
 > **Hecha (2026-10-21, rama `feat/reference-phase0`):** núcleo T1, nivel de escuadra, héroes y equipo (L7-3, IA incluidos),
-> L5-3, L1-06, L1-04 y L7-5 (XP y desbloqueos), un commit cada paso (`tasks/todo.md`). Regla y fuentes en
+> L5-3, L1-06, L1-04 y L7-5 (XP y desbloqueos), un commit cada paso (el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). Regla y fuentes en
 > `Docs/Mechanics/DamageMechanics.md` §4.1. L7-6 queda para después, en `Docs/Por_Abordar/Pila_Modificadores.md` P1.
 L1-01 y L7-3 con `StatId`; después L5-3 (velocidad), L1-06 (escudo absorbente), L1-04 (crítico por rating), L7-5
 (tablas) y L7-6 (ítems con `StatId`, tras decidir migración de guardados). Va antes que los perks.
 
 **Fase 2 — Perks y lanzador.**
 > **Hecha (2026-10-22, rama `feat/reference-phase0`):** L2-1, L2-2, L2-3, L2-4, L2-5, L2-6, L2-7 y L7-4, con efectos
-> genéricos para las 16 habilidades de clase (`tasks/todo.md`). Mecánica en `Docs/Mechanics/SkillsAndPerks.md`; lo que
+> genéricos para las 16 habilidades de clase (el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). Mecánica en `Docs/Mechanics/SkillsAndPerks.md`; lo que
 > queda, en `Docs/Por_Abordar/Habilidades_Perks.md`. L2-8 (proyectil en ECS) sigue fuera.
 L7-4 (perks, tras Fase 1). L2-1 (puerta) y L2-5 (cooldowns por grupo) antes que L2-2 (fases); después L2-3 (combos),
 L2-4 (interrupción), L2-6 (carga) y L2-7 (multiproyectil). El lanzador va antes que los combos; L2-5 usa

@@ -790,6 +790,105 @@ mientras se hornea, se pinta la figura de bloques. «Prototipo» y «Cajas» no 
 `LaColumnaConSuModelo`, `ElEstandarteYLasLanzas`, `ElEstandarteConSuPano`, `LasCaravanasConSusModelos`, `ElAedaConSuModelo`,
 `ElColorDeBando` y `LosCaballosDeGuerra` (PlayMode, `SueloDelMapaTests`), y `ColumnasDelMapaTests` (EditMode).
 
+## Cielo, niebla y vida (temas 8 y 9, 2026-11-23)
+
+Respuestas de Víctor: luz fija (sol a 40°), buen tiempo con nubes, lo nunca explorado como mapa dibujado, lo explorado sin ver apagado, solo
+pájaros y nadie trabajando. En el mapa lo que importa es el movimiento de las tropas, así que no hay vida alrededor de las maquetas.
+
+### La niebla de guerra dibujada (`PinturaDelMapa.NieblaDibujada`, por defecto encendida)
+
+- `MapaComun.hlsl`, `PintarMapaDibujado`. Apagado, el velo de antes tal cual (#0a0e17, alfas 0,81 / 0,62 / 0).
+- **Explorado sin ver:** apagado, sin velo: saturación al 50 % y luminancia × 0,80 en sRGB (`PinturaDelMapa.Apagado`, global `_NieblaApagado`; la primera ronda llevaba 55 % y × 0,72). Se distingue más por el color que por lo oscuro.
+- **Nunca explorado:** un mapa en tinta parda sobre papiro, sin sol ni sombras y todo en PLANTA, que se lee igual desde cualquier lado (la cámara gira libre). La primera ronda dibujaba montes en perfil y árboles con tronco: desde otro lado salían peines y escaleras.
+  - El suelo pone su dibujo con `DibujoSuelo`:
+    - el relieve a pluma: trazos verticales de `trazos.r` proyectados de lado (triplanar en X y Z, a lo largo de la Y del mundo, cada 4,5 u), que bajan por la ladera. Nada en llano (1 − N.y < 0,06); con poca pendiente solo los de rango bajo (`trazos.g`), y más gruesos cuanto más empinado;
+    - copas en planta (`trazos.b`, tres variantes) con el bosque de `_SueloDatos.b` > 0,3, en dos capas desplazadas con posición, tamaño y giro al azar (`Marca`);
+    - en el llano, pocas marcas (`trazos.a`): hierba con la fertilidad de `_SueloDatos.r` > 0,45 y punteado en lo seco.
+  - El agua, con `DibujoAgua`: aguada azul verdosa apagada (`AguadaDibujo`, #86a29e, más mate que el mar vivo) con el zigzag de `agua` en desorden y la línea de costa u orilla en tinta azul oscura (`TintaAgua`), opaca.
+  - Lo demás, papiro liso.
+- **Frontera de pincel:** el umbral bilineal de lo explorado, movido con ruido de unas 3 u. El papel acaba neto (0,49–0,505) y el reborde va pegado a su borde, sin franja clara: pincel seco, de tinta desigual y con cortes.
+- **Vegetación y nodos:** se recogen en el vértice (`NieblaCrecer`), sombra incluida. Al explorar, `_NieblaTex` lleva lo de antes en B y A y lo de ahora en R y G, y pasa de uno a otro en `NieblaDelMapa.SegundosDeCambio` (1,5 s), con `_NieblaModo.y` apuntado con `_RelojMapa`.
+- **`_RelojMapa`:** `Time.timeSinceLevelLoad`, que pone `MapaDeMundo` cada fotograma. Las pruebas mostraron que `_Time.y` no sirve para comparar con momentos apuntados desde C#.
+- **Texturas** (BronzeAgeArte/mapa/niebla/generar_niebla.py → Resources/MapaMundo/Niebla, lineales):
+  - `papiro` (256², gris: fibra irregular y rota, manchas amplias, sin juntas regulares);
+  - `trazos` (512²: R trazos verticales a mano sembrados sin filas, G el rango de cada trazo, B copas en atlas 2 × 2, A marcas del llano en atlas 2 × 2);
+  - `agua` (256², gris: el zigzag en filas con desorden).
+
+### El cielo (`PinturaDelMapa.CieloNuevo`, por defecto encendido)
+
+- **Cúmulos** en `ColorDelCielo`: borde neto (FBM entre 0,52 y 0,565) y volumen (la masa comparada con la de un poco hacia el sol: cara clara y base gris azulada).
+- **Viento:** derivan con el mismo que las sombras de nube (+x, −z del mundo). Antes el cielo iba hacia −z al revés.
+- **Sombras de nube:** manchas redondeadas (dos octavas, umbral 0,585–0,725, que cubren lo mismo que antes, un 21 %) con la misma fuerza (−20 %).
+- **Bruma del aire:** hacia el horizonte con un 25 % de azul (0,6, 0,7, 0,84). Va de la mitad de `cerca` a `lejos`, del 10 % al 18 % en lo que queda 80 m por debajo de lo que mira la cámara (`_BrumaValle`), y luego la bruma lejana de siempre.
+
+### La vida (`AvesDelMapa`, `PolvoDelMapa` en `VidaDelMapa.cs`)
+
+- **Pájaros** como `vida.ts`:
+  - rejilla de 24 u, 5 × 5 celdas, bandada en el 35 %; de 3 a 7 pájaros con radio de 4 a 11 u y a 3,5–5 u del suelo;
+  - el modelo, `Resources/MapaMundo/Vida/Ave.fbx` (170 triángulos; BronzeAgeArte/mapa/vida/ave.py; color R = aleteo, G = sombra);
+  - el vuelo y el aleteo en `Conquest/MapaAves`: una llamada `RenderMeshPrimitives` con un `StructuredBuffer` de dos float4 por pájaro;
+  - se recogen sobre lo nunca explorado;
+  - el vuelo va con `_RelojMapa`, así las pruebas saben dónde está cada pájaro (`AvesDelMapa.Vuelos`);
+  - con 0,22 u (la envergadura del prototipo, `AvesDelMapa.Envergadura`), desde la cámara del juego miden de punta a punta 18 px a zoom habitual y 35 px de cerca (a 1600 de ancho). Como las alas son finas, se ve una uve de unos 10 px.
+- **Polvo:** bocanadas de 1,4 s al pie de las columnas de ejército y las caravanas que andan (el Aeda no), en un anillo de 512 (`Conquest/MapaPolvo`, una llamada).
+  - Factor del suelo: 1 en lo seco, 0,06 en la hierba (fertilidad y humedad), 0 en el agua y la nieve.
+  - Solo a zoom cercano o habitual y a menos de 2,5 veces la distancia de la cámara.
+  - Bajo (hasta la rodilla) y claro. Bocanadas de 0,4 a 0,6 u y opacidad de hasta 0,5. Dos de cada diez van en una estela corta detrás de la cola.
+
+### Coste (mediana del fotograma a zoom habitual, 300 fotogramas, 1600×900)
+
+| Qué | Con | Sin (o lo de antes) |
+|-----|-----|-----|
+| Niebla dibujada en planta (bosque, tres estados en pantalla) | 4,3 ms (p95 4,9) | 4,3 ms con el velo (p95 4,9) |
+| Cielo nuevo (colinas) | 3,1 ms | 3,0 ms |
+| Pájaros (48) y polvo, con una columna y una caravana andando en lo seco | 3,4 ms | 3,4 ms |
+
+Luminancia (antes → después, en fotogramas seguidos): la imagen entera cambia entre 0,0 y +0,5 %, y su tercio central entre −0,7 y −1,0 % a los tres zooms.
+
+### Pruebas
+
+`SueloDelMapaTests` (explícitas):
+
+- `LaNieblaDibujada` («nd_»): la frontera a tres zooms, lo que crece, la montaña (con la vuelta) y el bosque denso dentro de lo nunca explorado, la costa con el mar nunca explorado, la hierba y el bosque explorados sin ver con el apagado de antes y el de ahora, el velo y el coste. Avisa al mapa de la nueva niebla a mano, porque `Almacen.Aplicar` no pasa por `Sesion.AlCambiar`.
+- `ElCieloYLaBruma` («nc_»): antes y después en fotogramas seguidos, con la luminancia, la cámara baja, el cénit y el coste.
+- `LaVidaDelMapa` («nv_»): el polvo en lo seco y en la hierba, con y sin, los pájaros desde la cámara del juego siguiendo a uno (con lo que miden en píxeles) y el coste.
+
+Las capturas están en la página «Cielo, niebla y vida».
+
+### Puntos débiles
+
+- En las laderas más empinadas y vistas de lado, el relieve a pluma es un campo de trazos parejo: la cumbre no destaca.
+- Las copas son anillos de grosor parecido: de cerca, el bosque dibujado se ve algo de burbujas.
+- La línea de costa del mar dibujado es fina y se pierde a zoom alejado.
+- Los cúmulos son ruido en un plano, sin silueta de coliflor, y con la cámara del juego casi no se ve el cielo.
+- Los pájaros son claros, blanco roto con las puntas de las alas oscuras (el color R del modelo, el peso del aleteo, marca la punta). Sobre el ocre seco contrastan menos que sobre la hierba, pero se leen.
+- El polvo contrasta poco sobre el llano ocre y no distingue los caminos.
+
+## Escalas y la previa del mapa (2026-11-23)
+
+Víctor, probando el mapa en su partida: lo que se mueve, × 1,5; lo fijo (menos los nodos), × 2. Y una escena para ver y afinar los tamaños sin partida.
+
+- **Lo que se mueve:** un solo factor, `ColumnasDelMapa.FactorDeFiguras` (1,5). De él salen `ColumnasDelMapa.Tropa` (2 × factor: figuras de bloques, formación, largo de la columna, estandarte) y `ModelosDeFiguras.MetrosAEscena` (antes, un 0,27 escrito a mano: ahora `MetrosAFigura · Tropa · MetrosPorUnidad`; los modelos horneados). El soldado mide 0,405 u.
+  - Uno a uno: el polvo (bocanadas, estela y dispersión × factor; arreglado de paso que `largo` y `Atras`, en unidades de figura, se usaban como u: el polvo caía a media distancia de la cola), el radio, el clic y el alto de columnas, caravanas y Aeda (`CosasDelMapa`), y la etiqueta de una columna con figuras, por encima del jinete y del estandarte (`FigurasDelMapa.AltoDelEstandarte`).
+  - Los umbrales de detalle de las figuras, × 1,5 en el código (`PixelesMinimos` 21, `PixelesSombra` 60, `PixelesCompleto` 60, `PixelesLejos` 30): cambian a la misma distancia que antes.
+  - Lo que solo cuenta con las figuras apagadas (`CarroDeCaravana`, la caja de la columna) no cambia.
+- **Lo fijo:** `CosasDelMapa.FactorDeFijos` (2), modelo y huella a la vez, solo en «Mejorado» (`CosasDelMapa.Fijos(clase)`: 1 en los demás estilos), con un afinado por clase que lo multiplica (`FactorPlazas`, `FactorPueblos`, `FactorAvanzadas`, `FactorCampamentos`, `FactorMenudo`; 1).
+  - Plazas: `HuellaDePlaza` × factor (después del mínimo de 0,9); de ella cuelgan la miniatura, la muralla, el suelo, el claro, el ralo, el aro, el clic y el alto.
+  - Pueblos, aldeas y lo menudo: la escala del modelo (`MaquetasDelMapa.UnidadDe(clase)`, 0,9 × factor) y la huella (`RadioU` × factor) por separado; con ellas, el claro (`MargenDeClaro` y `ClaroDeAlijo` × factor), el sitio del pueblo y los campos de las aldeas (en el marco del núcleo).
+  - Obra, batalla, aro y clic de aldea y los `Alto`: × factor.
+  - El nivel de detalle se elige con la huella sin el factor (`HuellaDetalle`): cambia a la misma distancia que antes y no carga más.
+  - Las maquetas se rehacen al cambiar un factor (`ClaveDeFactores` en su clave).
+  - Nodos: no cambian; `NodosDelMapa.FactorDeNodos` (1) solo para comparar en la previa.
+  - Las distancias del motor no se tocan: con × 2 se pisa lo que el motor deja cerca (aldea y pueblo a 3 u de la plaza, la avanzada a su mínimo) y la plaza de nivel 5 entra en el río de al lado (`ORILLA_RIO` está hecha para las huellas de antes).
+- **La previa del mapa** (`Assets/Scenes/BronzeAge/PreviaDelMapa.unity`, menú `Conquest/Mundo/Previa del mapa`; `UI/PreviaDelMapa.cs`), como `DemoAnimaciones`: el mismo `MapaDeMundo` sin servidor, con el mundo de disco, «Mejorado» puesto y sin niebla.
+  - Lo que se pone sale de `Mapa/BancoDelMapa.cs`, que también usa el banco de asentamientos del editor (`MenuDeAsentamientos`, ahora una llamada): el mundo de disco, `Libre`/`Buscar` (en la previa, siempre desde su centro: todo cabe en unas 120 u), y un helper por cosa (plaza, pueblo extractor con su nodo, nodo, aldea, avanzada, obra, campamentos, alijo, batalla), y `Montar` (el mapa con su héroe y su columna, el reloj en marcha con `Sesion.RelojSinServidor`).
+  - El mundo, por este orden: la caché del cliente (el de la última partida) y el del generador del motor (`BronzeAgeFase0/generador/salida/mundo`, solo leído); el panel dice cuál (hash y origen).
+  - El sitio, siempre el mismo para un mundo y con nota (`SitioConReferencias`): hierba y llano en 25 u, un solo río o costa a 30-40 u, un borde de bosque a 40-55 u y como mucho un 5 % de agua en 60 u; el registro dice lo que cumple el elegido. Lo que se pone no cae sobre agua ni sobre otra cosa (`Libre`, con más bosque admitido: abre su claro), menos la familia real.
+  - Sin las zonas de las plazas ni su territorio (`MapaDeMundo.Zonas`, apagado; la casilla «Zonas» del panel); la zona sigue contando para el tamaño.
+  - Un camino de 75 u (`RedCaminos` de un tramo), lo fijo, un nodo de cada recurso, la familia real (plaza de nivel 3, aldea y pueblo a 3 u, avanzada a 1,85 u) y lo que se mueve andando en bucle por el camino; cada cosa con su rótulo; WASD o las flechas llevan la cámara.
+  - El panel (UI Toolkit): los deslizadores de los factores, el alto del soldado y el radio de la plaza por nivel, «Restablecer», «Copiar valores» y andar o parar. Al salir de Play todo vuelve a los valores del código.
+  - Prueba: `PreviaDelMapaEditorTests.LaPreviaDelMapaSeMontaYSusDeslizadoresMandan` (están todas las clases, sin errores, y cada deslizador cambia lo suyo × 1,5 y no lo demás); `LaPreviaEnCapturas` (explícita: las de la página «Escalas y ruta»).
+
 ## La vegetación (tema 3, 2026-11-20)
 
 Árboles, matas y capa baja del mapa. Las reglas de colocación son las del prototipo (BronzeAgeClient: `src/mundo3d/arboles.ts`, `matas.ts`),

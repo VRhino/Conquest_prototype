@@ -1,7 +1,7 @@
 # Combate: lo que queda fuera
 
 Fecha: 2026-11-03. Sale del cierre de los puntos de combate del catálogo de la referencia (L1-02, L1-07, L1-08, L1-10 a
-L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en `tasks/todo.md`). La mecánica está en
+L1-14; `Docs/Design/Aprendizajes_Referencia.md` §4.1; plan en el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). La mecánica está en
 `Docs/Mechanics/DamageMechanics.md` §4.2, §5.5, §5.6, §7.4 y §7.5.
 
 ## Resumen

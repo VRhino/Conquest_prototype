@@ -1,6 +1,6 @@
 # 31. La Facción, la tecnología, el sigilo y los estandartes (paso 8 del bloque 4)
 
-2026-11-15. El plan, las tandas y las dudas contestadas: `tasks/bloque4-paso8-plan.md`.
+2026-11-15. El plan, las tandas y las dudas contestadas: el plan del paso 8 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ## Tanda 1: el sigilo y crear tu Facción (a revisar)
 

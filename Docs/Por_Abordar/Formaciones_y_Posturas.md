@@ -1,6 +1,6 @@
 # Formaciones y posturas: lo que queda fuera
 
-Fecha: 2026-10-20. Sale del plan de formaciones por datos (`tasks/todo.md`), que sustituye la rejilla fija de 1 m por
+Fecha: 2026-10-20. Sale del plan de formaciones por datos (el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git), que sustituye la rejilla fija de 1 m por
 `FormationDefinition` (espaciado propio, plantillas, papel y rumbo por ranura) y añade posturas por ranura (paso 6).
 
 Referencia: `game-re/notes/formations-orders.md` (plantillas, reparto, publicación), `game-re/notes/formation-postures.md`

@@ -475,7 +475,7 @@ enemigos persistentes en S6 y el coste de llegada en S4.
 
 Rama `feat/formation-layout` (desde `feat/movement-batch2`): `9c78b418` (modelo y disposición), `0130321c` (proyección del
 slot, tests y métrica), `e0aa54a1` (aceleración, frenado y reparto por cercanía) y `3c91f408` (posturas). Plan en
-`tasks/todo.md`; lo que queda fuera, en `Docs/Por_Abordar/`.
+el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git; lo que queda fuera, en `Docs/Por_Abordar/`.
 
 ### Modelo nuevo (patrón de la referencia, `game-re/notes/formations-orders.md` y `formation-postures.md`)
 - `FormationDefinition` sustituye a la rejilla de celdas de 1 m: disposición Template o Scatter, **espaciado propio** (suelo

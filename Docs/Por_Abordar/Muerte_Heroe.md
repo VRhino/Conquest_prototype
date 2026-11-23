@@ -1,6 +1,6 @@
 # Muerte del héroe: lo que queda fuera
 
-Fecha: 2026-10-27. Sale del plan de presentación de la muerte del héroe (`tasks/todo.md`): animación de muerte,
+Fecha: 2026-10-27. Sale del plan de presentación de la muerte del héroe (el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git): animación de muerte,
 retirar el cuerpo tras un retardo y volver a crearlo al reaparecer.
 
 ## Qué hay

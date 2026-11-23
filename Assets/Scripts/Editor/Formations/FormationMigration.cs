@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// One-off conversion of the old integer-grid formations into data-driven <see cref="FormationDefinition"/>s,
-/// in place (asset GUIDs and every reference are kept). Defaults per formation type follow tasks/todo.md (decisions 1-6).
+/// in place (asset GUIDs and every reference are kept). Defaults per formation type follow the formation-by-data plan (decisions 1-6; removed from tasks/todo.md on 2026-11-23, see git history).
 /// </summary>
 public static class FormationMigration
 {
@@ -14,7 +14,7 @@ public static class FormationMigration
     public static void ApplyPosturesMenu() => Debug.Log($"[FormationMigration] {ApplyDefaultPostures()}");
 
     /// <summary>
-    /// Default posture tables (tasks/todo.md, decision 7) for shield formations that have none yet: Testudo front
+    /// Default posture tables (formation-by-data plan, decision 7) for shield formations that have none yet: Testudo front
     /// shield in front, flanks to the side, interior and rear over the head; Shield Wall braced when formed.
     /// </summary>
     public static string ApplyDefaultPostures()

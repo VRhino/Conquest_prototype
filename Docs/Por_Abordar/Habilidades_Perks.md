@@ -1,7 +1,7 @@
 # Habilidades y perks: lo que queda fuera
 
 Fecha: 2026-10-22. Sale del cierre de la Fase 2 de `Docs/Design/Aprendizajes_Referencia.md` (lanzador de habilidades y
-perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechanics/SkillsAndPerks.md`.
+perks; plan en el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). La mecánica implementada está en `Docs/Mechanics/SkillsAndPerks.md`.
 
 ## Resumen
 | # | Tema | Prioridad | Estado |
@@ -23,7 +23,7 @@ perks; plan en `tasks/todo.md`). La mecánica implementada está en `Docs/Mechan
 | H15 | Lo que dejan abierto los efectos L2-10 a L2-14 | Baja | Pendiente (arqueros y Defensa Reforzada) |
 | H16 | Combo y bajas del héroe en el HUD (L2-16) | Media | **Hecho** (2026-11-07: contador en la definitiva, casilla apagada sin combo) |
 
-Bloque 3 (2026-10-27, `tasks/todo.md`): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
+Bloque 3 (2026-10-27, el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git): L2-9 (habilidades de escuadra), L2-15 (condiciones ricas), H5 (panel) y H1 con
 L4-08. La mecánica está en `Docs/Mechanics/SkillsAndPerks.md` §3.6, §5 y §8.
 
 ---

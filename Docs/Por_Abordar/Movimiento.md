@@ -1,7 +1,7 @@
 # Movimiento: lo que queda fuera
 
-Fecha: 2026-10-20. Sale del cierre del lote 2 (`tasks/movement-batch2-plan.md`, resultados en
-`Docs/Design/Movimiento_Formaciones.md` §10) y del plan actual (`tasks/todo.md`), cuyo paso 5 repara los tirones de
+Fecha: 2026-10-20. Sale del cierre del lote 2 (el plan del lote 2, (retirado de `tasks/` el 2026-11-23; sigue en git), resultados en
+`Docs/Design/Movimiento_Formaciones.md` §10) y del plan actual (el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git), cuyo paso 5 repara los tirones de
 aceleración y la llegada al slot. Lo que ese paso 5 cubre no se repite aquí.
 
 ## Resumen
@@ -286,7 +286,7 @@ marcha dentro del pasillo; en campo abierto, unas 15. El sistema cuesta 0,15 ms 
 
 ## M17. Monturas (L5-6, L5-8)
 **Hecho para las tropas (2026-11-10).** Decisiones del usuario: primero las escuadras; las tres (lanceros, espada y
-arqueros a caballo); en las tropas jinete y caballo son un solo cuerpo. Plan en `tasks/todo.md`.
+arqueros a caballo); en las tropas jinete y caballo son un solo cuerpo. Plan en el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git.
 - **Datos.** `SquadType` `LanceCavalry` (`lcv01`), `SwordCavalry` (`scv01`) y `HorseArchers` (`hac01`), con
   `unitType` `Cavalry`.
   - Nuevo en `SquadData`: `mountAttackArc` y `mountTurnRate`.

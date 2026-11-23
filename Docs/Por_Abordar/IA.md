@@ -1,7 +1,7 @@
 # IA: lo que queda fuera
 
 Fecha: 2026-11-03. Sale del bloque de IA del catálogo de la referencia (L4-03, L4-05, L4-06, L4-07, L4-10;
-`Docs/Design/Aprendizajes_Referencia.md` §4.4; plan en `tasks/todo.md`). La mecánica está en
+`Docs/Design/Aprendizajes_Referencia.md` §4.4; plan en el plan, retirado de `tasks/todo.md` el 2026-11-23 y en git). La mecánica está en
 `Docs/Mechanics/DamageMechanics.md` §9.
 
 ## Resumen

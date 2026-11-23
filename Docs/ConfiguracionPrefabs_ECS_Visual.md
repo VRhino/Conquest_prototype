@@ -156,7 +156,4 @@ La última matriz documentada en fase 15 pasó 62/62 EditMode, 12/12 PlayMode y 
 ## Referencias
 
 - [Arquitectura actual](Arquitectura/1_Arquitectura_Actual.md)
-- [Movimiento del héroe y autoridad física](Arquitectura/10_Movimiento_Heroe_Autoridad_Fisica_2026-09-14.md)
-- [Motor local del héroe](Arquitectura/14_Motor_Local_Heroe_2026-09-15.md)
-- [Animación remota separada](Arquitectura/15_Animacion_Remota_Separada_2026-09-15.md)
 - [Pipeline de movimiento de tropas](TroopMovementPipeline.md)

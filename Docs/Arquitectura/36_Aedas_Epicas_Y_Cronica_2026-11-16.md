@@ -1,7 +1,7 @@
 # 36. Los Aedas, las épicas y la crónica (paso 13 del bloque 4)
 
 2026-11-16. Lo que BronzeAgeClient hace con los Aedas itinerantes y residentes, las épicas y la crónica del mundo (§3.18 del inventario; el
-antiguo CQ-008), en Conquest. El plan, las respuestas de Víctor (1a 2a 3a) y las dudas están en `tasks/bloque4-paso13-plan.md`.
+antiguo CQ-008), en Conquest. El plan, las respuestas de Víctor (1a 2a 3a) y las dudas están en el plan del paso 13 (retirado de `tasks/` el 2026-11-23; sigue en git).
 
 ## Tanda 1: los Aedas (2026-11-16, en commit `615e23d4`)
 

@@ -54,6 +54,6 @@ visual_review: passed
 correction_rounds: 1
 ```
 
-La revisión automatizada está vinculada al artefacto en [arquitectura.visual-check.json](arquitectura.visual-check.json). Comprueba el visor a 1440×900, 1600×1000, 1920×1080 y 2048×1320, con capturas claras/oscuras en los extremos. Se inspeccionaron imágenes claras y oscuras; el render no contiene cruces ambiguos ni solapamientos de etiquetas. Los controles fijos del visor y su idioma HTML usan inglés; el contenido redactado es español. El HTML principal es español.
+La revisión automatizada (`arquitectura.visual-check.*`, retirada el 2026-11-23; sigue en git) se hizo sobre el artefacto. Comprueba el visor a 1440×900, 1600×1000, 1920×1080 y 2048×1320, con capturas claras/oscuras en los extremos. Se inspeccionaron imágenes claras y oscuras; el render no contiene cruces ambiguos ni solapamientos de etiquetas. Los controles fijos del visor y su idioma HTML usan inglés; el contenido redactado es español. El HTML principal es español.
 
 Esta validación acredita el documento y los diagramas. No es una prueba de IA, combate, rendimiento ni compilación del juego.
