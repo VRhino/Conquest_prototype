@@ -17,12 +17,14 @@ public static class CaballosDeGuerraSetup
     const string Carpeta = "Assets/Art/Mounts/Horse";
     static readonly (string nombre, string fichero)[] Cuerpos = { ("iberico", "Iberian"), ("tracio", "Thracian"), ("niseo", "Nisaean") };
     static readonly string[] Capas = { "castana", "torda", "alazana", "negra", "baya" };
+    /// <summary>El cuerpo que también tira de carros, y el FBX con sus arreos de tiro (`exportar_caravana.py -- caballo_tiro`).</summary>
+    static readonly (string cuerpo, string fichero) TiroDe = ("tracio", "Thracian_Draught");
 
     [MenuItem("Conquest/Caballos de guerra")]
     public static void Construir()
     {
         var avatar = AssetDatabase.LoadAllAssetsAtPath(CavalrySetup.HorseModel).OfType<Avatar>().FirstOrDefault();
-        foreach (var (_, fichero) in Cuerpos)
+        foreach (var fichero in Cuerpos.Select(c => c.fichero).Append(TiroDe.fichero))
         {
             var ruta = $"{Carpeta}/Models/Horse_War_{fichero}.fbx";
             var mi = (ModelImporter)AssetImporter.GetAtPath(ruta);
@@ -149,6 +151,14 @@ public static class CaballosDeGuerraSetup
                 Arreos = arreos != null ? Adaptar(arreos, $"Horse_War_{c.fichero}_Tack") : null,
                 HuesosArreos = arreos != null ? arreos.bones.Select(b => b.name).ToArray() : null,
             };
+            if (c.nombre == TiroDe.cuerpo)
+            {
+                var tiro = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>($"{Carpeta}/Models/Horse_War_{TiroDe.fichero}.fbx"));
+                var arreosTiro = tiro.GetComponentsInChildren<SkinnedMeshRenderer>(true).First(r => r.name == "Horse_Tack");
+                cuerpo.ArreosDeTiro = Adaptar(arreosTiro, $"Horse_War_{TiroDe.fichero}_Tack");
+                cuerpo.HuesosArreosDeTiro = arreosTiro.bones.Select(b => b.name).ToArray();
+                Object.DestroyImmediate(tiro);
+            }
             foreach (var r in copia.GetComponentsInChildren<Renderer>(true)) r.sharedMaterial = mat;
             PrefabUtility.SaveAsPrefabAsset(copia, $"{Carpeta}/Prefabs/Horse_War_{c.fichero}.prefab");
             Object.DestroyImmediate(copia);

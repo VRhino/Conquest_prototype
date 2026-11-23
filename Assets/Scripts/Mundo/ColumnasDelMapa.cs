@@ -29,6 +29,8 @@ namespace ConquestTactics.Mundo
         /// <summary>De 0 a 3 (A–D), fija por la semilla de la columna y su sitio en ella.</summary>
         public int Variante;
         public AnimalDeTiro Animal;
+        /// <summary>Un carro de carga reforzado (`Carro.tipo_carro`); si no, el básico.</summary>
+        public bool Reforzado;
         /// <summary>El héroe que va en este caballo (los jinetes, por orden de los que van en la columna); null en lo demás.</summary>
         public string HeroeId;
     }
@@ -47,6 +49,8 @@ namespace ConquestTactics.Mundo
         public int Carga;
         public bool Fundacion, Propio;
         public List<AnimalDeTiro> Animales = new List<AnimalDeTiro>();
+        /// <summary>Si cada carro de carga (por orden, como `Animales`) es reforzado.</summary>
+        public List<bool> Reforzados = new List<bool>();
     }
 
     public static class ColumnasDelMapa
@@ -58,16 +62,34 @@ namespace ConquestTactics.Mundo
         public const int MaxEscuadrasPersonal = 6, MaxEscuadrasEjercito = 12;
         /// <summary>El paso entre filas (y entre héroes) y el hueco de más entre un bloque de tropa y el siguiente.</summary>
         public const double Paso = 0.15, HuecoEntreBloques = 0.08;
-        /// <summary>Lo que va de la última fila al primer carro y de un carro al siguiente.</summary>
-        public const double TrasLaTropa = 0.1, EntreCarros = 0.04;
+        /// <summary>El estandarte, en la figura del centro de la primera fila (si no, en la primera, como antes; para comparar).</summary>
+        public static bool PortadorAlCentro = true;
         /// <summary>La escala de los carros de caravana: la misma que la de todo lo demás (Víctor, 2026-11-22: una sola escala, la de la tropa; el
-        /// ×1,5 del prototipo se descarta). Con ella, `LargoCarro` es el carro con su buey a sus medidas de verdad: 4,2 m del centro al hocico y
-        /// 1,1 m a la trasera.</summary>
+        /// ×1,5 del prototipo se descarta).</summary>
         public const double EscalaCarroCaravana = 1;
+        /// <summary>De metros de un modelo a unidades de figura: el soldado, de 1,75 m, mide 0,135.</summary>
+        public const double MetrosAFigura = 0.135 / 1.75;
+        /// <summary>El hueco libre entre el morro de un animal de tiro y lo que lleva delante (la última fila, el carrito, la pareja de carros
+        /// anterior): medio cuerpo de soldado (m).</summary>
+        public const double HuecoLibre = 0.875;
+        /// <summary>Lo que ocupa por detrás de su sitio la última fila (m): el soldado, la contera de la lanza al hombro; el jinete, la cola del
+        /// caballo. Medido en los modelos horneados.</summary>
+        public const double ColaDeSoldado = 0.74, ColaDeJinete = 1.26;
         /// <summary>A qué lado va cada carro de una pareja (en décimas de figura): queda un palmo entre los dos.</summary>
         public const double LadoCarroPareja = 1.3;
-        /// <summary>Lo que ocupa cada carro delante y detrás de su sitio, sin su escala: el de caravana con su animal; el carrito con sus varas.</summary>
-        public static readonly (double frente, double cola) LargoCarro = (0.325, 0.085), LargoCarrito = (0.13, 0.045);
+        /// <summary>Lo que ocupa cada conjunto (animal, varas y carro) delante y detrás de su eje, en m y sin su escala: el largo real de los
+        /// modelos horneados, por todos sus fotogramas (`CaravanaDeFigurasTests`, «LARGO»). El de fundación solo va con buey; el carrito, con el burro.</summary>
+        public static (double frente, double cola) LargoReal(FiguraDeColumna f, AnimalDeTiro animal, bool reforzado)
+        {
+            if (f == FiguraDeColumna.Carrito) return (3.08, 0.67);
+            if (f == FiguraDeColumna.CarroDeFundacion) return (4.44, 1.46);
+            switch (animal)
+            {
+                case AnimalDeTiro.Caballo: return reforzado ? (4.83, 1.45) : (4.38, 1.04);
+                case AnimalDeTiro.Camello: return reforzado ? (4.65, 1.45) : (4.21, 1.06);
+                default: return reforzado ? (4.54, 1.45) : (4.09, 1.03);
+            }
+        }
         /// <summary>El burro del Aeda: un paso por detrás y a un lado.</summary>
         public const double AtrasBurro = 0.1, LadoBurro = 0.9;
 
@@ -97,9 +119,9 @@ namespace ConquestTactics.Mundo
         {
             var r = new List<SitioDeFigura>();
             void Poner(FiguraDeColumna f, double atras, double lado, double escala = 1, string tropaId = null, bool estandarte = false,
-                AnimalDeTiro animal = AnimalDeTiro.Buey) =>
+                AnimalDeTiro animal = AnimalDeTiro.Buey, bool reforzado = false) =>
                 r.Add(new SitioDeFigura { Figura = f, Atras = atras, Lado = lado, Escala = escala, TropaId = tropaId, Estandarte = estandarte,
-                    Animal = animal, Variante = Variante(semilla, r.Count) });
+                    Animal = animal, Reforzado = reforzado, Variante = Variante(semilla, r.Count) });
             jinetes = Math.Max(0, Math.Min(MaxJinetes, jinetes));
             for (int k = 0; k < jinetes; k++)
             {
@@ -116,27 +138,33 @@ namespace ConquestTactics.Mundo
                 for (int f = 0; f < b.filas; f++, fila++)
                 {
                     ultima = fila * Paso + i * HuecoEntreBloques;
-                    for (int k = 0; k < b.ancho; k++)
-                        Poner(FiguraDeColumna.Soldado, ultima, k - (b.ancho - 1) / 2.0, tropaId: b.tropaPorFila[f], estandarte: soldados++ == 0);
+                    // el estandarte, en la figura del centro de la primera fila (en filas de cuatro, la segunda por la izquierda)
+                    bool primera = soldados == 0;
+                    for (int k = 0; k < b.ancho; k++, soldados++)
+                        Poner(FiguraDeColumna.Soldado, ultima, k - (b.ancho - 1) / 2.0, tropaId: b.tropaPorFila[f], estandarte: primera && k == (PortadorAlCentro ? (b.ancho - 1) / 2 : 0));
                 }
             }
             // los carros detrás de la última fila (sin nadie delante, el primero va en la cabeza): el carrito y luego los de las caravanas, de
-            // dos en dos (Víctor, 2026-11-04); si son impares, el último solo, en el centro
-            double? detras = jinetes + soldados > 0 ? ultima + TrasLaTropa : (double?)null;
-            void Enganchar(List<(FiguraDeColumna f, AnimalDeTiro a)> filaDeCarros, (double frente, double cola) largo, double escala)
+            // dos en dos (Víctor, 2026-11-04); si son impares, el último solo, en el centro. Entre el morro de cada fila de carros y lo de delante
+            // (lo que ocupa por detrás), `HuecoLibre`, con el largo real de cada conjunto
+            double? detras = jinetes + soldados > 0 ? ultima + (soldados > 0 ? ColaDeSoldado : ColaDeJinete) * MetrosAFigura : (double?)null;
+            void Enganchar(List<(FiguraDeColumna f, AnimalDeTiro a, bool r)> filaDeCarros, double escala)
             {
-                double atras = detras == null ? 0 : detras.Value + largo.frente * escala;
-                detras = atras + largo.cola * escala + EntreCarros;
+                double frente = filaDeCarros.Max(c => LargoReal(c.f, c.a, c.r).frente) * MetrosAFigura * escala;
+                double cola = filaDeCarros.Max(c => LargoReal(c.f, c.a, c.r).cola) * MetrosAFigura * escala;
+                double atras = detras == null ? 0 : detras.Value + HuecoLibre * MetrosAFigura + frente;
+                detras = atras + cola;
                 for (int k = 0; k < filaDeCarros.Count; k++)
-                    Poner(filaDeCarros[k].f, atras, filaDeCarros.Count == 1 ? 0 : (k == 0 ? -1 : 1) * LadoCarroPareja, escala, animal: filaDeCarros[k].a);
+                    Poner(filaDeCarros[k].f, atras, filaDeCarros.Count == 1 ? 0 : (k == 0 ? -1 : 1) * LadoCarroPareja, escala, animal: filaDeCarros[k].a,
+                          reforzado: filaDeCarros[k].r);
             }
-            if (carros.Propio) Enganchar(new List<(FiguraDeColumna, AnimalDeTiro)> { (FiguraDeColumna.Carrito, AnimalDeTiro.Buey) }, LargoCarrito, 1);
+            if (carros.Propio) Enganchar(new List<(FiguraDeColumna, AnimalDeTiro, bool)> { (FiguraDeColumna.Carrito, AnimalDeTiro.Buey, false) }, 1);
             int n = carros.Carga + (carros.Fundacion ? 1 : 0);
-            (FiguraDeColumna, AnimalDeTiro) CarroN(int k) => (carros.Fundacion && k == n - 1 ? FiguraDeColumna.CarroDeFundacion : FiguraDeColumna.Carro,
-                k < carros.Animales.Count ? carros.Animales[k] : AnimalDeTiro.Buey);
+            (FiguraDeColumna, AnimalDeTiro, bool) CarroN(int k) => (carros.Fundacion && k == n - 1 ? FiguraDeColumna.CarroDeFundacion : FiguraDeColumna.Carro,
+                k < carros.Animales.Count ? carros.Animales[k] : AnimalDeTiro.Buey, k < carros.Reforzados.Count && carros.Reforzados[k]);
             for (int k = 0; k < n; k += 2)
-                Enganchar(k + 1 < n ? new List<(FiguraDeColumna, AnimalDeTiro)> { CarroN(k), CarroN(k + 1) } : new List<(FiguraDeColumna, AnimalDeTiro)> { CarroN(k) },
-                    LargoCarro, EscalaCarroCaravana);
+                Enganchar(k + 1 < n ? new List<(FiguraDeColumna, AnimalDeTiro, bool)> { CarroN(k), CarroN(k + 1) } : new List<(FiguraDeColumna, AnimalDeTiro, bool)> { CarroN(k) },
+                    EscalaCarroCaravana);
             return r;
         }
 
@@ -209,7 +237,12 @@ namespace ConquestTactics.Mundo
             }
             r.Carga = deCarga.Count;
             r.Fundacion = fundacion;
-            foreach (var k in deCarga) r.Animales.Add(Animal(k?.Carros.FirstOrDefault(x => x.HasAnimal)?.Animal));
+            foreach (var k in deCarga)
+            {
+                var primero = k?.Carros.FirstOrDefault(x => x.HasAnimal);
+                r.Animales.Add(Animal(primero?.Animal));
+                r.Reforzados.Add(primero?.TipoCarro == "reforzado");
+            }
             if (fundacion) r.Animales.Add(AnimalDeTiro.Buey);
             r.Propio = c.Suministro != null && c.Suministro.PorId.Values.Any(v => v > 0);
             return r;
@@ -225,6 +258,7 @@ namespace ConquestTactics.Mundo
             if (c.Tipo == TipoCaravana.CaravanaDeFundacion) return (tropa, new CarrosDeColumna { Fundacion = true, Animales = { AnimalDeTiro.Buey } });
             var carros = new CarrosDeColumna();
             carros.Animales.AddRange(c.Carros.Take(MaxCarrosCaravana).Select(x => Animal(x.HasAnimal ? x.Animal : null)));
+            carros.Reforzados.AddRange(c.Carros.Take(MaxCarrosCaravana).Select(x => x.TipoCarro == "reforzado"));
             carros.Carga = Math.Max(1, carros.Animales.Count);
             return (tropa, carros);
         }
@@ -284,7 +318,7 @@ namespace ConquestTactics.Mundo
         /// <summary>Lo que ocupa la columna de la cabeza a la cola (u), para saber cuánto camino hace falta.</summary>
         public static double Largo(List<SitioDeFigura> figuras) =>
             figuras.Count == 0 ? 0 : figuras.Max(f => f.Atras + (f.Figura == FiguraDeColumna.Carro || f.Figura == FiguraDeColumna.CarroDeFundacion
-                ? LargoCarro.cola * f.Escala : f.Figura == FiguraDeColumna.Carrito ? LargoCarrito.cola : 0)) * Tropa;
+                || f.Figura == FiguraDeColumna.Carrito ? LargoReal(f.Figura, f.Animal, f.Reforzado).cola * MetrosAFigura * f.Escala : 0)) * Tropa;
     }
 
     /// <summary>El rastro de la cabeza (`mover` del prototipo): por dónde ha pasado, del más viejo al más nuevo. La primera vez o tras un salto

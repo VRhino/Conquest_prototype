@@ -88,6 +88,9 @@ namespace ConquestTactics.Mundo.Mapa
 
         /// <summary>Lo que anda de verdad la cabeza de `id` (u por segundo de reloj, suavizado): el paso de sus figuras va con lo que se ve, sea
         /// cual sea el ritmo del mundo.</summary>
+        /// <summary>Lo último medido de la cabeza de `id`: dónde y a qué velocidad (u/s), para las pruebas.</summary>
+        public static (double x, double y, double v) CabezaMedida(string id) => cabezas.TryGetValue(id, out var c) ? (c.x, c.y, c.v) : (double.NaN, double.NaN, double.NaN);
+
         static double Velocidad(string id, double x, double y)
         {
             float t = Time.time;
@@ -296,6 +299,81 @@ namespace ConquestTactics.Mundo.Mapa
             return panel;
         }
 
+        // ------------------------------------------------------------------ el paño del estandarte
+        /// <summary>Los paños de época entre los que se elige el de cada blasón: lino crudo para los blasones oscuros o de color fuerte, y pardo
+        /// casi negro o añil muy oscuro para los claros (ninguno es un color de bando). Y su ribete.</summary>
+        static readonly Color32 PanoLino = new Color32(0xCF, 0xC0, 0x98, 255), PanoPardo = new Color32(0x2B, 0x1F, 0x16, 255),
+            PanoAnil = new Color32(0x1B, 0x21, 0x3A, 255), RibeteOscuro = new Color32(0x4A, 0x33, 0x1E, 255), RibeteClaro = new Color32(0xB8, 0x8A, 0x3C, 255);
+        /// <summary>Con el blasón sobre su paño (si no, recortado por su silueta, como antes; para comparar).</summary>
+        public static bool EstandarteConPano = true;
+        /// <summary>Cuánto del ancho del paño ocupa el blasón.</summary>
+        public const float BlasonEnPano = 0.8f;
+        static readonly Dictionary<Texture, Texture> conPano = new Dictionary<Texture, Texture>();
+        /// <summary>Lo que se eligió para cada blasón (luminancia de su borde y de la media, y el paño), para las pruebas.</summary>
+        public static readonly Dictionary<Texture, string> PanoElegido = new Dictionary<Texture, string>();
+
+        static float Luminancia(Color c) => 0.2126f * c.r + 0.7152f * c.g + 0.0722f * c.b;
+
+        /// <summary>El blasón sobre su paño: el sigilo (recortado por su alfa) centrado y al `BlasonEnPano` del ancho, sobre un paño rígido que
+        /// contrasta con él (con el color del borde exterior del blasón, que es el que lo toca, y con su luminancia media) y un ribete fino. Una
+        /// textura por blasón, con el alto y el ancho del panel.</summary>
+        static Texture ConPano(Texture sigilo)
+        {
+            if (conPano.TryGetValue(sigilo, out var c)) return c;
+            if (!(sigilo is Texture2D s) || !s.isReadable) return conPano[sigilo] = sigilo;
+            var px = s.GetPixels();
+            int w = s.width, h = s.height;
+            bool Opaco(int x, int y) => x >= 0 && y >= 0 && x < w && y < h && px[y * w + x].a > 0.5f;
+            Color borde = Color.clear, media = Color.clear;
+            int nb = 0, nm = 0;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    if (!Opaco(x, y)) continue;
+                    media += px[y * w + x]; nm++;
+                    // el borde que se ve contra el paño: la franja de 4 a 10 px por dentro del contorno (el contorno de los sigilos es una línea
+                    // oscura en todos; lo que decide el contraste es el color que va justo dentro)
+                    bool dentro4 = Opaco(x - 4, y) && Opaco(x + 4, y) && Opaco(x, y - 4) && Opaco(x, y + 4);
+                    bool cerca10 = !Opaco(x - 10, y) || !Opaco(x + 10, y) || !Opaco(x, y - 10) || !Opaco(x, y + 10);
+                    if (dentro4 && cerca10) { borde += px[y * w + x]; nb++; }
+                }
+            if (nm == 0) return conPano[sigilo] = sigilo;
+            borde = nb > 0 ? borde / nb : media / nm;
+            media /= nm;
+            // el paño que más contrasta: con el borde, sobre todo, y algo con la media
+            Color mejor = PanoLino;
+            float puntos = float.MinValue;
+            foreach (Color p in new Color[] { PanoLino, PanoPardo, PanoAnil })
+            {
+                float d = Mathf.Abs(Luminancia(p) - Luminancia(borde)) + 0.35f * Mathf.Abs(Luminancia(p) - Luminancia(media))
+                          + 0.15f * new Vector3(p.r - borde.r, p.g - borde.g, p.b - borde.b).magnitude;
+                if (d > puntos) { puntos = d; mejor = p; }
+            }
+            Color ribete = Luminancia(mejor) > 0.4f ? (Color)RibeteOscuro : RibeteClaro;
+            int W = 128, H = Mathf.RoundToInt(W * PanelAlto / PanelAncho), r = 3;
+            var t = new Texture2D(W, H, TextureFormat.RGBA32, true) { name = sigilo.name + " (con paño)", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var o = new Color[W * H];
+            // (el blasón con su proporción, la del lienzo del sigilo: 100 × 120)
+            float lado = W * BlasonEnPano, alto = lado * s.height / s.width, x0 = (W - lado) / 2, y0 = (H - alto) / 2;
+            for (int y = 0; y < H; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    var col = x < r || y < r || x >= W - r || y >= H - r ? ribete : mejor;
+                    float u = (x + 0.5f - x0) / lado, v = (y + 0.5f - y0) / alto;
+                    if (u >= 0 && u <= 1 && v >= 0 && v <= 1)
+                    {
+                        var b = s.GetPixelBilinear(u, v);
+                        col = Color.Lerp(col, new Color(b.r, b.g, b.b, 1), b.a);
+                    }
+                    col.a = 1;
+                    o[y * W + x] = col;
+                }
+            t.SetPixels(o);
+            t.Apply(true, false);
+            PanoElegido[t] = $"borde {Luminancia(borde):0.00}, media {Luminancia(media):0.00}, paño {(mejor == (Color)PanoLino ? "lino" : mejor == (Color)PanoPardo ? "pardo" : "añil")}";
+            return conPano[sigilo] = t;
+        }
+
         /// <summary>Los paneles de este fotograma, por blasón (una llamada por Facción); y los de las Facciones sin sigilo, con su color liso.</summary>
         static readonly Dictionary<Texture, List<Matrix4x4>> paneles = new Dictionary<Texture, List<Matrix4x4>>();
         static readonly Dictionary<Texture, Material> materialesDePanel = new Dictionary<Texture, Material>();
@@ -413,7 +491,8 @@ namespace ConquestTactics.Mundo.Mapa
                     var sigilo = string.IsNullOrEmpty(cosa.FaccionId) ? null : CosasEnElMapa.SigiloDe?.Invoke(cosa.FaccionId, PixelesSigilo);
                     if (sigilo != null)
                     {
-                        if (!paneles.TryGetValue(sigilo, out var l)) paneles[sigilo] = l = new List<Matrix4x4>();
+                        var tela = EstandarteConPano ? ConPano(sigilo) : sigilo;     // (el blasón sobre su paño de contraste)
+                        if (!paneles.TryGetValue(tela, out var l)) paneles[tela] = l = new List<Matrix4x4>();
                         l.Add(m);
                     }
                     else
@@ -442,6 +521,15 @@ namespace ConquestTactics.Mundo.Mapa
             public (TiraDeFiguras propia, TiraDeFiguras media, TiraDeFiguras lejana)[] Tiras;
         }
         static readonly Dictionary<string, Sitios> sitios = new Dictionary<string, Sitios>();
+
+        /// <summary>Dónde se pusieron en el último fotograma las figuras de `id` que cumplen `cual` (en la escena; vacío si no se ha pintado).</summary>
+        public static List<Vector3> Pies(string id, Func<SitioDeFigura, bool> cual)
+        {
+            var r = new List<Vector3>();
+            if (!sitios.TryGetValue(id, out var st)) return r;
+            for (int i = 0; i < st.Figuras.Count && i < st.Pie.Length; i++) if (cual(st.Figuras[i])) r.Add(st.Pie[i]);
+            return r;
+        }
 
         static readonly Matrix4x4[] bloque = new Matrix4x4[1023];
         static readonly Vector4[] bloqueC = new Vector4[1023];

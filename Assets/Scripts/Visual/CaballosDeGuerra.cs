@@ -22,6 +22,9 @@ namespace ConquestTactics.Visual
             public Mesh Malla, Arreos;
             [Tooltip("Los huesos de la malla y de los arreos, por nombre, en el orden de sus pesos.")]
             public string[] Huesos, HuesosArreos;
+            [Tooltip("Los arreos del caballo que tira de un carro (sin manta ni riendas del jinete), si este cuerpo los tiene; y sus huesos.")]
+            public Mesh ArreosDeTiro;
+            public string[] HuesosArreosDeTiro;
         }
 
         [Serializable]
@@ -60,7 +63,7 @@ namespace ConquestTactics.Visual
         /// <summary>Viste el caballo `raiz` (una copia del `Horse_Mount`, con su `HorseRig`) con el cuerpo y la capa de `montura` y las señas de
         /// `semilla` (el id del héroe; null, sin señas). Quita las riendas viejas: las de los arreos nuevos van de la boca a la cruz. False si la
         /// montura no tiene caballo nuevo o falta algo (y el caballo se queda como estaba).</summary>
-        public bool Vestir(GameObject raiz, string montura, string semilla)
+        public bool Vestir(GameObject raiz, string montura, string semilla, bool deTiro = false)
         {
             if (raiz == null || !(Reparto(montura) is var (nombreCuerpo, nombreCapa))) return false;
             var cuerpo = Array.Find(Cuerpos ?? Array.Empty<Cuerpo>(), x => x.Nombre == nombreCuerpo);
@@ -93,10 +96,11 @@ namespace ConquestTactics.Visual
             caballo.sharedMaterials = new[] { mat };
             if (arreos != null)
             {
-                var ba = cuerpo.Arreos != null ? Huesos(cuerpo.HuesosArreos) : null;
+                bool tiro = deTiro && cuerpo.ArreosDeTiro != null;
+                var ba = tiro ? Huesos(cuerpo.HuesosArreosDeTiro) : cuerpo.Arreos != null ? Huesos(cuerpo.HuesosArreos) : null;
                 if (ba != null)
                 {
-                    arreos.sharedMesh = cuerpo.Arreos;
+                    arreos.sharedMesh = tiro ? cuerpo.ArreosDeTiro : cuerpo.Arreos;
                     arreos.bones = ba;
                     arreos.sharedMaterials = new[] { mat };
                     arreos.gameObject.SetActive(true);

@@ -757,6 +757,39 @@ lavadas). Van en `Assets/Resources/MapaMundo/Asentamientos`, en la cola 2456 com
   alijo del artefacto; los de mercenarios, lejos del resto, para que su anillo de protección no cruce las demás), `LaEscalaDeLasAvanzadas` (la
   tira de tamaños: pueblo y plaza de nivel 1, atalaya y fuerte a ×1 y ×1,35 y una ciudadela, con `EscalaForzada`) y `ElCosteDeLoMenudo`.
 
+## Columnas, caravanas y el Aeda con su modelo (tema 7, 2026-11-22)
+
+En el estilo «Mejorado», las figuras de columnas, caravanas y Aedas salen con su modelo de juego. Cada modelo se hornea una vez en una tira de
+mallas (`HornoDeFiguras`: 12 fotogramas de andar y 6 de reposo) y se pinta en lote (`ModelosDeFiguras`, `RenderMeshInstanced`). De lejos, o
+mientras se hornea, se pinta la figura de bloques. «Prototipo» y «Cajas» no cambian.
+
+- **Estandarte:** lo lleva la figura del centro de la primera fila (`ColumnasDelMapa.PortadorAlCentro`). El blasón va al 80 % del ancho
+  (`FigurasDelMapa.BlasonEnPano`) sobre un paño rígido con ribete. El color del paño se elige por contraste entre lino crudo, pardo casi
+  negro y añil oscuro. Va compuesto en la textura, así que sigue siendo una llamada por Facción.
+- **Andar:** el umbral es de 0,05 m/s del modelo (`UmbralAndar`), para que el ruido de una columna casi parada no la ponga a dar pasos. El
+  Aeda y su burro tienen el suyo, de 0,002 m/s (`UmbralAndarAeda`). Velocidades del motor: tropa 12 u/min, Aeda 20, caravanas 24 (buey),
+  28,5 (dromedario) y 36 (caballo). En las pruebas del mapa el reloj del mundo está parado sin servidor; para ver andar, la prueba lo pone en
+  marcha.
+
+### Coste
+
+- **Columnas, a zoom habitual, con 30 columnas (1.319 figuras):** 7,58 ms con modelos, frente a 4,01 ms de las cajas y 5,36 ms de las
+  figuras de bloques. Son 176 llamadas y 3,82 M de triángulos.
+- **Caravanas, con 12 caravanas de tres carros y escolta (unas 190 figuras):**
+  - a zoom habitual, 4,1 ms (p95 4,8) frente a 3,8 ms de bloques, con 35 llamadas frente a 8;
+  - de cerca, 5,2 ms (p95 6,3) frente a 3,6 ms, con 77 llamadas;
+  - casi un millón de triángulos, porque un carro con su animal tiene de 6.000 a 14.000.
+- **Aeda, con los tres Aedas de un mundo y una columna, andando a zoom habitual:** 4,10 ms frente a 3,95 ms, con 16 llamadas frente a 8.
+- **Por qué no hay nivel ligero:** se probó con 800 a 1.000 triángulos por soldado. No era el mismo soldado (se rompía la túnica y el cuerpo
+  de Synty salía de otro color) y apenas ahorraba, porque a zoom habitual el coste son sobre todo las llamadas. Lo que hay es el modelo
+  completo de cerca, con sombra y hasta 300 figuras por encima de 40 px. Más lejos va el mismo modelo reducido: 6 fotogramas de andar y sin
+  sombra. Si hiciera falta bajar más, la vía es hornear el color de Synty a una textura y pasar cada modelo por un solo material.
+
+### Pruebas
+
+`LaColumnaConSuModelo`, `ElEstandarteYLasLanzas`, `ElEstandarteConSuPano`, `LasCaravanasConSusModelos`, `ElAedaConSuModelo`,
+`ElColorDeBando` y `LosCaballosDeGuerra` (PlayMode, `SueloDelMapaTests`), y `ColumnasDelMapaTests` (EditMode).
+
 ## La vegetación (tema 3, 2026-11-20)
 
 Árboles, matas y capa baja del mapa. Las reglas de colocación son las del prototipo (BronzeAgeClient: `src/mundo3d/arboles.ts`, `matas.ts`),

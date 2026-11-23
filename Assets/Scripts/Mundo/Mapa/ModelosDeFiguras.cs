@@ -23,6 +23,16 @@ namespace ConquestTactics.Mundo.Mapa
 
     public static class ModelosDeFiguras
     {
+        /// <summary>Por debajo de esto (m/s, en el modelo), una figura va en reposo: las de columnas y caravanas.</summary>
+        public const float UmbralAndar = 0.05f;
+        /// <summary>El del Aeda y su burro (estilo «Mejorado»): justo por encima de cero, reposo solo cuando de verdad no avanza.</summary>
+        public const float UmbralAndarAeda = 0.002f;
+        /// <summary>En el último fotograma: el Aeda y su burro andando o parados, y lo que anda el Aeda (m/s del modelo), para las pruebas.</summary>
+        public static int AedaAndando, AedaParado;
+        /// <summary>Los del último fotograma pintado.</summary>
+        public static int ultimosAedaAndando, ultimosAedaParado;
+        public static float VelocidadAeda;
+
         /// <summary>Lo que sale en pantalla con menos alto que esto (px), con su figura de bloques.</summary>
         public static float PixelesMinimos = 14;
         /// <summary>Solo proyectan sombra las que miden al menos esto en pantalla (px).</summary>
@@ -73,6 +83,24 @@ namespace ConquestTactics.Mundo.Mapa
         {
             if (!clavesDeHeroe.TryGetValue(heroeId, out var c)) clavesDeHeroe[heroeId] = c = "heroe|" + heroeId;
             return c;
+        }
+
+        static readonly Dictionary<int, string> clavesDeCaravana = new Dictionary<int, string>();
+        /// <summary>El carrito del héroe: con qué animal va (null, a mano).</summary>
+        public static string AnimalDelCarrito = "burro";
+
+        /// <summary>La clave del modelo de un animal o carro de caravana (tema 7): el burro del Aeda, «animal|burro»; un carro, «carro|tipo|animal»
+        /// (tipo básico o reforzado; el de fundación, «fundacion»; el carrito del héroe, «carrito» con el animal de `AnimalDelCarrito`).</summary>
+        public static string ClaveDeCaravana(in SitioDeFigura f)
+        {
+            int k = (int)f.Figura * 64 + (int)f.Animal * 2 + (f.Reforzado ? 1 : 0);
+            if (clavesDeCaravana.TryGetValue(k, out var c)) return c;
+            string animal = f.Animal == AnimalDeTiro.Caballo ? "caballo" : f.Animal == AnimalDeTiro.Camello ? "camello" : "buey";
+            c = f.Figura == FiguraDeColumna.Burro ? "animal|burro"
+                : f.Figura == FiguraDeColumna.Carrito ? (AnimalDelCarrito == null ? "carro|carrito" : "carro|carrito|" + AnimalDelCarrito)
+                : f.Figura == FiguraDeColumna.CarroDeFundacion ? "carro|fundacion|" + animal
+                : "carro|" + (f.Reforzado ? "reforzado" : "basico") + "|" + animal;
+            return clavesDeCaravana[k] = c;
         }
 
         /// <summary>De cerca: por encima de este alto en pantalla (px), y como mucho los `TopeCompletos` más grandes, el modelo con todos sus
@@ -152,6 +180,17 @@ namespace ConquestTactics.Mundo.Mapa
                 var h = f.HeroeId != null ? Tira(ClaveDeHeroe(f.HeroeId)) : null;
                 return (h, h, h);
             }
+            if (f.Figura == FiguraDeColumna.Aeda)
+            {
+                var ae = Tira("aeda");
+                return (ae, ae, ae);
+            }
+            if (f.Figura == FiguraDeColumna.Burro || f.Figura == FiguraDeColumna.Carro || f.Figura == FiguraDeColumna.CarroDeFundacion
+                || f.Figura == FiguraDeColumna.Carrito)
+            {
+                var a = Tira(ClaveDeCaravana(f));
+                return (a, a, a);
+            }
             if (f.Figura != FiguraDeColumna.Soldado) return default;
             var t = Tira(ClaveDeTropa(f.TropaId, f.Variante));
             if (t == null) return default;
@@ -172,7 +211,11 @@ namespace ConquestTactics.Mundo.Mapa
             var lejos = f.Figura != FiguraDeColumna.Soldado || px >= PixelesCompleto ? t : px < PixelesLejos ? lejana : media;
             // el paso: al ritmo de lo que anda su columna (u/s → m/s del modelo), con su fase; parada, el reposo
             float vModelo = (float)(velocidad * EscalaDelMapa.MetrosPorUnidad / MetrosAEscena);
-            bool anda = vModelo > 0.05f && t.Andar.Length > 0;
+            // el umbral de andar: por debajo de `UmbralAndar` m/s, el reposo (que el ruido de la velocidad medida de una columna casi parada no la
+            // ponga a dar pasos); el Aeda y su burro, que van solos y despacio, andan en cuanto avanzan (`UmbralAndarAeda`)
+            bool delAeda = f.Figura == FiguraDeColumna.Aeda || f.Figura == FiguraDeColumna.Burro;
+            bool anda = vModelo > (delAeda ? UmbralAndarAeda : UmbralAndar) && t.Andar.Length > 0;
+            if (delAeda) { if (anda) AedaAndando++; else AedaParado++; VelocidadAeda = vModelo; }
             float ritmo = anda ? Mathf.Clamp(vModelo / t.PasoDelClip, 0.6f, 1.8f) : 1;
             float dura = anda ? t.DuracionAndar : t.DuracionReposo;
             // la fase: por grupos de filas (fila r, grupo r mod `GruposDePaso`) más el desfase de su columna, no por figura: así, en cada
@@ -196,6 +239,7 @@ namespace ConquestTactics.Mundo.Mapa
         public static void Pintar()
         {
             Llamadas = Instancias = TriangulosPintados = Completos = Reducidos = 0;
+            ultimosAedaAndando = AedaAndando; ultimosAedaParado = AedaParado; AedaAndando = AedaParado = 0;
             // las candidatas a ir con todo, de mayor a menor en pantalla
             orden.Clear();
             for (int i = 0; i < entradas.Count; i++)

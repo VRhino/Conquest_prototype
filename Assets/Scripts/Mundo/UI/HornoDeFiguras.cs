@@ -62,6 +62,9 @@ namespace ConquestTactics.Mundo.UI
             {
                 if (p[0] == "tropa") tira = Tropa(p[1], int.Parse(p[2]));
                 else if (p[0] == "heroe") tira = Heroe(p[1]);
+                else if (p[0] == "animal") tira = Animal(p[1]);
+                else if (p[0] == "carro") tira = Carro(p[1], p.Length > 2 ? p[2] : null);
+                else if (p[0] == "aeda") tira = Aeda();
             }
             catch (Exception e)
             {
@@ -336,8 +339,22 @@ namespace ConquestTactics.Mundo.UI
         }
 
         /// <summary>Un ciclo: los Animators con la velocidad `v` (lo que la tenga: `VelocidadReal`, `Speed`…) y el aire `aire` (`MountGaitBlend`),
-        /// avanzados a mano; `n` poses repartidas en lo que dura el estado, cada una cocida en una malla.</summary>
-        Mesh[] Ciclo(Animator[] animators, float v, float aire, int n, Transform raiz, List<Material> mats, Action tras, out float duracion)
+        /// avanzados a mano; `n` poses repartidas en lo que dura el estado (`vueltas` veces), cada una cocida en una malla.</summary>
+        Mesh[] Ciclo(Animator[] animators, float v, float aire, int n, Transform raiz, List<Material> mats, Action tras, out float duracion, int vueltas = 1)
+        {
+            duracion = Preparar(animators, v, aire) * vueltas;
+            var r = new Mesh[n];
+            for (int i = 0; i < n; i++)
+            {
+                tras?.Invoke();
+                r[i] = Cocer(raiz, mats);
+                foreach (var a in animators) a.Update(duracion / n);
+            }
+            return r;
+        }
+
+        /// <summary>Los Animators desde cero, con la velocidad y el aire puestos y asentados; lo que dura el estado del primero.</summary>
+        static float Preparar(Animator[] animators, float v, float aire)
         {
             foreach (var a in animators)
             {
@@ -352,15 +369,439 @@ namespace ConquestTactics.Mundo.UI
                 a.Update(0);
                 for (int i = 0; i < 10; i++) a.Update(0.05f);
             }
-            duracion = Mathf.Max(0.2f, animators[0].GetCurrentAnimatorStateInfo(0).length);
-            var r = new Mesh[n];
-            for (int i = 0; i < n; i++)
+            return Mathf.Max(0.2f, animators[0].GetCurrentAnimatorStateInfo(0).length);
+        }
+
+        // ------------------------------------------------------------------ los animales y los carros de las caravanas (tema 7)
+
+        /// <summary>Los modelos (`CaravanaSetup`), en Resources.</summary>
+        public const string Caravana = "MapaMundo/Caravana/";
+        public static readonly Dictionary<string, string> Animales = new Dictionary<string, string>
+            { ["buey"] = "Ox_Draught", ["burro"] = "Donkey_Pack", ["camello"] = "Camel_Draught" };
+        public static readonly Dictionary<string, string> Carros = new Dictionary<string, string>
+            { ["basico"] = "Cart_Basic", ["reforzado"] = "Cart_Reinforced", ["fundacion"] = "Cart_Foundation", ["carrito"] = "Cart_Hero" };
+        /// <summary>El caballo que tira de un carro: el de la montura de tiro (tracio castaño).</summary>
+        public const string MonturaDeTiro = "montura_tiro";
+        /// <summary>Lo que gira una rueda maciza de tres tablas hasta verse igual: media vuelta.</summary>
+        const float SimetriaRueda = 180f;
+        /// <summary>La punta de las varas, este tanto por debajo de lo alto del yugo o de la almohadilla (como en las láminas de Blender).</summary>
+        const float BajoElYugo = 0.06f;
+        /// <summary>Cuántos ciclos de andar puede cubrir la tira de un carro (12 fotogramas cada uno) para que sus ruedas cierren sin salto.</summary>
+        const int CiclosDeCarro = 3;
+        /// <summary>Lo más que se inclina un carro de dos ruedas que además tiene bisagra en las varas (el carrito): el resto, la bisagra.</summary>
+        const float InclinacionConBisagra = 8f;
+        /// <summary>Lo medido al enganchar y al hacer rodar cada carro, por clave (para la lámina).</summary>
+        public static readonly Dictionary<string, string> Medidas = new Dictionary<string, string>();
+
+        /// <summary>Cuánto de la amplitud del paso del caballo llevan las patas de cada animal (1: toda). Las patas cortas con todo el giro del
+        /// caballo andan agachadas y levantan de más la mano.</summary>
+        public static readonly Dictionary<string, float> AmplitudDePatas = new Dictionary<string, float> { ["buey"] = 0.6f, ["burro"] = 0.85f, ["camello"] = 0.7f };
+        /// <summary>El cero de la copia de giros: la postura de pie del caballo (su parado), no el reposo de su FBX; así, de pie, el animal queda
+        /// como se modeló.</summary>
+        public static bool CeroDePie = true;
+        /// <summary>Apunta en la bitácora lo doblado de las patas (para medir el paso).</summary>
+        public static bool MedirPatas;
+        static bool EsPata(string n) => n.StartsWith("Shoulder") || n.StartsWith("UpperArm") || n.StartsWith("Forearm") || n.StartsWith("Front")
+                                        || n.StartsWith("Thigh") || n.StartsWith("Gaskin") || n.StartsWith("Hind");
+
+        /// <summary>Lo doblado de la pata izquierda de delante (codo y rodilla) y de detrás (babilla y corvejón): el ángulo entre un tramo y el
+        /// siguiente, en grados (0: recta).</summary>
+        public static string Flexion(Transform raiz)
+        {
+            var h = new Dictionary<string, Transform>();
+            foreach (var t in raiz.GetComponentsInChildren<Transform>(true)) if (!h.ContainsKey(t.name)) h[t.name] = t;
+            float A(string a, string b, string c, string d) => h.ContainsKey(a) && h.ContainsKey(b) && h.ContainsKey(c) && h.ContainsKey(d)
+                ? Vector3.Angle(h[b].position - h[a].position, h[d].position - h[c].position) : -1;
+            float Aj(string a, string b, string c) => A(a, b, b, c);
+            return $"codo {Aj("UpperArm.L", "Forearm.L", "FrontCannon.L"):0} rodilla {Aj("Forearm.L", "FrontCannon.L", "FrontPastern.L"):0} "
+                   + $"babilla {Aj("Thigh.L", "Gaskin.L", "HindCannon.L"):0} corvejón {Aj("Gaskin.L", "HindCannon.L", "HindPastern.L"):0}";
+        }
+
+        /// <summary>Un animal de caravana que anda con el clip del caballo: un caballo de héroe escondido, en su taller, hace de reloj; antes de cocer
+        /// cada pose se copia el giro de cada hueso del caballo, respecto a su postura de pie (`CeroDePie`), al hueso del mismo nombre del animal,
+        /// sobre el reposo propio del animal, y en las patas solo la parte `AmplitudDePatas`. Solo giros: así el animal conserva el largo de sus
+        /// patas y de su cuello (el clip, que no se toca, escribe también posiciones de hueso, que lo dejarían con las del caballo). `Escala`: lo
+        /// alto de su pecho respecto al del caballo por la amplitud de sus patas (para su paso, sin patinar).</summary>
+        (GameObject taller, Animator reloj, Action copiar, float escala)? Reloj(Transform animal, string tipo)
+        {
+            var prefab = Resources.Load<HeroHorseVisual>(HeroHorseVisual.ResourcePath);
+            if (prefab == null) return null;
+            var taller = Taller();
+            var caballo = Instanciar(prefab.gameObject, taller);
+            Limpiar(caballo, taller);
+            var a = caballo.GetComponentInChildren<Animator>();
+            var cuerpoC = caballo.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "Horse");
+            var cuerpoA = animal.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(r => r.name == "Body");
+            if (a == null || cuerpoC == null || cuerpoA == null) { Destroy(taller); return null; }
+            var huesosC = new Dictionary<string, Transform>();
+            foreach (var t in cuerpoC.bones) if (t != null) huesosC[t.name] = t;
+            var amplitud = AmplitudDePatas.TryGetValue(tipo, out var am) ? am : 1;
+            // (lo alto del pecho, sobre las manos, de uno y otro)
+            float Alto(SkinnedMeshRenderer r, Transform raiz) { var p = r.bones.FirstOrDefault(b => b != null && b.name == "Chest"); return p == null ? 0 : raiz.InverseTransformPoint(p.position).y; }
+            var altoC = Alto(cuerpoC, caballo.transform);
+            var escala = (altoC > 0.1f && Alto(cuerpoA, animal) > 0.1f ? Alto(cuerpoA, animal) / altoC : 1) * amplitud;
+            if (MedirPatas) Bitacora.Add($"  patas {tipo}: caballo en reposo {Flexion(caballo.transform)}; {tipo} en reposo {Flexion(animal)}");
+            taller.SetActive(true);
+            // el cero: la postura de pie del caballo (parado y asentado) o su reposo
+            if (CeroDePie) Preparar(new[] { a }, 0, 0);
+            if (MedirPatas) Bitacora.Add($"  patas {tipo}: caballo de pie {Flexion(caballo.transform)}");
+            var pares = new List<(Transform c, Transform a, Quaternion reposo, Quaternion cero, float f)>();
+            foreach (var t in cuerpoA.bones)
+                if (t != null && huesosC.TryGetValue(t.name, out var c))
+                    pares.Add((c, t, t.localRotation, Quaternion.Inverse(c.localRotation), EsPata(t.name) ? amplitud : 1));
+            void Copiar()
             {
-                tras?.Invoke();
-                r[i] = Cocer(raiz, mats);
-                foreach (var a in animators) a.Update(duracion / n);
+                foreach (var (c, t, reposo, cero, f) in pares)
+                {
+                    var d = cero * c.localRotation;
+                    t.localRotation = reposo * (f == 1 ? d : Quaternion.Slerp(Quaternion.identity, d, f));
+                }
             }
-            return r;
+            return (taller, a, Copiar, escala);
+        }
+
+        /// <summary>Un animal de caravana suelto (buey, burro o camello; «caballo», el de tiro), andando y parado.</summary>
+        TiraDeFiguras Animal(string tipo)
+        {
+            var taller = Taller();
+            GameObject reloj = null;
+            try
+            {
+                var (go, a, copiar, escala) = Bestia(tipo, taller, out reloj);
+                if (go == null) return null;
+                taller.SetActive(true);
+                var tira = new TiraDeFiguras { PasoDelClip = AndarCaballo * escala };
+                var mats = new List<Material>();
+                var medir = MedirPatas && reloj != null ? (Action)(() => { copiar?.Invoke(); Bitacora.Add($"  patas {tipo} andando: {Flexion(go.transform)} | caballo {Flexion(reloj.transform)}"); }) : copiar;
+                tira.Andar = Ciclo(new[] { a }, AndarCaballo, 1, FotogramasAndar, go.transform, mats, medir, out tira.DuracionAndar);
+                tira.Reposo = Ciclo(new[] { a }, 0, 0, FotogramasReposo, go.transform, mats, copiar, out tira.DuracionReposo);
+                return Terminar(tira, mats);
+            }
+            finally
+            {
+                Destroy(taller);
+                if (reloj != null) Destroy(reloj);
+            }
+        }
+
+        /// <summary>El animal en el taller, con lo que lo mueve: el caballo, su propio Animator; los demás, el reloj del caballo y la copia de giros.</summary>
+        (GameObject go, Animator a, Action copiar, float escala) Bestia(string tipo, GameObject taller, out GameObject reloj, bool sinAperos = false)
+        {
+            reloj = null;
+            if (tipo == "caballo")
+            {
+                var prefab = Resources.Load<HeroHorseVisual>(HeroHorseVisual.ResourcePath);
+                if (prefab == null) return default;
+                var caballo = Instanciar(prefab.gameObject, taller);
+                if (CaballosDeGuerra.Cargar()?.Vestir(caballo, MonturaDeTiro, null, deTiro: true) != true) return default;
+                Limpiar(caballo, taller);
+                return (caballo, caballo.GetComponentInChildren<Animator>(), null, 1);
+            }
+            if (!Animales.TryGetValue(tipo, out var nombre)) return default;
+            var modelo = Resources.Load<GameObject>(Caravana + nombre);
+            if (modelo == null) return default;
+            var go = Instanciar(modelo, taller);
+            Limpiar(go, taller);
+            foreach (var an in go.GetComponentsInChildren<Animator>(true)) an.enabled = false;   // (lo mueve el caballo)
+            if (sinAperos) foreach (var s in go.GetComponentsInChildren<SkinnedMeshRenderer>(true)) if (s.name == "Tack") s.gameObject.SetActive(false);
+            if (!(Reloj(go.transform, tipo) is var (t, a, copiar, escala))) return default;
+            reloj = t;
+            return (go, a, copiar, escala);
+        }
+
+        /// <summary>Un carro de caravana (básico, reforzado o de fundación) enganchado a su animal, o el carrito del héroe (sin animal, a mano; con
+        /// él, el burro sin alforjas). Las varas se llevan a lo alto del yugo o de la almohadilla del animal (en el caballo y el burro, a su cruz):
+        /// las que van aparte, con bisagra (los de cuatro ruedas y el carrito), giran en ella; si no, el carro de dos ruedas se inclina sobre su eje.
+        /// Lo que no case queda apuntado en `Medidas`. Las ruedas giran lo que avanza el carro, en una tira de uno a tres ciclos de andar que cierre
+        /// en medias vueltas, sin salto.</summary>
+        TiraDeFiguras Carro(string tipo, string animal)
+        {
+            if (!Carros.TryGetValue(tipo, out var nombre)) return null;
+            var modelo = Resources.Load<GameObject>(Caravana + nombre);
+            if (modelo == null) return null;
+            var clave = animal == null ? tipo : tipo + "|" + animal;
+            var taller = Taller();
+            GameObject reloj = null;
+            try
+            {
+                // (el modelo, dentro de un padre propio: el FBX de una sola raíz trae el cuerpo en la raíz, y para inclinarlo hace falta un padre)
+                var carro = new GameObject("carro");
+                carro.transform.SetParent(taller.transform, false);
+                // (con el giro que trae el prefab: el FBX del carro lleva en la raíz el paso de los ejes de Blender)
+                Limpiar(Instantiate(modelo, carro.transform, false), taller);
+                var ruedas = carro.GetComponentsInChildren<Transform>(true).Where(t => t.name.Contains("_Wheel_")).ToArray();
+                var cuerpo = carro.GetComponentsInChildren<MeshFilter>(true).FirstOrDefault(m => !m.name.Contains("_Wheel_") && !m.name.Contains("_Shafts"));
+                // (las varas aparte, con bisagra en el frente de la caja: las de los carros de cuatro ruedas)
+                var varas = carro.GetComponentsInChildren<MeshFilter>(true).FirstOrDefault(m => m.name.Contains("_Shafts"));
+                if (cuerpo == null || ruedas.Length == 0) return null;
+                // el radio: medio alto de la primera rueda, en el espacio del carro
+                var rueda = ruedas[0].GetComponent<MeshFilter>();
+                var aCarro = carro.transform.worldToLocalMatrix * ruedas[0].localToWorldMatrix;
+                var alturas = rueda.sharedMesh.vertices.Select(v => aCarro.MultiplyPoint3x4(v).y).ToArray();
+                float radio = (alturas.Max() - alturas.Min()) / 2;
+                var eje = carro.transform.right;
+                (GameObject go, Animator a, Action copiar, float escala) bestia = default;
+                string medida = $"rueda {radio:0.00} m";
+                if (animal != null)
+                {
+                    bestia = Bestia(animal, taller, out reloj, sinAperos: tipo == "carrito");
+                    if (bestia.go == null) return null;
+                    medida += ", " + Enganchar(carro.transform, cuerpo, varas, ruedas, bestia.go.transform, animal == "caballo" ? "Horse" : tipo == "carrito" ? "Body" : null);
+                }
+                var giroRueda = ruedas.Select(r => r.rotation).ToArray();
+                taller.SetActive(true);
+                var tira = new TiraDeFiguras { PasoDelClip = bestia.go != null ? AndarCaballo * bestia.escala : AndarTropa };
+                var mats = new List<Material>();
+                // lo que avanza en un ciclo de andar; la tira cubre de 1 a `CiclosDeCarro` ciclos, los que mejor cierren en medias vueltas de rueda
+                float dur = bestia.a != null ? Preparar(new[] { bestia.a }, AndarCaballo, 1) : Mathf.PI * radio / AndarTropa;
+                float avance = tira.PasoDelClip * dur;
+                int ciclos = 1, medias = 1;
+                float desliza = float.MaxValue;
+                for (int c = 1; c <= (bestia.a != null ? CiclosDeCarro : 1); c++)
+                {
+                    int m = Mathf.Max(1, Mathf.RoundToInt(c * avance / (Mathf.PI * radio)));
+                    float d = Mathf.Abs(m * Mathf.PI * radio - c * avance) / (c * avance);
+                    if (d < desliza - 0.02f) (ciclos, medias, desliza) = (c, m, d);
+                }
+                medida += $", {medias} media{(medias > 1 ? "s" : "")} vuelta{(medias > 1 ? "s" : "")} de rueda en {ciclos} ciclo{(ciclos > 1 ? "s" : "")} de andar (desliza un {desliza:0%})";
+                int andar = FotogramasAndar * ciclos;
+                int fotograma = 0;
+                void Rodar(int n)
+                {
+                    float angulo = SimetriaRueda * medias * fotograma++ / n;
+                    for (int i = 0; i < ruedas.Length; i++) ruedas[i].rotation = Quaternion.AngleAxis(angulo, eje) * giroRueda[i];
+                    bestia.copiar?.Invoke();
+                }
+                if (bestia.a != null)
+                {
+                    tira.Andar = Ciclo(new[] { bestia.a }, AndarCaballo, 1, andar, taller.transform, mats, () => Rodar(andar), out tira.DuracionAndar, ciclos);
+                    fotograma = 0;
+                    tira.Reposo = Ciclo(new[] { bestia.a }, 0, 0, FotogramasReposo, taller.transform, mats, () => { fotograma = 0; Rodar(1); }, out tira.DuracionReposo);
+                }
+                else
+                {
+                    tira.Andar = new Mesh[FotogramasAndar];
+                    for (int i = 0; i < FotogramasAndar; i++) { Rodar(FotogramasAndar); tira.Andar[i] = Cocer(taller.transform, mats); }
+                    tira.DuracionAndar = dur;
+                    fotograma = 0;
+                    Rodar(1);
+                    var quieto = Cocer(taller.transform, mats);
+                    tira.Reposo = Enumerable.Repeat(quieto, FotogramasReposo).ToArray();
+                    tira.DuracionReposo = 2;
+                }
+                Medidas[clave] = medida;
+                return Terminar(tira, mats);
+            }
+            finally
+            {
+                Destroy(taller);
+                if (reloj != null) Destroy(reloj);
+            }
+        }
+
+        /// <summary>Pone el animal delante del carro con lo alto de su yugo (o almohadilla, o la cruz del caballo) a la punta de las varas; si no
+        /// llega y el carro es de dos ruedas, lo inclina sobre su eje. Devuelve lo medido.</summary>
+        static string Enganchar(Transform carro, MeshFilter cuerpo, MeshFilter varas, Transform[] ruedas, Transform animal, string cruzDe)
+        {
+            // la punta de las varas: lo más adelantado del carro (de sus varas, si van aparte)
+            Vector3 Punta()
+            {
+                var mf = varas != null ? varas : cuerpo;
+                var M = carro.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+                var vs = mf.sharedMesh.vertices.Select(v => M.MultiplyPoint3x4(v)).ToArray();
+                var frente = vs.Max(v => v.z);
+                var punta = vs.Where(v => v.z > frente - 0.05f).ToArray();
+                return new Vector3(0, punta.Average(v => v.y), punta.Average(v => v.z));
+            }
+            // el apoyo del animal: lo alto de sus aperos y su centro a lo largo (el yugo, la almohadilla); en el caballo, lo alto de la cruz
+            Vector3 Apoyo()
+            {
+                var r = animal.GetComponentsInChildren<SkinnedMeshRenderer>(true).FirstOrDefault(s => s.name == (cruzDe ?? "Tack"));
+                if (r == null) return Vector3.zero;
+                var m = new Mesh();
+                r.BakeMesh(m, true);
+                var M = animal.worldToLocalMatrix * r.transform.localToWorldMatrix;
+                var vs = m.vertices.Select(v => M.MultiplyPoint3x4(v)).ToArray();
+                Destroy(m);
+                if (cruzDe != null)
+                {
+                    var pecho = r.bones.FirstOrDefault(b => b != null && b.name == "Chest");
+                    float z = pecho != null ? animal.InverseTransformPoint(pecho.position).z : vs.Average(v => v.z);
+                    var cruz = vs.Where(v => Mathf.Abs(v.x) < 0.12f && Mathf.Abs(v.z - z) < 0.15f).ToArray();
+                    return cruz.Length == 0 ? Vector3.zero : new Vector3(0, cruz.Max(v => v.y), z);
+                }
+                return new Vector3(0, vs.Max(v => v.y), vs.Average(v => v.z));
+            }
+            var apoyo = Apoyo();
+            var p = Punta();
+            float falta = apoyo.y - BajoElYugo - p.y;   // (> 0: las varas quedan bajas)
+            float inclinacion = 0;
+            float bisagra = 0;
+            if (Mathf.Abs(falta) > 0.03f && ruedas.Length == 2)
+            {
+                // de dos ruedas: se inclina sobre el eje hasta que la punta llegue; si además tiene bisagra (el carrito), como mucho
+                // `InclinacionConBisagra` grados (que la carga no parezca caerse), y lo demás lo hace la bisagra
+                var ejeP = carro.InverseTransformPoint(ruedas[0].position);
+                var r = new Vector2(p.z - ejeP.z, p.y - ejeP.y);
+                float objetivo = Mathf.Asin(Mathf.Clamp((apoyo.y - BajoElYugo - ejeP.y) / r.magnitude, -1, 1)) * Mathf.Rad2Deg;
+                inclinacion = objetivo - Mathf.Atan2(r.y, r.x) * Mathf.Rad2Deg;
+                if (varas != null) inclinacion = Mathf.Clamp(inclinacion, -InclinacionConBisagra, InclinacionConBisagra);
+                // (sobre +x, un giro positivo baja lo de delante)
+                var pivote = carro.TransformPoint(new Vector3(0, ejeP.y, ejeP.z));
+                foreach (Transform hijo in carro) hijo.RotateAround(pivote, carro.right, -inclinacion);
+                p = Punta();
+                falta = apoyo.y - BajoElYugo - p.y;
+            }
+            if (Mathf.Abs(falta) > 0.03f && varas != null)
+            {
+                // varas con bisagra: giran sobre ella hasta que la punta llegue
+                var b = carro.InverseTransformPoint(varas.transform.position);
+                var r = new Vector2(p.z - b.z, p.y - b.y);
+                float objetivo = Mathf.Asin(Mathf.Clamp((apoyo.y - BajoElYugo - b.y) / r.magnitude, -1, 1)) * Mathf.Rad2Deg;
+                bisagra = objetivo - Mathf.Atan2(r.y, r.x) * Mathf.Rad2Deg;
+                varas.transform.RotateAround(varas.transform.position, carro.right, -bisagra);
+                p = Punta();
+                falta = apoyo.y - BajoElYugo - p.y;
+            }
+            // delante: el apoyo, 2 cm por detrás de la punta (como en las láminas); el animal, en el suelo
+            animal.localPosition = new Vector3(0, 0, p.z - apoyo.z - 0.02f);
+            animal.localRotation = Quaternion.identity;
+            return $"varas a {p.y:0.00} m, {(cruzDe != null ? "cruz" : "yugo")} a {apoyo.y:0.00} m" + (inclinacion != 0 ? $", inclinado {inclinacion:0.0}°" : "") + (bisagra != 0 ? $", varas giradas {bisagra:0.0}° en su bisagra" : "")
+                   + (Mathf.Abs(falta) > 0.03f ? $", NO CASA: faltan {falta * 100:0} cm" : ", casa");
+        }
+
+        // ------------------------------------------------------------------ el Aeda (tema 7)
+
+        /// <summary>El prefab del Aeda (`AedaSetup`), en Resources.</summary>
+        public const string RutaAeda = "MapaMundo/Aeda/Aeda";
+
+        /// <summary>El Aeda, andando y parado, con los clips de las levas tal cual y la corrección de brazos de `BrazosDelAeda` encima.</summary>
+        TiraDeFiguras Aeda()
+        {
+            var prefab = Resources.Load<GameObject>(RutaAeda);
+            if (prefab == null) return null;
+            var taller = Taller();
+            try
+            {
+                var go = Instanciar(prefab, taller);
+                Limpiar(go, taller);
+                var a = go.GetComponentInChildren<Animator>();
+                if (a == null) return null;
+                var brazos = new BrazosDelAeda(go.transform);    // (con el modelo aún en su reposo de Synty, antes de animar)
+                taller.SetActive(true);
+                var tira = new TiraDeFiguras { PasoDelClip = AndarTropa };
+                var mats = new List<Material>();
+                tira.Andar = Ciclo(new[] { a }, AndarTropa, 1, FotogramasAndar, go.transform, mats, () => brazos.Aplicar(true), out tira.DuracionAndar);
+                tira.Reposo = Ciclo(new[] { a }, 0, 0, FotogramasReposo, go.transform, mats, () => brazos.Aplicar(false), out tira.DuracionReposo);
+                return Terminar(tira, mats);
+            }
+            finally { Destroy(taller); }
+        }
+
+        /// <summary>La corrección de brazos del Aeda, encima de los clips de las levas (que son de herramienta a dos manos y la llevan al hombro;
+        /// no se editan): el brazo derecho, pegado al costado y algo adelantado, con la mano en el agarre del bastón (IK de dos huesos con el
+        /// codo atrás y abajo); el bastón, pieza rígida aparte, vertical con el pie en el suelo por delante y a la derecha del pie derecho y,
+        /// andando, con un vaivén corto contrario a la pierna derecha; el brazo izquierdo, en reposo, colgando junto al muslo, y andando, con el
+        /// balanceo del clip. Lo mismo que en Blender (`BronzeAgeArte/mapa/figuras/aeda/aeda.py`, `corregir_brazos`).</summary>
+        sealed class BrazosDelAeda
+        {
+            const float Agarre = 1.04f, Delante = 0.25f, Lado = 0.12f, Vaiven = 0.05f, AtrasDelAgarre = 0.03f;
+            /// <summary>La mano izquierda en reposo: tanto fuera del hueso del muslo y tanto por debajo (m).</summary>
+            const float ManoFuera = 0.10f, ManoAbajo = 0.16f;
+            readonly Transform raiz, baston, cadera, tobilloR, hombroR, codoR, manoR, hombroL, codoL, manoL, musloL;
+            // (en el mundo: el taller no gira; la raíz del modelo puede traer el giro de ejes del FBX, así que no se usan sus ejes)
+            readonly Vector3 pieDesdeCadera, adelante, derecha;
+            readonly Quaternion manoLReposo, bastonReposo;
+            /// <summary>La escala del esqueleto: el nodo `Rig_Leva` lleva el paso de cm a m de Synty (0,01), así que los huesos están a esa escala
+            /// del origen del modelo y la malla se ve a su tamaño. Lo visible (el bastón, las medidas en m) va en el espacio del modelo.</summary>
+            float e = 1;
+            readonly float anchoReposo;
+            readonly Vector3 escalaBaston;
+            /// <summary>El largo del bastón (m): el FBX lo trae a la escala de cm de Synty y se lleva a su tamaño.</summary>
+            const float LargoBaston = 1.5f;
+            int medidas;
+            Vector3 Ver(Vector3 hueso) => raiz.position + (hueso - raiz.position) / e;
+            Vector3 Hueso(Vector3 visible) => raiz.position + (visible - raiz.position) * e;
+
+            public BrazosDelAeda(Transform raiz)
+            {
+                this.raiz = raiz;
+                var h = new Dictionary<string, Transform>();
+                foreach (var t in raiz.GetComponentsInChildren<Transform>(true)) if (!h.ContainsKey(t.name)) h[t.name] = t;
+                Transform T(string n) => h.TryGetValue(n, out var t) ? t : null;
+                cadera = T("Hips"); tobilloR = T("Ankle_R"); hombroR = T("Shoulder_R"); codoR = T("Elbow_R"); manoR = T("Hand_R");
+                hombroL = T("Shoulder_L"); codoL = T("Elbow_L"); manoL = T("Hand_L"); musloL = T("UpperLeg_L");
+                baston = h.Values.FirstOrDefault(t => t.name.Contains("Baston"));
+                // (la escala del esqueleto: al animarlo, el clip de las levas lo deja a otra escala que la del modelo en reposo; se mide en cada
+                // pose por el ancho de hombros, y lo visible —la malla, el bastón— va a la del reposo)
+                anchoReposo = (hombroR.position - hombroL.position).magnitude;
+                if (baston != null && baston.GetComponent<MeshFilter>() is MeshFilter mb && mb.sharedMesh != null)
+                {
+                    var alto = Vector3.Scale(mb.sharedMesh.bounds.size, baston.lossyScale);
+                    float largo = Mathf.Max(alto.x, alto.y, alto.z);
+                    if (largo > 1e-4f) baston.localScale *= LargoBaston / largo;
+                }
+                if (baston != null) escalaBaston = baston.lossyScale;      // (la del mundo, que se mantiene: su padre puede cambiar de escala)
+                if (cadera == null || tobilloR == null || manoR == null || manoL == null)
+                {
+                    Bitacora.Add($"  aeda: faltan huesos (cadera {cadera != null}, tobillo {tobilloR != null}, manos {manoR != null}/{manoL != null})");
+                    return;
+                }
+                pieDesdeCadera = (tobilloR.position - cadera.position) / e;
+                pieDesdeCadera.y = 0;
+                manoLReposo = manoL.localRotation;
+                if (baston != null) bastonReposo = baston.rotation;
+                // hacia dónde mira la figura: de los talones a las puntas, en el suelo; su derecha, del hombro izquierdo al derecho
+                var puntas = T("Toes_R") ?? T("Ball_R");
+                adelante = puntas != null ? puntas.position - tobilloR.position : Vector3.forward;
+                adelante.y = 0; adelante.Normalize();
+                derecha = hombroR.position - hombroL.position;
+                derecha.y = 0; derecha = (derecha - adelante * Vector3.Dot(derecha, adelante)).normalized;
+            }
+
+            public void Aplicar(bool andar)
+            {
+                if (cadera == null || manoR == null) return;
+                e = Mathf.Max(1e-6f, (hombroR.position - hombroL.position).magnitude / anchoReposo);
+                Vector3 adel = adelante, der = derecha, arriba = Vector3.up;
+                var pie = Ver(cadera.position) + pieDesdeCadera + der * Lado + adel * Delante;
+                pie.y = raiz.position.y;                                                    // (en el suelo)
+                if (andar)
+                    pie += adel * Mathf.Clamp(-Vaiven * Vector3.Dot(tobilloR.position - cadera.position, adel) / e / 0.30f, -Vaiven, Vaiven);
+                var hom = Ver(hombroR.position);
+                DosHuesos(hombroR, codoR, manoR, Hueso(pie + arriba * Agarre - adel * AtrasDelAgarre), Hueso(hom - der * 0.05f - adel * 0.45f - arriba * 0.45f));
+                if (baston != null)
+                {
+                    baston.SetPositionAndRotation(pie, bastonReposo);
+                    // (si cuelga de la armadura, su escala sigue a la del esqueleto: se le devuelve la suya)
+                    var padre = baston.parent != null ? baston.parent.lossyScale.x : 1;
+                    baston.localScale = escalaBaston / Mathf.Max(1e-6f, padre);
+                }
+                if (MedirPatas && medidas++ < 3)
+                    Bitacora.Add($"  aeda {(andar ? "andando" : "parado")}: raíz {raiz.position}, cadera {cadera.position}, hombro {hombroR.position}, codo {codoR.position}, mano {manoR.position}, " +
+                                 $"objetivo {pie + arriba * Agarre - adel * AtrasDelAgarre}, mano vista {Ver(manoR.position)}, escala {e}, bastón {(baston != null ? baston.name + " " + baston.position + " " + baston.lossyScale + " " + (baston.GetComponent<Renderer>()?.bounds.size.ToString() ?? "-") : "NO")}");
+                if (!andar && musloL != null)
+                {
+                    DosHuesos(hombroL, codoL, manoL, Hueso(Ver(musloL.position) - der * ManoFuera - arriba * ManoAbajo),
+                              Hueso(Ver(hombroL.position) + der * 0.05f - adel * 0.45f - arriba * 0.45f));
+                    manoL.localRotation = manoLReposo;
+                }
+            }
+
+            /// <summary>IK de dos huesos (los del brazo de Synty no están unidos): el codo, en el plano del hombro, el objetivo y el polo.</summary>
+            static void DosHuesos(Transform hombro, Transform codo, Transform mano, Vector3 objetivo, Vector3 polo)
+            {
+                Vector3 s = hombro.position, e = codo.position, h = mano.position;
+                float a = (e - s).magnitude, b = (h - e).magnitude;
+                float d = Mathf.Clamp((objetivo - s).magnitude, Mathf.Abs(a - b) + 1e-3f, a + b - 1e-3f);
+                var eje = (objetivo - s).normalized;
+                var pv = Vector3.ProjectOnPlane(polo - s, eje).normalized;
+                float ca = (a * a + d * d - b * b) / (2 * a * d);
+                var e2 = s + eje * a * ca + pv * a * Mathf.Sqrt(Mathf.Max(0, 1 - ca * ca));
+                hombro.rotation = Quaternion.FromToRotation(e - s, e2 - s) * hombro.rotation;
+                var e3 = codo.position;
+                codo.rotation = Quaternion.FromToRotation(mano.position - e3, s + eje * d - e3) * codo.rotation;
+            }
         }
 
         Material Copia(Material m, Color? tinte)

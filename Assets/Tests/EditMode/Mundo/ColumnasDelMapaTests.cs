@@ -48,13 +48,15 @@ namespace ConquestTactics.Mundo.Tests
             Assert.AreEqual(12, s.Count);
             CollectionAssert.AreEqual(new[] { 0.30, 0.45, 0.68, 0.83 }, s.Select(x => Math.Round(x.Atras, 6)).Distinct());
             CollectionAssert.AreEqual(new[] { -1.0, 0.0, 1.0 }, s.Take(3).Select(x => x.Lado));
-            Assert.IsTrue(s[0].Estandarte);
+            Assert.IsTrue(s[1].Estandarte, "el estandarte, en la figura del centro de la primera fila");
             Assert.AreEqual(1, f.Count(x => x.Estandarte));
             Assert.AreEqual("lanceros", s[0].TropaId);
             Assert.AreEqual("mineros", s[11].TropaId);
-            // el carrito detrás de la última fila: 0,83 + 0,1 + 0,13
+            // el carrito detrás de la última fila: lo que ocupa el soldado por detrás, el hueco libre y lo que ocupa el carrito (con el burro)
+            // por delante, con el largo real de cada uno
+            double m = ColumnasDelMapa.MetrosAFigura, hueco = ColumnasDelMapa.HuecoLibre * m;
             var carrito = f.Single(x => x.Figura == FiguraDeColumna.Carrito);
-            Assert.AreEqual(0.83 + 0.1 + 0.13, carrito.Atras, 1e-9);
+            Assert.AreEqual(0.83 + ColumnasDelMapa.ColaDeSoldado * m + hueco + 3.08 * m, carrito.Atras, 1e-9);
             // los dos de carga en pareja, a la escala de todo (×1) y a ±1,3, cada uno con su animal; el de fundación, el último y en el centro
             var c = f.Where(x => x.Figura == FiguraDeColumna.Carro).ToList();
             Assert.AreEqual(2, c.Count);
@@ -62,12 +64,13 @@ namespace ConquestTactics.Mundo.Tests
             CollectionAssert.AreEqual(new[] { -1.3, 1.3 }, c.Select(x => x.Lado));
             Assert.That(c.All(x => x.Escala == 1));
             CollectionAssert.AreEqual(new[] { AnimalDeTiro.Camello, AnimalDeTiro.Caballo }, c.Select(x => x.Animal));
-            double tras = carrito.Atras + 0.045 + 0.04 + 0.325;
+            // (la pareja: lo más largo de los dos, el caballo por delante y el dromedario por detrás)
+            double tras = carrito.Atras + 0.67 * m + hueco + 4.38 * m;
             Assert.AreEqual(tras, c[0].Atras, 1e-9);
             var fun = f.Last();
             Assert.AreEqual(FiguraDeColumna.CarroDeFundacion, fun.Figura);
             Assert.AreEqual(0, fun.Lado);
-            Assert.AreEqual(tras + 0.085 + 0.04 + 0.325, fun.Atras, 1e-9);
+            Assert.AreEqual(tras + 1.06 * m + hueco + 4.44 * m, fun.Atras, 1e-9);
         }
 
         [Test]
