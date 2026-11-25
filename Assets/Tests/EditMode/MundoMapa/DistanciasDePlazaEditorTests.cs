@@ -519,6 +519,28 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                 }
             Fijar("estadoAvanzada", 0);
             Fijar("avanzadas", 0);
+            // lo menudo (el panel «Campamentos y alijos»), a escala fija: cada campamento de bandidos (claro y peña, nivel 1 a 3), cada alijo y
+            // cada tela de mercenarios, su modelo, en el suelo, y sin pisar la plaza
+            Fijar("menudo", 1);
+            foreach (int tb in new[] { 0, 1 })
+                for (int nivelB = 1; nivelB <= 3; nivelB++)
+                {
+                    Fijar("tipoBandidos", tb);
+                    Fijar("nivelBandidos", nivelB - 1);
+                    Fijar("tipoAlijo", tb);
+                    Fijar("origenMercenarios", nivelB - 1);
+                    yield return Esperar();
+                    StringAssert.Contains($"bandidos_{tb + 1}_{nivelB} ", Maqueta("dp-bandidos").malla, $"bandidos {tb + 1}, nivel {nivelB}: su modelo");
+                    StringAssert.Contains($"alijo_{tb + 1} ", Maqueta("dp-alijo").malla, $"alijo {tb + 1}: su modelo");
+                    StringAssert.StartsWith("mercenarios", Maqueta("dp-mercenarios").malla, "los mercenarios: su modelo");
+                    Assert.That(mapa.Maquetas.AlAireMaximo(), Is.LessThan(0.01), $"bandidos {tb + 1}, nivel {nivelB}, alijo {tb + 1}: en el suelo");
+                    foreach (var k in new[] { "plaza – mercenarios", "plaza – bandidos", "plaza – alijo" })
+                    {
+                        var fila = ((System.Collections.IList)tipo.GetField("Holguras").GetValue(d)).Cast<object>().First(h => ((string)h.GetType().GetField("Item1").GetValue(h)).StartsWith(k));
+                        Assert.That(fila.GetType().GetField("Item7").GetValue(fila).ToString(), Is.EqualTo("Libre"), $"{k}: no pisa la plaza");
+                    }
+                }
+            Fijar("menudo", 0);
             // los pueblos a la medida de la choza (1:1 con su nodo), de cada recurso: su modelo, asentado en el suelo
             for (int t = 0; t <= 5; t++)
             {

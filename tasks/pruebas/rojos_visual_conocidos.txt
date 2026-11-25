@@ -1,0 +1,2 @@
+# Rojos conocidos de la pasada visual (correr_visual.sh, [Category("Visual")]): el gancho pre-push los tolera. Una prueba por línea, el nombre
+# del método y, detrás de « #», el motivo y la fecha. Si se arregla una, se quita de aquí.

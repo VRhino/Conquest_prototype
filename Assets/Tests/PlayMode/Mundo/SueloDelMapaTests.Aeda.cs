@@ -39,6 +39,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa"), Explicit("tema 7: el Aeda con su modelo")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElAedaConSuModelo()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

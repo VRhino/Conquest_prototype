@@ -4,6 +4,7 @@
 # dice `MUNDO_LOTE` (`PantallasDeMundoTests.Lotes`); en el otro lote sale como saltada. Sin capturas (la regresión). Desde la carpeta de Conquest:
 #   bash tasks/pruebas/correr_en_paralelo.sh
 # Nunca con el editor de Víctor abierto en el proyecto principal. Al acabar, los dos servidores apagados.
+# Sin las pruebas del arte del mapa ([Category("Visual")], 25-11): van en la pasada visual (correr_visual.sh), antes del push (gancho pre-push).
 CQ=$(cd "$(dirname "$0")/../.." && pwd)
 MOTOR=${MOTOR:-$(cd "$CQ/.." && pwd)/BronzeAgeMotorPruebas}
 UNITY="/c/Program Files/Unity/Hub/Editor/6000.5.8f1/Editor/Unity.exe"
@@ -23,7 +24,7 @@ C2=$(servidor 7892 "$CLON" "$MOTOR/mundo-pruebas-2")
 mkdir -p "$CQ/Logs/mundo" "$CLON/Logs/mundo"
 inicio=$(date +%s)
 (cd "$CQ" && MUNDO_LOTE=1 BRONZEAGE_PRUEBA_ADMIN=$C1 BRONZEAGE_PRUEBA_URL=http://127.0.0.1:7891 MUNDO_CAPTURAS= "$UNITY" -batchmode -projectPath . -runTests \
-  -testPlatform PlayMode -testFilter "ConquestTactics.Mundo.UI.Tests" -testResults Logs/mundo/lote1.xml -logFile Logs/mundo/lote1.log) &
+  -testPlatform PlayMode -testFilter "ConquestTactics.Mundo.UI.Tests" -testCategory "!Visual" -testResults Logs/mundo/lote1.xml -logFile Logs/mundo/lote1.log) &
 (cd "$CLON" && MUNDO_LOTE=2 BRONZEAGE_PRUEBA_ADMIN=$C2 BRONZEAGE_PRUEBA_URL=http://127.0.0.1:7892 MUNDO_CAPTURAS= "$UNITY" -batchmode -projectPath . -runTests \
   -testPlatform PlayMode -testFilter "ConquestTactics.Mundo.UI.Tests.PantallasDeMundoTests" -testResults Logs/mundo/lote2.xml -logFile Logs/mundo/lote2.log) &
 wait

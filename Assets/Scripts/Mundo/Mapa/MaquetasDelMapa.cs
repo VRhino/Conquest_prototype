@@ -526,7 +526,7 @@ namespace ConquestTactics.Mundo.Mapa
             }
             CosasDelMapa.HuellaDePueblo = (tipoExtractor, nivel) => ModeloDePueblo(tipoExtractor, nivel) is Modelo mp_ ? HuellaDePuebloDe(mp_) : double.NaN;
             CosasDelMapa.HuellaDeAvanzada = etapa => HuellaOperativa((int)etapa);
-            CosasDelMapa.HuellaDeMenudo = clase => CosasDelMapa.Fijos(clase) * HuellaDe(clase == ClaseDeCosa.Mercenarios ? new[] { "mercenarios" }
+            CosasDelMapa.HuellaDeMenudo = clase => HuellaDe(clase, clase == ClaseDeCosa.Mercenarios ? new[] { "mercenarios" }
                 : clase == ClaseDeCosa.Bandidos ? new[] { "bandidos_1_1", "bandidos_1_2", "bandidos_1_3", "bandidos_2_1", "bandidos_2_2", "bandidos_2_3" }
                 : clase == ClaseDeCosa.Alijo ? new[] { "alijo_1", "alijo_2" } : new string[0]);
             CosasDelMapa.HuellaDeModelo = (nivel, x, y) => modelos.ContainsKey((int)nivel) ? ModeloDe(nivel, P.Semilla(x, y)).RadioU : double.NaN;
@@ -603,12 +603,17 @@ namespace ConquestTactics.Mundo.Mapa
         Modelo Menudo(string nombre) => nombre != null && Estilo == EstiloDeAsentamientos.Mejorado && menudos.TryGetValue(nombre, out var m) ? m : null;
         Modelo PiezaMenuda(string atlas, string pieza) => piezasMenudas.TryGetValue(atlas + "/" + pieza, out var m) ? m : null;
 
-        /// <summary>La huella (u) que cubre a todos esos modelos: el mayor radio, por su escala del mapa (NaN si no hay ninguno).</summary>
-        double HuellaDe(IEnumerable<string> nombres)
+        /// <summary>La huella (u) que cubre a todos esos modelos: el mayor radio; a escala fija (`escala_fija`), su `radio_u`; si no, por su escala
+        /// del mapa y lo fijo de su clase (NaN si no hay ninguno).</summary>
+        double HuellaDe(ClaseDeCosa clase, IEnumerable<string> nombres)
         {
             double r = double.NaN;
             foreach (var n in nombres)
-                if (menudos.TryGetValue(n, out var m)) r = double.IsNaN(r) ? m.RadioU * m.EscalaMapa : Math.Max(r, m.RadioU * m.EscalaMapa);
+                if (menudos.TryGetValue(n, out var m))
+                {
+                    double h = m.EscalaFija ? m.RadioU : m.RadioU * m.EscalaMapa * CosasDelMapa.Fijos(clase);
+                    r = double.IsNaN(r) ? h : Math.Max(r, h);
+                }
             return r;
         }
 
@@ -674,7 +679,9 @@ namespace ConquestTactics.Mundo.Mapa
         }
 
         /// <summary>El alijo (1 o 2) por su semilla, y la pieza de su mercancía por el recurso (trigo, madera, piedra u oro; si no, trigo).</summary>
-        public static string ModeloDeAlijo(double semilla) => P.Azar(semilla, 6, 3) < 0.5 ? "alijo_1" : "alijo_2";
+        public static string ModeloDeAlijo(double semilla) => AlijoForzado > 0 ? $"alijo_{AlijoForzado}" : P.Azar(semilla, 6, 3) < 0.5 ? "alijo_1" : "alijo_2";
+        /// <summary>(Escenas de banco) el alijo que se pone (1 bajo la piel, 2 el hoyo); 0: el de su semilla.</summary>
+        public static int AlijoForzado;
         public static string PiezaDeMercancia(string recurso) => recurso == "madera" || recurso == "piedra" || recurso == "oro" ? recurso : "trigo";
 
         /// <summary>La obra genérica (avanzada nueva, pueblo o aldea): el solar marcado si está pendiente; a media altura si ya arrancó.</summary>
@@ -901,7 +908,7 @@ namespace ConquestTactics.Mundo.Mapa
                     // (el tipo y el nivel del pueblo o la aldea: cambian su maqueta sin moverla)
                     .Append(c.Entidad?.Pueblo?.TipoExtractor).Append(c.Entidad?.Pueblo?.Cultivo).Append(c.Entidad?.Pueblo?.RebanoEspecie).Append(c.Entidad?.Pueblo?.NivelAldea).Append('|');
             foreach (var (id, p) in Caminos) sb.Append(id).Append(p.Count).Append(p.Count > 0 ? p[0].x + p[p.Count - 1].y : 0).Append(';');
-            var nueva = Estilo + CosasDelMapa.ClaveDeFactores + "|v" + VarianteForzada + "|c" + VarianteCiudadelaForzada + sb.ToString();
+            var nueva = Estilo + CosasDelMapa.ClaveDeFactores + "|v" + VarianteForzada + "|c" + VarianteCiudadelaForzada + "|a" + AlijoForzado + sb.ToString();
             if (nueva != clave)
             {
                 var reloj = Stopwatch.StartNew();
@@ -953,13 +960,14 @@ namespace ConquestTactics.Mundo.Mapa
                 return mi;
             }
             // una pieza suelta pegada a su miniatura (si está la pieza)
-            void PonerPieza(Miniatura padre, Modelo pieza, double lx, double ly, double giro)
+            void PonerPieza(Miniatura padre, Modelo pieza, double lx, double ly, double giro, bool kitDeAvanzada = false)
             {
                 if (pieza == null) return;
                 miniaturas.Add(new Miniatura
                 {
-                    // (si su avanzada va a escala fija, la pieza a la de antes: el kit de obra no crece con ella)
-                    EscalaPieza = padre.Modelo.EscalaFija ? UnidadDe(ClaseDeCosa.Avanzada) * 1.35 / padre.Escala : 1,
+                    // (si su avanzada va a escala fija, el kit de obra a la de antes: no crece con ella; las demás piezas, el edificio militar y la
+                    // mercancía, a la de su miniatura, que es la suya)
+                    EscalaPieza = kitDeAvanzada && padre.Modelo.EscalaFija ? UnidadDe(ClaseDeCosa.Avanzada) * 1.35 / padre.Escala : 1,
                     Padre = padre, Lx = lx, Ly = ly, LGiro = giro, X = padre.X, Y = padre.Y, Semilla = padre.Semilla, Huella = padre.Huella, Escala = padre.Escala,
                     BajoNiebla = padre.BajoNiebla, Faccion = padre.Faccion, Modelo = pieza, Recurso = Vector4.zero, Rumbo = double.NaN,
                     HuellaDetalle = padre.HuellaDetalle,
@@ -1075,7 +1083,7 @@ namespace ConquestTactics.Mundo.Mapa
                             // (la reparación de una ruina: el kit entero alrededor; la mejora pendiente de materiales: los montones al borde)
                             if ((reparacion && ruinas) || (mejora && !obra.HasTerminaEnMs))
                                 foreach (var (pieza, px, py, pg) in SitiosDelKit(RadioDeMuro(nombre), sem, reparacion))
-                                    PonerPieza(mi, PiezaMenuda("obra_kit", pieza), px, py, pg);
+                                    PonerPieza(mi, PiezaMenuda("obra_kit", pieza), px, py, pg, true);
                             break;
                         }
                         P.Avanzada(arriba, x, y, v.Etapa, ruinas, color);

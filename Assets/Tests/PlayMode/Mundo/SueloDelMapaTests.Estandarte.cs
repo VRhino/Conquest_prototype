@@ -19,6 +19,7 @@ namespace ConquestTactics.Mundo.UI.Tests
     {
         [Category("Mapa"), Explicit("tema 7: el estandarte en el centro y el blasón sobre su paño")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElEstandarteConSuPano()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

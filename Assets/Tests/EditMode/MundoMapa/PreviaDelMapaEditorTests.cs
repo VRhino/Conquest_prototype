@@ -101,6 +101,8 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
 
             // cada deslizador: lo suyo crece × 1,5 y lo demás no cambia
             var fijar = tipo.GetMethod("Fijar");
+            bool Fija(ClaseDeCosa c) => c == ClaseDeCosa.Plaza || c == ClaseDeCosa.Pueblo || c == ClaseDeCosa.Avanzada || c == ClaseDeCosa.Mercenarios || c == ClaseDeCosa.Bandidos
+                                         || c == ClaseDeCosa.Alijo;
             Dictionary<ClaseDeCosa, double> Radios() => mapa.Cosas.Where(c => c.Clase != ClaseDeCosa.Nodo).GroupBy(c => c.Clase).ToDictionary(g => g.Key, g => g.Max(c => c.Radio));
             var suyo = new Dictionary<string, ClaseDeCosa[]>
             {
@@ -123,8 +125,9 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                 var despues = Radios();
                 foreach (var c in antes.Keys)
                 {
-                    // (las plazas, los pueblos y las avanzadas hechos a la medida de la choza van a su escala fija: no los mueven los factores de lo fijo)
-                    double esperado = propias.Contains(c) && c != ClaseDeCosa.Plaza && c != ClaseDeCosa.Pueblo && c != ClaseDeCosa.Avanzada ? 1.5 : 1;
+                    // (las plazas, los pueblos y las avanzadas hechos a la medida de la choza, y los campamentos y los alijos (25-11), van a su escala
+                    // fija: no los mueven los factores de lo fijo)
+                    double esperado = propias.Contains(c) && !Fija(c) ? 1.5 : 1;
                     Assert.That(despues[c] / antes[c], Is.EqualTo(esperado).Within(0.02), $"«{clave}»: el radio de {c}");
                 }
                 Assert.That(ModelosDeFiguras.MetrosAEscena / soldado, Is.EqualTo(clave == "figuras" ? 1.5 : 1).Within(1e-4), $"«{clave}»: el soldado");
@@ -143,8 +146,8 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                 var despues = Radios();
                 foreach (var c in new[] { ClaseDeCosa.Plaza, ClaseDeCosa.Pueblo, ClaseDeCosa.Aldea, ClaseDeCosa.Avanzada, ClaseDeCosa.Mercenarios, ClaseDeCosa.Bandidos,
                              ClaseDeCosa.Obra, ClaseDeCosa.Alijo, ClaseDeCosa.Batalla })
-                    // (las plazas, los pueblos y las avanzadas hechos a la medida de la choza van a su escala fija: no los mueve lo fijo)
-                    Assert.That(despues[c] / antes[c], Is.EqualTo(c == ClaseDeCosa.Plaza || c == ClaseDeCosa.Pueblo || c == ClaseDeCosa.Avanzada ? 1 : 1.5).Within(0.02), $"«Lo fijo»: el radio de {c}");
+                    // (lo que va a escala fija no lo mueve lo fijo)
+                    Assert.That(despues[c] / antes[c], Is.EqualTo(Fija(c) ? 1 : 1.5).Within(0.02), $"«Lo fijo»: el radio de {c}");
                 Assert.That(despues[ClaseDeCosa.Ejercito] / antes[ClaseDeCosa.Ejercito], Is.EqualTo(1).Within(1e-6), "«Lo fijo»: no lo que se mueve");
                 tipo.GetMethod("Restablecer").Invoke(previa, null);
             }

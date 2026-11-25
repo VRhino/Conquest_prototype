@@ -14,6 +14,7 @@ namespace ConquestTactics.Mundo.UI.Tests
     {
         [Category("Mapa"), Explicit("tema 8: cielo, nubes y bruma")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElCieloYLaBruma()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

@@ -73,6 +73,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa"), Explicit("prueba técnica B del tema 7: la columna con su modelo")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaColumnaConSuModelo()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -153,6 +154,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// batalla) y al hombro (el porte de marcha del horneado), de lado y por detrás, de cerca («te_lanzas_…»).</summary>
         [Category("Mapa"), Explicit("ronda 3 de la columna: estandarte y lanzas")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElEstandarteYLasLanzas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -275,6 +277,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// Facción ajena (en guerra, rojo) y una sin Facción (neutral), una al lado de otra, de cerca y a zoom habitual («tb_…»).</summary>
         [Category("Mapa"), Explicit("color de bando por relación")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElColorDeBando()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -363,6 +366,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa"), Explicit("coste de 30 columnas con su modelo")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElCosteDeLasColumnas()
         {
             // 30 columnas (la mitad personales de 6 escuadras, la mitad ejércitos de 12) DENTRO del encuadre en cada zoom: se recolocan alrededor del
@@ -495,6 +499,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// zoom habitual («tg_habitual»).</summary>
         [Category("Mapa"), Explicit("tema 7: los caballos de guerra del héroe")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosCaballosDeGuerra()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

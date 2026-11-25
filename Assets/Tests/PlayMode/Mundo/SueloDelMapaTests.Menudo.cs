@@ -124,6 +124,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// artefacto), un campamento de mercenarios, uno de bandidos en bosque y un alijo, con sus árboles alrededor.</summary>
         [Category("Mapa"), Explicit("capturas de la parte 5 y lo menudo")]
         [UnityTest, Timeout(12_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LoMenudoEnElMapa()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -238,6 +239,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// nodo), una plaza de nivel 1, la atalaya y el fuerte a ×1 y a ×1,35 (la escala del mapa que llevan) y una ciudadela, en fila a 2,6 u.</summary>
         [Category("Mapa"), Explicit("tira de tamaños de las avanzadas")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaEscalaDeLasAvanzadas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -320,6 +322,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// «Mejorado», a zoom habitual y alejado: el fotograma, lo que cuesta mandar a dibujar, rehacer y asentar, y los triángulos.</summary>
         [Category("Mapa"), Explicit("coste de la parte 5 y lo menudo")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElCosteDeLoMenudo()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

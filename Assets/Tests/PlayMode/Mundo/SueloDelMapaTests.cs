@@ -45,6 +45,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa")]
         [UnityTest, Timeout(600_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElSueloEnCadaSitio()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -230,6 +231,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// prototipo). Cuenta cuántas plantas caen de cada especie.</summary>
         [Category("Mapa")]
         [UnityTest, Timeout(600_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElRepartoDeLaVegetacion()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -287,6 +289,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// el bosque denso (llegando de lejos) y ya cargado.</summary>
         [Category("Mapa"), Explicit("capturas de revisión de la vegetación")]
         [UnityTest, Timeout(1_200_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaVegetacionEnElMapa()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -387,6 +390,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// adelfas. Los sitios los busca repartiendo una de cada dos teselas del mundo y contando cada especie en ventanas de 6 u.</summary>
         [Category("Mapa"), Explicit("capturas de revisión de las especies")]
         [UnityTest, Timeout(2_400_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasEspeciesEnElMapa()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -480,6 +484,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// cerca; la pradera y la ladera también sin la capa baja. Mide el fotograma en la pradera con y sin ella.</summary>
         [Category("Mapa"), Explicit("capturas de revisión de la capa baja")]
         [UnityTest, Timeout(2_400_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaCapaBajaEnElMapa()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -540,6 +545,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// el detalle de la hierba en la playa, las piedras de la ladera y la flor de la adelfa.</summary>
         [Category("Mapa"), Explicit("medidas y capturas del estado final de la vegetación")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaVegetacionEstadoFinal()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -646,6 +652,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// el rehacer la vegetación por un camino nuevo.</summary>
         [Category("Mapa"), Explicit("banco y capturas de caminos y territorio")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosCaminosYElTerritorio()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -712,6 +719,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// iguales: fuera de los vados el agua no cambia). Las medidas: el fotograma con cada estilo, el paseo y un camino nuevo.</summary>
         [Category("Mapa"), Explicit("banco y capturas de la etapa 2 de caminos")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosCaminosMejorados()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1064,6 +1072,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>La roca de los nodos «Prototipo» en Unity: cada cara, hacia fuera (con el espejo de z, el sentido de las caras se invierte).</summary>
         [Test, Category("Mapa")]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public void LaRocaDeLosNodosMiraHaciaFuera()
         {
             var m = NodosDelMapa.MallaDeRoca();
@@ -1085,6 +1094,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// de golpe, y la tesela más cara.</summary>
         [Category("Mapa"), Explicit("coste de los nodos")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElCosteDeLosNodos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1232,6 +1242,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// modelo). Con «Mejorado», también: de cerca, las dos laderas más fuertes de cada tipo; y el nodo en bosque cerrado sin el claro.</summary>
         [Category("Mapa"), Explicit("capturas de los nodos de recursos")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosNodosDeRecursos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1328,6 +1339,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// entre pares.</summary>
         [Category("Mapa"), Explicit("láminas de los nodos de recursos")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasLaminasDeNodos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1442,6 +1454,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// camino: miran a la madre). Y el coste de las maquetas en la fila.</summary>
         [Category("Mapa"), Explicit("capturas de los pueblos extractores")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosPueblosExtractores()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1563,6 +1576,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// Y el nivel de detalle de los pueblos a cada zoom.</summary>
         [Category("Mapa"), Explicit("revisión de los pueblos extractores")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaRevisionDePueblos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1690,6 +1704,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// la cruza y dos vecinas a 3 u; de cerca y a zoom habitual. Y el coste de las maquetas con todas a la vista.</summary>
         [Category("Mapa"), Explicit("capturas de las aldeas")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasAldeas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1846,6 +1861,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa"), Explicit("capturas de los asentamientos")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosAsentamientos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -1897,6 +1913,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// Cada sitio, en tierra firme y al borde de lo despejado (con árboles cerca, para la proporción).</summary>
         [Category("Mapa"), Explicit("capturas de las plazas modeladas")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasPlazasModeladas() => PlazasModeladas(false);
 
         /// <summary>Las murallas («Mejorado») frente a la muralla del prototipo, en el mapa (capturas de revisión, `MUNDO_CAPTURAS`, «m_…»): el nivel
@@ -1905,6 +1922,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// y de cerca.</summary>
         [Category("Mapa"), Explicit("capturas de las murallas")]
         [UnityTest, Timeout(6_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasMurallasModeladas() => PlazasModeladas(true);
 
         IEnumerator PlazasModeladas(bool murallas)
@@ -2108,6 +2126,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// para saber qué píxeles son lo construido). La cuenta se hace fuera, con las tres.</summary>
         [Category("Mapa"), Explicit("luminancia de las plazas")]
         [UnityTest, Timeout(1_800_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaLuminanciaDeLasPlazas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2231,6 +2250,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// con «Prototipo», la del prototipo.</summary>
         [Category("Mapa")]
         [UnityTest, Timeout(600_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasMiniaturasQueSeDibujan()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2317,6 +2337,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// (el `tramo-3`, al oeste, que acaba en ella), no el `tramo-8` (al norte).</summary>
         [Category("Mapa")]
         [UnityTest, Timeout(600_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasMurallasDeLasPlazas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2421,6 +2442,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// en 300 fotogramas, y lo que cuesta mandar a dibujar.</summary>
         [Category("Mapa"), Explicit("coste de las plazas modeladas")]
         [UnityTest, Timeout(1_800_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElCosteDeLasPlazasModeladas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2486,6 +2508,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// <summary>Las cuentas del banco de asentamientos con «Prototipo»: piezas, llamadas de dibujo y triángulos (sin capturas).</summary>
         [Category("Mapa"), Explicit("cuentas del banco de asentamientos")]
         [UnityTest, Timeout(1_200_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasCuentasDelBancoDeAsentamientos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2516,6 +2539,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// mediana, el percentil 95 y el máximo, en m y en pendiente (desnivel / diámetro).</summary>
         [Category("Mapa"), Explicit("desnivel bajo las plazas")]
         [UnityTest, Timeout(1_200_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElDesnivelBajoLasPlazas()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2561,6 +2585,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// asentarlas, y cuántas piezas son.</summary>
         [Category("Mapa"), Explicit("coste de los asentamientos")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElCosteDeLosAsentamientos()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2624,6 +2649,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// «Mejorado».</summary>
         [Category("Mapa"), Explicit("capturas de las tres opciones del territorio")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LasTresOpcionesDelTerritorio()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2661,6 +2687,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         /// <summary>El sol del mapa, por defecto: el acimut del prototipo con 40° de elevación (Víctor, 2026-11-20).</summary>
         [Test, Category("Mapa")]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public void ElSolDelMapaEstaA40Grados()
         {
             var s = PinturaDelMapa.Sol;
@@ -2676,6 +2703,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// el peor fotograma al cruzar un borde de tesela, con la sombra del relieve encendida y apagada.</summary>
         [Category("Mapa"), Explicit("medida y capturas de la sombra del relieve")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaSombraDelRelieveEnElMundo()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2762,6 +2790,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// original y con sus valores.</summary>
         [Category("Mapa"), Explicit("capturas de revisión de la luz y las sombras")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LaLuzYLasSombras()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2895,6 +2924,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// la tesela del bosque denso con y sin mosaico y mide el fotograma en él.</summary>
         [Category("Mapa"), Explicit("capturas de revisión del mosaico")]
         [UnityTest, Timeout(1_800_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElMosaicoEnElMapa()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");
@@ -2974,6 +3004,7 @@ namespace ConquestTactics.Mundo.UI.Tests
         /// que el mar hondo es agua y sale más oscuro que el lago (somero en la orilla).</summary>
         [Category("Mapa")]
         [UnityTest, Timeout(600_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElAguaEnCadaSitio()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

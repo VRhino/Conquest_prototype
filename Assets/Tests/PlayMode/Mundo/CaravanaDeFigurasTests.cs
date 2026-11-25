@@ -22,6 +22,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa"), Explicit("tema 7, ronda A: animales y carros de las caravanas horneados")]
         [UnityTest, Timeout(3_000_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator LosAnimalesYLosCarros()
         {
             var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");
@@ -199,6 +200,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa"), Explicit("tema 7: el Aeda horneado, de cerca (para depurar el horno)")]
         [UnityTest, Timeout(600_000)]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator ElAedaHorneado()
         {
             var carpeta = Environment.GetEnvironmentVariable("MUNDO_CAPTURAS");

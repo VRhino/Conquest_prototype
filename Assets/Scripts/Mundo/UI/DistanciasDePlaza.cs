@@ -160,6 +160,12 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>(De vista) las avanzadas: su estado (0 operativa, 1 en obras: la mejora en marcha, que pone el modelo de la etapa siguiente en
         /// obras; 2 en ruina) y la ciudadela que se pone (1 o 2; `MaquetasDelMapa.VarianteCiudadelaForzada` mientras dura la escena).</summary>
         public int EstadoAvanzada, VarianteCiudadela = 1;
+        /// <summary>(De vista) lo menudo junto a la plaza, para verlo y compararlo: un campamento de mercenarios (su Origen, la tela, y su edificio
+        /// militar), uno de bandidos (del claro o de la peña, y su nivel) y un alijo (bajo la piel o el hoyo, y su recurso); cada uno a su huella
+        /// más 0,5 u de la plaza.</summary>
+        public bool Menudo;
+        public int OrigenMercenarios, MilitarMercenarios, TipoBandidos, NivelBandidos = 3, TipoAlijo, RecursoAlijo;
+        public static readonly string[] Militares = { "barracon", "galeriaDeTiro", "caballerizas" }, RecursosDeAlijo = { "trigo", "madera", "piedra", "oro" };
         /// <summary>El lado corto de la vivienda corriente de cada modelo de plaza, niveles 1 a 5 (media de sus dos variantes), en el espacio en
         /// que se escala (radio 1): medido el 23-11 corriendo los generadores (`medir_casas.py`: chozas, casas de adobe y casas de manzana, sin
         /// la del jefe, la principal, las nobles ni los cobertizos).</summary>
@@ -211,12 +217,15 @@ namespace ConquestTactics.Mundo.UI
             var huellaAntes = CosasDelMapa.HuellaPorNivel;
             var varianteAntes = MaquetasDelMapa.VarianteForzada;
             var ciudadelaAntes = MaquetasDelMapa.VarianteCiudadelaForzada;
+            var alijoAntes = MaquetasDelMapa.AlijoForzado;
             MaquetasDelMapa.VarianteCiudadelaForzada = VarianteCiudadela;
+            MaquetasDelMapa.AlijoForzado = TipoAlijo + 1;
             MaquetasDelMapa.VarianteForzada = Variante;
             alSalir = () =>
             {
                 MaquetasDelMapa.VarianteForzada = varianteAntes;
                 MaquetasDelMapa.VarianteCiudadelaForzada = ciudadelaAntes;
+                MaquetasDelMapa.AlijoForzado = alijoAntes;
                 CosasDelMapa.HuellaPorNivel = huellaAntes;
                 MaquetasDelMapa.Estilo = estiloAntes;
                 (CosasDelMapa.FactorDeFijos, CosasDelMapa.FactorPlazas, CosasDelMapa.FactorPueblos, CosasDelMapa.FactorAvanzadas, MapaDeMundo.PintarMiColumna) = antes;
@@ -354,6 +363,28 @@ namespace ConquestTactics.Mundo.UI
                         DestinoId = v.Id, IniciaEnMs = 1, TerminaEnMs = 9_999_999_999_999 } });
                 Puesto.Add((v.Id, ClaseDeCosa.Avanzada, $"avanzada {i} (a {dAv:0.00} u)", p.x, p.y));
             }
+            // lo menudo, si se ve: cada uno a lo que ocupa (la huella de la plaza con su muralla, la suya y 0,5 u), hacia el norte y el oeste
+            if (Menudo)
+            {
+                double Menudo_(ClaseDeCosa clase)
+                {
+                    double h = CosasDelMapa.HuellaDeMenudo?.Invoke(clase) ?? double.NaN;
+                    return RadioPlaza(Nivel, Zona) + (double.IsNaN(h) ? 1 : h) + BancoDelMapa.HolguraDeSitio;
+                }
+                var pm = Rumbo(centro, 120, Menudo_(ClaseDeCosa.Mercenarios));
+                var km = new CampamentoMercenarios { Id = "dp-mercenarios", Posicion = BancoDelMapa.Pu(pm.x, pm.y), Origen = (uint)OrigenMercenarios };
+                km.Edificios.AddRange(new[] { "taberna", "vivienda", "mercado", Militares[MilitarMercenarios] });
+                f.Entidades.Add(new Entidad { CampamentoMercenarios = km });
+                Puesto.Add((km.Id, ClaseDeCosa.Mercenarios, $"mercenarios (origen {OrigenMercenarios + 1}, {Militares[MilitarMercenarios]})", pm.x, pm.y));
+                var pb = Rumbo(centro, 170, Menudo_(ClaseDeCosa.Bandidos));
+                var kb = new CampamentoBandidos { Id = "dp-bandidos", Posicion = BancoDelMapa.Pu(pb.x, pb.y), Nivel = (uint)NivelBandidos };
+                if (TipoBandidos == 1) kb.VetaId = "dp-veta"; else kb.BosqueId = "dp-bosque";
+                f.Entidades.Add(new Entidad { CampamentoBandidos = kb });
+                Puesto.Add((kb.Id, ClaseDeCosa.Bandidos, $"bandidos {(TipoBandidos == 1 ? "de la peña" : "del claro")} · nivel {NivelBandidos}", pb.x, pb.y));
+                var pa = Rumbo(centro, 215, Menudo_(ClaseDeCosa.Alijo));
+                f.Entidades.Add(new Entidad { Alijo = new Alijo { Id = "dp-alijo", Posicion = BancoDelMapa.Pu(pa.x, pa.y), Recurso = RecursosDeAlijo[RecursoAlijo], Cantidad = 1000 } });
+                Puesto.Add(("dp-alijo", ClaseDeCosa.Alijo, $"alijo {(TipoAlijo == 1 ? "en el hoyo" : "bajo la piel")} ({RecursosDeAlijo[RecursoAlijo]})", pa.x, pa.y));
+            }
             // la columna parada a la puerta (al radio de puerta)
             {
                 var p = Rumbo(centro, 270, DistanciaDeColumna);
@@ -425,6 +456,7 @@ namespace ConquestTactics.Mundo.UI
             {
                 if (p.clase == ClaseDeCosa.Aldea) Par($"plaza – {p.nombre}", plaza, p, minimo: R.SeparacionAldea);
                 if (p.clase == ClaseDeCosa.Avanzada) Par($"plaza – {p.nombre}", plaza, p, minimo: MinimoDeAvanzadaEnMesa);
+                if (p.clase == ClaseDeCosa.Mercenarios || p.clase == ClaseDeCosa.Bandidos || p.clase == ClaseDeCosa.Alijo) Par($"plaza – {p.nombre}", plaza, p);
                 if (p.clase == ClaseDeCosa.Pueblo)
                 {
                     Par($"plaza – {p.nombre}", plaza, p);
@@ -661,6 +693,13 @@ namespace ConquestTactics.Mundo.UI
                 // (el índice del desplegable: 0 es la variante 1)
                 // (el índice del desplegable: 0 es el tamaño 1)
                 case "estadoAvanzada": EstadoAvanzada = (int)Math.Max(0, Math.Min(2, Math.Round(v))); break;
+                case "menudo": Menudo = v > 0.5; break;
+                case "origenMercenarios": OrigenMercenarios = (int)Math.Max(0, Math.Min(2, Math.Round(v))); break;
+                case "militarMercenarios": MilitarMercenarios = (int)Math.Max(0, Math.Min(2, Math.Round(v))); break;
+                case "tipoBandidos": TipoBandidos = (int)Math.Max(0, Math.Min(1, Math.Round(v))); break;
+                case "nivelBandidos": NivelBandidos = (int)Math.Max(1, Math.Min(3, Math.Round(v) + 1)); break;
+                case "tipoAlijo": TipoAlijo = (int)Math.Max(0, Math.Min(1, Math.Round(v))); MaquetasDelMapa.AlijoForzado = TipoAlijo + 1; break;
+                case "recursoAlijo": RecursoAlijo = (int)Math.Max(0, Math.Min(3, Math.Round(v))); break;
                 case "varianteCiudadela": VarianteCiudadela = (int)Math.Max(1, Math.Min(2, Math.Round(v) + 1)); MaquetasDelMapa.VarianteCiudadelaForzada = VarianteCiudadela; break;
                 case "nivelPueblo": NivelPueblo = (int)Math.Max(1, Math.Min(3, Math.Round(v) + 1)); break;
                 case "variante": Variante = (int)Math.Max(1, Math.Min(2, Math.Round(v) + 1)); MaquetasDelMapa.VarianteForzada = Variante; break;
@@ -754,6 +793,7 @@ namespace ConquestTactics.Mundo.UI
         /// <summary>Las reglas tal como las da el motor (`R` es la copia que el panel deja cambiar; los `DatosDeJuego` no se tocan).</summary>
         Reglas motorOriginal;
         readonly List<Action> refrescosMotor = new List<Action>();
+        readonly List<Action> refrescosMenudo = new List<Action>();
 
         /// <summary>Un valor que el panel deja cambiar: grupo, nombre, unidad, el dato del motor, nivel (0 a 4, o −1), paso de − y +, mínimo,
         /// y cómo se lee y se pone en unas reglas.</summary>
@@ -1094,6 +1134,8 @@ namespace ConquestTactics.Mundo.UI
             (Nivel, Aldeas, NivelAldea, Pueblos, Avanzadas, EtapaAvanzada, Muralla, AldeasEnMedio, Vecina, DistanciaPueblo) = (3, 2, 2, 1, 0, 1, true, false, false, R.SeparacionAldea);
             (TipoAldea, TipoPueblo, Caminos, EscalonCamino, TamanoFijo, Variante, NivelPueblo, EstadoAvanzada, VarianteCiudadela) = (0, 0, true, 0, true, 1, 2, 0, 1);
             DistanciaAvanzada = 0;
+            (Menudo, OrigenMercenarios, MilitarMercenarios, TipoBandidos, NivelBandidos, TipoAlijo, RecursoAlijo) = (false, 0, 0, 0, 3, 0, 0);
+            MaquetasDelMapa.AlijoForzado = TipoAlijo + 1;
             MaquetasDelMapa.VarianteCiudadelaForzada = VarianteCiudadela;
             MaquetasDelMapa.VarianteForzada = Variante;
             R.CasaU = CasaPorDefecto;
@@ -1369,6 +1411,41 @@ namespace ConquestTactics.Mundo.UI
             lista.Add(libres);
             pisa.Add(lista);
             panelPisa.Add(pisa);
+            {
+                var menudo = Caja(false);
+                menudo.style.position = Position.Relative;
+                menudo.style.left = menudo.style.top = StyleKeyword.Auto;
+                menudo.style.maxHeight = StyleKeyword.None;
+                menudo.style.marginTop = 8;
+                menudo.style.flexShrink = 0;
+                var t4 = Texto(menudo, "Campamentos y alijos", 16, true);
+                t4.style.color = new Color(0.95f, 0.88f, 0.7f);
+                Plegable(menudo, t4);
+                var ver = new Toggle("Ponerlos junto a la plaza") { value = Menudo };
+                ver.labelElement.style.color = claro;
+                ver.RegisterValueChangedCallback(ev => Fijar("menudo", ev.newValue ? 1 : 0));
+                refrescosMenudo.Add(() => ver.SetValueWithoutNotify(Menudo));
+                menudo.Add(ver);
+                void Elegir(string nombre, string clave, string[] opciones, Func<int> leer)
+                {
+                    var d = new DropdownField(nombre, opciones.ToList(), leer());
+                    d.labelElement.style.minWidth = 150;
+                    d.labelElement.style.color = claro;
+                    d.AddToClassList("dp-desplegable");
+                    d.style.height = 22;
+                    d.RegisterValueChangedCallback(ev => Fijar(clave, Array.IndexOf(opciones, ev.newValue)));
+                    refrescosMenudo.Add(() => { if (d.index != leer()) d.SetValueWithoutNotify(opciones[leer()]); });
+                    menudo.Add(d);
+                }
+                Elegir("Mercenarios: origen", "origenMercenarios", new[] { "1 (crudo)", "2 (rayado)", "3 (rubia)" }, () => OrigenMercenarios);
+                Elegir("  pieza militar", "militarMercenarios", new[] { "barracón", "galería de tiro", "caballerizas" }, () => MilitarMercenarios);
+                Elegir("Bandidos", "tipoBandidos", new[] { "del claro", "de la peña" }, () => TipoBandidos);
+                Elegir("  nivel", "nivelBandidos", new[] { "1", "2", "3" }, () => NivelBandidos - 1);
+                Elegir("Alijo", "tipoAlijo", new[] { "bajo la piel", "en el hoyo" }, () => TipoAlijo);
+                Elegir("  recurso", "recursoAlijo", RecursosDeAlijo, () => RecursoAlijo);
+                panelPisa.Add(menudo);
+                refrescos.Add(() => { foreach (var r in refrescosMenudo) r(); });
+            }
             var motor = Caja(false);
             motor.style.position = Position.Relative;
             motor.style.left = motor.style.top = StyleKeyword.Auto;

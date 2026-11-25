@@ -1,1 +1,1 @@
-{"radio": 0.371, "radio_u": 0.3339, "unidad_u": 0.9, "lado_suelo": 0.48, "triangulos": [2868, 1147, 286], "textura": 1024, "escala_mapa": 2.0, "nivel": 2}
+{"radio": 0.371, "radio_u": 1.3356, "unidad_u": 3.6, "lado_suelo": 0.48, "triangulos": [2868, 1147, 286], "textura": 1024, "escala_mapa": 2.0, "nivel": 2, "escala_fija": true}

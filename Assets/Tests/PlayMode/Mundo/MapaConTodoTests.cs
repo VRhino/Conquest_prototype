@@ -45,6 +45,7 @@ namespace ConquestTactics.Mundo.UI.Tests
 
         [Category("Mapa")]
         [UnityTest]
+        [Category("Visual")]  // (arte del mapa: en la pasada de antes del push, no en la de cada commit)
         public IEnumerator SeVeUnaCosaDeCadaTipo()
         {
             var url = Environment.GetEnvironmentVariable("BRONZEAGE_PRUEBA_URL");

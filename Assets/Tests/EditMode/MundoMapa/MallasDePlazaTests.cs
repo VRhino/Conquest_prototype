@@ -18,6 +18,8 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             // (y las avanzadas, con sus estados)
             nombres.AddRange(new[] { "atalaya", "fuerte", "fuerte_obras", "fuerte_ruina", "ciudadela_1", "ciudadela_1_obras", "ciudadela_1_ruina", "ciudadela_2",
                 "ciudadela_2_obras", "ciudadela_2_ruina" });
+            // (y lo menudo: campamentos de mercenarios, de bandidos en sus niveles y alijos)
+            nombres.AddRange(new[] { "mercenarios", "bandidos_1_1", "bandidos_1_2", "bandidos_1_3", "bandidos_2_1", "bandidos_2_2", "bandidos_2_3", "alijo_1", "alijo_2" });
             foreach (var nombre in nombres)
                     {
                         var raiz = Resources.Load<GameObject>("MapaMundo/Asentamientos/" + nombre);
