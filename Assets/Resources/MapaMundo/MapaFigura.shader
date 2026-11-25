@@ -1,7 +1,8 @@
 // Las figuras con su modelo en el mapa de mundo (tema 7): la textura del modelo (`_BaseMap` × `_BaseColor`) con la luz y la bruma del mapa, como
 // `MapaColor`. Las tropas traen en el alfa de su atlas la máscara del color de bando (1 = se tiñe): con `_Mascara` = 1 esas piezas se tiñen con el
 // color de la relación con quien mira (`_ColorEquipo`, por instancia: propio, aliado, enemigo o neutral), con la receta de la batalla,
-// lerp(rgb, rgb × color, alfa).
+// lerp(rgb, rgb × color, alfa). Con `_Mece` = 1 (la cinta de la lanza del destino), los vértices se mecen con el viento tanto como diga el rojo de
+// su color de vértice (0 lo rígido), en unidades del objeto.
 Shader "Conquest/MapaFigura"
 {
     Properties
@@ -12,6 +13,7 @@ Shader "Conquest/MapaFigura"
         _ConNiebla ("Con niebla", Float) = 1
         _Recorte ("Recorte por alfa (0: no)", Float) = 0
         _Cull ("Caras (0 las dos, 2 las de delante)", Float) = 2
+        _Mece ("Se mece con el viento (rojo del color de vértice)", Float) = 0
     }
     SubShader
     {
@@ -40,12 +42,23 @@ Shader "Conquest/MapaFigura"
                 float _ConNiebla;
                 float _Recorte;
                 float _Cull;
+                float _Mece;
             CBUFFER_END
             UNITY_INSTANCING_BUFFER_START(Props)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _ColorEquipo)
             UNITY_INSTANCING_BUFFER_END(Props)
 
-            struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct Entrada { float4 pos : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; float4 color : COLOR; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            // El viento de la cinta: dos ondas desfasadas por sitio y por altura, de lado y algo hacia delante (unidades del objeto: la lanza mide 1).
+            float3 Mecer(float3 p, float peso)
+            {
+                if (_Mece < 0.5 || peso <= 0) return p;
+                float3 o = TransformObjectToWorld(float3(0, 0, 0));
+                float fase = o.x * 0.013 + o.z * 0.017, t = _Time.y;
+                p.x += peso * (0.02 + sin(t * 2.1 + fase + p.y * 9.0) * 0.025);
+                p.z += peso * sin(t * 3.3 + fase * 1.7 + p.y * 13.0) * 0.015;
+                return p;
+            }
             struct Salida { float4 pos : SV_POSITION; float3 normal : TEXCOORD0; float3 mundo : TEXCOORD1; float2 uv : TEXCOORD2; UNITY_VERTEX_INPUT_INSTANCE_ID };
 
             Salida Vert(Entrada e)
@@ -53,7 +66,7 @@ Shader "Conquest/MapaFigura"
                 Salida s;
                 UNITY_SETUP_INSTANCE_ID(e);
                 UNITY_TRANSFER_INSTANCE_ID(e, s);
-                s.mundo = TransformObjectToWorld(e.pos.xyz);
+                s.mundo = TransformObjectToWorld(Mecer(e.pos.xyz, e.color.r));
                 s.pos = TransformWorldToHClip(s.mundo);
                 s.normal = TransformObjectToWorldNormal(e.normal);
                 s.uv = TRANSFORM_TEX(e.uv, _BaseMap);
@@ -97,6 +110,7 @@ Shader "Conquest/MapaFigura"
                 float _ConNiebla;
                 float _Recorte;
                 float _Cull;
+                float _Mece;
             CBUFFER_END
             float3 _LightDirection;
             struct EntradaSombra { float4 pos : POSITION; float3 normal : NORMAL; UNITY_VERTEX_INPUT_INSTANCE_ID };

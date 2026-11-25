@@ -1,1 +1,1 @@
-{"radio": 0.7533, "radio_u": 0.6779, "unidad_u": 0.9, "lado_suelo": 0.92, "triangulos": [16960, 6784, 1696], "textura": 1024, "propuesta": "ruina_ciudadela_2"}
+{"radio": 0.625, "radio_u": 2.0, "unidad_u": 3.2, "lado_suelo": 0.77, "triangulos": [9200, 3680, 920], "textura": 1024, "propuesta": "ruina_ciudadela_2", "escala_fija": true}

@@ -80,6 +80,7 @@ Shader "Conquest/MapaVegetacion"
                 float3 origen = TransformObjectToWorld(float3(0, 0, 0));
                 float azar = frac(sin(dot(origen.xz, float2(12.9898, 78.233))) * 43758.5453);
                 float3 w = ConViento(TransformObjectToWorld(e.pos.xyz), azar, e.color.a);
+                w = origen + (w - origen) * NieblaCrecer(origen); // recogida en lo nunca explorado
                 s.pos = TransformWorldToHClip(w);
                 s.mundo = w;
                 s.uv = TRANSFORM_TEX(e.uv, _MainTex);
@@ -213,6 +214,7 @@ Shader "Conquest/MapaVegetacion"
                 float3 origen = TransformObjectToWorld(float3(0, 0, 0));
                 float azar = frac(sin(dot(origen.xz, float2(12.9898, 78.233))) * 43758.5453);
                 float3 w = ConViento(TransformObjectToWorld(e.pos.xyz), azar, e.color.a);
+                w = origen + (w - origen) * NieblaCrecer(origen); // recogida en lo nunca explorado
                 s.pos = TransformWorldToHClip(ApplyShadowBias(w, TransformObjectToWorldNormal(e.normal), _LightDirection));
             #if UNITY_REVERSED_Z
                 s.pos.z = min(s.pos.z, UNITY_NEAR_CLIP_VALUE);

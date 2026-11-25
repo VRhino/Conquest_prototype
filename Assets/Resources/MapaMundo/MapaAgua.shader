@@ -242,7 +242,16 @@ Shader "Conquest/MapaAgua"
                 }
                 c = lerp(c, _Espuma.rgb, saturate(espuma) * 0.85);
                 if (modo != 3) alfa = max(alfa, saturate(espuma) * 0.85 * (modo == 1 ? smoothstep(0.0, 0.2, s.uv.x) * smoothstep(1.0, 0.8, s.uv.x) : 1));
-                return half4(PintarMapa(c, p, true), alfa);
+                // Lo nunca explorado, dibujado: la costa (lo poco hondo) o las dos orillas del río, en tinta; opaco.
+                float nunca = NuncaExplorado(p);
+                float3 dibujo = 0;
+                if (nunca > 0)
+                {
+                    float linea = modo == 1 ? 1 - smoothstep(0.03, 0.07, min(s.uv.x, 1 - s.uv.x)) : 1 - smoothstep(0.03, 0.06, prof);
+                    dibujo = DibujoAgua(p, linea);
+                    alfa = lerp(alfa, modo <= 1 ? 1 : alfa, nunca);
+                }
+                return half4(PintarMapaDibujado(c, p, true, dibujo, true), alfa);
             }
             ENDHLSL
         }

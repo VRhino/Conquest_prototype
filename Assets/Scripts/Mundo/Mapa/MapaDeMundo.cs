@@ -1,5 +1,5 @@
 // El mapa de mundo con cuadros (paso 2 del bloque 4): el suelo por teselas, el agua, los ríos y la niebla, la cámara de BronzeAgeClient, tu
-// columna como caja con su posición al instante del reloj, su ruta y su destino, y el clic en el suelo para marchar. Es interfaz de fuera de
+// columna como caja con su posición al instante del reloj, su ruta y su destino (`RutasDelMapa`), y el clic en el suelo para marchar. Es interfaz de fuera de
 // la batalla: no usa el ECS de la batalla ni `Conquest.Net`; lee el almacén de la sesión y da órdenes del contrato.
 using System;
 using System.Collections.Generic;
@@ -30,8 +30,10 @@ namespace ConquestTactics.Mundo.Mapa
         TerrenoDelMapa terreno;
         VegetacionDelMapa vegetacion;
         NieblaDelMapa niebla;
-        GameObject rios, caja, destino;
-        LineRenderer ruta;
+        AvesDelMapa aves;
+        PolvoDelMapa polvo;
+        GameObject rios, caja;
+        RutasDelMapa rutas;
         Material materialSuelo, materialPropio, cielo;
         Vector2? pulsado;
         Vector2 ultimoRaton;
@@ -61,6 +63,12 @@ namespace ConquestTactics.Mundo.Mapa
         /// donde nacer, los bandidos del artefacto, los aros de alrededor). Tras cambiar las rayas, `RehacerRayas`.</summary>
         public (double x, double y)? Enfoque;
         public double? RadioVisionFijo;
+        /// <summary>El encuadre de la cámara (u) aunque haya columna (la vista en planta de las distancias de plaza); null, el de la visión.</summary>
+        public double? EncuadreFijo;
+        /// <summary>Si las flechas y WASD giran e inclinan la cámara (en la previa y las distancias de plaza, no: llevan la cámara por la escena).</summary>
+        public bool TecladoDeCamara = true;
+        /// <summary>Las zonas de las plazas y de las Facciones (sus fronteras y su relleno); la previa del mapa las apaga.</summary>
+        public bool Zonas = true;
         public readonly List<CosaDelMapa> Adicionales = new List<CosaDelMapa>();
         public readonly List<RayaDelMapa> RayasAdicionales = new List<RayaDelMapa>();
         public void RehacerRayas() => sucio = true;
@@ -107,6 +115,10 @@ namespace ConquestTactics.Mundo.Mapa
                 return cauces.Fondo(x, y, 0.5f) is float f ? Mathf.Min(h, f) : h;
             }, transform, cauces);
             niebla = new NieblaDelMapa();
+            // la vida del mapa (tema 9): solo pájaros y el polvo de lo que anda
+            aves = new AvesDelMapa((x, y) => terreno.AlturaVisible(x, y));
+            polvo = new PolvoDelMapa((x, y) => terreno.AlturaVisible(x, y), (x, y) => relieve.AguaEn(x, y) || cauces.ACauce(x, y, 1) < 0.1,
+                Raster(artefacto.Fertilidad), Raster(artefacto.Humedad), umbrales.w + PinturaDelMapa.NieveSobreCima * ((float)Relieve.MetrosAltura - umbrales.w));
             // los nodos de recursos (tema 5): el agua, la del relieve y los cauces (el parche y los cascotes no van encima)
             nodos = new NodosDelMapa(terreno, artefacto.Nodos, (x, y) => relieve.AguaEn(x, y) || (cauces.ACauce(x, y, 2) < 0.15), terreno.Material);
             // las maquetas de los asentamientos (tema 6); la capa baja ralea junto a los nodos y junto a las miniaturas
@@ -166,13 +178,7 @@ namespace ConquestTactics.Mundo.Mapa
             if (PinturaDelMapa.SombrasReales && sol != null) PonerPipelineDelMapa();
 
             caja = Caja("Tu columna", PinturaDelMapa.Columna, new Vector3(PinturaDelMapa.LadoColumna, PinturaDelMapa.AltoColumna, PinturaDelMapa.LadoColumna));
-            destino = Caja("Destino", PinturaDelMapa.Destino, new Vector3(0.5f, 1.5f, 0.5f));
-            ruta = new GameObject("Ruta").AddComponent<LineRenderer>();
-            ruta.transform.SetParent(transform, false);
-            ruta.sharedMaterial = materialPropio;
-            ruta.startColor = ruta.endColor = PinturaDelMapa.Ruta.linear;
-            ruta.widthMultiplier = 0.25f * EscalaDelMapa.MetrosPorUnidad;
-            ruta.shadowCastingMode = ShadowCastingMode.Off;
+            rutas = new RutasDelMapa(transform, (x, y) => terreno.AlturaPintada(x, y), (x, y) => terreno.AlturaVisible(x, y));
         }
 
         static RasterDeMundo Raster(Raster r) => r != null && r.Encoding == EncodingRaster.EncodingU8 ? new RasterDeMundo(r) : null;
@@ -350,6 +356,8 @@ namespace ConquestTactics.Mundo.Mapa
             territorio?.Destruir();
             pintor?.Destruir();
             niebla?.Destruir();
+            aves?.Dispose();
+            polvo?.Dispose();
             if (rios != null)
                 foreach (var r in rios.GetComponentsInChildren<MeshRenderer>())
                 {
@@ -358,6 +366,7 @@ namespace ConquestTactics.Mundo.Mapa
                 }
             if (materialSuelo != null) Destroy(materialSuelo);
             if (materialPropio != null) Destroy(materialPropio);
+            rutas?.Destruir();
             if (cielo != null)
             {
                 if (RenderSettings.skybox == cielo) RenderSettings.skybox = null;
@@ -366,7 +375,7 @@ namespace ConquestTactics.Mundo.Mapa
             Shader.SetGlobalVector(Bruma, Vector4.zero);
         }
 
-        static readonly int Bruma = Shader.PropertyToID("_Bruma"), ColorBruma = Shader.PropertyToID("_BrumaColor");
+        static readonly int Bruma = Shader.PropertyToID("_Bruma"), ColorBruma = Shader.PropertyToID("_BrumaColor"), BrumaValle = Shader.PropertyToID("_BrumaValle"), CieloNuevo = Shader.PropertyToID("_CieloNuevo"), RelojMapa = Shader.PropertyToID("_RelojMapa");
 
         void Update()
         {
@@ -379,6 +388,9 @@ namespace ConquestTactics.Mundo.Mapa
             var objetivo = (cx, terreno.AlturaVisible(cx, cy) / EscalaDelMapa.MetrosPorUnidad, cy);
             var pos = Camara.Colocar(objetivo, camara.aspect, (x, y) => terreno.AlturaVisible(x, y) / EscalaDelMapa.MetrosPorUnidad, Time.deltaTime);
             var e = EscalaDelMapa.MetrosPorUnidad;
+            Shader.SetGlobalFloat(BrumaValle, (float)(objetivo.Item2 * e));
+            Shader.SetGlobalFloat(CieloNuevo, PinturaDelMapa.CieloNuevo ? 1 : 0);
+            Shader.SetGlobalFloat(RelojMapa, Time.timeSinceLevelLoad);
             camara.transform.position = EscalaDelMapa.AEscena(pos.x, pos.y, pos.h * e);
             camara.transform.LookAt(EscalaDelMapa.AEscena(cx, cy, objetivo.Item2 * e));
             camara.nearClipPlane = (float)Math.Max(0.05, Camara.Distancia * 0.05) * e;
@@ -393,12 +405,15 @@ namespace ConquestTactics.Mundo.Mapa
             terreno.HornearRelieve(1.0); // la sombra del relieve: 1 ms por fotograma como mucho
             vegetacion.Actualizar(cx, cy, Mathf.Min((float)Camara.Distancia * 7, 130));
             PintarCosas(ahora, cx, cy);
+            PintarRutas(ahora, cx, cy);
             // los nodos de recursos (tema 5), hasta donde se carga, como las cajas
             nodos.Actualizar(cx, cy, Math.Min(PinturaDelMapa.DistanciaCarga, Camara.Distancia * 7));
             nodos.Dibujar(camara);
             vegetacion.Claros(Claros());
             vegetacion.Aclarado(AclararCopas ? Aclarados(cx, cy) : SinAclarar);
             vegetacion.Dibujar(camara, cx, cy);
+            aves.Dibujar(cx, cy);
+            polvo.Actualizar(Cosas, cx, cy, Camara.Distancia * 2.5, Camara.Zoom != ZoomDelMapa.Alejado, Time.deltaTime);
             if (trazos != null)
             {
                 // la caja de las rayas: lo que se carga, con el tope del prototipo (240 u con la distancia de carga de 320)
@@ -461,6 +476,11 @@ namespace ConquestTactics.Mundo.Mapa
                     rayas.RemoveAll(r => r.Clase == ClaseDeRaya.Camino || r.Clase == ClaseDeRaya.ZonaDeFaccion || r.Clase == ClaseDeRaya.ZonaDePlaza
                                          || r.Color == CosasDelMapa.AnilloMercenarios);
                     var (lista, rellenos) = TrazosYTerritorio.Reunir(sesion.Almacen, heroeId(), radioProteccion, terreno.Cauces?.Vados);
+                    if (!Zonas)
+                    {
+                        lista.RemoveAll(t => t.Tipo == TipoDeTrazo.Frontera || t.Tipo == TipoDeTrazo.Zona);
+                        rellenos.Clear();
+                    }
                     trazos.Fijar(lista);
                     territorio.Fijar(rellenos);
                     vegetacion.Caminos(lista.Where(t => t.Tipo == TipoDeTrazo.Camino)
@@ -662,7 +682,7 @@ namespace ConquestTactics.Mundo.Mapa
             {
                 var p = Instante.Posicion(Columna.Plan, Columna.Posicion, ahora);
                 Centro = (p.x / 1000, p.y / 1000);
-                Camara.RadioVision = RadioDeVision(Columna);
+                Camara.RadioVision = EncuadreFijo ?? RadioDeVision(Columna);
             }
             else if (DondeEsta(heroe.Ubicacion) is (double, double) dentro)
             {
@@ -687,26 +707,62 @@ namespace ConquestTactics.Mundo.Mapa
             var (x, y) = Centro.Value;
             var e = EscalaDelMapa.MetrosPorUnidad;
             caja.transform.localPosition = EscalaDelMapa.AEscena(x, y, terreno.AlturaVisible(x, y) + PinturaDelMapa.AltoColumna * e / 2);
-            var resto = Instante.RutaRestante(Columna.Plan, Columna.Posicion, ahora);
-            destino.SetActive(resto.Count > 1);
-            ruta.enabled = resto.Count > 1;
-            if (resto.Count <= 1) return;
-            var (dx, dy) = (resto[resto.Count - 1].x / 1000, resto[resto.Count - 1].y / 1000);
-            destino.transform.localPosition = EscalaDelMapa.AEscena(dx, dy, terreno.AlturaVisible(dx, dy) + 0.75f * e);
-            var puntos = new List<Vector3>();
-            for (int i = 0; i + 1 < resto.Count; i++)
+        }
+
+        /// <summary>Las columnas que se pintan con la ruta y el destino como la tuya (la previa del mapa: no son la del héroe).</summary>
+        public readonly HashSet<string> RutasComoLaMia = new HashSet<string>();
+
+        /// <summary>Las rutas (`RutasDelMapa`): la de tu columna con su mira y su destino (cortada en la huella de lo que haya allí), y el rastro de
+        /// las demás columnas de tu Facción y de tus caravanas, hasta donde se carga. Lo ajeno no trae su ruta.</summary>
+        void PintarRutas(double ahora, double cx, double cy)
+        {
+            rutas.Empezar();
+            var id = heroeId();
+            var heroe = id == null ? null : sesion.Almacen.Buscar(TipoEntidad.Heroe, id)?.Heroe;
+            var miFaccion = heroe != null && heroe.HasFaccionId ? heroe.FaccionId : null;
+            double alcance = Math.Min(PinturaDelMapa.DistanciaCarga, Camara.Distancia * 7);
+            List<(double x, double y)> EnU(List<(double x, double y)> r)
             {
-                double ax = resto[i].x / 1000, ay = resto[i].y / 1000, bx = resto[i + 1].x / 1000, by = resto[i + 1].y / 1000;
-                int pasos = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)) / 2));
-                for (int k = 0; k < pasos; k++)
-                {
-                    double t = k / (double)pasos, px = ax + (bx - ax) * t, py = ay + (by - ay) * t;
-                    puntos.Add(EscalaDelMapa.AEscena(px, py, terreno.AlturaVisible(px, py) + 0.3f * e));
-                }
+                for (int i = 0; i < r.Count; i++) r[i] = (r[i].x / 1000, r[i].y / 1000);
+                return r;
             }
-            puntos.Add(EscalaDelMapa.AEscena(dx, dy, terreno.AlturaVisible(dx, dy) + 0.3f * e));
-            ruta.positionCount = puntos.Count;
-            ruta.SetPositions(puntos.ToArray());
+            bool Lejos((double x, double y) p) => Math.Abs(p.x - cx) > alcance || Math.Abs(p.y - cy) > alcance;
+            foreach (var en in sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Ejercito))
+            {
+                var c = en.Ejercito;
+                if (c.Plan == null || c.HasDentroDe) continue;
+                bool mia = Columna != null && c.Id == Columna.Id || RutasComoLaMia.Contains(c.Id);
+                if (!mia && (miFaccion == null || c.FaccionId != miFaccion)) continue;
+                var r = EnU(Instante.RutaRestante(c.Plan, c.Posicion, ahora));
+                if (r.Count < 2 || !mia && Lejos(r[0])) continue;
+                if (!mia) { rutas.Ruta(c.Id, r, RutasDelMapa.Clase.Faccion); continue; }
+                uint rgb = CosasDelMapa.ColorDeFaccion(sesion.Almacen, c.FaccionId);
+                rutas.Ruta(c.Id, r, RutasDelMapa.Clase.Mia, new Color32((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, 255), HuellaEn(r[r.Count - 1]));
+            }
+            foreach (var en in sesion.Almacen.Todas(Entidad.CuerpoOneofCase.Caravana))
+            {
+                var k = en.Caravana;
+                bool propia = miFaccion != null && k.HasFaccionId && k.FaccionId == miFaccion || k.HasTitularId && k.TitularId == id;
+                if (!propia || k.Plan == null) continue;
+                var r = EnU(Instante.RutaRestante(k.Plan, k.Posicion, ahora));
+                if (r.Count >= 2 && !Lejos(r[0])) rutas.Ruta("caravana:" + k.Id, r, RutasDelMapa.Clase.Caravana);
+            }
+            rutas.Terminar();
+        }
+
+        /// <summary>Lo fijo con huella en (x, y): la cosa más cercana (no lo que anda) en cuya huella (`Radio`) cae; su centro y su radio.</summary>
+        (double x, double y, double r)? HuellaEn((double x, double y) p)
+        {
+            CosaDelMapa mejor = null;
+            double dm = double.MaxValue;
+            foreach (var c in Cosas)
+            {
+                if (c.Clase == ClaseDeCosa.Ejercito || c.Clase == ClaseDeCosa.EjercitoAjeno || c.Clase == ClaseDeCosa.Formacion || c.Clase == ClaseDeCosa.Caravana
+                    || c.Clase == ClaseDeCosa.CaravanaAjena || c.Clase == ClaseDeCosa.Aeda || c.Radio <= 0) continue;
+                double d = CosasDelMapa.Distancia(p.x, p.y, c.X, c.Y);
+                if (d <= c.Radio && d < dm) { dm = d; mejor = c; }
+            }
+            return mejor == null ? ((double, double, double)?)null : (mejor.X, mejor.Y, mejor.Radio);
         }
 
         /// <summary>Dónde está el lugar en el que está dentro el héroe (plaza, pueblo o avanzada), o null.</summary>
@@ -725,7 +781,6 @@ namespace ConquestTactics.Mundo.Mapa
         void Mostrar(bool columna)
         {
             caja.SetActive(columna && !CosasDelMapa.ConFiguras);
-            if (!columna) { destino.SetActive(false); ruta.enabled = false; }
         }
 
         /// <summary>La visión de la columna (`Movimiento_Ejercitos.VISION` de `/v1/datos`): con soldados, la de ejército; si no, la del héroe solo.</summary>
@@ -744,7 +799,7 @@ namespace ConquestTactics.Mundo.Mapa
             var raton = Mouse.current;
             var teclado = Keyboard.current;
             var dt = Time.deltaTime;
-            if (teclado != null)
+            if (teclado != null && TecladoDeCamara)
             {
                 if (teclado.upArrowKey.isPressed || teclado.wKey.isPressed) Camara.Inclinar(40 * dt);
                 if (teclado.downArrowKey.isPressed || teclado.sKey.isPressed) Camara.Inclinar(-40 * dt);
@@ -858,6 +913,8 @@ namespace ConquestTactics.Mundo.Mapa
         public (int teselas, double ms) ConstruccionDelSuelo => terreno == null ? (0, 0) : (terreno.Construidas, terreno.MsConstruyendo);
         public bool SueloCompleto => terreno != null && terreno.Completo && (vegetacion == null || vegetacion.Completo) && (nodos == null || nodos.Completo);
         public VegetacionDelMapa Vegetacion => vegetacion;
+        public AvesDelMapa Aves => aves;
+        public PolvoDelMapa Polvo => polvo;
         public double PeorMsTeselaDeSuelo => terreno?.PeorMsTesela ?? 0;
         TrazosEnElMapa trazos;
         NodosDelMapa nodos;
@@ -887,6 +944,9 @@ namespace ConquestTactics.Mundo.Mapa
         public float? AlturaDeMalla(double x, double y) => terreno.AlturaDeMalla(x, y);
         /// <summary>Los ríos y vados pintados (una malla).</summary>
         public Mesh MallaDeRios => rios != null ? rios.GetComponent<MeshFilter>().sharedMesh : null;
-        public int PuntosDeRuta => ruta != null && ruta.enabled ? ruta.positionCount : 0;
+        public int PuntosDeRuta => Columna != null ? rutas?.PuntosDe(Columna.Id) ?? 0 : 0;
+        /// <summary>Puntos de la ruta pintada de la columna `id` (0 sin ruta) y dónde se planta su marca de destino.</summary>
+        public int PuntosDeRutaDe(string id) => rutas?.PuntosDe(id) ?? 0;
+        public (double x, double y)? MarcaDeDestino(string id) => rutas?.MarcaDe(id);
     }
 }

@@ -75,13 +75,27 @@ namespace ConquestTactics.Mundo.UI.Tests
                         Assert.That(CosasDelMapa.HuellaDePlaza(rc, n), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(rc, n)).Within(1e-12), $"«Prototipo»: rc {rc}, nivel {n}");
                 MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Mejorado;
                 Assert.That(MaquetasDelPrototipo.RadioDePlaza(1.2, 1), Is.EqualTo(0.5952).Within(1e-9));
-                Assert.That(CosasDelMapa.HuellaDePlaza(1.2, 1), Is.EqualTo(0.9).Within(1e-12), "recién fundada: de 0,60 a 0,90");
-                Assert.That(CosasDelMapa.HuellaDePlaza(2.0, 1), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(2.0, 1)).Within(1e-12), "zona de 20 u: 0,99, sin cambio");
-                Assert.That(CosasDelMapa.HuellaDePlaza(3.5, 3), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(3.5, 3)).Within(1e-12), "nivel 3, zona de 35 u: sin cambio");
+                // (con lo fijo a su factor: `CosasDelMapa.Fijos(Plaza)`, lo fijo (× 2) por el de las plazas (0,5), desde el 2026-11-23)
+                double f = CosasDelMapa.Fijos(ClaseDeCosa.Plaza);
+                Assert.That(CosasDelMapa.HuellaDePlaza(1.2, 1), Is.EqualTo(0.9 * f).Within(1e-12), "recién fundada: de 0,60 a 0,90, por el factor");
+                Assert.That(CosasDelMapa.HuellaDePlaza(2.0, 1), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(2.0, 1) * f).Within(1e-12), "zona de 20 u: 0,99, por el factor");
+                Assert.That(CosasDelMapa.HuellaDePlaza(3.5, 3), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(3.5, 3) * f).Within(1e-12), "nivel 3, zona de 35 u: por el factor");
                 Assert.That(MaquetasDelMapa.Huella(1.2, 1), Is.EqualTo(CosasDelMapa.HuellaDePlaza(1.2, 1)), "la miniatura usa la misma función");
                 foreach (var rc in new[] { 1.2, 2.0, 2.5, 3.5, 4.5, 5.5 })
                     for (int n = 1; n < 5; n++)
                         Assert.That(CosasDelMapa.HuellaDePlaza(rc, n + 1), Is.GreaterThanOrEqualTo(CosasDelMapa.HuellaDePlaza(rc, n)), $"rc {rc}: del nivel {n} al {n + 1}");
+                // (a la medida de la choza, 2026-11-23: la huella es el `radio_u` del modelo de su variante; nunca encoge al subir, sea cual sea la
+                // variante: el mayor de un nivel, por debajo del menor del siguiente)
+                double RadioU(int n, int v)
+                {
+                    var t = UnityEngine.Resources.Load<UnityEngine.TextAsset>($"MapaMundo/Asentamientos/plaza{n}_{v}");
+                    Assert.That(t, Is.Not.Null, $"plaza{n}_{v}.json");
+                    var m = System.Text.RegularExpressions.Regex.Match(t.text, "\"radio_u\"\\s*:\\s*([0-9.]+)");
+                    Assert.That(m.Success, $"plaza{n}_{v}: su radio_u");
+                    return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                }
+                for (int n = 1; n < 5; n++)
+                    Assert.That(Math.Max(RadioU(n, 1), RadioU(n, 2)), Is.LessThan(Math.Min(RadioU(n + 1, 1), RadioU(n + 1, 2))), $"a la medida de la choza: del nivel {n} al {n + 1}");
             }
             finally { MaquetasDelMapa.Estilo = antes; }
         }

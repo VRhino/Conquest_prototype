@@ -1,0 +1,10 @@
+/* Distancias de plaza (banco): los desplegables del panel, cerrados y con la lista abierta, con el contraste del resto del panel. */
+.dp-desplegable > .unity-base-popup-field__input { background-color: rgb(46, 38, 29); border-width: 1px; border-color: rgb(150, 120, 80); color: rgb(230, 219, 199); height: 22px; margin: 1px 0; padding: 0 6px; }
+.dp-desplegable > .unity-base-popup-field__input:hover { border-color: rgb(205, 170, 110); }
+.dp-desplegable .unity-base-popup-field__text { color: rgb(230, 219, 199); font-size: 12px; -unity-text-align: middle-left; margin: 0; padding: 0; }
+.dp-desplegable .unity-base-popup-field__arrow { -unity-background-image-tint-color: rgb(230, 219, 199); }
+.unity-base-dropdown .unity-base-dropdown__container-inner { background-color: rgb(36, 30, 23); border-width: 1px; border-color: rgb(150, 120, 80); }
+.unity-base-dropdown .unity-base-dropdown__item { background-color: rgb(36, 30, 23); }
+.unity-base-dropdown .unity-base-dropdown__item:hover { background-color: rgb(92, 74, 52); }
+.unity-base-dropdown .unity-base-dropdown__label { color: rgb(230, 219, 199); font-size: 12px; }
+.unity-base-dropdown .unity-base-dropdown__checkmark { -unity-background-image-tint-color: rgb(230, 219, 199); }

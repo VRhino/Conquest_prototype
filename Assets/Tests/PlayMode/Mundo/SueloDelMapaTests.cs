@@ -2271,22 +2271,37 @@ namespace ConquestTactics.Mundo.UI.Tests
                     int v_ = MaquetasDelMapa.VarianteDe(MaquetasDelPrototipo.Semilla(x, y), 2);
                     StringAssert.StartsWith($"plaza1_{v_ + 1} ", suya.Material.name, $"{e.Id}: su variante");
                 }
-                // el aro y el clic, con lo dibujado: el radio de cada plaza (`CosaDelMapa.Radio`, del que salen los dos) es la escala de su
-                // miniatura, y el clic, ese radio más la holgura
+                // el aro y el clic, con lo dibujado (a la medida de la choza, 2026-11-23): cada miniatura, a la escala fija de su modelo (su
+                // `unidad_u`), y el radio de cada plaza (`CosaDelMapa.Radio`, del que salen el aro y el clic), el `radio_u` del modelo de su
+                // variante, sea cual sea su zona; el clic, ese radio más la holgura
+                double JsonDe(string modelo, string clave)
+                {
+                    var t = Resources.Load<TextAsset>("MapaMundo/Asentamientos/" + modelo);
+                    Assert.That(t, Is.Not.Null, modelo + ".json");
+                    var m = System.Text.RegularExpressions.Regex.Match(t.text, "\"" + clave + "\"\\s*:\\s*(-?[0-9.]+)");
+                    return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                }
                 foreach (var c in mapa.Cosas.Where(c => c.Clase == ClaseDeCosa.Plaza))
                 {
                     var pos = EscalaDelMapa.AEscena(c.X, c.Y, 0);
                     var suya = villas.OrderBy(v => Vector2.Distance(new Vector2(v.M.GetColumn(3).x, v.M.GetColumn(3).z), new Vector2(pos.x, pos.z))).First();
-                    double dibujado = suya.M.lossyScale.x / EscalaDelMapa.MetrosPorUnidad;
-                    Assert.That(c.Radio, Is.EqualTo(dibujado).Within(1e-3), $"{c.Id}: el radio del aro, el de lo dibujado");
+                    string modelo = suya.Material.name.Split(' ')[0];
+                    // (la escala en planta: sin el sesgo de la ladera, que inclina la villa y estira su eje x en vertical)
+                    double dibujado = new Vector2(suya.M.m00, suya.M.m20).magnitude / EscalaDelMapa.MetrosPorUnidad;
+                    Assert.That(dibujado, Is.EqualTo(JsonDe(modelo, "unidad_u")).Within(1e-3), $"{c.Id}: dibujada a la escala fija de {modelo}");
+                    // (con muralla, su factor encima: el radio de la muralla, en unidades del modelo, frente al radio_u; la del 3, el de su malla)
+                    double radioU = JsonDe(modelo, "radio_u"), aro = radioU;
+                    var a_ = c.Entidad?.Asentamiento;
+                    if (a_ != null && a_.TieneMuralla && a_.Nivel >= 2)
+                    {
+                        double rm = a_.Nivel == 3 ? Math.Max(1, MaquetasDelMapa.RadiosMedidos[modelo]) : JsonDe("muralla" + modelo.Substring(5), "radio");
+                        aro = radioU * Math.Max(1, Math.Min(MaquetasDelMapa.RadioMaximoDeMuralla, rm) * JsonDe(modelo, "unidad_u") / radioU);
+                    }
+                    Assert.That(c.Radio, Is.EqualTo(aro).Within(1e-3), $"{c.Id}: el radio del aro, el radio_u de {modelo} (con su muralla, si la lleva)");
                     Assert.That(c.RadioClic, Is.EqualTo(c.Radio + 0.12).Within(1e-9), $"{c.Id}: el clic");
                 }
-                // la de nivel 1 recién fundada (zona de 12 u): de 0,60 a 0,90 u; la crecida (20 u), sin cambio (0,99); la de nivel 3 (35 u), igual
-                double R(string id) => mapa.Cosas.First(c => c.Id == id).Radio;
-                Assert.That(R("as-1a"), Is.EqualTo(0.9).Within(1e-3));
-                Assert.That(R("as-1c"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(2.0, 1)).Within(1e-3));
-                Assert.That(R("as-3m"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(3.5, 3)).Within(1e-3));
                 // con «Prototipo», todo como el prototipo
+                double R(string id) => mapa.Cosas.First(c => c.Id == id).Radio;
                 MaquetasDelMapa.Estilo = EstiloDeAsentamientos.Prototipo;
                 for (int i = 0; i < 70; i++) yield return null; // (las cosas se reúnen dos veces por segundo)
                 Assert.That(R("as-1a"), Is.EqualTo(MaquetasDelPrototipo.RadioDePlaza(1.2, 1)).Within(1e-3), "«Prototipo»: la huella del prototipo");
@@ -2364,12 +2379,18 @@ namespace ConquestTactics.Mundo.UI.Tests
                     var villa = Cercano(villas, x, y);
                     string modelo = villa.Material.name.Split(' ')[0]; // plaza<nivel>_<v>
                     StringAssert.StartsWith($"plaza{nivel}_", modelo, id);
-                    double huella = CosasDelMapa.HuellaDePlaza(2.0, nivel), factor = 1;
+                    // (a la medida de la choza, 2026-11-23: la huella, el radio_u del modelo; la villa, a su unidad_u)
+                    double huella = Json(modelo, "radio_u"), unidad = Json(modelo, "unidad_u"), factor = 1;
                     if (muralla && nivel >= 2)
                     {
                         var suya = Cercano(murallas, x, y);
                         Assert.That(Vector3.Distance(suya.M.GetColumn(3), villa.M.GetColumn(3)), Is.LessThan(0.01f), $"{id}: su muralla, en su plaza");
-                        if (nivel == 3) Assert.That(suya.Material, Is.SameAs(villa.Material), $"{id}: la del 3, la de su FBX");
+                        if (nivel == 3)
+                        {
+                            Assert.That(suya.Material, Is.SameAs(villa.Material), $"{id}: la del 3, la de su FBX");
+                            // (su radio, el de su malla: lo mide `MaquetasDelMapa` al cargar)
+                            factor = Math.Min(MaquetasDelMapa.RadioMaximoDeMuralla, Math.Max(1, MaquetasDelMapa.RadiosMedidos[modelo]));
+                        }
                         else
                         {
                             string nombre = "muralla" + modelo.Substring(5);
@@ -2379,9 +2400,11 @@ namespace ConquestTactics.Mundo.UI.Tests
                         }
                     }
                     var c = mapa.Cosas.First(k => k.Id == id);
-                    Assert.That(c.Radio, Is.EqualTo(huella * factor).Within(1e-3), $"{id}: el aro llega a su muralla");
+                    // (el radio de la muralla está en unidades del modelo: en u, por su unidad_u; el aro, el mayor de él y la huella)
+                    double esperado = muralla && nivel >= 2 ? huella * Math.Max(1, factor * unidad / huella) : huella;
+                    Assert.That(c.Radio, Is.EqualTo(esperado).Within(1e-3), $"{id}: el aro llega a su muralla");
                     Assert.That(c.RadioClic, Is.EqualTo(c.Radio + 0.12).Within(1e-9), $"{id}: y el clic");
-                    Assert.That(villa.M.lossyScale.x / EscalaDelMapa.MetrosPorUnidad, Is.EqualTo(huella).Within(1e-3), $"{id}: la villa, a su huella de siempre");
+                    Assert.That(new Vector2(villa.M.m00, villa.M.m20).magnitude / EscalaDelMapa.MetrosPorUnidad, Is.EqualTo(unidad).Within(1e-3), $"{id}: la villa, a su escala fija (en planta)");
                 }
                 // la de nivel 4 con muralla: su puerta (en el marco de la villa, x y −z de Unity), hacia el oeste
                 var v4 = Cercano(villas, cx - 4, cy + 2);

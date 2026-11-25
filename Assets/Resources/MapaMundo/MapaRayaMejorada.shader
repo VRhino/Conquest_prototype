@@ -3,7 +3,8 @@
 // cualquier suelo y, lejos, un ancho mínimo en píxeles (la cinta se ensancha en el vértice). Color plano, con su opacidad en el alfa del color
 // de vértice; encima, la niebla de guerra (si `_ConNiebla`), las nubes y la bruma de `MapaComun.hlsl`.
 //   UV0: x de un borde de la malla al otro (−1..1), y lo andado (u). UV1.x: 1 a trazos. UV2.x: medio ancho de la línea (u), UV2.y: el medio
-//   ancho de la malla (u). TANGENT: hacia donde crece UV0.x (mundo), w lo que se aparta el vértice del eje (m).
+//   ancho de la malla (u). TANGENT: hacia donde crece UV0.x (mundo), w lo que se aparta el vértice del eje (m). La ruta de las columnas
+//   (`RutasDelMapa`) usa el mismo sombreado con sus trazos (`_Lleno`, `_Periodo`).
 Shader "Conquest/MapaRayaMejorada"
 {
     Properties
@@ -11,6 +12,8 @@ Shader "Conquest/MapaRayaMejorada"
         _ConNiebla ("Bajo la niebla de guerra", Float) = 1
         _Desplazar ("Adelanto en el z-buffer", Float) = -3
         _MinPx ("Ancho mínimo de la línea (píxeles)", Float) = 2
+        _Lleno ("A trazos: lo lleno (u)", Float) = 1.2
+        _Periodo ("A trazos: lleno más hueco (u)", Float) = 1.9
     }
     SubShader
     {
@@ -30,7 +33,7 @@ Shader "Conquest/MapaRayaMejorada"
             #include "MapaComun.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                float _ConNiebla, _Desplazar, _MinPx;
+                float _ConNiebla, _Desplazar, _MinPx, _Lleno, _Periodo;
             CBUFFER_END
 
             struct Entrada { float4 pos : POSITION; float4 tangente : TANGENT; float4 color : COLOR; float2 uv : TEXCOORD0; float2 extra : TEXCOORD1; float2 medio : TEXCOORD2; };
@@ -61,8 +64,8 @@ Shader "Conquest/MapaRayaMejorada"
                 float d = abs(a);
                 if (s.datos.z > 0.5)
                 {
-                    // a trazos: la distancia a la cápsula del trazo más cercano (lleno 1,2 u, hueco 0,7 u, extremos redondos de radio w)
-                    const float lleno = 1.2, periodo = 1.9;
+                    // a trazos: la distancia a la cápsula del trazo más cercano (`_Lleno` y `_Periodo`: 1,2 u y 1,9 u el territorio, extremos redondos de radio w)
+                    float lleno = _Lleno, periodo = _Periodo;
                     float fase = s.uv.y - floor(s.uv.y / periodo) * periodo;
                     float r = min(w, lleno / 2);
                     float t = clamp(fase, r, lleno - r);

@@ -1,7 +1,9 @@
 // Las maquetas de asentamientos «Mejorado» del mapa de mundo (`MaquetasDelMapa`): la miniatura de Blender (`BronzeAgeArte/mapa/asentamientos`),
 // hermana de `MapaNodo`: de caras planas, con su color horneado y la oclusión horneada a medias (canal R de la máscara); las banderas (canal G)
 // toman el color de la Facción, por instancia (`_Faccion`). La luz del sol con algo de cielo, la sombra real, la bruma y, con `_ConNiebla`, la
-// niebla de guerra y las nubes (las plazas que solo se recuerdan). Mate.
+// niebla de guerra y las nubes (las plazas que solo se recuerdan). Mate. Con `_SinBandera` (solo las plazas y sus murallas, desde el repaso del
+// 23-11: su estandarte es el de las columnas, que pone `MaquetasDelMapa` en las anclas del json), el paño de la malla no se dibuja ni da
+// sombra (se recorta por el canal G).
 Shader "Conquest/MapaAsentamiento"
 {
     Properties
@@ -12,6 +14,7 @@ Shader "Conquest/MapaAsentamiento"
         _Oclusion ("Cuánta oclusión horneada", Float) = 0.6
         [Toggle] _Rodilla ("Comprimir las luces (que el encalado al sol no se queme)", Float) = 0
         _ConNiebla ("Con niebla de guerra", Float) = 0
+        _SinBandera ("Sin el paño de la malla (recortado por el canal G)", Float) = 0
     }
     SubShader
     {
@@ -36,7 +39,23 @@ Shader "Conquest/MapaAsentamiento"
                 float _Oclusion;
                 float _Rodilla;
                 float _ConNiebla;
+                float _SinBandera;
             CBUFFER_END
+            // (las plazas, asentadas por vértice) lo que sube o baja cada punto sobre el plano del sesgo para quedar en el suelo pintado: una rejilla
+            // de `_Rejilla.w`² valores (m) centrada en (x, z) = `_Rejilla.xy` con medio lado `_Rejilla.z` (m), interpolada; solo depende de x y z,
+            // así que las paredes siguen a plomo
+            float4 _Rejilla;
+            float _Residuos[169];
+            float Residuo(float3 w)
+            {
+                if (_Rejilla.w < 2) return 0;
+                float n = _Rejilla.w;
+                float2 t = saturate((w.xz - _Rejilla.xy) / (2 * _Rejilla.z) + 0.5) * (n - 1);
+                float2 i0 = min(floor(t), n - 2);
+                float2 f = t - i0;
+                int a = (int)(i0.y * n + i0.x), b = a + (int)n;
+                return lerp(lerp(_Residuos[a], _Residuos[a + 1], f.x), lerp(_Residuos[b], _Residuos[b + 1], f.x), f.y);
+            }
             UNITY_INSTANCING_BUFFER_START(Props)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Color)
                 UNITY_DEFINE_INSTANCED_PROP(float4, _Faccion)
@@ -51,6 +70,7 @@ Shader "Conquest/MapaAsentamiento"
                 Salida s;
                 UNITY_SETUP_INSTANCE_ID(e);
                 s.mundo = TransformObjectToWorld(e.pos.xyz);
+                s.mundo.y += Residuo(s.mundo);
                 s.pos = TransformWorldToHClip(s.mundo);
                 s.normal = TransformObjectToWorldNormal(e.normal);
                 s.uv = e.uv;
@@ -64,6 +84,7 @@ Shader "Conquest/MapaAsentamiento"
             {
                 float3 c = SAMPLE_TEXTURE2D(_ColorTex, sampler_ColorTex, s.uv).rgb * s.tono.rgb;
                 float3 masc = SAMPLE_TEXTURE2D(_Mascara, sampler_Mascara, s.uv).rgb;
+                if (_SinBandera > 0.5) clip(0.4 - masc.g);
                 float ao = masc.r;
                 // las banderas: el color de la Facción (su paño es casi blanco en la textura: conserva su sombreado horneado)
                 c = lerp(c, s.faccion.rgb * saturate(c * 1.1), saturate(masc.g * 1.5));
@@ -103,21 +124,50 @@ Shader "Conquest/MapaAsentamiento"
                 float _Oclusion;
                 float _Rodilla;
                 float _ConNiebla;
+                float _SinBandera;
             CBUFFER_END
             float3 _LightDirection;
-            struct EntradaSombra { float4 pos : POSITION; float3 normal : NORMAL; UNITY_VERTEX_INPUT_INSTANCE_ID };
-            float4 VertSombra(EntradaSombra e) : SV_POSITION
+            TEXTURE2D(_Mascara); SAMPLER(sampler_Mascara);
+            // (las plazas, asentadas por vértice) lo que sube o baja cada punto sobre el plano del sesgo para quedar en el suelo pintado: una rejilla
+            // de `_Rejilla.w`² valores (m) centrada en (x, z) = `_Rejilla.xy` con medio lado `_Rejilla.z` (m), interpolada; solo depende de x y z,
+            // así que las paredes siguen a plomo
+            float4 _Rejilla;
+            float _Residuos[169];
+            float Residuo(float3 w)
+            {
+                if (_Rejilla.w < 2) return 0;
+                float n = _Rejilla.w;
+                float2 t = saturate((w.xz - _Rejilla.xy) / (2 * _Rejilla.z) + 0.5) * (n - 1);
+                float2 i0 = min(floor(t), n - 2);
+                float2 f = t - i0;
+                int a = (int)(i0.y * n + i0.x), b = a + (int)n;
+                return lerp(lerp(_Residuos[a], _Residuos[a + 1], f.x), lerp(_Residuos[b], _Residuos[b + 1], f.x), f.y);
+            }
+
+            struct EntradaSombra { float4 pos : POSITION; float3 normal : NORMAL; float2 uv : TEXCOORD0; UNITY_VERTEX_INPUT_INSTANCE_ID };
+            struct SalidaSombra { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
+            SalidaSombra VertSombra(EntradaSombra e)
             {
                 UNITY_SETUP_INSTANCE_ID(e);
-                float4 pos = TransformWorldToHClip(ApplyShadowBias(TransformObjectToWorld(e.pos.xyz), TransformObjectToWorldNormal(e.normal), _LightDirection));
+                SalidaSombra s;
+                float3 w = TransformObjectToWorld(e.pos.xyz);
+                w.y += Residuo(w);
+                float4 pos = TransformWorldToHClip(ApplyShadowBias(w, TransformObjectToWorldNormal(e.normal), _LightDirection));
             #if UNITY_REVERSED_Z
                 pos.z = min(pos.z, UNITY_NEAR_CLIP_VALUE);
             #else
                 pos.z = max(pos.z, UNITY_NEAR_CLIP_VALUE);
             #endif
-                return pos;
+                s.pos = pos;
+                s.uv = e.uv;
+                return s;
             }
-            half4 FragSombra() : SV_Target { return 0; }
+            half4 FragSombra(SalidaSombra s) : SV_Target
+            {
+                // (el paño recortado tampoco da sombra)
+                if (_SinBandera > 0.5) clip(0.4 - SAMPLE_TEXTURE2D(_Mascara, sampler_Mascara, s.uv).g);
+                return 0;
+            }
             ENDHLSL
         }
     }

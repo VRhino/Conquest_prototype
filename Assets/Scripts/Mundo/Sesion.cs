@@ -155,6 +155,8 @@ namespace ConquestTactics.Mundo
         public double AhoraMundo => relojPausado ? relojMundoMs : relojMundoMs + (AhoraLocal - relojLocalMs) * relojFactor;
         public bool RelojPausado => relojPausado;
         public double FactorReloj => relojFactor;
+        /// <summary>Sin servidor (la previa del mapa): el reloj del mundo en marcha, a ritmo 1, desde `mundoMs`. Con servidor lo pone él.</summary>
+        public void RelojSinServidor(double mundoMs) => AjustarReloj(new Reloj { MundoMs = (long)mundoMs, FactorMilesimas = 1000, Pausado = false }, double.PositiveInfinity, true);
         /// <summary>La mejor ida y vuelta medida con el ping, en ms (infinito sin muestra).</summary>
         public double Rtt => relojRtt;
 

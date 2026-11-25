@@ -34,11 +34,12 @@ namespace ConquestTactics.Mundo.Mapa
         public static float VelocidadAeda;
 
         /// <summary>Lo que sale en pantalla con menos alto que esto (px), con su figura de bloques.</summary>
-        public static float PixelesMinimos = 14;
+        public static float PixelesMinimos = 21;
         /// <summary>Solo proyectan sombra las que miden al menos esto en pantalla (px).</summary>
-        public static float PixelesSombra = 40;
-        /// <summary>Los metros de un modelo, en la escena del mapa: el soldado (1,75 m) mide 0,27 u.</summary>
-        public static readonly float MetrosAEscena = (float)(0.27 * EscalaDelMapa.MetrosPorUnidad / 1.75);
+        public static float PixelesSombra = 60;
+        /// <summary>Los metros de un modelo, en la escena del mapa: los de la figura de bloques (`ColumnasDelMapa.Tropa`); el soldado (1,75 m)
+        /// mide 0,405 u.</summary>
+        public static float MetrosAEscena => (float)(ColumnasDelMapa.MetrosAFigura * ColumnasDelMapa.Tropa * EscalaDelMapa.MetrosPorUnidad);
         /// <summary>Con modelos (lo pone quien hornea; sin él, todo de bloques).</summary>
         public static bool Activos;
         /// <summary>Quien hornea: le llega la clave de lo que falta (una vez por clave) y cuando lo tenga lo pone en `Listos`.</summary>
@@ -107,11 +108,11 @@ namespace ConquestTactics.Mundo.Mapa
         /// fotogramas y variantes y con sombra (la de más de `PixelesSombra`). El resto, hasta los bloques, el mismo modelo reducido: menos
         /// fotogramas y variantes con la distancia y sin sombra. (No hay nivel simplificado: costaba lo mismo en llamadas y no era el mismo
         /// soldado; ver el doc del tema 7.)</summary>
-        public static float PixelesCompleto = 40;
+        public static float PixelesCompleto = 60;
         public static int TopeCompletos = 300;
         /// <summary>Por debajo de esto (px), el reducido usa 4 fotogramas de andar y 1 de reposo y una sola variante; por encima, 6 y 3 y dos
         /// variantes.</summary>
-        public static float PixelesLejos = 20;
+        public static float PixelesLejos = 30;
         /// <summary>Cuántas fases de andar hay en una columna (por grupos de filas).</summary>
         public static int GruposDePaso = 3;
 

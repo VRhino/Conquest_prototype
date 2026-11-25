@@ -29,6 +29,9 @@ namespace ConquestTactics.Mundo.Mapa
         public static EstiloDeNodos Estilo = EstiloDeNodos.Mejorado;
         /// <summary>«Mejorado»: el radio de la huella (u) de la piedra y de los metales; el parche, tantas veces la huella.</summary>
         public static double RadioPiedra = 0.65, RadioMetal = 0.5, Parche = 1.7;
+        /// <summary>Para comparar en la previa del mapa: los nodos, modelo y parche, por este factor (1: como están, que Víctor da por buenos).</summary>
+        public static double FactorDeNodos = 1;
+        double factorHecho = 1;
         /// <summary>«Mejorado»: hasta dónde (m de la cámara) va cada nivel del modelo: cerca, medio; más allá, lejos.</summary>
         public static float NivelCerca = 160, NivelMedio = 400;
         /// <summary>Para las pruebas («Mejorado»): dibujar los modelos; el parche y los cascotes; y el claro en la vegetación.</summary>
@@ -139,7 +142,7 @@ namespace ConquestTactics.Mundo.Mapa
         static int TipoDe(string tipo) => tipo switch { "piedra" => 0, "cobre" => 1, "estano" => 2, "oro" => 3, "hierro" => 4, _ => -1 };
 
         /// <summary>El radio de la huella (u) de un nodo de `tipo` con «Mejorado».</summary>
-        public static double Huella(string tipo) => tipo == "piedra" ? RadioPiedra : RadioMetal;
+        public static double Huella(string tipo) => (tipo == "piedra" ? RadioPiedra : RadioMetal) * FactorDeNodos;
 
         /// <summary>«Mejorado»: cuánta capa baja queda en (x, y) (de 0 a 1): rala dentro del parche de un nodo (un tercio) y entera a 1,3 veces su
         /// radio. Desde cualquier hilo (los nodos no cambian).</summary>
@@ -190,12 +193,13 @@ namespace ConquestTactics.Mundo.Mapa
                 hechas.Remove(k);
             }
             bool cambio = terreno.Version != version || VersionGiros != versionGirosHecha;
-            if (VersionGiros != versionGirosHecha)
+            if (VersionGiros != versionGirosHecha || FactorDeNodos != factorHecho)
             {
                 foreach (var t in hechas.Values) if (t.Parche != null) UnityEngine.Object.Destroy(t.Parche);
                 hechas.Clear();
             }
             versionGirosHecha = VersionGiros;
+            if (FactorDeNodos != factorHecho) { factorHecho = FactorDeNodos; cambio = true; }
             version = terreno.Version;
             int t0x = (int)Math.Floor((cx - alcance) / Lado), t1x = (int)Math.Floor((cx + alcance) / Lado);
             int t0y = (int)Math.Floor((cy - alcance) / Lado), t1y = (int)Math.Floor((cy + alcance) / Lado);

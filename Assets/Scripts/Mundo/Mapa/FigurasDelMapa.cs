@@ -383,6 +383,8 @@ namespace ConquestTactics.Mundo.Mapa
         public static int PixelesSigilo = 128;
         /// <summary>El estandarte es un marcador: puede ir mayor que la escala real (1 = asta de 4,2 m y panel de 1,2 × 1,44 m).</summary>
         public static float EstandarteEscala = 1.5f;
+        /// <summary>Hasta dónde llega el estandarte sobre el suelo (u), con su disco de remate: la etiqueta de la columna va por encima.</summary>
+        public static double AltoDelEstandarte => ColumnasDelMapa.Tropa * EstandarteEscala * (AltoAsta + 0.5f) / MetrosPorFigura;
 
         static (Tanda fija, Tanda faccion) TandaDe(in SitioDeFigura f, bool estandarte = false)
         {
@@ -522,6 +524,38 @@ namespace ConquestTactics.Mundo.Mapa
         }
         static readonly Dictionary<string, Sitios> sitios = new Dictionary<string, Sitios>();
 
+        /// <summary>Un estandarte suelto, el de las columnas (asta, travesaño, paño con el blasón de su Facción y disco), con el pie en `pie` (la
+        /// escena) y `altoM` metros hasta el disco; el paño, de cara a la cámara. Las plazas lo ponen en las anclas de su modelo (repaso del 23-11).
+        /// Se pinta con las figuras (`Pintar`, el fotograma siguiente si se añade después).</summary>
+        public static void EstandarteSuelto(Vector3 pie, float altoM, string faccionId, Vector4 faccion)
+        {
+            // (la malla va en metros de figura / `MetrosPorFigura`: su alto, (AltoAsta + 0,5) / MetrosPorFigura)
+            var escala = altoM * MetrosPorFigura / (AltoAsta + 0.5f);
+            var mira = ModelosDeFiguras.Camara != null ? ModelosDeFiguras.Camara.transform.position - pie : Vector3.forward;
+            mira.y = 0;
+            var cara = mira.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(mira.normalized, Vector3.up) : Quaternion.identity;
+            var m = Matrix4x4.TRS(pie, cara, Vector3.one * escala);
+            var (asta, borlas) = TandaDe(default, true);
+            asta?.Poner(m, new Vector4(1, 1, 1, 1));
+            borlas?.Poner(m, faccion);
+            var sigilo = string.IsNullOrEmpty(faccionId) ? null : CosasEnElMapa.SigiloDe?.Invoke(faccionId, PixelesSigilo);
+            if (sigilo != null)
+            {
+                var tela = EstandarteConPano ? ConPano(sigilo) : sigilo;
+                if (!paneles.TryGetValue(tela, out var l)) paneles[tela] = l = new List<Matrix4x4>();
+                l.Add(m);
+            }
+            else
+            {
+                if (panelesLisos == null) { panelesLisos = new Tanda { Malla = PanelEstandarte(), DeFaccion = true }; todas.Add(panelesLisos); }
+                panelesLisos.Poner(m, string.IsNullOrEmpty(faccionId) ? Lineal(0xE8E2D2) : faccion);
+            }
+            EstandartesSueltos++;
+        }
+
+        /// <summary>Estandartes sueltos puestos desde el último `Pintar`, y los que pintó el último (para las pruebas).</summary>
+        public static int EstandartesSueltos, EstandartesSueltosPintados;
+
         /// <summary>Dónde se pusieron en el último fotograma las figuras de `id` que cumplen `cual` (en la escena; vacío si no se ha pintado).</summary>
         public static List<Vector3> Pies(string id, Func<SitioDeFigura, bool> cual)
         {
@@ -539,6 +573,8 @@ namespace ConquestTactics.Mundo.Mapa
         public static void Pintar(Material material, MaterialPropertyBlock propiedades, bool sombras)
         {
             Llamadas = Figuras = 0;
+            EstandartesSueltosPintados = EstandartesSueltos;
+            EstandartesSueltos = 0;
             var rp = new RenderParams(material)
             {
                 shadowCastingMode = sombras ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off, matProps = propiedades,

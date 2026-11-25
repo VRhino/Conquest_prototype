@@ -212,7 +212,9 @@ namespace ConquestTactics.Mundo.Mapa
                     || c.Clase == ClaseDeCosa.Ejercito || c.Clase == ClaseDeCosa.EjercitoAjeno || c.Clase == ClaseDeCosa.Formacion)) continue;
                 var d = CosasDelMapa.Distancia(c.X, c.Y, cx, cy);
                 if (d > (nodo ? cercaNodos : lejos)) continue;
-                var mundo = EscalaDelMapa.AEscena(c.X, c.Y, alturaVisible(c.X, c.Y) + (float)(c.Alto + 0.25) * e);
+                // la etiqueta de una columna con figuras, por encima del jinete y del estandarte
+                double alto = c.Figuras != null && c.Figuras.Count > 0 ? Math.Max(c.Alto, c.Figuras.Exists(f => f.Estandarte) ? FigurasDelMapa.AltoDelEstandarte : 0.27 * ColumnasDelMapa.FactorDeFiguras * 2) : c.Alto;
+                var mundo = EscalaDelMapa.AEscena(c.X, c.Y, alturaVisible(c.X, c.Y) + (float)(alto + 0.25) * e);
                 var pantalla = camara.WorldToScreenPoint(mundo);
                 if (pantalla.z <= 0 || pantalla.x < 0 || pantalla.y < 0 || pantalla.x > camara.pixelWidth || pantalla.y > camara.pixelHeight) continue;
                 // En fracción de la vista de la cámara sobre la capa (que cubre la pantalla): vale también si el panel pinta en una textura de otro tamaño.

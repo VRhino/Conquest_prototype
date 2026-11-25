@@ -87,10 +87,18 @@ namespace ConquestTactics.Mundo.Mapa
         // La niebla de guerra: el color (el fondo del tema de BronzeAgeClient) y la opacidad de lo nunca visto, lo recordado y lo que se ve.
         public static readonly Color Niebla = new Color32(10, 14, 23, 255);
         public const float AlfaSinVer = 206 / 255f, AlfaRecordado = 158 / 255f, AlfaVisible = 0;
+        /// <summary>Tema 8: lo nunca explorado como mapa dibujado (tinta sobre papiro) y lo explorado que no se ve apagado, sin velo. Apagado, el
+        /// velo de antes (`Niebla` con sus tres alfas), para comparar. Se lee al crear el mapa y en cada cambio de la VISTA.</summary>
+        public static bool NieblaDibujada = true;
+        /// <summary>Lo explorado que no se ve, con la niebla dibujada: la saturación que le queda (x) y su luminancia (y), en sRGB; se distingue por
+        /// el color más que por lo oscuro. Se lee al crear el mapa y en cada cambio de la VISTA.</summary>
+        public static Vector4 Apagado = new Vector4(0.5f, 0.8f, 0, 0);
+        /// <summary>Tema 8: cúmulos con volumen en el cielo, sombras de nube redondeadas y la bruma leve y azulada del aire (más en los valles).
+        /// Apagado, el cielo, las sombras y la bruma de antes, para comparar.</summary>
+        public static bool CieloNuevo = true;
 
-        // Lo propio, encima de la niebla.
-        public static readonly Color Columna = new Color32(0xd8, 0xb8, 0x78, 255), Ruta = new Color32(0xf1, 0xdc, 0xae, 255),
-            Destino = new Color32(0xbf, 0x52, 0x33, 255);
+        // Lo propio, encima de la niebla (la ruta y el destino, en `RutasDelMapa`).
+        public static readonly Color Columna = new Color32(0xd8, 0xb8, 0x78, 255);
         /// <summary>La caja de tu columna: lado y alto (u).</summary>
         public const float LadoColumna = 1.2f, AltoColumna = 0.8f;
 

@@ -3,7 +3,7 @@
 // De la cabeza a la cola: los héroes a caballo (como mucho 4, a 0,15), la tropa por bloques (la primera figura lleva el estandarte), el carrito
 // del héroe si la columna lleva suministro y los carros de las caravanas de dos en dos, cada uno con su animal, el de fundación el
 // último. Una caravana suelta es una columna sin héroes (su escolta y sus carros); un Aeda, él a pie y su burro a un lado y un paso detrás.
-// Las distancias van en unidades de figura (las del prototipo): por `Tropa` (2) son unidades del mapa; el soldado mide 0,27 u.
+// Las distancias van en unidades de figura (las del prototipo): por `Tropa` (3, el 2 del prototipo × 1,5) son unidades del mapa; el soldado mide 0,405 u.
 // Cada figura se pone por longitud de arco hacia atrás sobre lo que ha andado la cabeza: el plan de la columna (`Instante`) si llega, si no el
 // rastro de la cabeza (formado hacia el sur la primera vez, como el prototipo).
 using System;
@@ -55,8 +55,11 @@ namespace ConquestTactics.Mundo
 
     public static class ColumnasDelMapa
     {
-        /// <summary>`MUNDO3D.tropa`: la escala de las figuras (el soldado, 0,135 de figura, mide 0,27 u).</summary>
-        public const double Tropa = 2;
+        /// <summary>Lo que se mueve en el mapa (figuras de bloques y modelos, formación, estandarte), sobre el tamaño del prototipo (Víctor,
+        /// 2026-11-23: ×1,5). Afinar es cambiar este número; se lee al pintar.</summary>
+        public static double FactorDeFiguras = 1.5;
+        /// <summary>La escala de las figuras: `MUNDO3D.tropa` (2) × `FactorDeFiguras`. El soldado, 0,135 de figura, mide 0,405 u.</summary>
+        public static double Tropa => 2 * FactorDeFiguras;
         public const int MaxJinetes = 4, MaxCarrosCaravana = 3, MaxEscolta = 3, MaxCarrosDeCargaEnColumna = 2;
         /// <summary>Como mucho, escuadras que se pintan: 6 en una columna personal (36 figuras), 12 en un ejército (48).</summary>
         public const int MaxEscuadrasPersonal = 6, MaxEscuadrasEjercito = 12;

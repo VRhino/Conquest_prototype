@@ -495,10 +495,15 @@ namespace ConquestTactics.Mundo.Mapa
     public sealed class NieblaDelMapa
     {
         static readonly int Tex = Shader.PropertyToID("_NieblaTex"), Rejilla = Shader.PropertyToID("_NieblaRejilla"),
-            Tamano = Shader.PropertyToID("_NieblaTamano"), ColorNiebla = Shader.PropertyToID("_NieblaColor"), Alfas = Shader.PropertyToID("_NieblaAlfas");
+            Tamano = Shader.PropertyToID("_NieblaTamano"), ColorNiebla = Shader.PropertyToID("_NieblaColor"), Alfas = Shader.PropertyToID("_NieblaAlfas"),
+            Modo = Shader.PropertyToID("_NieblaModo"), Papiro = Shader.PropertyToID("_DibujoPapiro"), Trazos = Shader.PropertyToID("_DibujoTrazos"),
+            Agua = Shader.PropertyToID("_DibujoAgua"), Apagado = Shader.PropertyToID("_NieblaApagado");
+        /// <summary>Lo que tarda lo recién explorado en pasar del dibujo al suelo (s): la frontera avanza y lo de debajo crece.</summary>
+        public const float SegundosDeCambio = 1.5f;
 
         Texture2D textura;
         byte[] pixeles;
+        bool primera;
 
         public NieblaDelMapa()
         {
@@ -506,6 +511,11 @@ namespace ConquestTactics.Mundo.Mapa
             Shader.SetGlobalVector(ColorNiebla, PinturaDelMapa.Niebla);
             Shader.SetGlobalVector(Alfas, new Vector4(PinturaDelMapa.AlfaSinVer, PinturaDelMapa.AlfaRecordado, PinturaDelMapa.AlfaVisible, 0));
             Shader.SetGlobalVector(Rejilla, Vector4.zero); // sin niebla hasta que llegue la VISTA
+            Shader.SetGlobalTexture(Papiro, Resources.Load<Texture2D>("MapaMundo/Niebla/papiro"));
+            Shader.SetGlobalTexture(Trazos, Resources.Load<Texture2D>("MapaMundo/Niebla/trazos"));
+            Shader.SetGlobalTexture(Agua, Resources.Load<Texture2D>("MapaMundo/Niebla/agua"));
+            Shader.SetGlobalVector(Apagado, PinturaDelMapa.Apagado);
+            Shader.SetGlobalVector(Modo, new Vector4(PinturaDelMapa.NieblaDibujada ? 1 : 0, 0, 1e-3f, 0));
         }
 
         public void Poner(NieblaProyectada n)
@@ -516,16 +526,24 @@ namespace ConquestTactics.Mundo.Mapa
             {
                 if (textura != null) UnityEngine.Object.Destroy(textura);
                 // Bilineal, como en BronzeAgeClient: el borde de la niebla se funde en una celda.
-                textura = new Texture2D(columnas, filas, TextureFormat.RG16, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
-                pixeles = new byte[columnas * filas * 2];
+                // R, G: lo explorado y lo visto de ahora; B, A: los de antes (la primera vez, los mismos: sin paso).
+                textura = new Texture2D(columnas, filas, TextureFormat.RGBA32, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                pixeles = new byte[columnas * filas * 4];
+                primera = true;
             }
             var celdas = n.Celdas.Span;
             var visibles = n.Visibles.Span;
             for (int i = 0; i < columnas * filas; i++)
             {
-                pixeles[2 * i] = Bit(celdas, i) ? (byte)255 : (byte)0;
-                pixeles[2 * i + 1] = Bit(visibles, i) ? (byte)255 : (byte)0;
+                byte e = Bit(celdas, i) ? (byte)255 : (byte)0, v = Bit(visibles, i) ? (byte)255 : (byte)0;
+                pixeles[4 * i + 2] = primera ? e : pixeles[4 * i];
+                pixeles[4 * i + 3] = primera ? v : pixeles[4 * i + 1];
+                pixeles[4 * i] = e;
+                pixeles[4 * i + 1] = v;
             }
+            primera = false;
+            Shader.SetGlobalVector(Modo, new Vector4(PinturaDelMapa.NieblaDibujada ? 1 : 0, Time.timeSinceLevelLoad, SegundosDeCambio, 0));
+            Shader.SetGlobalVector(Apagado, PinturaDelMapa.Apagado);
             textura.SetPixelData(pixeles, 0);
             textura.Apply(false);
             Shader.SetGlobalTexture(Tex, textura);

@@ -644,9 +644,10 @@ maquetas (`maquetas.ts`). Tres estilos, conmutables con `MaquetasDelMapa.Estilo`
   - nivel 5: unos 5200 / 2000 / 250, sin diezmar de cerca (72 tramos, torres de cuatro merlones y la banda roja en tira): así no se pierden las almenas.
 - **Radios** (en huellas):
   - nivel 2: 1,07 y 1,07;
-  - nivel 4: 1,11 y 1,06;
-  - nivel 5: 1,12 y 1,09.
-- **Variantes.** Los niveles 3, 4 y 5 tienen segunda variante (`plaza<nivel>_2`): palacio al noroeste y templo o zigurat al oeste.
+  - nivel 4: 1,13 y 1,10;
+  - nivel 5: 1,12 y 1,11 (25-11: la cara de dentro, a 0,2 W de lo construido como poco; el hueco de la puerta, recortado justo en el vano).
+  - nivel 3 (en el FBX de su plaza): de una pieza, con los vértices compartidos en las esquinas, y todas sus torres a 1,7 H con remate.
+- **Variantes.** Los niveles 3, 4 y 5 tienen segunda variante (`plaza<nivel>_2`): palacio al noroeste y templo al oeste (en el 5, el tholos).
 
 ### Pueblos y aldeas (parte 4, 2026-11-21)
 
@@ -702,7 +703,8 @@ horneado desde la geometría entera, mate; máscara R oclusión, G estandarte (c
 (`lado_suelo`, en unidades del modelo); tres niveles de detalle (el cerca, la malla entera: diezmarla deshacía los bloques sueltos, los palos y las
 ruinas en escalones; medio y lejos, 40 % y 10 %). Unidad del modelo 0,9 u, como los pueblos; además, por `escala_mapa` del json: los
 campamentos y los alijos ×2, y la atalaya y el fuerte (enteros, en obras, en ruina, y su kit) ×1,35 (si no, motas: atalaya 0,34 u de radio,
-fuerte 0,47, fuerte en obras 0,64; las ciudadelas, ×1, ya llenan los 0,65 u del motor). Todas las texturas `_color*` (también las otras telas,
+fuerte 0,47, fuerte en obras 0,64; las ciudadelas, ×1, ya llenan los 0,65 u del motor). Desde el 23-11, rehechas a la medida de la choza: atalaya,
+fuerte y ciudadelas en sus estados van a escala fija (`unidad_u` 3,2 u por unidad del modelo) y su huella es su `radio_u`. Todas las texturas `_color*` (también las otras telas,
 `_color_rayado` y `_color_rubia`) se importan en sRGB (`ImportarAsentamientosDelMapa`, versión 2: antes las telas entraban lineales y salían
 lavadas). Van en `Assets/Resources/MapaMundo/Asentamientos`, en la cola 2456 como los pueblos. Las reglas, puras, en
 `MaquetasDelMapa` (las prueba `MenudoDelMapaTests`):
@@ -864,6 +866,15 @@ Las capturas están en la página «Cielo, niebla y vida».
 - Los pájaros son claros, blanco roto con las puntas de las alas oscuras (el color R del modelo, el peso del aleteo, marca la punta). Sobre el ocre seco contrastan menos que sobre la hierba, pero se leen.
 - El polvo contrasta poco sobre el llano ocre y no distingue los caminos.
 
+### Repaso del 23-11: empalizada, estandartes y nada en el aire
+
+- **Empalizada del nivel 2** (`muralla2_<v>`): de cerca, 125 troncos sueltos de 5 caras con punta, de alturas desiguales (±15 %), algo inclinados o girados y con el tono de cada uno; un larguero por dentro, y el terraplén y el foso continuos. El número de troncos es `TRONCOS_NIVEL2` en `murallas.py`. De medio y de lejos, la cinta de dientes, ahora con grosor. Triángulos: unos 2.900, 600 y 100 (tope de cerca: 3.000).
+- **Estandartes:** ninguna plaza lleva ya el paño en la malla. Cada json de plaza y de muralla trae «estandartes»: [[x, y, z, alto]], el pie en Blender (z arriba) y el alto del mástil, en huellas. Hay una por plaza (el palacio o la casa grande); en el nivel 3, también una por torre de puerta; en `muralla4` y `muralla5`, una por torre de puerta. `MaquetasDelMapa.Dibujar` pone en cada ancla el estandarte de las columnas (`FigurasDelMapa.EstandarteSuelto`: asta, travesaño, paño con el blasón y disco, de cara a la cámara), con la matriz de la villa o de su muralla. En las plazas que solo se recuerdan, no lo pone. Por si algún FBX aún lo trae, `MapaAsentamiento` recorta el paño por el canal G de la máscara con `_SinBandera` (solo en los materiales de las plazas y sus murallas), también en la sombra. Los niveles 1 a 3 se re-hornearon sin el paño ni su mástil (36 triángulos menos), y lo demás del modelo queda igual.
+- **Nada en el aire** (`villa3.py`, niveles 4 y 5): la altura de lo que se pone sale de un rayo hacia abajo sobre las terrazas ya puestas, y lo redondo (graneros, árboles, corrales) se apoya en lo más bajo de su planta. Hay un bancal de tierra batida con su faldón desde la primera terraza hasta el pie de la muralla. Los corrales, huertos y eras quedan dentro del bancal. Los conos de los cobertizos van sobre su choza, los toldos de la plazuela llevan postes y las columnas del templo arrancan del recinto. Los graneros no pisan el templo, que en la variante 2 está al oeste. En el 5, las casas no pisan las torres de la ciudadela. El nivel 3 conserva su cuesta de antes.
+- **Nivel 4:** el palacio, al 70 % en planta y en alto, y su terraza a 0,42 × 0,38 del radio. La torre vigía va en una esquina de la terraza que no toque el templo ni las alas del palacio. En el 3 y el 5 el palacio no cambia.
+- **Comprobaciones** (`comprobar.py`, `comprobar_todo.py`): «en el aire», piezas sueltas con la base a más de 0,01 de lo que tienen debajo (vértices cercanos y una rejilla de rayos bajo la base); «cruzados», edificios que se meten uno en otro más de 0,008. Son un informe, no paran el horneado: marcan también juntas hechas adrede y piezas que apoyan en un faldón hueco, y hay que revisar cada una con vistas.
+- **Pruebas:** `PlazasDelRepasoTests` (las anclas de cada json; la empalizada, de 2.500 a 3.000 triángulos de cerca). Capturas en `PreviaDelMapaEditorTests.LasPlazasDelRepasoEnCapturas` (niveles 2, 4 y 5 en llano y en ladera, a 3, 6 y 12 radios y por los cuatro lados; los estandartes de cerca; las cinco plazas en fila).
+
 ## Escalas y la previa del mapa (2026-11-23)
 
 Víctor, probando el mapa en su partida: lo que se mueve, × 1,5; lo fijo (menos los nodos), × 2. Y una escena para ver y afinar los tamaños sin partida.
@@ -872,7 +883,7 @@ Víctor, probando el mapa en su partida: lo que se mueve, × 1,5; lo fijo (menos
   - Uno a uno: el polvo (bocanadas, estela y dispersión × factor; arreglado de paso que `largo` y `Atras`, en unidades de figura, se usaban como u: el polvo caía a media distancia de la cola), el radio, el clic y el alto de columnas, caravanas y Aeda (`CosasDelMapa`), y la etiqueta de una columna con figuras, por encima del jinete y del estandarte (`FigurasDelMapa.AltoDelEstandarte`).
   - Los umbrales de detalle de las figuras, × 1,5 en el código (`PixelesMinimos` 21, `PixelesSombra` 60, `PixelesCompleto` 60, `PixelesLejos` 30): cambian a la misma distancia que antes.
   - Lo que solo cuenta con las figuras apagadas (`CarroDeCaravana`, la caja de la columna) no cambia.
-- **Lo fijo:** `CosasDelMapa.FactorDeFijos` (2), modelo y huella a la vez, solo en «Mejorado» (`CosasDelMapa.Fijos(clase)`: 1 en los demás estilos), con un afinado por clase que lo multiplica (`FactorPlazas`, `FactorPueblos`, `FactorAvanzadas`, `FactorCampamentos`, `FactorMenudo`; 1).
+- **Lo fijo:** `CosasDelMapa.FactorDeFijos` (2), modelo y huella a la vez, solo en «Mejorado» (`CosasDelMapa.Fijos(clase)`: 1 en los demás estilos), con un afinado por clase que lo multiplica (`FactorPlazas` 0,5, la escala que Víctor validó en «Distancias de plaza»; `FactorPueblos`, `FactorAvanzadas`, `FactorCampamentos`, `FactorMenudo` 1).
   - Plazas: `HuellaDePlaza` × factor (después del mínimo de 0,9); de ella cuelgan la miniatura, la muralla, el suelo, el claro, el ralo, el aro, el clic y el alto.
   - Pueblos, aldeas y lo menudo: la escala del modelo (`MaquetasDelMapa.UnidadDe(clase)`, 0,9 × factor) y la huella (`RadioU` × factor) por separado; con ellas, el claro (`MargenDeClaro` y `ClaroDeAlijo` × factor), el sitio del pueblo y los campos de las aldeas (en el marco del núcleo).
   - Obra, batalla, aro y clic de aldea y los `Alto`: × factor.
@@ -888,6 +899,72 @@ Víctor, probando el mapa en su partida: lo que se mueve, × 1,5; lo fijo (menos
   - Un camino de 75 u (`RedCaminos` de un tramo), lo fijo, un nodo de cada recurso, la familia real (plaza de nivel 3, aldea y pueblo a 3 u, avanzada a 1,85 u) y lo que se mueve andando en bucle por el camino; cada cosa con su rótulo; WASD o las flechas llevan la cámara.
   - El panel (UI Toolkit): los deslizadores de los factores, el alto del soldado y el radio de la plaza por nivel, «Restablecer», «Copiar valores» y andar o parar. Al salir de Play todo vuelve a los valores del código.
   - Prueba: `PreviaDelMapaEditorTests.LaPreviaDelMapaSeMontaYSusDeslizadoresMandan` (están todas las clases, sin errores, y cada deslizador cambia lo suyo × 1,5 y no lo demás); `LaPreviaEnCapturas` (explícita: las de la página «Escalas y ruta»).
+
+### Distancias de plaza (2026-11-23)
+
+- Escena `Assets/Scenes/BronzeAge/DistanciasDePlaza.unity`, menú `Conquest/Mundo/Distancias de plaza` (`UI/DistanciasDePlaza.cs`), sobre `BancoDelMapa` como la previa: una plaza en el centro de un llano de hierba (`BancoDelMapa.SitioDeHierba(75)`, el buscador de la previa, ahora del banco) y en el suelo, como rayas del mapa (`MapaDeMundo.RayasAdicionales`), lo que el motor mide alrededor: huella de la maqueta, zona, anillos de aldea, separación mínima, mínimo de avanzada, radio de puerta (con una columna en él), orilla del río y separación entre plazas (con una plaza vecina). En rojo lo que se pisa.
+- Las reglas, de los datos del motor que guarda el cliente (`DatosDeJuego`, 24 cifras: `ZONA_INFLUENCIA`, `FUNDACION.separacionPlazas`, `MERCENARIOS.radioExclusionFundar`, `PUEBLOS_EXTRACTORES.cupoPorNivel` y `aldea.separacionMinima`, `AVANZADAS`, `TAMANOS_MAPA.avanzada`, `MOVIMIENTO.radioPuerta`, `ORILLA_RIO.radio`); si falta alguna, la constante del documento, anotada. El anillo de la aldea k, como `Nucleo::anillo_de_aldea`.
+- El panel cambia nivel, muralla, zona, aldeas (cuántas, nivel, lo más cerca o en medio), pueblos y su distancia, avanzadas y los factores de lo fijo; lee la tabla de holguras (distancia entre centros menos las huellas de `CosasDelMapa`); vista en planta (`MapaDeMundo.EncuadreFijo`, el encuadre aunque haya columna), «Copiar valores» y «Restablecer».
+- En esta escena y en la previa, WASD y las flechas llevan la cámara por la escena: `MapaDeMundo.TecladoDeCamara` (true en el juego: giran e inclinan) lo apaga.
+- Prueba: `DistanciasDePlazaEditorTests.LasDistanciasDePlazaSeMontanYMiden` (se monta, el nivel cambia maqueta y anillos, las holguras casan con lo puesto, la aldea a 3 u se mete en la plaza de nivel 3 a × 2); `LasDistanciasEnCapturas` (explícita).
+
+#### Caminos y tipos en Distancias de plaza (2026-11-23)
+
+- **Caminos de los carros de acarreo:** cada aldea y cada pueblo tiene su camino hasta la plaza, calculado con la regla del motor en `RedDeAcarreo` (Conquest.Mundo, código de banco: en la partida Unity no calcula rutas). Va de centro a centro por el grafo de navegación del artefacto; a un espaciado o menos, la recta; si no, el enganche y el A* por `coste_milesimas`. Las aristas que ya están en la red atraen a las siguientes: max(atraccionMin, 1 − atraccionPorPeso × peso), de `Comercio_Caravanas.NAVEGACION`. El escalón sale del peso (`RED_CAMINOS.escalonCamino` y `escalonCalzada`) y los tramos se funden como `tramos_de_red`.
+- **Dónde se aproxima:** sin la capa de transitable, un solo enganche, como `Rutas::desde_grafo`.
+- **Cómo se dibuja:** la red va a la escena como `RedCaminos`, así que la dibujan `TrazosEnElMapa`, las parcelas, el giro de la puerta y el claro, igual que en la partida.
+- **En el panel** (de vista; en «Copiar valores», en la línea «vista:»):
+  - el tipo de las aldeas (trigo, cebada, sésamo, vid, olivo, ganado vacuno u ovino, o variado);
+  - el de los pueblos (cantera o mina de cobre, estaño, hierro u oro, o variado);
+  - la casilla de los caminos;
+  - el escalón: según el motor, todo sendero o todo camino.
+- **Pruebas:** `RedDeAcarreoTests` (la recta, el A* que rodea una cuesta, la atracción, el escalón por peso, los tramos y la clave de arista) y la escena (un camino por aldea y pueblo, que acaba en el centro de la plaza, la casilla, los tipos y «Restablecer»). Capturas: `DistanciasDePlazaEditorTests.LosCaminosEnCapturas`.
+
+#### El tipo en vivo y la plaza de tamaño fijo por nivel (2026-11-23)
+
+- **El tipo en vivo:** `MaquetasDelMapa.Actualizar` solo rehace si cambia su clave, y la clave no llevaba el tipo ni el nivel del pueblo o
+  la aldea: cambiar el cultivo o pasar de cantera a mina sin moverse no se veía (también en el juego). Ahora lleva `TipoExtractor`,
+  `Cultivo`, `RebanoEspecie` y `NivelAldea`. Prueba: `ElTipoEnVivoRehaceLasMaquetas` (trigo a sésamo, a ganadera; cantera a mina), con
+  `MaquetasDelMapa.Puestas` (solo lectura, para las pruebas).
+- **Por qué la plaza crecía con el nivel** (hasta «A la medida de la choza», abajo: ahora va a escala fija): el modelo de cada nivel está hecho a radio 1 y se escala entero (planta y alto) a su huella,
+  que sale de la zona (`zona × 0,1 × 0,8 × f`, f = 0,62 / 0,8 / 1, mínimo 0,9 u, por lo fijo × las plazas). Nada ata la vivienda de un
+  nivel a la de otro: en el mapa mide su lado en el modelo por ese radio.
+- **La vivienda medida** (`BronzeAgeArte/mapa/asentamientos`: los generadores corridos apuntando cada vivienda, sin la del jefe, la
+  principal, las nobles ni los cobertizos; lado corto de la planta, media de las dos variantes, en el radio 1 ya escalado):
+  0,229 / 0,167 / 0,077 / 0,0625 / 0,057 (`DistanciasDePlaza.LadoDeCasa`).
+- **A prueba, solo en «Distancias de plaza»:** `CosasDelMapa.HuellaPorNivel` (en el juego, null) da el radio de la maqueta por nivel tal
+  cual, sin zona, factor de nivel, mínimo ni factores de lo fijo. La escena lo pone con la casilla «Plaza de tamaño fijo por nivel
+  (regla nueva)» (después quitada: las plazas rehechas van siempre a su escala fija), encendida por defecto: 1,4 / 1,9 / 4,15 / 5,1 / 5,6 u, los que dejan la vivienda en 0,32 u (la choza del núcleo de
+  aldea). Los cinco radios y la casa (que los recalcula) son editables en «Valores del motor» (grupo Plazas, con *). El rótulo dice
+  «radio X u · casa ≈ Y u»; con el modo fijo, el factor «plazas» se apaga. Prueba: en la de la escena, la zona no cambia la maqueta, cada
+  nivel sale con su radio y su casa ≈ 0,32 u, y apagado la regla de hoy queda intacta; capturas en `LaPlazaFijaEnCapturas`.
+- **Lo que se ve:** del 1 y el 2 a la aldea, las chozas cuadran. Del 3 al 5 las casas de adobe tienen el mismo lado corto pero son
+  alargadas y de bloque, y los cobertizos redondos del borde se ven como chozas del doble. Por superficie en vez de lado corto, los
+  radios serían ≈ 1,4 / 1,75 / 2,85 / 4,0 / 4,45 u.
+
+#### A la medida de la choza: el nivel 1 (2026-11-23)
+
+- **Vara común:** `BronzeAgeArte/mapa/asentamientos/medidas.py` (W = 0,32 u, H = 0,42 u, el radio de partida de cada nivel y la escala fija
+  del generador). Los niveles con escala fija no se estiran a la huella al hornear (`plaza.py`); su json lleva `radio` (lo construido, en el
+  radio 1), `radio_u` y `unidad_u` (u por unidad del modelo).
+- **Nivel 1 rehecho** (`villa1.py`): chozas Ø 1 W ± 3 %, con el alto de la choza de aldea; chozas largas 1 W × 1,3-1,6 W; la casa del jefe,
+  3 × 1,5 W y 1,4 H; el corral, 1 × 0,84 W. Lo construido llega a 1,38 u (variante 1) y 1,23 u (variante 2). Lo de antes, en `descartes/`.
+- **En Conquest:** una plaza cuyo modelo trae `unidad_u` se dibuja a esa escala fija (`Miniatura.Escala`), y su huella (el aro, el clic,
+  «Qué se pisa», la puerta) es su `radio_u`: `CosasDelMapa.HuellaDePlaza(rc, nivel, x, y)` pregunta a `HuellaDeModelo` (la pone
+  `MaquetasDelMapa`, por la variante de ese sitio) antes que a la regla de la zona o a `HuellaPorNivel`. Vale en el juego y en las escenas.
+- **Sin sendas propias en las aldeas** (`MaquetasDelMapa.Campos`): el camino real de la red es el que entra; la tierra pisada del núcleo
+  se queda y los campos se siguen apartando del camino.
+
+### Ruta y destino (2026-11-23)
+
+`Mapa/RutasDelMapa.cs`, en vez de la banda (`LineRenderer`) y la caja roja de antes; lo llama `MapaDeMundo.PintarRutas` cada fotograma.
+
+- **Tu columna:** la mira bajo ella (aro crema de 0,45 u de radio y 0,05 u de ancho, la del prototipo), la ruta en cinta punteada crema #f1e6c8 con filo oscuro (trazos de 0,5 u y huecos de 0,35 u, cinta de 0,12 u con el filo) y en el destino un aro de 0,75 u de radio con la lanza clavada (1,6 u de alto) y su cinta del color de la Facción, que se mece con el viento.
+- **Destino en un asentamiento:** si el final de la ruta cae en la huella de algo fijo (`CosaDelMapa.Radio`, la de «Distancias de plaza»; lo más cercano), la marca se planta fuera, sobre la línea por la que llega la ruta, con el aro entero y tangente al borde (su centro a huella + radio del aro; `RutasDelMapa.Cortar`), y la cinta acaba en ella. Solo es dibujo: el motor sigue llevando la columna al centro.
+- **Las demás:** las columnas de tu Facción, trazos de 0,6 u cada 1 u con opacidad 0,6; tus caravanas, igual con 0,35 (como `mundo3d/vista.ts`). Lo ajeno no trae ruta.
+- **Escala:** todo × `ColumnasDelMapa.FactorDeFiguras` (1,5), por `RutasDelMapa.AnchoDeCinta` (0,12) y `RutasDelMapa.TamanoDeMarca` (1). Los trazos se cuentan desde el final: no corren mientras la ruta se acorta por delante.
+- **Sombreado:** las cintas usan `MapaRayaMejorada` (extremos redondos, filo y ancho mínimo de 2 px), que ahora toma los trazos de `_Lleno` y `_Periodo` (1,2 y 1,9 por defecto, los del territorio). La lanza es `Resources/MapaMundo/Destino/Destino.fbx` (170 triángulos, leíble) con su atlas `lanza.png`, en `MapaFigura`; la cinta, con `_Mece` = 1 (nuevo, 0 por defecto: se mece según el rojo del color de vértice). Las texturas `trazo.png` y `aro.png` de la lámina no hacen falta: el sombreado dibuja lo mismo.
+- **La previa** pone dos columnas con ruta y destino como la tuya (`MapaDeMundo.RutasComoLaMia`): una a campo abierto y otra contra la plaza de nivel 5, con los deslizadores «Ancho de la cinta (u)» y «Tamaño de la marca» (también en «Copiar valores»). Pruebas: `RutasDelMapaTests` (el corte) y la previa (cinta, marca en el destino y en el borde de la plaza); capturas `LaRutaEnCapturas` (`rd_*`). Pruebas: la marca contra la plaza, a huella + radio del aro.
 
 ## La vegetación (tema 3, 2026-11-20)
 

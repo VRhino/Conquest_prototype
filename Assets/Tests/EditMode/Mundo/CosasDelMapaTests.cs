@@ -122,10 +122,10 @@ namespace ConquestTactics.Mundo.Tests
                 a.Aplicar(new MensajeDeServidor { Foto = f });
                 var cosas = CosasDelMapa.Reunir(a, null, 0, new NodoRecurso[0], 12);
                 var aldea = cosas.Single(c => c.Clase == ClaseDeCosa.Aldea);
-                Assert.AreEqual(0.5, aldea.Radio, 1e-9, "el aro, solo el núcleo");
-                Assert.AreEqual(0.62, aldea.RadioClic, 1e-9);
+                Assert.AreEqual(0.5 * CosasDelMapa.FactorDeFijos, aldea.Radio, 1e-9, "el aro, solo el núcleo (lo fijo, al doble)");
+                Assert.AreEqual(0.62 * CosasDelMapa.FactorDeFijos, aldea.RadioClic, 1e-9);
                 Assert.AreEqual(new[] { aldea }, CosasDelMapa.BajoElClic(cosas, 50.3, 50, 60).ToArray(), "en el núcleo, la aldea");
-                Assert.IsEmpty(CosasDelMapa.BajoElClic(cosas, 51.2, 50, 60), "en los campos (1,2 u), nada: la columna marcha");
+                Assert.IsEmpty(CosasDelMapa.BajoElClic(cosas, 50 + 0.62 * CosasDelMapa.FactorDeFijos + 0.6, 50, 60), "en los campos, más allá del clic del núcleo, nada: la columna marcha");
             }
             finally { (CosasDelMapa.HuellaMejorada, CosasDelMapa.HuellaDePueblo) = antes; }
         }

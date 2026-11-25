@@ -44,7 +44,8 @@ Shader "Conquest/MapaNodo"
             {
                 Salida s;
                 UNITY_SETUP_INSTANCE_ID(e);
-                s.mundo = TransformObjectToWorld(e.pos.xyz);
+                float3 origen = TransformObjectToWorld(float3(0, 0, 0));
+                s.mundo = origen + (TransformObjectToWorld(e.pos.xyz) - origen) * NieblaCrecer(origen); // recogido en lo nunca explorado
                 s.pos = TransformWorldToHClip(s.mundo);
                 s.normal = TransformObjectToWorldNormal(e.normal);
                 s.uv = e.uv;
@@ -78,6 +79,7 @@ Shader "Conquest/MapaNodo"
             #pragma multi_compile_instancing
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "MapaComun.hlsl"
             CBUFFER_START(UnityPerMaterial)
                 float _Oclusion;
             CBUFFER_END
@@ -86,7 +88,8 @@ Shader "Conquest/MapaNodo"
             float4 VertSombra(EntradaSombra e) : SV_POSITION
             {
                 UNITY_SETUP_INSTANCE_ID(e);
-                float4 pos = TransformWorldToHClip(ApplyShadowBias(TransformObjectToWorld(e.pos.xyz), TransformObjectToWorldNormal(e.normal), _LightDirection));
+                float3 origen = TransformObjectToWorld(float3(0, 0, 0));
+                float4 pos = TransformWorldToHClip(ApplyShadowBias(origen + (TransformObjectToWorld(e.pos.xyz) - origen) * NieblaCrecer(origen), TransformObjectToWorldNormal(e.normal), _LightDirection));
             #if UNITY_REVERSED_Z
                 pos.z = min(pos.z, UNITY_NEAR_CLIP_VALUE);
             #else

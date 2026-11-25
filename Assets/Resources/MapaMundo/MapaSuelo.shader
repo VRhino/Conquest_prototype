@@ -359,7 +359,14 @@ Shader "Conquest/MapaSuelo"
                 float3 luzNieve = lerp(float3(0.72, 0.8, 0.93), float3(1.02, 1.01, 1.0), envolvente);
                 float sombra = ConRelieve(SombraDelSol(p), s.relieve.x);
                 c *= lerp(LuzDelMapa(Nluz.y, 0.6, 0.45 * l, sombra, 0.36), luzNieve * lerp(float3(0.5, 0.6, 0.75), 1, sombra), pesoNieve);
-                return half4(PintarMapa(c, p, true), 1);
+                // Lo nunca explorado, dibujado: el bosque y la fertilidad de los datos del motor; el relieve, por la normal.
+                float3 dibujo = 0;
+                if (NuncaExplorado(p) > 0)
+                {
+                    float4 datosD = SAMPLE_TEXTURE2D(_SueloDatos, sampler_SueloDatos, float2(p.x, -p.z) / _DatosTamano.xy);
+                    dibujo = DibujoSuelo(p, N, datosD.b, datosD.r);
+                }
+                return half4(PintarMapaDibujado(c, p, true, dibujo, true), 1);
             }
             ENDHLSL
         }
