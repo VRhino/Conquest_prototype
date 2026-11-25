@@ -140,8 +140,11 @@ namespace ConquestTactics.Mundo.UI
         public static readonly (string nombre, string cultivo, string rebano)[] TiposDeAldea =
         {
             ("trigo", "trigo", null), ("cebada", "cebada", null), ("sésamo", "sesamo", null), ("vid", "vid", null), ("olivo", "oliva", null),
-            ("ganado vacuno", "ganado", "vacuno"), ("ganado ovino", "ganado", "ovejas"),
+            ("ganado vacuno", "ganado", "vacuno"),
         };
+        /// <summary>(De vista) el rebaño de las ganaderas: sin el dato o sus cabezas por corral (vacío, recién saqueado, el pie de cría y el tope).</summary>
+        public static readonly (string nombre, int porCorral)[] Rebanos = { ("sin el dato", -1), ("vacío", 0), ("saqueado (10 por corral)", 10), ("pie de cría (20)", 20), ("tope (40)", 40) };
+        public int Rebano = 3;
         public static readonly (string nombre, string recurso)[] TiposDePueblo =
             { ("cantera de piedra", "piedra"), ("mina de cobre", "cobre"), ("mina de estaño", "estano"), ("mina de hierro", "hierro"), ("mina de oro", "oro") };
         /// <summary>El índice del tipo (en `TiposDeAldea` / `TiposDePueblo`); su número es «variado».</summary>
@@ -320,7 +323,11 @@ namespace ConquestTactics.Mundo.UI
                 var tipo = TiposDeAldea[IndiceDeTipo(TipoAldea, k, TiposDeAldea.Length)];
                 var q = new Pueblo { Id = $"dp-aldea-{k}", AsentamientoMadreId = "dp-plaza", TipoExtractor = "aldeaAgricola", NivelAldea = (uint)NivelAldea, Cultivo = tipo.cultivo,
                     Posicion = BancoDelMapa.Pu(p.x, p.y) };
-                if (tipo.rebano != null) { q.RebanoEspecie = tipo.rebano; q.RebanoCabezas = 60_000; }
+                if (tipo.rebano != null)
+                {
+                    q.RebanoEspecie = tipo.rebano;
+                    if (Rebanos[Rebano].porCorral >= 0) q.RebanoCabezas = Rebanos[Rebano].porCorral * NivelAldea * 1000L;
+                }
                 f.Entidades.Add(new Entidad { Pueblo = q });
                 Puesto.Add((q.Id, ClaseDeCosa.Aldea, $"aldea {k} (a {d:0.0} u)", p.x, p.y));
             }
@@ -708,6 +715,7 @@ namespace ConquestTactics.Mundo.UI
                 case "distanciaAvanzada": DistanciaAvanzada = v <= MinimoDeAvanzadaEnMesa + 0.01 ? 0 : v; break;
                 case "vecina": Vecina = v > 0.5; break;
                 case "tipoAldea": TipoAldea = (int)Math.Max(0, Math.Min(TiposDeAldea.Length, v)); break;
+                case "rebano": Rebano = (int)Math.Max(0, Math.Min(Rebanos.Length - 1, Math.Round(v))); break;
                 case "tipoPueblo": TipoPueblo = (int)Math.Max(0, Math.Min(TiposDePueblo.Length, v)); break;
                 case "caminos": Caminos = v > 0.5; break;
                 case "tamanoFijo": TamanoFijo = v > 0.5; PonerTamanoFijo(); break;
@@ -1154,7 +1162,7 @@ namespace ConquestTactics.Mundo.UI
         {
             (CosasDelMapa.FactorDeFijos, CosasDelMapa.FactorPlazas, CosasDelMapa.FactorPueblos, CosasDelMapa.FactorAvanzadas) = (2, 0.5, 1, 1);
             (Nivel, Aldeas, NivelAldea, Pueblos, Avanzadas, EtapaAvanzada, Muralla, AldeasEnMedio, Vecina, DistanciaPueblo) = (3, 2, 2, 1, 0, 1, true, false, false, R.SeparacionAldea);
-            (TipoAldea, TipoPueblo, Caminos, EscalonCamino, TamanoFijo, Variante, NivelPueblo, EstadoAvanzada, VarianteCiudadela) = (0, 0, true, 0, true, 1, 2, 0, 1);
+            (TipoAldea, TipoPueblo, Caminos, EscalonCamino, TamanoFijo, Variante, NivelPueblo, EstadoAvanzada, VarianteCiudadela, Rebano) = (0, 0, true, 0, true, 1, 2, 0, 1, 3);
             DistanciaAvanzada = 0;
             (Menudo, OrigenMercenarios, MilitarMercenarios, TipoBandidos, NivelBandidos, TipoAlijo, RecursoAlijo) = (false, 0, 0, 0, 3, 0, 0);
             MaquetasDelMapa.AlijoForzado = TipoAlijo + 1;
@@ -1469,6 +1477,8 @@ namespace ConquestTactics.Mundo.UI
                 Elegir("  recurso", "recursoAlijo", RecursosDeAlijo, () => RecursoAlijo);
                 // (tema 10, punto 8) la placa de las etiquetas del mapa: la de hoy o una de las tres de bronce
                 Elegir("Placa de las etiquetas", "placa", NombresDePlaca, () => CosasEnElMapa.Placa);
+                // (las vacas de las ganaderas: el rebaño de sus aldeas, por corral; el panel de la derecha ya no tiene sitio)
+                Elegir("Rebaño de las ganaderas", "rebano", Rebanos.Select(r => r.nombre).ToArray(), () => Rebano);
                 panelPisa.Add(menudo);
                 refrescos.Add(() => { foreach (var r in refrescosMenudo) r(); });
             }

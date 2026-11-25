@@ -254,7 +254,8 @@ namespace ConquestTactics.Mundo.Mapa
         public Pueblo Aldea(string cultivo, uint nivel, string madre, double x, double y)
         {
             var q = new Pueblo { Id = NuevoId(), AsentamientoMadreId = madre, TipoExtractor = "aldeaAgricola", NivelAldea = nivel, Cultivo = cultivo, Posicion = Pu(x, y) };
-            if (cultivo == "ganado") { q.RebanoEspecie = "ovejas"; q.RebanoCabezas = 60; }
+            // (la ganadera, con su rebaño al pie de cría: 20 cabezas por corral; el motor solo tiene vacuno)
+            if (cultivo == "ganado") { q.RebanoEspecie = "vacuno"; q.RebanoCabezas = 20_000 * nivel; }
             Foto.Entidades.Add(new Entidad { Pueblo = q });
             Sitios.Add(($"aldea de {cultivo} · nivel {nivel}", x, y));
             return q;

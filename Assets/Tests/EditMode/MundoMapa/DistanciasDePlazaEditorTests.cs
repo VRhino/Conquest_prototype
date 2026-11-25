@@ -273,7 +273,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             yield return Esperar();
             var vista = (string)tipo.GetMethod("Valores").Invoke(d, null);
             StringAssert.Contains("vista: aldeas ganado vacuno; pueblos mina de oro; caminos según el motor", vista);
-            Fijar("tipoAldea", 7);
+            Fijar("tipoAldea", 6);
             Fijar("escalon", 2);
             yield return Esperar();
             vista = (string)tipo.GetMethod("Valores").Invoke(d, null);
@@ -504,7 +504,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
                 if (doc != null) doc.panelSettings.targetTexture = null;
                 rt.Release();
             }
-            Fijar("tipoAldea", 6);
+            Fijar("tipoAldea", 5);
             yield return Esperar();
             Assert.That(Maqueta("dp-aldea-1").malla, Is.Not.EqualTo(trigo.malla), "a ganadera: otro núcleo");
             // la variante de la plaza, elegida en el panel: la 2 y vuelta a la 1
@@ -623,7 +623,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             var cajaLectura = (UnityEngine.UIElements.VisualElement)tipo.GetField("cajaLectura", banderas).GetValue(d);
             tipo.GetMethod("CargarPropuesta").Invoke(d, null);
             tipo.GetMethod("Fijar").Invoke(d, new object[] { "nivel", 5.0 });
-            tipo.GetMethod("Fijar").Invoke(d, new object[] { "tipoAldea", 7.0 });
+            tipo.GetMethod("Fijar").Invoke(d, new object[] { "tipoAldea", 6.0 });
             foreach (var (ancho, alto) in new[] { (1920, 1080), (1200, 675) })
             {
                 var rt = new RenderTexture(ancho, alto, 24) { antiAliasing = 4 };
@@ -763,7 +763,7 @@ namespace ConquestTactics.Mundo.Mapa.EditorTests
             }
             var e = EscalaDelMapa.MetrosPorUnidad;
             var texto = new System.Text.StringBuilder();
-            foreach (var (pasada, aldeas, tipoAldea, pueblos) in new[] { ("a", 6, 7, 0), ("b", 1, 6, 5) })
+            foreach (var (pasada, aldeas, tipoAldea, pueblos) in new[] { ("a", 6, 6, 0), ("b", 1, 5, 5) })
             {
                 tipo.GetMethod("Restablecer").Invoke(d, null);
                 tipo.GetMethod("CargarPropuesta").Invoke(d, null);

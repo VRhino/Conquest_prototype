@@ -95,11 +95,11 @@ namespace ConquestTactics.Mundo.Mapa
             /// <summary>En las aldeas: su plaza madre (la primera senda va hacia ella) y sus sendas (u, en el mapa).</summary>
             public string Madre;
             public List<List<(double x, double y)>> Sendas;
-            /// <summary>En las aldeas: las cabezas del rebaño y las piezas sueltas sobre los campos (tipo de `NombresDePiezas`, matriz).</summary>
+            /// <summary>En las aldeas: las cabezas del rebaño (−1: sin el dato) y las piezas sueltas sobre los campos (tipo de `NombresDePiezas`,
+            /// matriz).</summary>
             public long Cabezas;
-            /// <summary>En las ganaderas: si el rebaño es vacuno (vacas) o de otra especie (ovejas); y las calvas de tierra pisada de las
+            /// <summary>En las ganaderas: las calvas de tierra pisada de las
             /// entradas de sus cercados (u, en el mapa).</summary>
-            public bool Vacuno;
             public List<(double x, double y)> Calvas;
             public List<(int tipo, Matrix4x4 m)> Piezas;
             /// <summary>El color del recurso de su nodo (los montones de mineral de las minas; alfa 0 si no tiene).</summary>
@@ -218,7 +218,20 @@ namespace ConquestTactics.Mundo.Mapa
         /// <summary>Los cultivos de los campos, en el orden de `_Paleta` (4 estados cada uno).</summary>
         static readonly string[] Cultivos = { "trigo", "cebada", "vid", "oliva", "sesamo", "ganado" };
         /// <summary>Las piezas sueltas de los campos (`piezas.fbx`, de `hornear.py piezas`): se dibujan instanciadas, todas las de la vista juntas.</summary>
-        static readonly string[] NombresDePiezas = { "olivo", "cepas", "gavillas", "hacina", "cerca", "res", "oveja", "abrevadero", "res_crema", "res_parda" };
+        // (25-11: el rebaño, la vaca de juego en tres posturas y tres capas, `PiezaDeVaca`; sin ovejas, que el motor solo tiene vacuno)
+        static readonly string[] NombresDePiezas = new[] { "olivo", "cepas", "gavillas", "hacina", "cerca", "abrevadero" }
+            .Concat(from postura in new[] { "de_pie", "pastando", "echada" } from capa in new[] { "parda", "crema", "negra" } select $"vaca_{postura}_{capa}").ToArray();
+        /// <summary>La pieza de la vaca en esa postura (0 de pie, 1 pastando, 2 echada) y capa (0 parda, 1 crema, 2 negra).</summary>
+        static int PiezaDeVaca(int postura, int capa) => 6 + postura * 3 + capa;
+        /// <summary>Las vacas que se ven en cada corral de una aldea ganadera (la equivalencia, 25-11): las cabezas del rebaño repartidas entre sus
+        /// corrales, una vaca por cada cuatro (hacia arriba), hasta 10; ninguna sin cabezas y 5 sin el dato (`cabezas` < 0). Con el pie de cría
+        /// (20 por corral), 5; con el tope (40), 10.</summary>
+        public static int VacasPorCorral(long cabezas, int corrales)
+        {
+            if (cabezas < 0) return 5;
+            if (cabezas == 0 || corrales <= 0) return 0;
+            return (int)Math.Min(10, Math.Ceiling(cabezas / (double)corrales / 4));
+        }
         readonly Mesh[] piezas = new Mesh[NombresDePiezas.Length];
         Material materialPiezas;
         readonly List<Matrix4x4>[] porPieza = Enumerable.Range(0, NombresDePiezas.Length).Select(_ => new List<Matrix4x4>()).ToArray();
@@ -910,7 +923,9 @@ namespace ConquestTactics.Mundo.Mapa
                     .Append(c.Entidad?.Avanzada?.Etapa).Append(c.Entidad?.Avanzada?.Estado).Append(c.Entidad?.CampamentoMercenarios?.Origen)
                     .Append(c.Entidad?.CampamentoMercenarios != null ? string.Join(",", c.Entidad.CampamentoMercenarios.Edificios) : null).Append(c.Entidad?.Alijo?.Recurso)
                     // (el tipo y el nivel del pueblo o la aldea: cambian su maqueta sin moverla)
-                    .Append(c.Entidad?.Pueblo?.TipoExtractor).Append(c.Entidad?.Pueblo?.Cultivo).Append(c.Entidad?.Pueblo?.RebanoEspecie).Append(c.Entidad?.Pueblo?.NivelAldea).Append('|');
+                    .Append(c.Entidad?.Pueblo?.TipoExtractor).Append(c.Entidad?.Pueblo?.Cultivo).Append(c.Entidad?.Pueblo?.RebanoEspecie).Append(c.Entidad?.Pueblo?.NivelAldea)
+                    // (las vacas que se ven por corral, no las cabezas, que crecen sin parar: se rehace solo cuando cambia lo que se ve)
+                    .Append(c.Entidad?.Pueblo is Pueblo pr && pr.Cultivo == "ganado" ? VacasPorCorral(pr.HasRebanoCabezas ? pr.RebanoCabezas / 1000 : -1, (int)Math.Max(1, Math.Min(3, pr.NivelAldea))) : -9).Append('|');
             foreach (var (id, p) in Caminos) sb.Append(id).Append(p.Count).Append(p.Count > 0 ? p[0].x + p[p.Count - 1].y : 0).Append(';');
             var nueva = Estilo + CosasDelMapa.ClaveDeFactores + "|v" + VarianteForzada + "|c" + VarianteCiudadelaForzada + "|a" + AlijoForzado + sb.ToString();
             if (nueva != clave)
@@ -1040,7 +1055,7 @@ namespace ConquestTactics.Mundo.Mapa
                             {
                                 X = x, Y = y, Semilla = sem, Nivel = nivelA, Huella = mn.RadioU * CosasDelMapa.Fijos(ClaseDeCosa.Aldea), HuellaDetalle = mn.RadioU, Escala = UnidadDePueblo, Rumbo = double.NaN,
                                 BajoNiebla = c.BajoNiebla, Faccion = Lineal(c.Color), Modelo = mn, Recurso = Vector4.zero,
-                                Cultivo = Math.Max(0, Array.IndexOf(Cultivos, ganado ? "ganado" : q.HasCultivo ? q.Cultivo : "trigo")), Madre = q.AsentamientoMadreId, Cabezas = q.HasRebanoCabezas ? q.RebanoCabezas / 1000 : 40, Vacuno = !q.HasRebanoEspecie || q.RebanoEspecie == "vacuno",
+                                Cultivo = Math.Max(0, Array.IndexOf(Cultivos, ganado ? "ganado" : q.HasCultivo ? q.Cultivo : "trigo")), Madre = q.AsentamientoMadreId, Cabezas = q.HasRebanoCabezas ? q.RebanoCabezas / 1000 : -1,
                             };
                             miniaturas.Add(mi);
                             aldeas.Add((mi, q.Id));
@@ -1473,37 +1488,70 @@ namespace ConquestTactics.Mundo.Mapa
             var cercadoEntero = new HashSet<int>();
             void PonerRebano()
             {
-                // el rebaño: dos o tres hatos, cada uno en un cercado distinto a 0,65 u o más del núcleo, con su abrevadero; una figura por
-                // cada dos cabezas (de 8 a 30), vacas o, si el rebaño es de otra especie, ovejas. Cada cercado con hato, cercado entero y con
-                // una calva de tierra pisada en la entrada (el lado que mira al núcleo)
+                // el rebaño (25-11): un hato por corral (1, 2 o 3, por el nivel), cada uno en un cercado distinto a 0,65 u o más del núcleo, con
+                // su abrevadero; por corral, las vacas de `VacasPorCorral`: unas pocas (hasta 3) dentro de su corral del núcleo y las demás en su
+                // cercado, de pie, pastando o echadas y de las tres capas, por la semilla. Cada cercado con hato, cercado entero y con una calva
+                // de tierra pisada en la entrada (el lado que mira al núcleo)
                 double Gauss() => Math.Sqrt(-2 * Math.Log(1 - rng.NextDouble())) * Math.Cos(2 * Math.PI * rng.NextDouble());
                 (double x, double y) Centro(List<(int i, int j)> cs) => (cs.Average(q => p.O + (q.i + 0.5) * c), cs.Average(q => p.O + (q.j + 0.5) * c));
                 // (los cercados grandes, de 10 casillas o más, a 0,65 u o más del núcleo; los mayores antes)
                 var lejos = porParcela.Where(k => k.Value.Count >= 10).Select(k => (k.Key, Centro(k.Value)))
                     .Where(k => Math.Sqrt(k.Item2.x * k.Item2.x + k.Item2.y * k.Item2.y) >= 0.65 * CosasDelMapa.Fijos(ClaseDeCosa.Aldea) / UnidadDePueblo)
                     .OrderByDescending(k => porParcela[k.Key].Count).ThenBy(k => k.Key).ToList();
-                int hatos = Math.Min(lejos.Count, rng.Next(2, 4));
-                var elegidos = lejos.Take(hatos).ToList();
-                int figuras = (int)Math.Max(8, Math.Min(30, mi.Cabezas / 2));
+                int corrales = (int)Math.Max(1, Math.Min(3, mi.Nivel));
+                var elegidos = lejos.Take(Math.Min(lejos.Count, corrales)).ToList();
+                int vacas = VacasPorCorral(mi.Cabezas, corrales);
+                // (una vaca: la postura, más de pie y pastando que echada; la capa, cualquiera)
+                void Vaca(double fx, double fy) => Poner(PiezaDeVaca(rng.NextDouble() < 0.4 ? 0 : rng.NextDouble() < 0.67 ? 1 : 2, rng.Next(3)), fx, fy, rng.NextDouble() * 6.28);
+                // (de la rejilla al marco del núcleo es girar `g`: lo del núcleo, como sus corrales, vuelve a la rejilla girando −g)
+                (double, double) ARejilla(double ox, double oy) => (ox * Math.Cos(g) + oy * Math.Sin(g), -ox * Math.Sin(g) + oy * Math.Cos(g));
                 mi.Calvas = new List<(double x, double y)>();
-                for (int h = 0; h < elegidos.Count; h++)
+                for (int h = 0; h < corrales; h++)
                 {
+                    // dentro del corral del núcleo (sus corrales son lo primero de `ocupado`), hasta 3, a dos tercios de su radio y sin pisarse;
+                    // todas (hasta 3), si este corral no tiene cercado
+                    bool conCercado = h < elegidos.Count;
+                    int dentro = conCercado ? Math.Min(3, vacas / 2) : Math.Min(3, vacas);
+                    if (mi.Modelo.Ocupado != null && h < mi.Modelo.Ocupado.Length)
+                    {
+                        var (ox, oy, orr) = mi.Modelo.Ocupado[h];
+                        double rc = (orr - 0.02) * 0.6;
+                        var dentroPuestas = new List<(double x, double y)>();
+                        for (int t = 0; t < dentro; t++)
+                            for (int intento = 0; intento < 24; intento++)
+                            {
+                                double a = rng.NextDouble() * 2 * Math.PI, r = rc * Math.Sqrt(rng.NextDouble());
+                                double fx = ox + r * Math.Cos(a), fy = oy + r * Math.Sin(a);
+                                if (dentroPuestas.Any(q => (q.x - fx) * (q.x - fx) + (q.y - fy) * (q.y - fy) < 0.09 * 0.09)) continue;
+                                dentroPuestas.Add((fx, fy));
+                                var (gx, gy) = ARejilla(fx, fy);
+                                Vaca(gx, gy);
+                                break;
+                            }
+                    }
+                    if (!conCercado) continue;
                     var (id, (cx, cy)) = elegidos[h];
-                    // (cada figura en una casilla del cercado al azar, algo movida, sin solaparse: a 1,2 veces su largo de las demás como poco;
-                    // las vacas, de tres capas por la semilla)
-                    double largo = mi.Vacuno ? 0.09 : 0.06, minimo = largo * 1.2;
+                    // las demás, cada una en una casilla del cercado al azar (de las de dentro, que no tocan otra parcela: no atraviesan la cerca),
+                    // algo movida, sin solaparse
+                    var casillas = porParcela[id].Where(q => new[] { (0, 1), (1, 0), (0, -1), (-1, 0) }.All(dd =>
+                    {
+                        int ii = q.i + dd.Item1, jj = q.j + dd.Item2;
+                        return ii >= 0 && jj >= 0 && ii < p.N && jj < p.N && p.Parcela[ii, jj] == id;
+                    })).ToList();
+                    if (casillas.Count == 0) casillas = porParcela[id];
+                    const double minimo = 0.1;
                     var puestas = new List<(double x, double y)>();
-                    for (int t = h; t < figuras; t += elegidos.Count)
+                    for (int t = dentro; t < vacas; t++)
                         for (int intento = 0; intento < 24; intento++)
                         {
-                            var (fi, fj) = porParcela[id][rng.Next(porParcela[id].Count)];
-                            double fx = p.O + (fi + 0.5) * c + Gauss() * 0.03, fy = p.O + (fj + 0.5) * c + Gauss() * 0.03;
+                            var (fi, fj) = casillas[rng.Next(casillas.Count)];
+                            double fx = p.O + (fi + 0.5) * c + Gauss() * 0.02, fy = p.O + (fj + 0.5) * c + Gauss() * 0.02;
                             if (puestas.Any(q => (q.x - fx) * (q.x - fx) + (q.y - fy) * (q.y - fy) < minimo * minimo)) continue;
                             puestas.Add((fx, fy));
-                            Poner(mi.Vacuno ? new[] { 5, 8, 9 }[rng.Next(3)] : 6, fx, fy, rng.NextDouble() * 6.28);
+                            Vaca(fx, fy);
                             break;
                         }
-                    Poner(7, cx + 0.07, cy - 0.05, rng.NextDouble() * 6.28);
+                    Poner(5, cx + 0.07, cy - 0.05, rng.NextDouble() * 6.28);
                     // la entrada: la casilla del cercado más cercana al núcleo, en su lado
                     var (ei, ej) = porParcela[id].OrderBy(q => Math.Pow(p.O + (q.i + 0.5) * c, 2) + Math.Pow(p.O + (q.j + 0.5) * c, 2)).First();
                     double ex = p.O + (ei + 0.5) * c, ey = p.O + (ej + 0.5) * c, el = Math.Max(1e-6, Math.Sqrt(ex * ex + ey * ey));
